@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "bind.go",
+        "eventsource.go",
+        "eventtype.go",
+        "expansion_generated.go",
+    ],
+    importpath = "github.com/elafros/binding/pkg/client/listers/bind/v1alpha1",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/apis/bind/v1alpha1:go_default_library",
+        "//vendor/k8s.io/apimachinery/pkg/api/errors:go_default_library",
+        "//vendor/k8s.io/apimachinery/pkg/labels:go_default_library",
+        "//vendor/k8s.io/client-go/tools/cache:go_default_library",
+    ],
+)
