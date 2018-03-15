@@ -19,7 +19,7 @@ limitations under the License.
 package versioned
 
 import (
-	elafrosv1alpha1 "github.com/elafros/eventing/pkg/client/clientset/versioned/typed/bind/v1alpha1"
+	eventingv1alpha1 "github.com/elafros/eventing/pkg/client/clientset/versioned/typed/bind/v1alpha1"
 	glog "github.com/golang/glog"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
@@ -28,27 +28,27 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	ElafrosV1alpha1() elafrosv1alpha1.ElafrosV1alpha1Interface
+	EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interface
 	// Deprecated: please explicitly pick a version if possible.
-	Elafros() elafrosv1alpha1.ElafrosV1alpha1Interface
+	Eventing() eventingv1alpha1.EventingV1alpha1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	elafrosV1alpha1 *elafrosv1alpha1.ElafrosV1alpha1Client
+	eventingV1alpha1 *eventingv1alpha1.EventingV1alpha1Client
 }
 
-// ElafrosV1alpha1 retrieves the ElafrosV1alpha1Client
-func (c *Clientset) ElafrosV1alpha1() elafrosv1alpha1.ElafrosV1alpha1Interface {
-	return c.elafrosV1alpha1
+// EventingV1alpha1 retrieves the EventingV1alpha1Client
+func (c *Clientset) EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interface {
+	return c.eventingV1alpha1
 }
 
-// Deprecated: Elafros retrieves the default version of ElafrosClient.
+// Deprecated: Eventing retrieves the default version of EventingClient.
 // Please explicitly pick a version.
-func (c *Clientset) Elafros() elafrosv1alpha1.ElafrosV1alpha1Interface {
-	return c.elafrosV1alpha1
+func (c *Clientset) Eventing() eventingv1alpha1.EventingV1alpha1Interface {
+	return c.eventingV1alpha1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -67,7 +67,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
-	cs.elafrosV1alpha1, err = elafrosv1alpha1.NewForConfig(&configShallowCopy)
+	cs.eventingV1alpha1, err = eventingv1alpha1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
-	cs.elafrosV1alpha1 = elafrosv1alpha1.NewForConfigOrDie(c)
+	cs.eventingV1alpha1 = eventingv1alpha1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -93,7 +93,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.elafrosV1alpha1 = elafrosv1alpha1.New(c)
+	cs.eventingV1alpha1 = eventingv1alpha1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

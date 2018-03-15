@@ -125,9 +125,9 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
-	Elafros() bind.Interface
+	Eventing() bind.Interface
 }
 
-func (f *sharedInformerFactory) Elafros() bind.Interface {
+func (f *sharedInformerFactory) Eventing() bind.Interface {
 	return bind.New(f, f.namespace, f.tweakListOptions)
 }
