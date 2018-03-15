@@ -54,7 +54,7 @@ type eventSources struct {
 }
 
 // newEventSources returns a EventSources
-func newEventSources(c *ElafrosV1alpha1Client, namespace string) *eventSources {
+func newEventSources(c *EventingV1alpha1Client, namespace string) *eventSources {
 	return &eventSources{
 		client: c.RESTClient(),
 		ns:     namespace,

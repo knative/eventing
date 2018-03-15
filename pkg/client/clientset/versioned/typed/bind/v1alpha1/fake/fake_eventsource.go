@@ -30,13 +30,13 @@ import (
 
 // FakeEventSources implements EventSourceInterface
 type FakeEventSources struct {
-	Fake *FakeElafrosV1alpha1
+	Fake *FakeEventingV1alpha1
 	ns   string
 }
 
-var eventsourcesResource = schema.GroupVersionResource{Group: "elafros.dev", Version: "v1alpha1", Resource: "eventsources"}
+var eventsourcesResource = schema.GroupVersionResource{Group: "eventing.elafros.dev", Version: "v1alpha1", Resource: "eventsources"}
 
-var eventsourcesKind = schema.GroupVersionKind{Group: "elafros.dev", Version: "v1alpha1", Kind: "EventSource"}
+var eventsourcesKind = schema.GroupVersionKind{Group: "eventing.elafros.dev", Version: "v1alpha1", Kind: "EventSource"}
 
 // Get takes name of the eventSource, and returns the corresponding eventSource object, and an error if there is any.
 func (c *FakeEventSources) Get(name string, options v1.GetOptions) (result *v1alpha1.EventSource, err error) {

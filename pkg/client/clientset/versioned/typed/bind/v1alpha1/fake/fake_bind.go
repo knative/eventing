@@ -30,13 +30,13 @@ import (
 
 // FakeBinds implements BindInterface
 type FakeBinds struct {
-	Fake *FakeElafrosV1alpha1
+	Fake *FakeEventingV1alpha1
 	ns   string
 }
 
-var bindsResource = schema.GroupVersionResource{Group: "elafros.dev", Version: "v1alpha1", Resource: "binds"}
+var bindsResource = schema.GroupVersionResource{Group: "eventing.elafros.dev", Version: "v1alpha1", Resource: "binds"}
 
-var bindsKind = schema.GroupVersionKind{Group: "elafros.dev", Version: "v1alpha1", Kind: "Bind"}
+var bindsKind = schema.GroupVersionKind{Group: "eventing.elafros.dev", Version: "v1alpha1", Kind: "Bind"}
 
 // Get takes name of the bind, and returns the corresponding bind object, and an error if there is any.
 func (c *FakeBinds) Get(name string, options v1.GetOptions) (result *v1alpha1.Bind, err error) {

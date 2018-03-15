@@ -49,6 +49,16 @@ k8s_object(
     template = ":githubsecret.yaml",
 )
 
+k8s_object(
+    name = "eventsource",
+    template = ":eventsource.yaml",
+)
+
+k8s_object(
+    name = "eventtype",
+    template = ":eventtype.yaml",
+)
+
 load("@io_bazel_rules_k8s//k8s:objects.bzl", "k8s_objects")
 
 k8s_objects(
@@ -57,6 +67,8 @@ k8s_objects(
         ":route",
         ":configuration",
         ":githubsecret",
+        ":eventsource",
+        ":eventtype",
     ],
 )
 
