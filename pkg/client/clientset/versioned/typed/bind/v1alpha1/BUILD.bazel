@@ -10,7 +10,7 @@ go_library(
         "eventtype.go",
         "generated_expansion.go",
     ],
-    importpath = "github.com/elafros/binding/pkg/client/clientset/versioned/typed/bind/v1alpha1",
+    importpath = "github.com/elafros/eventing/pkg/client/clientset/versioned/typed/bind/v1alpha1",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/apis/bind/v1alpha1:go_default_library",

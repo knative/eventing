@@ -19,7 +19,7 @@ limitations under the License.
 package versioned
 
 import (
-	elafrosv1alpha1 "github.com/elafros/binding/pkg/client/clientset/versioned/typed/bind/v1alpha1"
+	elafrosv1alpha1 "github.com/elafros/eventing/pkg/client/clientset/versioned/typed/bind/v1alpha1"
 	glog "github.com/golang/glog"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"

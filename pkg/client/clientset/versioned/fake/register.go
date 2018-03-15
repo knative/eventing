@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	elafrosv1alpha1 "github.com/elafros/binding/pkg/apis/bind/v1alpha1"
+	elafrosv1alpha1 "github.com/elafros/eventing/pkg/apis/bind/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

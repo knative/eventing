@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["gitwebhook.go"],
-    importpath = "github.com/elafros/binding/sample/github",
+    importpath = "github.com/elafros/eventing/sample/github",
     visibility = ["//visibility:private"],
     deps = [
         "//vendor/github.com/golang/glog:go_default_library",
@@ -63,6 +63,6 @@ k8s_objects(
 go_binary(
     name = "github",
     embed = [":go_default_library"],
-    importpath = "github.com/elafros/binding/sample/github",
+    importpath = "github.com/elafros/eventing/sample/github",
     visibility = ["//visibility:public"],
 )

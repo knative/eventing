@@ -23,10 +23,10 @@ package v1alpha1
 import (
 	time "time"
 
-	bind_v1alpha1 "github.com/elafros/binding/pkg/apis/bind/v1alpha1"
-	versioned "github.com/elafros/binding/pkg/client/clientset/versioned"
-	internalinterfaces "github.com/elafros/binding/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/elafros/binding/pkg/client/listers/bind/v1alpha1"
+	bind_v1alpha1 "github.com/elafros/eventing/pkg/apis/bind/v1alpha1"
+	versioned "github.com/elafros/eventing/pkg/client/clientset/versioned"
+	internalinterfaces "github.com/elafros/eventing/pkg/client/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/elafros/eventing/pkg/client/listers/bind/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
