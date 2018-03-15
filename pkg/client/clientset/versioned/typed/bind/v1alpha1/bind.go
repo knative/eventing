@@ -54,7 +54,7 @@ type binds struct {
 }
 
 // newBinds returns a Binds
-func newBinds(c *ElafrosV1alpha1Client, namespace string) *binds {
+func newBinds(c *EventingV1alpha1Client, namespace string) *binds {
 	return &binds{
 		client: c.RESTClient(),
 		ns:     namespace,

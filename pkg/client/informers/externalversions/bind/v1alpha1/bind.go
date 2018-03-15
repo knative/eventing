@@ -63,13 +63,13 @@ func NewFilteredBindInformer(client versioned.Interface, namespace string, resyn
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ElafrosV1alpha1().Binds(namespace).List(options)
+				return client.EventingV1alpha1().Binds(namespace).List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ElafrosV1alpha1().Binds(namespace).Watch(options)
+				return client.EventingV1alpha1().Binds(namespace).Watch(options)
 			},
 		},
 		&bind_v1alpha1.Bind{},

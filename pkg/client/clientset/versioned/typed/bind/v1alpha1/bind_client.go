@@ -25,32 +25,32 @@ import (
 	rest "k8s.io/client-go/rest"
 )
 
-type ElafrosV1alpha1Interface interface {
+type EventingV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	BindsGetter
 	EventSourcesGetter
 	EventTypesGetter
 }
 
-// ElafrosV1alpha1Client is used to interact with features provided by the elafros.dev group.
-type ElafrosV1alpha1Client struct {
+// EventingV1alpha1Client is used to interact with features provided by the eventing.elafros.dev group.
+type EventingV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *ElafrosV1alpha1Client) Binds(namespace string) BindInterface {
+func (c *EventingV1alpha1Client) Binds(namespace string) BindInterface {
 	return newBinds(c, namespace)
 }
 
-func (c *ElafrosV1alpha1Client) EventSources(namespace string) EventSourceInterface {
+func (c *EventingV1alpha1Client) EventSources(namespace string) EventSourceInterface {
 	return newEventSources(c, namespace)
 }
 
-func (c *ElafrosV1alpha1Client) EventTypes(namespace string) EventTypeInterface {
+func (c *EventingV1alpha1Client) EventTypes(namespace string) EventTypeInterface {
 	return newEventTypes(c, namespace)
 }
 
-// NewForConfig creates a new ElafrosV1alpha1Client for the given config.
-func NewForConfig(c *rest.Config) (*ElafrosV1alpha1Client, error) {
+// NewForConfig creates a new EventingV1alpha1Client for the given config.
+func NewForConfig(c *rest.Config) (*EventingV1alpha1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -59,12 +59,12 @@ func NewForConfig(c *rest.Config) (*ElafrosV1alpha1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ElafrosV1alpha1Client{client}, nil
+	return &EventingV1alpha1Client{client}, nil
 }
 
-// NewForConfigOrDie creates a new ElafrosV1alpha1Client for the given config and
+// NewForConfigOrDie creates a new EventingV1alpha1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *ElafrosV1alpha1Client {
+func NewForConfigOrDie(c *rest.Config) *EventingV1alpha1Client {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -72,9 +72,9 @@ func NewForConfigOrDie(c *rest.Config) *ElafrosV1alpha1Client {
 	return client
 }
 
-// New creates a new ElafrosV1alpha1Client for the given RESTClient.
-func New(c rest.Interface) *ElafrosV1alpha1Client {
-	return &ElafrosV1alpha1Client{c}
+// New creates a new EventingV1alpha1Client for the given RESTClient.
+func New(c rest.Interface) *EventingV1alpha1Client {
+	return &EventingV1alpha1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -92,7 +92,7 @@ func setConfigDefaults(config *rest.Config) error {
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *ElafrosV1alpha1Client) RESTClient() rest.Interface {
+func (c *EventingV1alpha1Client) RESTClient() rest.Interface {
 	if c == nil {
 		return nil
 	}

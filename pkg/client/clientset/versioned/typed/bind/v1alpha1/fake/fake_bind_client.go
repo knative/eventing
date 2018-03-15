@@ -24,25 +24,25 @@ import (
 	testing "k8s.io/client-go/testing"
 )
 
-type FakeElafrosV1alpha1 struct {
+type FakeEventingV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeElafrosV1alpha1) Binds(namespace string) v1alpha1.BindInterface {
+func (c *FakeEventingV1alpha1) Binds(namespace string) v1alpha1.BindInterface {
 	return &FakeBinds{c, namespace}
 }
 
-func (c *FakeElafrosV1alpha1) EventSources(namespace string) v1alpha1.EventSourceInterface {
+func (c *FakeEventingV1alpha1) EventSources(namespace string) v1alpha1.EventSourceInterface {
 	return &FakeEventSources{c, namespace}
 }
 
-func (c *FakeElafrosV1alpha1) EventTypes(namespace string) v1alpha1.EventTypeInterface {
+func (c *FakeEventingV1alpha1) EventTypes(namespace string) v1alpha1.EventTypeInterface {
 	return &FakeEventTypes{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeElafrosV1alpha1) RESTClient() rest.Interface {
+func (c *FakeEventingV1alpha1) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }

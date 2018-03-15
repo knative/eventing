@@ -30,13 +30,13 @@ import (
 
 // FakeEventTypes implements EventTypeInterface
 type FakeEventTypes struct {
-	Fake *FakeElafrosV1alpha1
+	Fake *FakeEventingV1alpha1
 	ns   string
 }
 
-var eventtypesResource = schema.GroupVersionResource{Group: "elafros.dev", Version: "v1alpha1", Resource: "eventtypes"}
+var eventtypesResource = schema.GroupVersionResource{Group: "eventing.elafros.dev", Version: "v1alpha1", Resource: "eventtypes"}
 
-var eventtypesKind = schema.GroupVersionKind{Group: "elafros.dev", Version: "v1alpha1", Kind: "EventType"}
+var eventtypesKind = schema.GroupVersionKind{Group: "eventing.elafros.dev", Version: "v1alpha1", Kind: "EventType"}
 
 // Get takes name of the eventType, and returns the corresponding eventType object, and an error if there is any.
 func (c *FakeEventTypes) Get(name string, options v1.GetOptions) (result *v1alpha1.EventType, err error) {

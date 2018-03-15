@@ -20,8 +20,8 @@ package fake
 
 import (
 	clientset "github.com/elafros/eventing/pkg/client/clientset/versioned"
-	elafrosv1alpha1 "github.com/elafros/eventing/pkg/client/clientset/versioned/typed/bind/v1alpha1"
-	fakeelafrosv1alpha1 "github.com/elafros/eventing/pkg/client/clientset/versioned/typed/bind/v1alpha1/fake"
+	eventingv1alpha1 "github.com/elafros/eventing/pkg/client/clientset/versioned/typed/bind/v1alpha1"
+	fakeeventingv1alpha1 "github.com/elafros/eventing/pkg/client/clientset/versioned/typed/bind/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -62,12 +62,12 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 
 var _ clientset.Interface = &Clientset{}
 
-// ElafrosV1alpha1 retrieves the ElafrosV1alpha1Client
-func (c *Clientset) ElafrosV1alpha1() elafrosv1alpha1.ElafrosV1alpha1Interface {
-	return &fakeelafrosv1alpha1.FakeElafrosV1alpha1{Fake: &c.Fake}
+// EventingV1alpha1 retrieves the EventingV1alpha1Client
+func (c *Clientset) EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interface {
+	return &fakeeventingv1alpha1.FakeEventingV1alpha1{Fake: &c.Fake}
 }
 
-// Elafros retrieves the ElafrosV1alpha1Client
-func (c *Clientset) Elafros() elafrosv1alpha1.ElafrosV1alpha1Interface {
-	return &fakeelafrosv1alpha1.FakeElafrosV1alpha1{Fake: &c.Fake}
+// Eventing retrieves the EventingV1alpha1Client
+func (c *Clientset) Eventing() eventingv1alpha1.EventingV1alpha1Interface {
+	return &fakeeventingv1alpha1.FakeEventingV1alpha1{Fake: &c.Fake}
 }

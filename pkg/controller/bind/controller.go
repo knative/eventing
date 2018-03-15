@@ -102,8 +102,7 @@ func NewController(
 	routeInformerFactory elainformers.SharedInformerFactory) controller.Interface {
 
 	// obtain a reference to a shared index informer for the Bind types.
-	//	bindInformer := bindInformerFactory.Elafros().V1alpha1().Binds()
-	bindInformer := bindInformerFactory.Elafros().V1alpha1()
+	bindInformer := bindInformerFactory.Eventing().V1alpha1()
 
 	// obtain a reference to a shared index informer for the Route type.
 	routeInformer := routeInformerFactory.Elafros().V1alpha1().Routes()
@@ -358,7 +357,7 @@ func (c *Controller) syncHandler(key string) error {
 }
 
 func (c *Controller) updateStatus(u *v1alpha1.Bind) (*v1alpha1.Bind, error) {
-	bindClient := c.bindclientset.ElafrosV1alpha1().Binds(u.Namespace)
+	bindClient := c.bindclientset.EventingV1alpha1().Binds(u.Namespace)
 	newu, err := bindClient.Get(u.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
