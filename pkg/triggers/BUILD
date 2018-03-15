@@ -6,7 +6,7 @@ go_library(
         "github.go",
         "trigger.go",
     ],
-    importpath = "github.com/elafros/binding/pkg/triggers",
+    importpath = "github.com/elafros/eventing/pkg/triggers",
     visibility = ["//visibility:public"],
     deps = [
         "//vendor/github.com/golang/glog:go_default_library",

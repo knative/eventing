@@ -10,7 +10,7 @@ go_library(
         "register.go",
         "zz_generated.deepcopy.go",
     ],
-    importpath = "github.com/elafros/binding/pkg/apis/bind/v1alpha1",
+    importpath = "github.com/elafros/eventing/pkg/apis/bind/v1alpha1",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/apis/bind:go_default_library",

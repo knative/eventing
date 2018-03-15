@@ -25,9 +25,9 @@ import (
 	sync "sync"
 	time "time"
 
-	versioned "github.com/elafros/binding/pkg/client/clientset/versioned"
-	bind "github.com/elafros/binding/pkg/client/informers/externalversions/bind"
-	internalinterfaces "github.com/elafros/binding/pkg/client/informers/externalversions/internalinterfaces"
+	versioned "github.com/elafros/eventing/pkg/client/clientset/versioned"
+	bind "github.com/elafros/eventing/pkg/client/informers/externalversions/bind"
+	internalinterfaces "github.com/elafros/eventing/pkg/client/informers/externalversions/internalinterfaces"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

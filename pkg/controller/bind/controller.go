@@ -39,15 +39,15 @@ import (
 	elainformers "github.com/elafros/elafros/pkg/client/informers/externalversions"
 	elalisters "github.com/elafros/elafros/pkg/client/listers/ela/v1alpha1"
 
-	"github.com/elafros/binding/pkg/controller"
-	"github.com/elafros/binding/pkg/triggers"
+	"github.com/elafros/eventing/pkg/controller"
+	"github.com/elafros/eventing/pkg/triggers"
 
-	v1alpha1 "github.com/elafros/binding/pkg/apis/bind/v1alpha1"
+	v1alpha1 "github.com/elafros/eventing/pkg/apis/bind/v1alpha1"
 
-	clientset "github.com/elafros/binding/pkg/client/clientset/versioned"
-	bindscheme "github.com/elafros/binding/pkg/client/clientset/versioned/scheme"
-	informers "github.com/elafros/binding/pkg/client/informers/externalversions"
-	listers "github.com/elafros/binding/pkg/client/listers/bind/v1alpha1"
+	clientset "github.com/elafros/eventing/pkg/client/clientset/versioned"
+	bindscheme "github.com/elafros/eventing/pkg/client/clientset/versioned/scheme"
+	informers "github.com/elafros/eventing/pkg/client/informers/externalversions"
+	listers "github.com/elafros/eventing/pkg/client/listers/bind/v1alpha1"
 )
 
 const controllerAgentName = "bind-controller"

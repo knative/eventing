@@ -21,8 +21,8 @@ limitations under the License.
 package elafros
 
 import (
-	v1alpha1 "github.com/elafros/binding/pkg/client/informers/externalversions/bind/v1alpha1"
-	internalinterfaces "github.com/elafros/binding/pkg/client/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/elafros/eventing/pkg/client/informers/externalversions/bind/v1alpha1"
+	internalinterfaces "github.com/elafros/eventing/pkg/client/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to each of this group's versions.

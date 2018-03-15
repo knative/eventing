@@ -19,7 +19,7 @@ You must have the core of [Elafros](http://github.com/elafros/elafros) running o
 
 ### Checkout your fork
 
-The Go tools require that you clone the repository to the `src/github.com/elafros/binding` directory
+The Go tools require that you clone the repository to the `src/github.com/elafros/eventing` directory
 in your [`GOPATH`](https://github.com/golang/go/wiki/SettingGOPATH).
 
 To check out this repository:
@@ -29,9 +29,9 @@ To check out this repository:
   ```shell
   mkdir -p ${GOPATH}/src/github.com/elafros
   cd ${GOPATH}/src/github.com/elafros
-  git clone git@github.com:${YOUR_GITHUB_USERNAME}/binding.git
+  git clone git@github.com:${YOUR_GITHUB_USERNAME}/eventing.git
   cd elafros
-  git remote add upstream git@github.com:elafros/binding.git
+  git remote add upstream git@github.com:elafros/eventing.git
   git remote set-url --push upstream no_push
   ```
 
