@@ -21,10 +21,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// Flow is a specification for a Flow resource
+// Flow is a binding of a Source to an Action specifying the trigger
+// condition and the event type.
 type Flow struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -33,43 +31,99 @@ type Flow struct {
 	Status FlowStatus `json:"status"`
 }
 
-type FilterLanguage string
-
-const (
-	FilterLanguageUnknown          FilterLanguage = "unknown"
-	FilterPathMatch                FilterLanguage = "path_match"
-	FilterCommonExpressionLanguage FilterLanguage = "common_expression_language"
-)
-
-type Filter struct {
-	Language   FilterLanguage `json:"language"`
-	Expression string         `json:"expression"`
-}
-
-type Source struct {
-	// SourceID is source-id from CNCF event model
-	SourceID string `json:"sourceId"`
-	Provider string `json:"provider"`
-}
-
+// Action is a consumer of events running in a Processor, for example a
+// particular Google Cloud Function.
 type Action struct {
-	Name      string `json:"name"`
+	// Name is where the event will be delivered to, for example
+	// "projects/my-project-id/locations/mordor-central1/functions/functionName"
+	Name string `json:"name"`
+
+	// Where the action runs. For example "google.cloud.functons" or "http".
 	Processor string `json:"processor"`
-	EventType string `json"eventType"`
+}
+
+// EventTrigger represents an interest in a subsets of events occurring in
+// a service.
+type EventTrigger struct {
+	// EventType is the type of event to observe. For example:
+	// `google.storage.object.finalize` and
+	// `google.firebase.analytics.event.log`.
+	//
+	// Event type consists of three parts:
+	//  1. namespace: The domain name of the organization in reverse-domain
+	//     notation (e.g. `acme.net` appears as `net.acme`) and any orginization
+	//     specific subdivisions. If the organization's top-level domain is `com`,
+	//     the top-level domain is ommited (e.g. `google.com` appears as
+	//     `google`). For example, `google.storage` and
+	//     `google.firebase.analytics`.
+	//     (-- GOOGLE_INTERNAL Within Google, subdivisions match the directory
+	//     structure under `google3/google/...`, ending before any
+	//     version number --)
+	//  2. resource type: The type of resource on which event occurs. For
+	//     example, the Google Cloud Storage API includes the types `object`
+	//     and `bucket`.
+	//  3. action: The action that generates the event. For example, actions for
+	//     a Google Cloud Storage Object include 'finalize' and 'delete'.
+	// These parts are lower case and joined by '.'.
+	EventType string `json:"event_type"`
+
+	// Resource or Resources from which to observe events, for example,
+	// `projects/_/buckets/myBucket/objects/{objectPath=**}`.
+	//
+	// Can be a specific resource or use wildcards to match a set of resources.
+	// Wildcards can either match a single segment in the resource name,
+	// using '*', or multiple segments, using '**'. For example,
+	// `projects/myProject/buckets/*/objects/**` would match all objects in all
+	// buckets in the 'myProject' project.
+	//
+	// The contents of wildcards can also be captured. This is done by assigning
+	// it to a variable name in braces. For example,
+	// `projects/myProject/buckets/{bucket_id=*}/objects/{object_path=**}`.
+	// Additionally, a single segment capture can omit `=*` and a multiple segment
+	// capture can specify additional structure. For example, the following
+	// all match the same buckets, but capture different data:
+	//     `projects/myProject/buckets/*/objects/users/*/data/**`
+	//     `projects/myProject/buckets/{bucket_id=*}/objects/users/{user_id}/data/{data_path=**}`
+	//     `projects/myProject/buckets/{bucket_id}/objects/{object_path=users/*/data/**}`
+	//
+	// Not all syntactically correct values are accepted by all services. For
+	// example:
+	//
+	// 1. The authorization model must support it. Google Cloud Functions
+	//    only allows EventTriggers to be deployed that observe resources in the
+	//    same project as the `CloudFunction`.
+	// 2. The resource type must match the pattern expected for an
+	//    `event_type`. For example, an `EventTrigger` that has an
+	//    `event_type` of "google.pubsub.topic.publish" should have a resource
+	//    that matches Google Cloud Pub/Sub topics.
+	//
+	// Additionally, some services may support short names when creating an
+	// `EventTrigger`. These will always be returned in the normalized "long"
+	// format.
+	//
+	// See each *service's* documentation for supported formats.
+	Resource string `json:"resource"`
+
+	// Service is the hostname of the service that should be observed.
+	//
+	// If no string is provided, the default service implementing the API will
+	// be used. For example, `storage.googleapis.com` is the default for all
+	// event types in the 'google.storage` namespace.
+	// (-- GOOGLE_INTERNAL:
+	//  Use this string to target staging versions of your service.
+	// --)
+	Service string `json:"service"`
 }
 
 // FlowSpec is the spec for a Flow resource
 type FlowSpec struct {
-	EventType string `json:"eventType"`
+	// Trigger contains the event_type, the "resource" path, and the hostname of the
+	// service hosting the event source. The "resource" includes the event source
+	// and a path match expression specifing a condition for emitting an event.
+	Trigger EventTrigger `json:"trigger"`
 
-	// Source specifies the event source to consume
-	Source Source `json:"source,omitempty"`
-
-	// Action to call
+	// Action is where an event gets delivered to. For example an HTTP endpoint.
 	Action Action `json:"action"`
-
-	// Filters for emitting an event, all of which must evaluate to true
-	Filters []Filter `json:"flowConditions"`
 }
 
 // FlowStatus is the status for a Flow resource
@@ -103,8 +157,6 @@ type FlowCondition struct {
 	// +optional
 	Message string `json:"message,omitempty" description:"human-readable message indicating details about last transition"`
 }
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // FlowList is a list of Flow resources
 type FlowList struct {

@@ -44,10 +44,9 @@ var (
 
 // Adds the list of known types to Scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
-	scheme.AddKnownTypes(SchemeGroupVersion,
-		// &Flow{},
-		// &FlowList{},
-	)
+	scheme.AddKnownTypes(SchemeGroupVersion)// &Flow{},
+	// &FlowList{},
+
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
 }
