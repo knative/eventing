@@ -6,7 +6,7 @@ development workflow](./CONTRIBUTING.md#workflow) and [the test docs](./test/REA
 
 ## Getting started
 
-1. Setup [Elafros][http://github.com/elafros/elafros]
+1. Setup [Elafros](http://github.com/elafros/elafros)
 1. [Create and checkout a repo fork](#checkout-your-fork)
 
 Once you meet these requirements, you can [start Binding](#starting-binding)!
