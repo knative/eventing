@@ -21,7 +21,7 @@ spec:
   template:
     spec:
       serviceType: container
-      containerSpec:
+      container:
         image: git-webhook:latest
         env:
           - name: GITHUB_SECRET

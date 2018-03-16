@@ -24,8 +24,8 @@ spec:
     eventSource: github
     eventType: pullrequest
   parameters:
-    owner: vaikas
-    repo: misc
+    owner: mchmarny
+    repo: eventing
     foo: bar
   parametersFrom:
     - secretKeyRef:

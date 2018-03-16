@@ -18,7 +18,7 @@ metadata:
   name: git-webhook
   namespace: default
 spec:
-  domainSuffix: demostuff.aikas.org
+  domainSuffix: gh.thingz.io
   traffic:
-  - configuration: git-webhook
+  - configurationName: git-webhook
     percent: 100
