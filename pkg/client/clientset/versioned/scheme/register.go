@@ -19,7 +19,7 @@ limitations under the License.
 package scheme
 
 import (
-	eventingv1alpha1 "github.com/elafros/eventing/pkg/apis/bind/v1alpha1"
+	eventingv1beta2 "github.com/elafros/eventing/pkg/apis/eventing/v1beta2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -50,6 +50,6 @@ func init() {
 // After this, RawExtensions in Kubernetes types will serialize kube-aggregator types
 // correctly.
 func AddToScheme(scheme *runtime.Scheme) {
-	eventingv1alpha1.AddToScheme(scheme)
+	eventingv1beta2.AddToScheme(scheme)
 
 }

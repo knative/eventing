@@ -23,7 +23,6 @@ package externalversions
 import (
 	"fmt"
 
-	v1alpha1 "github.com/elafros/eventing/pkg/apis/bind/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -54,13 +53,9 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=eventing.elafros.dev, Version=v1alpha1
-	case v1alpha1.SchemeGroupVersion.WithResource("binds"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().Binds().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("eventsources"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().EventSources().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("eventtypes"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().EventTypes().Informer()}, nil
+	// Group=eventing.elafros.dev, Version=v1beta2
+	//case v1beta2.SchemeGroupVersion.WithResource("flow"):
+	//	return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1beta2().Flow().Informer()}, nil
 
 	}
 

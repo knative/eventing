@@ -1,15 +1,15 @@
 # Development
 
 This doc explains how to setup a development environment so you can get started
-[contributing](./CONTRIBUTING.md) to Elafros Bindings. Also take a look at [the
+[contributing](./CONTRIBUTING.md) to Elafros Eventing. Also take a look at [the
 development workflow](./CONTRIBUTING.md#workflow) and [the test docs](./test/README.md).
 
 ## Getting started
 
-1. Setup (Elafros)[http://github.com/elafros/elafros]
+1. Setup [Elafros](http://github.com/elafros/elafros)
 1. [Create and checkout a repo fork](#checkout-your-fork)
 
-Once you meet these requirements, you can [start Binding](#starting-binding)!
+Once you meet these requirements, you can [start Eventing](#starting-eventing)!
 
 Before submitting a PR, see also [CONTRIBUTING.md](./CONTRIBUTING.md).
 
@@ -30,7 +30,7 @@ To check out this repository:
   mkdir -p ${GOPATH}/src/github.com/elafros
   cd ${GOPATH}/src/github.com/elafros
   git clone git@github.com:${YOUR_GITHUB_USERNAME}/eventing.git
-  cd elafros
+  cd eventing
   git remote add upstream git@github.com:elafros/eventing.git
   git remote set-url --push upstream no_push
   ```
@@ -40,9 +40,9 @@ fork](https://help.github.com/articles/syncing-a-fork/)._
 
 Once you reach this point you are ready to do a full build and deploy as described [here](./README.md#start-elafros).
 
-## Starting Binding
+## Starting Eventing
 
-Once you've [setup your development environment](#getting-started), stand up `Elafros Binding` with:
+Once you've [setup your development environment](#getting-started), stand up `Elafros Eventing` with:
 
 ```shell
 bazel run :everything.apply
@@ -55,7 +55,7 @@ NAME                               READY     STATUS    RESTARTS   AGE
 bind-controller-59f7969778-4dt7l   1/1       Running   0          2h
 ```
 
-You can access the Binding Controller's logs with:
+You can access the Eventing Controller's logs with:
 
 ```shell
 kubectl -n bind-system logs $(kubectl -n bind-system get pods -l app=bind-controller -o name)
@@ -64,7 +64,7 @@ kubectl -n bind-system logs $(kubectl -n bind-system get pods -l app=bind-contro
 ## Iterating
 
 As you make changes to the code-base, there are two special cases to be aware of:
-* **If you change a type definition ([pkg/apis/bind/v1alpha1/](./pkg/apis/bind/v1alpha1/.)),** then you must run [`./hack/update-codegen.sh`](./hack/update-codegen.sh).
+* **If you change a type definition ([pkg/apis/eventing/v1beta2/](./pkg/apis/eventing/v1beta2/.)),** then you must run [`./hack/update-codegen.sh`](./hack/update-codegen.sh).
 * **If you change a package's deps** (including adding external dep), then you must run
   [`./hack/update-deps.sh`](./hack/update-deps.sh).
 

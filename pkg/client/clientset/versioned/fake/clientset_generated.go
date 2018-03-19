@@ -19,9 +19,6 @@ limitations under the License.
 package fake
 
 import (
-	clientset "github.com/elafros/eventing/pkg/client/clientset/versioned"
-	eventingv1alpha1 "github.com/elafros/eventing/pkg/client/clientset/versioned/typed/bind/v1alpha1"
-	fakeeventingv1alpha1 "github.com/elafros/eventing/pkg/client/clientset/versioned/typed/bind/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -60,14 +57,14 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 	return c.discovery
 }
 
-var _ clientset.Interface = &Clientset{}
+//var _ clientset.Interface = &Clientset{}
 
-// EventingV1alpha1 retrieves the EventingV1alpha1Client
-func (c *Clientset) EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interface {
-	return &fakeeventingv1alpha1.FakeEventingV1alpha1{Fake: &c.Fake}
-}
+// EventingV1beta2 retrieves the EventingV1beta2Client
+//func (c *Clientset) EventingV1beta2() eventingv1beta2.EventingV1beta2Interface {
+//	return &fakeeventingv1beta2.FakeEventingV1beta2{Fake: &c.Fake}
+//}
 
-// Eventing retrieves the EventingV1alpha1Client
-func (c *Clientset) Eventing() eventingv1alpha1.EventingV1alpha1Interface {
-	return &fakeeventingv1alpha1.FakeEventingV1alpha1{Fake: &c.Fake}
-}
+// Eventing retrieves the EventingV1beta2Client
+//func (c *Clientset) Eventing() eventingv1beta2.EventingV1beta2Interface {
+//	return &fakeeventingv1beta2.FakeEventingV1beta2{Fake: &c.Fake}
+//}

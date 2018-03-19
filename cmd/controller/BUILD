@@ -11,7 +11,6 @@ go_library(
         "//pkg/client/clientset/versioned:go_default_library",
         "//pkg/client/informers/externalversions:go_default_library",
         "//pkg/controller:go_default_library",
-        "//pkg/controller/bind:go_default_library",
         "//pkg/signals:go_default_library",
         "//vendor/github.com/elafros/elafros/pkg/client/clientset/versioned:go_default_library",
         "//vendor/github.com/elafros/elafros/pkg/client/informers/externalversions:go_default_library",
