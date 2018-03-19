@@ -134,11 +134,11 @@ type FlowStatus struct {
 type FlowConditionType string
 
 const (
-	// FlowComplete specifies that the bind has completed successfully.
+	// FlowComplete specifies that the flow has completed successfully.
 	FlowComplete FlowConditionType = "Complete"
-	// FlowFailed specifies that the bind has failed.
+	// FlowFailed specifies that the flow has failed.
 	FlowFailed FlowConditionType = "Failed"
-	// FlowInvalid specifies that the given bind specification is invalid.
+	// FlowInvalid specifies that the given flow specification is invalid.
 	FlowInvalid FlowConditionType = "Invalid"
 )
 

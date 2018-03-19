@@ -35,7 +35,6 @@ import (
 	clientset "github.com/elafros/eventing/pkg/client/clientset/versioned"
 	informers "github.com/elafros/eventing/pkg/client/informers/externalversions"
 	"github.com/elafros/eventing/pkg/controller"
-	"github.com/elafros/eventing/pkg/controller/bind"
 	"github.com/elafros/eventing/pkg/signals"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -84,7 +83,7 @@ func main() {
 
 	// Add new controllers here.
 	ctors := []controller.Constructor{
-		bind.NewController,
+		//flow.NewController,
 	}
 
 	// Build all of our controllers, with the clients constructed above.
