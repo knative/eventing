@@ -56,9 +56,6 @@ type EventTrigger struct {
 	//     the top-level domain is ommited (e.g. `google.com` appears as
 	//     `google`). For example, `google.storage` and
 	//     `google.firebase.analytics`.
-	//     (-- GOOGLE_INTERNAL Within Google, subdivisions match the directory
-	//     structure under `google3/google/...`, ending before any
-	//     version number --)
 	//  2. resource type: The type of resource on which event occurs. For
 	//     example, the Google Cloud Storage API includes the types `object`
 	//     and `bucket`.
@@ -109,9 +106,6 @@ type EventTrigger struct {
 	// If no string is provided, the default service implementing the API will
 	// be used. For example, `storage.googleapis.com` is the default for all
 	// event types in the 'google.storage` namespace.
-	// (-- GOOGLE_INTERNAL:
-	//  Use this string to target staging versions of your service.
-	// --)
 	Service string `json:"service"`
 }
 
