@@ -296,7 +296,17 @@ func (c *Controller) syncHandler(key string) error {
 		}
 		return err
 	}
-	glog.Infof("Found route url as '%q'", route.Spec.DomainSuffix)
+
+	domainSuffix, err := getDomainSuffixFromElaConfig(c.kubeclientset)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			runtime.HandleError(fmt.Errorf("Can't find ela ConfigMap"))
+		}
+		return err
+	}
+
+	functionDNS := fmt.Sprintf("%s.%s.%s", route.Name, route.Namespace, domainSuffix)
+	glog.Infof("Found route DNS as '%q'", functionDNS)
 
 	es, err := c.eventSourcesLister.EventSources(namespace).Get(bind.Spec.Source.EventSource)
 	if err != nil {
@@ -327,7 +337,7 @@ func (c *Controller) syncHandler(key string) error {
 
 	glog.Infof("Creating a subscription to %q : %q with Parameters %+v", es.Name, et.Name, params)
 	if val, ok := c.triggers[es.Name]; ok {
-		r, err := val.Bind(params, route.Spec.DomainSuffix)
+		r, err := val.Bind(params, functionDNS)
 		if err != nil {
 			glog.Warningf("BIND failed: %s", err)
 			msg := fmt.Sprintf("Bind failed with : %s", r)
@@ -430,4 +440,18 @@ func unmarshalJSON(in []byte) (map[string]interface{}, error) {
 		return nil, fmt.Errorf("failed to unmarshal parameters as JSON object: %v", err)
 	}
 	return parameters, nil
+}
+
+func getDomainSuffixFromElaConfig(cl kubernetes.Interface) (string, error) {
+	const name = "ela-config"
+	const namespace = "ela-system"
+	c, err := cl.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+	domainSuffix, ok := c.Data["domainSuffix"]
+	if !ok {
+		return "", fmt.Errorf("cannot find domainSuffix in %v: ConfigMap.Data is %#v", name, c.Data)
+	}
+	return domainSuffix, nil
 }

@@ -11,21 +11,21 @@ the webhook gets created by Elafros.
 
 1. [Setup your development environment](../../DEVELOPMENT.md#getting-started)
 2. [Start Elafros](../../README.md#start-elafros)
-3. Decide on the DNS name that git can then call. Update sample/gitwebhook/route.yaml domainSuffix.
-For example I used demostuff.aikas.org as my hostname, so my route.yaml looks like so:
+3. Decide on the DNS name that git can then call. Update elafros/elafros/elaconfig.yaml domainSuffix.
+For example I used aikas.org as my hostname, so my elaconfig.yaml looks like so:
 
 ```yaml
-apiVersion: elafros.dev/v1alpha1
-kind: Route
+apiVersion: v1
+kind: ConfigMap
 metadata:
-  name: git-webhook
-  namespace: default
-spec:
-  domainSuffix: demostuff.aikas.org
-  traffic:
-  - configuration: configuration-example
-    percent: 100
+  name: ela-config
+  namespace: ela-system
+data:
+  domainSuffix: aikas.org
 ```
+
+If you were already running the elafros controllers, you will need to kill the ela-controller in the ela-system namespace for it to pick up the new domain suffix.
+
 4. Create a [personal access token[(https://github.com/settings/tokens) to github repo that you can use to bind webhooks to the Github API. Also decide on a token that your code will authenticate the incoming webhooks from github (accessSoken). Update sample/github/githubsecret.yaml with those values. If your generated access token is 'asdfasfdsaf' and you choose your secretToken as 'password', you'd modify githubsecret.yaml like so:
 
 ```yaml
@@ -73,14 +73,16 @@ To make this service accessible to github, we first need to determine its ingres
 (might have to wait a little while until 'ADDRESS' gets assigned):
 ```shell
 $ watch kubectl get ingress
-NAME                                 HOSTS                     ADDRESS        PORTS     AGE
-git-webhook-ela-ingress              demostuff.aikas.org       35.202.30.59   80        14s
+NAME                      HOSTS                           ADDRESS           PORTS     AGE
+git-webhook-ela-ingress   git-webhook.default.aikas.org   104.197.125.124   80        12m
 ```
 
-Once the `ADDRESS` gets assigned to the cluster, you need to assign a DNS name for that IP address.
+Once the `ADDRESS` gets assigned to the cluster, you need to assign a DNS name for that IP address. This DNS address needs to be:
+git-webhook.default.<domainsuffix you created> so for me, I would create a DNS entry from:
+git-webhook.default.aikas.org pointing to 104.197.125.124
 [Using GCP DNS](https://support.google.com/domains/answer/3290350)
 
-So, you'd need to create an A record for demostuff.aikas.org pointing to 35.202.30.59.
+So, you'd need to create an A record for git-webhook.default.aikas.org pointing to 104.197.125.124
 
 To now bind the github webhook for pull requests with the function we created above, you need to
  create a Bind object. Modify sample/github/pullrequest.yaml to point to owner of the repo as well
