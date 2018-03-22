@@ -6,7 +6,7 @@ development workflow](./CONTRIBUTING.md#workflow) and [the test docs](./test/REA
 
 ## Getting started
 
-1. Setup (Elafros)[http://github.com/elafros/elafros]
+1. Setup [Elafros](http://github.com/elafros/elafros)
 1. [Create and checkout a repo fork](#checkout-your-fork)
 
 Once you meet these requirements, you can [start Binding](#starting-binding)!
@@ -30,7 +30,7 @@ To check out this repository:
   mkdir -p ${GOPATH}/src/github.com/elafros
   cd ${GOPATH}/src/github.com/elafros
   git clone git@github.com:${YOUR_GITHUB_USERNAME}/eventing.git
-  cd elafros
+  cd eventing
   git remote add upstream git@github.com:elafros/eventing.git
   git remote set-url --push upstream no_push
   ```
