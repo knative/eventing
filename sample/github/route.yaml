@@ -18,7 +18,6 @@ metadata:
   name: git-webhook
   namespace: default
 spec:
-  domainSuffix: gh.thingz.io
   traffic:
   - configurationName: git-webhook
     percent: 100
