@@ -305,7 +305,7 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	functionDNS := fmt.Sprintf("%s.%s", route.Name, domainSuffix)
+	functionDNS := fmt.Sprintf("%s.%s.%s", route.Name, route.Namespace, domainSuffix)
 	glog.Infof("Found route DNS as '%q'", functionDNS)
 
 	es, err := c.eventSourcesLister.EventSources(namespace).Get(bind.Spec.Source.EventSource)
