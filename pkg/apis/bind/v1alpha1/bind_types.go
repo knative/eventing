@@ -40,6 +40,7 @@ type BindAction struct {
 	RouteName string `json:"routeName,omitempty"`
 }
 
+// EventTrigger describes when an Event should be delivered.
 type EventTrigger struct {
 	// Required. The type of event to observe. For example:
 	// `google.storage.object.finalize` and
