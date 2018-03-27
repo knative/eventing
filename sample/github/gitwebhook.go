@@ -36,7 +36,7 @@ const (
 	// Environment variable containing json credentials
 	envSecret = "GITHUB_SECRET"
 	// this is what we tack onto each PR title if not there already
-	titleSuffix = "looks pretty legit to me"
+	titleSuffix = "I buy it"
 )
 
 // GithubHandler holds necessary objects for communicating with the Github.

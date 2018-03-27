@@ -40,12 +40,82 @@ type BindAction struct {
 	RouteName string `json:"routeName,omitempty"`
 }
 
-type BindSource struct {
-	// EventSource specifies the event source to consume
-	EventSource string `json:"eventSource"`
-
-	// EventType specifies the event type to consume
+type EventTrigger struct {
+	// Required. The type of event to observe. For example:
+	// `google.storage.object.finalize` and
+	// `google.firebase.analytics.event.log`.
+	//
+	// Event type consists of three parts:
+	//  1. namespace: The domain name of the organization in reverse-domain
+	//     notation (e.g. `acme.net` appears as `net.acme`) and any orginization
+	//     specific subdivisions. If the organization's top-level domain is `com`,
+	//     the top-level domain is ommited (e.g. `google.com` appears as
+	//     `google`). For example, `google.storage` and
+	//     `google.firebase.analytics`.
+	//  2. resource type: The type of resource on which event occurs. For
+	//     example, the Google Cloud Storage API includes the types `object`
+	//     and `bucket`.
+	//  3. action: The action that generates the event. For example, actions for
+	//     a Google Cloud Storage Object include 'finalize' and 'delete'.
+	// These parts are lower case and joined by '.'.
 	EventType string `json:"eventType"`
+
+	// Required. The resource(s) from which to observe events, for example,
+	// `projects/_/buckets/myBucket/objects/{objectPath=**}`.
+	//
+	// Can be a specific resource or use wildcards to match a set of resources.
+	// Wildcards can either match a single segment in the resource name,
+	// using '*', or multiple segments, using '**'. For example,
+	// `projects/myProject/buckets/*/objects/**` would match all objects in all
+	// buckets in the 'myProject' project.
+	//
+	// The contents of wildcards can also be captured. This is done by assigning
+	// it to a variable name in braces. For example,
+	// `projects/myProject/buckets/{bucket_id=*}/objects/{object_path=**}`.
+	// Additionally, a single segment capture can omit `=*` and a multiple segment
+	// capture can specify additional structure. For example, the following
+	// all match the same buckets, but capture different data:
+	//     `projects/myProject/buckets/*/objects/users/*/data/**`
+	//     `projects/myProject/buckets/{bucket_id=*}/objects/users/{user_id}/data/{data_path=**}`
+	//     `projects/myProject/buckets/{bucket_id}/objects/{object_path=users/*/data/**}`
+	//
+	// Not all syntactically correct values are accepted by all services. For
+	// example:
+	//
+	// 1. The authorization model must support it. Google Cloud Functions
+	//    only allows EventTriggers to be deployed that observe resources in the
+	//    same project as the `CloudFunction`.
+	// 2. The resource type must match the pattern expected for an
+	//    `event_type`. For example, an `EventTrigger` that has an
+	//    `event_type` of "google.pubsub.topic.publish" should have a resource
+	//    that matches Google Cloud Pub/Sub topics.
+	//
+	// Additionally, some services may support short names when creating an
+	// `EventTrigger`. These will always be returned in the normalized "long"
+	// format.
+	//
+	// See each *service's* documentation for supported formats.
+	Resource string `json:"resource"`
+
+	// The hostname of the service that should be observed.
+	//
+	// If no string is provided, the default service implementing the API will
+	// be used. For example, `storage.googleapis.com` is the default for all
+	// event types in the 'google.storage` namespace.
+	Service string `json:"service"`
+
+	// Parameters is what's necessary to create the subscription.
+	// This is specific to each Source. Opaque to platform, only consumed
+	// by the actual trigger actuator.
+	// NOTE: experimental field.
+	Parameters *runtime.RawExtension `json:"parameters,omitempty"`
+
+	// ParametersFrom are pointers to secrets that contain sensitive
+	// parameters. Opaque to platform, merged in with Parameters and consumed
+	// by the actual trigger actuator.
+	// NOTE: experimental field. All secrets in ParametersFrom will be
+	// resolved and given to event sources in the Parameters field.
+	ParametersFrom []ParametersFromSource `json:"parametersFrom,omitempty"`
 }
 
 // BindSpec is the spec for a Bind resource
@@ -53,18 +123,8 @@ type BindSpec struct {
 	// Action specifies the target handler for the events
 	Action BindAction `json:"action"`
 
-	// Source specifies the trigger we're binding to
-	Source BindSource `json:"source"`
-
-	// Parameters is what's necessary to create the subscription.
-	// This is specific to each Source. Opaque to platform, only consumed
-	// by the actual trigger actuator.
-	Parameters *runtime.RawExtension `json:"parameters,omitempty"`
-
-	// ParametersFrom are pointers to secrets that contain sensitive
-	// parameters. Opaque to platform, merged in with Parameters and consumed
-	// by the actual trigger actuator.
-	ParametersFrom []ParametersFromSource `json:"parametersFrom,omitempty"`
+	// Trigger specifies the trigger we're binding to
+	Trigger EventTrigger `json:trigger"`
 }
 
 // ParametersFromSource represents the source of a set of Parameters

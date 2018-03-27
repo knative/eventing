@@ -15,7 +15,7 @@
 apiVersion: eventing.elafros.dev/v1alpha1
 kind: EventSource
 metadata:
-  name: github
+  name: github.com
   namespace: default
 spec:
   type: github

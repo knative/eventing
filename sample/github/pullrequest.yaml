@@ -18,16 +18,16 @@ metadata:
   name: bind-example
   namespace: default
 spec:
+  trigger:
+    # TODO: eventType doesn't match the normal naming scheme. At min should
+    # make this "com.github.pullrequest". May consider making it something
+    # like "com.github.pull.create"
+    eventType: pullrequest
+    resource: inlined/robots
+    service: github.com
+    parametersFrom:
+      - secretKeyRef:
+          name: githubsecret
+          key: githubCredentials
   action:
     routeName: git-webhook
-  source:
-    eventSource: github
-    eventType: pullrequest
-  parameters:
-    owner: vaikas
-    repo: misc
-    foo: bar
-  parametersFrom:
-    - secretKeyRef:
-        name: githubsecret
-        key: githubCredentials 
