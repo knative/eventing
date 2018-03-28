@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package triggers
+package sources
 
-type Trigger interface {
-	Bind(parameters map[string]interface{}, route string) (map[string]interface{}, error)
+type EventSource interface {
+	Bind(trigger EventTrigger, route string) (map[string]interface{}, error)
 }

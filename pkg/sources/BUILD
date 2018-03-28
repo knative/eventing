@@ -4,9 +4,10 @@ go_library(
     name = "go_default_library",
     srcs = [
         "github.go",
-        "trigger.go",
+        "event_source.go",
+        "event_trigger.go",
     ],
-    importpath = "github.com/elafros/eventing/pkg/triggers",
+    importpath = "github.com/elafros/eventing/pkg/sources",
     visibility = ["//visibility:public"],
     deps = [
         "//vendor/github.com/golang/glog:go_default_library",

@@ -33,7 +33,7 @@ bazel run //:gazelle -- -proto=disable
 # Rewrite the code-generator imports, which we pull in through WORKSPACE,
 # since it's hard to vendor.
 sed -i 's|//vendor/k8s.io/code-generator/|@io_k8s_code_generator//|g' \
-    $(find ${SCRIPT_ROOT}/vendor -type f -name '*' | xargs grep k8s.io/code-generator |& grep code-gen | cut -d':' -f 1 | uniq)
+    $(find ${SCRIPT_ROOT}/vendor -type f -name '*' | xargs grep k8s.io/code-generator 2>&1 | grep code-gen | cut -d':' -f 1 | uniq)
 
 # Fix up a case in k8s' client-go where non-testdata relies on files
 # in testdata (and so breaks after pruning).

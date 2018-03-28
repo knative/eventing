@@ -40,7 +40,7 @@ import (
 	elalisters "github.com/elafros/elafros/pkg/client/listers/ela/v1alpha1"
 
 	"github.com/elafros/eventing/pkg/controller"
-	"github.com/elafros/eventing/pkg/triggers"
+	"github.com/elafros/eventing/pkg/sources"
 
 	v1alpha1 "github.com/elafros/eventing/pkg/apis/bind/v1alpha1"
 
@@ -90,7 +90,7 @@ type Controller struct {
 	// Kubernetes API.
 	recorder record.EventRecorder
 
-	triggers map[string]triggers.Trigger
+	sources map[string]sources.EventSource
 }
 
 // NewController returns a new bind controller
@@ -132,8 +132,8 @@ func NewController(
 		recorder:           recorder,
 	}
 
-	controller.triggers = make(map[string]triggers.Trigger)
-	controller.triggers["github"] = triggers.NewGithubTrigger()
+	controller.sources = make(map[string]sources.EventSource)
+	controller.sources["github.com"] = sources.NewGithubEventSource()
 	glog.Info("Setting up event handlers")
 	// Set up an event handler for when Bind resources change
 	bindInformer.Binds().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -308,23 +308,23 @@ func (c *Controller) syncHandler(key string) error {
 	functionDNS := fmt.Sprintf("%s.%s.%s", route.Name, route.Namespace, domainSuffix)
 	glog.Infof("Found route DNS as '%q'", functionDNS)
 
-	es, err := c.eventSourcesLister.EventSources(namespace).Get(bind.Spec.Source.EventSource)
+	es, err := c.eventSourcesLister.EventSources(namespace).Get(bind.Spec.Trigger.Service)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			runtime.HandleError(fmt.Errorf("EventSource %q in namespace %q does not exist", bind.Spec.Source.EventSource, namespace))
+			runtime.HandleError(fmt.Errorf("EventSource %q in namespace %q does not exist", bind.Spec.Trigger.Service, namespace))
 		}
 		return err
 	}
 
-	et, err := c.eventTypesLister.EventTypes(namespace).Get(bind.Spec.Source.EventType)
+	et, err := c.eventTypesLister.EventTypes(namespace).Get(bind.Spec.Trigger.EventType)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			runtime.HandleError(fmt.Errorf("EventType %q in namespace %q does not exist", bind.Spec.Source.EventSource, namespace))
+			runtime.HandleError(fmt.Errorf("EventType %q in namespace %q does not exist", bind.Spec.Trigger.Service, namespace))
 		}
 		return err
 	}
 
-	params, err := getParameters(c.kubeclientset, namespace, bind.Spec.Parameters.Raw, bind.Spec.ParametersFrom)
+	trigger, err := resolveTrigger(c.kubeclientset, namespace, bind.Spec.Trigger)
 	if err != nil {
 		glog.Warningf("Failed to process parameters: %s", err)
 		return err
@@ -335,9 +335,9 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 
-	glog.Infof("Creating a subscription to %q : %q with Parameters %+v", es.Name, et.Name, params)
-	if val, ok := c.triggers[es.Name]; ok {
-		r, err := val.Bind(params, functionDNS)
+	glog.Infof("Creating a subscription to %q : %q with Trigger %+v", es.Name, et.Name, trigger)
+	if val, ok := c.sources[es.Name]; ok {
+		r, err := val.Bind(trigger, functionDNS)
 		if err != nil {
 			glog.Warningf("BIND failed: %s", err)
 			msg := fmt.Sprintf("Bind failed with : %s", r)
@@ -381,26 +381,30 @@ func (c *Controller) updateStatus(u *v1alpha1.Bind) (*v1alpha1.Bind, error) {
 	return bindClient.Update(newu)
 }
 
-func getParameters(kubeClient kubernetes.Interface, namespace string, parameters []byte, parametersFrom []v1alpha1.ParametersFromSource) (map[string]interface{}, error) {
-	r := make(map[string]interface{})
-	if parameters != nil && len(parameters) > 0 {
+func resolveTrigger(kubeClient kubernetes.Interface, namespace string, trigger v1alpha1.EventTrigger) (sources.EventTrigger, error) {
+	r := sources.EventTrigger{
+		Resource:   trigger.Resource,
+		EventType:  trigger.EventType,
+		Parameters: make(map[string]interface{}),
+	}
+	if trigger.Parameters != nil && trigger.Parameters.Raw != nil && len(trigger.Parameters.Raw) > 0 {
 		p := make(map[string]interface{})
-		if err := yaml.Unmarshal(parameters, &p); err != nil {
-			return nil, err
+		if err := yaml.Unmarshal(trigger.Parameters.Raw, &p); err != nil {
+			return r, err
 		}
 		for k, v := range p {
-			r[k] = v
+			r.Parameters[k] = v
 		}
 	}
-	if parametersFrom != nil {
-		glog.Infof("Fetching from source %+v", parametersFrom)
-		for _, p := range parametersFrom {
+	if trigger.ParametersFrom != nil {
+		glog.Infof("Fetching from source %+v", trigger.ParametersFrom)
+		for _, p := range trigger.ParametersFrom {
 			pfs, err := fetchParametersFromSource(kubeClient, namespace, &p)
 			if err != nil {
-				return nil, err
+				return r, err
 			}
 			for k, v := range pfs {
-				r[k] = v
+				r.Parameters[k] = v
 			}
 		}
 	}

@@ -12,7 +12,7 @@ go_library(
         "//pkg/client/informers/externalversions:go_default_library",
         "//pkg/client/listers/bind/v1alpha1:go_default_library",
         "//pkg/controller:go_default_library",
-        "//pkg/triggers:go_default_library",
+        "//pkg/sources:go_default_library",
         "//vendor/github.com/elafros/elafros/pkg/client/informers/externalversions:go_default_library",
         "//vendor/github.com/elafros/elafros/pkg/client/listers/ela/v1alpha1:go_default_library",
         "//vendor/github.com/ghodss/yaml:go_default_library",

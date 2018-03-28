@@ -18,5 +18,5 @@ metadata:
   name: pullrequest
   namespace: default
 spec:
-  eventSource: github
+  eventSource: github.com
   description: "notifications on pullrequests"

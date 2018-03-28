@@ -14,11 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package triggers
+package sources
 
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/golang/glog"
 
@@ -36,22 +37,22 @@ const (
 	MessageResourceSynced = "Bind synced successfully"
 )
 
-type GithubTrigger struct {
+type GithubEventSource struct {
 }
 
-func NewGithubTrigger() Trigger {
-	return &GithubTrigger{}
+func NewGithubEventSource() EventSource {
+	return &GithubEventSource{}
 }
 
-func (t *GithubTrigger) Bind(parameters map[string]interface{}, route string) (map[string]interface{}, error) {
+func (t *GithubEventSource) Bind(trigger EventTrigger, route string) (map[string]interface{}, error) {
 	glog.Infof("CREATING GITHUB WEBHOOK")
 
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: parameters["accessToken"].(string)},
+		&oauth2.Token{AccessToken: trigger.Parameters["accessToken"].(string)},
 	)
 	tc := oauth2.NewClient(ctx, ts)
-	glog.Infof("CREATING GITHUB WEBHOOK with access token: %s", parameters["accessToken"].(string))
+	glog.Infof("CREATING GITHUB WEBHOOK with access token: %s", trigger.Parameters["accessToken"].(string))
 
 	client := ghclient.NewClient(tc)
 	active := true
@@ -59,7 +60,7 @@ func (t *GithubTrigger) Bind(parameters map[string]interface{}, route string) (m
 	config := make(map[string]interface{})
 	config["url"] = fmt.Sprintf("http://%s", route)
 	config["content_type"] = "json"
-	config["secret"] = parameters["secretToken"].(string)
+	config["secret"] = trigger.Parameters["secretToken"].(string)
 	hook := ghclient.Hook{
 		Name:   &name,
 		URL:    &route,
@@ -68,7 +69,8 @@ func (t *GithubTrigger) Bind(parameters map[string]interface{}, route string) (m
 		Config: config,
 	}
 
-	h, r, err := client.Repositories.CreateHook(ctx, parameters["owner"].(string), parameters["repo"].(string), &hook)
+	components := strings.Split(trigger.Resource, "/")
+	h, r, err := client.Repositories.CreateHook(ctx, components[0] /* owner */, components[1] /* repo */, &hook)
 	if err != nil {
 		glog.Warningf("Failed to create the webhook: %s", err)
 		glog.Warningf("Response:\n%+v", r)
