@@ -1,7 +1,7 @@
 # Development
 
 This doc explains how to setup a development environment so you can get started
-[contributing](./CONTRIBUTING.md) to `Elafros`. Also take a look at [the 
+[contributing](./CONTRIBUTING.md) to `Elafros`. Also take a look at [the
 development workflow](./CONTRIBUTING.md#workflow) and [the test docs](./test/README.md).
 
 ## Getting started
@@ -16,8 +16,7 @@ development workflow](./CONTRIBUTING.md#workflow) and [the test docs](./test/REA
 1. Set up your [shell environment](#environment-setup)
 1. [Create and checkout a repo fork](#checkout-your-fork)
 
-Once you meet these requirements, you can [start an `Elafros`
-environment](README.md#start-elafros)!
+Once you meet these requirements, you can [start Elafros](#starting-elafros)!
 
 Before submitting a PR, see also [CONTRIBUTING.md](./CONTRIBUTING.md).
 
@@ -43,14 +42,17 @@ variables (we recommend adding them to your `.bashrc`):
 1. `$GOPATH/bin` on `PATH`: This is so that tooling installed via `go get` will work properly.
 1. `DOCKER_REPO_OVERRIDE`: The docker repository to which developer images should be pushed (e.g. `gcr.io/[gcloud-project]`).
 1. `K8S_CLUSTER_OVERRIDE`: The Kubernetes cluster on which development environments should be managed.
+1. `K8S_USER_OVERRIDE`: The Kubernetes user that you use to manage your cluster.  This depends on your cluster setup,
+    please take a look at [cluster setup instruction](./docs/creating-a-kubernetes-cluster.md).
 
 `.bashrc` example:
 
 ```shell
-export GOPATH='~/go'
+export GOPATH="$HOME/go"
 export PATH="${PATH}:${GOPATH}/bin"
 export DOCKER_REPO_OVERRIDE='gcr.io/my-gcloud-project-name'
 export K8S_CLUSTER_OVERRIDE='my-k8s-cluster-name'
+export K8S_USER_OVERRIDE='my-k8s-user'
 ```
 
 (Make sure to configure [authentication](https://github.com/bazelbuild/rules_docker#authentication) for your
@@ -93,6 +95,58 @@ fork](https://help.github.com/articles/syncing-a-fork/)._
 
 Once you reach this point you are ready to do a full build and deploy as described [here](./README.md#start-elafros).
 
+## Starting Elafros
+
+Once you've [setup your development environment](#getting-started), stand up `Elafros` with:
+
+```shell
+bazel run :everything.apply
+```
+
+You can see things running with:
+```shell
+$ kubectl -n ela-system get pods
+NAME                                READY     STATUS    RESTARTS   AGE
+ela-controller-77897cc687-vp27q   1/1       Running   0          16s
+ela-webhook-5cb5cfc667-k7mcg      1/1       Running   0          16s
+```
+
+You can access the Elafros Controller's logs with:
+
+```shell
+$ kubectl -n ela-system logs $(kubectl -n ela-system get pods -l app=ela-controller -o name)
+```
+
+## Enable log and metric collection
+You can use two different setups for collecting logs and metrics:
+1. **everything**: This configuration collects logs & metrics from user containers, build controller and istio requests.
+```shell
+bazel run config/monitoring:everything.apply
+```
+
+2. **everything-dev**: This configuration collects everything in (1) plus Elafros controller logs.
+```shell
+bazel run config/monitoring:everything-dev.apply
+```
+
+Once complete, follow the instructions at [Logs and Metrics](./docs/telemetry.md)
+
+## Enabling Istio Sidecar Injection
+After standing up elafros, perform the following steps to enable automatic
+sidecar injection.
+
+First, create a signed cert for the Istio webhook:
+
+```shell
+bazel run @istio_release//:webhook-create-signed-cert
+```
+
+Second, label namespaces with `istio-injection=enabled`:
+
+```shell
+kubectl label namespace default istio-injection=enabled
+```
+
 ## Iterating
 
 As you make changes to the code-base, there are two special cases to be aware of:
@@ -112,7 +166,21 @@ redeploy `Elafros`](./README.md#start-elafros).
 
 ## Tests
 
-Running tests as you make changes to the code-base is pretty simple. See [the test docs](./test/README.md).
+Tests are run automatically for every PR. For more details, see [the development workflow](./CONTRIBUTING.md#prow).
+
+For more details about the tests themselves and how to run them, see [the test docs](./test/README.md).
+
+## Clean up
+
+You can delete all of the service components with:
+```shell
+bazel run :everything.delete
+```
+
+Delete all cached environment variables (e.g. `DOCKER_REPO_OVERRIDE`):
+```shell
+bazel clean
+```
 
 ## Telemetry
 

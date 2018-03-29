@@ -49,6 +49,7 @@ go_library(
         ],
         "//conditions:default": [],
     }),
+    importmap = "bindcrd/vendor/github.com/modern-go/reflect2",
     importpath = "github.com/modern-go/reflect2",
     visibility = ["//visibility:public"],
     deps = ["//vendor/github.com/modern-go/concurrent:go_default_library"],
