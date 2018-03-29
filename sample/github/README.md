@@ -86,11 +86,11 @@ So, you'd need to create an A record for git-webhook.default.aikas.org pointing 
 
 To now bind the github webhook for pull requests with the function we created above, you need to
  create a Bind object. Modify sample/github/pullrequest.yaml to point to owner of the repo as well
- as the particular repo you want to subscribe to. So, change spec.parameters.[owner,repo] with the values
+ as the particular repo you want to subscribe to. So, change spec.trigger.resource with the owner/repo
  you want.
 
  For example, if I wanted to receive notifications to:
- github.com/vaikas/misc repo, my Bind object would look like so:
+ github.com/inlined/robots repo, my Bind object would look like so:
 
 ```yaml
 apiVersion: elafros.dev/v1alpha1
@@ -99,19 +99,16 @@ metadata:
   name: bind-example
   namespace: default
 spec:
- action:
-    routeName: git-webhook
-  source:
-    eventSource: github
+  trigger:
     eventType: pullrequest
-  parameters:
-    owner: vaikas
-    repo: misc
-  parametersFrom:
-    - secretKeyRef:
-        name: githubsecret
-        key: githubCredentials 
-
+    resource: inlined/robots
+    service: github.com
+    parametersFrom:
+      - secretKeyRef:
+          name: githubsecret
+          key: githubCredentials
+  action:
+    routeName: git-webhook
 ```
 
 Then create the binding so that you can see changes
