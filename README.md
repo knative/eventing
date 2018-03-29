@@ -7,7 +7,7 @@ address a common need for cloud native development:
 2. A producer can generate events before a consumer is listening, and a consumer
 can express an interest in an event or class of events that is not yet being
 produced.
-3. Services can be connected to to create new applications
+3. Services can be connected to create new applications
     - without modifying producer or consumer.
     - with the ability to select a specific subset of events from a particular
     producer
