@@ -30,8 +30,7 @@ var (
 		EventId:            "eventid-123",
 		EventType:          "google.firestore.document.create",
 		EventTime:          time.Now().UTC(),
-		SourceAuthority:    "firestore.googleapis.com",
-		SourcePath:         "projects/demo/databases/default/documents/users/inlined",
+		Source:             "//firestore.googleapis.com/projects/demo/databases/default/documents/users/inlined",
 	}
 	data = map[string]interface{}{
 		"username":      "inlined",

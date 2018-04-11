@@ -26,14 +26,27 @@ import (
 	"time"
 )
 
+const (
+	HeaderCloudEventsVersion = "cloud-events-version"
+	HeaderEventId            = "event-id"
+	HeaderEventType          = "event-type"
+	HeaderEventTime          = "event-time"
+	HeaderSource             = "source"
+
+	fieldCloudEventsVersion = "CloudEventsVersion"
+	fieldEventId            = "EventId"
+	fieldEventType          = "EventType"
+	fieldEventTime          = "EventTime"
+	fieldSource             = "Source"
+)
+
 // Context holds standard metadata about an event.
 type Context struct {
 	CloudEventsVersion string    `json:"cloud-events-version,omitempty"`
 	EventId            string    `json":event-id"`
 	EventType          string    `json:"event-type"`
 	EventTime          time.Time `json:"event-time,omitempty"`
-	SourceAuthority    string    `json:"source-authority"`
-	SourcePath         string    `json:"source-path,omitempty"`
+	Source             string    `json:"source"`
 }
 
 func anyError(errs ...error) error {
@@ -47,14 +60,14 @@ func anyError(errs ...error) error {
 
 func pullReqHeader(h http.Header, name string, value *string) error {
 	if *value = h.Get(name); *value == "" {
-		return fmt.Errorf("missing required header '%s'", name)
+		return fmt.Errorf("missing required header %q", name)
 	}
 	return nil
 }
 
 func require(name string, value string) error {
 	if len(value) == 0 {
-		return fmt.Errorf("missing required field '%s'", name)
+		return fmt.Errorf("missing required field %q", name)
 	}
 	return nil
 }
@@ -63,17 +76,15 @@ func require(name string, value string) error {
 func FromRequest(data interface{}, r *http.Request) (*Context, error) {
 	var ctx Context
 	err := anyError(
-		pullReqHeader(r.Header, "event-id", &ctx.EventId),
-		pullReqHeader(r.Header, "event-type", &ctx.EventType),
-		pullReqHeader(r.Header, "source-authority", &ctx.SourceAuthority),
-		pullReqHeader(r.Header, "source-path", &ctx.SourcePath))
+		pullReqHeader(r.Header, HeaderEventId, &ctx.EventId),
+		pullReqHeader(r.Header, HeaderEventType, &ctx.EventType),
+		pullReqHeader(r.Header, HeaderSource, &ctx.Source))
 	if err != nil {
 		return nil, err
 	}
 
-	ctx.CloudEventsVersion = r.Header.Get("cloud-events-version")
-	var timeStr = r.Header.Get("event-time")
-	if timeStr != "" {
+	ctx.CloudEventsVersion = r.Header.Get(HeaderCloudEventsVersion)
+	if timeStr := r.Header.Get(HeaderEventTime); timeStr != "" {
 		if err := ctx.EventTime.UnmarshalText([]byte(timeStr)); err != nil {
 			return nil, err
 		}
@@ -91,29 +102,27 @@ func NewRequest(urlString string, data interface{}, context Context) (*http.Requ
 	url, err := url.Parse(urlString)
 	err = anyError(
 		err,
-		require("EventId", context.EventId),
-		require("EventType", context.EventType),
-		require("SourceAuthority", context.SourceAuthority),
-		require("SourcePath", context.SourcePath))
+		require(fieldEventId, context.EventId),
+		require(fieldEventType, context.EventType),
+		require(fieldSource, context.Source))
 	if err != nil {
 		return nil, err
 	}
 
 	h := http.Header{}
-	h.Set("event-id", context.EventId)
-	h.Set("event-type", context.EventType)
-	h.Set("source-authority", context.SourceAuthority)
-	h.Set("source-path", context.SourcePath)
+	h.Set(HeaderEventId, context.EventId)
+	h.Set(HeaderEventType, context.EventType)
+	h.Set(HeaderSource, context.Source)
 
 	if context.CloudEventsVersion != "" {
-		h.Set("cloud-events-version", context.CloudEventsVersion)
+		h.Set(HeaderCloudEventsVersion, context.CloudEventsVersion)
 	}
 	if !context.EventTime.IsZero() {
 		b, err := context.EventTime.UTC().MarshalText()
 		if err != nil {
 			return nil, err
 		}
-		h.Set("event-time", string(b))
+		h.Set(HeaderEventTime, string(b))
 	}
 
 	buffer, err := json.Marshal(data)
