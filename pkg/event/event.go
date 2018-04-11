@@ -27,14 +27,26 @@ import (
 )
 
 const (
+	// HeaderCloudEventsVersion is the header for the version of Cloud Events
+	// used.
 	HeaderCloudEventsVersion = "cloud-events-version"
-	HeaderEventId            = "event-id"
-	HeaderEventType          = "event-type"
-	HeaderEventTime          = "event-time"
-	HeaderSource             = "source"
+
+	// HeaderEventID is the header for the unique ID of this event.
+	HeaderEventID = "event-id"
+
+	// HeaderEventType is the header for type of event represented. Value SHOULD
+	// be in reverse-dns form.
+	HeaderEventType = "event-type"
+
+	// HeaderEventTime is the OPTIONAL header for the time at which an event
+	// occurred.
+	HeaderEventTime = "event-time"
+
+	// HeaderSource is the header for the source which emitted this event.
+	HeaderSource = "source"
 
 	fieldCloudEventsVersion = "CloudEventsVersion"
-	fieldEventId            = "EventId"
+	fieldEventID            = "EventID"
 	fieldEventType          = "EventType"
 	fieldEventTime          = "EventTime"
 	fieldSource             = "Source"
@@ -43,7 +55,7 @@ const (
 // Context holds standard metadata about an event.
 type Context struct {
 	CloudEventsVersion string    `json:"cloud-events-version,omitempty"`
-	EventId            string    `json":event-id"`
+	EventID            string    `json":event-id"`
 	EventType          string    `json:"event-type"`
 	EventTime          time.Time `json:"event-time,omitempty"`
 	Source             string    `json:"source"`
@@ -76,7 +88,7 @@ func require(name string, value string) error {
 func FromRequest(data interface{}, r *http.Request) (*Context, error) {
 	var ctx Context
 	err := anyError(
-		pullReqHeader(r.Header, HeaderEventId, &ctx.EventId),
+		pullReqHeader(r.Header, HeaderEventID, &ctx.EventID),
 		pullReqHeader(r.Header, HeaderEventType, &ctx.EventType),
 		pullReqHeader(r.Header, HeaderSource, &ctx.Source))
 	if err != nil {
@@ -102,7 +114,7 @@ func NewRequest(urlString string, data interface{}, context Context) (*http.Requ
 	url, err := url.Parse(urlString)
 	err = anyError(
 		err,
-		require(fieldEventId, context.EventId),
+		require(fieldEventID, context.EventID),
 		require(fieldEventType, context.EventType),
 		require(fieldSource, context.Source))
 	if err != nil {
@@ -110,7 +122,7 @@ func NewRequest(urlString string, data interface{}, context Context) (*http.Requ
 	}
 
 	h := http.Header{}
-	h.Set(HeaderEventId, context.EventId)
+	h.Set(HeaderEventID, context.EventID)
 	h.Set(HeaderEventType, context.EventType)
 	h.Set(HeaderSource, context.Source)
 
