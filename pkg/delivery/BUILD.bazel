@@ -1,0 +1,41 @@
+package(default_visibility = ["//visibility:public"])
+
+load("@io_bazel_rules_go//go:def.bzl", "gazelle", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "receiver.go",
+        "sender.go",
+    ],
+    importpath = "github.com/elafros/eventing/pkg/delivery",
+    deps = [
+        "//pkg/apis/bind/v1alpha1:go_default_library",
+        "//pkg/client/listers/bind/v1alpha1:go_default_library",
+        "//pkg/delivery/action:go_default_library",
+        "//pkg/delivery/queue:go_default_library",
+        "//pkg/event:go_default_library",
+        "//vendor/github.com/golang/glog:go_default_library",
+        "//vendor/k8s.io/apimachinery/pkg/api/errors:go_default_library",
+        "//vendor/k8s.io/apimachinery/pkg/util/runtime:go_default_library",
+        "//vendor/k8s.io/apimachinery/pkg/util/wait:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "receiver_test.go",
+        "sender_test.go",
+    ],
+    deps = [
+        ":go_default_library",
+        "//pkg/apis/bind/v1alpha1:go_default_library",
+        "//pkg/client/clientset/versioned/fake:go_default_library",
+        "//pkg/client/informers/externalversions:go_default_library",
+        "//pkg/delivery/action:go_default_library",
+        "//pkg/delivery/queue:go_default_library",
+        "//pkg/event:go_default_library",
+        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
+    ],
+)
