@@ -125,13 +125,22 @@ type EventTrigger struct {
 	ParametersFrom []ParametersFromSource `json:"parametersFrom,omitempty"`
 }
 
+// Zero determines whether an EventTrigger is fully empty. If a Bind is set up
+// without an EventTrigger, it is assumed that the real event source is incompatible
+// with our event framework's control plane and will be set up manually through
+// side channels.
+func (t *EventTrigger) Zero() bool {
+	return t.EventType == "" && t.Resource == "" && t.Service == "" &&
+		t.Parameters == nil && t.ParametersFrom == nil
+}
+
 // BindSpec is the spec for a Bind resource
 type BindSpec struct {
 	// Action specifies the target handler for the events
 	Action BindAction `json:"action"`
 
 	// Trigger specifies the trigger we're binding to
-	Trigger EventTrigger `json:trigger"`
+	Trigger EventTrigger `json:"trigger"`
 }
 
 // ParametersFromSource represents the source of a set of Parameters

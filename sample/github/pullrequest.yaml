@@ -30,4 +30,5 @@ spec:
           name: githubsecret
           key: githubCredentials
   action:
-    routeName: git-webhook
+    processor: elafros.dev/Route
+    name: git-webhook

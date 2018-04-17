@@ -16,6 +16,10 @@ limitations under the License.
 
 package sources
 
+import "github.com/elafros/eventing/pkg/apis/bind/v1alpha1"
+
+// EventSource manages the subscription of which events a developer is interested in.
 type EventSource interface {
-	Bind(trigger EventTrigger, route string) (map[string]interface{}, error)
+	// Bind creates a new subscription of events.
+	Bind(bind *v1alpha1.Bind, parameters map[string]interface{}) (map[string]interface{}, error)
 }

@@ -48,6 +48,7 @@ import (
 	bindscheme "github.com/elafros/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/elafros/eventing/pkg/client/informers/externalversions"
 	listers "github.com/elafros/eventing/pkg/client/listers/bind/v1alpha1"
+	"github.com/elafros/eventing/pkg/delivery/action"
 )
 
 const controllerAgentName = "bind-controller"
@@ -133,7 +134,7 @@ func NewController(
 	}
 
 	controller.sources = make(map[string]sources.EventSource)
-	controller.sources["github.com"] = sources.NewGithubEventSource()
+	controller.sources["github.com"] = sources.NewGithubEventSource(kubeclientset)
 	glog.Info("Setting up event handlers")
 	// Set up an event handler for when Bind resources change
 	bindInformer.Binds().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -288,76 +289,40 @@ func (c *Controller) syncHandler(key string) error {
 	bind = bind.DeepCopy()
 
 	// Find the Route that they want.
-	routeName := bind.Spec.Action.RouteName
-	route, err := c.routesLister.Routes(namespace).Get(routeName)
-	if err != nil {
+	actionName := bind.Spec.Action.Name
+	actionType := bind.Spec.Action.Processor
+	if err := c.validateAction(namespace, actionName, actionType); err != nil {
 		if errors.IsNotFound(err) {
-			runtime.HandleError(fmt.Errorf("Route %q in namespace %q does not exist", routeName, namespace))
+			runtime.HandleError(fmt.Errorf("Action %q of type %q in namespace %q does not exist", actionName, actionType, namespace))
 		}
+		glog.Warningf("Bind %q rejected for invalid action: %s", name, err)
 		return err
 	}
 
-	domainSuffix, err := getDomainSuffixFromElaConfig(c.kubeclientset)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			runtime.HandleError(fmt.Errorf("Can't find ela ConfigMap"))
+	var condition *v1alpha1.BindCondition
+	if bind.Spec.Trigger.Zero() {
+		glog.Warningf("Bind %q has no Spec.Trigger", name)
+		if bind.Status.Conditions != nil {
+			condition = &v1alpha1.BindCondition{
+				Type:    v1alpha1.BindComplete,
+				Status:  corev1.ConditionTrue,
+				Reason:  fmt.Sprintf("BindSuccess; no Trigger to manage"),
+				Message: "Bind successful",
+			}
 		}
-		return err
-	}
-
-	functionDNS := fmt.Sprintf("%s.%s.%s", route.Name, route.Namespace, domainSuffix)
-	glog.Infof("Found route DNS as '%q'", functionDNS)
-
-	es, err := c.eventSourcesLister.EventSources(namespace).Get(bind.Spec.Trigger.Service)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			runtime.HandleError(fmt.Errorf("EventSource %q in namespace %q does not exist", bind.Spec.Trigger.Service, namespace))
+	} else {
+		if condition, err = c.bindTrigger(namespace, bind); err != nil {
+			return err
 		}
-		return err
 	}
 
-	et, err := c.eventTypesLister.EventTypes(namespace).Get(bind.Spec.Trigger.EventType)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			runtime.HandleError(fmt.Errorf("EventType %q in namespace %q does not exist", bind.Spec.Trigger.Service, namespace))
-		}
-		return err
-	}
-
-	trigger, err := resolveTrigger(c.kubeclientset, namespace, bind.Spec.Trigger)
-	if err != nil {
-		glog.Warningf("Failed to process parameters: %s", err)
-		return err
-	}
-
-	if bind.Status.Conditions != nil {
+	if condition == nil {
 		glog.Infof("Already has status, skipping")
 		return nil
 	}
 
-	glog.Infof("Creating a subscription to %q : %q with Trigger %+v", es.Name, et.Name, trigger)
-	if val, ok := c.sources[es.Name]; ok {
-		r, err := val.Bind(trigger, functionDNS)
-		if err != nil {
-			glog.Warningf("BIND failed: %s", err)
-			msg := fmt.Sprintf("Bind failed with : %s", r)
-			bind.Status.SetCondition(&v1alpha1.BindCondition{
-				Type:    v1alpha1.BindFailed,
-				Status:  corev1.ConditionTrue,
-				Reason:  "BindFailed",
-				Message: msg,
-			})
-		} else {
-			bind.Status.SetCondition(&v1alpha1.BindCondition{
-				Type:    v1alpha1.BindComplete,
-				Status:  corev1.ConditionTrue,
-				Reason:  fmt.Sprintf("BindSuccess: Hook: %s", r["ID"].(string)),
-				Message: "Bind successful",
-			})
-		}
-	}
-	_, err = c.updateStatus(bind)
-	if err != nil {
+	bind.Status.SetCondition(condition)
+	if _, err = c.updateStatus(bind); err != nil {
 		glog.Warningf("Failed to update status: %s", err)
 		return err
 	}
@@ -381,19 +346,69 @@ func (c *Controller) updateStatus(u *v1alpha1.Bind) (*v1alpha1.Bind, error) {
 	return bindClient.Update(newu)
 }
 
-func resolveTrigger(kubeClient kubernetes.Interface, namespace string, trigger v1alpha1.EventTrigger) (sources.EventTrigger, error) {
-	r := sources.EventTrigger{
-		Resource:   trigger.Resource,
-		EventType:  trigger.EventType,
-		Parameters: make(map[string]interface{}),
+func (c *Controller) bindTrigger(namespace string, bind *v1alpha1.Bind) (*v1alpha1.BindCondition, error) {
+	es, err := c.eventSourcesLister.EventSources(namespace).Get(bind.Spec.Trigger.Service)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			runtime.HandleError(fmt.Errorf("EventSource %q in namespace %q does not exist", bind.Spec.Trigger.Service, namespace))
+		}
+		return nil, err
 	}
+
+	et, err := c.eventTypesLister.EventTypes(namespace).Get(bind.Spec.Trigger.EventType)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			runtime.HandleError(fmt.Errorf("EventType %q in namespace %q does not exist", bind.Spec.Trigger.Service, namespace))
+		}
+		return nil, err
+	}
+
+	parameters, err := resolveParameters(c.kubeclientset, namespace, bind.Spec.Trigger)
+	if err != nil {
+		glog.Warningf("Failed to process parameters: %s", err)
+		return nil, err
+	}
+
+	if bind.Status.Conditions != nil {
+		return nil, nil
+	}
+
+	glog.Infof("Creating a subscription to %q : %q with Trigger %+v", es.Name, et.Name, bind.Spec.Trigger)
+	eventSource, ok := c.sources[es.Name]
+	if !ok {
+		return nil, fmt.Errorf("Do not know how to deploy EventTrigger to source with name %s", es.Name)
+	}
+
+	r, err := eventSource.Bind(bind, parameters)
+	if err != nil {
+		glog.Warningf("BIND failed: %s", err)
+		msg := fmt.Sprintf("Bind failed with : %s", r)
+		return &v1alpha1.BindCondition{
+			Type:    v1alpha1.BindFailed,
+			Status:  corev1.ConditionTrue,
+			Reason:  "BindFailed",
+			Message: msg,
+		}, nil
+	}
+	return &v1alpha1.BindCondition{
+		Type:   v1alpha1.BindComplete,
+		Status: corev1.ConditionTrue,
+		// BUG(43) ID is a feature of the GitHub event source. If it is to become standardized,
+		// we should not be using a map[string]interface{} result.
+		Reason:  fmt.Sprintf("BindSuccess: Hook: %s", r["ID"].(string)),
+		Message: "Bind successful",
+	}, nil
+}
+
+func resolveParameters(kubeClient kubernetes.Interface, namespace string, trigger v1alpha1.EventTrigger) (map[string]interface{}, error) {
+	r := make(map[string]interface{})
 	if trigger.Parameters != nil && trigger.Parameters.Raw != nil && len(trigger.Parameters.Raw) > 0 {
 		p := make(map[string]interface{})
 		if err := yaml.Unmarshal(trigger.Parameters.Raw, &p); err != nil {
 			return r, err
 		}
 		for k, v := range p {
-			r.Parameters[k] = v
+			r[k] = v
 		}
 	}
 	if trigger.ParametersFrom != nil {
@@ -404,7 +419,7 @@ func resolveTrigger(kubeClient kubernetes.Interface, namespace string, trigger v
 				return r, err
 			}
 			for k, v := range pfs {
-				r.Parameters[k] = v
+				r[k] = v
 			}
 		}
 	}
@@ -446,16 +461,16 @@ func unmarshalJSON(in []byte) (map[string]interface{}, error) {
 	return parameters, nil
 }
 
-func getDomainSuffixFromElaConfig(cl kubernetes.Interface) (string, error) {
-	const name = "ela-config"
-	const namespace = "ela-system"
-	c, err := cl.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
-	if err != nil {
-		return "", err
+func (c *Controller) validateAction(namespace string, name string, actionType string) error {
+	switch actionType {
+	case action.ElafrosActionType:
+		_, err := c.routesLister.Routes(namespace).Get(name)
+		return err
+	case action.LoggingActionType:
+		return nil
+	default:
+		// Should this be an errors.NewNotFound? How does the action struct
+		// fit into the schema.GroupResource idea?
+		return fmt.Errorf("Unknown Action.Processor %q", actionType)
 	}
-	domainSuffix, ok := c.Data["domainSuffix"]
-	if !ok {
-		return "", fmt.Errorf("cannot find domainSuffix in %v: ConfigMap.Data is %#v", name, c.Data)
-	}
-	return domainSuffix, nil
 }
