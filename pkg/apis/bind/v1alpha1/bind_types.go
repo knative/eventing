@@ -35,9 +35,15 @@ type Bind struct {
 	Status BindStatus `json:"status"`
 }
 
+// BindAction describes where events should be delivered.
 type BindAction struct {
-	// RouteName specifies Elafros route as a target.
-	RouteName string `json:"routeName,omitempty"`
+	// Processor dictates the kind of service that will handle the Event.
+	// For example "elafros.dev/Route"
+	Processor string `json:"processor"`
+
+	// Name dicates the resource exposed by Processor that will handle the event.
+	// The semantics of Name is determined by Processor.
+	Name string `json:"name"`
 }
 
 // EventTrigger describes when an Event should be delivered.
