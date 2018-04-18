@@ -6,7 +6,7 @@ A. Ability to register an event sources and specify which events may be generate
 B. kubctl command to set up a trigger where a specific event will cause a specific action
 C. Example source generating an event
 D. Example action
-E. Events conform to CloudEvent 0.1 specification
+E. Events conform to [CloudEvents](https://github.com/cloudevents/spec) 0.1 specification
 
 # 0.2
 
