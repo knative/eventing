@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Kubernetes Authors.
+Copyright 2018 Google, Inc. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Implements a process that wraps an event-receiving webhook, an event
+// queue, and a sender which delivers events to their eventual destination.
 package main
 
 import (
@@ -54,6 +56,7 @@ var (
 )
 
 func main() {
+	defer glog.Flush()
 	flag.Parse()
 
 	// set up signals so we handle the first shutdown signal gracefully
@@ -101,13 +104,12 @@ func main() {
 	}()
 
 	// Set up HTTP endpoints
-	glog.Infof("Set up metrics scrape path %s", metricsScrapePath)
-	glog.Infof("Set up debug queue path %s", debugQueuePath)
-	glog.Infof("Hosting sendEvent API at prefix %s", sendEventPrefix)
-
 	mux := http.NewServeMux()
+	glog.Infof("Set up metrics scrape path %s", metricsScrapePath)
 	mux.Handle(metricsScrapePath, promhttp.Handler())
+	glog.Infof("Set up debug queue path %s", debugQueuePath)
 	mux.Handle(debugQueuePath, queue.NewDiagnosticHandler(q))
+	glog.Infof("Hosting sendEvent API at prefix %s", sendEventPrefix)
 	mux.Handle(sendEventPrefix, receiver)
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		glog.Infof("Unhandled %s to route %q", req.Method, req.URL.Path)
@@ -129,8 +131,6 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	srv.Shutdown(ctx)
-
-	glog.Flush()
 }
 
 func init() {

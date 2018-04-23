@@ -29,10 +29,10 @@ type diagnosticsHandler struct {
 }
 
 // NewDiagnosticHandler provides endpoints for inspecting
-// and diagnsing queued events.
+// and diagnosing queued events.
 // Eventually we'll need to decide more about how we will shard our queues
 // and what visibility we'll give to each. E.g. I suspect we'll support looking
-// at the lenght of queues for a single Flow or Action.
+// at the length of queues for a single Flow or Action.
 func NewDiagnosticHandler(q Queue) http.Handler {
 	h := &diagnosticsHandler{Queue: q, ServeMux: http.NewServeMux()}
 	h.HandleFunc("/queue/length", h.GetLength)

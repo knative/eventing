@@ -20,13 +20,14 @@ import (
 	"github.com/elafros/eventing/pkg/event"
 )
 
-// QueuedEvents are saved to an EventQueue before delivery
+// QueuedEvent is the element saved to an EventQueue before delivery
 type QueuedEvent struct {
 	Action  ActionType     `json:"action"`
 	Data    interface{}    `json:"data"`
 	Context *event.Context `json:"context"`
 }
 
+// ActionType is a shim while Bind's Action is not generic.
 // TODO(vaikas): Remove this once Bind's Action has been migrated
 // to be generic.
 type ActionType struct {

@@ -17,7 +17,6 @@ limitations under the License.
 package delivery
 
 import (
-	"fmt"
 	"net/http"
 	"regexp"
 
@@ -30,18 +29,19 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
-// If an event source knows the exact flow it is targeting it can bypass the work involved with
-// processing event triggers.
+// Currently the delivery service requires that Events are sent directly to an endpoint named
+// after a Bind which the Event matches. Future versions may offer a "firehose" endpoint that
+// will do late-time filtering of Events.
 var directSendEventRegExp = regexp.MustCompile(`^.*/namespaces/([^/]*)/flows/([^/]*):sendEvent$`)
 
 // TODO(vaikas): Remove this once Bind's Action has been migrated
 // to be generic.
-const alwaysUseProcessor = "eventing.elafros.dev/EventLogger"
+const hardCodedProcessor = "eventing.elafros.dev/EventLogger"
 
 func actionFromBind(bind *v1alpha1.Bind) queue.ActionType {
 	return queue.ActionType{
 		Name:      bind.Spec.Action.RouteName,
-		Processor: alwaysUseProcessor,
+		Processor: hardCodedProcessor,
 	}
 }
 
@@ -52,7 +52,7 @@ type Receiver struct {
 	bindsLister listers.BindLister
 }
 
-// NewReceiver creates a new Reciever object to enqueue events.
+// NewReceiver creates a new Receiver object to enqueue events.
 func NewReceiver(bindsLister listers.BindLister, eventQueue queue.Queue) *Receiver {
 	return &Receiver{bindsLister: bindsLister, eventQueue: eventQueue}
 }
@@ -81,15 +81,15 @@ func (r *Receiver) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	bind, err := r.bindsLister.Binds(string(matches[1])).Get(string(matches[2]))
+	namespace, flowName := string(matches[1]), string(matches[2])
+	bind, err := r.bindsLister.Binds(namespace).Get(flowName)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			fmt.Printf("Could not find Bind %s in namespace %s\n", matches[2], matches[1])
-			glog.V(3).Infof("Event sent to non-existant Bind %s in namespace %s", matches[2], matches[1])
+			glog.V(3).Infof("Event sent to non-existant Bind %s in namespace %s", flowName, namespace)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		glog.Errorf("Unknown error fetching bind %s in namespace %s: %s", matches[2], matches[1], err)
+		glog.Errorf("Unknown error fetching bind %s in namespace %s: %s", flowName, namespace, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -107,6 +107,4 @@ func (r *Receiver) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
 }

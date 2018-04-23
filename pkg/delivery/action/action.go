@@ -27,7 +27,9 @@ import (
 type Action interface {
 	// SendEvent delivers an event to the named Action synchronously.
 	// Should return the response from the action (for possible continuation)
-	// or an error
+	// or an error.
+	// Returns an interface{} result which is currently unused, but will be used to
+	// allow continuations in the future.
 	// TODO: May need interfaces to indicate whether errors are fatal or retryable.
 	SendEvent(name string, data interface{}, context *event.Context) (interface{}, error)
 }

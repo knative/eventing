@@ -22,20 +22,20 @@ import "errors"
 // Note: this isn't just a simple typedef for a queue because we will soon start
 // experimenting with other features, such as fetching an event separate from acking,
 // transactional ack + enqueue, cursors, etc.
-type InMemoryQueue struct {
+type inMemoryQueue struct {
 	ch chan QueuedEvent
 }
 
 // NewInMemoryQueue creates a new InMemoryQueue
-func NewInMemoryQueue(length int) *InMemoryQueue {
+func NewInMemoryQueue(length int) Queue {
 	ch := make(chan QueuedEvent, length)
-	return &InMemoryQueue{
+	return &inMemoryQueue{
 		ch: ch,
 	}
 }
 
 // Push implements Queue.Push
-func (q *InMemoryQueue) Push(event QueuedEvent) error {
+func (q *inMemoryQueue) Push(event QueuedEvent) error {
 	select {
 	case q.ch <- event:
 		return nil
@@ -45,7 +45,7 @@ func (q *InMemoryQueue) Push(event QueuedEvent) error {
 }
 
 // Pull implements Queue.Pull
-func (q *InMemoryQueue) Pull(stopCh <-chan struct{}) (QueuedEvent, bool) {
+func (q *inMemoryQueue) Pull(stopCh <-chan struct{}) (QueuedEvent, bool) {
 	select {
 	case event, ok := <-q.ch:
 		return event, ok
@@ -55,6 +55,6 @@ func (q *InMemoryQueue) Pull(stopCh <-chan struct{}) (QueuedEvent, bool) {
 }
 
 // Length returns Queue.Length
-func (q InMemoryQueue) Length() int {
+func (q inMemoryQueue) Length() int {
 	return len(q.ch)
 }

@@ -6,6 +6,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "action.go",
+        "doc.go",
         "elafros.go",
         "logging.go",
     ],

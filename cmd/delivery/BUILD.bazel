@@ -30,7 +30,6 @@ go_binary(
     embed = [":go_default_library"],
     importpath = "github.com/elafros/eventing/cmd/delivery",
     pure = "on",
-    visibility = ["//visibility:public"],
 )
 
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")

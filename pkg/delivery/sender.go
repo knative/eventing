@@ -79,5 +79,10 @@ func (s *Sender) Run(threadiness int, stopCh <-chan struct{}) error {
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(func() { s.RunOnce(stopCh) }, time.Second, stopCh)
 	}
+
+	glog.Info("Started workers")
+	<-stopCh
+	glog.Info("Shutting down workers")
+
 	return nil
 }
