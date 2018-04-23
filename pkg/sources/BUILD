@@ -3,9 +3,9 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "github.go",
         "event_source.go",
         "event_trigger.go",
+        "github.go",
     ],
     importpath = "github.com/elafros/eventing/pkg/sources",
     visibility = ["//visibility:public"],
