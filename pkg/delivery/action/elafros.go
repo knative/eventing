@@ -31,6 +31,7 @@ func NewElafrosAction(kubeclientset kubernetes.Interface, httpclient *http.Clien
 
 // SendEvent will POST the event spec to the root URI of the elafros route.
 func (a *ElafrosAction) SendEvent(name string, data interface{}, context *event.Context) (interface{}, error) {
+	glog.V(4).Info("Sending event", context.EventID, "to ELA route")
 	parts := strings.Split(name, "/")
 	if len(parts) != 2 {
 		return nil, fmt.Errorf("Expected elafros route '%s' to be in the form '<namespace>/<route>'", name)
@@ -44,6 +45,7 @@ func (a *ElafrosAction) SendEvent(name string, data interface{}, context *event.
 	}
 
 	addr := fmt.Sprintf("http://%s.%s.%s", route, namespace, domain)
+	glog.V(4).Info("Sending event", context.EventID, "to ELA route at", addr)
 	req, err := event.NewRequest(addr, data, *context)
 	if err != nil {
 		return nil, err

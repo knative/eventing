@@ -19,6 +19,7 @@ package bind
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ghodss/yaml"
@@ -464,6 +465,10 @@ func unmarshalJSON(in []byte) (map[string]interface{}, error) {
 func (c *Controller) validateAction(namespace string, name string, actionType string) error {
 	switch actionType {
 	case action.ElafrosActionType:
+		parts := strings.Split(name, "/")
+		if len(parts) == 2 {
+			namespace, name = parts[0], parts[1]
+		}
 		_, err := c.routesLister.Routes(namespace).Get(name)
 		return err
 	case action.LoggingActionType:

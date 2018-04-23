@@ -1,0 +1,52 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["action.go"],
+    importpath = "github.com/elafros/eventing/sample/actions",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/event:go_default_library",
+        "//vendor/github.com/golang/glog:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "action-demo",
+    embed = [":go_default_library"],
+    importpath = "github.com/elafros/elafros/sample/actions",
+    pure = "on",
+    visibility = ["//visibility:public"],
+)
+
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+
+go_image(
+    name = "image",
+    binary = ":action-demo",
+)
+
+load("@k8s_object//:defaults.bzl", "k8s_object")
+
+k8s_object(
+    name = "configuration",
+    images = {
+        "action-demo:latest": ":image",
+    },
+    template = ":configuration.yaml",
+)
+
+k8s_object(
+    name = "route",
+    template = ":route.yaml",
+)
+
+load("@io_bazel_rules_k8s//k8s:objects.bzl", "k8s_objects")
+
+k8s_objects(
+    name = "everything",
+    objects = [
+        ":route",
+        ":configuration",
+    ],
+)
