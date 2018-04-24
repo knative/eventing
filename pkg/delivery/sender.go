@@ -62,13 +62,12 @@ func (s *Sender) RunOnce(stopCh <-chan struct{}) error {
 	glog.V(4).Info("Sending Event %s to %s Action %s", event.Context.EventID, event.Action.Processor, event.Action.Name)
 	action, ok := s.actions[event.Action.Processor]
 	if !ok {
-		names := make([]string, 0, len(s.actions))
-		for name := range s.actions {
-			names = append(names, name)
+		keys := make([]string, 0, len(s.actions))
+		for key := range s.actions {
+			keys = append(keys, key)
 		}
-		runtime.HandleError(fmt.Errorf("Event %q is routed to unknown Processor %q. Valid names are %q",
-			event.Context.EventID, event.Action.Processor, names))
-		return true
+		return fmt.Errorf("Event %s is routed to unknown Processor '%s'; known processors are %q",
+			event.Context.EventID, event.Action.Processor, keys)
 	}
 
 	// TODO(inlined): retry strategies for errors and continuations for success.
@@ -87,6 +86,7 @@ func (s *Sender) run(stopCh <-chan struct{}) {
 			if err == io.EOF {
 				return
 			}
+			glog.Warning(err)
 			runtime.HandleError(err)
 		}
 	}

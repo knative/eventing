@@ -31,12 +31,16 @@ func NewElafrosAction(kubeclientset kubernetes.Interface, httpclient *http.Clien
 
 // SendEvent will POST the event spec to the root URI of the elafros route.
 func (a *ElafrosAction) SendEvent(name string, data interface{}, context *event.Context) (interface{}, error) {
-	glog.V(4).Info("Sending event", context.EventID, "to ELA route")
+	glog.Infof("Sending event %s to ELA route %s", context.EventID, name)
+	var namespace, route string
 	parts := strings.Split(name, "/")
 	if len(parts) != 2 {
-		return nil, fmt.Errorf("Expected elafros route '%s' to be in the form '<namespace>/<route>'", name)
+		// TODO(inlined): for compatibility with the github demo we implicitly pick up the namespace
+		// of the Bind resource. Should ensure that we'll always get routes in this form.
+		namespace, route = "default", name
+	} else {
+		namespace, route = parts[0], parts[1]
 	}
-	route, namespace := parts[1], parts[0]
 
 	domain, err := getDomainSuffixFromElaConfig(a.kubeclientset)
 	if err != nil {
@@ -44,18 +48,25 @@ func (a *ElafrosAction) SendEvent(name string, data interface{}, context *event.
 		return nil, err
 	}
 
-	addr := fmt.Sprintf("http://%s.%s.%s", route, namespace, domain)
-	glog.V(4).Info("Sending event", context.EventID, "to ELA route at", addr)
+	addr := fmt.Sprintf("http://%s.%s.%s/", route, namespace, domain)
+	glog.Info("Sending event", context.EventID, "to ELA route at", addr)
 	req, err := event.NewRequest(addr, data, *context)
 	if err != nil {
 		return nil, err
 	}
 
-	if _, err := a.httpclient.Do(req); err != nil {
+	res, err := a.httpclient.Do(req)
+	if err != nil {
+		glog.Errorf("Failed to send event to webhook %s; err=%s", addr, err)
 		return nil, err
 	}
+	// TODO: Standard handling of non-200 responses as errors.
+	if res.StatusCode/100 != 2 {
+		glog.Errorf("Got unsuccessful response code %d from %s", res.StatusCode, addr)
+	}
 
-	// TODO: non-200 responses as errors. Standard decoding of responses to be forwarded.
+	// TODO: Return response data so that it may be forwarded in chained Binds.
+	glog.Infof("Sent event to %s; got response %s", addr, res.Status)
 	return nil, nil
 }
 

@@ -1,0 +1,11 @@
+apiVersion: eventing.elafros.dev/v1alpha1
+kind: Bind
+metadata:
+  name: action-demo
+spec:
+  trigger:
+    # Note: trigger is not used right now.
+    # Demos must currently publish directly to the endpoint for this Bind
+  action:
+    name: DemoLoggingAction
+    processor: eventing.elafros.dev/EventLogger

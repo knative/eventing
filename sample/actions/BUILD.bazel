@@ -28,6 +28,18 @@ go_image(
 
 load("@k8s_object//:defaults.bzl", "k8s_object")
 
+# Step 1: Support for action as a debug statement
+k8s_object(
+    name = "bind",
+    template = ":bind.yaml",
+)
+
+# Step 2: Support for action as an ELA route
+# To enable: update the action-sample Bind to have the following
+# Spec.Action:
+#  Name: action-demo
+#  Processor: elafros.dev/Route
+
 k8s_object(
     name = "configuration",
     images = {
@@ -46,6 +58,7 @@ load("@io_bazel_rules_k8s//k8s:objects.bzl", "k8s_objects")
 k8s_objects(
     name = "everything",
     objects = [
+        ":bind",
         ":route",
         ":configuration",
     ],
