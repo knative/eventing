@@ -21,6 +21,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/elafros/eventing/pkg/apis/bind/v1alpha1"
 	"github.com/elafros/eventing/pkg/delivery"
 	"github.com/elafros/eventing/pkg/delivery/action"
 	"github.com/elafros/eventing/pkg/delivery/queue"
@@ -63,7 +64,7 @@ func TestSendEvent(t *testing.T) {
 	q.Push(queue.QueuedEvent{
 		Context: expectedContext,
 		Data:    expectedData,
-		Action: queue.ActionType{
+		Action: v1alpha1.BindAction{
 			Processor: actionType,
 			Name:      actionName,
 		},

@@ -17,6 +17,7 @@ limitations under the License.
 package queue
 
 import (
+	"github.com/elafros/eventing/pkg/apis/bind/v1alpha1"
 	"github.com/elafros/eventing/pkg/event"
 )
 
@@ -25,17 +26,9 @@ import (
 // It may be reasonable to just return a tuple of these values from
 // the Queue pull operations instead of defining the struct.
 type QueuedEvent struct {
-	Action  ActionType     `json:"action"`
-	Data    interface{}    `json:"data"`
-	Context *event.Context `json:"context"`
-}
-
-// ActionType is a shim while Bind's Action is not generic.
-// TODO(vaikas): Remove this once Bind's Action has been migrated
-// to be generic.
-type ActionType struct {
-	Name      string `json:"name"`
-	Processor string `json:"processor"`
+	Action  v1alpha1.BindAction `json:"action"`
+	Data    interface{}         `json:"data"`
+	Context *event.Context      `json:"context"`
 }
 
 // Queue implements basic features to allow asynchronous buffering of events.
