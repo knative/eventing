@@ -19,16 +19,18 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 
 	"github.com/elafros/eventing/pkg/event"
 	"github.com/golang/glog"
 )
 
 const (
-	databaseURL = "https://inlined-junkdrawer.firebaseio.com/"
+	databaseURL = "https://inlined-junkdrawer.firebaseio.com"
 	address     = ":8080"
 )
 
@@ -43,7 +45,8 @@ func SendEventToDB(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url, err := url.Parse(databaseURL + "seenEvents/" + context.EventID + "/.json")
+	addr := fmt.Sprintf("%s/seenEvents%s/%s/.json", databaseURL, os.Getenv("KEY_SUFFIX"), context.EventID)
+	url, err := url.Parse(addr)
 	if err != nil {
 		glog.Errorf("Failed to parse url %s", err)
 		w.WriteHeader(http.StatusInternalServerError)

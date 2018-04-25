@@ -87,6 +87,7 @@ func main() {
 	processors := map[string]action.Action{
 		action.LoggingActionType: action.NewLoggingAction(),
 		action.ElafrosActionType: action.NewElafrosAction(kubeClient, http.DefaultClient),
+		action.ServiceActionType: action.NewServiceAction(http.DefaultClient),
 	}
 	sender := delivery.NewSender(q, processors)
 

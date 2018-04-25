@@ -53,6 +53,21 @@ k8s_object(
     template = ":route.yaml",
 )
 
+# Step 3: Support for action as Service
+
+k8s_object(
+    name = "deployment",
+    images = {
+        "action-demo:latest": ":image",
+    },
+    template = ":deployment.yaml",
+)
+
+k8s_object(
+    name = "service",
+    template = ":service.yaml",
+)
+
 load("@io_bazel_rules_k8s//k8s:objects.bzl", "k8s_objects")
 
 k8s_objects(
@@ -61,5 +76,7 @@ k8s_objects(
         ":bind",
         ":route",
         ":configuration",
+        ":deployment",
+        ":service",
     ],
 )

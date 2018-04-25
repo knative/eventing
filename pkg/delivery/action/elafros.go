@@ -18,19 +18,19 @@ const (
 	ElafrosActionType = "elafros.dev/Route"
 )
 
-// ElafrosAction sends Events to an Elafros Route.
-type ElafrosAction struct {
+// elafrosAction sends Events to an Elafros Route.
+type elafrosAction struct {
 	kubeclientset kubernetes.Interface
 	httpclient    *http.Client
 }
 
 // NewElafrosAction creates an Action object that sends Events to Elafros Routes.
-func NewElafrosAction(kubeclientset kubernetes.Interface, httpclient *http.Client) *ElafrosAction {
-	return &ElafrosAction{kubeclientset: kubeclientset, httpclient: httpclient}
+func NewElafrosAction(kubeclientset kubernetes.Interface, httpclient *http.Client) Action {
+	return &elafrosAction{kubeclientset: kubeclientset, httpclient: httpclient}
 }
 
 // SendEvent will POST the event spec to the root URI of the elafros route.
-func (a *ElafrosAction) SendEvent(name string, data interface{}, context *event.Context) (interface{}, error) {
+func (a *elafrosAction) SendEvent(name string, data interface{}, context *event.Context) (interface{}, error) {
 	glog.Infof("Sending event %s to ELA route %s", context.EventID, name)
 	var namespace, route string
 	parts := strings.Split(name, "/")

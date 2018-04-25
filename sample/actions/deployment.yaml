@@ -11,22 +11,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: bind-controller
-  namespace: bind-system
+  name: action-demo
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: bind-controller
+        app: action-demo-service
     spec:
       containers:
-      - name: bind-controller
-        image: bind-controller:latest
-        args: [
-          "-logtostderr",
-          "-stderrthreshold", "INFO",
-        ]
+      - name: action-demo
+        image: action-demo:latest
+        ports: 
+          - containerPort: 8080
+        env:
+          - name: KEY_SUFFIX
+            value: "InService"

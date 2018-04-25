@@ -85,12 +85,7 @@ In the previous step, you already deployed the elafros route (also named 'action
 that we'll use in this step. To make the demo more exciting, edit "action.go" and change
 the `databaseURL` constant to a Firebase Realtime Database URL which you are an owner of.
 
-To make the `action-demo` Bind point to your new action, edit `bind.yaml` and change the spec.action to be the following:
-
-```
-  Name: action-demo
-  Processor: elafros.dev/Route
-```
+To make the `action-demo` Bind point to your new action, edit `bind.yaml` and change the spec.action.processor to `elafros.dev/Route` 
 
 Apply these changes with `blaze run sample/actions:everything.apply`
 
@@ -114,3 +109,28 @@ To clean up the sample service:
 ```shell
 bazel run sample/github:everything.delete
 ```
+
+## Demo 3: Reroute Bind to a K8S Service
+
+### Deploying assets
+
+This step will reuse the same Docker image as step 2, but will host `action.go` in
+a Deployment + Service. To verify that we are targeting a new backend, the Deployment
+sets an environment variable to change where in the Firebase Realtime Database events
+are published.
+
+To mkae the `action-demo` bind point to the Service vrsion of our demo, edit `bind.yaml` and change the spec.action.processor to `Service`.
+
+Apply these changes with `bazel run sample/actions:everything.apply`
+
+### Sending events
+
+Again, the same command will now have new effects:
+
+```
+sendevent http://${EVENT_DELIVERY_IP}/v1alpha1/namespaces/default/flows/action-demo:sendEvent
+```
+
+### Observing side-effects
+
+If you load your Firebase Realtime Database, you will see new event-ids appended to the "seenEventsInService" node every time you run `sendevent`
