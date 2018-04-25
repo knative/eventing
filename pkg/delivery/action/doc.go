@@ -14,12 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package sources
-
-import "github.com/elafros/eventing/pkg/apis/bind/v1alpha1"
-
-// EventSource manages the subscription of which events a developer is interested in.
-type EventSource interface {
-	// Bind creates a new subscription of events.
-	Bind(bind *v1alpha1.Bind, parameters map[string]interface{}) (map[string]interface{}, error)
-}
+// Package action implements the various Actions that can be invoked
+// in response to an Event.
+package action

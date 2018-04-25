@@ -12,23 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: eventing.elafros.dev/v1alpha1
-kind: Bind
+apiVersion: elafros.dev/v1alpha1
+kind: Route
 metadata:
-  name: bind-example
+  name: action-demo
   namespace: default
 spec:
-  trigger:
-    # TODO: eventType doesn't match the normal naming scheme. At min should
-    # make this "com.github.pullrequest". May consider making it something
-    # like "com.github.pull.create"
-    eventType: pullrequest
-    resource: inlined/robots
-    service: github.com
-    parametersFrom:
-      - secretKeyRef:
-          name: githubsecret
-          key: githubCredentials
-  action:
-    processor: elafros.dev/Route
-    name: git-webhook
+  traffic:
+  - configurationName: action-demo
+    percent: 100

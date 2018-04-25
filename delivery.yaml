@@ -14,18 +14,20 @@
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: bind-controller
+  name: event-delivery
   namespace: bind-system
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: bind-controller
+        app: event-delivery
     spec:
+      # TODO(inlined): create new narrower role
+      serviceAccountName: bind-controller
       containers:
-      - name: bind-controller
-        image: bind-controller:latest
+      - name: event-delivery
+        image: event-delivery:latest
         args: [
           "-logtostderr",
           "-stderrthreshold", "INFO",

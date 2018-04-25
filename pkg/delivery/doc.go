@@ -14,12 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package sources
-
-import "github.com/elafros/eventing/pkg/apis/bind/v1alpha1"
-
-// EventSource manages the subscription of which events a developer is interested in.
-type EventSource interface {
-	// Bind creates a new subscription of events.
-	Bind(bind *v1alpha1.Bind, parameters map[string]interface{}) (map[string]interface{}, error)
-}
+// Package delivery implements an event delivery service. The Receiver
+// interface exposes a WebHook where compatible Events can be sent.
+// The Receiver enqueues the Event and then acknowledges the webhook.
+// A Sender polls the events Queue and delivers the event to the
+// appropriate Action according to the Bind that matched the Event.
+package delivery
