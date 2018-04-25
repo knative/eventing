@@ -1,0 +1,13 @@
+apiVersion: elafros.dev/v1alpha1
+kind: Configuration
+metadata:
+  name: action-demo
+  namespace: default
+spec:
+  revisionTemplate:
+    metadata:
+      labels:
+        elafros.dev/type: container
+    spec:
+      container:
+        image: action-demo:latest

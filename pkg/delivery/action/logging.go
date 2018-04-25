@@ -30,10 +30,10 @@ const (
 )
 
 // A LoggingAction will log and drop Events.
-type LoggingAction struct{}
+type loggingAction struct{}
 
 // SendEvent implements Action.SendEvent
-func (a LoggingAction) SendEvent(name string, data interface{}, context *event.Context) (interface{}, error) {
+func (a loggingAction) SendEvent(name string, data interface{}, context *event.Context) (interface{}, error) {
 	event := map[string]interface{}{
 		"data":    data,
 		"context": context,
@@ -47,6 +47,6 @@ func (a LoggingAction) SendEvent(name string, data interface{}, context *event.C
 }
 
 // NewLoggingAction creates an Action that will log and drop Events.
-func NewLoggingAction() LoggingAction {
-	return LoggingAction{}
+func NewLoggingAction() Action {
+	return loggingAction{}
 }

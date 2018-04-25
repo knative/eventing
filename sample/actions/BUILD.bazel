@@ -1,0 +1,89 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["action.go"],
+    importpath = "github.com/elafros/eventing/sample/actions",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/event:go_default_library",
+        "//vendor/github.com/golang/glog:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "action-demo",
+    embed = [":go_default_library"],
+    importpath = "github.com/elafros/elafros/sample/actions",
+    pure = "on",
+    visibility = ["//visibility:public"],
+)
+
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+
+go_image(
+    name = "image",
+    binary = ":action-demo",
+)
+
+load("@k8s_object//:defaults.bzl", "k8s_object")
+
+# Step 1: Support for action as a debug statement
+k8s_object(
+    name = "bind",
+    template = ":bind.yaml",
+)
+
+# Step 2: Support for action as an ELA route
+# To enable: update the action-sample Bind to have the following
+# Spec.Action:
+#  Name: action-demo
+#  Processor: elafros.dev/Route
+
+k8s_object(
+    name = "configuration",
+    images = {
+        "action-demo:latest": ":image",
+    },
+    template = ":configuration.yaml",
+)
+
+k8s_object(
+    name = "route",
+    template = ":route.yaml",
+)
+
+# Step 3: Support for action as Service
+
+k8s_object(
+    name = "deployment",
+    images = {
+        "action-demo:latest": ":image",
+    },
+    template = ":deployment.yaml",
+)
+
+k8s_object(
+    name = "service",
+    template = ":service.yaml",
+)
+
+load("@io_bazel_rules_k8s//k8s:objects.bzl", "k8s_objects")
+
+k8s_objects(
+    name = "everything",
+    objects = [
+        ":bind",
+        ":route",
+        ":configuration",
+        ":deployment",
+        ":service",
+    ],
+)
+
+go_binary(
+    name = "actions",
+    embed = [":go_default_library"],
+    importpath = "github.com/elafros/eventing/sample/actions",
+    visibility = ["//visibility:public"],
+)

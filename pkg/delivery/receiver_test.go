@@ -51,7 +51,8 @@ var (
 				Resource:  "{abc}/123",
 			},
 			Action: v1alpha1.BindAction{
-				RouteName: "vaikas.fix.this",
+				Processor: "eventing.elafros.dev/WebHook",
+				Name:      "https://demo.google.com/notreal",
 			},
 		},
 	}
@@ -162,5 +163,8 @@ func TestEnqueueEvent(t *testing.T) {
 	}
 	if !reflect.DeepEqual(data, event.Data) {
 		t.Fatalf("Event data was not marshalled correctly; expected=%+v got=%+v", data, event.Data)
+	}
+	if !reflect.DeepEqual(demoBind.Spec.Action, event.Action) {
+		t.Fatalf("Event action was not marshalled correctly; expected=%+v got=%+v", demoBind.Spec.Action, event.Action)
 	}
 }

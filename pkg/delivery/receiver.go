@@ -34,17 +34,6 @@ import (
 // will do late-time filtering of Events.
 var directSendEventRegExp = regexp.MustCompile(`^.*/namespaces/([^/]*)/flows/([^/]*):sendEvent$`)
 
-// TODO(vaikas): Remove this once Bind's Action has been migrated
-// to be generic.
-const hardCodedProcessor = "eventing.elafros.dev/EventLogger"
-
-func actionFromBind(bind *v1alpha1.Bind) queue.ActionType {
-	return queue.ActionType{
-		Name:      bind.Spec.Action.RouteName,
-		Processor: hardCodedProcessor,
-	}
-}
-
 // Receiver manages the HTTP endpoints for receiving events as well as
 // stats about the queue for processing events.
 type Receiver struct {
@@ -58,7 +47,7 @@ func NewReceiver(bindsLister listers.BindLister, eventQueue queue.Queue) *Receiv
 }
 
 // SendEvent enqueues an event data and Context for delivery to a particular action.
-func (r *Receiver) SendEvent(action queue.ActionType, data interface{}, context *event.Context) error {
+func (r *Receiver) SendEvent(action v1alpha1.BindAction, data interface{}, context *event.Context) error {
 	return r.eventQueue.Push(queue.QueuedEvent{
 		Action:  action,
 		Data:    data,
@@ -68,6 +57,7 @@ func (r *Receiver) SendEvent(action queue.ActionType, data interface{}, context 
 
 // ServeHTTP implements the external REST API that other services will use to send events.
 func (r *Receiver) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	glog.Infof("Serving %s", req.URL.Path)
 	if req.Method != http.MethodPost {
 		glog.V(3).Info("Cannot handle method", req.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -102,9 +92,13 @@ func (r *Receiver) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := r.SendEvent(actionFromBind(bind), data, context); err != nil {
+	if err := r.SendEvent(bind.Spec.Action, data, context); err != nil {
 		glog.Error("Failed to enqueue event", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	glog.Infof("Enqueued event %s for delivery to %s action %s",
+		context.EventID, bind.Spec.Action.Processor, bind.Spec.Action.Name)
+	w.WriteHeader(http.StatusOK)
 }
