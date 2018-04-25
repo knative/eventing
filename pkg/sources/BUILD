@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "event_source.go",
+        "event_trigger.go",
         "github.go",
     ],
     importpath = "github.com/elafros/eventing/pkg/sources",

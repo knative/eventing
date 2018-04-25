@@ -80,3 +80,10 @@ k8s_objects(
         ":service",
     ],
 )
+
+go_binary(
+    name = "actions",
+    embed = [":go_default_library"],
+    importpath = "github.com/elafros/eventing/sample/actions",
+    visibility = ["//visibility:public"],
+)
