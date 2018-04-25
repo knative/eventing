@@ -69,8 +69,8 @@ func TestSendEvent(t *testing.T) {
 		},
 	})
 
-	if ok := sender.RunOnce(nil); !ok {
-		t.Fatal("expected RunOnce() to return true")
+	if err := sender.RunOnce(nil); err != nil {
+		t.Fatalf("RunOnce() failed with err: %s", err)
 	}
 	if !actionInvoked {
 		t.Fatal("Did not invoke action")

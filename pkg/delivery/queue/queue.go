@@ -21,6 +21,9 @@ import (
 )
 
 // QueuedEvent is the element saved to an EventQueue before delivery
+// TODO(inlined): This should probably be made package protected;
+// It may be reasonable to just return a tuple of these values from
+// the Queue pull operations instead of defining the struct.
 type QueuedEvent struct {
 	Action  ActionType     `json:"action"`
 	Data    interface{}    `json:"data"`

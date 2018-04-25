@@ -18,6 +18,7 @@ package delivery
 
 import (
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/golang/glog"
@@ -46,38 +47,49 @@ func NewSender(
 }
 
 // RunOnce processes a single event from the queue.
+// Errors are unactionable and reported to the runtime rather than returned.
+// Returns true if more processing is possible.
 // TODO: If the Queue was redesigned so that events are pulled with a lease, then we could restructure RunOnce to not
 // need the stopCh (though does it really matter now anyway if the in-memory queue goes away?)
-func (s *Sender) RunOnce(stopCh <-chan struct{}) bool {
+func (s *Sender) RunOnce(stopCh <-chan struct{}) error {
 	// TODO(inlined): Pull should only take a lease on the queued event. The receiver should need
 	// to acknowledge the event and possibly transactionally enqueue subsequent events.
 	event, ok := s.eventQueue.Pull(stopCh)
 	if !ok {
-		glog.V(4).Info("RunOnce shutting down")
-		return false
+		return io.EOF
 	}
 
 	glog.V(4).Info("Sending Event %s to %s Action %s", event.Context.EventID, event.Action.Processor, event.Action.Name)
 	action, ok := s.actions[event.Action.Processor]
 	if !ok {
-		runtime.HandleError(fmt.Errorf("Event %s is routed to unknown Processor '%s'", event.Context.EventID, event.Action.Processor))
-		return true
+		return fmt.Errorf("Event %s is routed to unknown Processor '%s'", event.Context.EventID, event.Action.Processor)
 	}
 
 	// TODO(inlined): retry strategies for errors and continuations for success.
 	res, err := action.SendEvent(event.Action.Name, event.Data, event.Context)
 	if err != nil {
-		runtime.HandleError(fmt.Errorf("Action for event %s returned error: %s", event.Context.EventID, err))
-	} else {
-		glog.V(4).Info("Event %s handled with response %+v", event.Context.EventID, res)
+		return fmt.Errorf("Action for event %s returned error: %s", event.Context.EventID, err)
 	}
-	return true
+	glog.V(4).Info("Event %s handled with response %+v", event.Context.EventID, res)
+	return nil
+}
+
+func (s *Sender) run(stopCh <-chan struct{}) {
+	for {
+		err := s.RunOnce(stopCh)
+		if err != nil {
+			if err == io.EOF {
+				return
+			}
+			runtime.HandleError(err)
+		}
+	}
 }
 
 // Run runs Sender until stopCh is closed.
 func (s *Sender) Run(threadiness int, stopCh <-chan struct{}) error {
 	for i := 0; i < threadiness; i++ {
-		go wait.Until(func() { s.RunOnce(stopCh) }, time.Second, stopCh)
+		go wait.Until(func() { s.run(stopCh) }, time.Second, stopCh)
 	}
 
 	glog.Info("Started workers")
