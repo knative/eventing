@@ -27,7 +27,7 @@ import (
 var (
 	context = &event.Context{
 		CloudEventsVersion: "0.0.1-preview-1",
-		EventId:            "eventid-123",
+		EventID:            "eventid-123",
 		EventType:          "google.firestore.document.create",
 		EventTime:          time.Now().UTC(),
 		Source:             "//firestore.googleapis.com/projects/demo/databases/default/documents/users/inlined",

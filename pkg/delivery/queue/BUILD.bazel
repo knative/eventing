@@ -1,0 +1,17 @@
+package(default_visibility = ["//visibility:public"])
+
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "diagnostics.go",
+        "memory_queue.go",
+        "queue.go",
+    ],
+    importpath = "github.com/elafros/eventing/pkg/delivery/queue",
+    deps = [
+        "//pkg/event:go_default_library",
+        "//vendor/github.com/golang/glog:go_default_library",
+    ],
+)

@@ -18,6 +18,14 @@ k8s_object(
 )
 
 k8s_object(
+    name = "delivery",
+    images = {
+        "event-delivery:latest": "//cmd/delivery:image",
+    },
+    template = "delivery.yaml",
+)
+
+k8s_object(
     name = "namespace",
     template = "namespace.yaml",
 )
@@ -66,5 +74,6 @@ k8s_objects(
         ":eventtype",
         ":eventsource",
         ":controller",
+        ":delivery",
     ],
 )
