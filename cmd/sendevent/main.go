@@ -48,16 +48,16 @@ func init() {
 func main() {
 	flag.Parse()
 
-	if flag.NArg() != 1 {
-		fmt.Println("Missing webhook address")
+	if len(flag.Args()) != 1 {
+		fmt.Println("Usage: sendevent [flags] <webhook>\nFor details about valid flags, run sendevent --help")
 		os.Exit(1)
 	}
 
-	webhook := flag.Args()[0]
+	webhook := flag.Arg(0)
 
 	var untyped map[string]interface{}
 	if err := json.Unmarshal([]byte(data), &untyped); err != nil {
-		fmt.Println("Currenlty sendevent only supports JSON event data")
+		fmt.Println("Currently sendevent only supports JSON event data")
 		os.Exit(1)
 	}
 
