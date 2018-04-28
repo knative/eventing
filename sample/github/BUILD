@@ -33,7 +33,7 @@ load("@k8s_object//:defaults.bzl", "k8s_object")
 k8s_object(
     name = "configuration",
     images = {
-        "git-webhook:latest": ":image",
+        "github.com/elafros/eventing/sample/github": ":image",
     },
     template = ":configuration.yaml",
 )
