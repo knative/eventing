@@ -8,7 +8,7 @@ the samples directory.
 1. Ability to register an event sources and specify which events may be
    generated from that source
    [Proposal](https://github.com/elafros/eventing/issues/39)
-1. kubctl command to set up a trigger where a specific event will cause a
+1. kubectl command to set up a trigger where a specific event will cause a
   specific action powered by a specific processor
 1. Example source generating an event
 1. Example action
