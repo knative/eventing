@@ -24,7 +24,7 @@ spec:
         elafros.dev/type: container
     spec:
       container:
-        image: git-webhook:latest
+        image: github.com/elafros/eventing/sample/github
         env:
           - name: GITHUB_SECRET
             valueFrom:
