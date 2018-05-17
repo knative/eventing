@@ -30,6 +30,3 @@ dep prune
 rm -rf $(find vendor/ -name 'BUILD')
 rm -rf $(find vendor/ -name 'BUILD.bazel')
 rm -rf $(find vendor/ -name '*_test.go')
-
-# Make sure that BUILD files are up to date (the above removes them).
-bazel run //:gazelle

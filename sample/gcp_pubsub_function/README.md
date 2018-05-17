@@ -35,7 +35,7 @@ gcloud pubsub topics create ela-demo
 
 You can deploy this to Elafros from the root directory via:
 ```shell
-bazel run sample/gcp_pubsub_function:everything.create
+ko apply -f sample/gcp_pubsub_function/
 ```
 
 Once deployed, you can inspect the created resources with `kubectl` commands:
@@ -168,5 +168,5 @@ $gcloud pubsub subscribers list
 To clean up the sample service:
 
 ```shell
-bazel run sample/github:everything.delete
+ko delete -f sample/gcp_pubsub_function/
 ```

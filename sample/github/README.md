@@ -46,7 +46,7 @@ stringData:
 
 You can deploy this to Elafros from the root directory via:
 ```shell
-bazel run sample/github:everything.create
+ko apply -f sample/github/
 ```
 
 Once deployed, you can inspect the created resources with `kubectl` commands:
@@ -126,5 +126,5 @@ will be modified with the suffix '(looks pretty legit to me)'
 To clean up the sample service:
 
 ```shell
-bazel run sample/github:everything.delete
+ko delete -f sample/github/
 ```

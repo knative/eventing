@@ -45,7 +45,7 @@ Once you reach this point you are ready to do a full build and deploy as describ
 Once you've [setup your development environment](#getting-started), stand up `Elafros Binding` with:
 
 ```shell
-bazel run :everything.apply
+ko apply -f config/
 ```
 
 You can see things running with:
@@ -72,7 +72,7 @@ These are both idempotent, and we expect that running these at `HEAD` to have no
 
 Once the codegen and dependency information is correct, redeploying the controller is simply:
 ```shell
-bazel run :controller.apply
+ko apply -f config/controller.yaml
 ```
 
 Or you can [clean it up completely](./README.md#clean-up) and [completely
@@ -86,12 +86,7 @@ Running tests as you make changes to the code-base is pretty simple. See [the te
 
 You can delete all of the service components with:
 ```shell
-bazel run :everything.delete
-```
-
-Delete all cached environment variables (e.g. `DOCKER_REPO_OVERRIDE`):
-```shell
-bazel clean
+ko delete -f config/
 ```
 
 ## Telemetry
