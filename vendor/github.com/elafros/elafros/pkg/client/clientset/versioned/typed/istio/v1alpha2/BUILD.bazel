@@ -8,6 +8,7 @@ go_library(
         "istio_client.go",
         "routerule.go",
     ],
+    importmap = "bindcrd/vendor/github.com/elafros/elafros/pkg/client/clientset/versioned/typed/istio/v1alpha2",
     importpath = "github.com/elafros/elafros/pkg/client/clientset/versioned/typed/istio/v1alpha2",
     visibility = ["//visibility:public"],
     deps = [

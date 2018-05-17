@@ -8,6 +8,7 @@ go_library(
         "revision.go",
         "route.go",
     ],
+    importmap = "bindcrd/vendor/github.com/elafros/elafros/pkg/client/listers/ela/v1alpha1",
     importpath = "github.com/elafros/elafros/pkg/client/listers/ela/v1alpha1",
     visibility = ["//visibility:public"],
     deps = [

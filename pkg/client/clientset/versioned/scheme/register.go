@@ -40,7 +40,7 @@ func init() {
 //
 //   import (
 //     "k8s.io/client-go/kubernetes"
-//     clientsetscheme "k8s.io/client-go/kuberentes/scheme"
+//     clientsetscheme "k8s.io/client-go/kubernetes/scheme"
 //     aggregatorclientsetscheme "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme"
 //   )
 //
@@ -51,5 +51,4 @@ func init() {
 // correctly.
 func AddToScheme(scheme *runtime.Scheme) {
 	eventingv1alpha1.AddToScheme(scheme)
-
 }

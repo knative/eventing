@@ -10,7 +10,8 @@ http_archive(
 # Pull in rules_go
 git_repository(
     name = "io_bazel_rules_go",
-    commit = "737df20c53499fd84b67f04c6ca9ccdee2e77089",
+    # HEAD as of 2018-03-29
+    commit = "7de345ea707a8cb29b489f5f4d9a381ba8a98f1a",
     remote = "https://github.com/bazelbuild/rules_go.git",
 )
 
@@ -23,8 +24,8 @@ go_register_toolchains()
 # Pull in rules_docker
 git_repository(
     name = "io_bazel_rules_docker",
-    # HEAD as of 2018-02-03
-    commit = "bf925ec58ad96f2ead21cd8379caedbe3c26efc9",
+    # HEAD as of 2018-03-09
+    commit = "483759bba7be220a1014e7ba1cf989f052fefa2c",
     remote = "https://github.com/bazelbuild/rules_docker.git",
 )
 
@@ -46,8 +47,8 @@ _go_image_repos()
 # Pull in rules_k8s
 git_repository(
     name = "io_bazel_rules_k8s",
-    # HEAD as of 2018-02-03
-    commit = "959c5adc2d7863c0ff445c6fd789cfd04bc1815c",
+    # HEAD as of 2018-03-09
+    commit = "4348f8e28b70cf3aff7ca8e008e8dc7ac49bad92",
     remote = "https://github.com/bazelbuild/rules_k8s",
 )
 
@@ -55,7 +56,9 @@ load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_repositories", "k8s_defaults")
 
 k8s_repositories()
 
+# See ./print-workspace-status.sh for definitions.
 _CLUSTER = "{STABLE_K8S_CLUSTER}"
+
 _REPOSITORY = "{STABLE_DOCKER_REPO}"
 
 k8s_defaults(
@@ -63,25 +66,3 @@ k8s_defaults(
     cluster = _CLUSTER,
     image_chroot = _REPOSITORY,
 )
-
-go_repository(
-    name = "io_k8s_code_generator",
-    commit = "3c1fe2637f4efce271f1e6f50e039b2a0467c60c",
-    importpath = "k8s.io/code-generator",
-)
-
-go_repository(
-    name = "io_k8s_gengo",
-    commit = "1ef560bbde5195c01629039ad3b337ce63e7b321",
-    importpath = "k8s.io/gengo",
-)
-
-go_repository(
-    name = "com_github_spf13_pflag",
-    commit = "4c012f6dcd9546820e378d0bdda4d8fc772cdfea",
-    importpath = "github.com/spf13/pflag",
-)
-
-# Pull in the go_image stuff.
-load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
-

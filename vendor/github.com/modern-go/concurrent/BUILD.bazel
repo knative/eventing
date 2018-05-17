@@ -8,6 +8,7 @@ go_library(
         "go_below_19.go",
         "unbounded_executor.go",
     ],
+    importmap = "bindcrd/vendor/github.com/modern-go/concurrent",
     importpath = "github.com/modern-go/concurrent",
     visibility = ["//visibility:public"],
 )

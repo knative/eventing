@@ -6,6 +6,7 @@ go_library(
         "expansion_generated.go",
         "routerule.go",
     ],
+    importmap = "bindcrd/vendor/github.com/elafros/elafros/pkg/client/listers/istio/v1alpha2",
     importpath = "github.com/elafros/elafros/pkg/client/listers/istio/v1alpha2",
     visibility = ["//visibility:public"],
     deps = [

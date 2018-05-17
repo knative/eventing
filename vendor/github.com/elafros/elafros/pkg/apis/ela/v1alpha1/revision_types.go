@@ -36,6 +36,14 @@ type Revision struct {
 	Status RevisionStatus `json:"status,omitempty"`
 }
 
+// RevisionTemplateSpec describes the data a revision should have when created from a template.
+// Based on: https://github.com/kubernetes/api/blob/e771f807/core/v1/types.go#L3179-L3190
+type RevisionTemplateSpec struct {
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec RevisionSpec `json:"spec,omitempty"`
+}
+
 type RevisionServingStateType string
 
 const (
@@ -59,12 +67,6 @@ type RevisionSpec struct {
 	// ObjectMeta.Generation instead.
 	Generation int64 `json:"generation,omitempty"`
 
-	// TODO(grantr): This is used to generate names for sub-resources. Can we
-	// do that a different way that doesn't require this reference to the Route?
-	// Service (Route) this is part of. Points to the Service (Route) in the
-	// namespace.
-	Service string `json:"service"`
-
 	// Desired serving state of the Revision. Used to determine what state the
 	// Kubernetes resources should be in.
 	ServingState RevisionServingStateType `json:"servingState"`
@@ -72,7 +74,7 @@ type RevisionSpec struct {
 	// The name of the build that is producing the container image that we are deploying.
 	BuildName string `json:"buildName,omitempty"`
 
-	ContainerSpec *corev1.Container `json:"containerSpec,omitempty"`
+	Container *corev1.Container `json:"container,omitempty"`
 }
 
 // RevisionConditionType represents an Revision condition value
@@ -82,6 +84,8 @@ const (
 	// RevisionConditionReady is set when the revision is starting to materialize
 	// runtime resources, and becomes true when those resources are ready.
 	RevisionConditionReady RevisionConditionType = "Ready"
+	// RevisionConditionFailed is set when the revision readiness check exceeds 3.
+	RevisionConditionFailed RevisionConditionType = "Failed"
 	// RevisionConditionBuildComplete is set when the revision has an associated build
 	// and is marked True if/once the Build has completed succesfully.
 	RevisionConditionBuildComplete RevisionConditionType = "BuildComplete"
@@ -143,6 +147,15 @@ func (r *Revision) GetSpecJSON() ([]byte, error) {
 // RevisionConditionReady returns true if ConditionStatus is True
 func (rs *RevisionStatus) IsReady() bool {
 	if c := rs.GetCondition(RevisionConditionReady); c != nil {
+		return c.Status == corev1.ConditionTrue
+	}
+	return false
+}
+
+// IsFailed looks at the conditions and if the Status has a condition
+// RevisionConditionFailed returns true if ConditionStatus is True
+func (rs *RevisionStatus) IsFailed() bool {
+	if c := rs.GetCondition(RevisionConditionFailed); c != nil {
 		return c.Status == corev1.ConditionTrue
 	}
 	return false

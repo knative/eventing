@@ -6,10 +6,11 @@ go_library(
         "clientset.go",
         "doc.go",
     ],
+    importmap = "bindcrd/vendor/github.com/elafros/elafros/pkg/client/clientset/versioned",
     importpath = "github.com/elafros/elafros/pkg/client/clientset/versioned",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/github.com/elafros/elafros/pkg/client/clientset/versioned/typed/cloudbuild/v1alpha1:go_default_library",
+        "//vendor/github.com/elafros/elafros/pkg/client/clientset/versioned/typed/build/v1alpha1:go_default_library",
         "//vendor/github.com/elafros/elafros/pkg/client/clientset/versioned/typed/ela/v1alpha1:go_default_library",
         "//vendor/github.com/elafros/elafros/pkg/client/clientset/versioned/typed/istio/v1alpha2:go_default_library",
         "//vendor/github.com/golang/glog:go_default_library",
