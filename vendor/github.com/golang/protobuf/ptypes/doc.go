@@ -29,35 +29,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package proto
-
-import (
-	"testing"
-)
-
-// This is a separate file and package from size_test.go because that one uses
-// generated messages and thus may not be in package proto without having a circular
-// dependency, whereas this file tests unexported details of size.go.
-
-func TestVarintSize(t *testing.T) {
-	// Check the edge cases carefully.
-	testCases := []struct {
-		n    uint64
-		size int
-	}{
-		{0, 1},
-		{1, 1},
-		{127, 1},
-		{128, 2},
-		{16383, 2},
-		{16384, 3},
-		{1<<63 - 1, 9},
-		{1 << 63, 10},
-	}
-	for _, tc := range testCases {
-		size := SizeVarint(tc.n)
-		if size != tc.size {
-			t.Errorf("sizeVarint(%d) = %d, want %d", tc.n, size, tc.size)
-		}
-	}
-}
+/*
+Package ptypes contains code for interacting with well-known types.
+*/
+package ptypes

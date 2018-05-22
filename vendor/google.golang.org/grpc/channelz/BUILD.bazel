@@ -6,6 +6,7 @@ go_library(
         "funcs.go",
         "types.go",
     ],
+    importmap = "bindcrd/vendor/google.golang.org/grpc/channelz",
     importpath = "google.golang.org/grpc/channelz",
     visibility = ["//visibility:public"],
     deps = [

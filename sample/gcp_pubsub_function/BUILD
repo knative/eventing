@@ -10,7 +10,6 @@ go_library(
 go_binary(
     name = "gcp_pubsub_function",
     embed = [":go_default_library"],
-    importpath = "github.com/elafros/eventing/sample/gcp_pubsub_function",
     pure = "on",
     visibility = ["//visibility:public"],
 )

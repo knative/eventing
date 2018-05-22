@@ -1,8 +1,9 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
     srcs = ["iam.go"],
+    importmap = "bindcrd/vendor/cloud.google.com/go/iam",
     importpath = "cloud.google.com/go/iam",
     visibility = ["//visibility:public"],
     deps = [
@@ -12,12 +13,4 @@ go_library(
         "//vendor/google.golang.org/grpc:go_default_library",
         "//vendor/google.golang.org/grpc/codes:go_default_library",
     ],
-)
-
-go_test(
-    name = "go_default_test",
-    srcs = ["iam_test.go"],
-    embed = [":go_default_library"],
-    importpath = "cloud.google.com/go/iam",
-    deps = ["//vendor/cloud.google.com/go/internal/testutil:go_default_library"],
 )

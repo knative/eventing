@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
@@ -8,6 +8,7 @@ go_library(
         "publisher_client.go",
         "subscriber_client.go",
     ],
+    importmap = "bindcrd/vendor/cloud.google.com/go/pubsub/apiv1",
     importpath = "cloud.google.com/go/pubsub/apiv1",
     visibility = ["//visibility:public"],
     deps = [
@@ -22,49 +23,5 @@ go_library(
         "//vendor/google.golang.org/grpc:go_default_library",
         "//vendor/google.golang.org/grpc/codes:go_default_library",
         "//vendor/google.golang.org/grpc/metadata:go_default_library",
-    ],
-)
-
-go_test(
-    name = "go_default_test",
-    srcs = [
-        "ListTopics_smoke_test.go",
-        "mock_test.go",
-    ],
-    embed = [":go_default_library"],
-    importpath = "cloud.google.com/go/pubsub/apiv1",
-    deps = [
-        "//vendor/cloud.google.com/go/internal/testutil:go_default_library",
-        "//vendor/github.com/golang/protobuf/proto:go_default_library",
-        "//vendor/github.com/golang/protobuf/ptypes:go_default_library",
-        "//vendor/github.com/golang/protobuf/ptypes/empty:go_default_library",
-        "//vendor/github.com/golang/protobuf/ptypes/timestamp:go_default_library",
-        "//vendor/golang.org/x/net/context:go_default_library",
-        "//vendor/google.golang.org/api/iterator:go_default_library",
-        "//vendor/google.golang.org/api/option:go_default_library",
-        "//vendor/google.golang.org/genproto/googleapis/iam/v1:go_default_library",
-        "//vendor/google.golang.org/genproto/googleapis/pubsub/v1:go_default_library",
-        "//vendor/google.golang.org/genproto/googleapis/rpc/status:go_default_library",
-        "//vendor/google.golang.org/genproto/protobuf/field_mask:go_default_library",
-        "//vendor/google.golang.org/grpc:go_default_library",
-        "//vendor/google.golang.org/grpc/codes:go_default_library",
-        "//vendor/google.golang.org/grpc/metadata:go_default_library",
-        "//vendor/google.golang.org/grpc/status:go_default_library",
-    ],
-)
-
-go_test(
-    name = "go_default_xtest",
-    srcs = [
-        "publisher_client_example_test.go",
-        "pubsub_pull_example_test.go",
-        "subscriber_client_example_test.go",
-    ],
-    importpath = "cloud.google.com/go/pubsub/apiv1_test",
-    deps = [
-        ":go_default_library",
-        "//vendor/golang.org/x/net/context:go_default_library",
-        "//vendor/google.golang.org/api/iterator:go_default_library",
-        "//vendor/google.golang.org/genproto/googleapis/pubsub/v1:go_default_library",
     ],
 )

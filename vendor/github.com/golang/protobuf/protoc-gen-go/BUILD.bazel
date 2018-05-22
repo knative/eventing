@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_library(
     name = "go_default_library",
@@ -6,6 +6,7 @@ go_library(
         "link_grpc.go",
         "main.go",
     ],
+    importmap = "bindcrd/vendor/github.com/golang/protobuf/protoc-gen-go",
     importpath = "github.com/golang/protobuf/protoc-gen-go",
     visibility = ["//visibility:private"],
     deps = [
@@ -18,13 +19,5 @@ go_library(
 go_binary(
     name = "protoc-gen-go",
     embed = [":go_default_library"],
-    importpath = "github.com/golang/protobuf/protoc-gen-go",
     visibility = ["//visibility:public"],
-)
-
-go_test(
-    name = "go_default_test",
-    srcs = ["golden_test.go"],
-    embed = [":go_default_library"],
-    importpath = "github.com/golang/protobuf/protoc-gen-go",
 )

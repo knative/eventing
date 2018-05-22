@@ -7,6 +7,7 @@ go_library(
         "go19.go",
         "not_go19.go",
     ],
+    importmap = "bindcrd/vendor/google.golang.org/api/transport",
     importpath = "google.golang.org/api/transport",
     visibility = ["//visibility:public"],
     deps = [

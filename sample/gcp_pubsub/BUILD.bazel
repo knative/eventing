@@ -14,7 +14,6 @@ go_library(
 go_binary(
     name = "gcp_pubsub",
     embed = [":go_default_library"],
-    importpath = "github.com/elafros/eventing/sample/gcp_pubsub",
     pure = "on",
     visibility = ["//visibility:public"],
 )

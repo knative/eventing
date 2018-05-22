@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
@@ -8,6 +8,7 @@ go_library(
         "trace.go",
         "trace_proto.go",
     ],
+    importmap = "bindcrd/vendor/go.opencensus.io/exporter/stackdriver",
     importpath = "go.opencensus.io/exporter/stackdriver",
     visibility = ["//visibility:public"],
     deps = [
@@ -31,40 +32,5 @@ go_library(
         "//vendor/google.golang.org/genproto/googleapis/devtools/cloudtrace/v2:go_default_library",
         "//vendor/google.golang.org/genproto/googleapis/monitoring/v3:go_default_library",
         "//vendor/google.golang.org/genproto/googleapis/rpc/status:go_default_library",
-    ],
-)
-
-go_test(
-    name = "go_default_test",
-    srcs = [
-        "stackdriver_test.go",
-        "stats_test.go",
-        "trace_proto_test.go",
-        "trace_test.go",
-    ],
-    embed = [":go_default_library"],
-    importpath = "go.opencensus.io/exporter/stackdriver",
-    deps = [
-        "//vendor/cloud.google.com/go/monitoring/apiv3:go_default_library",
-        "//vendor/github.com/golang/protobuf/proto:go_default_library",
-        "//vendor/github.com/golang/protobuf/ptypes/timestamp:go_default_library",
-        "//vendor/github.com/golang/protobuf/ptypes/wrappers:go_default_library",
-        "//vendor/go.opencensus.io/internal:go_default_library",
-        "//vendor/go.opencensus.io/internal/testpb:go_default_library",
-        "//vendor/go.opencensus.io/plugin/ochttp:go_default_library",
-        "//vendor/go.opencensus.io/stats:go_default_library",
-        "//vendor/go.opencensus.io/stats/view:go_default_library",
-        "//vendor/go.opencensus.io/tag:go_default_library",
-        "//vendor/go.opencensus.io/trace:go_default_library",
-        "//vendor/golang.org/x/net/context/ctxhttp:go_default_library",
-        "//vendor/google.golang.org/api/option:go_default_library",
-        "//vendor/google.golang.org/genproto/googleapis/api/label:go_default_library",
-        "//vendor/google.golang.org/genproto/googleapis/api/metric:go_default_library",
-        "//vendor/google.golang.org/genproto/googleapis/api/monitoredres:go_default_library",
-        "//vendor/google.golang.org/genproto/googleapis/devtools/cloudtrace/v2:go_default_library",
-        "//vendor/google.golang.org/genproto/googleapis/monitoring/v3:go_default_library",
-        "//vendor/google.golang.org/genproto/googleapis/rpc/code:go_default_library",
-        "//vendor/google.golang.org/genproto/googleapis/rpc/status:go_default_library",
-        "//vendor/google.golang.org/grpc:go_default_library",
     ],
 )
