@@ -21,9 +21,9 @@ spec:
   trigger:
     service: gcppubsub
     eventType: receive
-    resource: quantum-reducer-434/ela-demo-2
+    resource: quantum-reducer-434/ela-demo
     parameters:
       projectID: quantum-reducer-434
-      topic: ela-demo-2
+      topic: ela-demo
   action:
     routeName: gcp-pubsub-function
