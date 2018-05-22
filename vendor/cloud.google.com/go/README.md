@@ -33,6 +33,110 @@ make backwards-incompatible changes.
 
 ## News
 
+_May 8, 2018_
+
+*v0.22.0*
+
+- bigtable:
+  - cbt: Support cells per column limit for row read.
+  - bttest: Correctly handle empty RowSet.
+  - Fix ReadModifyWrite operation in emulator.
+  - Fix API path in GetCluster.
+
+- bigquery:
+  - BEHAVIOR CHANGE: Retry on 503 status code.
+  - Add dataset.DeleteWithContents.
+  - Add SchemaUpdateOptions for query jobs.
+  - Add Timeline to QueryStatistics.
+  - Add more stats to ExplainQueryStage.
+  - Support Parquet data format.
+
+- datastore:
+  - Support omitempty for times.
+
+- dlp:
+  - **BREAKING CHANGE:** Remove v1beta1 client. Please migrate to the v2 client,
+  which is now out of beta.
+  - Add v2 client.
+
+- firestore:
+  - BEHAVIOR CHANGE: Treat set({}, MergeAll) as valid.
+
+- iam:
+  - Support JWT signing via SignJwt callopt.
+
+- profiler:
+  - BEHAVIOR CHANGE: PollForSerialOutput returns an error when context.Done.
+  - BEHAVIOR CHANGE: Increase the initial backoff to 1 minute.
+  - Avoid returning empty serial port output.
+
+- pubsub:
+  - BEHAVIOR CHANGE: Don't backoff during next retryable error once stream is healthy.
+  - BEHAVIOR CHANGE: Don't backoff on EOF.
+  - pstest: Support Acknowledge and ModifyAckDeadline RPCs.
+
+- redis:
+  - Add v1 beta Redis client.
+
+- spanner:
+  - Support SessionLabels.
+
+- speech:
+  - Add api v1 beta1 client.
+
+- storage:
+  - BEHAVIOR CHANGE: Retry reads when retryable error occurs.
+  - Fix delete of object in requester-pays bucket.
+  - Support KMS integration.
+
+_April 9, 2018_
+
+*v0.21.0*
+
+- bigquery:
+  - Add OpenCensus tracing.
+
+- firestore:
+  - **BREAKING CHANGE:** If a document does not exist, return a DocumentSnapshot
+    whose Exists method returns false. DocumentRef.Get and Transaction.Get
+    return the non-nil DocumentSnapshot in addition to a NotFound error.
+    **DocumentRef.GetAll and Transaction.GetAll return a non-nil
+    DocumentSnapshot instead of nil.**
+  - Add DocumentIterator.Stop. **Call Stop whenever you are done with a
+    DocumentIterator.**
+  - Added Query.Snapshots and DocumentRef.Snapshots, which provide realtime
+    notification of updates. See https://cloud.google.com/firestore/docs/query-data/listen.
+  - Canceling an RPC now always returns a grpc.Status with codes.Canceled.
+
+- spanner:
+  - Add `CommitTimestamp`, which supports inserting the commit timestamp of a
+    transaction into a column.
+
+_March 22, 2018_
+
+*v0.20.0*
+
+- bigquery: Support SchemaUpdateOptions for load jobs.
+
+- bigtable:
+  - Add SampleRowKeys.
+  - cbt: Support union, intersection GCPolicy.
+  - Retry admin RPCS.
+  - Add trace spans to retries.
+
+- datastore: Add OpenCensus tracing.
+
+- firestore:
+  - Fix queries involving Null and NaN.
+  - Allow Timestamp protobuffers for time values.
+
+- logging: Add a WriteTimeout option.
+
+- spanner: Support Batch API.
+
+- storage: Add OpenCensus tracing.
+
+
 _February 26, 2018_
 
 *v0.19.0*

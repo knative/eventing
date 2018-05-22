@@ -1,0 +1,51 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "aggregation.go",
+        "aggregation_data.go",
+        "collector.go",
+        "doc.go",
+        "export.go",
+        "view.go",
+        "worker.go",
+        "worker_commands.go",
+    ],
+    importpath = "go.opencensus.io/stats/view",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/go.opencensus.io/internal/tagencoding:go_default_library",
+        "//vendor/go.opencensus.io/stats:go_default_library",
+        "//vendor/go.opencensus.io/stats/internal:go_default_library",
+        "//vendor/go.opencensus.io/tag:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "aggregation_data_test.go",
+        "benchmark_test.go",
+        "collector_test.go",
+        "view_measure_test.go",
+        "view_test.go",
+        "worker_test.go",
+    ],
+    embed = [":go_default_library"],
+    importpath = "go.opencensus.io/stats/view",
+    deps = [
+        "//vendor/go.opencensus.io/stats:go_default_library",
+        "//vendor/go.opencensus.io/tag:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_xtest",
+    srcs = ["example_test.go"],
+    importpath = "go.opencensus.io/stats/view_test",
+    deps = [
+        ":go_default_library",
+        "//vendor/go.opencensus.io/stats:go_default_library",
+    ],
+)

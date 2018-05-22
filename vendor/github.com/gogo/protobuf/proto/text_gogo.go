@@ -55,3 +55,14 @@ func (tm *TextMarshaler) writeEnum(w *textWriter, v reflect.Value, props *Proper
 	_, err := fmt.Fprint(w, s)
 	return err
 }
+
+func TestMarshalMessageSetJSON_UnknownType(t *testing.T) {
+	extMap := map[int32]Extension{12345: Extension{}}
+	got, err := MarshalMessageSetJSON(extMap)
+	if err != nil {
+		t.Fatalf("MarshalMessageSetJSON: %v", err)
+	}
+	if want := []byte("{}"); !bytes.Equal(got, want) {
+		t.Errorf("MarshalMessageSetJSON(%v) = %q, want %q", extMap, got, want)
+	}
+}

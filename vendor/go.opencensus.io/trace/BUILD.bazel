@@ -1,0 +1,45 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "basetypes.go",
+        "config.go",
+        "doc.go",
+        "export.go",
+        "sampling.go",
+        "spanbucket.go",
+        "spanstore.go",
+        "status_codes.go",
+        "trace.go",
+        "trace_go11.go",
+        "trace_nongo11.go",
+    ],
+    importpath = "go.opencensus.io/trace",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/go.opencensus.io/internal:go_default_library",
+        "//vendor/go.opencensus.io/trace/internal:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "benchmark_test.go",
+        "config_test.go",
+        "trace_test.go",
+    ],
+    embed = [":go_default_library"],
+    importpath = "go.opencensus.io/trace",
+)
+
+go_test(
+    name = "go_default_xtest",
+    srcs = ["examples_test.go"],
+    importpath = "go.opencensus.io/trace_test",
+    deps = [
+        ":go_default_library",
+        "//vendor/golang.org/x/net/context:go_default_library",
+    ],
+)

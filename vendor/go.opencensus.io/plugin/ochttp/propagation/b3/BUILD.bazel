@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["b3.go"],
+    importpath = "go.opencensus.io/plugin/ochttp/propagation/b3",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/go.opencensus.io/trace:go_default_library",
+        "//vendor/go.opencensus.io/trace/propagation:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["b3_test.go"],
+    embed = [":go_default_library"],
+    importpath = "go.opencensus.io/plugin/ochttp/propagation/b3",
+    deps = ["//vendor/go.opencensus.io/trace:go_default_library"],
+)

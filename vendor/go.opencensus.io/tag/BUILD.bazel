@@ -1,0 +1,35 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "context.go",
+        "doc.go",
+        "key.go",
+        "map.go",
+        "map_codec.go",
+        "profile_19.go",
+        "profile_not19.go",
+        "validate.go",
+    ],
+    importpath = "go.opencensus.io/tag",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "map_codec_test.go",
+        "map_test.go",
+        "validate_test.go",
+    ],
+    embed = [":go_default_library"],
+    importpath = "go.opencensus.io/tag",
+)
+
+go_test(
+    name = "go_default_xtest",
+    srcs = ["example_test.go"],
+    importpath = "go.opencensus.io/tag_test",
+    deps = [":go_default_library"],
+)

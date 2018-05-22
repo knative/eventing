@@ -1,0 +1,33 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "doc.go",
+        "measure.go",
+        "measure_float64.go",
+        "measure_int64.go",
+        "record.go",
+        "units.go",
+    ],
+    importpath = "go.opencensus.io/stats",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/go.opencensus.io/stats/internal:go_default_library",
+        "//vendor/go.opencensus.io/tag:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_xtest",
+    srcs = [
+        "benchmark_test.go",
+        "example_test.go",
+    ],
+    importpath = "go.opencensus.io/stats_test",
+    deps = [
+        ":go_default_library",
+        "//vendor/go.opencensus.io/stats/view:go_default_library",
+        "//vendor/go.opencensus.io/tag:go_default_library",
+    ],
+)
