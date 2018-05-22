@@ -147,6 +147,13 @@ type SecretKeyReference struct {
 // BindStatus is the status for a Bind resource
 type BindStatus struct {
 	Conditions []BindCondition `json:"conditions,omitempty"`
+
+	// BindContext is what the Bind operation returns and holds enough information
+	// for the event source to perform Unbind.
+	// This is specific to each Binding. Opaque to platform, only consumed
+	// by the actual trigger actuator.
+	// NOTE: experimental field.
+	BindContext *runtime.RawExtension `json:"bindContext,omitempty"`
 }
 
 type BindConditionType string

@@ -21,7 +21,7 @@ metadata:
   name: ela-config
   namespace: ela-system
 data:
-  domainSuffix: aikas.org
+  aikas.org: |
 ```
 
 If you were already running the elafros controllers, you will need to kill the ela-controller in the ela-system namespace for it to pick up the new domain suffix.

@@ -19,14 +19,18 @@ package bind
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtimetypes "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -99,7 +103,8 @@ func NewController(
 	bindclientset clientset.Interface,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	bindInformerFactory informers.SharedInformerFactory,
-	routeInformerFactory elainformers.SharedInformerFactory) controller.Interface {
+	routeInformerFactory elainformers.SharedInformerFactory,
+	receiveAdapterImage string) controller.Interface {
 
 	// obtain a reference to a shared index informer for the Bind types.
 	bindInformer := bindInformerFactory.Eventing().V1alpha1()
@@ -133,7 +138,8 @@ func NewController(
 	}
 
 	controller.sources = make(map[string]sources.EventSource)
-	controller.sources["github.com"] = sources.NewGithubEventSource()
+	controller.sources["github"] = sources.NewGithubEventSource()
+	controller.sources["gcppubsub"] = sources.NewGCPPubSubEventSource(kubeclientset, receiveAdapterImage)
 	glog.Info("Setting up event handlers")
 	// Set up an event handler for when Bind resources change
 	bindInformer.Binds().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -297,15 +303,12 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	domainSuffix, err := getDomainSuffixFromElaConfig(c.kubeclientset)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			runtime.HandleError(fmt.Errorf("Can't find ela ConfigMap"))
-		}
-		return err
+	// Grab the route
+	functionDNS := route.Status.Domain
+	if len(functionDNS) == 0 {
+		runtime.HandleError(fmt.Errorf("Route %q does not have domain", routeName))
 	}
 
-	functionDNS := fmt.Sprintf("%s.%s.%s", route.Name, route.Namespace, domainSuffix)
 	glog.Infof("Found route DNS as '%q'", functionDNS)
 
 	es, err := c.eventSourcesLister.EventSources(namespace).Get(bind.Spec.Trigger.Service)
@@ -330,40 +333,113 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	if bind.Status.Conditions != nil {
+	// See if the binding has been deleted
+	accessor, err := meta.Accessor(bind)
+	if err != nil {
+		log.Printf("Failed to get metadata: %s", err)
+		panic("Failed to get metadata")
+	}
+
+	deletionTimestamp := accessor.GetDeletionTimestamp()
+
+	// If there are conditions or a context do nothing.
+	if (bind.Status.Conditions != nil || bind.Status.BindContext != nil) && deletionTimestamp == nil {
 		glog.Infof("Already has status, skipping")
 		return nil
 	}
 
-	glog.Infof("Creating a subscription to %q : %q with Trigger %+v", es.Name, et.Name, trigger)
 	if val, ok := c.sources[es.Name]; ok {
-		r, err := val.Bind(trigger, functionDNS)
-		if err != nil {
-			glog.Warningf("BIND failed: %s", err)
-			msg := fmt.Sprintf("Bind failed with : %s", r)
-			bind.Status.SetCondition(&v1alpha1.BindCondition{
-				Type:    v1alpha1.BindFailed,
-				Status:  corev1.ConditionTrue,
-				Reason:  "BindFailed",
-				Message: msg,
-			})
+		if deletionTimestamp == nil {
+			glog.Infof("Creating a subscription to %q : %q with Trigger %+v", es.Name, et.Name, trigger)
+			bindContext, err := val.Bind(trigger, functionDNS)
+
+			if err != nil {
+				glog.Warningf("BIND failed: %s", err)
+				msg := fmt.Sprintf("Bind failed with : %s", err)
+				bind.Status.SetCondition(&v1alpha1.BindCondition{
+					Type:    v1alpha1.BindFailed,
+					Status:  corev1.ConditionTrue,
+					Reason:  "BindFailed",
+					Message: msg,
+				})
+			} else {
+				glog.Infof("Got context back as: %+v", bindContext)
+				marshalledBindContext, err := json.Marshal(&bindContext.Context)
+				if err != nil {
+					glog.Warningf("Couldn't marshal bind context: %+v : %s", bindContext, err)
+				} else {
+					glog.Infof("Marshaled context to: %+v", marshalledBindContext)
+					bind.Status.BindContext = &runtimetypes.RawExtension{
+						Raw: make([]byte, len(marshalledBindContext)),
+					}
+					bind.Status.BindContext.Raw = marshalledBindContext
+				}
+
+				// Set the finalizer since the bind succeeded, we need to clean up...
+				// TODO: we should do this in the webhook instead...
+				bind.Finalizers = append(bind.ObjectMeta.Finalizers, controllerAgentName)
+				_, err = c.updateFinalizers(bind)
+				if err != nil {
+					glog.Warningf("Failed to update finalizers: %s", err)
+					return err
+				}
+
+				bind.Status.SetCondition(&v1alpha1.BindCondition{
+					Type:    v1alpha1.BindComplete,
+					Status:  corev1.ConditionTrue,
+					Reason:  "BindSuccess",
+					Message: "Bind successful",
+				})
+			}
+			_, err = c.updateStatus(bind)
+			if err != nil {
+				glog.Warningf("Failed to update status: %s", err)
+				return err
+			}
 		} else {
-			bind.Status.SetCondition(&v1alpha1.BindCondition{
-				Type:    v1alpha1.BindComplete,
-				Status:  corev1.ConditionTrue,
-				Reason:  fmt.Sprintf("BindSuccess: Hook: %s", r["ID"].(string)),
-				Message: "Bind successful",
-			})
+			glog.Infof("Deleting a subscription to %q : %q with Trigger %+v", es.Name, et.Name, trigger)
+			bindContext := sources.BindContext{
+				Context: make(map[string]interface{}),
+			}
+			if bind.Status.BindContext != nil && bind.Status.BindContext.Raw != nil && len(bind.Status.BindContext.Raw) > 0 {
+				if err := json.Unmarshal(bind.Status.BindContext.Raw, &bindContext.Context); err != nil {
+					glog.Warningf("Couldn't unmarshal BindContext: %v", err)
+					// TODO set the condition properly here
+					return err
+				}
+			}
+			err := val.Unbind(trigger, bindContext)
+			if err != nil {
+				glog.Warningf("Couldn't unbind: %v", err)
+				// TODO set the condition properly here
+				return err
+			}
+			newFinalizers, err := RemoveFinalizer(bind, controllerAgentName)
+			if err != nil {
+				glog.Warningf("Failed to remove finalizer: %s", err)
+				return err
+			}
+			bind.ObjectMeta.Finalizers = newFinalizers
+			_, err = c.updateFinalizers(bind)
+			if err != nil {
+				glog.Warningf("Failed to update finalizers: %s", err)
+				return err
+			}
 		}
-	}
-	_, err = c.updateStatus(bind)
-	if err != nil {
-		glog.Warningf("Failed to update status: %s", err)
-		return err
 	}
 
 	c.recorder.Event(bind, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
 	return nil
+}
+
+func (c *Controller) updateFinalizers(u *v1alpha1.Bind) (*v1alpha1.Bind, error) {
+	bindClient := c.bindclientset.EventingV1alpha1().Binds(u.Namespace)
+	newu, err := bindClient.Get(u.Name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	newu.ObjectMeta.Finalizers = u.ObjectMeta.Finalizers
+	return bindClient.Update(newu)
 }
 
 func (c *Controller) updateStatus(u *v1alpha1.Bind) (*v1alpha1.Bind, error) {
@@ -446,7 +522,7 @@ func unmarshalJSON(in []byte) (map[string]interface{}, error) {
 	return parameters, nil
 }
 
-func getDomainSuffixFromElaConfig(cl kubernetes.Interface) (string, error) {
+func getDomainSuffixFromRoute(cl kubernetes.Interface) (string, error) {
 	const name = "ela-config"
 	const namespace = "ela-system"
 	c, err := cl.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
@@ -458,4 +534,30 @@ func getDomainSuffixFromElaConfig(cl kubernetes.Interface) (string, error) {
 		return "", fmt.Errorf("cannot find domainSuffix in %v: ConfigMap.Data is %#v", name, c.Data)
 	}
 	return domainSuffix, nil
+}
+
+// AddFinalizer adds value to the list of finalizers on obj
+func AddFinalizer(obj runtimetypes.Object, value string) error {
+	accessor, err := meta.Accessor(obj)
+	if err != nil {
+		return err
+	}
+	finalizers := sets.NewString(accessor.GetFinalizers()...)
+	finalizers.Insert(value)
+	accessor.SetFinalizers(finalizers.List())
+	return nil
+}
+
+// RemoveFinalizer removes the given value from the list of finalizers in obj, then returns a new list
+// of finalizers after value has been removed.
+func RemoveFinalizer(obj runtimetypes.Object, value string) ([]string, error) {
+	accessor, err := meta.Accessor(obj)
+	if err != nil {
+		return nil, err
+	}
+	finalizers := sets.NewString(accessor.GetFinalizers()...)
+	finalizers.Delete(value)
+	newFinalizers := finalizers.List()
+	accessor.SetFinalizers(newFinalizers)
+	return newFinalizers, nil
 }

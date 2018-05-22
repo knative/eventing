@@ -23,8 +23,8 @@ spec:
     # make this "com.github.pullrequest". May consider making it something
     # like "com.github.pull.create"
     eventType: pullrequest
-    resource: inlined/robots
-    service: github.com
+    resource: vaikas/misc
+    service: github
     parametersFrom:
       - secretKeyRef:
           name: githubsecret
