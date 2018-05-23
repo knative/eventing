@@ -26,7 +26,7 @@ load("@k8s_object//:defaults.bzl", "k8s_object")
 k8s_object(
     name = "configuration",
     images = {
-        "gcp_pubsub_function:latest": ":image",
+        "github.com/elafros/eventing/sample/gcp_pubsub_function": ":image",
     },
     template = ":configuration.yaml",
 )

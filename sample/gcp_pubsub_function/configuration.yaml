@@ -24,4 +24,4 @@ spec:
         elafros.dev/type: container
     spec:
       container:
-        image: gcp_pubsub_function:latest
+        image: github.com/elafros/eventing/sample/gcp_pubsub_function

@@ -145,7 +145,7 @@ func (t *GCPPubSubEventSource) createWatcher(namespace string, deploymentName st
 	}
 
 	// TODO: Create ownerref to the binding so when the binding goes away deployment
-	// gets removed. Currently we manually do this.
+	// gets removed. Currently we manually delete the deployment.
 	deployment := MakeWatcherDeployment(namespace, deploymentName, image, projectID, subscription, route)
 	_, createErr := dc.Create(deployment)
 	return createErr

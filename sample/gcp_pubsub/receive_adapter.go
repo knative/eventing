@@ -38,6 +38,7 @@ func main() {
 	ctx := context.Background()
 
 	// Creates a client.
+	// TODO: Support additional ways of specifying the credentials for creating.
 	client, err := pubsub.NewClient(ctx, projectID)
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
@@ -50,11 +51,13 @@ func main() {
 		err = postMessage(target, m)
 		if err != nil {
 			log.Printf("Failed to post message: %s", err)
+			m.Nack()
+		} else {
+			m.Ack()
 		}
-		m.Ack()
 	})
 	if err != nil {
-		// Handle error.
+		log.Fatalf("Failed to create receive: %v", err)
 	}
 }
 
@@ -68,7 +71,11 @@ func postMessage(target string, m *pubsub.Message) error {
 	URL := fmt.Sprintf("http://%s/", target)
 	log.Printf("Posting to %q", URL)
 	req, err := http.NewRequest("POST", URL, bytes.NewBuffer(jsonStr))
-	req.Header.Set("X-Ela-Header", "foovalue")
+	if err != nil {
+		log.Printf("Failed to create http request: %s", err)
+		return err
+	}
+
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
 	resp, err := client.Do(req)
