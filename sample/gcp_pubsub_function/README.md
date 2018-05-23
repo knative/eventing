@@ -35,7 +35,8 @@ gcloud pubsub topics create ela-demo
 
 You can deploy this to Elafros from the root directory via:
 ```shell
-ko apply -f sample/gcp_pubsub_function/
+ko apply -f sample/gcp_pubsub_function/route.yaml
+ko apply -f sample/gcp_pubsub_function/configuration.yaml
 ```
 
 Once deployed, you can inspect the created resources with `kubectl` commands:
