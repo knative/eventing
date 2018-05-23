@@ -28,6 +28,7 @@ required = [
   "k8s.io/code-generator/cmd/client-gen",
   "k8s.io/code-generator/cmd/lister-gen",
   "k8s.io/code-generator/cmd/informer-gen"
+#  "golang.org/x/oauth2/google"
 ]
 
 [[constraint]]
@@ -45,3 +46,15 @@ required = [
 [[constraint]]
   name = "k8s.io/client-go"
   version = "kubernetes-1.10.0"
+
+[[override]]
+  name = "github.com/golang/protobuf"
+  version = "v1.1.0"
+
+[[override]]
+  name = "golang.org/x/oauth2"
+  revision = "cdc340f7c179dbbfa4afd43b7614e8fcadde4269"
+
+[[override]]
+  name = "cloud.google.com/go"
+  revision = "90f2606161ee6a14efe2ca79fc05ac2b8efe250b"

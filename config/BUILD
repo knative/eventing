@@ -6,6 +6,7 @@ k8s_object(
     name = "controller",
     images = {
         "github.com/elafros/eventing/cmd/controller": "//cmd/controller:image",
+        "github.com/elafros/eventing/sample/gcp_pubsub": "//sample/gcp_pubsub:image",
     },
     template = "controller.yaml",
 )

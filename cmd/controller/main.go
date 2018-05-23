@@ -48,12 +48,15 @@ const (
 )
 
 var (
-	masterURL  string
-	kubeconfig string
+	masterURL           string
+	kubeconfig          string
+	receiveAdapterImage = flag.String("receiveadapter", "", "receive adapter docker image <temporary hack>")
 )
 
 func main() {
 	flag.Parse()
+
+	glog.Infof("RECEIVE IMAGE: %q", *receiveAdapterImage)
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
@@ -91,7 +94,7 @@ func main() {
 	controllers := make([]controller.Interface, 0, len(ctors))
 	for _, ctor := range ctors {
 		controllers = append(controllers,
-			ctor(kubeClient, client, kubeInformerFactory, informerFactory, elaInformerFactory))
+			ctor(kubeClient, client, kubeInformerFactory, informerFactory, elaInformerFactory, *receiveAdapterImage))
 	}
 
 	go kubeInformerFactory.Start(stopCh)

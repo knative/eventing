@@ -16,6 +16,11 @@ limitations under the License.
 
 package sources
 
+type BindContext struct {
+	Context map[string]interface{}
+}
+
 type EventSource interface {
-	Bind(trigger EventTrigger, route string) (map[string]interface{}, error)
+	Bind(trigger EventTrigger, route string) (*BindContext, error)
+	Unbind(trigger EventTrigger, bindContext BindContext) error
 }

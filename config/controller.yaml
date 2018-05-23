@@ -30,4 +30,5 @@ spec:
         args: [
           "-logtostderr",
           "-stderrthreshold", "INFO",
+          "-receiveadapter", "github.com/elafros/eventing/sample/gcp_pubsub",
         ]

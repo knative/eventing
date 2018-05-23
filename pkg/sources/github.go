@@ -19,6 +19,7 @@ package sources
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/golang/glog"
@@ -29,6 +30,10 @@ import (
 )
 
 const (
+	webhookIDKey = "id"
+	ownerKey     = "owner"
+	repoKey      = "repo"
+
 	// SuccessSynced is used as part of the Event 'reason' when a Bind is synced
 	SuccessSynced = "Synced"
 
@@ -44,7 +49,35 @@ func NewGithubEventSource() EventSource {
 	return &GithubEventSource{}
 }
 
-func (t *GithubEventSource) Bind(trigger EventTrigger, route string) (map[string]interface{}, error) {
+func (t *GithubEventSource) Unbind(trigger EventTrigger, bindContext BindContext) error {
+	glog.Infof("Unbinding github webhook with context %+v", bindContext)
+	webhookID := bindContext.Context[webhookIDKey].(string)
+	owner := bindContext.Context[ownerKey].(string)
+	repo := bindContext.Context[repoKey].(string)
+
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: trigger.Parameters["accessToken"].(string)},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+	client := ghclient.NewClient(tc)
+
+	id, err := strconv.ParseInt(webhookID, 10, 64)
+	if err != nil {
+		glog.Warningf("Failed to convert webhook %q to int64 : %s", webhookID, err)
+		return err
+	}
+	r, err := client.Repositories.DeleteHook(ctx, owner, repo, id)
+	if err != nil {
+		glog.Warningf("Failed to delete the webhook: %s", err)
+		glog.Warningf("Response:\n%+v", r)
+		return err
+	}
+	glog.Infof("Deleted webhook %q successfully", webhookID)
+	return nil
+}
+
+func (t *GithubEventSource) Bind(trigger EventTrigger, route string) (*BindContext, error) {
 	glog.Infof("CREATING GITHUB WEBHOOK")
 
 	ctx := context.Background()
@@ -70,14 +103,19 @@ func (t *GithubEventSource) Bind(trigger EventTrigger, route string) (map[string
 	}
 
 	components := strings.Split(trigger.Resource, "/")
-	h, r, err := client.Repositories.CreateHook(ctx, components[0] /* owner */, components[1] /* repo */, &hook)
+	owner := components[0]
+	repo := components[1]
+	h, r, err := client.Repositories.CreateHook(ctx, owner, repo, &hook)
 	if err != nil {
 		glog.Warningf("Failed to create the webhook: %s", err)
 		glog.Warningf("Response:\n%+v", r)
 		return nil, err
 	}
 	glog.Infof("Created hook: %+v", h)
-	ret := make(map[string]interface{})
-	ret["ID"] = fmt.Sprintf("%d", h.ID)
-	return ret, nil
+	return &BindContext{
+		Context: map[string]interface{}{
+			webhookIDKey: strconv.FormatInt(*h.ID, 10),
+			ownerKey:     owner,
+			repoKey:      repo,
+		}}, nil
 }

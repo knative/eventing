@@ -143,6 +143,15 @@ func (in *BindStatus) DeepCopyInto(out *BindStatus) {
 		*out = make([]BindCondition, len(*in))
 		copy(*out, *in)
 	}
+	if in.BindContext != nil {
+		in, out := &in.BindContext, &out.BindContext
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(runtime.RawExtension)
+			(*in).DeepCopyInto(*out)
+		}
+	}
 	return
 }
 
