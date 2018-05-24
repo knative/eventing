@@ -296,8 +296,7 @@ func (c *Controller) syncHandler(key string) error {
 	// See if the binding has been deleted
 	accessor, err := meta.Accessor(bind)
 	if err != nil {
-		log.Printf("Failed to get metadata: %s", err)
-		panic("Failed to get metadata")
+		log.Fatalf("Failed to get metadata: %s", err)
 	}
 	deletionTimestamp := accessor.GetDeletionTimestamp()
 
@@ -317,7 +316,7 @@ func (c *Controller) syncHandler(key string) error {
 
 	if route != nil {
 		functionDNS = route.Status.Domain
-		glog.Infof("Found route DNS as '%q'", functionDNS)
+		glog.Infof("Found route DNS as %q", functionDNS)
 	}
 	if len(functionDNS) == 0 {
 		// Only return an error if we're not deleting so that we can delete
