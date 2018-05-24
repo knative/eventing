@@ -21,6 +21,8 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -75,8 +77,13 @@ func (t *GCPPubSubEventSource) Unbind(trigger EventTrigger, bindContext BindCont
 	sub := client.Subscription(subscriptionName)
 	err = sub.Delete(ctx)
 	if err != nil {
-		glog.Warningf("Failed to delete subscription %q : %s", subscriptionName, err)
-		return err
+		glog.Warningf("Failed to delete subscription %q : %s : %+v", subscriptionName, err, err)
+		// Return error only if it's something else than NotFound
+		rpcStatus := status.Convert(err)
+		if rpcStatus.Code() != codes.NotFound {
+			return err
+		}
+		glog.Infof("Subscription %q already deleted", subscriptionName)
 	}
 	return nil
 }
@@ -118,6 +125,13 @@ func (t *GCPPubSubEventSource) Bind(trigger EventTrigger, route string) (*BindCo
 	err = t.createWatcher("bind-system", deploymentName, t.image, projectID, subscriptionName, route)
 	if err != nil {
 		glog.Infof("Failed to create deployment: %v", err)
+
+		// delete the subscription so it's not left floating around.
+		errDelete := sub.Delete(ctx)
+		if errDelete != nil {
+			glog.Infof("Failed to delete subscription while trying to clean up %q : %s", subscriptionName, errDelete)
+		}
+
 		return nil, err
 	}
 

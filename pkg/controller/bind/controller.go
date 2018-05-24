@@ -293,23 +293,39 @@ func (c *Controller) syncHandler(key string) error {
 	// Don't mutate the informer's copy of our object.
 	bind = bind.DeepCopy()
 
+	// See if the binding has been deleted
+	accessor, err := meta.Accessor(bind)
+	if err != nil {
+		log.Fatalf("Failed to get metadata: %s", err)
+	}
+	deletionTimestamp := accessor.GetDeletionTimestamp()
+
 	// Find the Route that they want.
 	routeName := bind.Spec.Action.RouteName
 	route, err := c.routesLister.Routes(namespace).Get(routeName)
-	if err != nil {
+	functionDNS := ""
+
+	// Only return an error if we're not deleting so that we can delete
+	// the binding even if the route has already been deleted.
+	if err != nil && deletionTimestamp == nil {
 		if errors.IsNotFound(err) {
 			runtime.HandleError(fmt.Errorf("Route %q in namespace %q does not exist", routeName, namespace))
 		}
 		return err
 	}
 
-	// Grab the route
-	functionDNS := route.Status.Domain
-	if len(functionDNS) == 0 {
-		runtime.HandleError(fmt.Errorf("Route %q does not have domain", routeName))
+	if route != nil {
+		functionDNS = route.Status.Domain
+		glog.Infof("Found route DNS as %q", functionDNS)
 	}
-
-	glog.Infof("Found route DNS as '%q'", functionDNS)
+	if len(functionDNS) == 0 {
+		// Only return an error if we're not deleting so that we can delete
+		// the binding even if the route has already been deleted.
+		if deletionTimestamp == nil {
+			return fmt.Errorf("Route %q does not have domain", routeName)
+		}
+		log.Printf("Route %q does not have domain", routeName)
+	}
 
 	es, err := c.eventSourcesLister.EventSources(namespace).Get(bind.Spec.Trigger.Service)
 	if err != nil {
@@ -332,15 +348,6 @@ func (c *Controller) syncHandler(key string) error {
 		glog.Warningf("Failed to process parameters: %s", err)
 		return err
 	}
-
-	// See if the binding has been deleted
-	accessor, err := meta.Accessor(bind)
-	if err != nil {
-		log.Printf("Failed to get metadata: %s", err)
-		panic("Failed to get metadata")
-	}
-
-	deletionTimestamp := accessor.GetDeletionTimestamp()
 
 	// If there are conditions or a context do nothing.
 	if (bind.Status.Conditions != nil || bind.Status.BindContext != nil) && deletionTimestamp == nil {
