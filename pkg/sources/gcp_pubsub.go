@@ -18,10 +18,11 @@ package sources
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/golang/glog"
 	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -76,9 +77,10 @@ func (t *GCPPubSubEventSource) Unbind(trigger EventTrigger, bindContext BindCont
 	sub := client.Subscription(subscriptionName)
 	err = sub.Delete(ctx)
 	if err != nil {
-		glog.Warningf("Failed to delete subscription %q : %s : %q", subscriptionName, err)
-		// If it's already been deleted, don't error out
-		if !strings.Contains(err.Error(), "Resource not found") {
+		glog.Warningf("Failed to delete subscription %q : %s : %+v", subscriptionName, err, err)
+		// Return error only if it's something else than NotFound
+		rpcStatus := status.Convert(err)
+		if rpcStatus.Code() != codes.NotFound {
 			return err
 		}
 		glog.Infof("Subscription %q already deleted", subscriptionName)
