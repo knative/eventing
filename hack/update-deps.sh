@@ -25,8 +25,6 @@ trap popd EXIT
 
 # Ensure we have everything we need under vendor/
 dep ensure
-dep prune
 
 rm -rf $(find vendor/ -name 'BUILD')
 rm -rf $(find vendor/ -name 'BUILD.bazel')
-rm -rf $(find vendor/ -name '*_test.go')
