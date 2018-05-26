@@ -26,7 +26,13 @@ data:
 
 If you were already running the elafros controllers, you will need to kill the ela-controller in the ela-system namespace for it to pick up the new domain suffix.
 
-4. Create a [personal access token](https://github.com/settings/tokens) to github repo that you can use to bind webhooks to the Github API. Also decide on a token that your code will authenticate the incoming webhooks from github (accessSoken). Update sample/github/githubsecret.yaml with those values. If your generated access token is 'asdfasfdsaf' and you choose your secretToken as 'password', you'd modify githubsecret.yaml like so:
+4. Install Github as an event source
+
+```shell
+ko apply -f pkg/sources/github/
+```
+
+5. Create a [personal access token](https://github.com/settings/tokens) to github repo that you can use to bind webhooks to the Github API. Also decide on a token that your code will authenticate the incoming webhooks from github (accessSoken). Update sample/github/githubsecret.yaml with those values. If your generated access token is 'asdfasfdsaf' and you choose your secretToken as 'password', you'd modify githubsecret.yaml like so:
 
 ```yaml
 apiVersion: v1
@@ -100,9 +106,9 @@ metadata:
   namespace: default
 spec:
   trigger:
+    service: github
     eventType: pullrequest
     resource: inlined/robots
-    service: github.com
     parametersFrom:
       - secretKeyRef:
           name: githubsecret

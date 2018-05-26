@@ -69,6 +69,7 @@ const (
 type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
+
 	// bindclientset is a clientset for our own API group
 	bindclientset clientset.Interface
 
@@ -93,8 +94,6 @@ type Controller struct {
 	// recorder is an event recorder for recording Event resources to the
 	// Kubernetes API.
 	recorder record.EventRecorder
-
-	sources map[string]sources.EventSource
 }
 
 // NewController returns a new bind controller
@@ -103,8 +102,7 @@ func NewController(
 	bindclientset clientset.Interface,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	bindInformerFactory informers.SharedInformerFactory,
-	routeInformerFactory elainformers.SharedInformerFactory,
-	receiveAdapterImage string) controller.Interface {
+	routeInformerFactory elainformers.SharedInformerFactory) controller.Interface {
 
 	// obtain a reference to a shared index informer for the Bind types.
 	bindInformer := bindInformerFactory.Eventing().V1alpha1()
@@ -137,9 +135,6 @@ func NewController(
 		recorder:           recorder,
 	}
 
-	controller.sources = make(map[string]sources.EventSource)
-	controller.sources["github"] = sources.NewGithubEventSource()
-	controller.sources["gcppubsub"] = sources.NewGCPPubSubEventSource(kubeclientset, receiveAdapterImage)
 	glog.Info("Setting up event handlers")
 	// Set up an event handler for when Bind resources change
 	bindInformer.Binds().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -343,95 +338,97 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	trigger, err := resolveTrigger(c.kubeclientset, namespace, bind.Spec.Trigger)
-	if err != nil {
-		glog.Warningf("Failed to process parameters: %s", err)
-		return err
-	}
-
 	// If there are conditions or a context do nothing.
 	if (bind.Status.Conditions != nil || bind.Status.BindContext != nil) && deletionTimestamp == nil {
 		glog.Infof("Already has status, skipping")
 		return nil
 	}
 
-	if val, ok := c.sources[es.Name]; ok {
-		if deletionTimestamp == nil {
-			glog.Infof("Creating a subscription to %q : %q with Trigger %+v", es.Name, et.Name, trigger)
-			bindContext, err := val.Bind(trigger, functionDNS)
+	trigger, err := resolveTrigger(c.kubeclientset, namespace, bind.Spec.Trigger)
+	if err != nil {
+		glog.Warningf("Failed to process parameters: %s", err)
+		return err
+	}
 
-			if err != nil {
-				glog.Warningf("BIND failed: %s", err)
-				msg := fmt.Sprintf("Bind failed with : %s", err)
-				bind.Status.SetCondition(&v1alpha1.BindCondition{
-					Type:    v1alpha1.BindFailed,
-					Status:  corev1.ConditionTrue,
-					Reason:  "BindFailed",
-					Message: msg,
-				})
-			} else {
-				glog.Infof("Got context back as: %+v", bindContext)
-				marshalledBindContext, err := json.Marshal(&bindContext.Context)
-				if err != nil {
-					glog.Warningf("Couldn't marshal bind context: %+v : %s", bindContext, err)
-				} else {
-					glog.Infof("Marshaled context to: %+v", marshalledBindContext)
-					bind.Status.BindContext = &runtimetypes.RawExtension{
-						Raw: make([]byte, len(marshalledBindContext)),
-					}
-					bind.Status.BindContext.Raw = marshalledBindContext
-				}
+	// Don't mutate the informer's copy of our object.
+	newES := es.DeepCopy()
 
-				// Set the finalizer since the bind succeeded, we need to clean up...
-				// TODO: we should do this in the webhook instead...
-				bind.Finalizers = append(bind.ObjectMeta.Finalizers, controllerAgentName)
-				_, err = c.updateFinalizers(bind)
-				if err != nil {
-					glog.Warningf("Failed to update finalizers: %s", err)
-					return err
-				}
+	binder := sources.NewContainerEventSource(bind, c.kubeclientset, &newES.Spec, "bind-system")
+	if deletionTimestamp == nil {
+		glog.Infof("Creating a subscription to %q : %q with Trigger %+v", es.Name, et.Name, trigger)
+		bindContext, err := binder.Bind(trigger, functionDNS)
 
-				bind.Status.SetCondition(&v1alpha1.BindCondition{
-					Type:    v1alpha1.BindComplete,
-					Status:  corev1.ConditionTrue,
-					Reason:  "BindSuccess",
-					Message: "Bind successful",
-				})
-			}
-			_, err = c.updateStatus(bind)
-			if err != nil {
-				glog.Warningf("Failed to update status: %s", err)
-				return err
-			}
+		if err != nil {
+			glog.Warningf("BIND failed: %s", err)
+			msg := fmt.Sprintf("Bind failed with : %s", err)
+			bind.Status.SetCondition(&v1alpha1.BindCondition{
+				Type:    v1alpha1.BindFailed,
+				Status:  corev1.ConditionTrue,
+				Reason:  "BindFailed",
+				Message: msg,
+			})
 		} else {
-			glog.Infof("Deleting a subscription to %q : %q with Trigger %+v", es.Name, et.Name, trigger)
-			bindContext := sources.BindContext{
-				Context: make(map[string]interface{}),
-			}
-			if bind.Status.BindContext != nil && bind.Status.BindContext.Raw != nil && len(bind.Status.BindContext.Raw) > 0 {
-				if err := json.Unmarshal(bind.Status.BindContext.Raw, &bindContext.Context); err != nil {
-					glog.Warningf("Couldn't unmarshal BindContext: %v", err)
-					// TODO set the condition properly here
-					return err
+			glog.Infof("Got context back as: %+v", bindContext)
+			marshalledBindContext, err := json.Marshal(&bindContext.Context)
+			if err != nil {
+				glog.Warningf("Couldn't marshal bind context: %+v : %s", bindContext, err)
+			} else {
+				glog.Infof("Marshaled context to: %+v", marshalledBindContext)
+				bind.Status.BindContext = &runtimetypes.RawExtension{
+					Raw: make([]byte, len(marshalledBindContext)),
 				}
+				bind.Status.BindContext.Raw = marshalledBindContext
 			}
-			err := val.Unbind(trigger, bindContext)
-			if err != nil {
-				glog.Warningf("Couldn't unbind: %v", err)
-				// TODO set the condition properly here
-				return err
-			}
-			newFinalizers, err := RemoveFinalizer(bind, controllerAgentName)
-			if err != nil {
-				glog.Warningf("Failed to remove finalizer: %s", err)
-				return err
-			}
-			bind.ObjectMeta.Finalizers = newFinalizers
+
+			// Set the finalizer since the bind succeeded, we need to clean up...
+			// TODO: we should do this in the webhook instead...
+			bind.Finalizers = append(bind.ObjectMeta.Finalizers, controllerAgentName)
 			_, err = c.updateFinalizers(bind)
 			if err != nil {
 				glog.Warningf("Failed to update finalizers: %s", err)
 				return err
 			}
+
+			bind.Status.SetCondition(&v1alpha1.BindCondition{
+				Type:    v1alpha1.BindComplete,
+				Status:  corev1.ConditionTrue,
+				Reason:  "BindSuccess",
+				Message: "Bind successful",
+			})
+		}
+		_, err = c.updateStatus(bind)
+		if err != nil {
+			glog.Warningf("Failed to update status: %s", err)
+			return err
+		}
+	} else {
+		glog.Infof("Deleting a subscription to %q : %q with Trigger %+v", es.Name, et.Name, trigger)
+		bindContext := sources.BindContext{
+			Context: make(map[string]interface{}),
+		}
+		if bind.Status.BindContext != nil && bind.Status.BindContext.Raw != nil && len(bind.Status.BindContext.Raw) > 0 {
+			if err := json.Unmarshal(bind.Status.BindContext.Raw, &bindContext.Context); err != nil {
+				glog.Warningf("Couldn't unmarshal BindContext: %v", err)
+				// TODO set the condition properly here
+				return err
+			}
+		}
+		err := binder.Unbind(trigger, bindContext)
+		if err != nil {
+			glog.Warningf("Couldn't unbind: %v", err)
+			// TODO set the condition properly here
+			return err
+		}
+		newFinalizers, err := RemoveFinalizer(bind, controllerAgentName)
+		if err != nil {
+			glog.Warningf("Failed to remove finalizer: %s", err)
+			return err
+		}
+		bind.ObjectMeta.Finalizers = newFinalizers
+		_, err = c.updateFinalizers(bind)
+		if err != nil {
+			glog.Warningf("Failed to update finalizers: %s", err)
+			return err
 		}
 	}
 

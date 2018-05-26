@@ -16,6 +16,11 @@ limitations under the License.
 
 package sources
 
+const (
+	// EventTriggerKey is the Env variable that gets set to EventTrigger
+	EventTriggerKey string = "EVENT_TRIGGER"
+)
+
 type BindContext struct {
 	Context map[string]interface{}
 }
