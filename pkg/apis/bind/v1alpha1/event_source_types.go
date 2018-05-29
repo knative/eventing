@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -40,6 +41,14 @@ type EventSource struct {
 type EventSourceSpec struct {
 	Type   string `json:"type,omitempty"`
 	Source string `json:"source,omitempty"`
+
+	// Image that we run for bind/unbind operations
+	Image string `json:"image,omitempty"`
+
+	// Parameters are configuration options for a particular EventSource
+	// TODO: Consider instead using ConfigMaps and mount them instead
+	// on the event sources containers.
+	Parameters *runtime.RawExtension `json:"parameters,omitempty"`
 }
 
 // EventSourceStatus is the status for a EventSource resource

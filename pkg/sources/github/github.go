@@ -14,16 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package sources
+package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
 	"github.com/golang/glog"
 
+	"github.com/elafros/eventing/pkg/sources"
 	"golang.org/x/oauth2"
 
 	ghclient "github.com/google/go-github/github"
@@ -45,15 +48,23 @@ const (
 type GithubEventSource struct {
 }
 
-func NewGithubEventSource() EventSource {
+func NewGithubEventSource() sources.EventSource {
 	return &GithubEventSource{}
 }
 
-func (t *GithubEventSource) Unbind(trigger EventTrigger, bindContext BindContext) error {
+func (t *GithubEventSource) Unbind(trigger sources.EventTrigger, bindContext sources.BindContext) error {
 	glog.Infof("Unbinding github webhook with context %+v", bindContext)
+
+	components := strings.Split(trigger.Resource, "/")
+	owner := components[0]
+	repo := components[1]
+
+	if _, ok := bindContext.Context[webhookIDKey]; !ok {
+		// there's no webhook id, nothing to do.
+		glog.Infof("No Webhook ID Found, bailing...")
+		return nil
+	}
 	webhookID := bindContext.Context[webhookIDKey].(string)
-	owner := bindContext.Context[ownerKey].(string)
-	repo := bindContext.Context[repoKey].(string)
 
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
@@ -77,7 +88,7 @@ func (t *GithubEventSource) Unbind(trigger EventTrigger, bindContext BindContext
 	return nil
 }
 
-func (t *GithubEventSource) Bind(trigger EventTrigger, route string) (*BindContext, error) {
+func (t *GithubEventSource) Bind(trigger sources.EventTrigger, route string) (*sources.BindContext, error) {
 	glog.Infof("CREATING GITHUB WEBHOOK")
 
 	ctx := context.Background()
@@ -85,7 +96,6 @@ func (t *GithubEventSource) Bind(trigger EventTrigger, route string) (*BindConte
 		&oauth2.Token{AccessToken: trigger.Parameters["accessToken"].(string)},
 	)
 	tc := oauth2.NewClient(ctx, ts)
-	glog.Infof("CREATING GITHUB WEBHOOK with access token: %s", trigger.Parameters["accessToken"].(string))
 
 	client := ghclient.NewClient(tc)
 	active := true
@@ -112,10 +122,15 @@ func (t *GithubEventSource) Bind(trigger EventTrigger, route string) (*BindConte
 		return nil, err
 	}
 	glog.Infof("Created hook: %+v", h)
-	return &BindContext{
+	return &sources.BindContext{
 		Context: map[string]interface{}{
 			webhookIDKey: strconv.FormatInt(*h.ID, 10),
-			ownerKey:     owner,
-			repoKey:      repo,
 		}}, nil
+}
+
+func main() {
+	flag.Parse()
+
+	sources.RunEventSource(NewGithubEventSource())
+	log.Printf("Done...")
 }

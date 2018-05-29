@@ -14,11 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package sources
+package main
 
 import (
+	"encoding/base64"
+	"encoding/json"
+	"flag"
 	"fmt"
+	"log"
+	"os"
 
+	"github.com/elafros/eventing/pkg/sources"
 	"github.com/golang/glog"
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -27,6 +33,7 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"cloud.google.com/go/pubsub"
 	"golang.org/x/net/context"
@@ -47,12 +54,12 @@ type GCPPubSubEventSource struct {
 	image         string
 }
 
-func NewGCPPubSubEventSource(kubeclientset kubernetes.Interface, image string) EventSource {
+func NewGCPPubSubEventSource(kubeclientset kubernetes.Interface, image string) sources.EventSource {
 	glog.Infof("Image: %q", image)
 	return &GCPPubSubEventSource{kubeclientset: kubeclientset, image: image}
 }
 
-func (t *GCPPubSubEventSource) Unbind(trigger EventTrigger, bindContext BindContext) error {
+func (t *GCPPubSubEventSource) Unbind(trigger sources.EventTrigger, bindContext sources.BindContext) error {
 	glog.Infof("Unbinding GCP PUBSUB with context %+v", bindContext)
 
 	projectID := trigger.Parameters[projectIDKey].(string)
@@ -88,7 +95,7 @@ func (t *GCPPubSubEventSource) Unbind(trigger EventTrigger, bindContext BindCont
 	return nil
 }
 
-func (t *GCPPubSubEventSource) Bind(trigger EventTrigger, route string) (*BindContext, error) {
+func (t *GCPPubSubEventSource) Bind(trigger sources.EventTrigger, route string) (*sources.BindContext, error) {
 	glog.Infof("CREATING GCP PUBSUB binding")
 
 	projectID := trigger.Parameters[projectIDKey].(string)
@@ -135,7 +142,7 @@ func (t *GCPPubSubEventSource) Bind(trigger EventTrigger, route string) (*BindCo
 		return nil, err
 	}
 
-	return &BindContext{
+	return &sources.BindContext{
 		Context: map[string]interface{}{
 			subscription: subscriptionName,
 			deployment:   deploymentName,
@@ -160,7 +167,7 @@ func (t *GCPPubSubEventSource) createWatcher(namespace string, deploymentName st
 
 	// TODO: Create ownerref to the binding so when the binding goes away deployment
 	// gets removed. Currently we manually delete the deployment.
-	deployment := MakeWatcherDeployment(namespace, deploymentName, image, projectID, subscription, route)
+	deployment := MakeWatcherDeployment(namespace, deploymentName, "bind-controller", image, projectID, subscription, route)
 	_, createErr := dc.Create(deployment)
 	return createErr
 }
@@ -179,4 +186,33 @@ func (t *GCPPubSubEventSource) deleteWatcher(namespace string, deploymentName st
 	}
 
 	return dc.Delete(deploymentName, &metav1.DeleteOptions{})
+}
+
+type parameters struct {
+	Image string `json:"image,omitempty"`
+}
+
+func main() {
+	flag.Parse()
+
+	decodedParameters, _ := base64.StdEncoding.DecodeString(os.Getenv(sources.EventSourceParametersKey))
+
+	var p parameters
+	err := json.Unmarshal(decodedParameters, &p)
+	if err != nil {
+		panic(fmt.Sprintf("can not unmarshal %q : %s", decodedParameters, err))
+	}
+
+	cfg, err := clientcmd.BuildConfigFromFlags("", "")
+	if err != nil {
+		glog.Fatalf("Error building kubeconfig: %s", err.Error())
+	}
+
+	kubeClient, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		glog.Fatalf("Error building kubernetes clientset: %s", err.Error())
+	}
+
+	sources.RunEventSource(NewGCPPubSubEventSource(kubeClient, p.Image))
+	log.Printf("Done...")
 }

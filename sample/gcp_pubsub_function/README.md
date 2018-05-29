@@ -23,7 +23,12 @@ data:
 
 If you were already running the elafros controllers, you will need to kill the ela-controller in the ela-system namespace for it to pick up the new domain suffix.
 
-4. Create a GCP Pub Sub topic
+4. Install GCP Pub Sub as an event source
+```shell
+ko apply -f pkg/sources/gcppubsub/
+```
+
+5. Create a GCP Pub Sub topic
 
 ```shell
 gcloud pubsub topics create ela-demo

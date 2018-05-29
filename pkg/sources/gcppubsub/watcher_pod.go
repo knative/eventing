@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package sources
+package main
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
@@ -22,14 +22,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	// Each watcher pod gets these.
-	watcherContainerCPU = "400m"
-)
-
 // MakeWatcherDeployment creates a deployment for a watcher.
 // TODO: a whole bunch...
-func MakeWatcherDeployment(namespace string, deploymentName string, image string, projectID string, subscription string, route string) *appsv1.Deployment {
+func MakeWatcherDeployment(namespace string, deploymentName string, serviceAccount string, image string, projectID string, subscription string, route string) *appsv1.Deployment {
 	replicas := int32(1)
 	labels := map[string]string{
 		"watcher": deploymentName,
@@ -48,6 +43,7 @@ func MakeWatcherDeployment(namespace string, deploymentName string, image string
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
+					ServiceAccountName: serviceAccount,
 					Containers: []corev1.Container{
 						corev1.Container{
 							Name:            deploymentName,

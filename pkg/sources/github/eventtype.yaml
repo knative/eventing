@@ -13,10 +13,10 @@
 # limitations under the License.
 
 apiVersion: eventing.elafros.dev/v1alpha1
-kind: EventSource
+kind: EventType
 metadata:
-  name: gcppubsub
+  name: pullrequest
   namespace: default
 spec:
-  type: gcppubsub
-  source: gcppubsub
+  eventSource: github
+  description: "notifications on pullrequests"
