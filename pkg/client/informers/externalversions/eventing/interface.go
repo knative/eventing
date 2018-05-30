@@ -19,7 +19,7 @@ limitations under the License.
 package eventing
 
 import (
-	v1alpha1 "github.com/elafros/eventing/pkg/client/informers/externalversions/bind/v1alpha1"
+	v1alpha1 "github.com/elafros/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	internalinterfaces "github.com/elafros/eventing/pkg/client/informers/externalversions/internalinterfaces"
 )
 

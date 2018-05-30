@@ -20,7 +20,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
-	v1alpha1 "github.com/elafros/eventing/pkg/apis/bind/v1alpha1"
+	v1alpha1 "github.com/elafros/eventing/pkg/apis/eventing/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
