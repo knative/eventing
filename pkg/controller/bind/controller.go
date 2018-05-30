@@ -46,12 +46,12 @@ import (
 	"github.com/elafros/eventing/pkg/controller"
 	"github.com/elafros/eventing/pkg/sources"
 
-	v1alpha1 "github.com/elafros/eventing/pkg/apis/bind/v1alpha1"
+	v1alpha1 "github.com/elafros/eventing/pkg/apis/eventing/v1alpha1"
 
 	clientset "github.com/elafros/eventing/pkg/client/clientset/versioned"
 	bindscheme "github.com/elafros/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/elafros/eventing/pkg/client/informers/externalversions"
-	listers "github.com/elafros/eventing/pkg/client/listers/bind/v1alpha1"
+	listers "github.com/elafros/eventing/pkg/client/listers/eventing/v1alpha1"
 )
 
 const controllerAgentName = "bind-controller"

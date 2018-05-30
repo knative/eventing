@@ -21,10 +21,10 @@ package v1alpha1
 import (
 	time "time"
 
-	bind_v1alpha1 "github.com/elafros/eventing/pkg/apis/bind/v1alpha1"
+	eventing_v1alpha1 "github.com/elafros/eventing/pkg/apis/eventing/v1alpha1"
 	versioned "github.com/elafros/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/elafros/eventing/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/elafros/eventing/pkg/client/listers/bind/v1alpha1"
+	v1alpha1 "github.com/elafros/eventing/pkg/client/listers/eventing/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -70,7 +70,7 @@ func NewFilteredBindInformer(client versioned.Interface, namespace string, resyn
 				return client.EventingV1alpha1().Binds(namespace).Watch(options)
 			},
 		},
-		&bind_v1alpha1.Bind{},
+		&eventing_v1alpha1.Bind{},
 		resyncPeriod,
 		indexers,
 	)
@@ -81,7 +81,7 @@ func (f *bindInformer) defaultInformer(client versioned.Interface, resyncPeriod 
 }
 
 func (f *bindInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&bind_v1alpha1.Bind{}, f.defaultInformer)
+	return f.factory.InformerFor(&eventing_v1alpha1.Bind{}, f.defaultInformer)
 }
 
 func (f *bindInformer) Lister() v1alpha1.BindLister {

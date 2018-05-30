@@ -20,8 +20,8 @@ package fake
 
 import (
 	clientset "github.com/elafros/eventing/pkg/client/clientset/versioned"
-	eventingv1alpha1 "github.com/elafros/eventing/pkg/client/clientset/versioned/typed/bind/v1alpha1"
-	fakeeventingv1alpha1 "github.com/elafros/eventing/pkg/client/clientset/versioned/typed/bind/v1alpha1/fake"
+	eventingv1alpha1 "github.com/elafros/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
+	fakeeventingv1alpha1 "github.com/elafros/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
