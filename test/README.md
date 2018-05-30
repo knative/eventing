@@ -7,13 +7,7 @@ This directory contains tests and testing docs.
 
 ## Running unit tests
 
-Use bazel:
-
-```shell
-bazel test //pkg/... --test_output=errors
-```
-
-Or `go test`:
+Use `go test`:
 
 ```shell
 go test -v ./pkg/...
