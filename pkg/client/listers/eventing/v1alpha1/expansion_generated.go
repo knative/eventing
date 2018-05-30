@@ -26,6 +26,14 @@ type BindListerExpansion interface{}
 // BindNamespaceLister.
 type BindNamespaceListerExpansion interface{}
 
+// BrokerListerExpansion allows custom methods to be added to
+// BrokerLister.
+type BrokerListerExpansion interface{}
+
+// BrokerNamespaceListerExpansion allows custom methods to be added to
+// BrokerNamespaceLister.
+type BrokerNamespaceListerExpansion interface{}
+
 // EventSourceListerExpansion allows custom methods to be added to
 // EventSourceLister.
 type EventSourceListerExpansion interface{}
@@ -41,3 +49,19 @@ type EventTypeListerExpansion interface{}
 // EventTypeNamespaceListerExpansion allows custom methods to be added to
 // EventTypeNamespaceLister.
 type EventTypeNamespaceListerExpansion interface{}
+
+// StreamListerExpansion allows custom methods to be added to
+// StreamLister.
+type StreamListerExpansion interface{}
+
+// StreamNamespaceListerExpansion allows custom methods to be added to
+// StreamNamespaceLister.
+type StreamNamespaceListerExpansion interface{}
+
+// SubscriptionListerExpansion allows custom methods to be added to
+// SubscriptionLister.
+type SubscriptionListerExpansion interface{}
+
+// SubscriptionNamespaceListerExpansion allows custom methods to be added to
+// SubscriptionNamespaceLister.
+type SubscriptionNamespaceListerExpansion interface{}

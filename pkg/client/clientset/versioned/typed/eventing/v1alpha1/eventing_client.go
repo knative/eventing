@@ -28,8 +28,11 @@ import (
 type EventingV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	BindsGetter
+	BrokersGetter
 	EventSourcesGetter
 	EventTypesGetter
+	StreamsGetter
+	SubscriptionsGetter
 }
 
 // EventingV1alpha1Client is used to interact with features provided by the eventing.knative.dev group.
@@ -41,12 +44,24 @@ func (c *EventingV1alpha1Client) Binds(namespace string) BindInterface {
 	return newBinds(c, namespace)
 }
 
+func (c *EventingV1alpha1Client) Brokers(namespace string) BrokerInterface {
+	return newBrokers(c, namespace)
+}
+
 func (c *EventingV1alpha1Client) EventSources(namespace string) EventSourceInterface {
 	return newEventSources(c, namespace)
 }
 
 func (c *EventingV1alpha1Client) EventTypes(namespace string) EventTypeInterface {
 	return newEventTypes(c, namespace)
+}
+
+func (c *EventingV1alpha1Client) Streams(namespace string) StreamInterface {
+	return newStreams(c, namespace)
+}
+
+func (c *EventingV1alpha1Client) Subscriptions(namespace string) SubscriptionInterface {
+	return newSubscriptions(c, namespace)
 }
 
 // NewForConfig creates a new EventingV1alpha1Client for the given config.

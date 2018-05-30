@@ -22,6 +22,8 @@ import (
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
 	fakeeventingv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1/fake"
+	configv1alpha2 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/istio/v1alpha2"
+	fakeconfigv1alpha2 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/istio/v1alpha2/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -78,4 +80,14 @@ func (c *Clientset) EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interfac
 // Eventing retrieves the EventingV1alpha1Client
 func (c *Clientset) Eventing() eventingv1alpha1.EventingV1alpha1Interface {
 	return &fakeeventingv1alpha1.FakeEventingV1alpha1{Fake: &c.Fake}
+}
+
+// ConfigV1alpha2 retrieves the ConfigV1alpha2Client
+func (c *Clientset) ConfigV1alpha2() configv1alpha2.ConfigV1alpha2Interface {
+	return &fakeconfigv1alpha2.FakeConfigV1alpha2{Fake: &c.Fake}
+}
+
+// Config retrieves the ConfigV1alpha2Client
+func (c *Clientset) Config() configv1alpha2.ConfigV1alpha2Interface {
+	return &fakeconfigv1alpha2.FakeConfigV1alpha2{Fake: &c.Fake}
 }

@@ -32,12 +32,24 @@ func (c *FakeEventingV1alpha1) Binds(namespace string) v1alpha1.BindInterface {
 	return &FakeBinds{c, namespace}
 }
 
+func (c *FakeEventingV1alpha1) Brokers(namespace string) v1alpha1.BrokerInterface {
+	return &FakeBrokers{c, namespace}
+}
+
 func (c *FakeEventingV1alpha1) EventSources(namespace string) v1alpha1.EventSourceInterface {
 	return &FakeEventSources{c, namespace}
 }
 
 func (c *FakeEventingV1alpha1) EventTypes(namespace string) v1alpha1.EventTypeInterface {
 	return &FakeEventTypes{c, namespace}
+}
+
+func (c *FakeEventingV1alpha1) Streams(namespace string) v1alpha1.StreamInterface {
+	return &FakeStreams{c, namespace}
+}
+
+func (c *FakeEventingV1alpha1) Subscriptions(namespace string) v1alpha1.SubscriptionInterface {
+	return &FakeSubscriptions{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

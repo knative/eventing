@@ -47,10 +47,16 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&Bind{},
 		&BindList{},
+		&Broker{},
+		&BrokerList{},
 		&EventSource{},
 		&EventSourceList{},
 		&EventType{},
 		&EventTypeList{},
+		&Stream{},
+		&StreamList{},
+		&Subscription{},
+		&SubscriptionList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

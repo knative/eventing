@@ -26,6 +26,7 @@ import (
 	versioned "github.com/knative/eventing/pkg/client/clientset/versioned"
 	eventing "github.com/knative/eventing/pkg/client/informers/externalversions/eventing"
 	internalinterfaces "github.com/knative/eventing/pkg/client/informers/externalversions/internalinterfaces"
+	istio "github.com/knative/eventing/pkg/client/informers/externalversions/istio"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -124,8 +125,13 @@ type SharedInformerFactory interface {
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
 	Eventing() eventing.Interface
+	Config() istio.Interface
 }
 
 func (f *sharedInformerFactory) Eventing() eventing.Interface {
 	return eventing.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Config() istio.Interface {
+	return istio.New(f, f.namespace, f.tweakListOptions)
 }

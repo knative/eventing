@@ -26,10 +26,16 @@ import (
 type Interface interface {
 	// Binds returns a BindInformer.
 	Binds() BindInformer
+	// Brokers returns a BrokerInformer.
+	Brokers() BrokerInformer
 	// EventSources returns a EventSourceInformer.
 	EventSources() EventSourceInformer
 	// EventTypes returns a EventTypeInformer.
 	EventTypes() EventTypeInformer
+	// Streams returns a StreamInformer.
+	Streams() StreamInformer
+	// Subscriptions returns a SubscriptionInformer.
+	Subscriptions() SubscriptionInformer
 }
 
 type version struct {
@@ -48,6 +54,11 @@ func (v *version) Binds() BindInformer {
 	return &bindInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
+// Brokers returns a BrokerInformer.
+func (v *version) Brokers() BrokerInformer {
+	return &brokerInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
 // EventSources returns a EventSourceInformer.
 func (v *version) EventSources() EventSourceInformer {
 	return &eventSourceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
@@ -56,4 +67,14 @@ func (v *version) EventSources() EventSourceInformer {
 // EventTypes returns a EventTypeInformer.
 func (v *version) EventTypes() EventTypeInformer {
 	return &eventTypeInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Streams returns a StreamInformer.
+func (v *version) Streams() StreamInformer {
+	return &streamInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Subscriptions returns a SubscriptionInformer.
+func (v *version) Subscriptions() SubscriptionInformer {
+	return &subscriptionInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
