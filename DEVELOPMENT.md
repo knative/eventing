@@ -6,7 +6,7 @@ development workflow](./CONTRIBUTING.md#workflow) and [the test docs](./test/REA
 
 ## Getting started
 
-1. Setup [Elafros](http://github.com/knative/serving)
+1. Setup [Elafros](http://github.com/elafros/elafros)
 1. [Create and checkout a repo fork](#checkout-your-fork)
 
 Once you meet these requirements, you can [start Binding](#starting-binding)!
@@ -15,7 +15,7 @@ Before submitting a PR, see also [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ### Requirements
 
-You must have the core of [Elafros](http://github.com/knative/serving) running on your cluster:
+You must have the core of [Elafros](http://github.com/elafros/elafros) running on your cluster:
 
 ### Checkout your fork
 

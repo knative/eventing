@@ -21,7 +21,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	build_v1alpha1 "github.com/knative/serving/pkg/apis/build/v1alpha1"
+	build_v1alpha1 "github.com/elafros/elafros/pkg/apis/build/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )

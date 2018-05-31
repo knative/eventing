@@ -16,9 +16,9 @@ limitations under the License.
 package versioned
 
 import (
-	buildv1alpha1 "github.com/knative/serving/pkg/client/clientset/versioned/typed/build/v1alpha1"
-	knativev1alpha1 "github.com/knative/serving/pkg/client/clientset/versioned/typed/ela/v1alpha1"
-	configv1alpha2 "github.com/knative/serving/pkg/client/clientset/versioned/typed/istio/v1alpha2"
+	buildv1alpha1 "github.com/elafros/elafros/pkg/client/clientset/versioned/typed/build/v1alpha1"
+	knativev1alpha1 "github.com/elafros/elafros/pkg/client/clientset/versioned/typed/ela/v1alpha1"
+	configv1alpha2 "github.com/elafros/elafros/pkg/client/clientset/versioned/typed/istio/v1alpha2"
 	glog "github.com/golang/glog"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
