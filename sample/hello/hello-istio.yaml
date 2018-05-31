@@ -1,0 +1,40 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: hola
+  annotations:
+    kubernetes.io/ingress.class: "istio"
+spec:
+  rules:
+  - host: hola
+    http:
+      paths:
+      - backend:
+          serviceName: aloha
+          servicePort: http
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aloha
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 80
+
+---
+apiVersion: config.istio.io/v1alpha2
+kind: RouteRule
+metadata:
+  name: aloha2hello
+spec:
+  destination:
+    name: aloha
+  route:
+  - destination:
+      name: hello
+    weight: 100

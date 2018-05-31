@@ -1,0 +1,13 @@
+apiVersion: eventing.elafros.dev/v1alpha1
+kind: Stream
+metadata:
+  name: aloha
+
+---
+apiVersion: eventing.elafros.dev/v1alpha1
+kind: Subscription
+metadata:
+  name: aloha2hello
+spec:
+  stream: aloha
+  subscriber: hello
