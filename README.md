@@ -20,7 +20,7 @@ We’re following an agile process, starting from a working prototype that
 addresses a single use case and iterating to support additional use cases.
 
 This repo depends on [elafros/elafros](https://github.com/elafros/elafros) and
-together with [elafros/build](https://github.com/elafros/build) provides a
+together with [knative/build](https://github.com/knative/build) provides a
 complete serverless platform.
 
 The primary goal of *eventing* is interoperabilty; therefore, we expect to

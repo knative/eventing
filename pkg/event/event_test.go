@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/elafros/eventing/pkg/event"
+	"github.com/knative/eventing/pkg/event"
 )
 
 var (

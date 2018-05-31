@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: elafros.dev/v1alpha1
+apiVersion: knative.dev/v1alpha1
 kind: Configuration
 metadata:
   name: git-webhook
@@ -21,10 +21,10 @@ spec:
   revisionTemplate:
     metadata:
       labels:
-        elafros.dev/type: container
+        knative.dev/type: container
     spec:
       container:
-        image: github.com/elafros/eventing/sample/github
+        image: github.com/knative/eventing/sample/github
         env:
           - name: GITHUB_SECRET
             valueFrom:

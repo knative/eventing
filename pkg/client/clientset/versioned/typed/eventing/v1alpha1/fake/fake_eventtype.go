@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "github.com/elafros/eventing/pkg/apis/eventing/v1alpha1"
+	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -34,9 +34,9 @@ type FakeEventTypes struct {
 	ns   string
 }
 
-var eventtypesResource = schema.GroupVersionResource{Group: "eventing.elafros.dev", Version: "v1alpha1", Resource: "eventtypes"}
+var eventtypesResource = schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1alpha1", Resource: "eventtypes"}
 
-var eventtypesKind = schema.GroupVersionKind{Group: "eventing.elafros.dev", Version: "v1alpha1", Kind: "EventType"}
+var eventtypesKind = schema.GroupVersionKind{Group: "eventing.knative.dev", Version: "v1alpha1", Kind: "EventType"}
 
 // Get takes name of the eventType, and returns the corresponding eventType object, and an error if there is any.
 func (c *FakeEventTypes) Get(name string, options v1.GetOptions) (result *v1alpha1.EventType, err error) {

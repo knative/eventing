@@ -32,11 +32,11 @@ import (
 	elaclientset "github.com/elafros/elafros/pkg/client/clientset/versioned"
 	elainformers "github.com/elafros/elafros/pkg/client/informers/externalversions"
 
-	clientset "github.com/elafros/eventing/pkg/client/clientset/versioned"
-	informers "github.com/elafros/eventing/pkg/client/informers/externalversions"
-	"github.com/elafros/eventing/pkg/controller"
-	"github.com/elafros/eventing/pkg/controller/bind"
-	"github.com/elafros/eventing/pkg/signals"
+	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
+	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	"github.com/knative/eventing/pkg/controller"
+	"github.com/knative/eventing/pkg/controller/bind"
+	"github.com/knative/eventing/pkg/signals"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )

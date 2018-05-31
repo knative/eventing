@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "github.com/elafros/eventing/pkg/apis/eventing/v1alpha1"
+	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -34,9 +34,9 @@ type FakeBinds struct {
 	ns   string
 }
 
-var bindsResource = schema.GroupVersionResource{Group: "eventing.elafros.dev", Version: "v1alpha1", Resource: "binds"}
+var bindsResource = schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1alpha1", Resource: "binds"}
 
-var bindsKind = schema.GroupVersionKind{Group: "eventing.elafros.dev", Version: "v1alpha1", Kind: "Bind"}
+var bindsKind = schema.GroupVersionKind{Group: "eventing.knative.dev", Version: "v1alpha1", Kind: "Bind"}
 
 // Get takes name of the bind, and returns the corresponding bind object, and an error if there is any.
 func (c *FakeBinds) Get(name string, options v1.GetOptions) (result *v1alpha1.Bind, err error) {

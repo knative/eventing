@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: eventing.elafros.dev/v1alpha1
+apiVersion: eventing.knative.dev/v1alpha1
 kind: EventSource
 metadata:
   name: github.com

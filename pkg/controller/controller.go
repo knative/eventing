@@ -22,8 +22,8 @@ import (
 
 	elainformers "github.com/elafros/elafros/pkg/client/informers/externalversions"
 
-	clientset "github.com/elafros/eventing/pkg/client/clientset/versioned"
-	informers "github.com/elafros/eventing/pkg/client/informers/externalversions"
+	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
+	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 )
 
 type Interface interface {

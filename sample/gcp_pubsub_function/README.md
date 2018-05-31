@@ -2,12 +2,12 @@
 
 A simple function that receives Google Cloud Pub Sub events and prints out the data field after decoding
 from base64 encoding. Because we do **not** have an in-cluster event delivery mechanism yet, uses an
-elafros route as an endpoint.
+knative route as an endpoint.
 
 ## Prerequisites
 
 1. [Setup your development environment](../../DEVELOPMENT.md#getting-started)
-2. [Start Elafros](../../README.md#start-elafros)
+2. [Start Elafros](../../README.md#start-knative)
 3. Decide on the DNS name that git can then call. Update elafros/elafros/elaconfig.yaml domainSuffix.
 For example I used aikas.org as my hostname, so my elaconfig.yaml looks like so:
 
@@ -21,7 +21,7 @@ data:
   aikas.org: |
 ```
 
-If you were already running the elafros controllers, you will need to kill the ela-controller in the ela-system namespace for it to pick up the new domain suffix.
+If you were already running the knative controllers, you will need to kill the ela-controller in the ela-system namespace for it to pick up the new domain suffix.
 
 4. Install GCP Pub Sub as an event source
 ```shell
@@ -88,7 +88,7 @@ To now bind the gcp_pubsub_function for GCP PubSub messages with the function we
  project: quantum-reducer-434 topic: ela-demo, my Bind object would look like so:
 
 ```yaml
-apiVersion: elafros.dev/v1alpha1
+apiVersion: knative.dev/v1alpha1
 kind: Bind
 metadata:
   name: gcppubsub-example

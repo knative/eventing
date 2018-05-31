@@ -19,8 +19,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/elafros/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/elafros/eventing/pkg/client/clientset/versioned/scheme"
+	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	rest "k8s.io/client-go/rest"
 )
@@ -32,7 +32,7 @@ type EventingV1alpha1Interface interface {
 	EventTypesGetter
 }
 
-// EventingV1alpha1Client is used to interact with features provided by the eventing.elafros.dev group.
+// EventingV1alpha1Client is used to interact with features provided by the eventing.knative.dev group.
 type EventingV1alpha1Client struct {
 	restClient rest.Interface
 }

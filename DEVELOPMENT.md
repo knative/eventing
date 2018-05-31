@@ -19,7 +19,7 @@ You must have the core of [Elafros](http://github.com/elafros/elafros) running o
 
 ### Checkout your fork
 
-The Go tools require that you clone the repository to the `src/github.com/elafros/eventing` directory
+The Go tools require that you clone the repository to the `src/github.com/knative/eventing` directory
 in your [`GOPATH`](https://github.com/golang/go/wiki/SettingGOPATH).
 
 To check out this repository:
@@ -27,18 +27,18 @@ To check out this repository:
 1. Create your own [fork of this repo](https://help.github.com/articles/fork-a-repo/)
 2. Clone it to your machine:
   ```shell
-  mkdir -p ${GOPATH}/src/github.com/elafros
-  cd ${GOPATH}/src/github.com/elafros
+  mkdir -p ${GOPATH}/src/github.com/knative
+  cd ${GOPATH}/src/github.com/knative
   git clone git@github.com:${YOUR_GITHUB_USERNAME}/eventing.git
   cd eventing
-  git remote add upstream git@github.com:elafros/eventing.git
+  git remote add upstream git@github.com:knative/eventing.git
   git remote set-url --push upstream no_push
   ```
 
 _Adding the `upstream` remote sets you up nicely for regularly [syncing your
 fork](https://help.github.com/articles/syncing-a-fork/)._
 
-Once you reach this point you are ready to do a full build and deploy as described [here](./README.md#start-elafros).
+Once you reach this point you are ready to do a full build and deploy as described [here](./README.md#start-knative).
 
 ## Starting Binding
 
@@ -76,7 +76,7 @@ ko apply -f config/controller.yaml
 ```
 
 Or you can [clean it up completely](./README.md#clean-up) and [completely
-redeploy `Elafros`](./README.md#start-elafros).
+redeploy `Elafros`](./README.md#start-knative).
 
 ## Tests
 

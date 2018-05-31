@@ -24,7 +24,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/elafros/eventing/pkg/sources"
+	"github.com/knative/eventing/pkg/sources"
 	"github.com/golang/glog"
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
