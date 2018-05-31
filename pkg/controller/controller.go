@@ -20,7 +20,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 
-	elainformers "github.com/elafros/elafros/pkg/client/informers/externalversions"
+	elainformers "github.com/knative/serving/pkg/client/informers/externalversions"
 
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
