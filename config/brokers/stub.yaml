@@ -1,0 +1,8 @@
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Broker
+metadata:
+  name: stub
+spec:
+  container: 
+    name: broker
+    image: github.com/knative/eventing/cmd/stub-broker

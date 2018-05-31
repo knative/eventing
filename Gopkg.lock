@@ -27,6 +27,12 @@
   revision = "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9"
 
 [[projects]]
+  name = "github.com/codegangsta/inject"
+  packages = ["."]
+  revision = "37d7f8432a3e684eef9b2edece76bdfa6ac85b39"
+  version = "v1.0-rc1"
+
+[[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
@@ -120,6 +126,12 @@
   packages = ["."]
   revision = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7"
   version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/go-martini/martini"
+  packages = ["."]
+  revision = "49411a5b646861ad29a6ddd5351717a0a9c49b94"
+  version = "v1.0"
 
 [[projects]]
   name = "github.com/gogo/protobuf"
@@ -858,6 +870,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "af45ce432704d023cd07f040af17e202982be60efb9350e874ff78d5f66f4e70"
+  inputs-digest = "942beec00b4df3769bf57628f0f761bfd69128dac3d7009f4618a9c2a8666f5c"
   solver-name = "gps-cdcl"
   solver-version = 1
