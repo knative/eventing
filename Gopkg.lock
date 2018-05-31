@@ -82,7 +82,7 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/elafros/elafros"
+  name = "github.com/knative/serving"
   packages = [
     "pkg/apis/build",
     "pkg/apis/build/v1alpha1",

@@ -16,9 +16,9 @@ limitations under the License.
 package versioned
 
 import (
-	buildv1alpha1 "github.com/elafros/elafros/pkg/client/clientset/versioned/typed/build/v1alpha1"
-	elafrosv1alpha1 "github.com/elafros/elafros/pkg/client/clientset/versioned/typed/ela/v1alpha1"
-	configv1alpha2 "github.com/elafros/elafros/pkg/client/clientset/versioned/typed/istio/v1alpha2"
+	buildv1alpha1 "github.com/knative/serving/pkg/client/clientset/versioned/typed/build/v1alpha1"
+	knativev1alpha1 "github.com/knative/serving/pkg/client/clientset/versioned/typed/ela/v1alpha1"
+	configv1alpha2 "github.com/knative/serving/pkg/client/clientset/versioned/typed/istio/v1alpha2"
 	glog "github.com/golang/glog"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
@@ -30,9 +30,9 @@ type Interface interface {
 	BuildV1alpha1() buildv1alpha1.BuildV1alpha1Interface
 	// Deprecated: please explicitly pick a version if possible.
 	Build() buildv1alpha1.BuildV1alpha1Interface
-	ElafrosV1alpha1() elafrosv1alpha1.ElafrosV1alpha1Interface
+	ElafrosV1alpha1() knativev1alpha1.ElafrosV1alpha1Interface
 	// Deprecated: please explicitly pick a version if possible.
-	Elafros() elafrosv1alpha1.ElafrosV1alpha1Interface
+	Elafros() knativev1alpha1.ElafrosV1alpha1Interface
 	ConfigV1alpha2() configv1alpha2.ConfigV1alpha2Interface
 	// Deprecated: please explicitly pick a version if possible.
 	Config() configv1alpha2.ConfigV1alpha2Interface
@@ -43,7 +43,7 @@ type Interface interface {
 type Clientset struct {
 	*discovery.DiscoveryClient
 	buildV1alpha1   *buildv1alpha1.BuildV1alpha1Client
-	elafrosV1alpha1 *elafrosv1alpha1.ElafrosV1alpha1Client
+	knativeV1alpha1 *knativev1alpha1.ElafrosV1alpha1Client
 	configV1alpha2  *configv1alpha2.ConfigV1alpha2Client
 }
 
@@ -59,14 +59,14 @@ func (c *Clientset) Build() buildv1alpha1.BuildV1alpha1Interface {
 }
 
 // ElafrosV1alpha1 retrieves the ElafrosV1alpha1Client
-func (c *Clientset) ElafrosV1alpha1() elafrosv1alpha1.ElafrosV1alpha1Interface {
-	return c.elafrosV1alpha1
+func (c *Clientset) ElafrosV1alpha1() knativev1alpha1.ElafrosV1alpha1Interface {
+	return c.knativeV1alpha1
 }
 
 // Deprecated: Elafros retrieves the default version of ElafrosClient.
 // Please explicitly pick a version.
-func (c *Clientset) Elafros() elafrosv1alpha1.ElafrosV1alpha1Interface {
-	return c.elafrosV1alpha1
+func (c *Clientset) Elafros() knativev1alpha1.ElafrosV1alpha1Interface {
+	return c.knativeV1alpha1
 }
 
 // ConfigV1alpha2 retrieves the ConfigV1alpha2Client
@@ -100,7 +100,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
-	cs.elafrosV1alpha1, err = elafrosv1alpha1.NewForConfig(&configShallowCopy)
+	cs.knativeV1alpha1, err = knativev1alpha1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
 	cs.buildV1alpha1 = buildv1alpha1.NewForConfigOrDie(c)
-	cs.elafrosV1alpha1 = elafrosv1alpha1.NewForConfigOrDie(c)
+	cs.knativeV1alpha1 = knativev1alpha1.NewForConfigOrDie(c)
 	cs.configV1alpha2 = configv1alpha2.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
@@ -133,7 +133,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.buildV1alpha1 = buildv1alpha1.New(c)
-	cs.elafrosV1alpha1 = elafrosv1alpha1.New(c)
+	cs.knativeV1alpha1 = knativev1alpha1.New(c)
 	cs.configV1alpha2 = configv1alpha2.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)

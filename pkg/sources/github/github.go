@@ -26,7 +26,7 @@ import (
 
 	"github.com/golang/glog"
 
-	"github.com/elafros/eventing/pkg/sources"
+	"github.com/knative/eventing/pkg/sources"
 	"golang.org/x/oauth2"
 
 	ghclient "github.com/google/go-github/github"

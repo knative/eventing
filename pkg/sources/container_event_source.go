@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"time"
 
-	v1alpha1 "github.com/elafros/eventing/pkg/apis/eventing/v1alpha1"
+	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/golang/glog"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"

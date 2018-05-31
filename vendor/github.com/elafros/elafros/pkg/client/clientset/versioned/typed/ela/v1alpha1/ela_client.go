@@ -16,8 +16,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/elafros/elafros/pkg/apis/ela/v1alpha1"
-	"github.com/elafros/elafros/pkg/client/clientset/versioned/scheme"
+	v1alpha1 "github.com/knative/serving/pkg/apis/ela/v1alpha1"
+	"github.com/knative/serving/pkg/client/clientset/versioned/scheme"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	rest "k8s.io/client-go/rest"
 )
@@ -29,7 +29,7 @@ type ElafrosV1alpha1Interface interface {
 	RoutesGetter
 }
 
-// ElafrosV1alpha1Client is used to interact with features provided by the elafros.dev group.
+// ElafrosV1alpha1Client is used to interact with features provided by the knative.dev group.
 type ElafrosV1alpha1Client struct {
 	restClient rest.Interface
 }

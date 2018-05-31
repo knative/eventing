@@ -18,9 +18,9 @@ package externalversions
 import (
 	"fmt"
 
-	v1alpha1 "github.com/elafros/elafros/pkg/apis/build/v1alpha1"
-	ela_v1alpha1 "github.com/elafros/elafros/pkg/apis/ela/v1alpha1"
-	v1alpha2 "github.com/elafros/elafros/pkg/apis/istio/v1alpha2"
+	v1alpha1 "github.com/knative/serving/pkg/apis/build/v1alpha1"
+	ela_v1alpha1 "github.com/knative/serving/pkg/apis/ela/v1alpha1"
+	v1alpha2 "github.com/knative/serving/pkg/apis/istio/v1alpha2"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -61,7 +61,7 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	case v1alpha2.SchemeGroupVersion.WithResource("routerules"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Config().V1alpha2().RouteRules().Informer()}, nil
 
-		// Group=elafros.dev, Version=v1alpha1
+		// Group=knative.dev, Version=v1alpha1
 	case ela_v1alpha1.SchemeGroupVersion.WithResource("configurations"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Elafros().V1alpha1().Configurations().Informer()}, nil
 	case ela_v1alpha1.SchemeGroupVersion.WithResource("revisions"):

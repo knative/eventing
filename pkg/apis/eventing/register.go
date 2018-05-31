@@ -17,5 +17,5 @@ limitations under the License.
 package bind
 
 const (
-	GroupName = "eventing.elafros.dev"
+	GroupName = "eventing.knative.dev"
 )

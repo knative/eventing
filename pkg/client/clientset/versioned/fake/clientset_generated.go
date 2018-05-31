@@ -19,9 +19,9 @@ limitations under the License.
 package fake
 
 import (
-	clientset "github.com/elafros/eventing/pkg/client/clientset/versioned"
-	eventingv1alpha1 "github.com/elafros/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
-	fakeeventingv1alpha1 "github.com/elafros/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1/fake"
+	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
+	fakeeventingv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"

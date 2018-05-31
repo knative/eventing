@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: eventing.elafros.dev/v1alpha1
+apiVersion: eventing.knative.dev/v1alpha1
 kind: EventSource
 metadata:
   name: gcppubsub
@@ -20,6 +20,6 @@ metadata:
 spec:
   type: gcppubsub
   source: gcppubsub
-  image: github.com/elafros/eventing/pkg/sources/gcppubsub
+  image: github.com/knative/eventing/pkg/sources/gcppubsub
   parameters:
-    image: github.com/elafros/eventing/pkg/sources/gcppubsub/receive_adapter
+    image: github.com/knative/eventing/pkg/sources/gcppubsub/receive_adapter

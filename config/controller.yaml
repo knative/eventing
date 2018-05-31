@@ -26,7 +26,7 @@ spec:
       serviceAccountName: bind-controller
       containers:
       - name: bind-controller
-        image: github.com/elafros/eventing/cmd/controller
+        image: github.com/knative/eventing/cmd/controller
         args: [
           "-logtostderr",
           "-stderrthreshold", "INFO",

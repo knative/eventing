@@ -7,7 +7,7 @@ the [README](README.md).
 
 1. Ability to register an event sources and specify which events may be
    generated from that source
-   [Proposal](https://github.com/elafros/eventing/issues/39)
+   [Proposal](https://github.com/knative/eventing/issues/39)
 1. kubectl command to set up a trigger where a specific event will cause a
   specific action
 1. Example source generating an event
@@ -17,14 +17,14 @@ the [README](README.md).
 
 ## 0.2 Friendly Repo
 
-1. Easy installation [issue#51](https://github.com/elafros/eventing/issues/51)
+1. Easy installation [issue#51](https://github.com/knative/eventing/issues/51)
 1. We have clear guidelines for how we use Prow
 1. All the contributing info is tested and someone new to the repo has made a
    PR by following the directions
 
 ## 0.3 Functions
 
-1. An event can trigger an Elafros function [issue#52](https://github.com/elafros/eventing/issues/52)
+1. An event can trigger an Elafros function [issue#52](https://github.com/knative/eventing/issues/52)
 1. A local event can trigger a Google Cloud Function
 1. A Google source can trigger an action local within the Elafros cluster.
    Likely this will use some scaffolding on the Google side to validate the

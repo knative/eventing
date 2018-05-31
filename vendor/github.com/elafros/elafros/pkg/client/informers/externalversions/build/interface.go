@@ -16,8 +16,8 @@ limitations under the License.
 package build
 
 import (
-	v1alpha1 "github.com/elafros/elafros/pkg/client/informers/externalversions/build/v1alpha1"
-	internalinterfaces "github.com/elafros/elafros/pkg/client/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/knative/serving/pkg/client/informers/externalversions/build/v1alpha1"
+	internalinterfaces "github.com/knative/serving/pkg/client/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to each of this group's versions.
