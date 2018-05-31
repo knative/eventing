@@ -61,7 +61,7 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	case v1alpha2.SchemeGroupVersion.WithResource("routerules"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Config().V1alpha2().RouteRules().Informer()}, nil
 
-		// Group=knative.dev, Version=v1alpha1
+		// Group=elafros.dev, Version=v1alpha1
 	case ela_v1alpha1.SchemeGroupVersion.WithResource("configurations"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Elafros().V1alpha1().Configurations().Informer()}, nil
 	case ela_v1alpha1.SchemeGroupVersion.WithResource("revisions"):

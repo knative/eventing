@@ -29,7 +29,7 @@ type ElafrosV1alpha1Interface interface {
 	RoutesGetter
 }
 
-// ElafrosV1alpha1Client is used to interact with features provided by the knative.dev group.
+// ElafrosV1alpha1Client is used to interact with features provided by the elafros.dev group.
 type ElafrosV1alpha1Client struct {
 	restClient rest.Interface
 }

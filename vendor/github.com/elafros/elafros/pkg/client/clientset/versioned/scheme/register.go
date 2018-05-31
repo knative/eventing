@@ -17,7 +17,7 @@ package scheme
 
 import (
 	buildv1alpha1 "github.com/elafros/elafros/pkg/apis/build/v1alpha1"
-	knativev1alpha1 "github.com/elafros/elafros/pkg/apis/ela/v1alpha1"
+	elafrosv1alpha1 "github.com/elafros/elafros/pkg/apis/ela/v1alpha1"
 	configv1alpha2 "github.com/elafros/elafros/pkg/apis/istio/v1alpha2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -50,6 +50,6 @@ func init() {
 // correctly.
 func AddToScheme(scheme *runtime.Scheme) {
 	buildv1alpha1.AddToScheme(scheme)
-	knativev1alpha1.AddToScheme(scheme)
+	elafrosv1alpha1.AddToScheme(scheme)
 	configv1alpha2.AddToScheme(scheme)
 }
