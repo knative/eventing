@@ -39,11 +39,11 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	elainformers "github.com/elafros/elafros/pkg/client/informers/externalversions"
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	subscriptionscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	listers "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
+	elainformers "github.com/knative/serving/pkg/client/informers/externalversions"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	istiov1alpha2 "github.com/knative/eventing/pkg/apis/istio/v1alpha2"

@@ -5,13 +5,13 @@ github.
 [Modeled after GCF example](https://cloud.google.com/community/tutorials/github-auto-assign-reviewers-cloud-functions)
 But by introducing a Bind object, we make the subscription to github automatically by calling a github API
 and hence the developer does not have to manually wire things together in the UI, by creating the Bind object
-the webhook gets created by Elafros.
+the webhook gets created by Knative Eventing.
 
 ## Prerequisites
 
 1. [Setup your development environment](../../DEVELOPMENT.md#getting-started)
-2. [Start Elafros](../../README.md#start-knative)
-3. Decide on the DNS name that git can then call. Update elafros/elafros/elaconfig.yaml domainSuffix.
+2. [Start Knative](../../README.md#start-knative)
+3. Decide on the DNS name that git can then call. Update knative/serving/elaconfig.yaml domainSuffix.
 For example I used aikas.org as my hostname, so my elaconfig.yaml looks like so:
 
 ```yaml
@@ -50,7 +50,7 @@ stringData:
 
 ## Running
 
-You can deploy this to Elafros from the root directory via:
+You can deploy this to Knative from the root directory via:
 ```shell
 ko apply -f sample/github/
 ```

@@ -16,7 +16,7 @@
 
 package istio
 
-// TODO remove package after elafros/elafros#1002
+// TODO remove package after knative/serving#1002
 
 const (
 	GroupName = "config.istio.io"

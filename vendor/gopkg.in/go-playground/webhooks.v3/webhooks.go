@@ -19,6 +19,8 @@ func (p Provider) String() string {
 		return "Bitbucket"
 	case GitLab:
 		return "GitLab"
+	case Gogs:
+		return "Gogs"
 	default:
 		return "Unknown"
 	}
@@ -29,6 +31,7 @@ const (
 	GitHub Provider = iota
 	Bitbucket
 	GitLab
+	Gogs
 )
 
 // Webhook interface defines a webhook to receive events

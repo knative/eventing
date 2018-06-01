@@ -11,3 +11,4 @@ functionality.
 ## Samples
 
 * [Github Pull Request Handler](./github) - A simple handler for Github Pull Requests
+* [GCP PubSub Receiver Handler](./gcp_pubsub_function) - A simple handler for processing GCP PubSub events
