@@ -19,7 +19,7 @@ The above concerns are consistent with the [design goals](https://github.com/clo
 We’re following an agile process, starting from a working prototype that
 addresses a single use case and iterating to support additional use cases.
 
-This repo depends on [elafros/elafros](https://github.com/elafros/elafros) and
+This repo depends on [knative/serving](https://github.com/knative/serving) and
 together with [knative/build](https://github.com/knative/build) provides a
 complete serverless platform.
 
@@ -38,7 +38,7 @@ attaching an event (or filtered event stream via a "trigger) to an action.
 
 # Getting Started
 
-* [Setup Elafros](https://github.com/elafros/elafros)
+* [Setup Knative](https://github.com/knative/serving)
 * [Setup Binding](./DEVELOPMENT.md)
 * [Run samples](./sample/README.md)
 

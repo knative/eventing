@@ -51,10 +51,19 @@ func Image(ref name.Reference, auth authn.Authenticator, t http.RoundTripper) (v
 	if err != nil {
 		return nil, err
 	}
-	return partial.CompressedToImage(&remoteImage{
+	img, err := partial.CompressedToImage(&remoteImage{
 		ref:    ref,
 		client: &http.Client{Transport: tr},
 	})
+	if err != nil {
+		return nil, err
+	}
+	// Wrap the v1.Layers returned by this v1.Image in a hint for downstream
+	// remote.Write calls to facilitate cross-repo "mounting".
+	return &mountableImage{
+		Image:      img,
+		Repository: ref.Context(),
+	}, nil
 }
 
 func (r *remoteImage) url(resource, identifier string) url.URL {
@@ -189,6 +198,17 @@ func (rl *remoteLayer) Manifest() (*v1.Manifest, error) {
 func (rl *remoteLayer) Size() (int64, error) {
 	// Look up the size of this digest in the manifest to avoid a request.
 	return partial.BlobSize(rl, rl.digest)
+}
+
+// ConfigFile implements partial.WithManifestAndConfigFile so that we can use partial.BlobToDiffID below.
+func (rl *remoteLayer) ConfigFile() (*v1.ConfigFile, error) {
+	return partial.ConfigFile(rl.ri)
+}
+
+// DiffID implements partial.WithDiffID so that we don't recompute a DiffID that we already have
+// available in our ConfigFile.
+func (rl *remoteLayer) DiffID() (v1.Hash, error) {
+	return partial.BlobToDiffID(rl, rl.digest)
 }
 
 // LayerByDigest implements partial.CompressedLayer

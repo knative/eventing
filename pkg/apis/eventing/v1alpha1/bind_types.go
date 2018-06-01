@@ -36,7 +36,7 @@ type Bind struct {
 }
 
 type BindAction struct {
-	// RouteName specifies Elafros route as a target.
+	// RouteName specifies Knative route as a target.
 	RouteName string `json:"routeName,omitempty"`
 }
 

@@ -24,12 +24,12 @@ the [README](README.md).
 
 ## 0.3 Functions
 
-1. An event can trigger an Elafros function [issue#52](https://github.com/knative/eventing/issues/52)
+1. An event can trigger Knative function [issue#52](https://github.com/knative/eventing/issues/52)
 1. A local event can trigger a Google Cloud Function
-1. A Google source can trigger an action local within the Elafros cluster.
+1. A Google source can trigger an action local within the Knative cluster.
    Likely this will use some scaffolding on the Google side to validate the
    interaction between systems, such as deploying a Cloud Function that
-   forwards the Google Event to the Elafros cluster.
+   forwards the Google Event to the Knative cluster.
 
 ## 0.4 Event Persistence
 

@@ -24,7 +24,7 @@
   branch = "master"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
-  revision = "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9"
+  revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -81,35 +81,6 @@
   version = "v0.3.3"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/elafros/elafros"
-  packages = [
-    "pkg/apis/build",
-    "pkg/apis/build/v1alpha1",
-    "pkg/apis/ela",
-    "pkg/apis/ela/v1alpha1",
-    "pkg/apis/istio",
-    "pkg/apis/istio/v1alpha2",
-    "pkg/client/clientset/versioned",
-    "pkg/client/clientset/versioned/scheme",
-    "pkg/client/clientset/versioned/typed/build/v1alpha1",
-    "pkg/client/clientset/versioned/typed/ela/v1alpha1",
-    "pkg/client/clientset/versioned/typed/istio/v1alpha2",
-    "pkg/client/informers/externalversions",
-    "pkg/client/informers/externalversions/build",
-    "pkg/client/informers/externalversions/build/v1alpha1",
-    "pkg/client/informers/externalversions/ela",
-    "pkg/client/informers/externalversions/ela/v1alpha1",
-    "pkg/client/informers/externalversions/internalinterfaces",
-    "pkg/client/informers/externalversions/istio",
-    "pkg/client/informers/externalversions/istio/v1alpha2",
-    "pkg/client/listers/build/v1alpha1",
-    "pkg/client/listers/ela/v1alpha1",
-    "pkg/client/listers/istio/v1alpha2"
-  ]
-  revision = "abfe1677d1e3adf53016c2955417c4fbf4bf161c"
-
-[[projects]]
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
   revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
@@ -140,7 +111,7 @@
   branch = "master"
   name = "github.com/golang/groupcache"
   packages = ["lru"]
-  revision = "66deaeb636dff1ac7d938ce666d090556056a4b0"
+  revision = "24b0969c4cb722950103eed87108c8d291a8df00"
 
 [[projects]]
   name = "github.com/golang/protobuf"
@@ -178,7 +149,7 @@
     "v1/types",
     "v1/v1util"
   ]
-  revision = "69082dcd13b7285516a77b106c7bc702c61b544f"
+  revision = "e033bc7269cacc3145d08df64ad5cf387c7fc48d"
 
 [[projects]]
   name = "github.com/google/go-github"
@@ -217,8 +188,8 @@
     "compiler",
     "extensions"
   ]
-  revision = "ee43cbb60db7bd22502942cccbc39059117352ab"
-  version = "v0.1.0"
+  revision = "7c663266750e7d82587642f65e60bc4083f1f84e"
+  version = "v0.2.0"
 
 [[projects]]
   branch = "master"
@@ -255,8 +226,8 @@
 [[projects]]
   name = "github.com/imdario/mergo"
   packages = ["."]
-  revision = "163f41321a19dd09362d4c63cc2489db2015f1f4"
-  version = "0.3.2"
+  revision = "9d5f1277e9a8ed20c3684bda8fde67c05628518c"
+  version = "v0.3.4"
 
 [[projects]]
   name = "github.com/inconshreveable/mousetrap"
@@ -267,8 +238,38 @@
 [[projects]]
   name = "github.com/json-iterator/go"
   packages = ["."]
-  revision = "3353055b2a1a5ae1b6a8dfde887a524e7088f3a2"
-  version = "1.1.2"
+  revision = "ca39e5af3ece67bbcda3d0f4f56a8e24d9f2dad4"
+  version = "1.1.3"
+
+[[projects]]
+  name = "github.com/knative/build"
+  packages = [
+    "pkg/apis/build",
+    "pkg/apis/build/v1alpha1"
+  ]
+  revision = "bfc0222e894da677b45fd63828a89676aa706589"
+
+[[projects]]
+  name = "github.com/knative/serving"
+  packages = [
+    "pkg/apis/istio",
+    "pkg/apis/istio/v1alpha2",
+    "pkg/apis/serving",
+    "pkg/apis/serving/v1alpha1",
+    "pkg/client/clientset/versioned",
+    "pkg/client/clientset/versioned/scheme",
+    "pkg/client/clientset/versioned/typed/istio/v1alpha2",
+    "pkg/client/clientset/versioned/typed/serving/v1alpha1",
+    "pkg/client/informers/externalversions",
+    "pkg/client/informers/externalversions/internalinterfaces",
+    "pkg/client/informers/externalversions/istio",
+    "pkg/client/informers/externalversions/istio/v1alpha2",
+    "pkg/client/informers/externalversions/serving",
+    "pkg/client/informers/externalversions/serving/v1alpha1",
+    "pkg/client/listers/istio/v1alpha2",
+    "pkg/client/listers/serving/v1alpha1"
+  ]
+  revision = "de9b92f8e7f018178b32b2c44ee0bf73d1cb237c"
 
 [[projects]]
   name = "github.com/magiconair/properties"
@@ -279,8 +280,8 @@
 [[projects]]
   name = "github.com/matttproud/golang_protobuf_extensions"
   packages = ["pbutil"]
-  revision = "3247c84500bff8d9fb6d579d800f20b3e091582c"
-  version = "v1.0.0"
+  revision = "c12348ce28de40eed0136aa2b644d0ee0650e56c"
+  version = "v1.0.1"
 
 [[projects]]
   branch = "master"
@@ -291,8 +292,8 @@
 [[projects]]
   name = "github.com/modern-go/concurrent"
   packages = ["."]
-  revision = "e0a39a4cb4216ea8db28e22a69f4ec25610d513a"
-  version = "1.0.0"
+  revision = "bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94"
+  version = "1.0.3"
 
 [[projects]]
   name = "github.com/modern-go/reflect2"
@@ -335,7 +336,7 @@
     "internal/bitbucket.org/ww/goautoneg",
     "model"
   ]
-  revision = "6fb6fce6f8b75884b92e1889c150403fc0872c5e"
+  revision = "7600349dcfe1abd18d72d3a1770870d9800a7801"
 
 [[projects]]
   branch = "master"
@@ -346,7 +347,7 @@
     "nfs",
     "xfs"
   ]
-  revision = "d274e363d5759d1c916232217be421f1cc89c5fe"
+  revision = "94663424ae5ae9856b40a9f170762b4197024661"
 
 [[projects]]
   name = "github.com/spf13/afero"
@@ -402,14 +403,14 @@
     "trace/internal",
     "trace/propagation"
   ]
-  revision = "10cec2c05ea2cfb8b0d856711daedc49d8a45c56"
-  version = "v0.9.0"
+  revision = "c3ed530f775d85e577ca652cb052a52c078aad26"
+  version = "v0.11.0"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "91a49db82a88618983a78a06c1cbd4e00ab749ab"
+  revision = "5ba7f63082460102a45837dbd1827e10f9479ac0"
 
 [[projects]]
   branch = "master"
@@ -417,15 +418,16 @@
   packages = [
     "context",
     "context/ctxhttp",
+    "http/httpguts",
     "http2",
     "http2/hpack",
     "idna",
+    "internal/socks",
     "internal/timeseries",
-    "lex/httplex",
     "proxy",
     "trace"
   ]
-  revision = "cbe0f9307d0156177f9dd5dc85da1a31abc5f2fb"
+  revision = "1e491301e022f8f977054da4c2d852decd59571f"
 
 [[projects]]
   name = "golang.org/x/oauth2"
@@ -454,7 +456,7 @@
     "unix",
     "windows"
   ]
-  revision = "f6cff0780e542efa0c8e864dc8fa522808f6a598"
+  revision = "c11f84a56e43e20a78cee75a7c034031ecf57d1f"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -481,16 +483,17 @@
   branch = "master"
   name = "golang.org/x/time"
   packages = ["rate"]
-  revision = "26559e0f760e39c24d730d3224364aef164ee23f"
+  revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
-    "imports"
+    "imports",
+    "internal/fastwalk"
   ]
-  revision = "73e16cff9e0d4a802937444bebb562458548241d"
+  revision = "a5b4c53f6e8bdcafa95a94671bf2d1203365858b"
 
 [[projects]]
   branch = "master"
@@ -505,7 +508,7 @@
     "transport/grpc",
     "transport/http"
   ]
-  revision = "aedc137bffcaca05f836e35c6d182fcb7a68b1c0"
+  revision = "f71c6d4abd9757df4168c39856698c341d07251f"
 
 [[projects]]
   name = "google.golang.org/appengine"
@@ -536,7 +539,7 @@
     "googleapis/rpc/status",
     "protobuf/field_mask"
   ]
-  revision = "7bb2a897381c9c5ab2aeb8614f758d7766af68ff"
+  revision = "4065a77fc542a455295382a23a996a08ed18813a"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -576,14 +579,14 @@
     ".",
     "github"
   ]
-  revision = "c271ec3e322dab2e93990e8c5287fe5d5d1209ba"
-  version = "v3.8.0"
+  revision = "be944ed461fc75c52f0f149acfa011f8da721f6c"
+  version = "v3.12.0"
 
 [[projects]]
   name = "gopkg.in/inf.v0"
   packages = ["."]
-  revision = "3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4"
-  version = "v0.9.0"
+  revision = "d2d2541c53f18d2a059457998ce2876cc8e67cbf"
+  version = "v0.9.1"
 
 [[projects]]
   name = "gopkg.in/yaml.v2"
@@ -806,7 +809,7 @@
     "util/workqueue"
   ]
   revision = "23781f4d6632d88e869066eaebb743857aa1ef9b"
-  version = "kubernetes-1.10.0"
+  version = "v7.0.0"
 
 [[projects]]
   name = "k8s.io/code-generator"
@@ -847,17 +850,17 @@
     "parser",
     "types"
   ]
-  revision = "01a732e01d00cb9a81bb0ca050d3e6d2b947927b"
+  revision = "2e1a79edcaecf0bfbde129a1fd55624b66adb699"
 
 [[projects]]
   branch = "master"
   name = "k8s.io/kube-openapi"
   packages = ["pkg/util/proto"]
-  revision = "50ae88d24ede7b8bad68e23c805b5d3da5c8abaf"
+  revision = "8a9b82f00b3a86eac24681da3f9fe6c34c01cea2"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "644ecf30633e1cd3a8fbf54eb3ea9d249b9708c6d2df22c6913e50672c304b96"
+  inputs-digest = "216a68678f17d5c5efc0985044a26696a403e303136bb28d7e9fd81319a4faa2"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -40,8 +40,8 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	elainformers "github.com/elafros/elafros/pkg/client/informers/externalversions"
-	elalisters "github.com/elafros/elafros/pkg/client/listers/ela/v1alpha1"
+	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
+	servinglisters "github.com/knative/serving/pkg/client/listers/serving/v1alpha1"
 
 	"github.com/knative/eventing/pkg/controller"
 	"github.com/knative/eventing/pkg/sources"
@@ -82,7 +82,7 @@ type Controller struct {
 	eventSourcesLister listers.EventSourceLister
 	eventSourcesSynced cache.InformerSynced
 
-	routesLister elalisters.RouteLister
+	routesLister servinglisters.RouteLister
 	routesSynced cache.InformerSynced
 
 	// workqueue is a rate limited work queue. This is used to queue work to be
@@ -102,13 +102,13 @@ func NewController(
 	bindclientset clientset.Interface,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	bindInformerFactory informers.SharedInformerFactory,
-	routeInformerFactory elainformers.SharedInformerFactory) controller.Interface {
+	routeInformerFactory servinginformers.SharedInformerFactory) controller.Interface {
 
 	// obtain a reference to a shared index informer for the Bind types.
 	bindInformer := bindInformerFactory.Eventing().V1alpha1()
 
 	// obtain a reference to a shared index informer for the Route type.
-	routeInformer := routeInformerFactory.Elafros().V1alpha1().Routes()
+	routeInformer := routeInformerFactory.Knative().V1alpha1().Routes()
 
 	// Create event broadcaster
 	// Add bind-controller types to the default Kubernetes Scheme so Events can be

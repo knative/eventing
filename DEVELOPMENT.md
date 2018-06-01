@@ -1,12 +1,12 @@
 # Development
 
 This doc explains how to setup a development environment so you can get started
-[contributing](./CONTRIBUTING.md) to Elafros Bindings. Also take a look at [the
+[contributing](./CONTRIBUTING.md) to Knative Bindings. Also take a look at [the
 development workflow](./CONTRIBUTING.md#workflow) and [the test docs](./test/README.md).
 
 ## Getting started
 
-1. Setup [Elafros](http://github.com/elafros/elafros)
+1. Setup [Knative](http://github.com/knative/serving)
 1. [Create and checkout a repo fork](#checkout-your-fork)
 
 Once you meet these requirements, you can [start Binding](#starting-binding)!
@@ -15,7 +15,7 @@ Before submitting a PR, see also [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ### Requirements
 
-You must have the core of [Elafros](http://github.com/elafros/elafros) running on your cluster:
+You must have the core of [Knative](http://github.com/knative/serving) running on your cluster:
 
 ### Checkout your fork
 
@@ -42,7 +42,7 @@ Once you reach this point you are ready to do a full build and deploy as describ
 
 ## Starting Binding
 
-Once you've [setup your development environment](#getting-started), stand up `Elafros Binding` with:
+Once you've [setup your development environment](#getting-started), stand up `Knative Binding` with:
 
 ```shell
 ko apply -f config/
@@ -76,7 +76,7 @@ ko apply -f config/controller.yaml
 ```
 
 Or you can [clean it up completely](./README.md#clean-up) and [completely
-redeploy `Elafros`](./README.md#start-knative).
+redeploy `Knative`](./README.md#start-knative).
 
 ## Tests
 

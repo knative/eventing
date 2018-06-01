@@ -1,14 +1,14 @@
 # gcp_pubsub_function
 
 A simple function that receives Google Cloud Pub Sub events and prints out the data field after decoding
-from base64 encoding. Because we do **not** have an in-cluster event delivery mechanism yet, uses an
-knative route as an endpoint.
+from base64 encoding. Because we do **not** have an in-cluster event delivery mechanism yet, uses a
+Knative route as an endpoint.
 
 ## Prerequisites
 
 1. [Setup your development environment](../../DEVELOPMENT.md#getting-started)
-2. [Start Elafros](../../README.md#start-knative)
-3. Decide on the DNS name that git can then call. Update elafros/elafros/elaconfig.yaml domainSuffix.
+2. [Start Knative](../../README.md#start-knative)
+3. Decide on the DNS name that git can then call. Update knative/serving/elaconfig.yaml domainSuffix.
 For example I used aikas.org as my hostname, so my elaconfig.yaml looks like so:
 
 ```yaml
@@ -38,7 +38,7 @@ gcloud pubsub topics create ela-demo
 
 ## Running
 
-You can deploy this to Elafros from the root directory via:
+You can deploy this to Knative from the root directory via:
 ```shell
 ko apply -f sample/gcp_pubsub_function/route.yaml
 ko apply -f sample/gcp_pubsub_function/configuration.yaml

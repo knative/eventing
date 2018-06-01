@@ -1,11 +1,11 @@
-# Elafros Personas
+# Knative Personas
 
 When discussing user actions, it is often helpful to [define specific
 user roles](https://en.wikipedia.org/wiki/Persona_(user_experience)) who
 might want to do the action.
 
 
-## Elafros Events
+## Knative Events
 
 Event generation and consumption is a core part of the serverless
 (particularly function as a service) computing model. Event generation
@@ -34,7 +34,7 @@ User stories:
 
 ## Contributors
 
-Contributors are an important part of the Elafros project. As such, we
+Contributors are an important part of the Knative project. As such, we
 will also consider how various infrastructure encourages and enables
 contributors to the project, as well as the impact on end-users.
 
