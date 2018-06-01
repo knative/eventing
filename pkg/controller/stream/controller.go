@@ -18,8 +18,6 @@ package stream
 
 import (
 	"fmt"
-	"net/http"
-	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -348,12 +346,6 @@ func (c *Controller) syncBrokeredStream(stream *eventingv1alpha1.Stream) (*istio
 	if stream.Spec.Broker == "" {
 		// If the resource exists, delete it
 		if routerule != nil {
-			// Notify broker of stream removal
-			err = deleteBrokeredStream(routerule.Labels["broker"], stream)
-			if err != nil {
-				return routerule, err
-			}
-
 			// Remove RouteRule
 			err = c.streamclientset.ConfigV1alpha2().RouteRules(stream.Namespace).Delete(routeruleName, nil)
 			if err != nil {
@@ -383,12 +375,6 @@ func (c *Controller) syncBrokeredStream(stream *eventingv1alpha1.Stream) (*istio
 		msg := fmt.Sprintf(MessageResourceExists, routerule.Name)
 		c.recorder.Event(stream, corev1.EventTypeWarning, ErrResourceExists, msg)
 		return nil, fmt.Errorf(msg)
-	}
-
-	// Notify broker of stream
-	err = provisionBrokeredStream(stream)
-	if err != nil {
-		return nil, err
 	}
 
 	return routerule, nil
@@ -602,51 +588,4 @@ func newIngress(stream *eventingv1alpha1.Stream) *extensionsv1beta1.Ingress {
 			},
 		},
 	}
-}
-
-func provisionBrokeredStream(stream *eventingv1alpha1.Stream) error {
-	streamName := stream.Name
-	namespace := stream.Namespace
-	brokerName := stream.Spec.Broker
-	brokerServiceName := controller.BrokerServiceName(brokerName)
-
-	client := &http.Client{}
-	url := fmt.Sprintf("http://%s.%s.svc.cluster.local/streams/%s", brokerServiceName, namespace, streamName)
-	fmt.Printf("Create stream at %s\n", url)
-	request, err := http.NewRequest(http.MethodPut, url, strings.NewReader(""))
-	if err != nil {
-		return err
-	}
-	response, err := client.Do(request)
-	if err != nil {
-		return err
-	}
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("Unable to provision brokered stream %s on %s", streamName, brokerName)
-	}
-
-	return nil
-}
-
-func deleteBrokeredStream(brokerName string, stream *eventingv1alpha1.Stream) error {
-	streamName := stream.Name
-	namespace := stream.Namespace
-	brokerServiceName := controller.BrokerServiceName(brokerName)
-
-	client := &http.Client{}
-	url := fmt.Sprintf("http://%s.%s.svc.cluster.local/streams/%s", brokerServiceName, namespace, streamName)
-	fmt.Printf("Delete stream at %s\n", url)
-	request, err := http.NewRequest(http.MethodDelete, url, strings.NewReader(""))
-	if err != nil {
-		return err
-	}
-	response, err := client.Do(request)
-	if err != nil {
-		return err
-	}
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("Unable to delete brokered stream %s on %s", streamName, brokerName)
-	}
-
-	return nil
 }

@@ -18,19 +18,27 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/go-martini/martini"
+	"github.com/golang/glog"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
+	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	"github.com/knative/eventing/pkg/subscription"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 var (
-	// TODO make thread safe
-	subscriptions  = make(map[string]map[string]struct{})
-	exists         = struct{}{}
+	masterURL  string
+	kubeconfig string
+
 	broker         = os.Getenv("BROKER_NAME")
 	forwardHeaders = []string{
 		"content-type",
@@ -44,21 +52,55 @@ var (
 	}
 )
 
-func splitStreamName(host string) string {
+func splitStreamName(host string) (string, string) {
 	chunks := strings.Split(host, ".")
 	stream := chunks[0]
-	return stream
+	namespace := chunks[1]
+	return stream, namespace
 }
 
 func main() {
+	flag.Parse()
+
+	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
+	if err != nil {
+		glog.Fatalf("Error building kubeconfig: %s", err.Error())
+	}
+
+	client, err := clientset.NewForConfig(cfg)
+	if err != nil {
+		glog.Fatalf("Error building clientset: %s", err.Error())
+	}
+
+	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
+	monitor := subscription.NewMonitor(broker, informerFactory, subscription.MonitorEventHandlerFuncs{
+		ProvisionFunc: func(stream eventingv1alpha1.Stream) {
+			fmt.Printf("Provision stream %q\n", stream.Name)
+		},
+		UnprovisionFunc: func(stream eventingv1alpha1.Stream) {
+			fmt.Printf("Unprovision stream %q\n", stream.Name)
+		},
+		SubscribeFunc: func(subscription eventingv1alpha1.Subscription) {
+			fmt.Printf("Subscribe %q to %q stream\n", subscription.Spec.Subscriber, subscription.Spec.Stream)
+		},
+		UnsubscribeFunc: func(subscription eventingv1alpha1.Subscription) {
+			fmt.Printf("Unubscribe %q from %q stream\n", subscription.Spec.Subscriber, subscription.Spec.Stream)
+		},
+	})
+
+	m := createServer(monitor)
+	m.Run()
+}
+
+func createServer(monitor *subscription.Monitor) *martini.ClassicMartini {
 	m := martini.Classic()
 
 	m.Post("/", func(req *http.Request, res http.ResponseWriter) {
 		host := req.Host
 		fmt.Printf("Recieved request for %s\n", host)
-		stream := splitStreamName(host)
-		subscribers, ok := subscriptions[stream]
-		if !ok {
+		stream, namespace := splitStreamName(host)
+		subscriptions := monitor.Subscriptions(stream, namespace)
+		if subscriptions == nil {
 			res.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -71,16 +113,18 @@ func main() {
 
 		res.WriteHeader(http.StatusAccepted)
 		go func() {
-			fmt.Printf("Making subscribed requests for %s\n", stream)
+			if len(*subscriptions) == 0 {
+				fmt.Printf("No subscribers for stream %q\n", stream)
+			}
 
 			// make upstream requests
 			client := &http.Client{}
 
-			for subscribed := range subscribers {
-				go func(subscribed string) {
-					fmt.Printf("Making subscribed request to %s for %s\n", subscribed, stream)
+			for _, subscription := range *subscriptions {
+				go func(subscriber string) {
+					fmt.Printf("Sending to %q for %q\n", subscriber, stream)
 
-					url := fmt.Sprintf("http://%s/", subscribed)
+					url := fmt.Sprintf("http://%s/", subscriber)
 					request, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
 					if err != nil {
 						fmt.Printf("Unable to create subscriber request %v", err)
@@ -96,55 +140,15 @@ func main() {
 					if err != nil {
 						fmt.Printf("Unable to complete subscriber request %v", err)
 					}
-				}(subscribed)
+				}(subscription.Subscriber)
 			}
 		}()
 	})
 
-	m.Group("/streams/:stream", func(r martini.Router) {
-		r.Put("", func(params martini.Params, res http.ResponseWriter) {
-			stream := params["stream"]
-			fmt.Printf("Create stream %s\n", stream)
-			if _, ok := subscriptions[stream]; !ok {
-				subscriptions[stream] = map[string]struct{}{}
-			}
-			res.WriteHeader(http.StatusAccepted)
-		})
-		r.Delete("", func(params martini.Params, res http.ResponseWriter) {
-			stream := params["stream"]
-			fmt.Printf("Delete stream %s\n", stream)
-			delete(subscriptions, stream)
-			res.WriteHeader(http.StatusAccepted)
-		})
+	return m
+}
 
-		r.Group("/subscriptions/:subscription", func(r martini.Router) {
-			r.Put("", func(params martini.Params, res http.ResponseWriter) {
-				stream := params["stream"]
-				subscription := params["subscription"]
-				subscribers, ok := subscriptions[stream]
-				if !ok {
-					res.WriteHeader(http.StatusNotFound)
-					return
-				}
-				fmt.Printf("Create subscription %s for stream %s\n", subscription, stream)
-				// TODO store subscription params
-				subscribers[subscription] = exists
-				res.WriteHeader(http.StatusAccepted)
-			})
-			r.Delete("", func(params martini.Params, res http.ResponseWriter) {
-				stream := params["stream"]
-				subscription := params["subscription"]
-				subscribers, ok := subscriptions[stream]
-				if !ok {
-					res.WriteHeader(http.StatusNotFound)
-					return
-				}
-				fmt.Printf("Delete subscription %s for stream %s\n", subscription, stream)
-				delete(subscribers, subscription)
-				res.WriteHeader(http.StatusAccepted)
-			})
-		})
-	})
-
-	m.Run()
+func init() {
+	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 }
