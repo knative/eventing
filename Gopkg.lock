@@ -269,7 +269,7 @@
     "pkg/client/listers/istio/v1alpha2",
     "pkg/client/listers/serving/v1alpha1"
   ]
-  revision = "de9b92f8e7f018178b32b2c44ee0bf73d1cb237c"
+  revision = "a67361c49ec4a957f60d86de05f168a4b41b72ba"
 
 [[projects]]
   name = "github.com/magiconair/properties"
@@ -861,6 +861,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "216a68678f17d5c5efc0985044a26696a403e303136bb28d7e9fd81319a4faa2"
+  inputs-digest = "0caaeabdd984ed27d80935dd80da631c3bc23644e5de6d1bab51f5be748d6fd5"
   solver-name = "gps-cdcl"
   solver-version = 1

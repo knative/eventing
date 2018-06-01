@@ -108,7 +108,7 @@ func NewController(
 	bindInformer := bindInformerFactory.Eventing().V1alpha1()
 
 	// obtain a reference to a shared index informer for the Route type.
-	routeInformer := routeInformerFactory.Knative().V1alpha1().Routes()
+	routeInformer := routeInformerFactory.Serving().V1alpha1().Routes()
 
 	// Create event broadcaster
 	// Add bind-controller types to the default Kubernetes Scheme so Events can be
