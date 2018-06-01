@@ -17,6 +17,7 @@
 package subscription
 
 import (
+	"reflect"
 	"sync"
 
 	"github.com/golang/glog"
@@ -26,20 +27,69 @@ import (
 )
 
 type Monitor struct {
-	cache map[streamKey]map[subscriptionKey]eventingv1alpha1.SubscriptionSpec
+	brokerName string
+	handler    MonitorEventHandlerFuncs
+
+	cache map[streamKey]streamSummary
 	mutex *sync.Mutex
 }
 
-func NewMonitor(informerFactory informers.SharedInformerFactory) *Monitor {
+type MonitorEventHandlerFuncs struct {
+	ProvisionFunc   func(stream eventingv1alpha1.Stream)
+	UnprovisionFunc func(stream eventingv1alpha1.Stream)
+	SubscribeFunc   func(subscription eventingv1alpha1.Subscription)
+	UnsubscribeFunc func(subscription eventingv1alpha1.Subscription)
+}
 
+type streamSummary struct {
+	Stream        *eventingv1alpha1.StreamSpec
+	Subscriptions map[subscriptionKey]subscriptionSummary
+}
+
+type subscriptionSummary struct {
+	Subscription eventingv1alpha1.SubscriptionSpec
+}
+
+func NewMonitor(brokerName string, informerFactory informers.SharedInformerFactory, handler MonitorEventHandlerFuncs) *Monitor {
+
+	streamInformer := informerFactory.Eventing().V1alpha1().Streams()
 	subscriptionInformer := informerFactory.Eventing().V1alpha1().Subscriptions()
 
 	monitor := &Monitor{
-		cache: make(map[streamKey]map[subscriptionKey]eventingv1alpha1.SubscriptionSpec),
+		brokerName: brokerName,
+		handler:    handler,
+
+		cache: make(map[streamKey]streamSummary),
 		mutex: &sync.Mutex{},
 	}
 
 	glog.Info("Setting up event handlers")
+	// Set up an event handler for when Stream resources change
+	streamInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			stream := obj.(eventingv1alpha1.Stream)
+			monitor.createOrUpdateStream(stream)
+		},
+		UpdateFunc: func(old, new interface{}) {
+			oldStream := old.(eventingv1alpha1.Stream)
+			newStream := new.(eventingv1alpha1.Stream)
+
+			if oldStream.ResourceVersion == newStream.ResourceVersion {
+				// Periodic resync will send update events for all known Streams.
+				// Two different versions of the same Stream will always have different RVs.
+				return
+			}
+
+			monitor.createOrUpdateStream(newStream)
+			if oldStream.Spec.Broker != newStream.Spec.Broker {
+				monitor.removeStream(oldStream)
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			stream := obj.(eventingv1alpha1.Stream)
+			monitor.removeStream(stream)
+		},
+	})
 	// Set up an event handler for when Subscription resources change
 	subscriptionInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -71,45 +121,94 @@ func NewMonitor(informerFactory informers.SharedInformerFactory) *Monitor {
 }
 
 // Subscriptions for a stream name and namespace
-func (m *Monitor) Subscriptions(stream string, namespace string) []eventingv1alpha1.SubscriptionSpec {
+func (m *Monitor) Subscriptions(stream string, namespace string) *[]eventingv1alpha1.SubscriptionSpec {
 	streamKey := makeStreamKeyWithNames(stream, namespace)
-	subscriptionsCache := m.getOrCreateSubscriptionsCache(streamKey)
+	summary := m.getOrCreateStreamSummary(streamKey)
+
+	if summary.Stream.Broker != m.brokerName {
+		// the stream is not for this broker
+		return nil
+	}
+
 	m.mutex.Lock()
-	subscriptions := make([]eventingv1alpha1.SubscriptionSpec, len(subscriptionsCache))
-	for _, subscription := range subscriptionsCache {
-		subscriptions = append(subscriptions, subscription)
+	subscriptions := make([]eventingv1alpha1.SubscriptionSpec, len(summary.Subscriptions))
+	for _, subscription := range summary.Subscriptions {
+		subscriptions = append(subscriptions, subscription.Subscription)
 	}
 	m.mutex.Unlock()
-	return subscriptions
+
+	return &subscriptions
 }
 
-func (m *Monitor) getOrCreateSubscriptionsCache(key streamKey) map[subscriptionKey]eventingv1alpha1.SubscriptionSpec {
+func (m *Monitor) getOrCreateStreamSummary(key streamKey) streamSummary {
 	m.mutex.Lock()
-	subscriptionsCache, ok := m.cache[key]
+	summary, ok := m.cache[key]
 	if !ok {
-		subscriptionsCache = make(map[subscriptionKey]eventingv1alpha1.SubscriptionSpec)
-		m.cache[key] = subscriptionsCache
+		summary = streamSummary{
+			Stream:        nil,
+			Subscriptions: make(map[subscriptionKey]subscriptionSummary),
+		}
+		m.cache[key] = summary
 	}
 	m.mutex.Unlock()
-	return subscriptionsCache
+
+	return summary
+}
+
+func (m *Monitor) createOrUpdateStream(stream eventingv1alpha1.Stream) {
+	streamKey := makeStreamKeyFromStream(stream)
+	summary := m.getOrCreateStreamSummary(streamKey)
+
+	m.mutex.Lock()
+	old := summary.Stream
+	new := &stream.Spec
+	summary.Stream = new
+	m.mutex.Unlock()
+
+	if !reflect.DeepEqual(old, new) {
+		m.handler.ProvisionFunc(stream)
+	}
+}
+
+func (m *Monitor) removeStream(stream eventingv1alpha1.Stream) {
+	streamKey := makeStreamKeyFromStream(stream)
+	summary := m.getOrCreateStreamSummary(streamKey)
+
+	m.mutex.Lock()
+	summary.Stream = nil
+	m.mutex.Unlock()
+
+	m.handler.UnprovisionFunc(stream)
 }
 
 func (m *Monitor) createOrUpdateSubscription(subscription eventingv1alpha1.Subscription) {
-	streamKey := makeStreamKey(subscription)
-	subscriptionsCache := m.getOrCreateSubscriptionsCache(streamKey)
-	subscriptionKey := makeSubscriptionKey(subscription)
+	streamKey := makeStreamKeyFromSubscription(subscription)
+	summary := m.getOrCreateStreamSummary(streamKey)
+	subscriptionKey := makeSubscriptionKeyFromSubscription(subscription)
+
 	m.mutex.Lock()
-	subscriptionsCache[subscriptionKey] = subscription.Spec
+	old := summary.Subscriptions[subscriptionKey]
+	new := subscriptionSummary{
+		Subscription: subscription.Spec,
+	}
+	summary.Subscriptions[subscriptionKey] = new
 	m.mutex.Unlock()
+
+	if !reflect.DeepEqual(old.Subscription, new.Subscription) {
+		m.handler.SubscribeFunc(subscription)
+	}
 }
 
 func (m *Monitor) removeSubscription(subscription eventingv1alpha1.Subscription) {
-	streamKey := makeStreamKey(subscription)
-	subscriptionsCache := m.getOrCreateSubscriptionsCache(streamKey)
-	subscriptionKey := makeSubscriptionKey(subscription)
+	streamKey := makeStreamKeyFromSubscription(subscription)
+	summary := m.getOrCreateStreamSummary(streamKey)
+	subscriptionKey := makeSubscriptionKeyFromSubscription(subscription)
+
 	m.mutex.Lock()
-	delete(subscriptionsCache, subscriptionKey)
+	delete(summary.Subscriptions, subscriptionKey)
 	m.mutex.Unlock()
+
+	m.handler.UnsubscribeFunc(subscription)
 }
 
 type streamKey struct {
@@ -117,7 +216,11 @@ type streamKey struct {
 	Namespace string
 }
 
-func makeStreamKey(subscription eventingv1alpha1.Subscription) streamKey {
+func makeStreamKeyFromStream(stream eventingv1alpha1.Stream) streamKey {
+	return makeStreamKeyWithNames(stream.Name, stream.Namespace)
+}
+
+func makeStreamKeyFromSubscription(subscription eventingv1alpha1.Subscription) streamKey {
 	return makeStreamKeyWithNames(subscription.Spec.Stream, subscription.Namespace)
 }
 
@@ -133,7 +236,7 @@ type subscriptionKey struct {
 	Namespace string
 }
 
-func makeSubscriptionKey(subscription eventingv1alpha1.Subscription) subscriptionKey {
+func makeSubscriptionKeyFromSubscription(subscription eventingv1alpha1.Subscription) subscriptionKey {
 	return subscriptionKey{
 		Name:      subscription.Name,
 		Namespace: subscription.Namespace,
