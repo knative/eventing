@@ -29,8 +29,8 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	elaclientset "github.com/elafros/elafros/pkg/client/clientset/versioned"
-	elainformers "github.com/elafros/elafros/pkg/client/informers/externalversions"
+	servingclientset "github.com/knative/serving/pkg/client/clientset/versioned"
+	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
 
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
@@ -73,14 +73,14 @@ func main() {
 		glog.Fatalf("Error building clientset: %s", err.Error())
 	}
 
-	elaClient, err := elaclientset.NewForConfig(cfg)
+	servingClient, err := servingclientset.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building ela clientset: %s", err.Error())
+		glog.Fatalf("Error building serving clientset: %s", err.Error())
 	}
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
-	elaInformerFactory := elainformers.NewSharedInformerFactory(elaClient, time.Second*30)
+	servingInformerFactory := servinginformers.NewSharedInformerFactory(servingClient, time.Second*30)
 
 	// Add new controllers here.
 	ctors := []controller.Constructor{
@@ -91,12 +91,12 @@ func main() {
 	controllers := make([]controller.Interface, 0, len(ctors))
 	for _, ctor := range ctors {
 		controllers = append(controllers,
-			ctor(kubeClient, client, kubeInformerFactory, informerFactory, elaInformerFactory))
+			ctor(kubeClient, client, kubeInformerFactory, informerFactory, servingInformerFactory))
 	}
 
 	go kubeInformerFactory.Start(stopCh)
 	go informerFactory.Start(stopCh)
-	go elaInformerFactory.Start(stopCh)
+	go servingInformerFactory.Start(stopCh)
 
 	// Start all of the controllers.
 	for _, ctrlr := range controllers {
