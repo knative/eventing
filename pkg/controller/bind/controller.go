@@ -40,8 +40,8 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	elainformers "github.com/elafros/elafros/pkg/client/informers/externalversions"
-	elalisters "github.com/elafros/elafros/pkg/client/listers/ela/v1alpha1"
+	elainformers "github.com/knative/serving/pkg/client/informers/externalversions"
+	elalisters "github.com/knative/serving/pkg/client/listers/ela/v1alpha1"
 
 	"github.com/knative/eventing/pkg/controller"
 	"github.com/knative/eventing/pkg/sources"

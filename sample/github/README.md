@@ -11,7 +11,7 @@ the webhook gets created by Elafros.
 
 1. [Setup your development environment](../../DEVELOPMENT.md#getting-started)
 2. [Start Elafros](../../README.md#start-knative)
-3. Decide on the DNS name that git can then call. Update elafros/elafros/elaconfig.yaml domainSuffix.
+3. Decide on the DNS name that git can then call. Update knative/serving/elaconfig.yaml domainSuffix.
 For example I used aikas.org as my hostname, so my elaconfig.yaml looks like so:
 
 ```yaml
