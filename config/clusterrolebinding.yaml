@@ -18,7 +18,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: bind-controller
-    namespace: bind-system
+    namespace: knative-eventing-system
 roleRef:
   kind: ClusterRole
   name: cluster-admin
