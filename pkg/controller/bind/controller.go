@@ -353,7 +353,7 @@ func (c *Controller) syncHandler(key string) error {
 	// Don't mutate the informer's copy of our object.
 	newES := es.DeepCopy()
 
-	binder := sources.NewContainerEventSource(bind, c.kubeclientset, &newES.Spec, "bind-system")
+	binder := sources.NewContainerEventSource(bind, c.kubeclientset, &newES.Spec, "knative-eventing-system")
 	if deletionTimestamp == nil {
 		glog.Infof("Creating a subscription to %q : %q with Trigger %+v", es.Name, et.Name, trigger)
 		bindContext, err := binder.Bind(trigger, functionDNS)
