@@ -38,7 +38,6 @@ import (
 	"github.com/knative/eventing/pkg/controller/bind"
 	"github.com/knative/eventing/pkg/controller/bus"
 	"github.com/knative/eventing/pkg/controller/channel"
-	"github.com/knative/eventing/pkg/controller/subscription"
 	"github.com/knative/eventing/pkg/signals"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -90,7 +89,6 @@ func main() {
 		bind.NewController,
 		bus.NewController,
 		channel.NewController,
-		subscription.NewController,
 	}
 
 	// Build all of our controllers, with the clients constructed above.

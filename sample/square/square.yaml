@@ -32,3 +32,20 @@ spec:
     targetPort: 8080
   selector:
     app: square
+
+---
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Channel
+metadata:
+  name: square
+spec:
+  bus: stub
+
+---
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Subscription
+metadata:
+  name: square
+spec:
+  channel: square
+  subscriber: square

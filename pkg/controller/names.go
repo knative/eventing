@@ -26,7 +26,7 @@ func BusServiceName(busName string) string {
 	return fmt.Sprintf("%s-bus", busName)
 }
 
-func BusedChannelRouteRuleName(channelName string) string {
+func ChannelRouteRuleName(channelName string) string {
 	return fmt.Sprintf("%s-channel", channelName)
 }
 
@@ -36,8 +36,4 @@ func ChannelIngressName(channelName string) string {
 
 func ChannelServiceName(channelName string) string {
 	return fmt.Sprintf("%s-channel", channelName)
-}
-
-func SubscriptionRouteRuleName(subscriptionName string) string {
-	return fmt.Sprintf("%s-subscription", subscriptionName)
 }
