@@ -18,8 +18,6 @@ package subscription
 
 import (
 	"fmt"
-	"net/http"
-	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -278,13 +276,7 @@ func (c *Controller) syncHandler(key string) error {
 	stream, err := c.streamsLister.Streams(namespace).Get(subscription.Spec.Stream)
 
 	var brokerlessRouterule *istiov1alpha2.RouteRule
-	if stream.Spec.Broker != "" {
-		// TODO handle unsubscribe
-		err = subscribeBrokeredStream(stream.Spec.Broker, subscription)
-		if err != nil {
-			return err
-		}
-	} else {
+	if stream.Spec.Broker == "" {
 		brokerlessRouterule, err = c.syncBrokerlessRouteRule(subscription)
 		if err != nil {
 			return err
@@ -430,53 +422,4 @@ func newRouteRule(subscription *eventingv1alpha1.Subscription) *istiov1alpha2.Ro
 			},
 		},
 	}
-}
-
-func subscribeBrokeredStream(brokerName string, subscription *eventingv1alpha1.Subscription) error {
-	streamName := subscription.Spec.Stream
-	subscriberName := subscription.Spec.Subscriber
-	namespace := subscription.Namespace
-	brokerServiceName := controller.BrokerServiceName(brokerName)
-
-	client := &http.Client{}
-	// TODO pass subscriber and params in body, url should contain subscription name
-	url := fmt.Sprintf("http://%s.%s.svc.cluster.local/streams/%s/subscriptions/%s", brokerServiceName, namespace, streamName, subscriberName)
-	fmt.Printf("Subscribe %s to stream %s at %s\n", subscriberName, streamName, url)
-	request, err := http.NewRequest(http.MethodPut, url, strings.NewReader(""))
-	if err != nil {
-		return err
-	}
-	response, err := client.Do(request)
-	if err != nil {
-		return err
-	}
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("Unable to subscribe %s to brokered stream %s on %s", subscriberName, streamName, brokerName)
-	}
-
-	return nil
-}
-
-func unsubscribeBrokeredStream(brokerName string, subscription *eventingv1alpha1.Subscription) error {
-	streamName := subscription.Spec.Stream
-	subscriberName := subscription.Spec.Subscriber
-	namespace := subscription.Namespace
-	brokerServiceName := controller.BrokerServiceName(brokerName)
-
-	client := &http.Client{}
-	url := fmt.Sprintf("http://%s.%s.svc.cluster.local/streams/%s/subscriptions/%s", brokerServiceName, namespace, streamName, subscriberName)
-	fmt.Printf("Unsubscribe %s from stream %s at %s\n", subscriberName, streamName, url)
-	request, err := http.NewRequest(http.MethodDelete, url, strings.NewReader(""))
-	if err != nil {
-		return err
-	}
-	response, err := client.Do(request)
-	if err != nil {
-		return err
-	}
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("Unable to unsubscribe %s from brokered stream %s on %s", subscriberName, streamName, brokerName)
-	}
-
-	return nil
 }
