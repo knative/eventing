@@ -14,4 +14,4 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: bind-system
+  name: knative-eventing-system

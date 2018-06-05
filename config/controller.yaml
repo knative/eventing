@@ -15,7 +15,7 @@ apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
   name: bind-controller
-  namespace: bind-system
+  namespace: knative-eventing-system
 spec:
   replicas: 1
   template:

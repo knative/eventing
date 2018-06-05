@@ -67,7 +67,7 @@ func (t *GCPPubSubEventSource) Unbind(trigger sources.EventTrigger, bindContext 
 	deploymentName := bindContext.Context[deployment].(string)
 	subscriptionName := bindContext.Context[subscription].(string)
 
-	err := t.deleteWatcher("bind-system", deploymentName)
+	err := t.deleteWatcher("knative-eventing-system", deploymentName)
 	if err != nil {
 		glog.Warningf("Failed to delete deployment: %s", err)
 		return err
@@ -129,7 +129,7 @@ func (t *GCPPubSubEventSource) Bind(trigger sources.EventTrigger, route string) 
 
 	// Create actual watcher
 	deploymentName := subscriptionName
-	err = t.createWatcher("bind-system", deploymentName, t.image, projectID, subscriptionName, route)
+	err = t.createWatcher("knative-eventing-system", deploymentName, t.image, projectID, subscriptionName, route)
 	if err != nil {
 		glog.Infof("Failed to create deployment: %v", err)
 
