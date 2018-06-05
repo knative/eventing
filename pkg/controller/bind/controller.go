@@ -46,12 +46,12 @@ import (
 	"github.com/knative/eventing/pkg/controller"
 	"github.com/knative/eventing/pkg/sources"
 
-	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	v1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	bindscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	listers "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
+	listers "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
 )
 
 const controllerAgentName = "bind-controller"
@@ -70,11 +70,11 @@ type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
 
-	// bindclientset is a clientset for our own API group
-	bindclientset clientset.Interface
+	// sourcesclientset is a clientset for our own API group
+	sourcesclientset clientset.Interface
 
-	bindsLister listers.BindLister
-	bindsSynced cache.InformerSynced
+	sourcesLister listers.BindLister
+	sourcesSynced cache.InformerSynced
 
 	eventTypesLister listers.EventTypeLister
 	eventTypesSynced cache.InformerSynced
@@ -99,13 +99,13 @@ type Controller struct {
 // NewController returns a new bind controller
 func NewController(
 	kubeclientset kubernetes.Interface,
-	bindclientset clientset.Interface,
+	sourcesclientset clientset.Interface,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
-	bindInformerFactory informers.SharedInformerFactory,
+	sourcesInformerFactory informers.SharedInformerFactory,
 	routeInformerFactory servinginformers.SharedInformerFactory) controller.Interface {
 
 	// obtain a reference to a shared index informer for the Bind types.
-	bindInformer := bindInformerFactory.Eventing().V1alpha1()
+	bindInformer := sourcesInformerFactory.Sources().V1alpha1()
 
 	// obtain a reference to a shared index informer for the Route type.
 	routeInformer := routeInformerFactory.Serving().V1alpha1().Routes()
@@ -122,9 +122,9 @@ func NewController(
 
 	controller := &Controller{
 		kubeclientset:      kubeclientset,
-		bindclientset:      bindclientset,
-		bindsLister:        bindInformer.Binds().Lister(),
-		bindsSynced:        bindInformer.Binds().Informer().HasSynced,
+		sourcesclientset:   sourcesclientset,
+		sourcesLister:      bindInformer.Binds().Lister(),
+		sourcesSynced:      bindInformer.Binds().Informer().HasSynced,
 		routesLister:       routeInformer.Lister(),
 		routesSynced:       routeInformer.Informer().HasSynced,
 		eventSourcesLister: bindInformer.EventSources().Lister(),
@@ -160,7 +160,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 
 	// Wait for the caches to be synced before starting workers
 	glog.Info("Waiting for Bind informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, c.bindsSynced); !ok {
+	if ok := cache.WaitForCacheSync(stopCh, c.sourcesSynced); !ok {
 		return fmt.Errorf("failed to wait for Bind caches to sync")
 	}
 
@@ -274,7 +274,7 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	// Get the Bind resource with this namespace/name
-	bind, err := c.bindsLister.Binds(namespace).Get(name)
+	bind, err := c.sourcesLister.Binds(namespace).Get(name)
 	if err != nil {
 		// The Bind resource may no longer exist, in which case we stop
 		// processing.
@@ -437,7 +437,7 @@ func (c *Controller) syncHandler(key string) error {
 }
 
 func (c *Controller) updateFinalizers(u *v1alpha1.Bind) (*v1alpha1.Bind, error) {
-	bindClient := c.bindclientset.EventingV1alpha1().Binds(u.Namespace)
+	bindClient := c.sourcesclientset.SourcesV1alpha1().Binds(u.Namespace)
 	newu, err := bindClient.Get(u.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -447,7 +447,7 @@ func (c *Controller) updateFinalizers(u *v1alpha1.Bind) (*v1alpha1.Bind, error) 
 }
 
 func (c *Controller) updateStatus(u *v1alpha1.Bind) (*v1alpha1.Bind, error) {
-	bindClient := c.bindclientset.EventingV1alpha1().Binds(u.Namespace)
+	bindClient := c.sourcesclientset.SourcesV1alpha1().Binds(u.Namespace)
 	newu, err := bindClient.Get(u.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err

@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package bind
+package sources
 
 const (
-	GroupName = "eventing.knative.dev"
+	GroupName = "sources.eventing.knative.dev"
 )
