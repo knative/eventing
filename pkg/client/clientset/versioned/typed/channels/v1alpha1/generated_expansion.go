@@ -18,8 +18,8 @@ limitations under the License.
 
 package v1alpha1
 
-type BindExpansion interface{}
+type BusExpansion interface{}
 
-type EventSourceExpansion interface{}
+type ChannelExpansion interface{}
 
-type EventTypeExpansion interface{}
+type SubscriptionExpansion interface{}

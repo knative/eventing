@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	v1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -30,13 +30,13 @@ import (
 
 // FakeBuses implements BusInterface
 type FakeBuses struct {
-	Fake *FakeEventingV1alpha1
+	Fake *FakeChannelsV1alpha1
 	ns   string
 }
 
-var busesResource = schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1alpha1", Resource: "buses"}
+var busesResource = schema.GroupVersionResource{Group: "channels.eventing.knative.dev", Version: "v1alpha1", Resource: "buses"}
 
-var busesKind = schema.GroupVersionKind{Group: "eventing.knative.dev", Version: "v1alpha1", Kind: "Bus"}
+var busesKind = schema.GroupVersionKind{Group: "channels.eventing.knative.dev", Version: "v1alpha1", Kind: "Bus"}
 
 // Get takes name of the bus, and returns the corresponding bus object, and an error if there is any.
 func (c *FakeBuses) Get(name string, options v1.GetOptions) (result *v1alpha1.Bus, err error) {

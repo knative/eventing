@@ -24,6 +24,7 @@ import (
 	time "time"
 
 	versioned "github.com/knative/eventing/pkg/client/clientset/versioned"
+	channels "github.com/knative/eventing/pkg/client/informers/externalversions/channels"
 	eventing "github.com/knative/eventing/pkg/client/informers/externalversions/eventing"
 	internalinterfaces "github.com/knative/eventing/pkg/client/informers/externalversions/internalinterfaces"
 	istio "github.com/knative/eventing/pkg/client/informers/externalversions/istio"
@@ -124,8 +125,13 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
+	Channels() channels.Interface
 	Eventing() eventing.Interface
 	Config() istio.Interface
+}
+
+func (f *sharedInformerFactory) Channels() channels.Interface {
+	return channels.New(f, f.namespace, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Eventing() eventing.Interface {

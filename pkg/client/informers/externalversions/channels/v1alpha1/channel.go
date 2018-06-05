@@ -21,10 +21,10 @@ package v1alpha1
 import (
 	time "time"
 
-	eventing_v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	channels_v1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	versioned "github.com/knative/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/knative/eventing/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
+	v1alpha1 "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -61,16 +61,16 @@ func NewFilteredChannelInformer(client versioned.Interface, namespace string, re
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1alpha1().Channels(namespace).List(options)
+				return client.ChannelsV1alpha1().Channels(namespace).List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1alpha1().Channels(namespace).Watch(options)
+				return client.ChannelsV1alpha1().Channels(namespace).Watch(options)
 			},
 		},
-		&eventing_v1alpha1.Channel{},
+		&channels_v1alpha1.Channel{},
 		resyncPeriod,
 		indexers,
 	)
@@ -81,7 +81,7 @@ func (f *channelInformer) defaultInformer(client versioned.Interface, resyncPeri
 }
 
 func (f *channelInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&eventing_v1alpha1.Channel{}, f.defaultInformer)
+	return f.factory.InformerFor(&channels_v1alpha1.Channel{}, f.defaultInformer)
 }
 
 func (f *channelInformer) Lister() v1alpha1.ChannelLister {

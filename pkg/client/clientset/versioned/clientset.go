@@ -20,6 +20,7 @@ package versioned
 
 import (
 	glog "github.com/golang/glog"
+	channelsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/channels/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
 	configv1alpha2 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/istio/v1alpha2"
 	discovery "k8s.io/client-go/discovery"
@@ -29,6 +30,9 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
+	ChannelsV1alpha1() channelsv1alpha1.ChannelsV1alpha1Interface
+	// Deprecated: please explicitly pick a version if possible.
+	Channels() channelsv1alpha1.ChannelsV1alpha1Interface
 	EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interface
 	// Deprecated: please explicitly pick a version if possible.
 	Eventing() eventingv1alpha1.EventingV1alpha1Interface
@@ -41,8 +45,20 @@ type Interface interface {
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
+	channelsV1alpha1 *channelsv1alpha1.ChannelsV1alpha1Client
 	eventingV1alpha1 *eventingv1alpha1.EventingV1alpha1Client
 	configV1alpha2   *configv1alpha2.ConfigV1alpha2Client
+}
+
+// ChannelsV1alpha1 retrieves the ChannelsV1alpha1Client
+func (c *Clientset) ChannelsV1alpha1() channelsv1alpha1.ChannelsV1alpha1Interface {
+	return c.channelsV1alpha1
+}
+
+// Deprecated: Channels retrieves the default version of ChannelsClient.
+// Please explicitly pick a version.
+func (c *Clientset) Channels() channelsv1alpha1.ChannelsV1alpha1Interface {
+	return c.channelsV1alpha1
 }
 
 // EventingV1alpha1 retrieves the EventingV1alpha1Client
@@ -83,6 +99,10 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
+	cs.channelsV1alpha1, err = channelsv1alpha1.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
 	cs.eventingV1alpha1, err = eventingv1alpha1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
@@ -104,6 +124,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
+	cs.channelsV1alpha1 = channelsv1alpha1.NewForConfigOrDie(c)
 	cs.eventingV1alpha1 = eventingv1alpha1.NewForConfigOrDie(c)
 	cs.configV1alpha2 = configv1alpha2.NewForConfigOrDie(c)
 
@@ -114,6 +135,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
+	cs.channelsV1alpha1 = channelsv1alpha1.New(c)
 	cs.eventingV1alpha1 = eventingv1alpha1.New(c)
 	cs.configV1alpha2 = configv1alpha2.New(c)
 

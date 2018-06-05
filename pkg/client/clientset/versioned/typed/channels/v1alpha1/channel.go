@@ -19,7 +19,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	v1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	scheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -53,7 +53,7 @@ type channels struct {
 }
 
 // newChannels returns a Channels
-func newChannels(c *EventingV1alpha1Client, namespace string) *channels {
+func newChannels(c *ChannelsV1alpha1Client, namespace string) *channels {
 	return &channels{
 		client: c.RESTClient(),
 		ns:     namespace,

@@ -44,10 +44,10 @@ import (
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	channelscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	listers "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
+	listers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
 	elainformers "github.com/knative/serving/pkg/client/informers/externalversions"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 )
 
 const controllerAgentName = "bus-controller"
@@ -102,7 +102,7 @@ func NewController(
 
 	// obtain references to shared index informers for the Bus, Deployment and Service
 	// types.
-	busInformer := busInformerFactory.Eventing().V1alpha1().Buses()
+	busInformer := busInformerFactory.Channels().V1alpha1().Buses()
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
 
@@ -296,7 +296,7 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
-func (c *Controller) syncBusService(bus *eventingv1alpha1.Bus) (*corev1.Service, error) {
+func (c *Controller) syncBusService(bus *channelsv1alpha1.Bus) (*corev1.Service, error) {
 	// Get the service with the specified service name
 	serviceName := controller.BusServiceName(bus.ObjectMeta.Name)
 	service, err := c.servicesLister.Services(bus.Namespace).Get(serviceName)
@@ -323,7 +323,7 @@ func (c *Controller) syncBusService(bus *eventingv1alpha1.Bus) (*corev1.Service,
 	return service, nil
 }
 
-func (c *Controller) syncBusDeployment(bus *eventingv1alpha1.Bus) (*appsv1.Deployment, error) {
+func (c *Controller) syncBusDeployment(bus *channelsv1alpha1.Bus) (*appsv1.Deployment, error) {
 	// Get the deployment with the specified deployment name
 	deploymentName := controller.BusDeploymentName(bus.ObjectMeta.Name)
 	deployment, err := c.deploymentsLister.Deployments(bus.Namespace).Get(deploymentName)
@@ -362,7 +362,7 @@ func (c *Controller) syncBusDeployment(bus *eventingv1alpha1.Bus) (*appsv1.Deplo
 	return deployment, nil
 }
 
-func (c *Controller) updateBusStatus(bus *eventingv1alpha1.Bus, service *corev1.Service, deployment *appsv1.Deployment) error {
+func (c *Controller) updateBusStatus(bus *channelsv1alpha1.Bus, service *corev1.Service, deployment *appsv1.Deployment) error {
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
@@ -371,7 +371,7 @@ func (c *Controller) updateBusStatus(bus *eventingv1alpha1.Bus, service *corev1.
 	// we must use Update instead of UpdateStatus to update the Status block of the Bus resource.
 	// UpdateStatus will not allow changes to the Spec of the resource,
 	// which is ideal for ensuring nothing other than resource status has been updated.
-	_, err := c.busclientset.EventingV1alpha1().Buses(bus.Namespace).Update(busCopy)
+	_, err := c.busclientset.ChannelsV1alpha1().Buses(bus.Namespace).Update(busCopy)
 	return err
 }
 
@@ -431,7 +431,7 @@ func (c *Controller) handleObject(obj interface{}) {
 // newService creates a new Service for a Bus resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the Bus resource that 'owns' it.
-func newService(bus *eventingv1alpha1.Bus) *corev1.Service {
+func newService(bus *channelsv1alpha1.Bus) *corev1.Service {
 	labels := map[string]string{
 		"bus": bus.Name,
 	}
@@ -442,8 +442,8 @@ func newService(bus *eventingv1alpha1.Bus) *corev1.Service {
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(bus, schema.GroupVersionKind{
-					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
-					Version: eventingv1alpha1.SchemeGroupVersion.Version,
+					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
+					Version: channelsv1alpha1.SchemeGroupVersion.Version,
 					Kind:    "Bus",
 				}),
 			},
@@ -464,7 +464,7 @@ func newService(bus *eventingv1alpha1.Bus) *corev1.Service {
 // newDeployment creates a new Deployment for a Bus resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the Bus resource that 'owns' it.
-func newDeployment(bus *eventingv1alpha1.Bus) *appsv1.Deployment {
+func newDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 	labels := map[string]string{
 		"bus": bus.Name,
 	}
@@ -486,8 +486,8 @@ func newDeployment(bus *eventingv1alpha1.Bus) *appsv1.Deployment {
 			Namespace: bus.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(bus, schema.GroupVersionKind{
-					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
-					Version: eventingv1alpha1.SchemeGroupVersion.Version,
+					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
+					Version: channelsv1alpha1.SchemeGroupVersion.Version,
 					Kind:    "Bus",
 				}),
 			},

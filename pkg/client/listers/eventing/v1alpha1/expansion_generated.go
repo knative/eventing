@@ -26,22 +26,6 @@ type BindListerExpansion interface{}
 // BindNamespaceLister.
 type BindNamespaceListerExpansion interface{}
 
-// BusListerExpansion allows custom methods to be added to
-// BusLister.
-type BusListerExpansion interface{}
-
-// BusNamespaceListerExpansion allows custom methods to be added to
-// BusNamespaceLister.
-type BusNamespaceListerExpansion interface{}
-
-// ChannelListerExpansion allows custom methods to be added to
-// ChannelLister.
-type ChannelListerExpansion interface{}
-
-// ChannelNamespaceListerExpansion allows custom methods to be added to
-// ChannelNamespaceLister.
-type ChannelNamespaceListerExpansion interface{}
-
 // EventSourceListerExpansion allows custom methods to be added to
 // EventSourceLister.
 type EventSourceListerExpansion interface{}
@@ -57,11 +41,3 @@ type EventTypeListerExpansion interface{}
 // EventTypeNamespaceListerExpansion allows custom methods to be added to
 // EventTypeNamespaceLister.
 type EventTypeNamespaceListerExpansion interface{}
-
-// SubscriptionListerExpansion allows custom methods to be added to
-// SubscriptionLister.
-type SubscriptionListerExpansion interface{}
-
-// SubscriptionNamespaceListerExpansion allows custom methods to be added to
-// SubscriptionNamespaceLister.
-type SubscriptionNamespaceListerExpansion interface{}

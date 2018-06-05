@@ -21,7 +21,7 @@ import (
 	"sync"
 
 	"github.com/golang/glog"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"k8s.io/client-go/tools/cache"
 )
@@ -35,25 +35,25 @@ type Monitor struct {
 }
 
 type MonitorEventHandlerFuncs struct {
-	ProvisionFunc   func(channel eventingv1alpha1.Channel)
-	UnprovisionFunc func(channel eventingv1alpha1.Channel)
-	SubscribeFunc   func(subscription eventingv1alpha1.Subscription)
-	UnsubscribeFunc func(subscription eventingv1alpha1.Subscription)
+	ProvisionFunc   func(channel channelsv1alpha1.Channel)
+	UnprovisionFunc func(channel channelsv1alpha1.Channel)
+	SubscribeFunc   func(subscription channelsv1alpha1.Subscription)
+	UnsubscribeFunc func(subscription channelsv1alpha1.Subscription)
 }
 
 type channelSummary struct {
-	Channel       *eventingv1alpha1.ChannelSpec
+	Channel       *channelsv1alpha1.ChannelSpec
 	Subscriptions map[subscriptionKey]subscriptionSummary
 }
 
 type subscriptionSummary struct {
-	Subscription eventingv1alpha1.SubscriptionSpec
+	Subscription channelsv1alpha1.SubscriptionSpec
 }
 
 func NewMonitor(busName string, informerFactory informers.SharedInformerFactory, handler MonitorEventHandlerFuncs) *Monitor {
 
-	channelInformer := informerFactory.Eventing().V1alpha1().Channels()
-	subscriptionInformer := informerFactory.Eventing().V1alpha1().Subscriptions()
+	channelInformer := informerFactory.Channels().V1alpha1().Channels()
+	subscriptionInformer := informerFactory.Channels().V1alpha1().Subscriptions()
 
 	monitor := &Monitor{
 		busName: busName,
@@ -67,12 +67,12 @@ func NewMonitor(busName string, informerFactory informers.SharedInformerFactory,
 	// Set up an event handler for when Channel resources change
 	channelInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			channel := obj.(eventingv1alpha1.Channel)
+			channel := obj.(channelsv1alpha1.Channel)
 			monitor.createOrUpdateChannel(channel)
 		},
 		UpdateFunc: func(old, new interface{}) {
-			oldChannel := old.(eventingv1alpha1.Channel)
-			newChannel := new.(eventingv1alpha1.Channel)
+			oldChannel := old.(channelsv1alpha1.Channel)
+			newChannel := new.(channelsv1alpha1.Channel)
 
 			if oldChannel.ResourceVersion == newChannel.ResourceVersion {
 				// Periodic resync will send update events for all known Channels.
@@ -86,19 +86,19 @@ func NewMonitor(busName string, informerFactory informers.SharedInformerFactory,
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			channel := obj.(eventingv1alpha1.Channel)
+			channel := obj.(channelsv1alpha1.Channel)
 			monitor.removeChannel(channel)
 		},
 	})
 	// Set up an event handler for when Subscription resources change
 	subscriptionInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			subscription := obj.(eventingv1alpha1.Subscription)
+			subscription := obj.(channelsv1alpha1.Subscription)
 			monitor.createOrUpdateSubscription(subscription)
 		},
 		UpdateFunc: func(old, new interface{}) {
-			oldSubscription := old.(eventingv1alpha1.Subscription)
-			newSubscription := new.(eventingv1alpha1.Subscription)
+			oldSubscription := old.(channelsv1alpha1.Subscription)
+			newSubscription := new.(channelsv1alpha1.Subscription)
 
 			if oldSubscription.ResourceVersion == newSubscription.ResourceVersion {
 				// Periodic resync will send update events for all known Subscriptions.
@@ -112,7 +112,7 @@ func NewMonitor(busName string, informerFactory informers.SharedInformerFactory,
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			subscription := obj.(eventingv1alpha1.Subscription)
+			subscription := obj.(channelsv1alpha1.Subscription)
 			monitor.removeSubscription(subscription)
 		},
 	})
@@ -121,7 +121,7 @@ func NewMonitor(busName string, informerFactory informers.SharedInformerFactory,
 }
 
 // Subscriptions for a channel name and namespace
-func (m *Monitor) Subscriptions(channel string, namespace string) *[]eventingv1alpha1.SubscriptionSpec {
+func (m *Monitor) Subscriptions(channel string, namespace string) *[]channelsv1alpha1.SubscriptionSpec {
 	channelKey := makeChannelKeyWithNames(channel, namespace)
 	summary := m.getOrCreateChannelSummary(channelKey)
 
@@ -131,7 +131,7 @@ func (m *Monitor) Subscriptions(channel string, namespace string) *[]eventingv1a
 	}
 
 	m.mutex.Lock()
-	subscriptions := make([]eventingv1alpha1.SubscriptionSpec, len(summary.Subscriptions))
+	subscriptions := make([]channelsv1alpha1.SubscriptionSpec, len(summary.Subscriptions))
 	for _, subscription := range summary.Subscriptions {
 		subscriptions = append(subscriptions, subscription.Subscription)
 	}
@@ -155,7 +155,7 @@ func (m *Monitor) getOrCreateChannelSummary(key channelKey) channelSummary {
 	return summary
 }
 
-func (m *Monitor) createOrUpdateChannel(channel eventingv1alpha1.Channel) {
+func (m *Monitor) createOrUpdateChannel(channel channelsv1alpha1.Channel) {
 	channelKey := makeChannelKeyFromChannel(channel)
 	summary := m.getOrCreateChannelSummary(channelKey)
 
@@ -170,7 +170,7 @@ func (m *Monitor) createOrUpdateChannel(channel eventingv1alpha1.Channel) {
 	}
 }
 
-func (m *Monitor) removeChannel(channel eventingv1alpha1.Channel) {
+func (m *Monitor) removeChannel(channel channelsv1alpha1.Channel) {
 	channelKey := makeChannelKeyFromChannel(channel)
 	summary := m.getOrCreateChannelSummary(channelKey)
 
@@ -181,7 +181,7 @@ func (m *Monitor) removeChannel(channel eventingv1alpha1.Channel) {
 	m.handler.UnprovisionFunc(channel)
 }
 
-func (m *Monitor) createOrUpdateSubscription(subscription eventingv1alpha1.Subscription) {
+func (m *Monitor) createOrUpdateSubscription(subscription channelsv1alpha1.Subscription) {
 	channelKey := makeChannelKeyFromSubscription(subscription)
 	summary := m.getOrCreateChannelSummary(channelKey)
 	subscriptionKey := makeSubscriptionKeyFromSubscription(subscription)
@@ -199,7 +199,7 @@ func (m *Monitor) createOrUpdateSubscription(subscription eventingv1alpha1.Subsc
 	}
 }
 
-func (m *Monitor) removeSubscription(subscription eventingv1alpha1.Subscription) {
+func (m *Monitor) removeSubscription(subscription channelsv1alpha1.Subscription) {
 	channelKey := makeChannelKeyFromSubscription(subscription)
 	summary := m.getOrCreateChannelSummary(channelKey)
 	subscriptionKey := makeSubscriptionKeyFromSubscription(subscription)
@@ -216,11 +216,11 @@ type channelKey struct {
 	Namespace string
 }
 
-func makeChannelKeyFromChannel(channel eventingv1alpha1.Channel) channelKey {
+func makeChannelKeyFromChannel(channel channelsv1alpha1.Channel) channelKey {
 	return makeChannelKeyWithNames(channel.Name, channel.Namespace)
 }
 
-func makeChannelKeyFromSubscription(subscription eventingv1alpha1.Subscription) channelKey {
+func makeChannelKeyFromSubscription(subscription channelsv1alpha1.Subscription) channelKey {
 	return makeChannelKeyWithNames(subscription.Spec.Channel, subscription.Namespace)
 }
 
@@ -236,7 +236,7 @@ type subscriptionKey struct {
 	Namespace string
 }
 
-func makeSubscriptionKeyFromSubscription(subscription eventingv1alpha1.Subscription) subscriptionKey {
+func makeSubscriptionKeyFromSubscription(subscription channelsv1alpha1.Subscription) subscriptionKey {
 	return subscriptionKey{
 		Name:      subscription.Name,
 		Namespace: subscription.Namespace,

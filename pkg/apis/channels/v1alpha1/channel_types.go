@@ -25,39 +25,30 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:defaulter-gen=true
 
-// Represents the subscriptions.eventing.dev CRD
-type Subscription struct {
+// Represents the channels.channels.eventing.knative.dev CRD
+type Channel struct {
 	meta_v1.TypeMeta   `json:",inline"`
 	meta_v1.ObjectMeta `json:"metadata"`
-	Spec               SubscriptionSpec    `json:"spec"`
-	Status             *SubscriptionStatus `json:"status,omitempty"`
+	Spec               ChannelSpec    `json:"spec"`
+	Status             *ChannelStatus `json:"status,omitempty"`
 }
 
-// Spec (what the user wants) for a subscription
-type SubscriptionSpec struct {
+// Spec (what the user wants) for a channel
+type ChannelSpec struct {
 
-	// Name of the channel to subscribe to
-	Channel string `json:"channel"`
-
-	// Name of the subscriber service
-	Subscriber string `json:"subscriber"`
-
-	// Parameters for the subscription
-	Params *SubscriptionParams `json:"params,omitempty"`
+	// Name of the bus backing this channel (optional)
+	Bus string
 }
 
-// Params (key-value pairs) for a subscription
-type SubscriptionParams map[string]string
-
-// Status (computed) for a subscription
-type SubscriptionStatus struct {
+// Status (computed) for a channel
+type ChannelStatus struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Returned in list operations
-type SubscriptionList struct {
+type ChannelList struct {
 	meta_v1.TypeMeta `json:",inline"`
 	meta_v1.ListMeta `json:"metadata"`
-	Items            []Subscription `json:"items"`
+	Items            []Channel `json:"items"`
 }

@@ -44,10 +44,10 @@ import (
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	channelscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	listers "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
+	listers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
 	elainformers "github.com/knative/serving/pkg/client/informers/externalversions"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	istiov1alpha2 "github.com/knative/eventing/pkg/apis/istio/v1alpha2"
 )
 
@@ -108,7 +108,7 @@ func NewController(
 	ingressInformer := kubeInformerFactory.Extensions().V1beta1().Ingresses()
 	routeruleInformer := channelInformerFactory.Config().V1alpha2().RouteRules()
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
-	channelInformer := channelInformerFactory.Eventing().V1alpha1().Channels()
+	channelInformer := channelInformerFactory.Channels().V1alpha1().Channels()
 
 	// Create event broadcaster
 	// Add channel-controller types to the default Kubernetes Scheme so Events can be
@@ -311,7 +311,7 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
-func (c *Controller) syncChannelService(channel *eventingv1alpha1.Channel) (*corev1.Service, error) {
+func (c *Controller) syncChannelService(channel *channelsv1alpha1.Channel) (*corev1.Service, error) {
 	// Get the service with the specified service name
 	serviceName := controller.ChannelServiceName(channel.ObjectMeta.Name)
 	service, err := c.servicesLister.Services(channel.Namespace).Get(serviceName)
@@ -338,7 +338,7 @@ func (c *Controller) syncChannelService(channel *eventingv1alpha1.Channel) (*cor
 	return service, nil
 }
 
-func (c *Controller) syncChannelRouteRule(channel *eventingv1alpha1.Channel) (*istiov1alpha2.RouteRule, error) {
+func (c *Controller) syncChannelRouteRule(channel *channelsv1alpha1.Channel) (*istiov1alpha2.RouteRule, error) {
 	// Get the RouteRule with the specified Channel name
 	routeruleName := controller.ChannelRouteRuleName(channel.ObjectMeta.Name)
 	routerule, err := c.routerulesLister.RouteRules(channel.Namespace).Get(routeruleName)
@@ -366,7 +366,7 @@ func (c *Controller) syncChannelRouteRule(channel *eventingv1alpha1.Channel) (*i
 	return routerule, nil
 }
 
-func (c *Controller) syncChannelIngress(channel *eventingv1alpha1.Channel) (*extensionsv1beta1.Ingress, error) {
+func (c *Controller) syncChannelIngress(channel *channelsv1alpha1.Channel) (*extensionsv1beta1.Ingress, error) {
 	// TODO make ingress optional
 
 	// Get the ingress with the specified ingress name
@@ -395,7 +395,7 @@ func (c *Controller) syncChannelIngress(channel *eventingv1alpha1.Channel) (*ext
 	return ingress, nil
 }
 
-func (c *Controller) updateChannelStatus(channel *eventingv1alpha1.Channel, service *corev1.Service, ingress *extensionsv1beta1.Ingress, routeRule *istiov1alpha2.RouteRule) error {
+func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel, service *corev1.Service, ingress *extensionsv1beta1.Ingress, routeRule *istiov1alpha2.RouteRule) error {
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
@@ -404,7 +404,7 @@ func (c *Controller) updateChannelStatus(channel *eventingv1alpha1.Channel, serv
 	// we must use Update instead of UpdateStatus to update the Status block of the Channel resource.
 	// UpdateStatus will not allow changes to the Spec of the resource,
 	// which is ideal for ensuring nothing other than resource status has been updated.
-	_, err := c.channelclientset.EventingV1alpha1().Channels(channel.Namespace).Update(channelCopy)
+	_, err := c.channelclientset.ChannelsV1alpha1().Channels(channel.Namespace).Update(channelCopy)
 	return err
 }
 
@@ -464,7 +464,7 @@ func (c *Controller) handleObject(obj interface{}) {
 // newService creates a new Service for a Channel resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the Channel resource that 'owns' it.
-func newService(channel *eventingv1alpha1.Channel) *corev1.Service {
+func newService(channel *channelsv1alpha1.Channel) *corev1.Service {
 	labels := map[string]string{
 		"channel": channel.Name,
 	}
@@ -475,8 +475,8 @@ func newService(channel *eventingv1alpha1.Channel) *corev1.Service {
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(channel, schema.GroupVersionKind{
-					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
-					Version: eventingv1alpha1.SchemeGroupVersion.Version,
+					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
+					Version: channelsv1alpha1.SchemeGroupVersion.Version,
 					Kind:    "Channel",
 				}),
 			},
@@ -492,7 +492,7 @@ func newService(channel *eventingv1alpha1.Channel) *corev1.Service {
 // newRouteRule creates a new RouteRule for a Channel resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the Channel resource that 'owns' it.
-func newRouteRule(channel *eventingv1alpha1.Channel) *istiov1alpha2.RouteRule {
+func newRouteRule(channel *channelsv1alpha1.Channel) *istiov1alpha2.RouteRule {
 	labels := map[string]string{
 		"bus":     channel.Spec.Bus,
 		"channel": channel.Name,
@@ -504,8 +504,8 @@ func newRouteRule(channel *eventingv1alpha1.Channel) *istiov1alpha2.RouteRule {
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(channel, schema.GroupVersionKind{
-					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
-					Version: eventingv1alpha1.SchemeGroupVersion.Version,
+					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
+					Version: channelsv1alpha1.SchemeGroupVersion.Version,
 					Kind:    "Channel",
 				}),
 			},
@@ -532,7 +532,7 @@ func newRouteRule(channel *eventingv1alpha1.Channel) *istiov1alpha2.RouteRule {
 // newIngress creates a new Ingress for a Channel resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the Channel resource that 'owns' it.
-func newIngress(channel *eventingv1alpha1.Channel) *extensionsv1beta1.Ingress {
+func newIngress(channel *channelsv1alpha1.Channel) *extensionsv1beta1.Ingress {
 	labels := map[string]string{
 		"channel": channel.Name,
 	}
@@ -547,8 +547,8 @@ func newIngress(channel *eventingv1alpha1.Channel) *extensionsv1beta1.Ingress {
 			Annotations: annotations,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(channel, schema.GroupVersionKind{
-					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
-					Version: eventingv1alpha1.SchemeGroupVersion.Version,
+					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
+					Version: channelsv1alpha1.SchemeGroupVersion.Version,
 					Kind:    "Channel",
 				}),
 			},

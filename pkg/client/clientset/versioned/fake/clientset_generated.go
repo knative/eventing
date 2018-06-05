@@ -20,6 +20,8 @@ package fake
 
 import (
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
+	channelsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/channels/v1alpha1"
+	fakechannelsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/channels/v1alpha1/fake"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
 	fakeeventingv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1/fake"
 	configv1alpha2 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/istio/v1alpha2"
@@ -71,6 +73,16 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 }
 
 var _ clientset.Interface = &Clientset{}
+
+// ChannelsV1alpha1 retrieves the ChannelsV1alpha1Client
+func (c *Clientset) ChannelsV1alpha1() channelsv1alpha1.ChannelsV1alpha1Interface {
+	return &fakechannelsv1alpha1.FakeChannelsV1alpha1{Fake: &c.Fake}
+}
+
+// Channels retrieves the ChannelsV1alpha1Client
+func (c *Clientset) Channels() channelsv1alpha1.ChannelsV1alpha1Interface {
+	return &fakechannelsv1alpha1.FakeChannelsV1alpha1{Fake: &c.Fake}
+}
 
 // EventingV1alpha1 retrieves the EventingV1alpha1Client
 func (c *Clientset) EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interface {

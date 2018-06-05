@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	v1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -30,13 +30,13 @@ import (
 
 // FakeSubscriptions implements SubscriptionInterface
 type FakeSubscriptions struct {
-	Fake *FakeEventingV1alpha1
+	Fake *FakeChannelsV1alpha1
 	ns   string
 }
 
-var subscriptionsResource = schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1alpha1", Resource: "subscriptions"}
+var subscriptionsResource = schema.GroupVersionResource{Group: "channels.eventing.knative.dev", Version: "v1alpha1", Resource: "subscriptions"}
 
-var subscriptionsKind = schema.GroupVersionKind{Group: "eventing.knative.dev", Version: "v1alpha1", Kind: "Subscription"}
+var subscriptionsKind = schema.GroupVersionKind{Group: "channels.eventing.knative.dev", Version: "v1alpha1", Kind: "Subscription"}
 
 // Get takes name of the subscription, and returns the corresponding subscription object, and an error if there is any.
 func (c *FakeSubscriptions) Get(name string, options v1.GetOptions) (result *v1alpha1.Subscription, err error) {

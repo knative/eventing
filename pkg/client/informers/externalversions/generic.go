@@ -21,7 +21,8 @@ package externalversions
 import (
 	"fmt"
 
-	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	v1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	eventing_v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	v1alpha2 "github.com/knative/eventing/pkg/apis/istio/v1alpha2"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
@@ -53,23 +54,25 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=config.istio.io, Version=v1alpha2
+	// Group=channels.eventing.knative.dev, Version=v1alpha1
+	case v1alpha1.SchemeGroupVersion.WithResource("buses"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Channels().V1alpha1().Buses().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("channels"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Channels().V1alpha1().Channels().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("subscriptions"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Channels().V1alpha1().Subscriptions().Informer()}, nil
+
+		// Group=config.istio.io, Version=v1alpha2
 	case v1alpha2.SchemeGroupVersion.WithResource("routerules"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Config().V1alpha2().RouteRules().Informer()}, nil
 
 		// Group=eventing.knative.dev, Version=v1alpha1
-	case v1alpha1.SchemeGroupVersion.WithResource("binds"):
+	case eventing_v1alpha1.SchemeGroupVersion.WithResource("binds"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().Binds().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("buses"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().Buses().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("channels"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().Channels().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("eventsources"):
+	case eventing_v1alpha1.SchemeGroupVersion.WithResource("eventsources"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().EventSources().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("eventtypes"):
+	case eventing_v1alpha1.SchemeGroupVersion.WithResource("eventtypes"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().EventTypes().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("subscriptions"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().Subscriptions().Informer()}, nil
 
 	}
 
