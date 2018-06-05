@@ -275,9 +275,9 @@ func (c *Controller) syncHandler(key string) error {
 
 	channel, err := c.channelsLister.Channels(namespace).Get(subscription.Spec.Channel)
 
-	var brokerlessRouterule *istiov1alpha2.RouteRule
-	if channel.Spec.Broker == "" {
-		brokerlessRouterule, err = c.syncBrokerlessRouteRule(subscription)
+	var buslessRouterule *istiov1alpha2.RouteRule
+	if channel.Spec.Bus == "" {
+		buslessRouterule, err = c.syncBuslessRouteRule(subscription)
 		if err != nil {
 			return err
 		}
@@ -285,7 +285,7 @@ func (c *Controller) syncHandler(key string) error {
 
 	// Finally, we update the status block of the Subscription resource to reflect the
 	// current state of the world
-	err = c.updateSubscriptionStatus(subscription, brokerlessRouterule)
+	err = c.updateSubscriptionStatus(subscription, buslessRouterule)
 	if err != nil {
 		return err
 	}
@@ -294,7 +294,7 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
-func (c *Controller) syncBrokerlessRouteRule(subscription *eventingv1alpha1.Subscription) (*istiov1alpha2.RouteRule, error) {
+func (c *Controller) syncBuslessRouteRule(subscription *eventingv1alpha1.Subscription) (*istiov1alpha2.RouteRule, error) {
 
 	// Get the routerule with the name specified in Subscription.spec
 	routeruleName := controller.SubscriptionRouteRuleName(subscription.ObjectMeta.Name)
@@ -322,7 +322,7 @@ func (c *Controller) syncBrokerlessRouteRule(subscription *eventingv1alpha1.Subs
 	return routerule, nil
 }
 
-func (c *Controller) updateSubscriptionStatus(subscription *eventingv1alpha1.Subscription, brokerlessRouterule *istiov1alpha2.RouteRule) error {
+func (c *Controller) updateSubscriptionStatus(subscription *eventingv1alpha1.Subscription, buslessRouterule *istiov1alpha2.RouteRule) error {
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance

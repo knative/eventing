@@ -26,29 +26,29 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:defaulter-gen=true
 
-// Represents the brokers.eventing.dev CRD
-type Broker struct {
+// Represents the buses.eventing.dev CRD
+type Bus struct {
 	meta_v1.TypeMeta   `json:",inline"`
 	meta_v1.ObjectMeta `json:"metadata"`
-	Spec               BrokerSpec    `json:"spec"`
-	Status             *BrokerStatus `json:"status,omitempty"`
+	Spec               BusSpec    `json:"spec"`
+	Status             *BusStatus `json:"status,omitempty"`
 }
 
-// Spec (what the user wants) for a broker
-type BrokerSpec struct {
-	// Container definition to use for the broker.
+// Spec (what the user wants) for a bus
+type BusSpec struct {
+	// Container definition to use for the bus.
 	Container kapi.Container `json:"container"`
 }
 
-// Status (computed) for a broker
-type BrokerStatus struct {
+// Status (computed) for a bus
+type BusStatus struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Returned in list operations
-type BrokerList struct {
+type BusList struct {
 	meta_v1.TypeMeta `json:",inline"`
 	meta_v1.ListMeta `json:"metadata"`
-	Items            []Broker `json:"items"`
+	Items            []Bus `json:"items"`
 }

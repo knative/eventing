@@ -31,59 +31,59 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 )
 
-// BrokerInformer provides access to a shared informer and lister for
-// Brokers.
-type BrokerInformer interface {
+// BusInformer provides access to a shared informer and lister for
+// Buses.
+type BusInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.BrokerLister
+	Lister() v1alpha1.BusLister
 }
 
-type brokerInformer struct {
+type busInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 	namespace        string
 }
 
-// NewBrokerInformer constructs a new informer for Broker type.
+// NewBusInformer constructs a new informer for Bus type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewBrokerInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredBrokerInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewBusInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredBusInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredBrokerInformer constructs a new informer for Broker type.
+// NewFilteredBusInformer constructs a new informer for Bus type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredBrokerInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredBusInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1alpha1().Brokers(namespace).List(options)
+				return client.EventingV1alpha1().Buses(namespace).List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1alpha1().Brokers(namespace).Watch(options)
+				return client.EventingV1alpha1().Buses(namespace).Watch(options)
 			},
 		},
-		&eventing_v1alpha1.Broker{},
+		&eventing_v1alpha1.Bus{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *brokerInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredBrokerInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *busInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredBusInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *brokerInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&eventing_v1alpha1.Broker{}, f.defaultInformer)
+func (f *busInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&eventing_v1alpha1.Bus{}, f.defaultInformer)
 }
 
-func (f *brokerInformer) Lister() v1alpha1.BrokerLister {
-	return v1alpha1.NewBrokerLister(f.Informer().GetIndexer())
+func (f *busInformer) Lister() v1alpha1.BusLister {
+	return v1alpha1.NewBusLister(f.Informer().GetIndexer())
 }

@@ -39,7 +39,7 @@ var (
 	masterURL  string
 	kubeconfig string
 
-	broker         = os.Getenv("BROKER_NAME")
+	bus            = os.Getenv("BUS_NAME")
 	forwardHeaders = []string{
 		"content-type",
 		"x-request-id",
@@ -73,7 +73,7 @@ func main() {
 	}
 
 	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
-	monitor := subscription.NewMonitor(broker, informerFactory, subscription.MonitorEventHandlerFuncs{
+	monitor := subscription.NewMonitor(bus, informerFactory, subscription.MonitorEventHandlerFuncs{
 		ProvisionFunc: func(channel eventingv1alpha1.Channel) {
 			fmt.Printf("Provision channel %q\n", channel.Name)
 		},
@@ -129,7 +129,7 @@ func createServer(monitor *subscription.Monitor) *martini.ClassicMartini {
 					if err != nil {
 						fmt.Printf("Unable to create subscriber request %v", err)
 					}
-					request.Header.Set("x-broker", broker)
+					request.Header.Set("x-bus", bus)
 					request.Header.Set("x-channel", channel)
 					for _, header := range forwardHeaders {
 						if value := req.Header.Get(header); value != "" {

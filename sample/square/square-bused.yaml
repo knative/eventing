@@ -3,7 +3,7 @@ kind: Channel
 metadata:
   name: square
 spec:
-  broker: stub
+  bus: stub
 
 ---
 apiVersion: eventing.knative.dev/v1alpha1

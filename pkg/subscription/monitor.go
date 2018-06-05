@@ -27,8 +27,8 @@ import (
 )
 
 type Monitor struct {
-	brokerName string
-	handler    MonitorEventHandlerFuncs
+	busName string
+	handler MonitorEventHandlerFuncs
 
 	cache map[channelKey]channelSummary
 	mutex *sync.Mutex
@@ -50,14 +50,14 @@ type subscriptionSummary struct {
 	Subscription eventingv1alpha1.SubscriptionSpec
 }
 
-func NewMonitor(brokerName string, informerFactory informers.SharedInformerFactory, handler MonitorEventHandlerFuncs) *Monitor {
+func NewMonitor(busName string, informerFactory informers.SharedInformerFactory, handler MonitorEventHandlerFuncs) *Monitor {
 
 	channelInformer := informerFactory.Eventing().V1alpha1().Channels()
 	subscriptionInformer := informerFactory.Eventing().V1alpha1().Subscriptions()
 
 	monitor := &Monitor{
-		brokerName: brokerName,
-		handler:    handler,
+		busName: busName,
+		handler: handler,
 
 		cache: make(map[channelKey]channelSummary),
 		mutex: &sync.Mutex{},
@@ -81,7 +81,7 @@ func NewMonitor(brokerName string, informerFactory informers.SharedInformerFacto
 			}
 
 			monitor.createOrUpdateChannel(newChannel)
-			if oldChannel.Spec.Broker != newChannel.Spec.Broker {
+			if oldChannel.Spec.Bus != newChannel.Spec.Bus {
 				monitor.removeChannel(oldChannel)
 			}
 		},
@@ -125,8 +125,8 @@ func (m *Monitor) Subscriptions(channel string, namespace string) *[]eventingv1a
 	channelKey := makeChannelKeyWithNames(channel, namespace)
 	summary := m.getOrCreateChannelSummary(channelKey)
 
-	if summary.Channel.Broker != m.brokerName {
-		// the channel is not for this broker
+	if summary.Channel.Bus != m.busName {
+		// the channel is not for this bus
 		return nil
 	}
 

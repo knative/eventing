@@ -28,7 +28,7 @@ import (
 type EventingV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	BindsGetter
-	BrokersGetter
+	BusesGetter
 	ChannelsGetter
 	EventSourcesGetter
 	EventTypesGetter
@@ -44,8 +44,8 @@ func (c *EventingV1alpha1Client) Binds(namespace string) BindInterface {
 	return newBinds(c, namespace)
 }
 
-func (c *EventingV1alpha1Client) Brokers(namespace string) BrokerInterface {
-	return newBrokers(c, namespace)
+func (c *EventingV1alpha1Client) Buses(namespace string) BusInterface {
+	return newBuses(c, namespace)
 }
 
 func (c *EventingV1alpha1Client) Channels(namespace string) ChannelInterface {

@@ -36,8 +36,8 @@ type Channel struct {
 // Spec (what the user wants) for a channel
 type ChannelSpec struct {
 
-	// Name of the broker backing this channel (optional)
-	Broker string
+	// Name of the bus backing this channel (optional)
+	Bus string
 }
 
 // Status (computed) for a channel

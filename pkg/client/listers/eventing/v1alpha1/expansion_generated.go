@@ -26,13 +26,13 @@ type BindListerExpansion interface{}
 // BindNamespaceLister.
 type BindNamespaceListerExpansion interface{}
 
-// BrokerListerExpansion allows custom methods to be added to
-// BrokerLister.
-type BrokerListerExpansion interface{}
+// BusListerExpansion allows custom methods to be added to
+// BusLister.
+type BusListerExpansion interface{}
 
-// BrokerNamespaceListerExpansion allows custom methods to be added to
-// BrokerNamespaceLister.
-type BrokerNamespaceListerExpansion interface{}
+// BusNamespaceListerExpansion allows custom methods to be added to
+// BusNamespaceLister.
+type BusNamespaceListerExpansion interface{}
 
 // ChannelListerExpansion allows custom methods to be added to
 // ChannelLister.

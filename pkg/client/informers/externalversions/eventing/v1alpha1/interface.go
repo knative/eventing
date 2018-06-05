@@ -26,8 +26,8 @@ import (
 type Interface interface {
 	// Binds returns a BindInformer.
 	Binds() BindInformer
-	// Brokers returns a BrokerInformer.
-	Brokers() BrokerInformer
+	// Buses returns a BusInformer.
+	Buses() BusInformer
 	// Channels returns a ChannelInformer.
 	Channels() ChannelInformer
 	// EventSources returns a EventSourceInformer.
@@ -54,9 +54,9 @@ func (v *version) Binds() BindInformer {
 	return &bindInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// Brokers returns a BrokerInformer.
-func (v *version) Brokers() BrokerInformer {
-	return &brokerInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+// Buses returns a BusInformer.
+func (v *version) Buses() BusInformer {
+	return &busInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Channels returns a ChannelInformer.

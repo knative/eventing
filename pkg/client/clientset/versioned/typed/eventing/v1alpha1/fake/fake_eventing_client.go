@@ -32,8 +32,8 @@ func (c *FakeEventingV1alpha1) Binds(namespace string) v1alpha1.BindInterface {
 	return &FakeBinds{c, namespace}
 }
 
-func (c *FakeEventingV1alpha1) Brokers(namespace string) v1alpha1.BrokerInterface {
-	return &FakeBrokers{c, namespace}
+func (c *FakeEventingV1alpha1) Buses(namespace string) v1alpha1.BusInterface {
+	return &FakeBuses{c, namespace}
 }
 
 func (c *FakeEventingV1alpha1) Channels(namespace string) v1alpha1.ChannelInterface {

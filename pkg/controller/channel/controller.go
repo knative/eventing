@@ -288,8 +288,8 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	// Sync RouteRule derived from a brokered Channel
-	brokeredChannelRouteRule, err := c.syncBrokeredChannel(channel)
+	// Sync RouteRule derived from a bused Channel
+	busedChannelRouteRule, err := c.syncBusedChannel(channel)
 	if err != nil {
 		return err
 	}
@@ -302,7 +302,7 @@ func (c *Controller) syncHandler(key string) error {
 
 	// Finally, we update the status block of the Channel resource to reflect the
 	// current state of the world
-	err = c.updateChannelStatus(channel, service, ingress, brokeredChannelRouteRule)
+	err = c.updateChannelStatus(channel, service, ingress, busedChannelRouteRule)
 	if err != nil {
 		return err
 	}
@@ -338,12 +338,12 @@ func (c *Controller) syncChannelService(channel *eventingv1alpha1.Channel) (*cor
 	return service, nil
 }
 
-func (c *Controller) syncBrokeredChannel(channel *eventingv1alpha1.Channel) (*istiov1alpha2.RouteRule, error) {
+func (c *Controller) syncBusedChannel(channel *eventingv1alpha1.Channel) (*istiov1alpha2.RouteRule, error) {
 	// Get the RouteRule with the specified Channel name
-	routeruleName := controller.BrokeredChannelRouteRuleName(channel.ObjectMeta.Name)
+	routeruleName := controller.BusedChannelRouteRuleName(channel.ObjectMeta.Name)
 	routerule, err := c.routerulesLister.RouteRules(channel.Namespace).Get(routeruleName)
 
-	if channel.Spec.Broker == "" {
+	if channel.Spec.Bus == "" {
 		// If the resource exists, delete it
 		if routerule != nil {
 			// Remove RouteRule
@@ -359,7 +359,7 @@ func (c *Controller) syncBrokeredChannel(channel *eventingv1alpha1.Channel) (*is
 
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
-		routerule, err = c.channelclientset.ConfigV1alpha2().RouteRules(channel.Namespace).Create(newBrokeredRouteRule(channel))
+		routerule, err = c.channelclientset.ConfigV1alpha2().RouteRules(channel.Namespace).Create(newBusedRouteRule(channel))
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
@@ -409,7 +409,7 @@ func (c *Controller) syncChannelIngress(channel *eventingv1alpha1.Channel) (*ext
 	return ingress, nil
 }
 
-func (c *Controller) updateChannelStatus(channel *eventingv1alpha1.Channel, service *corev1.Service, ingress *extensionsv1beta1.Ingress, brokeredChannelRouteRule *istiov1alpha2.RouteRule) error {
+func (c *Controller) updateChannelStatus(channel *eventingv1alpha1.Channel, service *corev1.Service, ingress *extensionsv1beta1.Ingress, busedChannelRouteRule *istiov1alpha2.RouteRule) error {
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
@@ -503,17 +503,17 @@ func newService(channel *eventingv1alpha1.Channel) *corev1.Service {
 	}
 }
 
-// newBrokeredRouteRule creates a new RouteRule for a brokered Channel resource. It also sets
+// newBusedRouteRule creates a new RouteRule for a bused Channel resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the Channel resource that 'owns' it.
-func newBrokeredRouteRule(channel *eventingv1alpha1.Channel) *istiov1alpha2.RouteRule {
+func newBusedRouteRule(channel *eventingv1alpha1.Channel) *istiov1alpha2.RouteRule {
 	labels := map[string]string{
-		"broker":  channel.Spec.Broker,
+		"bus":     channel.Spec.Bus,
 		"channel": channel.Name,
 	}
 	return &istiov1alpha2.RouteRule{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.BrokeredChannelRouteRuleName(channel.Name),
+			Name:      controller.BusedChannelRouteRuleName(channel.Name),
 			Namespace: channel.Namespace,
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
@@ -531,7 +531,7 @@ func newBrokeredRouteRule(channel *eventingv1alpha1.Channel) *istiov1alpha2.Rout
 			Route: []istiov1alpha2.DestinationWeight{
 				{
 					Destination: istiov1alpha2.IstioService{
-						Name: controller.BrokerServiceName(channel.Spec.Broker),
+						Name: controller.BusServiceName(channel.Spec.Bus),
 					},
 					Weight: 100,
 				},

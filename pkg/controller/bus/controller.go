@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package broker
+package bus
 
 import (
 	"fmt"
@@ -50,36 +50,36 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 )
 
-const controllerAgentName = "broker-controller"
+const controllerAgentName = "bus-controller"
 
 const (
-	// SuccessSynced is used as part of the Event 'reason' when a Broker is synced
+	// SuccessSynced is used as part of the Event 'reason' when a Bus is synced
 	SuccessSynced = "Synced"
-	// ErrResourceExists is used as part of the Event 'reason' when a Broker fails
+	// ErrResourceExists is used as part of the Event 'reason' when a Bus fails
 	// to sync due to a Service of the same name already existing.
 	ErrResourceExists = "ErrResourceExists"
 
 	// MessageResourceExists is the message used for Events when a resource
 	// fails to sync due to a Service already existing
-	MessageResourceExists = "Resource %q already exists and is not managed by Broker"
-	// MessageResourceSynced is the message used for an Event fired when a Broker
+	MessageResourceExists = "Resource %q already exists and is not managed by Bus"
+	// MessageResourceSynced is the message used for an Event fired when a Bus
 	// is synced successfully
-	MessageResourceSynced = "Broker synced successfully"
+	MessageResourceSynced = "Bus synced successfully"
 )
 
-// Controller is the controller implementation for Broker resources
+// Controller is the controller implementation for Bus resources
 type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
-	// brokerclientset is a clientset for our own API group
-	brokerclientset clientset.Interface
+	// busclientset is a clientset for our own API group
+	busclientset clientset.Interface
 
 	deploymentsLister appslisters.DeploymentLister
 	deploymentsSynced cache.InformerSynced
 	servicesLister    corelisters.ServiceLister
 	servicesSynced    cache.InformerSynced
-	brokersLister     listers.BrokerLister
-	brokersSynced     cache.InformerSynced
+	busesLister       listers.BusLister
+	busesSynced       cache.InformerSynced
 
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
@@ -92,23 +92,23 @@ type Controller struct {
 	recorder record.EventRecorder
 }
 
-// NewController returns a new broker controller
+// NewController returns a new bus controller
 func NewController(
 	kubeclientset kubernetes.Interface,
-	brokerclientset clientset.Interface,
+	busclientset clientset.Interface,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
-	brokerInformerFactory informers.SharedInformerFactory,
+	busInformerFactory informers.SharedInformerFactory,
 	routeInformerFactory elainformers.SharedInformerFactory) controller.Interface {
 
-	// obtain references to shared index informers for the Broker, Deployment and Service
+	// obtain references to shared index informers for the Bus, Deployment and Service
 	// types.
-	brokerInformer := brokerInformerFactory.Eventing().V1alpha1().Brokers()
+	busInformer := busInformerFactory.Eventing().V1alpha1().Buses()
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
 
 	// Create event broadcaster
-	// Add broker-controller types to the default Kubernetes Scheme so Events can be
-	// logged for broker-controller types.
+	// Add bus-controller types to the default Kubernetes Scheme so Events can be
+	// logged for bus-controller types.
 	channelscheme.AddToScheme(scheme.Scheme)
 	glog.V(4).Info("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
@@ -118,28 +118,28 @@ func NewController(
 
 	controller := &Controller{
 		kubeclientset:     kubeclientset,
-		brokerclientset:   brokerclientset,
+		busclientset:      busclientset,
 		deploymentsLister: deploymentInformer.Lister(),
 		deploymentsSynced: deploymentInformer.Informer().HasSynced,
 		servicesLister:    serviceInformer.Lister(),
 		servicesSynced:    serviceInformer.Informer().HasSynced,
-		brokersLister:     brokerInformer.Lister(),
-		brokersSynced:     brokerInformer.Informer().HasSynced,
-		workqueue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Brokers"),
+		busesLister:       busInformer.Lister(),
+		busesSynced:       busInformer.Informer().HasSynced,
+		workqueue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Buses"),
 		recorder:          recorder,
 	}
 
 	glog.Info("Setting up event handlers")
-	// Set up an event handler for when Broker resources change
-	brokerInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: controller.enqueueBroker,
+	// Set up an event handler for when Bus resources change
+	busInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: controller.enqueueBus,
 		UpdateFunc: func(old, new interface{}) {
-			controller.enqueueBroker(new)
+			controller.enqueueBus(new)
 		},
 	})
 	// Set up an event handler for when Service resources change. This
 	// handler will lookup the owner of the given Service, and if it is
-	// owned by a Broker resource will enqueue that Broker resource for
+	// owned by a Bus resource will enqueue that Bus resource for
 	// processing. This way, we don't need to implement custom logic for
 	// handling Service resources. More info on this pattern:
 	// https://github.com/kubernetes/community/blob/8cafef897a22026d42f5e5bb3f104febe7e29830/contributors/devel/controllers.md
@@ -170,16 +170,16 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer c.workqueue.ShutDown()
 
 	// Start the informer factories to begin populating the informer caches
-	glog.Info("Starting Broker controller")
+	glog.Info("Starting Bus controller")
 
 	// Wait for the caches to be synced before starting workers
 	glog.Info("Waiting for informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, c.deploymentsSynced, c.servicesSynced, c.brokersSynced); !ok {
+	if ok := cache.WaitForCacheSync(stopCh, c.deploymentsSynced, c.servicesSynced, c.busesSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
 	glog.Info("Starting workers")
-	// Launch two workers to process Broker resources
+	// Launch two workers to process Bus resources
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
@@ -233,7 +233,7 @@ func (c *Controller) processNextWorkItem() bool {
 			return nil
 		}
 		// Run the syncHandler, passing it the namespace/name string of the
-		// Broker resource to be synced.
+		// Bus resource to be synced.
 		if err := c.syncHandler(key); err != nil {
 			return fmt.Errorf("error syncing '%s': %s", key, err.Error())
 		}
@@ -253,7 +253,7 @@ func (c *Controller) processNextWorkItem() bool {
 }
 
 // syncHandler compares the actual state with the desired, and attempts to
-// converge the two. It then updates the Status block of the Broker resource
+// converge the two. It then updates the Status block of the Bus resource
 // with the current status of the resource.
 func (c *Controller) syncHandler(key string) error {
 	// Convert the namespace/name string into a distinct namespace and name
@@ -263,46 +263,46 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 
-	// Get the Broker resource with this namespace/name
-	broker, err := c.brokersLister.Brokers(namespace).Get(name)
+	// Get the Bus resource with this namespace/name
+	bus, err := c.busesLister.Buses(namespace).Get(name)
 	if err != nil {
-		// The Broker resource may no longer exist, in which case we stop
+		// The Bus resource may no longer exist, in which case we stop
 		// processing.
 		if errors.IsNotFound(err) {
-			runtime.HandleError(fmt.Errorf("broker '%s' in work queue no longer exists", key))
+			runtime.HandleError(fmt.Errorf("bus '%s' in work queue no longer exists", key))
 			return nil
 		}
 
 		return err
 	}
 
-	// Sync Service derived from the Broker
-	service, err := c.syncBrokerService(broker)
+	// Sync Service derived from the Bus
+	service, err := c.syncBusService(bus)
 	if err != nil {
 		return err
 	}
 
-	// Sync Deployment derived from the Broker
-	deployment, err := c.syncBrokerDeployment(broker)
+	// Sync Deployment derived from the Bus
+	deployment, err := c.syncBusDeployment(bus)
 	if err != nil {
 		return err
 	}
 
-	// Finally, we update the status block of the Broker resource to reflect the
+	// Finally, we update the status block of the Bus resource to reflect the
 	// current state of the world
-	return c.updateBrokerStatus(broker, service, deployment)
+	return c.updateBusStatus(bus, service, deployment)
 
-	c.recorder.Event(broker, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
+	c.recorder.Event(bus, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
 	return nil
 }
 
-func (c *Controller) syncBrokerService(broker *eventingv1alpha1.Broker) (*corev1.Service, error) {
+func (c *Controller) syncBusService(bus *eventingv1alpha1.Bus) (*corev1.Service, error) {
 	// Get the service with the specified service name
-	serviceName := controller.BrokerServiceName(broker.ObjectMeta.Name)
-	service, err := c.servicesLister.Services(broker.Namespace).Get(serviceName)
+	serviceName := controller.BusServiceName(bus.ObjectMeta.Name)
+	service, err := c.servicesLister.Services(bus.Namespace).Get(serviceName)
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
-		service, err = c.kubeclientset.CoreV1().Services(broker.Namespace).Create(newService(broker))
+		service, err = c.kubeclientset.CoreV1().Services(bus.Namespace).Create(newService(bus))
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
@@ -312,24 +312,24 @@ func (c *Controller) syncBrokerService(broker *eventingv1alpha1.Broker) (*corev1
 		return nil, err
 	}
 
-	// If the Service is not controlled by this Broker resource, we should log
+	// If the Service is not controlled by this Bus resource, we should log
 	// a warning to the event recorder and return
-	if !metav1.IsControlledBy(service, broker) {
+	if !metav1.IsControlledBy(service, bus) {
 		msg := fmt.Sprintf(MessageResourceExists, service.Name)
-		c.recorder.Event(broker, corev1.EventTypeWarning, ErrResourceExists, msg)
+		c.recorder.Event(bus, corev1.EventTypeWarning, ErrResourceExists, msg)
 		return nil, fmt.Errorf(msg)
 	}
 
 	return service, nil
 }
 
-func (c *Controller) syncBrokerDeployment(broker *eventingv1alpha1.Broker) (*appsv1.Deployment, error) {
+func (c *Controller) syncBusDeployment(bus *eventingv1alpha1.Bus) (*appsv1.Deployment, error) {
 	// Get the deployment with the specified deployment name
-	deploymentName := controller.BrokerDeploymentName(broker.ObjectMeta.Name)
-	deployment, err := c.deploymentsLister.Deployments(broker.Namespace).Get(deploymentName)
+	deploymentName := controller.BusDeploymentName(bus.ObjectMeta.Name)
+	deployment, err := c.deploymentsLister.Deployments(bus.Namespace).Get(deploymentName)
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
-		deployment, err = c.kubeclientset.AppsV1().Deployments(broker.Namespace).Create(newDeployment(broker))
+		deployment, err = c.kubeclientset.AppsV1().Deployments(bus.Namespace).Create(newDeployment(bus))
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
@@ -339,20 +339,20 @@ func (c *Controller) syncBrokerDeployment(broker *eventingv1alpha1.Broker) (*app
 		return nil, err
 	}
 
-	// If the Deployment is not controlled by this Broker resource, we should log
+	// If the Deployment is not controlled by this Bus resource, we should log
 	// a warning to the event recorder and return
-	if !metav1.IsControlledBy(deployment, broker) {
+	if !metav1.IsControlledBy(deployment, bus) {
 		msg := fmt.Sprintf(MessageResourceExists, deployment.Name)
-		c.recorder.Event(broker, corev1.EventTypeWarning, ErrResourceExists, msg)
+		c.recorder.Event(bus, corev1.EventTypeWarning, ErrResourceExists, msg)
 		return nil, fmt.Errorf(msg)
 	}
 
-	// If the Deployment does not match the Broker's proposed Deployment we should update
+	// If the Deployment does not match the Bus's proposed Deployment we should update
 	// the Deployment resource.
-	proposedDeployment := newDeployment(broker)
+	proposedDeployment := newDeployment(bus)
 	if !reflect.DeepEqual(proposedDeployment.Spec, deployment.Spec) {
-		glog.V(4).Infof("Broker %s container spec updated", broker.Name)
-		deployment, err = c.kubeclientset.AppsV1().Deployments(broker.Namespace).Update(proposedDeployment)
+		glog.V(4).Infof("Bus %s container spec updated", bus.Name)
+		deployment, err = c.kubeclientset.AppsV1().Deployments(bus.Namespace).Update(proposedDeployment)
 
 		if err != nil {
 			return nil, err
@@ -362,23 +362,23 @@ func (c *Controller) syncBrokerDeployment(broker *eventingv1alpha1.Broker) (*app
 	return deployment, nil
 }
 
-func (c *Controller) updateBrokerStatus(broker *eventingv1alpha1.Broker, service *corev1.Service, deployment *appsv1.Deployment) error {
+func (c *Controller) updateBusStatus(bus *eventingv1alpha1.Bus, service *corev1.Service, deployment *appsv1.Deployment) error {
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
-	brokerCopy := broker.DeepCopy()
+	busCopy := bus.DeepCopy()
 	// If the CustomResourceSubresources feature gate is not enabled,
-	// we must use Update instead of UpdateStatus to update the Status block of the Broker resource.
+	// we must use Update instead of UpdateStatus to update the Status block of the Bus resource.
 	// UpdateStatus will not allow changes to the Spec of the resource,
 	// which is ideal for ensuring nothing other than resource status has been updated.
-	_, err := c.brokerclientset.EventingV1alpha1().Brokers(broker.Namespace).Update(brokerCopy)
+	_, err := c.busclientset.EventingV1alpha1().Buses(bus.Namespace).Update(busCopy)
 	return err
 }
 
-// enqueueBroker takes a Broker resource and converts it into a namespace/name
+// enqueueBus takes a Bus resource and converts it into a namespace/name
 // string which is then put onto the work queue. This method should *not* be
-// passed resources of any type other than Broker.
-func (c *Controller) enqueueBroker(obj interface{}) {
+// passed resources of any type other than Bus.
+func (c *Controller) enqueueBus(obj interface{}) {
 	var key string
 	var err error
 	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
@@ -389,9 +389,9 @@ func (c *Controller) enqueueBroker(obj interface{}) {
 }
 
 // handleObject will take any resource implementing metav1.Object and attempt
-// to find the Broker resource that 'owns' it. It does this by looking at the
+// to find the Bus resource that 'owns' it. It does this by looking at the
 // objects metadata.ownerReferences field for an appropriate OwnerReference.
-// It then enqueues that Broker resource to be processed. If the object does not
+// It then enqueues that Bus resource to be processed. If the object does not
 // have an appropriate OwnerReference, it will simply be skipped.
 func (c *Controller) handleObject(obj interface{}) {
 	var object metav1.Object
@@ -411,40 +411,40 @@ func (c *Controller) handleObject(obj interface{}) {
 	}
 	glog.V(4).Infof("Processing object: %s", object.GetName())
 	if ownerRef := metav1.GetControllerOf(object); ownerRef != nil {
-		// If this object is not owned by a Broker, we should not do anything more
+		// If this object is not owned by a Bus, we should not do anything more
 		// with it.
-		if ownerRef.Kind != "Broker" {
+		if ownerRef.Kind != "Bus" {
 			return
 		}
 
-		broker, err := c.brokersLister.Brokers(object.GetNamespace()).Get(ownerRef.Name)
+		bus, err := c.busesLister.Buses(object.GetNamespace()).Get(ownerRef.Name)
 		if err != nil {
-			glog.V(4).Infof("ignoring orphaned object '%s' of broker '%s'", object.GetSelfLink(), ownerRef.Name)
+			glog.V(4).Infof("ignoring orphaned object '%s' of bus '%s'", object.GetSelfLink(), ownerRef.Name)
 			return
 		}
 
-		c.enqueueBroker(broker)
+		c.enqueueBus(bus)
 		return
 	}
 }
 
-// newService creates a new Service for a Broker resource. It also sets
+// newService creates a new Service for a Bus resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
-// the Broker resource that 'owns' it.
-func newService(broker *eventingv1alpha1.Broker) *corev1.Service {
+// the Bus resource that 'owns' it.
+func newService(bus *eventingv1alpha1.Bus) *corev1.Service {
 	labels := map[string]string{
-		"broker": broker.Name,
+		"bus": bus.Name,
 	}
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.BrokerServiceName(broker.ObjectMeta.Name),
-			Namespace: broker.Namespace,
+			Name:      controller.BusServiceName(bus.ObjectMeta.Name),
+			Namespace: bus.Namespace,
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(broker, schema.GroupVersionKind{
+				*metav1.NewControllerRef(bus, schema.GroupVersionKind{
 					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
 					Version: eventingv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Broker",
+					Kind:    "Bus",
 				}),
 			},
 		},
@@ -461,34 +461,34 @@ func newService(broker *eventingv1alpha1.Broker) *corev1.Service {
 	}
 }
 
-// newDeployment creates a new Deployment for a Broker resource. It also sets
+// newDeployment creates a new Deployment for a Bus resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
-// the Broker resource that 'owns' it.
-func newDeployment(broker *eventingv1alpha1.Broker) *appsv1.Deployment {
+// the Bus resource that 'owns' it.
+func newDeployment(bus *eventingv1alpha1.Bus) *appsv1.Deployment {
 	labels := map[string]string{
-		"broker": broker.Name,
+		"bus": bus.Name,
 	}
 	one := int32(1)
-	container := broker.Spec.Container.DeepCopy()
+	container := bus.Spec.Container.DeepCopy()
 	container.Env = append(container.Env,
 		corev1.EnvVar{
 			Name:  "PORT",
 			Value: "8080",
 		},
 		corev1.EnvVar{
-			Name:  "BROKER_NAME",
-			Value: broker.Name,
+			Name:  "BUS_NAME",
+			Value: bus.Name,
 		},
 	)
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.BrokerDeploymentName(broker.ObjectMeta.Name),
-			Namespace: broker.Namespace,
+			Name:      controller.BusDeploymentName(bus.ObjectMeta.Name),
+			Namespace: bus.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(broker, schema.GroupVersionKind{
+				*metav1.NewControllerRef(bus, schema.GroupVersionKind{
 					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
 					Version: eventingv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Broker",
+					Kind:    "Bus",
 				}),
 			},
 		},

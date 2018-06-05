@@ -18,15 +18,15 @@ package controller
 
 import "fmt"
 
-func BrokerDeploymentName(brokerName string) string {
-	return fmt.Sprintf("%s-broker", brokerName)
+func BusDeploymentName(busName string) string {
+	return fmt.Sprintf("%s-bus", busName)
 }
 
-func BrokerServiceName(brokerName string) string {
-	return fmt.Sprintf("%s-broker", brokerName)
+func BusServiceName(busName string) string {
+	return fmt.Sprintf("%s-bus", busName)
 }
 
-func BrokeredChannelRouteRuleName(channelName string) string {
+func BusedChannelRouteRuleName(channelName string) string {
 	return fmt.Sprintf("%s-channel", channelName)
 }
 

@@ -6,20 +6,20 @@
 
 # Install
 
-Square can be run either with or without a broker.
+Square can be run either with or without a bus.
 
-At this time, in order to switch between brokered and brokerless, it is recomended that you delete the previous resources and then apply the new resources.
+At this time, in order to switch between bused and busless, it is recomended that you delete the previous resources and then apply the new resources.
 
-## Brokerless
-
-```
-kubectl apply -f square.yaml -f square-brokerless.yaml
-```
-
-## Brokered
+## Busless
 
 ```
-kubectl apply -f square.yaml -f square-brokered.yaml
+kubectl apply -f square.yaml -f square-busless.yaml
+```
+
+## Bused
+
+```
+kubectl apply -f square.yaml -f square-bused.yaml
 ```
 
 # Invoke

@@ -20,7 +20,7 @@ package v1alpha1
 
 type BindExpansion interface{}
 
-type BrokerExpansion interface{}
+type BusExpansion interface{}
 
 type ChannelExpansion interface{}
 
