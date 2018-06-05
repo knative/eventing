@@ -25,30 +25,30 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:defaulter-gen=true
 
-// Represents the streams.eventing.dev CRD
-type Stream struct {
+// Represents the channels.eventing.dev CRD
+type Channel struct {
 	meta_v1.TypeMeta   `json:",inline"`
 	meta_v1.ObjectMeta `json:"metadata"`
-	Spec               StreamSpec    `json:"spec"`
-	Status             *StreamStatus `json:"status,omitempty"`
+	Spec               ChannelSpec    `json:"spec"`
+	Status             *ChannelStatus `json:"status,omitempty"`
 }
 
-// Spec (what the user wants) for a stream
-type StreamSpec struct {
+// Spec (what the user wants) for a channel
+type ChannelSpec struct {
 
-	// Name of the broker backing this stream (optional)
+	// Name of the broker backing this channel (optional)
 	Broker string
 }
 
-// Status (computed) for a stream
-type StreamStatus struct {
+// Status (computed) for a channel
+type ChannelStatus struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Returned in list operations
-type StreamList struct {
+type ChannelList struct {
 	meta_v1.TypeMeta `json:",inline"`
 	meta_v1.ListMeta `json:"metadata"`
-	Items            []Stream `json:"items"`
+	Items            []Channel `json:"items"`
 }

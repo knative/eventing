@@ -36,8 +36,8 @@ type Subscription struct {
 // Spec (what the user wants) for a subscription
 type SubscriptionSpec struct {
 
-	// Name of the stream to subscribe to
-	Stream string `json:"stream"`
+	// Name of the channel to subscribe to
+	Channel string `json:"channel"`
 
 	// Name of the subscriber service
 	Subscriber string `json:"subscriber"`

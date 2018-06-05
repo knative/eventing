@@ -42,7 +42,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
-	streamscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
+	channelscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	listers "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	elainformers "github.com/knative/serving/pkg/client/informers/externalversions"
@@ -109,7 +109,7 @@ func NewController(
 	// Create event broadcaster
 	// Add broker-controller types to the default Kubernetes Scheme so Events can be
 	// logged for broker-controller types.
-	streamscheme.AddToScheme(scheme.Scheme)
+	channelscheme.AddToScheme(scheme.Scheme)
 	glog.V(4).Info("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(glog.Infof)

@@ -22,10 +22,10 @@ type BindExpansion interface{}
 
 type BrokerExpansion interface{}
 
+type ChannelExpansion interface{}
+
 type EventSourceExpansion interface{}
 
 type EventTypeExpansion interface{}
-
-type StreamExpansion interface{}
 
 type SubscriptionExpansion interface{}

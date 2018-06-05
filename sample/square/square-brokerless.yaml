@@ -1,5 +1,5 @@
 apiVersion: eventing.knative.dev/v1alpha1
-kind: Stream
+kind: Channel
 metadata:
   name: square
 
@@ -9,5 +9,5 @@ kind: Subscription
 metadata:
   name: square
 spec:
-  stream: square
+  channel: square
   subscriber: square

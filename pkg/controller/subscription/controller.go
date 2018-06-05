@@ -73,8 +73,8 @@ type Controller struct {
 
 	routerulesLister    istiolisters.RouteRuleLister
 	routerulesSynced    cache.InformerSynced
-	streamsLister       listers.StreamLister
-	streamsSynced       cache.InformerSynced
+	channelsLister      listers.ChannelLister
+	channelsSynced      cache.InformerSynced
 	subscriptionsLister listers.SubscriptionLister
 	subscriptionsSynced cache.InformerSynced
 
@@ -100,7 +100,7 @@ func NewController(
 	// obtain references to shared index informers for the RouteRule and Subscription
 	// types.
 	routeruleInformer := subscriptionInformerFactory.Config().V1alpha2().RouteRules()
-	streamInformer := subscriptionInformerFactory.Eventing().V1alpha1().Streams()
+	channelInformer := subscriptionInformerFactory.Eventing().V1alpha1().Channels()
 	subscriptionInformer := subscriptionInformerFactory.Eventing().V1alpha1().Subscriptions()
 
 	// Create event broadcaster
@@ -118,8 +118,8 @@ func NewController(
 		subscriptionclientset: subscriptionclientset,
 		routerulesLister:      routeruleInformer.Lister(),
 		routerulesSynced:      routeruleInformer.Informer().HasSynced,
-		streamsLister:         streamInformer.Lister(),
-		streamsSynced:         streamInformer.Informer().HasSynced,
+		channelsLister:        channelInformer.Lister(),
+		channelsSynced:        channelInformer.Informer().HasSynced,
 		subscriptionsLister:   subscriptionInformer.Lister(),
 		subscriptionsSynced:   subscriptionInformer.Informer().HasSynced,
 		workqueue:             workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Subscriptions"),
@@ -273,10 +273,10 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	stream, err := c.streamsLister.Streams(namespace).Get(subscription.Spec.Stream)
+	channel, err := c.channelsLister.Channels(namespace).Get(subscription.Spec.Channel)
 
 	var brokerlessRouterule *istiov1alpha2.RouteRule
-	if stream.Spec.Broker == "" {
+	if channel.Spec.Broker == "" {
 		brokerlessRouterule, err = c.syncBrokerlessRouteRule(subscription)
 		if err != nil {
 			return err
@@ -410,7 +410,7 @@ func newRouteRule(subscription *eventingv1alpha1.Subscription) *istiov1alpha2.Ro
 		},
 		Spec: istiov1alpha2.RouteRuleSpec{
 			Destination: istiov1alpha2.IstioService{
-				Name: controller.StreamServiceName(subscription.Spec.Stream),
+				Name: controller.ChannelServiceName(subscription.Spec.Channel),
 			},
 			Route: []istiov1alpha2.DestinationWeight{
 				{

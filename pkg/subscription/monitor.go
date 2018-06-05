@@ -30,19 +30,19 @@ type Monitor struct {
 	brokerName string
 	handler    MonitorEventHandlerFuncs
 
-	cache map[streamKey]streamSummary
+	cache map[channelKey]channelSummary
 	mutex *sync.Mutex
 }
 
 type MonitorEventHandlerFuncs struct {
-	ProvisionFunc   func(stream eventingv1alpha1.Stream)
-	UnprovisionFunc func(stream eventingv1alpha1.Stream)
+	ProvisionFunc   func(channel eventingv1alpha1.Channel)
+	UnprovisionFunc func(channel eventingv1alpha1.Channel)
 	SubscribeFunc   func(subscription eventingv1alpha1.Subscription)
 	UnsubscribeFunc func(subscription eventingv1alpha1.Subscription)
 }
 
-type streamSummary struct {
-	Stream        *eventingv1alpha1.StreamSpec
+type channelSummary struct {
+	Channel       *eventingv1alpha1.ChannelSpec
 	Subscriptions map[subscriptionKey]subscriptionSummary
 }
 
@@ -52,42 +52,42 @@ type subscriptionSummary struct {
 
 func NewMonitor(brokerName string, informerFactory informers.SharedInformerFactory, handler MonitorEventHandlerFuncs) *Monitor {
 
-	streamInformer := informerFactory.Eventing().V1alpha1().Streams()
+	channelInformer := informerFactory.Eventing().V1alpha1().Channels()
 	subscriptionInformer := informerFactory.Eventing().V1alpha1().Subscriptions()
 
 	monitor := &Monitor{
 		brokerName: brokerName,
 		handler:    handler,
 
-		cache: make(map[streamKey]streamSummary),
+		cache: make(map[channelKey]channelSummary),
 		mutex: &sync.Mutex{},
 	}
 
 	glog.Info("Setting up event handlers")
-	// Set up an event handler for when Stream resources change
-	streamInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	// Set up an event handler for when Channel resources change
+	channelInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			stream := obj.(eventingv1alpha1.Stream)
-			monitor.createOrUpdateStream(stream)
+			channel := obj.(eventingv1alpha1.Channel)
+			monitor.createOrUpdateChannel(channel)
 		},
 		UpdateFunc: func(old, new interface{}) {
-			oldStream := old.(eventingv1alpha1.Stream)
-			newStream := new.(eventingv1alpha1.Stream)
+			oldChannel := old.(eventingv1alpha1.Channel)
+			newChannel := new.(eventingv1alpha1.Channel)
 
-			if oldStream.ResourceVersion == newStream.ResourceVersion {
-				// Periodic resync will send update events for all known Streams.
-				// Two different versions of the same Stream will always have different RVs.
+			if oldChannel.ResourceVersion == newChannel.ResourceVersion {
+				// Periodic resync will send update events for all known Channels.
+				// Two different versions of the same Channel will always have different RVs.
 				return
 			}
 
-			monitor.createOrUpdateStream(newStream)
-			if oldStream.Spec.Broker != newStream.Spec.Broker {
-				monitor.removeStream(oldStream)
+			monitor.createOrUpdateChannel(newChannel)
+			if oldChannel.Spec.Broker != newChannel.Spec.Broker {
+				monitor.removeChannel(oldChannel)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			stream := obj.(eventingv1alpha1.Stream)
-			monitor.removeStream(stream)
+			channel := obj.(eventingv1alpha1.Channel)
+			monitor.removeChannel(channel)
 		},
 	})
 	// Set up an event handler for when Subscription resources change
@@ -107,7 +107,7 @@ func NewMonitor(brokerName string, informerFactory informers.SharedInformerFacto
 			}
 
 			monitor.createOrUpdateSubscription(newSubscription)
-			if oldSubscription.Spec.Stream != newSubscription.Spec.Stream {
+			if oldSubscription.Spec.Channel != newSubscription.Spec.Channel {
 				monitor.removeSubscription(oldSubscription)
 			}
 		},
@@ -120,13 +120,13 @@ func NewMonitor(brokerName string, informerFactory informers.SharedInformerFacto
 	return monitor
 }
 
-// Subscriptions for a stream name and namespace
-func (m *Monitor) Subscriptions(stream string, namespace string) *[]eventingv1alpha1.SubscriptionSpec {
-	streamKey := makeStreamKeyWithNames(stream, namespace)
-	summary := m.getOrCreateStreamSummary(streamKey)
+// Subscriptions for a channel name and namespace
+func (m *Monitor) Subscriptions(channel string, namespace string) *[]eventingv1alpha1.SubscriptionSpec {
+	channelKey := makeChannelKeyWithNames(channel, namespace)
+	summary := m.getOrCreateChannelSummary(channelKey)
 
-	if summary.Stream.Broker != m.brokerName {
-		// the stream is not for this broker
+	if summary.Channel.Broker != m.brokerName {
+		// the channel is not for this broker
 		return nil
 	}
 
@@ -140,12 +140,12 @@ func (m *Monitor) Subscriptions(stream string, namespace string) *[]eventingv1al
 	return &subscriptions
 }
 
-func (m *Monitor) getOrCreateStreamSummary(key streamKey) streamSummary {
+func (m *Monitor) getOrCreateChannelSummary(key channelKey) channelSummary {
 	m.mutex.Lock()
 	summary, ok := m.cache[key]
 	if !ok {
-		summary = streamSummary{
-			Stream:        nil,
+		summary = channelSummary{
+			Channel:       nil,
 			Subscriptions: make(map[subscriptionKey]subscriptionSummary),
 		}
 		m.cache[key] = summary
@@ -155,35 +155,35 @@ func (m *Monitor) getOrCreateStreamSummary(key streamKey) streamSummary {
 	return summary
 }
 
-func (m *Monitor) createOrUpdateStream(stream eventingv1alpha1.Stream) {
-	streamKey := makeStreamKeyFromStream(stream)
-	summary := m.getOrCreateStreamSummary(streamKey)
+func (m *Monitor) createOrUpdateChannel(channel eventingv1alpha1.Channel) {
+	channelKey := makeChannelKeyFromChannel(channel)
+	summary := m.getOrCreateChannelSummary(channelKey)
 
 	m.mutex.Lock()
-	old := summary.Stream
-	new := &stream.Spec
-	summary.Stream = new
+	old := summary.Channel
+	new := &channel.Spec
+	summary.Channel = new
 	m.mutex.Unlock()
 
 	if !reflect.DeepEqual(old, new) {
-		m.handler.ProvisionFunc(stream)
+		m.handler.ProvisionFunc(channel)
 	}
 }
 
-func (m *Monitor) removeStream(stream eventingv1alpha1.Stream) {
-	streamKey := makeStreamKeyFromStream(stream)
-	summary := m.getOrCreateStreamSummary(streamKey)
+func (m *Monitor) removeChannel(channel eventingv1alpha1.Channel) {
+	channelKey := makeChannelKeyFromChannel(channel)
+	summary := m.getOrCreateChannelSummary(channelKey)
 
 	m.mutex.Lock()
-	summary.Stream = nil
+	summary.Channel = nil
 	m.mutex.Unlock()
 
-	m.handler.UnprovisionFunc(stream)
+	m.handler.UnprovisionFunc(channel)
 }
 
 func (m *Monitor) createOrUpdateSubscription(subscription eventingv1alpha1.Subscription) {
-	streamKey := makeStreamKeyFromSubscription(subscription)
-	summary := m.getOrCreateStreamSummary(streamKey)
+	channelKey := makeChannelKeyFromSubscription(subscription)
+	summary := m.getOrCreateChannelSummary(channelKey)
 	subscriptionKey := makeSubscriptionKeyFromSubscription(subscription)
 
 	m.mutex.Lock()
@@ -200,8 +200,8 @@ func (m *Monitor) createOrUpdateSubscription(subscription eventingv1alpha1.Subsc
 }
 
 func (m *Monitor) removeSubscription(subscription eventingv1alpha1.Subscription) {
-	streamKey := makeStreamKeyFromSubscription(subscription)
-	summary := m.getOrCreateStreamSummary(streamKey)
+	channelKey := makeChannelKeyFromSubscription(subscription)
+	summary := m.getOrCreateChannelSummary(channelKey)
 	subscriptionKey := makeSubscriptionKeyFromSubscription(subscription)
 
 	m.mutex.Lock()
@@ -211,21 +211,21 @@ func (m *Monitor) removeSubscription(subscription eventingv1alpha1.Subscription)
 	m.handler.UnsubscribeFunc(subscription)
 }
 
-type streamKey struct {
+type channelKey struct {
 	Name      string
 	Namespace string
 }
 
-func makeStreamKeyFromStream(stream eventingv1alpha1.Stream) streamKey {
-	return makeStreamKeyWithNames(stream.Name, stream.Namespace)
+func makeChannelKeyFromChannel(channel eventingv1alpha1.Channel) channelKey {
+	return makeChannelKeyWithNames(channel.Name, channel.Namespace)
 }
 
-func makeStreamKeyFromSubscription(subscription eventingv1alpha1.Subscription) streamKey {
-	return makeStreamKeyWithNames(subscription.Spec.Stream, subscription.Namespace)
+func makeChannelKeyFromSubscription(subscription eventingv1alpha1.Subscription) channelKey {
+	return makeChannelKeyWithNames(subscription.Spec.Channel, subscription.Namespace)
 }
 
-func makeStreamKeyWithNames(name string, namespace string) streamKey {
-	return streamKey{
+func makeChannelKeyWithNames(name string, namespace string) channelKey {
+	return channelKey{
 		Name:      name,
 		Namespace: namespace,
 	}

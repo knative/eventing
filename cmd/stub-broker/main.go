@@ -52,11 +52,11 @@ var (
 	}
 )
 
-func splitStreamName(host string) (string, string) {
+func splitChannelName(host string) (string, string) {
 	chunks := strings.Split(host, ".")
-	stream := chunks[0]
+	channel := chunks[0]
 	namespace := chunks[1]
-	return stream, namespace
+	return channel, namespace
 }
 
 func main() {
@@ -74,17 +74,17 @@ func main() {
 
 	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
 	monitor := subscription.NewMonitor(broker, informerFactory, subscription.MonitorEventHandlerFuncs{
-		ProvisionFunc: func(stream eventingv1alpha1.Stream) {
-			fmt.Printf("Provision stream %q\n", stream.Name)
+		ProvisionFunc: func(channel eventingv1alpha1.Channel) {
+			fmt.Printf("Provision channel %q\n", channel.Name)
 		},
-		UnprovisionFunc: func(stream eventingv1alpha1.Stream) {
-			fmt.Printf("Unprovision stream %q\n", stream.Name)
+		UnprovisionFunc: func(channel eventingv1alpha1.Channel) {
+			fmt.Printf("Unprovision channel %q\n", channel.Name)
 		},
 		SubscribeFunc: func(subscription eventingv1alpha1.Subscription) {
-			fmt.Printf("Subscribe %q to %q stream\n", subscription.Spec.Subscriber, subscription.Spec.Stream)
+			fmt.Printf("Subscribe %q to %q channel\n", subscription.Spec.Subscriber, subscription.Spec.Channel)
 		},
 		UnsubscribeFunc: func(subscription eventingv1alpha1.Subscription) {
-			fmt.Printf("Unubscribe %q from %q stream\n", subscription.Spec.Subscriber, subscription.Spec.Stream)
+			fmt.Printf("Unubscribe %q from %q channel\n", subscription.Spec.Subscriber, subscription.Spec.Channel)
 		},
 	})
 
@@ -98,8 +98,8 @@ func createServer(monitor *subscription.Monitor) *martini.ClassicMartini {
 	m.Post("/", func(req *http.Request, res http.ResponseWriter) {
 		host := req.Host
 		fmt.Printf("Recieved request for %s\n", host)
-		stream, namespace := splitStreamName(host)
-		subscriptions := monitor.Subscriptions(stream, namespace)
+		channel, namespace := splitChannelName(host)
+		subscriptions := monitor.Subscriptions(channel, namespace)
 		if subscriptions == nil {
 			res.WriteHeader(http.StatusNotFound)
 			return
@@ -114,7 +114,7 @@ func createServer(monitor *subscription.Monitor) *martini.ClassicMartini {
 		res.WriteHeader(http.StatusAccepted)
 		go func() {
 			if len(*subscriptions) == 0 {
-				fmt.Printf("No subscribers for stream %q\n", stream)
+				fmt.Printf("No subscribers for channel %q\n", channel)
 			}
 
 			// make upstream requests
@@ -122,7 +122,7 @@ func createServer(monitor *subscription.Monitor) *martini.ClassicMartini {
 
 			for _, subscription := range *subscriptions {
 				go func(subscriber string) {
-					fmt.Printf("Sending to %q for %q\n", subscriber, stream)
+					fmt.Printf("Sending to %q for %q\n", subscriber, channel)
 
 					url := fmt.Sprintf("http://%s/", subscriber)
 					request, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
@@ -130,7 +130,7 @@ func createServer(monitor *subscription.Monitor) *martini.ClassicMartini {
 						fmt.Printf("Unable to create subscriber request %v", err)
 					}
 					request.Header.Set("x-broker", broker)
-					request.Header.Set("x-stream", stream)
+					request.Header.Set("x-channel", channel)
 					for _, header := range forwardHeaders {
 						if value := req.Header.Get(header); value != "" {
 							request.Header.Set(header, value)

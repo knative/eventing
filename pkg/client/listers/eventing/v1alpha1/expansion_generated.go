@@ -34,6 +34,14 @@ type BrokerListerExpansion interface{}
 // BrokerNamespaceLister.
 type BrokerNamespaceListerExpansion interface{}
 
+// ChannelListerExpansion allows custom methods to be added to
+// ChannelLister.
+type ChannelListerExpansion interface{}
+
+// ChannelNamespaceListerExpansion allows custom methods to be added to
+// ChannelNamespaceLister.
+type ChannelNamespaceListerExpansion interface{}
+
 // EventSourceListerExpansion allows custom methods to be added to
 // EventSourceLister.
 type EventSourceListerExpansion interface{}
@@ -49,14 +57,6 @@ type EventTypeListerExpansion interface{}
 // EventTypeNamespaceListerExpansion allows custom methods to be added to
 // EventTypeNamespaceLister.
 type EventTypeNamespaceListerExpansion interface{}
-
-// StreamListerExpansion allows custom methods to be added to
-// StreamLister.
-type StreamListerExpansion interface{}
-
-// StreamNamespaceListerExpansion allows custom methods to be added to
-// StreamNamespaceLister.
-type StreamNamespaceListerExpansion interface{}
 
 // SubscriptionListerExpansion allows custom methods to be added to
 // SubscriptionLister.

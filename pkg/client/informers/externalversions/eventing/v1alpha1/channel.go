@@ -31,59 +31,59 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 )
 
-// StreamInformer provides access to a shared informer and lister for
-// Streams.
-type StreamInformer interface {
+// ChannelInformer provides access to a shared informer and lister for
+// Channels.
+type ChannelInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.StreamLister
+	Lister() v1alpha1.ChannelLister
 }
 
-type streamInformer struct {
+type channelInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 	namespace        string
 }
 
-// NewStreamInformer constructs a new informer for Stream type.
+// NewChannelInformer constructs a new informer for Channel type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewStreamInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredStreamInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewChannelInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredChannelInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredStreamInformer constructs a new informer for Stream type.
+// NewFilteredChannelInformer constructs a new informer for Channel type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredStreamInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredChannelInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1alpha1().Streams(namespace).List(options)
+				return client.EventingV1alpha1().Channels(namespace).List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1alpha1().Streams(namespace).Watch(options)
+				return client.EventingV1alpha1().Channels(namespace).Watch(options)
 			},
 		},
-		&eventing_v1alpha1.Stream{},
+		&eventing_v1alpha1.Channel{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *streamInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredStreamInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *channelInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredChannelInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *streamInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&eventing_v1alpha1.Stream{}, f.defaultInformer)
+func (f *channelInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&eventing_v1alpha1.Channel{}, f.defaultInformer)
 }
 
-func (f *streamInformer) Lister() v1alpha1.StreamLister {
-	return v1alpha1.NewStreamLister(f.Informer().GetIndexer())
+func (f *channelInformer) Lister() v1alpha1.ChannelLister {
+	return v1alpha1.NewChannelLister(f.Informer().GetIndexer())
 }

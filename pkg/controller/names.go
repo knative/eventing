@@ -26,16 +26,16 @@ func BrokerServiceName(brokerName string) string {
 	return fmt.Sprintf("%s-broker", brokerName)
 }
 
-func BrokeredStreamRouteRuleName(streamName string) string {
-	return fmt.Sprintf("%s-stream", streamName)
+func BrokeredChannelRouteRuleName(channelName string) string {
+	return fmt.Sprintf("%s-channel", channelName)
 }
 
-func StreamIngressName(streamName string) string {
-	return fmt.Sprintf("%s-stream", streamName)
+func ChannelIngressName(channelName string) string {
+	return fmt.Sprintf("%s-channel", channelName)
 }
 
-func StreamServiceName(streamName string) string {
-	return fmt.Sprintf("%s-stream", streamName)
+func ChannelServiceName(channelName string) string {
+	return fmt.Sprintf("%s-channel", channelName)
 }
 
 func SubscriptionRouteRuleName(subscriptionName string) string {

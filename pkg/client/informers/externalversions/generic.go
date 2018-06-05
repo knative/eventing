@@ -62,12 +62,12 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().Binds().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("brokers"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().Brokers().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("channels"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().Channels().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("eventsources"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().EventSources().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("eventtypes"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().EventTypes().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("streams"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().Streams().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("subscriptions"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().Subscriptions().Informer()}, nil
 

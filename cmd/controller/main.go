@@ -37,7 +37,7 @@ import (
 	"github.com/knative/eventing/pkg/controller"
 	"github.com/knative/eventing/pkg/controller/bind"
 	"github.com/knative/eventing/pkg/controller/broker"
-	"github.com/knative/eventing/pkg/controller/stream"
+	"github.com/knative/eventing/pkg/controller/channel"
 	"github.com/knative/eventing/pkg/controller/subscription"
 	"github.com/knative/eventing/pkg/signals"
 
@@ -89,7 +89,7 @@ func main() {
 	ctors := []controller.Constructor{
 		bind.NewController,
 		broker.NewController,
-		stream.NewController,
+		channel.NewController,
 		subscription.NewController,
 	}
 

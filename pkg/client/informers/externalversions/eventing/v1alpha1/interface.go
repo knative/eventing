@@ -28,12 +28,12 @@ type Interface interface {
 	Binds() BindInformer
 	// Brokers returns a BrokerInformer.
 	Brokers() BrokerInformer
+	// Channels returns a ChannelInformer.
+	Channels() ChannelInformer
 	// EventSources returns a EventSourceInformer.
 	EventSources() EventSourceInformer
 	// EventTypes returns a EventTypeInformer.
 	EventTypes() EventTypeInformer
-	// Streams returns a StreamInformer.
-	Streams() StreamInformer
 	// Subscriptions returns a SubscriptionInformer.
 	Subscriptions() SubscriptionInformer
 }
@@ -59,6 +59,11 @@ func (v *version) Brokers() BrokerInformer {
 	return &brokerInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
+// Channels returns a ChannelInformer.
+func (v *version) Channels() ChannelInformer {
+	return &channelInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
 // EventSources returns a EventSourceInformer.
 func (v *version) EventSources() EventSourceInformer {
 	return &eventSourceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
@@ -67,11 +72,6 @@ func (v *version) EventSources() EventSourceInformer {
 // EventTypes returns a EventTypeInformer.
 func (v *version) EventTypes() EventTypeInformer {
 	return &eventTypeInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
-// Streams returns a StreamInformer.
-func (v *version) Streams() StreamInformer {
-	return &streamInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Subscriptions returns a SubscriptionInformer.

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package stream
+package channel
 
 import (
 	"fmt"
@@ -42,7 +42,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
-	streamscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
+	channelscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	listers "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	elainformers "github.com/knative/serving/pkg/client/informers/externalversions"
@@ -51,29 +51,29 @@ import (
 	istiov1alpha2 "github.com/knative/eventing/pkg/apis/istio/v1alpha2"
 )
 
-const controllerAgentName = "stream-controller"
+const controllerAgentName = "channel-controller"
 
 const (
-	// SuccessSynced is used as part of the Event 'reason' when a Stream is synced
+	// SuccessSynced is used as part of the Event 'reason' when a Channel is synced
 	SuccessSynced = "Synced"
-	// ErrResourceExists is used as part of the Event 'reason' when a Stream fails
+	// ErrResourceExists is used as part of the Event 'reason' when a Channel fails
 	// to sync due to a Service of the same name already existing.
 	ErrResourceExists = "ErrResourceExists"
 
 	// MessageResourceExists is the message used for Events when a resource
 	// fails to sync due to a Service already existing
-	MessageResourceExists = "Resource %q already exists and is not managed by Stream"
-	// MessageResourceSynced is the message used for an Event fired when a Stream
+	MessageResourceExists = "Resource %q already exists and is not managed by Channel"
+	// MessageResourceSynced is the message used for an Event fired when a Channel
 	// is synced successfully
-	MessageResourceSynced = "Stream synced successfully"
+	MessageResourceSynced = "Channel synced successfully"
 )
 
-// Controller is the controller implementation for Stream resources
+// Controller is the controller implementation for Channel resources
 type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
-	// streamclientset is a clientset for our own API group
-	streamclientset clientset.Interface
+	// channelclientset is a clientset for our own API group
+	channelclientset clientset.Interface
 
 	ingressesLister  extensionslisters.IngressLister
 	ingressesSynced  cache.InformerSynced
@@ -81,8 +81,8 @@ type Controller struct {
 	routerulesSynced cache.InformerSynced
 	servicesLister   corelisters.ServiceLister
 	servicesSynced   cache.InformerSynced
-	streamsLister    listers.StreamLister
-	streamsSynced    cache.InformerSynced
+	channelsLister   listers.ChannelLister
+	channelsSynced   cache.InformerSynced
 
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
@@ -95,25 +95,25 @@ type Controller struct {
 	recorder record.EventRecorder
 }
 
-// NewController returns a new stream controller
+// NewController returns a new channel controller
 func NewController(
 	kubeclientset kubernetes.Interface,
-	streamclientset clientset.Interface,
+	channelclientset clientset.Interface,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
-	streamInformerFactory informers.SharedInformerFactory,
+	channelInformerFactory informers.SharedInformerFactory,
 	routeInformerFactory elainformers.SharedInformerFactory) controller.Interface {
 
-	// obtain references to shared index informers for the Ingress, Service and Stream
+	// obtain references to shared index informers for the Ingress, Service and Channel
 	// types.
 	ingressInformer := kubeInformerFactory.Extensions().V1beta1().Ingresses()
-	routeruleInformer := streamInformerFactory.Config().V1alpha2().RouteRules()
+	routeruleInformer := channelInformerFactory.Config().V1alpha2().RouteRules()
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
-	streamInformer := streamInformerFactory.Eventing().V1alpha1().Streams()
+	channelInformer := channelInformerFactory.Eventing().V1alpha1().Channels()
 
 	// Create event broadcaster
-	// Add stream-controller types to the default Kubernetes Scheme so Events can be
-	// logged for stream-controller types.
-	streamscheme.AddToScheme(scheme.Scheme)
+	// Add channel-controller types to the default Kubernetes Scheme so Events can be
+	// logged for channel-controller types.
+	channelscheme.AddToScheme(scheme.Scheme)
 	glog.V(4).Info("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(glog.Infof)
@@ -122,30 +122,30 @@ func NewController(
 
 	controller := &Controller{
 		kubeclientset:    kubeclientset,
-		streamclientset:  streamclientset,
+		channelclientset: channelclientset,
 		ingressesLister:  ingressInformer.Lister(),
 		ingressesSynced:  ingressInformer.Informer().HasSynced,
 		routerulesLister: routeruleInformer.Lister(),
 		routerulesSynced: routeruleInformer.Informer().HasSynced,
 		servicesLister:   serviceInformer.Lister(),
 		servicesSynced:   serviceInformer.Informer().HasSynced,
-		streamsLister:    streamInformer.Lister(),
-		streamsSynced:    streamInformer.Informer().HasSynced,
-		workqueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Streams"),
+		channelsLister:   channelInformer.Lister(),
+		channelsSynced:   channelInformer.Informer().HasSynced,
+		workqueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Channels"),
 		recorder:         recorder,
 	}
 
 	glog.Info("Setting up event handlers")
-	// Set up an event handler for when Stream resources change
-	streamInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: controller.enqueueStream,
+	// Set up an event handler for when Channel resources change
+	channelInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: controller.enqueueChannel,
 		UpdateFunc: func(old, new interface{}) {
-			controller.enqueueStream(new)
+			controller.enqueueChannel(new)
 		},
 	})
 	// Set up an event handler for when Service resources change. This
 	// handler will lookup the owner of the given Service, and if it is
-	// owned by a Stream resource will enqueue that Stream resource for
+	// owned by a Channel resource will enqueue that Channel resource for
 	// processing. This way, we don't need to implement custom logic for
 	// handling Service resources. More info on this pattern:
 	// https://github.com/kubernetes/community/blob/8cafef897a22026d42f5e5bb3f104febe7e29830/contributors/devel/controllers.md
@@ -176,16 +176,16 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer c.workqueue.ShutDown()
 
 	// Start the informer factories to begin populating the informer caches
-	glog.Info("Starting Stream controller")
+	glog.Info("Starting Channel controller")
 
 	// Wait for the caches to be synced before starting workers
 	glog.Info("Waiting for informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, c.ingressesSynced, c.servicesSynced, c.streamsSynced); !ok {
+	if ok := cache.WaitForCacheSync(stopCh, c.ingressesSynced, c.servicesSynced, c.channelsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
 	glog.Info("Starting workers")
-	// Launch two workers to process Stream resources
+	// Launch two workers to process Channel resources
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
@@ -239,7 +239,7 @@ func (c *Controller) processNextWorkItem() bool {
 			return nil
 		}
 		// Run the syncHandler, passing it the namespace/name string of the
-		// Stream resource to be synced.
+		// Channel resource to be synced.
 		if err := c.syncHandler(key); err != nil {
 			return fmt.Errorf("error syncing '%s': %s", key, err.Error())
 		}
@@ -259,7 +259,7 @@ func (c *Controller) processNextWorkItem() bool {
 }
 
 // syncHandler compares the actual state with the desired, and attempts to
-// converge the two. It then updates the Status block of the Stream resource
+// converge the two. It then updates the Status block of the Channel resource
 // with the current status of the resource.
 func (c *Controller) syncHandler(key string) error {
 	// Convert the namespace/name string into a distinct namespace and name
@@ -269,55 +269,55 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 
-	// Get the Stream resource with this namespace/name
-	stream, err := c.streamsLister.Streams(namespace).Get(name)
+	// Get the Channel resource with this namespace/name
+	channel, err := c.channelsLister.Channels(namespace).Get(name)
 	if err != nil {
-		// The Stream resource may no longer exist, in which case we stop
+		// The Channel resource may no longer exist, in which case we stop
 		// processing.
 		if errors.IsNotFound(err) {
-			runtime.HandleError(fmt.Errorf("stream '%s' in work queue no longer exists", key))
+			runtime.HandleError(fmt.Errorf("channel '%s' in work queue no longer exists", key))
 			return nil
 		}
 
 		return err
 	}
 
-	// Sync Service derived from the Stream
-	service, err := c.syncStreamService(stream)
+	// Sync Service derived from the Channel
+	service, err := c.syncChannelService(channel)
 	if err != nil {
 		return err
 	}
 
-	// Sync RouteRule derived from a brokered Stream
-	brokeredStreamRouteRule, err := c.syncBrokeredStream(stream)
+	// Sync RouteRule derived from a brokered Channel
+	brokeredChannelRouteRule, err := c.syncBrokeredChannel(channel)
 	if err != nil {
 		return err
 	}
 
-	// Sync Ingress derived from the Stream
-	ingress, err := c.syncStreamIngress(stream)
+	// Sync Ingress derived from the Channel
+	ingress, err := c.syncChannelIngress(channel)
 	if err != nil {
 		return err
 	}
 
-	// Finally, we update the status block of the Stream resource to reflect the
+	// Finally, we update the status block of the Channel resource to reflect the
 	// current state of the world
-	err = c.updateStreamStatus(stream, service, ingress, brokeredStreamRouteRule)
+	err = c.updateChannelStatus(channel, service, ingress, brokeredChannelRouteRule)
 	if err != nil {
 		return err
 	}
 
-	c.recorder.Event(stream, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
+	c.recorder.Event(channel, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
 	return nil
 }
 
-func (c *Controller) syncStreamService(stream *eventingv1alpha1.Stream) (*corev1.Service, error) {
+func (c *Controller) syncChannelService(channel *eventingv1alpha1.Channel) (*corev1.Service, error) {
 	// Get the service with the specified service name
-	serviceName := controller.StreamServiceName(stream.ObjectMeta.Name)
-	service, err := c.servicesLister.Services(stream.Namespace).Get(serviceName)
+	serviceName := controller.ChannelServiceName(channel.ObjectMeta.Name)
+	service, err := c.servicesLister.Services(channel.Namespace).Get(serviceName)
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
-		service, err = c.kubeclientset.CoreV1().Services(stream.Namespace).Create(newService(stream))
+		service, err = c.kubeclientset.CoreV1().Services(channel.Namespace).Create(newService(channel))
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
@@ -327,27 +327,27 @@ func (c *Controller) syncStreamService(stream *eventingv1alpha1.Stream) (*corev1
 		return nil, err
 	}
 
-	// If the Service is not controlled by this Stream resource, we should log
+	// If the Service is not controlled by this Channel resource, we should log
 	// a warning to the event recorder and return
-	if !metav1.IsControlledBy(service, stream) {
+	if !metav1.IsControlledBy(service, channel) {
 		msg := fmt.Sprintf(MessageResourceExists, service.Name)
-		c.recorder.Event(stream, corev1.EventTypeWarning, ErrResourceExists, msg)
+		c.recorder.Event(channel, corev1.EventTypeWarning, ErrResourceExists, msg)
 		return nil, fmt.Errorf(msg)
 	}
 
 	return service, nil
 }
 
-func (c *Controller) syncBrokeredStream(stream *eventingv1alpha1.Stream) (*istiov1alpha2.RouteRule, error) {
-	// Get the RouteRule with the specified Stream name
-	routeruleName := controller.BrokeredStreamRouteRuleName(stream.ObjectMeta.Name)
-	routerule, err := c.routerulesLister.RouteRules(stream.Namespace).Get(routeruleName)
+func (c *Controller) syncBrokeredChannel(channel *eventingv1alpha1.Channel) (*istiov1alpha2.RouteRule, error) {
+	// Get the RouteRule with the specified Channel name
+	routeruleName := controller.BrokeredChannelRouteRuleName(channel.ObjectMeta.Name)
+	routerule, err := c.routerulesLister.RouteRules(channel.Namespace).Get(routeruleName)
 
-	if stream.Spec.Broker == "" {
+	if channel.Spec.Broker == "" {
 		// If the resource exists, delete it
 		if routerule != nil {
 			// Remove RouteRule
-			err = c.streamclientset.ConfigV1alpha2().RouteRules(stream.Namespace).Delete(routeruleName, nil)
+			err = c.channelclientset.ConfigV1alpha2().RouteRules(channel.Namespace).Delete(routeruleName, nil)
 			if err != nil {
 				return routerule, err
 			}
@@ -359,7 +359,7 @@ func (c *Controller) syncBrokeredStream(stream *eventingv1alpha1.Stream) (*istio
 
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
-		routerule, err = c.streamclientset.ConfigV1alpha2().RouteRules(stream.Namespace).Create(newBrokeredRouteRule(stream))
+		routerule, err = c.channelclientset.ConfigV1alpha2().RouteRules(channel.Namespace).Create(newBrokeredRouteRule(channel))
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
@@ -369,26 +369,26 @@ func (c *Controller) syncBrokeredStream(stream *eventingv1alpha1.Stream) (*istio
 		return nil, err
 	}
 
-	// If the Service is not controlled by this Stream resource, we should log
+	// If the Service is not controlled by this Channel resource, we should log
 	// a warning to the event recorder and return
-	if !metav1.IsControlledBy(routerule, stream) {
+	if !metav1.IsControlledBy(routerule, channel) {
 		msg := fmt.Sprintf(MessageResourceExists, routerule.Name)
-		c.recorder.Event(stream, corev1.EventTypeWarning, ErrResourceExists, msg)
+		c.recorder.Event(channel, corev1.EventTypeWarning, ErrResourceExists, msg)
 		return nil, fmt.Errorf(msg)
 	}
 
 	return routerule, nil
 }
 
-func (c *Controller) syncStreamIngress(stream *eventingv1alpha1.Stream) (*extensionsv1beta1.Ingress, error) {
+func (c *Controller) syncChannelIngress(channel *eventingv1alpha1.Channel) (*extensionsv1beta1.Ingress, error) {
 	// TODO make ingress optional
 
 	// Get the ingress with the specified ingress name
-	ingressName := controller.StreamIngressName(stream.ObjectMeta.Name)
-	ingress, err := c.ingressesLister.Ingresses(stream.Namespace).Get(ingressName)
+	ingressName := controller.ChannelIngressName(channel.ObjectMeta.Name)
+	ingress, err := c.ingressesLister.Ingresses(channel.Namespace).Get(ingressName)
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
-		ingress, err = c.kubeclientset.ExtensionsV1beta1().Ingresses(stream.Namespace).Create(newIngress(stream))
+		ingress, err = c.kubeclientset.ExtensionsV1beta1().Ingresses(channel.Namespace).Create(newIngress(channel))
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
@@ -398,34 +398,34 @@ func (c *Controller) syncStreamIngress(stream *eventingv1alpha1.Stream) (*extens
 		return nil, err
 	}
 
-	// If the Ingress is not controlled by this Stream resource, we should log
+	// If the Ingress is not controlled by this Channel resource, we should log
 	// a warning to the event recorder and return
-	if !metav1.IsControlledBy(ingress, stream) {
+	if !metav1.IsControlledBy(ingress, channel) {
 		msg := fmt.Sprintf(MessageResourceExists, ingress.Name)
-		c.recorder.Event(stream, corev1.EventTypeWarning, ErrResourceExists, msg)
+		c.recorder.Event(channel, corev1.EventTypeWarning, ErrResourceExists, msg)
 		return nil, fmt.Errorf(msg)
 	}
 
 	return ingress, nil
 }
 
-func (c *Controller) updateStreamStatus(stream *eventingv1alpha1.Stream, service *corev1.Service, ingress *extensionsv1beta1.Ingress, brokeredStreamRouteRule *istiov1alpha2.RouteRule) error {
+func (c *Controller) updateChannelStatus(channel *eventingv1alpha1.Channel, service *corev1.Service, ingress *extensionsv1beta1.Ingress, brokeredChannelRouteRule *istiov1alpha2.RouteRule) error {
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
-	streamCopy := stream.DeepCopy()
+	channelCopy := channel.DeepCopy()
 	// If the CustomResourceSubresources feature gate is not enabled,
-	// we must use Update instead of UpdateStatus to update the Status block of the Stream resource.
+	// we must use Update instead of UpdateStatus to update the Status block of the Channel resource.
 	// UpdateStatus will not allow changes to the Spec of the resource,
 	// which is ideal for ensuring nothing other than resource status has been updated.
-	_, err := c.streamclientset.EventingV1alpha1().Streams(stream.Namespace).Update(streamCopy)
+	_, err := c.channelclientset.EventingV1alpha1().Channels(channel.Namespace).Update(channelCopy)
 	return err
 }
 
-// enqueueStream takes a Stream resource and converts it into a namespace/name
+// enqueueChannel takes a Channel resource and converts it into a namespace/name
 // string which is then put onto the work queue. This method should *not* be
-// passed resources of any type other than Stream.
-func (c *Controller) enqueueStream(obj interface{}) {
+// passed resources of any type other than Channel.
+func (c *Controller) enqueueChannel(obj interface{}) {
 	var key string
 	var err error
 	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
@@ -436,9 +436,9 @@ func (c *Controller) enqueueStream(obj interface{}) {
 }
 
 // handleObject will take any resource implementing metav1.Object and attempt
-// to find the Stream resource that 'owns' it. It does this by looking at the
+// to find the Channel resource that 'owns' it. It does this by looking at the
 // objects metadata.ownerReferences field for an appropriate OwnerReference.
-// It then enqueues that Stream resource to be processed. If the object does not
+// It then enqueues that Channel resource to be processed. If the object does not
 // have an appropriate OwnerReference, it will simply be skipped.
 func (c *Controller) handleObject(obj interface{}) {
 	var object metav1.Object
@@ -458,40 +458,40 @@ func (c *Controller) handleObject(obj interface{}) {
 	}
 	glog.V(4).Infof("Processing object: %s", object.GetName())
 	if ownerRef := metav1.GetControllerOf(object); ownerRef != nil {
-		// If this object is not owned by a Stream, we should not do anything more
+		// If this object is not owned by a Channel, we should not do anything more
 		// with it.
-		if ownerRef.Kind != "Stream" {
+		if ownerRef.Kind != "Channel" {
 			return
 		}
 
-		stream, err := c.streamsLister.Streams(object.GetNamespace()).Get(ownerRef.Name)
+		channel, err := c.channelsLister.Channels(object.GetNamespace()).Get(ownerRef.Name)
 		if err != nil {
-			glog.V(4).Infof("ignoring orphaned object '%s' of stream '%s'", object.GetSelfLink(), ownerRef.Name)
+			glog.V(4).Infof("ignoring orphaned object '%s' of channel '%s'", object.GetSelfLink(), ownerRef.Name)
 			return
 		}
 
-		c.enqueueStream(stream)
+		c.enqueueChannel(channel)
 		return
 	}
 }
 
-// newService creates a new Service for a Stream resource. It also sets
+// newService creates a new Service for a Channel resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
-// the Stream resource that 'owns' it.
-func newService(stream *eventingv1alpha1.Stream) *corev1.Service {
+// the Channel resource that 'owns' it.
+func newService(channel *eventingv1alpha1.Channel) *corev1.Service {
 	labels := map[string]string{
-		"stream": stream.Name,
+		"channel": channel.Name,
 	}
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.StreamServiceName(stream.ObjectMeta.Name),
-			Namespace: stream.Namespace,
+			Name:      controller.ChannelServiceName(channel.ObjectMeta.Name),
+			Namespace: channel.Namespace,
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(stream, schema.GroupVersionKind{
+				*metav1.NewControllerRef(channel, schema.GroupVersionKind{
 					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
 					Version: eventingv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Stream",
+					Kind:    "Channel",
 				}),
 			},
 		},
@@ -503,67 +503,67 @@ func newService(stream *eventingv1alpha1.Stream) *corev1.Service {
 	}
 }
 
-// newBrokeredRouteRule creates a new RouteRule for a brokered Stream resource. It also sets
+// newBrokeredRouteRule creates a new RouteRule for a brokered Channel resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
-// the Stream resource that 'owns' it.
-func newBrokeredRouteRule(stream *eventingv1alpha1.Stream) *istiov1alpha2.RouteRule {
+// the Channel resource that 'owns' it.
+func newBrokeredRouteRule(channel *eventingv1alpha1.Channel) *istiov1alpha2.RouteRule {
 	labels := map[string]string{
-		"broker": stream.Spec.Broker,
-		"stream": stream.Name,
+		"broker":  channel.Spec.Broker,
+		"channel": channel.Name,
 	}
 	return &istiov1alpha2.RouteRule{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.BrokeredStreamRouteRuleName(stream.Name),
-			Namespace: stream.Namespace,
+			Name:      controller.BrokeredChannelRouteRuleName(channel.Name),
+			Namespace: channel.Namespace,
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(stream, schema.GroupVersionKind{
+				*metav1.NewControllerRef(channel, schema.GroupVersionKind{
 					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
 					Version: eventingv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Stream",
+					Kind:    "Channel",
 				}),
 			},
 		},
 		Spec: istiov1alpha2.RouteRuleSpec{
 			Destination: istiov1alpha2.IstioService{
-				Name: controller.StreamServiceName(stream.Name),
+				Name: controller.ChannelServiceName(channel.Name),
 			},
 			Route: []istiov1alpha2.DestinationWeight{
 				{
 					Destination: istiov1alpha2.IstioService{
-						Name: controller.BrokerServiceName(stream.Spec.Broker),
+						Name: controller.BrokerServiceName(channel.Spec.Broker),
 					},
 					Weight: 100,
 				},
 			},
 			Rewrite: istiov1alpha2.HTTPRewrite{
-				Authority: fmt.Sprintf("%s.%s.streams.cluster.local", stream.Name, stream.Namespace),
+				Authority: fmt.Sprintf("%s.%s.channels.cluster.local", channel.Name, channel.Namespace),
 			},
 		},
 	}
 }
 
-// newIngress creates a new Ingress for a Stream resource. It also sets
+// newIngress creates a new Ingress for a Channel resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
-// the Stream resource that 'owns' it.
-func newIngress(stream *eventingv1alpha1.Stream) *extensionsv1beta1.Ingress {
+// the Channel resource that 'owns' it.
+func newIngress(channel *eventingv1alpha1.Channel) *extensionsv1beta1.Ingress {
 	labels := map[string]string{
-		"stream": stream.Name,
+		"channel": channel.Name,
 	}
 	annotations := map[string]string{
 		"kubernetes.io/ingress.class": "istio",
 	}
 	return &extensionsv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        controller.StreamIngressName(stream.ObjectMeta.Name),
-			Namespace:   stream.Namespace,
+			Name:        controller.ChannelIngressName(channel.ObjectMeta.Name),
+			Namespace:   channel.Namespace,
 			Labels:      labels,
 			Annotations: annotations,
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(stream, schema.GroupVersionKind{
+				*metav1.NewControllerRef(channel, schema.GroupVersionKind{
 					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
 					Version: eventingv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Stream",
+					Kind:    "Channel",
 				}),
 			},
 		},
@@ -571,13 +571,13 @@ func newIngress(stream *eventingv1alpha1.Stream) *extensionsv1beta1.Ingress {
 			Rules: []extensionsv1beta1.IngressRule{
 				{
 					// TODO make host name configurable
-					Host: stream.ObjectMeta.Name,
+					Host: channel.ObjectMeta.Name,
 					IngressRuleValue: extensionsv1beta1.IngressRuleValue{
 						HTTP: &extensionsv1beta1.HTTPIngressRuleValue{
 							Paths: []extensionsv1beta1.HTTPIngressPath{
 								{
 									Backend: extensionsv1beta1.IngressBackend{
-										ServiceName: controller.StreamServiceName(stream.ObjectMeta.Name),
+										ServiceName: controller.ChannelServiceName(channel.ObjectMeta.Name),
 										ServicePort: intstr.FromString("http"),
 									},
 								},
