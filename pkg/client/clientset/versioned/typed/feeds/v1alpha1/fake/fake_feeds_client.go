@@ -19,30 +19,30 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
+	v1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/feeds/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
 
-type FakeEventingV1alpha1 struct {
+type FakeFeedsV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeEventingV1alpha1) Binds(namespace string) v1alpha1.BindInterface {
+func (c *FakeFeedsV1alpha1) Binds(namespace string) v1alpha1.BindInterface {
 	return &FakeBinds{c, namespace}
 }
 
-func (c *FakeEventingV1alpha1) EventSources(namespace string) v1alpha1.EventSourceInterface {
+func (c *FakeFeedsV1alpha1) EventSources(namespace string) v1alpha1.EventSourceInterface {
 	return &FakeEventSources{c, namespace}
 }
 
-func (c *FakeEventingV1alpha1) EventTypes(namespace string) v1alpha1.EventTypeInterface {
+func (c *FakeFeedsV1alpha1) EventTypes(namespace string) v1alpha1.EventTypeInterface {
 	return &FakeEventTypes{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeEventingV1alpha1) RESTClient() rest.Interface {
+func (c *FakeFeedsV1alpha1) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }

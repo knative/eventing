@@ -21,7 +21,7 @@ package externalversions
 import (
 	"fmt"
 
-	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	v1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -52,13 +52,13 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=eventing.knative.dev, Version=v1alpha1
+	// Group=feeds.knative.dev, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("binds"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().Binds().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Feeds().V1alpha1().Binds().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("eventsources"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().EventSources().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Feeds().V1alpha1().EventSources().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("eventtypes"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().EventTypes().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Feeds().V1alpha1().EventTypes().Informer()}, nil
 
 	}
 

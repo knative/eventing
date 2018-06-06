@@ -19,7 +19,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	v1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	scheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -54,7 +54,7 @@ type binds struct {
 }
 
 // newBinds returns a Binds
-func newBinds(c *EventingV1alpha1Client, namespace string) *binds {
+func newBinds(c *FeedsV1alpha1Client, namespace string) *binds {
 	return &binds{
 		client: c.RESTClient(),
 		ns:     namespace,

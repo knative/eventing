@@ -46,12 +46,12 @@ import (
 	"github.com/knative/eventing/pkg/controller"
 	"github.com/knative/eventing/pkg/sources"
 
-	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	v1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	bindscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	listers "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
+	listers "github.com/knative/eventing/pkg/client/listers/feeds/v1alpha1"
 )
 
 const controllerAgentName = "bind-controller"
@@ -70,8 +70,8 @@ type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
 
-	// bindclientset is a clientset for our own API group
-	bindclientset clientset.Interface
+	// feedsclientset is a clientset for our own API group
+	feedsclientset clientset.Interface
 
 	bindsLister listers.BindLister
 	bindsSynced cache.InformerSynced
@@ -99,13 +99,13 @@ type Controller struct {
 // NewController returns a new bind controller
 func NewController(
 	kubeclientset kubernetes.Interface,
-	bindclientset clientset.Interface,
+	feedsclientset clientset.Interface,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
-	bindInformerFactory informers.SharedInformerFactory,
+	feedsInformerFactory informers.SharedInformerFactory,
 	routeInformerFactory servinginformers.SharedInformerFactory) controller.Interface {
 
 	// obtain a reference to a shared index informer for the Bind types.
-	bindInformer := bindInformerFactory.Eventing().V1alpha1()
+	bindInformer := feedsInformerFactory.Feeds().V1alpha1()
 
 	// obtain a reference to a shared index informer for the Route type.
 	routeInformer := routeInformerFactory.Serving().V1alpha1().Routes()
@@ -122,7 +122,7 @@ func NewController(
 
 	controller := &Controller{
 		kubeclientset:      kubeclientset,
-		bindclientset:      bindclientset,
+		feedsclientset:     feedsclientset,
 		bindsLister:        bindInformer.Binds().Lister(),
 		bindsSynced:        bindInformer.Binds().Informer().HasSynced,
 		routesLister:       routeInformer.Lister(),
@@ -437,7 +437,7 @@ func (c *Controller) syncHandler(key string) error {
 }
 
 func (c *Controller) updateFinalizers(u *v1alpha1.Bind) (*v1alpha1.Bind, error) {
-	bindClient := c.bindclientset.EventingV1alpha1().Binds(u.Namespace)
+	bindClient := c.feedsclientset.FeedsV1alpha1().Binds(u.Namespace)
 	newu, err := bindClient.Get(u.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -447,7 +447,7 @@ func (c *Controller) updateFinalizers(u *v1alpha1.Bind) (*v1alpha1.Bind, error) 
 }
 
 func (c *Controller) updateStatus(u *v1alpha1.Bind) (*v1alpha1.Bind, error) {
-	bindClient := c.bindclientset.EventingV1alpha1().Binds(u.Namespace)
+	bindClient := c.feedsclientset.FeedsV1alpha1().Binds(u.Namespace)
 	newu, err := bindClient.Get(u.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
