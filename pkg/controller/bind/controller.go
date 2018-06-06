@@ -526,20 +526,6 @@ func unmarshalJSON(in []byte) (map[string]interface{}, error) {
 	return parameters, nil
 }
 
-func getDomainSuffixFromRoute(cl kubernetes.Interface) (string, error) {
-	const name = "ela-config"
-	const namespace = "ela-system"
-	c, err := cl.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
-	if err != nil {
-		return "", err
-	}
-	domainSuffix, ok := c.Data["domainSuffix"]
-	if !ok {
-		return "", fmt.Errorf("cannot find domainSuffix in %v: ConfigMap.Data is %#v", name, c.Data)
-	}
-	return domainSuffix, nil
-}
-
 // AddFinalizer adds value to the list of finalizers on obj
 func AddFinalizer(obj runtimetypes.Object, value string) error {
 	accessor, err := meta.Accessor(obj)
