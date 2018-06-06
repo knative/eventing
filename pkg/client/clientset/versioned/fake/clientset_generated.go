@@ -20,8 +20,8 @@ package fake
 
 import (
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
-	sourcesv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha1"
-	fakesourcesv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha1/fake"
+	feedsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/feeds/v1alpha1"
+	fakefeedsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/feeds/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -70,12 +70,12 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 
 var _ clientset.Interface = &Clientset{}
 
-// SourcesV1alpha1 retrieves the SourcesV1alpha1Client
-func (c *Clientset) SourcesV1alpha1() sourcesv1alpha1.SourcesV1alpha1Interface {
-	return &fakesourcesv1alpha1.FakeSourcesV1alpha1{Fake: &c.Fake}
+// FeedsV1alpha1 retrieves the FeedsV1alpha1Client
+func (c *Clientset) FeedsV1alpha1() feedsv1alpha1.FeedsV1alpha1Interface {
+	return &fakefeedsv1alpha1.FakeFeedsV1alpha1{Fake: &c.Fake}
 }
 
-// Sources retrieves the SourcesV1alpha1Client
-func (c *Clientset) Sources() sourcesv1alpha1.SourcesV1alpha1Interface {
-	return &fakesourcesv1alpha1.FakeSourcesV1alpha1{Fake: &c.Fake}
+// Feeds retrieves the FeedsV1alpha1Client
+func (c *Clientset) Feeds() feedsv1alpha1.FeedsV1alpha1Interface {
+	return &fakefeedsv1alpha1.FakeFeedsV1alpha1{Fake: &c.Fake}
 }

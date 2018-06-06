@@ -20,7 +20,7 @@ package versioned
 
 import (
 	glog "github.com/golang/glog"
-	sourcesv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha1"
+	feedsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/feeds/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -28,27 +28,27 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	SourcesV1alpha1() sourcesv1alpha1.SourcesV1alpha1Interface
+	FeedsV1alpha1() feedsv1alpha1.FeedsV1alpha1Interface
 	// Deprecated: please explicitly pick a version if possible.
-	Sources() sourcesv1alpha1.SourcesV1alpha1Interface
+	Feeds() feedsv1alpha1.FeedsV1alpha1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	sourcesV1alpha1 *sourcesv1alpha1.SourcesV1alpha1Client
+	feedsV1alpha1 *feedsv1alpha1.FeedsV1alpha1Client
 }
 
-// SourcesV1alpha1 retrieves the SourcesV1alpha1Client
-func (c *Clientset) SourcesV1alpha1() sourcesv1alpha1.SourcesV1alpha1Interface {
-	return c.sourcesV1alpha1
+// FeedsV1alpha1 retrieves the FeedsV1alpha1Client
+func (c *Clientset) FeedsV1alpha1() feedsv1alpha1.FeedsV1alpha1Interface {
+	return c.feedsV1alpha1
 }
 
-// Deprecated: Sources retrieves the default version of SourcesClient.
+// Deprecated: Feeds retrieves the default version of FeedsClient.
 // Please explicitly pick a version.
-func (c *Clientset) Sources() sourcesv1alpha1.SourcesV1alpha1Interface {
-	return c.sourcesV1alpha1
+func (c *Clientset) Feeds() feedsv1alpha1.FeedsV1alpha1Interface {
+	return c.feedsV1alpha1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -67,7 +67,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
-	cs.sourcesV1alpha1, err = sourcesv1alpha1.NewForConfig(&configShallowCopy)
+	cs.feedsV1alpha1, err = feedsv1alpha1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
-	cs.sourcesV1alpha1 = sourcesv1alpha1.NewForConfigOrDie(c)
+	cs.feedsV1alpha1 = feedsv1alpha1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -93,7 +93,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.sourcesV1alpha1 = sourcesv1alpha1.New(c)
+	cs.feedsV1alpha1 = feedsv1alpha1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs
