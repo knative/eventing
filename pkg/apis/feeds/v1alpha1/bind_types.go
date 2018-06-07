@@ -124,7 +124,7 @@ type BindSpec struct {
 	Action BindAction `json:"action"`
 
 	// Trigger specifies the trigger we're binding to
-	Trigger EventTrigger `json:trigger"`
+	Trigger EventTrigger `json:"trigger"`
 }
 
 // ParametersFromSource represents the source of a set of Parameters
