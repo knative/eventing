@@ -55,7 +55,7 @@ const (
 // Context holds standard metadata about an event.
 type Context struct {
 	CloudEventsVersion string    `json:"cloud-events-version,omitempty"`
-	EventID            string    `json":event-id"`
+	EventID            string    `json:"event-id"`
 	EventType          string    `json:"event-type"`
 	EventTime          time.Time `json:"event-time,omitempty"`
 	Source             string    `json:"source"`
