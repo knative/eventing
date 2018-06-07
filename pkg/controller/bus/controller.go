@@ -25,6 +25,7 @@ import (
 	"github.com/knative/eventing/pkg/controller"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -37,6 +38,7 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	appslisters "k8s.io/client-go/listers/apps/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
+	rbaclisters "k8s.io/client-go/listers/rbac/v1beta1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -74,12 +76,16 @@ type Controller struct {
 	// busclientset is a clientset for our own API group
 	busclientset clientset.Interface
 
-	deploymentsLister appslisters.DeploymentLister
-	deploymentsSynced cache.InformerSynced
-	servicesLister    corelisters.ServiceLister
-	servicesSynced    cache.InformerSynced
-	busesLister       listers.BusLister
-	busesSynced       cache.InformerSynced
+	deploymentsLister         appslisters.DeploymentLister
+	deploymentsSynced         cache.InformerSynced
+	servicesLister            corelisters.ServiceLister
+	servicesSynced            cache.InformerSynced
+	serviceAccountsLister     corelisters.ServiceAccountLister
+	serviceAccountsSynced     cache.InformerSynced
+	clusterRoleBindingsLister rbaclisters.ClusterRoleBindingLister
+	clusterRoleBindingsSynced cache.InformerSynced
+	busesLister               listers.BusLister
+	busesSynced               cache.InformerSynced
 
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
@@ -105,6 +111,8 @@ func NewController(
 	busInformer := busInformerFactory.Channels().V1alpha1().Buses()
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
+	serviceAccountInformer := kubeInformerFactory.Core().V1().ServiceAccounts()
+	clusterRoleBindingInformer := kubeInformerFactory.Rbac().V1beta1().ClusterRoleBindings()
 
 	// Create event broadcaster
 	// Add bus-controller types to the default Kubernetes Scheme so Events can be
@@ -117,16 +125,20 @@ func NewController(
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
 	controller := &Controller{
-		kubeclientset:     kubeclientset,
-		busclientset:      busclientset,
-		deploymentsLister: deploymentInformer.Lister(),
-		deploymentsSynced: deploymentInformer.Informer().HasSynced,
-		servicesLister:    serviceInformer.Lister(),
-		servicesSynced:    serviceInformer.Informer().HasSynced,
-		busesLister:       busInformer.Lister(),
-		busesSynced:       busInformer.Informer().HasSynced,
-		workqueue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Buses"),
-		recorder:          recorder,
+		kubeclientset:             kubeclientset,
+		busclientset:              busclientset,
+		deploymentsLister:         deploymentInformer.Lister(),
+		deploymentsSynced:         deploymentInformer.Informer().HasSynced,
+		servicesLister:            serviceInformer.Lister(),
+		servicesSynced:            serviceInformer.Informer().HasSynced,
+		serviceAccountsLister:     serviceAccountInformer.Lister(),
+		serviceAccountsSynced:     serviceAccountInformer.Informer().HasSynced,
+		clusterRoleBindingsLister: clusterRoleBindingInformer.Lister(),
+		clusterRoleBindingsSynced: clusterRoleBindingInformer.Informer().HasSynced,
+		busesLister:               busInformer.Lister(),
+		busesSynced:               busInformer.Informer().HasSynced,
+		workqueue:                 workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Buses"),
+		recorder:                  recorder,
 	}
 
 	glog.Info("Setting up event handlers")
@@ -235,12 +247,12 @@ func (c *Controller) processNextWorkItem() bool {
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Bus resource to be synced.
 		if err := c.syncHandler(key); err != nil {
-			return fmt.Errorf("error syncing '%s': %s", key, err.Error())
+			return fmt.Errorf("error syncing bus '%s': %s", key, err.Error())
 		}
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		c.workqueue.Forget(obj)
-		glog.Infof("Successfully synced '%s'", key)
+		glog.Infof("Successfully synced bus '%s'", key)
 		return nil
 	}(obj)
 
@@ -276,6 +288,18 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
+	// Sync ServiceAccount derived from the Bus
+	serviceAccount, err := c.syncBusServiceAccount(bus)
+	if err != nil {
+		return err
+	}
+
+	// Sync ClusterRoleBinding derived from the Bus
+	clusterRoleBinding, err := c.syncBusClusterRoleBinding(bus)
+	if err != nil {
+		return err
+	}
+
 	// Sync Service derived from the Bus
 	dispatcherService, err := c.syncBusDispatcherService(bus)
 	if err != nil {
@@ -296,7 +320,7 @@ func (c *Controller) syncHandler(key string) error {
 
 	// Finally, we update the status block of the Bus resource to reflect the
 	// current state of the world
-	return c.updateBusStatus(bus, dispatcherService, dispatcherDeployment, provisionerDeployment)
+	return c.updateBusStatus(bus, dispatcherService, dispatcherDeployment, provisionerDeployment, serviceAccount, clusterRoleBinding)
 
 	c.recorder.Event(bus, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
 	return nil
@@ -368,6 +392,73 @@ func (c *Controller) syncBusDispatcherDeployment(bus *channelsv1alpha1.Bus) (*ap
 	return deployment, nil
 }
 
+func (c *Controller) syncBusServiceAccount(bus *channelsv1alpha1.Bus) (*corev1.ServiceAccount, error) {
+	// Get the serviceAccount with the specified serviceAccount name
+	serviceAccountName := controller.BusServiceAccountName(bus.ObjectMeta.Name)
+	serviceAccount, err := c.serviceAccountsLister.ServiceAccounts(bus.Namespace).Get(serviceAccountName)
+	// If the resource doesn't exist, we'll create it
+	if errors.IsNotFound(err) {
+		serviceAccount, err = c.kubeclientset.CoreV1().ServiceAccounts(bus.Namespace).Create(newServiceAccount(bus))
+	}
+
+	// If an error occurs during Get/Create, we'll requeue the item so we can
+	// attempt processing again later. This could have been caused by a
+	// temporary network failure, or any other transient reason.
+	if err != nil {
+		return nil, err
+	}
+
+	// If the ServiceAccount is not controlled by this Bus resource, we should log
+	// a warning to the event recorder and return
+	if !metav1.IsControlledBy(serviceAccount, bus) {
+		msg := fmt.Sprintf(MessageResourceExists, serviceAccount.Name)
+		c.recorder.Event(bus, corev1.EventTypeWarning, ErrResourceExists, msg)
+		return nil, fmt.Errorf(msg)
+	}
+
+	return serviceAccount, nil
+}
+
+func (c *Controller) syncBusClusterRoleBinding(bus *channelsv1alpha1.Bus) (*rbacv1beta1.ClusterRoleBinding, error) {
+	// Get the clusterRoleBinding with the specified clusterRoleBinding name
+	clusterRoleBindingName := controller.BusClusterRoleBindingName(bus.ObjectMeta.Name)
+	clusterRoleBinding, err := c.clusterRoleBindingsLister.Get(clusterRoleBindingName)
+	// If the resource doesn't exist, we'll create it
+	if errors.IsNotFound(err) {
+		clusterRoleBinding, err = c.kubeclientset.RbacV1beta1().ClusterRoleBindings().Create(newClusterRoleBinding(bus))
+	}
+
+	// If an error occurs during Get/Create, we'll requeue the item so we can
+	// attempt processing again later. This could have been caused by a
+	// temporary network failure, or any other transient reason.
+	if err != nil {
+		return nil, err
+	}
+
+	// If the ClusterRoleBinding is not controlled by this Bus resource, we should log
+	// a warning to the event recorder and return
+	if !metav1.IsControlledBy(clusterRoleBinding, bus) {
+		msg := fmt.Sprintf(MessageResourceExists, clusterRoleBinding.Name)
+		c.recorder.Event(bus, corev1.EventTypeWarning, ErrResourceExists, msg)
+		return nil, fmt.Errorf(msg)
+	}
+
+	// If the ClusterRoleBinding does not match the Bus's proposed ClusterRoleBinding we
+	// should update the ClusterRoleBinding resource.
+	proposedClusterRoleBinding := newClusterRoleBinding(bus)
+	if !reflect.DeepEqual(proposedClusterRoleBinding.Subjects, clusterRoleBinding.Subjects) &&
+		!reflect.DeepEqual(proposedClusterRoleBinding.RoleRef, clusterRoleBinding.RoleRef) {
+		glog.V(4).Infof("Bus %s provisioner spec updated", bus.Name)
+		clusterRoleBinding, err = c.kubeclientset.RbacV1beta1().ClusterRoleBindings().Update(proposedClusterRoleBinding)
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return clusterRoleBinding, nil
+}
+
 func (c *Controller) syncBusProvisionerDeployment(bus *channelsv1alpha1.Bus) (*appsv1.Deployment, error) {
 	provisioner := bus.Spec.Provisioner
 
@@ -422,7 +513,14 @@ func (c *Controller) syncBusProvisionerDeployment(bus *channelsv1alpha1.Bus) (*a
 	return deployment, nil
 }
 
-func (c *Controller) updateBusStatus(bus *channelsv1alpha1.Bus, dispatcherService *corev1.Service, dispatcherDeployment *appsv1.Deployment, provisionerDeployment *appsv1.Deployment) error {
+func (c *Controller) updateBusStatus(
+	bus *channelsv1alpha1.Bus,
+	dispatcherService *corev1.Service,
+	dispatcherDeployment *appsv1.Deployment,
+	provisionerDeployment *appsv1.Deployment,
+	serviceAccount *corev1.ServiceAccount,
+	clusterRoleBinding *rbacv1beta1.ClusterRoleBinding,
+) error {
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
@@ -564,12 +662,62 @@ func newDispatcherDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: "bus-dispatcher",
+					ServiceAccountName: controller.BusServiceAccountName(bus.Name),
 					Containers: []corev1.Container{
 						*container,
 					},
 				},
 			},
+		},
+	}
+}
+
+// newServiceAccount creates a new ServiceAccount for a Bus resource. It also sets
+// the appropriate OwnerReferences on the resource so handleObject can discover
+// the Bus resource that 'owns' it.
+func newServiceAccount(bus *channelsv1alpha1.Bus) *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      controller.BusServiceAccountName(bus.ObjectMeta.Name),
+			Namespace: bus.Namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(bus, schema.GroupVersionKind{
+					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
+					Version: channelsv1alpha1.SchemeGroupVersion.Version,
+					Kind:    "Bus",
+				}),
+			},
+		},
+	}
+}
+
+// newClusterRoleBinding creates a new ClusterRoleBinding for a Bus resource. It also sets
+// the appropriate OwnerReferences on the resource so handleObject can discover
+// the Bus resource that 'owns' it.
+func newClusterRoleBinding(bus *channelsv1alpha1.Bus) *rbacv1beta1.ClusterRoleBinding {
+	return &rbacv1beta1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      controller.BusClusterRoleBindingName(bus.ObjectMeta.Name),
+			Namespace: bus.Namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(bus, schema.GroupVersionKind{
+					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
+					Version: channelsv1alpha1.SchemeGroupVersion.Version,
+					Kind:    "Bus",
+				}),
+			},
+		},
+		Subjects: []rbacv1beta1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      controller.BusServiceAccountName(bus.ObjectMeta.Name),
+				Namespace: bus.Namespace,
+			},
+		},
+		RoleRef: rbacv1beta1.RoleRef{
+			Kind:     "ClusterRole",
+			Name:     "knative-eventing-bus",
+			APIGroup: "rbac.authorization.k8s.io",
 		},
 	}
 }
@@ -612,7 +760,7 @@ func newProvisionerDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: "bus-provisioner",
+					ServiceAccountName: controller.BusServiceAccountName(bus.Name),
 					Containers: []corev1.Container{
 						*container,
 					},
