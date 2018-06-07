@@ -18,11 +18,15 @@ package controller
 
 import "fmt"
 
-func BusDeploymentName(busName string) string {
+func BusProvisionerDeploymentName(busName string) string {
+	return fmt.Sprintf("%s-bus-provisioner", busName)
+}
+
+func BusEventDeploymentName(busName string) string {
 	return fmt.Sprintf("%s-bus", busName)
 }
 
-func BusServiceName(busName string) string {
+func BusEventServiceName(busName string) string {
 	return fmt.Sprintf("%s-bus", busName)
 }
 

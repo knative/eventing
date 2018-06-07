@@ -517,7 +517,7 @@ func newRouteRule(channel *channelsv1alpha1.Channel) *istiov1alpha2.RouteRule {
 			Route: []istiov1alpha2.DestinationWeight{
 				{
 					Destination: istiov1alpha2.IstioService{
-						Name: controller.BusServiceName(channel.Spec.Bus),
+						Name: controller.BusEventServiceName(channel.Spec.Bus),
 					},
 					Weight: 100,
 				},

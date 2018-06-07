@@ -2,7 +2,6 @@ apiVersion: channels.eventing.knative.dev/v1alpha1
 kind: Bus
 metadata:
   name: stub
-  namespace: knative-eventing-system
 spec:
   container: 
     name: bus
