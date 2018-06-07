@@ -277,13 +277,13 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	// Sync Service derived from the Bus
-	eventService, err := c.syncBusEventService(bus)
+	dispatcherService, err := c.syncBusDispatcherService(bus)
 	if err != nil {
 		return err
 	}
 
 	// Sync Deployment derived from the Bus
-	eventDeployment, err := c.syncBusEventDeployment(bus)
+	dispatcherDeployment, err := c.syncBusDispatcherDeployment(bus)
 	if err != nil {
 		return err
 	}
@@ -296,19 +296,19 @@ func (c *Controller) syncHandler(key string) error {
 
 	// Finally, we update the status block of the Bus resource to reflect the
 	// current state of the world
-	return c.updateBusStatus(bus, eventService, eventDeployment, provisionerDeployment)
+	return c.updateBusStatus(bus, dispatcherService, dispatcherDeployment, provisionerDeployment)
 
 	c.recorder.Event(bus, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
 	return nil
 }
 
-func (c *Controller) syncBusEventService(bus *channelsv1alpha1.Bus) (*corev1.Service, error) {
+func (c *Controller) syncBusDispatcherService(bus *channelsv1alpha1.Bus) (*corev1.Service, error) {
 	// Get the service with the specified service name
-	serviceName := controller.BusEventServiceName(bus.ObjectMeta.Name)
+	serviceName := controller.BusDispatcherServiceName(bus.ObjectMeta.Name)
 	service, err := c.servicesLister.Services(bus.Namespace).Get(serviceName)
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
-		service, err = c.kubeclientset.CoreV1().Services(bus.Namespace).Create(newEventService(bus))
+		service, err = c.kubeclientset.CoreV1().Services(bus.Namespace).Create(newDispatcherService(bus))
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
@@ -329,13 +329,13 @@ func (c *Controller) syncBusEventService(bus *channelsv1alpha1.Bus) (*corev1.Ser
 	return service, nil
 }
 
-func (c *Controller) syncBusEventDeployment(bus *channelsv1alpha1.Bus) (*appsv1.Deployment, error) {
+func (c *Controller) syncBusDispatcherDeployment(bus *channelsv1alpha1.Bus) (*appsv1.Deployment, error) {
 	// Get the deployment with the specified deployment name
-	deploymentName := controller.BusEventDeploymentName(bus.ObjectMeta.Name)
+	deploymentName := controller.BusDispatcherDeploymentName(bus.ObjectMeta.Name)
 	deployment, err := c.deploymentsLister.Deployments(bus.Namespace).Get(deploymentName)
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
-		deployment, err = c.kubeclientset.AppsV1().Deployments(bus.Namespace).Create(newEventDeployment(bus))
+		deployment, err = c.kubeclientset.AppsV1().Deployments(bus.Namespace).Create(newDispatcherDeployment(bus))
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
@@ -355,9 +355,9 @@ func (c *Controller) syncBusEventDeployment(bus *channelsv1alpha1.Bus) (*appsv1.
 
 	// If the Deployment does not match the Bus's proposed Deployment we should update
 	// the Deployment resource.
-	proposedDeployment := newEventDeployment(bus)
+	proposedDeployment := newDispatcherDeployment(bus)
 	if !reflect.DeepEqual(proposedDeployment.Spec, deployment.Spec) {
-		glog.V(4).Infof("Bus %s container spec updated", bus.Name)
+		glog.V(4).Infof("Bus %s dispatcher spec updated", bus.Name)
 		deployment, err = c.kubeclientset.AppsV1().Deployments(bus.Namespace).Update(proposedDeployment)
 
 		if err != nil {
@@ -378,8 +378,11 @@ func (c *Controller) syncBusProvisionerDeployment(bus *channelsv1alpha1.Bus) (*a
 	// If the resource shouldn't exists
 	if provisioner == nil {
 		// If the resource exists, we'll delete it
-		if err == nil {
+		if deployment != nil {
 			err = c.kubeclientset.AppsV1().Deployments(bus.Namespace).Delete(deploymentName, nil)
+		}
+		if errors.IsNotFound(err) {
+			return nil, nil
 		}
 		return nil, err
 	}
@@ -408,7 +411,7 @@ func (c *Controller) syncBusProvisionerDeployment(bus *channelsv1alpha1.Bus) (*a
 	// the Deployment resource.
 	proposedDeployment := newProvisionerDeployment(bus)
 	if !reflect.DeepEqual(proposedDeployment.Spec, deployment.Spec) {
-		glog.V(4).Infof("Bus %s container spec updated", bus.Name)
+		glog.V(4).Infof("Bus %s provisioner spec updated", bus.Name)
 		deployment, err = c.kubeclientset.AppsV1().Deployments(bus.Namespace).Update(proposedDeployment)
 
 		if err != nil {
@@ -419,7 +422,7 @@ func (c *Controller) syncBusProvisionerDeployment(bus *channelsv1alpha1.Bus) (*a
 	return deployment, nil
 }
 
-func (c *Controller) updateBusStatus(bus *channelsv1alpha1.Bus, eventService *corev1.Service, eventDeployment *appsv1.Deployment, provisionerDeployment *appsv1.Deployment) error {
+func (c *Controller) updateBusStatus(bus *channelsv1alpha1.Bus, dispatcherService *corev1.Service, dispatcherDeployment *appsv1.Deployment, provisionerDeployment *appsv1.Deployment) error {
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
@@ -485,17 +488,17 @@ func (c *Controller) handleObject(obj interface{}) {
 	}
 }
 
-// newEventService creates a new Service for a Bus resource. It also sets
+// newDispatcherService creates a new Service for a Bus resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the Bus resource that 'owns' it.
-func newEventService(bus *channelsv1alpha1.Bus) *corev1.Service {
+func newDispatcherService(bus *channelsv1alpha1.Bus) *corev1.Service {
 	labels := map[string]string{
 		"bus":  bus.Name,
-		"role": "event",
+		"role": "dispatcher",
 	}
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.BusEventServiceName(bus.ObjectMeta.Name),
+			Name:      controller.BusDispatcherServiceName(bus.ObjectMeta.Name),
 			Namespace: bus.Namespace,
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
@@ -519,16 +522,16 @@ func newEventService(bus *channelsv1alpha1.Bus) *corev1.Service {
 	}
 }
 
-// newEventDeployment creates a new Deployment for a Bus resource. It also sets
+// newDispatcherDeployment creates a new Deployment for a Bus resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the Bus resource that 'owns' it.
-func newEventDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
+func newDispatcherDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 	labels := map[string]string{
 		"bus":  bus.Name,
-		"role": "event",
+		"role": "dispatcher",
 	}
 	one := int32(1)
-	container := bus.Spec.Container.DeepCopy()
+	container := bus.Spec.Dispatcher.DeepCopy()
 	container.Env = append(container.Env,
 		corev1.EnvVar{
 			Name:  "PORT",
@@ -541,7 +544,7 @@ func newEventDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 	)
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.BusEventDeploymentName(bus.ObjectMeta.Name),
+			Name:      controller.BusDispatcherDeploymentName(bus.ObjectMeta.Name),
 			Namespace: bus.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(bus, schema.GroupVersionKind{
@@ -561,7 +564,7 @@ func newEventDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: "bus-events",
+					ServiceAccountName: "bus-dispatcher",
 					Containers: []corev1.Container{
 						*container,
 					},

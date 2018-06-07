@@ -22,11 +22,11 @@ func BusProvisionerDeploymentName(busName string) string {
 	return fmt.Sprintf("%s-bus-provisioner", busName)
 }
 
-func BusEventDeploymentName(busName string) string {
+func BusDispatcherDeploymentName(busName string) string {
 	return fmt.Sprintf("%s-bus", busName)
 }
 
-func BusEventServiceName(busName string) string {
+func BusDispatcherServiceName(busName string) string {
 	return fmt.Sprintf("%s-bus", busName)
 }
 

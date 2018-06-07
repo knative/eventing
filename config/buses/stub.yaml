@@ -3,6 +3,6 @@ kind: Bus
 metadata:
   name: stub
 spec:
-  container: 
-    name: bus
+  dispatcher:
+    name: dispatcher
     image: github.com/knative/eventing/cmd/stub-bus

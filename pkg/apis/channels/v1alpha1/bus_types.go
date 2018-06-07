@@ -40,8 +40,8 @@ type BusSpec struct {
 	// Provisioner container definition to manage channels on the bus.
 	Provisioner *kapi.Container `json:"provisioner,omitempty"`
 
-	// Container definition to use for the bus data plane.
-	Container kapi.Container `json:"container"`
+	// Dispatcher container definition to use for the bus data plane.
+	Dispatcher kapi.Container `json:"dispatcher"`
 }
 
 // BusStatus (computed) for a bus

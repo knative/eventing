@@ -106,7 +106,7 @@ func (in *BusSpec) DeepCopyInto(out *BusSpec) {
 			(*in).DeepCopyInto(*out)
 		}
 	}
-	in.Container.DeepCopyInto(&out.Container)
+	in.Dispatcher.DeepCopyInto(&out.Dispatcher)
 	return
 }
 

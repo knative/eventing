@@ -31,10 +31,10 @@ roleRef:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: bus-events
+  name: bus-dispatcher
 subjects:
   - kind: ServiceAccount
-    name: bus-data
+    name: bus-dispatcher
     namespace: knative-eventing-system
 roleRef:
   kind: ClusterRole
