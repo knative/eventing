@@ -30,6 +30,7 @@ type Monitor struct {
 	busName string
 	handler MonitorEventHandlerFuncs
 
+	bus   *channelsv1alpha1.BusSpec
 	cache map[channelKey]*channelSummary
 	mutex *sync.Mutex
 }
@@ -52,6 +53,7 @@ type subscriptionSummary struct {
 
 func NewMonitor(busName string, informerFactory informers.SharedInformerFactory, handler MonitorEventHandlerFuncs) *Monitor {
 
+	busInformer := informerFactory.Channels().V1alpha1().Buses()
 	channelInformer := informerFactory.Channels().V1alpha1().Channels()
 	subscriptionInformer := informerFactory.Channels().V1alpha1().Subscriptions()
 
@@ -59,11 +61,31 @@ func NewMonitor(busName string, informerFactory informers.SharedInformerFactory,
 		busName: busName,
 		handler: handler,
 
+		bus:   nil,
 		cache: make(map[channelKey]*channelSummary),
 		mutex: &sync.Mutex{},
 	}
 
 	glog.Info("Setting up event handlers")
+	// Set up an event handler for when Bus resources change
+	busInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			bus := obj.(*channelsv1alpha1.Bus)
+			monitor.createOrUpdateBus(*bus)
+		},
+		UpdateFunc: func(old, new interface{}) {
+			oldBus := old.(*channelsv1alpha1.Bus)
+			newBus := new.(*channelsv1alpha1.Bus)
+
+			if oldBus.ResourceVersion == newBus.ResourceVersion {
+				// Periodic resync will send update events for all known Buses.
+				// Two different versions of the same Bus will always have different RVs.
+				return
+			}
+
+			monitor.createOrUpdateBus(*newBus)
+		},
+	})
 	// Set up an event handler for when Channel resources change
 	channelInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -120,12 +142,23 @@ func NewMonitor(busName string, informerFactory informers.SharedInformerFactory,
 	return monitor
 }
 
+// Channel for a channel name and namespace
+func (m *Monitor) Channel(channel string, namespace string) *channelsv1alpha1.ChannelSpec {
+	channelKey := makeChannelKeyWithNames(channel, namespace)
+	summary := m.getChannelSummary(channelKey)
+
+	if summary == nil {
+		return nil
+	}
+	return summary.Channel
+}
+
 // Subscriptions for a channel name and namespace
 func (m *Monitor) Subscriptions(channel string, namespace string) *[]channelsv1alpha1.SubscriptionSpec {
 	channelKey := makeChannelKeyWithNames(channel, namespace)
-	summary := m.getOrCreateChannelSummary(channelKey)
+	summary := m.getChannelSummary(channelKey)
 
-	if summary.Channel == nil {
+	if summary == nil || summary.Channel == nil {
 		// the channel is unknown
 		return nil
 	}
@@ -136,13 +169,66 @@ func (m *Monitor) Subscriptions(channel string, namespace string) *[]channelsv1a
 	}
 
 	m.mutex.Lock()
-	subscriptions := make([]channelsv1alpha1.SubscriptionSpec, len(summary.Subscriptions))
+	subscriptions := make([]channelsv1alpha1.SubscriptionSpec, len(summary.Subscriptions)-1)
 	for _, subscription := range summary.Subscriptions {
 		subscriptions = append(subscriptions, subscription.Subscription)
 	}
 	m.mutex.Unlock()
 
 	return &subscriptions
+}
+
+// ChannelParams resolve parameters for a channel
+func (m *Monitor) ChannelParams(channel channelsv1alpha1.ChannelSpec) map[string]string {
+	params := make(map[string]string)
+
+	// apply bus defaults
+	if m.bus.Parameters != nil {
+		for _, param := range *m.bus.Parameters {
+			if param.Default != nil {
+				params[param.Name] = *param.Default
+			}
+		}
+	}
+	// apply channel arguments
+	if channel.Arguments != nil {
+		for _, arg := range *channel.Arguments {
+			// TODO ignore arguments not defined by parameters
+			params[arg.Name] = arg.Value
+		}
+	}
+
+	return params
+}
+
+// SubscriptionParams resolve parameters for a subscription
+func (m *Monitor) SubscriptionParams(
+	channel channelsv1alpha1.ChannelSpec,
+	subscription channelsv1alpha1.SubscriptionSpec,
+) map[string]string {
+	params := m.ChannelParams(channel)
+
+	// apply channel defaults
+	if channel.Parameters != nil {
+		for _, param := range *channel.Parameters {
+			if _, ok := params[param.Name]; !ok && param.Default != nil {
+				params[param.Name] = *param.Default
+			}
+		}
+	}
+	// apply subscription arguments
+	if subscription.Arguments != nil {
+		for _, arg := range *subscription.Arguments {
+			// TODO ignore arguments not defined by parameters
+			params[arg.Name] = arg.Value
+		}
+	}
+
+	return params
+}
+
+func (m *Monitor) getChannelSummary(key channelKey) *channelSummary {
+	return m.cache[key]
 }
 
 func (m *Monitor) getOrCreateChannelSummary(key channelKey) *channelSummary {
@@ -158,6 +244,16 @@ func (m *Monitor) getOrCreateChannelSummary(key channelKey) *channelSummary {
 	m.mutex.Unlock()
 
 	return summary
+}
+
+func (m *Monitor) createOrUpdateBus(bus channelsv1alpha1.Bus) {
+	if bus.Name != m.busName {
+		// this is not our bus
+		return
+	}
+	if !reflect.DeepEqual(m.bus, bus.Spec) {
+		m.bus = &bus.Spec
+	}
 }
 
 func (m *Monitor) createOrUpdateChannel(channel channelsv1alpha1.Channel) {

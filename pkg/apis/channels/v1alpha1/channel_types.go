@@ -38,6 +38,12 @@ type ChannelSpec struct {
 
 	// Name of the bus backing this channel (optional)
 	Bus string
+
+	// Arguments configuration arguments for the bus
+	Arguments *[]Argument `json:"arguments,omitempty"`
+
+	// Parameters configuration params for the channel
+	Parameters *[]Parameter `json:"parameters,omitempty"`
 }
 
 // Status (computed) for a channel

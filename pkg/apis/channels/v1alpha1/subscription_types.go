@@ -42,12 +42,9 @@ type SubscriptionSpec struct {
 	// Name of the subscriber service
 	Subscriber string `json:"subscriber"`
 
-	// Parameters for the subscription
-	Params *SubscriptionParams `json:"params,omitempty"`
+	// Arguments for the channel
+	Arguments *[]Argument `json:"arguments,omitempty"`
 }
-
-// Params (key-value pairs) for a subscription
-type SubscriptionParams map[string]string
 
 // Status (computed) for a subscription
 type SubscriptionStatus struct {

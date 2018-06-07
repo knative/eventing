@@ -37,6 +37,9 @@ type Bus struct {
 // BusSpec (what the user wants) for a bus
 type BusSpec struct {
 
+	// Parameters configuration params for the bus
+	Parameters *[]Parameter `json:"parameters,omitempty"`
+
 	// Provisioner container definition to manage channels on the bus.
 	Provisioner *kapi.Container `json:"provisioner,omitempty"`
 
