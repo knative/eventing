@@ -22,7 +22,7 @@ import (
 	"fmt"
 
 	v1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
-	eventing_v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	feeds_v1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	v1alpha2 "github.com/knative/eventing/pkg/apis/istio/v1alpha2"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
@@ -66,13 +66,13 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	case v1alpha2.SchemeGroupVersion.WithResource("routerules"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Config().V1alpha2().RouteRules().Informer()}, nil
 
-		// Group=eventing.knative.dev, Version=v1alpha1
-	case eventing_v1alpha1.SchemeGroupVersion.WithResource("binds"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().Binds().Informer()}, nil
-	case eventing_v1alpha1.SchemeGroupVersion.WithResource("eventsources"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().EventSources().Informer()}, nil
-	case eventing_v1alpha1.SchemeGroupVersion.WithResource("eventtypes"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().EventTypes().Informer()}, nil
+		// Group=feeds.knative.dev, Version=v1alpha1
+	case feeds_v1alpha1.SchemeGroupVersion.WithResource("binds"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Feeds().V1alpha1().Binds().Informer()}, nil
+	case feeds_v1alpha1.SchemeGroupVersion.WithResource("eventsources"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Feeds().V1alpha1().EventSources().Informer()}, nil
+	case feeds_v1alpha1.SchemeGroupVersion.WithResource("eventtypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Feeds().V1alpha1().EventTypes().Informer()}, nil
 
 	}
 

@@ -22,8 +22,8 @@ import (
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	channelsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/channels/v1alpha1"
 	fakechannelsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/channels/v1alpha1/fake"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
-	fakeeventingv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1/fake"
+	feedsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/feeds/v1alpha1"
+	fakefeedsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/feeds/v1alpha1/fake"
 	configv1alpha2 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/istio/v1alpha2"
 	fakeconfigv1alpha2 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/istio/v1alpha2/fake"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -84,14 +84,14 @@ func (c *Clientset) Channels() channelsv1alpha1.ChannelsV1alpha1Interface {
 	return &fakechannelsv1alpha1.FakeChannelsV1alpha1{Fake: &c.Fake}
 }
 
-// EventingV1alpha1 retrieves the EventingV1alpha1Client
-func (c *Clientset) EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interface {
-	return &fakeeventingv1alpha1.FakeEventingV1alpha1{Fake: &c.Fake}
+// FeedsV1alpha1 retrieves the FeedsV1alpha1Client
+func (c *Clientset) FeedsV1alpha1() feedsv1alpha1.FeedsV1alpha1Interface {
+	return &fakefeedsv1alpha1.FakeFeedsV1alpha1{Fake: &c.Fake}
 }
 
-// Eventing retrieves the EventingV1alpha1Client
-func (c *Clientset) Eventing() eventingv1alpha1.EventingV1alpha1Interface {
-	return &fakeeventingv1alpha1.FakeEventingV1alpha1{Fake: &c.Fake}
+// Feeds retrieves the FeedsV1alpha1Client
+func (c *Clientset) Feeds() feedsv1alpha1.FeedsV1alpha1Interface {
+	return &fakefeedsv1alpha1.FakeFeedsV1alpha1{Fake: &c.Fake}
 }
 
 // ConfigV1alpha2 retrieves the ConfigV1alpha2Client

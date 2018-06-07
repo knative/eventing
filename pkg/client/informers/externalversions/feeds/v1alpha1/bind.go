@@ -21,10 +21,10 @@ package v1alpha1
 import (
 	time "time"
 
-	eventing_v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	feeds_v1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	versioned "github.com/knative/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/knative/eventing/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
+	v1alpha1 "github.com/knative/eventing/pkg/client/listers/feeds/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -61,16 +61,16 @@ func NewFilteredBindInformer(client versioned.Interface, namespace string, resyn
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1alpha1().Binds(namespace).List(options)
+				return client.FeedsV1alpha1().Binds(namespace).List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1alpha1().Binds(namespace).Watch(options)
+				return client.FeedsV1alpha1().Binds(namespace).Watch(options)
 			},
 		},
-		&eventing_v1alpha1.Bind{},
+		&feeds_v1alpha1.Bind{},
 		resyncPeriod,
 		indexers,
 	)
@@ -81,7 +81,7 @@ func (f *bindInformer) defaultInformer(client versioned.Interface, resyncPeriod 
 }
 
 func (f *bindInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&eventing_v1alpha1.Bind{}, f.defaultInformer)
+	return f.factory.InformerFor(&feeds_v1alpha1.Bind{}, f.defaultInformer)
 }
 
 func (f *bindInformer) Lister() v1alpha1.BindLister {

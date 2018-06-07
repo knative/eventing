@@ -21,7 +21,7 @@ package versioned
 import (
 	glog "github.com/golang/glog"
 	channelsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/channels/v1alpha1"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
+	feedsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/feeds/v1alpha1"
 	configv1alpha2 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/istio/v1alpha2"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
@@ -33,9 +33,9 @@ type Interface interface {
 	ChannelsV1alpha1() channelsv1alpha1.ChannelsV1alpha1Interface
 	// Deprecated: please explicitly pick a version if possible.
 	Channels() channelsv1alpha1.ChannelsV1alpha1Interface
-	EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interface
+	FeedsV1alpha1() feedsv1alpha1.FeedsV1alpha1Interface
 	// Deprecated: please explicitly pick a version if possible.
-	Eventing() eventingv1alpha1.EventingV1alpha1Interface
+	Feeds() feedsv1alpha1.FeedsV1alpha1Interface
 	ConfigV1alpha2() configv1alpha2.ConfigV1alpha2Interface
 	// Deprecated: please explicitly pick a version if possible.
 	Config() configv1alpha2.ConfigV1alpha2Interface
@@ -46,7 +46,7 @@ type Interface interface {
 type Clientset struct {
 	*discovery.DiscoveryClient
 	channelsV1alpha1 *channelsv1alpha1.ChannelsV1alpha1Client
-	eventingV1alpha1 *eventingv1alpha1.EventingV1alpha1Client
+	feedsV1alpha1    *feedsv1alpha1.FeedsV1alpha1Client
 	configV1alpha2   *configv1alpha2.ConfigV1alpha2Client
 }
 
@@ -61,15 +61,15 @@ func (c *Clientset) Channels() channelsv1alpha1.ChannelsV1alpha1Interface {
 	return c.channelsV1alpha1
 }
 
-// EventingV1alpha1 retrieves the EventingV1alpha1Client
-func (c *Clientset) EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interface {
-	return c.eventingV1alpha1
+// FeedsV1alpha1 retrieves the FeedsV1alpha1Client
+func (c *Clientset) FeedsV1alpha1() feedsv1alpha1.FeedsV1alpha1Interface {
+	return c.feedsV1alpha1
 }
 
-// Deprecated: Eventing retrieves the default version of EventingClient.
+// Deprecated: Feeds retrieves the default version of FeedsClient.
 // Please explicitly pick a version.
-func (c *Clientset) Eventing() eventingv1alpha1.EventingV1alpha1Interface {
-	return c.eventingV1alpha1
+func (c *Clientset) Feeds() feedsv1alpha1.FeedsV1alpha1Interface {
+	return c.feedsV1alpha1
 }
 
 // ConfigV1alpha2 retrieves the ConfigV1alpha2Client
@@ -103,7 +103,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
-	cs.eventingV1alpha1, err = eventingv1alpha1.NewForConfig(&configShallowCopy)
+	cs.feedsV1alpha1, err = feedsv1alpha1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
 	cs.channelsV1alpha1 = channelsv1alpha1.NewForConfigOrDie(c)
-	cs.eventingV1alpha1 = eventingv1alpha1.NewForConfigOrDie(c)
+	cs.feedsV1alpha1 = feedsv1alpha1.NewForConfigOrDie(c)
 	cs.configV1alpha2 = configv1alpha2.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
@@ -136,7 +136,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.channelsV1alpha1 = channelsv1alpha1.New(c)
-	cs.eventingV1alpha1 = eventingv1alpha1.New(c)
+	cs.feedsV1alpha1 = feedsv1alpha1.New(c)
 	cs.configV1alpha2 = configv1alpha2.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)

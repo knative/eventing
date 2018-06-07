@@ -20,7 +20,7 @@ package scheme
 
 import (
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	configv1alpha2 "github.com/knative/eventing/pkg/apis/istio/v1alpha2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -53,6 +53,6 @@ func init() {
 // correctly.
 func AddToScheme(scheme *runtime.Scheme) {
 	channelsv1alpha1.AddToScheme(scheme)
-	eventingv1alpha1.AddToScheme(scheme)
+	feedsv1alpha1.AddToScheme(scheme)
 	configv1alpha2.AddToScheme(scheme)
 }

@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	v1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -30,13 +30,13 @@ import (
 
 // FakeEventSources implements EventSourceInterface
 type FakeEventSources struct {
-	Fake *FakeEventingV1alpha1
+	Fake *FakeFeedsV1alpha1
 	ns   string
 }
 
-var eventsourcesResource = schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1alpha1", Resource: "eventsources"}
+var eventsourcesResource = schema.GroupVersionResource{Group: "feeds.knative.dev", Version: "v1alpha1", Resource: "eventsources"}
 
-var eventsourcesKind = schema.GroupVersionKind{Group: "eventing.knative.dev", Version: "v1alpha1", Kind: "EventSource"}
+var eventsourcesKind = schema.GroupVersionKind{Group: "feeds.knative.dev", Version: "v1alpha1", Kind: "EventSource"}
 
 // Get takes name of the eventSource, and returns the corresponding eventSource object, and an error if there is any.
 func (c *FakeEventSources) Get(name string, options v1.GetOptions) (result *v1alpha1.EventSource, err error) {

@@ -19,38 +19,38 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	v1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	"github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	rest "k8s.io/client-go/rest"
 )
 
-type EventingV1alpha1Interface interface {
+type FeedsV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	BindsGetter
 	EventSourcesGetter
 	EventTypesGetter
 }
 
-// EventingV1alpha1Client is used to interact with features provided by the eventing.knative.dev group.
-type EventingV1alpha1Client struct {
+// FeedsV1alpha1Client is used to interact with features provided by the feeds.knative.dev group.
+type FeedsV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *EventingV1alpha1Client) Binds(namespace string) BindInterface {
+func (c *FeedsV1alpha1Client) Binds(namespace string) BindInterface {
 	return newBinds(c, namespace)
 }
 
-func (c *EventingV1alpha1Client) EventSources(namespace string) EventSourceInterface {
+func (c *FeedsV1alpha1Client) EventSources(namespace string) EventSourceInterface {
 	return newEventSources(c, namespace)
 }
 
-func (c *EventingV1alpha1Client) EventTypes(namespace string) EventTypeInterface {
+func (c *FeedsV1alpha1Client) EventTypes(namespace string) EventTypeInterface {
 	return newEventTypes(c, namespace)
 }
 
-// NewForConfig creates a new EventingV1alpha1Client for the given config.
-func NewForConfig(c *rest.Config) (*EventingV1alpha1Client, error) {
+// NewForConfig creates a new FeedsV1alpha1Client for the given config.
+func NewForConfig(c *rest.Config) (*FeedsV1alpha1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -59,12 +59,12 @@ func NewForConfig(c *rest.Config) (*EventingV1alpha1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &EventingV1alpha1Client{client}, nil
+	return &FeedsV1alpha1Client{client}, nil
 }
 
-// NewForConfigOrDie creates a new EventingV1alpha1Client for the given config and
+// NewForConfigOrDie creates a new FeedsV1alpha1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *EventingV1alpha1Client {
+func NewForConfigOrDie(c *rest.Config) *FeedsV1alpha1Client {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -72,9 +72,9 @@ func NewForConfigOrDie(c *rest.Config) *EventingV1alpha1Client {
 	return client
 }
 
-// New creates a new EventingV1alpha1Client for the given RESTClient.
-func New(c rest.Interface) *EventingV1alpha1Client {
-	return &EventingV1alpha1Client{c}
+// New creates a new FeedsV1alpha1Client for the given RESTClient.
+func New(c rest.Interface) *FeedsV1alpha1Client {
+	return &FeedsV1alpha1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -92,7 +92,7 @@ func setConfigDefaults(config *rest.Config) error {
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *EventingV1alpha1Client) RESTClient() rest.Interface {
+func (c *FeedsV1alpha1Client) RESTClient() rest.Interface {
 	if c == nil {
 		return nil
 	}
