@@ -28,9 +28,10 @@ import (
 
 	"github.com/go-martini/martini"
 	"github.com/golang/glog"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	"github.com/knative/eventing/pkg/signals"
 	"github.com/knative/eventing/pkg/subscription"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -62,6 +63,9 @@ func splitChannelName(host string) (string, string) {
 func main() {
 	flag.Parse()
 
+	// set up signals so we handle the first shutdown signal gracefully
+	stopCh := signals.SetupSignalHandler()
+
 	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
 		glog.Fatalf("Error building kubeconfig: %s", err.Error())
@@ -74,22 +78,25 @@ func main() {
 
 	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
 	monitor := subscription.NewMonitor(bus, informerFactory, subscription.MonitorEventHandlerFuncs{
-		ProvisionFunc: func(channel eventingv1alpha1.Channel) {
-			fmt.Printf("Provision channel %q\n", channel.Name)
+		ProvisionFunc: func(channel channelsv1alpha1.Channel) {
+			glog.Infof("Provision channel %q\n", channel.Name)
 		},
-		UnprovisionFunc: func(channel eventingv1alpha1.Channel) {
-			fmt.Printf("Unprovision channel %q\n", channel.Name)
+		UnprovisionFunc: func(channel channelsv1alpha1.Channel) {
+			glog.Infof("Unprovision channel %q\n", channel.Name)
 		},
-		SubscribeFunc: func(subscription eventingv1alpha1.Subscription) {
-			fmt.Printf("Subscribe %q to %q channel\n", subscription.Spec.Subscriber, subscription.Spec.Channel)
+		SubscribeFunc: func(subscription channelsv1alpha1.Subscription) {
+			glog.Infof("Subscribe %q to %q channel\n", subscription.Spec.Subscriber, subscription.Spec.Channel)
 		},
-		UnsubscribeFunc: func(subscription eventingv1alpha1.Subscription) {
-			fmt.Printf("Unubscribe %q from %q channel\n", subscription.Spec.Subscriber, subscription.Spec.Channel)
+		UnsubscribeFunc: func(subscription channelsv1alpha1.Subscription) {
+			glog.Infof("Unubscribe %q from %q channel\n", subscription.Spec.Subscriber, subscription.Spec.Channel)
 		},
 	})
+	go informerFactory.Start(stopCh)
 
 	m := createServer(monitor)
 	m.Run()
+
+	glog.Flush()
 }
 
 func createServer(monitor *subscription.Monitor) *martini.ClassicMartini {
@@ -97,7 +104,7 @@ func createServer(monitor *subscription.Monitor) *martini.ClassicMartini {
 
 	m.Post("/", func(req *http.Request, res http.ResponseWriter) {
 		host := req.Host
-		fmt.Printf("Recieved request for %s\n", host)
+		glog.Infof("Recieved request for %s\n", host)
 		channel, namespace := splitChannelName(host)
 		subscriptions := monitor.Subscriptions(channel, namespace)
 		if subscriptions == nil {
@@ -114,7 +121,7 @@ func createServer(monitor *subscription.Monitor) *martini.ClassicMartini {
 		res.WriteHeader(http.StatusAccepted)
 		go func() {
 			if len(*subscriptions) == 0 {
-				fmt.Printf("No subscribers for channel %q\n", channel)
+				glog.Warningf("No subscribers for channel %q\n", channel)
 			}
 
 			// make upstream requests
@@ -122,12 +129,12 @@ func createServer(monitor *subscription.Monitor) *martini.ClassicMartini {
 
 			for _, subscription := range *subscriptions {
 				go func(subscriber string) {
-					fmt.Printf("Sending to %q for %q\n", subscriber, channel)
+					glog.Infof("Sending to %q for %q\n", subscriber, channel)
 
 					url := fmt.Sprintf("http://%s/", subscriber)
 					request, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
 					if err != nil {
-						fmt.Printf("Unable to create subscriber request %v", err)
+						glog.Errorf("Unable to create subscriber request %v", err)
 					}
 					request.Header.Set("x-bus", bus)
 					request.Header.Set("x-channel", channel)
@@ -138,7 +145,7 @@ func createServer(monitor *subscription.Monitor) *martini.ClassicMartini {
 					}
 					_, err = client.Do(request)
 					if err != nil {
-						fmt.Printf("Unable to complete subscriber request %v", err)
+						glog.Errorf("Unable to complete subscriber request %v", err)
 					}
 				}(subscription.Subscriber)
 			}

@@ -502,6 +502,7 @@ func newDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
+					ServiceAccountName: "bus-provisioner",
 					Containers: []corev1.Container{
 						*container,
 					},

@@ -30,7 +30,7 @@ type Monitor struct {
 	busName string
 	handler MonitorEventHandlerFuncs
 
-	cache map[channelKey]channelSummary
+	cache map[channelKey]*channelSummary
 	mutex *sync.Mutex
 }
 
@@ -59,7 +59,7 @@ func NewMonitor(busName string, informerFactory informers.SharedInformerFactory,
 		busName: busName,
 		handler: handler,
 
-		cache: make(map[channelKey]channelSummary),
+		cache: make(map[channelKey]*channelSummary),
 		mutex: &sync.Mutex{},
 	}
 
@@ -67,12 +67,12 @@ func NewMonitor(busName string, informerFactory informers.SharedInformerFactory,
 	// Set up an event handler for when Channel resources change
 	channelInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			channel := obj.(channelsv1alpha1.Channel)
-			monitor.createOrUpdateChannel(channel)
+			channel := obj.(*channelsv1alpha1.Channel)
+			monitor.createOrUpdateChannel(*channel)
 		},
 		UpdateFunc: func(old, new interface{}) {
-			oldChannel := old.(channelsv1alpha1.Channel)
-			newChannel := new.(channelsv1alpha1.Channel)
+			oldChannel := old.(*channelsv1alpha1.Channel)
+			newChannel := new.(*channelsv1alpha1.Channel)
 
 			if oldChannel.ResourceVersion == newChannel.ResourceVersion {
 				// Periodic resync will send update events for all known Channels.
@@ -80,25 +80,25 @@ func NewMonitor(busName string, informerFactory informers.SharedInformerFactory,
 				return
 			}
 
-			monitor.createOrUpdateChannel(newChannel)
+			monitor.createOrUpdateChannel(*newChannel)
 			if oldChannel.Spec.Bus != newChannel.Spec.Bus {
-				monitor.removeChannel(oldChannel)
+				monitor.removeChannel(*oldChannel)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			channel := obj.(channelsv1alpha1.Channel)
-			monitor.removeChannel(channel)
+			channel := obj.(*channelsv1alpha1.Channel)
+			monitor.removeChannel(*channel)
 		},
 	})
 	// Set up an event handler for when Subscription resources change
 	subscriptionInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			subscription := obj.(channelsv1alpha1.Subscription)
-			monitor.createOrUpdateSubscription(subscription)
+			subscription := obj.(*channelsv1alpha1.Subscription)
+			monitor.createOrUpdateSubscription(*subscription)
 		},
 		UpdateFunc: func(old, new interface{}) {
-			oldSubscription := old.(channelsv1alpha1.Subscription)
-			newSubscription := new.(channelsv1alpha1.Subscription)
+			oldSubscription := old.(*channelsv1alpha1.Subscription)
+			newSubscription := new.(*channelsv1alpha1.Subscription)
 
 			if oldSubscription.ResourceVersion == newSubscription.ResourceVersion {
 				// Periodic resync will send update events for all known Subscriptions.
@@ -106,14 +106,14 @@ func NewMonitor(busName string, informerFactory informers.SharedInformerFactory,
 				return
 			}
 
-			monitor.createOrUpdateSubscription(newSubscription)
+			monitor.createOrUpdateSubscription(*newSubscription)
 			if oldSubscription.Spec.Channel != newSubscription.Spec.Channel {
-				monitor.removeSubscription(oldSubscription)
+				monitor.removeSubscription(*oldSubscription)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			subscription := obj.(channelsv1alpha1.Subscription)
-			monitor.removeSubscription(subscription)
+			subscription := obj.(*channelsv1alpha1.Subscription)
+			monitor.removeSubscription(*subscription)
 		},
 	})
 
@@ -124,6 +124,11 @@ func NewMonitor(busName string, informerFactory informers.SharedInformerFactory,
 func (m *Monitor) Subscriptions(channel string, namespace string) *[]channelsv1alpha1.SubscriptionSpec {
 	channelKey := makeChannelKeyWithNames(channel, namespace)
 	summary := m.getOrCreateChannelSummary(channelKey)
+
+	if summary.Channel == nil {
+		// the channel is unknown
+		return nil
+	}
 
 	if summary.Channel.Bus != m.busName {
 		// the channel is not for this bus
@@ -140,11 +145,11 @@ func (m *Monitor) Subscriptions(channel string, namespace string) *[]channelsv1a
 	return &subscriptions
 }
 
-func (m *Monitor) getOrCreateChannelSummary(key channelKey) channelSummary {
+func (m *Monitor) getOrCreateChannelSummary(key channelKey) *channelSummary {
 	m.mutex.Lock()
 	summary, ok := m.cache[key]
 	if !ok {
-		summary = channelSummary{
+		summary = &channelSummary{
 			Channel:       nil,
 			Subscriptions: make(map[subscriptionKey]subscriptionSummary),
 		}
