@@ -12,4 +12,4 @@ metadata:
   name: aloha2hello
 spec:
   channel: aloha
-  subscriber: hello
+  subscriber: hello-00001-service
