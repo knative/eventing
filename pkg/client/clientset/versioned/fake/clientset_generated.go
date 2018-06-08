@@ -20,8 +20,12 @@ package fake
 
 import (
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
+	channelsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/channels/v1alpha1"
+	fakechannelsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/channels/v1alpha1/fake"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/feeds/v1alpha1"
 	fakefeedsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/feeds/v1alpha1/fake"
+	configv1alpha2 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/istio/v1alpha2"
+	fakeconfigv1alpha2 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/istio/v1alpha2/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -70,6 +74,16 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 
 var _ clientset.Interface = &Clientset{}
 
+// ChannelsV1alpha1 retrieves the ChannelsV1alpha1Client
+func (c *Clientset) ChannelsV1alpha1() channelsv1alpha1.ChannelsV1alpha1Interface {
+	return &fakechannelsv1alpha1.FakeChannelsV1alpha1{Fake: &c.Fake}
+}
+
+// Channels retrieves the ChannelsV1alpha1Client
+func (c *Clientset) Channels() channelsv1alpha1.ChannelsV1alpha1Interface {
+	return &fakechannelsv1alpha1.FakeChannelsV1alpha1{Fake: &c.Fake}
+}
+
 // FeedsV1alpha1 retrieves the FeedsV1alpha1Client
 func (c *Clientset) FeedsV1alpha1() feedsv1alpha1.FeedsV1alpha1Interface {
 	return &fakefeedsv1alpha1.FakeFeedsV1alpha1{Fake: &c.Fake}
@@ -78,4 +92,14 @@ func (c *Clientset) FeedsV1alpha1() feedsv1alpha1.FeedsV1alpha1Interface {
 // Feeds retrieves the FeedsV1alpha1Client
 func (c *Clientset) Feeds() feedsv1alpha1.FeedsV1alpha1Interface {
 	return &fakefeedsv1alpha1.FakeFeedsV1alpha1{Fake: &c.Fake}
+}
+
+// ConfigV1alpha2 retrieves the ConfigV1alpha2Client
+func (c *Clientset) ConfigV1alpha2() configv1alpha2.ConfigV1alpha2Interface {
+	return &fakeconfigv1alpha2.FakeConfigV1alpha2{Fake: &c.Fake}
+}
+
+// Config retrieves the ConfigV1alpha2Client
+func (c *Clientset) Config() configv1alpha2.ConfigV1alpha2Interface {
+	return &fakeconfigv1alpha2.FakeConfigV1alpha2{Fake: &c.Fake}
 }
