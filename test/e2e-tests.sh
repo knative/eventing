@@ -22,8 +22,8 @@
 # and run the tests.
 
 # Calling this script without arguments will create a new cluster in
-# project $PROJECT_ID, start elafros and the eventing system, run the
-# tests and delete the cluster.
+# project $PROJECT_ID, start Knative serving and the eventing system, run
+# the tests and delete the cluster.
 # $KO_DOCKER_REPO must point to a valid writable docker repo.
 
 source "$(dirname $(readlink -f ${BASH_SOURCE}))/library.sh"
@@ -36,7 +36,7 @@ readonly E2E_CLUSTER_NODES=2
 readonly E2E_CLUSTER_MACHINE=n1-standard-2
 readonly TEST_RESULT_FILE=/tmp/eventing-e2e-result
 readonly ISTIO_VERSION=0.6.0
-readonly ELAFROS_RELEASE=https://storage.googleapis.com/elafros-releases/latest/release.yaml
+readonly SERVING_RELEASE=https://storage.googleapis.com/knative-releases/latest/release.yaml
 export ISTIO_VERSION
 
 # This script.
@@ -154,9 +154,9 @@ if [[ -z ${KO_DOCKER_REPO} ]]; then
   export KO_DOCKER_REPO=gcr.io/$(gcloud config get-value project)/eventing-e2e-img
 fi
 
-# Start Elafros.
+# Start Knative Serving.
 
-header "Starting Elafros"
+header "Starting Knative Serving"
 
 echo "- Cluster is ${K8S_CLUSTER_OVERRIDE}"
 echo "- User is ${K8S_USER_OVERRIDE}"
@@ -191,18 +191,18 @@ wait_until_pods_running istio-system
 
 popd
 
-subheader "Installing Elafros"
+subheader "Installing Knative Serving"
 # Install might fail before succeding, so we retry a few times.
-# For details, see https://github.com/elafros/install/issues/13
+# For details, see https://github.com/knative/install/issues/13
 installed=0
 for i in {1..10}; do
-  kubectl apply -f ${ELAFROS_RELEASE} && installed=1 && break
+  kubectl apply -f ${SERVING_RELEASE} && installed=1 && break
   sleep 30
 done
 (( installed ))
-exit_if_test_failed "could not install Elafros"
+exit_if_test_failed "could not install Knative Serving"
 
-wait_until_pods_running ela-system
+wait_until_pods_running knative-serving-system
 wait_until_pods_running build-system
 
 (( IS_PROW )) && gcr_auth
@@ -212,7 +212,7 @@ if (( USING_EXISTING_CLUSTER )); then
   ko delete --ignore-not-found=true -f config/
 fi
 
-header "Standing up Elafros Binding"
+header "Standing up Knative Binding"
 ko apply -f config/
 exit_if_test_failed
 wait_until_pods_running knative-eventing-system
