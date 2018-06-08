@@ -25,7 +25,7 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:defaulter-gen=true
 
-// Represents the subscriptions.channels.knative.dev CRD
+// Subscription represents the subscriptions.channels.knative.dev CRD
 type Subscription struct {
 	meta_v1.TypeMeta   `json:",inline"`
 	meta_v1.ObjectMeta `json:"metadata"`
@@ -33,7 +33,7 @@ type Subscription struct {
 	Status             *SubscriptionStatus `json:"status,omitempty"`
 }
 
-// Spec (what the user wants) for a subscription
+// SubscriptionSpec (what the user wants) for a subscription
 type SubscriptionSpec struct {
 
 	// Name of the channel to subscribe to
@@ -46,13 +46,13 @@ type SubscriptionSpec struct {
 	Arguments *[]Argument `json:"arguments,omitempty"`
 }
 
-// Status (computed) for a subscription
+// SubscriptionStatus (computed) for a subscription
 type SubscriptionStatus struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Returned in list operations
+// SubscriptionList returned in list operations
 type SubscriptionList struct {
 	meta_v1.TypeMeta `json:",inline"`
 	meta_v1.ListMeta `json:"metadata"`

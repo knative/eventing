@@ -25,7 +25,7 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:defaulter-gen=true
 
-// Represents the channels.channels.knative.dev CRD
+// Channel represents the channels.channels.knative.dev CRD
 type Channel struct {
 	meta_v1.TypeMeta   `json:",inline"`
 	meta_v1.ObjectMeta `json:"metadata"`
@@ -33,7 +33,7 @@ type Channel struct {
 	Status             *ChannelStatus `json:"status,omitempty"`
 }
 
-// Spec (what the user wants) for a channel
+// ChannelSpec (what the user wants) for a channel
 type ChannelSpec struct {
 
 	// Name of the bus backing this channel (optional)
@@ -46,13 +46,13 @@ type ChannelSpec struct {
 	Parameters *[]Parameter `json:"parameters,omitempty"`
 }
 
-// Status (computed) for a channel
+// ChannelStatus (computed) for a channel
 type ChannelStatus struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Returned in list operations
+// ChannelList returned in list operations
 type ChannelList struct {
 	meta_v1.TypeMeta `json:",inline"`
 	meta_v1.ListMeta `json:"metadata"`

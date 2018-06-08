@@ -320,7 +320,10 @@ func (c *Controller) syncHandler(key string) error {
 
 	// Finally, we update the status block of the Bus resource to reflect the
 	// current state of the world
-	return c.updateBusStatus(bus, dispatcherService, dispatcherDeployment, provisionerDeployment, serviceAccount, clusterRoleBinding)
+	err = c.updateBusStatus(bus, dispatcherService, dispatcherDeployment, provisionerDeployment, serviceAccount, clusterRoleBinding)
+	if err != nil {
+		return err
+	}
 
 	c.recorder.Event(bus, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
 	return nil

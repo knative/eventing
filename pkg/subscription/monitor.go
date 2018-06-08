@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
+// Monitor utility to manage channels and subscriptions for a bus
 type Monitor struct {
 	busName string
 	handler MonitorEventHandlerFuncs
@@ -35,6 +36,7 @@ type Monitor struct {
 	mutex *sync.Mutex
 }
 
+// MonitorEventHandlerFuncs handler functions for channel and subscription provisioning
 type MonitorEventHandlerFuncs struct {
 	ProvisionFunc   func(channel channelsv1alpha1.Channel)
 	UnprovisionFunc func(channel channelsv1alpha1.Channel)
@@ -51,6 +53,7 @@ type subscriptionSummary struct {
 	Subscription channelsv1alpha1.SubscriptionSpec
 }
 
+// NewMonitor creates a monitor for a bus
 func NewMonitor(busName string, informerFactory informers.SharedInformerFactory, handler MonitorEventHandlerFuncs) *Monitor {
 
 	busInformer := informerFactory.Channels().V1alpha1().Buses()
