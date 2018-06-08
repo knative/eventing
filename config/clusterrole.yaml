@@ -14,8 +14,8 @@
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: knative-eventing-bus
+  name: knative-channels-bus
 rules:
-- apiGroups: ["channels.eventing.knative.dev"]
+- apiGroups: ["channels.knative.dev"]
   resources: ["buses", "channels", "subscriptions"]
   verbs: ["get", "watch", "list"]

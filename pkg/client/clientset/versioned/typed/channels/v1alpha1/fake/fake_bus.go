@@ -34,9 +34,9 @@ type FakeBuses struct {
 	ns   string
 }
 
-var busesResource = schema.GroupVersionResource{Group: "channels.eventing.knative.dev", Version: "v1alpha1", Resource: "buses"}
+var busesResource = schema.GroupVersionResource{Group: "channels.knative.dev", Version: "v1alpha1", Resource: "buses"}
 
-var busesKind = schema.GroupVersionKind{Group: "channels.eventing.knative.dev", Version: "v1alpha1", Kind: "Bus"}
+var busesKind = schema.GroupVersionKind{Group: "channels.knative.dev", Version: "v1alpha1", Kind: "Bus"}
 
 // Get takes name of the bus, and returns the corresponding bus object, and an error if there is any.
 func (c *FakeBuses) Get(name string, options v1.GetOptions) (result *v1alpha1.Bus, err error) {

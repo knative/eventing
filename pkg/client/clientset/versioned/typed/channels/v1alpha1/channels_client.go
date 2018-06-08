@@ -32,7 +32,7 @@ type ChannelsV1alpha1Interface interface {
 	SubscriptionsGetter
 }
 
-// ChannelsV1alpha1Client is used to interact with features provided by the channels.eventing.knative.dev group.
+// ChannelsV1alpha1Client is used to interact with features provided by the channels.knative.dev group.
 type ChannelsV1alpha1Client struct {
 	restClient rest.Interface
 }

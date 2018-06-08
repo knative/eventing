@@ -26,7 +26,7 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:defaulter-gen=true
 
-// Bus represents the buses.channels.eventing.knative.dev CRD
+// Bus represents the buses.channels.knative.dev CRD
 type Bus struct {
 	meta_v1.TypeMeta   `json:",inline"`
 	meta_v1.ObjectMeta `json:"metadata"`

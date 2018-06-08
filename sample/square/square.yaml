@@ -34,7 +34,7 @@ spec:
     app: square
 
 ---
-apiVersion: channels.eventing.knative.dev/v1alpha1
+apiVersion: channels.knative.dev/v1alpha1
 kind: Channel
 metadata:
   name: square
@@ -42,7 +42,7 @@ spec:
   bus: stub
 
 ---
-apiVersion: channels.eventing.knative.dev/v1alpha1
+apiVersion: channels.knative.dev/v1alpha1
 kind: Subscription
 metadata:
   name: square

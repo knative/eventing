@@ -716,7 +716,7 @@ func newClusterRoleBinding(bus *channelsv1alpha1.Bus) *rbacv1beta1.ClusterRoleBi
 		},
 		RoleRef: rbacv1beta1.RoleRef{
 			Kind:     "ClusterRole",
-			Name:     "knative-eventing-bus",
+			Name:     "knative-channels-bus",
 			APIGroup: "rbac.authorization.k8s.io",
 		},
 	}

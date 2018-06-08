@@ -17,5 +17,5 @@ limitations under the License.
 package channels
 
 const (
-	GroupName = "channels.eventing.knative.dev"
+	GroupName = "channels.knative.dev"
 )
