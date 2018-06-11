@@ -37,7 +37,7 @@ type Channel struct {
 type ChannelSpec struct {
 
 	// Name of the bus backing this channel (optional)
-	Bus string
+	Bus string `json:"bus`
 
 	// Arguments configuration arguments for the bus
 	Arguments *[]Argument `json:"arguments,omitempty"`
