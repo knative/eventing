@@ -29,10 +29,10 @@ import (
 	"github.com/go-martini/martini"
 	"github.com/golang/glog"
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	"github.com/knative/eventing/pkg/buses"
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/signals"
-	"github.com/knative/eventing/pkg/subscription"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -77,7 +77,7 @@ func main() {
 	}
 
 	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
-	monitor := subscription.NewMonitor(bus, informerFactory, subscription.MonitorEventHandlerFuncs{
+	monitor := buses.NewMonitor(bus, informerFactory, buses.MonitorEventHandlerFuncs{
 		ProvisionFunc: func(channel channelsv1alpha1.Channel) {
 			glog.Infof("Provision channel %q\n", channel.Name)
 		},
@@ -99,7 +99,7 @@ func main() {
 	glog.Flush()
 }
 
-func createServer(monitor *subscription.Monitor) *martini.ClassicMartini {
+func createServer(monitor *buses.Monitor) *martini.ClassicMartini {
 	m := martini.Classic()
 
 	m.Post("/", func(req *http.Request, res http.ResponseWriter) {
