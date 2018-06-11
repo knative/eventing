@@ -8,20 +8,20 @@ Knative route as an endpoint.
 
 1. [Setup your development environment](../../DEVELOPMENT.md#getting-started)
 2. [Start Knative](../../README.md#start-knative)
-3. Decide on the DNS name that git can then call. Update knative/serving/elaconfig.yaml domainSuffix.
-For example I used aikas.org as my hostname, so my elaconfig.yaml looks like so:
+3. Decide on the DNS name that git can then call. Update knative/serving/config-domain.yaml domainSuffix.
+For example I used aikas.org as my hostname, so my config-domain.yaml looks like so:
 
 ```yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: ela-config
-  namespace: ela-system
+  name: config-domain
+  namespace: knative-serving-system
 data:
   aikas.org: |
 ```
 
-If you were already running the knative controllers, you will need to kill the ela-controller in the ela-system namespace for it to pick up the new domain suffix.
+If you were already running the knative controllers, you will need to re-apply the configmap.
 
 4. Install GCP Pub Sub as an event source
 ```shell
