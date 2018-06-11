@@ -73,9 +73,9 @@ k8s-events-function.default.aikas.org pointing to 104.197.125.124
 
 So, you'd need to create an A record for k8s-events-function.default.aikas.org pointing to 104.197.125.124
 
-To now bind the k8s_events_function for GCP PubSub messages with the function we created above, you need to
- create a Bind object. Modify sample/k8s_events_function/bind.yaml to specify the namespace you want to
- watch events for ('default' in this example):
+To now bind the k8s_events_function for k8s system events with the function we created above, you need to
+create a Bind object. Modify sample/k8s_events_function/bind.yaml to specify the namespace you want to
+watch events for ('default' in this example):
 
 ```yaml
 apiVersion: feeds.knative.dev/v1alpha1
@@ -85,11 +85,8 @@ metadata:
   namespace: default
 spec:
   trigger:
-    # TODO: eventType doesn't match the normal naming scheme. At min should
-    # make this "com.github.pullrequest". May consider making it something
-    # like "com.github.pull.create"
     eventType: receiveevent
-    resource: vaikas/misc
+    resource: k8sevents/receiveevent
     service: k8sevents
     parameters:
       namespace: default

@@ -19,11 +19,10 @@ metadata:
   namespace: default
 spec:
   trigger:
-    # TODO: eventType doesn't match the normal naming scheme. At min should
-    # make this "com.github.pullrequest". May consider making it something
-    # like "com.github.pull.create"
     eventType: receiveevent
-    resource: vaikas/misc
+    # This is kind of superfluous due to parameters, but the current
+    # bind model still requires a resource
+    resource: k8sevents/receiveevent
     service: k8sevents
     parameters:
       namespace: default
