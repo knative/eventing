@@ -5,31 +5,10 @@ metadata:
 spec:
   runLatest:
     configuration:
-      build:
-        source:
-          git:
-            url: https://github.com/projectriff-samples/node-hello
-            branch: master
-        template:
-          name: buildpack
-          arguments:
-          - name: IMAGE
-            value: &image DOCKER_REPO_OVERRIDE/hello
-          - name: BUILDPACK_ORDER
-            value: https://github.com/projectriff/node-function-invoker.git#buildpack
-          - name: SKIP_DETECT
-            value: "true"
-        # - name: CACHE
-        #   value: buildpack-function-cache
-        # volumes:
-        # - name: buildpack-function-cache
-        #   persistentVolumeClaim:
-        #     claimName: buildpack-function-cache
-
       revisionTemplate:
         metadata:
           labels:
             knative.dev/type: function
         spec:
           container:
-            image: *image
+            image: github.com/knative/eventing/sample/hello

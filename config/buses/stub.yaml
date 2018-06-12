@@ -18,7 +18,7 @@ metadata:
 spec:
   dispatcher:
     name: dispatcher
-    image: github.com/knative/eventing/cmd/stub-bus
+    image: github.com/knative/eventing/pkg/buses/stub
     args: [
       "-logtostderr",
       "-stderrthreshold", "INFO",

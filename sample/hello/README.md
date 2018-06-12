@@ -8,23 +8,13 @@ First, install the Stub bus, if not already installed:
 ko apply -f config/buses/stub.yaml
 ```
 
-Then, install the Buildpack build template if not already installed:
-
-```shell
-kubectl apply -f https://github.com/knative/build-templates/raw/master/buildpack/buildpack.yaml
-```
-
 Then, deploy the hello function, channel and subscription:
 
 ```shell
-# Replace the token string with a suitable registry
-REPO="gcr.io/<your-project-here>"
-perl -pi -e "s@DOCKER_REPO_OVERRIDE@$REPO@g" sample/hello/hello-service.yaml
-
-kubectl apply -f sample/hello/
+ko apply -f sample/hello/
 ```
 
-The service will build and deploy the function and expose an ingress for the function and channel. It may take a minute, but eventually you should see something similar to:
+The service will deploy the function and expose an ingress for the function and channel. It may take a minute to acquire an IP address, but eventually you should see something similar to:
 
 ```
 $ watch -n1 kubectl get ing
@@ -59,7 +49,7 @@ $ curl -H "Host: $SERVICE_HOST" -H "Content-Type: text/plain" $SERVICE_IP -d "Kn
 
 You should see a response like:
 
-> hello knative from hello-00001-deployment-5fb4b845fd-7h2lc
+> Hello Knative, from hello-00001-deployment-5fb4b845fd-7h2lc
 
 Unlike with direct access, when invoking over the channel, the caller will not recieve a response directly.
 
