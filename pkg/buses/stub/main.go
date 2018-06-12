@@ -19,9 +19,9 @@ package main
 import (
 	"bytes"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -47,13 +47,6 @@ type StubBus struct {
 	forwardHeaders []string
 }
 
-func (b *StubBus) splitChannelName(host string) (string, string) {
-	chunks := strings.Split(host, ".")
-	channel := chunks[0]
-	namespace := chunks[1]
-	return channel, namespace
-}
-
 func (b *StubBus) handleEvent(res http.ResponseWriter, req *http.Request) {
 	host := req.Host
 	glog.Infof("Recieved request for %s\n", host)
@@ -74,30 +67,49 @@ func (b *StubBus) handleEvent(res http.ResponseWriter, req *http.Request) {
 	if len(*subscriptions) == 0 {
 		glog.Warningf("No subscribers for channel %q\n", channel)
 	}
+
+	safeHeaders := b.safeHeaders(req.Header)
+	safeHeaders.Set("x-bus", b.name)
+	safeHeaders.Set("x-channel", channel)
 	for _, subscription := range *subscriptions {
-		go b.dispatchEvent(channel, body, req.Header, subscription.Subscriber)
+		subscriber := subscription.Subscriber
+		glog.Infof("Sending to %q for %q\n", subscriber, channel)
+		go b.dispatchEvent(subscriber, body, safeHeaders)
 	}
 }
 
-func (b *StubBus) dispatchEvent(channel string, body []byte, headers http.Header, subscriber string) {
-	glog.Infof("Sending to %q for %q\n", subscriber, channel)
-
-	url := fmt.Sprintf("http://%s/", subscriber)
-	request, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+func (b *StubBus) dispatchEvent(subscriber string, body []byte, headers http.Header) {
+	url := url.URL{
+		Scheme: "http",
+		Host:   subscriber,
+		Path:   "/",
+	}
+	req, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewReader(body))
 	if err != nil {
 		glog.Errorf("Unable to create subscriber request %v", err)
 	}
-	request.Header.Set("x-bus", b.name)
-	request.Header.Set("x-channel", channel)
-	for _, header := range b.forwardHeaders {
-		if value := headers.Get(header); value != "" {
-			request.Header.Set(header, value)
-		}
-	}
-	_, err = b.client.Do(request)
+	req.Header = headers
+	_, err = b.client.Do(req)
 	if err != nil {
 		glog.Errorf("Unable to complete subscriber request %v", err)
 	}
+}
+
+func (b *StubBus) splitChannelName(host string) (string, string) {
+	chunks := strings.Split(host, ".")
+	channel := chunks[0]
+	namespace := chunks[1]
+	return channel, namespace
+}
+
+func (b *StubBus) safeHeaders(raw http.Header) http.Header {
+	safe := http.Header{}
+	for _, header := range b.forwardHeaders {
+		if value := raw.Get(header); value != "" {
+			safe.Set(header, value)
+		}
+	}
+	return safe
 }
 
 func NewStubBus(name string, monitor *buses.Monitor) *StubBus {
