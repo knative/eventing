@@ -259,6 +259,10 @@ func (m *Monitor) createOrUpdateBus(bus channelsv1alpha1.Bus) {
 	}
 }
 
+func (m *Monitor) isChannelForBus(channel channelsv1alpha1.Channel) bool {
+	return channel.Spec.Bus == m.busName
+}
+
 func (m *Monitor) createOrUpdateChannel(channel channelsv1alpha1.Channel) error {
 	channelKey := makeChannelKeyFromChannel(channel)
 	summary := m.getOrCreateChannelSummary(channelKey)
@@ -269,7 +273,7 @@ func (m *Monitor) createOrUpdateChannel(channel channelsv1alpha1.Channel) error 
 	summary.Channel = new
 	m.mutex.Unlock()
 
-	if !reflect.DeepEqual(old, new) {
+	if m.isChannelForBus(channel) && !reflect.DeepEqual(old, new) {
 		return m.handler.ProvisionFunc(channel)
 	}
 
@@ -284,7 +288,17 @@ func (m *Monitor) removeChannel(channel channelsv1alpha1.Channel) error {
 	summary.Channel = nil
 	m.mutex.Unlock()
 
-	return m.handler.UnprovisionFunc(channel)
+	if m.isChannelForBus(channel) {
+		return m.handler.UnprovisionFunc(channel)
+	}
+
+	return nil
+}
+
+func (m *Monitor) isSubscriptionForBus(subscription channelsv1alpha1.Subscription) bool {
+	channelKey := makeChannelKeyFromSubscription(subscription)
+	summary := m.getChannelSummary(channelKey)
+	return summary != nil && summary.Channel.Bus == m.busName
 }
 
 func (m *Monitor) createOrUpdateSubscription(subscription channelsv1alpha1.Subscription) error {
@@ -300,7 +314,7 @@ func (m *Monitor) createOrUpdateSubscription(subscription channelsv1alpha1.Subsc
 	summary.Subscriptions[subscriptionKey] = new
 	m.mutex.Unlock()
 
-	if !reflect.DeepEqual(old.Subscription, new.Subscription) {
+	if m.isSubscriptionForBus(subscription) && !reflect.DeepEqual(old.Subscription, new.Subscription) {
 		return m.handler.SubscribeFunc(subscription)
 	}
 
@@ -316,7 +330,11 @@ func (m *Monitor) removeSubscription(subscription channelsv1alpha1.Subscription)
 	delete(summary.Subscriptions, subscriptionKey)
 	m.mutex.Unlock()
 
-	return m.handler.UnsubscribeFunc(subscription)
+	if m.isSubscriptionForBus(subscription) {
+		return m.handler.UnsubscribeFunc(subscription)
+	}
+
+	return nil
 }
 
 type channelKey struct {
