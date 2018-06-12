@@ -19,7 +19,7 @@
 # Running the script without parameters, or with the --all-tests
 # flag, causes all tests to be executed, in the right order.
 # Use the flags --build-tests, --unit-tests and --integration-tests
-# to run a specific set of tests.
+# to run a specific set of tests@
 
 set -o errexit
 set -o pipefail
