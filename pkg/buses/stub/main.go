@@ -154,17 +154,21 @@ func main() {
 
 	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
 	monitor := buses.NewMonitor(name, informerFactory, buses.MonitorEventHandlerFuncs{
-		ProvisionFunc: func(channel channelsv1alpha1.Channel) {
+		ProvisionFunc: func(channel channelsv1alpha1.Channel) error {
 			glog.Infof("Provision channel %q\n", channel.Name)
+			return nil
 		},
-		UnprovisionFunc: func(channel channelsv1alpha1.Channel) {
+		UnprovisionFunc: func(channel channelsv1alpha1.Channel) error {
 			glog.Infof("Unprovision channel %q\n", channel.Name)
+			return nil
 		},
-		SubscribeFunc: func(subscription channelsv1alpha1.Subscription) {
+		SubscribeFunc: func(subscription channelsv1alpha1.Subscription) error {
 			glog.Infof("Subscribe %q to %q channel\n", subscription.Spec.Subscriber, subscription.Spec.Channel)
+			return nil
 		},
-		UnsubscribeFunc: func(subscription channelsv1alpha1.Subscription) {
+		UnsubscribeFunc: func(subscription channelsv1alpha1.Subscription) error {
 			glog.Infof("Unubscribe %q from %q channel\n", subscription.Spec.Subscriber, subscription.Spec.Channel)
+			return nil
 		},
 	})
 	bus := NewStubBus(name, monitor)

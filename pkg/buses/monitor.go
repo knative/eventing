@@ -38,10 +38,10 @@ type Monitor struct {
 
 // MonitorEventHandlerFuncs handler functions for channel and subscription provisioning
 type MonitorEventHandlerFuncs struct {
-	ProvisionFunc   func(channel channelsv1alpha1.Channel)
-	UnprovisionFunc func(channel channelsv1alpha1.Channel)
-	SubscribeFunc   func(subscription channelsv1alpha1.Subscription)
-	UnsubscribeFunc func(subscription channelsv1alpha1.Subscription)
+	ProvisionFunc   func(channel channelsv1alpha1.Channel) error
+	UnprovisionFunc func(channel channelsv1alpha1.Channel) error
+	SubscribeFunc   func(subscription channelsv1alpha1.Subscription) error
+	UnsubscribeFunc func(subscription channelsv1alpha1.Subscription) error
 }
 
 type channelSummary struct {
@@ -259,7 +259,7 @@ func (m *Monitor) createOrUpdateBus(bus channelsv1alpha1.Bus) {
 	}
 }
 
-func (m *Monitor) createOrUpdateChannel(channel channelsv1alpha1.Channel) {
+func (m *Monitor) createOrUpdateChannel(channel channelsv1alpha1.Channel) error {
 	channelKey := makeChannelKeyFromChannel(channel)
 	summary := m.getOrCreateChannelSummary(channelKey)
 
@@ -270,11 +270,13 @@ func (m *Monitor) createOrUpdateChannel(channel channelsv1alpha1.Channel) {
 	m.mutex.Unlock()
 
 	if !reflect.DeepEqual(old, new) {
-		m.handler.ProvisionFunc(channel)
+		return m.handler.ProvisionFunc(channel)
 	}
+
+	return nil
 }
 
-func (m *Monitor) removeChannel(channel channelsv1alpha1.Channel) {
+func (m *Monitor) removeChannel(channel channelsv1alpha1.Channel) error {
 	channelKey := makeChannelKeyFromChannel(channel)
 	summary := m.getOrCreateChannelSummary(channelKey)
 
@@ -282,10 +284,10 @@ func (m *Monitor) removeChannel(channel channelsv1alpha1.Channel) {
 	summary.Channel = nil
 	m.mutex.Unlock()
 
-	m.handler.UnprovisionFunc(channel)
+	return m.handler.UnprovisionFunc(channel)
 }
 
-func (m *Monitor) createOrUpdateSubscription(subscription channelsv1alpha1.Subscription) {
+func (m *Monitor) createOrUpdateSubscription(subscription channelsv1alpha1.Subscription) error {
 	channelKey := makeChannelKeyFromSubscription(subscription)
 	summary := m.getOrCreateChannelSummary(channelKey)
 	subscriptionKey := makeSubscriptionKeyFromSubscription(subscription)
@@ -299,11 +301,13 @@ func (m *Monitor) createOrUpdateSubscription(subscription channelsv1alpha1.Subsc
 	m.mutex.Unlock()
 
 	if !reflect.DeepEqual(old.Subscription, new.Subscription) {
-		m.handler.SubscribeFunc(subscription)
+		return m.handler.SubscribeFunc(subscription)
 	}
+
+	return nil
 }
 
-func (m *Monitor) removeSubscription(subscription channelsv1alpha1.Subscription) {
+func (m *Monitor) removeSubscription(subscription channelsv1alpha1.Subscription) error {
 	channelKey := makeChannelKeyFromSubscription(subscription)
 	summary := m.getOrCreateChannelSummary(channelKey)
 	subscriptionKey := makeSubscriptionKeyFromSubscription(subscription)
@@ -312,7 +316,7 @@ func (m *Monitor) removeSubscription(subscription channelsv1alpha1.Subscription)
 	delete(summary.Subscriptions, subscriptionKey)
 	m.mutex.Unlock()
 
-	m.handler.UnsubscribeFunc(subscription)
+	return m.handler.UnsubscribeFunc(subscription)
 }
 
 type channelKey struct {
