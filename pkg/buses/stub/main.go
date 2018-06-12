@@ -49,7 +49,7 @@ type StubBus struct {
 
 func (b *StubBus) handleEvent(res http.ResponseWriter, req *http.Request) {
 	host := req.Host
-	glog.Infof("Recieved request for %s\n", host)
+	glog.Infof("Received request for %s\n", host)
 	channel, namespace := b.splitChannelName(host)
 	subscriptions := b.monitor.Subscriptions(channel, namespace)
 	if subscriptions == nil {
