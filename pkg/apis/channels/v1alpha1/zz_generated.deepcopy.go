@@ -47,7 +47,15 @@ func (in *Bus) DeepCopyInto(out *Bus) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
+<<<<<<< HEAD
 	out.Status = in.Status
+=======
+	if in.Status != nil {
+		in, out := &in.Status, &out.Status
+		*out = new(BusStatus)
+		**out = **in
+	}
+>>>>>>> Introduce bus backed by Kafka
 	return
 }
 
@@ -107,31 +115,23 @@ func (in *BusParameters) DeepCopyInto(out *BusParameters) {
 	*out = *in
 	if in.Channel != nil {
 		in, out := &in.Channel, &out.Channel
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new([]Parameter)
-			if **in != nil {
-				in, out := *in, *out
-				*out = make([]Parameter, len(*in))
-				for i := range *in {
-					(*in)[i].DeepCopyInto(&(*out)[i])
-				}
+		*out = new([]Parameter)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]Parameter, len(*in))
+			for i := range *in {
+				(*in)[i].DeepCopyInto(&(*out)[i])
 			}
 		}
 	}
 	if in.Subscription != nil {
 		in, out := &in.Subscription, &out.Subscription
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new([]Parameter)
-			if **in != nil {
-				in, out := *in, *out
-				*out = make([]Parameter, len(*in))
-				for i := range *in {
-					(*in)[i].DeepCopyInto(&(*out)[i])
-				}
+		*out = new([]Parameter)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]Parameter, len(*in))
+			for i := range *in {
+				(*in)[i].DeepCopyInto(&(*out)[i])
 			}
 		}
 	}
@@ -153,35 +153,23 @@ func (in *BusSpec) DeepCopyInto(out *BusSpec) {
 	*out = *in
 	if in.Parameters != nil {
 		in, out := &in.Parameters, &out.Parameters
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(BusParameters)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(BusParameters)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.Provisioner != nil {
 		in, out := &in.Provisioner, &out.Provisioner
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Container)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(v1.Container)
+		(*in).DeepCopyInto(*out)
 	}
 	in.Dispatcher.DeepCopyInto(&out.Dispatcher)
 	if in.Volumes != nil {
 		in, out := &in.Volumes, &out.Volumes
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new([]v1.Volume)
-			if **in != nil {
-				in, out := *in, *out
-				*out = make([]v1.Volume, len(*in))
-				for i := range *in {
-					(*in)[i].DeepCopyInto(&(*out)[i])
-				}
+		*out = new([]v1.Volume)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]v1.Volume, len(*in))
+			for i := range *in {
+				(*in)[i].DeepCopyInto(&(*out)[i])
 			}
 		}
 	}
@@ -220,7 +208,15 @@ func (in *Channel) DeepCopyInto(out *Channel) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
+<<<<<<< HEAD
 	out.Status = in.Status
+=======
+	if in.Status != nil {
+		in, out := &in.Status, &out.Status
+		*out = new(ChannelStatus)
+		**out = **in
+	}
+>>>>>>> Introduce bus backed by Kafka
 	return
 }
 
@@ -280,15 +276,11 @@ func (in *ChannelSpec) DeepCopyInto(out *ChannelSpec) {
 	*out = *in
 	if in.Arguments != nil {
 		in, out := &in.Arguments, &out.Arguments
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new([]Argument)
-			if **in != nil {
-				in, out := *in, *out
-				*out = make([]Argument, len(*in))
-				copy(*out, *in)
-			}
+		*out = new([]Argument)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]Argument, len(*in))
+			copy(*out, *in)
 		}
 	}
 	return
@@ -402,12 +394,8 @@ func (in *Parameter) DeepCopyInto(out *Parameter) {
 	*out = *in
 	if in.Default != nil {
 		in, out := &in.Default, &out.Default
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(string)
-			**out = **in
-		}
+		*out = new(string)
+		**out = **in
 	}
 	return
 }
@@ -428,7 +416,15 @@ func (in *Subscription) DeepCopyInto(out *Subscription) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
+<<<<<<< HEAD
 	out.Status = in.Status
+=======
+	if in.Status != nil {
+		in, out := &in.Status, &out.Status
+		*out = new(SubscriptionStatus)
+		**out = **in
+	}
+>>>>>>> Introduce bus backed by Kafka
 	return
 }
 
@@ -488,15 +484,11 @@ func (in *SubscriptionSpec) DeepCopyInto(out *SubscriptionSpec) {
 	*out = *in
 	if in.Arguments != nil {
 		in, out := &in.Arguments, &out.Arguments
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new([]Argument)
-			if **in != nil {
-				in, out := *in, *out
-				*out = make([]Argument, len(*in))
-				copy(*out, *in)
-			}
+		*out = new([]Argument)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]Argument, len(*in))
+			copy(*out, *in)
 		}
 	}
 	return

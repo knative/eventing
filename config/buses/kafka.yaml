@@ -1,0 +1,42 @@
+apiVersion: channels.knative.dev/v1alpha1
+kind: Bus
+metadata:
+  name: kafka
+spec:
+  parameters:
+    subscription:
+    - name: "initialOffset"
+      description: "The initial offset to use when subscribing, either Oldest or Newest. Defaults to Newest."
+      default: "Newest"
+  provisioner:
+    name: provisioner
+    image: github.com/knative/eventing/pkg/buses/kafka/provisioner
+    args: [
+      "-logtostderr",
+      "-stderrthreshold", "INFO",
+    ]
+    env:
+    - name: KAFKA_BROKERS
+      value: "kafkabroker.kafka:9092"
+    - name: BUS_NAME
+      value: "kafka"
+    - name: BUS_NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+  dispatcher:
+    name: dispatcher
+    image: github.com/knative/eventing/pkg/buses/kafka/dispatcher
+    args: [
+      "-logtostderr",
+      "-stderrthreshold", "INFO",
+    ]
+    env:
+    - name: KAFKA_BROKERS
+      value: "kafkabroker.kafka:9092"
+    - name: BUS_NAME
+      value: "kafka"
+    - name: BUS_NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace

@@ -86,3 +86,12 @@ required = [
   name = "github.com/knative/serving"
   # HEAD as of 2018-06-29
   revision = "22e3cb0f057daf224ef3af5cc37feb9b152f880e"
+
+[[override]]
+  name = "github.com/Shopify/sarama"
+  revision = "46cf3e2cf1acef7876068f66cf69ec31aad2d0b2" # includes higher level admin client
+#  version = "1.17.0"
+
+[[constraint]]
+  name = "github.com/bsm/sarama-cluster"
+  version = "2.1.13"
