@@ -31,7 +31,7 @@ ko apply -f pkg/sources/gcppubsub/
 5. Create a GCP Pub Sub topic
 
 ```shell
-gcloud pubsub topics create ela-demo
+gcloud pubsub topics create knative-demo
 ```
 
 5. Install the event sources and types for [gcp_pubsub](../gcp_pubsub/README.md)
@@ -64,13 +64,12 @@ kubectl get eventtypes -oyaml
 
 ```
 
-To make this service accessible to github, we first need to determine its ingress address
+To make this service accessible to GCP, we first need to determine its ingress address
 (might have to wait a little while until 'ADDRESS' gets assigned):
 ```shell
 $ watch kubectl get ingress
 NAME                              HOSTS                                                                           ADDRESS           PORTS     AGE
-gcp-pubsub-function-ela-ingress   gcp-pubsub-function.default.aikas.org,*.gcp-pubsub-function.default.aikas.org   104.197.125.124   80        48s
-
+gcp-pubsub-function-ingress   gcp-pubsub-function.default.aikas.org,*.gcp-pubsub-function.default.aikas.org   130.211.116.160   80        20s
 ```
 
 Once the `ADDRESS` gets assigned to the cluster, you need to assign a DNS name for that IP address. This DNS address needs to be:
@@ -81,14 +80,14 @@ git-webhook.default.aikas.org pointing to 104.197.125.124
 So, you'd need to create an A record for gcp-pubsub-function.default.aikas.org pointing to 104.197.125.124
 
 To now bind the gcp_pubsub_function for GCP PubSub messages with the function we created above, you need to
- create a Bind object. Modify sample/gcp_pubsub_function/subscribe.yaml to specify the topic and project id
+ create a Bind object. Modify sample/gcp_pubsub_function/bind.yaml to specify the topic and project id
  you want.
 
  For example, if I wanted to receive notifications to:
- project: quantum-reducer-434 topic: ela-demo, my Bind object would look like so:
+ project: quantum-reducer-434 topic: knative-demo, my Bind object would look like so:
 
 ```yaml
-apiVersion: knative.dev/v1alpha1
+apiVersion: feeds.knative.dev/v1alpha1
 kind: Bind
 metadata:
   name: gcppubsub-example
@@ -97,10 +96,10 @@ spec:
   trigger:
     service: gcppubsub
     eventType: receive
-    resource: quantum-reducer-434/ela-demo
+    resource: quantum-reducer-434/knative-demo
     parameters:
       projectID: quantum-reducer-434
-      topic: ela-demo
+      topic: knative-demo
   action:
     routeName: gcp-pubsub-function
 ```
@@ -108,7 +107,7 @@ spec:
 Then create the binding so that you can see changes
 
 ```shell
- kubectl create -f sample/gcp_pubsub_function/subscribe.yaml
+ ko apply -f sample/gcp_pubsub_function/bind.yaml
 ```
 
 
@@ -116,14 +115,14 @@ This will create a subscription to the topic and create an Event Receiver that u
 to receive events from the topic we just created.
 
 ```shell
-$gcloud pubsub subscribers list 
+$gcloud pubsub subscriptions list
 
 <snip>
 ackDeadlineSeconds: 10
 messageRetentionDuration: 604800s
 name: projects/quantum-reducer-434/subscriptions/sub-67f12e62-95a2-4a5e-bc30-9edd29380214
 pushConfig: {}
-topic: projects/quantum-reducer-434/topics/ela-demo
+topic: projects/quantum-reducer-434/topics/knative-demo
 <snip>
 
 ```
@@ -137,19 +136,19 @@ gcp-pubsub-function-00001-deployment-68864b8c7d-rgx2w   3/3       Running   0   
 
 
 # Replace gcp-pubsub-function with the pod name from above:
-$ kubectl logs gcp-pubsub-function-00001-deployment-68864b8c7d-rgx2w ela-container
+$ kubectl logs gcp-pubsub-function-00001-deployment-68864b8c7d-rgx2w user-container
 ```
 
 Nothing is there, so let's change that:
 
 ```shell
-$ gcloud pubsub topics publish ela-demo --message 'test message'
+$ gcloud pubsub topics publish knative-demo --message 'test message'
 ```
 
 Then look at the function logs:
 
 ```shell
-$ kubectl logs gcp-pubsub-function-00001-deployment-68864b8c7d-rgx2w ela-container
+$ kubectl logs gcp-pubsub-function-00001-deployment-68864b8c7d-rgx2w user-container
 2018/05/22 19:16:59 {"ID":"99171831321660","Data":"dGVzdCBtZXNzYWdl","Attributes":null,"PublishTime":"2018-05-22T19:16:59.727Z"}
 2018/05/22 19:16:59 Received data: "test message"
 ```
@@ -164,7 +163,7 @@ kubectl delete binds gcppubsub-example
 
 And now your subscription from above has been removed
 ```shell
-$gcloud pubsub subscribers list 
+$gcloud pubsub subscriptions list
 # not there anymore
 ```
 
