@@ -643,6 +643,16 @@ func newDispatcherDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 			Value: bus.Name,
 		},
 	)
+	if bus.Spec.Arguments != nil {
+		for _, arg := range *bus.Spec.Arguments {
+			container.Env = append(container.Env,
+				corev1.EnvVar{
+					Name:  arg.Name,
+					Value: arg.Value,
+				},
+			)
+		}
+	}
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      controller.BusDispatcherDeploymentName(bus.ObjectMeta.Name),
@@ -741,6 +751,16 @@ func newProvisionerDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 			Value: bus.Name,
 		},
 	)
+	if bus.Spec.Arguments != nil {
+		for _, arg := range *bus.Spec.Arguments {
+			container.Env = append(container.Env,
+				corev1.EnvVar{
+					Name:  arg.Name,
+					Value: arg.Value,
+				},
+			)
+		}
+	}
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      controller.BusProvisionerDeploymentName(bus.ObjectMeta.Name),

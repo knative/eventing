@@ -37,7 +37,10 @@ type Bus struct {
 // BusSpec (what the user wants) for a bus
 type BusSpec struct {
 
-	// Parameters configuration params for the bus
+	// Arguments to configure the bus
+	Arguments *[]Argument `json:"arguments,omitempty"`
+
+	// Parameters configuration params for channels on the bus
 	Parameters *[]Parameter `json:"parameters,omitempty"`
 
 	// Provisioner container definition to manage channels on the bus.
