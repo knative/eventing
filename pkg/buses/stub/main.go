@@ -35,6 +35,10 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+const (
+	threadsPerMonitor = 1
+)
+
 var (
 	masterURL  string
 	kubeconfig string
@@ -174,7 +178,13 @@ func main() {
 	bus := NewStubBus(name, monitor)
 
 	go informerFactory.Start(stopCh)
+	go func() {
+		if err := monitor.Run(threadsPerMonitor, stopCh); err != nil {
+			glog.Fatalf("Error running monitor: %s", err.Error())
+		}
+	}()
 
+	glog.Infoln("Starting web server")
 	http.HandleFunc("/", bus.handleEvent)
 	glog.Fatal(http.ListenAndServe(":8080", nil))
 

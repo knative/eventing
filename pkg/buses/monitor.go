@@ -17,31 +17,89 @@
 package buses
 
 import (
+	"fmt"
 	"reflect"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/golang/glog"
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	listers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
+)
+
+const (
+	busKind          = "Bus"
+	channelKind      = "Channel"
+	subscriptionKind = "Subscription"
 )
 
 // Monitor utility to manage channels and subscriptions for a bus
 type Monitor struct {
-	busName string
-	handler MonitorEventHandlerFuncs
-
-	bus   *channelsv1alpha1.BusSpec
-	cache map[channelKey]*channelSummary
-	mutex *sync.Mutex
+	busName                  string
+	handler                  MonitorEventHandlerFuncs
+	bus                      *channelsv1alpha1.BusSpec
+	busesLister              listers.BusLister
+	busesSynced              cache.InformerSynced
+	channelsLister           listers.ChannelLister
+	channelsSynced           cache.InformerSynced
+	subscriptionsLister      listers.SubscriptionLister
+	subscriptionsSynced      cache.InformerSynced
+	workqueue                workqueue.RateLimitingInterface
+	cache                    map[channelKey]*channelSummary
+	provisionedChannels      map[resourceKey]channelsv1alpha1.Channel
+	provisionedSubscriptions map[resourceKey]channelsv1alpha1.Subscription
+	mutex                    *sync.Mutex
 }
 
 // MonitorEventHandlerFuncs handler functions for channel and subscription provisioning
 type MonitorEventHandlerFuncs struct {
+	BusFunc         func(bus channelsv1alpha1.Bus) error
 	ProvisionFunc   func(channel channelsv1alpha1.Channel) error
 	UnprovisionFunc func(channel channelsv1alpha1.Channel) error
 	SubscribeFunc   func(subscription channelsv1alpha1.Subscription) error
 	UnsubscribeFunc func(subscription channelsv1alpha1.Subscription) error
+}
+
+func (h MonitorEventHandlerFuncs) onBus(bus channelsv1alpha1.Bus) error {
+	if h.BusFunc != nil {
+		return h.BusFunc(bus)
+	}
+	return nil
+}
+
+func (h MonitorEventHandlerFuncs) onProvision(channel channelsv1alpha1.Channel) error {
+	if h.ProvisionFunc != nil {
+		return h.ProvisionFunc(channel)
+	}
+	return nil
+}
+
+func (h MonitorEventHandlerFuncs) onUnprovision(channel channelsv1alpha1.Channel) error {
+	if h.UnprovisionFunc != nil {
+		return h.UnprovisionFunc(channel)
+	}
+	return nil
+}
+
+func (h MonitorEventHandlerFuncs) onSubscribe(subscription channelsv1alpha1.Subscription) error {
+	if h.SubscribeFunc != nil {
+		return h.SubscribeFunc(subscription)
+	}
+	return nil
+}
+
+func (h MonitorEventHandlerFuncs) onUnsubscribe(subscription channelsv1alpha1.Subscription) error {
+	if h.UnsubscribeFunc != nil {
+		return h.UnsubscribeFunc(subscription)
+	}
+	return nil
 }
 
 type channelSummary struct {
@@ -64,8 +122,17 @@ func NewMonitor(busName string, informerFactory informers.SharedInformerFactory,
 		busName: busName,
 		handler: handler,
 
-		bus:   nil,
-		cache: make(map[channelKey]*channelSummary),
+		bus:                      nil,
+		busesLister:              busInformer.Lister(),
+		busesSynced:              busInformer.Informer().HasSynced,
+		channelsLister:           channelInformer.Lister(),
+		channelsSynced:           channelInformer.Informer().HasSynced,
+		subscriptionsLister:      subscriptionInformer.Lister(),
+		subscriptionsSynced:      subscriptionInformer.Informer().HasSynced,
+		workqueue:                workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Monitor"),
+		cache:                    make(map[channelKey]*channelSummary),
+		provisionedChannels:      make(map[resourceKey]channelsv1alpha1.Channel),
+		provisionedSubscriptions: make(map[resourceKey]channelsv1alpha1.Subscription),
 		mutex: &sync.Mutex{},
 	}
 
@@ -74,7 +141,7 @@ func NewMonitor(busName string, informerFactory informers.SharedInformerFactory,
 	busInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			bus := obj.(*channelsv1alpha1.Bus)
-			monitor.createOrUpdateBus(*bus)
+			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForBus(*bus))
 		},
 		UpdateFunc: func(old, new interface{}) {
 			oldBus := old.(*channelsv1alpha1.Bus)
@@ -86,14 +153,14 @@ func NewMonitor(busName string, informerFactory informers.SharedInformerFactory,
 				return
 			}
 
-			monitor.createOrUpdateBus(*newBus)
+			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForBus(*newBus))
 		},
 	})
 	// Set up an event handler for when Channel resources change
 	channelInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			channel := obj.(*channelsv1alpha1.Channel)
-			monitor.createOrUpdateChannel(*channel)
+			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForChannel(*channel))
 		},
 		UpdateFunc: func(old, new interface{}) {
 			oldChannel := old.(*channelsv1alpha1.Channel)
@@ -105,21 +172,18 @@ func NewMonitor(busName string, informerFactory informers.SharedInformerFactory,
 				return
 			}
 
-			monitor.createOrUpdateChannel(*newChannel)
-			if oldChannel.Spec.Bus != newChannel.Spec.Bus {
-				monitor.removeChannel(*oldChannel)
-			}
+			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForChannel(*newChannel))
 		},
 		DeleteFunc: func(obj interface{}) {
 			channel := obj.(*channelsv1alpha1.Channel)
-			monitor.removeChannel(*channel)
+			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForChannel(*channel))
 		},
 	})
 	// Set up an event handler for when Subscription resources change
 	subscriptionInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			subscription := obj.(*channelsv1alpha1.Subscription)
-			monitor.createOrUpdateSubscription(*subscription)
+			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForSubscription(*subscription))
 		},
 		UpdateFunc: func(old, new interface{}) {
 			oldSubscription := old.(*channelsv1alpha1.Subscription)
@@ -131,14 +195,11 @@ func NewMonitor(busName string, informerFactory informers.SharedInformerFactory,
 				return
 			}
 
-			monitor.createOrUpdateSubscription(*newSubscription)
-			if oldSubscription.Spec.Channel != newSubscription.Spec.Channel {
-				monitor.removeSubscription(*oldSubscription)
-			}
+			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForSubscription(*newSubscription))
 		},
 		DeleteFunc: func(obj interface{}) {
 			subscription := obj.(*channelsv1alpha1.Subscription)
-			monitor.removeSubscription(*subscription)
+			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForSubscription(*subscription))
 		},
 	})
 
@@ -230,6 +291,193 @@ func (m *Monitor) SubscriptionParams(
 	return params
 }
 
+// Run will set up the event handlers for types we are interested in, as well
+// as syncing informer caches and starting workers. It will block until stopCh
+// is closed, at which point it will shutdown the workqueue and wait for
+// workers to finish processing their current work items.
+func (m *Monitor) Run(threadiness int, stopCh <-chan struct{}) error {
+	defer runtime.HandleCrash()
+	defer m.workqueue.ShutDown()
+
+	// Start the informer factories to begin populating the informer caches
+	glog.Info("Starting Bus controller")
+
+	// Wait for the caches to be synced before starting workers
+	glog.Info("Waiting for informer caches to sync")
+	if ok := cache.WaitForCacheSync(stopCh, m.busesSynced, m.channelsSynced, m.subscriptionsSynced); !ok {
+		return fmt.Errorf("failed to wait for caches to sync")
+	}
+
+	glog.Info("Starting workers")
+	// Launch two workers to process Bus resources
+	for i := 0; i < threadiness; i++ {
+		go wait.Until(m.runWorker, time.Second, stopCh)
+	}
+
+	glog.Info("Started workers")
+	<-stopCh
+	glog.Info("Shutting down workers")
+
+	return nil
+}
+
+// runWorker is a long-running function that will continually call the
+// processNextWorkItem function in order to read and process a message on the
+// workqueue.
+func (m *Monitor) runWorker() {
+	for m.processNextWorkItem() {
+	}
+}
+
+// processNextWorkItem will read a single work item off the workqueue and
+// attempt to process it, by calling the syncHandler.
+func (m *Monitor) processNextWorkItem() bool {
+	obj, shutdown := m.workqueue.Get()
+
+	if shutdown {
+		return false
+	}
+
+	// We wrap this block in a func so we can defer m.workqueue.Done.
+	err := func(obj interface{}) error {
+		// We call Done here so the workqueue knows we have finished
+		// processing this item. We also must remember to call Forget if we
+		// do not want this work item being re-queued. For example, we do
+		// not call Forget if a transient error occurs, instead the item is
+		// put back on the workqueue and attempted again after a back-off
+		// period.
+		defer m.workqueue.Done(obj)
+		var key string
+		var ok bool
+		// We expect strings to come off the workqueue. These are of the
+		// form namespace/name. We do this as the delayed nature of the
+		// workqueue means the items in the informer cache may actually be
+		// more up to date that when the item was initially put onto the
+		// workqueue.
+		if key, ok = obj.(string); !ok {
+			// As the item in the workqueue is actually invalid, we call
+			// Forget here else we'd go into a loop of attempting to
+			// process a work item that is invalid.
+			m.workqueue.Forget(obj)
+			runtime.HandleError(fmt.Errorf("expected string in workqueue but got %#v", obj))
+			return nil
+		}
+		// Run the syncHandler, passing it the namespace/name string of the
+		// Bus resource to be synced.
+		if err := m.syncHandler(key); err != nil {
+			return fmt.Errorf("error syncing monitor '%s': %s", key, err.Error())
+		}
+		// Finally, if no error occurs we Forget this item so it does not
+		// get queued again until another change happens.
+		m.workqueue.Forget(obj)
+		glog.Infof("Successfully synced monitor '%s'", key)
+		return nil
+	}(obj)
+
+	if err != nil {
+		runtime.HandleError(err)
+		return true
+	}
+
+	return true
+}
+
+// syncHandler compares the actual state with the desired, and attempts to
+// converge the two. It then updates the Status block of the Bus resource
+// with the current status of the resource.
+func (m *Monitor) syncHandler(key string) error {
+	// Convert the namespace/name string into a distinct namespace and name
+	kind, namespace, name, err := splitWorkqueueKey(key)
+	if err != nil {
+		runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+		return nil
+	}
+
+	switch kind {
+	case busKind:
+		err = m.syncBus(namespace, name)
+	case channelKind:
+		err = m.syncChannel(namespace, name)
+	case subscriptionKind:
+		err = m.syncSubscription(namespace, name)
+	default:
+		runtime.HandleError(fmt.Errorf("Unknown resource kind %s", kind))
+		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Monitor) syncBus(namespace string, name string) error {
+	// Get the Bus resource with this namespace/name
+	bus, err := m.busesLister.Buses(namespace).Get(name)
+	if err != nil {
+		// The Bus resource may no longer exist
+		if errors.IsNotFound(err) {
+			m.removeBus(namespace, name)
+			return nil
+		}
+
+		return err
+	}
+
+	// Sync the Bus
+	err = m.createOrUpdateBus(*bus)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Monitor) syncChannel(namespace string, name string) error {
+	// Get the Channel resource with this namespace/name
+	channel, err := m.channelsLister.Channels(namespace).Get(name)
+	if err != nil {
+		// The Channel resource may no longer exist
+		if errors.IsNotFound(err) {
+			m.removeChannel(namespace, name)
+			return nil
+		}
+
+		return err
+	}
+
+	// Sync the Channel
+	err = m.createOrUpdateChannel(*channel)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Monitor) syncSubscription(namespace string, name string) error {
+	// Get the Subscription resource with this namespace/name
+	subscription, err := m.subscriptionsLister.Subscriptions(namespace).Get(name)
+	if err != nil {
+		// The Subscription resource may no longer exist
+		if errors.IsNotFound(err) {
+			m.removeSubscription(namespace, name)
+			return nil
+		}
+
+		return err
+	}
+
+	// Sync the Subscription
+	err = m.createOrUpdateSubscription(*subscription)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m *Monitor) getChannelSummary(key channelKey) *channelSummary {
 	return m.cache[key]
 }
@@ -249,14 +497,26 @@ func (m *Monitor) getOrCreateChannelSummary(key channelKey) *channelSummary {
 	return summary
 }
 
-func (m *Monitor) createOrUpdateBus(bus channelsv1alpha1.Bus) {
+func (m *Monitor) createOrUpdateBus(bus channelsv1alpha1.Bus) error {
 	if bus.Name != m.busName {
 		// this is not our bus
-		return
+		return nil
 	}
+
 	if !reflect.DeepEqual(m.bus, bus.Spec) {
 		m.bus = &bus.Spec
+		err := m.handler.onBus(bus)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
+}
+
+func (m *Monitor) removeBus(namespace string, name string) error {
+	// nothing to do
+	return nil
 }
 
 func (m *Monitor) isChannelForBus(channel channelsv1alpha1.Channel) bool {
@@ -264,6 +524,7 @@ func (m *Monitor) isChannelForBus(channel channelsv1alpha1.Channel) bool {
 }
 
 func (m *Monitor) createOrUpdateChannel(channel channelsv1alpha1.Channel) error {
+	resourceKey := makeResourceKey(channelKind, channel.Namespace, channel.Name)
 	channelKey := makeChannelKeyFromChannel(channel)
 	summary := m.getOrCreateChannelSummary(channelKey)
 
@@ -274,13 +535,23 @@ func (m *Monitor) createOrUpdateChannel(channel channelsv1alpha1.Channel) error 
 	m.mutex.Unlock()
 
 	if m.isChannelForBus(channel) && !reflect.DeepEqual(old, new) {
-		return m.handler.ProvisionFunc(channel)
+		err := m.handler.onProvision(channel)
+		if err != nil {
+			return err
+		}
+		m.provisionedChannels[resourceKey] = channel
 	}
 
 	return nil
 }
 
-func (m *Monitor) removeChannel(channel channelsv1alpha1.Channel) error {
+func (m *Monitor) removeChannel(namespace string, name string) error {
+	resourceKey := makeResourceKey(channelKind, namespace, name)
+	channel, ok := m.provisionedChannels[resourceKey]
+	if !ok {
+		return nil
+	}
+
 	channelKey := makeChannelKeyFromChannel(channel)
 	summary := m.getOrCreateChannelSummary(channelKey)
 
@@ -288,20 +559,29 @@ func (m *Monitor) removeChannel(channel channelsv1alpha1.Channel) error {
 	summary.Channel = nil
 	m.mutex.Unlock()
 
-	if m.isChannelForBus(channel) {
-		return m.handler.UnprovisionFunc(channel)
+	err := m.handler.onUnprovision(channel)
+	if err != nil {
+		return err
 	}
+	delete(m.provisionedChannels, resourceKey)
 
 	return nil
+}
+
+func (m *Monitor) isChannelKnown(subscription channelsv1alpha1.Subscription) bool {
+	channelKey := makeChannelKeyFromSubscription(subscription)
+	summary := m.getChannelSummary(channelKey)
+	return summary != nil && summary.Channel != nil
 }
 
 func (m *Monitor) isSubscriptionForBus(subscription channelsv1alpha1.Subscription) bool {
 	channelKey := makeChannelKeyFromSubscription(subscription)
 	summary := m.getChannelSummary(channelKey)
-	return summary != nil && summary.Channel.Bus == m.busName
+	return summary != nil && summary.Channel != nil && summary.Channel.Bus == m.busName
 }
 
 func (m *Monitor) createOrUpdateSubscription(subscription channelsv1alpha1.Subscription) error {
+	resourceKey := makeResourceKey(subscriptionKind, subscription.Namespace, subscription.Name)
 	channelKey := makeChannelKeyFromSubscription(subscription)
 	summary := m.getOrCreateChannelSummary(channelKey)
 	subscriptionKey := makeSubscriptionKeyFromSubscription(subscription)
@@ -314,14 +594,28 @@ func (m *Monitor) createOrUpdateSubscription(subscription channelsv1alpha1.Subsc
 	summary.Subscriptions[subscriptionKey] = new
 	m.mutex.Unlock()
 
+	if !m.isChannelKnown(subscription) {
+		return fmt.Errorf("Unknown channel %q for subscription", subscription.Spec.Channel)
+	}
+
 	if m.isSubscriptionForBus(subscription) && !reflect.DeepEqual(old.Subscription, new.Subscription) {
-		return m.handler.SubscribeFunc(subscription)
+		err := m.handler.onSubscribe(subscription)
+		if err != nil {
+			return err
+		}
+		m.provisionedSubscriptions[resourceKey] = subscription
 	}
 
 	return nil
 }
 
-func (m *Monitor) removeSubscription(subscription channelsv1alpha1.Subscription) error {
+func (m *Monitor) removeSubscription(namespace string, name string) error {
+	resourceKey := makeResourceKey(subscriptionKind, namespace, name)
+	subscription, ok := m.provisionedSubscriptions[resourceKey]
+	if !ok {
+		return nil
+	}
+
 	channelKey := makeChannelKeyFromSubscription(subscription)
 	summary := m.getOrCreateChannelSummary(channelKey)
 	subscriptionKey := makeSubscriptionKeyFromSubscription(subscription)
@@ -330,11 +624,27 @@ func (m *Monitor) removeSubscription(subscription channelsv1alpha1.Subscription)
 	delete(summary.Subscriptions, subscriptionKey)
 	m.mutex.Unlock()
 
-	if m.isSubscriptionForBus(subscription) {
-		return m.handler.UnsubscribeFunc(subscription)
+	err := m.handler.onUnsubscribe(subscription)
+	if err != nil {
+		return err
 	}
+	delete(m.provisionedSubscriptions, resourceKey)
 
 	return nil
+}
+
+type resourceKey struct {
+	Kind      string
+	Namespace string
+	Name      string
+}
+
+func makeResourceKey(kind string, namespace string, name string) resourceKey {
+	return resourceKey{
+		Kind:      kind,
+		Namespace: namespace,
+		Name:      name,
+	}
 }
 
 type channelKey struct {
@@ -367,4 +677,31 @@ func makeSubscriptionKeyFromSubscription(subscription channelsv1alpha1.Subscript
 		Name:      subscription.Name,
 		Namespace: subscription.Namespace,
 	}
+}
+
+func makeWorkqueueKeyForBus(bus channelsv1alpha1.Bus) string {
+	return makeWorkqueueKey(busKind, bus.Namespace, bus.Name)
+}
+
+func makeWorkqueueKeyForChannel(channel channelsv1alpha1.Channel) string {
+	return makeWorkqueueKey(channelKind, channel.Namespace, channel.Name)
+}
+
+func makeWorkqueueKeyForSubscription(subscription channelsv1alpha1.Subscription) string {
+	return makeWorkqueueKey(subscriptionKind, subscription.Namespace, subscription.Name)
+}
+
+func makeWorkqueueKey(kind string, namespace string, name string) string {
+	return fmt.Sprintf("%s/%s/%s", kind, namespace, name)
+}
+
+func splitWorkqueueKey(key string) (string, string, string, error) {
+	chunks := strings.Split(key, "/")
+	if len(chunks) != 3 {
+		return "", "", "", fmt.Errorf("Unknown workqueue key %v", key)
+	}
+	kind := chunks[0]
+	namespace := chunks[1]
+	name := chunks[2]
+	return kind, namespace, name, nil
 }
