@@ -207,14 +207,21 @@ func NewMonitor(busName string, informerFactory informers.SharedInformerFactory,
 }
 
 // Channel for a channel name and namespace
-func (m *Monitor) Channel(channel string, namespace string) *channelsv1alpha1.ChannelSpec {
-	channelKey := makeChannelKeyWithNames(channel, namespace)
-	summary := m.getChannelSummary(channelKey)
-
-	if summary == nil {
-		return nil
+func (m *Monitor) Channel(name string, namespace string) *channelsv1alpha1.Channel {
+	resourceKey := makeResourceKey(channelKind, namespace, name)
+	if channel, ok := m.provisionedChannels[resourceKey]; ok {
+		return &channel
 	}
-	return summary.Channel
+	return nil
+}
+
+// Subscription for a subscription name and namespace
+func (m *Monitor) Subscription(name string, namespace string) *channelsv1alpha1.Subscription {
+	resourceKey := makeResourceKey(subscriptionKind, namespace, name)
+	if subscription, ok := m.provisionedSubscriptions[resourceKey]; ok {
+		return &subscription
+	}
+	return nil
 }
 
 // Subscriptions for a channel name and namespace
