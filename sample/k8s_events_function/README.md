@@ -127,7 +127,7 @@ $ kubectl logs k8s-events-function user-container
 
 ## Removing a binding
 
-Remove the binding and things get cleaned up (including removing the subscription to GCP PubSub)
+Remove the binding and things get cleaned up (including removing the receive adapter to k8s events)
 
 ```shell
 kubectl delete binds k8s-events-example
