@@ -12,18 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: feeds.knative.dev/v1alpha1
-kind: Bind
+apiVersion: serving.knative.dev/v1alpha1
+kind: Route
 metadata:
-  name: gcppubsub-example
+  name: k8s-events-function
   namespace: default
 spec:
-  trigger:
-    service: gcppubsub
-    eventType: receive
-    resource: quantum-reducer-434/ela-demo
-    parameters:
-      projectID: quantum-reducer-434
-      topic: ela-demo
-  action:
-    routeName: gcp-pubsub-function
+  traffic:
+  - configurationName: k8s-events-function
+    percent: 100

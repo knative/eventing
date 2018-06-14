@@ -13,10 +13,17 @@
 # limitations under the License.
 
 apiVersion: feeds.knative.dev/v1alpha1
-kind: EventSource
+kind: Bind
 metadata:
-  name: github.com
+  name: gcppubsub-example
   namespace: default
 spec:
-  type: github
-  source: github.com
+  trigger:
+    service: gcppubsub
+    eventType: receive
+    resource: quantum-reducer-434/knative-demo
+    parameters:
+      projectID: quantum-reducer-434
+      topic: knative-demo
+  action:
+    routeName: gcp-pubsub-function

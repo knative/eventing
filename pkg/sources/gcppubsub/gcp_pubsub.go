@@ -24,9 +24,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/knative/eventing/pkg/sources"
 	"github.com/golang/glog"
 	"github.com/google/uuid"
+	"github.com/knative/eventing/pkg/sources"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -45,9 +45,6 @@ const (
 	subscription = "subscription"
 )
 
-// TODO: This and the github example need to move out of proc so they can be invoked
-// either with a webhook or by invoking a container. Regardless, that's a bigger
-// refactor and hence a followup.
 type GCPPubSubEventSource struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
