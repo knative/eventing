@@ -151,6 +151,21 @@ func (in *BusSpec) DeepCopyInto(out *BusSpec) {
 		}
 	}
 	in.Dispatcher.DeepCopyInto(&out.Dispatcher)
+	if in.Volumes != nil {
+		in, out := &in.Volumes, &out.Volumes
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new([]v1.Volume)
+			if **in != nil {
+				in, out := *in, *out
+				*out = make([]v1.Volume, len(*in))
+				for i := range *in {
+					(*in)[i].DeepCopyInto(&(*out)[i])
+				}
+			}
+		}
+	}
 	return
 }
 

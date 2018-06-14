@@ -48,6 +48,9 @@ type BusSpec struct {
 
 	// Dispatcher container definition to use for the bus data plane.
 	Dispatcher kapi.Container `json:"dispatcher"`
+
+	// Volumes to be mounted inside the provisioner or dispatcher containers
+	Volumes *[]kapi.Volume `json:"volumes,omitempty"`
 }
 
 // BusStatus (computed) for a bus
