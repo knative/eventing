@@ -158,7 +158,7 @@ func main() {
 
 	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
 	monitor := buses.NewMonitor(name, informerFactory, buses.MonitorEventHandlerFuncs{
-		ProvisionFunc: func(channel channelsv1alpha1.Channel) error {
+		ProvisionFunc: func(channel channelsv1alpha1.Channel, attributes buses.Attributes) error {
 			glog.Infof("Provision channel %q\n", channel.Name)
 			return nil
 		},
@@ -166,7 +166,7 @@ func main() {
 			glog.Infof("Unprovision channel %q\n", channel.Name)
 			return nil
 		},
-		SubscribeFunc: func(subscription channelsv1alpha1.Subscription) error {
+		SubscribeFunc: func(subscription channelsv1alpha1.Subscription, attributes buses.Attributes) error {
 			glog.Infof("Subscribe %q to %q channel\n", subscription.Spec.Subscriber, subscription.Spec.Channel)
 			return nil
 		},

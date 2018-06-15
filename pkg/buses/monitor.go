@@ -58,44 +58,59 @@ type Monitor struct {
 	mutex                    *sync.Mutex
 }
 
+type Attributes = map[string]string
+
 // MonitorEventHandlerFuncs handler functions for channel and subscription provisioning
 type MonitorEventHandlerFuncs struct {
 	BusFunc         func(bus channelsv1alpha1.Bus) error
-	ProvisionFunc   func(channel channelsv1alpha1.Channel) error
+	ProvisionFunc   func(channel channelsv1alpha1.Channel, attributes Attributes) error
 	UnprovisionFunc func(channel channelsv1alpha1.Channel) error
-	SubscribeFunc   func(subscription channelsv1alpha1.Subscription) error
+	SubscribeFunc   func(subscription channelsv1alpha1.Subscription, attributes Attributes) error
 	UnsubscribeFunc func(subscription channelsv1alpha1.Subscription) error
 }
 
-func (h MonitorEventHandlerFuncs) onBus(bus channelsv1alpha1.Bus) error {
+func (h MonitorEventHandlerFuncs) onBus(bus channelsv1alpha1.Bus, monitor *Monitor) error {
 	if h.BusFunc != nil {
 		return h.BusFunc(bus)
 	}
 	return nil
 }
 
-func (h MonitorEventHandlerFuncs) onProvision(channel channelsv1alpha1.Channel) error {
+func (h MonitorEventHandlerFuncs) onProvision(channel channelsv1alpha1.Channel, monitor *Monitor) error {
 	if h.ProvisionFunc != nil {
-		return h.ProvisionFunc(channel)
+		attributes, err := monitor.ChannelAttributes(channel.Spec)
+		if err != nil {
+			return err
+		}
+		return h.ProvisionFunc(channel, attributes)
 	}
 	return nil
 }
 
-func (h MonitorEventHandlerFuncs) onUnprovision(channel channelsv1alpha1.Channel) error {
+func (h MonitorEventHandlerFuncs) onUnprovision(channel channelsv1alpha1.Channel, monitor *Monitor) error {
 	if h.UnprovisionFunc != nil {
 		return h.UnprovisionFunc(channel)
 	}
 	return nil
 }
 
-func (h MonitorEventHandlerFuncs) onSubscribe(subscription channelsv1alpha1.Subscription) error {
+func (h MonitorEventHandlerFuncs) onSubscribe(subscription channelsv1alpha1.Subscription, monitor *Monitor) error {
 	if h.SubscribeFunc != nil {
-		return h.SubscribeFunc(subscription)
+		channel := monitor.Channel(subscription.Spec.Channel, subscription.Namespace)
+		if channel == nil {
+			// should never get here, but to be safe
+			return fmt.Errorf("unknown channel %q for subscription", subscription.Spec.Channel)
+		}
+		attributes, err := monitor.SubscriptionAttributes(channel.Spec, subscription.Spec)
+		if err != nil {
+			return err
+		}
+		return h.SubscribeFunc(subscription, attributes)
 	}
 	return nil
 }
 
-func (h MonitorEventHandlerFuncs) onUnsubscribe(subscription channelsv1alpha1.Subscription) error {
+func (h MonitorEventHandlerFuncs) onUnsubscribe(subscription channelsv1alpha1.Subscription, monitor *Monitor) error {
 	if h.UnsubscribeFunc != nil {
 		return h.UnsubscribeFunc(subscription)
 	}
@@ -249,21 +264,21 @@ func (m *Monitor) Subscriptions(channel string, namespace string) *[]channelsv1a
 	return &subscriptions
 }
 
-// ChannelParams resolve parameters for a channel
-func (m *Monitor) ChannelParams(channel channelsv1alpha1.ChannelSpec) (map[string]string, error) {
-	return m.resolveArguments(m.bus.Parameters, channel.Arguments)
+// ChannelParams resolve attributes for a channel
+func (m *Monitor) ChannelAttributes(channel channelsv1alpha1.ChannelSpec) (Attributes, error) {
+	return m.resolveAttributes(m.bus.Parameters, channel.Arguments)
 }
 
-// SubscriptionParams resolve parameters for a subscription
-func (m *Monitor) SubscriptionParams(
+// SubscriptionParams resolve attributes for a subscription
+func (m *Monitor) SubscriptionAttributes(
 	channel channelsv1alpha1.ChannelSpec,
 	subscription channelsv1alpha1.SubscriptionSpec,
-) (map[string]string, error) {
-	return m.resolveArguments(channel.Parameters, subscription.Arguments)
+) (Attributes, error) {
+	return m.resolveAttributes(channel.Parameters, subscription.Arguments)
 }
 
-func (m *Monitor) resolveArguments(parameters *[]channelsv1alpha1.Parameter, arguments *[]channelsv1alpha1.Argument) (map[string]string, error) {
-	resolved := make(map[string]string)
+func (m *Monitor) resolveAttributes(parameters *[]channelsv1alpha1.Parameter, arguments *[]channelsv1alpha1.Argument) (Attributes, error) {
+	resolved := make(Attributes)
 	known := make(map[string]interface{})
 	required := make(map[string]interface{})
 
@@ -532,7 +547,7 @@ func (m *Monitor) createOrUpdateBus(bus channelsv1alpha1.Bus) error {
 
 	if !reflect.DeepEqual(m.bus, bus.Spec) {
 		m.bus = &bus.Spec
-		err := m.handler.onBus(bus)
+		err := m.handler.onBus(bus, m)
 		if err != nil {
 			return err
 		}
@@ -562,7 +577,7 @@ func (m *Monitor) createOrUpdateChannel(channel channelsv1alpha1.Channel) error 
 	m.mutex.Unlock()
 
 	if m.isChannelForBus(channel) && !reflect.DeepEqual(old, new) {
-		err := m.handler.onProvision(channel)
+		err := m.handler.onProvision(channel, m)
 		if err != nil {
 			return err
 		}
@@ -586,7 +601,7 @@ func (m *Monitor) removeChannel(namespace string, name string) error {
 	summary.Channel = nil
 	m.mutex.Unlock()
 
-	err := m.handler.onUnprovision(channel)
+	err := m.handler.onUnprovision(channel, m)
 	if err != nil {
 		return err
 	}
@@ -635,7 +650,7 @@ func (m *Monitor) createOrUpdateSubscription(subscription channelsv1alpha1.Subsc
 	}
 
 	if !m.isSubscriptionProvisioned(subscription) || !reflect.DeepEqual(old.Subscription, new.Subscription) {
-		err := m.handler.onSubscribe(subscription)
+		err := m.handler.onSubscribe(subscription, m)
 		if err != nil {
 			return err
 		}
@@ -660,7 +675,7 @@ func (m *Monitor) removeSubscription(namespace string, name string) error {
 	delete(summary.Subscriptions, subscriptionKey)
 	m.mutex.Unlock()
 
-	err := m.handler.onUnsubscribe(subscription)
+	err := m.handler.onUnsubscribe(subscription, m)
 	if err != nil {
 		return err
 	}
