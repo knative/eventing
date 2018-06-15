@@ -250,52 +250,57 @@ func (m *Monitor) Subscriptions(channel string, namespace string) *[]channelsv1a
 }
 
 // ChannelParams resolve parameters for a channel
-func (m *Monitor) ChannelParams(channel channelsv1alpha1.ChannelSpec) map[string]string {
-	params := make(map[string]string)
-
-	// apply bus defaults
-	if m.bus.Parameters != nil {
-		for _, param := range *m.bus.Parameters {
-			if param.Default != nil {
-				params[param.Name] = *param.Default
-			}
-		}
-	}
-	// apply channel arguments
-	if channel.Arguments != nil {
-		for _, arg := range *channel.Arguments {
-			// TODO ignore arguments not defined by parameters
-			params[arg.Name] = arg.Value
-		}
-	}
-
-	return params
+func (m *Monitor) ChannelParams(channel channelsv1alpha1.ChannelSpec) (map[string]string, error) {
+	return m.resolveArguments(m.bus.Parameters, channel.Arguments)
 }
 
 // SubscriptionParams resolve parameters for a subscription
 func (m *Monitor) SubscriptionParams(
 	channel channelsv1alpha1.ChannelSpec,
 	subscription channelsv1alpha1.SubscriptionSpec,
-) map[string]string {
-	params := m.ChannelParams(channel)
+) (map[string]string, error) {
+	return m.resolveArguments(channel.Parameters, subscription.Arguments)
+}
 
-	// apply channel defaults
-	if channel.Parameters != nil {
-		for _, param := range *channel.Parameters {
-			if _, ok := params[param.Name]; !ok && param.Default != nil {
-				params[param.Name] = *param.Default
+func (m *Monitor) resolveArguments(parameters *[]channelsv1alpha1.Parameter, arguments *[]channelsv1alpha1.Argument) (map[string]string, error) {
+	resolved := make(map[string]string)
+	known := make(map[string]interface{})
+	required := make(map[string]interface{})
+
+	// apply parameters
+	if parameters != nil {
+		for _, param := range *parameters {
+			known[param.Name] = true
+			if param.Default != nil {
+				resolved[param.Name] = *param.Default
+			} else {
+				required[param.Name] = true
 			}
 		}
 	}
-	// apply subscription arguments
-	if subscription.Arguments != nil {
-		for _, arg := range *subscription.Arguments {
-			// TODO ignore arguments not defined by parameters
-			params[arg.Name] = arg.Value
+	// apply arguments
+	if arguments != nil {
+		for _, arg := range *arguments {
+			if _, ok := known[arg.Name]; ok {
+				// ignore arguments not defined by parameters
+				glog.Warningf("Skipping unknown argument: %s\n", arg.Name)
+				continue
+			}
+			delete(required, arg.Name)
+			resolved[arg.Name] = arg.Value
 		}
 	}
 
-	return params
+	// check for missing arguments
+	if len(required) != 0 {
+		missing := []string{}
+		for name := range required {
+			missing = append(missing, name)
+		}
+		return nil, fmt.Errorf("missing required arguments: %v", missing)
+	}
+
+	return resolved, nil
 }
 
 func (m *Monitor) RequeueSubscription(subscription channelsv1alpha1.Subscription) {
