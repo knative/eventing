@@ -13,20 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package networking
+package v1alpha3
 
 import (
 	internalinterfaces "github.com/knative/serving/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha3 "github.com/knative/serving/pkg/client/informers/externalversions/istio/v1alpha3"
 )
 
-// Interface provides access to each of this group's versions.
+// Interface provides access to all the informers in this group version.
 type Interface interface {
-	// V1alpha3 provides access to shared informers for resources in V1alpha3.
-	V1alpha3() v1alpha3.Interface
+	// Gateways returns a GatewayInformer.
+	Gateways() GatewayInformer
+	// VirtualServices returns a VirtualServiceInformer.
+	VirtualServices() VirtualServiceInformer
 }
 
-type group struct {
+type version struct {
 	factory          internalinterfaces.SharedInformerFactory
 	namespace        string
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
@@ -34,10 +35,15 @@ type group struct {
 
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
-	return &group{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
-// V1alpha3 returns a new v1alpha3.Interface.
-func (g *group) V1alpha3() v1alpha3.Interface {
-	return v1alpha3.New(g.factory, g.namespace, g.tweakListOptions)
+// Gateways returns a GatewayInformer.
+func (v *version) Gateways() GatewayInformer {
+	return &gatewayInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// VirtualServices returns a VirtualServiceInformer.
+func (v *version) VirtualServices() VirtualServiceInformer {
+	return &virtualServiceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
