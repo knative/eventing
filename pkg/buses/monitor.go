@@ -240,7 +240,7 @@ func (m *Monitor) Subscriptions(channel string, namespace string) *[]channelsv1a
 	}
 
 	m.mutex.Lock()
-	subscriptions := make([]channelsv1alpha1.SubscriptionSpec, len(summary.Subscriptions)-1)
+	subscriptions := []channelsv1alpha1.SubscriptionSpec{}
 	for _, subscription := range summary.Subscriptions {
 		subscriptions = append(subscriptions, subscription.Subscription)
 	}
