@@ -298,6 +298,11 @@ func (m *Monitor) SubscriptionParams(
 	return params
 }
 
+func (m *Monitor) RequeueSubscription(subscription channelsv1alpha1.Subscription) {
+	glog.Infof("Requeue subscription %q\n", subscription.Name)
+	m.workqueue.AddRateLimited(makeWorkqueueKeyForSubscription(subscription))
+}
+
 // Run will set up the event handlers for types we are interested in, as well
 // as syncing informer caches and starting workers. It will block until stopCh
 // is closed, at which point it will shutdown the workqueue and wait for
@@ -307,7 +312,7 @@ func (m *Monitor) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer m.workqueue.ShutDown()
 
 	// Start the informer factories to begin populating the informer caches
-	glog.Info("Starting Bus controller")
+	glog.Info("Starting monitor")
 
 	// Wait for the caches to be synced before starting workers
 	glog.Info("Waiting for informer caches to sync")
@@ -372,6 +377,7 @@ func (m *Monitor) processNextWorkItem() bool {
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Bus resource to be synced.
 		if err := m.syncHandler(key); err != nil {
+			m.workqueue.AddRateLimited(obj)
 			return fmt.Errorf("error syncing monitor '%s': %s", key, err.Error())
 		}
 		// Finally, if no error occurs we Forget this item so it does not
@@ -425,7 +431,10 @@ func (m *Monitor) syncBus(namespace string, name string) error {
 	if err != nil {
 		// The Bus resource may no longer exist
 		if errors.IsNotFound(err) {
-			m.removeBus(namespace, name)
+			err = m.removeBus(namespace, name)
+			if err != nil {
+				return err
+			}
 			return nil
 		}
 
@@ -447,7 +456,10 @@ func (m *Monitor) syncChannel(namespace string, name string) error {
 	if err != nil {
 		// The Channel resource may no longer exist
 		if errors.IsNotFound(err) {
-			m.removeChannel(namespace, name)
+			err = m.removeChannel(namespace, name)
+			if err != nil {
+				return err
+			}
 			return nil
 		}
 
@@ -469,7 +481,10 @@ func (m *Monitor) syncSubscription(namespace string, name string) error {
 	if err != nil {
 		// The Subscription resource may no longer exist
 		if errors.IsNotFound(err) {
-			m.removeSubscription(namespace, name)
+			err = m.removeSubscription(namespace, name)
+			if err != nil {
+				return err
+			}
 			return nil
 		}
 
@@ -581,6 +596,12 @@ func (m *Monitor) isChannelKnown(subscription channelsv1alpha1.Subscription) boo
 	return summary != nil && summary.Channel != nil
 }
 
+func (m *Monitor) isSubscriptionProvisioned(subscription channelsv1alpha1.Subscription) bool {
+	resourceKey := makeResourceKey(subscriptionKind, subscription.Namespace, subscription.Name)
+	_, ok := m.provisionedSubscriptions[resourceKey]
+	return ok
+}
+
 func (m *Monitor) isSubscriptionForBus(subscription channelsv1alpha1.Subscription) bool {
 	channelKey := makeChannelKeyFromSubscription(subscription)
 	summary := m.getChannelSummary(channelKey)
@@ -604,8 +625,11 @@ func (m *Monitor) createOrUpdateSubscription(subscription channelsv1alpha1.Subsc
 	if !m.isChannelKnown(subscription) {
 		return fmt.Errorf("Unknown channel %q for subscription", subscription.Spec.Channel)
 	}
+	if !m.isSubscriptionForBus(subscription) {
+		return nil
+	}
 
-	if m.isSubscriptionForBus(subscription) && !reflect.DeepEqual(old.Subscription, new.Subscription) {
+	if !m.isSubscriptionProvisioned(subscription) || !reflect.DeepEqual(old.Subscription, new.Subscription) {
 		err := m.handler.onSubscribe(subscription)
 		if err != nil {
 			return err
