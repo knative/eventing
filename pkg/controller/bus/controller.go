@@ -643,16 +643,6 @@ func newDispatcherDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 			Value: bus.Name,
 		},
 	)
-	if bus.Spec.Arguments != nil {
-		for _, arg := range *bus.Spec.Arguments {
-			container.Env = append(container.Env,
-				corev1.EnvVar{
-					Name:  arg.Name,
-					Value: arg.Value,
-				},
-			)
-		}
-	}
 	volumes := []corev1.Volume{}
 	if bus.Spec.Volumes != nil {
 		volumes = *bus.Spec.Volumes
@@ -756,16 +746,6 @@ func newProvisionerDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 			Value: bus.Name,
 		},
 	)
-	if bus.Spec.Arguments != nil {
-		for _, arg := range *bus.Spec.Arguments {
-			container.Env = append(container.Env,
-				corev1.EnvVar{
-					Name:  arg.Name,
-					Value: arg.Value,
-				},
-			)
-		}
-	}
 	volumes := []corev1.Volume{}
 	if bus.Spec.Volumes != nil {
 		volumes = *bus.Spec.Volumes
