@@ -13,10 +13,21 @@
 # limitations under the License.
 
 apiVersion: serving.knative.dev/v1alpha1
+kind: Route
+metadata:
+  name: e2e-k8s-events-function
+  namespace: e2etestfn
+spec:
+  traffic:
+  - configurationName: e2e-k8s-events-function
+    percent: 100
+
+---
+apiVersion: serving.knative.dev/v1alpha1
 kind: Configuration
 metadata:
-  name: k8s-events-function
-  namespace: default
+  name: e2e-k8s-events-function
+  namespace: e2etestfn
 spec:
   revisionTemplate:
     metadata:

@@ -21,6 +21,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 func handlePost(rw http.ResponseWriter, req *http.Request) {
@@ -28,14 +30,12 @@ func handlePost(rw http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	log.Println(string(body))
-
-	var event map[string]interface{}
+	var event corev1.Event
 	if err := json.Unmarshal(body, &event); err != nil {
-		log.Printf("Failed to unmarshal event: %s", err)
+		log.Printf("Failed to unmarshal body %q :  %v", string(body), err)
 		return
 	}
-	log.Printf("Received: %v", event)
+	log.Printf("%q : %s/%s\" : %q", event.InvolvedObject.Kind, event.InvolvedObject.Namespace, event.InvolvedObject.Name, event.Message)
 }
 
 func main() {

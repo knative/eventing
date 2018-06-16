@@ -312,6 +312,7 @@ func (c *Controller) syncHandler(key string) error {
 		log.Fatalf("Failed to get metadata: %s", err)
 	}
 	deletionTimestamp := accessor.GetDeletionTimestamp()
+	glog.Infof("DeletionTimestamp: %v", deletionTimestamp)
 
 	functionDNS, err := c.resolveActionTarget(bind.Namespace, bind.Spec.Action)
 
@@ -325,7 +326,7 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	es, err := c.eventSourcesLister.EventSources(namespace).Get(bind.Spec.Trigger.Service)
-	if err != nil {
+	if err != nil && deletionTimestamp == nil {
 		if errors.IsNotFound(err) {
 			if deletionTimestamp != nil {
 				// If the Event Source can not be found, we will remove our finalizer
@@ -351,11 +352,28 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	et, err := c.eventTypesLister.EventTypes(namespace).Get(bind.Spec.Trigger.EventType)
-	if err != nil {
+	if err != nil && deletionTimestamp == nil {
 		if errors.IsNotFound(err) {
 			runtime.HandleError(fmt.Errorf("EventType %q in namespace %q does not exist", bind.Spec.Trigger.Service, namespace))
 		}
 		return err
+	}
+
+	// If the EventSource has been deleted from underneath us, just remove our finalizer. We tried...
+	if es == nil && deletionTimestamp != nil {
+		glog.Warningf("Could not find a Bind container, removing finalizer")
+		newFinalizers, err := RemoveFinalizer(bind, controllerAgentName)
+		if err != nil {
+			glog.Warningf("Failed to remove finalizer: %s", err)
+			return err
+		}
+		bind.ObjectMeta.Finalizers = newFinalizers
+		_, err = c.updateFinalizers(bind)
+		if err != nil {
+			glog.Warningf("Failed to update finalizers: %s", err)
+			return err
+		}
+		return nil
 	}
 
 	// If there are conditions or a context do nothing.

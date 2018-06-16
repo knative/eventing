@@ -52,8 +52,7 @@ ko apply -f sample/k8s_events_function/serviceaccountbinding.yaml
 
 You can deploy this to Knative from the root directory via:
 ```shell
-ko apply -f sample/k8s_events_function/route.yaml
-ko apply -f sample/k8s_events_function/configuration.yaml
+ko apply -f sample/k8s_events_function/function.yaml
 ```
 
 Once deployed, you can inspect the created resources with `kubectl` commands:
