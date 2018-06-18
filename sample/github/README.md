@@ -11,8 +11,8 @@ the webhook gets created by Knative Eventing.
 
 1. [Setup your development environment](../../DEVELOPMENT.md#getting-started)
 2. [Start Knative](../../README.md#start-knative)
-3. Decide on the DNS name that git can then call. Update knative/serving/elaconfig.yaml domainSuffix.
-For example I used aikas.org as my hostname, so my elaconfig.yaml looks like so:
+3. Decide on the DNS name that git can then call. Update knative/serving/config/config-domain.yaml.
+For example I used aikas.org as my hostname, so my knative/serving/config/config-domain.yaml looks like so:
 
 ```yaml
 apiVersion: v1
@@ -24,7 +24,12 @@ data:
   aikas.org: |
 ```
 
-If you were already running the knative controllers, you will need to kill the ela-controller in the ela-system namespace for it to pick up the new domain suffix.
+If you were already running the knative controllers, you will need to update this configmap from the
+root of the knative/serving
+
+```shell
+ko apply -f config/config-domain.yaml
+```
 
 4. Install Github as an event source
 
@@ -32,7 +37,14 @@ If you were already running the knative controllers, you will need to kill the e
 ko apply -f pkg/sources/github/
 ```
 
-5. Create a [personal access token](https://github.com/settings/tokens) to github repo that you can use to bind webhooks to the Github API. Also decide on a token that your code will authenticate the incoming webhooks from github (accessSoken). Update sample/github/githubsecret.yaml with those values. If your generated access token is 'asdfasfdsaf' and you choose your secretToken as 'password', you'd modify githubsecret.yaml like so:
+5. Check that the github is now showing up as an event source and there's an event type for pullrequests
+
+```shell
+kubectl get eventsources
+kubectl get eventtypes
+```
+
+6. Create a [personal access token](https://github.com/settings/tokens) to github repo that you can use to bind webhooks to the Github API. Also decide on a token that your code will authenticate the incoming webhooks from github (accessSoken). Update sample/github/githubsecret.yaml with those values. If your generated access token is 'asdfasfdsaf' and you choose your secretToken as 'password', you'd modify githubsecret.yaml like so:
 
 ```yaml
 apiVersion: v1
@@ -50,9 +62,10 @@ stringData:
 
 ## Running
 
-You can deploy this to Knative from the root directory via:
+You can deploy a function that handles the pullrequest events to Knative from the root directory via:
 ```shell
-ko apply -f sample/github/
+ko apply -f sample/github/configuration.yaml
+ko apply -f sample/github/route.yaml
 ```
 
 Once deployed, you can inspect the created resources with `kubectl` commands:
@@ -117,19 +130,24 @@ spec:
     routeName: git-webhook
 ```
 
-Then create the binding so that you can see changes
+Then create the secret and a binding so that you can see changes
 
 ```shell
- kubectl create -f sample/github/pullrequest.yaml
+ ko apply -f sample/github/githubsecret.yaml
+ ko apply -f sample/github/bind.yaml
 ```
 
-
 Then create a PR for the repo you configured the webhook for, and you'll see that the Title
-will be modified with the suffix '(looks pretty legit to me)'
+will be modified with the suffix '(I buy it)'
 
 ## Cleaning up
 
-To clean up the sample service:
+To clean up the sample binding:
+```shell
+ ko delete -f sample/github/bind.yaml
+```
+
+And you can check the repo and see the webhook has been removed
 
 ```shell
 ko delete -f sample/github/
