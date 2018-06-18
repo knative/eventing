@@ -78,7 +78,7 @@ func (h MonitorEventHandlerFuncs) onBus(bus channelsv1alpha1.Bus, monitor *Monit
 
 func (h MonitorEventHandlerFuncs) onProvision(channel channelsv1alpha1.Channel, monitor *Monitor) error {
 	if h.ProvisionFunc != nil {
-		attributes, err := monitor.ChannelAttributes(channel.Spec)
+		attributes, err := monitor.channelAttributes(channel.Spec)
 		if err != nil {
 			return err
 		}
@@ -96,12 +96,7 @@ func (h MonitorEventHandlerFuncs) onUnprovision(channel channelsv1alpha1.Channel
 
 func (h MonitorEventHandlerFuncs) onSubscribe(subscription channelsv1alpha1.Subscription, monitor *Monitor) error {
 	if h.SubscribeFunc != nil {
-		channel := monitor.Channel(subscription.Spec.Channel, subscription.Namespace)
-		if channel == nil {
-			// should never get here, but to be safe
-			return fmt.Errorf("unknown channel %q for subscription", subscription.Spec.Channel)
-		}
-		attributes, err := monitor.SubscriptionAttributes(channel.Spec, subscription.Spec)
+		attributes, err := monitor.subscriptionAttributes(subscription.Spec)
 		if err != nil {
 			return err
 		}
@@ -264,17 +259,22 @@ func (m *Monitor) Subscriptions(channel string, namespace string) *[]channelsv1a
 	return &subscriptions
 }
 
-// ChannelParams resolve attributes for a channel
-func (m *Monitor) ChannelAttributes(channel channelsv1alpha1.ChannelSpec) (Attributes, error) {
-	return m.resolveAttributes(m.bus.Parameters, channel.Arguments)
+func (m *Monitor) channelAttributes(channel channelsv1alpha1.ChannelSpec) (Attributes, error) {
+	busParameters := m.bus.Parameters
+	var parameters *[]channelsv1alpha1.Parameter
+	if busParameters != nil {
+		parameters = busParameters.Channel
+	}
+	return m.resolveAttributes(parameters, channel.Arguments)
 }
 
-// SubscriptionParams resolve attributes for a subscription
-func (m *Monitor) SubscriptionAttributes(
-	channel channelsv1alpha1.ChannelSpec,
-	subscription channelsv1alpha1.SubscriptionSpec,
-) (Attributes, error) {
-	return m.resolveAttributes(channel.Parameters, subscription.Arguments)
+func (m *Monitor) subscriptionAttributes(subscription channelsv1alpha1.SubscriptionSpec) (Attributes, error) {
+	busParameters := m.bus.Parameters
+	var parameters *[]channelsv1alpha1.Parameter
+	if busParameters != nil {
+		parameters = busParameters.Subscription
+	}
+	return m.resolveAttributes(parameters, subscription.Arguments)
 }
 
 func (m *Monitor) resolveAttributes(parameters *[]channelsv1alpha1.Parameter, arguments *[]channelsv1alpha1.Argument) (Attributes, error) {
