@@ -6,9 +6,19 @@ This directory contains tests and testing docs.
 * [End-to-end tests](#running-end-to-end-tests)
 
 
-## Dependencies
+## Running unit tests
 
-There's couple of things you need to install before running tests locally.
+Use `go test`:
+
+```shell
+go test -v ./pkg/...
+```
+
+## Running end-to-end tests
+
+### Dependencies
+
+There's couple of things you need to install before running e2e tests locally.
 
 ```shell
 go get -u k8s.io/test-infra/kubetest
@@ -20,17 +30,6 @@ You also need to generate an ssh key for communicating with GCP
 ```shell
 ssh-keygen -t rsa -f ~/.ssh/google_compute_engine -C `whoami`
 ```
-
-
-## Running unit tests
-
-Use `go test`:
-
-```shell
-go test -v ./pkg/...
-```
-
-## Running end-to-end tests
 
 Simply run the `e2e-tests.sh` script. It will create a GKE cluster, install Knative Serving
 stack with Istio and run the end-to-end tests against the Knative Eventing built from source.

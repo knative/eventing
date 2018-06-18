@@ -98,7 +98,7 @@ function teardown_k8s_events_test_resources() {
   wait_until_object_does_not_exist eventtypes $E2E_TEST_FUNCTION_NAMESPACE receiveevent
   exit_if_test_failed
 
-  # Launch the pod into the test namespace
+  # Delete the pod from the test namespace
   ko delete -f test/e2e/k8sevents/pod.yaml
 
   # Delete the function namespace
@@ -257,8 +257,6 @@ if (( USING_EXISTING_CLUSTER )); then
   exit_if_test_failed
 fi
 
-header "sleeping"
-sleep 15s
 header "Standing up Knative Eventing"
 ko resolve -f config/
 ko apply -f config/

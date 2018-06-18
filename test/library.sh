@@ -150,9 +150,9 @@ function wait_until_crd_does_not_exist() {
 }
 
 function wait_until_object_does_not_exist() {
-  KIND=$1
-  NAMESPACE=$2
-  NAME=$3
+  local KIND=$1
+  local NAMESPACE=$2
+  local NAME=$3
 
   echo -n "Waiting until $KIND $NAMESPACE/$NAME does not exist"
   for i in {1..150}; do  # timeout after 5 minutes
@@ -166,15 +166,13 @@ function wait_until_object_does_not_exist() {
 }
 
 function wait_until_bind_ready() {
-  NAMESPACE=$1
-  NAME=$2
+  local NAMESPACE=$1
+  local NAME=$2
 
   echo -n "Waiting until bind $NAMESPACE/$NAME is ready"
   for i in {1..150}; do  # timeout after 5 minutes
     local reason="$(kubectl get -n $NAMESPACE binds $NAME -o 'jsonpath={.status.conditions[0].reason}')"
     local status="$(kubectl get -n $NAMESPACE binds $NAME -o 'jsonpath={.status.conditions[0].status}')"
-    echo $reason
-    echo $status
 
     if [ "$reason" = "BindSuccess" ]; then
        if [ "$status" = "True" ]; then
@@ -190,11 +188,10 @@ function wait_until_bind_ready() {
 }
 
 function validate_function_logs() {
-  NAMESPACE=$1
+  local NAMESPACE=$1
   local podname="$(kubectl -n $NAMESPACE get pods --no-headers -oname)"
   local logs="$(kubectl -n $NAMESPACE logs $podname user-container)"
-  echo $logs
-  echo "${logs} | grep "Started container" || return 1
-  echo "${logs} | grep "Created container" || return 1
+  echo "${logs}" | grep "Started container" || return 1
+  echo "${logs}" | grep "Created container" || return 1
   return 0
 }
