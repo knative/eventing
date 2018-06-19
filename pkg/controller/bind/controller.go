@@ -355,7 +355,7 @@ func (c *Controller) syncHandler(key string) error {
 
 	binder := sources.NewContainerEventSource(bind, c.kubeclientset, &newES.Spec, "knative-eventing-system")
 	if deletionTimestamp == nil {
-		glog.Infof("Creating a subscription to %q : %q with Trigger %+v", es.Name, et.Name, trigger)
+		glog.Infof("Creating a subscription to %q : %q for resource %q", es.Name, et.Name, trigger.Resource)
 		bindContext, err := binder.Bind(trigger, functionDNS)
 
 		if err != nil {
