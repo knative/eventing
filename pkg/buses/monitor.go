@@ -25,19 +25,34 @@ import (
 
 	"github.com/golang/glog"
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	"github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
+	channelscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	listers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
+	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 )
 
 const (
+	Dispatcher  = "dispatcher"
+	Provisioner = "provisioner"
+
 	busKind          = "Bus"
 	channelKind      = "Channel"
 	subscriptionKind = "Subscription"
+
+	// SuccessSynced is used as part of the Event 'reason' when a resource is synced
+	successSynced = "Synced"
+	// ErrResourceSync is used as part of the Event 'reason' when a resource fails
+	// to sync.
+	errResourceSync = "ErrResourceSync"
 )
 
 // Monitor utility to manage channels and subscriptions for a bus
@@ -51,11 +66,20 @@ type Monitor struct {
 	channelsSynced           cache.InformerSynced
 	subscriptionsLister      listers.SubscriptionLister
 	subscriptionsSynced      cache.InformerSynced
-	workqueue                workqueue.RateLimitingInterface
 	cache                    map[channelKey]*channelSummary
 	provisionedChannels      map[resourceKey]channelsv1alpha1.Channel
 	provisionedSubscriptions map[resourceKey]channelsv1alpha1.Subscription
 	mutex                    *sync.Mutex
+
+	// workqueue is a rate limited work queue. This is used to queue work to be
+	// processed instead of performing it as soon as a change happens. This
+	// means we can ensure we only process a fixed amount of resources at a
+	// time, and makes it easy to ensure we are never processing the same item
+	// simultaneously in two different workers.
+	workqueue workqueue.RateLimitingInterface
+	// recorder is an event recorder for recording Event resources to the
+	// Kubernetes API.
+	recorder record.EventRecorder
 }
 
 type Attributes = map[string]string
@@ -71,7 +95,13 @@ type MonitorEventHandlerFuncs struct {
 
 func (h MonitorEventHandlerFuncs) onBus(bus channelsv1alpha1.Bus, monitor *Monitor) error {
 	if h.BusFunc != nil {
-		return h.BusFunc(bus)
+		err := h.BusFunc(bus)
+		if err != nil {
+			monitor.recorder.Eventf(&bus, corev1.EventTypeWarning, errResourceSync, "Error syncing bus: %s", err)
+		} else {
+			monitor.recorder.Event(&bus, corev1.EventTypeNormal, successSynced, "Bus synched successfully")
+		}
+		return err
 	}
 	return nil
 }
@@ -82,14 +112,26 @@ func (h MonitorEventHandlerFuncs) onProvision(channel channelsv1alpha1.Channel, 
 		if err != nil {
 			return err
 		}
-		return h.ProvisionFunc(channel, attributes)
+		err = h.ProvisionFunc(channel, attributes)
+		if err != nil {
+			monitor.recorder.Eventf(&channel, corev1.EventTypeWarning, errResourceSync, "Error provisoning channel: %s", err)
+		} else {
+			monitor.recorder.Event(&channel, corev1.EventTypeNormal, successSynced, "Channel provisioned successfully")
+		}
+		return err
 	}
 	return nil
 }
 
 func (h MonitorEventHandlerFuncs) onUnprovision(channel channelsv1alpha1.Channel, monitor *Monitor) error {
 	if h.UnprovisionFunc != nil {
-		return h.UnprovisionFunc(channel)
+		err := h.UnprovisionFunc(channel)
+		if err != nil {
+			monitor.recorder.Eventf(&channel, corev1.EventTypeWarning, errResourceSync, "Error unprovisioning channel: %s", err)
+		} else {
+			monitor.recorder.Event(&channel, corev1.EventTypeNormal, successSynced, "Channel unprovisioned successfully")
+		}
+		return err
 	}
 	return nil
 }
@@ -100,14 +142,26 @@ func (h MonitorEventHandlerFuncs) onSubscribe(subscription channelsv1alpha1.Subs
 		if err != nil {
 			return err
 		}
-		return h.SubscribeFunc(subscription, attributes)
+		err = h.SubscribeFunc(subscription, attributes)
+		if err != nil {
+			monitor.recorder.Eventf(&subscription, corev1.EventTypeWarning, errResourceSync, "Error subscribing: %s", err)
+		} else {
+			monitor.recorder.Event(&subscription, corev1.EventTypeNormal, successSynced, "Subscribed successfully")
+		}
+		return err
 	}
 	return nil
 }
 
 func (h MonitorEventHandlerFuncs) onUnsubscribe(subscription channelsv1alpha1.Subscription, monitor *Monitor) error {
 	if h.UnsubscribeFunc != nil {
-		return h.UnsubscribeFunc(subscription)
+		err := h.UnsubscribeFunc(subscription)
+		if err != nil {
+			monitor.recorder.Eventf(&subscription, corev1.EventTypeWarning, errResourceSync, "Error unsubscribing: %s", err)
+		} else {
+			monitor.recorder.Event(&subscription, corev1.EventTypeNormal, successSynced, "Unsubscribed successfully")
+		}
+		return err
 	}
 	return nil
 }
@@ -122,11 +176,27 @@ type subscriptionSummary struct {
 }
 
 // NewMonitor creates a monitor for a bus
-func NewMonitor(busName string, informerFactory informers.SharedInformerFactory, handler MonitorEventHandlerFuncs) *Monitor {
+func NewMonitor(
+	busName, role string,
+	kubeclientset kubernetes.Interface,
+	informerFactory informers.SharedInformerFactory,
+	handler MonitorEventHandlerFuncs,
+) *Monitor {
+	component := fmt.Sprintf("%s-%s", busName, role)
 
 	busInformer := informerFactory.Channels().V1alpha1().Buses()
 	channelInformer := informerFactory.Channels().V1alpha1().Channels()
 	subscriptionInformer := informerFactory.Channels().V1alpha1().Subscriptions()
+
+	// Create event broadcaster
+	// Add bus-controller types to the default Kubernetes Scheme so Events can be
+	// logged for bus-controller types.
+	channelscheme.AddToScheme(scheme.Scheme)
+	glog.V(4).Info("Creating event broadcaster")
+	eventBroadcaster := record.NewBroadcaster()
+	eventBroadcaster.StartLogging(glog.Infof)
+	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
+	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: component})
 
 	monitor := &Monitor{
 		busName: busName,
@@ -139,11 +209,13 @@ func NewMonitor(busName string, informerFactory informers.SharedInformerFactory,
 		channelsSynced:           channelInformer.Informer().HasSynced,
 		subscriptionsLister:      subscriptionInformer.Lister(),
 		subscriptionsSynced:      subscriptionInformer.Informer().HasSynced,
-		workqueue:                workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Monitor"),
 		cache:                    make(map[channelKey]*channelSummary),
 		provisionedChannels:      make(map[resourceKey]channelsv1alpha1.Channel),
 		provisionedSubscriptions: make(map[resourceKey]channelsv1alpha1.Subscription),
 		mutex: &sync.Mutex{},
+
+		workqueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Monitor"),
+		recorder:  recorder,
 	}
 
 	glog.Info("Setting up event handlers")
@@ -426,6 +498,11 @@ func (m *Monitor) syncHandler(key string) error {
 		return nil
 	}
 
+	if m.bus == nil && kind != busKind {
+		// don't attempt tp sync until we have seen the bus for this monitor
+		return fmt.Errorf("Unknown bus for monitor")
+	}
+
 	switch kind {
 	case busKind:
 		err = m.syncBus(namespace, name)
@@ -451,10 +528,7 @@ func (m *Monitor) syncBus(namespace string, name string) error {
 	if err != nil {
 		// The Bus resource may no longer exist
 		if errors.IsNotFound(err) {
-			err = m.removeBus(namespace, name)
-			if err != nil {
-				return err
-			}
+			// nothing to do
 			return nil
 		}
 
@@ -553,11 +627,6 @@ func (m *Monitor) createOrUpdateBus(bus channelsv1alpha1.Bus) error {
 		}
 	}
 
-	return nil
-}
-
-func (m *Monitor) removeBus(namespace string, name string) error {
-	// nothing to do
 	return nil
 }
 

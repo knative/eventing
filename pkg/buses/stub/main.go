@@ -32,6 +32,7 @@ import (
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/signals"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -149,6 +150,11 @@ func main() {
 		glog.Fatalf("Error building kubeconfig: %s", err.Error())
 	}
 
+	kubeClient, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		glog.Fatalf("Error building kubernetes clientset: %s", err.Error())
+	}
+
 	client, err := clientset.NewForConfig(cfg)
 	if err != nil {
 		glog.Fatalf("Error building clientset: %s", err.Error())
@@ -157,7 +163,7 @@ func main() {
 	name := os.Getenv("BUS_NAME")
 
 	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
-	monitor := buses.NewMonitor(name, informerFactory, buses.MonitorEventHandlerFuncs{
+	monitor := buses.NewMonitor(name, buses.Dispatcher, kubeClient, informerFactory, buses.MonitorEventHandlerFuncs{
 		ProvisionFunc: func(channel channelsv1alpha1.Channel, attributes buses.Attributes) error {
 			glog.Infof("Provision channel %q\n", channel.Name)
 			return nil
