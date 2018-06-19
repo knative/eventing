@@ -54,6 +54,7 @@ const (
 	EventSourceParametersKey string = "EVENT_SOURCE_PARAMETERS"
 )
 
+// MakeJob creates a Job to complete a bind or unbind operation.
 func MakeJob(bind *v1alpha1.Bind, namespace string, serviceAccountName string, jobName string, spec *v1alpha1.EventSourceSpec, op BindOperation, trigger EventTrigger, route string, bindContext BindContext) (*batchv1.Job, error) {
 	labels := map[string]string{
 		"app": "bindpod",
@@ -77,7 +78,7 @@ func MakeJob(bind *v1alpha1.Bind, namespace string, serviceAccountName string, j
 	}, nil
 }
 
-// makePodSpec creates a pod spec for a bind or unbind job.
+// makePodTemplate creates a pod template for a bind or unbind Job.
 func makePodTemplate(bind *v1alpha1.Bind, namespace string, serviceAccountName string, podName string, spec *v1alpha1.EventSourceSpec, op BindOperation, trigger EventTrigger, route string, bindContext BindContext) (*corev1.PodTemplateSpec, error) {
 	marshalledBindContext, err := json.Marshal(bindContext)
 	if err != nil {
