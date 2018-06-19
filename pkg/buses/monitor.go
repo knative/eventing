@@ -27,8 +27,10 @@ import (
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	"github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	channelscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	listers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
+
+	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
+	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -36,6 +38,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 )
@@ -59,6 +62,7 @@ const (
 type Monitor struct {
 	bus                      *channelsv1alpha1.Bus
 	handler                  MonitorEventHandlerFuncs
+	informerFactory          informers.SharedInformerFactory
 	busesLister              listers.BusLister
 	busesSynced              cache.InformerSynced
 	channelsLister           listers.ChannelLister
@@ -176,11 +180,25 @@ type subscriptionSummary struct {
 
 // NewMonitor creates a monitor for a bus
 func NewMonitor(
-	component string,
-	kubeclientset kubernetes.Interface,
-	informerFactory informers.SharedInformerFactory,
+	component, masterURL, kubeconfig string,
 	handler MonitorEventHandlerFuncs,
 ) *Monitor {
+	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
+	if err != nil {
+		glog.Fatalf("Error building kubeconfig: %s", err.Error())
+	}
+
+	kubeClient, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		glog.Fatalf("Error building kubernetes clientset: %s", err.Error())
+	}
+
+	client, err := clientset.NewForConfig(cfg)
+	if err != nil {
+		glog.Fatalf("Error building clientset: %s", err.Error())
+	}
+
+	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
 	busInformer := informerFactory.Channels().V1alpha1().Buses()
 	channelInformer := informerFactory.Channels().V1alpha1().Channels()
 	subscriptionInformer := informerFactory.Channels().V1alpha1().Subscriptions()
@@ -192,13 +210,14 @@ func NewMonitor(
 	glog.V(4).Info("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(glog.Infof)
-	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
+	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeClient.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: component})
 
 	monitor := &Monitor{
 		bus:     nil,
 		handler: handler,
 
+		informerFactory:          informerFactory,
 		busesLister:              busInformer.Lister(),
 		busesSynced:              busInformer.Informer().HasSynced,
 		channelsLister:           channelInformer.Lister(),
@@ -401,6 +420,7 @@ func (m *Monitor) Run(namespace, name string, threadiness int, stopCh <-chan str
 
 	// Start the informer factories to begin populating the informer caches
 	glog.Info("Starting monitor")
+	go m.informerFactory.Start(stopCh)
 
 	// Wait for the caches to be synced before starting workers
 	glog.Info("Waiting for informer caches to sync")
@@ -621,7 +641,7 @@ func (m *Monitor) createOrUpdateBus(bus *channelsv1alpha1.Bus) error {
 		return nil
 	}
 
-	if !reflect.DeepEqual(m.bus, bus.Spec) {
+	if !reflect.DeepEqual(m.bus.Spec, bus.Spec) {
 		m.bus = bus
 		err := m.handler.onBus(bus, m)
 		if err != nil {

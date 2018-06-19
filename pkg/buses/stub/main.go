@@ -25,16 +25,11 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/golang/glog"
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	"github.com/knative/eventing/pkg/buses"
-	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/signals"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
@@ -146,27 +141,11 @@ func main() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
-	if err != nil {
-		glog.Fatalf("Error building kubeconfig: %s", err.Error())
-	}
-
-	kubeClient, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		glog.Fatalf("Error building kubernetes clientset: %s", err.Error())
-	}
-
-	client, err := clientset.NewForConfig(cfg)
-	if err != nil {
-		glog.Fatalf("Error building clientset: %s", err.Error())
-	}
-
 	namespace := os.Getenv("BUS_NAMESPACE")
 	name := os.Getenv("BUS_NAME")
 	component := fmt.Sprintf("%s-%s", name, buses.Dispatcher)
 
-	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
-	monitor := buses.NewMonitor(component, kubeClient, informerFactory, buses.MonitorEventHandlerFuncs{
+	monitor := buses.NewMonitor(component, masterURL, kubeconfig, buses.MonitorEventHandlerFuncs{
 		ProvisionFunc: func(channel *channelsv1alpha1.Channel, attributes buses.Attributes) error {
 			glog.Infof("Provision channel %q\n", channel.Name)
 			return nil
@@ -186,7 +165,6 @@ func main() {
 	})
 	bus := NewStubBus(name, monitor)
 
-	go informerFactory.Start(stopCh)
 	go func() {
 		if err := monitor.Run(namespace, name, threadsPerMonitor, stopCh); err != nil {
 			glog.Fatalf("Error running monitor: %s", err.Error())
