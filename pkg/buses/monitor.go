@@ -219,7 +219,7 @@ func NewMonitor(
 	busInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			bus := obj.(*channelsv1alpha1.Bus)
-			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForBus(*bus))
+			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForBus(bus))
 		},
 		UpdateFunc: func(old, new interface{}) {
 			oldBus := old.(*channelsv1alpha1.Bus)
@@ -231,14 +231,14 @@ func NewMonitor(
 				return
 			}
 
-			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForBus(*newBus))
+			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForBus(newBus))
 		},
 	})
 	// Set up an event handler for when Channel resources change
 	channelInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			channel := obj.(*channelsv1alpha1.Channel)
-			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForChannel(*channel))
+			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForChannel(channel))
 		},
 		UpdateFunc: func(old, new interface{}) {
 			oldChannel := old.(*channelsv1alpha1.Channel)
@@ -250,18 +250,18 @@ func NewMonitor(
 				return
 			}
 
-			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForChannel(*newChannel))
+			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForChannel(newChannel))
 		},
 		DeleteFunc: func(obj interface{}) {
 			channel := obj.(*channelsv1alpha1.Channel)
-			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForChannel(*channel))
+			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForChannel(channel))
 		},
 	})
 	// Set up an event handler for when Subscription resources change
 	subscriptionInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			subscription := obj.(*channelsv1alpha1.Subscription)
-			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForSubscription(*subscription))
+			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForSubscription(subscription))
 		},
 		UpdateFunc: func(old, new interface{}) {
 			oldSubscription := old.(*channelsv1alpha1.Subscription)
@@ -273,11 +273,11 @@ func NewMonitor(
 				return
 			}
 
-			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForSubscription(*newSubscription))
+			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForSubscription(newSubscription))
 		},
 		DeleteFunc: func(obj interface{}) {
 			subscription := obj.(*channelsv1alpha1.Subscription)
-			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForSubscription(*subscription))
+			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForSubscription(subscription))
 		},
 	})
 
@@ -386,7 +386,7 @@ func (m *Monitor) resolveAttributes(parameters *[]channelsv1alpha1.Parameter, ar
 	return resolved, nil
 }
 
-func (m *Monitor) RequeueSubscription(subscription channelsv1alpha1.Subscription) {
+func (m *Monitor) RequeueSubscription(subscription *channelsv1alpha1.Subscription) {
 	glog.Infof("Requeue subscription %q\n", subscription.Name)
 	m.workqueue.AddRateLimited(makeWorkqueueKeyForSubscription(subscription))
 }
@@ -787,15 +787,15 @@ func makeSubscriptionKeyWithNames(namespace string, name string) subscriptionKey
 	}
 }
 
-func makeWorkqueueKeyForBus(bus channelsv1alpha1.Bus) string {
+func makeWorkqueueKeyForBus(bus *channelsv1alpha1.Bus) string {
 	return makeWorkqueueKey(busKind, bus.Namespace, bus.Name)
 }
 
-func makeWorkqueueKeyForChannel(channel channelsv1alpha1.Channel) string {
+func makeWorkqueueKeyForChannel(channel *channelsv1alpha1.Channel) string {
 	return makeWorkqueueKey(channelKind, channel.Namespace, channel.Name)
 }
 
-func makeWorkqueueKeyForSubscription(subscription channelsv1alpha1.Subscription) string {
+func makeWorkqueueKeyForSubscription(subscription *channelsv1alpha1.Subscription) string {
 	return makeWorkqueueKey(subscriptionKind, subscription.Namespace, subscription.Name)
 }
 
