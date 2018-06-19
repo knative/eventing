@@ -57,9 +57,8 @@ const (
 
 // Monitor utility to manage channels and subscriptions for a bus
 type Monitor struct {
-	busName                  string
+	bus                      *channelsv1alpha1.Bus
 	handler                  MonitorEventHandlerFuncs
-	bus                      *channelsv1alpha1.BusSpec
 	busesLister              listers.BusLister
 	busesSynced              cache.InformerSynced
 	channelsLister           listers.ChannelLister
@@ -177,13 +176,11 @@ type subscriptionSummary struct {
 
 // NewMonitor creates a monitor for a bus
 func NewMonitor(
-	busName, role string,
+	component string,
 	kubeclientset kubernetes.Interface,
 	informerFactory informers.SharedInformerFactory,
 	handler MonitorEventHandlerFuncs,
 ) *Monitor {
-	component := fmt.Sprintf("%s-%s", busName, role)
-
 	busInformer := informerFactory.Channels().V1alpha1().Buses()
 	channelInformer := informerFactory.Channels().V1alpha1().Channels()
 	subscriptionInformer := informerFactory.Channels().V1alpha1().Subscriptions()
@@ -199,10 +196,9 @@ func NewMonitor(
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: component})
 
 	monitor := &Monitor{
-		busName: busName,
+		bus:     nil,
 		handler: handler,
 
-		bus:                      nil,
 		busesLister:              busInformer.Lister(),
 		busesSynced:              busInformer.Informer().HasSynced,
 		channelsLister:           channelInformer.Lister(),
@@ -316,7 +312,7 @@ func (m *Monitor) Subscriptions(channel string, namespace string) *[]channelsv1a
 		return nil
 	}
 
-	if summary.Channel.Bus != m.busName {
+	if summary.Channel.Bus != m.bus.Name {
 		// the channel is not for this bus
 		return nil
 	}
@@ -332,7 +328,7 @@ func (m *Monitor) Subscriptions(channel string, namespace string) *[]channelsv1a
 }
 
 func (m *Monitor) channelAttributes(channel channelsv1alpha1.ChannelSpec) (Attributes, error) {
-	busParameters := m.bus.Parameters
+	busParameters := m.bus.Spec.Parameters
 	var parameters *[]channelsv1alpha1.Parameter
 	if busParameters != nil {
 		parameters = busParameters.Channel
@@ -341,7 +337,7 @@ func (m *Monitor) channelAttributes(channel channelsv1alpha1.ChannelSpec) (Attri
 }
 
 func (m *Monitor) subscriptionAttributes(subscription channelsv1alpha1.SubscriptionSpec) (Attributes, error) {
-	busParameters := m.bus.Parameters
+	busParameters := m.bus.Spec.Parameters
 	var parameters *[]channelsv1alpha1.Parameter
 	if busParameters != nil {
 		parameters = busParameters.Subscription
@@ -399,7 +395,7 @@ func (m *Monitor) RequeueSubscription(subscription channelsv1alpha1.Subscription
 // as syncing informer caches and starting workers. It will block until stopCh
 // is closed, at which point it will shutdown the workqueue and wait for
 // workers to finish processing their current work items.
-func (m *Monitor) Run(threadiness int, stopCh <-chan struct{}) error {
+func (m *Monitor) Run(namespace, name string, threadiness int, stopCh <-chan struct{}) error {
 	defer runtime.HandleCrash()
 	defer m.workqueue.ShutDown()
 
@@ -411,6 +407,12 @@ func (m *Monitor) Run(threadiness int, stopCh <-chan struct{}) error {
 	if ok := cache.WaitForCacheSync(stopCh, m.busesSynced, m.channelsSynced, m.subscriptionsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
+
+	bus, err := m.busesLister.Buses(namespace).Get(name)
+	if err != nil {
+		glog.Fatalf("Unknown bus '%s/%s'", namespace, name)
+	}
+	m.bus = bus
 
 	glog.Info("Starting workers")
 	// Launch two workers to process Bus resources
@@ -614,13 +616,13 @@ func (m *Monitor) getOrCreateChannelSummary(key channelKey) *channelSummary {
 }
 
 func (m *Monitor) createOrUpdateBus(bus channelsv1alpha1.Bus) error {
-	if bus.Name != m.busName {
+	if bus.Name != m.bus.Name {
 		// this is not our bus
 		return nil
 	}
 
 	if !reflect.DeepEqual(m.bus, bus.Spec) {
-		m.bus = &bus.Spec
+		m.bus = &bus
 		err := m.handler.onBus(bus, m)
 		if err != nil {
 			return err
@@ -631,7 +633,7 @@ func (m *Monitor) createOrUpdateBus(bus channelsv1alpha1.Bus) error {
 }
 
 func (m *Monitor) isChannelForBus(channel channelsv1alpha1.Channel) bool {
-	return channel.Spec.Bus == m.busName
+	return channel.Spec.Bus == m.bus.Name
 }
 
 func (m *Monitor) createOrUpdateChannel(channel channelsv1alpha1.Channel) error {
@@ -694,7 +696,7 @@ func (m *Monitor) isSubscriptionProvisioned(subscription channelsv1alpha1.Subscr
 func (m *Monitor) isSubscriptionForBus(subscription channelsv1alpha1.Subscription) bool {
 	channelKey := makeChannelKeyFromSubscription(subscription)
 	summary := m.getChannelSummary(channelKey)
-	return summary != nil && summary.Channel != nil && summary.Channel.Bus == m.busName
+	return summary != nil && summary.Channel != nil && summary.Channel.Bus == m.bus.Name
 }
 
 func (m *Monitor) createOrUpdateSubscription(subscription channelsv1alpha1.Subscription) error {

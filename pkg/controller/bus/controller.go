@@ -639,6 +639,10 @@ func newDispatcherDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 			Value: "8080",
 		},
 		corev1.EnvVar{
+			Name:  "BUS_NAMESPACE",
+			Value: bus.Namespace,
+		},
+		corev1.EnvVar{
 			Name:  "BUS_NAME",
 			Value: bus.Name,
 		},
@@ -741,6 +745,10 @@ func newProvisionerDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 	one := int32(1)
 	container := bus.Spec.Provisioner.DeepCopy()
 	container.Env = append(container.Env,
+		corev1.EnvVar{
+			Name:  "BUS_NAMESPACE",
+			Value: bus.Namespace,
+		},
 		corev1.EnvVar{
 			Name:  "BUS_NAME",
 			Value: bus.Name,

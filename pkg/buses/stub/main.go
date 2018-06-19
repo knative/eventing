@@ -19,6 +19,7 @@ package main
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -160,10 +161,12 @@ func main() {
 		glog.Fatalf("Error building clientset: %s", err.Error())
 	}
 
+	namespace := os.Getenv("BUS_NAMESPACE")
 	name := os.Getenv("BUS_NAME")
+	component := fmt.Sprintf("%s-%s", name, buses.Dispatcher)
 
 	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
-	monitor := buses.NewMonitor(name, buses.Dispatcher, kubeClient, informerFactory, buses.MonitorEventHandlerFuncs{
+	monitor := buses.NewMonitor(component, kubeClient, informerFactory, buses.MonitorEventHandlerFuncs{
 		ProvisionFunc: func(channel channelsv1alpha1.Channel, attributes buses.Attributes) error {
 			glog.Infof("Provision channel %q\n", channel.Name)
 			return nil
@@ -185,7 +188,7 @@ func main() {
 
 	go informerFactory.Start(stopCh)
 	go func() {
-		if err := monitor.Run(threadsPerMonitor, stopCh); err != nil {
+		if err := monitor.Run(namespace, name, threadsPerMonitor, stopCh); err != nil {
 			glog.Fatalf("Error running monitor: %s", err.Error())
 		}
 	}()
