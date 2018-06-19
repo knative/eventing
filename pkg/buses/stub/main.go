@@ -167,19 +167,19 @@ func main() {
 
 	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
 	monitor := buses.NewMonitor(component, kubeClient, informerFactory, buses.MonitorEventHandlerFuncs{
-		ProvisionFunc: func(channel channelsv1alpha1.Channel, attributes buses.Attributes) error {
+		ProvisionFunc: func(channel *channelsv1alpha1.Channel, attributes buses.Attributes) error {
 			glog.Infof("Provision channel %q\n", channel.Name)
 			return nil
 		},
-		UnprovisionFunc: func(channel channelsv1alpha1.Channel) error {
+		UnprovisionFunc: func(channel *channelsv1alpha1.Channel) error {
 			glog.Infof("Unprovision channel %q\n", channel.Name)
 			return nil
 		},
-		SubscribeFunc: func(subscription channelsv1alpha1.Subscription, attributes buses.Attributes) error {
+		SubscribeFunc: func(subscription *channelsv1alpha1.Subscription, attributes buses.Attributes) error {
 			glog.Infof("Subscribe %q to %q channel\n", subscription.Spec.Subscriber, subscription.Spec.Channel)
 			return nil
 		},
-		UnsubscribeFunc: func(subscription channelsv1alpha1.Subscription) error {
+		UnsubscribeFunc: func(subscription *channelsv1alpha1.Subscription) error {
 			glog.Infof("Unubscribe %q from %q channel\n", subscription.Spec.Subscriber, subscription.Spec.Channel)
 			return nil
 		},

@@ -66,8 +66,8 @@ type Monitor struct {
 	subscriptionsLister      listers.SubscriptionLister
 	subscriptionsSynced      cache.InformerSynced
 	cache                    map[channelKey]*channelSummary
-	provisionedChannels      map[resourceKey]channelsv1alpha1.Channel
-	provisionedSubscriptions map[resourceKey]channelsv1alpha1.Subscription
+	provisionedChannels      map[channelKey]*channelsv1alpha1.Channel
+	provisionedSubscriptions map[subscriptionKey]*channelsv1alpha1.Subscription
 	mutex                    *sync.Mutex
 
 	// workqueue is a rate limited work queue. This is used to queue work to be
@@ -85,27 +85,27 @@ type Attributes = map[string]string
 
 // MonitorEventHandlerFuncs handler functions for channel and subscription provisioning
 type MonitorEventHandlerFuncs struct {
-	BusFunc         func(bus channelsv1alpha1.Bus) error
-	ProvisionFunc   func(channel channelsv1alpha1.Channel, attributes Attributes) error
-	UnprovisionFunc func(channel channelsv1alpha1.Channel) error
-	SubscribeFunc   func(subscription channelsv1alpha1.Subscription, attributes Attributes) error
-	UnsubscribeFunc func(subscription channelsv1alpha1.Subscription) error
+	BusFunc         func(bus *channelsv1alpha1.Bus) error
+	ProvisionFunc   func(channel *channelsv1alpha1.Channel, attributes Attributes) error
+	UnprovisionFunc func(channel *channelsv1alpha1.Channel) error
+	SubscribeFunc   func(subscription *channelsv1alpha1.Subscription, attributes Attributes) error
+	UnsubscribeFunc func(subscription *channelsv1alpha1.Subscription) error
 }
 
-func (h MonitorEventHandlerFuncs) onBus(bus channelsv1alpha1.Bus, monitor *Monitor) error {
+func (h MonitorEventHandlerFuncs) onBus(bus *channelsv1alpha1.Bus, monitor *Monitor) error {
 	if h.BusFunc != nil {
 		err := h.BusFunc(bus)
 		if err != nil {
-			monitor.recorder.Eventf(&bus, corev1.EventTypeWarning, errResourceSync, "Error syncing bus: %s", err)
+			monitor.recorder.Eventf(bus, corev1.EventTypeWarning, errResourceSync, "Error syncing bus: %s", err)
 		} else {
-			monitor.recorder.Event(&bus, corev1.EventTypeNormal, successSynced, "Bus synched successfully")
+			monitor.recorder.Event(bus, corev1.EventTypeNormal, successSynced, "Bus synched successfully")
 		}
 		return err
 	}
 	return nil
 }
 
-func (h MonitorEventHandlerFuncs) onProvision(channel channelsv1alpha1.Channel, monitor *Monitor) error {
+func (h MonitorEventHandlerFuncs) onProvision(channel *channelsv1alpha1.Channel, monitor *Monitor) error {
 	if h.ProvisionFunc != nil {
 		attributes, err := monitor.channelAttributes(channel.Spec)
 		if err != nil {
@@ -113,29 +113,29 @@ func (h MonitorEventHandlerFuncs) onProvision(channel channelsv1alpha1.Channel, 
 		}
 		err = h.ProvisionFunc(channel, attributes)
 		if err != nil {
-			monitor.recorder.Eventf(&channel, corev1.EventTypeWarning, errResourceSync, "Error provisoning channel: %s", err)
+			monitor.recorder.Eventf(channel, corev1.EventTypeWarning, errResourceSync, "Error provisoning channel: %s", err)
 		} else {
-			monitor.recorder.Event(&channel, corev1.EventTypeNormal, successSynced, "Channel provisioned successfully")
+			monitor.recorder.Event(channel, corev1.EventTypeNormal, successSynced, "Channel provisioned successfully")
 		}
 		return err
 	}
 	return nil
 }
 
-func (h MonitorEventHandlerFuncs) onUnprovision(channel channelsv1alpha1.Channel, monitor *Monitor) error {
+func (h MonitorEventHandlerFuncs) onUnprovision(channel *channelsv1alpha1.Channel, monitor *Monitor) error {
 	if h.UnprovisionFunc != nil {
 		err := h.UnprovisionFunc(channel)
 		if err != nil {
-			monitor.recorder.Eventf(&channel, corev1.EventTypeWarning, errResourceSync, "Error unprovisioning channel: %s", err)
+			monitor.recorder.Eventf(channel, corev1.EventTypeWarning, errResourceSync, "Error unprovisioning channel: %s", err)
 		} else {
-			monitor.recorder.Event(&channel, corev1.EventTypeNormal, successSynced, "Channel unprovisioned successfully")
+			monitor.recorder.Event(channel, corev1.EventTypeNormal, successSynced, "Channel unprovisioned successfully")
 		}
 		return err
 	}
 	return nil
 }
 
-func (h MonitorEventHandlerFuncs) onSubscribe(subscription channelsv1alpha1.Subscription, monitor *Monitor) error {
+func (h MonitorEventHandlerFuncs) onSubscribe(subscription *channelsv1alpha1.Subscription, monitor *Monitor) error {
 	if h.SubscribeFunc != nil {
 		attributes, err := monitor.subscriptionAttributes(subscription.Spec)
 		if err != nil {
@@ -143,22 +143,22 @@ func (h MonitorEventHandlerFuncs) onSubscribe(subscription channelsv1alpha1.Subs
 		}
 		err = h.SubscribeFunc(subscription, attributes)
 		if err != nil {
-			monitor.recorder.Eventf(&subscription, corev1.EventTypeWarning, errResourceSync, "Error subscribing: %s", err)
+			monitor.recorder.Eventf(subscription, corev1.EventTypeWarning, errResourceSync, "Error subscribing: %s", err)
 		} else {
-			monitor.recorder.Event(&subscription, corev1.EventTypeNormal, successSynced, "Subscribed successfully")
+			monitor.recorder.Event(subscription, corev1.EventTypeNormal, successSynced, "Subscribed successfully")
 		}
 		return err
 	}
 	return nil
 }
 
-func (h MonitorEventHandlerFuncs) onUnsubscribe(subscription channelsv1alpha1.Subscription, monitor *Monitor) error {
+func (h MonitorEventHandlerFuncs) onUnsubscribe(subscription *channelsv1alpha1.Subscription, monitor *Monitor) error {
 	if h.UnsubscribeFunc != nil {
 		err := h.UnsubscribeFunc(subscription)
 		if err != nil {
-			monitor.recorder.Eventf(&subscription, corev1.EventTypeWarning, errResourceSync, "Error unsubscribing: %s", err)
+			monitor.recorder.Eventf(subscription, corev1.EventTypeWarning, errResourceSync, "Error unsubscribing: %s", err)
 		} else {
-			monitor.recorder.Event(&subscription, corev1.EventTypeNormal, successSynced, "Unsubscribed successfully")
+			monitor.recorder.Event(subscription, corev1.EventTypeNormal, successSynced, "Unsubscribed successfully")
 		}
 		return err
 	}
@@ -206,8 +206,8 @@ func NewMonitor(
 		subscriptionsLister:      subscriptionInformer.Lister(),
 		subscriptionsSynced:      subscriptionInformer.Informer().HasSynced,
 		cache:                    make(map[channelKey]*channelSummary),
-		provisionedChannels:      make(map[resourceKey]channelsv1alpha1.Channel),
-		provisionedSubscriptions: make(map[resourceKey]channelsv1alpha1.Subscription),
+		provisionedChannels:      make(map[channelKey]*channelsv1alpha1.Channel),
+		provisionedSubscriptions: make(map[subscriptionKey]*channelsv1alpha1.Subscription),
 		mutex: &sync.Mutex{},
 
 		workqueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Monitor"),
@@ -286,25 +286,25 @@ func NewMonitor(
 
 // Channel for a channel name and namespace
 func (m *Monitor) Channel(name string, namespace string) *channelsv1alpha1.Channel {
-	resourceKey := makeResourceKey(channelKind, namespace, name)
-	if channel, ok := m.provisionedChannels[resourceKey]; ok {
-		return &channel
+	channelKey := makeChannelKeyWithNames(namespace, name)
+	if channel, ok := m.provisionedChannels[channelKey]; ok {
+		return channel
 	}
 	return nil
 }
 
 // Subscription for a subscription name and namespace
 func (m *Monitor) Subscription(name string, namespace string) *channelsv1alpha1.Subscription {
-	resourceKey := makeResourceKey(subscriptionKind, namespace, name)
-	if subscription, ok := m.provisionedSubscriptions[resourceKey]; ok {
-		return &subscription
+	subscriptionKey := makeSubscriptionKeyWithNames(namespace, name)
+	if subscription, ok := m.provisionedSubscriptions[subscriptionKey]; ok {
+		return subscription
 	}
 	return nil
 }
 
 // Subscriptions for a channel name and namespace
 func (m *Monitor) Subscriptions(channel string, namespace string) *[]channelsv1alpha1.SubscriptionSpec {
-	channelKey := makeChannelKeyWithNames(channel, namespace)
+	channelKey := makeChannelKeyWithNames(namespace, channel)
 	summary := m.getChannelSummary(channelKey)
 
 	if summary == nil || summary.Channel == nil {
@@ -538,7 +538,7 @@ func (m *Monitor) syncBus(namespace string, name string) error {
 	}
 
 	// Sync the Bus
-	err = m.createOrUpdateBus(*bus)
+	err = m.createOrUpdateBus(bus)
 	if err != nil {
 		return err
 	}
@@ -563,7 +563,7 @@ func (m *Monitor) syncChannel(namespace string, name string) error {
 	}
 
 	// Sync the Channel
-	err = m.createOrUpdateChannel(*channel)
+	err = m.createOrUpdateChannel(channel)
 	if err != nil {
 		return err
 	}
@@ -588,7 +588,7 @@ func (m *Monitor) syncSubscription(namespace string, name string) error {
 	}
 
 	// Sync the Subscription
-	err = m.createOrUpdateSubscription(*subscription)
+	err = m.createOrUpdateSubscription(subscription)
 	if err != nil {
 		return err
 	}
@@ -615,14 +615,14 @@ func (m *Monitor) getOrCreateChannelSummary(key channelKey) *channelSummary {
 	return summary
 }
 
-func (m *Monitor) createOrUpdateBus(bus channelsv1alpha1.Bus) error {
+func (m *Monitor) createOrUpdateBus(bus *channelsv1alpha1.Bus) error {
 	if bus.Name != m.bus.Name {
 		// this is not our bus
 		return nil
 	}
 
 	if !reflect.DeepEqual(m.bus, bus.Spec) {
-		m.bus = &bus
+		m.bus = bus
 		err := m.handler.onBus(bus, m)
 		if err != nil {
 			return err
@@ -632,12 +632,11 @@ func (m *Monitor) createOrUpdateBus(bus channelsv1alpha1.Bus) error {
 	return nil
 }
 
-func (m *Monitor) isChannelForBus(channel channelsv1alpha1.Channel) bool {
+func (m *Monitor) isChannelForBus(channel *channelsv1alpha1.Channel) bool {
 	return channel.Spec.Bus == m.bus.Name
 }
 
-func (m *Monitor) createOrUpdateChannel(channel channelsv1alpha1.Channel) error {
-	resourceKey := makeResourceKey(channelKind, channel.Namespace, channel.Name)
+func (m *Monitor) createOrUpdateChannel(channel *channelsv1alpha1.Channel) error {
 	channelKey := makeChannelKeyFromChannel(channel)
 	summary := m.getOrCreateChannelSummary(channelKey)
 
@@ -652,20 +651,19 @@ func (m *Monitor) createOrUpdateChannel(channel channelsv1alpha1.Channel) error 
 		if err != nil {
 			return err
 		}
-		m.provisionedChannels[resourceKey] = channel
+		m.provisionedChannels[channelKey] = channel
 	}
 
 	return nil
 }
 
 func (m *Monitor) removeChannel(namespace string, name string) error {
-	resourceKey := makeResourceKey(channelKind, namespace, name)
-	channel, ok := m.provisionedChannels[resourceKey]
+	channelKey := makeChannelKeyWithNames(namespace, name)
+	channel, ok := m.provisionedChannels[channelKey]
 	if !ok {
 		return nil
 	}
 
-	channelKey := makeChannelKeyFromChannel(channel)
 	summary := m.getOrCreateChannelSummary(channelKey)
 
 	m.mutex.Lock()
@@ -676,34 +674,33 @@ func (m *Monitor) removeChannel(namespace string, name string) error {
 	if err != nil {
 		return err
 	}
-	delete(m.provisionedChannels, resourceKey)
+	delete(m.provisionedChannels, channelKey)
 
 	return nil
 }
 
-func (m *Monitor) isChannelKnown(subscription channelsv1alpha1.Subscription) bool {
+func (m *Monitor) isChannelKnown(subscription *channelsv1alpha1.Subscription) bool {
 	channelKey := makeChannelKeyFromSubscription(subscription)
 	summary := m.getChannelSummary(channelKey)
 	return summary != nil && summary.Channel != nil
 }
 
-func (m *Monitor) isSubscriptionProvisioned(subscription channelsv1alpha1.Subscription) bool {
-	resourceKey := makeResourceKey(subscriptionKind, subscription.Namespace, subscription.Name)
-	_, ok := m.provisionedSubscriptions[resourceKey]
+func (m *Monitor) isSubscriptionProvisioned(subscription *channelsv1alpha1.Subscription) bool {
+	subscriptionKey := makeSubscriptionKeyFromSubscription(subscription)
+	_, ok := m.provisionedSubscriptions[subscriptionKey]
 	return ok
 }
 
-func (m *Monitor) isSubscriptionForBus(subscription channelsv1alpha1.Subscription) bool {
+func (m *Monitor) isSubscriptionForBus(subscription *channelsv1alpha1.Subscription) bool {
 	channelKey := makeChannelKeyFromSubscription(subscription)
 	summary := m.getChannelSummary(channelKey)
 	return summary != nil && summary.Channel != nil && summary.Channel.Bus == m.bus.Name
 }
 
-func (m *Monitor) createOrUpdateSubscription(subscription channelsv1alpha1.Subscription) error {
-	resourceKey := makeResourceKey(subscriptionKind, subscription.Namespace, subscription.Name)
+func (m *Monitor) createOrUpdateSubscription(subscription *channelsv1alpha1.Subscription) error {
+	subscriptionKey := makeSubscriptionKeyFromSubscription(subscription)
 	channelKey := makeChannelKeyFromSubscription(subscription)
 	summary := m.getOrCreateChannelSummary(channelKey)
-	subscriptionKey := makeSubscriptionKeyFromSubscription(subscription)
 
 	m.mutex.Lock()
 	old := summary.Subscriptions[subscriptionKey]
@@ -725,22 +722,21 @@ func (m *Monitor) createOrUpdateSubscription(subscription channelsv1alpha1.Subsc
 		if err != nil {
 			return err
 		}
-		m.provisionedSubscriptions[resourceKey] = subscription
+		m.provisionedSubscriptions[subscriptionKey] = subscription
 	}
 
 	return nil
 }
 
 func (m *Monitor) removeSubscription(namespace string, name string) error {
-	resourceKey := makeResourceKey(subscriptionKind, namespace, name)
-	subscription, ok := m.provisionedSubscriptions[resourceKey]
+	subscriptionKey := makeSubscriptionKeyWithNames(namespace, name)
+	subscription, ok := m.provisionedSubscriptions[subscriptionKey]
 	if !ok {
 		return nil
 	}
 
 	channelKey := makeChannelKeyFromSubscription(subscription)
 	summary := m.getOrCreateChannelSummary(channelKey)
-	subscriptionKey := makeSubscriptionKeyFromSubscription(subscription)
 
 	m.mutex.Lock()
 	delete(summary.Subscriptions, subscriptionKey)
@@ -750,54 +746,44 @@ func (m *Monitor) removeSubscription(namespace string, name string) error {
 	if err != nil {
 		return err
 	}
-	delete(m.provisionedSubscriptions, resourceKey)
+	delete(m.provisionedSubscriptions, subscriptionKey)
 
 	return nil
 }
 
-type resourceKey struct {
-	Kind      string
-	Namespace string
-	Name      string
-}
-
-func makeResourceKey(kind string, namespace string, name string) resourceKey {
-	return resourceKey{
-		Kind:      kind,
-		Namespace: namespace,
-		Name:      name,
-	}
-}
-
 type channelKey struct {
-	Name      string
 	Namespace string
+	Name      string
 }
 
-func makeChannelKeyFromChannel(channel channelsv1alpha1.Channel) channelKey {
-	return makeChannelKeyWithNames(channel.Name, channel.Namespace)
+func makeChannelKeyFromChannel(channel *channelsv1alpha1.Channel) channelKey {
+	return makeChannelKeyWithNames(channel.Namespace, channel.Name)
 }
 
-func makeChannelKeyFromSubscription(subscription channelsv1alpha1.Subscription) channelKey {
-	return makeChannelKeyWithNames(subscription.Spec.Channel, subscription.Namespace)
+func makeChannelKeyFromSubscription(subscription *channelsv1alpha1.Subscription) channelKey {
+	return makeChannelKeyWithNames(subscription.Namespace, subscription.Spec.Channel)
 }
 
-func makeChannelKeyWithNames(name string, namespace string) channelKey {
+func makeChannelKeyWithNames(namespace string, name string) channelKey {
 	return channelKey{
-		Name:      name,
 		Namespace: namespace,
+		Name:      name,
 	}
 }
 
 type subscriptionKey struct {
-	Name      string
 	Namespace string
+	Name      string
 }
 
-func makeSubscriptionKeyFromSubscription(subscription channelsv1alpha1.Subscription) subscriptionKey {
+func makeSubscriptionKeyFromSubscription(subscription *channelsv1alpha1.Subscription) subscriptionKey {
+	return makeSubscriptionKeyWithNames(subscription.Namespace, subscription.Name)
+}
+
+func makeSubscriptionKeyWithNames(namespace string, name string) subscriptionKey {
 	return subscriptionKey{
-		Name:      subscription.Name,
-		Namespace: subscription.Namespace,
+		Namespace: namespace,
+		Name:      name,
 	}
 }
 
