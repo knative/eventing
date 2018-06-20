@@ -81,19 +81,19 @@ kubectl get configurations -o yaml
 kubectl get revisions -o yaml
 
 # This will show the available EventSources that you can bind to:
-kubectl get eventsources -oyaml
+kubectl get eventsources -o yaml
 
 # This will show the available EventTypes that you can bind to:
-kubectl get eventtypes -oyaml
+kubectl get eventtypes -o yaml
 
 ```
 
 To make this service accessible to github, we first need to determine its ingress address
 (might have to wait a little while until 'ADDRESS' gets assigned):
 ```shell
-$ watch kubectl get ingress
+$ kubectl get ingress --watch
 NAME                      HOSTS                           ADDRESS           PORTS     AGE
-git-webhook-ela-ingress   git-webhook.default.aikas.org   104.197.125.124   80        12m
+git-webhook-ingress   git-webhook.default.aikas.org   104.197.125.124   80        12m
 ```
 
 Once the `ADDRESS` gets assigned to the cluster, you need to assign a DNS name for that IP address. This DNS address needs to be:
@@ -104,7 +104,7 @@ git-webhook.default.aikas.org pointing to 104.197.125.124
 So, you'd need to create an A record for git-webhook.default.aikas.org pointing to 104.197.125.124
 
 To now bind the github webhook for pull requests with the function we created above, you need to
- create a Bind object. Modify sample/github/pullrequest.yaml to point to owner of the repo as well
+ create a Bind object. Modify sample/github/bind.yaml to point to owner of the repo as well
  as the particular repo you want to subscribe to. So, change spec.trigger.resource with the owner/repo
  you want.
 
