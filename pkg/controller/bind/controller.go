@@ -332,7 +332,8 @@ func (c *Controller) syncHandler(key string) error {
 		if errors.IsNotFound(err) {
 			if deletionTimestamp != nil {
 				// If the Event Source can not be found, we will remove our finalizer
-				// because without it, we can't bind. There needs to be a way to either
+				// because without it, we can't unbind and hence this binding will never
+				// be deleted. There needs to be a way to either
 				// prevent or cascade delete bindings before the EventSource goes away. Or
 				// we need to make a defensive copy so that we can unbind.
 				// https://github.com/knative/eventing/issues/94
