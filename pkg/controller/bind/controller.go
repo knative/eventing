@@ -40,7 +40,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	servingclientset "github.com/knative/serving/pkg/client/clientset/versioned"
 	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
 	servinglisters "github.com/knative/serving/pkg/client/listers/serving/v1alpha1"
 
@@ -101,7 +100,6 @@ type Controller struct {
 func NewController(
 	kubeclientset kubernetes.Interface,
 	feedsclientset clientset.Interface,
-	servingclientset servingclientset.Interface,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	feedsInformerFactory informers.SharedInformerFactory,
 	routeInformerFactory servinginformers.SharedInformerFactory) controller.Interface {

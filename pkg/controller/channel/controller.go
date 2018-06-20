@@ -42,7 +42,6 @@ import (
 	channelscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	listers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
-	servingclientset "github.com/knative/serving/pkg/client/clientset/versioned"
 	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
@@ -75,8 +74,6 @@ const (
 type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
-	// knative service clientset
-	servingclientset servingclientset.Interface
 	// channelclientset is a clientset for our own API group
 	channelclientset clientset.Interface
 
@@ -102,7 +99,6 @@ type Controller struct {
 func NewController(
 	kubeclientset kubernetes.Interface,
 	channelclientset clientset.Interface,
-	servingclientset servingclientset.Interface,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	channelInformerFactory informers.SharedInformerFactory,
 	routeInformerFactory servinginformers.SharedInformerFactory) controller.Interface {
@@ -125,7 +121,6 @@ func NewController(
 	controller := &Controller{
 		kubeclientset:         kubeclientset,
 		channelclientset:      channelclientset,
-		servingclientset:      servingclientset,
 		virtualservicesLister: virtualserviceInformer.Lister(),
 		virtualservicesSynced: virtualserviceInformer.Informer().HasSynced,
 		servicesLister:        serviceInformer.Lister(),
