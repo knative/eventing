@@ -85,13 +85,16 @@ function exit_if_test_failed() {
 
 # Tests
 function teardown_k8s_events_test_resources() {
+  echo "Deleting any previously existing bind"
   ko delete --ignore-not-found=true -f test/e2e/k8sevents/bind.yaml
   wait_until_object_does_not_exist bind $E2E_TEST_FUNCTION_NAMESPACE receiveevent
 
   # Delete the function resources and namespace
+  echo "Deleting function and test namespace"
   ko delete --ignore-not-found=true -f test/e2e/k8sevents/function.yaml
   wait_until_object_does_not_exist route $E2E_TEST_FUNCTION_NAMESPACE $E2E_TEST_FUNCTION
 
+  echo "Deleting k8s events event source"
   ko delete --ignore-not-found=true -f test/e2e/k8sevents/k8sevents.yaml
   wait_until_object_does_not_exist eventsources $E2E_TEST_FUNCTION_NAMESPACE k8sevents
   exit_if_test_failed
@@ -99,42 +102,52 @@ function teardown_k8s_events_test_resources() {
   exit_if_test_failed
 
   # Delete the pod from the test namespace
+  echo "Deleting test pod"
   ko delete -f test/e2e/k8sevents/pod.yaml
 
   # Delete the function namespace
+  echo "Deleting namespace $E2E_TEST_FUNCTION_NAMESPACE"
   kubectl --ignore-not-found=true delete namespace $E2E_TEST_FUNCTION_NAMESPACE
   wait_until_namespace_does_not_exist $E2E_TEST_FUNCTION_NAMESPACE
   exit_if_test_failed
 
   # Delete the test namespace
+  echo "Deleting namespace $E2E_TEST_NAMESPACE"
   kubectl --ignore-not-found=true delete namespace $E2E_TEST_NAMESPACE
   wait_until_namespace_does_not_exist $E2E_TEST_NAMESPACE
   exit_if_test_failed
 }
 
 function run_k8s_events_test() {
+  echo "Creating namespace $E2E_TEST_FUNCTION_NAMESPACE"
   kubectl create namespace $E2E_TEST_FUNCTION_NAMESPACE
+  echo "Creating namespace $E2E_TEST_NAMESPACE"
   kubectl create namespace $E2E_TEST_NAMESPACE
 
   # Install k8s events as an event source
+  echo "Installing k8s events as an event source"
   ko apply -f test/e2e/k8sevents/k8sevents.yaml
 
   # launch the function
+  echo "Installing the receiving function"
   ko apply -f test/e2e/k8sevents/function.yaml
   wait_until_pods_running $E2E_TEST_FUNCTION_NAMESPACE
   exit_if_test_failed
 
   # Install binding
+  echo "Creating a binding"
   ko apply -f test/e2e/k8sevents/bind.yaml
   wait_until_bind_ready $E2E_TEST_FUNCTION_NAMESPACE e2e-k8s-events-example
   exit_if_test_failed
 
   # Launch the pod into the test namespace
+  echo "Creating a pod in the test namespace"
   ko apply -f test/e2e/k8sevents/pod.yaml
   wait_until_pods_running $E2E_TEST_NAMESPACE
   exit_if_test_failed
 
   # Check the logs to make sure messages made to our function
+  echo "Validating that the function received the expected events"
   validate_function_logs $E2E_TEST_FUNCTION_NAMESPACE
   exit_if_test_failed
 }
