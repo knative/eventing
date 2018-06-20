@@ -13,9 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+package v1alpha2
 
-package istio
+// RouteRuleListerExpansion allows custom methods to be added to
+// RouteRuleLister.
+type RouteRuleListerExpansion interface{}
 
-const (
-	GroupName = "config.istio.io"
-)
+// RouteRuleNamespaceListerExpansion allows custom methods to be added to
+// RouteRuleNamespaceLister.
+type RouteRuleNamespaceListerExpansion interface{}

@@ -42,10 +42,6 @@ func ChannelVirtualServiceName(channelName string) string {
 	return fmt.Sprintf("%s-channel", channelName)
 }
 
-func ChannelGatewayName(channelName string) string {
-	return fmt.Sprintf("%s-channel", channelName)
-}
-
 func ChannelServiceName(channelName string) string {
 	return fmt.Sprintf("%s-channel", channelName)
 }

@@ -49,8 +49,6 @@ type BuildTemplateConditionType string
 
 const (
 	// BuildTemplateInvalid specifies that the given specification is invalid.
-	//
-	// TODO(jasonhall): Remove when webhook validation rejects invalid build templates.
 	BuildTemplateInvalid BuildTemplateConditionType = "Invalid"
 )
 

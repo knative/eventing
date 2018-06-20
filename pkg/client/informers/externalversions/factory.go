@@ -27,6 +27,7 @@ import (
 	channels "github.com/knative/eventing/pkg/client/informers/externalversions/channels"
 	feeds "github.com/knative/eventing/pkg/client/informers/externalversions/feeds"
 	internalinterfaces "github.com/knative/eventing/pkg/client/informers/externalversions/internalinterfaces"
+	istio "github.com/knative/eventing/pkg/client/informers/externalversions/istio"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -126,6 +127,7 @@ type SharedInformerFactory interface {
 
 	Channels() channels.Interface
 	Feeds() feeds.Interface
+	Networking() istio.Interface
 }
 
 func (f *sharedInformerFactory) Channels() channels.Interface {
@@ -134,4 +136,8 @@ func (f *sharedInformerFactory) Channels() channels.Interface {
 
 func (f *sharedInformerFactory) Feeds() feeds.Interface {
 	return feeds.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Networking() istio.Interface {
+	return istio.New(f, f.namespace, f.tweakListOptions)
 }

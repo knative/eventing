@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	istiolisters "github.com/knative/eventing/pkg/client/listers/istio/v1alpha3"
 	"github.com/knative/eventing/pkg/controller"
-	istiolisters "github.com/knative/serving/pkg/client/listers/istio/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,10 +43,10 @@ import (
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	listers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
 	servingclientset "github.com/knative/serving/pkg/client/clientset/versioned"
-	elainformers "github.com/knative/serving/pkg/client/informers/externalversions"
+	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
-	istiov1alpha3 "github.com/knative/serving/pkg/apis/istio/v1alpha3"
+	istiov1alpha3 "github.com/knative/eventing/pkg/apis/istio/v1alpha3"
 )
 
 const controllerAgentName = "channel-controller"
@@ -67,10 +67,8 @@ const (
 )
 
 const (
-	PortNumber          = 80
-	PortName            = "http"
-	IstioSelectorKey    = "istio"
-	IstioIngressGateway = "ingressgateway"
+	PortNumber = 80
+	PortName   = "http"
 )
 
 // Controller is the controller implementation for Channel resources
@@ -82,8 +80,6 @@ type Controller struct {
 	// channelclientset is a clientset for our own API group
 	channelclientset clientset.Interface
 
-	gatewaysLister        istiolisters.GatewayLister
-	gatewaysSynced        cache.InformerSynced
 	virtualservicesLister istiolisters.VirtualServiceLister
 	virtualservicesSynced cache.InformerSynced
 	servicesLister        corelisters.ServiceLister
@@ -109,12 +105,10 @@ func NewController(
 	servingclientset servingclientset.Interface,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	channelInformerFactory informers.SharedInformerFactory,
-	routeInformerFactory elainformers.SharedInformerFactory) controller.Interface {
+	routeInformerFactory servinginformers.SharedInformerFactory) controller.Interface {
 
-	// obtain references to shared index informers for the Gateway, Service and Channel
-	// types.
-	gatewayInformer := routeInformerFactory.Networking().V1alpha3().Gateways()
-	virtualserviceInformer := routeInformerFactory.Networking().V1alpha3().VirtualServices()
+	// obtain references to shared index informers for the Service and Channel types.
+	virtualserviceInformer := channelInformerFactory.Networking().V1alpha3().VirtualServices()
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
 	channelInformer := channelInformerFactory.Channels().V1alpha1().Channels()
 
@@ -132,8 +126,6 @@ func NewController(
 		kubeclientset:         kubeclientset,
 		channelclientset:      channelclientset,
 		servingclientset:      servingclientset,
-		gatewaysLister:        gatewayInformer.Lister(),
-		gatewaysSynced:        gatewayInformer.Informer().HasSynced,
 		virtualservicesLister: virtualserviceInformer.Lister(),
 		virtualservicesSynced: virtualserviceInformer.Informer().HasSynced,
 		servicesLister:        serviceInformer.Lister(),
@@ -189,7 +181,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 
 	// Wait for the caches to be synced before starting workers
 	glog.Info("Waiting for informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, c.gatewaysSynced, c.servicesSynced, c.channelsSynced); !ok {
+	if ok := cache.WaitForCacheSync(stopCh, c.servicesSynced, c.channelsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
@@ -303,15 +295,9 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	// Sync Gateway derived from the Channel
-	gateway, err := c.syncChannelGateway(channel)
-	if err != nil {
-		return err
-	}
-
 	// Finally, we update the status block of the Channel resource to reflect the
 	// current state of the world
-	err = c.updateChannelStatus(channel, service, gateway, virtualService)
+	err = c.updateChannelStatus(channel, service, virtualService)
 	if err != nil {
 		return err
 	}
@@ -354,7 +340,7 @@ func (c *Controller) syncChannelVirtualService(channel *channelsv1alpha1.Channel
 
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
-		virtualservice, err = c.servingclientset.NetworkingV1alpha3().VirtualServices(channel.Namespace).Create(newVirtualService(channel))
+		virtualservice, err = c.channelclientset.NetworkingV1alpha3().VirtualServices(channel.Namespace).Create(newVirtualService(channel))
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
@@ -375,36 +361,7 @@ func (c *Controller) syncChannelVirtualService(channel *channelsv1alpha1.Channel
 	return virtualservice, nil
 }
 
-func (c *Controller) syncChannelGateway(channel *channelsv1alpha1.Channel) (*istiov1alpha3.Gateway, error) {
-	// TODO make gateway optional
-
-	// Get the gateway with the specified gateway name
-	gatewayName := controller.ChannelGatewayName(channel.ObjectMeta.Name)
-	gateway, err := c.gatewaysLister.Gateways(channel.Namespace).Get(gatewayName)
-	// If the resource doesn't exist, we'll create it
-	if errors.IsNotFound(err) {
-		gateway, err = c.servingclientset.NetworkingV1alpha3().Gateways(channel.Namespace).Create(newGateway(channel))
-	}
-
-	// If an error occurs during Get/Create, we'll requeue the item so we can
-	// attempt processing again later. This could have been caused by a
-	// temporary network failure, or any other transient reason.
-	if err != nil {
-		return nil, err
-	}
-
-	// If the Gateway is not controlled by this Channel resource, we should log
-	// a warning to the event recorder and return
-	if !metav1.IsControlledBy(gateway, channel) {
-		msg := fmt.Sprintf(MessageResourceExists, gateway.Name)
-		c.recorder.Event(channel, corev1.EventTypeWarning, ErrResourceExists, msg)
-		return nil, fmt.Errorf(msg)
-	}
-
-	return gateway, nil
-}
-
-func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel, service *corev1.Service, gateway *istiov1alpha3.Gateway, virtualService *istiov1alpha3.VirtualService) error {
+func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel, service *corev1.Service, virtualService *istiov1alpha3.VirtualService) error {
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
@@ -520,12 +477,7 @@ func newVirtualService(channel *channelsv1alpha1.Channel) *istiov1alpha3.Virtual
 			},
 		},
 		Spec: istiov1alpha3.VirtualServiceSpec{
-			Gateways: []string{
-				"mesh",
-				controller.ChannelGatewayName(channel.Name),
-			},
 			Hosts: []string{
-				// TODO make host name configurable
 				controller.ServiceHostName(controller.ChannelServiceName(channel.Name), channel.Namespace),
 				controller.ChannelHostName(channel.Name, channel.Namespace),
 			},
@@ -540,47 +492,6 @@ func newVirtualService(channel *channelsv1alpha1.Channel) *istiov1alpha3.Virtual
 								Host: controller.ServiceHostName(controller.BusDispatcherServiceName(channel.Spec.Bus), channel.Namespace),
 							},
 						},
-					},
-				},
-			},
-		},
-	}
-}
-
-// newGateway creates a new Gateway for a Channel resource. It also sets
-// the appropriate OwnerReferences on the resource so handleObject can discover
-// the Channel resource that 'owns' it.
-func newGateway(channel *channelsv1alpha1.Channel) *istiov1alpha3.Gateway {
-	labels := map[string]string{
-		"channel": channel.Name,
-	}
-	return &istiov1alpha3.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.ChannelGatewayName(channel.Name),
-			Namespace: channel.Namespace,
-			Labels:    labels,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(channel, schema.GroupVersionKind{
-					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
-					Version: channelsv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Channel",
-				}),
-			},
-		},
-		Spec: istiov1alpha3.GatewaySpec{
-			Selector: map[string]string{
-				IstioSelectorKey: IstioIngressGateway,
-			},
-			Servers: []istiov1alpha3.Server{
-				{
-					Port: istiov1alpha3.Port{
-						Number:   PortNumber,
-						Name:     PortName,
-						Protocol: istiov1alpha3.ProtocolHTTP,
-					},
-					Hosts: []string{
-						// TODO make host name configurable
-						controller.ChannelHostName(channel.Name, channel.Namespace),
 					},
 				},
 			},

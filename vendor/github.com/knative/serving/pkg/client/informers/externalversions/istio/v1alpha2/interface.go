@@ -13,20 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package config
+package v1alpha2
 
 import (
 	internalinterfaces "github.com/knative/serving/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha2 "github.com/knative/serving/pkg/client/informers/externalversions/istio/v1alpha2"
 )
 
-// Interface provides access to each of this group's versions.
+// Interface provides access to all the informers in this group version.
 type Interface interface {
-	// V1alpha2 provides access to shared informers for resources in V1alpha2.
-	V1alpha2() v1alpha2.Interface
+	// RouteRules returns a RouteRuleInformer.
+	RouteRules() RouteRuleInformer
 }
 
-type group struct {
+type version struct {
 	factory          internalinterfaces.SharedInformerFactory
 	namespace        string
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
@@ -34,10 +33,10 @@ type group struct {
 
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
-	return &group{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
-// V1alpha2 returns a new v1alpha2.Interface.
-func (g *group) V1alpha2() v1alpha2.Interface {
-	return v1alpha2.New(g.factory, g.namespace, g.tweakListOptions)
+// RouteRules returns a RouteRuleInformer.
+func (v *version) RouteRules() RouteRuleInformer {
+	return &routeRuleInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package istio
+// Api versions allow the api contract for a resource to be changed while keeping
+// backward compatibility by support multiple concurrent versions
+// of the same resource
 
-const (
-	GroupName = "config.istio.io"
-)
+// +k8s:deepcopy-gen=package
+// +groupName=config.istio.io
+package v1alpha2

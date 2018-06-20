@@ -247,31 +247,29 @@
     "pkg/apis/build",
     "pkg/apis/build/v1alpha1"
   ]
-  revision = "8624fda54557ac4461d35921765b7bf48e5aba6d"
+  revision = "bfc0222e894da677b45fd63828a89676aa706589"
 
 [[projects]]
-  branch = "gateway"
   name = "github.com/knative/serving"
   packages = [
     "pkg/apis/istio",
-    "pkg/apis/istio/v1alpha3",
+    "pkg/apis/istio/v1alpha2",
     "pkg/apis/serving",
     "pkg/apis/serving/v1alpha1",
     "pkg/client/clientset/versioned",
     "pkg/client/clientset/versioned/scheme",
-    "pkg/client/clientset/versioned/typed/istio/v1alpha3",
+    "pkg/client/clientset/versioned/typed/istio/v1alpha2",
     "pkg/client/clientset/versioned/typed/serving/v1alpha1",
     "pkg/client/informers/externalversions",
     "pkg/client/informers/externalversions/internalinterfaces",
     "pkg/client/informers/externalversions/istio",
-    "pkg/client/informers/externalversions/istio/v1alpha3",
+    "pkg/client/informers/externalversions/istio/v1alpha2",
     "pkg/client/informers/externalversions/serving",
     "pkg/client/informers/externalversions/serving/v1alpha1",
-    "pkg/client/listers/istio/v1alpha3",
+    "pkg/client/listers/istio/v1alpha2",
     "pkg/client/listers/serving/v1alpha1"
   ]
-  revision = "d7e75ae644274202658d5e2e4aa996ba3e5a8f67"
-  source = "git@github.com:tcnghia/serving.git"
+  revision = "a67361c49ec4a957f60d86de05f168a4b41b72ba"
 
 [[projects]]
   name = "github.com/magiconair/properties"
@@ -863,6 +861,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "48e69066d374d21cfeb0690eb5d6c6ca7aed703a66623e62b1ff12af37cf9745"
+  inputs-digest = "a2faefe914d55104c1cff466274b267f2f32eda137c5f4339d1f29e8026dfbd5"
   solver-name = "gps-cdcl"
   solver-version = 1
