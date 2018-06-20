@@ -127,7 +127,7 @@ type SharedInformerFactory interface {
 
 	Channels() channels.Interface
 	Feeds() feeds.Interface
-	Config() istio.Interface
+	Networking() istio.Interface
 }
 
 func (f *sharedInformerFactory) Channels() channels.Interface {
@@ -138,6 +138,6 @@ func (f *sharedInformerFactory) Feeds() feeds.Interface {
 	return feeds.New(f, f.namespace, f.tweakListOptions)
 }
 
-func (f *sharedInformerFactory) Config() istio.Interface {
+func (f *sharedInformerFactory) Networking() istio.Interface {
 	return istio.New(f, f.namespace, f.tweakListOptions)
 }

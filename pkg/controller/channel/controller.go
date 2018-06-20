@@ -21,14 +21,12 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	istiolisters "github.com/knative/eventing/pkg/client/listers/istio/v1alpha2"
+	istiolisters "github.com/knative/eventing/pkg/client/listers/istio/v1alpha3"
 	"github.com/knative/eventing/pkg/controller"
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubeinformers "k8s.io/client-go/informers"
@@ -36,7 +34,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
-	extensionslisters "k8s.io/client-go/listers/extensions/v1beta1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -45,10 +42,10 @@ import (
 	channelscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	listers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
-	elainformers "github.com/knative/serving/pkg/client/informers/externalversions"
+	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
-	istiov1alpha2 "github.com/knative/eventing/pkg/apis/istio/v1alpha2"
+	istiov1alpha3 "github.com/knative/eventing/pkg/apis/istio/v1alpha3"
 )
 
 const controllerAgentName = "channel-controller"
@@ -68,6 +65,11 @@ const (
 	MessageResourceSynced = "Channel synced successfully"
 )
 
+const (
+	PortNumber = 80
+	PortName   = "http"
+)
+
 // Controller is the controller implementation for Channel resources
 type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
@@ -75,14 +77,12 @@ type Controller struct {
 	// channelclientset is a clientset for our own API group
 	channelclientset clientset.Interface
 
-	ingressesLister  extensionslisters.IngressLister
-	ingressesSynced  cache.InformerSynced
-	routerulesLister istiolisters.RouteRuleLister
-	routerulesSynced cache.InformerSynced
-	servicesLister   corelisters.ServiceLister
-	servicesSynced   cache.InformerSynced
-	channelsLister   listers.ChannelLister
-	channelsSynced   cache.InformerSynced
+	virtualservicesLister istiolisters.VirtualServiceLister
+	virtualservicesSynced cache.InformerSynced
+	servicesLister        corelisters.ServiceLister
+	servicesSynced        cache.InformerSynced
+	channelsLister        listers.ChannelLister
+	channelsSynced        cache.InformerSynced
 
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
@@ -101,12 +101,10 @@ func NewController(
 	channelclientset clientset.Interface,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	channelInformerFactory informers.SharedInformerFactory,
-	routeInformerFactory elainformers.SharedInformerFactory) controller.Interface {
+	routeInformerFactory servinginformers.SharedInformerFactory) controller.Interface {
 
-	// obtain references to shared index informers for the Ingress, Service and Channel
-	// types.
-	ingressInformer := kubeInformerFactory.Extensions().V1beta1().Ingresses()
-	routeruleInformer := channelInformerFactory.Config().V1alpha2().RouteRules()
+	// obtain references to shared index informers for the Service and Channel types.
+	virtualserviceInformer := channelInformerFactory.Networking().V1alpha3().VirtualServices()
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
 	channelInformer := channelInformerFactory.Channels().V1alpha1().Channels()
 
@@ -121,18 +119,16 @@ func NewController(
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
 	controller := &Controller{
-		kubeclientset:    kubeclientset,
-		channelclientset: channelclientset,
-		ingressesLister:  ingressInformer.Lister(),
-		ingressesSynced:  ingressInformer.Informer().HasSynced,
-		routerulesLister: routeruleInformer.Lister(),
-		routerulesSynced: routeruleInformer.Informer().HasSynced,
-		servicesLister:   serviceInformer.Lister(),
-		servicesSynced:   serviceInformer.Informer().HasSynced,
-		channelsLister:   channelInformer.Lister(),
-		channelsSynced:   channelInformer.Informer().HasSynced,
-		workqueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Channels"),
-		recorder:         recorder,
+		kubeclientset:         kubeclientset,
+		channelclientset:      channelclientset,
+		virtualservicesLister: virtualserviceInformer.Lister(),
+		virtualservicesSynced: virtualserviceInformer.Informer().HasSynced,
+		servicesLister:        serviceInformer.Lister(),
+		servicesSynced:        serviceInformer.Informer().HasSynced,
+		channelsLister:        channelInformer.Lister(),
+		channelsSynced:        channelInformer.Informer().HasSynced,
+		workqueue:             workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Channels"),
+		recorder:              recorder,
 	}
 
 	glog.Info("Setting up event handlers")
@@ -180,7 +176,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 
 	// Wait for the caches to be synced before starting workers
 	glog.Info("Waiting for informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, c.ingressesSynced, c.servicesSynced, c.channelsSynced); !ok {
+	if ok := cache.WaitForCacheSync(stopCh, c.servicesSynced, c.channelsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
@@ -288,21 +284,15 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	// Sync RouteRule derived from a Channel
-	routeRule, err := c.syncChannelRouteRule(channel)
-	if err != nil {
-		return err
-	}
-
-	// Sync Ingress derived from the Channel
-	ingress, err := c.syncChannelIngress(channel)
+	// Sync VirtualService derived from a Channel
+	virtualService, err := c.syncChannelVirtualService(channel)
 	if err != nil {
 		return err
 	}
 
 	// Finally, we update the status block of the Channel resource to reflect the
 	// current state of the world
-	err = c.updateChannelStatus(channel, service, ingress, routeRule)
+	err = c.updateChannelStatus(channel, service, virtualService)
 	if err != nil {
 		return err
 	}
@@ -338,14 +328,14 @@ func (c *Controller) syncChannelService(channel *channelsv1alpha1.Channel) (*cor
 	return service, nil
 }
 
-func (c *Controller) syncChannelRouteRule(channel *channelsv1alpha1.Channel) (*istiov1alpha2.RouteRule, error) {
-	// Get the RouteRule with the specified Channel name
-	routeruleName := controller.ChannelRouteRuleName(channel.ObjectMeta.Name)
-	routerule, err := c.routerulesLister.RouteRules(channel.Namespace).Get(routeruleName)
+func (c *Controller) syncChannelVirtualService(channel *channelsv1alpha1.Channel) (*istiov1alpha3.VirtualService, error) {
+	// Get the VirtualService with the specified Channel name
+	virtualserviceName := controller.ChannelVirtualServiceName(channel.ObjectMeta.Name)
+	virtualservice, err := c.virtualservicesLister.VirtualServices(channel.Namespace).Get(virtualserviceName)
 
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
-		routerule, err = c.channelclientset.ConfigV1alpha2().RouteRules(channel.Namespace).Create(newRouteRule(channel))
+		virtualservice, err = c.channelclientset.NetworkingV1alpha3().VirtualServices(channel.Namespace).Create(newVirtualService(channel))
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
@@ -357,45 +347,16 @@ func (c *Controller) syncChannelRouteRule(channel *channelsv1alpha1.Channel) (*i
 
 	// If the Service is not controlled by this Channel resource, we should log
 	// a warning to the event recorder and return
-	if !metav1.IsControlledBy(routerule, channel) {
-		msg := fmt.Sprintf(MessageResourceExists, routerule.Name)
+	if !metav1.IsControlledBy(virtualservice, channel) {
+		msg := fmt.Sprintf(MessageResourceExists, virtualservice.Name)
 		c.recorder.Event(channel, corev1.EventTypeWarning, ErrResourceExists, msg)
 		return nil, fmt.Errorf(msg)
 	}
 
-	return routerule, nil
+	return virtualservice, nil
 }
 
-func (c *Controller) syncChannelIngress(channel *channelsv1alpha1.Channel) (*extensionsv1beta1.Ingress, error) {
-	// TODO make ingress optional
-
-	// Get the ingress with the specified ingress name
-	ingressName := controller.ChannelIngressName(channel.ObjectMeta.Name)
-	ingress, err := c.ingressesLister.Ingresses(channel.Namespace).Get(ingressName)
-	// If the resource doesn't exist, we'll create it
-	if errors.IsNotFound(err) {
-		ingress, err = c.kubeclientset.ExtensionsV1beta1().Ingresses(channel.Namespace).Create(newIngress(channel))
-	}
-
-	// If an error occurs during Get/Create, we'll requeue the item so we can
-	// attempt processing again later. This could have been caused by a
-	// temporary network failure, or any other transient reason.
-	if err != nil {
-		return nil, err
-	}
-
-	// If the Ingress is not controlled by this Channel resource, we should log
-	// a warning to the event recorder and return
-	if !metav1.IsControlledBy(ingress, channel) {
-		msg := fmt.Sprintf(MessageResourceExists, ingress.Name)
-		c.recorder.Event(channel, corev1.EventTypeWarning, ErrResourceExists, msg)
-		return nil, fmt.Errorf(msg)
-	}
-
-	return ingress, nil
-}
-
-func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel, service *corev1.Service, ingress *extensionsv1beta1.Ingress, routeRule *istiov1alpha2.RouteRule) error {
+func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel, service *corev1.Service, virtualService *istiov1alpha3.VirtualService) error {
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
@@ -483,23 +444,23 @@ func newService(channel *channelsv1alpha1.Channel) *corev1.Service {
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
-				{Name: "http", Port: 80},
+				{Name: PortName, Port: PortNumber},
 			},
 		},
 	}
 }
 
-// newRouteRule creates a new RouteRule for a Channel resource. It also sets
+// newVirtualService creates a new VirtualService for a Channel resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the Channel resource that 'owns' it.
-func newRouteRule(channel *channelsv1alpha1.Channel) *istiov1alpha2.RouteRule {
+func newVirtualService(channel *channelsv1alpha1.Channel) *istiov1alpha3.VirtualService {
 	labels := map[string]string{
 		"bus":     channel.Spec.Bus,
 		"channel": channel.Name,
 	}
-	return &istiov1alpha2.RouteRule{
+	return &istiov1alpha3.VirtualService{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.ChannelRouteRuleName(channel.Name),
+			Name:      controller.ChannelVirtualServiceName(channel.Name),
 			Namespace: channel.Namespace,
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
@@ -510,63 +471,20 @@ func newRouteRule(channel *channelsv1alpha1.Channel) *istiov1alpha2.RouteRule {
 				}),
 			},
 		},
-		Spec: istiov1alpha2.RouteRuleSpec{
-			Destination: istiov1alpha2.IstioService{
-				Name: controller.ChannelServiceName(channel.Name),
+		Spec: istiov1alpha3.VirtualServiceSpec{
+			Hosts: []string{
+				controller.ServiceHostName(controller.ChannelServiceName(channel.Name), channel.Namespace),
+				controller.ChannelHostName(channel.Name, channel.Namespace),
 			},
-			Route: []istiov1alpha2.DestinationWeight{
+			Http: []istiov1alpha3.HTTPRoute{
 				{
-					Destination: istiov1alpha2.IstioService{
-						Name: controller.BusDispatcherServiceName(channel.Spec.Bus),
+					Rewrite: &istiov1alpha3.HTTPRewrite{
+						Authority: controller.ChannelHostName(channel.Name, channel.Namespace),
 					},
-					Weight: 100,
-				},
-			},
-			Rewrite: istiov1alpha2.HTTPRewrite{
-				Authority: fmt.Sprintf("%s.%s.channels.cluster.local", channel.Name, channel.Namespace),
-			},
-		},
-	}
-}
-
-// newIngress creates a new Ingress for a Channel resource. It also sets
-// the appropriate OwnerReferences on the resource so handleObject can discover
-// the Channel resource that 'owns' it.
-func newIngress(channel *channelsv1alpha1.Channel) *extensionsv1beta1.Ingress {
-	labels := map[string]string{
-		"channel": channel.Name,
-	}
-	annotations := map[string]string{
-		"kubernetes.io/ingress.class": "istio",
-	}
-	return &extensionsv1beta1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        controller.ChannelIngressName(channel.ObjectMeta.Name),
-			Namespace:   channel.Namespace,
-			Labels:      labels,
-			Annotations: annotations,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(channel, schema.GroupVersionKind{
-					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
-					Version: channelsv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Channel",
-				}),
-			},
-		},
-		Spec: extensionsv1beta1.IngressSpec{
-			Rules: []extensionsv1beta1.IngressRule{
-				{
-					// TODO make host name configurable
-					Host: channel.ObjectMeta.Name,
-					IngressRuleValue: extensionsv1beta1.IngressRuleValue{
-						HTTP: &extensionsv1beta1.HTTPIngressRuleValue{
-							Paths: []extensionsv1beta1.HTTPIngressPath{
-								{
-									Backend: extensionsv1beta1.IngressBackend{
-										ServiceName: controller.ChannelServiceName(channel.ObjectMeta.Name),
-										ServicePort: intstr.FromString("http"),
-									},
-								},
+					Route: []istiov1alpha3.DestinationWeight{
+						{
+							Destination: istiov1alpha3.Destination{
+								Host: controller.ServiceHostName(controller.BusDispatcherServiceName(channel.Spec.Bus), channel.Namespace),
 							},
 						},
 					},

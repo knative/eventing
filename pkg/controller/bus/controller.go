@@ -47,7 +47,8 @@ import (
 	channelscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	listers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
-	elainformers "github.com/knative/serving/pkg/client/informers/externalversions"
+
+	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 )
@@ -104,7 +105,7 @@ func NewController(
 	busclientset clientset.Interface,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	busInformerFactory informers.SharedInformerFactory,
-	routeInformerFactory elainformers.SharedInformerFactory) controller.Interface {
+	routeInformerFactory servinginformers.SharedInformerFactory) controller.Interface {
 
 	// obtain references to shared index informers for the Bus, Deployment and Service
 	// types.

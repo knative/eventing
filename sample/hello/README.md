@@ -62,11 +62,11 @@ kail -d stub-bus -c dispatcher
 To invoke the function via the channel:
 
 ```
-# Put the Ingress Host name into an environment variable.
-$ export SERVICE_HOST=`kubectl get ingress aloha-channel -o jsonpath="{.spec.rules[0].host}"`
+# Put the channel hostname into an environment variable.
+$ export SERVICE_HOST=`kubectl get gateway aloha-channel -o jsonpath="{.spec.servers[0].hosts[0]}"`
 
-# Put the Ingress IP into an environment variable.
-$ export SERVICE_IP=`kubectl get ingress aloha-channel -o jsonpath="{.status.loadBalancer.ingress[*]['ip']}"`
+# Put the Istio IngressGateway IP into an environment variable.
+$ export SERVICE_IP=`kubectl get svc -l istio=ingressgateway --all-namespaces -o jsonpath="{.items[0].status.loadBalancer.ingress[0].ip}"`
 
 # Curl the Ingress IP "as-if" DNS were properly configured.
 $ curl -H "Host: $SERVICE_HOST" -H "Content-Type: text/plain" $SERVICE_IP -d "Knative"
