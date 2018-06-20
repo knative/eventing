@@ -124,6 +124,7 @@ func postMessage(target string, m *corev1.Event) error {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Printf("Failed to do POST: %v", err)
 		return err
 	}
 	defer resp.Body.Close()
