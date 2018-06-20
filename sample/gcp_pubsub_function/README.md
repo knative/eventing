@@ -73,11 +73,11 @@ gcp-pubsub-function-ingress   gcp-pubsub-function.default.aikas.org,*.gcp-pubsub
 ```
 
 Once the `ADDRESS` gets assigned to the cluster, you need to assign a DNS name for that IP address. This DNS address needs to be:
-git-webhook.default.<domainsuffix you created> so for me, I would create a DNS entry from:
-git-webhook.default.aikas.org pointing to 104.197.125.124
+gcp-pubsub-function.default.<domainsuffix you created> so for me, I would create a DNS entry from:
+gcp-pubsub-function.default.aikas.org pointing to 130.211.116.160
 [Using GCP DNS](https://support.google.com/domains/answer/3290350)
 
-So, you'd need to create an A record for gcp-pubsub-function.default.aikas.org pointing to 104.197.125.124
+So, you'd need to create an A record for gcp-pubsub-function.default.aikas.org pointing to 130.211.116.160
 
 To now bind the gcp_pubsub_function for GCP PubSub messages with the function we created above, you need to
  create a Bind object. Modify sample/gcp_pubsub_function/bind.yaml to specify the topic and project id
@@ -163,7 +163,7 @@ kubectl delete binds gcppubsub-example
 
 And now your subscription from above has been removed
 ```shell
-$gcloud pubsub subscriptions list
+$ gcloud pubsub subscriptions list
 # not there anymore
 ```
 
