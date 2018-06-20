@@ -65,6 +65,11 @@ const (
 	MessageResourceSynced = "Bind synced successfully"
 )
 
+var (
+	bindControllerKind      = v1alpha1.SchemeGroupVersion.WithKind("Bind")
+	eventTypeControllerKind = v1alpha1.SchemeGroupVersion.WithKind("EventType")
+)
+
 // Controller is the controller implementation for Bind resources
 type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
@@ -325,6 +330,26 @@ func (c *Controller) syncHandler(key string) error {
 	es, err := c.eventSourcesLister.EventSources(namespace).Get(bind.Spec.Trigger.Service)
 	if err != nil {
 		if errors.IsNotFound(err) {
+			if deletionTimestamp != nil {
+				// If the Event Source can not be found, we will remove our finalizer
+				// because without it, we can't unbind and hence this binding will never
+				// be deleted. There needs to be a way to either
+				// prevent or cascade delete bindings before the EventSource goes away. Or
+				// we need to make a defensive copy so that we can unbind.
+				// https://github.com/knative/eventing/issues/94
+				newFinalizers, err := RemoveFinalizer(bind, controllerAgentName)
+				if err != nil {
+					glog.Warningf("Failed to remove finalizer: %s", err)
+					return err
+				}
+				bind.ObjectMeta.Finalizers = newFinalizers
+				_, err = c.updateFinalizers(bind)
+				if err != nil {
+					glog.Warningf("Failed to update finalizers: %s", err)
+					return err
+				}
+				return nil
+			}
 			runtime.HandleError(fmt.Errorf("EventSource %q in namespace %q does not exist", bind.Spec.Trigger.Service, namespace))
 		}
 		return err
@@ -343,6 +368,19 @@ func (c *Controller) syncHandler(key string) error {
 		glog.Infof("Already has status, skipping")
 		return nil
 	}
+
+	// Set the OwnerReference to EventType to make sure that if it's deleted, the binding
+	// will also get deleted and not left orphaned. However, this does not work yet. Regardless
+	// we should set the owner reference to indicate a dependency.
+	// https://github.com/knative/eventing/issues/94
+	bind.ObjectMeta.OwnerReferences = append(bind.ObjectMeta.OwnerReferences, *newEventTypeNonControllerRef(et))
+	bindClient := c.feedsclientset.FeedsV1alpha1().Binds(bind.Namespace)
+	updatedBind, err := bindClient.Update(bind)
+	if err != nil {
+		glog.Warningf("Failed to update OwnerReferences on bind '%s/%s' : %v", bind.Namespace, bind.Name, err)
+		return err
+	}
+	bind = updatedBind
 
 	trigger, err := resolveTrigger(c.kubeclientset, namespace, bind.Spec.Trigger)
 	if err != nil {
@@ -550,4 +588,13 @@ func RemoveFinalizer(obj runtimetypes.Object, value string) ([]string, error) {
 	newFinalizers := finalizers.List()
 	accessor.SetFinalizers(newFinalizers)
 	return newFinalizers, nil
+}
+
+func newEventTypeNonControllerRef(et *v1alpha1.EventType) *metav1.OwnerReference {
+	blockOwnerDeletion := true
+	isController := false
+	revRef := metav1.NewControllerRef(et, eventTypeControllerKind)
+	revRef.BlockOwnerDeletion = &blockOwnerDeletion
+	revRef.Controller = &isController
+	return revRef
 }
