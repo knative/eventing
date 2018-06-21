@@ -43,6 +43,9 @@ function build_tests() {
   header "Running build tests"
   go build -v ${CODE_PACKAGES_STR}
   echo "Code built successfully"
+  # kubekins images don't have dep installed by default
+  go get -u github.com/golang/dep/cmd/dep
+  ./hack/verify-codegen.sh
 }
 
 function unit_tests() {

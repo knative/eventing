@@ -22,7 +22,7 @@ import (
 	glog "github.com/golang/glog"
 	channelsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/channels/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/feeds/v1alpha1"
-	configv1alpha2 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/istio/v1alpha2"
+	networkingv1alpha3 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/istio/v1alpha3"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -36,18 +36,18 @@ type Interface interface {
 	FeedsV1alpha1() feedsv1alpha1.FeedsV1alpha1Interface
 	// Deprecated: please explicitly pick a version if possible.
 	Feeds() feedsv1alpha1.FeedsV1alpha1Interface
-	ConfigV1alpha2() configv1alpha2.ConfigV1alpha2Interface
+	NetworkingV1alpha3() networkingv1alpha3.NetworkingV1alpha3Interface
 	// Deprecated: please explicitly pick a version if possible.
-	Config() configv1alpha2.ConfigV1alpha2Interface
+	Networking() networkingv1alpha3.NetworkingV1alpha3Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	channelsV1alpha1 *channelsv1alpha1.ChannelsV1alpha1Client
-	feedsV1alpha1    *feedsv1alpha1.FeedsV1alpha1Client
-	configV1alpha2   *configv1alpha2.ConfigV1alpha2Client
+	channelsV1alpha1   *channelsv1alpha1.ChannelsV1alpha1Client
+	feedsV1alpha1      *feedsv1alpha1.FeedsV1alpha1Client
+	networkingV1alpha3 *networkingv1alpha3.NetworkingV1alpha3Client
 }
 
 // ChannelsV1alpha1 retrieves the ChannelsV1alpha1Client
@@ -72,15 +72,15 @@ func (c *Clientset) Feeds() feedsv1alpha1.FeedsV1alpha1Interface {
 	return c.feedsV1alpha1
 }
 
-// ConfigV1alpha2 retrieves the ConfigV1alpha2Client
-func (c *Clientset) ConfigV1alpha2() configv1alpha2.ConfigV1alpha2Interface {
-	return c.configV1alpha2
+// NetworkingV1alpha3 retrieves the NetworkingV1alpha3Client
+func (c *Clientset) NetworkingV1alpha3() networkingv1alpha3.NetworkingV1alpha3Interface {
+	return c.networkingV1alpha3
 }
 
-// Deprecated: Config retrieves the default version of ConfigClient.
+// Deprecated: Networking retrieves the default version of NetworkingClient.
 // Please explicitly pick a version.
-func (c *Clientset) Config() configv1alpha2.ConfigV1alpha2Interface {
-	return c.configV1alpha2
+func (c *Clientset) Networking() networkingv1alpha3.NetworkingV1alpha3Interface {
+	return c.networkingV1alpha3
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -107,7 +107,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
-	cs.configV1alpha2, err = configv1alpha2.NewForConfig(&configShallowCopy)
+	cs.networkingV1alpha3, err = networkingv1alpha3.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
 	cs.channelsV1alpha1 = channelsv1alpha1.NewForConfigOrDie(c)
 	cs.feedsV1alpha1 = feedsv1alpha1.NewForConfigOrDie(c)
-	cs.configV1alpha2 = configv1alpha2.NewForConfigOrDie(c)
+	cs.networkingV1alpha3 = networkingv1alpha3.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -137,7 +137,7 @@ func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.channelsV1alpha1 = channelsv1alpha1.New(c)
 	cs.feedsV1alpha1 = feedsv1alpha1.New(c)
-	cs.configV1alpha2 = configv1alpha2.New(c)
+	cs.networkingV1alpha3 = networkingv1alpha3.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs
