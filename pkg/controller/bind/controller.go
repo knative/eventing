@@ -326,7 +326,7 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	es, err := c.eventSourcesLister.EventSources(namespace).Get(bind.Spec.Trigger.Service)
-	if err != nil && deletionTimestamp == nil {
+	if err != nil {
 		if errors.IsNotFound(err) {
 			if deletionTimestamp != nil {
 				// If the Event Source can not be found, we will remove our finalizer
