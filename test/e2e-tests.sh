@@ -108,11 +108,11 @@ if [[ -z $1 ]]; then
   )
   if (( ! IS_PROW )); then
     CLUSTER_CREATION_ARGS+=(--gcp-project=${PROJECT_ID:?"PROJECT_ID must be set to the GCP project where the tests are run."})
-  else
-    # On prow, set bogus SSH keys for kubetest, we're not using them.
-    touch $HOME/.ssh/google_compute_engine.pub
-    touch $HOME/.ssh/google_compute_engine
   fi
+  # SSH keys are not used, but kubetest checks for their existence.
+  # Touch them so if they don't exist, empty files are create to satisfy the check.
+  touch $HOME/.ssh/google_compute_engine.pub
+  touch $HOME/.ssh/google_compute_engine
   # Clear user and cluster variables, so they'll be set to the test cluster.
   # KO_DOCKER_REPO is not touched because when running locally it must
   # be a writeable docker repo.
