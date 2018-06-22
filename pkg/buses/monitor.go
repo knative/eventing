@@ -383,7 +383,7 @@ func (m *Monitor) resolveAttributes(parameters *[]channelsv1alpha1.Parameter, ar
 	// apply arguments
 	if arguments != nil {
 		for _, arg := range *arguments {
-			if _, ok := known[arg.Name]; ok {
+			if _, ok := known[arg.Name]; !ok {
 				// ignore arguments not defined by parameters
 				glog.Warningf("Skipping unknown argument: %s\n", arg.Name)
 				continue
