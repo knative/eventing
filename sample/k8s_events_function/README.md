@@ -127,7 +127,7 @@ This will create a receive_adapter that runs in the cluster and receives native 
 and pushes them to the consuming function.
 
 ```shell
-$kubectl -n knative-eventing-system get pods
+$kubectl -n knative-eventing get pods
 
 NAME                                                        READY     STATUS    RESTARTS   AGE
 bind-controller-dddb99dfc-jzp7z                             1/1       Running   0          1d

@@ -18,7 +18,7 @@ metadata:
   labels:
     role: eventing-webhook
   name: eventing-webhook
-  namespace: knative-eventing-system
+  namespace: knative-eventing
 spec:
   ports:
     - port: 443

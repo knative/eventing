@@ -50,7 +50,7 @@ ko apply -f config/
 
 You can see things running with:
 ```shell
-$ kubectl -n knative-eventing-system get pods
+$ kubectl -n knative-eventing get pods
 NAME                               READY     STATUS    RESTARTS   AGE
 bind-controller-59f7969778-4dt7l   1/1       Running   0          2h
 ```
@@ -58,7 +58,7 @@ bind-controller-59f7969778-4dt7l   1/1       Running   0          2h
 You can access the Binding Controller's logs with:
 
 ```shell
-kubectl -n knative-eventing-system logs $(kubectl -n knative-eventing-system get pods -l app=bind-controller -o name)
+kubectl -n knative-eventing logs $(kubectl -n knative-eventing get pods -l app=bind-controller -o name)
 ```
 
 ## Iterating

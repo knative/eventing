@@ -14,4 +14,4 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: knative-eventing-system
+  name: knative-eventing

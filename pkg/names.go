@@ -19,5 +19,5 @@ package pkg
 // GetEventingSystemNamespace returns the namespace where
 // eventing controllers are deployed to.
 func GetEventingSystemNamespace() string {
-	return "knative-eventing-system"
+	return "knative-eventing"
 }
