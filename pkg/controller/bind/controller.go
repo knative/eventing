@@ -365,7 +365,7 @@ func (c *Controller) syncHandler(key string) error {
 
 	// If there are conditions or a context do nothing.
 	if (bind.Status.Conditions != nil || bind.Status.BindContext != nil) && deletionTimestamp == nil {
-		glog.Infof("Already has status, skipping")
+		glog.Infof("Binding \"%s/%s\" already has status, skipping", bind.Namespace, bind.Name)
 		return nil
 	}
 
@@ -391,7 +391,12 @@ func (c *Controller) syncHandler(key string) error {
 	// Don't mutate the informer's copy of our object.
 	newES := es.DeepCopy()
 
-	binder := sources.NewContainerEventSource(bind, c.kubeclientset, &newES.Spec, "knative-eventing-system")
+	// check if the user specified a ServiceAccount to use and if so, use it.
+	serviceAccountName := "default"
+	if len(bind.Spec.ServiceAccountName) != 0 {
+		serviceAccountName = bind.Spec.ServiceAccountName
+	}
+	binder := sources.NewContainerEventSource(bind, c.kubeclientset, &newES.Spec, bind.Namespace, serviceAccountName)
 	if deletionTimestamp == nil {
 		glog.Infof("Creating a subscription to %q : %q for resource %q", es.Name, et.Name, trigger.Resource)
 		bindContext, err := binder.Bind(trigger, functionDNS)
