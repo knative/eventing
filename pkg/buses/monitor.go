@@ -47,7 +47,7 @@ const (
 	Dispatcher  = "dispatcher"
 	Provisioner = "provisioner"
 
-	busKind          = "Bus"
+	clusterBusKind   = "ClusterBus"
 	channelKind      = "Channel"
 	subscriptionKind = "Subscription"
 
@@ -58,13 +58,13 @@ const (
 	errResourceSync = "ErrResourceSync"
 )
 
-// Monitor utility to manage channels and subscriptions for a bus
+// Monitor utility to manage channels and subscriptions for a clusterbus
 type Monitor struct {
-	bus                      *channelsv1alpha1.Bus
+	clusterBus               *channelsv1alpha1.ClusterBus
 	handler                  MonitorEventHandlerFuncs
 	informerFactory          informers.SharedInformerFactory
-	busesLister              listers.BusLister
-	busesSynced              cache.InformerSynced
+	clusterBusesLister       listers.ClusterBusLister
+	clusterBusesSynced       cache.InformerSynced
 	channelsLister           listers.ChannelLister
 	channelsSynced           cache.InformerSynced
 	subscriptionsLister      listers.SubscriptionLister
@@ -89,20 +89,20 @@ type Attributes = map[string]string
 
 // MonitorEventHandlerFuncs handler functions for channel and subscription provisioning
 type MonitorEventHandlerFuncs struct {
-	BusFunc         func(bus *channelsv1alpha1.Bus) error
+	ClusterBusFunc  func(clusterBus *channelsv1alpha1.ClusterBus) error
 	ProvisionFunc   func(channel *channelsv1alpha1.Channel, attributes Attributes) error
 	UnprovisionFunc func(channel *channelsv1alpha1.Channel) error
 	SubscribeFunc   func(subscription *channelsv1alpha1.Subscription, attributes Attributes) error
 	UnsubscribeFunc func(subscription *channelsv1alpha1.Subscription) error
 }
 
-func (h MonitorEventHandlerFuncs) onBus(bus *channelsv1alpha1.Bus, monitor *Monitor) error {
-	if h.BusFunc != nil {
-		err := h.BusFunc(bus)
+func (h MonitorEventHandlerFuncs) onClusterBus(clusterBus *channelsv1alpha1.ClusterBus, monitor *Monitor) error {
+	if h.ClusterBusFunc != nil {
+		err := h.ClusterBusFunc(clusterBus)
 		if err != nil {
-			monitor.recorder.Eventf(bus, corev1.EventTypeWarning, errResourceSync, "Error syncing bus: %s", err)
+			monitor.recorder.Eventf(clusterBus, corev1.EventTypeWarning, errResourceSync, "Error syncing ClusterBus: %s", err)
 		} else {
-			monitor.recorder.Event(bus, corev1.EventTypeNormal, successSynced, "Bus synched successfully")
+			monitor.recorder.Event(clusterBus, corev1.EventTypeNormal, successSynced, "ClusterBus synched successfully")
 		}
 		return err
 	}
@@ -178,7 +178,7 @@ type subscriptionSummary struct {
 	Subscription channelsv1alpha1.SubscriptionSpec
 }
 
-// NewMonitor creates a monitor for a bus
+// NewMonitor creates a monitor for a clusterbus
 func NewMonitor(
 	component, masterURL, kubeconfig string,
 	handler MonitorEventHandlerFuncs,
@@ -199,13 +199,13 @@ func NewMonitor(
 	}
 
 	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
-	busInformer := informerFactory.Channels().V1alpha1().Buses()
+	clusterBusInformer := informerFactory.Channels().V1alpha1().ClusterBuses()
 	channelInformer := informerFactory.Channels().V1alpha1().Channels()
 	subscriptionInformer := informerFactory.Channels().V1alpha1().Subscriptions()
 
 	// Create event broadcaster
-	// Add bus-controller types to the default Kubernetes Scheme so Events can be
-	// logged for bus-controller types.
+	// Add clusterbus-controller types to the default Kubernetes Scheme so Events can be
+	// logged for clusterbus-controller types.
 	channelscheme.AddToScheme(scheme.Scheme)
 	glog.V(4).Info("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
@@ -214,12 +214,12 @@ func NewMonitor(
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: component})
 
 	monitor := &Monitor{
-		bus:     nil,
-		handler: handler,
+		clusterBus: nil,
+		handler:    handler,
 
 		informerFactory:          informerFactory,
-		busesLister:              busInformer.Lister(),
-		busesSynced:              busInformer.Informer().HasSynced,
+		clusterBusesLister:       clusterBusInformer.Lister(),
+		clusterBusesSynced:       clusterBusInformer.Informer().HasSynced,
 		channelsLister:           channelInformer.Lister(),
 		channelsSynced:           channelInformer.Informer().HasSynced,
 		subscriptionsLister:      subscriptionInformer.Lister(),
@@ -234,23 +234,23 @@ func NewMonitor(
 	}
 
 	glog.Info("Setting up event handlers")
-	// Set up an event handler for when Bus resources change
-	busInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	// Set up an event handler for when ClusterBus resources change
+	clusterBusInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			bus := obj.(*channelsv1alpha1.Bus)
-			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForBus(bus))
+			clusterBus := obj.(*channelsv1alpha1.ClusterBus)
+			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForClusterBus(clusterBus))
 		},
 		UpdateFunc: func(old, new interface{}) {
-			oldBus := old.(*channelsv1alpha1.Bus)
-			newBus := new.(*channelsv1alpha1.Bus)
+			oldClusterBus := old.(*channelsv1alpha1.ClusterBus)
+			newClusterBus := new.(*channelsv1alpha1.ClusterBus)
 
-			if oldBus.ResourceVersion == newBus.ResourceVersion {
-				// Periodic resync will send update events for all known Buses.
-				// Two different versions of the same Bus will always have different RVs.
+			if oldClusterBus.ResourceVersion == newClusterBus.ResourceVersion {
+				// Periodic resync will send update events for all known ClusterBuses.
+				// Two different versions of the same ClusterBus will always have different RVs.
 				return
 			}
 
-			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForBus(newBus))
+			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForClusterBus(newClusterBus))
 		},
 	})
 	// Set up an event handler for when Channel resources change
@@ -331,8 +331,8 @@ func (m *Monitor) Subscriptions(channel string, namespace string) *[]channelsv1a
 		return nil
 	}
 
-	if summary.Channel.Bus != m.bus.Name {
-		// the channel is not for this bus
+	if summary.Channel.ClusterBus != m.clusterBus.Name {
+		// the channel is not for this clusterbus
 		return nil
 	}
 
@@ -347,19 +347,19 @@ func (m *Monitor) Subscriptions(channel string, namespace string) *[]channelsv1a
 }
 
 func (m *Monitor) channelAttributes(channel channelsv1alpha1.ChannelSpec) (Attributes, error) {
-	busParameters := m.bus.Spec.Parameters
+	clusterBusParameters := m.clusterBus.Spec.Parameters
 	var parameters *[]channelsv1alpha1.Parameter
-	if busParameters != nil {
-		parameters = busParameters.Channel
+	if clusterBusParameters != nil {
+		parameters = clusterBusParameters.Channel
 	}
 	return m.resolveAttributes(parameters, channel.Arguments)
 }
 
 func (m *Monitor) subscriptionAttributes(subscription channelsv1alpha1.SubscriptionSpec) (Attributes, error) {
-	busParameters := m.bus.Spec.Parameters
+	clusterBusParameters := m.clusterBus.Spec.Parameters
 	var parameters *[]channelsv1alpha1.Parameter
-	if busParameters != nil {
-		parameters = busParameters.Subscription
+	if clusterBusParameters != nil {
+		parameters = clusterBusParameters.Subscription
 	}
 	return m.resolveAttributes(parameters, subscription.Arguments)
 }
@@ -414,7 +414,7 @@ func (m *Monitor) RequeueSubscription(subscription *channelsv1alpha1.Subscriptio
 // as syncing informer caches and starting workers. It will block until stopCh
 // is closed, at which point it will shutdown the workqueue and wait for
 // workers to finish processing their current work items.
-func (m *Monitor) Run(namespace, name string, threadiness int, stopCh <-chan struct{}) error {
+func (m *Monitor) Run(clusterBusName string, threadiness int, stopCh <-chan struct{}) error {
 	defer runtime.HandleCrash()
 	defer m.workqueue.ShutDown()
 
@@ -424,18 +424,18 @@ func (m *Monitor) Run(namespace, name string, threadiness int, stopCh <-chan str
 
 	// Wait for the caches to be synced before starting workers
 	glog.Info("Waiting for informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, m.busesSynced, m.channelsSynced, m.subscriptionsSynced); !ok {
+	if ok := cache.WaitForCacheSync(stopCh, m.clusterBusesSynced, m.channelsSynced, m.subscriptionsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
-	bus, err := m.busesLister.Buses(namespace).Get(name)
+	clusterBus, err := m.clusterBusesLister.Get(clusterBusName)
 	if err != nil {
-		glog.Fatalf("Unknown bus '%s/%s'", namespace, name)
+		glog.Fatalf("Unknown clusterbus %q", clusterBusName)
 	}
-	m.bus = bus
+	m.clusterBus = clusterBus
 
 	glog.Info("Starting workers")
-	// Launch two workers to process Bus resources
+	// Launch two workers to process ClusterBus resources
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(m.runWorker, time.Second, stopCh)
 	}
@@ -488,8 +488,8 @@ func (m *Monitor) processNextWorkItem() bool {
 			runtime.HandleError(fmt.Errorf("expected string in workqueue but got %#v", obj))
 			return nil
 		}
-		// Run the syncHandler, passing it the namespace/name string of the
-		// Bus resource to be synced.
+		// Run the syncHandler, passing it the name string of the
+		// ClusterBus resource to be synced.
 		if err := m.syncHandler(key); err != nil {
 			m.workqueue.AddRateLimited(obj)
 			return fmt.Errorf("error syncing monitor '%s': %s", key, err.Error())
@@ -510,7 +510,7 @@ func (m *Monitor) processNextWorkItem() bool {
 }
 
 // syncHandler compares the actual state with the desired, and attempts to
-// converge the two. It then updates the Status block of the Bus resource
+// converge the two. It then updates the Status block of the ClusterBus resource
 // with the current status of the resource.
 func (m *Monitor) syncHandler(key string) error {
 	// Convert the namespace/name string into a distinct namespace and name
@@ -520,14 +520,14 @@ func (m *Monitor) syncHandler(key string) error {
 		return nil
 	}
 
-	if m.bus == nil && kind != busKind {
-		// don't attempt tp sync until we have seen the bus for this monitor
-		return fmt.Errorf("Unknown bus for monitor")
+	if m.clusterBus == nil && kind != clusterBusKind {
+		// don't attempt tp sync until we have seen the clusterbus for this monitor
+		return fmt.Errorf("Unknown clusterbus for monitor")
 	}
 
 	switch kind {
-	case busKind:
-		err = m.syncBus(namespace, name)
+	case clusterBusKind:
+		err = m.syncClusterBus(name)
 	case channelKind:
 		err = m.syncChannel(namespace, name)
 	case subscriptionKind:
@@ -544,11 +544,11 @@ func (m *Monitor) syncHandler(key string) error {
 	return nil
 }
 
-func (m *Monitor) syncBus(namespace string, name string) error {
-	// Get the Bus resource with this namespace/name
-	bus, err := m.busesLister.Buses(namespace).Get(name)
+func (m *Monitor) syncClusterBus(name string) error {
+	// Get the ClusterBus resource with this name
+	clusterBus, err := m.clusterBusesLister.Get(name)
 	if err != nil {
-		// The Bus resource may no longer exist
+		// The ClusterBus resource may no longer exist
 		if errors.IsNotFound(err) {
 			// nothing to do
 			return nil
@@ -557,8 +557,8 @@ func (m *Monitor) syncBus(namespace string, name string) error {
 		return err
 	}
 
-	// Sync the Bus
-	err = m.createOrUpdateBus(bus)
+	// Sync the ClusterBus
+	err = m.createOrUpdateClusterBus(clusterBus)
 	if err != nil {
 		return err
 	}
@@ -635,15 +635,15 @@ func (m *Monitor) getOrCreateChannelSummary(key channelKey) *channelSummary {
 	return summary
 }
 
-func (m *Monitor) createOrUpdateBus(bus *channelsv1alpha1.Bus) error {
-	if bus.Name != m.bus.Name {
-		// this is not our bus
+func (m *Monitor) createOrUpdateClusterBus(clusterBus *channelsv1alpha1.ClusterBus) error {
+	if clusterBus.Name != m.clusterBus.Name {
+		// this is not our clusterbus
 		return nil
 	}
 
-	if !reflect.DeepEqual(m.bus.Spec, bus.Spec) {
-		m.bus = bus
-		err := m.handler.onBus(bus, m)
+	if !reflect.DeepEqual(m.clusterBus.Spec, clusterBus.Spec) {
+		m.clusterBus = clusterBus
+		err := m.handler.onClusterBus(clusterBus, m)
 		if err != nil {
 			return err
 		}
@@ -653,7 +653,7 @@ func (m *Monitor) createOrUpdateBus(bus *channelsv1alpha1.Bus) error {
 }
 
 func (m *Monitor) isChannelForBus(channel *channelsv1alpha1.Channel) bool {
-	return channel.Spec.Bus == m.bus.Name
+	return channel.Spec.ClusterBus == m.clusterBus.Name
 }
 
 func (m *Monitor) createOrUpdateChannel(channel *channelsv1alpha1.Channel) error {
@@ -714,7 +714,7 @@ func (m *Monitor) isSubscriptionProvisioned(subscription *channelsv1alpha1.Subsc
 func (m *Monitor) isSubscriptionForBus(subscription *channelsv1alpha1.Subscription) bool {
 	channelKey := makeChannelKeyFromSubscription(subscription)
 	summary := m.getChannelSummary(channelKey)
-	return summary != nil && summary.Channel != nil && summary.Channel.Bus == m.bus.Name
+	return summary != nil && summary.Channel != nil && summary.Channel.ClusterBus == m.clusterBus.Name
 }
 
 func (m *Monitor) createOrUpdateSubscription(subscription *channelsv1alpha1.Subscription) error {
@@ -807,8 +807,8 @@ func makeSubscriptionKeyWithNames(namespace string, name string) subscriptionKey
 	}
 }
 
-func makeWorkqueueKeyForBus(bus *channelsv1alpha1.Bus) string {
-	return makeWorkqueueKey(busKind, bus.Namespace, bus.Name)
+func makeWorkqueueKeyForClusterBus(clusterBus *channelsv1alpha1.ClusterBus) string {
+	return makeWorkqueueKey(clusterBusKind, "", clusterBus.Name)
 }
 
 func makeWorkqueueKeyForChannel(channel *channelsv1alpha1.Channel) string {

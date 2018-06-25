@@ -18,8 +18,8 @@ limitations under the License.
 
 package v1alpha1
 
-type BusExpansion interface{}
-
 type ChannelExpansion interface{}
+
+type ClusterBusExpansion interface{}
 
 type SubscriptionExpansion interface{}

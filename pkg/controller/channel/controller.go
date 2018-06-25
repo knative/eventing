@@ -456,8 +456,8 @@ func newService(channel *channelsv1alpha1.Channel) *corev1.Service {
 // the Channel resource that 'owns' it.
 func newVirtualService(channel *channelsv1alpha1.Channel) *istiov1alpha3.VirtualService {
 	labels := map[string]string{
-		"bus":     channel.Spec.Bus,
-		"channel": channel.Name,
+		"clusterBus": channel.Spec.ClusterBus,
+		"channel":    channel.Name,
 	}
 	return &istiov1alpha3.VirtualService{
 		ObjectMeta: metav1.ObjectMeta{
@@ -485,7 +485,7 @@ func newVirtualService(channel *channelsv1alpha1.Channel) *istiov1alpha3.Virtual
 					Route: []istiov1alpha3.DestinationWeight{
 						{
 							Destination: istiov1alpha3.Destination{
-								Host: controller.ServiceHostName(controller.BusDispatcherServiceName(channel.Spec.Bus), pkg.GetEventingSystemNamespace()),
+								Host: controller.ServiceHostName(controller.ClusterBusDispatcherServiceName(channel.Spec.ClusterBus), pkg.GetEventingSystemNamespace()),
 							},
 						},
 					},

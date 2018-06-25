@@ -29,53 +29,53 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:defaulter-gen=true
 
-// Bus represents the buses.channels.knative.dev CRD
-type Bus struct {
+// ClusterBus represents the clusterbuses.channels.knative.dev CRD
+type ClusterBus struct {
 	meta_v1.TypeMeta   `json:",inline"`
 	meta_v1.ObjectMeta `json:"metadata"`
-	Spec               BusSpec    `json:"spec"`
-	Status             *BusStatus `json:"status,omitempty"`
+	Spec               ClusterBusSpec    `json:"spec"`
+	Status             *ClusterBusStatus `json:"status,omitempty"`
 }
 
-// BusSpec (what the user wants) for a bus
-type BusSpec struct {
+// ClusterBusSpec (what the user wants) for a clusterbus
+type ClusterBusSpec struct {
 
-	// Parameters exposed by the bus for channels and subscriptions
-	Parameters *BusParameters `json:"parameters,omitempty"`
+	// Parameters exposed by the clusterbus for channels and subscriptions
+	Parameters *ClusterBusParameters `json:"parameters,omitempty"`
 
-	// Provisioner container definition to manage channels on the bus.
+	// Provisioner container definition to manage channels on the clusterbus.
 	Provisioner *kapi.Container `json:"provisioner,omitempty"`
 
-	// Dispatcher container definition to use for the bus data plane.
+	// Dispatcher container definition to use for the clusterbus data plane.
 	Dispatcher kapi.Container `json:"dispatcher"`
 
 	// Volumes to be mounted inside the provisioner or dispatcher containers
 	Volumes *[]kapi.Volume `json:"volumes,omitempty"`
 }
 
-// BusParameters parameters exposed by the bus
-type BusParameters struct {
+// ClusterBusParameters parameters exposed by the clusterbus
+type ClusterBusParameters struct {
 
-	// Channel configuration params for channels on the bus
+	// Channel configuration params for channels on the clusterbus
 	Channel *[]Parameter `json:"channel,omitempty"`
 
-	// Subscription configuration params for subscriptions on the bus
+	// Subscription configuration params for subscriptions on the clusterbus
 	Subscription *[]Parameter `json:"subscription,omitempty"`
 }
 
-// BusStatus (computed) for a bus
-type BusStatus struct {
+// ClusterBusStatus (computed) for a clusterbus
+type ClusterBusStatus struct {
 }
 
-func (b *Bus) GetSpecJSON() ([]byte, error) {
+func (b *ClusterBus) GetSpecJSON() ([]byte, error) {
 	return json.Marshal(b.Spec)
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// BusList returned in list operations
-type BusList struct {
+// ClusterBusList returned in list operations
+type ClusterBusList struct {
 	meta_v1.TypeMeta `json:",inline"`
 	meta_v1.ListMeta `json:"metadata"`
-	Items            []Bus `json:"items"`
+	Items            []ClusterBus `json:"items"`
 }

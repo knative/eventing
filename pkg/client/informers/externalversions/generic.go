@@ -55,10 +55,10 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=channels.knative.dev, Version=v1alpha1
-	case v1alpha1.SchemeGroupVersion.WithResource("buses"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Channels().V1alpha1().Buses().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("channels"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Channels().V1alpha1().Channels().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("clusterbuses"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Channels().V1alpha1().ClusterBuses().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("subscriptions"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Channels().V1alpha1().Subscriptions().Informer()}, nil
 

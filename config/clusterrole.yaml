@@ -14,10 +14,10 @@
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: knative-channels-bus
+  name: knative-channels-clusterbus
 rules:
 - apiGroups: ["channels.knative.dev"]
-  resources: ["buses", "channels", "subscriptions"]
+  resources: ["clusterbuses", "channels", "subscriptions"]
   verbs: ["get", "watch", "list"]
 - apiGroups: [""]
   resources: ["events"]

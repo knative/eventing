@@ -20,7 +20,7 @@ import (
 )
 
 func TestNewChannel(t *testing.T) {
-	c := createChannel(testChannelName, testBusName)
+	c := createChannel(testChannelName, testClusterBusName)
 	if err := ValidateChannel(testCtx)(nil, nil, &c); err != nil {
 		t.Errorf("Expected success, but failed with: %s", err)
 	}
@@ -32,26 +32,26 @@ func TestNewEmptyChannel(t *testing.T) {
 	if err == nil {
 		t.Errorf("Expected failure, but succeeded with: %+v", c)
 	}
-	if e, a := errInvalidChannelBusMissing, err; e != a {
+	if e, a := errInvalidChannelClusterBusMissing, err; e != a {
 		t.Errorf("Expected %s got %s", e, a)
 	}
 }
 
 func TestChannelMutation(t *testing.T) {
-	c := createChannel(testChannelName, testBusName)
+	c := createChannel(testChannelName, testClusterBusName)
 	if err := ValidateChannel(testCtx)(nil, &c, &c); err != nil {
 		t.Errorf("Expected success, but failed with: %s", err)
 	}
 }
 
-func TestChannelBusMutation(t *testing.T) {
+func TestChannelClusterBusMutation(t *testing.T) {
 	old := createChannel(testChannelName, "stub")
 	new := createChannel(testChannelName, "pubsub")
 	err := ValidateChannel(testCtx)(nil, &old, &new)
 	if err == nil {
 		t.Errorf("Expected failure, but succeeded with: %+v %+v", old, new)
 	}
-	if e, a := errInvalidChannelBusMutation, err; e != a {
+	if e, a := errInvalidChannelClusterBusMutation, err; e != a {
 		t.Errorf("Expected %s got %s", e, a)
 	}
 }

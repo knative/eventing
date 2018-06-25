@@ -31,58 +31,58 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 )
 
-// BusInformer provides access to a shared informer and lister for
-// Buses.
-type BusInformer interface {
+// ClusterBusInformer provides access to a shared informer and lister for
+// ClusterBuses.
+type ClusterBusInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.BusLister
+	Lister() v1alpha1.ClusterBusLister
 }
 
-type busInformer struct {
+type clusterBusInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 }
 
-// NewBusInformer constructs a new informer for Bus type.
+// NewClusterBusInformer constructs a new informer for ClusterBus type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewBusInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredBusInformer(client, resyncPeriod, indexers, nil)
+func NewClusterBusInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredClusterBusInformer(client, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredBusInformer constructs a new informer for Bus type.
+// NewFilteredClusterBusInformer constructs a new informer for ClusterBus type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredBusInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredClusterBusInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ChannelsV1alpha1().Buses().List(options)
+				return client.ChannelsV1alpha1().ClusterBuses().List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ChannelsV1alpha1().Buses().Watch(options)
+				return client.ChannelsV1alpha1().ClusterBuses().Watch(options)
 			},
 		},
-		&channels_v1alpha1.Bus{},
+		&channels_v1alpha1.ClusterBus{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *busInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredBusInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *clusterBusInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredClusterBusInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *busInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&channels_v1alpha1.Bus{}, f.defaultInformer)
+func (f *clusterBusInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&channels_v1alpha1.ClusterBus{}, f.defaultInformer)
 }
 
-func (f *busInformer) Lister() v1alpha1.BusLister {
-	return v1alpha1.NewBusLister(f.Informer().GetIndexer())
+func (f *clusterBusInformer) Lister() v1alpha1.ClusterBusLister {
+	return v1alpha1.NewClusterBusLister(f.Informer().GetIndexer())
 }

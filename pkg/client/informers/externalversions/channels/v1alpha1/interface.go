@@ -24,10 +24,10 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
-	// Buses returns a BusInformer.
-	Buses() BusInformer
 	// Channels returns a ChannelInformer.
 	Channels() ChannelInformer
+	// ClusterBuses returns a ClusterBusInformer.
+	ClusterBuses() ClusterBusInformer
 	// Subscriptions returns a SubscriptionInformer.
 	Subscriptions() SubscriptionInformer
 }
@@ -43,14 +43,14 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
-// Buses returns a BusInformer.
-func (v *version) Buses() BusInformer {
-	return &busInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
 // Channels returns a ChannelInformer.
 func (v *version) Channels() ChannelInformer {
 	return &channelInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// ClusterBuses returns a ClusterBusInformer.
+func (v *version) ClusterBuses() ClusterBusInformer {
+	return &clusterBusInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // Subscriptions returns a SubscriptionInformer.

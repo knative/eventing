@@ -38,8 +38,8 @@ type Channel struct {
 // ChannelSpec (what the user wants) for a channel
 type ChannelSpec struct {
 
-	// Name of the bus backing this channel (optional)
-	Bus string `json:"bus`
+	// ClusterBus name of the clusterbus backing this channel
+	ClusterBus string `json:"clusterBus"`
 
 	// Arguments configuration arguments for the channel
 	Arguments *[]Argument `json:"arguments,omitempty"`
