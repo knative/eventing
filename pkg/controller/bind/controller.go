@@ -51,6 +51,7 @@ import (
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	bindscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	channelListers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/feeds/v1alpha1"
 )
 
@@ -90,6 +91,9 @@ type Controller struct {
 	routesLister servinglisters.RouteLister
 	routesSynced cache.InformerSynced
 
+	channelsLister channelListers.ChannelLister
+	channelsSynced cache.InformerSynced
+
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
 	// means we can ensure we only process a fixed amount of resources at a
@@ -115,6 +119,8 @@ func NewController(
 	// obtain a reference to a shared index informer for the Route type.
 	routeInformer := routeInformerFactory.Serving().V1alpha1().Routes()
 
+	channelInformer := feedsInformerFactory.Channels().V1alpha1().Channels()
+
 	// Create event broadcaster
 	// Add bind-controller types to the default Kubernetes Scheme so Events can be
 	// logged for bind-controller types.
@@ -136,6 +142,8 @@ func NewController(
 		eventSourcesSynced: bindInformer.EventSources().Informer().HasSynced,
 		eventTypesLister:   bindInformer.EventTypes().Lister(),
 		eventTypesSynced:   bindInformer.EventTypes().Informer().HasSynced,
+		channelsLister:     channelInformer.Lister(),
+		channelsSynced:     channelInformer.Informer().HasSynced,
 		workqueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Binds"),
 		recorder:           recorder,
 	}
@@ -182,6 +190,11 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	glog.Info("Waiting for route informer caches to sync")
 	if ok := cache.WaitForCacheSync(stopCh, c.routesSynced); !ok {
 		return fmt.Errorf("failed to wait for Route caches to sync")
+	}
+
+	glog.Info("Waiting for channel informer caches to sync")
+	if ok := cache.WaitForCacheSync(stopCh, c.channelsSynced); !ok {
+		return fmt.Errorf("failed to wait for Channel caches to sync")
 	}
 
 	glog.Info("Starting workers")
@@ -300,31 +313,15 @@ func (c *Controller) syncHandler(key string) error {
 	}
 	deletionTimestamp := accessor.GetDeletionTimestamp()
 
-	// Find the Route that they want.
-	routeName := bind.Spec.Action.RouteName
-	route, err := c.routesLister.Routes(namespace).Get(routeName)
-	functionDNS := ""
+	functionDNS, err := c.resolveActionTarget(bind.Namespace, bind.Spec.Action)
 
-	// Only return an error if we're not deleting so that we can delete
-	// the binding even if the route has already been deleted.
+	// Only return an error on not found if we're not deleting so that we can delete
+	// the binding even if the route or channel has already been deleted.
 	if err != nil && deletionTimestamp == nil {
 		if errors.IsNotFound(err) {
-			runtime.HandleError(fmt.Errorf("Route %q in namespace %q does not exist", routeName, namespace))
+			runtime.HandleError(fmt.Errorf("cannot resolve target for %v in namespace %q", bind.Spec.Action, namespace))
 		}
 		return err
-	}
-
-	if route != nil {
-		functionDNS = route.Status.Domain
-		glog.Infof("Found route DNS as %q", functionDNS)
-	}
-	if len(functionDNS) == 0 {
-		// Only return an error if we're not deleting so that we can delete
-		// the binding even if the route has already been deleted.
-		if deletionTimestamp == nil {
-			return fmt.Errorf("Route %q does not have domain", routeName)
-		}
-		log.Printf("Route %q does not have domain", routeName)
 	}
 
 	es, err := c.eventSourcesLister.EventSources(namespace).Get(bind.Spec.Trigger.Service)
@@ -333,9 +330,7 @@ func (c *Controller) syncHandler(key string) error {
 			if deletionTimestamp != nil {
 				// If the Event Source can not be found, we will remove our finalizer
 				// because without it, we can't unbind and hence this binding will never
-				// be deleted. There needs to be a way to either
-				// prevent or cascade delete bindings before the EventSource goes away. Or
-				// we need to make a defensive copy so that we can unbind.
+				// be deleted.
 				// https://github.com/knative/eventing/issues/94
 				newFinalizers, err := RemoveFinalizer(bind, controllerAgentName)
 				if err != nil {
@@ -602,4 +597,41 @@ func newEventTypeNonControllerRef(et *v1alpha1.EventType) *metav1.OwnerReference
 	revRef.BlockOwnerDeletion = &blockOwnerDeletion
 	revRef.Controller = &isController
 	return revRef
+}
+
+// syncHandler compares the actual state with the desired, and attempts to
+// converge the two. It then updates the Status block of the Bind resource
+// with the current status of the resource.
+func (c *Controller) resolveActionTarget(namespace string, action v1alpha1.BindAction) (string, error) {
+	if len(action.RouteName) > 0 {
+		return c.resolveRouteDNS(namespace, action.RouteName)
+	}
+	if len(action.ChannelName) > 0 {
+		return c.resolveChannelDNS(namespace, action.ChannelName)
+	}
+	// This should never happen, but because we don't have webhook validation yet, check
+	// and complain.
+	return "", fmt.Errorf("action is missing both RouteName and ChannelName")
+}
+
+func (c *Controller) resolveRouteDNS(namespace string, routeName string) (string, error) {
+	route, err := c.routesLister.Routes(namespace).Get(routeName)
+	if err != nil {
+		return "", err
+	}
+	if len(route.Status.Domain) == 0 {
+		return "", fmt.Errorf("route '%s/%s' is missing a domain", namespace, routeName)
+	}
+	return route.Status.Domain, nil
+}
+
+func (c *Controller) resolveChannelDNS(namespace string, channelName string) (string, error) {
+	channel, err := c.channelsLister.Channels(namespace).Get(channelName)
+	if err != nil {
+		return "", err
+	}
+	// TODO: The actual dns name should come from something in the status, or ?? But right
+	// now it is hard coded to be <channelname>-channel
+	// So we just check that the channel actually exists and tack on the -channel
+	return fmt.Sprintf("%s-channel", channel.Name), nil
 }
