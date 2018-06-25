@@ -19,3 +19,6 @@ rules:
 - apiGroups: ["channels.knative.dev"]
   resources: ["buses", "channels", "subscriptions"]
   verbs: ["get", "watch", "list"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]

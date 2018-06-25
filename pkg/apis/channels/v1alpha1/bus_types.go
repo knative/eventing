@@ -39,14 +39,27 @@ type Bus struct {
 // BusSpec (what the user wants) for a bus
 type BusSpec struct {
 
-	// Parameters configuration params for the bus
-	Parameters *[]Parameter `json:"parameters,omitempty"`
+	// Parameters exposed by the bus for channels and subscriptions
+	Parameters *BusParameters `json:"parameters,omitempty"`
 
 	// Provisioner container definition to manage channels on the bus.
 	Provisioner *kapi.Container `json:"provisioner,omitempty"`
 
 	// Dispatcher container definition to use for the bus data plane.
 	Dispatcher kapi.Container `json:"dispatcher"`
+
+	// Volumes to be mounted inside the provisioner or dispatcher containers
+	Volumes *[]kapi.Volume `json:"volumes,omitempty"`
+}
+
+// BusParameters parameters exposed by the bus
+type BusParameters struct {
+
+	// Channel configuration params for channels on the bus
+	Channel *[]Parameter `json:"channel,omitempty"`
+
+	// Subscription configuration params for subscriptions on the bus
+	Subscription *[]Parameter `json:"subscription,omitempty"`
 }
 
 // BusStatus (computed) for a bus

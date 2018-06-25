@@ -19,20 +19,21 @@ package main
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/golang/glog"
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	"github.com/knative/eventing/pkg/buses"
-	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/signals"
-	"k8s.io/client-go/tools/clientcmd"
+)
+
+const (
+	threadsPerMonitor = 1
 )
 
 var (
@@ -140,37 +141,37 @@ func main() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
-	if err != nil {
-		glog.Fatalf("Error building kubeconfig: %s", err.Error())
-	}
-
-	client, err := clientset.NewForConfig(cfg)
-	if err != nil {
-		glog.Fatalf("Error building clientset: %s", err.Error())
-	}
-
+	namespace := os.Getenv("BUS_NAMESPACE")
 	name := os.Getenv("BUS_NAME")
+	component := fmt.Sprintf("%s-%s", name, buses.Dispatcher)
 
-	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
-	monitor := buses.NewMonitor(name, informerFactory, buses.MonitorEventHandlerFuncs{
-		ProvisionFunc: func(channel channelsv1alpha1.Channel) {
+	monitor := buses.NewMonitor(component, masterURL, kubeconfig, buses.MonitorEventHandlerFuncs{
+		ProvisionFunc: func(channel *channelsv1alpha1.Channel, attributes buses.Attributes) error {
 			glog.Infof("Provision channel %q\n", channel.Name)
+			return nil
 		},
-		UnprovisionFunc: func(channel channelsv1alpha1.Channel) {
+		UnprovisionFunc: func(channel *channelsv1alpha1.Channel) error {
 			glog.Infof("Unprovision channel %q\n", channel.Name)
+			return nil
 		},
-		SubscribeFunc: func(subscription channelsv1alpha1.Subscription) {
+		SubscribeFunc: func(subscription *channelsv1alpha1.Subscription, attributes buses.Attributes) error {
 			glog.Infof("Subscribe %q to %q channel\n", subscription.Spec.Subscriber, subscription.Spec.Channel)
+			return nil
 		},
-		UnsubscribeFunc: func(subscription channelsv1alpha1.Subscription) {
+		UnsubscribeFunc: func(subscription *channelsv1alpha1.Subscription) error {
 			glog.Infof("Unubscribe %q from %q channel\n", subscription.Spec.Subscriber, subscription.Spec.Channel)
+			return nil
 		},
 	})
 	bus := NewStubBus(name, monitor)
 
-	go informerFactory.Start(stopCh)
+	go func() {
+		if err := monitor.Run(namespace, name, threadsPerMonitor, stopCh); err != nil {
+			glog.Fatalf("Error running monitor: %s", err.Error())
+		}
+	}()
 
+	glog.Infoln("Starting web server")
 	http.HandleFunc("/", bus.handleEvent)
 	glog.Fatal(http.ListenAndServe(":8080", nil))
 

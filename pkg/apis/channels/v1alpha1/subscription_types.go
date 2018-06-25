@@ -44,7 +44,7 @@ type SubscriptionSpec struct {
 	// Name of the subscriber service
 	Subscriber string `json:"subscriber"`
 
-	// Arguments for the channel
+	// Arguments for the subscription
 	Arguments *[]Argument `json:"arguments,omitempty"`
 }
 

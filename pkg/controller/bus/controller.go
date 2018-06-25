@@ -640,10 +640,18 @@ func newDispatcherDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 			Value: "8080",
 		},
 		corev1.EnvVar{
+			Name:  "BUS_NAMESPACE",
+			Value: bus.Namespace,
+		},
+		corev1.EnvVar{
 			Name:  "BUS_NAME",
 			Value: bus.Name,
 		},
 	)
+	volumes := []corev1.Volume{}
+	if bus.Spec.Volumes != nil {
+		volumes = *bus.Spec.Volumes
+	}
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      controller.BusDispatcherDeploymentName(bus.ObjectMeta.Name),
@@ -670,6 +678,7 @@ func newDispatcherDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 					Containers: []corev1.Container{
 						*container,
 					},
+					Volumes: volumes,
 				},
 			},
 		},
@@ -738,10 +747,18 @@ func newProvisionerDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 	container := bus.Spec.Provisioner.DeepCopy()
 	container.Env = append(container.Env,
 		corev1.EnvVar{
+			Name:  "BUS_NAMESPACE",
+			Value: bus.Namespace,
+		},
+		corev1.EnvVar{
 			Name:  "BUS_NAME",
 			Value: bus.Name,
 		},
 	)
+	volumes := []corev1.Volume{}
+	if bus.Spec.Volumes != nil {
+		volumes = *bus.Spec.Volumes
+	}
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      controller.BusProvisionerDeploymentName(bus.ObjectMeta.Name),
@@ -768,6 +785,7 @@ func newProvisionerDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 					Containers: []corev1.Container{
 						*container,
 					},
+					Volumes: volumes,
 				},
 			},
 		},
