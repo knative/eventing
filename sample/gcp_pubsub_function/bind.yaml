@@ -18,6 +18,7 @@ metadata:
   name: gcppubsub-example
   namespace: default
 spec:
+  serviceAccountName: binder
   trigger:
     service: gcppubsub
     eventType: receive

@@ -18,6 +18,7 @@ metadata:
   name: k8s-events-example
   namespace: default
 spec:
+  serviceAccountName: binder
   trigger:
     eventType: receiveevent
     # This is kind of superfluous due to parameters, but the current

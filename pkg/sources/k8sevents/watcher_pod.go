@@ -22,6 +22,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	sidecarIstioInjectAnnotation = "sidecar.istio.io/inject"
+)
+
 // MakeWatcherDeployment creates a deployment for a watcher.
 // TODO: a whole bunch...
 func MakeWatcherDeployment(namespace string, deploymentName string, serviceAccount string, image string, eventNamespace string, route string) *appsv1.Deployment {
@@ -41,6 +45,9 @@ func MakeWatcherDeployment(namespace string, deploymentName string, serviceAccou
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labels,
+					// Inject Istio so any connection made from the receive adapter
+					// goes through and is enforced by Istio.
+					Annotations: map[string]string{sidecarIstioInjectAnnotation: "true"},
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: serviceAccount,

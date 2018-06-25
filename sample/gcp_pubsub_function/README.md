@@ -2,7 +2,10 @@
 
 A simple function that receives Google Cloud Pub Sub events and prints out the data field after decoding
 from base64 encoding. Because we do **not** have an in-cluster event delivery mechanism yet, uses a
-Knative route as an endpoint.
+Knative route as an endpoint. This is also example of where we make use of a Receive Adapter
+that runs in the context of the namespace where the binding is created. Since we wanted to
+demonstrate pull events, we create a deployment that attaches to the specified GCP topic and
+then forwards them to the destination.
 
 ## Prerequisites
 
@@ -35,6 +38,22 @@ gcloud pubsub topics create knative-demo
 ```
 
 5. Install the event sources and types for [gcp_pubsub](../gcp_pubsub/README.md)
+
+
+## Creating a Service Account
+Because the Receive Adapter needs to run a deployment, you need to specify what 
+Service Account should be used in the target namespace for running the Receive Adapter.
+Bind.Spec has a field that allows you to specify this. By default it uses "default" for
+binding which typically has no priviledges, but this binding requires standing up a
+deployment, so you need to either use an existing Service Account with appropriate
+priviledges or create a new one. This example creates a Service Account and grants
+it cluster admin access, and you probably wouldn't want to do that in production
+settings, but for this example it will suffice just fine.
+
+```shell
+ko apply -f sample/gcp_pubsub_function/serviceaccount.yaml
+ko apply -f sample/gcp_pubsub_function/serviceaccountbinding.yaml
+```
 
 ## Running
 
@@ -79,12 +98,15 @@ gcp-pubsub-function.default.aikas.org pointing to 130.211.116.160
 
 So, you'd need to create an A record for gcp-pubsub-function.default.aikas.org pointing to 130.211.116.160
 
-To now bind the gcp_pubsub_function for GCP PubSub messages with the function we created above, you need to
- create a Bind object. Modify sample/gcp_pubsub_function/bind.yaml to specify the topic and project id
- you want.
+To now bind the gcp_pubsub_function for GCP PubSub messages with the function we created above, you need
+to create a Bind object. Modify sample/gcp_pubsub_function/bind.yaml to specify the topic and project id
+you want.
+For example, if I wanted to receive notifications to:
+project: quantum-reducer-434 topic: knative-demo, my Bind object would look like the one below.
 
- For example, if I wanted to receive notifications to:
- project: quantum-reducer-434 topic: knative-demo, my Bind object would look like so:
+You can also specify a different Service Account to use for the bind / receive watcher by changing
+the spec.serviceAccountName to something else.
+
 
 ```yaml
 apiVersion: feeds.knative.dev/v1alpha1
@@ -93,6 +115,7 @@ metadata:
   name: gcppubsub-example
   namespace: default
 spec:
+  serviceAccountName: binder
   trigger:
     service: gcppubsub
     eventType: receive

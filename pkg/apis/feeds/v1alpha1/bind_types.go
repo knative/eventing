@@ -36,8 +36,13 @@ type Bind struct {
 }
 
 type BindAction struct {
+	// You must specify one and only of these.
+
 	// RouteName specifies Knative route as a target.
 	RouteName string `json:"routeName,omitempty"`
+
+	// ChannelName specifies the channel name as a target
+	ChannelName string `json:"channelName,omitempty"`
 }
 
 type EventTrigger struct {
@@ -125,6 +130,9 @@ type BindSpec struct {
 
 	// Trigger specifies the trigger we're binding to
 	Trigger EventTrigger `json:"trigger"`
+
+	// Service Account to run binding container. If left out, uses "default"
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
 
 // ParametersFromSource represents the source of a set of Parameters
