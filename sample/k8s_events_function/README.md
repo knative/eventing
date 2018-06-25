@@ -2,7 +2,10 @@
 
 A simple function that receives Kubernetes events and prints them out the after decoding
 from base64 encoding. Because we do **not** have an in-cluster event delivery mechanism yet, uses a
-Knative route as an endpoint.
+Knative route as an endpoint. This is also example of where we make use of a Receive Adapter
+that runs in the context of the namespace where the binding is created. Since there's no push
+events, we create a deployment that attaches to k8s events for a given namespace and then
+forwards them to the destination.
 
 ## Prerequisites
 
@@ -28,6 +31,22 @@ will see the changes.
 ```shell
 ko apply -f pkg/sources/k8sevents/
 ```
+
+## Creating a Service Account
+Because the Receive Adapter needs to run a deployment, you need to specify what 
+Service Account should be used in the target namespace for running the Receive Adapter.
+Bind.Spec has a field that allows you to specify this. By default it uses "default" for
+binding which typically has no priviledges, but this binding requires standing up a
+deployment, so you need to either use an existing Service Account with appropriate
+priviledges or create a new one. This example creates a Service Account and grants
+it cluster admin access, and you probably wouldn't want to do that in production
+settings, but for this example it will suffice just fine.
+
+```shell
+ko apply -f sample/k8s_events_function/serviceaccount.yaml
+ko apply -f sample/k8s_events_function/serviceaccountbinding.yaml
+```
+
 
 ## Running
 
@@ -57,8 +76,8 @@ kubectl get eventtypes -oyaml
 
 ```
 
-To make this service accessible to github, we first need to determine its ingress address
-(might have to wait a little while until 'ADDRESS' gets assigned):
+To make this function accessible to our receive adapter via a Route, we first need to determine
+its ingress address (might have to wait a little while until 'ADDRESS' gets assigned):
 ```shell
 $ watch kubectl get ingress
 NAME                              HOSTS                                                                           ADDRESS           PORTS     AGE
@@ -74,7 +93,9 @@ k8s-events-function.default.aikas.org pointing to 104.197.125.124
 So, you'd need to create an A record for k8s-events-function.default.aikas.org pointing to 104.197.125.124
 
 To now bind the k8s_events_function for k8s system events with the function we created above, you need to
-create a Bind object. Modify sample/k8s_events_function/bind.yaml to specify the namespace you want to
+create a Bind object. Note that if you are using a different Service Account than created
+in the example above, you also need to specify that Service Account in the bind.spec.serviceAccountName.
+Modify sample/k8s_events_function/bind.yaml to specify the namespace you want to
 watch events for ('default' in this example):
 
 ```yaml
@@ -84,6 +105,7 @@ metadata:
   name: k8s-events-example
   namespace: default
 spec:
+  serviceAccountName: binder
   trigger:
     eventType: receiveevent
     resource: k8sevents/receiveevent

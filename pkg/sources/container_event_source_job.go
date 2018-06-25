@@ -52,6 +52,14 @@ const (
 
 	// EventSourceParametersKey is the Env variable that gets set to serialized EventSourceSpec
 	EventSourceParametersKey string = "EVENT_SOURCE_PARAMETERS"
+
+	// BindNamespaceKey is the Env variable that gets set to namespace of the container doing
+	// the Bind (aka, namespace of the binding). Uses downward api
+	BindNamespaceKey string = "BIND_NAMESPACE"
+
+	// BindServiceAccount is the Env variable that gets set to serviceaccount of the
+	// container doing the Bind. Uses downward api
+	BindServiceAccountKey string = "BIND_SERVICE_ACCOUNT"
 )
 
 // MakeJob creates a Job to complete a bind or unbind operation.
@@ -102,6 +110,11 @@ func makePodTemplate(bind *v1alpha1.Bind, namespace string, serviceAccountName s
 	}
 
 	return &corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"sidecar.istio.io/inject": "false",
+			},
+		},
 		Spec: corev1.PodSpec{
 			ServiceAccountName: serviceAccountName,
 			RestartPolicy:      corev1.RestartPolicyNever,
@@ -130,6 +143,22 @@ func makePodTemplate(bind *v1alpha1.Bind, namespace string, serviceAccountName s
 						{
 							Name:  EventSourceParametersKey,
 							Value: encodedParameters,
+						},
+						{
+							Name: BindNamespaceKey,
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									FieldPath: "metadata.namespace",
+								},
+							},
+						},
+						{
+							Name: BindServiceAccountKey,
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									FieldPath: "spec.serviceAccountName",
+								},
+							},
 						},
 					},
 				},

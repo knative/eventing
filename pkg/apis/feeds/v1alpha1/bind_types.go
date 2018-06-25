@@ -125,6 +125,9 @@ type BindSpec struct {
 
 	// Trigger specifies the trigger we're binding to
 	Trigger EventTrigger `json:"trigger"`
+
+	// Service Account to run binding container. If left out, uses "default"
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
 
 // ParametersFromSource represents the source of a set of Parameters

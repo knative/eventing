@@ -49,11 +49,16 @@ type GCPPubSubEventSource struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
 	image         string
+	// namespace where the binding is created
+	bindNamespace string
+	// serviceAccount that the container runs as. Launches Receive Adapter with the
+	// same Service Account
+	bindServiceAccountName string
 }
 
-func NewGCPPubSubEventSource(kubeclientset kubernetes.Interface, image string) sources.EventSource {
+func NewGCPPubSubEventSource(kubeclientset kubernetes.Interface, bindNamespace string, bindServiceAccountName string, image string) sources.EventSource {
 	glog.Infof("Image: %q", image)
-	return &GCPPubSubEventSource{kubeclientset: kubeclientset, image: image}
+	return &GCPPubSubEventSource{kubeclientset: kubeclientset, bindNamespace: bindNamespace, bindServiceAccountName: bindServiceAccountName, image: image}
 }
 
 func (t *GCPPubSubEventSource) Unbind(trigger sources.EventTrigger, bindContext sources.BindContext) error {
@@ -64,7 +69,7 @@ func (t *GCPPubSubEventSource) Unbind(trigger sources.EventTrigger, bindContext 
 	deploymentName := bindContext.Context[deployment].(string)
 	subscriptionName := bindContext.Context[subscription].(string)
 
-	err := t.deleteWatcher("knative-eventing-system", deploymentName)
+	err := t.deleteWatcher(t.bindNamespace, deploymentName)
 	if err != nil {
 		glog.Warningf("Failed to delete deployment: %s", err)
 		return err
@@ -126,7 +131,7 @@ func (t *GCPPubSubEventSource) Bind(trigger sources.EventTrigger, route string) 
 
 	// Create actual watcher
 	deploymentName := subscriptionName
-	err = t.createWatcher("knative-eventing-system", deploymentName, t.image, projectID, subscriptionName, route)
+	err = t.createWatcher(deploymentName, t.image, projectID, subscriptionName, route)
 	if err != nil {
 		glog.Infof("Failed to create deployment: %v", err)
 
@@ -147,8 +152,8 @@ func (t *GCPPubSubEventSource) Bind(trigger sources.EventTrigger, route string) 
 
 }
 
-func (t *GCPPubSubEventSource) createWatcher(namespace string, deploymentName string, image string, projectID string, subscription string, route string) error {
-	dc := t.kubeclientset.AppsV1().Deployments(namespace)
+func (t *GCPPubSubEventSource) createWatcher(deploymentName string, image string, projectID string, subscription string, route string) error {
+	dc := t.kubeclientset.AppsV1().Deployments(t.bindNamespace)
 
 	// First, check if deployment exists already.
 	if _, err := dc.Get(deploymentName, metav1.GetOptions{}); err != nil {
@@ -164,7 +169,7 @@ func (t *GCPPubSubEventSource) createWatcher(namespace string, deploymentName st
 
 	// TODO: Create ownerref to the binding so when the binding goes away deployment
 	// gets removed. Currently we manually delete the deployment.
-	deployment := MakeWatcherDeployment(namespace, deploymentName, "bind-controller", image, projectID, subscription, route)
+	deployment := MakeWatcherDeployment(t.bindNamespace, deploymentName, t.bindServiceAccountName, image, projectID, subscription, route)
 	_, createErr := dc.Create(deployment)
 	return createErr
 }
@@ -194,6 +199,9 @@ func main() {
 
 	decodedParameters, _ := base64.StdEncoding.DecodeString(os.Getenv(sources.EventSourceParametersKey))
 
+	bindNamespace := os.Getenv(sources.BindNamespaceKey)
+	bindServiceAccountName := os.Getenv(sources.BindServiceAccountKey)
+
 	var p parameters
 	err := json.Unmarshal(decodedParameters, &p)
 	if err != nil {
@@ -210,6 +218,6 @@ func main() {
 		glog.Fatalf("Error building kubernetes clientset: %s", err.Error())
 	}
 
-	sources.RunEventSource(NewGCPPubSubEventSource(kubeClient, p.Image))
+	sources.RunEventSource(NewGCPPubSubEventSource(kubeClient, bindNamespace, bindServiceAccountName, p.Image))
 	log.Printf("Done...")
 }

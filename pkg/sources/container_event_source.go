@@ -39,6 +39,9 @@ type ContainerEventSource struct {
 	// Namespace to run the container in
 	Namespace string
 
+	// ServiceAccount to run as
+	ServiceAccountName string
+
 	// Binding for this operation
 	Binding *v1alpha1.Bind
 
@@ -46,17 +49,18 @@ type ContainerEventSource struct {
 	EventSourceSpec *v1alpha1.EventSourceSpec
 }
 
-func NewContainerEventSource(bind *v1alpha1.Bind, kubeclientset kubernetes.Interface, spec *v1alpha1.EventSourceSpec, namespace string) EventSource {
+func NewContainerEventSource(bind *v1alpha1.Bind, kubeclientset kubernetes.Interface, spec *v1alpha1.EventSourceSpec, namespace string, serviceAccountName string) EventSource {
 	return &ContainerEventSource{
-		kubeclientset:   kubeclientset,
-		Namespace:       namespace,
-		Binding:         bind,
-		EventSourceSpec: spec,
+		kubeclientset:      kubeclientset,
+		Namespace:          namespace,
+		ServiceAccountName: serviceAccountName,
+		Binding:            bind,
+		EventSourceSpec:    spec,
 	}
 }
 
 func (t *ContainerEventSource) Bind(trigger EventTrigger, route string) (*BindContext, error) {
-	job, err := MakeJob(t.Binding, t.Namespace, "bind-controller", "binder", t.EventSourceSpec, Bind, trigger, route, BindContext{})
+	job, err := MakeJob(t.Binding, t.Namespace, t.ServiceAccountName, "binder", t.EventSourceSpec, Bind, trigger, route, BindContext{})
 	if err != nil {
 		glog.Errorf("failed to make job: %s", err)
 		return nil, err
@@ -74,7 +78,7 @@ func (t *ContainerEventSource) Bind(trigger EventTrigger, route string) (*BindCo
 }
 
 func (t *ContainerEventSource) Unbind(trigger EventTrigger, bindContext BindContext) error {
-	job, err := MakeJob(t.Binding, t.Namespace, "bind-controller", "binder", t.EventSourceSpec, Unbind, trigger, "", bindContext)
+	job, err := MakeJob(t.Binding, t.Namespace, t.ServiceAccountName, "binder", t.EventSourceSpec, Unbind, trigger, "", bindContext)
 	if err != nil {
 		glog.Errorf("failed to make job: %s", err)
 		return err
