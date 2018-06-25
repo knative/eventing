@@ -17,6 +17,8 @@
 package v1alpha1
 
 import (
+	"encoding/json"
+
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -48,6 +50,10 @@ type ChannelSpec struct {
 
 // ChannelStatus (computed) for a channel
 type ChannelStatus struct {
+}
+
+func (c *Channel) GetSpecJSON() ([]byte, error) {
+	return json.Marshal(c.Spec)
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
