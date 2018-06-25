@@ -6,7 +6,7 @@ functionality.
 ## Prerequisites
 
 1. [Setup your development environment](../DEVELOPMENT.md#getting-started)
-2. [Start Binding](../README.md#start-binding)
+2. [Start Binding](../DEVELOPMENT.md#starting-binding)
 
 ## Samples
 
