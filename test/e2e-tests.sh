@@ -187,7 +187,7 @@ fi
 header "Standing up Knative Binding"
 ko apply -f config/
 exit_if_test_failed
-wait_until_pods_running knative-eventing-system
+wait_until_pods_running knative-eventing
 exit_if_test_failed
 
 # TODO: Add tests.
