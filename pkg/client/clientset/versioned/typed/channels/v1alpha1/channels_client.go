@@ -37,8 +37,8 @@ type ChannelsV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *ChannelsV1alpha1Client) Buses(namespace string) BusInterface {
-	return newBuses(c, namespace)
+func (c *ChannelsV1alpha1Client) Buses() BusInterface {
+	return newBuses(c)
 }
 
 func (c *ChannelsV1alpha1Client) Channels(namespace string) ChannelInterface {

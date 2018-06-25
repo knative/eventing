@@ -29,8 +29,8 @@ import (
 type BusLister interface {
 	// List lists all Buses in the indexer.
 	List(selector labels.Selector) (ret []*v1alpha1.Bus, err error)
-	// Buses returns an object that can list and get Buses.
-	Buses(namespace string) BusNamespaceLister
+	// Get retrieves the Bus from the index for a given name.
+	Get(name string) (*v1alpha1.Bus, error)
 	BusListerExpansion
 }
 
@@ -52,38 +52,9 @@ func (s *busLister) List(selector labels.Selector) (ret []*v1alpha1.Bus, err err
 	return ret, err
 }
 
-// Buses returns an object that can list and get Buses.
-func (s *busLister) Buses(namespace string) BusNamespaceLister {
-	return busNamespaceLister{indexer: s.indexer, namespace: namespace}
-}
-
-// BusNamespaceLister helps list and get Buses.
-type BusNamespaceLister interface {
-	// List lists all Buses in the indexer for a given namespace.
-	List(selector labels.Selector) (ret []*v1alpha1.Bus, err error)
-	// Get retrieves the Bus from the indexer for a given namespace and name.
-	Get(name string) (*v1alpha1.Bus, error)
-	BusNamespaceListerExpansion
-}
-
-// busNamespaceLister implements the BusNamespaceLister
-// interface.
-type busNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all Buses in the indexer for a given namespace.
-func (s busNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.Bus, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.Bus))
-	})
-	return ret, err
-}
-
-// Get retrieves the Bus from the indexer for a given namespace and name.
-func (s busNamespaceLister) Get(name string) (*v1alpha1.Bus, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+// Get retrieves the Bus from the index for a given name.
+func (s *busLister) Get(name string) (*v1alpha1.Bus, error) {
+	obj, exists, err := s.indexer.GetByKey(name)
 	if err != nil {
 		return nil, err
 	}

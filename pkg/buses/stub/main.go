@@ -73,7 +73,7 @@ func (b *StubBus) handleEvent(res http.ResponseWriter, req *http.Request) {
 	safeHeaders.Set("x-bus", b.name)
 	safeHeaders.Set("x-channel", channel)
 	for _, subscription := range *subscriptions {
-		subscriber := subscription.Subscriber
+		subscriber := b.resolveSubscriber(subscription, namespace)
 		glog.Infof("Sending to %q for %q\n", subscriber, channel)
 		go b.dispatchEvent(subscriber, body, safeHeaders)
 	}
@@ -94,6 +94,14 @@ func (b *StubBus) dispatchEvent(subscriber string, body []byte, headers http.Hea
 	if err != nil {
 		glog.Errorf("Unable to complete subscriber request %v", err)
 	}
+}
+
+func (b *StubBus) resolveSubscriber(subscription channelsv1alpha1.SubscriptionSpec, namespace string) string {
+	subscriber := subscription.Subscriber
+	if strings.Index(subscriber, ".") == -1 {
+		subscriber = fmt.Sprintf("%s.%s.svc.cluster.local", subscriber, namespace)
+	}
+	return subscriber
 }
 
 func (b *StubBus) splitChannelName(host string) (string, string) {

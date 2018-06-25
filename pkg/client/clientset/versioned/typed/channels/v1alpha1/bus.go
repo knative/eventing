@@ -30,7 +30,7 @@ import (
 // BusesGetter has a method to return a BusInterface.
 // A group's client should implement this interface.
 type BusesGetter interface {
-	Buses(namespace string) BusInterface
+	Buses() BusInterface
 }
 
 // BusInterface has methods to work with Bus resources.
@@ -49,14 +49,12 @@ type BusInterface interface {
 // buses implements BusInterface
 type buses struct {
 	client rest.Interface
-	ns     string
 }
 
 // newBuses returns a Buses
-func newBuses(c *ChannelsV1alpha1Client, namespace string) *buses {
+func newBuses(c *ChannelsV1alpha1Client) *buses {
 	return &buses{
 		client: c.RESTClient(),
-		ns:     namespace,
 	}
 }
 
@@ -64,7 +62,6 @@ func newBuses(c *ChannelsV1alpha1Client, namespace string) *buses {
 func (c *buses) Get(name string, options v1.GetOptions) (result *v1alpha1.Bus, err error) {
 	result = &v1alpha1.Bus{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("buses").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -77,7 +74,6 @@ func (c *buses) Get(name string, options v1.GetOptions) (result *v1alpha1.Bus, e
 func (c *buses) List(opts v1.ListOptions) (result *v1alpha1.BusList, err error) {
 	result = &v1alpha1.BusList{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("buses").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Do().
@@ -89,7 +85,6 @@ func (c *buses) List(opts v1.ListOptions) (result *v1alpha1.BusList, err error) 
 func (c *buses) Watch(opts v1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
 	return c.client.Get().
-		Namespace(c.ns).
 		Resource("buses").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Watch()
@@ -99,7 +94,6 @@ func (c *buses) Watch(opts v1.ListOptions) (watch.Interface, error) {
 func (c *buses) Create(bus *v1alpha1.Bus) (result *v1alpha1.Bus, err error) {
 	result = &v1alpha1.Bus{}
 	err = c.client.Post().
-		Namespace(c.ns).
 		Resource("buses").
 		Body(bus).
 		Do().
@@ -111,7 +105,6 @@ func (c *buses) Create(bus *v1alpha1.Bus) (result *v1alpha1.Bus, err error) {
 func (c *buses) Update(bus *v1alpha1.Bus) (result *v1alpha1.Bus, err error) {
 	result = &v1alpha1.Bus{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("buses").
 		Name(bus.Name).
 		Body(bus).
@@ -123,7 +116,6 @@ func (c *buses) Update(bus *v1alpha1.Bus) (result *v1alpha1.Bus, err error) {
 // Delete takes name of the bus and deletes it. Returns an error if one occurs.
 func (c *buses) Delete(name string, options *v1.DeleteOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("buses").
 		Name(name).
 		Body(options).
@@ -134,7 +126,6 @@ func (c *buses) Delete(name string, options *v1.DeleteOptions) error {
 // DeleteCollection deletes a collection of objects.
 func (c *buses) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("buses").
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Body(options).
@@ -146,7 +137,6 @@ func (c *buses) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListO
 func (c *buses) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.Bus, err error) {
 	result = &v1alpha1.Bus{}
 	err = c.client.Patch(pt).
-		Namespace(c.ns).
 		Resource("buses").
 		SubResource(subresources...).
 		Name(name).

@@ -38,6 +38,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
+	"github.com/knative/eventing/pkg"
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	channelscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
@@ -484,7 +485,7 @@ func newVirtualService(channel *channelsv1alpha1.Channel) *istiov1alpha3.Virtual
 					Route: []istiov1alpha3.DestinationWeight{
 						{
 							Destination: istiov1alpha3.Destination{
-								Host: controller.ServiceHostName(controller.BusDispatcherServiceName(channel.Spec.Bus), channel.Namespace),
+								Host: controller.ServiceHostName(controller.BusDispatcherServiceName(channel.Spec.Bus), pkg.GetEventingSystemNamespace()),
 							},
 						},
 					},

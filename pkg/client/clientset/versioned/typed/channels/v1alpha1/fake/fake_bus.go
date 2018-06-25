@@ -31,7 +31,6 @@ import (
 // FakeBuses implements BusInterface
 type FakeBuses struct {
 	Fake *FakeChannelsV1alpha1
-	ns   string
 }
 
 var busesResource = schema.GroupVersionResource{Group: "channels.knative.dev", Version: "v1alpha1", Resource: "buses"}
@@ -41,8 +40,7 @@ var busesKind = schema.GroupVersionKind{Group: "channels.knative.dev", Version: 
 // Get takes name of the bus, and returns the corresponding bus object, and an error if there is any.
 func (c *FakeBuses) Get(name string, options v1.GetOptions) (result *v1alpha1.Bus, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(busesResource, c.ns, name), &v1alpha1.Bus{})
-
+		Invokes(testing.NewRootGetAction(busesResource, name), &v1alpha1.Bus{})
 	if obj == nil {
 		return nil, err
 	}
@@ -52,8 +50,7 @@ func (c *FakeBuses) Get(name string, options v1.GetOptions) (result *v1alpha1.Bu
 // List takes label and field selectors, and returns the list of Buses that match those selectors.
 func (c *FakeBuses) List(opts v1.ListOptions) (result *v1alpha1.BusList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(busesResource, busesKind, c.ns, opts), &v1alpha1.BusList{})
-
+		Invokes(testing.NewRootListAction(busesResource, busesKind, opts), &v1alpha1.BusList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -74,15 +71,13 @@ func (c *FakeBuses) List(opts v1.ListOptions) (result *v1alpha1.BusList, err err
 // Watch returns a watch.Interface that watches the requested buses.
 func (c *FakeBuses) Watch(opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(busesResource, c.ns, opts))
-
+		InvokesWatch(testing.NewRootWatchAction(busesResource, opts))
 }
 
 // Create takes the representation of a bus and creates it.  Returns the server's representation of the bus, and an error, if there is any.
 func (c *FakeBuses) Create(bus *v1alpha1.Bus) (result *v1alpha1.Bus, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(busesResource, c.ns, bus), &v1alpha1.Bus{})
-
+		Invokes(testing.NewRootCreateAction(busesResource, bus), &v1alpha1.Bus{})
 	if obj == nil {
 		return nil, err
 	}
@@ -92,8 +87,7 @@ func (c *FakeBuses) Create(bus *v1alpha1.Bus) (result *v1alpha1.Bus, err error) 
 // Update takes the representation of a bus and updates it. Returns the server's representation of the bus, and an error, if there is any.
 func (c *FakeBuses) Update(bus *v1alpha1.Bus) (result *v1alpha1.Bus, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(busesResource, c.ns, bus), &v1alpha1.Bus{})
-
+		Invokes(testing.NewRootUpdateAction(busesResource, bus), &v1alpha1.Bus{})
 	if obj == nil {
 		return nil, err
 	}
@@ -103,14 +97,13 @@ func (c *FakeBuses) Update(bus *v1alpha1.Bus) (result *v1alpha1.Bus, err error) 
 // Delete takes name of the bus and deletes it. Returns an error if one occurs.
 func (c *FakeBuses) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(busesResource, c.ns, name), &v1alpha1.Bus{})
-
+		Invokes(testing.NewRootDeleteAction(busesResource, name), &v1alpha1.Bus{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeBuses) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(busesResource, c.ns, listOptions)
+	action := testing.NewRootDeleteCollectionAction(busesResource, listOptions)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.BusList{})
 	return err
@@ -119,8 +112,7 @@ func (c *FakeBuses) DeleteCollection(options *v1.DeleteOptions, listOptions v1.L
 // Patch applies the patch and returns the patched bus.
 func (c *FakeBuses) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.Bus, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(busesResource, c.ns, name, data, subresources...), &v1alpha1.Bus{})
-
+		Invokes(testing.NewRootPatchSubresourceAction(busesResource, name, data, subresources...), &v1alpha1.Bus{})
 	if obj == nil {
 		return nil, err
 	}

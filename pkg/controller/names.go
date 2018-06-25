@@ -26,14 +26,6 @@ func BusDispatcherDeploymentName(busName string) string {
 	return fmt.Sprintf("%s-bus", busName)
 }
 
-func BusServiceAccountName(busName string) string {
-	return fmt.Sprintf("%s-bus", busName)
-}
-
-func BusClusterRoleBindingName(busName string) string {
-	return fmt.Sprintf("%s-bus", busName)
-}
-
 func BusDispatcherServiceName(busName string) string {
 	return fmt.Sprintf("%s-bus", busName)
 }

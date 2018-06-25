@@ -16,7 +16,7 @@ kind: CustomResourceDefinition
 metadata:
   name: buses.channels.knative.dev
 spec:
-  scope: Namespaced
+  scope: Cluster
   group: channels.knative.dev
   version: v1alpha1
   names:

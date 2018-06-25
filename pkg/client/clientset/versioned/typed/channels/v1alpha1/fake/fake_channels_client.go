@@ -28,8 +28,8 @@ type FakeChannelsV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeChannelsV1alpha1) Buses(namespace string) v1alpha1.BusInterface {
-	return &FakeBuses{c, namespace}
+func (c *FakeChannelsV1alpha1) Buses() v1alpha1.BusInterface {
+	return &FakeBuses{c}
 }
 
 func (c *FakeChannelsV1alpha1) Channels(namespace string) v1alpha1.ChannelInterface {

@@ -45,7 +45,7 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 
 // Buses returns a BusInformer.
 func (v *version) Buses() BusInformer {
-	return &busInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+	return &busInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // Channels returns a ChannelInformer.
