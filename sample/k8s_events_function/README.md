@@ -1,8 +1,8 @@
 # k8s_events_function
 
 A simple function that receives Kubernetes events and prints them out the after decoding
-from base64 encoding. Because we do **not** have an in-cluster event delivery mechanism yet, uses a
-Knative route as an endpoint. This is also example of where we make use of a Receive Adapter
+from base64 encoding. This example targets a Knative Route, there's another example [using
+channels](./README_CHANNEL.md). This is also example of where we make use of a Receive Adapter
 that runs in the context of the namespace where the binding is created. Since there's no push
 events, we create a deployment that attaches to k8s events for a given namespace and then
 forwards them to the destination.

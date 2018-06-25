@@ -36,8 +36,13 @@ type Bind struct {
 }
 
 type BindAction struct {
+	// You must specify one and only of these.
+
 	// RouteName specifies Knative route as a target.
 	RouteName string `json:"routeName,omitempty"`
+
+	// ChannelName specifies the channel name as a target
+	ChannelName string `json:"channelName,omitempty"`
 }
 
 type EventTrigger struct {
