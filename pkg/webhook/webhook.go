@@ -202,10 +202,6 @@ func NewAdmissionController(client kubernetes.Interface, options ControllerOptio
 		client:  client,
 		options: options,
 		handlers: map[string]GenericCRDHandler{
-			// "Bus": {
-			// 	Factory:   &v1alpha1.Bus{},
-			// 	Validator: ValidateBus(ctx),
-			// },
 			"Channel": {
 				Factory:   &v1alpha1.Channel{},
 				Validator: ValidateChannel(ctx),

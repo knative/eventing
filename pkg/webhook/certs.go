@@ -32,7 +32,7 @@ import (
 
 const (
 	// TODO(vaikas): Add / change other parts of the cert we might care about
-	organization = "kube"
+	organization = "knative"
 )
 
 // Create the common parts of the cert. These don't change between

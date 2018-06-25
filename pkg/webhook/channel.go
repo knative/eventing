@@ -49,8 +49,6 @@ func validateChannel(old, new *v1alpha1.Channel) error {
 	if old != nil && old.Spec.Bus != new.Spec.Bus {
 		return errInvalidChannelBusMutation
 	}
-	// TODO maybe validate bus exists
-	// TODO maybe validate args against bus's channel params
 	return nil
 }
 

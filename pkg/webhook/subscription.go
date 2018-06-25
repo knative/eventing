@@ -49,8 +49,6 @@ func validateSubscription(old, new *v1alpha1.Subscription) error {
 	if old != nil && old.Spec.Channel != new.Spec.Channel {
 		return errInvalidSubscriptionChannelMutation
 	}
-	// TODO maybe validate channel exists
-	// TODO maybe validate args against bus' subscription params
 	return nil
 }
 
