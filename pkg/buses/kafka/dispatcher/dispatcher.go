@@ -19,12 +19,12 @@ package main
 
 import (
 	"flag"
-		"github.com/golang/glog"
+	"github.com/golang/glog"
 	"os"
 	"time"
 	"github.com/knative/eventing/pkg/signals"
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
-		informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"strings"
 	"github.com/knative/eventing/pkg/buses"
 	"log"
@@ -36,12 +36,12 @@ import (
 	"io/ioutil"
 	"github.com/Shopify/sarama"
 	"context"
-	)
+)
 
 const (
 	InitialOffset = "initialOffset"
-	Newest = "Newest"
-	Oldest = "Oldest"
+	Newest        = "Newest"
+	Oldest        = "Oldest"
 )
 
 type dispatcher struct {
@@ -119,12 +119,12 @@ func NewKafkaDispatcher(name string, namespace string, masterURL string, kubeCon
 	}()
 
 	d := dispatcher{
-		busName:         name,
-		namespace:       namespace,
-		client:          &http.Client{},
-		brokers:         brokers,
-		consumers:       make(map[subscriptionKey]*cluster.Consumer),
-		producer:        asyncProducer,
+		busName:   name,
+		namespace: namespace,
+		client:    &http.Client{},
+		brokers:   brokers,
+		consumers: make(map[subscriptionKey]*cluster.Consumer),
+		producer:  asyncProducer,
 	}
 	component := fmt.Sprintf("%s-%s", name, buses.Dispatcher)
 	monitor := buses.NewMonitor(component, masterURL, kubeConfig, buses.MonitorEventHandlerFuncs{

@@ -261,7 +261,7 @@ func NewMonitor(
 		cache:                    make(map[channelKey]*channelSummary),
 		provisionedChannels:      make(map[channelKey]*channelsv1alpha1.Channel),
 		provisionedSubscriptions: make(map[subscriptionKey]*channelsv1alpha1.Subscription),
-		mutex: &sync.Mutex{},
+		mutex:                    &sync.Mutex{},
 
 		workqueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Monitor"),
 		recorder:  recorder,

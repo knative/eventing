@@ -19,18 +19,18 @@ package main
 
 import (
 	"flag"
-		"github.com/golang/glog"
+	"github.com/golang/glog"
 	"os"
-		"github.com/knative/eventing/pkg/signals"
+	"github.com/knative/eventing/pkg/signals"
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
-		informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/Shopify/sarama"
 	"strings"
 	"github.com/knative/eventing/pkg/buses"
 	"fmt"
 	"strconv"
 	"log"
-	)
+)
 
 const (
 	NumPartitions = "NumPartitions"
@@ -91,9 +91,9 @@ func main() {
 func NewKafkaProvisioner(name string, namespace string, masterURL string, kubeconfig string, admin sarama.ClusterAdmin) (*provisioner, error) {
 
 	p := provisioner{
-		namespace:       namespace,
-		name:            name,
-		admin:           admin,
+		namespace: namespace,
+		name:      name,
+		admin:     admin,
 	}
 	component := fmt.Sprintf("%s-%s", name, buses.Provisioner)
 	monitor := buses.NewMonitor(component, masterURL, kubeconfig, buses.MonitorEventHandlerFuncs{
@@ -122,7 +122,7 @@ func (p *provisioner) provision(channel *channelsv1alpha1.Channel, attrs buses.A
 		}
 	}
 
-	err := p.admin.CreateTopic(topicName, &sarama.TopicDetail{ReplicationFactor:1, NumPartitions:int32(partitions)}, false)
+	err := p.admin.CreateTopic(topicName, &sarama.TopicDetail{ReplicationFactor: 1, NumPartitions: int32(partitions)}, false)
 	if err == sarama.ErrTopicAlreadyExists {
 		return nil
 	} else if err != nil {
