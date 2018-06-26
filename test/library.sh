@@ -67,9 +67,8 @@ function wait_until_pods_running() {
   echo -n "Waiting until all pods in namespace $1 are up"
   for i in {1..150}; do  # timeout after 5 minutes
     local pods="$(kubectl get pods -n $1 | grep -v NAME)"
-    local not_running=$(echo "${pods}" | grep -v Running | wc -l)
-    local not_running_or_completed=$(echo "${not_running}" | grep -v Completed | wc -l)
-    if [[ -n "${pods}" && ${not_running_or_completed} == 0 ]]; then
+    local not_running=$(echo "${pods}" | grep -v Running | grep -v Completed | wc -l)
+    if [[ -n "${pods}" && ${not_running} == 0 ]]; then
       echo -e "\nAll pods are up:"
       kubectl get pods -n $1
       return 0

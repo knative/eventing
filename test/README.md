@@ -24,13 +24,6 @@ There's couple of things you need to install before running e2e tests locally.
 go get -u k8s.io/test-infra/kubetest
 ```
 
-
-You also need to generate an ssh key for communicating with GCP
-
-```shell
-ssh-keygen -t rsa -f ~/.ssh/google_compute_engine -C `whoami`
-```
-
 Simply run the `e2e-tests.sh` script. It will create a GKE cluster, install Knative Serving
 stack with Istio and run the end-to-end tests against the Knative Eventing built from source.
 
