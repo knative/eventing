@@ -35,7 +35,6 @@ To check out this repository:
 
 1. Create your own [fork of this repo](https://help.github.com/articles/fork-a-repo/)
 2. Clone it to your machine:
-
   ```shell
   mkdir -p ${GOPATH}/src/github.com/knative
   cd ${GOPATH}/src/github.com/knative
