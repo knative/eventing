@@ -12,12 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: serving.knative.dev/v1alpha1
-kind: Route
+apiVersion: channels.knative.dev/v1alpha1
+kind: Channel
 metadata:
-  name: k8s-events-function
-  namespace: default
+  name: k8s-events-channel
+  namespace: e2etestfn
 spec:
-  traffic:
-  - configurationName: k8s-events-function
-    percent: 100
+  bus: stub

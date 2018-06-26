@@ -37,6 +37,9 @@ readonly E2E_CLUSTER_MACHINE=n1-standard-2
 readonly TEST_RESULT_FILE=/tmp/eventing-e2e-result
 readonly ISTIO_YAML=https://storage.googleapis.com/knative-releases/latest/istio.yaml
 readonly SERVING_RELEASE=https://storage.googleapis.com/knative-releases/latest/release.yaml
+readonly E2E_TEST_NAMESPACE=e2etest
+readonly E2E_TEST_FUNCTION_NAMESPACE=e2etestfn
+readonly E2E_TEST_FUNCTION=e2e-k8s-events-function
 
 # This script.
 readonly SCRIPT_CANONICAL_PATH="$(readlink -f ${BASH_SOURCE})"
@@ -78,6 +81,112 @@ function exit_if_test_failed() {
   echo "***     End of information dump     ***"
   echo "***************************************"
   exit 1
+}
+
+# Tests
+function teardown_k8s_events_test_resources() {
+  echo "Deleting any previously existing bind"
+  ko delete --ignore-not-found=true -f test/e2e/k8sevents/bind-channel.yaml
+  wait_until_object_does_not_exist bind $E2E_TEST_FUNCTION_NAMESPACE receiveevent
+
+  # Delete the function resources and namespace
+  echo "Deleting function and test namespace"
+  ko delete --ignore-not-found=true -f test/e2e/k8sevents/function.yaml
+  wait_until_object_does_not_exist route $E2E_TEST_FUNCTION_NAMESPACE $E2E_TEST_FUNCTION
+
+  echo "Deleting k8s events event source"
+  ko delete --ignore-not-found=true -f test/e2e/k8sevents/k8sevents.yaml
+  wait_until_object_does_not_exist eventsources $E2E_TEST_FUNCTION_NAMESPACE k8sevents
+  exit_if_test_failed
+  wait_until_object_does_not_exist eventtypes $E2E_TEST_FUNCTION_NAMESPACE receiveevent
+  exit_if_test_failed
+
+  # Delete the pod from the test namespace
+  echo "Deleting test pod"
+  ko delete --ignore-not-found=true -f test/e2e/k8sevents/pod.yaml
+
+  # Delete the channel and subscription
+  echo "Deleting subscription"
+  ko delete --ignore-not-found=true -f test/e2e/k8sevents/subscription.yaml
+  echo "Deleting channel"
+  ko delete -f test/e2e/k8sevents/channel.yaml
+
+  # Delete the service account and role binding
+  echo "Deleting cluster role binding"
+  ko delete --ignore-not-found=true -f test/e2e/k8sevents/serviceaccountbinding.yaml
+  echo "Deleting service account"
+  ko delete --ignore-not-found=true -f test/e2e/k8sevents/serviceaccount.yaml
+
+  # Delete the function namespace
+  echo "Deleting namespace $E2E_TEST_FUNCTION_NAMESPACE"
+  kubectl --ignore-not-found=true delete namespace $E2E_TEST_FUNCTION_NAMESPACE
+  wait_until_namespace_does_not_exist $E2E_TEST_FUNCTION_NAMESPACE
+  exit_if_test_failed
+
+  # Delete the test namespace
+  echo "Deleting namespace $E2E_TEST_NAMESPACE"
+  kubectl --ignore-not-found=true delete namespace $E2E_TEST_NAMESPACE
+  wait_until_namespace_does_not_exist $E2E_TEST_NAMESPACE
+  exit_if_test_failed
+}
+
+function run_k8s_events_test() {
+  echo "Creating namespace $E2E_TEST_FUNCTION_NAMESPACE"
+  ko apply -f test/e2e/k8sevents/e2etestnamespace.yaml
+  echo "Creating namespace $E2E_TEST_NAMESPACE"
+  ko apply -f test/e2e/k8sevents/e2etestfnnamespace.yaml
+
+  # Install service account and role binding
+  echo "Installing service account"
+  ko apply -f test/e2e/k8sevents/serviceaccount.yaml
+
+  echo "Installing role binding"
+  ko apply -f test/e2e/k8sevents/serviceaccountbinding.yaml
+
+  # Install stub bus
+  echo "Installing stub bus"
+  ko apply -f test/e2e/k8sevents/stub.yaml
+
+  # Install k8s events as an event source
+  echo "Installing k8s events as an event source"
+  ko apply -f test/e2e/k8sevents/k8sevents.yaml
+
+  # launch the function
+  echo "Installing the receiving function"
+  ko apply -f test/e2e/k8sevents/function.yaml
+  wait_until_pods_running $E2E_TEST_FUNCTION_NAMESPACE
+  exit_if_test_failed
+
+  # create a channel and subscription
+  echo "Creating a channel"
+  ko apply -f test/e2e/k8sevents/channel.yaml
+  echo "Creating a subscription"
+  ko apply -f test/e2e/k8sevents/subscription.yaml
+
+
+  # Install binding
+  echo "Creating a binding"
+  ko apply -f test/e2e/k8sevents/bind-channel.yaml
+  wait_until_bind_ready $E2E_TEST_FUNCTION_NAMESPACE e2e-k8s-events-example
+  exit_if_test_failed
+
+  # Work around for: https://github.com/knative/eventing/issues/125
+  # and the fact that even after pods are up, due to Istio slowdown, there's
+  # about 5-6 seconds that traffic won't be passed through.
+  echo "Waiting until receive_adapter up"
+  wait_until_pods_running $E2E_TEST_FUNCTION_NAMESPACE
+  sleep 10
+
+  # Launch the pod into the test namespace
+  echo "Creating a pod in the test namespace"
+  ko apply -f test/e2e/k8sevents/pod.yaml
+  wait_until_pods_running $E2E_TEST_NAMESPACE
+  exit_if_test_failed
+
+  # Check the logs to make sure messages made to our function
+  echo "Validating that the function received the expected events"
+  validate_function_logs $E2E_TEST_FUNCTION_NAMESPACE
+  exit_if_test_failed
 }
 
 # Script entry point.
@@ -153,10 +262,6 @@ if [[ -z ${KO_DOCKER_REPO} ]]; then
   export KO_DOCKER_REPO=gcr.io/$(gcloud config get-value project)/eventing-e2e-img
 fi
 
-# Start Knative Serving.
-
-header "Starting Knative Serving"
-
 echo "- Cluster is ${K8S_CLUSTER_OVERRIDE}"
 echo "- User is ${K8S_USER_OVERRIDE}"
 echo "- Docker is ${KO_DOCKER_REPO}"
@@ -165,32 +270,53 @@ trap teardown EXIT
 
 install_ko
 
-subheader "Installing istio"
-kubectl apply -f ${ISTIO_YAML}
-wait_until_pods_running istio-system
-kubectl label namespace default istio-injection=enabled
+if (( ! USING_EXISTING_CLUSTER )); then
+  # Start Knative Serving.
 
-subheader "Installing Knative Serving"
-kubectl apply -f ${SERVING_RELEASE}
-exit_if_test_failed "could not install Knative Serving"
+  header "Starting Knative Serving"
 
-wait_until_pods_running knative-serving-system
-wait_until_pods_running build-system
+  subheader "Installing istio"
+  kubectl apply -f ${ISTIO_YAML}
+  # This seems racy:
+  # https://github.com/knative/eventing/issues/92
+  wait_until_pods_running istio-system
+  kubectl label namespace default istio-injection=enabled
+
+  subheader "Installing Knative Serving"
+  kubectl apply -f ${SERVING_RELEASE}
+  exit_if_test_failed "could not install Knative Serving"
+
+  wait_until_pods_running knative-serving-system
+  wait_until_pods_running build-system
+else
+  header "Using existing Knative Serving"
+fi
+
 
 (( IS_PROW )) && gcr_auth
 
+# Clean up anything that might still be around...
+teardown_k8s_events_test_resources
+
 if (( USING_EXISTING_CLUSTER )); then
-  echo "Deleting any previous eventing instance"
+  header "Deleting previous eventing instance if it exists"
   ko delete --ignore-not-found=true -f config/
+  wait_until_namespace_does_not_exist knative-eventing
+  exit_if_test_failed
+  wait_until_crd_does_not_exist binds.feeds.knative.dev
+  exit_if_test_failed
 fi
 
-header "Standing up Knative Binding"
+header "Standing up Knative Eventing"
+ko resolve -f config/
 ko apply -f config/
 exit_if_test_failed
 wait_until_pods_running knative-eventing
 exit_if_test_failed
 
-# TODO: Add tests.
+header "Running 'k8s events' test"
+run_k8s_events_test
+exit_if_test_failed
 
 # kubetest teardown might fail and thus incorrectly report failure of the
 # script, even if the tests pass.

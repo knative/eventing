@@ -61,13 +61,13 @@ function restore_override_vars() {
   export KO_DOCKER_REPO="${OG_KO_DOCKER_REPO}"
 }
 
-# Waits until all pods are running in the given namespace.
+# Waits until all pods are running in the given namespace or Completed.
 # Parameters: $1 - namespace.
 function wait_until_pods_running() {
   echo -n "Waiting until all pods in namespace $1 are up"
   for i in {1..150}; do  # timeout after 5 minutes
     local pods="$(kubectl get pods -n $1 | grep -v NAME)"
-    local not_running=$(echo "${pods}" | grep -v Running | wc -l)
+    local not_running=$(echo "${pods}" | grep -v Running | grep -v Completed | wc -l)
     if [[ -n "${pods}" && ${not_running} == 0 ]]; then
       echo -e "\nAll pods are up:"
       kubectl get pods -n $1
@@ -119,4 +119,80 @@ function ko() {
   else
     ko $@
   fi
+}
+
+# Waits until a namespace no longer exists
+# Parameters: $1 - namespace.
+function wait_until_namespace_does_not_exist() {
+  echo -n "Waiting until namespace $1 does not exist"
+  for i in {1..150}; do  # timeout after 5 minutes
+    kubectl get namespaces $1 2>&1 > /dev/null || return 0
+    echo -n "."
+    sleep 2
+  done
+  echo -e "\n\nERROR: timeout waiting for namespace to not exist"
+  kubectl get namespaces $1
+  return 1
+}
+
+# Waits until a CRD no longer exists
+# Parameters: $1 - crd.
+function wait_until_crd_does_not_exist() {
+  echo -n "Waiting until CRD $1 does not exist"
+  for i in {1..150}; do  # timeout after 5 minutes
+    kubectl get customresourcedefinitions $1 2>&1 > /dev/null || return 0
+    echo -n "."
+    sleep 2
+  done
+  echo -e "\n\nERROR: timeout waiting for CRD to not exist"
+  kubectl get customresourcedefinitions $1
+  return 1
+}
+
+function wait_until_object_does_not_exist() {
+  local KIND=$1
+  local NAMESPACE=$2
+  local NAME=$3
+
+  echo -n "Waiting until $KIND $NAMESPACE/$NAME does not exist"
+  for i in {1..150}; do  # timeout after 5 minutes
+    kubectl get -n $NAMESPACE $KIND $NAME 2>&1 > /dev/null || return 0
+    echo -n "."
+    sleep 2
+  done
+  echo -e "\n\nERROR: timeout waiting for $KIND $NAMESPACE/$NAME not to exist"
+  kubectl get -n $NAMESPACE $KIND $NAME  $1
+  return 1
+}
+
+function wait_until_bind_ready() {
+  local NAMESPACE=$1
+  local NAME=$2
+
+  echo -n "Waiting until bind $NAMESPACE/$NAME is ready"
+  for i in {1..150}; do  # timeout after 5 minutes
+    local reason="$(kubectl get -n $NAMESPACE binds $NAME -o 'jsonpath={.status.conditions[0].reason}')"
+    local status="$(kubectl get -n $NAMESPACE binds $NAME -o 'jsonpath={.status.conditions[0].status}')"
+
+    if [ "$reason" = "BindSuccess" ]; then
+       if [ "$status" = "True" ]; then
+          return 0
+       fi
+    fi
+    echo -n "."
+    sleep 2
+  done
+  echo -e "\n\nERROR: timeout waiting for bind $NAMESPACE/$NAME to be ready"
+  kubectl get -n $NAMESPACE $KIND $NAME  $1
+  return 1
+}
+
+function validate_function_logs() {
+  local NAMESPACE=$1
+  local podname="$(kubectl -n $NAMESPACE get pods --no-headers -oname | grep e2e-k8s-events-)"
+  echo "$podname"
+  local logs="$(kubectl -n $NAMESPACE logs $podname user-container)"
+  echo "${logs}" | grep "Started container" || return 1
+  echo "${logs}" | grep "Created container" || return 1
+  return 0
 }
