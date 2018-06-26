@@ -80,13 +80,13 @@ Then create the binding so that you can see changes on that namespace
 ```
 
 This will create a receive_adapter that runs in the cluster and receives native k8s events
-and pushes them to the consuming function.
+and pushes them to the consuming function. You can check the status by looking at the
+namespace you deployed the binding into. In the case above it would be default.
 
 ```shell
-$kubectl -n knative-eventing-system get pods
+$kubectl get pods
 
 NAME                                                        READY     STATUS    RESTARTS   AGE
-bind-controller-dddb99dfc-jzp7z                             1/1       Running   0          1d
 sub-a3095905-f9c8-4f32-87ac-3c8fec9b51f9-85db55dc48-2mbm9   1/1       Running   0          1m
 
 ```
