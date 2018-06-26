@@ -61,14 +61,15 @@ function restore_override_vars() {
   export KO_DOCKER_REPO="${OG_KO_DOCKER_REPO}"
 }
 
-# Waits until all pods are running in the given namespace.
+# Waits until all pods are running in the given namespace or Completed.
 # Parameters: $1 - namespace.
 function wait_until_pods_running() {
   echo -n "Waiting until all pods in namespace $1 are up"
   for i in {1..150}; do  # timeout after 5 minutes
     local pods="$(kubectl get pods -n $1 | grep -v NAME)"
     local not_running=$(echo "${pods}" | grep -v Running | wc -l)
-    if [[ -n "${pods}" && ${not_running} == 0 ]]; then
+    local not_running_or_completed=$(echo "${not_running}" | grep -v Completed | wc -l)
+    if [[ -n "${pods}" && ${not_running_or_completed} == 0 ]]; then
       echo -e "\nAll pods are up:"
       kubectl get pods -n $1
       return 0
@@ -189,7 +190,8 @@ function wait_until_bind_ready() {
 
 function validate_function_logs() {
   local NAMESPACE=$1
-  local podname="$(kubectl -n $NAMESPACE get pods --no-headers -oname)"
+  local podname="$(kubectl -n $NAMESPACE get pods --no-headers -oname | grep e2e-k8s-events-)"
+  echo "$podname"
   local logs="$(kubectl -n $NAMESPACE logs $podname user-container)"
   echo "${logs}" | grep "Started container" || return 1
   echo "${logs}" | grep "Created container" || return 1

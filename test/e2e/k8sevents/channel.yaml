@@ -12,19 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: feeds.knative.dev/v1alpha1
-kind: Bind
+apiVersion: channels.knative.dev/v1alpha1
+kind: Channel
 metadata:
-  name: e2e-k8s-events-example
+  name: k8s-events-channel
   namespace: e2etestfn
 spec:
-  trigger:
-    eventType: receiveevent
-    # This is kind of superfluous due to parameters, but the current
-    # bind model still requires a resource
-    resource: k8sevents/receiveevent
-    service: k8sevents
-    parameters:
-      namespace: e2etest
-  action:
-    routeName: e2e-k8s-events-function
+  bus: stub

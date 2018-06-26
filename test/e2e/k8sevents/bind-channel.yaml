@@ -1,0 +1,32 @@
+# Copyright 2018 The Knative Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: feeds.knative.dev/v1alpha1
+kind: Bind
+metadata:
+  name: e2e-k8s-events-example
+  namespace: e2etestfn
+spec:
+  serviceAccountName: e2e-binder
+  trigger:
+    eventType: receiveevent
+    # This is kind of superfluous due to parameters, but the current
+    # bind model still requires a resource
+    resource: k8sevents/receiveevent
+    service: k8sevents
+    # Watch for events in namespace e2etest
+    parameters:
+      namespace: e2etest
+  action:
+    channelName: k8s-events-channel

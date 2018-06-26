@@ -86,7 +86,7 @@ function exit_if_test_failed() {
 # Tests
 function teardown_k8s_events_test_resources() {
   echo "Deleting any previously existing bind"
-  ko delete --ignore-not-found=true -f test/e2e/k8sevents/bind.yaml
+  ko delete --ignore-not-found=true -f test/e2e/k8sevents/bind-channel.yaml
   wait_until_object_does_not_exist bind $E2E_TEST_FUNCTION_NAMESPACE receiveevent
 
   # Delete the function resources and namespace
@@ -103,7 +103,19 @@ function teardown_k8s_events_test_resources() {
 
   # Delete the pod from the test namespace
   echo "Deleting test pod"
-  ko delete -f test/e2e/k8sevents/pod.yaml
+  ko delete --ignore-not-found=true -f test/e2e/k8sevents/pod.yaml
+
+  # Delete the channel and subscription
+  echo "Deleting subscription"
+  ko delete --ignore-not-found=true -f test/e2e/k8sevents/subscription.yaml
+  echo "Deleting channel"
+  ko delete -f test/e2e/k8sevents/channel.yaml
+
+  # Delete the service account and role binding
+  echo "Deleting cluster role binding"
+  ko delete --ignore-not-found=true -f test/e2e/k8sevents/serviceaccountbinding.yaml
+  echo "Deleting service account"
+  ko delete --ignore-not-found=true -f test/e2e/k8sevents/serviceaccount.yaml
 
   # Delete the function namespace
   echo "Deleting namespace $E2E_TEST_FUNCTION_NAMESPACE"
@@ -120,9 +132,20 @@ function teardown_k8s_events_test_resources() {
 
 function run_k8s_events_test() {
   echo "Creating namespace $E2E_TEST_FUNCTION_NAMESPACE"
-  kubectl create namespace $E2E_TEST_FUNCTION_NAMESPACE
+  ko apply -f test/e2e/k8sevents/e2etestnamespace.yaml
   echo "Creating namespace $E2E_TEST_NAMESPACE"
-  kubectl create namespace $E2E_TEST_NAMESPACE
+  ko apply -f test/e2e/k8sevents/e2etestfnnamespace.yaml
+
+  # Install service account and role binding
+  echo "Installing service account"
+  ko apply -f test/e2e/k8sevents/serviceaccount.yaml
+
+  echo "Installing role binding"
+  ko apply -f test/e2e/k8sevents/serviceaccountbinding.yaml
+
+  # Install stub bus
+  echo "Installing stub bus"
+  ko apply -f test/e2e/k8sevents/stub.yaml
 
   # Install k8s events as an event source
   echo "Installing k8s events as an event source"
@@ -134,11 +157,25 @@ function run_k8s_events_test() {
   wait_until_pods_running $E2E_TEST_FUNCTION_NAMESPACE
   exit_if_test_failed
 
+  # create a channel and subscription
+  echo "Creating a channel"
+  ko apply -f test/e2e/k8sevents/channel.yaml
+  echo "Creating a subscription"
+  ko apply -f test/e2e/k8sevents/subscription.yaml
+
+
   # Install binding
   echo "Creating a binding"
-  ko apply -f test/e2e/k8sevents/bind.yaml
+  ko apply -f test/e2e/k8sevents/bind-channel.yaml
   wait_until_bind_ready $E2E_TEST_FUNCTION_NAMESPACE e2e-k8s-events-example
   exit_if_test_failed
+
+  # Work around for: https://github.com/knative/eventing/issues/125
+  # and the fact that even after pods are up, due to Istio slowdown, there's
+  # about 5-6 seconds that traffic won't be passed through.
+  echo "Waiting until receive_adapter up"
+  wait_until_pods_running $E2E_TEST_FUNCTION_NAMESPACE
+  sleep 10
 
   # Launch the pod into the test namespace
   echo "Creating a pod in the test namespace"
@@ -264,7 +301,7 @@ teardown_k8s_events_test_resources
 if (( USING_EXISTING_CLUSTER )); then
   header "Deleting previous eventing instance if it exists"
   ko delete --ignore-not-found=true -f config/
-  wait_until_namespace_does_not_exist knative-eventing-system
+  wait_until_namespace_does_not_exist knative-eventing
   exit_if_test_failed
   wait_until_crd_does_not_exist binds.feeds.knative.dev
   exit_if_test_failed
