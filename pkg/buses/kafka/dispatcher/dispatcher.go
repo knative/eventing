@@ -193,7 +193,8 @@ func (d *dispatcher) subscribe(subscription *channelsv1alpha1.Subscription, attr
 				glog.Infof("Dispatching a message for subscription %s/%s: %s -> %s", subscription.Namespace,
 					subscription.Name, subscription.Spec.Channel, subscription.Spec.Subscriber)
 				hs := kafka2HttpHeaders(msg)
-				d.dispatchEvent(subscription.Spec.Subscriber, msg.Value, hs)
+				svc := fmt.Sprintf("%s.%s", subscription.Spec.Subscriber, subscription.Namespace)
+				d.dispatchEvent(svc, msg.Value, hs)
 				consumer.MarkOffset(msg, "") // Mark message as processed
 			} else {
 				break
@@ -245,10 +246,10 @@ func topicNameFromMeta(channel string, namespace string) string {
 	return fmt.Sprintf("%s.%s", namespace, channel)
 }
 
-func (d *dispatcher) dispatchEvent(subscriber string, body []byte, headers http.Header) {
+func (d *dispatcher) dispatchEvent(host string, body []byte, headers http.Header) {
 	url := url.URL{
 		Scheme: "http",
-		Host:   subscriber,
+		Host:   host,
 		Path:   "/",
 	}
 	req, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewReader(body))
