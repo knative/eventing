@@ -34,6 +34,6 @@ installed and configured to your particular configuration setup. Knative Eventin
 still built and deployed from source.
 
 Otherwise, calling this script without arguments will create a new cluster in
-project `$PROJECT_ID`, start Elafros and the eventing system, run the
+project `$PROJECT_ID`, start Knative Serving and the eventing system, run the
 tests and delete the cluster. In this case, it's required that `$KO_DOCKER_REPO`
 point to a valid writable docker repo.
