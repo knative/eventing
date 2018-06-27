@@ -132,41 +132,41 @@ function teardown_k8s_events_test_resources() {
 
 function run_k8s_events_test() {
   echo "Creating namespace $E2E_TEST_FUNCTION_NAMESPACE"
-  ko apply -f test/e2e/k8sevents/e2etestnamespace.yaml
+  ko apply -f test/e2e/k8sevents/e2etestnamespace.yaml || return 1
   echo "Creating namespace $E2E_TEST_NAMESPACE"
-  ko apply -f test/e2e/k8sevents/e2etestfnnamespace.yaml
+  ko apply -f test/e2e/k8sevents/e2etestfnnamespace.yaml || return 1
 
   # Install service account and role binding
   echo "Installing service account"
-  ko apply -f test/e2e/k8sevents/serviceaccount.yaml
+  ko apply -f test/e2e/k8sevents/serviceaccount.yaml || return 1
 
   echo "Installing role binding"
-  ko apply -f test/e2e/k8sevents/serviceaccountbinding.yaml
+  ko apply -f test/e2e/k8sevents/serviceaccountbinding.yaml || return 1
 
   # Install stub bus
   echo "Installing stub bus"
-  ko apply -f test/e2e/k8sevents/stub.yaml
+  ko apply -f test/e2e/k8sevents/stub.yaml || return 1
 
   # Install k8s events as an event source
   echo "Installing k8s events as an event source"
-  ko apply -f test/e2e/k8sevents/k8sevents.yaml
+  ko apply -f test/e2e/k8sevents/k8sevents.yaml || return 1
 
   # launch the function
   echo "Installing the receiving function"
-  ko apply -f test/e2e/k8sevents/function.yaml
+  ko apply -f test/e2e/k8sevents/function.yaml || return 1
   wait_until_pods_running $E2E_TEST_FUNCTION_NAMESPACE
   exit_if_test_failed
 
   # create a channel and subscription
   echo "Creating a channel"
-  ko apply -f test/e2e/k8sevents/channel.yaml
+  ko apply -f test/e2e/k8sevents/channel.yaml || return 1
   echo "Creating a subscription"
-  ko apply -f test/e2e/k8sevents/subscription.yaml
+  ko apply -f test/e2e/k8sevents/subscription.yaml || return 1
 
 
   # Install binding
   echo "Creating a binding"
-  ko apply -f test/e2e/k8sevents/bind-channel.yaml
+  ko apply -f test/e2e/k8sevents/bind-channel.yaml || return 1
   wait_until_bind_ready $E2E_TEST_FUNCTION_NAMESPACE e2e-k8s-events-example
   exit_if_test_failed
 
@@ -179,7 +179,7 @@ function run_k8s_events_test() {
 
   # Launch the pod into the test namespace
   echo "Creating a pod in the test namespace"
-  ko apply -f test/e2e/k8sevents/pod.yaml
+  ko apply -f test/e2e/k8sevents/pod.yaml || return 1
   wait_until_pods_running $E2E_TEST_NAMESPACE
   exit_if_test_failed
 
