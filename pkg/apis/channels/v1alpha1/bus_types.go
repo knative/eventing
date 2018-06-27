@@ -29,7 +29,7 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:defaulter-gen=true
 
-// Bus represents the clusterbuses.channels.knative.dev CRD
+// Bus represents the buses.channels.knative.dev CRD
 type Bus struct {
 	meta_v1.TypeMeta   `json:",inline"`
 	meta_v1.ObjectMeta `json:"metadata"`
@@ -37,33 +37,33 @@ type Bus struct {
 	Status             *BusStatus `json:"status,omitempty"`
 }
 
-// BusSpec (what the user wants) for a clusterbus
+// BusSpec (what the user wants) for a bus
 type BusSpec struct {
 
-	// Parameters exposed by the clusterbus for channels and subscriptions
+	// Parameters exposed by the bus for channels and subscriptions
 	Parameters *BusParameters `json:"parameters,omitempty"`
 
-	// Provisioner container definition to manage channels on the clusterbus.
+	// Provisioner container definition to manage channels on the bus.
 	Provisioner *kapi.Container `json:"provisioner,omitempty"`
 
-	// Dispatcher container definition to use for the clusterbus data plane.
+	// Dispatcher container definition to use for the bus data plane.
 	Dispatcher kapi.Container `json:"dispatcher"`
 
 	// Volumes to be mounted inside the provisioner or dispatcher containers
 	Volumes *[]kapi.Volume `json:"volumes,omitempty"`
 }
 
-// BusParameters parameters exposed by the clusterbus
+// BusParameters parameters exposed by the bus
 type BusParameters struct {
 
-	// Channel configuration params for channels on the clusterbus
+	// Channel configuration params for channels on the bus
 	Channel *[]Parameter `json:"channel,omitempty"`
 
-	// Subscription configuration params for subscriptions on the clusterbus
+	// Subscription configuration params for subscriptions on the bus
 	Subscription *[]Parameter `json:"subscription,omitempty"`
 }
 
-// BusStatus (computed) for a clusterbus
+// BusStatus (computed) for a bus
 type BusStatus struct {
 }
 
