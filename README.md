@@ -65,4 +65,3 @@ of events:
 
  - Gateway
  - VirtualService
- - 
