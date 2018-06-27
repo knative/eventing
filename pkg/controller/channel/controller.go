@@ -289,12 +289,14 @@ func (c *Controller) syncHandler(key string) error {
 	// Sync Service derived from the Channel
 	service, err := c.syncChannelService(channel)
 	if err != nil {
+		_ = c.updateChannelStatus(channel, nil, nil)
 		return err
 	}
 
 	// Sync VirtualService derived from a Channel
 	virtualService, err := c.syncChannelVirtualService(channel)
 	if err != nil {
+		c.updateChannelStatus(channel, service, nil)
 		return err
 	}
 
@@ -370,8 +372,16 @@ func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel, serv
 	// Or create a copy manually for better performance
 	channelCopy := channel.DeepCopy()
 
-	// Update ChannelStatus
-	channelCopy.Status.ServiceName = service.Name
+	if service != nil {
+		channelCopy.Status.Service = &corev1.LocalObjectReference{Name: service.Name}
+	} else {
+		channelCopy.Status.Service = nil
+	}
+	if virtualService != nil {
+		channelCopy.Status.VirtualService = &corev1.LocalObjectReference{Name: virtualService.Name}
+	} else {
+		channelCopy.Status.VirtualService = nil
+	}
 
 	// If the CustomResourceSubresources feature gate is not enabled,
 	// we must use Update instead of UpdateStatus to update the Status block of the Channel resource.

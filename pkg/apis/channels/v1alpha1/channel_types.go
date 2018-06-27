@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"encoding/json"
 
+	"k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -59,10 +60,11 @@ type ChannelSpec struct {
 
 // ChannelStatus (computed) for a channel
 type ChannelStatus struct {
-	// ServiceName holds the name of a core Kubernetes Service resource that
-	// load balances over the pods backing the Channel's Bus.
-	// +optional
-	ServiceName string `json:"serviceName,omitempty"`
+	// A reference to the k8s Service backing this channel, if successfully synced
+	Service *v1.LocalObjectReference `json:"service,omitempty"`
+
+	// A reference to the istio VirtualService backing this channel, if successfully synced
+	VirtualService *v1.LocalObjectReference `json:"virtualService,omitempty"`
 }
 
 func (c *Channel) GetSpecJSON() ([]byte, error) {
