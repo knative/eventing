@@ -8,6 +8,10 @@ functionality.
 1. [Setup your development environment](../DEVELOPMENT.md#getting-started)
 2. [Start Binding](../DEVELOPMENT.md#starting-binding)
 
+## Tools
+
+- [Kail](https://github.com/boz/kail)
+
 ## Samples
 
 * [Github Pull Request Handler](./github) - A simple handler for Github Pull Requests
