@@ -33,8 +33,8 @@ import (
 type Bus struct {
 	meta_v1.TypeMeta   `json:",inline"`
 	meta_v1.ObjectMeta `json:"metadata"`
-	Spec               BusSpec    `json:"spec"`
-	Status             *BusStatus `json:"status,omitempty"`
+	Spec               BusSpec   `json:"spec"`
+	Status             BusStatus `json:"status,omitempty"`
 }
 
 // BusSpec (what the user wants) for a bus

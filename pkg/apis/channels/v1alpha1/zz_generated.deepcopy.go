@@ -47,15 +47,7 @@ func (in *Bus) DeepCopyInto(out *Bus) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
-	if in.Status != nil {
-		in, out := &in.Status, &out.Status
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(BusStatus)
-			**out = **in
-		}
-	}
+	out.Status = in.Status
 	return
 }
 
@@ -228,15 +220,7 @@ func (in *Channel) DeepCopyInto(out *Channel) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
-	if in.Status != nil {
-		in, out := &in.Status, &out.Status
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(ChannelStatus)
-			**out = **in
-		}
-	}
+	out.Status = in.Status
 	return
 }
 
@@ -342,15 +326,7 @@ func (in *ClusterBus) DeepCopyInto(out *ClusterBus) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
-	if in.Status != nil {
-		in, out := &in.Status, &out.Status
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(ClusterBusStatus)
-			**out = **in
-		}
-	}
+	out.Status = in.Status
 	return
 }
 
@@ -452,15 +428,7 @@ func (in *Subscription) DeepCopyInto(out *Subscription) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
-	if in.Status != nil {
-		in, out := &in.Status, &out.Status
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(SubscriptionStatus)
-			**out = **in
-		}
-	}
+	out.Status = in.Status
 	return
 }
 

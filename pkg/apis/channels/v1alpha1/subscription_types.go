@@ -31,8 +31,8 @@ import (
 type Subscription struct {
 	meta_v1.TypeMeta   `json:",inline"`
 	meta_v1.ObjectMeta `json:"metadata"`
-	Spec               SubscriptionSpec    `json:"spec"`
-	Status             *SubscriptionStatus `json:"status,omitempty"`
+	Spec               SubscriptionSpec   `json:"spec"`
+	Status             SubscriptionStatus `json:"status,omitempty"`
 }
 
 // SubscriptionSpec (what the user wants) for a subscription

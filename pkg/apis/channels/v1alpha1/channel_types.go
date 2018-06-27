@@ -31,8 +31,8 @@ import (
 type Channel struct {
 	meta_v1.TypeMeta   `json:",inline"`
 	meta_v1.ObjectMeta `json:"metadata"`
-	Spec               ChannelSpec    `json:"spec"`
-	Status             *ChannelStatus `json:"status,omitempty"`
+	Spec               ChannelSpec   `json:"spec"`
+	Status             ChannelStatus `json:"status,omitempty"`
 }
 
 // ChannelSpec (what the user wants) for a channel

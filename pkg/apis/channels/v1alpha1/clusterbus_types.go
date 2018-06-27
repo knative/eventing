@@ -32,8 +32,8 @@ import (
 type ClusterBus struct {
 	meta_v1.TypeMeta   `json:",inline"`
 	meta_v1.ObjectMeta `json:"metadata"`
-	Spec               ClusterBusSpec    `json:"spec"`
-	Status             *ClusterBusStatus `json:"status,omitempty"`
+	Spec               ClusterBusSpec   `json:"spec"`
+	Status             ClusterBusStatus `json:"status,omitempty"`
 }
 
 // ClusterBusSpec (what the user wants) for a clusterbus
