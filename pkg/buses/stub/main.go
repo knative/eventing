@@ -99,7 +99,7 @@ func (b *StubBus) dispatchEvent(subscriber string, body []byte, headers http.Hea
 func (b *StubBus) resolveSubscriber(subscription channelsv1alpha1.SubscriptionSpec, namespace string) string {
 	subscriber := subscription.Subscriber
 	if strings.Index(subscriber, ".") == -1 {
-		subscriber = fmt.Sprintf("%s.%s.svc.cluster.local", subscriber, namespace)
+		subscriber = fmt.Sprintf("%s.%s", subscriber, namespace)
 	}
 	return subscriber
 }
@@ -174,7 +174,7 @@ func main() {
 	bus := NewStubBus(busName, monitor)
 
 	go func() {
-		if err := monitor.Run(busName, busNamespace, threadsPerMonitor, stopCh); err != nil {
+		if err := monitor.Run(busNamespace, busName, threadsPerMonitor, stopCh); err != nil {
 			glog.Fatalf("Error running monitor: %s", err.Error())
 		}
 	}()

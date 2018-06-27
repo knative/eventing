@@ -28,7 +28,7 @@ var (
 	errInvalidChannelInput              = errors.New("failed to convert input into Channel")
 	errInvalidChannelBusMissing         = errors.New("the Channel must reference a Bus or ClusterBus")
 	errInvalidChannelBusExclusivity     = errors.New("the Channel must reference either a Bus or ClusterBus, not both")
-	errInvalidChannelBusMutation        = errors.New("the Channel's ClusterBus may not change")
+	errInvalidChannelBusMutation        = errors.New("the Channel's Bus may not change")
 	errInvalidChannelClusterBusMutation = errors.New("the Channel's ClusterBus may not change")
 )
 

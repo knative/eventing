@@ -3,4 +3,4 @@ kind: Channel
 metadata:
   name: aloha
 spec:
-  clusterBus: stub
+  bus: stub

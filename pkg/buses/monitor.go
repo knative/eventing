@@ -59,7 +59,7 @@ const (
 	errResourceSync = "ErrResourceSync"
 )
 
-// Monitor utility to manage channels and subscriptions for a clusterbus
+// Monitor utility to manage channels and subscriptions for a GenericBus
 type Monitor struct {
 	bus                      channelsv1alpha1.GenericBus
 	handler                  MonitorEventHandlerFuncs
@@ -181,7 +181,7 @@ type subscriptionSummary struct {
 	Subscription channelsv1alpha1.SubscriptionSpec
 }
 
-// NewMonitor creates a monitor for a clusterbus
+// NewMonitor creates a monitor for a GenericBus
 func NewMonitor(
 	component, masterURL, kubeconfig string,
 	handler MonitorEventHandlerFuncs,
@@ -208,8 +208,7 @@ func NewMonitor(
 	subscriptionInformer := informerFactory.Channels().V1alpha1().Subscriptions()
 
 	// Create event broadcaster
-	// Add clusterbus-controller types to the default Kubernetes Scheme so Events can be
-	// logged for clusterbus-controller types.
+	// Add types to the default Kubernetes Scheme so Events can be logged for the component.
 	channelscheme.AddToScheme(scheme.Scheme)
 	glog.V(4).Info("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
@@ -240,6 +239,25 @@ func NewMonitor(
 	}
 
 	glog.Info("Setting up event handlers")
+	// Set up an event handler for when Bus resources change
+	busInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			bus := obj.(*channelsv1alpha1.Bus)
+			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForBus(bus))
+		},
+		UpdateFunc: func(old, new interface{}) {
+			oldBus := old.(*channelsv1alpha1.Bus)
+			newBus := new.(*channelsv1alpha1.Bus)
+
+			if oldBus.ResourceVersion == newBus.ResourceVersion {
+				// Periodic resync will send update events for all known Buses.
+				// Two different versions of the same Bus will always have different RVs.
+				return
+			}
+
+			monitor.workqueue.AddRateLimited(makeWorkqueueKeyForBus(newBus))
+		},
+	})
 	// Set up an event handler for when ClusterBus resources change
 	clusterBusInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -354,19 +372,19 @@ func (m *Monitor) Subscriptions(channelName string, namespace string) *[]channel
 }
 
 func (m *Monitor) channelAttributes(channel channelsv1alpha1.ChannelSpec) (Attributes, error) {
-	clusterBusParameters := m.bus.GetSpec().Parameters
+	genericBusParameters := m.bus.GetSpec().Parameters
 	var parameters *[]channelsv1alpha1.Parameter
-	if clusterBusParameters != nil {
-		parameters = clusterBusParameters.Channel
+	if genericBusParameters != nil {
+		parameters = genericBusParameters.Channel
 	}
 	return m.resolveAttributes(parameters, channel.Arguments)
 }
 
 func (m *Monitor) subscriptionAttributes(subscription channelsv1alpha1.SubscriptionSpec) (Attributes, error) {
-	clusterBusParameters := m.bus.GetSpec().Parameters
+	genericBusParameters := m.bus.GetSpec().Parameters
 	var parameters *[]channelsv1alpha1.Parameter
-	if clusterBusParameters != nil {
-		parameters = clusterBusParameters.Subscription
+	if genericBusParameters != nil {
+		parameters = genericBusParameters.Subscription
 	}
 	return m.resolveAttributes(parameters, subscription.Arguments)
 }
@@ -421,7 +439,7 @@ func (m *Monitor) RequeueSubscription(subscription *channelsv1alpha1.Subscriptio
 // as syncing informer caches and starting workers. It will block until stopCh
 // is closed, at which point it will shutdown the workqueue and wait for
 // workers to finish processing their current work items.
-func (m *Monitor) Run(busName, busNamespace string, threadiness int, stopCh <-chan struct{}) error {
+func (m *Monitor) Run(busNamespace, busName string, threadiness int, stopCh <-chan struct{}) error {
 	defer runtime.HandleCrash()
 	defer m.workqueue.ShutDown()
 
@@ -452,7 +470,7 @@ func (m *Monitor) Run(busName, busNamespace string, threadiness int, stopCh <-ch
 	}
 
 	glog.Info("Starting workers")
-	// Launch two workers to process ClusterBus resources
+	// Launch workers to process resources
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(m.runWorker, time.Second, stopCh)
 	}
@@ -526,8 +544,8 @@ func (m *Monitor) processNextWorkItem() bool {
 }
 
 // syncHandler compares the actual state with the desired, and attempts to
-// converge the two. It then updates the Status block of the ClusterBus resource
-// with the current status of the resource.
+// converge the two. It then updates the Status block of the resource with the
+// current status.
 func (m *Monitor) syncHandler(key string) error {
 	// Convert the namespace/name string into a distinct namespace and name
 	kind, namespace, name, err := splitWorkqueueKey(key)
@@ -676,7 +694,8 @@ func (m *Monitor) getOrCreateChannelSummary(key channelKey) *channelSummary {
 }
 
 func (m *Monitor) createOrUpdateBus(bus *channelsv1alpha1.Bus) error {
-	if bus.Namespace == m.bus.GetObjectMeta().GetNamespace() && bus.Name != m.bus.GetObjectMeta().GetName() {
+	if bus.Namespace != m.bus.GetObjectMeta().GetNamespace() ||
+		bus.Name != m.bus.GetObjectMeta().GetName() {
 		// this is not our bus
 		return nil
 	}
@@ -847,6 +866,10 @@ func makeSubscriptionKeyWithNames(namespace string, name string) subscriptionKey
 		Namespace: namespace,
 		Name:      name,
 	}
+}
+
+func makeWorkqueueKeyForBus(bus *channelsv1alpha1.Bus) string {
+	return makeWorkqueueKey(busKind, bus.Namespace, bus.Name)
 }
 
 func makeWorkqueueKeyForClusterBus(clusterBus *channelsv1alpha1.ClusterBus) string {
