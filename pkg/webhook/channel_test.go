@@ -44,6 +44,17 @@ func TestNewEmptyChannel(t *testing.T) {
 	}
 }
 
+func TestNewExclusiveChannel(t *testing.T) {
+	c := createChannel(testChannelName, testBusName, testClusterBusName)
+	err := ValidateChannel(testCtx)(nil, nil, &c)
+	if err == nil {
+		t.Errorf("Expected failure, but succeeded with: %+v", c)
+	}
+	if e, a := errInvalidChannelBusExclusivity, err; e != a {
+		t.Errorf("Expected %s got %s", e, a)
+	}
+}
+
 func TestChannelNoopMutation(t *testing.T) {
 	c := createChannel(testChannelName, testBusName, "")
 	if err := ValidateChannel(testCtx)(nil, &c, &c); err != nil {
