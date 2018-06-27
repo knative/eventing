@@ -56,16 +56,10 @@ var (
 	DefaultMessageCountDistribution = view.Distribution(0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536)
 )
 
-// Server tags are applied to the context used to process each RPC, as well as
-// the measures at the end of each RPC.
 var (
 	KeyServerMethod, _ = tag.NewKey("grpc_server_method")
-	KeyServerStatus, _ = tag.NewKey("grpc_server_status")
-)
-
-// Client tags are applied to measures at the end of each RPC.
-var (
 	KeyClientMethod, _ = tag.NewKey("grpc_client_method")
+	KeyServerStatus, _ = tag.NewKey("grpc_server_status")
 	KeyClientStatus, _ = tag.NewKey("grpc_client_status")
 )
 

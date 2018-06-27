@@ -191,13 +191,21 @@ func (in *HTTPFaultInjection) DeepCopyInto(out *HTTPFaultInjection) {
 	*out = *in
 	if in.Delay != nil {
 		in, out := &in.Delay, &out.Delay
-		*out = new(InjectDelay)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(InjectDelay)
+			**out = **in
+		}
 	}
 	if in.Abort != nil {
 		in, out := &in.Abort, &out.Abort
-		*out = new(InjectAbort)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(InjectAbort)
+			**out = **in
+		}
 	}
 	return
 }
@@ -217,23 +225,39 @@ func (in *HTTPMatchRequest) DeepCopyInto(out *HTTPMatchRequest) {
 	*out = *in
 	if in.Uri != nil {
 		in, out := &in.Uri, &out.Uri
-		*out = new(StringMatch)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(StringMatch)
+			**out = **in
+		}
 	}
 	if in.Scheme != nil {
 		in, out := &in.Scheme, &out.Scheme
-		*out = new(StringMatch)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(StringMatch)
+			**out = **in
+		}
 	}
 	if in.Method != nil {
 		in, out := &in.Method, &out.Method
-		*out = new(StringMatch)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(StringMatch)
+			**out = **in
+		}
 	}
 	if in.Authority != nil {
 		in, out := &in.Authority, &out.Authority
-		*out = new(StringMatch)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(StringMatch)
+			**out = **in
+		}
 	}
 	if in.Headers != nil {
 		in, out := &in.Headers, &out.Headers
@@ -320,28 +344,48 @@ func (in *HTTPRoute) DeepCopyInto(out *HTTPRoute) {
 	}
 	if in.Redirect != nil {
 		in, out := &in.Redirect, &out.Redirect
-		*out = new(HTTPRedirect)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(HTTPRedirect)
+			**out = **in
+		}
 	}
 	if in.Rewrite != nil {
 		in, out := &in.Rewrite, &out.Rewrite
-		*out = new(HTTPRewrite)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(HTTPRewrite)
+			**out = **in
+		}
 	}
 	if in.Retries != nil {
 		in, out := &in.Retries, &out.Retries
-		*out = new(HTTPRetry)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(HTTPRetry)
+			**out = **in
+		}
 	}
 	if in.Fault != nil {
 		in, out := &in.Fault, &out.Fault
-		*out = new(HTTPFaultInjection)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(HTTPFaultInjection)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	if in.Mirror != nil {
 		in, out := &in.Mirror, &out.Mirror
-		*out = new(Destination)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(Destination)
+			**out = **in
+		}
 	}
 	if in.AppendHeaders != nil {
 		in, out := &in.AppendHeaders, &out.AppendHeaders
@@ -473,8 +517,12 @@ func (in *Server) DeepCopyInto(out *Server) {
 	}
 	if in.TLS != nil {
 		in, out := &in.TLS, &out.TLS
-		*out = new(TLSOptions)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(TLSOptions)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	return
 }

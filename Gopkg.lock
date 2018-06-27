@@ -166,25 +166,25 @@
   branch = "master"
   name = "github.com/google/go-containerregistry"
   packages = [
+    "authn",
     "cmd/ko",
-    "pkg/authn",
-    "pkg/ko/build",
-    "pkg/ko/publish",
-    "pkg/ko/resolve",
-    "pkg/name",
-    "pkg/v1",
-    "pkg/v1/daemon",
-    "pkg/v1/empty",
-    "pkg/v1/mutate",
-    "pkg/v1/partial",
-    "pkg/v1/random",
-    "pkg/v1/remote",
-    "pkg/v1/remote/transport",
-    "pkg/v1/tarball",
-    "pkg/v1/types",
-    "pkg/v1/v1util"
+    "ko/build",
+    "ko/publish",
+    "ko/resolve",
+    "name",
+    "v1",
+    "v1/daemon",
+    "v1/empty",
+    "v1/mutate",
+    "v1/partial",
+    "v1/random",
+    "v1/remote",
+    "v1/remote/transport",
+    "v1/tarball",
+    "v1/types",
+    "v1/v1util"
   ]
-  revision = "3f6471078a9661a9a439bd5e71a371aff429566a"
+  revision = "e033bc7269cacc3145d08df64ad5cf387c7fc48d"
 
 [[projects]]
   name = "github.com/google/go-github"
@@ -261,8 +261,8 @@
 [[projects]]
   name = "github.com/imdario/mergo"
   packages = ["."]
-  revision = "9316a62528ac99aaecb4e47eadd6dc8aa6533d58"
-  version = "v0.3.5"
+  revision = "9d5f1277e9a8ed20c3684bda8fde67c05628518c"
+  version = "v0.3.4"
 
 [[projects]]
   name = "github.com/inconshreveable/mousetrap"
@@ -345,8 +345,8 @@
 [[projects]]
   name = "github.com/pelletier/go-toml"
   packages = ["."]
-  revision = "c01d1270ff3e442a8a57cddc1c92dc1138598194"
-  version = "v1.2.0"
+  revision = "acdc4509485b587f5e675510c4f2c63e90ff68a8"
+  version = "v1.1.0"
 
 [[projects]]
   name = "github.com/pierrec/lz4"
@@ -397,7 +397,7 @@
     "nfs",
     "xfs"
   ]
-  revision = "7d6f385de8bea29190f15ba9931442a0eaef9af7"
+  revision = "94663424ae5ae9856b40a9f170762b4197024661"
 
 [[projects]]
   branch = "master"
@@ -411,8 +411,8 @@
     ".",
     "mem"
   ]
-  revision = "787d034dfe70e44075ccc060d346146ef53270ad"
-  version = "v1.1.1"
+  revision = "63644898a8da0bc22138abf860edaf5277b6102e"
+  version = "v1.1.0"
 
 [[projects]]
   name = "github.com/spf13/cast"
@@ -445,7 +445,6 @@
 [[projects]]
   name = "go.opencensus.io"
   packages = [
-    ".",
     "exporter/stackdriver/propagation",
     "internal",
     "internal/tagencoding",
@@ -460,14 +459,14 @@
     "trace/internal",
     "trace/propagation"
   ]
-  revision = "6edeb78af2d9e4f169abb223feaef35da2e45d06"
-  version = "v0.13.0"
+  revision = "c3ed530f775d85e577ca652cb052a52c078aad26"
+  version = "v0.11.0"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "a49355c7e3f8fe157a85be2f77e6e269a0f89602"
+  revision = "5ba7f63082460102a45837dbd1827e10f9479ac0"
 
 [[projects]]
   branch = "master"
@@ -484,7 +483,7 @@
     "proxy",
     "trace"
   ]
-  revision = "afe8f62b1d6bbd81f31868121a50b06d8188e1f9"
+  revision = "1e491301e022f8f977054da4c2d852decd59571f"
 
 [[projects]]
   name = "golang.org/x/oauth2"
@@ -513,7 +512,7 @@
     "unix",
     "windows"
   ]
-  revision = "a200a19cb90b19de298170992778b1fda7217bd6"
+  revision = "c11f84a56e43e20a78cee75a7c034031ecf57d1f"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -550,7 +549,7 @@
     "imports",
     "internal/fastwalk"
   ]
-  revision = "3c1bb8b785f2aa4d86f83a0cd87fc1df046c60de"
+  revision = "a5b4c53f6e8bdcafa95a94671bf2d1203365858b"
 
 [[projects]]
   branch = "master"
@@ -565,7 +564,7 @@
     "transport/grpc",
     "transport/http"
   ]
-  revision = "3639d6d93f377f39a1de765fa4ef37b3c7ca8bd9"
+  revision = "f71c6d4abd9757df4168c39856698c341d07251f"
 
 [[projects]]
   name = "google.golang.org/appengine"
@@ -583,8 +582,8 @@
     "socket",
     "urlfetch"
   ]
-  revision = "b1f26356af11148e710935ed1ac8a7f5702c7612"
-  version = "v1.1.0"
+  revision = "150dc57a1b433e64154302bdc40b6bb8aefa313a"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -596,7 +595,7 @@
     "googleapis/rpc/status",
     "protobuf/field_mask"
   ]
-  revision = "80063a038e333bbe006c878e4c5ce4c74d055498"
+  revision = "4065a77fc542a455295382a23a996a08ed18813a"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -605,17 +604,16 @@
     "balancer",
     "balancer/base",
     "balancer/roundrobin",
+    "channelz",
     "codes",
     "connectivity",
     "credentials",
     "credentials/oauth",
     "encoding",
     "encoding/proto",
+    "grpclb/grpc_lb_v1/messages",
     "grpclog",
     "internal",
-    "internal/backoff",
-    "internal/channelz",
-    "internal/grpcrand",
     "keepalive",
     "metadata",
     "naming",
@@ -628,8 +626,8 @@
     "tap",
     "transport"
   ]
-  revision = "168a6198bcb0ef175f7dacec0b8691fc141dc9b8"
-  version = "v1.13.0"
+  revision = "41344da2231b913fa3d983840a57a6b1b7b631a1"
+  version = "v1.12.0"
 
 [[projects]]
   name = "gopkg.in/go-playground/webhooks.v3"
@@ -938,13 +936,13 @@
     "parser",
     "types"
   ]
-  revision = "f659ec9d5207b3bf034eb9b7e22720d360d28712"
+  revision = "2e1a79edcaecf0bfbde129a1fd55624b66adb699"
 
 [[projects]]
   branch = "master"
   name = "k8s.io/kube-openapi"
   packages = ["pkg/util/proto"]
-  revision = "4cac20de16b951c103aa40c4bafbc8cefdd18a12"
+  revision = "8a9b82f00b3a86eac24681da3f9fe6c34c01cea2"
 
 [solve-meta]
   analyzer-name = "dep"

@@ -312,14 +312,6 @@ var (
 	OID_SGC_NETSCAPE        = []byte("2.16.840.1.113730.4.1\x00")
 )
 
-// Pointer represents a pointer to an arbitrary Windows type.
-//
-// Pointer-typed fields may point to one of many different types. It's
-// up to the caller to provide a pointer to the appropriate type, cast
-// to Pointer. The caller must obey the unsafe.Pointer rules while
-// doing so.
-type Pointer *struct{}
-
 // Invented values to support what package os expects.
 type Timeval struct {
 	Sec  int32
@@ -888,15 +880,11 @@ type MibIfRow struct {
 	Descr           [MAXLEN_IFDESCR]byte
 }
 
-type CertInfo struct {
-	// Not implemented
-}
-
 type CertContext struct {
 	EncodingType uint32
 	EncodedCert  *byte
 	Length       uint32
-	CertInfo     *CertInfo
+	CertInfo     uintptr
 	Store        Handle
 }
 
@@ -911,16 +899,12 @@ type CertChainContext struct {
 	RevocationFreshnessTime    uint32
 }
 
-type CertTrustListInfo struct {
-	// Not implemented
-}
-
 type CertSimpleChain struct {
 	Size                       uint32
 	TrustStatus                CertTrustStatus
 	NumElements                uint32
 	Elements                   **CertChainElement
-	TrustListInfo              *CertTrustListInfo
+	TrustListInfo              uintptr
 	HasRevocationFreshnessTime uint32
 	RevocationFreshnessTime    uint32
 }
@@ -935,18 +919,14 @@ type CertChainElement struct {
 	ExtendedErrorInfo *uint16
 }
 
-type CertRevocationCrlInfo struct {
-	// Not implemented
-}
-
 type CertRevocationInfo struct {
 	Size             uint32
 	RevocationResult uint32
 	RevocationOid    *byte
-	OidSpecificInfo  Pointer
+	OidSpecificInfo  uintptr
 	HasFreshnessTime uint32
 	FreshnessTime    uint32
-	CrlInfo          *CertRevocationCrlInfo
+	CrlInfo          uintptr // *CertRevocationCrlInfo
 }
 
 type CertTrustStatus struct {
@@ -977,7 +957,7 @@ type CertChainPara struct {
 type CertChainPolicyPara struct {
 	Size            uint32
 	Flags           uint32
-	ExtraPolicyPara Pointer
+	ExtraPolicyPara uintptr
 }
 
 type SSLExtraCertChainPolicyPara struct {
@@ -992,7 +972,7 @@ type CertChainPolicyStatus struct {
 	Error             uint32
 	ChainIndex        uint32
 	ElementIndex      uint32
-	ExtraPolicyStatus Pointer
+	ExtraPolicyStatus uintptr
 }
 
 const (

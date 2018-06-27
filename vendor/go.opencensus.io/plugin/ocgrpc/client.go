@@ -31,7 +31,6 @@ type ClientHandler struct {
 	StartOptions trace.StartOptions
 }
 
-// HandleConn exists to satisfy gRPC stats.Handler.
 func (c *ClientHandler) HandleConn(ctx context.Context, cs stats.ConnStats) {
 	// no-op
 }

@@ -14,16 +14,11 @@
 
 package internal // import "go.opencensus.io/internal"
 
-import (
-	"fmt"
-	"time"
-
-	"go.opencensus.io"
-)
+import "time"
 
 // UserAgent is the user agent to be added to the outgoing
 // requests from the exporters.
-var UserAgent = fmt.Sprintf("opencensus-go [%s]", opencensus.Version())
+const UserAgent = "opencensus-go [0.11.0]"
 
 // MonotonicEndTime returns the end time at present
 // but offset from start, monotonically.

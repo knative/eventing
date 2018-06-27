@@ -145,8 +145,12 @@ func (in *BindStatus) DeepCopyInto(out *BindStatus) {
 	}
 	if in.BindContext != nil {
 		in, out := &in.BindContext, &out.BindContext
-		*out = new(runtime.RawExtension)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(runtime.RawExtension)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	return
 }
@@ -243,8 +247,12 @@ func (in *EventSourceSpec) DeepCopyInto(out *EventSourceSpec) {
 	*out = *in
 	if in.Parameters != nil {
 		in, out := &in.Parameters, &out.Parameters
-		*out = new(runtime.RawExtension)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(runtime.RawExtension)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	return
 }
@@ -285,8 +293,12 @@ func (in *EventTrigger) DeepCopyInto(out *EventTrigger) {
 	*out = *in
 	if in.Parameters != nil {
 		in, out := &in.Parameters, &out.Parameters
-		*out = new(runtime.RawExtension)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(runtime.RawExtension)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	if in.ParametersFrom != nil {
 		in, out := &in.ParametersFrom, &out.ParametersFrom
@@ -390,13 +402,21 @@ func (in *EventTypeSpec) DeepCopyInto(out *EventTypeSpec) {
 	*out = *in
 	if in.SubscribeSchema != nil {
 		in, out := &in.SubscribeSchema, &out.SubscribeSchema
-		*out = new(runtime.RawExtension)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(runtime.RawExtension)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	if in.EventSchema != nil {
 		in, out := &in.EventSchema, &out.EventSchema
-		*out = new(runtime.RawExtension)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(runtime.RawExtension)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	return
 }
@@ -437,8 +457,12 @@ func (in *ParametersFromSource) DeepCopyInto(out *ParametersFromSource) {
 	*out = *in
 	if in.SecretKeyRef != nil {
 		in, out := &in.SecretKeyRef, &out.SecretKeyRef
-		*out = new(SecretKeyReference)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(SecretKeyReference)
+			**out = **in
+		}
 	}
 	return
 }

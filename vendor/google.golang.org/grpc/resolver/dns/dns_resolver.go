@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net"
 	"os"
 	"strconv"
@@ -33,7 +34,6 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/grpclog"
-	"google.golang.org/grpc/internal/grpcrand"
 	"google.golang.org/grpc/resolver"
 )
 
@@ -52,6 +52,7 @@ const (
 
 var (
 	errMissingAddr = errors.New("missing address")
+	randomGen      = rand.New(rand.NewSource(time.Now().UnixNano()))
 )
 
 // NewBuilder creates a dnsBuilder which is used to factory DNS resolvers.
@@ -66,9 +67,6 @@ type dnsBuilder struct {
 
 // Build creates and starts a DNS resolver that watches the name resolution of the target.
 func (b *dnsBuilder) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOption) (resolver.Resolver, error) {
-	if target.Authority != "" {
-		return nil, fmt.Errorf("Default DNS resolver does not support custom DNS server")
-	}
 	host, port, err := parseTarget(target.Endpoint)
 	if err != nil {
 		return nil, err
@@ -348,7 +346,7 @@ func chosenByPercentage(a *int) bool {
 	if a == nil {
 		return true
 	}
-	return grpcrand.Intn(100)+1 <= *a
+	return randomGen.Intn(100)+1 <= *a
 }
 
 func canaryingSC(js string) string {

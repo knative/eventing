@@ -31,9 +31,9 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/hpack"
 
+	"google.golang.org/grpc/channelz"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/internal/channelz"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
@@ -76,9 +76,8 @@ type http2Client struct {
 
 	// Boolean to keep track of reading activity on transport.
 	// 1 is true and 0 is false.
-	activity         uint32 // Accessed atomically.
-	kp               keepalive.ClientParameters
-	keepaliveEnabled bool
+	activity uint32 // Accessed atomically.
+	kp       keepalive.ClientParameters
 
 	statsHandler stats.Handler
 
@@ -260,10 +259,6 @@ func newHTTP2Client(connectCtx, ctx context.Context, addr TargetInfo, opts Conne
 	if channelz.IsOn() {
 		t.channelzID = channelz.RegisterNormalSocket(t, opts.ChannelzParentID, "")
 	}
-	if t.kp.Time != infinity {
-		t.keepaliveEnabled = true
-		go t.keepalive()
-	}
 	// Start the reader goroutine for incoming message. Each transport has
 	// a dedicated goroutine which reads HTTP2 frame from network. Then it
 	// dispatches the frame to the corresponding stream entity.
@@ -300,17 +295,13 @@ func newHTTP2Client(connectCtx, ctx context.Context, addr TargetInfo, opts Conne
 	t.framer.writer.Flush()
 	go func() {
 		t.loopy = newLoopyWriter(clientSide, t.framer, t.controlBuf, t.bdpEst)
-		err := t.loopy.run()
-		if err != nil {
-			errorf("transport: loopyWriter.run returning. Err: %v", err)
-		}
-		// If it's a connection error, let reader goroutine handle it
-		// since there might be data in the buffers.
-		if _, ok := err.(net.Error); !ok {
-			t.conn.Close()
-		}
+		t.loopy.run()
+		t.conn.Close()
 		close(t.writerDone)
 	}()
+	if t.kp.Time != infinity {
+		go t.keepalive()
+	}
 	return t, nil
 }
 
@@ -546,7 +537,7 @@ func (t *http2Client) NewStream(ctx context.Context, callHdr *CallHdr) (_ *Strea
 			var sendPing bool
 			// If the number of active streams change from 0 to 1, then check if keepalive
 			// has gone dormant. If so, wake it up.
-			if len(t.activeStreams) == 1 && t.keepaliveEnabled {
+			if len(t.activeStreams) == 1 {
 				select {
 				case t.awakenKeepalive <- struct{}{}:
 					sendPing = true
@@ -744,7 +735,6 @@ func (t *http2Client) GracefulClose() error {
 	if active == 0 {
 		return t.Close()
 	}
-	t.controlBuf.put(&incomingGoAway{})
 	return nil
 }
 
@@ -1119,9 +1109,7 @@ func (t *http2Client) reader() {
 		t.Close()
 		return
 	}
-	if t.keepaliveEnabled {
-		atomic.CompareAndSwapUint32(&t.activity, 0, 1)
-	}
+	atomic.CompareAndSwapUint32(&t.activity, 0, 1)
 	sf, ok := frame.(*http2.SettingsFrame)
 	if !ok {
 		t.Close()
@@ -1133,9 +1121,7 @@ func (t *http2Client) reader() {
 	// loop to keep reading incoming messages on this transport.
 	for {
 		frame, err := t.framer.fr.ReadFrame()
-		if t.keepaliveEnabled {
-			atomic.CompareAndSwapUint32(&t.activity, 0, 1)
-		}
+		atomic.CompareAndSwapUint32(&t.activity, 0, 1)
 		if err != nil {
 			// Abort an active stream if the http2.Framer returns a
 			// http2.StreamError. This can happen only if the server's response

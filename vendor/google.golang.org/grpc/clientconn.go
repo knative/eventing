@@ -32,13 +32,11 @@ import (
 	"golang.org/x/net/trace"
 	"google.golang.org/grpc/balancer"
 	_ "google.golang.org/grpc/balancer/roundrobin" // To register roundrobin.
+	"google.golang.org/grpc/channelz"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
-	"google.golang.org/grpc/internal"
-	"google.golang.org/grpc/internal/backoff"
-	"google.golang.org/grpc/internal/channelz"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/resolver"
 	_ "google.golang.org/grpc/resolver/dns"         // To register dns resolver.
@@ -51,8 +49,6 @@ import (
 const (
 	// minimum time to give a connection to complete
 	minConnectTimeout = 20 * time.Second
-	// must match grpclbName in grpclb/grpclb.go
-	grpclbName = "grpclb"
 )
 
 var (
@@ -101,7 +97,7 @@ type dialOptions struct {
 	streamInt   StreamClientInterceptor
 	cp          Compressor
 	dc          Decompressor
-	bs          backoff.Strategy
+	bs          backoffStrategy
 	block       bool
 	insecure    bool
 	timeout     time.Duration
@@ -279,17 +275,17 @@ func WithBackoffMaxDelay(md time.Duration) DialOption {
 // Use WithBackoffMaxDelay until more parameters on BackoffConfig are opened up
 // for use.
 func WithBackoffConfig(b BackoffConfig) DialOption {
-
-	return withBackoff(backoff.Exponential{
-		MaxDelay: b.MaxDelay,
-	})
+	// Set defaults to ensure that provided BackoffConfig is valid and
+	// unexported fields get default values.
+	setDefaults(&b)
+	return withBackoff(b)
 }
 
 // withBackoff sets the backoff strategy used for connectRetryNum after a
 // failed connection attempt.
 //
 // This can be exported if arbitrary backoff strategies are allowed by gRPC.
-func withBackoff(bs backoff.Strategy) DialOption {
+func withBackoff(bs backoffStrategy) DialOption {
 	return func(o *dialOptions) {
 		o.bs = bs
 	}
@@ -342,11 +338,6 @@ func withContextDialer(f func(context.Context, string) (net.Conn, error)) DialOp
 	return func(o *dialOptions) {
 		o.copts.Dialer = f
 	}
-}
-
-func init() {
-	internal.WithContextDialer = withContextDialer
-	internal.WithResolverBuilder = withResolverBuilder
 }
 
 // WithDialer returns a DialOption that specifies a function to use for dialing network addresses.
@@ -541,9 +532,7 @@ func DialContext(ctx context.Context, target string, opts ...DialOption) (conn *
 		}
 	}
 	if cc.dopts.bs == nil {
-		cc.dopts.bs = backoff.Exponential{
-			MaxDelay: DefaultBackoffConfig.MaxDelay,
-		}
+		cc.dopts.bs = DefaultBackoffConfig
 	}
 	if cc.dopts.resolverBuilder == nil {
 		// Only try to parse target when resolver builder is not already set.
@@ -1063,9 +1052,9 @@ func (cc *ClientConn) handleServiceConfig(js string) error {
 }
 
 func (cc *ClientConn) resolveNow(o resolver.ResolveNowOption) {
-	cc.mu.RLock()
+	cc.mu.Lock()
 	r := cc.resolverWrapper
-	cc.mu.RUnlock()
+	cc.mu.Unlock()
 	if r == nil {
 		return
 	}
@@ -1214,7 +1203,7 @@ func (ac *addrConn) resetTransport() error {
 			// This means either a successful HTTP2 connection was established
 			// or this is the first time this addrConn is trying to establish a
 			// connection.
-			backoffFor := ac.dopts.bs.Backoff(connectRetryNum) // time.Duration.
+			backoffFor := ac.dopts.bs.backoff(connectRetryNum) // time.Duration.
 			// This will be the duration that dial gets to finish.
 			dialDuration := getMinConnectTimeout()
 			if backoffFor > dialDuration {
