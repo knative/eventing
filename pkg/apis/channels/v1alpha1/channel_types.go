@@ -58,6 +58,37 @@ type ChannelSpec struct {
 	Arguments *[]Argument `json:"arguments,omitempty"`
 }
 
+type ChannelConditionType string
+
+const (
+	// Serviceable means the service addressing the channel exists.
+	ChannelServiceable ChannelConditionType = "Serviceable"
+
+	// Routable means the virtual service forwarding traffic from the channel service to the
+	// bus is created.
+	ChannelRoutable ChannelConditionType = "Routeable"
+
+	// Provisioned means the channel backing construct on the bus middleware has been set up.
+	ChannelProvisioned ChannelConditionType = "Provisioned"
+)
+
+// ChannelCondition describes the state of a channel at a point in time.
+type ChannelCondition struct {
+	// Type of channel condition.
+	Type ChannelConditionType `json:"type"`
+	// Status of the condition, one of True, False, Unknown.
+	Status v1.ConditionStatus `json:"status"`
+	// The last time this condition was updated.
+	LastUpdateTime meta_v1.Time `json:"lastUpdateTime,omitempty"`
+	// Last time the condition transitioned from one status to another.
+	LastTransitionTime meta_v1.Time `json:"lastTransitionTime,omitempty"`
+	// The reason for the condition's last transition.
+	Reason string `json:"reason,omitempty"`
+	// A human readable message indicating details about the transition.
+	Message string `json:"message,omitempty"`
+}
+
+
 // ChannelStatus (computed) for a channel
 type ChannelStatus struct {
 	// A reference to the k8s Service backing this channel, if successfully synced
@@ -65,6 +96,11 @@ type ChannelStatus struct {
 
 	// A reference to the istio VirtualService backing this channel, if successfully synced
 	VirtualService *v1.LocalObjectReference `json:"virtualService,omitempty"`
+
+	// Represents the latest available observations of a channel's current state.
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	Conditions []ChannelCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 func (c *Channel) GetSpecJSON() ([]byte, error) {

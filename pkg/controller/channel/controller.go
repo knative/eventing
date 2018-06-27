@@ -48,6 +48,7 @@ import (
 	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	"github.com/knative/eventing/pkg/controller/util"
 	istiov1alpha3 "github.com/knative/serving/pkg/apis/istio/v1alpha3"
 )
 
@@ -289,20 +290,20 @@ func (c *Controller) syncHandler(key string) error {
 	// Sync Service derived from the Channel
 	service, err := c.syncChannelService(channel)
 	if err != nil {
-		_ = c.updateChannelStatus(channel, nil, nil)
+		_ = c.updateChannelStatus(channel, nil, err, nil, nil)
 		return err
 	}
 
 	// Sync VirtualService derived from a Channel
 	virtualService, err := c.syncChannelVirtualService(channel)
 	if err != nil {
-		c.updateChannelStatus(channel, service, nil)
+		c.updateChannelStatus(channel, service, nil, nil, err)
 		return err
 	}
 
 	// Finally, we update the status block of the Channel resource to reflect the
 	// current state of the world
-	err = c.updateChannelStatus(channel, service, virtualService)
+	err = c.updateChannelStatus(channel, service, nil, virtualService, nil)
 	if err != nil {
 		return err
 	}
@@ -366,7 +367,9 @@ func (c *Controller) syncChannelVirtualService(channel *channelsv1alpha1.Channel
 	return virtualservice, nil
 }
 
-func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel, service *corev1.Service, virtualService *istiov1alpha3.VirtualService) error {
+func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel,
+	service *corev1.Service, serviceError error,
+	virtualService *istiov1alpha3.VirtualService, virtualServiceError error) error {
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
@@ -374,13 +377,22 @@ func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel, serv
 
 	if service != nil {
 		channelCopy.Status.Service = &corev1.LocalObjectReference{Name: service.Name}
+		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelServiceable, corev1.ConditionTrue, "ServiceSynced", "service successfully synced")
+		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
 	} else {
 		channelCopy.Status.Service = nil
+		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelServiceable, corev1.ConditionFalse, "ServiceError", serviceError.Error())
+		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
 	}
+
 	if virtualService != nil {
 		channelCopy.Status.VirtualService = &corev1.LocalObjectReference{Name: virtualService.Name}
+		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelRoutable, corev1.ConditionTrue, "VirutalServiceSynced", "virtual service successfully synced")
+		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
 	} else {
 		channelCopy.Status.VirtualService = nil
+		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelRoutable, corev1.ConditionFalse, "VirutalServiceError", virtualServiceError.Error())
+		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
 	}
 
 	// If the CustomResourceSubresources feature gate is not enabled,
