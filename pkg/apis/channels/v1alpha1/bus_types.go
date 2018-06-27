@@ -1,0 +1,97 @@
+/*
+ * Copyright 2018 The Knative Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package v1alpha1
+
+import (
+	"encoding/json"
+
+	kapi "k8s.io/api/core/v1"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+)
+
+// +genclient
+// +genclient:noStatus
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:defaulter-gen=true
+
+// Bus represents the clusterbuses.channels.knative.dev CRD
+type Bus struct {
+	meta_v1.TypeMeta   `json:",inline"`
+	meta_v1.ObjectMeta `json:"metadata"`
+	Spec               BusSpec    `json:"spec"`
+	Status             *BusStatus `json:"status,omitempty"`
+}
+
+// BusSpec (what the user wants) for a clusterbus
+type BusSpec struct {
+
+	// Parameters exposed by the clusterbus for channels and subscriptions
+	Parameters *BusParameters `json:"parameters,omitempty"`
+
+	// Provisioner container definition to manage channels on the clusterbus.
+	Provisioner *kapi.Container `json:"provisioner,omitempty"`
+
+	// Dispatcher container definition to use for the clusterbus data plane.
+	Dispatcher kapi.Container `json:"dispatcher"`
+
+	// Volumes to be mounted inside the provisioner or dispatcher containers
+	Volumes *[]kapi.Volume `json:"volumes,omitempty"`
+}
+
+// BusParameters parameters exposed by the clusterbus
+type BusParameters struct {
+
+	// Channel configuration params for channels on the clusterbus
+	Channel *[]Parameter `json:"channel,omitempty"`
+
+	// Subscription configuration params for subscriptions on the clusterbus
+	Subscription *[]Parameter `json:"subscription,omitempty"`
+}
+
+// BusStatus (computed) for a clusterbus
+type BusStatus struct {
+}
+
+func (b *Bus) BacksChannel(channel *Channel) bool {
+	return b.Namespace == channel.Namespace && b.Name == channel.Spec.Bus
+}
+
+func (b *Bus) GetSpec() *BusSpec {
+	return &b.Spec
+}
+
+func (b *Bus) GetSpecJSON() ([]byte, error) {
+	return json.Marshal(b.Spec)
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// BusList returned in list operations
+type BusList struct {
+	meta_v1.TypeMeta `json:",inline"`
+	meta_v1.ListMeta `json:"metadata"`
+	Items            []Bus `json:"items"`
+}
+
+// GenericBus may be backed by Bus or ClusterBus
+type GenericBus interface {
+	runtime.Object
+	meta_v1.ObjectMetaAccessor
+	BacksChannel(channel *Channel) bool
+	GetSpec() *BusSpec
+}

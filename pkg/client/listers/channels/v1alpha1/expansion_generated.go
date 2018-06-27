@@ -18,6 +18,14 @@ limitations under the License.
 
 package v1alpha1
 
+// BusListerExpansion allows custom methods to be added to
+// BusLister.
+type BusListerExpansion interface{}
+
+// BusNamespaceListerExpansion allows custom methods to be added to
+// BusNamespaceLister.
+type BusNamespaceListerExpansion interface{}
+
 // ChannelListerExpansion allows custom methods to be added to
 // ChannelLister.
 type ChannelListerExpansion interface{}

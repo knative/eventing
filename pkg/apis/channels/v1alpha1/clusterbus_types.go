@@ -19,7 +19,6 @@ package v1alpha1
 import (
 	"encoding/json"
 
-	kapi "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -38,33 +37,18 @@ type ClusterBus struct {
 }
 
 // ClusterBusSpec (what the user wants) for a clusterbus
-type ClusterBusSpec struct {
-
-	// Parameters exposed by the clusterbus for channels and subscriptions
-	Parameters *ClusterBusParameters `json:"parameters,omitempty"`
-
-	// Provisioner container definition to manage channels on the clusterbus.
-	Provisioner *kapi.Container `json:"provisioner,omitempty"`
-
-	// Dispatcher container definition to use for the clusterbus data plane.
-	Dispatcher kapi.Container `json:"dispatcher"`
-
-	// Volumes to be mounted inside the provisioner or dispatcher containers
-	Volumes *[]kapi.Volume `json:"volumes,omitempty"`
-}
-
-// ClusterBusParameters parameters exposed by the clusterbus
-type ClusterBusParameters struct {
-
-	// Channel configuration params for channels on the clusterbus
-	Channel *[]Parameter `json:"channel,omitempty"`
-
-	// Subscription configuration params for subscriptions on the clusterbus
-	Subscription *[]Parameter `json:"subscription,omitempty"`
-}
+type ClusterBusSpec = BusSpec
 
 // ClusterBusStatus (computed) for a clusterbus
 type ClusterBusStatus struct {
+}
+
+func (b *ClusterBus) BacksChannel(channel *Channel) bool {
+	return len(b.Namespace) == 0 && b.Name == channel.Spec.ClusterBus
+}
+
+func (b *ClusterBus) GetSpec() *BusSpec {
+	return &b.Spec
 }
 
 func (b *ClusterBus) GetSpecJSON() ([]byte, error) {

@@ -27,6 +27,7 @@ import (
 
 type ChannelsV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	BusesGetter
 	ChannelsGetter
 	ClusterBusesGetter
 	SubscriptionsGetter
@@ -35,6 +36,10 @@ type ChannelsV1alpha1Interface interface {
 // ChannelsV1alpha1Client is used to interact with features provided by the channels.knative.dev group.
 type ChannelsV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *ChannelsV1alpha1Client) Buses(namespace string) BusInterface {
+	return newBuses(c, namespace)
 }
 
 func (c *ChannelsV1alpha1Client) Channels(namespace string) ChannelInterface {

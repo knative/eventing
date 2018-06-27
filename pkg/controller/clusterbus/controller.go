@@ -551,7 +551,7 @@ func newDispatcherDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.De
 			Value: "8080",
 		},
 		corev1.EnvVar{
-			Name:  "CLUSTER_BUS_NAME",
+			Name:  "BUS_NAME",
 			Value: clusterBus.Name,
 		},
 	)
@@ -604,7 +604,7 @@ func newProvisionerDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.D
 	container := clusterBus.Spec.Provisioner.DeepCopy()
 	container.Env = append(container.Env,
 		corev1.EnvVar{
-			Name:  "CLUSTER_BUS_NAME",
+			Name:  "BUS_NAME",
 			Value: clusterBus.Name,
 		},
 	)

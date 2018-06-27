@@ -35,5 +35,5 @@ subjects:
     namespace: knative-eventing
 roleRef:
   kind: ClusterRole
-  name: knative-channels-clusterbus
+  name: knative-channels-bus
   apiGroup: rbac.authorization.k8s.io

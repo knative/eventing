@@ -36,6 +36,7 @@ import (
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/controller"
 	"github.com/knative/eventing/pkg/controller/bind"
+	"github.com/knative/eventing/pkg/controller/bus"
 	"github.com/knative/eventing/pkg/controller/channel"
 	"github.com/knative/eventing/pkg/controller/clusterbus"
 	"github.com/knative/eventing/pkg/signals"
@@ -87,6 +88,7 @@ func main() {
 	// Add new controllers here.
 	ctors := []controller.Constructor{
 		bind.NewController,
+		bus.NewController,
 		clusterbus.NewController,
 		channel.NewController,
 	}

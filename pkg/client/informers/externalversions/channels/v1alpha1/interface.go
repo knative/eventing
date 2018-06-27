@@ -24,6 +24,8 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// Buses returns a BusInformer.
+	Buses() BusInformer
 	// Channels returns a ChannelInformer.
 	Channels() ChannelInformer
 	// ClusterBuses returns a ClusterBusInformer.
@@ -41,6 +43,11 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// Buses returns a BusInformer.
+func (v *version) Buses() BusInformer {
+	return &busInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Channels returns a ChannelInformer.

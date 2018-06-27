@@ -70,7 +70,7 @@ func (b *StubBus) handleEvent(res http.ResponseWriter, req *http.Request) {
 	}
 
 	safeHeaders := b.safeHeaders(req.Header)
-	safeHeaders.Set("x-clusterbus", b.name)
+	safeHeaders.Set("x-bus", b.name)
 	safeHeaders.Set("x-channel", channel)
 	for _, subscription := range *subscriptions {
 		subscriber := b.resolveSubscriber(subscription, namespace)
@@ -149,8 +149,9 @@ func main() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	clusterBusName := os.Getenv("CLUSTER_BUS_NAME")
-	component := fmt.Sprintf("%s-%s", clusterBusName, buses.Dispatcher)
+	busNamespace := os.Getenv("BUS_NAMESPACE")
+	busName := os.Getenv("BUS_NAME")
+	component := fmt.Sprintf("%s-%s", busName, buses.Dispatcher)
 
 	monitor := buses.NewMonitor(component, masterURL, kubeconfig, buses.MonitorEventHandlerFuncs{
 		ProvisionFunc: func(channel *channelsv1alpha1.Channel, attributes buses.Attributes) error {
@@ -170,10 +171,10 @@ func main() {
 			return nil
 		},
 	})
-	bus := NewStubBus(clusterBusName, monitor)
+	bus := NewStubBus(busName, monitor)
 
 	go func() {
-		if err := monitor.Run(clusterBusName, threadsPerMonitor, stopCh); err != nil {
+		if err := monitor.Run(busName, busNamespace, threadsPerMonitor, stopCh); err != nil {
 			glog.Fatalf("Error running monitor: %s", err.Error())
 		}
 	}()
