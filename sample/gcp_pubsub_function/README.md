@@ -1,12 +1,11 @@
 # gcp_pubsub_function
 
 A simple function that receives Google Cloud Pub Sub events and prints out the
-data field after decoding from base64 encoding. Because we do **not** have an
-in-cluster event delivery mechanism yet, uses a Knative route as an endpoint.
-This is also example of where we make use of a Receive Adapter that runs in the
-context of the namespace where the binding is created. Since we wanted to
-demonstrate pull events, we create a deployment that attaches to the specified
-GCP topic and then forwards them to the destination.
+data field after decoding from base64 encoding. The function uses a Knative
+route as an endpoint. This is also example of where we make use of a Receive
+Adapter that runs in the context of the namespace where the binding is created.
+Since we wanted to demonstrate pull events, we create a deployment that
+attaches to the specified GCP topic and then forwards them to the destination.
 
 ## Prerequisites
 
