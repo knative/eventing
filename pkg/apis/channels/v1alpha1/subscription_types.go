@@ -27,7 +27,8 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:defaulter-gen=true
 
-// Subscription represents the subscriptions.channels.knative.dev CRD
+// Subscription routes events received on a Channel to a DNS name and
+// corresponds to the subscriptions.channels.knative.dev CRD.
 type Subscription struct {
 	meta_v1.TypeMeta   `json:",inline"`
 	meta_v1.ObjectMeta `json:"metadata"`
@@ -35,16 +36,22 @@ type Subscription struct {
 	Status             SubscriptionStatus `json:"status,omitempty"`
 }
 
-// SubscriptionSpec (what the user wants) for a subscription
+// SubscriptionSpec specifies the Channel and Subscriber and the configuration
+// arguments for the Subscription.
 type SubscriptionSpec struct {
-
-	// Name of the channel to subscribe to
+	// Channel is the name of the channel to subscribe to.
 	Channel string `json:"channel"`
 
-	// Name of the subscriber service
+	// Subscriber is the name of the subscriber service DNS name.
 	Subscriber string `json:"subscriber"`
 
-	// Arguments for the subscription
+	// Arguments is a list of configuration arguments for the Subscription. The
+	// Arguments for a channel must contain values for each of the Parameters
+	// specified by the Bus' spec.parameters.Subscriptions field except the
+	// Parameters that have a default value. If a Parameter has a default value
+	// and it is not in the list of Arguments, the default value will be used; a
+	// Parameter without a default value that does not have an Argument will
+	// result in an error setting up the Subscription.
 	Arguments *[]Argument `json:"arguments,omitempty"`
 }
 
