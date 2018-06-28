@@ -60,8 +60,3 @@ of events:
  - Bind
  - EventSource
  - EventType
-
-#### Istio
-
- - Gateway
- - VirtualService
