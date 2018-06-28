@@ -287,23 +287,27 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
+	var service *corev1.Service
+	var virtualService *istiov1alpha3.VirtualService
+	var serviceErr, virtualServiceErr error
+
 	// Sync Service derived from the Channel
-	service, err := c.syncChannelService(channel)
+	service, serviceErr = c.syncChannelService(channel)
 	if err != nil {
-		_ = c.updateChannelStatus(channel, nil, err, nil, nil)
+		c.updateChannelStatus(channel, service, serviceErr, virtualService, virtualServiceErr)
 		return err
 	}
 
 	// Sync VirtualService derived from a Channel
-	virtualService, err := c.syncChannelVirtualService(channel)
-	if err != nil {
-		c.updateChannelStatus(channel, service, nil, nil, err)
+	virtualService, virtualServiceErr = c.syncChannelVirtualService(channel)
+	if virtualServiceErr != nil {
+		c.updateChannelStatus(channel, service, serviceErr, virtualService, virtualServiceErr)
 		return err
 	}
 
 	// Finally, we update the status block of the Channel resource to reflect the
 	// current state of the world
-	err = c.updateChannelStatus(channel, service, nil, virtualService, nil)
+	err = c.updateChannelStatus(channel, service, serviceErr, virtualService, virtualServiceErr)
 	if err != nil {
 		return err
 	}
