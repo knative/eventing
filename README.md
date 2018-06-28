@@ -38,7 +38,7 @@ attaching an event (or filtered event stream via a "trigger) to an action.
 
 # Getting Started
 
-* [Setup Knative](https://github.com/knative/serving)
-* [Setup Binding](./DEVELOPMENT.md)
+* [Setup Knative Serving](https://github.com/knative/serving)
+* [Setup Knative Eventing](./DEVELOPMENT.md)
 * [Run samples](./sample/README.md)
 

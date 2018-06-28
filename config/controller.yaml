@@ -14,18 +14,18 @@
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: bind-controller
+  name: eventing-controller
   namespace: knative-eventing
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: bind-controller
+        app: eventing-controller
     spec:
-      serviceAccountName: bind-controller
+      serviceAccountName: eventing-controller
       containers:
-      - name: bind-controller
+      - name: eventing-controller
         image: github.com/knative/eventing/cmd/controller
         args: [
           "-logtostderr",
