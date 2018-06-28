@@ -146,7 +146,7 @@ func main() {
 	component := fmt.Sprintf("%s-%s", name, buses.Dispatcher)
 
 	monitor := buses.NewMonitor(component, masterURL, kubeconfig, buses.MonitorEventHandlerFuncs{
-		ProvisionFunc: func(channel *channelsv1alpha1.Channel, attributes buses.Attributes) error {
+		ProvisionFunc: func(channel *channelsv1alpha1.Channel, parameters buses.ResolvedParameters) error {
 			glog.Infof("Provision channel %q\n", channel.Name)
 			return nil
 		},
@@ -154,7 +154,7 @@ func main() {
 			glog.Infof("Unprovision channel %q\n", channel.Name)
 			return nil
 		},
-		SubscribeFunc: func(subscription *channelsv1alpha1.Subscription, attributes buses.Attributes) error {
+		SubscribeFunc: func(subscription *channelsv1alpha1.Subscription, parameters buses.ResolvedParameters) error {
 			glog.Infof("Subscribe %q to %q channel\n", subscription.Spec.Subscriber, subscription.Spec.Channel)
 			return nil
 		},

@@ -40,7 +40,7 @@ type PubSubBus struct {
 	receivers      map[string]context.CancelFunc
 }
 
-func (b *PubSubBus) CreateTopic(channel *channelsv1alpha1.Channel, attributes buses.Attributes) error {
+func (b *PubSubBus) CreateTopic(channel *channelsv1alpha1.Channel, parameters buses.ResolvedParameters) error {
 	ctx := context.Background()
 
 	topicID := b.topicID(channel)
@@ -79,7 +79,7 @@ func (b *PubSubBus) DeleteTopic(channel *channelsv1alpha1.Channel) error {
 	return topic.Delete(ctx)
 }
 
-func (b *PubSubBus) CreateOrUpdateSubscription(sub *channelsv1alpha1.Subscription, attributes buses.Attributes) error {
+func (b *PubSubBus) CreateOrUpdateSubscription(sub *channelsv1alpha1.Subscription, parameters buses.ResolvedParameters) error {
 	ctx := context.Background()
 
 	subscriptionID := b.subscriptionID(sub)
@@ -148,7 +148,7 @@ func (b *PubSubBus) SendEventToTopic(channel *channelsv1alpha1.Channel, data []b
 	return nil
 }
 
-func (b *PubSubBus) ReceiveEvents(sub *channelsv1alpha1.Subscription, attributes buses.Attributes) error {
+func (b *PubSubBus) ReceiveEvents(sub *channelsv1alpha1.Subscription, parameters buses.ResolvedParameters) error {
 	ctx := context.Background()
 	cctx, cancel := context.WithCancel(ctx)
 
