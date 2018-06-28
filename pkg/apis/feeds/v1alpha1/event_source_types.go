@@ -25,9 +25,10 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// EventSource is a specification for a EventSource resource
-// It would define necessary information to talk to the source of the event.
-// Some examples would be github.com, or GCP, etc.
+// EventSource represents a software system which wishes to make changes in
+// state discoverable via eventing, without prior knowledge of systems which
+// might consume state changes. EventSources produce events that the Bind
+// resource connects to consumers.
 type EventSource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -36,13 +37,17 @@ type EventSource struct {
 	Status EventSourceStatus `json:"status"`
 }
 
-// EventSourceSpec is the spec for a EventSource resource
-// TODO: Define this to actually be useful. Placeholder for now
+// EventSourceSpec describes the type and source of an event, a container image
+// to run for bind and unbind operations, and configuration options for the
+// EventSource.
 type EventSourceSpec struct {
-	Type   string `json:"type,omitempty"`
+	// Source is the name of the source that produces the events.
 	Source string `json:"source,omitempty"`
 
-	// Image that we run for bind/unbind operations
+	// Image is the container image to run for bind/unbind operations.
+	//
+	// TODO: make this a container
+	// TODO: specify exactly when containers are run
 	Image string `json:"image,omitempty"`
 
 	// Parameters are configuration options for a particular EventSource
