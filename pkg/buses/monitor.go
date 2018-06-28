@@ -141,7 +141,7 @@ func (h MonitorEventHandlerFuncs) onUnprovision(channel *channelsv1alpha1.Channe
 
 func (h MonitorEventHandlerFuncs) onSubscribe(subscription *channelsv1alpha1.Subscription, monitor *Monitor) error {
 	if h.SubscribeFunc != nil {
-		attributes, err := monitor.resovleSubscriptionParameters(subscription.Spec)
+		attributes, err := monitor.resolveSubscriptionParameters(subscription.Spec)
 		if err != nil {
 			return err
 		}
@@ -355,7 +355,7 @@ func (m *Monitor) resolveChannelParameters(channel channelsv1alpha1.ChannelSpec)
 	return m.resolveParameters(parameters, channel.Arguments)
 }
 
-func (m *Monitor) resovleSubscriptionParameters(subscription channelsv1alpha1.SubscriptionSpec) (ResolvedParameters, error) {
+func (m *Monitor) resolveSubscriptionParameters(subscription channelsv1alpha1.SubscriptionSpec) (ResolvedParameters, error) {
 	busParameters := m.bus.Spec.Parameters
 	var parameters *[]channelsv1alpha1.Parameter
 	if busParameters != nil {
