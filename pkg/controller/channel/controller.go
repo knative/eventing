@@ -391,11 +391,11 @@ func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel,
 
 	if virtualService != nil {
 		channelCopy.Status.VirtualService = &corev1.LocalObjectReference{Name: virtualService.Name}
-		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelRoutable, corev1.ConditionTrue, "VirutalServiceSynced", "virtual service successfully synced")
+		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelRoutable, corev1.ConditionTrue, "VirtualServiceSynced", "virtual service successfully synced")
 		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
 	} else {
 		channelCopy.Status.VirtualService = nil
-		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelRoutable, corev1.ConditionFalse, "VirutalServiceError", virtualServiceError.Error())
+		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelRoutable, corev1.ConditionFalse, "VirtualServiceError", virtualServiceError.Error())
 		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
 	}
 

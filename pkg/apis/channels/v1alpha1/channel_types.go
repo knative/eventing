@@ -91,10 +91,10 @@ type ChannelCondition struct {
 
 // ChannelStatus (computed) for a channel
 type ChannelStatus struct {
-	// A reference to the k8s Service backing this channel, if successfully synced
+	// A reference to the k8s Service backing this channel, if successfully synced.
 	Service *v1.LocalObjectReference `json:"service,omitempty"`
 
-	// A reference to the istio VirtualService backing this channel, if successfully synced
+	// A reference to the istio VirtualService backing this channel, if successfully synced.
 	VirtualService *v1.LocalObjectReference `json:"virtualService,omitempty"`
 
 	// Represents the latest available observations of a channel's current state.
