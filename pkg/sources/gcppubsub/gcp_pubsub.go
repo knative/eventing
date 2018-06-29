@@ -48,6 +48,7 @@ const (
 type GCPPubSubEventSource struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
+	// image is the receive adapter
 	image         string
 	// namespace where the binding is created
 	bindNamespace string
