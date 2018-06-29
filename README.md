@@ -46,8 +46,8 @@ attaching an event (or filtered event stream via a "trigger) to an action.
 # Kubernetes Extensions
 
 Eventing extends Kubernetes with Custom Resource Definitions (CRDs). The
-following Custom Resources (CRs) are related in the production and consumption
-of events:
+following Custom Resources (CRs) are used in the production and consumption of
+events:
 
 #### Channels
 
