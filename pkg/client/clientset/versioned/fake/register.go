@@ -21,7 +21,6 @@ package fake
 import (
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
-	networkingv1alpha3 "github.com/knative/eventing/pkg/apis/istio/v1alpha3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -54,5 +53,4 @@ func init() {
 func AddToScheme(scheme *runtime.Scheme) {
 	channelsv1alpha1.AddToScheme(scheme)
 	feedsv1alpha1.AddToScheme(scheme)
-	networkingv1alpha3.AddToScheme(scheme)
 }
