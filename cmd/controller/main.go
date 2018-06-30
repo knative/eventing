@@ -39,7 +39,6 @@ import (
 	"github.com/knative/eventing/pkg/controller/bus"
 	"github.com/knative/eventing/pkg/controller/channel"
 	"github.com/knative/eventing/pkg/controller/clusterbus"
-	"github.com/knative/eventing/pkg/controller/feed"
 	"github.com/knative/eventing/pkg/controller/flow"
 	"github.com/knative/eventing/pkg/signals"
 
@@ -96,7 +95,6 @@ func main() {
 
 	// Add new controllers here.
 	ctors := []controller.Constructor{
-		feed.NewController,
 		flow.NewController,
 		bus.NewController,
 		clusterbus.NewController,
