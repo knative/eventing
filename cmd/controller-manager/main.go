@@ -23,8 +23,6 @@ import (
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	istiov1alpha3 "github.com/knative/eventing/pkg/apis/istio/v1alpha3"
-	"github.com/knative/eventing/pkg/controller/routesample"
-	"github.com/knative/eventing/pkg/controller/rssample"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -66,8 +64,7 @@ func main() {
 	// Add each controller's ProvideController func to this list to have the
 	// manager run it.
 	providers := []ProvideFunc{
-		rssample.ProvideController,
-		routesample.ProvideController,
+		feed.ProvideController,
 	}
 
 	for _, provider := range providers {
