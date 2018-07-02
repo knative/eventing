@@ -7,33 +7,37 @@ Knative Eventing API is grouped into _Channels_ and _Feeds_:
 
 * _Feeds_ bridge the event source into the eventing framework.
 
+Typically, _Feeds_ perform out-of-cluster provisioning, while _Channels_ are
+within-cluster management of event delivery.
+
 # Resource Types
 
 The primary resources in the Knative Eventing _Feeds_ API are EventSource, EventType and Bind:
 
-* An **EventSource** wraps an event producer and is able to produce multiple definitions of
+* **EventSource**, an archetype of an event producer.
 
-* **EventType**, which describes the schema for the shape of the event and Subscription. 
+* **EventType**, the schema for an event.
 
-* A **Bind** connects an EventType to a Channel or Route.
+* **Bind**, ties the output of an event producer to the input of an event
+  consumer.
 
 
 The primary resources in the Knative Eventing _Channels_ API are Channel, Subscription and Bus:
 
-* A **Channel** is a logical endpoint to allow events to flow into a
+* **Channel**, a named endpoint which accepts and forwards events.
 
-* **Bus**, which implements delivery mechanisms allowing events to flow to a
+* **Bus**, an implementation of an event delivery mechanism.
 
-* **Subscription**, which allows events of interest to be delivered to a
+* **Subscription**, an expressed interest in events to be delivered to a
   service.
-
 
 ![TODO:: Object model](images/object_model.png)
 
 
 ## EventSource
 
-TODO
+A software system which wishes to make changes in state discoverable via
+eventing, without prior knowledge of systems which might consume state changes.
 
 ## EventType
 
@@ -41,19 +45,26 @@ TODO
 
 ## Bind
 
-TODO
+A configuration of event transmission from a single Source to a single Action.
+A Binding may contain additional properties of the event transmission such as
+filtering, timeouts, rate limits, and buffering.
 
 ## Channel
 
-TODO
+A named endpoint on a Bus which accepts events delivered from an outside system.
 
 ## Bus
 
-TODO
+A system which routes events from Channels to Actions. The Broker MAY (RFC
+2119) provide durable, at-least-once semantics and buffering of events between
+the Source and the Action. Brokers also perform event fan-out across multiple
+actions which are subscribed to the same channel.
+
 
 ## Subscription
 
-TODO
+A control plane construct which routes events received on a Channel to a URL or
+DNS name
 
 # Eventing
 

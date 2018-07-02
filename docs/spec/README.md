@@ -1,8 +1,8 @@
 # Knative Eventing API spec
 
 This directory contains the specification of the Knative Eventing API, which is
-implemented in [`pkg/apis/channels/v1alpha1`](/pkg/apis/channels/v1alpha1) and
-[`pkg/apis/feeds/v1alpha1`](/pkg/apis/feeds/v1alpha1) and verified via [the e2e
+implemented in [`channels.knative.dev`](/pkg/apis/channels/v1alpha1) and
+[`feeds.knative.dev`](/pkg/apis/feeds/v1alpha1) and verified via [the e2e
 test](/test/e2e).
 
 **Updates to this spec should include a corresponding change to the
