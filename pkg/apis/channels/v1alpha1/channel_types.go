@@ -27,7 +27,10 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:defaulter-gen=true
 
-// Channel represents the channels.channels.knative.dev CRD
+// Channel represents a named endpoint on which a Bus accepts event delivery and
+// corresponds to the channels.channels.knative.dev CRD. The Bus handles
+// provisioning channels, delivering events to Channels, and delivering events
+// from Channels to their Subscriptions.
 type Channel struct {
 	meta_v1.TypeMeta   `json:",inline"`
 	meta_v1.ObjectMeta `json:"metadata"`
@@ -35,16 +38,22 @@ type Channel struct {
 	Status             ChannelStatus `json:"status,omitempty"`
 }
 
-// ChannelSpec (what the user wants) for a channel
+// ChannelSpec specifies the Bus backing a channel and the configuration
+// arguments for the channel.
 type ChannelSpec struct {
-
-	// Bus name of the bus backing this channel (mutually exclusive with ClusterBus)
-	Bus string `json:"bus"`
+	// Name of the bus backing this channel (optional)
+	Bus string `json:"bus`
 
 	// ClusterBus name of the clusterbus backing this channel (mutually exclusive with Bus)
 	ClusterBus string `json:"clusterBus"`
 
-	// Arguments configuration arguments for the channel
+	// Arguments is a list of configuration arguments for the Channel. The
+	// Arguments for a channel must contain values for each of the Parameters
+	// specified by the Bus' spec.parameters.Channels field except the
+	// Parameters that have a default value. If a Parameter has a default value
+	// and it is not in the list of Arguments, the default value will be used; a
+	// Parameter without a default value that does not have an Argument will
+	// result in an error setting up the Channel.
 	Arguments *[]Argument `json:"arguments,omitempty"`
 }
 
