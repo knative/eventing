@@ -78,8 +78,8 @@ As you make changes to the code-base, there are two special cases to be aware of
 - **If you change a type definition
   ([pkg/apis/bind/v1alpha1/](./pkg/apis/bind/v1alpha1/.)),** then you must run
   [`./hack/update-codegen.sh`](./hack/update-codegen.sh).
-- **If you change a package's deps** (including adding external dep), then you
-  must run [`./hack/update-deps.sh`](./hack/update-deps.sh).
+- **If you change a package's external deps** (including adding external dep),
+  then you must run [`./hack/update-deps.sh`](./hack/update-deps.sh).
 
 These are both idempotent, and we expect that running these at `HEAD` to have
 no diffs.
