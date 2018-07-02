@@ -149,7 +149,10 @@ func (t *ContainerEventSource) run(job *batchv1.Job, parseLogs bool) (*BindConte
 
 func (t *ContainerEventSource) delete(job *batchv1.Job) error {
 	jobClient := t.kubeclientset.BatchV1().Jobs(job.Namespace)
-	err := jobClient.Delete(job.Name, &metav1.DeleteOptions{})
+	backgroundPolicy := metav1.DeletePropagationBackground
+	err := jobClient.Delete(job.Name, &metav1.DeleteOptions{
+		PropagationPolicy: &backgroundPolicy,
+	})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			glog.Infof("Job has already been deleted")
