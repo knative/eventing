@@ -21,6 +21,7 @@ import (
 
 	kapi "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -32,8 +33,8 @@ import (
 type Bus struct {
 	meta_v1.TypeMeta   `json:",inline"`
 	meta_v1.ObjectMeta `json:"metadata"`
-	Spec               BusSpec    `json:"spec"`
-	Status             *BusStatus `json:"status,omitempty"`
+	Spec               BusSpec   `json:"spec"`
+	Status             BusStatus `json:"status,omitempty"`
 }
 
 // BusSpec (what the user wants) for a bus
@@ -66,6 +67,14 @@ type BusParameters struct {
 type BusStatus struct {
 }
 
+func (b *Bus) BacksChannel(channel *Channel) bool {
+	return b.Namespace == channel.Namespace && b.Name == channel.Spec.Bus
+}
+
+func (b *Bus) GetSpec() *BusSpec {
+	return &b.Spec
+}
+
 func (b *Bus) GetSpecJSON() ([]byte, error) {
 	return json.Marshal(b.Spec)
 }
@@ -77,4 +86,12 @@ type BusList struct {
 	meta_v1.TypeMeta `json:",inline"`
 	meta_v1.ListMeta `json:"metadata"`
 	Items            []Bus `json:"items"`
+}
+
+// GenericBus may be backed by Bus or ClusterBus
+type GenericBus interface {
+	runtime.Object
+	meta_v1.ObjectMetaAccessor
+	BacksChannel(channel *Channel) bool
+	GetSpec() *BusSpec
 }

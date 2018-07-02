@@ -29,6 +29,7 @@ type ChannelsV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	BusesGetter
 	ChannelsGetter
+	ClusterBusesGetter
 	SubscriptionsGetter
 }
 
@@ -43,6 +44,10 @@ func (c *ChannelsV1alpha1Client) Buses(namespace string) BusInterface {
 
 func (c *ChannelsV1alpha1Client) Channels(namespace string) ChannelInterface {
 	return newChannels(c, namespace)
+}
+
+func (c *ChannelsV1alpha1Client) ClusterBuses() ClusterBusInterface {
+	return newClusterBuses(c)
 }
 
 func (c *ChannelsV1alpha1Client) Subscriptions(namespace string) SubscriptionInterface {

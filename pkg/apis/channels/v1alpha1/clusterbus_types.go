@@ -24,43 +24,42 @@ import (
 
 // +genclient
 // +genclient:noStatus
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:defaulter-gen=true
 
-// Channel represents the channels.channels.knative.dev CRD
-type Channel struct {
+// ClusterBus represents the clusterbuses.channels.knative.dev CRD
+type ClusterBus struct {
 	meta_v1.TypeMeta   `json:",inline"`
 	meta_v1.ObjectMeta `json:"metadata"`
-	Spec               ChannelSpec   `json:"spec"`
-	Status             ChannelStatus `json:"status,omitempty"`
+	Spec               ClusterBusSpec   `json:"spec"`
+	Status             ClusterBusStatus `json:"status,omitempty"`
 }
 
-// ChannelSpec (what the user wants) for a channel
-type ChannelSpec struct {
+// ClusterBusSpec (what the user wants) for a clusterbus
+type ClusterBusSpec = BusSpec
 
-	// Bus name of the bus backing this channel (mutually exclusive with ClusterBus)
-	Bus string `json:"bus"`
-
-	// ClusterBus name of the clusterbus backing this channel (mutually exclusive with Bus)
-	ClusterBus string `json:"clusterBus"`
-
-	// Arguments configuration arguments for the channel
-	Arguments *[]Argument `json:"arguments,omitempty"`
+// ClusterBusStatus (computed) for a clusterbus
+type ClusterBusStatus struct {
 }
 
-// ChannelStatus (computed) for a channel
-type ChannelStatus struct {
+func (b *ClusterBus) BacksChannel(channel *Channel) bool {
+	return len(b.Namespace) == 0 && b.Name == channel.Spec.ClusterBus
 }
 
-func (c *Channel) GetSpecJSON() ([]byte, error) {
-	return json.Marshal(c.Spec)
+func (b *ClusterBus) GetSpec() *BusSpec {
+	return &b.Spec
+}
+
+func (b *ClusterBus) GetSpecJSON() ([]byte, error) {
+	return json.Marshal(b.Spec)
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ChannelList returned in list operations
-type ChannelList struct {
+// ClusterBusList returned in list operations
+type ClusterBusList struct {
 	meta_v1.TypeMeta `json:",inline"`
 	meta_v1.ListMeta `json:"metadata"`
-	Items            []Channel `json:"items"`
+	Items            []ClusterBus `json:"items"`
 }

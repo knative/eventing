@@ -47,6 +47,7 @@ func newDefaultOptions() ControllerOptions {
 const (
 	testNamespace        = "test-namespace"
 	testBusName          = "test-bus"
+	testClusterBusName   = "test-clusterbus"
 	testChannelName      = "test-channel"
 	testSubscriptionName = "test-subscription"
 )
@@ -133,7 +134,7 @@ func TestInvalidNewChannelNameFails(t *testing.T) {
 		Kind:      metav1.GroupVersionKind{Kind: "Channel"},
 	}
 	invalidName := "channel.example"
-	channel := createChannel(invalidName, "bus-name")
+	channel := createChannel(invalidName, testBusName, "")
 	marshaled, err := json.Marshal(channel)
 	if err != nil {
 		t.Fatalf("Failed to marshal channel: %s", err)
@@ -142,7 +143,7 @@ func TestInvalidNewChannelNameFails(t *testing.T) {
 	expectFailsWith(t, ac.admit(testCtx, req), "Invalid resource name")
 
 	invalidName = strings.Repeat("a", 64)
-	channel = createChannel(invalidName, "bus-name")
+	channel = createChannel(invalidName, testBusName, "")
 	marshaled, err = json.Marshal(channel)
 	if err != nil {
 		t.Fatalf("Failed to marshal channel: %s", err)
@@ -158,10 +159,19 @@ func TestValidNewChannelObject(t *testing.T) {
 	expectPatches(t, resp.Patch, []jsonpatch.JsonPatchOperation{})
 }
 
-func TestValidChannelNoChanges(t *testing.T) {
+func TestValidChannelNSBusNoChanges(t *testing.T) {
 	_, ac := newNonRunningTestAdmissionController(t, newDefaultOptions())
-	old := createChannel(testChannelName, testBusName)
-	new := createChannel(testChannelName, testBusName)
+	old := createChannel(testChannelName, testBusName, "")
+	new := createChannel(testChannelName, testBusName, "")
+	resp := ac.admit(testCtx, createUpdateChannel(&old, &new))
+	expectAllowed(t, resp)
+	expectPatches(t, resp.Patch, []jsonpatch.JsonPatchOperation{})
+}
+
+func TestValidChannelClusterBusNoChanges(t *testing.T) {
+	_, ac := newNonRunningTestAdmissionController(t, newDefaultOptions())
+	old := createChannel(testChannelName, "", testClusterBusName)
+	new := createChannel(testChannelName, "", testClusterBusName)
 	resp := ac.admit(testCtx, createUpdateChannel(&old, &new))
 	expectAllowed(t, resp)
 	expectPatches(t, resp.Patch, []jsonpatch.JsonPatchOperation{})
@@ -345,17 +355,18 @@ func createCreateChannel(channel v1alpha1.Channel) *admissionv1beta1.AdmissionRe
 }
 
 func createValidCreateChannel() *admissionv1beta1.AdmissionRequest {
-	return createCreateChannel(createChannel(testChannelName, testBusName))
+	return createCreateChannel(createChannel(testChannelName, testBusName, ""))
 }
 
-func createChannel(channelName string, busName string) v1alpha1.Channel {
+func createChannel(channelName string, busName, clusterBusName string) v1alpha1.Channel {
 	return v1alpha1.Channel{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNamespace,
 			Name:      channelName,
 		},
 		Spec: v1alpha1.ChannelSpec{
-			Bus: busName,
+			Bus:        busName,
+			ClusterBus: clusterBusName,
 		},
 	}
 }

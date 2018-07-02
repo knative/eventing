@@ -25,9 +25,11 @@ import (
 )
 
 var (
-	errInvalidChannelInput       = errors.New("failed to convert input into Channel")
-	errInvalidChannelBusMissing  = errors.New("the Channel must reference a Bus")
-	errInvalidChannelBusMutation = errors.New("the Channel's Bus may not change")
+	errInvalidChannelInput              = errors.New("failed to convert input into Channel")
+	errInvalidChannelBusMissing         = errors.New("the Channel must reference a Bus or ClusterBus")
+	errInvalidChannelBusExclusivity     = errors.New("the Channel must reference either a Bus or ClusterBus, not both")
+	errInvalidChannelBusMutation        = errors.New("the Channel's Bus may not change")
+	errInvalidChannelClusterBusMutation = errors.New("the Channel's ClusterBus may not change")
 )
 
 // ValidateChannel is Channel resource specific validation and mutation handler
@@ -43,11 +45,20 @@ func ValidateChannel(ctx context.Context) ResourceCallback {
 }
 
 func validateChannel(old, new *v1alpha1.Channel) error {
-	if len(new.Spec.Bus) == 0 {
+	refsBus := len(new.Spec.Bus) != 0
+	refsClusterBus := len(new.Spec.ClusterBus) != 0
+	if !refsBus && !refsClusterBus {
 		return errInvalidChannelBusMissing
+	} else if refsBus && refsClusterBus {
+		return errInvalidChannelBusExclusivity
 	}
-	if old != nil && old.Spec.Bus != new.Spec.Bus {
-		return errInvalidChannelBusMutation
+	if old != nil {
+		if old.Spec.Bus != new.Spec.Bus {
+			return errInvalidChannelBusMutation
+		}
+		if old.Spec.ClusterBus != new.Spec.ClusterBus {
+			return errInvalidChannelClusterBusMutation
+		}
 	}
 	return nil
 }

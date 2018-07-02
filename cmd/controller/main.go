@@ -38,6 +38,7 @@ import (
 	"github.com/knative/eventing/pkg/controller/bind"
 	"github.com/knative/eventing/pkg/controller/bus"
 	"github.com/knative/eventing/pkg/controller/channel"
+	"github.com/knative/eventing/pkg/controller/clusterbus"
 	"github.com/knative/eventing/pkg/signals"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -88,6 +89,7 @@ func main() {
 	ctors := []controller.Constructor{
 		bind.NewController,
 		bus.NewController,
+		clusterbus.NewController,
 		channel.NewController,
 	}
 
