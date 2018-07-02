@@ -2,7 +2,9 @@
 
 This doc explains how to setup a development environment so you can get started
 [contributing](./CONTRIBUTING.md) to Knative Bindings. Also take a look at [the
-development workflow](./CONTRIBUTING.md#workflow) and [the test docs](./test/README.md).
+development workflow](./CONTRIBUTING.md#workflow) and [the test
+docs](./test/README.md).
+
 
 ## Getting started
 
@@ -15,12 +17,18 @@ Before submitting a PR, see also [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ### Requirements
 
-You must have the core of [Knative](http://github.com/knative/serving) running on your cluster:
+You must have the core of [Knative](http://github.com/knative/serving) running
+on your cluster.
+
+You must have
+[ko](https://github.com/google/go-containerregistry/blob/master/cmd/ko/README.md
+) installed.
 
 ### Checkout your fork
 
-The Go tools require that you clone the repository to the `src/github.com/knative/eventing` directory
-in your [`GOPATH`](https://github.com/golang/go/wiki/SettingGOPATH).
+The Go tools require that you clone the repository to the
+`src/github.com/knative/eventing` directory in your
+[`GOPATH`](https://github.com/golang/go/wiki/SettingGOPATH).
 
 To check out this repository:
 
@@ -38,17 +46,20 @@ To check out this repository:
 _Adding the `upstream` remote sets you up nicely for regularly [syncing your
 fork](https://help.github.com/articles/syncing-a-fork/)._
 
-Once you reach this point you are ready to do a full build and deploy as described [here](./README.md#start-knative).
+Once you reach this point you are ready to do a full build and deploy as
+described [here](./README.md#start-knative).
 
 ## Starting Binding
 
-Once you've [setup your development environment](#getting-started), stand up `Knative Binding` with:
+Once you've [setup your development environment](#getting-started), stand up
+`Knative Binding` with:
 
 ```shell
 ko apply -f config/
 ```
 
 You can see things running with:
+
 ```shell
 $ kubectl -n knative-eventing get pods
 NAME                               READY     STATUS    RESTARTS   AGE
@@ -64,13 +75,19 @@ kubectl -n knative-eventing logs $(kubectl -n knative-eventing get pods -l app=b
 ## Iterating
 
 As you make changes to the code-base, there are two special cases to be aware of:
-* **If you change a type definition ([pkg/apis/bind/v1alpha1/](./pkg/apis/bind/v1alpha1/.)),** then you must run [`./hack/update-codegen.sh`](./hack/update-codegen.sh).
-* **If you change a package's deps** (including adding external dep), then you must run
+- **If you change a type definition
+  ([pkg/apis/bind/v1alpha1/](./pkg/apis/bind/v1alpha1/.)),** then you must run
+  [`./hack/update-codegen.sh`](./hack/update-codegen.sh).
+- **If you add an external dependency**, then you must run
   [`./hack/update-deps.sh`](./hack/update-deps.sh).
 
-These are both idempotent, and we expect that running these at `HEAD` to have no diffs.
 
-Once the codegen and dependency information is correct, redeploying the controller is simply:
+These are both idempotent, and we expect that running these at `HEAD` to have
+no diffs.
+
+Once the codegen and dependency information is correct, redeploying the
+controller is simply:
+
 ```shell
 ko apply -f config/controller.yaml
 ```
@@ -80,11 +97,13 @@ redeploy `Knative`](./README.md#start-knative).
 
 ## Tests
 
-Running tests as you make changes to the code-base is pretty simple. See [the test docs](./test/README.md).
+Running tests as you make changes to the code-base is pretty simple. See [the
+test docs](./test/README.md).
 
 ## Clean up
 
 You can delete all of the service components with:
+
 ```shell
 ko delete -f config/
 ```
