@@ -36,6 +36,10 @@ func (c *FakeChannelsV1alpha1) Channels(namespace string) v1alpha1.ChannelInterf
 	return &FakeChannels{c, namespace}
 }
 
+func (c *FakeChannelsV1alpha1) ClusterBuses() v1alpha1.ClusterBusInterface {
+	return &FakeClusterBuses{c}
+}
+
 func (c *FakeChannelsV1alpha1) Subscriptions(namespace string) v1alpha1.SubscriptionInterface {
 	return &FakeSubscriptions{c, namespace}
 }

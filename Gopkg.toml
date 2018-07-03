@@ -84,5 +84,5 @@ required = [
 
 [[constraint]]
   name = "github.com/knative/serving"
-  # HEAD as of 2018-06-01
-  revision = "a67361c49ec4a957f60d86de05f168a4b41b72ba"
+  # HEAD as of 2018-06-28, chosen for no particular reason
+  revision = "5e4bb4f8eb2aa1417fd51c95e4e9594e8ca32ace"

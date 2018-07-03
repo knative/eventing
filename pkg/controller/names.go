@@ -38,6 +38,18 @@ func BusDispatcherServiceName(busName string) string {
 	return fmt.Sprintf("%s-bus", busName)
 }
 
+func ClusterBusProvisionerDeploymentName(clusterBusName string) string {
+	return fmt.Sprintf("%s-clusterbus-provisioner", clusterBusName)
+}
+
+func ClusterBusDispatcherDeploymentName(clusterBusName string) string {
+	return fmt.Sprintf("%s-clusterbus", clusterBusName)
+}
+
+func ClusterBusDispatcherServiceName(clusterBusName string) string {
+	return fmt.Sprintf("%s-clusterbus", clusterBusName)
+}
+
 func ChannelVirtualServiceName(channelName string) string {
 	return fmt.Sprintf("%s-channel", channelName)
 }
