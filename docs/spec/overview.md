@@ -18,8 +18,8 @@ The primary resources in the Knative Eventing _Feeds_ API are EventSource, Event
 
 * **EventType**, the schema for an event.
 
-* **Bind**, ties the output of an event producer to the input of an event
-  consumer.
+* **Bind**, the association between the output of an event producer to the
+  input of an event consumer.
 
 
 The primary resources in the Knative Eventing _Channels_ API are Channel, Subscription and Bus:
@@ -31,8 +31,7 @@ The primary resources in the Knative Eventing _Channels_ API are Channel, Subscr
 * **Subscription**, an expressed interest in events to be delivered to a
   service.
 
-![TODO:: Object model](images/object_model.png)
-
+![Object Model](images/overview-reference.png)
 
 ## EventSource
 
