@@ -22,4 +22,6 @@ type BusExpansion interface{}
 
 type ChannelExpansion interface{}
 
+type ClusterBusExpansion interface{}
+
 type SubscriptionExpansion interface{}

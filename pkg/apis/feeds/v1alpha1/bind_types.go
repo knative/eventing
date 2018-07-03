@@ -26,7 +26,8 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Bind is a specification for a Bind resource
+// Bind connects an event trigger with an action that processes events produced
+// by the trigger.
 type Bind struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -35,6 +36,20 @@ type Bind struct {
 	Status BindStatus `json:"status"`
 }
 
+// BindSpec is the spec for a Bind resource.
+type BindSpec struct {
+	// Action specifies the target handler for the events
+	Action BindAction `json:"action"`
+
+	// Trigger specifies the trigger we're binding to
+	Trigger EventTrigger `json:"trigger"`
+
+	// Service Account to run binding container. If left out, uses "default"
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+}
+
+// BindAction specifies the target handler - a Knative route or channel - for
+// events produced by an EventTrigger.
 type BindAction struct {
 	// You must specify one and only of these.
 
@@ -45,6 +60,8 @@ type BindAction struct {
 	ChannelName string `json:"channelName,omitempty"`
 }
 
+// EventTrigger specifies the intention that a particular event type and
+// resource should be consumed.
 type EventTrigger struct {
 	// Required. The type of event to observe. For example:
 	// `google.storage.object.finalize` and
@@ -123,18 +140,6 @@ type EventTrigger struct {
 	ParametersFrom []ParametersFromSource `json:"parametersFrom,omitempty"`
 }
 
-// BindSpec is the spec for a Bind resource
-type BindSpec struct {
-	// Action specifies the target handler for the events
-	Action BindAction `json:"action"`
-
-	// Trigger specifies the trigger we're binding to
-	Trigger EventTrigger `json:"trigger"`
-
-	// Service Account to run binding container. If left out, uses "default"
-	ServiceAccountName string `json:"serviceAccountName,omitempty"`
-}
-
 // ParametersFromSource represents the source of a set of Parameters
 // TODO: consider making this into a new secret type.
 type ParametersFromSource struct {
@@ -146,7 +151,7 @@ type ParametersFromSource struct {
 
 // SecretKeyReference references a key of a Secret.
 type SecretKeyReference struct {
-	// The name of the secret in the pod's namespace to select from.
+	// The name of the secret in the resource's namespace to select from.
 	Name string `json:"name"`
 	// The key of the secret to select from.  Must be a valid secret key.
 	Key string `json:"key"`
