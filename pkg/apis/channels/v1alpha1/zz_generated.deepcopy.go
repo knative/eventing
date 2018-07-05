@@ -220,11 +220,7 @@ func (in *Channel) DeepCopyInto(out *Channel) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
-<<<<<<< HEAD
-	out.Status = in.Status
-=======
 	in.Status.DeepCopyInto(&out.Status)
->>>>>>> Add status for channel
 	return
 }
 
