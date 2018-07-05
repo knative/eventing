@@ -53,6 +53,7 @@ import (
 	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	"github.com/knative/eventing/pkg/controller/util"
 )
 
 const controllerAgentName = "bus-controller"
@@ -302,30 +303,60 @@ func (c *Controller) syncHandler(key string) error {
 	// Sync ServiceAccount derived from the Bus
 	serviceAccount, saErr = c.syncBusServiceAccount(bus)
 	if saErr != nil {
+		_ = c.updateBusStatus(bus,
+			dispatcherService, dispatcherServiceErr,
+			dispatcherDeployment, dispatcherDeplErr,
+			provisionerDeployment, provisionerDeplError,
+			serviceAccount, saErr,
+			clusterRoleBinding, clusterRoleBindingErr)
 		return saErr
 	}
 
 	// Sync ClusterRoleBinding derived from the Bus
 	clusterRoleBinding, clusterRoleBindingErr = c.syncBusClusterRoleBinding(bus)
 	if clusterRoleBindingErr != nil {
+		_ = c.updateBusStatus(bus,
+			dispatcherService, dispatcherServiceErr,
+			dispatcherDeployment, dispatcherDeplErr,
+			provisionerDeployment, provisionerDeplError,
+			serviceAccount, saErr,
+			clusterRoleBinding, clusterRoleBindingErr)
 		return clusterRoleBindingErr
 	}
 
 	// Sync Service derived from the Bus
 	dispatcherService, dispatcherServiceErr = c.syncBusDispatcherService(bus)
 	if dispatcherServiceErr != nil {
+		_ = c.updateBusStatus(bus,
+			dispatcherService, dispatcherServiceErr,
+			dispatcherDeployment, dispatcherDeplErr,
+			provisionerDeployment, provisionerDeplError,
+			serviceAccount, saErr,
+			clusterRoleBinding, clusterRoleBindingErr)
 		return dispatcherServiceErr
 	}
 
 	// Sync Deployment derived from the Bus
 	dispatcherDeployment, dispatcherDeplErr = c.syncBusDispatcherDeployment(bus)
 	if dispatcherDeplErr != nil {
+		_ = c.updateBusStatus(bus,
+			dispatcherService, dispatcherServiceErr,
+			dispatcherDeployment, dispatcherDeplErr,
+			provisionerDeployment, provisionerDeplError,
+			serviceAccount, saErr,
+			clusterRoleBinding, clusterRoleBindingErr)
 		return dispatcherDeplErr
 	}
 
 	// Sync Deployment derived from the Bus
 	provisionerDeployment, provisionerDeplError = c.syncBusProvisionerDeployment(bus)
 	if provisionerDeplError != nil {
+		_ = c.updateBusStatus(bus,
+			dispatcherService, dispatcherServiceErr,
+			dispatcherDeployment, dispatcherDeplErr,
+			provisionerDeployment, provisionerDeplError,
+			serviceAccount, saErr,
+			clusterRoleBinding, clusterRoleBindingErr)
 		return provisionerDeplError
 	}
 
@@ -546,11 +577,32 @@ func (c *Controller) updateBusStatus(
 	busCopy := bus.DeepCopy()
 
 	if dispatcherService != nil {
-		busCopy.Status.Service = &corev1.LocalObjectReference{Name:dispatcherService.Name}
+		busCopy.Status.Service = &corev1.LocalObjectReference{Name: dispatcherService.Name}
+		serviceCondition := util.NewBusCondition(channelsv1alpha1.BusServiceable, corev1.ConditionTrue, "ServiceSynced", "service successfully synced")
+		util.SetBusCondition(&busCopy.Status, *serviceCondition)
 	} else {
 		busCopy.Status.Service = nil
+		serviceCondition := util.NewBusCondition(channelsv1alpha1.BusServiceable, corev1.ConditionFalse, "ServiceError", dispatcherServiceErr.Error())
+		util.SetBusCondition(&busCopy.Status, *serviceCondition)
 	}
 
+	if dispatcherDeployment != nil {
+		dispatchCondition := util.NewBusCondition(channelsv1alpha1.BusDispatching, corev1.ConditionTrue, "DeploymentSynced", "deployment successfully synced")
+		util.SetBusCondition(&busCopy.Status, *dispatchCondition)
+	} else {
+		dispatchCondition := util.NewBusCondition(channelsv1alpha1.BusDispatching, corev1.ConditionFalse, "DeploymentError", dispatcherDeploymentErr.Error())
+		util.SetBusCondition(&busCopy.Status, *dispatchCondition)
+	}
+
+	if provisionerDeployment != nil {
+		provisionCondition := util.NewBusCondition(channelsv1alpha1.BusProvisioning, corev1.ConditionTrue, "DeploymentSynced", "deployment successfully synced")
+		util.SetBusCondition(&busCopy.Status, *provisionCondition)
+	} else if provisionerDeploymentErr != nil {
+		provisionCondition := util.NewBusCondition(channelsv1alpha1.BusProvisioning, corev1.ConditionFalse, "DeploymentError", provisionerDeploymentErr.Error())
+		util.SetBusCondition(&busCopy.Status, *provisionCondition)
+	} else {
+		util.RemoveBusCondition(&busCopy.Status, channelsv1alpha1.BusProvisioning)
+	}
 
 	// If the CustomResourceSubresources feature gate is not enabled,
 	// we must use Update instead of UpdateStatus to update the Status block of the Bus resource.

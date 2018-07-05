@@ -12,6 +12,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package util
@@ -22,9 +23,9 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// NewChannelCondition creates a new channel condition with the provided values and both times set to now().
-func NewChannelCondition(condType v1alpha1.ChannelConditionType, status v1.ConditionStatus, reason, message string) *v1alpha1.ChannelCondition {
-	return &v1alpha1.ChannelCondition{
+// NewBusCondition creates a new bus condition with the provided values and both times set to now().
+func NewBusCondition(condType v1alpha1.BusConditionType, status v1.ConditionStatus, reason, message string) *v1alpha1.BusCondition {
+	return &v1alpha1.BusCondition{
 		Type:               condType,
 		Status:             status,
 		LastUpdateTime:     meta_v1.Now(),
@@ -34,8 +35,8 @@ func NewChannelCondition(condType v1alpha1.ChannelConditionType, status v1.Condi
 	}
 }
 
-// GetChannelCondition returns the channel condition with the provided type.
-func GetChannelCondition(status v1alpha1.ChannelStatus, condType v1alpha1.ChannelConditionType) *v1alpha1.ChannelCondition {
+// GetBusCondition returns the bus condition with the provided type.
+func GetBusCondition(status v1alpha1.BusStatus, condType v1alpha1.BusConditionType) *v1alpha1.BusCondition {
 	for i := range status.Conditions {
 		c := status.Conditions[i]
 		if c.Type == condType {
@@ -45,10 +46,10 @@ func GetChannelCondition(status v1alpha1.ChannelStatus, condType v1alpha1.Channe
 	return nil
 }
 
-// SetChannelCondition updates the channel status to include the provided condition. If the condition that
+// SetBusCondition updates the bus status to include the provided condition. If the condition that
 // we are about to add already exists and has the same status and reason then no update happens.
-func SetChannelCondition(status *v1alpha1.ChannelStatus, condition v1alpha1.ChannelCondition) {
-	currentCond := GetChannelCondition(*status, condition.Type)
+func SetBusCondition(status *v1alpha1.BusStatus, condition v1alpha1.BusCondition) {
+	currentCond := GetBusCondition(*status, condition.Type)
 	if currentCond != nil && currentCond.Status == condition.Status && currentCond.Reason == condition.Reason {
 		return
 	}
@@ -56,18 +57,18 @@ func SetChannelCondition(status *v1alpha1.ChannelStatus, condition v1alpha1.Chan
 	if currentCond != nil && currentCond.Status == condition.Status {
 		condition.LastTransitionTime = currentCond.LastTransitionTime
 	}
-	newConditions := filterOutChannelCondition(status.Conditions, condition.Type)
+	newConditions := filterOutBusCondition(status.Conditions, condition.Type)
 	status.Conditions = append(newConditions, condition)
 }
 
-// RemoveChannelCondition removes the channel condition with the provided type.
-func RemoveChannelCondition(status *v1alpha1.ChannelStatus, condType v1alpha1.ChannelConditionType) {
-	status.Conditions = filterOutChannelCondition(status.Conditions, condType)
+// RemoveBusCondition removes the bus condition with the provided type.
+func RemoveBusCondition(status *v1alpha1.BusStatus, condType v1alpha1.BusConditionType) {
+	status.Conditions = filterOutBusCondition(status.Conditions, condType)
 }
 
-// filterOutChannelCondition returns a new slice of channel conditions without conditions with the provided type.
-func filterOutChannelCondition(conditions []v1alpha1.ChannelCondition, condType v1alpha1.ChannelConditionType) []v1alpha1.ChannelCondition {
-	var newConditions []v1alpha1.ChannelCondition
+// filterOutBusCondition returns a new slice of bus conditions without conditions with the provided type.
+func filterOutBusCondition(conditions []v1alpha1.BusCondition, condType v1alpha1.BusConditionType) []v1alpha1.BusCondition {
+	var newConditions []v1alpha1.BusCondition
 	for _, c := range conditions {
 		if c.Type == condType {
 			continue
