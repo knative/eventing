@@ -47,19 +47,7 @@ func (in *Bus) DeepCopyInto(out *Bus) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
-<<<<<<< HEAD
 	out.Status = in.Status
-=======
-	if in.Status != nil {
-		in, out := &in.Status, &out.Status
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(BusStatus)
-			**out = **in
-		}
-	}
->>>>>>> Introduce bus backed by Kafka
 	return
 }
 
@@ -232,19 +220,7 @@ func (in *Channel) DeepCopyInto(out *Channel) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
-<<<<<<< HEAD
 	out.Status = in.Status
-=======
-	if in.Status != nil {
-		in, out := &in.Status, &out.Status
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(ChannelStatus)
-			**out = **in
-		}
-	}
->>>>>>> Introduce bus backed by Kafka
 	return
 }
 
@@ -452,19 +428,7 @@ func (in *Subscription) DeepCopyInto(out *Subscription) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
-<<<<<<< HEAD
 	out.Status = in.Status
-=======
-	if in.Status != nil {
-		in, out := &in.Status, &out.Status
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(SubscriptionStatus)
-			**out = **in
-		}
-	}
->>>>>>> Introduce bus backed by Kafka
 	return
 }
 
