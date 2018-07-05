@@ -77,6 +77,10 @@ type BusParameters struct {
 
 // BusStatus (computed) for a bus
 type BusStatus struct {
+
+	// A reference to the k8s Service backing this bus, if successfully synced.
+	Service *kapi.LocalObjectReference `json:"service,omitempty"`
+
 }
 
 func (b *Bus) BacksChannel(channel *Channel) bool {

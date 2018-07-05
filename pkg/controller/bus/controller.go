@@ -293,39 +293,50 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
+	var serviceAccount *corev1.ServiceAccount
+	var clusterRoleBinding *rbacv1beta1.ClusterRoleBinding
+	var dispatcherService *corev1.Service
+	var dispatcherDeployment, provisionerDeployment *appsv1.Deployment
+	var saErr, clusterRoleBindingErr, dispatcherServiceErr, dispatcherDeplErr, provisionerDeplError error
+
 	// Sync ServiceAccount derived from the Bus
-	serviceAccount, err := c.syncBusServiceAccount(bus)
-	if err != nil {
-		return err
+	serviceAccount, saErr = c.syncBusServiceAccount(bus)
+	if saErr != nil {
+		return saErr
 	}
 
 	// Sync ClusterRoleBinding derived from the Bus
-	clusterRoleBinding, err := c.syncBusClusterRoleBinding(bus)
-	if err != nil {
-		return err
+	clusterRoleBinding, clusterRoleBindingErr = c.syncBusClusterRoleBinding(bus)
+	if clusterRoleBindingErr != nil {
+		return clusterRoleBindingErr
 	}
 
 	// Sync Service derived from the Bus
-	dispatcherService, err := c.syncBusDispatcherService(bus)
-	if err != nil {
-		return err
+	dispatcherService, dispatcherServiceErr = c.syncBusDispatcherService(bus)
+	if dispatcherServiceErr != nil {
+		return dispatcherServiceErr
 	}
 
 	// Sync Deployment derived from the Bus
-	dispatcherDeployment, err := c.syncBusDispatcherDeployment(bus)
-	if err != nil {
-		return err
+	dispatcherDeployment, dispatcherDeplErr = c.syncBusDispatcherDeployment(bus)
+	if dispatcherDeplErr != nil {
+		return dispatcherDeplErr
 	}
 
 	// Sync Deployment derived from the Bus
-	provisionerDeployment, err := c.syncBusProvisionerDeployment(bus)
-	if err != nil {
-		return err
+	provisionerDeployment, provisionerDeplError = c.syncBusProvisionerDeployment(bus)
+	if provisionerDeplError != nil {
+		return provisionerDeplError
 	}
 
 	// Finally, we update the status block of the Bus resource to reflect the
 	// current state of the world
-	err = c.updateBusStatus(bus, dispatcherService, dispatcherDeployment, provisionerDeployment, serviceAccount, clusterRoleBinding)
+	err = c.updateBusStatus(bus,
+		dispatcherService, dispatcherServiceErr,
+		dispatcherDeployment, dispatcherDeplErr,
+		provisionerDeployment, provisionerDeplError,
+		serviceAccount, saErr,
+		clusterRoleBinding, clusterRoleBindingErr)
 	if err != nil {
 		return err
 	}
@@ -523,16 +534,24 @@ func (c *Controller) syncBusProvisionerDeployment(bus *channelsv1alpha1.Bus) (*a
 
 func (c *Controller) updateBusStatus(
 	bus *channelsv1alpha1.Bus,
-	dispatcherService *corev1.Service,
-	dispatcherDeployment *appsv1.Deployment,
-	provisionerDeployment *appsv1.Deployment,
-	serviceAccount *corev1.ServiceAccount,
-	clusterRoleBinding *rbacv1beta1.ClusterRoleBinding,
+	dispatcherService *corev1.Service, dispatcherServiceErr error,
+	dispatcherDeployment *appsv1.Deployment, dispatcherDeploymentErr error,
+	provisionerDeployment *appsv1.Deployment, provisionerDeploymentErr error,
+	serviceAccount *corev1.ServiceAccount, serviceAccountErr error,
+	clusterRoleBinding *rbacv1beta1.ClusterRoleBinding, clusterRoleBindingErr error,
 ) error {
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
 	busCopy := bus.DeepCopy()
+
+	if dispatcherService != nil {
+		busCopy.Status.Service = &corev1.LocalObjectReference{Name:dispatcherService.Name}
+	} else {
+		busCopy.Status.Service = nil
+	}
+
+
 	// If the CustomResourceSubresources feature gate is not enabled,
 	// we must use Update instead of UpdateStatus to update the Status block of the Bus resource.
 	// UpdateStatus will not allow changes to the Spec of the resource,
