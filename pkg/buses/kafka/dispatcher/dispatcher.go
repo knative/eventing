@@ -207,7 +207,6 @@ func (d *dispatcher) subscribe(subscription *channelsv1alpha1.Subscription, attr
 }
 
 func initialOffset(attributes buses.Attributes) (int64, error) {
-	var initialOffset int64
 	sInitial := attributes[InitialOffset]
 	if sInitial == Oldest {
 		return sarama.OffsetOldest, nil
@@ -216,7 +215,6 @@ func initialOffset(attributes buses.Attributes) (int64, error) {
 	} else {
 		return 0, fmt.Errorf("unsupported initialOffset value. Must be one of %s or %s", Oldest, Newest)
 	}
-	return initialOffset, nil
 }
 
 func kafka2HttpHeaders(message *sarama.ConsumerMessage) http.Header {
