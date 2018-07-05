@@ -59,7 +59,14 @@ const (
 	errResourceSync = "ErrResourceSync"
 )
 
-// Monitor utility to manage channels and subscriptions for a GenericBus
+// Monitor is a utility mix-in intended to be used by Bus authors to easily
+// write provisioners and dispatchers for buses. Bus provisioners are
+// responsible for managing the storage asset(s) that back a channel. Bus
+// dispatchers are responsible for dispatching events on the Channel to the
+// Channel's Subscriptions. Monitor handles setting up informers that watch a
+// Bus, its Channels, and their Subscriptions and allows Bus authors to register
+// event handler functions to be called when Provision/Unprovision and
+// Subscribe/Unsubscribe happen.
 type Monitor struct {
 	bus                      channelsv1alpha1.GenericBus
 	handler                  MonitorEventHandlerFuncs
@@ -90,12 +97,25 @@ type Monitor struct {
 
 type Attributes = map[string]string
 
-// MonitorEventHandlerFuncs handler functions for channel and subscription provisioning
+// MonitorEventHandlerFuncs is a set of handler functions that are called when a
+// bus requires sync, channels are provisioned/unprovisioned, or a subscription
+// is created or deleted, or if one of the relevant resources is changed.
 type MonitorEventHandlerFuncs struct {
-	BusFunc         func(bus channelsv1alpha1.GenericBus) error
-	ProvisionFunc   func(channel *channelsv1alpha1.Channel, attributes Attributes) error
+	// BusFunc is invoked when the Bus requires sync.
+	BusFunc func(bus channelsv1alpha1.GenericBus) error
+
+	// ProvisionFunc is invoked when a new Channel should be provisioned or when
+	// the attributes change.
+	ProvisionFunc func(channel *channelsv1alpha1.Channel, attributes Attributes) error
+
+	// UnprovisionFunc in invoked when a Channel should be deleted.
 	UnprovisionFunc func(channel *channelsv1alpha1.Channel) error
-	SubscribeFunc   func(subscription *channelsv1alpha1.Subscription, attributes Attributes) error
+
+	// SubscribeFunc is invoked when a new Subscription should be set up or when
+	// the attributes change.
+	SubscribeFunc func(subscription *channelsv1alpha1.Subscription, attributes Attributes) error
+
+	// UnsubscribeFunc is invoked when a Subscription should be deleted.
 	UnsubscribeFunc func(subscription *channelsv1alpha1.Subscription) error
 }
 
@@ -172,16 +192,25 @@ func (h MonitorEventHandlerFuncs) onUnsubscribe(subscription *channelsv1alpha1.S
 	return nil
 }
 
+// channelSummary is a record, for a particular Channel, of that Channel's spec
+// and its current subscriptions.
 type channelSummary struct {
 	Channel       *channelsv1alpha1.ChannelSpec
 	Subscriptions map[subscriptionKey]subscriptionSummary
 }
 
+// subscriptionSummary is a record of a Subscription's spec that is used as part
+// of a channelSummary.
 type subscriptionSummary struct {
 	Subscription channelsv1alpha1.SubscriptionSpec
 }
 
-// NewMonitor creates a monitor for a GenericBus
+// NewMonitor creates a monitor for a bus given:
+//
+// component: the name of the component this monitor should use in created k8s events
+// masterURL: the URL of the API server the monitor should communicate with
+// kubeconfig: the path of a kubeconfig file to create a client connection to the masterURL with
+// handler: a MonitorEventHandlerFuncs with handler functions for the monitor to call
 func NewMonitor(
 	component, masterURL, kubeconfig string,
 	handler MonitorEventHandlerFuncs,
@@ -327,7 +356,8 @@ func NewMonitor(
 	return monitor
 }
 
-// Channel for a channel name and namespace
+// Channel returns the provisioned Channel with the given name and namespace, or
+// nil if such a Channel hasn't been provisioned.
 func (m *Monitor) Channel(name string, namespace string) *channelsv1alpha1.Channel {
 	channelKey := makeChannelKeyWithNames(namespace, name)
 	if channel, ok := m.provisionedChannels[channelKey]; ok {
@@ -336,7 +366,8 @@ func (m *Monitor) Channel(name string, namespace string) *channelsv1alpha1.Chann
 	return nil
 }
 
-// Subscription for a subscription name and namespace
+// Subscription returns the provisioned Subscription with the given name and
+// namespace, or nil if such a Subscription hasn't been provisioned.
 func (m *Monitor) Subscription(name string, namespace string) *channelsv1alpha1.Subscription {
 	subscriptionKey := makeSubscriptionKeyWithNames(namespace, name)
 	if subscription, ok := m.provisionedSubscriptions[subscriptionKey]; ok {
@@ -345,7 +376,8 @@ func (m *Monitor) Subscription(name string, namespace string) *channelsv1alpha1.
 	return nil
 }
 
-// Subscriptions for a channel name and namespace
+// Subscriptions returns a slice of SubscriptionSpecs for the Channel with the
+// given name and namespace, or nil if the Channel hasn't been provisioned.
 func (m *Monitor) Subscriptions(channelName string, namespace string) *[]channelsv1alpha1.SubscriptionSpec {
 	channelKey := makeChannelKeyWithNames(namespace, channelName)
 	summary := m.getChannelSummary(channelKey)
@@ -371,6 +403,8 @@ func (m *Monitor) Subscriptions(channelName string, namespace string) *[]channel
 	return &subscriptions
 }
 
+// channelAttributes resolves the given Channel Arguments and the Bus' Channel
+// Parameters, returning an Attributes or an Error.
 func (m *Monitor) channelAttributes(channel channelsv1alpha1.ChannelSpec) (Attributes, error) {
 	genericBusParameters := m.bus.GetSpec().Parameters
 	var parameters *[]channelsv1alpha1.Parameter
@@ -380,6 +414,8 @@ func (m *Monitor) channelAttributes(channel channelsv1alpha1.ChannelSpec) (Attri
 	return m.resolveAttributes(parameters, channel.Arguments)
 }
 
+// channelAttributes resolves the given Subscription Arguments and the Bus' Subscription
+// Parameters, returning an Attributes or an Error.
 func (m *Monitor) subscriptionAttributes(subscription channelsv1alpha1.SubscriptionSpec) (Attributes, error) {
 	genericBusParameters := m.bus.GetSpec().Parameters
 	var parameters *[]channelsv1alpha1.Parameter
@@ -389,6 +425,13 @@ func (m *Monitor) subscriptionAttributes(subscription channelsv1alpha1.Subscript
 	return m.resolveAttributes(parameters, subscription.Arguments)
 }
 
+// resolveAttributes resolves a slice of Parameters and a slice of arguments and
+// returns an Attributes or an error if there are missing Arguments. Each
+// Parameter represents a variable that must be provided by an Argument or
+// optionally defaulted if a default value for the Parameter is specified.
+// resolveAttributes combines the given arrays of Parameters and Arguments,
+// using default values where necessary and returning an error if there are
+// missing Arguments.
 func (m *Monitor) resolveAttributes(parameters *[]channelsv1alpha1.Parameter, arguments *[]channelsv1alpha1.Argument) (Attributes, error) {
 	resolved := make(Attributes)
 	known := make(map[string]interface{})
