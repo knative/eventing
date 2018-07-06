@@ -73,6 +73,18 @@ const (
 	MessageResourceSynced = "Bus synced successfully"
 )
 
+const (
+	// ServiceSynced is used as part of the condition reason when the bus (k8s) service is successfully created.
+	ServiceSynced = "ServiceSynced"
+	// ServiceError is used as part of the condition reason when the bus (k8s) service creation failed.
+	ServiceError = "ServiceError"
+	// DeploymentSynced is used as part of the condition reason when a bus deployment is successfully created.
+	DeploymentSynced = "DeploymentSynced"
+	// DeploymentError is used as part of the condition reason when a bus deployment creation failed.
+	DeploymentError = "DeploymentError"
+)
+
+
 // Controller is the controller implementation for Bus resources
 type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
@@ -578,27 +590,27 @@ func (c *Controller) updateBusStatus(
 
 	if dispatcherService != nil {
 		busCopy.Status.Service = &corev1.LocalObjectReference{Name: dispatcherService.Name}
-		serviceCondition := util.NewBusCondition(channelsv1alpha1.BusServiceable, corev1.ConditionTrue, "ServiceSynced", "service successfully synced")
+		serviceCondition := util.NewBusCondition(channelsv1alpha1.BusServiceable, corev1.ConditionTrue, ServiceSynced, "service successfully synced")
 		util.SetBusCondition(&busCopy.Status, *serviceCondition)
 	} else {
 		busCopy.Status.Service = nil
-		serviceCondition := util.NewBusCondition(channelsv1alpha1.BusServiceable, corev1.ConditionFalse, "ServiceError", dispatcherServiceErr.Error())
+		serviceCondition := util.NewBusCondition(channelsv1alpha1.BusServiceable, corev1.ConditionFalse, ServiceError, dispatcherServiceErr.Error())
 		util.SetBusCondition(&busCopy.Status, *serviceCondition)
 	}
 
 	if dispatcherDeployment != nil {
-		dispatchCondition := util.NewBusCondition(channelsv1alpha1.BusDispatching, corev1.ConditionTrue, "DeploymentSynced", "deployment successfully synced")
+		dispatchCondition := util.NewBusCondition(channelsv1alpha1.BusDispatching, corev1.ConditionTrue, DeploymentSynced, "deployment successfully synced")
 		util.SetBusCondition(&busCopy.Status, *dispatchCondition)
 	} else {
-		dispatchCondition := util.NewBusCondition(channelsv1alpha1.BusDispatching, corev1.ConditionFalse, "DeploymentError", dispatcherDeploymentErr.Error())
+		dispatchCondition := util.NewBusCondition(channelsv1alpha1.BusDispatching, corev1.ConditionFalse, DeploymentError, dispatcherDeploymentErr.Error())
 		util.SetBusCondition(&busCopy.Status, *dispatchCondition)
 	}
 
 	if provisionerDeployment != nil {
-		provisionCondition := util.NewBusCondition(channelsv1alpha1.BusProvisioning, corev1.ConditionTrue, "DeploymentSynced", "deployment successfully synced")
+		provisionCondition := util.NewBusCondition(channelsv1alpha1.BusProvisioning, corev1.ConditionTrue, DeploymentSynced, "deployment successfully synced")
 		util.SetBusCondition(&busCopy.Status, *provisionCondition)
 	} else if provisionerDeploymentErr != nil {
-		provisionCondition := util.NewBusCondition(channelsv1alpha1.BusProvisioning, corev1.ConditionFalse, "DeploymentError", provisionerDeploymentErr.Error())
+		provisionCondition := util.NewBusCondition(channelsv1alpha1.BusProvisioning, corev1.ConditionFalse, DeploymentError, provisionerDeploymentErr.Error())
 		util.SetBusCondition(&busCopy.Status, *provisionCondition)
 	} else {
 		util.RemoveBusCondition(&busCopy.Status, channelsv1alpha1.BusProvisioning)

@@ -70,6 +70,17 @@ const (
 )
 
 const (
+	// ServiceSynced is used as part of the condition reason when the channel (k8s) service is successfully created.
+	ServiceSynced = "ServiceSynced"
+	// ServiceError is used as part of the condition reason when the channel (k8s) service creation failed.
+	ServiceError = "ServiceError"
+	// VirtualServiceSynced is used as part of the condition reason when the channel istio virtual service is successfully created.
+	VirtualServiceSynced = "VirtualServiceSynced"
+	// VirtualServiceError is used as part of the condition reason when the channel istio virtual service creation failed.
+	VirtualServiceError = "VirtualServiceError"
+)
+
+const (
 	PortNumber = 80
 	PortName   = "http"
 )
@@ -381,21 +392,21 @@ func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel,
 
 	if service != nil {
 		channelCopy.Status.Service = &corev1.LocalObjectReference{Name: service.Name}
-		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelServiceable, corev1.ConditionTrue, "ServiceSynced", "service successfully synced")
+		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelServiceable, corev1.ConditionTrue, ServiceSynced, "service successfully synced")
 		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
 	} else {
 		channelCopy.Status.Service = nil
-		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelServiceable, corev1.ConditionFalse, "ServiceError", serviceError.Error())
+		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelServiceable, corev1.ConditionFalse, ServiceError, serviceError.Error())
 		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
 	}
 
 	if virtualService != nil {
 		channelCopy.Status.VirtualService = &corev1.LocalObjectReference{Name: virtualService.Name}
-		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelRoutable, corev1.ConditionTrue, "VirtualServiceSynced", "virtual service successfully synced")
+		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelRoutable, corev1.ConditionTrue, VirtualServiceSynced, "virtual service successfully synced")
 		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
 	} else {
 		channelCopy.Status.VirtualService = nil
-		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelRoutable, corev1.ConditionFalse, "VirtualServiceError", virtualServiceError.Error())
+		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelRoutable, corev1.ConditionFalse, VirtualServiceError, virtualServiceError.Error())
 		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
 	}
 
