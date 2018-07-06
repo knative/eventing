@@ -34,6 +34,10 @@ type ChannelListerExpansion interface{}
 // ChannelNamespaceLister.
 type ChannelNamespaceListerExpansion interface{}
 
+// ClusterBusListerExpansion allows custom methods to be added to
+// ClusterBusLister.
+type ClusterBusListerExpansion interface{}
+
 // SubscriptionListerExpansion allows custom methods to be added to
 // SubscriptionLister.
 type SubscriptionListerExpansion interface{}
