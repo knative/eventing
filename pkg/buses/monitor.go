@@ -151,9 +151,9 @@ func (h MonitorEventHandlerFuncs) onProvision(channel *channelsv1alpha1.Channel,
 			cond = util.NewChannelCondition(channelsv1alpha1.ChannelProvisioned, corev1.ConditionTrue, successSynced, "Channel provisioned successfully")
 		}
 		util.SetChannelCondition(&channelCopy.Status, *cond)
-		_, err = monitor.clientset.ChannelsV1alpha1().Channels(channel.Namespace).Update(channelCopy)
-		if err != nil {
-			glog.Warningf("Could not update status: %v", err)
+		_, errS := monitor.clientset.ChannelsV1alpha1().Channels(channel.Namespace).Update(channelCopy)
+		if errS != nil {
+			glog.Warningf("Could not update status: %v", errS)
 		}
 		return err
 	}
@@ -173,9 +173,9 @@ func (h MonitorEventHandlerFuncs) onUnprovision(channel *channelsv1alpha1.Channe
 			cond = util.NewChannelCondition(channelsv1alpha1.ChannelProvisioned, corev1.ConditionFalse, successSynced, "Channel unprovisioned successfully")
 		}
 		util.SetChannelCondition(&channelCopy.Status, *cond)
-		_, err = monitor.clientset.ChannelsV1alpha1().Channels(channel.Namespace).Update(channelCopy)
-		if err != nil {
-			glog.Warningf("Could not update status: %v", err)
+		_, errS := monitor.clientset.ChannelsV1alpha1().Channels(channel.Namespace).Update(channelCopy)
+		if errS != nil {
+			glog.Warningf("Could not update status: %v", errS)
 		}
 		return err
 	}
@@ -189,10 +189,19 @@ func (h MonitorEventHandlerFuncs) onSubscribe(subscription *channelsv1alpha1.Sub
 			return err
 		}
 		err = h.SubscribeFunc(subscription, attributes)
+		subscriptionCopy := subscription.DeepCopy()
+		var cond *channelsv1alpha1.SubscriptionCondition
 		if err != nil {
 			monitor.recorder.Eventf(subscription, corev1.EventTypeWarning, errResourceSync, "Error subscribing: %s", err)
+			cond = util.NewSubscriptionCondition(channelsv1alpha1.SubscriptionDispatching, corev1.ConditionFalse, errResourceSync, err.Error())
 		} else {
 			monitor.recorder.Event(subscription, corev1.EventTypeNormal, successSynced, "Subscribed successfully")
+			cond = util.NewSubscriptionCondition(channelsv1alpha1.SubscriptionDispatching, corev1.ConditionTrue, successSynced, "Subscription dispatcher successfully created")
+		}
+		util.SetSubscriptionCondition(&subscriptionCopy.Status, *cond)
+		_, errS := monitor.clientset.ChannelsV1alpha1().Subscriptions(subscription.Namespace).Update(subscriptionCopy)
+		if errS != nil {
+			glog.Warningf("Could not update status: %v", errS)
 		}
 		return err
 	}
@@ -202,10 +211,19 @@ func (h MonitorEventHandlerFuncs) onSubscribe(subscription *channelsv1alpha1.Sub
 func (h MonitorEventHandlerFuncs) onUnsubscribe(subscription *channelsv1alpha1.Subscription, monitor *Monitor) error {
 	if h.UnsubscribeFunc != nil {
 		err := h.UnsubscribeFunc(subscription)
+		subscriptionCopy := subscription.DeepCopy()
+		var cond *channelsv1alpha1.SubscriptionCondition
 		if err != nil {
 			monitor.recorder.Eventf(subscription, corev1.EventTypeWarning, errResourceSync, "Error unsubscribing: %s", err)
+			cond = util.NewSubscriptionCondition(channelsv1alpha1.SubscriptionDispatching, corev1.ConditionUnknown, errResourceSync, err.Error())
 		} else {
 			monitor.recorder.Event(subscription, corev1.EventTypeNormal, successSynced, "Unsubscribed successfully")
+			cond = util.NewSubscriptionCondition(channelsv1alpha1.SubscriptionDispatching, corev1.ConditionFalse, successSynced, "Subscription dispatcher successfully deleted")
+		}
+		util.SetSubscriptionCondition(&subscriptionCopy.Status, *cond)
+		_, errS := monitor.clientset.ChannelsV1alpha1().Subscriptions(subscription.Namespace).Update(subscriptionCopy)
+		if errS != nil {
+			glog.Warningf("Could not update status: %v", errS)
 		}
 		return err
 	}

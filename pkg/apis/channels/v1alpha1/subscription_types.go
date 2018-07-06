@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/api/core/v1"
 )
 
 // +genclient
@@ -55,8 +56,39 @@ type SubscriptionSpec struct {
 	Arguments *[]Argument `json:"arguments,omitempty"`
 }
 
+
+type SubscriptionConditionType string
+
+const (
+	// Dispatching means the subscription is actively listening for incoming events on its channel and dispatching them.
+	SubscriptionDispatching SubscriptionConditionType = "Dispatching"
+)
+
+// SubscriptionCondition describes the state of a subscription at a point in time.
+type SubscriptionCondition struct {
+	// Type of subscription condition.
+	Type SubscriptionConditionType `json:"type"`
+	// Status of the condition, one of True, False, Unknown.
+	Status v1.ConditionStatus `json:"status"`
+	// The last time this condition was updated.
+	LastUpdateTime meta_v1.Time `json:"lastUpdateTime,omitempty"`
+	// Last time the condition transitioned from one status to another.
+	LastTransitionTime meta_v1.Time `json:"lastTransitionTime,omitempty"`
+	// The reason for the condition's last transition.
+	Reason string `json:"reason,omitempty"`
+	// A human readable message indicating details about the transition.
+	Message string `json:"message,omitempty"`
+}
+
+
 // SubscriptionStatus (computed) for a subscription
 type SubscriptionStatus struct {
+
+	// Represents the latest available observations of a subscription's current state.
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	Conditions []SubscriptionCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+
 }
 
 func (s *Subscription) GetSpecJSON() ([]byte, error) {
