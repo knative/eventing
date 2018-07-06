@@ -62,6 +62,7 @@ type TestCase struct {
 	WantAbsent []runtime.Object
 }
 
+// Runner returns a testing func that can be passed to t.Run.
 func (tc *TestCase) Runner(t *testing.T, r reconcile.Reconciler, c client.Client) func(t *testing.T) {
 	return func(t *testing.T) {
 		result, recErr := tc.Reconcile(r)
@@ -89,10 +90,14 @@ func (tc *TestCase) GetClient() client.Client {
 	return fake.NewFakeClient(tc.InitialState...)
 }
 
+// Reconcile calls the given reconciler's Reconcile() function with the test
+// case's reconcile request.
 func (tc *TestCase) Reconcile(r reconcile.Reconciler) (reconcile.Result, error) {
 	return r.Reconcile(tc.ReconcileRequest)
 }
 
+// VerifyErr verifies that the given error returned from Reconcile is the error
+// expected by the test case.
 func (tc *TestCase) VerifyErr(err error) error {
 	if tc.WantErr && err == nil {
 		return fmt.Errorf("want error, got nil")
@@ -106,6 +111,8 @@ func (tc *TestCase) VerifyErr(err error) error {
 	return nil
 }
 
+// VerifyResult verifies that the given result returned from Reconcile is the
+// result expected by the test case.
 func (tc *TestCase) VerifyResult(result reconcile.Result) error {
 	if diff := cmp.Diff(tc.WantResult, result); diff != "" {
 		return fmt.Errorf("Unexpected reconcile Result (-want +got) %v", diff)
@@ -113,6 +120,8 @@ func (tc *TestCase) VerifyResult(result reconcile.Result) error {
 	return nil
 }
 
+// VerifyWantPresent verifies that the client contains all the objects expected
+// to be present after reconciliation.
 func (tc *TestCase) VerifyWantPresent(c client.Client) error {
 	//TODO(grantr) return all errors
 	for _, wp := range tc.WantPresent {
@@ -136,6 +145,8 @@ func (tc *TestCase) VerifyWantPresent(c client.Client) error {
 	return nil
 }
 
+// VerifyWantAbsent verifies that the client does not contain any of the objects
+// expected to be absent after reconciliation.
 func (tc *TestCase) VerifyWantAbsent(c client.Client) error {
 	//TODO(grantr) return all errors
 	for _, wa := range tc.WantAbsent {
