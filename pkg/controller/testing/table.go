@@ -25,6 +25,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -39,14 +41,14 @@ type TestCase struct {
 	// starts.
 	InitialState []runtime.Object
 
-	// ReconcileRequest is the argument to pass to the Reconcile function.
-	ReconcileRequest reconcile.Request
+	// ReconcileKey is the key of the object to reconcile in namespace/name form.
+	ReconcileKey string
 
 	// WantErr is true when we expect the Reconcile function to return an error.
 	WantErr bool
 
 	// WantErrMsg contains the pattern to match the returned error message.
-	// Implies WantErr = true.
+	// Implies WantErr = true. TODO implement
 	WantErrMsg string
 
 	// WantResult is the reconcile result we expect to be returned from the
@@ -93,7 +95,19 @@ func (tc *TestCase) GetClient() client.Client {
 // Reconcile calls the given reconciler's Reconcile() function with the test
 // case's reconcile request.
 func (tc *TestCase) Reconcile(r reconcile.Reconciler) (reconcile.Result, error) {
-	return r.Reconcile(tc.ReconcileRequest)
+	if tc.ReconcileKey == "" {
+		return reconcile.Result{}, fmt.Errorf("Test did not set ReconcileKey")
+	}
+	ns, n, err := cache.SplitMetaNamespaceKey(tc.ReconcileKey)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	return r.Reconcile(reconcile.Request{
+		NamespacedName: types.NamespacedName{
+			Namespace: ns,
+			Name:      n,
+		},
+	})
 }
 
 // VerifyErr verifies that the given error returned from Reconcile is the error

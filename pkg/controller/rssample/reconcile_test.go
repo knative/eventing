@@ -56,6 +56,7 @@ func TestLabel(t *testing.T) {
 	testCases := []controllertesting.TestCase{
 		{
 			Name:         "TestLabel",
+			ReconcileKey: "test/test",
 			InitialState: []runtime.Object{getUnlabeledRS()},
 			WantPresent:  []runtime.Object{labelRS(getUnlabeledRS())},
 		},
