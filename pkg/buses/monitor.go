@@ -95,7 +95,7 @@ type Monitor struct {
 	recorder record.EventRecorder
 }
 
-type Attributes = map[string]string
+type ResolvedParameters = map[string]string
 
 // MonitorEventHandlerFuncs is a set of handler functions that are called when a
 // bus requires sync, channels are provisioned/unprovisioned, or a subscription
@@ -106,14 +106,14 @@ type MonitorEventHandlerFuncs struct {
 
 	// ProvisionFunc is invoked when a new Channel should be provisioned or when
 	// the attributes change.
-	ProvisionFunc func(channel *channelsv1alpha1.Channel, attributes Attributes) error
+	ProvisionFunc func(channel *channelsv1alpha1.Channel, parameters ResolvedParameters) error
 
 	// UnprovisionFunc in invoked when a Channel should be deleted.
 	UnprovisionFunc func(channel *channelsv1alpha1.Channel) error
 
 	// SubscribeFunc is invoked when a new Subscription should be set up or when
 	// the attributes change.
-	SubscribeFunc func(subscription *channelsv1alpha1.Subscription, attributes Attributes) error
+	SubscribeFunc func(subscription *channelsv1alpha1.Subscription, parameters ResolvedParameters) error
 
 	// UnsubscribeFunc is invoked when a Subscription should be deleted.
 	UnsubscribeFunc func(subscription *channelsv1alpha1.Subscription) error
@@ -134,11 +134,11 @@ func (h MonitorEventHandlerFuncs) onBus(bus channelsv1alpha1.GenericBus, monitor
 
 func (h MonitorEventHandlerFuncs) onProvision(channel *channelsv1alpha1.Channel, monitor *Monitor) error {
 	if h.ProvisionFunc != nil {
-		attributes, err := monitor.channelAttributes(channel.Spec)
+		parameters, err := monitor.resolveChannelParameters(channel.Spec)
 		if err != nil {
 			return err
 		}
-		err = h.ProvisionFunc(channel, attributes)
+		err = h.ProvisionFunc(channel, parameters)
 		if err != nil {
 			monitor.recorder.Eventf(channel, corev1.EventTypeWarning, errResourceSync, "Error provisoning channel: %s", err)
 		} else {
@@ -164,7 +164,7 @@ func (h MonitorEventHandlerFuncs) onUnprovision(channel *channelsv1alpha1.Channe
 
 func (h MonitorEventHandlerFuncs) onSubscribe(subscription *channelsv1alpha1.Subscription, monitor *Monitor) error {
 	if h.SubscribeFunc != nil {
-		attributes, err := monitor.subscriptionAttributes(subscription.Spec)
+		attributes, err := monitor.resolveSubscriptionParameters(subscription.Spec)
 		if err != nil {
 			return err
 		}
@@ -403,26 +403,26 @@ func (m *Monitor) Subscriptions(channelName string, namespace string) *[]channel
 	return &subscriptions
 }
 
-// channelAttributes resolves the given Channel Arguments and the Bus' Channel
-// Parameters, returning an Attributes or an Error.
-func (m *Monitor) channelAttributes(channel channelsv1alpha1.ChannelSpec) (Attributes, error) {
+// resolveChannelParameters resolves the given Channel Parameters and the Bus'
+// Channel Parameters, returning an ResolvedParameters or an Error.
+func (m *Monitor) resolveChannelParameters(channel channelsv1alpha1.ChannelSpec) (ResolvedParameters, error) {
 	genericBusParameters := m.bus.GetSpec().Parameters
 	var parameters *[]channelsv1alpha1.Parameter
 	if genericBusParameters != nil {
 		parameters = genericBusParameters.Channel
 	}
-	return m.resolveAttributes(parameters, channel.Arguments)
+	return m.resolveParameters(parameters, channel.Arguments)
 }
 
-// channelAttributes resolves the given Subscription Arguments and the Bus' Subscription
-// Parameters, returning an Attributes or an Error.
-func (m *Monitor) subscriptionAttributes(subscription channelsv1alpha1.SubscriptionSpec) (Attributes, error) {
+// resolveSubscriptionParameters resolves the given Subscription Parameters and
+// the Bus' Subscription Parameters, returning an Attributes or an Error.
+func (m *Monitor) resolveSubscriptionParameters(subscription channelsv1alpha1.SubscriptionSpec) (ResolvedParameters, error) {
 	genericBusParameters := m.bus.GetSpec().Parameters
 	var parameters *[]channelsv1alpha1.Parameter
 	if genericBusParameters != nil {
 		parameters = genericBusParameters.Subscription
 	}
-	return m.resolveAttributes(parameters, subscription.Arguments)
+	return m.resolveParameters(parameters, subscription.Arguments)
 }
 
 // resolveAttributes resolves a slice of Parameters and a slice of arguments and
@@ -432,8 +432,8 @@ func (m *Monitor) subscriptionAttributes(subscription channelsv1alpha1.Subscript
 // resolveAttributes combines the given arrays of Parameters and Arguments,
 // using default values where necessary and returning an error if there are
 // missing Arguments.
-func (m *Monitor) resolveAttributes(parameters *[]channelsv1alpha1.Parameter, arguments *[]channelsv1alpha1.Argument) (Attributes, error) {
-	resolved := make(Attributes)
+func (m *Monitor) resolveParameters(parameters *[]channelsv1alpha1.Parameter, arguments *[]channelsv1alpha1.Argument) (ResolvedParameters, error) {
+	resolved := make(ResolvedParameters)
 	known := make(map[string]interface{})
 	required := make(map[string]interface{})
 
