@@ -88,7 +88,6 @@ const (
 	BusDispatching = "Dispatching"
 )
 
-
 // BusCondition describes the state of a bus at a point in time.
 type BusCondition struct {
 	// Type of bus condition.
@@ -107,14 +106,13 @@ type BusCondition struct {
 
 // BusStatus (computed) for a bus
 type BusStatus struct {
-	// A reference to the k8s Service backing this bus, if successfully synced.
+	// A reference to the k8s Service fronting this bus, if successfully synced.
 	Service *kapi.LocalObjectReference `json:"service,omitempty"`
 
 	// Represents the latest available observations of a bus's current state.
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	Conditions []BusCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
-
 }
 
 func (b *Bus) BacksChannel(channel *Channel) bool {
