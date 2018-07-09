@@ -57,8 +57,8 @@ func main() {
 
 	var bus *gcppubsub.PubSubBus
 	monitor := buses.NewMonitor(component, masterURL, kubeconfig, buses.MonitorEventHandlerFuncs{
-		SubscribeFunc: func(subscription *channelsv1alpha1.Subscription, attributes buses.Attributes) error {
-			return bus.ReceiveEvents(subscription, attributes)
+		SubscribeFunc: func(subscription *channelsv1alpha1.Subscription, parameters buses.ResolvedParameters) error {
+			return bus.ReceiveEvents(subscription, parameters)
 		},
 		UnsubscribeFunc: func(subscription *channelsv1alpha1.Subscription) error {
 			return bus.StopReceiveEvents(subscription)

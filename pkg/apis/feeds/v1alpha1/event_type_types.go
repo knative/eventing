@@ -36,10 +36,13 @@ type EventType struct {
 	Status EventTypeStatus `json:"status"`
 }
 
-// EventTypeSpec is the spec for a EventType resource
-// TODO: Define this to be more useful
+// EventTypeSpec specifies information about the EventType, including a schema
+// for the event and information about the parameters needed to create a Bind to
+// the event.
 type EventTypeSpec struct {
+	// EventSource is the name of the EventSource that produces this EventType.
 	EventSource string `json:"eventSource"`
+	// Description is a human-readable description of the EventType.
 	Description string `json:"description,omitempty"`
 	// SubscribeSchema describing how to subscribe to this. This basically
 	// defines what is required in the Bind.Parameters so that the developer

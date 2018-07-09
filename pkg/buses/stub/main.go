@@ -73,7 +73,7 @@ func (b *StubBus) handleEvent(res http.ResponseWriter, req *http.Request) {
 	safeHeaders.Set("x-bus", b.name)
 	safeHeaders.Set("x-channel", channel)
 	for _, subscription := range *subscriptions {
-		subscriber := subscription.Subscriber
+		subscriber := b.resolveSubscriber(subscription, namespace)
 		glog.Infof("Sending to %q for %q\n", subscriber, channel)
 		go b.dispatchEvent(subscriber, body, safeHeaders)
 	}
@@ -94,6 +94,14 @@ func (b *StubBus) dispatchEvent(subscriber string, body []byte, headers http.Hea
 	if err != nil {
 		glog.Errorf("Unable to complete subscriber request %v", err)
 	}
+}
+
+func (b *StubBus) resolveSubscriber(subscription channelsv1alpha1.SubscriptionSpec, namespace string) string {
+	subscriber := subscription.Subscriber
+	if strings.Index(subscriber, ".") == -1 {
+		subscriber = fmt.Sprintf("%s.%s", subscriber, namespace)
+	}
+	return subscriber
 }
 
 func (b *StubBus) splitChannelName(host string) (string, string) {
@@ -141,12 +149,12 @@ func main() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	namespace := os.Getenv("BUS_NAMESPACE")
-	name := os.Getenv("BUS_NAME")
-	component := fmt.Sprintf("%s-%s", name, buses.Dispatcher)
+	busNamespace := os.Getenv("BUS_NAMESPACE")
+	busName := os.Getenv("BUS_NAME")
+	component := fmt.Sprintf("%s-%s", busName, buses.Dispatcher)
 
 	monitor := buses.NewMonitor(component, masterURL, kubeconfig, buses.MonitorEventHandlerFuncs{
-		ProvisionFunc: func(channel *channelsv1alpha1.Channel, attributes buses.Attributes) error {
+		ProvisionFunc: func(channel *channelsv1alpha1.Channel, parameters buses.ResolvedParameters) error {
 			glog.Infof("Provision channel %q\n", channel.Name)
 			return nil
 		},
@@ -154,7 +162,7 @@ func main() {
 			glog.Infof("Unprovision channel %q\n", channel.Name)
 			return nil
 		},
-		SubscribeFunc: func(subscription *channelsv1alpha1.Subscription, attributes buses.Attributes) error {
+		SubscribeFunc: func(subscription *channelsv1alpha1.Subscription, parameters buses.ResolvedParameters) error {
 			glog.Infof("Subscribe %q to %q channel\n", subscription.Spec.Subscriber, subscription.Spec.Channel)
 			return nil
 		},
@@ -163,10 +171,10 @@ func main() {
 			return nil
 		},
 	})
-	bus := NewStubBus(name, monitor)
+	bus := NewStubBus(busName, monitor)
 
 	go func() {
-		if err := monitor.Run(namespace, name, threadsPerMonitor, stopCh); err != nil {
+		if err := monitor.Run(busNamespace, busName, threadsPerMonitor, stopCh); err != nil {
 			glog.Fatalf("Error running monitor: %s", err.Error())
 		}
 	}()
