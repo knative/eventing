@@ -28,6 +28,8 @@ type Interface interface {
 	Buses() BusInformer
 	// Channels returns a ChannelInformer.
 	Channels() ChannelInformer
+	// ClusterBuses returns a ClusterBusInformer.
+	ClusterBuses() ClusterBusInformer
 	// Subscriptions returns a SubscriptionInformer.
 	Subscriptions() SubscriptionInformer
 }
@@ -51,6 +53,11 @@ func (v *version) Buses() BusInformer {
 // Channels returns a ChannelInformer.
 func (v *version) Channels() ChannelInformer {
 	return &channelInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// ClusterBuses returns a ClusterBusInformer.
+func (v *version) ClusterBuses() ClusterBusInformer {
+	return &clusterBusInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // Subscriptions returns a SubscriptionInformer.

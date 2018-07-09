@@ -18,20 +18,26 @@ package v1alpha1
 
 // inspired by the parameter/argument from buildtemplate/build
 
-// Parameter a named parameter that may be defined
+// Parameter represents a named configuration parameter that must be supplied to
+// create a particular resource by an Argument. Parameters may optionally have a
+// default value that will be used if an Argument is not supplied.
 type Parameter struct {
-	// Name parameter to apply
+	// Name is the name of the Parameter.
 	Name string `json:"name"`
 
-	// Description human friendly description of the parameter
+	// Description is the human friendly description of the parameter.
 	Description string `json:"description"`
 
-	// Default (optional) value to use if not explicitly set
+	// Default is the value to use if an Argument for this Parameter is not
+	// explicitly set.
 	Default *string `json:"default,omitempty"`
 }
 
-// Argument a value for a named parameter
+// Argument represents a value for a named parameter.
 type Argument struct {
-	Name  string `json:"name"`
+	// Name is the name of the Parameter this Argument is for.
+	Name string `json:"name"`
+
+	// Value is the value for the Parameter.
 	Value string `json:"value"`
 }

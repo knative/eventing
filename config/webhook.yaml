@@ -27,7 +27,7 @@ spec:
         app: eventing-webhook
         role: eventing-webhook
     spec:
-      serviceAccountName: bind-controller
+      serviceAccountName: eventing-controller
       containers:
       - name: eventing-webhook
         # This is the Go import path for the binary that is containerized

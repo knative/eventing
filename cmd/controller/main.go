@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Knative Authors
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import (
 	"github.com/knative/eventing/pkg/controller/bind"
 	"github.com/knative/eventing/pkg/controller/bus"
 	"github.com/knative/eventing/pkg/controller/channel"
+	"github.com/knative/eventing/pkg/controller/clusterbus"
 	"github.com/knative/eventing/pkg/signals"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -88,6 +89,7 @@ func main() {
 	ctors := []controller.Constructor{
 		bind.NewController,
 		bus.NewController,
+		clusterbus.NewController,
 		channel.NewController,
 	}
 
@@ -95,7 +97,7 @@ func main() {
 	controllers := make([]controller.Interface, 0, len(ctors))
 	for _, ctor := range ctors {
 		controllers = append(controllers,
-			ctor(kubeClient, client, kubeInformerFactory, informerFactory, servingInformerFactory))
+			ctor(kubeClient, client, servingClient, kubeInformerFactory, informerFactory, servingInformerFactory))
 	}
 
 	go kubeInformerFactory.Start(stopCh)

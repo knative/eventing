@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Knative Authors
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	istiolisters "github.com/knative/eventing/pkg/client/listers/istio/v1alpha3"
 	"github.com/knative/eventing/pkg/controller"
+	istiolisters "github.com/knative/serving/pkg/client/listers/istio/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,14 +38,16 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
+	"github.com/knative/eventing/pkg"
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	channelscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	listers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
+	servingclientset "github.com/knative/serving/pkg/client/clientset/versioned"
 	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
-	istiov1alpha3 "github.com/knative/eventing/pkg/apis/istio/v1alpha3"
+	istiov1alpha3 "github.com/knative/serving/pkg/apis/istio/v1alpha3"
 )
 
 const controllerAgentName = "channel-controller"
@@ -76,6 +78,8 @@ type Controller struct {
 	kubeclientset kubernetes.Interface
 	// channelclientset is a clientset for our own API group
 	channelclientset clientset.Interface
+	// servingclientset is a clientset for serving API groups
+	servingclientset servingclientset.Interface
 
 	virtualservicesLister istiolisters.VirtualServiceLister
 	virtualservicesSynced cache.InformerSynced
@@ -99,12 +103,13 @@ type Controller struct {
 func NewController(
 	kubeclientset kubernetes.Interface,
 	channelclientset clientset.Interface,
+	servingclientset servingclientset.Interface,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	channelInformerFactory informers.SharedInformerFactory,
-	routeInformerFactory servinginformers.SharedInformerFactory) controller.Interface {
+	servingInformerFactory servinginformers.SharedInformerFactory) controller.Interface {
 
 	// obtain references to shared index informers for the Service and Channel types.
-	virtualserviceInformer := channelInformerFactory.Networking().V1alpha3().VirtualServices()
+	virtualserviceInformer := servingInformerFactory.Networking().V1alpha3().VirtualServices()
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
 	channelInformer := channelInformerFactory.Channels().V1alpha1().Channels()
 
@@ -121,6 +126,7 @@ func NewController(
 	controller := &Controller{
 		kubeclientset:         kubeclientset,
 		channelclientset:      channelclientset,
+		servingclientset:      servingclientset,
 		virtualservicesLister: virtualserviceInformer.Lister(),
 		virtualservicesSynced: virtualserviceInformer.Informer().HasSynced,
 		servicesLister:        serviceInformer.Lister(),
@@ -335,7 +341,7 @@ func (c *Controller) syncChannelVirtualService(channel *channelsv1alpha1.Channel
 
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
-		virtualservice, err = c.channelclientset.NetworkingV1alpha3().VirtualServices(channel.Namespace).Create(newVirtualService(channel))
+		virtualservice, err = c.servingclientset.NetworkingV1alpha3().VirtualServices(channel.Namespace).Create(newVirtualService(channel))
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
@@ -455,8 +461,16 @@ func newService(channel *channelsv1alpha1.Channel) *corev1.Service {
 // the Channel resource that 'owns' it.
 func newVirtualService(channel *channelsv1alpha1.Channel) *istiov1alpha3.VirtualService {
 	labels := map[string]string{
-		"bus":     channel.Spec.Bus,
 		"channel": channel.Name,
+	}
+	var destinationHost string
+	if len(channel.Spec.Bus) != 0 {
+		labels["bus"] = channel.Spec.Bus
+		destinationHost = controller.ServiceHostName(controller.BusDispatcherServiceName(channel.Spec.Bus), channel.Namespace)
+	}
+	if len(channel.Spec.ClusterBus) != 0 {
+		labels["clusterBus"] = channel.Spec.ClusterBus
+		destinationHost = controller.ServiceHostName(controller.ClusterBusDispatcherServiceName(channel.Spec.ClusterBus), pkg.GetEventingSystemNamespace())
 	}
 	return &istiov1alpha3.VirtualService{
 		ObjectMeta: metav1.ObjectMeta{
@@ -484,7 +498,7 @@ func newVirtualService(channel *channelsv1alpha1.Channel) *istiov1alpha3.Virtual
 					Route: []istiov1alpha3.DestinationWeight{
 						{
 							Destination: istiov1alpha3.Destination{
-								Host: controller.ServiceHostName(controller.BusDispatcherServiceName(channel.Spec.Bus), channel.Namespace),
+								Host: destinationHost,
 							},
 						},
 					},

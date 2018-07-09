@@ -56,14 +56,14 @@ func main() {
 
 	var bus *gcppubsub.PubSubBus
 	monitor := buses.NewMonitor(component, masterURL, kubeconfig, buses.MonitorEventHandlerFuncs{
-		ProvisionFunc: func(channel *channelsv1alpha1.Channel, attributes buses.Attributes) error {
-			return bus.CreateTopic(channel, attributes)
+		ProvisionFunc: func(channel *channelsv1alpha1.Channel, parameters buses.ResolvedParameters) error {
+			return bus.CreateTopic(channel, parameters)
 		},
 		UnprovisionFunc: func(channel *channelsv1alpha1.Channel) error {
 			return bus.DeleteTopic(channel)
 		},
-		SubscribeFunc: func(subscription *channelsv1alpha1.Subscription, attributes buses.Attributes) error {
-			return bus.CreateOrUpdateSubscription(subscription, attributes)
+		SubscribeFunc: func(subscription *channelsv1alpha1.Subscription, parameters buses.ResolvedParameters) error {
+			return bus.CreateOrUpdateSubscription(subscription, parameters)
 		},
 		UnsubscribeFunc: func(subscription *channelsv1alpha1.Subscription) error {
 			return bus.DeleteSubscription(subscription)
