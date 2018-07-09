@@ -18,24 +18,25 @@
 package main
 
 import (
-	"flag"
-	"github.com/golang/glog"
-	"os"
-	"time"
-	"github.com/knative/eventing/pkg/signals"
-	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	"strings"
-	"github.com/knative/eventing/pkg/buses"
-	"log"
-	"github.com/bsm/sarama-cluster"
-	"net/http"
-	"net/url"
 	"bytes"
+	"context"
+	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
+	"net/http"
+	"net/url"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/Shopify/sarama"
-	"context"
+	"github.com/bsm/sarama-cluster"
+	"github.com/golang/glog"
+	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	"github.com/knative/eventing/pkg/buses"
+	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	"github.com/knative/eventing/pkg/signals"
 )
 
 const (
@@ -165,12 +166,12 @@ func (d *dispatcher) startHttpServer(stopCh <-chan struct{}) {
 	}()
 }
 
-func (d *dispatcher) subscribe(subscription *channelsv1alpha1.Subscription, attributes buses.Attributes) error {
+func (d *dispatcher) subscribe(subscription *channelsv1alpha1.Subscription, parameters buses.ResolvedParameters) error {
 	glog.Infof("Subscribing %s/%s: %s -> %s  (%v)", subscription.Namespace,
-		subscription.Name, subscription.Spec.Channel, subscription.Spec.Subscriber, attributes)
+		subscription.Name, subscription.Spec.Channel, subscription.Spec.Subscriber, parameters)
 	topicName := topicNameFromMeta(subscription.Spec.Channel, subscription.Namespace)
 
-	initialOffset, err := initialOffset(attributes)
+	initialOffset, err := initialOffset(parameters)
 	if err != nil {
 		return err
 	}
@@ -206,8 +207,8 @@ func (d *dispatcher) subscribe(subscription *channelsv1alpha1.Subscription, attr
 	return nil
 }
 
-func initialOffset(attributes buses.Attributes) (int64, error) {
-	sInitial := attributes[InitialOffset]
+func initialOffset(parameters buses.ResolvedParameters) (int64, error) {
+	sInitial := parameters[InitialOffset]
 	if sInitial == Oldest {
 		return sarama.OffsetOldest, nil
 	} else if sInitial == Newest {

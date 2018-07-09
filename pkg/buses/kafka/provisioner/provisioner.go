@@ -19,17 +19,18 @@ package main
 
 import (
 	"flag"
-	"github.com/golang/glog"
-	"os"
-	"github.com/knative/eventing/pkg/signals"
-	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	"github.com/Shopify/sarama"
-	"strings"
-	"github.com/knative/eventing/pkg/buses"
 	"fmt"
-	"strconv"
 	"log"
+	"os"
+	"strconv"
+	"strings"
+
+	"github.com/Shopify/sarama"
+	"github.com/golang/glog"
+	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	"github.com/knative/eventing/pkg/buses"
+	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	"github.com/knative/eventing/pkg/signals"
 )
 
 const (
@@ -109,12 +110,12 @@ func (p *provisioner) Start(stopCh <-chan struct{}) {
 	go p.monitor.Run(p.namespace, p.name, 2, stopCh)
 }
 
-func (p *provisioner) provision(channel *channelsv1alpha1.Channel, attrs buses.Attributes) error {
+func (p *provisioner) provision(channel *channelsv1alpha1.Channel, parameters buses.ResolvedParameters) error {
 	topicName := topicNameFromChannel(channel)
 	glog.Infof("Provisioning topic %s on bus backed by Kafka", topicName)
 
 	partitions := 1
-	if p, ok := attrs[NumPartitions]; ok {
+	if p, ok := parameters[NumPartitions]; ok {
 		var err error
 		partitions, err = strconv.Atoi(p)
 		if err != nil {
