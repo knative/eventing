@@ -51,7 +51,7 @@ events:
 
 #### Channels
 
- - Bus
+ - Bus, ClusterBus
  - Channel
  - Subscription
 
