@@ -253,23 +253,23 @@
   name = "github.com/knative/serving"
   packages = [
     "pkg/apis/istio",
-    "pkg/apis/istio/v1alpha2",
+    "pkg/apis/istio/v1alpha3",
     "pkg/apis/serving",
     "pkg/apis/serving/v1alpha1",
     "pkg/client/clientset/versioned",
     "pkg/client/clientset/versioned/scheme",
-    "pkg/client/clientset/versioned/typed/istio/v1alpha2",
+    "pkg/client/clientset/versioned/typed/istio/v1alpha3",
     "pkg/client/clientset/versioned/typed/serving/v1alpha1",
     "pkg/client/informers/externalversions",
     "pkg/client/informers/externalversions/internalinterfaces",
     "pkg/client/informers/externalversions/istio",
-    "pkg/client/informers/externalversions/istio/v1alpha2",
+    "pkg/client/informers/externalversions/istio/v1alpha3",
     "pkg/client/informers/externalversions/serving",
     "pkg/client/informers/externalversions/serving/v1alpha1",
-    "pkg/client/listers/istio/v1alpha2",
+    "pkg/client/listers/istio/v1alpha3",
     "pkg/client/listers/serving/v1alpha1"
   ]
-  revision = "5e4bb4f8eb2aa1417fd51c95e4e9594e8ca32ace"
+  revision = "22e3cb0f057daf224ef3af5cc37feb9b152f880e"
 
 [[projects]]
   name = "github.com/magiconair/properties"
@@ -897,6 +897,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "57160e3a149c468ed4f796aff5aa759b14537b54cb0587137f0a935714eae4c5"
+  inputs-digest = "e317f39c351af27ab91cd73376a0ab864311ac9be87400814c5e17e825c48a30"
   solver-name = "gps-cdcl"
   solver-version = 1

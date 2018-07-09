@@ -17,7 +17,7 @@ limitations under the License.
 package v1alpha3
 
 import (
-	istio "github.com/knative/eventing/pkg/apis/istio"
+	"github.com/knative/serving/pkg/apis/istio"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -46,6 +46,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&VirtualService{},
 		&Gateway{},
+		&VirtualServiceList{},
+		&GatewayList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

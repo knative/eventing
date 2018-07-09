@@ -97,7 +97,7 @@ func main() {
 	controllers := make([]controller.Interface, 0, len(ctors))
 	for _, ctor := range ctors {
 		controllers = append(controllers,
-			ctor(kubeClient, client, kubeInformerFactory, informerFactory, servingInformerFactory))
+			ctor(kubeClient, client, servingClient, kubeInformerFactory, informerFactory, servingInformerFactory))
 	}
 
 	go kubeInformerFactory.Start(stopCh)
