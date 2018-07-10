@@ -46,17 +46,3 @@ spec:
   - name: google-cloud-key
     secret:
       secretName: gcppubsub-bus-key
----
-apiVersion: networking.istio.io/v1alpha3
-kind: ServiceEntry
-metadata:
-  name: gcppubsub-bus-ext
-spec:
-  hosts:
-  - "*.googleapis.com"
-  - "accounts.google.com"
-  ports:
-  - number: 443
-    name: https
-    protocol: HTTPS
-  location: MESH_EXTERNAL
