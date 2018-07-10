@@ -195,8 +195,12 @@ func (d *dispatcher) subscribe(subscription *channelsv1alpha1.Subscription, para
 					subscription.Name, subscription.Spec.Channel, subscription.Spec.Subscriber)
 				hs := kafka2HttpHeaders(msg)
 				svc := fmt.Sprintf("%s.%s", subscription.Spec.Subscriber, subscription.Namespace)
-				d.dispatchEvent(svc, msg.Value, hs) // TODO: handle errors with pluggable strategy
-				consumer.MarkOffset(msg, "")        // Mark message as processed
+				err := d.dispatchEvent(svc, msg.Value, hs)
+				if err != nil {
+					glog.Warningf("Got error trying to dispatch message: %v", err)
+				}
+				// TODO: handle errors with pluggable strategy
+				consumer.MarkOffset(msg, "") // Mark message as processed
 			} else {
 				break
 			}
@@ -245,7 +249,7 @@ func topicNameFromMeta(channel string, namespace string) string {
 	return fmt.Sprintf("%s.%s", namespace, channel)
 }
 
-func (d *dispatcher) dispatchEvent(host string, body []byte, headers http.Header) {
+func (d *dispatcher) dispatchEvent(host string, body []byte, headers http.Header) error {
 	url := url.URL{
 		Scheme: "http",
 		Host:   host,
@@ -253,13 +257,11 @@ func (d *dispatcher) dispatchEvent(host string, body []byte, headers http.Header
 	}
 	req, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewReader(body))
 	if err != nil {
-		glog.Errorf("Unable to create subscriber request %v", err)
+		return err
 	}
 	req.Header = headers
 	_, err = d.client.Do(req)
-	if err != nil {
-		glog.Errorf("Unable to complete subscriber request %v", err)
-	}
+	return err
 }
 
 func channelFromHost(host string) (channel string, namespace string) {
