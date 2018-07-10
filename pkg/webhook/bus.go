@@ -30,6 +30,7 @@ import (
 
 var (
 	errInvalidBusInput = errors.New("failed to convert input into Bus or ClusterBus")
+	errInternalNilBus  = errors.New("unexpected internal error: nil Bus or ClusterBus")
 )
 
 // ValidateBus is Bus resource specific validation and mutation handler
@@ -81,7 +82,7 @@ func unmarshalBuses(
 	glog.Infof("%s: OLD Bus is\n%+v", fnName, oldBus)
 
 	if new == nil {
-		return nil, nil, errInvalidBusInput
+		return nil, nil, errInternalNilBus
 	}
 	newBus, ok := new.(v1alpha1.GenericBus)
 	if !ok {
