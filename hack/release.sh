@@ -28,10 +28,6 @@ readonly EVENTING_RELEASE_GCR
 # Local generated yaml file.
 readonly OUTPUT_YAML=release-eventing.yaml
 
-function cleanup() {
-  restore_override_vars
-}
-
 function banner() {
   echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
   echo "@@@@ $1 @@@@"
@@ -61,7 +57,6 @@ function publish_yaml() {
 # Script entry point.
 
 cd ${EVENTING_ROOT_DIR}
-trap cleanup EXIT
 
 SKIP_TESTS=0
 TAG_RELEASE=0
@@ -105,8 +100,6 @@ if (( ! SKIP_TESTS )); then
   ./test/presubmit-tests.sh
 fi
 
-install_ko
-
 banner "    BUILDING THE RELEASE   "
 
 # Set the repository
@@ -119,9 +112,6 @@ if (( TAG_RELEASE )); then
   TAG="v$(date +%Y%m%d)-${commit}"
 fi
 readonly TAG
-
-# If this is a prow job, authenticate against GCR.
-(( IS_PROW )) && gcr_auth
 
 if (( ! DONT_PUBLISH )); then
   echo "- Destination GCR: ${EVENTING_RELEASE_GCR}"
