@@ -86,12 +86,12 @@ func main() {
 	conf.ClientID = name + "-dispatcher"
 	kafka_client, err := sarama.NewClient(brokers, conf)
 	if err != nil {
-		glog.Fatalf("Error building kafka client: %s", err.Error())
+		glog.Fatalf("Error building kafka client: %v", err)
 	}
 
 	dispatcher, err := NewKafkaDispatcher(name, namespace, *masterURL, *kubeconfig, brokers, kafka_client)
 	if err != nil {
-		glog.Fatalf("Error building kafka provisioner: %s", err.Error())
+		glog.Fatalf("Error building kafka provisioner: %v", err)
 	}
 
 	stopCh := signals.SetupSignalHandler()
@@ -195,8 +195,8 @@ func (d *dispatcher) subscribe(subscription *channelsv1alpha1.Subscription, para
 					subscription.Name, subscription.Spec.Channel, subscription.Spec.Subscriber)
 				hs := kafka2HttpHeaders(msg)
 				svc := fmt.Sprintf("%s.%s", subscription.Spec.Subscriber, subscription.Namespace)
-				d.dispatchEvent(svc, msg.Value, hs)
-				consumer.MarkOffset(msg, "") // Mark message as processed
+				d.dispatchEvent(svc, msg.Value, hs) // TODO: handle errors with pluggable strategy
+				consumer.MarkOffset(msg, "")        // Mark message as processed
 			} else {
 				break
 			}
@@ -265,7 +265,9 @@ func (d *dispatcher) dispatchEvent(host string, body []byte, headers http.Header
 func channelFromHost(host string) (channel string, namespace string) {
 	chunks := strings.Split(host, ".")
 	channel = chunks[0]
-	namespace = chunks[1]
+	if len(chunks) > 1 {
+		namespace = chunks[1]
+	}
 	return
 }
 

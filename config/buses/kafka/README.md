@@ -13,6 +13,7 @@ Deployment steps:
     ko apply -f config/buses/kafka/kafka-bus.yaml
     ```
 1. Create Channels that reference the 'kafka' Bus
+1. (Optional) Install [Kail](https://github.com/boz/kail) - Kubernetes tail
 
 The bus has an independent provisioner and dispatcher.
 

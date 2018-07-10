@@ -151,6 +151,5 @@ func (p *provisioner) unprovision(channel *channelsv1alpha1.Channel) error {
 }
 
 func topicNameFromChannel(channel *channelsv1alpha1.Channel) string {
-	topicName := fmt.Sprintf("%s.%s", channel.Namespace, channel.Name)
-	return topicName
+	return fmt.Sprintf("%s.%s", channel.Namespace, channel.Name)
 }
