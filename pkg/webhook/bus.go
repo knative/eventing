@@ -18,9 +18,7 @@ package webhook
 
 import (
 	"context"
-
 	"errors"
-
 	"fmt"
 	"strings"
 
@@ -82,6 +80,9 @@ func unmarshalBuses(
 	}
 	glog.Infof("%s: OLD Bus is\n%+v", fnName, oldBus)
 
+	if new == nil {
+		return nil, nil, errInvalidBusInput
+	}
 	newBus, ok := new.(v1alpha1.GenericBus)
 	if !ok {
 		return nil, nil, errInvalidBusInput
