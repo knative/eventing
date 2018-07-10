@@ -261,7 +261,7 @@ func NewMonitor(
 		cache:                    make(map[channelKey]*channelSummary),
 		provisionedChannels:      make(map[channelKey]*channelsv1alpha1.Channel),
 		provisionedSubscriptions: make(map[subscriptionKey]*channelsv1alpha1.Subscription),
-		mutex:                    &sync.Mutex{},
+		mutex: &sync.Mutex{},
 
 		workqueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Monitor"),
 		recorder:  recorder,
@@ -492,8 +492,8 @@ func (m *Monitor) Run(busNamespace, busName string, threadiness int, stopCh <-ch
 
 	// Wait for the caches to be synced before starting workers
 	glog.Info("Waiting for informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, m.busesSynced, m.clusterBusesSynced, m.channelsSynced, m.subscriptionsSynced); !ok {
-		return fmt.Errorf("failed to wait for caches to sync")
+	if err := m.WaitForCacheSync(stopCh); err != nil {
+		return err
 	}
 
 	if len(busNamespace) == 0 {
@@ -522,6 +522,15 @@ func (m *Monitor) Run(busNamespace, busName string, threadiness int, stopCh <-ch
 	<-stopCh
 	glog.Info("Shutting down workers")
 
+	return nil
+}
+
+// WaitForCacheSync blocks returning until the monitor's informers have
+// synchronized. It returns an error if the caches cannot sync.
+func (m *Monitor) WaitForCacheSync(stopCh <-chan struct{}) error {
+	if ok := cache.WaitForCacheSync(stopCh, m.busesSynced, m.clusterBusesSynced, m.channelsSynced, m.subscriptionsSynced); !ok {
+		return fmt.Errorf("failed to wait for caches to sync")
+	}
 	return nil
 }
 
