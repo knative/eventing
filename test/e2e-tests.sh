@@ -264,8 +264,6 @@ echo "- Docker is ${KO_DOCKER_REPO}"
 
 trap teardown EXIT
 
-install_ko
-
 if (( ! USING_EXISTING_CLUSTER )); then
   # Start Knative Serving.
 
@@ -288,8 +286,6 @@ else
   header "Using existing Knative Serving"
 fi
 
-
-(( IS_PROW )) && gcr_auth
 
 # Clean up anything that might still be around...
 teardown_k8s_events_test_resources
