@@ -276,14 +276,14 @@ if (( ! USING_EXISTING_CLUSTER )); then
   # This seems racy:
   # https://github.com/knative/eventing/issues/92
   wait_until_pods_running istio-system
-  kubectl label namespace default istio-injection=enabled
+  exit_if_test_failed "could not install Istio"
 
   subheader "Installing Knative Serving"
   kubectl apply -f ${SERVING_RELEASE}
   exit_if_test_failed "could not install Knative Serving"
 
-  wait_until_pods_running knative-serving-system
-  wait_until_pods_running build-system
+  wait_until_pods_running knative-serving || exit_if_test_failed
+  wait_until_pods_running knative-build || exit_if_test_failed
 else
   header "Using existing Knative Serving"
 fi
