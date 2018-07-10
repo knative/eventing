@@ -38,7 +38,7 @@ function banner() {
   echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 }
 
-# Tag Knative Serving images in the yaml file with a tag.
+# Tag Knative Eventing images in the yaml file with a tag.
 # Parameters: $1 - yaml file to parse for images.
 #             $2 - tag to apply.
 function tag_knative_images() {
@@ -111,10 +111,6 @@ banner "    BUILDING THE RELEASE   "
 
 # Set the repository
 export KO_DOCKER_REPO=${EVENTING_RELEASE_GCR}
-# Build should not try to deploy anything, use a bogus value for cluster.
-export K8S_CLUSTER_OVERRIDE=CLUSTER_NOT_SET
-export K8S_USER_OVERRIDE=USER_NOT_SET
-export DOCKER_REPO_OVERRIDE=DOCKER_NOT_SET
 
 TAG=""
 if (( TAG_RELEASE )); then
