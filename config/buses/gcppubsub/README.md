@@ -8,6 +8,7 @@ Deployment steps:
 1. For cluster wide deployment, change the kind in `config/buses/gcppubsub/gcppubsub-bus.yaml` from `Bus` to `ClusterBus`.
 1. Apply the 'gcppubsub' Bus `ko apply -f config/buses/gcppubsub/`
 1. Create Channels that reference the 'gcppubsub' Bus
+1. (Optional) Install [Kail](https://github.com/boz/kail) - Kubernetes tail
 
 The bus has an independent provisioner and dispatcher.
 
