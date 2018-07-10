@@ -1,11 +1,11 @@
 /*
- * Copyright 2017 the original author or authors.
+ * Copyright 2018 The Knative Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -31,7 +31,7 @@ import (
 )
 
 var (
-	errInvalidBusInput = errors.New("failed to convert input into Bus")
+	errInvalidBusInput = errors.New("failed to convert input into Bus or ClusterBus")
 )
 
 // ValidateBus is Bus resource specific validation and mutation handler
@@ -46,10 +46,10 @@ func ValidateBus(ctx context.Context) ResourceCallback {
 	}
 }
 
-func validateBus(old, new *v1alpha1.Bus) error {
-	if new.Spec.Parameters != nil {
-		if new.Spec.Parameters.Channel != nil {
-			for _, p := range *new.Spec.Parameters.Channel {
+func validateBus(old, new v1alpha1.GenericBus) error {
+	if new.GetSpec().Parameters != nil {
+		if new.GetSpec().Parameters.Channel != nil {
+			for _, p := range *new.GetSpec().Parameters.Channel {
 				errs := validation.IsConfigMapKey(p.Name)
 				if len(errs) > 0 {
 					return fmt.Errorf("invalid parameter name Spec.Parameters.Channel.%s: %s", p.Name,
@@ -57,8 +57,8 @@ func validateBus(old, new *v1alpha1.Bus) error {
 				}
 			}
 		}
-		if new.Spec.Parameters.Subscription != nil {
-			for _, p := range *new.Spec.Parameters.Subscription {
+		if new.GetSpec().Parameters.Subscription != nil {
+			for _, p := range *new.GetSpec().Parameters.Subscription {
 				errs := validation.IsConfigMapKey(p.Name)
 				if len(errs) > 0 {
 					return fmt.Errorf("invalid parameter name Spec.Parameters.Subscription.%s: %s", p.Name,
@@ -71,18 +71,18 @@ func validateBus(old, new *v1alpha1.Bus) error {
 }
 
 func unmarshalBuses(
-	ctx context.Context, old, new GenericCRD, fnName string) (*v1alpha1.Bus, *v1alpha1.Bus, error) {
-	var oldBus *v1alpha1.Bus
+	ctx context.Context, old, new GenericCRD, fnName string) (v1alpha1.GenericBus, v1alpha1.GenericBus, error) {
+	var oldBus v1alpha1.GenericBus
 	if old != nil {
 		var ok bool
-		oldBus, ok = old.(*v1alpha1.Bus)
+		oldBus, ok = old.(v1alpha1.GenericBus)
 		if !ok {
 			return nil, nil, errInvalidBusInput
 		}
 	}
 	glog.Infof("%s: OLD Bus is\n%+v", fnName, oldBus)
 
-	newBus, ok := new.(*v1alpha1.Bus)
+	newBus, ok := new.(v1alpha1.GenericBus)
 	if !ok {
 		return nil, nil, errInvalidBusInput
 	}
