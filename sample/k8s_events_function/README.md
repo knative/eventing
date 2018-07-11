@@ -3,7 +3,7 @@
 A simple function that receives Kubernetes events and prints them out the after decoding
 from base64 encoding. This example targets a Knative Route, there's another example [using
 channels](./README_CHANNEL.md). This is also example of where we make use of a Receive Adapter
-that runs in the context of the namespace where the binding is created. Since there's no push
+that runs in the context of the namespace where the feed is created. Since there's no push
 events, we create a deployment that attaches to k8s events for a given namespace and then
 forwards them to the destination.
 
@@ -35,10 +35,10 @@ ko apply -f pkg/sources/k8sevents/
 ## Creating a Service Account
 Because the Receive Adapter needs to run a deployment, you need to specify what 
 Service Account should be used in the target namespace for running the Receive Adapter.
-Bind.Spec has a field that allows you to specify this. By default it uses "default" for
-binding which typically has no priviledges, but this binding requires standing up a
+Feed.Spec has a field that allows you to specify this. By default it uses "default" for
+feed which typically has no privileges, but this feed requires standing up a
 deployment, so you need to either use an existing Service Account with appropriate
-priviledges or create a new one. This example creates a Service Account and grants
+privileges or create a new one. This example creates a Service Account and grants
 it cluster admin access, and you probably wouldn't want to do that in production
 settings, but for this example it will suffice just fine.
 
@@ -67,10 +67,10 @@ kubectl get configurations -o yaml
 # This will show the Revision that was created by our configuration:
 kubectl get revisions -o yaml
 
-# This will show the available EventSources that you can bind to:
+# This will show the available EventSources that you can generate a feed from:
 kubectl get eventsources -oyaml
 
-# This will show the available EventTypes that you can bind to:
+# This will show the available EventTypes that you can generate a feed from:
 kubectl get eventtypes -oyaml
 
 ```
@@ -91,20 +91,20 @@ k8s-events-function.default.aikas.org pointing to 104.197.125.124
 
 So, you'd need to create an A record for k8s-events-function.default.aikas.org pointing to 104.197.125.124
 
-To now bind the k8s_events_function for k8s system events with the function we created above, you need to
-create a Bind object. Note that if you are using a different Service Account than created
-in the example above, you also need to specify that Service Account in the bind.spec.serviceAccountName.
-Modify sample/k8s_events_function/bind.yaml to specify the namespace you want to
+To now send the feed of k8s system events to the function we created above, you need to
+create a Feed object. Note that if you are using a different Service Account than created
+in the example above, you also need to specify that Service Account in the feed.spec.serviceAccountName.
+Modify sample/k8s_events_function/feed.yaml to specify the namespace you want to
 watch events for ('default' in this example):
 
 ```yaml
 apiVersion: feeds.knative.dev/v1alpha1
-kind: Bind
+kind: Feed
 metadata:
   name: k8s-events-example
   namespace: default
 spec:
-  serviceAccountName: binder
+  serviceAccountName: feed-sa
   trigger:
     eventType: receiveevent
     resource: k8sevents/receiveevent
@@ -115,16 +115,16 @@ spec:
     routeName: k8s-events-example
 ```
 
-Then create the binding so that you can see changes
+Then create the feed so that you can see changes
 
 ```shell
- kubectl create -f sample/k8s_events_function/bind.yaml
+ kubectl create -f sample/k8s_events_function/feed.yaml
 ```
 
 
 This will create a receive_adapter that runs in the cluster and receives native k8s events
 and pushes them to the consuming function. You can check the status by looking at the
-namespace you deployed the binding into. In the case above it would be default.
+namespace you deployed the feed into. In the case above it would be default.
 
 ```shell
 $kubectl get pods
@@ -146,12 +146,12 @@ k8s-events-function-00001-deployment-68864b8c7d-rgx2w   3/3       Running   0   
 $ kubectl logs k8s-events-function user-container
 ```
 
-## Removing a binding
+## Removing a feed
 
-Remove the binding and things get cleaned up (including removing the receive adapter to k8s events)
+Remove the feed and things get cleaned up (including removing the receive adapter to k8s events)
 
 ```shell
-kubectl delete binds k8s-events-example
+kubectl delete feeds k8s-events-example
 ```
 
 ## Cleaning up

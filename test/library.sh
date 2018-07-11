@@ -134,16 +134,16 @@ function wait_until_object_does_not_exist() {
   return 1
 }
 
-function wait_until_bind_ready() {
+function wait_until_feed_ready() {
   local NAMESPACE=$1
   local NAME=$2
 
-  echo -n "Waiting until bind $NAMESPACE/$NAME is ready"
+  echo -n "Waiting until feed $NAMESPACE/$NAME is ready"
   for i in {1..150}; do  # timeout after 5 minutes
-    local reason="$(kubectl get -n $NAMESPACE binds $NAME -o 'jsonpath={.status.conditions[0].reason}')"
-    local status="$(kubectl get -n $NAMESPACE binds $NAME -o 'jsonpath={.status.conditions[0].status}')"
+    local reason="$(kubectl get -n $NAMESPACE feeds $NAME -o 'jsonpath={.status.conditions[0].reason}')"
+    local status="$(kubectl get -n $NAMESPACE feeds $NAME -o 'jsonpath={.status.conditions[0].status}')"
 
-    if [ "$reason" = "BindSuccess" ]; then
+    if [ "$reason" = "FeedSuccess" ]; then
        if [ "$status" = "True" ]; then
           return 0
        fi
@@ -151,7 +151,7 @@ function wait_until_bind_ready() {
     echo -n "."
     sleep 2
   done
-  echo -e "\n\nERROR: timeout waiting for bind $NAMESPACE/$NAME to be ready"
+  echo -e "\n\nERROR: timeout waiting for feed $NAMESPACE/$NAME to be ready"
   kubectl get -n $NAMESPACE $KIND $NAME  $1
   return 1
 }

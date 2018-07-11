@@ -27,7 +27,7 @@ import (
 
 // EventSource represents a software system which wishes to make changes in
 // state discoverable via eventing, without prior knowledge of systems which
-// might consume state changes. EventSources produce events that the Bind
+// might consume state changes. EventSources produce events that the Feed
 // resource connects to consumers.
 type EventSource struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -38,13 +38,13 @@ type EventSource struct {
 }
 
 // EventSourceSpec describes the type and source of an event, a container image
-// to run for bind and unbind operations, and configuration options for the
+// to run for feed lifecycle operations, and configuration options for the
 // EventSource.
 type EventSourceSpec struct {
 	// Source is the name of the source that produces the events.
 	Source string `json:"source,omitempty"`
 
-	// Image is the container image to run for bind/unbind operations.
+	// Image is the container image to run for feed lifecycle operations.
 	//
 	// TODO: make this a container
 	// TODO: specify exactly when containers are run
@@ -64,11 +64,11 @@ type EventSourceStatus struct {
 type EventSourceConditionType string
 
 const (
-	// EventSourceComplete specifies that the bind has completed successfully.
+	// EventSourceComplete specifies that the EventSource has completed successfully.
 	EventSourceComplete EventSourceConditionType = "Complete"
-	// EventSourceFailed specifies that the bind has failed.
+	// EventSourceFailed specifies that the EventSource has failed.
 	EventSourceFailed EventSourceConditionType = "Failed"
-	// EventSourceInvalid specifies that the given bind specification is invalid.
+	// EventSourceInvalid specifies that the given EventSource specification is invalid.
 	EventSourceInvalid EventSourceConditionType = "Invalid"
 )
 

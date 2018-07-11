@@ -13,21 +13,20 @@
 # limitations under the License.
 
 apiVersion: feeds.knative.dev/v1alpha1
-kind: Bind
+kind: Feed
 metadata:
-  name: bind-example
-  namespace: default
+  name: e2e-k8s-events-example
+  namespace: e2etestfn
 spec:
+  serviceAccountName: e2e-feed
   trigger:
-    # TODO: eventType doesn't match the normal naming scheme. At min should
-    # make this "com.github.pullrequest". May consider making it something
-    # like "com.github.pull.create"
-    eventType: pullrequest
-    resource: vaikas/misc
-    service: github
-    parametersFrom:
-      - secretKeyRef:
-          name: githubsecret
-          key: githubCredentials
+    eventType: receiveevent
+    # This is kind of superfluous due to parameters, but the current
+    # feed model still requires a resource
+    resource: k8sevents/receiveevent
+    service: k8sevents
+    # Watch for events in namespace e2etest
+    parameters:
+      namespace: e2etest
   action:
-    routeName: git-webhook
+    channelName: k8s-events-channel

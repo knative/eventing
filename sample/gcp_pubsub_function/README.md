@@ -3,7 +3,7 @@
 A simple function that receives Google Cloud Pub Sub events and prints out the
 data field after decoding from base64 encoding. The function uses a Knative
 route as an endpoint. This is also example of where we make use of a Receive
-Adapter that runs in the context of the namespace where the binding is created.
+Adapter that runs in the context of the namespace where the feed is created.
 Since we wanted to demonstrate pull events, we create a deployment that
 attaches to the specified GCP topic and then forwards them to the destination.
 
@@ -45,8 +45,8 @@ gcloud pubsub topics create knative-demo
 
 Because the Receive Adapter needs to run a deployment, you need to specify what
 Service Account should be used in the target namespace for running the Receive
-Adapter. Bind.Spec has a field that allows you to specify this. By default it
-uses "default" for binding which typically has no privileges, but this binding
+Adapter. Feed.Spec has a field that allows you to specify this. By default it
+uses "default" for feed which typically has no privileges, but this feed
 requires standing up a deployment, so you need to either use an existing
 Service Account with appropriate privileges or create a new one. This example
 creates a Service Account and grants it cluster admin access, and you probably
@@ -79,10 +79,10 @@ kubectl get configurations -o yaml
 # This will show the Revision that was created by our configuration:
 kubectl get revisions -o yaml
 
-# This will show the available EventSources that you can bind to:
+# This will show the available EventSources that you can generate a feed from:
 kubectl get eventsources -oyaml
 
-# This will show the available EventTypes that you can bind to:
+# This will show the available EventTypes that you can generate a feed from:
 kubectl get eventtypes -oyaml
 ```
 
@@ -105,26 +105,26 @@ DNS](https://support.google.com/domains/answer/3290350).
 So, you'd need to create an A record for
 `gcp-pubsub-function.default.aikas.org` pointing to `130.211.116.160`
 
-To now bind the `gcp_pubsub_function` for GCP PubSub messages with the function
-we created above, you need to create a Bind object. Modify
-`sample/gcp_pubsub_function/bind.yaml` to specify the topic and project id you
+To now send events to the `gcp_pubsub_function` for GCP PubSub messages with the function
+we created above, you need to create a Feed object. Modify
+`sample/gcp_pubsub_function/feed.yaml` to specify the topic and project id you
 want.
 
 For example, if I wanted to receive notifications to: project:
-quantum-reducer-434 topic: knative-demo, my Bind object would look like the one
+quantum-reducer-434 topic: knative-demo, my Feed object would look like the one
 below.
 
-You can also specify a different Service Account to use for the bind / receive
+You can also specify a different Service Account to use for the feed / receive
 watcher by changing the spec.serviceAccountName to something else.
 
 ```yaml
 apiVersion: feeds.knative.dev/v1alpha1
-kind: Bind
+kind: Feed
 metadata:
   name: gcppubsub-example
   namespace: default
 spec:
-  serviceAccountName: binder
+  serviceAccountName: feed-sa
   trigger:
     service: gcppubsub
     eventType: receive
@@ -136,10 +136,10 @@ spec:
     routeName: gcp-pubsub-function
 ```
 
-Then create the binding so that you can see changes:
+Then create the feed so that you can see changes:
 
 ```shell
- ko apply -f sample/gcp_pubsub_function/bind.yaml
+ ko apply -f sample/gcp_pubsub_function/feed.yaml
 ```
 
 
@@ -185,13 +185,13 @@ $ kubectl logs gcp-pubsub-function-00001-deployment-68864b8c7d-rgx2w user-contai
 2018/05/22 19:16:59 Received data: "test message"
 ```
 
-## Removing a binding
+## Removing a feed
 
-Remove the binding and things get cleaned up (including removing the
+Remove the feed and things get cleaned up (including removing the
 subscription to GCP PubSub):
 
 ```shell
-kubectl delete binds gcppubsub-example
+kubectl delete feeds gcppubsub-example
 ```
 
 And now your subscription from above has been removed:

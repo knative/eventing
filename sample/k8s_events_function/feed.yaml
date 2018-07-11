@@ -13,16 +13,16 @@
 # limitations under the License.
 
 apiVersion: feeds.knative.dev/v1alpha1
-kind: Bind
+kind: Feed
 metadata:
   name: k8s-events-example
   namespace: default
 spec:
-  serviceAccountName: binder
+  serviceAccountName: feed-sa
   trigger:
     eventType: receiveevent
     # This is kind of superfluous due to parameters, but the current
-    # bind model still requires a resource
+    # feed model still requires a resource
     resource: k8sevents/receiveevent
     service: k8sevents
     parameters:

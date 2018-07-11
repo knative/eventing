@@ -27,18 +27,14 @@ import (
 
 type FeedsV1alpha1Interface interface {
 	RESTClient() rest.Interface
-	BindsGetter
 	EventSourcesGetter
 	EventTypesGetter
+	FeedsGetter
 }
 
 // FeedsV1alpha1Client is used to interact with features provided by the feeds.knative.dev group.
 type FeedsV1alpha1Client struct {
 	restClient rest.Interface
-}
-
-func (c *FeedsV1alpha1Client) Binds(namespace string) BindInterface {
-	return newBinds(c, namespace)
 }
 
 func (c *FeedsV1alpha1Client) EventSources(namespace string) EventSourceInterface {
@@ -47,6 +43,10 @@ func (c *FeedsV1alpha1Client) EventSources(namespace string) EventSourceInterfac
 
 func (c *FeedsV1alpha1Client) EventTypes(namespace string) EventTypeInterface {
 	return newEventTypes(c, namespace)
+}
+
+func (c *FeedsV1alpha1Client) Feeds(namespace string) FeedInterface {
+	return newFeeds(c, namespace)
 }
 
 // NewForConfig creates a new FeedsV1alpha1Client for the given config.

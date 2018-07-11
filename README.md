@@ -32,8 +32,7 @@ events.
 
 We'll be tracking the CloudEvents nomenclature as much as possible; however,
 that is in flux and many of the needed terms are outside of the current scope
-of the specification. At the moment, in our code and documentation, we may use
-the terms "binding" and "flow" at different times to represent the concept of
+of the specification. We use the term "feed" to represent the concept of
 attaching an event (or filtered event stream via a "trigger) to an action.
 
 # Getting Started
@@ -57,6 +56,6 @@ events:
 
 #### Feeds
 
- - Bind
+ - Feed
  - EventSource
  - EventType

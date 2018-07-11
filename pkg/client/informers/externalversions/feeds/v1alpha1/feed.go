@@ -31,59 +31,59 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 )
 
-// BindInformer provides access to a shared informer and lister for
-// Binds.
-type BindInformer interface {
+// FeedInformer provides access to a shared informer and lister for
+// Feeds.
+type FeedInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.BindLister
+	Lister() v1alpha1.FeedLister
 }
 
-type bindInformer struct {
+type feedInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 	namespace        string
 }
 
-// NewBindInformer constructs a new informer for Bind type.
+// NewFeedInformer constructs a new informer for Feed type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewBindInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredBindInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewFeedInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredFeedInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredBindInformer constructs a new informer for Bind type.
+// NewFilteredFeedInformer constructs a new informer for Feed type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredBindInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredFeedInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.FeedsV1alpha1().Binds(namespace).List(options)
+				return client.FeedsV1alpha1().Feeds(namespace).List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.FeedsV1alpha1().Binds(namespace).Watch(options)
+				return client.FeedsV1alpha1().Feeds(namespace).Watch(options)
 			},
 		},
-		&feeds_v1alpha1.Bind{},
+		&feeds_v1alpha1.Feed{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *bindInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredBindInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *feedInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredFeedInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *bindInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&feeds_v1alpha1.Bind{}, f.defaultInformer)
+func (f *feedInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&feeds_v1alpha1.Feed{}, f.defaultInformer)
 }
 
-func (f *bindInformer) Lister() v1alpha1.BindLister {
-	return v1alpha1.NewBindLister(f.Informer().GetIndexer())
+func (f *feedInformer) Lister() v1alpha1.FeedLister {
+	return v1alpha1.NewFeedLister(f.Informer().GetIndexer())
 }

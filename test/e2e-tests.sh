@@ -81,9 +81,9 @@ function exit_if_test_failed() {
 
 # Tests
 function teardown_k8s_events_test_resources() {
-  echo "Deleting any previously existing bind"
-  ko delete --ignore-not-found=true -f test/e2e/k8sevents/bind-channel.yaml
-  wait_until_object_does_not_exist bind $E2E_TEST_FUNCTION_NAMESPACE receiveevent
+  echo "Deleting any previously existing feed"
+  ko delete --ignore-not-found=true -f test/e2e/k8sevents/feed-channel.yaml
+  wait_until_object_does_not_exist feed $E2E_TEST_FUNCTION_NAMESPACE receiveevent
 
   # Delete the function resources and namespace
   echo "Deleting function and test namespace"
@@ -160,10 +160,10 @@ function run_k8s_events_test() {
   ko apply -f test/e2e/k8sevents/subscription.yaml || return 1
 
 
-  # Install binding
-  echo "Creating a binding"
-  ko apply -f test/e2e/k8sevents/bind-channel.yaml || return 1
-  wait_until_bind_ready $E2E_TEST_FUNCTION_NAMESPACE e2e-k8s-events-example
+  # Install feed
+  echo "Creating a feed"
+  ko apply -f test/e2e/k8sevents/feed-channel.yaml || return 1
+  wait_until_feed_ready $E2E_TEST_FUNCTION_NAMESPACE e2e-k8s-events-example
   exit_if_test_failed
 
   # Work around for: https://github.com/knative/eventing/issues/125
@@ -295,7 +295,7 @@ if (( USING_EXISTING_CLUSTER )); then
   ko delete --ignore-not-found=true -f config/
   wait_until_namespace_does_not_exist knative-eventing
   exit_if_test_failed
-  wait_until_crd_does_not_exist binds.feeds.knative.dev
+  wait_until_crd_does_not_exist feeds.feeds.knative.dev
   exit_if_test_failed
 fi
 
