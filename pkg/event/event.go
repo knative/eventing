@@ -17,6 +17,7 @@ limitations under the License.
 package event
 
 import (
+	"context"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
@@ -54,8 +55,8 @@ const (
 	fieldSource             = "Source"
 )
 
-// Context holds standard metadata about an event.
-type Context struct {
+// EventContext holds standard metadata about an event.
+type EventContext struct {
 	CloudEventsVersion string                 `json:"cloudEventsVersion,omitempty"`
 	EventID            string                 `json:"eventID"`
 	EventTime          time.Time              `json:"eventTime,omitempty"`
@@ -70,8 +71,8 @@ type Context struct {
 // HTTPMarshaller implements a scheme for decoding CloudEvents over HTTP.
 // Implementations are Binary, Structured, and Any
 type HTTPMarshaller interface {
-	FromRequest(data interface{}, r *http.Request) (*Context, error)
-	NewRequest(urlString string, data interface{}, context Context) (*http.Request, error)
+	FromRequest(data interface{}, r *http.Request) (*EventContext, error)
+	NewRequest(urlString string, data interface{}, context EventContext) (*http.Request, error)
 }
 
 func anyError(errs ...error) error {
@@ -83,7 +84,7 @@ func anyError(errs ...error) error {
 	return nil
 }
 
-func ensureRequiredFields(context Context) error {
+func ensureRequiredFields(context EventContext) error {
 	return anyError(
 		require(fieldEventID, context.EventID),
 		require(fieldEventType, context.EventType),
@@ -150,7 +151,7 @@ func marshalEventData(encoding string, data interface{}) ([]byte, error) {
 }
 
 // FromRequest parses a CloudEvent from any known encoding.
-func FromRequest(data interface{}, r *http.Request) (*Context, error) {
+func FromRequest(data interface{}, r *http.Request) (*EventContext, error) {
 	switch r.Header.Get(HeaderContentType) {
 	case ContentTypeStructuredJSON:
 		return Structured.FromRequest(data, r)
@@ -162,6 +163,16 @@ func FromRequest(data interface{}, r *http.Request) (*Context, error) {
 }
 
 // NewRequest craetes an HTTP request for Structured content encoding.
-func NewRequest(urlString string, data interface{}, context Context) (*http.Request, error) {
+func NewRequest(urlString string, data interface{}, context EventContext) (*http.Request, error) {
 	return Structured.NewRequest(urlString, data, context)
+}
+
+// Opaque key type used to store EventContexts in a context.Context
+type contextKeyType struct{}
+
+const contextKey = contextKeyType{}
+
+// FromContext loads an EventContext from a normal context.Context
+func FromContext(context.Context) *EventContext {
+	return context.Value(contextKey).(*EventContext)
 }

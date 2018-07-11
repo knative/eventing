@@ -17,6 +17,7 @@ limitations under the License.
 package event
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,25 +27,37 @@ import (
 	"github.com/golang/glog"
 )
 
-// TODO(inlined): Change function signature to be a more traditional
-// func(context.Context, any) (any, error)
-// where both in & out param lists can be of size 0, 1, 2
-const usage = "event.NewHandler expected a `func(<data>, event.Context) error`"
-
 type handler struct {
 	fnValue  reflect.Value
 	dataType reflect.Type
 }
 
+const (
+	inParamUsage  = "Expected a function taking either no parameters, a context.Context, or (context.Context, any)"
+	outParamusage = "Expected a function returning either nothing, an error, or (any, error)"
+)
+
+var (
+	contextType = reflect.TypeOf(context.Context(nil))
+	errorType   = reflect.TypeOf(error(nil))
+	nilType     = reflect.TypeOf(nil)
+)
+
 // Verifies that the inputs to a function have a valid signature; panics otherwise.
 // Valid input signatures:
-// (any, event.Context)
+// (), (context.Context), (context.Context, any)
 func assertInParamSignature(fnType reflect.Type) {
-	if fnType.NumIn() != 2 {
-		panic(usage + "; wrong parameter count")
-	}
-	if !fnType.In(1).ConvertibleTo(reflect.TypeOf(&Context{})) {
-		panic(usage + "; cannot convert " + fnType.In(1).Name() + " to event.Context")
+	switch fnType.NumIn() {
+	case 2:
+		fallthrough
+	case 1:
+		if !fnType.In(0).ConvertibleTo(contextType) {
+			panic(inParamUsage + "; cannot convert first parameter to context.Context")
+		}
+		fallthrough
+	case 0:
+	default:
+		panic(inParamUsage + "; too many parameters")
 	}
 }
 
