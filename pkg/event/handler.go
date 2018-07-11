@@ -133,7 +133,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Mux allows developers to handle logically related groups of
 // functionality multiplexed based on the event type.
-// BUG: Mux relies on JSON encoding for events.
+// TOOD: Consider dropping Mux or figure out how to handle non-JSON encoding.
 type Mux map[string]*handler
 
 // NewMux creates a new Mux

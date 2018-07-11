@@ -20,7 +20,6 @@ limitations under the License.
 package main
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -30,6 +29,8 @@ import (
 	"time"
 
 	"github.com/knative/eventing/pkg/event"
+
+	"github.com/google/uuid"
 )
 
 var (
@@ -85,13 +86,7 @@ func fillEventContext(ctx *event.Context) {
 	ctx.EventTime = time.Now().UTC()
 
 	if ctx.EventID == "" {
-		// A "UUID". Not technically spec complaint
-		b := make([]byte, 16)
-		if n, err := rand.Read(b); n != 16 || err != nil {
-			fmt.Println("Could not create event-id UUID")
-			os.Exit(1)
-		}
-		ctx.EventID = fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+		ctx.EventID = uuid.New().String()
 	}
 
 	if ctx.Source == "" {
