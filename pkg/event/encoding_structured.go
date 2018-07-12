@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -69,7 +69,7 @@ func (structured) FromRequest(data interface{}, r *http.Request) (*Context, erro
 	return &e.Context, nil
 }
 
-// NewRequest craetes an HTTP request for Structured content encoding.
+// NewRequest creates an HTTP request for Structured content encoding.
 func (structured) NewRequest(urlString string, data interface{}, context Context) (*http.Request, error) {
 	url, err := url.Parse(urlString)
 	if err != nil {

@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -69,10 +69,10 @@ type binary int
 func (binary) FromRequest(data interface{}, r *http.Request) (*Context, error) {
 	var ctx Context
 	err := anyError(
-		getReqHeader(r.Header, HeaderEventID, &ctx.EventID),
-		getReqHeader(r.Header, HeaderEventType, &ctx.EventType),
-		getReqHeader(r.Header, HeaderSource, &ctx.Source),
-		getReqHeader(r.Header, HeaderContentType, &ctx.ContentType))
+		getRequiredHeader(r.Header, HeaderEventID, &ctx.EventID),
+		getRequiredHeader(r.Header, HeaderEventType, &ctx.EventType),
+		getRequiredHeader(r.Header, HeaderSource, &ctx.Source),
+		getRequiredHeader(r.Header, HeaderContentType, &ctx.ContentType))
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func setHeader(h http.Header, name string, value string) {
 		h.Set(name, value)
 	}
 }
-func getReqHeader(h http.Header, name string, value *string) error {
+func getRequiredHeader(h http.Header, name string, value *string) error {
 	if *value = getHeader(h, name); *value == "" {
 		return fmt.Errorf("missing required header %q", name)
 	}

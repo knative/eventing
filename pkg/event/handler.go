@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ func assertInParamSignature(fnType reflect.Type) {
 // (error)
 func assertOutParamSignature(fnType reflect.Type) {
 	if fnType.NumOut() != 1 {
-		panic(usage + "; wrong output count")
+		panic(fmt.Sprintf("%s; wrong output count. Expected 1, got %d", usage, fnType.NumOut()))
 	}
 	// We have to use an awkward jump into and out of a pointer to avoid passing a literal
 	// nil to reflect, which would lose all type information and assert.
@@ -63,7 +63,7 @@ func assertOutParamSignature(fnType reflect.Type) {
 	}
 }
 
-// Verifies the that a function has the right number of in and out params and that they are
+// Verifies that a function has the right number of in and out params and that they are
 // of allowed types. If successful, returns the expected in-param type, otherwise panics.
 func assertEventHandler(fn interface{}) (dataType reflect.Type) {
 	fnType := reflect.TypeOf(fn)
@@ -108,7 +108,7 @@ func respondHTTP(res []reflect.Value, w http.ResponseWriter) {
 
 // Handler creates an EventHandler that implements http.Handler
 // Will panic in case of a type error
-// @param fn a function of type func(<your data struct>, *event.Context) error
+// * fn a function of type func(<your data struct>, *event.Context) error
 // TODO(inlined): for continuations we'll probably change the return signature to (interface{}, error)
 func Handler(fn interface{}) http.Handler {
 	return &handler{dataType: assertEventHandler(fn), fnValue: reflect.ValueOf(fn)}

@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google LLC
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@ limitations under the License.
 */
 
 // Implements a simple utility for sending a JSON-encoded sample event.
-// Not wired to bazel because this utility is meant to be run directly rather
-// than deployed to K8S
 package main
 
 import (
@@ -40,7 +38,7 @@ var (
 )
 
 func init() {
-	flag.StringVar(&context.EventID, "event-id", "", "Event ID to use. Defaults to a UUID")
+	flag.StringVar(&context.EventID, "event-id", "", "Event ID to use. Defaults to a generated UUID")
 	flag.StringVar(&context.EventType, "event-type", "google.events.action.demo", "The Event Type to use.")
 	flag.StringVar(&context.Source, "source", "", "Source URI to use. Defaults to the current machine's hostname")
 	flag.StringVar(&data, "data", `{"hello": "world!"}`, "Event data")
