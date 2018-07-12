@@ -341,182 +341,186 @@ func (c *Controller) reconcile(flow *v1alpha1.Flow) error {
 	deletionTimestamp := accessor.GetDeletionTimestamp()
 	glog.Infof("DeletionTimestamp: %v", deletionTimestamp)
 
-	functionDNS, err := c.resolveActionTarget(flow.Namespace, flow.Spec.Action)
+	functionDNS, err := c.resolveActionTarget(flow.Spec.Action)
 
-	// Only return an error on not found if we're not deleting so that we can delete
-	// the flowing even if the route or channel has already been deleted.
-	if err != nil && deletionTimestamp == nil {
-		if errors.IsNotFound(err) {
-			runtime.HandleError(fmt.Errorf("cannot resolve target for %v in namespace %q", flow.Spec.Action, namespace))
-		}
-		return err
-	}
+	return nil
 
-	es, err := c.eventSourcesLister.EventSources(namespace).Get(flow.Spec.Trigger.Service)
-	if err != nil && deletionTimestamp == nil {
-		if errors.IsNotFound(err) {
-			if deletionTimestamp != nil {
-				// If the Event Source can not be found, we will remove our finalizer
-				// because without it, we can't unflow and hence this flowing will never
-				// be deleted.
-				// https://github.com/knative/eventing/issues/94
-				newFinalizers, err := RemoveFinalizer(flow, controllerAgentName)
-				if err != nil {
-					glog.Warningf("Failed to remove finalizer: %s", err)
-					return err
-				}
-				flow.ObjectMeta.Finalizers = newFinalizers
-				_, err = c.updateFinalizers(flow)
-				if err != nil {
-					glog.Warningf("Failed to update finalizers: %s", err)
-					return err
-				}
-				return nil
+	/*
+		// Only return an error on not found if we're not deleting so that we can delete
+		// the flowing even if the route or channel has already been deleted.
+		if err != nil && deletionTimestamp == nil {
+			if errors.IsNotFound(err) {
+				runtime.HandleError(fmt.Errorf("cannot resolve target for %v in namespace %q", flow.Spec.Action, namespace))
 			}
-			runtime.HandleError(fmt.Errorf("EventSource %q in namespace %q does not exist", flow.Spec.Trigger.Service, namespace))
-		}
-		return err
-	}
-
-	et, err := c.eventTypesLister.EventTypes(namespace).Get(flow.Spec.Trigger.EventType)
-	if err != nil && deletionTimestamp == nil {
-		if errors.IsNotFound(err) {
-			runtime.HandleError(fmt.Errorf("EventType %q in namespace %q does not exist", flow.Spec.Trigger.Service, namespace))
-		}
-		return err
-	}
-
-	// If the EventSource has been deleted from underneath us, just remove our finalizer. We tried...
-	if es == nil && deletionTimestamp != nil {
-		glog.Warningf("Could not find a Flow container, removing finalizer")
-		newFinalizers, err := RemoveFinalizer(flow, controllerAgentName)
-		if err != nil {
-			glog.Warningf("Failed to remove finalizer: %s", err)
 			return err
 		}
-		flow.ObjectMeta.Finalizers = newFinalizers
-		_, err = c.updateFinalizers(flow)
-		if err != nil {
-			glog.Warningf("Failed to update finalizers: %s", err)
+
+		es, err := c.eventSourcesLister.EventSources(namespace).Get(flow.Spec.Trigger.Service)
+		if err != nil && deletionTimestamp == nil {
+			if errors.IsNotFound(err) {
+				if deletionTimestamp != nil {
+					// If the Event Source can not be found, we will remove our finalizer
+					// because without it, we can't unflow and hence this flowing will never
+					// be deleted.
+					// https://github.com/knative/eventing/issues/94
+					newFinalizers, err := RemoveFinalizer(flow, controllerAgentName)
+					if err != nil {
+						glog.Warningf("Failed to remove finalizer: %s", err)
+						return err
+					}
+					flow.ObjectMeta.Finalizers = newFinalizers
+					_, err = c.updateFinalizers(flow)
+					if err != nil {
+						glog.Warningf("Failed to update finalizers: %s", err)
+						return err
+					}
+					return nil
+				}
+				runtime.HandleError(fmt.Errorf("EventSource %q in namespace %q does not exist", flow.Spec.Trigger.Service, namespace))
+			}
 			return err
 		}
-		return nil
-	}
 
-	// If there are conditions or a context do nothing.
-	if (flow.Status.Conditions != nil || flow.Status.FlowContext != nil) && deletionTimestamp == nil {
-		glog.Infof("Flowing \"%s/%s\" already has status, skipping", flow.Namespace, flow.Name)
-		return nil
-	}
+		et, err := c.eventTypesLister.EventTypes(namespace).Get(flow.Spec.Trigger.EventType)
+		if err != nil && deletionTimestamp == nil {
+			if errors.IsNotFound(err) {
+				runtime.HandleError(fmt.Errorf("EventType %q in namespace %q does not exist", flow.Spec.Trigger.Service, namespace))
+			}
+			return err
+		}
 
-	// Set the OwnerReference to EventType to make sure that if it's deleted, the flowing
-	// will also get deleted and not left orphaned. However, this does not work yet. Regardless
-	// we should set the owner reference to indicate a dependency.
-	// https://github.com/knative/eventing/issues/94
-	flow.ObjectMeta.OwnerReferences = append(flow.ObjectMeta.OwnerReferences, *newEventTypeNonControllerRef(et))
-	flowClient := c.feedsclientset.FeedsV1alpha1().Flows(flow.Namespace)
-	updatedFlow, err := flowClient.Update(flow)
-	if err != nil {
-		glog.Warningf("Failed to update OwnerReferences on flow '%s/%s' : %v", flow.Namespace, flow.Name, err)
-		return err
-	}
-	flow = updatedFlow
-
-	trigger, err := resolveTrigger(c.kubeclientset, namespace, flow.Spec.Trigger)
-	if err != nil {
-		glog.Warningf("Failed to process parameters: %s", err)
-		return err
-	}
-
-	// Don't mutate the informer's copy of our object.
-	newES := es.DeepCopy()
-
-	// check if the user specified a ServiceAccount to use and if so, use it.
-	serviceAccountName := "default"
-	if len(flow.Spec.ServiceAccountName) != 0 {
-		serviceAccountName = flow.Spec.ServiceAccountName
-	}
-	flower := sources.NewContainerEventSource(flow, c.kubeclientset, &newES.Spec, flow.Namespace, serviceAccountName)
-	if deletionTimestamp == nil {
-		glog.Infof("Creating a subscription to %q : %q for resource %q", es.Name, et.Name, trigger.Resource)
-		flowContext, err := flower.Flow(trigger, functionDNS)
-
-		if err != nil {
-			glog.Warningf("FLOW failed: %s", err)
-			msg := fmt.Sprintf("Flow failed with : %s", err)
-			flow.Status.SetCondition(&v1alpha1.FlowCondition{
-				Type:    v1alpha1.FlowFailed,
-				Status:  corev1.ConditionTrue,
-				Reason:  "FlowFailed",
-				Message: msg,
-			})
-		} else {
-			glog.Infof("Got context back as: %+v", flowContext)
-			marshalledFlowContext, err := json.Marshal(&flowContext.Context)
+		// If the EventSource has been deleted from underneath us, just remove our finalizer. We tried...
+		if es == nil && deletionTimestamp != nil {
+			glog.Warningf("Could not find a Flow container, removing finalizer")
+			newFinalizers, err := RemoveFinalizer(flow, controllerAgentName)
 			if err != nil {
-				glog.Warningf("Couldn't marshal flow context: %+v : %s", flowContext, err)
-			} else {
-				glog.Infof("Marshaled context to: %+v", marshalledFlowContext)
-				flow.Status.FlowContext = &runtimetypes.RawExtension{
-					Raw: make([]byte, len(marshalledFlowContext)),
-				}
-				flow.Status.FlowContext.Raw = marshalledFlowContext
+				glog.Warningf("Failed to remove finalizer: %s", err)
+				return err
 			}
-
-			// Set the finalizer since the flow succeeded, we need to clean up...
-			// TODO: we should do this in the webhook instead...
-			flow.Finalizers = append(flow.ObjectMeta.Finalizers, controllerAgentName)
+			flow.ObjectMeta.Finalizers = newFinalizers
 			_, err = c.updateFinalizers(flow)
 			if err != nil {
 				glog.Warningf("Failed to update finalizers: %s", err)
 				return err
 			}
-
-			flow.Status.SetCondition(&v1alpha1.FlowCondition{
-				Type:    v1alpha1.FlowComplete,
-				Status:  corev1.ConditionTrue,
-				Reason:  "FlowSuccess",
-				Message: "Flow successful",
-			})
+			return nil
 		}
-		_, err = c.updateStatus(flow)
+
+		// If there are conditions or a context do nothing.
+		if (flow.Status.Conditions != nil || flow.Status.FlowContext != nil) && deletionTimestamp == nil {
+			glog.Infof("Flowing \"%s/%s\" already has status, skipping", flow.Namespace, flow.Name)
+			return nil
+		}
+
+		// Set the OwnerReference to EventType to make sure that if it's deleted, the flowing
+		// will also get deleted and not left orphaned. However, this does not work yet. Regardless
+		// we should set the owner reference to indicate a dependency.
+		// https://github.com/knative/eventing/issues/94
+		flow.ObjectMeta.OwnerReferences = append(flow.ObjectMeta.OwnerReferences, *newEventTypeNonControllerRef(et))
+		flowClient := c.feedsclientset.FeedsV1alpha1().Flows(flow.Namespace)
+		updatedFlow, err := flowClient.Update(flow)
 		if err != nil {
-			glog.Warningf("Failed to update status: %s", err)
+			glog.Warningf("Failed to update OwnerReferences on flow '%s/%s' : %v", flow.Namespace, flow.Name, err)
 			return err
 		}
-	} else {
-		glog.Infof("Deleting a subscription to %q : %q with Trigger %+v", es.Name, et.Name, trigger)
-		flowContext := sources.FlowContext{
-			Context: make(map[string]interface{}),
+		flow = updatedFlow
+
+		trigger, err := resolveTrigger(c.kubeclientset, namespace, flow.Spec.Trigger)
+		if err != nil {
+			glog.Warningf("Failed to process parameters: %s", err)
+			return err
 		}
-		if flow.Status.FlowContext != nil && flow.Status.FlowContext.Raw != nil && len(flow.Status.FlowContext.Raw) > 0 {
-			if err := json.Unmarshal(flow.Status.FlowContext.Raw, &flowContext.Context); err != nil {
-				glog.Warningf("Couldn't unmarshal FlowContext: %v", err)
+
+		// Don't mutate the informer's copy of our object.
+		newES := es.DeepCopy()
+
+		// check if the user specified a ServiceAccount to use and if so, use it.
+		serviceAccountName := "default"
+		if len(flow.Spec.ServiceAccountName) != 0 {
+			serviceAccountName = flow.Spec.ServiceAccountName
+		}
+		flower := sources.NewContainerEventSource(flow, c.kubeclientset, &newES.Spec, flow.Namespace, serviceAccountName)
+		if deletionTimestamp == nil {
+			glog.Infof("Creating a subscription to %q : %q for resource %q", es.Name, et.Name, trigger.Resource)
+			flowContext, err := flower.Flow(trigger, functionDNS)
+
+			if err != nil {
+				glog.Warningf("FLOW failed: %s", err)
+				msg := fmt.Sprintf("Flow failed with : %s", err)
+				flow.Status.SetCondition(&v1alpha1.FlowCondition{
+					Type:    v1alpha1.FlowFailed,
+					Status:  corev1.ConditionTrue,
+					Reason:  "FlowFailed",
+					Message: msg,
+				})
+			} else {
+				glog.Infof("Got context back as: %+v", flowContext)
+				marshalledFlowContext, err := json.Marshal(&flowContext.Context)
+				if err != nil {
+					glog.Warningf("Couldn't marshal flow context: %+v : %s", flowContext, err)
+				} else {
+					glog.Infof("Marshaled context to: %+v", marshalledFlowContext)
+					flow.Status.FlowContext = &runtimetypes.RawExtension{
+						Raw: make([]byte, len(marshalledFlowContext)),
+					}
+					flow.Status.FlowContext.Raw = marshalledFlowContext
+				}
+
+				// Set the finalizer since the flow succeeded, we need to clean up...
+				// TODO: we should do this in the webhook instead...
+				flow.Finalizers = append(flow.ObjectMeta.Finalizers, controllerAgentName)
+				_, err = c.updateFinalizers(flow)
+				if err != nil {
+					glog.Warningf("Failed to update finalizers: %s", err)
+					return err
+				}
+
+				flow.Status.SetCondition(&v1alpha1.FlowCondition{
+					Type:    v1alpha1.FlowComplete,
+					Status:  corev1.ConditionTrue,
+					Reason:  "FlowSuccess",
+					Message: "Flow successful",
+				})
+			}
+			_, err = c.updateStatus(flow)
+			if err != nil {
+				glog.Warningf("Failed to update status: %s", err)
+				return err
+			}
+		} else {
+			glog.Infof("Deleting a subscription to %q : %q with Trigger %+v", es.Name, et.Name, trigger)
+			flowContext := sources.FlowContext{
+				Context: make(map[string]interface{}),
+			}
+			if flow.Status.FlowContext != nil && flow.Status.FlowContext.Raw != nil && len(flow.Status.FlowContext.Raw) > 0 {
+				if err := json.Unmarshal(flow.Status.FlowContext.Raw, &flowContext.Context); err != nil {
+					glog.Warningf("Couldn't unmarshal FlowContext: %v", err)
+					// TODO set the condition properly here
+					return err
+				}
+			}
+			err := flower.Unflow(trigger, flowContext)
+			if err != nil {
+				glog.Warningf("Couldn't unflow: %v", err)
 				// TODO set the condition properly here
 				return err
 			}
+			newFinalizers, err := RemoveFinalizer(flow, controllerAgentName)
+			if err != nil {
+				glog.Warningf("Failed to remove finalizer: %s", err)
+				return err
+			}
+			flow.ObjectMeta.Finalizers = newFinalizers
+			_, err = c.updateFinalizers(flow)
+			if err != nil {
+				glog.Warningf("Failed to update finalizers: %s", err)
+				return err
+			}
 		}
-		err := flower.Unflow(trigger, flowContext)
-		if err != nil {
-			glog.Warningf("Couldn't unflow: %v", err)
-			// TODO set the condition properly here
-			return err
-		}
-		newFinalizers, err := RemoveFinalizer(flow, controllerAgentName)
-		if err != nil {
-			glog.Warningf("Failed to remove finalizer: %s", err)
-			return err
-		}
-		flow.ObjectMeta.Finalizers = newFinalizers
-		_, err = c.updateFinalizers(flow)
-		if err != nil {
-			glog.Warningf("Failed to update finalizers: %s", err)
-			return err
-		}
-	}
 
-	c.recorder.Event(flow, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
-	return nil
+		c.recorder.Event(flow, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
+		return nil
+	*/
 }
 
 func (c *Controller) updateFinalizers(u *v1alpha1.Flow) (*v1alpha1.Flow, error) {

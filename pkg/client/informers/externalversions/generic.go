@@ -23,6 +23,7 @@ import (
 
 	v1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	feeds_v1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
+	flows_v1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -70,6 +71,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Feeds().V1alpha1().EventTypes().Informer()}, nil
 	case feeds_v1alpha1.SchemeGroupVersion.WithResource("feeds"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Feeds().V1alpha1().Feeds().Informer()}, nil
+
+		// Group=flows.knative.dev, Version=v1alpha1
+	case flows_v1alpha1.SchemeGroupVersion.WithResource("flows"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Flows().V1alpha1().Flows().Informer()}, nil
 
 	}
 

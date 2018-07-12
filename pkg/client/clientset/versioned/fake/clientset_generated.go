@@ -24,6 +24,8 @@ import (
 	fakechannelsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/channels/v1alpha1/fake"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/feeds/v1alpha1"
 	fakefeedsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/feeds/v1alpha1/fake"
+	flowsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/flows/v1alpha1"
+	fakeflowsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/flows/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -90,4 +92,14 @@ func (c *Clientset) FeedsV1alpha1() feedsv1alpha1.FeedsV1alpha1Interface {
 // Feeds retrieves the FeedsV1alpha1Client
 func (c *Clientset) Feeds() feedsv1alpha1.FeedsV1alpha1Interface {
 	return &fakefeedsv1alpha1.FakeFeedsV1alpha1{Fake: &c.Fake}
+}
+
+// FlowsV1alpha1 retrieves the FlowsV1alpha1Client
+func (c *Clientset) FlowsV1alpha1() flowsv1alpha1.FlowsV1alpha1Interface {
+	return &fakeflowsv1alpha1.FakeFlowsV1alpha1{Fake: &c.Fake}
+}
+
+// Flows retrieves the FlowsV1alpha1Client
+func (c *Clientset) Flows() flowsv1alpha1.FlowsV1alpha1Interface {
+	return &fakeflowsv1alpha1.FakeFlowsV1alpha1{Fake: &c.Fake}
 }
