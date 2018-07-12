@@ -260,6 +260,9 @@ func TestReturnTypeRendering(t *testing.T) {
 	eventData := map[string]interface{}{
 		"unused": "data",
 	}
+	type RetVal struct {
+		ID interface{}
+	}
 	eventContext := event.EventContext{
 		CloudEventsVersion: event.CloudEventsVersion,
 		EventID:            "1234",
@@ -312,6 +315,13 @@ func TestReturnTypeRendering(t *testing.T) {
 				return map[string]interface{}{"hello": "world"}, nil
 			}),
 			expectedResponse: `{"hello":"world"}`,
+		},
+		{
+			name:           "bad JSON content",
+			expectedStatus: http.StatusInternalServerError,
+			handler: event.Handler(func() (RetVal, error) {
+				return RetVal{ID: func() {}}, nil
+			}),
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {

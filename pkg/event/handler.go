@@ -38,6 +38,11 @@ type failedHandler struct {
 	err error
 }
 
+type errAndHandler interface {
+	http.Handler
+	error
+}
+
 const (
 	inParamUsage  = "Expected a function taking either no parameters, a context.Context, or (context.Context, any)"
 	outParamUsage = "Expected a function returning either nothing, an error, or (any, error)"
@@ -98,7 +103,7 @@ func assertOutParamSignature(fnType reflect.Type) error {
 
 // Verifies that a function has the right number of in and out params and that they are
 // of allowed types. If successful, returns the expected in-param type, otherwise panics.
-func assertEventHandler(fnType reflect.Type) *failedHandler {
+func validateFunction(fnType reflect.Type) errAndHandler {
 	if fnType.Kind() != reflect.Func {
 		return &failedHandler{err: fmt.Errorf("Must pass a function to handle events")}
 	}
@@ -184,7 +189,7 @@ func respondHTTP(outparams []reflect.Value, w http.ResponseWriter) {
 // TODO(inlined): for continuations we'll probably change the return signature to (interface{}, error)
 func Handler(fn interface{}) http.Handler {
 	fnType := reflect.TypeOf(fn)
-	err := assertEventHandler(fnType)
+	err := validateFunction(fnType)
 	if err != nil {
 		return err
 	}
@@ -250,7 +255,7 @@ func NewMux() Mux {
 // Handle adds a new handler for a specific event type
 func (m Mux) Handle(eventType string, fn interface{}) error {
 	fnType := reflect.TypeOf(fn)
-	err := assertEventHandler(fnType)
+	err := validateFunction(fnType)
 	if err != nil {
 		return err
 	}
