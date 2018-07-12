@@ -65,8 +65,8 @@ func TestHandlerTypeErrors(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := event.Handler(test.param)
-			if err == nil {
+			err, ok := event.Handler(test.param).(error)
+			if !ok {
 				t.Errorf("Expected Handler() to fail with %v, passed", test.err)
 				return
 			}
@@ -118,7 +118,7 @@ func TestHandlerValidTypes(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			if _, err := event.Handler(test.f); err != nil {
+			if err, ok := event.Handler(test.f).(error); ok {
 				t.Errorf("%q failed: %v", test.name, err)
 			}
 		})
@@ -140,11 +140,11 @@ func TestParameterMarsahlling(t *testing.T) {
 	var wasCalled = false
 	for _, test := range []struct {
 		name      string
-		generator func(t *testing.T) (http.Handler, error)
+		generator func(t *testing.T) http.Handler
 	}{
 		{
 			name: "no parameters",
-			generator: func(t *testing.T) (http.Handler, error) {
+			generator: func(t *testing.T) http.Handler {
 				return event.Handler(func() {
 					wasCalled = true
 				})
@@ -152,7 +152,7 @@ func TestParameterMarsahlling(t *testing.T) {
 		},
 		{
 			name: "one parameter",
-			generator: func(t *testing.T) (http.Handler, error) {
+			generator: func(t *testing.T) http.Handler {
 				return event.Handler(func(ctx context.Context) {
 					eventContext := event.FromContext(ctx)
 					if !reflect.DeepEqual(expectedContext, eventContext) {
@@ -163,7 +163,7 @@ func TestParameterMarsahlling(t *testing.T) {
 			},
 		}, {
 			name: "two parameters (struct type)",
-			generator: func(t *testing.T) (http.Handler, error) {
+			generator: func(t *testing.T) http.Handler {
 				return event.Handler(func(ctx context.Context, data Data) {
 					eventContext := event.FromContext(ctx)
 					if !reflect.DeepEqual(expectedContext, eventContext) {
@@ -177,7 +177,7 @@ func TestParameterMarsahlling(t *testing.T) {
 			},
 		}, {
 			name: "two parameters (pointer type)",
-			generator: func(t *testing.T) (http.Handler, error) {
+			generator: func(t *testing.T) http.Handler {
 				return event.Handler(func(ctx context.Context, data *Data) {
 					eventContext := event.FromContext(ctx)
 					if !reflect.DeepEqual(expectedContext, eventContext) {
@@ -191,7 +191,7 @@ func TestParameterMarsahlling(t *testing.T) {
 			},
 		}, {
 			name: "two parameters (untyped)",
-			generator: func(t *testing.T) (http.Handler, error) {
+			generator: func(t *testing.T) http.Handler {
 				return event.Handler(func(ctx context.Context, data map[string]interface{}) {
 					eventContext := event.FromContext(ctx)
 					if !reflect.DeepEqual(expectedContext, eventContext) {
@@ -216,8 +216,8 @@ func TestParameterMarsahlling(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			wasCalled = false
-			handler, err := test.generator(t)
-			if err != nil {
+			handler := test.generator(t)
+			if err, ok := handler.(error); ok {
 				t.Errorf("Handler() failed: %v", err)
 				return
 			}
@@ -241,15 +241,6 @@ func TestParameterMarsahlling(t *testing.T) {
 	}
 }
 
-func toHandler(f interface{}, t *testing.T) *http.Handler {
-	h, err := event.Handler(f)
-	if err != nil {
-		t.Errorf("Handler() failed: %v", err)
-		return nil
-	}
-	return &h
-}
-
 func TestReturnTypeRendering(t *testing.T) {
 	eventData := map[string]interface{}{
 		"unused": "data",
@@ -265,55 +256,55 @@ func TestReturnTypeRendering(t *testing.T) {
 		name             string
 		expectedStatus   int
 		expectedResponse string
-		handler          *http.Handler
+		handler          http.Handler
 	}{
 		{
 			name:           "no return",
 			expectedStatus: http.StatusNoContent,
-			handler:        toHandler(func() {}, t),
+			handler:        event.Handler(func() {}),
 		}, {
 			name:           "nil error return",
 			expectedStatus: http.StatusNoContent,
-			handler: toHandler(func() error {
+			handler: event.Handler(func() error {
 				return nil
-			}, t),
+			}),
 		}, {
 			name:           "non-nil error return (one return type)",
 			expectedStatus: http.StatusInternalServerError,
-			handler: toHandler(func() error {
+			handler: event.Handler(func() error {
 				return errors.New("Some error")
-			}, t),
+			}),
 			expectedResponse: "Internal server error",
 		}, {
 			name:           "successful return",
 			expectedStatus: http.StatusOK,
-			handler: toHandler(func() (map[string]interface{}, error) {
+			handler: event.Handler(func() (map[string]interface{}, error) {
 				return map[string]interface{}{"hello": "world"}, nil
-			}, t),
+			}),
 			expectedResponse: `{"hello":"world"}`,
 		}, {
 			name:           "non-nil error return (two return types)",
 			expectedStatus: http.StatusInternalServerError,
-			handler: toHandler(func() (map[string]interface{}, error) {
+			handler: event.Handler(func() (map[string]interface{}, error) {
 				return map[string]interface{}{"hello": "world"}, errors.New("Errors take precedence")
-			}, t),
+			}),
 			expectedResponse: "Internal server error",
 		},
 		{
 			name:           "non-nil content return",
 			expectedStatus: http.StatusOK,
-			handler: toHandler(func() (map[string]interface{}, error) {
+			handler: event.Handler(func() (map[string]interface{}, error) {
 				return map[string]interface{}{"hello": "world"}, nil
-			}, t),
+			}),
 			expectedResponse: `{"hello":"world"}`,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			if test.handler == nil {
-				t.Errorf("Handler() failed, skipping")
+			if err, ok := test.handler.(error); ok {
+				t.Errorf("Handler() failed: %v", err)
 				return
 			}
-			srv := httptest.NewServer(*test.handler)
+			srv := httptest.NewServer(test.handler)
 			defer srv.Close()
 			req, err := event.NewRequest(srv.URL, eventData, eventContext)
 			if err != nil {

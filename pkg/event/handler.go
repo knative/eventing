@@ -34,6 +34,10 @@ type handler struct {
 	dataType reflect.Type
 }
 
+type failedHandler struct {
+	err error
+}
+
 const (
 	inParamUsage  = "Expected a function taking either no parameters, a context.Context, or (context.Context, any)"
 	outParamUsage = "Expected a function returning either nothing, an error, or (any, error)"
@@ -94,13 +98,17 @@ func assertOutParamSignature(fnType reflect.Type) error {
 
 // Verifies that a function has the right number of in and out params and that they are
 // of allowed types. If successful, returns the expected in-param type, otherwise panics.
-func assertEventHandler(fnType reflect.Type) error {
+func assertEventHandler(fnType reflect.Type) *failedHandler {
 	if fnType.Kind() != reflect.Func {
-		return fmt.Errorf("Must pass a function to handle events")
+		return &failedHandler{err: fmt.Errorf("Must pass a function to handle events")}
 	}
-	return anyError(
+	err := anyError(
 		assertInParamSignature(fnType),
 		assertOutParamSignature(fnType))
+	if err != nil {
+		return &failedHandler{err: err}
+	}
+	return nil
 }
 
 // Alocates a new instance of type t and returns:
@@ -174,11 +182,11 @@ func respondHTTP(outparams []reflect.Value, w http.ResponseWriter) {
 // Will panic in case of a type error
 // * fn a function of type func(<your data struct>, *event.Context) error
 // TODO(inlined): for continuations we'll probably change the return signature to (interface{}, error)
-func Handler(fn interface{}) (http.Handler, error) {
+func Handler(fn interface{}) http.Handler {
 	fnType := reflect.TypeOf(fn)
 	err := assertEventHandler(fnType)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	var dataType reflect.Type
 	if fnType.NumIn() == 2 {
@@ -189,7 +197,7 @@ func Handler(fn interface{}) (http.Handler, error) {
 		numIn:    fnType.NumIn(),
 		dataType: dataType,
 		fnValue:  reflect.ValueOf(fn),
-	}, nil
+	}
 }
 
 // ServeHTTP implements http.Handler
@@ -217,6 +225,16 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	res := h.fnValue.Call(args)
 	respondHTTP(res, w)
+}
+
+func (h failedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	glog.Error("Failed to handle event: ", h.Error())
+	w.WriteHeader(http.StatusServiceUnavailable)
+	w.Write([]byte(`Internal server error`))
+}
+
+func (h failedHandler) Error() string {
+	return h.err.Error()
 }
 
 // Mux allows developers to handle logically related groups of
