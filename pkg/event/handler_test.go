@@ -241,6 +241,15 @@ func TestParameterMarsahlling(t *testing.T) {
 	}
 }
 
+func toHandler(f interface{}, t *testing.T) *http.Handler {
+	h, err := event.Handler(f)
+	if err != nil {
+		t.Errorf("Handler() failed: %v", err)
+		return nil
+	}
+	return &h
+}
+
 func TestReturnTypeRendering(t *testing.T) {
 	eventData := map[string]interface{}{
 		"unused": "data",
@@ -256,43 +265,47 @@ func TestReturnTypeRendering(t *testing.T) {
 		name             string
 		expectedStatus   int
 		expectedResponse string
-		handler          http.Handler
+		handler          *http.Handler
 	}{
 		{
 			name:           "no return",
 			expectedStatus: http.StatusNoContent,
-			handler:        event.Handler(func() {}),
+			handler:        toHandler(func() {}, t),
 		}, {
 			name:           "nil error return",
 			expectedStatus: http.StatusNoContent,
-			handler: event.Handler(func() error {
+			handler: toHandler(func() error {
 				return nil
-			}),
+			}, t),
 		}, {
 			name:           "non-nil error return (one return type)",
 			expectedStatus: http.StatusInternalServerError,
-			handler: event.Handler(func() error {
+			handler: toHandler(func() error {
 				return errors.New("Some error")
-			}),
+			}, t),
 			expectedResponse: "Internal server error",
 		}, {
 			name:           "successful return",
 			expectedStatus: http.StatusOK,
-			handler: event.Handler(func() (map[string]interface{}, error) {
+			handler: toHandler(func() (map[string]interface{}, error) {
 				return map[string]interface{}{"hello": "world"}, nil
-			}),
+			}, t),
 			expectedResponse: `{"hello":"world"}`,
 		}, {
 			name:           "non-nil error return (two return types)",
 			expectedStatus: http.StatusInternalServerError,
-			handler: event.Handler(func() (map[string]interface{}, error) {
+			handler: toHandler(func() (map[string]interface{}, error) {
 				return map[string]interface{}{"hello": "world"}, errors.New("Errors take precedence")
-			}),
+			}, t),
 			expectedResponse: "Internal server error",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			srv := httptest.NewServer(test.handler)
+			if test.handler == nil {
+				t.Errorf("Handler() failed, skipping")
+				return
+			}
+			srv := httptest.NewServer(*test.handler)
 			defer srv.Close()
 			req, err := event.NewRequest(srv.URL, eventData, eventContext)
 			if err != nil {
