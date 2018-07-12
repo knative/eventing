@@ -61,18 +61,14 @@ func TestHandlerTypeErrors(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			defer func() {
-				r := recover()
-				if r == nil {
-					t.Fatal("Did not panic")
-				}
-				str := r.(string)
-				if !strings.Contains(str, test.err) {
-					t.Fatalf("Got panic %q; which should have contained %q", str, test.err)
-				}
-			}()
-
-			event.Handler(test.param)
+			_, err := event.Handler(test.param)
+			if err == nil {
+				t.Errorf("Expected Handler() to fail with %v, passed", test.err)
+				return
+			}
+			if !strings.Contains(err.Error(), test.err) {
+				t.Errorf("Expected Handler() to fail. want %q, got %v", test.err, err)
+			}
 		})
 	}
 }
@@ -118,7 +114,9 @@ func TestHandlerValidTypes(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			event.Handler(test.f)
+			if _, err := event.Handler(test.f); err != nil {
+				t.Errorf("%q failed: %v", test.name, err)
+			}
 		})
 	}
 }
@@ -134,7 +132,7 @@ func TestUntypedHandling(t *testing.T) {
 		EventType:          "dev.eventing.test",
 		Extensions:         map[string]interface{}{},
 	}
-	handler := event.Handler(func(data map[string]interface{}, ctx *event.EventContext) error {
+	handler, err := event.Handler(func(data map[string]interface{}, ctx *event.EventContext) error {
 		if !reflect.DeepEqual(expectedData, data) {
 			t.Fatalf("Did not get expected data: wanted=%s; got=%s",
 				spew.Sdump(expectedData), spew.Sdump(data))
@@ -145,6 +143,9 @@ func TestUntypedHandling(t *testing.T) {
 		}
 		return nil
 	})
+	if err != nil {
+		t.Fatalf("Handler() failed: %v", err)
+	}
 
 	srv := httptest.NewServer(handler)
 	defer srv.Close()
@@ -174,7 +175,7 @@ func TestTypedHandling(t *testing.T) {
 		EventType:          "dev.eventing.test",
 		Extensions:         map[string]interface{}{},
 	}
-	handler := event.Handler(func(data Data, ctx *event.EventContext) error {
+	handler, err := event.Handler(func(data Data, ctx *event.EventContext) error {
 		if !reflect.DeepEqual(expectedData, data) {
 			t.Fatalf("Did not get expected data: wanted=%s; got=%s",
 				spew.Sdump(expectedData), spew.Sdump(data))
@@ -185,6 +186,9 @@ func TestTypedHandling(t *testing.T) {
 		}
 		return nil
 	})
+	if err != nil {
+		t.Fatalf("Handler() failed: %v", err)
+	}
 
 	srv := httptest.NewServer(handler)
 	defer srv.Close()
@@ -214,7 +218,7 @@ func TestPointerHandling(t *testing.T) {
 		EventType:          "dev.eventing.test",
 		Extensions:         map[string]interface{}{},
 	}
-	handler := event.Handler(func(data *Data, ctx *event.EventContext) error {
+	handler, err := event.Handler(func(data *Data, ctx *event.EventContext) error {
 		if !reflect.DeepEqual(expectedData, data) {
 			t.Fatalf("Did not get expected data: wanted=%s; got=%s",
 				spew.Sdump(expectedData), spew.Sdump(data))
@@ -225,6 +229,9 @@ func TestPointerHandling(t *testing.T) {
 		}
 		return nil
 	})
+	if err != nil {
+		t.Fatalf("Handler() failed: %v", err)
+	}
 
 	srv := httptest.NewServer(handler)
 	defer srv.Close()
@@ -274,7 +281,7 @@ func TestMux(t *testing.T) {
 	sawA, sawB := false, false
 
 	mux := event.NewMux()
-	mux.Handle("org.A.test", func(data TypeA, context *event.EventContext) error {
+	err := mux.Handle("org.A.test", func(data TypeA, context *event.EventContext) error {
 		sawA = true
 		if !reflect.DeepEqual(eventA, data) {
 			t.Fatalf("Got wrong data for event A; wanted=%s; got=%s", eventA, data)
@@ -284,7 +291,10 @@ func TestMux(t *testing.T) {
 		}
 		return nil
 	})
-	mux.Handle("org.B.test", func(data TypeB, context *event.EventContext) error {
+	if err != nil {
+		t.Fatalf("mux.Handle('org.A.test') failed: %v", err)
+	}
+	err = mux.Handle("org.B.test", func(data TypeB, context *event.EventContext) error {
 		sawB = true
 		if !reflect.DeepEqual(eventB, data) {
 			t.Fatalf("Got wrong data for event A; wanted=%s; got=%s", eventB, data)
@@ -294,6 +304,9 @@ func TestMux(t *testing.T) {
 		}
 		return nil
 	})
+	if err != nil {
+		t.Fatalf("mux.Handle('org.B.test') failed: %v", err)
+	}
 
 	srv := httptest.NewServer(mux)
 	defer srv.Close()

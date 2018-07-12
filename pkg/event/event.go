@@ -72,6 +72,7 @@ type EventContext struct {
 	// A link to the schema that the `data` attribute adheres to.
 	SchemaURL string `json:"schemaURL,omitempty"`
 	// A MIME (RFC 2046) string describing the media type of `data`.
+	// TODO: Should an empty string assume `application/json`, or auto-detect the content?
 	ContentType string `json:"contentType,omitempty"`
 	// A URI describing the event producer.
 	Source string `json:"source"`
@@ -176,7 +177,7 @@ func FromRequest(data interface{}, r *http.Request) (*EventContext, error) {
 		return Binary.FromRequest(data, r)
 	default:
 		// TODO: assume binary content mode
-		// (https://github.com/cloudevents/spec/blob/v0.1/http-transport-binding.md#31-binary-content-mode)
+		// (https://github.com/cloudevents/spec/blob/v0.1/http-transport-binding.md#3-http-message-mapping)
 		// and that data is ??? (io.Reader?, byte array?)
 		return nil, fmt.Errorf("Cannot handle encoding %q", r.Header.Get("Content-Type"))
 	}

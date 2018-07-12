@@ -55,25 +55,26 @@ var (
 // Verifies that the inputs to a function have a valid signature; panics otherwise.
 // Valid input signatures:
 // (), (context.Context), (context.Context, any)
-func assertInParamSignature(fnType reflect.Type) {
+func assertInParamSignature(fnType reflect.Type) error {
 	switch fnType.NumIn() {
 	case 2:
 		fallthrough
 	case 1:
 		if !fnType.In(0).ConvertibleTo(contextType) {
-			panic(fmt.Sprintf("%s; cannot convert parameter 0 from %s to context.Context", inParamUsage, fnType.In(0)))
+			return fmt.Errorf("%s; cannot convert parameter 0 from %s to context.Context", inParamUsage, fnType.In(0))
 		}
 		fallthrough
 	case 0:
+		return nil
 	default:
-		panic(fmt.Sprintf("%s; function has too many parameters (%d)", inParamUsage, fnType.NumIn()))
+		return fmt.Errorf("%s; function has too many parameters (%d)", inParamUsage, fnType.NumIn())
 	}
 }
 
 // Verifies that the outputs of a function have a valid signature; panics otherwise.
 // Valid output signatures:
 // (), (error), (any, error)
-func assertOutParamSignature(fnType reflect.Type) {
+func assertOutParamSignature(fnType reflect.Type) error {
 	switch fnType.NumOut() {
 	case 2:
 		fallthrough
@@ -81,23 +82,25 @@ func assertOutParamSignature(fnType reflect.Type) {
 		paramNo := fnType.NumOut() - 1
 		paramType := fnType.Out(paramNo)
 		if !paramType.ConvertibleTo(errorType) {
-			panic(fmt.Sprintf("%s; cannot convert return type %d from %s to error", outParamUsage, paramNo, paramType))
+			return fmt.Errorf("%s; cannot convert return type %d from %s to error", outParamUsage, paramNo, paramType)
 		}
 		fallthrough
 	case 0:
+		return nil
 	default:
-		panic(fmt.Sprintf("%s; function has too many return types (%d)", outParamUsage, fnType.NumOut()))
+		return fmt.Errorf("%s; function has too many return types (%d)", outParamUsage, fnType.NumOut())
 	}
 }
 
 // Verifies that a function has the right number of in and out params and that they are
 // of allowed types. If successful, returns the expected in-param type, otherwise panics.
-func assertEventHandler(fnType reflect.Type) {
+func assertEventHandler(fnType reflect.Type) error {
 	if fnType.Kind() != reflect.Func {
-		panic("Must pass a function to handle events")
+		return fmt.Errorf("Must pass a function to handle events")
 	}
-	assertInParamSignature(fnType)
-	assertOutParamSignature(fnType)
+	return anyError(
+		assertInParamSignature(fnType),
+		assertOutParamSignature(fnType))
 }
 
 // Alocates a new instance of type t and returns:
@@ -164,9 +167,12 @@ func respondHTTP(outparams []reflect.Value, w http.ResponseWriter) {
 // Will panic in case of a type error
 // * fn a function of type func(<your data struct>, *event.Context) error
 // TODO(inlined): for continuations we'll probably change the return signature to (interface{}, error)
-func Handler(fn interface{}) http.Handler {
+func Handler(fn interface{}) (http.Handler, error) {
 	fnType := reflect.TypeOf(fn)
-	assertEventHandler(fnType)
+	err := assertEventHandler(fnType)
+	if err != nil {
+		return nil, err
+	}
 	var dataType reflect.Type
 	if fnType.NumIn() == 2 {
 		dataType = fnType.In(1)
@@ -176,7 +182,7 @@ func Handler(fn interface{}) http.Handler {
 		numIn:    fnType.NumIn(),
 		dataType: dataType,
 		fnValue:  reflect.ValueOf(fn),
-	}
+	}, nil
 }
 
 // ServeHTTP implements http.Handler
@@ -217,9 +223,12 @@ func NewMux() Mux {
 }
 
 // Handle adds a new handler for a specific event type
-func (m Mux) Handle(eventType string, fn interface{}) {
+func (m Mux) Handle(eventType string, fn interface{}) error {
 	fnType := reflect.TypeOf(fn)
-	assertEventHandler(fnType)
+	err := assertEventHandler(fnType)
+	if err != nil {
+		return err
+	}
 	var dataType reflect.Type
 	if fnType.NumIn() == 2 {
 		dataType = fnType.In(1)
@@ -229,6 +238,7 @@ func (m Mux) Handle(eventType string, fn interface{}) {
 		dataType: dataType,
 		fnValue:  reflect.ValueOf(fn),
 	}
+	return nil
 }
 
 // ServeHTTP implements http.Handler
