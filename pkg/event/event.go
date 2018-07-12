@@ -55,17 +55,28 @@ const (
 	fieldSource             = "Source"
 )
 
-// EventContext holds standard metadata about an event.
+// EventContext holds standard metadata about an event. See
+// https://github.com/cloudevents/spec/blob/v0.1/spec.md#context-attributes for
+// details on these fields.
 type EventContext struct {
-	CloudEventsVersion string                 `json:"cloudEventsVersion,omitempty"`
-	EventID            string                 `json:"eventID"`
-	EventTime          time.Time              `json:"eventTime,omitempty"`
-	EventType          string                 `json:"eventType"`
-	EventTypeVersion   string                 `json:"eventTypeVersion,omitempty"`
-	SchemaURL          string                 `json:"schemaURL,omitempty"`
-	ContentType        string                 `json:"contentType,omitempty"`
-	Source             string                 `json:"source"`
-	Extensions         map[string]interface{} `json:"extensions,omitempty"`
+	// The version of the CloudEvents specification used by the event.
+	CloudEventsVersion string `json:"cloudEventsVersion,omitempty"`
+	// ID of the event; must be non-empty and unique within the scope of the producer.
+	EventID string `json:"eventID"`
+	// Timestamp when the event happened.
+	EventTime time.Time `json:"eventTime,omitempty"`
+	// Type of occurrence which has happened.
+	EventType string `json:"eventType"`
+	// The version of the `eventType`; this is producer-specific.
+	EventTypeVersion string `json:"eventTypeVersion,omitempty"`
+	// A link to the schema that the `data` attribute adheres to.
+	SchemaURL string `json:"schemaURL,omitempty"`
+	// A MIME (RFC 2046) string describing the media type of `data`.
+	ContentType string `json:"contentType,omitempty"`
+	// A URI describing the event producer.
+	Source string `json:"source"`
+	// Additional metadata without a well-defined structure.
+	Extensions map[string]interface{} `json:"extensions,omitempty"`
 }
 
 // HTTPMarshaller implements a scheme for decoding CloudEvents over HTTP.
@@ -164,6 +175,9 @@ func FromRequest(data interface{}, r *http.Request) (*EventContext, error) {
 	case ContentTypeBinaryJSON:
 		return Binary.FromRequest(data, r)
 	default:
+		// TODO: assume binary content mode
+		// (https://github.com/cloudevents/spec/blob/v0.1/http-transport-binding.md#31-binary-content-mode)
+		// and that data is ??? (io.Reader?, byte array?)
 		return nil, fmt.Errorf("Cannot handle encoding %q", r.Header.Get("Content-Type"))
 	}
 }
