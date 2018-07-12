@@ -138,11 +138,11 @@ func TestParameterMarsahlling(t *testing.T) {
 	var wasCalled = false
 	for _, test := range []struct {
 		name      string
-		generator func(t *testing.T) http.Handler
+		generator func(t *testing.T) (http.Handler, error)
 	}{
 		{
 			name: "no parameters",
-			generator: func(t *testing.T) http.Handler {
+			generator: func(t *testing.T) (http.Handler, error) {
 				return event.Handler(func() {
 					wasCalled = true
 				})
@@ -150,7 +150,7 @@ func TestParameterMarsahlling(t *testing.T) {
 		},
 		{
 			name: "one parameter",
-			generator: func(t *testing.T) http.Handler {
+			generator: func(t *testing.T) (http.Handler, error) {
 				return event.Handler(func(ctx context.Context) {
 					eventContext := event.FromContext(ctx)
 					if !reflect.DeepEqual(expectedContext, eventContext) {
@@ -161,7 +161,7 @@ func TestParameterMarsahlling(t *testing.T) {
 			},
 		}, {
 			name: "two parameters (struct type)",
-			generator: func(t *testing.T) http.Handler {
+			generator: func(t *testing.T) (http.Handler, error) {
 				return event.Handler(func(ctx context.Context, data Data) {
 					eventContext := event.FromContext(ctx)
 					if !reflect.DeepEqual(expectedContext, eventContext) {
@@ -175,7 +175,7 @@ func TestParameterMarsahlling(t *testing.T) {
 			},
 		}, {
 			name: "two parameters (pointer type)",
-			generator: func(t *testing.T) http.Handler {
+			generator: func(t *testing.T) (http.Handler, error) {
 				return event.Handler(func(ctx context.Context, data *Data) {
 					eventContext := event.FromContext(ctx)
 					if !reflect.DeepEqual(expectedContext, eventContext) {
@@ -189,7 +189,7 @@ func TestParameterMarsahlling(t *testing.T) {
 			},
 		}, {
 			name: "two parameters (untyped)",
-			generator: func(t *testing.T) http.Handler {
+			generator: func(t *testing.T) (http.Handler, error) {
 				return event.Handler(func(ctx context.Context, data map[string]interface{}) {
 					eventContext := event.FromContext(ctx)
 					if !reflect.DeepEqual(expectedContext, eventContext) {
@@ -214,7 +214,12 @@ func TestParameterMarsahlling(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			wasCalled = false
-			srv := httptest.NewServer(test.generator(t))
+			handler, err := test.generator(t)
+			if err != nil {
+				t.Errorf("Handler() failed: %v", err)
+				return
+			}
+			srv := httptest.NewServer(handler)
 			defer srv.Close()
 			req, err := event.NewRequest(srv.URL, expectedData, *expectedContext)
 			if err != nil {
