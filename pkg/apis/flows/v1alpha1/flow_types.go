@@ -232,21 +232,21 @@ func (fs *FlowStatus) SetCondition(new *FlowCondition) {
 
 	t := new.Type
 	var conditions []FlowCondition
-	for _, cond := range bs.Conditions {
+	for _, cond := range fs.Conditions {
 		if cond.Type != t {
 			conditions = append(conditions, cond)
 		}
 	}
 	conditions = append(conditions, *new)
-	bs.Conditions = conditions
+	fs.Conditions = conditions
 }
 
 func (fs *FlowStatus) RemoveCondition(t FlowConditionType) {
 	var conditions []FlowCondition
-	for _, cond := range bs.Conditions {
+	for _, cond := range fs.Conditions {
 		if cond.Type != t {
 			conditions = append(conditions, cond)
 		}
 	}
-	bs.Conditions = conditions
+	fs.Conditions = conditions
 }
