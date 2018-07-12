@@ -17,33 +17,35 @@ limitations under the License.
 package event
 
 import (
-	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
-	"net/url"
+	"reflect"
 	"time"
 )
 
 const (
-	// HeaderCloudEventsVersion is the header for the version of Cloud Events
-	// used.
-	HeaderCloudEventsVersion = "cloud-events-version"
+	// CloudEventsVersion is the version of the CloudEvents spec targeted
+	// by this library.
+	CloudEventsVersion = "0.1"
 
-	// HeaderEventID is the header for the unique ID of this event.
-	HeaderEventID = "event-id"
+	// ContentTypeStructuredJSON is the content-type for "Structured" encoding
+	// where an event envelope is written in JSON and the body is arbitrary
+	// data which might be an alternate encoding.
+	ContentTypeStructuredJSON = "application/cloudevents+json"
 
-	// HeaderEventType is the header for type of event represented. Value SHOULD
-	// be in reverse-dns form.
-	HeaderEventType = "event-type"
+	// ContentTypeBinaryJSON is the content-type for "Binary" encoding where
+	// the event context is in HTTP headers and the body is a JSON event data.
+	ContentTypeBinaryJSON = "application/json"
 
-	// HeaderEventTime is the OPTIONAL header for the time at which an event
-	// occurred.
-	HeaderEventTime = "event-time"
+	// TODO(inlined) what about charset additions?
+	contentTypeJSON = "application/json"
+	contentTypeXML  = "application/xml"
 
-	// HeaderSource is the header for the source which emitted this event.
-	HeaderSource = "source"
+	// HeaderContentType is the standard HTTP header "Content-Type"
+	HeaderContentType = "Content-Type"
 
 	fieldCloudEventsVersion = "CloudEventsVersion"
 	fieldEventID            = "EventID"
@@ -54,11 +56,22 @@ const (
 
 // Context holds standard metadata about an event.
 type Context struct {
-	CloudEventsVersion string    `json:"cloud-events-version,omitempty"`
-	EventID            string    `json:"event-id"`
-	EventType          string    `json:"event-type"`
-	EventTime          time.Time `json:"event-time,omitempty"`
-	Source             string    `json:"source"`
+	CloudEventsVersion string                 `json:"cloudEventsVersion,omitempty"`
+	EventID            string                 `json:"eventID"`
+	EventTime          time.Time              `json:"eventTime,omitempty"`
+	EventType          string                 `json:"eventType"`
+	EventTypeVersion   string                 `json:"eventTypeVersion,omitempty"`
+	SchemaURL          string                 `json:"schemaURL,omitempty"`
+	ContentType        string                 `json:"contentType,omitempty"`
+	Source             string                 `json:"source"`
+	Extensions         map[string]interface{} `json:"extensions,omitempty"`
+}
+
+// HTTPMarshaller implements a scheme for decoding CloudEvents over HTTP.
+// Implementations are Binary, Structured, and Any
+type HTTPMarshaller interface {
+	FromRequest(data interface{}, r *http.Request) (*Context, error)
+	NewRequest(urlString string, data interface{}, context Context) (*http.Request, error)
 }
 
 func anyError(errs ...error) error {
@@ -70,11 +83,11 @@ func anyError(errs ...error) error {
 	return nil
 }
 
-func pullReqHeader(h http.Header, name string, value *string) error {
-	if *value = h.Get(name); *value == "" {
-		return fmt.Errorf("missing required header %q", name)
-	}
-	return nil
+func ensureRequiredFields(context Context) error {
+	return anyError(
+		require(fieldEventID, context.EventID),
+		require(fieldEventType, context.EventType),
+		require(fieldSource, context.Source))
 }
 
 func require(name string, value string) error {
@@ -84,68 +97,71 @@ func require(name string, value string) error {
 	return nil
 }
 
-// FromRequest parses event data and context from an HTTP request.
-func FromRequest(data interface{}, r *http.Request) (*Context, error) {
-	var ctx Context
-	err := anyError(
-		pullReqHeader(r.Header, HeaderEventID, &ctx.EventID),
-		pullReqHeader(r.Header, HeaderEventType, &ctx.EventType),
-		pullReqHeader(r.Header, HeaderSource, &ctx.Source))
-	if err != nil {
-		return nil, err
-	}
-
-	ctx.CloudEventsVersion = r.Header.Get(HeaderCloudEventsVersion)
-	if timeStr := r.Header.Get(HeaderEventTime); timeStr != "" {
-		if err := ctx.EventTime.UnmarshalText([]byte(timeStr)); err != nil {
-			return nil, err
-		}
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		return nil, err
-	}
-
-	return &ctx, nil
+// The Cloud-Events spec allows two forms of JSON encoding:
+// 1. The overall message (Structured JSON encoding)
+// 2. Just the event data, where the context will be in HTTP headers instead
+//
+// Case #1 actually includes case #2. In structured binary encoding the JSON
+// HTTP body itself allows for cross-encoding of the "data" field.
+// This method is only intended for checking that inner JSON encoding type.
+func isJSONEncoding(encoding string) bool {
+	return encoding == contentTypeJSON || encoding == "text/json"
 }
 
-// NewRequest creates an HTTP request for a given event data and context.
+func isXMLEncoding(encoding string) bool {
+	return encoding == contentTypeXML || encoding == "text/xml"
+}
+
+func unmarshalEventData(encoding string, reader io.Reader, data interface{}) error {
+	// If someone tried to marshal an event into an io.Reader, just assign our existing reader.
+	// (This is used by event.Mux to determine which type to unmarshal as)
+	readerPtrType := reflect.TypeOf((*io.Reader)(nil))
+	if reflect.TypeOf(data).ConvertibleTo(readerPtrType) {
+		reflect.ValueOf(data).Elem().Set(reflect.ValueOf(reader))
+		return nil
+	}
+	if isJSONEncoding(encoding) || encoding == "" {
+		return json.NewDecoder(reader).Decode(&data)
+	}
+
+	if isXMLEncoding(encoding) {
+		return xml.NewDecoder(reader).Decode(&data)
+	}
+
+	return fmt.Errorf("Cannot decode content type %q", encoding)
+}
+
+func marshalEventData(encoding string, data interface{}) ([]byte, error) {
+	var b []byte
+	var err error
+
+	if isJSONEncoding(encoding) {
+		b, err = json.Marshal(data)
+	} else if isXMLEncoding(encoding) {
+		b, err = xml.Marshal(data)
+	} else {
+		err = fmt.Errorf("Cannot encode content type %q", encoding)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+// FromRequest parses a CloudEvent from any known encoding.
+func FromRequest(data interface{}, r *http.Request) (*Context, error) {
+	switch r.Header.Get(HeaderContentType) {
+	case ContentTypeStructuredJSON:
+		return Structured.FromRequest(data, r)
+	case ContentTypeBinaryJSON:
+		return Binary.FromRequest(data, r)
+	default:
+		return nil, fmt.Errorf("Cannot handle encoding %q", r.Header.Get("Content-Type"))
+	}
+}
+
+// NewRequest craetes an HTTP request for Structured content encoding.
 func NewRequest(urlString string, data interface{}, context Context) (*http.Request, error) {
-	url, err := url.Parse(urlString)
-	err = anyError(
-		err,
-		require(fieldEventID, context.EventID),
-		require(fieldEventType, context.EventType),
-		require(fieldSource, context.Source))
-	if err != nil {
-		return nil, err
-	}
-
-	h := http.Header{}
-	h.Set(HeaderEventID, context.EventID)
-	h.Set(HeaderEventType, context.EventType)
-	h.Set(HeaderSource, context.Source)
-
-	if context.CloudEventsVersion != "" {
-		h.Set(HeaderCloudEventsVersion, context.CloudEventsVersion)
-	}
-	if !context.EventTime.IsZero() {
-		b, err := context.EventTime.UTC().MarshalText()
-		if err != nil {
-			return nil, err
-		}
-		h.Set(HeaderEventTime, string(b))
-	}
-
-	buffer, err := json.Marshal(data)
-	if err != nil {
-		return nil, err
-	}
-
-	return &http.Request{
-		Method: http.MethodPost,
-		URL:    url,
-		Header: h,
-		Body:   ioutil.NopCloser(bytes.NewReader(buffer)),
-	}, nil
+	return Structured.NewRequest(urlString, data, context)
 }
