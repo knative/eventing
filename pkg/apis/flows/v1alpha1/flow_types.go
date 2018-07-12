@@ -74,7 +74,7 @@ type FlowAction struct {
 	// TODO: would it be sufficient to just have a TypeMeta + name
 	// (and optional namespace if not the same)
 	// +optional
-	Target *ObjectReference `json:"target,omitempty"`
+	Target *corev1.ObjectReference `json:"target,omitempty"`
 
 	// Reference to a 'known' endpoint where no resolving be done.
 	// http://k8s-service for example
