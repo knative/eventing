@@ -40,9 +40,11 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	servingclientset "github.com/knative/serving/pkg/client/clientset/versioned"
-	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
-	servinglisters "github.com/knative/serving/pkg/client/listers/serving/v1alpha1"
+	/*
+		servingclientset "github.com/knative/serving/pkg/client/clientset/versioned"
+		servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
+		servinglisters "github.com/knative/serving/pkg/client/listers/serving/v1alpha1"
+	*/
 
 	"github.com/knative/eventing/pkg/controller"
 	"github.com/knative/eventing/pkg/sources"
@@ -95,6 +97,9 @@ type Controller struct {
 	channelsLister channelListers.ChannelLister
 	channelsSynced cache.InformerSynced
 
+	subscriptionsLister channelListers.SubscriptionLister
+	subscriptionsSynced cache.InformerSynced
+
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
 	// means we can ensure we only process a fixed amount of resources at a
@@ -122,6 +127,7 @@ func NewController(
 	routeInformer := routeInformerFactory.Serving().V1alpha1().Routes()
 
 	channelInformer := feedsInformerFactory.Channels().V1alpha1().Channels()
+	subscriptionInformer := feedsInformerFactory.Channels().V1alpha1().Subscriptions()
 
 	// Create event broadcaster
 	// Add flow-controller types to the default Kubernetes Scheme so Events can be
@@ -134,23 +140,26 @@ func NewController(
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
 	controller := &Controller{
-		kubeclientset:      kubeclientset,
-		feedsclientset:     feedsclientset,
-		flowsLister:        flowInformer.Flows().Lister(),
-		flowsSynced:        flowInformer.Flows().Informer().HasSynced,
-		routesLister:       routeInformer.Lister(),
-		routesSynced:       routeInformer.Informer().HasSynced,
-		eventSourcesLister: flowInformer.EventSources().Lister(),
-		eventSourcesSynced: flowInformer.EventSources().Informer().HasSynced,
-		eventTypesLister:   flowInformer.EventTypes().Lister(),
-		eventTypesSynced:   flowInformer.EventTypes().Informer().HasSynced,
-		channelsLister:     channelInformer.Lister(),
-		channelsSynced:     channelInformer.Informer().HasSynced,
-		workqueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Flows"),
-		recorder:           recorder,
+		kubeclientset:       kubeclientset,
+		feedsclientset:      feedsclientset,
+		flowsLister:         flowInformer.Flows().Lister(),
+		flowsSynced:         flowInformer.Flows().Informer().HasSynced,
+		routesLister:        routeInformer.Lister(),
+		routesSynced:        routeInformer.Informer().HasSynced,
+		eventSourcesLister:  flowInformer.EventSources().Lister(),
+		eventSourcesSynced:  flowInformer.EventSources().Informer().HasSynced,
+		eventTypesLister:    flowInformer.EventTypes().Lister(),
+		eventTypesSynced:    flowInformer.EventTypes().Informer().HasSynced,
+		channelsLister:      channelInformer.Lister(),
+		channelsSynced:      channelInformer.Informer().HasSynced,
+		subscriptionsLister: subscriptionInformer.Lister(),
+		subscriptionsSynced: subscriptionInformer.Informer().HasSynced,
+		workqueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Flows"),
+		recorder:            recorder,
 	}
 
 	glog.Info("Setting up event handlers")
+
 	// Set up an event handler for when Flow resources change
 	flowInformer.Flows().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueueFlow,
@@ -221,7 +230,7 @@ func (c *Controller) runWorker() {
 }
 
 // processNextWorkItem will read a single work item off the workqueue and
-// attempt to process it, by calling the syncHandler.
+// attempt to process it, by calling Reconcile.
 func (c *Controller) processNextWorkItem() bool {
 	obj, shutdown := c.workqueue.Get()
 
@@ -252,9 +261,9 @@ func (c *Controller) processNextWorkItem() bool {
 			runtime.HandleError(fmt.Errorf("expected string in workqueue but got %#v", obj))
 			return nil
 		}
-		// Run the syncHandler, passing it the namespace/name string of the
+		// Run the Reconcile, passing it the namespace/name string of the
 		// Flow resource to be synced.
-		if err := c.syncHandler(key); err != nil {
+		if err := c.Reconcile(key); err != nil {
 			return fmt.Errorf("error syncing '%s': %s", key, err.Error())
 		}
 		// Finally, if no error occurs we Forget this item so it does not
@@ -282,10 +291,10 @@ func (c *Controller) enqueueFlow(obj interface{}) {
 	c.workqueue.AddRateLimited(key)
 }
 
-// syncHandler compares the actual state with the desired, and attempts to
+// Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Flow resource
 // with the current status of the resource.
-func (c *Controller) syncHandler(key string) error {
+func (c *Controller) Reconcile(key string) error {
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
@@ -294,7 +303,7 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	// Get the Flow resource with this namespace/name
-	flow, err := c.flowsLister.Flows(namespace).Get(name)
+	original, err := c.flowsLister.Flows(namespace).Get(name)
 	if err != nil {
 		// The Flow resource may no longer exist, in which case we stop
 		// processing.
@@ -302,13 +311,29 @@ func (c *Controller) syncHandler(key string) error {
 			runtime.HandleError(fmt.Errorf("flow '%s' in work queue no longer exists", key))
 			return nil
 		}
-
 		return err
 	}
-	// Don't mutate the informer's copy of our object.
-	flow = flow.DeepCopy()
 
-	// See if the flowing has been deleted
+	// Don't mutate the informer's copy of our object.
+	flow = original.DeepCopy()
+
+	// Reconcile this copy of the Flow and then write back any status
+	// updates regardless of whether the reconcile error out.
+	err = c.reconcile(flow)
+	if equality.Semantic.DeepEqual(original.Status, flow.Status) {
+		// If we didn't change anything then don't call updateStatus.
+		// This is important because the copy we loaded from the informer's
+		// cache may be stale and we don't want to overwrite a prior update
+		// to status with this stale state.
+	} else if _, err := c.updateStatus(flow); err != nil {
+		glog.Warningf("Failed to update flow status: %v", err)
+		return err
+	}
+	return err
+}
+
+func (c *Controller) reconcile(flow *v1alpha1.Flow) error {
+	// See if the flow has been deleted
 	accessor, err := meta.Accessor(flow)
 	if err != nil {
 		log.Fatalf("Failed to get metadata: %s", err)
