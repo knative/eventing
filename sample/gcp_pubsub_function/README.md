@@ -103,7 +103,7 @@ create a DNS entry from: `gcp-pubsub-function.default.aikas.org` pointing to
 DNS](https://support.google.com/domains/answer/3290350).
 
 So, you'd need to create an A record for
-`gcp-pubsub-function.default.aikas.org` pointing to `130.211.116.160`
+`gcp-pubsub-function.default.aikas.org` pointing to `35.203.155.229`.
 
 To now bind the `gcp_pubsub_function` for GCP PubSub messages with the function
 we created above, you need to create a Bind object. Modify
@@ -111,8 +111,8 @@ we created above, you need to create a Bind object. Modify
 want.
 
 For example, if I wanted to receive notifications to: project:
-quantum-reducer-434 topic: knative-demo, my Bind object would look like the one
-below.
+`quantum-reducer-434` topic: `knative-demo`, my Bind object would look like the
+one below.
 
 You can also specify a different Service Account to use for the bind / receive
 watcher by changing the spec.serviceAccountName to something else.
