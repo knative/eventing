@@ -61,12 +61,12 @@ func assertInParamSignature(fnType reflect.Type) {
 		fallthrough
 	case 1:
 		if !fnType.In(0).ConvertibleTo(contextType) {
-			panic(inParamUsage + "; cannot convert first parameter to context.Context")
+			panic(fmt.Sprintf("%s; cannot convert parameter 0 from %s to context.Context", inParamUsage, fnType.In(0)))
 		}
 		fallthrough
 	case 0:
 	default:
-		panic(inParamUsage + "; too many parameters")
+		panic(fmt.Sprintf("%s; function has too many parameters (%d)", inParamUsage, fnType.NumIn()))
 	}
 }
 
@@ -78,13 +78,15 @@ func assertOutParamSignature(fnType reflect.Type) {
 	case 2:
 		fallthrough
 	case 1:
-		if !fnType.In(fnType.NumOut() - 1).ConvertibleTo(errorType) {
-			panic(outParamUsage + "; cannot convert last return value to an error")
+		paramNo := fnType.NumOut() - 1
+		paramType := fnType.Out(paramNo)
+		if !paramType.ConvertibleTo(errorType) {
+			panic(fmt.Sprintf("%s; cannot convert return type %d from %s to error", outParamUsage, paramNo, paramType))
 		}
 		fallthrough
 	case 0:
 	default:
-		panic(fmt.Sprintf("%s; Expected 0, 1, or 2 return values, got %d ", outParamUsage, fnType.NumOut()))
+		panic(fmt.Sprintf("%s; function has too many return types (%d)", outParamUsage, fnType.NumOut()))
 	}
 }
 

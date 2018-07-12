@@ -17,6 +17,8 @@ limitations under the License.
 package event_test
 
 import (
+	"context"
+	"io"
 	"net/http/httptest"
 	"reflect"
 	"strings"
@@ -35,27 +37,27 @@ func TestHandlerTypeErrors(t *testing.T) {
 		{
 			name:  "non-func",
 			param: 5,
-			err:   "did not receive a func",
+			err:   "Must pass a function to handle events",
 		},
 		{
 			name:  "wrong param count",
-			param: func() {},
-			err:   "wrong parameter count",
+			param: func(context.Context, interface{}, interface{}) {},
+			err:   "Expected a function taking either no parameters, a context.Context, or (context.Context, any); function has too many parameters (3)",
 		},
 		{
-			name:  "context by value",
-			param: func(map[string]interface{}, event.EventContext) error { return nil },
-			err:   "cannot convert", /* <type name> to event.EventContext */
+			name:  "wrong first parameter type",
+			param: func(int) {},
+			err:   "Expected a function taking either no parameters, a context.Context, or (context.Context, any); cannot convert parameter 0 from int to context.Context",
 		},
 		{
 			name:  "wrong return count",
-			param: func(map[string]interface{}, *event.EventContext) (interface{}, error) { return nil, nil },
-			err:   "wrong output count",
+			param: func() (interface{}, error, interface{}) { return nil, nil, nil },
+			err:   "Expected a function returning either nothing, an error, or (any, error); function has too many return types (3)",
 		},
 		{
 			name:  "invalid return type",
-			param: func(map[string]interface{}, *event.EventContext) interface{} { return nil },
-			err:   "cannot convert", /* <type name> to error */
+			param: func() interface{} { return nil },
+			err:   "Expected a function returning either nothing, an error, or (any, error); cannot convert return type 0 from interface {} to error",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -71,6 +73,52 @@ func TestHandlerTypeErrors(t *testing.T) {
 			}()
 
 			event.Handler(test.param)
+		})
+	}
+}
+
+func TestHandlerValidTypes(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		f    interface{}
+	}{
+		{
+			name: "no in, no out",
+			f:    func() {},
+		}, {
+			name: "one in, no out",
+			f:    func(context.Context) {},
+		}, {
+			name: "interface in, no out",
+			f:    func(context.Context, io.Reader) {},
+		}, {
+			name: "value-type in, no out",
+			f:    func(context.Context, int) {},
+		}, {
+			name: "pointer-type in, no out",
+			f:    func(context.Context, *int) {},
+		}, {
+			name: "no in, one out",
+			f:    func() error { return nil },
+		}, {
+			name: "one in, one out",
+			f:    func(context.Context) error { return nil },
+		}, {
+			name: "two in, one out",
+			f:    func(context.Context, string) error { return nil },
+		}, {
+			name: "no in, two out",
+			f:    func() (string, error) { return "", nil },
+		}, {
+			name: "one in, two out",
+			f:    func(context.Context) (map[string]interface{}, error) { return nil, nil },
+		}, {
+			name: "two in, two out",
+			f:    func(context.Context, io.Reader) (interface{}, error) { return nil, nil },
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			event.Handler(test.f)
 		})
 	}
 }
