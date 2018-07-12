@@ -114,6 +114,12 @@ func isXMLEncoding(encoding string) bool {
 }
 
 func unmarshalEventData(encoding string, reader io.Reader, data interface{}) error {
+	// The Handler tools allow develoeprs to not ask for event data;
+	// in this case, just don't unmarshal anything
+	if data == nil {
+		return nil
+	}
+
 	// If someone tried to marshal an event into an io.Reader, just assign our existing reader.
 	// (This is used by event.Mux to determine which type to unmarshal as)
 	readerPtrType := reflect.TypeOf((*io.Reader)(nil))
@@ -170,9 +176,9 @@ func NewRequest(urlString string, data interface{}, context EventContext) (*http
 // Opaque key type used to store EventContexts in a context.Context
 type contextKeyType struct{}
 
-const contextKey = contextKeyType{}
+var contextKey = contextKeyType{}
 
 // FromContext loads an EventContext from a normal context.Context
-func FromContext(context.Context) *EventContext {
-	return context.Value(contextKey).(*EventContext)
+func FromContext(ctx context.Context) *EventContext {
+	return ctx.Value(contextKey).(*EventContext)
 }

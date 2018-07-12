@@ -44,17 +44,17 @@ func TestHandlerTypeErrors(t *testing.T) {
 		},
 		{
 			name:  "context by value",
-			param: func(map[string]interface{}, event.Context) error { return nil },
-			err:   "cannot convert", /* <type name> to event.Context */
+			param: func(map[string]interface{}, event.EventContext) error { return nil },
+			err:   "cannot convert", /* <type name> to event.EventContext */
 		},
 		{
 			name:  "wrong return count",
-			param: func(map[string]interface{}, *event.Context) (interface{}, error) { return nil, nil },
+			param: func(map[string]interface{}, *event.EventContext) (interface{}, error) { return nil, nil },
 			err:   "wrong output count",
 		},
 		{
 			name:  "invalid return type",
-			param: func(map[string]interface{}, *event.Context) interface{} { return nil },
+			param: func(map[string]interface{}, *event.EventContext) interface{} { return nil },
 			err:   "cannot convert", /* <type name> to error */
 		},
 	} {
@@ -79,14 +79,14 @@ func TestUntypedHandling(t *testing.T) {
 	expectedData := map[string]interface{}{
 		"hello": "world!",
 	}
-	expectedContext := &event.Context{
+	expectedContext := &event.EventContext{
 		CloudEventsVersion: event.CloudEventsVersion,
 		EventID:            "1234",
 		Source:             "tests:TestUndtypedHandling",
 		EventType:          "dev.eventing.test",
 		Extensions:         map[string]interface{}{},
 	}
-	handler := event.Handler(func(data map[string]interface{}, ctx *event.Context) error {
+	handler := event.Handler(func(data map[string]interface{}, ctx *event.EventContext) error {
 		if !reflect.DeepEqual(expectedData, data) {
 			t.Fatalf("Did not get expected data: wanted=%s; got=%s",
 				spew.Sdump(expectedData), spew.Sdump(data))
@@ -119,14 +119,14 @@ func TestTypedHandling(t *testing.T) {
 		Message string
 	}
 	expectedData := Data{Message: "Hello, world!"}
-	expectedContext := &event.Context{
+	expectedContext := &event.EventContext{
 		CloudEventsVersion: event.CloudEventsVersion,
 		EventID:            "1234",
 		Source:             "tests:TestUndtypedHandling",
 		EventType:          "dev.eventing.test",
 		Extensions:         map[string]interface{}{},
 	}
-	handler := event.Handler(func(data Data, ctx *event.Context) error {
+	handler := event.Handler(func(data Data, ctx *event.EventContext) error {
 		if !reflect.DeepEqual(expectedData, data) {
 			t.Fatalf("Did not get expected data: wanted=%s; got=%s",
 				spew.Sdump(expectedData), spew.Sdump(data))
@@ -159,14 +159,14 @@ func TestPointerHandling(t *testing.T) {
 		Message string
 	}
 	expectedData := &Data{Message: "Hello, world!"}
-	expectedContext := &event.Context{
+	expectedContext := &event.EventContext{
 		CloudEventsVersion: event.CloudEventsVersion,
 		EventID:            "1234",
 		Source:             "tests:TestUndtypedHandling",
 		EventType:          "dev.eventing.test",
 		Extensions:         map[string]interface{}{},
 	}
-	handler := event.Handler(func(data *Data, ctx *event.Context) error {
+	handler := event.Handler(func(data *Data, ctx *event.EventContext) error {
 		if !reflect.DeepEqual(expectedData, data) {
 			t.Fatalf("Did not get expected data: wanted=%s; got=%s",
 				spew.Sdump(expectedData), spew.Sdump(data))
@@ -209,14 +209,14 @@ func TestMux(t *testing.T) {
 		Farewell: "Hasta la vista",
 	}
 
-	contextA := &event.Context{
+	contextA := &event.EventContext{
 		EventID:     "1234",
 		EventType:   "org.A.test",
 		Source:      "test:TestMux",
 		ContentType: "application/json",
 		Extensions:  map[string]interface{}{},
 	}
-	contextB := &event.Context{
+	contextB := &event.EventContext{
 		EventID:     "5678",
 		EventType:   "org.B.test",
 		Source:      "test:TestMux",
@@ -226,7 +226,7 @@ func TestMux(t *testing.T) {
 	sawA, sawB := false, false
 
 	mux := event.NewMux()
-	mux.Handle("org.A.test", func(data TypeA, context *event.Context) error {
+	mux.Handle("org.A.test", func(data TypeA, context *event.EventContext) error {
 		sawA = true
 		if !reflect.DeepEqual(eventA, data) {
 			t.Fatalf("Got wrong data for event A; wanted=%s; got=%s", eventA, data)
@@ -236,7 +236,7 @@ func TestMux(t *testing.T) {
 		}
 		return nil
 	})
-	mux.Handle("org.B.test", func(data TypeB, context *event.Context) error {
+	mux.Handle("org.B.test", func(data TypeB, context *event.EventContext) error {
 		sawB = true
 		if !reflect.DeepEqual(eventB, data) {
 			t.Fatalf("Got wrong data for event A; wanted=%s; got=%s", eventB, data)

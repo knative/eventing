@@ -18,6 +18,7 @@ package event
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -28,19 +29,27 @@ import (
 )
 
 type handler struct {
+	numIn    int
 	fnValue  reflect.Value
 	dataType reflect.Type
 }
 
 const (
 	inParamUsage  = "Expected a function taking either no parameters, a context.Context, or (context.Context, any)"
-	outParamusage = "Expected a function returning either nothing, an error, or (any, error)"
+	outParamUsage = "Expected a function returning either nothing, an error, or (any, error)"
 )
 
 var (
-	contextType = reflect.TypeOf(context.Context(nil))
-	errorType   = reflect.TypeOf(error(nil))
-	nilType     = reflect.TypeOf(nil)
+	// FYI: Getting the type of an interface is a bit hard in Go because of nil is special:
+	// 1. Structs & pointers hae concrete types, whereas interfaces area actually tuples of
+	//    [imlpementation vtable, pointer].
+	// 2. Literals (such as nil) can be cast to any relevant type.
+	// Because TypeOf takes an interface{}, a nil interface reference would cast lossily when
+	// it leaves this stack frame. The workaround is to pass a pointer to an interface and then
+	// get the type of its reference.
+	// For example, see: https://play.golang.org/p/_dxLvdkvqvg
+	contextType = reflect.TypeOf((*context.Context)(nil)).Elem()
+	errorType   = reflect.TypeOf((*error)(nil)).Elem()
 )
 
 // Verifies that the inputs to a function have a valid signature; panics otherwise.
@@ -63,36 +72,39 @@ func assertInParamSignature(fnType reflect.Type) {
 
 // Verifies that the outputs of a function have a valid signature; panics otherwise.
 // Valid output signatures:
-// (error)
+// (), (error), (any, error)
 func assertOutParamSignature(fnType reflect.Type) {
-	if fnType.NumOut() != 1 {
-		panic(fmt.Sprintf("%s; wrong output count. Expected 1, got %d", usage, fnType.NumOut()))
-	}
-	// We have to use an awkward jump into and out of a pointer to avoid passing a literal
-	// nil to reflect, which would lose all type information and assert.
-	errorType := reflect.TypeOf((*error)(nil)).Elem()
-	if !fnType.Out(0).ConvertibleTo(errorType) {
-		panic(usage + "; cannot convert " + fnType.Out(0).Name() + " to error")
+	switch fnType.NumOut() {
+	case 2:
+		fallthrough
+	case 1:
+		if !fnType.In(fnType.NumOut() - 1).ConvertibleTo(errorType) {
+			panic(outParamUsage + "; cannot convert last return value to an error")
+		}
+		fallthrough
+	case 0:
+	default:
+		panic(fmt.Sprintf("%s; Expected 0, 1, or 2 return values, got %d ", outParamUsage, fnType.NumOut()))
 	}
 }
 
 // Verifies that a function has the right number of in and out params and that they are
 // of allowed types. If successful, returns the expected in-param type, otherwise panics.
-func assertEventHandler(fn interface{}) (dataType reflect.Type) {
-	fnType := reflect.TypeOf(fn)
+func assertEventHandler(fnType reflect.Type) {
 	if fnType.Kind() != reflect.Func {
-		panic(usage + "; did not receive a func")
+		panic("Must pass a function to handle events")
 	}
 	assertInParamSignature(fnType)
 	assertOutParamSignature(fnType)
-
-	return fnType.In(0)
 }
 
 // Alocates a new instance of type t and returns:
 // asPtr is of type t if t is a pointer type and of type &t otherwise (used for unmarshalling)
 // asValue is a Value of type t pointing to the same data as asPtr
 func allocate(t reflect.Type) (asPtr interface{}, asValue reflect.Value) {
+	if t == nil {
+		return nil, reflect.Value{}
+	}
 	if t.Kind() == reflect.Ptr {
 		reflectPtr := reflect.New(t.Elem())
 		asPtr = reflectPtr.Interface()
@@ -105,18 +117,45 @@ func allocate(t reflect.Type) (asPtr interface{}, asValue reflect.Value) {
 	return
 }
 
+func unwrapReturnValues(res []reflect.Value) (interface{}, error) {
+	switch len(res) {
+	case 0:
+		return nil, nil
+	case 1:
+		// Should be a safe cast due to assertEventHandler()
+		return nil, res[0].Interface().(error)
+	case 2:
+		return res[0].Interface(), res[1].Interface().(error)
+	default:
+		// Should never happen due to assertEventHandler()
+		panic("Cannot unmarshal more than 2 return values")
+	}
+}
+
 // Accepts the results from a handler functions and translates them to an HTTP response
-func respondHTTP(res []reflect.Value, w http.ResponseWriter) {
-	errVal := res[0]
-	if errVal.IsNil() {
+func respondHTTP(outparams []reflect.Value, w http.ResponseWriter) {
+	res, err := unwrapReturnValues(outparams)
+
+	if err != nil {
+		glog.Error("Failed to handle event: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`Internal server error`))
 		return
 	}
 
-	// Type cast safe due to assertEventHandler()
-	err := errVal.Interface().(error)
-	glog.Error("Failed to handle event: ", err)
-	w.WriteHeader(http.StatusInternalServerError)
-	w.Write([]byte(`Internal server error`))
+	if res != nil {
+		json, err := json.Marshal(res)
+		if err != nil {
+			glog.Errorf("Failed to marshal return value %+v: %s", res, err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`Internal server error`))
+		} else {
+			w.Write(json)
+		}
+		return
+	}
+
+	// Neither result nor error will cause a 204 NO CONTENT
 }
 
 // Handler creates an EventHandler that implements http.Handler
@@ -124,22 +163,43 @@ func respondHTTP(res []reflect.Value, w http.ResponseWriter) {
 // * fn a function of type func(<your data struct>, *event.Context) error
 // TODO(inlined): for continuations we'll probably change the return signature to (interface{}, error)
 func Handler(fn interface{}) http.Handler {
-	return &handler{dataType: assertEventHandler(fn), fnValue: reflect.ValueOf(fn)}
+	fnType := reflect.TypeOf(fn)
+	assertEventHandler(fnType)
+	var dataType reflect.Type
+	if fnType.NumIn() == 2 {
+		dataType = fnType.In(1)
+	}
+
+	return &handler{
+		numIn:    fnType.NumIn(),
+		dataType: dataType,
+		fnValue:  reflect.ValueOf(fn),
+	}
 }
 
 // ServeHTTP implements http.Handler
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	dataPtr, dataArg := allocate(h.dataType)
+	args := make([]reflect.Value, 0, 2)
 
-	context, err := FromRequest(dataPtr, r)
-	if err != nil {
-		glog.Warning("Failed to handle request", spew.Sdump(r))
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`Invalid request`))
-		return
+	if h.numIn > 0 {
+		dataPtr, dataArg := allocate(h.dataType)
+		eventContext, err := FromRequest(dataPtr, r)
+		if err != nil {
+			glog.Warning("Failed to handle request", spew.Sdump(r))
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`Invalid request`))
+			return
+		}
+
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, contextKey, eventContext)
+		args = append(args, reflect.ValueOf(ctx))
+
+		if h.numIn == 2 {
+			args = append(args, dataArg)
+		}
 	}
 
-	args := []reflect.Value{dataArg, reflect.ValueOf(context)}
 	res := h.fnValue.Call(args)
 	respondHTTP(res, w)
 }
@@ -156,13 +216,23 @@ func NewMux() Mux {
 
 // Handle adds a new handler for a specific event type
 func (m Mux) Handle(eventType string, fn interface{}) {
-	m[eventType] = &handler{dataType: assertEventHandler(fn), fnValue: reflect.ValueOf(fn)}
+	fnType := reflect.TypeOf(fn)
+	assertEventHandler(fnType)
+	var dataType reflect.Type
+	if fnType.NumIn() == 2 {
+		dataType = fnType.In(1)
+	}
+	m[eventType] = &handler{
+		numIn:    fnType.NumIn(),
+		dataType: dataType,
+		fnValue:  reflect.ValueOf(fn),
+	}
 }
 
 // ServeHTTP implements http.Handler
 func (m Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var rawData io.Reader
-	context, err := FromRequest(&rawData, r)
+	eventContext, err := FromRequest(&rawData, r)
 	if err != nil {
 		glog.Warning("Failed to handle request", spew.Sdump(r))
 		w.WriteHeader(http.StatusBadRequest)
@@ -170,23 +240,31 @@ func (m Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h := m[context.EventType]
+	h := m[eventContext.EventType]
 	if h == nil {
-		glog.Warning("Cloud not find handler for event type", context.EventType)
+		glog.Warning("Cloud not find handler for event type", eventContext.EventType)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(fmt.Sprintf("Event type %q is not supported", context.EventType)))
+		w.Write([]byte(fmt.Sprintf("Event type %q is not supported", eventContext.EventType)))
 		return
 	}
 
-	dataPtr, dataArg := allocate(h.dataType)
-	if err := unmarshalEventData(context.ContentType, rawData, dataPtr); err != nil {
-		glog.Warning("Failed to parse event data", err)
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`Invalid request`))
-		return
+	args := make([]reflect.Value, 0, 2)
+	if h.numIn > 0 {
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, contextKey, eventContext)
+		args = append(args, reflect.ValueOf(ctx))
+	}
+	if h.numIn == 2 {
+		dataPtr, dataArg := allocate(h.dataType)
+		if err := unmarshalEventData(eventContext.ContentType, rawData, dataPtr); err != nil {
+			glog.Warning("Failed to parse event data", err)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`Invalid request`))
+			return
+		}
+		args = append(args, dataArg)
 	}
 
-	args := []reflect.Value{dataArg, reflect.ValueOf(context)}
 	res := h.fnValue.Call(args)
 	respondHTTP(res, w)
 }
