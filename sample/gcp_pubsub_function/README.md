@@ -24,8 +24,8 @@ For example I used aikas.org as my hostname, so my config-domain.yaml looks like
       aikas.org: |
     ```
 
-If you were already running the Knative controllers, you will need to re-apply
-the configmap.
+    If you were already running the Knative controllers, you will need to
+    re-apply the configmap.
 
 1. Install GCP Pub Sub as an event source
 
