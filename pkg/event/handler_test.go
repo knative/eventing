@@ -299,6 +299,14 @@ func TestReturnTypeRendering(t *testing.T) {
 			}, t),
 			expectedResponse: "Internal server error",
 		},
+		{
+			name:           "non-nil content return",
+			expectedStatus: http.StatusOK,
+			handler: toHandler(func() (map[string]interface{}, error) {
+				return map[string]interface{}{"hello": "world"}, nil
+			}, t),
+			expectedResponse: `{"hello":"world"}`,
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			if test.handler == nil {
