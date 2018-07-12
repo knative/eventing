@@ -41,7 +41,7 @@ type FlowSpec struct {
 	// Action specifies the target handler for the events
 	Action FlowAction `json:"action"`
 
-	// Trigger specifies the trigger we're binding to
+	// Trigger specifies the trigger we're creating a Flow to
 	Trigger EventTrigger `json:"trigger"`
 
 	// Service Account to use when creating the underlying Feed.
@@ -71,8 +71,10 @@ type FlowAction struct {
 	// or a Configuration resource.
 	// TODO: Specify the required fields the target object must
 	// have in the status.
-	// TODO: would it be sufficient to just have a TypeMeta + name
-	// (and optional namespace if not the same)
+	// You can specify only the following fields of the ObjectReference:
+	//   - Kind
+	//   - APIVersion
+	//   - Name
 	// +optional
 	Target *corev1.ObjectReference `json:"target,omitempty"`
 
@@ -185,21 +187,19 @@ type FlowStatus struct {
 	Conditions []FlowCondition `json:"conditions,omitempty"`
 
 	// FlowContext is what the Flow operation returns and holds enough information
-	// for the event source to perform Unbind.
-	// This is specific to each Flowing. Opaque to platform, only consumed
-	// by the actual trigger actuator.
+	// to perform cleanup once a Flow is deleted.
 	// NOTE: experimental field.
-	FlowContext *runtime.RawExtension `json:"bindContext,omitempty"`
+	FlowContext *runtime.RawExtension `json:"flowContext,omitempty"`
 }
 
 type FlowConditionType string
 
 const (
-	// FlowComplete specifies that the bind has completed successfully.
+	// FlowComplete specifies that the Flow has completed successfully.
 	FlowComplete FlowConditionType = "Complete"
-	// FlowFailed specifies that the bind has failed.
+	// FlowFailed specifies that the Flow has failed.
 	FlowFailed FlowConditionType = "Failed"
-	// FlowInvalid specifies that the given bind specification is invalid.
+	// FlowInvalid specifies that the given Flow specification is invalid.
 	FlowInvalid FlowConditionType = "Invalid"
 )
 
@@ -225,7 +225,7 @@ type FlowList struct {
 	Items []Flow `json:"items"`
 }
 
-func (bs *FlowStatus) SetCondition(new *FlowCondition) {
+func (fs *FlowStatus) SetCondition(new *FlowCondition) {
 	if new == nil {
 		return
 	}
@@ -241,7 +241,7 @@ func (bs *FlowStatus) SetCondition(new *FlowCondition) {
 	bs.Conditions = conditions
 }
 
-func (bs *FlowStatus) RemoveCondition(t FlowConditionType) {
+func (fs *FlowStatus) RemoveCondition(t FlowConditionType) {
 	var conditions []FlowCondition
 	for _, cond := range bs.Conditions {
 		if cond.Type != t {
