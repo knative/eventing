@@ -19,7 +19,7 @@ without writing code.
 
 User stories:
 * Determine what event sources are available
-* Trigger my service when certain events happen (event binding)
+* Trigger my service when certain events happen (event feed)
 * Filter events from a provider
 
 ### Event producer
@@ -29,7 +29,7 @@ which can be acted on by event consumers.
 
 User stories:
 * Publish events
-* Control who can bind events
+* Control who can create Feeds
 
 
 ## Contributors

@@ -37,7 +37,7 @@ type EventType struct {
 }
 
 // EventTypeSpec specifies information about the EventType, including a schema
-// for the event and information about the parameters needed to create a Bind to
+// for the event and information about the parameters needed to create a Feed to
 // the event.
 type EventTypeSpec struct {
 	// EventSource is the name of the EventSource that produces this EventType.
@@ -45,7 +45,7 @@ type EventTypeSpec struct {
 	// Description is a human-readable description of the EventType.
 	Description string `json:"description,omitempty"`
 	// SubscribeSchema describing how to subscribe to this. This basically
-	// defines what is required in the Bind.Parameters so that the developer
+	// defines what is required in the Feed.Parameters so that the developer
 	// can see the required parameters.
 	SubscribeSchema *runtime.RawExtension `json:"subscribeSchema,omitempty"`
 	// Describe the schema for the events emitted by this EventType.
@@ -60,11 +60,11 @@ type EventTypeStatus struct {
 type EventTypeConditionType string
 
 const (
-	// EventTypeComplete specifies that the bind has completed successfully.
+	// EventTypeComplete specifies that the EventType has completed successfully.
 	EventTypeComplete EventTypeConditionType = "Complete"
-	// EventTypeFailed specifies that the bind has failed.
+	// EventTypeFailed specifies that the EventType has failed.
 	EventTypeFailed EventTypeConditionType = "Failed"
-	// EventTypeInvalid specifies that the given bind specification is invalid.
+	// EventTypeInvalid specifies that the given EventType specification is invalid.
 	EventTypeInvalid EventTypeConditionType = "Invalid"
 )
 

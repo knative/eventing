@@ -10,47 +10,47 @@ import (
 )
 
 func RunEventSource(es EventSource) {
-	op := os.Getenv(BindOperationKey)
-	bindContext := os.Getenv(BindContextKey)
-	trigger := os.Getenv(BindTriggerKey)
-	target := os.Getenv(BindTargetKey)
+	op := os.Getenv(FeedOperationKey)
+	feedContext := os.Getenv(FeedContextKey)
+	trigger := os.Getenv(FeedTriggerKey)
+	target := os.Getenv(FeedTargetKey)
 
-	decodedContext, _ := base64.StdEncoding.DecodeString(bindContext)
+	decodedContext, _ := base64.StdEncoding.DecodeString(feedContext)
 	decodedTrigger, _ := base64.StdEncoding.DecodeString(trigger)
-	var c BindContext
+	var c FeedContext
 	var t EventTrigger
 
 	err := json.Unmarshal(decodedContext, &c)
 	if err != nil {
-		panic(fmt.Sprintf("can not unmarshal %q %q : %s", BindContextKey, decodedContext, err))
+		panic(fmt.Sprintf("can not unmarshal %q %q : %s", FeedContextKey, decodedContext, err))
 	}
 
 	err = json.Unmarshal(decodedTrigger, &t)
 	if err != nil {
-		panic(fmt.Sprintf("can not unmarshal %q %q : %s", BindTriggerKey, decodedTrigger, err))
+		panic(fmt.Sprintf("can not unmarshal %q %q : %s", FeedTriggerKey, decodedTrigger, err))
 	}
 
-	log.Printf("Doing %q target: %q Received bindContext as %+v trigger %+v", op, target, c, t)
-	if op == string(Bind) {
-		b, err := es.Bind(t, target)
+	log.Printf("Doing %q target: %q Received feedContext as %+v trigger %+v", op, target, c, t)
+	if op == string(StartFeed) {
+		b, err := es.StartFeed(t, target)
 		if err != nil {
-			panic(fmt.Sprintf("Failed to bind: %s", err))
+			panic(fmt.Sprintf("Failed to start feed: %s", err))
 		}
 
-		marshalledBindContext, err := json.Marshal(b)
+		marshalledFeedContext, err := json.Marshal(b)
 		if err != nil {
-			panic(fmt.Sprintf("Failed to marshal returned bind context %+v : %s", b, err))
+			panic(fmt.Sprintf("Failed to marshal returned feed context %+v : %s", b, err))
 		}
-		encodedBindContext := base64.StdEncoding.EncodeToString(marshalledBindContext)
+		encodedFeedContext := base64.StdEncoding.EncodeToString(marshalledFeedContext)
 
-		err = ioutil.WriteFile("/dev/termination-log", []byte(encodedBindContext), os.ModeDevice)
+		err = ioutil.WriteFile("/dev/termination-log", []byte(encodedFeedContext), os.ModeDevice)
 		if err != nil {
 			panic(fmt.Sprintf("Failed to write the termination message: %s", err))
 		}
 	} else {
-		err = es.Unbind(t, c)
+		err = es.StopFeed(t, c)
 		if err != nil {
-			panic(fmt.Sprintf("Failed to unbind: %s", err))
+			panic(fmt.Sprintf("Failed to stop feed: %s", err))
 		}
 	}
 }

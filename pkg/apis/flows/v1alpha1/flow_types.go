@@ -26,38 +26,63 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Bind connects an event trigger with an action that processes events produced
-// by the trigger.
-type Bind struct {
+// Flow connects an event source with an action that processes events produced
+// by the event source.
+type Flow struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   BindSpec   `json:"spec"`
-	Status BindStatus `json:"status"`
+	Spec   FlowSpec   `json:"spec"`
+	Status FlowStatus `json:"status"`
 }
 
-// BindSpec is the spec for a Bind resource.
-type BindSpec struct {
+// FlowSpec is the spec for a Flow resource.
+type FlowSpec struct {
 	// Action specifies the target handler for the events
-	Action BindAction `json:"action"`
+	Action FlowAction `json:"action"`
 
-	// Trigger specifies the trigger we're binding to
+	// Trigger specifies the trigger we're creating a Flow to
 	Trigger EventTrigger `json:"trigger"`
 
-	// Service Account to run binding container. If left out, uses "default"
+	// Service Account to use when creating the underlying Feed.
+	// If left out, uses "default"
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
 
-// BindAction specifies the target handler - a Knative route or channel - for
-// events produced by an EventTrigger.
-type BindAction struct {
-	// You must specify one and only of these.
+// FlowAction specifies the reference to an object that's expected to
+// provide the resolved target of the action. Currently we inspect
+// the objects Status and see if there's a predefined Status field
+// that we will then use to give to Feed object as the target. Currently
+// must resolve to a k8s service or Istio virtual service. Note that by
+// in the future we should try to utilize subresources (/resolve ?) to
+// utilize this, but CRDs do not support subresources yet, so we need
+// to rely on a specified Status field today. By relying on this behaviour
+// we can utilize a dynamic client instead of having to understand all
+// kinds of different types of objects. As long as they adhere to this
+// particular contract, they can be used as a Target.
+// To ensure that we can support external targets and for ease of use
+// we also allow for an URI to be specified.
+type FlowAction struct {
+	// Only one of these can be specified
 
-	// RouteName specifies Knative route as a target.
-	RouteName string `json:"routeName,omitempty"`
+	// Reference to an object that will be used to find the target
+	// endpoint.
+	// For example, this could be a reference to a Route resource
+	// or a Configuration resource.
+	// TODO: Specify the required fields the target object must
+	// have in the status.
+	// You can specify only the following fields of the ObjectReference:
+	//   - Kind
+	//   - APIVersion
+	//   - Name
+	// +optional
+	Target *corev1.ObjectReference `json:"target,omitempty"`
 
-	// ChannelName specifies the channel name as a target
-	ChannelName string `json:"channelName,omitempty"`
+	// Reference to a 'known' endpoint where no resolving be done.
+	// http://k8s-service for example
+	// http://myexternalhandler.example.com/foo/bar
+	// +optional
+	TargetURI *string `json:"targetURI,omitempty"`
 }
 
 // EventTrigger specifies the intention that a particular event type and
@@ -157,33 +182,31 @@ type SecretKeyReference struct {
 	Key string `json:"key"`
 }
 
-// BindStatus is the status for a Bind resource
-type BindStatus struct {
-	Conditions []BindCondition `json:"conditions,omitempty"`
+// FlowStatus is the status for a Flow resource
+type FlowStatus struct {
+	Conditions []FlowCondition `json:"conditions,omitempty"`
 
-	// BindContext is what the Bind operation returns and holds enough information
-	// for the event source to perform Unbind.
-	// This is specific to each Binding. Opaque to platform, only consumed
-	// by the actual trigger actuator.
+	// FlowContext is what the Flow operation returns and holds enough information
+	// to perform cleanup once a Flow is deleted.
 	// NOTE: experimental field.
-	BindContext *runtime.RawExtension `json:"bindContext,omitempty"`
+	FlowContext *runtime.RawExtension `json:"flowContext,omitempty"`
 }
 
-type BindConditionType string
+type FlowConditionType string
 
 const (
-	// BindComplete specifies that the bind has completed successfully.
-	BindComplete BindConditionType = "Complete"
-	// BindFailed specifies that the bind has failed.
-	BindFailed BindConditionType = "Failed"
-	// BindInvalid specifies that the given bind specification is invalid.
-	BindInvalid BindConditionType = "Invalid"
+	// FlowComplete specifies that the Flow has completed successfully.
+	FlowComplete FlowConditionType = "Complete"
+	// FlowFailed specifies that the Flow has failed.
+	FlowFailed FlowConditionType = "Failed"
+	// FlowInvalid specifies that the given Flow specification is invalid.
+	FlowInvalid FlowConditionType = "Invalid"
 )
 
-// BindCondition defines a readiness condition for a Bind.
+// FlowCondition defines a readiness condition for a Flow.
 // See: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#typical-status-properties
-type BindCondition struct {
-	Type BindConditionType `json:"state"`
+type FlowCondition struct {
+	Type FlowConditionType `json:"state"`
 
 	Status corev1.ConditionStatus `json:"status" description:"status of the condition, one of True, False, Unknown"`
 	// +optional
@@ -194,36 +217,36 @@ type BindCondition struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// BindList is a list of Bind resources
-type BindList struct {
+// FlowList is a list of Flow resources
+type FlowList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 
-	Items []Bind `json:"items"`
+	Items []Flow `json:"items"`
 }
 
-func (bs *BindStatus) SetCondition(new *BindCondition) {
+func (fs *FlowStatus) SetCondition(new *FlowCondition) {
 	if new == nil {
 		return
 	}
 
 	t := new.Type
-	var conditions []BindCondition
-	for _, cond := range bs.Conditions {
+	var conditions []FlowCondition
+	for _, cond := range fs.Conditions {
 		if cond.Type != t {
 			conditions = append(conditions, cond)
 		}
 	}
 	conditions = append(conditions, *new)
-	bs.Conditions = conditions
+	fs.Conditions = conditions
 }
 
-func (bs *BindStatus) RemoveCondition(t BindConditionType) {
-	var conditions []BindCondition
-	for _, cond := range bs.Conditions {
+func (fs *FlowStatus) RemoveCondition(t FlowConditionType) {
+	var conditions []FlowCondition
+	for _, cond := range fs.Conditions {
 		if cond.Type != t {
 			conditions = append(conditions, cond)
 		}
 	}
-	bs.Conditions = conditions
+	fs.Conditions = conditions
 }

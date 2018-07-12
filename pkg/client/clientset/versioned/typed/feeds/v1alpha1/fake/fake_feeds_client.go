@@ -28,16 +28,16 @@ type FakeFeedsV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeFeedsV1alpha1) Binds(namespace string) v1alpha1.BindInterface {
-	return &FakeBinds{c, namespace}
-}
-
 func (c *FakeFeedsV1alpha1) EventSources(namespace string) v1alpha1.EventSourceInterface {
 	return &FakeEventSources{c, namespace}
 }
 
 func (c *FakeFeedsV1alpha1) EventTypes(namespace string) v1alpha1.EventTypeInterface {
 	return &FakeEventTypes{c, namespace}
+}
+
+func (c *FakeFeedsV1alpha1) Feeds(namespace string) v1alpha1.FeedInterface {
+	return &FakeFeeds{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

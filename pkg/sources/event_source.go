@@ -21,11 +21,11 @@ const (
 	EventTriggerKey string = "EVENT_TRIGGER"
 )
 
-type BindContext struct {
+type FeedContext struct {
 	Context map[string]interface{}
 }
 
 type EventSource interface {
-	Bind(trigger EventTrigger, route string) (*BindContext, error)
-	Unbind(trigger EventTrigger, bindContext BindContext) error
+	StartFeed(trigger EventTrigger, route string) (*FeedContext, error)
+	StopFeed(trigger EventTrigger, feedContext FeedContext) error
 }

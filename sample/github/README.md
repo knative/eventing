@@ -3,8 +3,8 @@
 A simple git webhook handler that demonstrates interacting with
 github. 
 [Modeled after GCF example](https://cloud.google.com/community/tutorials/github-auto-assign-reviewers-cloud-functions)
-But by introducing a Bind object, we make the subscription to github automatically by calling a github API
-and hence the developer does not have to manually wire things together in the UI, by creating the Bind object
+But by introducing a Feed object, we make the subscription to github automatically by calling a github API
+and hence the developer does not have to manually wire things together in the UI, by creating the Feed object
 the webhook gets created by Knative Eventing.
 
 ## Prerequisites
@@ -44,7 +44,7 @@ kubectl get eventsources
 kubectl get eventtypes
 ```
 
-6. Create a [personal access token](https://github.com/settings/tokens) to github repo that you can use to bind webhooks to the Github API. Also decide on a token that your code will authenticate the incoming webhooks from github (accessSoken). Update sample/github/githubsecret.yaml with those values. If your generated access token is 'asdfasfdsaf' and you choose your secretToken as 'password', you'd modify githubsecret.yaml like so:
+6. Create a [personal access token](https://github.com/settings/tokens) to github repo that you can use to register webhooks with the Github API. Also decide on a token that your code will authenticate the incoming webhooks from github (accessSoken). Update sample/github/githubsecret.yaml with those values. If your generated access token is 'asdfasfdsaf' and you choose your secretToken as 'password', you'd modify githubsecret.yaml like so:
 
 ```yaml
 apiVersion: v1
@@ -80,10 +80,10 @@ kubectl get configurations -o yaml
 # This will show the Revision that was created by our configuration:
 kubectl get revisions -o yaml
 
-# This will show the available EventSources that you can bind to:
+# This will show the available EventSources that you can generate feeds from:
 kubectl get eventsources -o yaml
 
-# This will show the available EventTypes that you can bind to:
+# This will show the available EventTypes that you can generate feeds from:
 kubectl get eventtypes -o yaml
 
 ```
@@ -103,19 +103,19 @@ git-webhook.default.aikas.org pointing to 104.197.125.124
 
 So, you'd need to create an A record for git-webhook.default.aikas.org pointing to 104.197.125.124
 
-To now bind the github webhook for pull requests with the function we created above, you need to
- create a Bind object. Modify sample/github/bind.yaml to point to owner of the repo as well
+To now send events via the github webhook for pull requests to the function we created above, you need to
+ create a Feed object. Modify sample/github/feed.yaml to point to owner of the repo as well
  as the particular repo you want to subscribe to. So, change spec.trigger.resource with the owner/repo
  you want.
 
  For example, if I wanted to receive notifications to:
- github.com/inlined/robots repo, my Bind object would look like so:
+ github.com/inlined/robots repo, my Feed object would look like so:
 
 ```yaml
 apiVersion: knative.dev/v1alpha1
-kind: Bind
+kind: Feed
 metadata:
-  name: bind-example
+  name: feed-example
   namespace: default
 spec:
   trigger:
@@ -130,11 +130,11 @@ spec:
     routeName: git-webhook
 ```
 
-Then create the secret and a binding so that you can see changes
+Then create the secret and a feed so that you can see changes
 
 ```shell
  ko apply -f sample/github/githubsecret.yaml
- ko apply -f sample/github/bind.yaml
+ ko apply -f sample/github/feed.yaml
 ```
 
 Then create a PR for the repo you configured the webhook for, and you'll see that the Title
@@ -142,9 +142,9 @@ will be modified with the suffix '(I buy it)'
 
 ## Cleaning up
 
-To clean up the sample binding:
+To clean up the sample feed:
 ```shell
- ko delete -f sample/github/bind.yaml
+ ko delete -f sample/github/feed.yaml
 ```
 
 And you can check the repo and see the webhook has been removed
