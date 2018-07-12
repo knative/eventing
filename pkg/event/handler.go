@@ -127,9 +127,15 @@ func unwrapReturnValues(res []reflect.Value) (interface{}, error) {
 	case 0:
 		return nil, nil
 	case 1:
+		if res[0].IsNil() {
+			return nil, nil
+		}
 		// Should be a safe cast due to assertEventHandler()
 		return nil, res[0].Interface().(error)
 	case 2:
+		if res[0].IsNil() {
+			return res[0].Interface(), nil
+		}
 		return res[0].Interface(), res[1].Interface().(error)
 	default:
 		// Should never happen due to assertEventHandler()

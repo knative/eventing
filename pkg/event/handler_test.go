@@ -271,8 +271,9 @@ func TestMux(t *testing.T) {
 	sawA, sawB := false, false
 
 	mux := event.NewMux()
-	err := mux.Handle("org.A.test", func(data TypeA, context *event.EventContext) error {
+	err := mux.Handle("org.A.test", func(ctx context.Context, data TypeA) error {
 		sawA = true
+		context := event.FromContext(ctx)
 		if !reflect.DeepEqual(eventA, data) {
 			t.Fatalf("Got wrong data for event A; wanted=%s; got=%s", eventA, data)
 		}
@@ -284,8 +285,9 @@ func TestMux(t *testing.T) {
 	if err != nil {
 		t.Fatalf("mux.Handle('org.A.test') failed: %v", err)
 	}
-	err = mux.Handle("org.B.test", func(data TypeB, context *event.EventContext) error {
+	err = mux.Handle("org.B.test", func(ctx context.Context, data TypeB) error {
 		sawB = true
+		context := event.FromContext(ctx)
 		if !reflect.DeepEqual(eventB, data) {
 			t.Fatalf("Got wrong data for event A; wanted=%s; got=%s", eventB, data)
 		}
