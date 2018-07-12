@@ -1,12 +1,12 @@
 # Samples
 
-This directory contains sample services which demonstrate `Binding`
+This directory contains sample services which demonstrate `Feed`
 functionality.
 
 ## Prerequisites
 
 1. [Setup your development environment](../DEVELOPMENT.md#getting-started)
-2. [Start Binding](../DEVELOPMENT.md#starting-binding)
+2. [Start Eventing](../DEVELOPMENT.md#starting-eventing-controller)
 
 ## Tools
 

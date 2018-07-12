@@ -13,19 +13,18 @@
 # limitations under the License.
 
 apiVersion: feeds.knative.dev/v1alpha1
-kind: Bind
+kind: Feed
 metadata:
-  name: k8s-events-example-channel
+  name: gcppubsub-example
   namespace: default
 spec:
-  serviceAccountName: binder
+  serviceAccountName: feed-sa
   trigger:
-    eventType: receiveevent
-    # This is kind of superfluous due to parameters, but the current
-    # bind model still requires a resource
-    resource: k8sevents/receiveevent
-    service: k8sevents
+    service: gcppubsub
+    eventType: receive
+    resource: quantum-reducer-434/knative-demo
     parameters:
-      namespace: default
+      projectID: quantum-reducer-434
+      topic: knative-demo
   action:
-    channelName: aloha
+    routeName: gcp-pubsub-function

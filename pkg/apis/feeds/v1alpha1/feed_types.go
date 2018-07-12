@@ -26,31 +26,31 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Bind connects an event trigger with an action that processes events produced
+// Feed connects an event trigger with an action that processes events produced
 // by the trigger.
-type Bind struct {
+type Feed struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   BindSpec   `json:"spec"`
-	Status BindStatus `json:"status"`
+	Spec   FeedSpec   `json:"spec"`
+	Status FeedStatus `json:"status"`
 }
 
-// BindSpec is the spec for a Bind resource.
-type BindSpec struct {
+// FeedSpec is the spec for a Feed resource.
+type FeedSpec struct {
 	// Action specifies the target handler for the events
-	Action BindAction `json:"action"`
+	Action FeedAction `json:"action"`
 
-	// Trigger specifies the trigger we're binding to
+	// Trigger specifies the trigger producing events for this feed
 	Trigger EventTrigger `json:"trigger"`
 
-	// Service Account to run binding container. If left out, uses "default"
+	// Service Account to run feed container. If left out, uses "default"
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
 
-// BindAction specifies the target handler - a Knative route or channel - for
+// FeedAction specifies the target handler - a Knative route or channel - for
 // events produced by an EventTrigger.
-type BindAction struct {
+type FeedAction struct {
 	// You must specify one and only of these.
 
 	// RouteName specifies Knative route as a target.
@@ -157,33 +157,33 @@ type SecretKeyReference struct {
 	Key string `json:"key"`
 }
 
-// BindStatus is the status for a Bind resource
-type BindStatus struct {
-	Conditions []BindCondition `json:"conditions,omitempty"`
+// FeedStatus is the status for a Feed resource
+type FeedStatus struct {
+	Conditions []FeedCondition `json:"conditions,omitempty"`
 
-	// BindContext is what the Bind operation returns and holds enough information
-	// for the event source to perform Unbind.
-	// This is specific to each Binding. Opaque to platform, only consumed
+	// FeedContext is what the Feed operation returns and holds enough information
+	// for the event source to stop the Feed.
+	// This is specific to each Feed. Opaque to platform, only consumed
 	// by the actual trigger actuator.
 	// NOTE: experimental field.
-	BindContext *runtime.RawExtension `json:"bindContext,omitempty"`
+	FeedContext *runtime.RawExtension `json:"feedContext,omitempty"`
 }
 
-type BindConditionType string
+type FeedConditionType string
 
 const (
-	// BindComplete specifies that the bind has completed successfully.
-	BindComplete BindConditionType = "Complete"
-	// BindFailed specifies that the bind has failed.
-	BindFailed BindConditionType = "Failed"
-	// BindInvalid specifies that the given bind specification is invalid.
-	BindInvalid BindConditionType = "Invalid"
+	// FeedStarted specifies that the feed has started successfully.
+	FeedStarted FeedConditionType = "Started"
+	// FeedFailed specifies that the feed has failed to start.
+	FeedFailed FeedConditionType = "Failed"
+	// FeedInvalid specifies that the given feed specification is invalid.
+	FeedInvalid FeedConditionType = "Invalid"
 )
 
-// BindCondition defines a readiness condition for a Bind.
+// FeedCondition defines a readiness condition for a Feed.
 // See: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#typical-status-properties
-type BindCondition struct {
-	Type BindConditionType `json:"state"`
+type FeedCondition struct {
+	Type FeedConditionType `json:"state"`
 
 	Status corev1.ConditionStatus `json:"status" description:"status of the condition, one of True, False, Unknown"`
 	// +optional
@@ -194,36 +194,36 @@ type BindCondition struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// BindList is a list of Bind resources
-type BindList struct {
+// FeedList is a list of Feed resources
+type FeedList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 
-	Items []Bind `json:"items"`
+	Items []Feed `json:"items"`
 }
 
-func (bs *BindStatus) SetCondition(new *BindCondition) {
+func (fs *FeedStatus) SetCondition(new *FeedCondition) {
 	if new == nil {
 		return
 	}
 
 	t := new.Type
-	var conditions []BindCondition
-	for _, cond := range bs.Conditions {
+	var conditions []FeedCondition
+	for _, cond := range fs.Conditions {
 		if cond.Type != t {
 			conditions = append(conditions, cond)
 		}
 	}
 	conditions = append(conditions, *new)
-	bs.Conditions = conditions
+	fs.Conditions = conditions
 }
 
-func (bs *BindStatus) RemoveCondition(t BindConditionType) {
-	var conditions []BindCondition
-	for _, cond := range bs.Conditions {
+func (fs *FeedStatus) RemoveCondition(t FeedConditionType) {
+	var conditions []FeedCondition
+	for _, cond := range fs.Conditions {
 		if cond.Type != t {
 			conditions = append(conditions, cond)
 		}
 	}
-	bs.Conditions = conditions
+	fs.Conditions = conditions
 }

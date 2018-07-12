@@ -64,12 +64,12 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Channels().V1alpha1().Subscriptions().Informer()}, nil
 
 		// Group=feeds.knative.dev, Version=v1alpha1
-	case feeds_v1alpha1.SchemeGroupVersion.WithResource("binds"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Feeds().V1alpha1().Binds().Informer()}, nil
 	case feeds_v1alpha1.SchemeGroupVersion.WithResource("eventsources"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Feeds().V1alpha1().EventSources().Informer()}, nil
 	case feeds_v1alpha1.SchemeGroupVersion.WithResource("eventtypes"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Feeds().V1alpha1().EventTypes().Informer()}, nil
+	case feeds_v1alpha1.SchemeGroupVersion.WithResource("feeds"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Feeds().V1alpha1().Feeds().Informer()}, nil
 
 	}
 

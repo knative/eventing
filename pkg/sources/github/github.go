@@ -37,12 +37,12 @@ const (
 	ownerKey     = "owner"
 	repoKey      = "repo"
 
-	// SuccessSynced is used as part of the Event 'reason' when a Bind is synced
+	// SuccessSynced is used as part of the Event 'reason' when a Feed is synced
 	SuccessSynced = "Synced"
 
-	// MessageResourceSynced is the message used for an Event fired when a Bind
+	// MessageResourceSynced is the message used for an Event fired when a Feed
 	// is synced successfully
-	MessageResourceSynced = "Bind synced successfully"
+	MessageResourceSynced = "Feed synced successfully"
 )
 
 type GithubEventSource struct {
@@ -52,19 +52,19 @@ func NewGithubEventSource() sources.EventSource {
 	return &GithubEventSource{}
 }
 
-func (t *GithubEventSource) Unbind(trigger sources.EventTrigger, bindContext sources.BindContext) error {
-	glog.Infof("Unbinding github webhook with context %+v", bindContext)
+func (t *GithubEventSource) StopFeed(trigger sources.EventTrigger, feedContext sources.FeedContext) error {
+	glog.Infof("Stopping github webhook feed with context %+v", feedContext)
 
 	components := strings.Split(trigger.Resource, "/")
 	owner := components[0]
 	repo := components[1]
 
-	if _, ok := bindContext.Context[webhookIDKey]; !ok {
+	if _, ok := feedContext.Context[webhookIDKey]; !ok {
 		// there's no webhook id, nothing to do.
 		glog.Infof("No Webhook ID Found, bailing...")
 		return nil
 	}
-	webhookID := bindContext.Context[webhookIDKey].(string)
+	webhookID := feedContext.Context[webhookIDKey].(string)
 
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
@@ -88,7 +88,7 @@ func (t *GithubEventSource) Unbind(trigger sources.EventTrigger, bindContext sou
 	return nil
 }
 
-func (t *GithubEventSource) Bind(trigger sources.EventTrigger, route string) (*sources.BindContext, error) {
+func (t *GithubEventSource) StartFeed(trigger sources.EventTrigger, route string) (*sources.FeedContext, error) {
 	glog.Infof("CREATING GITHUB WEBHOOK")
 
 	ctx := context.Background()
@@ -122,7 +122,7 @@ func (t *GithubEventSource) Bind(trigger sources.EventTrigger, route string) (*s
 		return nil, err
 	}
 	glog.Infof("Created hook: %+v", h)
-	return &sources.BindContext{
+	return &sources.FeedContext{
 		Context: map[string]interface{}{
 			webhookIDKey: strconv.FormatInt(*h.ID, 10),
 		}}, nil

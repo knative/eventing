@@ -12,6 +12,6 @@
  5. create a channel (ko apply -f test/e2e/k8sevents/channel.yaml)
  6. install a function (ko apply -f test/e2e/k8sevents/function.yaml)
  7. subscribe function to channel (ko apply -f test/e2e/k8sevents/subscription.yaml)
- 8. create a binding, watching namespace #3 (ko apply -f test/e2e/k8sevents/bind-channel.yaml)
+ 8. create a feed, watching namespace #3 (ko apply -f test/e2e/k8sevents/feed-channel.yaml)
  9. create a pod in that namespace (ko apply -f test/e2e/k8sevents/pod.yaml)
  10. check the logs of the function and check that events show up

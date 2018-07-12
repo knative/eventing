@@ -42,32 +42,32 @@ type ContainerEventSource struct {
 	// ServiceAccount to run as
 	ServiceAccountName string
 
-	// Binding for this operation
-	Binding *v1alpha1.Bind
+	// Feed for this operation
+	Feed *v1alpha1.Feed
 
 	// EventSourceSpec for the actual underlying source
 	EventSourceSpec *v1alpha1.EventSourceSpec
 }
 
-func NewContainerEventSource(bind *v1alpha1.Bind, kubeclientset kubernetes.Interface, spec *v1alpha1.EventSourceSpec, namespace string, serviceAccountName string) EventSource {
+func NewContainerEventSource(feed *v1alpha1.Feed, kubeclientset kubernetes.Interface, spec *v1alpha1.EventSourceSpec, namespace string, serviceAccountName string) EventSource {
 	return &ContainerEventSource{
 		kubeclientset:      kubeclientset,
 		Namespace:          namespace,
 		ServiceAccountName: serviceAccountName,
-		Binding:            bind,
+		Feed:               feed,
 		EventSourceSpec:    spec,
 	}
 }
 
-func (t *ContainerEventSource) Bind(trigger EventTrigger, route string) (*BindContext, error) {
-	job, err := MakeJob(t.Binding, t.Namespace, t.ServiceAccountName, "binder", t.EventSourceSpec, Bind, trigger, route, BindContext{})
+func (t *ContainerEventSource) StartFeed(trigger EventTrigger, route string) (*FeedContext, error) {
+	job, err := MakeJob(t.Feed, t.Namespace, t.ServiceAccountName, "feed-starter", t.EventSourceSpec, StartFeed, trigger, route, FeedContext{})
 	if err != nil {
 		glog.Errorf("failed to make job: %s", err)
 		return nil, err
 	}
 	bc, err := t.run(job, true)
 	if err != nil {
-		glog.Errorf("failed to bind: %s", err)
+		glog.Errorf("failed to run feed start job: %s", err)
 	}
 	// Try to delete the job even if it failed to run
 	delErr := t.delete(job)
@@ -77,15 +77,15 @@ func (t *ContainerEventSource) Bind(trigger EventTrigger, route string) (*BindCo
 	return bc, err
 }
 
-func (t *ContainerEventSource) Unbind(trigger EventTrigger, bindContext BindContext) error {
-	job, err := MakeJob(t.Binding, t.Namespace, t.ServiceAccountName, "binder", t.EventSourceSpec, Unbind, trigger, "", bindContext)
+func (t *ContainerEventSource) StopFeed(trigger EventTrigger, feedContext FeedContext) error {
+	job, err := MakeJob(t.Feed, t.Namespace, t.ServiceAccountName, "feed-stopper", t.EventSourceSpec, StopFeed, trigger, "", feedContext)
 	if err != nil {
 		glog.Errorf("failed to make job: %s", err)
 		return err
 	}
 	_, err = t.run(job, false)
 	if err != nil {
-		glog.Errorf("failed to unbind job: %s", err)
+		glog.Errorf("failed to run feed stop job: %s", err)
 	}
 	// Try to delete the job anyways
 	delErr := t.delete(job)
@@ -95,11 +95,11 @@ func (t *ContainerEventSource) Unbind(trigger EventTrigger, bindContext BindCont
 	return err
 }
 
-func (t *ContainerEventSource) run(job *batchv1.Job, parseLogs bool) (*BindContext, error) {
+func (t *ContainerEventSource) run(job *batchv1.Job, parseLogs bool) (*FeedContext, error) {
 	jobClient := t.kubeclientset.BatchV1().Jobs(job.Namespace)
 	_, err := jobClient.Create(job)
 	if err != nil {
-		return &BindContext{}, err
+		return &FeedContext{}, err
 	}
 
 	// TODO replace with a construct similar to Build by watching for pod
@@ -131,7 +131,7 @@ func (t *ContainerEventSource) run(job *batchv1.Job, parseLogs bool) (*BindConte
 					if msg := getFirstTerminationMessage(&p); msg != "" {
 						decodedContext, _ := base64.StdEncoding.DecodeString(msg)
 						glog.Infof("Decoded to %q", decodedContext)
-						var ret BindContext
+						var ret FeedContext
 						err = json.Unmarshal(decodedContext, &ret)
 						if err != nil {
 							glog.Errorf("Failed to unmarshal context: %s", err)
@@ -142,7 +142,7 @@ func (t *ContainerEventSource) run(job *batchv1.Job, parseLogs bool) (*BindConte
 				}
 			}
 
-			return &BindContext{}, nil
+			return &FeedContext{}, nil
 		}
 	}
 }

@@ -3,7 +3,7 @@
 A simple function that receives Kubernetes events and prints them out the after decoding
 from base64 encoding. This version wires the action into an existing Channel differing from
 the [sample that targets a Knative route](./README.md). This is also example of where we
-make use of a Receive Adapter that runs in the context of the namespace where the binding
+make use of a Receive Adapter that runs in the context of the namespace where the feed
 is created. Since there's no push events, we create a deployment that attaches to k8s events
 for a given namespace and then forwards them to the destination.
 
@@ -21,10 +21,10 @@ ko apply -f pkg/sources/k8sevents/
 Once deployed, you can inspect the created resources with `kubectl` commands:
 
 ```shell
-# This will show the available EventSources that you can bind to:
+# This will show the available EventSources that you can generate a feed from:
 kubectl get eventsources -oyaml
 
-# This will show the available EventTypes that you can bind to:
+# This will show the available EventTypes that you can generate a feed from:
 kubectl get eventtypes -oyaml
 
 ```
@@ -32,8 +32,8 @@ kubectl get eventtypes -oyaml
 ## Creating a Service Account
 Because the Receive Adapter needs to run a deployment, you need to specify what 
 Service Account should be used in the target namespace for running the Receive Adapter.
-Bind.Spec has a field that allows you to specify this. By default it uses "default" for
-binding which typically has no priviledges, but this binding requires standing up a
+Feed.Spec has a field that allows you to specify this. By default it uses "default" for
+feed which typically has no privileges, but this feed requires standing up a
 deployment, so you need to either use an existing Service Account with appropriate
 priviledges or create a new one. This example creates a Service Account and grants
 it cluster admin access, and you probably wouldn't want to do that in production
@@ -47,22 +47,21 @@ ko apply -f sample/k8s_events_function/serviceaccountbinding.yaml
 ## Running
 
 Assuming you have [installed the Bus, channel and function](../hello/README.md), you
-can now create a binding for k8s events that will then send k8s events by creating
-a binding targeting that channel.
+can now create a feed for k8s events that will then target that channel.
 
 Note that if you are using a different Service Account than created in the example above,
-you also need to specify that Service Account in the bind.spec.serviceAccountName.
-Modify sample/k8s_events_function/bind-channel.yaml to specify the namespace you want to
+you also need to specify that Service Account in the feed.spec.serviceAccountName.
+Modify sample/k8s_events_function/feed-channel.yaml to specify the namespace you want to
 watch events for ('default' in this example):
 
 ```yaml
 apiVersion: feeds.knative.dev/v1alpha1
-kind: Bind
+kind: Feed
 metadata:
   name: k8s-events-example-channel
   namespace: default
 spec:
-  serviceAccountName: binder
+  serviceAccountName: feed-sa
   trigger:
     eventType: receiveevent
     resource: k8sevents/receiveevent
@@ -73,15 +72,15 @@ spec:
     channelName: aloha
 ```
 
-Then create the binding so that you can see changes on that namespace
+Then create the feed so that you can see changes on that namespace
 
 ```shell
- kubectl create -f sample/k8s_events_function/bind-channel.yaml
+ kubectl create -f sample/k8s_events_function/feed-channel.yaml
 ```
 
 This will create a receive_adapter that runs in the cluster and receives native k8s events
 and pushes them to the consuming function. You can check the status by looking at the
-namespace you deployed the binding into. In the case above it would be default.
+namespace you deployed the feed into. In the case above it would be default.
 
 ```shell
 $kubectl get pods
@@ -108,12 +107,12 @@ hello-00001-deployment-747d97bbdc-cxg8p                     4/4       Running   
 $ kubectl logs hello-00001-deployment-XXXX user-container
 ```
 
-## Removing a binding
+## Removing a feed
 
-Remove the binding and things get cleaned up (including removing the receive adapter to k8s events)
+Remove the feed and things get cleaned up (including removing the receive adapter to k8s events)
 
 ```shell
-kubectl delete binds k8s-events-example-channel
+kubectl delete feeds k8s-events-example-channel
 ```
 
 ## Cleaning up

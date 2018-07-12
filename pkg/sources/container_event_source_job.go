@@ -26,49 +26,50 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// BindOperation specifies whether we're binding or unbinding
-type BindOperation string
+// FeedOperation specifies whether we're starting or stopping
+type FeedOperation string
 
 const (
-	// Each binding pod gets these.
+	// Each feed lifecycle pod gets these.
 	watcherContainerCPU = "400m"
 
-	// Bind specifies a binding should be created
-	Bind BindOperation = "BIND"
-	// Unbind specifies a binding should be deleted
-	Unbind BindOperation = "UNBIND"
+	// START specifies a Feed should be started
+	StartFeed FeedOperation = "START"
 
-	// BindOperationKey is the Env variable that gets set to requested BindOperation
-	BindOperationKey string = "BIND_OPERATION"
+	// STOP specifies a Feed should be stopped
+	StopFeed FeedOperation = "STOP"
 
-	// BindTriggerKey is the Env variable that gets set to serialized trigger configuration
-	BindTriggerKey string = "BIND_TRIGGER"
+	// FeedOperationKey is the Env variable that gets set to requested FeedOperationKey
+	FeedOperationKey string = "FEED_OPERATION"
 
-	// BindTargetKey is the Env variable that gets set to target of the bind operation
-	BindTargetKey string = "BIND_TARGET"
+	// FeedTriggerKey is the Env variable that gets set to serialized trigger configuration
+	FeedTriggerKey string = "FEED_TRIGGER"
 
-	// BindContextKey is the Env variable that gets set to serialized BindContext if unbinding
-	BindContextKey string = "BIND_CONTEXT"
+	// FeedTargetKey is the Env variable that gets set to target of the feed
+	FeedTargetKey string = "FEED_TARGET"
+
+	// FeedContextKey is the Env variable that gets set to serialized FeedContext if stopping
+	FeedContextKey string = "FEED_CONTEXT"
 
 	// EventSourceParametersKey is the Env variable that gets set to serialized EventSourceSpec
 	EventSourceParametersKey string = "EVENT_SOURCE_PARAMETERS"
 
-	// BindNamespaceKey is the Env variable that gets set to namespace of the container doing
-	// the Bind (aka, namespace of the binding). Uses downward api
-	BindNamespaceKey string = "BIND_NAMESPACE"
+	// FeedNamespaceKey is the Env variable that gets set to namespace of the container performing
+	// the Feed lifecycle operation (aka, namespace of the feed). Uses downward api
+	FeedNamespaceKey string = "FEED_NAMESPACE"
 
-	// BindServiceAccount is the Env variable that gets set to serviceaccount of the
-	// container doing the Bind. Uses downward api
-	BindServiceAccountKey string = "BIND_SERVICE_ACCOUNT"
+	// FeedServiceAccount is the Env variable that gets set to serviceaccount of the
+	// container performing the Feed operation. Uses downward api
+	FeedServiceAccountKey string = "FEED_SERVICE_ACCOUNT"
 )
 
-// MakeJob creates a Job to complete a bind or unbind operation.
-func MakeJob(bind *v1alpha1.Bind, namespace string, serviceAccountName string, jobName string, spec *v1alpha1.EventSourceSpec, op BindOperation, trigger EventTrigger, route string, bindContext BindContext) (*batchv1.Job, error) {
+// MakeJob creates a Job to complete a start or stop operation for a Feed.
+func MakeJob(feed *v1alpha1.Feed, namespace string, serviceAccountName string, jobName string, spec *v1alpha1.EventSourceSpec, op FeedOperation, trigger EventTrigger, route string, feedContext FeedContext) (*batchv1.Job, error) {
 	labels := map[string]string{
-		"app": "bindpod",
+		"app": "feedlifecyclepod",
 	}
 
-	podTemplate, err := makePodTemplate(bind, namespace, serviceAccountName, jobName, spec, op, trigger, route, bindContext)
+	podTemplate, err := makePodTemplate(feed, namespace, serviceAccountName, jobName, spec, op, trigger, route, feedContext)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +79,7 @@ func MakeJob(bind *v1alpha1.Bind, namespace string, serviceAccountName string, j
 			Name:            jobName,
 			Namespace:       namespace,
 			Labels:          labels,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(bind, v1alpha1.SchemeGroupVersion.WithKind("Bind"))},
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(feed, v1alpha1.SchemeGroupVersion.WithKind("Feed"))},
 		},
 		Spec: batchv1.JobSpec{
 			Template: *podTemplate,
@@ -86,13 +87,13 @@ func MakeJob(bind *v1alpha1.Bind, namespace string, serviceAccountName string, j
 	}, nil
 }
 
-// makePodTemplate creates a pod template for a bind or unbind Job.
-func makePodTemplate(bind *v1alpha1.Bind, namespace string, serviceAccountName string, podName string, spec *v1alpha1.EventSourceSpec, op BindOperation, trigger EventTrigger, route string, bindContext BindContext) (*corev1.PodTemplateSpec, error) {
-	marshalledBindContext, err := json.Marshal(bindContext)
+// makePodTemplate creates a pod template for starting or stopping a feed.
+func makePodTemplate(feed *v1alpha1.Feed, namespace string, serviceAccountName string, podName string, spec *v1alpha1.EventSourceSpec, op FeedOperation, trigger EventTrigger, route string, feedContext FeedContext) (*corev1.PodTemplateSpec, error) {
+	marshalledFeedContext, err := json.Marshal(feedContext)
 	if err != nil {
 		return nil, err
 	}
-	encodedBindContext := base64.StdEncoding.EncodeToString(marshalledBindContext)
+	encodedFeedContext := base64.StdEncoding.EncodeToString(marshalledFeedContext)
 
 	marshalledTrigger, err := json.Marshal(trigger)
 	if err != nil {
@@ -125,27 +126,27 @@ func makePodTemplate(bind *v1alpha1.Bind, namespace string, serviceAccountName s
 					ImagePullPolicy: "Always",
 					Env: []corev1.EnvVar{
 						{
-							Name:  BindOperationKey,
+							Name:  FeedOperationKey,
 							Value: string(op),
 						},
 						{
-							Name:  BindTargetKey,
+							Name:  FeedTargetKey,
 							Value: route,
 						},
 						{
-							Name:  BindTriggerKey,
+							Name:  FeedTriggerKey,
 							Value: encodedTrigger,
 						},
 						{
-							Name:  BindContextKey,
-							Value: encodedBindContext,
+							Name:  FeedContextKey,
+							Value: encodedFeedContext,
 						},
 						{
 							Name:  EventSourceParametersKey,
 							Value: encodedParameters,
 						},
 						{
-							Name: BindNamespaceKey,
+							Name: FeedNamespaceKey,
 							ValueFrom: &corev1.EnvVarSource{
 								FieldRef: &corev1.ObjectFieldSelector{
 									FieldPath: "metadata.namespace",
@@ -153,7 +154,7 @@ func makePodTemplate(bind *v1alpha1.Bind, namespace string, serviceAccountName s
 							},
 						},
 						{
-							Name: BindServiceAccountKey,
+							Name: FeedServiceAccountKey,
 							ValueFrom: &corev1.EnvVarSource{
 								FieldRef: &corev1.ObjectFieldSelector{
 									FieldPath: "spec.serviceAccountName",
