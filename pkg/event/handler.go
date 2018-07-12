@@ -133,10 +133,11 @@ func unwrapReturnValues(res []reflect.Value) (interface{}, error) {
 		// Should be a safe cast due to assertEventHandler()
 		return nil, res[0].Interface().(error)
 	case 2:
-		if res[0].IsNil() {
+		if res[1].IsNil() {
 			return res[0].Interface(), nil
 		}
-		return res[0].Interface(), res[1].Interface().(error)
+		// Should be a safe cast due to assertEventHandler()
+		return nil, res[1].Interface().(error)
 	default:
 		// Should never happen due to assertEventHandler()
 		panic("Cannot unmarshal more than 2 return values")
@@ -166,7 +167,7 @@ func respondHTTP(outparams []reflect.Value, w http.ResponseWriter) {
 		return
 	}
 
-	// Neither result nor error will cause a 204 NO CONTENT
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // Handler creates an EventHandler that implements http.Handler

@@ -19,7 +19,9 @@ package event_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -234,6 +236,85 @@ func TestParameterMarsahlling(t *testing.T) {
 			}
 			if !wasCalled {
 				t.Fatal("Handler was never called")
+			}
+		})
+	}
+}
+
+func TestReturnTypeRendering(t *testing.T) {
+	eventData := map[string]interface{}{
+		"unused": "data",
+	}
+	eventContext := event.EventContext{
+		CloudEventsVersion: event.CloudEventsVersion,
+		EventID:            "1234",
+		Source:             "tests:TestUndtypedHandling",
+		EventType:          "dev.eventing.test",
+		Extensions:         map[string]interface{}{},
+	}
+	for _, test := range []struct {
+		name             string
+		expectedStatus   int
+		expectedResponse string
+		handler          http.Handler
+	}{
+		{
+			name:           "no return",
+			expectedStatus: http.StatusNoContent,
+			handler:        event.Handler(func() {}),
+		}, {
+			name:           "nil error return",
+			expectedStatus: http.StatusNoContent,
+			handler: event.Handler(func() error {
+				return nil
+			}),
+		}, {
+			name:           "non-nil error return (one return type)",
+			expectedStatus: http.StatusInternalServerError,
+			handler: event.Handler(func() error {
+				return errors.New("Some error")
+			}),
+			expectedResponse: "Internal server error",
+		}, {
+			name:           "successful return",
+			expectedStatus: http.StatusOK,
+			handler: event.Handler(func() (map[string]interface{}, error) {
+				return map[string]interface{}{"hello": "world"}, nil
+			}),
+			expectedResponse: `{"hello":"world"}`,
+		}, {
+			name:           "non-nil error return (two return types)",
+			expectedStatus: http.StatusInternalServerError,
+			handler: event.Handler(func() (map[string]interface{}, error) {
+				return map[string]interface{}{"hello": "world"}, errors.New("Errors take precedence")
+			}),
+			expectedResponse: "Internal server error",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			srv := httptest.NewServer(test.handler)
+			defer srv.Close()
+			req, err := event.NewRequest(srv.URL, eventData, eventContext)
+			if err != nil {
+				t.Fatal("Failed to marshal request ", err)
+			}
+			res, err := srv.Client().Do(req)
+			if err != nil {
+				t.Fatal("Failed to send request")
+			}
+			defer res.Body.Close()
+			if test.expectedStatus != res.StatusCode {
+				t.Fatalf("Wrong status code from event handler; wanted=%d; got=%d", test.expectedStatus, res.StatusCode)
+			}
+			if test.expectedResponse != "" {
+				b, err := ioutil.ReadAll(res.Body)
+				if err != nil {
+					t.Fatal("Failed to read response body:", err)
+				}
+				resBody := string(b)
+				if test.expectedResponse != resBody {
+					t.Fatalf("Got unexpected respnose string; wanted=%q; got=%q", test.expectedResponse, resBody)
+				}
 			}
 		})
 	}
