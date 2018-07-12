@@ -65,13 +65,28 @@ func TestHandlerTypeErrors(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			err, ok := event.Handler(test.param).(error)
+			h := event.Handler(test.param)
+			err, ok := h.(error)
 			if !ok {
-				t.Errorf("Expected Handler() to fail with %v, passed", test.err)
-				return
+				t.Fatalf("Expected Handler() to fail with %v, passed", test.err)
 			}
 			if !strings.Contains(err.Error(), test.err) {
 				t.Errorf("Expected Handler() to fail. want %q, got %v", test.err, err)
+			}
+
+			// Attempt to call the returned Handler to verify it fails.
+			srv := httptest.NewServer(h)
+			defer srv.Close()
+			type E struct{}
+			req, err := event.NewRequest(srv.URL, E{}, event.EventContext{
+				EventID: "1", EventType: "a", Source: "one"})
+			if err != nil {
+				t.Errorf("Couldn't construct request: %v", err)
+			}
+			if resp, err := srv.Client().Do(req); err != nil {
+				t.Errorf("Failed to Post event: %v", resp)
+			} else if resp.StatusCode != http.StatusServiceUnavailable {
+				t.Errorf("Expected error status. got %d, got %d", resp.StatusCode, http.StatusServiceUnavailable)
 			}
 		})
 	}
