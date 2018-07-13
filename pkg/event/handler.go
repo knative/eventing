@@ -234,7 +234,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (h failedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	glog.Error("Failed to handle event: ", h.Error())
-	w.WriteHeader(http.StatusServiceUnavailable)
+	w.WriteHeader(http.StatusNotImplemented)
 	w.Write([]byte(`Internal server error`))
 }
 

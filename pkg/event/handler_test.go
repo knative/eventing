@@ -85,8 +85,8 @@ func TestHandlerTypeErrors(t *testing.T) {
 			}
 			if resp, err := srv.Client().Do(req); err != nil {
 				t.Errorf("Failed to Post event: %v", resp)
-			} else if resp.StatusCode != http.StatusServiceUnavailable {
-				t.Errorf("Expected error status. got %d, got %d", resp.StatusCode, http.StatusServiceUnavailable)
+			} else if resp.StatusCode != http.StatusNotImplemented {
+				t.Errorf("Expected error status. got %d, got %d", resp.StatusCode, http.StatusNotImplemented)
 			}
 		})
 	}
