@@ -59,6 +59,10 @@ type ChannelSpec struct {
 
 // ChannelStatus (computed) for a channel
 type ChannelStatus struct {
+	// ServiceName holds the name of a core Kubernetes Service resource that
+	// load balances over the pods backing the Channel's Bus.
+	// +optional
+	ServiceName string `json:"serviceName,omitempty"`
 }
 
 func (c *Channel) GetSpecJSON() ([]byte, error) {

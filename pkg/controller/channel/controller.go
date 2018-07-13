@@ -367,6 +367,10 @@ func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel, serv
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
 	channelCopy := channel.DeepCopy()
+
+	// Update ChannelStatus
+	channelCopy.Status.ServiceName = service.Name
+
 	// If the CustomResourceSubresources feature gate is not enabled,
 	// we must use Update instead of UpdateStatus to update the Status block of the Channel resource.
 	// UpdateStatus will not allow changes to the Spec of the resource,
