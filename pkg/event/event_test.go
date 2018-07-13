@@ -47,10 +47,10 @@ type defaultMarshaller int
 
 var Default defaultMarshaller = 0
 
-func (defaultMarshaller) FromRequest(data interface{}, r *http.Request) (*event.Context, error) {
+func (defaultMarshaller) FromRequest(data interface{}, r *http.Request) (*event.EventContext, error) {
 	return event.FromRequest(data, r)
 }
-func (defaultMarshaller) NewRequest(urlString string, data interface{}, context event.Context) (*http.Request, error) {
+func (defaultMarshaller) NewRequest(urlString string, data interface{}, context event.EventContext) (*http.Request, error) {
 	return event.NewRequest(urlString, data, context)
 }
 
@@ -67,7 +67,7 @@ func TestValidRoundTrips(t *testing.T) {
 
 	service := "firestore.googleapis.com"
 
-	context := &event.Context{
+	context := &event.EventContext{
 		CloudEventsVersion: "0.1",
 		EventID:            "eventid-123",
 		EventTime:          doc.UpdateTime,

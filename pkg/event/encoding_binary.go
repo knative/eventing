@@ -66,8 +66,8 @@ const (
 type binary int
 
 // FromRequest parses event data and context from an HTTP request.
-func (binary) FromRequest(data interface{}, r *http.Request) (*Context, error) {
-	var ctx Context
+func (binary) FromRequest(data interface{}, r *http.Request) (*EventContext, error) {
+	var ctx EventContext
 	err := anyError(
 		getRequiredHeader(r.Header, HeaderEventID, &ctx.EventID),
 		getRequiredHeader(r.Header, HeaderEventType, &ctx.EventType),
@@ -114,7 +114,7 @@ func (binary) FromRequest(data interface{}, r *http.Request) (*Context, error) {
 }
 
 // NewRequest creates an HTTP request for Binary content encoding.
-func (binary) NewRequest(urlString string, data interface{}, context Context) (*http.Request, error) {
+func (binary) NewRequest(urlString string, data interface{}, context EventContext) (*http.Request, error) {
 	url, err := url.Parse(urlString)
 	if err != nil {
 		return nil, err

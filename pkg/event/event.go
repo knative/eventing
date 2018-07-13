@@ -17,6 +17,7 @@ limitations under the License.
 package event
 
 import (
+	"context"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
@@ -54,24 +55,36 @@ const (
 	fieldSource             = "Source"
 )
 
-// Context holds standard metadata about an event.
-type Context struct {
-	CloudEventsVersion string                 `json:"cloudEventsVersion,omitempty"`
-	EventID            string                 `json:"eventID"`
-	EventTime          time.Time              `json:"eventTime,omitempty"`
-	EventType          string                 `json:"eventType"`
-	EventTypeVersion   string                 `json:"eventTypeVersion,omitempty"`
-	SchemaURL          string                 `json:"schemaURL,omitempty"`
-	ContentType        string                 `json:"contentType,omitempty"`
-	Source             string                 `json:"source"`
-	Extensions         map[string]interface{} `json:"extensions,omitempty"`
+// EventContext holds standard metadata about an event. See
+// https://github.com/cloudevents/spec/blob/v0.1/spec.md#context-attributes for
+// details on these fields.
+type EventContext struct {
+	// The version of the CloudEvents specification used by the event.
+	CloudEventsVersion string `json:"cloudEventsVersion,omitempty"`
+	// ID of the event; must be non-empty and unique within the scope of the producer.
+	EventID string `json:"eventID"`
+	// Timestamp when the event happened.
+	EventTime time.Time `json:"eventTime,omitempty"`
+	// Type of occurrence which has happened.
+	EventType string `json:"eventType"`
+	// The version of the `eventType`; this is producer-specific.
+	EventTypeVersion string `json:"eventTypeVersion,omitempty"`
+	// A link to the schema that the `data` attribute adheres to.
+	SchemaURL string `json:"schemaURL,omitempty"`
+	// A MIME (RFC 2046) string describing the media type of `data`.
+	// TODO: Should an empty string assume `application/json`, or auto-detect the content?
+	ContentType string `json:"contentType,omitempty"`
+	// A URI describing the event producer.
+	Source string `json:"source"`
+	// Additional metadata without a well-defined structure.
+	Extensions map[string]interface{} `json:"extensions,omitempty"`
 }
 
 // HTTPMarshaller implements a scheme for decoding CloudEvents over HTTP.
 // Implementations are Binary, Structured, and Any
 type HTTPMarshaller interface {
-	FromRequest(data interface{}, r *http.Request) (*Context, error)
-	NewRequest(urlString string, data interface{}, context Context) (*http.Request, error)
+	FromRequest(data interface{}, r *http.Request) (*EventContext, error)
+	NewRequest(urlString string, data interface{}, context EventContext) (*http.Request, error)
 }
 
 func anyError(errs ...error) error {
@@ -83,7 +96,7 @@ func anyError(errs ...error) error {
 	return nil
 }
 
-func ensureRequiredFields(context Context) error {
+func ensureRequiredFields(context EventContext) error {
 	return anyError(
 		require(fieldEventID, context.EventID),
 		require(fieldEventType, context.EventType),
@@ -113,6 +126,12 @@ func isXMLEncoding(encoding string) bool {
 }
 
 func unmarshalEventData(encoding string, reader io.Reader, data interface{}) error {
+	// The Handler tools allow developers to not ask for event data;
+	// in this case, just don't unmarshal anything
+	if data == nil {
+		return nil
+	}
+
 	// If someone tried to marshal an event into an io.Reader, just assign our existing reader.
 	// (This is used by event.Mux to determine which type to unmarshal as)
 	readerPtrType := reflect.TypeOf((*io.Reader)(nil))
@@ -150,18 +169,31 @@ func marshalEventData(encoding string, data interface{}) ([]byte, error) {
 }
 
 // FromRequest parses a CloudEvent from any known encoding.
-func FromRequest(data interface{}, r *http.Request) (*Context, error) {
+func FromRequest(data interface{}, r *http.Request) (*EventContext, error) {
 	switch r.Header.Get(HeaderContentType) {
 	case ContentTypeStructuredJSON:
 		return Structured.FromRequest(data, r)
 	case ContentTypeBinaryJSON:
 		return Binary.FromRequest(data, r)
 	default:
+		// TODO: assume binary content mode
+		// (https://github.com/cloudevents/spec/blob/v0.1/http-transport-binding.md#3-http-message-mapping)
+		// and that data is ??? (io.Reader?, byte array?)
 		return nil, fmt.Errorf("Cannot handle encoding %q", r.Header.Get("Content-Type"))
 	}
 }
 
 // NewRequest craetes an HTTP request for Structured content encoding.
-func NewRequest(urlString string, data interface{}, context Context) (*http.Request, error) {
+func NewRequest(urlString string, data interface{}, context EventContext) (*http.Request, error) {
 	return Structured.NewRequest(urlString, data, context)
+}
+
+// Opaque key type used to store EventContexts in a context.Context
+type contextKeyType struct{}
+
+var contextKey = contextKeyType{}
+
+// FromContext loads an EventContext from a normal context.Context
+func FromContext(ctx context.Context) *EventContext {
+	return ctx.Value(contextKey).(*EventContext)
 }
