@@ -27,16 +27,18 @@ import (
 // MessageReceiver starts a server to receive new messages for the bus. The new
 // message is emitted via the receiver function.
 type MessageReceiver struct {
-	receiverFunc   func(*ChannelReference, *Message) error
-	forwardHeaders []string
+	receiverFunc    func(*ChannelReference, *Message) error
+	forwardHeaders  map[string]bool
+	forwardPrefixes []string
 }
 
 // NewMessageReceiver creates a message receiver passing new messages to the
 // receiverFunc.
 func NewMessageReceiver(receiverFunc func(*ChannelReference, *Message) error) *MessageReceiver {
 	receiver := &MessageReceiver{
-		receiverFunc:   receiverFunc,
-		forwardHeaders: forwardHeaders,
+		receiverFunc:    receiverFunc,
+		forwardHeaders:  headerSet(forwardHeaders),
+		forwardPrefixes: forwardPrefixes,
 	}
 	return receiver
 }
@@ -136,13 +138,23 @@ func (r *MessageReceiver) fromRequest(req *http.Request) (*Message, error) {
 //
 // Only headers whitelisted as safe are copied. If an HTTP header exists
 // multiple times, a single value will be retained.
-func (r *MessageReceiver) fromHTTPHeaders(http http.Header) map[string]string {
+func (r *MessageReceiver) fromHTTPHeaders(headers http.Header) map[string]string {
 	safe := map[string]string{}
-	for _, header := range r.forwardHeaders {
-		if value := http.Get(header); value != "" {
-			safe[header] = value
+
+	// TODO handle multi-value headers
+	for h, v := range headers {
+		if _, ok := r.forwardHeaders[h]; ok {
+			safe[h] = v[0]
+			break
+		}
+		for _, p := range r.forwardPrefixes {
+			if strings.HasPrefix(h, p) {
+				safe[h] = v[0]
+				break
+			}
 		}
 	}
+
 	return safe
 }
 

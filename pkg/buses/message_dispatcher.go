@@ -26,16 +26,18 @@ import (
 
 // MessageDispatcher dispatches messages to a destination over HTTP.
 type MessageDispatcher struct {
-	httpClient     *http.Client
-	forwardHeaders []string
+	httpClient      *http.Client
+	forwardHeaders  map[string]bool
+	forwardPrefixes []string
 }
 
 // NewMessageDispatcher creates a new message dispatcher that can dispatch
 // messages to HTTP destinations.
 func NewMessageDispatcher() *MessageDispatcher {
 	return &MessageDispatcher{
-		httpClient:     &http.Client{},
-		forwardHeaders: forwardHeaders,
+		httpClient:      &http.Client{},
+		forwardHeaders:  headerSet(forwardHeaders),
+		forwardPrefixes: forwardPrefixes,
 	}
 }
 
@@ -55,14 +57,34 @@ func (d *MessageDispatcher) DispatchMessage(destination string, defaultNamespace
 	if err != nil {
 		return fmt.Errorf("Unable to create request %v", err)
 	}
-	for key, value := range message.Headers {
-		req.Header.Add(key, value)
-	}
+	req.Header = d.toHTTPHeaders(message.Headers)
 	_, err = d.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("Unable to complete request %v", err)
 	}
 	return nil
+}
+
+// toHTTPHeaders converts message headers to HTTP headers.
+//
+// Only headers whitelisted as safe are copied.
+func (d *MessageDispatcher) toHTTPHeaders(headers map[string]string) http.Header {
+	safe := http.Header{}
+
+	for name, value := range headers {
+		if _, ok := d.forwardHeaders[name]; ok {
+			safe.Add(name, value)
+			break
+		}
+		for _, prefix := range d.forwardPrefixes {
+			if strings.HasPrefix(name, prefix) {
+				safe.Add(name, value)
+				break
+			}
+		}
+	}
+
+	return safe
 }
 
 func (d *MessageDispatcher) resolveDestination(destination string, defaultNamespace string) string {

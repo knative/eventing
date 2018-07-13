@@ -22,25 +22,16 @@ import (
 
 var forwardHeaders = []string{
 	"content-type",
-
-	// cloud event headers
-	"ce-eventtype",
-	"ce-eventtypeversion",
-	"ce-cloudeventsversion",
-	"ce-source",
-	"ce-eventid",
-	"ce-eventtime",
-	"ce-schemaurl",
-	// TODO handle "ce-x-*"
-
-	// tracing headers
+	// tracing
 	"x-request-id",
-	"x-b3-traceid",
-	"x-b3-spanid",
-	"x-b3-parentspanid",
-	"x-b3-sampled",
-	"x-b3-flags",
-	"x-ot-span-context",
+}
+
+var forwardPrefixes = []string{
+	// cloud events
+	"ce-",
+	// tracing
+	"x-b3-",
+	"x-ot-",
 }
 
 // Message represents an chunk of data within a bus. The message contains both
@@ -61,3 +52,11 @@ type Message struct {
 // ErrUnknownChannel is returned when a message is recieved by a bus for a
 // channel that does not exist.
 var ErrUnknownChannel = errors.New("unknown channel")
+
+func headerSet(headers []string) map[string]bool {
+	set := make(map[string]bool)
+	for _, header := range headers {
+		set[header] = true
+	}
+	return set
+}
