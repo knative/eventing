@@ -30,7 +30,7 @@ func TestCommonEventTypeCondition_SetCondition(t *testing.T) {
 		{"Simple", []CommonEventTypeConditionType{EventTypeComplete}, 1},
 		{"Two", []CommonEventTypeConditionType{EventTypeComplete, EventTypeFailed}, 2},
 		{"Override", []CommonEventTypeConditionType{EventTypeComplete, EventTypeComplete}, 1},
-		{"Invalid", []CommonEventTypeConditionType{}, 0},
+		{"Invalid", []CommonEventTypeConditionType{""}, 0},
 	}
 
 	// EventType

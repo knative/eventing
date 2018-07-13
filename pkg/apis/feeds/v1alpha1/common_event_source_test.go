@@ -30,7 +30,7 @@ func TestCommonEventSourceCondition_SetCondition(t *testing.T) {
 		{"Simple", []CommonEventSourceConditionType{EventSourceComplete}, 1},
 		{"Two", []CommonEventSourceConditionType{EventSourceComplete, EventSourceFailed}, 2},
 		{"Override", []CommonEventSourceConditionType{EventSourceComplete, EventSourceComplete}, 1},
-		{"Invalid", []CommonEventSourceConditionType{}, 0},
+		{"Invalid", []CommonEventSourceConditionType{""}, 0},
 	}
 
 	// EventSource
