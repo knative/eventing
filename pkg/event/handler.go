@@ -50,7 +50,7 @@ const (
 
 var (
 	// FYI: Getting the type of an interface is a bit hard in Go because of nil is special:
-	// 1. Structs & pointers hae concrete types, whereas interfaces area actually tuples of
+	// 1. Structs & pointers have concrete types, whereas interfaces are actually tuples of
 	//    [imlpementation vtable, pointer].
 	// 2. Literals (such as nil) can be cast to any relevant type.
 	// Because TypeOf takes an interface{}, a nil interface reference would cast lossily when
@@ -64,7 +64,7 @@ var (
 // Verifies that the inputs to a function have a valid signature; panics otherwise.
 // Valid input signatures:
 // (), (context.Context), (context.Context, any)
-func assertInParamSignature(fnType reflect.Type) error {
+func validateInParamSignature(fnType reflect.Type) error {
 	switch fnType.NumIn() {
 	case 2:
 		fallthrough
@@ -83,7 +83,7 @@ func assertInParamSignature(fnType reflect.Type) error {
 // Verifies that the outputs of a function have a valid signature; panics otherwise.
 // Valid output signatures:
 // (), (error), (any, error)
-func assertOutParamSignature(fnType reflect.Type) error {
+func validateOutParamSignature(fnType reflect.Type) error {
 	switch fnType.NumOut() {
 	case 2:
 		fallthrough
@@ -108,8 +108,8 @@ func validateFunction(fnType reflect.Type) errAndHandler {
 		return &failedHandler{err: fmt.Errorf("Must pass a function to handle events")}
 	}
 	err := anyError(
-		assertInParamSignature(fnType),
-		assertOutParamSignature(fnType))
+		validateInParamSignature(fnType),
+		validateOutParamSignature(fnType))
 	if err != nil {
 		return &failedHandler{err: err}
 	}
@@ -184,9 +184,28 @@ func respondHTTP(outparams []reflect.Value, w http.ResponseWriter) {
 }
 
 // Handler creates an EventHandler that implements http.Handler
-// Will panic in case of a type error
-// * fn a function of type func(<your data struct>, *event.Context) error
-// TODO(inlined): for continuations we'll probably change the return signature to (interface{}, error)
+// If the fn parameter is not a valid type, will produce an http.Handler that also conforms
+// to error and will respond to all HTTP requests with that error. Valid types of fn are:
+//
+// * func()
+// * func() error
+// * func() (anything, error)
+// * func(context.Context)
+// * func(context.Context) error
+// * func(context.Context) (anything, error)
+// * func(context.Context, anything)
+// * func(context.Context, anything) error
+// * func(context.Context, anything) (anything, error)
+//
+// CloudEvent contexts are available from the context.Context parameter
+// CloudEvent data will be deserialized into the "anything" parameter.
+// The library supports native decoding with both XML and JSON encoding.
+// To accept another advanced type, pass an io.Reader as the input parameter.
+//
+// HTTP responses are generated based on the return value of fn:
+// * any error return value will cause a StatusInternalServerError response
+// * a function with no return type or a function returning nil will cause a StatusNoContent response
+// * a function that returns a value will cause a StatusOK and render the response as JSON
 func Handler(fn interface{}) http.Handler {
 	fnType := reflect.TypeOf(fn)
 	err := validateFunction(fnType)
@@ -213,7 +232,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		dataPtr, dataArg := allocate(h.dataType)
 		eventContext, err := FromRequest(dataPtr, r)
 		if err != nil {
-			glog.Warning("Failed to handle request", spew.Sdump(r))
+			glog.Warningf("Failed to handle request %s; error %s", spew.Sdump(r), err)
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte(`Invalid request`))
 			return
@@ -253,6 +272,28 @@ func NewMux() Mux {
 }
 
 // Handle adds a new handler for a specific event type
+// If the fn parameter is not a valid type, the endpoint will respond to all HTTP requests
+// with that error. Valid types of fn are:
+//
+// * func()
+// * func() error
+// * func() (anything, error)
+// * func(context.Context)
+// * func(context.Context) error
+// * func(context.Context) (anything, error)
+// * func(context.Context, anything)
+// * func(context.Context, anything) error
+// * func(context.Context, anything) (anything, error)
+//
+// CloudEvent contexts are available from the context.Context parameter
+// CloudEvent data will be deserialized into the "anything" parameter.
+// The library supports native decoding with both XML and JSON encoding.
+// To accept another advanced type, pass an io.Reader as the input parameter.
+//
+// HTTP responses are generated based on the return value of fn:
+// * any error return value will cause a StatusInternalServerError response
+// * a function with no return type or a function returning nil will cause a StatusNoContent response
+// * a function that returns a value will cause a StatusOK and render the response as JSON
 func (m Mux) Handle(eventType string, fn interface{}) error {
 	fnType := reflect.TypeOf(fn)
 	err := validateFunction(fnType)

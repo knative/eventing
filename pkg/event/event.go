@@ -126,7 +126,7 @@ func isXMLEncoding(encoding string) bool {
 }
 
 func unmarshalEventData(encoding string, reader io.Reader, data interface{}) error {
-	// The Handler tools allow develoeprs to not ask for event data;
+	// The Handler tools allow developers to not ask for event data;
 	// in this case, just don't unmarshal anything
 	if data == nil {
 		return nil
