@@ -20,6 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -162,24 +163,7 @@ type EventTrigger struct {
 	// by the actual trigger actuator.
 	// NOTE: experimental field. All secrets in ParametersFrom will be
 	// resolved and given to event sources in the Parameters field.
-	ParametersFrom []ParametersFromSource `json:"parametersFrom,omitempty"`
-}
-
-// ParametersFromSource represents the source of a set of Parameters
-// TODO: consider making this into a new secret type.
-type ParametersFromSource struct {
-	// The Secret key to select from.
-	// The value must be a JSON object.
-	//+optional
-	SecretKeyRef *SecretKeyReference `json:"secretKeyRef,omitempty"`
-}
-
-// SecretKeyReference references a key of a Secret.
-type SecretKeyReference struct {
-	// The name of the secret in the resource's namespace to select from.
-	Name string `json:"name"`
-	// The key of the secret to select from.  Must be a valid secret key.
-	Key string `json:"key"`
+	ParametersFrom []feedsv1alpha1.ParametersFromSource `json:"parametersFrom,omitempty"`
 }
 
 // FlowStatus is the status for a Flow resource

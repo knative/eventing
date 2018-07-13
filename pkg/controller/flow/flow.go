@@ -17,12 +17,10 @@ limitations under the License.
 package flow
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"time"
 
-	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -47,9 +45,9 @@ import (
 	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
 
 	"github.com/knative/eventing/pkg/controller"
-	"github.com/knative/eventing/pkg/sources"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	v1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
@@ -94,11 +92,8 @@ type Controller struct {
 	flowsLister listers.FlowLister
 	flowsSynced cache.InformerSynced
 
-	eventTypesLister feedListers.EventTypeLister
-	eventTypesSynced cache.InformerSynced
-
-	eventSourcesLister feedListers.EventSourceLister
-	eventSourcesSynced cache.InformerSynced
+	feedsLister feedListers.FeedLister
+	feedsSynced cache.InformerSynced
 
 	channelsLister channelListers.ChannelLister
 	channelsSynced cache.InformerSynced
@@ -153,10 +148,8 @@ func NewController(
 		clientset:           clientset,
 		flowsLister:         flowInformer.Flows().Lister(),
 		flowsSynced:         flowInformer.Flows().Informer().HasSynced,
-		eventSourcesLister:  feedInformer.EventSources().Lister(),
-		eventSourcesSynced:  feedInformer.EventSources().Informer().HasSynced,
-		eventTypesLister:    feedInformer.EventTypes().Lister(),
-		eventTypesSynced:    feedInformer.EventTypes().Informer().HasSynced,
+		feedsLister:         feedInformer.Feeds().Lister(),
+		feedsSynced:         feedInformer.Feeds().Informer().HasSynced,
 		channelsLister:      channelInformer.Lister(),
 		channelsSynced:      channelInformer.Informer().HasSynced,
 		subscriptionsLister: subscriptionInformer.Lister(),
@@ -195,14 +188,9 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 		return fmt.Errorf("failed to wait for Flow caches to sync")
 	}
 
-	glog.Info("Waiting for EventSources informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, c.eventSourcesSynced); !ok {
-		return fmt.Errorf("failed to wait for EventSources caches to sync")
-	}
-
-	glog.Info("Waiting for EventTypes informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, c.eventTypesSynced); !ok {
-		return fmt.Errorf("failed to wait for EventTypes caches to sync")
+	glog.Info("Waiting for Feed informer caches to sync")
+	if ok := cache.WaitForCacheSync(stopCh, c.feedsSynced); !ok {
+		return fmt.Errorf("failed to wait for Feed caches to sync")
 	}
 
 	glog.Info("Waiting for channel informer caches to sync")
@@ -370,13 +358,12 @@ func (c *Controller) reconcile(flow *v1alpha1.Flow) error {
 
 	glog.Infof("Created Subscription %q", subscription.Name)
 
-	/*
-		feed, err := c.reconcileFeed(channel, flow)
-		if err != nil {
-			glog.Warningf("Failed to reconcile feed: %v", err)
-		}
-	*/
+	feed, err := c.reconcileFeed(channel.Name, flow)
+	if err != nil {
+		glog.Warningf("Failed to reconcile feed: %v", err)
+	}
 
+	glog.Infof("Created Feed %q", feed.Name)
 	return nil
 }
 
@@ -393,71 +380,6 @@ func (c *Controller) updateStatus(u *v1alpha1.Flow) (*v1alpha1.Flow, error) {
 	// allow changes to the Spec of the resource, which is ideal for ensuring
 	// nothing other than resource status has been updated.
 	return flowClient.Update(newu)
-}
-
-func resolveTrigger(kubeClient kubernetes.Interface, namespace string, trigger v1alpha1.EventTrigger) (sources.EventTrigger, error) {
-	r := sources.EventTrigger{
-		Resource:   trigger.Resource,
-		EventType:  trigger.EventType,
-		Parameters: make(map[string]interface{}),
-	}
-	if trigger.Parameters != nil && trigger.Parameters.Raw != nil && len(trigger.Parameters.Raw) > 0 {
-		p := make(map[string]interface{})
-		if err := yaml.Unmarshal(trigger.Parameters.Raw, &p); err != nil {
-			return r, err
-		}
-		for k, v := range p {
-			r.Parameters[k] = v
-		}
-	}
-	if trigger.ParametersFrom != nil {
-		glog.Infof("Fetching from source %+v", trigger.ParametersFrom)
-		for _, p := range trigger.ParametersFrom {
-			pfs, err := fetchParametersFromSource(kubeClient, namespace, &p)
-			if err != nil {
-				return r, err
-			}
-			for k, v := range pfs {
-				r.Parameters[k] = v
-			}
-		}
-	}
-	return r, nil
-}
-
-func fetchParametersFromSource(kubeClient kubernetes.Interface, namespace string, parametersFrom *v1alpha1.ParametersFromSource) (map[string]interface{}, error) {
-	var params map[string]interface{}
-	if parametersFrom.SecretKeyRef != nil {
-		glog.Infof("Fetching secret %+v", parametersFrom.SecretKeyRef)
-		data, err := fetchSecretKeyValue(kubeClient, namespace, parametersFrom.SecretKeyRef)
-		if err != nil {
-			return nil, err
-		}
-
-		p, err := unmarshalJSON(data)
-		if err != nil {
-			return nil, err
-		}
-		params = p
-
-	}
-	return params, nil
-}
-
-func fetchSecretKeyValue(kubeClient kubernetes.Interface, namespace string, secretKeyRef *v1alpha1.SecretKeyReference) ([]byte, error) {
-	secret, err := kubeClient.CoreV1().Secrets(namespace).Get(secretKeyRef.Name, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return secret.Data[secretKeyRef.Key], nil
-}
-
-func unmarshalJSON(in []byte) (map[string]interface{}, error) {
-	parameters := make(map[string]interface{})
-	if err := json.Unmarshal(in, &parameters); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal parameters as JSON object: %v", err)
-	}
-	return parameters, nil
 }
 
 // AddFinalizer adds value to the list of finalizers on obj
@@ -607,4 +529,54 @@ func (c *Controller) createSubscription(channelName string, target string, flow 
 		},
 	}
 	return c.clientset.ChannelsV1alpha1().Subscriptions(flow.Namespace).Create(subscription)
+}
+
+func (c *Controller) reconcileFeed(channelName string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
+	feedName := flow.Name
+	feed, err := c.feedsLister.Feeds(flow.Namespace).Get(feedName)
+	if errors.IsNotFound(err) {
+		feed, err = c.createFeed(feedName, flow)
+		if err != nil {
+			glog.Errorf("Failed to create feed %q : %v", feedName, err)
+			return nil, err
+		}
+	} else if err != nil {
+		glog.Errorf("Failed to reconcile feed %q failed to get feeds : %v", feedName, err)
+		return nil, err
+	}
+
+	// Should make sure feed is what it should be. For now, just assume it's fine
+	// if it exists.
+	return feed, err
+
+}
+
+func (c *Controller) createFeed(channelName string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
+	feedName := flow.Name
+	feed := &feedsv1alpha1.Feed{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      feedName,
+			Namespace: flow.Namespace,
+		},
+		Spec: feedsv1alpha1.FeedSpec{
+			Action: feedsv1alpha1.FeedAction{ChannelName: channelName},
+			Trigger: feedsv1alpha1.EventTrigger{
+				EventType: flow.Spec.Trigger.EventType,
+				Resource:  flow.Spec.Trigger.Resource,
+				Service:   flow.Spec.Trigger.Service,
+			},
+		},
+	}
+	if flow.Spec.ServiceAccountName != "" {
+		feed.Spec.ServiceAccountName = flow.Spec.ServiceAccountName
+	}
+
+	if flow.Spec.Trigger.Parameters != nil {
+		feed.Spec.Trigger.Parameters = flow.Spec.Trigger.Parameters
+	}
+	if flow.Spec.Trigger.ParametersFrom != nil {
+		feed.Spec.Trigger.ParametersFrom = flow.Spec.Trigger.ParametersFrom
+	}
+
+	return c.clientset.FeedsV1alpha1().Feeds(flow.Namespace).Create(feed)
 }

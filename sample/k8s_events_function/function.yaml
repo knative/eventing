@@ -12,27 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: flows.knative.dev/v1alpha1
-kind: Flow
+apiVersion: serving.knative.dev/v1alpha1
+kind: Configuration
 metadata:
-  name: flow-example
+  name: k8s-events
   namespace: default
 spec:
-  serviceAccountName: feed-sa
-  trigger:
-    eventType: receiveevent
-    # This is kind of superfluous due to parameters, but the current
-    # feed model still requires a resource
-    resource: k8sevents/receiveevent
-    service: k8sevents
-    parameters:
-      namespace: default
-  action:
-    target:
-# Once Route supports serviceName, use that
-#      kind: Route
-      kind: Revision
-      apiVersion: serving.knative.dev/v1alpha1
-# Once Route supports serviceName, use that
-#      name: k8s-events
-      name: k8s-events-00001
+  revisionTemplate:
+    metadata:
+      labels:
+        knative.dev/type: container
+    spec:
+      container:
+        image: github.com/knative/eventing/sample/k8s_events_function
+
+---
+apiVersion: serving.knative.dev/v1alpha1
+kind: Route
+metadata:
+  name: k8s-events
+  namespace: default
+spec:
+  traffic:
+  - configurationName: k8s-events
+    percent: 100
