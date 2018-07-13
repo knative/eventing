@@ -73,8 +73,7 @@ const (
 )
 
 var (
-	flowControllerKind      = v1alpha1.SchemeGroupVersion.WithKind("Flow")
-	eventTypeControllerKind = v1alpha1.SchemeGroupVersion.WithKind("EventType")
+	flowControllerKind = v1alpha1.SchemeGroupVersion.WithKind("Flow")
 )
 
 // Controller is the controller implementation for Flow resources
@@ -394,29 +393,6 @@ func AddFinalizer(obj runtimetypes.Object, value string) error {
 	return nil
 }
 
-// RemoveFinalizer removes the given value from the list of finalizers in obj, then returns a new list
-// of finalizers after value has been removed.
-func RemoveFinalizer(obj runtimetypes.Object, value string) ([]string, error) {
-	accessor, err := meta.Accessor(obj)
-	if err != nil {
-		return nil, err
-	}
-	finalizers := sets.NewString(accessor.GetFinalizers()...)
-	finalizers.Delete(value)
-	newFinalizers := finalizers.List()
-	accessor.SetFinalizers(newFinalizers)
-	return newFinalizers, nil
-}
-
-func newFlowNonControllerRef(et *v1alpha1.Flow) *metav1.OwnerReference {
-	blockOwnerDeletion := true
-	isController := false
-	revRef := metav1.NewControllerRef(et, flowControllerKind)
-	revRef.BlockOwnerDeletion = &blockOwnerDeletion
-	revRef.Controller = &isController
-	return revRef
-}
-
 // syncHandler compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Flow resource
 // with the current status of the resource.
@@ -489,6 +465,9 @@ func (c *Controller) createChannel(flow *v1alpha1.Flow) (*channelsv1alpha1.Chann
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      channelName,
 			Namespace: flow.Namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				*c.NewControllerRef(flow),
+			},
 		},
 		Spec: channelsv1alpha1.ChannelSpec{
 			ClusterBus: defaultBusName,
@@ -522,6 +501,9 @@ func (c *Controller) createSubscription(channelName string, target string, flow 
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      subscriptionName,
 			Namespace: flow.Namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				*c.NewControllerRef(flow),
+			},
 		},
 		Spec: channelsv1alpha1.SubscriptionSpec{
 			Channel:    channelName,
@@ -557,6 +539,9 @@ func (c *Controller) createFeed(channelName string, flow *v1alpha1.Flow) (*feeds
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      feedName,
 			Namespace: flow.Namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				*c.NewControllerRef(flow),
+			},
 		},
 		Spec: feedsv1alpha1.FeedSpec{
 			Action: feedsv1alpha1.FeedAction{ChannelName: channelName},
@@ -579,4 +564,13 @@ func (c *Controller) createFeed(channelName string, flow *v1alpha1.Flow) (*feeds
 	}
 
 	return c.clientset.FeedsV1alpha1().Feeds(flow.Namespace).Create(feed)
+}
+
+func (c *Controller) NewControllerRef(flow *v1alpha1.Flow) *metav1.OwnerReference {
+	blockOwnerDeletion := false
+	isController := false
+	revRef := metav1.NewControllerRef(flow, flowControllerKind)
+	revRef.BlockOwnerDeletion = &blockOwnerDeletion
+	revRef.Controller = &isController
+	return revRef
 }
