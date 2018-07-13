@@ -36,6 +36,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -111,6 +112,7 @@ func NewController(
 	kubeclientset kubernetes.Interface,
 	feedsclientset clientset.Interface,
 	servingclientset servingclientset.Interface,
+	restConfig *rest.Config,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	feedsInformerFactory informers.SharedInformerFactory,
 	routeInformerFactory servinginformers.SharedInformerFactory) controller.Interface {

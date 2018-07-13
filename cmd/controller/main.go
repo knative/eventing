@@ -25,6 +25,7 @@ import (
 	"github.com/golang/glog"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -82,6 +83,13 @@ func main() {
 		glog.Fatalf("Error building serving clientset: %s", err.Error())
 	}
 
+	// Build a rest.Config from configuration injected into the Pod by
+	// Kubernetes. Clients will use the Pod's ServiceAccount principal.
+	restConfig, err := rest.InClusterConfig()
+	if err != nil {
+		glog.Fatalf("Error building rest config: %v", err.Error())
+	}
+
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
 	servingInformerFactory := servinginformers.NewSharedInformerFactory(servingClient, time.Second*30)
@@ -99,7 +107,7 @@ func main() {
 	controllers := make([]controller.Interface, 0, len(ctors))
 	for _, ctor := range ctors {
 		controllers = append(controllers,
-			ctor(kubeClient, client, servingClient, kubeInformerFactory, informerFactory, servingInformerFactory))
+			ctor(kubeClient, client, servingClient, restConfig, kubeInformerFactory, informerFactory, servingInformerFactory))
 	}
 
 	go kubeInformerFactory.Start(stopCh)

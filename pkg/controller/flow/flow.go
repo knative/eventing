@@ -25,6 +25,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,29 +37,33 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	/*
-		servingclientset "github.com/knative/serving/pkg/client/clientset/versioned"
-		servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
-		servinglisters "github.com/knative/serving/pkg/client/listers/serving/v1alpha1"
-	*/
+	// TODO: Get rid of these, but needed as other controllers use them.
+	servingclientset "github.com/knative/serving/pkg/client/clientset/versioned"
+	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
 
 	"github.com/knative/eventing/pkg/controller"
 	"github.com/knative/eventing/pkg/sources"
 
-	v1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
+	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	v1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	flowscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	channelListers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
-	listers "github.com/knative/eventing/pkg/client/listers/feeds/v1alpha1"
+	feedListers "github.com/knative/eventing/pkg/client/listers/feeds/v1alpha1"
+	listers "github.com/knative/eventing/pkg/client/listers/flows/v1alpha1"
 )
 
 const controllerAgentName = "flow-controller"
+
+// TODO: This should come from a configmap
+const defaultBusName = "stub"
 
 const (
 	// SuccessSynced is used as part of the Event 'reason' when a Flow is synced
@@ -79,20 +84,21 @@ type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
 
-	// feedsclientset is a clientset for our own API group
-	feedsclientset clientset.Interface
+	// restConfig is used to create dynamic clients for
+	// resolving ObjectReference targets.
+	restConfig *rest.Config
+
+	// clientset is a clientset for our own API group
+	clientset clientset.Interface
 
 	flowsLister listers.FlowLister
 	flowsSynced cache.InformerSynced
 
-	eventTypesLister listers.EventTypeLister
+	eventTypesLister feedListers.EventTypeLister
 	eventTypesSynced cache.InformerSynced
 
-	eventSourcesLister listers.EventSourceLister
+	eventSourcesLister feedListers.EventSourceLister
 	eventSourcesSynced cache.InformerSynced
-
-	routesLister servinglisters.RouteLister
-	routesSynced cache.InformerSynced
 
 	channelsLister channelListers.ChannelLister
 	channelsSynced cache.InformerSynced
@@ -114,20 +120,22 @@ type Controller struct {
 // NewController returns a new flow controller
 func NewController(
 	kubeclientset kubernetes.Interface,
-	feedsclientset clientset.Interface,
+	clientset clientset.Interface,
 	servingclientset servingclientset.Interface,
+	restConfig *rest.Config,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
-	feedsInformerFactory informers.SharedInformerFactory,
+	flowsInformerFactory informers.SharedInformerFactory,
 	routeInformerFactory servinginformers.SharedInformerFactory) controller.Interface {
 
 	// obtain a reference to a shared index informer for the Flow types.
-	flowInformer := feedsInformerFactory.Feeds().V1alpha1()
+	flowInformer := flowsInformerFactory.Flows().V1alpha1()
 
-	// obtain a reference to a shared index informer for the Route type.
-	routeInformer := routeInformerFactory.Serving().V1alpha1().Routes()
+	// obtain a reference to a shared index informer for the Feed types.
+	feedInformer := flowsInformerFactory.Feeds().V1alpha1()
 
-	channelInformer := feedsInformerFactory.Channels().V1alpha1().Channels()
-	subscriptionInformer := feedsInformerFactory.Channels().V1alpha1().Subscriptions()
+	channelInformer := flowsInformerFactory.Channels().V1alpha1().Channels()
+
+	subscriptionInformer := flowsInformerFactory.Channels().V1alpha1().Subscriptions()
 
 	// Create event broadcaster
 	// Add flow-controller types to the default Kubernetes Scheme so Events can be
@@ -141,15 +149,14 @@ func NewController(
 
 	controller := &Controller{
 		kubeclientset:       kubeclientset,
-		feedsclientset:      feedsclientset,
+		restConfig:          restConfig,
+		clientset:           clientset,
 		flowsLister:         flowInformer.Flows().Lister(),
 		flowsSynced:         flowInformer.Flows().Informer().HasSynced,
-		routesLister:        routeInformer.Lister(),
-		routesSynced:        routeInformer.Informer().HasSynced,
-		eventSourcesLister:  flowInformer.EventSources().Lister(),
-		eventSourcesSynced:  flowInformer.EventSources().Informer().HasSynced,
-		eventTypesLister:    flowInformer.EventTypes().Lister(),
-		eventTypesSynced:    flowInformer.EventTypes().Informer().HasSynced,
+		eventSourcesLister:  feedInformer.EventSources().Lister(),
+		eventSourcesSynced:  feedInformer.EventSources().Informer().HasSynced,
+		eventTypesLister:    feedInformer.EventTypes().Lister(),
+		eventTypesSynced:    feedInformer.EventTypes().Informer().HasSynced,
 		channelsLister:      channelInformer.Lister(),
 		channelsSynced:      channelInformer.Informer().HasSynced,
 		subscriptionsLister: subscriptionInformer.Lister(),
@@ -196,11 +203,6 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	glog.Info("Waiting for EventTypes informer caches to sync")
 	if ok := cache.WaitForCacheSync(stopCh, c.eventTypesSynced); !ok {
 		return fmt.Errorf("failed to wait for EventTypes caches to sync")
-	}
-
-	glog.Info("Waiting for route informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, c.routesSynced); !ok {
-		return fmt.Errorf("failed to wait for Route caches to sync")
 	}
 
 	glog.Info("Waiting for channel informer caches to sync")
@@ -315,7 +317,7 @@ func (c *Controller) Reconcile(key string) error {
 	}
 
 	// Don't mutate the informer's copy of our object.
-	flow = original.DeepCopy()
+	flow := original.DeepCopy()
 
 	// Reconcile this copy of the Flow and then write back any status
 	// updates regardless of whether the reconcile error out.
@@ -341,200 +343,45 @@ func (c *Controller) reconcile(flow *v1alpha1.Flow) error {
 	deletionTimestamp := accessor.GetDeletionTimestamp()
 	glog.Infof("DeletionTimestamp: %v", deletionTimestamp)
 
-	functionDNS, err := c.resolveActionTarget(flow.Spec.Action)
+	target, err := c.resolveActionTarget(flow.Namespace, flow.Spec.Action)
+	if err != nil {
+		glog.Warningf("Failed to resolve target %v : %v", flow.Spec.Action, err)
+		return err
+	}
 
-	return nil
+	// Ok, so target is the underlying k8s service (or URI if so specified) that we want to target
+	glog.Infof("Resolved Target to: %q", target)
+
+	// Reconcile the Channel. Creates a channel that is the target that the Feed will use.
+	// TODO: We should reuse channels possibly.
+	channel, err := c.reconcileChannel(flow)
+	if err != nil {
+		glog.Warningf("Failed to reconcile channel : %v", err)
+		return err
+	}
+
+	glog.Infof("Created Channel %q", channel.Name)
+
+	subscription, err := c.reconcileSubscription(channel.Name, target, flow)
+	if err != nil {
+		glog.Warningf("Failed to reconcile subscription : %v", err)
+		return err
+	}
+
+	glog.Infof("Created Subscription %q", subscription.Name)
 
 	/*
-		// Only return an error on not found if we're not deleting so that we can delete
-		// the flowing even if the route or channel has already been deleted.
-		if err != nil && deletionTimestamp == nil {
-			if errors.IsNotFound(err) {
-				runtime.HandleError(fmt.Errorf("cannot resolve target for %v in namespace %q", flow.Spec.Action, namespace))
-			}
-			return err
-		}
-
-		es, err := c.eventSourcesLister.EventSources(namespace).Get(flow.Spec.Trigger.Service)
-		if err != nil && deletionTimestamp == nil {
-			if errors.IsNotFound(err) {
-				if deletionTimestamp != nil {
-					// If the Event Source can not be found, we will remove our finalizer
-					// because without it, we can't unflow and hence this flowing will never
-					// be deleted.
-					// https://github.com/knative/eventing/issues/94
-					newFinalizers, err := RemoveFinalizer(flow, controllerAgentName)
-					if err != nil {
-						glog.Warningf("Failed to remove finalizer: %s", err)
-						return err
-					}
-					flow.ObjectMeta.Finalizers = newFinalizers
-					_, err = c.updateFinalizers(flow)
-					if err != nil {
-						glog.Warningf("Failed to update finalizers: %s", err)
-						return err
-					}
-					return nil
-				}
-				runtime.HandleError(fmt.Errorf("EventSource %q in namespace %q does not exist", flow.Spec.Trigger.Service, namespace))
-			}
-			return err
-		}
-
-		et, err := c.eventTypesLister.EventTypes(namespace).Get(flow.Spec.Trigger.EventType)
-		if err != nil && deletionTimestamp == nil {
-			if errors.IsNotFound(err) {
-				runtime.HandleError(fmt.Errorf("EventType %q in namespace %q does not exist", flow.Spec.Trigger.Service, namespace))
-			}
-			return err
-		}
-
-		// If the EventSource has been deleted from underneath us, just remove our finalizer. We tried...
-		if es == nil && deletionTimestamp != nil {
-			glog.Warningf("Could not find a Flow container, removing finalizer")
-			newFinalizers, err := RemoveFinalizer(flow, controllerAgentName)
-			if err != nil {
-				glog.Warningf("Failed to remove finalizer: %s", err)
-				return err
-			}
-			flow.ObjectMeta.Finalizers = newFinalizers
-			_, err = c.updateFinalizers(flow)
-			if err != nil {
-				glog.Warningf("Failed to update finalizers: %s", err)
-				return err
-			}
-			return nil
-		}
-
-		// If there are conditions or a context do nothing.
-		if (flow.Status.Conditions != nil || flow.Status.FlowContext != nil) && deletionTimestamp == nil {
-			glog.Infof("Flowing \"%s/%s\" already has status, skipping", flow.Namespace, flow.Name)
-			return nil
-		}
-
-		// Set the OwnerReference to EventType to make sure that if it's deleted, the flowing
-		// will also get deleted and not left orphaned. However, this does not work yet. Regardless
-		// we should set the owner reference to indicate a dependency.
-		// https://github.com/knative/eventing/issues/94
-		flow.ObjectMeta.OwnerReferences = append(flow.ObjectMeta.OwnerReferences, *newEventTypeNonControllerRef(et))
-		flowClient := c.feedsclientset.FeedsV1alpha1().Flows(flow.Namespace)
-		updatedFlow, err := flowClient.Update(flow)
+		feed, err := c.reconcileFeed(channel, flow)
 		if err != nil {
-			glog.Warningf("Failed to update OwnerReferences on flow '%s/%s' : %v", flow.Namespace, flow.Name, err)
-			return err
+			glog.Warningf("Failed to reconcile feed: %v", err)
 		}
-		flow = updatedFlow
-
-		trigger, err := resolveTrigger(c.kubeclientset, namespace, flow.Spec.Trigger)
-		if err != nil {
-			glog.Warningf("Failed to process parameters: %s", err)
-			return err
-		}
-
-		// Don't mutate the informer's copy of our object.
-		newES := es.DeepCopy()
-
-		// check if the user specified a ServiceAccount to use and if so, use it.
-		serviceAccountName := "default"
-		if len(flow.Spec.ServiceAccountName) != 0 {
-			serviceAccountName = flow.Spec.ServiceAccountName
-		}
-		flower := sources.NewContainerEventSource(flow, c.kubeclientset, &newES.Spec, flow.Namespace, serviceAccountName)
-		if deletionTimestamp == nil {
-			glog.Infof("Creating a subscription to %q : %q for resource %q", es.Name, et.Name, trigger.Resource)
-			flowContext, err := flower.Flow(trigger, functionDNS)
-
-			if err != nil {
-				glog.Warningf("FLOW failed: %s", err)
-				msg := fmt.Sprintf("Flow failed with : %s", err)
-				flow.Status.SetCondition(&v1alpha1.FlowCondition{
-					Type:    v1alpha1.FlowFailed,
-					Status:  corev1.ConditionTrue,
-					Reason:  "FlowFailed",
-					Message: msg,
-				})
-			} else {
-				glog.Infof("Got context back as: %+v", flowContext)
-				marshalledFlowContext, err := json.Marshal(&flowContext.Context)
-				if err != nil {
-					glog.Warningf("Couldn't marshal flow context: %+v : %s", flowContext, err)
-				} else {
-					glog.Infof("Marshaled context to: %+v", marshalledFlowContext)
-					flow.Status.FlowContext = &runtimetypes.RawExtension{
-						Raw: make([]byte, len(marshalledFlowContext)),
-					}
-					flow.Status.FlowContext.Raw = marshalledFlowContext
-				}
-
-				// Set the finalizer since the flow succeeded, we need to clean up...
-				// TODO: we should do this in the webhook instead...
-				flow.Finalizers = append(flow.ObjectMeta.Finalizers, controllerAgentName)
-				_, err = c.updateFinalizers(flow)
-				if err != nil {
-					glog.Warningf("Failed to update finalizers: %s", err)
-					return err
-				}
-
-				flow.Status.SetCondition(&v1alpha1.FlowCondition{
-					Type:    v1alpha1.FlowComplete,
-					Status:  corev1.ConditionTrue,
-					Reason:  "FlowSuccess",
-					Message: "Flow successful",
-				})
-			}
-			_, err = c.updateStatus(flow)
-			if err != nil {
-				glog.Warningf("Failed to update status: %s", err)
-				return err
-			}
-		} else {
-			glog.Infof("Deleting a subscription to %q : %q with Trigger %+v", es.Name, et.Name, trigger)
-			flowContext := sources.FlowContext{
-				Context: make(map[string]interface{}),
-			}
-			if flow.Status.FlowContext != nil && flow.Status.FlowContext.Raw != nil && len(flow.Status.FlowContext.Raw) > 0 {
-				if err := json.Unmarshal(flow.Status.FlowContext.Raw, &flowContext.Context); err != nil {
-					glog.Warningf("Couldn't unmarshal FlowContext: %v", err)
-					// TODO set the condition properly here
-					return err
-				}
-			}
-			err := flower.Unflow(trigger, flowContext)
-			if err != nil {
-				glog.Warningf("Couldn't unflow: %v", err)
-				// TODO set the condition properly here
-				return err
-			}
-			newFinalizers, err := RemoveFinalizer(flow, controllerAgentName)
-			if err != nil {
-				glog.Warningf("Failed to remove finalizer: %s", err)
-				return err
-			}
-			flow.ObjectMeta.Finalizers = newFinalizers
-			_, err = c.updateFinalizers(flow)
-			if err != nil {
-				glog.Warningf("Failed to update finalizers: %s", err)
-				return err
-			}
-		}
-
-		c.recorder.Event(flow, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
-		return nil
 	*/
-}
 
-func (c *Controller) updateFinalizers(u *v1alpha1.Flow) (*v1alpha1.Flow, error) {
-	flowClient := c.feedsclientset.FeedsV1alpha1().Flows(u.Namespace)
-	newu, err := flowClient.Get(u.Name, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	newu.ObjectMeta.Finalizers = u.ObjectMeta.Finalizers
-	return flowClient.Update(newu)
+	return nil
 }
 
 func (c *Controller) updateStatus(u *v1alpha1.Flow) (*v1alpha1.Flow, error) {
-	flowClient := c.feedsclientset.FeedsV1alpha1().Flows(u.Namespace)
+	flowClient := c.clientset.FlowsV1alpha1().Flows(u.Namespace)
 	newu, err := flowClient.Get(u.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -639,10 +486,10 @@ func RemoveFinalizer(obj runtimetypes.Object, value string) ([]string, error) {
 	return newFinalizers, nil
 }
 
-func newEventTypeNonControllerRef(et *v1alpha1.EventType) *metav1.OwnerReference {
+func newFloweNonControllerRef(et *v1alpha1.Flow) *metav1.OwnerReference {
 	blockOwnerDeletion := true
 	isController := false
-	revRef := metav1.NewControllerRef(et, eventTypeControllerKind)
+	revRef := metav1.NewControllerRef(et, flowControllerKind)
 	revRef.BlockOwnerDeletion = &blockOwnerDeletion
 	revRef.Controller = &isController
 	return revRef
@@ -652,35 +499,112 @@ func newEventTypeNonControllerRef(et *v1alpha1.EventType) *metav1.OwnerReference
 // converge the two. It then updates the Status block of the Flow resource
 // with the current status of the resource.
 func (c *Controller) resolveActionTarget(namespace string, action v1alpha1.FlowAction) (string, error) {
-	if len(action.RouteName) > 0 {
-		return c.resolveRouteDNS(namespace, action.RouteName)
+	glog.Infof("Resolving target: %v", action)
+
+	if action.Target != nil {
+		return c.resolveObjectReference(namespace, action.Target)
 	}
-	if len(action.ChannelName) > 0 {
-		return c.resolveChannelDNS(namespace, action.ChannelName)
+	if action.TargetURI != nil {
+		return *action.TargetURI, nil
 	}
-	// This should never happen, but because we don't have webhook validation yet, check
-	// and complain.
-	return "", fmt.Errorf("action is missing both RouteName and ChannelName")
+
+	return "", fmt.Errorf("No resolvable action target: %+v", action)
 }
 
-func (c *Controller) resolveRouteDNS(namespace string, routeName string) (string, error) {
-	route, err := c.routesLister.Routes(namespace).Get(routeName)
+// resolveObjectReference fetches an object based on ObjectRefence. It assumes the
+// object has a status["serviceName"] string in it and returns it.
+func (c *Controller) resolveObjectReference(namespace string, ref *corev1.ObjectReference) (string, error) {
+	resourceClient, err := CreateResourceInterface(c.restConfig, ref, namespace)
 	if err != nil {
+		glog.Warningf("failed to create dynamic client resource: %v", err)
 		return "", err
 	}
-	if len(route.Status.Domain) == 0 {
-		return "", fmt.Errorf("route '%s/%s' is missing a domain", namespace, routeName)
+
+	obj, err := resourceClient.Get(ref.Name, metav1.GetOptions{})
+	if err != nil {
+		glog.Warningf("failed to get object: %v", err)
+		return "", err
 	}
-	return route.Status.Domain, nil
+	status, ok := obj.Object["status"]
+	if !ok {
+		return "", fmt.Errorf("%q does not contain status", ref.Name)
+	}
+	statusMap := status.(map[string]interface{})
+	serviceName, ok := statusMap["serviceName"]
+	if !ok {
+		return "", fmt.Errorf("%q does not contain serviceName in status", ref.Name)
+	}
+	serviceNameStr, ok := serviceName.(string)
+	if !ok {
+		return "", fmt.Errorf("%q status serviceName is not a string", ref.Name)
+	}
+	return serviceNameStr, nil
 }
 
-func (c *Controller) resolveChannelDNS(namespace string, channelName string) (string, error) {
-	channel, err := c.channelsLister.Channels(namespace).Get(channelName)
-	if err != nil {
-		return "", err
+func (c *Controller) reconcileChannel(flow *v1alpha1.Flow) (*channelsv1alpha1.Channel, error) {
+	channelName := flow.Name
+
+	channel, err := c.channelsLister.Channels(flow.Namespace).Get(channelName)
+	if errors.IsNotFound(err) {
+		channel, err = c.createChannel(flow)
+		if err != nil {
+			glog.Errorf("Failed to create channel %q : %v", channelName, err)
+			return nil, err
+		}
+	} else if err != nil {
+		glog.Errorf("Failed to reconcile channel %q failed to get channels : %v", channelName, err)
+		return nil, err
 	}
-	// TODO: The actual dns name should come from something in the status, or ?? But right
-	// now it is hard coded to be <channelname>-channel
-	// So we just check that the channel actually exists and tack on the -channel
-	return fmt.Sprintf("%s-channel", channel.Name), nil
+
+	// Should make sure channel is what it should be. For now, just assume it's fine
+	// if it exists.
+	return channel, err
+}
+
+func (c *Controller) createChannel(flow *v1alpha1.Flow) (*channelsv1alpha1.Channel, error) {
+	channelName := flow.Name
+	channel := &channelsv1alpha1.Channel{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      channelName,
+			Namespace: flow.Namespace,
+		},
+		Spec: channelsv1alpha1.ChannelSpec{
+			ClusterBus: defaultBusName,
+		},
+	}
+	return c.clientset.ChannelsV1alpha1().Channels(flow.Namespace).Create(channel)
+}
+
+func (c *Controller) reconcileSubscription(channelName string, target string, flow *v1alpha1.Flow) (*channelsv1alpha1.Subscription, error) {
+	subscriptionName := flow.Name
+	subscription, err := c.subscriptionsLister.Subscriptions(flow.Namespace).Get(subscriptionName)
+	if errors.IsNotFound(err) {
+		subscription, err = c.createSubscription(channelName, target, flow)
+		if err != nil {
+			glog.Errorf("Failed to create subscription %q : %v", subscriptionName, err)
+			return nil, err
+		}
+	} else if err != nil {
+		glog.Errorf("Failed to reconcile subscription %q failed to get subscriptions : %v", subscriptionName, err)
+		return nil, err
+	}
+
+	// Should make sure subscription is what it should be. For now, just assume it's fine
+	// if it exists.
+	return subscription, err
+}
+
+func (c *Controller) createSubscription(channelName string, target string, flow *v1alpha1.Flow) (*channelsv1alpha1.Subscription, error) {
+	subscriptionName := flow.Name
+	subscription := &channelsv1alpha1.Subscription{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      subscriptionName,
+			Namespace: flow.Namespace,
+		},
+		Spec: channelsv1alpha1.SubscriptionSpec{
+			Channel:    channelName,
+			Subscriber: target,
+		},
+	}
+	return c.clientset.ChannelsV1alpha1().Subscriptions(flow.Namespace).Create(subscription)
 }

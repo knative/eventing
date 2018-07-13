@@ -689,6 +689,7 @@
 [[projects]]
   name = "k8s.io/apimachinery"
   packages = [
+    "pkg/api/equality",
     "pkg/api/errors",
     "pkg/api/meta",
     "pkg/api/resource",
@@ -742,6 +743,7 @@
   packages = [
     "discovery",
     "discovery/fake",
+    "dynamic",
     "informers",
     "informers/admissionregistration",
     "informers/admissionregistration/v1alpha1",
@@ -947,6 +949,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d3f4080aa119c17dca1ce35a76026eec74d03111f3c72eaaa8a97ec7dbd11ae5"
+  inputs-digest = "306367db1d23c58ed8fee3d130bbac10637d54f5730f6465a1cea5704ded7a9e"
   solver-name = "gps-cdcl"
   solver-version = 1
