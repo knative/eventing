@@ -39,6 +39,7 @@ import (
 	appslisters "k8s.io/client-go/listers/apps/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	rbaclisters "k8s.io/client-go/listers/rbac/v1beta1"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -105,6 +106,7 @@ func NewController(
 	kubeclientset kubernetes.Interface,
 	busclientset clientset.Interface,
 	servingclientset servingclientset.Interface,
+	restConfig *rest.Config,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	busInformerFactory informers.SharedInformerFactory,
 	routeInformerFactory servinginformers.SharedInformerFactory) controller.Interface {

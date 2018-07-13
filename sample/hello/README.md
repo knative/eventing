@@ -5,7 +5,7 @@ The hello sample includes a Knative Service, Channel and Subscription.
 First, install the Stub bus, if not already installed:
 
 ```
-ko apply -f config/buses/stub.yaml
+ko apply -f config/buses/stub/stub-bus.yaml
 ```
 
 Then, deploy the hello function, channel and subscription:
