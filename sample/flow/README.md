@@ -8,7 +8,7 @@ object that wires it into the function
 First, install the Stub bus, if not already installed. You **must** change the Kind to ClusterBus
 
 ```
-ko apply -f config/buses/stub-bus.yaml
+ko apply -f config/buses/stub/stub-bus.yaml
 ```
 
 ## Install k8s events as an event source
