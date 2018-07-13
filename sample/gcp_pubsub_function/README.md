@@ -10,35 +10,34 @@ attaches to the specified GCP topic and then forwards them to the destination.
 ## Prerequisites
 
 1. [Setup your development environment](../../DEVELOPMENT.md#getting-started)
-2. [Start Knative](../../README.md#start-knative)
-3. Decide on the DNS name that git can then call. Update knative/serving/config-domain.yaml domainSuffix.
+1. [Start Knative](../../README.md#start-knative)
+1. Decide on the DNS name that git can then call. Update knative/serving/config-domain.yaml domainSuffix.
 For example I used aikas.org as my hostname, so my config-domain.yaml looks like so:
 
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: config-domain
-  namespace: knative-serving-system
-data:
-  aikas.org: |
-```
+    ```yaml
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: config-domain
+      namespace: knative-serving
+    data:
+      aikas.org: |
+    ```
 
-If you were already running the Knative controllers, you will need to re-apply
-the configmap.
+    If you were already running the Knative controllers, you will need to
+    re-apply the configmap.
 
-4. Install GCP Pub Sub as an event source
-```shell
-ko apply -f pkg/sources/gcppubsub/
-```
+1. Install GCP Pub Sub as an event source
 
-5. Create a GCP Pub Sub topic
+    ```shell
+    ko apply -f pkg/sources/gcppubsub/
+    ```
 
-```shell
-gcloud pubsub topics create knative-demo
-```
+1. Create a GCP Pub Sub topic
 
-5. Install the event sources and types for [gcp_pubsub](../gcp_pubsub/README.md)
+    ```shell
+    gcloud pubsub topics create knative-demo
+    ```
 
 
 ## Creating a Service Account
@@ -71,39 +70,40 @@ Once deployed, you can inspect the created resources with `kubectl` commands:
 
 ```shell
 # This will show the Route that we created:
-kubectl get route -o yaml
+kubectl get route gcp-pubsub-function -o yaml
 
 # This will show the Configuration that we created:
-kubectl get configurations -o yaml
+kubectl get configurations gcp-pubsub-function -o yaml
 
 # This will show the Revision that was created by our configuration:
-kubectl get revisions -o yaml
+kubectl get revisions -l serving.knative.dev/configuration=gcp-pubsub-function -o yaml
 
 # This will show the available EventSources that you can generate a feed from:
-kubectl get eventsources -oyaml
+kubectl get eventsources -o yaml
 
 # This will show the available EventTypes that you can generate a feed from:
-kubectl get eventtypes -oyaml
+kubectl get eventtypes -o yaml
 ```
 
 To make this service accessible to GCP, we first need to determine its ingress
-address (might have to wait a little while until 'ADDRESS' gets assigned):
+address (might have to wait a little while until 'EXTERNAL-IP' gets assigned):
 
 ```shell
-$ watch kubectl get ingress
-NAME                              HOSTS                                                                           ADDRESS           PORTS     AGE
-gcp-pubsub-function-ingress   gcp-pubsub-function.default.aikas.org,*.gcp-pubsub-function.default.aikas.org   130.211.116.160   80        20s
+kubectl get svc knative-ingressgateway -n istio-system
+
+NAME                     TYPE           CLUSTER-IP     EXTERNAL-IP      PORT(S)                                      AGE
+knative-ingressgateway   LoadBalancer   10.23.247.74   35.203.155.229   80:32380/TCP,443:32390/TCP,32400:32400/TCP   2d
 ```
 
-Once the `ADDRESS` gets assigned to the cluster, you need to assign a DNS name
+Once the `EXTERNAL-IP` gets assigned to the cluster, you need to assign a DNS name
 for that IP address. This DNS address needs to be:
 `gcp-pubsub-function.default.<domainsuffix you created>` so for me, I would
 create a DNS entry from: `gcp-pubsub-function.default.aikas.org` pointing to
-`130.211.116.160`. See also, [Using GCP
+`35.203.155.229`. See also, [Using GCP
 DNS](https://support.google.com/domains/answer/3290350).
 
 So, you'd need to create an A record for
-`gcp-pubsub-function.default.aikas.org` pointing to `130.211.116.160`
+`gcp-pubsub-function.default.aikas.org` pointing to `35.203.155.229`.
 
 To now send events to the `gcp_pubsub_function` for GCP PubSub messages with the function
 we created above, you need to create a Feed object. Modify
@@ -111,8 +111,8 @@ we created above, you need to create a Feed object. Modify
 want.
 
 For example, if I wanted to receive notifications to: project:
-quantum-reducer-434 topic: knative-demo, my Feed object would look like the one
-below.
+`quantum-reducer-434` topic: `knative-demo`, my Feed object would look like the
+one below.
 
 You can also specify a different Service Account to use for the feed / receive
 watcher by changing the spec.serviceAccountName to something else.
@@ -159,27 +159,32 @@ topic: projects/quantum-reducer-434/topics/knative-demo
 
 ```
 
-Then look at the logs for the function:
+The subscription has been setup, but the function is not yet running, as no
+event has been received.
+
 
 ```shell
 $ kubectl get pods
-NAME                                                    READY     STATUS    RESTARTS   AGE
-gcp-pubsub-function-00001-deployment-68864b8c7d-rgx2w   3/3       Running   0          12m
-
-
-# Replace gcp-pubsub-function with the pod name from above:
-$ kubectl logs gcp-pubsub-function-00001-deployment-68864b8c7d-rgx2w user-container
+NAME                                                      READY     STATUS    RESTARTS   AGE
+sub-9aa6465b-28e1-4149-80d9-abf6b514f3b4-bf7bbdd4-zpckj   1/1       Running   0          12m
 ```
 
-Nothing is there, so let's change that:
+Let's send an event.
 
 ```shell
 $ gcloud pubsub topics publish knative-demo --message 'test message'
 ```
 
-Then look at the function logs:
+Then look at the logs for the function:
 
 ```shell
+$ kubectl get pods
+NAME                                                      READY     STATUS    RESTARTS   AGE
+gcp-pubsub-function-00001-deployment-68864b8c7d-rgx2w     3/3       Running   0          1m
+sub-9aa6465b-28e1-4149-80d9-abf6b514f3b4-bf7bbdd4-zpckj   1/1       Running   0          12m
+
+
+# Replace gcp-pubsub-function with the pod name from above:
 $ kubectl logs gcp-pubsub-function-00001-deployment-68864b8c7d-rgx2w user-container
 2018/05/22 19:16:59 {"ID":"99171831321660","Data":"dGVzdCBtZXNzYWdl","Attributes":null,"PublishTime":"2018-05-22T19:16:59.727Z"}
 2018/05/22 19:16:59 Received data: "test message"
