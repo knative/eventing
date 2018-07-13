@@ -39,12 +39,12 @@ type EventSource struct {
 // to run for feed lifecycle operations, and configuration options for the
 // EventSource.
 type EventSourceSpec struct {
-	CommonEventSourceSpec
+	CommonEventSourceSpec `json:",inline"`
 }
 
 // EventSourceStatus is the status for a EventSource resource
 type EventSourceStatus struct {
-	CommonEventSourceStatus
+	CommonEventSourceStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

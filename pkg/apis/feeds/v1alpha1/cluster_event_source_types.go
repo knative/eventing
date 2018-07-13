@@ -40,12 +40,12 @@ type ClusterEventSource struct {
 // to run for feed lifecycle operations, and configuration options for the
 // ClusterEventSource.
 type ClusterEventSourceSpec struct {
-	CommonEventSourceSpec
+	CommonEventSourceSpec `json:",inline"`
 }
 
 // ClusterEventSourceStatus is the status for a ClusterEventSource resource
 type ClusterEventSourceStatus struct {
-	CommonEventSourceStatus
+	CommonEventSourceStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
