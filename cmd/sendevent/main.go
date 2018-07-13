@@ -32,7 +32,7 @@ import (
 )
 
 var (
-	context event.Context
+	context event.EventContext
 	webhook string
 	data    string
 )
@@ -79,7 +79,7 @@ func main() {
 	}
 }
 
-func fillEventContext(ctx *event.Context) {
+func fillEventContext(ctx *event.EventContext) {
 	ctx.CloudEventsVersion = "0.1"
 	ctx.EventTime = time.Now().UTC()
 
