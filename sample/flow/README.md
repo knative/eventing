@@ -1,6 +1,6 @@
 # Flow Example
 
-The flow sample includes a function that listes for k8s events on a cluster and a flow
+The flow sample includes a function that listens for k8s events on a cluster and a flow
 object that wires it into the function
 
 ## Deploy

@@ -408,7 +408,7 @@ func RemoveFinalizer(obj runtimetypes.Object, value string) ([]string, error) {
 	return newFinalizers, nil
 }
 
-func newFloweNonControllerRef(et *v1alpha1.Flow) *metav1.OwnerReference {
+func newFlowNonControllerRef(et *v1alpha1.Flow) *metav1.OwnerReference {
 	blockOwnerDeletion := true
 	isController := false
 	revRef := metav1.NewControllerRef(et, flowControllerKind)
