@@ -39,12 +39,12 @@ type FeedsV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *FeedsV1alpha1Client) ClusterEventSources(namespace string) ClusterEventSourceInterface {
-	return newClusterEventSources(c, namespace)
+func (c *FeedsV1alpha1Client) ClusterEventSources() ClusterEventSourceInterface {
+	return newClusterEventSources(c)
 }
 
-func (c *FeedsV1alpha1Client) ClusterEventTypes(namespace string) ClusterEventTypeInterface {
-	return newClusterEventTypes(c, namespace)
+func (c *FeedsV1alpha1Client) ClusterEventTypes() ClusterEventTypeInterface {
+	return newClusterEventTypes(c)
 }
 
 func (c *FeedsV1alpha1Client) EventSources(namespace string) EventSourceInterface {

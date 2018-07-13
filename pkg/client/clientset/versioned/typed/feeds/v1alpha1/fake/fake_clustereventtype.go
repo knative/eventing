@@ -31,7 +31,6 @@ import (
 // FakeClusterEventTypes implements ClusterEventTypeInterface
 type FakeClusterEventTypes struct {
 	Fake *FakeFeedsV1alpha1
-	ns   string
 }
 
 var clustereventtypesResource = schema.GroupVersionResource{Group: "feeds.knative.dev", Version: "v1alpha1", Resource: "clustereventtypes"}
@@ -41,8 +40,7 @@ var clustereventtypesKind = schema.GroupVersionKind{Group: "feeds.knative.dev", 
 // Get takes name of the clusterEventType, and returns the corresponding clusterEventType object, and an error if there is any.
 func (c *FakeClusterEventTypes) Get(name string, options v1.GetOptions) (result *v1alpha1.ClusterEventType, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(clustereventtypesResource, c.ns, name), &v1alpha1.ClusterEventType{})
-
+		Invokes(testing.NewRootGetAction(clustereventtypesResource, name), &v1alpha1.ClusterEventType{})
 	if obj == nil {
 		return nil, err
 	}
@@ -52,8 +50,7 @@ func (c *FakeClusterEventTypes) Get(name string, options v1.GetOptions) (result 
 // List takes label and field selectors, and returns the list of ClusterEventTypes that match those selectors.
 func (c *FakeClusterEventTypes) List(opts v1.ListOptions) (result *v1alpha1.ClusterEventTypeList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(clustereventtypesResource, clustereventtypesKind, c.ns, opts), &v1alpha1.ClusterEventTypeList{})
-
+		Invokes(testing.NewRootListAction(clustereventtypesResource, clustereventtypesKind, opts), &v1alpha1.ClusterEventTypeList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -74,15 +71,13 @@ func (c *FakeClusterEventTypes) List(opts v1.ListOptions) (result *v1alpha1.Clus
 // Watch returns a watch.Interface that watches the requested clusterEventTypes.
 func (c *FakeClusterEventTypes) Watch(opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(clustereventtypesResource, c.ns, opts))
-
+		InvokesWatch(testing.NewRootWatchAction(clustereventtypesResource, opts))
 }
 
 // Create takes the representation of a clusterEventType and creates it.  Returns the server's representation of the clusterEventType, and an error, if there is any.
 func (c *FakeClusterEventTypes) Create(clusterEventType *v1alpha1.ClusterEventType) (result *v1alpha1.ClusterEventType, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(clustereventtypesResource, c.ns, clusterEventType), &v1alpha1.ClusterEventType{})
-
+		Invokes(testing.NewRootCreateAction(clustereventtypesResource, clusterEventType), &v1alpha1.ClusterEventType{})
 	if obj == nil {
 		return nil, err
 	}
@@ -92,8 +87,7 @@ func (c *FakeClusterEventTypes) Create(clusterEventType *v1alpha1.ClusterEventTy
 // Update takes the representation of a clusterEventType and updates it. Returns the server's representation of the clusterEventType, and an error, if there is any.
 func (c *FakeClusterEventTypes) Update(clusterEventType *v1alpha1.ClusterEventType) (result *v1alpha1.ClusterEventType, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(clustereventtypesResource, c.ns, clusterEventType), &v1alpha1.ClusterEventType{})
-
+		Invokes(testing.NewRootUpdateAction(clustereventtypesResource, clusterEventType), &v1alpha1.ClusterEventType{})
 	if obj == nil {
 		return nil, err
 	}
@@ -104,8 +98,7 @@ func (c *FakeClusterEventTypes) Update(clusterEventType *v1alpha1.ClusterEventTy
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 func (c *FakeClusterEventTypes) UpdateStatus(clusterEventType *v1alpha1.ClusterEventType) (*v1alpha1.ClusterEventType, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(clustereventtypesResource, "status", c.ns, clusterEventType), &v1alpha1.ClusterEventType{})
-
+		Invokes(testing.NewRootUpdateSubresourceAction(clustereventtypesResource, "status", clusterEventType), &v1alpha1.ClusterEventType{})
 	if obj == nil {
 		return nil, err
 	}
@@ -115,14 +108,13 @@ func (c *FakeClusterEventTypes) UpdateStatus(clusterEventType *v1alpha1.ClusterE
 // Delete takes name of the clusterEventType and deletes it. Returns an error if one occurs.
 func (c *FakeClusterEventTypes) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(clustereventtypesResource, c.ns, name), &v1alpha1.ClusterEventType{})
-
+		Invokes(testing.NewRootDeleteAction(clustereventtypesResource, name), &v1alpha1.ClusterEventType{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeClusterEventTypes) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(clustereventtypesResource, c.ns, listOptions)
+	action := testing.NewRootDeleteCollectionAction(clustereventtypesResource, listOptions)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.ClusterEventTypeList{})
 	return err
@@ -131,8 +123,7 @@ func (c *FakeClusterEventTypes) DeleteCollection(options *v1.DeleteOptions, list
 // Patch applies the patch and returns the patched clusterEventType.
 func (c *FakeClusterEventTypes) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.ClusterEventType, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(clustereventtypesResource, c.ns, name, data, subresources...), &v1alpha1.ClusterEventType{})
-
+		Invokes(testing.NewRootPatchSubresourceAction(clustereventtypesResource, name, data, subresources...), &v1alpha1.ClusterEventType{})
 	if obj == nil {
 		return nil, err
 	}

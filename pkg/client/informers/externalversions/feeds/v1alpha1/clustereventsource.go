@@ -41,33 +41,32 @@ type ClusterEventSourceInformer interface {
 type clusterEventSourceInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewClusterEventSourceInformer constructs a new informer for ClusterEventSource type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewClusterEventSourceInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredClusterEventSourceInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewClusterEventSourceInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredClusterEventSourceInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredClusterEventSourceInformer constructs a new informer for ClusterEventSource type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredClusterEventSourceInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredClusterEventSourceInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.FeedsV1alpha1().ClusterEventSources(namespace).List(options)
+				return client.FeedsV1alpha1().ClusterEventSources().List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.FeedsV1alpha1().ClusterEventSources(namespace).Watch(options)
+				return client.FeedsV1alpha1().ClusterEventSources().Watch(options)
 			},
 		},
 		&feeds_v1alpha1.ClusterEventSource{},
@@ -77,7 +76,7 @@ func NewFilteredClusterEventSourceInformer(client versioned.Interface, namespace
 }
 
 func (f *clusterEventSourceInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredClusterEventSourceInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+	return NewFilteredClusterEventSourceInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
 func (f *clusterEventSourceInformer) Informer() cache.SharedIndexInformer {

@@ -49,12 +49,12 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 
 // ClusterEventSources returns a ClusterEventSourceInformer.
 func (v *version) ClusterEventSources() ClusterEventSourceInformer {
-	return &clusterEventSourceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+	return &clusterEventSourceInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // ClusterEventTypes returns a ClusterEventTypeInformer.
 func (v *version) ClusterEventTypes() ClusterEventTypeInformer {
-	return &clusterEventTypeInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+	return &clusterEventTypeInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // EventSources returns a EventSourceInformer.

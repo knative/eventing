@@ -23,6 +23,7 @@ import (
 )
 
 // +genclient
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ClusterEventSource represents a software system which wishes to make changes in

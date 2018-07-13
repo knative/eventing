@@ -29,8 +29,8 @@ import (
 type ClusterEventTypeLister interface {
 	// List lists all ClusterEventTypes in the indexer.
 	List(selector labels.Selector) (ret []*v1alpha1.ClusterEventType, err error)
-	// ClusterEventTypes returns an object that can list and get ClusterEventTypes.
-	ClusterEventTypes(namespace string) ClusterEventTypeNamespaceLister
+	// Get retrieves the ClusterEventType from the index for a given name.
+	Get(name string) (*v1alpha1.ClusterEventType, error)
 	ClusterEventTypeListerExpansion
 }
 
@@ -52,38 +52,9 @@ func (s *clusterEventTypeLister) List(selector labels.Selector) (ret []*v1alpha1
 	return ret, err
 }
 
-// ClusterEventTypes returns an object that can list and get ClusterEventTypes.
-func (s *clusterEventTypeLister) ClusterEventTypes(namespace string) ClusterEventTypeNamespaceLister {
-	return clusterEventTypeNamespaceLister{indexer: s.indexer, namespace: namespace}
-}
-
-// ClusterEventTypeNamespaceLister helps list and get ClusterEventTypes.
-type ClusterEventTypeNamespaceLister interface {
-	// List lists all ClusterEventTypes in the indexer for a given namespace.
-	List(selector labels.Selector) (ret []*v1alpha1.ClusterEventType, err error)
-	// Get retrieves the ClusterEventType from the indexer for a given namespace and name.
-	Get(name string) (*v1alpha1.ClusterEventType, error)
-	ClusterEventTypeNamespaceListerExpansion
-}
-
-// clusterEventTypeNamespaceLister implements the ClusterEventTypeNamespaceLister
-// interface.
-type clusterEventTypeNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all ClusterEventTypes in the indexer for a given namespace.
-func (s clusterEventTypeNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.ClusterEventType, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.ClusterEventType))
-	})
-	return ret, err
-}
-
-// Get retrieves the ClusterEventType from the indexer for a given namespace and name.
-func (s clusterEventTypeNamespaceLister) Get(name string) (*v1alpha1.ClusterEventType, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+// Get retrieves the ClusterEventType from the index for a given name.
+func (s *clusterEventTypeLister) Get(name string) (*v1alpha1.ClusterEventType, error) {
+	obj, exists, err := s.indexer.GetByKey(name)
 	if err != nil {
 		return nil, err
 	}

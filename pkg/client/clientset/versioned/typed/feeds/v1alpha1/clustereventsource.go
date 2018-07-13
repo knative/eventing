@@ -30,7 +30,7 @@ import (
 // ClusterEventSourcesGetter has a method to return a ClusterEventSourceInterface.
 // A group's client should implement this interface.
 type ClusterEventSourcesGetter interface {
-	ClusterEventSources(namespace string) ClusterEventSourceInterface
+	ClusterEventSources() ClusterEventSourceInterface
 }
 
 // ClusterEventSourceInterface has methods to work with ClusterEventSource resources.
@@ -50,14 +50,12 @@ type ClusterEventSourceInterface interface {
 // clusterEventSources implements ClusterEventSourceInterface
 type clusterEventSources struct {
 	client rest.Interface
-	ns     string
 }
 
 // newClusterEventSources returns a ClusterEventSources
-func newClusterEventSources(c *FeedsV1alpha1Client, namespace string) *clusterEventSources {
+func newClusterEventSources(c *FeedsV1alpha1Client) *clusterEventSources {
 	return &clusterEventSources{
 		client: c.RESTClient(),
-		ns:     namespace,
 	}
 }
 
@@ -65,7 +63,6 @@ func newClusterEventSources(c *FeedsV1alpha1Client, namespace string) *clusterEv
 func (c *clusterEventSources) Get(name string, options v1.GetOptions) (result *v1alpha1.ClusterEventSource, err error) {
 	result = &v1alpha1.ClusterEventSource{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("clustereventsources").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -78,7 +75,6 @@ func (c *clusterEventSources) Get(name string, options v1.GetOptions) (result *v
 func (c *clusterEventSources) List(opts v1.ListOptions) (result *v1alpha1.ClusterEventSourceList, err error) {
 	result = &v1alpha1.ClusterEventSourceList{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("clustereventsources").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Do().
@@ -90,7 +86,6 @@ func (c *clusterEventSources) List(opts v1.ListOptions) (result *v1alpha1.Cluste
 func (c *clusterEventSources) Watch(opts v1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
 	return c.client.Get().
-		Namespace(c.ns).
 		Resource("clustereventsources").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Watch()
@@ -100,7 +95,6 @@ func (c *clusterEventSources) Watch(opts v1.ListOptions) (watch.Interface, error
 func (c *clusterEventSources) Create(clusterEventSource *v1alpha1.ClusterEventSource) (result *v1alpha1.ClusterEventSource, err error) {
 	result = &v1alpha1.ClusterEventSource{}
 	err = c.client.Post().
-		Namespace(c.ns).
 		Resource("clustereventsources").
 		Body(clusterEventSource).
 		Do().
@@ -112,7 +106,6 @@ func (c *clusterEventSources) Create(clusterEventSource *v1alpha1.ClusterEventSo
 func (c *clusterEventSources) Update(clusterEventSource *v1alpha1.ClusterEventSource) (result *v1alpha1.ClusterEventSource, err error) {
 	result = &v1alpha1.ClusterEventSource{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("clustereventsources").
 		Name(clusterEventSource.Name).
 		Body(clusterEventSource).
@@ -127,7 +120,6 @@ func (c *clusterEventSources) Update(clusterEventSource *v1alpha1.ClusterEventSo
 func (c *clusterEventSources) UpdateStatus(clusterEventSource *v1alpha1.ClusterEventSource) (result *v1alpha1.ClusterEventSource, err error) {
 	result = &v1alpha1.ClusterEventSource{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("clustereventsources").
 		Name(clusterEventSource.Name).
 		SubResource("status").
@@ -140,7 +132,6 @@ func (c *clusterEventSources) UpdateStatus(clusterEventSource *v1alpha1.ClusterE
 // Delete takes name of the clusterEventSource and deletes it. Returns an error if one occurs.
 func (c *clusterEventSources) Delete(name string, options *v1.DeleteOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("clustereventsources").
 		Name(name).
 		Body(options).
@@ -151,7 +142,6 @@ func (c *clusterEventSources) Delete(name string, options *v1.DeleteOptions) err
 // DeleteCollection deletes a collection of objects.
 func (c *clusterEventSources) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("clustereventsources").
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Body(options).
@@ -163,7 +153,6 @@ func (c *clusterEventSources) DeleteCollection(options *v1.DeleteOptions, listOp
 func (c *clusterEventSources) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.ClusterEventSource, err error) {
 	result = &v1alpha1.ClusterEventSource{}
 	err = c.client.Patch(pt).
-		Namespace(c.ns).
 		Resource("clustereventsources").
 		SubResource(subresources...).
 		Name(name).

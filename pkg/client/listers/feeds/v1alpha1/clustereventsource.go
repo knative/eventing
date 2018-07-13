@@ -29,8 +29,8 @@ import (
 type ClusterEventSourceLister interface {
 	// List lists all ClusterEventSources in the indexer.
 	List(selector labels.Selector) (ret []*v1alpha1.ClusterEventSource, err error)
-	// ClusterEventSources returns an object that can list and get ClusterEventSources.
-	ClusterEventSources(namespace string) ClusterEventSourceNamespaceLister
+	// Get retrieves the ClusterEventSource from the index for a given name.
+	Get(name string) (*v1alpha1.ClusterEventSource, error)
 	ClusterEventSourceListerExpansion
 }
 
@@ -52,38 +52,9 @@ func (s *clusterEventSourceLister) List(selector labels.Selector) (ret []*v1alph
 	return ret, err
 }
 
-// ClusterEventSources returns an object that can list and get ClusterEventSources.
-func (s *clusterEventSourceLister) ClusterEventSources(namespace string) ClusterEventSourceNamespaceLister {
-	return clusterEventSourceNamespaceLister{indexer: s.indexer, namespace: namespace}
-}
-
-// ClusterEventSourceNamespaceLister helps list and get ClusterEventSources.
-type ClusterEventSourceNamespaceLister interface {
-	// List lists all ClusterEventSources in the indexer for a given namespace.
-	List(selector labels.Selector) (ret []*v1alpha1.ClusterEventSource, err error)
-	// Get retrieves the ClusterEventSource from the indexer for a given namespace and name.
-	Get(name string) (*v1alpha1.ClusterEventSource, error)
-	ClusterEventSourceNamespaceListerExpansion
-}
-
-// clusterEventSourceNamespaceLister implements the ClusterEventSourceNamespaceLister
-// interface.
-type clusterEventSourceNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all ClusterEventSources in the indexer for a given namespace.
-func (s clusterEventSourceNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.ClusterEventSource, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.ClusterEventSource))
-	})
-	return ret, err
-}
-
-// Get retrieves the ClusterEventSource from the indexer for a given namespace and name.
-func (s clusterEventSourceNamespaceLister) Get(name string) (*v1alpha1.ClusterEventSource, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+// Get retrieves the ClusterEventSource from the index for a given name.
+func (s *clusterEventSourceLister) Get(name string) (*v1alpha1.ClusterEventSource, error) {
+	obj, exists, err := s.indexer.GetByKey(name)
 	if err != nil {
 		return nil, err
 	}
