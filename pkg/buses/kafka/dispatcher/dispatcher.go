@@ -68,13 +68,7 @@ func main() {
 	flag.Parse()
 
 	name := os.Getenv("BUS_NAME")
-	if name == "" {
-		log.Fatalf("Environment variable BUS_NAME not set")
-	}
 	namespace := os.Getenv("BUS_NAMESPACE")
-	if namespace == "" {
-		log.Fatalf("Environment variable BUS_NAMESPACE not set")
-	}
 
 	brokers := strings.Split(os.Getenv("KAFKA_BROKERS"), ",")
 	if len(brokers) == 0 {
