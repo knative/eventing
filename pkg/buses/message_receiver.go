@@ -75,9 +75,8 @@ func (r *MessageReceiver) start() *http.Server {
 		}),
 	}
 	go func() {
-		if err := srv.ListenAndServe(); err != nil {
-			// probably is an intentional close
-			glog.Warningf("HttpServer: ListenAndServe() error: %v", err)
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			glog.Errorf("HttpServer: ListenAndServe() error: %v", err)
 		}
 	}()
 	return srv
