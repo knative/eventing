@@ -422,8 +422,8 @@ func (c *Controller) syncHandler(key string) error {
 			glog.Warningf("failed to start feed: %s", err)
 			msg := fmt.Sprintf("failed to start feed: %s", err)
 			feed.Status.SetCondition(&v1alpha1.FeedCondition{
-				Type:    v1alpha1.FeedFailed,
-				Status:  corev1.ConditionTrue,
+				Type:    v1alpha1.FeedConditionReady,
+				Status:  corev1.ConditionFalse,
 				Reason:  "FeedFailed",
 				Message: msg,
 			})
@@ -450,7 +450,7 @@ func (c *Controller) syncHandler(key string) error {
 			}
 
 			feed.Status.SetCondition(&v1alpha1.FeedCondition{
-				Type:    v1alpha1.FeedStarted,
+				Type:    v1alpha1.FeedConditionReady,
 				Status:  corev1.ConditionTrue,
 				Reason:  "FeedSuccess",
 				Message: "Feed started successfully",
