@@ -390,6 +390,8 @@ func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel,
 	// Or create a copy manually for better performance
 	channelCopy := channel.DeepCopy()
 
+	// Update ChannelStatus
+
 	if service != nil {
 		channelCopy.Status.Service = &corev1.LocalObjectReference{Name: service.Name}
 		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelServiceable, corev1.ConditionTrue, ServiceSynced, "service successfully synced")
@@ -411,6 +413,8 @@ func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel,
 	}
 
 	util.ConsolidateChannelCondition(&channelCopy.Status)
+
+	channelCopy.Status.DomainInternal = controller.ServiceHostName(service.Name, service.Namespace)
 
 	// If the CustomResourceSubresources feature gate is not enabled,
 	// we must use Update instead of UpdateStatus to update the Status block of the Channel resource.
