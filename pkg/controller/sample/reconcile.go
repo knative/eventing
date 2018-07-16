@@ -31,17 +31,17 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	rs := &appsv1.ReplicaSet{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, rs)
 	if errors.IsNotFound(err) {
-		log.Printf("Could not find ReplicaSet %v.\n", request)
+		log.Printf("could not find ReplicaSet %v.\n", request)
 		return reconcile.Result{}, nil
 	}
 
 	if err != nil {
-		log.Printf("Could not fetch ReplicaSet %v for %+v\n", err, request)
+		log.Printf("could not fetch ReplicaSet %v for %+v\n", err, request)
 		return reconcile.Result{}, err
 	}
 
 	// Print the ReplicaSet
-	log.Printf("ReplicaSet Name %s Namespace %s, Pod Name: %s\n",
+	log.Printf("replicaSet Name %s Namespace %s, Pod Name: %s\n",
 		rs.Name, rs.Namespace, rs.Spec.Template.Spec.Containers[0].Name)
 
 	// Set the label if it is missing
@@ -56,7 +56,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	rs.Labels["hello"] = "world"
 	err = r.client.Update(context.TODO(), rs)
 	if err != nil {
-		log.Printf("Could not write ReplicaSet %v\n", err)
+		log.Printf("could not write ReplicaSet %v\n", err)
 		return reconcile.Result{}, err
 	}
 

@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const controllerAgentName = "bind-controller"
+const controllerAgentName = "feed-controller"
 
 type reconciler struct {
 	client   client.Client
@@ -37,8 +37,8 @@ type reconciler struct {
 // Verify the struct implements reconcile.Reconciler
 var _ reconcile.Reconciler = &reconciler{}
 
-// ProvideController returns a bind controller.
-func ProvideController(mrg manager.Manager) (controller.Controller, error) {
+// NewController returns a Feed controller.
+func NewController(mrg manager.Manager) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Routes
 	c, err := controller.New(controllerAgentName, mrg, controller.Options{
 		Reconciler: &reconciler{

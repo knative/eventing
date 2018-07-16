@@ -49,18 +49,18 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	err := r.client.Get(context.TODO(), request.NamespacedName, feed)
 
 	if errors.IsNotFound(err) {
-		glog.Errorf("Could not find Feed %v\n", request)
+		glog.Errorf("could not find Feed %v\n", request)
 		return reconcile.Result{}, nil
 	}
 
 	if err != nil {
-		glog.Errorf("Could not fetch Feed %v for %+v\n", err, request)
+		glog.Errorf("could not fetch Feed %v for %+v\n", err, request)
 		return reconcile.Result{}, err
 	}
 
 	r.setEventTypeOwnerReference(feed)
 	if err := r.updateOwnerReferences(feed); err != nil {
-		glog.Errorf("Failed to update Feed owner references: %v", err)
+		glog.Errorf("failed to update Feed owner references: %v", err)
 		return reconcile.Result{}, err
 	}
 
@@ -68,24 +68,24 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	if feed.GetDeletionTimestamp() == nil {
 		err = r.reconcileStartJob(feed)
 		if err != nil {
-			glog.Errorf("Error reconciling start Job: %v", err)
+			glog.Errorf("error reconciling start Job: %v", err)
 		}
 	} else {
 		err = r.reconcileStopJob(feed)
 		if err != nil {
-			glog.Errorf("Error reconciling stop Job: %v", err)
+			glog.Errorf("error reconciling stop Job: %v", err)
 		}
 	}
 
 	if err := r.updateStatus(feed); err != nil {
-		glog.Errorf("Failed to update Feed status: %v", err)
+		glog.Errorf("failed to update Feed status: %v", err)
 		return reconcile.Result{}, err
 	}
 	return reconcile.Result{}, err
 }
 
 func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
-	bc := feed.Status.GetCondition(feedsv1alpha1.FeedStarted)
+	bc := feed.Status.GetCondition(feedsv1alpha1.FeedConditionStarted)
 	switch bc.Status {
 	case corev1.ConditionUnknown:
 
@@ -99,10 +99,10 @@ func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
 					return err
 				}
 				feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-					Type:    feedsv1alpha1.FeedStarted,
+					Type:    feedsv1alpha1.FeedConditionStarted,
 					Status:  corev1.ConditionUnknown,
 					Reason:  "StartJob",
-					Message: "Start job in progress",
+					Message: "start job in progress",
 				})
 			}
 		}
@@ -117,14 +117,14 @@ func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
 			}
 			//TODO just use a single Succeeded condition, like Build
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-				Type:    feedsv1alpha1.FeedStarted,
+				Type:    feedsv1alpha1.FeedConditionStarted,
 				Status:  corev1.ConditionTrue,
 				Reason:  "StartJobComplete",
-				Message: "Start job succeeded",
+				Message: "start job succeeded",
 			})
 		} else if resources.IsJobFailed(job) {
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-				Type:    feedsv1alpha1.FeedFailed,
+				Type:    feedsv1alpha1.FeedConditionFailed,
 				Status:  corev1.ConditionTrue,
 				Reason:  "StartJobFailed",
 				Message: "TODO replace with job failure message",
@@ -166,10 +166,10 @@ func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
 				//TODO check for event source not found and remove finalizer
 
 				feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-					Type:    feedsv1alpha1.FeedStarted,
+					Type:    feedsv1alpha1.FeedConditionStarted,
 					Status:  corev1.ConditionUnknown,
 					Reason:  "StopJob",
-					Message: "Stop job in progress",
+					Message: "stop job in progress",
 				})
 			}
 		}
@@ -180,15 +180,15 @@ func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
 				return err
 			}
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-				Type:    feedsv1alpha1.FeedStarted,
+				Type:    feedsv1alpha1.FeedConditionStarted,
 				Status:  corev1.ConditionTrue,
 				Reason:  "StopJobComplete",
-				Message: "Stop job succeeded",
+				Message: "stop job succeeded",
 			})
 		} else if resources.IsJobFailed(job) {
 			// finalizer remains to allow humans to inspect the failure
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-				Type:    feedsv1alpha1.FeedFailed,
+				Type:    feedsv1alpha1.FeedConditionFailed,
 				Status:  corev1.ConditionTrue,
 				Reason:  "StopJobFailed",
 				Message: "TODO replace with job failure message",
@@ -282,7 +282,7 @@ func (r *reconciler) resolveTrigger(feed *feedsv1alpha1.Feed) (sources.EventTrig
 		}
 	}
 	if trigger.ParametersFrom != nil {
-		glog.Infof("Fetching from source %+v", trigger.ParametersFrom)
+		glog.Infof("fetching from source %+v", trigger.ParametersFrom)
 		for _, p := range trigger.ParametersFrom {
 			pfs, err := r.fetchParametersFromSource(feed.Namespace, &p)
 			if err != nil {
@@ -299,7 +299,7 @@ func (r *reconciler) resolveTrigger(feed *feedsv1alpha1.Feed) (sources.EventTrig
 func (r *reconciler) fetchParametersFromSource(namespace string, parametersFrom *feedsv1alpha1.ParametersFromSource) (map[string]interface{}, error) {
 	var params map[string]interface{}
 	if parametersFrom.SecretKeyRef != nil {
-		glog.Infof("Fetching secret %+v", parametersFrom.SecretKeyRef)
+		glog.Infof("fetching secret %+v", parametersFrom.SecretKeyRef)
 		data, err := r.fetchSecretKeyValue(namespace, parametersFrom.SecretKeyRef)
 		if err != nil {
 			return nil, err
@@ -430,11 +430,11 @@ func (r *reconciler) getJobContext(job *batchv1.Job) (*sources.FeedContext, erro
 			glog.Infof("Pod succeeded: %s", p.Name)
 			if msg := resources.GetFirstTerminationMessage(&p); msg != "" {
 				decodedContext, _ := base64.StdEncoding.DecodeString(msg)
-				glog.Infof("Decoded to %q", decodedContext)
+				glog.Infof("decoded to %q", decodedContext)
 				var ret sources.FeedContext
 				err = json.Unmarshal(decodedContext, &ret)
 				if err != nil {
-					glog.Errorf("Failed to unmarshal context: %s", err)
+					glog.Errorf("failed to unmarshal context: %s", err)
 					return nil, err
 				}
 				return &ret, nil

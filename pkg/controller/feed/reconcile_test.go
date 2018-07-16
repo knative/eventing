@@ -37,8 +37,8 @@ import (
 
 /*
 TODO
-- initial: bind with job deadline exceeded
-  reconciled: bind failure, job exists, finalizer
+- initial: feed with job deadline exceeded
+  reconciled: feed failure, job exists, finalizer
 */
 
 var (
@@ -57,124 +57,124 @@ func init() {
 
 var testCases = []controllertesting.TestCase{
 	{
-		Name: "new bind: adds status, finalizer, creates job",
+		Name: "new feed: adds status, finalizer, creates job",
 		InitialState: []runtime.Object{
 			getEventSource(),
 			getEventType(),
 			getRoute(),
-			getNewBind(),
+			getNewFeed(),
 		},
-		ReconcileKey: "test/test-bind",
+		ReconcileKey: "test/test-feed",
 		WantPresent: []runtime.Object{
-			getBindInProgressBind(),
-			getNewBindJob(),
+			getStartInProgressFeed(),
+			getNewFeedJob(),
 		},
 	},
 	{
-		Name: "in progress bind with existing job: both unchanged",
+		Name: "in progress feed with existing job: both unchanged",
 		InitialState: []runtime.Object{
 			getEventSource(),
 			getEventType(),
 			getRoute(),
-			getBindInProgressBind(),
-			getNewBindJob(),
+			getStartInProgressFeed(),
+			getNewFeedJob(),
 		},
-		ReconcileKey: "test/test-bind",
+		ReconcileKey: "test/test-feed",
 		WantPresent: []runtime.Object{
-			getBindInProgressBind(),
-			getNewBindJob(),
+			getStartInProgressFeed(),
+			getNewFeedJob(),
 		},
 	},
 	{
-		Name: "in progress bind with completed job: updated status, context, job exists",
+		Name: "in progress feed with completed job: updated status, context, job exists",
 		InitialState: []runtime.Object{
 			getEventSource(),
 			getEventType(),
 			getRoute(),
-			getBindInProgressBind(),
-			getCompletedBindJob(),
-			getCompletedBindJobPod(),
+			getStartInProgressFeed(),
+			getCompletedStartFeedJob(),
+			getCompletedStartFeedJobPod(),
 		},
-		ReconcileKey: "test/test-bind",
+		ReconcileKey: "test/test-feed",
 		WantPresent: []runtime.Object{
-			getBoundBind(),
-			getCompletedBindJob(),
+			getStartedFeed(),
+			getCompletedStartFeedJob(),
 		},
 	},
 	{
-		Name: "in progress bind with failed job: updated status, job exists",
+		Name: "in progress feed with failed job: updated status, job exists",
 		InitialState: []runtime.Object{
 			getEventSource(),
 			getEventType(),
 			getRoute(),
-			getBindInProgressBind(),
-			getFailedBindJob(),
-			getCompletedBindJobPod(),
+			getStartInProgressFeed(),
+			getFailedStartFeedJob(),
+			getCompletedStartFeedJobPod(),
 		},
-		ReconcileKey: "test/test-bind",
+		ReconcileKey: "test/test-feed",
 		WantPresent: []runtime.Object{
-			getBindFailedBind(),
-			getFailedBindJob(),
+			getStartFailedFeed(),
+			getFailedStartFeedJob(),
 		},
 	},
 	{
-		Name: "Deleted bind with finalizer, previously completed, bind job exists: bind job deleted",
+		Name: "Deleted feed with finalizer, previously completed, feed job exists: feed job deleted",
 		InitialState: []runtime.Object{
 			getEventSource(),
 			getEventType(),
 			getRoute(),
-			getDeletedBoundBind(),
-			getCompletedBindJob(),
+			getDeletedStartedFeed(),
+			getCompletedStartFeedJob(),
 		},
-		ReconcileKey: "test/test-bind",
+		ReconcileKey: "test/test-feed",
 		WantPresent: []runtime.Object{
-			getDeletedBoundBind(),
+			getDeletedStartedFeed(),
 		},
 		WantAbsent: []runtime.Object{
-			getCompletedBindJob(),
+			getCompletedStartFeedJob(),
 		},
 	},
 	{
-		Name: "Deleted bind with finalizer, previously completed, bind job missing: unbind job created, status updated",
+		Name: "Deleted feed with finalizer, previously completed, feed job missing: stop feed job created, status updated",
 		InitialState: []runtime.Object{
 			getEventSource(),
 			getEventType(),
 			getRoute(),
-			getDeletedBoundBind(),
+			getDeletedStartedFeed(),
 		},
-		ReconcileKey: "test/test-bind",
+		ReconcileKey: "test/test-feed",
 		WantPresent: []runtime.Object{
-			getDeletedStopInProgressBind(),
+			getDeletedStopInProgressFeed(),
 			getNewStopJob(),
 		},
 	},
 	{
-		Name: "Deleted in-progress bind with finalizer, unbind job exists: unchanged",
+		Name: "Deleted in-progress feed with finalizer, stop feed job exists: unchanged",
 		InitialState: []runtime.Object{
 			getEventSource(),
 			getEventType(),
 			getRoute(),
-			getDeletedStopInProgressBind(),
+			getDeletedStopInProgressFeed(),
 			getInProgressStopJob(),
 		},
-		ReconcileKey: "test/test-bind",
+		ReconcileKey: "test/test-feed",
 		WantPresent: []runtime.Object{
-			getDeletedStopInProgressBind(),
+			getDeletedStopInProgressFeed(),
 			getInProgressStopJob(),
 		},
 	},
 	{
-		Name: "Deleted bind with completed unbind job: no finalizers, update status",
+		Name: "Deleted feed with completed stop feed job: no finalizers, update status",
 		InitialState: []runtime.Object{
 			getEventSource(),
 			getEventType(),
 			getRoute(),
-			getDeletedStopInProgressBind(),
+			getDeletedStopInProgressFeed(),
 			getCompletedStopJob(),
 		},
-		ReconcileKey: "test/test-bind",
+		ReconcileKey: "test/test-feed",
 		WantPresent: []runtime.Object{
-			getDeletedUnboundBind(),
+			getDeletedStoppedFeed(),
 		},
 	},
 }
@@ -195,9 +195,11 @@ func getEventSource() *feedsv1alpha1.EventSource {
 	return &feedsv1alpha1.EventSource{
 		ObjectMeta: om("test", "test-es"),
 		Spec: feedsv1alpha1.EventSourceSpec{
-			Source:     "github",
-			Image:      "example.com/test-es-binder",
-			Parameters: nil,
+			CommonEventSourceSpec: feedsv1alpha1.CommonEventSourceSpec{
+				Source:     "github",
+				Image:      "example.com/test-es-feeder",
+				Parameters: nil,
+			},
 		},
 	}
 }
@@ -231,8 +233,8 @@ func getFeedContext() *sources.FeedContext {
 
 func getNewFeed() *feedsv1alpha1.Feed {
 	return &feedsv1alpha1.Feed{
-		TypeMeta:   bindType(),
-		ObjectMeta: om("test", "test-bind"),
+		TypeMeta:   feedType(),
+		ObjectMeta: om("test", "test-feed"),
 		Spec: feedsv1alpha1.FeedSpec{
 			Action: feedsv1alpha1.FeedAction{
 				RouteName: getRoute().Name,
@@ -249,98 +251,98 @@ func getNewFeed() *feedsv1alpha1.Feed {
 }
 
 func getStartInProgressFeed() *feedsv1alpha1.Feed {
-	bind := getNewFeed()
-	bind.SetOwnerReference(&metav1.OwnerReference{
+	feed := getNewFeed()
+	feed.SetOwnerReference(&metav1.OwnerReference{
 		APIVersion:         feedsv1alpha1.SchemeGroupVersion.String(),
 		Kind:               "EventType",
 		Name:               getEventType().Name,
 		Controller:         &falseVal,
 		BlockOwnerDeletion: &trueVal,
 	})
-	bind.AddFinalizer(finalizerName)
+	feed.AddFinalizer(finalizerName)
 
-	bind.Status.InitializeConditions()
-	bind.Status.SetCondition(&feedsv1alpha1.BindCondition{
-		Type:    feedsv1alpha1.FeedStarted,
+	feed.Status.InitializeConditions()
+	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+		Type:    feedsv1alpha1.FeedConditionStarted,
 		Status:  corev1.ConditionUnknown,
 		Reason:  "StartJob",
-		Message: "Start job in progress",
+		Message: "start job in progress",
 	})
 
-	return bind
+	return feed
 }
 
-func getBoundFeed() *feedsv1alpha1.Feed {
-	bind := getBindInProgressFeed()
+func getStartedFeed() *feedsv1alpha1.Feed {
+	feed := getStartInProgressFeed()
 	marshalledContext, err := json.Marshal(getFeedContext().Context)
 	if err != nil {
 		panic(err)
 	}
-	bind.Status.FeedContext = &runtime.RawExtension{
+	feed.Status.FeedContext = &runtime.RawExtension{
 		Raw: marshalledContext,
 	}
-	bind.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-		Type:    feedsv1alpha1.FeedStarted,
+	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+		Type:    feedsv1alpha1.FeedConditionStarted,
 		Status:  corev1.ConditionTrue,
-		Reason:  "BindJobComplete",
-		Message: "Bind job succeeded",
+		Reason:  "StartJobComplete",
+		Message: "start job succeeded",
 	})
-	return bind
+	return feed
 }
 
-func getBindFailedFeed() *feedsv1alpha1.Feed {
-	bind := getBindInProgressFeed()
-	bind.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-		Type:    feedsv1alpha1.FeedFailed,
+func getStartFailedFeed() *feedsv1alpha1.Feed {
+	feed := getStartInProgressFeed()
+	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+		Type:    feedsv1alpha1.FeedConditionFailed,
 		Status:  corev1.ConditionTrue,
-		Reason:  "BindJobFailed",
+		Reason:  "StartJobFailed",
 		Message: "TODO replace with job failure message",
 	})
-	return bind
+	return feed
 }
 
-func getDeletedBoundFeed() *feedsv1alpha1.Feed {
-	bind := getBoundFeed()
-	bind.SetDeletionTimestamp(&deletionTime)
-	return bind
+func getDeletedStartedFeed() *feedsv1alpha1.Feed {
+	feed := getStartedFeed()
+	feed.SetDeletionTimestamp(&deletionTime)
+	return feed
 }
 
 func getDeletedStopInProgressFeed() *feedsv1alpha1.Feed {
-	bind := getDeletedBoundFeed()
+	feed := getDeletedStartedFeed()
 
-	bind.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-		Type:    feedsv1alpha1.FeedStarted,
+	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+		Type:    feedsv1alpha1.FeedConditionStarted,
 		Status:  corev1.ConditionUnknown,
 		Reason:  "StopJob",
-		Message: "Stop job in progress",
+		Message: "stop job in progress",
 	})
-	return bind
+	return feed
 }
 
-func getDeletedUnboundBind() *feedsv1alpha1.Bind {
-	bind := getDeletedStopInProgressBind()
-	bind.RemoveFinalizer(finalizerName)
-	bind.Status.SetCondition(&feedsv1alpha1.BindCondition{
-		Type:    feedsv1alpha1.FeedStarted,
+func getDeletedStoppedFeed() *feedsv1alpha1.Feed {
+	feed := getDeletedStopInProgressFeed()
+	feed.RemoveFinalizer(finalizerName)
+	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+		Type:    feedsv1alpha1.FeedConditionStarted,
 		Status:  corev1.ConditionTrue,
 		Reason:  "StopJobComplete",
-		Message: "Stop job succeeded",
+		Message: "stop job succeeded",
 	})
-	return bind
+	return feed
 }
 
-func getNewBindJob() *batchv1.Job {
-	jobName := resources.BindJobName(getNewBind())
+func getNewFeedJob() *batchv1.Job {
+	jobName := resources.StartJobName(getNewFeed())
 	return &batchv1.Job{
 		TypeMeta: jobType(),
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
 			Name:      jobName,
-			Labels:    map[string]string{"app": "bindpod"},
+			Labels:    map[string]string{"app": "feedpod"},
 			OwnerReferences: []metav1.OwnerReference{{
 				APIVersion:         feedsv1alpha1.SchemeGroupVersion.String(),
-				Kind:               "Bind",
-				Name:               getNewBind().Name,
+				Kind:               "Feed",
+				Name:               getNewFeed().Name,
 				Controller:         &trueVal,
 				BlockOwnerDeletion: &trueVal,
 			}},
@@ -352,11 +354,11 @@ func getNewBindJob() *batchv1.Job {
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
-						Name:  "binder",
-						Image: "example.com/test-es-binder",
+						Name:  "feed-effector",
+						Image: "example.com/test-es-feeder",
 						Env: []corev1.EnvVar{{
 							Name:  string(resources.EnvVarOperation),
-							Value: string(resources.OperationBind),
+							Value: string(resources.OperationStartFeed),
 						}, {
 							Name:  string(resources.EnvVarTarget),
 							Value: "example.com",
@@ -399,8 +401,8 @@ func getNewBindJob() *batchv1.Job {
 	}
 }
 
-func getInProgressBindJob() *batchv1.Job {
-	job := getNewBindJob()
+func getInProgressStartFeedJob() *batchv1.Job {
+	job := getNewFeedJob()
 	// This is normally set by a webhook. Set it here
 	// to simulate. TODO use a reactor when that's
 	// supported.
@@ -412,8 +414,8 @@ func getInProgressBindJob() *batchv1.Job {
 	return job
 }
 
-func getCompletedBindJob() *batchv1.Job {
-	job := getInProgressBindJob()
+func getCompletedStartFeedJob() *batchv1.Job {
+	job := getInProgressStartFeedJob()
 	job.Status = batchv1.JobStatus{
 		Conditions: []batchv1.JobCondition{{
 			Type:   batchv1.JobComplete,
@@ -423,8 +425,8 @@ func getCompletedBindJob() *batchv1.Job {
 	return job
 }
 
-func getFailedBindJob() *batchv1.Job {
-	job := getInProgressBindJob()
+func getFailedStartFeedJob() *batchv1.Job {
+	job := getInProgressStartFeedJob()
 	job.Status = batchv1.JobStatus{
 		Conditions: []batchv1.JobCondition{{
 			Type:   batchv1.JobFailed,
@@ -434,9 +436,9 @@ func getFailedBindJob() *batchv1.Job {
 	return job
 }
 
-func getCompletedBindJobPod() *corev1.Pod {
-	job := getCompletedBindJob()
-	outputContext, err := json.Marshal(getBindContext())
+func getCompletedStartFeedJobPod() *corev1.Pod {
+	job := getCompletedStartFeedJob()
+	outputContext, err := json.Marshal(getFeedContext())
 	if err != nil {
 		panic(err)
 	}
@@ -461,12 +463,12 @@ func getCompletedBindJobPod() *corev1.Pod {
 }
 
 func getNewStopJob() *batchv1.Job {
-	job := getNewBindJob()
-	job.Name = resources.StopJobName(getDeletedBoundBind())
+	job := getNewFeedJob()
+	job.Name = resources.StopJobName(getDeletedStartedFeed())
 
 	job.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{{
 		Name:  string(resources.EnvVarOperation),
-		Value: string(resources.OperationStop),
+		Value: string(resources.OperationStopFeed),
 	}, {
 		Name:  string(resources.EnvVarTarget),
 		Value: "example.com",
@@ -480,7 +482,7 @@ func getNewStopJob() *batchv1.Job {
 		))),
 	}, {
 		Name:  string(resources.EnvVarContext),
-		Value: base64.StdEncoding.EncodeToString(bytesOrDie(json.Marshal(getBindContext()))),
+		Value: base64.StdEncoding.EncodeToString(bytesOrDie(json.Marshal(getFeedContext()))),
 	}, {
 		Name:  string(resources.EnvVarEventSourceParameters),
 		Value: "",
@@ -499,7 +501,7 @@ func getNewStopJob() *batchv1.Job {
 			},
 		},
 	}}
-	fmt.Printf("new unbind job: %#v", job)
+	fmt.Printf("new stop feed job: %#v", job)
 	return job
 }
 
@@ -553,10 +555,10 @@ func bytesOrDie(v []byte, err error) []byte {
 	return v
 }
 
-func bindType() metav1.TypeMeta {
+func feedType() metav1.TypeMeta {
 	return metav1.TypeMeta{
 		APIVersion: feedsv1alpha1.SchemeGroupVersion.String(),
-		Kind:       "Bind",
+		Kind:       "Feed",
 	}
 }
 
