@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package bind
+package feed
 
 import (
 	"encoding/base64"
@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
-	"github.com/knative/eventing/pkg/controller/bind/resources"
+	"github.com/knative/eventing/pkg/controller/feed/resources"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
 	"github.com/knative/eventing/pkg/sources"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
@@ -37,27 +37,8 @@ import (
 
 /*
 TODO
-* initial: new bind with or without status, no job
-  reconciled: new bind with status unknown, finalizer, job created
-
-* initial: bind with job not completed
-  reconciled: same
-
-* initial: bind with job completed
-  reconciled: bind success and context
-
-* initial: bind with job failure
-  reconciled: bind failure, job exists, finalizer
-
 - initial: bind with job deadline exceeded
   reconciled: bind failure, job exists, finalizer
-
-* initial: bind with deletionTimestamp
-  reconciled: bind same, job created, job exists, finalizer
-
-* initial: bind with deletionTimestamp, job completed
-  reconciled: bind has no finalizers
-
 */
 
 var (
@@ -163,8 +144,8 @@ var testCases = []controllertesting.TestCase{
 		},
 		ReconcileKey: "test/test-bind",
 		WantPresent: []runtime.Object{
-			getDeletedUnbindInProgressBind(),
-			getNewUnbindJob(),
+			getDeletedStopInProgressBind(),
+			getNewStopJob(),
 		},
 	},
 	{
@@ -173,13 +154,13 @@ var testCases = []controllertesting.TestCase{
 			getEventSource(),
 			getEventType(),
 			getRoute(),
-			getDeletedUnbindInProgressBind(),
-			getInProgressUnbindJob(),
+			getDeletedStopInProgressBind(),
+			getInProgressStopJob(),
 		},
 		ReconcileKey: "test/test-bind",
 		WantPresent: []runtime.Object{
-			getDeletedUnbindInProgressBind(),
-			getInProgressUnbindJob(),
+			getDeletedStopInProgressBind(),
+			getInProgressStopJob(),
 		},
 	},
 	{
@@ -188,8 +169,8 @@ var testCases = []controllertesting.TestCase{
 			getEventSource(),
 			getEventType(),
 			getRoute(),
-			getDeletedUnbindInProgressBind(),
-			getCompletedUnbindJob(),
+			getDeletedStopInProgressBind(),
+			getCompletedStopJob(),
 		},
 		ReconcileKey: "test/test-bind",
 		WantPresent: []runtime.Object{
@@ -240,20 +221,20 @@ func getRoute() *servingv1alpha1.Route {
 	}
 }
 
-func getBindContext() *sources.BindContext {
-	return &sources.BindContext{
+func getFeedContext() *sources.FeedContext {
+	return &sources.FeedContext{
 		Context: map[string]interface{}{
 			"foo": "bar",
 		},
 	}
 }
 
-func getNewBind() *feedsv1alpha1.Bind {
-	return &feedsv1alpha1.Bind{
+func getNewFeed() *feedsv1alpha1.Feed {
+	return &feedsv1alpha1.Feed{
 		TypeMeta:   bindType(),
 		ObjectMeta: om("test", "test-bind"),
-		Spec: feedsv1alpha1.BindSpec{
-			Action: feedsv1alpha1.BindAction{
+		Spec: feedsv1alpha1.FeedSpec{
+			Action: feedsv1alpha1.FeedAction{
 				RouteName: getRoute().Name,
 			},
 			Trigger: feedsv1alpha1.EventTrigger{
@@ -267,8 +248,8 @@ func getNewBind() *feedsv1alpha1.Bind {
 	}
 }
 
-func getBindInProgressBind() *feedsv1alpha1.Bind {
-	bind := getNewBind()
+func getStartInProgressFeed() *feedsv1alpha1.Feed {
+	bind := getNewFeed()
 	bind.SetOwnerReference(&metav1.OwnerReference{
 		APIVersion:         feedsv1alpha1.SchemeGroupVersion.String(),
 		Kind:               "EventType",
@@ -280,26 +261,26 @@ func getBindInProgressBind() *feedsv1alpha1.Bind {
 
 	bind.Status.InitializeConditions()
 	bind.Status.SetCondition(&feedsv1alpha1.BindCondition{
-		Type:    feedsv1alpha1.BindComplete,
+		Type:    feedsv1alpha1.FeedStarted,
 		Status:  corev1.ConditionUnknown,
-		Reason:  "BindJob",
-		Message: "Bind job in progress",
+		Reason:  "StartJob",
+		Message: "Start job in progress",
 	})
 
 	return bind
 }
 
-func getBoundBind() *feedsv1alpha1.Bind {
-	bind := getBindInProgressBind()
-	marshalledContext, err := json.Marshal(getBindContext().Context)
+func getBoundFeed() *feedsv1alpha1.Feed {
+	bind := getBindInProgressFeed()
+	marshalledContext, err := json.Marshal(getFeedContext().Context)
 	if err != nil {
 		panic(err)
 	}
-	bind.Status.BindContext = &runtime.RawExtension{
+	bind.Status.FeedContext = &runtime.RawExtension{
 		Raw: marshalledContext,
 	}
-	bind.Status.SetCondition(&feedsv1alpha1.BindCondition{
-		Type:    feedsv1alpha1.BindComplete,
+	bind.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+		Type:    feedsv1alpha1.FeedStarted,
 		Status:  corev1.ConditionTrue,
 		Reason:  "BindJobComplete",
 		Message: "Bind job succeeded",
@@ -307,10 +288,10 @@ func getBoundBind() *feedsv1alpha1.Bind {
 	return bind
 }
 
-func getBindFailedBind() *feedsv1alpha1.Bind {
-	bind := getBindInProgressBind()
-	bind.Status.SetCondition(&feedsv1alpha1.BindCondition{
-		Type:    feedsv1alpha1.BindFailed,
+func getBindFailedFeed() *feedsv1alpha1.Feed {
+	bind := getBindInProgressFeed()
+	bind.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+		Type:    feedsv1alpha1.FeedFailed,
 		Status:  corev1.ConditionTrue,
 		Reason:  "BindJobFailed",
 		Message: "TODO replace with job failure message",
@@ -318,32 +299,32 @@ func getBindFailedBind() *feedsv1alpha1.Bind {
 	return bind
 }
 
-func getDeletedBoundBind() *feedsv1alpha1.Bind {
-	bind := getBoundBind()
+func getDeletedBoundFeed() *feedsv1alpha1.Feed {
+	bind := getBoundFeed()
 	bind.SetDeletionTimestamp(&deletionTime)
 	return bind
 }
 
-func getDeletedUnbindInProgressBind() *feedsv1alpha1.Bind {
-	bind := getDeletedBoundBind()
+func getDeletedStopInProgressFeed() *feedsv1alpha1.Feed {
+	bind := getDeletedBoundFeed()
 
-	bind.Status.SetCondition(&feedsv1alpha1.BindCondition{
-		Type:    feedsv1alpha1.BindComplete,
+	bind.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+		Type:    feedsv1alpha1.FeedStarted,
 		Status:  corev1.ConditionUnknown,
-		Reason:  "UnbindJob",
-		Message: "Unbind job in progress",
+		Reason:  "StopJob",
+		Message: "Stop job in progress",
 	})
 	return bind
 }
 
 func getDeletedUnboundBind() *feedsv1alpha1.Bind {
-	bind := getDeletedUnbindInProgressBind()
+	bind := getDeletedStopInProgressBind()
 	bind.RemoveFinalizer(finalizerName)
 	bind.Status.SetCondition(&feedsv1alpha1.BindCondition{
-		Type:    feedsv1alpha1.BindComplete,
+		Type:    feedsv1alpha1.FeedStarted,
 		Status:  corev1.ConditionTrue,
-		Reason:  "UnbindJobComplete",
-		Message: "Unbind job succeeded",
+		Reason:  "StopJobComplete",
+		Message: "Stop job succeeded",
 	})
 	return bind
 }
@@ -479,13 +460,13 @@ func getCompletedBindJobPod() *corev1.Pod {
 	}
 }
 
-func getNewUnbindJob() *batchv1.Job {
+func getNewStopJob() *batchv1.Job {
 	job := getNewBindJob()
-	job.Name = resources.UnbindJobName(getDeletedBoundBind())
+	job.Name = resources.StopJobName(getDeletedBoundBind())
 
 	job.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{{
 		Name:  string(resources.EnvVarOperation),
-		Value: string(resources.OperationUnbind),
+		Value: string(resources.OperationStop),
 	}, {
 		Name:  string(resources.EnvVarTarget),
 		Value: "example.com",
@@ -522,8 +503,8 @@ func getNewUnbindJob() *batchv1.Job {
 	return job
 }
 
-func getInProgressUnbindJob() *batchv1.Job {
-	job := getNewUnbindJob()
+func getInProgressStopJob() *batchv1.Job {
+	job := getNewStopJob()
 	// This is normally set by a webhook. Set it here
 	// to simulate. TODO use a reactor when that's
 	// supported.
@@ -535,8 +516,8 @@ func getInProgressUnbindJob() *batchv1.Job {
 	return job
 }
 
-func getCompletedUnbindJob() *batchv1.Job {
-	job := getInProgressUnbindJob()
+func getCompletedStopJob() *batchv1.Job {
+	job := getInProgressStopJob()
 	job.Status = batchv1.JobStatus{
 		Conditions: []batchv1.JobCondition{{
 			Type:   batchv1.JobComplete,
@@ -546,8 +527,8 @@ func getCompletedUnbindJob() *batchv1.Job {
 	return job
 }
 
-func getFailedUnbindJob() *batchv1.Job {
-	job := getInProgressUnbindJob()
+func getFailedStopJob() *batchv1.Job {
+	job := getInProgressStopJob()
 	job.Status = batchv1.JobStatus{
 		Conditions: []batchv1.JobCondition{{
 			Type:   batchv1.JobFailed,

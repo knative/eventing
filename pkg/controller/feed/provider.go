@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package bind
+package feed
 
 import (
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
@@ -49,10 +49,12 @@ func ProvideController(mrg manager.Manager) (controller.Controller, error) {
 		return nil, err
 	}
 
-	// Watch ReplicaSets and enqueue ReplicaSet object key
-	if err := c.Watch(&source.Kind{Type: &feedsv1alpha1.Bind{}}, &handler.EnqueueRequestForObject{}); err != nil {
+	// Watch Feed events and enqueue Feed object key
+	if err := c.Watch(&source.Kind{Type: &feedsv1alpha1.Feed{}}, &handler.EnqueueRequestForObject{}); err != nil {
 		return nil, err
 	}
+
+	//FIXME(grantr) watch job events
 
 	return c, nil
 }

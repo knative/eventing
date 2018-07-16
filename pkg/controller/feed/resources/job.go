@@ -28,58 +28,58 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Operation specifies the operation for the bind container to perform.
+// Operation specifies the operation for the feed container to perform.
 type Operation string
 
 const (
-	// OperationBind specifies a binding should be created
-	OperationBind Operation = "BIND"
-	// OperationUnbind specifies a binding should be deleted
-	OperationUnbind = "UNBIND"
+	// OperationStartFeed specifies a feed should be started
+	OperationStartFeed Operation = "START"
+	// OperationStopFeed specifies a feed should be stopped
+	OperationStopFeed = "STOP"
 )
 
 // EnvVar specifies the names of the environment variables passed to the
-// bind container.
+// feed container.
 type EnvVar string
 
 const (
-	// EnvVarOperation is the Env variable that gets set to requested BindOperation
+	// EnvVarOperation is the Env variable that gets set to requested Operation
 	EnvVarOperation EnvVar = "BIND_OPERATION"
 	// EnvVarTrigger is the Env variable that gets set to serialized trigger configuration
 	EnvVarTrigger = "BIND_TRIGGER"
-	// EnvVarTarget is the Env variable that gets set to target of the bind operation
+	// EnvVarTarget is the Env variable that gets set to target of the feed operation
 	EnvVarTarget = "BIND_TARGET"
-	// EnvVarContext is the Env variable that gets set to serialized BindContext if unbinding
+	// EnvVarContext is the Env variable that gets set to serialized FeedContext if stopping
 	EnvVarContext = "BIND_CONTEXT"
 	// EnvVarEventSourceParameters is the Env variable that gets set to serialized EventSourceSpec
 	EnvVarEventSourceParameters = "EVENT_SOURCE_PARAMETERS"
 	// EnvVarNamespace is the Env variable that gets set to namespace of the container doing
-	// the Bind (aka, namespace of the binding). Uses downward api
+	// the Feed (aka, namespace of the feed). Uses downward api
 	EnvVarNamespace = "BIND_NAMESPACE"
 	// EnvVarServiceAccount is the Env variable that gets set to serviceaccount of the
-	// container doing the Bind. Uses downward api
+	// container doing the feed. Uses downward api
 	//TODO is this useful? Wouldn't this already be the implicit service Account
 	// for the container?
 	EnvVarServiceAccount = "BIND_SERVICE_ACCOUNT"
 )
 
-// MakeJob creates a Job to complete a bind or unbind operation.
-func MakeJob(bind *feedsv1alpha1.Bind, source *feedsv1alpha1.EventSource, trigger sources.EventTrigger, target string) (*batchv1.Job, error) {
+// MakeJob creates a Job to start or stop a Feed.
+func MakeJob(feed *feedsv1alpha1.Feed, source *feedsv1alpha1.EventSource, trigger sources.EventTrigger, target string) (*batchv1.Job, error) {
 	labels := map[string]string{
-		"app": "bindpod",
+		"app": "feedpod",
 	}
 
-	podTemplate, err := makePodTemplate(bind, source, trigger, target)
+	podTemplate, err := makePodTemplate(feed, source, trigger, target)
 	if err != nil {
 		return nil, err
 	}
 
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            JobName(bind),
-			Namespace:       bind.Namespace,
+			Name:            JobName(feed),
+			Namespace:       feed.Namespace,
 			Labels:          labels,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(bind, feedsv1alpha1.SchemeGroupVersion.WithKind("Bind"))},
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(feed, feedsv1alpha1.SchemeGroupVersion.WithKind("Feed"))},
 		},
 		Spec: batchv1.JobSpec{
 			Template: *podTemplate,
@@ -105,19 +105,19 @@ func IsJobFailed(job *batchv1.Job) bool {
 	return false
 }
 
-// makePodTemplate creates a pod template for a bind or unbind Job.
-func makePodTemplate(bind *feedsv1alpha1.Bind, source *feedsv1alpha1.EventSource, trigger sources.EventTrigger, target string) (*corev1.PodTemplateSpec, error) {
+// makePodTemplate creates a pod template for a feed stop or start Job.
+func makePodTemplate(feed *feedsv1alpha1.Feed, source *feedsv1alpha1.EventSource, trigger sources.EventTrigger, target string) (*corev1.PodTemplateSpec, error) {
 	var op Operation
-	if bind.GetDeletionTimestamp() == nil {
-		op = OperationBind
+	if feed.GetDeletionTimestamp() == nil {
+		op = OperationStartFeed
 	} else {
-		op = OperationUnbind
+		op = OperationStopFeed
 	}
 
-	var encodedBindContext string
-	if rawExt := bind.Status.BindContext; rawExt != nil {
+	var encodedFeedContext string
+	if rawExt := feed.Status.FeedContext; rawExt != nil {
 		if rawExt.Raw != nil && len(rawExt.Raw) > 0 {
-			var ctx sources.BindContext
+			var ctx sources.FeedContext
 			if err := json.Unmarshal(rawExt.Raw, &ctx.Context); err != nil {
 				return nil, err
 			}
@@ -125,7 +125,7 @@ func makePodTemplate(bind *feedsv1alpha1.Bind, source *feedsv1alpha1.EventSource
 			if err != nil {
 				return nil, err
 			}
-			encodedBindContext = base64.StdEncoding.EncodeToString(marshaledCtx)
+			encodedFeedContext = base64.StdEncoding.EncodeToString(marshaledCtx)
 		}
 	}
 
@@ -151,11 +151,11 @@ func makePodTemplate(bind *feedsv1alpha1.Bind, source *feedsv1alpha1.EventSource
 			},
 		},
 		Spec: corev1.PodSpec{
-			ServiceAccountName: bind.Spec.ServiceAccountName,
+			ServiceAccountName: feed.Spec.ServiceAccountName,
 			RestartPolicy:      corev1.RestartPolicyNever,
 			Containers: []corev1.Container{
 				corev1.Container{
-					Name:            "binder",
+					Name:            "feed-effector", //FIXME(grantr) container naming
 					Image:           source.Spec.Image,
 					ImagePullPolicy: "Always",
 					Env: []corev1.EnvVar{
@@ -173,7 +173,7 @@ func makePodTemplate(bind *feedsv1alpha1.Bind, source *feedsv1alpha1.EventSource
 						},
 						{
 							Name:  string(EnvVarContext),
-							Value: encodedBindContext,
+							Value: encodedFeedContext,
 						},
 						{
 							Name:  string(EnvVarEventSourceParameters),

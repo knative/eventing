@@ -22,21 +22,21 @@ import (
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 )
 
-// JobName returns the name of the job for the bind, taking into account whether
+// JobName returns the name of the job for the feed, taking into account whether
 // it's been deleted.
-func JobName(bind *feedsv1alpha1.Bind) string {
-	if bind.GetDeletionTimestamp() != nil {
-		return UnbindJobName(bind)
+func JobName(feed *feedsv1alpha1.Feed) string {
+	if feed.GetDeletionTimestamp() != nil {
+		return StopJobName(feed)
 	}
-	return BindJobName(bind)
+	return StartJobName(feed)
 }
 
-// BindJobName returns the name of the job for the bind operation.
-func BindJobName(bind *feedsv1alpha1.Bind) string {
-	return fmt.Sprintf("%s-bind", bind.Name)
+// StartJobName returns the name of the job for the start operation.
+func StartJobName(feed *feedsv1alpha1.Feed) string {
+	return fmt.Sprintf("%s-start", feed.Name)
 }
 
-// UnbindJobName returns the name of the job for the unbind operation.
-func UnbindJobName(bind *feedsv1alpha1.Bind) string {
-	return fmt.Sprintf("%s-unbind", bind.Name)
+// StopJobName returns the name of the job for the stop operation.
+func StopJobName(feed *feedsv1alpha1.Feed) string {
+	return fmt.Sprintf("%s-stop", feed.Name)
 }

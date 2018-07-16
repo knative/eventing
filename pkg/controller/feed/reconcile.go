@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package bind
+package feed
 
 import (
 	"context"
@@ -25,7 +25,7 @@ import (
 	"github.com/golang/glog"
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
-	"github.com/knative/eventing/pkg/controller/bind/resources"
+	"github.com/knative/eventing/pkg/controller/feed/resources"
 	"github.com/knative/eventing/pkg/sources"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	yaml "gopkg.in/yaml.v2"
@@ -43,87 +43,90 @@ const (
 	finalizerName = controllerAgentName
 )
 
-// Reconcile Routes
+// Reconcile Feed resources
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	bind := &feedsv1alpha1.Bind{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, bind)
+	feed := &feedsv1alpha1.Feed{}
+	err := r.client.Get(context.TODO(), request.NamespacedName, feed)
 
 	if errors.IsNotFound(err) {
-		glog.Errorf("Could not find Bind %v\n", request)
+		glog.Errorf("Could not find Feed %v\n", request)
 		return reconcile.Result{}, nil
 	}
 
 	if err != nil {
-		glog.Errorf("Could not fetch Bind %v for %+v\n", err, request)
+		glog.Errorf("Could not fetch Feed %v for %+v\n", err, request)
 		return reconcile.Result{}, err
 	}
 
-	r.setEventTypeOwnerReference(bind)
-	if err := r.updateOwnerReferences(bind); err != nil {
-		glog.Errorf("Failed to update Bind owner references: %v", err)
+	r.setEventTypeOwnerReference(feed)
+	if err := r.updateOwnerReferences(feed); err != nil {
+		glog.Errorf("Failed to update Feed owner references: %v", err)
 		return reconcile.Result{}, err
 	}
 
-	bind.Status.InitializeConditions()
-	if bind.GetDeletionTimestamp() == nil {
-		err = r.reconcileBindJob(bind)
+	feed.Status.InitializeConditions()
+	if feed.GetDeletionTimestamp() == nil {
+		err = r.reconcileStartJob(feed)
+		if err != nil {
+			glog.Errorf("Error reconciling start Job: %v", err)
+		}
 	} else {
-		err = r.reconcileUnbindJob(bind)
-	}
-	if err != nil {
-		glog.Errorf("Error reconciling bind job: %v", err)
+		err = r.reconcileStopJob(feed)
+		if err != nil {
+			glog.Errorf("Error reconciling stop Job: %v", err)
+		}
 	}
 
-	if err := r.updateStatus(bind); err != nil {
-		glog.Errorf("Failed to update Bind status: %v", err)
+	if err := r.updateStatus(feed); err != nil {
+		glog.Errorf("Failed to update Feed status: %v", err)
 		return reconcile.Result{}, err
 	}
 	return reconcile.Result{}, err
 }
 
-func (r *reconciler) reconcileBindJob(bind *feedsv1alpha1.Bind) error {
-	bc := bind.Status.GetCondition(feedsv1alpha1.BindComplete)
+func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
+	bc := feed.Status.GetCondition(feedsv1alpha1.FeedStarted)
 	switch bc.Status {
 	case corev1.ConditionUnknown:
 
 		job := &batchv1.Job{}
-		jobName := resources.JobName(bind)
+		jobName := resources.JobName(feed)
 
-		if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: bind.Namespace, Name: jobName}, job); err != nil {
+		if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: jobName}, job); err != nil {
 			if errors.IsNotFound(err) {
-				job, err = r.createJob(bind)
+				job, err = r.createJob(feed)
 				if err != nil {
 					return err
 				}
-				bind.Status.SetCondition(&feedsv1alpha1.BindCondition{
-					Type:    feedsv1alpha1.BindComplete,
+				feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+					Type:    feedsv1alpha1.FeedStarted,
 					Status:  corev1.ConditionUnknown,
-					Reason:  "BindJob",
-					Message: "Bind job in progress",
+					Reason:  "StartJob",
+					Message: "Start job in progress",
 				})
 			}
 		}
-		bind.AddFinalizer(finalizerName)
-		if err := r.updateFinalizers(bind); err != nil {
+		feed.AddFinalizer(finalizerName)
+		if err := r.updateFinalizers(feed); err != nil {
 			return err
 		}
 
 		if resources.IsJobComplete(job) {
-			if err := r.setBindContext(bind, job); err != nil {
+			if err := r.setFeedContext(feed, job); err != nil {
 				return err
 			}
 			//TODO just use a single Succeeded condition, like Build
-			bind.Status.SetCondition(&feedsv1alpha1.BindCondition{
-				Type:    feedsv1alpha1.BindComplete,
+			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+				Type:    feedsv1alpha1.FeedStarted,
 				Status:  corev1.ConditionTrue,
-				Reason:  "BindJobComplete",
-				Message: "Bind job succeeded",
+				Reason:  "StartJobComplete",
+				Message: "Start job succeeded",
 			})
 		} else if resources.IsJobFailed(job) {
-			bind.Status.SetCondition(&feedsv1alpha1.BindCondition{
-				Type:    feedsv1alpha1.BindFailed,
+			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+				Type:    feedsv1alpha1.FeedFailed,
 				Status:  corev1.ConditionTrue,
-				Reason:  "BindJobFailed",
+				Reason:  "StartJobFailed",
 				Message: "TODO replace with job failure message",
 			})
 		}
@@ -134,17 +137,17 @@ func (r *reconciler) reconcileBindJob(bind *feedsv1alpha1.Bind) error {
 	return nil
 }
 
-func (r *reconciler) reconcileUnbindJob(bind *feedsv1alpha1.Bind) error {
-	if bind.HasFinalizer(finalizerName) {
+func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
+	if feed.HasFinalizer(finalizerName) {
 
-		// check for an existing bind job
+		// check for an existing start Job
 		job := &batchv1.Job{}
-		jobName := resources.BindJobName(bind)
+		jobName := resources.StartJobName(feed)
 
-		err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: bind.Namespace, Name: jobName}, job)
+		err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: jobName}, job)
 		if !errors.IsNotFound(err) {
 			if err == nil {
-				// Delete the existing job and return. When it's deleted, this Bind
+				// Delete the existing job and return. When it's deleted, this Feed
 				// will be reconciled again.
 				r.client.Delete(context.TODO(), job)
 				return nil
@@ -152,42 +155,42 @@ func (r *reconciler) reconcileUnbindJob(bind *feedsv1alpha1.Bind) error {
 			return err
 		}
 
-		jobName = resources.JobName(bind)
+		jobName = resources.JobName(feed)
 
-		if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: bind.Namespace, Name: jobName}, job); err != nil {
+		if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: jobName}, job); err != nil {
 			if errors.IsNotFound(err) {
-				job, err = r.createJob(bind)
+				job, err = r.createJob(feed)
 				if err != nil {
 					return err
 				}
 				//TODO check for event source not found and remove finalizer
 
-				bind.Status.SetCondition(&feedsv1alpha1.BindCondition{
-					Type:    feedsv1alpha1.BindComplete,
+				feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+					Type:    feedsv1alpha1.FeedStarted,
 					Status:  corev1.ConditionUnknown,
-					Reason:  "UnbindJob",
-					Message: "Unbind job in progress",
+					Reason:  "StopJob",
+					Message: "Stop job in progress",
 				})
 			}
 		}
 
 		if resources.IsJobComplete(job) {
-			bind.RemoveFinalizer(finalizerName)
-			if err := r.updateFinalizers(bind); err != nil {
+			feed.RemoveFinalizer(finalizerName)
+			if err := r.updateFinalizers(feed); err != nil {
 				return err
 			}
-			bind.Status.SetCondition(&feedsv1alpha1.BindCondition{
-				Type:    feedsv1alpha1.BindComplete,
+			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+				Type:    feedsv1alpha1.FeedStarted,
 				Status:  corev1.ConditionTrue,
-				Reason:  "UnbindJobComplete",
-				Message: "Unbind job succeeded",
+				Reason:  "StopJobComplete",
+				Message: "Stop job succeeded",
 			})
 		} else if resources.IsJobFailed(job) {
 			// finalizer remains to allow humans to inspect the failure
-			bind.Status.SetCondition(&feedsv1alpha1.BindCondition{
-				Type:    feedsv1alpha1.BindFailed,
+			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+				Type:    feedsv1alpha1.FeedFailed,
 				Status:  corev1.ConditionTrue,
-				Reason:  "UnbindJobFailed",
+				Reason:  "StopJobFailed",
 				Message: "TODO replace with job failure message",
 			})
 		}
@@ -195,58 +198,58 @@ func (r *reconciler) reconcileUnbindJob(bind *feedsv1alpha1.Bind) error {
 	return nil
 }
 
-func (r *reconciler) updateOwnerReferences(u *feedsv1alpha1.Bind) error {
-	bind := &feedsv1alpha1.Bind{}
-	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: u.Namespace, Name: u.Name}, bind)
+func (r *reconciler) updateOwnerReferences(u *feedsv1alpha1.Feed) error {
+	feed := &feedsv1alpha1.Feed{}
+	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: u.Namespace, Name: u.Name}, feed)
 	if err != nil {
 		return err
 	}
 
-	if !equality.Semantic.DeepEqual(bind.OwnerReferences, u.OwnerReferences) {
-		bind.SetOwnerReferences(u.ObjectMeta.OwnerReferences)
-		return r.client.Update(context.TODO(), bind)
+	if !equality.Semantic.DeepEqual(feed.OwnerReferences, u.OwnerReferences) {
+		feed.SetOwnerReferences(u.ObjectMeta.OwnerReferences)
+		return r.client.Update(context.TODO(), feed)
 	}
 	return nil
 }
 
-func (r *reconciler) updateFinalizers(u *feedsv1alpha1.Bind) error {
-	bind := &feedsv1alpha1.Bind{}
-	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: u.Namespace, Name: u.Name}, bind)
+func (r *reconciler) updateFinalizers(u *feedsv1alpha1.Feed) error {
+	feed := &feedsv1alpha1.Feed{}
+	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: u.Namespace, Name: u.Name}, feed)
 	if err != nil {
 		return err
 	}
 
-	if !equality.Semantic.DeepEqual(bind.Finalizers, u.Finalizers) {
-		bind.SetFinalizers(u.ObjectMeta.Finalizers)
-		return r.client.Update(context.TODO(), bind)
+	if !equality.Semantic.DeepEqual(feed.Finalizers, u.Finalizers) {
+		feed.SetFinalizers(u.ObjectMeta.Finalizers)
+		return r.client.Update(context.TODO(), feed)
 	}
 	return nil
 }
 
-func (r *reconciler) updateStatus(u *feedsv1alpha1.Bind) error {
-	bind := &feedsv1alpha1.Bind{}
-	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: u.Namespace, Name: u.Name}, bind)
+func (r *reconciler) updateStatus(u *feedsv1alpha1.Feed) error {
+	feed := &feedsv1alpha1.Feed{}
+	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: u.Namespace, Name: u.Name}, feed)
 	if err != nil {
 		return err
 	}
 
-	if !equality.Semantic.DeepEqual(bind.Status, u.Status) {
-		bind.Status = u.Status
+	if !equality.Semantic.DeepEqual(feed.Status, u.Status) {
+		feed.Status = u.Status
 		// Until #38113 is merged, we must use Update instead of UpdateStatus to
-		// update the Status block of the Bind resource. UpdateStatus will not
+		// update the Status block of the Feed resource. UpdateStatus will not
 		// allow changes to the Spec of the resource, which is ideal for ensuring
 		// nothing other than resource status has been updated.
-		return r.client.Update(context.TODO(), bind)
+		return r.client.Update(context.TODO(), feed)
 	}
 	return nil
 }
 
-func (r *reconciler) setEventTypeOwnerReference(bind *feedsv1alpha1.Bind) error {
+func (r *reconciler) setEventTypeOwnerReference(feed *feedsv1alpha1.Feed) error {
 
 	et := &feedsv1alpha1.EventType{}
-	if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: bind.Namespace, Name: bind.Spec.Trigger.EventType}, et); err != nil {
+	if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.EventType}, et); err != nil {
 		if errors.IsNotFound(err) {
-			glog.Errorf("Bind event type not found, will not set finalizer")
+			glog.Errorf("Feed event type not found, will not set finalizer")
 			return nil
 		}
 		return err
@@ -258,12 +261,12 @@ func (r *reconciler) setEventTypeOwnerReference(bind *feedsv1alpha1.Bind) error 
 	ref.BlockOwnerDeletion = &blockOwnerDeletion
 	ref.Controller = &isController
 
-	bind.SetOwnerReference(ref)
+	feed.SetOwnerReference(ref)
 	return nil
 }
 
-func (r *reconciler) resolveTrigger(bind *feedsv1alpha1.Bind) (sources.EventTrigger, error) {
-	trigger := bind.Spec.Trigger
+func (r *reconciler) resolveTrigger(feed *feedsv1alpha1.Feed) (sources.EventTrigger, error) {
+	trigger := feed.Spec.Trigger
 	resolved := sources.EventTrigger{
 		Resource:   trigger.Resource,
 		EventType:  trigger.EventType,
@@ -281,7 +284,7 @@ func (r *reconciler) resolveTrigger(bind *feedsv1alpha1.Bind) (sources.EventTrig
 	if trigger.ParametersFrom != nil {
 		glog.Infof("Fetching from source %+v", trigger.ParametersFrom)
 		for _, p := range trigger.ParametersFrom {
-			pfs, err := r.fetchParametersFromSource(bind.Namespace, &p)
+			pfs, err := r.fetchParametersFromSource(feed.Namespace, &p)
 			if err != nil {
 				return resolved, err
 			}
@@ -329,29 +332,29 @@ func unmarshalJSON(in []byte) (map[string]interface{}, error) {
 	return parameters, nil
 }
 
-func (r *reconciler) createJob(bind *feedsv1alpha1.Bind) (*batchv1.Job, error) {
+func (r *reconciler) createJob(feed *feedsv1alpha1.Feed) (*batchv1.Job, error) {
 	//TODO just use service dns
-	target, err := r.resolveActionTarget(bind)
+	target, err := r.resolveActionTarget(feed)
 	if err != nil {
 		return nil, err
 	}
 
 	source := &feedsv1alpha1.EventSource{}
-	if err = r.client.Get(context.TODO(), client.ObjectKey{Namespace: bind.Namespace, Name: bind.Spec.Trigger.Service}, source); err != nil {
+	if err = r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.Service}, source); err != nil {
 		return nil, err
 	}
 
 	et := &feedsv1alpha1.EventType{}
-	if err = r.client.Get(context.TODO(), client.ObjectKey{Namespace: bind.Namespace, Name: bind.Spec.Trigger.EventType}, et); err != nil {
+	if err = r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.EventType}, et); err != nil {
 		return nil, err
 	}
 
-	trigger, err := r.resolveTrigger(bind)
+	trigger, err := r.resolveTrigger(feed)
 	if err != nil {
 		return nil, err
 	}
 
-	job, err := resources.MakeJob(bind, source, trigger, target)
+	job, err := resources.MakeJob(feed, source, trigger, target)
 	if err != nil {
 		return nil, err
 	}
@@ -362,13 +365,13 @@ func (r *reconciler) createJob(bind *feedsv1alpha1.Bind) (*batchv1.Job, error) {
 	return job, nil
 }
 
-func (r *reconciler) resolveActionTarget(bind *feedsv1alpha1.Bind) (string, error) {
-	action := bind.Spec.Action
+func (r *reconciler) resolveActionTarget(feed *feedsv1alpha1.Feed) (string, error) {
+	action := feed.Spec.Action
 	if len(action.RouteName) > 0 {
-		return r.resolveRouteDNS(bind.Namespace, action.RouteName)
+		return r.resolveRouteDNS(feed.Namespace, action.RouteName)
 	}
 	if len(action.ChannelName) > 0 {
-		return r.resolveChannelDNS(bind.Namespace, action.ChannelName)
+		return r.resolveChannelDNS(feed.Namespace, action.ChannelName)
 	}
 	// This should never happen, but because we don't have webhook validation yet, check
 	// and complain.
@@ -399,24 +402,24 @@ func (r *reconciler) resolveChannelDNS(namespace string, channelName string) (st
 	return fmt.Sprintf("%s-channel", channel.Name), nil
 }
 
-func (r *reconciler) setBindContext(bind *feedsv1alpha1.Bind, job *batchv1.Job) error {
+func (r *reconciler) setFeedContext(feed *feedsv1alpha1.Feed, job *batchv1.Job) error {
 	ctx, err := r.getJobContext(job)
 	if err != nil {
 		return err
 	}
 
-	marshalledBindContext, err := json.Marshal(&ctx.Context)
+	marshalledFeedContext, err := json.Marshal(&ctx.Context)
 	if err != nil {
 		return err
 	}
-	bind.Status.BindContext = &runtime.RawExtension{
-		Raw: marshalledBindContext,
+	feed.Status.FeedContext = &runtime.RawExtension{
+		Raw: marshalledFeedContext,
 	}
 
 	return nil
 }
 
-func (r *reconciler) getJobContext(job *batchv1.Job) (*sources.BindContext, error) {
+func (r *reconciler) getJobContext(job *batchv1.Job) (*sources.FeedContext, error) {
 	pods, err := r.getJobPods(job)
 	if err != nil {
 		return nil, err
@@ -428,7 +431,7 @@ func (r *reconciler) getJobContext(job *batchv1.Job) (*sources.BindContext, erro
 			if msg := resources.GetFirstTerminationMessage(&p); msg != "" {
 				decodedContext, _ := base64.StdEncoding.DecodeString(msg)
 				glog.Infof("Decoded to %q", decodedContext)
-				var ret sources.BindContext
+				var ret sources.FeedContext
 				err = json.Unmarshal(decodedContext, &ret)
 				if err != nil {
 					glog.Errorf("Failed to unmarshal context: %s", err)
@@ -438,7 +441,7 @@ func (r *reconciler) getJobContext(job *batchv1.Job) (*sources.BindContext, erro
 			}
 		}
 	}
-	return &sources.BindContext{}, nil
+	return &sources.FeedContext{}, nil
 }
 
 func (r *reconciler) getJobPods(job *batchv1.Job) ([]corev1.Pod, error) {
