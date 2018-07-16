@@ -172,7 +172,7 @@ type FeedStatus struct {
 type FeedConditionType string
 
 const (
-	// FeedStarted specifies that the feed has started successfully.
+	// FeedConditionReady specifies that the feed has started successfully.
 	FeedConditionReady FeedConditionType = "Ready"
 )
 
