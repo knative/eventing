@@ -18,6 +18,14 @@ limitations under the License.
 
 package v1alpha1
 
+// ClusterEventSourceListerExpansion allows custom methods to be added to
+// ClusterEventSourceLister.
+type ClusterEventSourceListerExpansion interface{}
+
+// ClusterEventTypeListerExpansion allows custom methods to be added to
+// ClusterEventTypeLister.
+type ClusterEventTypeListerExpansion interface{}
+
 // EventSourceListerExpansion allows custom methods to be added to
 // EventSourceLister.
 type EventSourceListerExpansion interface{}

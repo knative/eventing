@@ -21,38 +21,39 @@ import (
 )
 
 // +genclient
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// EventSource represents a software system which wishes to make changes in
+// ClusterEventSource represents a software system which wishes to make changes in
 // state discoverable via eventing, without prior knowledge of systems which
-// might consume state changes. EventSources produce events that the Feed
+// might consume state changes. ClusterEventSources produce events that the Feed
 // resource connects to consumers.
-type EventSource struct {
+type ClusterEventSource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   EventSourceSpec   `json:"spec"`
-	Status EventSourceStatus `json:"status"`
+	Spec   ClusterEventSourceSpec   `json:"spec"`
+	Status ClusterEventSourceStatus `json:"status"`
 }
 
-// EventSourceSpec describes the type and source of an event, a container image
+// ClusterEventSourceSpec describes the type and source of an event, a container image
 // to run for feed lifecycle operations, and configuration options for the
-// EventSource.
-type EventSourceSpec struct {
+// ClusterEventSource.
+type ClusterEventSourceSpec struct {
 	CommonEventSourceSpec `json:",inline"`
 }
 
-// EventSourceStatus is the status for a EventSource resource
-type EventSourceStatus struct {
+// ClusterEventSourceStatus is the status for a ClusterEventSource resource
+type ClusterEventSourceStatus struct {
 	CommonEventSourceStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// EventSourceList is a list of EventSource resources
-type EventSourceList struct {
+// ClusterEventSourceList is a list of ClusterEventSource resources
+type ClusterEventSourceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 
-	Items []EventSource `json:"items"`
+	Items []ClusterEventSource `json:"items"`
 }

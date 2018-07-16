@@ -18,6 +18,10 @@ limitations under the License.
 
 package v1alpha1
 
+type ClusterEventSourceExpansion interface{}
+
+type ClusterEventTypeExpansion interface{}
+
 type EventSourceExpansion interface{}
 
 type EventTypeExpansion interface{}

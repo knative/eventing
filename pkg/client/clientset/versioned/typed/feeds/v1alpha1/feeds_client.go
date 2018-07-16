@@ -27,6 +27,8 @@ import (
 
 type FeedsV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	ClusterEventSourcesGetter
+	ClusterEventTypesGetter
 	EventSourcesGetter
 	EventTypesGetter
 	FeedsGetter
@@ -35,6 +37,14 @@ type FeedsV1alpha1Interface interface {
 // FeedsV1alpha1Client is used to interact with features provided by the feeds.knative.dev group.
 type FeedsV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *FeedsV1alpha1Client) ClusterEventSources() ClusterEventSourceInterface {
+	return newClusterEventSources(c)
+}
+
+func (c *FeedsV1alpha1Client) ClusterEventTypes() ClusterEventTypeInterface {
+	return newClusterEventTypes(c)
 }
 
 func (c *FeedsV1alpha1Client) EventSources(namespace string) EventSourceInterface {

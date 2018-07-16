@@ -24,6 +24,10 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// ClusterEventSources returns a ClusterEventSourceInformer.
+	ClusterEventSources() ClusterEventSourceInformer
+	// ClusterEventTypes returns a ClusterEventTypeInformer.
+	ClusterEventTypes() ClusterEventTypeInformer
 	// EventSources returns a EventSourceInformer.
 	EventSources() EventSourceInformer
 	// EventTypes returns a EventTypeInformer.
@@ -41,6 +45,16 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// ClusterEventSources returns a ClusterEventSourceInformer.
+func (v *version) ClusterEventSources() ClusterEventSourceInformer {
+	return &clusterEventSourceInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ClusterEventTypes returns a ClusterEventTypeInformer.
+func (v *version) ClusterEventTypes() ClusterEventTypeInformer {
+	return &clusterEventTypeInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // EventSources returns a EventSourceInformer.

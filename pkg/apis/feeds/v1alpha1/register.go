@@ -45,6 +45,10 @@ var (
 // Adds the list of known types to Scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
+		&ClusterEventSource{},
+		&ClusterEventSourceList{},
+		&ClusterEventType{},
+		&ClusterEventTypeList{},
 		&Feed{},
 		&FeedList{},
 		&EventSource{},

@@ -28,6 +28,14 @@ type FakeFeedsV1alpha1 struct {
 	*testing.Fake
 }
 
+func (c *FakeFeedsV1alpha1) ClusterEventSources() v1alpha1.ClusterEventSourceInterface {
+	return &FakeClusterEventSources{c}
+}
+
+func (c *FakeFeedsV1alpha1) ClusterEventTypes() v1alpha1.ClusterEventTypeInterface {
+	return &FakeClusterEventTypes{c}
+}
+
 func (c *FakeFeedsV1alpha1) EventSources(namespace string) v1alpha1.EventSourceInterface {
 	return &FakeEventSources{c, namespace}
 }

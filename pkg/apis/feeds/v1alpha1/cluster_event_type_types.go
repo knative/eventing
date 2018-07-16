@@ -21,39 +21,40 @@ import (
 )
 
 // +genclient
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// EventType is a specification for a EventType resource
+// ClusterEventType is a specification for a ClusterEventType resource
 // EventSource can expose multiple event types. For example, github
 // has PullRequest events as well as Issues and Comments, etc.
-type EventType struct {
+type ClusterEventType struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   EventTypeSpec   `json:"spec"`
-	Status EventTypeStatus `json:"status"`
+	Spec   ClusterEventTypeSpec   `json:"spec"`
+	Status ClusterEventTypeStatus `json:"status"`
 }
 
-// EventTypeSpec specifies information about the EventType, including a schema
+// ClusterEventTypeSpec specifies information about the ClusterEventType, including a schema
 // for the event and information about the parameters needed to create a Feed to
 // the event.
-type EventTypeSpec struct {
+type ClusterEventTypeSpec struct {
 	CommonEventTypeSpec `json:",inline"`
-	// EventSource is the name of the EventSource that produces this EventType.
-	EventSource string `json:"eventSource"`
+	// ClusterEventSource is the name of the ClusterEventSource that produces this ClusterEventType.
+	ClusterEventSource string `json:"eventSource"`
 }
 
-// EventTypeStatus is the status for a EventType resource
-type EventTypeStatus struct {
+// ClusterEventTypeStatus is the status for a ClusterEventType resource
+type ClusterEventTypeStatus struct {
 	CommonEventTypeStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// EventTypeList is a list of EventType resources
-type EventTypeList struct {
+// ClusterEventTypeList is a list of ClusterEventType resources
+type ClusterEventTypeList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 
-	Items []EventType `json:"items"`
+	Items []ClusterEventType `json:"items"`
 }
