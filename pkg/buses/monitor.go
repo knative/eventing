@@ -151,6 +151,7 @@ func (h MonitorEventHandlerFuncs) onProvision(channel *channelsv1alpha1.Channel,
 			cond = util.NewChannelCondition(channelsv1alpha1.ChannelProvisioned, corev1.ConditionTrue, successSynced, "Channel provisioned successfully")
 		}
 		util.SetChannelCondition(&channelCopy.Status, *cond)
+		util.ConsolidateChannelCondition(&channelCopy.Status)
 		_, errS := monitor.clientset.ChannelsV1alpha1().Channels(channel.Namespace).Update(channelCopy)
 		if errS != nil {
 			glog.Warningf("Could not update status: %v", errS)
@@ -173,6 +174,7 @@ func (h MonitorEventHandlerFuncs) onUnprovision(channel *channelsv1alpha1.Channe
 			cond = util.NewChannelCondition(channelsv1alpha1.ChannelProvisioned, corev1.ConditionFalse, successSynced, "Channel unprovisioned successfully")
 		}
 		util.SetChannelCondition(&channelCopy.Status, *cond)
+		util.ConsolidateChannelCondition(&channelCopy.Status)
 		_, errS := monitor.clientset.ChannelsV1alpha1().Channels(channel.Namespace).Update(channelCopy)
 		if errS != nil {
 			glog.Warningf("Could not update status: %v", errS)
@@ -300,7 +302,7 @@ func NewMonitor(
 		cache:                    make(map[channelKey]*channelSummary),
 		provisionedChannels:      make(map[channelKey]*channelsv1alpha1.Channel),
 		provisionedSubscriptions: make(map[subscriptionKey]*channelsv1alpha1.Subscription),
-		mutex:                    &sync.Mutex{},
+		mutex: &sync.Mutex{},
 
 		workqueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Monitor"),
 		recorder:  recorder,

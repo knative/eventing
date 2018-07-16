@@ -17,8 +17,8 @@
 package util
 
 import (
-	"k8s.io/api/core/v1"
 	"github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	"k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -63,6 +63,31 @@ func SetChannelCondition(status *v1alpha1.ChannelStatus, condition v1alpha1.Chan
 // RemoveChannelCondition removes the channel condition with the provided type.
 func RemoveChannelCondition(status *v1alpha1.ChannelStatus, condType v1alpha1.ChannelConditionType) {
 	status.Conditions = filterOutChannelCondition(status.Conditions, condType)
+}
+
+// ConsolidateChannelCondition computes and sets the overall "Ready" condition of the channel
+// given all other sub-conditions.
+func ConsolidateChannelCondition(status *v1alpha1.ChannelStatus) {
+	subConditionsTypes := []v1alpha1.ChannelConditionType{
+		v1alpha1.ChannelProvisioned,
+		v1alpha1.ChannelRoutable,
+		v1alpha1.ChannelServiceable,
+	}
+	cond := NewChannelCondition(v1alpha1.ChannelReady, v1.ConditionTrue, "", "")
+	for _, t := range subConditionsTypes {
+		if c := GetChannelCondition(*status, t); c == nil || c.Status != v1.ConditionTrue {
+			cond.Status = v1.ConditionFalse
+			break
+		}
+	}
+
+	SetChannelCondition(status, *cond)
+}
+
+// IsChannelReady returns whether all readiness conditions of a channel are met, as a boolean.
+func IsChannelReady(status *v1alpha1.ChannelStatus) bool {
+	c := GetChannelCondition(*status, v1alpha1.ChannelReady)
+	return c != nil && c.Status == v1.ConditionTrue
 }
 
 // filterOutChannelCondition returns a new slice of channel conditions without conditions with the provided type.

@@ -61,6 +61,10 @@ type ChannelSpec struct {
 type ChannelConditionType string
 
 const (
+
+	// Ready is set when all other conditions are met and the channel is ready to accept traffic.
+	ChannelReady ChannelConditionType = "Ready"
+
 	// Serviceable means the service addressing the channel exists.
 	ChannelServiceable ChannelConditionType = "Serviceable"
 
@@ -87,7 +91,6 @@ type ChannelCondition struct {
 	// A human readable message indicating details about the transition.
 	Message string `json:"message,omitempty"`
 }
-
 
 // ChannelStatus (computed) for a channel
 type ChannelStatus struct {

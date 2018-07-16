@@ -410,6 +410,8 @@ func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel,
 		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
 	}
 
+	util.ConsolidateChannelCondition(&channelCopy.Status)
+
 	// If the CustomResourceSubresources feature gate is not enabled,
 	// we must use Update instead of UpdateStatus to update the Status block of the Channel resource.
 	// UpdateStatus will not allow changes to the Spec of the resource,

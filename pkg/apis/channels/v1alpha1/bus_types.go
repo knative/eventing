@@ -78,6 +78,9 @@ type BusParameters struct {
 type BusConditionType string
 
 const (
+	// Ready is set when all other conditions are met and the bus is ready to accept traffic.
+	BusReady BusConditionType = "Ready"
+
 	// Serviceable means the service addressing the bus exists.
 	BusServiceable BusConditionType = "Serviceable"
 

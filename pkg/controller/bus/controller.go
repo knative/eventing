@@ -84,7 +84,6 @@ const (
 	DeploymentError = "DeploymentError"
 )
 
-
 // Controller is the controller implementation for Bus resources
 type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
@@ -615,6 +614,8 @@ func (c *Controller) updateBusStatus(
 	} else {
 		util.RemoveBusCondition(&busCopy.Status, channelsv1alpha1.BusProvisioning)
 	}
+
+	util.ConsolidateBusCondition(busCopy)
 
 	// If the CustomResourceSubresources feature gate is not enabled,
 	// we must use Update instead of UpdateStatus to update the Status block of the Bus resource.

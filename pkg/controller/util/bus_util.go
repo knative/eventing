@@ -18,8 +18,8 @@
 package util
 
 import (
-	"k8s.io/api/core/v1"
 	"github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	"k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -64,6 +64,32 @@ func SetBusCondition(status *v1alpha1.BusStatus, condition v1alpha1.BusCondition
 // RemoveBusCondition removes the bus condition with the provided type.
 func RemoveBusCondition(status *v1alpha1.BusStatus, condType v1alpha1.BusConditionType) {
 	status.Conditions = filterOutBusCondition(status.Conditions, condType)
+}
+
+// ConsolidateBusCondition computes and sets the overall "Ready" condition of the bus
+// given all other sub-conditions.
+func ConsolidateBusCondition(bus *v1alpha1.Bus) {
+	dispatching := GetBusCondition(bus.Status, v1alpha1.BusDispatching)
+	provisioning := GetBusCondition(bus.Status, v1alpha1.BusProvisioning)
+	serviceable := GetBusCondition(bus.Status, v1alpha1.BusServiceable)
+	needsProvitioner := bus.Spec.Provisioner != nil
+
+	var cond *v1alpha1.BusCondition
+
+	if dispatching != nil && dispatching.Status == v1.ConditionTrue &&
+		serviceable != nil && serviceable.Status == v1.ConditionTrue &&
+		((provisioning != nil && provisioning.Status == v1.ConditionTrue) || !needsProvitioner) {
+		cond = NewBusCondition(v1alpha1.BusReady, v1.ConditionTrue, "", "")
+	} else {
+		cond = NewBusCondition(v1alpha1.BusReady, v1.ConditionFalse, "", "")
+	}
+	SetBusCondition(&bus.Status, *cond)
+}
+
+// IsBusReady returns whether all readiness conditions of a bus are met, as a boolean.
+func IsBusReady(status *v1alpha1.BusStatus) bool {
+	c := GetBusCondition(*status, v1alpha1.BusReady)
+	return c != nil && c.Status == v1.ConditionTrue
 }
 
 // filterOutBusCondition returns a new slice of bus conditions without conditions with the provided type.
