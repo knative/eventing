@@ -27,6 +27,9 @@ readonly EVENTING_RELEASE_GCR
 
 # Local generated yaml file.
 readonly OUTPUT_YAML=release-eventing.yaml
+readonly OUTPUT_YAML_BUS_STUB=release-eventing-bus-stub.yaml
+readonly OUTPUT_YAML_BUS_GCPPUBSUB=release-eventing-bus-gcppubsub.yaml
+readonly OUTPUT_YAML_BUS_KAFKA=release-eventing-bus-kafka.yaml
 
 function banner() {
   echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
@@ -120,8 +123,19 @@ fi
 
 echo "Building Knative Eventing"
 ko resolve ${KO_FLAGS} -f config/ >> ${OUTPUT_YAML}
-
 tag_knative_images ${OUTPUT_YAML} ${TAG}
+
+echo "Building Knative Eventing - Stub Bus"
+ko resolve ${KO_FLAGS} -f config/buses/stub/ >> ${OUTPUT_YAML_BUS_STUB}
+tag_knative_images ${OUTPUT_YAML_BUS_STUB} ${TAG}
+
+echo "Building Knative Eventing - GCP Cloud Pub/Sub Bus"
+ko resolve ${KO_FLAGS} -f config/buses/gcppubsub/ >> ${OUTPUT_YAML_BUS_GCPPUBSUB}
+tag_knative_images ${OUTPUT_YAML_BUS_GCPPUBSUB} ${TAG}
+
+echo "Building Knative Eventing - Kafka Bus"
+ko resolve ${KO_FLAGS} -f config/buses/kafka/ >> ${OUTPUT_YAML_BUS_KAFKA}
+tag_knative_images ${OUTPUT_YAML_BUS_KAFKA} ${TAG}
 
 if (( DONT_PUBLISH )); then
   echo "New release built successfully"
@@ -130,5 +144,8 @@ fi
 
 echo "Publishing release.yaml"
 publish_yaml ${OUTPUT_YAML}
+publish_yaml ${OUTPUT_YAML_BUS_STUB}
+publish_yaml ${OUTPUT_YAML_BUS_GCPPUBSUB}
+publish_yaml ${OUTPUT_YAML_BUS_KAFKA}
 
 echo "New release published successfully"
