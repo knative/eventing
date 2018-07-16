@@ -15,9 +15,12 @@ spec:
       "-logtostderr",
       "-stderrthreshold", "INFO",
     ]
-    env:
+    env: &env
     - name: KAFKA_BROKERS
-      value: "kafkabroker.kafka:9092"
+      valueFrom:
+        configMapKeyRef:
+          name: kafka-bus-config
+          key: KAFKA_BROKERS
   dispatcher:
     name: dispatcher
     image: github.com/knative/eventing/pkg/buses/kafka/dispatcher
@@ -25,6 +28,4 @@ spec:
       "-logtostderr",
       "-stderrthreshold", "INFO",
     ]
-    env:
-    - name: KAFKA_BROKERS
-      value: "kafkabroker.kafka:9092"
+    env: *env

@@ -4,7 +4,7 @@ Deployment steps:
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md)
 1. [Create a service account](https://console.cloud.google.com/iam-admin/serviceaccounts/project) with the 'Pub/Sub Editor' role, and download a new JSON private key.
 1. Create a secret for the downloaded key `kubectl create secret generic gcppubsub-bus-key --from-file=key.json=PATH-TO-KEY-FILE.json`
-1. Replace `$PROJECT_ID` in `config/buses/gcppubsub/gcppubsub-bus.yaml` with your GCP Project ID
+1. Configure the bus, replacing `$PROJECT_ID` with your GCP Project ID, `kubectl create configmap gcppubsub-bus-config --from-literal=GOOGLE_CLOUD_PROJECT=$PROJECT_ID`
 1. For cluster wide deployment, change the kind in `config/buses/gcppubsub/gcppubsub-bus.yaml` from `Bus` to `ClusterBus`.
 1. Apply the 'gcppubsub' Bus `ko apply -f config/buses/gcppubsub/`
 1. Create Channels that reference the 'gcppubsub' Bus

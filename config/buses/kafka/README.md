@@ -7,10 +7,14 @@ Deployment steps:
     kubectl create namespace kafka
     kubectl apply -n kafka -f config/buses/kafka/broker/kafka-broker.yaml
     ```
+1. Configure the bus to use the Kafka broker, replace the broker URL if not using the provided broker:
+    ```
+    kubectl create configmap kafka-bus-config --from-literal=KAFKA_BROKERS=kafkabroker.kafka:9092
+    ```
 1. For cluster wide deployment, change the kind in `config/buses/kafka/kafka-bus.yaml` from `Bus` to `ClusterBus`.
 1. Apply the Kafka Bus:
     ```
-    ko apply -f config/buses/kafka/kafka-bus.yaml
+    ko apply -f config/buses/kafka/
     ```
 1. Create Channels that reference the 'kafka' Bus
 1. (Optional) Install [Kail](https://github.com/boz/kail) - Kubernetes tail
