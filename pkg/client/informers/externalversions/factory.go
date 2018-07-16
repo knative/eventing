@@ -26,6 +26,7 @@ import (
 	versioned "github.com/knative/eventing/pkg/client/clientset/versioned"
 	channels "github.com/knative/eventing/pkg/client/informers/externalversions/channels"
 	feeds "github.com/knative/eventing/pkg/client/informers/externalversions/feeds"
+	flows "github.com/knative/eventing/pkg/client/informers/externalversions/flows"
 	internalinterfaces "github.com/knative/eventing/pkg/client/informers/externalversions/internalinterfaces"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -126,6 +127,7 @@ type SharedInformerFactory interface {
 
 	Channels() channels.Interface
 	Feeds() feeds.Interface
+	Flows() flows.Interface
 }
 
 func (f *sharedInformerFactory) Channels() channels.Interface {
@@ -134,4 +136,8 @@ func (f *sharedInformerFactory) Channels() channels.Interface {
 
 func (f *sharedInformerFactory) Feeds() feeds.Interface {
 	return feeds.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Flows() flows.Interface {
+	return flows.New(f, f.namespace, f.tweakListOptions)
 }

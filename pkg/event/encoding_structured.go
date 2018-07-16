@@ -35,18 +35,18 @@ const (
 type structured int
 
 type structuredEnvelope struct {
-	Context
+	EventContext
 	RawData json.RawMessage `json:"data"`
 }
 
 // FromRequest parses a CloudEvent from structured content encoding.
-func (structured) FromRequest(data interface{}, r *http.Request) (*Context, error) {
+func (structured) FromRequest(data interface{}, r *http.Request) (*EventContext, error) {
 	var e structuredEnvelope
 	if err := json.NewDecoder(r.Body).Decode(&e); err != nil {
 		return nil, err
 	}
 
-	contentType := e.Context.ContentType
+	contentType := e.EventContext.ContentType
 	if contentType == "" {
 		contentType = contentTypeJSON
 	}
@@ -60,17 +60,17 @@ func (structured) FromRequest(data interface{}, r *http.Request) (*Context, erro
 	} else {
 		reader = bytes.NewReader(e.RawData)
 	}
-	if e.Context.Extensions == nil {
-		e.Context.Extensions = make(map[string]interface{}, 0)
+	if e.EventContext.Extensions == nil {
+		e.EventContext.Extensions = make(map[string]interface{}, 0)
 	}
 	if err := unmarshalEventData(contentType, reader, data); err != nil {
 		return nil, err
 	}
-	return &e.Context, nil
+	return &e.EventContext, nil
 }
 
 // NewRequest creates an HTTP request for Structured content encoding.
-func (structured) NewRequest(urlString string, data interface{}, context Context) (*http.Request, error) {
+func (structured) NewRequest(urlString string, data interface{}, context EventContext) (*http.Request, error) {
 	url, err := url.Parse(urlString)
 	if err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ func (structured) NewRequest(urlString string, data interface{}, context Context
 		contentType = contentTypeJSON
 	}
 	e := structuredEnvelope{
-		Context: context,
+		EventContext: context,
 	}
 	dataBytes, err := marshalEventData(contentType, data)
 	if err != nil {

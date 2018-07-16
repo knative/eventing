@@ -34,6 +34,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -104,6 +105,7 @@ func NewController(
 	kubeclientset kubernetes.Interface,
 	channelclientset clientset.Interface,
 	servingclientset servingclientset.Interface,
+	restConfig *rest.Config,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	channelInformerFactory informers.SharedInformerFactory,
 	servingInformerFactory servinginformers.SharedInformerFactory) controller.Interface {
@@ -367,6 +369,10 @@ func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel, serv
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
 	channelCopy := channel.DeepCopy()
+
+	// Update ChannelStatus
+	channelCopy.Status.ServiceName = service.Name
+
 	// If the CustomResourceSubresources feature gate is not enabled,
 	// we must use Update instead of UpdateStatus to update the Status block of the Channel resource.
 	// UpdateStatus will not allow changes to the Spec of the resource,
