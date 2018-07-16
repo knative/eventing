@@ -347,7 +347,7 @@ func (c *Controller) reconcile(flow *v1alpha1.Flow) error {
 		return err
 	}
 
-	glog.Infof("Created Channel %q", channel.Name)
+	flow.Status.PropagateChannelStatus(channel.Status)
 
 	subscription, err := c.reconcileSubscription(channel.Name, target, flow)
 	if err != nil {
@@ -355,14 +355,14 @@ func (c *Controller) reconcile(flow *v1alpha1.Flow) error {
 		return err
 	}
 
-	glog.Infof("Created Subscription %q", subscription.Name)
+	flow.Status.PropagateSubscriptionStatus(subscription.Status)
 
 	feed, err := c.reconcileFeed(channel.Name, flow)
 	if err != nil {
 		glog.Warningf("Failed to reconcile feed: %v", err)
 	}
 
-	glog.Infof("Created Feed %q", feed.Name)
+	flow.Status.PropagateFeedStatus(feed.Status)
 	return nil
 }
 

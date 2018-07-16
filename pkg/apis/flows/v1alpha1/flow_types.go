@@ -20,6 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -174,17 +175,30 @@ type FlowStatus struct {
 	// to perform cleanup once a Flow is deleted.
 	// NOTE: experimental field.
 	FlowContext *runtime.RawExtension `json:"flowContext,omitempty"`
+
+	// ChannelTarget is the name of the target channel
+	ChannelTarget string `json:"channelTarget,omitempty"`
+
+	// ObservedGeneration is the 'Generation' of the Flow that
+	// was last reconciled by the controller.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 type FlowConditionType string
 
 const (
-	// FlowComplete specifies that the Flow has completed successfully.
-	FlowComplete FlowConditionType = "Complete"
-	// FlowFailed specifies that the Flow has failed.
-	FlowFailed FlowConditionType = "Failed"
-	// FlowInvalid specifies that the given Flow specification is invalid.
-	FlowInvalid FlowConditionType = "Invalid"
+	// FlowConditionReady specifies that the Flow has been configured successfully.
+	FlowConditionReady FlowConditionType = "Ready"
+
+	// FlowConditionFeedReady specifies that the Feed has been configured successfully.
+	FlowConditionFeedReady FlowConditionType = "FeedReady"
+
+	// FlowConditionChannelReady specifies that the Channel has been configured successfully.
+	FlowConditionChannelReady FlowConditionType = "ChannelReady"
+
+	// FlowConditionSubscriptionReady specifies that the Subscription has been configured successfully.
+	FlowConditionSubscriptionReady FlowConditionType = "SubscriptionReady"
 )
 
 // FlowCondition defines a readiness condition for a Flow.
@@ -209,8 +223,24 @@ type FlowList struct {
 	Items []Flow `json:"items"`
 }
 
-func (fs *FlowStatus) SetCondition(new *FlowCondition) {
-	if new == nil {
+func (fs *FlowStatus) IsReady() bool {
+	if c := fs.GetCondition(FlowConditionReady); c != nil {
+		return c.Status == corev1.ConditionTrue
+	}
+	return false
+}
+
+func (fs *FlowStatus) GetCondition(t FlowConditionType) *FlowCondition {
+	for _, cond := range fs.Conditions {
+		if cond.Type == t {
+			return &cond
+		}
+	}
+	return nil
+}
+
+func (fs *FlowStatus) setCondition(new *FlowCondition) {
+	if new == nil || new.Type == "" {
 		return
 	}
 
@@ -225,7 +255,7 @@ func (fs *FlowStatus) SetCondition(new *FlowCondition) {
 	fs.Conditions = conditions
 }
 
-func (fs *FlowStatus) RemoveCondition(t FlowConditionType) {
+func (fs *FlowStatus) removeCondition(t FlowConditionType) {
 	var conditions []FlowCondition
 	for _, cond := range fs.Conditions {
 		if cond.Type != t {
@@ -233,4 +263,63 @@ func (fs *FlowStatus) RemoveCondition(t FlowConditionType) {
 		}
 	}
 	fs.Conditions = conditions
+}
+
+func (fs *FlowStatus) PropagateChannelStatus(cs channelsv1alpha1.ChannelStatus) {
+	if cs.ServiceName != "" {
+		fs.ChannelTarget = cs.ServiceName
+		fs.setCondition(&FlowCondition{
+			Type:   FlowConditionChannelReady,
+			Status: corev1.ConditionTrue,
+		})
+		fs.checkAndMarkReady()
+	}
+
+}
+
+func (fs *FlowStatus) PropagateSubscriptionStatus(ss channelsv1alpha1.SubscriptionStatus) {
+	// TODO: Once SubscriptionStatus has meaningful content, add it here.
+}
+
+func (fs *FlowStatus) PropagateFeedStatus(s feedsv1alpha1.FeedStatus) {
+	// Check to see if Feed is ready
+	fc := s.GetCondition(feedsv1alpha1.FeedConditionReady)
+
+	if fc == nil {
+		return
+	}
+	fst := []FlowConditionType{FlowConditionFeedReady}
+	// If the underlying Feed reported not ready, then bubble it up.
+	if fc.Status != corev1.ConditionTrue {
+		fst = append(fst, FlowConditionReady)
+	}
+	for _, cond := range fst {
+		fs.setCondition(&FlowCondition{
+			Type:    cond,
+			Status:  fc.Status,
+			Reason:  fc.Reason,
+			Message: fc.Message,
+		})
+	}
+	fs.checkAndMarkReady()
+}
+
+func (fs *FlowStatus) checkAndMarkReady() {
+	for _, cond := range []FlowConditionType{
+		FlowConditionFeedReady,
+		FlowConditionChannelReady,
+	} {
+		c := fs.GetCondition(cond)
+		if c == nil || c.Status != corev1.ConditionTrue {
+			return
+		}
+	}
+	fs.markReady()
+}
+
+func (fs *FlowStatus) markReady() {
+	fs.setCondition(&FlowCondition{
+		Type:   FlowConditionReady,
+		Status: corev1.ConditionTrue,
+	})
 }

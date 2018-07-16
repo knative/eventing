@@ -173,12 +173,8 @@ type FeedStatus struct {
 type FeedConditionType string
 
 const (
-	// FeedStarted specifies that the feed has started successfully.
-	FeedStarted FeedConditionType = "Started"
-	// FeedFailed specifies that the feed has failed to start.
-	FeedFailed FeedConditionType = "Failed"
-	// FeedInvalid specifies that the given feed specification is invalid.
-	FeedInvalid FeedConditionType = "Invalid"
+	// FeedConditionReady specifies that the feed has started successfully.
+	FeedConditionReady FeedConditionType = "Ready"
 )
 
 // FeedCondition defines a readiness condition for a Feed.
@@ -213,7 +209,7 @@ func (fs *FeedStatus) GetCondition(t FeedConditionType) *FeedCondition {
 }
 
 func (fs *FeedStatus) SetCondition(new *FeedCondition) {
-	if new == nil {
+	if new == nil || new.Type == "" {
 		return
 	}
 
