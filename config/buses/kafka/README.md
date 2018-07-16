@@ -5,7 +5,7 @@ Deployment steps:
 1. Install a Kafka broker. A simple setup is provided:
     ```
     kubectl create namespace kafka
-    kubectl apply -n kafka -f config/buses/kafka/kafka-broker.yaml
+    kubectl apply -n kafka -f config/buses/kafka/broker/kafka-broker.yaml
     ```
 1. For cluster wide deployment, change the kind in `config/buses/kafka/kafka-bus.yaml` from `Bus` to `ClusterBus`.
 1. Apply the Kafka Bus:
