@@ -219,7 +219,7 @@ func initialOffset(parameters buses.ResolvedParameters) (int64, error) {
 func kafka2HttpHeaders(message *sarama.ConsumerMessage) http.Header {
 	result := make(http.Header)
 	for _, h := range message.Headers {
-		result[string(h.Key)] = []string{string(h.Value)}
+		result.Set(string(h.Key), string(h.Value))
 	}
 	return result
 }

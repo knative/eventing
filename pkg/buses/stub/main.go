@@ -41,11 +41,14 @@ var (
 	kubeconfig string
 )
 
+// StubBus is an in-memory forwarding implementation that forwards each
+// channel to subscribers in-memory.
 type StubBus struct {
-	name           string
-	monitor        *buses.Monitor
-	client         *http.Client
-	forwardHeaders []string
+	name            string
+	monitor         *buses.Monitor
+	client          *http.Client
+	forwardHeaders  map[string]bool
+	forwardPrefixes []string
 }
 
 func (b *StubBus) handleEvent(res http.ResponseWriter, req *http.Request) {
@@ -113,31 +116,45 @@ func (b *StubBus) splitChannelName(host string) (string, string) {
 
 func (b *StubBus) safeHeaders(raw http.Header) http.Header {
 	safe := http.Header{}
-	for _, header := range b.forwardHeaders {
-		if value := raw.Get(header); value != "" {
-			safe.Set(header, value)
+	for h, v := range raw {
+		if _, ok := b.forwardHeaders[h]; ok {
+			safe[h] = v
+			break
+		}
+		for _, p := range b.forwardPrefixes {
+			if strings.HasPrefix(h, p) {
+				safe[h] = v
+				break
+			}
 		}
 	}
 	return safe
 }
 
+// NewStubBus creates a StubBus which forwards requests using a header
+// whitelist.
 func NewStubBus(name string, monitor *buses.Monitor) *StubBus {
-	forwardHeaders := []string{
-		"content-type",
-		"x-request-id",
-		"x-b3-traceid",
-		"x-b3-spanid",
-		"x-b3-parentspanid",
-		"x-b3-sampled",
-		"x-b3-flags",
-		"x-ot-span-context",
+	forwardHeaders := map[string]bool{
+		"content-type":      true,
+		"x-request-id":      true,
+		"x-b3-traceid":      true,
+		"x-b3-spanid":       true,
+		"x-b3-parentspanid": true,
+		"x-b3-sampled":      true,
+		"x-b3-flags":        true,
+		"x-ot-span-context": true,
+	}
+	// TODO: should we instead blacklist specific headers?
+	forwardPrefixes := []string{
+		"ce-",
 	}
 
 	bus := StubBus{
-		name:           name,
-		monitor:        monitor,
-		client:         &http.Client{},
-		forwardHeaders: forwardHeaders,
+		name:            name,
+		monitor:         monitor,
+		client:          &http.Client{},
+		forwardHeaders:  forwardHeaders,
+		forwardPrefixes: forwardPrefixes,
 	}
 
 	return &bus
