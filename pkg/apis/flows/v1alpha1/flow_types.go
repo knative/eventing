@@ -301,7 +301,7 @@ func (fs *FlowStatus) PropagateFeedStatus(s feedsv1alpha1.FeedStatus) {
 			Message: fc.Message,
 		})
 	}
-	//	fs.checkAndMarkReady()
+	fs.checkAndMarkReady()
 }
 
 func (fs *FlowStatus) checkAndMarkReady() {
