@@ -147,7 +147,7 @@ func TestFlowCondition_IsReady(t *testing.T) {
 				Type:   FlowConditionChannelReady,
 				Status: corev1.ConditionTrue,
 			}},
-			true},
+			false},
 		{"FlowConditionFeedReadyChannelNotReady", []FlowCondition{
 			FlowCondition{
 				Type:   FlowConditionFeedReady,
@@ -168,6 +168,20 @@ func TestFlowCondition_IsReady(t *testing.T) {
 				Status: corev1.ConditionTrue,
 			}},
 			false},
+		{"FlowConditionFeedReadyChannelReadySubscriptionDispatching", []FlowCondition{
+			FlowCondition{
+				Type:   FlowConditionFeedReady,
+				Status: corev1.ConditionTrue,
+			},
+			FlowCondition{
+				Type:   FlowConditionChannelReady,
+				Status: corev1.ConditionTrue,
+			},
+			FlowCondition{
+				Type:   FlowConditionSubscriptionReady,
+				Status: corev1.ConditionTrue,
+			}},
+			true},
 	}
 
 	for _, tc := range testcases {
@@ -187,10 +201,11 @@ func TestFlowCondition_IsReady(t *testing.T) {
 
 func TestFlowCondition_PropagateStatus(t *testing.T) {
 	testcases := []struct {
-		name            string
-		feedStatuses    []feedsv1alpha1.FeedStatus
-		channelStatuses []channelsv1alpha1.ChannelStatus
-		want            bool
+		name                 string
+		feedStatuses         []feedsv1alpha1.FeedStatus
+		channelStatuses      []channelsv1alpha1.ChannelStatus
+		subscriptionStatuses []channelsv1alpha1.SubscriptionStatus
+		want                 bool
 	}{
 		{"FeedReady",
 			[]feedsv1alpha1.FeedStatus{
@@ -203,16 +218,38 @@ func TestFlowCondition_PropagateStatus(t *testing.T) {
 					},
 				}},
 			[]channelsv1alpha1.ChannelStatus{},
+			[]channelsv1alpha1.SubscriptionStatus{},
 			false},
 		{"ChannelReady",
 			[]feedsv1alpha1.FeedStatus{},
 			[]channelsv1alpha1.ChannelStatus{
 				channelsv1alpha1.ChannelStatus{
+					Conditions: []channelsv1alpha1.ChannelCondition{
+						channelsv1alpha1.ChannelCondition{
+							Type:   channelsv1alpha1.ChannelReady,
+							Status: corev1.ConditionTrue,
+						},
+					},
 					DomainInternal: "foobar-channel.default.svc.cluster.local",
 				},
 			},
+			[]channelsv1alpha1.SubscriptionStatus{},
 			false},
-		{"BothReady",
+		{"SubscriptionReady",
+			[]feedsv1alpha1.FeedStatus{},
+			[]channelsv1alpha1.ChannelStatus{},
+			[]channelsv1alpha1.SubscriptionStatus{
+				channelsv1alpha1.SubscriptionStatus{
+					Conditions: []channelsv1alpha1.SubscriptionCondition{
+						channelsv1alpha1.SubscriptionCondition{
+							Type:   channelsv1alpha1.SubscriptionDispatching,
+							Status: corev1.ConditionTrue,
+						},
+					},
+				},
+			},
+			false},
+		{"AllReady",
 			[]feedsv1alpha1.FeedStatus{
 				feedsv1alpha1.FeedStatus{
 					Conditions: []feedsv1alpha1.FeedCondition{
@@ -224,7 +261,23 @@ func TestFlowCondition_PropagateStatus(t *testing.T) {
 				}},
 			[]channelsv1alpha1.ChannelStatus{
 				channelsv1alpha1.ChannelStatus{
+					Conditions: []channelsv1alpha1.ChannelCondition{
+						channelsv1alpha1.ChannelCondition{
+							Type:   channelsv1alpha1.ChannelReady,
+							Status: corev1.ConditionTrue,
+						},
+					},
 					DomainInternal: "foobar-channel.default.svc.cluster.local",
+				},
+			},
+			[]channelsv1alpha1.SubscriptionStatus{
+				channelsv1alpha1.SubscriptionStatus{
+					Conditions: []channelsv1alpha1.SubscriptionCondition{
+						channelsv1alpha1.SubscriptionCondition{
+							Type:   channelsv1alpha1.SubscriptionDispatching,
+							Status: corev1.ConditionTrue,
+						},
+					},
 				},
 			},
 			true},
@@ -238,6 +291,9 @@ func TestFlowCondition_PropagateStatus(t *testing.T) {
 			}
 			for _, cs := range tc.channelStatuses {
 				flow.Status.PropagateChannelStatus(cs)
+			}
+			for _, ss := range tc.subscriptionStatuses {
+				flow.Status.PropagateSubscriptionStatus(ss)
 			}
 			if want, got := tc.want, flow.Status.IsReady(); want != got {
 				t.Fatalf("Failed IsReady check : \nwant:\t%#v\ngot:\t%#v", want, got)

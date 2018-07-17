@@ -112,6 +112,15 @@ type ChannelStatus struct {
 	DomainInternal string `json:"domainInternal,omitempty"`
 }
 
+func (cs *ChannelStatus) GetCondition(t ChannelConditionType) *ChannelCondition {
+	for _, cond := range cs.Conditions {
+		if cond.Type == t {
+			return &cond
+		}
+	}
+	return nil
+}
+
 func (c *Channel) GetSpecJSON() ([]byte, error) {
 	return json.Marshal(c.Spec)
 }
