@@ -132,55 +132,45 @@ func TestFlowCondition_IsReady(t *testing.T) {
 		set  []FlowCondition
 		want bool
 	}{
-		{"FlowConditionFeedReady", []FlowCondition{
-			FlowCondition{
-				Type:   FlowConditionFeedReady,
-				Status: corev1.ConditionTrue,
-			}},
+		{"FlowConditionFeedReady", []FlowCondition{{
+			Type:   FlowConditionFeedReady,
+			Status: corev1.ConditionTrue,
+		}},
 			false},
-		{"FlowConditionFeedAndChannelReady", []FlowCondition{
-			FlowCondition{
-				Type:   FlowConditionFeedReady,
-				Status: corev1.ConditionTrue,
-			},
-			FlowCondition{
-				Type:   FlowConditionChannelReady,
-				Status: corev1.ConditionTrue,
-			}},
+		{"FlowConditionFeedAndChannelReady", []FlowCondition{{
+			Type:   FlowConditionFeedReady,
+			Status: corev1.ConditionTrue,
+		}, {
+			Type:   FlowConditionChannelReady,
+			Status: corev1.ConditionTrue,
+		}},
 			false},
-		{"FlowConditionFeedReadyChannelNotReady", []FlowCondition{
-			FlowCondition{
-				Type:   FlowConditionFeedReady,
-				Status: corev1.ConditionTrue,
-			},
-			FlowCondition{
-				Type:   FlowConditionChannelReady,
-				Status: corev1.ConditionFalse,
-			}},
+		{"FlowConditionFeedReadyChannelNotReady", []FlowCondition{{
+			Type:   FlowConditionFeedReady,
+			Status: corev1.ConditionTrue,
+		}, {
+			Type:   FlowConditionChannelReady,
+			Status: corev1.ConditionFalse,
+		}},
 			false},
-		{"FlowConditionFeedNotReadyChannelReady", []FlowCondition{
-			FlowCondition{
-				Type:   FlowConditionFeedReady,
-				Status: corev1.ConditionFalse,
-			},
-			FlowCondition{
-				Type:   FlowConditionChannelReady,
-				Status: corev1.ConditionTrue,
-			}},
+		{"FlowConditionFeedNotReadyChannelReady", []FlowCondition{{
+			Type:   FlowConditionFeedReady,
+			Status: corev1.ConditionFalse,
+		}, {
+			Type:   FlowConditionChannelReady,
+			Status: corev1.ConditionTrue,
+		}},
 			false},
-		{"FlowConditionFeedReadyChannelReadySubscriptionDispatching", []FlowCondition{
-			FlowCondition{
-				Type:   FlowConditionFeedReady,
-				Status: corev1.ConditionTrue,
-			},
-			FlowCondition{
-				Type:   FlowConditionChannelReady,
-				Status: corev1.ConditionTrue,
-			},
-			FlowCondition{
-				Type:   FlowConditionSubscriptionReady,
-				Status: corev1.ConditionTrue,
-			}},
+		{"FlowConditionFeedReadyChannelReadySubscriptionDispatching", []FlowCondition{{
+			Type:   FlowConditionFeedReady,
+			Status: corev1.ConditionTrue,
+		}, {
+			Type:   FlowConditionChannelReady,
+			Status: corev1.ConditionTrue,
+		}, {
+			Type:   FlowConditionSubscriptionReady,
+			Status: corev1.ConditionTrue,
+		}},
 			true},
 	}
 
@@ -213,110 +203,77 @@ func TestFlowCondition_PropagateStatus(t *testing.T) {
 			[]channelsv1alpha1.SubscriptionStatus{channelsv1alpha1.SubscriptionStatus{}},
 			false},
 		{"FeedReady",
-			[]feedsv1alpha1.FeedStatus{
-				feedsv1alpha1.FeedStatus{
-					Conditions: []feedsv1alpha1.FeedCondition{
-						feedsv1alpha1.FeedCondition{
-							Type:   feedsv1alpha1.FeedConditionReady,
-							Status: corev1.ConditionTrue,
-						},
-					},
+			[]feedsv1alpha1.FeedStatus{{
+				Conditions: []feedsv1alpha1.FeedCondition{{
+					Type:   feedsv1alpha1.FeedConditionReady,
+					Status: corev1.ConditionTrue,
 				}},
+			}},
 			[]channelsv1alpha1.ChannelStatus{},
 			[]channelsv1alpha1.SubscriptionStatus{},
 			false},
 		{"ChannelReady",
 			[]feedsv1alpha1.FeedStatus{},
-			[]channelsv1alpha1.ChannelStatus{
-				channelsv1alpha1.ChannelStatus{
-					Conditions: []channelsv1alpha1.ChannelCondition{
-						channelsv1alpha1.ChannelCondition{
-							Type:   channelsv1alpha1.ChannelReady,
-							Status: corev1.ConditionTrue,
-						},
-					},
-					DomainInternal: "foobar-channel.default.svc.cluster.local",
-				},
-			},
+			[]channelsv1alpha1.ChannelStatus{{
+				Conditions: []channelsv1alpha1.ChannelCondition{{
+					Type:   channelsv1alpha1.ChannelReady,
+					Status: corev1.ConditionTrue,
+				}},
+				DomainInternal: "foobar-channel.default.svc.cluster.local",
+			}},
 			[]channelsv1alpha1.SubscriptionStatus{},
 			false},
 		{"SubscriptionReady",
 			[]feedsv1alpha1.FeedStatus{},
 			[]channelsv1alpha1.ChannelStatus{},
-			[]channelsv1alpha1.SubscriptionStatus{
-				channelsv1alpha1.SubscriptionStatus{
-					Conditions: []channelsv1alpha1.SubscriptionCondition{
-						channelsv1alpha1.SubscriptionCondition{
-							Type:   channelsv1alpha1.SubscriptionDispatching,
-							Status: corev1.ConditionTrue,
-						},
-					},
-				},
-			},
+			[]channelsv1alpha1.SubscriptionStatus{{
+				Conditions: []channelsv1alpha1.SubscriptionCondition{{
+					Type:   channelsv1alpha1.SubscriptionDispatching,
+					Status: corev1.ConditionTrue,
+				}},
+			}},
 			false},
 		{"AllNotReady",
-			[]feedsv1alpha1.FeedStatus{
-				feedsv1alpha1.FeedStatus{
-					Conditions: []feedsv1alpha1.FeedCondition{
-						feedsv1alpha1.FeedCondition{
-							Type:   feedsv1alpha1.FeedConditionReady,
-							Status: corev1.ConditionFalse,
-						},
-					},
+			[]feedsv1alpha1.FeedStatus{{
+				Conditions: []feedsv1alpha1.FeedCondition{{
+					Type:   feedsv1alpha1.FeedConditionReady,
+					Status: corev1.ConditionFalse,
 				}},
-			[]channelsv1alpha1.ChannelStatus{
-				channelsv1alpha1.ChannelStatus{
-					Conditions: []channelsv1alpha1.ChannelCondition{
-						channelsv1alpha1.ChannelCondition{
-							Type:   channelsv1alpha1.ChannelReady,
-							Status: corev1.ConditionFalse,
-						},
-					},
-					DomainInternal: "foobar-channel.default.svc.cluster.local",
-				},
-			},
-			[]channelsv1alpha1.SubscriptionStatus{
-				channelsv1alpha1.SubscriptionStatus{
-					Conditions: []channelsv1alpha1.SubscriptionCondition{
-						channelsv1alpha1.SubscriptionCondition{
-							Type:   channelsv1alpha1.SubscriptionDispatching,
-							Status: corev1.ConditionFalse,
-						},
-					},
-				},
-			},
+			}},
+			[]channelsv1alpha1.ChannelStatus{{
+				Conditions: []channelsv1alpha1.ChannelCondition{{
+					Type:   channelsv1alpha1.ChannelReady,
+					Status: corev1.ConditionFalse,
+				}},
+				DomainInternal: "foobar-channel.default.svc.cluster.local",
+			}},
+			[]channelsv1alpha1.SubscriptionStatus{{
+				Conditions: []channelsv1alpha1.SubscriptionCondition{{
+					Type:   channelsv1alpha1.SubscriptionDispatching,
+					Status: corev1.ConditionFalse,
+				}},
+			}},
 			false},
 		{"AllReady",
-			[]feedsv1alpha1.FeedStatus{
-				feedsv1alpha1.FeedStatus{
-					Conditions: []feedsv1alpha1.FeedCondition{
-						feedsv1alpha1.FeedCondition{
-							Type:   feedsv1alpha1.FeedConditionReady,
-							Status: corev1.ConditionTrue,
-						},
-					},
+			[]feedsv1alpha1.FeedStatus{{
+				Conditions: []feedsv1alpha1.FeedCondition{{
+					Type:   feedsv1alpha1.FeedConditionReady,
+					Status: corev1.ConditionTrue,
 				}},
-			[]channelsv1alpha1.ChannelStatus{
-				channelsv1alpha1.ChannelStatus{
-					Conditions: []channelsv1alpha1.ChannelCondition{
-						channelsv1alpha1.ChannelCondition{
-							Type:   channelsv1alpha1.ChannelReady,
-							Status: corev1.ConditionTrue,
-						},
-					},
-					DomainInternal: "foobar-channel.default.svc.cluster.local",
-				},
-			},
-			[]channelsv1alpha1.SubscriptionStatus{
-				channelsv1alpha1.SubscriptionStatus{
-					Conditions: []channelsv1alpha1.SubscriptionCondition{
-						channelsv1alpha1.SubscriptionCondition{
-							Type:   channelsv1alpha1.SubscriptionDispatching,
-							Status: corev1.ConditionTrue,
-						},
-					},
-				},
-			},
+			}},
+			[]channelsv1alpha1.ChannelStatus{{
+				Conditions: []channelsv1alpha1.ChannelCondition{{
+					Type:   channelsv1alpha1.ChannelReady,
+					Status: corev1.ConditionTrue,
+				}},
+				DomainInternal: "foobar-channel.default.svc.cluster.local",
+			}},
+			[]channelsv1alpha1.SubscriptionStatus{{
+				Conditions: []channelsv1alpha1.SubscriptionCondition{{
+					Type:   channelsv1alpha1.SubscriptionDispatching,
+					Status: corev1.ConditionTrue,
+				}},
+			}},
 			true},
 	}
 	for _, tc := range testcases {
