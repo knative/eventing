@@ -759,6 +759,9 @@ func newDispatcherDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"sidecar.istio.io/inject": "true",
+					},
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
@@ -866,6 +869,9 @@ func newProvisionerDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"sidecar.istio.io/inject": "true",
+					},
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
