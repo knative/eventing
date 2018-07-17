@@ -85,7 +85,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 }
 
 func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
-	bc := feed.Status.GetCondition(feedsv1alpha1.FeedConditionStarted)
+	bc := feed.Status.GetCondition(feedsv1alpha1.FeedConditionReady)
 	switch bc.Status {
 	case corev1.ConditionUnknown:
 
@@ -99,7 +99,7 @@ func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
 					return err
 				}
 				feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-					Type:    feedsv1alpha1.FeedConditionStarted,
+					Type:    feedsv1alpha1.FeedConditionReady,
 					Status:  corev1.ConditionUnknown,
 					Reason:  "StartJob",
 					Message: "start job in progress",
@@ -117,15 +117,15 @@ func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
 			}
 			//TODO just use a single Succeeded condition, like Build
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-				Type:    feedsv1alpha1.FeedConditionStarted,
+				Type:    feedsv1alpha1.FeedConditionReady,
 				Status:  corev1.ConditionTrue,
 				Reason:  "StartJobComplete",
 				Message: "start job succeeded",
 			})
 		} else if resources.IsJobFailed(job) {
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-				Type:    feedsv1alpha1.FeedConditionFailed,
-				Status:  corev1.ConditionTrue,
+				Type:    feedsv1alpha1.FeedConditionReady,
+				Status:  corev1.ConditionFalse,
 				Reason:  "StartJobFailed",
 				Message: "TODO replace with job failure message",
 			})
@@ -166,7 +166,7 @@ func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
 				//TODO check for event source not found and remove finalizer
 
 				feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-					Type:    feedsv1alpha1.FeedConditionStarted,
+					Type:    feedsv1alpha1.FeedConditionReady,
 					Status:  corev1.ConditionUnknown,
 					Reason:  "StopJob",
 					Message: "stop job in progress",
@@ -180,7 +180,7 @@ func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
 				return err
 			}
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-				Type:    feedsv1alpha1.FeedConditionStarted,
+				Type:    feedsv1alpha1.FeedConditionReady,
 				Status:  corev1.ConditionTrue,
 				Reason:  "StopJobComplete",
 				Message: "stop job succeeded",
@@ -188,8 +188,8 @@ func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
 		} else if resources.IsJobFailed(job) {
 			// finalizer remains to allow humans to inspect the failure
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-				Type:    feedsv1alpha1.FeedConditionFailed,
-				Status:  corev1.ConditionTrue,
+				Type:    feedsv1alpha1.FeedConditionReady,
+				Status:  corev1.ConditionFalse,
 				Reason:  "StopJobFailed",
 				Message: "TODO replace with job failure message",
 			})

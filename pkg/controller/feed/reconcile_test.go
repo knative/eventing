@@ -263,7 +263,7 @@ func getStartInProgressFeed() *feedsv1alpha1.Feed {
 
 	feed.Status.InitializeConditions()
 	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-		Type:    feedsv1alpha1.FeedConditionStarted,
+		Type:    feedsv1alpha1.FeedConditionReady,
 		Status:  corev1.ConditionUnknown,
 		Reason:  "StartJob",
 		Message: "start job in progress",
@@ -282,7 +282,7 @@ func getStartedFeed() *feedsv1alpha1.Feed {
 		Raw: marshalledContext,
 	}
 	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-		Type:    feedsv1alpha1.FeedConditionStarted,
+		Type:    feedsv1alpha1.FeedConditionReady,
 		Status:  corev1.ConditionTrue,
 		Reason:  "StartJobComplete",
 		Message: "start job succeeded",
@@ -293,8 +293,8 @@ func getStartedFeed() *feedsv1alpha1.Feed {
 func getStartFailedFeed() *feedsv1alpha1.Feed {
 	feed := getStartInProgressFeed()
 	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-		Type:    feedsv1alpha1.FeedConditionFailed,
-		Status:  corev1.ConditionTrue,
+		Type:    feedsv1alpha1.FeedConditionReady,
+		Status:  corev1.ConditionFalse,
 		Reason:  "StartJobFailed",
 		Message: "TODO replace with job failure message",
 	})
@@ -311,7 +311,7 @@ func getDeletedStopInProgressFeed() *feedsv1alpha1.Feed {
 	feed := getDeletedStartedFeed()
 
 	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-		Type:    feedsv1alpha1.FeedConditionStarted,
+		Type:    feedsv1alpha1.FeedConditionReady,
 		Status:  corev1.ConditionUnknown,
 		Reason:  "StopJob",
 		Message: "stop job in progress",
@@ -323,7 +323,7 @@ func getDeletedStoppedFeed() *feedsv1alpha1.Feed {
 	feed := getDeletedStopInProgressFeed()
 	feed.RemoveFinalizer(finalizerName)
 	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-		Type:    feedsv1alpha1.FeedConditionStarted,
+		Type:    feedsv1alpha1.FeedConditionReady,
 		Status:  corev1.ConditionTrue,
 		Reason:  "StopJobComplete",
 		Message: "stop job succeeded",

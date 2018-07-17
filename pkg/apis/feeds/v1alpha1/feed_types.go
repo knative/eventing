@@ -174,10 +174,7 @@ type FeedConditionType string
 
 const (
 	// FeedConditionReady specifies that the feed has started successfully.
-	FeedConditionReady   FeedConditionType = "Ready"
-	FeedConditionStarted FeedConditionType = "Started"
-	FeedConditionFailed  FeedConditionType = "Failed"
-	FeedConditionInvalid FeedConditionType = "Invalid"
+	FeedConditionReady FeedConditionType = "Ready"
 )
 
 // FeedCondition defines a readiness condition for a Feed.
@@ -240,9 +237,6 @@ func (fs *FeedStatus) RemoveCondition(t FeedConditionType) {
 func (fs *FeedStatus) InitializeConditions() {
 	for _, cond := range []FeedConditionType{
 		FeedConditionReady,
-		FeedConditionStarted,
-		FeedConditionFailed,
-		FeedConditionInvalid,
 	} {
 		if fc := fs.GetCondition(cond); fc == nil {
 			fs.SetCondition(&FeedCondition{
