@@ -354,7 +354,7 @@ func getNewFeedJob() *batchv1.Job {
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
-						Name:  "feed-effector",
+						Name:  "feedlet",
 						Image: "example.com/test-es-feeder",
 						Env: []corev1.EnvVar{{
 							Name:  string(resources.EnvVarOperation),
