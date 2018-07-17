@@ -21,7 +21,7 @@ import (
 
 	kapi "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -68,7 +68,6 @@ type BusSpec struct {
 // BusParameters represents the arguments that must be passed by Channels and
 // Subscriptions.
 type BusParameters struct {
-
 	// Channel configuration params for channels on the bus
 	Channel *[]Parameter `json:"channel,omitempty"`
 
@@ -76,8 +75,47 @@ type BusParameters struct {
 	Subscription *[]Parameter `json:"subscription,omitempty"`
 }
 
+type BusConditionType string
+
+const (
+	// Ready is set when all other conditions are met and the bus is ready to accept traffic.
+	BusReady BusConditionType = "Ready"
+
+	// Serviceable means the service addressing the bus exists.
+	BusServiceable BusConditionType = "Serviceable"
+
+	// Provisioning means the deployment for the bus provisioner exists.
+	BusProvisioning BusConditionType = "Provisioning"
+
+	// Dispatching means the deployment for the bus dispatcher exists.
+	BusDispatching = "Dispatching"
+)
+
+// BusCondition describes the state of a bus at a point in time.
+type BusCondition struct {
+	// Type of bus condition.
+	Type BusConditionType `json:"type"`
+	// Status of the condition, one of True, False, Unknown.
+	Status kapi.ConditionStatus `json:"status"`
+	// The last time this condition was updated.
+	LastUpdateTime meta_v1.Time `json:"lastUpdateTime,omitempty"`
+	// Last time the condition transitioned from one status to another.
+	LastTransitionTime meta_v1.Time `json:"lastTransitionTime,omitempty"`
+	// The reason for the condition's last transition.
+	Reason string `json:"reason,omitempty"`
+	// A human readable message indicating details about the transition.
+	Message string `json:"message,omitempty"`
+}
+
 // BusStatus (computed) for a bus
 type BusStatus struct {
+	// A reference to the k8s Service fronting this bus, if successfully synced.
+	Service *kapi.LocalObjectReference `json:"service,omitempty"`
+
+	// Represents the latest available observations of a bus's current state.
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	Conditions []BusCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 func (b *Bus) BacksChannel(channel *Channel) bool {

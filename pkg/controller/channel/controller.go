@@ -48,6 +48,7 @@ import (
 	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	"github.com/knative/eventing/pkg/controller/util"
 	istiov1alpha3 "github.com/knative/serving/pkg/apis/istio/v1alpha3"
 )
 
@@ -66,6 +67,17 @@ const (
 	// MessageResourceSynced is the message used for an Event fired when a Channel
 	// is synced successfully
 	MessageResourceSynced = "Channel synced successfully"
+)
+
+const (
+	// ServiceSynced is used as part of the condition reason when the channel (k8s) service is successfully created.
+	ServiceSynced = "ServiceSynced"
+	// ServiceError is used as part of the condition reason when the channel (k8s) service creation failed.
+	ServiceError = "ServiceError"
+	// VirtualServiceSynced is used as part of the condition reason when the channel istio virtual service is successfully created.
+	VirtualServiceSynced = "VirtualServiceSynced"
+	// VirtualServiceError is used as part of the condition reason when the channel istio virtual service creation failed.
+	VirtualServiceError = "VirtualServiceError"
 )
 
 const (
@@ -286,21 +298,27 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
+	var service *corev1.Service
+	var virtualService *istiov1alpha3.VirtualService
+	var serviceErr, virtualServiceErr error
+
 	// Sync Service derived from the Channel
-	service, err := c.syncChannelService(channel)
+	service, serviceErr = c.syncChannelService(channel)
 	if err != nil {
+		c.updateChannelStatus(channel, service, serviceErr, virtualService, virtualServiceErr)
 		return err
 	}
 
 	// Sync VirtualService derived from a Channel
-	virtualService, err := c.syncChannelVirtualService(channel)
-	if err != nil {
+	virtualService, virtualServiceErr = c.syncChannelVirtualService(channel)
+	if virtualServiceErr != nil {
+		c.updateChannelStatus(channel, service, serviceErr, virtualService, virtualServiceErr)
 		return err
 	}
 
 	// Finally, we update the status block of the Channel resource to reflect the
 	// current state of the world
-	err = c.updateChannelStatus(channel, service, virtualService)
+	err = c.updateChannelStatus(channel, service, serviceErr, virtualService, virtualServiceErr)
 	if err != nil {
 		return err
 	}
@@ -364,14 +382,35 @@ func (c *Controller) syncChannelVirtualService(channel *channelsv1alpha1.Channel
 	return virtualservice, nil
 }
 
-func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel, service *corev1.Service, virtualService *istiov1alpha3.VirtualService) error {
+func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel,
+	service *corev1.Service, serviceError error,
+	virtualService *istiov1alpha3.VirtualService, virtualServiceError error) error {
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
 	channelCopy := channel.DeepCopy()
 
-	// Update ChannelStatus
-	channelCopy.Status.ServiceName = service.Name
+	if service != nil {
+		channelCopy.Status.Service = &corev1.LocalObjectReference{Name: service.Name}
+		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelServiceable, corev1.ConditionTrue, ServiceSynced, "service successfully synced")
+		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
+	} else {
+		channelCopy.Status.Service = nil
+		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelServiceable, corev1.ConditionFalse, ServiceError, serviceError.Error())
+		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
+	}
+
+	if virtualService != nil {
+		channelCopy.Status.VirtualService = &corev1.LocalObjectReference{Name: virtualService.Name}
+		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelRoutable, corev1.ConditionTrue, VirtualServiceSynced, "virtual service successfully synced")
+		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
+	} else {
+		channelCopy.Status.VirtualService = nil
+		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelRoutable, corev1.ConditionFalse, VirtualServiceError, virtualServiceError.Error())
+		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
+	}
+
+	util.ConsolidateChannelCondition(&channelCopy.Status)
 
 	// If the CustomResourceSubresources feature gate is not enabled,
 	// we must use Update instead of UpdateStatus to update the Status block of the Channel resource.
