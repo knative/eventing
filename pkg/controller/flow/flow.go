@@ -63,6 +63,9 @@ const controllerAgentName = "flow-controller"
 // TODO: This should come from a configmap
 const defaultBusName = "stub"
 
+// What field do we assume Object Reference exports as a resolvable target
+const targetFieldName = "domainInternal"
+
 const (
 	// SuccessSynced is used as part of the Event 'reason' when a Flow is synced
 	SuccessSynced = "Synced"
@@ -346,7 +349,6 @@ func (c *Controller) reconcile(flow *v1alpha1.Flow) error {
 		glog.Warningf("Failed to reconcile channel : %v", err)
 		return err
 	}
-
 	flow.Status.PropagateChannelStatus(channel.Status)
 
 	subscription, err := c.reconcileSubscription(channel.Name, target, flow)
@@ -354,15 +356,17 @@ func (c *Controller) reconcile(flow *v1alpha1.Flow) error {
 		glog.Warningf("Failed to reconcile subscription : %v", err)
 		return err
 	}
-
 	flow.Status.PropagateSubscriptionStatus(subscription.Status)
 
-	feed, err := c.reconcileFeed(channel.Name, flow)
-	if err != nil {
-		glog.Warningf("Failed to reconcile feed: %v", err)
+	channelTarget := channel.Status.DomainInternal
+	if channelTarget != "" {
+		glog.Infof("Reconciling feed for flow %q targeting channel %q", flow.Name, channelTarget)
+		feed, err := c.reconcileFeed(channelTarget, flow)
+		if err != nil {
+			glog.Warningf("Failed to reconcile feed: %v", err)
+		}
+		flow.Status.PropagateFeedStatus(feed.Status)
 	}
-
-	flow.Status.PropagateFeedStatus(feed.Status)
 	return nil
 }
 
@@ -410,7 +414,7 @@ func (c *Controller) resolveActionTarget(namespace string, action v1alpha1.FlowA
 }
 
 // resolveObjectReference fetches an object based on ObjectRefence. It assumes the
-// object has a status["serviceName"] string in it and returns it.
+// object has a status["domainInternal"] string in it and returns it.
 func (c *Controller) resolveObjectReference(namespace string, ref *corev1.ObjectReference) (string, error) {
 	resourceClient, err := CreateResourceInterface(c.restConfig, ref, namespace)
 	if err != nil {
@@ -428,13 +432,13 @@ func (c *Controller) resolveObjectReference(namespace string, ref *corev1.Object
 		return "", fmt.Errorf("%q does not contain status", ref.Name)
 	}
 	statusMap := status.(map[string]interface{})
-	serviceName, ok := statusMap["serviceName"]
+	serviceName, ok := statusMap[targetFieldName]
 	if !ok {
-		return "", fmt.Errorf("%q does not contain serviceName in status", ref.Name)
+		return "", fmt.Errorf("%q does not contain field %q in status", targetFieldName, ref.Name)
 	}
 	serviceNameStr, ok := serviceName.(string)
 	if !ok {
-		return "", fmt.Errorf("%q status serviceName is not a string", ref.Name)
+		return "", fmt.Errorf("%q status field %q is not a string", targetFieldName, ref.Name)
 	}
 	return serviceNameStr, nil
 }

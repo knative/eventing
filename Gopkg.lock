@@ -163,6 +163,18 @@
   revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
 
 [[projects]]
+  name = "github.com/google/go-cmp"
+  packages = [
+    "cmp",
+    "cmp/cmpopts",
+    "cmp/internal/diff",
+    "cmp/internal/function",
+    "cmp/internal/value"
+  ]
+  revision = "3af367b6b30c263d47e8895973edcca9a49cf029"
+  version = "v0.2.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/google/go-containerregistry"
   packages = [
@@ -282,7 +294,7 @@
     "pkg/apis/build",
     "pkg/apis/build/v1alpha1"
   ]
-  revision = "5dba97ea172464d6459c393330ffba2152ec78dd"
+  revision = "5c1d8c8469d1ed34b2aecf4c2305b3a57fff2ee3"
 
 [[projects]]
   name = "github.com/knative/serving"
@@ -304,7 +316,7 @@
     "pkg/client/listers/istio/v1alpha3",
     "pkg/client/listers/serving/v1alpha1"
   ]
-  revision = "22e3cb0f057daf224ef3af5cc37feb9b152f880e"
+  revision = "2326173b13899c32896caf526a318a8b30033b3e"
 
 [[projects]]
   name = "github.com/magiconair/properties"
@@ -949,6 +961,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "306367db1d23c58ed8fee3d130bbac10637d54f5730f6465a1cea5704ded7a9e"
+  inputs-digest = "7e88cd88a8a3e4807ee078ed615e4c1c8824bd53869fa194e954193e23ef4e8b"
   solver-name = "gps-cdcl"
   solver-version = 1

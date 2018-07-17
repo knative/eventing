@@ -266,18 +266,55 @@ func (fs *FlowStatus) removeCondition(t FlowConditionType) {
 }
 
 func (fs *FlowStatus) PropagateChannelStatus(cs channelsv1alpha1.ChannelStatus) {
-	if cs.DomainInternal != "" {
-		fs.ChannelTarget = cs.DomainInternal
-		fs.setCondition(&FlowCondition{
-			Type:   FlowConditionChannelReady,
-			Status: corev1.ConditionTrue,
-		})
-		fs.checkAndMarkReady()
+	cc := cs.GetCondition(channelsv1alpha1.ChannelReady)
+
+	if cc == nil {
+		return
 	}
+
+	fst := []FlowConditionType{FlowConditionChannelReady}
+	// If the underlying channel reported not ready, then bubble it up.
+	if cc.Status != corev1.ConditionTrue {
+		fst = append(fst, FlowConditionReady)
+	}
+
+	for _, cond := range fst {
+		fs.setCondition(&FlowCondition{
+			Type:    cond,
+			Status:  cc.Status,
+			Reason:  cc.Reason,
+			Message: cc.Message,
+		})
+	}
+
+	fs.ChannelTarget = cs.DomainInternal
+
+	fs.checkAndMarkReady()
 }
 
 func (fs *FlowStatus) PropagateSubscriptionStatus(ss channelsv1alpha1.SubscriptionStatus) {
-	// TODO: Once SubscriptionStatus has meaningful content, add it here.
+	sc := ss.GetCondition(channelsv1alpha1.SubscriptionDispatching)
+
+	if sc == nil {
+		return
+	}
+
+	fst := []FlowConditionType{FlowConditionSubscriptionReady}
+	// If the underlying subscription reported not ready, then bubble it up.
+	if sc.Status != corev1.ConditionTrue {
+		fst = append(fst, FlowConditionReady)
+	}
+
+	for _, cond := range fst {
+		fs.setCondition(&FlowCondition{
+			Type:    cond,
+			Status:  sc.Status,
+			Reason:  sc.Reason,
+			Message: sc.Message,
+		})
+	}
+
+	fs.checkAndMarkReady()
 }
 
 func (fs *FlowStatus) PropagateFeedStatus(s feedsv1alpha1.FeedStatus) {
@@ -307,6 +344,7 @@ func (fs *FlowStatus) checkAndMarkReady() {
 	for _, cond := range []FlowConditionType{
 		FlowConditionFeedReady,
 		FlowConditionChannelReady,
+		FlowConditionSubscriptionReady,
 	} {
 		c := fs.GetCondition(cond)
 		if c == nil || c.Status != corev1.ConditionTrue {
