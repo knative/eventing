@@ -155,7 +155,7 @@ func makePodTemplate(feed *feedsv1alpha1.Feed, source *feedsv1alpha1.EventSource
 			RestartPolicy:      corev1.RestartPolicyNever,
 			Containers: []corev1.Container{
 				corev1.Container{
-					Name:            "feed-effector", //FIXME(grantr) container naming
+					Name:            "feedlet",
 					Image:           source.Spec.Image,
 					ImagePullPolicy: "Always",
 					Env: []corev1.EnvVar{
