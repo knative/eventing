@@ -30,6 +30,9 @@ readonly OUTPUT_YAML=release-eventing.yaml
 readonly OUTPUT_YAML_BUS_STUB=release-eventing-bus-stub.yaml
 readonly OUTPUT_YAML_BUS_GCPPUBSUB=release-eventing-bus-gcppubsub.yaml
 readonly OUTPUT_YAML_BUS_KAFKA=release-eventing-bus-kafka.yaml
+readonly OUTPUT_YAML_SOURCE_K8SEVENTS=release-eventing-source-k8sevents.yaml
+readonly OUTPUT_YAML_SOURCE_GCPPUBSUB=release-eventing-source-gcppubsub.yaml
+readonly OUTPUT_YAML_SOURCE_GITHUB=release-eventing-source-github.yaml
 
 function banner() {
   echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
@@ -137,6 +140,18 @@ echo "Building Knative Eventing - Kafka Bus"
 ko resolve ${KO_FLAGS} -f config/buses/kafka/ >> ${OUTPUT_YAML_BUS_KAFKA}
 tag_knative_images ${OUTPUT_YAML_BUS_KAFKA} ${TAG}
 
+echo "Building Knative Eventing - K8s Events Source"
+ko resolve ${KO_FLAGS} -f pkg/sources/k8sevents/ >> ${OUTPUT_YAML_SOURCE_K8SEVENTS}
+tag_knative_images ${OUTPUT_YAML_SOURCE_K8SEVENTS} ${TAG}
+
+echo "Building Knative Eventing - GCP Cloud Pub/Sub Source"
+ko resolve ${KO_FLAGS} -f pkg/sources/gcppubsub/ >> ${OUTPUT_YAML_SOURCE_GCPPUBSUB}
+tag_knative_images ${OUTPUT_YAML_SOURCE_GCPPUBSUB} ${TAG}
+
+echo "Building Knative Eventing - GitHub Source"
+ko resolve ${KO_FLAGS} -f pkg/sources/github/ >> ${OUTPUT_YAML_SOURCE_GITHUB}
+tag_knative_images ${OUTPUT_YAML_SOURCE_GITHUB} ${TAG}
+
 if (( DONT_PUBLISH )); then
   echo "New release built successfully"
   exit 0
@@ -147,5 +162,8 @@ publish_yaml ${OUTPUT_YAML}
 publish_yaml ${OUTPUT_YAML_BUS_STUB}
 publish_yaml ${OUTPUT_YAML_BUS_GCPPUBSUB}
 publish_yaml ${OUTPUT_YAML_BUS_KAFKA}
+publish_yaml ${OUTPUT_YAML_SOURCE_K8SEVENTS}
+publish_yaml ${OUTPUT_YAML_SOURCE_GCPPUBSUB}
+publish_yaml ${OUTPUT_YAML_SOURCE_GITHUB}
 
 echo "New release published successfully"
