@@ -104,6 +104,12 @@ type ChannelStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	Conditions []ChannelCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+
+	// DomainInternal holds the top-level domain that will distribute traffic
+	// over the provided targets from inside the cluster. It generally has the
+	// form {channel}.{namespace}.svc.cluster.local
+	// +optional
+	DomainInternal string `json:"domainInternal,omitempty"`
 }
 
 func (c *Channel) GetSpecJSON() ([]byte, error) {

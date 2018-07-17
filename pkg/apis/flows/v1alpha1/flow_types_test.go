@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"testing"
 
+	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -183,64 +185,63 @@ func TestFlowCondition_IsReady(t *testing.T) {
 	}
 }
 
-// TODO restore test after https://github.com/knative/eventing/pull/130 merges
-// func TestFlowCondition_PropagateStatus(t *testing.T) {
-// 	testcases := []struct {
-// 		name            string
-// 		feedStatuses    []feedsv1alpha1.FeedStatus
-// 		channelStatuses []channelsv1alpha1.ChannelStatus
-// 		want            bool
-// 	}{
-// 		{"FeedReady",
-// 			[]feedsv1alpha1.FeedStatus{
-// 				feedsv1alpha1.FeedStatus{
-// 					Conditions: []feedsv1alpha1.FeedCondition{
-// 						feedsv1alpha1.FeedCondition{
-// 							Type:   feedsv1alpha1.FeedConditionReady,
-// 							Status: corev1.ConditionTrue,
-// 						},
-// 					},
-// 				}},
-// 			[]channelsv1alpha1.ChannelStatus{},
-// 			false},
-// 		{"ChannelReady",
-// 			[]feedsv1alpha1.FeedStatus{},
-// 			[]channelsv1alpha1.ChannelStatus{
-// 				channelsv1alpha1.ChannelStatus{
-// 					ServiceName: "foobar",
-// 				},
-// 			},
-// 			false},
-// 		{"BothReady",
-// 			[]feedsv1alpha1.FeedStatus{
-// 				feedsv1alpha1.FeedStatus{
-// 					Conditions: []feedsv1alpha1.FeedCondition{
-// 						feedsv1alpha1.FeedCondition{
-// 							Type:   feedsv1alpha1.FeedConditionReady,
-// 							Status: corev1.ConditionTrue,
-// 						},
-// 					},
-// 				}},
-// 			[]channelsv1alpha1.ChannelStatus{
-// 				channelsv1alpha1.ChannelStatus{
-// 					ServiceName: "foobar",
-// 				},
-// 			},
-// 			true},
-// 	}
-// 	for _, tc := range testcases {
-// 		testName := fmt.Sprintf("%s - %s", "Flow", tc.name)
-// 		t.Run(testName, func(t *testing.T) {
-// 			flow := Flow{}
-// 			for _, fs := range tc.feedStatuses {
-// 				flow.Status.PropagateFeedStatus(fs)
-// 			}
-// 			for _, cs := range tc.channelStatuses {
-// 				flow.Status.PropagateChannelStatus(cs)
-// 			}
-// 			if want, got := tc.want, flow.Status.IsReady(); want != got {
-// 				t.Fatalf("Failed IsReady check : \nwant:\t%#v\ngot:\t%#v", want, got)
-// 			}
-// 		})
-// 	}
-// }
+func TestFlowCondition_PropagateStatus(t *testing.T) {
+	testcases := []struct {
+		name            string
+		feedStatuses    []feedsv1alpha1.FeedStatus
+		channelStatuses []channelsv1alpha1.ChannelStatus
+		want            bool
+	}{
+		{"FeedReady",
+			[]feedsv1alpha1.FeedStatus{
+				feedsv1alpha1.FeedStatus{
+					Conditions: []feedsv1alpha1.FeedCondition{
+						feedsv1alpha1.FeedCondition{
+							Type:   feedsv1alpha1.FeedConditionReady,
+							Status: corev1.ConditionTrue,
+						},
+					},
+				}},
+			[]channelsv1alpha1.ChannelStatus{},
+			false},
+		{"ChannelReady",
+			[]feedsv1alpha1.FeedStatus{},
+			[]channelsv1alpha1.ChannelStatus{
+				channelsv1alpha1.ChannelStatus{
+					DomainInternal: "foobar-channel.default.svc.cluster.local",
+				},
+			},
+			false},
+		{"BothReady",
+			[]feedsv1alpha1.FeedStatus{
+				feedsv1alpha1.FeedStatus{
+					Conditions: []feedsv1alpha1.FeedCondition{
+						feedsv1alpha1.FeedCondition{
+							Type:   feedsv1alpha1.FeedConditionReady,
+							Status: corev1.ConditionTrue,
+						},
+					},
+				}},
+			[]channelsv1alpha1.ChannelStatus{
+				channelsv1alpha1.ChannelStatus{
+					DomainInternal: "foobar-channel.default.svc.cluster.local",
+				},
+			},
+			true},
+	}
+	for _, tc := range testcases {
+		testName := fmt.Sprintf("%s - %s", "Flow", tc.name)
+		t.Run(testName, func(t *testing.T) {
+			flow := Flow{}
+			for _, fs := range tc.feedStatuses {
+				flow.Status.PropagateFeedStatus(fs)
+			}
+			for _, cs := range tc.channelStatuses {
+				flow.Status.PropagateChannelStatus(cs)
+			}
+			if want, got := tc.want, flow.Status.IsReady(); want != got {
+				t.Fatalf("Failed IsReady check : \nwant:\t%#v\ngot:\t%#v", want, got)
+			}
+		})
+	}
+}

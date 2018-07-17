@@ -266,16 +266,14 @@ func (fs *FlowStatus) removeCondition(t FlowConditionType) {
 }
 
 func (fs *FlowStatus) PropagateChannelStatus(cs channelsv1alpha1.ChannelStatus) {
-	// TODO update after https://github.com/knative/eventing/pull/130 merges
-	// if cs.ServiceName != "" {
-	// 	fs.ChannelTarget = cs.ServiceName
-	// 	fs.setCondition(&FlowCondition{
-	// 		Type:   FlowConditionChannelReady,
-	// 		Status: corev1.ConditionTrue,
-	// 	})
-	// 	fs.checkAndMarkReady()
-	// }
-
+	if cs.DomainInternal != "" {
+		fs.ChannelTarget = cs.DomainInternal
+		fs.setCondition(&FlowCondition{
+			Type:   FlowConditionChannelReady,
+			Status: corev1.ConditionTrue,
+		})
+		fs.checkAndMarkReady()
+	}
 }
 
 func (fs *FlowStatus) PropagateSubscriptionStatus(ss channelsv1alpha1.SubscriptionStatus) {
