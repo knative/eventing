@@ -44,23 +44,23 @@ type EnvVar string
 
 const (
 	// EnvVarOperation is the Env variable that gets set to requested Operation
-	EnvVarOperation EnvVar = "BIND_OPERATION"
+	EnvVarOperation EnvVar = "FEED_OPERATION"
 	// EnvVarTrigger is the Env variable that gets set to serialized trigger configuration
-	EnvVarTrigger = "BIND_TRIGGER"
+	EnvVarTrigger = "FEED_TRIGGER"
 	// EnvVarTarget is the Env variable that gets set to target of the feed operation
-	EnvVarTarget = "BIND_TARGET"
+	EnvVarTarget = "FEED_TARGET"
 	// EnvVarContext is the Env variable that gets set to serialized FeedContext if stopping
-	EnvVarContext = "BIND_CONTEXT"
+	EnvVarContext = "FEED_CONTEXT"
 	// EnvVarEventSourceParameters is the Env variable that gets set to serialized EventSourceSpec
 	EnvVarEventSourceParameters = "EVENT_SOURCE_PARAMETERS"
 	// EnvVarNamespace is the Env variable that gets set to namespace of the container doing
 	// the Feed (aka, namespace of the feed). Uses downward api
-	EnvVarNamespace = "BIND_NAMESPACE"
+	EnvVarNamespace = "FEED_NAMESPACE"
 	// EnvVarServiceAccount is the Env variable that gets set to serviceaccount of the
 	// container doing the feed. Uses downward api
 	//TODO is this useful? Wouldn't this already be the implicit service Account
 	// for the container?
-	EnvVarServiceAccount = "BIND_SERVICE_ACCOUNT"
+	EnvVarServiceAccount = "FEED_SERVICE_ACCOUNT"
 )
 
 // MakeJob creates a Job to start or stop a Feed.
