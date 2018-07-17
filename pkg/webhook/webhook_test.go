@@ -29,6 +29,7 @@ import (
 	"github.com/mattbaird/jsonpatch"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	"k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
@@ -125,6 +126,87 @@ func TestUnknownKindFails(t *testing.T) {
 	}
 
 	expectFailsWith(t, ac.admit(testCtx, &req), "unhandled kind")
+}
+
+func TestValidBusParameterNamePasses(t *testing.T) {
+	_, ac := newNonRunningTestAdmissionController(t, newDefaultOptions())
+	req := &admissionv1beta1.AdmissionRequest{
+		Operation: admissionv1beta1.Create,
+		Kind:      metav1.GroupVersionKind{Kind: "Bus"},
+	}
+	validName := "ok_param.name"
+	bus := createBus(testBusName, "foobar/dispatcher")
+	bus.Spec.Parameters.Subscription = &[]v1alpha1.Parameter{{Name: validName}}
+	marshaled, err := json.Marshal(bus)
+	if err != nil {
+		t.Fatalf("Failed to marshal bus: %s", err)
+	}
+	req.Object.Raw = marshaled
+	expectAllowed(t, ac.admit(testCtx, req))
+
+	validName = "simple-name"
+	bus = createBus(testBusName, "foobar/dispatcher")
+	bus.Spec.Parameters.Channel = &[]v1alpha1.Parameter{{Name: validName}}
+	marshaled, err = json.Marshal(bus)
+	if err != nil {
+		t.Fatalf("Failed to marshal bus: %s", err)
+	}
+	req.Object.Raw = marshaled
+	expectAllowed(t, ac.admit(testCtx, req))
+}
+
+func TestInvalidBusParameterNameFails(t *testing.T) {
+	_, ac := newNonRunningTestAdmissionController(t, newDefaultOptions())
+	req := &admissionv1beta1.AdmissionRequest{
+		Operation: admissionv1beta1.Create,
+		Kind:      metav1.GroupVersionKind{Kind: "Bus"},
+	}
+	invalidName := "paramètre"
+	bus := createBus(testBusName, "foobar/dispatcher")
+	bus.Spec.Parameters.Subscription = &[]v1alpha1.Parameter{{Name: invalidName}}
+	marshaled, err := json.Marshal(bus)
+	if err != nil {
+		t.Fatalf("Failed to marshal bus: %s", err)
+	}
+	req.Object.Raw = marshaled
+	expectFailsWith(t, ac.admit(testCtx, req), "invalid parameter name Spec.Parameters.Subscription.paramètre")
+
+	invalidName = "param/name"
+	bus = createBus(testBusName, "foobar/dispatcher")
+	bus.Spec.Parameters.Channel = &[]v1alpha1.Parameter{{Name: invalidName}}
+	marshaled, err = json.Marshal(bus)
+	if err != nil {
+		t.Fatalf("Failed to marshal bus: %s", err)
+	}
+	req.Object.Raw = marshaled
+	expectFailsWith(t, ac.admit(testCtx, req), "invalid parameter name Spec.Parameters.Channel.param/name")
+}
+
+func TestInvalidClusterBusParameterNameFails(t *testing.T) {
+	_, ac := newNonRunningTestAdmissionController(t, newDefaultOptions())
+	req := &admissionv1beta1.AdmissionRequest{
+		Operation: admissionv1beta1.Create,
+		Kind:      metav1.GroupVersionKind{Kind: "ClusterBus"},
+	}
+	invalidName := "paramètre"
+	bus := createClusterBus(testBusName, "foobar/dispatcher")
+	bus.Spec.Parameters.Subscription = &[]v1alpha1.Parameter{{Name: invalidName}}
+	marshaled, err := json.Marshal(bus)
+	if err != nil {
+		t.Fatalf("Failed to marshal bus: %s", err)
+	}
+	req.Object.Raw = marshaled
+	expectFailsWith(t, ac.admit(testCtx, req), "invalid parameter name Spec.Parameters.Subscription.paramètre")
+
+	invalidName = "param/name"
+	bus = createClusterBus(testBusName, "foobar/dispatcher")
+	bus.Spec.Parameters.Channel = &[]v1alpha1.Parameter{{Name: invalidName}}
+	marshaled, err = json.Marshal(bus)
+	if err != nil {
+		t.Fatalf("Failed to marshal bus: %s", err)
+	}
+	req.Object.Raw = marshaled
+	expectFailsWith(t, ac.admit(testCtx, req), "invalid parameter name Spec.Parameters.Channel.param/name")
 }
 
 func TestInvalidNewChannelNameFails(t *testing.T) {
@@ -316,6 +398,42 @@ func expectPatches(t *testing.T, a []byte, e []jsonpatch.JsonPatchOperation) {
 		if !f {
 			t.Errorf("Extra patch found %+v in expected patches: %q", a[i], e)
 		}
+	}
+}
+
+func createBus(busName string, dispatcherImage string) v1alpha1.Bus {
+	return v1alpha1.Bus{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNamespace,
+			Name:      busName,
+		},
+		Spec: v1alpha1.BusSpec{
+			Dispatcher: v1.Container{
+				Image: dispatcherImage,
+			},
+			Parameters: &v1alpha1.BusParameters{
+				Channel:      &[]v1alpha1.Parameter{},
+				Subscription: &[]v1alpha1.Parameter{},
+			},
+		},
+	}
+}
+
+func createClusterBus(busName string, dispatcherImage string) v1alpha1.ClusterBus {
+	return v1alpha1.ClusterBus{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNamespace,
+			Name:      busName,
+		},
+		Spec: v1alpha1.BusSpec{
+			Dispatcher: v1.Container{
+				Image: dispatcherImage,
+			},
+			Parameters: &v1alpha1.BusParameters{
+				Channel:      &[]v1alpha1.Parameter{},
+				Subscription: &[]v1alpha1.Parameter{},
+			},
+		},
 	}
 }
 
