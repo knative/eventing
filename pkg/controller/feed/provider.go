@@ -18,6 +18,7 @@ package feed
 
 import (
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
+	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -54,7 +55,11 @@ func ProvideController(mrg manager.Manager) (controller.Controller, error) {
 		return nil, err
 	}
 
-	//FIXME(grantr) watch job events
+	// Watch Jobs and enqueue owning Feed key
+	if err := c.Watch(&source.Kind{Type: &batchv1.Job{}},
+		&handler.EnqueueRequestForOwner{OwnerType: &feedsv1alpha1.Feed{}, IsController: true}); err != nil {
+		return nil, err
+	}
 
 	return c, nil
 }
