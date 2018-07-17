@@ -76,7 +76,7 @@ func MakeJob(feed *v1alpha1.Feed, spec *v1alpha1.EventSourceSpec, op FeedOperati
 
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            "binder", //FIXME(grantr) job name?
+			Name:            "feedlet",
 			Namespace:       feed.Namespace,
 			Labels:          labels,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(feed, v1alpha1.SchemeGroupVersion.WithKind("Feed"))},
@@ -121,7 +121,7 @@ func makePodTemplate(feed *v1alpha1.Feed, spec *v1alpha1.EventSourceSpec, op Fee
 			RestartPolicy:      corev1.RestartPolicyNever,
 			Containers: []corev1.Container{
 				corev1.Container{
-					Name:            "feed-starter", //FIXME(grantr) feed-stopper for stop feed?
+					Name:            "feedlet",
 					Image:           spec.Image,
 					ImagePullPolicy: "Always",
 					Env: []corev1.EnvVar{
