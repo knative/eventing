@@ -501,7 +501,6 @@ func getNewStopJob() *batchv1.Job {
 			},
 		},
 	}}
-	fmt.Printf("new stop feed job: %#v", job)
 	return job
 }
 
