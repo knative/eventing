@@ -249,7 +249,7 @@ func (r *reconciler) setEventTypeOwnerReference(feed *feedsv1alpha1.Feed) error 
 	et := &feedsv1alpha1.EventType{}
 	if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.EventType}, et); err != nil {
 		if errors.IsNotFound(err) {
-			glog.Errorf("Feed event type not found, will not set finalizer")
+			glog.Errorf("Feed EventType not found, will not set finalizer")
 			return nil
 		}
 		return err
