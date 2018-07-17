@@ -246,6 +246,12 @@ func (r *reconciler) updateStatus(u *feedsv1alpha1.Feed) error {
 
 func (r *reconciler) setEventTypeOwnerReference(feed *feedsv1alpha1.Feed) error {
 
+	if len(feed.Spec.Trigger.EventType) > 0 {
+
+	} else {
+
+	}
+
 	et := &feedsv1alpha1.EventType{}
 	if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.EventType}, et); err != nil {
 		if errors.IsNotFound(err) {
