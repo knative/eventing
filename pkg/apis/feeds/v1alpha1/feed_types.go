@@ -57,6 +57,10 @@ type FeedAction struct {
 	RouteName string `json:"routeName,omitempty"`
 
 	// ChannelName specifies the channel name as a target
+	// If ChannelName specifies a full DNS (for example:
+	// flow-example-channel.default.svc.cluster.local)
+	// it's returned as is.
+	// TODO: clean up the action names.
 	ChannelName string `json:"channelName,omitempty"`
 }
 
