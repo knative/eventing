@@ -204,7 +204,7 @@ const (
 // FlowCondition defines a readiness condition for a Flow.
 // See: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#typical-status-properties
 type FlowCondition struct {
-	Type FlowConditionType `json:"state"`
+	Type FlowConditionType `json:"type"`
 
 	Status corev1.ConditionStatus `json:"status" description:"status of the condition, one of True, False, Unknown"`
 	// +optional

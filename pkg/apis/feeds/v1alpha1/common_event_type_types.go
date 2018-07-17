@@ -54,7 +54,7 @@ const (
 // EventTypeCondition defines a readiness condition for a EventType.
 // See: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#typical-status-properties
 type CommonEventTypeCondition struct {
-	Type CommonEventTypeConditionType `json:"state"`
+	Type CommonEventTypeConditionType `json:"type"`
 
 	Status corev1.ConditionStatus `json:"status" description:"status of the condition, one of True, False, Unknown"`
 
