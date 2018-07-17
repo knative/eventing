@@ -521,7 +521,7 @@ func (c *Controller) reconcileFeed(channelName string, flow *v1alpha1.Flow) (*fe
 	feedName := flow.Name
 	feed, err := c.feedsLister.Feeds(flow.Namespace).Get(feedName)
 	if errors.IsNotFound(err) {
-		feed, err = c.createFeed(feedName, flow)
+		feed, err = c.createFeed(channelName, flow)
 		if err != nil {
 			glog.Errorf("Failed to create feed %q : %v", feedName, err)
 			return nil, err
