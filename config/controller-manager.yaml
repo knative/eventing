@@ -23,7 +23,7 @@ spec:
       labels:
         app: controller-manager
     spec:
-      serviceAccountName: bind-controller
+      serviceAccountName: eventing-controller
       containers:
       - name: controller-manager
         image: github.com/knative/eventing/cmd/controller-manager
