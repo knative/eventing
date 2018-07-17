@@ -179,7 +179,7 @@ const (
 // FeedCondition defines a readiness condition for a Feed.
 // See: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#typical-status-properties
 type FeedCondition struct {
-	Type FeedConditionType `json:"state"`
+	Type FeedConditionType `json:"type"`
 
 	Status corev1.ConditionStatus `json:"status" description:"status of the condition, one of True, False, Unknown"`
 	// +optional
