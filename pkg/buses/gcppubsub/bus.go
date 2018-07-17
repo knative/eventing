@@ -17,12 +17,8 @@
 package gcppubsub
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
 	"strings"
 
 	"cloud.google.com/go/pubsub"
@@ -32,12 +28,12 @@ import (
 )
 
 type PubSubBus struct {
-	name           string
-	monitor        *buses.Monitor
-	pubsubClient   *pubsub.Client
-	client         *http.Client
-	forwardHeaders []string
-	receivers      map[string]context.CancelFunc
+	name              string
+	monitor           *buses.Monitor
+	messageReceiver   *buses.MessageReceiver
+	messageDispatcher *buses.MessageDispatcher
+	pubsubClient      *pubsub.Client
+	receivers         map[string]context.CancelFunc
 }
 
 func (b *PubSubBus) CreateTopic(channel *channelsv1alpha1.Channel, parameters buses.ResolvedParameters) error {
@@ -126,15 +122,15 @@ func (b *PubSubBus) DeleteSubscription(sub *channelsv1alpha1.Subscription) error
 	return subscription.Delete(ctx)
 }
 
-func (b *PubSubBus) SendEventToTopic(channel *channelsv1alpha1.Channel, data []byte, attributes map[string]string) error {
+func (b *PubSubBus) SendEventToTopic(channel *channelsv1alpha1.Channel, message *buses.Message) error {
 	ctx := context.Background()
 
 	topicID := b.topicID(channel)
 	topic := b.pubsubClient.Topic(topicID)
 
 	result := topic.Publish(ctx, &pubsub.Message{
-		Data:       data,
-		Attributes: attributes,
+		Data:       message.Payload,
+		Attributes: message.Headers,
 	})
 	id, err := result.Get(ctx)
 	if err != nil {
@@ -169,14 +165,20 @@ func (b *PubSubBus) ReceiveEvents(sub *channelsv1alpha1.Subscription, parameters
 	// subscription.Receive blocks, so run it in a goroutine
 	go func() {
 		glog.Infof("Start receiving events for subscription %q\n", subscriptionID)
-		err := subscription.Receive(cctx, func(ctx context.Context, message *pubsub.Message) {
-			err := b.DispatchHTTPEvent(sub, message.Data, message.Attributes)
+		err := subscription.Receive(cctx, func(ctx context.Context, pubsubMessage *pubsub.Message) {
+			subscriber := sub.Spec.Subscriber
+			namespace := sub.Namespace
+			message := &buses.Message{
+				Headers: pubsubMessage.Attributes,
+				Payload: pubsubMessage.Data,
+			}
+			err := b.messageDispatcher.DispatchMessage(subscriber, namespace, message)
 			if err != nil {
-				glog.Warningf("Unable to dispatch event %q to %q", message.ID, sub.Spec.Subscriber)
-				message.Nack()
+				glog.Warningf("Unable to dispatch event %q to %q", pubsubMessage.ID, subscriber)
+				pubsubMessage.Nack()
 			} else {
-				glog.Infof("Dispatched event %q to %q", message.ID, sub.Spec.Subscriber)
-				message.Ack()
+				glog.Infof("Dispatched event %q to %q", pubsubMessage.ID, subscriber)
+				pubsubMessage.Ack()
 			}
 		})
 		if err != nil {
@@ -207,54 +209,17 @@ func (b *PubSubBus) subscriptionID(subscription *channelsv1alpha1.Subscription) 
 	return fmt.Sprintf("subscription-%s-%s-%s", b.name, subscription.Namespace, subscription.Name)
 }
 
-func (b *PubSubBus) ReceiveHTTPEvent(res http.ResponseWriter, req *http.Request) {
-	host := req.Host
-	glog.Infof("Received request for %s\n", host)
-
-	name, namespace := b.splitChannelName(host)
-	channel := b.monitor.Channel(name, namespace)
-	if channel == nil {
-		res.WriteHeader(http.StatusNotFound)
-		return
+func (b *PubSubBus) ReceiveMessage(channel *buses.ChannelReference, message *buses.Message) error {
+	c := b.monitor.Channel(channel.Name, channel.Namespace)
+	if c == nil {
+		return buses.ErrUnknownChannel
 	}
 
-	data, err := ioutil.ReadAll(req.Body)
+	err := b.SendEventToTopic(c, message)
 	if err != nil {
-		res.WriteHeader(http.StatusInternalServerError)
-		return
+		return fmt.Errorf("unable to send event to topic %q: %v", channel.Name, err)
 	}
 
-	attributes := b.headersToAttributes(b.safeHeaders(req.Header))
-
-	err = b.SendEventToTopic(channel, data, attributes)
-	if err != nil {
-		glog.Warningf("Unable to send event to topic %q: %v", channel.Name, err)
-		res.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	res.WriteHeader(http.StatusAccepted)
-}
-
-func (b *PubSubBus) DispatchHTTPEvent(subscription *channelsv1alpha1.Subscription, data []byte, attributes map[string]string) error {
-	subscriber := subscription.Spec.Subscriber
-	url := url.URL{
-		Scheme: "http",
-		Host:   subscription.Spec.Subscriber,
-		Path:   "/",
-	}
-	req, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewReader(data))
-	if err != nil {
-		return err
-	}
-	req.Header = b.safeHeaders(b.attributesToHeaders(attributes))
-	res, err := b.client.Do(req)
-	if err != nil {
-		return err
-	}
-	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return fmt.Errorf("Subscribing service %q did not accept event: got HTTP %d", subscriber, res.StatusCode)
-	}
 	return nil
 }
 
@@ -265,45 +230,12 @@ func (b *PubSubBus) splitChannelName(host string) (string, string) {
 	return channel, namespace
 }
 
-func (b *PubSubBus) safeHeaders(raw http.Header) http.Header {
-	safe := http.Header{}
-	for _, header := range b.forwardHeaders {
-		if value := raw.Get(header); value != "" {
-			safe.Set(header, value)
-		}
-	}
-	return safe
-}
-
-func (b *PubSubBus) headersToAttributes(headers http.Header) map[string]string {
-	attributes := make(map[string]string)
-	for name, value := range headers {
-		// TODO hanle compound headers
-		attributes[name] = value[0]
-	}
-	return attributes
-}
-
-func (b *PubSubBus) attributesToHeaders(attributes map[string]string) http.Header {
-	headers := http.Header{}
-	for name, value := range attributes {
-		headers.Set(name, value)
-	}
-	return headers
-}
-
-func NewPubSubBus(name string, projectID string, monitor *buses.Monitor) (*PubSubBus, error) {
-	forwardHeaders := []string{
-		"content-type",
-		"x-request-id",
-		"x-b3-traceid",
-		"x-b3-spanid",
-		"x-b3-parentspanid",
-		"x-b3-sampled",
-		"x-b3-flags",
-		"x-ot-span-context",
-	}
-
+func NewPubSubBus(
+	name string, projectID string,
+	monitor *buses.Monitor,
+	messageReceiver *buses.MessageReceiver,
+	messageDispatcher *buses.MessageDispatcher,
+) (*PubSubBus, error) {
 	ctx := context.Background()
 	pubsubClient, err := pubsub.NewClient(ctx, projectID)
 	if err != nil {
@@ -311,12 +243,12 @@ func NewPubSubBus(name string, projectID string, monitor *buses.Monitor) (*PubSu
 	}
 
 	bus := PubSubBus{
-		name:           name,
-		monitor:        monitor,
-		pubsubClient:   pubsubClient,
-		client:         &http.Client{},
-		forwardHeaders: forwardHeaders,
-		receivers:      map[string]context.CancelFunc{},
+		name:              name,
+		monitor:           monitor,
+		messageReceiver:   messageReceiver,
+		messageDispatcher: messageDispatcher,
+		pubsubClient:      pubsubClient,
+		receivers:         map[string]context.CancelFunc{},
 	}
 
 	return &bus, nil

@@ -19,7 +19,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
 
 	"github.com/golang/glog"
@@ -64,7 +63,11 @@ func main() {
 			return bus.StopReceiveEvents(subscription)
 		},
 	})
-	bus, err := gcppubsub.NewPubSubBus(name, projectID, monitor)
+	messageReceiver := buses.NewMessageReceiver(func(channel *buses.ChannelReference, message *buses.Message) error {
+		return bus.ReceiveMessage(channel, message)
+	})
+	messageDispatcher := buses.NewMessageDispatcher()
+	bus, err := gcppubsub.NewPubSubBus(name, projectID, monitor, messageReceiver, messageDispatcher)
 	if err != nil {
 		glog.Fatalf("Failed to create pubsub bus: %v", err)
 	}
@@ -74,10 +77,7 @@ func main() {
 			glog.Fatalf("Error running monitor: %s", err.Error())
 		}
 	}()
-
-	glog.Infoln("Starting web server")
-	http.HandleFunc("/", bus.ReceiveHTTPEvent)
-	glog.Fatal(http.ListenAndServe(":8080", nil))
+	messageReceiver.Run(stopCh)
 }
 
 func init() {
