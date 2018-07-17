@@ -31,6 +31,7 @@ import (
 
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	"github.com/knative/eventing/pkg/controller/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -71,6 +72,7 @@ type Monitor struct {
 	bus                      channelsv1alpha1.GenericBus
 	handler                  MonitorEventHandlerFuncs
 	informerFactory          informers.SharedInformerFactory
+	clientset                clientset.Interface
 	busesLister              listers.BusLister
 	busesSynced              cache.InformerSynced
 	clusterBusesLister       listers.ClusterBusLister
@@ -139,10 +141,20 @@ func (h MonitorEventHandlerFuncs) onProvision(channel *channelsv1alpha1.Channel,
 			return err
 		}
 		err = h.ProvisionFunc(channel, parameters)
+		channelCopy := channel.DeepCopy()
+		var cond *channelsv1alpha1.ChannelCondition
 		if err != nil {
 			monitor.recorder.Eventf(channel, corev1.EventTypeWarning, errResourceSync, "Error provisoning channel: %s", err)
+			cond = util.NewChannelCondition(channelsv1alpha1.ChannelProvisioned, corev1.ConditionFalse, errResourceSync, err.Error())
 		} else {
 			monitor.recorder.Event(channel, corev1.EventTypeNormal, successSynced, "Channel provisioned successfully")
+			cond = util.NewChannelCondition(channelsv1alpha1.ChannelProvisioned, corev1.ConditionTrue, successSynced, "Channel provisioned successfully")
+		}
+		util.SetChannelCondition(&channelCopy.Status, *cond)
+		util.ConsolidateChannelCondition(&channelCopy.Status)
+		_, errS := monitor.clientset.ChannelsV1alpha1().Channels(channel.Namespace).Update(channelCopy)
+		if errS != nil {
+			glog.Warningf("Could not update status: %v", errS)
 		}
 		return err
 	}
@@ -152,10 +164,20 @@ func (h MonitorEventHandlerFuncs) onProvision(channel *channelsv1alpha1.Channel,
 func (h MonitorEventHandlerFuncs) onUnprovision(channel *channelsv1alpha1.Channel, monitor *Monitor) error {
 	if h.UnprovisionFunc != nil {
 		err := h.UnprovisionFunc(channel)
+		channelCopy := channel.DeepCopy()
+		var cond *channelsv1alpha1.ChannelCondition
 		if err != nil {
 			monitor.recorder.Eventf(channel, corev1.EventTypeWarning, errResourceSync, "Error unprovisioning channel: %s", err)
+			cond = util.NewChannelCondition(channelsv1alpha1.ChannelProvisioned, corev1.ConditionUnknown, errResourceSync, err.Error())
 		} else {
 			monitor.recorder.Event(channel, corev1.EventTypeNormal, successSynced, "Channel unprovisioned successfully")
+			cond = util.NewChannelCondition(channelsv1alpha1.ChannelProvisioned, corev1.ConditionFalse, successSynced, "Channel unprovisioned successfully")
+		}
+		util.SetChannelCondition(&channelCopy.Status, *cond)
+		util.ConsolidateChannelCondition(&channelCopy.Status)
+		_, errS := monitor.clientset.ChannelsV1alpha1().Channels(channel.Namespace).Update(channelCopy)
+		if errS != nil {
+			glog.Warningf("Could not update status: %v", errS)
 		}
 		return err
 	}
@@ -169,10 +191,19 @@ func (h MonitorEventHandlerFuncs) onSubscribe(subscription *channelsv1alpha1.Sub
 			return err
 		}
 		err = h.SubscribeFunc(subscription, attributes)
+		subscriptionCopy := subscription.DeepCopy()
+		var cond *channelsv1alpha1.SubscriptionCondition
 		if err != nil {
 			monitor.recorder.Eventf(subscription, corev1.EventTypeWarning, errResourceSync, "Error subscribing: %s", err)
+			cond = util.NewSubscriptionCondition(channelsv1alpha1.SubscriptionDispatching, corev1.ConditionFalse, errResourceSync, err.Error())
 		} else {
 			monitor.recorder.Event(subscription, corev1.EventTypeNormal, successSynced, "Subscribed successfully")
+			cond = util.NewSubscriptionCondition(channelsv1alpha1.SubscriptionDispatching, corev1.ConditionTrue, successSynced, "Subscription dispatcher successfully created")
+		}
+		util.SetSubscriptionCondition(&subscriptionCopy.Status, *cond)
+		_, errS := monitor.clientset.ChannelsV1alpha1().Subscriptions(subscription.Namespace).Update(subscriptionCopy)
+		if errS != nil {
+			glog.Warningf("Could not update status: %v", errS)
 		}
 		return err
 	}
@@ -182,10 +213,19 @@ func (h MonitorEventHandlerFuncs) onSubscribe(subscription *channelsv1alpha1.Sub
 func (h MonitorEventHandlerFuncs) onUnsubscribe(subscription *channelsv1alpha1.Subscription, monitor *Monitor) error {
 	if h.UnsubscribeFunc != nil {
 		err := h.UnsubscribeFunc(subscription)
+		subscriptionCopy := subscription.DeepCopy()
+		var cond *channelsv1alpha1.SubscriptionCondition
 		if err != nil {
 			monitor.recorder.Eventf(subscription, corev1.EventTypeWarning, errResourceSync, "Error unsubscribing: %s", err)
+			cond = util.NewSubscriptionCondition(channelsv1alpha1.SubscriptionDispatching, corev1.ConditionUnknown, errResourceSync, err.Error())
 		} else {
 			monitor.recorder.Event(subscription, corev1.EventTypeNormal, successSynced, "Unsubscribed successfully")
+			cond = util.NewSubscriptionCondition(channelsv1alpha1.SubscriptionDispatching, corev1.ConditionFalse, successSynced, "Subscription dispatcher successfully deleted")
+		}
+		util.SetSubscriptionCondition(&subscriptionCopy.Status, *cond)
+		_, errS := monitor.clientset.ChannelsV1alpha1().Subscriptions(subscription.Namespace).Update(subscriptionCopy)
+		if errS != nil {
+			glog.Warningf("Could not update status: %v", errS)
 		}
 		return err
 	}
@@ -249,6 +289,7 @@ func NewMonitor(
 		bus:     nil,
 		handler: handler,
 
+		clientset:                client,
 		informerFactory:          informerFactory,
 		busesLister:              busInformer.Lister(),
 		busesSynced:              busInformer.Informer().HasSynced,
@@ -261,7 +302,7 @@ func NewMonitor(
 		cache:                    make(map[channelKey]*channelSummary),
 		provisionedChannels:      make(map[channelKey]*channelsv1alpha1.Channel),
 		provisionedSubscriptions: make(map[subscriptionKey]*channelsv1alpha1.Subscription),
-		mutex:                    &sync.Mutex{},
+		mutex: &sync.Mutex{},
 
 		workqueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Monitor"),
 		recorder:  recorder,
