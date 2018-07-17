@@ -62,10 +62,10 @@ func main() {
 		schemeFunc(mrg.GetScheme())
 	}
 
-	// Add each controller's NewController func to this list to have the
+	// Add each controller's ProvideController func to this list to have the
 	// manager run it.
 	providers := []ProvideFunc{
-		feed.NewController,
+		feed.ProvideController,
 	}
 
 	for _, provider := range providers {

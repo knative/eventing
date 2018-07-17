@@ -34,8 +34,8 @@ type reconciler struct {
 // Verify the struct implements reconcile.Reconciler
 var _ reconcile.Reconciler = &reconciler{}
 
-// NewController returns a foo controller.
-func NewController(mrg manager.Manager) (controller.Controller, error) {
+// ProvideController returns a foo controller.
+func ProvideController(mrg manager.Manager) (controller.Controller, error) {
 	// Setup a new controller to Reconcile ReplicaSets
 	c, err := controller.New("foo-controller", mrg, controller.Options{
 		Reconciler: &reconciler{
