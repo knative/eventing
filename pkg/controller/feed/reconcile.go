@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/golang/glog"
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
@@ -391,15 +392,24 @@ func (r *reconciler) resolveRouteDNS(namespace string, routeName string) (string
 }
 
 func (r *reconciler) resolveChannelDNS(namespace string, channelName string) (string, error) {
+	// Currently Flow object resolves the channel to the DNS so allow for a fully
+	// specified cluster name to be returned as is.
+	// TODO: once the FeedAction gets normalized, clean this up.
+	if strings.HasSuffix(channelName, "svc.cluster.local") {
+		glog.Infof("using channel name as DNS entry: %q", channelName)
+		return channelName, nil
+	}
+
 	channel := &channelsv1alpha1.Channel{}
 	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: channelName}, channel)
 	if err != nil {
 		return "", err
 	}
-	// TODO: The actual dns name should come from something in the status, or ?? But right
-	// now it is hard coded to be <channelname>-channel
-	// So we just check that the channel actually exists and tack on the -channel
-	return fmt.Sprintf("%s-channel", channel.Name), nil
+
+	if channel.Status.DomainInternal != "" {
+		return channel.Status.DomainInternal, nil
+	}
+	return "", fmt.Errorf("channel '%s/%s' does not have Status.DomainInternal", namespace, channelName)
 }
 
 func (r *reconciler) setFeedContext(feed *feedsv1alpha1.Feed, job *batchv1.Job) error {
