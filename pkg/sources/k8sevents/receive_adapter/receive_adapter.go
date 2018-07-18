@@ -201,11 +201,6 @@ func postMessage(target string, m *corev1.Event) error {
 	}
 	defer resp.Body.Close()
 	log.Printf("response Status: %s", resp.Status)
-	if resp.StatusCode/100 != 2 {
-		b, _ := ioutil.ReadAll(req.Body)
-		log.Printf("Headers wer: %v", req.Header)
-		log.Printf("Body was: %s", b)
-	}
 	body, _ := ioutil.ReadAll(resp.Body)
 	log.Printf("response Body: %s", string(body))
 	return nil
