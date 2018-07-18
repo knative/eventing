@@ -159,7 +159,7 @@ function wait_until_feed_ready() {
 
 function validate_function_logs() {
   local NAMESPACE=$1
-  local podname="$(kubectl -n $NAMESPACE get pods --no-headers -oname | grep e2e-k8s-events-)"
+  local podname="$(kubectl -n $NAMESPACE get pods --no-headers -oname | grep e2e-k8s-events-function)"
   echo "$podname"
   local logs="$(kubectl -n $NAMESPACE logs $podname user-container)"
   echo "${logs}" | grep "Started container" || return 1
