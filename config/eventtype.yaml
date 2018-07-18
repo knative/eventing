@@ -21,4 +21,5 @@ spec:
   names:
     kind: EventType
     plural: eventtypes
+    singular: eventtype
   scope: Namespaced

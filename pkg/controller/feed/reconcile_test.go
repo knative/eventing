@@ -67,7 +67,7 @@ var testCases = []controllertesting.TestCase{
 		ReconcileKey: "test/test-feed",
 		WantPresent: []runtime.Object{
 			getStartInProgressFeed(),
-			getNewFeedJob(),
+			getNewStartJob(),
 		},
 	},
 	{
@@ -77,12 +77,12 @@ var testCases = []controllertesting.TestCase{
 			getEventType(),
 			getRoute(),
 			getStartInProgressFeed(),
-			getNewFeedJob(),
+			getNewStartJob(),
 		},
 		ReconcileKey: "test/test-feed",
 		WantPresent: []runtime.Object{
 			getStartInProgressFeed(),
-			getNewFeedJob(),
+			getNewStartJob(),
 		},
 	},
 	{
@@ -263,7 +263,7 @@ func getStartInProgressFeed() *feedsv1alpha1.Feed {
 
 	feed.Status.InitializeConditions()
 	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-		Type:    feedsv1alpha1.FeedConditionStarted,
+		Type:    feedsv1alpha1.FeedConditionReady,
 		Status:  corev1.ConditionUnknown,
 		Reason:  "StartJob",
 		Message: "start job in progress",
@@ -282,9 +282,9 @@ func getStartedFeed() *feedsv1alpha1.Feed {
 		Raw: marshalledContext,
 	}
 	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-		Type:    feedsv1alpha1.FeedConditionStarted,
+		Type:    feedsv1alpha1.FeedConditionReady,
 		Status:  corev1.ConditionTrue,
-		Reason:  "StartJobComplete",
+		Reason:  "FeedSuccess",
 		Message: "start job succeeded",
 	})
 	return feed
@@ -293,10 +293,10 @@ func getStartedFeed() *feedsv1alpha1.Feed {
 func getStartFailedFeed() *feedsv1alpha1.Feed {
 	feed := getStartInProgressFeed()
 	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-		Type:    feedsv1alpha1.FeedConditionFailed,
-		Status:  corev1.ConditionTrue,
-		Reason:  "StartJobFailed",
-		Message: "TODO replace with job failure message",
+		Type:    feedsv1alpha1.FeedConditionReady,
+		Status:  corev1.ConditionFalse,
+		Reason:  "FeedFailed",
+		Message: "Job failed with [] ",
 	})
 	return feed
 }
@@ -311,7 +311,7 @@ func getDeletedStopInProgressFeed() *feedsv1alpha1.Feed {
 	feed := getDeletedStartedFeed()
 
 	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-		Type:    feedsv1alpha1.FeedConditionStarted,
+		Type:    feedsv1alpha1.FeedConditionReady,
 		Status:  corev1.ConditionUnknown,
 		Reason:  "StopJob",
 		Message: "stop job in progress",
@@ -323,7 +323,7 @@ func getDeletedStoppedFeed() *feedsv1alpha1.Feed {
 	feed := getDeletedStopInProgressFeed()
 	feed.RemoveFinalizer(finalizerName)
 	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-		Type:    feedsv1alpha1.FeedConditionStarted,
+		Type:    feedsv1alpha1.FeedConditionReady,
 		Status:  corev1.ConditionTrue,
 		Reason:  "StopJobComplete",
 		Message: "stop job succeeded",
@@ -331,7 +331,7 @@ func getDeletedStoppedFeed() *feedsv1alpha1.Feed {
 	return feed
 }
 
-func getNewFeedJob() *batchv1.Job {
+func getNewStartJob() *batchv1.Job {
 	jobName := resources.StartJobName(getNewFeed())
 	return &batchv1.Job{
 		TypeMeta: jobType(),
@@ -354,7 +354,7 @@ func getNewFeedJob() *batchv1.Job {
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
-						Name:  "feed-effector",
+						Name:  "feedlet",
 						Image: "example.com/test-es-feeder",
 						Env: []corev1.EnvVar{{
 							Name:  string(resources.EnvVarOperation),
@@ -371,8 +371,10 @@ func getNewFeedJob() *batchv1.Job {
 								},
 							))),
 						}, {
-							Name:  string(resources.EnvVarContext),
-							Value: "",
+							Name: string(resources.EnvVarContext),
+							Value: base64.StdEncoding.EncodeToString(bytesOrDie(json.Marshal(
+								sources.FeedContext{},
+							))),
 						}, {
 							Name:  string(resources.EnvVarEventSourceParameters),
 							Value: "",
@@ -402,7 +404,7 @@ func getNewFeedJob() *batchv1.Job {
 }
 
 func getInProgressStartFeedJob() *batchv1.Job {
-	job := getNewFeedJob()
+	job := getNewStartJob()
 	// This is normally set by a webhook. Set it here
 	// to simulate. TODO use a reactor when that's
 	// supported.
@@ -463,7 +465,7 @@ func getCompletedStartFeedJobPod() *corev1.Pod {
 }
 
 func getNewStopJob() *batchv1.Job {
-	job := getNewFeedJob()
+	job := getNewStartJob()
 	job.Name = resources.StopJobName(getDeletedStartedFeed())
 
 	job.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{{
@@ -501,7 +503,6 @@ func getNewStopJob() *batchv1.Job {
 			},
 		},
 	}}
-	fmt.Printf("new stop feed job: %#v", job)
 	return job
 }
 

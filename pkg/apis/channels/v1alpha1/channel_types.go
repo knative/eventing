@@ -43,10 +43,10 @@ type Channel struct {
 // arguments for the channel.
 type ChannelSpec struct {
 	// Name of the bus backing this channel (optional)
-	Bus string `json:"bus`
+	Bus string `json:"bus,omitempty"`
 
 	// ClusterBus name of the clusterbus backing this channel (mutually exclusive with Bus)
-	ClusterBus string `json:"clusterBus"`
+	ClusterBus string `json:"clusterBus,omitempty"`
 
 	// Arguments is a list of configuration arguments for the Channel. The
 	// Arguments for a channel must contain values for each of the Parameters
@@ -110,6 +110,15 @@ type ChannelStatus struct {
 	// form {channel}.{namespace}.svc.cluster.local
 	// +optional
 	DomainInternal string `json:"domainInternal,omitempty"`
+}
+
+func (cs *ChannelStatus) GetCondition(t ChannelConditionType) *ChannelCondition {
+	for _, cond := range cs.Conditions {
+		if cond.Type == t {
+			return &cond
+		}
+	}
+	return nil
 }
 
 func (c *Channel) GetSpecJSON() ([]byte, error) {

@@ -29,10 +29,6 @@ spec:
       namespace: default
   action:
     target:
-# Once Route supports serviceName, use that
-#      kind: Route
-      kind: Revision
+      kind: Route
       apiVersion: serving.knative.dev/v1alpha1
-# Once Route supports serviceName, use that
-#      name: k8s-events
-      name: k8s-events-00001
+      name: k8s-events

@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/golang/glog"
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
@@ -85,7 +86,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 }
 
 func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
-	bc := feed.Status.GetCondition(feedsv1alpha1.FeedConditionStarted)
+	bc := feed.Status.GetCondition(feedsv1alpha1.FeedConditionReady)
 	switch bc.Status {
 	case corev1.ConditionUnknown:
 
@@ -99,7 +100,7 @@ func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
 					return err
 				}
 				feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-					Type:    feedsv1alpha1.FeedConditionStarted,
+					Type:    feedsv1alpha1.FeedConditionReady,
 					Status:  corev1.ConditionUnknown,
 					Reason:  "StartJob",
 					Message: "start job in progress",
@@ -117,17 +118,17 @@ func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
 			}
 			//TODO just use a single Succeeded condition, like Build
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-				Type:    feedsv1alpha1.FeedConditionStarted,
+				Type:    feedsv1alpha1.FeedConditionReady,
 				Status:  corev1.ConditionTrue,
-				Reason:  "StartJobComplete",
+				Reason:  "FeedSuccess",
 				Message: "start job succeeded",
 			})
 		} else if resources.IsJobFailed(job) {
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-				Type:    feedsv1alpha1.FeedConditionFailed,
-				Status:  corev1.ConditionTrue,
-				Reason:  "StartJobFailed",
-				Message: "TODO replace with job failure message",
+				Type:    feedsv1alpha1.FeedConditionReady,
+				Status:  corev1.ConditionFalse,
+				Reason:  "FeedFailed",
+				Message: fmt.Sprintf("Job failed with %s", resources.JobFailedMessage(job)),
 			})
 		}
 
@@ -166,7 +167,7 @@ func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
 				//TODO check for event source not found and remove finalizer
 
 				feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-					Type:    feedsv1alpha1.FeedConditionStarted,
+					Type:    feedsv1alpha1.FeedConditionReady,
 					Status:  corev1.ConditionUnknown,
 					Reason:  "StopJob",
 					Message: "stop job in progress",
@@ -180,7 +181,7 @@ func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
 				return err
 			}
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-				Type:    feedsv1alpha1.FeedConditionStarted,
+				Type:    feedsv1alpha1.FeedConditionReady,
 				Status:  corev1.ConditionTrue,
 				Reason:  "StopJobComplete",
 				Message: "stop job succeeded",
@@ -188,10 +189,10 @@ func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
 		} else if resources.IsJobFailed(job) {
 			// finalizer remains to allow humans to inspect the failure
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-				Type:    feedsv1alpha1.FeedConditionFailed,
-				Status:  corev1.ConditionTrue,
+				Type:    feedsv1alpha1.FeedConditionReady,
+				Status:  corev1.ConditionFalse,
 				Reason:  "StopJobFailed",
-				Message: "TODO replace with job failure message",
+				Message: fmt.Sprintf("Job failed with %s", resources.JobFailedMessage(job)),
 			})
 		}
 	}
@@ -397,15 +398,24 @@ func (r *reconciler) resolveRouteDNS(namespace string, routeName string) (string
 }
 
 func (r *reconciler) resolveChannelDNS(namespace string, channelName string) (string, error) {
+	// Currently Flow object resolves the channel to the DNS so allow for a fully
+	// specified cluster name to be returned as is.
+	// TODO: once the FeedAction gets normalized, clean this up.
+	if strings.HasSuffix(channelName, "svc.cluster.local") {
+		glog.Infof("using channel name as DNS entry: %q", channelName)
+		return channelName, nil
+	}
+
 	channel := &channelsv1alpha1.Channel{}
 	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: channelName}, channel)
 	if err != nil {
 		return "", err
 	}
-	// TODO: The actual dns name should come from something in the status, or ?? But right
-	// now it is hard coded to be <channelname>-channel
-	// So we just check that the channel actually exists and tack on the -channel
-	return fmt.Sprintf("%s-channel", channel.Name), nil
+
+	if channel.Status.DomainInternal != "" {
+		return channel.Status.DomainInternal, nil
+	}
+	return "", fmt.Errorf("channel '%s/%s' does not have Status.DomainInternal", namespace, channelName)
 }
 
 func (r *reconciler) setFeedContext(feed *feedsv1alpha1.Feed, job *batchv1.Job) error {

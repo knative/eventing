@@ -19,8 +19,8 @@ package v1alpha1
 import (
 	"encoding/json"
 
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/api/core/v1"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // +genclient
@@ -56,7 +56,6 @@ type SubscriptionSpec struct {
 	Arguments *[]Argument `json:"arguments,omitempty"`
 }
 
-
 type SubscriptionConditionType string
 
 const (
@@ -80,7 +79,6 @@ type SubscriptionCondition struct {
 	Message string `json:"message,omitempty"`
 }
 
-
 // SubscriptionStatus (computed) for a subscription
 type SubscriptionStatus struct {
 
@@ -88,7 +86,15 @@ type SubscriptionStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	Conditions []SubscriptionCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+}
 
+func (ss *SubscriptionStatus) GetCondition(t SubscriptionConditionType) *SubscriptionCondition {
+	for _, cond := range ss.Conditions {
+		if cond.Type == t {
+			return &cond
+		}
+	}
+	return nil
 }
 
 func (s *Subscription) GetSpecJSON() ([]byte, error) {

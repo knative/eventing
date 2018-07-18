@@ -17,11 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"encoding/json"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-
-	"encoding/json"
 
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -60,6 +60,10 @@ type FeedAction struct {
 	RouteName string `json:"routeName,omitempty"`
 
 	// ChannelName specifies the channel name as a target
+	// If ChannelName specifies a full DNS (for example:
+	// flow-example-channel.default.svc.cluster.local)
+	// it's returned as is.
+	// TODO: clean up the action names.
 	ChannelName string `json:"channelName,omitempty"`
 }
 
@@ -190,7 +194,7 @@ const (
 // FeedCondition defines a readiness condition for a Feed.
 // See: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#typical-status-properties
 type FeedCondition struct {
-	Type FeedConditionType `json:"state"`
+	Type FeedConditionType `json:"type"`
 
 	Status corev1.ConditionStatus `json:"status" description:"status of the condition, one of True, False, Unknown"`
 	// +optional
@@ -247,9 +251,6 @@ func (fs *FeedStatus) RemoveCondition(t FeedConditionType) {
 func (fs *FeedStatus) InitializeConditions() {
 	for _, cond := range []FeedConditionType{
 		FeedConditionReady,
-		FeedConditionStarted,
-		FeedConditionFailed,
-		FeedConditionInvalid,
 	} {
 		if fc := fs.GetCondition(cond); fc == nil {
 			fs.SetCondition(&FeedCondition{

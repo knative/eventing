@@ -309,7 +309,7 @@
     "pkg/apis/build",
     "pkg/apis/build/v1alpha1"
   ]
-  revision = "5dba97ea172464d6459c393330ffba2152ec78dd"
+  revision = "5c1d8c8469d1ed34b2aecf4c2305b3a57fff2ee3"
 
 [[projects]]
   name = "github.com/knative/serving"
@@ -331,7 +331,7 @@
     "pkg/client/listers/istio/v1alpha3",
     "pkg/client/listers/serving/v1alpha1"
   ]
-  revision = "22e3cb0f057daf224ef3af5cc37feb9b152f880e"
+  revision = "2326173b13899c32896caf526a318a8b30033b3e"
 
 [[projects]]
   name = "github.com/magiconair/properties"
@@ -1023,11 +1023,11 @@
     "pkg/source",
     "pkg/source/internal"
   ]
-  revision = "8bfde6ca0e62025c2c90195b270fefef26be424a"
+  revision = "f5b79b93f3aa7b978117f942f3cd67a91db12207"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6c8e4b352218914ad8ba7fc2db2f23dd63f462ab650e69965a12d36ec8c25755"
+  inputs-digest = "b6817e40027a92f07452f6aca6b22b35108a7f07ebfe71d72fab450b05856709"
   solver-name = "gps-cdcl"
   solver-version = 1

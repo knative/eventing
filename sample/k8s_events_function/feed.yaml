@@ -28,4 +28,4 @@ spec:
     parameters:
       namespace: default
   action:
-    routeName: k8s-events-function
+    routeName: k8s-events

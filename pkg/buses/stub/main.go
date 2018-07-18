@@ -17,14 +17,9 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
 	"os"
-	"strings"
 
 	"github.com/golang/glog"
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
@@ -41,117 +36,75 @@ var (
 	kubeconfig string
 )
 
+// StubBus is able to broadcast messages to multiple subscribers, but does not
+// have any delivery guarentees.
+//
+// The stub bus is commonly used in development and testing, but is often not
+// suiteable for production environments.
 type StubBus struct {
-	name           string
-	monitor        *buses.Monitor
-	client         *http.Client
-	forwardHeaders []string
+	ref        *buses.BusReference
+	monitor    *buses.Monitor
+	receiver   *buses.MessageReceiver
+	dispatcher *buses.MessageDispatcher
 }
 
-func (b *StubBus) handleEvent(res http.ResponseWriter, req *http.Request) {
-	host := req.Host
-	glog.Infof("Received request for %s\n", host)
-	channel, namespace := b.splitChannelName(host)
-	subscriptions := b.monitor.Subscriptions(channel, namespace)
-	if subscriptions == nil {
-		res.WriteHeader(http.StatusNotFound)
-		return
+// NewStubBus creates a stub bus.
+func NewStubBus(ref *buses.BusReference, monitor *buses.Monitor) *StubBus {
+	bus := &StubBus{
+		ref:     ref,
+		monitor: monitor,
 	}
-
-	body, err := ioutil.ReadAll(req.Body)
-	if err != nil {
-		res.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	res.WriteHeader(http.StatusAccepted)
-
-	if len(*subscriptions) == 0 {
-		glog.Warningf("No subscribers for channel %q\n", channel)
-	}
-
-	safeHeaders := b.safeHeaders(req.Header)
-	safeHeaders.Set("x-bus", b.name)
-	safeHeaders.Set("x-channel", channel)
-	for _, subscription := range *subscriptions {
-		subscriber := b.resolveSubscriber(subscription, namespace)
-		glog.Infof("Sending to %q for %q\n", subscriber, channel)
-		go b.dispatchEvent(subscriber, body, safeHeaders)
-	}
+	bus.dispatcher = buses.NewMessageDispatcher()
+	bus.receiver = buses.NewMessageReceiver(bus.receiveMessage)
+	return bus
 }
 
-func (b *StubBus) dispatchEvent(subscriber string, body []byte, headers http.Header) {
-	url := url.URL{
-		Scheme: "http",
-		Host:   subscriber,
-		Path:   "/",
-	}
-	req, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewReader(body))
-	if err != nil {
-		glog.Errorf("Unable to create subscriber request %v", err)
-	}
-	req.Header = headers
-	_, err = b.client.Do(req)
-	if err != nil {
-		glog.Errorf("Unable to complete subscriber request %v", err)
-	}
-}
-
-func (b *StubBus) resolveSubscriber(subscription channelsv1alpha1.SubscriptionSpec, namespace string) string {
-	subscriber := subscription.Subscriber
-	if strings.Index(subscriber, ".") == -1 {
-		subscriber = fmt.Sprintf("%s.%s", subscriber, namespace)
-	}
-	return subscriber
-}
-
-func (b *StubBus) splitChannelName(host string) (string, string) {
-	chunks := strings.Split(host, ".")
-	channel := chunks[0]
-	namespace := chunks[1]
-	return channel, namespace
-}
-
-func (b *StubBus) safeHeaders(raw http.Header) http.Header {
-	safe := http.Header{}
-	for _, header := range b.forwardHeaders {
-		if value := raw.Get(header); value != "" {
-			safe.Set(header, value)
+// Run starts the bus's monitor and receiver. This function will block until
+// the stop channel receives a message.
+func (b *StubBus) Run(stopCh <-chan struct{}) {
+	go func() {
+		if err := b.monitor.Run(b.ref.Namespace, b.ref.Name, 1, stopCh); err != nil {
+			glog.Fatalf("Error running monitor: %s", err.Error())
 		}
-	}
-	return safe
+	}()
+	b.monitor.WaitForCacheSync(stopCh)
+	b.receiver.Run(stopCh)
 }
 
-func NewStubBus(name string, monitor *buses.Monitor) *StubBus {
-	forwardHeaders := []string{
-		"content-type",
-		"x-request-id",
-		"x-b3-traceid",
-		"x-b3-spanid",
-		"x-b3-parentspanid",
-		"x-b3-sampled",
-		"x-b3-flags",
-		"x-ot-span-context",
+// receiveMessage receives new messages for the bus from the message receiver,
+// looks up active subscriptions for the channel and dispatches the message to
+// each subscriber.
+func (b *StubBus) receiveMessage(channel *buses.ChannelReference, message *buses.Message) error {
+	subscriptions := b.monitor.Subscriptions(channel.Name, channel.Namespace)
+	if subscriptions == nil {
+		return buses.ErrUnknownChannel
 	}
-
-	bus := StubBus{
-		name:           name,
-		monitor:        monitor,
-		client:         &http.Client{},
-		forwardHeaders: forwardHeaders,
+	for _, subscription := range *subscriptions {
+		go b.dispatchMessage(subscription, channel, message)
 	}
+	return nil
+}
 
-	return &bus
+// dispatchMessage dispatches messages for the bus to a channel's subscriber.
+func (b *StubBus) dispatchMessage(subscription channelsv1alpha1.SubscriptionSpec, channel *buses.ChannelReference, message *buses.Message) {
+	subscriber := subscription.Subscriber
+	glog.Infof("Sending to %q for %q", subscriber, channel)
+	b.dispatcher.DispatchMessage(subscriber, channel.Namespace, message)
 }
 
 func main() {
+	defer glog.Flush()
+
 	flag.Parse()
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	busNamespace := os.Getenv("BUS_NAMESPACE")
-	busName := os.Getenv("BUS_NAME")
-	component := fmt.Sprintf("%s-%s", busName, buses.Dispatcher)
+	busReference := &buses.BusReference{
+		Namespace: os.Getenv("BUS_NAMESPACE"),
+		Name:      os.Getenv("BUS_NAME"),
+	}
+	component := fmt.Sprintf("%s-%s", busReference.Name, buses.Dispatcher)
 
 	monitor := buses.NewMonitor(component, masterURL, kubeconfig, buses.MonitorEventHandlerFuncs{
 		ProvisionFunc: func(channel *channelsv1alpha1.Channel, parameters buses.ResolvedParameters) error {
@@ -171,19 +124,8 @@ func main() {
 			return nil
 		},
 	})
-	bus := NewStubBus(busName, monitor)
-
-	go func() {
-		if err := monitor.Run(busNamespace, busName, threadsPerMonitor, stopCh); err != nil {
-			glog.Fatalf("Error running monitor: %s", err.Error())
-		}
-	}()
-
-	glog.Infoln("Starting web server")
-	http.HandleFunc("/", bus.handleEvent)
-	glog.Fatal(http.ListenAndServe(":8080", nil))
-
-	glog.Flush()
+	bus := NewStubBus(busReference, monitor)
+	bus.Run(stopCh)
 }
 
 func init() {
