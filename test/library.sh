@@ -143,7 +143,7 @@ function wait_until_feed_ready() {
     local reason="$(kubectl get -n $NAMESPACE feeds $NAME -o 'jsonpath={.status.conditions[0].reason}')"
     local status="$(kubectl get -n $NAMESPACE feeds $NAME -o 'jsonpath={.status.conditions[0].status}')"
 
-    if [ "$reason" = "FeedReady" ]; then
+    if [ "$reason" = "FeedSuccess" ]; then
        if [ "$status" = "True" ]; then
           return 0
        fi
