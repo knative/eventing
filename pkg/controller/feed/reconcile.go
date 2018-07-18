@@ -245,14 +245,26 @@ func (r *reconciler) updateStatus(u *feedsv1alpha1.Feed) error {
 	return nil
 }
 
-func (r *reconciler) setEventTypeOwnerReference(feed *feedsv1alpha1.Feed) error {
-
+func (r *reconciler) getEventTypeName(feed *feedsv1alpha1.Feed) string {
 	if len(feed.Spec.Trigger.EventType) > 0 {
-
-	} else {
-
+		return feed.Spec.Trigger.EventType
+	} else if len(feed.Spec.Trigger.ClusterEventType) > 0 {
+		return feed.Spec.Trigger.ClusterEventType
 	}
+	return ""
+}
 
+func (r *reconciler) setEventTypeOwnerReference(feed *feedsv1alpha1.Feed) error {
+	// TODO(nicholss): need to set the owner on a cluser level event type as well.
+	if len(feed.Spec.Trigger.EventType) > 0 {
+		return r.setNamespacedEventTypeOwnerReference(feed)
+	} else if len(feed.Spec.Trigger.ClusterEventType) > 0 {
+		return r.setClusterEventTypeOwnerReference(feed)
+	}
+	return nil
+}
+
+func (r *reconciler) setNamespacedEventTypeOwnerReference(feed *feedsv1alpha1.Feed) error {
 	et := &feedsv1alpha1.EventType{}
 	if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.EventType}, et); err != nil {
 		if errors.IsNotFound(err) {
@@ -272,13 +284,34 @@ func (r *reconciler) setEventTypeOwnerReference(feed *feedsv1alpha1.Feed) error 
 	return nil
 }
 
+func (r *reconciler) setClusterEventTypeOwnerReference(feed *feedsv1alpha1.Feed) error {
+	et := &feedsv1alpha1.ClusterEventType{}
+	if err := r.client.Get(context.TODO(), client.ObjectKey{Name: feed.Spec.Trigger.ClusterEventType}, et); err != nil {
+		if errors.IsNotFound(err) {
+			glog.Errorf("Feed ClusterEventType not found, will not set finalizer")
+			return nil
+		}
+		return err
+	}
+
+	blockOwnerDeletion := true
+	isController := false
+	ref := metav1.NewControllerRef(et, feedsv1alpha1.SchemeGroupVersion.WithKind("ClusterEventType"))
+	ref.BlockOwnerDeletion = &blockOwnerDeletion
+	ref.Controller = &isController
+
+	feed.SetOwnerReference(ref)
+	return nil
+}
+
 func (r *reconciler) resolveTrigger(feed *feedsv1alpha1.Feed) (sources.EventTrigger, error) {
 	trigger := feed.Spec.Trigger
 	resolved := sources.EventTrigger{
 		Resource:   trigger.Resource,
-		EventType:  trigger.EventType,
+		EventType:  r.getEventTypeName(feed),
 		Parameters: make(map[string]interface{}),
 	}
+
 	if trigger.Parameters != nil && trigger.Parameters.Raw != nil && len(trigger.Parameters.Raw) > 0 {
 		p := make(map[string]interface{})
 		if err := yaml.Unmarshal(trigger.Parameters.Raw, &p); err != nil {
@@ -346,13 +379,15 @@ func (r *reconciler) createJob(feed *feedsv1alpha1.Feed) (*batchv1.Job, error) {
 		return nil, err
 	}
 
-	source := &feedsv1alpha1.EventSource{}
-	if err = r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.Service}, source); err != nil {
+	// TODO(nicholss): this needs to be an EventType of ClusterEventType
+	et := &feedsv1alpha1.EventType{}
+	if err = r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.EventType}, et); err != nil {
 		return nil, err
 	}
 
-	et := &feedsv1alpha1.EventType{}
-	if err = r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.EventType}, et); err != nil {
+	// TODO(nicholss): this needs to be an EventSource or ClusterEventSource
+	source := &feedsv1alpha1.EventSource{}
+	if err = r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: et.Spec.EventSource}, source); err != nil {
 		return nil, err
 	}
 

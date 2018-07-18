@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	testFeedName             = "test-feeed"
+	testFeedName             = "test-feed"
 	testClusterEventTypeName = "test-clustereventtype"
 	testEventTypeName        = "test-eventtype"
 )
