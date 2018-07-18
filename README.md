@@ -12,4 +12,4 @@ produced.
     - with the ability to select a specific subset of events from a particular
     producer.
 
-For complete Knative Eventing documenttion, see [Knative Eventing](https://github.com/knative/docs/eventing) or [Knative docs](https://github.com/knative/docs) to learn about Knative.
+For complete Knative Eventing documentation, see [Knative Eventing](https://github.com/knative/docs/tree/master/eventing) or [Knative docs](https://github.com/knative/docs/) to learn about Knative.
