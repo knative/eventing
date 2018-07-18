@@ -1,8 +1,10 @@
 # gcp_pubsub_function
 
 A simple function that receives Google Cloud Pub Sub events and prints out the
-data field after decoding from base64 encoding. The function uses a Knative
-route as an endpoint. This is also example of where we make use of a Receive
+data field after decoding from base64 encoding. The Flow object creates underlying
+primitive resources underneath: Feed, Channel and Subscription and wires them
+together.
+This is also example of where we make use of a Receive
 Adapter that runs in the context of the namespace where the feed is created.
 Since we wanted to demonstrate pull events, we create a deployment that
 attaches to the specified GCP topic and then forwards them to the destination.
@@ -34,7 +36,7 @@ ko apply -f config/buses/stub/stub-bus.yaml
 
 Because the Receive Adapter needs to run a deployment, you need to specify what
 Service Account should be used in the target namespace for running the Receive
-Adapter. Feed.Spec has a field that allows you to specify this. By default it
+Adapter. FLow.Spec has a field that allows you to specify this. By default it
 uses "default" for feed which typically has no privileges, but this feed
 requires standing up a deployment, so you need to either use an existing
 Service Account with appropriate privileges or create a new one. This example
@@ -68,10 +70,10 @@ kubectl get configurations gcp-pubsub-function -o yaml
 # This will show the Revision that was created by our configuration:
 kubectl get revisions -l serving.knative.dev/configuration=gcp-pubsub-function -o yaml
 
-# This will show the available EventSources that you can generate a feed from:
+# This will show the available EventSources that you can generate a flow from:
 kubectl get eventsources -o yaml
 
-# This will show the available EventTypes that you can generate a feed from:
+# This will show the available EventTypes that you can generate a flow from:
 kubectl get eventtypes -o yaml
 ```
 
@@ -84,14 +86,14 @@ we created above, you need to create a Flow object. Modify
 want.
 
 For example, if I wanted to receive notifications to: project:
-`quantum-reducer-434` topic: `knative-demo`, my Feed object would look like the
+`quantum-reducer-434` topic: `knative-demo`, my flow object would look like the
 one below.
 
-You can also specify a different Service Account to use for the feed / receive
+You can also specify a different Service Account to use for the flow / receive
 watcher by changing the spec.serviceAccountName to something else.
 
 ```yaml
-apiVersion: feeds.knative.dev/v1alpha1
+apiVersion: flows.knative.dev/v1alpha1
 kind: Flow
 metadata:
   name: gcppubsub-example
@@ -166,13 +168,13 @@ $ kubectl logs gcp-pubsub-function-00001-deployment-68864b8c7d-rgx2w user-contai
 2018/05/22 19:16:59 Received data: "test message"
 ```
 
-## Removing a feed
+## Removing a flow
 
-Remove the feed and things get cleaned up (including removing the
+Remove the flow and things get cleaned up (including removing the
 subscription to GCP PubSub):
 
 ```shell
-kubectl delete feeds gcppubsub-example
+kubectl delete flows gcppubsub-example
 ```
 
 And now your subscription from above has been removed:
