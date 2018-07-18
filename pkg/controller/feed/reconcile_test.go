@@ -67,7 +67,7 @@ var testCases = []controllertesting.TestCase{
 		ReconcileKey: "test/test-feed",
 		WantPresent: []runtime.Object{
 			getStartInProgressFeed(),
-			getNewFeedJob(),
+			getNewStartJob(),
 		},
 	},
 	{
@@ -77,12 +77,12 @@ var testCases = []controllertesting.TestCase{
 			getEventType(),
 			getRoute(),
 			getStartInProgressFeed(),
-			getNewFeedJob(),
+			getNewStartJob(),
 		},
 		ReconcileKey: "test/test-feed",
 		WantPresent: []runtime.Object{
 			getStartInProgressFeed(),
-			getNewFeedJob(),
+			getNewStartJob(),
 		},
 	},
 	{
@@ -331,7 +331,7 @@ func getDeletedStoppedFeed() *feedsv1alpha1.Feed {
 	return feed
 }
 
-func getNewFeedJob() *batchv1.Job {
+func getNewStartJob() *batchv1.Job {
 	jobName := resources.StartJobName(getNewFeed())
 	return &batchv1.Job{
 		TypeMeta: jobType(),
@@ -402,7 +402,7 @@ func getNewFeedJob() *batchv1.Job {
 }
 
 func getInProgressStartFeedJob() *batchv1.Job {
-	job := getNewFeedJob()
+	job := getNewStartJob()
 	// This is normally set by a webhook. Set it here
 	// to simulate. TODO use a reactor when that's
 	// supported.
@@ -463,7 +463,7 @@ func getCompletedStartFeedJobPod() *corev1.Pod {
 }
 
 func getNewStopJob() *batchv1.Job {
-	job := getNewFeedJob()
+	job := getNewStartJob()
 	job.Name = resources.StopJobName(getDeletedStartedFeed())
 
 	job.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{{
