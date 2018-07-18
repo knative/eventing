@@ -40,7 +40,7 @@ var _ reconcile.Reconciler = &reconciler{}
 
 // ProvideController returns a Feed controller.
 func ProvideController(mrg manager.Manager) (controller.Controller, error) {
-	// Setup a new controller to Reconcile Routes
+	// Setup a new controller to Reconcile Feeds.
 	c, err := controller.New(controllerAgentName, mrg, controller.Options{
 		Reconciler: &reconciler{
 			recorder: mrg.GetRecorder(controllerAgentName),
@@ -50,12 +50,12 @@ func ProvideController(mrg manager.Manager) (controller.Controller, error) {
 		return nil, err
 	}
 
-	// Watch Feed events and enqueue Feed object key
+	// Watch Feed events and enqueue Feed object key.
 	if err := c.Watch(&source.Kind{Type: &feedsv1alpha1.Feed{}}, &handler.EnqueueRequestForObject{}); err != nil {
 		return nil, err
 	}
 
-	// Watch Jobs and enqueue owning Feed key
+	// Watch Jobs and enqueue owning Feed key.
 	if err := c.Watch(&source.Kind{Type: &batchv1.Job{}},
 		&handler.EnqueueRequestForOwner{OwnerType: &feedsv1alpha1.Feed{}, IsController: true}); err != nil {
 		return nil, err

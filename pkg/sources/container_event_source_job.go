@@ -63,7 +63,7 @@ const (
 	FeedServiceAccountKey string = "FEED_SERVICE_ACCOUNT"
 )
 
-// MakeJob creates a Job to complete a complete a start or stop operation for a Feed.
+// MakeJob creates a Job to complete a start or stop operation for a Feed.
 func MakeJob(feed *v1alpha1.Feed, spec *v1alpha1.EventSourceSpec, op FeedOperation, trigger EventTrigger, route string, feedContext FeedContext) (*batchv1.Job, error) {
 	labels := map[string]string{
 		"app": "feedlifecyclepod",
