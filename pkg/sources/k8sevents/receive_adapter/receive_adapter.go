@@ -130,20 +130,12 @@ func createSelfLink(o corev1.ObjectReference) string {
 //	&Event{
 //		ObjectMeta:k8s_io_apimachinery_pkg_apis_meta_v1.ObjectMeta{
 //			Name:k8s-events-00001.1542495ae3f5fbba,
-//			GenerateName:,
 //			Namespace:default,
 //			SelfLink:/api/v1/namespaces/default/events/k8s-events-00001.1542495ae3f5fbba,
 //			UID:fc2fffb3-8a12-11e8-8874-42010a8a0fd9,
 //			ResourceVersion:2729,
 //			Generation:0,
 //			CreationTimestamp:2018-07-17 22:44:37 +0000 UTC,
-//			DeletionTimestamp:<nil>,
-//			DeletionGracePeriodSeconds:nil,
-//			Labels:map[string]string{},
-//			Annotations:map[string]string{},
-//			OwnerReferences:[],Finalizers:[],
-//			ClusterName:,
-//			Initializers:nil,
 //		},
 //		InvolvedObject:ObjectReference{
 //			Kind:Revision,
@@ -152,31 +144,24 @@ func createSelfLink(o corev1.ObjectReference) string {
 //			UID:f5c19306-8a12-11e8-8874-42010a8a0fd9,
 //			APIVersion:serving.knative.dev,
 //			ResourceVersion:42683,
-//			FieldPath:,
 //		},
 //		Reason:RevisionReady,
 //		Message:Revision becomes ready upon endpoint "k8s-events-00001-service" becoming ready,
 //		Source:EventSource{
 //			Component:revision-controller,
-//			Host:,
 //		},
 //		FirstTimestamp:2018-07-17 22:44:37 +0000 UTC,
 //		LastTimestamp:2018-07-17 22:49:40 +0000 UTC,
 //		Count:91,
 //		Type:Normal,
 //		EventTime:0001-01-01 00:00:00 +0000 UTC,
-//		Series:nil,
-//		Action:,
-//		Related:nil,
-//		ReportingController:,
-//		ReportingInstance:,
 //	}
 func cloudEventsContext(m *corev1.Event) *event.EventContext {
 	return &event.EventContext{
 		// Events are themselves object and have a unique UUID. Could also have used the UID
 		CloudEventsVersion: event.CloudEventsVersion,
-		EventType:          "io.k8s.object.event-add",
-		EventID:            m.ObjectMeta.Name,
+		EventType:          "dev.knative.k8s.event.create",
+		EventID:            m.ObjectMeta.UID,
 		Source:             createSelfLink(m.InvolvedObject),
 		EventTime:          m.ObjectMeta.CreationTimestamp.Time,
 	}
@@ -187,7 +172,9 @@ func postMessage(target string, m *corev1.Event) error {
 
 	URL := fmt.Sprintf("http://%s/", target)
 	log.Printf("Posting to %q", URL)
-	req, err := event.NewRequest(URL, m, *ctx)
+	// Explicitly using Binary encoding so that Istio, et. al. can better inspect
+	// event metadata.
+	req, err := event.Binary.NewRequest(URL, m, *ctx)
 	if err != nil {
 		log.Printf("Failed to create http request: %s", err)
 		return err
