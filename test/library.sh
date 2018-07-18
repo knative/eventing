@@ -153,6 +153,7 @@ function wait_until_feed_ready() {
   done
   echo -e "\n\nERROR: timeout waiting for feed $NAMESPACE/$NAME to be ready"
   kubectl get -n $NAMESPACE feeds $NAME $1 -oyaml
+  kubectl get -n $NAMESPACE jobs $NAME-start $1 -oyaml
   return 1
 }
 
