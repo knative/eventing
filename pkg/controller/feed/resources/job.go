@@ -23,6 +23,8 @@ import (
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	"github.com/knative/eventing/pkg/sources"
 
+	"fmt"
+
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -103,6 +105,15 @@ func IsJobFailed(job *batchv1.Job) bool {
 		}
 	}
 	return false
+}
+
+func JobFailedMessage(job *batchv1.Job) string {
+	for _, c := range job.Status.Conditions {
+		if c.Type == batchv1.JobFailed && c.Status == corev1.ConditionTrue {
+			return fmt.Sprintf("[%s] %s", c.Reason, c.Message)
+		}
+	}
+	return ""
 }
 
 // makePodTemplate creates a pod template for a feed stop or start Job.

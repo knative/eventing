@@ -128,7 +128,7 @@ func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
 				Type:    feedsv1alpha1.FeedConditionReady,
 				Status:  corev1.ConditionFalse,
 				Reason:  "StartJobFailed",
-				Message: "TODO replace with job failure message",
+				Message: fmt.Sprintf("Job failed with %s", resources.JobFailedMessage(job)),
 			})
 		}
 
@@ -192,7 +192,7 @@ func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
 				Type:    feedsv1alpha1.FeedConditionReady,
 				Status:  corev1.ConditionFalse,
 				Reason:  "StopJobFailed",
-				Message: "TODO replace with job failure message",
+				Message: fmt.Sprintf("Job failed with %s", resources.JobFailedMessage(job)),
 			})
 		}
 	}

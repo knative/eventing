@@ -296,7 +296,7 @@ func getStartFailedFeed() *feedsv1alpha1.Feed {
 		Type:    feedsv1alpha1.FeedConditionReady,
 		Status:  corev1.ConditionFalse,
 		Reason:  "StartJobFailed",
-		Message: "TODO replace with job failure message",
+		Message: "Job failed with [] ",
 	})
 	return feed
 }
