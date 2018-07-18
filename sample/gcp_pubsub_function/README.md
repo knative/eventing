@@ -10,34 +10,24 @@ attaches to the specified GCP topic and then forwards them to the destination.
 ## Prerequisites
 
 1. [Setup your development environment](../../DEVELOPMENT.md#getting-started)
-1. [Start Knative](../../README.md#start-knative)
-1. Decide on the DNS name that git can then call. Update knative/serving/config-domain.yaml domainSuffix.
-For example I used aikas.org as my hostname, so my config-domain.yaml looks like so:
-
-    ```yaml
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: config-domain
-      namespace: knative-serving
-    data:
-      aikas.org: |
-    ```
-
-    If you were already running the Knative controllers, you will need to
-    re-apply the configmap.
-
-1. Install GCP Pub Sub as an event source
+2. [Start Knative Serving](../../README.md#start-knative)
+3. Install GCP Pub Sub as an event source
 
     ```shell
     ko apply -f pkg/sources/gcppubsub/
     ```
-
-1. Create a GCP Pub Sub topic
+4. Create a GCP Pub Sub topic
 
     ```shell
     gcloud pubsub topics create knative-demo
     ```
+
+5. Create a cluster bus. You **must** change the Kind to ClusterBus in stub-sub.yaml file.
+
+```
+ko apply -f config/buses/stub/stub-bus.yaml
+```
+
 
 
 ## Creating a Service Account
@@ -85,29 +75,12 @@ kubectl get eventsources -o yaml
 kubectl get eventtypes -o yaml
 ```
 
-To make this service accessible to GCP, we first need to determine its ingress
-address (might have to wait a little while until 'EXTERNAL-IP' gets assigned):
 
-```shell
-kubectl get svc knative-ingressgateway -n istio-system
-
-NAME                     TYPE           CLUSTER-IP     EXTERNAL-IP      PORT(S)                                      AGE
-knative-ingressgateway   LoadBalancer   10.23.247.74   35.203.155.229   80:32380/TCP,443:32390/TCP,32400:32400/TCP   2d
-```
-
-Once the `EXTERNAL-IP` gets assigned to the cluster, you need to assign a DNS name
-for that IP address. This DNS address needs to be:
-`gcp-pubsub-function.default.<domainsuffix you created>` so for me, I would
-create a DNS entry from: `gcp-pubsub-function.default.aikas.org` pointing to
-`35.203.155.229`. See also, [Using GCP
-DNS](https://support.google.com/domains/answer/3290350).
-
-So, you'd need to create an A record for
-`gcp-pubsub-function.default.aikas.org` pointing to `35.203.155.229`.
+## Creating a Flow
 
 To now send events to the `gcp_pubsub_function` for GCP PubSub messages with the function
-we created above, you need to create a Feed object. Modify
-`sample/gcp_pubsub_function/feed.yaml` to specify the topic and project id you
+we created above, you need to create a Flow object. Modify
+`sample/gcp_pubsub_function/flow.yaml` to specify the topic and project id you
 want.
 
 For example, if I wanted to receive notifications to: project:
@@ -119,7 +92,7 @@ watcher by changing the spec.serviceAccountName to something else.
 
 ```yaml
 apiVersion: feeds.knative.dev/v1alpha1
-kind: Feed
+kind: Flow
 metadata:
   name: gcppubsub-example
   namespace: default
@@ -133,13 +106,16 @@ spec:
       projectID: quantum-reducer-434
       topic: knative-demo
   action:
-    routeName: gcp-pubsub-function
+    target:
+      kind: Route
+      apiVersion: serving.knative.dev/v1alpha1
+      name: gcp-pubsub-function
 ```
 
-Then create the feed so that you can see changes:
+Then create the flow so that you can see changes:
 
 ```shell
- ko apply -f sample/gcp_pubsub_function/feed.yaml
+ ko apply -f sample/gcp_pubsub_function/flow.yaml
 ```
 
 

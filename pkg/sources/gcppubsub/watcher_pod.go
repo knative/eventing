@@ -46,16 +46,14 @@ func MakeWatcherDeployment(namespace string, deploymentName string, serviceAccou
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labels,
 					// Inject Istio so any connection made from the receive adapter
-					// goes through and is enforced by Istio. Currently for some
-					// reason turning this on means that the container can not
-					// reach GCP so leaving this false for now.
-					Annotations: map[string]string{sidecarIstioInjectAnnotation: "false"},
+					// goes through and is enforced by Istio.
+					Annotations: map[string]string{sidecarIstioInjectAnnotation: "true"},
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: serviceAccount,
 					Containers: []corev1.Container{
 						corev1.Container{
-							Name:            deploymentName,
+							Name:            "receive-adapter",
 							Image:           image,
 							ImagePullPolicy: "Always",
 							Env: []corev1.EnvVar{
