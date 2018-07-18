@@ -1,8 +1,10 @@
 # gcp_pubsub_function
 
 A simple function that receives Google Cloud Pub Sub events and prints out the
-data field after decoding from base64 encoding. The function uses a Knative
-route as an endpoint. This is also example of where we make use of a Receive
+data field after decoding from base64 encoding. The Flow object creates underlying
+primitive resources underneath: Feed, Channel and Subscription and wires them
+together.
+This is also example of where we make use of a Receive
 Adapter that runs in the context of the namespace where the feed is created.
 Since we wanted to demonstrate pull events, we create a deployment that
 attaches to the specified GCP topic and then forwards them to the destination.
@@ -10,41 +12,31 @@ attaches to the specified GCP topic and then forwards them to the destination.
 ## Prerequisites
 
 1. [Setup your development environment](../../DEVELOPMENT.md#getting-started)
-1. [Start Knative](../../README.md#start-knative)
-1. Decide on the DNS name that git can then call. Update knative/serving/config-domain.yaml domainSuffix.
-For example I used aikas.org as my hostname, so my config-domain.yaml looks like so:
-
-    ```yaml
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: config-domain
-      namespace: knative-serving
-    data:
-      aikas.org: |
-    ```
-
-    If you were already running the Knative controllers, you will need to
-    re-apply the configmap.
-
-1. Install GCP Pub Sub as an event source
+2. [Start Knative Serving](../../README.md#start-knative)
+3. Install GCP Pub Sub as an event source
 
     ```shell
     ko apply -f pkg/sources/gcppubsub/
     ```
-
-1. Create a GCP Pub Sub topic
+4. Create a GCP Pub Sub topic
 
     ```shell
     gcloud pubsub topics create knative-demo
     ```
+
+5. Create a cluster bus. You **must** change the Kind to ClusterBus in stub-sub.yaml file.
+
+```
+ko apply -f config/buses/stub/stub-bus.yaml
+```
+
 
 
 ## Creating a Service Account
 
 Because the Receive Adapter needs to run a deployment, you need to specify what
 Service Account should be used in the target namespace for running the Receive
-Adapter. Feed.Spec has a field that allows you to specify this. By default it
+Adapter. FLow.Spec has a field that allows you to specify this. By default it
 uses "default" for feed which typically has no privileges, but this feed
 requires standing up a deployment, so you need to either use an existing
 Service Account with appropriate privileges or create a new one. This example
@@ -78,48 +70,31 @@ kubectl get configurations gcp-pubsub-function -o yaml
 # This will show the Revision that was created by our configuration:
 kubectl get revisions -l serving.knative.dev/configuration=gcp-pubsub-function -o yaml
 
-# This will show the available EventSources that you can generate a feed from:
+# This will show the available EventSources that you can generate a flow from:
 kubectl get eventsources -o yaml
 
-# This will show the available EventTypes that you can generate a feed from:
+# This will show the available EventTypes that you can generate a flow from:
 kubectl get eventtypes -o yaml
 ```
 
-To make this service accessible to GCP, we first need to determine its ingress
-address (might have to wait a little while until 'EXTERNAL-IP' gets assigned):
 
-```shell
-kubectl get svc knative-ingressgateway -n istio-system
-
-NAME                     TYPE           CLUSTER-IP     EXTERNAL-IP      PORT(S)                                      AGE
-knative-ingressgateway   LoadBalancer   10.23.247.74   35.203.155.229   80:32380/TCP,443:32390/TCP,32400:32400/TCP   2d
-```
-
-Once the `EXTERNAL-IP` gets assigned to the cluster, you need to assign a DNS name
-for that IP address. This DNS address needs to be:
-`gcp-pubsub-function.default.<domainsuffix you created>` so for me, I would
-create a DNS entry from: `gcp-pubsub-function.default.aikas.org` pointing to
-`35.203.155.229`. See also, [Using GCP
-DNS](https://support.google.com/domains/answer/3290350).
-
-So, you'd need to create an A record for
-`gcp-pubsub-function.default.aikas.org` pointing to `35.203.155.229`.
+## Creating a Flow
 
 To now send events to the `gcp_pubsub_function` for GCP PubSub messages with the function
-we created above, you need to create a Feed object. Modify
-`sample/gcp_pubsub_function/feed.yaml` to specify the topic and project id you
+we created above, you need to create a Flow object. Modify
+`sample/gcp_pubsub_function/flow.yaml` to specify the topic and project id you
 want.
 
 For example, if I wanted to receive notifications to: project:
-`quantum-reducer-434` topic: `knative-demo`, my Feed object would look like the
+`quantum-reducer-434` topic: `knative-demo`, my flow object would look like the
 one below.
 
-You can also specify a different Service Account to use for the feed / receive
+You can also specify a different Service Account to use for the flow / receive
 watcher by changing the spec.serviceAccountName to something else.
 
 ```yaml
-apiVersion: feeds.knative.dev/v1alpha1
-kind: Feed
+apiVersion: flows.knative.dev/v1alpha1
+kind: Flow
 metadata:
   name: gcppubsub-example
   namespace: default
@@ -133,13 +108,16 @@ spec:
       projectID: quantum-reducer-434
       topic: knative-demo
   action:
-    routeName: gcp-pubsub-function
+    target:
+      kind: Route
+      apiVersion: serving.knative.dev/v1alpha1
+      name: gcp-pubsub-function
 ```
 
-Then create the feed so that you can see changes:
+Then create the flow so that you can see changes:
 
 ```shell
- ko apply -f sample/gcp_pubsub_function/feed.yaml
+ ko apply -f sample/gcp_pubsub_function/flow.yaml
 ```
 
 
@@ -190,13 +168,13 @@ $ kubectl logs gcp-pubsub-function-00001-deployment-68864b8c7d-rgx2w user-contai
 2018/05/22 19:16:59 Received data: "test message"
 ```
 
-## Removing a feed
+## Removing a flow
 
-Remove the feed and things get cleaned up (including removing the
+Remove the flow and things get cleaned up (including removing the
 subscription to GCP PubSub):
 
 ```shell
-kubectl delete feeds gcppubsub-example
+kubectl delete flows gcppubsub-example
 ```
 
 And now your subscription from above has been removed:
