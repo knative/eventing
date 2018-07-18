@@ -185,10 +185,7 @@ type FeedConditionType string
 
 const (
 	// FeedConditionReady specifies that the feed has started successfully.
-	FeedConditionReady   FeedConditionType = "Ready"
-	FeedConditionStarted FeedConditionType = "Started"
-	FeedConditionFailed  FeedConditionType = "Failed"
-	FeedConditionInvalid FeedConditionType = "Invalid"
+	FeedConditionReady FeedConditionType = "Ready"
 )
 
 // FeedCondition defines a readiness condition for a Feed.
