@@ -371,8 +371,10 @@ func getNewStartJob() *batchv1.Job {
 								},
 							))),
 						}, {
-							Name:  string(resources.EnvVarContext),
-							Value: "",
+							Name: string(resources.EnvVarContext),
+							Value: base64.StdEncoding.EncodeToString(bytesOrDie(json.Marshal(
+								sources.FeedContext{},
+							))),
 						}, {
 							Name:  string(resources.EnvVarEventSourceParameters),
 							Value: "",

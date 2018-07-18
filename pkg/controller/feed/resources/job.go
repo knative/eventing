@@ -114,20 +114,28 @@ func makePodTemplate(feed *feedsv1alpha1.Feed, source *feedsv1alpha1.EventSource
 		op = OperationStopFeed
 	}
 
-	var encodedFeedContext string
-	if rawExt := feed.Status.FeedContext; rawExt != nil {
-		if rawExt.Raw != nil && len(rawExt.Raw) > 0 {
-			var ctx sources.FeedContext
-			if err := json.Unmarshal(rawExt.Raw, &ctx.Context); err != nil {
-				return nil, err
-			}
-			marshaledCtx, err := json.Marshal(ctx)
-			if err != nil {
-				return nil, err
-			}
-			encodedFeedContext = base64.StdEncoding.EncodeToString(marshaledCtx)
+	var marshaledFeedContext []byte
+	var err error
+	// Check for an existing RawExtension object in the Feed status
+	if rawExt := feed.Status.FeedContext; rawExt != nil && rawExt.Raw != nil && len(rawExt.Raw) > 0 {
+		var ctx sources.FeedContext
+		if err = json.Unmarshal(rawExt.Raw, &ctx.Context); err != nil {
+			return nil, err
+		}
+		marshaledFeedContext, err = json.Marshal(ctx)
+		if err != nil {
+			return nil, err
 		}
 	}
+	// If no context was present, marshal an empty context because the event
+	// source wrapper expects it to be valid json.
+	if len(marshaledFeedContext) == 0 {
+		marshaledFeedContext, err = json.Marshal(sources.FeedContext{})
+		if err != nil {
+			return nil, err
+		}
+	}
+	encodedFeedContext := base64.StdEncoding.EncodeToString(marshaledFeedContext)
 
 	marshalledTrigger, err := json.Marshal(trigger)
 	if err != nil {
