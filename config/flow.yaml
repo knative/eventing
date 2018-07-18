@@ -21,4 +21,5 @@ spec:
   names:
     kind: Flow
     plural: flows
+    singular: flow
   scope: Namespaced
