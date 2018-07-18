@@ -120,14 +120,14 @@ func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
 				Type:    feedsv1alpha1.FeedConditionReady,
 				Status:  corev1.ConditionTrue,
-				Reason:  "StartJobComplete",
+				Reason:  "FeedSuccess",
 				Message: "start job succeeded",
 			})
 		} else if resources.IsJobFailed(job) {
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
 				Type:    feedsv1alpha1.FeedConditionReady,
 				Status:  corev1.ConditionFalse,
-				Reason:  "StartJobFailed",
+				Reason:  "FeedFailed",
 				Message: fmt.Sprintf("Job failed with %s", resources.JobFailedMessage(job)),
 			})
 		}

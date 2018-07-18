@@ -284,7 +284,7 @@ func getStartedFeed() *feedsv1alpha1.Feed {
 	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
 		Type:    feedsv1alpha1.FeedConditionReady,
 		Status:  corev1.ConditionTrue,
-		Reason:  "StartJobComplete",
+		Reason:  "FeedSuccess",
 		Message: "start job succeeded",
 	})
 	return feed
@@ -295,7 +295,7 @@ func getStartFailedFeed() *feedsv1alpha1.Feed {
 	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
 		Type:    feedsv1alpha1.FeedConditionReady,
 		Status:  corev1.ConditionFalse,
-		Reason:  "StartJobFailed",
+		Reason:  "FeedFailed",
 		Message: "Job failed with [] ",
 	})
 	return feed
