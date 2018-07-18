@@ -21,4 +21,5 @@ spec:
   names:
     kind: EventSource
     plural: eventsources
+    singular: eventsource
   scope: Namespaced

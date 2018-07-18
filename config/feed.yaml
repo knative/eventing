@@ -21,4 +21,5 @@ spec:
   names:
     kind: Feed
     plural: feeds
+    singular: feed
   scope: Namespaced
