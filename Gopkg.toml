@@ -54,21 +54,21 @@ required = [
   name = "gopkg.in/yaml.v2"
   version = "v2.2.1"
 
-[[constraint]]
+[[override]]
   name = "k8s.io/api"
-  version = "kubernetes-1.10.0"
+  version = "kubernetes-1.10.1"
 
-[[constraint]]
+[[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.10.0"
+  version = "kubernetes-1.10.1"
 
-[[constraint]]
+[[override]]
   name = "k8s.io/code-generator"
-  version = "kubernetes-1.10.0"
+  version = "kubernetes-1.10.1"
 
-[[constraint]]
+[[override]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.10.0"
+  version = "kubernetes-1.10.1"
 
 [[override]]
   name = "github.com/golang/protobuf"

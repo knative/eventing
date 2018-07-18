@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -235,4 +236,64 @@ func (fs *FeedStatus) RemoveCondition(t FeedConditionType) {
 		}
 	}
 	fs.Conditions = conditions
+}
+
+func (fs *FeedStatus) InitializeConditions() {
+	for _, cond := range []FeedConditionType{
+		FeedConditionReady,
+	} {
+		if fc := fs.GetCondition(cond); fc == nil {
+			fs.SetCondition(&FeedCondition{
+				Type:   cond,
+				Status: corev1.ConditionUnknown,
+			})
+		}
+	}
+}
+
+// AddFinalizer adds the given value to the list of finalizers if it doesn't
+// already exist.
+func (f *Feed) AddFinalizer(value string) {
+	finalizers := sets.NewString(f.GetFinalizers()...)
+	finalizers.Insert(value)
+	f.SetFinalizers(finalizers.List())
+}
+
+// RemoveFinalizer removes the given value from the list of finalizers if it
+// exists.
+func (f *Feed) RemoveFinalizer(value string) {
+	finalizers := sets.NewString(f.GetFinalizers()...)
+	finalizers.Delete(value)
+	if finalizers.Len() == 0 {
+		// if no finalizers, set to nil list, not an empty slice.
+		f.SetFinalizers([]string(nil))
+	} else {
+		f.SetFinalizers(finalizers.List())
+	}
+}
+
+// HasFinalizer returns true if a finalizer exists, or false otherwise.
+func (f *Feed) HasFinalizer(value string) bool {
+	for _, f := range f.GetFinalizers() {
+		if f == value {
+			return true
+		}
+	}
+	return false
+}
+
+// SetOwnerReference adds the given owner reference to the list of owner
+// references, replacing the corresponding owner reference if it exists.
+func (f *Feed) SetOwnerReference(or *metav1.OwnerReference) {
+	var refs []metav1.OwnerReference
+
+	for _, ref := range f.GetOwnerReferences() {
+		if !(ref.APIVersion == or.APIVersion &&
+			ref.Kind == or.Kind &&
+			ref.Name == or.Name) {
+			refs = append(refs, ref)
+		}
+	}
+	refs = append(refs, *or)
+	f.SetOwnerReferences(refs)
 }

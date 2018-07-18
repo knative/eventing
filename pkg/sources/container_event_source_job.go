@@ -64,20 +64,20 @@ const (
 )
 
 // MakeJob creates a Job to complete a start or stop operation for a Feed.
-func MakeJob(feed *v1alpha1.Feed, namespace string, serviceAccountName string, jobName string, spec *v1alpha1.EventSourceSpec, op FeedOperation, trigger EventTrigger, route string, feedContext FeedContext) (*batchv1.Job, error) {
+func MakeJob(feed *v1alpha1.Feed, spec *v1alpha1.EventSourceSpec, op FeedOperation, trigger EventTrigger, route string, feedContext FeedContext) (*batchv1.Job, error) {
 	labels := map[string]string{
 		"app": "feedlifecyclepod",
 	}
 
-	podTemplate, err := makePodTemplate(feed, namespace, serviceAccountName, jobName, spec, op, trigger, route, feedContext)
+	podTemplate, err := makePodTemplate(feed, spec, op, trigger, route, feedContext)
 	if err != nil {
 		return nil, err
 	}
 
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            jobName,
-			Namespace:       namespace,
+			Name:            "feedlet",
+			Namespace:       feed.Namespace,
 			Labels:          labels,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(feed, v1alpha1.SchemeGroupVersion.WithKind("Feed"))},
 		},
@@ -88,7 +88,7 @@ func MakeJob(feed *v1alpha1.Feed, namespace string, serviceAccountName string, j
 }
 
 // makePodTemplate creates a pod template for starting or stopping a feed.
-func makePodTemplate(feed *v1alpha1.Feed, namespace string, serviceAccountName string, podName string, spec *v1alpha1.EventSourceSpec, op FeedOperation, trigger EventTrigger, route string, feedContext FeedContext) (*corev1.PodTemplateSpec, error) {
+func makePodTemplate(feed *v1alpha1.Feed, spec *v1alpha1.EventSourceSpec, op FeedOperation, trigger EventTrigger, route string, feedContext FeedContext) (*corev1.PodTemplateSpec, error) {
 	marshalledFeedContext, err := json.Marshal(feedContext)
 	if err != nil {
 		return nil, err
@@ -117,11 +117,11 @@ func makePodTemplate(feed *v1alpha1.Feed, namespace string, serviceAccountName s
 			},
 		},
 		Spec: corev1.PodSpec{
-			ServiceAccountName: serviceAccountName,
+			ServiceAccountName: feed.Spec.ServiceAccountName,
 			RestartPolicy:      corev1.RestartPolicyNever,
 			Containers: []corev1.Container{
 				corev1.Container{
-					Name:            podName,
+					Name:            "feedlet",
 					Image:           spec.Image,
 					ImagePullPolicy: "Always",
 					Env: []corev1.EnvVar{
