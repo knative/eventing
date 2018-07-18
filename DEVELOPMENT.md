@@ -45,8 +45,7 @@ To check out this repository:
 _Adding the `upstream` remote sets you up nicely for regularly [syncing your
 fork](https://help.github.com/articles/syncing-a-fork/)._
 
-Once you reach this point you are ready to do a full build and deploy as
-described [here](./README.md#start-knative).
+Once you reach this point you are ready to do a full build and deploy as follows.
 
 ## Starting Eventing Controller
 
@@ -91,8 +90,7 @@ controller is simply:
 ko apply -f config/controller.yaml
 ```
 
-Or you can [clean it up completely](./README.md#clean-up) and [completely
-redeploy `Knative`](./README.md#start-knative).
+Or you can [clean it up completely](#clean-up) and start again.
 
 ## Tests
 
@@ -101,7 +99,7 @@ test docs](./test/README.md).
 
 ## Clean up
 
-You can delete all of the service components with:
+You can delete `Knative Eventing` with:
 
 ```shell
 ko delete -f config/
