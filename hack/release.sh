@@ -28,8 +28,11 @@ readonly EVENTING_RELEASE_GCR
 # Local generated yaml file.
 readonly OUTPUT_YAML=release-eventing.yaml
 readonly OUTPUT_YAML_BUS_STUB=release-eventing-bus-stub.yaml
+readonly OUTPUT_YAML_CLUSTERBUS_STUB=release-eventing-clusterbus-stub.yaml
 readonly OUTPUT_YAML_BUS_GCPPUBSUB=release-eventing-bus-gcppubsub.yaml
+readonly OUTPUT_YAML_CLUSTERBUS_GCPPUBSUB=release-eventing-clusterbus-gcppubsub.yaml
 readonly OUTPUT_YAML_BUS_KAFKA=release-eventing-bus-kafka.yaml
+readonly OUTPUT_YAML_CLUSTERBUS_KAFKA=release-eventing-clusterbus-kafka.yaml
 readonly OUTPUT_YAML_SOURCE_K8SEVENTS=release-eventing-source-k8sevents.yaml
 readonly OUTPUT_YAML_SOURCE_GCPPUBSUB=release-eventing-source-gcppubsub.yaml
 readonly OUTPUT_YAML_SOURCE_GITHUB=release-eventing-source-github.yaml
@@ -58,6 +61,15 @@ function publish_yaml() {
   if (( TAG_RELEASE )); then
     gsutil cp $1 gs://${EVENTING_RELEASE_GCS}/previous/${TAG}/
   fi
+}
+
+# Convert a Bus to a ClusterBus
+# Parameters: $1 - yaml file containing a Bus.
+#             $2 - yaml file to create containing a ClusterBus.
+function make_clusterbus() {
+  local BUS_YAML=$1
+  local CLUSTERBUS_YAML=$2
+  sed -e 's/^kind: Bus$/kind: ClusterBus/g' $BUS_YAML > $CLUSTERBUS_YAML
 }
 
 # Script entry point.
@@ -131,14 +143,20 @@ tag_knative_images ${OUTPUT_YAML} ${TAG}
 echo "Building Knative Eventing - Stub Bus"
 ko resolve ${KO_FLAGS} -f config/buses/stub/ >> ${OUTPUT_YAML_BUS_STUB}
 tag_knative_images ${OUTPUT_YAML_BUS_STUB} ${TAG}
+make_clusterbus ${OUTPUT_YAML_BUS_STUB} ${OUTPUT_YAML_CLUSTERBUS_STUB}
+tag_knative_images ${OUTPUT_YAML_CLUSTERBUS_STUB} ${TAG}
 
 echo "Building Knative Eventing - GCP Cloud Pub/Sub Bus"
 ko resolve ${KO_FLAGS} -f config/buses/gcppubsub/ >> ${OUTPUT_YAML_BUS_GCPPUBSUB}
 tag_knative_images ${OUTPUT_YAML_BUS_GCPPUBSUB} ${TAG}
+make_clusterbus ${OUTPUT_YAML_BUS_GCPPUBSUB} ${OUTPUT_YAML_CLUSTERBUS_GCPPUBSUB}
+tag_knative_images ${OUTPUT_YAML_CLUSTERBUS_GCPPUBSUB} ${TAG}
 
 echo "Building Knative Eventing - Kafka Bus"
 ko resolve ${KO_FLAGS} -f config/buses/kafka/ >> ${OUTPUT_YAML_BUS_KAFKA}
 tag_knative_images ${OUTPUT_YAML_BUS_KAFKA} ${TAG}
+make_clusterbus ${OUTPUT_YAML_BUS_KAFKA} ${OUTPUT_YAML_CLUSTERBUS_KAFKA}
+tag_knative_images ${OUTPUT_YAML_CLUSTERBUS_KAFKA} ${TAG}
 
 echo "Building Knative Eventing - K8s Events Source"
 ko resolve ${KO_FLAGS} -f pkg/sources/k8sevents/ >> ${OUTPUT_YAML_SOURCE_K8SEVENTS}
