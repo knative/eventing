@@ -11,16 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: bus
----
 apiVersion: channels.knative.dev/v1alpha1
 kind: Bus
 metadata:
   name: awssqs
-  namespace: bus
 spec:
   provisioner:
     name: provisioner
