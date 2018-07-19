@@ -38,7 +38,7 @@ import (
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	v1beta1 "k8s.io/api/extensions/v1beta1"
+	"k8s.io/api/extensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -202,6 +202,14 @@ func NewAdmissionController(client kubernetes.Interface, options ControllerOptio
 		client:  client,
 		options: options,
 		handlers: map[string]GenericCRDHandler{
+			"Bus": {
+				Factory:   &v1alpha1.Bus{},
+				Validator: ValidateBus(ctx),
+			},
+			"ClusterBus": {
+				Factory:   &v1alpha1.ClusterBus{},
+				Validator: ValidateBus(ctx),
+			},
 			"Channel": {
 				Factory:   &v1alpha1.Channel{},
 				Validator: ValidateChannel(ctx),
@@ -290,7 +298,7 @@ func (ac *AdmissionController) unregister(
 
 func (ac *AdmissionController) register(
 	ctx context.Context, client clientadmissionregistrationv1beta1.MutatingWebhookConfigurationInterface, caCert []byte) error { // nolint: lll
-	resources := []string{"channels", "subscriptions"}
+	resources := []string{"buses", "clusterbuses", "channels", "subscriptions"}
 
 	webhook := &admissionregistrationv1beta1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{

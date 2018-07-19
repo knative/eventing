@@ -122,6 +122,21 @@
   version = "v1.0.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/go-logr/logr"
+  packages = [
+    ".",
+    "testing"
+  ]
+  revision = "9fb12b3b21c5415d16ac18dc5cd42c1cfdd40c4e"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/go-logr/zapr"
+  packages = ["."]
+  revision = "7536572e8d55209135cd5e7ccf7fce43dca217ab"
+
+[[projects]]
   name = "github.com/gogo/protobuf"
   packages = [
     "proto",
@@ -161,6 +176,18 @@
   name = "github.com/golang/snappy"
   packages = ["."]
   revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
+
+[[projects]]
+  name = "github.com/google/go-cmp"
+  packages = [
+    "cmp",
+    "cmp/cmpopts",
+    "cmp/internal/diff",
+    "cmp/internal/function",
+    "cmp/internal/value"
+  ]
+  revision = "3af367b6b30c263d47e8895973edcca9a49cf029"
+  version = "v0.2.0"
 
 [[projects]]
   branch = "master"
@@ -282,7 +309,7 @@
     "pkg/apis/build",
     "pkg/apis/build/v1alpha1"
   ]
-  revision = "5dba97ea172464d6459c393330ffba2152ec78dd"
+  revision = "5c1d8c8469d1ed34b2aecf4c2305b3a57fff2ee3"
 
 [[projects]]
   name = "github.com/knative/serving"
@@ -304,7 +331,7 @@
     "pkg/client/listers/istio/v1alpha3",
     "pkg/client/listers/serving/v1alpha1"
   ]
-  revision = "22e3cb0f057daf224ef3af5cc37feb9b152f880e"
+  revision = "2326173b13899c32896caf526a318a8b30033b3e"
 
 [[projects]]
   name = "github.com/magiconair/properties"
@@ -461,6 +488,31 @@
   ]
   revision = "c3ed530f775d85e577ca652cb052a52c078aad26"
   version = "v0.11.0"
+
+[[projects]]
+  name = "go.uber.org/atomic"
+  packages = ["."]
+  revision = "1ea20fb1cbb1cc08cbd0d913a96dead89aa18289"
+  version = "v1.3.2"
+
+[[projects]]
+  name = "go.uber.org/multierr"
+  packages = ["."]
+  revision = "3c4937480c32f4c13a875a1829af76c98ca3d40a"
+  version = "v1.1.0"
+
+[[projects]]
+  name = "go.uber.org/zap"
+  packages = [
+    ".",
+    "buffer",
+    "internal/bufferpool",
+    "internal/color",
+    "internal/exit",
+    "zapcore"
+  ]
+  revision = "eeedf312bc6c57391d84767a4cd413f02a917974"
+  version = "v1.8.0"
 
 [[projects]]
   branch = "master"
@@ -896,8 +948,8 @@
     "util/retry",
     "util/workqueue"
   ]
-  revision = "23781f4d6632d88e869066eaebb743857aa1ef9b"
-  version = "v7.0.0"
+  revision = "989be4278f353e42f26c416c53757d16fcff77db"
+  version = "kubernetes-1.10.1"
 
 [[projects]]
   name = "k8s.io/code-generator"
@@ -946,9 +998,36 @@
   packages = ["pkg/util/proto"]
   revision = "8a9b82f00b3a86eac24681da3f9fe6c34c01cea2"
 
+[[projects]]
+  branch = "master"
+  name = "sigs.k8s.io/controller-runtime"
+  packages = [
+    "pkg/cache",
+    "pkg/cache/internal",
+    "pkg/client",
+    "pkg/client/apiutil",
+    "pkg/client/config",
+    "pkg/client/fake",
+    "pkg/controller",
+    "pkg/event",
+    "pkg/handler",
+    "pkg/internal/controller",
+    "pkg/internal/recorder",
+    "pkg/manager",
+    "pkg/predicate",
+    "pkg/reconcile",
+    "pkg/recorder",
+    "pkg/runtime/inject",
+    "pkg/runtime/log",
+    "pkg/runtime/signals",
+    "pkg/source",
+    "pkg/source/internal"
+  ]
+  revision = "f5b79b93f3aa7b978117f942f3cd67a91db12207"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "306367db1d23c58ed8fee3d130bbac10637d54f5730f6465a1cea5704ded7a9e"
+  inputs-digest = "b6817e40027a92f07452f6aca6b22b35108a7f07ebfe71d72fab450b05856709"
   solver-name = "gps-cdcl"
   solver-version = 1

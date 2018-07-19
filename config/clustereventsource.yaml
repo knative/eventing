@@ -21,4 +21,5 @@ spec:
   names:
     kind: ClusterEventSource
     plural: clustereventsources
+    singular: clustereventsource
   scope: Cluster

@@ -69,7 +69,7 @@ func main() {
 			return bus.DeleteSubscription(subscription)
 		},
 	})
-	bus, err := gcppubsub.NewPubSubBus(name, projectID, monitor)
+	bus, err := gcppubsub.NewPubSubBus(name, projectID, monitor, nil, nil)
 	if err != nil {
 		glog.Fatalf("Failed to create pubsub bus: %v", err)
 	}

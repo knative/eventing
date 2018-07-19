@@ -11,14 +11,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-apiVersion: apiextensions.k8s.io/v1beta1
-kind: CustomResourceDefinition
+apiVersion: apps/v1beta1
+kind: Deployment
 metadata:
-  name: feeds.feeds.knative.dev
+  name: controller-manager
+  namespace: knative-eventing
 spec:
-  group: feeds.knative.dev
-  version: v1alpha1
-  names:
-    kind: Feed
-    plural: feeds
-  scope: Namespaced
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: controller-manager
+    spec:
+      serviceAccountName: eventing-controller
+      containers:
+      - name: controller-manager
+        image: github.com/knative/eventing/cmd/controller-manager
+        args: [
+          "-logtostderr",
+          "-stderrthreshold", "INFO",
+        ]

@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -57,6 +58,10 @@ type FeedAction struct {
 	RouteName string `json:"routeName,omitempty"`
 
 	// ChannelName specifies the channel name as a target
+	// If ChannelName specifies a full DNS (for example:
+	// flow-example-channel.default.svc.cluster.local)
+	// it's returned as is.
+	// TODO: clean up the action names.
 	ChannelName string `json:"channelName,omitempty"`
 }
 
@@ -172,18 +177,14 @@ type FeedStatus struct {
 type FeedConditionType string
 
 const (
-	// FeedStarted specifies that the feed has started successfully.
-	FeedStarted FeedConditionType = "Started"
-	// FeedFailed specifies that the feed has failed to start.
-	FeedFailed FeedConditionType = "Failed"
-	// FeedInvalid specifies that the given feed specification is invalid.
-	FeedInvalid FeedConditionType = "Invalid"
+	// FeedConditionReady specifies that the feed has started successfully.
+	FeedConditionReady FeedConditionType = "Ready"
 )
 
 // FeedCondition defines a readiness condition for a Feed.
 // See: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#typical-status-properties
 type FeedCondition struct {
-	Type FeedConditionType `json:"state"`
+	Type FeedConditionType `json:"type"`
 
 	Status corev1.ConditionStatus `json:"status" description:"status of the condition, one of True, False, Unknown"`
 	// +optional
@@ -202,8 +203,17 @@ type FeedList struct {
 	Items []Feed `json:"items"`
 }
 
+func (fs *FeedStatus) GetCondition(t FeedConditionType) *FeedCondition {
+	for _, cond := range fs.Conditions {
+		if cond.Type == t {
+			return &cond
+		}
+	}
+	return nil
+}
+
 func (fs *FeedStatus) SetCondition(new *FeedCondition) {
-	if new == nil {
+	if new == nil || new.Type == "" {
 		return
 	}
 
@@ -226,4 +236,64 @@ func (fs *FeedStatus) RemoveCondition(t FeedConditionType) {
 		}
 	}
 	fs.Conditions = conditions
+}
+
+func (fs *FeedStatus) InitializeConditions() {
+	for _, cond := range []FeedConditionType{
+		FeedConditionReady,
+	} {
+		if fc := fs.GetCondition(cond); fc == nil {
+			fs.SetCondition(&FeedCondition{
+				Type:   cond,
+				Status: corev1.ConditionUnknown,
+			})
+		}
+	}
+}
+
+// AddFinalizer adds the given value to the list of finalizers if it doesn't
+// already exist.
+func (f *Feed) AddFinalizer(value string) {
+	finalizers := sets.NewString(f.GetFinalizers()...)
+	finalizers.Insert(value)
+	f.SetFinalizers(finalizers.List())
+}
+
+// RemoveFinalizer removes the given value from the list of finalizers if it
+// exists.
+func (f *Feed) RemoveFinalizer(value string) {
+	finalizers := sets.NewString(f.GetFinalizers()...)
+	finalizers.Delete(value)
+	if finalizers.Len() == 0 {
+		// if no finalizers, set to nil list, not an empty slice.
+		f.SetFinalizers([]string(nil))
+	} else {
+		f.SetFinalizers(finalizers.List())
+	}
+}
+
+// HasFinalizer returns true if a finalizer exists, or false otherwise.
+func (f *Feed) HasFinalizer(value string) bool {
+	for _, f := range f.GetFinalizers() {
+		if f == value {
+			return true
+		}
+	}
+	return false
+}
+
+// SetOwnerReference adds the given owner reference to the list of owner
+// references, replacing the corresponding owner reference if it exists.
+func (f *Feed) SetOwnerReference(or *metav1.OwnerReference) {
+	var refs []metav1.OwnerReference
+
+	for _, ref := range f.GetOwnerReferences() {
+		if !(ref.APIVersion == or.APIVersion &&
+			ref.Kind == or.Kind &&
+			ref.Name == or.Name) {
+			refs = append(refs, ref)
+		}
+	}
+	refs = append(refs, *or)
+	f.SetOwnerReferences(refs)
 }

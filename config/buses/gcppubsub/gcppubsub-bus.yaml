@@ -25,7 +25,10 @@ spec:
     ]
     env: &env
     - name: GOOGLE_CLOUD_PROJECT
-      value: $PROJECT_ID
+      valueFrom:
+        configMapKeyRef:
+          name: gcppubsub-bus-config
+          key: GOOGLE_CLOUD_PROJECT
     - name: GOOGLE_APPLICATION_CREDENTIALS
       value: /var/secrets/google/key.json
     volumeMounts:

@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"encoding/json"
 
+	"k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -42,10 +43,10 @@ type Channel struct {
 // arguments for the channel.
 type ChannelSpec struct {
 	// Name of the bus backing this channel (optional)
-	Bus string `json:"bus`
+	Bus string `json:"bus,omitempty"`
 
 	// ClusterBus name of the clusterbus backing this channel (mutually exclusive with Bus)
-	ClusterBus string `json:"clusterBus"`
+	ClusterBus string `json:"clusterBus,omitempty"`
 
 	// Arguments is a list of configuration arguments for the Channel. The
 	// Arguments for a channel must contain values for each of the Parameters
@@ -57,12 +58,67 @@ type ChannelSpec struct {
 	Arguments *[]Argument `json:"arguments,omitempty"`
 }
 
+type ChannelConditionType string
+
+const (
+
+	// Ready is set when all other conditions are met and the channel is ready to accept traffic.
+	ChannelReady ChannelConditionType = "Ready"
+
+	// Serviceable means the service addressing the channel exists.
+	ChannelServiceable ChannelConditionType = "Serviceable"
+
+	// Routable means the virtual service forwarding traffic from the channel service to the
+	// bus is created.
+	ChannelRoutable ChannelConditionType = "Routeable"
+
+	// Provisioned means the channel backing construct on the bus middleware has been set up.
+	ChannelProvisioned ChannelConditionType = "Provisioned"
+)
+
+// ChannelCondition describes the state of a channel at a point in time.
+type ChannelCondition struct {
+	// Type of channel condition.
+	Type ChannelConditionType `json:"type"`
+	// Status of the condition, one of True, False, Unknown.
+	Status v1.ConditionStatus `json:"status"`
+	// The last time this condition was updated.
+	LastUpdateTime meta_v1.Time `json:"lastUpdateTime,omitempty"`
+	// Last time the condition transitioned from one status to another.
+	LastTransitionTime meta_v1.Time `json:"lastTransitionTime,omitempty"`
+	// The reason for the condition's last transition.
+	Reason string `json:"reason,omitempty"`
+	// A human readable message indicating details about the transition.
+	Message string `json:"message,omitempty"`
+}
+
 // ChannelStatus (computed) for a channel
 type ChannelStatus struct {
-	// ServiceName holds the name of a core Kubernetes Service resource that
-	// load balances over the pods backing the Channel's Bus.
+	// A reference to the k8s Service backing this channel, if successfully synced.
+	Service *v1.LocalObjectReference `json:"service,omitempty"`
+
+	// A reference to the istio VirtualService backing this channel, if successfully synced.
+	VirtualService *v1.LocalObjectReference `json:"virtualService,omitempty"`
+
+	// Represents the latest available observations of a channel's current state.
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	Conditions []ChannelCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+
+	// DomainInternal holds the top-level domain that will distribute traffic
+	// over the provided targets from inside the cluster. It generally has the
+	// form {channel}.{namespace}.svc.cluster.local
 	// +optional
-	ServiceName string `json:"serviceName,omitempty"`
+	DomainInternal string `json:"domainInternal,omitempty"`
+}
+
+func (cs *ChannelStatus) GetCondition(t ChannelConditionType) *ChannelCondition {
+	for _, cond := range cs.Conditions {
+		if cond.Type == t {
+			return &cond
+		}
+	}
+	return nil
 }
 
 func (c *Channel) GetSpecJSON() ([]byte, error) {

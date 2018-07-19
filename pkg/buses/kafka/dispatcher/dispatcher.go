@@ -18,17 +18,12 @@
 package main
 
 import (
-	"bytes"
-	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
@@ -46,14 +41,16 @@ const (
 )
 
 type dispatcher struct {
-	monitor         *buses.Monitor
-	brokers         []string
-	consumers       map[subscriptionKey]*cluster.Consumer
-	busName         string
-	client          *http.Client
-	producer        sarama.AsyncProducer
-	informerFactory informers.SharedInformerFactory
-	namespace       string
+	monitor           *buses.Monitor
+	messageReceiver   *buses.MessageReceiver
+	messageDispatcher *buses.MessageDispatcher
+	brokers           []string
+	consumers         map[subscriptionKey]*cluster.Consumer
+	busName           string
+	client            *http.Client
+	producer          sarama.AsyncProducer
+	informerFactory   informers.SharedInformerFactory
+	namespace         string
 }
 
 type subscriptionKey struct {
@@ -127,43 +124,25 @@ func NewKafkaDispatcher(name string, namespace string, masterURL string, kubeCon
 		UnsubscribeFunc: d.unsubscribe,
 	})
 	d.monitor = monitor
+	d.messageDispatcher = buses.NewMessageDispatcher()
+	d.messageReceiver = buses.NewMessageReceiver(d.handleEvent)
 
 	return &d, nil
 }
 
 func (d *dispatcher) Start(stopCh <-chan struct{}) {
 	go d.monitor.Run(d.namespace, d.busName, 2, stopCh)
-	d.startHttpServer(stopCh)
-}
-
-func (d *dispatcher) startHttpServer(stopCh <-chan struct{}) {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", d.handleEvent)
-	httpServer := &http.Server{
-		Addr:    fmt.Sprintf(":%v", 8080),
-		Handler: mux,
-	}
-	go func() {
-		if err := httpServer.ListenAndServe(); err != http.ErrServerClosed {
-			glog.Fatalf("Error running http server: %v", err)
-		} else {
-			glog.Infof("Http server shut down")
-		}
-	}()
-	go func() {
-		<-stopCh
-		timeout, ctx := context.WithTimeout(context.Background(), 1*time.Second)
-		defer ctx()
-		if err := httpServer.Shutdown(timeout); err != nil {
-			glog.Fatalf("Failure to shut down http server gracefully: %v", err)
-		}
-	}()
+	go d.messageReceiver.Run(stopCh)
 }
 
 func (d *dispatcher) subscribe(subscription *channelsv1alpha1.Subscription, parameters buses.ResolvedParameters) error {
 	glog.Infof("Subscribing %s/%s: %s -> %s  (%v)", subscription.Namespace,
 		subscription.Name, subscription.Spec.Channel, subscription.Spec.Subscriber, parameters)
-	topicName := topicNameFromMeta(subscription.Spec.Channel, subscription.Namespace)
+	channel := &buses.ChannelReference{
+		Name:      subscription.Spec.Channel,
+		Namespace: subscription.Namespace,
+	}
+	topicName := topicName(channel)
 
 	initialOffset, err := initialOffset(parameters)
 	if err != nil {
@@ -187,9 +166,8 @@ func (d *dispatcher) subscribe(subscription *channelsv1alpha1.Subscription, para
 			if more {
 				glog.Infof("Dispatching a message for subscription %s/%s: %s -> %s", subscription.Namespace,
 					subscription.Name, subscription.Spec.Channel, subscription.Spec.Subscriber)
-				hs := kafka2HttpHeaders(msg)
-				svc := fmt.Sprintf("%s.%s", subscription.Spec.Subscriber, subscription.Namespace)
-				err := d.dispatchEvent(svc, msg.Value, hs)
+				message := fromKafkaMessage(msg)
+				err := d.messageDispatcher.DispatchMessage(subscription.Spec.Subscriber, subscription.Namespace, message)
 				if err != nil {
 					glog.Warningf("Got error trying to dispatch message: %v", err)
 				}
@@ -216,14 +194,6 @@ func initialOffset(parameters buses.ResolvedParameters) (int64, error) {
 	}
 }
 
-func kafka2HttpHeaders(message *sarama.ConsumerMessage) http.Header {
-	result := make(http.Header)
-	for _, h := range message.Headers {
-		result[string(h.Key)] = []string{string(h.Value)}
-	}
-	return result
-}
-
 func (d *dispatcher) unsubscribe(subscription *channelsv1alpha1.Subscription) error {
 	glog.Infof("Un-Subscribing %s/%s: %s -> %s", subscription.Namespace,
 		subscription.Name, subscription.Spec.Channel, subscription.Spec.Subscriber)
@@ -239,64 +209,39 @@ func subscriptionKeyFor(subscription *channelsv1alpha1.Subscription) subscriptio
 	return subscriptionKey{name: subscription.Name, namespace: subscription.Namespace}
 }
 
-func topicNameFromMeta(channel string, namespace string) string {
-	return fmt.Sprintf("%s.%s", namespace, channel)
+func topicName(channel *buses.ChannelReference) string {
+	return fmt.Sprintf("%s.%s", channel.Namespace, channel.Name)
 }
 
-func (d *dispatcher) dispatchEvent(host string, body []byte, headers http.Header) error {
-	url := url.URL{
-		Scheme: "http",
-		Host:   host,
-		Path:   "/",
+func (d *dispatcher) handleEvent(channel *buses.ChannelReference, message *buses.Message) error {
+	if c := d.monitor.Channel(channel.Name, channel.Namespace); c == nil {
+		return buses.ErrUnknownChannel
 	}
-	req, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-	req.Header = headers
-	_, err = d.client.Do(req)
-	return err
+
+	d.producer.Input() <- toKafkaMessage(channel, message)
+
+	return nil
 }
 
-func channelFromHost(host string) (channel string, namespace string) {
-	chunks := strings.Split(host, ".")
-	channel = chunks[0]
-	if len(chunks) > 1 {
-		namespace = chunks[1]
+func toKafkaMessage(channel *buses.ChannelReference, message *buses.Message) *sarama.ProducerMessage {
+	kafkaMessage := sarama.ProducerMessage{
+		Topic: topicName(channel),
+		Value: sarama.ByteEncoder(message.Payload),
 	}
-	return
+	for h, v := range message.Headers {
+		kafkaMessage.Headers = append(kafkaMessage.Headers, sarama.RecordHeader{[]byte(h), []byte(v)})
+	}
+	return &kafkaMessage
 }
 
-func (d *dispatcher) handleEvent(res http.ResponseWriter, req *http.Request) {
-	host := req.Host
-	glog.Infof("Received request for %s\n", host)
-	channel, namespace := channelFromHost(host)
-	c := d.monitor.Channel(channel, namespace)
-	if c == nil {
-		res.WriteHeader(http.StatusNotFound)
+func fromKafkaMessage(kafkaMessage *sarama.ConsumerMessage) *buses.Message {
+	headers := make(map[string]string)
+	for _, header := range kafkaMessage.Headers {
+		headers[string(header.Key)] = string(header.Value)
 	}
-
-	msg, err := http2KafkaMessage(channel, namespace, req)
-	if err != nil {
-		res.WriteHeader(http.StatusInternalServerError)
-		return
+	message := buses.Message{
+		Headers: headers,
+		Payload: kafkaMessage.Value,
 	}
-	d.producer.Input() <- msg
-
-	res.WriteHeader(http.StatusAccepted)
-}
-
-func http2KafkaMessage(channel string, namespace string, req *http.Request) (*sarama.ProducerMessage, error) {
-	body, err := ioutil.ReadAll(req.Body)
-	if err != nil {
-		return nil, err
-	}
-	message := sarama.ProducerMessage{
-		Topic: topicNameFromMeta(channel, namespace),
-		Value: sarama.ByteEncoder(body),
-	}
-	for h, v := range req.Header {
-		message.Headers = append(message.Headers, sarama.RecordHeader{[]byte(h), []byte(v[0])})
-	}
-	return &message, nil
+	return &message
 }

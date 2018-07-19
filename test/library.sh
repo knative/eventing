@@ -163,13 +163,14 @@ function wait_until_feed_ready() {
     sleep 2
   done
   echo -e "\n\nERROR: timeout waiting for feed $NAMESPACE/$NAME to be ready"
-  kubectl get -n $NAMESPACE $KIND $NAME  $1
+  kubectl get -n $NAMESPACE feeds $NAME -oyaml
+  kubectl get -n $NAMESPACE jobs $NAME-start -oyaml
   return 1
 }
 
 function validate_function_logs() {
   local NAMESPACE=$1
-  local podname="$(kubectl -n $NAMESPACE get pods --no-headers -oname | grep e2e-k8s-events-)"
+  local podname="$(kubectl -n $NAMESPACE get pods --no-headers -oname | grep e2e-k8s-events-function)"
   echo "$podname"
   local logs="$(kubectl -n $NAMESPACE logs $podname user-container)"
   echo "${logs}" | grep "Started container" || return 1
