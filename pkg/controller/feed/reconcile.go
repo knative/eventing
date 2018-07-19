@@ -74,9 +74,9 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		}
 	}
 
-	if err := r.updateFeed(feed); err != nil {
-		glog.Errorf("failed to update Feed status: %v", err)
-		return reconcile.Result{}, err
+	if updateErr := r.updateFeed(feed); updateErr != nil {
+		glog.Errorf("failed to update Feed status: %v", updateErr)
+		return reconcile.Result{}, updateErr
 	}
 	return reconcile.Result{}, err
 }
