@@ -45,7 +45,8 @@ type AWSSQSBus struct {
 }
 
 const (
-	queueUrlName = "queueUrl"
+	queueUrlName   = "queueUrl"
+	waitTimeSecond = 5
 )
 
 func (b *AWSSQSBus) CreateQueue(channel *channelsv1alpha1.Channel, parameters buses.ResolvedParameters) error {
@@ -119,31 +120,47 @@ func (b *AWSSQSBus) ReceiveMessages(sub *channelsv1alpha1.Subscription, paramete
 	if err != nil {
 		return fmt.Errorf("Cannot find queue url for Channel %q: %v", sub.Spec.Channel, err)
 	}
+	// cancel current subscription receiver, if any
+	b.StopReceiveMessages(sub)
+
+	ctx := context.Background()
+	cctx, cancel := context.WithCancel(ctx)
+
+	subscriptionID := b.subscriptionID(sub)
+	b.receivers[subscriptionID] = cancel
 
 	go func() {
 		glog.Infof("Start receiving messages")
-		rcvParam := &sqs.ReceiveMessageInput{
-			QueueUrl: aws.String(queueUrl),
-		}
-		resp, err := b.sqsClient.ReceiveMessage(rcvParam)
-		if err != nil {
-			glog.Warningf("failed to receive from queue %s:%v", queueUrl, err)
-			return
-		}
-		glog.Infof("received msg: %v", resp)
-		for _, message := range resp.Messages {
-			err := b.DispatchHTTPEvent(sub, []byte(*message.Body), message.Attributes)
-			// delete message
-			deleteParam := &sqs.DeleteMessageInput{
-				QueueUrl:      aws.String(queueUrl),
-				ReceiptHandle: message.ReceiptHandle,
+		for {
+			rcvParam := &sqs.ReceiveMessageInput{
+				QueueUrl:        aws.String(queueUrl),
+				WaitTimeSeconds: aws.Int64(waitTimeSecond),
 			}
-			_, err = b.sqsClient.DeleteMessage(deleteParam)
+			resp, err := b.sqsClient.ReceiveMessageWithContext(cctx, rcvParam)
 			if err != nil {
-				glog.Warningf("failed to delete msg %v: %v", *message.MessageId, err)
+				glog.Warningf("failed to receive from queue %s:%v", queueUrl, err)
+				break
 			}
-			glog.Infof("Message %v has beed deleted", *message.MessageId)
+
+			glog.V(5).Infof("received msg: %v", resp)
+
+			for _, message := range resp.Messages {
+				err := b.DispatchHTTPEvent(sub, []byte(*message.Body), message.Attributes)
+				// delete message
+				deleteParam := &sqs.DeleteMessageInput{
+					QueueUrl:      aws.String(queueUrl),
+					ReceiptHandle: message.ReceiptHandle,
+				}
+				_, err = b.sqsClient.DeleteMessage(deleteParam)
+				if err != nil {
+					glog.Warningf("failed to delete msg %v: %v", *message.MessageId, err)
+				}
+				glog.Infof("Message %v has beed deleted", *message.MessageId)
+			}
 		}
+		delete(b.receivers, subscriptionID)
+		b.monitor.RequeueSubscription(sub)
+
 	}()
 
 	return nil
