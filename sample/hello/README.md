@@ -43,7 +43,9 @@ curl -H "Host: $SERVICE_HOST" -H "Content-Type: text/plain" $SERVICE_IP -d "Knat
 
 You should see a response like:
 
-> Hello Knative, from hello-00001-deployment-5fb4b845fd-7h2lc
+```shell
+Hello Knative, from hello-00001-deployment-5fb4b845fd-7h2lc
+```
 
 #### Minikube
 
@@ -60,7 +62,9 @@ curl -H "Host: $SERVICE_HOST" -H "Content-Type: text/plain" $SERVICE_IP -d "Knat
 
 You should see a response like:
 
-> Hello Knative, from hello-00001-deployment-5fb4b845fd-7h2lc
+```shell
+Hello Knative, from hello-00001-deployment-5fb4b845fd-7h2lc
+```
 
 
 ## Channel
