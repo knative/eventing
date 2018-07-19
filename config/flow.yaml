@@ -22,4 +22,9 @@ spec:
     kind: Flow
     plural: flows
     singular: flow
+    categories:
+    - all
+    - knative
+    - eventing
   scope: Namespaced
+

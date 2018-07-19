@@ -23,3 +23,7 @@ spec:
     kind: Bus
     plural: buses
     singular: bus
+    categories:
+    - all
+    - knative
+    - eventing
