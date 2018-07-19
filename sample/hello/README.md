@@ -84,6 +84,8 @@ kubectl exec curl -- curl -H "Content-Type: text/plain" http://aloha-channel/ -d
 This time there should be no response via curl, but you should see logging from
 the bus and the function indicating it received the request.
 
+### Clean up
+
 Clean up the curl pod.
 
 ```shell
