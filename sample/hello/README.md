@@ -81,7 +81,8 @@ kubectl run --image=tutum/curl curl --restart=Never --command sleep inf
 kubectl exec curl -- curl -H "Content-Type: text/plain" http://aloha-channel/ -d "Curl"
 ```
 
-You should now see the logs on both the channel and the function.
+This time there should be no response via curl, but you should see logging from
+the bus and the function indicating it received the request.
 
 Clean up the curl pod.
 
@@ -89,5 +90,4 @@ Clean up the curl pod.
 kubectl delete pod curl
 ```
 
-This time there should be no response via curl, but you should see logging from the bus and the function indicating it received the request.
 
