@@ -206,8 +206,6 @@ if [[ -n $1 && $1 != "--run-tests" ]]; then
   exit 1
 fi
 
-echo "HERE3"
-
 # No argument provided, create the test cluster.
 
 if [[ -z $1 ]]; then
@@ -249,8 +247,6 @@ if [[ -z $1 ]]; then
   exit $result
 fi
 
-echo "HERE2"
-
 # --run-tests passed as first argument, run the tests.
 
 # Set the required variables if necessary.
@@ -278,8 +274,6 @@ echo "- User is ${K8S_USER_OVERRIDE}"
 echo "- Docker is ${KO_DOCKER_REPO}"
 
 trap teardown EXIT
-
-echo "HERE"
 
 if (( ! USING_EXISTING_CLUSTER )); then
   # Start Knative Serving.
