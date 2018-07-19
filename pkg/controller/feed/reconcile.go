@@ -62,31 +62,50 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	r.setEventTypeOwnerReference(feed)
 
 	feed.Status.InitializeConditions()
-
 	// Fetch the EventSource and EventType that is being asked for
-	// and if they don't exist.
+	// and if they don't exist update the status to reflect this back
+	// to the user.
 	eventSource, eventType, err := r.getFeedSource(feed)
 	if err != nil {
 		switch t := err.(type) {
 		case *EventSourceError:
 			glog.Errorf("eventsource can not be used as a target : %s", err)
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-				Type:    feedsv1alpha1.FeedConditionReady,
-				Status:  corev1.ConditionUnknown,
+				Type:    feedsv1alpha1.FeedConditionDependenciesSatisfied,
+				Status:  corev1.ConditionFalse,
 				Reason:  t.Reason,
 				Message: t.Message,
 			})
 		case *EventTypeError:
 			glog.Errorf("eventtype can not be used as a target : %s", err)
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-				Type:    feedsv1alpha1.FeedConditionReady,
-				Status:  corev1.ConditionUnknown,
+				Type:    feedsv1alpha1.FeedConditionDependenciesSatisfied,
+				Status:  corev1.ConditionFalse,
 				Reason:  t.Reason,
 				Message: t.Message,
 			})
+		default:
+			return reconcile.Result{}, err
 		}
-		return reconcile.Result{}, err
+		if err := r.updateStatus(feed); err != nil {
+			glog.Errorf("failed to update Feed status: %v", err)
+			return reconcile.Result{}, err
+		}
+		return reconcile.Result{}, nil
+	}
 
+	// TODO: Set teh FeedConditionDependenciesSatisfied to true here? Or, after
+	// job finishes? For now, the above conveys enough information to the user
+	// to make sure if they make a typo they will get that relayed back to them.
+
+	// Once we found the actual type, set the owner reference for it.
+	// TODO: Remove this and use finalizers in the EventTypes / EventSources
+	// to do this properly.
+	// TODO: Add issue link here. can't look up right now, no wifi
+	r.setEventTypeOwnerReference(feed)
+	if err := r.updateOwnerReferences(feed); err != nil {
+		glog.Errorf("failed to update Feed owner references: %v", err)
+		return reconcile.Result{}, err
 	}
 
 	if feed.GetDeletionTimestamp() == nil {
@@ -534,27 +553,35 @@ func (r *reconciler) getFeedSource(feed *feedsv1alpha1.Feed) (*feedsv1alpha1.Eve
 	es := &feedsv1alpha1.EventSource{}
 	if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.Service}, es); err != nil {
 		if errors.IsNotFound(err) {
-			return nil, nil, &EventSourceError{StatusError{EventSourceDoesNotExist, fmt.Sprintf("EventSource %s/%s does not exist", feed.Namespace, feed.Spec.Trigger.Service)}}
+			msg := fmt.Sprintf("EventSource %s/%s does not exist", feed.Namespace, feed.Spec.Trigger.Service)
+			glog.Info(msg)
+			return nil, nil, &EventSourceError{StatusError{EventSourceDoesNotExist, msg}}
 		}
 		return nil, nil, err
 	}
 
 	if es.GetDeletionTimestamp() != nil {
 		// EventSource is being deleted so don't allow feeds to it
-		return nil, nil, &EventSourceError{StatusError{EventSourceDoesNotExist, fmt.Sprintf("EventSource %s/%s does not exist", feed.Namespace, feed.Spec.Trigger.Service)}}
+		msg := fmt.Sprintf("EventSource %s/%s is being deleted", feed.Namespace, feed.Spec.Trigger.Service)
+		glog.Info(msg)
+		return nil, nil, &EventSourceError{StatusError{EventSourceDeleting, msg}}
 	}
 
 	et := &feedsv1alpha1.EventType{}
 	if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.EventType}, et); err != nil {
 		if errors.IsNotFound(err) {
-			return nil, nil, &EventTypeError{StatusError{EventTypeDoesNotExist, fmt.Sprintf("EventType %s/%s does not exist", feed.Namespace, feed.Spec.Trigger.EventType)}}
+			msg := fmt.Sprintf("EventType %s/%s does not exist", feed.Namespace, feed.Spec.Trigger.EventType)
+			glog.Info(msg)
+			return nil, nil, &EventTypeError{StatusError{EventTypeDoesNotExist, msg}}
 		}
 		return nil, nil, err
 	}
 
 	if et.GetDeletionTimestamp() != nil {
 		// EventType is being deleted so don't allow feeds to it
-		return nil, nil, &EventTypeError{StatusError{EventTypeDeleting, fmt.Sprintf("EventType %s/%s does not exist", feed.Namespace, feed.Spec.Trigger.EventType)}}
+		msg := fmt.Sprintf("EventType %s/%s is being deleted", feed.Namespace, feed.Spec.Trigger.EventType)
+		glog.Info(msg)
+		return nil, nil, &EventTypeError{StatusError{EventTypeDeleting, msg}}
 	}
 	return es, et, nil
 }

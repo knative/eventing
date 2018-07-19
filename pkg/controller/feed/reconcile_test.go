@@ -123,12 +123,45 @@ var testCases = []controllertesting.TestCase{
 	{
 		Name: "non-existing event type: updated status",
 		InitialState: []runtime.Object{
+			getNewFeed(),
 			getEventSource(),
 		},
 		ReconcileKey: "test/test-feed",
 		WantPresent: []runtime.Object{
-			//			getEventSourceMissingStatus(),
-			getStartFailedFeed(),
+			getEventTypeMissing(),
+		},
+	},
+	{
+		Name: "deleting event type: updated status",
+		InitialState: []runtime.Object{
+			getNewFeed(),
+			getEventSource(),
+			getDeletingEventType(),
+		},
+		ReconcileKey: "test/test-feed",
+		WantPresent: []runtime.Object{
+			getEventTypeDeleting(),
+		},
+	},
+	{
+		Name: "non-existing event source: updated status",
+		InitialState: []runtime.Object{
+			getNewFeed(),
+		},
+		ReconcileKey: "test/test-feed",
+		WantPresent: []runtime.Object{
+			getEventSourceMissing(),
+		},
+	},
+	{
+		Name: "deleting event source: updated status",
+		InitialState: []runtime.Object{
+			getNewFeed(),
+			getDeletingEventSource(),
+		},
+		ReconcileKey: "test/test-feed",
+		WantPresent: []runtime.Object{
+			getEventSourceDeleting(),
 		},
 	},
 	{
@@ -220,9 +253,31 @@ func getEventSource() *feedsv1alpha1.EventSource {
 	}
 }
 
+func getDeletingEventSource() *feedsv1alpha1.EventSource {
+	return &feedsv1alpha1.EventSource{
+		ObjectMeta: omDeleting("test", "test-es"),
+		Spec: feedsv1alpha1.EventSourceSpec{
+			CommonEventSourceSpec: feedsv1alpha1.CommonEventSourceSpec{
+				Source:     "github",
+				Image:      "example.com/test-es-feeder",
+				Parameters: nil,
+			},
+		},
+	}
+}
+
 func getEventType() *feedsv1alpha1.EventType {
 	return &feedsv1alpha1.EventType{
 		ObjectMeta: om("test", "test-et"),
+		Spec: feedsv1alpha1.EventTypeSpec{
+			EventSource: getEventSource().Name,
+		},
+	}
+}
+
+func getDeletingEventType() *feedsv1alpha1.EventType {
+	return &feedsv1alpha1.EventType{
+		ObjectMeta: omDeleting("test", "test-et"),
 		Spec: feedsv1alpha1.EventTypeSpec{
 			EventSource: getEventSource().Name,
 		},
@@ -559,11 +614,72 @@ func getFailedStopJob() *batchv1.Job {
 	return job
 }
 
+func getEventTypeMissing() *feedsv1alpha1.Feed {
+	feed := getNewFeed()
+	feed.Status.InitializeConditions()
+	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+		Type:    feedsv1alpha1.FeedConditionDependenciesSatisfied,
+		Status:  corev1.ConditionFalse,
+		Reason:  EventTypeDoesNotExist,
+		Message: "EventType test/test-et does not exist",
+	})
+
+	return feed
+}
+
+func getEventTypeDeleting() *feedsv1alpha1.Feed {
+	feed := getNewFeed()
+	feed.Status.InitializeConditions()
+	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+		Type:    feedsv1alpha1.FeedConditionDependenciesSatisfied,
+		Status:  corev1.ConditionFalse,
+		Reason:  EventTypeDeleting,
+		Message: "EventType test/test-et is being deleted",
+	})
+
+	return feed
+}
+
+func getEventSourceMissing() *feedsv1alpha1.Feed {
+	feed := getNewFeed()
+	feed.Status.InitializeConditions()
+	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+		Type:    feedsv1alpha1.FeedConditionDependenciesSatisfied,
+		Status:  corev1.ConditionFalse,
+		Reason:  EventSourceDoesNotExist,
+		Message: "EventSource test/ does not exist",
+	})
+
+	return feed
+}
+
+func getEventSourceDeleting() *feedsv1alpha1.Feed {
+	feed := getNewFeed()
+	feed.Status.InitializeConditions()
+	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+		Type:    feedsv1alpha1.FeedConditionDependenciesSatisfied,
+		Status:  corev1.ConditionFalse,
+		Reason:  EventSourceDeleting,
+		Message: "EventSource test/ is being deleted",
+	})
+
+	return feed
+}
+
 func om(namespace, name string) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
 		Namespace: namespace,
 		Name:      name,
 		SelfLink:  fmt.Sprintf("/apis/eventing/v1alpha1/namespaces/%s/object/%s", namespace, name),
+	}
+}
+
+func omDeleting(namespace, name string) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Namespace:         namespace,
+		Name:              name,
+		SelfLink:          fmt.Sprintf("/apis/eventing/v1alpha1/namespaces/%s/object/%s", namespace, name),
+		DeletionTimestamp: &deletionTime,
 	}
 }
 
