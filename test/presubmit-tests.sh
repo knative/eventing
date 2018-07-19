@@ -20,9 +20,21 @@
 # flag, causes all tests to be executed, in the right order.
 # Use the flags --build-tests, --unit-tests and --integration-tests
 # to run a specific set of tests.
+#
+# Running on OSX:
+# $ brew install coreutils
+#
 
 set -o errexit
 set -o pipefail
+
+
+uname=$(uname);
+case "$uname" in
+    (*Linux*) READLINK_CMD='readlink'; ;;
+    (*Darwin*) READLINK_CMD='greadlink'; ;;
+    (*) echo 'error: unsupported platform.'; exit 2; ;;
+esac;
 
 # Extensions or file patterns that don't require presubmit tests
 readonly NO_PRESUBMIT_FILES=(\.md \.png ^OWNERS)
@@ -30,11 +42,14 @@ readonly NO_PRESUBMIT_FILES=(\.md \.png ^OWNERS)
 # Directories with code to build/test
 readonly CODE_PACKAGES=(cmd pkg sample)
 
-source "$(dirname $(readlink -f ${BASH_SOURCE}))/library.sh"
+source "$(dirname $($READLINK_CMD -f ${BASH_SOURCE}))/library.sh"
 
 # Convert list of packages into list of dirs for go
 CODE_PACKAGES_STR="${CODE_PACKAGES[*]}"
-CODE_PACKAGES_STR="./${CODE_PACKAGES_STR// /\/... .\/}/..."
+case "$uname" in
+    (*Linux*) CODE_PACKAGES_STR="./${CODE_PACKAGES_STR// /\/... .\/}/..."; ;;
+    (*Darwin*) CODE_PACKAGES_STR="./${CODE_PACKAGES_STR// //... ./}/..."; ;;
+esac;
 readonly CODE_PACKAGES_STR
 
 # Helper functions.
