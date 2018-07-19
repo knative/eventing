@@ -11,8 +11,14 @@ This directory contains tests and testing docs.
 Use `go test`:
 
 ```shell
-go test -v ./pkg/...
+$ go test -v ./pkg/...
 ```
+
+Alternatively, use the presubmit script:
+
+```shell
+$ ./test/presubmit-tests.sh --unit-tests
+``` 
 
 ## Running end-to-end tests
 
