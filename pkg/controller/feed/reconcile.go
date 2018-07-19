@@ -146,22 +146,22 @@ func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
 		jobName := resources.StartJobName(feed)
 
 		err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: jobName}, job)
-		if !errors.IsNotFound(err) {
-			if err == nil {
-				glog.Infof("Found existing start job: %s/%s", job.Namespace, job.Name)
-				// Delete the existing job and return. When it's deleted, this Feed
-				// will be reconciled again.
-
-				// Need to delete pods first to workaround the client's lack of support
-				// for cascading deletes. TODO remove this when client support allows.
-				if err = r.deleteJobPods(job); err != nil {
-					return err
-				}
-				r.client.Delete(context.TODO(), job)
-				glog.Infof("Deleted start job: %s/%s", job.Namespace, job.Name)
-				return nil
-			}
+		if err != nil && !errors.IsNotFound(err) {
 			return err
+		}
+		if err == nil {
+			// Delete the existing job and return. When it's deleted, this Feed
+			// will be reconciled again.
+			glog.Infof("Found existing start job: %s/%s", job.Namespace, job.Name)
+
+			// Need to delete pods first to workaround the client's lack of support
+			// for cascading deletes. TODO remove this when client support allows.
+			if err = r.deleteJobPods(job); err != nil {
+				return err
+			}
+			r.client.Delete(context.TODO(), job)
+			glog.Infof("Deleted start job: %s/%s", job.Namespace, job.Name)
+			return nil
 		}
 
 		jobName = resources.JobName(feed)
