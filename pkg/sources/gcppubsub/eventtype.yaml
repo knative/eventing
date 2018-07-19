@@ -15,7 +15,7 @@
 apiVersion: feeds.knative.dev/v1alpha1
 kind: EventType
 metadata:
-  name: receive
+  name: google.pubsub.topic.publish
   namespace: default
 spec:
   eventSource: gcppubsub
