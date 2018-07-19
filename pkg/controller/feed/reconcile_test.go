@@ -121,6 +121,17 @@ var testCases = []controllertesting.TestCase{
 		},
 	},
 	{
+		Name: "non-existing event type: updated status",
+		InitialState: []runtime.Object{
+			getEventSource(),
+		},
+		ReconcileKey: "test/test-feed",
+		WantPresent: []runtime.Object{
+			//			getEventSourceMissingStatus(),
+			getStartFailedFeed(),
+		},
+	},
+	{
 		Name: "Deleted feed with finalizer, previously completed, feed job exists: feed job deleted",
 		InitialState: []runtime.Object{
 			getEventSource(),
