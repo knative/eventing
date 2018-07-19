@@ -30,7 +30,7 @@ case "$uname" in
 esac;
 
 # Default GKE version to be used with eventing
-readonly EVENTING_GKE_VERSION=1.10.0-gke.0
+readonly EVENTING_GKE_VERSION=1.9.6-gke.1
 
 # Useful environment variables
 [[ -n "${PROW_JOB_ID}" ]] && IS_PROW=1 || IS_PROW=0
