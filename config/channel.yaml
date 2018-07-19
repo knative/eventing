@@ -23,3 +23,7 @@ spec:
     kind: Channel
     plural: channels
     singular: channel
+    categories:
+    - all
+    - knative
+    - eventing

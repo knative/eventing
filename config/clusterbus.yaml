@@ -23,3 +23,7 @@ spec:
     kind: ClusterBus
     plural: clusterbuses
     singular: clusterbus
+    categories:
+    - all
+    - knative
+    - eventing

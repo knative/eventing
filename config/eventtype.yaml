@@ -22,4 +22,8 @@ spec:
     kind: EventType
     plural: eventtypes
     singular: eventtype
+    categories:
+    - all
+    - knative
+    - eventing
   scope: Namespaced

@@ -22,4 +22,8 @@ spec:
     kind: EventSource
     plural: eventsources
     singular: eventsource
+    categories:
+    - all
+    - knative
+    - eventing
   scope: Namespaced

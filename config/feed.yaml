@@ -22,4 +22,8 @@ spec:
     kind: Feed
     plural: feeds
     singular: feed
+    categories:
+    - all
+    - knative
+    - eventing
   scope: Namespaced

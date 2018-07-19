@@ -22,4 +22,8 @@ spec:
     kind: ClusterEventSource
     plural: clustereventsources
     singular: clustereventsource
+    categories:
+    - all
+    - knative
+    - eventing
   scope: Cluster

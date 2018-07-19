@@ -23,3 +23,7 @@ spec:
     kind: Subscription
     plural: subscriptions
     singular: subscription
+    categories:
+    - all
+    - knative
+    - eventing
