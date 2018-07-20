@@ -118,7 +118,6 @@ func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
 			if err := r.setFeedContext(feed, job); err != nil {
 				return err
 			}
-			//TODO just use a single Succeeded condition, like Build
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
 				Type:    feedsv1alpha1.FeedConditionReady,
 				Status:  corev1.ConditionTrue,
@@ -196,7 +195,7 @@ func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
 				Type:    feedsv1alpha1.FeedConditionReady,
 				Status:  corev1.ConditionTrue,
-				Reason:  "StopJobComplete",
+				Reason:  "FeedSuccess",
 				Message: "stop job succeeded",
 			})
 		} else if resources.IsJobFailed(job) {
@@ -204,7 +203,7 @@ func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
 				Type:    feedsv1alpha1.FeedConditionReady,
 				Status:  corev1.ConditionFalse,
-				Reason:  "StopJobFailed",
+				Reason:  "FeedFailed",
 				Message: fmt.Sprintf("Job failed with %s", resources.JobFailedMessage(job)),
 			})
 		}

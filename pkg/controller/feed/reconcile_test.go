@@ -330,7 +330,7 @@ func getDeletedStoppedFeed() *feedsv1alpha1.Feed {
 	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
 		Type:    feedsv1alpha1.FeedConditionReady,
 		Status:  corev1.ConditionTrue,
-		Reason:  "StopJobComplete",
+		Reason:  "FeedSuccess",
 		Message: "stop job succeeded",
 	})
 	return feed
