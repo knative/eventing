@@ -17,6 +17,17 @@
 # This is a collection of useful bash functions and constants, intended
 # to be used in test scripts and the like. It doesn't do anything when
 # called from command line.
+#
+# Running on OSX:
+# $ brew install coreutils
+#
+
+uname=$(uname);
+case "$uname" in
+    (*Linux*) READLINK_CMD='readlink'; ;;
+    (*Darwin*) READLINK_CMD='greadlink'; ;;
+    (*) echo 'error: unsupported platform.'; exit 2; ;;
+esac;
 
 # Default GKE version to be used with eventing
 readonly EVENTING_GKE_VERSION=1.9.6-gke.1
@@ -24,7 +35,7 @@ readonly EVENTING_GKE_VERSION=1.9.6-gke.1
 # Useful environment variables
 [[ -n "${PROW_JOB_ID}" ]] && IS_PROW=1 || IS_PROW=0
 readonly IS_PROW
-readonly EVENTING_ROOT_DIR="$(dirname $(readlink -f ${BASH_SOURCE}))/.."
+readonly EVENTING_ROOT_DIR="$(dirname $($READLINK_CMD -f ${BASH_SOURCE}))/.."
 readonly OUTPUT_GOBIN="${EVENTING_ROOT_DIR}/_output/bin"
 
 # Copy of *_OVERRIDE variables
@@ -36,7 +47,7 @@ readonly OG_KO_DOCKER_REPO="${KO_DOCKER_REPO}"
 # Simple header for logging purposes.
 function header() {
   echo "================================================="
-  echo ${1^^}
+  echo ${1} | awk '{print toupper($0)}'
   echo "================================================="
 }
 

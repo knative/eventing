@@ -14,6 +14,12 @@ Use `go test`:
 go test -v ./pkg/...
 ```
 
+Alternatively, use the presubmit script:
+
+```shell
+./test/presubmit-tests.sh --unit-tests
+``` 
+
 ## Running end-to-end tests
 
 ### Dependencies

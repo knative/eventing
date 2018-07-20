@@ -25,8 +25,19 @@
 # project $PROJECT_ID, start Knative serving and the eventing system, run
 # the tests and delete the cluster.
 # $KO_DOCKER_REPO must point to a valid writable docker repo.
+#
+# Running on OSX:
+# $ brew install coreutils
+#
 
-source "$(dirname $(readlink -f ${BASH_SOURCE}))/library.sh"
+uname=$(uname);
+case "$uname" in
+    (*Linux*) READLINK_CMD='readlink'; ;;
+    (*Darwin*) READLINK_CMD='greadlink'; ;;
+    (*) echo 'error: unsupported platform.'; exit 2; ;;
+esac;
+
+source "$(dirname $($READLINK_CMD -f ${BASH_SOURCE}))/library.sh"
 
 # Test cluster parameters and location of test files
 readonly E2E_CLUSTER_NAME=eventing-e2e-cluster${BUILD_NUMBER}
@@ -42,7 +53,7 @@ readonly E2E_TEST_FUNCTION_NAMESPACE=e2etestfn
 readonly E2E_TEST_FUNCTION=e2e-k8s-events-function
 
 # This script.
-readonly SCRIPT_CANONICAL_PATH="$(readlink -f ${BASH_SOURCE})"
+readonly SCRIPT_CANONICAL_PATH="$($READLINK_CMD -f ${BASH_SOURCE})"
 
 # Helper functions.
 
