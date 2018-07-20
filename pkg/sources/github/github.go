@@ -76,8 +76,15 @@ func (t *GithubEventSource) StopFeed(trigger sources.EventTrigger, feedContext s
 		log.Printf("Failed to convert webhook %q to int64 : %s", webhookID, err)
 		return err
 	}
-	r, err := client.Repositories.DeleteHook(ctx, owner, repo, id)
+	_, err = client.Repositories.DeleteHook(ctx, owner, repo, id)
 	if err != nil {
+		if errResp, ok := err.(*ghclient.ErrorResponse); ok {
+			// If the webhook doesn't exist, nothing to do
+			if errResp.Message == "Not Found" {
+				log.Printf("Webhook doesn't exist, nothing to delete.")
+				return nil
+			}
+		}
 		log.Printf("Failed to delete the webhook: %#v", err)
 		return err
 	}
