@@ -46,6 +46,11 @@ function build_tests() {
   # kubekins images don't have dep installed by default
   go get -u github.com/golang/dep/cmd/dep
   ./hack/verify-codegen.sh
+
+  # Fetch the google/licenseclassifier for its license db
+  go get github.com/google/licenseclassifier
+  # Check that we don't have any forbidden licenses in our images.
+  go run ./vendor/github.com/mattmoor/dep-collector/*.go -check ./cmd/*
 }
 
 function unit_tests() {
