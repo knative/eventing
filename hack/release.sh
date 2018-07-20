@@ -178,8 +178,11 @@ fi
 echo "Publishing release.yaml"
 publish_yaml ${OUTPUT_YAML}
 publish_yaml ${OUTPUT_YAML_BUS_STUB}
+publish_yaml ${OUTPUT_YAML_CLUSTERBUS_STUB}
 publish_yaml ${OUTPUT_YAML_BUS_GCPPUBSUB}
+publish_yaml ${OUTPUT_YAML_CLUSTERBUS_GCPPUBSUB}
 publish_yaml ${OUTPUT_YAML_BUS_KAFKA}
+publish_yaml ${OUTPUT_YAML_CLUSTERBUS_KAFKA}
 publish_yaml ${OUTPUT_YAML_SOURCE_K8SEVENTS}
 publish_yaml ${OUTPUT_YAML_SOURCE_GCPPUBSUB}
 publish_yaml ${OUTPUT_YAML_SOURCE_GITHUB}
