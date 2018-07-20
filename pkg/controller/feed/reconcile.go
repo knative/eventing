@@ -200,6 +200,8 @@ func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
 			})
 		} else if resources.IsJobFailed(job) {
 			r.recorder.Eventf(feed, corev1.EventTypeWarning, "StopJobFailed", "Stop job %q failed: %q", job.Name, resources.JobFailedMessage(job))
+			glog.Warningf("Stop job %q failed, removing finalizer on feed %q anyway.", job.Name, feed.Name)
+			feed.RemoveFinalizer(finalizerName)
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
 				Type:    feedsv1alpha1.FeedConditionReady,
 				Status:  corev1.ConditionFalse,
