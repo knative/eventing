@@ -67,9 +67,9 @@ const (
 
 var (
 	// DefaultBackoffLimit is the default BackoffLimit value for feedlet jobs.
-	// No more than this number of job pods will be created before the job is
-	// considered failed.
-	DefaultBackoffLimit int32 = 3
+	// No more than this number of retry pods will be created before the job is
+	// considered failed. The total number of tries is this number + 1.
+	DefaultBackoffLimit int32 = 2
 	// DefaultActiveDeadlineSeconds is the default ActiveDeadlineSeconds value for
 	// feedlet jobs. The job cannot be active for more than this number of
 	// seconds before it is considered failed.
