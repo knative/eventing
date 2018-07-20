@@ -165,6 +165,20 @@ var testCases = []controllertesting.TestCase{
 		},
 	},
 	{
+		Name: "failed because missing event source, now present",
+		InitialState: []runtime.Object{
+			getFeedFailingWithMissingEventSource(),
+			getEventSource(),
+			getEventType(),
+			getRoute(),
+		},
+		ReconcileKey: "test/test-feed",
+		WantPresent: []runtime.Object{
+			getStartInProgressFeed(),
+			getNewStartJob(),
+		},
+	},
+	{
 		Name: "Deleted feed with finalizer, previously completed, feed job exists: feed job deleted",
 		InitialState: []runtime.Object{
 			getEventSource(),
@@ -317,6 +331,33 @@ func getNewFeed() *feedsv1alpha1.Feed {
 				Parameters:     nil,
 				ParametersFrom: nil,
 			},
+		},
+	}
+}
+
+func getFeedFailingWithMissingEventSource() *feedsv1alpha1.Feed {
+	return &feedsv1alpha1.Feed{
+		TypeMeta:   feedType(),
+		ObjectMeta: om("test", "test-feed"),
+		Spec: feedsv1alpha1.FeedSpec{
+			Action: feedsv1alpha1.FeedAction{
+				RouteName: getRoute().Name,
+			},
+			Trigger: feedsv1alpha1.EventTrigger{
+				EventType:      getEventType().Name,
+				Resource:       "",
+				Service:        "",
+				Parameters:     nil,
+				ParametersFrom: nil,
+			},
+		},
+		Status: feedsv1alpha1.FeedStatus{
+			Conditions: []feedsv1alpha1.FeedCondition{{
+				Type:    feedsv1alpha1.FeedConditionDependenciesSatisfied,
+				Status:  corev1.ConditionFalse,
+				Reason:  "TestGenerated",
+				Message: "Test generated",
+			}},
 		},
 	}
 }

@@ -94,9 +94,12 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
-	// TODO: Set teh FeedConditionDependenciesSatisfied to true here? Or, after
+	// TODO: Set the FeedConditionDependenciesSatisfied to true here? Or, after
 	// job finishes? For now, the above conveys enough information to the user
 	// to make sure if they make a typo they will get that relayed back to them.
+	// IF we make it here, clear the condition in case they actually fixed the problem
+	// say, by installing an event provider.
+	feed.Status.RemoveCondition(feedsv1alpha1.FeedConditionDependenciesSatisfied)
 
 	// Once we found the actual type, set the owner reference for it.
 	// TODO: Remove this and use finalizers in the EventTypes / EventSources
