@@ -72,9 +72,12 @@ func (d *MessageDispatcher) toHTTPHeaders(headers map[string]string) http.Header
 	safe := http.Header{}
 
 	for name, value := range headers {
+		// Header names are case insensitive. Be sure to compare against a lower-cased version
+		// (all our oracles are lower-case as well).
+		name = strings.ToLower(name)
 		if _, ok := d.forwardHeaders[name]; ok {
 			safe.Add(name, value)
-			break
+			continue
 		}
 		for _, prefix := range d.forwardPrefixes {
 			if strings.HasPrefix(name, prefix) {

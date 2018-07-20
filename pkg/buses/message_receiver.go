@@ -142,12 +142,14 @@ func (r *MessageReceiver) fromHTTPHeaders(headers http.Header) map[string]string
 
 	// TODO handle multi-value headers
 	for h, v := range headers {
-		if _, ok := r.forwardHeaders[h]; ok {
+		// Headers are case-insensitive but test case are all lower-case
+		comparable := strings.ToLower(h)
+		if _, ok := r.forwardHeaders[comparable]; ok {
 			safe[h] = v[0]
-			break
+			continue
 		}
 		for _, p := range r.forwardPrefixes {
-			if strings.HasPrefix(h, p) {
+			if strings.HasPrefix(comparable, p) {
 				safe[h] = v[0]
 				break
 			}

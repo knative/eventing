@@ -20,7 +20,7 @@ metadata:
 spec:
   serviceAccountName: e2e-feed
   trigger:
-    eventType: receiveevent
+    eventType: dev.knative.k8s.event
     # This is kind of superfluous due to parameters, but the current
     # feed model still requires a resource
     resource: k8sevents/receiveevent
