@@ -99,6 +99,7 @@ func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
 				if err != nil {
 					return err
 				}
+				r.recorder.Eventf(feed, corev1.EventTypeNormal, "StartJobCreated", "Created start job %q", job.Name)
 				feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
 					Type:    feedsv1alpha1.FeedConditionReady,
 					Status:  corev1.ConditionUnknown,
@@ -113,6 +114,7 @@ func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
 		}
 
 		if resources.IsJobComplete(job) {
+			r.recorder.Eventf(feed, corev1.EventTypeNormal, "StartJobCompleted", "Start job %q completed", job.Name)
 			if err := r.setFeedContext(feed, job); err != nil {
 				return err
 			}
@@ -124,6 +126,7 @@ func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
 				Message: "start job succeeded",
 			})
 		} else if resources.IsJobFailed(job) {
+			r.recorder.Eventf(feed, corev1.EventTypeWarning, "StartJobFailed", "Start job %q failed: %q", job.Name, resources.JobFailedMessage(job))
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
 				Type:    feedsv1alpha1.FeedConditionReady,
 				Status:  corev1.ConditionFalse,
@@ -172,6 +175,7 @@ func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
 				if err != nil {
 					return err
 				}
+				r.recorder.Eventf(feed, corev1.EventTypeNormal, "StopJobCreated", "Created stop job %q", job.Name)
 				//TODO check for event source not found and remove finalizer
 
 				feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
@@ -184,6 +188,7 @@ func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
 		}
 
 		if resources.IsJobComplete(job) {
+			r.recorder.Eventf(feed, corev1.EventTypeNormal, "StopJobCompleted", "Stop job %q completed", job.Name)
 			feed.RemoveFinalizer(finalizerName)
 			if err := r.updateFinalizers(feed); err != nil {
 				return err
@@ -195,7 +200,7 @@ func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
 				Message: "stop job succeeded",
 			})
 		} else if resources.IsJobFailed(job) {
-			// finalizer remains to allow humans to inspect the failure
+			r.recorder.Eventf(feed, corev1.EventTypeWarning, "StopJobFailed", "Stop job %q failed: %q", job.Name, resources.JobFailedMessage(job))
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
 				Type:    feedsv1alpha1.FeedConditionReady,
 				Status:  corev1.ConditionFalse,

@@ -68,6 +68,7 @@ var testCases = []controllertesting.TestCase{
 		WantPresent: []runtime.Object{
 			getStartInProgressFeed(),
 			getNewStartJob(),
+			//TODO job created event
 		},
 	},
 	{
@@ -99,10 +100,11 @@ var testCases = []controllertesting.TestCase{
 		WantPresent: []runtime.Object{
 			getStartedFeed(),
 			getCompletedStartFeedJob(),
+			//TODO job completed event
 		},
 	},
 	{
-		Name: "in progress feed with failed job: updated status, job exists",
+		Name: "in progress feed with failed start job: updated status, job exists",
 		InitialState: []runtime.Object{
 			getEventSource(),
 			getEventType(),
@@ -115,6 +117,7 @@ var testCases = []controllertesting.TestCase{
 		WantPresent: []runtime.Object{
 			getStartFailedFeed(),
 			getFailedStartFeedJob(),
+			//TODO job failed event
 		},
 	},
 	{
@@ -146,6 +149,7 @@ var testCases = []controllertesting.TestCase{
 		WantPresent: []runtime.Object{
 			getDeletedStopInProgressFeed(),
 			getNewStopJob(),
+			//TODO job created event
 		},
 	},
 	{
@@ -175,6 +179,7 @@ var testCases = []controllertesting.TestCase{
 		ReconcileKey: "test/test-feed",
 		WantPresent: []runtime.Object{
 			getDeletedStoppedFeed(),
+			//TODO job completed event
 		},
 	},
 }
