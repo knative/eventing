@@ -360,7 +360,7 @@ func (c *Controller) reconcile(flow *v1alpha1.Flow) error {
 
 	channelDNS := channel.Status.DomainInternal
 	if channelDNS != "" {
-		glog.Infof("Reconciling feed for flow %q targeting channel %q", flow.Name, channelDNS)
+		glog.Infof("Reconciling feed for flow %q targeting %q", flow.Name, channelDNS)
 		feed, err := c.reconcileFeed(channelDNS, flow)
 		if err != nil {
 			glog.Warningf("Failed to reconcile feed: %v", err)
