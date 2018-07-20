@@ -359,8 +359,8 @@ func (c *Controller) reconcile(flow *v1alpha1.Flow) error {
 	flow.Status.PropagateSubscriptionStatus(subscription.Status)
 
 	channelDNS := channel.Status.DomainInternal
-	if channelTarget != "" {
-		glog.Infof("Reconciling feed for flow %q targeting channel %q", flow.Name, channelTarget)
+	if channelDNS != "" {
+		glog.Infof("Reconciling feed for flow %q targeting channel %q", flow.Name, channelDNS)
 		feed, err := c.reconcileFeed(channelDNS, flow)
 		if err != nil {
 			glog.Warningf("Failed to reconcile feed: %v", err)
@@ -548,7 +548,7 @@ func (c *Controller) createFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv
 			},
 		},
 		Spec: feedsv1alpha1.FeedSpec{
-			Action: feedsv1alpha1.FeedAction{ChannelDNS: DNSName},
+			Action: feedsv1alpha1.FeedAction{DNSName: channelDNS},
 			Trigger: feedsv1alpha1.EventTrigger{
 				EventType: flow.Spec.Trigger.EventType,
 				Resource:  flow.Spec.Trigger.Resource,
