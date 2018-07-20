@@ -160,7 +160,7 @@ func cloudEventsContext(m *corev1.Event) *event.EventContext {
 	return &event.EventContext{
 		// Events are themselves object and have a unique UUID. Could also have used the UID
 		CloudEventsVersion: event.CloudEventsVersion,
-		EventType:          "dev.knative.k8s.event.create",
+		EventType:          "dev.knative.k8s.event",
 		EventID:            string(m.ObjectMeta.UID),
 		Source:             createSelfLink(m.InvolvedObject),
 		EventTime:          m.ObjectMeta.CreationTimestamp.Time,
