@@ -18,7 +18,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-readonly SERVING_ROOT_DIR="$(git rev-parse --show-toplevel)"
+readonly EVENTING_ROOT_DIR="$(git rev-parse --show-toplevel)"
 readonly TMP_DIFFROOT="$(mktemp -d -p ${EVENTING_ROOT_DIR})"
 
 cleanup() {
