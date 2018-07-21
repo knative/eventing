@@ -28,3 +28,6 @@ dep ensure
 
 rm -rf $(find vendor/ -name 'BUILD')
 rm -rf $(find vendor/ -name 'BUILD.bazel')
+
+# Run dep-collector to update our VENDOR-LICENSE
+go run ./vendor/github.com/mattmoor/dep-collector/*.go ./cmd/* > third_party/VENDOR-LICENSE

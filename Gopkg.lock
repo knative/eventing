@@ -190,28 +190,27 @@
   version = "v0.2.0"
 
 [[projects]]
-  branch = "master"
   name = "github.com/google/go-containerregistry"
   packages = [
-    "authn",
     "cmd/ko",
-    "ko/build",
-    "ko/publish",
-    "ko/resolve",
-    "name",
-    "v1",
-    "v1/daemon",
-    "v1/empty",
-    "v1/mutate",
-    "v1/partial",
-    "v1/random",
-    "v1/remote",
-    "v1/remote/transport",
-    "v1/tarball",
-    "v1/types",
-    "v1/v1util"
+    "pkg/authn",
+    "pkg/ko/build",
+    "pkg/ko/publish",
+    "pkg/ko/resolve",
+    "pkg/name",
+    "pkg/v1",
+    "pkg/v1/daemon",
+    "pkg/v1/empty",
+    "pkg/v1/mutate",
+    "pkg/v1/partial",
+    "pkg/v1/random",
+    "pkg/v1/remote",
+    "pkg/v1/remote/transport",
+    "pkg/v1/tarball",
+    "pkg/v1/types",
+    "pkg/v1/v1util"
   ]
-  revision = "e033bc7269cacc3145d08df64ad5cf387c7fc48d"
+  revision = "0eeba96f66fdd1873f2ec7f3764ee3b58c5a050c"
 
 [[projects]]
   name = "github.com/google/go-github"
@@ -230,6 +229,19 @@
   name = "github.com/google/gofuzz"
   packages = ["."]
   revision = "24818f796faf91cd76ec7bddd72458fbced7a6c1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/google/licenseclassifier"
+  packages = [
+    ".",
+    "internal/sets",
+    "stringclassifier",
+    "stringclassifier/internal/pq",
+    "stringclassifier/searchset",
+    "stringclassifier/searchset/tokenizer"
+  ]
+  revision = "3c8ad1f0b0644b6646210ee9cf2f34ff907e2e18"
 
 [[projects]]
   name = "github.com/google/uuid"
@@ -346,6 +358,12 @@
   revision = "81af80346b1a01caae0cbc27fd3c1ba5b11e189f"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/mattmoor/dep-collector"
+  packages = ["."]
+  revision = "ea0470924d0dd9363ffae8936f88a22d28551685"
+
+[[projects]]
   name = "github.com/matttproud/golang_protobuf_extensions"
   packages = ["pbutil"]
   revision = "c12348ce28de40eed0136aa2b644d0ee0650e56c"
@@ -431,6 +449,12 @@
   name = "github.com/rcrowley/go-metrics"
   packages = ["."]
   revision = "e2704e165165ec55d062f5919b4b29494e9fa790"
+
+[[projects]]
+  name = "github.com/sergi/go-diff"
+  packages = ["diffmatchpatch"]
+  revision = "1744e2970ca51c86172c8190fadad617561ed6e7"
+  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/spf13/afero"
@@ -1028,6 +1052,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b6817e40027a92f07452f6aca6b22b35108a7f07ebfe71d72fab450b05856709"
+  inputs-digest = "abbfc98e1da21a8dc2663fa0e6b153f7fd531e9c75dd66df5c38cf2cf7f6e6a7"
   solver-name = "gps-cdcl"
   solver-version = 1
