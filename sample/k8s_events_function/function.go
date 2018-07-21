@@ -17,28 +17,21 @@ limitations under the License.
 package main
 
 import (
-	"encoding/json"
-	"io/ioutil"
+	"context"
 	"log"
 	"net/http"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/knative/eventing/pkg/event"
 )
 
-func handlePost(rw http.ResponseWriter, req *http.Request) {
-	body, err := ioutil.ReadAll(req.Body)
-	if err != nil {
-		panic(err)
-	}
-	var event corev1.Event
-	if err := json.Unmarshal(body, &event); err != nil {
-		log.Printf("Failed to unmarshal body %q :  %v", string(body), err)
-		return
-	}
-	log.Printf("%q : %s/%s\" : %q", event.InvolvedObject.Kind, event.InvolvedObject.Namespace, event.InvolvedObject.Name, event.Message)
+func handler(ctx context.Context, e *corev1.Event) {
+	metadata := event.FromContext(ctx)
+	log.Printf("[%s] %s : %q", metadata.EventTime.Format(time.RFC3339), metadata.Source, e.Message)
 }
 
 func main() {
-	http.HandleFunc("/", handlePost)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8080", event.Handler(handler)))
 }

@@ -15,7 +15,9 @@
 apiVersion: feeds.knative.dev/v1alpha1
 kind: EventType
 metadata:
-  name: receiveevent
+  # Warning: This event type has not been ratified by any K8S SIG and may
+  # change in future versions of Knative Eventing.
+  name: dev.knative.k8s.event
   namespace: default
 spec:
   eventSource: k8sevents
