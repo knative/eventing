@@ -24,8 +24,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/golang/glog"
-
 	"github.com/knative/eventing/pkg/sources"
 	"golang.org/x/oauth2"
 
@@ -53,7 +51,7 @@ func NewGithubEventSource() sources.EventSource {
 }
 
 func (t *GithubEventSource) StopFeed(trigger sources.EventTrigger, feedContext sources.FeedContext) error {
-	glog.Infof("Stopping github webhook feed with context %+v", feedContext)
+	log.Printf("Stopping github webhook feed with context %+v", feedContext)
 
 	components := strings.Split(trigger.Resource, "/")
 	owner := components[0]
@@ -61,7 +59,7 @@ func (t *GithubEventSource) StopFeed(trigger sources.EventTrigger, feedContext s
 
 	if _, ok := feedContext.Context[webhookIDKey]; !ok {
 		// there's no webhook id, nothing to do.
-		glog.Infof("No Webhook ID Found, bailing...")
+		log.Printf("No Webhook ID Found, bailing...")
 		return nil
 	}
 	webhookID := feedContext.Context[webhookIDKey].(string)
@@ -75,21 +73,27 @@ func (t *GithubEventSource) StopFeed(trigger sources.EventTrigger, feedContext s
 
 	id, err := strconv.ParseInt(webhookID, 10, 64)
 	if err != nil {
-		glog.Warningf("Failed to convert webhook %q to int64 : %s", webhookID, err)
+		log.Printf("Failed to convert webhook %q to int64 : %s", webhookID, err)
 		return err
 	}
-	r, err := client.Repositories.DeleteHook(ctx, owner, repo, id)
+	_, err = client.Repositories.DeleteHook(ctx, owner, repo, id)
 	if err != nil {
-		glog.Warningf("Failed to delete the webhook: %s", err)
-		glog.Warningf("Response:\n%+v", r)
+		if errResp, ok := err.(*ghclient.ErrorResponse); ok {
+			// If the webhook doesn't exist, nothing to do
+			if errResp.Message == "Not Found" {
+				log.Printf("Webhook doesn't exist, nothing to delete.")
+				return nil
+			}
+		}
+		log.Printf("Failed to delete the webhook: %#v", err)
 		return err
 	}
-	glog.Infof("Deleted webhook %q successfully", webhookID)
+	log.Printf("Deleted webhook %q successfully", webhookID)
 	return nil
 }
 
 func (t *GithubEventSource) StartFeed(trigger sources.EventTrigger, route string) (*sources.FeedContext, error) {
-	glog.Infof("CREATING GITHUB WEBHOOK")
+	log.Printf("CREATING GITHUB WEBHOOK")
 
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
@@ -115,13 +119,12 @@ func (t *GithubEventSource) StartFeed(trigger sources.EventTrigger, route string
 	components := strings.Split(trigger.Resource, "/")
 	owner := components[0]
 	repo := components[1]
-	h, r, err := client.Repositories.CreateHook(ctx, owner, repo, &hook)
+	h, _, err := client.Repositories.CreateHook(ctx, owner, repo, &hook)
 	if err != nil {
-		glog.Warningf("Failed to create the webhook: %s", err)
-		glog.Warningf("Response:\n%+v", r)
+		log.Printf("Failed to create the webhook: %s", err)
 		return nil, err
 	}
-	glog.Infof("Created hook: %+v", h)
+	log.Printf("Created hook: %+v", h)
 	return &sources.FeedContext{
 		Context: map[string]interface{}{
 			webhookIDKey: strconv.FormatInt(*h.ID, 10),
