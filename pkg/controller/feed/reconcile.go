@@ -60,10 +60,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	r.setEventTypeOwnerReference(feed)
-	if err := r.updateOwnerReferences(feed); err != nil {
-		glog.Errorf("failed to update Feed owner references: %v", err)
-		return reconcile.Result{}, err
-	}
 
 	feed.Status.InitializeConditions()
 	if feed.GetDeletionTimestamp() == nil {
@@ -78,9 +74,9 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		}
 	}
 
-	if err := r.updateStatus(feed); err != nil {
-		glog.Errorf("failed to update Feed status: %v", err)
-		return reconcile.Result{}, err
+	if updateErr := r.updateFeed(feed); updateErr != nil {
+		glog.Errorf("failed to update Feed status: %v", updateErr)
+		return reconcile.Result{}, updateErr
 	}
 	return reconcile.Result{}, err
 }
@@ -108,9 +104,6 @@ func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
 			}
 		}
 		feed.AddFinalizer(finalizerName)
-		if err := r.updateFinalizers(feed); err != nil {
-			return err
-		}
 
 		if resources.IsJobComplete(job) {
 			if err := r.setFeedContext(feed, job); err != nil {
@@ -185,9 +178,6 @@ func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
 
 		if resources.IsJobComplete(job) {
 			feed.RemoveFinalizer(finalizerName)
-			if err := r.updateFinalizers(feed); err != nil {
-				return err
-			}
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
 				Type:    feedsv1alpha1.FeedConditionReady,
 				Status:  corev1.ConditionTrue,
@@ -235,22 +225,37 @@ func (r *reconciler) updateFinalizers(u *feedsv1alpha1.Feed) error {
 	return nil
 }
 
-func (r *reconciler) updateStatus(u *feedsv1alpha1.Feed) error {
+func (r *reconciler) updateFeed(u *feedsv1alpha1.Feed) error {
 	feed := &feedsv1alpha1.Feed{}
 	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: u.Namespace, Name: u.Name}, feed)
 	if err != nil {
 		return err
 	}
 
+	updated := false
+	if !equality.Semantic.DeepEqual(feed.OwnerReferences, u.OwnerReferences) {
+		feed.SetOwnerReferences(u.ObjectMeta.OwnerReferences)
+		updated = true
+	}
+
+	if !equality.Semantic.DeepEqual(feed.Finalizers, u.Finalizers) {
+		feed.SetFinalizers(u.ObjectMeta.Finalizers)
+		updated = true
+	}
+
 	if !equality.Semantic.DeepEqual(feed.Status, u.Status) {
 		feed.Status = u.Status
-		// Until #38113 is merged, we must use Update instead of UpdateStatus to
-		// update the Status block of the Feed resource. UpdateStatus will not
-		// allow changes to the Spec of the resource, which is ideal for ensuring
-		// nothing other than resource status has been updated.
-		return r.client.Update(context.TODO(), feed)
+		updated = true
 	}
-	return nil
+
+	if updated == false {
+		return nil
+	}
+	// Until #38113 is merged, we must use Update instead of UpdateStatus to
+	// update the Status block of the Feed resource. UpdateStatus will not
+	// allow changes to the Spec of the resource, which is ideal for ensuring
+	// nothing other than resource status has been updated.
+	return r.client.Update(context.TODO(), feed)
 }
 
 func (r *reconciler) setEventTypeOwnerReference(feed *feedsv1alpha1.Feed) error {
