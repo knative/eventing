@@ -1,3 +1,26 @@
+# Channel Demo
+
+> **Note**: This is an older demo, and many components have changed since this
+> demo was written. In particular, the following items have broken this demo:
+>
+> 1.  The Subscription targets the kubernetes `Service` associated with the
+>     Knative `Revision`, rather than the DNS name associated with the Knative
+>     `Route`. This was an early workaround for Istio 0.6 `RouteRules`, and is
+>     resolved with Istio 0.8 `VirtualServices`.
+> 1.  The example provisions a stub `Bus`. It should instead provision a
+>     `ClusterBus` and then create namespace-specific Channels as needed.
+> 1.  `Channels` no longer provision an `Ingress`. `Channels are intended to
+>     provide a within-cluster fanout mechanism, but are not intended to be
+>     exposed between clusters.
+> 1.  The sample payload is unstructured. It should be rewritten to send a
+>     CloudEvents structured-format payload.
+> 1.  The sample uses `ko` to deploy the application code. It should use Docker
+>     or some other mechanism which does not require a `go install` installer.
+> 1.  The sample sends events to only a single Service, which does not really
+>     motivate its' usage. It should send events to two different endpoints.
+> 1.  The invocation section uses `kail`, but does not reference it as a
+>     requirement.
+
 The hello sample includes a Knative Service, Channel and Subscription.
 
 # Deploy
@@ -14,7 +37,9 @@ Then, deploy the hello function, channel and subscription:
 ko apply -f sample/hello/
 ```
 
-The service will deploy the function and expose an ingress for the function and channel. It may take a minute to acquire an IP address, but eventually you should see something similar to:
+The service will deploy the function and expose an ingress for the function and
+channel. It may take a minute to acquire an IP address, but eventually you
+should see something similar to:
 
 ```
 $ watch -n1 kubectl get ing
@@ -25,9 +50,11 @@ hello-ingress   hello.default.demo-domain.com,*.hello.default.demo-domain.com   
 
 # Invoke
 
-The hello function is reachable either directly via the route created by the hello service, or by the aloha channel.
+The hello function is reachable either directly via the route created by the
+hello service, or by the aloha channel.
 
-We can use kail to watch the log output for the function. In a separte shell run:
+We can use kail to watch the log output for the function. In a separte shell
+run:
 
 ```
 kail -d hello-00001-deployment
@@ -51,7 +78,8 @@ You should see a response like:
 
 > Hello Knative, from hello-00001-deployment-5fb4b845fd-7h2lc
 
-Unlike with direct access, when invoking over the channel, the caller will not recieve a response directly.
+Unlike with direct access, when invoking over the channel, the caller will not
+recieve a response directly.
 
 We can use kail to watch the log output from the bus. In a separte shell run:
 
@@ -72,4 +100,5 @@ $ export SERVICE_IP=`kubectl get svc -l istio=ingressgateway --all-namespaces -o
 $ curl -H "Host: $SERVICE_HOST" -H "Content-Type: text/plain" $SERVICE_IP -d "Knative"
 ```
 
-This time there should be no response via curl, but you should see logging from the bus and the function indicating it received the request.
+This time there should be no response via curl, but you should see logging from
+the bus and the function indicating it received the request.
