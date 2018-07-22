@@ -65,6 +65,17 @@ const (
 	EnvVarServiceAccount = "FEED_SERVICE_ACCOUNT"
 )
 
+var (
+	// DefaultBackoffLimit is the default BackoffLimit value for feedlet jobs.
+	// No more than this number of retry pods will be created before the job is
+	// considered failed. The total number of tries is this number + 1.
+	DefaultBackoffLimit int32 = 2
+	// DefaultActiveDeadlineSeconds is the default ActiveDeadlineSeconds value for
+	// feedlet jobs. The job cannot be active for more than this number of
+	// seconds before it is considered failed.
+	DefaultActiveDeadlineSeconds int64 = 30
+)
+
 // MakeJob creates a Job to start or stop a Feed.
 func MakeJob(feed *feedsv1alpha1.Feed, source *feedsv1alpha1.EventSource, trigger sources.EventTrigger, target string) (*batchv1.Job, error) {
 	labels := map[string]string{
@@ -84,7 +95,9 @@ func MakeJob(feed *feedsv1alpha1.Feed, source *feedsv1alpha1.EventSource, trigge
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(feed, feedsv1alpha1.SchemeGroupVersion.WithKind("Feed"))},
 		},
 		Spec: batchv1.JobSpec{
-			Template: *podTemplate,
+			Template:              *podTemplate,
+			BackoffLimit:          &DefaultBackoffLimit,
+			ActiveDeadlineSeconds: &DefaultActiveDeadlineSeconds,
 		},
 	}, nil
 }

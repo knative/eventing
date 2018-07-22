@@ -398,6 +398,8 @@ func getNewStartJob() *batchv1.Job {
 					RestartPolicy: corev1.RestartPolicyNever,
 				},
 			},
+			BackoffLimit:          &resources.DefaultBackoffLimit,
+			ActiveDeadlineSeconds: &resources.DefaultActiveDeadlineSeconds,
 		},
 		Status: batchv1.JobStatus{},
 	}
