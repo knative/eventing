@@ -14,12 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-source "$(dirname $(readlink -f ${BASH_SOURCE}))/../test/library.sh"
-
 set -o errexit
 set -o nounset
 set -o pipefail
 
+readonly EVENTING_ROOT_DIR="$(git rev-parse --show-toplevel)"
 readonly TMP_DIFFROOT="$(mktemp -d -p ${EVENTING_ROOT_DIR})"
 
 cleanup() {
@@ -37,7 +36,7 @@ cp -aR "${EVENTING_ROOT_DIR}/Gopkg.lock" "${EVENTING_ROOT_DIR}/pkg" "${EVENTING_
 "${EVENTING_ROOT_DIR}/hack/update-codegen.sh"
 echo "Diffing ${EVENTING_ROOT_DIR} against freshly generated codegen"
 ret=0
-diff -Naupr "${EVENTING_ROOT_DIR}/pkg" "${TMP_DIFFROOT}/pkg" || ret=$?
+diff -Naupr "${EVENTING_ROOT_DIR}/pkg" "${TMP_DIFFROOT}/pkg" || ret=1
 
 # Restore working tree state
 rm -fr "${EVENTING_ROOT_DIR}/Gopkg.lock" "${EVENTING_ROOT_DIR}/pkg" "${EVENTING_ROOT_DIR}/vendor"
