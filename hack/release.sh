@@ -14,10 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -o errexit
-set -o pipefail
-
-source "$(dirname $(readlink -f ${BASH_SOURCE}))/../test/library.sh"
+# Load github.com/knative/test-infra/images/prow-tests/scripts/release.sh
+[ -f /workspace/release.sh ] \
+  && source /workspace/release.sh \
+  || eval "$(docker run --entrypoint sh gcr.io/knative-tests/test-infra/prow-tests -c 'cat release.sh')"
+[ -v KNATIVE_TEST_INFRA ] || exit 1
 
 # Set default GCS/GCR
 : ${EVENTING_RELEASE_GCS:="knative-releases"}
@@ -25,166 +26,75 @@ source "$(dirname $(readlink -f ${BASH_SOURCE}))/../test/library.sh"
 readonly EVENTING_RELEASE_GCS
 readonly EVENTING_RELEASE_GCR
 
-# Local generated yaml file.
-readonly OUTPUT_YAML=release-eventing.yaml
-readonly OUTPUT_YAML_BUS_STUB=release-eventing-bus-stub.yaml
-readonly OUTPUT_YAML_CLUSTERBUS_STUB=release-eventing-clusterbus-stub.yaml
-readonly OUTPUT_YAML_BUS_GCPPUBSUB=release-eventing-bus-gcppubsub.yaml
-readonly OUTPUT_YAML_CLUSTERBUS_GCPPUBSUB=release-eventing-clusterbus-gcppubsub.yaml
-readonly OUTPUT_YAML_BUS_KAFKA=release-eventing-bus-kafka.yaml
-readonly OUTPUT_YAML_CLUSTERBUS_KAFKA=release-eventing-clusterbus-kafka.yaml
-readonly OUTPUT_YAML_SOURCE_K8SEVENTS=release-eventing-source-k8sevents.yaml
-readonly OUTPUT_YAML_SOURCE_GCPPUBSUB=release-eventing-source-gcppubsub.yaml
-readonly OUTPUT_YAML_SOURCE_GITHUB=release-eventing-source-github.yaml
+# Yaml files to generate, and the source config dir for them.
+declare -A RELEASES
+RELEASES["release-eventing.yaml"]="config"
+RELEASES["release-eventing-bus-stub.yaml"]="config/buses/stub"
+RELEASES["release-eventing-bus-gcppubsub.yaml"]="config/buses/gcppubsub"
+RELEASES["release-eventing-bus-kafka.yaml"]="config/buses/kafka"
+RELEASES["release-eventing-source-k8sevents.yaml"]="pkg/sources/k8sevents"
+RELEASES["release-eventing-source-gcppubsub.yaml"]="pkg/sources/gcppubsub"
+RELEASES["release-eventing-source-github.yaml"]="pkg/sources/github"
+readonly RELEASES
 
-function banner() {
-  echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-  echo "@@@@ $1 @@@@"
-  echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-}
-
-# Tag Knative Eventing images in the yaml file with a tag.
-# Parameters: $1 - yaml file to parse for images.
-#             $2 - tag to apply.
-function tag_knative_images() {
-  [[ -z $2 ]] && return 0
-  echo "Tagging images with $2"
-  for image in $(grep -o "${EVENTING_RELEASE_GCR}/[a-z\./-]\+@sha256:[0-9a-f]\+" $1); do
-    gcloud -q container images add-tag ${image} ${image%%@*}:$2
-  done
-}
-
-# Copy the given yaml file to the release GCS bucket.
-# Parameters: $1 - yaml file to copy.
-function publish_yaml() {
-  gsutil cp $1 gs://${EVENTING_RELEASE_GCS}/latest/
-  if (( TAG_RELEASE )); then
-    gsutil cp $1 gs://${EVENTING_RELEASE_GCS}/previous/${TAG}/
-  fi
-}
-
-# Convert a Bus to a ClusterBus
-# Parameters: $1 - yaml file containing a Bus.
-#             $2 - yaml file to create containing a ClusterBus.
-function make_clusterbus() {
-  local BUS_YAML=$1
-  local CLUSTERBUS_YAML=$2
-  sed -e 's/^kind: Bus$/kind: ClusterBus/g' $BUS_YAML > $CLUSTERBUS_YAML
-}
+# Yaml files that will be also released as ClusterBuses from Buses
+readonly CLUSTERBUS_YAMLS=(
+  release-eventing-bus-stub.yaml
+  release-eventing-bus-gcppubsub.yaml
+  release-eventing-bus-kafka.yaml
+)
 
 # Script entry point.
 
-cd ${EVENTING_ROOT_DIR}
+parse_flags $@
 
-SKIP_TESTS=0
-TAG_RELEASE=0
-DONT_PUBLISH=0
-KO_FLAGS="-P"
+set -o errexit
+set -o pipefail
 
-for parameter in "$@"; do
-  case $parameter in
-    --skip-tests)
-      SKIP_TESTS=1
-      shift
-      ;;
-    --tag-release)
-      TAG_RELEASE=1
-      shift
-      ;;
-    --publish)
-      DONT_PUBLISH=0
-      shift
-      ;;
-    --nopublish)
-      DONT_PUBLISH=1
-      KO_FLAGS="-L"
-      shift
-      ;;
-    *)
-      echo "error: unknown option ${parameter}"
-      exit 1
-      ;;
-  esac
-done
+run_validation_tests ./test/presubmit-tests.sh
 
-readonly SKIP_TESTS
-readonly TAG_RELEASE
-readonly DONT_PUBLISH
-readonly KO_FLAGS
-
-if (( ! SKIP_TESTS )); then
-  banner "RUNNING RELEASE VALIDATION TESTS"
-  # Run tests.
-  ./test/presubmit-tests.sh
-fi
-
-banner "    BUILDING THE RELEASE   "
+banner "Building the release"
 
 # Set the repository
 export KO_DOCKER_REPO=${EVENTING_RELEASE_GCR}
 
-TAG=""
-if (( TAG_RELEASE )); then
-  commit=$(git describe --tags --always --dirty)
-  # Like kubernetes, image tag is vYYYYMMDD-commit
-  TAG="v$(date +%Y%m%d)-${commit}"
-fi
-readonly TAG
-
-if (( ! DONT_PUBLISH )); then
+if (( PUBLISH_RELEASE )); then
   echo "- Destination GCR: ${EVENTING_RELEASE_GCR}"
   echo "- Destination GCS: ${EVENTING_RELEASE_GCS}"
 fi
 
-echo "Building Knative Eventing"
-ko resolve ${KO_FLAGS} -f config/ >> ${OUTPUT_YAML}
-tag_knative_images ${OUTPUT_YAML} ${TAG}
+# Build the release
 
-echo "Building Knative Eventing - Stub Bus"
-ko resolve ${KO_FLAGS} -f config/buses/stub/ >> ${OUTPUT_YAML_BUS_STUB}
-tag_knative_images ${OUTPUT_YAML_BUS_STUB} ${TAG}
-make_clusterbus ${OUTPUT_YAML_BUS_STUB} ${OUTPUT_YAML_CLUSTERBUS_STUB}
-tag_knative_images ${OUTPUT_YAML_CLUSTERBUS_STUB} ${TAG}
+all_yamls=()
 
-echo "Building Knative Eventing - GCP Cloud Pub/Sub Bus"
-ko resolve ${KO_FLAGS} -f config/buses/gcppubsub/ >> ${OUTPUT_YAML_BUS_GCPPUBSUB}
-tag_knative_images ${OUTPUT_YAML_BUS_GCPPUBSUB} ${TAG}
-make_clusterbus ${OUTPUT_YAML_BUS_GCPPUBSUB} ${OUTPUT_YAML_CLUSTERBUS_GCPPUBSUB}
-tag_knative_images ${OUTPUT_YAML_CLUSTERBUS_GCPPUBSUB} ${TAG}
+for yaml in "${!RELEASES[@]}"; do
+  config="${RELEASES[${yaml}]}"
+  echo "Building Knative Eventing - ${config}"
+  ko resolve ${KO_FLAGS} -f ${config}/ > ${yaml}
+  tag_images_in_yaml ${yaml} ${EVENTING_RELEASE_GCR} ${TAG}
+  all_yamls+=(${yaml})
+done
 
-echo "Building Knative Eventing - Kafka Bus"
-ko resolve ${KO_FLAGS} -f config/buses/kafka/ >> ${OUTPUT_YAML_BUS_KAFKA}
-tag_knative_images ${OUTPUT_YAML_BUS_KAFKA} ${TAG}
-make_clusterbus ${OUTPUT_YAML_BUS_KAFKA} ${OUTPUT_YAML_CLUSTERBUS_KAFKA}
-tag_knative_images ${OUTPUT_YAML_CLUSTERBUS_KAFKA} ${TAG}
+for yaml in ${CLUSTERBUS_YAMLS[@]}; do
+  clusterbus_yaml=${yaml/-bus-/-clusterbus-}
+  config="${RELEASES[${yaml}]}"
+  echo "Building Knative Eventing - ${config} (${clusterbus_yaml})"
+  sed -e 's/^kind: Bus$/kind: ClusterBus/g' ${yaml} > ${clusterbus_yaml}
+  tag_images_in_yaml ${clusterbus_yaml} ${EVENTING_RELEASE_GCR} ${TAG}
+  all_yamls+=(${clusterbus_yaml})
+done
 
-echo "Building Knative Eventing - K8s Events Source"
-ko resolve ${KO_FLAGS} -f pkg/sources/k8sevents/ >> ${OUTPUT_YAML_SOURCE_K8SEVENTS}
-tag_knative_images ${OUTPUT_YAML_SOURCE_K8SEVENTS} ${TAG}
+echo "New release built successfully"
 
-echo "Building Knative Eventing - GCP Cloud Pub/Sub Source"
-ko resolve ${KO_FLAGS} -f pkg/sources/gcppubsub/ >> ${OUTPUT_YAML_SOURCE_GCPPUBSUB}
-tag_knative_images ${OUTPUT_YAML_SOURCE_GCPPUBSUB} ${TAG}
-
-echo "Building Knative Eventing - GitHub Source"
-ko resolve ${KO_FLAGS} -f pkg/sources/github/ >> ${OUTPUT_YAML_SOURCE_GITHUB}
-tag_knative_images ${OUTPUT_YAML_SOURCE_GITHUB} ${TAG}
-
-if (( DONT_PUBLISH )); then
-  echo "New release built successfully"
-  exit 0
+if (( ! PUBLISH_RELEASE )); then
+ exit 0
 fi
 
-echo "Publishing release.yaml"
-publish_yaml ${OUTPUT_YAML}
-publish_yaml ${OUTPUT_YAML_BUS_STUB}
-publish_yaml ${OUTPUT_YAML_CLUSTERBUS_STUB}
-publish_yaml ${OUTPUT_YAML_BUS_GCPPUBSUB}
-publish_yaml ${OUTPUT_YAML_CLUSTERBUS_GCPPUBSUB}
-publish_yaml ${OUTPUT_YAML_BUS_KAFKA}
-publish_yaml ${OUTPUT_YAML_CLUSTERBUS_KAFKA}
-publish_yaml ${OUTPUT_YAML_SOURCE_K8SEVENTS}
-publish_yaml ${OUTPUT_YAML_SOURCE_GCPPUBSUB}
-publish_yaml ${OUTPUT_YAML_SOURCE_GITHUB}
+# Publish the release
+
+for yaml in ${all_yamls[@]}; do
+  echo "Publishing ${yaml}"
+  publish_yaml ${yaml} ${EVENTING_RELEASE_GCS} ${TAG}
+done
 
 echo "New release published successfully"
