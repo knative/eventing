@@ -59,8 +59,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
-	r.setEventTypeOwnerReference(feed)
-
 	feed.Status.InitializeConditions()
 	// Fetch the EventSource and EventType that is being asked for
 	// and if they don't exist update the status to reflect this back
@@ -87,7 +85,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		default:
 			return reconcile.Result{}, err
 		}
-		if err := r.updateStatus(feed); err != nil {
+		if err := r.updateFeed(feed); err != nil {
 			glog.Errorf("failed to update Feed status: %v", err)
 			return reconcile.Result{}, err
 		}
