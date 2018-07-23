@@ -445,18 +445,6 @@ func (r *reconciler) createJob(feed *feedsv1alpha1.Feed, es *feedsv1alpha1.Event
 		return nil, err
 	}
 
-	// TODO(nicholss): this needs to be an EventType of ClusterEventType
-	et := &feedsv1alpha1.EventType{}
-	if err = r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.EventType}, et); err != nil {
-		return nil, err
-	}
-
-	// TODO(nicholss): this needs to be an EventSource or ClusterEventSource
-	source := &feedsv1alpha1.EventSource{}
-	if err = r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: et.Spec.EventSource}, source); err != nil {
-		return nil, err
-	}
-
 	trigger, err := r.resolveTrigger(feed)
 	if err != nil {
 		return nil, err
