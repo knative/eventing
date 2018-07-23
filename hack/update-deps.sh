@@ -14,14 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Load github.com/knative/test-infra/images/prow-tests/scripts/library.sh
+[ -f /workspace/library.sh ] \
+  && source /workspace/library.sh \
+  || eval "$(docker run --entrypoint sh gcr.io/knative-tests/test-infra/prow-tests -c 'cat library.sh')"
+[ -v KNATIVE_TEST_INFRA ] || exit 1
+
 set -o errexit
 set -o nounset
 set -o pipefail
 
-SCRIPT_ROOT=$(dirname ${BASH_SOURCE})/..
-
-pushd ${SCRIPT_ROOT}
-trap popd EXIT
+cd ${REPO_ROOT_DIR}
 
 # Ensure we have everything we need under vendor/
 dep ensure
@@ -29,5 +32,4 @@ dep ensure
 rm -rf $(find vendor/ -name 'BUILD')
 rm -rf $(find vendor/ -name 'BUILD.bazel')
 
-# Run dep-collector to update our VENDOR-LICENSE
-go run ./vendor/github.com/mattmoor/dep-collector/*.go ./cmd/* > third_party/VENDOR-LICENSE
+update_licenses third_party/VENDOR-LICENSE "./cmd/*"

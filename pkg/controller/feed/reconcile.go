@@ -59,33 +59,76 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
-	r.setEventTypeOwnerReference(feed)
+	feed.Status.InitializeConditions()
+	// Fetch the EventSource and EventType that is being asked for
+	// and if they don't exist update the status to reflect this back
+	// to the user.
+	eventSource, eventType, err := r.getFeedSource(feed)
+	if err != nil {
+		switch t := err.(type) {
+		case *EventSourceError:
+			glog.Errorf("eventsource can not be used as a target : %s", err)
+			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+				Type:    feedsv1alpha1.FeedConditionDependenciesSatisfied,
+				Status:  corev1.ConditionFalse,
+				Reason:  t.Reason,
+				Message: t.Message,
+			})
+		case *EventTypeError:
+			glog.Errorf("eventtype can not be used as a target : %s", err)
+			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+				Type:    feedsv1alpha1.FeedConditionDependenciesSatisfied,
+				Status:  corev1.ConditionFalse,
+				Reason:  t.Reason,
+				Message: t.Message,
+			})
+		default:
+			return reconcile.Result{}, err
+		}
+		if err := r.updateFeed(feed); err != nil {
+			glog.Errorf("failed to update Feed status: %v", err)
+			return reconcile.Result{}, err
+		}
+		return reconcile.Result{}, nil
+	}
+
+	// TODO: Set the FeedConditionDependenciesSatisfied to true here? Or, after
+	// job finishes? For now, the above conveys enough information to the user
+	// to make sure if they make a typo they will get that relayed back to them.
+	// IF we make it here, clear the condition in case they actually fixed the problem
+	// say, by installing an event provider.
+	feed.Status.RemoveCondition(feedsv1alpha1.FeedConditionDependenciesSatisfied)
+
+	// Once we found the actual type, set the owner reference for it.
+	// TODO: Remove this and use finalizers in the EventTypes / EventSources
+	// to do this properly.
+	// TODO: Add issue link here. can't look up right now, no wifi
+	r.setEventTypeOwnerReference(feed, eventType)
 	if err := r.updateOwnerReferences(feed); err != nil {
 		glog.Errorf("failed to update Feed owner references: %v", err)
 		return reconcile.Result{}, err
 	}
 
-	feed.Status.InitializeConditions()
 	if feed.GetDeletionTimestamp() == nil {
-		err = r.reconcileStartJob(feed)
+		err = r.reconcileStartJob(feed, eventSource, eventType)
 		if err != nil {
 			glog.Errorf("error reconciling start Job: %v", err)
 		}
 	} else {
-		err = r.reconcileStopJob(feed)
+		err = r.reconcileStopJob(feed, eventSource, eventType)
 		if err != nil {
 			glog.Errorf("error reconciling stop Job: %v", err)
 		}
 	}
 
-	if err := r.updateStatus(feed); err != nil {
-		glog.Errorf("failed to update Feed status: %v", err)
-		return reconcile.Result{}, err
+	if updateErr := r.updateFeed(feed); updateErr != nil {
+		glog.Errorf("failed to update Feed status: %v", updateErr)
+		return reconcile.Result{}, updateErr
 	}
 	return reconcile.Result{}, err
 }
 
-func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
+func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed, es *feedsv1alpha1.EventSource, et *feedsv1alpha1.EventType) error {
 	bc := feed.Status.GetCondition(feedsv1alpha1.FeedConditionReady)
 	switch bc.Status {
 	case corev1.ConditionUnknown:
@@ -95,10 +138,11 @@ func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
 
 		if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: jobName}, job); err != nil {
 			if errors.IsNotFound(err) {
-				job, err = r.createJob(feed)
+				job, err = r.createJob(feed, es, et)
 				if err != nil {
 					return err
 				}
+				r.recorder.Eventf(feed, corev1.EventTypeNormal, "StartJobCreated", "Created start job %q", job.Name)
 				feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
 					Type:    feedsv1alpha1.FeedConditionReady,
 					Status:  corev1.ConditionUnknown,
@@ -108,15 +152,12 @@ func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
 			}
 		}
 		feed.AddFinalizer(finalizerName)
-		if err := r.updateFinalizers(feed); err != nil {
-			return err
-		}
 
 		if resources.IsJobComplete(job) {
+			r.recorder.Eventf(feed, corev1.EventTypeNormal, "StartJobCompleted", "Start job %q completed", job.Name)
 			if err := r.setFeedContext(feed, job); err != nil {
 				return err
 			}
-			//TODO just use a single Succeeded condition, like Build
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
 				Type:    feedsv1alpha1.FeedConditionReady,
 				Status:  corev1.ConditionTrue,
@@ -124,6 +165,7 @@ func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
 				Message: "start job succeeded",
 			})
 		} else if resources.IsJobFailed(job) {
+			r.recorder.Eventf(feed, corev1.EventTypeWarning, "StartJobFailed", "Start job %q failed: %q", job.Name, resources.JobFailedMessage(job))
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
 				Type:    feedsv1alpha1.FeedConditionReady,
 				Status:  corev1.ConditionFalse,
@@ -138,7 +180,7 @@ func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed) error {
 	return nil
 }
 
-func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
+func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed, es *feedsv1alpha1.EventSource, et *feedsv1alpha1.EventType) error {
 	if feed.HasFinalizer(finalizerName) {
 
 		// check for an existing start Job
@@ -168,10 +210,11 @@ func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
 
 		if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: jobName}, job); err != nil {
 			if errors.IsNotFound(err) {
-				job, err = r.createJob(feed)
+				job, err = r.createJob(feed, es, et)
 				if err != nil {
 					return err
 				}
+				r.recorder.Eventf(feed, corev1.EventTypeNormal, "StopJobCreated", "Created stop job %q", job.Name)
 				//TODO check for event source not found and remove finalizer
 
 				feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
@@ -184,22 +227,22 @@ func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed) error {
 		}
 
 		if resources.IsJobComplete(job) {
+			r.recorder.Eventf(feed, corev1.EventTypeNormal, "StopJobCompleted", "Stop job %q completed", job.Name)
 			feed.RemoveFinalizer(finalizerName)
-			if err := r.updateFinalizers(feed); err != nil {
-				return err
-			}
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
 				Type:    feedsv1alpha1.FeedConditionReady,
 				Status:  corev1.ConditionTrue,
-				Reason:  "StopJobComplete",
+				Reason:  "FeedSuccess",
 				Message: "stop job succeeded",
 			})
 		} else if resources.IsJobFailed(job) {
-			// finalizer remains to allow humans to inspect the failure
+			r.recorder.Eventf(feed, corev1.EventTypeWarning, "StopJobFailed", "Stop job %q failed: %q", job.Name, resources.JobFailedMessage(job))
+			glog.Warningf("Stop job %q failed, removing finalizer on feed %q anyway.", job.Name, feed.Name)
+			feed.RemoveFinalizer(finalizerName)
 			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
 				Type:    feedsv1alpha1.FeedConditionReady,
 				Status:  corev1.ConditionFalse,
-				Reason:  "StopJobFailed",
+				Reason:  "FeedFailed",
 				Message: fmt.Sprintf("Job failed with %s", resources.JobFailedMessage(job)),
 			})
 		}
@@ -235,35 +278,40 @@ func (r *reconciler) updateFinalizers(u *feedsv1alpha1.Feed) error {
 	return nil
 }
 
-func (r *reconciler) updateStatus(u *feedsv1alpha1.Feed) error {
+func (r *reconciler) updateFeed(u *feedsv1alpha1.Feed) error {
 	feed := &feedsv1alpha1.Feed{}
 	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: u.Namespace, Name: u.Name}, feed)
 	if err != nil {
 		return err
 	}
 
+	updated := false
+	if !equality.Semantic.DeepEqual(feed.OwnerReferences, u.OwnerReferences) {
+		feed.SetOwnerReferences(u.ObjectMeta.OwnerReferences)
+		updated = true
+	}
+
+	if !equality.Semantic.DeepEqual(feed.Finalizers, u.Finalizers) {
+		feed.SetFinalizers(u.ObjectMeta.Finalizers)
+		updated = true
+	}
+
 	if !equality.Semantic.DeepEqual(feed.Status, u.Status) {
 		feed.Status = u.Status
-		// Until #38113 is merged, we must use Update instead of UpdateStatus to
-		// update the Status block of the Feed resource. UpdateStatus will not
-		// allow changes to the Spec of the resource, which is ideal for ensuring
-		// nothing other than resource status has been updated.
-		return r.client.Update(context.TODO(), feed)
+		updated = true
 	}
-	return nil
+
+	if updated == false {
+		return nil
+	}
+	// Until #38113 is merged, we must use Update instead of UpdateStatus to
+	// update the Status block of the Feed resource. UpdateStatus will not
+	// allow changes to the Spec of the resource, which is ideal for ensuring
+	// nothing other than resource status has been updated.
+	return r.client.Update(context.TODO(), feed)
 }
 
-func (r *reconciler) setEventTypeOwnerReference(feed *feedsv1alpha1.Feed) error {
-
-	et := &feedsv1alpha1.EventType{}
-	if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.EventType}, et); err != nil {
-		if errors.IsNotFound(err) {
-			glog.Errorf("Feed event type not found, will not set finalizer")
-			return nil
-		}
-		return err
-	}
-
+func (r *reconciler) setEventTypeOwnerReference(feed *feedsv1alpha1.Feed, et *feedsv1alpha1.EventType) error {
 	blockOwnerDeletion := true
 	isController := false
 	ref := metav1.NewControllerRef(et, feedsv1alpha1.SchemeGroupVersion.WithKind("EventType"))
@@ -341,20 +389,10 @@ func unmarshalJSON(in []byte) (map[string]interface{}, error) {
 	return parameters, nil
 }
 
-func (r *reconciler) createJob(feed *feedsv1alpha1.Feed) (*batchv1.Job, error) {
+func (r *reconciler) createJob(feed *feedsv1alpha1.Feed, es *feedsv1alpha1.EventSource, et *feedsv1alpha1.EventType) (*batchv1.Job, error) {
 	//TODO just use service dns
 	target, err := r.resolveActionTarget(feed)
 	if err != nil {
-		return nil, err
-	}
-
-	source := &feedsv1alpha1.EventSource{}
-	if err = r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.Service}, source); err != nil {
-		return nil, err
-	}
-
-	et := &feedsv1alpha1.EventType{}
-	if err = r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.EventType}, et); err != nil {
 		return nil, err
 	}
 
@@ -363,7 +401,7 @@ func (r *reconciler) createJob(feed *feedsv1alpha1.Feed) (*batchv1.Job, error) {
 		return nil, err
 	}
 
-	job, err := resources.MakeJob(feed, source, trigger, target)
+	job, err := resources.MakeJob(feed, es, trigger, target)
 	if err != nil {
 		return nil, err
 	}
@@ -497,4 +535,44 @@ func (r *reconciler) deleteJobPods(job *batchv1.Job) error {
 		glog.Infof("Deleted start job pod: %s/%s", pod.Namespace, pod.Name)
 	}
 	return nil
+}
+
+// getFeedSource gets the EventSource and EventType that the trigger is targeting and
+// returns them. If either the source or type is not found or is in the deleting state
+// returns an error of the proper type.
+func (r *reconciler) getFeedSource(feed *feedsv1alpha1.Feed) (*feedsv1alpha1.EventSource, *feedsv1alpha1.EventType, error) {
+	es := &feedsv1alpha1.EventSource{}
+	if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.Service}, es); err != nil {
+		if errors.IsNotFound(err) {
+			msg := fmt.Sprintf("EventSource %s/%s does not exist", feed.Namespace, feed.Spec.Trigger.Service)
+			glog.Info(msg)
+			return nil, nil, &EventSourceError{StatusError{EventSourceDoesNotExist, msg}}
+		}
+		return nil, nil, err
+	}
+
+	if es.GetDeletionTimestamp() != nil {
+		// EventSource is being deleted so don't allow feeds to it
+		msg := fmt.Sprintf("EventSource %s/%s is being deleted", feed.Namespace, feed.Spec.Trigger.Service)
+		glog.Info(msg)
+		return nil, nil, &EventSourceError{StatusError{EventSourceDeleting, msg}}
+	}
+
+	et := &feedsv1alpha1.EventType{}
+	if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.EventType}, et); err != nil {
+		if errors.IsNotFound(err) {
+			msg := fmt.Sprintf("EventType %s/%s does not exist", feed.Namespace, feed.Spec.Trigger.EventType)
+			glog.Info(msg)
+			return nil, nil, &EventTypeError{StatusError{EventTypeDoesNotExist, msg}}
+		}
+		return nil, nil, err
+	}
+
+	if et.GetDeletionTimestamp() != nil {
+		// EventType is being deleted so don't allow feeds to it
+		msg := fmt.Sprintf("EventType %s/%s is being deleted", feed.Namespace, feed.Spec.Trigger.EventType)
+		glog.Info(msg)
+		return nil, nil, &EventTypeError{StatusError{EventTypeDeleting, msg}}
+	}
+	return es, et, nil
 }

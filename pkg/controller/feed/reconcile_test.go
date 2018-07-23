@@ -68,6 +68,7 @@ var testCases = []controllertesting.TestCase{
 		WantPresent: []runtime.Object{
 			getStartInProgressFeed(),
 			getNewStartJob(),
+			//TODO job created event
 		},
 	},
 	{
@@ -99,10 +100,11 @@ var testCases = []controllertesting.TestCase{
 		WantPresent: []runtime.Object{
 			getStartedFeed(),
 			getCompletedStartFeedJob(),
+			//TODO job completed event
 		},
 	},
 	{
-		Name: "in progress feed with failed job: updated status, job exists",
+		Name: "in progress feed with failed start job: updated status, job exists",
 		InitialState: []runtime.Object{
 			getEventSource(),
 			getEventType(),
@@ -115,6 +117,65 @@ var testCases = []controllertesting.TestCase{
 		WantPresent: []runtime.Object{
 			getStartFailedFeed(),
 			getFailedStartFeedJob(),
+			//TODO job failed event
+		},
+	},
+	{
+		Name: "non-existing event type: updated status",
+		InitialState: []runtime.Object{
+			getNewFeed(),
+			getEventSource(),
+		},
+		ReconcileKey: "test/test-feed",
+		WantPresent: []runtime.Object{
+			getEventTypeMissing(),
+		},
+	},
+	{
+		Name: "deleting event type: updated status",
+		InitialState: []runtime.Object{
+			getNewFeed(),
+			getEventSource(),
+			getDeletingEventType(),
+		},
+		ReconcileKey: "test/test-feed",
+		WantPresent: []runtime.Object{
+			getEventTypeDeleting(),
+		},
+	},
+	{
+		Name: "non-existing event source: updated status",
+		InitialState: []runtime.Object{
+			getNewFeed(),
+		},
+		ReconcileKey: "test/test-feed",
+		WantPresent: []runtime.Object{
+			getEventSourceMissing(),
+		},
+	},
+	{
+		Name: "deleting event source: updated status",
+		InitialState: []runtime.Object{
+			getNewFeed(),
+			getDeletingEventSource(),
+		},
+		ReconcileKey: "test/test-feed",
+		WantPresent: []runtime.Object{
+			getEventSourceDeleting(),
+		},
+	},
+	{
+		Name: "failed because missing event source, now present",
+		InitialState: []runtime.Object{
+			getFeedFailingWithMissingEventSource(),
+			getEventSource(),
+			getEventType(),
+			getRoute(),
+		},
+		ReconcileKey: "test/test-feed",
+		WantPresent: []runtime.Object{
+			getStartInProgressFeed(),
+			getNewStartJob(),
 		},
 	},
 	{
@@ -146,6 +207,7 @@ var testCases = []controllertesting.TestCase{
 		WantPresent: []runtime.Object{
 			getDeletedStopInProgressFeed(),
 			getNewStopJob(),
+			//TODO job created event
 		},
 	},
 	{
@@ -175,6 +237,7 @@ var testCases = []controllertesting.TestCase{
 		ReconcileKey: "test/test-feed",
 		WantPresent: []runtime.Object{
 			getDeletedStoppedFeed(),
+			//TODO job completed event
 		},
 	},
 }
@@ -204,9 +267,31 @@ func getEventSource() *feedsv1alpha1.EventSource {
 	}
 }
 
+func getDeletingEventSource() *feedsv1alpha1.EventSource {
+	return &feedsv1alpha1.EventSource{
+		ObjectMeta: omDeleting("test", "test-es"),
+		Spec: feedsv1alpha1.EventSourceSpec{
+			CommonEventSourceSpec: feedsv1alpha1.CommonEventSourceSpec{
+				Source:     "github",
+				Image:      "example.com/test-es-feeder",
+				Parameters: nil,
+			},
+		},
+	}
+}
+
 func getEventType() *feedsv1alpha1.EventType {
 	return &feedsv1alpha1.EventType{
 		ObjectMeta: om("test", "test-et"),
+		Spec: feedsv1alpha1.EventTypeSpec{
+			EventSource: getEventSource().Name,
+		},
+	}
+}
+
+func getDeletingEventType() *feedsv1alpha1.EventType {
+	return &feedsv1alpha1.EventType{
+		ObjectMeta: omDeleting("test", "test-et"),
 		Spec: feedsv1alpha1.EventTypeSpec{
 			EventSource: getEventSource().Name,
 		},
@@ -246,6 +331,33 @@ func getNewFeed() *feedsv1alpha1.Feed {
 				Parameters:     nil,
 				ParametersFrom: nil,
 			},
+		},
+	}
+}
+
+func getFeedFailingWithMissingEventSource() *feedsv1alpha1.Feed {
+	return &feedsv1alpha1.Feed{
+		TypeMeta:   feedType(),
+		ObjectMeta: om("test", "test-feed"),
+		Spec: feedsv1alpha1.FeedSpec{
+			Action: feedsv1alpha1.FeedAction{
+				RouteName: getRoute().Name,
+			},
+			Trigger: feedsv1alpha1.EventTrigger{
+				EventType:      getEventType().Name,
+				Resource:       "",
+				Service:        "",
+				Parameters:     nil,
+				ParametersFrom: nil,
+			},
+		},
+		Status: feedsv1alpha1.FeedStatus{
+			Conditions: []feedsv1alpha1.FeedCondition{{
+				Type:    feedsv1alpha1.FeedConditionDependenciesSatisfied,
+				Status:  corev1.ConditionFalse,
+				Reason:  "TestGenerated",
+				Message: "Test generated",
+			}},
 		},
 	}
 }
@@ -325,7 +437,7 @@ func getDeletedStoppedFeed() *feedsv1alpha1.Feed {
 	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
 		Type:    feedsv1alpha1.FeedConditionReady,
 		Status:  corev1.ConditionTrue,
-		Reason:  "StopJobComplete",
+		Reason:  "FeedSuccess",
 		Message: "stop job succeeded",
 	})
 	return feed
@@ -398,6 +510,8 @@ func getNewStartJob() *batchv1.Job {
 					RestartPolicy: corev1.RestartPolicyNever,
 				},
 			},
+			BackoffLimit:          &resources.DefaultBackoffLimit,
+			ActiveDeadlineSeconds: &resources.DefaultActiveDeadlineSeconds,
 		},
 		Status: batchv1.JobStatus{},
 	}
@@ -541,11 +655,72 @@ func getFailedStopJob() *batchv1.Job {
 	return job
 }
 
+func getEventTypeMissing() *feedsv1alpha1.Feed {
+	feed := getNewFeed()
+	feed.Status.InitializeConditions()
+	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+		Type:    feedsv1alpha1.FeedConditionDependenciesSatisfied,
+		Status:  corev1.ConditionFalse,
+		Reason:  EventTypeDoesNotExist,
+		Message: "EventType test/test-et does not exist",
+	})
+
+	return feed
+}
+
+func getEventTypeDeleting() *feedsv1alpha1.Feed {
+	feed := getNewFeed()
+	feed.Status.InitializeConditions()
+	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+		Type:    feedsv1alpha1.FeedConditionDependenciesSatisfied,
+		Status:  corev1.ConditionFalse,
+		Reason:  EventTypeDeleting,
+		Message: "EventType test/test-et is being deleted",
+	})
+
+	return feed
+}
+
+func getEventSourceMissing() *feedsv1alpha1.Feed {
+	feed := getNewFeed()
+	feed.Status.InitializeConditions()
+	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+		Type:    feedsv1alpha1.FeedConditionDependenciesSatisfied,
+		Status:  corev1.ConditionFalse,
+		Reason:  EventSourceDoesNotExist,
+		Message: "EventSource test/ does not exist",
+	})
+
+	return feed
+}
+
+func getEventSourceDeleting() *feedsv1alpha1.Feed {
+	feed := getNewFeed()
+	feed.Status.InitializeConditions()
+	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+		Type:    feedsv1alpha1.FeedConditionDependenciesSatisfied,
+		Status:  corev1.ConditionFalse,
+		Reason:  EventSourceDeleting,
+		Message: "EventSource test/ is being deleted",
+	})
+
+	return feed
+}
+
 func om(namespace, name string) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
 		Namespace: namespace,
 		Name:      name,
 		SelfLink:  fmt.Sprintf("/apis/eventing/v1alpha1/namespaces/%s/object/%s", namespace, name),
+	}
+}
+
+func omDeleting(namespace, name string) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Namespace:         namespace,
+		Name:              name,
+		SelfLink:          fmt.Sprintf("/apis/eventing/v1alpha1/namespaces/%s/object/%s", namespace, name),
+		DeletionTimestamp: &deletionTime,
 	}
 }
 
