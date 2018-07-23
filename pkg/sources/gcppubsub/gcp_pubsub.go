@@ -83,33 +83,37 @@ func (t *GCPPubSubEventSource) StopFeed(trigger sources.EventTrigger, feedContex
 		return err
 	}
 
-	deploymentName := feedContext.Context[deployment].(string)
-	subscriptionName := feedContext.Context[subscription].(string)
+	if _, ok := feedContext.Context[deployment]; ok {
+		deploymentName := feedContext.Context[deployment].(string)
 
-	err = t.deleteWatcher(t.feedNamespace, deploymentName)
-	if err != nil {
-		glog.Warningf("Failed to delete deployment: %s", err)
-		return err
-	}
-
-	ctx := context.Background()
-	// Creates a client.
-	client, err := pubsub.NewClient(ctx, projectID)
-	if err != nil {
-		glog.Infof("Failed to create client: %v", err)
-		return err
-	}
-
-	sub := client.Subscription(subscriptionName)
-	err = sub.Delete(ctx)
-	if err != nil {
-		glog.Warningf("Failed to delete subscription %q : %s : %+v", subscriptionName, err, err)
-		// Return error only if it's something else than NotFound
-		rpcStatus := status.Convert(err)
-		if rpcStatus.Code() != codes.NotFound {
+		err = t.deleteWatcher(t.feedNamespace, deploymentName)
+		if err != nil {
+			glog.Warningf("Failed to delete deployment: %s", err)
 			return err
 		}
-		glog.Infof("Subscription %q already deleted", subscriptionName)
+	}
+
+	if _, ok := feedContext.Context[subscription]; ok {
+		subscriptionName := feedContext.Context[subscription].(string)
+		ctx := context.Background()
+		// Creates a client.
+		client, err := pubsub.NewClient(ctx, projectID)
+		if err != nil {
+			glog.Infof("Failed to create client: %v", err)
+			return err
+		}
+
+		sub := client.Subscription(subscriptionName)
+		err = sub.Delete(ctx)
+		if err != nil {
+			glog.Warningf("Failed to delete subscription %q : %s : %+v", subscriptionName, err, err)
+			// Return error only if it's something else than NotFound
+			rpcStatus := status.Convert(err)
+			if rpcStatus.Code() != codes.NotFound {
+				return err
+			}
+			glog.Infof("Subscription %q already deleted", subscriptionName)
+		}
 	}
 	return nil
 }

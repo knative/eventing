@@ -19,7 +19,7 @@ const (
 	envProject = "PROJECT_ID"
 
 	// Environment variable containing topic id
-	envTopic = "TOPIC"
+	envTopic = "TOPIC_ID"
 
 	// Target for messages
 	envTarget = "TARGET"

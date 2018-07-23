@@ -18,5 +18,5 @@ metadata:
   name: google.pubsub.topic.publish
   namespace: default
 spec:
-  eventSource: gcppubsub
+  eventSource: pubsub.googleapis.com
   description: "subscription for receiving pubsub messages"
