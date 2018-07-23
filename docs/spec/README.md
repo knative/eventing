@@ -13,6 +13,6 @@ Docs in this directory:
 
 * [Motivation and goals](motivation.md)
 * [Resource type overview](overview.md)
-* [Knative Eventing API spec](spec.md)
-* [Error conditions and reporting](errors.md)
-* [Sample API usage](normative_examples.md)
+<!-- * [Knative Eventing API spec](spec.md) -->
+<!-- * [Error conditions and reporting](errors.md) -->
+<!-- * [Sample API usage](normative_examples.md) -->
