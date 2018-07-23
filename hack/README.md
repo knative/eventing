@@ -1,8 +1,8 @@
 # Assorted scripts for development
 
-This directory contains several script useful in the development process of Knative Eventing.
+This directory contains several scripts useful in the development process of Knative Eventing.
 
-* `boilerplate/add-boilerplate.sh` Adds boilerplate to *txt* or *go* files in a directory, recursively.
+* `boilerplate/add-boilerplate.sh` Adds license boilerplate to *txt* or *go* files in a directory, recursively.
 * `release.sh` Builds (and optionally tags and publishes) a new release of Knative Eventing.
 * `update-codegen.sh` Update auto-generated client libraries.
 * `update-deps.sh` Update Go dependencies.
