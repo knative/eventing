@@ -56,12 +56,12 @@ function wait_until_flow_ready() {
     done
     for statuses in `kubectl get -n $NAMESPACE flows $NAME -o 'jsonpath={.status.conditions[*].status}'`; do
       if [ "$statuses" = "True" ]; then
-        $readyCount=$((readyCount+1))
+        readyCount=$((readyCount+1))
       fi
     done
 
-    if [ "$typeCount" -eq 4]; then
-      if [ "$readyCount" -eq 4]; then
+    if [ $typeCount -eq 4 ]; then
+      if [ $readyCount -eq 4 ]; then
         return 0
       fi
     fi
