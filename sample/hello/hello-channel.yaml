@@ -1,6 +1,0 @@
-apiVersion: channels.knative.dev/v1alpha1
-kind: Channel
-metadata:
-  name: aloha
-spec:
-  bus: stub
