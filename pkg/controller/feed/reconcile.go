@@ -103,7 +103,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// TODO: Remove this and use finalizers in the EventTypes / EventSources
 	// to do this properly.
 	// TODO: Add issue link here. can't look up right now, no wifi
-	r.setEventTypeOwnerReference(feed)
+	r.setEventTypeOwnerReference(feed, eventType)
 	if err := r.updateOwnerReferences(feed); err != nil {
 		glog.Errorf("failed to update Feed owner references: %v", err)
 		return reconcile.Result{}, err
@@ -311,17 +311,7 @@ func (r *reconciler) updateFeed(u *feedsv1alpha1.Feed) error {
 	return r.client.Update(context.TODO(), feed)
 }
 
-func (r *reconciler) setEventTypeOwnerReference(feed *feedsv1alpha1.Feed) error {
-
-	et := &feedsv1alpha1.EventType{}
-	if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.EventType}, et); err != nil {
-		if errors.IsNotFound(err) {
-			glog.Errorf("Feed event type not found, will not set finalizer")
-			return nil
-		}
-		return err
-	}
-
+func (r *reconciler) setEventTypeOwnerReference(feed *feedsv1alpha1.Feed, et *feedsv1alpha1.EventType) error {
 	blockOwnerDeletion := true
 	isController := false
 	ref := metav1.NewControllerRef(et, feedsv1alpha1.SchemeGroupVersion.WithKind("EventType"))
