@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/golang/glog"
 )
@@ -79,7 +80,7 @@ func (binary) FromRequest(data interface{}, r *http.Request) (*EventContext, err
 
 	ctx.CloudEventsVersion = r.Header.Get(HeaderCloudEventsVersion)
 	if timeStr := r.Header.Get(HeaderEventTime); timeStr != "" {
-		if err := ctx.EventTime.UnmarshalText([]byte(timeStr)); err != nil {
+		if ctx.EventTime, err = time.Parse(time.RFC3339Nano, timeStr); err != nil {
 			return nil, err
 		}
 	}
@@ -136,11 +137,7 @@ func (binary) NewRequest(urlString string, data interface{}, context EventContex
 	// non-string values:
 	eventTime := ""
 	if !context.EventTime.IsZero() {
-		b, err := context.EventTime.UTC().MarshalText()
-		if err != nil {
-			return nil, err
-		}
-		eventTime = string(b)
+		eventTime = context.EventTime.Format(time.RFC3339Nano)
 	}
 
 	h := http.Header{}

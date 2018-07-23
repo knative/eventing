@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -27,6 +28,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/knative/eventing/pkg/event"
@@ -150,109 +152,124 @@ func TestParameterMarsahlling(t *testing.T) {
 		EventID:            "1234",
 		Source:             "tests:TestUndtypedHandling",
 		EventType:          "dev.eventing.test",
+		EventTime:          time.Now().UTC(),
+		ContentType:        "application/json",
 		Extensions:         map[string]interface{}{},
 	}
 	var wasCalled = false
-	for _, test := range []struct {
-		name      string
-		generator func(t *testing.T) http.Handler
+	for _, marshaller := range []struct {
+		name string
+		val  event.HTTPMarshaller
 	}{
 		{
-			name: "no parameters",
-			generator: func(t *testing.T) http.Handler {
-				return event.Handler(func() {
-					wasCalled = true
-				})
-			},
-		},
-		{
-			name: "one parameter",
-			generator: func(t *testing.T) http.Handler {
-				return event.Handler(func(ctx context.Context) {
-					eventContext := event.FromContext(ctx)
-					if !reflect.DeepEqual(expectedContext, eventContext) {
-						t.Fatalf("Did not get expected context; wanted=%s; got=%s", spew.Sdump(expectedContext), spew.Sdump(eventContext))
-					}
-					wasCalled = true
-				})
-			},
+			name: "structured",
+			val:  event.Structured,
 		}, {
-			name: "two parameters (struct type)",
-			generator: func(t *testing.T) http.Handler {
-				return event.Handler(func(ctx context.Context, data Data) {
-					eventContext := event.FromContext(ctx)
-					if !reflect.DeepEqual(expectedContext, eventContext) {
-						t.Fatalf("Did not get expected context; wanted=%s; got=%s", spew.Sdump(expectedContext), spew.Sdump(eventContext))
-					}
-					if !reflect.DeepEqual(expectedData, data) {
-						t.Fatalf("Did not get expected data; wanted=%s; got=%s", spew.Sdump(expectedData), spew.Sdump(data))
-					}
-					wasCalled = true
-				})
-			},
-		}, {
-			name: "two parameters (pointer type)",
-			generator: func(t *testing.T) http.Handler {
-				return event.Handler(func(ctx context.Context, data *Data) {
-					eventContext := event.FromContext(ctx)
-					if !reflect.DeepEqual(expectedContext, eventContext) {
-						t.Fatalf("Did not get expected context; wanted=%s; got=%s", spew.Sdump(expectedContext), spew.Sdump(eventContext))
-					}
-					if !reflect.DeepEqual(expectedData, *data) {
-						t.Fatalf("Did not get expected data; wanted=%s; got=%s", spew.Sdump(&expectedData), spew.Sdump(data))
-					}
-					wasCalled = true
-				})
-			},
-		}, {
-			name: "two parameters (untyped)",
-			generator: func(t *testing.T) http.Handler {
-				return event.Handler(func(ctx context.Context, data map[string]interface{}) {
-					eventContext := event.FromContext(ctx)
-					if !reflect.DeepEqual(expectedContext, eventContext) {
-						t.Fatalf("Did not get expected context; wanted=%s; got=%s", spew.Sdump(expectedContext), spew.Sdump(eventContext))
-					}
-					b, err := json.Marshal(expectedData)
-					if err != nil {
-						t.Fatal("Failed to serialize expected data", err)
-					}
-					var expectedUntyped map[string]interface{}
-					err = json.Unmarshal(b, &expectedUntyped)
-					if err != nil {
-						t.Fatal("Failed to deserialize expected data", err)
-					}
-					if !reflect.DeepEqual(expectedUntyped, data) {
-						t.Fatalf("Did not get expected data; wanted=%s; got=%s", spew.Sdump(expectedUntyped), spew.Sdump(data))
-					}
-					wasCalled = true
-				})
-			},
+			name: "binary",
+			val:  event.Binary,
 		},
 	} {
-		t.Run(test.name, func(t *testing.T) {
-			wasCalled = false
-			handler := test.generator(t)
-			if err, ok := handler.(error); ok {
-				t.Errorf("Handler() failed: %v", err)
-				return
-			}
-			srv := httptest.NewServer(handler)
-			defer srv.Close()
-			req, err := event.NewRequest(srv.URL, expectedData, *expectedContext)
-			if err != nil {
-				t.Fatal("Failed to marshal request ", err)
-			}
-			res, err := srv.Client().Do(req)
-			if err != nil {
-				t.Fatal("Failed to send request")
-			}
-			if res.StatusCode/100 != 2 {
-				t.Fatal("Got non-successful response: ", res.StatusCode)
-			}
-			if !wasCalled {
-				t.Fatal("Handler was never called")
-			}
-		})
+		for _, test := range []struct {
+			name      string
+			generator func(t *testing.T) http.Handler
+		}{
+			{
+				name: "no parameters",
+				generator: func(t *testing.T) http.Handler {
+					return event.Handler(func() {
+						wasCalled = true
+					})
+				},
+			},
+			{
+				name: "one parameter",
+				generator: func(t *testing.T) http.Handler {
+					return event.Handler(func(ctx context.Context) {
+						eventContext := event.FromContext(ctx)
+						if !reflect.DeepEqual(expectedContext, eventContext) {
+							t.Fatalf("Did not get expected context; wanted=%s; got=%s", spew.Sdump(expectedContext), spew.Sdump(eventContext))
+						}
+						wasCalled = true
+					})
+				},
+			}, {
+				name: "two parameters (struct type)",
+				generator: func(t *testing.T) http.Handler {
+					return event.Handler(func(ctx context.Context, data Data) {
+						eventContext := event.FromContext(ctx)
+						if !reflect.DeepEqual(expectedContext, eventContext) {
+							t.Fatalf("Did not get expected context; wanted=%s; got=%s", spew.Sdump(expectedContext), spew.Sdump(eventContext))
+						}
+						if !reflect.DeepEqual(expectedData, data) {
+							t.Fatalf("Did not get expected data; wanted=%s; got=%s", spew.Sdump(expectedData), spew.Sdump(data))
+						}
+						wasCalled = true
+					})
+				},
+			}, {
+				name: "two parameters (pointer type)",
+				generator: func(t *testing.T) http.Handler {
+					return event.Handler(func(ctx context.Context, data *Data) {
+						eventContext := event.FromContext(ctx)
+						if !reflect.DeepEqual(expectedContext, eventContext) {
+							t.Fatalf("Did not get expected context; wanted=%s; got=%s", spew.Sdump(expectedContext), spew.Sdump(eventContext))
+						}
+						if !reflect.DeepEqual(expectedData, *data) {
+							t.Fatalf("Did not get expected data; wanted=%s; got=%s", spew.Sdump(&expectedData), spew.Sdump(data))
+						}
+						wasCalled = true
+					})
+				},
+			}, {
+				name: "two parameters (untyped)",
+				generator: func(t *testing.T) http.Handler {
+					return event.Handler(func(ctx context.Context, data map[string]interface{}) {
+						eventContext := event.FromContext(ctx)
+						if !reflect.DeepEqual(expectedContext, eventContext) {
+							t.Fatalf("Did not get expected context; wanted=%s; got=%s", spew.Sdump(expectedContext), spew.Sdump(eventContext))
+						}
+						b, err := json.Marshal(expectedData)
+						if err != nil {
+							t.Fatal("Failed to serialize expected data", err)
+						}
+						var expectedUntyped map[string]interface{}
+						err = json.Unmarshal(b, &expectedUntyped)
+						if err != nil {
+							t.Fatal("Failed to deserialize expected data", err)
+						}
+						if !reflect.DeepEqual(expectedUntyped, data) {
+							t.Fatalf("Did not get expected data; wanted=%s; got=%s", spew.Sdump(expectedUntyped), spew.Sdump(data))
+						}
+						wasCalled = true
+					})
+				},
+			},
+		} {
+			t.Run(fmt.Sprintf("%s: %s", marshaller.name, test.name), func(t *testing.T) {
+				wasCalled = false
+				handler := test.generator(t)
+				if err, ok := handler.(error); ok {
+					t.Errorf("Handler() failed: %v", err)
+					return
+				}
+				srv := httptest.NewServer(handler)
+				defer srv.Close()
+				req, err := marshaller.val.NewRequest(srv.URL, expectedData, *expectedContext)
+				if err != nil {
+					t.Fatal("Failed to marshal request ", err)
+				}
+				res, err := srv.Client().Do(req)
+				if err != nil {
+					t.Fatal("Failed to send request")
+				}
+				if res.StatusCode/100 != 2 {
+					t.Fatal("Got non-successful response: ", res.StatusCode)
+				}
+				if !wasCalled {
+					t.Fatal("Handler was never called")
+				}
+			})
+		}
 	}
 }
 

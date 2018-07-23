@@ -24,62 +24,56 @@
 # Calling this script without arguments will create a new cluster in
 # project $PROJECT_ID, start Knative serving and the eventing system, run
 # the tests and delete the cluster.
-# $KO_DOCKER_REPO must point to a valid writable docker repo.
 
-source "$(dirname $(readlink -f ${BASH_SOURCE}))/library.sh"
+# Load github.com/knative/test-infra/images/prow-tests/scripts/e2e-tests.sh
+[ -f /workspace/e2e-tests.sh ] \
+  && source /workspace/e2e-tests.sh \
+  || eval "$(docker run --entrypoint sh gcr.io/knative-tests/test-infra/prow-tests -c 'cat e2e-tests.sh')"
+[ -v KNATIVE_TEST_INFRA ] || exit 1
 
-# Test cluster parameters and location of test files
-readonly E2E_CLUSTER_NAME=eventing-e2e-cluster${BUILD_NUMBER}
-readonly E2E_NETWORK_NAME=eventing-e2e-net${BUILD_NUMBER}
-readonly E2E_CLUSTER_ZONE=us-central1-a
-readonly E2E_CLUSTER_NODES=2
-readonly E2E_CLUSTER_MACHINE=n1-standard-2
-readonly TEST_RESULT_FILE=/tmp/eventing-e2e-result
-readonly ISTIO_YAML=https://storage.googleapis.com/knative-releases/latest/istio.yaml
-readonly SERVING_RELEASE=https://storage.googleapis.com/knative-releases/latest/release.yaml
+# Names of the Resources used in the tests.
 readonly E2E_TEST_NAMESPACE=e2etest
 readonly E2E_TEST_FUNCTION_NAMESPACE=e2etestfn
 readonly E2E_TEST_FUNCTION=e2e-k8s-events-function
 
-# This script.
-readonly SCRIPT_CANONICAL_PATH="$(readlink -f ${BASH_SOURCE})"
-
 # Helper functions.
 
 function teardown() {
-  header "Tearing down test environment"
-  # Free resources in GCP project.
-  if (( ! USING_EXISTING_CLUSTER )); then
-    ko delete --ignore-not-found=true -f config/
-  fi
-
-  # Delete images when using prow.
-  if (( IS_PROW )); then
-    echo "Images in ${KO_DOCKER_REPO}:"
-    gcloud container images list --repository=${KO_DOCKER_REPO}
-    delete_gcr_images ${KO_DOCKER_REPO}
-  else
-    restore_override_vars
-  fi
+  ko delete --ignore-not-found=true -f config/
 }
 
-function exit_if_test_failed() {
-  [[ $? -eq 0 ]] && return 0
-  [[ -n $1 ]] && echo "ERROR: $1"
-  echo "***************************************"
-  echo "***           TEST FAILED           ***"
-  echo "***    Start of information dump    ***"
-  echo "***************************************"
-  echo ">>> All resources:"
-  kubectl get all --all-namespaces
-  echo "***************************************"
-  echo "***           TEST FAILED           ***"
-  echo "***     End of information dump     ***"
-  echo "***************************************"
-  exit 1
+function wait_until_feed_ready() {
+  local NAMESPACE=$1
+  local NAME=$2
+
+  echo -n "Waiting until feed $NAMESPACE/$NAME is ready"
+  for i in {1..150}; do  # timeout after 5 minutes
+    local reason="$(kubectl get -n $NAMESPACE feeds $NAME -o 'jsonpath={.status.conditions[0].reason}')"
+    local status="$(kubectl get -n $NAMESPACE feeds $NAME -o 'jsonpath={.status.conditions[0].status}')"
+
+    if [ "$reason" = "FeedSuccess" ]; then
+       if [ "$status" = "True" ]; then
+          return 0
+       fi
+    fi
+    echo -n "."
+    sleep 2
+  done
+  echo -e "\n\nERROR: timeout waiting for feed $NAMESPACE/$NAME to be ready"
+  kubectl get -n $NAMESPACE feeds $NAME -oyaml
+  kubectl get -n $NAMESPACE jobs $NAME-start -oyaml
+  return 1
 }
 
-# Tests
+function validate_function_logs() {
+  local NAMESPACE=$1
+  local podname="$(kubectl -n $NAMESPACE get pods --no-headers -oname | grep e2e-k8s-events-function)"
+  local logs="$(kubectl -n $NAMESPACE logs $podname user-container)"
+  echo "${logs}" | grep "Started container" || return 1
+  echo "${logs}" | grep "Created container" || return 1
+  return 0
+}
+
 function teardown_k8s_events_test_resources() {
   echo "Deleting any previously existing feed"
   ko delete --ignore-not-found=true -f test/e2e/k8sevents/feed-channel.yaml
@@ -92,10 +86,8 @@ function teardown_k8s_events_test_resources() {
 
   echo "Deleting k8s events event source"
   ko delete --ignore-not-found=true -f test/e2e/k8sevents/k8sevents.yaml
-  wait_until_object_does_not_exist eventsources $E2E_TEST_FUNCTION_NAMESPACE k8sevents
-  exit_if_test_failed
-  wait_until_object_does_not_exist eventtypes $E2E_TEST_FUNCTION_NAMESPACE receiveevent
-  exit_if_test_failed
+  wait_until_object_does_not_exist eventsources $E2E_TEST_FUNCTION_NAMESPACE k8sevents || return 1
+  wait_until_object_does_not_exist eventtypes $E2E_TEST_FUNCTION_NAMESPACE receiveevent || return 1
 
   # Delete the pod from the test namespace
   echo "Deleting test pod"
@@ -105,7 +97,7 @@ function teardown_k8s_events_test_resources() {
   echo "Deleting subscription"
   ko delete --ignore-not-found=true -f test/e2e/k8sevents/subscription.yaml
   echo "Deleting channel"
-  ko delete -f test/e2e/k8sevents/channel.yaml
+  ko delete --ignore-not-found=true -f test/e2e/k8sevents/channel.yaml
 
   # Delete the service account and role binding
   echo "Deleting cluster role binding"
@@ -116,17 +108,18 @@ function teardown_k8s_events_test_resources() {
   # Delete the function namespace
   echo "Deleting namespace $E2E_TEST_FUNCTION_NAMESPACE"
   kubectl --ignore-not-found=true delete namespace $E2E_TEST_FUNCTION_NAMESPACE
-  wait_until_namespace_does_not_exist $E2E_TEST_FUNCTION_NAMESPACE
-  exit_if_test_failed
+  wait_until_object_does_not_exist namespaces $E2E_TEST_FUNCTION_NAMESPACE || return 1
 
   # Delete the test namespace
   echo "Deleting namespace $E2E_TEST_NAMESPACE"
   kubectl --ignore-not-found=true delete namespace $E2E_TEST_NAMESPACE
-  wait_until_namespace_does_not_exist $E2E_TEST_NAMESPACE
-  exit_if_test_failed
+  wait_until_object_does_not_exist namespaces $E2E_TEST_NAMESPACE || return 1
 }
 
+# Tests
+
 function run_k8s_events_test() {
+  header "Running 'k8s events' test"
   echo "Creating namespace $E2E_TEST_FUNCTION_NAMESPACE"
   ko apply -f test/e2e/k8sevents/e2etestnamespace.yaml || return 1
   echo "Creating namespace $E2E_TEST_NAMESPACE"
@@ -147,11 +140,10 @@ function run_k8s_events_test() {
   echo "Installing k8s events as an event source"
   ko apply -f test/e2e/k8sevents/k8sevents.yaml || return 1
 
-  # launch the function
+  # Launch the function
   echo "Installing the receiving function"
   ko apply -f test/e2e/k8sevents/function.yaml || return 1
-  wait_until_pods_running $E2E_TEST_FUNCTION_NAMESPACE
-  exit_if_test_failed
+  wait_until_pods_running $E2E_TEST_FUNCTION_NAMESPACE || return 1
 
   # create a channel and subscription
   echo "Creating a channel"
@@ -159,164 +151,61 @@ function run_k8s_events_test() {
   echo "Creating a subscription"
   ko apply -f test/e2e/k8sevents/subscription.yaml || return 1
 
-
   # Install feed
   echo "Creating a feed"
   ko apply -f test/e2e/k8sevents/feed-channel.yaml || return 1
-  wait_until_feed_ready $E2E_TEST_FUNCTION_NAMESPACE e2e-k8s-events-example
-  exit_if_test_failed
+  wait_until_feed_ready $E2E_TEST_FUNCTION_NAMESPACE e2e-k8s-events-example || return 1
 
   # Work around for: https://github.com/knative/eventing/issues/125
   # and the fact that even after pods are up, due to Istio slowdown, there's
   # about 5-6 seconds that traffic won't be passed through.
   echo "Waiting until receive_adapter up"
-  wait_until_pods_running $E2E_TEST_FUNCTION_NAMESPACE
+  wait_until_pods_running $E2E_TEST_FUNCTION_NAMESPACE || return 1
   sleep 10
 
   # Launch the pod into the test namespace
   echo "Creating a pod in the test namespace"
   ko apply -f test/e2e/k8sevents/pod.yaml || return 1
-  wait_until_pods_running $E2E_TEST_NAMESPACE
-  exit_if_test_failed
+  wait_until_pods_running $E2E_TEST_NAMESPACE || return 1
 
   # Check the logs to make sure messages made to our function
   echo "Validating that the function received the expected events"
-  validate_function_logs $E2E_TEST_FUNCTION_NAMESPACE
-  exit_if_test_failed
+  validate_function_logs $E2E_TEST_FUNCTION_NAMESPACE || return 1
 }
 
 # Script entry point.
 
-cd ${EVENTING_ROOT_DIR}
+initialize $@
 
-# Show help if bad arguments are passed.
-if [[ -n $1 && $1 != "--run-tests" ]]; then
-  echo "usage: $0 [--run-tests]"
-  exit 1
-fi
-
-# No argument provided, create the test cluster.
-
-if [[ -z $1 ]]; then
-  header "Creating test cluster"
-  # Smallest cluster required to run the end-to-end-tests
-  CLUSTER_CREATION_ARGS=(
-    --gke-create-args="--enable-autoscaling --min-nodes=1 --max-nodes=${E2E_CLUSTER_NODES} --scopes=cloud-platform"
-    --gke-shape={\"default\":{\"Nodes\":${E2E_CLUSTER_NODES}\,\"MachineType\":\"${E2E_CLUSTER_MACHINE}\"}}
-    --provider=gke
-    --deployment=gke
-    --gcp-node-image=cos
-    --cluster="${E2E_CLUSTER_NAME}"
-    --gcp-zone="${E2E_CLUSTER_ZONE}"
-    --gcp-network="${E2E_NETWORK_NAME}"
-    --gke-environment=prod
-  )
-  if (( ! IS_PROW )); then
-    CLUSTER_CREATION_ARGS+=(--gcp-project=${PROJECT_ID:?"PROJECT_ID must be set to the GCP project where the tests are run."})
-  fi
-  # SSH keys are not used, but kubetest checks for their existence.
-  # Touch them so if they don't exist, empty files are create to satisfy the check.
-  touch $HOME/.ssh/google_compute_engine.pub
-  touch $HOME/.ssh/google_compute_engine
-  # Clear user and cluster variables, so they'll be set to the test cluster.
-  # KO_DOCKER_REPO is not touched because when running locally it must
-  # be a writeable docker repo.
-  export K8S_USER_OVERRIDE=
-  export K8S_CLUSTER_OVERRIDE=
-  # Assume test failed (see more details at the end of this script).
-  echo -n "1"> ${TEST_RESULT_FILE}
-  kubetest "${CLUSTER_CREATION_ARGS[@]}" \
-    --up \
-    --down \
-    --extract "v${EVENTING_GKE_VERSION}" \
-    --test-cmd "${SCRIPT_CANONICAL_PATH}" \
-    --test-cmd-args --run-tests
-  result="$(cat ${TEST_RESULT_FILE})"
-  echo "Test result code is $result"
-  exit $result
-fi
-
-# --run-tests passed as first argument, run the tests.
-
-# Set the required variables if necessary.
-
-if [[ -z ${K8S_USER_OVERRIDE} ]]; then
-  export K8S_USER_OVERRIDE=$(gcloud config get-value core/account)
-fi
-
-USING_EXISTING_CLUSTER=1
-if [[ -z ${K8S_CLUSTER_OVERRIDE} ]]; then
-  USING_EXISTING_CLUSTER=0
-  export K8S_CLUSTER_OVERRIDE=$(kubectl config current-context)
-  acquire_cluster_admin_role ${K8S_USER_OVERRIDE} ${E2E_CLUSTER_NAME} ${E2E_CLUSTER_ZONE}
-  # Make sure we're in the default namespace
-  kubectl config set-context $K8S_CLUSTER_OVERRIDE --namespace=default
-fi
-readonly USING_EXISTING_CLUSTER
-
-if [[ -z ${KO_DOCKER_REPO} ]]; then
-  export KO_DOCKER_REPO=gcr.io/$(gcloud config get-value project)/eventing-e2e-img
-fi
-
-echo "- Cluster is ${K8S_CLUSTER_OVERRIDE}"
-echo "- User is ${K8S_USER_OVERRIDE}"
-echo "- Docker is ${KO_DOCKER_REPO}"
-
-trap teardown EXIT
-
+# Install Knative Serving if not using an existing cluster
 if (( ! USING_EXISTING_CLUSTER )); then
-  # Start Knative Serving.
-
-  header "Starting Knative Serving"
-
-  subheader "Installing istio"
-  kubectl apply -f ${ISTIO_YAML}
-  # This seems racy:
-  # https://github.com/knative/eventing/issues/92
-  wait_until_pods_running istio-system
-  exit_if_test_failed "could not install Istio"
-
-  subheader "Installing Knative Serving"
-  kubectl apply -f ${SERVING_RELEASE}
-  exit_if_test_failed "could not install Knative Serving"
-
-  wait_until_pods_running knative-serving || exit_if_test_failed
-  wait_until_pods_running knative-build || exit_if_test_failed
-else
-  header "Using existing Knative Serving"
+  start_latest_knative_serving || fail_test
 fi
 
-
-# Clean up anything that might still be around...
+# Clean up anything that might still be around
 teardown_k8s_events_test_resources
 
 if (( USING_EXISTING_CLUSTER )); then
-  header "Deleting previous eventing instance if it exists"
+  subheader "Deleting any previous eventing instance"
   ko delete --ignore-not-found=true -f config/
-  wait_until_namespace_does_not_exist knative-eventing
-  exit_if_test_failed
-  wait_until_crd_does_not_exist feeds.feeds.knative.dev
-  exit_if_test_failed
+  wait_until_object_does_not_exist namespaces knative-eventing
+  wait_until_object_does_not_exist customresourcedefinitions feeds.feeds.knative.dev
 fi
 
+# Fail fast during setup.
+set -o errexit
+set -o pipefail
+
 header "Standing up Knative Eventing"
+export KO_DOCKER_REPO=${DOCKER_REPO_OVERRIDE}
 ko resolve -f config/
 ko apply -f config/
-exit_if_test_failed
 wait_until_pods_running knative-eventing
-exit_if_test_failed
 
-header "Running 'k8s events' test"
-run_k8s_events_test
-exit_if_test_failed
+# Handle test failures ourselves, so we can dump useful info.
+set +o errexit
+set +o pipefail
 
-# kubetest teardown might fail and thus incorrectly report failure of the
-# script, even if the tests pass.
-# We store the real test result to return it later, ignoring any teardown
-# failure in kubetest.
-# TODO(adrcunha): Get rid of this workaround.
-echo -n "0"> ${TEST_RESULT_FILE}
-echo "**************************************"
-echo "***        ALL TESTS PASSED        ***"
-echo "**************************************"
-exit 0
+run_k8s_events_test || fail_test
+
+success

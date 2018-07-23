@@ -17,17 +17,16 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/spf13/viper"
 
-	"github.com/google/go-containerregistry/authn"
-	"github.com/google/go-containerregistry/name"
-	"github.com/google/go-containerregistry/v1"
-	"github.com/google/go-containerregistry/v1/remote"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
 var (
@@ -41,11 +40,7 @@ func getBaseImage(s string) (v1.Image, error) {
 		ref = defaultBaseImage
 	}
 	log.Printf("Using base %s for %s", ref, s)
-	auth, err := authn.DefaultKeychain.Resolve(ref.Context().Registry)
-	if err != nil {
-		return nil, err
-	}
-	return remote.Image(ref, auth, http.DefaultTransport)
+	return remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 }
 
 func getCreationTime() (*v1.Time, error) {
