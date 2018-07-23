@@ -75,8 +75,3 @@ required = [
 [[constraint]]
   name = "github.com/bsm/sarama-cluster"
   version = "2.1.13"
-
-[[constraint]]
-  name = "github.com/google/go-containerregistry"
-  # HEAD as of 2018-07-19
-  revision = "0eeba96f66fdd1873f2ec7f3764ee3b58c5a050c"
