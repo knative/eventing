@@ -103,7 +103,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// TODO: Remove this and use finalizers in the EventTypes / EventSources
 	// to do this properly.
 	// TODO: Add issue link here. can't look up right now, no wifi
-	r.setEventTypeOwnerReference(feed, eventType)
+	r.setEventTypeOwnerReference(feed)
 	if err := r.updateOwnerReferences(feed); err != nil {
 		glog.Errorf("failed to update Feed owner references: %v", err)
 		return reconcile.Result{}, err
