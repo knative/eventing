@@ -358,10 +358,10 @@ func (c *Controller) reconcile(flow *v1alpha1.Flow) error {
 	}
 	flow.Status.PropagateSubscriptionStatus(subscription.Status)
 
-	channelTarget := channel.Status.DomainInternal
-	if channelTarget != "" {
-		glog.Infof("Reconciling feed for flow %q targeting channel %q", flow.Name, channelTarget)
-		feed, err := c.reconcileFeed(channelTarget, flow)
+	channelDNS := channel.Status.DomainInternal
+	if channelDNS != "" {
+		glog.Infof("Reconciling feed for flow %q targeting %q", flow.Name, channelDNS)
+		feed, err := c.reconcileFeed(channelDNS, flow)
 		if err != nil {
 			glog.Warningf("Failed to reconcile feed: %v", err)
 		}
@@ -517,11 +517,11 @@ func (c *Controller) createSubscription(channelName string, target string, flow 
 	return c.clientset.ChannelsV1alpha1().Subscriptions(flow.Namespace).Create(subscription)
 }
 
-func (c *Controller) reconcileFeed(channelName string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
+func (c *Controller) reconcileFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
 	feedName := flow.Name
 	feed, err := c.feedsLister.Feeds(flow.Namespace).Get(feedName)
 	if errors.IsNotFound(err) {
-		feed, err = c.createFeed(channelName, flow)
+		feed, err = c.createFeed(channelDNS, flow)
 		if err != nil {
 			glog.Errorf("Failed to create feed %q : %v", feedName, err)
 			return nil, err
@@ -537,7 +537,7 @@ func (c *Controller) reconcileFeed(channelName string, flow *v1alpha1.Flow) (*fe
 
 }
 
-func (c *Controller) createFeed(channelName string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
+func (c *Controller) createFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
 	feedName := flow.Name
 	feed := &feedsv1alpha1.Feed{
 		ObjectMeta: metav1.ObjectMeta{
@@ -548,7 +548,7 @@ func (c *Controller) createFeed(channelName string, flow *v1alpha1.Flow) (*feeds
 			},
 		},
 		Spec: feedsv1alpha1.FeedSpec{
-			Action: feedsv1alpha1.FeedAction{ChannelName: channelName},
+			Action: feedsv1alpha1.FeedAction{DNSName: channelDNS},
 			Trigger: feedsv1alpha1.EventTrigger{
 				EventType: flow.Spec.Trigger.EventType,
 				Resource:  flow.Spec.Trigger.Resource,

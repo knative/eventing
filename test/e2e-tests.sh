@@ -42,25 +42,34 @@ function teardown() {
   ko delete --ignore-not-found=true -f config/
 }
 
-function wait_until_feed_ready() {
+function wait_until_flow_ready() {
   local NAMESPACE=$1
   local NAME=$2
 
-  echo -n "Waiting until feed $NAMESPACE/$NAME is ready"
+  echo -n "Waiting until flow $NAMESPACE/$NAME is ready"
   for i in {1..150}; do  # timeout after 5 minutes
-    local reason="$(kubectl get -n $NAMESPACE feeds $NAME -o 'jsonpath={.status.conditions[0].reason}')"
-    local status="$(kubectl get -n $NAMESPACE feeds $NAME -o 'jsonpath={.status.conditions[0].status}')"
+    local typeCount=0
+    local readyCount=0
+    # TODO: Validate all the types exist. bashfu weak...
+    for types in `kubectl get -n $NAMESPACE flows $NAME -o 'jsonpath={.status.conditions[*].type}'`; do
+      typeCount=$((typeCount+1))
+    done
+    for statuses in `kubectl get -n $NAMESPACE flows $NAME -o 'jsonpath={.status.conditions[*].status}'`; do
+      if [ "$statuses" = "True" ]; then
+        readyCount=$((readyCount+1))
+      fi
+    done
 
-    if [ "$reason" = "FeedSuccess" ]; then
-       if [ "$status" = "True" ]; then
-          return 0
-       fi
+    if [ $typeCount -eq 4 ]; then
+      if [ $readyCount -eq 4 ]; then
+        return 0
+      fi
     fi
     echo -n "."
     sleep 2
   done
-  echo -e "\n\nERROR: timeout waiting for feed $NAMESPACE/$NAME to be ready"
-  kubectl get -n $NAMESPACE feeds $NAME -oyaml
+  echo -e "\n\nERROR: timeout waiting for flow $NAMESPACE/$NAME to be ready"
+  kubectl get -n $NAMESPACE flows $NAME -oyaml
   kubectl get -n $NAMESPACE jobs $NAME-start -oyaml
   return 1
 }
@@ -75,9 +84,9 @@ function validate_function_logs() {
 }
 
 function teardown_k8s_events_test_resources() {
-  echo "Deleting any previously existing feed"
-  ko delete --ignore-not-found=true -f test/e2e/k8sevents/feed-channel.yaml
-  wait_until_object_does_not_exist feed $E2E_TEST_FUNCTION_NAMESPACE receiveevent
+  echo "Deleting any previously existing flows"
+  ko delete --ignore-not-found=true -f test/e2e/k8sevents/flow.yaml
+  wait_until_object_does_not_exist flow $E2E_TEST_FUNCTION_NAMESPACE e2e-k8s-events-example
 
   # Delete the function resources and namespace
   echo "Deleting function and test namespace"
@@ -98,6 +107,10 @@ function teardown_k8s_events_test_resources() {
   ko delete --ignore-not-found=true -f test/e2e/k8sevents/subscription.yaml
   echo "Deleting channel"
   ko delete --ignore-not-found=true -f test/e2e/k8sevents/channel.yaml
+
+  # Delete the clusterbus
+  echo "Deleting the stub bus"
+  ko delete --ignore-not-found=true -f test/e2e/k8sevents/stub.yaml
 
   # Delete the service account and role binding
   echo "Deleting cluster role binding"
@@ -151,10 +164,10 @@ function run_k8s_events_test() {
   echo "Creating a subscription"
   ko apply -f test/e2e/k8sevents/subscription.yaml || return 1
 
-  # Install feed
-  echo "Creating a feed"
-  ko apply -f test/e2e/k8sevents/feed-channel.yaml || return 1
-  wait_until_feed_ready $E2E_TEST_FUNCTION_NAMESPACE e2e-k8s-events-example || return 1
+  # Install flow
+  echo "Creating a flow"
+  ko apply -f test/e2e/k8sevents/flow.yaml || return 1
+  wait_until_flow_ready $E2E_TEST_FUNCTION_NAMESPACE e2e-k8s-events-example || return 1
 
   # Work around for: https://github.com/knative/eventing/issues/125
   # and the fact that even after pods are up, due to Istio slowdown, there's
@@ -190,6 +203,7 @@ if (( USING_EXISTING_CLUSTER )); then
   ko delete --ignore-not-found=true -f config/
   wait_until_object_does_not_exist namespaces knative-eventing
   wait_until_object_does_not_exist customresourcedefinitions feeds.feeds.knative.dev
+  wait_until_object_does_not_exist customresourcedefinitions flows.flows.knative.dev
 fi
 
 # Fail fast during setup.

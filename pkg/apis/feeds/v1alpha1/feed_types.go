@@ -52,17 +52,8 @@ type FeedSpec struct {
 // FeedAction specifies the target handler - a Knative route or channel - for
 // events produced by an EventTrigger.
 type FeedAction struct {
-	// You must specify one and only of these.
-
-	// RouteName specifies Knative route as a target.
-	RouteName string `json:"routeName,omitempty"`
-
-	// ChannelName specifies the channel name as a target
-	// If ChannelName specifies a full DNS (for example:
-	// flow-example-channel.default.svc.cluster.local)
-	// it's returned as is.
-	// TODO: clean up the action names.
-	ChannelName string `json:"channelName,omitempty"`
+	// DNSName is the target for this feed.
+	DNSName string `json:"dnsName,omitempty"`
 }
 
 // EventTrigger specifies the intention that a particular event type and

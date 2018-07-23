@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: feeds.knative.dev/v1alpha1
-kind: Feed
+apiVersion: flows.knative.dev/v1alpha1
+kind: Flow
 metadata:
   name: e2e-k8s-events-example
   namespace: e2etestfn
@@ -23,10 +23,16 @@ spec:
     eventType: dev.knative.k8s.event
     # This is kind of superfluous due to parameters, but the current
     # feed model still requires a resource
+    # Future revisions may opt to have a meaningful resource string
+    # that allows users to scope which objects they choose based on
+    # a templatized self-link. E.g. Configurations across all namespaces:
+    # /apis/serving.knative.dev/v1alpha1/namespaces/{namespace}/configurations/{config}
     resource: k8sevents/receiveevent
     service: k8sevents
-    # Watch for events in namespace e2etest
     parameters:
       namespace: e2etest
   action:
-    channelName: k8s-events-channel
+    target:
+      kind: Route
+      apiVersion: serving.knative.dev/v1alpha1
+      name: e2e-k8s-events-function

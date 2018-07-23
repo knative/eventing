@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 apiVersion: channels.knative.dev/v1alpha1
-kind: Bus
+kind: ClusterBus
 metadata:
   name: stub
   namespace: e2etestfn
