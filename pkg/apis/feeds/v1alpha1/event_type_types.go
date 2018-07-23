@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"encoding/json"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -56,4 +58,8 @@ type EventTypeList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []EventType `json:"items"`
+}
+
+func (et *EventType) GetSpecJSON() ([]byte, error) {
+	return json.Marshal(et.Spec)
 }
