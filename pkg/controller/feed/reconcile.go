@@ -21,14 +21,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/golang/glog"
-	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	"github.com/knative/eventing/pkg/controller/feed/resources"
 	"github.com/knative/eventing/pkg/sources"
-	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	yaml "gopkg.in/yaml.v2"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -390,18 +387,12 @@ func unmarshalJSON(in []byte) (map[string]interface{}, error) {
 }
 
 func (r *reconciler) createJob(feed *feedsv1alpha1.Feed, es *feedsv1alpha1.EventSource, et *feedsv1alpha1.EventType) (*batchv1.Job, error) {
-	//TODO just use service dns
-	target, err := r.resolveActionTarget(feed)
-	if err != nil {
-		return nil, err
-	}
-
 	trigger, err := r.resolveTrigger(feed)
 	if err != nil {
 		return nil, err
 	}
 
-	job, err := resources.MakeJob(feed, es, trigger, target)
+	job, err := resources.MakeJob(feed, es, trigger, feed.Spec.Action.DNSName)
 	if err != nil {
 		return nil, err
 	}
@@ -410,52 +401,6 @@ func (r *reconciler) createJob(feed *feedsv1alpha1.Feed, es *feedsv1alpha1.Event
 		return nil, err
 	}
 	return job, nil
-}
-
-func (r *reconciler) resolveActionTarget(feed *feedsv1alpha1.Feed) (string, error) {
-	action := feed.Spec.Action
-	if len(action.RouteName) > 0 {
-		return r.resolveRouteDNS(feed.Namespace, action.RouteName)
-	}
-	if len(action.ChannelName) > 0 {
-		return r.resolveChannelDNS(feed.Namespace, action.ChannelName)
-	}
-	// This should never happen, but because we don't have webhook validation yet, check
-	// and complain.
-	return "", fmt.Errorf("action is missing both RouteName and ChannelName")
-}
-
-func (r *reconciler) resolveRouteDNS(namespace string, routeName string) (string, error) {
-	route := &servingv1alpha1.Route{}
-	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: routeName}, route)
-	if err != nil {
-		return "", err
-	}
-	if len(route.Status.Domain) == 0 {
-		return "", fmt.Errorf("route '%s/%s' is missing a domain", namespace, routeName)
-	}
-	return route.Status.Domain, nil
-}
-
-func (r *reconciler) resolveChannelDNS(namespace string, channelName string) (string, error) {
-	// Currently Flow object resolves the channel to the DNS so allow for a fully
-	// specified cluster name to be returned as is.
-	// TODO: once the FeedAction gets normalized, clean this up.
-	if strings.HasSuffix(channelName, "svc.cluster.local") {
-		glog.Infof("using channel name as DNS entry: %q", channelName)
-		return channelName, nil
-	}
-
-	channel := &channelsv1alpha1.Channel{}
-	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: channelName}, channel)
-	if err != nil {
-		return "", err
-	}
-
-	if channel.Status.DomainInternal != "" {
-		return channel.Status.DomainInternal, nil
-	}
-	return "", fmt.Errorf("channel '%s/%s' does not have Status.DomainInternal", namespace, channelName)
 }
 
 func (r *reconciler) setFeedContext(feed *feedsv1alpha1.Feed, job *batchv1.Job) error {
