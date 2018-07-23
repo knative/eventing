@@ -53,7 +53,7 @@ func MakeWatcherDeployment(namespace string, deploymentName string, serviceAccou
 					ServiceAccountName: serviceAccount,
 					Containers: []corev1.Container{
 						corev1.Container{
-							Name:            deploymentName,
+							Name:            "receive-adapter",
 							Image:           image,
 							ImagePullPolicy: "Always",
 							Env: []corev1.EnvVar{

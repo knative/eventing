@@ -49,6 +49,10 @@ var (
 	deletionTime = metav1.Now().Rfc3339Copy()
 )
 
+const (
+	targetDNS = "myservice.mynamespace.svc.cluster.local"
+)
+
 func init() {
 	// Add types to scheme
 	feedsv1alpha1.AddToScheme(scheme.Scheme)
@@ -61,7 +65,6 @@ var testCases = []controllertesting.TestCase{
 		InitialState: []runtime.Object{
 			getEventSource(),
 			getEventType(),
-			getRoute(),
 			getNewFeed(),
 		},
 		ReconcileKey: "test/test-feed",
@@ -76,7 +79,6 @@ var testCases = []controllertesting.TestCase{
 		InitialState: []runtime.Object{
 			getEventSource(),
 			getEventType(),
-			getRoute(),
 			getStartInProgressFeed(),
 			getNewStartJob(),
 		},
@@ -91,7 +93,6 @@ var testCases = []controllertesting.TestCase{
 		InitialState: []runtime.Object{
 			getEventSource(),
 			getEventType(),
-			getRoute(),
 			getStartInProgressFeed(),
 			getCompletedStartFeedJob(),
 			getCompletedStartFeedJobPod(),
@@ -108,7 +109,6 @@ var testCases = []controllertesting.TestCase{
 		InitialState: []runtime.Object{
 			getEventSource(),
 			getEventType(),
-			getRoute(),
 			getStartInProgressFeed(),
 			getFailedStartFeedJob(),
 			getCompletedStartFeedJobPod(),
@@ -170,7 +170,6 @@ var testCases = []controllertesting.TestCase{
 			getFeedFailingWithMissingEventSource(),
 			getEventSource(),
 			getEventType(),
-			getRoute(),
 		},
 		ReconcileKey: "test/test-feed",
 		WantPresent: []runtime.Object{
@@ -183,7 +182,6 @@ var testCases = []controllertesting.TestCase{
 		InitialState: []runtime.Object{
 			getEventSource(),
 			getEventType(),
-			getRoute(),
 			getDeletedStartedFeed(),
 			getCompletedStartFeedJob(),
 		},
@@ -200,7 +198,6 @@ var testCases = []controllertesting.TestCase{
 		InitialState: []runtime.Object{
 			getEventSource(),
 			getEventType(),
-			getRoute(),
 			getDeletedStartedFeed(),
 		},
 		ReconcileKey: "test/test-feed",
@@ -215,7 +212,6 @@ var testCases = []controllertesting.TestCase{
 		InitialState: []runtime.Object{
 			getEventSource(),
 			getEventType(),
-			getRoute(),
 			getDeletedStopInProgressFeed(),
 			getInProgressStopJob(),
 		},
@@ -230,7 +226,6 @@ var testCases = []controllertesting.TestCase{
 		InitialState: []runtime.Object{
 			getEventSource(),
 			getEventType(),
-			getRoute(),
 			getDeletedStopInProgressFeed(),
 			getCompletedStopJob(),
 		},
@@ -298,16 +293,6 @@ func getDeletingEventType() *feedsv1alpha1.EventType {
 	}
 }
 
-func getRoute() *servingv1alpha1.Route {
-	return &servingv1alpha1.Route{
-		ObjectMeta: om("test", "test-route"),
-		Spec:       servingv1alpha1.RouteSpec{},
-		Status: servingv1alpha1.RouteStatus{
-			Domain: "example.com",
-		},
-	}
-}
-
 func getFeedContext() *sources.FeedContext {
 	return &sources.FeedContext{
 		Context: map[string]interface{}{
@@ -322,7 +307,7 @@ func getNewFeed() *feedsv1alpha1.Feed {
 		ObjectMeta: om("test", "test-feed"),
 		Spec: feedsv1alpha1.FeedSpec{
 			Action: feedsv1alpha1.FeedAction{
-				RouteName: getRoute().Name,
+				DNSName: targetDNS,
 			},
 			Trigger: feedsv1alpha1.EventTrigger{
 				EventType:      getEventType().Name,
@@ -341,7 +326,7 @@ func getFeedFailingWithMissingEventSource() *feedsv1alpha1.Feed {
 		ObjectMeta: om("test", "test-feed"),
 		Spec: feedsv1alpha1.FeedSpec{
 			Action: feedsv1alpha1.FeedAction{
-				RouteName: getRoute().Name,
+				DNSName: targetDNS,
 			},
 			Trigger: feedsv1alpha1.EventTrigger{
 				EventType:      getEventType().Name,
@@ -473,7 +458,7 @@ func getNewStartJob() *batchv1.Job {
 							Value: string(resources.OperationStartFeed),
 						}, {
 							Name:  string(resources.EnvVarTarget),
-							Value: "example.com",
+							Value: targetDNS,
 						}, {
 							Name: string(resources.EnvVarTrigger),
 							Value: base64.StdEncoding.EncodeToString(bytesOrDie(json.Marshal(
@@ -587,7 +572,7 @@ func getNewStopJob() *batchv1.Job {
 		Value: string(resources.OperationStopFeed),
 	}, {
 		Name:  string(resources.EnvVarTarget),
-		Value: "example.com",
+		Value: targetDNS,
 	}, {
 		Name: string(resources.EnvVarTrigger),
 		Value: base64.StdEncoding.EncodeToString(bytesOrDie(json.Marshal(
