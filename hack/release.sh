@@ -21,27 +21,27 @@
 [ -v KNATIVE_TEST_INFRA ] || exit 1
 
 # Set default GCS/GCR
-: ${EVENTING_RELEASE_GCS:="knative-releases"}
+: ${EVENTING_RELEASE_GCS:="knative-releases/eventing"}
 : ${EVENTING_RELEASE_GCR:="gcr.io/knative-releases"}
 readonly EVENTING_RELEASE_GCS
 readonly EVENTING_RELEASE_GCR
 
 # Yaml files to generate, and the source config dir for them.
 declare -A RELEASES
-RELEASES["release-eventing.yaml"]="config"
-RELEASES["release-eventing-bus-stub.yaml"]="config/buses/stub"
-RELEASES["release-eventing-bus-gcppubsub.yaml"]="config/buses/gcppubsub"
-RELEASES["release-eventing-bus-kafka.yaml"]="config/buses/kafka"
-RELEASES["release-eventing-source-k8sevents.yaml"]="pkg/sources/k8sevents"
-RELEASES["release-eventing-source-gcppubsub.yaml"]="pkg/sources/gcppubsub"
-RELEASES["release-eventing-source-github.yaml"]="pkg/sources/github"
+RELEASES["release.yaml"]="config"
+RELEASES["release-bus-stub.yaml"]="config/buses/stub"
+RELEASES["release-bus-gcppubsub.yaml"]="config/buses/gcppubsub"
+RELEASES["release-bus-kafka.yaml"]="config/buses/kafka"
+RELEASES["release-source-k8sevents.yaml"]="pkg/sources/k8sevents"
+RELEASES["release-source-gcppubsub.yaml"]="pkg/sources/gcppubsub"
+RELEASES["release-source-github.yaml"]="pkg/sources/github"
 readonly RELEASES
 
 # Yaml files that will be also released as ClusterBuses from Buses
 readonly CLUSTERBUS_YAMLS=(
-  release-eventing-bus-stub.yaml
-  release-eventing-bus-gcppubsub.yaml
-  release-eventing-bus-kafka.yaml
+  release-bus-stub.yaml
+  release-bus-gcppubsub.yaml
+  release-bus-kafka.yaml
 )
 
 # Script entry point.
