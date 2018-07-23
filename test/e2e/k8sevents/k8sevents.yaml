@@ -28,7 +28,7 @@ spec:
 apiVersion: feeds.knative.dev/v1alpha1
 kind: EventType
 metadata:
-  name: receiveevent
+  name: dev.knative.k8s.event
   namespace: e2etestfn
 spec:
   eventSource: k8sevents

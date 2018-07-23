@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"encoding/json"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -25,7 +27,9 @@ import (
 // +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Build is a specification for a Build resource
+// Build represents a build of a container image. A Build is made up of a
+// source, and a set of steps. Steps can mount volumes to share data between
+// themselves. A build may be created by instantiating a BuildTemplate.
 type Build struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -34,36 +38,49 @@ type Build struct {
 	Status BuildStatus `json:"status"`
 }
 
-// BuildSpec is the spec for a Build resource
+// BuildSpec is the spec for a Build resource.
 type BuildSpec struct {
-	Source *SourceSpec        `json:"source,omitempty"`
-	Steps  []corev1.Container `json:"steps,omitempty"`
+	// TODO: Generation does not work correctly with CRD. They are scrubbed
+	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
+	// So, we add Generation here. Once that gets fixed, remove this and use
+	// ObjectMeta.Generation instead.
+	// +optional
+	Generation int64 `json:"generation,omitempty"`
 
+	// Source specifies the input to the build.
+	Source *SourceSpec `json:"source,omitempty"`
+
+	// Steps are the steps of the build; each step is run sequentially with the
+	// source mounted into /workspace.
+	Steps []corev1.Container `json:"steps,omitempty"`
+
+	// Volumes is a collection of volumes that are available to mount into the
+	// steps of the build.
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
 
 	// The name of the service account as which to run this build.
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
-	// Template, if specified,references a BuildTemplate resource to use to
+	// Template, if specified, references a BuildTemplate resource to use to
 	// populate fields in the build, and optional Arguments to pass to the
 	// template.
 	Template *TemplateInstantiationSpec `json:"template,omitempty"`
 }
 
+// TemplateInstantiationSpec specifies how a BuildTemplate is instantiated into
+// a Build.
 type TemplateInstantiationSpec struct {
 	// Name references the BuildTemplate resource to use.
+	//
+	// The template is assumed to exist in the Build's namespace.
 	Name string `json:"name"`
-
-	// Namespace, if specified, is the namespace of the BuildTemplate resource to
-	// use. If omitted, the build's namespace is used.
-	Namespace string `json:"namespace,omitempty"`
 
 	// Arguments, if specified, lists values that should be applied to the
 	// parameters specified by the template.
 	Arguments []ArgumentSpec `json:"arguments,omitempty"`
 
 	// Env, if specified will provide variables to all build template steps.
-	// This will override any of the template's steps environment variables
+	// This will override any of the template's steps environment variables.
 	Env []corev1.EnvVar `json:"env,omitempty"`
 }
 
@@ -84,15 +101,13 @@ type SourceSpec struct {
 
 // GitSourceSpec describes a Git repo source input to the Build.
 type GitSourceSpec struct {
+	// URL of the Git repository to clone from.
 	Url string `json:"url"`
 
-	// One of these may be specified.
-	Branch string `json:"branch,omitempty"`
-	Tag    string `json:"tag,omitempty"`
-	Ref    string `json:"ref,omitempty"`
-	Commit string `json:"commit,omitempty"`
-
-	// TODO(mattmoor): authn/z
+	// Git revision (branch, tag, commit SHA or ref) to clone.  See
+	// https://git-scm.com/docs/gitrevisions#_specifying_revisions for more
+	// information.
+	Revision string `json:"revision"`
 }
 
 // GCSSourceSpec describes source input to the Build in the form of an archive,
@@ -147,12 +162,12 @@ type GoogleSpec struct {
 type BuildConditionType string
 
 const (
-	// BuildComplete specifies that the build has completed successfully.
-	BuildComplete BuildConditionType = "Complete"
-	// BuildFailed specifies that the build has failed.
-	BuildFailed BuildConditionType = "Failed"
-	// BuildInvalid specifies that the given build specification is invalid.
-	BuildInvalid BuildConditionType = "Invalid"
+	// BuildSucceeded is set when the build is running, and becomes True
+	// when the build finishes successfully.
+	//
+	// If the build is ongoing, its status will be Unknown. If it fails,
+	// its status will be False.
+	BuildSucceeded BuildConditionType = "Succeeded"
 )
 
 // BuildCondition defines a readiness condition for a Build.
@@ -176,6 +191,15 @@ type BuildList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []Build `json:"items"`
+}
+
+func (bs *BuildStatus) GetCondition(t BuildConditionType) *BuildCondition {
+	for _, cond := range bs.Conditions {
+		if cond.Type == t {
+			return &cond
+		}
+	}
+	return nil
 }
 
 func (b *BuildStatus) SetCondition(newCond *BuildCondition) {
@@ -203,3 +227,7 @@ func (b *BuildStatus) RemoveCondition(t BuildConditionType) {
 	}
 	b.Conditions = conditions
 }
+
+func (b *Build) GetGeneration() int64           { return b.Spec.Generation }
+func (b *Build) SetGeneration(generation int64) { b.Spec.Generation = generation }
+func (b *Build) GetSpecJSON() ([]byte, error)   { return json.Marshal(b.Spec) }

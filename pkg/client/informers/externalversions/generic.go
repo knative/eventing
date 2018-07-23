@@ -23,7 +23,7 @@ import (
 
 	v1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	feeds_v1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
-	v1alpha3 "github.com/knative/eventing/pkg/apis/istio/v1alpha3"
+	flows_v1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -59,22 +59,26 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Channels().V1alpha1().Buses().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("channels"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Channels().V1alpha1().Channels().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("clusterbuses"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Channels().V1alpha1().ClusterBuses().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("subscriptions"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Channels().V1alpha1().Subscriptions().Informer()}, nil
 
 		// Group=feeds.knative.dev, Version=v1alpha1
-	case feeds_v1alpha1.SchemeGroupVersion.WithResource("binds"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Feeds().V1alpha1().Binds().Informer()}, nil
+	case feeds_v1alpha1.SchemeGroupVersion.WithResource("clustereventsources"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Feeds().V1alpha1().ClusterEventSources().Informer()}, nil
+	case feeds_v1alpha1.SchemeGroupVersion.WithResource("clustereventtypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Feeds().V1alpha1().ClusterEventTypes().Informer()}, nil
 	case feeds_v1alpha1.SchemeGroupVersion.WithResource("eventsources"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Feeds().V1alpha1().EventSources().Informer()}, nil
 	case feeds_v1alpha1.SchemeGroupVersion.WithResource("eventtypes"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Feeds().V1alpha1().EventTypes().Informer()}, nil
+	case feeds_v1alpha1.SchemeGroupVersion.WithResource("feeds"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Feeds().V1alpha1().Feeds().Informer()}, nil
 
-		// Group=networking.istio.io, Version=v1alpha3
-	case v1alpha3.SchemeGroupVersion.WithResource("gateways"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Networking().V1alpha3().Gateways().Informer()}, nil
-	case v1alpha3.SchemeGroupVersion.WithResource("virtualservices"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Networking().V1alpha3().VirtualServices().Informer()}, nil
+		// Group=flows.knative.dev, Version=v1alpha1
+	case flows_v1alpha1.SchemeGroupVersion.WithResource("flows"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Flows().V1alpha1().Flows().Informer()}, nil
 
 	}
 

@@ -19,7 +19,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
 
 	"github.com/golang/glog"
@@ -57,14 +56,18 @@ func main() {
 
 	var bus *gcppubsub.PubSubBus
 	monitor := buses.NewMonitor(component, masterURL, kubeconfig, buses.MonitorEventHandlerFuncs{
-		SubscribeFunc: func(subscription *channelsv1alpha1.Subscription, attributes buses.Attributes) error {
-			return bus.ReceiveEvents(subscription, attributes)
+		SubscribeFunc: func(subscription *channelsv1alpha1.Subscription, parameters buses.ResolvedParameters) error {
+			return bus.ReceiveEvents(subscription, parameters)
 		},
 		UnsubscribeFunc: func(subscription *channelsv1alpha1.Subscription) error {
 			return bus.StopReceiveEvents(subscription)
 		},
 	})
-	bus, err := gcppubsub.NewPubSubBus(name, projectID, monitor)
+	messageReceiver := buses.NewMessageReceiver(func(channel *buses.ChannelReference, message *buses.Message) error {
+		return bus.ReceiveMessage(channel, message)
+	})
+	messageDispatcher := buses.NewMessageDispatcher()
+	bus, err := gcppubsub.NewPubSubBus(name, projectID, monitor, messageReceiver, messageDispatcher)
 	if err != nil {
 		glog.Fatalf("Failed to create pubsub bus: %v", err)
 	}
@@ -74,10 +77,7 @@ func main() {
 			glog.Fatalf("Error running monitor: %s", err.Error())
 		}
 	}()
-
-	glog.Infoln("Starting web server")
-	http.HandleFunc("/", bus.ReceiveHTTPEvent)
-	glog.Fatal(http.ListenAndServe(":8080", nil))
+	messageReceiver.Run(stopCh)
 }
 
 func init() {

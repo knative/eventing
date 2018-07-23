@@ -17,9 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -36,46 +34,18 @@ type EventType struct {
 	Status EventTypeStatus `json:"status"`
 }
 
-// EventTypeSpec is the spec for a EventType resource
-// TODO: Define this to be more useful
+// EventTypeSpec specifies information about the EventType, including a schema
+// for the event and information about the parameters needed to create a Feed to
+// the event.
 type EventTypeSpec struct {
+	CommonEventTypeSpec `json:",inline"`
+	// EventSource is the name of the EventSource that produces this EventType.
 	EventSource string `json:"eventSource"`
-	Description string `json:"description,omitempty"`
-	// SubscribeSchema describing how to subscribe to this. This basically
-	// defines what is required in the Bind.Parameters so that the developer
-	// can see the required parameters.
-	SubscribeSchema *runtime.RawExtension `json:"subscribeSchema,omitempty"`
-	// Describe the schema for the events emitted by this EventType.
-	EventSchema *runtime.RawExtension `json:"eventSchema,omitempty"`
 }
 
 // EventTypeStatus is the status for a EventType resource
 type EventTypeStatus struct {
-	Conditions []EventTypeCondition `json:"conditions,omitempty"`
-}
-
-type EventTypeConditionType string
-
-const (
-	// EventTypeComplete specifies that the bind has completed successfully.
-	EventTypeComplete EventTypeConditionType = "Complete"
-	// EventTypeFailed specifies that the bind has failed.
-	EventTypeFailed EventTypeConditionType = "Failed"
-	// EventTypeInvalid specifies that the given bind specification is invalid.
-	EventTypeInvalid EventTypeConditionType = "Invalid"
-)
-
-// EventTypeCondition defines a readiness condition for a EventType.
-// See: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#typical-status-properties
-type EventTypeCondition struct {
-	Type EventTypeConditionType `json:"state"`
-
-	Status corev1.ConditionStatus `json:"status" description:"status of the condition, one of True, False, Unknown"`
-
-	// +optional
-	Reason string `json:"reason,omitempty" description:"one-word CamelCase reason for the condition's last transition"`
-	// +optional
-	Message string `json:"message,omitempty" description:"human-readable message indicating details about last transition"`
+	CommonEventTypeStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -86,30 +56,4 @@ type EventTypeList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []EventType `json:"items"`
-}
-
-func (ets *EventTypeStatus) SetCondition(new *EventTypeCondition) {
-	if new == nil {
-		return
-	}
-
-	t := new.Type
-	var conditions []EventTypeCondition
-	for _, cond := range ets.Conditions {
-		if cond.Type != t {
-			conditions = append(conditions, cond)
-		}
-	}
-	conditions = append(conditions, *new)
-	ets.Conditions = conditions
-}
-
-func (ets *EventTypeStatus) RemoveCondition(t EventTypeConditionType) {
-	var conditions []EventTypeCondition
-	for _, cond := range ets.Conditions {
-		if cond.Type != t {
-			conditions = append(conditions, cond)
-		}
-	}
-	ets.Conditions = conditions
 }

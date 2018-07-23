@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Knative Authors
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import (
 	"github.com/golang/glog"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -35,9 +36,10 @@ import (
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/controller"
-	"github.com/knative/eventing/pkg/controller/bind"
 	"github.com/knative/eventing/pkg/controller/bus"
 	"github.com/knative/eventing/pkg/controller/channel"
+	"github.com/knative/eventing/pkg/controller/clusterbus"
+	"github.com/knative/eventing/pkg/controller/flow"
 	"github.com/knative/eventing/pkg/signals"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -80,14 +82,22 @@ func main() {
 		glog.Fatalf("Error building serving clientset: %s", err.Error())
 	}
 
+	// Build a rest.Config from configuration injected into the Pod by
+	// Kubernetes. Clients will use the Pod's ServiceAccount principal.
+	restConfig, err := rest.InClusterConfig()
+	if err != nil {
+		glog.Fatalf("Error building rest config: %v", err.Error())
+	}
+
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
 	servingInformerFactory := servinginformers.NewSharedInformerFactory(servingClient, time.Second*30)
 
 	// Add new controllers here.
 	ctors := []controller.Constructor{
-		bind.NewController,
+		flow.NewController,
 		bus.NewController,
+		clusterbus.NewController,
 		channel.NewController,
 	}
 
@@ -95,7 +105,7 @@ func main() {
 	controllers := make([]controller.Interface, 0, len(ctors))
 	for _, ctor := range ctors {
 		controllers = append(controllers,
-			ctor(kubeClient, client, kubeInformerFactory, informerFactory, servingInformerFactory))
+			ctor(kubeClient, client, servingClient, restConfig, kubeInformerFactory, informerFactory, servingInformerFactory))
 	}
 
 	go kubeInformerFactory.Start(stopCh)

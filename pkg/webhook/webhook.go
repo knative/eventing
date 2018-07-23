@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Knative Authors
+Copyright 2018 The Knative Authors
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -38,7 +38,7 @@ import (
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	v1beta1 "k8s.io/api/extensions/v1beta1"
+	"k8s.io/api/extensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -202,6 +202,14 @@ func NewAdmissionController(client kubernetes.Interface, options ControllerOptio
 		client:  client,
 		options: options,
 		handlers: map[string]GenericCRDHandler{
+			"Bus": {
+				Factory:   &v1alpha1.Bus{},
+				Validator: ValidateBus(ctx),
+			},
+			"ClusterBus": {
+				Factory:   &v1alpha1.ClusterBus{},
+				Validator: ValidateBus(ctx),
+			},
 			"Channel": {
 				Factory:   &v1alpha1.Channel{},
 				Validator: ValidateChannel(ctx),
@@ -290,7 +298,7 @@ func (ac *AdmissionController) unregister(
 
 func (ac *AdmissionController) register(
 	ctx context.Context, client clientadmissionregistrationv1beta1.MutatingWebhookConfigurationInterface, caCert []byte) error { // nolint: lll
-	resources := []string{"channels", "subscriptions"}
+	resources := []string{"buses", "clusterbuses", "channels", "subscriptions"}
 
 	webhook := &admissionregistrationv1beta1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{

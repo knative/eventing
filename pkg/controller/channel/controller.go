@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Knative Authors
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	istiolisters "github.com/knative/eventing/pkg/client/listers/istio/v1alpha3"
 	"github.com/knative/eventing/pkg/controller"
+	istiolisters "github.com/knative/serving/pkg/client/listers/istio/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,18 +34,22 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
+	"github.com/knative/eventing/pkg"
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	channelscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	listers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
+	servingclientset "github.com/knative/serving/pkg/client/clientset/versioned"
 	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
-	istiov1alpha3 "github.com/knative/eventing/pkg/apis/istio/v1alpha3"
+	"github.com/knative/eventing/pkg/controller/util"
+	istiov1alpha3 "github.com/knative/serving/pkg/apis/istio/v1alpha3"
 )
 
 const controllerAgentName = "channel-controller"
@@ -66,6 +70,17 @@ const (
 )
 
 const (
+	// ServiceSynced is used as part of the condition reason when the channel (k8s) service is successfully created.
+	ServiceSynced = "ServiceSynced"
+	// ServiceError is used as part of the condition reason when the channel (k8s) service creation failed.
+	ServiceError = "ServiceError"
+	// VirtualServiceSynced is used as part of the condition reason when the channel istio virtual service is successfully created.
+	VirtualServiceSynced = "VirtualServiceSynced"
+	// VirtualServiceError is used as part of the condition reason when the channel istio virtual service creation failed.
+	VirtualServiceError = "VirtualServiceError"
+)
+
+const (
 	PortNumber = 80
 	PortName   = "http"
 )
@@ -76,6 +91,8 @@ type Controller struct {
 	kubeclientset kubernetes.Interface
 	// channelclientset is a clientset for our own API group
 	channelclientset clientset.Interface
+	// servingclientset is a clientset for serving API groups
+	servingclientset servingclientset.Interface
 
 	virtualservicesLister istiolisters.VirtualServiceLister
 	virtualservicesSynced cache.InformerSynced
@@ -99,12 +116,14 @@ type Controller struct {
 func NewController(
 	kubeclientset kubernetes.Interface,
 	channelclientset clientset.Interface,
+	servingclientset servingclientset.Interface,
+	restConfig *rest.Config,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	channelInformerFactory informers.SharedInformerFactory,
-	routeInformerFactory servinginformers.SharedInformerFactory) controller.Interface {
+	servingInformerFactory servinginformers.SharedInformerFactory) controller.Interface {
 
 	// obtain references to shared index informers for the Service and Channel types.
-	virtualserviceInformer := channelInformerFactory.Networking().V1alpha3().VirtualServices()
+	virtualserviceInformer := servingInformerFactory.Networking().V1alpha3().VirtualServices()
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
 	channelInformer := channelInformerFactory.Channels().V1alpha1().Channels()
 
@@ -121,6 +140,7 @@ func NewController(
 	controller := &Controller{
 		kubeclientset:         kubeclientset,
 		channelclientset:      channelclientset,
+		servingclientset:      servingclientset,
 		virtualservicesLister: virtualserviceInformer.Lister(),
 		virtualservicesSynced: virtualserviceInformer.Informer().HasSynced,
 		servicesLister:        serviceInformer.Lister(),
@@ -278,21 +298,27 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
+	var service *corev1.Service
+	var virtualService *istiov1alpha3.VirtualService
+	var serviceErr, virtualServiceErr error
+
 	// Sync Service derived from the Channel
-	service, err := c.syncChannelService(channel)
+	service, serviceErr = c.syncChannelService(channel)
 	if err != nil {
+		c.updateChannelStatus(channel, service, serviceErr, virtualService, virtualServiceErr)
 		return err
 	}
 
 	// Sync VirtualService derived from a Channel
-	virtualService, err := c.syncChannelVirtualService(channel)
-	if err != nil {
+	virtualService, virtualServiceErr = c.syncChannelVirtualService(channel)
+	if virtualServiceErr != nil {
+		c.updateChannelStatus(channel, service, serviceErr, virtualService, virtualServiceErr)
 		return err
 	}
 
 	// Finally, we update the status block of the Channel resource to reflect the
 	// current state of the world
-	err = c.updateChannelStatus(channel, service, virtualService)
+	err = c.updateChannelStatus(channel, service, serviceErr, virtualService, virtualServiceErr)
 	if err != nil {
 		return err
 	}
@@ -335,7 +361,7 @@ func (c *Controller) syncChannelVirtualService(channel *channelsv1alpha1.Channel
 
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
-		virtualservice, err = c.channelclientset.NetworkingV1alpha3().VirtualServices(channel.Namespace).Create(newVirtualService(channel))
+		virtualservice, err = c.servingclientset.NetworkingV1alpha3().VirtualServices(channel.Namespace).Create(newVirtualService(channel))
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
@@ -356,11 +382,40 @@ func (c *Controller) syncChannelVirtualService(channel *channelsv1alpha1.Channel
 	return virtualservice, nil
 }
 
-func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel, service *corev1.Service, virtualService *istiov1alpha3.VirtualService) error {
+func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel,
+	service *corev1.Service, serviceError error,
+	virtualService *istiov1alpha3.VirtualService, virtualServiceError error) error {
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
 	channelCopy := channel.DeepCopy()
+
+	// Update ChannelStatus
+
+	if service != nil {
+		channelCopy.Status.Service = &corev1.LocalObjectReference{Name: service.Name}
+		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelServiceable, corev1.ConditionTrue, ServiceSynced, "service successfully synced")
+		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
+	} else {
+		channelCopy.Status.Service = nil
+		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelServiceable, corev1.ConditionFalse, ServiceError, serviceError.Error())
+		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
+	}
+
+	if virtualService != nil {
+		channelCopy.Status.VirtualService = &corev1.LocalObjectReference{Name: virtualService.Name}
+		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelRoutable, corev1.ConditionTrue, VirtualServiceSynced, "virtual service successfully synced")
+		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
+	} else {
+		channelCopy.Status.VirtualService = nil
+		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelRoutable, corev1.ConditionFalse, VirtualServiceError, virtualServiceError.Error())
+		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
+	}
+
+	util.ConsolidateChannelCondition(&channelCopy.Status)
+
+	channelCopy.Status.DomainInternal = controller.ServiceHostName(service.Name, service.Namespace)
+
 	// If the CustomResourceSubresources feature gate is not enabled,
 	// we must use Update instead of UpdateStatus to update the Status block of the Channel resource.
 	// UpdateStatus will not allow changes to the Spec of the resource,
@@ -455,8 +510,16 @@ func newService(channel *channelsv1alpha1.Channel) *corev1.Service {
 // the Channel resource that 'owns' it.
 func newVirtualService(channel *channelsv1alpha1.Channel) *istiov1alpha3.VirtualService {
 	labels := map[string]string{
-		"bus":     channel.Spec.Bus,
 		"channel": channel.Name,
+	}
+	var destinationHost string
+	if len(channel.Spec.Bus) != 0 {
+		labels["bus"] = channel.Spec.Bus
+		destinationHost = controller.ServiceHostName(controller.BusDispatcherServiceName(channel.Spec.Bus), channel.Namespace)
+	}
+	if len(channel.Spec.ClusterBus) != 0 {
+		labels["clusterBus"] = channel.Spec.ClusterBus
+		destinationHost = controller.ServiceHostName(controller.ClusterBusDispatcherServiceName(channel.Spec.ClusterBus), pkg.GetEventingSystemNamespace())
 	}
 	return &istiov1alpha3.VirtualService{
 		ObjectMeta: metav1.ObjectMeta{
@@ -484,7 +547,7 @@ func newVirtualService(channel *channelsv1alpha1.Channel) *istiov1alpha3.Virtual
 					Route: []istiov1alpha3.DestinationWeight{
 						{
 							Destination: istiov1alpha3.Destination{
-								Host: controller.ServiceHostName(controller.BusDispatcherServiceName(channel.Spec.Bus), channel.Namespace),
+								Host: destinationHost,
 							},
 						},
 					},

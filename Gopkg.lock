@@ -21,10 +21,21 @@
   version = "v0.4.7"
 
 [[projects]]
+  name = "github.com/Shopify/sarama"
+  packages = ["."]
+  revision = "46cf3e2cf1acef7876068f66cf69ec31aad2d0b2"
+
+[[projects]]
   branch = "master"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
+
+[[projects]]
+  name = "github.com/bsm/sarama-cluster"
+  packages = ["."]
+  revision = "cf455bc755fe41ac9bb2861e7a961833d9c2ecc3"
+  version = "v2.1.13"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -81,6 +92,24 @@
   version = "v0.3.3"
 
 [[projects]]
+  name = "github.com/eapache/go-resiliency"
+  packages = ["breaker"]
+  revision = "ea41b0fad31007accc7f806884dcdf3da98b79ce"
+  version = "v1.1.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/eapache/go-xerial-snappy"
+  packages = ["."]
+  revision = "bb955e01b9346ac19dc29eb16586c90ded99a98c"
+
+[[projects]]
+  name = "github.com/eapache/queue"
+  packages = ["."]
+  revision = "44cc805cf13205b55f69e14bcb69867d1ae92f98"
+  version = "v1.1.0"
+
+[[projects]]
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
   revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
@@ -91,6 +120,21 @@
   packages = ["."]
   revision = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7"
   version = "v1.0.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/go-logr/logr"
+  packages = [
+    ".",
+    "testing"
+  ]
+  revision = "9fb12b3b21c5415d16ac18dc5cd42c1cfdd40c4e"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/go-logr/zapr"
+  packages = ["."]
+  revision = "7536572e8d55209135cd5e7ccf7fce43dca217ab"
 
 [[projects]]
   name = "github.com/gogo/protobuf"
@@ -129,27 +173,44 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/golang/snappy"
+  packages = ["."]
+  revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
+
+[[projects]]
+  name = "github.com/google/go-cmp"
+  packages = [
+    "cmp",
+    "cmp/cmpopts",
+    "cmp/internal/diff",
+    "cmp/internal/function",
+    "cmp/internal/value"
+  ]
+  revision = "3af367b6b30c263d47e8895973edcca9a49cf029"
+  version = "v0.2.0"
+
+[[projects]]
   name = "github.com/google/go-containerregistry"
   packages = [
-    "authn",
     "cmd/ko",
-    "ko/build",
-    "ko/publish",
-    "ko/resolve",
-    "name",
-    "v1",
-    "v1/daemon",
-    "v1/empty",
-    "v1/mutate",
-    "v1/partial",
-    "v1/random",
-    "v1/remote",
-    "v1/remote/transport",
-    "v1/tarball",
-    "v1/types",
-    "v1/v1util"
+    "pkg/authn",
+    "pkg/ko/build",
+    "pkg/ko/publish",
+    "pkg/ko/resolve",
+    "pkg/name",
+    "pkg/v1",
+    "pkg/v1/daemon",
+    "pkg/v1/empty",
+    "pkg/v1/mutate",
+    "pkg/v1/partial",
+    "pkg/v1/random",
+    "pkg/v1/remote",
+    "pkg/v1/remote/transport",
+    "pkg/v1/tarball",
+    "pkg/v1/types",
+    "pkg/v1/v1util"
   ]
-  revision = "e033bc7269cacc3145d08df64ad5cf387c7fc48d"
+  revision = "0eeba96f66fdd1873f2ec7f3764ee3b58c5a050c"
 
 [[projects]]
   name = "github.com/google/go-github"
@@ -168,6 +229,19 @@
   name = "github.com/google/gofuzz"
   packages = ["."]
   revision = "24818f796faf91cd76ec7bddd72458fbced7a6c1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/google/licenseclassifier"
+  packages = [
+    ".",
+    "internal/sets",
+    "stringclassifier",
+    "stringclassifier/internal/pq",
+    "stringclassifier/searchset",
+    "stringclassifier/searchset/tokenizer"
+  ]
+  revision = "3c8ad1f0b0644b6646210ee9cf2f34ff907e2e18"
 
 [[projects]]
   name = "github.com/google/uuid"
@@ -247,29 +321,29 @@
     "pkg/apis/build",
     "pkg/apis/build/v1alpha1"
   ]
-  revision = "bfc0222e894da677b45fd63828a89676aa706589"
+  revision = "5c1d8c8469d1ed34b2aecf4c2305b3a57fff2ee3"
 
 [[projects]]
   name = "github.com/knative/serving"
   packages = [
     "pkg/apis/istio",
-    "pkg/apis/istio/v1alpha2",
+    "pkg/apis/istio/v1alpha3",
     "pkg/apis/serving",
     "pkg/apis/serving/v1alpha1",
     "pkg/client/clientset/versioned",
     "pkg/client/clientset/versioned/scheme",
-    "pkg/client/clientset/versioned/typed/istio/v1alpha2",
+    "pkg/client/clientset/versioned/typed/istio/v1alpha3",
     "pkg/client/clientset/versioned/typed/serving/v1alpha1",
     "pkg/client/informers/externalversions",
     "pkg/client/informers/externalversions/internalinterfaces",
     "pkg/client/informers/externalversions/istio",
-    "pkg/client/informers/externalversions/istio/v1alpha2",
+    "pkg/client/informers/externalversions/istio/v1alpha3",
     "pkg/client/informers/externalversions/serving",
     "pkg/client/informers/externalversions/serving/v1alpha1",
-    "pkg/client/listers/istio/v1alpha2",
+    "pkg/client/listers/istio/v1alpha3",
     "pkg/client/listers/serving/v1alpha1"
   ]
-  revision = "a67361c49ec4a957f60d86de05f168a4b41b72ba"
+  revision = "2326173b13899c32896caf526a318a8b30033b3e"
 
 [[projects]]
   name = "github.com/magiconair/properties"
@@ -282,6 +356,12 @@
   name = "github.com/mattbaird/jsonpatch"
   packages = ["."]
   revision = "81af80346b1a01caae0cbc27fd3c1ba5b11e189f"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mattmoor/dep-collector"
+  packages = ["."]
+  revision = "ea0470924d0dd9363ffae8936f88a22d28551685"
 
 [[projects]]
   name = "github.com/matttproud/golang_protobuf_extensions"
@@ -312,6 +392,15 @@
   packages = ["."]
   revision = "acdc4509485b587f5e675510c4f2c63e90ff68a8"
   version = "v1.1.0"
+
+[[projects]]
+  name = "github.com/pierrec/lz4"
+  packages = [
+    ".",
+    "internal/xxh32"
+  ]
+  revision = "6b9367c9ff401dbc54fabce3fb8d972e799b702d"
+  version = "v2.0.2"
 
 [[projects]]
   name = "github.com/pkg/errors"
@@ -354,6 +443,18 @@
     "xfs"
   ]
   revision = "94663424ae5ae9856b40a9f170762b4197024661"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/rcrowley/go-metrics"
+  packages = ["."]
+  revision = "e2704e165165ec55d062f5919b4b29494e9fa790"
+
+[[projects]]
+  name = "github.com/sergi/go-diff"
+  packages = ["diffmatchpatch"]
+  revision = "1744e2970ca51c86172c8190fadad617561ed6e7"
+  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/spf13/afero"
@@ -411,6 +512,31 @@
   ]
   revision = "c3ed530f775d85e577ca652cb052a52c078aad26"
   version = "v0.11.0"
+
+[[projects]]
+  name = "go.uber.org/atomic"
+  packages = ["."]
+  revision = "1ea20fb1cbb1cc08cbd0d913a96dead89aa18289"
+  version = "v1.3.2"
+
+[[projects]]
+  name = "go.uber.org/multierr"
+  packages = ["."]
+  revision = "3c4937480c32f4c13a875a1829af76c98ca3d40a"
+  version = "v1.1.0"
+
+[[projects]]
+  name = "go.uber.org/zap"
+  packages = [
+    ".",
+    "buffer",
+    "internal/bufferpool",
+    "internal/color",
+    "internal/exit",
+    "zapcore"
+  ]
+  revision = "eeedf312bc6c57391d84767a4cd413f02a917974"
+  version = "v1.8.0"
 
 [[projects]]
   branch = "master"
@@ -639,6 +765,7 @@
 [[projects]]
   name = "k8s.io/apimachinery"
   packages = [
+    "pkg/api/equality",
     "pkg/api/errors",
     "pkg/api/meta",
     "pkg/api/resource",
@@ -692,6 +819,7 @@
   packages = [
     "discovery",
     "discovery/fake",
+    "dynamic",
     "informers",
     "informers/admissionregistration",
     "informers/admissionregistration/v1alpha1",
@@ -844,8 +972,8 @@
     "util/retry",
     "util/workqueue"
   ]
-  revision = "23781f4d6632d88e869066eaebb743857aa1ef9b"
-  version = "v7.0.0"
+  revision = "989be4278f353e42f26c416c53757d16fcff77db"
+  version = "kubernetes-1.10.1"
 
 [[projects]]
   name = "k8s.io/code-generator"
@@ -894,9 +1022,36 @@
   packages = ["pkg/util/proto"]
   revision = "8a9b82f00b3a86eac24681da3f9fe6c34c01cea2"
 
+[[projects]]
+  branch = "master"
+  name = "sigs.k8s.io/controller-runtime"
+  packages = [
+    "pkg/cache",
+    "pkg/cache/internal",
+    "pkg/client",
+    "pkg/client/apiutil",
+    "pkg/client/config",
+    "pkg/client/fake",
+    "pkg/controller",
+    "pkg/event",
+    "pkg/handler",
+    "pkg/internal/controller",
+    "pkg/internal/recorder",
+    "pkg/manager",
+    "pkg/predicate",
+    "pkg/reconcile",
+    "pkg/recorder",
+    "pkg/runtime/inject",
+    "pkg/runtime/log",
+    "pkg/runtime/signals",
+    "pkg/source",
+    "pkg/source/internal"
+  ]
+  revision = "f5b79b93f3aa7b978117f942f3cd67a91db12207"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "001aef2bcc7b7a7f3d307748cd9b0615acff2999d22ff7b3fcfc76a807420e69"
+  inputs-digest = "abbfc98e1da21a8dc2663fa0e6b153f7fd531e9c75dd66df5c38cf2cf7f6e6a7"
   solver-name = "gps-cdcl"
   solver-version = 1

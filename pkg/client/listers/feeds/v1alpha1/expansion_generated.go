@@ -18,13 +18,13 @@ limitations under the License.
 
 package v1alpha1
 
-// BindListerExpansion allows custom methods to be added to
-// BindLister.
-type BindListerExpansion interface{}
+// ClusterEventSourceListerExpansion allows custom methods to be added to
+// ClusterEventSourceLister.
+type ClusterEventSourceListerExpansion interface{}
 
-// BindNamespaceListerExpansion allows custom methods to be added to
-// BindNamespaceLister.
-type BindNamespaceListerExpansion interface{}
+// ClusterEventTypeListerExpansion allows custom methods to be added to
+// ClusterEventTypeLister.
+type ClusterEventTypeListerExpansion interface{}
 
 // EventSourceListerExpansion allows custom methods to be added to
 // EventSourceLister.
@@ -41,3 +41,11 @@ type EventTypeListerExpansion interface{}
 // EventTypeNamespaceListerExpansion allows custom methods to be added to
 // EventTypeNamespaceLister.
 type EventTypeNamespaceListerExpansion interface{}
+
+// FeedListerExpansion allows custom methods to be added to
+// FeedLister.
+type FeedListerExpansion interface{}
+
+// FeedNamespaceListerExpansion allows custom methods to be added to
+// FeedNamespaceLister.
+type FeedNamespaceListerExpansion interface{}

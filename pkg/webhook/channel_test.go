@@ -19,15 +19,22 @@ import (
 	"testing"
 )
 
-func TestNewChannel(t *testing.T) {
-	c := createChannel(testChannelName, testBusName)
+func TestNewChannelNSBus(t *testing.T) {
+	c := createChannel(testChannelName, testBusName, "")
+	if err := ValidateChannel(testCtx)(nil, nil, &c); err != nil {
+		t.Errorf("Expected success, but failed with: %s", err)
+	}
+}
+
+func TestNewChannelClusterBus(t *testing.T) {
+	c := createChannel(testChannelName, "", testClusterBusName)
 	if err := ValidateChannel(testCtx)(nil, nil, &c); err != nil {
 		t.Errorf("Expected success, but failed with: %s", err)
 	}
 }
 
 func TestNewEmptyChannel(t *testing.T) {
-	c := createChannel(testChannelName, "")
+	c := createChannel(testChannelName, "", "")
 	err := ValidateChannel(testCtx)(nil, nil, &c)
 	if err == nil {
 		t.Errorf("Expected failure, but succeeded with: %+v", c)
@@ -37,21 +44,44 @@ func TestNewEmptyChannel(t *testing.T) {
 	}
 }
 
-func TestChannelMutation(t *testing.T) {
-	c := createChannel(testChannelName, testBusName)
+func TestNewExclusiveChannel(t *testing.T) {
+	c := createChannel(testChannelName, testBusName, testClusterBusName)
+	err := ValidateChannel(testCtx)(nil, nil, &c)
+	if err == nil {
+		t.Errorf("Expected failure, but succeeded with: %+v", c)
+	}
+	if e, a := errInvalidChannelBusExclusivity, err; e != a {
+		t.Errorf("Expected %s got %s", e, a)
+	}
+}
+
+func TestChannelNoopMutation(t *testing.T) {
+	c := createChannel(testChannelName, testBusName, "")
 	if err := ValidateChannel(testCtx)(nil, &c, &c); err != nil {
 		t.Errorf("Expected success, but failed with: %s", err)
 	}
 }
 
-func TestChannelBusMutation(t *testing.T) {
-	old := createChannel(testChannelName, "stub")
-	new := createChannel(testChannelName, "pubsub")
+func TestChannelNSBusMutation(t *testing.T) {
+	old := createChannel(testChannelName, "stub", "")
+	new := createChannel(testChannelName, "pubsub", "")
 	err := ValidateChannel(testCtx)(nil, &old, &new)
 	if err == nil {
 		t.Errorf("Expected failure, but succeeded with: %+v %+v", old, new)
 	}
 	if e, a := errInvalidChannelBusMutation, err; e != a {
+		t.Errorf("Expected %s got %s", e, a)
+	}
+}
+
+func TestChannelClusterBusMutation(t *testing.T) {
+	old := createChannel(testChannelName, "", "stub")
+	new := createChannel(testChannelName, "", "pubsub")
+	err := ValidateChannel(testCtx)(nil, &old, &new)
+	if err == nil {
+		t.Errorf("Expected failure, but succeeded with: %+v %+v", old, new)
+	}
+	if e, a := errInvalidChannelClusterBusMutation, err; e != a {
 		t.Errorf("Expected %s got %s", e, a)
 	}
 }

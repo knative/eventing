@@ -19,7 +19,9 @@ package controller
 import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
+	servingclientset "github.com/knative/serving/pkg/client/clientset/versioned"
 	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
 
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
@@ -30,4 +32,12 @@ type Interface interface {
 	Run(threadiness int, stopCh <-chan struct{}) error
 }
 
-type Constructor func(kubernetes.Interface, clientset.Interface, kubeinformers.SharedInformerFactory, informers.SharedInformerFactory, servinginformers.SharedInformerFactory) Interface
+type Constructor func(
+	kubernetes.Interface,
+	clientset.Interface,
+	servingclientset.Interface,
+	*rest.Config,
+	kubeinformers.SharedInformerFactory,
+	informers.SharedInformerFactory,
+	servinginformers.SharedInformerFactory,
+) Interface

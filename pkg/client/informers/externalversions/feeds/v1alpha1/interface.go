@@ -24,12 +24,16 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
-	// Binds returns a BindInformer.
-	Binds() BindInformer
+	// ClusterEventSources returns a ClusterEventSourceInformer.
+	ClusterEventSources() ClusterEventSourceInformer
+	// ClusterEventTypes returns a ClusterEventTypeInformer.
+	ClusterEventTypes() ClusterEventTypeInformer
 	// EventSources returns a EventSourceInformer.
 	EventSources() EventSourceInformer
 	// EventTypes returns a EventTypeInformer.
 	EventTypes() EventTypeInformer
+	// Feeds returns a FeedInformer.
+	Feeds() FeedInformer
 }
 
 type version struct {
@@ -43,9 +47,14 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
-// Binds returns a BindInformer.
-func (v *version) Binds() BindInformer {
-	return &bindInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+// ClusterEventSources returns a ClusterEventSourceInformer.
+func (v *version) ClusterEventSources() ClusterEventSourceInformer {
+	return &clusterEventSourceInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ClusterEventTypes returns a ClusterEventTypeInformer.
+func (v *version) ClusterEventTypes() ClusterEventTypeInformer {
+	return &clusterEventTypeInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // EventSources returns a EventSourceInformer.
@@ -56,4 +65,9 @@ func (v *version) EventSources() EventSourceInformer {
 // EventTypes returns a EventTypeInformer.
 func (v *version) EventTypes() EventTypeInformer {
 	return &eventTypeInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Feeds returns a FeedInformer.
+func (v *version) Feeds() FeedInformer {
+	return &feedInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
