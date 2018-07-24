@@ -178,73 +178,72 @@ func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed, es *feedsv1alph
 }
 
 func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed, es *feedsv1alpha1.EventSource, et *feedsv1alpha1.EventType) error {
-	if !feed.HasFinalizer(finalizerName) {
-		return nil
-	}
+	if feed.HasFinalizer(finalizerName) {
 
-	// check for an existing start Job
-	job := &batchv1.Job{}
-	jobName := resources.StartJobName(feed)
+		// check for an existing start Job
+		job := &batchv1.Job{}
+		jobName := resources.StartJobName(feed)
 
-	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: jobName}, job)
-	if err != nil && !errors.IsNotFound(err) {
-		return err
-	}
-	if err == nil {
-		// Delete the existing job and return. When it's deleted, this Feed
-		// will be reconciled again.
-		glog.Infof("Found existing start job: %s/%s", job.Namespace, job.Name)
-
-		// Need to delete pods first to workaround the client's lack of support
-		// for cascading deletes. TODO remove this when client support allows.
-		if err = r.deleteJobPods(job); err != nil {
+		err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: jobName}, job)
+		if err != nil && !errors.IsNotFound(err) {
 			return err
 		}
-		r.client.Delete(context.TODO(), job)
-		glog.Infof("Deleted start job: %s/%s", job.Namespace, job.Name)
-		return nil
-	}
+		if err == nil {
+			// Delete the existing job and return. When it's deleted, this Feed
+			// will be reconciled again.
+			glog.Infof("Found existing start job: %s/%s", job.Namespace, job.Name)
 
-	jobName = resources.JobName(feed)
-
-	if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: jobName}, job); errors.IsNotFound(err) {
-		job, err = r.createJob(feed, es, et)
-		if err != nil {
-			return err
+			// Need to delete pods first to workaround the client's lack of support
+			// for cascading deletes. TODO remove this when client support allows.
+			if err = r.deleteJobPods(job); err != nil {
+				return err
+			}
+			r.client.Delete(context.TODO(), job)
+			glog.Infof("Deleted start job: %s/%s", job.Namespace, job.Name)
+			return nil
 		}
-		r.recorder.Eventf(feed, corev1.EventTypeNormal, "StopJobCreated", "Created stop job %q", job.Name)
-		//TODO check for event source not found and remove finalizer
 
-		feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-			Type:    feedsv1alpha1.FeedConditionReady,
-			Status:  corev1.ConditionUnknown,
-			Reason:  "StopJob",
-			Message: "stop job in progress",
-		})
-		//TODO check for event source not found and remove finalizer
+		jobName = resources.JobName(feed)
+
+		if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: jobName}, job); err != nil {
+			if errors.IsNotFound(err) {
+				job, err = r.createJob(feed, es, et)
+				if err != nil {
+					return err
+				}
+				r.recorder.Eventf(feed, corev1.EventTypeNormal, "StopJobCreated", "Created stop job %q", job.Name)
+				//TODO check for event source not found and remove finalizer
+
+				feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+					Type:    feedsv1alpha1.FeedConditionReady,
+					Status:  corev1.ConditionUnknown,
+					Reason:  "StopJob",
+					Message: "stop job in progress",
+				})
+			}
+		}
+
+		if resources.IsJobComplete(job) {
+			r.recorder.Eventf(feed, corev1.EventTypeNormal, "StopJobCompleted", "Stop job %q completed", job.Name)
+			feed.RemoveFinalizer(finalizerName)
+			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+				Type:    feedsv1alpha1.FeedConditionReady,
+				Status:  corev1.ConditionTrue,
+				Reason:  "FeedSuccess",
+				Message: "stop job succeeded",
+			})
+		} else if resources.IsJobFailed(job) {
+			r.recorder.Eventf(feed, corev1.EventTypeWarning, "StopJobFailed", "Stop job %q failed: %q", job.Name, resources.JobFailedMessage(job))
+			glog.Warningf("Stop job %q failed, removing finalizer on feed %q anyway.", job.Name, feed.Name)
+			feed.RemoveFinalizer(finalizerName)
+			feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+				Type:    feedsv1alpha1.FeedConditionReady,
+				Status:  corev1.ConditionFalse,
+				Reason:  "FeedFailed",
+				Message: fmt.Sprintf("Job failed with %s", resources.JobFailedMessage(job)),
+			})
+		}
 	}
-
-	if resources.IsJobComplete(job) {
-		r.recorder.Eventf(feed, corev1.EventTypeNormal, "StopJobCompleted", "Stop job %q completed", job.Name)
-		feed.RemoveFinalizer(finalizerName)
-		feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-			Type:    feedsv1alpha1.FeedConditionReady,
-			Status:  corev1.ConditionTrue,
-			Reason:  "FeedSuccess",
-			Message: "stop job succeeded",
-		})
-	} else if resources.IsJobFailed(job) {
-		r.recorder.Eventf(feed, corev1.EventTypeWarning, "StopJobFailed", "Stop job %q failed: %q", job.Name, resources.JobFailedMessage(job))
-		glog.Warningf("Stop job %q failed, removing finalizer on feed %q anyway.", job.Name, feed.Name)
-		feed.RemoveFinalizer(finalizerName)
-		feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
-			Type:    feedsv1alpha1.FeedConditionReady,
-			Status:  corev1.ConditionFalse,
-			Reason:  "FeedFailed",
-			Message: fmt.Sprintf("Job failed with %s", resources.JobFailedMessage(job)),
-		})
-	}
-
 	return nil
 }
 
@@ -302,7 +301,6 @@ func (r *reconciler) updateFeed(u *feedsv1alpha1.Feed) error {
 	if updated == false {
 		return nil
 	}
-
 	et := &feedsv1alpha1.EventType{}
 	if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.EventType}, et); err != nil {
 		if errors.IsNotFound(err) {
