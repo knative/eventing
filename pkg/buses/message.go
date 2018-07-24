@@ -49,7 +49,7 @@ type Message struct {
 	Payload []byte
 }
 
-// ErrUnknownChannel is returned when a message is recieved by a bus for a
+// ErrUnknownChannel is returned when a message is received by a bus for a
 // channel that does not exist.
 var ErrUnknownChannel = errors.New("unknown channel")
 
