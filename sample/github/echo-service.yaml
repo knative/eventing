@@ -12,14 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: v1
-kind: Secret
+apiVersion: serving.knative.dev/v1alpha1
+kind: Service
 metadata:
-  name: githubsecret
-type: Opaque
-stringData:
-  githubCredentials: >
-    {
-      "accessToken": "<YOUR PERSONAL TOKEN FROM GITHUB>",
-      "secretToken": "<YOUR RANDOM STRING>"
-    }
+  name: echo
+spec:
+  runLatest:
+    configuration:
+      revisionTemplate:
+        metadata:
+          labels:
+            knative.dev/type: function
+        spec:
+          container:
+            image: github.com/knative/eventing/sample/github

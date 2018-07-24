@@ -15,19 +15,35 @@
 apiVersion: feeds.knative.dev/v1alpha1
 kind: Feed
 metadata:
-  name: feed-example
+  name: github-feed
   namespace: default
 spec:
+  serviceAccountName: feed-sa
   trigger:
-    # TODO: eventType doesn't match the normal naming scheme. At min should
-    # make this "com.github.pullrequest". May consider making it something
-    # like "com.github.pull.create"
     eventType: pullrequest
-    resource: vaikas/misc
+    resource: <org>/<repo> # fill this out
     service: github
+    parameters:
+      secretName: githubsecret
+      secretKey: githubCredentials
     parametersFrom:
       - secretKeyRef:
           name: githubsecret
           key: githubCredentials
   action:
-    routeName: git-webhook
+    dnsName: echo.default.svc.cluster.local
+---
+apiVersion: channels.knative.dev/v1alpha1
+kind: Channel
+metadata:
+  name: echo
+spec:
+  bus: stub
+---
+apiVersion: channels.knative.dev/v1alpha1
+kind: Subscription
+metadata:
+  name: echo
+spec:
+  channel: echo
+  subscriber: echo
