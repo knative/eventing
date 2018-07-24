@@ -20,7 +20,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
@@ -78,8 +77,6 @@ type GithubEventSource struct {
 	feedServiceAccountName string
 	// image for the receive adapter
 	image string
-
-	secretKeyRef map[string]string
 }
 
 func NewGithubEventSource(kubeclientset kubernetes.Interface, servingclientset servingclientset.Interface, feedNamespace, feedServiceAccountName, image string) sources.EventSource {
@@ -89,15 +86,11 @@ func NewGithubEventSource(kubeclientset kubernetes.Interface, servingclientset s
 		feedNamespace:          feedNamespace,
 		feedServiceAccountName: feedServiceAccountName,
 		image: image,
-		secretKeyRef: map[string]string{
-			nameSecretKeyRef: "githubsecret-n3wscott",
-			keySecretKeyRef:  "githubCredentials",
-		},
 	}
 }
 
 func (t *GithubEventSource) StopFeed(trigger sources.EventTrigger, feedContext sources.FeedContext) error {
-	log.Printf("Stopping github webhook feed with context %+v", feedContext)
+	glog.Infof("Stopping github webhook feed with context %+v", feedContext)
 
 	serviceName := receiveAdapterName(trigger.Resource)
 	t.deleteReceiveAdapter(t.feedNamespace, serviceName)
@@ -108,7 +101,7 @@ func (t *GithubEventSource) StopFeed(trigger sources.EventTrigger, feedContext s
 
 	if _, ok := feedContext.Context[webhookIDKey]; !ok {
 		// there's no webhook id, nothing to do.
-		log.Printf("No Webhook ID Found, bailing...")
+		glog.Error("No Webhook ID Found, bailing...")
 		return nil
 	}
 	webhookID := feedContext.Context[webhookIDKey].(string)
@@ -122,7 +115,7 @@ func (t *GithubEventSource) StopFeed(trigger sources.EventTrigger, feedContext s
 
 	id, err := strconv.ParseInt(webhookID, 10, 64)
 	if err != nil {
-		log.Printf("Failed to convert webhook %q to int64 : %s", webhookID, err)
+		glog.Errorf("Failed to convert webhook %q to int64 : %s", webhookID, err)
 		return err
 	}
 	_, err = client.Repositories.DeleteHook(ctx, owner, repo, id)
@@ -130,14 +123,14 @@ func (t *GithubEventSource) StopFeed(trigger sources.EventTrigger, feedContext s
 		if errResp, ok := err.(*ghclient.ErrorResponse); ok {
 			// If the webhook doesn't exist, nothing to do
 			if errResp.Message == "Not Found" {
-				log.Printf("Webhook doesn't exist, nothing to delete.")
+				glog.Errorf("Webhook doesn't exist, nothing to delete.")
 				return nil
 			}
 		}
-		log.Printf("Failed to delete the webhook: %#v", err)
+		glog.Errorf("Failed to delete the webhook: %#v", err)
 		return err
 	}
-	log.Printf("Deleted webhook %q successfully", webhookID)
+	glog.Infof("Deleted webhook %q successfully", webhookID)
 	return nil
 }
 
@@ -304,5 +297,5 @@ func main() {
 	}
 
 	sources.RunEventSource(NewGithubEventSource(kubeClient, servingClient, feedNamespace, feedServiceAccountName, p.Image))
-	log.Printf("done...")
+	glog.Info("done...")
 }
