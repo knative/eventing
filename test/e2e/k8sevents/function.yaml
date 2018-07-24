@@ -35,4 +35,4 @@ spec:
         knative.dev/type: container
     spec:
       container:
-        image: github.com/knative/eventing/sample/k8s_events_function
+        image: github.com/knative/eventing/test/e2e/k8sevents

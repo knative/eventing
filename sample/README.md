@@ -18,7 +18,12 @@ functionality.
 
 ## Samples
 
+See [the docs repo](https://github.com/knative/docs/tree/master/eventing/samples) for the best-maintained samples:
+
+* [Handling Kubernetes events](https://github.com/knative/docs/tree/master/eventing/samples/k8s-events) -
+  A simple handler for processing k8s events from the local cluster.
+* [Binding running services to an IoT core](https://github.com/knative/docs/tree/master/eventing/samples/event-flow) -
+  A sample using Google PubSub to read events from Google's IoT core.
+
 * [Github Pull Request Handler](./github) - A simple handler for Github Pull Requests
 * [GCP PubSub Receiver Handler](./gcp_pubsub_function) - A simple handler for processing GCP PubSub events
-* [K8S events Handler](./k8s_events_function) - A simple handler for processing k8s events in the cluster
-* [K8S events Handler using Flow](./flow) - Example using Flow object that wires k8s events through the bus
