@@ -29,7 +29,7 @@ import (
 func newPubsubMessage(ctx context.Context, m *pubsub.Message) {
 	// Traditionally, complex data is stored in Pub/Sub data as a Base64 encoded string.
 	data, _ := base64.StdEncoding.DecodeString(string(m.Data))
-	log.Printf("Recieved data: %q\n", data)
+	log.Printf("Received data: %q\n", data)
 	if len(m.Attributes) != 0 {
 		log.Printf("...and attributes: %v\n", m.Attributes)
 	}
