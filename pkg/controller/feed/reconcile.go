@@ -301,14 +301,6 @@ func (r *reconciler) updateFeed(u *feedsv1alpha1.Feed) error {
 	if updated == false {
 		return nil
 	}
-	et := &feedsv1alpha1.EventType{}
-	if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.EventType}, et); err != nil {
-		if errors.IsNotFound(err) {
-			glog.Errorf("Feed %q has unknown event type %q, will not set finalizer", feed.Name, feed.Spec.Trigger.EventType)
-			return nil
-		}
-		return err
-	}
 	// Until #38113 is merged, we must use Update instead of UpdateStatus to
 	// update the Status block of the Feed resource. UpdateStatus will not
 	// allow changes to the Spec of the resource, which is ideal for ensuring
