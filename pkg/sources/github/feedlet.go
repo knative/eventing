@@ -59,10 +59,11 @@ const (
 	accessToken = "accessToken"
 	secretToken = "secretToken"
 
-	nameSecretKeyRef = "secretName"
-	keySecretKeyRef  = "secretKey"
-
+	// postfixReceiveAdapter is appended to the name of the service running the Receive Adapter
 	postfixReceiveAdapter = "rcvadptr"
+
+	// watchTimeout is the timeout that the feedlet will wait for the Receiver Adapter to get a domain name.
+	watchTimeout int64 = 60 * 5 // 5 minutes?
 )
 
 type GithubEventSource struct {
@@ -77,20 +78,26 @@ type GithubEventSource struct {
 	feedServiceAccountName string
 	// image for the receive adapter
 	image string
+	// secretName is the name of the secret that contains the GitHub credentials.
+	secretName string
+	// secretKey is the name of key inside the secret that contains the GitHub credentials.
+	secretKey string
 }
 
-func NewGithubEventSource(kubeclientset kubernetes.Interface, servingclientset servingclientset.Interface, feedNamespace, feedServiceAccountName, image string) sources.EventSource {
+func NewGithubEventSource(kubeclientset kubernetes.Interface, servingclientset servingclientset.Interface, feedNamespace, feedServiceAccountName, image string, secretName, secretKey string) sources.EventSource {
 	return &GithubEventSource{
 		kubeclientset:          kubeclientset,
 		servingclientset:       servingclientset,
 		feedNamespace:          feedNamespace,
 		feedServiceAccountName: feedServiceAccountName,
-		image: image,
+		image:      image,
+		secretName: secretName,
+		secretKey:  secretKey,
 	}
 }
 
 func (t *GithubEventSource) StopFeed(trigger sources.EventTrigger, feedContext sources.FeedContext) error {
-	glog.Infof("Stopping github webhook feed with context %+v", feedContext)
+	glog.Infof("stopping github webhook feed with context %+v", feedContext)
 
 	serviceName := receiveAdapterName(trigger.Resource)
 	t.deleteReceiveAdapter(t.feedNamespace, serviceName)
@@ -101,7 +108,7 @@ func (t *GithubEventSource) StopFeed(trigger sources.EventTrigger, feedContext s
 
 	if _, ok := feedContext.Context[webhookIDKey]; !ok {
 		// there's no webhook id, nothing to do.
-		glog.Error("No Webhook ID Found, bailing...")
+		glog.Error("no Webhook ID Found, bailing...")
 		return nil
 	}
 	webhookID := feedContext.Context[webhookIDKey].(string)
@@ -115,7 +122,7 @@ func (t *GithubEventSource) StopFeed(trigger sources.EventTrigger, feedContext s
 
 	id, err := strconv.ParseInt(webhookID, 10, 64)
 	if err != nil {
-		glog.Errorf("Failed to convert webhook %q to int64 : %s", webhookID, err)
+		glog.Errorf("failed to convert webhook %q to int64 : %s", webhookID, err)
 		return err
 	}
 	_, err = client.Repositories.DeleteHook(ctx, owner, repo, id)
@@ -123,14 +130,14 @@ func (t *GithubEventSource) StopFeed(trigger sources.EventTrigger, feedContext s
 		if errResp, ok := err.(*ghclient.ErrorResponse); ok {
 			// If the webhook doesn't exist, nothing to do
 			if errResp.Message == "Not Found" {
-				glog.Errorf("Webhook doesn't exist, nothing to delete.")
+				glog.Errorf("webhook doesn't exist, nothing to delete.")
 				return nil
 			}
 		}
-		glog.Errorf("Failed to delete the webhook: %#v", err)
+		glog.Errorf("gailed to delete the webhook: %#v", err)
 		return err
 	}
-	glog.Infof("Deleted webhook %q successfully", webhookID)
+	glog.Infof("deleted webhook %q successfully", webhookID)
 	return nil
 }
 
@@ -139,28 +146,26 @@ func (t *GithubEventSource) StartFeed(trigger sources.EventTrigger, target strin
 	// Create the Receive Adapter Service that will accept incoming requests from GitHub.
 	service, err := t.createReceiveAdapter(trigger, target)
 	if err != nil {
-		glog.Warningf("Failed to create service: %v", err)
+		glog.Warningf("failed to create service: %v", err)
 		return nil, err
 	}
 
-	glog.Infof("Created Service: %+v", service)
+	glog.Infof("created Service: %+v", service)
 
 	// Start watching the Receive Adapter Service for it's updated domain name. This will be passed
 	// to GitHub as part of the webhook registration.
 	receiveAdaptorDomain, err := t.waitForServiceDomain(service.GetObjectMeta().GetName())
 	if err != nil {
-		glog.Infof("Failed to get the service: %v", err)
+		glog.Infof("failed to get the service: %v", err)
 	}
 
 	return t.createWebhook(trigger, receiveAdaptorDomain)
 }
 
 func (t *GithubEventSource) waitForServiceDomain(serviceName string) (string, error) {
-
 	sc := t.servingclientset.ServingV1alpha1().Services(t.feedNamespace)
 
-	var watchTimeout int64 = 60 * 5 // 5 minutes?
-
+	wt := watchTimeout
 	opts := metav1.ListOptions{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Service",
@@ -169,7 +174,7 @@ func (t *GithubEventSource) waitForServiceDomain(serviceName string) (string, er
 		FieldSelector:  fmt.Sprintf("metadata.name=%s", serviceName),
 		LabelSelector:  "receive-adapter=github",
 		Watch:          true,
-		TimeoutSeconds: &watchTimeout,
+		TimeoutSeconds: &wt,
 	}
 
 	w, err := sc.Watch(opts)
@@ -208,7 +213,6 @@ func (t *GithubEventSource) waitForServiceDomain(serviceName string) (string, er
 			}
 		}
 	}
-
 }
 
 func receiveAdapterName(resource string) string {
@@ -218,7 +222,7 @@ func receiveAdapterName(resource string) string {
 	return serviceName
 }
 
-func (t *GithubEventSource) createReceiveAdapter(trigger sources.EventTrigger, target string) (*v1alpha1.Service, error) { //serviceName, image, route, serviceAccountName, githubSecret, githubSecretKey string) error {
+func (t *GithubEventSource) createReceiveAdapter(trigger sources.EventTrigger, target string) (*v1alpha1.Service, error) {
 	sc := t.servingclientset.ServingV1alpha1().Services(t.feedNamespace)
 
 	serviceName := receiveAdapterName(trigger.Resource)
@@ -235,7 +239,7 @@ func (t *GithubEventSource) createReceiveAdapter(trigger sources.EventTrigger, t
 		return nil, nil
 	}
 
-	service := resources.MakeService(t.feedNamespace, serviceName, t.image, t.feedServiceAccountName, target, trigger.Parameters[nameSecretKeyRef].(string), trigger.Parameters[keySecretKeyRef].(string))
+	service := resources.MakeService(t.feedNamespace, serviceName, t.image, t.feedServiceAccountName, target, t.secretName, t.secretKey)
 	service, createErr := sc.Create(service)
 	if createErr != nil {
 		glog.Errorf("service failed: %s", createErr)
@@ -261,14 +265,19 @@ func (t *GithubEventSource) deleteReceiveAdapter(namespace string, serviceName s
 }
 
 type parameters struct {
-	Image string `json:"image,omitempty"`
+	Image      string `json:"image,omitempty"`
+	SecretName string `json:"secretName,omitempty"`
+	SecretKey  string `json:"secretKey,omitempty"`
 }
 
+// The main entry point for the GitHub Feedlet
 func main() {
 	flag.Parse()
 
 	flag.Lookup("logtostderr").Value.Set("true")
 	flag.Lookup("v").Value.Set("3")
+
+	glog.Info("GitHub Feedlet starting...")
 
 	decodedParameters, _ := base64.StdEncoding.DecodeString(os.Getenv(sources.EventSourceParametersKey))
 
@@ -296,6 +305,6 @@ func main() {
 		glog.Fatalf("error building serving clientset: %s", err.Error())
 	}
 
-	sources.RunEventSource(NewGithubEventSource(kubeClient, servingClient, feedNamespace, feedServiceAccountName, p.Image))
+	sources.RunEventSource(NewGithubEventSource(kubeClient, servingClient, feedNamespace, feedServiceAccountName, p.Image, p.SecretName, p.SecretKey))
 	glog.Info("done...")
 }
