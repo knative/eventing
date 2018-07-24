@@ -20,12 +20,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"io"
 	"net/http"
 	"reflect"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/golang/glog"
 )
 
 type handler struct {
@@ -162,7 +162,7 @@ func respondHTTP(outparams []reflect.Value, w http.ResponseWriter) {
 	res, err := unwrapReturnValues(outparams)
 
 	if err != nil {
-		glog.Error("Failed to handle event: ", err)
+		log.Print("Failed to handle event: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(`Internal server error`))
 		return
@@ -171,7 +171,7 @@ func respondHTTP(outparams []reflect.Value, w http.ResponseWriter) {
 	if res != nil {
 		json, err := json.Marshal(res)
 		if err != nil {
-			glog.Errorf("Failed to marshal return value %+v: %s", res, err)
+			log.Printf("Failed to marshal return value %+v: %s", res, err)
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(`Internal server error`))
 		} else {
@@ -232,7 +232,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		dataPtr, dataArg := allocate(h.dataType)
 		eventContext, err := FromRequest(dataPtr, r)
 		if err != nil {
-			glog.Warningf("Failed to handle request %s; error %s", spew.Sdump(r), err)
+			log.Printf("Failed to handle request %s; error %s", spew.Sdump(r), err)
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte(`Invalid request`))
 			return
@@ -252,7 +252,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h failedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	glog.Error("Failed to handle event: ", h.Error())
+	log.Print("Failed to handle event: ", h.Error())
 	w.WriteHeader(http.StatusNotImplemented)
 	w.Write([]byte(`Internal server error`))
 }
@@ -317,7 +317,7 @@ func (m Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var rawData io.Reader
 	eventContext, err := FromRequest(&rawData, r)
 	if err != nil {
-		glog.Warning("Failed to handle request", spew.Sdump(r))
+		log.Printf("Failed to handle request: %s %s", err, spew.Sdump(r))
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(`Invalid request`))
 		return
@@ -325,7 +325,7 @@ func (m Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	h := m[eventContext.EventType]
 	if h == nil {
-		glog.Warning("Cloud not find handler for event type", eventContext.EventType)
+		log.Print("Cloud not find handler for event type", eventContext.EventType)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(fmt.Sprintf("Event type %q is not supported", eventContext.EventType)))
 		return
@@ -340,7 +340,7 @@ func (m Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.numIn == 2 {
 		dataPtr, dataArg := allocate(h.dataType)
 		if err := unmarshalEventData(eventContext.ContentType, rawData, dataPtr); err != nil {
-			glog.Warning("Failed to parse event data", err)
+			log.Print("Failed to parse event data", err)
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte(`Invalid request`))
 			return

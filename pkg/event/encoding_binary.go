@@ -23,12 +23,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
-
-	"github.com/golang/glog"
 )
 
 const (
@@ -87,7 +86,7 @@ func (binary) FromRequest(data interface{}, r *http.Request) (*EventContext, err
 	ctx.EventTypeVersion = r.Header.Get(HeaderEventTypeVersion)
 	ctx.SchemaURL = r.Header.Get(HeaderSchemaURL)
 	if ctx.CloudEventsVersion != CloudEventsVersion {
-		glog.Warningf("Received CloudEvent version %q; parsing as version %q",
+		log.Printf("Received CloudEvent version %q; parsing as version %q",
 			ctx.CloudEventsVersion, CloudEventsVersion)
 	}
 
