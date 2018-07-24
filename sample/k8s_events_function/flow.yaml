@@ -15,7 +15,7 @@
 apiVersion: flows.knative.dev/v1alpha1
 kind: Flow
 metadata:
-  name: flow-example
+  name: k8s-events
   namespace: default
 spec:
   serviceAccountName: feed-sa

@@ -18,6 +18,17 @@ attaches to the specified GCP topic and then forwards them to the destination.
     ```shell
     ko apply -f pkg/sources/gcppubsub/
     ```
+
+  Once deployed, you can inspect the created resources with `kubectl` commands:
+
+    ```
+    # This will show the available EventSources that you can generate a flow from:
+    kubectl get eventsources -o yaml
+
+    # This will show the available EventTypes that you can generate a flow from:
+    kubectl get eventtypes -o yaml
+    ```
+
 4. Create a GCP Pub Sub topic
 
     ```shell
@@ -46,16 +57,14 @@ suffice just fine.
 
 
 ```shell
-ko apply -f sample/gcp_pubsub_function/serviceaccount.yaml
-ko apply -f sample/gcp_pubsub_function/serviceaccountbinding.yaml
+ko apply -f sample/gcp_pubsub_function/auth.yaml
 ```
 
 ## Running
 
 You can deploy this to Knative from the root directory via:
 ```shell
-ko apply -f sample/gcp_pubsub_function/route.yaml
-ko apply -f sample/gcp_pubsub_function/configuration.yaml
+ko apply -f sample/gcp_pubsub_function/function.yaml
 ```
 
 Once deployed, you can inspect the created resources with `kubectl` commands:
@@ -70,11 +79,7 @@ kubectl get configurations gcp-pubsub-function -o yaml
 # This will show the Revision that was created by our configuration:
 kubectl get revisions -l serving.knative.dev/configuration=gcp-pubsub-function -o yaml
 
-# This will show the available EventSources that you can generate a flow from:
-kubectl get eventsources -o yaml
 
-# This will show the available EventTypes that you can generate a flow from:
-kubectl get eventtypes -o yaml
 ```
 
 
