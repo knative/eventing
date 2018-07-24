@@ -21,7 +21,7 @@ spec:
   serviceAccountName: feed-sa
   trigger:
     eventType: google.pubsub.topic.publish
-    resource: projects/inlined-junkdrawer/topics/event-source #quantum-reducer-434/topics/knative-demo
+    resource: projects/quantum-reducer-434/topics/knative-demo
     service: pubsub.googleapis.com
   action:
     target:
