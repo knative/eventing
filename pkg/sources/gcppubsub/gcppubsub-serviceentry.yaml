@@ -14,7 +14,7 @@
 apiVersion: networking.istio.io/v1alpha3
 kind: ServiceEntry
 metadata:
-  name: gcppubsub-bus-receive-adapter-ext
+  name: gcppubsub-receive-adapter-ext
 spec:
   hosts:
   - "*.googleapis.com"
@@ -24,3 +24,42 @@ spec:
     name: https
     protocol: HTTPS
   location: MESH_EXTERNAL
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: gcppubsub-receive-adapter-metadata
+spec:
+  hosts:
+  - metadata
+  ports:
+  - number: 80
+    name: http
+    protocol: HTTP
+  - number: 443
+    name: https
+    protocol: HTTPS
+  location: MESH_EXTERNAL
+  resolution: DNS
+  endpoints:
+  - address: 169.254.169.254
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: gcppubsub-receive-adapter-metadata-int
+spec:
+  hosts:
+  - metadata.google.internal
+  addresses:
+  - 169.254.169.254
+  ports:
+  - number: 80
+    name: http
+    protocol: HTTP
+  - number: 443
+    name: https
+    protocol: HTTPS
+  resolution: DNS
+  endpoints:
+  - address: 169.254.169.254
