@@ -26,11 +26,11 @@ import (
 )
 
 const (
-	actionTargetResolveFailMessage    = "action target fail resolved"
-	actionTargetResolveSuccessMessage = "action target fail resolved"
+	actionTargetResolveFailMessage    = "action target failed to resolve"
+	actionTargetResolveSuccessMessage = "action target resolved"
 
 	actionTargetResolveFailReason    = "ActionTargetResolveFailed"
-	actionTargetResolveSuccessReason = "ActionTargetResolveFailed"
+	actionTargetResolveSuccessReason = "ActionTargetResolveSucceeded"
 )
 
 func TestFlowCondition_GetConditionNotFound(t *testing.T) {
