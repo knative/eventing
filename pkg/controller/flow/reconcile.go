@@ -17,9 +17,10 @@ limitations under the License.
 package flow
 
 import (
+	"context"
 	"fmt"
 	"log"
-	"time"
+	//	"time"
 
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
@@ -27,38 +28,41 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtimetypes "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/wait"
-	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
-	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/workqueue"
+	//	runtimetypes "k8s.io/apimachinery/pkg/runtime"
+	//	"k8s.io/apimachinery/pkg/util/runtime"
+	//	"k8s.io/apimachinery/pkg/util/sets"
+	//	"k8s.io/apimachinery/pkg/util/wait"
+	//	kubeinformers "k8s.io/client-go/informers"
+	//	"k8s.io/client-go/kubernetes"
+	//	"k8s.io/client-go/kubernetes/scheme"
+	//	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	//	"k8s.io/client-go/rest"
+	//	"k8s.io/client-go/tools/cache"
+	//	"k8s.io/client-go/tools/record"
+	//	"k8s.io/client-go/util/workqueue"
 
 	// TODO: Get rid of these, but needed as other controllers use them.
-	servingclientset "github.com/knative/serving/pkg/client/clientset/versioned"
-	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
+	//	servingclientset "github.com/knative/serving/pkg/client/clientset/versioned"
+	//	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
 
-	"github.com/knative/eventing/pkg/controller"
+	//	"github.com/knative/eventing/pkg/controller"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	v1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 
-	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
-	flowscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	channelListers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
-	feedListers "github.com/knative/eventing/pkg/client/listers/feeds/v1alpha1"
-	listers "github.com/knative/eventing/pkg/client/listers/flows/v1alpha1"
-)
+	/*
+		clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
+		flowscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
+		informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+		channelListers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
+		feedListers "github.com/knative/eventing/pkg/client/listers/feeds/v1alpha1"
+		listers "github.com/knative/eventing/pkg/client/listers/flows/v1alpha1"
+	*/
 
-const controllerAgentName = "flow-controller"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+)
 
 // TODO: This should come from a configmap
 const defaultBusName = "stub"
@@ -80,6 +84,7 @@ var (
 )
 
 // Controller is the controller implementation for Flow resources
+/*
 type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
@@ -113,8 +118,10 @@ type Controller struct {
 	// Kubernetes API.
 	recorder record.EventRecorder
 }
+*/
 
 // NewController returns a new flow controller
+/*
 func NewController(
 	kubeclientset kubernetes.Interface,
 	clientset clientset.Interface,
@@ -172,159 +179,45 @@ func NewController(
 
 	return controller
 }
-
-// Run will set up the event handlers for types we are interested in, as well
-// as syncing informer caches and starting workers. It will block until stopCh
-// is closed, at which point it will shutdown the workqueue and wait for
-// workers to finish processing their current work items.
-func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
-	defer runtime.HandleCrash()
-	defer c.workqueue.ShutDown()
-
-	// Start the informer factories to begin populating the informer caches
-	glog.Info("Starting Flow controller")
-
-	// Wait for the caches to be synced before starting workers
-	glog.Info("Waiting for Flow informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, c.flowsSynced); !ok {
-		return fmt.Errorf("failed to wait for Flow caches to sync")
-	}
-
-	glog.Info("Waiting for Feed informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, c.feedsSynced); !ok {
-		return fmt.Errorf("failed to wait for Feed caches to sync")
-	}
-
-	glog.Info("Waiting for channel informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, c.channelsSynced); !ok {
-		return fmt.Errorf("failed to wait for Channel caches to sync")
-	}
-
-	glog.Info("Starting workers")
-	// Launch two workers to process Flow resources
-	for i := 0; i < threadiness; i++ {
-		go wait.Until(c.runWorker, time.Second, stopCh)
-	}
-
-	glog.Info("Started workers")
-	<-stopCh
-	glog.Info("Shutting down workers")
-
-	return nil
-}
-
-// runWorker is a long-running function that will continually call the
-// processNextWorkItem function in order to read and process a message on the
-// workqueue.
-func (c *Controller) runWorker() {
-	for c.processNextWorkItem() {
-	}
-}
-
-// processNextWorkItem will read a single work item off the workqueue and
-// attempt to process it, by calling Reconcile.
-func (c *Controller) processNextWorkItem() bool {
-	obj, shutdown := c.workqueue.Get()
-
-	if shutdown {
-		return false
-	}
-
-	// We wrap this block in a func so we can defer c.workqueue.Done.
-	if err := func(obj interface{}) error {
-		// We call Done here so the workqueue knows we have finished
-		// processing this item. We also must remember to call Forget if we
-		// do not want this work item being re-queued. For example, we do
-		// not call Forget if a transient error occurs, instead the item is
-		// put back on the workqueue and attempted again after a back-off
-		// period.
-		defer c.workqueue.Done(obj)
-		// We expect strings to come off the workqueue. These are of the
-		// form namespace/name. We do this as the delayed nature of the
-		// workqueue means the items in the informer cache may actually be
-		// more up to date that when the item was initially put onto the
-		// workqueue.
-		key, ok := obj.(string)
-		if !ok {
-			// As the item in the workqueue is actually invalid, we call
-			// Forget here else we'd go into a loop of attempting to
-			// process a work item that is invalid.
-			c.workqueue.Forget(obj)
-			runtime.HandleError(fmt.Errorf("expected string in workqueue but got %#v", obj))
-			return nil
-		}
-		// Run the Reconcile, passing it the namespace/name string of the
-		// Flow resource to be synced.
-		if err := c.Reconcile(key); err != nil {
-			return fmt.Errorf("error syncing '%s': %s", key, err.Error())
-		}
-		// Finally, if no error occurs we Forget this item so it does not
-		// get queued again until another change happens.
-		c.workqueue.Forget(obj)
-		glog.Infof("Successfully synced '%s'", key)
-		return nil
-	}(obj); err != nil {
-		runtime.HandleError(err)
-	}
-
-	return true
-}
-
-// enqueueFlow takes a Flow resource and converts it into a namespace/name
-// string which is then put onto the work queue. This method should *not* be
-// passed resources of any type other than Flow.
-func (c *Controller) enqueueFlow(obj interface{}) {
-	var key string
-	var err error
-	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
-		runtime.HandleError(err)
-		return
-	}
-	c.workqueue.AddRateLimited(key)
-}
+*/
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Flow resource
 // with the current status of the resource.
-func (c *Controller) Reconcile(key string) error {
-	// Convert the namespace/name string into a distinct namespace and name
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
-		return nil
+func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	flow := &v1alpha1.Flow{}
+	err := r.client.Get(context.TODO(), request.NamespacedName, flow)
+
+	if errors.IsNotFound(err) {
+		glog.Errorf("could not find flow %v\n", request)
+		return reconcile.Result{}, nil
 	}
 
-	// Get the Flow resource with this namespace/name
-	original, err := c.flowsLister.Flows(namespace).Get(name)
 	if err != nil {
-		// The Flow resource may no longer exist, in which case we stop
-		// processing.
-		if errors.IsNotFound(err) {
-			runtime.HandleError(fmt.Errorf("flow '%s' in work queue no longer exists", key))
-			return nil
-		}
-		return err
+		glog.Errorf("could not fetch Flow %v for %+v\n", err, request)
+		return reconcile.Result{}, err
 	}
 
-	// Don't mutate the informer's copy of our object.
-	flow := original.DeepCopy()
+	original := flow.DeepCopy()
+
+	flow.Status.InitializeConditions()
 
 	// Reconcile this copy of the Flow and then write back any status
 	// updates regardless of whether the reconcile error out.
-	err = c.reconcile(flow)
+	err = r.reconcile(flow)
 	if equality.Semantic.DeepEqual(original.Status, flow.Status) {
 		// If we didn't change anything then don't call updateStatus.
 		// This is important because the copy we loaded from the informer's
 		// cache may be stale and we don't want to overwrite a prior update
 		// to status with this stale state.
-	} else if _, err := c.updateStatus(flow); err != nil {
+	} else if _, err := r.updateStatus(flow); err != nil {
 		glog.Warningf("Failed to update flow status: %v", err)
-		return err
+		return reconcile.Result{}, err
 	}
-	return err
+	return reconcile.Result{}, err
 }
 
-func (c *Controller) reconcile(flow *v1alpha1.Flow) error {
+func (r *reconciler) reconcile(flow *v1alpha1.Flow) error {
 	// See if the flow has been deleted
 	accessor, err := meta.Accessor(flow)
 	if err != nil {
@@ -333,7 +226,7 @@ func (c *Controller) reconcile(flow *v1alpha1.Flow) error {
 	deletionTimestamp := accessor.GetDeletionTimestamp()
 	glog.Infof("DeletionTimestamp: %v", deletionTimestamp)
 
-	target, err := c.resolveActionTarget(flow.Namespace, flow.Spec.Action)
+	target, err := r.resolveActionTarget(flow.Namespace, flow.Spec.Action)
 	if err != nil {
 		glog.Warningf("Failed to resolve target %v : %v", flow.Spec.Action, err)
 		flow.Status.PropagateActionTargetResolved(corev1.ConditionFalse, "ActionTargetNotResolved", err.Error())
@@ -347,14 +240,14 @@ func (c *Controller) reconcile(flow *v1alpha1.Flow) error {
 
 	// Reconcile the Channel. Creates a channel that is the target that the Feed will use.
 	// TODO: We should reuse channels possibly.
-	channel, err := c.reconcileChannel(flow)
+	channel, err := r.reconcileChannel(flow)
 	if err != nil {
 		glog.Warningf("Failed to reconcile channel : %v", err)
 		return err
 	}
 	flow.Status.PropagateChannelStatus(channel.Status)
 
-	subscription, err := c.reconcileSubscription(channel.Name, target, flow)
+	subscription, err := r.reconcileSubscription(channel.Name, target, flow)
 	if err != nil {
 		glog.Warningf("Failed to reconcile subscription : %v", err)
 		return err
@@ -364,7 +257,7 @@ func (c *Controller) reconcile(flow *v1alpha1.Flow) error {
 	channelDNS := channel.Status.DomainInternal
 	if channelDNS != "" {
 		glog.Infof("Reconciling feed for flow %q targeting %q", flow.Name, channelDNS)
-		feed, err := c.reconcileFeed(channelDNS, flow)
+		feed, err := r.reconcileFeed(channelDNS, flow)
 		if err != nil {
 			glog.Warningf("Failed to reconcile feed: %v", err)
 		}
@@ -373,41 +266,34 @@ func (c *Controller) reconcile(flow *v1alpha1.Flow) error {
 	return nil
 }
 
-func (c *Controller) updateStatus(u *v1alpha1.Flow) (*v1alpha1.Flow, error) {
-	flowClient := c.clientset.FlowsV1alpha1().Flows(u.Namespace)
-	newu, err := flowClient.Get(u.Name, metav1.GetOptions{})
+func (r *reconciler) updateStatus(flow *v1alpha1.Flow) (*v1alpha1.Flow, error) {
+	newFlow := &v1alpha1.Flow{}
+	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: flow.Namespace, Name: flow.Name}, newFlow)
+
 	if err != nil {
 		return nil, err
 	}
-	newu.Status = u.Status
+	newFlow.Status = flow.Status
 
 	// Until #38113 is merged, we must use Update instead of UpdateStatus to
 	// update the Status block of the Flow resource. UpdateStatus will not
 	// allow changes to the Spec of the resource, which is ideal for ensuring
 	// nothing other than resource status has been updated.
-	return flowClient.Update(newu)
-}
-
-// AddFinalizer adds value to the list of finalizers on obj
-func AddFinalizer(obj runtimetypes.Object, value string) error {
-	accessor, err := meta.Accessor(obj)
+	err = r.client.Update(context.TODO(), newFlow)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	finalizers := sets.NewString(accessor.GetFinalizers()...)
-	finalizers.Insert(value)
-	accessor.SetFinalizers(finalizers.List())
-	return nil
+	return newFlow, nil
 }
 
 // syncHandler compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Flow resource
 // with the current status of the resource.
-func (c *Controller) resolveActionTarget(namespace string, action v1alpha1.FlowAction) (string, error) {
+func (r *reconciler) resolveActionTarget(namespace string, action v1alpha1.FlowAction) (string, error) {
 	glog.Infof("Resolving target: %v", action)
 
 	if action.Target != nil {
-		return c.resolveObjectReference(namespace, action.Target)
+		return r.resolveObjectReference(namespace, action.Target)
 	}
 	if action.TargetURI != nil {
 		return *action.TargetURI, nil
@@ -418,8 +304,8 @@ func (c *Controller) resolveActionTarget(namespace string, action v1alpha1.FlowA
 
 // resolveObjectReference fetches an object based on ObjectRefence. It assumes the
 // object has a status["domainInternal"] string in it and returns it.
-func (c *Controller) resolveObjectReference(namespace string, ref *corev1.ObjectReference) (string, error) {
-	resourceClient, err := CreateResourceInterface(c.restConfig, ref, namespace)
+func (r *reconciler) resolveObjectReference(namespace string, ref *corev1.ObjectReference) (string, error) {
+	resourceClient, err := CreateResourceInterface(r.restConfig, ref, namespace)
 	if err != nil {
 		glog.Warningf("failed to create dynamic client resource: %v", err)
 		return "", err
@@ -446,12 +332,13 @@ func (c *Controller) resolveObjectReference(namespace string, ref *corev1.Object
 	return serviceNameStr, nil
 }
 
-func (c *Controller) reconcileChannel(flow *v1alpha1.Flow) (*channelsv1alpha1.Channel, error) {
+func (r *reconciler) reconcileChannel(flow *v1alpha1.Flow) (*channelsv1alpha1.Channel, error) {
 	channelName := flow.Name
 
-	channel, err := c.channelsLister.Channels(flow.Namespace).Get(channelName)
+	channel := &channelsv1alpha1.Channel{}
+	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: flow.Namespace, Name: channelName}, channel)
 	if errors.IsNotFound(err) {
-		channel, err = c.createChannel(flow)
+		channel, err = r.createChannel(flow)
 		if err != nil {
 			glog.Errorf("Failed to create channel %q : %v", channelName, err)
 			return nil, err
@@ -466,28 +353,33 @@ func (c *Controller) reconcileChannel(flow *v1alpha1.Flow) (*channelsv1alpha1.Ch
 	return channel, err
 }
 
-func (c *Controller) createChannel(flow *v1alpha1.Flow) (*channelsv1alpha1.Channel, error) {
+func (r *reconciler) createChannel(flow *v1alpha1.Flow) (*channelsv1alpha1.Channel, error) {
 	channelName := flow.Name
 	channel := &channelsv1alpha1.Channel{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      channelName,
 			Namespace: flow.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
-				*c.NewControllerRef(flow),
+				*r.NewControllerRef(flow),
 			},
 		},
 		Spec: channelsv1alpha1.ChannelSpec{
 			ClusterBus: defaultBusName,
 		},
 	}
-	return c.clientset.ChannelsV1alpha1().Channels(flow.Namespace).Create(channel)
+	if err := r.client.Create(context.TODO(), channel); err != nil {
+		return nil, err
+	}
+	return channel, nil
 }
 
-func (c *Controller) reconcileSubscription(channelName string, target string, flow *v1alpha1.Flow) (*channelsv1alpha1.Subscription, error) {
+func (r *reconciler) reconcileSubscription(channelName string, target string, flow *v1alpha1.Flow) (*channelsv1alpha1.Subscription, error) {
 	subscriptionName := flow.Name
-	subscription, err := c.subscriptionsLister.Subscriptions(flow.Namespace).Get(subscriptionName)
+
+	subscription := &channelsv1alpha1.Subscription{}
+	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: flow.Namespace, Name: subscriptionName}, subscription)
 	if errors.IsNotFound(err) {
-		subscription, err = c.createSubscription(channelName, target, flow)
+		subscription, err = r.createSubscription(channelName, target, flow)
 		if err != nil {
 			glog.Errorf("Failed to create subscription %q : %v", subscriptionName, err)
 			return nil, err
@@ -502,14 +394,14 @@ func (c *Controller) reconcileSubscription(channelName string, target string, fl
 	return subscription, err
 }
 
-func (c *Controller) createSubscription(channelName string, target string, flow *v1alpha1.Flow) (*channelsv1alpha1.Subscription, error) {
+func (r *reconciler) createSubscription(channelName string, target string, flow *v1alpha1.Flow) (*channelsv1alpha1.Subscription, error) {
 	subscriptionName := flow.Name
 	subscription := &channelsv1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      subscriptionName,
 			Namespace: flow.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
-				*c.NewControllerRef(flow),
+				*r.NewControllerRef(flow),
 			},
 		},
 		Spec: channelsv1alpha1.SubscriptionSpec{
@@ -517,14 +409,19 @@ func (c *Controller) createSubscription(channelName string, target string, flow 
 			Subscriber: target,
 		},
 	}
-	return c.clientset.ChannelsV1alpha1().Subscriptions(flow.Namespace).Create(subscription)
+	if err := r.client.Create(context.TODO(), subscription); err != nil {
+		return nil, err
+	}
+	return subscription, nil
 }
 
-func (c *Controller) reconcileFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
+func (r *reconciler) reconcileFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
 	feedName := flow.Name
-	feed, err := c.feedsLister.Feeds(flow.Namespace).Get(feedName)
+
+	feed := &feedsv1alpha1.Feed{}
+	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: flow.Namespace, Name: feedName}, feed)
 	if errors.IsNotFound(err) {
-		feed, err = c.createFeed(channelDNS, flow)
+		feed, err = r.createFeed(channelDNS, flow)
 		if err != nil {
 			glog.Errorf("Failed to create feed %q : %v", feedName, err)
 			return nil, err
@@ -540,14 +437,14 @@ func (c *Controller) reconcileFeed(channelDNS string, flow *v1alpha1.Flow) (*fee
 
 }
 
-func (c *Controller) createFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
+func (r *reconciler) createFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
 	feedName := flow.Name
 	feed := &feedsv1alpha1.Feed{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      feedName,
 			Namespace: flow.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
-				*c.NewControllerRef(flow),
+				*r.NewControllerRef(flow),
 			},
 		},
 		Spec: feedsv1alpha1.FeedSpec{
@@ -570,10 +467,13 @@ func (c *Controller) createFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv
 		feed.Spec.Trigger.ParametersFrom = flow.Spec.Trigger.ParametersFrom
 	}
 
-	return c.clientset.FeedsV1alpha1().Feeds(flow.Namespace).Create(feed)
+	if err := r.client.Create(context.TODO(), feed); err != nil {
+		return nil, err
+	}
+	return feed, nil
 }
 
-func (c *Controller) NewControllerRef(flow *v1alpha1.Flow) *metav1.OwnerReference {
+func (r *reconciler) NewControllerRef(flow *v1alpha1.Flow) *metav1.OwnerReference {
 	blockOwnerDeletion := false
 	isController := false
 	revRef := metav1.NewControllerRef(flow, flowControllerKind)
