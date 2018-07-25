@@ -8,20 +8,23 @@ digraph G {
   rankdir = LR;
   
   node [shape=rectangle; width=1.25; height=.5; fixedsize=true;]
-
+  
   subgraph cluster_A {
-    Source -> EventType;
+    Source -> EventType [dir=back];
     color=white; 
     {rank = same; Source; EventType}
   }
-
-  subgraph cluster_B {
-    Channel
-    Subscription;
-    label = "Bus";
-    color=black;
+  
+  subgraph cluster_C {
+    Feed;
+    subgraph cluster_B {
+      Channel
+      Subscription;
+      label = "Bus";
+      color=black;
+    }
+    label = "Flow";
   }
-
   EventType -> Feed [dir=back];
   Feed -> Channel;
 
