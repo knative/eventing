@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pkg
+package system
 
-// GetEventingSystemNamespace returns the namespace where
-// eventing controllers are deployed to.
-func GetEventingSystemNamespace() string {
-	return "knative-eventing"
-}
+const (
+	// Namespace holds the K8s namespace where our eventing system
+	// components run.
+	Namespace = "knative-eventing"
+)
