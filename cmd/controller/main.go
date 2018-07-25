@@ -43,6 +43,8 @@ import (
 	"github.com/knative/eventing/pkg/signals"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/zap"
+	"github.com/knative/serving-private/pkg/configmap"
 )
 
 const (
@@ -57,7 +59,21 @@ var (
 )
 
 func main() {
+
+
 	flag.Parse()
+	cm, err := configmap.Load("/etc/config-logging")
+	if err != nil {
+		log.Fatalf("Error loading logging configuration: %v", err)
+	}
+	config, err := logging.NewConfigFromMap(cm)
+	if err != nil {
+		log.Fatalf("Error parsing logging configuration: %v", err)
+	}
+	logger, atomicLevel := logging.NewLoggerFromConfig(config, logLevelKey)
+	defer logger.Sync()
+	logger = logger.With(zap.String(logkey.ControllerType, "activator"))
+	logger.Info("Starting the knative activator")
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
@@ -132,6 +148,13 @@ func main() {
 			glog.Infof("Httpserver: ListenAndServe() finished with error: %s", err)
 		}
 	}()
+
+	// Watch the logging config map and dynamically update logging levels.
+	configMapWatcher := configmap.NewDefaultWatcher(kubeClient, system.Namespace)
+	configMapWatcher.Watch(logging.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, logLevelKey))
+	if err = configMapWatcher.Start(stopCh); err != nil {
+		logger.Fatalf("failed to start configuration manager: %v", err)
+	}
 
 	<-stopCh
 
