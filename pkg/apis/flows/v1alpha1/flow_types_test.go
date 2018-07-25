@@ -25,6 +25,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const (
+	actionTargetResolveFailMessage    = "action target failed to resolve"
+	actionTargetResolveSuccessMessage = "action target resolved"
+
+	actionTargetResolveFailReason    = "ActionTargetResolveFailed"
+	actionTargetResolveSuccessReason = "ActionTargetResolveSucceeded"
+)
+
 func TestFlowCondition_GetConditionNotFound(t *testing.T) {
 	flow := Flow{}
 	flow.Status.setCondition(&FlowCondition{Type: FlowConditionReady})
@@ -171,6 +179,20 @@ func TestFlowCondition_IsReady(t *testing.T) {
 			Type:   FlowConditionSubscriptionReady,
 			Status: corev1.ConditionTrue,
 		}},
+			false},
+		{"FlowConditionFeedReadyChannelReadySubscriptionDispatchingActionTargetResolved", []FlowCondition{{
+			Type:   FlowConditionFeedReady,
+			Status: corev1.ConditionTrue,
+		}, {
+			Type:   FlowConditionChannelReady,
+			Status: corev1.ConditionTrue,
+		}, {
+			Type:   FlowConditionSubscriptionReady,
+			Status: corev1.ConditionTrue,
+		}, {
+			Type:   FlowConditionActionTargetResolved,
+			Status: corev1.ConditionTrue,
+		}},
 			true},
 	}
 
@@ -190,17 +212,21 @@ func TestFlowCondition_IsReady(t *testing.T) {
 }
 
 func TestFlowCondition_PropagateStatus(t *testing.T) {
+	// These just get set by the
+
 	testcases := []struct {
-		name                 string
-		feedStatuses         []feedsv1alpha1.FeedStatus
-		channelStatuses      []channelsv1alpha1.ChannelStatus
-		subscriptionStatuses []channelsv1alpha1.SubscriptionStatus
-		want                 bool
+		name                      string
+		feedStatuses              []feedsv1alpha1.FeedStatus
+		channelStatuses           []channelsv1alpha1.ChannelStatus
+		subscriptionStatuses      []channelsv1alpha1.SubscriptionStatus
+		actionTargetResolveStatus corev1.ConditionStatus
+		want                      bool
 	}{
 		{"NothingReady",
 			[]feedsv1alpha1.FeedStatus{feedsv1alpha1.FeedStatus{}},
 			[]channelsv1alpha1.ChannelStatus{channelsv1alpha1.ChannelStatus{}},
 			[]channelsv1alpha1.SubscriptionStatus{channelsv1alpha1.SubscriptionStatus{}},
+			corev1.ConditionFalse,
 			false},
 		{"FeedReady",
 			[]feedsv1alpha1.FeedStatus{{
@@ -211,6 +237,7 @@ func TestFlowCondition_PropagateStatus(t *testing.T) {
 			}},
 			[]channelsv1alpha1.ChannelStatus{},
 			[]channelsv1alpha1.SubscriptionStatus{},
+			corev1.ConditionFalse,
 			false},
 		{"ChannelReady",
 			[]feedsv1alpha1.FeedStatus{},
@@ -222,6 +249,7 @@ func TestFlowCondition_PropagateStatus(t *testing.T) {
 				DomainInternal: "foobar-channel.default.svc.cluster.local",
 			}},
 			[]channelsv1alpha1.SubscriptionStatus{},
+			corev1.ConditionFalse,
 			false},
 		{"SubscriptionReady",
 			[]feedsv1alpha1.FeedStatus{},
@@ -232,6 +260,13 @@ func TestFlowCondition_PropagateStatus(t *testing.T) {
 					Status: corev1.ConditionTrue,
 				}},
 			}},
+			corev1.ConditionFalse,
+			false},
+		{"ActionTargetResolved",
+			[]feedsv1alpha1.FeedStatus{},
+			[]channelsv1alpha1.ChannelStatus{},
+			[]channelsv1alpha1.SubscriptionStatus{},
+			corev1.ConditionTrue,
 			false},
 		{"AllNotReady",
 			[]feedsv1alpha1.FeedStatus{{
@@ -253,6 +288,7 @@ func TestFlowCondition_PropagateStatus(t *testing.T) {
 					Status: corev1.ConditionFalse,
 				}},
 			}},
+			corev1.ConditionFalse,
 			false},
 		{"AllReady",
 			[]feedsv1alpha1.FeedStatus{{
@@ -274,6 +310,7 @@ func TestFlowCondition_PropagateStatus(t *testing.T) {
 					Status: corev1.ConditionTrue,
 				}},
 			}},
+			corev1.ConditionTrue,
 			true},
 	}
 	for _, tc := range testcases {
@@ -288,6 +325,13 @@ func TestFlowCondition_PropagateStatus(t *testing.T) {
 			}
 			for _, ss := range tc.subscriptionStatuses {
 				flow.Status.PropagateSubscriptionStatus(ss)
+			}
+			if tc.actionTargetResolveStatus == corev1.ConditionTrue {
+				flow.Status.PropagateActionTargetResolved(corev1.ConditionTrue, actionTargetResolveSuccessReason, actionTargetResolveSuccessMessage)
+			} else if tc.actionTargetResolveStatus == corev1.ConditionFalse {
+				flow.Status.PropagateActionTargetResolved(corev1.ConditionFalse, actionTargetResolveFailReason, actionTargetResolveFailMessage)
+			} else {
+				flow.Status.PropagateActionTargetResolved(corev1.ConditionUnknown, "Unknown", "Unknown")
 			}
 			if want, got := tc.want, flow.Status.IsReady(); want != got {
 				t.Fatalf("Failed IsReady check : \nwant:\t%#v\ngot:\t%#v", want, got)

@@ -336,8 +336,11 @@ func (c *Controller) reconcile(flow *v1alpha1.Flow) error {
 	target, err := c.resolveActionTarget(flow.Namespace, flow.Spec.Action)
 	if err != nil {
 		glog.Warningf("Failed to resolve target %v : %v", flow.Spec.Action, err)
+		flow.Status.PropagateActionTargetResolved(corev1.ConditionFalse, "ActionTargetNotResolved", err.Error())
 		return err
 	}
+
+	flow.Status.PropagateActionTargetResolved(corev1.ConditionTrue, "ActionTargetResolved", fmt.Sprintf("Resolved to: %q", target))
 
 	// Ok, so target is the underlying k8s service (or URI if so specified) that we want to target
 	glog.Infof("Resolved Target to: %q", target)
