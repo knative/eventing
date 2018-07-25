@@ -144,7 +144,7 @@ func (h MonitorEventHandlerFuncs) onProvision(channel *channelsv1alpha1.Channel,
 		channelCopy := channel.DeepCopy()
 		var cond *channelsv1alpha1.ChannelCondition
 		if err != nil {
-			monitor.recorder.Eventf(channel, corev1.EventTypeWarning, errResourceSync, "Error provisoning channel: %s", err)
+			monitor.recorder.Eventf(channel, corev1.EventTypeWarning, errResourceSync, "Error provisioning channel: %s", err)
 			cond = util.NewChannelCondition(channelsv1alpha1.ChannelProvisioned, corev1.ConditionFalse, errResourceSync, err.Error())
 		} else {
 			monitor.recorder.Event(channel, corev1.EventTypeNormal, successSynced, "Channel provisioned successfully")
@@ -466,7 +466,7 @@ func (m *Monitor) resolveSubscriptionParameters(subscription channelsv1alpha1.Su
 	return m.resolveParameters(parameters, subscription.Arguments)
 }
 
-// resolveAttributes resolves a slice of Parameters and a slice of arguments and
+// resolveParameters resolves a slice of Parameters and a slice of arguments and
 // returns an Attributes or an error if there are missing Arguments. Each
 // Parameter represents a variable that must be provided by an Argument or
 // optionally defaulted if a default value for the Parameter is specified.

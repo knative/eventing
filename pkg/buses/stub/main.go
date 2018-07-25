@@ -37,10 +37,10 @@ var (
 )
 
 // StubBus is able to broadcast messages to multiple subscribers, but does not
-// have any delivery guarentees.
+// have any delivery guarantees.
 //
 // The stub bus is commonly used in development and testing, but is often not
-// suiteable for production environments.
+// suitable for production environments.
 type StubBus struct {
 	ref        *buses.BusReference
 	monitor    *buses.Monitor
@@ -120,7 +120,7 @@ func main() {
 			return nil
 		},
 		UnsubscribeFunc: func(subscription *channelsv1alpha1.Subscription) error {
-			glog.Infof("Unubscribe %q from %q channel\n", subscription.Spec.Subscriber, subscription.Spec.Channel)
+			glog.Infof("Unsubscribe %q from %q channel\n", subscription.Spec.Subscriber, subscription.Spec.Channel)
 			return nil
 		},
 	})
