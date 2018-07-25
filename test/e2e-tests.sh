@@ -60,8 +60,8 @@ function wait_until_flow_ready() {
       fi
     done
 
-    if [ $typeCount -eq 4 ]; then
-      if [ $readyCount -eq 4 ]; then
+    if [ $typeCount -eq 5 ]; then
+      if [ $readyCount -eq 5 ]; then
         return 0
       fi
     fi

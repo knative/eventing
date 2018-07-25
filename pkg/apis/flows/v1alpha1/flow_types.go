@@ -199,6 +199,9 @@ const (
 
 	// FlowConditionSubscriptionReady specifies that the Subscription has been configured successfully.
 	FlowConditionSubscriptionReady FlowConditionType = "SubscriptionReady"
+
+	// FlowConditionActionTargetResolved specifies that the Action Target has been resolved
+	FlowConditionActionTargetResolved FlowConditionType = "ActionTargetResolved"
 )
 
 // FlowCondition defines a readiness condition for a Flow.
@@ -263,6 +266,16 @@ func (fs *FlowStatus) removeCondition(t FlowConditionType) {
 		}
 	}
 	fs.Conditions = conditions
+}
+
+func (fs *FlowStatus) PropagateActionTargetResolved(status corev1.ConditionStatus, reason string, message string) {
+	fs.setCondition(&FlowCondition{
+		Type:    FlowConditionActionTargetResolved,
+		Status:  status,
+		Reason:  reason,
+		Message: message,
+	})
+	fs.checkAndMarkReady()
 }
 
 func (fs *FlowStatus) PropagateChannelStatus(cs channelsv1alpha1.ChannelStatus) {
@@ -345,6 +358,7 @@ func (fs *FlowStatus) checkAndMarkReady() {
 		FlowConditionFeedReady,
 		FlowConditionChannelReady,
 		FlowConditionSubscriptionReady,
+		FlowConditionActionTargetResolved,
 	} {
 		c := fs.GetCondition(cond)
 		if c == nil || c.Status != corev1.ConditionTrue {
