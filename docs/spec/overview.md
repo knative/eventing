@@ -15,7 +15,8 @@ within-cluster management of event delivery.
 
 # Resource Types
 
-The primary resources in the Knative Eventing _Feeds_ API are EventSource, EventType and Bind:
+The primary resources in the Knative Eventing _Feeds_ API are EventSource,
+EventType and Feed:
 
 * **EventSource**, an archetype of an event producer.
 
@@ -25,7 +26,8 @@ The primary resources in the Knative Eventing _Feeds_ API are EventSource, Event
   input of an event consumer.
 
 
-The primary resources in the Knative Eventing _Channels_ API are Channel, Subscription and Bus:
+The primary resources in the Knative Eventing _Channels_ API are Channel,
+Subscription and Bus:
 
 * **Channel**, a named endpoint which accepts and forwards events.
 
