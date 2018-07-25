@@ -135,6 +135,7 @@ func (r *reconciler) reconcile(flow *v1alpha1.Flow) error {
 			glog.Warningf("Failed to reconcile feed: %v", err)
 			return err
 		}
+		glog.Infof("Reconciled feed status for flow %q targeting %q : %+v", flow.Name, channelDNS, feed.Status)
 		flow.Status.PropagateFeedStatus(feed.Status)
 	}
 	return nil
@@ -304,6 +305,7 @@ func (r *reconciler) reconcileFeed(channelDNS string, flow *v1alpha1.Flow) (*fee
 		return nil, err
 	}
 
+	glog.Infof("Reconciled feed: %+v", feed)
 	// Should make sure feed is what it should be. For now, just assume it's fine
 	// if it exists.
 	return feed, err

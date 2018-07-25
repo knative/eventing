@@ -50,6 +50,7 @@ var (
 	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
 	// truncates to seconds to match the loss of precision during serialization.
 	deletionTime = metav1.Now().Rfc3339Copy()
+	targetURI    = "http://target.example.com"
 )
 
 const (
@@ -68,17 +69,13 @@ func init() {
 
 var testCases = []controllertesting.TestCase{
 	{
-		Name: "new flow: adds status, finalizer, creates job",
+		Name: "new flow: adds status, action target resolved",
 		InitialState: []runtime.Object{
-			//			getEventSource(),
-			//			getEventType(),
 			getNewFlow(),
 		},
 		ReconcileKey: "test/test-flow",
-		WantPresent:  []runtime.Object{
-			//			getStartInProgressFeed(),
-			//			getNewStartJob(),
-			//TODO job created event
+		WantPresent: []runtime.Object{
+			getActionTargetResolvedFlow(),
 		},
 	},
 }
@@ -95,17 +92,46 @@ func TestAllCases(t *testing.T) {
 	}
 }
 
-func getNewFlow() *feedsv1alpha1.Feed {
-	return &feedsv1alpha1.Feed{
+func getActionTargetResolvedFlow() *flowsv1alpha1.Flow {
+	newFlow := getNewFlow()
+	newFlow.Status = flowsv1alpha1.FlowStatus{
+		Conditions: []flowsv1alpha1.FlowCondition{{
+			Type:   flowsv1alpha1.FlowConditionReady,
+			Status: corev1.ConditionUnknown,
+		}, {
+			Type:    flowsv1alpha1.FlowConditionActionTargetResolved,
+			Status:  corev1.ConditionTrue,
+			Reason:  "ActionTargetResolved",
+			Message: fmt.Sprintf("Resolved to: %q", targetURI),
+		}},
+	}
+	/*
+		newFlow.Status = flowsv1alpha1.FlowStatus{
+			Conditions: []flowsv1alpha1.FlowCondition{{
+				Type:    flowsv1alpha1.FlowConditionActionTargetResolved,
+				Status:  corev1.ConditionTrue,
+				Reason:  "ActionTargetResolved",
+				Message: fmt.Sprintf("Resolved to: %q", targetURI),
+			}, {
+				Type:   flowsv1alpha1.FlowConditionReady,
+				Status: corev1.ConditionUnknown,
+			}},
+		}
+	*/
+	return newFlow
+}
+
+func getNewFlow() *flowsv1alpha1.Flow {
+	return &flowsv1alpha1.Flow{
 		TypeMeta:   flowType(),
-		ObjectMeta: om("test", "test-feed"),
-		Spec: feedsv1alpha1.FeedSpec{
-			Action: feedsv1alpha1.FeedAction{
-				DNSName: targetDNS,
+		ObjectMeta: om("test", "test-flow"),
+		Spec: flowsv1alpha1.FlowSpec{
+			Action: flowsv1alpha1.FlowAction{
+				TargetURI: &targetURI,
 			},
-			Trigger: feedsv1alpha1.EventTrigger{
+			Trigger: flowsv1alpha1.EventTrigger{
 				EventType:      eventType,
-				Resource:       "",
+				Resource:       "myresource",
 				Service:        "",
 				Parameters:     nil,
 				ParametersFrom: nil,
