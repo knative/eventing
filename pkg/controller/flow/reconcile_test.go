@@ -19,11 +19,12 @@ package flow
 import (
 	//	"encoding/base64"
 	//	"encoding/json"
-	//	"fmt"
+	"fmt"
 	"testing"
 
-	//	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
+	flowsv1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -52,24 +53,28 @@ var (
 )
 
 const (
-	targetDNS = "myservice.mynamespace.svc.cluster.local"
+	targetDNS   = "myservice.mynamespace.svc.cluster.local"
+	eventType   = "myeventtype"
+	eventSource = "myeventsource"
 )
 
 func init() {
 	// Add types to scheme
 	feedsv1alpha1.AddToScheme(scheme.Scheme)
+	flowsv1alpha1.AddToScheme(scheme.Scheme)
 	servingv1alpha1.AddToScheme(scheme.Scheme)
+	channelsv1alpha1.AddToScheme(scheme.Scheme)
 }
 
 var testCases = []controllertesting.TestCase{
 	{
-		Name:         "new feed: adds status, finalizer, creates job",
+		Name: "new flow: adds status, finalizer, creates job",
 		InitialState: []runtime.Object{
 			//			getEventSource(),
 			//			getEventType(),
-			//			getNewFeed(),
+			getNewFlow(),
 		},
-		ReconcileKey: "test/test-feed",
+		ReconcileKey: "test/test-flow",
 		WantPresent:  []runtime.Object{
 			//			getStartInProgressFeed(),
 			//			getNewStartJob(),
@@ -88,4 +93,44 @@ func TestAllCases(t *testing.T) {
 		}
 		t.Run(tc.Name, tc.Runner(t, r, r.client))
 	}
+}
+
+func getNewFlow() *feedsv1alpha1.Feed {
+	return &feedsv1alpha1.Feed{
+		TypeMeta:   flowType(),
+		ObjectMeta: om("test", "test-feed"),
+		Spec: feedsv1alpha1.FeedSpec{
+			Action: feedsv1alpha1.FeedAction{
+				DNSName: targetDNS,
+			},
+			Trigger: feedsv1alpha1.EventTrigger{
+				EventType:      eventType,
+				Resource:       "",
+				Service:        "",
+				Parameters:     nil,
+				ParametersFrom: nil,
+			},
+		},
+	}
+}
+
+func flowType() metav1.TypeMeta {
+	return metav1.TypeMeta{
+		APIVersion: flowsv1alpha1.SchemeGroupVersion.String(),
+		Kind:       "Flow",
+	}
+}
+
+func om(namespace, name string) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Namespace: namespace,
+		Name:      name,
+		SelfLink:  fmt.Sprintf("/apis/eventing/v1alpha1/namespaces/%s/object/%s", namespace, name),
+	}
+}
+
+func omDeleting(namespace, name string) metav1.ObjectMeta {
+	om := om(namespace, name)
+	om.DeletionTimestamp = &deletionTime
+	return om
 }
