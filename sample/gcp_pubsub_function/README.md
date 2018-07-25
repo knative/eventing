@@ -87,7 +87,10 @@ want.
 
 For example, if I wanted to receive notifications to: project:
 `quantum-reducer-434` topic: `knative-demo`, my flow object would look like the
-one below.
+one below. To see a list of valid topics for your GCP project, run the
+command `gcloud pubsub topics list`; each of these names are valid
+values for `spec.trigger.resource`. To create a new topic, use `gcloud
+pubsub topic create`.
 
 You can also specify a different Service Account to use for the flow / receive
 watcher by changing the spec.serviceAccountName to something else.
@@ -101,12 +104,9 @@ metadata:
 spec:
   serviceAccountName: feed-sa
   trigger:
-    service: gcppubsub
-    eventType: receive
-    resource: quantum-reducer-434/knative-demo
-    parameters:
-      projectID: quantum-reducer-434
-      topic: knative-demo
+    service: pubsub.googleapis.com
+    eventType: google.pubsub.topic.publish
+    resource: projects/quantum-reducer-434/topics/knative-demo
   action:
     target:
       kind: Route

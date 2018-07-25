@@ -28,7 +28,7 @@ const (
 
 // MakeWatcherDeployment creates a deployment for a watcher.
 // TODO: a whole bunch...
-func MakeWatcherDeployment(namespace string, deploymentName string, serviceAccount string, image string, projectID string, subscription string, route string) *appsv1.Deployment {
+func MakeWatcherDeployment(namespace string, deploymentName string, serviceAccount string, image string, projectID string, topicID string, subscription string, route string) *appsv1.Deployment {
 	replicas := int32(1)
 	labels := map[string]string{
 		"watcher": deploymentName,
@@ -60,6 +60,10 @@ func MakeWatcherDeployment(namespace string, deploymentName string, serviceAccou
 								{
 									Name:  "PROJECT_ID",
 									Value: projectID,
+								},
+								{
+									Name:  "TOPIC_ID",
+									Value: topicID,
 								},
 								{
 									Name:  "SUBSCRIPTION",

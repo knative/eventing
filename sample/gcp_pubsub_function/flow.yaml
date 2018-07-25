@@ -20,12 +20,9 @@ metadata:
 spec:
   serviceAccountName: feed-sa
   trigger:
-    service: gcppubsub
-    eventType: receive
-    resource: quantum-reducer-434/knative-demo
-    parameters:
-      projectID: quantum-reducer-434
-      topic: knative-demo
+    eventType: google.pubsub.topic.publish
+    resource: projects/quantum-reducer-434/topics/knative-demo
+    service: pubsub.googleapis.com
   action:
     target:
       kind: Route

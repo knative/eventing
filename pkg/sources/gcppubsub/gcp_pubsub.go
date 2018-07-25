@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 
 	"github.com/golang/glog"
 	"github.com/google/uuid"
@@ -40,9 +41,12 @@ import (
 )
 
 const (
-	projectIDKey = "projectID"
 	deployment   = "deployment"
 	subscription = "subscription"
+)
+
+var (
+	resourceFormat = regexp.MustCompile("^projects/([^/]+)/topics/([^/]+)$")
 )
 
 type GCPPubSubEventSource struct {
@@ -56,6 +60,15 @@ type GCPPubSubEventSource struct {
 	feedServiceAccountName string
 }
 
+// The Go client libraries make you explicitly reconstruct the URI through builder patterns, so we sadly must crack it first.
+func crackTopic(topic string) (projectID, topicID string, err error) {
+	matches := resourceFormat.FindStringSubmatch(topic)
+	if len(matches) != 3 {
+		return "", "", fmt.Errorf(`Google Cloud Pub/Sub topics must match the pattern projects/*/topics/*";Got %q`, topic)
+	}
+	return matches[1], matches[2], nil
+}
+
 func NewGCPPubSubEventSource(kubeclientset kubernetes.Interface, feedNamespace string, feedServiceAccountName string, image string) sources.EventSource {
 	glog.Infof("Image: %q", image)
 	return &GCPPubSubEventSource{kubeclientset: kubeclientset, feedNamespace: feedNamespace, feedServiceAccountName: feedServiceAccountName, image: image}
@@ -64,35 +77,43 @@ func NewGCPPubSubEventSource(kubeclientset kubernetes.Interface, feedNamespace s
 func (t *GCPPubSubEventSource) StopFeed(trigger sources.EventTrigger, feedContext sources.FeedContext) error {
 	glog.Infof("Stopping GCP PUBSUB Feed with context %+v", feedContext)
 
-	projectID := trigger.Parameters[projectIDKey].(string)
-
-	deploymentName := feedContext.Context[deployment].(string)
-	subscriptionName := feedContext.Context[subscription].(string)
-
-	err := t.deleteWatcher(t.feedNamespace, deploymentName)
+	projectID, _, err := crackTopic(trigger.Resource)
 	if err != nil {
 		glog.Warningf("Failed to delete deployment: %s", err)
 		return err
 	}
 
-	ctx := context.Background()
-	// Creates a client.
-	client, err := pubsub.NewClient(ctx, projectID)
-	if err != nil {
-		glog.Infof("Failed to create client: %v", err)
-		return err
-	}
+	if _, ok := feedContext.Context[deployment]; ok {
+		deploymentName := feedContext.Context[deployment].(string)
 
-	sub := client.Subscription(subscriptionName)
-	err = sub.Delete(ctx)
-	if err != nil {
-		glog.Warningf("Failed to delete subscription %q : %s : %+v", subscriptionName, err, err)
-		// Return error only if it's something else than NotFound
-		rpcStatus := status.Convert(err)
-		if rpcStatus.Code() != codes.NotFound {
+		err = t.deleteWatcher(t.feedNamespace, deploymentName)
+		if err != nil {
+			glog.Warningf("Failed to delete deployment: %s", err)
 			return err
 		}
-		glog.Infof("Subscription %q already deleted", subscriptionName)
+	}
+
+	if _, ok := feedContext.Context[subscription]; ok {
+		subscriptionName := feedContext.Context[subscription].(string)
+		ctx := context.Background()
+		// Creates a client.
+		client, err := pubsub.NewClient(ctx, projectID)
+		if err != nil {
+			glog.Infof("Failed to create client: %v", err)
+			return err
+		}
+
+		sub := client.Subscription(subscriptionName)
+		err = sub.Delete(ctx)
+		if err != nil {
+			glog.Warningf("Failed to delete subscription %q : %s : %+v", subscriptionName, err, err)
+			// Return error only if it's something else than NotFound
+			rpcStatus := status.Convert(err)
+			if rpcStatus.Code() != codes.NotFound {
+				return err
+			}
+			glog.Infof("Subscription %q already deleted", subscriptionName)
+		}
 	}
 	return nil
 }
@@ -100,14 +121,17 @@ func (t *GCPPubSubEventSource) StopFeed(trigger sources.EventTrigger, feedContex
 func (t *GCPPubSubEventSource) StartFeed(trigger sources.EventTrigger, route string) (*sources.FeedContext, error) {
 	glog.Infof("CREATING GCP PUBSUB feed")
 
-	projectID := trigger.Parameters[projectIDKey].(string)
-	topic := trigger.Parameters["topic"].(string)
+	projectID, topicID, err := crackTopic(trigger.Resource)
+	if err != nil {
+		glog.Infof("Failed to create deployment: %v", err)
+		return nil, err
+	}
 
 	// Just generate a random UUID as a subscriptionName
 	uuid, err := uuid.NewRandom()
 	subscriptionName := fmt.Sprintf("sub-%s", uuid.String())
 
-	glog.Infof("ProjectID: %q Topic: %q SubscriptionName: %q Route: %s", projectID, topic, subscriptionName, route)
+	glog.Infof("ProjectID: %q Topic: %q SubscriptionName: %q Route: %s", projectID, topicID, subscriptionName, route)
 
 	ctx := context.Background()
 
@@ -121,7 +145,7 @@ func (t *GCPPubSubEventSource) StartFeed(trigger sources.EventTrigger, route str
 	}
 
 	sub, err := client.CreateSubscription(ctx, subscriptionName,
-		pubsub.SubscriptionConfig{Topic: client.Topic(topic)})
+		pubsub.SubscriptionConfig{Topic: client.Topic(topicID)})
 	if err != nil {
 		glog.Infof("Failed to create subscription (might already exist): %+v", err)
 		return nil, err
@@ -131,7 +155,7 @@ func (t *GCPPubSubEventSource) StartFeed(trigger sources.EventTrigger, route str
 
 	// Create actual watcher
 	deploymentName := subscriptionName
-	err = t.createWatcher(deploymentName, t.image, projectID, subscriptionName, route)
+	err = t.createWatcher(deploymentName, t.image, projectID, topicID, subscriptionName, route)
 	if err != nil {
 		glog.Infof("Failed to create deployment: %v", err)
 
@@ -152,7 +176,7 @@ func (t *GCPPubSubEventSource) StartFeed(trigger sources.EventTrigger, route str
 
 }
 
-func (t *GCPPubSubEventSource) createWatcher(deploymentName string, image string, projectID string, subscription string, route string) error {
+func (t *GCPPubSubEventSource) createWatcher(deploymentName string, image string, projectID string, topicID string, subscription string, route string) error {
 	dc := t.kubeclientset.AppsV1().Deployments(t.feedNamespace)
 
 	// First, check if deployment exists already.
@@ -169,7 +193,7 @@ func (t *GCPPubSubEventSource) createWatcher(deploymentName string, image string
 
 	// TODO: Create ownerref to the feed so when the feed goes away deployment
 	// gets removed. Currently we manually delete the deployment.
-	deployment := MakeWatcherDeployment(t.feedNamespace, deploymentName, t.feedServiceAccountName, image, projectID, subscription, route)
+	deployment := MakeWatcherDeployment(t.feedNamespace, deploymentName, t.feedServiceAccountName, image, projectID, topicID, subscription, route)
 	_, createErr := dc.Create(deployment)
 	return createErr
 }

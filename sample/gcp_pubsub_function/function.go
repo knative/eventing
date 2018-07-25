@@ -17,30 +17,24 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"encoding/base64"
-	"encoding/json"
-	"io/ioutil"
 	"log"
 	"net/http"
+
+	"cloud.google.com/go/pubsub"
+	"github.com/knative/eventing/pkg/event"
 )
 
-func handlePost(rw http.ResponseWriter, req *http.Request) {
-	body, err := ioutil.ReadAll(req.Body)
-	if err != nil {
-		panic(err)
+func newPubsubMessage(ctx context.Context, m *pubsub.Message) {
+	// Traditionally, complex data is stored in Pub/Sub data as a Base64 encoded string.
+	data, _ := base64.StdEncoding.DecodeString(string(m.Data))
+	log.Printf("Received data: %q\n", data)
+	if len(m.Attributes) != 0 {
+		log.Printf("...and attributes: %v\n", m.Attributes)
 	}
-	log.Println(string(body))
-
-	var event map[string]string
-	if err := json.Unmarshal(body, &event); err != nil {
-		log.Printf("Failed to unmarshal event: %s", err)
-		return
-	}
-	data, _ := base64.StdEncoding.DecodeString(event["Data"])
-	log.Printf("Received data: %q", data)
 }
 
 func main() {
-	http.HandleFunc("/", handlePost)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8080", event.Handler(newPubsubMessage)))
 }

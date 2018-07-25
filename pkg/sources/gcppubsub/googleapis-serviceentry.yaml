@@ -14,7 +14,7 @@
 apiVersion: networking.istio.io/v1alpha3
 kind: ServiceEntry
 metadata:
-  name: gcppubsub-receive-adapter-ext
+  name: googleapis
 spec:
   hosts:
   - "*.googleapis.com"
@@ -28,7 +28,7 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: ServiceEntry
 metadata:
-  name: gcppubsub-receive-adapter-metadata
+  name: metadata-server-gke
 spec:
   hosts:
   - metadata
@@ -47,7 +47,7 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: ServiceEntry
 metadata:
-  name: gcppubsub-receive-adapter-metadata-int
+  name: metadata-server
 spec:
   hosts:
   - metadata.google.internal
