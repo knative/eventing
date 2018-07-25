@@ -71,6 +71,7 @@ function wait_until_flow_ready() {
   echo -e "\n\nERROR: timeout waiting for flow $NAMESPACE/$NAME to be ready"
   kubectl get -n $NAMESPACE flows $NAME -oyaml
   kubectl get -n $NAMESPACE jobs $NAME-start -oyaml
+  kubectl get -n $NAMESPACE feeds $NAME -oyaml
   return 1
 }
 

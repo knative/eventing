@@ -20,46 +20,16 @@ import (
 	"context"
 	"fmt"
 	"log"
-	//	"time"
 
 	"github.com/golang/glog"
+	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
+	v1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	//	runtimetypes "k8s.io/apimachinery/pkg/runtime"
-	//	"k8s.io/apimachinery/pkg/util/runtime"
-	//	"k8s.io/apimachinery/pkg/util/sets"
-	//	"k8s.io/apimachinery/pkg/util/wait"
-	//	kubeinformers "k8s.io/client-go/informers"
-	//	"k8s.io/client-go/kubernetes"
-	//	"k8s.io/client-go/kubernetes/scheme"
-	//	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	//	"k8s.io/client-go/rest"
-	//	"k8s.io/client-go/tools/cache"
-	//	"k8s.io/client-go/tools/record"
-	//	"k8s.io/client-go/util/workqueue"
-
-	// TODO: Get rid of these, but needed as other controllers use them.
-	//	servingclientset "github.com/knative/serving/pkg/client/clientset/versioned"
-	//	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
-
-	//	"github.com/knative/eventing/pkg/controller"
-
-	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
-	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
-	v1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
-
-	/*
-		clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
-		flowscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
-		informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-		channelListers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
-		feedListers "github.com/knative/eventing/pkg/client/listers/feeds/v1alpha1"
-		listers "github.com/knative/eventing/pkg/client/listers/flows/v1alpha1"
-	*/
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -82,104 +52,6 @@ const (
 var (
 	flowControllerKind = v1alpha1.SchemeGroupVersion.WithKind("Flow")
 )
-
-// Controller is the controller implementation for Flow resources
-/*
-type Controller struct {
-	// kubeclientset is a standard kubernetes clientset
-	kubeclientset kubernetes.Interface
-
-	// restConfig is used to create dynamic clients for
-	// resolving ObjectReference targets.
-	restConfig *rest.Config
-
-	// clientset is a clientset for our own API group
-	clientset clientset.Interface
-
-	flowsLister listers.FlowLister
-	flowsSynced cache.InformerSynced
-
-	feedsLister feedListers.FeedLister
-	feedsSynced cache.InformerSynced
-
-	channelsLister channelListers.ChannelLister
-	channelsSynced cache.InformerSynced
-
-	subscriptionsLister channelListers.SubscriptionLister
-	subscriptionsSynced cache.InformerSynced
-
-	// workqueue is a rate limited work queue. This is used to queue work to be
-	// processed instead of performing it as soon as a change happens. This
-	// means we can ensure we only process a fixed amount of resources at a
-	// time, and makes it easy to ensure we are never processing the same item
-	// simultaneously in two different workers.
-	workqueue workqueue.RateLimitingInterface
-	// recorder is an event recorder for recording Event resources to the
-	// Kubernetes API.
-	recorder record.EventRecorder
-}
-*/
-
-// NewController returns a new flow controller
-/*
-func NewController(
-	kubeclientset kubernetes.Interface,
-	clientset clientset.Interface,
-	servingclientset servingclientset.Interface,
-	restConfig *rest.Config,
-	kubeInformerFactory kubeinformers.SharedInformerFactory,
-	flowsInformerFactory informers.SharedInformerFactory,
-	routeInformerFactory servinginformers.SharedInformerFactory) controller.Interface {
-
-	// obtain a reference to a shared index informer for the Flow types.
-	flowInformer := flowsInformerFactory.Flows().V1alpha1()
-
-	// obtain a reference to a shared index informer for the Feed types.
-	feedInformer := flowsInformerFactory.Feeds().V1alpha1()
-
-	channelInformer := flowsInformerFactory.Channels().V1alpha1().Channels()
-
-	subscriptionInformer := flowsInformerFactory.Channels().V1alpha1().Subscriptions()
-
-	// Create event broadcaster
-	// Add flow-controller types to the default Kubernetes Scheme so Events can be
-	// logged for flow-controller types.
-	flowscheme.AddToScheme(scheme.Scheme)
-	glog.V(4).Info("Creating event broadcaster")
-	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(glog.Infof)
-	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
-	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
-
-	controller := &Controller{
-		kubeclientset:       kubeclientset,
-		restConfig:          restConfig,
-		clientset:           clientset,
-		flowsLister:         flowInformer.Flows().Lister(),
-		flowsSynced:         flowInformer.Flows().Informer().HasSynced,
-		feedsLister:         feedInformer.Feeds().Lister(),
-		feedsSynced:         feedInformer.Feeds().Informer().HasSynced,
-		channelsLister:      channelInformer.Lister(),
-		channelsSynced:      channelInformer.Informer().HasSynced,
-		subscriptionsLister: subscriptionInformer.Lister(),
-		subscriptionsSynced: subscriptionInformer.Informer().HasSynced,
-		workqueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Flows"),
-		recorder:            recorder,
-	}
-
-	glog.Info("Setting up event handlers")
-
-	// Set up an event handler for when Flow resources change
-	flowInformer.Flows().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: controller.enqueueFlow,
-		UpdateFunc: func(old, new interface{}) {
-			controller.enqueueFlow(new)
-		},
-	})
-
-	return controller
-}
-*/
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Flow resource
@@ -260,6 +132,7 @@ func (r *reconciler) reconcile(flow *v1alpha1.Flow) error {
 		feed, err := r.reconcileFeed(channelDNS, flow)
 		if err != nil {
 			glog.Warningf("Failed to reconcile feed: %v", err)
+			return err
 		}
 		flow.Status.PropagateFeedStatus(feed.Status)
 	}
