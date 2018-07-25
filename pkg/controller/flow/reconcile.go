@@ -57,6 +57,7 @@ var (
 // converge the two. It then updates the Status block of the Flow resource
 // with the current status of the resource.
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	glog.Infof("Reconciling flow %v", request)
 	flow := &v1alpha1.Flow{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, flow)
 
@@ -162,7 +163,7 @@ func (r *reconciler) updateStatus(flow *v1alpha1.Flow) (*v1alpha1.Flow, error) {
 // converge the two. It then updates the Status block of the Flow resource
 // with the current status of the resource.
 func (r *reconciler) resolveActionTarget(namespace string, action v1alpha1.FlowAction) (string, error) {
-	glog.Infof("Resolving target: %v", action)
+	glog.Infof("Resolving target: %+v", action)
 
 	if action.Target != nil {
 		return r.resolveObjectReference(namespace, action.Target)
