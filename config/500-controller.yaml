@@ -30,6 +30,15 @@ spec:
       - name: eventing-controller
         image: github.com/knative/eventing/cmd/controller
         args: [
-          "-logtostderr",
-          "-stderrthreshold", "INFO",
-        ]
+          # Disable glog writing into stderr. Our code doesn't use glog
+          # and seeing k8s logs in addition to ours is not useful.
+        - "-logtostderr=false"
+        - "-stderrthreshold=FATAL"
+        volumeMounts:
+        - name: config-logging
+          mountPath: /etc/config-logging
+      volumes:
+      - name: config-logging
+        configMap:
+          name: config-logging
+  

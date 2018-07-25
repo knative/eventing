@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	"log"
 	"net/http"
 	"time"
 
@@ -42,15 +43,18 @@ import (
 	"github.com/knative/eventing/pkg/controller/flow"
 	"github.com/knative/eventing/pkg/signals"
 
+	"github.com/knative/serving/pkg/configmap"
+	"github.com/knative/serving/pkg/logging"
+	"github.com/knative/serving/pkg/logging/logkey"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
-	"github.com/knative/serving-private/pkg/configmap"
 )
 
 const (
 	threadsPerController = 2
 	metricsScrapeAddr    = ":9090"
 	metricsScrapePath    = "/metrics"
+	logLevelKey          = "controller"
 )
 
 var (
@@ -59,7 +63,6 @@ var (
 )
 
 func main() {
-
 
 	flag.Parse()
 	cm, err := configmap.Load("/etc/config-logging")
@@ -72,8 +75,8 @@ func main() {
 	}
 	logger, atomicLevel := logging.NewLoggerFromConfig(config, logLevelKey)
 	defer logger.Sync()
-	logger = logger.With(zap.String(logkey.ControllerType, "activator"))
-	logger.Info("Starting the knative activator")
+	logger = logger.With(zap.String(logkey.ControllerType, "controller"))
+	logger.Info("Starting the knative controller")
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
@@ -88,7 +91,7 @@ func main() {
 		glog.Fatalf("Error building kubernetes clientset: %s", err.Error())
 	}
 
-	client, err := clientset.NewForConfig(cfg)
+	eventingClient, err := clientset.NewForConfig(cfg)
 	if err != nil {
 		glog.Fatalf("Error building clientset: %s", err.Error())
 	}
@@ -106,8 +109,16 @@ func main() {
 	}
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
-	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
+	informerFactory := informers.NewSharedInformerFactory(eventingClient, time.Second*30)
 	servingInformerFactory := servinginformers.NewSharedInformerFactory(servingClient, time.Second*30)
+
+	opt := controller.Options{
+		KubeClientSet:    kubeClient,
+		ServingClientSet: servingClient,
+		BuildClientSet:   buildClient,
+		ConfigMapWatcher: configMapWatcher,
+		Logger:           logger,
+	}
 
 	// Add new controllers here.
 	ctors := []controller.Constructor{
@@ -121,7 +132,7 @@ func main() {
 	controllers := make([]controller.Interface, 0, len(ctors))
 	for _, ctor := range ctors {
 		controllers = append(controllers,
-			ctor(kubeClient, client, servingClient, restConfig, kubeInformerFactory, informerFactory, servingInformerFactory))
+			ctor(kubeClient, eventingClient, servingClient, restConfig, kubeInformerFactory, informerFactory, servingInformerFactory))
 	}
 
 	go kubeInformerFactory.Start(stopCh)
