@@ -339,3 +339,18 @@ func TestFlowCondition_PropagateStatus(t *testing.T) {
 		})
 	}
 }
+
+func TestFlowCondition_InitializeConditions(t *testing.T) {
+	flow := Flow{}
+	flow.Status.InitializeConditions()
+	cond := flow.Status.GetCondition(FlowConditionReady)
+	if cond == nil {
+		t.Fatalf("InitializeConditions didn't set FlowConditionReady")
+	}
+	if want, got := cond.Status, corev1.ConditionUnknown; want != got {
+		t.Fatalf("Status was not set correctly : \nwant:\t%#v\ngot:\t%#v", want, got)
+	}
+	if flow.Status.IsReady() {
+		t.Fatalf("InitializeConditions marked the flow Ready")
+	}
+}

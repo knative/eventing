@@ -152,8 +152,7 @@ func (r *reconciler) updateStatus(flow *v1alpha1.Flow) (*v1alpha1.Flow, error) {
 	// update the Status block of the Flow resource. UpdateStatus will not
 	// allow changes to the Spec of the resource, which is ideal for ensuring
 	// nothing other than resource status has been updated.
-	err = r.client.Update(context.TODO(), newFlow)
-	if err != nil {
+	if err = r.client.Update(context.TODO(), newFlow); err != nil {
 		return nil, err
 	}
 	return newFlow, nil
