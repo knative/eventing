@@ -87,7 +87,9 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		glog.Warningf("Failed to update flow status: %v", err)
 		return reconcile.Result{}, err
 	}
-	return reconcile.Result{}, err
+
+	// Requeue if the resource is not ready:
+	return reconcile.Result{Requeue: !flow.Status.IsReady()}, err
 }
 
 func (r *reconciler) reconcile(flow *v1alpha1.Flow) error {

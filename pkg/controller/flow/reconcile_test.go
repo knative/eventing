@@ -57,6 +57,7 @@ const (
 	targetDNS   = "myservice.mynamespace.svc.cluster.local"
 	eventType   = "myeventtype"
 	eventSource = "myeventsource"
+	flowName    = "test-flow"
 )
 
 func init() {
@@ -76,6 +77,7 @@ var testCases = []controllertesting.TestCase{
 		ReconcileKey: "test/test-flow",
 		WantPresent: []runtime.Object{
 			getActionTargetResolvedFlow(),
+			getNewChannel(),
 		},
 	},
 }
@@ -105,26 +107,13 @@ func getActionTargetResolvedFlow() *flowsv1alpha1.Flow {
 			Message: fmt.Sprintf("Resolved to: %q", targetURI),
 		}},
 	}
-	/*
-		newFlow.Status = flowsv1alpha1.FlowStatus{
-			Conditions: []flowsv1alpha1.FlowCondition{{
-				Type:    flowsv1alpha1.FlowConditionActionTargetResolved,
-				Status:  corev1.ConditionTrue,
-				Reason:  "ActionTargetResolved",
-				Message: fmt.Sprintf("Resolved to: %q", targetURI),
-			}, {
-				Type:   flowsv1alpha1.FlowConditionReady,
-				Status: corev1.ConditionUnknown,
-			}},
-		}
-	*/
 	return newFlow
 }
 
 func getNewFlow() *flowsv1alpha1.Flow {
 	return &flowsv1alpha1.Flow{
 		TypeMeta:   flowType(),
-		ObjectMeta: om("test", "test-flow"),
+		ObjectMeta: om("test", flowName),
 		Spec: flowsv1alpha1.FlowSpec{
 			Action: flowsv1alpha1.FlowAction{
 				TargetURI: &targetURI,
@@ -140,10 +129,32 @@ func getNewFlow() *flowsv1alpha1.Flow {
 	}
 }
 
+func getNewChannel() *channelsv1alpha1.Channel {
+	channel := &channelsv1alpha1.Channel{
+		TypeMeta:   channelType(),
+		ObjectMeta: om("test", flowName),
+		Spec: channelsv1alpha1.ChannelSpec{
+			ClusterBus: "stub",
+		},
+	}
+	channel.ObjectMeta.OwnerReferences = append(channel.ObjectMeta.OwnerReferences, getOwnerReference())
+
+	// selflink is not filled in when we create the object, so clear it
+	channel.ObjectMeta.SelfLink = ""
+	return channel
+}
+
 func flowType() metav1.TypeMeta {
 	return metav1.TypeMeta{
 		APIVersion: flowsv1alpha1.SchemeGroupVersion.String(),
 		Kind:       "Flow",
+	}
+}
+
+func channelType() metav1.TypeMeta {
+	return metav1.TypeMeta{
+		APIVersion: channelsv1alpha1.SchemeGroupVersion.String(),
+		Kind:       "Channel",
 	}
 }
 
@@ -159,4 +170,14 @@ func omDeleting(namespace, name string) metav1.ObjectMeta {
 	om := om(namespace, name)
 	om.DeletionTimestamp = &deletionTime
 	return om
+}
+
+func getOwnerReference() metav1.OwnerReference {
+	return metav1.OwnerReference{
+		APIVersion:         flowsv1alpha1.SchemeGroupVersion.String(),
+		Kind:               "Flow",
+		Name:               flowName,
+		Controller:         &falseVal,
+		BlockOwnerDeletion: &falseVal,
+	}
 }
