@@ -7,8 +7,7 @@ Knative Eventing API is grouped into _Channels_, _Feeds_ and _Flows_:
 
 * _Feeds_ bridge the event source into the eventing framework.
 
-* _Flows_ are the higher order abstractions for eventing that use _Channels_
-  and _Feeds_.
+* _Flows_ abstract the path of an event from a source reaches an event consumer.
 
 Typically, _Feeds_ perform out-of-cluster provisioning, while _Channels_ are
 within-cluster management of event delivery. _Flows_ is a higher order wrapper
