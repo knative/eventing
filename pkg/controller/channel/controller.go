@@ -39,7 +39,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	"github.com/knative/eventing/pkg"
+	"github.com/knative/eventing/pkg/system"
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	channelscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
@@ -519,7 +519,7 @@ func newVirtualService(channel *channelsv1alpha1.Channel) *istiov1alpha3.Virtual
 	}
 	if len(channel.Spec.ClusterBus) != 0 {
 		labels["clusterBus"] = channel.Spec.ClusterBus
-		destinationHost = controller.ServiceHostName(controller.ClusterBusDispatcherServiceName(channel.Spec.ClusterBus), pkg.GetEventingSystemNamespace())
+		destinationHost = controller.ServiceHostName(controller.ClusterBusDispatcherServiceName(channel.Spec.ClusterBus), system.Namespace)
 	}
 	return &istiov1alpha3.VirtualService{
 		ObjectMeta: metav1.ObjectMeta{

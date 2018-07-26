@@ -23,7 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/knative/eventing/pkg"
+	"github.com/knative/eventing/pkg/system"
 
 	"github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	"github.com/mattbaird/jsonpatch"
@@ -38,7 +38,7 @@ import (
 func newDefaultOptions() ControllerOptions {
 	return ControllerOptions{
 		ServiceName:      "eventing-webhook",
-		ServiceNamespace: pkg.GetEventingSystemNamespace(),
+		ServiceNamespace: system.Namespace,
 		Port:             443,
 		SecretName:       "eventing-webhook-certs",
 		WebhookName:      "webhook.eventing.knative.dev",
@@ -336,10 +336,10 @@ func createDeployment(ac *AdmissionController) {
 	deployment := &extensionsv1beta1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      eventingWebhookDeployment,
-			Namespace: pkg.GetEventingSystemNamespace(),
+			Namespace: system.Namespace,
 		},
 	}
-	ac.client.ExtensionsV1beta1().Deployments(pkg.GetEventingSystemNamespace()).Create(deployment)
+	ac.client.ExtensionsV1beta1().Deployments(system.Namespace).Create(deployment)
 }
 
 func createWebhook(ac *AdmissionController, webhook *admissionregistrationv1beta1.MutatingWebhookConfiguration) {

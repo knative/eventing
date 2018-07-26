@@ -42,7 +42,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	"github.com/knative/eventing/pkg"
+	"github.com/knative/eventing/pkg/system"
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	channelscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
@@ -317,10 +317,10 @@ func (c *Controller) syncHandler(key string) error {
 func (c *Controller) syncClusterBusDispatcherService(clusterBus *channelsv1alpha1.ClusterBus) (*corev1.Service, error) {
 	// Get the service with the specified service name
 	serviceName := controller.ClusterBusDispatcherServiceName(clusterBus.ObjectMeta.Name)
-	service, err := c.servicesLister.Services(pkg.GetEventingSystemNamespace()).Get(serviceName)
+	service, err := c.servicesLister.Services(system.Namespace).Get(serviceName)
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
-		service, err = c.kubeclientset.CoreV1().Services(pkg.GetEventingSystemNamespace()).Create(newDispatcherService(clusterBus))
+		service, err = c.kubeclientset.CoreV1().Services(system.Namespace).Create(newDispatcherService(clusterBus))
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
@@ -344,10 +344,10 @@ func (c *Controller) syncClusterBusDispatcherService(clusterBus *channelsv1alpha
 func (c *Controller) syncClusterBusDispatcherDeployment(clusterBus *channelsv1alpha1.ClusterBus) (*appsv1.Deployment, error) {
 	// Get the deployment with the specified deployment name
 	deploymentName := controller.ClusterBusDispatcherDeploymentName(clusterBus.ObjectMeta.Name)
-	deployment, err := c.deploymentsLister.Deployments(pkg.GetEventingSystemNamespace()).Get(deploymentName)
+	deployment, err := c.deploymentsLister.Deployments(system.Namespace).Get(deploymentName)
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
-		deployment, err = c.kubeclientset.AppsV1().Deployments(pkg.GetEventingSystemNamespace()).Create(newDispatcherDeployment(clusterBus))
+		deployment, err = c.kubeclientset.AppsV1().Deployments(system.Namespace).Create(newDispatcherDeployment(clusterBus))
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
@@ -370,7 +370,7 @@ func (c *Controller) syncClusterBusDispatcherDeployment(clusterBus *channelsv1al
 	proposedDeployment := newDispatcherDeployment(clusterBus)
 	if !reflect.DeepEqual(proposedDeployment.Spec, deployment.Spec) {
 		glog.V(4).Infof("ClusterBus %s dispatcher spec updated", clusterBus.Name)
-		deployment, err = c.kubeclientset.AppsV1().Deployments(pkg.GetEventingSystemNamespace()).Update(proposedDeployment)
+		deployment, err = c.kubeclientset.AppsV1().Deployments(system.Namespace).Update(proposedDeployment)
 
 		if err != nil {
 			return nil, err
@@ -385,13 +385,13 @@ func (c *Controller) syncClusterBusProvisionerDeployment(clusterBus *channelsv1a
 
 	// Get the deployment with the specified deployment name
 	deploymentName := controller.ClusterBusProvisionerDeploymentName(clusterBus.ObjectMeta.Name)
-	deployment, err := c.deploymentsLister.Deployments(pkg.GetEventingSystemNamespace()).Get(deploymentName)
+	deployment, err := c.deploymentsLister.Deployments(system.Namespace).Get(deploymentName)
 
 	// If the resource shouldn't exists
 	if provisioner == nil {
 		// If the resource exists, we'll delete it
 		if deployment != nil {
-			err = c.kubeclientset.AppsV1().Deployments(pkg.GetEventingSystemNamespace()).Delete(deploymentName, nil)
+			err = c.kubeclientset.AppsV1().Deployments(system.Namespace).Delete(deploymentName, nil)
 		}
 		if errors.IsNotFound(err) {
 			return nil, nil
@@ -401,7 +401,7 @@ func (c *Controller) syncClusterBusProvisionerDeployment(clusterBus *channelsv1a
 
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
-		deployment, err = c.kubeclientset.AppsV1().Deployments(pkg.GetEventingSystemNamespace()).Create(newProvisionerDeployment(clusterBus))
+		deployment, err = c.kubeclientset.AppsV1().Deployments(system.Namespace).Create(newProvisionerDeployment(clusterBus))
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
@@ -424,7 +424,7 @@ func (c *Controller) syncClusterBusProvisionerDeployment(clusterBus *channelsv1a
 	proposedDeployment := newProvisionerDeployment(clusterBus)
 	if !reflect.DeepEqual(proposedDeployment.Spec, deployment.Spec) {
 		glog.V(4).Infof("ClusterBus %s provisioner spec updated", clusterBus.Name)
-		deployment, err = c.kubeclientset.AppsV1().Deployments(pkg.GetEventingSystemNamespace()).Update(proposedDeployment)
+		deployment, err = c.kubeclientset.AppsV1().Deployments(system.Namespace).Update(proposedDeployment)
 
 		if err != nil {
 			return nil, err
@@ -516,7 +516,7 @@ func newDispatcherService(clusterBus *channelsv1alpha1.ClusterBus) *corev1.Servi
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      controller.ClusterBusDispatcherServiceName(clusterBus.ObjectMeta.Name),
-			Namespace: pkg.GetEventingSystemNamespace(),
+			Namespace: system.Namespace,
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(clusterBus, schema.GroupVersionKind{
@@ -566,7 +566,7 @@ func newDispatcherDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.De
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      controller.ClusterBusDispatcherDeploymentName(clusterBus.ObjectMeta.Name),
-			Namespace: pkg.GetEventingSystemNamespace(),
+			Namespace: system.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(clusterBus, schema.GroupVersionKind{
 					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
@@ -622,7 +622,7 @@ func newProvisionerDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.D
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      controller.ClusterBusProvisionerDeploymentName(clusterBus.ObjectMeta.Name),
-			Namespace: pkg.GetEventingSystemNamespace(),
+			Namespace: system.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(clusterBus, schema.GroupVersionKind{
 					Group:   channelsv1alpha1.SchemeGroupVersion.Group,

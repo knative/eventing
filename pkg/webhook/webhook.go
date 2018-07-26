@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/knative/eventing/pkg"
+	"github.com/knative/eventing/pkg/system"
 
 	"github.com/knative/eventing/pkg/apis/channels"
 	"github.com/knative/eventing/pkg/apis/channels/v1alpha1"
@@ -328,7 +328,7 @@ func (ac *AdmissionController) register(
 	}
 
 	// Set the owner to our deployment
-	deployment, err := ac.client.ExtensionsV1beta1().Deployments(pkg.GetEventingSystemNamespace()).Get(eventingWebhookDeployment, metav1.GetOptions{})
+	deployment, err := ac.client.ExtensionsV1beta1().Deployments(system.Namespace).Get(eventingWebhookDeployment, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to fetch our deployment: %s", err)
 	}

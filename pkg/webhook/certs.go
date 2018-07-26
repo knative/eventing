@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/knative/eventing/pkg"
+	"github.com/knative/eventing/pkg/system"
 )
 
 const (
@@ -44,7 +44,7 @@ func createCertTemplate() (*x509.Certificate, error) {
 		return nil, errors.New("failed to generate serial number: " + err.Error())
 	}
 
-	serviceName := eventingWebhookDeployment + "." + pkg.GetEventingSystemNamespace()
+	serviceName := eventingWebhookDeployment + "." + system.Namespace
 	serviceNames := []string{serviceName, serviceName + ".svc", serviceName + ".svc.cluster.local"}
 
 	tmpl := x509.Certificate{
