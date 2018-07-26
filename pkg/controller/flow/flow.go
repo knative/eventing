@@ -434,11 +434,11 @@ func (c *Controller) resolveObjectReference(namespace string, ref *corev1.Object
 	statusMap := status.(map[string]interface{})
 	serviceName, ok := statusMap[targetFieldName]
 	if !ok {
-		return "", fmt.Errorf("%q/%q does not contain field %q in status", ref.Kind, ref.Name, targetFieldName)
+		return "", fmt.Errorf("\"%s/%s\" does not contain field %q in status", ref.Kind, ref.Name, targetFieldName)
 	}
 	serviceNameStr, ok := serviceName.(string)
 	if !ok {
-		return "", fmt.Errorf("%q status field %q/%q is not a string", targetFieldName, ref.Kind, ref.Name)
+		return "", fmt.Errorf("%q status field \"%s/%s\" is not a string", targetFieldName, ref.Kind, ref.Name)
 	}
 	return serviceNameStr, nil
 }
