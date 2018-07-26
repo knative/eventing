@@ -17,8 +17,6 @@ limitations under the License.
 package flow
 
 import (
-	//	"encoding/base64"
-	//	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -29,20 +27,12 @@ import (
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
-	/*
-		"github.com/knative/eventing/pkg/controller/feed/resources"
-		"github.com/knative/eventing/pkg/sources"
-		batchv1 "k8s.io/api/batch/v1"
-	*/)
-
-/*
-TODO
-- initial: feed with job deadline exceeded
-  reconciled: feed failure, job exists, finalizer
-*/
+)
 
 var (
 	trueVal  = true
@@ -75,9 +65,12 @@ var testCases = []controllertesting.TestCase{
 			getNewFlow(),
 		},
 		ReconcileKey: "test/test-flow",
+		// Not ready, requeue.
+		WantResult: reconcile.Result{Requeue: true},
 		WantPresent: []runtime.Object{
 			getActionTargetResolvedFlow(),
 			getNewChannel(),
+			getNewSubscription(),
 		},
 	},
 }
@@ -144,6 +137,41 @@ func getNewChannel() *channelsv1alpha1.Channel {
 	return channel
 }
 
+func getNewSubscription() *channelsv1alpha1.Subscription {
+	subscription := &channelsv1alpha1.Subscription{
+		TypeMeta:   subscriptionType(),
+		ObjectMeta: om("test", flowName),
+		Spec: channelsv1alpha1.SubscriptionSpec{
+			Channel:    flowName,
+			Subscriber: targetURI,
+		},
+	}
+	subscription.ObjectMeta.OwnerReferences = append(subscription.ObjectMeta.OwnerReferences, getOwnerReference())
+
+	// selflink is not filled in when we create the object, so clear it
+	subscription.ObjectMeta.SelfLink = ""
+	return subscription
+}
+
+func getNewFeed() *feedsv1alpha1.Feed {
+	return &feedsv1alpha1.Feed{
+		TypeMeta:   feedType(),
+		ObjectMeta: om("test", "test-flow"),
+		Spec: feedsv1alpha1.FeedSpec{
+			Action: feedsv1alpha1.FeedAction{
+				DNSName: targetURI,
+			},
+			Trigger: feedsv1alpha1.EventTrigger{
+				EventType:      eventType,
+				Resource:       "",
+				Service:        "",
+				Parameters:     nil,
+				ParametersFrom: nil,
+			},
+		},
+	}
+}
+
 func flowType() metav1.TypeMeta {
 	return metav1.TypeMeta{
 		APIVersion: flowsv1alpha1.SchemeGroupVersion.String(),
@@ -151,10 +179,24 @@ func flowType() metav1.TypeMeta {
 	}
 }
 
+func feedType() metav1.TypeMeta {
+	return metav1.TypeMeta{
+		APIVersion: feedsv1alpha1.SchemeGroupVersion.String(),
+		Kind:       "Feed",
+	}
+}
+
 func channelType() metav1.TypeMeta {
 	return metav1.TypeMeta{
 		APIVersion: channelsv1alpha1.SchemeGroupVersion.String(),
 		Kind:       "Channel",
+	}
+}
+
+func subscriptionType() metav1.TypeMeta {
+	return metav1.TypeMeta{
+		APIVersion: channelsv1alpha1.SchemeGroupVersion.String(),
+		Kind:       "Subscription",
 	}
 }
 
