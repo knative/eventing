@@ -32,7 +32,7 @@ var (
 var _ GenericCRD = &v1alpha1.ClusterEventType{}
 
 // ValidateClusterEventType is the event type for a Feed
-func ValidateClusterClusterEventType(ctx context.Context) ResourceCallback {
+func ValidateClusterEventType(ctx context.Context) ResourceCallback {
 	return func(patches *[]jsonpatch.JsonPatchOperation, old GenericCRD, new GenericCRD) error {
 		oldSubscription, newSubscription, err := unmarshalClusterEventTypes(ctx, old, new, "ValidateClusterEventType")
 		if err != nil {
