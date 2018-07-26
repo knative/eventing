@@ -26,6 +26,7 @@ import (
 	"reflect"
 
 	"github.com/davecgh/go-spew/spew"
+	"runtime/debug"
 )
 
 type handler struct {
@@ -232,7 +233,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		dataPtr, dataArg := allocate(h.dataType)
 		eventContext, err := FromRequest(dataPtr, r)
 		if err != nil {
-			log.Printf("Failed to handle request %s; error %s", spew.Sdump(r), err)
+			debug.PrintStack()
+			log.Printf("235 -- Adams own")
+			//log.Printf("235 Failed to handle request %s; error %s", spew.Sdump(r), err)
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte(`Invalid request`))
 			return
@@ -317,7 +320,7 @@ func (m Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var rawData io.Reader
 	eventContext, err := FromRequest(&rawData, r)
 	if err != nil {
-		log.Printf("Failed to handle request: %s %s", err, spew.Sdump(r))
+		log.Printf("320 Failed to handle request: %s %s", err, spew.Sdump(r))
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(`Invalid request`))
 		return
