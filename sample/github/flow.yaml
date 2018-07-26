@@ -34,4 +34,4 @@ spec:
     target:
       kind: Route
       apiVersion: serving.knative.dev/v1alpha1
-      name: echo
+      name: legit
