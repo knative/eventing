@@ -490,7 +490,7 @@ func getNewStartJob() *batchv1.Job {
 								},
 							},
 						}},
-						ImagePullPolicy: corev1.PullAlways,
+						ImagePullPolicy: corev1.PullIfNotPresent,
 					}},
 					RestartPolicy: corev1.RestartPolicyNever,
 				},
