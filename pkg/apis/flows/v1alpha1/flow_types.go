@@ -278,6 +278,19 @@ func (fs *FlowStatus) PropagateActionTargetResolved(status corev1.ConditionStatu
 	fs.checkAndMarkReady()
 }
 
+func (fs *FlowStatus) InitializeConditions() {
+	for _, cond := range []FlowConditionType{
+		FlowConditionReady,
+	} {
+		if fc := fs.GetCondition(cond); fc == nil {
+			fs.setCondition(&FlowCondition{
+				Type:   cond,
+				Status: corev1.ConditionUnknown,
+			})
+		}
+	}
+}
+
 func (fs *FlowStatus) PropagateChannelStatus(cs channelsv1alpha1.ChannelStatus) {
 	cc := cs.GetCondition(channelsv1alpha1.ChannelReady)
 

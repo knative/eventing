@@ -39,7 +39,6 @@ import (
 	"github.com/knative/eventing/pkg/controller/bus"
 	"github.com/knative/eventing/pkg/controller/channel"
 	"github.com/knative/eventing/pkg/controller/clusterbus"
-	"github.com/knative/eventing/pkg/controller/flow"
 	"github.com/knative/eventing/pkg/signals"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -82,6 +81,8 @@ func main() {
 		glog.Fatalf("Error building serving clientset: %s", err.Error())
 	}
 
+	// TODO: Rip this out from all the controllers since we can get it
+	// from provider.
 	// Build a rest.Config from configuration injected into the Pod by
 	// Kubernetes. Clients will use the Pod's ServiceAccount principal.
 	restConfig, err := rest.InClusterConfig()
@@ -95,7 +96,6 @@ func main() {
 
 	// Add new controllers here.
 	ctors := []controller.Constructor{
-		flow.NewController,
 		bus.NewController,
 		clusterbus.NewController,
 		channel.NewController,
