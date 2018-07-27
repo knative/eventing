@@ -40,15 +40,6 @@ const defaultBusName = "stub"
 // What field do we assume Object Reference exports as a resolvable target
 const targetFieldName = "domainInternal"
 
-const (
-	// SuccessSynced is used as part of the Event 'reason' when a Flow is synced
-	SuccessSynced = "Synced"
-
-	// MessageResourceSynced is the message used for an Event fired when a Flow
-	// is synced successfully
-	MessageResourceSynced = "Flow synced successfully"
-)
-
 var (
 	flowControllerKind = v1alpha1.SchemeGroupVersion.WithKind("Flow")
 )
@@ -114,7 +105,9 @@ func (r *reconciler) reconcile(flow *v1alpha1.Flow) error {
 	glog.Infof("Resolved Target to: %q", target)
 
 	// Reconcile the Channel. Creates a channel that is the target that the Feed will use.
-	// TODO: We should reuse channels possibly.
+	// TODO: We should reuse channels possibly. By this I mean that instead of creating a
+	// channel for each subdscription, we could look at existing channels and reuse one
+	// and only create a subscription to a channel instead.
 	channel, err := r.reconcileChannel(flow)
 	if err != nil {
 		glog.Warningf("Failed to reconcile channel : %v", err)
@@ -162,9 +155,8 @@ func (r *reconciler) updateStatus(flow *v1alpha1.Flow) (*v1alpha1.Flow, error) {
 	return newFlow, nil
 }
 
-// syncHandler compares the actual state with the desired, and attempts to
-// converge the two. It then updates the Status block of the Flow resource
-// with the current status of the resource.
+// resolveActionTarget resolves the Action.Target. If it's an ObjectReference
+// will resolve it, and if it's an TargetURI will just return it.
 func (r *reconciler) resolveActionTarget(namespace string, action v1alpha1.FlowAction) (string, error) {
 	glog.Infof("Resolving target: %+v", action)
 
@@ -178,7 +170,7 @@ func (r *reconciler) resolveActionTarget(namespace string, action v1alpha1.FlowA
 	return "", fmt.Errorf("No resolvable action target: %+v", action)
 }
 
-// resolveObjectReference fetches an object based on ObjectRefence. It assumes the
+// resolveObjectReference fetches an object based on ObjectReference. It assumes the
 // object has a status["domainInternal"] string in it and returns it.
 func (r *reconciler) resolveObjectReference(namespace string, ref *corev1.ObjectReference) (string, error) {
 	resourceClient, err := CreateResourceInterface(r.restConfig, ref, namespace)
@@ -224,9 +216,9 @@ func (r *reconciler) reconcileChannel(flow *v1alpha1.Flow) (*channelsv1alpha1.Ch
 		return nil, err
 	}
 
-	// Should make sure channel is what it should be. For now, just assume it's fine
+	// TODO: Make sure channel is what it should be. For now, just assume it's fine
 	// if it exists.
-	return channel, err
+	return channel, nil
 }
 
 func (r *reconciler) createChannel(flow *v1alpha1.Flow) (*channelsv1alpha1.Channel, error) {
@@ -265,9 +257,9 @@ func (r *reconciler) reconcileSubscription(channelName string, target string, fl
 		return nil, err
 	}
 
-	// Should make sure subscription is what it should be. For now, just assume it's fine
+	// TODO: Make sure subscription is what it should be. For now, just assume it's fine
 	// if it exists.
-	return subscription, err
+	return subscription, nil
 }
 
 func (r *reconciler) createSubscription(channelName string, target string, flow *v1alpha1.Flow) (*channelsv1alpha1.Subscription, error) {
@@ -308,9 +300,9 @@ func (r *reconciler) reconcileFeed(channelDNS string, flow *v1alpha1.Flow) (*fee
 	}
 
 	glog.Infof("Reconciled feed: %+v", feed)
-	// Should make sure feed is what it should be. For now, just assume it's fine
+	// TODO: Make sure feed is what it should be. For now, just assume it's fine
 	// if it exists.
-	return feed, err
+	return feed, nil
 
 }
 
