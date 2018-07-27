@@ -19,7 +19,7 @@ import (
 	"flag"
 
 	"github.com/golang/glog"
-	"github.com/knative/eventing/pkg"
+	"github.com/knative/eventing/pkg/system"
 	"github.com/knative/eventing/pkg/signals"
 	"github.com/knative/eventing/pkg/webhook"
 
@@ -48,7 +48,7 @@ func main() {
 
 	options := webhook.ControllerOptions{
 		ServiceName:      "eventing-webhook",
-		ServiceNamespace: pkg.GetEventingSystemNamespace(),
+		ServiceNamespace: system.Namespace,
 		Port:             443,
 		SecretName:       "eventing-webhook-certs",
 		WebhookName:      "webhook.eventing.knative.dev",

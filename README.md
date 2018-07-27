@@ -1,5 +1,8 @@
 # Knative eventing
 
+[![GoDoc](https://godoc.org/github.com/knative/eventing?status.svg)](https://godoc.org/github.com/knative/eventing)
+[![Go Report Card](https://goreportcard.com/badge/knative/eventing)](https://goreportcard.com/report/knative/eventing)
+
 This repository contains a work-in-progress eventing system that is designed to
 address a common need for cloud native development:
 

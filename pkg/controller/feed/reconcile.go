@@ -100,7 +100,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// TODO: Remove this and use finalizers in the EventTypes / EventSources
 	// to do this properly.
 	// TODO: Add issue link here. can't look up right now, no wifi
-	r.setEventTypeOwnerReference(feed, eventType)
+	r.setEventTypeOwnerReference(feed)
 	if err := r.updateOwnerReferences(feed); err != nil {
 		glog.Errorf("failed to update Feed owner references: %v", err)
 		return reconcile.Result{}, err
@@ -308,10 +308,58 @@ func (r *reconciler) updateFeed(u *feedsv1alpha1.Feed) error {
 	return r.client.Update(context.TODO(), feed)
 }
 
-func (r *reconciler) setEventTypeOwnerReference(feed *feedsv1alpha1.Feed, et *feedsv1alpha1.EventType) error {
+func (r *reconciler) getEventTypeName(feed *feedsv1alpha1.Feed) string {
+	if len(feed.Spec.Trigger.EventType) > 0 {
+		return feed.Spec.Trigger.EventType
+	} else if len(feed.Spec.Trigger.ClusterEventType) > 0 {
+		return feed.Spec.Trigger.ClusterEventType
+	}
+	return ""
+}
+
+func (r *reconciler) setEventTypeOwnerReference(feed *feedsv1alpha1.Feed) error {
+	// TODO(nicholss): need to set the owner on a cluser level event type as well.
+	if len(feed.Spec.Trigger.EventType) > 0 {
+		return r.setNamespacedEventTypeOwnerReference(feed)
+	} else if len(feed.Spec.Trigger.ClusterEventType) > 0 {
+		return r.setClusterEventTypeOwnerReference(feed)
+	}
+	return nil
+}
+
+func (r *reconciler) setNamespacedEventTypeOwnerReference(feed *feedsv1alpha1.Feed) error {
+	et := &feedsv1alpha1.EventType{}
+	if err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.EventType}, et); err != nil {
+		if errors.IsNotFound(err) {
+			glog.Errorf("Feed EventType not found, will not set finalizer")
+			return nil
+		}
+		return err
+	}
+
 	blockOwnerDeletion := true
 	isController := false
 	ref := metav1.NewControllerRef(et, feedsv1alpha1.SchemeGroupVersion.WithKind("EventType"))
+	ref.BlockOwnerDeletion = &blockOwnerDeletion
+	ref.Controller = &isController
+
+	feed.SetOwnerReference(ref)
+	return nil
+}
+
+func (r *reconciler) setClusterEventTypeOwnerReference(feed *feedsv1alpha1.Feed) error {
+	et := &feedsv1alpha1.ClusterEventType{}
+	if err := r.client.Get(context.TODO(), client.ObjectKey{Name: feed.Spec.Trigger.ClusterEventType}, et); err != nil {
+		if errors.IsNotFound(err) {
+			glog.Errorf("Feed ClusterEventType not found, will not set finalizer")
+			return nil
+		}
+		return err
+	}
+
+	blockOwnerDeletion := true
+	isController := false
+	ref := metav1.NewControllerRef(et, feedsv1alpha1.SchemeGroupVersion.WithKind("ClusterEventType"))
 	ref.BlockOwnerDeletion = &blockOwnerDeletion
 	ref.Controller = &isController
 
@@ -323,9 +371,10 @@ func (r *reconciler) resolveTrigger(feed *feedsv1alpha1.Feed) (sources.EventTrig
 	trigger := feed.Spec.Trigger
 	resolved := sources.EventTrigger{
 		Resource:   trigger.Resource,
-		EventType:  trigger.EventType,
+		EventType:  r.getEventTypeName(feed),
 		Parameters: make(map[string]interface{}),
 	}
+
 	if trigger.Parameters != nil && trigger.Parameters.Raw != nil && len(trigger.Parameters.Raw) > 0 {
 		p := make(map[string]interface{})
 		if err := yaml.Unmarshal(trigger.Parameters.Raw, &p); err != nil {
