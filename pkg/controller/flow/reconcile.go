@@ -89,7 +89,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	// Requeue if the resource is not ready:
-	return reconcile.Result{Requeue: !flow.Status.IsReady()}, err
+	return reconcile.Result{}, err
 }
 
 func (r *reconciler) reconcile(flow *v1alpha1.Flow) error {
@@ -352,7 +352,7 @@ func (r *reconciler) createFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv
 
 func (r *reconciler) NewControllerRef(flow *v1alpha1.Flow) *metav1.OwnerReference {
 	blockOwnerDeletion := false
-	isController := false
+	isController := true
 	revRef := metav1.NewControllerRef(flow, flowControllerKind)
 	revRef.BlockOwnerDeletion = &blockOwnerDeletion
 	revRef.Controller = &isController

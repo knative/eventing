@@ -56,6 +56,21 @@ func ProvideController(mrg manager.Manager) (controller.Controller, error) {
 		return nil, err
 	}
 
+	// In addition to watching Flow objects, watch for objects that a Flow creates and own and when changes
+	// are made to them, enqueue owning Flow object for reconcile loop.
+	if err := c.Watch(&source.Kind{Type: &channelsv1alpha1.Channel{}},
+		&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Flow{}, IsController: true}); err != nil {
+		return nil, err
+	}
+	if err := c.Watch(&source.Kind{Type: &channelsv1alpha1.Subscription{}},
+		&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Flow{}, IsController: true}); err != nil {
+		return nil, err
+	}
+	if err := c.Watch(&source.Kind{Type: &feedsv1alpha1.Feed{}},
+		&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Flow{}, IsController: true}); err != nil {
+		return nil, err
+	}
+
 	return c, nil
 }
 
