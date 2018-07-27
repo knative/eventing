@@ -17,6 +17,8 @@ limitations under the License.
 package flow
 
 import (
+	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"

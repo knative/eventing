@@ -65,8 +65,7 @@ var testCases = []controllertesting.TestCase{
 			getNewFlow(),
 		},
 		ReconcileKey: "test/test-flow",
-		// Not ready, requeue.
-		WantResult: reconcile.Result{Requeue: true},
+		WantResult:   reconcile.Result{},
 		WantPresent: []runtime.Object{
 			getActionTargetResolvedFlow(),
 			getNewChannel(),
@@ -219,7 +218,7 @@ func getOwnerReference() metav1.OwnerReference {
 		APIVersion:         flowsv1alpha1.SchemeGroupVersion.String(),
 		Kind:               "Flow",
 		Name:               flowName,
-		Controller:         &falseVal,
+		Controller:         &trueVal,
 		BlockOwnerDeletion: &falseVal,
 	}
 }
