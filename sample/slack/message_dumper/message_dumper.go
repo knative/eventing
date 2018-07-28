@@ -19,6 +19,7 @@ package main
 import (
 	"net/http"
 	"log"
+	"net/http/httputil"
 )
 
 type MessageDumper struct {}
@@ -26,6 +27,9 @@ type MessageDumper struct {}
 func (md *MessageDumper) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Message Dumper received a message: %+v", r)
 		w.WriteHeader(http.StatusOK)
+		if reqBytes, err := httputil.DumpRequest(r, true); err == nil {
+			w.Write(reqBytes)
+		}
 	}
 
 func main() {
