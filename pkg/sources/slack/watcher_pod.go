@@ -17,50 +17,34 @@ limitations under the License.
 package main
 
 import (
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/knative/serving/pkg/apis/serving/v1alpha1"
 )
 
-const (
-	sidecarIstioInjectAnnotation = "sidecar.istio.io/inject"
-)
-
-// MakeWatcherDeployment creates a deployment for a watcher.
-// TODO: a whole bunch...
-func MakeWatcherDeployment(namespace, deploymentName, serviceAccount, image, route string) *appsv1.Deployment {
-	// t.feedNamespace, deploymentName, t.feedServiceAccountName, t.image, route)
-	replicas := int32(1)
+func MakeService(namespace, name, serviceAccount, image, target string) *v1alpha1.Service {
 	labels := map[string]string{
-		"watcher": deploymentName,
+		"receive-adapter": "slack",
 	}
-	return &appsv1.Deployment{
+	return &v1alpha1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      deploymentName,
+			Name:      name,
 			Namespace: namespace,
 			Labels:    labels,
 		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &replicas,
-			Selector: &metav1.LabelSelector{MatchLabels: labels},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
-					// Inject Istio so any connection made from the receive adapter
-					// goes through and is enforced by Istio.
-					Annotations: map[string]string{sidecarIstioInjectAnnotation: "true"},
-				},
-				Spec: corev1.PodSpec{
-					ServiceAccountName: serviceAccount,
-					Containers: []corev1.Container{
-						corev1.Container{
-							Name:            "receive-adapter",
-							Image:           image,
-							ImagePullPolicy: "Always",
-							Env: []corev1.EnvVar{
-								{
-									Name:  "TARGET",
-									Value: route,
+		Spec: v1alpha1.ServiceSpec{
+			RunLatest: &v1alpha1.RunLatestType{
+				Configuration: v1alpha1.ConfigurationSpec{
+					RevisionTemplate: v1alpha1.RevisionTemplateSpec{
+						Spec: v1alpha1.RevisionSpec{
+							ServiceAccountName: serviceAccount,
+							Container: corev1.Container{
+								Image: image,
+								Env: []corev1.EnvVar{
+									{
+										Name:  "TARGET",
+										Value: target,
+									},
 								},
 							},
 						},

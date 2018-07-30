@@ -11,17 +11,23 @@ import (
 	"github.com/knative/eventing/pkg/event"
 	"fmt"
 	"io/ioutil"
+	"os"
 )
 
 const (
 	// Slack App token
-	TOKEN = "1234asdf"
+	TOKEN = "123ABC"
+
+	// Target for messages.
+	ENV_TARGET = "TARGET"
 )
 
 func main() {
 	flag.Parse()
 
 	log.Printf("Starting slack receive adapter web server on port 8080")
+
+	target := os.Getenv(ENV_TARGET)
 
 	eventHandler := func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Inside slack receive adapter's event handler")
@@ -55,7 +61,7 @@ func main() {
 		// Handle all the 'normal' events.
 		if eventsAPIEvent.Type == slackevents.CallbackEvent {
 			cbEvent := eventsAPIEvent.Data.(*slackevents.EventsAPICallbackEvent)
-			postMessage("foo", "bar", cbEvent)
+			postMessage(target, cbEvent)
 		}
 	}
 
@@ -65,7 +71,7 @@ func main() {
 	//http.ListenAndServe(":8080", eh)
 }
 
-func postMessage(target, source string, m *slackevents.EventsAPICallbackEvent) error {
+func postMessage(target string, m *slackevents.EventsAPICallbackEvent) error {
 	//log.Printf("postMessage: %v, %v, %v", target, source, m)
 	//return nil
 	ctx := event.EventContext{

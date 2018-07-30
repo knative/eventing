@@ -23,47 +23,26 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"regexp"
-
 	"github.com/golang/glog"
-	"github.com/google/uuid"
 	"github.com/knative/eventing/pkg/sources"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"cloud.google.com/go/pubsub"
-	"golang.org/x/net/context"
+	servingclientset "github.com/knative/serving/pkg/client/clientset/versioned"
+
+	"github.com/knative/serving/pkg/apis/serving/v1alpha1"
 )
 
 const (
-	deployment   = "deployment"
-	subscription = "subscription"
 	there_can_only_be_one = "there_can_only_be_one"
 )
-
-var (
-	resourceFormat = regexp.MustCompile("^projects/([^/]+)/topics/([^/]+)$")
-)
-
-type GCPPubSubEventSource struct {
-	// kubeclientset is a standard kubernetes clientset
-	kubeclientset kubernetes.Interface
-	image         string
-	// namespace where the feed is created
-	feedNamespace string
-	// serviceAccount that the container runs as. Launches Receive Adapter with the
-	// same Service Account
-	feedServiceAccountName string
-}
 
 type SlackEventSource struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
+	servingclientset servingclientset.Interface
 	image         string
 	// namespace where the feed is created
 	feedNamespace string
@@ -72,135 +51,33 @@ type SlackEventSource struct {
 	feedServiceAccountName string
 }
 
-// The Go client libraries make you explicitly reconstruct the URI through builder patterns, so we sadly must crack it first.
-func crackTopic(topic string) (projectID, topicID string, err error) {
-	matches := resourceFormat.FindStringSubmatch(topic)
-	if len(matches) != 3 {
-		return "", "", fmt.Errorf(`Google Cloud Pub/Sub topics must match the pattern projects/*/topics/*";Got %q`, topic)
-	}
-	return matches[1], matches[2], nil
-}
-
-func NewSlackEventSource(kubeclientset kubernetes.Interface, feedNamespace string, feedServiceAccountName string, image string) sources.EventSource {
+func NewSlackEventSource(kubeclientset kubernetes.Interface, servingclientset servingclientset.Interface, feedNamespace string, feedServiceAccountName string, image string) sources.EventSource {
 	glog.Infof("Creating slack event source.")
-	return &SlackEventSource{kubeclientset: kubeclientset, feedNamespace: feedNamespace, feedServiceAccountName: feedServiceAccountName, image: image}
-}
-
-func (t *GCPPubSubEventSource) StopFeed(trigger sources.EventTrigger, feedContext sources.FeedContext) error {
-	glog.Infof("Stopping GCP PUBSUB Feed with context %+v", feedContext)
-
-	projectID, _, err := crackTopic(trigger.Resource)
-	if err != nil {
-		glog.Warningf("Failed to delete deployment: %s", err)
-		return err
-	}
-
-	if _, ok := feedContext.Context[deployment]; ok {
-		deploymentName := feedContext.Context[deployment].(string)
-
-		err = t.deleteWatcher(t.feedNamespace, deploymentName)
-		if err != nil {
-			glog.Warningf("Failed to delete deployment: %s", err)
-			return err
-		}
-	}
-
-	if _, ok := feedContext.Context[subscription]; ok {
-		subscriptionName := feedContext.Context[subscription].(string)
-		ctx := context.Background()
-		// Creates a client.
-		client, err := pubsub.NewClient(ctx, projectID)
-		if err != nil {
-			glog.Infof("Failed to create client: %v", err)
-			return err
-		}
-
-		sub := client.Subscription(subscriptionName)
-		err = sub.Delete(ctx)
-		if err != nil {
-			glog.Warningf("Failed to delete subscription %q : %s : %+v", subscriptionName, err, err)
-			// Return error only if it's something else than NotFound
-			rpcStatus := status.Convert(err)
-			if rpcStatus.Code() != codes.NotFound {
-				return err
-			}
-			glog.Infof("Subscription %q already deleted", subscriptionName)
-		}
-	}
-	return nil
+	return &SlackEventSource{kubeclientset: kubeclientset, servingclientset: servingclientset, feedNamespace: feedNamespace, feedServiceAccountName: feedServiceAccountName, image: image}
 }
 
 func (t *SlackEventSource) StopFeed(trigger sources.EventTrigger, feedContext sources.FeedContext) error {
-	return nil
+	glog.Infof("Stopping Slack feed with context %+v", feedContext)
+
+	serviceName := makeServiceName(trigger.Resource)
+	err := t.deleteReceiveAdapter(serviceName)
+	if err != nil {
+		glog.Infof("Unable to delete Slack Knative service: %v", err)
+	}
+
+	return err
 }
 
-func (t *GCPPubSubEventSource) StartFeed(trigger sources.EventTrigger, route string) (*sources.FeedContext, error) {
-	glog.Infof("CREATING GCP PUBSUB feed")
-
-	projectID, topicID, err := crackTopic(trigger.Resource)
-	if err != nil {
-		glog.Infof("Failed to create deployment: %v", err)
-		return nil, err
-	}
-
-	// Just generate a random UUID as a subscriptionName
-	uuid, err := uuid.NewRandom()
-	subscriptionName := fmt.Sprintf("sub-%s", uuid.String())
-
-	glog.Infof("ProjectID: %q Topic: %q SubscriptionName: %q Route: %s", projectID, topicID, subscriptionName, route)
-
-	ctx := context.Background()
-
-	// TODO: Create a unique credential here just for this watcher...
-
-	// Creates a client.
-	client, err := pubsub.NewClient(ctx, projectID)
-	if err != nil {
-		glog.Infof("Failed to create client: %v", err)
-		return nil, err
-	}
-
-	sub, err := client.CreateSubscription(ctx, subscriptionName,
-		pubsub.SubscriptionConfig{Topic: client.Topic(topicID)})
-	if err != nil {
-		glog.Infof("Failed to create subscription (might already exist): %+v", err)
-		return nil, err
-	}
-
-	glog.Infof("Created subscription: %v", sub)
-
-	// Create actual watcher
-	deploymentName := subscriptionName
-	err = t.createWatcher(deploymentName, t.image, projectID, topicID, subscriptionName, route)
-	if err != nil {
-		glog.Infof("Failed to create deployment: %v", err)
-
-		// delete the subscription so it's not left floating around.
-		errDelete := sub.Delete(ctx)
-		if errDelete != nil {
-			glog.Infof("Failed to delete subscription while trying to clean up %q : %s", subscriptionName, errDelete)
-		}
-
-		return nil, err
-	}
-
-	return &sources.FeedContext{
-		Context: map[string]interface{}{
-			subscription: subscriptionName,
-			deployment:   deploymentName,
-		}}, nil
-
-}
-
-func (t *SlackEventSource) StartFeed(trigger sources.EventTrigger, route string) (*sources.FeedContext, error) {
+func (t *SlackEventSource) StartFeed(trigger sources.EventTrigger, target string) (*sources.FeedContext, error) {
 	glog.Infof("Creating Slack feed.")
 
-	deploymentName := "the-one-and-only-slack-deployment"
-	err := t.createWatcher(deploymentName, route)
+	service, err := t.createReceiveAdapter(trigger, target)
 	if err != nil {
-		glog.Infof("Unable to create Slack feed deployment: %v", err)
+		glog.Warningf("Failed to create slack service: %v", err)
 		return nil, err
 	}
+
+	glog.Infof("Created Slack service: %+v", service)
 
 	return &sources.FeedContext{
 		Context: map[string]interface{}{
@@ -208,81 +85,49 @@ func (t *SlackEventSource) StartFeed(trigger sources.EventTrigger, route string)
 		}}, nil
 }
 
-func (t *GCPPubSubEventSource) createWatcher(deploymentName string, image string, projectID string, topicID string, subscription string, route string) error {
-	dc := t.kubeclientset.AppsV1().Deployments(t.feedNamespace)
+func makeServiceName(resource string) string {
+	return "slack-hardcoded-service-name"
+}
 
-	// First, check if deployment exists already.
-	if _, err := dc.Get(deploymentName, metav1.GetOptions{}); err != nil {
+func (t *SlackEventSource) createReceiveAdapter(trigger sources.EventTrigger, target string) (*v1alpha1.Service, error) {
+	sc := t.servingclientset.ServingV1alpha1().Services(t.feedNamespace)
+
+	serviceName := makeServiceName(trigger.Resource)
+
+	// First, check if the service already exists.
+	if svc, err := sc.Get(serviceName, metav1.GetOptions{}); err != nil {
 		if !apierrs.IsNotFound(err) {
-			glog.Infof("deployments.Get for %q failed: %s", deploymentName, err)
-			return err
+			glog.Infof("Knative service.Get for %q failed: %s", serviceName, err)
+			return nil, err
 		}
-		glog.Infof("Deployment %q doesn't exist, creating", deploymentName)
+		glog.Infof("Knative service %q doesn't exist, creating", serviceName)
 	} else {
-		glog.Infof("Found existing deployment %q", deploymentName)
-		return nil
+		glog.Infof("Found existing Knative service %q", serviceName)
+		return svc, nil
 	}
 
-	// TODO: Create ownerref to the feed so when the feed goes away deployment
-	// gets removed. Currently we manually delete the deployment.
-	//deployment := MakeWatcherDeployment(t.feedNamespace, deploymentName, t.feedServiceAccountName, image, projectID, topicID, subscription, route)
-	//_, createErr := dc.Create(deployment)
-	//return createErr
-	return nil
+	deployment := MakeService(t.feedNamespace, serviceName , t.feedServiceAccountName, t.image, target)
+	svc, createErr := sc.Create(deployment)
+	if createErr != nil {
+		glog.Errorf("Knative serving failed: %s", createErr)
+	}
+	return svc, createErr
 }
 
-func (t *SlackEventSource) createWatcher(deploymentName, route string) error {
-	dc := t.kubeclientset.AppsV1().Deployments(t.feedNamespace)
+func (t *SlackEventSource) deleteReceiveAdapter(serviceName string) error {
+	sc := t.servingclientset.ServingV1alpha1().Services(t.feedNamespace)
 
-	// First, check if deployment exists already.
-	if _, err := dc.Get(deploymentName, metav1.GetOptions{}); err != nil {
-		if !apierrs.IsNotFound(err) {
-			glog.Infof("deployments.Get for %q failed: %s", deploymentName, err)
-			return err
+	// First, check if the Knative service actually exists.
+	if _, err := sc.Get(serviceName, metav1.GetOptions{}); err != nil {
+		if apierrs.IsNotFound(err) {
+			glog.Infof("Knative serving %q already deleted", serviceName)
+			return nil
 		}
-		glog.Infof("Deployment %q doesn't exist, creating", deploymentName)
-	} else {
-		glog.Infof("Found existing deployment %q", deploymentName)
-		return nil
+		glog.Infof("Knative Services.Get for %q failed: %v", serviceName, err)
+		return err
 	}
 
-	// TODO: Create ownerref to the feed so when the feed goes away deployment
-	// gets removed. Currently we manually delete the deployment.
-	deployment := MakeWatcherDeployment(t.feedNamespace, deploymentName, t.feedServiceAccountName, t.image, route)
-	_, createErr := dc.Create(deployment)
-	return createErr
-}
-
-func (t *GCPPubSubEventSource) deleteWatcher(namespace string, deploymentName string) error {
-	dc := t.kubeclientset.AppsV1().Deployments(namespace)
-
-	// First, check if deployment exists already.
-	if _, err := dc.Get(deploymentName, metav1.GetOptions{}); err != nil {
-		if !apierrs.IsNotFound(err) {
-			glog.Infof("deployments.Get for %q failed: %s", deploymentName, err)
-			return err
-		}
-		glog.Infof("Deployment %q already deleted", deploymentName)
-		return nil
-	}
-
-	return dc.Delete(deploymentName, &metav1.DeleteOptions{})
-}
-
-func (t *SlackEventSource) deleteWatcher(namespace, deploymentName string) error {
-	dc := t.kubeclientset.AppsV1().Deployments(namespace)
-
-	// First, check if deployment exists already.
-	if _, err := dc.Get(deploymentName, metav1.GetOptions{}); err != nil {
-		if !apierrs.IsNotFound(err) {
-			glog.Infof("deployments.Get for %q failed: %s", deploymentName, err)
-			return err
-		}
-		glog.Infof("Deployment %q already deleted", deploymentName)
-		return nil
-	}
-
-	return dc.Delete(deploymentName, &metav1.DeleteOptions{})
+	return sc.Delete(serviceName, &metav1.DeleteOptions{})
 }
 
 type parameters struct {
@@ -291,6 +136,8 @@ type parameters struct {
 
 func main() {
 	flag.Parse()
+
+	flag.Lookup("logtostderr").Value.Set("true")
 
 	log.Printf("Starting up the main slack!")
 
@@ -315,6 +162,11 @@ func main() {
 		glog.Fatalf("Error building kubernetes clientset: %s", err.Error())
 	}
 
-	sources.RunEventSource(NewSlackEventSource(kubeClient, feedNamespace, feedServiceAccountName, p.Image))
+	servingClient, err := servingclientset.NewForConfig(cfg)
+	if err != nil {
+		glog.Fatalf("error building serving clientset: %s", err.Error())
+	}
+
+	sources.RunEventSource(NewSlackEventSource(kubeClient, servingClient, feedNamespace, feedServiceAccountName, p.Image))
 	log.Printf("Done...")
 }
