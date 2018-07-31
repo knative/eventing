@@ -7,9 +7,11 @@ Deployment steps:
     kubectl create namespace kafka
     kubectl apply -n kafka -f config/buses/kafka/broker/kafka-broker.yaml
     ```
-1. Configure the bus to use the Kafka broker, replace the broker URL if not using the provided broker:
+1. Configure the bus to use the Kafka broker:
+    * change `$NAMESPACE` to the namespace for the bus, or `knative-eventing` for cluster buses
+    * replace the broker URL if not using the provided broker
     ```
-    kubectl create configmap kafka-bus-config --from-literal=KAFKA_BROKERS=kafkabroker.kafka:9092
+    kubectl create configmap kafka-bus-config --namespace $NAMESPACE --from-literal=KAFKA_BROKERS=kafkabroker.kafka:9092
     ```
 1. For cluster wide deployment, change the kind in `config/buses/kafka/kafka-bus.yaml` from `Bus` to `ClusterBus`.
 1. Apply the Kafka Bus:
@@ -33,5 +35,11 @@ from the subscription's channel and forwards them over HTTP to the
 subscriber.
 
 To view logs:
-- for the dispatcher `kail -d kafka-bus -c dispatcher`
-- for the provisioner `kail -d kafka-bus-provisioner -c provisioner`
+- for the dispatcher
+    ```
+    kail -d kafka-bus -c dispatcher
+    ```
+- for the provisioner
+    ```
+    kail -d kafka-bus-provisioner -c provisioner
+    ```
