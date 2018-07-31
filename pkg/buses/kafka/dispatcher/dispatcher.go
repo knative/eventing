@@ -167,7 +167,7 @@ func (d *dispatcher) subscribe(subscription *channelsv1alpha1.Subscription, para
 				glog.Infof("Dispatching a message for subscription %s/%s: %s -> %s", subscription.Namespace,
 					subscription.Name, subscription.Spec.Channel, subscription.Spec.Subscriber)
 				message := fromKafkaMessage(msg)
-				err := d.messageDispatcher.DispatchMessage(subscription.Spec.Subscriber, subscription.Namespace, message)
+				err := d.messageDispatcher.DispatchMessage(subscription.Spec.Subscriber, subscription.Spec.ReplyTo, subscription.Namespace, message)
 				if err != nil {
 					glog.Warningf("Got error trying to dispatch message: %v", err)
 				}

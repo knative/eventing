@@ -19,10 +19,13 @@ package buses
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 )
+
+const correlationIdHeaderName = "X-Knative-Correlation-Id"
 
 // MessageDispatcher dispatches messages to a destination over HTTP.
 type MessageDispatcher struct {
@@ -48,21 +51,39 @@ func NewMessageDispatcher() *MessageDispatcher {
 
 // DispatchMessage dispatches a message to a destination over HTTP.
 //
-// The destination is a DNS name. For destinations with a single label, the
-// default namespace is used to expand the destination into a fully qualified
-// name within the cluster.
-func (d *MessageDispatcher) DispatchMessage(destination string, defaultNamespace string, message *Message) error {
-	url := d.resolveURL(destination, defaultNamespace)
-	req, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewReader(message.Payload))
-	if err != nil {
-		return fmt.Errorf("Unable to create request %v", err)
-	}
-	req.Header = d.toHTTPHeaders(message.Headers)
-	_, err = d.httpClient.Do(req)
+// The destination and replyTo are DNS names. For names with a single label,
+// the default namespace is used to expand it into a fully qualified name
+// within the cluster.
+func (d *MessageDispatcher) DispatchMessage(destination string, replyTo string, defaultNamespace string, message *Message) error {
+	res, err := d.executeRequest(destination, defaultNamespace, message)
 	if err != nil {
 		return fmt.Errorf("Unable to complete request %v", err)
 	}
+	if replyTo != "" && res != nil {
+		headers := d.fromHTTPHeaders(res.Header)
+		// TODO: add configurable whitelisting of propagated headers/prefixes (configmap?)
+		correlationID := message.Headers[correlationIdHeaderName]
+		if correlationID != "" {
+			headers[correlationIdHeaderName] = correlationID
+		}
+		payload, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return fmt.Errorf("Unable to read response %v", err)
+		}
+		replyMessage := Message{headers, payload}
+		d.executeRequest(replyTo, defaultNamespace, &replyMessage)
+	}
 	return nil
+}
+
+func (d *MessageDispatcher) executeRequest(destination string, defaultNamespace string, message *Message) (*http.Response, error) {
+	url := d.resolveURL(destination, defaultNamespace)
+	req, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewReader(message.Payload))
+	if err != nil {
+		return nil, fmt.Errorf("Unable to create request %v", err)
+	}
+	req.Header = d.toHTTPHeaders(message.Headers)
+	return d.httpClient.Do(req)
 }
 
 // toHTTPHeaders converts message headers to HTTP headers.
@@ -82,6 +103,32 @@ func (d *MessageDispatcher) toHTTPHeaders(headers map[string]string) http.Header
 		for _, prefix := range d.forwardPrefixes {
 			if strings.HasPrefix(name, prefix) {
 				safe.Add(name, value)
+				break
+			}
+		}
+	}
+
+	return safe
+}
+
+// fromHTTPHeaders converts HTTP headers into a message header map.
+//
+// Only headers whitelisted as safe are copied. If an HTTP header exists
+// multiple times, a single value will be retained.
+func (d *MessageDispatcher) fromHTTPHeaders(headers http.Header) map[string]string {
+	safe := map[string]string{}
+
+	// TODO handle multi-value headers
+	for h, v := range headers {
+		// Headers are case-insensitive but test case are all lower-case
+		comparable := strings.ToLower(h)
+		if _, ok := d.forwardHeaders[comparable]; ok {
+			safe[h] = v[0]
+			continue
+		}
+		for _, p := range d.forwardPrefixes {
+			if strings.HasPrefix(comparable, p) {
+				safe[h] = v[0]
 				break
 			}
 		}

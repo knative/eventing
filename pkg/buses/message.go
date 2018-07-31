@@ -27,6 +27,8 @@ var forwardHeaders = []string{
 }
 
 var forwardPrefixes = []string{
+	// knative
+	"x-knative-",
 	// cloud events
 	"ce-",
 	// tracing
