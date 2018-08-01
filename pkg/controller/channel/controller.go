@@ -547,7 +547,8 @@ func newVirtualService(channel *channelsv1alpha1.Channel) *istiov1alpha3.Virtual
 					Destination: istiov1alpha3.Destination{
 						Host: destinationHost,
 						Port: istiov1alpha3.PortSelector{
-							Number: 80,
+							Name:   PortName,
+							Number: PortNumber,
 						},
 					}},
 				}},
