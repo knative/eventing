@@ -22,7 +22,7 @@ import (
 	"github.com/knative/serving/pkg/apis/serving/v1alpha1"
 )
 
-func MakeService(namespace, name, serviceAccount, image, target string) *v1alpha1.Service {
+func MakeService(namespace, name, serviceAccount, image, target, slackSecret, slackSecretKey string) *v1alpha1.Service {
 	labels := map[string]string{
 		"receive-adapter": "slack",
 	}
@@ -44,6 +44,17 @@ func MakeService(namespace, name, serviceAccount, image, target string) *v1alpha
 									{
 										Name:  "TARGET",
 										Value: target,
+									},
+									{
+										Name: "SLACK_SECRET",
+										ValueFrom: &corev1.EnvVarSource{
+											SecretKeyRef: &corev1.SecretKeySelector{
+												LocalObjectReference: corev1.LocalObjectReference{
+													Name: slackSecret,
+												},
+												Key: slackSecretKey,
+											},
+										},
 									},
 								},
 							},

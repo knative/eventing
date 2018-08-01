@@ -12,56 +12,72 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"github.com/golang/glog"
 )
 
 const (
-	// Slack App token
-	TOKEN = "123ABC"
-
 	// Target for messages.
-	ENV_TARGET = "TARGET"
+	envTarget = "TARGET"
+
+	// Environment variable containing the Slack App token.
+	envSlackSecret = "SLACK_SECRET"
 )
+
+type SlackCredential struct {
+	Token string
+}
 
 func main() {
 	flag.Parse()
 
 	log.Printf("Starting slack receive adapter web server on port 8080")
 
-	target := os.Getenv(ENV_TARGET)
+	target := os.Getenv(envTarget)
+
+	slackSecret := os.Getenv(envSlackSecret)
+	var slackCredential SlackCredential
+	err := json.Unmarshal([]byte(slackSecret), &slackCredential)
+	if err != nil {
+		glog.Fatalf("Failed to unmarshal slack credentials: %s", err)
+		return
+	}
 
 	eventHandler := func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Inside slack receive adapter's event handler")
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(r.Body)
 		body := buf.String()
-		eventsAPIEvent, e := slackevents.ParseEvent(json.RawMessage(body), slackevents.OptionVerifyToken(&slackevents.TokenComparator{TOKEN}))
-		if e != nil {
+		eventsAPIEvent, err := slackevents.ParseEvent(json.RawMessage(body), slackevents.OptionVerifyToken(&slackevents.TokenComparator{slackCredential.Token}))
+		if err != nil {
+			log.Printf("Problem parsing the event: %+v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		// Handle the challenge event.
-		if eventsAPIEvent.Type == slackevents.URLVerification {
+		switch eventsAPIEvent.Type {
+		case slackevents.URLVerification:
+			// Handle the challenge event.
 			var r *slackevents.ChallengeResponse
 			err := json.Unmarshal([]byte(body), &r)
 			if err != nil {
+				log.Printf("Problem unmarshaling the URLVerification event: %+v", err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 			w.Header().Set("Content-Type", "text")
 			w.Write([]byte(r.Challenge))
-			return
-		}
+			log.Printf("Responded to URLVerification event")
 
-		if eventsAPIEvent.Type == slackevents.AppRateLimited {
+		case slackevents.AppRateLimited:
 			log.Printf("Rate limited: %v", eventsAPIEvent)
-			return
-		}
 
-		// Handle all the 'normal' events.
-		if eventsAPIEvent.Type == slackevents.CallbackEvent {
+		case slackevents.CallbackEvent:
+			// Handle all the 'normal' events.
 			cbEvent := eventsAPIEvent.Data.(*slackevents.EventsAPICallbackEvent)
 			postMessage(target, cbEvent)
+
+		default:
+			log.Printf("Unknown slack event type: %v", eventsAPIEvent.Type)
 		}
 	}
 

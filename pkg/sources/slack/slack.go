@@ -37,6 +37,11 @@ import (
 
 const (
 	there_can_only_be_one = "there_can_only_be_one"
+
+	// secretName is the name of the secret that contains the Slack credentials.
+	secretName = "secretName"
+	// secretKey is the name of the key inside the secret that contains the Slack credentials.
+	secretKey = "secretKey"
 )
 
 type SlackEventSource struct {
@@ -106,8 +111,10 @@ func (t *SlackEventSource) createReceiveAdapter(trigger sources.EventTrigger, ta
 		return svc, nil
 	}
 
-	deployment := MakeService(t.feedNamespace, serviceName , t.feedServiceAccountName, t.image, target)
-	svc, createErr := sc.Create(deployment)
+	glog.Infof("secretName %s ; secretKey: %s", trigger.Parameters[secretName].(string), trigger.Parameters[secretKey].(string))
+
+	service := MakeService(t.feedNamespace, serviceName , t.feedServiceAccountName, t.image, target, trigger.Parameters[secretName].(string), trigger.Parameters[secretKey].(string))
+	svc, createErr := sc.Create(service)
 	if createErr != nil {
 		glog.Errorf("Knative serving failed: %s", createErr)
 	}

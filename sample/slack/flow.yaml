@@ -23,6 +23,13 @@ spec:
     eventType: slack.foobar.event-type
     resource: unused-flow-trigger-resource
     service: slack.foobar.source # Must match the eventsources.feeds.knative.dev's name.
+    parameters:
+      secretName: slack-secret
+      secretKey: slackCredentials
+    parametersFrom:
+      - secretKeyRef:
+          name: slack-secret
+          key: slackCredentials
   action:
     target:
       kind: Route
