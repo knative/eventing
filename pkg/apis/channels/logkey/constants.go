@@ -14,10 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package signals
+package logkey
 
-import (
-	"os"
+const (
+	kNative = "knative.dev/"
+
+	// ClusterBus is the key used for cluster scoped bus name in structured logs
+	ClusterBus = kNative + "clusterbus"
+
+	// Bus is the key used for bus name in structured logs
+	Bus = kNative + "bus"
+
+	// Channel is the key used for channel name in structured logs
+	Channel = kNative + "channel"
 )
-
-var shutdownSignals = []os.Signal{os.Interrupt}

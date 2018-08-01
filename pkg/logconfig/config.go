@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package logging
+package logconfig
 
 const (
 	// ConfigName is the name of the config map used for knative-eventing logging config.

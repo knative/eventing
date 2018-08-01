@@ -17,9 +17,9 @@ package main
 
 import (
 	"flag"
+	"log"
 
-	"github.com/golang/glog"
-	eventinglogging "github.com/knative/eventing/pkg/logging"
+	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/signals"
 	"github.com/knative/eventing/pkg/system"
 	"github.com/knative/eventing/pkg/webhook"
@@ -27,10 +27,10 @@ import (
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/logging/logkey"
+
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"log"
 )
 
 func main() {
@@ -41,36 +41,34 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading logging configuration: %v", err)
 	}
-	config, err := logging.NewConfigFromMap(cm, eventinglogging.Webhook)
+	config, err := logging.NewConfigFromMap(cm, logconfig.Webhook)
 	if err != nil {
 		log.Fatalf("Error parsing logging configuration: %v", err)
 	}
-	logger, atomicLevel := logging.NewLoggerFromConfig(config, eventinglogging.Webhook)
+	logger, atomicLevel := logging.NewLoggerFromConfig(config, logconfig.Webhook)
 	defer logger.Sync()
-	logger = logger.With(zap.String(logkey.ControllerType, eventinglogging.Webhook))
+	logger = logger.With(zap.String(logkey.ControllerType, logconfig.Webhook))
 
 	logger.Info("Starting the Eventing Webhook")
-
-	defer glog.Flush()
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
 	clusterConfig, err := rest.InClusterConfig()
 	if err != nil {
-		glog.Fatal("Failed to get in cluster config", err)
+		logger.Fatal("Failed to get in cluster config", err)
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(clusterConfig)
 	if err != nil {
-		glog.Fatal("Failed to get the client set", err)
+		logger.Fatal("Failed to get the client set", err)
 	}
 
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewDefaultWatcher(kubeClient, system.Namespace)
-	configMapWatcher.Watch(eventinglogging.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, eventinglogging.Webhook, eventinglogging.Webhook))
+	configMapWatcher.Watch(logconfig.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Webhook, logconfig.Webhook))
 	if err = configMapWatcher.Start(stopCh); err != nil {
-		logger.Fatalf("failed to start configuration manager: %v", err)
+		logger.Fatalf("failed to start webhook configmap watcher: %v", err)
 	}
 
 	// TODO(n3wscott): Send the logger to the controller.
@@ -83,7 +81,7 @@ func main() {
 	}
 	controller, err := webhook.NewAdmissionController(kubeClient, options)
 	if err != nil {
-		glog.Fatal("Failed to create the admission controller", err)
+		logger.Fatal("Failed to create the admission controller", err)
 	}
 	controller.Run(stopCh)
 }

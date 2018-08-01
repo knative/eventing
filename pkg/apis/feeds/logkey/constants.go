@@ -33,16 +33,4 @@ const (
 
 	// Feed is the key used for feed name in structured logs
 	Feed = kNative + "feed"
-
-	// Flow is the key used for flow name in structured logs
-	Flow = kNative + "flow"
-
-	// ClusterBus is the key used for cluster scoped bus name in structured logs
-	ClusterBus = kNative + "clusterbus"
-
-	// Bus is the key used for bus name in structured logs
-	Bus = kNative + "bus"
-
-	// Channel is the key used for channel name in structured logs
-	Channel = kNative + "channel"
 )

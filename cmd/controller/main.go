@@ -41,7 +41,14 @@ import (
 	"github.com/knative/eventing/pkg/controller/clusterbus"
 	"github.com/knative/eventing/pkg/signals"
 
+	"github.com/knative/eventing/pkg/logconfig"
+	"github.com/knative/eventing/pkg/system"
+	"github.com/knative/pkg/configmap"
+	"github.com/knative/pkg/logging"
+	"github.com/knative/pkg/logging/logkey"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/zap"
+	"log"
 )
 
 const (
@@ -57,6 +64,21 @@ var (
 
 func main() {
 	flag.Parse()
+
+	// Read the logging config and setup a logger.
+	cm, err := configmap.Load("/etc/config-logging")
+	if err != nil {
+		log.Fatalf("Error loading logging configuration: %v", err)
+	}
+	config, err := logging.NewConfigFromMap(cm, logconfig.Controller)
+	if err != nil {
+		log.Fatalf("Error parsing logging configuration: %v", err)
+	}
+	logger, atomicLevel := logging.NewLoggerFromConfig(config, logconfig.Controller)
+	defer logger.Sync()
+	logger = logger.With(zap.String(logkey.ControllerType, logconfig.Controller))
+
+	logger.Info("Starting the Controller")
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
@@ -94,6 +116,13 @@ func main() {
 	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
 	servingInformerFactory := servinginformers.NewSharedInformerFactory(servingClient, time.Second*30)
 
+	// Watch the logging config map and dynamically update logging levels.
+	configMapWatcher := configmap.NewDefaultWatcher(kubeClient, system.Namespace)
+	configMapWatcher.Watch(logconfig.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller, logconfig.Controller))
+	if err = configMapWatcher.Start(stopCh); err != nil {
+		logger.Fatalf("failed to start controller config map watcher: %v", err)
+	}
+
 	// Add new controllers here.
 	ctors := []controller.Constructor{
 		bus.NewController,
@@ -101,6 +130,7 @@ func main() {
 		channel.NewController,
 	}
 
+	// TODO(n3wscott): Send the logger to the controllers.
 	// Build all of our controllers, with the clients constructed above.
 	controllers := make([]controller.Interface, 0, len(ctors))
 	for _, ctor := range ctors {

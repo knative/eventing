@@ -262,15 +262,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d2ad0b894debee75e84ccbb964a26b77fbfbd983e0e2f36242fc3ba028d5c3ac"
+  digest = "1:142c93e2290b002f67a0540ceaf3f94acf691e9fbd202fe7cb5429f80a5f5c0b"
   name = "github.com/knative/pkg"
   packages = [
-    "apis",
     "configmap",
     "logging",
     "logging/logkey",
-    "signals",
-    "webhook",
   ]
   pruneopts = "NUT"
   revision = "fdf2fdcd93ddadf126cad6991d43a90f20033ceb"
@@ -1015,7 +1012,6 @@
     "github.com/Shopify/sarama",
     "github.com/bsm/sarama-cluster",
     "github.com/davecgh/go-spew/spew",
-    "github.com/ghodss/yaml",
     "github.com/golang/glog",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
@@ -1025,8 +1021,6 @@
     "github.com/knative/pkg/configmap",
     "github.com/knative/pkg/logging",
     "github.com/knative/pkg/logging/logkey",
-    "github.com/knative/pkg/signals",
-    "github.com/knative/pkg/webhook",
     "github.com/knative/serving/pkg/apis/istio/v1alpha3",
     "github.com/knative/serving/pkg/apis/serving/v1alpha1",
     "github.com/knative/serving/pkg/client/clientset/versioned",
@@ -1035,7 +1029,6 @@
     "github.com/mattbaird/jsonpatch",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "go.uber.org/zap",
-    "go.uber.org/zap/zapcore",
     "golang.org/x/net/context",
     "golang.org/x/oauth2",
     "google.golang.org/grpc/codes",
