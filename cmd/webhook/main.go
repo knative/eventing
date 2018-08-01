@@ -56,16 +56,17 @@ func main() {
 
 	clusterConfig, err := rest.InClusterConfig()
 	if err != nil {
-		logger.Fatal("Failed to get in cluster config", err)
+		logger.Fatal("Failed to get in cluster config", zap.Error(err))
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(clusterConfig)
 	if err != nil {
-		logger.Fatal("Failed to get the client set", err)
+		logger.Fatal("Failed to get the client set", zap.Error(err))
 	}
 
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewDefaultWatcher(kubeClient, system.Namespace)
+
 	configMapWatcher.Watch(logconfig.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Webhook, logconfig.Webhook))
 	if err = configMapWatcher.Start(stopCh); err != nil {
 		logger.Fatalf("failed to start webhook configmap watcher: %v", err)
@@ -81,7 +82,7 @@ func main() {
 	}
 	controller, err := webhook.NewAdmissionController(kubeClient, options)
 	if err != nil {
-		logger.Fatal("Failed to create the admission controller", err)
+		logger.Fatal("Failed to create the admission controller", zap.Error(err))
 	}
 	controller.Run(stopCh)
 }
