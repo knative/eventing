@@ -19,8 +19,8 @@ import (
 	"flag"
 
 	"github.com/golang/glog"
-	"github.com/knative/eventing/pkg/system"
 	"github.com/knative/eventing/pkg/signals"
+	"github.com/knative/eventing/pkg/system"
 	"github.com/knative/eventing/pkg/webhook"
 
 	"k8s.io/client-go/kubernetes"
@@ -56,47 +56,6 @@ func main() {
 	controller, err := webhook.NewAdmissionController(clientset, options)
 	if err != nil {
 		glog.Fatal("Failed to create the admission controller", err)
-	}
-	controller.Run(stopCh)
-}
-g", zap.Error(err))
-	}
-
-	kubeClient, err := kubernetes.NewForConfig(clusterConfig)
-	if err != nil {
-		logger.Fatal("Failed to get the client set", zap.Error(err))
-	}
-
-	// Watch the logging config map and dynamically update logging levels.
-	configMapWatcher := configmap.NewDefaultWatcher(kubeClient, system.Namespace)
-	configMapWatcher.Watch(logging.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, logLevelKey))
-	if err = configMapWatcher.Start(stopCh); err != nil {
-		logger.Fatalf("failed to start configuration manager: %v", err)
-	}
-
-	options := webhook.ControllerOptions{
-		ServiceName:    "eventing-webhook",
-		DeploymentName: "eventing-webhook",
-		Namespace:      system.Namespace,
-		Port:           443,
-		SecretName:     "eventing-webhook-certs",
-		WebhookName:    "eventing-webhook.eventing.knative.dev",
-	}
-	controller := webhook.AdmissionController{
-		Client:  kubeClient,
-		Options: options,
-		// TODO(mattmoor): Will we need to rework these to support versioning?
-		GroupVersion: v1alpha1.SchemeGroupVersion,
-		Handlers: map[string]runtime.Object{
-			"Revision":      &v1alpha1.Revision{},
-			"Configuration": &v1alpha1.Configuration{},
-			"Route":         &v1alpha1.Route{},
-			"Service":       &v1alpha1.Service{},
-		},
-		Logger: logger,
-	}
-	if err != nil {
-		logger.Fatal("Failed to create the admission controller", zap.Error(err))
 	}
 	controller.Run(stopCh)
 }
