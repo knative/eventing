@@ -1,6 +1,5 @@
 /*
-Copyright 2017 The Knative Authors
-
+Copyright 2018 The Knative Authors
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -18,49 +17,49 @@ package main
 
 import (
 	"flag"
-	"log"
 
-	"go.uber.org/zap"
-
-	"github.com/knative/pkg/configmap"
-	"github.com/knative/pkg/logging"
-	"github.com/knative/pkg/logging/logkey"
-	"github.com/knative/pkg/signals"
-	"github.com/knative/pkg/webhook"
-
+	"github.com/golang/glog"
 	"github.com/knative/eventing/pkg/system"
+	"github.com/knative/eventing/pkg/signals"
+	"github.com/knative/eventing/pkg/webhook"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
-const (
-	logLevelKey = "webhook"
-)
-
 func main() {
 	flag.Parse()
-	cm, err := configmap.Load("/etc/config-logging")
-	if err != nil {
-		log.Fatalf("Error loading logging configuration: %v", err)
-	}
-	config, err := logging.NewConfigFromMap(cm)
-	if err != nil {
-		log.Fatalf("Error parsing logging configuration: %v", err)
-	}
-	logger, atomicLevel := logging.NewLoggerFromConfig(config, logLevelKey)
-	defer logger.Sync()
-	logger = logger.With(zap.String(logkey.ControllerType, "webhook"))
+	defer glog.Flush()
 
-	logger.Info("Starting the Eventing Webhook")
+	glog.Info("Starting the Configuration Webhook")
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
 	clusterConfig, err := rest.InClusterConfig()
 	if err != nil {
-		logger.Fatal("Failed to get in cluster config", zap.Error(err))
+		glog.Fatal("Failed to get in cluster config", err)
+	}
+
+	clientset, err := kubernetes.NewForConfig(clusterConfig)
+	if err != nil {
+		glog.Fatal("Failed to get the client set", err)
+	}
+
+	options := webhook.ControllerOptions{
+		ServiceName:      "eventing-webhook",
+		ServiceNamespace: system.Namespace,
+		Port:             443,
+		SecretName:       "eventing-webhook-certs",
+		WebhookName:      "webhook.eventing.knative.dev",
+	}
+	controller, err := webhook.NewAdmissionController(clientset, options)
+	if err != nil {
+		glog.Fatal("Failed to create the admission controller", err)
+	}
+	controller.Run(stopCh)
+}
+g", zap.Error(err))
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(clusterConfig)
