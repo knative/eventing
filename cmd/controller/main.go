@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/golang/glog"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -85,22 +84,22 @@ func main() {
 
 	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
-		glog.Fatalf("Error building kubeconfig: %s", err.Error())
+		logger.Fatalf("Error building kubeconfig: %s", err.Error())
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building kubernetes clientset: %s", err.Error())
+		logger.Fatalf("Error building kubernetes clientset: %s", err.Error())
 	}
 
 	client, err := clientset.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building clientset: %s", err.Error())
+		logger.Fatalf("Error building clientset: %s", err.Error())
 	}
 
 	servingClient, err := servingclientset.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building serving clientset: %s", err.Error())
+		logger.Fatalf("Error building serving clientset: %s", err.Error())
 	}
 
 	// TODO: Rip this out from all the controllers since we can get it
@@ -109,7 +108,7 @@ func main() {
 	// Kubernetes. Clients will use the Pod's ServiceAccount principal.
 	restConfig, err := rest.InClusterConfig()
 	if err != nil {
-		glog.Fatalf("Error building rest config: %v", err.Error())
+		logger.Fatalf("Error building rest config: %v", err.Error())
 	}
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
@@ -148,7 +147,7 @@ func main() {
 			// We don't expect this to return until stop is called,
 			// but if it does, propagate it back.
 			if err := ctrlr.Run(threadsPerController, stopCh); err != nil {
-				glog.Fatalf("Error running controller: %s", err.Error())
+				logger.Fatalf("Error running controller: %s", err.Error())
 			}
 		}(ctrlr)
 	}
@@ -157,9 +156,9 @@ func main() {
 	srv := &http.Server{Addr: metricsScrapeAddr}
 	http.Handle(metricsScrapePath, promhttp.Handler())
 	go func() {
-		glog.Info("Starting metrics listener at %s", metricsScrapeAddr)
+		logger.Info("Starting metrics listener at %s", metricsScrapeAddr)
 		if err := srv.ListenAndServe(); err != nil {
-			glog.Infof("Httpserver: ListenAndServe() finished with error: %s", err)
+			logger.Infof("Httpserver: ListenAndServe() finished with error: %s", err)
 		}
 	}()
 
@@ -169,8 +168,6 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	srv.Shutdown(ctx)
-
-	glog.Flush()
 }
 
 func init() {
