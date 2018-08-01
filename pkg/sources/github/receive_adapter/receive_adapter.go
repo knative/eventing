@@ -56,11 +56,7 @@ type GithubSecrets struct {
 // HandlePullRequest is invoked whenever a PullRequest is modified (created, updated, etc.)
 func (h *GithubHandler) HandlePullRequest(payload interface{}, header webhooks.Header) {
 	glog.Info("Handling Pull Request")
-
 	pl := payload.(github.PullRequestPayload)
-
-	glog.Infof("GOT PAYLOAD: %+v\n HEADER: %+v", pl, header)
-
 	postMessage(h.target, &pl)
 }
 
@@ -86,10 +82,6 @@ func main() {
 	// odd that you have to also pass context around for the
 	// calls even after giving it to client. But, whatever.
 	ctx := context.Background()
-	//ts := oauth2.StaticTokenSource(
-	//	&oauth2.Token{AccessToken: credentials.AccessToken},
-	//)
-	//tc := oauth2.NewClient(ctx, ts)
 	var tc *http.Client = nil
 
 	client := ghclient.NewClient(tc)
@@ -103,6 +95,7 @@ func main() {
 	hook := github.New(&github.Config{Secret: credentials.SecretToken})
 	hook.RegisterEvents(h.HandlePullRequest, github.PullRequestEvent)
 
+	// TODO(n3wscott): Do we need to configure the PORT?
 	err = webhooks.Run(hook, ":8080", "/")
 	if err != nil {
 		glog.Fatalf("Failed to run the webhook")
@@ -117,7 +110,6 @@ func postMessage(target string, m *github.PullRequestPayload) error {
 	}
 
 	URL := fmt.Sprintf("http://%s/", target)
-	glog.Infof("Posting to %q", URL)
 	req, err := http.NewRequest("POST", URL, bytes.NewBuffer(jsonStr))
 	if err != nil {
 		glog.Errorf("Failed to create http request: %s", err)
