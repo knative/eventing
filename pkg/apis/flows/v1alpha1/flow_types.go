@@ -22,6 +22,7 @@ import (
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
+	"github.com/knative/pkg/apis"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -37,6 +38,11 @@ type Flow struct {
 	Spec   FlowSpec   `json:"spec"`
 	Status FlowStatus `json:"status"`
 }
+
+// Check that Flow can be validated, can be defaulted, and has immutable fields.
+var _ apis.Validatable = (*Flow)(nil)
+var _ apis.Defaultable = (*Flow)(nil)
+var _ apis.Immutable = (*Flow)(nil)
 
 // FlowSpec is the spec for a Flow resource.
 type FlowSpec struct {
