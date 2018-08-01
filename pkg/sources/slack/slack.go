@@ -21,22 +21,24 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
-	"os"
 	"github.com/golang/glog"
 	"github.com/knative/eventing/pkg/sources"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	"log"
+	"os"
 
 	servingclientset "github.com/knative/serving/pkg/client/clientset/versioned"
 
 	"github.com/knative/serving/pkg/apis/serving/v1alpha1"
+	"strings"
 )
 
 const (
-	there_can_only_be_one = "there_can_only_be_one"
+	// postfixReceiveAdapter is appended to the name of the service running the Receive Adapter
+	postfixReceiveAdapter = "rcvadptr"
 
 	// secretName is the name of the secret that contains the Slack credentials.
 	secretName = "secretName"
@@ -46,9 +48,9 @@ const (
 
 type SlackEventSource struct {
 	// kubeclientset is a standard kubernetes clientset
-	kubeclientset kubernetes.Interface
+	kubeclientset    kubernetes.Interface
 	servingclientset servingclientset.Interface
-	image         string
+	image            string
 	// namespace where the feed is created
 	feedNamespace string
 	// serviceAccount that the container runs as. Launches Receive Adapter with the
@@ -85,13 +87,13 @@ func (t *SlackEventSource) StartFeed(trigger sources.EventTrigger, target string
 	glog.Infof("Created Slack service: %+v", service)
 
 	return &sources.FeedContext{
-		Context: map[string]interface{}{
-			there_can_only_be_one: there_can_only_be_one,
-		}}, nil
+		Context: map[string]interface{}{}}, nil
 }
 
 func makeServiceName(resource string) string {
-	return "slack-hardcoded-service-name"
+	serviceName := fmt.Sprintf("%s-%s-%s", "slack", resource, postfixReceiveAdapter) // TODO: this needs more UUID on the end of it.
+	serviceName = strings.ToLower(serviceName)
+	return serviceName
 }
 
 func (t *SlackEventSource) createReceiveAdapter(trigger sources.EventTrigger, target string) (*v1alpha1.Service, error) {
@@ -111,9 +113,7 @@ func (t *SlackEventSource) createReceiveAdapter(trigger sources.EventTrigger, ta
 		return svc, nil
 	}
 
-	glog.Infof("secretName %s ; secretKey: %s", trigger.Parameters[secretName].(string), trigger.Parameters[secretKey].(string))
-
-	service := MakeService(t.feedNamespace, serviceName , t.feedServiceAccountName, t.image, target, trigger.Parameters[secretName].(string), trigger.Parameters[secretKey].(string))
+	service := MakeService(t.feedNamespace, serviceName, t.feedServiceAccountName, t.image, target, trigger.Parameters[secretName].(string), trigger.Parameters[secretKey].(string))
 	svc, createErr := sc.Create(service)
 	if createErr != nil {
 		glog.Errorf("Knative serving failed: %s", createErr)
