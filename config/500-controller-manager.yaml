@@ -31,3 +31,10 @@ spec:
           "-logtostderr",
           "-stderrthreshold", "INFO",
         ]
+        volumeMounts:
+          - name: config-logging
+            mountPath: /etc/config-logging
+      volumes:
+        - name: config-logging
+          configMap:
+            name: config-logging

@@ -44,6 +44,7 @@ type ProvideFunc func(manager.Manager) (controller.Controller, error)
 
 func main() {
 	flag.Parse()
+
 	logf.SetLogger(logf.ZapLogger(false))
 
 	// Setup a Manager
