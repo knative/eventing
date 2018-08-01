@@ -17,45 +17,53 @@ limitations under the License.
 package feed
 
 const (
-	// EventSource does not exist
+	// EventSourceDoesNotExist is a condition reason used when an EventSource
+	// referenced by a Feed does not exist.
 	EventSourceDoesNotExist string = "EventSourceDoesNotExist"
 
-	// EventSource has been marked for deletion
+	// EventSourceDeleting is a condition reason used when an EventSource
+	// referenced by a feed has been marked for deletion.
 	EventSourceDeleting string = "EventSourceDeleting"
 
-	// EventType does not exist
+	// EventTypeDoesNotExist is a condition reason used when an EventType
+	// referenced by a Feed does not exist.
 	EventTypeDoesNotExist string = "EventTypeDoesNotExist"
 
-	// EventType has been marked for deletion
+	// EventTypeDeleting is a condition reason used when an EventType
+	// referenced by a feed has been marked for deletion.
 	EventTypeDeleting string = "EventTypeDeleting"
 )
 
-// Some errors are bubbled up from the lower level functions that we want to
-// then update status with. These represent those errors. They have Reason and
-// Message that can be used to bubble up lower level errors into the Conditions.
+// StatusError can be returned from lower level functions and used as the input
+// for setting conditions on the Feed.
 type StatusError struct {
-	// Reason is a one-word CamelCase reason for the failure with EventSource
+	// Reason is a one-word CamelCase reason for the failure.
 	Reason string
-	// Message is the human-readable message that we'll describe
+	// Message is a human-readable message describing the error.
 	Message string
 }
 
+// Error implements the error interface.
 func (se *StatusError) Error() string {
 	return se.Message
 }
 
+// EventSourceError is a StatusError specifically for EventSource errors.
 type EventSourceError struct {
 	StatusError
 }
 
+// Error implements the error interface.
 func (es *EventSourceError) Error() string {
 	return es.StatusError.Error()
 }
 
+// EventTypeError is a StatusError specifically for EventType errors.
 type EventTypeError struct {
 	StatusError
 }
 
+// Error implements the error interface.
 func (es *EventTypeError) Error() string {
 	return es.StatusError.Error()
 }
