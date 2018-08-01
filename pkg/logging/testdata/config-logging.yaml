@@ -16,7 +16,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: config-logging
-  namespace: knative-serving
+  namespace: knative-eventing
 data:
   # Common configuration for all Knative codebase
   zap-logger-config: |
@@ -44,9 +44,6 @@ data:
   # Log level overrides
   # For all components except the autoscaler and queue proxy, 
   # changes are be picked up immediately.
-  # For autoscaler and queue proxy, changes require recreation of the pods.
   loglevel.controller: "info"
-  loglevel.autoscaler: "info"
-  loglevel.queueproxy: "info"
+  loglevel.controller-manager: "info"
   loglevel.webhook: "info"
-  loglevel.activator: "info"

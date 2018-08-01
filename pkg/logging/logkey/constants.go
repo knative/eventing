@@ -17,18 +17,32 @@ limitations under the License.
 package logkey
 
 const (
-	// Service is the key used for service name in structured logs
-	Service = "knative.dev/service"
+	kNative = "knative.dev/"
 
-	// Configuration is the key used for configuration name in structured logs
-	Configuration = "knative.dev/configuration"
+	// ClusterEventSource is the key used for cluster scoped event source name in structured logs
+	ClusterEventSource = kNative + "clustereventsource"
 
-	// Revision is the key used for revision name in structured logs
-	Revision = "knative.dev/revision"
+	// ClusterEventType is the key used for cluster event type name in structured logs
+	ClusterEventType = kNative + "clustereventtype"
 
-	// Route is the key used for route name in structured logs
-	Route = "knative.dev/route"
+	// EventSource is the key used for event source name in structured logs
+	EventSource = kNative + "eventsource"
 
-	// Build is the key used for build name in structured logs
-	Build = "knative.dev/build"
+	// EventType is the key used for event type name in structured logs
+	EventType = kNative + "eventtype"
+
+	// Feed is the key used for feed name in structured logs
+	Feed = kNative + "feed"
+
+	// Flow is the key used for flow name in structured logs
+	Flow = kNative + "flow"
+
+	// ClusterBus is the key used for cluster scoped bus name in structured logs
+	ClusterBus = kNative + "clusterbus"
+
+	// Bus is the key used for bus name in structured logs
+	Bus = kNative + "bus"
+
+	// Channel is the key used for channel name in structured logs
+	Channel = kNative + "channel"
 )

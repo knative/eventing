@@ -22,8 +22,8 @@ import (
 	"testing"
 
 	"github.com/ghodss/yaml"
+	"github.com/knative/eventing/pkg/system"
 	"github.com/knative/pkg/logging"
-	"github.com/knative/serving/pkg/system"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
@@ -144,7 +144,7 @@ func TestNewConfig(t *testing.T) {
 		},
 		Data: map[string]string{
 			"zap-logger-config":   wantCfg,
-			"loglevel.queueproxy": wantLevel.String(),
+			"loglevel.controller": wantLevel.String(),
 		},
 	})
 	if err != nil {
@@ -153,8 +153,8 @@ func TestNewConfig(t *testing.T) {
 	if got := c.LoggingConfig; got != wantCfg {
 		t.Errorf("LoggingConfig = %v, want %v", got, wantCfg)
 	}
-	if got := c.LoggingLevel["queueproxy"]; got != wantLevel {
-		t.Errorf("LoggingLevel[queueproxy] = %v, want %v", got, wantLevel)
+	if got := c.LoggingLevel["controller"]; got != wantLevel {
+		t.Errorf("LoggingLevel[controller] = %v, want %v", got, wantLevel)
 	}
 }
 
@@ -178,7 +178,7 @@ func TestOurConfig(t *testing.T) {
 
 func TestNewLoggerFromConfig(t *testing.T) {
 	c, _, _ := getTestConfig()
-	_, atomicLevel := NewLoggerFromConfig(c, "queueproxy")
+	_, atomicLevel := NewLoggerFromConfig(c, "controller")
 	if atomicLevel.Level() != zapcore.DebugLevel {
 		t.Errorf("logger level wanted: DebugLevel, got: %v", atomicLevel)
 	}
@@ -192,14 +192,14 @@ func TestEmptyLevel(t *testing.T) {
 		},
 		Data: map[string]string{
 			"zap-logger-config":   "{\"level\": \"error\",\n\"outputPaths\": [\"stdout\"],\n\"errorOutputPaths\": [\"stderr\"],\n\"encoding\": \"json\"}",
-			"loglevel.queueproxy": "",
+			"loglevel.controller": "",
 		},
 	})
 	if err != nil {
 		t.Errorf("Expected no errors. got: %v", err)
 	}
-	if _, ok := c.LoggingLevel["queueproxy"]; ok {
-		t.Errorf("Expected nothing for LoggingLevel[queueproxy]. got: %v", c.LoggingLevel["queueproxy"])
+	if _, ok := c.LoggingLevel["controller"]; ok {
+		t.Errorf("Expected nothing for LoggingLevel[controller]. got: %v", c.LoggingLevel["controller"])
 	}
 }
 
@@ -212,7 +212,7 @@ func TestInvalidLevel(t *testing.T) {
 		},
 		Data: map[string]string{
 			"zap-logger-config":   wantCfg,
-			"loglevel.queueproxy": "invalid",
+			"loglevel.controller": "invalid",
 		},
 	})
 	if err == nil {
@@ -230,7 +230,7 @@ func getTestConfig() (*logging.Config, string, string) {
 		},
 		Data: map[string]string{
 			"zap-logger-config":   wantCfg,
-			"loglevel.queueproxy": wantLevel,
+			"loglevel.controller": wantLevel,
 		},
 	})
 	return c, wantCfg, wantLevel
