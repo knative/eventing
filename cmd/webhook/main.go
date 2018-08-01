@@ -33,11 +33,6 @@ import (
 	"log"
 )
 
-const (
-	logLevelKey = "webhook"
-	loggerName  = "webhook"
-)
-
 func main() {
 	flag.Parse()
 
@@ -46,13 +41,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading logging configuration: %v", err)
 	}
-	config, err := logging.NewConfigFromMap(cm, loggerName)
+	config, err := logging.NewConfigFromMap(cm, eventinglogging.Webhook)
 	if err != nil {
 		log.Fatalf("Error parsing logging configuration: %v", err)
 	}
-	logger, atomicLevel := logging.NewLoggerFromConfig(config, logLevelKey)
+	logger, atomicLevel := logging.NewLoggerFromConfig(config, eventinglogging.Webhook)
 	defer logger.Sync()
-	logger = logger.With(zap.String(logkey.ControllerType, loggerName))
+	logger = logger.With(zap.String(logkey.ControllerType, eventinglogging.Webhook))
 
 	logger.Info("Starting the Eventing Webhook")
 
@@ -73,7 +68,7 @@ func main() {
 
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewDefaultWatcher(kubeClient, system.Namespace)
-	configMapWatcher.Watch(eventinglogging.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, logLevelKey))
+	configMapWatcher.Watch(eventinglogging.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, eventinglogging.Webhook, eventinglogging.Webhook))
 	if err = configMapWatcher.Start(stopCh); err != nil {
 		logger.Fatalf("failed to start configuration manager: %v", err)
 	}
