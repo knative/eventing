@@ -18,17 +18,19 @@ package main
 
 import (
 	"net/http"
-	"log"
 	"net/http/httputil"
+	"log"
 )
 
 type MessageDumper struct {}
 
 func (md *MessageDumper) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-		log.Printf("Message Dumper received a message: %+v", r)
 		w.WriteHeader(http.StatusOK)
 		if reqBytes, err := httputil.DumpRequest(r, true); err == nil {
+			log.Printf("Message Dumper received a message: %+v", string(reqBytes))
 			w.Write(reqBytes)
+		} else {
+			log.Printf("Error dumping the request: %+v :: %+v", err, r)
 		}
 	}
 
