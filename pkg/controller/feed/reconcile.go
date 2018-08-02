@@ -112,6 +112,10 @@ func (r *reconciler) reconcile(feed *feedsv1alpha1.Feed) error {
 				Reason:  t.Reason,
 				Message: t.Message,
 			})
+		default:
+			// This is unreachable unless getFeedSource is refactored.
+			// Assume this is a non-terminal state and return the error.
+			return fmt.Errorf("Error getting feed source: %v", err)
 		}
 		// This is a terminal state, and we've noted it in the status, so return
 		// nil to signal that no further reconciling is required.
