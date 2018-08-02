@@ -39,11 +39,11 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	"github.com/knative/eventing/pkg/system"
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	channelscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	listers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
+	"github.com/knative/eventing/pkg/system"
 	servingclientset "github.com/knative/serving/pkg/client/clientset/versioned"
 	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
 
@@ -539,19 +539,18 @@ func newVirtualService(channel *channelsv1alpha1.Channel) *istiov1alpha3.Virtual
 				controller.ServiceHostName(controller.ChannelServiceName(channel.Name), channel.Namespace),
 				controller.ChannelHostName(channel.Name, channel.Namespace),
 			},
-			Http: []istiov1alpha3.HTTPRoute{
-				{
-					Rewrite: &istiov1alpha3.HTTPRewrite{
-						Authority: controller.ChannelHostName(channel.Name, channel.Namespace),
-					},
-					Route: []istiov1alpha3.DestinationWeight{
-						{
-							Destination: istiov1alpha3.Destination{
-								Host: destinationHost,
-							},
-						},
-					},
+			Http: []istiov1alpha3.HTTPRoute{{
+				Rewrite: &istiov1alpha3.HTTPRewrite{
+					Authority: controller.ChannelHostName(channel.Name, channel.Namespace),
 				},
+				Route: []istiov1alpha3.DestinationWeight{{
+					Destination: istiov1alpha3.Destination{
+						Host: destinationHost,
+						Port: istiov1alpha3.PortSelector{
+							Number: PortNumber,
+						},
+					}},
+				}},
 			},
 		},
 	}
