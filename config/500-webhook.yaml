@@ -31,3 +31,10 @@ spec:
         # This is the Go import path for the binary that is containerized
         # and substituted here.
         image: github.com/knative/eventing/cmd/webhook
+        volumeMounts:
+          - name: config-logging
+            mountPath: /etc/config-logging
+      volumes:
+        - name: config-logging
+          configMap:
+            name: config-logging

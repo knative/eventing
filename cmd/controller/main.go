@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/golang/glog"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -41,7 +40,14 @@ import (
 	"github.com/knative/eventing/pkg/controller/clusterbus"
 	"github.com/knative/eventing/pkg/signals"
 
+	"github.com/knative/eventing/pkg/logconfig"
+	"github.com/knative/eventing/pkg/system"
+	"github.com/knative/pkg/configmap"
+	"github.com/knative/pkg/logging"
+	"github.com/knative/pkg/logging/logkey"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/zap"
+	"log"
 )
 
 const (
@@ -58,27 +64,42 @@ var (
 func main() {
 	flag.Parse()
 
+	// Read the logging config and setup a logger.
+	cm, err := configmap.Load("/etc/config-logging")
+	if err != nil {
+		log.Fatalf("Error loading logging configuration: %v", err)
+	}
+	config, err := logging.NewConfigFromMap(cm, logconfig.Controller)
+	if err != nil {
+		log.Fatalf("Error parsing logging configuration: %v", err)
+	}
+	logger, atomicLevel := logging.NewLoggerFromConfig(config, logconfig.Controller)
+	defer logger.Sync()
+	logger = logger.With(zap.String(logkey.ControllerType, logconfig.Controller))
+
+	logger.Info("Starting the Controller")
+
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
 	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
-		glog.Fatalf("Error building kubeconfig: %s", err.Error())
+		logger.Fatalf("Error building kubeconfig: %s", err.Error())
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building kubernetes clientset: %s", err.Error())
+		logger.Fatalf("Error building kubernetes clientset: %s", err.Error())
 	}
 
 	client, err := clientset.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building clientset: %s", err.Error())
+		logger.Fatalf("Error building clientset: %s", err.Error())
 	}
 
 	servingClient, err := servingclientset.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building serving clientset: %s", err.Error())
+		logger.Fatalf("Error building serving clientset: %s", err.Error())
 	}
 
 	// TODO: Rip this out from all the controllers since we can get it
@@ -87,12 +108,19 @@ func main() {
 	// Kubernetes. Clients will use the Pod's ServiceAccount principal.
 	restConfig, err := rest.InClusterConfig()
 	if err != nil {
-		glog.Fatalf("Error building rest config: %v", err.Error())
+		logger.Fatalf("Error building rest config: %v", err.Error())
 	}
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
 	servingInformerFactory := servinginformers.NewSharedInformerFactory(servingClient, time.Second*30)
+
+	// Watch the logging config map and dynamically update logging levels.
+	configMapWatcher := configmap.NewDefaultWatcher(kubeClient, system.Namespace)
+	configMapWatcher.Watch(logconfig.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller, logconfig.Controller))
+	if err = configMapWatcher.Start(stopCh); err != nil {
+		logger.Fatalf("failed to start controller config map watcher: %v", err)
+	}
 
 	// Add new controllers here.
 	ctors := []controller.Constructor{
@@ -101,6 +129,7 @@ func main() {
 		channel.NewController,
 	}
 
+	// TODO(n3wscott): Send the logger to the controllers.
 	// Build all of our controllers, with the clients constructed above.
 	controllers := make([]controller.Interface, 0, len(ctors))
 	for _, ctor := range ctors {
@@ -118,7 +147,7 @@ func main() {
 			// We don't expect this to return until stop is called,
 			// but if it does, propagate it back.
 			if err := ctrlr.Run(threadsPerController, stopCh); err != nil {
-				glog.Fatalf("Error running controller: %s", err.Error())
+				logger.Fatalf("Error running controller: %s", err.Error())
 			}
 		}(ctrlr)
 	}
@@ -127,9 +156,9 @@ func main() {
 	srv := &http.Server{Addr: metricsScrapeAddr}
 	http.Handle(metricsScrapePath, promhttp.Handler())
 	go func() {
-		glog.Info("Starting metrics listener at %s", metricsScrapeAddr)
+		logger.Info("Starting metrics listener at %s", metricsScrapeAddr)
 		if err := srv.ListenAndServe(); err != nil {
-			glog.Infof("Httpserver: ListenAndServe() finished with error: %s", err)
+			logger.Infof("Httpserver: ListenAndServe() finished with error: %s", err)
 		}
 	}()
 
@@ -139,8 +168,6 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	srv.Shutdown(ctx)
-
-	glog.Flush()
 }
 
 func init() {

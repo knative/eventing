@@ -261,6 +261,18 @@
   revision = "5c1d8c8469d1ed34b2aecf4c2305b3a57fff2ee3"
 
 [[projects]]
+  branch = "master"
+  digest = "1:142c93e2290b002f67a0540ceaf3f94acf691e9fbd202fe7cb5429f80a5f5c0b"
+  name = "github.com/knative/pkg"
+  packages = [
+    "configmap",
+    "logging",
+    "logging/logkey",
+  ]
+  pruneopts = "NUT"
+  revision = "fdf2fdcd93ddadf126cad6991d43a90f20033ceb"
+
+[[projects]]
   digest = "1:c0361b10d998857122ab480346b688f7dfabf5e9b34e52d786e8e6fd02b602d9"
   name = "github.com/knative/serving"
   packages = [
@@ -1006,6 +1018,9 @@
     "github.com/google/go-github/github",
     "github.com/google/uuid",
     "github.com/knative/build/pkg/apis/build/v1alpha1",
+    "github.com/knative/pkg/configmap",
+    "github.com/knative/pkg/logging",
+    "github.com/knative/pkg/logging/logkey",
     "github.com/knative/serving/pkg/apis/istio/v1alpha3",
     "github.com/knative/serving/pkg/apis/serving/v1alpha1",
     "github.com/knative/serving/pkg/client/clientset/versioned",
@@ -1013,6 +1028,7 @@
     "github.com/knative/serving/pkg/client/listers/istio/v1alpha3",
     "github.com/mattbaird/jsonpatch",
     "github.com/prometheus/client_golang/prometheus/promhttp",
+    "go.uber.org/zap",
     "golang.org/x/net/context",
     "golang.org/x/oauth2",
     "google.golang.org/grpc/codes",
