@@ -41,7 +41,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/knative/eventing/pkg/system"
-	clientconfig "sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -62,16 +62,17 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading logging configuration: %v", err)
 	}
-	config, err := logging.NewConfigFromMap(cm, logconfig.ControllerManager)
+	cfg, err := logging.NewConfigFromMap(cm, logconfig.ControllerManager)
 	if err != nil {
 		log.Fatalf("Error parsing logging configuration: %v", err)
 	}
-	logger, atomicLevel := logging.NewLoggerFromConfig(config, logconfig.ControllerManager)
+	logger, atomicLevel := logging.NewLoggerFromConfig(cfg, logconfig.ControllerManager)
 	defer logger.Sync()
 	logger = logger.With(zap.String(logkey.ControllerType, logconfig.ControllerManager))
 
 	logger.Info("Starting the Controller Manager")
 
+	// This tells controller-runtime to use zap to log internal messages.
 	logf.SetLogger(logf.ZapLogger(false))
 
 	// set up signals so we handle the first shutdown signal gracefully
@@ -95,7 +96,7 @@ func main() {
 	}
 
 	// Setup a Manager
-	mrg, err := manager.New(clientconfig.GetConfigOrDie(), manager.Options{})
+	mrg, err := manager.New(config.GetConfigOrDie(), manager.Options{})
 	if err != nil {
 		log.Fatal(err)
 	}
