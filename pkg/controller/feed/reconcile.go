@@ -41,21 +41,54 @@ const (
 	finalizerName = controllerAgentName
 )
 
-// Reconcile Feed resources
+// Reconcile compares the actual state of a Feed with the desired, and attempts
+// to converge the two. It then updates the Status block of the Feed with
+// its current state.
+// If Reconcile returns a non-nil error, the request will be retried.
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	feed := &feedsv1alpha1.Feed{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, feed)
 
+	// The feed may have been deleted since it was added to the workqueue. If so
+	// there's nothing to be done.
 	if errors.IsNotFound(err) {
 		glog.Errorf("could not find Feed %v\n", request)
 		return reconcile.Result{}, nil
 	}
 
+	// If the feed exists but could not be retrieved, then we should retry.
 	if err != nil {
 		glog.Errorf("could not fetch Feed %v for %+v\n", err, request)
 		return reconcile.Result{}, err
 	}
 
+	// Now that we know the feed exists, we can reconcile it. An error returned
+	// here means the reconcile did not complete and the Feed should be requeued
+	// for another attempt.
+	// A successful reconcile does not necessarily mean the feed is in the desired
+	// state, it means no more can be done for now. In this case the feed will
+	// not be reconciled again until the resync period or a watched resource
+	// changes.
+	if err = r.reconcile(feed); err != nil {
+		glog.Errorf("error reconciling Feed: %v", err)
+	}
+
+	// Since the reconcile is a sequence of steps, earlier steps may complete
+	// successfully while later steps fail. The Feed is updated on failure to
+	// preserve any useful status or metadata changes the non-failing steps made.
+	if updateErr := r.updateFeed(feed); updateErr != nil {
+		glog.Errorf("failed to update Feed: %v", updateErr)
+		// An error here means the feed should be reconciled again, regardless of
+		// whether the reconcile was successful or not.
+		return reconcile.Result{}, updateErr
+	}
+	return reconcile.Result{}, err
+}
+
+// reconcile tries to converge the current state of the given Feed to the
+// desired state. This function should not update the Feed; the calling method
+// should do that.
+func (r *reconciler) reconcile(feed *feedsv1alpha1.Feed) error {
 	feed.Status.InitializeConditions()
 	// Fetch the EventSource and EventType that is being asked for
 	// and if they don't exist update the status to reflect this back
@@ -80,13 +113,13 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 				Message: t.Message,
 			})
 		default:
-			return reconcile.Result{}, err
+			// This is unreachable unless getFeedSource is refactored.
+			// Assume this is a non-terminal state and return the error.
+			return fmt.Errorf("Error getting feed source: %v", err)
 		}
-		if err := r.updateFeed(feed); err != nil {
-			glog.Errorf("failed to update Feed status: %v", err)
-			return reconcile.Result{}, err
-		}
-		return reconcile.Result{}, nil
+		// This is a terminal state, and we've noted it in the status, so return
+		// nil to signal that no further reconciling is required.
+		return nil
 	}
 
 	// TODO: Set the FeedConditionDependenciesSatisfied to true here? Or, after
@@ -101,10 +134,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// to do this properly.
 	// TODO: Add issue link here. can't look up right now, no wifi
 	r.setEventTypeOwnerReference(feed)
-	if err := r.updateOwnerReferences(feed); err != nil {
-		glog.Errorf("failed to update Feed owner references: %v", err)
-		return reconcile.Result{}, err
-	}
 
 	if feed.GetDeletionTimestamp() == nil {
 		err = r.reconcileStartJob(feed, eventSource, eventType)
@@ -117,12 +146,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 			glog.Errorf("error reconciling stop Job: %v", err)
 		}
 	}
-
-	if updateErr := r.updateFeed(feed); updateErr != nil {
-		glog.Errorf("failed to update Feed status: %v", updateErr)
-		return reconcile.Result{}, updateErr
-	}
-	return reconcile.Result{}, err
+	return nil
 }
 
 func (r *reconciler) reconcileStartJob(feed *feedsv1alpha1.Feed, es *feedsv1alpha1.EventSource, et *feedsv1alpha1.EventType) error {
@@ -243,20 +267,6 @@ func (r *reconciler) reconcileStopJob(feed *feedsv1alpha1.Feed, es *feedsv1alpha
 				Message: fmt.Sprintf("Job failed with %s", resources.JobFailedMessage(job)),
 			})
 		}
-	}
-	return nil
-}
-
-func (r *reconciler) updateOwnerReferences(u *feedsv1alpha1.Feed) error {
-	feed := &feedsv1alpha1.Feed{}
-	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: u.Namespace, Name: u.Name}, feed)
-	if err != nil {
-		return err
-	}
-
-	if !equality.Semantic.DeepEqual(feed.OwnerReferences, u.OwnerReferences) {
-		feed.SetOwnerReferences(u.ObjectMeta.OwnerReferences)
-		return r.client.Update(context.TODO(), feed)
 	}
 	return nil
 }
