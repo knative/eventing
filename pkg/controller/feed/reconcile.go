@@ -41,27 +41,45 @@ const (
 	finalizerName = controllerAgentName
 )
 
-// Reconcile Feed resources
+// Reconcile compares the actual state of a Feed with the desired, and attempts
+// to converge the two. It then updates the Status block of the Feed with
+// its current state.
+// If Reconcile returns a non-nil error, the request will be retried.
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	feed := &feedsv1alpha1.Feed{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, feed)
 
+	// The feed may have been deleted since it was added to the workqueue. If so
+	// there's nothing to be done.
 	if errors.IsNotFound(err) {
 		glog.Errorf("could not find Feed %v\n", request)
 		return reconcile.Result{}, nil
 	}
 
+	// If the feed exists but could not be retrieved, then we should retry.
 	if err != nil {
 		glog.Errorf("could not fetch Feed %v for %+v\n", err, request)
 		return reconcile.Result{}, err
 	}
 
+	// Now that we know the feed exists, we can reconcile it. An error returned
+	// here means the reconcile did not complete and the Feed should be requeued
+	// for another attempt.
+	// A successful reconcile does not necessarily mean the feed is in the desired
+	// state, it means no more can be done for now. In this case the feed will
+	// not be reconciled again until the resync period or a watched resource
+	// changes.
 	if err = r.reconcile(feed); err != nil {
 		glog.Errorf("error reconciling Feed: %v", err)
 	}
 
+	// Since the reconcile is a sequence of steps, earlier steps may complete
+	// successfully while later steps fail. The Feed is updated on failure to
+	// preserve any useful status or metadata changes the non-failing steps made.
 	if updateErr := r.updateFeed(feed); updateErr != nil {
 		glog.Errorf("failed to update Feed: %v", updateErr)
+		// An error here means the feed should be reconciled again, regardless of
+		// whether the reconcile was successful or not.
 		return reconcile.Result{}, updateErr
 	}
 	return reconcile.Result{}, err
