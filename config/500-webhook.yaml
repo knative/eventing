@@ -21,8 +21,6 @@ spec:
   replicas: 1
   template:
     metadata:
-      annotations:
-        sidecar.istio.io/inject: "false"
       labels:
         app: eventing-webhook
         role: eventing-webhook
