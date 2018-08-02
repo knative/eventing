@@ -44,6 +44,7 @@ func main() {
 
 	eventHandler := func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Inside slack receive adapter's event handler")
+
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(r.Body)
 		body := buf.String()
