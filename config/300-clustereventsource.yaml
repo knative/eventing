@@ -26,4 +26,7 @@ spec:
     - all
     - knative
     - eventing
+    shortNames:
+    - kces
+    - ces
   scope: Cluster

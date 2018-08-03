@@ -26,4 +26,7 @@ spec:
     - all
     - knative
     - eventing
+    shortNames:
+    - kes
+    - es
   scope: Namespaced

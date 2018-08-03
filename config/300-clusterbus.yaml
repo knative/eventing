@@ -27,3 +27,6 @@ spec:
     - all
     - knative
     - eventing
+    shortNames:
+    - kcbus
+    - cbus
