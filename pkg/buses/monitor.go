@@ -543,14 +543,14 @@ func (m *Monitor) Run(busNamespace, busName string, threadiness int, stopCh <-ch
 		if err != nil {
 			glog.Fatalf("Unknown clusterbus %q", busName)
 		}
-		m.bus = clusterBus
+		m.bus = clusterBus.DeepCopy()
 	} else {
 		// monitor is for a namespaced Bus
 		bus, err := m.busesLister.Buses(busNamespace).Get(busName)
 		if err != nil {
 			glog.Fatalf("Unknown bus '%s/%s'", busNamespace, busName)
 		}
-		m.bus = bus
+		m.bus = bus.DeepCopy()
 	}
 
 	glog.Info("Starting workers")
@@ -787,14 +787,15 @@ func (m *Monitor) getOrCreateChannelSummary(key channelKey) *channelSummary {
 }
 
 func (m *Monitor) createOrUpdateBus(bus *channelsv1alpha1.Bus) error {
-	if bus.Namespace != m.bus.GetObjectMeta().GetNamespace() ||
+	if m.bus.GetObjectKind().GroupVersionKind().Kind != bus.Kind ||
+		bus.Namespace != m.bus.GetObjectMeta().GetNamespace() ||
 		bus.Name != m.bus.GetObjectMeta().GetName() {
 		// this is not our bus
 		return nil
 	}
 
 	if !reflect.DeepEqual(m.bus.GetSpec(), bus.Spec) {
-		m.bus = bus
+		m.bus = bus.DeepCopy()
 		err := m.handler.onBus(bus, m)
 		if err != nil {
 			return err
@@ -805,13 +806,14 @@ func (m *Monitor) createOrUpdateBus(bus *channelsv1alpha1.Bus) error {
 }
 
 func (m *Monitor) createOrUpdateClusterBus(clusterBus *channelsv1alpha1.ClusterBus) error {
-	if clusterBus.Name != m.bus.GetObjectMeta().GetName() {
+	if m.bus.GetObjectKind().GroupVersionKind().Kind != clusterBus.Kind ||
+		clusterBus.Name != m.bus.GetObjectMeta().GetName() {
 		// this is not our clusterbus
 		return nil
 	}
 
 	if !reflect.DeepEqual(m.bus.GetSpec(), clusterBus.Spec) {
-		m.bus = clusterBus
+		m.bus = clusterBus.DeepCopy()
 		err := m.handler.onBus(clusterBus, m)
 		if err != nil {
 			return err

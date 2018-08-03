@@ -15,5 +15,3 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: e2etest
-  labels:
-    istio-injection: enabled
