@@ -177,11 +177,6 @@ func makePodTemplate(feed *feedsv1alpha1.Feed, source *feedsv1alpha1.EventSource
 	}
 
 	return &corev1.PodTemplateSpec{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				"sidecar.istio.io/inject": "false",
-			},
-		},
 		Spec: corev1.PodSpec{
 			ServiceAccountName: feed.Spec.ServiceAccountName,
 			RestartPolicy:      corev1.RestartPolicyNever,

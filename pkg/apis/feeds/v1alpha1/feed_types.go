@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"encoding/json"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -59,9 +61,10 @@ type FeedAction struct {
 // EventTrigger specifies the intention that a particular event type and
 // resource should be consumed.
 type EventTrigger struct {
-	// Required. The type of event to observe. For example:
-	// `google.storage.object.finalize` and
-	// `google.firebase.analytics.event.log`.
+	// EventType or ClusterEventType Required. The type of event to observe.
+	// For example:
+	//   `google.storage.object.finalize` and
+	//   `google.firebase.analytics.event.log`.
 	//
 	// Event type consists of three parts:
 	//  1. namespace: The domain name of the organization in reverse-domain
@@ -77,6 +80,10 @@ type EventTrigger struct {
 	//     a Google Cloud Storage Object include 'finalize' and 'delete'.
 	// These parts are lower case and joined by '.'.
 	EventType string `json:"eventType"`
+
+	// EventType or ClusterEventType Required. ClusterEventType is the same as
+	// EventType but Cluster scoped.
+	ClusterEventType string `json:"clusterEventType"`
 
 	// Required. The resource(s) from which to observe events, for example,
 	// `projects/_/buckets/myBucket/objects/{objectPath=**}`.
@@ -291,4 +298,8 @@ func (f *Feed) SetOwnerReference(or *metav1.OwnerReference) {
 	}
 	refs = append(refs, *or)
 	f.SetOwnerReferences(refs)
+}
+
+func (f *Feed) GetSpecJSON() ([]byte, error) {
+	return json.Marshal(f.Spec)
 }

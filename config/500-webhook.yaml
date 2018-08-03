@@ -21,8 +21,6 @@ spec:
   replicas: 1
   template:
     metadata:
-      annotations:
-        sidecar.istio.io/inject: "false"
       labels:
         app: eventing-webhook
         role: eventing-webhook
@@ -34,3 +32,10 @@ spec:
         # This is the Go import path for the binary that is containerized
         # and substituted here.
         image: github.com/knative/eventing/cmd/webhook
+        volumeMounts:
+          - name: config-logging
+            mountPath: /etc/config-logging
+      volumes:
+        - name: config-logging
+          configMap:
+            name: config-logging
