@@ -23,7 +23,7 @@ func BusProvisionerDeploymentName(busName string) string {
 }
 
 func BusDispatcherDeploymentName(busName string) string {
-	return fmt.Sprintf("%s-bus", busName)
+	return fmt.Sprintf("%s-bus-dispatcher", busName)
 }
 
 func BusServiceAccountName(busName string) string {
@@ -43,7 +43,7 @@ func ClusterBusProvisionerDeploymentName(clusterBusName string) string {
 }
 
 func ClusterBusDispatcherDeploymentName(clusterBusName string) string {
-	return fmt.Sprintf("%s-clusterbus", clusterBusName)
+	return fmt.Sprintf("%s-clusterbus-dispatcher", clusterBusName)
 }
 
 func ClusterBusDispatcherServiceName(clusterBusName string) string {
