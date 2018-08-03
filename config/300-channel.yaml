@@ -16,7 +16,6 @@ kind: CustomResourceDefinition
 metadata:
   name: channels.channels.knative.dev
 spec:
-  scope: Namespaced
   group: channels.knative.dev
   version: v1alpha1
   names:
@@ -30,3 +29,4 @@ spec:
     shortNames:
     - kchan
     - chan
+  scope: Namespaced

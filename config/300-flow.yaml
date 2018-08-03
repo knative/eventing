@@ -29,4 +29,3 @@ spec:
     shortNames:
     - kflow
   scope: Namespaced
-
