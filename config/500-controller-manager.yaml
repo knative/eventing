@@ -26,6 +26,7 @@ spec:
       serviceAccountName: eventing-controller
       containers:
       - name: controller-manager
+        terminationMessagePolicy: FallbackToLogsOnError
         image: github.com/knative/eventing/cmd/controller-manager
         args: [
           "-logtostderr",

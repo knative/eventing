@@ -28,6 +28,7 @@ spec:
       serviceAccountName: eventing-controller
       containers:
       - name: eventing-webhook
+        terminationMessagePolicy: FallbackToLogsOnError
         # This is the Go import path for the binary that is containerized
         # and substituted here.
         image: github.com/knative/eventing/cmd/webhook
