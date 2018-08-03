@@ -104,7 +104,7 @@ verification token into a secret.
     page of your Slack App.
 
 1.  Edit `sample/slack/slacksecret.yaml`, replacing
-    "<YOUR PERSONAL TOKEN FROM SLACK>" with the actual token found in step 1.
+    "\<YOUR PERSONAL TOKEN FROM SLACK>" with the actual token found in step 1.
 
 1.  Create the secret.
 

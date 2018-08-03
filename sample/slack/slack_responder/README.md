@@ -27,7 +27,7 @@ to send commands back to Slack.
     Permissions' settings page of your Slack App.
 
 1.  Edit `sample/slack/slack_responder/slackrespondersecret.yaml`, replacing
-    "<Your Bot User OAuth Access Token from Slack>" with the actual token found
+    "\<Your Bot User OAuth Access Token from Slack>" with the actual token found
     in step 1.
 
 1.  Create the secret.
