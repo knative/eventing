@@ -4,15 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
+	"fmt"
+	"github.com/golang/glog"
+	"github.com/knative/eventing/pkg/event"
 	"github.com/nlopes/slack/slackevents"
 	"log"
 	"net/http"
-	"time"
-	"github.com/knative/eventing/pkg/event"
-	"fmt"
-	"io/ioutil"
 	"os"
-	"github.com/golang/glog"
+	"time"
 )
 
 const (
@@ -43,8 +42,6 @@ func main() {
 	}
 
 	eventHandler := func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("Inside slack receive adapter's event handler")
-
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(r.Body)
 		body := buf.String()
@@ -84,13 +81,9 @@ func main() {
 
 	http.HandleFunc("/", eventHandler)
 	http.ListenAndServe(":8080", nil)
-	//eh := http.HandlerFunc(eventHandler)
-	//http.ListenAndServe(":8080", eh)
 }
 
 func postMessage(target string, m *slackevents.EventsAPICallbackEvent) error {
-	//log.Printf("postMessage: %v, %v, %v", target, source, m)
-	//return nil
 	ctx := event.EventContext{
 		CloudEventsVersion: event.CloudEventsVersion,
 		EventType:          "slack.foobar.event_type",
@@ -109,12 +102,11 @@ func postMessage(target string, m *slackevents.EventsAPICallbackEvent) error {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Printf("Failed to post the message: %v, %v", URL, err)
 		return err
 	}
 	defer resp.Body.Close()
 	log.Printf("response Status: %s", resp.Status)
-	body, _ := ioutil.ReadAll(resp.Body)
-	log.Printf("response Body: %s", string(body))
 	return nil
 }
 

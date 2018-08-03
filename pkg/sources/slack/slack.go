@@ -47,14 +47,16 @@ const (
 )
 
 type SlackEventSource struct {
-	// kubeclientset is a standard kubernetes clientset
-	kubeclientset    kubernetes.Interface
+	// kubeclientset is a standard kubernetes clientset.
+	kubeclientset kubernetes.Interface
+	// servingclientset is a standard serving.knative.dev clientset.
 	servingclientset servingclientset.Interface
-	image            string
-	// namespace where the feed is created
+	// image is the container image used as the receive adapter.
+	image string
+	// namespace where the feed is created.
 	feedNamespace string
 	// serviceAccount that the container runs as. Launches Receive Adapter with the
-	// same Service Account
+	// same Service Account.
 	feedServiceAccountName string
 }
 
@@ -143,10 +145,7 @@ type parameters struct {
 
 func main() {
 	flag.Parse()
-
 	flag.Lookup("logtostderr").Value.Set("true")
-
-	log.Printf("Starting up the main slack!")
 
 	decodedParameters, _ := base64.StdEncoding.DecodeString(os.Getenv(sources.EventSourceParametersKey))
 

@@ -17,6 +17,7 @@ const (
 	// Environment variable containing the Slack App token.
 	envSlackSecret = "SLACK_SECRET"
 
+	// Environment variable containg a format string for the message to send to Slack.
 	envMessageFormat = "MESSAGE_FORMAT"
 
 	// Subtype for slack messages that are sent by Bots. See
@@ -29,13 +30,11 @@ type SlackResponderCredential struct {
 }
 
 type slackResponder struct {
-	api *slack.Client
+	api           *slack.Client
 	messageFormat string
 }
 
 func (s *slackResponder) handleRequest(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Inside slack responder event handler")
-
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(r.Body)
 	body := buf.String()
@@ -79,13 +78,13 @@ func (s *slackResponder) handleRequest(w http.ResponseWriter, r *http.Request) {
 func main() {
 	flag.Parse()
 
-	log.Printf("Starting slack receive adapter web server on port 8080")
+	log.Printf("Starting slack responder on port 8080")
 
 	slackSecret := os.Getenv(envSlackSecret)
 	var slackCredential SlackResponderCredential
 	err := json.Unmarshal([]byte(slackSecret), &slackCredential)
 	if err != nil {
-		glog.Fatalf("Failed to unmarshal slack credentials: %s", err)
+		glog.Fatalf("Failed to unmarshal slack responder credentials: %s", err)
 		return
 	}
 
