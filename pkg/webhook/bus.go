@@ -19,13 +19,10 @@ package webhook
 import (
 	"context"
 	"errors"
-	"fmt"
-	"strings"
 
 	"github.com/golang/glog"
 	"github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	"github.com/mattbaird/jsonpatch"
-	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 var (
@@ -46,25 +43,11 @@ func ValidateBus(ctx context.Context) ResourceCallback {
 }
 
 func validateBus(old, new v1alpha1.GenericBus) error {
-	if new.GetSpec().Parameters != nil {
-		if new.GetSpec().Parameters.Channel != nil {
-			for _, p := range *new.GetSpec().Parameters.Channel {
-				errs := validation.IsConfigMapKey(p.Name)
-				if len(errs) > 0 {
-					return fmt.Errorf("invalid parameter name Spec.Parameters.Channel.%s: %s", p.Name,
-						strings.Join(errs, ", "))
-				}
-			}
-		}
-		if new.GetSpec().Parameters.Subscription != nil {
-			for _, p := range *new.GetSpec().Parameters.Subscription {
-				errs := validation.IsConfigMapKey(p.Name)
-				if len(errs) > 0 {
-					return fmt.Errorf("invalid parameter name Spec.Parameters.Subscription.%s: %s", p.Name,
-						strings.Join(errs, ", "))
-				}
-			}
-		}
+	if err := new.Validate(); err != nil {
+		return err
+	}
+	if err := new.CheckImmutableFields(old); err != nil {
+		return err
 	}
 	return nil
 }
