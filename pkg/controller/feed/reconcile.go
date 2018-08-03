@@ -423,12 +423,9 @@ func (r *reconciler) fetchParametersFromSource(namespace string, parametersFrom 
 			return nil, err
 		}
 
-		p, err := unmarshalJSON(data)
-		if err != nil {
-			return nil, err
+		if err := json.Unmarshal(data, &params); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal parameters as JSON object: %v", err)
 		}
-		params = p
-
 	}
 	return params, nil
 }
@@ -442,16 +439,6 @@ func (r *reconciler) fetchSecretKeyValue(namespace string, secretKeyRef *feedsv1
 		return nil, err
 	}
 	return secret.Data[secretKeyRef.Key], nil
-}
-
-// unmarshalJSON is a helper function for unmarshaling string-keyed maps from
-// JSON.
-func unmarshalJSON(in []byte) (map[string]interface{}, error) {
-	parameters := make(map[string]interface{})
-	if err := json.Unmarshal(in, &parameters); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal parameters as JSON object: %v", err)
-	}
-	return parameters, nil
 }
 
 // createJob creates a Job for the given Feed based on its current state,

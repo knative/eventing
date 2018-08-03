@@ -20,8 +20,6 @@ spec:
   replicas: 1
   template:
     metadata:
-      annotations:
-        sidecar.istio.io/inject: "false"
       labels:
         app: eventing-controller
     spec:
@@ -33,3 +31,10 @@ spec:
           "-logtostderr",
           "-stderrthreshold", "INFO",
         ]
+        volumeMounts:
+          - name: config-logging
+            mountPath: /etc/config-logging
+      volumes:
+        - name: config-logging
+          configMap:
+            name: config-logging
