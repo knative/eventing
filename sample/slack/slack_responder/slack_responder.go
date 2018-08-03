@@ -17,6 +17,8 @@ const (
 	// Environment variable containing the Slack App token.
 	envSlackSecret = "SLACK_SECRET"
 
+	envMessageFormat = "MESSAGE_FORMAT"
+
 	// Subtype for slack messages that are sent by Bots. See
 	// https://api.slack.com/events/message/bot_message.
 	botMessage = "bot_message"
@@ -56,7 +58,7 @@ func (s *slackResponder) handleRequest(w http.ResponseWriter, r *http.Request) {
 	switch ev := innerEvent.Data.(type) {
 	case *slackevents.MessageEvent:
 		if ev.SubType == botMessage {
-			// Don't respond to bots, or we might get an infinite loop.
+			// Don't respond to bots, or this will respond to itself, leading to an infinite loop.
 			w.WriteHeader(http.StatusOK)
 			return
 		}
@@ -87,7 +89,9 @@ func main() {
 		return
 	}
 
-	slackResponder := slackResponder{api: slack.New(slackCredential.BotToken), messageFormat:"You said: %v"}
+	messageFormat := os.Getenv(envMessageFormat)
+
+	slackResponder := slackResponder{api: slack.New(slackCredential.BotToken), messageFormat: messageFormat}
 
 	http.HandleFunc("/", slackResponder.handleRequest)
 	http.ListenAndServe(":8080", nil)
