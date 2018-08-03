@@ -121,8 +121,6 @@ kubectl get revisions -o yaml
 
 The `Flow` will accept the Webhook calls from GitHub and pass them to the _legit_ service.
 
-The `Flow` will configure a Receive Adapter pod from the `
-
 You can inspect those resources with the following `kubectl` commands:
 
 ```shell
@@ -169,7 +167,7 @@ Then create the secret so that you can see changes:
 ```
 
 Then create a PR for the repo you configured the webhook for, and you'll see that the Title
-will be modified with the suffix '(I buy it)'
+will be modified with the suffix '(looks pretty legit)'
 
 ## Cleaning up
 
