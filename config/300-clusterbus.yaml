@@ -16,7 +16,6 @@ kind: CustomResourceDefinition
 metadata:
   name: clusterbuses.channels.knative.dev
 spec:
-  scope: Cluster
   group: channels.knative.dev
   version: v1alpha1
   names:
@@ -26,4 +25,8 @@ spec:
     categories:
     - all
     - knative
+    - kbus
     - eventing
+    shortNames:
+    - cbus
+  scope: Cluster

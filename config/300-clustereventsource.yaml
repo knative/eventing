@@ -25,5 +25,6 @@ spec:
     categories:
     - all
     - knative
+    - keventsource
     - eventing
   scope: Cluster

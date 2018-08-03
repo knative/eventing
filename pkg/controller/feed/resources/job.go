@@ -184,7 +184,7 @@ func makePodTemplate(feed *feedsv1alpha1.Feed, source *feedsv1alpha1.EventSource
 				corev1.Container{
 					Name:            "feedlet",
 					Image:           source.Spec.Image,
-					ImagePullPolicy: "Always",
+					ImagePullPolicy: corev1.PullIfNotPresent,
 					Env: []corev1.EnvVar{
 						{
 							Name:  string(EnvVarOperation),

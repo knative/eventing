@@ -16,7 +16,6 @@ kind: CustomResourceDefinition
 metadata:
   name: subscriptions.channels.knative.dev
 spec:
-  scope: Namespaced
   group: channels.knative.dev
   version: v1alpha1
   names:
@@ -27,3 +26,6 @@ spec:
     - all
     - knative
     - eventing
+    shortNames:
+    - sub
+  scope: Namespaced
