@@ -20,9 +20,9 @@ metadata:
 spec:
   serviceAccountName: feed-sa
   trigger:
-    eventType: slack.foobar.event-type
+    eventType: dev.knative.slack.event
     resource: keventing-app # Fill this in with the name/nickname of your slack App.
-    service: slack.foobar.source # Must match the eventsources.feeds.knative.dev's name.
+    service: slack # Must match the eventsources.feeds.knative.dev's name.
     parameters:
       secretName: slack-secret
       secretKey: slackCredentials

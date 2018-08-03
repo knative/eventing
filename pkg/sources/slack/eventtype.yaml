@@ -15,8 +15,8 @@
 apiVersion: feeds.knative.dev/v1alpha1
 kind: EventType
 metadata:
-  name: slack.foobar.event-type
+  name: dev.knative.slack.event
   namespace: default
 spec:
-  eventSource: slack.foobar.source
+  eventSource: slack
   description: Event from Slack.

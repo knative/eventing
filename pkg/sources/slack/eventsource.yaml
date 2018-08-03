@@ -15,10 +15,10 @@
 apiVersion: feeds.knative.dev/v1alpha1
 kind: EventSource
 metadata:
-  name: slack.foobar.source
+  name: slack
   namespace: default
 spec:
-  source: slack.foobar.source # Must match this resource's name.
+  source: slack # Must match this resource's name.
   image: github.com/knative/eventing/pkg/sources/slack
   parameters:
     image: github.com/knative/eventing/pkg/sources/slack/receive_adapter

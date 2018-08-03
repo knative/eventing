@@ -86,10 +86,10 @@ func main() {
 func postMessage(target string, m *slackevents.EventsAPICallbackEvent) error {
 	ctx := event.EventContext{
 		CloudEventsVersion: event.CloudEventsVersion,
-		EventType:          "slack.foobar.event_type",
+		EventType:          "dev.knative.slack.event",
 		EventID:            m.EventID,
 		EventTime:          parseTime(m.EventTime),
-		Source:             "slack.foobar.hardcoded_source",
+		Source:             m.APIAppID,
 	}
 	URL := fmt.Sprintf("http://%s/", target)
 	req, err := event.Binary.NewRequest(URL, m, ctx)
