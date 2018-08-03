@@ -169,6 +169,7 @@ func (h MonitorEventHandlerFuncs) onUnprovision(channel *channelsv1alpha1.Channe
 		} else {
 			monitor.recorder.Event(channel, corev1.EventTypeNormal, successSynced, "Channel unprovisioned successfully")
 		}
+		// skip updating status conditions since the channel was deleted
 		return err
 	}
 	return nil
@@ -208,6 +209,7 @@ func (h MonitorEventHandlerFuncs) onUnsubscribe(subscription *channelsv1alpha1.S
 		} else {
 			monitor.recorder.Event(subscription, corev1.EventTypeNormal, successSynced, "Unsubscribed successfully")
 		}
+		// skip updating status conditions since the subscription was deleted
 		return err
 	}
 	return nil
