@@ -27,6 +27,5 @@ spec:
     - knative
     - eventing
     shortNames:
-    - ksub
     - sub
   scope: Namespaced

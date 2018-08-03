@@ -25,7 +25,6 @@ spec:
     categories:
     - all
     - knative
+    - keventtype
     - eventing
-    shortNames:
-    - kcet
   scope: Cluster

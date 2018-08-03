@@ -25,7 +25,6 @@ spec:
     categories:
     - all
     - knative
-    - eventing
-    shortNames:
     - kbus
+    - eventing
   scope: Namespaced
