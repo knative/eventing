@@ -1,12 +1,36 @@
 # Slack
 
-This example creates a Slack event source. 
+This example creates a Slack event source.
 
 ## Prerequisites
 
-### Create a Slack App
+### Slack App
 
-1. foobar
+We have to create and configure a Slack App.
+
+#### Create a Slack App
+
+1.  Go to <https://api.slack.com/slack-apps>.
+
+1.  Click 'Create a Slack App'.
+
+1.  Follow the instructions to create the Slack App in a Slack Workspace.
+
+#### Configure a Slack App
+
+1.  Go the Slack App's 'OAuth & Permissions' settings page.
+
+1.  Add the `channels:history` scope.
+
+1.  Enable events by going to the 'Event Subscription' settings page and
+    toggling 'Enable Events' to On.
+
+1.  Add the `message.channels` Workspace Event by going to the 'Event
+    Subscription' settings page and clicking 'Add Workspace Event', then
+    selecting `message.channels`.
+
+`Note: We have not yet setup a Request URL, we will do that later because its
+name changes based on the Flow properties.`
 
 ### Install Knative
 
@@ -14,16 +38,30 @@ This example creates a Slack event source.
 
 1.  [Start Knative Serving](../../README.md#start-knative).
 
-1.  [Start Knative Eventing](../../README.md#start-eventing)
-
-1.  Create a cluster bus. You **must** change the Kind to ClusterBus in
-    stub-sub.yaml file.
-
-    ```shell
-    ko apply -f config/buses/stub/stub-bus.yaml
-    ```
+1.  [Start Knative Eventing](../../README.md#start-eventing).
 
 ## Setup
+
+### Cluster Bus
+
+1.  Create a cluster bus.
+
+    1.  Edit `config/buses/stub/stub-bus.yaml`, changing the kind from `Bus` to
+        `ClusterBus`.
+
+    1.  Install the bus.
+
+        ```shell
+        ko apply -f config/buses/stub/stub-bus.yaml
+        ```
+
+### DNS
+
+Because Slack will be sending events to us, we need to have a valid DNS entry
+for them to call. Follow these
+[instuctions](https://github.com/knative/docs/blob/master/serving/using-a-custom-domain.md)
+to setup a custom domain. You can skip the 'Deploy an Application' and 'Local
+DNS setup' sections.
 
 ### Service account
 
@@ -31,11 +69,11 @@ Because the Receive Adapter needs to run a service, you need to specify what
 Service Account should be used in the target namespace for running the Receive
 Adapter. Flow.Spec has a field that allows you to specify this. By default it
 uses "default" for feed which typically has no privileges, but this feed
-requires standing up a service, so you need to either use an existing
-Service Account with appropriate privileges or create a new one. This example
-creates a Service Account and grants it cluster admin access. You probably
-wouldn't want to do that in production settings, but for this example it will
-suffice just fine.
+requires standing up a Knative `Service`, so you need to either use an existing Service
+Account with appropriate privileges or create a new one. This example creates a
+Service Account and grants it cluster admin access. You probably wouldn't want
+to do that in production settings, but for this example it will suffice just
+fine.
 
 1.  Create and give permissions to the service account.
 
@@ -50,24 +88,24 @@ suffice just fine.
     ```shell
     ko apply -f pkg/sources/slack/eventsource.yaml
     ```
-    
+
 1.  Install the EventType.
 
     ```shell
     ko apply -f pkg/sources/slack/eventtype.yaml
     ```
-    
+
 ### Slack Secrets
 
 In order to verify the requests come from Slack, we need to save our app's
 verification token into a secret.
 
-1.  Find your Slack App's verification token on the 'Basic Information' page of
-    your Slack App's settings.
-    
-1.  Edit `sample/slack/slacksecret.yaml`, replacing "<YOUR PERSONAL TOKEN FROM
-    SLACK>" with the actual token found in step 1.
-    
+1.  Find your Slack App's verification token on the 'Basic Information' settings
+    page of your Slack App.
+
+1.  Edit `sample/slack/slacksecret.yaml`, replacing
+    "<YOUR PERSONAL TOKEN FROM SLACK>" with the actual token found in step 1.
+
 1.  Create the secret.
 
     ```shell
@@ -81,7 +119,7 @@ things in response to the events.
 
 *   [Message Dumper](message_dumper/README.md) - A simple program that writes
     received messages to standard out.
-    
+
 *   [Slack Responder](slack_responder/README.md) - Echoes messages sent in
     public channels back to those channels.
 
@@ -89,7 +127,7 @@ things in response to the events.
 
 1.  Clean up anything unique to either sample, by following the sample's cleanup
     instructions first.
-    
+
 1.  Delete the secret.
 
     ```shell
@@ -102,7 +140,7 @@ things in response to the events.
     ko delete -f pkg/sources/slack/eventsource.yaml
     ko delete -f pkg/sources/slack/eventype.yaml
     ```
-    
+
 1.  Delete the service account and its permissions.
 
     ```shell
