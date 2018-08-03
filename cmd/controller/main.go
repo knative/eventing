@@ -36,8 +36,8 @@ import (
 	"github.com/knative/eventing/pkg/controller/channel"
 	"github.com/knative/eventing/pkg/controller/clusterbus"
 	"github.com/knative/eventing/pkg/signals"
-	istioclientset "github.com/knative/pkg/client/clientset/versioned"
-	istioinformers "github.com/knative/pkg/client/informers/externalversions"
+	sharedclientset "github.com/knative/pkg/client/clientset/versioned"
+	sharedinformers "github.com/knative/pkg/client/informers/externalversions"
 
 	"log"
 
@@ -97,9 +97,9 @@ func main() {
 		logger.Fatalf("Error building clientset: %s", err.Error())
 	}
 
-	istioClient, err := istioclientset.NewForConfig(cfg)
+	sharedClient, err := sharedclientset.NewForConfig(cfg)
 	if err != nil {
-		logger.Fatalf("Error building istio clientset: %s", err.Error())
+		logger.Fatalf("Error building shared clientset: %s", err.Error())
 	}
 
 	// TODO: Rip this out from all the controllers since we can get it
@@ -113,7 +113,7 @@ func main() {
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
-	istioInformerFactory := istioinformers.NewSharedInformerFactory(istioClient, time.Second*30)
+	sharedInformerFactory := sharedinformers.NewSharedInformerFactory(sharedClient, time.Second*30)
 
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewDefaultWatcher(kubeClient, system.Namespace)
@@ -134,12 +134,12 @@ func main() {
 	controllers := make([]controller.Interface, 0, len(ctors))
 	for _, ctor := range ctors {
 		controllers = append(controllers,
-			ctor(kubeClient, client, istioClient, restConfig, kubeInformerFactory, informerFactory, istioInformerFactory))
+			ctor(kubeClient, client, sharedClient, restConfig, kubeInformerFactory, informerFactory, sharedInformerFactory))
 	}
 
 	go kubeInformerFactory.Start(stopCh)
 	go informerFactory.Start(stopCh)
-	go istioInformerFactory.Start(stopCh)
+	go sharedInformerFactory.Start(stopCh)
 
 	// Start all of the controllers.
 	for _, ctrlr := range controllers {

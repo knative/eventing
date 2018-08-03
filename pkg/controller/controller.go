@@ -21,8 +21,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	istioclientset "github.com/knative/pkg/client/clientset/versioned"
-	istioinformers "github.com/knative/pkg/client/informers/externalversions"
+	sharedclientset "github.com/knative/pkg/client/clientset/versioned"
+	sharedinformers "github.com/knative/pkg/client/informers/externalversions"
 
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
@@ -35,9 +35,9 @@ type Interface interface {
 type Constructor func(
 	kubernetes.Interface,
 	clientset.Interface,
-	istioclientset.Interface,
+	sharedclientset.Interface,
 	*rest.Config,
 	kubeinformers.SharedInformerFactory,
 	informers.SharedInformerFactory,
-	istioinformers.SharedInformerFactory,
+	sharedinformers.SharedInformerFactory,
 ) Interface

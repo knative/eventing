@@ -214,8 +214,7 @@
     "logging",
     "logging/logkey"
   ]
-  revision = "2dbc2f9b7f4d77f6f907a0b2f14ce3b30f895157"
-  source = "https://github.com/scothis/pkg.git"
+  revision = "a088fee6227f7c6842ce7f7406cb75af8a6e0643"
 
 [[projects]]
   branch = "master"
@@ -854,6 +853,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4e0a266c43909a92487749f2ef9cc7250942574848751c602e237e980b778d05"
+  inputs-digest = "56aa94746c11a53bad64aefaa06bb0223f08f111bb8030ebc1a9ae4f1b3d7141"
   solver-name = "gps-cdcl"
   solver-version = 1

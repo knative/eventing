@@ -44,8 +44,8 @@ import (
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	listers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
 	"github.com/knative/eventing/pkg/system"
-	istioclientset "github.com/knative/pkg/client/clientset/versioned"
-	istioinformers "github.com/knative/pkg/client/informers/externalversions"
+	sharedclientset "github.com/knative/pkg/client/clientset/versioned"
+	sharedinformers "github.com/knative/pkg/client/informers/externalversions"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	"github.com/knative/eventing/pkg/controller/util"
@@ -91,8 +91,8 @@ type Controller struct {
 	kubeclientset kubernetes.Interface
 	// channelclientset is a clientset for our own API group
 	channelclientset clientset.Interface
-	// istioclientset is a clientset for istio API groups
-	istioclientset istioclientset.Interface
+	// sharedclientset is a clientset for shared API groups
+	sharedclientset sharedclientset.Interface
 
 	virtualservicesLister istiolisters.VirtualServiceLister
 	virtualservicesSynced cache.InformerSynced
@@ -116,14 +116,14 @@ type Controller struct {
 func NewController(
 	kubeclientset kubernetes.Interface,
 	channelclientset clientset.Interface,
-	istioclientset istioclientset.Interface,
+	sharedclientset sharedclientset.Interface,
 	restConfig *rest.Config,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	channelInformerFactory informers.SharedInformerFactory,
-	istioInformerFactory istioinformers.SharedInformerFactory) controller.Interface {
+	sharedInformerFactory sharedinformers.SharedInformerFactory) controller.Interface {
 
 	// obtain references to shared index informers for the Service and Channel types.
-	virtualserviceInformer := istioInformerFactory.Networking().V1alpha3().VirtualServices()
+	virtualserviceInformer := sharedInformerFactory.Networking().V1alpha3().VirtualServices()
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
 	channelInformer := channelInformerFactory.Channels().V1alpha1().Channels()
 
@@ -360,7 +360,7 @@ func (c *Controller) syncChannelVirtualService(channel *channelsv1alpha1.Channel
 
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
-		virtualservice, err = c.istioclientset.NetworkingV1alpha3().VirtualServices(channel.Namespace).Create(newVirtualService(channel))
+		virtualservice, err = c.sharedclientset.NetworkingV1alpha3().VirtualServices(channel.Namespace).Create(newVirtualService(channel))
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can

@@ -48,8 +48,8 @@ import (
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	listers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
 	"github.com/knative/eventing/pkg/system"
-	istioclientset "github.com/knative/pkg/client/clientset/versioned"
-	istioinformers "github.com/knative/pkg/client/informers/externalversions"
+	sharedclientset "github.com/knative/pkg/client/clientset/versioned"
+	sharedinformers "github.com/knative/pkg/client/informers/externalversions"
 )
 
 const (
@@ -101,11 +101,11 @@ type Controller struct {
 func NewController(
 	kubeclientset kubernetes.Interface,
 	clusterbusclientset clientset.Interface,
-	istioclientset istioclientset.Interface,
+	sharedclientset sharedclientset.Interface,
 	restConfig *rest.Config,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	clusterBusInformerFactory informers.SharedInformerFactory,
-	istioInformerFactory istioinformers.SharedInformerFactory) controller.Interface {
+	sharedInformerFactory sharedinformers.SharedInformerFactory) controller.Interface {
 
 	// obtain references to shared index informers for the ClusterBus, Deployment and Service
 	// types.
