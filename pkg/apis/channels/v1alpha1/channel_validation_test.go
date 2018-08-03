@@ -42,20 +42,20 @@ func TestChannelSpecValidation(t *testing.T) {
 	}, {
 		name: "empty",
 		c:    &ChannelSpec{},
-		want: ErrMutuallyExclusiveFields("bus", "clusterBus"),
+		want: apis.ErrMissingOneOf("bus", "clusterBus"),
 	}, {
 		name: "mutually exclusive missing",
 		c: &ChannelSpec{
 			Arguments: &[]Argument{{Name: "foo", Value: "bar"}},
 		},
-		want: ErrMutuallyExclusiveFields("bus", "clusterBus"),
+		want: apis.ErrMissingOneOf("bus", "clusterBus"),
 	}, {
 		name: "mutually exclusive both",
 		c: &ChannelSpec{
 			Bus:        "foo",
 			ClusterBus: "bar",
 		},
-		want: ErrMutuallyExclusiveFields("bus", "clusterBus"),
+		want: apis.ErrMultipleOneOf("bus", "clusterBus"),
 	}}
 
 	for _, test := range tests {
