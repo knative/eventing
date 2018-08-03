@@ -75,6 +75,21 @@ var testCases = []controllertesting.TestCase{
 		},
 	},
 	{
+		Name: "new feed with secret ref: secret gets to job",
+		InitialState: []runtime.Object{
+			getEventSource(),
+			getEventType(),
+			getFeedSecret(),
+			getNewSecretFeed(),
+		},
+		ReconcileKey: "test/test-feed",
+		WantPresent: []runtime.Object{
+			getSecretStartInProgressFeed(),
+			getNewSecretStartJob(),
+			//TODO job created event
+		},
+	},
+	{
 		Name: "in progress feed with existing job: both unchanged",
 		InitialState: []runtime.Object{
 			getEventSource(),
@@ -320,31 +335,42 @@ func getNewFeed() *feedsv1alpha1.Feed {
 	}
 }
 
-func getFeedFailingWithMissingEventSource() *feedsv1alpha1.Feed {
-	return &feedsv1alpha1.Feed{
-		TypeMeta:   feedType(),
-		ObjectMeta: om("test", "test-feed"),
-		Spec: feedsv1alpha1.FeedSpec{
-			Action: feedsv1alpha1.FeedAction{
-				DNSName: targetDNS,
-			},
-			Trigger: feedsv1alpha1.EventTrigger{
-				EventType:      getEventType().Name,
-				Resource:       "",
-				Service:        "",
-				Parameters:     nil,
-				ParametersFrom: nil,
-			},
-		},
-		Status: feedsv1alpha1.FeedStatus{
-			Conditions: []feedsv1alpha1.FeedCondition{{
-				Type:    feedsv1alpha1.FeedConditionDependenciesSatisfied,
-				Status:  corev1.ConditionFalse,
-				Reason:  "TestGenerated",
-				Message: "Test generated",
-			}},
+func getFeedSecret() *corev1.Secret {
+	secretMap := map[string]interface{}{"foo": "bar"}
+	data, err := json.Marshal(secretMap)
+	if err != nil {
+		panic(err)
+	}
+	return &corev1.Secret{
+		ObjectMeta: om("test", "feed-secret"),
+		Data: map[string][]byte{
+			"test-secret-key": data,
 		},
 	}
+
+}
+
+func getNewSecretFeed() *feedsv1alpha1.Feed {
+	feed := getNewFeed()
+	feed.Spec.Trigger.ParametersFrom = []feedsv1alpha1.ParametersFromSource{{
+		SecretKeyRef: &feedsv1alpha1.SecretKeyReference{
+			Name: getFeedSecret().Name,
+			Key:  "test-secret-key",
+		},
+	}}
+	return feed
+}
+
+func getFeedFailingWithMissingEventSource() *feedsv1alpha1.Feed {
+	feed := getNewFeed()
+	feed.Status.InitializeConditions()
+	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+		Type:    feedsv1alpha1.FeedConditionDependenciesSatisfied,
+		Status:  corev1.ConditionFalse,
+		Reason:  "TestGenerated",
+		Message: "test generated",
+	})
+	return feed
 }
 
 func getStartInProgressFeed() *feedsv1alpha1.Feed {
@@ -366,6 +392,17 @@ func getStartInProgressFeed() *feedsv1alpha1.Feed {
 		Message: "start job in progress",
 	})
 
+	return feed
+}
+
+func getSecretStartInProgressFeed() *feedsv1alpha1.Feed {
+	feed := getStartInProgressFeed()
+	feed.Spec.Trigger.ParametersFrom = []feedsv1alpha1.ParametersFromSource{{
+		SecretKeyRef: &feedsv1alpha1.SecretKeyReference{
+			Name: getFeedSecret().Name,
+			Key:  "test-secret-key",
+		},
+	}}
 	return feed
 }
 
@@ -497,6 +534,29 @@ func getNewStartJob() *batchv1.Job {
 		},
 		Status: batchv1.JobStatus{},
 	}
+}
+
+func getNewSecretStartJob() *batchv1.Job {
+	job := getNewStartJob()
+	envVars := job.Spec.Template.Spec.Containers[0].Env
+	var newEnvVars []corev1.EnvVar
+	for _, envVar := range envVars {
+		if envVar.Name == string(resources.EnvVarTrigger) {
+			newEnvVars = append(newEnvVars, corev1.EnvVar{
+				Name: string(resources.EnvVarTrigger),
+				Value: base64.StdEncoding.EncodeToString(bytesOrDie(json.Marshal(
+					sources.EventTrigger{
+						EventType:  "test-et",
+						Parameters: map[string]interface{}{"foo": "bar"},
+					},
+				))),
+			})
+		} else {
+			newEnvVars = append(newEnvVars, envVar)
+		}
+	}
+	job.Spec.Template.Spec.Containers[0].Env = newEnvVars
+	return job
 }
 
 func getInProgressStartFeedJob() *batchv1.Job {

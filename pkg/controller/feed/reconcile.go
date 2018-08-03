@@ -418,12 +418,9 @@ func (r *reconciler) fetchParametersFromSource(namespace string, parametersFrom 
 			return nil, err
 		}
 
-		p, err := unmarshalJSON(data)
-		if err != nil {
-			return nil, err
+		if err := json.Unmarshal(data, &params); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal parameters as JSON object: %v", err)
 		}
-		params = p
-
 	}
 	return params, nil
 }
@@ -435,14 +432,6 @@ func (r *reconciler) fetchSecretKeyValue(namespace string, secretKeyRef *feedsv1
 		return nil, err
 	}
 	return secret.Data[secretKeyRef.Key], nil
-}
-
-func unmarshalJSON(in []byte) (map[string]interface{}, error) {
-	parameters := make(map[string]interface{})
-	if err := json.Unmarshal(in, &parameters); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal parameters as JSON object: %v", err)
-	}
-	return parameters, nil
 }
 
 func (r *reconciler) createJob(feed *feedsv1alpha1.Feed, es *feedsv1alpha1.EventSource, et *feedsv1alpha1.EventType) (*batchv1.Job, error) {
