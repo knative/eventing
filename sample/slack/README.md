@@ -34,11 +34,10 @@ name changes based on the Flow properties.`
 
 ### Install Knative
 
+There needs to be a Kubernetes cluster with Knative Serving and Knative Eventing
+installed.
+
 1.  [Setup your development environment](../../DEVELOPMENT.md#getting-started).
-
-1.  [Start Knative Serving](../../README.md#start-knative).
-
-1.  [Start Knative Eventing](../../README.md#start-eventing).
 
 ## Setup
 
