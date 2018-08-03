@@ -262,9 +262,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:142c93e2290b002f67a0540ceaf3f94acf691e9fbd202fe7cb5429f80a5f5c0b"
+  digest = "1:5ffabe260419381651677d406088b43b6038aa1200d01432eaa53c0e03ab4212"
   name = "github.com/knative/pkg"
   packages = [
+    "apis",
     "configmap",
     "logging",
     "logging/logkey",
@@ -1018,6 +1019,7 @@
     "github.com/google/go-github/github",
     "github.com/google/uuid",
     "github.com/knative/build/pkg/apis/build/v1alpha1",
+    "github.com/knative/pkg/apis",
     "github.com/knative/pkg/configmap",
     "github.com/knative/pkg/logging",
     "github.com/knative/pkg/logging/logkey",
