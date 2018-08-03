@@ -1,7 +1,7 @@
 # Slack - Message Dumper
 
-This is a simple program which simply writes any messages received to standard
-out, to be viewed in logs. It is run as a Knative `Service`.
+This is a simple program which writes any messages received to standard out, to
+be viewed in logs. It is run as a Knative `Service`.
 
 ## Prerequisites
 
