@@ -69,7 +69,8 @@ func RemoveChannelCondition(status *v1alpha1.ChannelStatus, condType v1alpha1.Ch
 // given all other sub-conditions.
 func ConsolidateChannelCondition(status *v1alpha1.ChannelStatus) {
 	subConditionsTypes := []v1alpha1.ChannelConditionType{
-		v1alpha1.ChannelProvisioned,
+		// TODO restore ChannelProvisioned condition with issue #285
+		// v1alpha1.ChannelProvisioned,
 		v1alpha1.ChannelRoutable,
 		v1alpha1.ChannelServiceable,
 	}
