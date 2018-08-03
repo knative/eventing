@@ -289,12 +289,3 @@ func (r *reconciler) createFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv
 	}
 	return feed, nil
 }
-
-func (r *reconciler) NewControllerRef(flow *v1alpha1.Flow) *metav1.OwnerReference {
-	blockOwnerDeletion := false
-	isController := true
-	revRef := metav1.NewControllerRef(flow, flowControllerKind)
-	revRef.BlockOwnerDeletion = &blockOwnerDeletion
-	revRef.Controller = &isController
-	return revRef
-}
