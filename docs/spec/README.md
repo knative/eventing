@@ -15,9 +15,9 @@ Docs in this directory:
 
 * [Motivation and goals](motivation.md)
 * [Resource type overview](overview.md)
-<!-- * [Knative Eventing API spec](spec.md) -->
-<!-- * [Error conditions and reporting](errors.md) -->
-<!-- * [Sample API usage](normative_examples.md) -->
+<!-- TODO(n3wscott): * [Knative Eventing API spec](spec.md) -->
+<!-- TODO(n3wscott): * [Error conditions and reporting](errors.md) -->
+<!-- TODO(n3wscott): * [Sample API usage](normative_examples.md) -->
 
 <!-- TODO(evankanderson):
 `This may be the right place, but it seems like it would be useful to include a

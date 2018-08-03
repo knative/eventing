@@ -12,17 +12,13 @@ digraph G {
   subgraph cluster_A {
     Source -> EventType [dir=back];
     color=white; 
-    {rank = same; Source; EventType}
+    {rank = same; Source; EventType;}
   }
   
   subgraph cluster_C {
     Feed;
-    subgraph cluster_B {
-      Channel
-      Subscription;
-      label = "Bus";
-      color=black;
-    }
+    Channel
+    Subscription;
     label = "Flow";
   }
   EventType -> Feed [dir=back];
@@ -30,6 +26,8 @@ digraph G {
 
   Subscription -> Service;
   Channel -> Subscription [dir=back];
+
+  Bus -> Channel [dir=back];
 
   {rank = max; Service;}
 }

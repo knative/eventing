@@ -1,9 +1,27 @@
 # Motivation
 
-Knative Eventing implements the common components for an event delivery
-ecosystem. These common components enable producing and consuming events
-adhering to the [CloudEvents
-Specification](https://github.com/cloudevents/spec), in a decoupled way.
+The goal of Knative Eventing is to define common, composable primitives to
+enable late-binding event sources and event consumers.
+
+<!-- TODO(n3wscott): [Why late-binding] -->
+
+Knative Eventing has following principles:
+
+1. Services are loosely coupled during development and deployed independently
+  on a variety of platforms (Kubernetes, VMs, SaaS or FaaS).
+
+1. A producer can generate events before a consumer is listening, and a
+  consumer can express an interest in an event or class of events that is not
+  yet being produced.
+
+1. Services can be connected to create new applications
+  a. without modifying producer or consumer.
+  b. with the ability to select a specific subset of events from a particular
+  producer
+
+These primitives enable producing and consuming events adhering to the
+[CloudEvents Specification](https://github.com/cloudevents/spec), in a
+decoupled way.
 
 Kubernetes has no primitives related to event processing, yet this is an
 essential component in serverless workloads. Eventing introduces high-level
