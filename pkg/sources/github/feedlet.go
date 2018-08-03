@@ -23,7 +23,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/golang/glog"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -41,6 +40,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	"log"
 	"time"
 )
 
@@ -98,7 +98,7 @@ func NewGithubEventSource(kubeclientset kubernetes.Interface, servingclientset s
 
 // TODO(n3wscott): Add a timeout for StopFeed.
 func (t *GithubEventSource) StopFeed(trigger sources.EventTrigger, feedContext sources.FeedContext) error {
-	glog.Infof("stopping github webhook feed with context %+v", feedContext)
+	log.Printf("stopping github webhook feed with context %+v", feedContext)
 
 	serviceName := receiveAdapterName(trigger.Resource)
 	t.deleteReceiveAdapter(t.feedNamespace, serviceName)
@@ -109,13 +109,13 @@ func (t *GithubEventSource) StopFeed(trigger sources.EventTrigger, feedContext s
 
 	webhookID, err := stringFrom(feedContext.Context, webhookIDKey)
 	if err != nil {
-		glog.Errorf("Failed to get webhook id from context: %v; bailing...", err)
+		log.Printf("Error: Failed to get webhook id from context: %v; bailing...", err)
 		return nil
 	}
 
 	accessToken, err := stringFrom(trigger.Parameters, accessTokenKey)
 	if err != nil {
-		glog.Errorf("Failed to get access token from trigger parameters: %v; bailing...", err)
+		log.Printf("Error: Failed to get access token from trigger parameters: %v; bailing...", err)
 		return nil
 	}
 
@@ -128,20 +128,20 @@ func (t *GithubEventSource) StopFeed(trigger sources.EventTrigger, feedContext s
 
 	id, err := strconv.ParseInt(webhookID, 10, 64)
 	if err != nil {
-		glog.Errorf("failed to convert webhook %q to int64 : %s", webhookID, err)
+		log.Printf("Error:failed to convert webhook %q to int64 : %s", webhookID, err)
 		return err
 	}
 	_, err = client.Repositories.DeleteHook(ctx, owner, repo, id)
 	if err != nil {
 		if errResp, ok := err.(*ghclient.ErrorResponse); ok && errResp.Message == "Not Found" {
 			// If the webhook doesn't exist, nothing to do
-			glog.Errorf("webhook doesn't exist, nothing to delete.")
+			log.Printf("Error:webhook doesn't exist, nothing to delete.")
 			return nil
 		}
-		glog.Errorf("failed to delete the webhook: %v", err)
+		log.Printf("Error:failed to delete the webhook: %v", err)
 		return err
 	}
-	glog.Infof("deleted webhook %q successfully", webhookID)
+	log.Printf("deleted webhook %q successfully", webhookID)
 	return nil
 }
 
@@ -151,18 +151,18 @@ func (t *GithubEventSource) StartFeed(trigger sources.EventTrigger, target strin
 	// Create the Receive Adapter Service that will accept incoming requests from GitHub.
 	service, err := t.createReceiveAdapter(trigger, target)
 	if err != nil {
-		glog.Warningf("failed to create service: %v", err)
+		log.Printf("failed to create service: %v", err)
 		return nil, err
 	}
 
 	// TODO(n3wscott): look into using spew.
-	glog.Infof("created Service: %+v", service)
+	log.Printf("created Service: %+v", service)
 
 	// Start watching the Receive Adapter Service for it's updated domain name. This will be passed
 	// to GitHub as part of the webhook registration.
 	receiveAdaptorDomain, err := t.waitForServiceDomain(service.GetObjectMeta().GetName())
 	if err != nil {
-		glog.Infof("failed to get the service: %v", err)
+		log.Printf("failed to get the service: %v", err)
 	}
 
 	return t.createWebhook(trigger, receiveAdaptorDomain)
@@ -185,7 +185,7 @@ func (t *GithubEventSource) waitForServiceDomain(serviceName string) (string, er
 
 	w, err := sc.Watch(opts)
 	if err != nil {
-		glog.Infof("failed to create watch: %v", err)
+		log.Printf("failed to create watch: %v", err)
 		return "", err
 	}
 
@@ -193,7 +193,7 @@ func (t *GithubEventSource) waitForServiceDomain(serviceName string) (string, er
 	for {
 		event, more := <-eventChan
 		if !more {
-			glog.Infof("expected a Service object, but got %T", event.Object)
+			log.Printf("expected a Service object, but got %T", event.Object)
 			return "", fmt.Errorf("no more")
 		}
 		switch event.Type {
@@ -206,14 +206,14 @@ func (t *GithubEventSource) waitForServiceDomain(serviceName string) (string, er
 		case watch.Modified:
 			service, ok := event.Object.(*v1alpha1.Service)
 			if !ok {
-				glog.Infof("expected a Service object, but got %T", event.Object)
+				log.Printf("expected a Service object, but got %T", event.Object)
 				continue
 			}
 			if service.Name == serviceName {
 				status := service.Status
 				if status.Domain != "" {
 					w.Stop()
-					glog.Infof("got domain: %s", event.Object)
+					log.Printf("got domain: %s", event.Object)
 					return status.Domain, nil
 				}
 			}
@@ -237,12 +237,12 @@ func (t *GithubEventSource) createReceiveAdapter(trigger sources.EventTrigger, t
 	// First, check if service exists already.
 	if _, err := sc.Get(serviceName, metav1.GetOptions{}); err != nil {
 		if !apierrs.IsNotFound(err) {
-			glog.Infof("service.Get for %q failed: %s", serviceName, err)
+			log.Printf("service.Get for %q failed: %s", serviceName, err)
 			return nil, err
 		}
-		glog.Infof("service %q doesn't exist, creating", serviceName)
+		log.Printf("service %q doesn't exist, creating", serviceName)
 	} else {
-		glog.Infof("found existing service %q", serviceName)
+		log.Printf("found existing service %q", serviceName)
 		return nil, nil
 	}
 
@@ -259,7 +259,7 @@ func (t *GithubEventSource) createReceiveAdapter(trigger sources.EventTrigger, t
 	service := resources.MakeService(t.feedNamespace, serviceName, t.image, t.feedServiceAccountName, target, secretName, secretKey)
 	service, createErr := sc.Create(service)
 	if createErr != nil {
-		glog.Errorf("service failed: %s", createErr)
+		log.Printf("Error:service failed: %s", createErr)
 	}
 
 	return service, createErr
@@ -271,10 +271,10 @@ func (t *GithubEventSource) deleteReceiveAdapter(namespace string, serviceName s
 	// First, check if deployment exists already.
 	if _, err := sc.Get(serviceName, metav1.GetOptions{}); err != nil {
 		if !apierrs.IsNotFound(err) {
-			glog.Infof("services.Get for %q failed: %s", serviceName, err)
+			log.Printf("services.Get for %q failed: %s", serviceName, err)
 			return err
 		}
-		glog.Infof("service %q already deleted", serviceName)
+		log.Printf("service %q already deleted", serviceName)
 		return nil
 	}
 
@@ -282,7 +282,7 @@ func (t *GithubEventSource) deleteReceiveAdapter(namespace string, serviceName s
 }
 
 func (t *GithubEventSource) deleteWebhook(trigger sources.EventTrigger, feedContext sources.FeedContext) error {
-	glog.Infof("Stopping github webhook feed with context %+v", feedContext)
+	log.Printf("Stopping github webhook feed with context %+v", feedContext)
 
 	components := strings.Split(trigger.Resource, "/")
 	owner := components[0]
@@ -307,7 +307,7 @@ func (t *GithubEventSource) deleteWebhook(trigger sources.EventTrigger, feedCont
 
 	id, err := strconv.ParseInt(webhookID, 10, 64)
 	if err != nil {
-		glog.Warningf("Failed to convert webhook %q to int64 : %s", webhookID, err)
+		log.Printf("Failed to convert webhook %q to int64 : %s", webhookID, err)
 		return err
 	}
 	r, err := client.Repositories.DeleteHook(ctx, owner, repo, id)
@@ -315,21 +315,21 @@ func (t *GithubEventSource) deleteWebhook(trigger sources.EventTrigger, feedCont
 		if errResp, ok := err.(*ghclient.ErrorResponse); ok {
 			// If the webhook doesn't exist, nothing to do
 			if errResp.Message == "Not Found" {
-				glog.Info("Webhook doesn't exist, nothing to delete.")
+				log.Print("Webhook doesn't exist, nothing to delete.")
 				return nil
 			}
 		}
-		glog.Warningf("Failed to delete the webhook: %s", err)
-		glog.Warningf("Response:\n%+v", r)
+		log.Printf("Failed to delete the webhook: %s", err)
+		log.Printf("Response:\n%+v", r)
 		return err
 	}
-	glog.Infof("Deleted webhook %q successfully", webhookID)
+	log.Printf("Deleted webhook %q successfully", webhookID)
 	return nil
 }
 
 func (t *GithubEventSource) createWebhook(trigger sources.EventTrigger, domain string) (*sources.FeedContext, error) {
 
-	glog.Infof("CREATING GITHUB WEBHOOK")
+	log.Printf("CREATING GITHUB WEBHOOK")
 
 	accessToken, err := stringFrom(trigger.Parameters, accessTokenKey)
 	if err != nil {
@@ -369,11 +369,11 @@ func (t *GithubEventSource) createWebhook(trigger sources.EventTrigger, domain s
 	repo := components[1]
 	h, r, err := client.Repositories.CreateHook(ctx, owner, repo, &hook)
 	if err != nil {
-		glog.Warningf("Failed to create the webhook: %s", err)
-		glog.Warningf("Response:\n%+v", r)
+		log.Printf("Failed to create the webhook: %s", err)
+		log.Printf("Response:\n%+v", r)
 		return nil, err
 	}
-	glog.Infof("Created hook: %+v", h)
+	log.Printf("Created hook: %+v", h)
 
 	return &sources.FeedContext{
 		Context: map[string]interface{}{
@@ -392,7 +392,7 @@ func main() {
 	flag.Lookup("logtostderr").Value.Set("true")
 	flag.Lookup("v").Value.Set("3")
 
-	glog.Info("GitHub Feedlet starting...")
+	log.Printf("GitHub Feedlet starting...")
 
 	decodedParameters, _ := base64.StdEncoding.DecodeString(os.Getenv(sources.EventSourceParametersKey))
 
@@ -407,21 +407,21 @@ func main() {
 
 	cfg, err := clientcmd.BuildConfigFromFlags("", "")
 	if err != nil {
-		glog.Fatalf("error building kubeconfig: %s", err.Error())
+		log.Printf("Error: error building kubeconfig: %s", err.Error())
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("error building kubernetes clientset: %s", err.Error())
+		log.Printf("Error: error building kubernetes clientset: %s", err.Error())
 	}
 
 	servingClient, err := servingclientset.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("error building serving clientset: %s", err.Error())
+		log.Printf("Error: error building serving clientset: %s", err.Error())
 	}
 
 	sources.RunEventSource(NewGithubEventSource(kubeClient, servingClient, feedNamespace, feedServiceAccountName, p.Image))
-	glog.Info("done...")
+	log.Printf("done...")
 }
 
 // TODO(n3wscott): Move this to knative/pkg/context.

@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/golang/glog"
 	webhooks "gopkg.in/go-playground/webhooks.v3"
 	"gopkg.in/go-playground/webhooks.v3/github"
 
@@ -32,6 +31,7 @@ import (
 	"net/http"
 
 	ghclient "github.com/google/go-github/github"
+	"log"
 )
 
 const (
@@ -55,7 +55,7 @@ type GithubSecrets struct {
 
 // HandlePullRequest is invoked whenever a PullRequest is modified (created, updated, etc.)
 func (h *GithubHandler) HandlePullRequest(payload interface{}, header webhooks.Header) {
-	glog.Info("Handling Pull Request")
+	log.Print("Handling Pull Request")
 	pl := payload.(github.PullRequestPayload)
 	postMessage(h.target, &pl)
 }
@@ -67,14 +67,14 @@ func main() {
 
 	target := os.Getenv(envTarget)
 
-	glog.Infof("Target is: %q", target)
+	log.Printf("Target is: %q", target)
 
 	githubSecrets := os.Getenv(envSecret)
 
 	var credentials GithubSecrets
 	err := json.Unmarshal([]byte(githubSecrets), &credentials)
 	if err != nil {
-		glog.Fatalf("Failed to unmarshal credentials: %s", err)
+		log.Fatalf("Failed to unmarshal credentials: %s", err)
 		return
 	}
 
@@ -98,21 +98,21 @@ func main() {
 	// TODO(n3wscott): Do we need to configure the PORT?
 	err = webhooks.Run(hook, ":8080", "/")
 	if err != nil {
-		glog.Fatalf("Failed to run the webhook")
+		log.Fatalf("Failed to run the webhook")
 	}
 }
 
 func postMessage(target string, m *github.PullRequestPayload) error {
 	jsonStr, err := json.Marshal(m)
 	if err != nil {
-		glog.Errorf("Failed to marshal the message: %+v : %s", m, err)
+		log.Printf("Error: Failed to marshal the message: %+v : %s", m, err)
 		return err
 	}
 
 	URL := fmt.Sprintf("http://%s/", target)
 	req, err := http.NewRequest("POST", URL, bytes.NewBuffer(jsonStr))
 	if err != nil {
-		glog.Errorf("Failed to create http request: %s", err)
+		log.Printf("Error: Failed to create http request: %s", err)
 		return err
 	}
 
@@ -120,12 +120,12 @@ func postMessage(target string, m *github.PullRequestPayload) error {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		glog.Errorf("Failed to do POST: %v", err)
+		log.Printf("Error: Failed to do POST: %v", err)
 		return err
 	}
 	defer resp.Body.Close()
-	glog.Infof("response Status: %s", resp.Status)
+	log.Printf("Error: response Status: %s", resp.Status)
 	body, _ := ioutil.ReadAll(resp.Body)
-	glog.Infof("response Body: %s", string(body))
+	log.Printf("Error: esponse Body: %s", string(body))
 	return nil
 }
