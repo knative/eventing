@@ -29,7 +29,6 @@ func (c *Channel) Validate() *apis.FieldError {
 }
 
 func (cs *ChannelSpec) Validate() *apis.FieldError {
-
 	switch {
 	case len(cs.Bus) != 0 && len(cs.ClusterBus) != 0:
 		return apis.ErrMultipleOneOf("bus", "clusterBus")
@@ -52,6 +51,9 @@ func (current *Channel) CheckImmutableFields(og apis.Immutable) *apis.FieldError
 	original, ok := og.(*Channel)
 	if !ok {
 		return &apis.FieldError{Message: "The provided original was not a Channel"}
+	}
+	if original == nil {
+		return nil
 	}
 
 	ignoreArguments := cmpopts.IgnoreFields(ChannelSpec{}, "Arguments")
