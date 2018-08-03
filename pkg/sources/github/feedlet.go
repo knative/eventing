@@ -46,15 +46,6 @@ import (
 
 const (
 	webhookIDKey = "id"
-	ownerKey     = "owner"
-	repoKey      = "repo"
-
-	// SuccessSynced is used as part of the Event 'reason' when a Feed is synced
-	SuccessSynced = "Synced"
-
-	// MessageResourceSynced is the message used for an Event fired when a Feed
-	// is synced successfully
-	MessageResourceSynced = "Feed synced successfully"
 
 	// property bag keys
 	accessTokenKey = "accessToken"
@@ -100,49 +91,7 @@ func NewGithubEventSource(kubeclientset kubernetes.Interface, servingclientset s
 func (t *GithubEventSource) StopFeed(trigger sources.EventTrigger, feedContext sources.FeedContext) error {
 	log.Printf("stopping github webhook feed with context %+v", feedContext)
 
-	serviceName := receiveAdapterName(trigger.Resource)
-	t.deleteReceiveAdapter(t.feedNamespace, serviceName)
-
-	components := strings.Split(trigger.Resource, "/")
-	owner := components[0]
-	repo := components[1]
-
-	webhookID, err := stringFrom(feedContext.Context, webhookIDKey)
-	if err != nil {
-		log.Printf("Error: Failed to get webhook id from context: %v; bailing...", err)
-		return nil
-	}
-
-	accessToken, err := stringFrom(trigger.Parameters, accessTokenKey)
-	if err != nil {
-		log.Printf("Error: Failed to get access token from trigger parameters: %v; bailing...", err)
-		return nil
-	}
-
-	ctx := context.Background()
-	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: accessToken},
-	)
-	tc := oauth2.NewClient(ctx, ts)
-	client := ghclient.NewClient(tc)
-
-	id, err := strconv.ParseInt(webhookID, 10, 64)
-	if err != nil {
-		log.Printf("Error:failed to convert webhook %q to int64 : %s", webhookID, err)
-		return err
-	}
-	_, err = client.Repositories.DeleteHook(ctx, owner, repo, id)
-	if err != nil {
-		if errResp, ok := err.(*ghclient.ErrorResponse); ok && errResp.Message == "Not Found" {
-			// If the webhook doesn't exist, nothing to do
-			log.Printf("Error:webhook doesn't exist, nothing to delete.")
-			return nil
-		}
-		log.Printf("Error:failed to delete the webhook: %v", err)
-		return err
-	}
-	log.Printf("deleted webhook %q successfully", webhookID)
-	return nil
+	return t.deleteWebhook(trigger, feedContext)
 }
 
 // TODO(n3wscott): Add a timeout for StartFeed.
@@ -222,7 +171,10 @@ func (t *GithubEventSource) waitForServiceDomain(serviceName string) (string, er
 }
 
 func receiveAdapterName(resource string) string {
-	serviceName := fmt.Sprintf("%s-%s-%s", "github", resource, postfixReceiveAdapter) // TODO: this needs more UUID on the end of it.
+	// TODO(n3wscott): this needs more UUID on the end of it.
+	// TODO(n3wscott): this needs more UUID on the end of it.
+	// TODO(n3wscott): Currently this needs to be deterministic so StopFeed can find the receive adapter. If the receive adapter name were added to the feed context, then this could be a uuid.
+	serviceName := fmt.Sprintf("%s-%s-%s", "github", resource, postfixReceiveAdapter)
 	serviceName = strings.Replace(serviceName, "/", "-", -1)
 	serviceName = strings.Replace(serviceName, ".", "-", -1)
 	serviceName = strings.ToLower(serviceName)
@@ -282,7 +234,8 @@ func (t *GithubEventSource) deleteReceiveAdapter(namespace string, serviceName s
 }
 
 func (t *GithubEventSource) deleteWebhook(trigger sources.EventTrigger, feedContext sources.FeedContext) error {
-	log.Printf("Stopping github webhook feed with context %+v", feedContext)
+	serviceName := receiveAdapterName(trigger.Resource)
+	t.deleteReceiveAdapter(t.feedNamespace, serviceName)
 
 	components := strings.Split(trigger.Resource, "/")
 	owner := components[0]
@@ -290,12 +243,14 @@ func (t *GithubEventSource) deleteWebhook(trigger sources.EventTrigger, feedCont
 
 	webhookID, err := stringFrom(feedContext.Context, webhookIDKey)
 	if err != nil {
-		return fmt.Errorf("Failed to get webhook ID from context: %v", err)
+		log.Printf("Error: Failed to get webhook id from context: %v; bailing...", err)
+		return nil
 	}
 
 	accessToken, err := stringFrom(trigger.Parameters, accessTokenKey)
 	if err != nil {
-		return fmt.Errorf("Failed to get access token from trigger parameters: %v", err)
+		log.Printf("Error: Failed to get access token from trigger parameters: %v; bailing...", err)
+		return nil
 	}
 
 	ctx := context.Background()
@@ -307,23 +262,20 @@ func (t *GithubEventSource) deleteWebhook(trigger sources.EventTrigger, feedCont
 
 	id, err := strconv.ParseInt(webhookID, 10, 64)
 	if err != nil {
-		log.Printf("Failed to convert webhook %q to int64 : %s", webhookID, err)
+		log.Printf("Error:failed to convert webhook %q to int64 : %s", webhookID, err)
 		return err
 	}
-	r, err := client.Repositories.DeleteHook(ctx, owner, repo, id)
+	_, err = client.Repositories.DeleteHook(ctx, owner, repo, id)
 	if err != nil {
-		if errResp, ok := err.(*ghclient.ErrorResponse); ok {
+		if errResp, ok := err.(*ghclient.ErrorResponse); ok && errResp.Message == "Not Found" {
 			// If the webhook doesn't exist, nothing to do
-			if errResp.Message == "Not Found" {
-				log.Print("Webhook doesn't exist, nothing to delete.")
-				return nil
-			}
+			log.Printf("Error:webhook doesn't exist, nothing to delete.")
+			return nil
 		}
-		log.Printf("Failed to delete the webhook: %s", err)
-		log.Printf("Response:\n%+v", r)
+		log.Printf("Error:failed to delete the webhook: %v", err)
 		return err
 	}
-	log.Printf("Deleted webhook %q successfully", webhookID)
+	log.Printf("deleted webhook %q successfully", webhookID)
 	return nil
 }
 
