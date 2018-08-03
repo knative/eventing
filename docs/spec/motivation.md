@@ -15,9 +15,9 @@ Knative Eventing has following principles:
   yet being produced.
 
 1. Services can be connected to create new applications
-  a. without modifying producer or consumer.
-  b. with the ability to select a specific subset of events from a particular
-  producer
+    * without modifying producer or consumer.
+    * with the ability to select a specific subset of events from a particular
+      producer
 
 These primitives enable producing and consuming events adhering to the
 [CloudEvents Specification](https://github.com/cloudevents/spec), in a
