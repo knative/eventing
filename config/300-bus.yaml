@@ -16,7 +16,6 @@ kind: CustomResourceDefinition
 metadata:
   name: buses.channels.knative.dev
 spec:
-  scope: Namespaced
   group: channels.knative.dev
   version: v1alpha1
   names:
@@ -26,4 +25,6 @@ spec:
     categories:
     - all
     - knative
+    - kbus
     - eventing
+  scope: Namespaced

@@ -152,6 +152,8 @@ func (r *reconciler) reconcile(ctx context.Context, feed *feedsv1alpha1.Feed) er
 	return nil
 }
 
+// reconcileStartJob creates a start Job if one doesn't exist, checks the status
+// of the start Job, and updates the Feed status accordingly.
 func (r *reconciler) reconcileStartJob(ctx context.Context, feed *feedsv1alpha1.Feed, es *feedsv1alpha1.EventSource, et *feedsv1alpha1.EventType) error {
 	bc := feed.Status.GetCondition(feedsv1alpha1.FeedConditionReady)
 	switch bc.Status {
@@ -204,6 +206,9 @@ func (r *reconciler) reconcileStartJob(ctx context.Context, feed *feedsv1alpha1.
 	return nil
 }
 
+// reconcileStopJob deletes the start Job if it exists, creates a stop Job if
+// one doesn't exist, checks the status of the stop Job, and updates the Feed
+// status accordingly.
 func (r *reconciler) reconcileStopJob(ctx context.Context, feed *feedsv1alpha1.Feed, es *feedsv1alpha1.EventSource, et *feedsv1alpha1.EventType) error {
 	if feed.HasFinalizer(finalizerName) {
 
@@ -274,20 +279,8 @@ func (r *reconciler) reconcileStopJob(ctx context.Context, feed *feedsv1alpha1.F
 	return nil
 }
 
-func (r *reconciler) updateFinalizers(u *feedsv1alpha1.Feed) error {
-	feed := &feedsv1alpha1.Feed{}
-	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: u.Namespace, Name: u.Name}, feed)
-	if err != nil {
-		return err
-	}
-
-	if !equality.Semantic.DeepEqual(feed.Finalizers, u.Finalizers) {
-		feed.SetFinalizers(u.ObjectMeta.Finalizers)
-		return r.client.Update(context.TODO(), feed)
-	}
-	return nil
-}
-
+// updateFeed updates the given Feed's owner references, finalizers, and status
+// to the given values. It skips the update if none of those values would change.
 func (r *reconciler) updateFeed(ctx context.Context, u *feedsv1alpha1.Feed) error {
 	feed := &feedsv1alpha1.Feed{}
 	err := r.client.Get(ctx, client.ObjectKey{Namespace: u.Namespace, Name: u.Name}, feed)
@@ -321,6 +314,8 @@ func (r *reconciler) updateFeed(ctx context.Context, u *feedsv1alpha1.Feed) erro
 	return r.client.Update(ctx, feed)
 }
 
+// getEventTypeName returns the name of the Feed's referenced EventType or
+// ClusterEventType.
 func (r *reconciler) getEventTypeName(feed *feedsv1alpha1.Feed) string {
 	if len(feed.Spec.Trigger.EventType) > 0 {
 		return feed.Spec.Trigger.EventType
@@ -330,6 +325,8 @@ func (r *reconciler) getEventTypeName(feed *feedsv1alpha1.Feed) string {
 	return ""
 }
 
+// setEventTypeOwnerReference makes the given Feed's referenced EventType or
+// ClusterEventType a non-controlling owner of the Feed.
 func (r *reconciler) setEventTypeOwnerReference(ctx context.Context, feed *feedsv1alpha1.Feed) error {
 	// TODO(nicholss): need to set the owner on a cluser level event type as well.
 	if len(feed.Spec.Trigger.EventType) > 0 {
@@ -340,6 +337,8 @@ func (r *reconciler) setEventTypeOwnerReference(ctx context.Context, feed *feeds
 	return nil
 }
 
+// setEventTypeOwnerReference makes the given Feed's referenced EventType a
+// non-controlling owner of the Feed.
 func (r *reconciler) setNamespacedEventTypeOwnerReference(ctx context.Context, feed *feedsv1alpha1.Feed) error {
 	et := &feedsv1alpha1.EventType{}
 	if err := r.client.Get(ctx, client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.EventType}, et); err != nil {
@@ -360,6 +359,8 @@ func (r *reconciler) setNamespacedEventTypeOwnerReference(ctx context.Context, f
 	return nil
 }
 
+// setEventTypeOwnerReference makes the given Feed's referenced ClusterEventType
+// a non-controlling owner of the Feed.
 func (r *reconciler) setClusterEventTypeOwnerReference(ctx context.Context, feed *feedsv1alpha1.Feed) error {
 	et := &feedsv1alpha1.ClusterEventType{}
 	if err := r.client.Get(ctx, client.ObjectKey{Name: feed.Spec.Trigger.ClusterEventType}, et); err != nil {
@@ -380,6 +381,8 @@ func (r *reconciler) setClusterEventTypeOwnerReference(ctx context.Context, feed
 	return nil
 }
 
+// resolveTrigger extracts the trigger from the Feed, reifies the parameters,
+// and turns it all into an EventTrigger.
 func (r *reconciler) resolveTrigger(ctx context.Context, feed *feedsv1alpha1.Feed) (sources.EventTrigger, error) {
 	trigger := feed.Spec.Trigger
 	resolved := sources.EventTrigger{
@@ -412,6 +415,8 @@ func (r *reconciler) resolveTrigger(ctx context.Context, feed *feedsv1alpha1.Fee
 	return resolved, nil
 }
 
+// fetchParametersFromSource gets the secret value referenced by the given
+// ParametersFrom and returns it as a string-keyed map.
 func (r *reconciler) fetchParametersFromSource(ctx context.Context, namespace string, parametersFrom *feedsv1alpha1.ParametersFromSource) (map[string]interface{}, error) {
 	var params map[string]interface{}
 	if parametersFrom.SecretKeyRef != nil {
@@ -421,16 +426,15 @@ func (r *reconciler) fetchParametersFromSource(ctx context.Context, namespace st
 			return nil, err
 		}
 
-		p, err := unmarshalJSON(data)
-		if err != nil {
-			return nil, err
+		if err := json.Unmarshal(data, &params); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal parameters as JSON object: %v", err)
 		}
-		params = p
-
 	}
 	return params, nil
 }
 
+// fetchSecretKeyValue gets the Secret referenced and returns the data in the
+// referenced key.
 func (r *reconciler) fetchSecretKeyValue(ctx context.Context, namespace string, secretKeyRef *feedsv1alpha1.SecretKeyReference) ([]byte, error) {
 	secret := &corev1.Secret{}
 	err := r.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretKeyRef.Name}, secret)
@@ -440,14 +444,8 @@ func (r *reconciler) fetchSecretKeyValue(ctx context.Context, namespace string, 
 	return secret.Data[secretKeyRef.Key], nil
 }
 
-func unmarshalJSON(in []byte) (map[string]interface{}, error) {
-	parameters := make(map[string]interface{})
-	if err := json.Unmarshal(in, &parameters); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal parameters as JSON object: %v", err)
-	}
-	return parameters, nil
-}
-
+// createJob creates a Job for the given Feed based on its current state,
+// returning the created Job.
 func (r *reconciler) createJob(ctx context.Context, feed *feedsv1alpha1.Feed, es *feedsv1alpha1.EventSource, et *feedsv1alpha1.EventType) (*batchv1.Job, error) {
 	trigger, err := r.resolveTrigger(ctx, feed)
 	if err != nil {
@@ -465,6 +463,8 @@ func (r *reconciler) createJob(ctx context.Context, feed *feedsv1alpha1.Feed, es
 	return job, nil
 }
 
+// setFeedContext sets the Feed's context from the context emitted by the given
+// Job.
 func (r *reconciler) setFeedContext(ctx context.Context, feed *feedsv1alpha1.Feed, job *batchv1.Job) error {
 	feedContext, err := r.getJobContext(ctx, job)
 	if err != nil {
@@ -482,6 +482,9 @@ func (r *reconciler) setFeedContext(ctx context.Context, feed *feedsv1alpha1.Fee
 	return nil
 }
 
+// getJobContext returns the FeedContext emitted by the first successful pod
+// owned by this job. The feed context is extracted from the termination
+// message of the first container in the pod.
 func (r *reconciler) getJobContext(ctx context.Context, job *batchv1.Job) (*sources.FeedContext, error) {
 	pods, err := r.getJobPods(ctx, job)
 	if err != nil {
@@ -507,6 +510,7 @@ func (r *reconciler) getJobContext(ctx context.Context, job *batchv1.Job) (*sour
 	return &sources.FeedContext{}, nil
 }
 
+// getJobPods returns the array of Pods owned by the given Job.
 func (r *reconciler) getJobPods(ctx context.Context, job *batchv1.Job) ([]corev1.Pod, error) {
 	podList := &corev1.PodList{}
 	listOptions := client.

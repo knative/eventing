@@ -27,4 +27,3 @@ spec:
     - knative
     - eventing
   scope: Namespaced
-
