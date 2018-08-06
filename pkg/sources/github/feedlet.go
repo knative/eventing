@@ -40,6 +40,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/test-infra/prow/plugins/trigger"
 	"log"
 	"time"
 )
@@ -237,9 +238,11 @@ func (t *GithubEventSource) deleteWebhook(trigger sources.EventTrigger, feedCont
 	serviceName := receiveAdapterName(trigger.Resource)
 	t.deleteReceiveAdapter(t.feedNamespace, serviceName)
 
-	components := strings.Split(trigger.Resource, "/")
-	owner := components[0]
-	repo := components[1]
+	owner, repo, err := parseOwnerRepoFrom(trigger.Resource)
+	if err != nil {
+		log.Printf("Error: Failed to get webhook id from context: %v; bailing...", err)
+		return nil
+	}
 
 	webhookID, err := stringFrom(feedContext.Context, webhookIDKey)
 	if err != nil {
@@ -283,6 +286,11 @@ func (t *GithubEventSource) createWebhook(trigger sources.EventTrigger, domain s
 
 	log.Printf("CREATING GITHUB WEBHOOK")
 
+	owner, repo, err := parseOwnerRepoFrom(trigger.Resource)
+	if err != nil {
+		return nil, err
+	}
+
 	accessToken, err := stringFrom(trigger.Parameters, accessTokenKey)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get access token from trigger parameters: %v", err)
@@ -316,9 +324,6 @@ func (t *GithubEventSource) createWebhook(trigger sources.EventTrigger, domain s
 		Config: config,
 	}
 
-	components := strings.Split(trigger.Resource, "/")
-	owner := components[0]
-	repo := components[1]
 	h, r, err := client.Repositories.CreateHook(ctx, owner, repo, &hook)
 	if err != nil {
 		log.Printf("Failed to create the webhook: %s", err)
@@ -387,4 +392,18 @@ func stringFrom(bag map[string]interface{}, key string) (string, error) {
 		return "", fmt.Errorf("value for %s was not a valid string", key)
 	}
 	return value, nil
+}
+
+func parseOwnerRepoFrom(resource string) (string, string, error) {
+	if len(resource) == 0 {
+		return "", "", fmt.Errorf("resouce is empty")
+	}
+	slashes := strings.Count(resource, "/")
+	if slashes != 1 {
+		return "", "", fmt.Errorf("resouce is malformatted, expected 'owner/repo' but found %q", resource)
+	}
+	components := strings.Split(resource, "/")
+	owner := components[0]
+	repo := components[1]
+	return owner, repo, nil
 }
