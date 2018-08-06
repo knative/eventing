@@ -39,6 +39,7 @@ readonly E2E_TEST_FUNCTION=e2e-k8s-events-function
 # Helper functions.
 
 function teardown() {
+  # should this be kubectl
   ko delete --ignore-not-found=true -f config/
 }
 
