@@ -63,9 +63,9 @@ required = [
   revision = "90f2606161ee6a14efe2ca79fc05ac2b8efe250b"
 
 [[constraint]]
-  name = "github.com/knative/serving"
-  # HEAD as of 2018-07-16
-  revision = "2326173b13899c32896caf526a318a8b30033b3e"
+  name = "github.com/knative/pkg"
+  # HEAD as of 2018-08-03
+  revision = "a088fee6227f7c6842ce7f7406cb75af8a6e0643"
 
 [[override]]
   name = "github.com/Shopify/sarama"
