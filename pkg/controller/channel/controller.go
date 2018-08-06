@@ -140,6 +140,7 @@ func NewController(
 	controller := &Controller{
 		kubeclientset:         kubeclientset,
 		channelclientset:      channelclientset,
+		sharedclientset:       sharedclientset,
 		virtualservicesLister: virtualserviceInformer.Lister(),
 		virtualservicesSynced: virtualserviceInformer.Informer().HasSynced,
 		servicesLister:        serviceInformer.Lister(),
