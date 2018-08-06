@@ -16,14 +16,14 @@ limitations under the License.
 package main
 
 import (
-	buildv1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	flowsv1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 	"github.com/knative/eventing/pkg/controller/feed"
 	"github.com/knative/eventing/pkg/controller/flow"
-	istiov1alpha3 "github.com/knative/serving/pkg/apis/istio/v1alpha3"
-	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
+
+	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -53,12 +53,10 @@ func controllerRuntimeStart() error {
 
 	// Add custom types to this array to get them into the manager's scheme.
 	schemeFuncs := []SchemeFunc{
-		buildv1alpha1.AddToScheme,
 		channelsv1alpha1.AddToScheme,
 		feedsv1alpha1.AddToScheme,
 		flowsv1alpha1.AddToScheme,
 		istiov1alpha3.AddToScheme,
-		servingv1alpha1.AddToScheme,
 	}
 	for _, schemeFunc := range schemeFuncs {
 		schemeFunc(mrg.GetScheme())

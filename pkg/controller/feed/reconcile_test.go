@@ -26,7 +26,6 @@ import (
 	"github.com/knative/eventing/pkg/controller/feed/resources"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
 	"github.com/knative/eventing/pkg/sources"
-	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,7 +55,6 @@ const (
 func init() {
 	// Add types to scheme
 	feedsv1alpha1.AddToScheme(scheme.Scheme)
-	servingv1alpha1.AddToScheme(scheme.Scheme)
 }
 
 var testCases = []controllertesting.TestCase{
