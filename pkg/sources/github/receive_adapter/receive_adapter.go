@@ -44,7 +44,6 @@ const (
 // GithubHandler holds necessary objects for communicating with the Github.
 type GithubHandler struct {
 	client *ghclient.Client
-	ctx    context.Context
 	target string
 }
 
@@ -78,17 +77,13 @@ func main() {
 		return
 	}
 
-	// Set up the auth for being able to talk to Github. It's
-	// odd that you have to also pass context around for the
-	// calls even after giving it to client. But, whatever.
-	ctx := context.Background()
+	// Set up the auth for being able to talk to Github.
 	var tc *http.Client = nil
 
 	client := ghclient.NewClient(tc)
 
 	h := &GithubHandler{
 		client: client,
-		ctx:    ctx,
 		target: target,
 	}
 
@@ -128,6 +123,6 @@ func postMessage(target string, m *github.PullRequestPayload) error {
 	defer resp.Body.Close()
 	log.Printf("Error: response Status: %s", resp.Status)
 	body, _ := ioutil.ReadAll(resp.Body)
-	log.Printf("Error: esponse Body: %s", string(body))
+	log.Printf("Error: response Body: %s", string(body))
 	return nil
 }

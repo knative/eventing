@@ -1,40 +1,18 @@
 # GitHub Flow
 
-A simple service will be deployed and register for events from the github SourceType, this demonstrates interacting with
-GitHub. 
-
-But by introducing a `Flow` object, we make the registration to GitHub automatically by calling a GitHub API
-and hence the developer does not have to manually wire things together in the UI, by creating the `Flow` object
-the webhook gets created by Knative Eventing.
+A GitHub webhook will be created on a repository and a Knative `Service` will be 
+deployed to receive the webhook's event deliveries and forward them into a 
+`Channel`, through a `Bus`, and out to the consumer via a `Subscription`. The 
+`Flow` resource takes care of provisioning the webhook, the `Service`, the 
+`Channel`, and the `Subscription`.
 
 ## Prerequisites
 
 1. [Setup your development environment](../../DEVELOPMENT.md#getting-started)
 2. [Start Knative](../../README.md#start-knative)
-3. Decide on the DNS name that git can then call. Update `knative/serving/config/config-domain.yaml`.
-For example I used `aikas.org` as my *hostname*, so my `knative/serving/config/config-domain.yaml` looks like so:
-
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: config-domain
-  namespace: knative-serving
-data:
-  aikas.org: |
-```
-
-If you were already running the knative controllers, you will need to update this *configmap* from the
-root of the knative/serving
-
-```shell
-ko apply -f config/config-domain.yaml
-```
-
-For GitHub to be able to call into the cluster,  
-[configure a custom domain](https://github.com/knative/docs/blob/master/serving/using-a-custom-domain.md) and 
-[assign a static IP address](https://github.com/knative/docs/blob/master/serving/gke-assigning-static-ip-address.md).
-
+3. For GitHub to be able to call into the cluster,  
+   [configure a custom domain](https://github.com/knative/docs/blob/master/serving/using-a-custom-domain.md) and 
+   [assign a static IP address](https://github.com/knative/docs/blob/master/serving/gke-assigning-static-ip-address.md).
 4. Install a ClusterBus
 
 update `knative/eventing/config/buses/stub-bus.yaml`, changing `kind` to `ClusterBus`, like:
@@ -74,10 +52,10 @@ kubectl get eventtypes
 ```
 
 6. Create a [personal access token](https://github.com/settings/tokens) to GitHub repo that you can use to register
-   webhooks with the GitHub API. Also decide on a token that your code will authenticate the incoming webhooks from
-   GitHub (*accessToken*). Update `sample/github/githubsecret.yaml` with those values. If your generated access token is 
-   `'asdfasfdsaf'` and you choose your *secretToken* as `'password'`, you'd modify `sample/github/githubsecret.yaml`
-   like so:
+   webhooks with the GitHub API. Also decide on a token that your code will use to authenticate the incoming webhooks
+   from GitHub (*accessToken*). Update `sample/github/githubsecret.yaml` with those values. If your generated access
+   token is `'asdfasfdsaf'` and you choose your *secretToken* as `'password'`, you'd modify
+   `sample/github/githubsecret.yaml` like so:
 
 ```yaml
 apiVersion: v1
@@ -95,7 +73,7 @@ stringData:
 
 ## Running
 
-In response to a pull request event, the _legit_ service will add `(looks pretty legit)` to the PR title.
+In response to a pull request event, the _legit_ Service will add `(looks pretty legit)` to the PR title.
 
 Deploy the _legit_ service via:
 
@@ -115,7 +93,7 @@ kubectl get route -o yaml
 # This will show the Configuration that the Service created:
 kubectl get configurations -o yaml
 
-# This will show the Revision that was created by the configuration:
+# This will show the Revision that was created by the Configuration:
 kubectl get revisions -o yaml
 ```
 

@@ -21,7 +21,7 @@ spec:
   serviceAccountName: feed-sa
   trigger:
     eventType: pullrequest
-    resource: <org>/<repo> # Fill this out
+    resource: <org>/<repo> # TODO: Fill this out
     service: github
     parameters:
       secretName: githubsecret
