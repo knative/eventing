@@ -40,7 +40,6 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/test-infra/prow/plugins/trigger"
 	"log"
 	"time"
 )
@@ -101,8 +100,7 @@ func (t *GithubEventSource) StartFeed(trigger sources.EventTrigger, target strin
 	// Create the Receive Adapter Service that will accept incoming requests from GitHub.
 	service, err := t.createReceiveAdapter(trigger, target)
 	if err != nil {
-		log.Printf("failed to create service: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to create service: %v", err)
 	}
 
 	// TODO(n3wscott): look into using spew.
@@ -112,7 +110,7 @@ func (t *GithubEventSource) StartFeed(trigger sources.EventTrigger, target strin
 	// to GitHub as part of the webhook registration.
 	receiveAdaptorDomain, err := t.waitForServiceDomain(service.GetObjectMeta().GetName())
 	if err != nil {
-		log.Printf("failed to get the service: %v", err)
+		return nil, fmt.Errorf("failed to get the service: %v", err)
 	}
 
 	return t.createWebhook(trigger, receiveAdaptorDomain)
@@ -151,29 +149,29 @@ func (t *GithubEventSource) waitForServiceDomain(serviceName string) (string, er
 			return "", fmt.Errorf("watched Service error")
 		case watch.Deleted:
 			return "", fmt.Errorf("watched Service deleted")
-		case watch.Added:
-			fallthrough
-		case watch.Modified:
+		case watch.Added, watch.Modified:
 			service, ok := event.Object.(*v1alpha1.Service)
 			if !ok {
 				log.Printf("expected a Service object, but got %T", event.Object)
 				continue
 			}
-			if service.Name == serviceName {
-				status := service.Status
-				if status.Domain != "" {
-					w.Stop()
-					log.Printf("got domain: %s", event.Object)
-					return status.Domain, nil
-				}
+			if service.Name != serviceName {
+				log.Printf("Error: expected a service.Name %q to match expected serviceName %q", service.Name, serviceName)
+				continue
 			}
+			status := service.Status
+			if status.Domain != "" {
+				w.Stop()
+				log.Printf("got domain: %s", event.Object)
+				return status.Domain, nil
+			}
+
 		}
 	}
 }
 
 func receiveAdapterName(resource string) string {
-	// TODO(n3wscott): this needs more UUID on the end of it.
-	// TODO(n3wscott): this needs more UUID on the end of it.
+	// TODO(n3wscott): this needs more UUID on the end of it?
 	// TODO(n3wscott): Currently this needs to be deterministic so StopFeed can find the receive adapter. If the receive adapter name were added to the feed context, then this could be a uuid.
 	serviceName := fmt.Sprintf("%s-%s-%s", "github", resource, postfixReceiveAdapter)
 	serviceName = strings.Replace(serviceName, "/", "-", -1)
@@ -190,32 +188,32 @@ func (t *GithubEventSource) createReceiveAdapter(trigger sources.EventTrigger, t
 	// First, check if service exists already.
 	if _, err := sc.Get(serviceName, metav1.GetOptions{}); err != nil {
 		if !apierrs.IsNotFound(err) {
-			log.Printf("service.Get for %q failed: %s", serviceName, err)
-			return nil, err
+			return nil, fmt.Errorf("service.Get for %q failed: %v", serviceName, err)
 		}
 		log.Printf("service %q doesn't exist, creating", serviceName)
 	} else {
 		log.Printf("found existing service %q", serviceName)
+		// Don't try again.
 		return nil, nil
 	}
 
 	secretName, err := stringFrom(trigger.Parameters, secretNameKey)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get secret name from trigger parameters: %v", err)
+		return nil, fmt.Errorf("failed to get secret name from trigger parameters: %v", err)
 	}
 
 	secretKey, err := stringFrom(trigger.Parameters, secretKeyKey)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get secret key from trigger parameters: %v", err)
+		return nil, fmt.Errorf("failed to get secret key from trigger parameters: %v", err)
 	}
 
 	service := resources.MakeService(t.feedNamespace, serviceName, t.image, t.feedServiceAccountName, target, secretName, secretKey)
-	service, createErr := sc.Create(service)
-	if createErr != nil {
-		log.Printf("Error:service failed: %s", createErr)
+	service, err = sc.Create(service)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create service: %s", err)
 	}
 
-	return service, createErr
+	return service, nil
 }
 
 func (t *GithubEventSource) deleteReceiveAdapter(namespace string, serviceName string) error {
@@ -224,10 +222,10 @@ func (t *GithubEventSource) deleteReceiveAdapter(namespace string, serviceName s
 	// First, check if deployment exists already.
 	if _, err := sc.Get(serviceName, metav1.GetOptions{}); err != nil {
 		if !apierrs.IsNotFound(err) {
-			log.Printf("services.Get for %q failed: %s", serviceName, err)
-			return err
+			return fmt.Errorf("services.Get for %q failed: %v", serviceName, err)
 		}
 		log.Printf("service %q already deleted", serviceName)
+		// Don't try again.
 		return nil
 	}
 
@@ -241,18 +239,21 @@ func (t *GithubEventSource) deleteWebhook(trigger sources.EventTrigger, feedCont
 	owner, repo, err := parseOwnerRepoFrom(trigger.Resource)
 	if err != nil {
 		log.Printf("Error: Failed to get webhook id from context: %v; bailing...", err)
+		// Don't try again.
 		return nil
 	}
 
 	webhookID, err := stringFrom(feedContext.Context, webhookIDKey)
 	if err != nil {
 		log.Printf("Error: Failed to get webhook id from context: %v; bailing...", err)
+		// Don't try again.
 		return nil
 	}
 
 	accessToken, err := stringFrom(trigger.Parameters, accessTokenKey)
 	if err != nil {
 		log.Printf("Error: Failed to get access token from trigger parameters: %v; bailing...", err)
+		// Don't try again.
 		return nil
 	}
 
@@ -265,18 +266,15 @@ func (t *GithubEventSource) deleteWebhook(trigger sources.EventTrigger, feedCont
 
 	id, err := strconv.ParseInt(webhookID, 10, 64)
 	if err != nil {
-		log.Printf("Error:failed to convert webhook %q to int64 : %s", webhookID, err)
-		return err
+		return fmt.Errorf("failed to convert webhook %q to int64 : %s", webhookID, err)
 	}
 	_, err = client.Repositories.DeleteHook(ctx, owner, repo, id)
 	if err != nil {
 		if errResp, ok := err.(*ghclient.ErrorResponse); ok && errResp.Message == "Not Found" {
 			// If the webhook doesn't exist, nothing to do
-			log.Printf("Error:webhook doesn't exist, nothing to delete.")
-			return nil
+			return fmt.Errorf("webhook doesn't exist, nothing to delete.")
 		}
-		log.Printf("Error:failed to delete the webhook: %v", err)
-		return err
+		return fmt.Errorf("failed to delete the webhook: %v", err)
 	}
 	log.Printf("deleted webhook %q successfully", webhookID)
 	return nil
@@ -293,12 +291,12 @@ func (t *GithubEventSource) createWebhook(trigger sources.EventTrigger, domain s
 
 	accessToken, err := stringFrom(trigger.Parameters, accessTokenKey)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get access token from trigger parameters: %v", err)
+		return nil, fmt.Errorf("failed to get access token from trigger parameters: %v", err)
 	}
 
 	secretToken, err := stringFrom(trigger.Parameters, secretTokenKey)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get secret token from trigger parameters: %v", err)
+		return nil, fmt.Errorf("failed to get secret token from trigger parameters: %v", err)
 	}
 
 	ctx := context.Background()
@@ -326,11 +324,10 @@ func (t *GithubEventSource) createWebhook(trigger sources.EventTrigger, domain s
 
 	h, r, err := client.Repositories.CreateHook(ctx, owner, repo, &hook)
 	if err != nil {
-		log.Printf("Failed to create the webhook: %s", err)
-		log.Printf("Response:\n%+v", r)
-		return nil, err
+		log.Printf("create webhook error response:\n%+v", r)
+		return nil, fmt.Errorf("failed to create the webhook: %v", err)
 	}
-	log.Printf("Created hook: %+v", h)
+	log.Printf("created hook: %+v", h)
 
 	return &sources.FeedContext{
 		Context: map[string]interface{}{
@@ -345,9 +342,6 @@ type parameters struct {
 // The main entry point for the GitHub Feedlet
 func main() {
 	flag.Parse()
-
-	flag.Lookup("logtostderr").Value.Set("true")
-	flag.Lookup("v").Value.Set("3")
 
 	log.Printf("GitHub Feedlet starting...")
 
