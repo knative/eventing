@@ -30,7 +30,8 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Flow connects an event source with an action that processes events produced
-// by the event source.
+// by the event source. The flow controller handles creating the lower-level
+// eventing primitives (Feeds, Channels, Subscriptions) used to implement flows.
 type Flow struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

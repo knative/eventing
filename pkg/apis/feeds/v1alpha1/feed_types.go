@@ -30,7 +30,8 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Feed connects an event trigger with an action that processes events produced
-// by the trigger.
+// by the trigger. Feeds are building blocks used to implement Flows and are not
+// expected to be used directly.
 type Feed struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
