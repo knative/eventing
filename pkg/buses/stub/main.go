@@ -88,9 +88,9 @@ func (b *StubBus) receiveMessage(channel *buses.ChannelReference, message *buses
 // dispatchMessage dispatches messages for the bus to a channel's subscriber.
 func (b *StubBus) dispatchMessage(subscription channelsv1alpha1.SubscriptionSpec, channel *buses.ChannelReference, message *buses.Message) {
 	subscriber := subscription.Subscriber
-	replyTo := subscription.ReplyTo
-	glog.Infof("Sending to %q for %q and replying to %q", subscriber, channel, replyTo)
-	b.dispatcher.DispatchMessage(subscriber, replyTo, channel.Namespace, message)
+	defaults := buses.DispatchDefaults{Namespace: channel.Namespace, ReplyTo: subscription.ReplyTo}
+	glog.Infof("Sending to %q for %q with defaults %+v", subscriber, channel, defaults)
+	b.dispatcher.DispatchMessage(message, subscriber, defaults)
 }
 
 func main() {

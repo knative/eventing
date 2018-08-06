@@ -25,7 +25,7 @@ import (
 	"strings"
 )
 
-const correlationIdHeaderName = "X-Knative-Correlation-Id"
+const correlationIDHeaderName = "Knative-Correlation-Id"
 
 // MessageDispatcher dispatches messages to a destination over HTTP.
 type MessageDispatcher struct {
@@ -33,6 +33,12 @@ type MessageDispatcher struct {
 	forwardHeaders   map[string]bool
 	forwardPrefixes  []string
 	supportedSchemes map[string]bool
+}
+
+// DispatchDefaults provides default parameter values used when dispatching a message.
+type DispatchDefaults struct {
+	Namespace string
+	ReplyTo   string
 }
 
 // NewMessageDispatcher creates a new message dispatcher that can dispatch
@@ -54,36 +60,45 @@ func NewMessageDispatcher() *MessageDispatcher {
 // The destination and replyTo are DNS names. For names with a single label,
 // the default namespace is used to expand it into a fully qualified name
 // within the cluster.
-func (d *MessageDispatcher) DispatchMessage(destination string, replyTo string, defaultNamespace string, message *Message) error {
-	res, err := d.executeRequest(destination, defaultNamespace, message)
+func (d *MessageDispatcher) DispatchMessage(message *Message, destination string, defaults DispatchDefaults) error {
+	destinationURL := d.resolveURL(destination, defaults.Namespace)
+	reply, err := d.executeRequest(destinationURL, message)
 	if err != nil {
 		return fmt.Errorf("Unable to complete request %v", err)
 	}
-	if replyTo != "" && res != nil {
-		headers := d.fromHTTPHeaders(res.Header)
-		// TODO: add configurable whitelisting of propagated headers/prefixes (configmap?)
-		correlationID := message.Headers[correlationIdHeaderName]
-		if correlationID != "" {
-			headers[correlationIdHeaderName] = correlationID
-		}
-		payload, err := ioutil.ReadAll(res.Body)
+	if defaults.ReplyTo != "" && reply != nil {
+		replyToURL := d.resolveURL(defaults.ReplyTo, defaults.Namespace)
+		_, err = d.executeRequest(replyToURL, reply)
 		if err != nil {
-			return fmt.Errorf("Unable to read response %v", err)
+			return fmt.Errorf("Failed to forward reply %v", err)
 		}
-		replyMessage := Message{headers, payload}
-		d.executeRequest(replyTo, defaultNamespace, &replyMessage)
 	}
 	return nil
 }
 
-func (d *MessageDispatcher) executeRequest(destination string, defaultNamespace string, message *Message) (*http.Response, error) {
-	url := d.resolveURL(destination, defaultNamespace)
+func (d *MessageDispatcher) executeRequest(url *url.URL, message *Message) (*Message, error) {
 	req, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewReader(message.Payload))
 	if err != nil {
 		return nil, fmt.Errorf("Unable to create request %v", err)
 	}
 	req.Header = d.toHTTPHeaders(message.Headers)
-	return d.httpClient.Do(req)
+	res, err := d.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if res != nil {
+		headers := d.fromHTTPHeaders(res.Header)
+		// TODO: add configurable whitelisting of propagated headers/prefixes (configmap?)
+		if correlationID, ok := message.Headers[correlationIDHeaderName]; ok {
+			headers[correlationIDHeaderName] = correlationID
+		}
+		payload, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return nil, fmt.Errorf("Unable to read response %v", err)
+		}
+		return &Message{headers, payload}, nil
+	}
+	return nil, nil
 }
 
 // toHTTPHeaders converts message headers to HTTP headers.

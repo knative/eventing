@@ -47,7 +47,7 @@ type SubscriptionSpec struct {
 	Subscriber string `json:"subscriber"`
 
 	// Target service DNS name for replies returned by the subscriber.
-	ReplyTo string `json:"replyTo"`
+	ReplyTo string `json:"replyTo,omitempty"`
 
 	// Arguments is a list of configuration arguments for the Subscription. The
 	// Arguments for a channel must contain values for each of the Parameters
