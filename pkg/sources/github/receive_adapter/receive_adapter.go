@@ -93,6 +93,8 @@ func main() {
 	}
 
 	hook := github.New(&github.Config{Secret: credentials.SecretToken})
+	// TODO: GitHub has more than just Pull Request Events. This needs to
+	// handle them all?
 	hook.RegisterEvents(h.HandlePullRequest, github.PullRequestEvent)
 
 	// TODO(n3wscott): Do we need to configure the PORT?

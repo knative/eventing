@@ -50,6 +50,7 @@ const (
 	// property bag keys
 	accessTokenKey = "accessToken"
 	secretTokenKey = "secretToken"
+	eventName      = "event"
 
 	// postfixReceiveAdapter is appended to the name of the service running the Receive Adapter
 	postfixReceiveAdapter = "rcvadptr"
@@ -113,7 +114,7 @@ func (t *GithubEventSource) StartFeed(trigger sources.EventTrigger, target strin
 		return nil, fmt.Errorf("failed to get the service: %v", err)
 	}
 
-	return t.createWebhook(trigger, receiveAdaptorDomain)
+	return t.createWebhook(trigger, service.GetObjectMeta().GetName(), receiveAdaptorDomain)
 }
 
 func (t *GithubEventSource) waitForServiceDomain(serviceName string) (string, error) {
@@ -280,11 +281,16 @@ func (t *GithubEventSource) deleteWebhook(trigger sources.EventTrigger, feedCont
 	return nil
 }
 
-func (t *GithubEventSource) createWebhook(trigger sources.EventTrigger, domain string) (*sources.FeedContext, error) {
+func (t *GithubEventSource) createWebhook(trigger sources.EventTrigger, name, domain string) (*sources.FeedContext, error) {
 
 	log.Printf("CREATING GITHUB WEBHOOK")
 
 	owner, repo, err := parseOwnerRepoFrom(trigger.Resource)
+	if err != nil {
+		return nil, err
+	}
+
+	events, err := parseEventsFrom(trigger.EventType)
 	if err != nil {
 		return nil, err
 	}
@@ -307,17 +313,14 @@ func (t *GithubEventSource) createWebhook(trigger sources.EventTrigger, domain s
 
 	client := ghclient.NewClient(tc)
 	active := true
-	name := "web"
 	config := make(map[string]interface{})
 	config["url"] = fmt.Sprintf("http://%s", domain)
 	config["content_type"] = "json"
 	config["secret"] = secretToken
-	// TODO(n3wscott): GitHub has many types of events, we will have to make this dynamic when we support
-	// more types of events from GitHub.
 	hook := ghclient.Hook{
 		Name:   &name,
 		URL:    &domain,
-		Events: []string{"pull_request"},
+		Events: events,
 		Active: &active,
 		Config: config,
 	}
@@ -400,4 +403,17 @@ func parseOwnerRepoFrom(resource string) (string, string, error) {
 	owner := components[0]
 	repo := components[1]
 	return owner, repo, nil
+}
+
+func parseEventsFrom(eventType string) ([]string, error) {
+	if len(eventType) == 0 {
+		return []string(nil), fmt.Errorf("event type is empty")
+	}
+	switch eventType {
+	case "pullrequest":
+		return []string{"pull_request"}, nil
+	// TODO: Add more supported event types.
+	default:
+		return []string(nil), fmt.Errorf("event type is unknown: %s", eventType)
+	}
 }
