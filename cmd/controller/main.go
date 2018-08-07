@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	"log"
 	"net/http"
 	"time"
 
@@ -38,8 +39,6 @@ import (
 	"github.com/knative/eventing/pkg/signals"
 	sharedclientset "github.com/knative/pkg/client/clientset/versioned"
 	sharedinformers "github.com/knative/pkg/client/informers/externalversions"
-
-	"log"
 
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/system"
@@ -122,7 +121,8 @@ func main() {
 		logger.Fatalf("failed to start controller config map watcher: %v", err)
 	}
 
-	// Add new controllers here.
+	// Add new controllers here, except controllers that use controller-runtime.
+	// Those should be added to controller-runtime-main.go.
 	ctors := []controller.Constructor{
 		bus.NewController,
 		clusterbus.NewController,
@@ -152,6 +152,13 @@ func main() {
 		}(ctrlr)
 	}
 
+	// Start the controller-runtime controllers.
+	go func() {
+		if err := controllerRuntimeStart(); err != nil {
+			logger.Fatalf("Error running controller-runtime controllers: %v", err)
+		}
+	}()
+
 	// Start the endpoint that Prometheus scraper talks to
 	srv := &http.Server{Addr: metricsScrapeAddr}
 	http.Handle(metricsScrapePath, promhttp.Handler())
@@ -171,6 +178,7 @@ func main() {
 }
 
 func init() {
-	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-	flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	// These are commented because they're also defined by controller-runtime.
+	// flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	// flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 }
