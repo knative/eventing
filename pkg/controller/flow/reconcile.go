@@ -26,6 +26,7 @@ import (
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	v1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 	"github.com/knative/eventing/pkg/controller/flow/resources"
+	"github.com/knative/eventing/pkg/system"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -223,7 +224,12 @@ func (r *reconciler) reconcileChannel(flow *v1alpha1.Flow) (*channelsv1alpha1.Ch
 }
 
 func (r *reconciler) createChannel(flow *v1alpha1.Flow) (*channelsv1alpha1.Channel, error) {
-	channel := resources.MakeChannel(defaultBusName, flow)
+	clusterBusName, err := r.getDefaultClusterBusName()
+	if err != nil {
+		return nil, err
+	}
+
+	channel := resources.MakeChannel(clusterBusName, flow)
 	if err := r.client.Create(context.TODO(), channel); err != nil {
 		return nil, err
 	}
@@ -288,4 +294,51 @@ func (r *reconciler) createFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv
 		return nil, err
 	}
 	return feed, nil
+}
+
+func (r *reconciler) NewControllerRef(flow *v1alpha1.Flow) *metav1.OwnerReference {
+	blockOwnerDeletion := false
+	isController := true
+	revRef := metav1.NewControllerRef(flow, flowControllerKind)
+	revRef.BlockOwnerDeletion = &blockOwnerDeletion
+	revRef.Controller = &isController
+	return revRef
+}
+
+const (
+	// controllerConfigMapName is the name of the configmap in the eventing
+	// namespace that holds the configuration for this controller.
+	controllerConfigMapName = "flow-controller-config"
+
+	// defaultClusterBusConfigMapKey is the name of the key in this controller's
+	// ConfigMap that contains the name of the default cluster bus for the flow
+	// controller to use.
+	defaultClusterBusConfigMapKey = "default-cluster-bus"
+
+	// fallbackClusterBusName is the name of the cluster bus that will be used
+	// for flows if the controller's configmap does not exist or does not
+	// contain the 'default-cluster-bus' key.
+	fallbackClusterBusName = "stub"
+)
+
+// getDefaultClusterBusName returns the value of the 'default-cluster-bus' key in
+// the knative-system/flow-controller-config configmap or an error. If the
+// 'default-cluster-bus' key is not set, it returns the default value "stub".
+func (r *reconciler) getDefaultClusterBusName() (string, error) {
+	configMapKey := client.ObjectKey{
+		Namespace: system.Namespace,
+		Name:      controllerConfigMapName,
+	}
+
+	configMap := &corev1.ConfigMap{}
+	if err := r.client.Get(context.TODO(), configMapKey, configMap); err != nil {
+		// return the fallback value if there's an error loading the configmap
+		return fallbackClusterBusName, nil
+	}
+
+	if value, ok := configMap.Data[defaultClusterBusConfigMapKey]; ok {
+		return value, nil
+	}
+
+	return fallbackClusterBusName, nil // return the fallback value
 }

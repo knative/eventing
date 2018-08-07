@@ -24,6 +24,7 @@ import (
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	flowsv1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
+	"github.com/knative/eventing/pkg/system"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -59,6 +60,24 @@ func init() {
 var testCases = []controllertesting.TestCase{
 	{
 		Name: "new flow: adds status, action target resolved",
+		InitialState: []runtime.Object{
+			getNewFlow(),
+			getFlowControllerConfigMap(),
+		},
+		ReconcileKey: "test/test-flow",
+		WantResult:   reconcile.Result{},
+		WantPresent: []runtime.Object{
+			getActionTargetResolvedFlow(),
+			func() *channelsv1alpha1.Channel {
+				c := getNewChannel()
+				c.Spec.ClusterBus = "special-bus"
+				return c
+			}(),
+			getNewSubscription(),
+		},
+	},
+	{
+		Name: "new flow: adds status, action target resolved, no flow controller config map, use default 'stub' bus",
 		InitialState: []runtime.Object{
 			getNewFlow(),
 		},
@@ -169,6 +188,15 @@ func getNewFeed() *feedsv1alpha1.Feed {
 	}
 }
 
+func getFlowControllerConfigMap() *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: om(system.Namespace, controllerConfigMapName),
+		Data: map[string]string{
+			defaultClusterBusConfigMapKey: "special-bus",
+		},
+	}
+}
+
 func flowType() metav1.TypeMeta {
 	return metav1.TypeMeta{
 		APIVersion: flowsv1alpha1.SchemeGroupVersion.String(),
@@ -194,6 +222,13 @@ func subscriptionType() metav1.TypeMeta {
 	return metav1.TypeMeta{
 		APIVersion: channelsv1alpha1.SchemeGroupVersion.String(),
 		Kind:       "Subscription",
+	}
+}
+
+func configMapType() metav1.TypeMeta {
+	return metav1.TypeMeta{
+		APIVersion: corev1.SchemeGroupVersion.String(),
+		Kind:       "ConfigMap",
 	}
 }
 
