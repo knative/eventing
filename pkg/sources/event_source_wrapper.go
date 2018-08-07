@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-func RunEventSource(es EventSource) {
+func RunEventSource(es EventSource) error {
 	op := os.Getenv(FeedOperationKey)
 	feedContext := os.Getenv(FeedContextKey)
 	trigger := os.Getenv(FeedTriggerKey)
@@ -22,35 +22,36 @@ func RunEventSource(es EventSource) {
 
 	err := json.Unmarshal(decodedContext, &c)
 	if err != nil {
-		panic(fmt.Sprintf("can not unmarshal %q %q : %s", FeedContextKey, decodedContext, err))
+		return fmt.Errorf("can not unmarshal %q %q : %s", FeedContextKey, decodedContext, err)
 	}
 
 	err = json.Unmarshal(decodedTrigger, &t)
 	if err != nil {
-		panic(fmt.Sprintf("can not unmarshal %q %q : %s", FeedTriggerKey, decodedTrigger, err))
+		return fmt.Errorf("can not unmarshal %q %q : %s", FeedTriggerKey, decodedTrigger, err)
 	}
 
 	log.Printf("Doing %q target: %q Received feedContext as %+v trigger %+v", op, target, c, t)
 	if op == string(StartFeed) {
 		b, err := es.StartFeed(t, target)
 		if err != nil {
-			panic(fmt.Sprintf("Failed to start feed: %s", err))
+			return fmt.Errorf("Failed to start feed: %s", err)
 		}
 
 		marshalledFeedContext, err := json.Marshal(b)
 		if err != nil {
-			panic(fmt.Sprintf("Failed to marshal returned feed context %+v : %s", b, err))
+			return fmt.Errorf("Failed to marshal returned feed context %+v : %s", b, err)
 		}
 		encodedFeedContext := base64.StdEncoding.EncodeToString(marshalledFeedContext)
 
 		err = ioutil.WriteFile("/dev/termination-log", []byte(encodedFeedContext), os.ModeDevice)
 		if err != nil {
-			panic(fmt.Sprintf("Failed to write the termination message: %s", err))
+			return fmt.Errorf("Failed to write the termination message: %s", err)
 		}
 	} else {
 		err = es.StopFeed(t, c)
 		if err != nil {
-			panic(fmt.Sprintf("Failed to stop feed: %s", err))
+			return fmt.Errorf("Failed to stop feed: %s", err)
 		}
 	}
+	return nil
 }
