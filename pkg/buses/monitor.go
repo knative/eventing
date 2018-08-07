@@ -164,21 +164,12 @@ func (h MonitorEventHandlerFuncs) onProvision(channel *channelsv1alpha1.Channel,
 func (h MonitorEventHandlerFuncs) onUnprovision(channel *channelsv1alpha1.Channel, monitor *Monitor) error {
 	if h.UnprovisionFunc != nil {
 		err := h.UnprovisionFunc(channel)
-		channelCopy := channel.DeepCopy()
-		var cond *channelsv1alpha1.ChannelCondition
 		if err != nil {
 			monitor.recorder.Eventf(channel, corev1.EventTypeWarning, errResourceSync, "Error unprovisioning channel: %s", err)
-			cond = util.NewChannelCondition(channelsv1alpha1.ChannelProvisioned, corev1.ConditionUnknown, errResourceSync, err.Error())
 		} else {
 			monitor.recorder.Event(channel, corev1.EventTypeNormal, successSynced, "Channel unprovisioned successfully")
-			cond = util.NewChannelCondition(channelsv1alpha1.ChannelProvisioned, corev1.ConditionFalse, successSynced, "Channel unprovisioned successfully")
 		}
-		util.SetChannelCondition(&channelCopy.Status, *cond)
-		util.ConsolidateChannelCondition(&channelCopy.Status)
-		_, errS := monitor.clientset.ChannelsV1alpha1().Channels(channel.Namespace).Update(channelCopy)
-		if errS != nil {
-			glog.Warningf("Could not update status: %v", errS)
-		}
+		// skip updating status conditions since the channel was deleted
 		return err
 	}
 	return nil
@@ -213,20 +204,12 @@ func (h MonitorEventHandlerFuncs) onSubscribe(subscription *channelsv1alpha1.Sub
 func (h MonitorEventHandlerFuncs) onUnsubscribe(subscription *channelsv1alpha1.Subscription, monitor *Monitor) error {
 	if h.UnsubscribeFunc != nil {
 		err := h.UnsubscribeFunc(subscription)
-		subscriptionCopy := subscription.DeepCopy()
-		var cond *channelsv1alpha1.SubscriptionCondition
 		if err != nil {
 			monitor.recorder.Eventf(subscription, corev1.EventTypeWarning, errResourceSync, "Error unsubscribing: %s", err)
-			cond = util.NewSubscriptionCondition(channelsv1alpha1.SubscriptionDispatching, corev1.ConditionUnknown, errResourceSync, err.Error())
 		} else {
 			monitor.recorder.Event(subscription, corev1.EventTypeNormal, successSynced, "Unsubscribed successfully")
-			cond = util.NewSubscriptionCondition(channelsv1alpha1.SubscriptionDispatching, corev1.ConditionFalse, successSynced, "Subscription dispatcher successfully deleted")
 		}
-		util.SetSubscriptionCondition(&subscriptionCopy.Status, *cond)
-		_, errS := monitor.clientset.ChannelsV1alpha1().Subscriptions(subscription.Namespace).Update(subscriptionCopy)
-		if errS != nil {
-			glog.Warningf("Could not update status: %v", errS)
-		}
+		// skip updating status conditions since the subscription was deleted
 		return err
 	}
 	return nil
