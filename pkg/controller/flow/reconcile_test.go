@@ -24,7 +24,6 @@ import (
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	flowsv1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
-	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -54,7 +53,6 @@ func init() {
 	// Add types to scheme
 	feedsv1alpha1.AddToScheme(scheme.Scheme)
 	flowsv1alpha1.AddToScheme(scheme.Scheme)
-	servingv1alpha1.AddToScheme(scheme.Scheme)
 	channelsv1alpha1.AddToScheme(scheme.Scheme)
 }
 

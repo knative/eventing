@@ -28,10 +28,10 @@ The dispatcher receives events via a Channel's Service from inside the cluster a
 
 Note: Cloud Pub/Sub does not guarantee exactly once delivery, subscribers must guard against multiple deliveries of the same event.
 
-To view logs:
+To view logs (for cluster wide deployment replace `bus` with `clusterbus`):
 - for the dispatcher
     ```
-    kail -d gcppubsub-bus -c dispatcher
+    kail -d gcppubsub-bus-dispatcher -c dispatcher
     ```
 - for the provisioner
     ```

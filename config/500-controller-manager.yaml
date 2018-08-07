@@ -26,8 +26,16 @@ spec:
       serviceAccountName: eventing-controller
       containers:
       - name: controller-manager
+        terminationMessagePolicy: FallbackToLogsOnError
         image: github.com/knative/eventing/cmd/controller-manager
         args: [
           "-logtostderr",
           "-stderrthreshold", "INFO",
         ]
+        volumeMounts:
+          - name: config-logging
+            mountPath: /etc/config-logging
+      volumes:
+        - name: config-logging
+          configMap:
+            name: config-logging

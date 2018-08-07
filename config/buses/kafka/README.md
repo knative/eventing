@@ -34,10 +34,10 @@ writes them to the corresponding Kafka topic
 from the subscription's channel and forwards them over HTTP to the
 subscriber.
 
-To view logs:
+To view logs (for cluster wide deployment replace `bus` with `clusterbus`):
 - for the dispatcher
     ```
-    kail -d kafka-bus -c dispatcher
+    kail -d kafka-bus-dispatcher -c dispatcher
     ```
 - for the provisioner
     ```

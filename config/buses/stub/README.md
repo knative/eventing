@@ -18,8 +18,8 @@ The dispatcher receives events via a Channel's Service from inside the cluster a
 
 Note: The stub bus does not guarantee delivery, errors will not be reattempted.
 
-To view logs:
+To view logs (for cluster wide deployment replace `bus` with `clusterbus`):
 
 ```
-kail -d stub-bus -c dispatcher
+kail -d stub-bus-dispatcher -c dispatcher
 ```

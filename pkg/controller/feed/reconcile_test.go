@@ -26,7 +26,6 @@ import (
 	"github.com/knative/eventing/pkg/controller/feed/resources"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
 	"github.com/knative/eventing/pkg/sources"
-	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,7 +55,6 @@ const (
 func init() {
 	// Add types to scheme
 	feedsv1alpha1.AddToScheme(scheme.Scheme)
-	servingv1alpha1.AddToScheme(scheme.Scheme)
 }
 
 var testCases = []controllertesting.TestCase{
@@ -71,6 +69,21 @@ var testCases = []controllertesting.TestCase{
 		WantPresent: []runtime.Object{
 			getStartInProgressFeed(),
 			getNewStartJob(),
+			//TODO job created event
+		},
+	},
+	{
+		Name: "new feed with secret ref: secret gets to job",
+		InitialState: []runtime.Object{
+			getEventSource(),
+			getEventType(),
+			getFeedSecret(),
+			getNewSecretFeed(),
+		},
+		ReconcileKey: "test/test-feed",
+		WantPresent: []runtime.Object{
+			getSecretStartInProgressFeed(),
+			getNewSecretStartJob(),
 			//TODO job created event
 		},
 	},
@@ -320,31 +333,42 @@ func getNewFeed() *feedsv1alpha1.Feed {
 	}
 }
 
-func getFeedFailingWithMissingEventSource() *feedsv1alpha1.Feed {
-	return &feedsv1alpha1.Feed{
-		TypeMeta:   feedType(),
-		ObjectMeta: om("test", "test-feed"),
-		Spec: feedsv1alpha1.FeedSpec{
-			Action: feedsv1alpha1.FeedAction{
-				DNSName: targetDNS,
-			},
-			Trigger: feedsv1alpha1.EventTrigger{
-				EventType:      getEventType().Name,
-				Resource:       "",
-				Service:        "",
-				Parameters:     nil,
-				ParametersFrom: nil,
-			},
-		},
-		Status: feedsv1alpha1.FeedStatus{
-			Conditions: []feedsv1alpha1.FeedCondition{{
-				Type:    feedsv1alpha1.FeedConditionDependenciesSatisfied,
-				Status:  corev1.ConditionFalse,
-				Reason:  "TestGenerated",
-				Message: "Test generated",
-			}},
+func getFeedSecret() *corev1.Secret {
+	secretMap := map[string]interface{}{"foo": "bar"}
+	data, err := json.Marshal(secretMap)
+	if err != nil {
+		panic(err)
+	}
+	return &corev1.Secret{
+		ObjectMeta: om("test", "feed-secret"),
+		Data: map[string][]byte{
+			"test-secret-key": data,
 		},
 	}
+
+}
+
+func getNewSecretFeed() *feedsv1alpha1.Feed {
+	feed := getNewFeed()
+	feed.Spec.Trigger.ParametersFrom = []feedsv1alpha1.ParametersFromSource{{
+		SecretKeyRef: &feedsv1alpha1.SecretKeyReference{
+			Name: getFeedSecret().Name,
+			Key:  "test-secret-key",
+		},
+	}}
+	return feed
+}
+
+func getFeedFailingWithMissingEventSource() *feedsv1alpha1.Feed {
+	feed := getNewFeed()
+	feed.Status.InitializeConditions()
+	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+		Type:    feedsv1alpha1.FeedConditionDependenciesSatisfied,
+		Status:  corev1.ConditionFalse,
+		Reason:  "TestGenerated",
+		Message: "test generated",
+	})
+	return feed
 }
 
 func getStartInProgressFeed() *feedsv1alpha1.Feed {
@@ -366,6 +390,17 @@ func getStartInProgressFeed() *feedsv1alpha1.Feed {
 		Message: "start job in progress",
 	})
 
+	return feed
+}
+
+func getSecretStartInProgressFeed() *feedsv1alpha1.Feed {
+	feed := getStartInProgressFeed()
+	feed.Spec.Trigger.ParametersFrom = []feedsv1alpha1.ParametersFromSource{{
+		SecretKeyRef: &feedsv1alpha1.SecretKeyReference{
+			Name: getFeedSecret().Name,
+			Key:  "test-secret-key",
+		},
+	}}
 	return feed
 }
 
@@ -446,9 +481,6 @@ func getNewStartJob() *batchv1.Job {
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{"sidecar.istio.io/inject": "false"},
-				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
 						Name:  "feedlet",
@@ -490,7 +522,7 @@ func getNewStartJob() *batchv1.Job {
 								},
 							},
 						}},
-						ImagePullPolicy: corev1.PullAlways,
+						ImagePullPolicy: corev1.PullIfNotPresent,
 					}},
 					RestartPolicy: corev1.RestartPolicyNever,
 				},
@@ -500,6 +532,29 @@ func getNewStartJob() *batchv1.Job {
 		},
 		Status: batchv1.JobStatus{},
 	}
+}
+
+func getNewSecretStartJob() *batchv1.Job {
+	job := getNewStartJob()
+	envVars := job.Spec.Template.Spec.Containers[0].Env
+	var newEnvVars []corev1.EnvVar
+	for _, envVar := range envVars {
+		if envVar.Name == string(resources.EnvVarTrigger) {
+			newEnvVars = append(newEnvVars, corev1.EnvVar{
+				Name: string(resources.EnvVarTrigger),
+				Value: base64.StdEncoding.EncodeToString(bytesOrDie(json.Marshal(
+					sources.EventTrigger{
+						EventType:  "test-et",
+						Parameters: map[string]interface{}{"foo": "bar"},
+					},
+				))),
+			})
+		} else {
+			newEnvVars = append(newEnvVars, envVar)
+		}
+	}
+	job.Spec.Template.Spec.Containers[0].Env = newEnvVars
+	return job
 }
 
 func getInProgressStartFeedJob() *batchv1.Job {
