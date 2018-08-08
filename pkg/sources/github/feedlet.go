@@ -350,13 +350,22 @@ func main() {
 
 	decodedParameters, _ := base64.StdEncoding.DecodeString(os.Getenv(sources.EventSourceParametersKey))
 
-	feedNamespace := os.Getenv(sources.FeedNamespaceKey)
-	feedServiceAccountName := os.Getenv(sources.FeedServiceAccountKey)
-
 	var p parameters
 	err := json.Unmarshal(decodedParameters, &p)
 	if err != nil {
 		log.Printf("Fatal: can not unmarshal %q : %v", decodedParameters, err)
+		os.Exit(1)
+	}
+
+	feedNamespace := os.Getenv(sources.FeedNamespaceKey)
+	if len(feedNamespace) != 0 {
+		log.Printf("Fatal: feed namespace not provided, expected envvar %q to be set", sources.FeedNamespaceKey)
+		os.Exit(1)
+	}
+
+	feedServiceAccountName := os.Getenv(sources.FeedServiceAccountKey)
+	if len(feedServiceAccountName) != 0 {
+		log.Printf("Fatal: feed service account not provided, expected envvar %q to be set", sources.FeedServiceAccountKey)
 		os.Exit(1)
 	}
 
