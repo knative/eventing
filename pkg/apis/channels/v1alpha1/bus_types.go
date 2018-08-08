@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"encoding/json"
 
+	"github.com/knative/pkg/apis"
 	kapi "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -145,4 +146,9 @@ type GenericBus interface {
 	meta_v1.ObjectMetaAccessor
 	BacksChannel(channel *Channel) bool
 	GetSpec() *BusSpec
+
+	// Needed for generic webhook support
+	apis.Defaultable
+	apis.Immutable
+	apis.Validatable
 }

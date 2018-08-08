@@ -75,7 +75,7 @@ func TestInvalidBusParameterNameFails(t *testing.T) {
 		t.Fatalf("Failed to marshal bus: %s", err)
 	}
 	req.Object.Raw = marshaled
-	expectFailsWith(t, ac.admit(testCtx, req), "invalid parameter name Spec.Parameters.Subscription.paramètre")
+	expectFailsWith(t, ac.admit(testCtx, req), `invalid key name "paramètre": spec.parameters.subscription[0].name`)
 
 	invalidName = "param/name"
 	bus = createBus(testBusName, "foobar/dispatcher")
@@ -85,7 +85,7 @@ func TestInvalidBusParameterNameFails(t *testing.T) {
 		t.Fatalf("Failed to marshal bus: %s", err)
 	}
 	req.Object.Raw = marshaled
-	expectFailsWith(t, ac.admit(testCtx, req), "invalid parameter name Spec.Parameters.Channel.param/name")
+	expectFailsWith(t, ac.admit(testCtx, req), `invalid key name "param/name": spec.parameters.channel[0].name`)
 }
 
 func TestInvalidClusterBusParameterNameFails(t *testing.T) {
@@ -102,7 +102,7 @@ func TestInvalidClusterBusParameterNameFails(t *testing.T) {
 		t.Fatalf("Failed to marshal bus: %s", err)
 	}
 	req.Object.Raw = marshaled
-	expectFailsWith(t, ac.admit(testCtx, req), "invalid parameter name Spec.Parameters.Subscription.paramètre")
+	expectFailsWith(t, ac.admit(testCtx, req), `invalid key name "paramètre": spec.parameters.subscription[0].name`)
 
 	invalidName = "param/name"
 	bus = createClusterBus(testBusName, "foobar/dispatcher")
@@ -112,7 +112,7 @@ func TestInvalidClusterBusParameterNameFails(t *testing.T) {
 		t.Fatalf("Failed to marshal bus: %s", err)
 	}
 	req.Object.Raw = marshaled
-	expectFailsWith(t, ac.admit(testCtx, req), "invalid parameter name Spec.Parameters.Channel.param/name")
+	expectFailsWith(t, ac.admit(testCtx, req), `invalid key name "param/name": spec.parameters.channel[0].name`)
 }
 
 func TestInvalidNewChannelNameFails(t *testing.T) {
