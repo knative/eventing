@@ -251,6 +251,16 @@
   version = "1.1.3"
 
 [[projects]]
+  digest = "1:3b8adce8bbe5865d7155ddfadbd063915265f04a22ab47a3f5cddd7b32333d1e"
+  name = "github.com/knative/build"
+  packages = [
+    "pkg/apis/build",
+    "pkg/apis/build/v1alpha1",
+  ]
+  pruneopts = "NUT"
+  revision = "5c1d8c8469d1ed34b2aecf4c2305b3a57fff2ee3"
+
+[[projects]]
   digest = "1:c19f87a341b72c2121456397006116f9496006d62722315e43940e7d42744672"
   name = "github.com/knative/pkg"
   packages = [
@@ -271,6 +281,31 @@
   ]
   pruneopts = "NUT"
   revision = "a088fee6227f7c6842ce7f7406cb75af8a6e0643"
+
+[[projects]]
+  digest = "1:07e99c5d7a11f4c0d768fef69fb53999ce38b9e359ae039057b7ff10f959bb76"
+  name = "github.com/knative/serving"
+  packages = [
+    "pkg/apis/istio",
+    "pkg/apis/istio/v1alpha3",
+    "pkg/apis/serving",
+    "pkg/apis/serving/v1alpha1",
+    "pkg/client/clientset/versioned",
+    "pkg/client/clientset/versioned/scheme",
+    "pkg/client/clientset/versioned/typed/istio/v1alpha3",
+    "pkg/client/clientset/versioned/typed/serving/v1alpha1",
+    "pkg/client/informers/externalversions",
+    "pkg/client/informers/externalversions/internalinterfaces",
+    "pkg/client/informers/externalversions/istio",
+    "pkg/client/informers/externalversions/istio/v1alpha3",
+    "pkg/client/informers/externalversions/serving",
+    "pkg/client/informers/externalversions/serving/v1alpha1",
+    "pkg/client/listers/istio/v1alpha3",
+    "pkg/client/listers/serving/v1alpha1",
+  ]
+  pruneopts = "NUT"
+  revision = "091d4519394bb7bee5ae4d3ab764c3f4f6f2a51b"
+  version = "v0.1.0"
 
 [[projects]]
   branch = "master"
@@ -1001,6 +1036,9 @@
     "github.com/knative/pkg/configmap",
     "github.com/knative/pkg/logging",
     "github.com/knative/pkg/logging/logkey",
+    "github.com/knative/serving/pkg/apis/serving/v1alpha1",
+    "github.com/knative/serving/pkg/client/clientset/versioned",
+    "github.com/knative/serving/pkg/client/informers/externalversions",
     "github.com/mattbaird/jsonpatch",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "go.uber.org/zap",
