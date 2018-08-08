@@ -81,12 +81,9 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b49dd34bdf52d28b69e41181bed939bdf48e1152ef54d21db643e3c50b3b33c0"
+  digest = "1:53becd66889185091b58ea3fc49294996f2179fb05a89702f4de7d15e581b509"
   name = "github.com/go-logr/logr"
-  packages = [
-    ".",
-    "testing",
-  ]
+  packages = ["."]
   pruneopts = "NUT"
   revision = "9fb12b3b21c5415d16ac18dc5cd42c1cfdd40c4e"
 
@@ -953,7 +950,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:0636bd706086f089dffeb6ea9a6e6a5079da1820943367949e4e477b7f94355c"
+  digest = "1:6021a2650ad6880e656ea296948bff84ec1f1df778a51fe416cee1ad6cf7a444"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/cache",
@@ -978,7 +975,7 @@
     "pkg/source/internal",
   ]
   pruneopts = "NUT"
-  revision = "f5b79b93f3aa7b978117f942f3cd67a91db12207"
+  revision = "60bb251ad86f9b313653618aad0c2c53f41a6625"
 
 [solve-meta]
   analyzer-name = "dep"
