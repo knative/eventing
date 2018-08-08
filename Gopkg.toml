@@ -67,11 +67,6 @@ required = [
   # HEAD as of 2018-08-03
   revision = "a088fee6227f7c6842ce7f7406cb75af8a6e0643"
 
-[[constraint]]
-  name = "github.com/knative/pkg"
-  # HEAD as of 2018-08-02
-  revision = "51828370417a6cce0cf7b271a5ee49bf3b01734c"
-
 [[override]]
   name = "github.com/Shopify/sarama"
   revision = "46cf3e2cf1acef7876068f66cf69ec31aad2d0b2" # includes higher level admin client
