@@ -146,6 +146,9 @@ type GenericBus interface {
 	meta_v1.ObjectMetaAccessor
 	BacksChannel(channel *Channel) bool
 	GetSpec() *BusSpec
-	apis.Validatable
+
+	// Needed for generic webhook support
+	apis.Defaultable
 	apis.Immutable
+	apis.Validatable
 }
