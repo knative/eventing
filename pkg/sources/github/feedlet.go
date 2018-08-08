@@ -356,7 +356,8 @@ func main() {
 	var p parameters
 	err := json.Unmarshal(decodedParameters, &p)
 	if err != nil {
-		panic(fmt.Sprintf("can not unmarshal %q : %v", decodedParameters, err))
+		log.Printf("Fatal: can not unmarshal %q : %v", decodedParameters, err)
+		os.Exit(1)
 	}
 
 	cfg, err := clientcmd.BuildConfigFromFlags("", "")
@@ -375,7 +376,7 @@ func main() {
 	}
 
 	sources.RunEventSource(NewGithubEventSource(kubeClient, servingClient, feedNamespace, feedServiceAccountName, p.Image))
-	log.Printf("done...")
+	log.Printf("GitHub Feedlet finsihed")
 }
 
 func webhookIDFrom(feedContext sources.FeedContext) (int64, error) {
