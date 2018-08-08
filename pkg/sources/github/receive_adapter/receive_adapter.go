@@ -73,7 +73,7 @@ func main() {
 	var credentials GithubSecrets
 	err := json.Unmarshal([]byte(githubSecrets), &credentials)
 	if err != nil {
-		log.Fatalf("Failed to unmarshal credentials: %s", err)
+		log.Fatalf("Failed to unmarshal credentials: %v", err)
 		return
 	}
 
@@ -102,14 +102,14 @@ func main() {
 func postMessage(target string, m *github.PullRequestPayload) error {
 	jsonStr, err := json.Marshal(m)
 	if err != nil {
-		log.Printf("Error: Failed to marshal the message: %+v : %s", m, err)
+		log.Printf("Error: Failed to marshal the message: %+v : %v", m, err)
 		return err
 	}
 
 	URL := fmt.Sprintf("http://%s/", target)
 	req, err := http.NewRequest("POST", URL, bytes.NewBuffer(jsonStr))
 	if err != nil {
-		log.Printf("Error: Failed to create http request: %s", err)
+		log.Printf("Error: Failed to create http request: %v", err)
 		return err
 	}
 

@@ -55,7 +55,6 @@ func (h *GithubHandler) handlePost(rw http.ResponseWriter, req *http.Request) {
 		panic(err)
 	}
 	rw.WriteHeader(200)
-	rw.Header().Add("content-type", "application/json")
 
 	var pl github.PullRequestPayload
 	if err := json.Unmarshal(body, &pl); err != nil {

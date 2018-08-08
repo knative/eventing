@@ -64,7 +64,7 @@ const (
 	secretKeyKey = "secretKey"
 )
 
-type GithubEventSource struct {
+type githubEventSource struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
 	// servingclientset is a clientset for serving API groups
@@ -79,7 +79,7 @@ type GithubEventSource struct {
 }
 
 func NewGithubEventSource(kubeclientset kubernetes.Interface, servingclientset servingclientset.Interface, feedNamespace, feedServiceAccountName, image string) sources.EventSource {
-	return &GithubEventSource{
+	return &githubEventSource{
 		kubeclientset:          kubeclientset,
 		servingclientset:       servingclientset,
 		feedNamespace:          feedNamespace,
@@ -89,14 +89,14 @@ func NewGithubEventSource(kubeclientset kubernetes.Interface, servingclientset s
 }
 
 // TODO(n3wscott): Add a timeout for StopFeed.
-func (t *GithubEventSource) StopFeed(trigger sources.EventTrigger, feedContext sources.FeedContext) error {
+func (t *githubEventSource) StopFeed(trigger sources.EventTrigger, feedContext sources.FeedContext) error {
 	log.Printf("stopping github webhook feed with context %+v", feedContext)
 
 	return t.deleteWebhook(trigger, feedContext)
 }
 
 // TODO(n3wscott): Add a timeout for StartFeed.
-func (t *GithubEventSource) StartFeed(trigger sources.EventTrigger, target string) (*sources.FeedContext, error) {
+func (t *githubEventSource) StartFeed(trigger sources.EventTrigger, target string) (*sources.FeedContext, error) {
 
 	// Create the Receive Adapter Service that will accept incoming requests from GitHub.
 	service, err := t.createReceiveAdapter(trigger, target)
@@ -109,15 +109,15 @@ func (t *GithubEventSource) StartFeed(trigger sources.EventTrigger, target strin
 
 	// Start watching the Receive Adapter Service for it's updated domain name. This will be passed
 	// to GitHub as part of the webhook registration.
-	receiveAdaptorDomain, err := t.waitForServiceDomain(service.GetObjectMeta().GetName())
+	receiveAdapterDomain, err := t.waitForServiceDomain(service.GetObjectMeta().GetName())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the service: %v", err)
 	}
 
-	return t.createWebhook(trigger, service.GetObjectMeta().GetName(), receiveAdaptorDomain)
+	return t.createWebhook(trigger, service.GetObjectMeta().GetName(), receiveAdapterDomain)
 }
 
-func (t *GithubEventSource) waitForServiceDomain(serviceName string) (string, error) {
+func (t *githubEventSource) waitForServiceDomain(serviceName string) (string, error) {
 	sc := t.servingclientset.ServingV1alpha1().Services(t.feedNamespace)
 
 	wt := int64(watchTimeout / time.Second)
@@ -134,7 +134,7 @@ func (t *GithubEventSource) waitForServiceDomain(serviceName string) (string, er
 
 	w, err := sc.Watch(opts)
 	if err != nil {
-		log.Printf("failed to create watch: %v", err)
+		log.Printf("[%s] failed to create watch: %v", serviceName, err)
 		return "", err
 	}
 
@@ -142,28 +142,27 @@ func (t *GithubEventSource) waitForServiceDomain(serviceName string) (string, er
 	for {
 		event, more := <-eventChan
 		if !more {
-			log.Printf("expected a Service object, but got %T", event.Object)
-			return "", fmt.Errorf("no more")
+			return "", fmt.Errorf("[%s] watch channel closed, no more", serviceName)
 		}
 		switch event.Type {
 		case watch.Error:
-			return "", fmt.Errorf("watched Service error")
+			return "", fmt.Errorf("[%s] watched Service error", serviceName)
 		case watch.Deleted:
-			return "", fmt.Errorf("watched Service deleted")
+			return "", fmt.Errorf("[%s] watched Service deleted", serviceName)
 		case watch.Added, watch.Modified:
 			service, ok := event.Object.(*v1alpha1.Service)
 			if !ok {
-				log.Printf("expected a Service object, but got %T", event.Object)
+				log.Printf("[%s] expected a Service object, but got %T", serviceName, event.Object)
 				continue
 			}
 			if service.Name != serviceName {
-				log.Printf("Error: expected a service.Name %q to match expected serviceName %q", service.Name, serviceName)
+				log.Printf("Error: [%s] expected a service.Name %q to match expected serviceName %q",
+					serviceName, service.Name, serviceName)
 				continue
 			}
 			status := service.Status
 			if status.Domain != "" {
 				w.Stop()
-				log.Printf("got domain: %s", event.Object)
 				return status.Domain, nil
 			}
 
@@ -171,23 +170,24 @@ func (t *GithubEventSource) waitForServiceDomain(serviceName string) (string, er
 	}
 }
 
-func receiveAdapterName(resource string) string {
+func receiveAdapterName(trigger sources.EventTrigger) string {
 	// TODO(n3wscott): this needs more UUID on the end of it?
-	// TODO(n3wscott): Currently this needs to be deterministic so StopFeed can find the receive adapter. If the receive adapter name were added to the feed context, then this could be a uuid.
-	serviceName := fmt.Sprintf("%s-%s-%s", "github", resource, postfixReceiveAdapter)
+	// TODO(n3wscott): Currently this needs to be deterministic so StopFeed can find the receive adapter. If the receive
+	// adapter name were added to the feed context, then this could be a uuid.
+	serviceName := fmt.Sprintf("%s-%s-%s", "github", trigger.Resource, postfixReceiveAdapter)
 	serviceName = strings.Replace(serviceName, "/", "-", -1)
 	serviceName = strings.Replace(serviceName, ".", "-", -1)
 	serviceName = strings.ToLower(serviceName)
 	return serviceName
 }
 
-func (t *GithubEventSource) createReceiveAdapter(trigger sources.EventTrigger, target string) (*v1alpha1.Service, error) {
+func (t *githubEventSource) createReceiveAdapter(trigger sources.EventTrigger, target string) (*v1alpha1.Service, error) {
 	sc := t.servingclientset.ServingV1alpha1().Services(t.feedNamespace)
 
-	serviceName := receiveAdapterName(trigger.Resource)
+	serviceName := receiveAdapterName(trigger)
 
 	// First, check if service exists already.
-	if _, err := sc.Get(serviceName, metav1.GetOptions{}); err != nil {
+	if sc, err := sc.Get(serviceName, metav1.GetOptions{}); err != nil {
 		if !apierrs.IsNotFound(err) {
 			return nil, fmt.Errorf("service.Get for %q failed: %v", serviceName, err)
 		}
@@ -195,7 +195,7 @@ func (t *GithubEventSource) createReceiveAdapter(trigger sources.EventTrigger, t
 	} else {
 		log.Printf("found existing service %q", serviceName)
 		// Don't try again.
-		return nil, nil
+		return sc, nil
 	}
 
 	secretName, err := stringFrom(trigger.Parameters, secretNameKey)
@@ -217,7 +217,7 @@ func (t *GithubEventSource) createReceiveAdapter(trigger sources.EventTrigger, t
 	return service, nil
 }
 
-func (t *GithubEventSource) deleteReceiveAdapter(namespace string, serviceName string) error {
+func (t *githubEventSource) deleteReceiveAdapter(namespace string, serviceName string) error {
 	sc := t.servingclientset.ServingV1alpha1().Services(t.feedNamespace)
 
 	// First, check if deployment exists already.
@@ -233,18 +233,22 @@ func (t *GithubEventSource) deleteReceiveAdapter(namespace string, serviceName s
 	return sc.Delete(serviceName, &metav1.DeleteOptions{})
 }
 
-func (t *GithubEventSource) deleteWebhook(trigger sources.EventTrigger, feedContext sources.FeedContext) error {
-	serviceName := receiveAdapterName(trigger.Resource)
-	t.deleteReceiveAdapter(t.feedNamespace, serviceName)
+func (t *githubEventSource) deleteWebhook(trigger sources.EventTrigger, feedContext sources.FeedContext) error {
+	serviceName := receiveAdapterName(trigger)
+	err := t.deleteReceiveAdapter(t.feedNamespace, serviceName)
+	if err != nil {
+		log.Printf("Error: Failed to delete the ReceiveAdapter \"%s/%s\": %v", t.feedNamespace, serviceName, err)
+		// Continue deleting the webhook.
+	}
 
 	owner, repo, err := parseOwnerRepoFrom(trigger.Resource)
 	if err != nil {
-		log.Printf("Error: Failed to get webhook id from context: %v; bailing...", err)
+		log.Printf("Error: Failed to parse owner and repo from tigger.resource: %v; bailing...", err)
 		// Don't try again.
 		return nil
 	}
 
-	webhookID, err := stringFrom(feedContext.Context, webhookIDKey)
+	webhookID, err := webhookIDFrom(feedContext)
 	if err != nil {
 		log.Printf("Error: Failed to get webhook id from context: %v; bailing...", err)
 		// Don't try again.
@@ -265,23 +269,19 @@ func (t *GithubEventSource) deleteWebhook(trigger sources.EventTrigger, feedCont
 	tc := oauth2.NewClient(ctx, ts)
 	client := ghclient.NewClient(tc)
 
-	id, err := strconv.ParseInt(webhookID, 10, 64)
-	if err != nil {
-		return fmt.Errorf("failed to convert webhook %q to int64 : %s", webhookID, err)
-	}
-	_, err = client.Repositories.DeleteHook(ctx, owner, repo, id)
+	_, err = client.Repositories.DeleteHook(ctx, owner, repo, webhookID)
 	if err != nil {
 		if errResp, ok := err.(*ghclient.ErrorResponse); ok && errResp.Message == "Not Found" {
 			// If the webhook doesn't exist, nothing to do
-			return fmt.Errorf("webhook doesn't exist, nothing to delete.")
+			return fmt.Errorf("webhook doesn't exist, nothing to delete")
 		}
 		return fmt.Errorf("failed to delete the webhook: %v", err)
 	}
-	log.Printf("deleted webhook %q successfully", webhookID)
+	log.Printf("deleted webhook \"%d\" successfully", webhookID)
 	return nil
 }
 
-func (t *GithubEventSource) createWebhook(trigger sources.EventTrigger, name, domain string) (*sources.FeedContext, error) {
+func (t *githubEventSource) createWebhook(trigger sources.EventTrigger, name, domain string) (*sources.FeedContext, error) {
 
 	log.Printf("CREATING GITHUB WEBHOOK")
 
@@ -356,26 +356,43 @@ func main() {
 	var p parameters
 	err := json.Unmarshal(decodedParameters, &p)
 	if err != nil {
-		panic(fmt.Sprintf("can not unmarshal %q : %s", decodedParameters, err))
+		panic(fmt.Sprintf("can not unmarshal %q : %v", decodedParameters, err))
 	}
 
 	cfg, err := clientcmd.BuildConfigFromFlags("", "")
 	if err != nil {
-		log.Printf("Error: error building kubeconfig: %s", err.Error())
+		log.Printf("Error: error building kubeconfig: %v", err)
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		log.Printf("Error: error building kubernetes clientset: %s", err.Error())
+		log.Printf("Error: error building kubernetes clientset: %v", err)
 	}
 
 	servingClient, err := servingclientset.NewForConfig(cfg)
 	if err != nil {
-		log.Printf("Error: error building serving clientset: %s", err.Error())
+		log.Printf("Error: error building serving clientset: %v", err)
 	}
 
 	sources.RunEventSource(NewGithubEventSource(kubeClient, servingClient, feedNamespace, feedServiceAccountName, p.Image))
 	log.Printf("done...")
+}
+
+func webhookIDFrom(feedContext sources.FeedContext) (int64, error) {
+	webhookID, err := stringFrom(feedContext.Context, webhookIDKey)
+	if err != nil {
+		return 0, err
+
+	}
+	id, err := int64From(webhookID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to convert webhook %q to int64 : %v", webhookID, err)
+	}
+	return id, nil
+}
+
+func int64From(strNum string) (int64, error) {
+	return strconv.ParseInt(strNum, 10, 64)
 }
 
 // TODO(n3wscott): Move this to knative/pkg/context.
@@ -395,13 +412,19 @@ func parseOwnerRepoFrom(resource string) (string, string, error) {
 	if len(resource) == 0 {
 		return "", "", fmt.Errorf("resouce is empty")
 	}
-	slashes := strings.Count(resource, "/")
-	if slashes != 1 {
+	components := strings.Split(resource, "/")
+	if len(components) != 2 {
 		return "", "", fmt.Errorf("resouce is malformatted, expected 'owner/repo' but found %q", resource)
 	}
-	components := strings.Split(resource, "/")
 	owner := components[0]
+	if len(owner) == 0 {
+		return "", "", fmt.Errorf("owner is empty, expected 'owner/repo' but found %q", resource)
+	}
 	repo := components[1]
+	if len(repo) == 0 {
+		return "", "", fmt.Errorf("repo is empty, expected 'owner/repo' but found %q", resource)
+	}
+
 	return owner, repo, nil
 }
 
