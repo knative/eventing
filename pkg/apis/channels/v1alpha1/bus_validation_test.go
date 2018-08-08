@@ -26,6 +26,11 @@ import (
 
 var longName = strings.Repeat("A", 255)
 
+// TODO: add the following tests:
+//  1. Multiple parameters to the same Bus.
+//  2. Two parameters with the same Name in the same list.
+//  3. Multiple errors in the same object.
+
 func TestBusSpecValidation(t *testing.T) {
 	tests := []struct {
 		name string
@@ -49,7 +54,22 @@ func TestBusSpecValidation(t *testing.T) {
 				},
 			},
 		},
-		want: nil,
+	}, {
+		name: "valid no description",
+		bs: &BusSpec{
+			Parameters: &BusParameters{
+				Channel: &[]Parameter{
+					{
+						Name: "foo",
+					},
+				},
+				Subscription: &[]Parameter{
+					{
+						Name: "foo",
+					},
+				},
+			},
+		},
 	}, {
 		name: "invalid channel parameter",
 		bs: &BusSpec{
@@ -107,7 +127,6 @@ func TestBusSpecValidation(t *testing.T) {
 	}, {
 		name: "empty bus",
 		bs:   &BusSpec{},
-		want: nil,
 	}}
 
 	for _, test := range tests {

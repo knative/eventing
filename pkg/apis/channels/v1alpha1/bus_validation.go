@@ -22,6 +22,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
+// TODO(n3wscott): This is staging work, the plan is another pass to bring up
+// the test coverage, then remove unused after each type is stubbed.
+// This is all prep for new serving style webhook integration.
+
 func (b *Bus) Validate() *apis.FieldError {
 	return b.Spec.Validate().ViaField("spec")
 }
