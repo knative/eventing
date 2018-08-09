@@ -44,6 +44,11 @@ import (
 	"time"
 )
 
+/*
+A Feedlet is a container to create or destroy event source bindings.
+The Feedlet is run as a Job by the Feed controller.
+*/
+
 const (
 	webhookIDKey = "id"
 
@@ -103,7 +108,6 @@ func (t *githubEventSource) StartFeed(trigger sources.EventTrigger, target strin
 		return nil, fmt.Errorf("failed to create service: %v", err)
 	}
 
-	// TODO(n3wscott): look into using spew.
 	log.Printf("created Service: %+v", service)
 
 	// Start watching the Receive Adapter Service for it's updated domain name. This will be passed
@@ -141,7 +145,7 @@ func (t *githubEventSource) waitForServiceDomain(serviceName string) (string, er
 	for {
 		event, more := <-eventChan
 		if !more {
-			return "", fmt.Errorf("[%s] watch channel closed, no more", serviceName)
+			return "", fmt.Errorf("[%s] watch channel closed, failed to observe Service domain update", serviceName)
 		}
 		switch event.Type {
 		case watch.Error:
@@ -172,7 +176,9 @@ func (t *githubEventSource) waitForServiceDomain(serviceName string) (string, er
 func receiveAdapterName(trigger sources.EventTrigger) string {
 	// TODO(n3wscott): this needs more UUID on the end of it?
 	// TODO(n3wscott): Currently this needs to be deterministic so StopFeed can find the receive adapter. If the receive
-	// adapter name were added to the feed context, then this could be a uuid.
+	// adapter name were added to the feed context, then this could be a uuid. There is an issue where where we will
+	// get blocked by a pre-existing conflicting name and we are not able to unblock or regenerate without deleting
+	// the feed and trying it again.
 	serviceName := fmt.Sprintf("%s-%s-%s", "github", trigger.Resource, receiveAdapterSuffix)
 	serviceName = strings.Replace(serviceName, "/", "-", -1)
 	serviceName = strings.Replace(serviceName, ".", "-", -1)
@@ -207,6 +213,7 @@ func (t *githubEventSource) createReceiveAdapter(trigger sources.EventTrigger, t
 		return nil, fmt.Errorf("failed to get secret key from trigger parameters: %v", err)
 	}
 
+	// TODO(n3wscott): if we add an owner reference here we can remove the delete service call on stopFeed
 	service := resources.MakeService(t.feedNamespace, serviceName, t.image, t.feedServiceAccountName, target, secretName, secretKey)
 	service, err = sc.Create(service)
 	if err != nil {
@@ -270,9 +277,12 @@ func (t *githubEventSource) deleteWebhook(trigger sources.EventTrigger, feedCont
 
 	_, err = client.Repositories.DeleteHook(ctx, owner, repo, webhookID)
 	if err != nil {
+		// Note: errResp.Message == "Not Found" is not ideal, but the gh errors are not very easy to parse.
+		// It would be better to look into the errResp.Errors[] and confirm that the issue is "not found".
 		if errResp, ok := err.(*ghclient.ErrorResponse); ok && errResp.Message == "Not Found" {
 			// If the webhook doesn't exist, nothing to do
-			return fmt.Errorf("webhook doesn't exist, nothing to delete")
+			log.Printf("webhook doesn't exist, nothing to delete")
+			return nil
 		}
 		return fmt.Errorf("failed to delete the webhook: %v", err)
 	}
@@ -282,7 +292,7 @@ func (t *githubEventSource) deleteWebhook(trigger sources.EventTrigger, feedCont
 
 func (t *githubEventSource) createWebhook(trigger sources.EventTrigger, name, domain string) (*sources.FeedContext, error) {
 
-	log.Printf("CREATING GITHUB WEBHOOK")
+	log.Printf("creating GitHub webhook")
 
 	owner, repo, err := parseOwnerRepoFrom(trigger.Resource)
 	if err != nil {
