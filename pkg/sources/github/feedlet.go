@@ -50,10 +50,9 @@ const (
 	// property bag keys
 	accessTokenKey = "accessToken"
 	secretTokenKey = "secretToken"
-	eventName      = "event"
 
-	// postfixReceiveAdapter is appended to the name of the service running the Receive Adapter
-	postfixReceiveAdapter = "rcvadptr"
+	// receiveAdapterSuffix is appended to the name of the service running the Receive Adapter
+	receiveAdapterSuffix = "rcvadptr"
 
 	// watchTimeout is the timeout that the feedlet will wait for the Receiver Adapter to get a domain name.
 	watchTimeout = 5 * time.Minute
@@ -174,7 +173,7 @@ func receiveAdapterName(trigger sources.EventTrigger) string {
 	// TODO(n3wscott): this needs more UUID on the end of it?
 	// TODO(n3wscott): Currently this needs to be deterministic so StopFeed can find the receive adapter. If the receive
 	// adapter name were added to the feed context, then this could be a uuid.
-	serviceName := fmt.Sprintf("%s-%s-%s", "github", trigger.Resource, postfixReceiveAdapter)
+	serviceName := fmt.Sprintf("%s-%s-%s", "github", trigger.Resource, receiveAdapterSuffix)
 	serviceName = strings.Replace(serviceName, "/", "-", -1)
 	serviceName = strings.Replace(serviceName, ".", "-", -1)
 	serviceName = strings.ToLower(serviceName)
