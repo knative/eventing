@@ -29,6 +29,7 @@ import (
 	"net/http"
 
 	ghclient "github.com/google/go-github/github"
+	"github.com/google/uuid"
 	"github.com/knative/eventing/pkg/event"
 	"github.com/knative/eventing/pkg/sources/github"
 	"log"
@@ -56,27 +57,26 @@ type GithubSecrets struct {
 // HandlePullRequest is invoked whenever a PullRequest is modified (created, updated, etc.)
 func (h *GithubHandler) HandlePullRequest(payload interface{}, header webhooks.Header) {
 	log.Print("Handling Pull Request")
+
+	hdr := http.Header(header)
+
 	pl := payload.(gh.PullRequestPayload)
 
 	source := pl.PullRequest.HTMLURL
 
-	var eventType string
-	if len(header["X-GitHub-Event"]) == 1 {
-		switch header["X-GitHub-Event"][0] {
-		case "pull_request":
-			eventType = github.PullrequestEvent
-		default:
-			eventType = "unsupported"
+	eventType, ok := github.CloudEventType[hdr.Get("X-GitHub-Event")]
+	if !ok {
+		eventType = github.UnsupportedEvent
+	}
+
+	eventID := hdr.Get("X-GitHub-Delivery")
+	if len(eventID) == 0 {
+		if uuid, err := uuid.NewRandom(); err != nil {
+			eventID = uuid.String()
 		}
-
 	}
 
-	eventID := "unknown"
-	if len(header["X-GitHub-Delivery"]) == 1 {
-		eventID = header["X-GitHub-Delivery"][0]
-	}
-
-	postMessage(h.target, &pl, source, eventType, eventID)
+	postMessage(h.target, payload, source, eventType, eventID)
 }
 
 func main() {
@@ -119,7 +119,7 @@ func main() {
 	}
 }
 
-func postMessage(target string, m *gh.PullRequestPayload, source, eventType, eventID string) error {
+func postMessage(target string, payload interface{}, source, eventType, eventID string) error {
 	URL := fmt.Sprintf("http://%s/", target)
 
 	ctx := event.EventContext{
@@ -129,9 +129,9 @@ func postMessage(target string, m *gh.PullRequestPayload, source, eventType, eve
 		EventTime:          time.Now(),
 		Source:             source,
 	}
-	req, err := event.Binary.NewRequest(URL, m, ctx)
+	req, err := event.Binary.NewRequest(URL, payload, ctx)
 	if err != nil {
-		log.Printf("Failed to marshal the message: %+v : %s", m, err)
+		log.Printf("Failed to marshal the message: %+v : %s", payload, err)
 		return err
 	}
 
@@ -142,8 +142,12 @@ func postMessage(target string, m *gh.PullRequestPayload, source, eventType, eve
 		return err
 	}
 	defer resp.Body.Close()
-	log.Printf("response Status: %s", resp.Status)
-	body, _ := ioutil.ReadAll(resp.Body)
-	log.Printf("response Body: %s", string(body))
+
+	if resp.StatusCode != http.StatusOK {
+		// TODO: in general, receive adapters may have to be able to retry for error cases.
+		log.Printf("response Status: %s", resp.Status)
+		body, _ := ioutil.ReadAll(resp.Body)
+		log.Printf("response Body: %s", string(body))
+	}
 	return nil
 }

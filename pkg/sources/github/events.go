@@ -19,4 +19,14 @@ package github
 const (
 	// Event Names
 	PullrequestEvent = "dev.knative.github.pullrequest"
+	UnsupportedEvent = "dev.knative.github.unsupported"
 )
+
+var CloudEventType = map[string]string{
+	"pull_request": PullrequestEvent,
+	"":             UnsupportedEvent,
+}
+
+var GithubEventType = map[string]string{
+	PullrequestEvent: "pull_request",
+}
