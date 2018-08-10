@@ -11,15 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-apiVersion: feeds.knative.dev/v1alpha1
-kind: EventSource
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
 metadata:
-  name: github
-  namespace: default
+  name: github-receive-adapter-ext
 spec:
-  type: github
-  source: github
-  image: github.com/knative/eventing/pkg/sources/github
-  parameters:
-    image: github.com/knative/eventing/pkg/sources/github/receive_adapter
+  hosts:
+  - "*.github.com"
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  location: MESH_EXTERNAL

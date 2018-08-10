@@ -21,22 +21,21 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	ghclient "github.com/google/go-github/github"
+	"golang.org/x/oauth2"
+	"gopkg.in/go-playground/webhooks.v3/github"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"os"
 	"strings"
-
-	"github.com/golang/glog"
-	"golang.org/x/oauth2"
-	webhooks "gopkg.in/go-playground/webhooks.v3"
-	"gopkg.in/go-playground/webhooks.v3/github"
-
-	ghclient "github.com/google/go-github/github"
 )
 
 const (
 	// Environment variable containing json credentials
 	envSecret = "GITHUB_SECRET"
 	// this is what we tack onto each PR title if not there already
-	titleSuffix = "I buy it"
+	titleSuffix = "looks pretty legit"
 )
 
 // GithubHandler holds necessary objects for communicating with the Github.
@@ -50,15 +49,22 @@ type GithubSecrets struct {
 	SecretToken string `json:"secretToken"`
 }
 
-// HandlePullRequest is invoked whenever a PullRequest is modified (created, updated, etc.)
-func (handler *GithubHandler) HandlePullRequest(payload interface{}, header webhooks.Header) {
-	glog.Info("Handling Pull Request")
+func (h *GithubHandler) handlePost(rw http.ResponseWriter, req *http.Request) {
+	body, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		panic(err)
+	}
+	rw.WriteHeader(200)
 
-	pl := payload.(github.PullRequestPayload)
+	var pl github.PullRequestPayload
+	if err := json.Unmarshal(body, &pl); err != nil {
+		log.Printf("error: could not unmarshal payload %v", err)
+		return
+	}
 
 	// Do whatever you want from here...
 	title := pl.PullRequest.Title
-	glog.Infof("GOT PR with Title: %q", title)
+	log.Printf("GOT PR with Title: %q", title)
 
 	// Check the title and if it contains 'looks pretty legit' leave it alone
 	if strings.Contains(title, titleSuffix) {
@@ -70,28 +76,26 @@ func (handler *GithubHandler) HandlePullRequest(payload interface{}, header webh
 	updatedPR := ghclient.PullRequest{
 		Title: &newTitle,
 	}
-	newPR, response, err := handler.client.PullRequests.Edit(handler.ctx, pl.Repository.Owner.Login, pl.Repository.Name, int(pl.Number), &updatedPR)
+	newPR, response, err := h.client.PullRequests.Edit(h.ctx, pl.Repository.Owner.Login, pl.Repository.Name, int(pl.Number), &updatedPR)
 	if err != nil {
-		glog.Warningf("Failed to update PR: %s\n%s", err, response)
+		log.Printf("Failed to update PR: %s\n%s", err, response)
 		return
 	}
 	if newPR.Title != nil {
-		glog.Infof("New PR Title: %q", *newPR.Title)
+		log.Printf("New PR Title: %q", *newPR.Title)
 	} else {
-		glog.Infof("New PR title is nil")
+		log.Printf("New PR title is nil")
 	}
 }
 
 func main() {
 	flag.Parse()
-	// set the logs to stderr so kube will see them.
-	flag.Lookup("logtostderr").Value.Set("true")
 	githubSecrets := os.Getenv(envSecret)
 
 	var credentials GithubSecrets
 	err := json.Unmarshal([]byte(githubSecrets), &credentials)
 	if err != nil {
-		glog.Fatalf("Failed to unmarshal credentials: %s", err)
+		log.Fatalf("Failed to unmarshal credentials: %s", err)
 		return
 	}
 
@@ -111,11 +115,6 @@ func main() {
 		ctx:    ctx,
 	}
 
-	hook := github.New(&github.Config{Secret: credentials.SecretToken})
-	hook.RegisterEvents(h.HandlePullRequest, github.PullRequestEvent)
-
-	err = webhooks.Run(hook, ":8080", "/")
-	if err != nil {
-		glog.Fatalf("Failed to run the webhook")
-	}
+	http.HandleFunc("/", h.handlePost)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }

@@ -13,21 +13,22 @@
 # limitations under the License.
 
 apiVersion: serving.knative.dev/v1alpha1
-kind: Configuration
+kind: Service
 metadata:
-  name: git-webhook
-  namespace: default
+  name: legit
 spec:
-  revisionTemplate:
-    metadata:
-      labels:
-        knative.dev/type: container
-    spec:
-      container:
-        image: github.com/knative/eventing/sample/github
-        env:
-          - name: GITHUB_SECRET
-            valueFrom:
-              secretKeyRef:
-                name: githubsecret
-                key: githubCredentials
+  runLatest:
+    configuration:
+      revisionTemplate:
+        metadata:
+          labels:
+            knative.dev/type: function
+        spec:
+          container:
+            image: github.com/knative/eventing/sample/github
+            env:
+            - name: GITHUB_SECRET
+              valueFrom:
+                secretKeyRef:
+                  key: githubCredentials
+                  name: githubsecret

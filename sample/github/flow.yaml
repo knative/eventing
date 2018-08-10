@@ -12,22 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: feeds.knative.dev/v1alpha1
-kind: Feed
+apiVersion: flows.knative.dev/v1alpha1
+kind: Flow
 metadata:
-  name: feed-example
+  name: github-flow
   namespace: default
 spec:
+  serviceAccountName: feed-sa
   trigger:
-    # TODO: eventType doesn't match the normal naming scheme. At min should
-    # make this "com.github.pullrequest". May consider making it something
-    # like "com.github.pull.create"
     eventType: pullrequest
-    resource: vaikas/misc
+    resource: <org>/<repo> # TODO: Fill this out
     service: github
+    parameters:
+      secretName: githubsecret
+      secretKey: githubCredentials
     parametersFrom:
       - secretKeyRef:
           name: githubsecret
           key: githubCredentials
   action:
-    routeName: git-webhook
+    target:
+      kind: Route
+      apiVersion: serving.knative.dev/v1alpha1
+      name: legit

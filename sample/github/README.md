@@ -1,50 +1,61 @@
-# gitwebhook
+# GitHub Flow
 
-A simple git webhook handler that demonstrates interacting with
-github. 
-[Modeled after GCF example](https://cloud.google.com/community/tutorials/github-auto-assign-reviewers-cloud-functions)
-But by introducing a Feed object, we make the subscription to github automatically by calling a github API
-and hence the developer does not have to manually wire things together in the UI, by creating the Feed object
-the webhook gets created by Knative Eventing.
+A GitHub webhook will be created on a repository and a Knative `Service` will be 
+deployed to receive the webhook's event deliveries and forward them into a 
+`Channel`, through a `Bus`, and out to the consumer via a `Subscription`. The 
+`Flow` resource takes care of provisioning the webhook, the `Service`, the 
+`Channel`, and the `Subscription`.
 
 ## Prerequisites
 
 1. [Setup your development environment](../../DEVELOPMENT.md#getting-started)
 2. [Start Knative](../../README.md#start-knative)
-3. Decide on the DNS name that git can then call. Update knative/serving/config/config-domain.yaml.
-For example I used aikas.org as my hostname, so my knative/serving/config/config-domain.yaml looks like so:
+3. For GitHub to be able to call into the cluster,  
+   [configure a custom domain](https://github.com/knative/docs/blob/master/serving/using-a-custom-domain.md) and 
+   [assign a static IP address](https://github.com/knative/docs/blob/master/serving/gke-assigning-static-ip-address.md).
+4. Install a ClusterBus
+
+update `knative/eventing/config/buses/stub-bus.yaml`, changing `kind` to `ClusterBus`, like:
 
 ```yaml
-apiVersion: v1
-kind: ConfigMap
+apiVersion: channels.knative.dev/v1alpha1
+kind: ClusterBus
 metadata:
-  name: ela-config
-  namespace: ela-system
-data:
-  aikas.org: |
-```
+  name: stub
+spec:
+  dispatcher:
+    name: dispatcher
+    image: github.com/knative/eventing/pkg/buses/stub
+    args: [
+      "-logtostderr",
+      "-stderrthreshold", "INFO",
+    ]
+``` 
 
-If you were already running the knative controllers, you will need to update this configmap from the
-root of the knative/serving
+and apply the stub bus
 
 ```shell
-ko apply -f config/config-domain.yaml
+ko apply -f config/buses/stub
 ```
 
-4. Install Github as an event source
+5. Install GitHub as an event source
 
 ```shell
 ko apply -f pkg/sources/github/
 ```
 
-5. Check that the github is now showing up as an event source and there's an event type for pullrequests
+5. Check that the GitHub is now showing up as an event source and there's an event type for *pullrequests*
 
 ```shell
 kubectl get eventsources
 kubectl get eventtypes
 ```
 
-6. Create a [personal access token](https://github.com/settings/tokens) to github repo that you can use to register webhooks with the Github API. Also decide on a token that your code will authenticate the incoming webhooks from github (accessSoken). Update sample/github/githubsecret.yaml with those values. If your generated access token is 'asdfasfdsaf' and you choose your secretToken as 'password', you'd modify githubsecret.yaml like so:
+6. Create a [personal access token](https://github.com/settings/tokens) to GitHub repo that you can use to register
+   webhooks with the GitHub API. Also decide on a token that your code will use to authenticate the incoming webhooks
+   from GitHub (*accessToken*). Update `sample/github/githubsecret.yaml` with those values. If your generated access
+   token is `'asdfasfdsaf'` and you choose your *secretToken* as `'password'`, you'd modify
+   `sample/github/githubsecret.yaml` like so:
 
 ```yaml
 apiVersion: v1
@@ -62,89 +73,85 @@ stringData:
 
 ## Running
 
-You can deploy a function that handles the pullrequest events to Knative from the root directory via:
+In response to a pull request event, the _legit_ Service will add `(looks pretty legit)` to the PR title.
+
+Deploy the _legit_ service via:
+
 ```shell
-ko apply -f sample/github/configuration.yaml
-ko apply -f sample/github/route.yaml
+ko apply sample/github/legit-service.yaml
 ```
 
 Once deployed, you can inspect the created resources with `kubectl` commands:
 
 ```shell
-# This will show the Route that we created:
+# This will show the Service that we created:
+kubectl get service.serving.knative.dev -o yaml
+
+# This will show the Route that the Service created:
 kubectl get route -o yaml
 
-# This will show the Configuration that we created:
+# This will show the Configuration that the Service created:
 kubectl get configurations -o yaml
 
-# This will show the Revision that was created by our configuration:
+# This will show the Revision that was created by the Configuration:
 kubectl get revisions -o yaml
+```
 
+The `Flow` will accept the Webhook calls from GitHub and pass them to the _legit_ service.
+
+You can inspect those resources with the following `kubectl` commands:
+
+```shell
 # This will show the available EventSources that you can generate feeds from:
 kubectl get eventsources -o yaml
 
 # This will show the available EventTypes that you can generate feeds from:
 kubectl get eventtypes -o yaml
-
 ```
 
-To make this service accessible to github, we first need to determine its ingress address
-(might have to wait a little while until 'ADDRESS' gets assigned):
+Configure the `Flow` to point to a GitHub repository you are able to control and update
+`spec.trigger.resource` in `samples/github/flow.yaml`.  
+
+And then apply the resources:
+
 ```shell
-$ kubectl get ingress --watch
-NAME                      HOSTS                           ADDRESS           PORTS     AGE
-git-webhook-ingress   git-webhook.default.aikas.org   104.197.125.124   80        12m
+ko apply -f sample/github/auth.yaml
+ko apply -f sample/github/flow.yaml
+```   
+
+Once deployed, you can inspect the created resources with `kubectl` commands:
+
+```shell
+# This will show the available Flows we created:
+kubectl get flows -o yaml
+
+# This will show the available Feeds created from the Flow:
+kubectl get feeds -o yaml
+
+# This will show the available Channels created from the Flow:
+kubectl get channels -o yaml
+
+# This will show the available Subscriptions created from the Flow:
+kubectl get subscriptions -o yaml
+
+# This will show the available ClusterBuses we created in the prerequisites:
+kubectl get clusterbuses -o yaml
 ```
 
-Once the `ADDRESS` gets assigned to the cluster, you need to assign a DNS name for that IP address. This DNS address needs to be:
-git-webhook.default.<domainsuffix you created> so for me, I would create a DNS entry from:
-git-webhook.default.aikas.org pointing to 104.197.125.124
-[Using GCP DNS](https://support.google.com/domains/answer/3290350)
-
-So, you'd need to create an A record for git-webhook.default.aikas.org pointing to 104.197.125.124
-
-To now send events via the github webhook for pull requests to the function we created above, you need to
- create a Feed object. Modify sample/github/feed.yaml to point to owner of the repo as well
- as the particular repo you want to subscribe to. So, change spec.trigger.resource with the owner/repo
- you want.
-
- For example, if I wanted to receive notifications to:
- github.com/inlined/robots repo, my Feed object would look like so:
-
-```yaml
-apiVersion: knative.dev/v1alpha1
-kind: Feed
-metadata:
-  name: feed-example
-  namespace: default
-spec:
-  trigger:
-    service: github
-    eventType: pullrequest
-    resource: inlined/robots
-    parametersFrom:
-      - secretKeyRef:
-          name: githubsecret
-          key: githubCredentials
-  action:
-    routeName: git-webhook
-```
-
-Then create the secret and a feed so that you can see changes
+Then create the secret so that you can see changes:
 
 ```shell
  ko apply -f sample/github/githubsecret.yaml
- ko apply -f sample/github/feed.yaml
 ```
 
 Then create a PR for the repo you configured the webhook for, and you'll see that the Title
-will be modified with the suffix '(I buy it)'
+will be modified with the suffix '(looks pretty legit)'
 
 ## Cleaning up
 
-To clean up the sample feed:
+To clean up the sample `Flow`:
 ```shell
- ko delete -f sample/github/feed.yaml
+ ko delete -f sample/github/flow.yaml
 ```
 
 And you can check the repo and see the webhook has been removed
