@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/golang/glog"
 	"github.com/knative/eventing/pkg/sources"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,18 +31,19 @@ import (
 
 	servingclientset "github.com/knative/serving/pkg/client/clientset/versioned"
 
+	"github.com/knative/eventing/pkg/sources/slack/resources"
 	"github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	"strings"
-)
+	)
 
 const (
-	// postfixReceiveAdapter is appended to the name of the service running the Receive Adapter
-	postfixReceiveAdapter = "rcvadptr"
+	// receiveAdapterSuffix is appended to the name of the service running the Receive Adapter
+	receiveAdapterSuffix = "rcvadptr"
 
-	// secretName is the name of the secret that contains the Slack credentials.
-	secretName = "secretName"
-	// secretKey is the name of the key inside the secret that contains the Slack credentials.
-	secretKey = "secretKey"
+	// secretNameKey is the name of the secret that contains the Slack credentials.
+	secretNameKey = "secretName"
+	// secretKeyKey is the name of the key inside the secret that contains the Slack credentials.
+	secretKeyKey = "secretKey"
 )
 
 type SlackEventSource struct {
@@ -61,39 +61,45 @@ type SlackEventSource struct {
 }
 
 func NewSlackEventSource(kubeclientset kubernetes.Interface, servingclientset servingclientset.Interface, feedNamespace string, feedServiceAccountName string, image string) sources.EventSource {
-	glog.Infof("Creating slack event source.")
-	return &SlackEventSource{kubeclientset: kubeclientset, servingclientset: servingclientset, feedNamespace: feedNamespace, feedServiceAccountName: feedServiceAccountName, image: image}
+	log.Printf("Creating slack event source.")
+	return &SlackEventSource{
+		kubeclientset:          kubeclientset,
+		servingclientset:       servingclientset,
+		feedNamespace:          feedNamespace,
+		feedServiceAccountName: feedServiceAccountName,
+		image:                  image,
+	}
 }
 
 func (t *SlackEventSource) StopFeed(trigger sources.EventTrigger, feedContext sources.FeedContext) error {
-	glog.Infof("Stopping Slack feed with context %+v", feedContext)
+	log.Printf("Stopping Slack feed with context %+v", feedContext)
 
 	serviceName := makeServiceName(trigger.Resource)
 	err := t.deleteReceiveAdapter(serviceName)
 	if err != nil {
-		glog.Infof("Unable to delete Slack Knative service: %v", err)
+		log.Printf("Unable to delete Slack Knative service: %v", err)
 	}
 
 	return err
 }
 
 func (t *SlackEventSource) StartFeed(trigger sources.EventTrigger, target string) (*sources.FeedContext, error) {
-	glog.Infof("Creating Slack feed.")
+	log.Printf("Creating Slack feed.")
 
 	service, err := t.createReceiveAdapter(trigger, target)
 	if err != nil {
-		glog.Warningf("Failed to create slack service: %v", err)
+		log.Printf("Failed to create Slack service: %v", err)
 		return nil, err
 	}
 
-	glog.Infof("Created Slack service: %+v", service)
+	log.Printf("Created Slack service: %+v", service)
 
 	return &sources.FeedContext{
 		Context: map[string]interface{}{}}, nil
 }
 
 func makeServiceName(resource string) string {
-	serviceName := fmt.Sprintf("%s-%s-%s", "slack", resource, postfixReceiveAdapter) // TODO: this needs more UUID on the end of it.
+	serviceName := fmt.Sprintf("%s-%s-%s", "slack", resource, receiveAdapterSuffix) // TODO: this needs more UUID on the end of it.
 	serviceName = strings.ToLower(serviceName)
 	return serviceName
 }
@@ -106,19 +112,29 @@ func (t *SlackEventSource) createReceiveAdapter(trigger sources.EventTrigger, ta
 	// First, check if the service already exists.
 	if svc, err := sc.Get(serviceName, metav1.GetOptions{}); err != nil {
 		if !apierrs.IsNotFound(err) {
-			glog.Infof("Knative service.Get for %q failed: %s", serviceName, err)
+			log.Printf("Knative service.Get for %q failed: %v", serviceName, err)
 			return nil, err
 		}
-		glog.Infof("Knative service %q doesn't exist, creating", serviceName)
+		log.Printf("Knative service %q doesn't exist, creating", serviceName)
 	} else {
-		glog.Infof("Found existing Knative service %q", serviceName)
+		log.Printf("Found existing Knative service %q", serviceName)
 		return svc, nil
 	}
 
-	service := MakeService(t.feedNamespace, serviceName, t.feedServiceAccountName, t.image, target, trigger.Parameters[secretName].(string), trigger.Parameters[secretKey].(string))
+	secretName, err := stringFrom(trigger.Parameters, secretNameKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get secret name from trigger parameters: %s, %v", secretNameKey, err)
+	}
+
+	secretKey, err := stringFrom(trigger.Parameters, secretKeyKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get secret key from trigger parameters: %s, %v", secretKeyKey, err)
+	}
+
+	service := resources.MakeService(t.feedNamespace, serviceName, t.feedServiceAccountName, t.image, target, secretName, secretKey)
 	svc, createErr := sc.Create(service)
 	if createErr != nil {
-		glog.Errorf("Knative serving failed: %s", createErr)
+		log.Printf("failed to create Knative service: %s", createErr)
 	}
 	return svc, createErr
 }
@@ -129,10 +145,10 @@ func (t *SlackEventSource) deleteReceiveAdapter(serviceName string) error {
 	// First, check if the Knative service actually exists.
 	if _, err := sc.Get(serviceName, metav1.GetOptions{}); err != nil {
 		if apierrs.IsNotFound(err) {
-			glog.Infof("Knative serving %q already deleted", serviceName)
+			log.Printf("Knative service %q already deleted", serviceName)
 			return nil
 		}
-		glog.Infof("Knative Services.Get for %q failed: %v", serviceName, err)
+		log.Printf("Knative Services.Get for %q failed: %v", serviceName, err)
 		return err
 	}
 
@@ -160,19 +176,32 @@ func main() {
 
 	cfg, err := clientcmd.BuildConfigFromFlags("", "")
 	if err != nil {
-		glog.Fatalf("Error building kubeconfig: %s", err.Error())
+		log.Printf("Error building kubeconfig: %s", err.Error())
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building kubernetes clientset: %s", err.Error())
+		log.Printf("Error building kubernetes clientset: %s", err.Error())
 	}
 
 	servingClient, err := servingclientset.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("error building serving clientset: %s", err.Error())
+		log.Printf("error building serving clientset: %s", err.Error())
 	}
 
 	sources.RunEventSource(NewSlackEventSource(kubeClient, servingClient, feedNamespace, feedServiceAccountName, p.Image))
 	log.Printf("Done...")
+}
+
+// TODO(n3wscott): Move this to knative/pkg/context.
+func stringFrom(bag map[string]interface{}, key string) (string, error) {
+	// check to see if the key is in the bag.
+	if _, ok := bag[key]; !ok {
+		return "", fmt.Errorf("%s not found", key)
+	}
+	value, ok := bag[key].(string)
+	if !ok {
+		return "", fmt.Errorf("value for %s was not a valid string", key)
+	}
+	return value, nil
 }

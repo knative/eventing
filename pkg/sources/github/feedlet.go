@@ -192,7 +192,7 @@ func (t *githubEventSource) createReceiveAdapter(trigger sources.EventTrigger, t
 	serviceName := receiveAdapterName(trigger)
 
 	// First, check if service exists already.
-	if sc, err := sc.Get(serviceName, metav1.GetOptions{}); err != nil {
+	if svc, err := sc.Get(serviceName, metav1.GetOptions{}); err != nil {
 		if !apierrs.IsNotFound(err) {
 			return nil, fmt.Errorf("service.Get for %q failed: %v", serviceName, err)
 		}
@@ -200,7 +200,7 @@ func (t *githubEventSource) createReceiveAdapter(trigger sources.EventTrigger, t
 	} else {
 		log.Printf("found existing service %q", serviceName)
 		// Don't try again.
-		return sc, nil
+		return svc, nil
 	}
 
 	secretName, err := stringFrom(trigger.Parameters, secretNameKey)

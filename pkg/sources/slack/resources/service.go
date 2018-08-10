@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package resources
 
 import (
 	"github.com/knative/serving/pkg/apis/serving/v1alpha1"

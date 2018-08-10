@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/golang/glog"
 	"github.com/nlopes/slack"
 	"github.com/nlopes/slack/slackevents"
 	"log"
@@ -39,6 +38,8 @@ func (s *slackResponder) handleRequest(w http.ResponseWriter, r *http.Request) {
 	buf.ReadFrom(r.Body)
 	body := buf.String()
 	eventsAPIEvent, err := slackevents.ParseEvent(json.RawMessage(body), func(cfg *slackevents.Config) {
+		// Trust that any message that came in is an event from Slack, do not verify using the
+		// verification token.
 		cfg.TokenVerified = true
 	})
 	if err != nil {
@@ -84,7 +85,7 @@ func main() {
 	var slackCredential SlackResponderCredential
 	err := json.Unmarshal([]byte(slackSecret), &slackCredential)
 	if err != nil {
-		glog.Fatalf("Failed to unmarshal slack responder credentials: %s", err)
+		log.Fatalf("Failed to unmarshal slack responder credentials: %s", err)
 		return
 	}
 
