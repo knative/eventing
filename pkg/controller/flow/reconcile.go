@@ -106,7 +106,7 @@ func (r *reconciler) reconcile(flow *v1alpha1.Flow) error {
 
 	// Reconcile the Channel. Creates a channel that is the target that the Feed will use.
 	// TODO: We should reuse channels possibly. By this I mean that instead of creating a
-	// channel for each subdscription, we could look at existing channels and reuse one
+	// channel for each subscription, we could look at existing channels and reuse one
 	// and only create a subscription to a channel instead.
 	channel, err := r.reconcileChannel(flow)
 	if err != nil {
