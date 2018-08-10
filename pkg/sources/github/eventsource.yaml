@@ -18,8 +18,7 @@ metadata:
   name: github
   namespace: default
 spec:
-  type: github
   source: github
-  image: github.com/knative/eventing/pkg/sources/github
+  image: github.com/knative/eventing/pkg/sources/github/feedlet
   parameters:
     image: github.com/knative/eventing/pkg/sources/github/receive_adapter

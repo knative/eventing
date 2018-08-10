@@ -66,6 +66,9 @@ const (
 	secretNameKey = "secretName"
 	// secretKeyKey is the name of key inside the secret that contains the GitHub credentials.
 	secretKeyKey = "secretKey"
+
+	// Event Names
+	pullrequestEvent = "dev.knative.github.pullrequest"
 )
 
 type githubEventSource struct {
@@ -452,7 +455,7 @@ func parseEventsFrom(eventType string) ([]string, error) {
 		return []string(nil), fmt.Errorf("event type is empty")
 	}
 	switch eventType {
-	case "pullrequest":
+	case pullrequestEvent:
 		return []string{"pull_request"}, nil
 	// TODO: Add more supported event types.
 	default:

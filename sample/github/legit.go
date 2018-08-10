@@ -22,9 +22,9 @@ import (
 	"flag"
 	"fmt"
 	ghclient "github.com/google/go-github/github"
+	"github.com/knative/eventing/pkg/event"
 	"golang.org/x/oauth2"
 	"gopkg.in/go-playground/webhooks.v3/github"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -49,20 +49,8 @@ type GithubSecrets struct {
 	SecretToken string `json:"secretToken"`
 }
 
-func (h *GithubHandler) handlePost(rw http.ResponseWriter, req *http.Request) {
-	body, err := ioutil.ReadAll(req.Body)
-	if err != nil {
-		panic(err)
-	}
-	rw.WriteHeader(200)
+func (h *GithubHandler) newPullRequestPayload(ctx context.Context, pl *github.PullRequestPayload) {
 
-	var pl github.PullRequestPayload
-	if err := json.Unmarshal(body, &pl); err != nil {
-		log.Printf("error: could not unmarshal payload %v", err)
-		return
-	}
-
-	// Do whatever you want from here...
 	title := pl.PullRequest.Title
 	log.Printf("GOT PR with Title: %q", title)
 
@@ -76,7 +64,8 @@ func (h *GithubHandler) handlePost(rw http.ResponseWriter, req *http.Request) {
 	updatedPR := ghclient.PullRequest{
 		Title: &newTitle,
 	}
-	newPR, response, err := h.client.PullRequests.Edit(h.ctx, pl.Repository.Owner.Login, pl.Repository.Name, int(pl.Number), &updatedPR)
+	newPR, response, err := h.client.PullRequests.Edit(h.ctx,
+		pl.Repository.Owner.Login, pl.Repository.Name, int(pl.Number), &updatedPR)
 	if err != nil {
 		log.Printf("Failed to update PR: %s\n%s", err, response)
 		return
@@ -115,6 +104,5 @@ func main() {
 		ctx:    ctx,
 	}
 
-	http.HandleFunc("/", h.handlePost)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8080", event.Handler(h.newPullRequestPayload)))
 }

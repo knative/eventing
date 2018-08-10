@@ -22,15 +22,17 @@ import (
 	"fmt"
 	"os"
 
-	webhooks "gopkg.in/go-playground/webhooks.v3"
-	"gopkg.in/go-playground/webhooks.v3/github"
+	"gopkg.in/go-playground/webhooks.v3"
+	gh "gopkg.in/go-playground/webhooks.v3/github"
 
-	"bytes"
 	"io/ioutil"
 	"net/http"
 
 	ghclient "github.com/google/go-github/github"
+	"github.com/knative/eventing/pkg/event"
+	"github.com/knative/eventing/pkg/sources/github"
 	"log"
+	"time"
 )
 
 const (
@@ -54,8 +56,27 @@ type GithubSecrets struct {
 // HandlePullRequest is invoked whenever a PullRequest is modified (created, updated, etc.)
 func (h *GithubHandler) HandlePullRequest(payload interface{}, header webhooks.Header) {
 	log.Print("Handling Pull Request")
-	pl := payload.(github.PullRequestPayload)
-	postMessage(h.target, &pl)
+	pl := payload.(gh.PullRequestPayload)
+
+	source := pl.PullRequest.HTMLURL
+
+	var eventType string
+	if len(header["X-GitHub-Event"]) == 1 {
+		switch header["X-GitHub-Event"][0] {
+		case "pull_request":
+			eventType = github.PullrequestEvent
+		default:
+			eventType = "unsupported"
+		}
+
+	}
+
+	eventID := "unknown"
+	if len(header["X-GitHub-Delivery"]) == 1 {
+		eventID = header["X-GitHub-Delivery"][0]
+	}
+
+	postMessage(h.target, &pl, source, eventType, eventID)
 }
 
 func main() {
@@ -86,10 +107,10 @@ func main() {
 		target: target,
 	}
 
-	hook := github.New(&github.Config{Secret: credentials.SecretToken})
+	hook := gh.New(&gh.Config{Secret: credentials.SecretToken})
 	// TODO: GitHub has more than just Pull Request Events. This needs to
 	// handle them all?
-	hook.RegisterEvents(h.HandlePullRequest, github.PullRequestEvent)
+	hook.RegisterEvents(h.HandlePullRequest, gh.PullRequestEvent)
 
 	// TODO(n3wscott): Do we need to configure the PORT?
 	err = webhooks.Run(hook, ":8080", "/")
@@ -98,30 +119,31 @@ func main() {
 	}
 }
 
-func postMessage(target string, m *github.PullRequestPayload) error {
-	jsonStr, err := json.Marshal(m)
-	if err != nil {
-		log.Printf("Error: Failed to marshal the message: %+v : %v", m, err)
-		return err
-	}
-
+func postMessage(target string, m *gh.PullRequestPayload, source, eventType, eventID string) error {
 	URL := fmt.Sprintf("http://%s/", target)
-	req, err := http.NewRequest("POST", URL, bytes.NewBuffer(jsonStr))
+
+	ctx := event.EventContext{
+		CloudEventsVersion: event.CloudEventsVersion,
+		EventType:          eventType,
+		EventID:            eventID,
+		EventTime:          time.Now(),
+		Source:             source,
+	}
+	req, err := event.Binary.NewRequest(URL, m, ctx)
 	if err != nil {
-		log.Printf("Error: Failed to create http request: %v", err)
+		log.Printf("Failed to marshal the message: %+v : %s", m, err)
 		return err
 	}
 
-	req.Header.Set("Content-Type", "application/json")
+	log.Printf("Posting to %q", URL)
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("Error: Failed to do POST: %v", err)
 		return err
 	}
 	defer resp.Body.Close()
-	log.Printf("Error: response Status: %s", resp.Status)
+	log.Printf("response Status: %s", resp.Status)
 	body, _ := ioutil.ReadAll(resp.Body)
-	log.Printf("Error: response Body: %s", string(body))
+	log.Printf("response Body: %s", string(body))
 	return nil
 }
