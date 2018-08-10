@@ -42,16 +42,14 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	"github.com/knative/eventing/pkg/system"
+	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	channelscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	listers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
-
-	servingclientset "github.com/knative/serving/pkg/client/clientset/versioned"
-	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
-
-	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	"github.com/knative/eventing/pkg/system"
+	sharedclientset "github.com/knative/pkg/client/clientset/versioned"
+	sharedinformers "github.com/knative/pkg/client/informers/externalversions"
 )
 
 const (
@@ -103,11 +101,11 @@ type Controller struct {
 func NewController(
 	kubeclientset kubernetes.Interface,
 	clusterbusclientset clientset.Interface,
-	servingclientset servingclientset.Interface,
+	sharedclientset sharedclientset.Interface,
 	restConfig *rest.Config,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	clusterBusInformerFactory informers.SharedInformerFactory,
-	routeInformerFactory servinginformers.SharedInformerFactory) controller.Interface {
+	sharedInformerFactory sharedinformers.SharedInformerFactory) controller.Interface {
 
 	// obtain references to shared index informers for the ClusterBus, Deployment and Service
 	// types.

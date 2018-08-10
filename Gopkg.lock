@@ -269,20 +269,29 @@
   revision = "5c1d8c8469d1ed34b2aecf4c2305b3a57fff2ee3"
 
 [[projects]]
-  branch = "master"
-  digest = "1:6be10876681fb2a0b8434ee48a1dc21899fa8002a52f5692828aebc9ae35cee3"
+  digest = "1:c19f87a341b72c2121456397006116f9496006d62722315e43940e7d42744672"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
+    "apis/istio",
+    "apis/istio/v1alpha3",
+    "client/clientset/versioned",
+    "client/clientset/versioned/scheme",
+    "client/clientset/versioned/typed/istio/v1alpha3",
+    "client/informers/externalversions",
+    "client/informers/externalversions/internalinterfaces",
+    "client/informers/externalversions/istio",
+    "client/informers/externalversions/istio/v1alpha3",
+    "client/listers/istio/v1alpha3",
     "configmap",
     "logging",
     "logging/logkey",
   ]
   pruneopts = "NUT"
-  revision = "fdf2fdcd93ddadf126cad6991d43a90f20033ceb"
+  revision = "a088fee6227f7c6842ce7f7406cb75af8a6e0643"
 
 [[projects]]
-  digest = "1:19e4c5347c26cf238042498ae3f0fbd85ee731520b085fc960096693eb465179"
+  digest = "1:099ca9ce3ca083383c02d6faf14e0ad3f0281c92fa82261eccff4ab83a6b8e7b"
   name = "github.com/knative/serving"
   packages = [
     "pkg/apis/istio",
@@ -293,14 +302,6 @@
     "pkg/client/clientset/versioned/scheme",
     "pkg/client/clientset/versioned/typed/istio/v1alpha3",
     "pkg/client/clientset/versioned/typed/serving/v1alpha1",
-    "pkg/client/informers/externalversions",
-    "pkg/client/informers/externalversions/internalinterfaces",
-    "pkg/client/informers/externalversions/istio",
-    "pkg/client/informers/externalversions/istio/v1alpha3",
-    "pkg/client/informers/externalversions/serving",
-    "pkg/client/informers/externalversions/serving/v1alpha1",
-    "pkg/client/listers/istio/v1alpha3",
-    "pkg/client/listers/serving/v1alpha1",
   ]
   pruneopts = "NUT"
   revision = "2326173b13899c32896caf526a318a8b30033b3e"
@@ -1037,16 +1038,16 @@
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/go-github/github",
     "github.com/google/uuid",
-    "github.com/knative/build/pkg/apis/build/v1alpha1",
     "github.com/knative/pkg/apis",
+    "github.com/knative/pkg/apis/istio/v1alpha3",
+    "github.com/knative/pkg/client/clientset/versioned",
+    "github.com/knative/pkg/client/informers/externalversions",
+    "github.com/knative/pkg/client/listers/istio/v1alpha3",
     "github.com/knative/pkg/configmap",
     "github.com/knative/pkg/logging",
     "github.com/knative/pkg/logging/logkey",
-    "github.com/knative/serving/pkg/apis/istio/v1alpha3",
     "github.com/knative/serving/pkg/apis/serving/v1alpha1",
     "github.com/knative/serving/pkg/client/clientset/versioned",
-    "github.com/knative/serving/pkg/client/informers/externalversions",
-    "github.com/knative/serving/pkg/client/listers/istio/v1alpha3",
     "github.com/mattbaird/jsonpatch",
     "github.com/nlopes/slack",
     "github.com/nlopes/slack/slackevents",

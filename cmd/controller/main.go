@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	"log"
 	"net/http"
 	"time"
 
@@ -29,9 +30,6 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	servingclientset "github.com/knative/serving/pkg/client/clientset/versioned"
-	servinginformers "github.com/knative/serving/pkg/client/informers/externalversions"
-
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/controller"
@@ -39,6 +37,8 @@ import (
 	"github.com/knative/eventing/pkg/controller/channel"
 	"github.com/knative/eventing/pkg/controller/clusterbus"
 	"github.com/knative/eventing/pkg/signals"
+	sharedclientset "github.com/knative/pkg/client/clientset/versioned"
+	sharedinformers "github.com/knative/pkg/client/informers/externalversions"
 
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/system"
@@ -47,7 +47,6 @@ import (
 	"github.com/knative/pkg/logging/logkey"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
-	"log"
 )
 
 const (
@@ -97,9 +96,9 @@ func main() {
 		logger.Fatalf("Error building clientset: %s", err.Error())
 	}
 
-	servingClient, err := servingclientset.NewForConfig(cfg)
+	sharedClient, err := sharedclientset.NewForConfig(cfg)
 	if err != nil {
-		logger.Fatalf("Error building serving clientset: %s", err.Error())
+		logger.Fatalf("Error building shared clientset: %s", err.Error())
 	}
 
 	// TODO: Rip this out from all the controllers since we can get it
@@ -113,7 +112,7 @@ func main() {
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
-	servingInformerFactory := servinginformers.NewSharedInformerFactory(servingClient, time.Second*30)
+	sharedInformerFactory := sharedinformers.NewSharedInformerFactory(sharedClient, time.Second*30)
 
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewDefaultWatcher(kubeClient, system.Namespace)
@@ -122,7 +121,8 @@ func main() {
 		logger.Fatalf("failed to start controller config map watcher: %v", err)
 	}
 
-	// Add new controllers here.
+	// Add new controllers here, except controllers that use controller-runtime.
+	// Those should be added to controller-runtime-main.go.
 	ctors := []controller.Constructor{
 		bus.NewController,
 		clusterbus.NewController,
@@ -134,12 +134,12 @@ func main() {
 	controllers := make([]controller.Interface, 0, len(ctors))
 	for _, ctor := range ctors {
 		controllers = append(controllers,
-			ctor(kubeClient, client, servingClient, restConfig, kubeInformerFactory, informerFactory, servingInformerFactory))
+			ctor(kubeClient, client, sharedClient, restConfig, kubeInformerFactory, informerFactory, sharedInformerFactory))
 	}
 
 	go kubeInformerFactory.Start(stopCh)
 	go informerFactory.Start(stopCh)
-	go servingInformerFactory.Start(stopCh)
+	go sharedInformerFactory.Start(stopCh)
 
 	// Start all of the controllers.
 	for _, ctrlr := range controllers {
@@ -151,6 +151,13 @@ func main() {
 			}
 		}(ctrlr)
 	}
+
+	// Start the controller-runtime controllers.
+	go func() {
+		if err := controllerRuntimeStart(); err != nil {
+			logger.Fatalf("Error running controller-runtime controllers: %v", err)
+		}
+	}()
 
 	// Start the endpoint that Prometheus scraper talks to
 	srv := &http.Server{Addr: metricsScrapeAddr}
@@ -171,6 +178,7 @@ func main() {
 }
 
 func init() {
-	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-	flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	// These are commented because they're also defined by controller-runtime.
+	// flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	// flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 }

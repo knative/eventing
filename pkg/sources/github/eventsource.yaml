@@ -21,3 +21,5 @@ spec:
   type: github
   source: github
   image: github.com/knative/eventing/pkg/sources/github
+  parameters:
+    image: github.com/knative/eventing/pkg/sources/github/receive_adapter

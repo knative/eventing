@@ -102,6 +102,8 @@ func MakeJob(feed *feedsv1alpha1.Feed, source *feedsv1alpha1.EventSource, trigge
 	}, nil
 }
 
+// IsJobComplete returns true if the Job has completed successfully, or false if
+// the Job is in progress or failed.
 func IsJobComplete(job *batchv1.Job) bool {
 	for _, c := range job.Status.Conditions {
 		if c.Type == batchv1.JobComplete && c.Status == corev1.ConditionTrue {
@@ -111,6 +113,8 @@ func IsJobComplete(job *batchv1.Job) bool {
 	return false
 }
 
+// IsJobFailed returns true if the Job has failed, or false if
+// the Job is in progress or completed successfully.
 func IsJobFailed(job *batchv1.Job) bool {
 	for _, c := range job.Status.Conditions {
 		if c.Type == batchv1.JobFailed && c.Status == corev1.ConditionTrue {
@@ -120,6 +124,8 @@ func IsJobFailed(job *batchv1.Job) bool {
 	return false
 }
 
+// JobFailedMessage returns a string containing the job's failure reason
+// and message for use in a Condition.
 func JobFailedMessage(job *batchv1.Job) string {
 	for _, c := range job.Status.Conditions {
 		if c.Type == batchv1.JobFailed && c.Status == corev1.ConditionTrue {
@@ -229,6 +235,8 @@ func makePodTemplate(feed *feedsv1alpha1.Feed, source *feedsv1alpha1.EventSource
 	}, nil
 }
 
+// GetFirstTerminationMessage returns the termination message of the first
+// terminated container in the given Pod.
 func GetFirstTerminationMessage(pod *corev1.Pod) string {
 	for _, cs := range pod.Status.ContainerStatuses {
 		if cs.State.Terminated != nil && cs.State.Terminated.Message != "" {

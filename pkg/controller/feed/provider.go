@@ -38,7 +38,7 @@ type reconciler struct {
 // Verify the struct implements reconcile.Reconciler
 var _ reconcile.Reconciler = &reconciler{}
 
-// ProvideController returns a Feed controller.
+// ProvideController returns a Feed controller and adds it to the given Manager.
 func ProvideController(mrg manager.Manager) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Feeds.
 	c, err := controller.New(controllerAgentName, mrg, controller.Options{
@@ -64,6 +64,7 @@ func ProvideController(mrg manager.Manager) (controller.Controller, error) {
 	return c, nil
 }
 
+// InjectClient is called by the injector to set the reconciler's client field.
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	return nil
