@@ -19,6 +19,8 @@ import (
 	"testing"
 )
 
+// TODO(n3wscott): these tests will go away when we move to new type of webhooks.
+
 func TestNewChannelNSBus(t *testing.T) {
 	c := createChannel(testChannelName, testBusName, "")
 	if err := ValidateChannel(testCtx)(nil, nil, &c); err != nil {
@@ -39,9 +41,6 @@ func TestNewEmptyChannel(t *testing.T) {
 	if err == nil {
 		t.Errorf("Expected failure, but succeeded with: %+v", c)
 	}
-	if e, a := errInvalidChannelBusMissing, err; e != a {
-		t.Errorf("Expected %s got %s", e, a)
-	}
 }
 
 func TestNewExclusiveChannel(t *testing.T) {
@@ -49,9 +48,6 @@ func TestNewExclusiveChannel(t *testing.T) {
 	err := ValidateChannel(testCtx)(nil, nil, &c)
 	if err == nil {
 		t.Errorf("Expected failure, but succeeded with: %+v", c)
-	}
-	if e, a := errInvalidChannelBusExclusivity, err; e != a {
-		t.Errorf("Expected %s got %s", e, a)
 	}
 }
 
@@ -69,9 +65,6 @@ func TestChannelNSBusMutation(t *testing.T) {
 	if err == nil {
 		t.Errorf("Expected failure, but succeeded with: %+v %+v", old, new)
 	}
-	if e, a := errInvalidChannelBusMutation, err; e != a {
-		t.Errorf("Expected %s got %s", e, a)
-	}
 }
 
 func TestChannelClusterBusMutation(t *testing.T) {
@@ -80,8 +73,5 @@ func TestChannelClusterBusMutation(t *testing.T) {
 	err := ValidateChannel(testCtx)(nil, &old, &new)
 	if err == nil {
 		t.Errorf("Expected failure, but succeeded with: %+v %+v", old, new)
-	}
-	if e, a := errInvalidChannelClusterBusMutation, err; e != a {
-		t.Errorf("Expected %s got %s", e, a)
 	}
 }
