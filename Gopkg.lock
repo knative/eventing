@@ -261,7 +261,7 @@
   revision = "5c1d8c8469d1ed34b2aecf4c2305b3a57fff2ee3"
 
 [[projects]]
-  digest = "1:c19f87a341b72c2121456397006116f9496006d62722315e43940e7d42744672"
+  digest = "1:3011133d478306f027779d4bd536482c8d4339b0dc517b825031ca7be4d477cb"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -278,6 +278,7 @@
     "configmap",
     "logging",
     "logging/logkey",
+    "signals",
   ]
   pruneopts = "NUT"
   revision = "a088fee6227f7c6842ce7f7406cb75af8a6e0643"
@@ -1028,6 +1029,7 @@
     "github.com/knative/pkg/configmap",
     "github.com/knative/pkg/logging",
     "github.com/knative/pkg/logging/logkey",
+    "github.com/knative/pkg/signals",
     "github.com/knative/serving/pkg/apis/serving/v1alpha1",
     "github.com/knative/serving/pkg/client/clientset/versioned",
     "github.com/mattbaird/jsonpatch",

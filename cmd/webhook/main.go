@@ -20,9 +20,9 @@ import (
 	"log"
 
 	"github.com/knative/eventing/pkg/logconfig"
-	"github.com/knative/eventing/pkg/signals"
 	"github.com/knative/eventing/pkg/system"
 	"github.com/knative/eventing/pkg/webhook"
+	"github.com/knative/pkg/signals"
 
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/logging"
