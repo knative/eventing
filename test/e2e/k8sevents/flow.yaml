@@ -36,4 +36,3 @@ spec:
       kind: Route
       apiVersion: serving.knative.dev/v1alpha1
       name: e2e-k8s-events-function
-      namespace: e2etest
