@@ -85,3 +85,10 @@ required = [
 [[constraint]]
   name = "github.com/bsm/sarama-cluster"
   version = "2.1.13"
+
+[[constraint]]
+  name = "sigs.k8s.io/controller-runtime"
+  # TODO when https://github.com/kubernetes-sigs/controller-runtime/pull/108 lands,
+  #      re-point back at sigs.k8s.io/controller-runtime fork
+  source = "github.com/n3wscott/controller-runtime"
+  branch = "update-k8s-1.11"
