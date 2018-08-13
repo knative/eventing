@@ -57,8 +57,7 @@ func CreateResourceInterface(config *rest.Config, ref *corev1.ObjectReference, n
 	if r == nil {
 		return nil, fmt.Errorf("failed to create dynamic client resource")
 	}
-	r.Namespace(namespace)
-	return r, nil
+	return r.Namespace(namespace), nil
 }
 
 // takes a kind and pluralizes it. This is super terrible, but I am
