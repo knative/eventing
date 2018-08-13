@@ -85,14 +85,14 @@ func main() {
 		Namespace:      system.Namespace,
 		Port:           443,
 		SecretName:     "webhook-certs",
-		WebhookName:    "webhook.serving.knative.dev",
+		WebhookName:    "webhook.eventing.knative.dev",
 	}
 	controller := webhook.AdmissionController{
 		Client:  kubeClient,
 		Options: options,
 		Handlers: map[schema.GroupVersionKind]runtime.Object{
 			v1alpha1channels.SchemeGroupVersion.WithKind("Bus"):        &v1alpha1channels.Bus{},
-			v1alpha1channels.SchemeGroupVersion.WithKind("ClusterBus"): &v1alpha1channels.Bus{},
+			v1alpha1channels.SchemeGroupVersion.WithKind("ClusterBus"): &v1alpha1channels.ClusterBus{},
 		},
 		Logger: logger,
 	}

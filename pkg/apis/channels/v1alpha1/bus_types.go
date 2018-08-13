@@ -40,6 +40,12 @@ type Bus struct {
 	Status             BusStatus `json:"status,omitempty"`
 }
 
+// Check that Bus can be validated, can be defaulted, and has immutable fields.
+var _ apis.Validatable = (*Bus)(nil)
+var _ apis.Defaultable = (*Bus)(nil)
+var _ apis.Immutable = (*Bus)(nil)
+var _ runtime.Object = (*Bus)(nil)
+
 // BusSpec specifies the Bus' parameters for Channels and Subscriptions, how the
 // provisioner and dispatcher for a bus should be run, and which volumes should
 // be mounted into them.
