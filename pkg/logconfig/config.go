@@ -23,14 +23,10 @@ const (
 	// Named Loggers are used to override the default log level. config-logging.yaml will use the follow:
 	//
 	// loglevel.controller: "info"
-	// loglevel.controller-manager: "info"
 	// loglevel.webhook: "info"
 
 	// Controller is the name of the override key used inside of the logging config for Controller.
 	Controller = "controller"
-
-	// ControllerManager is the name of the override key used inside of the logging config for Controller Manager.
-	ControllerManager = "controller-manager"
 
 	// Webhook is the name of the override key used inside of the logging config for Webhook Controller.
 	Webhook = "webhook"
