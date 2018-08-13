@@ -1008,8 +1008,7 @@
   revision = "8a9b82f00b3a86eac24681da3f9fe6c34c01cea2"
 
 [[projects]]
-  branch = "update-k8s-1.11"
-  digest = "1:8e57820bbf8ea19e72c3a8f0023ad1d2b78e0f24f2b75d343c91a3d849174239"
+  digest = "1:d7f34929f9fd9822b69a72fd59d987baf5e2d01eb8fb42831504741c2d9f20c1"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/cache",
@@ -1034,7 +1033,7 @@
     "pkg/source/internal",
   ]
   pruneopts = "NUT"
-  revision = "f88e58acb81e9f15dc4352215cf1b6ed97b9618f"
+  revision = "21388f002e2c9d66214326bcd3486f0e1b5f4857"
   source = "github.com/n3wscott/controller-runtime"
 
 [solve-meta]
