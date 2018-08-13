@@ -62,7 +62,7 @@ func (c *FakeFeeds) List(opts v1.ListOptions) (result *v1alpha1.FeedList, err er
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &v1alpha1.FeedList{}
+	list := &v1alpha1.FeedList{ListMeta: obj.(*v1alpha1.FeedList).ListMeta}
 	for _, item := range obj.(*v1alpha1.FeedList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)

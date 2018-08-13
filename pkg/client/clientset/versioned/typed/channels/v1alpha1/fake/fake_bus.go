@@ -62,7 +62,7 @@ func (c *FakeBuses) List(opts v1.ListOptions) (result *v1alpha1.BusList, err err
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &v1alpha1.BusList{}
+	list := &v1alpha1.BusList{ListMeta: obj.(*v1alpha1.BusList).ListMeta}
 	for _, item := range obj.(*v1alpha1.BusList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
