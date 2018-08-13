@@ -36,6 +36,7 @@ func (ss *SubscriptionSpec) Validate() *apis.FieldError {
 		fe.Details = channelMissingDetail
 		return fe
 	}
+	// TOOD: should subscriptions have a subscriber?
 	return nil
 }
 
