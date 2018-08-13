@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+>>>>>>> Updating to k8s 1.11.
 
 ===========================================================
 Import: github.com/knative/eventing/vendor/cloud.google.com/go
@@ -5803,3 +5808,7 @@ Import: github.com/knative/eventing/vendor/sigs.k8s.io/controller-runtime
    See the License for the specific language governing permissions and
    limitations under the License.
 
+<<<<<<< HEAD
+=======
+>>>>>>> Updating to k8s 1.11.
+>>>>>>> Updating to k8s 1.11.

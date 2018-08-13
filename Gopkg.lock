@@ -786,7 +786,11 @@
   version = "kubernetes-1.11.0"
 
 [[projects]]
+<<<<<<< HEAD
   digest = "1:cd302e5f1ff90eae88c0d0a2f72b8fa4d47ec3ca20b892a6d52383898152c354"
+=======
+  digest = "1:7e8f168d4bd0d7b250bdd0362793dcb2c6bbb7cdb6a658008c73b883ed963e52"
+>>>>>>> Updating to k8s 1.11.
   name = "k8s.io/client-go"
   packages = [
     "discovery",
