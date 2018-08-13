@@ -25,6 +25,7 @@ import (
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	v1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
+	"github.com/knative/eventing/pkg/controller/flow/resources"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -222,19 +223,7 @@ func (r *reconciler) reconcileChannel(flow *v1alpha1.Flow) (*channelsv1alpha1.Ch
 }
 
 func (r *reconciler) createChannel(flow *v1alpha1.Flow) (*channelsv1alpha1.Channel, error) {
-	channelName := flow.Name
-	channel := &channelsv1alpha1.Channel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      channelName,
-			Namespace: flow.Namespace,
-			OwnerReferences: []metav1.OwnerReference{
-				*r.NewControllerRef(flow),
-			},
-		},
-		Spec: channelsv1alpha1.ChannelSpec{
-			ClusterBus: defaultBusName,
-		},
-	}
+	channel := resources.MakeChannel(defaultBusName, flow)
 	if err := r.client.Create(context.TODO(), channel); err != nil {
 		return nil, err
 	}
@@ -263,20 +252,7 @@ func (r *reconciler) reconcileSubscription(channelName string, target string, fl
 }
 
 func (r *reconciler) createSubscription(channelName string, target string, flow *v1alpha1.Flow) (*channelsv1alpha1.Subscription, error) {
-	subscriptionName := flow.Name
-	subscription := &channelsv1alpha1.Subscription{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      subscriptionName,
-			Namespace: flow.Namespace,
-			OwnerReferences: []metav1.OwnerReference{
-				*r.NewControllerRef(flow),
-			},
-		},
-		Spec: channelsv1alpha1.SubscriptionSpec{
-			Channel:    channelName,
-			Subscriber: target,
-		},
-	}
+	subscription := resources.MakeSubscription(channelName, target, flow)
 	if err := r.client.Create(context.TODO(), subscription); err != nil {
 		return nil, err
 	}
@@ -307,46 +283,9 @@ func (r *reconciler) reconcileFeed(channelDNS string, flow *v1alpha1.Flow) (*fee
 }
 
 func (r *reconciler) createFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
-	feedName := flow.Name
-	feed := &feedsv1alpha1.Feed{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      feedName,
-			Namespace: flow.Namespace,
-			OwnerReferences: []metav1.OwnerReference{
-				*r.NewControllerRef(flow),
-			},
-		},
-		Spec: feedsv1alpha1.FeedSpec{
-			Action: feedsv1alpha1.FeedAction{DNSName: channelDNS},
-			Trigger: feedsv1alpha1.EventTrigger{
-				EventType: flow.Spec.Trigger.EventType,
-				Resource:  flow.Spec.Trigger.Resource,
-				Service:   flow.Spec.Trigger.Service,
-			},
-		},
-	}
-	if flow.Spec.ServiceAccountName != "" {
-		feed.Spec.ServiceAccountName = flow.Spec.ServiceAccountName
-	}
-
-	if flow.Spec.Trigger.Parameters != nil {
-		feed.Spec.Trigger.Parameters = flow.Spec.Trigger.Parameters
-	}
-	if flow.Spec.Trigger.ParametersFrom != nil {
-		feed.Spec.Trigger.ParametersFrom = flow.Spec.Trigger.ParametersFrom
-	}
-
+	feed := resources.MakeFeed(channelDNS, flow)
 	if err := r.client.Create(context.TODO(), feed); err != nil {
 		return nil, err
 	}
 	return feed, nil
-}
-
-func (r *reconciler) NewControllerRef(flow *v1alpha1.Flow) *metav1.OwnerReference {
-	blockOwnerDeletion := false
-	isController := true
-	revRef := metav1.NewControllerRef(flow, flowControllerKind)
-	revRef.BlockOwnerDeletion = &blockOwnerDeletion
-	revRef.Controller = &isController
-	return revRef
 }

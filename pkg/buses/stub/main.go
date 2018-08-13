@@ -24,7 +24,7 @@ import (
 	"github.com/golang/glog"
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	"github.com/knative/eventing/pkg/buses"
-	"github.com/knative/eventing/pkg/signals"
+	"github.com/knative/pkg/signals"
 )
 
 const (
