@@ -44,6 +44,7 @@ type Flow struct {
 var _ apis.Validatable = (*Flow)(nil)
 var _ apis.Defaultable = (*Flow)(nil)
 var _ apis.Immutable = (*Flow)(nil)
+var _ runtime.Object = (*Flow)(nil)
 
 // FlowSpec is the spec for a Flow resource.
 type FlowSpec struct {
