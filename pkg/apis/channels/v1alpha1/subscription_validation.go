@@ -22,10 +22,6 @@ import (
 	"github.com/knative/pkg/apis"
 )
 
-const (
-	channelMissingDetail = "the Subscription must reference a Channel"
-)
-
 func (s *Subscription) Validate() *apis.FieldError {
 	return s.Spec.Validate().ViaField("spec")
 }
@@ -33,7 +29,7 @@ func (s *Subscription) Validate() *apis.FieldError {
 func (ss *SubscriptionSpec) Validate() *apis.FieldError {
 	if len(ss.Channel) == 0 {
 		fe := apis.ErrMissingField("channel")
-		fe.Details = channelMissingDetail
+		fe.Details = "the Subscription must reference a Channel"
 		return fe
 	}
 	// TOOD: should subscriptions have a subscriber?
