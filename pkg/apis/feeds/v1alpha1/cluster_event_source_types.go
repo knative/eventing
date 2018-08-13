@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"encoding/json"
 
+	"github.com/knative/pkg/apis"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -37,6 +38,11 @@ type ClusterEventSource struct {
 	Spec   ClusterEventSourceSpec   `json:"spec"`
 	Status ClusterEventSourceStatus `json:"status"`
 }
+
+// Check that ClusterEventSource can be validated, can be defaulted, and has immutable fields.
+var _ apis.Validatable = (*ClusterEventSource)(nil)
+var _ apis.Defaultable = (*ClusterEventSource)(nil)
+var _ apis.Immutable = (*ClusterEventSource)(nil)
 
 // ClusterEventSourceSpec describes the type and source of an event, a container image
 // to run for feed lifecycle operations, and configuration options for the

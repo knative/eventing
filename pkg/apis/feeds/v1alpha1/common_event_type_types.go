@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/knative/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -34,6 +35,10 @@ type CommonEventTypeSpec struct {
 	// Describe the schema for the events emitted by this EventType.
 	EventSchema *runtime.RawExtension `json:"eventSchema,omitempty"`
 }
+
+// Check that CommonEventTypeSpec can be validated and can be defaulted
+var _ apis.Validatable = (*CommonEventTypeSpec)(nil)
+var _ apis.Defaultable = (*CommonEventTypeSpec)(nil)
 
 // CommonEventTypeStatus is the status for a EventType resource
 type CommonEventTypeStatus struct {
