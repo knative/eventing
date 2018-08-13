@@ -25,9 +25,7 @@ import (
 )
 
 var (
-	errInvalidFeedInput                = errors.New("failed to convert input into Feed")
-	errInvalidFeedEventTypeMissing     = errors.New("the Feed must reference a EventType or ClusterEventType")
-	errInvalidFeedEventTypeExclusivity = errors.New("the Feed must reference either a EventType or ClusterEventType, not both")
+	errInvalidFeedInput = errors.New("failed to convert input into Feed")
 )
 
 // Test the type for interface compliance
@@ -46,14 +44,12 @@ func ValidateFeed(ctx context.Context) ResourceCallback {
 }
 
 func validateFeed(old, new *v1alpha1.Feed) error {
-	refsEventType := len(new.Spec.Trigger.EventType) != 0
-	refsClusterEventType := len(new.Spec.Trigger.ClusterEventType) != 0
-	if !refsEventType && !refsClusterEventType {
-		return errInvalidFeedEventTypeMissing
-	} else if refsEventType && refsClusterEventType {
-		return errInvalidFeedEventTypeExclusivity
+	if err := new.Validate(); err != nil {
+		return err
 	}
-	// TODO(nicholss): write this.
+	if err := new.CheckImmutableFields(old); err != nil {
+		return err
+	}
 	return nil
 }
 

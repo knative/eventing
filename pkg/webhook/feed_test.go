@@ -19,6 +19,8 @@ import (
 	"testing"
 )
 
+// TODO(n3wscott): this file goes away.
+
 func TestNewFeedNSEventType(t *testing.T) {
 	c := createFeed(testFeedName, testEventTypeName, "")
 	if err := ValidateFeed(testCtx)(nil, nil, &c); err != nil {
@@ -39,9 +41,6 @@ func TestNewEmptyFeed(t *testing.T) {
 	if err == nil {
 		t.Errorf("Expected failure, but succeeded with: %+v", c)
 	}
-	if e, a := errInvalidFeedEventTypeMissing, err; e != a {
-		t.Errorf("Expected %s got %s", e, a)
-	}
 }
 
 func TestNewExclusiveFeed(t *testing.T) {
@@ -49,8 +48,5 @@ func TestNewExclusiveFeed(t *testing.T) {
 	err := ValidateFeed(testCtx)(nil, nil, &c)
 	if err == nil {
 		t.Errorf("Expected failure, but succeeded with: %+v", c)
-	}
-	if e, a := errInvalidFeedEventTypeExclusivity, err; e != a {
-		t.Errorf("Expected %s got %s", e, a)
 	}
 }
