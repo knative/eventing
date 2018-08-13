@@ -31,7 +31,6 @@ func (s *Subscription) Validate() *apis.FieldError {
 }
 
 func (ss *SubscriptionSpec) Validate() *apis.FieldError {
-
 	if len(ss.Channel) == 0 {
 		fe := apis.ErrMissingField("channel")
 		fe.Details = channelMissingDetail
