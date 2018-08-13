@@ -63,7 +63,7 @@ func (s *slackResponder) handleRequest(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		msg := fmt.Sprintf(s.messageFormat, ev.Text)
-		a, b, err := s.api.PostMessage(ev.Channel, msg, slack.PostMessageParameters{})
+		_, _, err := s.api.PostMessage(ev.Channel, msg, slack.PostMessageParameters{})
 		if err != nil {
 			log.Printf("Error posting message: %+v", err)
 			w.WriteHeader(http.StatusInternalServerError)
