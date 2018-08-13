@@ -25,9 +25,7 @@ import (
 )
 
 var (
-	errInvalidSubscriptionInput           = errors.New("failed to convert input into Subscription")
-	errInvalidSubscriptionChannelMissing  = errors.New("the Subscription must reference a Channel")
-	errInvalidSubscriptionChannelMutation = errors.New("the Subscription's Channel may not change")
+	errInvalidSubscriptionInput = errors.New("failed to convert input into Subscription")
 )
 
 // ValidateSubscription is Subscription resource specific validation and mutation handler
@@ -43,11 +41,11 @@ func ValidateSubscription(ctx context.Context) ResourceCallback {
 }
 
 func validateSubscription(old, new *v1alpha1.Subscription) error {
-	if len(new.Spec.Channel) == 0 {
-		return errInvalidSubscriptionChannelMissing
+	if err := new.Validate(); err != nil {
+		return err
 	}
-	if old != nil && old.Spec.Channel != new.Spec.Channel {
-		return errInvalidSubscriptionChannelMutation
+	if err := new.CheckImmutableFields(old); err != nil {
+		return err
 	}
 	return nil
 }

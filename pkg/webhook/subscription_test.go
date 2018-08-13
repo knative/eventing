@@ -19,6 +19,8 @@ import (
 	"testing"
 )
 
+// TODO(n3wscott): this file goes away.
+
 func TestNewSubscription(t *testing.T) {
 	s := createSubscription(testSubscriptionName, testChannelName)
 	if err := ValidateSubscription(testCtx)(nil, nil, &s); err != nil {
@@ -31,9 +33,6 @@ func TestNewEmptySubscription(t *testing.T) {
 	err := ValidateSubscription(testCtx)(nil, nil, &s)
 	if err == nil {
 		t.Errorf("Expected failure, but succeeded with: %+v", s)
-	}
-	if e, a := errInvalidSubscriptionChannelMissing, err; e != a {
-		t.Errorf("Expected %s got %s", e, a)
 	}
 }
 
@@ -50,8 +49,5 @@ func TestSubscriptionChannelMutation(t *testing.T) {
 	err := ValidateSubscription(testCtx)(nil, &old, &new)
 	if err == nil {
 		t.Errorf("Expected failure, but succeeded with: %+v %+v", old, new)
-	}
-	if e, a := errInvalidSubscriptionChannelMutation, err; e != a {
-		t.Errorf("Expected %s got %s", e, a)
 	}
 }
