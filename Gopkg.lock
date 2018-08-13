@@ -81,12 +81,9 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b49dd34bdf52d28b69e41181bed939bdf48e1152ef54d21db643e3c50b3b33c0"
+  digest = "1:53becd66889185091b58ea3fc49294996f2179fb05a89702f4de7d15e581b509"
   name = "github.com/go-logr/logr"
-  packages = [
-    ".",
-    "testing",
-  ]
+  packages = ["."]
   pruneopts = "NUT"
   revision = "9fb12b3b21c5415d16ac18dc5cd42c1cfdd40c4e"
 
@@ -788,7 +785,7 @@
   version = "kubernetes-1.11.0"
 
 [[projects]]
-  digest = "1:7e8f168d4bd0d7b250bdd0362793dcb2c6bbb7cdb6a658008c73b883ed963e52"
+  digest = "1:cd302e5f1ff90eae88c0d0a2f72b8fa4d47ec3ca20b892a6d52383898152c354"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -929,6 +926,7 @@
     "plugin/pkg/client/auth/gcp",
     "rest",
     "rest/watch",
+    "restmapper",
     "testing",
     "third_party/forked/golang/template",
     "tools/auth",
@@ -1010,8 +1008,8 @@
   revision = "8a9b82f00b3a86eac24681da3f9fe6c34c01cea2"
 
 [[projects]]
-  branch = "master"
-  digest = "1:0636bd706086f089dffeb6ea9a6e6a5079da1820943367949e4e477b7f94355c"
+  branch = "update-k8s-1.11"
+  digest = "1:8e57820bbf8ea19e72c3a8f0023ad1d2b78e0f24f2b75d343c91a3d849174239"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/cache",
@@ -1036,7 +1034,8 @@
     "pkg/source/internal",
   ]
   pruneopts = "NUT"
-  revision = "f5b79b93f3aa7b978117f942f3cd67a91db12207"
+  revision = "f88e58acb81e9f15dc4352215cf1b6ed97b9618f"
+  source = "github.com/n3wscott/controller-runtime"
 
 [solve-meta]
   analyzer-name = "dep"
