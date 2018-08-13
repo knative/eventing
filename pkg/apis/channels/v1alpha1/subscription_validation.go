@@ -20,8 +20,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/knative/pkg/apis"
-
-	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 const (
