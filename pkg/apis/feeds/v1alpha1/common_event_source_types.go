@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/knative/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -39,6 +40,10 @@ type CommonEventSourceSpec struct {
 	// on the event sources containers.
 	Parameters *runtime.RawExtension `json:"parameters,omitempty"`
 }
+
+// Check that CommonEventSourceSpec can be validated and can be defaulted
+var _ apis.Validatable = (*CommonEventSourceSpec)(nil)
+var _ apis.Defaultable = (*CommonEventSourceSpec)(nil)
 
 // EventSourceStatus is the status for a EventSource resource
 type CommonEventSourceStatus struct {

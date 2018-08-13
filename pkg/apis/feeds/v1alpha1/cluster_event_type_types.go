@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/knative/pkg/apis"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -34,6 +35,11 @@ type ClusterEventType struct {
 	Spec   ClusterEventTypeSpec   `json:"spec"`
 	Status ClusterEventTypeStatus `json:"status"`
 }
+
+// Check that ClusterEventType can be validated, can be defaulted, and has immutable fields.
+var _ apis.Validatable = (*ClusterEventType)(nil)
+var _ apis.Defaultable = (*ClusterEventType)(nil)
+var _ apis.Immutable = (*ClusterEventType)(nil)
 
 // ClusterEventTypeSpec specifies information about the ClusterEventType, including a schema
 // for the event and information about the parameters needed to create a Feed to
