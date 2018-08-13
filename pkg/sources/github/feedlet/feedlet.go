@@ -35,6 +35,7 @@ import (
 	"os"
 
 	ghclient "github.com/google/go-github/github"
+	"github.com/knative/eventing/pkg/sources/github"
 	"github.com/knative/eventing/pkg/sources/github/resources"
 	"github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -451,11 +452,9 @@ func parseEventsFrom(eventType string) ([]string, error) {
 	if len(eventType) == 0 {
 		return []string(nil), fmt.Errorf("event type is empty")
 	}
-	switch eventType {
-	case "pullrequest":
-		return []string{"pull_request"}, nil
-	// TODO: Add more supported event types.
-	default:
+	event, ok := github.GithubEventType[eventType]
+	if !ok {
 		return []string(nil), fmt.Errorf("event type is unknown: %s", eventType)
 	}
+	return []string{event}, nil
 }
