@@ -1,0 +1,20 @@
+apiVersion: serving.knative.dev/v1alpha1
+kind: Service
+metadata:
+  name: slack-responder
+  namespace: default
+spec:
+  runLatest:
+    configuration:
+      revisionTemplate:
+        spec:
+          container:
+            image: github.com/knative/eventing/sample/slack/slack_responder
+            env:
+              - name: SLACK_SECRET
+                valueFrom:
+                  secretKeyRef:
+                    name: slack-responder-secret
+                    key: slackCredentials
+              - name: MESSAGE_FORMAT
+                value: "You said: %v"

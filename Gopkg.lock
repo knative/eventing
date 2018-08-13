@@ -216,6 +216,14 @@
   version = "v0.2.0"
 
 [[projects]]
+  digest = "1:3b708ebf63bfa9ba3313bedb8526bc0bb284e51474e65e958481476a9d4a12aa"
+  name = "github.com/gorilla/websocket"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
+  version = "v1.2.0"
+
+[[projects]]
   branch = "master"
   digest = "1:13e2fa5735a82a5fb044f290cfd0dba633d1c5e516b27da0509e0dbb3515a18e"
   name = "github.com/hashicorp/golang-lru"
@@ -284,7 +292,7 @@
   revision = "a088fee6227f7c6842ce7f7406cb75af8a6e0643"
 
 [[projects]]
-  digest = "1:63f3974f3afe3dc5b6a115c0d53b0897cd01be6880c4bf5d014fc69a95db6ed1"
+  digest = "1:099ca9ce3ca083383c02d6faf14e0ad3f0281c92fa82261eccff4ab83a6b8e7b"
   name = "github.com/knative/serving"
   packages = [
     "pkg/apis/istio",
@@ -297,8 +305,7 @@
     "pkg/client/clientset/versioned/typed/serving/v1alpha1",
   ]
   pruneopts = "NUT"
-  revision = "091d4519394bb7bee5ae4d3ab764c3f4f6f2a51b"
-  version = "v0.1.0"
+  revision = "2326173b13899c32896caf526a318a8b30033b3e"
 
 [[projects]]
   branch = "master"
@@ -331,6 +338,17 @@
   pruneopts = "NUT"
   revision = "1df9eeb2bb81f327b96228865c5687bc2194af3f"
   version = "1.0.0"
+
+[[projects]]
+  digest = "1:61fecf1979a0c38c6ec99600db5caea90bf29a85bfc8b61475738ad9375eed08"
+  name = "github.com/nlopes/slack"
+  packages = [
+    ".",
+    "slackevents",
+  ]
+  pruneopts = "NUT"
+  revision = "0db1d5eae1116bf7c8ed96c6749acfbf4daaec3e"
+  version = "v0.3.0"
 
 [[projects]]
   digest = "1:43830c167ef48755903a1bb81e37f73b8f522c5fbecc80f269e2e25d741aa8ee"
@@ -1033,6 +1051,8 @@
     "github.com/knative/serving/pkg/apis/serving/v1alpha1",
     "github.com/knative/serving/pkg/client/clientset/versioned",
     "github.com/mattbaird/jsonpatch",
+    "github.com/nlopes/slack",
+    "github.com/nlopes/slack/slackevents",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "go.uber.org/zap",
     "golang.org/x/net/context",
