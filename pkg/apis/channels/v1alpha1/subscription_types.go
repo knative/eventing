@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"encoding/json"
 
+	"github.com/knative/pkg/apis"
 	"k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -36,6 +37,11 @@ type Subscription struct {
 	Spec               SubscriptionSpec   `json:"spec"`
 	Status             SubscriptionStatus `json:"status,omitempty"`
 }
+
+// Check that Subscription can be validated, can be defaulted, and has immutable fields.
+var _ apis.Validatable = (*Subscription)(nil)
+var _ apis.Defaultable = (*Subscription)(nil)
+var _ apis.Immutable = (*Subscription)(nil)
 
 // SubscriptionSpec specifies the Channel and Subscriber and the configuration
 // arguments for the Subscription.
