@@ -28,6 +28,7 @@ import (
 	"github.com/knative/pkg/webhook"
 
 	v1alpha1channels "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	v1alpha1feeds "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	v1alpha1flows "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/system"
@@ -36,10 +37,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-)
-
-const (
-	logLevelKey = "webhook"
 )
 
 func main() {
@@ -93,9 +90,17 @@ func main() {
 		Options: options,
 		Handlers: map[schema.GroupVersionKind]runtime.Object{
 			// For group channels.knative.dev,
-			v1alpha1channels.SchemeGroupVersion.WithKind("Bus"):        &v1alpha1channels.Bus{},
-			v1alpha1channels.SchemeGroupVersion.WithKind("ClusterBus"): &v1alpha1channels.ClusterBus{},
-			v1alpha1channels.SchemeGroupVersion.WithKind("Channel"):    &v1alpha1channels.Channel{},
+			v1alpha1channels.SchemeGroupVersion.WithKind("Bus"):          &v1alpha1channels.Bus{},
+			v1alpha1channels.SchemeGroupVersion.WithKind("ClusterBus"):   &v1alpha1channels.ClusterBus{},
+			v1alpha1channels.SchemeGroupVersion.WithKind("Channel"):      &v1alpha1channels.Channel{},
+			v1alpha1channels.SchemeGroupVersion.WithKind("Subscription"): &v1alpha1channels.Subscription{},
+
+			// For group feeds.knative.dev,
+			v1alpha1feeds.SchemeGroupVersion.WithKind("EventSource"):        &v1alpha1feeds.EventSource{},
+			v1alpha1feeds.SchemeGroupVersion.WithKind("ClusterEventSource"): &v1alpha1feeds.ClusterEventSource{},
+			v1alpha1feeds.SchemeGroupVersion.WithKind("EventType"):          &v1alpha1feeds.EventType{},
+			v1alpha1feeds.SchemeGroupVersion.WithKind("ClusterEventType"):   &v1alpha1feeds.ClusterEventType{},
+			v1alpha1feeds.SchemeGroupVersion.WithKind("Feed"):               &v1alpha1feeds.Feed{},
 
 			// For group flows.knative.dev,
 			v1alpha1flows.SchemeGroupVersion.WithKind("Flow"): &v1alpha1flows.Flow{},
