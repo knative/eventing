@@ -25,9 +25,7 @@ import (
 )
 
 var (
-	errInvalidSubscriptionInput           = errors.New("failed to convert input into Subscription")
-	errInvalidSubscriptionChannelMissing  = errors.New("the Subscription must reference a Channel")
-	errInvalidSubscriptionChannelMutation = errors.New("the Subscription's Channel may not change")
+	errInvalidSubscriptionInput = errors.New("failed to convert input into Subscription")
 )
 
 // ValidateSubscription is Subscription resource specific validation and mutation handler
