@@ -72,10 +72,8 @@ function wait_until_flow_ready() {
   kubectl get -n $NAMESPACE flows $NAME -oyaml
   kubectl get -n $NAMESPACE jobs $NAME-start -oyaml
   kubectl get -n $NAMESPACE feeds $NAME -oyaml
-  echo -e "Dumping controller manager logs"
-  kubectl -n knative-eventing logs `kubectl -n knative-eventing get pods -oname | grep controller-manager` controller-manager
-  echo -e "Dumping controller logs"
-  kubectl -n knative-eventing logs `kubectl -n knative-eventing get pods -oname | grep eventing-controller`
+  echo -e "Dumping eventing controller logs"
+  kubectl -n knative-eventing logs `kubectl -n knative-eventing get pods -oname | grep eventing-controller` eventing-controller
   return 1
 }
 
