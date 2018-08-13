@@ -57,6 +57,7 @@ func CreateResourceInterface(config *rest.Config, ref *corev1.ObjectReference, n
 	if r == nil {
 		return nil, fmt.Errorf("failed to create dynamic client resource")
 	}
+	r.Namespace(namespace)
 	return r, nil
 }
 
