@@ -20,9 +20,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"encoding/json"
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/webhook"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -45,6 +47,7 @@ var _ apis.Validatable = (*Flow)(nil)
 var _ apis.Defaultable = (*Flow)(nil)
 var _ apis.Immutable = (*Flow)(nil)
 var _ runtime.Object = (*Flow)(nil)
+var _ webhook.GenericCRD = (*Flow)(nil)
 
 // FlowSpec is the spec for a Flow resource.
 type FlowSpec struct {
@@ -224,16 +227,6 @@ type FlowCondition struct {
 	Message string `json:"message,omitempty" description:"human-readable message indicating details about last transition"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// FlowList is a list of Flow resources
-type FlowList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []Flow `json:"items"`
-}
-
 func (fs *FlowStatus) IsReady() bool {
 	if c := fs.GetCondition(FlowConditionReady); c != nil {
 		return c.Status == corev1.ConditionTrue
@@ -394,4 +387,18 @@ func (fs *FlowStatus) markReady() {
 		Type:   FlowConditionReady,
 		Status: corev1.ConditionTrue,
 	})
+}
+
+func (f *Flow) GetSpecJSON() ([]byte, error) {
+	return json.Marshal(f.Spec)
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// FlowList is a list of Flow resources
+type FlowList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []Flow `json:"items"`
 }

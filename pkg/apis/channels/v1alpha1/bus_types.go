@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 
 	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/webhook"
 	kapi "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -45,6 +46,7 @@ var _ apis.Validatable = (*Bus)(nil)
 var _ apis.Defaultable = (*Bus)(nil)
 var _ apis.Immutable = (*Bus)(nil)
 var _ runtime.Object = (*Bus)(nil)
+var _ webhook.GenericCRD = (*Bus)(nil)
 
 // BusSpec specifies the Bus' parameters for Channels and Subscriptions, how the
 // provisioner and dispatcher for a bus should be run, and which volumes should

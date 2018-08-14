@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 
 	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/webhook"
 	"k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -42,6 +43,7 @@ type Subscription struct {
 var _ apis.Validatable = (*Subscription)(nil)
 var _ apis.Defaultable = (*Subscription)(nil)
 var _ apis.Immutable = (*Subscription)(nil)
+var _ webhook.GenericCRD = (*ClusterBus)(nil)
 
 // SubscriptionSpec specifies the Channel and Subscriber and the configuration
 // arguments for the Subscription.

@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 
 	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/webhook"
 	"k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,6 +47,7 @@ var _ apis.Validatable = (*Channel)(nil)
 var _ apis.Defaultable = (*Channel)(nil)
 var _ apis.Immutable = (*Channel)(nil)
 var _ runtime.Object = (*Channel)(nil)
+var _ webhook.GenericCRD = (*Channel)(nil)
 
 // ChannelSpec specifies the Bus backing a channel and the configuration
 // arguments for the channel.
