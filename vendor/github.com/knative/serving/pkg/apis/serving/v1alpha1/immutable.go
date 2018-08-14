@@ -14,15 +14,3 @@ limitations under the License.
 */
 
 package v1alpha1
-
-func (s *Service) SetDefaults() {
-	s.Spec.SetDefaults()
-}
-
-func (ss *ServiceSpec) SetDefaults() {
-	if ss.RunLatest != nil {
-		ss.RunLatest.Configuration.SetDefaults()
-	} else if ss.Pinned != nil {
-		ss.Pinned.Configuration.SetDefaults()
-	}
-}

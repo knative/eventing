@@ -15,14 +15,8 @@ limitations under the License.
 
 package v1alpha1
 
-func (s *Service) SetDefaults() {
-	s.Spec.SetDefaults()
-}
-
-func (ss *ServiceSpec) SetDefaults() {
-	if ss.RunLatest != nil {
-		ss.RunLatest.Configuration.SetDefaults()
-	} else if ss.Pinned != nil {
-		ss.Pinned.Configuration.SetDefaults()
-	}
+// Defaultable defines an interface for setting the defaults for the
+// uninitialized fields of this instance.
+type Defaultable interface {
+	SetDefaults()
 }

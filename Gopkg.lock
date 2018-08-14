@@ -258,14 +258,14 @@
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
 [[projects]]
-  digest = "1:56e5ca4c6ba1f620ada9def804ea4e13bde71d963a43293e2b1d1e299d8b7680"
+  digest = "1:3b8adce8bbe5865d7155ddfadbd063915265f04a22ab47a3f5cddd7b32333d1e"
   name = "github.com/knative/build"
   packages = [
     "pkg/apis/build",
     "pkg/apis/build/v1alpha1",
   ]
   pruneopts = "NUT"
-  revision = "e7a708f4562329a7d2bd51eb9f2a3889145a80a7"
+  revision = "5c1d8c8469d1ed34b2aecf4c2305b3a57fff2ee3"
 
 [[projects]]
   digest = "1:62e6813bcbb3d88a242b4ba211033c942d2b81bc78cd60a745805896d10deb24"
@@ -288,23 +288,24 @@
     "signals",
   ]
   pruneopts = "NUT"
-  revision = "bc264c290f777cc51f53644a1996f5e8887dcba6"
+  revision = "a3bc2db77a14d9ca6195172e81b4bf33e6190f85"
 
 [[projects]]
-  digest = "1:bef8975198e19cef26c9855db6c2e705cd9ae4582360da4df451a51cede4b155"
+  digest = "1:63f3974f3afe3dc5b6a115c0d53b0897cd01be6880c4bf5d014fc69a95db6ed1"
   name = "github.com/knative/serving"
   packages = [
-    "pkg/apis/autoscaling",
-    "pkg/apis/autoscaling/v1alpha1",
+    "pkg/apis/istio",
+    "pkg/apis/istio/v1alpha3",
     "pkg/apis/serving",
     "pkg/apis/serving/v1alpha1",
     "pkg/client/clientset/versioned",
     "pkg/client/clientset/versioned/scheme",
-    "pkg/client/clientset/versioned/typed/autoscaling/v1alpha1",
+    "pkg/client/clientset/versioned/typed/istio/v1alpha3",
     "pkg/client/clientset/versioned/typed/serving/v1alpha1",
   ]
   pruneopts = "NUT"
-  revision = "ace9afa467f6b1b0e6fb343bac87ff612afd6700"
+  revision = "37c640555a3241ed707962ba6b29d6c7fe68f937"
+  version = "v0.1.1"
 
 [[projects]]
   branch = "master"
