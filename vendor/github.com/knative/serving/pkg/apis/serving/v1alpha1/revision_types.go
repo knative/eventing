@@ -19,14 +19,12 @@ package v1alpha1
 import (
 	"encoding/json"
 	"reflect"
-	"sort"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	buildv1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
-	"github.com/knative/pkg/apis"
 )
 
 // +genclient
@@ -53,9 +51,9 @@ type Revision struct {
 }
 
 // Check that Revision can be validated, can be defaulted, and has immutable fields.
-var _ apis.Validatable = (*Revision)(nil)
-var _ apis.Defaultable = (*Revision)(nil)
-var _ apis.Immutable = (*Revision)(nil)
+var _ Validatable = (*Revision)(nil)
+var _ Defaultable = (*Revision)(nil)
+var _ HasImmutableFields = (*Revision)(nil)
 
 // RevisionTemplateSpec describes the data a revision should have when created from a template.
 // Based on: https://github.com/kubernetes/api/blob/e771f807/core/v1/types.go#L3179-L3190
@@ -156,7 +154,7 @@ const (
 	// runtime resources, and becomes true when those resources are ready.
 	RevisionConditionReady RevisionConditionType = "Ready"
 	// RevisionConditionBuildComplete is set when the revision has an associated build
-	// and is marked True if/once the Build has completed successfully.
+	// and is marked True if/once the Build has completed succesfully.
 	RevisionConditionBuildSucceeded RevisionConditionType = "BuildSucceeded"
 	// RevisionConditionResourcesAvailable is set when underlying
 	// Kubernetes resources have been provisioned.
@@ -173,9 +171,7 @@ type RevisionCondition struct {
 	Status corev1.ConditionStatus `json:"status" description:"status of the condition, one of True, False, Unknown"`
 
 	// +optional
-	// We use VolatileTime in place of metav1.Time to exclude this from creating equality.Semantic
-	// differences (all other things held constant).
-	LastTransitionTime apis.VolatileTime `json:"lastTransitionTime,omitempty" description:"last time the condition transit from one status to another"`
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty" description:"last time the condition transit from one status to another"`
 
 	// +optional
 	Reason string `json:"reason,omitempty" description:"one-word CamelCase reason for the condition's last transition"`
@@ -281,9 +277,18 @@ func (rs *RevisionStatus) setCondition(new *RevisionCondition) {
 			}
 		}
 	}
-	new.LastTransitionTime = apis.VolatileTime{metav1.NewTime(time.Now())}
+	new.LastTransitionTime = metav1.NewTime(time.Now())
 	conditions = append(conditions, *new)
-	sort.Slice(conditions, func(i, j int) bool { return conditions[i].Type < conditions[j].Type })
+	rs.Conditions = conditions
+}
+
+func (rs *RevisionStatus) RemoveCondition(t RevisionConditionType) {
+	var conditions []RevisionCondition
+	for _, cond := range rs.Conditions {
+		if cond.Type != t {
+			conditions = append(conditions, cond)
+		}
+	}
 	rs.Conditions = conditions
 }
 
@@ -395,12 +400,11 @@ func (rs *RevisionStatus) MarkResourcesAvailable() {
 	rs.checkAndMarkReady()
 }
 
-func (rs *RevisionStatus) MarkInactive(message string) {
+func (rs *RevisionStatus) MarkInactive() {
 	rs.setCondition(&RevisionCondition{
-		Type:    RevisionConditionReady,
-		Status:  corev1.ConditionFalse,
-		Reason:  "Inactive",
-		Message: message,
+		Type:   RevisionConditionReady,
+		Status: corev1.ConditionFalse,
+		Reason: "Inactive",
 	})
 }
 

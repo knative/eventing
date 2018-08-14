@@ -19,13 +19,10 @@ package v1alpha1
 import (
 	"encoding/json"
 	"reflect"
-	"sort"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/knative/pkg/apis"
 )
 
 // +genclient
@@ -54,8 +51,8 @@ type Service struct {
 }
 
 // Check that Service may be validated and defaulted.
-var _ apis.Validatable = (*Service)(nil)
-var _ apis.Defaultable = (*Service)(nil)
+var _ Validatable = (*Service)(nil)
+var _ Defaultable = (*Service)(nil)
 
 // ServiceSpec represents the configuration for the Service object. Exactly one
 // of its members (other than Generation) must be specified. Services can either
@@ -104,9 +101,7 @@ type ServiceCondition struct {
 	Status corev1.ConditionStatus `json:"status" description:"status of the condition, one of True, False, Unknown"`
 
 	// +optional
-	// We use VolatileTime in place of metav1.Time to exclude this from creating equality.Semantic
-	// differences (all other things held constant).
-	LastTransitionTime apis.VolatileTime `json:"lastTransitionTime,omitempty" description:"last time the condition transit from one status to another"`
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty" description:"last time the condition transit from one status to another"`
 
 	// +optional
 	Reason string `json:"reason,omitempty" description:"one-word CamelCase reason for the condition's last transition"`
@@ -228,9 +223,18 @@ func (ss *ServiceStatus) setCondition(new *ServiceCondition) {
 			}
 		}
 	}
-	new.LastTransitionTime = apis.VolatileTime{metav1.NewTime(time.Now())}
+	new.LastTransitionTime = metav1.NewTime(time.Now())
 	conditions = append(conditions, *new)
-	sort.Slice(conditions, func(i, j int) bool { return conditions[i].Type < conditions[j].Type })
+	ss.Conditions = conditions
+}
+
+func (ss *ServiceStatus) RemoveCondition(t ServiceConditionType) {
+	var conditions []ServiceCondition
+	for _, cond := range ss.Conditions {
+		if cond.Type != t {
+			conditions = append(conditions, cond)
+		}
+	}
 	ss.Conditions = conditions
 }
 
