@@ -54,7 +54,7 @@ func main() {
 	defer logger.Sync()
 	logger = logger.With(zap.String(logkey.ControllerType, logconfig.Webhook))
 
-	logger.Info("Starting the Configuration Webhook")
+	logger.Info("Starting the Eventing Webhook")
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
