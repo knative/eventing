@@ -23,6 +23,12 @@ them. It is run as a Knative `Service`.
 We already have the ability to verify Slack events, but now we need the ability
 to send commands back to Slack.
 
+1.  On your Slack App's 'Bot Users' page, click 'Add a Bot user', put in any
+    names you'd like and click 'Add Bot User'.
+
+1.  On your Slack App's 'OAuth & Permissions' settings page of your Slack App,
+    add the Bot by clicking on 'Install App' or 'Reinstall App'.
+
 1.  Find your Slack App's 'Bot User OAuth Access Token', on the 'OAuth &
     Permissions' settings page of your Slack App.
 
@@ -106,6 +112,19 @@ send requests to `http://slack.com`. To give it permission we create an Istio
     # Show the Receive Adapter the Feed created.
     kubectl get services.serving.knative.dev slack-keventing-app-rcvadptr -oyaml
     ```
+
+### Configure your Slack App
+
+1.  Go to your Slack App's 'OAuth & Permissions' settings page.
+
+1.  Add the `channels:history` scope.
+
+1.  Enable events by going to the 'Event Subscription' settings page and
+    toggling 'Enable Events' to On.
+
+1.  Add the `message.channels` Workspace Event by going to the 'Event
+    Subscription' settings page and clicking 'Add Workspace Event', then
+    selecting `message.channels`.
 
 1.  Set the Slack App's 'Request URL'.
 

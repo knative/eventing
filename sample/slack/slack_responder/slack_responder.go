@@ -73,6 +73,7 @@ func (s *slackResponder) handleRequest(w http.ResponseWriter, r *http.Request) {
 		}
 	default:
 		log.Printf("Unknown event: %+v", innerEvent)
+		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
 

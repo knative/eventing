@@ -16,22 +16,6 @@ We have to create and configure a Slack App.
 
 1.  Follow the instructions to create the Slack App in a Slack Workspace.
 
-#### Configure a Slack App
-
-1.  Go the Slack App's 'OAuth & Permissions' settings page.
-
-1.  Add the `channels:history` scope.
-
-1.  Enable events by going to the 'Event Subscription' settings page and
-    toggling 'Enable Events' to On.
-
-1.  Add the `message.channels` Workspace Event by going to the 'Event
-    Subscription' settings page and clicking 'Add Workspace Event', then
-    selecting `message.channels`.
-
-`Note: We have not yet setup a Request URL, we will do that later because its
-name changes based on the Flow properties.`
-
 ### Install Knative
 
 There needs to be a Kubernetes cluster with Knative Serving and Knative Eventing
@@ -68,11 +52,11 @@ Because the Receive Adapter needs to run a service, you need to specify what
 Service Account should be used in the target namespace for running the Receive
 Adapter. Flow.Spec has a field that allows you to specify this. By default it
 uses "default" for feed which typically has no privileges, but this feed
-requires standing up a Knative `Service`, so you need to either use an existing Service
-Account with appropriate privileges or create a new one. This example creates a
-Service Account and grants it cluster admin access. You probably wouldn't want
-to do that in production settings, but for this example it will suffice just
-fine.
+requires standing up a Knative `Service`, so you need to either use an existing
+Service Account with appropriate privileges or create a new one. This example
+creates a Service Account and grants it cluster admin access. You probably
+wouldn't want to do that in production settings, but for this example it will
+suffice just fine.
 
 1.  Create and give permissions to the service account.
 
@@ -102,8 +86,8 @@ verification token into a secret.
 1.  Find your Slack App's verification token on the 'Basic Information' settings
     page of your Slack App.
 
-1.  Edit `sample/slack/slacksecret.yaml`, replacing
-    "\<YOUR PERSONAL TOKEN FROM SLACK>" with the actual token found in step 1.
+1.  Edit `sample/slack/slacksecret.yaml`, replacing "\<YOUR PERSONAL TOKEN FROM
+    SLACK>" with the actual token found in step 1.
 
 1.  Create the secret.
 

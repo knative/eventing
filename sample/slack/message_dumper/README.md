@@ -59,6 +59,19 @@ be viewed in logs. It is run as a Knative `Service`.
     kubectl get services.serving.knative.dev slack-keventing-app-rcvadptr -oyaml
     ```
 
+### Configure your Slack App
+
+1.  Go your Slack App's 'OAuth & Permissions' settings page.
+
+1.  Add the `channels:history` scope.
+
+1.  Enable events by going to the 'Event Subscription' settings page and
+    toggling 'Enable Events' to On.
+
+1.  Add the `message.channels` Workspace Event by going to the 'Event
+    Subscription' settings page and clicking 'Add Workspace Event', then
+    selecting `message.channels`.
+
 1.  Set the Slack App's 'Request URL'.
 
     1.  Find the receive adapter's URL.
