@@ -28,9 +28,9 @@ func MakeFeed(channelDNS string, flow *v1alpha1.Flow) *feedsv1alpha1.Feed {
 	feed := &feedsv1alpha1.Feed{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: flow.Name,
-			Namespace: flow.Namespace,
+			Namespace:    flow.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
-				*controller.NewControllerRef(flow),
+				makeControllerOwnerRef(flow),
 			},
 		},
 		Spec: feedsv1alpha1.FeedSpec{
@@ -53,4 +53,11 @@ func MakeFeed(channelDNS string, flow *v1alpha1.Flow) *feedsv1alpha1.Feed {
 		feed.Spec.Trigger.ParametersFrom = flow.Spec.Trigger.ParametersFrom
 	}
 	return feed
+}
+
+func makeControllerOwnerRef(flow *v1alpha1.Flow) metav1.OwnerReference {
+	controllerOwnerRef := *controller.NewControllerRef(flow)
+	blockOwnerDeletion := true
+	controllerOwnerRef.BlockOwnerDeletion = &blockOwnerDeletion
+	return controllerOwnerRef
 }
