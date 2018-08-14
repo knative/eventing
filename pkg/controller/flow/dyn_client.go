@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
@@ -29,7 +28,7 @@ import (
 
 // CreateDynamicClient creates a dynamic client for the Group Version for the
 // ObjectReference. It can only be used for that APIVersion / Group
-func CreateDynamicClient(config *rest.Config, ref *corev1.ObjectReference) (*dynamic.Client, error) {
+func CreateDynamicClient(config *rest.Config, ref *corev1.ObjectReference) (dynamic.Interface, error) {
 	// We need to tweak the configuration so that it points to the right
 	// resources under the ThirdPartyResources that Istio uses.
 	gvk := ref.GroupVersionKind()
@@ -39,7 +38,7 @@ func CreateDynamicClient(config *rest.Config, ref *corev1.ObjectReference) (*dyn
 		Version: gvk.Version,
 	}
 	config.APIPath = "apis"
-	return dynamic.NewClient(config)
+	return dynamic.NewForConfig(config)
 }
 
 func CreateResourceInterface(config *rest.Config, ref *corev1.ObjectReference, namespace string) (dynamic.ResourceInterface, error) {
@@ -49,19 +48,16 @@ func CreateResourceInterface(config *rest.Config, ref *corev1.ObjectReference, n
 	}
 
 	gvk := ref.GroupVersionKind()
-	kind := gvk.Kind
-	name := pluralizeKind(kind)
 
-	resource := metav1.APIResource{
-		Name:       name,
-		Kind:       gvk.Kind,
-		Namespaced: true,
-	}
-	r := c.Resource(&resource, namespace)
+	r := c.Resource(schema.GroupVersionResource{
+		Group:    gvk.Group,
+		Version:  gvk.Version,
+		Resource: pluralizeKind(gvk.Kind),
+	})
 	if r == nil {
 		return nil, fmt.Errorf("failed to create dynamic client resource")
 	}
-	return r, nil
+	return r.Namespace(namespace), nil
 }
 
 // takes a kind and pluralizes it. This is super terrible, but I am

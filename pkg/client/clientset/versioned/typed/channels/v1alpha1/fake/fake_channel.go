@@ -62,7 +62,7 @@ func (c *FakeChannels) List(opts v1.ListOptions) (result *v1alpha1.ChannelList, 
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &v1alpha1.ChannelList{}
+	list := &v1alpha1.ChannelList{ListMeta: obj.(*v1alpha1.ChannelList).ListMeta}
 	for _, item := range obj.(*v1alpha1.ChannelList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)

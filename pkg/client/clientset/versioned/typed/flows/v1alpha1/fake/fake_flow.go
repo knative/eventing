@@ -62,7 +62,7 @@ func (c *FakeFlows) List(opts v1.ListOptions) (result *v1alpha1.FlowList, err er
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &v1alpha1.FlowList{}
+	list := &v1alpha1.FlowList{ListMeta: obj.(*v1alpha1.FlowList).ListMeta}
 	for _, item := range obj.(*v1alpha1.FlowList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)

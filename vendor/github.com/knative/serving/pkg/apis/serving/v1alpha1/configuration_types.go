@@ -20,12 +20,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 	"time"
 
 	build "github.com/knative/build/pkg/apis/build/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/knative/pkg/apis"
 )
 
 // +genclient
@@ -52,8 +55,8 @@ type Configuration struct {
 }
 
 // Check that Configuration may be validated and defaulted.
-var _ Validatable = (*Configuration)(nil)
-var _ Defaultable = (*Configuration)(nil)
+var _ apis.Validatable = (*Configuration)(nil)
+var _ apis.Defaultable = (*Configuration)(nil)
 
 // ConfigurationSpec holds the desired state of the Configuration (from the client).
 type ConfigurationSpec struct {
@@ -95,7 +98,9 @@ type ConfigurationCondition struct {
 	Status corev1.ConditionStatus `json:"status" description:"status of the condition, one of True, False, Unknown"`
 
 	// +optional
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty" description:"last time the condition transit from one status to another"`
+	// We use VolatileTime in place of metav1.Time to exclude this from creating equality.Semantic
+	// differences (all other things held constant).
+	LastTransitionTime apis.VolatileTime `json:"lastTransitionTime,omitempty" description:"last time the condition transit from one status to another"`
 
 	// +optional
 	Reason string `json:"reason,omitempty" description:"one-word CamelCase reason for the condition's last transition"`
@@ -194,18 +199,9 @@ func (cs *ConfigurationStatus) setCondition(new *ConfigurationCondition) {
 			}
 		}
 	}
-	new.LastTransitionTime = metav1.NewTime(time.Now())
+	new.LastTransitionTime = apis.VolatileTime{metav1.NewTime(time.Now())}
 	conditions = append(conditions, *new)
-	cs.Conditions = conditions
-}
-
-func (cs *ConfigurationStatus) RemoveCondition(t ConfigurationConditionType) {
-	var conditions []ConfigurationCondition
-	for _, cond := range cs.Conditions {
-		if cond.Type != t {
-			conditions = append(conditions, cond)
-		}
-	}
+	sort.Slice(conditions, func(i, j int) bool { return conditions[i].Type < conditions[j].Type })
 	cs.Conditions = conditions
 }
 

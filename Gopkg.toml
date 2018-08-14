@@ -3,7 +3,6 @@
 
 required = [
   "k8s.io/apimachinery/pkg/util/sets/types",
-  "k8s.io/apimachinery/pkg/apimachinery/registered",
   "k8s.io/code-generator/cmd/deepcopy-gen",
   "k8s.io/code-generator/cmd/defaulter-gen",
   "k8s.io/code-generator/cmd/client-gen",
@@ -36,19 +35,25 @@ required = [
 
 [[override]]
   name = "k8s.io/api"
-  version = "kubernetes-1.10.1"
+  version = "kubernetes-1.11.0"
 
 [[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.10.1"
+  version = "kubernetes-1.11.0"
 
 [[override]]
   name = "k8s.io/code-generator"
-  version = "kubernetes-1.10.1"
+  version = "kubernetes-1.11.0"
 
 [[override]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.10.1"
+  version = "kubernetes-1.11.0"
+
+[[override]]
+  name = "github.com/json-iterator/go"
+  # This is the commit at which k8s depends on this in 1.11
+  # It seems to be broken at HEAD.
+  revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
 [[override]]
   name = "github.com/golang/protobuf"
@@ -64,8 +69,13 @@ required = [
 
 [[constraint]]
   name = "github.com/knative/pkg"
-  # HEAD as of 2018-08-03
-  revision = "a088fee6227f7c6842ce7f7406cb75af8a6e0643"
+  # HEAD as of 2018-08-09
+  revision = "bc264c290f777cc51f53644a1996f5e8887dcba6"
+
+[[constraint]]
+  name = "github.com/knative/serving"
+  # HEAD as of 2018-08-13
+  revision = "ace9afa467f6b1b0e6fb343bac87ff612afd6700"
 
 [[override]]
   name = "github.com/Shopify/sarama"
@@ -75,3 +85,11 @@ required = [
 [[constraint]]
   name = "github.com/bsm/sarama-cluster"
   version = "2.1.13"
+
+[[constraint]]
+  name = "sigs.k8s.io/controller-runtime"
+  # TODO when https://github.com/kubernetes-sigs/controller-runtime/pull/108 lands,
+  #      re-point back at sigs.k8s.io/controller-runtime fork
+  source = "github.com/n3wscott/controller-runtime"
+  # HEAD as of 2018-08-13
+  revision = "21388f002e2c9d66214326bcd3486f0e1b5f4857"

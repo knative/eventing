@@ -62,7 +62,7 @@ func (c *FakeSubscriptions) List(opts v1.ListOptions) (result *v1alpha1.Subscrip
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &v1alpha1.SubscriptionList{}
+	list := &v1alpha1.SubscriptionList{ListMeta: obj.(*v1alpha1.SubscriptionList).ListMeta}
 	for _, item := range obj.(*v1alpha1.SubscriptionList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
