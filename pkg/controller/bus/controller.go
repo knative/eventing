@@ -26,6 +26,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -616,12 +617,16 @@ func (c *Controller) updateBusStatus(
 
 	util.ConsolidateBusCondition(busCopy)
 
-	// If the CustomResourceSubresources feature gate is not enabled,
-	// we must use Update instead of UpdateStatus to update the Status block of the Bus resource.
-	// UpdateStatus will not allow changes to the Spec of the resource,
-	// which is ideal for ensuring nothing other than resource status has been updated.
-	_, err := c.busclientset.ChannelsV1alpha1().Buses(bus.Namespace).Update(busCopy)
-	return err
+	// Only update if status has changed
+	if !equality.Semantic.DeepEqual(bus.Status, busCopy.Status) {
+		// If the CustomResourceSubresources feature gate is not enabled,
+		// we must use Update instead of UpdateStatus to update the Status block of the Bus resource.
+		// UpdateStatus will not allow changes to the Spec of the resource,
+		// which is ideal for ensuring nothing other than resource status has been updated.
+		_, err := c.busclientset.ChannelsV1alpha1().Buses(bus.Namespace).Update(busCopy)
+		return err
+	}
+	return nil
 }
 
 // enqueueBus takes a Bus resource and converts it into a namespace/name

@@ -24,6 +24,7 @@ import (
 	"github.com/knative/eventing/pkg/controller"
 	istiolisters "github.com/knative/pkg/client/listers/istio/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -416,12 +417,16 @@ func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel,
 
 	channelCopy.Status.DomainInternal = controller.ServiceHostName(service.Name, service.Namespace)
 
-	// If the CustomResourceSubresources feature gate is not enabled,
-	// we must use Update instead of UpdateStatus to update the Status block of the Channel resource.
-	// UpdateStatus will not allow changes to the Spec of the resource,
-	// which is ideal for ensuring nothing other than resource status has been updated.
-	_, err := c.channelclientset.ChannelsV1alpha1().Channels(channel.Namespace).Update(channelCopy)
-	return err
+	// Only update if status has changed
+	if !equality.Semantic.DeepEqual(channel.Status, channelCopy.Status) {
+		// If the CustomResourceSubresources feature gate is not enabled,
+		// we must use Update instead of UpdateStatus to update the Status block of the Channel resource.
+		// UpdateStatus will not allow changes to the Spec of the resource,
+		// which is ideal for ensuring nothing other than resource status has been updated.
+		_, err := c.channelclientset.ChannelsV1alpha1().Channels(channel.Namespace).Update(channelCopy)
+		return err
+	}
+	return nil
 }
 
 // enqueueChannel takes a Channel resource and converts it into a namespace/name
