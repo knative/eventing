@@ -1,8 +1,11 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 <<<<<<< HEAD
 =======
 >>>>>>> Updating to k8s 1.11.
+=======
+>>>>>>> Updated serving and pkg dep.
 
 ===========================================================
 Import: github.com/knative/eventing/vendor/cloud.google.com/go
@@ -5809,6 +5812,9 @@ Import: github.com/knative/eventing/vendor/sigs.k8s.io/controller-runtime
    limitations under the License.
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> Updating to k8s 1.11.
 >>>>>>> Updating to k8s 1.11.
+=======
+>>>>>>> Updated serving and pkg dep.
