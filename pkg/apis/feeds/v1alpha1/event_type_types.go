@@ -22,6 +22,7 @@ import (
 	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/webhook"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -42,6 +43,7 @@ type EventType struct {
 var _ apis.Validatable = (*EventType)(nil)
 var _ apis.Defaultable = (*EventType)(nil)
 var _ apis.Immutable = (*EventType)(nil)
+var _ runtime.Object = (*EventType)(nil)
 var _ webhook.GenericCRD = (*EventType)(nil)
 
 // EventTypeSpec specifies information about the EventType, including a schema

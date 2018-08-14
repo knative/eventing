@@ -21,6 +21,7 @@ import (
 	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/webhook"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -42,6 +43,7 @@ type EventSource struct {
 var _ apis.Validatable = (*EventSource)(nil)
 var _ apis.Defaultable = (*EventSource)(nil)
 var _ apis.Immutable = (*EventSource)(nil)
+var _ runtime.Object = (*EventSource)(nil)
 var _ webhook.GenericCRD = (*EventSource)(nil)
 
 // EventSourceSpec describes the type and source of an event, a container image

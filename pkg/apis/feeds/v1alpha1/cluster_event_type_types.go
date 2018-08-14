@@ -21,6 +21,7 @@ import (
 	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/webhook"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -42,6 +43,7 @@ type ClusterEventType struct {
 var _ apis.Validatable = (*ClusterEventType)(nil)
 var _ apis.Defaultable = (*ClusterEventType)(nil)
 var _ apis.Immutable = (*ClusterEventType)(nil)
+var _ runtime.Object = (*ClusterEventType)(nil)
 var _ webhook.GenericCRD = (*ClusterEventType)(nil)
 
 // ClusterEventTypeSpec specifies information about the ClusterEventType, including a schema
