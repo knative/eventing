@@ -167,12 +167,15 @@ func (b *PubSubBus) ReceiveEvents(sub *channelsv1alpha1.Subscription, parameters
 		glog.Infof("Start receiving events for subscription %q\n", subscriptionID)
 		err := subscription.Receive(cctx, func(ctx context.Context, pubsubMessage *pubsub.Message) {
 			subscriber := sub.Spec.Subscriber
-			namespace := sub.Namespace
 			message := &buses.Message{
 				Headers: pubsubMessage.Attributes,
 				Payload: pubsubMessage.Data,
 			}
-			err := b.messageDispatcher.DispatchMessage(subscriber, namespace, message)
+			defaults := buses.DispatchDefaults{
+				Namespace: sub.Namespace,
+				ReplyTo:   sub.Spec.ReplyTo,
+			}
+			err := b.messageDispatcher.DispatchMessage(message, subscriber, defaults)
 			if err != nil {
 				glog.Warningf("Unable to dispatch event %q to %q", pubsubMessage.ID, subscriber)
 				pubsubMessage.Nack()

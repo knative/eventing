@@ -52,6 +52,9 @@ type SubscriptionSpec struct {
 	// Subscriber is the name of the subscriber service DNS name.
 	Subscriber string `json:"subscriber"`
 
+	// Target service DNS name for replies returned by the subscriber.
+	ReplyTo string `json:"replyTo,omitempty"`
+
 	// Arguments is a list of configuration arguments for the Subscription. The
 	// Arguments for a channel must contain values for each of the Parameters
 	// specified by the Bus' spec.parameters.Subscriptions field except the
