@@ -51,6 +51,13 @@ var _ webhook.GenericCRD = (*Flow)(nil)
 
 // FlowSpec is the spec for a Flow resource.
 type FlowSpec struct {
+	// TODO: Generation does not work correctly with CRD. They are scrubbed
+	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
+	// So, we add Generation here. Once that gets fixed, remove this and use
+	// ObjectMeta.Generation instead.
+	// +optional
+	Generation int64 `json:"generation,omitempty"`
+
 	// Action specifies the target handler for the events
 	Action FlowAction `json:"action"`
 

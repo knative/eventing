@@ -50,6 +50,13 @@ var _ webhook.GenericCRD = (*ClusterBus)(nil)
 // SubscriptionSpec specifies the Channel and Subscriber and the configuration
 // arguments for the Subscription.
 type SubscriptionSpec struct {
+	// TODO: Generation does not work correctly with CRD. They are scrubbed
+	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
+	// So, we add Generation here. Once that gets fixed, remove this and use
+	// ObjectMeta.Generation instead.
+	// +optional
+	Generation int64 `json:"generation,omitempty"`
+
 	// Channel is the name of the channel to subscribe to.
 	Channel string `json:"channel"`
 

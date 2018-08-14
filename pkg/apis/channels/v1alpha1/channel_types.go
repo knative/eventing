@@ -52,6 +52,13 @@ var _ webhook.GenericCRD = (*Channel)(nil)
 // ChannelSpec specifies the Bus backing a channel and the configuration
 // arguments for the channel.
 type ChannelSpec struct {
+	// TODO: Generation does not work correctly with CRD. They are scrubbed
+	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
+	// So, we add Generation here. Once that gets fixed, remove this and use
+	// ObjectMeta.Generation instead.
+	// +optional
+	Generation int64 `json:"generation,omitempty"`
+
 	// Name of the bus backing this channel (optional)
 	Bus string `json:"bus,omitempty"`
 

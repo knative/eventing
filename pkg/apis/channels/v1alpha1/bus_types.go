@@ -52,6 +52,13 @@ var _ webhook.GenericCRD = (*Bus)(nil)
 // provisioner and dispatcher for a bus should be run, and which volumes should
 // be mounted into them.
 type BusSpec struct {
+	// TODO: Generation does not work correctly with CRD. They are scrubbed
+	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
+	// So, we add Generation here. Once that gets fixed, remove this and use
+	// ObjectMeta.Generation instead.
+	// +optional
+	Generation int64 `json:"generation,omitempty"`
+
 	// Parameters defines the parameters that must be passed by this Bus'
 	// Channels and their Subscriptions. Channels and Subscriptions fulfill
 	// these parameters with Arguments.

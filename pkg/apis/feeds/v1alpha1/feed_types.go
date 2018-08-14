@@ -50,6 +50,13 @@ var _ webhook.GenericCRD = (*Feed)(nil)
 
 // FeedSpec is the spec for a Feed resource.
 type FeedSpec struct {
+	// TODO: Generation does not work correctly with CRD. They are scrubbed
+	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
+	// So, we add Generation here. Once that gets fixed, remove this and use
+	// ObjectMeta.Generation instead.
+	// +optional
+	Generation int64 `json:"generation,omitempty"`
+
 	// Action specifies the target handler for the events
 	Action FeedAction `json:"action"`
 
