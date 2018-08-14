@@ -38,15 +38,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// TODO: This should come from a configmap
-const defaultBusName = "stub"
-
 // What field do we assume Object Reference exports as a resolvable target
 const targetFieldName = "domainInternal"
-
-var (
-	flowControllerKind = v1alpha1.SchemeGroupVersion.WithKind("Flow")
-)
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Flow resource
