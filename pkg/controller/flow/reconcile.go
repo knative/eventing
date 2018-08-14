@@ -34,6 +34,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // TODO: This should come from a configmap
@@ -265,10 +268,45 @@ func (r *reconciler) createSubscription(channelName string, target string, flow 
 	return subscription, nil
 }
 
-func (r *reconciler) reconcileFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
+type privateFlowContext struct {
+	feedName string
+	feedUID	string
+}
+
+func getFeedNameAndUID(flow *v1alpha1.Flow) (string, types.UID) {
 	feedName := flow.Name
+	var feedUID types.UID = "abc123"
+	return feedName, feedUID
+}
+
+func setFeedNameAndUID(flow *v1alpha1.Flow, feed *feedsv1alpha1.Feed) error {
+	// Do stuff!
+	return nil
+}
+
+func (r *reconciler) reconcileFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
+	feed, err := r.getFeedForFlow(flow)
+	if errors.IsNotFound(err) {
+		feed := resources.MakeFeed(channelDNS, flow)
+		if err := r.client.Create(context.TODO(), feed); err != nil {
+			return nil, err
+		}
+	} else if err != nil {
+		glog.Errorf("Unable to find a feed for the flow: %v", err)
+		return nil, err
+	}
+
+	glog.Infof("Reconciled feed: %+v", feed)
+	// TODO: Make sure feed is what it should be. For now, just assume it's fine
+	// if it exists.
+	return feed, nil
+}
+
+func (r *reconciler) reconcileFeedOld(channelDNS string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
+	feedName, feedUID := getFeedNameAndUID(flow)
 
 	feed := &feedsv1alpha1.Feed{}
+
 	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: flow.Namespace, Name: feedName}, feed)
 	if errors.IsNotFound(err) {
 		feed, err = r.createFeed(channelDNS, flow)
@@ -279,18 +317,26 @@ func (r *reconciler) reconcileFeed(channelDNS string, flow *v1alpha1.Flow) (*fee
 	} else if err != nil {
 		glog.Errorf("Failed to reconcile feed %q failed to get feeds : %v", feedName, err)
 		return nil, err
+	} else if feed.UID != feedUID {
+		err = fmt.Errorf("found a feed with the correct name, %v, but incorrect UID. Desired '%v', actual '%v'", feedName, feedUID, feed.UID)
+		return nil, err
 	}
 
 	glog.Infof("Reconciled feed: %+v", feed)
 	// TODO: Make sure feed is what it should be. For now, just assume it's fine
 	// if it exists.
 	return feed, nil
-
 }
 
 func (r *reconciler) createFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
 	feed := resources.MakeFeed(channelDNS, flow)
 	if err := r.client.Create(context.TODO(), feed); err != nil {
+		return nil, err
+	}
+	// Save the newly created Feed's information to the Flow's status.
+	err := setFeedNameAndUID(flow, feed)
+	if err != nil {
+		glog.Errorf("Failed to save the created feed's information to the flow, '%v', '%v': %v", feed.Name, feed.UID, err)
 		return nil, err
 	}
 	return feed, nil
@@ -341,4 +387,20 @@ func (r *reconciler) getDefaultClusterBusName() (string, error) {
 	}
 
 	return fallbackClusterBusName, nil // return the fallback value
+}
+
+func (r *reconciler) getFeedForFlow(flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
+	feedList := &feedsv1alpha1.FeedList{}
+	err := r.client.List(context.TODO(), &client.ListOptions{Namespace:flow.Namespace, LabelSelector: labels.Everything()}, feedList)
+	if err != nil {
+		glog.Errorf("Unable to list feeds: %v", err)
+		return nil, err
+	}
+	for _, feed := range feedList.Items {
+		ownerRef := metav1.GetControllerOf(&feed)
+		if ownerRef != nil && ownerRef.Name == flow.Name && ownerRef.UID == flow.UID {
+			return &feed, nil
+		}
+	}
+	return nil, errors.NewNotFound(schema.GroupResource{}, "")
 }

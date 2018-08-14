@@ -27,7 +27,7 @@ import (
 func MakeFeed(channelDNS string, flow *v1alpha1.Flow) *feedsv1alpha1.Feed {
 	feed := &feedsv1alpha1.Feed{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      flow.Name,
+			GenerateName: flow.Name,
 			Namespace: flow.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*controller.NewControllerRef(flow),
