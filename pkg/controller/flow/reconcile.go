@@ -270,8 +270,9 @@ func (r *reconciler) createSubscription(channelName string, target string, flow 
 func (r *reconciler) reconcileFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
 	feed, err := r.getFeedForFlow(flow)
 	if errors.IsNotFound(err) {
-		feed := resources.MakeFeed(channelDNS, flow)
-		if err := r.client.Create(context.TODO(), feed); err != nil {
+		feed, err = r.createFeed(channelDNS, flow)
+		if err != nil {
+			glog.Errorf("Failed to create feed %q : %v", feed.Name, err)
 			return nil, err
 		}
 	} else if err != nil {
@@ -282,6 +283,14 @@ func (r *reconciler) reconcileFeed(channelDNS string, flow *v1alpha1.Flow) (*fee
 	glog.Infof("Reconciled feed: %+v", feed)
 	// TODO: Make sure feed is what it should be. For now, just assume it's fine
 	// if it exists.
+	return feed, nil
+}
+
+func (r *reconciler) createFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
+	feed := resources.MakeFeed(channelDNS, flow)
+	if err := r.client.Create(context.TODO(), feed); err != nil {
+		return nil, err
+	}
 	return feed, nil
 }
 
