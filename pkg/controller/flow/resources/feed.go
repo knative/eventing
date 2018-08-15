@@ -30,7 +30,12 @@ func MakeFeed(channelDNS string, flow *v1alpha1.Flow) *feedsv1alpha1.Feed {
 			GenerateName: flow.Name + "-",
 			Namespace:    flow.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
-				makeControllerOwnerRef(flow),
+				// Ideally this would block owner deletion, to ensure the Flow is only deleted
+				// after the Feed is gone, but because EventTypes are also owners of the Feed,
+				// it results in the Feed not getting cleaned up and the Flow not getting cleaned
+				// up. Once EventTypes are no longer owners of the Feed, then this should
+				// blockOwnerDeletion.
+				*controller.NewControllerRef(flow),
 			},
 		},
 		Spec: feedsv1alpha1.FeedSpec{
@@ -53,11 +58,4 @@ func MakeFeed(channelDNS string, flow *v1alpha1.Flow) *feedsv1alpha1.Feed {
 		feed.Spec.Trigger.ParametersFrom = flow.Spec.Trigger.ParametersFrom
 	}
 	return feed
-}
-
-func makeControllerOwnerRef(flow *v1alpha1.Flow) metav1.OwnerReference {
-	controllerOwnerRef := *controller.NewControllerRef(flow)
-	blockOwnerDeletion := true
-	controllerOwnerRef.BlockOwnerDeletion = &blockOwnerDeletion
-	return controllerOwnerRef
 }
