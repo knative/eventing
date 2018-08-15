@@ -51,7 +51,7 @@ const (
 var (
 	// FYI: Getting the type of an interface is a bit hard in Go because of nil is special:
 	// 1. Structs & pointers have concrete types, whereas interfaces are actually tuples of
-	//    [implmented vtable, pointer].
+	//    [implementation vtable, pointer].
 	// 2. Literals (such as nil) can be cast to any relevant type.
 	// Because TypeOf takes an interface{}, a nil interface reference would cast lossily when
 	// it leaves this stack frame. The workaround is to pass a pointer to an interface and then
