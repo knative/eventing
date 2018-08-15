@@ -27,9 +27,9 @@ import (
 	"github.com/knative/pkg/signals"
 	"github.com/knative/pkg/webhook"
 
-	v1alpha1channels "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
-	v1alpha1feeds "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
-	v1alpha1flows "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
+	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
+	flowsv1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/system"
 
@@ -90,20 +90,20 @@ func main() {
 		Options: options,
 		Handlers: map[schema.GroupVersionKind]runtime.Object{
 			// For group channels.knative.dev,
-			v1alpha1channels.SchemeGroupVersion.WithKind("Bus"):          &v1alpha1channels.Bus{},
-			v1alpha1channels.SchemeGroupVersion.WithKind("ClusterBus"):   &v1alpha1channels.ClusterBus{},
-			v1alpha1channels.SchemeGroupVersion.WithKind("Channel"):      &v1alpha1channels.Channel{},
-			v1alpha1channels.SchemeGroupVersion.WithKind("Subscription"): &v1alpha1channels.Subscription{},
+			channelsv1alpha1.SchemeGroupVersion.WithKind("Bus"):          &channelsv1alpha1.Bus{},
+			channelsv1alpha1.SchemeGroupVersion.WithKind("ClusterBus"):   &channelsv1alpha1.ClusterBus{},
+			channelsv1alpha1.SchemeGroupVersion.WithKind("Channel"):      &channelsv1alpha1.Channel{},
+			channelsv1alpha1.SchemeGroupVersion.WithKind("Subscription"): &channelsv1alpha1.Subscription{},
 
 			// For group feeds.knative.dev,
-			v1alpha1feeds.SchemeGroupVersion.WithKind("EventSource"):        &v1alpha1feeds.EventSource{},
-			v1alpha1feeds.SchemeGroupVersion.WithKind("ClusterEventSource"): &v1alpha1feeds.ClusterEventSource{},
-			v1alpha1feeds.SchemeGroupVersion.WithKind("EventType"):          &v1alpha1feeds.EventType{},
-			v1alpha1feeds.SchemeGroupVersion.WithKind("ClusterEventType"):   &v1alpha1feeds.ClusterEventType{},
-			v1alpha1feeds.SchemeGroupVersion.WithKind("Feed"):               &v1alpha1feeds.Feed{},
+			feedsv1alpha1.SchemeGroupVersion.WithKind("EventSource"):        &feedsv1alpha1.EventSource{},
+			feedsv1alpha1.SchemeGroupVersion.WithKind("ClusterEventSource"): &feedsv1alpha1.ClusterEventSource{},
+			feedsv1alpha1.SchemeGroupVersion.WithKind("EventType"):          &feedsv1alpha1.EventType{},
+			feedsv1alpha1.SchemeGroupVersion.WithKind("ClusterEventType"):   &feedsv1alpha1.ClusterEventType{},
+			feedsv1alpha1f.SchemeGroupVersion.WithKind("Feed"):               &feedsv1alpha1.Feed{},
 
 			// For group flows.knative.dev,
-			v1alpha1flows.SchemeGroupVersion.WithKind("Flow"): &v1alpha1flows.Flow{},
+			flowsv1alpha1.SchemeGroupVersion.WithKind("Flow"): &flowsv1alpha1.Flow{},
 		},
 		Logger: logger,
 	}
