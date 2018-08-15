@@ -19,13 +19,20 @@ package v1alpha1
 import (
 	"github.com/knative/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // CommonEventSourceSpec describes the type and source of an event, a container image
 // to run for feed lifecycle operations, and configuration options common for
 // ClusterEventSource and EventSource.
 type CommonEventSourceSpec struct {
+	// TODO: Generation does not work correctly with CRD. They are scrubbed
+	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
+	// So, we add Generation here. Once that gets fixed, remove this and use
+	// ObjectMeta.Generation instead.
+	// +optional
+	Generation int64 `json:"generation,omitempty"`
+
 	// Source is the name of the source that produces the events.
 	Source string `json:"source,omitempty"`
 

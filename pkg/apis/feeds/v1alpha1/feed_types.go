@@ -23,6 +23,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 
+	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/webhook"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -40,8 +42,21 @@ type Feed struct {
 	Status FeedStatus `json:"status"`
 }
 
+var _ apis.Validatable = (*Feed)(nil)
+var _ apis.Defaultable = (*Feed)(nil)
+var _ apis.Immutable = (*Feed)(nil)
+var _ runtime.Object = (*Feed)(nil)
+var _ webhook.GenericCRD = (*Feed)(nil)
+
 // FeedSpec is the spec for a Feed resource.
 type FeedSpec struct {
+	// TODO: Generation does not work correctly with CRD. They are scrubbed
+	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
+	// So, we add Generation here. Once that gets fixed, remove this and use
+	// ObjectMeta.Generation instead.
+	// +optional
+	Generation int64 `json:"generation,omitempty"`
+
 	// Action specifies the target handler for the events
 	Action FeedAction `json:"action"`
 
@@ -196,16 +211,6 @@ type FeedCondition struct {
 	Message string `json:"message,omitempty" description:"human-readable message indicating details about last transition"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// FeedList is a list of Feed resources
-type FeedList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []Feed `json:"items"`
-}
-
 func (fs *FeedStatus) GetCondition(t FeedConditionType) *FeedCondition {
 	for _, cond := range fs.Conditions {
 		if cond.Type == t {
@@ -303,4 +308,14 @@ func (f *Feed) SetOwnerReference(or *metav1.OwnerReference) {
 
 func (f *Feed) GetSpecJSON() ([]byte, error) {
 	return json.Marshal(f.Spec)
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// FeedList is a list of Feed resources
+type FeedList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []Feed `json:"items"`
 }
