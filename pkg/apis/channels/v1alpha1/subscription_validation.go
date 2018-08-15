@@ -32,7 +32,7 @@ func (ss *SubscriptionSpec) Validate() *apis.FieldError {
 		fe.Details = "the Subscription must reference a Channel"
 		return fe
 	}
-	// TOOD: should subscriptions have a subscriber?
+	// TODO: should subscriptions have a subscriber?
 	return nil
 }
 

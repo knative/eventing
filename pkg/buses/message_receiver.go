@@ -95,7 +95,7 @@ func (r *MessageReceiver) stop(srv *http.Server) {
 // The response status codes:
 //   202 - the message was sent to subscibers
 //   404 - the request was for an unknown channel
-//   500 - an error occured processing the request
+//   500 - an error occurred processing the request
 func (r *MessageReceiver) HandleRequest(res http.ResponseWriter, req *http.Request) {
 	host := req.Host
 	glog.Infof("Received request for %s\n", host)

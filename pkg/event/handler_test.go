@@ -456,6 +456,6 @@ func TestMux(t *testing.T) {
 		t.Fatal("Handler for eventA never called")
 	}
 	if !sawB {
-		t.Fatal("Hanlder for eventB never called")
+		t.Fatal("Handler for eventB never called")
 	}
 }

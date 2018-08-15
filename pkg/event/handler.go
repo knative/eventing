@@ -51,7 +51,7 @@ const (
 var (
 	// FYI: Getting the type of an interface is a bit hard in Go because of nil is special:
 	// 1. Structs & pointers have concrete types, whereas interfaces are actually tuples of
-	//    [imlpementation vtable, pointer].
+	//    [implementation vtable, pointer].
 	// 2. Literals (such as nil) can be cast to any relevant type.
 	// Because TypeOf takes an interface{}, a nil interface reference would cast lossily when
 	// it leaves this stack frame. The workaround is to pass a pointer to an interface and then
@@ -263,7 +263,7 @@ func (h failedHandler) Error() string {
 
 // Mux allows developers to handle logically related groups of
 // functionality multiplexed based on the event type.
-// TOOD: Consider dropping Mux or figure out how to handle non-JSON encoding.
+// TODO: Consider dropping Mux or figure out how to handle non-JSON encoding.
 type Mux map[string]*handler
 
 // NewMux creates a new Mux
