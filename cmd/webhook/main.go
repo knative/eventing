@@ -100,7 +100,7 @@ func main() {
 			feedsv1alpha1.SchemeGroupVersion.WithKind("ClusterEventSource"): &feedsv1alpha1.ClusterEventSource{},
 			feedsv1alpha1.SchemeGroupVersion.WithKind("EventType"):          &feedsv1alpha1.EventType{},
 			feedsv1alpha1.SchemeGroupVersion.WithKind("ClusterEventType"):   &feedsv1alpha1.ClusterEventType{},
-			feedsv1alpha1f.SchemeGroupVersion.WithKind("Feed"):               &feedsv1alpha1.Feed{},
+			feedsv1alpha1.SchemeGroupVersion.WithKind("Feed"):               &feedsv1alpha1.Feed{},
 
 			// For group flows.knative.dev,
 			flowsv1alpha1.SchemeGroupVersion.WithKind("Flow"): &flowsv1alpha1.Flow{},
