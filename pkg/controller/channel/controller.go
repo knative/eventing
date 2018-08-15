@@ -520,7 +520,7 @@ func newVirtualService(channel *channelsv1alpha1.Channel) *istiov1alpha3.Virtual
 	var destinationHost string
 	if len(channel.Spec.Bus) != 0 {
 		labels["bus"] = channel.Spec.Bus
-		destinationHost = controller.ServiceHostName(controller.BusDispatcherServiceName(channel.Spec.Bus), channel.Namespace)
+		destinationHost = controller.ServiceHostName(controller.BusDispatcherServiceName(channel.Spec.Bus, channel.Namespace), system.Namespace)
 	}
 	if len(channel.Spec.ClusterBus) != 0 {
 		labels["clusterBus"] = channel.Spec.ClusterBus
