@@ -54,8 +54,10 @@ import (
 )
 
 const (
-	controllerAgentName                    = "clusterbus-controller"
-	clusterBusControllerServiceAccountName = "clusterbus-controller"
+	controllerAgentName = "clusterbus-controller"
+	serviceAccountName  = "bus-operator"
+	provisionerRole     = "provisioner"
+	dispatcherRole      = "dispatcher"
 )
 
 const (
@@ -514,7 +516,7 @@ func (c *Controller) handleObject(obj interface{}) {
 func newDispatcherService(clusterBus *channelsv1alpha1.ClusterBus) *corev1.Service {
 	labels := map[string]string{
 		"clusterBus": clusterBus.Name,
-		"role":       "dispatcher",
+		"role":       dispatcherRole,
 	}
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -548,7 +550,7 @@ func newDispatcherService(clusterBus *channelsv1alpha1.ClusterBus) *corev1.Servi
 func newDispatcherDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.Deployment {
 	labels := map[string]string{
 		"clusterBus": clusterBus.Name,
-		"role":       "dispatcher",
+		"role":       dispatcherRole,
 	}
 	one := int32(1)
 	container := clusterBus.Spec.Dispatcher.DeepCopy()
@@ -591,7 +593,7 @@ func newDispatcherDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.De
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: clusterBusControllerServiceAccountName,
+					ServiceAccountName: serviceAccountName,
 					Containers: []corev1.Container{
 						*container,
 					},
@@ -608,7 +610,7 @@ func newDispatcherDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.De
 func newProvisionerDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.Deployment {
 	labels := map[string]string{
 		"clusterBus": clusterBus.Name,
-		"role":       "provisioner",
+		"role":       provisionerRole,
 	}
 	one := int32(1)
 	container := clusterBus.Spec.Provisioner.DeepCopy()
@@ -647,7 +649,7 @@ func newProvisionerDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.D
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: clusterBusControllerServiceAccountName,
+					ServiceAccountName: serviceAccountName,
 					Containers: []corev1.Container{
 						*container,
 					},
