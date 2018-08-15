@@ -86,7 +86,7 @@ type EventTrigger struct {
 	//  1. namespace: The domain name of the organization in reverse-domain
 	//     notation (e.g. `acme.net` appears as `net.acme`) and any orginization
 	//     specific subdivisions. If the organization's top-level domain is `com`,
-	//     the top-level domain is ommited (e.g. `google.com` appears as
+	//     the top-level domain is omitted (e.g. `google.com` appears as
 	//     `google`). For example, `google.storage` and
 	//     `google.firebase.analytics`.
 	//  2. resource type: The type of resource on which event occurs. For
