@@ -25,6 +25,7 @@ import (
 	"github.com/knative/eventing/pkg/controller"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -442,12 +443,16 @@ func (c *Controller) updateClusterBusStatus(
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
 	clusterBusCopy := clusterBus.DeepCopy()
-	// If the CustomResourceSubresources feature gate is not enabled,
-	// we must use Update instead of UpdateStatus to update the Status block of the ClusterBus resource.
-	// UpdateStatus will not allow changes to the Spec of the resource,
-	// which is ideal for ensuring nothing other than resource status has been updated.
-	_, err := c.clusterbusclientset.ChannelsV1alpha1().ClusterBuses().Update(clusterBusCopy)
-	return err
+	// Only update if status has changed
+	if !equality.Semantic.DeepEqual(clusterBus.Status, clusterBusCopy.Status) {
+		// If the CustomResourceSubresources feature gate is not enabled,
+		// we must use Update instead of UpdateStatus to update the Status block of the ClusterBus resource.
+		// UpdateStatus will not allow changes to the Spec of the resource,
+		// which is ideal for ensuring nothing other than resource status has been updated.
+		_, err := c.clusterbusclientset.ChannelsV1alpha1().ClusterBuses().Update(clusterBusCopy)
+		return err
+	}
+	return nil
 }
 
 // enqueueClusterBus takes a ClusterBus resource and converts it into a namespace/name
