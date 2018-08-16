@@ -52,7 +52,7 @@ func MakeWatcherDeployment(namespace string, deploymentName string, serviceAccou
 				Spec: corev1.PodSpec{
 					ServiceAccountName: serviceAccount,
 					Containers: []corev1.Container{
-						corev1.Container{
+						{
 							Name:            "receive-adapter",
 							Image:           image,
 							ImagePullPolicy: "Always",

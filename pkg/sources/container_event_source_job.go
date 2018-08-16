@@ -115,7 +115,7 @@ func makePodTemplate(feed *v1alpha1.Feed, spec *v1alpha1.EventSourceSpec, op Fee
 			ServiceAccountName: feed.Spec.ServiceAccountName,
 			RestartPolicy:      corev1.RestartPolicyNever,
 			Containers: []corev1.Container{
-				corev1.Container{
+				{
 					Name:            "feedlet",
 					Image:           spec.Image,
 					ImagePullPolicy: "Always",
