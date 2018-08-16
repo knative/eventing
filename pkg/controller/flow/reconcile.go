@@ -265,7 +265,7 @@ func (r *reconciler) reconcileFeed(channelDNS string, flow *v1alpha1.Flow) (*fee
 	if errors.IsNotFound(err) {
 		feed, err = r.createFeed(channelDNS, flow)
 		if err != nil {
-			glog.Errorf("Failed to create feed %q : %v", feed.Name, err)
+			glog.Errorf("Failed to create feed: %v", err)
 			return nil, err
 		}
 	} else if err != nil {
@@ -327,7 +327,10 @@ func (r *reconciler) getDefaultClusterBusName() (string, error) {
 
 func (r *reconciler) getFeedForFlow(flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
 	feedList := &feedsv1alpha1.FeedList{}
-	err := r.client.List(context.TODO(), &client.ListOptions{Namespace: flow.Namespace, LabelSelector: labels.Everything()}, feedList)
+	err := r.client.List(
+		context.TODO(),
+		&client.ListOptions{Namespace: flow.Namespace, LabelSelector: labels.Everything()},
+		feedList)
 	if err != nil {
 		glog.Errorf("Unable to list feeds: %v", err)
 		return nil, err
