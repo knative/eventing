@@ -265,11 +265,11 @@ func (r *reconciler) reconcileFeed(channelDNS string, flow *v1alpha1.Flow) (*fee
 	if errors.IsNotFound(err) {
 		feed, err = r.createFeed(channelDNS, flow)
 		if err != nil {
-			glog.Errorf("Failed to create feed: %v", err)
+			glog.Errorf("Failed to create feed for flow %q: %v", flow.Name, err)
 			return nil, err
 		}
 	} else if err != nil {
-		glog.Errorf("Unable to find a feed for the flow: %v", err)
+		glog.Errorf("Failed to reconcile feed for flow %q failed to get feeds : %v", flow.Name, err)
 		return nil, err
 	}
 
