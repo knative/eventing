@@ -76,6 +76,10 @@ func (t *K8SEventsEventSource) StartFeed(trigger sources.EventTrigger, route str
 
 	// Just generate a random UUID as a subscriptionName
 	uuid, err := uuid.NewRandom()
+	if err != nil {
+		glog.Infof("Failed to create new random uuid: %v", err)
+		return nil, err
+	}
 	subscriptionName := fmt.Sprintf("sub-%s", uuid.String())
 
 	glog.Infof("Namespace: %q Route: %s", namespace, route)
