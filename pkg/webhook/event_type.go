@@ -28,6 +28,14 @@ var (
 	errInvalidEventTypeInput = errors.New("failed to convert input into EventType")
 )
 
+
+
+
+// Something probably goes here to add the finalizer.
+
+
+
+
 // Test the type for interface compliance
 var _ GenericCRD = &v1alpha1.EventType{}
 

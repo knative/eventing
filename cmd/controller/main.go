@@ -47,6 +47,7 @@ import (
 	"github.com/knative/pkg/logging/logkey"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
+	"github.com/knative/eventing/pkg/controller/eventtype"
 )
 
 const (
@@ -127,6 +128,7 @@ func main() {
 		bus.NewController,
 		clusterbus.NewController,
 		channel.NewController,
+		eventtype.NewController,
 	}
 
 	// TODO(n3wscott): Send the logger to the controllers.
