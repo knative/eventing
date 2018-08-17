@@ -18,7 +18,6 @@ metadata:
   name: k8sevents
   namespace: default
 spec:
-  type: k8sevents
   source: k8sevents
   image: github.com/knative/eventing/pkg/sources/k8sevents
   parameters:
