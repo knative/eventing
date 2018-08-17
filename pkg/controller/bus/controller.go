@@ -59,8 +59,6 @@ import (
 const (
 	controllerAgentName = "bus-controller"
 	serviceAccountName  = "bus-operator"
-	provisionerRole     = "provisioner"
-	dispatcherRole      = "dispatcher"
 )
 
 const (
@@ -126,7 +124,8 @@ func NewController(
 	restConfig *rest.Config,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	busInformerFactory informers.SharedInformerFactory,
-	istioInformerFactory sharedinformers.SharedInformerFactory) controller.Interface {
+	istioInformerFactory sharedinformers.SharedInformerFactory,
+) controller.Interface {
 
 	// obtain references to shared index informers for the Bus, Deployment and Service
 	// types.
@@ -588,11 +587,7 @@ func (c *Controller) handleObject(obj interface{}) {
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the Bus resource that 'owns' it.
 func newDispatcherService(bus *channelsv1alpha1.Bus) *corev1.Service {
-	labels := map[string]string{
-		"bus":       bus.Name,
-		"namespace": bus.Namespace,
-		"role":      dispatcherRole,
-	}
+	labels := dispatcherLabels(bus.Name, bus.Namespace)
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      controller.BusDispatcherServiceName(bus.Name, bus.Namespace),
@@ -623,11 +618,7 @@ func newDispatcherService(bus *channelsv1alpha1.Bus) *corev1.Service {
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the Bus resource that 'owns' it.
 func newDispatcherDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
-	labels := map[string]string{
-		"bus":       bus.Name,
-		"namespace": bus.Namespace,
-		"role":      dispatcherRole,
-	}
+	labels := dispatcherLabels(bus.Name, bus.Namespace)
 	one := int32(1)
 	container := bus.Spec.Dispatcher.DeepCopy()
 	container.Env = append(container.Env,
@@ -688,11 +679,7 @@ func newDispatcherDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the Bus resource that 'owns' it.
 func newProvisionerDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
-	labels := map[string]string{
-		"bus":       bus.Name,
-		"namespace": bus.Namespace,
-		"role":      provisionerRole,
-	}
+	labels := provisionerLabels(bus.Name, bus.Namespace)
 	one := int32(1)
 	container := bus.Spec.Provisioner.DeepCopy()
 	container.Env = append(container.Env,
@@ -742,5 +729,21 @@ func newProvisionerDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 				},
 			},
 		},
+	}
+}
+
+func dispatcherLabels(busName, namespace string) map[string]string {
+	return map[string]string{
+		"bus":       busName,
+		"namespace": namespace,
+		"role":      "dispatcher",
+	}
+}
+
+func provisionerLabels(busName, namespace string) map[string]string {
+	return map[string]string{
+		"bus":       busName,
+		"namespace": namespace,
+		"role":      "provisioner",
 	}
 }

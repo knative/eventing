@@ -121,7 +121,8 @@ func NewController(
 	restConfig *rest.Config,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	channelInformerFactory informers.SharedInformerFactory,
-	sharedInformerFactory sharedinformers.SharedInformerFactory) controller.Interface {
+	sharedInformerFactory sharedinformers.SharedInformerFactory,
+) controller.Interface {
 
 	// obtain references to shared index informers for the Service and Channel types.
 	virtualserviceInformer := sharedInformerFactory.Networking().V1alpha3().VirtualServices()
@@ -518,11 +519,11 @@ func newVirtualService(channel *channelsv1alpha1.Channel) *istiov1alpha3.Virtual
 		"channel": channel.Name,
 	}
 	var destinationHost string
-	if len(channel.Spec.Bus) != 0 {
+	if channel.Spec.Bus != "" {
 		labels["bus"] = channel.Spec.Bus
 		destinationHost = controller.ServiceHostName(controller.BusDispatcherServiceName(channel.Spec.Bus, channel.Namespace), system.Namespace)
 	}
-	if len(channel.Spec.ClusterBus) != 0 {
+	if channel.Spec.ClusterBus != "" {
 		labels["clusterBus"] = channel.Spec.ClusterBus
 		destinationHost = controller.ServiceHostName(controller.ClusterBusDispatcherServiceName(channel.Spec.ClusterBus), system.Namespace)
 	}

@@ -23,6 +23,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/golang/glog"
 )
 
 const correlationIDHeaderName = "Knative-Correlation-Id"
@@ -77,6 +79,7 @@ func (d *MessageDispatcher) DispatchMessage(message *Message, destination string
 }
 
 func (d *MessageDispatcher) executeRequest(url *url.URL, message *Message) (*Message, error) {
+	glog.Infof("Dispatching message to %s\n", url.String())
 	req, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewReader(message.Payload))
 	if err != nil {
 		return nil, fmt.Errorf("Unable to create request %v", err)
