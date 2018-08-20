@@ -29,15 +29,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
-	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
-	channelscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	sharedclientset "github.com/knative/pkg/client/clientset/versioned"
 	sharedinformers "github.com/knative/pkg/client/informers/externalversions"
@@ -47,7 +43,6 @@ import (
 	"strings"
 )
 
-const controllerAgentName = "event-type-controller"
 const finalizerName = "event-type-finalizer"
 
 // Controller is the controller implementation for Channel resources
@@ -70,9 +65,6 @@ type Controller struct {
 	// time, and makes it easy to ensure we are never processing the same item
 	// simultaneously in two different workers.
 	workqueue workqueue.RateLimitingInterface
-	// recorder is an event recorder for recording Event resources to the
-	// Kubernetes API.
-	recorder record.EventRecorder
 }
 
 // NewController returns a new channel controller
@@ -89,16 +81,6 @@ func NewController(
 	feedInformer := feedInformerFactory.Feeds().V1alpha1().Feeds()
 	etInformer := feedInformerFactory.Feeds().V1alpha1().EventTypes()
 
-	// Create event broadcaster
-	// Add channel-controller types to the default Kubernetes Scheme so Events can be
-	// logged for channel-controller types.
-	channelscheme.AddToScheme(scheme.Scheme)
-	glog.V(4).Info("Creating event broadcaster")
-	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(glog.Infof)
-	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
-	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
-
 	c := &Controller{
 		kubeclientset:   kubeclientset,
 		feedclientset:   feedclientset,
@@ -108,7 +90,6 @@ func NewController(
 		feedLister:      feedInformer.Lister(),
 		feedSynced:      feedInformer.Informer().HasSynced,
 		workqueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Channels"),
-		recorder:        recorder,
 	}
 
 	glog.Info("Setting up event handlers")
