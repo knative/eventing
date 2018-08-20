@@ -261,7 +261,7 @@ func (r *reconciler) createSubscription(channelName string, target string, flow 
 }
 
 func (r *reconciler) reconcileFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
-	feed, err := r.getFeedForFlow(flow)
+	feed, err := r.getFeed(flow)
 	if errors.IsNotFound(err) {
 		feed, err = r.createFeed(channelDNS, flow)
 		if err != nil {
@@ -325,7 +325,7 @@ func (r *reconciler) getDefaultClusterBusName() (string, error) {
 	return fallbackClusterBusName, nil // return the fallback value
 }
 
-func (r *reconciler) getFeedForFlow(flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
+func (r *reconciler) getFeed(flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
 	feedList := &feedsv1alpha1.FeedList{}
 	err := r.client.List(
 		context.TODO(),
