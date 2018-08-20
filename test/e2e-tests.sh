@@ -29,7 +29,10 @@
 [ -f /workspace/e2e-tests.sh ] \
   && source /workspace/e2e-tests.sh \
   || eval "$(docker run --entrypoint sh gcr.io/knative-tests/test-infra/prow-tests -c 'cat e2e-tests.sh')"
-[ -v KNATIVE_TEST_INFRA ] || exit 1
+
+if [ -z "${KNATIVE_TEST_INFRA}" ]; then
+  exit 1
+fi
 
 # Names of the Resources used in the tests.
 readonly E2E_TEST_NAMESPACE=e2etest

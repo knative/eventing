@@ -1,6 +1,5 @@
 /*
 Copyright 2017 The Knative Authors
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -18,22 +17,20 @@ package v1alpha1
 
 import (
 	"k8s.io/apimachinery/pkg/api/equality"
-
-	"github.com/knative/pkg/apis"
 )
 
-func (c *Configuration) Validate() *apis.FieldError {
+func (c *Configuration) Validate() *FieldError {
 	return c.Spec.Validate().ViaField("spec")
 }
 
-func (cs *ConfigurationSpec) Validate() *apis.FieldError {
+func (cs *ConfigurationSpec) Validate() *FieldError {
 	if equality.Semantic.DeepEqual(cs, &ConfigurationSpec{}) {
-		return apis.ErrMissingField(apis.CurrentField)
+		return errMissingField(currentField)
 	}
 	// In the context of Configuration, serving state may not be specified at all.
 	// TODO(mattmoor): Check ObjectMeta for Name/Namespace/GenerateName
 	if cs.RevisionTemplate.Spec.ServingState != "" {
-		return apis.ErrDisallowedFields("revisionTemplate.spec.servingState")
+		return errDisallowedFields("revisionTemplate.spec.servingState")
 	}
 	return cs.RevisionTemplate.Validate().ViaField("revisionTemplate")
 }

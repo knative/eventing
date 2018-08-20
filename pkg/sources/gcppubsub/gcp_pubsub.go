@@ -129,6 +129,10 @@ func (t *GCPPubSubEventSource) StartFeed(trigger sources.EventTrigger, route str
 
 	// Just generate a random UUID as a subscriptionName
 	uuid, err := uuid.NewRandom()
+	if err != nil {
+		glog.Infof("Failed to get create random uuid: %v", err)
+		return nil, err
+	}
 	subscriptionName := fmt.Sprintf("sub-%s", uuid.String())
 
 	glog.Infof("ProjectID: %q Topic: %q SubscriptionName: %q Route: %s", projectID, topicID, subscriptionName, route)

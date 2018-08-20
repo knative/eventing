@@ -25,6 +25,7 @@ import (
 	"github.com/knative/eventing/pkg/controller"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -53,8 +54,10 @@ import (
 )
 
 const (
-	controllerAgentName                    = "clusterbus-controller"
-	clusterBusControllerServiceAccountName = "clusterbus-controller"
+	controllerAgentName = "clusterbus-controller"
+	serviceAccountName  = "bus-operator"
+	provisionerRole     = "provisioner"
+	dispatcherRole      = "dispatcher"
 )
 
 const (
@@ -442,12 +445,16 @@ func (c *Controller) updateClusterBusStatus(
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
 	clusterBusCopy := clusterBus.DeepCopy()
-	// If the CustomResourceSubresources feature gate is not enabled,
-	// we must use Update instead of UpdateStatus to update the Status block of the ClusterBus resource.
-	// UpdateStatus will not allow changes to the Spec of the resource,
-	// which is ideal for ensuring nothing other than resource status has been updated.
-	_, err := c.clusterbusclientset.ChannelsV1alpha1().ClusterBuses().Update(clusterBusCopy)
-	return err
+	// Only update if status has changed
+	if !equality.Semantic.DeepEqual(clusterBus.Status, clusterBusCopy.Status) {
+		// If the CustomResourceSubresources feature gate is not enabled,
+		// we must use Update instead of UpdateStatus to update the Status block of the ClusterBus resource.
+		// UpdateStatus will not allow changes to the Spec of the resource,
+		// which is ideal for ensuring nothing other than resource status has been updated.
+		_, err := c.clusterbusclientset.ChannelsV1alpha1().ClusterBuses().Update(clusterBusCopy)
+		return err
+	}
+	return nil
 }
 
 // enqueueClusterBus takes a ClusterBus resource and converts it into a namespace/name
@@ -509,7 +516,7 @@ func (c *Controller) handleObject(obj interface{}) {
 func newDispatcherService(clusterBus *channelsv1alpha1.ClusterBus) *corev1.Service {
 	labels := map[string]string{
 		"clusterBus": clusterBus.Name,
-		"role":       "dispatcher",
+		"role":       dispatcherRole,
 	}
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -543,7 +550,7 @@ func newDispatcherService(clusterBus *channelsv1alpha1.ClusterBus) *corev1.Servi
 func newDispatcherDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.Deployment {
 	labels := map[string]string{
 		"clusterBus": clusterBus.Name,
-		"role":       "dispatcher",
+		"role":       dispatcherRole,
 	}
 	one := int32(1)
 	container := clusterBus.Spec.Dispatcher.DeepCopy()
@@ -586,7 +593,7 @@ func newDispatcherDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.De
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: clusterBusControllerServiceAccountName,
+					ServiceAccountName: serviceAccountName,
 					Containers: []corev1.Container{
 						*container,
 					},
@@ -603,7 +610,7 @@ func newDispatcherDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.De
 func newProvisionerDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.Deployment {
 	labels := map[string]string{
 		"clusterBus": clusterBus.Name,
-		"role":       "provisioner",
+		"role":       provisionerRole,
 	}
 	one := int32(1)
 	container := clusterBus.Spec.Provisioner.DeepCopy()
@@ -642,7 +649,7 @@ func newProvisionerDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.D
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: clusterBusControllerServiceAccountName,
+					ServiceAccountName: serviceAccountName,
 					Containers: []corev1.Container{
 						*container,
 					},

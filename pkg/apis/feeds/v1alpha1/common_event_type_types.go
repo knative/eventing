@@ -26,6 +26,13 @@ import (
 // including a schema for the event and information about the parameters
 // needed to create a Feed to the event.
 type CommonEventTypeSpec struct {
+	// TODO: Generation does not work correctly with CRD. They are scrubbed
+	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
+	// So, we add Generation here. Once that gets fixed, remove this and use
+	// ObjectMeta.Generation instead.
+	// +optional
+	Generation int64 `json:"generation,omitempty"`
+
 	// Description is a human-readable description of the EventType.
 	Description string `json:"description,omitempty"`
 	// SubscribeSchema describing how to subscribe to this. This basically

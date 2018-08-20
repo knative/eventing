@@ -17,8 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"encoding/json"
 	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/webhook"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -40,6 +43,8 @@ type EventSource struct {
 var _ apis.Validatable = (*EventSource)(nil)
 var _ apis.Defaultable = (*EventSource)(nil)
 var _ apis.Immutable = (*EventSource)(nil)
+var _ runtime.Object = (*EventSource)(nil)
+var _ webhook.GenericCRD = (*EventSource)(nil)
 
 // EventSourceSpec describes the type and source of an event, a container image
 // to run for feed lifecycle operations, and configuration options for the
@@ -51,6 +56,10 @@ type EventSourceSpec struct {
 // EventSourceStatus is the status for a EventSource resource
 type EventSourceStatus struct {
 	CommonEventSourceStatus `json:",inline"`
+}
+
+func (es *EventSource) GetSpecJSON() ([]byte, error) {
+	return json.Marshal(es.Spec)
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
