@@ -82,6 +82,7 @@ func (b *StubBus) addChannel(channelRef buses.ChannelReference, parameters buses
 		b.channels[channelRef] = &stubChannel{
 			parameters:    parameters,
 			subscriptions: make(map[buses.SubscriptionReference]*stubSubscription),
+			logger:        b.logger,
 		}
 	}
 }
@@ -98,11 +99,18 @@ type stubChannel struct {
 	channelRef    buses.ChannelReference
 	parameters    buses.ResolvedParameters
 	subscriptions map[buses.SubscriptionReference]*stubSubscription
+
+	logger *zap.SugaredLogger
 }
 
 func (c *stubChannel) receiveMessage(message *buses.Message) {
 	for _, stubSubscription := range c.subscriptions {
-		go stubSubscription.dispatchMessage(message)
+		go func() {
+			err := stubSubscription.dispatchMessage(message)
+			if err != nil {
+				c.logger.Warnf("Failed to dispatch message: %v", err)
+			}
+		}()
 	}
 }
 
