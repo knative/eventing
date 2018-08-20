@@ -24,6 +24,7 @@ See [the docs repo](https://github.com/knative/docs/tree/master/eventing/samples
   A simple handler for processing k8s events from the local cluster.
 * [Binding running services to an IoT core](https://github.com/knative/docs/tree/master/eventing/samples/event-flow) -
   A sample using Google PubSub to read events from Google's IoT core.
+* [Github Pull Request Handler](https://github.com/knative/docs/tree/master/eventing/samples/github-events) -
+  A simple handler for Github Pull Requests
 
-* [Github Pull Request Handler](./github) - A simple handler for Github Pull Requests
 * [GCP PubSub Receiver Handler](./gcp_pubsub_function) - A simple handler for processing GCP PubSub events
