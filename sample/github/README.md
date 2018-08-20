@@ -20,7 +20,7 @@ In response to a pull request event, the sample app _legit_ Service will add
   ```shell
   kubectl apply -f https://storage.googleapis.com/knative-releases/eventing/latest/release.yaml
   ```
-- A custom domain is setup to allow for GitHub to be able to call into the cluster,  
+- A custom domain is setup to allow for GitHub to be able to call into the cluster:
   [configure a custom domain](https://github.com/knative/docs/blob/master/serving/using-a-custom-domain.md) and 
   [assign a static IP address](https://github.com/knative/docs/blob/master/serving/gke-assigning-static-ip-address.md).
 
@@ -36,14 +36,14 @@ kubectl apply -f https://storage.googleapis.com/knative-releases/eventing/latest
 
 ## Granting permissions
 
-Because the `github` EventSource needs to create a `Service.serving.knative.dev`
-and call the Kubernetes watch API on events, you'll need to provision a special
+Because the `github` EventSource needs to create a
+`Service.serving.knative.dev`, you'll need to provision a special
 ServiceAccount with the necessary permissions.
 
-The `eventing/samples/github-events/auth.yaml` file provisions a service account, creates a role
-which can create Service in the `default` namespace and can view all
-Kubernetes resources. In a production environment, you might want to limit the
-access of this service account to only specific namespaces.
+The `eventing/samples/github-events/auth.yaml` file provisions a service
+account, and creates a role which can create a Knative Service in the `default`
+namespace. In a production environment, you might want to limit the access of
+this service account to only specific namespaces.
 
 ```shell
 kubectl apply -f eventing/samples/github-events/auth.yaml
@@ -83,10 +83,19 @@ kubectl apply -f eventing/samples/github-events/auth.yaml
 1.  Create a [personal access token](https://github.com/settings/tokens) to 
     GitHub repo that the GitHub source can use to register webhooks with the 
     GitHub API. Also decide on a token that your code will use to authenticate
-    the incoming webhooks from GitHub (*accessToken*). Update 
-    `eventing/samples/github-events/githubsecret.yaml` with those values. If 
-    your generated access token is `'asdfasfdsaf'` and you choose your
-    *secretToken* as `'password'`, you'd modify 
+    the incoming webhooks from GitHub (*accessToken*).
+    
+    The token can be named anything you find convenient. This sample requires
+    full `repo` control to be able update the title of the _Pull Request_.
+    The Source requires `admin:repo_hook`, this allows it to create webhooks
+    into repos that your account is allowed to do so. Copy and save this token,
+    GitHub will force you to generate it again if misplaced.
+
+    ![GitHub PAT](personal_access_token.png "GitHub Personal Access Token Screenshot")
+    
+    Update  `eventing/samples/github-events/githubsecret.yaml` with those
+    values. If  your generated access token is `'asdfasfdsaf'` and you choose
+    your *secretToken* as `'password'`, you'd modify 
     `eventing/samples/github-events/githubsecret.yaml` like so:
     
     ```yaml
@@ -102,6 +111,7 @@ kubectl apply -f eventing/samples/github-events/auth.yaml
           "secretToken": "password"
         }
     ```
+    Hint: you can makeup a random access token with `head -c 8 /dev/urandom | base64`.
     
     Then, apply the githubsecret using `kubectl`:
     
@@ -121,7 +131,12 @@ kubectl apply -f eventing/samples/github-events/auth.yaml
 
 ## Understanding what happened
 
-...TODO...
+<!--TODO:
+explain the resources and communication channels, as well as where the secret
+is used. In particular include a note to look at
+https://github.com/<owner>/<repo>/settings/hooks to see the webhook registered
+and then deleted.
+ -->
 
 ## Cleaning up
 
@@ -133,3 +148,6 @@ kubectl delete -f eventing/samples/github-events/flow.yaml
 kubectl delete -f eventing/samples/github-events/auth.yaml
 kubectl delete -f eventing/samples/github-events/githubsecret.yaml
 ```
+
+And then delete the [personal access token](https://github.com/settings/tokens)
+created from GitHub.
