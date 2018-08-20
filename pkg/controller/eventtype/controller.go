@@ -22,18 +22,15 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/knative/eventing/pkg/controller"
-	istiolisters "github.com/knative/pkg/client/listers/istio/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -42,53 +39,23 @@ import (
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	channelscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	listers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
-	"github.com/knative/eventing/pkg/system"
 	sharedclientset "github.com/knative/pkg/client/clientset/versioned"
 	sharedinformers "github.com/knative/pkg/client/informers/externalversions"
 
-	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
-	"github.com/knative/eventing/pkg/controller/util"
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
-	"github.com/knative/eventing/pkg/client/listers/feeds/v1alpha1"
 	feedv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
+	"github.com/knative/eventing/pkg/client/listers/feeds/v1alpha1"
+	"strings"
 )
 
-const controllerAgentName = "channel-controller"
+const controllerAgentName = "event-type-controller"
 const finalizerName = "event-type-finalizer"
-
-const (
-	// SuccessSynced is used as part of the Event 'reason' when a Channel is synced
-	SuccessSynced = "Synced"
-	// ErrResourceExists is used as part of the Event 'reason' when a Channel fails
-	// to sync due to a Service of the same name already existing.
-	ErrResourceExists = "ErrResourceExists"
-
-	// MessageResourceExists is the message used for Events when a resource
-	// fails to sync due to a Service already existing
-	MessageResourceExists = "Resource %q already exists and is not managed by Channel"
-	// MessageResourceSynced is the message used for an Event fired when a Channel
-	// is synced successfully
-	MessageResourceSynced = "Channel synced successfully"
-)
-
-const (
-	// ServiceSynced is used as part of the condition reason when the channel (k8s) service is successfully created.
-	ServiceSynced = "ServiceSynced"
-	// ServiceError is used as part of the condition reason when the channel (k8s) service creation failed.
-	ServiceError = "ServiceError"
-	// VirtualServiceSynced is used as part of the condition reason when the channel istio virtual service is successfully created.
-	VirtualServiceSynced = "VirtualServiceSynced"
-	// VirtualServiceError is used as part of the condition reason when the channel istio virtual service creation failed.
-	VirtualServiceError = "VirtualServiceError"
-)
 
 // Controller is the controller implementation for Channel resources
 type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
-	// etclientset is a clientset for our own API group
-	etclientset clientset.Interface
+	// feedclientset is a clientset for our own API group
+	feedclientset clientset.Interface
 	// sharedclientset is a clientset for shared API groups
 	sharedclientset sharedclientset.Interface
 
@@ -105,22 +72,22 @@ type Controller struct {
 	workqueue workqueue.RateLimitingInterface
 	// recorder is an event recorder for recording Event resources to the
 	// Kubernetes API.
-	recorder         record.EventRecorder
+	recorder record.EventRecorder
 }
 
 // NewController returns a new channel controller
 func NewController(
 	kubeclientset kubernetes.Interface,
-	etclientset clientset.Interface,
+	feedclientset clientset.Interface,
 	sharedclientset sharedclientset.Interface,
-	restConfig *rest.Config,
-	kubeInformerFactory kubeinformers.SharedInformerFactory,
-	etInformerFactory informers.SharedInformerFactory,
-	sharedInformerFactory sharedinformers.SharedInformerFactory) controller.Interface {
+	_ *rest.Config,
+	_ kubeinformers.SharedInformerFactory,
+	feedInformerFactory informers.SharedInformerFactory,
+	_ sharedinformers.SharedInformerFactory) controller.Interface {
 
-	// obtain references to shared index informers for the Service and Channel types.
-	feedInformer := etInformerFactory.Feeds().V1alpha1().Feeds()
-	etInformer := etInformerFactory.Feeds().V1alpha1().EventTypes()
+	// obtain references to shared index informers for the Feed and EventType types.
+	feedInformer := feedInformerFactory.Feeds().V1alpha1().Feeds()
+	etInformer := feedInformerFactory.Feeds().V1alpha1().EventTypes()
 
 	// Create event broadcaster
 	// Add channel-controller types to the default Kubernetes Scheme so Events can be
@@ -132,86 +99,36 @@ func NewController(
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
-	controller := &Controller{
-		kubeclientset:         kubeclientset,
-		etclientset:      etclientset,
-		sharedclientset:       sharedclientset,
+	c := &Controller{
+		kubeclientset:   kubeclientset,
+		feedclientset:   feedclientset,
+		sharedclientset: sharedclientset,
 		etLister:        etInformer.Lister(),
 		etSynced:        etInformer.Informer().HasSynced,
-		feedLister: feedInformer.Lister(),
-		feedSynced: feedInformer.Informer().HasSynced,
-		workqueue:             workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Channels"),
-		recorder:              recorder,
+		feedLister:      feedInformer.Lister(),
+		feedSynced:      feedInformer.Informer().HasSynced,
+		workqueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Channels"),
+		recorder:        recorder,
 	}
 
 	glog.Info("Setting up event handlers")
 	// Set up an event handler for when EventType resources change. This controller is really just
 	// a finalizer, so we only care about deletion events.
 	etInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		DeleteFunc: controller.handleEventTypeDelete,
+		DeleteFunc: func(old interface{}) {
+			// Ignore the returned error.
+			c.handleEventTypeDelete(old)
+		},
 	})
 	// Set up an event handler for when Feed resources change. This controller is really just a
 	// finalizer, so we only care about when Feeds no longer use an EventType, at which point we
 	// will check if it can be deleted.
 	feedInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		UpdateFunc: controller.handleFeedUpdate,
-		DeleteFunc: controller.handleFeedDelete,
+		UpdateFunc: c.handleFeedUpdate,
+		DeleteFunc: c.handleFeedDelete,
 	})
 
-	return controller
-}
-
-func (c *Controller) handleFeedUpdate(old, new interface{}) {
-	// Did it used to listen to me? If not, then ignore. If yes, then does it still listen to me? If so, then ignore. If not, then, can I be deleted?
-	oldFeed := old.(*feedv1alpha1.Feed)
-	newFeed := new.(*feedv1alpha1.Feed)
-	// TODO: Support ClusterEventTypes as well.
-	if oldFeed.Spec.Trigger.EventType != newFeed.Spec.Trigger.EventType {
-		// Now that the feed is no longer using the old EventType, handle it to check if it can be deleted.
-		c.handleFeedDelete(old)
-	}
-}
-
-func (c *Controller) handleFeedDelete(old interface{}) {
-	oldFeed := old.(*feedv1alpha1.Feed)
-	// Now that the feed is no longer using the old EventType, handle it to check if it can be deleted.
-	c.syncHandler(oldFeed.Namespace + "/" + oldFeed.Spec.Trigger.EventType)
-}
-
-func (c *Controller) handleEventTypeDelete(old interface{}) {
-	et := old.(*feedv1alpha1.EventType)
-	if et.ObjectMeta.DeletionTimestamp == nil {
-		// EventType is not yet marked for deletion.
-		return
-	}
-	feeds, err := c.findFeedsUsingEventType(et)
-	if err != nil {
-		// Something...
-	}
-	if len(feeds) == 0 {
-		c.removeFinalizer(et)
-	}
-	glog.Infof("Cannot remove finalizer from EventType %q, %v Feeds still use it.", et.Name, len(feeds))
-}
-
-func (c *Controller) findFeedsUsingEventType(et *feedv1alpha1.EventType) ([]feedv1alpha1.Feed, error) {
-	feedList, err := c.etclientset.FeedsV1alpha1().Feeds(et.Namespace).List(metav1.ListOptions{})
-	if err != nil {
-		glog.Errorf("Unable to list the feeds: %v", err)
-		return nil, err
-	}
-	return feedList.Items, nil
-}
-
-func (c *Controller) removeFinalizer(et *feedv1alpha1.EventType) {
-	newFinalizers := []string
-	for _, finalizer := range et.ObjectMeta.Finalizers {
-		if finalizer != finalizerName {
-			newFinalizers = append(newFinalizers, finalizer)
-		}
-	}
-	et.ObjectMeta.Finalizers = newFinalizers
-	// TODO Actually save the value...
+	return c
 }
 
 // Run will set up the event handlers for types we are interested in, as well
@@ -227,7 +144,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 
 	// Wait for the caches to be synced before starting workers
 	glog.Info("Waiting for informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, c.servicesSynced, c.channelsSynced); !ok {
+	if ok := cache.WaitForCacheSync(stopCh, c.etSynced, c.feedSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
@@ -316,273 +233,125 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 
-	// Get the Channel resource with this namespace/name
-	channel, err := c.channelsLister.Channels(namespace).Get(name)
+	// Get the EventType resource with this namespace/name
+	et, err := c.etLister.EventTypes(namespace).Get(name)
 	if err != nil {
-		// The Channel resource may no longer exist, in which case we stop
-		// processing.
+		// The EventType resource may no longer exist, in which case we stop processing.
 		if errors.IsNotFound(err) {
-			runtime.HandleError(fmt.Errorf("channel '%s' in work queue no longer exists", key))
+			runtime.HandleError(fmt.Errorf("eventType '%s' in work queue no longer exists", key))
 			return nil
 		}
 
 		return err
 	}
 
-	var service *corev1.Service
-	var virtualService *istiov1alpha3.VirtualService
-	var serviceErr, virtualServiceErr error
+	// handleEventTypeDelete checks the deletion timestamp and will only affect EventTypes that have
+	// been marked for deletion.
+	return c.handleEventTypeDelete(et)
+}
 
-	// Sync Service derived from the Channel
-	service, serviceErr = c.syncChannelService(channel)
+func (c *Controller) handleFeedUpdate(old, new interface{}) {
+	// Did it used to listen to me? If not, then ignore. If yes, then does it still listen to me? If so, then ignore. If not, then, can I be deleted?
+	oldFeed := old.(*feedv1alpha1.Feed)
+	newFeed := new.(*feedv1alpha1.Feed)
+	// TODO: Support ClusterEventTypes as well.
+	if oldFeed.Spec.Trigger.EventType != newFeed.Spec.Trigger.EventType {
+		// Now that the feed is no longer using the old EventType, handle it to check if it can be deleted.
+		c.handleFeedDelete(old)
+	}
+}
+
+func (c *Controller) handleFeedDelete(old interface{}) {
+	oldFeed := old.(*feedv1alpha1.Feed)
+	// Now that the feed is no longer using the old EventType, handle it to check if it can be deleted.
+	c.syncHandler(oldFeed.Namespace + "/" + oldFeed.Spec.Trigger.EventType)
+}
+
+func (c *Controller) handleEventTypeDelete(old interface{}) error {
+	et := old.(*feedv1alpha1.EventType)
+	if et.ObjectMeta.DeletionTimestamp == nil {
+		// EventType is not yet marked for deletion.
+		return nil
+	}
+	feeds, err := c.findFeedsUsingEventType(et)
 	if err != nil {
-		c.updateChannelStatus(channel, service, serviceErr, virtualService, virtualServiceErr)
+		glog.Infof("Unable to find feeds using EventType %s: %v", et.Name, err)
 		return err
 	}
-
-	// Sync VirtualService derived from a Channel
-	virtualService, virtualServiceErr = c.syncChannelVirtualService(channel)
-	if virtualServiceErr != nil {
-		c.updateChannelStatus(channel, service, serviceErr, virtualService, virtualServiceErr)
-		return err
+	if len(feeds) == 0 {
+		err = c.removeFinalizer(et)
+		if err != nil {
+			glog.Infof("Unable to remove the %s from the EventType %s: %v", finalizerName, et.Name, err)
+			return err
+		}
+	} else {
+		glog.Infof("Cannot remove finalizer from EventType %q, %v Feeds still use it.", et.Name, len(feeds))
+		err = c.updateEventTypeStatus(et, feeds)
+		if err != nil {
+			glog.Infof("Unable to update the status of EventType %s: %v", et.Name, err)
+			return err
+		}
 	}
-
-	// Finally, we update the status block of the Channel resource to reflect the
-	// current state of the world
-	err = c.updateChannelStatus(channel, service, serviceErr, virtualService, virtualServiceErr)
-	if err != nil {
-		return err
-	}
-
-	c.recorder.Event(channel, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
 	return nil
 }
 
-func (c *Controller) syncChannelService(channel *channelsv1alpha1.Channel) (*corev1.Service, error) {
-	// Get the service with the specified service name
-	serviceName := controller.ChannelServiceName(channel.ObjectMeta.Name)
-	service, err := c.servicesLister.Services(channel.Namespace).Get(serviceName)
-	// If the resource doesn't exist, we'll create it
-	if errors.IsNotFound(err) {
-		service, err = c.kubeclientset.CoreV1().Services(channel.Namespace).Create(newService(channel))
-	}
-
-	// If an error occurs during Get/Create, we'll requeue the item so we can
-	// attempt processing again later. This could have been caused by a
-	// temporary network failure, or any other transient reason.
+func (c *Controller) findFeedsUsingEventType(et *feedv1alpha1.EventType) ([]feedv1alpha1.Feed, error) {
+	feedList, err := c.feedclientset.FeedsV1alpha1().Feeds(et.Namespace).List(metav1.ListOptions{})
 	if err != nil {
+		glog.Errorf("Unable to list the feeds: %v", err)
 		return nil, err
 	}
-
-	// If the Service is not controlled by this Channel resource, we should log
-	// a warning to the event recorder and return
-	if !metav1.IsControlledBy(service, channel) {
-		msg := fmt.Sprintf(MessageResourceExists, service.Name)
-		c.recorder.Event(channel, corev1.EventTypeWarning, ErrResourceExists, msg)
-		return nil, fmt.Errorf(msg)
-	}
-
-	return service, nil
+	return feedList.Items, nil
 }
 
-func (c *Controller) syncChannelVirtualService(channel *channelsv1alpha1.Channel) (*istiov1alpha3.VirtualService, error) {
-	// Get the VirtualService with the specified Channel name
-	virtualserviceName := controller.ChannelVirtualServiceName(channel.ObjectMeta.Name)
-	virtualservice, err := c.virtualservicesLister.VirtualServices(channel.Namespace).Get(virtualserviceName)
-
-	// If the resource doesn't exist, we'll create it
-	if errors.IsNotFound(err) {
-		virtualservice, err = c.sharedclientset.NetworkingV1alpha3().VirtualServices(channel.Namespace).Create(newVirtualService(channel))
+func (c *Controller) removeFinalizer(et *feedv1alpha1.EventType) error {
+	newFinalizers := make([]string, len(et.ObjectMeta.Finalizers))
+	for _, finalizer := range et.ObjectMeta.Finalizers {
+		if finalizer != finalizerName {
+			newFinalizers = append(newFinalizers, finalizer)
+		}
 	}
-
-	// If an error occurs during Get/Create, we'll requeue the item so we can
-	// attempt processing again later. This could have been caused by a
-	// temporary network failure, or any other transient reason.
+	etCopy := et.DeepCopy()
+	etCopy.ObjectMeta.Finalizers = newFinalizers
+	_, err := c.feedclientset.FeedsV1alpha1().EventTypes(etCopy.Namespace).Update(etCopy)
 	if err != nil {
-		return nil, err
+		glog.Infof("Unable to update EventType %s: %v", etCopy.Name, err)
+		return err
 	}
-
-	// If the Service is not controlled by this Channel resource, we should log
-	// a warning to the event recorder and return
-	if !metav1.IsControlledBy(virtualservice, channel) {
-		msg := fmt.Sprintf(MessageResourceExists, virtualservice.Name)
-		c.recorder.Event(channel, corev1.EventTypeWarning, ErrResourceExists, msg)
-		return nil, fmt.Errorf(msg)
-	}
-
-	return virtualservice, nil
+	return nil
 }
 
-func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel,
-	service *corev1.Service, serviceError error,
-	virtualService *istiov1alpha3.VirtualService, virtualServiceError error) error {
-	// NEVER modify objects from the store. It's a read-only, local cache.
-	// You can use DeepCopy() to make a deep copy of original object and modify this copy
-	// Or create a copy manually for better performance
-	channelCopy := channel.DeepCopy()
+func (c *Controller) updateEventTypeStatus(et *feedv1alpha1.EventType, feedsStillUsingEventType []feedv1alpha1.Feed) error {
+	etCopy := et.DeepCopy()
 
-	// Update ChannelStatus
-
-	if service != nil {
-		channelCopy.Status.Service = &corev1.LocalObjectReference{Name: service.Name}
-		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelServiceable, corev1.ConditionTrue, ServiceSynced, "service successfully synced")
-		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
-	} else {
-		channelCopy.Status.Service = nil
-		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelServiceable, corev1.ConditionFalse, ServiceError, serviceError.Error())
-		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
+	// Filter out the existing InUse condition, if present.
+	var newConditions []feedv1alpha1.CommonEventTypeCondition
+	for _, condition := range etCopy.Status.Conditions {
+		if condition.Type != feedv1alpha1.EventTypeInUse {
+			newConditions = append(newConditions, condition)
+		}
 	}
 
-	if virtualService != nil {
-		channelCopy.Status.VirtualService = &corev1.LocalObjectReference{Name: virtualService.Name}
-		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelRoutable, corev1.ConditionTrue, VirtualServiceSynced, "virtual service successfully synced")
-		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
-	} else {
-		channelCopy.Status.VirtualService = nil
-		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelRoutable, corev1.ConditionFalse, VirtualServiceError, virtualServiceError.Error())
-		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
+	// Add the up-to-date InUse condition.
+	newConditions = append(newConditions, feedv1alpha1.CommonEventTypeCondition{
+		Type:    feedv1alpha1.EventTypeInUse,
+		Status:  corev1.ConditionTrue,
+		Message: fmt.Sprintf("Still in use by the feeds: %s", getFeedNames(feedsStillUsingEventType)),
+	})
+
+	etCopy.Status.Conditions = newConditions
+	_, err := c.feedclientset.FeedsV1alpha1().EventTypes(etCopy.Namespace).Update(etCopy)
+	if err != nil {
+		glog.Infof("Unable to update the status of EventType %s: %v", etCopy.Name, err)
 	}
-
-	util.ConsolidateChannelCondition(&channelCopy.Status)
-
-	channelCopy.Status.DomainInternal = controller.ServiceHostName(service.Name, service.Namespace)
-
-	// If the CustomResourceSubresources feature gate is not enabled,
-	// we must use Update instead of UpdateStatus to update the Status block of the Channel resource.
-	// UpdateStatus will not allow changes to the Spec of the resource,
-	// which is ideal for ensuring nothing other than resource status has been updated.
-	_, err := c.channelclientset.ChannelsV1alpha1().Channels(channel.Namespace).Update(channelCopy)
 	return err
 }
 
-// enqueueChannel takes a Channel resource and converts it into a namespace/name
-// string which is then put onto the work queue. This method should *not* be
-// passed resources of any type other than Channel.
-func (c *Controller) enqueueChannel(obj interface{}) {
-	var key string
-	var err error
-	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
-		runtime.HandleError(err)
-		return
+func getFeedNames(feeds []feedv1alpha1.Feed) string {
+	var feedNames strings.Builder
+	for _, feed := range feeds {
+		feedNames.WriteString(feed.Name)
+		feedNames.WriteRune(' ')
 	}
-	c.workqueue.AddRateLimited(key)
-}
-
-// handleObject will take any resource implementing metav1.Object and attempt
-// to find the Channel resource that 'owns' it. It does this by looking at the
-// objects metadata.ownerReferences field for an appropriate OwnerReference.
-// It then enqueues that Channel resource to be processed. If the object does not
-// have an appropriate OwnerReference, it will simply be skipped.
-func (c *Controller) handleObject(obj interface{}) {
-	var object metav1.Object
-	var ok bool
-	if object, ok = obj.(metav1.Object); !ok {
-		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-		if !ok {
-			runtime.HandleError(fmt.Errorf("error decoding object, invalid type"))
-			return
-		}
-		object, ok = tombstone.Obj.(metav1.Object)
-		if !ok {
-			runtime.HandleError(fmt.Errorf("error decoding object tombstone, invalid type"))
-			return
-		}
-		glog.V(4).Infof("Recovered deleted object '%s' from tombstone", object.GetName())
-	}
-	glog.V(4).Infof("Processing object: %s", object.GetName())
-	if ownerRef := metav1.GetControllerOf(object); ownerRef != nil {
-		// If this object is not owned by a Channel, we should not do anything more
-		// with it.
-		if ownerRef.Kind != "Channel" {
-			return
-		}
-
-		channel, err := c.channelsLister.Channels(object.GetNamespace()).Get(ownerRef.Name)
-		if err != nil {
-			glog.V(4).Infof("ignoring orphaned object '%s' of channel '%s'", object.GetSelfLink(), ownerRef.Name)
-			return
-		}
-
-		c.enqueueChannel(channel)
-		return
-	}
-}
-
-// newService creates a new Service for a Channel resource. It also sets
-// the appropriate OwnerReferences on the resource so handleObject can discover
-// the Channel resource that 'owns' it.
-func newService(channel *channelsv1alpha1.Channel) *corev1.Service {
-	labels := map[string]string{
-		"channel": channel.Name,
-	}
-	return &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.ChannelServiceName(channel.ObjectMeta.Name),
-			Namespace: channel.Namespace,
-			Labels:    labels,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(channel, schema.GroupVersionKind{
-					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
-					Version: channelsv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Channel",
-				}),
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{Name: PortName, Port: PortNumber},
-			},
-		},
-	}
-}
-
-// newVirtualService creates a new VirtualService for a Channel resource. It also sets
-// the appropriate OwnerReferences on the resource so handleObject can discover
-// the Channel resource that 'owns' it.
-func newVirtualService(channel *channelsv1alpha1.Channel) *istiov1alpha3.VirtualService {
-	labels := map[string]string{
-		"channel": channel.Name,
-	}
-	var destinationHost string
-	if len(channel.Spec.Bus) != 0 {
-		labels["bus"] = channel.Spec.Bus
-		destinationHost = controller.ServiceHostName(controller.BusDispatcherServiceName(channel.Spec.Bus), channel.Namespace)
-	}
-	if len(channel.Spec.ClusterBus) != 0 {
-		labels["clusterBus"] = channel.Spec.ClusterBus
-		destinationHost = controller.ServiceHostName(controller.ClusterBusDispatcherServiceName(channel.Spec.ClusterBus), system.Namespace)
-	}
-	return &istiov1alpha3.VirtualService{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.ChannelVirtualServiceName(channel.Name),
-			Namespace: channel.Namespace,
-			Labels:    labels,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(channel, schema.GroupVersionKind{
-					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
-					Version: channelsv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Channel",
-				}),
-			},
-		},
-		Spec: istiov1alpha3.VirtualServiceSpec{
-			Hosts: []string{
-				controller.ServiceHostName(controller.ChannelServiceName(channel.Name), channel.Namespace),
-				controller.ChannelHostName(channel.Name, channel.Namespace),
-			},
-			Http: []istiov1alpha3.HTTPRoute{{
-				Rewrite: &istiov1alpha3.HTTPRewrite{
-					Authority: controller.ChannelHostName(channel.Name, channel.Namespace),
-				},
-				Route: []istiov1alpha3.DestinationWeight{{
-					Destination: istiov1alpha3.Destination{
-						Host: destinationHost,
-						Port: istiov1alpha3.PortSelector{
-							Number: PortNumber,
-						},
-					}},
-				}},
-			},
-		},
-	}
+	return feedNames.String()
 }
