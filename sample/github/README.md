@@ -91,13 +91,16 @@ kubectl apply -f eventing/samples/github-events/auth.yaml
     into repos that your account is allowed to do so. Copy and save this token,
     GitHub will force you to generate it again if misplaced.
 
-    ![GitHub PAT](personal_access_token.png "GitHub Personal Access Token Screenshot")
-    
-    Update  `eventing/samples/github-events/githubsecret.yaml` with those
+    Here I named my token "EventingSample" and have selected the recommended
+    scopes: 
+
+    ![GitHub UI](personal_access_token.png "GitHub personal access token screenshot")
+
+    Update `eventing/samples/github-events/githubsecret.yaml` with those
     values. If  your generated access token is `'asdfasfdsaf'` and you choose
-    your *secretToken* as `'password'`, you'd modify 
+    your *secretToken* as `'personal_access_token_value'`, you'd modify
     `eventing/samples/github-events/githubsecret.yaml` like so:
-    
+
     ```yaml
     apiVersion: v1
     kind: Secret
@@ -108,11 +111,16 @@ kubectl apply -f eventing/samples/github-events/auth.yaml
       githubCredentials: >
         {
           "accessToken": "asdfasfdsaf",
-          "secretToken": "password"
+          "secretToken": "personal_access_token_value"
         }
     ```
-    Hint: you can makeup a random access token with `head -c 8 /dev/urandom | base64`.
+
+    Hint: you can makeup a random *accessToken* with:
     
+    ```shell
+    head -c 8 /dev/urandom | base64
+    ```
+
     Then, apply the githubsecret using `kubectl`:
     
     ```shell
