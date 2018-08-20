@@ -368,13 +368,13 @@ func main() {
 	}
 
 	feedNamespace := os.Getenv(sources.FeedNamespaceKey)
-	if len(feedNamespace) != 0 {
+	if len(feedNamespace) == 0 {
 		log.Printf("Fatal: feed namespace not provided, expected envvar %q to be set", sources.FeedNamespaceKey)
 		os.Exit(1)
 	}
 
 	feedServiceAccountName := os.Getenv(sources.FeedServiceAccountKey)
-	if len(feedServiceAccountName) != 0 {
+	if len(feedServiceAccountName) == 0 {
 		log.Printf("Fatal: feed service account not provided, expected envvar %q to be set", sources.FeedServiceAccountKey)
 		os.Exit(1)
 	}
