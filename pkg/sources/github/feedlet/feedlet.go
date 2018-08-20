@@ -327,8 +327,11 @@ func (t *githubEventSource) createWebhook(trigger sources.EventTrigger, name, do
 	config["url"] = fmt.Sprintf("http://%s", domain)
 	config["content_type"] = "json"
 	config["secret"] = secretToken
+
+	// GitHub hook names are required to be named "web" or the name of a GitHub service
+	hookname := "web"
 	hook := ghclient.Hook{
-		Name:   &name,
+		Name:   &hookname,
 		URL:    &domain,
 		Events: events,
 		Active: &active,
