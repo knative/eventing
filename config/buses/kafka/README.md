@@ -33,5 +33,5 @@ from the subscription's channel and forwards them over HTTP to the
 subscriber.
 
 To view logs:
-- for the dispatcher `kail -d kafka-bus-dispatcher -c dispatcher`
-- for the provisioner `kail -d kafka-bus-provisioner -c provisioner`
+- for the dispatcher `kail -d kafka-[namespace]-bus-dispatcher -c dispatcher`
+- for the provisioner `kail -d kafka-[namespace]-bus-provisioner -c provisioner`

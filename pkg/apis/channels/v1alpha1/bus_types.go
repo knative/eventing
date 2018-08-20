@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 
 	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/webhook"
 	kapi "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,10 +41,24 @@ type Bus struct {
 	Status             BusStatus `json:"status,omitempty"`
 }
 
+// Check that Bus can be validated, can be defaulted, and has immutable fields.
+var _ apis.Validatable = (*Bus)(nil)
+var _ apis.Defaultable = (*Bus)(nil)
+var _ apis.Immutable = (*Bus)(nil)
+var _ runtime.Object = (*Bus)(nil)
+var _ webhook.GenericCRD = (*Bus)(nil)
+
 // BusSpec specifies the Bus' parameters for Channels and Subscriptions, how the
 // provisioner and dispatcher for a bus should be run, and which volumes should
 // be mounted into them.
 type BusSpec struct {
+	// TODO: Generation does not work correctly with CRD. They are scrubbed
+	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
+	// So, we add Generation here. Once that gets fixed, remove this and use
+	// ObjectMeta.Generation instead.
+	// +optional
+	Generation int64 `json:"generation,omitempty"`
+
 	// Parameters defines the parameters that must be passed by this Bus'
 	// Channels and their Subscriptions. Channels and Subscriptions fulfill
 	// these parameters with Arguments.

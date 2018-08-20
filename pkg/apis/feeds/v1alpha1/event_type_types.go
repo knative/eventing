@@ -20,7 +20,9 @@ import (
 	"encoding/json"
 
 	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/webhook"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -41,6 +43,8 @@ type EventType struct {
 var _ apis.Validatable = (*EventType)(nil)
 var _ apis.Defaultable = (*EventType)(nil)
 var _ apis.Immutable = (*EventType)(nil)
+var _ runtime.Object = (*EventType)(nil)
+var _ webhook.GenericCRD = (*EventType)(nil)
 
 // EventTypeSpec specifies information about the EventType, including a schema
 // for the event and information about the parameters needed to create a Feed to
@@ -56,6 +60,10 @@ type EventTypeStatus struct {
 	CommonEventTypeStatus `json:",inline"`
 }
 
+func (et *EventType) GetSpecJSON() ([]byte, error) {
+	return json.Marshal(et.Spec)
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // EventTypeList is a list of EventType resources
@@ -64,8 +72,4 @@ type EventTypeList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []EventType `json:"items"`
-}
-
-func (et *EventType) GetSpecJSON() ([]byte, error) {
-	return json.Marshal(et.Spec)
 }

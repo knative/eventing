@@ -20,8 +20,10 @@ import (
 	"encoding/json"
 
 	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/webhook"
 	"k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -42,10 +44,19 @@ type Subscription struct {
 var _ apis.Validatable = (*Subscription)(nil)
 var _ apis.Defaultable = (*Subscription)(nil)
 var _ apis.Immutable = (*Subscription)(nil)
+var _ runtime.Object = (*Subscription)(nil)
+var _ webhook.GenericCRD = (*ClusterBus)(nil)
 
 // SubscriptionSpec specifies the Channel and Subscriber and the configuration
 // arguments for the Subscription.
 type SubscriptionSpec struct {
+	// TODO: Generation does not work correctly with CRD. They are scrubbed
+	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
+	// So, we add Generation here. Once that gets fixed, remove this and use
+	// ObjectMeta.Generation instead.
+	// +optional
+	Generation int64 `json:"generation,omitempty"`
+
 	// Channel is the name of the channel to subscribe to.
 	Channel string `json:"channel"`
 

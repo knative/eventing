@@ -20,7 +20,9 @@ import (
 	"encoding/json"
 
 	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/webhook"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -43,6 +45,8 @@ type ClusterEventSource struct {
 var _ apis.Validatable = (*ClusterEventSource)(nil)
 var _ apis.Defaultable = (*ClusterEventSource)(nil)
 var _ apis.Immutable = (*ClusterEventSource)(nil)
+var _ runtime.Object = (*ClusterEventSource)(nil)
+var _ webhook.GenericCRD = (*ClusterEventSource)(nil)
 
 // ClusterEventSourceSpec describes the type and source of an event, a container image
 // to run for feed lifecycle operations, and configuration options for the
@@ -56,6 +60,10 @@ type ClusterEventSourceStatus struct {
 	CommonEventSourceStatus `json:",inline"`
 }
 
+func (es *ClusterEventSource) GetSpecJSON() ([]byte, error) {
+	return json.Marshal(es.Spec)
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ClusterEventSourceList is a list of ClusterEventSource resources
@@ -64,8 +72,4 @@ type ClusterEventSourceList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []ClusterEventSource `json:"items"`
-}
-
-func (et *ClusterEventType) GetSpecJSON() ([]byte, error) {
-	return json.Marshal(et.Spec)
 }

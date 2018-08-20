@@ -19,7 +19,10 @@ package v1alpha1
 import (
 	"encoding/json"
 
+	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/webhook"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -35,6 +38,13 @@ type ClusterBus struct {
 	Spec               ClusterBusSpec   `json:"spec"`
 	Status             ClusterBusStatus `json:"status,omitempty"`
 }
+
+// Check that Bus can be validated, can be defaulted, and has immutable fields.
+var _ apis.Validatable = (*ClusterBus)(nil)
+var _ apis.Defaultable = (*ClusterBus)(nil)
+var _ apis.Immutable = (*ClusterBus)(nil)
+var _ runtime.Object = (*ClusterBus)(nil)
+var _ webhook.GenericCRD = (*ClusterBus)(nil)
 
 // ClusterBusSpec (what the user wants) for a clusterbus
 type ClusterBusSpec = BusSpec
