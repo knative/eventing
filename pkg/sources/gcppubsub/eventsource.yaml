@@ -18,7 +18,6 @@ metadata:
   name: pubsub.googleapis.com
   namespace: default
 spec:
-  type: pubsub.googleapis.com
   source: pubsub.googleapis.com
   image: github.com/knative/eventing/pkg/sources/gcppubsub
   parameters:
