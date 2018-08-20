@@ -307,14 +307,14 @@ func (c *Controller) syncHandler(key string) error {
 	service, serviceErr = c.syncChannelService(channel)
 	if serviceErr != nil {
 		c.updateChannelStatus(channel, service, serviceErr, virtualService, virtualServiceErr)
-		return err
+		return serviceErr
 	}
 
 	// Sync VirtualService derived from a Channel
 	virtualService, virtualServiceErr = c.syncChannelVirtualService(channel)
 	if virtualServiceErr != nil {
 		c.updateChannelStatus(channel, service, serviceErr, virtualService, virtualServiceErr)
-		return err
+		return virtualServiceErr
 	}
 
 	// Finally, we update the status block of the Channel resource to reflect the
