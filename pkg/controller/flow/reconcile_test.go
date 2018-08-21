@@ -252,14 +252,11 @@ func getOwnerReference() metav1.OwnerReference {
 	}
 }
 
-// wrappedClient is a wrapper around a FakeClient. It is used to manipulate Create() and List()
-// responses.
+// wrappedClient is a wrapper around a FakeClient. It fills in created Channel's
+// status.domainInternal field, whose value is used to determine code flow in reconcile.go.
 // TODO: Replace this with Reactors, once the FakeClient uses Reactors.
 type wrappedClient struct {
 	client client.Client
-	// We list Feeds. The underlying fake client behaves differently than the real API server
-	// and doesn't return the created Feeds, so save them ourselves.
-	createdFeeds []feedsv1alpha1.Feed
 }
 
 func (w *wrappedClient) Get(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
@@ -267,10 +264,6 @@ func (w *wrappedClient) Get(ctx context.Context, key client.ObjectKey, obj runti
 }
 
 func (w *wrappedClient) List(ctx context.Context, opts *client.ListOptions, list runtime.Object) error {
-	if feedList, ok := list.(*feedsv1alpha1.FeedList); ok {
-		feedList.Items = append(feedList.Items, w.createdFeeds...)
-		return nil
-	}
 	return w.client.List(ctx, opts, list)
 }
 
@@ -284,9 +277,6 @@ func (w *wrappedClient) Create(ctx context.Context, obj runtime.Object) error {
 	// it used to control whether the Feed is created.
 	if channel, ok := obj.(*channelsv1alpha1.Channel); ok {
 		channel.Status.DomainInternal = targetDNS
-	}
-	if feed, ok := obj.(*feedsv1alpha1.Feed); ok {
-		w.createdFeeds = append(w.createdFeeds, *feed)
 	}
 	return nil
 }

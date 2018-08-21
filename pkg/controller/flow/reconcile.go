@@ -329,7 +329,18 @@ func (r *reconciler) getFeed(flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
 	feedList := &feedsv1alpha1.FeedList{}
 	err := r.client.List(
 		context.TODO(),
-		&client.ListOptions{Namespace: flow.Namespace, LabelSelector: labels.Everything()},
+		&client.ListOptions{
+			Namespace:     flow.Namespace,
+			LabelSelector: labels.Everything(),
+			// TODO this is here because the fake client needs it. Remove this when it's no longer
+			// needed.
+			Raw: &metav1.ListOptions{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: feedsv1alpha1.SchemeGroupVersion.String(),
+					Kind:       "Feed",
+				},
+			},
+		},
 		feedList)
 	if err != nil {
 		glog.Errorf("Unable to list feeds: %v", err)
