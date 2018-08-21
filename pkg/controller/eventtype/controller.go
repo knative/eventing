@@ -41,9 +41,8 @@ import (
 	feedv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	"github.com/knative/eventing/pkg/client/listers/feeds/v1alpha1"
 	"strings"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
-
-const finalizerName = "event-type-finalizer"
 
 // Controller is the controller implementation for Channel resources
 type Controller struct {
@@ -262,7 +261,7 @@ func (c *Controller) handleEventTypeDelete(old interface{}) error {
 	if len(feeds) == 0 {
 		err = c.removeFinalizer(et)
 		if err != nil {
-			glog.Infof("Unable to remove the %s from the EventType %s: %v", finalizerName, et.Name, err)
+			glog.Infof("Unable to remove the %s from the EventType %s: %v", feedv1alpha1.EventTypeFinalizerName, et.Name, err)
 			return err
 		}
 	} else {
@@ -286,14 +285,10 @@ func (c *Controller) findFeedsUsingEventType(et *feedv1alpha1.EventType) ([]feed
 }
 
 func (c *Controller) removeFinalizer(et *feedv1alpha1.EventType) error {
-	newFinalizers := make([]string, len(et.ObjectMeta.Finalizers))
-	for _, finalizer := range et.ObjectMeta.Finalizers {
-		if finalizer != finalizerName {
-			newFinalizers = append(newFinalizers, finalizer)
-		}
-	}
 	etCopy := et.DeepCopy()
-	etCopy.ObjectMeta.Finalizers = newFinalizers
+	finalizers := sets.NewString(etCopy.GetFinalizers()...)
+	finalizers.Delete(feedv1alpha1.EventTypeFinalizerName)
+	etCopy.ObjectMeta.Finalizers = finalizers.List()
 	_, err := c.feedclientset.FeedsV1alpha1().EventTypes(etCopy.Namespace).Update(etCopy)
 	if err != nil {
 		glog.Infof("Unable to update EventType %s: %v", etCopy.Name, err)
