@@ -327,8 +327,11 @@ func (t *githubEventSource) createWebhook(trigger sources.EventTrigger, name, do
 	config["url"] = fmt.Sprintf("http://%s", domain)
 	config["content_type"] = "json"
 	config["secret"] = secretToken
+
+	// GitHub hook names are required to be named "web" or the name of a GitHub service
+	hookname := "web"
 	hook := ghclient.Hook{
-		Name:   &name,
+		Name:   &hookname,
 		URL:    &domain,
 		Events: events,
 		Active: &active,
@@ -368,13 +371,13 @@ func main() {
 	}
 
 	feedNamespace := os.Getenv(sources.FeedNamespaceKey)
-	if len(feedNamespace) != 0 {
+	if len(feedNamespace) == 0 {
 		log.Printf("Fatal: feed namespace not provided, expected envvar %q to be set", sources.FeedNamespaceKey)
 		os.Exit(1)
 	}
 
 	feedServiceAccountName := os.Getenv(sources.FeedServiceAccountKey)
-	if len(feedServiceAccountName) != 0 {
+	if len(feedServiceAccountName) == 0 {
 		log.Printf("Fatal: feed service account not provided, expected envvar %q to be set", sources.FeedServiceAccountKey)
 		os.Exit(1)
 	}
