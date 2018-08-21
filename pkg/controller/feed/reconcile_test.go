@@ -481,6 +481,9 @@ func getNewStartJob() *batchv1.Job {
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{"sidecar.istio.io/inject": "false"},
+				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
 						Name:  "feedlet",
