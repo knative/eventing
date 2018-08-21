@@ -38,8 +38,6 @@ const (
 	OperationStartFeed Operation = "START"
 	// OperationStopFeed specifies a feed should be stopped
 	OperationStopFeed = "STOP"
-	// istio side car injection annotation
-	sidecarIstioInjectAnnotation = "sidecar.istio.io/inject"
 )
 
 // EnvVar specifies the names of the environment variables passed to the
@@ -185,16 +183,11 @@ func makePodTemplate(feed *feedsv1alpha1.Feed, source *feedsv1alpha1.EventSource
 	}
 
 	return &corev1.PodTemplateSpec{
-		ObjectMeta: metav1.ObjectMeta{
-			// don't inject Istio sidecar
-			// so if the feed can to access external services during StartFeed/StopFeed
-			Annotations: map[string]string{sidecarIstioInjectAnnotation: "false"},
-		},
 		Spec: corev1.PodSpec{
 			ServiceAccountName: feed.Spec.ServiceAccountName,
 			RestartPolicy:      corev1.RestartPolicyNever,
 			Containers: []corev1.Container{
-				corev1.Container{
+				{
 					Name:            "feedlet",
 					Image:           source.Spec.Image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
