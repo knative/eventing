@@ -68,9 +68,15 @@ func (b *StubBus) Run(threadness int, stopCh <-chan struct{}) {
 }
 
 func (b *StubBus) addChannel(channelRef buses.ChannelReference, parameters buses.ResolvedParameters) {
-	b.channels[channelRef] = &stubChannel{
-		parameters:    parameters,
-		subscriptions: make(map[buses.SubscriptionReference]*stubSubscription),
+	if channel, ok := b.channels[channelRef]; ok {
+		// update channel
+		channel.parameters = parameters
+	} else {
+		// create channel
+		b.channels[channelRef] = &stubChannel{
+			parameters:    parameters,
+			subscriptions: make(map[buses.SubscriptionReference]*stubSubscription),
+		}
 	}
 }
 
@@ -95,6 +101,7 @@ func (c *stubChannel) receiveMessage(message *buses.Message) {
 }
 
 func (c *stubChannel) addSubscription(subscriptionRef buses.SubscriptionReference, parameters buses.ResolvedParameters, bus buses.BusDispatcher) {
+	// create or update subscription
 	c.subscriptions[subscriptionRef] = &stubSubscription{
 		bus:             bus,
 		parameters:      parameters,
