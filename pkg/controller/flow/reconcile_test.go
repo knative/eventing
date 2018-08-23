@@ -259,6 +259,9 @@ type wrappedClient struct {
 	client client.Client
 }
 
+// Assert that wrappedClient can act as a client.Client.
+var _ client.Client = &wrappedClient{}
+
 func (w *wrappedClient) Get(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 	return w.client.Get(ctx, key, obj)
 }

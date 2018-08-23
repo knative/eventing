@@ -261,7 +261,7 @@ func (r *reconciler) createSubscription(channelName string, target string, flow 
 }
 
 func (r *reconciler) reconcileFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
-	feed, err := r.getFeed(flow)
+	feed, err := r.getFeed(context.TODO(), flow)
 	if errors.IsNotFound(err) {
 		feed, err = r.createFeed(channelDNS, flow)
 		if err != nil {
@@ -325,10 +325,10 @@ func (r *reconciler) getDefaultClusterBusName() (string, error) {
 	return fallbackClusterBusName, nil // return the fallback value
 }
 
-func (r *reconciler) getFeed(flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
+func (r *reconciler) getFeed(ctx context.Context, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
 	feedList := &feedsv1alpha1.FeedList{}
 	err := r.client.List(
-		context.TODO(),
+		ctx,
 		&client.ListOptions{
 			Namespace:     flow.Namespace,
 			LabelSelector: labels.Everything(),
@@ -347,8 +347,7 @@ func (r *reconciler) getFeed(flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
 		return nil, err
 	}
 	for _, feed := range feedList.Items {
-		ownerRef := metav1.GetControllerOf(&feed)
-		if ownerRef != nil && ownerRef.Name == flow.Name && ownerRef.UID == flow.UID {
+		if metav1.IsControlledBy(&feed, flow) {
 			return &feed, nil
 		}
 	}
