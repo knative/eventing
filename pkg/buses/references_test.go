@@ -33,6 +33,38 @@ const (
 	referencesTestSubscriptionName = "test-subscription"
 )
 
+func TestNewBusReference(t *testing.T) {
+	bus := &channelsv1alpha1.Bus{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      referencesTestBusName,
+			Namespace: referencesTestNamespace,
+		},
+	}
+	expected := buses.BusReference{
+		Name:      referencesTestBusName,
+		Namespace: referencesTestNamespace,
+	}
+	actual := buses.NewBusReference(bus)
+	if expected != actual {
+		t.Errorf("%s expected: %+v got: %+v", "BusReference", expected, actual)
+	}
+}
+
+func TestNewBusReference_ClusterBus(t *testing.T) {
+	clusterBus := &channelsv1alpha1.ClusterBus{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: referencesTestClusterBusName,
+		},
+	}
+	expected := buses.BusReference{
+		Name: referencesTestClusterBusName,
+	}
+	actual := buses.NewBusReference(clusterBus)
+	if expected != actual {
+		t.Errorf("%s expected: %+v got: %+v", "BusReference", expected, actual)
+	}
+}
+
 func TestNewBusReferenceFromNames(t *testing.T) {
 	expected := buses.BusReference{
 		Name:      referencesTestBusName,

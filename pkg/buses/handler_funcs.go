@@ -43,7 +43,7 @@ type ResolvedParameters = map[string]string
 // created or deleted, or if one of the relevant resources is changed.
 type EventHandlerFuncs struct {
 	// BusFunc is invoked when the Bus requires sync.
-	BusFunc func(bus channelsv1alpha1.GenericBus) error
+	BusFunc func(busRef BusReference) error
 
 	// ProvisionFunc is invoked when a new Channel should be provisioned or when
 	// the attributes change.
@@ -65,7 +65,8 @@ type EventHandlerFuncs struct {
 
 func (h EventHandlerFuncs) onBus(bus channelsv1alpha1.GenericBus, reconciler *Reconciler) error {
 	if h.BusFunc != nil {
-		err := h.BusFunc(bus)
+		busRef := NewBusReference(bus)
+		err := h.BusFunc(busRef)
 		if err != nil {
 			reconciler.RecordBusEventf(corev1.EventTypeWarning, errResourceSync, "Error syncing Bus: %s", err)
 		} else {
@@ -82,10 +83,10 @@ func (h EventHandlerFuncs) onProvision(channel *channelsv1alpha1.Channel, reconc
 		if err != nil {
 			return err
 		}
-		channelRef := NewChannelReference(channel)
-		err = h.ProvisionFunc(channelRef, parameters)
 		channelCopy := channel.DeepCopy()
 		var cond *channelsv1alpha1.ChannelCondition
+		channelRef := NewChannelReference(channel)
+		err = h.ProvisionFunc(channelRef, parameters)
 		if err != nil {
 			reconciler.RecordChannelEventf(channelRef, corev1.EventTypeWarning, errResourceSync, "Error provisioning channel: %s", err)
 			cond = util.NewChannelCondition(channelsv1alpha1.ChannelProvisioned, corev1.ConditionFalse, errResourceSync, err.Error())
@@ -101,8 +102,7 @@ func (h EventHandlerFuncs) onProvision(channel *channelsv1alpha1.Channel, reconc
 			if errS != nil {
 				glog.Warningf("Could not update channel status: %v", errS)
 				if err != nil {
-					// return the original err, since it is more meaningful
-					return err
+					return fmt.Errorf("error provisioning channel (%v); error updating channel status (%v)", err, errS)
 				}
 				return errS
 			}
@@ -115,14 +115,12 @@ func (h EventHandlerFuncs) onProvision(channel *channelsv1alpha1.Channel, reconc
 func (h EventHandlerFuncs) onUnprovision(channel *channelsv1alpha1.Channel, reconciler *Reconciler) error {
 	if h.UnprovisionFunc != nil {
 		channelRef := NewChannelReference(channel)
-		err := h.UnprovisionFunc(channelRef)
-		if err != nil {
+		if err := h.UnprovisionFunc(channelRef); err != nil {
 			reconciler.RecordChannelEventf(channelRef, corev1.EventTypeWarning, errResourceSync, "Error unprovisioning channel: %s", err)
-		} else {
-			reconciler.RecordChannelEventf(channelRef, corev1.EventTypeNormal, successSynced, "Channel unprovisioned successfully")
+			return err
 		}
+		reconciler.RecordChannelEventf(channelRef, corev1.EventTypeNormal, successSynced, "Channel unprovisioned successfully")
 		// skip updating status conditions since the channel was deleted
-		return err
 	}
 	return nil
 }
@@ -135,9 +133,9 @@ func (h EventHandlerFuncs) onSubscribe(subscription *channelsv1alpha1.Subscripti
 		}
 		channelRef := NewChannelReferenceFromSubscription(subscription)
 		subscriptionRef := NewSubscriptionReference(subscription)
-		err = h.SubscribeFunc(channelRef, subscriptionRef, parameters)
 		subscriptionCopy := subscription.DeepCopy()
 		var cond *channelsv1alpha1.SubscriptionCondition
+		err = h.SubscribeFunc(channelRef, subscriptionRef, parameters)
 		if err != nil {
 			reconciler.RecordSubscriptionEventf(subscriptionRef, corev1.EventTypeWarning, errResourceSync, "Error subscribing: %s", err)
 			cond = util.NewSubscriptionCondition(channelsv1alpha1.SubscriptionDispatching, corev1.ConditionFalse, errResourceSync, err.Error())
@@ -152,8 +150,7 @@ func (h EventHandlerFuncs) onSubscribe(subscription *channelsv1alpha1.Subscripti
 			if errS != nil {
 				glog.Warningf("Could not update subscription status: %v", errS)
 				if err != nil {
-					// return the original err, since it is more meaningful
-					return err
+					return fmt.Errorf("error subscribing (%v); error updating subscription status (%v)", err, errS)
 				}
 				return errS
 			}
@@ -167,14 +164,12 @@ func (h EventHandlerFuncs) onUnsubscribe(subscription *channelsv1alpha1.Subscrip
 	if h.UnsubscribeFunc != nil {
 		channelRef := NewChannelReferenceFromSubscription(subscription)
 		subscriptionRef := NewSubscriptionReference(subscription)
-		err := h.UnsubscribeFunc(channelRef, subscriptionRef)
-		if err != nil {
+		if err := h.UnsubscribeFunc(channelRef, subscriptionRef); err != nil {
 			reconciler.RecordSubscriptionEventf(subscriptionRef, corev1.EventTypeWarning, errResourceSync, "Error unsubscribing: %s", err)
-		} else {
-			reconciler.RecordSubscriptionEventf(subscriptionRef, corev1.EventTypeNormal, successSynced, "Unsubscribed successfully")
+			return err
 		}
+		reconciler.RecordSubscriptionEventf(subscriptionRef, corev1.EventTypeNormal, successSynced, "Unsubscribed successfully")
 		// skip updating status conditions since the subscription was deleted
-		return err
 	}
 	return nil
 }

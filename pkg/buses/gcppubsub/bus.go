@@ -240,7 +240,7 @@ func (b *CloudPubSubBus) createOrUpdateSubscription(channelRef buses.ChannelRefe
 	if exists, err := subscription.Exists(ctx); err != nil {
 		return err
 	} else if exists {
-		// TODO update subscription configuration
+		// TODO once the bus has configurable params, update subscription configuration
 		// _, err := subscription.Update(b.ctx, pubsub.SubscriptionConfigToUpdate{})
 		// return err
 		return nil

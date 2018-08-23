@@ -62,12 +62,18 @@ func (c *Cache) Subscription(subscriptionRef SubscriptionReference) (*channelsv1
 // AddChannel adds, or updates, the provided channel to the cache for later
 // retrieal by its reference.
 func (c *Cache) AddChannel(channel *channelsv1alpha1.Channel) {
+	if channel == nil {
+		return
+	}
 	channelRef := NewChannelReference(channel)
 	c.channels[channelRef] = channel
 }
 
 // RemoveChannel removes the provided channel from the cache.
 func (c *Cache) RemoveChannel(channel *channelsv1alpha1.Channel) {
+	if channel == nil {
+		return
+	}
 	channelRef := NewChannelReference(channel)
 	delete(c.channels, channelRef)
 }
@@ -75,12 +81,18 @@ func (c *Cache) RemoveChannel(channel *channelsv1alpha1.Channel) {
 // AddSubscription adds, or updates, the provided subscription to the cache for
 // later retrieal by its reference.
 func (c *Cache) AddSubscription(subscription *channelsv1alpha1.Subscription) {
+	if subscription == nil {
+		return
+	}
 	subscriptionRef := NewSubscriptionReference(subscription)
 	c.subscriptions[subscriptionRef] = subscription
 }
 
 // RemoveSubscription removes the provided subscription from the cache.
 func (c *Cache) RemoveSubscription(subscription *channelsv1alpha1.Subscription) {
+	if subscription == nil {
+		return
+	}
 	subscriptionRef := NewSubscriptionReference(subscription)
 	delete(c.subscriptions, subscriptionRef)
 }

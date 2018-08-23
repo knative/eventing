@@ -68,22 +68,22 @@ type BusProvisioner interface {
 // EventHandlerFuncs are used to be notified when a channel or subscription is
 // created, updated or removed.
 func NewBusProvisioner(busRef BusReference, handlerFuncs EventHandlerFuncs, opts *BusOpts) BusProvisioner {
-	bus := &bus{
-		busRef:       busRef,
-		handlerFuncs: handlerFuncs,
+	if opts == nil {
+		opts = &BusOpts{}
 	}
-
 	if opts.Cache == nil {
 		opts.Cache = NewCache()
 	}
-	bus.cache = opts.Cache
-
 	if opts.Reconciler == nil {
-		opts.Reconciler = NewReconciler(Provisioner, opts.MasterURL, opts.KubeConfig, bus.cache, handlerFuncs)
+		opts.Reconciler = NewReconciler(Provisioner, opts.MasterURL, opts.KubeConfig, opts.Cache, handlerFuncs)
 	}
-	bus.reconciler = opts.Reconciler
 
-	return bus
+	return &bus{
+		busRef:       busRef,
+		handlerFuncs: handlerFuncs,
+		cache:        opts.Cache,
+		reconciler:   opts.Reconciler,
+	}
 }
 
 // BusDispatcher dispatches messages from channels to subscribers via backing
@@ -97,34 +97,37 @@ type BusDispatcher interface {
 // EventHandlerFuncs are used to be notified when a subscription is created,
 // updated or removed, or a message is received.
 func NewBusDispatcher(busRef BusReference, handlerFuncs EventHandlerFuncs, opts *BusOpts) BusDispatcher {
-	bus := &bus{
-		busRef:       busRef,
-		handlerFuncs: handlerFuncs,
-	}
+	var b *bus
 
+	if opts == nil {
+		opts = &BusOpts{}
+	}
 	if opts.Cache == nil {
 		opts.Cache = NewCache()
 	}
-	bus.cache = opts.Cache
-
 	if opts.Reconciler == nil {
-		opts.Reconciler = NewReconciler(Dispatcher, opts.MasterURL, opts.KubeConfig, bus.cache, handlerFuncs)
+		opts.Reconciler = NewReconciler(Dispatcher, opts.MasterURL, opts.KubeConfig, opts.Cache, handlerFuncs)
 	}
-	bus.reconciler = opts.Reconciler
-
 	if opts.MessageDispatcher == nil {
 		opts.MessageDispatcher = NewMessageDispatcher()
 	}
-	bus.dispatcher = opts.MessageDispatcher
-
 	if opts.MessageReceiver == nil {
 		opts.MessageReceiver = NewMessageReceiver(func(channelRef ChannelReference, message *Message) error {
-			return bus.receiveMessage(channelRef, message)
+			return b.receiveMessage(channelRef, message)
 		})
 	}
-	bus.receiver = opts.MessageReceiver
 
-	return bus
+	b = &bus{
+		busRef:       busRef,
+		handlerFuncs: handlerFuncs,
+
+		cache:      opts.Cache,
+		reconciler: opts.Reconciler,
+		dispatcher: opts.MessageDispatcher,
+		receiver:   opts.MessageReceiver,
+	}
+
+	return b
 }
 
 // Run starts the bus's processing.

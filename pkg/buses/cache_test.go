@@ -30,7 +30,7 @@ const (
 	cacheTestSubscription = "test-subscription"
 )
 
-func TestStoreErrsForUnknownChannel(t *testing.T) {
+func TestCacheErrsForUnknownChannel(t *testing.T) {
 	cache := buses.NewCache()
 	channelRef := buses.NewChannelReferenceFromNames(cacheTestChannel, cacheDefaultNamespace)
 	var expected *channelsv1alpha1.Channel
@@ -43,7 +43,7 @@ func TestStoreErrsForUnknownChannel(t *testing.T) {
 	}
 }
 
-func TestStoreRetrievesKnownChannel(t *testing.T) {
+func TestCacheRetrievesKnownChannel(t *testing.T) {
 	cache := buses.NewCache()
 	channelRef := buses.NewChannelReferenceFromNames(cacheTestChannel, cacheDefaultNamespace)
 	expected := makeChannel(channelRef)
@@ -57,7 +57,7 @@ func TestStoreRetrievesKnownChannel(t *testing.T) {
 	}
 }
 
-func TestStoreRemovesKnownChannel(t *testing.T) {
+func TestCacheRemovesKnownChannel(t *testing.T) {
 	cache := buses.NewCache()
 	channelRef := buses.NewChannelReferenceFromNames(cacheTestChannel, cacheDefaultNamespace)
 	channel := makeChannel(channelRef)
@@ -73,7 +73,14 @@ func TestStoreRemovesKnownChannel(t *testing.T) {
 	}
 }
 
-func TestStoreErrsForUnknownSubscription(t *testing.T) {
+func TestCacheNilChannel(t *testing.T) {
+	cache := buses.NewCache()
+	var channel *channelsv1alpha1.Channel
+	cache.AddChannel(channel)
+	cache.RemoveChannel(channel)
+}
+
+func TestCacheErrsForUnknownSubscription(t *testing.T) {
 	cache := buses.NewCache()
 	subscriptionRef := buses.NewSubscriptionReferenceFromNames(cacheTestSubscription, cacheDefaultNamespace)
 	var expected *channelsv1alpha1.Subscription
@@ -86,7 +93,7 @@ func TestStoreErrsForUnknownSubscription(t *testing.T) {
 	}
 }
 
-func TestStoreRetrievesKnownSubscription(t *testing.T) {
+func TestCacheRetrievesKnownSubscription(t *testing.T) {
 	cache := buses.NewCache()
 	subscriptionRef := buses.NewSubscriptionReferenceFromNames(cacheTestSubscription, cacheDefaultNamespace)
 	expected := makeSubscription(subscriptionRef)
@@ -100,7 +107,7 @@ func TestStoreRetrievesKnownSubscription(t *testing.T) {
 	}
 }
 
-func TestStoreRemovesKnownSubscription(t *testing.T) {
+func TestCacheRemovesKnownSubscription(t *testing.T) {
 	cache := buses.NewCache()
 	subscriptionRef := buses.NewSubscriptionReferenceFromNames(cacheTestSubscription, cacheDefaultNamespace)
 	subscription := makeSubscription(subscriptionRef)
@@ -114,6 +121,13 @@ func TestStoreRemovesKnownSubscription(t *testing.T) {
 	if expected != actual {
 		t.Errorf("%s expected: %+v got: %+v", "Subscription", expected, actual)
 	}
+}
+
+func TestCacheNilSubscription(t *testing.T) {
+	cache := buses.NewCache()
+	var subscription *channelsv1alpha1.Subscription
+	cache.AddSubscription(subscription)
+	cache.RemoveSubscription(subscription)
 }
 
 func makeChannel(channelRef buses.ChannelReference) *channelsv1alpha1.Channel {

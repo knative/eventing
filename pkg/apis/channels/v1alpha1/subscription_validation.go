@@ -27,12 +27,16 @@ func (s *Subscription) Validate() *apis.FieldError {
 }
 
 func (ss *SubscriptionSpec) Validate() *apis.FieldError {
-	if len(ss.Channel) == 0 {
+	if ss.Channel == "" {
 		fe := apis.ErrMissingField("channel")
 		fe.Details = "the Subscription must reference a Channel"
 		return fe
 	}
-	// TODO: should subscriptions have a subscriber?
+	if ss.Subscriber == "" {
+		fe := apis.ErrMissingField("subscriber")
+		fe.Details = "the Subscription must reference a Subscriber"
+		return fe
+	}
 	return nil
 }
 

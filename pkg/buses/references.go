@@ -29,6 +29,15 @@ type BusReference struct {
 	Name      string
 }
 
+// NewBusReference creates a BusReference for a bus.
+func NewBusReference(bus channelsv1alpha1.GenericBus) BusReference {
+	meta := bus.GetObjectMeta()
+	return BusReference{
+		Namespace: meta.GetNamespace(),
+		Name:      meta.GetName(),
+	}
+}
+
 // NewBusReferenceFromNames creates a BusReference for a name and namespace.
 func NewBusReferenceFromNames(name, namespace string) BusReference {
 	return BusReference{

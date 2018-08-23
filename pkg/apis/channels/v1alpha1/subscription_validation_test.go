@@ -16,9 +16,10 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/pkg/apis"
-	"testing"
 )
 
 func TestSubscriptionSpecValidation(t *testing.T) {
@@ -29,24 +30,28 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 	}{{
 		name: "valid",
 		c: &SubscriptionSpec{
-			Channel: "foo",
-		},
-		want: nil,
-	}, {
-		name: "valid with subscriber",
-		c: &SubscriptionSpec{
 			Channel:    "bar",
 			Subscriber: "foo",
 		},
 		want: nil,
 	}, {
-		name: "valid with subscriber and arguments",
+		name: "valid with arguments",
 		c: &SubscriptionSpec{
 			Channel:    "bar",
 			Subscriber: "foo",
 			Arguments:  &[]Argument{{Name: "foo", Value: "bar"}},
 		},
 		want: nil,
+	}, {
+		name: "missing subscriber",
+		c: &SubscriptionSpec{
+			Channel: "foo",
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("subscriber")
+			fe.Details = "the Subscription must reference a Subscriber"
+			return fe
+		}(),
 	}, {
 		name: "empty",
 		c:    &SubscriptionSpec{},
