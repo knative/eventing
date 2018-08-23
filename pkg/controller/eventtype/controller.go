@@ -44,6 +44,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
+const eventTypeFinalizerName = "event-type-finalizer"
+
 // Controller is the controller implementation for Channel resources
 type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
@@ -225,9 +227,11 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	// handleEventTypeDelete checks the deletion timestamp and will only affect EventTypes that have
-	// been marked for deletion.
-	return c.handleEventTypeDelete(et)
+	if et.ObjectMeta.DeletionTimestamp == nil {
+		return c.addEventTypeFinalizer(et)
+	} else {
+		return c.handleEventTypeDelete(et)
+	}
 }
 
 func (c *Controller) handleFeedUpdate(old, new interface{}) {
@@ -261,7 +265,7 @@ func (c *Controller) handleEventTypeDelete(old interface{}) error {
 	if len(feeds) == 0 {
 		err = c.removeFinalizer(et)
 		if err != nil {
-			glog.Infof("Unable to remove the %s from the EventType %s: %v", feedv1alpha1.EventTypeFinalizerName, et.Name, err)
+			glog.Infof("Unable to remove the %s from the EventType %s: %v", eventTypeFinalizerName, et.Name, err)
 			return err
 		}
 	} else {
@@ -284,10 +288,26 @@ func (c *Controller) findFeedsUsingEventType(et *feedv1alpha1.EventType) ([]feed
 	return feedList.Items, nil
 }
 
+func (c *Controller) addEventTypeFinalizer(et *feedv1alpha1.EventType) error {
+	etCopy := et.DeepCopy()
+	finalizers := sets.NewString(etCopy.Finalizers...)
+	finalizers.Insert(eventTypeFinalizerName)
+	if finalizers.Len() == len(etCopy.Finalizers) {
+		return nil
+	}
+	etCopy.Finalizers = finalizers.List()
+	_, err := c.feedclientset.FeedsV1alpha1().EventTypes(etCopy.Namespace).Update(etCopy)
+	if err != nil {
+		glog.Infof("Unable to update EventType %s: %v", etCopy.Name, err)
+		return err
+	}
+	return nil
+}
+
 func (c *Controller) removeFinalizer(et *feedv1alpha1.EventType) error {
 	etCopy := et.DeepCopy()
 	finalizers := sets.NewString(etCopy.GetFinalizers()...)
-	finalizers.Delete(feedv1alpha1.EventTypeFinalizerName)
+	finalizers.Delete(eventTypeFinalizerName)
 	etCopy.ObjectMeta.Finalizers = finalizers.List()
 	_, err := c.feedclientset.FeedsV1alpha1().EventTypes(etCopy.Namespace).Update(etCopy)
 	if err != nil {

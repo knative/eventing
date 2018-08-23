@@ -16,24 +16,11 @@ limitations under the License.
 
 package v1alpha1
 
-import (
-	"k8s.io/apimachinery/pkg/util/sets"
-)
-
-const EventTypeFinalizerName = "event-type-finalizer"
-
 func (et *EventType) SetDefaults() {
 	et.Spec.SetDefaults()
-	addEventTypeFinalizer(et)
 }
 
 func (ets *EventTypeSpec) SetDefaults() {
 	ets.CommonEventTypeSpec.SetDefaults()
 	// TODO anything?
-}
-
-func addEventTypeFinalizer(et *EventType) {
-	finalizers := sets.NewString(et.Finalizers...)
-	finalizers.Insert(EventTypeFinalizerName)
-	et.Finalizers = finalizers.List()
 }
