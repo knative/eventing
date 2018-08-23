@@ -53,9 +53,9 @@ func main() {
 	flag.StringVar(&opts.MasterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	flag.Parse()
 
-	bus, err := kafka.NewKafkaBusProvisioner(busRef, brokers, opts)
+	bus, err := kafka.NewKafkaBusDispatcher(busRef, brokers, opts)
 	if err != nil {
-		glog.Fatalf("Error starting kafka bus provisioner: %v", err)
+		glog.Fatalf("Error starting kafka bus dispatcher: %v", err)
 	}
 
 	// set up signals so we handle the first shutdown signal gracefully
