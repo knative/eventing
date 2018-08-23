@@ -373,13 +373,6 @@ func getFeedFailingWithMissingEventSource() *feedsv1alpha1.Feed {
 
 func getStartInProgressFeed() *feedsv1alpha1.Feed {
 	feed := getNewFeed()
-	feed.SetOwnerReference(&metav1.OwnerReference{
-		APIVersion:         feedsv1alpha1.SchemeGroupVersion.String(),
-		Kind:               "EventType",
-		Name:               getEventType().Name,
-		Controller:         &falseVal,
-		BlockOwnerDeletion: &trueVal,
-	})
 	feed.AddFinalizer(finalizerName)
 
 	feed.Status.InitializeConditions()

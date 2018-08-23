@@ -326,37 +326,13 @@ func (r *reconciler) getEventTypeName(feed *feedsv1alpha1.Feed) string {
 	return ""
 }
 
-// setEventTypeOwnerReference makes the given Feed's referenced EventType or
-// ClusterEventType a non-controlling owner of the Feed.
+// setEventTypeOwnerReference makes the given Feed's referenced ClusterEventType a non-controlling
+// owner of the Feed.
 func (r *reconciler) setEventTypeOwnerReference(ctx context.Context, feed *feedsv1alpha1.Feed) error {
-	// TODO(nicholss): need to set the owner on a cluser level event type as well.
-	if len(feed.Spec.Trigger.EventType) > 0 {
-		return r.setNamespacedEventTypeOwnerReference(ctx, feed)
-	} else if len(feed.Spec.Trigger.ClusterEventType) > 0 {
+	// Namespaced EventTypes use a finalizer and do not need an Owners reference.
+	if len(feed.Spec.Trigger.ClusterEventType) > 0 {
 		return r.setClusterEventTypeOwnerReference(ctx, feed)
 	}
-	return nil
-}
-
-// setEventTypeOwnerReference makes the given Feed's referenced EventType a
-// non-controlling owner of the Feed.
-func (r *reconciler) setNamespacedEventTypeOwnerReference(ctx context.Context, feed *feedsv1alpha1.Feed) error {
-	et := &feedsv1alpha1.EventType{}
-	if err := r.client.Get(ctx, client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.EventType}, et); err != nil {
-		if errors.IsNotFound(err) {
-			glog.Errorf("Feed EventType not found, will not set finalizer")
-			return nil
-		}
-		return err
-	}
-
-	blockOwnerDeletion := true
-	isController := false
-	ref := metav1.NewControllerRef(et, feedsv1alpha1.SchemeGroupVersion.WithKind("EventType"))
-	ref.BlockOwnerDeletion = &blockOwnerDeletion
-	ref.Controller = &isController
-
-	feed.SetOwnerReference(ref)
 	return nil
 }
 

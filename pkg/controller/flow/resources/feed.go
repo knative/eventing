@@ -30,7 +30,7 @@ func MakeFeed(channelDNS string, flow *v1alpha1.Flow) *feedsv1alpha1.Feed {
 			Name:      flow.Name,
 			Namespace: flow.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
-				*controller.NewControllerRef(flow),
+				*controller.NewControllerRef(flow, true),
 			},
 		},
 		Spec: feedsv1alpha1.FeedSpec{

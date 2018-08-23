@@ -31,7 +31,7 @@ func MakeSubscription(channelName string, target string, flow *v1alpha1.Flow) *c
 			Name:      subscriptionName,
 			Namespace: flow.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
-				*controller.NewControllerRef(flow),
+				*controller.NewControllerRef(flow, false),
 			},
 		},
 		Spec: channelsv1alpha1.SubscriptionSpec{
