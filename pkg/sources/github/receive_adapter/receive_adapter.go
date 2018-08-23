@@ -81,8 +81,6 @@ func (h *GithubHandler) HandlePullRequest(payload interface{}, header webhooks.H
 
 func main() {
 	flag.Parse()
-	// set the logs to stderr so kube will see them.
-	flag.Lookup("logtostderr").Value.Set("true")
 
 	target := os.Getenv(envTarget)
 
