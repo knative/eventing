@@ -44,7 +44,7 @@ ko apply -f config/buses/stub
 ko apply -f pkg/sources/github/
 ```
 
-5. Check that the GitHub is now showing up as an event source and there's an event type for *pullrequests*
+5. Check that the GitHub is now showing up as an event source and there's an event type for *dev.knative.github.pullrequest*
 
 ```shell
 kubectl get eventsources
@@ -78,7 +78,7 @@ In response to a pull request event, the _legit_ Service will add `(looks pretty
 Deploy the _legit_ service via:
 
 ```shell
-ko apply sample/github/legit-service.yaml
+ko apply -f sample/github/legit-service.yaml
 ```
 
 Once deployed, you can inspect the created resources with `kubectl` commands:

@@ -20,7 +20,7 @@ metadata:
 spec:
   serviceAccountName: feed-sa
   trigger:
-    eventType: pullrequest
+    eventType: dev.knative.github.pullrequest
     resource: <org>/<repo> # TODO: Fill this out
     service: github
     parameters:
