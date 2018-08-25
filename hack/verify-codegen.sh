@@ -20,7 +20,7 @@ set -o pipefail
 
 source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/library.sh
 
-readonly TMP_DIFFROOT="$(mktemp -d -p ${REPO_ROOT_DIR})"
+readonly TMP_DIFFROOT="$(mktemp -d ${REPO_ROOT_DIR}/tmpdiffroot.XXXXXX)"
 
 cleanup() {
   rm -rf "${TMP_DIFFROOT}"
