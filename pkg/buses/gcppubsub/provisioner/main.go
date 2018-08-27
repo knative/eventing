@@ -75,7 +75,7 @@ func main() {
 	}
 
 	if err := monitor.Run(namespace, name, threadsPerMonitor, stopCh); err != nil {
-		glog.Fatalf("Error running monitor: %s", err.Error())
+		glog.Fatalf("Error running monitor: %v", err)
 	}
 }
 

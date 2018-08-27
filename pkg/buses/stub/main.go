@@ -64,7 +64,7 @@ func NewStubBus(ref *buses.BusReference, monitor *buses.Monitor) *StubBus {
 func (b *StubBus) Run(stopCh <-chan struct{}) {
 	go func() {
 		if err := b.monitor.Run(b.ref.Namespace, b.ref.Name, 1, stopCh); err != nil {
-			glog.Fatalf("Error running monitor: %s", err.Error())
+			glog.Fatalf("Error running monitor: %v", err)
 		}
 	}()
 	b.monitor.WaitForCacheSync(stopCh)

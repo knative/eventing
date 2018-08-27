@@ -68,12 +68,12 @@ func main() {
 
 	clusterAdmin, err := sarama.NewClusterAdmin(brokers, conf)
 	if err != nil {
-		glog.Fatalf("Error building kafka admin client: %s", err.Error())
+		glog.Fatalf("Error building kafka admin client: %v", err)
 	}
 
 	provisioner, err := NewKafkaProvisioner(name, namespace, *masterURL, *kubeconfig, clusterAdmin)
 	if err != nil {
-		glog.Fatalf("Error building kafka provisioner: %s", err.Error())
+		glog.Fatalf("Error building kafka provisioner: %v", err)
 	}
 
 	stopCh := signals.SetupSignalHandler()
