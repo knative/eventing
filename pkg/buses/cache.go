@@ -41,20 +41,20 @@ type Cache struct {
 
 // Channel returns a cached channel for provided reference or an error if the
 // channel is not in the cache.
-func (c *Cache) Channel(channelRef ChannelReference) (*channelsv1alpha1.Channel, error) {
-	channel, ok := c.channels[channelRef]
+func (c *Cache) Channel(ref ChannelReference) (*channelsv1alpha1.Channel, error) {
+	channel, ok := c.channels[ref]
 	if !ok {
-		return nil, fmt.Errorf("unknown channel %q", channelRef.String())
+		return nil, fmt.Errorf("unknown channel %q", ref.String())
 	}
 	return channel, nil
 }
 
 // Subscription returns a cached subscription for provided reference or an
 // error if the subscription is not in the cache.
-func (c *Cache) Subscription(subscriptionRef SubscriptionReference) (*channelsv1alpha1.Subscription, error) {
-	subscription, ok := c.subscriptions[subscriptionRef]
+func (c *Cache) Subscription(ref SubscriptionReference) (*channelsv1alpha1.Subscription, error) {
+	subscription, ok := c.subscriptions[ref]
 	if !ok {
-		return nil, fmt.Errorf("unknown subscription %q", subscriptionRef.String())
+		return nil, fmt.Errorf("unknown subscription %q", ref.String())
 	}
 	return subscription, nil
 }
@@ -65,8 +65,8 @@ func (c *Cache) AddChannel(channel *channelsv1alpha1.Channel) {
 	if channel == nil {
 		return
 	}
-	channelRef := NewChannelReference(channel)
-	c.channels[channelRef] = channel
+	ref := NewChannelReference(channel)
+	c.channels[ref] = channel
 }
 
 // RemoveChannel removes the provided channel from the cache.
@@ -74,8 +74,8 @@ func (c *Cache) RemoveChannel(channel *channelsv1alpha1.Channel) {
 	if channel == nil {
 		return
 	}
-	channelRef := NewChannelReference(channel)
-	delete(c.channels, channelRef)
+	ref := NewChannelReference(channel)
+	delete(c.channels, ref)
 }
 
 // AddSubscription adds, or updates, the provided subscription to the cache for
@@ -84,8 +84,8 @@ func (c *Cache) AddSubscription(subscription *channelsv1alpha1.Subscription) {
 	if subscription == nil {
 		return
 	}
-	subscriptionRef := NewSubscriptionReference(subscription)
-	c.subscriptions[subscriptionRef] = subscription
+	ref := NewSubscriptionReference(subscription)
+	c.subscriptions[ref] = subscription
 }
 
 // RemoveSubscription removes the provided subscription from the cache.
@@ -93,6 +93,6 @@ func (c *Cache) RemoveSubscription(subscription *channelsv1alpha1.Subscription) 
 	if subscription == nil {
 		return
 	}
-	subscriptionRef := NewSubscriptionReference(subscription)
-	delete(c.subscriptions, subscriptionRef)
+	ref := NewSubscriptionReference(subscription)
+	delete(c.subscriptions, ref)
 }

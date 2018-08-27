@@ -38,7 +38,7 @@ const (
 )
 
 type KafkaBus struct {
-	busRef      buses.BusReference
+	ref         buses.BusReference
 	dispatcher  buses.BusDispatcher
 	provisioner buses.BusProvisioner
 
@@ -50,30 +50,30 @@ type KafkaBus struct {
 	logger *zap.SugaredLogger
 }
 
-func NewKafkaBusDispatcher(busRef buses.BusReference, brokers []string, opts *buses.BusOpts) (*KafkaBus, error) {
+func NewKafkaBusDispatcher(ref buses.BusReference, brokers []string, opts *buses.BusOpts) (*KafkaBus, error) {
 	bus := &KafkaBus{
-		busRef:       busRef,
+		ref:          ref,
 		kafkaBrokers: brokers,
 	}
 	eventHandlers := buses.EventHandlerFuncs{
-		SubscribeFunc: func(channelRef buses.ChannelReference, subscriptionRef buses.SubscriptionReference, parameters buses.ResolvedParameters) error {
-			return bus.subscribe(channelRef, subscriptionRef, parameters)
+		SubscribeFunc: func(channel buses.ChannelReference, subscription buses.SubscriptionReference, parameters buses.ResolvedParameters) error {
+			return bus.subscribe(channel, subscription, parameters)
 		},
-		UnsubscribeFunc: func(channelRef buses.ChannelReference, subscriptionRef buses.SubscriptionReference) error {
-			return bus.unsubscribe(channelRef, subscriptionRef)
+		UnsubscribeFunc: func(channel buses.ChannelReference, subscription buses.SubscriptionReference) error {
+			return bus.unsubscribe(channel, subscription)
 		},
-		ReceiveMessageFunc: func(channelRef buses.ChannelReference, message *buses.Message) error {
-			bus.kafkaAsyncProducer.Input() <- toKafkaMessage(channelRef, message)
+		ReceiveMessageFunc: func(channel buses.ChannelReference, message *buses.Message) error {
+			bus.kafkaAsyncProducer.Input() <- toKafkaMessage(channel, message)
 			return nil
 		},
 	}
-	bus.dispatcher = buses.NewBusDispatcher(busRef, eventHandlers, opts)
+	bus.dispatcher = buses.NewBusDispatcher(ref, eventHandlers, opts)
 	bus.logger = opts.Logger
 	bus.kafkaConsumers = make(map[buses.SubscriptionReference]*cluster.Consumer)
 
 	conf := sarama.NewConfig()
 	conf.Version = sarama.V1_1_0_0
-	conf.ClientID = busRef.Name + "-dispatcher"
+	conf.ClientID = ref.Name + "-dispatcher"
 	client, err := sarama.NewClient(brokers, conf)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create kafka client: %v", err)
@@ -87,25 +87,25 @@ func NewKafkaBusDispatcher(busRef buses.BusReference, brokers []string, opts *bu
 	return bus, nil
 }
 
-func NewKafkaBusProvisioner(busRef buses.BusReference, brokers []string, opts *buses.BusOpts) (*KafkaBus, error) {
+func NewKafkaBusProvisioner(ref buses.BusReference, brokers []string, opts *buses.BusOpts) (*KafkaBus, error) {
 	bus := &KafkaBus{
-		busRef:       busRef,
+		ref:          ref,
 		kafkaBrokers: brokers,
 	}
 	eventHandlers := buses.EventHandlerFuncs{
-		ProvisionFunc: func(channelRef buses.ChannelReference, parameters buses.ResolvedParameters) error {
-			return bus.provision(channelRef, parameters)
+		ProvisionFunc: func(channel buses.ChannelReference, parameters buses.ResolvedParameters) error {
+			return bus.provision(channel, parameters)
 		},
-		UnprovisionFunc: func(channelRef buses.ChannelReference) error {
-			return bus.unprovision(channelRef)
+		UnprovisionFunc: func(channel buses.ChannelReference) error {
+			return bus.unprovision(channel)
 		},
 	}
-	bus.provisioner = buses.NewBusProvisioner(busRef, eventHandlers, opts)
+	bus.provisioner = buses.NewBusProvisioner(ref, eventHandlers, opts)
 	bus.logger = opts.Logger
 
 	conf := sarama.NewConfig()
 	conf.Version = sarama.V1_1_0_0
-	conf.ClientID = busRef.Name + "-provisioner"
+	conf.ClientID = ref.Name + "-provisioner"
 
 	clusterAdmin, err := sarama.NewClusterAdmin(brokers, conf)
 	if err != nil {
@@ -139,26 +139,26 @@ func (b *KafkaBus) Run(threadness int, stopCh <-chan struct{}) {
 	}
 }
 
-func (b *KafkaBus) subscribe(channelRef buses.ChannelReference, subscriptionRef buses.SubscriptionReference, parameters buses.ResolvedParameters) error {
-	if _, ok := b.kafkaConsumers[subscriptionRef]; ok {
+func (b *KafkaBus) subscribe(channel buses.ChannelReference, subscription buses.SubscriptionReference, parameters buses.ResolvedParameters) error {
+	if _, ok := b.kafkaConsumers[subscription]; ok {
 		// subscribe can be called multiple times for the same subscription,
 		//unsubscribe before we resubscribe
-		err := b.unsubscribe(channelRef, subscriptionRef)
+		err := b.unsubscribe(channel, subscription)
 		if err != nil {
 			return err
 		}
 	}
 
-	b.logger.Infof("Subscribing %q to %q (%v)", subscriptionRef.String(), channelRef.String(), parameters)
+	b.logger.Infof("Subscribing %q to %q (%v)", subscription.String(), channel.String(), parameters)
 
-	topicName := topicName(channelRef)
+	topicName := topicName(channel)
 
 	initialOffset, err := resolveInitialOffset(parameters)
 	if err != nil {
 		return err
 	}
 
-	group := fmt.Sprintf("%s.%s.%s", b.busRef.Name, subscriptionRef.Namespace, subscriptionRef.Name)
+	group := fmt.Sprintf("%s.%s.%s", b.ref.Name, subscription.Namespace, subscription.Name)
 	consumerConfig := cluster.NewConfig()
 	consumerConfig.Version = sarama.V1_1_0_0
 	consumerConfig.Consumer.Offsets.Initial = initialOffset
@@ -167,15 +167,15 @@ func (b *KafkaBus) subscribe(channelRef buses.ChannelReference, subscriptionRef 
 		return err
 	}
 
-	b.kafkaConsumers[subscriptionRef] = consumer
+	b.kafkaConsumers[subscription] = consumer
 
 	go func() {
 		for {
 			msg, more := <-consumer.Messages()
 			if more {
-				b.logger.Infof("Dispatching a message for subscription %q", subscriptionRef.String())
+				b.logger.Infof("Dispatching a message for subscription %q", subscription.String())
 				message := fromKafkaMessage(msg)
-				err := b.dispatcher.DispatchMessage(subscriptionRef, message)
+				err := b.dispatcher.DispatchMessage(subscription, message)
 				if err != nil {
 					b.logger.Warnf("Got error trying to dispatch message: %v", err)
 				}
@@ -185,23 +185,23 @@ func (b *KafkaBus) subscribe(channelRef buses.ChannelReference, subscriptionRef 
 				break
 			}
 		}
-		b.logger.Infof("Consumer for subscription %q stopped", subscriptionRef.String())
+		b.logger.Infof("Consumer for subscription %q stopped", subscription.String())
 	}()
 
 	return nil
 }
 
-func (b *KafkaBus) unsubscribe(channelRef buses.ChannelReference, subscriptionRef buses.SubscriptionReference) error {
-	b.logger.Infof("Un-Subscribing %q from %q", subscriptionRef.String(), channelRef.String())
-	if consumer, ok := b.kafkaConsumers[subscriptionRef]; ok {
-		delete(b.kafkaConsumers, subscriptionRef)
+func (b *KafkaBus) unsubscribe(channel buses.ChannelReference, subscription buses.SubscriptionReference) error {
+	b.logger.Infof("Un-Subscribing %q from %q", subscription.String(), channel.String())
+	if consumer, ok := b.kafkaConsumers[subscription]; ok {
+		delete(b.kafkaConsumers, subscription)
 		return consumer.Close()
 	}
 	return nil
 }
 
-func (b *KafkaBus) provision(channelRef buses.ChannelReference, parameters buses.ResolvedParameters) error {
-	topicName := topicName(channelRef)
+func (b *KafkaBus) provision(channel buses.ChannelReference, parameters buses.ResolvedParameters) error {
+	topicName := topicName(channel)
 	b.logger.Infof("Provisioning topic %s on bus backed by Kafka", topicName)
 
 	partitions := 1
@@ -209,7 +209,7 @@ func (b *KafkaBus) provision(channelRef buses.ChannelReference, parameters buses
 		var err error
 		partitions, err = strconv.Atoi(p)
 		if err != nil {
-			b.logger.Warnf("Could not parse partition count for %q: %s", channelRef.String(), p)
+			b.logger.Warnf("Could not parse partition count for %q: %s", channel.String(), p)
 		}
 	}
 
@@ -227,8 +227,8 @@ func (b *KafkaBus) provision(channelRef buses.ChannelReference, parameters buses
 	return err
 }
 
-func (b *KafkaBus) unprovision(channelRef buses.ChannelReference) error {
-	topicName := topicName(channelRef)
+func (b *KafkaBus) unprovision(channel buses.ChannelReference) error {
+	topicName := topicName(channel)
 	b.logger.Infof("Un-provisioning topic %s from bus backed by Kafka", topicName)
 
 	err := b.kafkaClusterAdmin.DeleteTopic(topicName)
@@ -243,9 +243,9 @@ func (b *KafkaBus) unprovision(channelRef buses.ChannelReference) error {
 	return err
 }
 
-func toKafkaMessage(channelRef buses.ChannelReference, message *buses.Message) *sarama.ProducerMessage {
+func toKafkaMessage(channel buses.ChannelReference, message *buses.Message) *sarama.ProducerMessage {
 	kafkaMessage := sarama.ProducerMessage{
-		Topic: topicName(channelRef),
+		Topic: topicName(channel),
 		Value: sarama.ByteEncoder(message.Payload),
 	}
 	for h, v := range message.Headers {
