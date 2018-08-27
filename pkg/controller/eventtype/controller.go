@@ -237,6 +237,8 @@ func (c *Controller) syncHandler(key string) error {
 	return c.syncEventType(et)
 }
 
+// syncEventType is meant to be used in the Informer's event handler functions. It asserts that obj
+// is an EventType and then reconciles it.
 func (c *Controller) syncEventType(obj interface{}) error {
 	et, ok := obj.(*feedv1alpha1.EventType)
 	if !ok {
@@ -245,22 +247,6 @@ func (c *Controller) syncEventType(obj interface{}) error {
 	return c.handleEventType(et)
 }
 
-func (c *Controller) handleFeedUpdate(old, new interface{}) {
-	// Did it used to listen to me? If not, then ignore. If yes, then does it still listen to me? If so, then ignore. If not, then, can I be deleted?
-	oldFeed := old.(*feedv1alpha1.Feed)
-	newFeed := new.(*feedv1alpha1.Feed)
-	// TODO: Support ClusterEventTypes as well.
-	if oldFeed.Spec.Trigger.EventType != newFeed.Spec.Trigger.EventType {
-		// Now that the feed is no longer using the old EventType, handle it to check if it can be deleted.
-		c.handleFeedDelete(old)
-	}
-}
-
-func (c *Controller) handleFeedDelete(old interface{}) {
-	oldFeed := old.(*feedv1alpha1.Feed)
-	// Now that the feed is no longer using the old EventType, handle it to check if it can be deleted.
-	c.syncHandler(oldFeed.Namespace + "/" + oldFeed.Spec.Trigger.EventType)
-}
 
 func (c *Controller) handleEventType(et *feedv1alpha1.EventType) error {
 	if et.ObjectMeta.DeletionTimestamp == nil {
@@ -282,7 +268,7 @@ func (c *Controller) handleEventTypeDelete(old interface{}) error {
 		return err
 	}
 	if len(feeds) == 0 {
-		err = c.removeFinalizer(et)
+		err = c.removeEventTypeFinalizer(et)
 		if err != nil {
 			glog.Infof("Unable to remove the %s from the EventType %s: %v", eventTypeFinalizerName, et.Name, err)
 			return err
@@ -298,13 +284,20 @@ func (c *Controller) handleEventTypeDelete(old interface{}) error {
 	return nil
 }
 
-func (c *Controller) findFeedsUsingEventType(et *feedv1alpha1.EventType) ([]feedv1alpha1.Feed, error) {
-	feedList, err := c.feedclientset.FeedsV1alpha1().Feeds(et.Namespace).List(metav1.ListOptions{})
+func (c *Controller) findFeedsUsingEventType(et *feedv1alpha1.EventType) ([]*feedv1alpha1.Feed, error) {
+	allFeeds, err := c.feedclientset.FeedsV1alpha1().Feeds(et.Namespace).List(metav1.ListOptions{})
 	if err != nil {
 		glog.Errorf("Unable to list the feeds: %v", err)
 		return nil, err
 	}
-	return feedList.Items, nil
+	feeds := make([]*feedv1alpha1.Feed, 0, len(allFeeds.Items))
+
+	for _, feed := range allFeeds.Items {
+		if et.Name == feed.Spec.Trigger.EventType {
+			feeds = append(feeds, &feed)
+		}
+	}
+	return feeds, nil
 }
 
 func (c *Controller) addEventTypeFinalizer(et *feedv1alpha1.EventType) error {
@@ -323,7 +316,7 @@ func (c *Controller) addEventTypeFinalizer(et *feedv1alpha1.EventType) error {
 	return nil
 }
 
-func (c *Controller) removeFinalizer(et *feedv1alpha1.EventType) error {
+func (c *Controller) removeEventTypeFinalizer(et *feedv1alpha1.EventType) error {
 	etCopy := et.DeepCopy()
 	finalizers := sets.NewString(etCopy.GetFinalizers()...)
 	finalizers.Delete(eventTypeFinalizerName)
@@ -336,7 +329,9 @@ func (c *Controller) removeFinalizer(et *feedv1alpha1.EventType) error {
 	return nil
 }
 
-func (c *Controller) updateEventTypeStatus(et *feedv1alpha1.EventType, feedsStillUsingEventType []feedv1alpha1.Feed) error {
+// updateEventTypeStatus updates an EventType's status with the Feeds that are pinning the
+// EventType.
+func (c *Controller) updateEventTypeStatus(et *feedv1alpha1.EventType, feedsStillUsingEventType []*feedv1alpha1.Feed) error {
 	etCopy := et.DeepCopy()
 
 	// Filter out the existing InUse condition, if present.
@@ -362,11 +357,29 @@ func (c *Controller) updateEventTypeStatus(et *feedv1alpha1.EventType, feedsStil
 	return err
 }
 
-func getFeedNames(feeds []feedv1alpha1.Feed) string {
-	var feedNames strings.Builder
+// getFeedNames generates a single string with the names of all the feeds.
+func getFeedNames(feeds []*feedv1alpha1.Feed) string {
+	feedNames := make([]string, 0, len(feeds))
 	for _, feed := range feeds {
-		feedNames.WriteString(feed.Name)
-		feedNames.WriteRune(' ')
+		feedNames = append(feedNames, feed.Name)
 	}
-	return feedNames.String()
+	return strings.Join(feedNames, ", ")
+}
+
+func (c *Controller) handleFeedUpdate(old, new interface{}) {
+	// Did it used to listen to me? If not, then ignore. If yes, then does it still listen to me?
+	// If so, then ignore. If not, then, can I be deleted?
+	oldFeed := old.(*feedv1alpha1.Feed)
+	newFeed := new.(*feedv1alpha1.Feed)
+	// TODO: Support ClusterEventTypes as well.
+	if oldFeed.Spec.Trigger.EventType != newFeed.Spec.Trigger.EventType {
+		// Now that the feed is no longer using the old EventType, handle it to check if it can be deleted.
+		c.handleFeedDelete(old)
+	}
+}
+
+func (c *Controller) handleFeedDelete(old interface{}) {
+	oldFeed := old.(*feedv1alpha1.Feed)
+	// Now that the feed is no longer using the old EventType, handle it to check if it can be deleted.
+	c.syncHandler(oldFeed.Namespace + "/" + oldFeed.Spec.Trigger.EventType)
 }
