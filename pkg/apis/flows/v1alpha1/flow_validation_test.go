@@ -117,6 +117,49 @@ func TestFlowSpecValidation(t *testing.T) {
 			Paths:   []string{"action.target", "action.targetURI"},
 		},
 	}, {
+		name: "invalid, missing event type",
+		f: &FlowSpec{
+			Action: FlowAction{
+				TargetURI: stringPtr("http://example.com/action"),
+			},
+			Trigger: EventTrigger{
+				Resource: "bar",
+			},
+		},
+		want: &apis.FieldError{
+			Message: "missing field(s)",
+			Paths:   []string{"trigger.eventType"},
+		},
+	}, {
+		name: "invalid event type",
+		f: &FlowSpec{
+			Action: FlowAction{
+				TargetURI: stringPtr("http://example.com/action"),
+			},
+			Trigger: EventTrigger{
+				EventType: "f@o",
+				Resource:  "bar",
+			},
+		},
+		want: &apis.FieldError{
+			Message: `invalid value "f@o"`,
+			Paths:   []string{"trigger.eventType"},
+		},
+	}, {
+		name: "invalid, missing resource",
+		f: &FlowSpec{
+			Action: FlowAction{
+				TargetURI: stringPtr("http://example.com/action"),
+			},
+			Trigger: EventTrigger{
+				EventType: "foo",
+			},
+		},
+		want: &apis.FieldError{
+			Message: "missing field(s)",
+			Paths:   []string{"trigger.resource"},
+		},
+	}, {
 		name: "empty",
 		f:    &FlowSpec{},
 		want: &apis.FieldError{

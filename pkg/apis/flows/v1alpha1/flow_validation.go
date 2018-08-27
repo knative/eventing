@@ -49,6 +49,9 @@ func (et *EventTrigger) Validate() *apis.FieldError {
 	if et.EventType == "" {
 		return apis.ErrMissingField("eventType")
 	}
+	if errs := validation.IsQualifiedName(et.EventType); len(errs) > 0 {
+		return apis.ErrInvalidValue(et.EventType, "eventType")
+	}
 
 	if et.Resource == "" {
 		return apis.ErrMissingField("resource")
@@ -74,10 +77,6 @@ func (fa *FlowAction) Validate() *apis.FieldError {
 		return nil
 	default:
 		return apis.ErrMissingOneOf("target", "targetURI")
-	}
-
-	if fa.Target != nil && fa.TargetURI != nil {
-
 	}
 
 	return nil
