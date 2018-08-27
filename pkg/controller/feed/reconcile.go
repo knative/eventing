@@ -152,7 +152,6 @@ func (r *reconciler) reconcile(ctx context.Context, feed *feedsv1alpha1.Feed) er
 	return nil
 }
 
-
 // reconcileStartJob creates a start Job if one doesn't exist, checks the status
 // of the start Job, and updates the Feed status accordingly.
 func (r *reconciler) reconcileStartJob(ctx context.Context, feed *feedsv1alpha1.Feed, es *feedsv1alpha1.EventSource, et *feedsv1alpha1.EventType) error {
