@@ -40,6 +40,7 @@ import (
 	sharedinformers "github.com/knative/pkg/client/informers/externalversions"
 	"github.com/knative/pkg/signals"
 
+	"github.com/knative/eventing/pkg/controller/eventtype"
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/system"
 	"github.com/knative/pkg/configmap"
@@ -47,7 +48,6 @@ import (
 	"github.com/knative/pkg/logging/logkey"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
-	"github.com/knative/eventing/pkg/controller/eventtype"
 )
 
 const (

@@ -94,9 +94,16 @@ func NewController(
 	}
 
 	glog.Info("Setting up event handlers")
-	// Set up an event handler for when EventType resources change. This controller is really just
-	// a finalizer, so we only care about deletion events.
+	// Set up an event handler for when EventType resources change.
 	etInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			// Ignore the returned error.
+			c.syncEventType(obj)
+		},
+		UpdateFunc: func(old, new interface{}) {
+			// Ignore the returned error.
+			c.syncEventType(new)
+		},
 		DeleteFunc: func(old interface{}) {
 			// Ignore the returned error.
 			c.handleEventTypeDelete(old)
@@ -122,7 +129,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer c.workqueue.ShutDown()
 
 	// Start the informer factories to begin populating the informer caches
-	glog.Info("Starting Channel controller")
+	glog.Info("Starting EventType controller")
 
 	// Wait for the caches to be synced before starting workers
 	glog.Info("Waiting for informer caches to sync")
@@ -227,11 +234,15 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	if et.ObjectMeta.DeletionTimestamp == nil {
-		return c.addEventTypeFinalizer(et)
-	} else {
-		return c.handleEventTypeDelete(et)
+	return c.syncEventType(et)
+}
+
+func (c *Controller) syncEventType(obj interface{}) error {
+	et, ok := obj.(*feedv1alpha1.EventType)
+	if !ok {
+		return fmt.Errorf("unable to assert *EventType: %v", obj)
 	}
+	return c.handleEventType(et)
 }
 
 func (c *Controller) handleFeedUpdate(old, new interface{}) {
@@ -249,6 +260,14 @@ func (c *Controller) handleFeedDelete(old interface{}) {
 	oldFeed := old.(*feedv1alpha1.Feed)
 	// Now that the feed is no longer using the old EventType, handle it to check if it can be deleted.
 	c.syncHandler(oldFeed.Namespace + "/" + oldFeed.Spec.Trigger.EventType)
+}
+
+func (c *Controller) handleEventType(et *feedv1alpha1.EventType) error {
+	if et.ObjectMeta.DeletionTimestamp == nil {
+		return c.addEventTypeFinalizer(et)
+	} else {
+		return c.handleEventTypeDelete(et)
+	}
 }
 
 func (c *Controller) handleEventTypeDelete(old interface{}) error {
@@ -332,7 +351,7 @@ func (c *Controller) updateEventTypeStatus(et *feedv1alpha1.EventType, feedsStil
 	newConditions = append(newConditions, feedv1alpha1.CommonEventTypeCondition{
 		Type:    feedv1alpha1.EventTypeInUse,
 		Status:  corev1.ConditionTrue,
-		Message: fmt.Sprintf("Still in use by the feeds: %s", getFeedNames(feedsStillUsingEventType)),
+		Message: fmt.Sprintf("Still in use by the Feeds: %s", getFeedNames(feedsStillUsingEventType)),
 	})
 
 	etCopy.Status.Conditions = newConditions
