@@ -40,7 +40,6 @@ import (
 	sharedinformers "github.com/knative/pkg/client/informers/externalversions"
 	"github.com/knative/pkg/signals"
 
-	"github.com/knative/eventing/pkg/controller/eventtype"
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/system"
 	"github.com/knative/pkg/configmap"
@@ -128,7 +127,6 @@ func main() {
 		bus.NewController,
 		clusterbus.NewController,
 		channel.NewController,
-		eventtype.NewController,
 	}
 
 	// TODO(n3wscott): Send the logger to the controllers.

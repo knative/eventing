@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+	"github.com/knative/eventing/pkg/controller/eventtype"
 )
 
 // SchemeFunc adds types to a Scheme.
@@ -65,6 +66,7 @@ func controllerRuntimeStart() error {
 	// Add each controller's ProvideController func to this list to have the
 	// manager run it.
 	providers := []ProvideFunc{
+		eventtype.ProvideController,
 		feed.ProvideController,
 		flow.ProvideController,
 	}
