@@ -158,12 +158,12 @@ func main() {
 
 	cfg, err := clientcmd.BuildConfigFromFlags("", "")
 	if err != nil {
-		glog.Fatalf("Error building kubeconfig: %v", err.Error())
+		glog.Fatalf("Error building kubeconfig: %v", err)
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building kubernetes clientset: %v", err.Error())
+		glog.Fatalf("Error building kubernetes clientset: %v", err)
 	}
 
 	sources.RunEventSource(NewK8SEventsEventSource(kubeClient, feedNamespace, feedServiceAccountName, p.Image))

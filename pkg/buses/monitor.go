@@ -240,17 +240,17 @@ func NewMonitor(
 ) *Monitor {
 	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
-		glog.Fatalf("Error building kubeconfig: %s", err.Error())
+		glog.Fatalf("Error building kubeconfig: %v", err)
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building kubernetes clientset: %s", err.Error())
+		glog.Fatalf("Error building kubernetes clientset: %v", err)
 	}
 
 	client, err := clientset.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building clientset: %s", err.Error())
+		glog.Fatalf("Error building clientset: %v", err)
 	}
 
 	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
@@ -602,7 +602,7 @@ func (m *Monitor) processNextWorkItem() bool {
 		// Run the syncHandler, passing it the name string of the resource to be synced.
 		if err := m.syncHandler(key); err != nil {
 			m.workqueue.AddRateLimited(obj)
-			return fmt.Errorf("error syncing monitor '%s': %s", key, err.Error())
+			return fmt.Errorf("error syncing monitor '%s': %v", key, err)
 		}
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
