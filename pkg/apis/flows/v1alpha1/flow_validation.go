@@ -78,6 +78,4 @@ func (fa *FlowAction) Validate() *apis.FieldError {
 	default:
 		return apis.ErrMissingOneOf("target", "targetURI")
 	}
-
-	return nil
 }
