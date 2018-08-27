@@ -24,7 +24,7 @@ import (
 	"github.com/golang/glog"
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
-	v1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
+	"github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 	"github.com/knative/eventing/pkg/controller/flow/resources"
 	"github.com/knative/eventing/pkg/system"
 	corev1 "k8s.io/api/core/v1"
@@ -32,19 +32,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// TODO: This should come from a configmap
-const defaultBusName = "stub"
-
 // What field do we assume Object Reference exports as a resolvable target
 const targetFieldName = "domainInternal"
-
-var (
-	flowControllerKind = v1alpha1.SchemeGroupVersion.WithKind("Flow")
-)
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Flow resource
@@ -169,7 +164,7 @@ func (r *reconciler) resolveActionTarget(namespace string, action v1alpha1.FlowA
 		return *action.TargetURI, nil
 	}
 
-	return "", fmt.Errorf("No resolvable action target: %+v", action)
+	return "", fmt.Errorf("no resolvable action target: %+v", action)
 }
 
 // resolveObjectReference fetches an object based on ObjectReference. It assumes the
@@ -266,18 +261,15 @@ func (r *reconciler) createSubscription(channelName string, target string, flow 
 }
 
 func (r *reconciler) reconcileFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
-	feedName := flow.Name
-
-	feed := &feedsv1alpha1.Feed{}
-	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: flow.Namespace, Name: feedName}, feed)
+	feed, err := r.getFeed(context.TODO(), flow)
 	if errors.IsNotFound(err) {
 		feed, err = r.createFeed(channelDNS, flow)
 		if err != nil {
-			glog.Errorf("Failed to create feed %q : %v", feedName, err)
+			glog.Errorf("Failed to create feed for flow %q: %v", flow.Name, err)
 			return nil, err
 		}
 	} else if err != nil {
-		glog.Errorf("Failed to reconcile feed %q failed to get feeds : %v", feedName, err)
+		glog.Errorf("Failed to reconcile feed for flow %q failed to get feeds : %v", flow.Name, err)
 		return nil, err
 	}
 
@@ -285,7 +277,6 @@ func (r *reconciler) reconcileFeed(channelDNS string, flow *v1alpha1.Flow) (*fee
 	// TODO: Make sure feed is what it should be. For now, just assume it's fine
 	// if it exists.
 	return feed, nil
-
 }
 
 func (r *reconciler) createFeed(channelDNS string, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
@@ -332,4 +323,33 @@ func (r *reconciler) getDefaultClusterBusName() (string, error) {
 	}
 
 	return fallbackClusterBusName, nil // return the fallback value
+}
+
+func (r *reconciler) getFeed(ctx context.Context, flow *v1alpha1.Flow) (*feedsv1alpha1.Feed, error) {
+	feedList := &feedsv1alpha1.FeedList{}
+	err := r.client.List(
+		ctx,
+		&client.ListOptions{
+			Namespace:     flow.Namespace,
+			LabelSelector: labels.Everything(),
+			// TODO this is here because the fake client needs it. Remove this when it's no longer
+			// needed.
+			Raw: &metav1.ListOptions{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: feedsv1alpha1.SchemeGroupVersion.String(),
+					Kind:       "Feed",
+				},
+			},
+		},
+		feedList)
+	if err != nil {
+		glog.Errorf("Unable to list feeds: %v", err)
+		return nil, err
+	}
+	for _, feed := range feedList.Items {
+		if metav1.IsControlledBy(&feed, flow) {
+			return &feed, nil
+		}
+	}
+	return nil, errors.NewNotFound(schema.GroupResource{}, "")
 }

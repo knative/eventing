@@ -66,8 +66,8 @@ function wait_until_flow_ready() {
   done
   echo -e "\n\nERROR: timeout waiting for flow $NAMESPACE/$NAME to be ready"
   kubectl get -n $NAMESPACE flows $NAME -oyaml
-  kubectl get -n $NAMESPACE jobs $NAME-start -oyaml
-  kubectl get -n $NAMESPACE feeds $NAME -oyaml
+  kubectl get -n $NAMESPACE jobs -oyaml
+  kubectl get -n $NAMESPACE feeds -oyaml
   echo -e "Dumping eventing controller logs"
   kubectl -n knative-eventing logs `kubectl -n knative-eventing get pods -oname | grep eventing-controller` eventing-controller
   return 1
