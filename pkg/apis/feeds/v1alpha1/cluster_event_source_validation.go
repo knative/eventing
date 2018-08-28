@@ -25,19 +25,6 @@ func (ces *ClusterEventSource) Validate() *apis.FieldError {
 }
 
 func (cess *ClusterEventSourceSpec) Validate() *apis.FieldError {
+	// nothing to validate
 	return cess.CommonEventSourceSpec.Validate()
-}
-
-func (current *ClusterEventSource) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
-	original, ok := og.(*ClusterEventSource)
-	if !ok {
-		return &apis.FieldError{Message: "The provided original was not a ClusterEventSource"}
-	}
-	if original == nil {
-		return nil
-	}
-
-	// TODO
-
-	return nil
 }

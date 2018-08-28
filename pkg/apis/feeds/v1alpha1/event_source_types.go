@@ -42,7 +42,6 @@ type EventSource struct {
 // Check that EventSource can be validated, can be defaulted, and has immutable fields.
 var _ apis.Validatable = (*EventSource)(nil)
 var _ apis.Defaultable = (*EventSource)(nil)
-var _ apis.Immutable = (*EventSource)(nil)
 var _ runtime.Object = (*EventSource)(nil)
 var _ webhook.GenericCRD = (*EventSource)(nil)
 
