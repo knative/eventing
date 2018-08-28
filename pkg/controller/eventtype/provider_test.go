@@ -31,7 +31,7 @@ func TestMap(t *testing.T) {
 		{
 			name: "Feed",
 			obj: handler.MapObject{
-				Meta: getFeed(etNamespace, feedName, etName),
+				Meta:   getFeed(etNamespace, feedName, etName),
 				Object: getFeed(etNamespace, feedName, etName),
 			},
 			rr: []reconcile.Request{

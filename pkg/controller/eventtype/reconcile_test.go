@@ -34,8 +34,6 @@ func TestStub(t *testing.T) {
 }
 
 var (
-	trueVal  = true
-	falseVal = false
 	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
 	// truncates to seconds to match the loss of precision during serialization.
 	deletionTime = metav1.Now().Rfc3339Copy()
@@ -46,7 +44,6 @@ const (
 	etNamespace     = "test-namespace"
 	etName          = "test-event-type"
 	reconcileKey    = etNamespace + "/" + etName
-	etGetErrorMsg = "error-getting-EventType"
 
 	fn1 = "fake-feed-name-1"
 	fn2 = "fake-feed-name-2"
@@ -59,17 +56,10 @@ func init() {
 
 var testCases = []controllertesting.TestCase{
 	{
-		Name: "missing EventType",
+		Name:         "missing EventType",
 		InitialState: []runtime.Object{},
 		ReconcileKey: reconcileKey,
 	},
-	/*{
-		Name: "unable to get EventType",
-		InitialState: []runtime.Object{},
-		ReconcileKey: reconcileKey,
-		WantErr: true,
-		WantErrMsg: etGetErrorMsg,
-	},*/
 	{
 		Name: "new EventType: adds Finalizer",
 		InitialState: []runtime.Object{
@@ -113,7 +103,7 @@ var testCases = []controllertesting.TestCase{
 			getDeletingEventType(false),
 			getFeedUsingOtherEventType(),
 		},
-	},	{
+	}, {
 		Name: "deleting EventType: Feeds using EventType in different namespace",
 		InitialState: []runtime.Object{
 			getDeletingEventType(true),
@@ -157,11 +147,11 @@ func TestAllCases(t *testing.T) {
 }
 
 func objectMeta(namespace, name string) metav1.ObjectMeta {
-return metav1.ObjectMeta{
-	Namespace: namespace,
-	Name:      name,
-	SelfLink:  fmt.Sprintf("/apis/eventing/v1alpha1/namespaces/%s/object/%s", namespace, name),
-}
+	return metav1.ObjectMeta{
+		Namespace: namespace,
+		Name:      name,
+		SelfLink:  fmt.Sprintf("/apis/eventing/v1alpha1/namespaces/%s/object/%s", namespace, name),
+	}
 }
 
 func getEventType(finalizer bool) *feedsv1alpha1.EventType {
@@ -190,8 +180,8 @@ func getDeletingEventType(finalizer bool) *feedsv1alpha1.EventType {
 func getDeletingEventTypeWithInUseStatus(feedNames string) *feedsv1alpha1.EventType {
 	et := getDeletingEventType(true)
 	et.Status.Conditions = append(et.Status.Conditions, feedsv1alpha1.CommonEventTypeCondition{
-		Type: feedsv1alpha1.EventTypeInUse,
-		Status: corev1.ConditionTrue,
+		Type:    feedsv1alpha1.EventTypeInUse,
+		Status:  corev1.ConditionTrue,
 		Message: "Still in use by the Feeds: " + feedNames,
 	})
 	return et
@@ -200,12 +190,12 @@ func getDeletingEventTypeWithInUseStatus(feedNames string) *feedsv1alpha1.EventT
 func getFeed(namespace, name, eventType string) *feedsv1alpha1.Feed {
 	feed := &feedsv1alpha1.Feed{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion:feedsv1alpha1.SchemeGroupVersion.String(),
-			Kind: "Feed",
+			APIVersion: feedsv1alpha1.SchemeGroupVersion.String(),
+			Kind:       "Feed",
 		},
 		ObjectMeta: objectMeta(namespace, name),
 		Spec: feedsv1alpha1.FeedSpec{
-			Trigger:feedsv1alpha1.EventTrigger{
+			Trigger: feedsv1alpha1.EventTrigger{
 				EventType: eventType,
 			},
 		},
@@ -216,7 +206,6 @@ func getFeed(namespace, name, eventType string) *feedsv1alpha1.Feed {
 func getFeedUsingOtherEventType() *feedsv1alpha1.Feed {
 	return getFeed(etNamespace, "feed-not-using-event-type", "some-other-event-type")
 }
-
 
 func getFeedUsingEventType(feedName string) *feedsv1alpha1.Feed {
 	return getFeed(etNamespace, feedName, etName)
