@@ -45,15 +45,19 @@ func (et *EventTrigger) Validate() *apis.FieldError {
 		if errs := validation.IsQualifiedName(et.EventType); len(errs) > 0 {
 			return apis.ErrInvalidKeyName(et.EventType, "eventType", errs...)
 		}
-		return nil
 	case len(et.ClusterEventType) != 0:
 		if errs := validation.IsQualifiedName(et.ClusterEventType); len(errs) > 0 {
 			return apis.ErrInvalidKeyName(et.ClusterEventType, "clusterEventType", errs...)
 		}
-		return nil
 	default:
 		return apis.ErrMissingOneOf("eventType", "clusterEventType")
 	}
+
+	if et.Resource == "" {
+		return apis.ErrMissingField("resource")
+	}
+
+	return nil
 }
 
 func (fa *FeedAction) Validate() *apis.FieldError {
@@ -64,19 +68,5 @@ func (fa *FeedAction) Validate() *apis.FieldError {
 			return err
 		}
 	}
-	return nil
-}
-
-func (current *Feed) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
-	original, ok := og.(*Feed)
-	if !ok {
-		return &apis.FieldError{Message: "The provided original was not a Feed"}
-	}
-	if original == nil {
-		return nil
-	}
-
-	// TODO(n3wscott): Anything to test?
-
 	return nil
 }
