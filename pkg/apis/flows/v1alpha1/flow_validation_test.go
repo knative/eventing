@@ -173,7 +173,7 @@ func TestFlowSpecValidation(t *testing.T) {
 			got := test.f.Validate()
 			ignoreArguments := cmpopts.IgnoreFields(apis.FieldError{}, "Details")
 			if diff := cmp.Diff(test.want, got, ignoreArguments); diff != "" {
-				t.Errorf("validateFeed (-want, +got) = %v", diff)
+				t.Errorf("validateFlow (-want, +got) = %v", diff)
 			}
 		})
 	}
