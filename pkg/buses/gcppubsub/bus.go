@@ -21,17 +21,23 @@ import (
 	"fmt"
 
 	"cloud.google.com/go/pubsub"
-	"github.com/golang/glog"
 	"github.com/knative/eventing/pkg/buses"
+	"go.uber.org/zap"
 )
 
+// BusType is the type of the gcppubsub bus
+const BusType = "gcppubsub"
+
 type CloudPubSubBus struct {
-	busRef       buses.BusReference
-	reconciler   *buses.Reconciler
-	dispatcher   buses.BusDispatcher
-	provisioner  buses.BusProvisioner
+	busRef      buses.BusReference
+	reconciler  *buses.Reconciler
+	dispatcher  buses.BusDispatcher
+	provisioner buses.BusProvisioner
+
 	pubsubClient *pubsub.Client
 	receivers    map[string]context.CancelFunc
+
+	logger *zap.SugaredLogger
 }
 
 func NewCloudPubSubBusDispatcher(busRef buses.BusReference, projectID string, opts *buses.BusOpts) (*CloudPubSubBus, error) {
@@ -58,6 +64,7 @@ func NewCloudPubSubBusDispatcher(busRef buses.BusReference, projectID string, op
 		},
 	}
 	bus.dispatcher = buses.NewBusDispatcher(busRef, eventHandlers, opts)
+	bus.logger = opts.Logger
 	bus.reconciler = opts.Reconciler
 	bus.receivers = make(map[string]context.CancelFunc)
 	return bus, nil
@@ -89,6 +96,7 @@ func NewCloudPubSubBusProvisioner(busRef buses.BusReference, projectID string, o
 		},
 	}
 	bus.provisioner = buses.NewBusProvisioner(busRef, eventHandlers, opts)
+	bus.logger = opts.Logger
 	return bus, nil
 }
 
@@ -125,7 +133,7 @@ func (b *CloudPubSubBus) startReceivingEvents(subscriptionRef buses.Subscription
 
 	// subscription.Receive blocks, so run it in a goroutine
 	go func() {
-		glog.Infof("Start receiving events for subscription %q\n", subscriptionID)
+		b.logger.Infof("Start receiving events for subscription %q", subscriptionID)
 		err := subscription.Receive(cctx, func(ctx context.Context, pubsubMessage *pubsub.Message) {
 			message := &buses.Message{
 				Headers: pubsubMessage.Attributes,
@@ -133,15 +141,15 @@ func (b *CloudPubSubBus) startReceivingEvents(subscriptionRef buses.Subscription
 			}
 			err := b.dispatcher.DispatchMessage(subscriptionRef, message)
 			if err != nil {
-				glog.Warningf("Unable to dispatch event %q to %q", pubsubMessage.ID, subscriptionRef.String())
+				b.logger.Warnf("Unable to dispatch event %q to %q", pubsubMessage.ID, subscriptionRef.String())
 				pubsubMessage.Nack()
 			} else {
-				glog.Infof("Dispatched event %q to %q", pubsubMessage.ID, subscriptionRef.String())
+				b.logger.Infof("Dispatched event %q to %q", pubsubMessage.ID, subscriptionRef.String())
 				pubsubMessage.Ack()
 			}
 		})
 		if err != nil {
-			glog.Errorf("Error receiving messesages for %q: %v\n", subscriptionID, err)
+			b.logger.Errorf("Error receiving messesages for %q: %v", subscriptionID, err)
 		}
 		delete(b.receivers, subscriptionID)
 		b.reconciler.RequeueSubscription(subscriptionRef)
@@ -156,7 +164,7 @@ func (b *CloudPubSubBus) startReceivingEvents(subscriptionRef buses.Subscription
 func (b *CloudPubSubBus) stopReceivingEvents(subscriptionRef buses.SubscriptionReference) {
 	subscriptionID := b.subscriptionID(subscriptionRef)
 	if cancel, ok := b.receivers[subscriptionID]; ok {
-		glog.Infof("Stop receiving events for subscription %q\n", subscriptionID)
+		b.logger.Infof("Stop receiving events for subscription %q", subscriptionID)
 		cancel()
 		delete(b.receivers, subscriptionID)
 	}
@@ -182,7 +190,7 @@ func (b *CloudPubSubBus) sendEventToTopic(channelRef buses.ChannelReference, mes
 	// TODO allow topics to be reused between publish events, call .Stop after an idle period
 	topic.Stop()
 
-	glog.Infof("Published a message to %s; msg ID: %v\n", topicID, id)
+	b.logger.Infof("Published a message to %s; msg ID: %v", topicID, id)
 	return nil
 }
 
@@ -200,7 +208,7 @@ func (b *CloudPubSubBus) createTopic(channelRef buses.ChannelReference, paramete
 		return nil
 	}
 
-	glog.Infof("Create topic %q\n", topicID)
+	b.logger.Infof("Create topic %q", topicID)
 	topic, err := b.pubsubClient.CreateTopic(ctx, topicID)
 	if err != nil {
 		return err
@@ -223,7 +231,7 @@ func (b *CloudPubSubBus) deleteTopic(channelRef buses.ChannelReference) error {
 		return nil
 	}
 
-	glog.Infof("Delete topic %q\n", topicID)
+	b.logger.Infof("Delete topic %q", topicID)
 	return topic.Delete(ctx)
 }
 
@@ -249,7 +257,7 @@ func (b *CloudPubSubBus) createOrUpdateSubscription(channelRef buses.ChannelRefe
 	// create subscription
 	topicID := b.topicID(channelRef)
 	topic := b.pubsubClient.Topic(topicID)
-	glog.Infof("Create subscription %q for topic %q\n", subscriptionID, topicID)
+	b.logger.Infof("Create subscription %q for topic %q", subscriptionID, topicID)
 	subscription, err := b.pubsubClient.CreateSubscription(ctx, subscriptionID, pubsub.SubscriptionConfig{
 		Topic: topic,
 	})
@@ -271,7 +279,7 @@ func (b *CloudPubSubBus) deleteSubscription(subscriptionRef buses.SubscriptionRe
 		return nil
 	}
 
-	glog.Infof("Deleting subscription %q\n", subscriptionID)
+	b.logger.Infof("Deleting subscription %q", subscriptionID)
 	return subscription.Delete(ctx)
 }
 

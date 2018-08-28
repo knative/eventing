@@ -21,7 +21,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/golang/glog"
+	"go.uber.org/zap"
 )
 
 // MessageReceiver starts a server to receive new messages for the bus. The new
@@ -30,15 +30,19 @@ type MessageReceiver struct {
 	receiverFunc    func(ChannelReference, *Message) error
 	forwardHeaders  map[string]bool
 	forwardPrefixes []string
+
+	logger *zap.SugaredLogger
 }
 
 // NewMessageReceiver creates a message receiver passing new messages to the
 // receiverFunc.
-func NewMessageReceiver(receiverFunc func(ChannelReference, *Message) error) *MessageReceiver {
+func NewMessageReceiver(receiverFunc func(ChannelReference, *Message) error, logger *zap.SugaredLogger) *MessageReceiver {
 	receiver := &MessageReceiver{
 		receiverFunc:    receiverFunc,
 		forwardHeaders:  headerSet(forwardHeaders),
 		forwardPrefixes: forwardPrefixes,
+
+		logger: logger,
 	}
 	return receiver
 }
@@ -58,7 +62,7 @@ func (r *MessageReceiver) Run(stopCh <-chan struct{}) {
 }
 
 func (r *MessageReceiver) start() *http.Server {
-	glog.Info("Starting web server")
+	r.logger.Info("Starting web server")
 	srv := &http.Server{
 		Addr: ":8080",
 		Handler: http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
@@ -76,16 +80,16 @@ func (r *MessageReceiver) start() *http.Server {
 	}
 	go func() {
 		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-			glog.Errorf("HttpServer: ListenAndServe() error: %v", err)
+			r.logger.Errorf("HttpServer: ListenAndServe() error: %v", err)
 		}
 	}()
 	return srv
 }
 
 func (r *MessageReceiver) stop(srv *http.Server) {
-	glog.Info("Shutdown web server")
+	r.logger.Info("Shutdown web server")
 	if err := srv.Shutdown(nil); err != nil {
-		glog.Fatal(err)
+		r.logger.Fatal(err)
 	}
 }
 
@@ -98,7 +102,7 @@ func (r *MessageReceiver) stop(srv *http.Server) {
 //   500 - an error occurred processing the request
 func (r *MessageReceiver) HandleRequest(res http.ResponseWriter, req *http.Request) {
 	host := req.Host
-	glog.Infof("Received request for %s\n", host)
+	r.logger.Infof("Received request for %s", host)
 	channelReference := r.parseChannelReference(host)
 
 	message, err := r.fromRequest(req)
