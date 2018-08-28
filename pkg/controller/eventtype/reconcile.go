@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -130,7 +131,17 @@ func (r *reconciler) handleDeletion(ctx context.Context, et *feedsv1alpha1.Event
 func (r *reconciler) findFeedsUsingEventType(ctx context.Context, et *feedsv1alpha1.EventType) (
 	[]feedsv1alpha1.Feed, error) {
 	allFeeds := &feedsv1alpha1.FeedList{}
-	err := r.client.List(ctx, &client.ListOptions{}, allFeeds)
+	listOptions := client.InNamespace(et.Namespace)
+
+	//TODO this is here because the fake client needs it. Remove this when it's
+	// no longer needed.
+	listOptions.Raw = &metav1.ListOptions{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: feedsv1alpha1.SchemeGroupVersion.String(),
+			Kind:       "Feed",
+		},
+	}
+	err := r.client.List(ctx, listOptions, allFeeds)
 	if err != nil {
 		glog.Errorf("Unable to list the feeds: %v", err)
 		return nil, err

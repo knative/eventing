@@ -78,16 +78,22 @@ func (r *reconciler) InjectClient(c client.Client) error {
 	return nil
 }
 
-type feedToEventType struct{}
+type feedToEventType struct {}
 
 func (_ feedToEventType) Map(obj handler.MapObject) []reconcile.Request {
-	feed := obj.Object.(*feedsv1alpha1.Feed)
+	feed, ok := obj.Object.(*feedsv1alpha1.Feed)
+	if !ok {
+		// This wasn't a Feed.
+		return []reconcile.Request{}
+	}
 	etName := feed.Spec.Trigger.EventType
 
 	return []reconcile.Request{
-		{NamespacedName: types.NamespacedName{
-			Namespace: obj.Meta.GetNamespace(),
-			Name:      etName},
+		{
+			NamespacedName: types.NamespacedName{
+				Namespace: obj.Meta.GetNamespace(),
+				Name:      etName,
+			},
 		},
 	}
 }

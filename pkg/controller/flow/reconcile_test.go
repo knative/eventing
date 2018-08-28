@@ -38,7 +38,6 @@ import (
 
 var (
 	trueVal   = true
-	falseVal  = false
 	targetURI = "http://target.example.com"
 )
 
@@ -146,7 +145,7 @@ func getNewChannel() *channelsv1alpha1.Channel {
 			ClusterBus: "stub",
 		},
 	}
-	channel.ObjectMeta.OwnerReferences = append(channel.ObjectMeta.OwnerReferences, getOwnerReference())
+	channel.ObjectMeta.OwnerReferences = append(channel.ObjectMeta.OwnerReferences, getOwnerReference(false))
 
 	// selflink is not filled in when we create the object, so clear it
 	channel.ObjectMeta.SelfLink = ""
@@ -162,7 +161,7 @@ func getNewSubscription() *channelsv1alpha1.Subscription {
 			Subscriber: targetURI,
 		},
 	}
-	subscription.ObjectMeta.OwnerReferences = append(subscription.ObjectMeta.OwnerReferences, getOwnerReference())
+	subscription.ObjectMeta.OwnerReferences = append(subscription.ObjectMeta.OwnerReferences, getOwnerReference(false))
 
 	// selflink is not filled in when we create the object, so clear it
 	subscription.ObjectMeta.SelfLink = ""
@@ -237,18 +236,18 @@ func feedObjectMeta(namespace, generateName string) metav1.ObjectMeta {
 		Namespace:    namespace,
 		GenerateName: generateName,
 		OwnerReferences: []metav1.OwnerReference{
-			getOwnerReference(),
+			getOwnerReference(true),
 		},
 	}
 }
 
-func getOwnerReference() metav1.OwnerReference {
+func getOwnerReference(blockOwnerDeletion bool) metav1.OwnerReference {
 	return metav1.OwnerReference{
 		APIVersion:         flowsv1alpha1.SchemeGroupVersion.String(),
 		Kind:               "Flow",
 		Name:               flowName,
 		Controller:         &trueVal,
-		BlockOwnerDeletion: &falseVal,
+		BlockOwnerDeletion: &blockOwnerDeletion,
 	}
 }
 

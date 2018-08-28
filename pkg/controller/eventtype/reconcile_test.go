@@ -16,9 +16,212 @@ limitations under the License.
 
 package eventtype
 
-import "testing"
+import (
+	"fmt"
+	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
+	controllertesting "github.com/knative/eventing/pkg/controller/testing"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/record"
+	"testing"
+)
 
 func TestStub(t *testing.T) {
 	// TODO: Implement tests in this directory, please.
 	// This file is used to make code coverage on this directly count.
+}
+
+var (
+	trueVal  = true
+	falseVal = false
+	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
+	// truncates to seconds to match the loss of precision during serialization.
+	deletionTime = metav1.Now().Rfc3339Copy()
+)
+
+const (
+	eventSourceName = "event-source"
+	etNamespace     = "test-namespace"
+	etName          = "test-event-type"
+	reconcileKey    = etNamespace + "/" + etName
+	etGetErrorMsg = "error-getting-EventType"
+
+	fn1 = "fake-feed-name-1"
+	fn2 = "fake-feed-name-2"
+)
+
+func init() {
+	// Add types to scheme
+	feedsv1alpha1.AddToScheme(scheme.Scheme)
+}
+
+var testCases = []controllertesting.TestCase{
+	{
+		Name: "missing EventType",
+		InitialState: []runtime.Object{},
+		ReconcileKey: reconcileKey,
+	},
+	/*{
+		Name: "unable to get EventType",
+		InitialState: []runtime.Object{},
+		ReconcileKey: reconcileKey,
+		WantErr: true,
+		WantErrMsg: etGetErrorMsg,
+	},*/
+	{
+		Name: "new EventType: adds Finalizer",
+		InitialState: []runtime.Object{
+			getEventType(false),
+		},
+		ReconcileKey: reconcileKey,
+		WantPresent: []runtime.Object{
+			getEventType(true),
+		},
+	},
+	{
+		Name: "old EventType: already has Finalizer",
+		InitialState: []runtime.Object{
+			getEventType(true),
+		},
+		ReconcileKey: reconcileKey,
+		WantPresent: []runtime.Object{
+			getEventType(true),
+		},
+	},
+	{
+		Name: "deleting EventType: no Feeds",
+		InitialState: []runtime.Object{
+			getDeletingEventType(true),
+		},
+		ReconcileKey: reconcileKey,
+		WantPresent: []runtime.Object{
+			// The Finalizer should have been removed.
+			getDeletingEventType(false),
+		},
+	},
+	{
+		Name: "deleting EventType: Feeds not using EventType",
+		InitialState: []runtime.Object{
+			getDeletingEventType(true),
+			getFeedUsingOtherEventType(),
+		},
+		ReconcileKey: reconcileKey,
+		WantPresent: []runtime.Object{
+			// The Finalizer should have been removed.
+			getDeletingEventType(false),
+			getFeedUsingOtherEventType(),
+		},
+	},	{
+		Name: "deleting EventType: Feeds using EventType in different namespace",
+		InitialState: []runtime.Object{
+			getDeletingEventType(true),
+			getFeedUsingEventTypeInDifferentNamespace(),
+		},
+		ReconcileKey: reconcileKey,
+		WantPresent: []runtime.Object{
+			// The Finalizer should have been removed.
+			getDeletingEventType(false),
+			getFeedUsingEventTypeInDifferentNamespace(),
+		},
+	},
+	{
+		Name: "deleting EventType: Feeds using EventType",
+		InitialState: []runtime.Object{
+			getDeletingEventType(true),
+			getFeedUsingEventType(fn1),
+			getFeedUsingEventType(fn2),
+		},
+		ReconcileKey: reconcileKey,
+		WantPresent: []runtime.Object{
+			// There are Feeds still using the EventType, it should still have its Finalizer and a
+			// new Status added stating which Feeds are blocking its deletion.
+			getDeletingEventTypeWithInUseStatus(fn1 + ", " + fn2),
+			getFeedUsingEventType(fn1),
+			getFeedUsingEventType(fn2),
+		},
+	},
+}
+
+func TestAllCases(t *testing.T) {
+	recorder := record.NewBroadcaster().NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
+
+	for _, tc := range testCases {
+		r := &reconciler{
+			client:   tc.GetClient(),
+			recorder: recorder,
+		}
+		t.Run(tc.Name, tc.Runner(t, r, r.client))
+	}
+}
+
+func objectMeta(namespace, name string) metav1.ObjectMeta {
+return metav1.ObjectMeta{
+	Namespace: namespace,
+	Name:      name,
+	SelfLink:  fmt.Sprintf("/apis/eventing/v1alpha1/namespaces/%s/object/%s", namespace, name),
+}
+}
+
+func getEventType(finalizer bool) *feedsv1alpha1.EventType {
+	et := &feedsv1alpha1.EventType{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: feedsv1alpha1.SchemeGroupVersion.String(),
+			Kind:       "EventType",
+		},
+		ObjectMeta: objectMeta(etNamespace, etName),
+		Spec: feedsv1alpha1.EventTypeSpec{
+			EventSource: eventSourceName,
+		},
+	}
+	if finalizer {
+		et.Finalizers = []string{finalizerName}
+	}
+	return et
+}
+
+func getDeletingEventType(finalizer bool) *feedsv1alpha1.EventType {
+	et := getEventType(finalizer)
+	et.ObjectMeta.DeletionTimestamp = &deletionTime
+	return et
+}
+
+func getDeletingEventTypeWithInUseStatus(feedNames string) *feedsv1alpha1.EventType {
+	et := getDeletingEventType(true)
+	et.Status.Conditions = append(et.Status.Conditions, feedsv1alpha1.CommonEventTypeCondition{
+		Type: feedsv1alpha1.EventTypeInUse,
+		Status: corev1.ConditionTrue,
+		Message: "Still in use by the Feeds: " + feedNames,
+	})
+	return et
+}
+
+func getFeed(namespace, name, eventType string) *feedsv1alpha1.Feed {
+	feed := &feedsv1alpha1.Feed{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion:feedsv1alpha1.SchemeGroupVersion.String(),
+			Kind: "Feed",
+		},
+		ObjectMeta: objectMeta(namespace, name),
+		Spec: feedsv1alpha1.FeedSpec{
+			Trigger:feedsv1alpha1.EventTrigger{
+				EventType: eventType,
+			},
+		},
+	}
+	return feed
+}
+
+func getFeedUsingOtherEventType() *feedsv1alpha1.Feed {
+	return getFeed(etNamespace, "feed-not-using-event-type", "some-other-event-type")
+}
+
+
+func getFeedUsingEventType(feedName string) *feedsv1alpha1.Feed {
+	return getFeed(etNamespace, feedName, etName)
+}
+
+func getFeedUsingEventTypeInDifferentNamespace() *feedsv1alpha1.Feed {
+	return getFeed("some-other-namespace", "feed-in-different-namespace", etName)
 }
