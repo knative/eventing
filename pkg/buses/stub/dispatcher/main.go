@@ -21,8 +21,9 @@ import (
 	"os"
 
 	"github.com/golang/glog"
+
 	"github.com/knative/eventing/pkg/buses"
-	"github.com/knative/eventing/pkg/buses/gcppubsub"
+	"github.com/knative/eventing/pkg/buses/stub"
 	"github.com/knative/pkg/signals"
 )
 
@@ -38,21 +39,13 @@ func main() {
 		os.Getenv("BUS_NAMESPACE"),
 	)
 
-	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
-	if projectID == "" {
-		glog.Fatalf("GOOGLE_CLOUD_PROJECT environment variable must be set")
-	}
-
 	opts := &buses.BusOpts{}
 
 	flag.StringVar(&opts.KubeConfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 	flag.StringVar(&opts.MasterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	flag.Parse()
 
-	bus, err := gcppubsub.NewCloudPubSubBusDispatcher(busRef, projectID, opts)
-	if err != nil {
-		glog.Fatalf("Error starting pub/sub bus dispatcher: %v", err)
-	}
+	bus := stub.NewStubBusDispatcher(busRef, opts)
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()

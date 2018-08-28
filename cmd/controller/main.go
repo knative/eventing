@@ -83,22 +83,22 @@ func main() {
 
 	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
-		logger.Fatalf("Error building kubeconfig: %s", err.Error())
+		logger.Fatalf("Error building kubeconfig: %v", err)
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		logger.Fatalf("Error building kubernetes clientset: %s", err.Error())
+		logger.Fatalf("Error building kubernetes clientset: %v", err)
 	}
 
 	client, err := clientset.NewForConfig(cfg)
 	if err != nil {
-		logger.Fatalf("Error building clientset: %s", err.Error())
+		logger.Fatalf("Error building clientset: %v", err)
 	}
 
 	sharedClient, err := sharedclientset.NewForConfig(cfg)
 	if err != nil {
-		logger.Fatalf("Error building shared clientset: %s", err.Error())
+		logger.Fatalf("Error building shared clientset: %v", err)
 	}
 
 	// TODO: Rip this out from all the controllers since we can get it
@@ -107,7 +107,7 @@ func main() {
 	// Kubernetes. Clients will use the Pod's ServiceAccount principal.
 	restConfig, err := rest.InClusterConfig()
 	if err != nil {
-		logger.Fatalf("Error building rest config: %v", err.Error())
+		logger.Fatalf("Error building rest config: %v", err)
 	}
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
@@ -147,7 +147,7 @@ func main() {
 			// We don't expect this to return until stop is called,
 			// but if it does, propagate it back.
 			if err := ctrlr.Run(threadsPerController, stopCh); err != nil {
-				logger.Fatalf("Error running controller: %s", err.Error())
+				logger.Fatalf("Error running controller: %v", err)
 			}
 		}(ctrlr)
 	}
