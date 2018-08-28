@@ -178,6 +178,30 @@ var testCases = []controllertesting.TestCase{
 		},
 	},
 	{
+		Name: "deleting Feed with deleting EventSource",
+		InitialState: []runtime.Object{
+			getDeletedStartedFeed(),
+			getDeletingEventSource(),
+			getEventType(),
+		},
+		ReconcileKey: "test/test-feed",
+		WantPresent: []runtime.Object{
+			getDeletedStopInProgressFeed(),
+		},
+	},
+	{
+		Name: "deleting Feed with deleting EventType",
+		InitialState: []runtime.Object{
+			getDeletedStartedFeed(),
+			getEventSource(),
+			getDeletingEventType(),
+		},
+		ReconcileKey: "test/test-feed",
+		WantPresent: []runtime.Object{
+			getDeletedStopInProgressFeed(),
+		},
+	},
+	{
 		Name: "failed because missing event source, now present",
 		InitialState: []runtime.Object{
 			getFeedFailingWithMissingEventSource(),

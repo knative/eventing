@@ -538,8 +538,8 @@ func (r *reconciler) getFeedSource(ctx context.Context, feed *feedsv1alpha1.Feed
 		return nil, nil, err
 	}
 
-	if es.GetDeletionTimestamp() != nil {
-		// EventSource is being deleted so don't allow feeds to it
+	if feed.GetDeletionTimestamp() == nil && es.GetDeletionTimestamp() != nil {
+		// EventSource is being deleted so don't allow non-deleting Feeds to use it.
 		msg := fmt.Sprintf("EventSource %s/%s is being deleted", feed.Namespace, feed.Spec.Trigger.Service)
 		glog.Info(msg)
 		return nil, nil, &EventSourceError{StatusError{EventSourceDeleting, msg}}
@@ -555,8 +555,8 @@ func (r *reconciler) getFeedSource(ctx context.Context, feed *feedsv1alpha1.Feed
 		return nil, nil, err
 	}
 
-	if et.GetDeletionTimestamp() != nil {
-		// EventType is being deleted so don't allow feeds to it
+	if feed.GetDeletionTimestamp() == nil && et.GetDeletionTimestamp() != nil {
+		// EventType is being deleted so don't allow non-deleting Feeds to use it.
 		msg := fmt.Sprintf("EventType %s/%s is being deleted", feed.Namespace, feed.Spec.Trigger.EventType)
 		glog.Info(msg)
 		return nil, nil, &EventTypeError{StatusError{EventTypeDeleting, msg}}
