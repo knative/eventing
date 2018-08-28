@@ -18,68 +18,43 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 
 	"github.com/golang/glog"
-	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	"github.com/knative/eventing/pkg/buses"
 	"github.com/knative/eventing/pkg/buses/gcppubsub"
 	"github.com/knative/pkg/signals"
 )
 
 const (
-	threadsPerMonitor = 1
-)
-
-var (
-	masterURL  string
-	kubeconfig string
+	threadsPerReconciler = 1
 )
 
 func main() {
 	defer glog.Flush()
 
+	busRef := buses.NewBusReferenceFromNames(
+		os.Getenv("BUS_NAME"),
+		os.Getenv("BUS_NAMESPACE"),
+	)
+
+	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	if projectID == "" {
+		glog.Fatalf("GOOGLE_CLOUD_PROJECT environment variable must be set")
+	}
+
+	opts := &buses.BusOpts{}
+
+	flag.StringVar(&opts.KubeConfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	flag.StringVar(&opts.MasterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	flag.Parse()
+
+	bus, err := gcppubsub.NewCloudPubSubBusProvisioner(busRef, projectID, opts)
+	if err != nil {
+		glog.Fatalf("Error starting pub/sub bus provisioner: %v", err)
+	}
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
-
-	namespace := os.Getenv("BUS_NAMESPACE")
-	name := os.Getenv("BUS_NAME")
-	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
-	if projectID == "" {
-		glog.Fatalf("GOOGLE_CLOUD_PROJECT environment variable must be set.\n")
-	}
-
-	component := fmt.Sprintf("%s-%s", name, buses.Provisioner)
-
-	var bus *gcppubsub.PubSubBus
-	monitor := buses.NewMonitor(component, masterURL, kubeconfig, buses.MonitorEventHandlerFuncs{
-		ProvisionFunc: func(channel *channelsv1alpha1.Channel, parameters buses.ResolvedParameters) error {
-			return bus.CreateTopic(channel, parameters)
-		},
-		UnprovisionFunc: func(channel *channelsv1alpha1.Channel) error {
-			return bus.DeleteTopic(channel)
-		},
-		SubscribeFunc: func(subscription *channelsv1alpha1.Subscription, parameters buses.ResolvedParameters) error {
-			return bus.CreateOrUpdateSubscription(subscription, parameters)
-		},
-		UnsubscribeFunc: func(subscription *channelsv1alpha1.Subscription) error {
-			return bus.DeleteSubscription(subscription)
-		},
-	})
-	bus, err := gcppubsub.NewPubSubBus(name, projectID, monitor, nil, nil)
-	if err != nil {
-		glog.Fatalf("Failed to create pubsub bus: %v", err)
-	}
-
-	if err := monitor.Run(namespace, name, threadsPerMonitor, stopCh); err != nil {
-		glog.Fatalf("Error running monitor: %v", err)
-	}
-}
-
-func init() {
-	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-	flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	bus.Run(threadsPerReconciler, stopCh)
 }

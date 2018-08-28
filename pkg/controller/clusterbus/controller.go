@@ -56,8 +56,6 @@ import (
 const (
 	controllerAgentName = "clusterbus-controller"
 	serviceAccountName  = "bus-operator"
-	provisionerRole     = "provisioner"
-	dispatcherRole      = "dispatcher"
 )
 
 const (
@@ -108,7 +106,8 @@ func NewController(
 	restConfig *rest.Config,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	clusterBusInformerFactory informers.SharedInformerFactory,
-	sharedInformerFactory sharedinformers.SharedInformerFactory) controller.Interface {
+	sharedInformerFactory sharedinformers.SharedInformerFactory,
+) controller.Interface {
 
 	// obtain references to shared index informers for the ClusterBus, Deployment and Service
 	// types.
@@ -514,10 +513,7 @@ func (c *Controller) handleObject(obj interface{}) {
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the ClusterBus resource that 'owns' it.
 func newDispatcherService(clusterBus *channelsv1alpha1.ClusterBus) *corev1.Service {
-	labels := map[string]string{
-		"clusterBus": clusterBus.Name,
-		"role":       dispatcherRole,
-	}
+	labels := dispatcherLabels(clusterBus.Name)
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      controller.ClusterBusDispatcherServiceName(clusterBus.ObjectMeta.Name),
@@ -548,10 +544,7 @@ func newDispatcherService(clusterBus *channelsv1alpha1.ClusterBus) *corev1.Servi
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the ClusterBus resource that 'owns' it.
 func newDispatcherDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.Deployment {
-	labels := map[string]string{
-		"clusterBus": clusterBus.Name,
-		"role":       dispatcherRole,
-	}
+	labels := dispatcherLabels(clusterBus.Name)
 	one := int32(1)
 	container := clusterBus.Spec.Dispatcher.DeepCopy()
 	container.Env = append(container.Env,
@@ -608,10 +601,7 @@ func newDispatcherDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.De
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the ClusterBus resource that 'owns' it.
 func newProvisionerDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.Deployment {
-	labels := map[string]string{
-		"clusterBus": clusterBus.Name,
-		"role":       provisionerRole,
-	}
+	labels := provisionerLabels(clusterBus.Name)
 	one := int32(1)
 	container := clusterBus.Spec.Provisioner.DeepCopy()
 	container.Env = append(container.Env,
@@ -657,5 +647,19 @@ func newProvisionerDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.D
 				},
 			},
 		},
+	}
+}
+
+func dispatcherLabels(busName string) map[string]string {
+	return map[string]string{
+		"clusterBus": busName,
+		"role":       "dispatcher",
+	}
+}
+
+func provisionerLabels(busName string) map[string]string {
+	return map[string]string{
+		"clusterBus": busName,
+		"role":       "provisioner",
 	}
 }

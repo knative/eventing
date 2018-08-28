@@ -27,14 +27,14 @@ import (
 // MessageReceiver starts a server to receive new messages for the bus. The new
 // message is emitted via the receiver function.
 type MessageReceiver struct {
-	receiverFunc    func(*ChannelReference, *Message) error
+	receiverFunc    func(ChannelReference, *Message) error
 	forwardHeaders  map[string]bool
 	forwardPrefixes []string
 }
 
 // NewMessageReceiver creates a message receiver passing new messages to the
 // receiverFunc.
-func NewMessageReceiver(receiverFunc func(*ChannelReference, *Message) error) *MessageReceiver {
+func NewMessageReceiver(receiverFunc func(ChannelReference, *Message) error) *MessageReceiver {
 	receiver := &MessageReceiver{
 		receiverFunc:    receiverFunc,
 		forwardHeaders:  headerSet(forwardHeaders),
@@ -161,9 +161,9 @@ func (r *MessageReceiver) fromHTTPHeaders(headers http.Header) map[string]string
 
 // parseChannelReference converts the channel's hostname into a channel
 // reference.
-func (r *MessageReceiver) parseChannelReference(host string) *ChannelReference {
+func (r *MessageReceiver) parseChannelReference(host string) ChannelReference {
 	chunks := strings.Split(host, ".")
-	return &ChannelReference{
+	return ChannelReference{
 		Name:      chunks[0],
 		Namespace: chunks[1],
 	}

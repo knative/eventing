@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,11 +18,14 @@ package main
 
 import (
 	"flag"
+	"log"
 	"os"
+	"strings"
 
+	"github.com/Shopify/sarama"
 	"github.com/golang/glog"
 	"github.com/knative/eventing/pkg/buses"
-	"github.com/knative/eventing/pkg/buses/gcppubsub"
+	"github.com/knative/eventing/pkg/buses/kafka"
 	"github.com/knative/pkg/signals"
 )
 
@@ -32,15 +35,16 @@ const (
 
 func main() {
 	defer glog.Flush()
+	sarama.Logger = log.New(os.Stderr, "[Sarama] ", log.LstdFlags)
 
 	busRef := buses.NewBusReferenceFromNames(
 		os.Getenv("BUS_NAME"),
 		os.Getenv("BUS_NAMESPACE"),
 	)
 
-	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
-	if projectID == "" {
-		glog.Fatalf("GOOGLE_CLOUD_PROJECT environment variable must be set")
+	brokers := strings.Split(os.Getenv("KAFKA_BROKERS"), ",")
+	if len(brokers) == 0 {
+		log.Fatalf("Environment variable KAFKA_BROKERS not set")
 	}
 
 	opts := &buses.BusOpts{}
@@ -49,9 +53,9 @@ func main() {
 	flag.StringVar(&opts.MasterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	flag.Parse()
 
-	bus, err := gcppubsub.NewCloudPubSubBusDispatcher(busRef, projectID, opts)
+	bus, err := kafka.NewKafkaBusDispatcher(busRef, brokers, opts)
 	if err != nil {
-		glog.Fatalf("Error starting pub/sub bus dispatcher: %v", err)
+		glog.Fatalf("Error starting kafka bus dispatcher: %v", err)
 	}
 
 	// set up signals so we handle the first shutdown signal gracefully
