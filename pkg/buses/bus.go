@@ -112,8 +112,8 @@ func NewBusDispatcher(busRef BusReference, handlerFuncs EventHandlerFuncs, opts 
 		opts.MessageDispatcher = NewMessageDispatcher()
 	}
 	if opts.MessageReceiver == nil {
-		opts.MessageReceiver = NewMessageReceiver(func(channelRef ChannelReference, message *Message) error {
-			return b.receiveMessage(channelRef, message)
+		opts.MessageReceiver = NewMessageReceiver(busRef, func(ref ChannelHostReference, message *Message) error {
+			return b.receiveMessage(ref, message)
 		})
 	}
 
@@ -141,11 +141,12 @@ func (b bus) Run(threadiness int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (b *bus) receiveMessage(channelRef ChannelReference, message *Message) error {
-	_, err := b.cache.Channel(channelRef)
+func (b *bus) receiveMessage(ref ChannelHostReference, message *Message) error {
+	channel, err := b.cache.ChannelHost(ref)
 	if err != nil {
 		return ErrUnknownChannel
 	}
+	channelRef := NewChannelReference(channel)
 	return b.handlerFuncs.onReceiveMessage(channelRef, message)
 }
 

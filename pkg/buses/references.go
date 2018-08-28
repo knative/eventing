@@ -18,6 +18,7 @@ package buses
 
 import (
 	"fmt"
+	"strings"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 )
@@ -82,6 +83,46 @@ func NewChannelReferenceFromNames(name, namespace string) ChannelReference {
 
 func (r *ChannelReference) String() string {
 	return fmt.Sprintf("%s/%s", r.Namespace, r.Name)
+}
+
+// ChannelHostReference references a hostname for a Channel.
+type ChannelHostReference struct {
+	Namespace string
+	Name      string
+}
+
+// NewChannelHostReference creates a ChannelHostReference from a hostname. If
+// the hostname does not contain the namespace, the default value is used.
+func NewChannelHostReference(hostname, defaultNamespace string) ChannelHostReference {
+	chunks := strings.Split(hostname, ".")
+	if len(chunks) == 1 {
+		return NewChannelHostReferenceFromNames(chunks[0], defaultNamespace)
+	}
+	return NewChannelHostReferenceFromNames(chunks[0], chunks[1])
+}
+
+// NewChannelHostReferenceFromChannel creates a ChannelHostReference from a
+// provisioned Channel.
+func NewChannelHostReferenceFromChannel(channel *channelsv1alpha1.Channel) (ChannelHostReference, error) {
+	domainInternal := channel.Status.DomainInternal
+	if domainInternal == "" {
+		channelRef := NewChannelReference(channel)
+		return ChannelHostReference{}, fmt.Errorf("channel %q is not serviceable", channelRef.String())
+	}
+	return NewChannelHostReference(domainInternal, channel.Namespace), nil
+}
+
+// NewChannelHostReferenceFromNames creates a ChannelHostReference for a name
+// and namespace.
+func NewChannelHostReferenceFromNames(name, namespace string) ChannelHostReference {
+	return ChannelHostReference{
+		Namespace: namespace,
+		Name:      name,
+	}
+}
+
+func (r *ChannelHostReference) String() string {
+	return fmt.Sprintf("%s.%s", r.Name, r.Namespace)
 }
 
 // SubscriptionReference references a Subscription within the cluster by name

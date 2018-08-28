@@ -17,15 +17,11 @@ limitations under the License.
 package controller
 
 import (
+	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
+	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-
-	sharedclientset "github.com/knative/pkg/client/clientset/versioned"
-	sharedinformers "github.com/knative/pkg/client/informers/externalversions"
-
-	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 )
 
 type Interface interface {
@@ -35,9 +31,7 @@ type Interface interface {
 type Constructor func(
 	kubernetes.Interface,
 	clientset.Interface,
-	sharedclientset.Interface,
 	*rest.Config,
 	kubeinformers.SharedInformerFactory,
 	informers.SharedInformerFactory,
-	sharedinformers.SharedInformerFactory,
 ) Interface

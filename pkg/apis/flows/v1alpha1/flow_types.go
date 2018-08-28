@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"encoding/json"
+
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	"github.com/knative/pkg/apis"
@@ -73,8 +74,9 @@ type FlowSpec struct {
 // provide the resolved target of the action. Currently we inspect
 // the objects Status and see if there's a predefined Status field
 // that we will then use to give to Feed object as the target. Currently
-// must resolve to a k8s service or Istio virtual service. Note that by
-// in the future we should try to utilize subresources (/resolve ?) to
+// must resolve to a k8s service.
+//
+// In the future we should try to utilize subresources (/resolve ?) to
 // utilize this, but CRDs do not support subresources yet, so we need
 // to rely on a specified Status field today. By relying on this behaviour
 // we can utilize a dynamic client instead of having to understand all

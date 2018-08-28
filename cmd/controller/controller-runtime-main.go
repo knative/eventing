@@ -22,8 +22,6 @@ import (
 	"github.com/knative/eventing/pkg/controller/feed"
 	"github.com/knative/eventing/pkg/controller/flow"
 
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -56,7 +54,6 @@ func controllerRuntimeStart() error {
 		channelsv1alpha1.AddToScheme,
 		feedsv1alpha1.AddToScheme,
 		flowsv1alpha1.AddToScheme,
-		istiov1alpha3.AddToScheme,
 	}
 	for _, schemeFunc := range schemeFuncs {
 		schemeFunc(mrg.GetScheme())

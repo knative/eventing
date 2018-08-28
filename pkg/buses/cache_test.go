@@ -17,6 +17,7 @@ limitations under the License.
 package buses_test
 
 import (
+	"fmt"
 	"testing"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
@@ -27,6 +28,7 @@ import (
 const (
 	cacheDefaultNamespace = "default"
 	cacheTestChannel      = "test-channel"
+	cacheTestChannelHost  = "test-channel-host"
 	cacheTestSubscription = "test-subscription"
 )
 
@@ -39,7 +41,7 @@ func TestCacheErrsForUnknownChannel(t *testing.T) {
 		t.Errorf("%s expected: %+v got: %+v", "Error", "<error>", err)
 	}
 	if expected != actual {
-		t.Errorf("%s expected: %+v got: %+v", "Unexpected channel", nil, actual)
+		t.Errorf("%s expected: %+v got: %+v", "Channel", expected, actual)
 	}
 }
 
@@ -78,6 +80,64 @@ func TestCacheNilChannel(t *testing.T) {
 	var channel *channelsv1alpha1.Channel
 	cache.AddChannel(channel)
 	cache.RemoveChannel(channel)
+}
+
+func TestCacheErrsForUnknownChannelHost(t *testing.T) {
+	cache := buses.NewCache()
+	ref := buses.NewChannelHostReferenceFromNames(cacheTestChannelHost, cacheDefaultNamespace)
+	var expected *channelsv1alpha1.Channel
+	actual, err := cache.ChannelHost(ref)
+	if err == nil {
+		t.Errorf("%s expected: %+v got: %+v", "Error", "<error>", err)
+	}
+	if expected != actual {
+		t.Errorf("%s expected: %+v got: %+v", "Channel", expected, actual)
+	}
+}
+
+func TestCacheRetrievesKnownChannelHost(t *testing.T) {
+	cache := buses.NewCache()
+	ref := buses.NewChannelHostReferenceFromNames(cacheTestChannelHost, cacheDefaultNamespace)
+	expected := makeChannelForHost(ref)
+	cache.AddChannel(expected)
+	actual, err := cache.ChannelHost(ref)
+	if err != nil {
+		t.Errorf("%s expected: %+v got: %+v", "Unexpected error", nil, err)
+	}
+	if expected != actual {
+		t.Errorf("%s expected: %+v got: %+v", "Channel", expected, actual)
+	}
+}
+
+func TestCacheErrsForUnserviceableChannel(t *testing.T) {
+	cache := buses.NewCache()
+	ref := buses.NewChannelHostReferenceFromNames(cacheTestChannelHost, cacheDefaultNamespace)
+	channel := makeChannel(buses.NewChannelReferenceFromNames(cacheTestChannel, cacheDefaultNamespace))
+	cache.AddChannel(channel)
+	var expected *channelsv1alpha1.Channel
+	actual, err := cache.ChannelHost(ref)
+	if err == nil {
+		t.Errorf("%s expected: %+v got: %+v", "Error", "<error>", err)
+	}
+	if expected != actual {
+		t.Errorf("%s expected: %+v got: %+v", "Channel", expected, actual)
+	}
+}
+
+func TestCacheRemovesKnownChannelHost(t *testing.T) {
+	cache := buses.NewCache()
+	ref := buses.NewChannelHostReferenceFromNames(cacheTestChannel, cacheDefaultNamespace)
+	channel := makeChannelForHost(ref)
+	cache.AddChannel(channel)
+	cache.RemoveChannel(channel)
+	var expected *channelsv1alpha1.Channel
+	actual, err := cache.ChannelHost(ref)
+	if err == nil {
+		t.Errorf("%s expected: %+v got: %+v", "Unexpected error", nil, err)
+	}
+	if expected != actual {
+		t.Errorf("%s expected: %+v got: %+v", "Channel", expected, actual)
+	}
 }
 
 func TestCacheErrsForUnknownSubscription(t *testing.T) {
@@ -135,6 +195,18 @@ func makeChannel(channelRef buses.ChannelReference) *channelsv1alpha1.Channel {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      channelRef.Name,
 			Namespace: channelRef.Namespace,
+		},
+	}
+}
+
+func makeChannelForHost(ref buses.ChannelHostReference) *channelsv1alpha1.Channel {
+	return &channelsv1alpha1.Channel{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cacheTestChannel,
+			Namespace: cacheDefaultNamespace,
+		},
+		Status: channelsv1alpha1.ChannelStatus{
+			DomainInternal: fmt.Sprintf("%s.%s.svc.cluster.local", ref.Name, ref.Namespace),
 		},
 	}
 }

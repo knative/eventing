@@ -147,6 +147,10 @@ function run_k8s_events_test() {
   # Install stub bus
   echo "Installing stub bus"
   ko apply -f test/e2e/k8sevents/stub.yaml || return 1
+	
+  # Install istio serviceentry for channels
+  echo "Installing istio serviceentry for channels"
+  ko apply -f test/e2e/k8sevents/serviceentry.yaml || return 1
 
   # Install k8s events as an event source
   echo "Installing k8s events as an event source"

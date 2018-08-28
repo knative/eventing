@@ -268,20 +268,10 @@
   revision = "5c1d8c8469d1ed34b2aecf4c2305b3a57fff2ee3"
 
 [[projects]]
-  digest = "1:75099ce780b47b2c612be5b4581a8779d749208423eb783c5073c158fbfadb7d"
+  digest = "1:433e603dd22d1d3725ca2a3ad38caf41cda3a271cede87f39fcaf0c76cb4f963"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
-    "apis/istio",
-    "apis/istio/v1alpha3",
-    "client/clientset/versioned",
-    "client/clientset/versioned/scheme",
-    "client/clientset/versioned/typed/istio/v1alpha3",
-    "client/informers/externalversions",
-    "client/informers/externalversions/internalinterfaces",
-    "client/informers/externalversions/istio",
-    "client/informers/externalversions/istio/v1alpha3",
-    "client/listers/istio/v1alpha3",
     "configmap",
     "logging",
     "logging/logkey",
@@ -310,7 +300,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d6415e6b744ec877c21fe734067636b9ee149af77276b08a3d33dd8698abf947"
+  digest = "1:c9a813ac651ba08533e49b886b85d272296119512ca3fda10bc318a5199080cd"
   name = "github.com/knative/test-infra"
   packages = ["."]
   pruneopts = "T"
@@ -1030,10 +1020,6 @@
     "github.com/google/go-github/github",
     "github.com/google/uuid",
     "github.com/knative/pkg/apis",
-    "github.com/knative/pkg/apis/istio/v1alpha3",
-    "github.com/knative/pkg/client/clientset/versioned",
-    "github.com/knative/pkg/client/informers/externalversions",
-    "github.com/knative/pkg/client/listers/istio/v1alpha3",
     "github.com/knative/pkg/configmap",
     "github.com/knative/pkg/logging",
     "github.com/knative/pkg/logging/logkey",
@@ -1041,6 +1027,7 @@
     "github.com/knative/pkg/webhook",
     "github.com/knative/serving/pkg/apis/serving/v1alpha1",
     "github.com/knative/serving/pkg/client/clientset/versioned",
+    "github.com/knative/test-infra",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "go.uber.org/zap",
     "golang.org/x/net/context",
@@ -1079,7 +1066,6 @@
     "k8s.io/client-go/kubernetes/typed/core/v1",
     "k8s.io/client-go/listers/apps/v1",
     "k8s.io/client-go/listers/core/v1",
-    "k8s.io/client-go/listers/rbac/v1beta1",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/testing",

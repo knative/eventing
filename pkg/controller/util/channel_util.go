@@ -70,7 +70,6 @@ func RemoveChannelCondition(status *v1alpha1.ChannelStatus, condType v1alpha1.Ch
 func ConsolidateChannelCondition(status *v1alpha1.ChannelStatus) {
 	subConditionsTypes := []v1alpha1.ChannelConditionType{
 		v1alpha1.ChannelProvisioned,
-		v1alpha1.ChannelRoutable,
 		v1alpha1.ChannelServiceable,
 	}
 	cond := NewChannelCondition(v1alpha1.ChannelReady, v1.ConditionTrue, "", "")

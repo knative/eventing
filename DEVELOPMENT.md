@@ -47,6 +47,30 @@ fork](https://help.github.com/articles/syncing-a-fork/)._
 
 Once you reach this point you are ready to do a full build and deploy as follows.
 
+### Configure Istio per namespace
+
+ Clusters not using Istio may skip this step.
+
+ Each namespace that contains a Channel needs to be configured so that Istio will bridge the service mesh for a Channel to the Bus hosting that channel. The following snippet will need to be applied to each namespace that will use a Channel. Replace $NAMESPACE both in the metadata struct and the service hosts.
+
+ ```yaml
+ apiVersion: networking.istio.io/v1alpha3
+ kind: ServiceEntry
+ metadata:
+   name: knative-channels
+   namespace: $NAMESPACE
+ spec:
+   hosts:
+   - '*-channel.$NAMESPACE.svc.cluster.local'
+   location: MESH_INTERNAL
+   ports:
+   - name: http
+     number: 80
+     protocol: HTTP
+ ```
+
+ This ServiceEntry extends the Istio mesh to include Channels.
+
 ## Starting Eventing Controller
 
 Once you've [setup your development environment](#getting-started), stand up

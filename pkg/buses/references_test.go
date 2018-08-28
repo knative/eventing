@@ -30,6 +30,7 @@ const (
 	referencesTestBusName          = "test-bus"
 	referencesTestClusterBusName   = "test-clusterbus"
 	referencesTestChannelName      = "test-channel"
+	referencesTestChannelHostName  = "test-channel-host"
 	referencesTestSubscriptionName = "test-subscription"
 )
 
@@ -166,6 +167,108 @@ func TestChannelReference_String(t *testing.T) {
 	actual := channelRef.String()
 	if expected != actual {
 		t.Errorf("%s expected: %+v got: %+v", "ChannelReference", expected, actual)
+	}
+}
+
+func TestNewChannelHostReference_FullyQualified(t *testing.T) {
+	hostname := fmt.Sprintf("%s.%s.svc.cluster.local", referencesTestChannelHostName, referencesTestNamespace)
+	expected := buses.ChannelHostReference{
+		Name:      referencesTestChannelHostName,
+		Namespace: referencesTestNamespace,
+	}
+	actual := buses.NewChannelHostReference(hostname, "bogus")
+	if expected != actual {
+		t.Errorf("%s expected: %+v got: %+v", "ChannelHostReference", expected, actual)
+	}
+}
+
+func TestNewChannelHostReference_Namespaced(t *testing.T) {
+	hostname := fmt.Sprintf("%s.%s", referencesTestChannelHostName, referencesTestNamespace)
+	expected := buses.ChannelHostReference{
+		Name:      referencesTestChannelHostName,
+		Namespace: referencesTestNamespace,
+	}
+	actual := buses.NewChannelHostReference(hostname, "bogus")
+	if expected != actual {
+		t.Errorf("%s expected: %+v got: %+v", "ChannelHostReference", expected, actual)
+	}
+}
+
+func TestNewChannelHostReference_Shortname(t *testing.T) {
+	hostname := referencesTestChannelHostName
+	expected := buses.ChannelHostReference{
+		Name:      referencesTestChannelHostName,
+		Namespace: referencesTestNamespace,
+	}
+	actual := buses.NewChannelHostReference(hostname, referencesTestNamespace)
+	if expected != actual {
+		t.Errorf("%s expected: %+v got: %+v", "ChannelHostReference", expected, actual)
+	}
+}
+
+func TestNewChannelHostReferenceFromChannel(t *testing.T) {
+	channel := &channelsv1alpha1.Channel{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      referencesTestChannelName,
+			Namespace: referencesTestNamespace,
+		},
+		Status: channelsv1alpha1.ChannelStatus{
+			DomainInternal: fmt.Sprintf("%s.%s.svc.cluster.local", referencesTestChannelHostName, referencesTestNamespace),
+		},
+	}
+	expected := buses.ChannelHostReference{
+		Name:      referencesTestChannelHostName,
+		Namespace: referencesTestNamespace,
+	}
+	actual, err := buses.NewChannelHostReferenceFromChannel(channel)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if expected != actual {
+		t.Errorf("%s expected: %+v got: %+v", "ChannelHostReference", expected, actual)
+	}
+}
+
+func TestNewChannelHostReferenceFromChannel_NotServiceable(t *testing.T) {
+	channel := &channelsv1alpha1.Channel{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      referencesTestChannelName,
+			Namespace: referencesTestNamespace,
+		},
+	}
+	expected := buses.ChannelHostReference{}
+	expectedErr := fmt.Sprintf("channel \"%s/%s\" is not serviceable", referencesTestNamespace, referencesTestChannelName)
+	actual, actualErr := buses.NewChannelHostReferenceFromChannel(channel)
+	if actualErr == nil {
+		t.Errorf("error expected: %v", actualErr)
+	} else if actualErr.Error() != expectedErr {
+		t.Errorf("%s expected: %+v got: %+v", "ChannelHostReference Error", expectedErr, actualErr)
+	}
+	if expected != actual {
+		t.Errorf("%s expected: %+v got: %+v", "ChannelHostReference", expected, actual)
+	}
+}
+
+func TestNewChannelHostReferenceFromNames(t *testing.T) {
+	expected := buses.ChannelHostReference{
+		Name:      referencesTestChannelHostName,
+		Namespace: referencesTestNamespace,
+	}
+	actual := buses.NewChannelHostReferenceFromNames(referencesTestChannelHostName, referencesTestNamespace)
+	if expected != actual {
+		t.Errorf("%s expected: %+v got: %+v", "ChannelHostReference", expected, actual)
+	}
+}
+
+func TestChannelHostReference_String(t *testing.T) {
+	channelHostRef := buses.ChannelHostReference{
+		Name:      referencesTestChannelHostName,
+		Namespace: referencesTestNamespace,
+	}
+	expected := fmt.Sprintf("%s.%s", referencesTestChannelHostName, referencesTestNamespace)
+	actual := channelHostRef.String()
+	if expected != actual {
+		t.Errorf("%s expected: %+v got: %+v", "ChannelHostReference", expected, actual)
 	}
 }
 

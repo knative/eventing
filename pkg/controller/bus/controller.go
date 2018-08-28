@@ -39,7 +39,6 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	appslisters "k8s.io/client-go/listers/apps/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
-	rbaclisters "k8s.io/client-go/listers/rbac/v1beta1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -49,8 +48,6 @@ import (
 	channelscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	listers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
-	sharedclientset "github.com/knative/pkg/client/clientset/versioned"
-	sharedinformers "github.com/knative/pkg/client/informers/externalversions"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	"github.com/knative/eventing/pkg/controller/util"
@@ -94,16 +91,12 @@ type Controller struct {
 	// busclientset is a clientset for our own API group
 	busclientset clientset.Interface
 
-	deploymentsLister         appslisters.DeploymentLister
-	deploymentsSynced         cache.InformerSynced
-	servicesLister            corelisters.ServiceLister
-	servicesSynced            cache.InformerSynced
-	serviceAccountsLister     corelisters.ServiceAccountLister
-	serviceAccountsSynced     cache.InformerSynced
-	clusterRoleBindingsLister rbaclisters.ClusterRoleBindingLister
-	clusterRoleBindingsSynced cache.InformerSynced
-	busesLister               listers.BusLister
-	busesSynced               cache.InformerSynced
+	deploymentsLister appslisters.DeploymentLister
+	deploymentsSynced cache.InformerSynced
+	servicesLister    corelisters.ServiceLister
+	servicesSynced    cache.InformerSynced
+	busesLister       listers.BusLister
+	busesSynced       cache.InformerSynced
 
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
@@ -120,11 +113,9 @@ type Controller struct {
 func NewController(
 	kubeclientset kubernetes.Interface,
 	busclientset clientset.Interface,
-	sharedclientset sharedclientset.Interface,
 	restConfig *rest.Config,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	busInformerFactory informers.SharedInformerFactory,
-	istioInformerFactory sharedinformers.SharedInformerFactory,
 ) controller.Interface {
 
 	// obtain references to shared index informers for the Bus, Deployment and Service
@@ -132,8 +123,6 @@ func NewController(
 	busInformer := busInformerFactory.Channels().V1alpha1().Buses()
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
-	serviceAccountInformer := kubeInformerFactory.Core().V1().ServiceAccounts()
-	clusterRoleBindingInformer := kubeInformerFactory.Rbac().V1beta1().ClusterRoleBindings()
 
 	// Create event broadcaster
 	// Add bus-controller types to the default Kubernetes Scheme so Events can be
@@ -146,20 +135,16 @@ func NewController(
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
 	controller := &Controller{
-		kubeclientset:             kubeclientset,
-		busclientset:              busclientset,
-		deploymentsLister:         deploymentInformer.Lister(),
-		deploymentsSynced:         deploymentInformer.Informer().HasSynced,
-		servicesLister:            serviceInformer.Lister(),
-		servicesSynced:            serviceInformer.Informer().HasSynced,
-		serviceAccountsLister:     serviceAccountInformer.Lister(),
-		serviceAccountsSynced:     serviceAccountInformer.Informer().HasSynced,
-		clusterRoleBindingsLister: clusterRoleBindingInformer.Lister(),
-		clusterRoleBindingsSynced: clusterRoleBindingInformer.Informer().HasSynced,
-		busesLister:               busInformer.Lister(),
-		busesSynced:               busInformer.Informer().HasSynced,
-		workqueue:                 workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Buses"),
-		recorder:                  recorder,
+		kubeclientset:     kubeclientset,
+		busclientset:      busclientset,
+		deploymentsLister: deploymentInformer.Lister(),
+		deploymentsSynced: deploymentInformer.Informer().HasSynced,
+		servicesLister:    serviceInformer.Lister(),
+		servicesSynced:    serviceInformer.Informer().HasSynced,
+		busesLister:       busInformer.Lister(),
+		busesSynced:       busInformer.Informer().HasSynced,
+		workqueue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Buses"),
+		recorder:          recorder,
 	}
 
 	glog.Info("Setting up event handlers")

@@ -368,15 +368,6 @@ func (in *ChannelStatus) DeepCopyInto(out *ChannelStatus) {
 			**out = **in
 		}
 	}
-	if in.VirtualService != nil {
-		in, out := &in.VirtualService, &out.VirtualService
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.LocalObjectReference)
-			**out = **in
-		}
-	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]ChannelCondition, len(*in))

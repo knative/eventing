@@ -27,15 +27,17 @@ import (
 // MessageReceiver starts a server to receive new messages for the bus. The new
 // message is emitted via the receiver function.
 type MessageReceiver struct {
-	receiverFunc    func(ChannelReference, *Message) error
+	busRef          BusReference
+	receiverFunc    func(ChannelHostReference, *Message) error
 	forwardHeaders  map[string]bool
 	forwardPrefixes []string
 }
 
 // NewMessageReceiver creates a message receiver passing new messages to the
 // receiverFunc.
-func NewMessageReceiver(receiverFunc func(ChannelReference, *Message) error) *MessageReceiver {
+func NewMessageReceiver(busRef BusReference, receiverFunc func(ChannelHostReference, *Message) error) *MessageReceiver {
 	receiver := &MessageReceiver{
+		busRef:          busRef,
 		receiverFunc:    receiverFunc,
 		forwardHeaders:  headerSet(forwardHeaders),
 		forwardPrefixes: forwardPrefixes,
@@ -99,7 +101,7 @@ func (r *MessageReceiver) stop(srv *http.Server) {
 func (r *MessageReceiver) HandleRequest(res http.ResponseWriter, req *http.Request) {
 	host := req.Host
 	glog.Infof("Received request for %s\n", host)
-	channelReference := r.parseChannelReference(host)
+	ref := NewChannelHostReference(host, r.busRef.Namespace)
 
 	message, err := r.fromRequest(req)
 	if err != nil {
@@ -107,7 +109,7 @@ func (r *MessageReceiver) HandleRequest(res http.ResponseWriter, req *http.Reque
 		return
 	}
 
-	err = r.receiverFunc(channelReference, message)
+	err = r.receiverFunc(ref, message)
 	if err != nil {
 		if err == ErrUnknownChannel {
 			res.WriteHeader(http.StatusNotFound)
@@ -157,14 +159,4 @@ func (r *MessageReceiver) fromHTTPHeaders(headers http.Header) map[string]string
 	}
 
 	return safe
-}
-
-// parseChannelReference converts the channel's hostname into a channel
-// reference.
-func (r *MessageReceiver) parseChannelReference(host string) ChannelReference {
-	chunks := strings.Split(host, ".")
-	return ChannelReference{
-		Name:      chunks[0],
-		Namespace: chunks[1],
-	}
 }

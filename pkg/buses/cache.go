@@ -27,6 +27,7 @@ import (
 func NewCache() *Cache {
 	return &Cache{
 		channels:      make(map[ChannelReference]*channelsv1alpha1.Channel),
+		channelHosts:  make(map[ChannelHostReference]ChannelReference),
 		subscriptions: make(map[SubscriptionReference]*channelsv1alpha1.Subscription),
 	}
 }
@@ -36,6 +37,7 @@ func NewCache() *Cache {
 // provisioned and comparing updated resources to the provisioned version.
 type Cache struct {
 	channels      map[ChannelReference]*channelsv1alpha1.Channel
+	channelHosts  map[ChannelHostReference]ChannelReference
 	subscriptions map[SubscriptionReference]*channelsv1alpha1.Subscription
 }
 
@@ -47,6 +49,16 @@ func (c *Cache) Channel(channelRef ChannelReference) (*channelsv1alpha1.Channel,
 		return nil, fmt.Errorf("unknown channel %q", channelRef.String())
 	}
 	return channel, nil
+}
+
+// ChannelHost returns a cached channel for a provided channel host reference
+// or an error if the channel host is not in the cache.
+func (c *Cache) ChannelHost(channelHostRef ChannelHostReference) (*channelsv1alpha1.Channel, error) {
+	channelRef, ok := c.channelHosts[channelHostRef]
+	if !ok {
+		return nil, fmt.Errorf("unknown channel host %q", channelHostRef.String())
+	}
+	return c.Channel(channelRef)
 }
 
 // Subscription returns a cached subscription for provided reference or an
@@ -67,6 +79,10 @@ func (c *Cache) AddChannel(channel *channelsv1alpha1.Channel) {
 	}
 	channelRef := NewChannelReference(channel)
 	c.channels[channelRef] = channel
+	if channelHostRef, err := NewChannelHostReferenceFromChannel(channel); err == nil {
+		// an error is expected if the channel is not serviceable yet
+		c.channelHosts[channelHostRef] = channelRef
+	}
 }
 
 // RemoveChannel removes the provided channel from the cache.
@@ -76,6 +92,11 @@ func (c *Cache) RemoveChannel(channel *channelsv1alpha1.Channel) {
 	}
 	channelRef := NewChannelReference(channel)
 	delete(c.channels, channelRef)
+	if channelHostRef, err := NewChannelHostReferenceFromChannel(channel); err != nil {
+		// it's ok if key is abandoned in the channelHost cache after being
+		// removed from the channel cache, but we should try to clean it up.
+		delete(c.channelHosts, channelHostRef)
+	}
 }
 
 // AddSubscription adds, or updates, the provided subscription to the cache for

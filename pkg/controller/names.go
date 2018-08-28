@@ -42,16 +42,8 @@ func ClusterBusDispatcherServiceName(clusterBusName string) string {
 	return fmt.Sprintf("%s-clusterbus", clusterBusName)
 }
 
-func ChannelVirtualServiceName(channelName string) string {
-	return fmt.Sprintf("%s-channel", channelName)
-}
-
 func ChannelServiceName(channelName string) string {
 	return fmt.Sprintf("%s-channel", channelName)
-}
-
-func ChannelHostName(channelName, namespace string) string {
-	return fmt.Sprintf("%s.%s.channels.cluster.local", channelName, namespace)
 }
 
 func ServiceHostName(serviceName, namespace string) string {

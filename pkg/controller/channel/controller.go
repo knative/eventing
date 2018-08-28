@@ -22,7 +22,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/knative/eventing/pkg/controller"
-	istiolisters "github.com/knative/pkg/client/listers/istio/v1alpha3"
+	"github.com/knative/eventing/pkg/system"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -44,13 +44,9 @@ import (
 	channelscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	listers "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
-	"github.com/knative/eventing/pkg/system"
-	sharedclientset "github.com/knative/pkg/client/clientset/versioned"
-	sharedinformers "github.com/knative/pkg/client/informers/externalversions"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	"github.com/knative/eventing/pkg/controller/util"
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 )
 
 const controllerAgentName = "channel-controller"
@@ -75,15 +71,9 @@ const (
 	ServiceSynced = "ServiceSynced"
 	// ServiceError is used as part of the condition reason when the channel (k8s) service creation failed.
 	ServiceError = "ServiceError"
-	// VirtualServiceSynced is used as part of the condition reason when the channel istio virtual service is successfully created.
-	VirtualServiceSynced = "VirtualServiceSynced"
-	// VirtualServiceError is used as part of the condition reason when the channel istio virtual service creation failed.
-	VirtualServiceError = "VirtualServiceError"
-)
 
-const (
-	PortNumber = 80
-	PortName   = "http"
+	portNumber = 80
+	portName   = "http"
 )
 
 // Controller is the controller implementation for Channel resources
@@ -92,15 +82,11 @@ type Controller struct {
 	kubeclientset kubernetes.Interface
 	// channelclientset is a clientset for our own API group
 	channelclientset clientset.Interface
-	// sharedclientset is a clientset for shared API groups
-	sharedclientset sharedclientset.Interface
 
-	virtualservicesLister istiolisters.VirtualServiceLister
-	virtualservicesSynced cache.InformerSynced
-	servicesLister        corelisters.ServiceLister
-	servicesSynced        cache.InformerSynced
-	channelsLister        listers.ChannelLister
-	channelsSynced        cache.InformerSynced
+	servicesLister corelisters.ServiceLister
+	servicesSynced cache.InformerSynced
+	channelsLister listers.ChannelLister
+	channelsSynced cache.InformerSynced
 
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
@@ -117,15 +103,12 @@ type Controller struct {
 func NewController(
 	kubeclientset kubernetes.Interface,
 	channelclientset clientset.Interface,
-	sharedclientset sharedclientset.Interface,
 	restConfig *rest.Config,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	channelInformerFactory informers.SharedInformerFactory,
-	sharedInformerFactory sharedinformers.SharedInformerFactory,
 ) controller.Interface {
 
 	// obtain references to shared index informers for the Service and Channel types.
-	virtualserviceInformer := sharedInformerFactory.Networking().V1alpha3().VirtualServices()
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
 	channelInformer := channelInformerFactory.Channels().V1alpha1().Channels()
 
@@ -140,17 +123,14 @@ func NewController(
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
 	controller := &Controller{
-		kubeclientset:         kubeclientset,
-		channelclientset:      channelclientset,
-		sharedclientset:       sharedclientset,
-		virtualservicesLister: virtualserviceInformer.Lister(),
-		virtualservicesSynced: virtualserviceInformer.Informer().HasSynced,
-		servicesLister:        serviceInformer.Lister(),
-		servicesSynced:        serviceInformer.Informer().HasSynced,
-		channelsLister:        channelInformer.Lister(),
-		channelsSynced:        channelInformer.Informer().HasSynced,
-		workqueue:             workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Channels"),
-		recorder:              recorder,
+		kubeclientset:    kubeclientset,
+		channelclientset: channelclientset,
+		servicesLister:   serviceInformer.Lister(),
+		servicesSynced:   serviceInformer.Informer().HasSynced,
+		channelsLister:   channelInformer.Lister(),
+		channelsSynced:   channelInformer.Informer().HasSynced,
+		workqueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Channels"),
+		recorder:         recorder,
 	}
 
 	glog.Info("Setting up event handlers")
@@ -301,26 +281,19 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	var service *corev1.Service
-	var virtualService *istiov1alpha3.VirtualService
-	var serviceErr, virtualServiceErr error
+	var serviceErr error
 
 	// Sync Service derived from the Channel
 	service, serviceErr = c.syncChannelService(channel)
-	if serviceErr != nil {
-		c.updateChannelStatus(channel, service, serviceErr, virtualService, virtualServiceErr)
-		return serviceErr
-	}
 
-	// Sync VirtualService derived from a Channel
-	virtualService, virtualServiceErr = c.syncChannelVirtualService(channel)
-	if virtualServiceErr != nil {
-		c.updateChannelStatus(channel, service, serviceErr, virtualService, virtualServiceErr)
-		return virtualServiceErr
+	if serviceErr != nil {
+		c.updateChannelStatus(channel, service, serviceErr)
+		return serviceErr
 	}
 
 	// Finally, we update the status block of the Channel resource to reflect the
 	// current state of the world
-	err = c.updateChannelStatus(channel, service, serviceErr, virtualService, virtualServiceErr)
+	err = c.updateChannelStatus(channel, service, serviceErr)
 	if err != nil {
 		return err
 	}
@@ -333,6 +306,7 @@ func (c *Controller) syncChannelService(channel *channelsv1alpha1.Channel) (*cor
 	// Get the service with the specified service name
 	serviceName := controller.ChannelServiceName(channel.ObjectMeta.Name)
 	service, err := c.servicesLister.Services(channel.Namespace).Get(serviceName)
+
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
 		service, err = c.kubeclientset.CoreV1().Services(channel.Namespace).Create(newService(channel))
@@ -356,37 +330,7 @@ func (c *Controller) syncChannelService(channel *channelsv1alpha1.Channel) (*cor
 	return service, nil
 }
 
-func (c *Controller) syncChannelVirtualService(channel *channelsv1alpha1.Channel) (*istiov1alpha3.VirtualService, error) {
-	// Get the VirtualService with the specified Channel name
-	virtualserviceName := controller.ChannelVirtualServiceName(channel.ObjectMeta.Name)
-	virtualservice, err := c.virtualservicesLister.VirtualServices(channel.Namespace).Get(virtualserviceName)
-
-	// If the resource doesn't exist, we'll create it
-	if errors.IsNotFound(err) {
-		virtualservice, err = c.sharedclientset.NetworkingV1alpha3().VirtualServices(channel.Namespace).Create(newVirtualService(channel))
-	}
-
-	// If an error occurs during Get/Create, we'll requeue the item so we can
-	// attempt processing again later. This could have been caused by a
-	// temporary network failure, or any other transient reason.
-	if err != nil {
-		return nil, err
-	}
-
-	// If the Service is not controlled by this Channel resource, we should log
-	// a warning to the event recorder and return
-	if !metav1.IsControlledBy(virtualservice, channel) {
-		msg := fmt.Sprintf(MessageResourceExists, virtualservice.Name)
-		c.recorder.Event(channel, corev1.EventTypeWarning, ErrResourceExists, msg)
-		return nil, fmt.Errorf(msg)
-	}
-
-	return virtualservice, nil
-}
-
-func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel,
-	service *corev1.Service, serviceError error,
-	virtualService *istiov1alpha3.VirtualService, virtualServiceError error) error {
+func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel, service *corev1.Service, serviceError error) error {
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
@@ -401,16 +345,6 @@ func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel,
 	} else {
 		channelCopy.Status.Service = nil
 		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelServiceable, corev1.ConditionFalse, ServiceError, serviceError.Error())
-		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
-	}
-
-	if virtualService != nil {
-		channelCopy.Status.VirtualService = &corev1.LocalObjectReference{Name: virtualService.Name}
-		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelRoutable, corev1.ConditionTrue, VirtualServiceSynced, "virtual service successfully synced")
-		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
-	} else {
-		channelCopy.Status.VirtualService = nil
-		serviceCondition := util.NewChannelCondition(channelsv1alpha1.ChannelRoutable, corev1.ConditionFalse, VirtualServiceError, virtualServiceError.Error())
 		util.SetChannelCondition(&channelCopy.Status, *serviceCondition)
 	}
 
@@ -490,9 +424,17 @@ func newService(channel *channelsv1alpha1.Channel) *corev1.Service {
 	labels := map[string]string{
 		"channel": channel.Name,
 	}
+	var dispatcherServiceHostName string
+	if channel.Spec.Bus != "" {
+		labels["bus"] = channel.Spec.Bus
+		dispatcherServiceHostName = controller.ServiceHostName(controller.BusDispatcherServiceName(channel.Spec.Bus, channel.Namespace), system.Namespace)
+	} else {
+		labels["clusterBus"] = channel.Spec.ClusterBus
+		dispatcherServiceHostName = controller.ServiceHostName(controller.ClusterBusDispatcherServiceName(channel.Spec.ClusterBus), system.Namespace)
+	}
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.ChannelServiceName(channel.ObjectMeta.Name),
+			Name:      controller.ChannelServiceName(channel.Name),
 			Namespace: channel.Namespace,
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
@@ -504,60 +446,8 @@ func newService(channel *channelsv1alpha1.Channel) *corev1.Service {
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{Name: PortName, Port: PortNumber},
-			},
-		},
-	}
-}
-
-// newVirtualService creates a new VirtualService for a Channel resource. It also sets
-// the appropriate OwnerReferences on the resource so handleObject can discover
-// the Channel resource that 'owns' it.
-func newVirtualService(channel *channelsv1alpha1.Channel) *istiov1alpha3.VirtualService {
-	labels := map[string]string{
-		"channel": channel.Name,
-	}
-	var destinationHost string
-	if channel.Spec.Bus != "" {
-		labels["bus"] = channel.Spec.Bus
-		destinationHost = controller.ServiceHostName(controller.BusDispatcherServiceName(channel.Spec.Bus, channel.Namespace), system.Namespace)
-	}
-	if channel.Spec.ClusterBus != "" {
-		labels["clusterBus"] = channel.Spec.ClusterBus
-		destinationHost = controller.ServiceHostName(controller.ClusterBusDispatcherServiceName(channel.Spec.ClusterBus), system.Namespace)
-	}
-	return &istiov1alpha3.VirtualService{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.ChannelVirtualServiceName(channel.Name),
-			Namespace: channel.Namespace,
-			Labels:    labels,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(channel, schema.GroupVersionKind{
-					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
-					Version: channelsv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Channel",
-				}),
-			},
-		},
-		Spec: istiov1alpha3.VirtualServiceSpec{
-			Hosts: []string{
-				controller.ServiceHostName(controller.ChannelServiceName(channel.Name), channel.Namespace),
-				controller.ChannelHostName(channel.Name, channel.Namespace),
-			},
-			Http: []istiov1alpha3.HTTPRoute{{
-				Rewrite: &istiov1alpha3.HTTPRewrite{
-					Authority: controller.ChannelHostName(channel.Name, channel.Namespace),
-				},
-				Route: []istiov1alpha3.DestinationWeight{{
-					Destination: istiov1alpha3.Destination{
-						Host: destinationHost,
-						Port: istiov1alpha3.PortSelector{
-							Number: PortNumber,
-						},
-					}},
-				}},
-			},
+			Type:         corev1.ServiceTypeExternalName,
+			ExternalName: dispatcherServiceHostName,
 		},
 	}
 }

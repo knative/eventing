@@ -85,10 +85,6 @@ const (
 	// Serviceable means the service addressing the channel exists.
 	ChannelServiceable ChannelConditionType = "Serviceable"
 
-	// Routable means the virtual service forwarding traffic from the channel service to the
-	// bus is created.
-	ChannelRoutable ChannelConditionType = "Routeable"
-
 	// Provisioned means the channel backing construct on the bus middleware has been set up.
 	ChannelProvisioned ChannelConditionType = "Provisioned"
 )
@@ -113,9 +109,6 @@ type ChannelCondition struct {
 type ChannelStatus struct {
 	// A reference to the k8s Service backing this channel, if successfully synced.
 	Service *v1.LocalObjectReference `json:"service,omitempty"`
-
-	// A reference to the istio VirtualService backing this channel, if successfully synced.
-	VirtualService *v1.LocalObjectReference `json:"virtualService,omitempty"`
 
 	// Represents the latest available observations of a channel's current state.
 	// +patchMergeKey=type

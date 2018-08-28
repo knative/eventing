@@ -1,0 +1,13 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: knative-channels
+  namespace: e2etestfn
+spec:
+  hosts:
+  - '*-channel.e2etestfn.svc.cluster.local'
+  location: MESH_INTERNAL
+  ports:
+  - name: http
+    number: 80
+    protocol: HTTP
