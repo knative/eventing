@@ -99,17 +99,17 @@ func NewReconciler(
 ) *Reconciler {
 	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
-		glog.Fatalf("Error building kubeconfig: %s", err.Error())
+		glog.Fatalf("Error building kubeconfig: %v", err)
 	}
 
 	kubeClient, err := kubernetesclientset.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building kubernetes clientset: %s", err.Error())
+		glog.Fatalf("Error building kubernetes clientset: %v", err)
 	}
 
 	eventingClient, err := eventingclientset.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building eventing clientset: %s", err.Error())
+		glog.Fatalf("Error building eventing clientset: %v", err)
 	}
 
 	eventingInformerFactory := eventinginformers.NewSharedInformerFactory(eventingClient, time.Second*30)
@@ -374,7 +374,7 @@ func (r *Reconciler) processNextWorkItem() bool {
 		// Run the syncHandler, passing it the name string of the resource to be synced.
 		if err := r.syncHandler(key); err != nil {
 			r.workqueue.AddRateLimited(obj)
-			return fmt.Errorf("error syncing reconciler '%s': %s", key, err.Error())
+			return fmt.Errorf("error syncing reconciler '%s': %v", key, err)
 		}
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.

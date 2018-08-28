@@ -74,12 +74,12 @@ func main() {
 
 	cfg, err := clientcmd.BuildConfigFromFlags("", "")
 	if err != nil {
-		log.Fatalf("Error building kubeconfig: %v", err.Error())
+		log.Fatalf("Error building kubeconfig: %v", err)
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		log.Fatalf("Error building kubernetes clientset: %v", err.Error())
+		log.Fatalf("Error building kubernetes clientset: %v", err)
 	}
 
 	log.Printf("Creating a new Event Watcher...")

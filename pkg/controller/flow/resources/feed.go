@@ -27,9 +27,14 @@ import (
 func MakeFeed(channelDNS string, flow *v1alpha1.Flow) *feedsv1alpha1.Feed {
 	feed := &feedsv1alpha1.Feed{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      flow.Name,
-			Namespace: flow.Namespace,
+			GenerateName: flow.Name + "-",
+			Namespace:    flow.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
+				// Ideally this would block owner deletion, to ensure the Flow is only deleted
+				// after the Feed is gone, but because EventTypes are also owners of the Feed,
+				// it results in the Feed not getting cleaned up and the Flow not getting cleaned
+				// up. Once EventTypes are no longer owners of the Feed, then this should
+				// blockOwnerDeletion.
 				*controller.NewControllerRef(flow),
 			},
 		},

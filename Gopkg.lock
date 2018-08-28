@@ -310,6 +310,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:d6415e6b744ec877c21fe734067636b9ee149af77276b08a3d33dd8698abf947"
+  name = "github.com/knative/test-infra"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "4a4a682ee1fd31f33e450406393c3553b9ec5c2a"
+
+[[projects]]
+  branch = "master"
   digest = "1:0e9bfc47ab9941ecc3344e580baca5deb4091177e84dd9773b48b38ec26b93d5"
   name = "github.com/mattbaird/jsonpatch"
   packages = ["."]
