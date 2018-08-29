@@ -17,5 +17,5 @@ limitations under the License.
 package v1alpha1
 
 func (cess *CommonEventSourceSpec) SetDefaults() {
-	// TODO anything?
+	// nothing to default
 }

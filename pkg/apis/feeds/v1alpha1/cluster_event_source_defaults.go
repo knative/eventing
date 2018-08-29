@@ -16,11 +16,10 @@ limitations under the License.
 
 package v1alpha1
 
-func (ces *ClusterEventSource) SetDefaults() {
-	ces.Spec.SetDefaults()
+func (es *ClusterEventSource) SetDefaults() {
+	es.Spec.SetDefaults()
 }
 
-func (cess *ClusterEventSourceSpec) SetDefaults() {
-	cess.CommonEventSourceSpec.SetDefaults()
-	// TODO anything?
+func (ess *ClusterEventSourceSpec) SetDefaults() {
+	ess.CommonEventSourceSpec.SetDefaults()
 }

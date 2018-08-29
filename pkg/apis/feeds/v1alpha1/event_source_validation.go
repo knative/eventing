@@ -27,17 +27,3 @@ func (es *EventSource) Validate() *apis.FieldError {
 func (ess *EventSourceSpec) Validate() *apis.FieldError {
 	return ess.CommonEventSourceSpec.Validate()
 }
-
-func (current *EventSource) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
-	original, ok := og.(*EventSource)
-	if !ok {
-		return &apis.FieldError{Message: "The provided original was not a EventSource"}
-	}
-	if original == nil {
-		return nil
-	}
-
-	// TODO
-
-	return nil
-}

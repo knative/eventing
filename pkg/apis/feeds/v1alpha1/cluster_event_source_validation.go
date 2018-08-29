@@ -20,24 +20,10 @@ import (
 	"github.com/knative/pkg/apis"
 )
 
-func (ces *ClusterEventSource) Validate() *apis.FieldError {
-	return ces.Spec.Validate().ViaField("spec")
+func (es *ClusterEventSource) Validate() *apis.FieldError {
+	return es.Spec.Validate().ViaField("spec")
 }
 
-func (cess *ClusterEventSourceSpec) Validate() *apis.FieldError {
-	return cess.CommonEventSourceSpec.Validate()
-}
-
-func (current *ClusterEventSource) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
-	original, ok := og.(*ClusterEventSource)
-	if !ok {
-		return &apis.FieldError{Message: "The provided original was not a ClusterEventSource"}
-	}
-	if original == nil {
-		return nil
-	}
-
-	// TODO
-
-	return nil
+func (ess *ClusterEventSourceSpec) Validate() *apis.FieldError {
+	return ess.CommonEventSourceSpec.Validate()
 }
