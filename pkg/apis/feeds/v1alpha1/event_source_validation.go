@@ -25,6 +25,5 @@ func (es *EventSource) Validate() *apis.FieldError {
 }
 
 func (ess *EventSourceSpec) Validate() *apis.FieldError {
-	// nothing to validate
 	return ess.CommonEventSourceSpec.Validate()
 }

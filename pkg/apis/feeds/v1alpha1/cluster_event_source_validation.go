@@ -20,11 +20,10 @@ import (
 	"github.com/knative/pkg/apis"
 )
 
-func (ces *ClusterEventSource) Validate() *apis.FieldError {
-	return ces.Spec.Validate().ViaField("spec")
+func (es *ClusterEventSource) Validate() *apis.FieldError {
+	return es.Spec.Validate().ViaField("spec")
 }
 
-func (cess *ClusterEventSourceSpec) Validate() *apis.FieldError {
-	// nothing to validate
-	return cess.CommonEventSourceSpec.Validate()
+func (ess *ClusterEventSourceSpec) Validate() *apis.FieldError {
+	return ess.CommonEventSourceSpec.Validate()
 }
