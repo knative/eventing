@@ -47,7 +47,7 @@ type reconciler struct {
 var _ reconcile.Reconciler = &reconciler{}
 
 // ProvideController returns a flow controller.
-func ProvideController(mrg manager.Manager) (controller.Controller, error) {
+func ProvideController(mgr manager.Manager) (controller.Controller, error) {
 	logger, err := zap.NewProduction()
 	if err != nil {
 		return nil, err
@@ -55,9 +55,9 @@ func ProvideController(mrg manager.Manager) (controller.Controller, error) {
 	logger.With(zap.String("controller", controllerAgentName))
 
 	// Setup a new controller to Reconcile Flows.
-	c, err := controller.New(controllerAgentName, mrg, controller.Options{
+	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: &reconciler{
-			recorder: mrg.GetRecorder(controllerAgentName),
+			recorder: mgr.GetRecorder(controllerAgentName),
 			logger: logger,
 		},
 	})
