@@ -20,6 +20,7 @@ import (
 	"fmt"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -27,11 +28,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	"testing"
 )
-
-func TestStub(t *testing.T) {
-	// TODO: Implement tests in this directory, please.
-	// This file is used to make code coverage on this directly count.
-}
 
 var (
 	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
@@ -54,93 +50,93 @@ func init() {
 	feedsv1alpha1.AddToScheme(scheme.Scheme)
 }
 
-var testCases = []controllertesting.TestCase{
-	{
-		Name:         "missing EventType",
-		InitialState: []runtime.Object{},
-		ReconcileKey: reconcileKey,
-	},
-	{
-		Name: "new EventType: adds Finalizer",
-		InitialState: []runtime.Object{
-			getEventType(false),
-		},
-		ReconcileKey: reconcileKey,
-		WantPresent: []runtime.Object{
-			getEventType(true),
-		},
-	},
-	{
-		Name: "old EventType: already has Finalizer",
-		InitialState: []runtime.Object{
-			getEventType(true),
-		},
-		ReconcileKey: reconcileKey,
-		WantPresent: []runtime.Object{
-			getEventType(true),
-		},
-	},
-	{
-		Name: "deleting EventType: no Feeds",
-		InitialState: []runtime.Object{
-			getDeletingEventType(true),
-		},
-		ReconcileKey: reconcileKey,
-		WantPresent: []runtime.Object{
-			// The Finalizer should have been removed.
-			getDeletingEventType(false),
-		},
-	},
-	{
-		Name: "deleting EventType: Feeds not using EventType",
-		InitialState: []runtime.Object{
-			getDeletingEventType(true),
-			getFeedUsingOtherEventType(),
-		},
-		ReconcileKey: reconcileKey,
-		WantPresent: []runtime.Object{
-			// The Finalizer should have been removed.
-			getDeletingEventType(false),
-			getFeedUsingOtherEventType(),
-		},
-	}, {
-		Name: "deleting EventType: Feeds using EventType in different namespace",
-		InitialState: []runtime.Object{
-			getDeletingEventType(true),
-			getFeedUsingEventTypeInDifferentNamespace(),
-		},
-		ReconcileKey: reconcileKey,
-		WantPresent: []runtime.Object{
-			// The Finalizer should have been removed.
-			getDeletingEventType(false),
-			getFeedUsingEventTypeInDifferentNamespace(),
-		},
-	},
-	{
-		Name: "deleting EventType: Feeds using EventType",
-		InitialState: []runtime.Object{
-			getDeletingEventType(true),
-			getFeedUsingEventType(fn1),
-			getFeedUsingEventType(fn2),
-		},
-		ReconcileKey: reconcileKey,
-		WantPresent: []runtime.Object{
-			// There are Feeds still using the EventType, it should still have its Finalizer and a
-			// new Status added stating which Feeds are blocking its deletion.
-			getDeletingEventTypeWithInUseStatus(fn1 + ", " + fn2),
-			getFeedUsingEventType(fn1),
-			getFeedUsingEventType(fn2),
-		},
-	},
-}
-
 func TestAllCases(t *testing.T) {
+	testCases := []controllertesting.TestCase{
+		{
+			Name:         "missing EventType",
+			InitialState: []runtime.Object{},
+			ReconcileKey: reconcileKey,
+		},
+		{
+			Name: "new EventType: adds Finalizer",
+			InitialState: []runtime.Object{
+				getEventType(false),
+			},
+			ReconcileKey: reconcileKey,
+			WantPresent: []runtime.Object{
+				getEventType(true),
+			},
+		},
+		{
+			Name: "old EventType: already has Finalizer",
+			InitialState: []runtime.Object{
+				getEventType(true),
+			},
+			ReconcileKey: reconcileKey,
+			WantPresent: []runtime.Object{
+				getEventType(true),
+			},
+		},
+		{
+			Name: "deleting EventType: no Feeds",
+			InitialState: []runtime.Object{
+				getDeletingEventType(true),
+			},
+			ReconcileKey: reconcileKey,
+			WantPresent: []runtime.Object{
+				// The Finalizer should have been removed.
+				getDeletingEventType(false),
+			},
+		},
+		{
+			Name: "deleting EventType: Feeds not using EventType",
+			InitialState: []runtime.Object{
+				getDeletingEventType(true),
+				getFeedUsingOtherEventType(),
+			},
+			ReconcileKey: reconcileKey,
+			WantPresent: []runtime.Object{
+				// The Finalizer should have been removed.
+				getDeletingEventType(false),
+				getFeedUsingOtherEventType(),
+			},
+		}, {
+			Name: "deleting EventType: Feeds using EventType in different namespace",
+			InitialState: []runtime.Object{
+				getDeletingEventType(true),
+				getFeedUsingEventTypeInDifferentNamespace(),
+			},
+			ReconcileKey: reconcileKey,
+			WantPresent: []runtime.Object{
+				// The Finalizer should have been removed.
+				getDeletingEventType(false),
+				getFeedUsingEventTypeInDifferentNamespace(),
+			},
+		},
+		{
+			Name: "deleting EventType: Feeds using EventType",
+			InitialState: []runtime.Object{
+				getDeletingEventType(true),
+				getFeedUsingEventType(fn1),
+				getFeedUsingEventType(fn2),
+			},
+			ReconcileKey: reconcileKey,
+			WantPresent: []runtime.Object{
+				// There are Feeds still using the EventType, it should still have its Finalizer and a
+				// new Status added stating which Feeds are blocking its deletion.
+				getDeletingEventTypeWithInUseStatus(fn1 + ", " + fn2),
+				getFeedUsingEventType(fn1),
+				getFeedUsingEventType(fn2),
+			},
+		},
+	}
 	recorder := record.NewBroadcaster().NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
 	for _, tc := range testCases {
 		r := &reconciler{
 			client:   tc.GetClient(),
 			recorder: recorder,
+			logger: zap.NewNop(),
 		}
 		t.Run(tc.Name, tc.Runner(t, r, r.client))
 	}

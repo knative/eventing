@@ -18,14 +18,21 @@ package v1alpha1
 
 import (
 	"github.com/knative/pkg/apis"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
-func (cet *ClusterEventType) Validate() *apis.FieldError {
-	return cet.Spec.Validate().ViaField("spec")
+func (et *ClusterEventType) Validate() *apis.FieldError {
+	return et.Spec.Validate().ViaField("spec")
 }
 
-func (cess *ClusterEventTypeSpec) Validate() *apis.FieldError {
-	return cess.CommonEventTypeSpec.Validate()
+func (ets *ClusterEventTypeSpec) Validate() *apis.FieldError {
+	if ets.ClusterEventSource == "" {
+		return apis.ErrMissingField("eventSource")
+	}
+	if errs := validation.IsQualifiedName(ets.ClusterEventSource); len(errs) > 0 {
+		return apis.ErrInvalidValue(ets.ClusterEventSource, "eventSource")
+	}
+	return ets.CommonEventTypeSpec.Validate()
 }
 
 func (current *ClusterEventType) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
@@ -37,7 +44,13 @@ func (current *ClusterEventType) CheckImmutableFields(og apis.Immutable) *apis.F
 		return nil
 	}
 
-	// TODO
+	// EventSource for an EventType should not change.
+	if original.Spec.ClusterEventSource != current.Spec.ClusterEventSource {
+		return &apis.FieldError{
+			Message: "Immutable fields changed",
+			Paths:   []string{"spec.eventSource"},
+		}
+	}
 
 	return nil
 }

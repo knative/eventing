@@ -19,6 +19,8 @@ package buses
 import (
 	"fmt"
 
+	"go.uber.org/zap"
+
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 )
 
@@ -30,12 +32,17 @@ type bus struct {
 	cache      *Cache
 	dispatcher *MessageDispatcher
 	receiver   *MessageReceiver
+
+	logger *zap.SugaredLogger
 }
 
 // BusOpts holds configuration options for new buses. These options are not
 // required for proper operation of the bus, but are useful to override the
 // default behavior and for testing.
 type BusOpts struct {
+	// Logger to use for the bus and created components
+	Logger *zap.SugaredLogger
+
 	// MasterURL is the address of the Kubernetes API server. Overrides any
 	// value in kubeconfig. Only required if out-of-cluster.
 	MasterURL string
@@ -71,18 +78,30 @@ func NewBusProvisioner(busRef BusReference, handlerFuncs EventHandlerFuncs, opts
 	if opts == nil {
 		opts = &BusOpts{}
 	}
+	if opts.Logger == nil {
+		opts.Logger = zap.NewNop().Sugar()
+	}
 	if opts.Cache == nil {
 		opts.Cache = NewCache()
 	}
+	if handlerFuncs.logger == nil {
+		handlerFuncs.logger = opts.Logger.Named(handlerLoggingComponent)
+	}
 	if opts.Reconciler == nil {
-		opts.Reconciler = NewReconciler(Provisioner, opts.MasterURL, opts.KubeConfig, opts.Cache, handlerFuncs)
+		opts.Reconciler = NewReconciler(
+			Provisioner, opts.MasterURL, opts.KubeConfig, opts.Cache,
+			handlerFuncs, opts.Logger.Named(reconcilerLoggingComponent),
+		)
 	}
 
 	return &bus{
 		busRef:       busRef,
 		handlerFuncs: handlerFuncs,
-		cache:        opts.Cache,
-		reconciler:   opts.Reconciler,
+
+		cache:      opts.Cache,
+		reconciler: opts.Reconciler,
+
+		logger: opts.Logger.Named(busLoggingComponent),
 	}
 }
 
@@ -102,19 +121,28 @@ func NewBusDispatcher(busRef BusReference, handlerFuncs EventHandlerFuncs, opts 
 	if opts == nil {
 		opts = &BusOpts{}
 	}
+	if opts.Logger == nil {
+		opts.Logger = zap.NewNop().Sugar()
+	}
 	if opts.Cache == nil {
 		opts.Cache = NewCache()
 	}
+	if handlerFuncs.logger == nil {
+		handlerFuncs.logger = opts.Logger.Named(handlerLoggingComponent)
+	}
 	if opts.Reconciler == nil {
-		opts.Reconciler = NewReconciler(Dispatcher, opts.MasterURL, opts.KubeConfig, opts.Cache, handlerFuncs)
+		opts.Reconciler = NewReconciler(
+			Dispatcher, opts.MasterURL, opts.KubeConfig, opts.Cache,
+			handlerFuncs, opts.Logger.Named(reconcilerLoggingComponent),
+		)
 	}
 	if opts.MessageDispatcher == nil {
-		opts.MessageDispatcher = NewMessageDispatcher()
+		opts.MessageDispatcher = NewMessageDispatcher(opts.Logger.Named(dispatcherLoggingComponent))
 	}
 	if opts.MessageReceiver == nil {
 		opts.MessageReceiver = NewMessageReceiver(func(channelRef ChannelReference, message *Message) error {
 			return b.receiveMessage(channelRef, message)
-		})
+		}, opts.Logger.Named(receiverLoggingComponent))
 	}
 
 	b = &bus{
@@ -125,6 +153,8 @@ func NewBusDispatcher(busRef BusReference, handlerFuncs EventHandlerFuncs, opts 
 		reconciler: opts.Reconciler,
 		dispatcher: opts.MessageDispatcher,
 		receiver:   opts.MessageReceiver,
+
+		logger: opts.Logger,
 	}
 
 	return b

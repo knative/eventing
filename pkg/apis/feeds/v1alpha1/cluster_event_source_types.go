@@ -44,7 +44,6 @@ type ClusterEventSource struct {
 // Check that ClusterEventSource can be validated, can be defaulted, and has immutable fields.
 var _ apis.Validatable = (*ClusterEventSource)(nil)
 var _ apis.Defaultable = (*ClusterEventSource)(nil)
-var _ apis.Immutable = (*ClusterEventSource)(nil)
 var _ runtime.Object = (*ClusterEventSource)(nil)
 var _ webhook.GenericCRD = (*ClusterEventSource)(nil)
 

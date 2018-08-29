@@ -26,9 +26,9 @@ func (fs *FlowSpec) SetDefaults() {
 }
 
 func (fa *FlowAction) SetDefaults() {
-	// TODO anything?
+	// nothing to do
 }
 
 func (et *EventTrigger) SetDefaults() {
-	// TODO anything?
+	// // nothing to do
 }

@@ -1,6 +1,7 @@
 package eventtype
 
 import (
+	"github.com/google/go-cmp/cmp"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -48,8 +49,8 @@ func TestMap(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			feedToEventType := feedToEventType{}
 			actualRR := feedToEventType.Map(tc.obj)
-			if !rrEquals(tc.rr, actualRR) {
-				t.Errorf("Expected reconcile requests %v, actual reconcile requests %v", tc.rr, actualRR)
+			if diff := cmp.Diff(tc.rr, actualRR); diff != "" {
+				t.Errorf("Reconcile request (-want, +got) = %v", diff)
 			}
 		})
 	}
@@ -63,25 +64,4 @@ func getPod() *v1.Pod {
 			Kind:       "Pod",
 		},
 	}
-}
-
-// rrEquals determines if the expected and actual slices have the same reconcile requests.
-func rrEquals(e, a []reconcile.Request) bool {
-	if e == nil {
-		if a == nil {
-			return true
-		}
-		return false
-	} else if a == nil {
-		return false
-	} else if len(e) != len(a) {
-		return false
-	} else {
-		for i := range e {
-			if e[i] != a[i] {
-				return false
-			}
-		}
-	}
-	return true
 }

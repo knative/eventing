@@ -17,10 +17,13 @@
 package stub
 
 import (
-	"github.com/golang/glog"
+	"go.uber.org/zap"
 
 	"github.com/knative/eventing/pkg/buses"
 )
+
+// BusType is the type of the stub bus
+const BusType = "stub"
 
 func NewStubBusDispatcher(busRef buses.BusReference, opts *buses.BusOpts) *StubBus {
 	bus := &StubBus{
@@ -28,32 +31,33 @@ func NewStubBusDispatcher(busRef buses.BusReference, opts *buses.BusOpts) *StubB
 	}
 	handlerFuncs := buses.EventHandlerFuncs{
 		ProvisionFunc: func(channelRef buses.ChannelReference, parameters buses.ResolvedParameters) error {
-			glog.Infof("Provision channel %q\n", channelRef.String())
+			bus.logger.Infof("Provision channel %q", channelRef.String())
 			bus.addChannel(channelRef, parameters)
 			return nil
 		},
 		UnprovisionFunc: func(channelRef buses.ChannelReference) error {
-			glog.Infof("Unprovision channel %q\n", channelRef.String())
+			bus.logger.Infof("Unprovision channel %q", channelRef.String())
 			bus.removeChannel(channelRef)
 			return nil
 		},
 		SubscribeFunc: func(channelRef buses.ChannelReference, subscriptionRef buses.SubscriptionReference, parameters buses.ResolvedParameters) error {
-			glog.Infof("Subscribe %q to %q channel\n", subscriptionRef.String(), channelRef.String())
+			bus.logger.Infof("Subscribe %q to %q channel", subscriptionRef.String(), channelRef.String())
 			bus.channel(channelRef).addSubscription(subscriptionRef, parameters, bus.dispatcher)
 			return nil
 		},
 		UnsubscribeFunc: func(channelRef buses.ChannelReference, subscriptionRef buses.SubscriptionReference) error {
-			glog.Infof("Unsubscribe %q from %q channel\n", subscriptionRef.String(), channelRef.String())
+			bus.logger.Infof("Unsubscribe %q from %q channel", subscriptionRef.String(), channelRef.String())
 			bus.channel(channelRef).removeSubscription(subscriptionRef)
 			return nil
 		},
 		ReceiveMessageFunc: func(channelRef buses.ChannelReference, message *buses.Message) error {
-			glog.Infof("Recieved message for %q channel\n", channelRef.String())
+			bus.logger.Infof("Recieved message for %q channel", channelRef.String())
 			bus.channel(channelRef).receiveMessage(message)
 			return nil
 		},
 	}
 	bus.dispatcher = buses.NewBusDispatcher(busRef, handlerFuncs, opts)
+	bus.logger = opts.Logger
 
 	return bus
 }
@@ -61,6 +65,8 @@ func NewStubBusDispatcher(busRef buses.BusReference, opts *buses.BusOpts) *StubB
 type StubBus struct {
 	dispatcher buses.BusDispatcher
 	channels   map[buses.ChannelReference]*stubChannel
+
+	logger *zap.SugaredLogger
 }
 
 func (b *StubBus) Run(threadness int, stopCh <-chan struct{}) {

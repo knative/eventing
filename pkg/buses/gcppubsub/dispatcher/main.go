@@ -20,10 +20,10 @@ import (
 	"flag"
 	"os"
 
-	"github.com/golang/glog"
 	"github.com/knative/eventing/pkg/buses"
 	"github.com/knative/eventing/pkg/buses/gcppubsub"
 	"github.com/knative/pkg/signals"
+	"go.uber.org/zap"
 )
 
 const (
@@ -31,19 +31,28 @@ const (
 )
 
 func main() {
-	defer glog.Flush()
-
 	busRef := buses.NewBusReferenceFromNames(
 		os.Getenv("BUS_NAME"),
 		os.Getenv("BUS_NAMESPACE"),
 	)
 
+	config := buses.NewLoggingConfig()
+	logger := buses.NewBusLoggerFromConfig(config)
+	defer logger.Sync()
+	logger = logger.With(
+		zap.String("channels.knative.dev/bus", busRef.String()),
+		zap.String("channels.knative.dev/busType", gcppubsub.BusType),
+		zap.String("channels.knative.dev/busComponent", buses.Dispatcher),
+	)
+
 	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
 	if projectID == "" {
-		glog.Fatalf("GOOGLE_CLOUD_PROJECT environment variable must be set")
+		logger.Fatalf("GOOGLE_CLOUD_PROJECT environment variable must be set")
 	}
 
-	opts := &buses.BusOpts{}
+	opts := &buses.BusOpts{
+		Logger: logger,
+	}
 
 	flag.StringVar(&opts.KubeConfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 	flag.StringVar(&opts.MasterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
@@ -51,7 +60,7 @@ func main() {
 
 	bus, err := gcppubsub.NewCloudPubSubBusDispatcher(busRef, projectID, opts)
 	if err != nil {
-		glog.Fatalf("Error starting pub/sub bus dispatcher: %v", err)
+		logger.Fatalf("Error starting pub/sub bus dispatcher: %v", err)
 	}
 
 	// set up signals so we handle the first shutdown signal gracefully

@@ -18,6 +18,7 @@ package eventtype
 
 import (
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
+	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
@@ -39,17 +40,25 @@ type reconciler struct {
 	client     client.Client
 	restConfig *rest.Config
 	recorder   record.EventRecorder
+	logger     *zap.Logger
 }
 
 // Verify the struct implements reconcile.Reconciler
 var _ reconcile.Reconciler = &reconciler{}
 
 // ProvideController returns a flow controller.
-func ProvideController(mrg manager.Manager) (controller.Controller, error) {
+func ProvideController(mgr manager.Manager) (controller.Controller, error) {
+	logger, err := zap.NewProduction()
+	if err != nil {
+		return nil, err
+	}
+	logger.With(zap.String("controller", controllerAgentName))
+
 	// Setup a new controller to Reconcile Flows.
-	c, err := controller.New(controllerAgentName, mrg, controller.Options{
+	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: &reconciler{
-			recorder: mrg.GetRecorder(controllerAgentName),
+			recorder: mgr.GetRecorder(controllerAgentName),
+			logger: logger,
 		},
 	})
 	if err != nil {

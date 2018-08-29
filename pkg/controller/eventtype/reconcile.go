@@ -19,8 +19,8 @@ package eventtype
 import (
 	"context"
 	"fmt"
-	"github.com/golang/glog"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -49,13 +49,15 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// The EventType may have been deleted since it was added to the workqueue. If so
 	// there's nothing to be done.
 	if errors.IsNotFound(err) {
-		glog.Errorf("could not find EventType %v\n", request)
+		r.logger.Error("could not find EventType", zap.Any("request", request))
 		return reconcile.Result{}, nil
 	}
 
 	// If the EventType exists but could not be retrieved, then we should retry.
 	if err != nil {
-		glog.Errorf("could not fetch EventType %v for %+v\n", err, request)
+		r.logger.Error("could not fetch EventType",
+			zap.Any("request", request),
+			zap.Error(err))
 		return reconcile.Result{}, err
 	}
 
@@ -66,14 +68,21 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// state, it means no more can be done for now. In this case the EventType will
 	// not be reconciled again until the resync period or a watched resource changes.
 	if err = r.reconcile(ctx, et); err != nil {
-		glog.Errorf("error reconciling EventType: %v", err)
+		r.logger.Error("error reconciling EventType",
+			zap.Any("EventType", et),
+			zap.Error(err))
+		// Note that we do not return the error here. That is because we rely on r.updateEventType()
+		// to write any updated status to the API server. After updating the API server, then we
+		// should return this error.
 	}
 
 	// Since the reconcile is a sequence of steps, earlier steps may complete
 	// successfully while later steps fail. The EventType is updated on failure to
 	// preserve any useful status or metadata changes the non-failing steps made.
 	if updateErr := r.updateEventType(ctx, et); updateErr != nil {
-		glog.Errorf("failed to update EventType: %v", updateErr)
+		r.logger.Error("failed to update EventType",
+			zap.Any("EventType", et),
+			zap.Error(updateErr))
 		// An error here means the EventType should be reconciled again, regardless of
 		// whether the reconcile was successful or not.
 		return reconcile.Result{}, updateErr
@@ -90,7 +99,9 @@ func (r *reconciler) reconcile(ctx context.Context, et *feedsv1alpha1.EventType)
 	} else {
 		err := r.handleDeletion(ctx, et)
 		if err != nil {
-			glog.Errorf("Error deleting the EventType: %v", err)
+			r.logger.Error("Error deleting the EventType",
+				zap.Any("EventType", et),
+				zap.Error(err))
 			return err
 		}
 	}
@@ -115,13 +126,17 @@ func (r *reconciler) removeFinalizer(et *feedsv1alpha1.EventType) {
 func (r *reconciler) handleDeletion(ctx context.Context, et *feedsv1alpha1.EventType) error {
 	feeds, err := r.findFeedsUsingEventType(ctx, et)
 	if err != nil {
-		glog.Infof("Unable to find Feeds using EventType %s: %v", et.Name, err)
+		r.logger.Info("Unable to find Feeds using EventType",
+			zap.String("EventType.Name", et.Name),
+			zap.Error(err))
 		return err
 	}
 	if len(feeds) == 0 {
 		r.removeFinalizer(et)
 	} else {
-		glog.Infof("Cannot remove finalizer from EventType %q, %v Feed(s) still use it.", et.Name, len(feeds))
+		r.logger.Info("Cannot remove finalizer from EventType, Feed(s) still use it.",
+			zap.String("EventType.Name", et.Name),
+			zap.Int("feedsUsingEventType", len(feeds)))
 	}
 	r.updateInUseStatus(ctx, et, feeds)
 	return nil
@@ -143,7 +158,7 @@ func (r *reconciler) findFeedsUsingEventType(ctx context.Context, et *feedsv1alp
 	}
 	err := r.client.List(ctx, listOptions, allFeeds)
 	if err != nil {
-		glog.Errorf("Unable to list the feeds: %v", err)
+		r.logger.Error("Unable to list feeds", zap.Error(err))
 		return nil, err
 	}
 	feeds := make([]feedsv1alpha1.Feed, 0, len(allFeeds.Items))

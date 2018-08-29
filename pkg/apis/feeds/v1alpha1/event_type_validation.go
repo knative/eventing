@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"github.com/knative/pkg/apis"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 func (et *EventType) Validate() *apis.FieldError {
@@ -25,6 +26,12 @@ func (et *EventType) Validate() *apis.FieldError {
 }
 
 func (ets *EventTypeSpec) Validate() *apis.FieldError {
+	if ets.EventSource == "" {
+		return apis.ErrMissingField("eventSource")
+	}
+	if errs := validation.IsQualifiedName(ets.EventSource); len(errs) > 0 {
+		return apis.ErrInvalidValue(ets.EventSource, "eventSource")
+	}
 	return ets.CommonEventTypeSpec.Validate()
 }
 
@@ -37,7 +44,13 @@ func (current *EventType) CheckImmutableFields(og apis.Immutable) *apis.FieldErr
 		return nil
 	}
 
-	// TODO
+	// EventSource for an EventType should not change.
+	if original.Spec.EventSource != current.Spec.EventSource {
+		return &apis.FieldError{
+			Message: "Immutable fields changed",
+			Paths:   []string{"spec.eventSource"},
+		}
+	}
 
 	return nil
 }
