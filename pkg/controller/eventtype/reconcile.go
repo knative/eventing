@@ -67,6 +67,9 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// not be reconciled again until the resync period or a watched resource changes.
 	if err = r.reconcile(ctx, et); err != nil {
 		glog.Errorf("error reconciling EventType: %v", err)
+		// Note that we do not return the error here. That is because we rely on r.updateEventType()
+		// to write any updated status to the API server. After updating the API server, then we
+		// should return this error.
 	}
 
 	// Since the reconcile is a sequence of steps, earlier steps may complete
