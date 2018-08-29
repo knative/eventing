@@ -24,7 +24,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/golang/glog"
+	"go.uber.org/zap"
 )
 
 const correlationIDHeaderName = "Knative-Correlation-Id"
@@ -35,6 +35,8 @@ type MessageDispatcher struct {
 	forwardHeaders   map[string]bool
 	forwardPrefixes  []string
 	supportedSchemes map[string]bool
+
+	logger *zap.SugaredLogger
 }
 
 // DispatchDefaults provides default parameter values used when dispatching a message.
@@ -45,7 +47,7 @@ type DispatchDefaults struct {
 
 // NewMessageDispatcher creates a new message dispatcher that can dispatch
 // messages to HTTP destinations.
-func NewMessageDispatcher() *MessageDispatcher {
+func NewMessageDispatcher(logger *zap.SugaredLogger) *MessageDispatcher {
 	return &MessageDispatcher{
 		httpClient:      &http.Client{},
 		forwardHeaders:  headerSet(forwardHeaders),
@@ -54,6 +56,8 @@ func NewMessageDispatcher() *MessageDispatcher {
 			"http":  true,
 			"https": true,
 		},
+
+		logger: logger,
 	}
 }
 
@@ -79,7 +83,7 @@ func (d *MessageDispatcher) DispatchMessage(message *Message, destination string
 }
 
 func (d *MessageDispatcher) executeRequest(url *url.URL, message *Message) (*Message, error) {
-	glog.Infof("Dispatching message to %s\n", url.String())
+	d.logger.Infof("Dispatching message to %s", url.String())
 	req, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewReader(message.Payload))
 	if err != nil {
 		return nil, fmt.Errorf("Unable to create request %v", err)

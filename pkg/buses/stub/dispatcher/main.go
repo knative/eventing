@@ -20,11 +20,10 @@ import (
 	"flag"
 	"os"
 
-	"github.com/golang/glog"
-
 	"github.com/knative/eventing/pkg/buses"
 	"github.com/knative/eventing/pkg/buses/stub"
 	"github.com/knative/pkg/signals"
+	"go.uber.org/zap"
 )
 
 const (
@@ -32,14 +31,23 @@ const (
 )
 
 func main() {
-	defer glog.Flush()
-
 	busRef := buses.NewBusReferenceFromNames(
 		os.Getenv("BUS_NAME"),
 		os.Getenv("BUS_NAMESPACE"),
 	)
 
-	opts := &buses.BusOpts{}
+	config := buses.NewLoggingConfig()
+	logger := buses.NewBusLoggerFromConfig(config)
+	defer logger.Sync()
+	logger = logger.With(
+		zap.String("channels.knative.dev/bus", busRef.String()),
+		zap.String("channels.knative.dev/busType", stub.BusType),
+		zap.String("channels.knative.dev/busComponent", buses.Dispatcher),
+	)
+
+	opts := &buses.BusOpts{
+		Logger: logger,
+	}
 
 	flag.StringVar(&opts.KubeConfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 	flag.StringVar(&opts.MasterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
