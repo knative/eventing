@@ -21,5 +21,6 @@ import (
 )
 
 func (cess *CommonEventTypeSpec) Validate() *apis.FieldError {
+	// nothing to validate.
 	return nil
 }

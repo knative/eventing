@@ -22,5 +22,4 @@ func (es *EventSource) SetDefaults() {
 
 func (ess *EventSourceSpec) SetDefaults() {
 	ess.CommonEventSourceSpec.SetDefaults()
-	// TODO anything?
 }

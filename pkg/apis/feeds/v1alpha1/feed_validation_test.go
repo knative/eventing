@@ -33,6 +33,7 @@ func TestFeedSpecValidation(t *testing.T) {
 		f: &FeedSpec{
 			Trigger: EventTrigger{
 				EventType: "foo",
+				Resource:  "baz",
 			},
 		},
 	}, {
@@ -40,6 +41,7 @@ func TestFeedSpecValidation(t *testing.T) {
 		f: &FeedSpec{
 			Trigger: EventTrigger{
 				ClusterEventType: "foo",
+				Resource:         "baz",
 			},
 		},
 	}, {
@@ -54,6 +56,9 @@ func TestFeedSpecValidation(t *testing.T) {
 		name: "mutually exclusive missing",
 		f: &FeedSpec{
 			ServiceAccountName: "Sue",
+			Trigger: EventTrigger{
+				Resource: "baz",
+			},
 		},
 		want: apis.ErrMissingOneOf("eventType", "clusterEventType").ViaField("trigger"),
 	}, {
@@ -62,6 +67,7 @@ func TestFeedSpecValidation(t *testing.T) {
 			Trigger: EventTrigger{
 				EventType:        "foo",
 				ClusterEventType: "bar",
+				Resource:         "baz",
 			},
 		},
 		want: apis.ErrMultipleOneOf("eventType", "clusterEventType").ViaField("trigger"),
@@ -70,16 +76,26 @@ func TestFeedSpecValidation(t *testing.T) {
 		f: &FeedSpec{
 			Trigger: EventTrigger{
 				EventType: "foo",
+				Resource:  "baz",
 			},
 			Action: FeedAction{
 				DNSName: "valid.com",
 			},
 		},
 	}, {
-		name: "invalidvalid dns name",
+		name: "missing trigger.resource",
 		f: &FeedSpec{
 			Trigger: EventTrigger{
 				EventType: "foo",
+			},
+		},
+		want: apis.ErrMissingField("resource").ViaField("trigger"),
+	}, {
+		name: "invalid dns name",
+		f: &FeedSpec{
+			Trigger: EventTrigger{
+				EventType: "foo",
+				Resource:  "baz",
 			},
 			Action: FeedAction{
 				DNSName: "inv@lid.com",

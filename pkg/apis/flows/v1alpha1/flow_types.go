@@ -42,10 +42,9 @@ type Flow struct {
 	Status FlowStatus `json:"status"`
 }
 
-// Check that Flow can be validated, can be defaulted, and has immutable fields.
+// Check that Flow can be validated and can be defaulted.
 var _ apis.Validatable = (*Flow)(nil)
 var _ apis.Defaultable = (*Flow)(nil)
-var _ apis.Immutable = (*Flow)(nil)
 var _ runtime.Object = (*Flow)(nil)
 var _ webhook.GenericCRD = (*Flow)(nil)
 
