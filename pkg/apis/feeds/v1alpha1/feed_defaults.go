@@ -21,5 +21,7 @@ func (f *Feed) SetDefaults() {
 }
 
 func (fs *FeedSpec) SetDefaults() {
-	// TODO anything?
+	if fs.ServiceAccountName == "" {
+		fs.ServiceAccountName = "default"
+	}
 }
