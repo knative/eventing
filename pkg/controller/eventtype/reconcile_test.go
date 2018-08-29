@@ -17,6 +17,7 @@ limitations under the License.
 package eventtype
 
 import (
+	"context"
 	"fmt"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
@@ -26,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 )
 
@@ -54,8 +56,19 @@ func TestAllCases(t *testing.T) {
 	testCases := []controllertesting.TestCase{
 		{
 			Name:         "missing EventType",
-			InitialState: []runtime.Object{},
 			ReconcileKey: reconcileKey,
+		},
+		{
+			Name: "Internal error getting EventType",
+			ReconcileKey: reconcileKey,
+			Mocks: controllertesting.Mocks{
+				MockGets: []controllertesting.MockGet{
+					func(_ client.Client, _ context.Context, _ client.ObjectKey, _ runtime.Object) (bool, error) {
+						return true, fmt.Errorf("unexplained test error while getting")
+					},
+				},
+			},
+			WantErr: true,
 		},
 		{
 			Name: "new EventType: adds Finalizer",
@@ -127,6 +140,25 @@ func TestAllCases(t *testing.T) {
 				getDeletingEventTypeWithInUseStatus(fn1 + ", " + fn2),
 				getFeedUsingEventType(fn1),
 				getFeedUsingEventType(fn2),
+			},
+		},
+				{
+			Name: "deleting EventType: can't list Feeds",
+			InitialState: []runtime.Object{
+				getDeletingEventType(true),
+			},
+			ReconcileKey: reconcileKey,
+			WantPresent: []runtime.Object{
+				// The Finalizer should have been removed.
+				getDeletingEventType(true),
+			},
+			WantErr: true,
+			Mocks: controllertesting.Mocks{
+				MockLists: []controllertesting.MockList{
+					func(_ client.Client, _ context.Context, _ *client.ListOptions, _ runtime.Object) (bool, error) {
+						return true, fmt.Errorf("unexplained test error listing")
+					},
+				},
 			},
 		},
 	}
