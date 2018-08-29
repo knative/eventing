@@ -26,5 +26,3 @@ See [the docs repo](https://github.com/knative/docs/tree/master/eventing/samples
   A sample using Google PubSub to read events from Google's IoT core.
 * [Github Pull Request Handler](https://github.com/knative/docs/tree/master/eventing/samples/github-events) -
   A simple handler for Github Pull Requests
-
-* [GCP PubSub Receiver Handler](./gcp_pubsub_function) - A simple handler for processing GCP PubSub events
