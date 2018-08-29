@@ -66,6 +66,9 @@ type TestCase struct {
 	// WantAbsent holds the list of objects expected to not exist
 	// after reconciliation completes.
 	WantAbsent []runtime.Object
+
+	// Mocks that tamper with the client's responses.
+	Mocks Mocks
 }
 
 // Runner returns a testing func that can be passed to t.Run.
@@ -91,9 +94,10 @@ func (tc *TestCase) Runner(t *testing.T, r reconcile.Reconciler, c client.Client
 	}
 }
 
-// GetClient returns the fake client to use for this test case.
+// GetClient returns the mockClient to use for this test case.
 func (tc *TestCase) GetClient() client.Client {
-	return fake.NewFakeClient(tc.InitialState...)
+	innerClient := fake.NewFakeClient(tc.InitialState...)
+	return NewMockClient(innerClient, tc.Mocks)
 }
 
 // Reconcile calls the given reconciler's Reconcile() function with the test
