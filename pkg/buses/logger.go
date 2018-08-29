@@ -56,10 +56,6 @@ func NewLoggingConfig() *logging.Config {
 	}`
 	lc.LoggingLevel = make(map[string]zapcore.Level)
 	lc.LoggingLevel[busLoggingComponent] = zapcore.InfoLevel
-	lc.LoggingLevel[reconcilerLoggingComponent] = zapcore.InfoLevel
-	lc.LoggingLevel[handlerLoggingComponent] = zapcore.InfoLevel
-	lc.LoggingLevel[dispatcherLoggingComponent] = zapcore.InfoLevel
-	lc.LoggingLevel[receiverLoggingComponent] = zapcore.InfoLevel
 	return lc
 }
 
