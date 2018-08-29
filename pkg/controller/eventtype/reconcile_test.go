@@ -20,6 +20,7 @@ import (
 	"fmt"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -135,6 +136,7 @@ func TestAllCases(t *testing.T) {
 		r := &reconciler{
 			client:   tc.GetClient(),
 			recorder: recorder,
+			logger: zap.NewNop(),
 		}
 		t.Run(tc.Name, tc.Runner(t, r, r.client))
 	}
