@@ -57,8 +57,7 @@ func kind(obj metav1.Object) schema.GroupVersionKind {
 }
 
 // NewControllerRef creates an OwnerReference pointing to the given Resource.
-func NewControllerRef(obj metav1.Object) *metav1.OwnerReference {
-	blockOwnerDeletion := false
+func NewControllerRef(obj metav1.Object, blockOwnerDeletion bool) *metav1.OwnerReference {
 	ref := metav1.NewControllerRef(obj, kind(obj))
 	ref.BlockOwnerDeletion = &blockOwnerDeletion
 	return ref

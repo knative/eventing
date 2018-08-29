@@ -14,11 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package feed
+package eventtype
 
 import (
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
-	batchv1 "k8s.io/api/batch/v1"
+	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -28,44 +30,79 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const controllerAgentName = "feed-controller"
+const (
+	// controllerAgentName is the string used by this controller to identify
+	// itself when creating events.
+	controllerAgentName = "event-type-controller"
+)
 
 type reconciler struct {
-	client   client.Client
-	recorder record.EventRecorder
+	client     client.Client
+	restConfig *rest.Config
+	recorder   record.EventRecorder
+	logger     *zap.Logger
 }
 
 // Verify the struct implements reconcile.Reconciler
 var _ reconcile.Reconciler = &reconciler{}
 
-// ProvideController returns a Feed controller and adds it to the given Manager.
+// ProvideController returns a flow controller.
 func ProvideController(mgr manager.Manager) (controller.Controller, error) {
-	// Setup a new controller to Reconcile Feeds.
+	logger, err := zap.NewProduction()
+	if err != nil {
+		return nil, err
+	}
+	logger.With(zap.String("controller", controllerAgentName))
+
+	// Setup a new controller to Reconcile Flows.
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: &reconciler{
 			recorder: mgr.GetRecorder(controllerAgentName),
+			logger: logger,
 		},
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	// Watch Feed events and enqueue Feed object key.
-	if err := c.Watch(&source.Kind{Type: &feedsv1alpha1.Feed{}}, &handler.EnqueueRequestForObject{}); err != nil {
+	// Watch EventType events and enqueue EventType object key.
+	if err := c.Watch(&source.Kind{
+		Type: &feedsv1alpha1.EventType{}},
+		&handler.EnqueueRequestForObject{}); err != nil {
 		return nil, err
 	}
 
-	// Watch Jobs and enqueue owning Feed key.
-	if err := c.Watch(&source.Kind{Type: &batchv1.Job{}},
-		&handler.EnqueueRequestForOwner{OwnerType: &feedsv1alpha1.Feed{}, IsController: true}); err != nil {
+	// In addition to watching EventType objects, watch for Feeds, which use and 'pin' EventTypes.
+	err = c.Watch(&source.Kind{Type: &feedsv1alpha1.Feed{}},
+		&handler.EnqueueRequestsFromMapFunc{ToRequests: feedToEventType{}})
+	if err != nil {
 		return nil, err
 	}
 
 	return c, nil
 }
 
-// InjectClient is called by the injector to set the reconciler's client field.
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	return nil
+}
+
+type feedToEventType struct{}
+
+func (_ feedToEventType) Map(obj handler.MapObject) []reconcile.Request {
+	feed, ok := obj.Object.(*feedsv1alpha1.Feed)
+	if !ok {
+		// This wasn't a Feed.
+		return []reconcile.Request{}
+	}
+	etName := feed.Spec.Trigger.EventType
+
+	return []reconcile.Request{
+		{
+			NamespacedName: types.NamespacedName{
+				Namespace: obj.Meta.GetNamespace(),
+				Name:      etName,
+			},
+		},
+	}
 }

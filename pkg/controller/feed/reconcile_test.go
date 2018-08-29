@@ -178,6 +178,30 @@ var testCases = []controllertesting.TestCase{
 		},
 	},
 	{
+		Name: "deleting Feed with deleting EventSource",
+		InitialState: []runtime.Object{
+			getDeletedStartedFeed(),
+			getDeletingEventSource(),
+			getEventType(),
+		},
+		ReconcileKey: "test/test-feed",
+		WantPresent: []runtime.Object{
+			getDeletedStopInProgressFeed(),
+		},
+	},
+	{
+		Name: "deleting Feed with deleting EventType",
+		InitialState: []runtime.Object{
+			getDeletedStartedFeed(),
+			getEventSource(),
+			getDeletingEventType(),
+		},
+		ReconcileKey: "test/test-feed",
+		WantPresent: []runtime.Object{
+			getDeletedStopInProgressFeed(),
+		},
+	},
+	{
 		Name: "failed because missing event source, now present",
 		InitialState: []runtime.Object{
 			getFeedFailingWithMissingEventSource(),
@@ -373,13 +397,6 @@ func getFeedFailingWithMissingEventSource() *feedsv1alpha1.Feed {
 
 func getStartInProgressFeed() *feedsv1alpha1.Feed {
 	feed := getNewFeed()
-	feed.SetOwnerReference(&metav1.OwnerReference{
-		APIVersion:         feedsv1alpha1.SchemeGroupVersion.String(),
-		Kind:               "EventType",
-		Name:               getEventType().Name,
-		Controller:         &falseVal,
-		BlockOwnerDeletion: &trueVal,
-	})
 	feed.AddFinalizer(finalizerName)
 
 	feed.Status.InitializeConditions()
