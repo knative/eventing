@@ -44,7 +44,6 @@ type Feed struct {
 
 var _ apis.Validatable = (*Feed)(nil)
 var _ apis.Defaultable = (*Feed)(nil)
-var _ apis.Immutable = (*Feed)(nil)
 var _ runtime.Object = (*Feed)(nil)
 var _ webhook.GenericCRD = (*Feed)(nil)
 
