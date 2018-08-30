@@ -66,7 +66,6 @@ func TestAllCases(t *testing.T) {
 		{
 			Name:         "Internal error getting EventType",
 			ReconcileKey: reconcileKey,
-			WantErr:      true,
 			WantErrMsg:   getError,
 			Mocks: controllertesting.Mocks{
 				MockGets: []controllertesting.MockGet{
@@ -96,7 +95,6 @@ func TestAllCases(t *testing.T) {
 				getEventType(false),
 			},
 			ReconcileKey: reconcileKey,
-			WantErr:      true,
 			WantErrMsg:   getError,
 			Mocks: controllertesting.Mocks{
 				MockGets: []controllertesting.MockGet{
@@ -122,7 +120,6 @@ func TestAllCases(t *testing.T) {
 				getEventType(false),
 			},
 			ReconcileKey: reconcileKey,
-			WantErr:      true,
 			WantErrMsg:   updateError,
 			Mocks: controllertesting.Mocks{
 				MockUpdates: []controllertesting.MockUpdate{
@@ -200,7 +197,6 @@ func TestAllCases(t *testing.T) {
 				// Unable to update the EventType, it should still be in the initial state.
 				getDeletingEventType(true),
 			},
-			WantErr:    true,
 			WantErrMsg: listError,
 			Mocks: controllertesting.Mocks{
 				MockLists: []controllertesting.MockList{

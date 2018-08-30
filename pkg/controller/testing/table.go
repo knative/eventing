@@ -124,11 +124,14 @@ func (tc *TestCase) Reconcile(r reconcile.Reconciler) (reconcile.Result, error) 
 // VerifyErr verifies that the given error returned from Reconcile is the error
 // expected by the test case.
 func (tc *TestCase) VerifyErr(err error) error {
-	if tc.WantErr && err == nil {
+	// A non-empty WantErrMsg implies that an error is wanted.
+	wantErr := tc.WantErr || tc.WantErrMsg != ""
+
+	if wantErr && err == nil {
 		return fmt.Errorf("want error, got nil")
 	}
 
-	if !tc.WantErr && err != nil {
+	if !wantErr && err != nil {
 		return fmt.Errorf("want no error, got %v", err)
 	}
 
