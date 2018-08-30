@@ -47,9 +47,9 @@ const (
 	fn1 = "fake-feed-name-1"
 	fn2 = "fake-feed-name-2"
 
-	listError   = "unexplained test error listing"
-	getError    = "unexplained test error getting"
-	updateError = "unexplained test error updating"
+	getError    = "test induced error getting"
+	listError   = "test induced error listing"
+	updateError = "test induced error updating"
 )
 
 func init() {
