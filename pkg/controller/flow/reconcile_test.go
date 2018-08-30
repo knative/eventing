@@ -56,15 +56,15 @@ func init() {
 
 var injectDomainInternalMocks = controllertesting.Mocks{
 	MockCreates: []controllertesting.MockCreate{
-		func(innerClient client.Client, ctx context.Context, obj runtime.Object) (bool, error) {
+		func(innerClient client.Client, ctx context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
 			// If we are creating a Channel, then fill in the status, in particular the DomainInternal as
 			// it used to control whether the Feed is created.
 			if channel, ok := obj.(*channelsv1alpha1.Channel); ok {
 				err := innerClient.Create(ctx, obj)
 				channel.Status.DomainInternal = targetDNS
-				return true, err
+				return controllertesting.Handled, err
 			}
-			return false, nil
+			return controllertesting.Unhandled, nil
 		},
 	},
 }

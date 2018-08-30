@@ -52,7 +52,7 @@ type TestCase struct {
 	WantErr bool
 
 	// WantErrMsg contains the pattern to match the returned error message.
-	// Implies WantErr = true. TODO implement
+	// Implies WantErr = true.
 	WantErrMsg string
 
 	// WantResult is the reconcile result we expect to be returned from the
@@ -104,7 +104,7 @@ func (tc *TestCase) GetClient() client.Client {
 // case's reconcile request.
 func (tc *TestCase) Reconcile(r reconcile.Reconciler) (reconcile.Result, error) {
 	if tc.ReconcileKey == "" {
-		return reconcile.Result{}, fmt.Errorf("Test did not set ReconcileKey")
+		return reconcile.Result{}, fmt.Errorf("test did not set ReconcileKey")
 	}
 	ns, n, err := cache.SplitMetaNamespaceKey(tc.ReconcileKey)
 	if err != nil {
@@ -129,7 +129,11 @@ func (tc *TestCase) VerifyErr(err error) error {
 		return fmt.Errorf("want no error, got %v", err)
 	}
 
-	//TODO if tc.WantErrMsg
+	if err != nil {
+		if diff := cmp.Diff(tc.WantErrMsg, err.Error()); diff != "" {
+			return fmt.Errorf("incorrect error (-want, +got): %v", diff)
+		}
+	}
 	return nil
 }
 
@@ -137,7 +141,7 @@ func (tc *TestCase) VerifyErr(err error) error {
 // result expected by the test case.
 func (tc *TestCase) VerifyResult(result reconcile.Result) error {
 	if diff := cmp.Diff(tc.WantResult, result); diff != "" {
-		return fmt.Errorf("Unexpected reconcile Result (-want +got) %v", diff)
+		return fmt.Errorf("unexpected reconcile Result (-want +got) %v", diff)
 	}
 	return nil
 }
@@ -161,18 +165,18 @@ func (tc *TestCase) VerifyWantPresent(c client.Client) error {
 	for _, wp := range tc.WantPresent {
 		o, err := scheme.Scheme.New(wp.GetObjectKind().GroupVersionKind())
 		if err != nil {
-			errs.errors = append(errs.errors, fmt.Errorf("Error creating a copy of %T: %v", wp, err))
+			errs.errors = append(errs.errors, fmt.Errorf("error creating a copy of %T: %v", wp, err))
 		}
 		acc, err := meta.Accessor(wp)
 		if err != nil {
-			errs.errors = append(errs.errors, fmt.Errorf("Error getting accessor for %#v %v", wp, err))
+			errs.errors = append(errs.errors, fmt.Errorf("error getting accessor for %#v %v", wp, err))
 		}
 		err = c.Get(context.TODO(), client.ObjectKey{Namespace: acc.GetNamespace(), Name: acc.GetName()}, o)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				errs.errors = append(errs.errors, fmt.Errorf("Want present %T %s/%s, got absent", wp, acc.GetNamespace(), acc.GetName()))
+				errs.errors = append(errs.errors, fmt.Errorf("want present %T %s/%s, got absent", wp, acc.GetNamespace(), acc.GetName()))
 			} else {
-				errs.errors = append(errs.errors, fmt.Errorf("Error getting %T %s/%s: %v", wp, acc.GetNamespace(), acc.GetName(), err))
+				errs.errors = append(errs.errors, fmt.Errorf("error getting %T %s/%s: %v", wp, acc.GetNamespace(), acc.GetName(), err))
 			}
 		}
 
@@ -195,14 +199,14 @@ func (tc *TestCase) VerifyWantAbsent(c client.Client) error {
 	for _, wa := range tc.WantAbsent {
 		acc, err := meta.Accessor(wa)
 		if err != nil {
-			errs.errors = append(errs.errors, fmt.Errorf("Error getting accessor for %#v %v", wa, err))
+			errs.errors = append(errs.errors, fmt.Errorf("error getting accessor for %#v %v", wa, err))
 		}
 		err = c.Get(context.TODO(), client.ObjectKey{Namespace: acc.GetNamespace(), Name: acc.GetName()}, wa)
 		if err == nil {
-			errs.errors = append(errs.errors, fmt.Errorf("Want absent, got present %T %s/%s", wa, acc.GetNamespace(), acc.GetName()))
+			errs.errors = append(errs.errors, fmt.Errorf("want absent, got present %T %s/%s", wa, acc.GetNamespace(), acc.GetName()))
 		}
 		if !apierrors.IsNotFound(err) {
-			errs.errors = append(errs.errors, fmt.Errorf("Error getting %T %s/%s: %v", wa, acc.GetNamespace(), acc.GetName(), err))
+			errs.errors = append(errs.errors, fmt.Errorf("error getting %T %s/%s: %v", wa, acc.GetNamespace(), acc.GetName(), err))
 		}
 	}
 	if len(errs.errors) > 0 {
