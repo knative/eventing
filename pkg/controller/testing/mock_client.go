@@ -45,7 +45,7 @@ type MockUpdate func(innerClient client.Client, ctx context.Context, obj runtime
 
 // mockClient is a client.Client that allows mock responses to be returned, instead of calling the
 // inner client.Client.
-type mockClient struct {
+type MockClient struct {
 	innerClient client.Client
 	mocks       Mocks
 }
@@ -62,11 +62,15 @@ type Mocks struct {
 	MockUpdates []MockUpdate
 }
 
-func NewMockClient(innerClient client.Client, mocks Mocks) client.Client {
-	return &mockClient{
+func NewMockClient(innerClient client.Client, mocks Mocks) *MockClient {
+	return &MockClient{
 		innerClient: innerClient,
 		mocks:       mocks,
 	}
+}
+
+func (m *MockClient) stopMocking() {
+	m.mocks = Mocks{}
 }
 
 // All of the functions are handled almost identically:
@@ -76,7 +80,7 @@ func NewMockClient(innerClient client.Client, mocks Mocks) client.Client {
 //      ii. Return the response from the mock.
 // 2. No mock handled the request, so call the inner client.
 
-func (m *mockClient) Get(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+func (m *MockClient) Get(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 	for i, mockGet := range m.mocks.MockGets {
 		handled, err := mockGet(m.innerClient, ctx, key, obj)
 		if handled == Handled {
@@ -89,7 +93,7 @@ func (m *mockClient) Get(ctx context.Context, key client.ObjectKey, obj runtime.
 	return m.innerClient.Get(ctx, key, obj)
 }
 
-func (m *mockClient) List(ctx context.Context, opts *client.ListOptions, list runtime.Object) error {
+func (m *MockClient) List(ctx context.Context, opts *client.ListOptions, list runtime.Object) error {
 	for i, mockList := range m.mocks.MockLists {
 		handled, err := mockList(m.innerClient, ctx, opts, list)
 		if handled == Handled {
@@ -102,7 +106,7 @@ func (m *mockClient) List(ctx context.Context, opts *client.ListOptions, list ru
 	return m.innerClient.List(ctx, opts, list)
 }
 
-func (m *mockClient) Create(ctx context.Context, obj runtime.Object) error {
+func (m *MockClient) Create(ctx context.Context, obj runtime.Object) error {
 	for i, mockCreate := range m.mocks.MockCreates {
 		handled, err := mockCreate(m.innerClient, ctx, obj)
 		if handled == Handled {
@@ -115,7 +119,7 @@ func (m *mockClient) Create(ctx context.Context, obj runtime.Object) error {
 	return m.innerClient.Create(ctx, obj)
 }
 
-func (m *mockClient) Delete(ctx context.Context, obj runtime.Object) error {
+func (m *MockClient) Delete(ctx context.Context, obj runtime.Object) error {
 	for i, mockDelete := range m.mocks.MockDeletes {
 		handled, err := mockDelete(m.innerClient, ctx, obj)
 		if handled == Handled {
@@ -128,7 +132,7 @@ func (m *mockClient) Delete(ctx context.Context, obj runtime.Object) error {
 	return m.innerClient.Delete(ctx, obj)
 }
 
-func (m *mockClient) Update(ctx context.Context, obj runtime.Object) error {
+func (m *MockClient) Update(ctx context.Context, obj runtime.Object) error {
 	for i, mockUpdate := range m.mocks.MockUpdates {
 		handled, err := mockUpdate(m.innerClient, ctx, obj)
 		if handled == Handled {

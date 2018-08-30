@@ -72,7 +72,7 @@ type TestCase struct {
 }
 
 // Runner returns a testing func that can be passed to t.Run.
-func (tc *TestCase) Runner(t *testing.T, r reconcile.Reconciler, c client.Client) func(t *testing.T) {
+func (tc *TestCase) Runner(t *testing.T, r reconcile.Reconciler, c *MockClient) func(t *testing.T) {
 	return func(t *testing.T) {
 		result, recErr := tc.Reconcile(r)
 
@@ -83,6 +83,9 @@ func (tc *TestCase) Runner(t *testing.T, r reconcile.Reconciler, c client.Client
 		if err := tc.VerifyResult(result); err != nil {
 			t.Error(err)
 		}
+
+		// Verifying should be done against the innerClient, never against mocks.
+		c.stopMocking()
 
 		if err := tc.VerifyWantPresent(c); err != nil {
 			t.Error(err)
@@ -95,7 +98,7 @@ func (tc *TestCase) Runner(t *testing.T, r reconcile.Reconciler, c client.Client
 }
 
 // GetClient returns the mockClient to use for this test case.
-func (tc *TestCase) GetClient() client.Client {
+func (tc *TestCase) GetClient() *MockClient {
 	innerClient := fake.NewFakeClient(tc.InitialState...)
 	return NewMockClient(innerClient, tc.Mocks)
 }

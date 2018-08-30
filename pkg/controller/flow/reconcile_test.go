@@ -111,11 +111,12 @@ func TestAllCases(t *testing.T) {
 	recorder := record.NewBroadcaster().NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
 	for _, tc := range testCases {
+		c := tc.GetClient()
 		r := &reconciler{
-			client:   tc.GetClient(),
+			client:   c,
 			recorder: recorder,
 		}
-		t.Run(tc.Name, tc.Runner(t, r, r.client))
+		t.Run(tc.Name, tc.Runner(t, r, c))
 	}
 }
 

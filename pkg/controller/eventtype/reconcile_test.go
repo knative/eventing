@@ -91,6 +91,10 @@ func TestAllCases(t *testing.T) {
 			InitialState: []runtime.Object{
 				getEventType(false),
 			},
+			WantPresent: []runtime.Object{
+				// Unable to update the EventType, it should still be in the initial state.
+				getEventType(false),
+			},
 			ReconcileKey: reconcileKey,
 			WantErr:      true,
 			WantErrMsg:   getError,
@@ -101,7 +105,7 @@ func TestAllCases(t *testing.T) {
 						realResponse := innerClient.Get(ctx, key, obj)
 						return controllertesting.Handled, realResponse
 					},
-					// The second Get, which runs inside the Update logic, will fail.
+					// The second Get, which runs inside the Update logic, should error.
 					func(_ client.Client, _ context.Context, _ client.ObjectKey, _ runtime.Object) (controllertesting.MockHandled, error) {
 						return controllertesting.Handled, errors.New(getError)
 					},
@@ -111,6 +115,10 @@ func TestAllCases(t *testing.T) {
 		{
 			Name: "tries to add finalizer -- EventType.Update() errors",
 			InitialState: []runtime.Object{
+				getEventType(false),
+			},
+			WantPresent: []runtime.Object{
+				// Unable to update the EventType, it should still be in the initial state.
 				getEventType(false),
 			},
 			ReconcileKey: reconcileKey,
@@ -155,7 +163,6 @@ func TestAllCases(t *testing.T) {
 			WantPresent: []runtime.Object{
 				// The Finalizer should have been removed.
 				getDeletingEventType(false),
-				getFeedUsingOtherEventType(),
 			},
 		}, {
 			Name: "deleting EventType: Feeds using EventType in different namespace",
@@ -167,7 +174,6 @@ func TestAllCases(t *testing.T) {
 			WantPresent: []runtime.Object{
 				// The Finalizer should have been removed.
 				getDeletingEventType(false),
-				getFeedUsingEventTypeInDifferentNamespace(),
 			},
 		},
 		{
@@ -182,8 +188,6 @@ func TestAllCases(t *testing.T) {
 				// There are Feeds still using the EventType, it should still have its Finalizer and a
 				// new Status added stating which Feeds are blocking its deletion.
 				getDeletingEventTypeWithCompleteAndInUseStatus(fn1 + ", " + fn2),
-				getFeedUsingEventType(fn1),
-				getFeedUsingEventType(fn2),
 			},
 		},
 		{
@@ -193,7 +197,7 @@ func TestAllCases(t *testing.T) {
 			},
 			ReconcileKey: reconcileKey,
 			WantPresent: []runtime.Object{
-				// The Finalizer should have been removed.
+				// Unable to update the EventType, it should still be in the initial state.
 				getDeletingEventType(true),
 			},
 			WantErr:    true,
@@ -210,12 +214,13 @@ func TestAllCases(t *testing.T) {
 	recorder := record.NewBroadcaster().NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
 	for _, tc := range testCases {
+		c := tc.GetClient()
 		r := &reconciler{
-			client:   tc.GetClient(),
+			client:   c,
 			recorder: recorder,
 			logger:   zap.NewNop(),
 		}
-		t.Run(tc.Name, tc.Runner(t, r, r.client))
+		t.Run(tc.Name, tc.Runner(t, r, c))
 	}
 }
 
