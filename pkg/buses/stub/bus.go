@@ -83,6 +83,7 @@ func (b *StubBus) addChannel(ref buses.ChannelReference, parameters buses.Resolv
 			ref:           ref,
 			parameters:    parameters,
 			subscriptions: make(map[buses.SubscriptionReference]*stubSubscription),
+			logger:        b.logger.With(zap.String("channels.knative.dev/channel", ref.String())),
 		}
 	}
 }
@@ -99,6 +100,8 @@ type stubChannel struct {
 	ref           buses.ChannelReference
 	parameters    buses.ResolvedParameters
 	subscriptions map[buses.SubscriptionReference]*stubSubscription
+
+	logger *zap.SugaredLogger
 }
 
 func (c *stubChannel) receiveMessage(message *buses.Message) {
@@ -108,11 +111,18 @@ func (c *stubChannel) receiveMessage(message *buses.Message) {
 }
 
 func (c *stubChannel) addSubscription(ref buses.SubscriptionReference, parameters buses.ResolvedParameters, bus buses.BusDispatcher) {
-	// create or update subscription
-	c.subscriptions[ref] = &stubSubscription{
-		ref:        ref,
-		bus:        bus,
-		parameters: parameters,
+	if subscription, ok := c.subscriptions[ref]; ok {
+		// update subscription
+		subscription.parameters = parameters
+	} else {
+		// create subscription
+		c.subscriptions[ref] = &stubSubscription{
+			ref:        ref,
+			bus:        bus,
+			parameters: parameters,
+
+			logger: c.logger.With(zap.String("channels.knative.dev/subscription", ref.String())),
+		}
 	}
 }
 
@@ -124,8 +134,14 @@ type stubSubscription struct {
 	ref        buses.SubscriptionReference
 	bus        buses.BusDispatcher
 	parameters buses.ResolvedParameters
+
+	logger *zap.SugaredLogger
 }
 
 func (s *stubSubscription) dispatchMessage(message *buses.Message) error {
-	return s.bus.DispatchMessage(s.ref, message)
+	err := s.bus.DispatchMessage(s.ref, message)
+	if err != nil {
+		s.logger.Warnf("Failed to dispatch message: %v", err)
+	}
+	return err
 }

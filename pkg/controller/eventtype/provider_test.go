@@ -65,4 +65,3 @@ func getPod() *v1.Pod {
 		},
 	}
 }
-
