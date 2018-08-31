@@ -61,6 +61,9 @@ const (
 	EventTypeFailed CommonEventTypeConditionType = "Failed"
 	// EventTypeInvalid specifies that the given EventType specification is invalid.
 	EventTypeInvalid CommonEventTypeConditionType = "Invalid"
+	// EventTypeInUse specifies that the given EventType, which is marked for deletion, still has
+	// Feeds that depend on it, so cannot yet be deleted.
+	EventTypeInUse CommonEventTypeConditionType = "InUse"
 )
 
 // EventTypeCondition defines a readiness condition for a EventType.

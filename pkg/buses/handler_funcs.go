@@ -19,7 +19,8 @@ package buses
 import (
 	"fmt"
 
-	"github.com/golang/glog"
+	"go.uber.org/zap"
+
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	"github.com/knative/eventing/pkg/controller/util"
 	corev1 "k8s.io/api/core/v1"
@@ -61,6 +62,8 @@ type EventHandlerFuncs struct {
 
 	// ReceiveMessageFunc is invoked when a Message is received on a Channel
 	ReceiveMessageFunc func(channelRef ChannelReference, message *Message) error
+
+	logger *zap.SugaredLogger
 }
 
 func (h EventHandlerFuncs) onBus(bus channelsv1alpha1.GenericBus, reconciler *Reconciler) error {
@@ -102,7 +105,7 @@ func (h EventHandlerFuncs) onProvision(channel *channelsv1alpha1.Channel, reconc
 		// status has changed, update channel
 		_, errS := reconciler.eventingClient.ChannelsV1alpha1().Channels(channel.Namespace).Update(channelCopy)
 		if errS != nil {
-			glog.Warningf("Could not update channel status: %v", errS)
+			h.logger.Warnf("Could not update channel status: %v", errS)
 			if err != nil {
 				return fmt.Errorf("error provisioning channel (%v); error updating channel status (%v)", err, errS)
 			}
@@ -151,7 +154,7 @@ func (h EventHandlerFuncs) onSubscribe(subscription *channelsv1alpha1.Subscripti
 		// status has changed, update subscription
 		_, errS := reconciler.eventingClient.ChannelsV1alpha1().Subscriptions(subscription.Namespace).Update(subscriptionCopy)
 		if errS != nil {
-			glog.Warningf("Could not update subscription status: %v", errS)
+			h.logger.Warnf("Could not update subscription status: %v", errS)
 			if err != nil {
 				return fmt.Errorf("error subscribing (%v); error updating subscription status (%v)", err, errS)
 			}
@@ -234,7 +237,7 @@ func (h EventHandlerFuncs) resolveParameters(parameters *[]channelsv1alpha1.Para
 		for _, arg := range *arguments {
 			if _, ok := known[arg.Name]; !ok {
 				// ignore arguments not defined by parameters
-				glog.Warningf("Skipping unknown argument: %s\n", arg.Name)
+				h.logger.Warnf("Skipping unknown argument: %s", arg.Name)
 				continue
 			}
 			delete(required, arg.Name)

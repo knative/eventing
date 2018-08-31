@@ -21,7 +21,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/glog"
+	"go.uber.org/zap"
+
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	eventingclientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	eventingscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
@@ -85,6 +86,8 @@ type Reconciler struct {
 	// recorder is an event recorder for recording Event resources to the
 	// Kubernetes API.
 	recorder record.EventRecorder
+
+	logger *zap.SugaredLogger
 }
 
 // NewReconciler creates a reconciler for a bus given:
@@ -96,20 +99,21 @@ type Reconciler struct {
 func NewReconciler(
 	component, masterURL, kubeconfig string,
 	cache *Cache, handler EventHandlerFuncs,
+	logger *zap.SugaredLogger,
 ) *Reconciler {
 	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
-		glog.Fatalf("Error building kubeconfig: %v", err)
+		logger.Fatalf("Error building kubeconfig: %v", err)
 	}
 
 	kubeClient, err := kubernetesclientset.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building kubernetes clientset: %v", err)
+		logger.Fatalf("Error building kubernetes clientset: %v", err)
 	}
 
 	eventingClient, err := eventingclientset.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building eventing clientset: %v", err)
+		logger.Fatalf("Error building eventing clientset: %v", err)
 	}
 
 	eventingInformerFactory := eventinginformers.NewSharedInformerFactory(eventingClient, time.Second*30)
@@ -121,9 +125,9 @@ func NewReconciler(
 	// Create event broadcaster
 	// Add types to the default Kubernetes Scheme so Events can be logged for the component.
 	eventingscheme.AddToScheme(eventingscheme.Scheme)
-	glog.V(4).Info("Creating event broadcaster")
+	logger.Info("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(glog.Infof)
+	eventBroadcaster.StartLogging(logger.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeClient.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(eventingscheme.Scheme, corev1.EventSource{Component: component})
 
@@ -145,9 +149,11 @@ func NewReconciler(
 
 		workqueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Reconciler"),
 		recorder:  recorder,
+
+		logger: logger,
 	}
 
-	glog.Info("Setting up event handlers")
+	logger.Info("Setting up event handlers")
 	// Set up an event handler for when Bus resources change
 	busInformer.Informer().AddEventHandler(informercache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -240,7 +246,7 @@ func NewReconciler(
 // processing. Reprocessing a Subscription is often used within a dispatcher
 // when a long lived receiver is interrupted by an asynchronous error.
 func (r *Reconciler) RequeueSubscription(subscriptionRef SubscriptionReference) {
-	glog.Infof("Requeue subscription %q\n", subscriptionRef.String())
+	r.logger.Infof("Requeue subscription %q", subscriptionRef.String())
 	r.workqueue.AddRateLimited(makeWorkqueueKey(subscriptionKind, subscriptionRef.Namespace, subscriptionRef.Name))
 }
 
@@ -283,11 +289,11 @@ func (r *Reconciler) Run(busRef BusReference, threadiness int, stopCh <-chan str
 	defer r.workqueue.ShutDown()
 
 	// Start the informer factories to begin populating the informer caches
-	glog.Info("Starting reconciler")
+	r.logger.Info("Starting reconciler")
 	go r.eventingInformerFactory.Start(stopCh)
 
 	// Wait for the caches to be synced before starting workers
-	glog.Info("Waiting for informer caches to sync")
+	r.logger.Info("Waiting for informer caches to sync")
 	if err := r.WaitForCacheSync(stopCh); err != nil {
 		return err
 	}
@@ -296,27 +302,27 @@ func (r *Reconciler) Run(busRef BusReference, threadiness int, stopCh <-chan str
 		// reconciler is for a ClusterBus
 		clusterBus, err := r.clusterBusesLister.Get(busRef.Name)
 		if err != nil {
-			glog.Fatalf("Unknown clusterbus %q: %v", busRef.Name, err)
+			r.logger.Fatalf("Unknown clusterbus %q: %v", busRef.Name, err)
 		}
 		r.bus = clusterBus.DeepCopy()
 	} else {
 		// reconciler is for a namespaced Bus
 		bus, err := r.busesLister.Buses(busRef.Namespace).Get(busRef.Name)
 		if err != nil {
-			glog.Fatalf("Unknown bus %q: %v", busRef, err)
+			r.logger.Fatalf("Unknown bus %q: %v", busRef, err)
 		}
 		r.bus = bus.DeepCopy()
 	}
 
-	glog.Info("Starting workers")
+	r.logger.Info("Starting workers")
 	// Launch workers to process resources
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(r.runWorker, time.Second, stopCh)
 	}
 
-	glog.Info("Started workers")
+	r.logger.Info("Started workers")
 	<-stopCh
-	glog.Info("Shutting down workers")
+	r.logger.Info("Shutting down workers")
 
 	return nil
 }
@@ -379,7 +385,7 @@ func (r *Reconciler) processNextWorkItem() bool {
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		r.workqueue.Forget(obj)
-		glog.Infof("Successfully synced reconciler '%s'", key)
+		r.logger.Infof("Successfully synced reconciler '%s'", key)
 		return nil
 	}(obj)
 

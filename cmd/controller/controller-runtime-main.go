@@ -22,6 +22,7 @@ import (
 	"github.com/knative/eventing/pkg/controller/feed"
 	"github.com/knative/eventing/pkg/controller/flow"
 
+	"github.com/knative/eventing/pkg/controller/eventtype"
 	"k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -62,6 +63,7 @@ func controllerRuntimeStart() error {
 	// Add each controller's ProvideController func to this list to have the
 	// manager run it.
 	providers := []ProvideFunc{
+		eventtype.ProvideController,
 		feed.ProvideController,
 		flow.ProvideController,
 	}

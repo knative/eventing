@@ -31,7 +31,7 @@ func MakeChannel(defaultBusName string, flow *v1alpha1.Flow) *channelsv1alpha1.C
 			Name:      channelName,
 			Namespace: flow.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
-				*controller.NewControllerRef(flow),
+				*controller.NewControllerRef(flow, false),
 			},
 		},
 		Spec: channelsv1alpha1.ChannelSpec{

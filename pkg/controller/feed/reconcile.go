@@ -325,37 +325,13 @@ func (r *reconciler) getEventTypeName(feed *feedsv1alpha1.Feed) string {
 	return ""
 }
 
-// setEventTypeOwnerReference makes the given Feed's referenced EventType or
-// ClusterEventType a non-controlling owner of the Feed.
+// setEventTypeOwnerReference makes the given Feed's referenced ClusterEventType a non-controlling
+// owner of the Feed.
 func (r *reconciler) setEventTypeOwnerReference(ctx context.Context, feed *feedsv1alpha1.Feed) error {
-	// TODO(nicholss): need to set the owner on a cluser level event type as well.
-	if len(feed.Spec.Trigger.EventType) > 0 {
-		return r.setNamespacedEventTypeOwnerReference(ctx, feed)
-	} else if len(feed.Spec.Trigger.ClusterEventType) > 0 {
+	// Namespaced EventTypes use a finalizer and do not need an Owners reference.
+	if len(feed.Spec.Trigger.ClusterEventType) > 0 {
 		return r.setClusterEventTypeOwnerReference(ctx, feed)
 	}
-	return nil
-}
-
-// setEventTypeOwnerReference makes the given Feed's referenced EventType a
-// non-controlling owner of the Feed.
-func (r *reconciler) setNamespacedEventTypeOwnerReference(ctx context.Context, feed *feedsv1alpha1.Feed) error {
-	et := &feedsv1alpha1.EventType{}
-	if err := r.client.Get(ctx, client.ObjectKey{Namespace: feed.Namespace, Name: feed.Spec.Trigger.EventType}, et); err != nil {
-		if errors.IsNotFound(err) {
-			glog.Errorf("Feed EventType not found, will not set finalizer")
-			return nil
-		}
-		return err
-	}
-
-	blockOwnerDeletion := true
-	isController := false
-	ref := metav1.NewControllerRef(et, feedsv1alpha1.SchemeGroupVersion.WithKind("EventType"))
-	ref.BlockOwnerDeletion = &blockOwnerDeletion
-	ref.Controller = &isController
-
-	feed.SetOwnerReference(ref)
 	return nil
 }
 
@@ -562,8 +538,8 @@ func (r *reconciler) getFeedSource(ctx context.Context, feed *feedsv1alpha1.Feed
 		return nil, nil, err
 	}
 
-	if es.GetDeletionTimestamp() != nil {
-		// EventSource is being deleted so don't allow feeds to it
+	if feed.GetDeletionTimestamp() == nil && es.GetDeletionTimestamp() != nil {
+		// EventSource is being deleted so don't allow non-deleting Feeds to use it.
 		msg := fmt.Sprintf("EventSource %s/%s is being deleted", feed.Namespace, feed.Spec.Trigger.Service)
 		glog.Info(msg)
 		return nil, nil, &EventSourceError{StatusError{EventSourceDeleting, msg}}
@@ -579,8 +555,8 @@ func (r *reconciler) getFeedSource(ctx context.Context, feed *feedsv1alpha1.Feed
 		return nil, nil, err
 	}
 
-	if et.GetDeletionTimestamp() != nil {
-		// EventType is being deleted so don't allow feeds to it
+	if feed.GetDeletionTimestamp() == nil && et.GetDeletionTimestamp() != nil {
+		// EventType is being deleted so don't allow non-deleting Feeds to use it.
 		msg := fmt.Sprintf("EventType %s/%s is being deleted", feed.Namespace, feed.Spec.Trigger.EventType)
 		glog.Info(msg)
 		return nil, nil, &EventTypeError{StatusError{EventTypeDeleting, msg}}

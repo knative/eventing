@@ -19,6 +19,7 @@ package flow
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
@@ -33,12 +34,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
 	trueVal   = true
-	falseVal  = false
 	targetURI = "http://target.example.com"
 )
 
@@ -53,6 +52,21 @@ func init() {
 	feedsv1alpha1.AddToScheme(scheme.Scheme)
 	flowsv1alpha1.AddToScheme(scheme.Scheme)
 	channelsv1alpha1.AddToScheme(scheme.Scheme)
+}
+
+var injectDomainInternalMocks = controllertesting.Mocks{
+	MockCreates: []controllertesting.MockCreate{
+		func(innerClient client.Client, ctx context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+			// If we are creating a Channel, then fill in the status, in particular the DomainInternal as
+			// it used to control whether the Feed is created.
+			if channel, ok := obj.(*channelsv1alpha1.Channel); ok {
+				err := innerClient.Create(ctx, obj)
+				channel.Status.DomainInternal = targetDNS
+				return controllertesting.Handled, err
+			}
+			return controllertesting.Unhandled, nil
+		},
+	},
 }
 
 var testCases = []controllertesting.TestCase{
@@ -74,6 +88,7 @@ var testCases = []controllertesting.TestCase{
 			getNewSubscription(),
 			getNewFeed(),
 		},
+		Mocks: injectDomainInternalMocks,
 	},
 	{
 		Name: "new flow: adds status, action target resolved, no flow controller config map, use default 'stub' bus",
@@ -88,6 +103,7 @@ var testCases = []controllertesting.TestCase{
 			getNewSubscription(),
 			getNewFeed(),
 		},
+		Mocks: injectDomainInternalMocks,
 	},
 }
 
@@ -95,11 +111,12 @@ func TestAllCases(t *testing.T) {
 	recorder := record.NewBroadcaster().NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
 	for _, tc := range testCases {
+		c := tc.GetClient()
 		r := &reconciler{
-			client:   &wrappedClient{client: tc.GetClient()},
+			client:   c,
 			recorder: recorder,
 		}
-		t.Run(tc.Name, tc.Runner(t, r, r.client))
+		t.Run(tc.Name, tc.Runner(t, r, c))
 	}
 }
 
@@ -146,7 +163,7 @@ func getNewChannel() *channelsv1alpha1.Channel {
 			ClusterBus: "stub",
 		},
 	}
-	channel.ObjectMeta.OwnerReferences = append(channel.ObjectMeta.OwnerReferences, getOwnerReference())
+	channel.ObjectMeta.OwnerReferences = append(channel.ObjectMeta.OwnerReferences, getOwnerReference(false))
 
 	// selflink is not filled in when we create the object, so clear it
 	channel.ObjectMeta.SelfLink = ""
@@ -162,7 +179,7 @@ func getNewSubscription() *channelsv1alpha1.Subscription {
 			Subscriber: targetURI,
 		},
 	}
-	subscription.ObjectMeta.OwnerReferences = append(subscription.ObjectMeta.OwnerReferences, getOwnerReference())
+	subscription.ObjectMeta.OwnerReferences = append(subscription.ObjectMeta.OwnerReferences, getOwnerReference(false))
 
 	// selflink is not filled in when we create the object, so clear it
 	subscription.ObjectMeta.SelfLink = ""
@@ -237,57 +254,17 @@ func feedObjectMeta(namespace, generateName string) metav1.ObjectMeta {
 		Namespace:    namespace,
 		GenerateName: generateName,
 		OwnerReferences: []metav1.OwnerReference{
-			getOwnerReference(),
+			getOwnerReference(true),
 		},
 	}
 }
 
-func getOwnerReference() metav1.OwnerReference {
+func getOwnerReference(blockOwnerDeletion bool) metav1.OwnerReference {
 	return metav1.OwnerReference{
 		APIVersion:         flowsv1alpha1.SchemeGroupVersion.String(),
 		Kind:               "Flow",
 		Name:               flowName,
 		Controller:         &trueVal,
-		BlockOwnerDeletion: &falseVal,
+		BlockOwnerDeletion: &blockOwnerDeletion,
 	}
-}
-
-// wrappedClient is a wrapper around a FakeClient. It fills in created Channel's
-// status.domainInternal field, whose value is used to determine code flow in reconcile.go.
-// TODO: Replace this with Reactors, once the FakeClient uses Reactors.
-type wrappedClient struct {
-	client client.Client
-}
-
-// Assert that wrappedClient can act as a client.Client.
-var _ client.Client = &wrappedClient{}
-
-func (w *wrappedClient) Get(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
-	return w.client.Get(ctx, key, obj)
-}
-
-func (w *wrappedClient) List(ctx context.Context, opts *client.ListOptions, list runtime.Object) error {
-	return w.client.List(ctx, opts, list)
-}
-
-func (w *wrappedClient) Create(ctx context.Context, obj runtime.Object) error {
-	err := w.client.Create(ctx, obj)
-	if err != nil {
-		return err
-	}
-
-	// If we are creating a Channel, then fill in the status, in particular the DomainInternal as
-	// it used to control whether the Feed is created.
-	if channel, ok := obj.(*channelsv1alpha1.Channel); ok {
-		channel.Status.DomainInternal = targetDNS
-	}
-	return nil
-}
-
-func (w *wrappedClient) Delete(ctx context.Context, obj runtime.Object) error {
-	return w.client.Delete(ctx, obj)
-}
-
-func (w *wrappedClient) Update(ctx context.Context, obj runtime.Object) error {
-	return w.client.Update(ctx, obj)
 }
