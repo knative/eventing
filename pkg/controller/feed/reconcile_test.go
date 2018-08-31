@@ -17,9 +17,13 @@ limitations under the License.
 package feed
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"testing"
 
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
@@ -41,7 +45,7 @@ TODO
 */
 
 var (
-	trueVal  = true
+	trueVal = true
 	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
 	// truncates to seconds to match the loss of precision during serialization.
 	deletionTime = metav1.Now().Rfc3339Copy()
@@ -49,6 +53,12 @@ var (
 
 const (
 	targetDNS = "myservice.mynamespace.svc.cluster.local"
+
+	getError    = "test induced error getting"
+	createError = "test induced error creating"
+
+	jobFailedReason  = "test induced job failure reason"
+	jobFailedMessage = "test induced job failure message"
 )
 
 func init() {
@@ -56,224 +66,281 @@ func init() {
 	feedsv1alpha1.AddToScheme(scheme.Scheme)
 }
 
-var testCases = []controllertesting.TestCase{
-	{
-		Name: "new feed: adds status, finalizer, creates job",
-		InitialState: []runtime.Object{
-			getEventSource(),
-			getEventType(),
-			getNewFeed(),
-		},
-		ReconcileKey: "test/test-feed",
-		WantPresent: []runtime.Object{
-			getStartInProgressFeed(),
-			getNewStartJob(),
-			//TODO job created event
-		},
-	},
-	{
-		Name: "new feed with secret ref: secret gets to job",
-		InitialState: []runtime.Object{
-			getEventSource(),
-			getEventType(),
-			getFeedSecret(),
-			getNewSecretFeed(),
-		},
-		ReconcileKey: "test/test-feed",
-		WantPresent: []runtime.Object{
-			getSecretStartInProgressFeed(),
-			getNewSecretStartJob(),
-			//TODO job created event
-		},
-	},
-	{
-		Name: "in progress feed with existing job: both unchanged",
-		InitialState: []runtime.Object{
-			getEventSource(),
-			getEventType(),
-			getStartInProgressFeed(),
-			getNewStartJob(),
-		},
-		ReconcileKey: "test/test-feed",
-		WantPresent: []runtime.Object{
-			getStartInProgressFeed(),
-			getNewStartJob(),
-		},
-	},
-	{
-		Name: "in progress feed with completed job: updated status, context, job exists",
-		InitialState: []runtime.Object{
-			getEventSource(),
-			getEventType(),
-			getStartInProgressFeed(),
-			getCompletedStartFeedJob(),
-			getCompletedStartFeedJobPod(),
-		},
-		ReconcileKey: "test/test-feed",
-		WantPresent: []runtime.Object{
-			getStartedFeed(),
-			getCompletedStartFeedJob(),
-			//TODO job completed event
-		},
-	},
-	{
-		Name: "in progress feed with failed start job: updated status, job exists",
-		InitialState: []runtime.Object{
-			getEventSource(),
-			getEventType(),
-			getStartInProgressFeed(),
-			getFailedStartFeedJob(),
-			getCompletedStartFeedJobPod(),
-		},
-		ReconcileKey: "test/test-feed",
-		WantPresent: []runtime.Object{
-			getStartFailedFeed(),
-			getFailedStartFeedJob(),
-			//TODO job failed event
-		},
-	},
-	{
-		Name: "non-existing event type: updated status",
-		InitialState: []runtime.Object{
-			getNewFeed(),
-			getEventSource(),
-		},
-		ReconcileKey: "test/test-feed",
-		WantPresent: []runtime.Object{
-			getEventTypeMissing(),
-		},
-	},
-	{
-		Name: "deleting event type: updated status",
-		InitialState: []runtime.Object{
-			getNewFeed(),
-			getEventSource(),
-			getDeletingEventType(),
-		},
-		ReconcileKey: "test/test-feed",
-		WantPresent: []runtime.Object{
-			getEventTypeDeleting(),
-		},
-	},
-	{
-		Name: "non-existing event source: updated status",
-		InitialState: []runtime.Object{
-			getNewFeed(),
-		},
-		ReconcileKey: "test/test-feed",
-		WantPresent: []runtime.Object{
-			getEventSourceMissing(),
-		},
-	},
-	{
-		Name: "deleting event source: updated status",
-		InitialState: []runtime.Object{
-			getNewFeed(),
-			getDeletingEventSource(),
-		},
-		ReconcileKey: "test/test-feed",
-		WantPresent: []runtime.Object{
-			getEventSourceDeleting(),
-		},
-	},
-	{
-		Name: "deleting Feed with deleting EventSource",
-		InitialState: []runtime.Object{
-			getDeletedStartedFeed(),
-			getDeletingEventSource(),
-			getEventType(),
-		},
-		ReconcileKey: "test/test-feed",
-		WantPresent: []runtime.Object{
-			getDeletedStopInProgressFeed(),
-		},
-	},
-	{
-		Name: "deleting Feed with deleting EventType",
-		InitialState: []runtime.Object{
-			getDeletedStartedFeed(),
-			getEventSource(),
-			getDeletingEventType(),
-		},
-		ReconcileKey: "test/test-feed",
-		WantPresent: []runtime.Object{
-			getDeletedStopInProgressFeed(),
-		},
-	},
-	{
-		Name: "failed because missing event source, now present",
-		InitialState: []runtime.Object{
-			getFeedFailingWithMissingEventSource(),
-			getEventSource(),
-			getEventType(),
-		},
-		ReconcileKey: "test/test-feed",
-		WantPresent: []runtime.Object{
-			getStartInProgressFeed(),
-			getNewStartJob(),
-		},
-	},
-	{
-		Name: "Deleted feed with finalizer, previously completed, feed job exists: feed job deleted",
-		InitialState: []runtime.Object{
-			getEventSource(),
-			getEventType(),
-			getDeletedStartedFeed(),
-			getCompletedStartFeedJob(),
-		},
-		ReconcileKey: "test/test-feed",
-		WantPresent: []runtime.Object{
-			getDeletedStartedFeed(),
-		},
-		WantAbsent: []runtime.Object{
-			getCompletedStartFeedJob(),
-		},
-	},
-	{
-		Name: "Deleted feed with finalizer, previously completed, feed job missing: stop feed job created, status updated",
-		InitialState: []runtime.Object{
-			getEventSource(),
-			getEventType(),
-			getDeletedStartedFeed(),
-		},
-		ReconcileKey: "test/test-feed",
-		WantPresent: []runtime.Object{
-			getDeletedStopInProgressFeed(),
-			getNewStopJob(),
-			//TODO job created event
-		},
-	},
-	{
-		Name: "Deleted in-progress feed with finalizer, stop feed job exists: unchanged",
-		InitialState: []runtime.Object{
-			getEventSource(),
-			getEventType(),
-			getDeletedStopInProgressFeed(),
-			getInProgressStopJob(),
-		},
-		ReconcileKey: "test/test-feed",
-		WantPresent: []runtime.Object{
-			getDeletedStopInProgressFeed(),
-			getInProgressStopJob(),
-		},
-	},
-	{
-		Name: "Deleted feed with completed stop feed job: no finalizers, update status",
-		InitialState: []runtime.Object{
-			getEventSource(),
-			getEventType(),
-			getDeletedStopInProgressFeed(),
-			getCompletedStopJob(),
-		},
-		ReconcileKey: "test/test-feed",
-		WantPresent: []runtime.Object{
-			getDeletedStoppedFeed(),
-			//TODO job completed event
-		},
-	},
-}
-
 func TestAllCases(t *testing.T) {
+	testCases := []controllertesting.TestCase{
+		{
+			Name: "Feed not found",
+			// This should return a successful reconcile result immediately.
+			WantErr:    false,
+			WantResult: reconcile.Result{},
+		},
+		{
+			Name:       "Internal error getting Feed",
+			WantErrMsg: getError,
+			Mocks: controllertesting.Mocks{
+				MockGets: []controllertesting.MockGet{
+					func(_ client.Client, _ context.Context, _ client.ObjectKey, _ runtime.Object) (controllertesting.MockHandled, error) {
+						return controllertesting.Handled, errors.New(getError)
+					},
+				},
+			},
+		},
+		{
+			Name: "new feed: adds status, finalizer, creates job",
+			InitialState: []runtime.Object{
+				getEventSource(),
+				getEventType(),
+				getNewFeed(),
+			},
+			WantPresent: []runtime.Object{
+				getStartInProgressFeed(),
+				getNewStartJob(),
+				//TODO job created event
+			},
+		}, {
+			Name: "new feed: adds status, finalizer, create job fails",
+			InitialState: []runtime.Object{
+				getEventSource(),
+				getEventType(),
+				getNewFeed(),
+			},
+			WantPresent: []runtime.Object{
+				getReadyUnknownFeed(),
+				//TODO job created event
+			},
+			Mocks: controllertesting.Mocks{
+				MockCreates: []controllertesting.MockCreate{
+					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+						// Return an error when creating a Job.
+						if _, ok := obj.(*batchv1.Job); ok {
+							return controllertesting.Handled, errors.New(createError)
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+		},
+		{
+			Name: "new feed with secret ref: secret gets to job",
+			InitialState: []runtime.Object{
+				getEventSource(),
+				getEventType(),
+				getFeedSecret(),
+				getNewSecretFeed(),
+			},
+			WantPresent: []runtime.Object{
+				getSecretStartInProgressFeed(),
+				getNewSecretStartJob(),
+				//TODO job created event
+			},
+		},
+		{
+			Name: "in progress feed with existing job: both unchanged",
+			InitialState: []runtime.Object{
+				getEventSource(),
+				getEventType(),
+				getStartInProgressFeed(),
+				getNewStartJob(),
+			},
+			WantPresent: []runtime.Object{
+				getStartInProgressFeed(),
+				getNewStartJob(),
+			},
+		},
+		{
+			Name: "in progress feed with completed job: updated status, context, job exists",
+			InitialState: []runtime.Object{
+				getEventSource(),
+				getEventType(),
+				getStartInProgressFeed(),
+				getCompletedStartFeedJob(),
+				getCompletedStartFeedJobPod(),
+			},
+			WantPresent: []runtime.Object{
+				getStartedFeed(),
+				getCompletedStartFeedJob(),
+				//TODO job completed event
+			},
+		},
+		{
+			Name: "in progress feed with failed start job: updated status, job exists",
+			InitialState: []runtime.Object{
+				getEventSource(),
+				getEventType(),
+				getStartInProgressFeed(),
+				getFailedStartFeedJob(),
+				getCompletedStartFeedJobPod(),
+			},
+			WantPresent: []runtime.Object{
+				getStartFailedFeed(),
+				getFailedStartFeedJob(),
+				//TODO job failed event
+			},
+		},
+		{
+			Name: "non-existing event type: updated status",
+			InitialState: []runtime.Object{
+				getNewFeed(),
+				getEventSource(),
+			},
+			WantPresent: []runtime.Object{
+				getEventTypeMissing(),
+			},
+		},
+		{
+			Name: "Internal Error getting EventSource",
+			InitialState: []runtime.Object{
+				getNewFeed(),
+			},
+			WantPresent: []runtime.Object{
+				getReadyUnknownFeed(),
+			},
+			WantErrMsg: "error getting feed source: " + getError,
+			Mocks: controllertesting.Mocks{
+				MockGets: []controllertesting.MockGet{
+					func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := obj.(*feedsv1alpha1.EventSource); ok {
+							return controllertesting.Handled, errors.New(getError)
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+		},
+		{
+			Name: "deleting event type: updated status",
+			InitialState: []runtime.Object{
+				getNewFeed(),
+				getEventSource(),
+				getDeletingEventType(),
+			},
+			WantPresent: []runtime.Object{
+				getEventTypeDeleting(),
+			},
+		},
+		{
+			Name: "non-existing event source: updated status",
+			InitialState: []runtime.Object{
+				getNewFeed(),
+			},
+			WantPresent: []runtime.Object{
+				getEventSourceMissing(),
+			},
+		},
+		{
+			Name: "deleting event source: updated status",
+			InitialState: []runtime.Object{
+				getNewFeed(),
+				getDeletingEventSource(),
+			},
+			WantPresent: []runtime.Object{
+				getEventSourceDeleting(),
+			},
+		},
+		{
+			Name: "deleting Feed with deleting EventSource",
+			InitialState: []runtime.Object{
+				getDeletedStartedFeed(),
+				getDeletingEventSource(),
+				getEventType(),
+			},
+			WantPresent: []runtime.Object{
+				getDeletedStopInProgressFeed(),
+			},
+		},
+		{
+			Name: "deleting Feed with deleting EventType",
+			InitialState: []runtime.Object{
+				getDeletedStartedFeed(),
+				getEventSource(),
+				getDeletingEventType(),
+			},
+			WantPresent: []runtime.Object{
+				getDeletedStopInProgressFeed(),
+			},
+		},
+		{
+			Name: "in progress feed with failed stop job: finalizer removed",
+			InitialState: []runtime.Object{
+				getEventSource(),
+				getEventType(),
+				getDeletedStopInProgressFeed(),
+				getFailedStopJob(),
+			},
+			WantPresent: []runtime.Object{
+				getFinalizerRemovedStopJobFailedFeed(),
+				//TODO job failed event
+			},
+		},
+		{
+			Name: "failed because missing event source, now present",
+			InitialState: []runtime.Object{
+				getFeedFailingWithMissingEventSource(),
+				getEventSource(),
+				getEventType(),
+			},
+			WantPresent: []runtime.Object{
+				getStartInProgressFeed(),
+				getNewStartJob(),
+			},
+		},
+		{
+			Name: "Deleted feed with finalizer, previously completed, feed job exists: feed job deleted",
+			InitialState: []runtime.Object{
+				getEventSource(),
+				getEventType(),
+				getDeletedStartedFeed(),
+				getCompletedStartFeedJob(),
+			},
+			WantPresent: []runtime.Object{
+				getDeletedStartedFeed(),
+			},
+			WantAbsent: []runtime.Object{
+				getCompletedStartFeedJob(),
+			},
+		},
+		{
+			Name: "Deleted feed with finalizer, previously completed, feed job missing: stop feed job created, status updated",
+			InitialState: []runtime.Object{
+				getEventSource(),
+				getEventType(),
+				getDeletedStartedFeed(),
+			},
+			WantPresent: []runtime.Object{
+				getDeletedStopInProgressFeed(),
+				getNewStopJob(),
+				//TODO job created event
+			},
+		},
+		{
+			Name: "Deleted in-progress feed with finalizer, stop feed job exists: unchanged",
+			InitialState: []runtime.Object{
+				getEventSource(),
+				getEventType(),
+				getDeletedStopInProgressFeed(),
+				getInProgressStopJob(),
+			},
+			WantPresent: []runtime.Object{
+				getDeletedStopInProgressFeed(),
+				getInProgressStopJob(),
+			},
+		},
+		{
+			Name: "Deleted feed with completed stop feed job: no finalizers, update status",
+			InitialState: []runtime.Object{
+				getEventSource(),
+				getEventType(),
+				getDeletedStopInProgressFeed(),
+				getCompletedStopJob(),
+			},
+			WantPresent: []runtime.Object{
+				getDeletedStoppedFeed(),
+				//TODO job completed event
+			},
+		},
+	}
+	reconcileKey := "test/test-feed"
+
 	recorder := record.NewBroadcaster().NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
 	for _, tc := range testCases {
@@ -282,6 +349,7 @@ func TestAllCases(t *testing.T) {
 			client:   c,
 			recorder: recorder,
 		}
+		tc.ReconcileKey = reconcileKey
 		t.Run(tc.Name, tc.Runner(t, r, c))
 	}
 }
@@ -395,9 +463,26 @@ func getFeedFailingWithMissingEventSource() *feedsv1alpha1.Feed {
 	return feed
 }
 
-func getStartInProgressFeed() *feedsv1alpha1.Feed {
+func getReadyUnknownFeed() *feedsv1alpha1.Feed {
+	feed := getNewFeed()
+
+	feed.Status.InitializeConditions()
+	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+		Type:   feedsv1alpha1.FeedConditionReady,
+		Status: corev1.ConditionUnknown,
+	})
+
+	return feed
+}
+
+func getNewFeedWithFinalizer() *feedsv1alpha1.Feed {
 	feed := getNewFeed()
 	feed.AddFinalizer(finalizerName)
+	return feed
+}
+
+func getStartInProgressFeed() *feedsv1alpha1.Feed {
+	feed := getNewFeedWithFinalizer()
 
 	feed.Status.InitializeConditions()
 	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
@@ -476,6 +561,18 @@ func getDeletedStoppedFeed() *feedsv1alpha1.Feed {
 		Status:  corev1.ConditionTrue,
 		Reason:  "FeedSuccess",
 		Message: "stop job succeeded",
+	})
+	return feed
+}
+
+func getFinalizerRemovedStopJobFailedFeed() *feedsv1alpha1.Feed {
+	feed := getDeletedStopInProgressFeed()
+	feed.RemoveFinalizer(finalizerName)
+	feed.Status.SetCondition(&feedsv1alpha1.FeedCondition{
+		Type:    feedsv1alpha1.FeedConditionReady,
+		Status:  corev1.ConditionFalse,
+		Reason:  "FeedFailed",
+		Message: fmt.Sprintf("Job failed with [%s] %s", jobFailedReason, jobFailedMessage),
 	})
 	return feed
 }
@@ -701,6 +798,17 @@ func getCompletedStopJob() *batchv1.Job {
 			Status: corev1.ConditionTrue,
 		}},
 	}
+	return job
+}
+
+func getFailedStopJob() *batchv1.Job {
+	job := getInProgressStopJob()
+	job.Status.Conditions = append(job.Status.Conditions, batchv1.JobCondition{
+		Type:    batchv1.JobFailed,
+		Status:  corev1.ConditionTrue,
+		Reason:  jobFailedReason,
+		Message: jobFailedMessage,
+	})
 	return job
 }
 
