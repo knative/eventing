@@ -42,7 +42,6 @@ TODO
 
 var (
 	trueVal  = true
-	falseVal = false
 	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
 	// truncates to seconds to match the loss of precision during serialization.
 	deletionTime = metav1.Now().Rfc3339Copy()
@@ -278,11 +277,12 @@ func TestAllCases(t *testing.T) {
 	recorder := record.NewBroadcaster().NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
 	for _, tc := range testCases {
+		c := tc.GetClient()
 		r := &reconciler{
-			client:   tc.GetClient(),
+			client:   c,
 			recorder: recorder,
 		}
-		t.Run(tc.Name, tc.Runner(t, r, r.client))
+		t.Run(tc.Name, tc.Runner(t, r, c))
 	}
 }
 
@@ -704,17 +704,6 @@ func getCompletedStopJob() *batchv1.Job {
 	return job
 }
 
-func getFailedStopJob() *batchv1.Job {
-	job := getInProgressStopJob()
-	job.Status = batchv1.JobStatus{
-		Conditions: []batchv1.JobCondition{{
-			Type:   batchv1.JobFailed,
-			Status: corev1.ConditionTrue,
-		}},
-	}
-	return job
-}
-
 func getEventTypeMissing() *feedsv1alpha1.Feed {
 	feed := getNewFeed()
 	feed.Status.InitializeConditions()
@@ -802,12 +791,5 @@ func jobType() metav1.TypeMeta {
 	return metav1.TypeMeta{
 		APIVersion: batchv1.SchemeGroupVersion.String(),
 		Kind:       "Job",
-	}
-}
-
-func podType() metav1.TypeMeta {
-	return metav1.TypeMeta{
-		APIVersion: corev1.SchemeGroupVersion.String(),
-		Kind:       "Pod",
 	}
 }
