@@ -17,12 +17,7 @@ metadata:
   name: gcppubsub
 spec:
   provisioner:
-    name: provisioner
     image: github.com/knative/eventing/pkg/buses/gcppubsub/provisioner
-    args: [
-      "-logtostderr",
-      "-stderrthreshold", "INFO",
-    ]
     env: &env
     - name: GOOGLE_CLOUD_PROJECT
       valueFrom:
@@ -35,12 +30,7 @@ spec:
     - name: google-cloud-key
       mountPath: /var/secrets/google
   dispatcher:
-    name: dispatcher
     image: github.com/knative/eventing/pkg/buses/gcppubsub/dispatcher
-    args: [
-      "-logtostderr",
-      "-stderrthreshold", "INFO",
-    ]
     env: *env
     volumeMounts:
     - name: google-cloud-key

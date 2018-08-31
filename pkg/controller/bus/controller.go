@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/knative/eventing/pkg/buses"
 	"github.com/knative/eventing/pkg/controller"
 	"github.com/knative/eventing/pkg/system"
 	appsv1 "k8s.io/api/apps/v1"
@@ -621,6 +622,9 @@ func newDispatcherDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 	labels := dispatcherLabels(bus.Name, bus.Namespace)
 	one := int32(1)
 	container := bus.Spec.Dispatcher.DeepCopy()
+	if container.Name == "" {
+		container.Name = buses.Dispatcher
+	}
 	container.Env = append(container.Env,
 		corev1.EnvVar{
 			Name:  "PORT",
@@ -682,6 +686,9 @@ func newProvisionerDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 	labels := provisionerLabels(bus.Name, bus.Namespace)
 	one := int32(1)
 	container := bus.Spec.Provisioner.DeepCopy()
+	if container.Name == "" {
+		container.Name = buses.Provisioner
+	}
 	container.Env = append(container.Env,
 		corev1.EnvVar{
 			Name:  "BUS_NAMESPACE",

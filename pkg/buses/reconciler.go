@@ -42,11 +42,6 @@ import (
 )
 
 const (
-	// Dispatcher manages the data plane for a bus
-	Dispatcher = "dispatcher"
-	// Provisioner manages the control plane for a bus
-	Provisioner = "provisioner"
-
 	busKind          = "Bus"
 	clusterBusKind   = "ClusterBus"
 	channelKind      = "Channel"

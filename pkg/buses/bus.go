@@ -24,6 +24,13 @@ import (
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 )
 
+const (
+	// Dispatcher manages the data plane for a bus
+	Dispatcher = "dispatcher"
+	// Provisioner manages the control plane for a bus
+	Provisioner = "provisioner"
+)
+
 type bus struct {
 	busRef       BusReference
 	handlerFuncs EventHandlerFuncs
