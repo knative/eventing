@@ -297,20 +297,35 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
+	// NEVER modify objects from the store. It's a read-only, local cache.
+	// You can use DeepCopy() to make a deep copy of original object and modify this copy
+	// Or create a copy manually for better performance
+	clusterBusCopy := clusterBus.DeepCopy()
+
 	// Sync Service derived from the ClusterBus
-	err = c.syncDispatcherServiceClusterBusStatus(clusterBus)
+	err = c.syncDispatcherServiceClusterBusStatus(clusterBusCopy)
 	if err != nil {
+		c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
 		return err
 	}
 
 	// Sync Deployment derived from the ClusterBus
-	err = c.syncDispatcherDeploymentClusterBusStatus(clusterBus)
+	err = c.syncDispatcherDeploymentClusterBusStatus(clusterBusCopy)
 	if err != nil {
+		c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
 		return err
 	}
 
 	// Sync Deployment derived from the ClusterBus
-	err = c.syncProvisionerDeploymentClusterBusStatus(clusterBus)
+	err = c.syncProvisionerDeploymentClusterBusStatus(clusterBusCopy)
+	if err != nil {
+		c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
+		return err
+	}
+
+	// Finally, we update the status block of the ClusterBus resource to reflect the
+	// current state of the world
+	err = c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
 	if err != nil {
 		return err
 	}
@@ -320,75 +335,57 @@ func (c *Controller) syncHandler(key string) error {
 }
 
 func (c *Controller) syncDispatcherServiceClusterBusStatus(clusterBus *channelsv1alpha1.ClusterBus) error {
-	// NEVER modify objects from the store. It's a read-only, local cache.
-	// You can use DeepCopy() to make a deep copy of original object and modify this copy
-	// Or create a copy manually for better performance
-	clusterBusCopy := clusterBus.DeepCopy()
 
-	dispatcherService, err := c.syncDispatcherService(clusterBusCopy)
+	dispatcherService, err := c.syncDispatcherService(clusterBus)
 
 	if err != nil {
-		clusterBusCopy.Status.Service = nil
+		clusterBus.Status.Service = nil
 		serviceCondition := util.NewBusCondition(channelsv1alpha1.BusServiceable, corev1.ConditionFalse, ServiceError, err.Error())
-		util.SetBusCondition(&clusterBusCopy.Status, *serviceCondition)
-		// Ignore error in updating bus status
-		c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
+		util.SetBusCondition(&clusterBus.Status, *serviceCondition)
 		return err
 	}
 
-	clusterBusCopy.Status.Service = &corev1.LocalObjectReference{Name: dispatcherService.Name}
+	clusterBus.Status.Service = &corev1.LocalObjectReference{Name: dispatcherService.Name}
 	serviceCondition := util.NewBusCondition(channelsv1alpha1.BusServiceable, corev1.ConditionTrue, ServiceSynced, "service successfully synced")
-	util.SetBusCondition(&clusterBusCopy.Status, *serviceCondition)
+	util.SetBusCondition(&clusterBus.Status, *serviceCondition)
 
-	return c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
+	return nil
 }
 
 func (c *Controller) syncDispatcherDeploymentClusterBusStatus(clusterBus *channelsv1alpha1.ClusterBus) error {
-	// NEVER modify objects from the store. It's a read-only, local cache.
-	// You can use DeepCopy() to make a deep copy of original object and modify this copy
-	// Or create a copy manually for better performance
-	clusterBusCopy := clusterBus.DeepCopy()
 
-	_, err := c.syncDispatcherDeployment(clusterBusCopy)
+	_, err := c.syncDispatcherDeployment(clusterBus)
 
 	if err != nil {
 		dispatchCondition := util.NewBusCondition(channelsv1alpha1.BusDispatching, corev1.ConditionFalse, DeploymentError, err.Error())
-		util.SetBusCondition(&clusterBusCopy.Status, *dispatchCondition)
-		// Ignore error in updating bus status
-		c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
+		util.SetBusCondition(&clusterBus.Status, *dispatchCondition)
 		return err
 	}
 
 	dispatchCondition := util.NewBusCondition(channelsv1alpha1.BusDispatching, corev1.ConditionTrue, DeploymentSynced, "deployment successfully synced")
-	util.SetBusCondition(&clusterBusCopy.Status, *dispatchCondition)
+	util.SetBusCondition(&clusterBus.Status, *dispatchCondition)
 
-	return c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
+	return nil
 }
 
 func (c *Controller) syncProvisionerDeploymentClusterBusStatus(clusterBus *channelsv1alpha1.ClusterBus) error {
-	// NEVER modify objects from the store. It's a read-only, local cache.
-	// You can use DeepCopy() to make a deep copy of original object and modify this copy
-	// Or create a copy manually for better performance
-	clusterBusCopy := clusterBus.DeepCopy()
 
-	provisionerDeployment, err := c.syncProvisionerDeployment(clusterBusCopy)
+	provisionerDeployment, err := c.syncProvisionerDeployment(clusterBus)
 
 	if err != nil {
 		provisionCondition := util.NewBusCondition(channelsv1alpha1.BusProvisioning, corev1.ConditionFalse, DeploymentError, err.Error())
-		util.SetBusCondition(&clusterBusCopy.Status, *provisionCondition)
-		// Ignore error in updating cluster bus status
-		c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
+		util.SetBusCondition(&clusterBus.Status, *provisionCondition)
 		return err
 	}
 
 	if provisionerDeployment != nil {
 		provisionCondition := util.NewBusCondition(channelsv1alpha1.BusProvisioning, corev1.ConditionTrue, DeploymentSynced, "deployment successfully synced")
-		util.SetBusCondition(&clusterBusCopy.Status, *provisionCondition)
+		util.SetBusCondition(&clusterBus.Status, *provisionCondition)
 	} else {
-		util.RemoveBusCondition(&clusterBusCopy.Status, channelsv1alpha1.BusProvisioning)
+		util.RemoveBusCondition(&clusterBus.Status, channelsv1alpha1.BusProvisioning)
 	}
 
-	return c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
+	return nil
 }
 
 func (c *Controller) syncDispatcherService(clusterBus *channelsv1alpha1.ClusterBus) (*corev1.Service, error) {

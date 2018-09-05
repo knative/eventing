@@ -309,20 +309,35 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
+	// NEVER modify objects from the store. It's a read-only, local cache.
+	// You can use DeepCopy() to make a deep copy of original object and modify this copy
+	// Or create a copy manually for better performance
+	busCopy := bus.DeepCopy()
+
 	// Sync Service derived from the Bus
-	err = c.syncDispatcherServiceBusStatus(bus)
+	err = c.syncDispatcherServiceBusStatus(busCopy)
 	if err != nil {
+		c.compareAndUpdateBusStatus(bus, busCopy)
 		return err
 	}
 
 	// Sync Deployment derived from the Bus
-	err = c.syncDispatcherDeploymentBusStatus(bus)
+	err = c.syncDispatcherDeploymentBusStatus(busCopy)
 	if err != nil {
+		c.compareAndUpdateBusStatus(bus, busCopy)
 		return err
 	}
 
 	// Sync Deployment derived from the Bus
-	err = c.syncProvisionerDeploymentBusStatus(bus)
+	err = c.syncProvisionerDeploymentBusStatus(busCopy)
+	if err != nil {
+		c.compareAndUpdateBusStatus(bus, busCopy)
+		return err
+	}
+
+	// Finally, we update the status block of the Bus resource to reflect the
+	// current state of the world
+	err = c.compareAndUpdateBusStatus(bus, busCopy)
 	if err != nil {
 		return err
 	}
@@ -332,75 +347,56 @@ func (c *Controller) syncHandler(key string) error {
 }
 
 func (c *Controller) syncDispatcherServiceBusStatus(bus *channelsv1alpha1.Bus) error {
-	// NEVER modify objects from the store. It's a read-only, local cache.
-	// You can use DeepCopy() to make a deep copy of original object and modify this copy
-	// Or create a copy manually for better performance
-	busCopy := bus.DeepCopy()
 
-	dispatcherService, err := c.syncDispatcherService(busCopy)
+	dispatcherService, err := c.syncDispatcherService(bus)
 
 	if err != nil {
-		busCopy.Status.Service = nil
+		bus.Status.Service = nil
 		serviceCondition := util.NewBusCondition(channelsv1alpha1.BusServiceable, corev1.ConditionFalse, ServiceError, err.Error())
-		util.SetBusCondition(&busCopy.Status, *serviceCondition)
-		// Ignore error in updating bus status
-		c.compareAndUpdateBusStatus(bus, busCopy)
+		util.SetBusCondition(&bus.Status, *serviceCondition)
 		return err
 	}
 
-	busCopy.Status.Service = &corev1.LocalObjectReference{Name: dispatcherService.Name}
+	bus.Status.Service = &corev1.LocalObjectReference{Name: dispatcherService.Name}
 	serviceCondition := util.NewBusCondition(channelsv1alpha1.BusServiceable, corev1.ConditionTrue, ServiceSynced, "service successfully synced")
-	util.SetBusCondition(&busCopy.Status, *serviceCondition)
+	util.SetBusCondition(&bus.Status, *serviceCondition)
 
-	return c.compareAndUpdateBusStatus(bus, busCopy)
+	return nil
 }
 
 func (c *Controller) syncDispatcherDeploymentBusStatus(bus *channelsv1alpha1.Bus) error {
-	// NEVER modify objects from the store. It's a read-only, local cache.
-	// You can use DeepCopy() to make a deep copy of original object and modify this copy
-	// Or create a copy manually for better performance
-	busCopy := bus.DeepCopy()
-
-	_, err := c.syncDispatcherDeployment(busCopy)
+	_, err := c.syncDispatcherDeployment(bus)
 
 	if err != nil {
 		dispatchCondition := util.NewBusCondition(channelsv1alpha1.BusDispatching, corev1.ConditionFalse, DeploymentError, err.Error())
-		util.SetBusCondition(&busCopy.Status, *dispatchCondition)
-		// Ignore error in updating bus status
-		c.compareAndUpdateBusStatus(bus, busCopy)
+		util.SetBusCondition(&bus.Status, *dispatchCondition)
 		return err
 	}
 
 	dispatchCondition := util.NewBusCondition(channelsv1alpha1.BusDispatching, corev1.ConditionTrue, DeploymentSynced, "deployment successfully synced")
-	util.SetBusCondition(&busCopy.Status, *dispatchCondition)
+	util.SetBusCondition(&bus.Status, *dispatchCondition)
 
-	return c.compareAndUpdateBusStatus(bus, busCopy)
+	return nil
 }
 
 func (c *Controller) syncProvisionerDeploymentBusStatus(bus *channelsv1alpha1.Bus) error {
-	// NEVER modify objects from the store. It's a read-only, local cache.
-	// You can use DeepCopy() to make a deep copy of original object and modify this copy
-	// Or create a copy manually for better performance
-	busCopy := bus.DeepCopy()
 
-	provisionerDeployment, err := c.syncProvisionerDeployment(busCopy)
+	provisionerDeployment, err := c.syncProvisionerDeployment(bus)
 
 	if err != nil {
 		provisionCondition := util.NewBusCondition(channelsv1alpha1.BusProvisioning, corev1.ConditionFalse, DeploymentError, err.Error())
-		util.SetBusCondition(&busCopy.Status, *provisionCondition)
-		// Ignore error in updating bus status
-		c.compareAndUpdateBusStatus(bus, busCopy)
+		util.SetBusCondition(&bus.Status, *provisionCondition)
 		return err
 	}
 
 	if provisionerDeployment != nil {
 		provisionCondition := util.NewBusCondition(channelsv1alpha1.BusProvisioning, corev1.ConditionTrue, DeploymentSynced, "deployment successfully synced")
-		util.SetBusCondition(&busCopy.Status, *provisionCondition)
+		util.SetBusCondition(&bus.Status, *provisionCondition)
 	} else {
-		util.RemoveBusCondition(&busCopy.Status, channelsv1alpha1.BusProvisioning)
+		util.RemoveBusCondition(&bus.Status, channelsv1alpha1.BusProvisioning)
 	}
 
-	return c.compareAndUpdateBusStatus(bus, busCopy)
+	return nil
 }
 
 func (c *Controller) syncDispatcherService(bus *channelsv1alpha1.Bus) (*corev1.Service, error) {
