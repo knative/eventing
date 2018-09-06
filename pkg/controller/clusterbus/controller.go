@@ -447,48 +447,48 @@ func (c *Controller) updateBusStatus(clusterBus *channelsv1alpha1.ClusterBus) er
 	clusterBusCopy := clusterBus.DeepCopy()
 
 	// Sync Service derived from the ClusterBus
-	dispatcherService, err := c.syncClusterBusDispatcherService(clusterBus)
+	dispatcherService, err := c.syncClusterBusDispatcherService(clusterBusCopy)
 
 	if err != nil {
-		clusterBus.Status.Service = nil
+		clusterBusCopy.Status.Service = nil
 		serviceCondition := util.NewBusCondition(channelsv1alpha1.BusServiceable, corev1.ConditionFalse, ServiceError, err.Error())
-		util.SetBusCondition(&clusterBus.Status, *serviceCondition)
+		util.SetBusCondition(&clusterBusCopy.Status, *serviceCondition)
 		c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
 		return err
 	}
 
-	clusterBus.Status.Service = &corev1.LocalObjectReference{Name: dispatcherService.Name}
+	clusterBusCopy.Status.Service = &corev1.LocalObjectReference{Name: dispatcherService.Name}
 	serviceCondition := util.NewBusCondition(channelsv1alpha1.BusServiceable, corev1.ConditionTrue, ServiceSynced, "service successfully synced")
-	util.SetBusCondition(&clusterBus.Status, *serviceCondition)
+	util.SetBusCondition(&clusterBusCopy.Status, *serviceCondition)
 
 	// Sync Deployment derived from the ClusterBus
-	_, err = c.syncClusterBusDispatcherDeployment(clusterBus)
+	_, err = c.syncClusterBusDispatcherDeployment(clusterBusCopy)
 
 	if err != nil {
 		dispatchCondition := util.NewBusCondition(channelsv1alpha1.BusDispatching, corev1.ConditionFalse, DeploymentError, err.Error())
-		util.SetBusCondition(&clusterBus.Status, *dispatchCondition)
+		util.SetBusCondition(&clusterBusCopy.Status, *dispatchCondition)
 		c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
 		return err
 	}
 
 	dispatchCondition := util.NewBusCondition(channelsv1alpha1.BusDispatching, corev1.ConditionTrue, DeploymentSynced, "deployment successfully synced")
-	util.SetBusCondition(&clusterBus.Status, *dispatchCondition)
+	util.SetBusCondition(&clusterBusCopy.Status, *dispatchCondition)
 
 	// Sync Deployment derived from the ClusterBus
-	provisionerDeployment, err := c.syncClusterBusProvisionerDeployment(clusterBus)
+	provisionerDeployment, err := c.syncClusterBusProvisionerDeployment(clusterBusCopy)
 
 	if err != nil {
 		provisionCondition := util.NewBusCondition(channelsv1alpha1.BusProvisioning, corev1.ConditionFalse, DeploymentError, err.Error())
-		util.SetBusCondition(&clusterBus.Status, *provisionCondition)
+		util.SetBusCondition(&clusterBusCopy.Status, *provisionCondition)
 		c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
 		return err
 	}
 
 	if provisionerDeployment != nil {
 		provisionCondition := util.NewBusCondition(channelsv1alpha1.BusProvisioning, corev1.ConditionTrue, DeploymentSynced, "deployment successfully synced")
-		util.SetBusCondition(&clusterBus.Status, *provisionCondition)
+		util.SetBusCondition(&clusterBusCopy.Status, *provisionCondition)
 	} else {
-		util.RemoveBusCondition(&clusterBus.Status, channelsv1alpha1.BusProvisioning)
+		util.RemoveBusCondition(&clusterBusCopy.Status, channelsv1alpha1.BusProvisioning)
 	}
 
 	// Finally, we update the status block of the ClusterBus resource to reflect the
