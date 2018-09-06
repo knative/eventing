@@ -447,6 +447,9 @@ func (r *Reconciler) syncBus(namespace string, name string) error {
 		return err
 	}
 
+	// TODO: Figure out why kind is set to nil on updates but not on create
+	bus.Kind = busKind
+
 	// Sync the Bus
 	err = r.createOrUpdateBus(bus)
 	if err != nil {
@@ -468,6 +471,9 @@ func (r *Reconciler) syncClusterBus(name string) error {
 
 		return err
 	}
+
+	// TODO: Figure out why kind is set to nil on updates but not on create
+	clusterBus.Kind = clusterBusKind
 
 	// Sync the ClusterBus
 	err = r.createOrUpdateClusterBus(clusterBus)
@@ -535,6 +541,7 @@ func (r *Reconciler) createOrUpdateBus(bus *channelsv1alpha1.Bus) error {
 		bus.Namespace != r.bus.GetObjectMeta().GetNamespace() ||
 		bus.Name != r.bus.GetObjectMeta().GetName() {
 		// this is not our bus
+		r.logger.Infof("Ignoring update for bus (%v/%v) that is not ours.", bus.Namespace, bus.Name)
 		return nil
 	}
 
@@ -554,6 +561,7 @@ func (r *Reconciler) createOrUpdateClusterBus(clusterBus *channelsv1alpha1.Clust
 	if r.bus.GetObjectKind().GroupVersionKind().Kind != clusterBus.Kind ||
 		clusterBus.Name != r.bus.GetObjectMeta().GetName() {
 		// this is not our clusterbus
+		r.logger.Infof("Ignoring update for bus (%v/%v) that is not ours.", clusterBus.Namespace, clusterBus.Name)
 		return nil
 	}
 
