@@ -319,7 +319,7 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
-func (c *Controller) syncDispatcherService(bus *channelsv1alpha1.Bus) (*corev1.Service, error) {
+func (c *Controller) syncBusDispatcherService(bus *channelsv1alpha1.Bus) (*corev1.Service, error) {
 	// Get the service with the specified service name
 	serviceName := controller.BusDispatcherServiceName(bus.Name, bus.Namespace)
 	service, err := c.servicesLister.Services(system.Namespace).Get(serviceName)
@@ -461,7 +461,7 @@ func (c *Controller) updateBusStatus(bus *channelsv1alpha1.Bus) error {
 	busCopy := bus.DeepCopy()
 
 	// Sync Service derived from the Bus
-	dispatcherService, err := c.syncDispatcherService(bus)
+	dispatcherService, err := c.syncBusDispatcherService(bus)
 
 	if err != nil {
 		bus.Status.Service = nil
