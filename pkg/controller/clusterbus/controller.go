@@ -297,7 +297,59 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	err = c.updateBusStatus(clusterBus)
+	// NEVER modify objects from the store. It's a read-only, local cache.
+	// You can use DeepCopy() to make a deep copy of original object and modify this copy
+	// Or create a copy manually for better performance
+	clusterBusCopy := clusterBus.DeepCopy()
+
+	// Sync Service derived from the ClusterBus
+	dispatcherService, err := c.syncClusterBusDispatcherService(clusterBusCopy)
+
+	if err != nil {
+		clusterBusCopy.Status.Service = nil
+		serviceCondition := util.NewBusCondition(channelsv1alpha1.BusServiceable, corev1.ConditionFalse, ServiceError, err.Error())
+		util.SetBusCondition(&clusterBusCopy.Status, *serviceCondition)
+		c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
+		return err
+	}
+
+	clusterBusCopy.Status.Service = &corev1.LocalObjectReference{Name: dispatcherService.Name}
+	serviceCondition := util.NewBusCondition(channelsv1alpha1.BusServiceable, corev1.ConditionTrue, ServiceSynced, "service successfully synced")
+	util.SetBusCondition(&clusterBusCopy.Status, *serviceCondition)
+
+	// Sync Deployment derived from the ClusterBus
+	_, err = c.syncClusterBusDispatcherDeployment(clusterBusCopy)
+
+	if err != nil {
+		dispatchCondition := util.NewBusCondition(channelsv1alpha1.BusDispatching, corev1.ConditionFalse, DeploymentError, err.Error())
+		util.SetBusCondition(&clusterBusCopy.Status, *dispatchCondition)
+		c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
+		return err
+	}
+
+	dispatchCondition := util.NewBusCondition(channelsv1alpha1.BusDispatching, corev1.ConditionTrue, DeploymentSynced, "deployment successfully synced")
+	util.SetBusCondition(&clusterBusCopy.Status, *dispatchCondition)
+
+	// Sync Deployment derived from the ClusterBus
+	provisionerDeployment, err := c.syncClusterBusProvisionerDeployment(clusterBusCopy)
+
+	if err != nil {
+		provisionCondition := util.NewBusCondition(channelsv1alpha1.BusProvisioning, corev1.ConditionFalse, DeploymentError, err.Error())
+		util.SetBusCondition(&clusterBusCopy.Status, *provisionCondition)
+		c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
+		return err
+	}
+
+	if provisionerDeployment != nil {
+		provisionCondition := util.NewBusCondition(channelsv1alpha1.BusProvisioning, corev1.ConditionTrue, DeploymentSynced, "deployment successfully synced")
+		util.SetBusCondition(&clusterBusCopy.Status, *provisionCondition)
+	} else {
+		util.RemoveBusCondition(&clusterBusCopy.Status, channelsv1alpha1.BusProvisioning)
+	}
+
+	// Finally, we update the status block of the ClusterBus resource to reflect the
+	// current state of the world
+	err = c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
 	if err != nil {
 		return err
 	}
@@ -438,62 +490,6 @@ func (c *Controller) compareAndUpdateBusStatus(clusterBus *channelsv1alpha1.Clus
 		return err
 	}
 	return nil
-}
-
-func (c *Controller) updateBusStatus(clusterBus *channelsv1alpha1.ClusterBus) error {
-	// NEVER modify objects from the store. It's a read-only, local cache.
-	// You can use DeepCopy() to make a deep copy of original object and modify this copy
-	// Or create a copy manually for better performance
-	clusterBusCopy := clusterBus.DeepCopy()
-
-	// Sync Service derived from the ClusterBus
-	dispatcherService, err := c.syncClusterBusDispatcherService(clusterBusCopy)
-
-	if err != nil {
-		clusterBusCopy.Status.Service = nil
-		serviceCondition := util.NewBusCondition(channelsv1alpha1.BusServiceable, corev1.ConditionFalse, ServiceError, err.Error())
-		util.SetBusCondition(&clusterBusCopy.Status, *serviceCondition)
-		c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
-		return err
-	}
-
-	clusterBusCopy.Status.Service = &corev1.LocalObjectReference{Name: dispatcherService.Name}
-	serviceCondition := util.NewBusCondition(channelsv1alpha1.BusServiceable, corev1.ConditionTrue, ServiceSynced, "service successfully synced")
-	util.SetBusCondition(&clusterBusCopy.Status, *serviceCondition)
-
-	// Sync Deployment derived from the ClusterBus
-	_, err = c.syncClusterBusDispatcherDeployment(clusterBusCopy)
-
-	if err != nil {
-		dispatchCondition := util.NewBusCondition(channelsv1alpha1.BusDispatching, corev1.ConditionFalse, DeploymentError, err.Error())
-		util.SetBusCondition(&clusterBusCopy.Status, *dispatchCondition)
-		c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
-		return err
-	}
-
-	dispatchCondition := util.NewBusCondition(channelsv1alpha1.BusDispatching, corev1.ConditionTrue, DeploymentSynced, "deployment successfully synced")
-	util.SetBusCondition(&clusterBusCopy.Status, *dispatchCondition)
-
-	// Sync Deployment derived from the ClusterBus
-	provisionerDeployment, err := c.syncClusterBusProvisionerDeployment(clusterBusCopy)
-
-	if err != nil {
-		provisionCondition := util.NewBusCondition(channelsv1alpha1.BusProvisioning, corev1.ConditionFalse, DeploymentError, err.Error())
-		util.SetBusCondition(&clusterBusCopy.Status, *provisionCondition)
-		c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
-		return err
-	}
-
-	if provisionerDeployment != nil {
-		provisionCondition := util.NewBusCondition(channelsv1alpha1.BusProvisioning, corev1.ConditionTrue, DeploymentSynced, "deployment successfully synced")
-		util.SetBusCondition(&clusterBusCopy.Status, *provisionCondition)
-	} else {
-		util.RemoveBusCondition(&clusterBusCopy.Status, channelsv1alpha1.BusProvisioning)
-	}
-
-	// Finally, we update the status block of the ClusterBus resource to reflect the
-	// current state of the world
-	return c.compareAndUpdateBusStatus(clusterBus, clusterBusCopy)
 }
 
 // enqueueClusterBus takes a ClusterBus resource and converts it into a namespace/name
