@@ -309,93 +309,13 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	// NEVER modify objects from the store. It's a read-only, local cache.
-	// You can use DeepCopy() to make a deep copy of original object and modify this copy
-	// Or create a copy manually for better performance
-	busCopy := bus.DeepCopy()
+	err = c.updateBusStatus(bus)
 
-	// Sync Service derived from the Bus
-	err = c.syncDispatcherServiceBusStatus(busCopy)
-	if err != nil {
-		c.compareAndUpdateBusStatus(bus, busCopy)
-		return err
-	}
-
-	// Sync Deployment derived from the Bus
-	err = c.syncDispatcherDeploymentBusStatus(busCopy)
-	if err != nil {
-		c.compareAndUpdateBusStatus(bus, busCopy)
-		return err
-	}
-
-	// Sync Deployment derived from the Bus
-	err = c.syncProvisionerDeploymentBusStatus(busCopy)
-	if err != nil {
-		c.compareAndUpdateBusStatus(bus, busCopy)
-		return err
-	}
-
-	// Finally, we update the status block of the Bus resource to reflect the
-	// current state of the world
-	err = c.compareAndUpdateBusStatus(bus, busCopy)
 	if err != nil {
 		return err
 	}
 
 	c.recorder.Event(bus, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
-	return nil
-}
-
-func (c *Controller) syncDispatcherServiceBusStatus(bus *channelsv1alpha1.Bus) error {
-
-	dispatcherService, err := c.syncDispatcherService(bus)
-
-	if err != nil {
-		bus.Status.Service = nil
-		serviceCondition := util.NewBusCondition(channelsv1alpha1.BusServiceable, corev1.ConditionFalse, ServiceError, err.Error())
-		util.SetBusCondition(&bus.Status, *serviceCondition)
-		return err
-	}
-
-	bus.Status.Service = &corev1.LocalObjectReference{Name: dispatcherService.Name}
-	serviceCondition := util.NewBusCondition(channelsv1alpha1.BusServiceable, corev1.ConditionTrue, ServiceSynced, "service successfully synced")
-	util.SetBusCondition(&bus.Status, *serviceCondition)
-
-	return nil
-}
-
-func (c *Controller) syncDispatcherDeploymentBusStatus(bus *channelsv1alpha1.Bus) error {
-	_, err := c.syncDispatcherDeployment(bus)
-
-	if err != nil {
-		dispatchCondition := util.NewBusCondition(channelsv1alpha1.BusDispatching, corev1.ConditionFalse, DeploymentError, err.Error())
-		util.SetBusCondition(&bus.Status, *dispatchCondition)
-		return err
-	}
-
-	dispatchCondition := util.NewBusCondition(channelsv1alpha1.BusDispatching, corev1.ConditionTrue, DeploymentSynced, "deployment successfully synced")
-	util.SetBusCondition(&bus.Status, *dispatchCondition)
-
-	return nil
-}
-
-func (c *Controller) syncProvisionerDeploymentBusStatus(bus *channelsv1alpha1.Bus) error {
-
-	provisionerDeployment, err := c.syncProvisionerDeployment(bus)
-
-	if err != nil {
-		provisionCondition := util.NewBusCondition(channelsv1alpha1.BusProvisioning, corev1.ConditionFalse, DeploymentError, err.Error())
-		util.SetBusCondition(&bus.Status, *provisionCondition)
-		return err
-	}
-
-	if provisionerDeployment != nil {
-		provisionCondition := util.NewBusCondition(channelsv1alpha1.BusProvisioning, corev1.ConditionTrue, DeploymentSynced, "deployment successfully synced")
-		util.SetBusCondition(&bus.Status, *provisionCondition)
-	} else {
-		util.RemoveBusCondition(&bus.Status, channelsv1alpha1.BusProvisioning)
-	}
-
 	return nil
 }
 
@@ -426,7 +346,7 @@ func (c *Controller) syncDispatcherService(bus *channelsv1alpha1.Bus) (*corev1.S
 	return service, nil
 }
 
-func (c *Controller) syncDispatcherDeployment(bus *channelsv1alpha1.Bus) (*appsv1.Deployment, error) {
+func (c *Controller) syncBusDispatcherDeployment(bus *channelsv1alpha1.Bus) (*appsv1.Deployment, error) {
 	// Get the deployment with the specified deployment name
 	deploymentName := controller.BusDispatcherDeploymentName(bus.Name, bus.Namespace)
 	deployment, err := c.deploymentsLister.Deployments(system.Namespace).Get(deploymentName)
@@ -465,7 +385,7 @@ func (c *Controller) syncDispatcherDeployment(bus *channelsv1alpha1.Bus) (*appsv
 	return deployment, nil
 }
 
-func (c *Controller) syncProvisionerDeployment(bus *channelsv1alpha1.Bus) (*appsv1.Deployment, error) {
+func (c *Controller) syncBusProvisionerDeployment(bus *channelsv1alpha1.Bus) (*appsv1.Deployment, error) {
 	provisioner := bus.Spec.Provisioner
 
 	// Get the deployment with the specified deployment name
@@ -532,6 +452,62 @@ func (c *Controller) compareAndUpdateBusStatus(bus *channelsv1alpha1.Bus, busCop
 		return err
 	}
 	return nil
+}
+
+func (c *Controller) updateBusStatus(bus *channelsv1alpha1.Bus) error {
+	// NEVER modify objects from the store. It's a read-only, local cache.
+	// You can use DeepCopy() to make a deep copy of original object and modify this copy
+	// Or create a copy manually for better performance
+	busCopy := bus.DeepCopy()
+
+	// Sync Service derived from the Bus
+	dispatcherService, err := c.syncDispatcherService(bus)
+
+	if err != nil {
+		bus.Status.Service = nil
+		serviceCondition := util.NewBusCondition(channelsv1alpha1.BusServiceable, corev1.ConditionFalse, ServiceError, err.Error())
+		util.SetBusCondition(&bus.Status, *serviceCondition)
+		c.compareAndUpdateBusStatus(bus, busCopy)
+		return err
+	}
+
+	bus.Status.Service = &corev1.LocalObjectReference{Name: dispatcherService.Name}
+	serviceCondition := util.NewBusCondition(channelsv1alpha1.BusServiceable, corev1.ConditionTrue, ServiceSynced, "service successfully synced")
+	util.SetBusCondition(&bus.Status, *serviceCondition)
+
+	// Sync Deployment derived from the Bus
+	_, err = c.syncBusDispatcherDeployment(bus)
+
+	if err != nil {
+		dispatchCondition := util.NewBusCondition(channelsv1alpha1.BusDispatching, corev1.ConditionFalse, DeploymentError, err.Error())
+		util.SetBusCondition(&bus.Status, *dispatchCondition)
+		c.compareAndUpdateBusStatus(bus, busCopy)
+		return err
+	}
+
+	dispatchCondition := util.NewBusCondition(channelsv1alpha1.BusDispatching, corev1.ConditionTrue, DeploymentSynced, "deployment successfully synced")
+	util.SetBusCondition(&bus.Status, *dispatchCondition)
+
+	// Sync Deployment derived from the Bus
+	provisionerDeployment, err := c.syncBusProvisionerDeployment(bus)
+
+	if err != nil {
+		provisionCondition := util.NewBusCondition(channelsv1alpha1.BusProvisioning, corev1.ConditionFalse, DeploymentError, err.Error())
+		util.SetBusCondition(&bus.Status, *provisionCondition)
+		c.compareAndUpdateBusStatus(bus, busCopy)
+		return err
+	}
+
+	if provisionerDeployment != nil {
+		provisionCondition := util.NewBusCondition(channelsv1alpha1.BusProvisioning, corev1.ConditionTrue, DeploymentSynced, "deployment successfully synced")
+		util.SetBusCondition(&bus.Status, *provisionCondition)
+	} else {
+		util.RemoveBusCondition(&bus.Status, channelsv1alpha1.BusProvisioning)
+	}
+
+	// Finally, we update the status block of the Bus resource to reflect the
+	// current state of the world
+	return c.compareAndUpdateBusStatus(bus, busCopy)
 }
 
 // enqueueBus takes a Bus resource and converts it into a namespace/name
