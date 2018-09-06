@@ -49,8 +49,6 @@ spec:
   - port: 9092
     name: kafka
     protocol: TCP
-    nodePort: 31349
-
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
