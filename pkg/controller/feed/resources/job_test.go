@@ -92,13 +92,16 @@ func TestIsJobComplete(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		job := makeJobWithConditions(tc.conditions)
-		actual := IsJobComplete(job)
-		if actual != tc.want {
-			t.Errorf("Expected %v, actual %v", tc.want, actual)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			job := makeJobWithConditions(tc.conditions)
+			actual := IsJobComplete(job)
+			if actual != tc.want {
+				t.Errorf("Expected %v, actual %v", tc.want, actual)
+			}
+		})
 	}
 }
+
 func TestIsJobFailed(t *testing.T) {
 	testCases := []struct {
 		name       string
@@ -156,11 +159,13 @@ func TestIsJobFailed(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		job := makeJobWithConditions(tc.conditions)
-		actual := IsJobFailed(job)
-		if actual != tc.want {
-			t.Errorf("Expected %v, actual %v", tc.want, actual)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			job := makeJobWithConditions(tc.conditions)
+			actual := IsJobFailed(job)
+			if actual != tc.want {
+				t.Errorf("Expected %v, actual %v", tc.want, actual)
+			}
+		})
 	}
 }
 
@@ -228,11 +233,13 @@ func TestJobFailedMessage(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		job := makeJobWithConditions(tc.conditions)
-		actual := JobFailedMessage(job)
-		if actual != tc.want {
-			t.Errorf("Expected '%v', actual '%v'", tc.want, actual)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			job := makeJobWithConditions(tc.conditions)
+			actual := JobFailedMessage(job)
+			if actual != tc.want {
+				t.Errorf("Expected '%v', actual '%v'", tc.want, actual)
+			}
+		})
 	}
 }
 
@@ -307,33 +314,19 @@ func TestGetFirstTerminationMessage(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		pod := makePodWithStatus(tc.status)
-		actual := GetFirstTerminationMessage(pod)
-		if actual != tc.want {
-			t.Errorf("Expected '%v', actual '%v'", tc.want, actual)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			pod := makePodWithStatus(tc.status)
+			actual := GetFirstTerminationMessage(pod)
+			if actual != tc.want {
+				t.Errorf("Expected '%v', actual '%v'", tc.want, actual)
+			}
+		})
 	}
 }
-
-func makeJobWithConditions(conditions []batchv1.JobCondition) *batchv1.Job {
-	return &batchv1.Job{
-		Status: batchv1.JobStatus{
-			Conditions: conditions,
-		},
-	}
-}
-
-func makePodWithStatus(status []corev1.ContainerStatus) *corev1.Pod {
-	return &corev1.Pod{
-		Status: corev1.PodStatus{
-			ContainerStatuses: status,
-		},
-	}
-}
-
-type jobVerification func(t *testing.T, job *batchv1.Job)
 
 func TestMakeJob(t *testing.T) {
+	type jobVerification func(t *testing.T, job *batchv1.Job)
+
 	testCases := []struct {
 		name            string
 		feed            *feedsv1alpha1.Feed
@@ -368,13 +361,31 @@ func TestMakeJob(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		actual, actualErr := MakeJob(tc.feed, tc.source, tc.trigger, tc.target)
-		if cmp.Diff(tc.wantErr, actualErr) != "" {
-			t.Errorf("Incorrect error (-want, +got): %v", cmp.Diff(tc.wantErr, actualErr))
-		}
-		for _, jv := range tc.jobVerification {
-			jv(t, actual)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			actual, actualErr := MakeJob(tc.feed, tc.source, tc.trigger, tc.target)
+			if cmp.Diff(tc.wantErr, actualErr) != "" {
+				t.Errorf("Incorrect error (-want, +got): %v", cmp.Diff(tc.wantErr, actualErr))
+			}
+			for _, jv := range tc.jobVerification {
+				jv(t, actual)
+			}
+		})
+	}
+}
+
+func makeJobWithConditions(conditions []batchv1.JobCondition) *batchv1.Job {
+	return &batchv1.Job{
+		Status: batchv1.JobStatus{
+			Conditions: conditions,
+		},
+	}
+}
+
+func makePodWithStatus(status []corev1.ContainerStatus) *corev1.Pod {
+	return &corev1.Pod{
+		Status: corev1.PodStatus{
+			ContainerStatuses: status,
+		},
 	}
 }
 
@@ -397,7 +408,7 @@ func jobObjectMetaVerification(t *testing.T, job *batchv1.Job) {
 func jobObjectSpecVerification(t *testing.T, job *batchv1.Job) {
 	pt := job.Spec.Template
 	if pt.Annotations[sidecarIstioInjectAnnotation] != "false" {
-		t.Errorf("Expected Istio sidecare injection disabled. Actually: %v", pt.Labels[sidecarIstioInjectAnnotation])
+		t.Errorf("Expected Istio sidecar injection disabled. Actually: %v", pt.Labels[sidecarIstioInjectAnnotation])
 	}
 	if len(pt.Spec.Containers) != 1 {
 		t.Errorf("Expected exactly one container, the feedlet. Actually: %+v", pt.Spec.Containers)
