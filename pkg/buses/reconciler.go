@@ -63,6 +63,7 @@ const (
 // Subscribe/Unsubscribe happen.
 type Reconciler struct {
 	bus     channelsv1alpha1.GenericBus
+	ref     BusReference
 	handler EventHandlerFuncs
 	cache   *Cache
 
@@ -97,6 +98,7 @@ type Reconciler struct {
 // kubeconfig: the path of a kubeconfig file to create a client connection to the masterURL with
 // handler: a EventHandlerFuncs with handler functions for the reconciler to call
 func NewReconciler(
+	ref BusReference,
 	component, masterURL, kubeconfig string,
 	cache *Cache, handler EventHandlerFuncs,
 	logger *zap.SugaredLogger,
@@ -133,6 +135,7 @@ func NewReconciler(
 
 	reconciler := &Reconciler{
 		bus:     nil,
+		ref:     ref,
 		handler: handler,
 		cache:   cache,
 
@@ -154,44 +157,47 @@ func NewReconciler(
 	}
 
 	logger.Info("Setting up event handlers")
-	// Set up an event handler for when Bus resources change
-	busInformer.Informer().AddEventHandler(informercache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			bus := obj.(*channelsv1alpha1.Bus)
-			reconciler.workqueue.AddRateLimited(makeWorkqueueKeyForBus(bus))
-		},
-		UpdateFunc: func(old, new interface{}) {
-			oldBus := old.(*channelsv1alpha1.Bus)
-			newBus := new.(*channelsv1alpha1.Bus)
+	if reconciler.ref.IsNamespaced() {
+		// Set up an event handler for when Bus resources change
+		busInformer.Informer().AddEventHandler(informercache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				bus := obj.(*channelsv1alpha1.Bus)
+				reconciler.workqueue.AddRateLimited(makeWorkqueueKeyForBus(bus))
+			},
+			UpdateFunc: func(old, new interface{}) {
+				oldBus := old.(*channelsv1alpha1.Bus)
+				newBus := new.(*channelsv1alpha1.Bus)
 
-			if oldBus.ResourceVersion == newBus.ResourceVersion {
-				// Periodic resync will send update events for all known Buses.
-				// Two different versions of the same Bus will always have different RVs.
-				return
-			}
+				if oldBus.ResourceVersion == newBus.ResourceVersion {
+					// Periodic resync will send update events for all known Buses.
+					// Two different versions of the same Bus will always have different RVs.
+					return
+				}
 
-			reconciler.workqueue.AddRateLimited(makeWorkqueueKeyForBus(newBus))
-		},
-	})
-	// Set up an event handler for when ClusterBus resources change
-	clusterBusInformer.Informer().AddEventHandler(informercache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			clusterBus := obj.(*channelsv1alpha1.ClusterBus)
-			reconciler.workqueue.AddRateLimited(makeWorkqueueKeyForClusterBus(clusterBus))
-		},
-		UpdateFunc: func(old, new interface{}) {
-			oldClusterBus := old.(*channelsv1alpha1.ClusterBus)
-			newClusterBus := new.(*channelsv1alpha1.ClusterBus)
+				reconciler.workqueue.AddRateLimited(makeWorkqueueKeyForBus(newBus))
+			},
+		})
+	} else {
+		// Set up an event handler for when ClusterBus resources change
+		clusterBusInformer.Informer().AddEventHandler(informercache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				clusterBus := obj.(*channelsv1alpha1.ClusterBus)
+				reconciler.workqueue.AddRateLimited(makeWorkqueueKeyForClusterBus(clusterBus))
+			},
+			UpdateFunc: func(old, new interface{}) {
+				oldClusterBus := old.(*channelsv1alpha1.ClusterBus)
+				newClusterBus := new.(*channelsv1alpha1.ClusterBus)
 
-			if oldClusterBus.ResourceVersion == newClusterBus.ResourceVersion {
-				// Periodic resync will send update events for all known ClusterBuses.
-				// Two different versions of the same ClusterBus will always have different RVs.
-				return
-			}
+				if oldClusterBus.ResourceVersion == newClusterBus.ResourceVersion {
+					// Periodic resync will send update events for all known ClusterBuses.
+					// Two different versions of the same ClusterBus will always have different RVs.
+					return
+				}
 
-			reconciler.workqueue.AddRateLimited(makeWorkqueueKeyForClusterBus(newClusterBus))
-		},
-	})
+				reconciler.workqueue.AddRateLimited(makeWorkqueueKeyForClusterBus(newClusterBus))
+			},
+		})
+	}
 	// Set up an event handler for when Channel resources change
 	channelInformer.Informer().AddEventHandler(informercache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -330,7 +336,14 @@ func (r *Reconciler) Run(busRef BusReference, threadiness int, stopCh <-chan str
 // WaitForCacheSync blocks returning until the reconciler's informers have
 // synchronized. It returns an error if the caches cannot sync.
 func (r *Reconciler) WaitForCacheSync(stopCh <-chan struct{}) error {
-	if ok := informercache.WaitForCacheSync(stopCh, r.busesSynced, r.clusterBusesSynced, r.channelsSynced, r.subscriptionsSynced); !ok {
+	var busesSynced informercache.InformerSynced
+	// get correct synced reference for bus type
+	if r.ref.IsNamespaced() {
+		busesSynced = r.busesSynced
+	} else {
+		busesSynced = r.clusterBusesSynced
+	}
+	if ok := informercache.WaitForCacheSync(stopCh, busesSynced, r.channelsSynced, r.subscriptionsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 	return nil
@@ -408,11 +421,6 @@ func (r *Reconciler) syncHandler(key string) error {
 		return nil
 	}
 
-	if r.bus == nil && !(kind == busKind || kind == clusterBusKind) {
-		// don't attempt to sync until we have seen the bus for this reconciler
-		return fmt.Errorf("Unknown bus for reconciler")
-	}
-
 	switch kind {
 	case busKind:
 		err = r.syncBus(namespace, name)
@@ -470,7 +478,7 @@ func (r *Reconciler) syncClusterBus(name string) error {
 	}
 
 	// Sync the ClusterBus
-	err = r.createOrUpdateClusterBus(clusterBus)
+	err = r.createOrUpdateBus(clusterBus)
 	if err != nil {
 		return err
 	}
@@ -530,36 +538,15 @@ func (r *Reconciler) syncSubscription(namespace string, name string) error {
 	return nil
 }
 
-func (r *Reconciler) createOrUpdateBus(bus *channelsv1alpha1.Bus) error {
-	if r.bus.GetObjectKind().GroupVersionKind().Kind != bus.Kind ||
-		bus.Namespace != r.bus.GetObjectMeta().GetNamespace() ||
-		bus.Name != r.bus.GetObjectMeta().GetName() {
-		// this is not our bus
+func (r *Reconciler) createOrUpdateBus(bus channelsv1alpha1.GenericBus) error {
+	if r.ref != NewBusReference(bus) {
+		// not the bus for this reconciler
 		return nil
 	}
 
-	previousBus := r.bus
-	r.bus = bus.DeepCopy()
-	if !equality.Semantic.DeepEqual(r.bus.GetSpec(), previousBus.GetSpec()) {
-		err := r.handler.onBus(r.bus, r)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (r *Reconciler) createOrUpdateClusterBus(clusterBus *channelsv1alpha1.ClusterBus) error {
-	if r.bus.GetObjectKind().GroupVersionKind().Kind != clusterBus.Kind ||
-		clusterBus.Name != r.bus.GetObjectMeta().GetName() {
-		// this is not our clusterbus
-		return nil
-	}
-
-	previousBus := r.bus
-	r.bus = clusterBus.DeepCopy()
-	if !equality.Semantic.DeepEqual(r.bus.GetSpec(), previousBus.GetSpec()) {
+	// stash the new bus on the reconciler while retaining the old bus
+	bus, r.bus = r.bus, bus
+	if !equality.Semantic.DeepEqual(r.bus.GetSpec(), bus.GetSpec()) {
 		err := r.handler.onBus(r.bus, r)
 		if err != nil {
 			return err

@@ -89,7 +89,7 @@ func NewBusProvisioner(busRef BusReference, handlerFuncs EventHandlerFuncs, opts
 	}
 	if opts.Reconciler == nil {
 		opts.Reconciler = NewReconciler(
-			Provisioner, opts.MasterURL, opts.KubeConfig, opts.Cache,
+			busRef, Provisioner, opts.MasterURL, opts.KubeConfig, opts.Cache,
 			handlerFuncs, opts.Logger.Named(reconcilerLoggingComponent),
 		)
 	}
@@ -132,7 +132,7 @@ func NewBusDispatcher(busRef BusReference, handlerFuncs EventHandlerFuncs, opts 
 	}
 	if opts.Reconciler == nil {
 		opts.Reconciler = NewReconciler(
-			Dispatcher, opts.MasterURL, opts.KubeConfig, opts.Cache,
+			busRef, Dispatcher, opts.MasterURL, opts.KubeConfig, opts.Cache,
 			handlerFuncs, opts.Logger.Named(reconcilerLoggingComponent),
 		)
 	}
