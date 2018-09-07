@@ -290,7 +290,7 @@ func (r *Reconciler) RecordSubscriptionEventf(subscriptionRef SubscriptionRefere
 // as syncing informer caches and starting workers. It will block until stopCh
 // is closed, at which point it will shutdown the workqueue and wait for
 // workers to finish processing their current work items.
-func (r *Reconciler) Run(busRef BusReference, threadiness int, stopCh <-chan struct{}) error {
+func (r *Reconciler) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer runtime.HandleCrash()
 	defer r.workqueue.ShutDown()
 
@@ -304,20 +304,20 @@ func (r *Reconciler) Run(busRef BusReference, threadiness int, stopCh <-chan str
 		return err
 	}
 
-	if len(busRef.Namespace) == 0 {
-		// reconciler is for a ClusterBus
-		clusterBus, err := r.clusterBusesLister.Get(busRef.Name)
-		if err != nil {
-			r.logger.Fatalf("Unknown clusterbus %q: %v", busRef.Name, err)
-		}
-		r.bus = clusterBus.DeepCopy()
-	} else {
+	if r.ref.IsNamespaced() {
 		// reconciler is for a namespaced Bus
-		bus, err := r.busesLister.Buses(busRef.Namespace).Get(busRef.Name)
+		bus, err := r.busesLister.Buses(r.ref.Namespace).Get(r.ref.Name)
 		if err != nil {
-			r.logger.Fatalf("Unknown bus %q: %v", busRef, err)
+			r.logger.Fatalf("Unknown bus %q: %v", r.ref.String(), err)
 		}
 		r.bus = bus.DeepCopy()
+	} else {
+		// reconciler is for a ClusterBus
+		clusterBus, err := r.clusterBusesLister.Get(r.ref.Name)
+		if err != nil {
+			r.logger.Fatalf("Unknown clusterbus %q: %v", r.ref.String(), err)
+		}
+		r.bus = clusterBus.DeepCopy()
 	}
 
 	r.logger.Info("Starting workers")

@@ -162,7 +162,7 @@ func NewBusDispatcher(busRef BusReference, handlerFuncs EventHandlerFuncs, opts 
 
 // Run starts the bus's processing.
 func (b bus) Run(threadiness int, stopCh <-chan struct{}) {
-	go b.reconciler.Run(b.busRef, threadiness, stopCh)
+	go b.reconciler.Run(threadiness, stopCh)
 	b.reconciler.WaitForCacheSync(stopCh)
 	if b.receiver != nil {
 		go b.receiver.Run(stopCh)
