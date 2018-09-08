@@ -30,34 +30,48 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 	}{{
 		name: "valid",
 		c: &SubscriptionSpec{
-			Channel:    "bar",
-			Subscriber: "foo",
+			From:      "fromChannel",
+			Processor: "processor",
 		},
 		want: nil,
 	}, {
 		name: "valid with arguments",
 		c: &SubscriptionSpec{
-			Channel:    "bar",
-			Subscriber: "foo",
-			Arguments:  &[]Argument{{Name: "foo", Value: "bar"}},
+			From:      "fromChannel",
+			Processor: "processor",
+			Arguments: &[]Argument{{Name: "foo", Value: "bar"}},
 		},
 		want: nil,
 	}, {
-		name: "missing subscriber",
+		name: "missing processor and to",
 		c: &SubscriptionSpec{
-			Channel: "foo",
+			From: "fromChannel",
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("subscriber")
-			fe.Details = "the Subscription must reference a Subscriber"
+			fe := apis.ErrMissingField("to", "processor")
+			fe.Details = "the Subscription must reference a to channel or a processor"
 			return fe
 		}(),
+	}, {
+		name: "missing to",
+		c: &SubscriptionSpec{
+			From: "fromChannel",
+			To:   "toChannel",
+		},
+		want: nil,
+	}, {
+		name: "missing processor",
+		c: &SubscriptionSpec{
+			From: "fromChannel",
+			To:   "toChannel",
+		},
+		want: nil,
 	}, {
 		name: "empty",
 		c:    &SubscriptionSpec{},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("channel")
-			fe.Details = "the Subscription must reference a Channel"
+			fe := apis.ErrMissingField("from")
+			fe.Details = "the Subscription must reference a from channel"
 			return fe
 		}(),
 	}}
@@ -66,7 +80,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.c.Validate()
 			if diff := cmp.Diff(test.want, got); diff != "" {
-				t.Errorf("validateChannel (-want, +got) = %v", diff)
+				t.Errorf("validateFrom (-want, +got) = %v", diff)
 			}
 		})
 	}
@@ -82,48 +96,48 @@ func TestSubscriptionImmutable(t *testing.T) {
 		name: "valid",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
-				Channel: "foo",
+				From: "foo",
 			},
 		},
 		og: &Subscription{
 			Spec: SubscriptionSpec{
-				Channel: "foo",
+				From: "foo",
 			},
 		},
 		want: nil,
 	}, {
-		name: "valid, new subscriber",
+		name: "valid, new processor",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
-				Channel:    "foo",
-				Subscriber: "bar",
+				From:      "foo",
+				Processor: "newProcessor",
 			},
 		},
 		og: &Subscription{
 			Spec: SubscriptionSpec{
-				Channel:    "foo",
-				Subscriber: "baz",
+				From:      "foo",
+				Processor: "processor",
 			},
 		},
 		want: nil,
 	}, {
-		name: "channel changed",
+		name: "from changed",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
-				Channel: "foo",
+				From: "fromChannel",
 			},
 		},
 		og: &Subscription{
 			Spec: SubscriptionSpec{
-				Channel: "bar",
+				From: "newFromChannel",
 			},
 		},
 		want: &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",
 			Paths:   []string{"spec"},
-			Details: `{v1alpha1.SubscriptionSpec}.Channel:
-	-: "bar"
-	+: "foo"
+			Details: `{v1alpha1.SubscriptionSpec}.From:
+	-: "newFromChannel"
+	+: "fromChannel"
 `,
 		},
 	}}

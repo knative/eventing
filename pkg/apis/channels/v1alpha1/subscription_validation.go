@@ -27,14 +27,14 @@ func (s *Subscription) Validate() *apis.FieldError {
 }
 
 func (ss *SubscriptionSpec) Validate() *apis.FieldError {
-	if ss.Channel == "" {
-		fe := apis.ErrMissingField("channel")
-		fe.Details = "the Subscription must reference a Channel"
+	if ss.From == "" {
+		fe := apis.ErrMissingField("from")
+		fe.Details = "the Subscription must reference a from channel"
 		return fe
 	}
-	if ss.Subscriber == "" {
-		fe := apis.ErrMissingField("subscriber")
-		fe.Details = "the Subscription must reference a Subscriber"
+	if ss.To == "" && ss.Processor == "" {
+		fe := apis.ErrMissingField("to", "processor")
+		fe.Details = "the Subscription must reference a to channel or a processor"
 		return fe
 	}
 	return nil
@@ -49,7 +49,7 @@ func (current *Subscription) CheckImmutableFields(og apis.Immutable) *apis.Field
 		return nil
 	}
 
-	ignoreArguments := cmpopts.IgnoreFields(SubscriptionSpec{}, "Subscriber", "Arguments")
+	ignoreArguments := cmpopts.IgnoreFields(SubscriptionSpec{}, "Processor", "Arguments")
 	if diff := cmp.Diff(original.Spec, current.Spec, ignoreArguments); diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",

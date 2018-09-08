@@ -47,8 +47,14 @@ var _ apis.Immutable = (*Subscription)(nil)
 var _ runtime.Object = (*Subscription)(nil)
 var _ webhook.GenericCRD = (*ClusterBus)(nil)
 
-// SubscriptionSpec specifies the Channel and Subscriber and the configuration
-// arguments for the Subscription.
+// SubscriptionSpec specifies the Channel for incoming events, a handler and the Channel
+// for outgoing messages.
+// from --[transform]--> to
+// Note that the following are valid configurations also:
+// Sink, no outgoing events:
+// from -- transform
+// no-op function (identity transformation):
+// from --> to
 type SubscriptionSpec struct {
 	// TODO: Generation does not work correctly with CRD. They are scrubbed
 	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
@@ -57,14 +63,17 @@ type SubscriptionSpec struct {
 	// +optional
 	Generation int64 `json:"generation,omitempty"`
 
-	// Channel is the name of the channel to subscribe to.
-	Channel string `json:"channel"`
+	// From is the name of the channel to subscribe to for receiving events
+	// to be transformed.
+	From string `json:"from"`
 
-	// Subscriber is the name of the subscriber service DNS name.
-	Subscriber string `json:"subscriber"`
+	// Processor is the processor service DNS name. Events
+	// from the From channel will be delivered here and replies are sent
+	// to To channel.
+	Processor string `json:"processor,omitempty"`
 
-	// Target service DNS name for replies returned by the subscriber.
-	ReplyTo string `json:"replyTo,omitempty"`
+	// To is the name of the channel to send transformed events
+	To string `json:"to,omitempty"`
 
 	// Arguments is a list of configuration arguments for the Subscription. The
 	// Arguments for a channel must contain values for each of the Parameters
