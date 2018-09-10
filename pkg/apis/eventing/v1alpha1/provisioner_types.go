@@ -17,12 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"encoding/json"
-	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
-	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/webhook"
 	"k8s.io/apimachinery/pkg/runtime"
