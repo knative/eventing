@@ -456,7 +456,7 @@ func (r *Reconciler) syncBus(namespace string, name string) error {
 	}
 
 	// Sync the Bus
-	err = r.createOrUpdateBus(bus)
+	err = r.createOrUpdateBus(bus.DeepCopy())
 	if err != nil {
 		return err
 	}
@@ -478,7 +478,7 @@ func (r *Reconciler) syncClusterBus(name string) error {
 	}
 
 	// Sync the ClusterBus
-	err = r.createOrUpdateBus(clusterBus)
+	err = r.createOrUpdateBus(clusterBus.DeepCopy())
 	if err != nil {
 		return err
 	}
