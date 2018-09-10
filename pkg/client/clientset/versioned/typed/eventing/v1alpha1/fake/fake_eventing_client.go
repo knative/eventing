@@ -28,6 +28,10 @@ type FakeEventingV1alpha1 struct {
 	*testing.Fake
 }
 
+func (c *FakeEventingV1alpha1) Provisioners(namespace string) v1alpha1.ProvisionerInterface {
+	return &FakeProvisioners{c, namespace}
+}
+
 func (c *FakeEventingV1alpha1) Subscriptions(namespace string) v1alpha1.SubscriptionInterface {
 	return &FakeSubscriptions{c, namespace}
 }

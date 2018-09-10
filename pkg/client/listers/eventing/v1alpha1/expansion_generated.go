@@ -18,6 +18,14 @@ limitations under the License.
 
 package v1alpha1
 
+// ProvisionerListerExpansion allows custom methods to be added to
+// ProvisionerLister.
+type ProvisionerListerExpansion interface{}
+
+// ProvisionerNamespaceListerExpansion allows custom methods to be added to
+// ProvisionerNamespaceLister.
+type ProvisionerNamespaceListerExpansion interface{}
+
 // SubscriptionListerExpansion allows custom methods to be added to
 // SubscriptionLister.
 type SubscriptionListerExpansion interface{}
