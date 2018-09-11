@@ -32,9 +32,9 @@ const (
 
 func TestCacheErrsForUnknownChannel(t *testing.T) {
 	cache := buses.NewCache()
-	channelRef := buses.NewChannelReferenceFromNames(cacheTestChannel, cacheDefaultNamespace)
+	ref := buses.NewChannelReferenceFromNames(cacheTestChannel, cacheDefaultNamespace)
 	var expected *channelsv1alpha1.Channel
-	actual, err := cache.Channel(channelRef)
+	actual, err := cache.Channel(ref)
 	if err == nil {
 		t.Errorf("%s expected: %+v got: %+v", "Error", "<error>", err)
 	}
@@ -45,10 +45,10 @@ func TestCacheErrsForUnknownChannel(t *testing.T) {
 
 func TestCacheRetrievesKnownChannel(t *testing.T) {
 	cache := buses.NewCache()
-	channelRef := buses.NewChannelReferenceFromNames(cacheTestChannel, cacheDefaultNamespace)
-	expected := makeChannel(channelRef)
+	ref := buses.NewChannelReferenceFromNames(cacheTestChannel, cacheDefaultNamespace)
+	expected := makeChannel(ref)
 	cache.AddChannel(expected)
-	actual, err := cache.Channel(channelRef)
+	actual, err := cache.Channel(ref)
 	if err != nil {
 		t.Errorf("%s expected: %+v got: %+v", "Unexpected error", nil, err)
 	}
@@ -59,12 +59,12 @@ func TestCacheRetrievesKnownChannel(t *testing.T) {
 
 func TestCacheRemovesKnownChannel(t *testing.T) {
 	cache := buses.NewCache()
-	channelRef := buses.NewChannelReferenceFromNames(cacheTestChannel, cacheDefaultNamespace)
-	channel := makeChannel(channelRef)
+	ref := buses.NewChannelReferenceFromNames(cacheTestChannel, cacheDefaultNamespace)
+	channel := makeChannel(ref)
 	cache.AddChannel(channel)
 	cache.RemoveChannel(channel)
 	var expected *channelsv1alpha1.Channel
-	actual, err := cache.Channel(channelRef)
+	actual, err := cache.Channel(ref)
 	if err == nil {
 		t.Errorf("%s expected: %+v got: %+v", "Unexpected error", nil, err)
 	}
@@ -82,9 +82,9 @@ func TestCacheNilChannel(t *testing.T) {
 
 func TestCacheErrsForUnknownSubscription(t *testing.T) {
 	cache := buses.NewCache()
-	subscriptionRef := buses.NewSubscriptionReferenceFromNames(cacheTestSubscription, cacheDefaultNamespace)
+	ref := buses.NewSubscriptionReferenceFromNames(cacheTestSubscription, cacheDefaultNamespace)
 	var expected *channelsv1alpha1.Subscription
-	actual, err := cache.Subscription(subscriptionRef)
+	actual, err := cache.Subscription(ref)
 	if err == nil {
 		t.Errorf("%s expected: %+v got: %+v", "Error", "<error>", err)
 	}
@@ -95,10 +95,10 @@ func TestCacheErrsForUnknownSubscription(t *testing.T) {
 
 func TestCacheRetrievesKnownSubscription(t *testing.T) {
 	cache := buses.NewCache()
-	subscriptionRef := buses.NewSubscriptionReferenceFromNames(cacheTestSubscription, cacheDefaultNamespace)
-	expected := makeSubscription(subscriptionRef)
+	ref := buses.NewSubscriptionReferenceFromNames(cacheTestSubscription, cacheDefaultNamespace)
+	expected := makeSubscription(ref)
 	cache.AddSubscription(expected)
-	actual, err := cache.Subscription(subscriptionRef)
+	actual, err := cache.Subscription(ref)
 	if err != nil {
 		t.Errorf("%s expected: %+v got: %+v", "Unexpected error", nil, err)
 	}
@@ -109,12 +109,12 @@ func TestCacheRetrievesKnownSubscription(t *testing.T) {
 
 func TestCacheRemovesKnownSubscription(t *testing.T) {
 	cache := buses.NewCache()
-	subscriptionRef := buses.NewSubscriptionReferenceFromNames(cacheTestSubscription, cacheDefaultNamespace)
-	subscription := makeSubscription(subscriptionRef)
+	ref := buses.NewSubscriptionReferenceFromNames(cacheTestSubscription, cacheDefaultNamespace)
+	subscription := makeSubscription(ref)
 	cache.AddSubscription(subscription)
 	cache.RemoveSubscription(subscription)
 	var expected *channelsv1alpha1.Subscription
-	actual, err := cache.Subscription(subscriptionRef)
+	actual, err := cache.Subscription(ref)
 	if err == nil {
 		t.Errorf("%s expected: %+v got: %+v", "Unexpected error", nil, err)
 	}
@@ -130,20 +130,20 @@ func TestCacheNilSubscription(t *testing.T) {
 	cache.RemoveSubscription(subscription)
 }
 
-func makeChannel(channelRef buses.ChannelReference) *channelsv1alpha1.Channel {
+func makeChannel(ref buses.ChannelReference) *channelsv1alpha1.Channel {
 	return &channelsv1alpha1.Channel{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      channelRef.Name,
-			Namespace: channelRef.Namespace,
+			Name:      ref.Name,
+			Namespace: ref.Namespace,
 		},
 	}
 }
 
-func makeSubscription(subscriptionRef buses.SubscriptionReference) *channelsv1alpha1.Subscription {
+func makeSubscription(ref buses.SubscriptionReference) *channelsv1alpha1.Subscription {
 	return &channelsv1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      subscriptionRef.Name,
-			Namespace: subscriptionRef.Namespace,
+			Name:      ref.Name,
+			Namespace: ref.Namespace,
 		},
 	}
 }

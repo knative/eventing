@@ -103,7 +103,7 @@ func (r *MessageReceiver) stop(srv *http.Server) {
 func (r *MessageReceiver) HandleRequest(res http.ResponseWriter, req *http.Request) {
 	host := req.Host
 	r.logger.Infof("Received request for %s", host)
-	channelReference := r.parseChannelReference(host)
+	channel := r.parseChannel(host)
 
 	message, err := r.fromRequest(req)
 	if err != nil {
@@ -111,7 +111,7 @@ func (r *MessageReceiver) HandleRequest(res http.ResponseWriter, req *http.Reque
 		return
 	}
 
-	err = r.receiverFunc(channelReference, message)
+	err = r.receiverFunc(channel, message)
 	if err != nil {
 		if err == ErrUnknownChannel {
 			res.WriteHeader(http.StatusNotFound)
@@ -163,9 +163,9 @@ func (r *MessageReceiver) fromHTTPHeaders(headers http.Header) map[string]string
 	return safe
 }
 
-// parseChannelReference converts the channel's hostname into a channel
+// parseChannel converts the channel's hostname into a channel
 // reference.
-func (r *MessageReceiver) parseChannelReference(host string) ChannelReference {
+func (r *MessageReceiver) parseChannel(host string) ChannelReference {
 	chunks := strings.Split(host, ".")
 	return ChannelReference{
 		Name:      chunks[0],

@@ -25,7 +25,7 @@ import (
 )
 
 type bus struct {
-	busRef       BusReference
+	ref          BusReference
 	handlerFuncs EventHandlerFuncs
 
 	reconciler *Reconciler
@@ -74,7 +74,7 @@ type BusProvisioner interface {
 // NewBusProvisioner creates a new provisioner for a specific bus.
 // EventHandlerFuncs are used to be notified when a channel or subscription is
 // created, updated or removed.
-func NewBusProvisioner(busRef BusReference, handlerFuncs EventHandlerFuncs, opts *BusOpts) BusProvisioner {
+func NewBusProvisioner(ref BusReference, handlerFuncs EventHandlerFuncs, opts *BusOpts) BusProvisioner {
 	if opts == nil {
 		opts = &BusOpts{}
 	}
@@ -95,7 +95,7 @@ func NewBusProvisioner(busRef BusReference, handlerFuncs EventHandlerFuncs, opts
 	}
 
 	return &bus{
-		busRef:       busRef,
+		ref:          ref,
 		handlerFuncs: handlerFuncs,
 
 		cache:      opts.Cache,
@@ -109,13 +109,13 @@ func NewBusProvisioner(busRef BusReference, handlerFuncs EventHandlerFuncs, opts
 // infrastructure.
 type BusDispatcher interface {
 	Run(threadiness int, stopCh <-chan struct{})
-	DispatchMessage(subscriptionRef SubscriptionReference, message *Message) error
+	DispatchMessage(subscription SubscriptionReference, message *Message) error
 }
 
 // NewBusDispatcher creates a new dispatcher for a specific bus.
 // EventHandlerFuncs are used to be notified when a subscription is created,
 // updated or removed, or a message is received.
-func NewBusDispatcher(busRef BusReference, handlerFuncs EventHandlerFuncs, opts *BusOpts) BusDispatcher {
+func NewBusDispatcher(ref BusReference, handlerFuncs EventHandlerFuncs, opts *BusOpts) BusDispatcher {
 	var b *bus
 
 	if opts == nil {
@@ -140,13 +140,13 @@ func NewBusDispatcher(busRef BusReference, handlerFuncs EventHandlerFuncs, opts 
 		opts.MessageDispatcher = NewMessageDispatcher(opts.Logger.Named(dispatcherLoggingComponent))
 	}
 	if opts.MessageReceiver == nil {
-		opts.MessageReceiver = NewMessageReceiver(func(channelRef ChannelReference, message *Message) error {
-			return b.receiveMessage(channelRef, message)
+		opts.MessageReceiver = NewMessageReceiver(func(channel ChannelReference, message *Message) error {
+			return b.receiveMessage(channel, message)
 		}, opts.Logger.Named(receiverLoggingComponent))
 	}
 
 	b = &bus{
-		busRef:       busRef,
+		ref:          ref,
 		handlerFuncs: handlerFuncs,
 
 		cache:      opts.Cache,
@@ -162,7 +162,7 @@ func NewBusDispatcher(busRef BusReference, handlerFuncs EventHandlerFuncs, opts 
 
 // Run starts the bus's processing.
 func (b bus) Run(threadiness int, stopCh <-chan struct{}) {
-	go b.reconciler.Run(b.busRef, threadiness, stopCh)
+	go b.reconciler.Run(b.ref, threadiness, stopCh)
 	b.reconciler.WaitForCacheSync(stopCh)
 	if b.receiver != nil {
 		go b.receiver.Run(stopCh)
@@ -171,20 +171,20 @@ func (b bus) Run(threadiness int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (b *bus) receiveMessage(channelRef ChannelReference, message *Message) error {
-	_, err := b.cache.Channel(channelRef)
+func (b *bus) receiveMessage(channel ChannelReference, message *Message) error {
+	_, err := b.cache.Channel(channel)
 	if err != nil {
 		return ErrUnknownChannel
 	}
-	return b.handlerFuncs.onReceiveMessage(channelRef, message)
+	return b.handlerFuncs.onReceiveMessage(channel, message)
 }
 
 // DispatchMessage sends a message to a subscriber. This function is only
 // avilable for bus dispatchers.
-func (b *bus) DispatchMessage(subscriptionRef SubscriptionReference, message *Message) error {
-	subscription, err := b.cache.Subscription(subscriptionRef)
+func (b *bus) DispatchMessage(ref SubscriptionReference, message *Message) error {
+	subscription, err := b.cache.Subscription(ref)
 	if err != nil {
-		return fmt.Errorf("unable to dispatch to unknown subscription %q", subscriptionRef.String())
+		return fmt.Errorf("unable to dispatch to unknown subscription %q", ref.String())
 	}
 	return b.dispatchMessage(subscription, message)
 }

@@ -25,38 +25,38 @@ import (
 // BusType is the type of the stub bus
 const BusType = "stub"
 
-func NewStubBusDispatcher(busRef buses.BusReference, opts *buses.BusOpts) *StubBus {
+func NewStubBusDispatcher(ref buses.BusReference, opts *buses.BusOpts) *StubBus {
 	bus := &StubBus{
 		channels: make(map[buses.ChannelReference]*stubChannel),
 	}
 	handlerFuncs := buses.EventHandlerFuncs{
-		ProvisionFunc: func(channelRef buses.ChannelReference, parameters buses.ResolvedParameters) error {
-			bus.logger.Infof("Provision channel %q", channelRef.String())
-			bus.addChannel(channelRef, parameters)
+		ProvisionFunc: func(channel buses.ChannelReference, parameters buses.ResolvedParameters) error {
+			bus.logger.Infof("Provision channel %q", channel.String())
+			bus.addChannel(channel, parameters)
 			return nil
 		},
-		UnprovisionFunc: func(channelRef buses.ChannelReference) error {
-			bus.logger.Infof("Unprovision channel %q", channelRef.String())
-			bus.removeChannel(channelRef)
+		UnprovisionFunc: func(channel buses.ChannelReference) error {
+			bus.logger.Infof("Unprovision channel %q", channel.String())
+			bus.removeChannel(channel)
 			return nil
 		},
-		SubscribeFunc: func(channelRef buses.ChannelReference, subscriptionRef buses.SubscriptionReference, parameters buses.ResolvedParameters) error {
-			bus.logger.Infof("Subscribe %q to %q channel", subscriptionRef.String(), channelRef.String())
-			bus.channel(channelRef).addSubscription(subscriptionRef, parameters, bus.dispatcher)
+		SubscribeFunc: func(channel buses.ChannelReference, subscription buses.SubscriptionReference, parameters buses.ResolvedParameters) error {
+			bus.logger.Infof("Subscribe %q to %q channel", subscription.String(), channel.String())
+			bus.channel(channel).addSubscription(subscription, parameters, bus.dispatcher)
 			return nil
 		},
-		UnsubscribeFunc: func(channelRef buses.ChannelReference, subscriptionRef buses.SubscriptionReference) error {
-			bus.logger.Infof("Unsubscribe %q from %q channel", subscriptionRef.String(), channelRef.String())
-			bus.channel(channelRef).removeSubscription(subscriptionRef)
+		UnsubscribeFunc: func(channel buses.ChannelReference, subscription buses.SubscriptionReference) error {
+			bus.logger.Infof("Unsubscribe %q from %q channel", subscription.String(), channel.String())
+			bus.channel(channel).removeSubscription(subscription)
 			return nil
 		},
-		ReceiveMessageFunc: func(channelRef buses.ChannelReference, message *buses.Message) error {
-			bus.logger.Infof("Recieved message for %q channel", channelRef.String())
-			bus.channel(channelRef).receiveMessage(message)
+		ReceiveMessageFunc: func(channel buses.ChannelReference, message *buses.Message) error {
+			bus.logger.Infof("Recieved message for %q channel", channel.String())
+			bus.channel(channel).receiveMessage(message)
 			return nil
 		},
 	}
-	bus.dispatcher = buses.NewBusDispatcher(busRef, handlerFuncs, opts)
+	bus.dispatcher = buses.NewBusDispatcher(ref, handlerFuncs, opts)
 	bus.logger = opts.Logger
 
 	return bus
@@ -73,30 +73,31 @@ func (b *StubBus) Run(threadness int, stopCh <-chan struct{}) {
 	b.dispatcher.Run(threadness, stopCh)
 }
 
-func (b *StubBus) addChannel(channelRef buses.ChannelReference, parameters buses.ResolvedParameters) {
-	if channel, ok := b.channels[channelRef]; ok {
+func (b *StubBus) addChannel(ref buses.ChannelReference, parameters buses.ResolvedParameters) {
+	if channel, ok := b.channels[ref]; ok {
 		// update channel
 		channel.parameters = parameters
 	} else {
 		// create channel
-		b.channels[channelRef] = &stubChannel{
+		b.channels[ref] = &stubChannel{
+			ref:           ref,
 			parameters:    parameters,
 			subscriptions: make(map[buses.SubscriptionReference]*stubSubscription),
-			logger:        b.logger.With(zap.String("channels.knative.dev/channel", channelRef.String())),
+			logger:        b.logger.With(zap.String("channels.knative.dev/channel", ref.String())),
 		}
 	}
 }
 
-func (b *StubBus) removeChannel(channelRef buses.ChannelReference) {
-	delete(b.channels, channelRef)
+func (b *StubBus) removeChannel(channel buses.ChannelReference) {
+	delete(b.channels, channel)
 }
 
-func (b *StubBus) channel(channelRef buses.ChannelReference) *stubChannel {
-	return b.channels[channelRef]
+func (b *StubBus) channel(channel buses.ChannelReference) *stubChannel {
+	return b.channels[channel]
 }
 
 type stubChannel struct {
-	channelRef    buses.ChannelReference
+	ref           buses.ChannelReference
 	parameters    buses.ResolvedParameters
 	subscriptions map[buses.SubscriptionReference]*stubSubscription
 
@@ -109,36 +110,36 @@ func (c *stubChannel) receiveMessage(message *buses.Message) {
 	}
 }
 
-func (c *stubChannel) addSubscription(subscriptionRef buses.SubscriptionReference, parameters buses.ResolvedParameters, bus buses.BusDispatcher) {
-	if subscription, ok := c.subscriptions[subscriptionRef]; ok {
+func (c *stubChannel) addSubscription(ref buses.SubscriptionReference, parameters buses.ResolvedParameters, bus buses.BusDispatcher) {
+	if subscription, ok := c.subscriptions[ref]; ok {
 		// update subscription
 		subscription.parameters = parameters
 	} else {
 		// create subscription
-		c.subscriptions[subscriptionRef] = &stubSubscription{
-			bus:             bus,
-			parameters:      parameters,
-			subscriptionRef: subscriptionRef,
+		c.subscriptions[ref] = &stubSubscription{
+			ref:        ref,
+			bus:        bus,
+			parameters: parameters,
 
-			logger: c.logger.With(zap.String("channels.knative.dev/subscription", subscriptionRef.String())),
+			logger: c.logger.With(zap.String("channels.knative.dev/subscription", ref.String())),
 		}
 	}
 }
 
-func (c *stubChannel) removeSubscription(subscriptionRef buses.SubscriptionReference) {
-	delete(c.subscriptions, subscriptionRef)
+func (c *stubChannel) removeSubscription(subscription buses.SubscriptionReference) {
+	delete(c.subscriptions, subscription)
 }
 
 type stubSubscription struct {
-	bus             buses.BusDispatcher
-	parameters      buses.ResolvedParameters
-	subscriptionRef buses.SubscriptionReference
+	ref        buses.SubscriptionReference
+	bus        buses.BusDispatcher
+	parameters buses.ResolvedParameters
 
 	logger *zap.SugaredLogger
 }
 
 func (s *stubSubscription) dispatchMessage(message *buses.Message) error {
-	err := s.bus.DispatchMessage(s.subscriptionRef, message)
+	err := s.bus.DispatchMessage(s.ref, message)
 	if err != nil {
 		s.logger.Warnf("Failed to dispatch message: %v", err)
 	}
