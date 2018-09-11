@@ -106,8 +106,8 @@ func NewChannelHostReference(hostname, defaultNamespace string) ChannelHostRefer
 func NewChannelHostReferenceFromChannel(channel *channelsv1alpha1.Channel) (ChannelHostReference, error) {
 	domainInternal := channel.Status.DomainInternal
 	if domainInternal == "" {
-		channelRef := NewChannelReference(channel)
-		return ChannelHostReference{}, fmt.Errorf("channel %q is not serviceable", channelRef.String())
+		ref := NewChannelReference(channel)
+		return ChannelHostReference{}, fmt.Errorf("channel %q is not serviceable", ref.String())
 	}
 	return NewChannelHostReference(domainInternal, channel.Namespace), nil
 }

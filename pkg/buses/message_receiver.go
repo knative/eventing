@@ -27,7 +27,7 @@ import (
 // MessageReceiver starts a server to receive new messages for the bus. The new
 // message is emitted via the receiver function.
 type MessageReceiver struct {
-	busRef          BusReference
+	ref             BusReference
 	receiverFunc    func(ChannelHostReference, *Message) error
 	forwardHeaders  map[string]bool
 	forwardPrefixes []string
@@ -37,9 +37,9 @@ type MessageReceiver struct {
 
 // NewMessageReceiver creates a message receiver passing new messages to the
 // receiverFunc.
-func NewMessageReceiver(busRef BusReference, receiverFunc func(ChannelHostReference, *Message) error, logger *zap.SugaredLogger) *MessageReceiver {
+func NewMessageReceiver(ref BusReference, receiverFunc func(ChannelHostReference, *Message) error, logger *zap.SugaredLogger) *MessageReceiver {
 	receiver := &MessageReceiver{
-		busRef:          busRef,
+		ref:             ref,
 		receiverFunc:    receiverFunc,
 		forwardHeaders:  headerSet(forwardHeaders),
 		forwardPrefixes: forwardPrefixes,
@@ -105,7 +105,7 @@ func (r *MessageReceiver) stop(srv *http.Server) {
 func (r *MessageReceiver) HandleRequest(res http.ResponseWriter, req *http.Request) {
 	host := req.Host
 	r.logger.Infof("Received request for %s", host)
-	ref := NewChannelHostReference(host, r.busRef.Namespace)
+	ref := NewChannelHostReference(host, r.ref.Namespace)
 
 	message, err := r.fromRequest(req)
 	if err != nil {

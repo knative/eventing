@@ -300,11 +300,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c9a813ac651ba08533e49b886b85d272296119512ca3fda10bc318a5199080cd"
+  digest = "1:849fc53918b4658b896a43881305d60afc0d6a51d87c0d5b065afd631415f1d4"
   name = "github.com/knative/test-infra"
   packages = ["."]
   pruneopts = "T"
-  revision = "4a4a682ee1fd31f33e450406393c3553b9ec5c2a"
+  revision = "51872094d69a5b0266fd92a38978819e20ee70c8"
 
 [[projects]]
   branch = "master"
@@ -1030,6 +1030,7 @@
     "github.com/knative/test-infra",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "go.uber.org/zap",
+    "go.uber.org/zap/zapcore",
     "golang.org/x/net/context",
     "golang.org/x/oauth2",
     "google.golang.org/grpc/codes",

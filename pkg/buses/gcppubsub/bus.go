@@ -29,7 +29,7 @@ import (
 const BusType = "gcppubsub"
 
 type CloudPubSubBus struct {
-	busRef      buses.BusReference
+	ref         buses.BusReference
 	reconciler  *buses.Reconciler
 	dispatcher  buses.BusDispatcher
 	provisioner buses.BusProvisioner
@@ -40,7 +40,7 @@ type CloudPubSubBus struct {
 	logger *zap.SugaredLogger
 }
 
-func NewCloudPubSubBusDispatcher(busRef buses.BusReference, projectID string, opts *buses.BusOpts) (*CloudPubSubBus, error) {
+func NewCloudPubSubBusDispatcher(ref buses.BusReference, projectID string, opts *buses.BusOpts) (*CloudPubSubBus, error) {
 	ctx := context.Background()
 	pubsubClient, err := pubsub.NewClient(ctx, projectID)
 	if err != nil {
@@ -48,29 +48,29 @@ func NewCloudPubSubBusDispatcher(busRef buses.BusReference, projectID string, op
 	}
 
 	bus := &CloudPubSubBus{
-		busRef:       busRef,
+		ref:          ref,
 		pubsubClient: pubsubClient,
 	}
 	eventHandlers := buses.EventHandlerFuncs{
-		SubscribeFunc: func(channelRef buses.ChannelReference, subscriptionRef buses.SubscriptionReference, parameters buses.ResolvedParameters) error {
-			return bus.startReceivingEvents(subscriptionRef, parameters)
+		SubscribeFunc: func(channel buses.ChannelReference, subscription buses.SubscriptionReference, parameters buses.ResolvedParameters) error {
+			return bus.startReceivingEvents(subscription, parameters)
 		},
-		UnsubscribeFunc: func(channelRef buses.ChannelReference, subscriptionRef buses.SubscriptionReference) error {
-			bus.stopReceivingEvents(subscriptionRef)
+		UnsubscribeFunc: func(channel buses.ChannelReference, subscription buses.SubscriptionReference) error {
+			bus.stopReceivingEvents(subscription)
 			return nil
 		},
-		ReceiveMessageFunc: func(channelRef buses.ChannelReference, messgae *buses.Message) error {
-			return bus.sendEventToTopic(channelRef, messgae)
+		ReceiveMessageFunc: func(channel buses.ChannelReference, messgae *buses.Message) error {
+			return bus.sendEventToTopic(channel, messgae)
 		},
 	}
-	bus.dispatcher = buses.NewBusDispatcher(busRef, eventHandlers, opts)
+	bus.dispatcher = buses.NewBusDispatcher(ref, eventHandlers, opts)
 	bus.logger = opts.Logger
 	bus.reconciler = opts.Reconciler
 	bus.receivers = make(map[string]context.CancelFunc)
 	return bus, nil
 }
 
-func NewCloudPubSubBusProvisioner(busRef buses.BusReference, projectID string, opts *buses.BusOpts) (*CloudPubSubBus, error) {
+func NewCloudPubSubBusProvisioner(ref buses.BusReference, projectID string, opts *buses.BusOpts) (*CloudPubSubBus, error) {
 	ctx := context.Background()
 	pubsubClient, err := pubsub.NewClient(ctx, projectID)
 	if err != nil {
@@ -78,24 +78,24 @@ func NewCloudPubSubBusProvisioner(busRef buses.BusReference, projectID string, o
 	}
 
 	bus := &CloudPubSubBus{
-		busRef:       busRef,
+		ref:          ref,
 		pubsubClient: pubsubClient,
 	}
 	eventHandlers := buses.EventHandlerFuncs{
-		ProvisionFunc: func(channelRef buses.ChannelReference, parameters buses.ResolvedParameters) error {
-			return bus.createTopic(channelRef, parameters)
+		ProvisionFunc: func(channel buses.ChannelReference, parameters buses.ResolvedParameters) error {
+			return bus.createTopic(channel, parameters)
 		},
-		UnprovisionFunc: func(channelRef buses.ChannelReference) error {
-			return bus.deleteTopic(channelRef)
+		UnprovisionFunc: func(channel buses.ChannelReference) error {
+			return bus.deleteTopic(channel)
 		},
-		SubscribeFunc: func(channelRef buses.ChannelReference, subscriptionRef buses.SubscriptionReference, parameters buses.ResolvedParameters) error {
-			return bus.createOrUpdateSubscription(channelRef, subscriptionRef, parameters)
+		SubscribeFunc: func(channel buses.ChannelReference, subscription buses.SubscriptionReference, parameters buses.ResolvedParameters) error {
+			return bus.createOrUpdateSubscription(channel, subscription, parameters)
 		},
-		UnsubscribeFunc: func(channelRef buses.ChannelReference, subscriptionRef buses.SubscriptionReference) error {
-			return bus.deleteSubscription(subscriptionRef)
+		UnsubscribeFunc: func(channel buses.ChannelReference, subscription buses.SubscriptionReference) error {
+			return bus.deleteSubscription(subscription)
 		},
 	}
-	bus.provisioner = buses.NewBusProvisioner(busRef, eventHandlers, opts)
+	bus.provisioner = buses.NewBusProvisioner(ref, eventHandlers, opts)
 	bus.logger = opts.Logger
 	return bus, nil
 }
@@ -113,14 +113,14 @@ func (b *CloudPubSubBus) Run(threadness int, stopCh <-chan struct{}) {
 // Knative Subscription. This method will not block, but will continue to
 // receive events until either this method or StopReceivingEvents is called for
 // the same Subscription.
-func (b *CloudPubSubBus) startReceivingEvents(subscriptionRef buses.SubscriptionReference, parameters buses.ResolvedParameters) error {
+func (b *CloudPubSubBus) startReceivingEvents(ref buses.SubscriptionReference, parameters buses.ResolvedParameters) error {
 	ctx := context.Background()
 	cctx, cancel := context.WithCancel(ctx)
 
 	// cancel current subscription receiver, if any
-	b.stopReceivingEvents(subscriptionRef)
+	b.stopReceivingEvents(ref)
 
-	subscriptionID := b.subscriptionID(subscriptionRef)
+	subscriptionID := b.subscriptionID(ref)
 	subscription := b.pubsubClient.Subscription(subscriptionID)
 	b.receivers[subscriptionID] = cancel
 
@@ -139,12 +139,12 @@ func (b *CloudPubSubBus) startReceivingEvents(subscriptionRef buses.Subscription
 				Headers: pubsubMessage.Attributes,
 				Payload: pubsubMessage.Data,
 			}
-			err := b.dispatcher.DispatchMessage(subscriptionRef, message)
+			err := b.dispatcher.DispatchMessage(ref, message)
 			if err != nil {
-				b.logger.Warnf("Unable to dispatch event %q to %q", pubsubMessage.ID, subscriptionRef.String())
+				b.logger.Warnf("Unable to dispatch event %q to %q", pubsubMessage.ID, ref.String())
 				pubsubMessage.Nack()
 			} else {
-				b.logger.Infof("Dispatched event %q to %q", pubsubMessage.ID, subscriptionRef.String())
+				b.logger.Infof("Dispatched event %q to %q", pubsubMessage.ID, ref.String())
 				pubsubMessage.Ack()
 			}
 		})
@@ -152,7 +152,7 @@ func (b *CloudPubSubBus) startReceivingEvents(subscriptionRef buses.Subscription
 			b.logger.Errorf("Error receiving messesages for %q: %v", subscriptionID, err)
 		}
 		delete(b.receivers, subscriptionID)
-		b.reconciler.RequeueSubscription(subscriptionRef)
+		b.reconciler.RequeueSubscription(ref)
 	}()
 
 	return nil
@@ -161,8 +161,8 @@ func (b *CloudPubSubBus) startReceivingEvents(subscriptionRef buses.Subscription
 // stopReceivingEvents stops receiving events for a previous call to
 // StartReceivingEvents. Calls for a Subscription that is not not actively receiving
 // are ignored.
-func (b *CloudPubSubBus) stopReceivingEvents(subscriptionRef buses.SubscriptionReference) {
-	subscriptionID := b.subscriptionID(subscriptionRef)
+func (b *CloudPubSubBus) stopReceivingEvents(ref buses.SubscriptionReference) {
+	subscriptionID := b.subscriptionID(ref)
 	if cancel, ok := b.receivers[subscriptionID]; ok {
 		b.logger.Infof("Stop receiving events for subscription %q", subscriptionID)
 		cancel()
@@ -172,10 +172,10 @@ func (b *CloudPubSubBus) stopReceivingEvents(subscriptionRef buses.SubscriptionR
 
 // sendEventToTopic sends a message to the Cloud Pub/Sub Topic backing the
 // Channel.
-func (b *CloudPubSubBus) sendEventToTopic(channelRef buses.ChannelReference, message *buses.Message) error {
+func (b *CloudPubSubBus) sendEventToTopic(channel buses.ChannelReference, message *buses.Message) error {
 	ctx := context.Background()
 
-	topicID := b.topicID(channelRef)
+	topicID := b.topicID(channel)
 	topic := b.pubsubClient.Topic(topicID)
 
 	result := topic.Publish(ctx, &pubsub.Message{
@@ -195,10 +195,10 @@ func (b *CloudPubSubBus) sendEventToTopic(channelRef buses.ChannelReference, mes
 }
 
 // createTopic creates a Topic in Cloud Pub/Sub for the Channel.
-func (b *CloudPubSubBus) createTopic(channelRef buses.ChannelReference, parameters buses.ResolvedParameters) error {
+func (b *CloudPubSubBus) createTopic(channel buses.ChannelReference, parameters buses.ResolvedParameters) error {
 	ctx := context.Background()
 
-	topicID := b.topicID(channelRef)
+	topicID := b.topicID(channel)
 	topic := b.pubsubClient.Topic(topicID)
 
 	// check if topic exists before creating
@@ -218,10 +218,10 @@ func (b *CloudPubSubBus) createTopic(channelRef buses.ChannelReference, paramete
 }
 
 // deleteTopic deletes the Topic in Cloud Pub/Sub for the Channel.
-func (b *CloudPubSubBus) deleteTopic(channelRef buses.ChannelReference) error {
+func (b *CloudPubSubBus) deleteTopic(channel buses.ChannelReference) error {
 	ctx := context.Background()
 
-	topicID := b.topicID(channelRef)
+	topicID := b.topicID(channel)
 	topic := b.pubsubClient.Topic(topicID)
 
 	// check if topic exists before deleting
@@ -238,10 +238,10 @@ func (b *CloudPubSubBus) deleteTopic(channelRef buses.ChannelReference) error {
 // createOrUpdateSubscription creates a Subscription in Cloud Pub/Sub for the
 // Knative Subscription, or idempotently updates a Subscription if it already
 // exists.
-func (b *CloudPubSubBus) createOrUpdateSubscription(channelRef buses.ChannelReference, subscriptionRef buses.SubscriptionReference, parameters buses.ResolvedParameters) error {
+func (b *CloudPubSubBus) createOrUpdateSubscription(channel buses.ChannelReference, ref buses.SubscriptionReference, parameters buses.ResolvedParameters) error {
 	ctx := context.Background()
 
-	subscriptionID := b.subscriptionID(subscriptionRef)
+	subscriptionID := b.subscriptionID(ref)
 	subscription := b.pubsubClient.Subscription(subscriptionID)
 
 	// check if subscription exists before creating
@@ -255,7 +255,7 @@ func (b *CloudPubSubBus) createOrUpdateSubscription(channelRef buses.ChannelRefe
 	}
 
 	// create subscription
-	topicID := b.topicID(channelRef)
+	topicID := b.topicID(channel)
 	topic := b.pubsubClient.Topic(topicID)
 	b.logger.Infof("Create subscription %q for topic %q", subscriptionID, topicID)
 	subscription, err := b.pubsubClient.CreateSubscription(ctx, subscriptionID, pubsub.SubscriptionConfig{
@@ -266,10 +266,10 @@ func (b *CloudPubSubBus) createOrUpdateSubscription(channelRef buses.ChannelRefe
 
 // deleteSubscription removes a Subscription from Cloud Pub/Sub for a Knative
 // Subscription.
-func (b *CloudPubSubBus) deleteSubscription(subscriptionRef buses.SubscriptionReference) error {
+func (b *CloudPubSubBus) deleteSubscription(ref buses.SubscriptionReference) error {
 	ctx := context.Background()
 
-	subscriptionID := b.subscriptionID(subscriptionRef)
+	subscriptionID := b.subscriptionID(ref)
 	subscription := b.pubsubClient.Subscription(subscriptionID)
 
 	// check if subscription exists before deleting
@@ -283,10 +283,10 @@ func (b *CloudPubSubBus) deleteSubscription(subscriptionRef buses.SubscriptionRe
 	return subscription.Delete(ctx)
 }
 
-func (b *CloudPubSubBus) topicID(channelRef buses.ChannelReference) string {
-	return fmt.Sprintf("channel-%s-%s-%s", b.busRef.Name, channelRef.Namespace, channelRef.Name)
+func (b *CloudPubSubBus) topicID(channel buses.ChannelReference) string {
+	return fmt.Sprintf("channel-%s-%s-%s", b.ref.Name, channel.Namespace, channel.Name)
 }
 
-func (b *CloudPubSubBus) subscriptionID(subscriptionRef buses.SubscriptionReference) string {
-	return fmt.Sprintf("subscription-%s-%s-%s", b.busRef.Name, subscriptionRef.Namespace, subscriptionRef.Name)
+func (b *CloudPubSubBus) subscriptionID(subscription buses.SubscriptionReference) string {
+	return fmt.Sprintf("subscription-%s-%s-%s", b.ref.Name, subscription.Namespace, subscription.Name)
 }
