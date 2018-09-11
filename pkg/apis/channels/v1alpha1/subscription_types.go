@@ -63,17 +63,48 @@ type SubscriptionSpec struct {
 	// +optional
 	Generation int64 `json:"generation,omitempty"`
 
-	// From is the name of the channel to subscribe to for receiving events
-	// to be transformed.
-	From string `json:"from"`
+	// Reference to an object that will be used to create the subscription
+	// for receiving events. The object must have spec.subscriptions
+	// list which will then be modified accordingly.
+	//
+	// You can specify only the following fields of the ObjectReference:
+	//   - Kind
+	//   - APIVersion
+	//   - Name
+	From *corev1.ObjectReference `json:"from,omitempty"`
 
 	// Processor is the processor service DNS name. Events
 	// from the From channel will be delivered here and replies are sent
 	// to To channel.
-	Processor string `json:"processor,omitempty"`
+	// Reference to an object that will be used to deliver events for
+	// (optional) processing before sending them to To for further
+	// if specified for additional Subscriptions to then subscribe
+	// to these events for further processing.
+	//
+	// For example, this could be a reference to a Route resource
+	// or a Configuration resource.
+	// TODO: Specify the required fields the target object must
+	// have in the status.
+	// You can specify only the following fields of the ObjectReference:
+	//   - Kind
+	//   - APIVersion
+	//   - Name
+	// +optional
+	Processor *corev1.ObjectReference `json:"processor,omitempty"`
 
-	// To is the name of the channel to send transformed events
-	To string `json:"to,omitempty"`
+	// To is the (optional) resolved channel where (optionally) processed
+	// events get sent.
+	//
+	// This has to be a channel
+	//
+	// TODO: Specify the required fields the target object must
+	// have in the status.
+	// You can specify only the following fields of the ObjectReference:
+	//   - Kind
+	//   - APIVersion
+	//   - Name
+	// +optional
+	To *corev1.ObjectReference `json:"to,omitempty"`
 
 	// Arguments is a list of configuration arguments for the Subscription. The
 	// Arguments for a channel must contain values for each of the Parameters
