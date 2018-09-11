@@ -26,7 +26,7 @@ import (
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	"github.com/knative/eventing/pkg/controller/feed/resources"
 	"github.com/knative/eventing/pkg/sources"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -118,7 +118,7 @@ func (r *reconciler) reconcile(ctx context.Context, feed *feedsv1alpha1.Feed) er
 		default:
 			// This is unreachable unless getFeedSource is refactored.
 			// Assume this is a non-terminal state and return the error.
-			return fmt.Errorf("Error getting feed source: %v", err)
+			return fmt.Errorf("error getting feed source: %v", err)
 		}
 		// This is a terminal state, and we've noted it in the status, so return
 		// nil to signal that no further reconciling is required.

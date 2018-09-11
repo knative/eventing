@@ -251,9 +251,9 @@ func NewReconciler(
 // RequeueSubscription will add the Subscription to the workqueue for future
 // processing. Reprocessing a Subscription is often used within a dispatcher
 // when a long lived receiver is interrupted by an asynchronous error.
-func (r *Reconciler) RequeueSubscription(subscriptionRef SubscriptionReference) {
-	r.logger.Infof("Requeue subscription %q", subscriptionRef.String())
-	r.workqueue.AddRateLimited(makeWorkqueueKey(subscriptionKind, subscriptionRef.Namespace, subscriptionRef.Name))
+func (r *Reconciler) RequeueSubscription(subscription SubscriptionReference) {
+	r.logger.Infof("Requeue subscription %q", subscription.String())
+	r.workqueue.AddRateLimited(makeWorkqueueKey(subscriptionKind, subscription.Namespace, subscription.Name))
 }
 
 // RecordBusEventf creates a new event for the reconciled bus and records it
@@ -265,8 +265,8 @@ func (r *Reconciler) RecordBusEventf(eventtype, reason, messageFmt string, args 
 // RecordChannelEventf creates a new event for the channel and records it with
 // the api server. Attempts to records an event for an unknown channel are
 // ignored.
-func (r *Reconciler) RecordChannelEventf(channelRef ChannelReference, eventtype, reason, messageFmt string, args ...interface{}) {
-	channel, err := r.cache.Channel(channelRef)
+func (r *Reconciler) RecordChannelEventf(ref ChannelReference, eventtype, reason, messageFmt string, args ...interface{}) {
+	channel, err := r.cache.Channel(ref)
 	if err != nil {
 		// TODO handle error
 		return
@@ -277,8 +277,8 @@ func (r *Reconciler) RecordChannelEventf(channelRef ChannelReference, eventtype,
 // RecordSubscriptionEventf creates a new event for the subscription and
 // records it with the api server. Attempts to records an event for an unknown
 // subscription are ignored.
-func (r *Reconciler) RecordSubscriptionEventf(subscriptionRef SubscriptionReference, eventtype, reason, messageFmt string, args ...interface{}) {
-	subscription, err := r.cache.Subscription(subscriptionRef)
+func (r *Reconciler) RecordSubscriptionEventf(ref SubscriptionReference, eventtype, reason, messageFmt string, args ...interface{}) {
+	subscription, err := r.cache.Subscription(ref)
 	if err != nil {
 		// TODO handle error
 		return
@@ -492,8 +492,8 @@ func (r *Reconciler) syncChannel(namespace string, name string) error {
 	if err != nil {
 		// The Channel resource may no longer exist
 		if errors.IsNotFound(err) {
-			channelRef := NewChannelReferenceFromNames(name, namespace)
-			err = r.removeChannel(channelRef)
+			ref := NewChannelReferenceFromNames(name, namespace)
+			err = r.removeChannel(ref)
 			if err != nil {
 				return err
 			}
@@ -518,8 +518,8 @@ func (r *Reconciler) syncSubscription(namespace string, name string) error {
 	if err != nil {
 		// The Subscription resource may no longer exist
 		if errors.IsNotFound(err) {
-			subscriptionRef := NewSubscriptionReferenceFromNames(name, namespace)
-			err = r.removeSubscription(subscriptionRef)
+			ref := NewSubscriptionReferenceFromNames(name, namespace)
+			err = r.removeSubscription(ref)
 			if err != nil {
 				return err
 			}
@@ -570,8 +570,8 @@ func (r *Reconciler) createOrUpdateChannel(channel *channelsv1alpha1.Channel) er
 	return nil
 }
 
-func (r *Reconciler) removeChannel(channelRef ChannelReference) error {
-	channel, err := r.cache.Channel(channelRef)
+func (r *Reconciler) removeChannel(ref ChannelReference) error {
+	channel, err := r.cache.Channel(ref)
 	if err != nil {
 		// the channel isn't provisioned
 		return nil
@@ -587,11 +587,11 @@ func (r *Reconciler) removeChannel(channelRef ChannelReference) error {
 }
 
 func (r *Reconciler) createOrUpdateSubscription(subscription *channelsv1alpha1.Subscription) error {
-	channelRef := NewChannelReferenceFromSubscription(subscription)
-	_, err := r.cache.Channel(channelRef)
+	ref := NewChannelReferenceFromSubscription(subscription)
+	_, err := r.cache.Channel(ref)
 	if err != nil {
 		// channel is not provisioned, before erring we need to check if the channel is provionable
-		channel, errS := r.channelsLister.Channels(channelRef.Namespace).Get(channelRef.Name)
+		channel, errS := r.channelsLister.Channels(ref.Namespace).Get(ref.Name)
 		if errS != nil {
 			return err
 		}
@@ -610,8 +610,8 @@ func (r *Reconciler) createOrUpdateSubscription(subscription *channelsv1alpha1.S
 	return nil
 }
 
-func (r *Reconciler) removeSubscription(subscriptionRef SubscriptionReference) error {
-	subscription, err := r.cache.Subscription(subscriptionRef)
+func (r *Reconciler) removeSubscription(ref SubscriptionReference) error {
+	subscription, err := r.cache.Subscription(ref)
 	if err != nil {
 		return nil
 	}

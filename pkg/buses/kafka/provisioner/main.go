@@ -33,7 +33,7 @@ const (
 )
 
 func main() {
-	busRef := buses.NewBusReferenceFromNames(
+	ref := buses.NewBusReferenceFromNames(
 		os.Getenv("BUS_NAME"),
 		os.Getenv("BUS_NAMESPACE"),
 	)
@@ -42,7 +42,7 @@ func main() {
 	logger := buses.NewBusLoggerFromConfig(config)
 	defer logger.Sync()
 	logger = logger.With(
-		zap.String("channels.knative.dev/bus", busRef.String()),
+		zap.String("channels.knative.dev/bus", ref.String()),
 		zap.String("channels.knative.dev/busType", kafka.BusType),
 		zap.String("channels.knative.dev/busComponent", buses.Provisioner),
 	)
@@ -61,7 +61,7 @@ func main() {
 	flag.StringVar(&opts.MasterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	flag.Parse()
 
-	bus, err := kafka.NewKafkaBusProvisioner(busRef, brokers, opts)
+	bus, err := kafka.NewKafkaBusProvisioner(ref, brokers, opts)
 	if err != nil {
 		logger.Fatalf("Error starting kafka bus provisioner: %v", err)
 	}
