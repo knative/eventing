@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/knative/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -25,6 +26,13 @@ import (
 // including a schema for the event and information about the parameters
 // needed to create a Feed to the event.
 type CommonEventTypeSpec struct {
+	// TODO: Generation does not work correctly with CRD. They are scrubbed
+	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
+	// So, we add Generation here. Once that gets fixed, remove this and use
+	// ObjectMeta.Generation instead.
+	// +optional
+	Generation int64 `json:"generation,omitempty"`
+
 	// Description is a human-readable description of the EventType.
 	Description string `json:"description,omitempty"`
 	// SubscribeSchema describing how to subscribe to this. This basically
@@ -34,6 +42,10 @@ type CommonEventTypeSpec struct {
 	// Describe the schema for the events emitted by this EventType.
 	EventSchema *runtime.RawExtension `json:"eventSchema,omitempty"`
 }
+
+// Check that CommonEventTypeSpec can be validated and can be defaulted
+var _ apis.Validatable = (*CommonEventTypeSpec)(nil)
+var _ apis.Defaultable = (*CommonEventTypeSpec)(nil)
 
 // CommonEventTypeStatus is the status for a EventType resource
 type CommonEventTypeStatus struct {
@@ -49,6 +61,9 @@ const (
 	EventTypeFailed CommonEventTypeConditionType = "Failed"
 	// EventTypeInvalid specifies that the given EventType specification is invalid.
 	EventTypeInvalid CommonEventTypeConditionType = "Invalid"
+	// EventTypeInUse specifies that the given EventType, which is marked for deletion, still has
+	// Feeds that depend on it, so cannot yet be deleted.
+	EventTypeInUse CommonEventTypeConditionType = "InUse"
 )
 
 // EventTypeCondition defines a readiness condition for a EventType.

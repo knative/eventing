@@ -223,9 +223,9 @@ func TestFlowCondition_PropagateStatus(t *testing.T) {
 		want                      bool
 	}{
 		{"NothingReady",
-			[]feedsv1alpha1.FeedStatus{feedsv1alpha1.FeedStatus{}},
-			[]channelsv1alpha1.ChannelStatus{channelsv1alpha1.ChannelStatus{}},
-			[]channelsv1alpha1.SubscriptionStatus{channelsv1alpha1.SubscriptionStatus{}},
+			[]feedsv1alpha1.FeedStatus{{}},
+			[]channelsv1alpha1.ChannelStatus{{}},
+			[]channelsv1alpha1.SubscriptionStatus{{}},
 			corev1.ConditionFalse,
 			false},
 		{"FeedReady",

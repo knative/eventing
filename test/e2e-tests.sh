@@ -25,11 +25,7 @@
 # project $PROJECT_ID, start Knative serving and the eventing system, run
 # the tests and delete the cluster.
 
-# Load github.com/knative/test-infra/images/prow-tests/scripts/e2e-tests.sh
-[ -f /workspace/e2e-tests.sh ] \
-  && source /workspace/e2e-tests.sh \
-  || eval "$(docker run --entrypoint sh gcr.io/knative-tests/test-infra/prow-tests -c 'cat e2e-tests.sh')"
-[ -v KNATIVE_TEST_INFRA ] || exit 1
+source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/e2e-tests.sh
 
 # Names of the Resources used in the tests.
 readonly E2E_TEST_NAMESPACE=e2etest
@@ -70,12 +66,10 @@ function wait_until_flow_ready() {
   done
   echo -e "\n\nERROR: timeout waiting for flow $NAMESPACE/$NAME to be ready"
   kubectl get -n $NAMESPACE flows $NAME -oyaml
-  kubectl get -n $NAMESPACE jobs $NAME-start -oyaml
-  kubectl get -n $NAMESPACE feeds $NAME -oyaml
-  echo -e "Dumping controller manager logs"
-  kubectl -n knative-eventing logs `kubectl -n knative-eventing get pods -oname | grep controller-manager` controller-manager
-  echo -e "Dumping controller logs"
-  kubectl -n knative-eventing logs `kubectl -n knative-eventing get pods -oname | grep eventing-controller`
+  kubectl get -n $NAMESPACE jobs -oyaml
+  kubectl get -n $NAMESPACE feeds -oyaml
+  echo -e "Dumping eventing controller logs"
+  kubectl -n knative-eventing logs `kubectl -n knative-eventing get pods -oname | grep eventing-controller` eventing-controller
   return 1
 }
 

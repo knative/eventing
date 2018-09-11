@@ -18,8 +18,20 @@ The dispatcher receives events via a Channel's Service from inside the cluster a
 
 Note: The stub bus does not guarantee delivery, errors will not be reattempted.
 
-To view logs (for cluster wide deployment replace `bus` with `clusterbus`):
+To view logs:
+- for the clusterbus
+    ```
+    # dispatcher
+    kail -d stub-clusterbus-dispatcher -c dispatcher
 
-```
-kail -d stub-bus-dispatcher -c dispatcher
-```
+    # provisioner
+    kail -d stub-clusterbus-provisioner -c provisioner
+    ```
+- for a namespaced bus, replace $NAMESPACE with the namespace for your bus
+    ```
+    # dispatcher
+    kail -d stub-$NAMESPACE-bus-dispatcher -c dispatcher
+
+    # provisioner
+    kail -d stub-$NAMESPACE-bus-provisioner -c provisioner
+    ```

@@ -17,7 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"encoding/json"
+	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/webhook"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -35,6 +39,13 @@ type ClusterEventType struct {
 	Status ClusterEventTypeStatus `json:"status"`
 }
 
+// Check that ClusterEventType can be validated, can be defaulted, and has immutable fields.
+var _ apis.Validatable = (*ClusterEventType)(nil)
+var _ apis.Defaultable = (*ClusterEventType)(nil)
+var _ apis.Immutable = (*ClusterEventType)(nil)
+var _ runtime.Object = (*ClusterEventType)(nil)
+var _ webhook.GenericCRD = (*ClusterEventType)(nil)
+
 // ClusterEventTypeSpec specifies information about the ClusterEventType, including a schema
 // for the event and information about the parameters needed to create a Feed to
 // the event.
@@ -47,6 +58,10 @@ type ClusterEventTypeSpec struct {
 // ClusterEventTypeStatus is the status for a ClusterEventType resource
 type ClusterEventTypeStatus struct {
 	CommonEventTypeStatus `json:",inline"`
+}
+
+func (et *ClusterEventType) GetSpecJSON() ([]byte, error) {
+	return json.Marshal(et.Spec)
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

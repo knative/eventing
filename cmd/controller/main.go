@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	"log"
 	"net/http"
 	"time"
 
@@ -35,11 +36,9 @@ import (
 	"github.com/knative/eventing/pkg/controller/bus"
 	"github.com/knative/eventing/pkg/controller/channel"
 	"github.com/knative/eventing/pkg/controller/clusterbus"
-	"github.com/knative/eventing/pkg/signals"
 	sharedclientset "github.com/knative/pkg/client/clientset/versioned"
 	sharedinformers "github.com/knative/pkg/client/informers/externalversions"
-
-	"log"
+	"github.com/knative/pkg/signals"
 
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/system"
@@ -84,22 +83,22 @@ func main() {
 
 	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
-		logger.Fatalf("Error building kubeconfig: %s", err.Error())
+		logger.Fatalf("Error building kubeconfig: %v", err)
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		logger.Fatalf("Error building kubernetes clientset: %s", err.Error())
+		logger.Fatalf("Error building kubernetes clientset: %v", err)
 	}
 
 	client, err := clientset.NewForConfig(cfg)
 	if err != nil {
-		logger.Fatalf("Error building clientset: %s", err.Error())
+		logger.Fatalf("Error building clientset: %v", err)
 	}
 
 	sharedClient, err := sharedclientset.NewForConfig(cfg)
 	if err != nil {
-		logger.Fatalf("Error building shared clientset: %s", err.Error())
+		logger.Fatalf("Error building shared clientset: %v", err)
 	}
 
 	// TODO: Rip this out from all the controllers since we can get it
@@ -108,7 +107,7 @@ func main() {
 	// Kubernetes. Clients will use the Pod's ServiceAccount principal.
 	restConfig, err := rest.InClusterConfig()
 	if err != nil {
-		logger.Fatalf("Error building rest config: %v", err.Error())
+		logger.Fatalf("Error building rest config: %v", err)
 	}
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
@@ -122,7 +121,8 @@ func main() {
 		logger.Fatalf("failed to start controller config map watcher: %v", err)
 	}
 
-	// Add new controllers here.
+	// Add new controllers here, except controllers that use controller-runtime.
+	// Those should be added to controller-runtime-main.go.
 	ctors := []controller.Constructor{
 		bus.NewController,
 		clusterbus.NewController,
@@ -147,10 +147,17 @@ func main() {
 			// We don't expect this to return until stop is called,
 			// but if it does, propagate it back.
 			if err := ctrlr.Run(threadsPerController, stopCh); err != nil {
-				logger.Fatalf("Error running controller: %s", err.Error())
+				logger.Fatalf("Error running controller: %v", err)
 			}
 		}(ctrlr)
 	}
+
+	// Start the controller-runtime controllers.
+	go func() {
+		if err := controllerRuntimeStart(); err != nil {
+			logger.Fatalf("Error running controller-runtime controllers: %v", err)
+		}
+	}()
 
 	// Start the endpoint that Prometheus scraper talks to
 	srv := &http.Server{Addr: metricsScrapeAddr}
@@ -171,6 +178,7 @@ func main() {
 }
 
 func init() {
-	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-	flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	// These are commented because they're also defined by controller-runtime.
+	// flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	// flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 }

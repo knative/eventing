@@ -1,0 +1,33 @@
+// This is the overview graph for object refrences in the control plane.
+//
+// To reproduce the PNG, run the following:
+// $ dot -Tpng overview-reference.dot -o overview-reference.png
+//
+digraph G {
+  ordering = out;
+  rankdir = LR;
+  
+  node [shape=rectangle; width=1.25; height=.5; fixedsize=true;]
+  
+  subgraph cluster_A {
+    Source -> EventType [dir=back];
+    color=white; 
+    {rank = same; Source; EventType;}
+  }
+  
+  subgraph cluster_C {
+    Feed;
+    Channel
+    Subscription;
+    label = "Flow";
+  }
+  EventType -> Feed [dir=back];
+  Feed -> Channel;
+
+  Subscription -> Service;
+  Channel -> Subscription [dir=back];
+
+  Bus -> Channel [dir=back];
+
+  {rank = max; Service;}
+}

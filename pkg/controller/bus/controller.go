@@ -23,9 +23,10 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/knative/eventing/pkg/controller"
+	"github.com/knative/eventing/pkg/system"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -55,7 +56,10 @@ import (
 	"github.com/knative/eventing/pkg/controller/util"
 )
 
-const controllerAgentName = "bus-controller"
+const (
+	controllerAgentName = "bus-controller"
+	serviceAccountName  = "bus-operator"
+)
 
 const (
 	// SuccessSynced is used as part of the Event 'reason' when a Bus is synced
@@ -120,7 +124,8 @@ func NewController(
 	restConfig *rest.Config,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	busInformerFactory informers.SharedInformerFactory,
-	istioInformerFactory sharedinformers.SharedInformerFactory) controller.Interface {
+	istioInformerFactory sharedinformers.SharedInformerFactory,
+) controller.Interface {
 
 	// obtain references to shared index informers for the Bus, Deployment and Service
 	// types.
@@ -263,7 +268,7 @@ func (c *Controller) processNextWorkItem() bool {
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Bus resource to be synced.
 		if err := c.syncHandler(key); err != nil {
-			return fmt.Errorf("error syncing bus '%s': %s", key, err.Error())
+			return fmt.Errorf("error syncing bus '%s': %v", key, err)
 		}
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
@@ -304,35 +309,9 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	var serviceAccount *corev1.ServiceAccount
-	var clusterRoleBinding *rbacv1beta1.ClusterRoleBinding
 	var dispatcherService *corev1.Service
 	var dispatcherDeployment, provisionerDeployment *appsv1.Deployment
-	var saErr, clusterRoleBindingErr, dispatcherServiceErr, dispatcherDeplErr, provisionerDeplError error
-
-	// Sync ServiceAccount derived from the Bus
-	serviceAccount, saErr = c.syncBusServiceAccount(bus)
-	if saErr != nil {
-		_ = c.updateBusStatus(bus,
-			dispatcherService, dispatcherServiceErr,
-			dispatcherDeployment, dispatcherDeplErr,
-			provisionerDeployment, provisionerDeplError,
-			serviceAccount, saErr,
-			clusterRoleBinding, clusterRoleBindingErr)
-		return saErr
-	}
-
-	// Sync ClusterRoleBinding derived from the Bus
-	clusterRoleBinding, clusterRoleBindingErr = c.syncBusClusterRoleBinding(bus)
-	if clusterRoleBindingErr != nil {
-		_ = c.updateBusStatus(bus,
-			dispatcherService, dispatcherServiceErr,
-			dispatcherDeployment, dispatcherDeplErr,
-			provisionerDeployment, provisionerDeplError,
-			serviceAccount, saErr,
-			clusterRoleBinding, clusterRoleBindingErr)
-		return clusterRoleBindingErr
-	}
+	var dispatcherServiceErr, dispatcherDeplErr, provisionerDeplError error
 
 	// Sync Service derived from the Bus
 	dispatcherService, dispatcherServiceErr = c.syncBusDispatcherService(bus)
@@ -340,9 +319,7 @@ func (c *Controller) syncHandler(key string) error {
 		_ = c.updateBusStatus(bus,
 			dispatcherService, dispatcherServiceErr,
 			dispatcherDeployment, dispatcherDeplErr,
-			provisionerDeployment, provisionerDeplError,
-			serviceAccount, saErr,
-			clusterRoleBinding, clusterRoleBindingErr)
+			provisionerDeployment, provisionerDeplError)
 		return dispatcherServiceErr
 	}
 
@@ -352,9 +329,7 @@ func (c *Controller) syncHandler(key string) error {
 		_ = c.updateBusStatus(bus,
 			dispatcherService, dispatcherServiceErr,
 			dispatcherDeployment, dispatcherDeplErr,
-			provisionerDeployment, provisionerDeplError,
-			serviceAccount, saErr,
-			clusterRoleBinding, clusterRoleBindingErr)
+			provisionerDeployment, provisionerDeplError)
 		return dispatcherDeplErr
 	}
 
@@ -364,9 +339,7 @@ func (c *Controller) syncHandler(key string) error {
 		_ = c.updateBusStatus(bus,
 			dispatcherService, dispatcherServiceErr,
 			dispatcherDeployment, dispatcherDeplErr,
-			provisionerDeployment, provisionerDeplError,
-			serviceAccount, saErr,
-			clusterRoleBinding, clusterRoleBindingErr)
+			provisionerDeployment, provisionerDeplError)
 		return provisionerDeplError
 	}
 
@@ -375,9 +348,7 @@ func (c *Controller) syncHandler(key string) error {
 	err = c.updateBusStatus(bus,
 		dispatcherService, dispatcherServiceErr,
 		dispatcherDeployment, dispatcherDeplErr,
-		provisionerDeployment, provisionerDeplError,
-		serviceAccount, saErr,
-		clusterRoleBinding, clusterRoleBindingErr)
+		provisionerDeployment, provisionerDeplError)
 	if err != nil {
 		return err
 	}
@@ -388,11 +359,11 @@ func (c *Controller) syncHandler(key string) error {
 
 func (c *Controller) syncBusDispatcherService(bus *channelsv1alpha1.Bus) (*corev1.Service, error) {
 	// Get the service with the specified service name
-	serviceName := controller.BusDispatcherServiceName(bus.ObjectMeta.Name)
-	service, err := c.servicesLister.Services(bus.Namespace).Get(serviceName)
+	serviceName := controller.BusDispatcherServiceName(bus.Name, bus.Namespace)
+	service, err := c.servicesLister.Services(system.Namespace).Get(serviceName)
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
-		service, err = c.kubeclientset.CoreV1().Services(bus.Namespace).Create(newDispatcherService(bus))
+		service, err = c.kubeclientset.CoreV1().Services(system.Namespace).Create(newDispatcherService(bus))
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
@@ -415,11 +386,11 @@ func (c *Controller) syncBusDispatcherService(bus *channelsv1alpha1.Bus) (*corev
 
 func (c *Controller) syncBusDispatcherDeployment(bus *channelsv1alpha1.Bus) (*appsv1.Deployment, error) {
 	// Get the deployment with the specified deployment name
-	deploymentName := controller.BusDispatcherDeploymentName(bus.ObjectMeta.Name)
-	deployment, err := c.deploymentsLister.Deployments(bus.Namespace).Get(deploymentName)
+	deploymentName := controller.BusDispatcherDeploymentName(bus.Name, bus.Namespace)
+	deployment, err := c.deploymentsLister.Deployments(system.Namespace).Get(deploymentName)
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
-		deployment, err = c.kubeclientset.AppsV1().Deployments(bus.Namespace).Create(newDispatcherDeployment(bus))
+		deployment, err = c.kubeclientset.AppsV1().Deployments(system.Namespace).Create(newDispatcherDeployment(bus))
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
@@ -442,7 +413,7 @@ func (c *Controller) syncBusDispatcherDeployment(bus *channelsv1alpha1.Bus) (*ap
 	proposedDeployment := newDispatcherDeployment(bus)
 	if !reflect.DeepEqual(proposedDeployment.Spec, deployment.Spec) {
 		glog.V(4).Infof("Bus %s dispatcher spec updated", bus.Name)
-		deployment, err = c.kubeclientset.AppsV1().Deployments(bus.Namespace).Update(proposedDeployment)
+		deployment, err = c.kubeclientset.AppsV1().Deployments(system.Namespace).Update(proposedDeployment)
 
 		if err != nil {
 			return nil, err
@@ -452,85 +423,18 @@ func (c *Controller) syncBusDispatcherDeployment(bus *channelsv1alpha1.Bus) (*ap
 	return deployment, nil
 }
 
-func (c *Controller) syncBusServiceAccount(bus *channelsv1alpha1.Bus) (*corev1.ServiceAccount, error) {
-	// Get the serviceAccount with the specified serviceAccount name
-	serviceAccountName := controller.BusServiceAccountName(bus.ObjectMeta.Name)
-	serviceAccount, err := c.serviceAccountsLister.ServiceAccounts(bus.Namespace).Get(serviceAccountName)
-	// If the resource doesn't exist, we'll create it
-	if errors.IsNotFound(err) {
-		serviceAccount, err = c.kubeclientset.CoreV1().ServiceAccounts(bus.Namespace).Create(newServiceAccount(bus))
-	}
-
-	// If an error occurs during Get/Create, we'll requeue the item so we can
-	// attempt processing again later. This could have been caused by a
-	// temporary network failure, or any other transient reason.
-	if err != nil {
-		return nil, err
-	}
-
-	// If the ServiceAccount is not controlled by this Bus resource, we should log
-	// a warning to the event recorder and return
-	if !metav1.IsControlledBy(serviceAccount, bus) {
-		msg := fmt.Sprintf(MessageResourceExists, serviceAccount.Name)
-		c.recorder.Event(bus, corev1.EventTypeWarning, ErrResourceExists, msg)
-		return nil, fmt.Errorf(msg)
-	}
-
-	return serviceAccount, nil
-}
-
-func (c *Controller) syncBusClusterRoleBinding(bus *channelsv1alpha1.Bus) (*rbacv1beta1.ClusterRoleBinding, error) {
-	// Get the clusterRoleBinding with the specified clusterRoleBinding name
-	clusterRoleBindingName := controller.BusClusterRoleBindingName(bus.ObjectMeta.Name)
-	clusterRoleBinding, err := c.clusterRoleBindingsLister.Get(clusterRoleBindingName)
-	// If the resource doesn't exist, we'll create it
-	if errors.IsNotFound(err) {
-		clusterRoleBinding, err = c.kubeclientset.RbacV1beta1().ClusterRoleBindings().Create(newClusterRoleBinding(bus))
-	}
-
-	// If an error occurs during Get/Create, we'll requeue the item so we can
-	// attempt processing again later. This could have been caused by a
-	// temporary network failure, or any other transient reason.
-	if err != nil {
-		return nil, err
-	}
-
-	// If the ClusterRoleBinding is not controlled by this Bus resource, we should log
-	// a warning to the event recorder and return
-	if !metav1.IsControlledBy(clusterRoleBinding, bus) {
-		msg := fmt.Sprintf(MessageResourceExists, clusterRoleBinding.Name)
-		c.recorder.Event(bus, corev1.EventTypeWarning, ErrResourceExists, msg)
-		return nil, fmt.Errorf(msg)
-	}
-
-	// If the ClusterRoleBinding does not match the Bus's proposed ClusterRoleBinding we
-	// should update the ClusterRoleBinding resource.
-	proposedClusterRoleBinding := newClusterRoleBinding(bus)
-	if !reflect.DeepEqual(proposedClusterRoleBinding.Subjects, clusterRoleBinding.Subjects) &&
-		!reflect.DeepEqual(proposedClusterRoleBinding.RoleRef, clusterRoleBinding.RoleRef) {
-		glog.V(4).Infof("Bus %s provisioner spec updated", bus.Name)
-		clusterRoleBinding, err = c.kubeclientset.RbacV1beta1().ClusterRoleBindings().Update(proposedClusterRoleBinding)
-
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return clusterRoleBinding, nil
-}
-
 func (c *Controller) syncBusProvisionerDeployment(bus *channelsv1alpha1.Bus) (*appsv1.Deployment, error) {
 	provisioner := bus.Spec.Provisioner
 
 	// Get the deployment with the specified deployment name
-	deploymentName := controller.BusProvisionerDeploymentName(bus.ObjectMeta.Name)
-	deployment, err := c.deploymentsLister.Deployments(bus.Namespace).Get(deploymentName)
+	deploymentName := controller.BusProvisionerDeploymentName(bus.Name, bus.Namespace)
+	deployment, err := c.deploymentsLister.Deployments(system.Namespace).Get(deploymentName)
 
 	// If the resource shouldn't exists
 	if provisioner == nil {
 		// If the resource exists, we'll delete it
 		if deployment != nil {
-			err = c.kubeclientset.AppsV1().Deployments(bus.Namespace).Delete(deploymentName, nil)
+			err = c.kubeclientset.AppsV1().Deployments(system.Namespace).Delete(deploymentName, nil)
 		}
 		if errors.IsNotFound(err) {
 			return nil, nil
@@ -540,7 +444,7 @@ func (c *Controller) syncBusProvisionerDeployment(bus *channelsv1alpha1.Bus) (*a
 
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
-		deployment, err = c.kubeclientset.AppsV1().Deployments(bus.Namespace).Create(newProvisionerDeployment(bus))
+		deployment, err = c.kubeclientset.AppsV1().Deployments(system.Namespace).Create(newProvisionerDeployment(bus))
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
@@ -563,7 +467,7 @@ func (c *Controller) syncBusProvisionerDeployment(bus *channelsv1alpha1.Bus) (*a
 	proposedDeployment := newProvisionerDeployment(bus)
 	if !reflect.DeepEqual(proposedDeployment.Spec, deployment.Spec) {
 		glog.V(4).Infof("Bus %s provisioner spec updated", bus.Name)
-		deployment, err = c.kubeclientset.AppsV1().Deployments(bus.Namespace).Update(proposedDeployment)
+		deployment, err = c.kubeclientset.AppsV1().Deployments(system.Namespace).Update(proposedDeployment)
 
 		if err != nil {
 			return nil, err
@@ -578,8 +482,6 @@ func (c *Controller) updateBusStatus(
 	dispatcherService *corev1.Service, dispatcherServiceErr error,
 	dispatcherDeployment *appsv1.Deployment, dispatcherDeploymentErr error,
 	provisionerDeployment *appsv1.Deployment, provisionerDeploymentErr error,
-	serviceAccount *corev1.ServiceAccount, serviceAccountErr error,
-	clusterRoleBinding *rbacv1beta1.ClusterRoleBinding, clusterRoleBindingErr error,
 ) error {
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
@@ -616,12 +518,16 @@ func (c *Controller) updateBusStatus(
 
 	util.ConsolidateBusCondition(busCopy)
 
-	// If the CustomResourceSubresources feature gate is not enabled,
-	// we must use Update instead of UpdateStatus to update the Status block of the Bus resource.
-	// UpdateStatus will not allow changes to the Spec of the resource,
-	// which is ideal for ensuring nothing other than resource status has been updated.
-	_, err := c.busclientset.ChannelsV1alpha1().Buses(bus.Namespace).Update(busCopy)
-	return err
+	// Only update if status has changed
+	if !equality.Semantic.DeepEqual(bus.Status, busCopy.Status) {
+		// If the CustomResourceSubresources feature gate is not enabled,
+		// we must use Update instead of UpdateStatus to update the Status block of the Bus resource.
+		// UpdateStatus will not allow changes to the Spec of the resource,
+		// which is ideal for ensuring nothing other than resource status has been updated.
+		_, err := c.busclientset.ChannelsV1alpha1().Buses(bus.Namespace).Update(busCopy)
+		return err
+	}
+	return nil
 }
 
 // enqueueBus takes a Bus resource and converts it into a namespace/name
@@ -681,14 +587,11 @@ func (c *Controller) handleObject(obj interface{}) {
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the Bus resource that 'owns' it.
 func newDispatcherService(bus *channelsv1alpha1.Bus) *corev1.Service {
-	labels := map[string]string{
-		"bus":  bus.Name,
-		"role": "dispatcher",
-	}
+	labels := dispatcherLabels(bus.Name, bus.Namespace)
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.BusDispatcherServiceName(bus.ObjectMeta.Name),
-			Namespace: bus.Namespace,
+			Name:      controller.BusDispatcherServiceName(bus.Name, bus.Namespace),
+			Namespace: system.Namespace,
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(bus, schema.GroupVersionKind{
@@ -715,10 +618,7 @@ func newDispatcherService(bus *channelsv1alpha1.Bus) *corev1.Service {
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the Bus resource that 'owns' it.
 func newDispatcherDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
-	labels := map[string]string{
-		"bus":  bus.Name,
-		"role": "dispatcher",
-	}
+	labels := dispatcherLabels(bus.Name, bus.Namespace)
 	one := int32(1)
 	container := bus.Spec.Dispatcher.DeepCopy()
 	container.Env = append(container.Env,
@@ -741,8 +641,8 @@ func newDispatcherDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 	}
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.BusDispatcherDeploymentName(bus.ObjectMeta.Name),
-			Namespace: bus.Namespace,
+			Name:      controller.BusDispatcherDeploymentName(bus.Name, bus.Namespace),
+			Namespace: system.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(bus, schema.GroupVersionKind{
 					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
@@ -764,7 +664,7 @@ func newDispatcherDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: controller.BusServiceAccountName(bus.Name),
+					ServiceAccountName: serviceAccountName,
 					Containers: []corev1.Container{
 						*container,
 					},
@@ -775,64 +675,11 @@ func newDispatcherDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 	}
 }
 
-// newServiceAccount creates a new ServiceAccount for a Bus resource. It also sets
-// the appropriate OwnerReferences on the resource so handleObject can discover
-// the Bus resource that 'owns' it.
-func newServiceAccount(bus *channelsv1alpha1.Bus) *corev1.ServiceAccount {
-	return &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.BusServiceAccountName(bus.ObjectMeta.Name),
-			Namespace: bus.Namespace,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(bus, schema.GroupVersionKind{
-					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
-					Version: channelsv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Bus",
-				}),
-			},
-		},
-	}
-}
-
-// newClusterRoleBinding creates a new ClusterRoleBinding for a Bus resource. It also sets
-// the appropriate OwnerReferences on the resource so handleObject can discover
-// the Bus resource that 'owns' it.
-func newClusterRoleBinding(bus *channelsv1alpha1.Bus) *rbacv1beta1.ClusterRoleBinding {
-	return &rbacv1beta1.ClusterRoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.BusClusterRoleBindingName(bus.ObjectMeta.Name),
-			Namespace: bus.Namespace,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(bus, schema.GroupVersionKind{
-					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
-					Version: channelsv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Bus",
-				}),
-			},
-		},
-		Subjects: []rbacv1beta1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      controller.BusServiceAccountName(bus.ObjectMeta.Name),
-				Namespace: bus.Namespace,
-			},
-		},
-		RoleRef: rbacv1beta1.RoleRef{
-			Kind:     "ClusterRole",
-			Name:     "knative-channels-bus",
-			APIGroup: "rbac.authorization.k8s.io",
-		},
-	}
-}
-
 // newProvisionerDeployment creates a new Deployment for a Bus resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the Bus resource that 'owns' it.
 func newProvisionerDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
-	labels := map[string]string{
-		"bus":  bus.Name,
-		"role": "provisioner",
-	}
+	labels := provisionerLabels(bus.Name, bus.Namespace)
 	one := int32(1)
 	container := bus.Spec.Provisioner.DeepCopy()
 	container.Env = append(container.Env,
@@ -851,8 +698,8 @@ func newProvisionerDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 	}
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.BusProvisionerDeploymentName(bus.ObjectMeta.Name),
-			Namespace: bus.Namespace,
+			Name:      controller.BusProvisionerDeploymentName(bus.Name, bus.Namespace),
+			Namespace: system.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(bus, schema.GroupVersionKind{
 					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
@@ -874,7 +721,7 @@ func newProvisionerDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: controller.BusServiceAccountName(bus.Name),
+					ServiceAccountName: serviceAccountName,
 					Containers: []corev1.Container{
 						*container,
 					},
@@ -882,5 +729,21 @@ func newProvisionerDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 				},
 			},
 		},
+	}
+}
+
+func dispatcherLabels(busName, namespace string) map[string]string {
+	return map[string]string{
+		"bus":       busName,
+		"namespace": namespace,
+		"role":      "dispatcher",
+	}
+}
+
+func provisionerLabels(busName, namespace string) map[string]string {
+	return map[string]string{
+		"bus":       busName,
+		"namespace": namespace,
+		"role":      "provisioner",
 	}
 }

@@ -20,9 +20,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"encoding/json"
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/webhook"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -30,7 +32,8 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Flow connects an event source with an action that processes events produced
-// by the event source.
+// by the event source. The flow controller handles creating the lower-level
+// eventing primitives (Feeds, Channels, Subscriptions) used to implement flows.
 type Flow struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -39,13 +42,21 @@ type Flow struct {
 	Status FlowStatus `json:"status"`
 }
 
-// Check that Flow can be validated, can be defaulted, and has immutable fields.
+// Check that Flow can be validated and can be defaulted.
 var _ apis.Validatable = (*Flow)(nil)
 var _ apis.Defaultable = (*Flow)(nil)
-var _ apis.Immutable = (*Flow)(nil)
+var _ runtime.Object = (*Flow)(nil)
+var _ webhook.GenericCRD = (*Flow)(nil)
 
 // FlowSpec is the spec for a Flow resource.
 type FlowSpec struct {
+	// TODO: Generation does not work correctly with CRD. They are scrubbed
+	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
+	// So, we add Generation here. Once that gets fixed, remove this and use
+	// ObjectMeta.Generation instead.
+	// +optional
+	Generation int64 `json:"generation,omitempty"`
+
 	// Action specifies the target handler for the events
 	Action FlowAction `json:"action"`
 
@@ -104,7 +115,7 @@ type EventTrigger struct {
 	//  1. namespace: The domain name of the organization in reverse-domain
 	//     notation (e.g. `acme.net` appears as `net.acme`) and any orginization
 	//     specific subdivisions. If the organization's top-level domain is `com`,
-	//     the top-level domain is ommited (e.g. `google.com` appears as
+	//     the top-level domain is omitted (e.g. `google.com` appears as
 	//     `google`). For example, `google.storage` and
 	//     `google.firebase.analytics`.
 	//  2. resource type: The type of resource on which event occurs. For
@@ -220,16 +231,6 @@ type FlowCondition struct {
 	Reason string `json:"reason,omitempty" description:"one-word CamelCase reason for the condition's last transition"`
 	// +optional
 	Message string `json:"message,omitempty" description:"human-readable message indicating details about last transition"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// FlowList is a list of Flow resources
-type FlowList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []Flow `json:"items"`
 }
 
 func (fs *FlowStatus) IsReady() bool {
@@ -392,4 +393,18 @@ func (fs *FlowStatus) markReady() {
 		Type:   FlowConditionReady,
 		Status: corev1.ConditionTrue,
 	})
+}
+
+func (f *Flow) GetSpecJSON() ([]byte, error) {
+	return json.Marshal(f.Spec)
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// FlowList is a list of Flow resources
+type FlowList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []Flow `json:"items"`
 }

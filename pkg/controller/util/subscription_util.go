@@ -18,8 +18,8 @@
 package util
 
 import (
-	"k8s.io/api/core/v1"
 	"github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	"k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

@@ -3,14 +3,14 @@
 Deployment steps:
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md)
 1. [Create a service account](https://console.cloud.google.com/iam-admin/serviceaccounts/project) with the 'Pub/Sub Editor' role, and download a new JSON private key.
-1. Configure the bus. Change `$NAMESPACE` to the namespace for the bus, or `knative-eventing` for cluster buses:
+1. Configure the bus:
      1. Create a secret for the downloaded key:
          ```
-         kubectl create secret generic gcppubsub-bus-key --namespace $NAMESPACE --from-file=key.json=PATH-TO-KEY-FILE.json
+         kubectl create secret generic gcppubsub-bus-key --namespace knative-eventing --from-file=key.json=PATH-TO-KEY-FILE.json
          ```
     1. Create a configmap, replacing `$PROJECT_ID` with your GCP Project ID: 
         ```
-        kubectl create configmap gcppubsub-bus-config --namespace $NAMESPACE --from-literal=GOOGLE_CLOUD_PROJECT=$PROJECT_ID
+        kubectl create configmap gcppubsub-bus-config --namespace knative-eventing --from-literal=GOOGLE_CLOUD_PROJECT=$PROJECT_ID
         ```
 1. For cluster wide deployment, change the kind in `config/buses/gcppubsub/gcppubsub-bus.yaml` from `Bus` to `ClusterBus`.
 1. Apply the 'gcppubsub' bus:
@@ -28,12 +28,20 @@ The dispatcher receives events via a Channel's Service from inside the cluster a
 
 Note: Cloud Pub/Sub does not guarantee exactly once delivery, subscribers must guard against multiple deliveries of the same event.
 
-To view logs (for cluster wide deployment replace `bus` with `clusterbus`):
-- for the dispatcher
+To view logs:
+- for the clusterbus
     ```
-    kail -d gcppubsub-bus-dispatcher -c dispatcher
+    # dispatcher
+    kail -d gcppubsub-clusterbus-dispatcher -c dispatcher
+
+    # provisioner
+    kail -d gcppubsub-clusterbus-provisioner -c provisioner
     ```
-- for the provisioner
+- for a namespaced bus, replace $NAMESPACE with the namespace for your bus
     ```
-    kail -d gcppubsub-bus-provisioner -c provisioner
+    # dispatcher
+    kail -d gcppubsub-$NAMESPACE-bus-dispatcher -c dispatcher
+
+    # provisioner
+    kail -d gcppubsub-$NAMESPACE-bus-provisioner -c provisioner
     ```

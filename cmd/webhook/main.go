@@ -19,23 +19,28 @@ import (
 	"flag"
 	"log"
 
-	"github.com/knative/eventing/pkg/logconfig"
-	"github.com/knative/eventing/pkg/signals"
-	"github.com/knative/eventing/pkg/system"
-	"github.com/knative/eventing/pkg/webhook"
+	"go.uber.org/zap"
 
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/logging/logkey"
+	"github.com/knative/pkg/signals"
+	"github.com/knative/pkg/webhook"
 
-	"go.uber.org/zap"
+	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
+	flowsv1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
+	"github.com/knative/eventing/pkg/logconfig"
+	"github.com/knative/eventing/pkg/system"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
 func main() {
 	flag.Parse()
-
 	// Read the logging config and setup a logger.
 	cm, err := configmap.Load("/etc/config-logging")
 	if err != nil {
@@ -56,32 +61,54 @@ func main() {
 
 	clusterConfig, err := rest.InClusterConfig()
 	if err != nil {
-		logger.Fatal("Failed to get in cluster config", err)
+		logger.Fatal("Failed to get in cluster config", zap.Error(err))
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(clusterConfig)
 	if err != nil {
-		logger.Fatal("Failed to get the client set", err)
+		logger.Fatal("Failed to get the client set", zap.Error(err))
 	}
 
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewDefaultWatcher(kubeClient, system.Namespace)
+
 	configMapWatcher.Watch(logconfig.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Webhook, logconfig.Webhook))
 	if err = configMapWatcher.Start(stopCh); err != nil {
 		logger.Fatalf("failed to start webhook configmap watcher: %v", err)
 	}
 
-	// TODO(n3wscott): Send the logger to the controller.
 	options := webhook.ControllerOptions{
-		ServiceName:      "eventing-webhook",
-		ServiceNamespace: system.Namespace,
-		Port:             443,
-		SecretName:       "eventing-webhook-certs",
-		WebhookName:      "webhook.eventing.knative.dev",
+		ServiceName:    "webhook",
+		DeploymentName: "webhook",
+		Namespace:      system.Namespace,
+		Port:           443,
+		SecretName:     "webhook-certs",
+		WebhookName:    "webhook.eventing.knative.dev",
 	}
-	controller, err := webhook.NewAdmissionController(kubeClient, options)
+	controller := webhook.AdmissionController{
+		Client:  kubeClient,
+		Options: options,
+		Handlers: map[schema.GroupVersionKind]runtime.Object{
+			// For group channels.knative.dev,
+			channelsv1alpha1.SchemeGroupVersion.WithKind("Bus"):          &channelsv1alpha1.Bus{},
+			channelsv1alpha1.SchemeGroupVersion.WithKind("ClusterBus"):   &channelsv1alpha1.ClusterBus{},
+			channelsv1alpha1.SchemeGroupVersion.WithKind("Channel"):      &channelsv1alpha1.Channel{},
+			channelsv1alpha1.SchemeGroupVersion.WithKind("Subscription"): &channelsv1alpha1.Subscription{},
+
+			// For group feeds.knative.dev,
+			feedsv1alpha1.SchemeGroupVersion.WithKind("EventSource"):        &feedsv1alpha1.EventSource{},
+			feedsv1alpha1.SchemeGroupVersion.WithKind("ClusterEventSource"): &feedsv1alpha1.ClusterEventSource{},
+			feedsv1alpha1.SchemeGroupVersion.WithKind("EventType"):          &feedsv1alpha1.EventType{},
+			feedsv1alpha1.SchemeGroupVersion.WithKind("ClusterEventType"):   &feedsv1alpha1.ClusterEventType{},
+			feedsv1alpha1.SchemeGroupVersion.WithKind("Feed"):               &feedsv1alpha1.Feed{},
+
+			// For group flows.knative.dev,
+			flowsv1alpha1.SchemeGroupVersion.WithKind("Flow"): &flowsv1alpha1.Flow{},
+		},
+		Logger: logger,
+	}
 	if err != nil {
-		logger.Fatal("Failed to create the admission controller", err)
+		logger.Fatal("Failed to create the admission controller", zap.Error(err))
 	}
 	controller.Run(stopCh)
 }

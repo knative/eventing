@@ -15,7 +15,7 @@
 apiVersion: feeds.knative.dev/v1alpha1
 kind: EventType
 metadata:
-  name: pullrequest
+  name: dev.knative.github.pullrequest
   namespace: default
 spec:
   eventSource: github

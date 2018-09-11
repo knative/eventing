@@ -23,6 +23,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 
+	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/webhook"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -30,7 +32,8 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Feed connects an event trigger with an action that processes events produced
-// by the trigger.
+// by the trigger. Feeds are building blocks used to implement Flows and are not
+// expected to be used directly.
 type Feed struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -39,8 +42,20 @@ type Feed struct {
 	Status FeedStatus `json:"status"`
 }
 
+var _ apis.Validatable = (*Feed)(nil)
+var _ apis.Defaultable = (*Feed)(nil)
+var _ runtime.Object = (*Feed)(nil)
+var _ webhook.GenericCRD = (*Feed)(nil)
+
 // FeedSpec is the spec for a Feed resource.
 type FeedSpec struct {
+	// TODO: Generation does not work correctly with CRD. They are scrubbed
+	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
+	// So, we add Generation here. Once that gets fixed, remove this and use
+	// ObjectMeta.Generation instead.
+	// +optional
+	Generation int64 `json:"generation,omitempty"`
+
 	// Action specifies the target handler for the events
 	Action FeedAction `json:"action"`
 
@@ -70,7 +85,7 @@ type EventTrigger struct {
 	//  1. namespace: The domain name of the organization in reverse-domain
 	//     notation (e.g. `acme.net` appears as `net.acme`) and any orginization
 	//     specific subdivisions. If the organization's top-level domain is `com`,
-	//     the top-level domain is ommited (e.g. `google.com` appears as
+	//     the top-level domain is omitted (e.g. `google.com` appears as
 	//     `google`). For example, `google.storage` and
 	//     `google.firebase.analytics`.
 	//  2. resource type: The type of resource on which event occurs. For
@@ -195,16 +210,6 @@ type FeedCondition struct {
 	Message string `json:"message,omitempty" description:"human-readable message indicating details about last transition"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// FeedList is a list of Feed resources
-type FeedList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []Feed `json:"items"`
-}
-
 func (fs *FeedStatus) GetCondition(t FeedConditionType) *FeedCondition {
 	for _, cond := range fs.Conditions {
 		if cond.Type == t {
@@ -302,4 +307,14 @@ func (f *Feed) SetOwnerReference(or *metav1.OwnerReference) {
 
 func (f *Feed) GetSpecJSON() ([]byte, error) {
 	return json.Marshal(f.Spec)
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// FeedList is a list of Feed resources
+type FeedList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []Feed `json:"items"`
 }

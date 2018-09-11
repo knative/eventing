@@ -24,6 +24,7 @@ import (
 	"github.com/knative/eventing/pkg/controller"
 	istiolisters "github.com/knative/pkg/client/listers/istio/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -120,7 +121,8 @@ func NewController(
 	restConfig *rest.Config,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	channelInformerFactory informers.SharedInformerFactory,
-	sharedInformerFactory sharedinformers.SharedInformerFactory) controller.Interface {
+	sharedInformerFactory sharedinformers.SharedInformerFactory,
+) controller.Interface {
 
 	// obtain references to shared index informers for the Service and Channel types.
 	virtualserviceInformer := sharedInformerFactory.Networking().V1alpha3().VirtualServices()
@@ -257,7 +259,7 @@ func (c *Controller) processNextWorkItem() bool {
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Channel resource to be synced.
 		if err := c.syncHandler(key); err != nil {
-			return fmt.Errorf("error syncing channel '%s': %s", key, err.Error())
+			return fmt.Errorf("error syncing channel '%s': %v", key, err)
 		}
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
@@ -304,16 +306,16 @@ func (c *Controller) syncHandler(key string) error {
 
 	// Sync Service derived from the Channel
 	service, serviceErr = c.syncChannelService(channel)
-	if err != nil {
+	if serviceErr != nil {
 		c.updateChannelStatus(channel, service, serviceErr, virtualService, virtualServiceErr)
-		return err
+		return serviceErr
 	}
 
 	// Sync VirtualService derived from a Channel
 	virtualService, virtualServiceErr = c.syncChannelVirtualService(channel)
 	if virtualServiceErr != nil {
 		c.updateChannelStatus(channel, service, serviceErr, virtualService, virtualServiceErr)
-		return err
+		return virtualServiceErr
 	}
 
 	// Finally, we update the status block of the Channel resource to reflect the
@@ -416,12 +418,16 @@ func (c *Controller) updateChannelStatus(channel *channelsv1alpha1.Channel,
 
 	channelCopy.Status.DomainInternal = controller.ServiceHostName(service.Name, service.Namespace)
 
-	// If the CustomResourceSubresources feature gate is not enabled,
-	// we must use Update instead of UpdateStatus to update the Status block of the Channel resource.
-	// UpdateStatus will not allow changes to the Spec of the resource,
-	// which is ideal for ensuring nothing other than resource status has been updated.
-	_, err := c.channelclientset.ChannelsV1alpha1().Channels(channel.Namespace).Update(channelCopy)
-	return err
+	// Only update if status has changed
+	if !equality.Semantic.DeepEqual(channel.Status, channelCopy.Status) {
+		// If the CustomResourceSubresources feature gate is not enabled,
+		// we must use Update instead of UpdateStatus to update the Status block of the Channel resource.
+		// UpdateStatus will not allow changes to the Spec of the resource,
+		// which is ideal for ensuring nothing other than resource status has been updated.
+		_, err := c.channelclientset.ChannelsV1alpha1().Channels(channel.Namespace).Update(channelCopy)
+		return err
+	}
+	return nil
 }
 
 // enqueueChannel takes a Channel resource and converts it into a namespace/name
@@ -513,11 +519,11 @@ func newVirtualService(channel *channelsv1alpha1.Channel) *istiov1alpha3.Virtual
 		"channel": channel.Name,
 	}
 	var destinationHost string
-	if len(channel.Spec.Bus) != 0 {
+	if channel.Spec.Bus != "" {
 		labels["bus"] = channel.Spec.Bus
-		destinationHost = controller.ServiceHostName(controller.BusDispatcherServiceName(channel.Spec.Bus), channel.Namespace)
+		destinationHost = controller.ServiceHostName(controller.BusDispatcherServiceName(channel.Spec.Bus, channel.Namespace), system.Namespace)
 	}
-	if len(channel.Spec.ClusterBus) != 0 {
+	if channel.Spec.ClusterBus != "" {
 		labels["clusterBus"] = channel.Spec.ClusterBus
 		destinationHost = controller.ServiceHostName(controller.ClusterBusDispatcherServiceName(channel.Spec.ClusterBus), system.Namespace)
 	}

@@ -18,69 +18,52 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 
-	"github.com/golang/glog"
-	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	"github.com/knative/eventing/pkg/buses"
 	"github.com/knative/eventing/pkg/buses/gcppubsub"
-	"github.com/knative/eventing/pkg/signals"
+	"github.com/knative/pkg/signals"
+	"go.uber.org/zap"
 )
 
 const (
-	threadsPerMonitor = 1
-)
-
-var (
-	masterURL  string
-	kubeconfig string
+	threadsPerReconciler = 1
 )
 
 func main() {
-	defer glog.Flush()
+	busRef := buses.NewBusReferenceFromNames(
+		os.Getenv("BUS_NAME"),
+		os.Getenv("BUS_NAMESPACE"),
+	)
 
+	config := buses.NewLoggingConfig()
+	logger := buses.NewBusLoggerFromConfig(config)
+	defer logger.Sync()
+	logger = logger.With(
+		zap.String("channels.knative.dev/bus", busRef.String()),
+		zap.String("channels.knative.dev/busType", gcppubsub.BusType),
+		zap.String("channels.knative.dev/busComponent", buses.Dispatcher),
+	)
+
+	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	if projectID == "" {
+		logger.Fatalf("GOOGLE_CLOUD_PROJECT environment variable must be set")
+	}
+
+	opts := &buses.BusOpts{
+		Logger: logger,
+	}
+
+	flag.StringVar(&opts.KubeConfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	flag.StringVar(&opts.MasterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	flag.Parse()
+
+	bus, err := gcppubsub.NewCloudPubSubBusDispatcher(busRef, projectID, opts)
+	if err != nil {
+		logger.Fatalf("Error starting pub/sub bus dispatcher: %v", err)
+	}
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
-
-	namespace := os.Getenv("BUS_NAMESPACE")
-	name := os.Getenv("BUS_NAME")
-	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
-	if projectID == "" {
-		glog.Fatalf("GOOGLE_CLOUD_PROJECT environment variable must be set.\n")
-	}
-
-	component := fmt.Sprintf("%s-%s", name, buses.Dispatcher)
-
-	var bus *gcppubsub.PubSubBus
-	monitor := buses.NewMonitor(component, masterURL, kubeconfig, buses.MonitorEventHandlerFuncs{
-		SubscribeFunc: func(subscription *channelsv1alpha1.Subscription, parameters buses.ResolvedParameters) error {
-			return bus.ReceiveEvents(subscription, parameters)
-		},
-		UnsubscribeFunc: func(subscription *channelsv1alpha1.Subscription) error {
-			return bus.StopReceiveEvents(subscription)
-		},
-	})
-	messageReceiver := buses.NewMessageReceiver(func(channel *buses.ChannelReference, message *buses.Message) error {
-		return bus.ReceiveMessage(channel, message)
-	})
-	messageDispatcher := buses.NewMessageDispatcher()
-	bus, err := gcppubsub.NewPubSubBus(name, projectID, monitor, messageReceiver, messageDispatcher)
-	if err != nil {
-		glog.Fatalf("Failed to create pubsub bus: %v", err)
-	}
-
-	go func() {
-		if err := monitor.Run(namespace, name, threadsPerMonitor, stopCh); err != nil {
-			glog.Fatalf("Error running monitor: %s", err.Error())
-		}
-	}()
-	messageReceiver.Run(stopCh)
-}
-
-func init() {
-	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-	flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	bus.Run(threadsPerReconciler, stopCh)
 }

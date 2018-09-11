@@ -17,13 +17,16 @@ limitations under the License.
 package flow
 
 import (
+	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	flowsv1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
+	"github.com/knative/eventing/pkg/system"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -34,19 +37,14 @@ import (
 )
 
 var (
-	trueVal  = true
-	falseVal = false
-	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
-	// truncates to seconds to match the loss of precision during serialization.
-	deletionTime = metav1.Now().Rfc3339Copy()
-	targetURI    = "http://target.example.com"
+	trueVal   = true
+	targetURI = "http://target.example.com"
 )
 
 const (
-	targetDNS   = "myservice.mynamespace.svc.cluster.local"
-	eventType   = "myeventtype"
-	eventSource = "myeventsource"
-	flowName    = "test-flow"
+	targetDNS = "myservice.mynamespace.svc.cluster.local"
+	eventType = "myeventtype"
+	flowName  = "test-flow"
 )
 
 func init() {
@@ -56,9 +54,44 @@ func init() {
 	channelsv1alpha1.AddToScheme(scheme.Scheme)
 }
 
+var injectDomainInternalMocks = controllertesting.Mocks{
+	MockCreates: []controllertesting.MockCreate{
+		func(innerClient client.Client, ctx context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+			// If we are creating a Channel, then fill in the status, in particular the DomainInternal as
+			// it used to control whether the Feed is created.
+			if channel, ok := obj.(*channelsv1alpha1.Channel); ok {
+				err := innerClient.Create(ctx, obj)
+				channel.Status.DomainInternal = targetDNS
+				return controllertesting.Handled, err
+			}
+			return controllertesting.Unhandled, nil
+		},
+	},
+}
+
 var testCases = []controllertesting.TestCase{
 	{
 		Name: "new flow: adds status, action target resolved",
+		InitialState: []runtime.Object{
+			getNewFlow(),
+			getFlowControllerConfigMap(),
+		},
+		ReconcileKey: "test/test-flow",
+		WantResult:   reconcile.Result{},
+		WantPresent: []runtime.Object{
+			getActionTargetResolvedFlow(),
+			func() *channelsv1alpha1.Channel {
+				c := getNewChannel()
+				c.Spec.ClusterBus = "special-bus"
+				return c
+			}(),
+			getNewSubscription(),
+			getNewFeed(),
+		},
+		Mocks: injectDomainInternalMocks,
+	},
+	{
+		Name: "new flow: adds status, action target resolved, no flow controller config map, use default 'stub' bus",
 		InitialState: []runtime.Object{
 			getNewFlow(),
 		},
@@ -68,7 +101,9 @@ var testCases = []controllertesting.TestCase{
 			getActionTargetResolvedFlow(),
 			getNewChannel(),
 			getNewSubscription(),
+			getNewFeed(),
 		},
+		Mocks: injectDomainInternalMocks,
 	},
 }
 
@@ -76,11 +111,12 @@ func TestAllCases(t *testing.T) {
 	recorder := record.NewBroadcaster().NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
 	for _, tc := range testCases {
+		c := tc.GetClient()
 		r := &reconciler{
-			client:   tc.GetClient(),
+			client:   c,
 			recorder: recorder,
 		}
-		t.Run(tc.Name, tc.Runner(t, r, r.client))
+		t.Run(tc.Name, tc.Runner(t, r, c))
 	}
 }
 
@@ -127,7 +163,7 @@ func getNewChannel() *channelsv1alpha1.Channel {
 			ClusterBus: "stub",
 		},
 	}
-	channel.ObjectMeta.OwnerReferences = append(channel.ObjectMeta.OwnerReferences, getOwnerReference())
+	channel.ObjectMeta.OwnerReferences = append(channel.ObjectMeta.OwnerReferences, getOwnerReference(false))
 
 	// selflink is not filled in when we create the object, so clear it
 	channel.ObjectMeta.SelfLink = ""
@@ -143,7 +179,7 @@ func getNewSubscription() *channelsv1alpha1.Subscription {
 			Subscriber: targetURI,
 		},
 	}
-	subscription.ObjectMeta.OwnerReferences = append(subscription.ObjectMeta.OwnerReferences, getOwnerReference())
+	subscription.ObjectMeta.OwnerReferences = append(subscription.ObjectMeta.OwnerReferences, getOwnerReference(false))
 
 	// selflink is not filled in when we create the object, so clear it
 	subscription.ObjectMeta.SelfLink = ""
@@ -153,18 +189,27 @@ func getNewSubscription() *channelsv1alpha1.Subscription {
 func getNewFeed() *feedsv1alpha1.Feed {
 	return &feedsv1alpha1.Feed{
 		TypeMeta:   feedType(),
-		ObjectMeta: om("test", "test-flow"),
+		ObjectMeta: feedObjectMeta("test", "test-flow-"),
 		Spec: feedsv1alpha1.FeedSpec{
 			Action: feedsv1alpha1.FeedAction{
-				DNSName: targetURI,
+				DNSName: targetDNS,
 			},
 			Trigger: feedsv1alpha1.EventTrigger{
 				EventType:      eventType,
-				Resource:       "",
+				Resource:       "myresource",
 				Service:        "",
 				Parameters:     nil,
 				ParametersFrom: nil,
 			},
+		},
+	}
+}
+
+func getFlowControllerConfigMap() *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: om(system.Namespace, controllerConfigMapName),
+		Data: map[string]string{
+			defaultClusterBusConfigMapKey: "special-bus",
 		},
 	}
 }
@@ -204,19 +249,22 @@ func om(namespace, name string) metav1.ObjectMeta {
 		SelfLink:  fmt.Sprintf("/apis/eventing/v1alpha1/namespaces/%s/object/%s", namespace, name),
 	}
 }
-
-func omDeleting(namespace, name string) metav1.ObjectMeta {
-	om := om(namespace, name)
-	om.DeletionTimestamp = &deletionTime
-	return om
+func feedObjectMeta(namespace, generateName string) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Namespace:    namespace,
+		GenerateName: generateName,
+		OwnerReferences: []metav1.OwnerReference{
+			getOwnerReference(true),
+		},
+	}
 }
 
-func getOwnerReference() metav1.OwnerReference {
+func getOwnerReference(blockOwnerDeletion bool) metav1.OwnerReference {
 	return metav1.OwnerReference{
 		APIVersion:         flowsv1alpha1.SchemeGroupVersion.String(),
 		Kind:               "Flow",
 		Name:               flowName,
 		Controller:         &trueVal,
-		BlockOwnerDeletion: &falseVal,
+		BlockOwnerDeletion: &blockOwnerDeletion,
 	}
 }

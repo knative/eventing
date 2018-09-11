@@ -76,6 +76,10 @@ func (t *K8SEventsEventSource) StartFeed(trigger sources.EventTrigger, route str
 
 	// Just generate a random UUID as a subscriptionName
 	uuid, err := uuid.NewRandom()
+	if err != nil {
+		glog.Infof("Failed to create new random uuid: %v", err)
+		return nil, err
+	}
 	subscriptionName := fmt.Sprintf("sub-%s", uuid.String())
 
 	glog.Infof("Namespace: %q Route: %s", namespace, route)
@@ -154,12 +158,12 @@ func main() {
 
 	cfg, err := clientcmd.BuildConfigFromFlags("", "")
 	if err != nil {
-		glog.Fatalf("Error building kubeconfig: %v", err.Error())
+		glog.Fatalf("Error building kubeconfig: %v", err)
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building kubernetes clientset: %v", err.Error())
+		glog.Fatalf("Error building kubernetes clientset: %v", err)
 	}
 
 	sources.RunEventSource(NewK8SEventsEventSource(kubeClient, feedNamespace, feedServiceAccountName, p.Image))

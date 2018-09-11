@@ -27,7 +27,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/knative/eventing/pkg/event"
-	"github.com/knative/eventing/pkg/signals"
+	"github.com/knative/pkg/signals"
 	corev1 "k8s.io/api/core/v1"
 	coreinformers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -74,12 +74,12 @@ func main() {
 
 	cfg, err := clientcmd.BuildConfigFromFlags("", "")
 	if err != nil {
-		log.Fatalf("Error building kubeconfig: %v", err.Error())
+		log.Fatalf("Error building kubeconfig: %v", err)
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		log.Fatalf("Error building kubernetes clientset: %v", err.Error())
+		log.Fatalf("Error building kubernetes clientset: %v", err)
 	}
 
 	log.Printf("Creating a new Event Watcher...")
