@@ -73,16 +73,16 @@ type SubscriptionSpec struct {
 	//   - Name
 	From *corev1.ObjectReference `json:"from,omitempty"`
 
-	// Processor is the processor service DNS name. Events
-	// from the From channel will be delivered here and replies are sent
-	// to To channel.
+	// Processor is reference to (optional) function for processing events.
+	// Events from the From channel will be delivered here and replies
+	// are sent to To channel.
 	// Reference to an object that will be used to deliver events for
 	// (optional) processing before sending them to To for further
 	// if specified for additional Subscriptions to then subscribe
 	// to these events for further processing.
 	//
 	// For example, this could be a reference to a Route resource
-	// or a Configuration resource.
+	// or a Service resource.
 	// TODO: Specify the required fields the target object must
 	// have in the status.
 	// You can specify only the following fields of the ObjectReference:
