@@ -378,7 +378,7 @@ func (r *Reconciler) processNextWorkItem() bool {
 		var key string
 		var ok bool
 		// We expect strings to come off the workqueue. These are of the
-		// form namespace/name. We do this as the delayed nature of the
+		// form kind/namespace/name. We do this as the delayed nature of the
 		// workqueue means the items in the informer cache may actually be
 		// more up to date that when the item was initially put onto the
 		// workqueue.
@@ -390,7 +390,8 @@ func (r *Reconciler) processNextWorkItem() bool {
 			runtime.HandleError(fmt.Errorf("expected string in workqueue but got %#v", obj))
 			return nil
 		}
-		// Run the syncHandler, passing it the name string of the resource to be synced.
+		// Run the syncHandler, passing it the kind/namespace/name key of the
+		// resource to be synced.
 		if err := r.syncHandler(key); err != nil {
 			r.workqueue.AddRateLimited(obj)
 			return fmt.Errorf("error syncing reconciler '%s': %v", key, err)
@@ -414,7 +415,7 @@ func (r *Reconciler) processNextWorkItem() bool {
 // converge the two. It then updates the Status block of the resource with the
 // current status.
 func (r *Reconciler) syncHandler(key string) error {
-	// Convert the namespace/name string into a distinct namespace and name
+	// Convert the kind/namespace/name string into a distinct kind, namespace and name
 	kind, namespace, name, err := splitWorkqueueKey(key)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
