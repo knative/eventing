@@ -67,6 +67,8 @@ type SubscriptionSpec struct {
 	// for receiving events. The object must have spec.subscriptions
 	// list which will then be modified accordingly.
 	//
+	// This object must fulfill the Subscribable contract.
+	//
 	// You can specify only the following fields of the ObjectReference:
 	//   - Kind
 	//   - APIVersion
@@ -76,6 +78,9 @@ type SubscriptionSpec struct {
 	// Processor is reference to (optional) function for processing events.
 	// Events from the From channel will be delivered here and replies
 	// are sent to To channel.
+	//
+	// This object must fulfill the Targetable contract.
+	//
 	// Reference to an object that will be used to deliver events for
 	// (optional) processing before sending them to To for further
 	// if specified for additional Subscriptions to then subscribe
@@ -95,7 +100,7 @@ type SubscriptionSpec struct {
 	// To is the (optional) resolved channel where (optionally) processed
 	// events get sent.
 	//
-	// This has to be a channel
+	// This object must fulfill the Channel contract.
 	//
 	// TODO: Specify the required fields the target object must
 	// have in the status.
