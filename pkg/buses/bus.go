@@ -89,7 +89,7 @@ func NewBusProvisioner(ref BusReference, handlerFuncs EventHandlerFuncs, opts *B
 	}
 	if opts.Reconciler == nil {
 		opts.Reconciler = NewReconciler(
-			Provisioner, opts.MasterURL, opts.KubeConfig, opts.Cache,
+			ref, Provisioner, opts.MasterURL, opts.KubeConfig, opts.Cache,
 			handlerFuncs, opts.Logger.Named(reconcilerLoggingComponent),
 		)
 	}
@@ -132,7 +132,7 @@ func NewBusDispatcher(ref BusReference, handlerFuncs EventHandlerFuncs, opts *Bu
 	}
 	if opts.Reconciler == nil {
 		opts.Reconciler = NewReconciler(
-			Dispatcher, opts.MasterURL, opts.KubeConfig, opts.Cache,
+			ref, Dispatcher, opts.MasterURL, opts.KubeConfig, opts.Cache,
 			handlerFuncs, opts.Logger.Named(reconcilerLoggingComponent),
 		)
 	}
@@ -162,7 +162,7 @@ func NewBusDispatcher(ref BusReference, handlerFuncs EventHandlerFuncs, opts *Bu
 
 // Run starts the bus's processing.
 func (b bus) Run(threadiness int, stopCh <-chan struct{}) {
-	go b.reconciler.Run(b.ref, threadiness, stopCh)
+	go b.reconciler.Run(threadiness, stopCh)
 	b.reconciler.WaitForCacheSync(stopCh)
 	if b.receiver != nil {
 		go b.receiver.Run(stopCh)

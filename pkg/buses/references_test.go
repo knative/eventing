@@ -86,6 +86,29 @@ func TestNewBusReferenceFromNames_ClusterBus(t *testing.T) {
 	}
 }
 
+func TestBusReference_IsNamespaced(t *testing.T) {
+	busRef := buses.BusReference{
+		Name:      referencesTestBusName,
+		Namespace: referencesTestNamespace,
+	}
+	expected := true
+	actual := busRef.IsNamespaced()
+	if expected != actual {
+		t.Errorf("%s expected: %+v got: %+v", "IsNamespaced", expected, actual)
+	}
+}
+
+func TestBusReference_IsNamespaced_ClusterBus(t *testing.T) {
+	busRef := buses.BusReference{
+		Name: referencesTestClusterBusName,
+	}
+	expected := false
+	actual := busRef.IsNamespaced()
+	if expected != actual {
+		t.Errorf("%s expected: %+v got: %+v", "IsNamespaced", expected, actual)
+	}
+}
+
 func TestBusReference_String(t *testing.T) {
 	ref := buses.BusReference{
 		Name:      referencesTestBusName,
