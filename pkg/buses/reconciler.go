@@ -544,7 +544,11 @@ func (r *Reconciler) createOrUpdateBus(bus channelsv1alpha1.GenericBus) error {
 		return nil
 	}
 
-	// stash the new bus on the reconciler while retaining the old bus
+	// stash the new bus on the reconciler while retaining the old bus. This
+	// operation is threadsafe because there is only a single Bus/ClusterBus
+	// that is valid for the Reconciler and the workqueue guarantees that it
+	// will not emit the same key concurrently. Any bus received is an updated
+	// revision of the current bus.
 	bus, r.bus = r.bus, bus
 	if !equality.Semantic.DeepEqual(r.bus.GetSpec(), bus.GetSpec()) {
 		err := r.handler.onBus(r.bus, r)
