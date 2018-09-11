@@ -2,7 +2,7 @@
 
 Deployment steps:
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md)
-1. [Create a service account](https://console.cloud.google.com/iam-admin/serviceaccounts/project) with the 'Pub/Sub Editor' role, and download a new JSON private key.
+1. [Create a service account](https://console.cloud.google.com/iam-admin/serviceaccounts/project) with the 'Pub/Sub Editor' role, and (https://cloud.google.com/iam/docs/creating-managing-service-account-keys)[download a new JSON private key].
 1. Configure the bus:
      1. Create a secret for the downloaded key:
          ```
