@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"fmt"
 	"github.com/knative/pkg/apis"
 	"k8s.io/apimachinery/pkg/api/equality"
 )
@@ -34,16 +33,6 @@ func (ps *ProvisionerSpec) Validate() *apis.FieldError {
 	}
 
 	// TODO: validate type
-
-	for i, p := range ps.Parameters {
-		if err := p.Validate(); err != nil {
-			return err.ViaField(fmt.Sprintf("parameters[%d]", i))
-		}
-	}
-
-	if err := isQualifiedName(ps.ServiceAccountName, false); err != nil {
-		return err.ViaField("serviceAccountName")
-	}
 
 	return nil
 }

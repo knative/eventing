@@ -23,7 +23,5 @@ func (p *Provisioner) SetDefaults() {
 
 // SetDefaults defaults the Provisioner spec.
 func (ps *ProvisionerSpec) SetDefaults() {
-	if ps.ServiceAccountName == "" {
-		ps.ServiceAccountName = "default"
-	}
+	// no defaults
 }

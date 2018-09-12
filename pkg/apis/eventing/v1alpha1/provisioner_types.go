@@ -56,15 +56,6 @@ type ProvisionerSpec struct {
 	// Type is the type of the resource to be provisioned.
 	// +required
 	Type runtime.TypeMeta `json:"type"`
-
-	// Parameters are used for validation of arguments.
-	// +optional
-	Parameters []ParameterSpec `json:"parameters,omitempty"`
-
-	// Service Account to use when creating the underlying objects.
-	// defaults to "default"
-	// +optional
-	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
 
 type ProvisionerConditionType string
