@@ -79,10 +79,6 @@ type ProvisionerConditionStatus struct {
 	// +optional
 	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
 
-	// Last time the condition transitioned from one status to another.
-	// +optional
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
-
 	// The reason for the condition's last transition.
 	// +optional
 	Reason string `json:"reason,omitempty"`
@@ -96,16 +92,6 @@ type ProvisionerConditionStatus struct {
 type ProvisionerStatus struct {
 	// Conditions holds the state of a provisioner at a point in time.
 	Conditions []ProvisionerConditionStatus `json:"conditions,omitempty"`
-
-	// Provisioned holds the status of creation or adoption of each EventType
-	// and errors therein. It is expected that a provisioner list all produced
-	// EventTypes, if applicable.
-	Provisioned []ProvisionedStatus `json:"provisioned,omitempty"`
-
-	// ProvisionerContext is what the Provisioner operation returns and holds
-	// enough information to perform cleanup once a Provisioner is deleted.
-	// NOTE: experimental field.
-	ProvisionerContext *runtime.RawExtension `json:"provisionerContext,omitempty"`
 
 	// ObservedGeneration is the 'Generation' of the Provisioner that
 	// was last reconciled by the controller.
