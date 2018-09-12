@@ -20,6 +20,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/knative/pkg/apis"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 )
 
 func (s *Subscription) Validate() *apis.FieldError {
@@ -27,14 +29,20 @@ func (s *Subscription) Validate() *apis.FieldError {
 }
 
 func (ss *SubscriptionSpec) Validate() *apis.FieldError {
-	if ss.From == "" {
+	if ss.From == nil || equality.Semantic.DeepEqual(ss.From, &corev1.ObjectReference{}) {
 		fe := apis.ErrMissingField("from")
 		fe.Details = "the Subscription must reference a from channel"
 		return fe
 	}
-	if ss.To == "" && ss.Processor == "" {
+	if ss.Processor == nil && ss.To == nil {
 		fe := apis.ErrMissingField("to", "processor")
-		fe.Details = "the Subscription must reference a to channel or a processor"
+		fe.Details = "the Subscription must reference at least one of (to channel or a processor)"
+		return fe
+	}
+
+	if equality.Semantic.DeepEqual(ss.Processor, &corev1.ObjectReference{}) && equality.Semantic.DeepEqual(ss.To, &corev1.ObjectReference{}) {
+		fe := apis.ErrMissingField("to", "processor")
+		fe.Details = "the Subscription must reference at least one of (to channel or a processor)"
 		return fe
 	}
 	return nil

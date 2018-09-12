@@ -20,7 +20,42 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/pkg/apis"
+	corev1 "k8s.io/api/core/v1"
 )
+
+const (
+	channelKind       = "Channel"
+	channelAPIVersion = "eventing.knative.dev/v1alpha1"
+	routeKind         = "Route"
+	routeAPIVersion   = "serving.knative.dev/v1alpha1"
+	FromChannelName   = "fromChannel"
+	ToChannelName     = "toChannel"
+	ProcessorName     = "processor"
+)
+
+func getValidFromRef() *corev1.ObjectReference {
+	return &corev1.ObjectReference{
+		Name:       FromChannelName,
+		Kind:       channelKind,
+		APIVersion: channelAPIVersion,
+	}
+}
+
+func getValidToRef() *corev1.ObjectReference {
+	return &corev1.ObjectReference{
+		Name:       ToChannelName,
+		Kind:       channelKind,
+		APIVersion: channelAPIVersion,
+	}
+}
+
+func getValidProcessor() *corev1.ObjectReference {
+	return &corev1.ObjectReference{
+		Name:       ProcessorName,
+		Kind:       routeKind,
+		APIVersion: routeAPIVersion,
+	}
+}
 
 func TestSubscriptionSpecValidation(t *testing.T) {
 	tests := []struct {
@@ -30,40 +65,40 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 	}{{
 		name: "valid",
 		c: &SubscriptionSpec{
-			From:      "fromChannel",
-			Processor: "processor",
+			From:      getValidFromRef(),
+			Processor: getValidProcessor(),
 		},
 		want: nil,
 	}, {
 		name: "valid with arguments",
 		c: &SubscriptionSpec{
-			From:      "fromChannel",
-			Processor: "processor",
+			From:      getValidFromRef(),
+			Processor: getValidProcessor(),
 			Arguments: &[]Argument{{Name: "foo", Value: "bar"}},
 		},
 		want: nil,
 	}, {
 		name: "missing processor and to",
 		c: &SubscriptionSpec{
-			From: "fromChannel",
+			From: getValidFromRef(),
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("to", "processor")
-			fe.Details = "the Subscription must reference a to channel or a processor"
+			fe.Details = "the Subscription must reference at least one of (to channel or a processor)"
 			return fe
 		}(),
 	}, {
 		name: "missing to",
 		c: &SubscriptionSpec{
-			From: "fromChannel",
-			To:   "toChannel",
+			From:      getValidFromRef(),
+			Processor: getValidProcessor(),
 		},
 		want: nil,
 	}, {
 		name: "missing processor",
 		c: &SubscriptionSpec{
-			From: "fromChannel",
-			To:   "toChannel",
+			From: getValidFromRef(),
+			To:   getValidToRef(),
 		},
 		want: nil,
 	}, {
@@ -87,6 +122,12 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 }
 
 func TestSubscriptionImmutable(t *testing.T) {
+	newFrom := getValidFromRef()
+	newFrom.Name = "newFromChannel"
+
+	newProcessor := getValidProcessor()
+	newProcessor.Name = "newProcessor"
+
 	tests := []struct {
 		name string
 		c    *Subscription
@@ -96,12 +137,12 @@ func TestSubscriptionImmutable(t *testing.T) {
 		name: "valid",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
-				From: "foo",
+				From: getValidFromRef(),
 			},
 		},
 		og: &Subscription{
 			Spec: SubscriptionSpec{
-				From: "foo",
+				From: getValidFromRef(),
 			},
 		},
 		want: nil,
@@ -109,14 +150,14 @@ func TestSubscriptionImmutable(t *testing.T) {
 		name: "valid, new processor",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
-				From:      "foo",
-				Processor: "newProcessor",
+				From:      getValidFromRef(),
+				Processor: getValidProcessor(),
 			},
 		},
 		og: &Subscription{
 			Spec: SubscriptionSpec{
-				From:      "foo",
-				Processor: "processor",
+				From:      getValidFromRef(),
+				Processor: newProcessor,
 			},
 		},
 		want: nil,
@@ -124,18 +165,18 @@ func TestSubscriptionImmutable(t *testing.T) {
 		name: "from changed",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
-				From: "fromChannel",
+				From: getValidFromRef(),
 			},
 		},
 		og: &Subscription{
 			Spec: SubscriptionSpec{
-				From: "newFromChannel",
+				From: newFrom,
 			},
 		},
 		want: &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",
 			Paths:   []string{"spec"},
-			Details: `{v1alpha1.SubscriptionSpec}.From:
+			Details: `{v1alpha1.SubscriptionSpec}.From.Name:
 	-: "newFromChannel"
 	+: "fromChannel"
 `,
