@@ -22,7 +22,6 @@ import (
 	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/webhook"
 	"k8s.io/api/core/v1"
-	corev1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -48,14 +47,8 @@ var _ apis.Immutable = (*Subscription)(nil)
 var _ runtime.Object = (*Subscription)(nil)
 var _ webhook.GenericCRD = (*ClusterBus)(nil)
 
-// SubscriptionSpec specifies the Channel for incoming events, a handler and the Channel
-// for outgoing messages.
-// from --[transform]--> to
-// Note that the following are valid configurations also:
-// Sink, no outgoing events:
-// from -- transform
-// no-op function (identity transformation):
-// from --> to
+// SubscriptionSpec specifies the Channel and Subscriber and the configuration
+// arguments for the Subscription.
 type SubscriptionSpec struct {
 	// TODO: Generation does not work correctly with CRD. They are scrubbed
 	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
@@ -64,53 +57,14 @@ type SubscriptionSpec struct {
 	// +optional
 	Generation int64 `json:"generation,omitempty"`
 
-	// Reference to an object that will be used to create the subscription
-	// for receiving events. The object must have spec.subscriptions
-	// list which will then be modified accordingly.
-	//
-	// This object must fulfill the Subscribable contract.
-	//
-	// You can specify only the following fields of the ObjectReference:
-	//   - Kind
-	//   - APIVersion
-	//   - Name
-	From *corev1.ObjectReference `json:"from,omitempty"`
+	// Channel is the name of the channel to subscribe to.
+	Channel string `json:"channel"`
 
-	// Call is reference to (optional) function for processing events.
-	// Events from the From channel will be delivered here and replies
-	// are sent to To channel.
-	//
-	// This object must fulfill the Targetable contract.
-	//
-	// Reference to an object that will be used to deliver events for
-	// (optional) processing before sending them to To for further
-	// if specified for additional Subscriptions to then subscribe
-	// to these events for further processing.
-	//
-	// For example, this could be a reference to a Route resource
-	// or a Service resource.
-	// TODO: Specify the required fields the target object must
-	// have in the status.
-	// You can specify only the following fields of the ObjectReference:
-	//   - Kind
-	//   - APIVersion
-	//   - Name
-	// +optional
-	Call *corev1.ObjectReference `json:"call,omitempty"`
+	// Subscriber is the name of the subscriber service DNS name.
+	Subscriber string `json:"subscriber"`
 
-	// To is the (optional) resolved channel where (optionally) processed
-	// events get sent.
-	//
-	// This object must fulfill the Sinkable contract.
-	//
-	// TODO: Specify the required fields the target object must
-	// have in the status.
-	// You can specify only the following fields of the ObjectReference:
-	//   - Kind
-	//   - APIVersion
-	//   - Name
-	// +optional
-	To *corev1.ObjectReference `json:"to,omitempty"`
+	// Target service DNS name for replies returned by the subscriber.
+	ReplyTo string `json:"replyTo,omitempty"`
 
 	// Arguments is a list of configuration arguments for the Subscription. The
 	// Arguments for a channel must contain values for each of the Parameters
