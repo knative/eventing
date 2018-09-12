@@ -78,9 +78,31 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		},
 		want: nil,
 	}, {
+		name: "empty from",
+		c: &SubscriptionSpec{
+			From: &corev1.ObjectReference{},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("from")
+			fe.Details = "the Subscription must reference a from channel"
+			return fe
+		}(),
+	}, {
 		name: "missing processor and to",
 		c: &SubscriptionSpec{
 			From: getValidFromRef(),
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("to", "processor")
+			fe.Details = "the Subscription must reference at least one of (to channel or a processor)"
+			return fe
+		}(),
+	}, {
+		name: "empty processor and to",
+		c: &SubscriptionSpec{
+			From:      getValidFromRef(),
+			Processor: &corev1.ObjectReference{},
+			To:        &corev1.ObjectReference{},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("to", "processor")
@@ -95,10 +117,26 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		},
 		want: nil,
 	}, {
+		name: "empty to",
+		c: &SubscriptionSpec{
+			From:      getValidFromRef(),
+			Processor: getValidProcessor(),
+			To:        &corev1.ObjectReference{},
+		},
+		want: nil,
+	}, {
 		name: "missing processor",
 		c: &SubscriptionSpec{
 			From: getValidFromRef(),
 			To:   getValidToRef(),
+		},
+		want: nil,
+	}, {
+		name: "empty processor",
+		c: &SubscriptionSpec{
+			From:      getValidFromRef(),
+			Processor: &corev1.ObjectReference{},
+			To:        getValidToRef(),
 		},
 		want: nil,
 	}, {
