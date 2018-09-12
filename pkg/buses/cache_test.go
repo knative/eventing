@@ -17,10 +17,12 @@ limitations under the License.
 package buses_test
 
 import (
+	"fmt"
 	"testing"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	"github.com/knative/eventing/pkg/buses"
+	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -128,6 +130,56 @@ func TestCacheNilSubscription(t *testing.T) {
 	var subscription *channelsv1alpha1.Subscription
 	cache.AddSubscription(subscription)
 	cache.RemoveSubscription(subscription)
+}
+
+func TestCacheAllChannels(t *testing.T) {
+	cases := []struct {
+		Channels []*channelsv1alpha1.Channel
+	}{
+		{Channels: []*channelsv1alpha1.Channel{}},
+		{Channels: []*channelsv1alpha1.Channel{
+			makeChannel(buses.NewChannelReferenceFromNames(cacheTestChannel, cacheDefaultNamespace)),
+		}},
+	}
+
+	for _, tt := range cases {
+		t.Run(fmt.Sprintf("%v", tt.Channels), func(t *testing.T) {
+			cache := buses.NewCache()
+
+			for _, channel := range tt.Channels {
+				cache.AddChannel(channel)
+			}
+
+			if !equality.Semantic.DeepEqual(tt.Channels, cache.AllChannels()) {
+				t.Errorf("%v != %v", tt.Channels, cache.AllChannels())
+			}
+		})
+	}
+}
+
+func TestCacheAllSubscriptions(t *testing.T) {
+	cases := []struct {
+		Subscriptions []*channelsv1alpha1.Subscription
+	}{
+		{Subscriptions: []*channelsv1alpha1.Subscription{}},
+		{Subscriptions: []*channelsv1alpha1.Subscription{
+			makeSubscription(buses.NewSubscriptionReferenceFromNames(cacheTestSubscription, cacheDefaultNamespace)),
+		}},
+	}
+
+	for _, tt := range cases {
+		t.Run(fmt.Sprintf("%v", tt.Subscriptions), func(t *testing.T) {
+			cache := buses.NewCache()
+
+			for _, sub := range tt.Subscriptions {
+				cache.AddSubscription(sub)
+			}
+
+			if !equality.Semantic.DeepEqual(tt.Subscriptions, cache.AllSubscriptions()) {
+				t.Errorf("%v != %v", tt.Subscriptions, cache.AllSubscriptions())
+			}
+		})
+	}
 }
 
 func makeChannel(ref buses.ChannelReference) *channelsv1alpha1.Channel {

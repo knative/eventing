@@ -96,3 +96,19 @@ func (c *Cache) RemoveSubscription(subscription *channelsv1alpha1.Subscription) 
 	ref := NewSubscriptionReference(subscription)
 	delete(c.subscriptions, ref)
 }
+
+func (c *Cache) AllChannels() []*channelsv1alpha1.Channel {
+	chans := []*channelsv1alpha1.Channel{}
+	for _, channel := range c.channels {
+		chans = append(chans, channel)
+	}
+	return chans
+}
+
+func (c *Cache) AllSubscriptions() []*channelsv1alpha1.Subscription {
+	subs := []*channelsv1alpha1.Subscription{}
+	for _, sub := range c.subscriptions {
+		subs = append(subs, sub)
+	}
+	return subs
+}

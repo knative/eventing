@@ -551,10 +551,29 @@ func (r *Reconciler) createOrUpdateBus(bus channelsv1alpha1.GenericBus) error {
 	// will not emit the same key concurrently. Any bus received is an updated
 	// revision of the current bus.
 	bus, r.bus = r.bus, bus
+
 	if !equality.Semantic.DeepEqual(r.bus.GetSpec(), bus.GetSpec()) {
 		err := r.handler.onBus(r.bus, r)
 		if err != nil {
 			return err
+		}
+
+		oldParams := bus.GetSpec().Parameters
+		newParams := r.bus.GetSpec().Parameters
+		// If channel parameters changed we need to reprovision
+		if !equality.Semantic.DeepEqual(oldParams.Channel, newParams.Channel) {
+			r.logger.Infof("Bus channel parameters changed. Reprovisioning channels.")
+			for _, channel := range r.cache.AllChannels() {
+				r.workqueue.AddRateLimited(makeWorkqueueKeyForChannel(channel))
+			}
+		}
+
+		// If subscription parameters changed we need to resubscribe
+		if !equality.Semantic.DeepEqual(oldParams.Subscription, newParams.Subscription) {
+			r.logger.Infof("Bus subscription parameters changed. Resubscribing.")
+			for _, subscription := range r.cache.AllSubscriptions() {
+				r.workqueue.AddRateLimited(makeWorkqueueKeyForSubscription(subscription))
+			}
 		}
 	}
 
