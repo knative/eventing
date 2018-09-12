@@ -17,12 +17,13 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"encoding/json"
 	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/webhook"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -66,7 +67,39 @@ type ProvisionerSpec struct {
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
 
-type ProvisionerConditionStatus ConditionStatus
+type ProvisionerConditionType string
+
+const (
+	// ProvisionerConditionReady specifies that the resource is ready.
+	ProvisionerConditionReady ProvisionerConditionType = "Ready"
+)
+
+// ProvisionerConditionStatus describes the state of this resource at a point in time.
+type ProvisionerConditionStatus struct {
+	// Type of condition.
+	// +required
+	Type ProvisionerConditionType `json:"type"`
+
+	// Status of the condition, one of True, False, Unknown.
+	// +required
+	Status corev1.ConditionStatus `json:"status"`
+
+	// The last time this condition was updated.
+	// +optional
+	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
+
+	// Last time the condition transitioned from one status to another.
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+
+	// The reason for the condition's last transition.
+	// +optional
+	Reason string `json:"reason,omitempty"`
+
+	// A human readable message indicating details about the transition.
+	// +optional
+	Message string `json:"message,omitempty"`
+}
 
 // ProvisionerStatus is the status for a Provisioner resource
 type ProvisionerStatus struct {
