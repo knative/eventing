@@ -34,15 +34,15 @@ func (ss *SubscriptionSpec) Validate() *apis.FieldError {
 		fe.Details = "the Subscription must reference a from channel"
 		return fe
 	}
-	if ss.Processor == nil && ss.To == nil {
-		fe := apis.ErrMissingField("to", "processor")
-		fe.Details = "the Subscription must reference at least one of (to channel or a processor)"
+	if ss.Call == nil && ss.To == nil {
+		fe := apis.ErrMissingField("to", "call")
+		fe.Details = "the Subscription must reference at least one of (to channel or a call)"
 		return fe
 	}
 
-	if equality.Semantic.DeepEqual(ss.Processor, &corev1.ObjectReference{}) && equality.Semantic.DeepEqual(ss.To, &corev1.ObjectReference{}) {
-		fe := apis.ErrMissingField("to", "processor")
-		fe.Details = "the Subscription must reference at least one of (to channel or a processor)"
+	if equality.Semantic.DeepEqual(ss.Call, &corev1.ObjectReference{}) && equality.Semantic.DeepEqual(ss.To, &corev1.ObjectReference{}) {
+		fe := apis.ErrMissingField("to", "call")
+		fe.Details = "the Subscription must reference at least one of (to channel or a call)"
 		return fe
 	}
 	return nil
@@ -57,7 +57,7 @@ func (current *Subscription) CheckImmutableFields(og apis.Immutable) *apis.Field
 		return nil
 	}
 
-	ignoreArguments := cmpopts.IgnoreFields(SubscriptionSpec{}, "Processor", "Arguments")
+	ignoreArguments := cmpopts.IgnoreFields(SubscriptionSpec{}, "Call", "To", "Arguments")
 	if diff := cmp.Diff(original.Spec, current.Spec, ignoreArguments); diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",

@@ -30,7 +30,7 @@ const (
 	routeAPIVersion   = "serving.knative.dev/v1alpha1"
 	FromChannelName   = "fromChannel"
 	ToChannelName     = "toChannel"
-	ProcessorName     = "processor"
+	CallName          = "call"
 )
 
 func getValidFromRef() *corev1.ObjectReference {
@@ -49,9 +49,9 @@ func getValidToRef() *corev1.ObjectReference {
 	}
 }
 
-func getValidProcessor() *corev1.ObjectReference {
+func getValidCall() *corev1.ObjectReference {
 	return &corev1.ObjectReference{
-		Name:       ProcessorName,
+		Name:       CallName,
 		Kind:       routeKind,
 		APIVersion: routeAPIVersion,
 	}
@@ -94,15 +94,15 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 	}{{
 		name: "valid",
 		c: &SubscriptionSpec{
-			From:      getValidFromRef(),
-			Processor: getValidProcessor(),
+			From: getValidFromRef(),
+			Call: getValidCall(),
 		},
 		want: nil,
 	}, {
 		name: "valid with arguments",
 		c: &SubscriptionSpec{
 			From:      getValidFromRef(),
-			Processor: getValidProcessor(),
+			Call:      getValidCall(),
 			Arguments: &[]Argument{{Name: "foo", Value: "bar"}},
 		},
 		want: nil,
@@ -117,55 +117,55 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			return fe
 		}(),
 	}, {
-		name: "missing processor and to",
+		name: "missing call and to",
 		c: &SubscriptionSpec{
 			From: getValidFromRef(),
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("to", "processor")
-			fe.Details = "the Subscription must reference at least one of (to channel or a processor)"
+			fe := apis.ErrMissingField("to", "call")
+			fe.Details = "the Subscription must reference at least one of (to channel or a call)"
 			return fe
 		}(),
 	}, {
-		name: "empty processor and to",
+		name: "empty call and to",
 		c: &SubscriptionSpec{
-			From:      getValidFromRef(),
-			Processor: &corev1.ObjectReference{},
-			To:        &corev1.ObjectReference{},
+			From: getValidFromRef(),
+			Call: &corev1.ObjectReference{},
+			To:   &corev1.ObjectReference{},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("to", "processor")
-			fe.Details = "the Subscription must reference at least one of (to channel or a processor)"
+			fe := apis.ErrMissingField("to", "call")
+			fe.Details = "the Subscription must reference at least one of (to channel or a call)"
 			return fe
 		}(),
 	}, {
 		name: "missing to",
 		c: &SubscriptionSpec{
-			From:      getValidFromRef(),
-			Processor: getValidProcessor(),
+			From: getValidFromRef(),
+			Call: getValidCall(),
 		},
 		want: nil,
 	}, {
 		name: "empty to",
 		c: &SubscriptionSpec{
-			From:      getValidFromRef(),
-			Processor: getValidProcessor(),
-			To:        &corev1.ObjectReference{},
+			From: getValidFromRef(),
+			Call: getValidCall(),
+			To:   &corev1.ObjectReference{},
 		},
 		want: nil,
 	}, {
-		name: "missing processor",
+		name: "missing call",
 		c: &SubscriptionSpec{
 			From: getValidFromRef(),
 			To:   getValidToRef(),
 		},
 		want: nil,
 	}, {
-		name: "empty processor",
+		name: "empty call",
 		c: &SubscriptionSpec{
-			From:      getValidFromRef(),
-			Processor: &corev1.ObjectReference{},
-			To:        getValidToRef(),
+			From: getValidFromRef(),
+			Call: &corev1.ObjectReference{},
+			To:   getValidToRef(),
 		},
 		want: nil,
 	}, {
@@ -192,8 +192,11 @@ func TestSubscriptionImmutable(t *testing.T) {
 	newFrom := getValidFromRef()
 	newFrom.Name = "newFromChannel"
 
-	newProcessor := getValidProcessor()
-	newProcessor.Name = "newProcessor"
+	newCall := getValidCall()
+	newCall.Name = "newCall"
+
+	newTo := getValidToRef()
+	newTo.Name = "newToChannel"
 
 	tests := []struct {
 		name string
@@ -217,24 +220,39 @@ func TestSubscriptionImmutable(t *testing.T) {
 		name: "new nil is ok",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
-				From:      getValidFromRef(),
-				Processor: getValidProcessor(),
+				From: getValidFromRef(),
+				Call: getValidCall(),
 			},
 		},
 		og:   nil,
 		want: nil,
 	}, {
-		name: "valid, new processor",
+		name: "valid, new call",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
-				From:      getValidFromRef(),
-				Processor: getValidProcessor(),
+				From: getValidFromRef(),
+				Call: getValidCall(),
 			},
 		},
 		og: &Subscription{
 			Spec: SubscriptionSpec{
-				From:      getValidFromRef(),
-				Processor: newProcessor,
+				From: getValidFromRef(),
+				Call: newCall,
+			},
+		},
+		want: nil,
+	}, {
+		name: "valid, new to",
+		c: &Subscription{
+			Spec: SubscriptionSpec{
+				From: getValidFromRef(),
+				To:   getValidToRef(),
+			},
+		},
+		og: &Subscription{
+			Spec: SubscriptionSpec{
+				From: getValidFromRef(),
+				Call: newTo,
 			},
 		},
 		want: nil,
@@ -274,8 +292,8 @@ func TestInvalidImmutableType(t *testing.T) {
 	name := "invalid type"
 	c := &Subscription{
 		Spec: SubscriptionSpec{
-			From:      getValidFromRef(),
-			Processor: getValidProcessor(),
+			From: getValidFromRef(),
+			Call: getValidCall(),
 		},
 	}
 	og := &DummyImmutableType{}

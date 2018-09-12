@@ -76,7 +76,7 @@ type SubscriptionSpec struct {
 	//   - Name
 	From *corev1.ObjectReference `json:"from,omitempty"`
 
-	// Processor is reference to (optional) function for processing events.
+	// Call is reference to (optional) function for processing events.
 	// Events from the From channel will be delivered here and replies
 	// are sent to To channel.
 	//
@@ -96,7 +96,7 @@ type SubscriptionSpec struct {
 	//   - APIVersion
 	//   - Name
 	// +optional
-	Processor *corev1.ObjectReference `json:"processor,omitempty"`
+	Call *corev1.ObjectReference `json:"call,omitempty"`
 
 	// To is the (optional) resolved channel where (optionally) processed
 	// events get sent.
