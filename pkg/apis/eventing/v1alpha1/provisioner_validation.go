@@ -32,7 +32,12 @@ func (ps *ProvisionerSpec) Validate() *apis.FieldError {
 		return apis.ErrMissingField("type")
 	}
 
-	// TODO: validate type
+	if ps.Type.Kind == "" {
+		return apis.ErrMissingField("kind").ViaField("type")
+	}
+	if ps.Type.APIVersion == "" {
+		return apis.ErrMissingField("apiVersion").ViaField("type")
+	}
 
 	return nil
 }
