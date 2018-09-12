@@ -63,6 +63,29 @@ func (d *DummyImmutableType) CheckImmutableFields(og apis.Immutable) *apis.Field
 	return nil
 }
 
+func TestSubscriptionValidation(t *testing.T) {
+	name := "empty from"
+	c := &Subscription{
+
+		Spec: SubscriptionSpec{
+			From: &corev1.ObjectReference{},
+		},
+	}
+	want := &apis.FieldError{
+		Paths:   []string{"spec.from"},
+		Message: "missing field(s)",
+		Details: "the Subscription must reference a from channel",
+	}
+
+	t.Run(name, func(t *testing.T) {
+		got := c.Validate()
+		if diff := cmp.Diff(want, got); diff != "" {
+			t.Errorf("CheckImmutableFields (-want, +got) = %v", diff)
+		}
+	})
+
+}
+
 func TestSubscriptionSpecValidation(t *testing.T) {
 	tests := []struct {
 		name string
