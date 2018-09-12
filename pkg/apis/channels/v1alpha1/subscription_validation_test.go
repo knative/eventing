@@ -57,6 +57,12 @@ func getValidProcessor() *corev1.ObjectReference {
 	}
 }
 
+type DummyImmutableType struct{}
+
+func (d *DummyImmutableType) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
+	return nil
+}
+
 func TestSubscriptionSpecValidation(t *testing.T) {
 	tests := []struct {
 		name string
@@ -185,6 +191,16 @@ func TestSubscriptionImmutable(t *testing.T) {
 		},
 		want: nil,
 	}, {
+		name: "new nil is ok",
+		c: &Subscription{
+			Spec: SubscriptionSpec{
+				From:      getValidFromRef(),
+				Processor: getValidProcessor(),
+			},
+		},
+		og:   nil,
+		want: nil,
+	}, {
 		name: "valid, new processor",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
@@ -229,4 +245,24 @@ func TestSubscriptionImmutable(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestInvalidImmutableType(t *testing.T) {
+	name := "invalid type"
+	c := &Subscription{
+		Spec: SubscriptionSpec{
+			From:      getValidFromRef(),
+			Processor: getValidProcessor(),
+		},
+	}
+	og := &DummyImmutableType{}
+	want := &apis.FieldError{
+		Message: "The provided original was not a Subscription",
+	}
+	t.Run(name, func(t *testing.T) {
+		got := c.CheckImmutableFields(og)
+		if diff := cmp.Diff(want, got); diff != "" {
+			t.Errorf("CheckImmutableFields (-want, +got) = %v", diff)
+		}
+	})
 }
