@@ -100,7 +100,7 @@ type SubscriptionSpec struct {
 	// To is the (optional) resolved channel where (optionally) processed
 	// events get sent.
 	//
-	// This object must fulfill the Channel contract.
+	// This object must fulfill the Sinkable contract.
 	//
 	// TODO: Specify the required fields the target object must
 	// have in the status.
