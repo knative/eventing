@@ -100,18 +100,6 @@ func (c *FakeClusterProvisioners) Update(clusterProvisioner *v1alpha1.ClusterPro
 	return obj.(*v1alpha1.ClusterProvisioner), err
 }
 
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeClusterProvisioners) UpdateStatus(clusterProvisioner *v1alpha1.ClusterProvisioner) (*v1alpha1.ClusterProvisioner, error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(clusterprovisionersResource, "status", c.ns, clusterProvisioner), &v1alpha1.ClusterProvisioner{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ClusterProvisioner), err
-}
-
 // Delete takes name of the clusterProvisioner and deletes it. Returns an error if one occurs.
 func (c *FakeClusterProvisioners) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.

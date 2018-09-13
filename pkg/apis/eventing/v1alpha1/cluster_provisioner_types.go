@@ -27,15 +27,22 @@ import (
 )
 
 // +genclient
+// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ClusterProvisioner provisions.
+// ClusterProvisioner encapsulates a provisioning strategy for the backing
+// resources required to realize a particular resource type.
 type ClusterProvisioner struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ClusterProvisionerSpec   `json:"spec"`
-	Status ClusterProvisionerStatus `json:"status"`
+	// Spec defines the Types provisioned by this Provisioner.
+	Spec ClusterProvisionerSpec `json:"spec"`
+
+	// Status is the current status of the Provisioner.
+	// +optional
+	Status ClusterProvisionerStatus `json:"status,omitempty"`
 }
 
 // Check that ClusterProvisioner can be validated and can be defaulted.
@@ -55,7 +62,7 @@ type ClusterProvisionerSpec struct {
 
 	// Type is the type of the resource to be provisioned.
 	// +required
-	Type runtime.TypeMeta `json:"type"`
+	Type metav1.TypeMeta `json:"type"`
 }
 
 type ClusterProvisionerConditionType string
