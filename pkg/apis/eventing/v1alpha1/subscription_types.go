@@ -23,7 +23,7 @@ import (
 	"github.com/knative/pkg/webhook"
 	"k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -35,10 +35,10 @@ import (
 // Subscription routes events received on a Channel to a DNS name and
 // corresponds to the subscriptions.channels.knative.dev CRD.
 type Subscription struct {
-	meta_v1.TypeMeta   `json:",inline"`
-	meta_v1.ObjectMeta `json:"metadata"`
-	Spec               SubscriptionSpec   `json:"spec"`
-	Status             SubscriptionStatus `json:"status,omitempty"`
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata"`
+	Spec              SubscriptionSpec   `json:"spec"`
+	Status            SubscriptionStatus `json:"status,omitempty"`
 }
 
 // Check that Subscription can be validated, can be defaulted, and has immutable fields.
@@ -198,7 +198,7 @@ func (s *Subscription) GetSpecJSON() ([]byte, error) {
 
 // SubscriptionList returned in list operations
 type SubscriptionList struct {
-	meta_v1.TypeMeta `json:",inline"`
-	meta_v1.ListMeta `json:"metadata"`
-	Items            []Subscription `json:"items"`
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []Subscription `json:"items"`
 }
