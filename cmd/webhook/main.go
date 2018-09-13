@@ -91,7 +91,7 @@ func main() {
 		Options: options,
 		Handlers: map[schema.GroupVersionKind]runtime.Object{
 			// For group eventing.knative.dev,
-			eventingv1alpha1.SchemeGroupVersion.WithKind("Provisioner"): &eventingv1alpha1.Provisioner{},
+			eventingv1alpha1.SchemeGroupVersion.WithKind("ClusterProvisioner"): &eventingv1alpha1.ClusterProvisioner{},
 
 			// For group channels.knative.dev,
 			channelsv1alpha1.SchemeGroupVersion.WithKind("Bus"):          &channelsv1alpha1.Bus{},
