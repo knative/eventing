@@ -61,9 +61,10 @@ type ClusterProvisionerSpec struct {
 	// +optional
 	Generation int64 `json:"generation,omitempty"`
 
-	// Kind is the kind of the resource to watch to produce backing resources.
+	// Realizes is the kind of the resource the controller watches to produce
+	// required  backing resources.
 	// +required
-	Kind metav1.GroupKind `json:"kind"`
+	Realizes metav1.GroupKind `json:"kind"`
 }
 
 type ClusterProvisionerConditionType string

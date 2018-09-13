@@ -19,7 +19,7 @@ package v1alpha1
 import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/pkg/apis"
-	"k8s.io/apimachinery/pkg/runtime"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 )
 
@@ -31,37 +31,37 @@ func TestValidate(t *testing.T) {
 	}{{
 		name: "valid",
 		ps: &ClusterProvisionerSpec{
-			Type: runtime.TypeMeta{
-				APIVersion: "v1beta1",
-				Kind:       "Channel",
+			Realizes: metav1.GroupKind{
+				Group: "knative.dev",
+				Kind:  "Channel",
 			},
 		},
 	}, {
-		name: "invalid cluster provisioner, empty type",
+		name: "invalid cluster provisioner, empty realizes",
 		ps: &ClusterProvisionerSpec{
-			Type: runtime.TypeMeta{},
+			Realizes: metav1.GroupKind{},
 		},
-		want: apis.ErrMissingField("type"),
+		want: apis.ErrMissingField("realizes"),
 	}, {
-		name: "invalid cluster provisioner, empty kind",
+		name: "invalid cluster provisioner, empty realizes",
 		ps: &ClusterProvisionerSpec{
-			Type: runtime.TypeMeta{
-				APIVersion: "v1beta1",
+			Realizes: metav1.GroupKind{
+				Group: "knative.dev",
 			},
 		},
-		want: apis.ErrMissingField("type.kind"),
+		want: apis.ErrMissingField("realizes.kind"),
 	}, {
 		name: "invalid cluster provisioner",
 		ps: &ClusterProvisionerSpec{
-			Type: runtime.TypeMeta{
+			Realizes: metav1.GroupKind{
 				Kind: "Channel",
 			},
 		},
-		want: apis.ErrMissingField("type.apiVersion"),
+		want: apis.ErrMissingField("realizes.group"),
 	}, {
 		name: "empty",
 		ps:   &ClusterProvisionerSpec{},
-		want: apis.ErrMissingField("type"),
+		want: apis.ErrMissingField("realizes"),
 	}}
 
 	for _, test := range tests {
