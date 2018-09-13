@@ -41,33 +41,32 @@ type ClusterProvisionerInformer interface {
 type clusterProvisionerInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewClusterProvisionerInformer constructs a new informer for ClusterProvisioner type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewClusterProvisionerInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredClusterProvisionerInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewClusterProvisionerInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredClusterProvisionerInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredClusterProvisionerInformer constructs a new informer for ClusterProvisioner type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredClusterProvisionerInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredClusterProvisionerInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1alpha1().ClusterProvisioners(namespace).List(options)
+				return client.EventingV1alpha1().ClusterProvisioners().List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1alpha1().ClusterProvisioners(namespace).Watch(options)
+				return client.EventingV1alpha1().ClusterProvisioners().Watch(options)
 			},
 		},
 		&eventing_v1alpha1.ClusterProvisioner{},
@@ -77,7 +76,7 @@ func NewFilteredClusterProvisionerInformer(client versioned.Interface, namespace
 }
 
 func (f *clusterProvisionerInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredClusterProvisionerInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+	return NewFilteredClusterProvisionerInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
 func (f *clusterProvisionerInformer) Informer() cache.SharedIndexInformer {

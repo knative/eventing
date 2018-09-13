@@ -28,6 +28,7 @@ import (
 
 // +genclient
 // +genclient:noStatus
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ClusterProvisioner encapsulates a provisioning strategy for the backing
@@ -60,9 +61,9 @@ type ClusterProvisionerSpec struct {
 	// +optional
 	Generation int64 `json:"generation,omitempty"`
 
-	// Type is the type of the resource to be provisioned.
+	// Kind is the kind of the resource to watch to produce backing resources.
 	// +required
-	Type metav1.TypeMeta `json:"type"`
+	Kind metav1.GroupKind `json:"kind"`
 }
 
 type ClusterProvisionerConditionType string

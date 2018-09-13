@@ -29,8 +29,8 @@ import (
 type ClusterProvisionerLister interface {
 	// List lists all ClusterProvisioners in the indexer.
 	List(selector labels.Selector) (ret []*v1alpha1.ClusterProvisioner, err error)
-	// ClusterProvisioners returns an object that can list and get ClusterProvisioners.
-	ClusterProvisioners(namespace string) ClusterProvisionerNamespaceLister
+	// Get retrieves the ClusterProvisioner from the index for a given name.
+	Get(name string) (*v1alpha1.ClusterProvisioner, error)
 	ClusterProvisionerListerExpansion
 }
 
@@ -52,38 +52,9 @@ func (s *clusterProvisionerLister) List(selector labels.Selector) (ret []*v1alph
 	return ret, err
 }
 
-// ClusterProvisioners returns an object that can list and get ClusterProvisioners.
-func (s *clusterProvisionerLister) ClusterProvisioners(namespace string) ClusterProvisionerNamespaceLister {
-	return clusterProvisionerNamespaceLister{indexer: s.indexer, namespace: namespace}
-}
-
-// ClusterProvisionerNamespaceLister helps list and get ClusterProvisioners.
-type ClusterProvisionerNamespaceLister interface {
-	// List lists all ClusterProvisioners in the indexer for a given namespace.
-	List(selector labels.Selector) (ret []*v1alpha1.ClusterProvisioner, err error)
-	// Get retrieves the ClusterProvisioner from the indexer for a given namespace and name.
-	Get(name string) (*v1alpha1.ClusterProvisioner, error)
-	ClusterProvisionerNamespaceListerExpansion
-}
-
-// clusterProvisionerNamespaceLister implements the ClusterProvisionerNamespaceLister
-// interface.
-type clusterProvisionerNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all ClusterProvisioners in the indexer for a given namespace.
-func (s clusterProvisionerNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.ClusterProvisioner, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.ClusterProvisioner))
-	})
-	return ret, err
-}
-
-// Get retrieves the ClusterProvisioner from the indexer for a given namespace and name.
-func (s clusterProvisionerNamespaceLister) Get(name string) (*v1alpha1.ClusterProvisioner, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+// Get retrieves the ClusterProvisioner from the index for a given name.
+func (s *clusterProvisionerLister) Get(name string) (*v1alpha1.ClusterProvisioner, error) {
+	obj, exists, err := s.indexer.GetByKey(name)
 	if err != nil {
 		return nil, err
 	}

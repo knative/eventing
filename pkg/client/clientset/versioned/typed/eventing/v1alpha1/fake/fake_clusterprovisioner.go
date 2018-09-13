@@ -31,7 +31,6 @@ import (
 // FakeClusterProvisioners implements ClusterProvisionerInterface
 type FakeClusterProvisioners struct {
 	Fake *FakeEventingV1alpha1
-	ns   string
 }
 
 var clusterprovisionersResource = schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1alpha1", Resource: "clusterprovisioners"}
@@ -41,8 +40,7 @@ var clusterprovisionersKind = schema.GroupVersionKind{Group: "eventing.knative.d
 // Get takes name of the clusterProvisioner, and returns the corresponding clusterProvisioner object, and an error if there is any.
 func (c *FakeClusterProvisioners) Get(name string, options v1.GetOptions) (result *v1alpha1.ClusterProvisioner, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(clusterprovisionersResource, c.ns, name), &v1alpha1.ClusterProvisioner{})
-
+		Invokes(testing.NewRootGetAction(clusterprovisionersResource, name), &v1alpha1.ClusterProvisioner{})
 	if obj == nil {
 		return nil, err
 	}
@@ -52,8 +50,7 @@ func (c *FakeClusterProvisioners) Get(name string, options v1.GetOptions) (resul
 // List takes label and field selectors, and returns the list of ClusterProvisioners that match those selectors.
 func (c *FakeClusterProvisioners) List(opts v1.ListOptions) (result *v1alpha1.ClusterProvisionerList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(clusterprovisionersResource, clusterprovisionersKind, c.ns, opts), &v1alpha1.ClusterProvisionerList{})
-
+		Invokes(testing.NewRootListAction(clusterprovisionersResource, clusterprovisionersKind, opts), &v1alpha1.ClusterProvisionerList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -74,15 +71,13 @@ func (c *FakeClusterProvisioners) List(opts v1.ListOptions) (result *v1alpha1.Cl
 // Watch returns a watch.Interface that watches the requested clusterProvisioners.
 func (c *FakeClusterProvisioners) Watch(opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(clusterprovisionersResource, c.ns, opts))
-
+		InvokesWatch(testing.NewRootWatchAction(clusterprovisionersResource, opts))
 }
 
 // Create takes the representation of a clusterProvisioner and creates it.  Returns the server's representation of the clusterProvisioner, and an error, if there is any.
 func (c *FakeClusterProvisioners) Create(clusterProvisioner *v1alpha1.ClusterProvisioner) (result *v1alpha1.ClusterProvisioner, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(clusterprovisionersResource, c.ns, clusterProvisioner), &v1alpha1.ClusterProvisioner{})
-
+		Invokes(testing.NewRootCreateAction(clusterprovisionersResource, clusterProvisioner), &v1alpha1.ClusterProvisioner{})
 	if obj == nil {
 		return nil, err
 	}
@@ -92,8 +87,7 @@ func (c *FakeClusterProvisioners) Create(clusterProvisioner *v1alpha1.ClusterPro
 // Update takes the representation of a clusterProvisioner and updates it. Returns the server's representation of the clusterProvisioner, and an error, if there is any.
 func (c *FakeClusterProvisioners) Update(clusterProvisioner *v1alpha1.ClusterProvisioner) (result *v1alpha1.ClusterProvisioner, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(clusterprovisionersResource, c.ns, clusterProvisioner), &v1alpha1.ClusterProvisioner{})
-
+		Invokes(testing.NewRootUpdateAction(clusterprovisionersResource, clusterProvisioner), &v1alpha1.ClusterProvisioner{})
 	if obj == nil {
 		return nil, err
 	}
@@ -103,14 +97,13 @@ func (c *FakeClusterProvisioners) Update(clusterProvisioner *v1alpha1.ClusterPro
 // Delete takes name of the clusterProvisioner and deletes it. Returns an error if one occurs.
 func (c *FakeClusterProvisioners) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(clusterprovisionersResource, c.ns, name), &v1alpha1.ClusterProvisioner{})
-
+		Invokes(testing.NewRootDeleteAction(clusterprovisionersResource, name), &v1alpha1.ClusterProvisioner{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeClusterProvisioners) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(clusterprovisionersResource, c.ns, listOptions)
+	action := testing.NewRootDeleteCollectionAction(clusterprovisionersResource, listOptions)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.ClusterProvisionerList{})
 	return err
@@ -119,8 +112,7 @@ func (c *FakeClusterProvisioners) DeleteCollection(options *v1.DeleteOptions, li
 // Patch applies the patch and returns the patched clusterProvisioner.
 func (c *FakeClusterProvisioners) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.ClusterProvisioner, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(clusterprovisionersResource, c.ns, name, data, subresources...), &v1alpha1.ClusterProvisioner{})
-
+		Invokes(testing.NewRootPatchSubresourceAction(clusterprovisionersResource, name, data, subresources...), &v1alpha1.ClusterProvisioner{})
 	if obj == nil {
 		return nil, err
 	}

@@ -28,8 +28,8 @@ type FakeEventingV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeEventingV1alpha1) ClusterProvisioners(namespace string) v1alpha1.ClusterProvisionerInterface {
-	return &FakeClusterProvisioners{c, namespace}
+func (c *FakeEventingV1alpha1) ClusterProvisioners() v1alpha1.ClusterProvisionerInterface {
+	return &FakeClusterProvisioners{c}
 }
 
 func (c *FakeEventingV1alpha1) Subscriptions(namespace string) v1alpha1.SubscriptionInterface {

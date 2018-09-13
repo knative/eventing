@@ -22,11 +22,6 @@ package v1alpha1
 // ClusterProvisionerLister.
 type ClusterProvisionerListerExpansion interface{}
 
-<<<<<<< HEAD
-// ProvisionerNamespaceListerExpansion allows custom methods to be added to
-// ProvisionerNamespaceLister.
-type ProvisionerNamespaceListerExpansion interface{}
-
 // SubscriptionListerExpansion allows custom methods to be added to
 // SubscriptionLister.
 type SubscriptionListerExpansion interface{}
@@ -34,8 +29,3 @@ type SubscriptionListerExpansion interface{}
 // SubscriptionNamespaceListerExpansion allows custom methods to be added to
 // SubscriptionNamespaceLister.
 type SubscriptionNamespaceListerExpansion interface{}
-=======
-// ClusterProvisionerNamespaceListerExpansion allows custom methods to be added to
-// ClusterProvisionerNamespaceLister.
-type ClusterProvisionerNamespaceListerExpansion interface{}
->>>>>>> Switch to cluster provisoner.

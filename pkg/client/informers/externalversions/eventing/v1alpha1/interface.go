@@ -24,15 +24,10 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
-<<<<<<< HEAD
-	// Provisioners returns a ProvisionerInformer.
-	Provisioners() ProvisionerInformer
-	// Subscriptions returns a SubscriptionInformer.
-	Subscriptions() SubscriptionInformer
-=======
 	// ClusterProvisioners returns a ClusterProvisionerInformer.
 	ClusterProvisioners() ClusterProvisionerInformer
->>>>>>> Switch to cluster provisoner.
+	// Subscriptions returns a SubscriptionInformer.
+	Subscriptions() SubscriptionInformer
 }
 
 type version struct {
@@ -48,7 +43,7 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 
 // ClusterProvisioners returns a ClusterProvisionerInformer.
 func (v *version) ClusterProvisioners() ClusterProvisionerInformer {
-	return &clusterProvisionerInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+	return &clusterProvisionerInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // Subscriptions returns a SubscriptionInformer.

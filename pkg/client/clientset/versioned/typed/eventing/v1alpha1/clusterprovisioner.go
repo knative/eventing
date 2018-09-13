@@ -30,7 +30,7 @@ import (
 // ClusterProvisionersGetter has a method to return a ClusterProvisionerInterface.
 // A group's client should implement this interface.
 type ClusterProvisionersGetter interface {
-	ClusterProvisioners(namespace string) ClusterProvisionerInterface
+	ClusterProvisioners() ClusterProvisionerInterface
 }
 
 // ClusterProvisionerInterface has methods to work with ClusterProvisioner resources.
@@ -49,14 +49,12 @@ type ClusterProvisionerInterface interface {
 // clusterProvisioners implements ClusterProvisionerInterface
 type clusterProvisioners struct {
 	client rest.Interface
-	ns     string
 }
 
 // newClusterProvisioners returns a ClusterProvisioners
-func newClusterProvisioners(c *EventingV1alpha1Client, namespace string) *clusterProvisioners {
+func newClusterProvisioners(c *EventingV1alpha1Client) *clusterProvisioners {
 	return &clusterProvisioners{
 		client: c.RESTClient(),
-		ns:     namespace,
 	}
 }
 
@@ -64,7 +62,6 @@ func newClusterProvisioners(c *EventingV1alpha1Client, namespace string) *cluste
 func (c *clusterProvisioners) Get(name string, options v1.GetOptions) (result *v1alpha1.ClusterProvisioner, err error) {
 	result = &v1alpha1.ClusterProvisioner{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("clusterprovisioners").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -77,7 +74,6 @@ func (c *clusterProvisioners) Get(name string, options v1.GetOptions) (result *v
 func (c *clusterProvisioners) List(opts v1.ListOptions) (result *v1alpha1.ClusterProvisionerList, err error) {
 	result = &v1alpha1.ClusterProvisionerList{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("clusterprovisioners").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Do().
@@ -89,7 +85,6 @@ func (c *clusterProvisioners) List(opts v1.ListOptions) (result *v1alpha1.Cluste
 func (c *clusterProvisioners) Watch(opts v1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
 	return c.client.Get().
-		Namespace(c.ns).
 		Resource("clusterprovisioners").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Watch()
@@ -99,7 +94,6 @@ func (c *clusterProvisioners) Watch(opts v1.ListOptions) (watch.Interface, error
 func (c *clusterProvisioners) Create(clusterProvisioner *v1alpha1.ClusterProvisioner) (result *v1alpha1.ClusterProvisioner, err error) {
 	result = &v1alpha1.ClusterProvisioner{}
 	err = c.client.Post().
-		Namespace(c.ns).
 		Resource("clusterprovisioners").
 		Body(clusterProvisioner).
 		Do().
@@ -111,7 +105,6 @@ func (c *clusterProvisioners) Create(clusterProvisioner *v1alpha1.ClusterProvisi
 func (c *clusterProvisioners) Update(clusterProvisioner *v1alpha1.ClusterProvisioner) (result *v1alpha1.ClusterProvisioner, err error) {
 	result = &v1alpha1.ClusterProvisioner{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("clusterprovisioners").
 		Name(clusterProvisioner.Name).
 		Body(clusterProvisioner).
@@ -123,7 +116,6 @@ func (c *clusterProvisioners) Update(clusterProvisioner *v1alpha1.ClusterProvisi
 // Delete takes name of the clusterProvisioner and deletes it. Returns an error if one occurs.
 func (c *clusterProvisioners) Delete(name string, options *v1.DeleteOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("clusterprovisioners").
 		Name(name).
 		Body(options).
@@ -134,7 +126,6 @@ func (c *clusterProvisioners) Delete(name string, options *v1.DeleteOptions) err
 // DeleteCollection deletes a collection of objects.
 func (c *clusterProvisioners) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("clusterprovisioners").
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Body(options).
@@ -146,7 +137,6 @@ func (c *clusterProvisioners) DeleteCollection(options *v1.DeleteOptions, listOp
 func (c *clusterProvisioners) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.ClusterProvisioner, err error) {
 	result = &v1alpha1.ClusterProvisioner{}
 	err = c.client.Patch(pt).
-		Namespace(c.ns).
 		Resource("clusterprovisioners").
 		SubResource(subresources...).
 		Name(name).
