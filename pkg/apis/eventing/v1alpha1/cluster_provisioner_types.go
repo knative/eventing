@@ -75,9 +75,11 @@ type ClusterProvisionerConditionStatus struct {
 	// +required
 	Status corev1.ConditionStatus `json:"status"`
 
-	// The last time this condition was updated.
+	// LastTransitionTime is the last time the condition transitioned from one status to another.
+	// We use VolatileTime in place of metav1.Time to exclude this from creating equality.Semantic
+	// differences (all other things held constant).
 	// +optional
-	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
+	LastTransitionTime apis.VolatileTime `json:"lastTransitionTime,omitempty" description:"last time the condition transit from one status to another"`
 
 	// The reason for the condition's last transition.
 	// +optional
