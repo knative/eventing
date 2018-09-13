@@ -79,8 +79,17 @@ type SubscriptionSpec struct {
 	//   - Kind
 	//   - APIVersion
 	//   - Name
-	// This field is immutable
-	From *corev1.ObjectReference `json:"from,omitempty"`
+	// Currently Kind must be "Channel" and
+	// APIVersion must be "channels.knative.dev/v1alpha1"
+	//
+	// This field is immutable. We have no good answer on what happens to
+	// the events that are currently in the channel being consumed from
+	// and what the semantics there should be. For now, you can always
+	// delete the Subscription and recreate it to point to a different
+	// channel, giving the user more control over what semantics should
+	// be used (drain the channel first, possibly have events dropped,
+	// etc.)
+	From corev1.ObjectReference `json:"from"`
 
 	// Call is reference to (optional) function for processing events.
 	// Events from the From channel will be delivered here and replies
@@ -170,7 +179,6 @@ type SubscriptionCondition struct {
 
 // SubscriptionStatus (computed) for a subscription
 type SubscriptionStatus struct {
-
 	// Represents the latest available observations of a subscription's current state.
 	// +patchMergeKey=type
 	// +patchStrategy=merge
