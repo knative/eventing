@@ -19,6 +19,6 @@ package logkey
 const (
 	kNative = "knative.dev/"
 
-	// Provisioner is the key used for provisioner name in structured logs
-	Provisioner = kNative + "provisioner"
+	// ClusterProvisioner is the key used for cluster provisioner names in structured logs
+	ClusterProvisioner = kNative + "clusterprovisioner"
 )

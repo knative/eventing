@@ -17,11 +17,11 @@ limitations under the License.
 package v1alpha1
 
 // SetDefaults defaults
-func (p *Provisioner) SetDefaults() {
+func (p *ClusterProvisioner) SetDefaults() {
 	p.Spec.SetDefaults()
 }
 
-// SetDefaults defaults the Provisioner spec.
-func (ps *ProvisionerSpec) SetDefaults() {
+// SetDefaults defaults the ClusterProvisioner spec.
+func (ps *ClusterProvisionerSpec) SetDefaults() {
 	// no defaults
 }

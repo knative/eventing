@@ -29,23 +29,23 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Provisioner provisions.
-type Provisioner struct {
+// ClusterProvisioner provisions.
+type ClusterProvisioner struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ProvisionerSpec   `json:"spec"`
-	Status ProvisionerStatus `json:"status"`
+	Spec   ClusterProvisionerSpec   `json:"spec"`
+	Status ClusterProvisionerStatus `json:"status"`
 }
 
-// Check that Provisioner can be validated and can be defaulted.
-var _ apis.Validatable = (*Provisioner)(nil)
-var _ apis.Defaultable = (*Provisioner)(nil)
-var _ runtime.Object = (*Provisioner)(nil)
-var _ webhook.GenericCRD = (*Provisioner)(nil)
+// Check that ClusterProvisioner can be validated and can be defaulted.
+var _ apis.Validatable = (*ClusterProvisioner)(nil)
+var _ apis.Defaultable = (*ClusterProvisioner)(nil)
+var _ runtime.Object = (*ClusterProvisioner)(nil)
+var _ webhook.GenericCRD = (*ClusterProvisioner)(nil)
 
-// ProvisionerSpec is the spec for a Provisioner resource.
-type ProvisionerSpec struct {
+// ClusterProvisionerSpec is the spec for a ClusterProvisioner resource.
+type ClusterProvisionerSpec struct {
 	// TODO: Generation does not work correctly with CRD. They are scrubbed
 	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
 	// So, we add Generation here. Once that gets fixed, remove this and use
@@ -58,18 +58,18 @@ type ProvisionerSpec struct {
 	Type runtime.TypeMeta `json:"type"`
 }
 
-type ProvisionerConditionType string
+type ClusterProvisionerConditionType string
 
 const (
-	// ProvisionerConditionReady specifies that the resource is ready.
-	ProvisionerConditionReady ProvisionerConditionType = "Ready"
+	// ClusterProvisionerConditionReady specifies that the resource is ready.
+	ClusterProvisionerConditionReady ClusterProvisionerConditionType = "Ready"
 )
 
-// ProvisionerConditionStatus describes the state of this resource at a point in time.
-type ProvisionerConditionStatus struct {
+// ClusterProvisionerConditionStatus describes the state of this resource at a point in time.
+type ClusterProvisionerConditionStatus struct {
 	// Type of condition.
 	// +required
-	Type ProvisionerConditionType `json:"type"`
+	Type ClusterProvisionerConditionType `json:"type"`
 
 	// Status of the condition, one of True, False, Unknown.
 	// +required
@@ -88,28 +88,28 @@ type ProvisionerConditionStatus struct {
 	Message string `json:"message,omitempty"`
 }
 
-// ProvisionerStatus is the status for a Provisioner resource
-type ProvisionerStatus struct {
-	// Conditions holds the state of a provisioner at a point in time.
-	Conditions []ProvisionerConditionStatus `json:"conditions,omitempty"`
+// ClusterProvisionerStatus is the status for a ClusterProvisioner resource
+type ClusterProvisionerStatus struct {
+	// Conditions holds the state of a cluster provisioner at a point in time.
+	Conditions []ClusterProvisionerConditionStatus `json:"conditions,omitempty"`
 
-	// ObservedGeneration is the 'Generation' of the Provisioner that
+	// ObservedGeneration is the 'Generation' of the ClusterProvisioner that
 	// was last reconciled by the controller.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 // GetSpecJSON returns spec as json
-func (p *Provisioner) GetSpecJSON() ([]byte, error) {
+func (p *ClusterProvisioner) GetSpecJSON() ([]byte, error) {
 	return json.Marshal(p.Spec)
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ProvisionerList is a list of Provisioner resources
-type ProvisionerList struct {
+// ClusterProvisionerList is a list of ClusterProvisioner resources
+type ClusterProvisionerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 
-	Items []Provisioner `json:"items"`
+	Items []ClusterProvisioner `json:"items"`
 }

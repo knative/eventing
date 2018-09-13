@@ -18,6 +18,10 @@ limitations under the License.
 
 package v1alpha1
 
+<<<<<<< HEAD
 type ProvisionerExpansion interface{}
 
 type SubscriptionExpansion interface{}
+=======
+type ClusterProvisionerExpansion interface{}
+>>>>>>> Switch to cluster provisoner.

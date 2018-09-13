@@ -18,10 +18,11 @@ limitations under the License.
 
 package v1alpha1
 
-// ProvisionerListerExpansion allows custom methods to be added to
-// ProvisionerLister.
-type ProvisionerListerExpansion interface{}
+// ClusterProvisionerListerExpansion allows custom methods to be added to
+// ClusterProvisionerLister.
+type ClusterProvisionerListerExpansion interface{}
 
+<<<<<<< HEAD
 // ProvisionerNamespaceListerExpansion allows custom methods to be added to
 // ProvisionerNamespaceLister.
 type ProvisionerNamespaceListerExpansion interface{}
@@ -33,3 +34,8 @@ type SubscriptionListerExpansion interface{}
 // SubscriptionNamespaceListerExpansion allows custom methods to be added to
 // SubscriptionNamespaceLister.
 type SubscriptionNamespaceListerExpansion interface{}
+=======
+// ClusterProvisionerNamespaceListerExpansion allows custom methods to be added to
+// ClusterProvisionerNamespaceLister.
+type ClusterProvisionerNamespaceListerExpansion interface{}
+>>>>>>> Switch to cluster provisoner.

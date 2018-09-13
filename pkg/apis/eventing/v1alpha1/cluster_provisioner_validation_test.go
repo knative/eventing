@@ -26,33 +26,33 @@ import (
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		name string
-		ps   *ProvisionerSpec
+		ps   *ClusterProvisionerSpec
 		want *apis.FieldError
 	}{{
 		name: "valid",
-		ps: &ProvisionerSpec{
+		ps: &ClusterProvisionerSpec{
 			Type: runtime.TypeMeta{
 				APIVersion: "v1beta1",
 				Kind:       "Channel",
 			},
 		},
 	}, {
-		name: "invalid provisioner, empty type",
-		ps: &ProvisionerSpec{
+		name: "invalid cluster provisioner, empty type",
+		ps: &ClusterProvisionerSpec{
 			Type: runtime.TypeMeta{},
 		},
 		want: apis.ErrMissingField("type"),
 	}, {
-		name: "invalid provisioner, empty kind",
-		ps: &ProvisionerSpec{
+		name: "invalid cluster provisioner, empty kind",
+		ps: &ClusterProvisionerSpec{
 			Type: runtime.TypeMeta{
 				APIVersion: "v1beta1",
 			},
 		},
 		want: apis.ErrMissingField("type.kind"),
 	}, {
-		name: "invalid provisioner",
-		ps: &ProvisionerSpec{
+		name: "invalid cluster provisioner",
+		ps: &ClusterProvisionerSpec{
 			Type: runtime.TypeMeta{
 				Kind: "Channel",
 			},
@@ -60,7 +60,7 @@ func TestValidate(t *testing.T) {
 		want: apis.ErrMissingField("type.apiVersion"),
 	}, {
 		name: "empty",
-		ps:   &ProvisionerSpec{},
+		ps:   &ClusterProvisionerSpec{},
 		want: apis.ErrMissingField("type"),
 	}}
 
