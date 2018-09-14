@@ -74,7 +74,7 @@ func isCallableNilOrEmpty(c *Callable) bool {
 }
 
 func isValidCallable(c Callable) *apis.FieldError {
-	if c.TargetURI != nil && c.Target != nil && !equality.Semantic.DeepEqual(c.Target, &corev1.ObjectReference{}) {
+	if c.TargetURI != nil && *c.TargetURI != "" && c.Target != nil && !equality.Semantic.DeepEqual(c.Target, &corev1.ObjectReference{}) {
 		return apis.ErrMultipleOneOf("target", "targetURI")
 	}
 
