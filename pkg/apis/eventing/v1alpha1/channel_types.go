@@ -73,6 +73,8 @@ type ChannelSpec struct {
 	// this Channel.
 	// +optional
 	Arguments *runtime.RawExtension `json:"arguments,omitempty"`
+
+	//TODO Subscription spec array
 }
 
 // ChannelStatus represents the current state of a Channel.
