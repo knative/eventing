@@ -105,13 +105,9 @@ type ChannelStatus struct {
 type ChannelConditionType string
 
 const (
-	// ChannelConditionReady has status True when the Channel is ready to accept traffic.
+	// ChannelConditionReady has status True when the Channel is ready to accept
+	// traffic.
 	ChannelConditionReady ChannelConditionType = "Ready"
-
-	// ChannelConditionServiceable has status True when the service addressing the
-	// Channel exists.
-	// TODO should this be Sinkable?
-	ChannelConditionServiceable ChannelConditionType = "Serviceable"
 
 	// ChannelConditionProvisioned has status True when the Channel's backing
 	// resources have been provisioned.
