@@ -61,10 +61,10 @@ type ClusterProvisionerSpec struct {
 	// +optional
 	Generation int64 `json:"generation,omitempty"`
 
-	// Realizes is the kind of the resource the controller watches to produce
-	// required  backing resources.
+	// Reconciles is the kind of the resource the provisioner controller watches to
+	// produce required  backing resources.
 	// +required
-	Realizes metav1.GroupKind `json:"kind"`
+	Reconciles metav1.GroupKind `json:"reconciles"`
 }
 
 type ClusterProvisionerConditionType string

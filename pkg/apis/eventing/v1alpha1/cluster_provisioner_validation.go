@@ -29,14 +29,14 @@ func (p *ClusterProvisioner) Validate() *apis.FieldError {
 // Validate validates the ClusterProvisioner spec
 func (ps *ClusterProvisionerSpec) Validate() *apis.FieldError {
 	if equality.Semantic.DeepEqual(ps, &ClusterProvisionerSpec{}) {
-		return apis.ErrMissingField("realizes")
+		return apis.ErrMissingField("reconciles")
 	}
 
-	if ps.Realizes.Kind == "" {
-		return apis.ErrMissingField("kind").ViaField("realizes")
+	if ps.Reconciles.Kind == "" {
+		return apis.ErrMissingField("kind").ViaField("reconciles")
 	}
-	if ps.Realizes.Group == "" {
-		return apis.ErrMissingField("group").ViaField("realizes")
+	if ps.Reconciles.Group == "" {
+		return apis.ErrMissingField("group").ViaField("reconciles")
 	}
 
 	return nil

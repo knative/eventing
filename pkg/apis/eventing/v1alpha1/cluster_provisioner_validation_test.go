@@ -31,37 +31,37 @@ func TestValidate(t *testing.T) {
 	}{{
 		name: "valid",
 		ps: &ClusterProvisionerSpec{
-			Realizes: metav1.GroupKind{
+			Reconciles: metav1.GroupKind{
 				Group: "knative.dev",
 				Kind:  "Channel",
 			},
 		},
 	}, {
-		name: "invalid cluster provisioner, empty realizes",
+		name: "invalid cluster provisioner, empty reconciles",
 		ps: &ClusterProvisionerSpec{
-			Realizes: metav1.GroupKind{},
+			Reconciles: metav1.GroupKind{},
 		},
-		want: apis.ErrMissingField("realizes"),
+		want: apis.ErrMissingField("reconciles"),
 	}, {
-		name: "invalid cluster provisioner, empty realizes",
+		name: "invalid cluster provisioner, empty kind",
 		ps: &ClusterProvisionerSpec{
-			Realizes: metav1.GroupKind{
-				Group: "knative.dev",
+			Reconciles: metav1.GroupKind{
+				Group: "eventing.knative.test",
 			},
 		},
-		want: apis.ErrMissingField("realizes.kind"),
+		want: apis.ErrMissingField("reconciles.kind"),
 	}, {
 		name: "invalid cluster provisioner",
 		ps: &ClusterProvisionerSpec{
-			Realizes: metav1.GroupKind{
+			Reconciles: metav1.GroupKind{
 				Kind: "Channel",
 			},
 		},
-		want: apis.ErrMissingField("realizes.group"),
+		want: apis.ErrMissingField("reconciles.group"),
 	}, {
 		name: "empty",
 		ps:   &ClusterProvisionerSpec{},
-		want: apis.ErrMissingField("realizes"),
+		want: apis.ErrMissingField("reconciles"),
 	}}
 
 	for _, test := range tests {
