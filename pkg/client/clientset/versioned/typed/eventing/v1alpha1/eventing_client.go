@@ -27,12 +27,17 @@ import (
 
 type EventingV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	ClusterProvisionersGetter
 	SubscriptionsGetter
 }
 
 // EventingV1alpha1Client is used to interact with features provided by the eventing.knative.dev group.
 type EventingV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *EventingV1alpha1Client) ClusterProvisioners() ClusterProvisionerInterface {
+	return newClusterProvisioners(c)
 }
 
 func (c *EventingV1alpha1Client) Subscriptions(namespace string) SubscriptionInterface {

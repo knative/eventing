@@ -28,6 +28,7 @@ import (
 	"github.com/knative/pkg/webhook"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	flowsv1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 	"github.com/knative/eventing/pkg/logconfig"
@@ -89,6 +90,9 @@ func main() {
 		Client:  kubeClient,
 		Options: options,
 		Handlers: map[schema.GroupVersionKind]runtime.Object{
+			// For group eventing.knative.dev,
+			eventingv1alpha1.SchemeGroupVersion.WithKind("ClusterProvisioner"): &eventingv1alpha1.ClusterProvisioner{},
+
 			// For group channels.knative.dev,
 			channelsv1alpha1.SchemeGroupVersion.WithKind("Bus"):          &channelsv1alpha1.Bus{},
 			channelsv1alpha1.SchemeGroupVersion.WithKind("ClusterBus"):   &channelsv1alpha1.ClusterBus{},
