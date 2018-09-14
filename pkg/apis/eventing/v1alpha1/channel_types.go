@@ -87,14 +87,6 @@ type ChannelStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// A reference to the k8s Service backing this channel.
-	// +optional
-	Service *corev1.LocalObjectReference `json:"service,omitempty"`
-
-	// A reference to the istio VirtualService backing this channel.
-	// +optional
-	VirtualService *corev1.LocalObjectReference `json:"virtualService,omitempty"`
-
 	// DomainInternal holds the top-level domain that will distribute traffic
 	// over the provided targets from inside the cluster. It generally has the
 	// form {channel}.{namespace}.svc.cluster.local
