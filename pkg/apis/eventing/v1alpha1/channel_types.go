@@ -121,7 +121,9 @@ type ChannelCondition struct {
 	// Status of the condition, one of True, False, Unknown.
 	Status corev1.ConditionStatus `json:"status"`
 	// LastTransitionTime from one status to another.
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+	// We use VolatileTime in place of metav1.Time to exclude this from creating equality.Semantic
+	// differences (all other things held constant).
+	LastTransitionTime apis.VolatileTime `json:"lastTransitionTime,omitempty"`
 	// Reason for the condition's last transition.
 	Reason string `json:"reason,omitempty"`
 	// Message is a human readable message indicating details about the
