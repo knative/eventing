@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	v1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	eventing_v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	feeds_v1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	flows_v1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -63,6 +64,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Channels().V1alpha1().ClusterBuses().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("subscriptions"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Channels().V1alpha1().Subscriptions().Informer()}, nil
+
+		// Group=eventing.knative.dev, Version=v1alpha1
+	case eventing_v1alpha1.SchemeGroupVersion.WithResource("subscriptions"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().Subscriptions().Informer()}, nil
 
 		// Group=feeds.knative.dev, Version=v1alpha1
 	case feeds_v1alpha1.SchemeGroupVersion.WithResource("clustereventsources"):
