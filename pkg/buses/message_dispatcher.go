@@ -94,6 +94,10 @@ func (d *MessageDispatcher) executeRequest(url *url.URL, message *Message) (*Mes
 		return nil, err
 	}
 	if res != nil {
+		if res.StatusCode < 200 || res.StatusCode >= 300 {
+			// reject non-successful (2xx) responses
+			return nil, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", res.StatusCode)
+		}
 		headers := d.fromHTTPHeaders(res.Header)
 		// TODO: add configurable whitelisting of propagated headers/prefixes (configmap?)
 		if correlationID, ok := message.Headers[correlationIDHeaderName]; ok {
