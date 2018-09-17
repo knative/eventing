@@ -131,15 +131,6 @@ type ChannelCondition struct {
 	Message string `json:"message,omitempty"`
 }
 
-//TODO move this to ClusterProvisioner types
-// ProvisionerReference defines the strategy for selecting a Provisioner for a
-// provisioned resource.
-type ProvisionerReference struct {
-	// A reference to a specific Provisioner.
-	//TODO: +optional add selector
-	Ref *corev1.ObjectReference `json:"ref,omitempty"`
-}
-
 func (cs *ChannelStatus) GetCondition(t ChannelConditionType) *ChannelCondition {
 	for _, cond := range cs.Conditions {
 		if cond.Type == t {
