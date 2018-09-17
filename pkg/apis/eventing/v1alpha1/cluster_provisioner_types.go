@@ -17,12 +17,12 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"encoding/json"
 	"github.com/knative/pkg/apis"
+	duck "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/webhook"
 )
 
@@ -52,6 +52,9 @@ var _ apis.Defaultable = (*ClusterProvisioner)(nil)
 var _ runtime.Object = (*ClusterProvisioner)(nil)
 var _ webhook.GenericCRD = (*ClusterProvisioner)(nil)
 
+// Check that ConfigurationStatus may have its conditions managed.
+var _ duck.ConditionsAccessor = (*ClusterProvisionerStatus)(nil)
+
 // ClusterProvisionerSpec is the spec for a ClusterProvisioner resource.
 type ClusterProvisionerSpec struct {
 	// TODO: Generation does not work correctly with CRD. They are scrubbed
@@ -67,42 +70,12 @@ type ClusterProvisionerSpec struct {
 	Reconciles metav1.GroupKind `json:"reconciles"`
 }
 
-type ClusterProvisionerConditionType string
-
-const (
-	// ClusterProvisionerConditionReady specifies that the resource is ready.
-	ClusterProvisionerConditionReady ClusterProvisionerConditionType = "Ready"
-)
-
-// ClusterProvisionerConditionStatus describes the state of this resource at a point in time.
-type ClusterProvisionerConditionStatus struct {
-	// Type of condition.
-	// +required
-	Type ClusterProvisionerConditionType `json:"type"`
-
-	// Status of the condition, one of True, False, Unknown.
-	// +required
-	Status corev1.ConditionStatus `json:"status"`
-
-	// LastTransitionTime is the last time the condition transitioned from one status to another.
-	// We use VolatileTime in place of metav1.Time to exclude this from creating equality.Semantic
-	// differences (all other things held constant).
-	// +optional
-	LastTransitionTime apis.VolatileTime `json:"lastTransitionTime,omitempty" description:"last time the condition transit from one status to another"`
-
-	// The reason for the condition's last transition.
-	// +optional
-	Reason string `json:"reason,omitempty"`
-
-	// A human readable message indicating details about the transition.
-	// +optional
-	Message string `json:"message,omitempty"`
-}
+var cProvCondSet = duck.NewLivingConditionSet()
 
 // ClusterProvisionerStatus is the status for a ClusterProvisioner resource
 type ClusterProvisionerStatus struct {
 	// Conditions holds the state of a cluster provisioner at a point in time.
-	Conditions []ClusterProvisionerConditionStatus `json:"conditions,omitempty"`
+	Conditions duck.Conditions `json:"conditions,omitempty"`
 
 	// ObservedGeneration is the 'Generation' of the ClusterProvisioner that
 	// was last reconciled by the controller.
@@ -123,4 +96,16 @@ type ClusterProvisionerList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []ClusterProvisioner `json:"items"`
+}
+
+// GetConditions returns the Conditions array. This enables generic handling of
+// conditions by implementing the duck.Conditions interface.
+func (ps *ClusterProvisionerStatus) GetConditions() duck.Conditions {
+	return ps.Conditions
+}
+
+// SetConditions sets the Conditions array. This enables generic handling of
+// conditions by implementing the duck.Conditions interface.
+func (ps *ClusterProvisionerStatus) SetConditions(conditions duck.Conditions) {
+	ps.Conditions = conditions
 }

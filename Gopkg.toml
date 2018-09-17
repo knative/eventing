@@ -75,8 +75,8 @@ required = [
 
 [[constraint]]
   name = "github.com/knative/pkg"
-  # HEAD as of 2018-09-12
-  revision = "8fc80deb200e7853795e6baf4029f406ca9534b8"
+  # HEAD as of 2018-09-17
+  revision = "67830c7a64431edc38ee19628dc7116b0c6d99b5"
 
 [[constraint]]
   name = "github.com/knative/serving"

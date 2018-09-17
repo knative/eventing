@@ -20,8 +20,8 @@ import (
 	"encoding/json"
 
 	"github.com/knative/pkg/apis"
+	duck "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/webhook"
-	"k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -47,6 +47,9 @@ var _ apis.Defaultable = (*Subscription)(nil)
 var _ apis.Immutable = (*Subscription)(nil)
 var _ runtime.Object = (*Subscription)(nil)
 var _ webhook.GenericCRD = (*Subscription)(nil)
+
+// Check that ConfigurationStatus may have its conditions managed.
+var _ duck.ConditionsAccessor = (*SubscriptionStatus)(nil)
 
 // SubscriptionSpec specifies the Channel for incoming events, a Call target for
 // processing those events and where to put the result of the processing. Only
@@ -160,40 +163,18 @@ type ResultStrategy struct {
 	Target *corev1.ObjectReference `json:"target,omitempty"`
 }
 
-type SubscriptionConditionType string
-
-const (
-	// SubscriptionReady is when the From,Call and Result have been reconciled successfully.
-	SubscriptionReady SubscriptionConditionType = "Ready"
-)
-
-// SubscriptionCondition describes the state of a subscription at a point in time.
-type SubscriptionCondition struct {
-	// Type of subscription condition.
-	Type SubscriptionConditionType `json:"type"`
-	// Status of the condition, one of True, False, Unknown.
-	Status v1.ConditionStatus `json:"status"`
-	// The reason for the condition's last transition.
-	Reason string `json:"reason,omitempty"`
-	// A human readable message indicating details about the transition.
-	Message string `json:"message,omitempty"`
-}
+var subCondSet = duck.NewLivingConditionSet()
 
 // SubscriptionStatus (computed) for a subscription
 type SubscriptionStatus struct {
 	// Represents the latest available observations of a subscription's current state.
 	// +patchMergeKey=type
 	// +patchStrategy=merge
-	Conditions []SubscriptionCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	Conditions duck.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
-func (ss *SubscriptionStatus) GetCondition(t SubscriptionConditionType) *SubscriptionCondition {
-	for _, cond := range ss.Conditions {
-		if cond.Type == t {
-			return &cond
-		}
-	}
-	return nil
+func (ss *SubscriptionStatus) GetCondition(t duck.ConditionType) *duck.Condition {
+	return subCondSet.Manage(ss).GetCondition(t)
 }
 
 func (s *Subscription) GetSpecJSON() ([]byte, error) {
@@ -207,4 +188,16 @@ type SubscriptionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 	Items           []Subscription `json:"items"`
+}
+
+// GetConditions returns the Conditions array. This enables generic handling of
+// conditions by implementing the duck.Conditions interface.
+func (ss *SubscriptionStatus) GetConditions() duck.Conditions {
+	return ss.Conditions
+}
+
+// SetConditions sets the Conditions array. This enables generic handling of
+// conditions by implementing the duck.Conditions interface.
+func (ss *SubscriptionStatus) SetConditions(conditions duck.Conditions) {
+	ss.Conditions = conditions
 }
