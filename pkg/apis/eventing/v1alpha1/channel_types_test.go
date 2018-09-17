@@ -36,10 +36,10 @@ var condUnprovisioned = ChannelCondition{
 
 func TestChannelGetCondition(t *testing.T) {
 	tests := []struct {
-		name     string
-		cs       *ChannelStatus
-		condType ChannelConditionType
-		want     *ChannelCondition
+		name      string
+		cs        *ChannelStatus
+		condQuery ChannelConditionType
+		want      *ChannelCondition
 	}{{
 		name: "single condition",
 		cs: &ChannelStatus{
@@ -47,8 +47,8 @@ func TestChannelGetCondition(t *testing.T) {
 				condReady,
 			},
 		},
-		condType: ChannelConditionReady,
-		want:     &condReady,
+		condQuery: ChannelConditionReady,
+		want:      &condReady,
 	}, {
 		name: "multiple conditions",
 		cs: &ChannelStatus{
@@ -57,8 +57,8 @@ func TestChannelGetCondition(t *testing.T) {
 				condUnprovisioned,
 			},
 		},
-		condType: ChannelConditionProvisioned,
-		want:     &condUnprovisioned,
+		condQuery: ChannelConditionProvisioned,
+		want:      &condUnprovisioned,
 	}, {
 		name: "unknown condition",
 		cs: &ChannelStatus{
@@ -67,13 +67,13 @@ func TestChannelGetCondition(t *testing.T) {
 				condUnprovisioned,
 			},
 		},
-		condType: ChannelConditionServiceable,
-		want:     nil,
+		condQuery: ChannelConditionType("foo"),
+		want:      nil,
 	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.cs.GetCondition(test.condType)
+			got := test.cs.GetCondition(test.condQuery)
 			if diff := cmp.Diff(test.want, got); diff != "" {
 				t.Errorf("unexpected condition (-want, +got) = %v", diff)
 			}
