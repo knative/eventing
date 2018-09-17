@@ -74,7 +74,23 @@ type ChannelSpec struct {
 	// +optional
 	Arguments *runtime.RawExtension `json:"arguments,omitempty"`
 
-	//TODO Subscription spec array
+	// Subscribers is a list of the Subscribers to this channel. This is filled in
+	// by the Subscriptions controller. Users should not mutate this field.
+	Subscribers []ChannelSubscriberSpec `json:"subscribers,omitempty"`
+}
+
+// ChannelSubscriberSpec defines a single subscriber to a Channel.
+type ChannelSubscriberSpec struct {
+	// Call is an optional reference to a function for processing events.
+	// Events from the From channel will be delivered here and replies
+	// are optionally handled by Result.
+	// +optional
+	Call *Callable `json:"call,omitempty"`
+
+	// Result optionally specifies how to handle events received from the Call
+	// target.
+	// +optional
+	Result *ResultStrategy `json:"result,omitempty"`
 }
 
 // ChannelStatus represents the current state of a Channel.
