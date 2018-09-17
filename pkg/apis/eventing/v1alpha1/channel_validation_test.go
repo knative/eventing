@@ -25,6 +25,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+var targetURI = "https://example.com"
+
 func TestChannelValidation(t *testing.T) {
 	tests := []struct {
 		name string
@@ -48,6 +50,62 @@ func TestChannelValidation(t *testing.T) {
 			Spec: ChannelSpec{},
 		},
 		want: apis.ErrMissingField("spec.provisioner"),
+	}, {
+		name: "subscribers array",
+		c: &Channel{
+			Spec: ChannelSpec{
+				Provisioner: &ProvisionerReference{
+					Ref: &corev1.ObjectReference{
+						Name: "foo",
+					},
+				},
+				Subscribers: []ChannelSubscriberSpec{{
+					Call: &Callable{
+						TargetURI: &targetURI,
+					},
+				}, {
+					Result: &ResultStrategy{
+						Target: &corev1.ObjectReference{
+							APIVersion: "eventing.knative.dev/v1alpha1",
+							Kind:       "Channel",
+							Name:       "to-chan",
+						},
+					},
+				}, {
+					Call: &Callable{
+						TargetURI: &targetURI,
+					},
+					Result: &ResultStrategy{
+						Target: &corev1.ObjectReference{
+							APIVersion: "eventing.knative.dev/v1alpha1",
+							Kind:       "Channel",
+							Name:       "to-chan",
+						},
+					},
+				}},
+			},
+		},
+		want: nil,
+	}, {
+		name: "empty subscriber",
+		c: &Channel{
+			Spec: ChannelSpec{
+				Provisioner: &ProvisionerReference{
+					Ref: &corev1.ObjectReference{
+						Name: "foo",
+					},
+				},
+				Subscribers: []ChannelSubscriberSpec{
+					{
+						Call: &Callable{
+							TargetURI: &targetURI,
+						},
+					},
+					{},
+				},
+			},
+		},
+		want: apis.ErrMissingField("spec.subscriber[1].call", "spec.subscriber[1].result"),
 	}}
 
 	for _, test := range tests {

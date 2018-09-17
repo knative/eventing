@@ -79,7 +79,8 @@ type ChannelSpec struct {
 	Subscribers []ChannelSubscriberSpec `json:"subscribers,omitempty"`
 }
 
-// ChannelSubscriberSpec defines a single subscriber to a Channel.
+// ChannelSubscriberSpec defines a single subscriber to a Channel. At least one
+// of Call or Result must be present.
 type ChannelSubscriberSpec struct {
 	// Call is an optional reference to a function for processing events.
 	// Events from the From channel will be delivered here and replies

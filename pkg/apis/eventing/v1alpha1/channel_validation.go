@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/knative/pkg/apis"
@@ -29,6 +31,14 @@ func (c *Channel) Validate() *apis.FieldError {
 func (cs *ChannelSpec) Validate() *apis.FieldError {
 	if cs.Provisioner == nil {
 		return apis.ErrMissingField("provisioner")
+	}
+
+	for i, subscriber := range cs.Subscribers {
+		if subscriber.Call == nil && subscriber.Result == nil {
+			//TODO collect all errors instead of returning the first. This isn't
+			// possible yet with knative/pkg validation.
+			return apis.ErrMissingField("call", "result").ViaField(fmt.Sprintf("subscriber[%d]", i))
+		}
 	}
 
 	return nil
