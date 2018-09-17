@@ -25,6 +25,10 @@ import (
 
 	versioned "github.com/knative/pkg/client/clientset/versioned"
 	authentication "github.com/knative/pkg/client/informers/externalversions/authentication"
+<<<<<<< HEAD
+=======
+	duck "github.com/knative/pkg/client/informers/externalversions/duck"
+>>>>>>> Upgrading knative.eventing resoureces to use knative.pkg.Conditions
 	internalinterfaces "github.com/knative/pkg/client/informers/externalversions/internalinterfaces"
 	istio "github.com/knative/pkg/client/informers/externalversions/istio"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -174,6 +178,10 @@ type SharedInformerFactory interface {
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
 	Authentication() authentication.Interface
+<<<<<<< HEAD
+=======
+	Duck() duck.Interface
+>>>>>>> Upgrading knative.eventing resoureces to use knative.pkg.Conditions
 	Networking() istio.Interface
 }
 
@@ -181,6 +189,13 @@ func (f *sharedInformerFactory) Authentication() authentication.Interface {
 	return authentication.New(f, f.namespace, f.tweakListOptions)
 }
 
+<<<<<<< HEAD
+=======
+func (f *sharedInformerFactory) Duck() duck.Interface {
+	return duck.New(f, f.namespace, f.tweakListOptions)
+}
+
+>>>>>>> Upgrading knative.eventing resoureces to use knative.pkg.Conditions
 func (f *sharedInformerFactory) Networking() istio.Interface {
 	return istio.New(f, f.namespace, f.tweakListOptions)
 }
