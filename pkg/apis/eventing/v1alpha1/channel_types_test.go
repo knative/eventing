@@ -26,7 +26,7 @@ import (
 )
 
 var condReady = duckv1alpha1.Condition{
-	Type:   duckv1alpha1.ConditionReady,
+	Type:   ChannelConditionReady,
 	Status: corev1.ConditionTrue,
 }
 

@@ -128,6 +128,10 @@ type ChannelStatus struct {
 }
 
 const (
+	// ChannelConditionReady has status True when the Channel is ready to accept
+	// traffic.
+	ChannelConditionReady = duckv1alpha1.ConditionReady
+
 	// ChannelConditionProvisioned has status True when the Channel's backing
 	// resources have been provisioned.
 	ChannelConditionProvisioned duckv1alpha1.ConditionType = "Provisioned"
