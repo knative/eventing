@@ -31,59 +31,59 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 )
 
-// TopicInformer provides access to a shared informer and lister for
-// Topics.
-type TopicInformer interface {
+// SinkInformer provides access to a shared informer and lister for
+// Sinks.
+type SinkInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.TopicLister
+	Lister() v1alpha1.SinkLister
 }
 
-type topicInformer struct {
+type sinkInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 	namespace        string
 }
 
-// NewTopicInformer constructs a new informer for Topic type.
+// NewSinkInformer constructs a new informer for Sink type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewTopicInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredTopicInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewSinkInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredSinkInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredTopicInformer constructs a new informer for Topic type.
+// NewFilteredSinkInformer constructs a new informer for Sink type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredTopicInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredSinkInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DuckV1alpha1().Topics(namespace).List(options)
+				return client.DuckV1alpha1().Sinks(namespace).List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DuckV1alpha1().Topics(namespace).Watch(options)
+				return client.DuckV1alpha1().Sinks(namespace).Watch(options)
 			},
 		},
-		&duckv1alpha1.Topic{},
+		&duckv1alpha1.Sink{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *topicInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredTopicInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *sinkInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredSinkInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *topicInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&duckv1alpha1.Topic{}, f.defaultInformer)
+func (f *sinkInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&duckv1alpha1.Sink{}, f.defaultInformer)
 }
 
-func (f *topicInformer) Lister() v1alpha1.TopicLister {
-	return v1alpha1.NewTopicLister(f.Informer().GetIndexer())
+func (f *sinkInformer) Lister() v1alpha1.SinkLister {
+	return v1alpha1.NewSinkLister(f.Informer().GetIndexer())
 }

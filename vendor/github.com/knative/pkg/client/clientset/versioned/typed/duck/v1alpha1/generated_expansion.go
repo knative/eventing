@@ -18,8 +18,14 @@ limitations under the License.
 
 package v1alpha1
 
+type ChannelExpansion interface{}
+
+type ChannelableRefExpansion interface{}
+
+type GenerationalExpansion interface{}
+
 type KResourceExpansion interface{}
 
-type TargetExpansion interface{}
+type SinkExpansion interface{}
 
-type TopicExpansion interface{}
+type TargetExpansion interface{}

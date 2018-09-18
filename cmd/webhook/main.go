@@ -34,7 +34,6 @@ import (
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/system"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -89,7 +88,7 @@ func main() {
 	controller := webhook.AdmissionController{
 		Client:  kubeClient,
 		Options: options,
-		Handlers: map[schema.GroupVersionKind]runtime.Object{
+		Handlers: map[schema.GroupVersionKind]webhook.GenericCRD{
 			// For group eventing.knative.dev,
 			eventingv1alpha1.SchemeGroupVersion.WithKind("Channel"):            &eventingv1alpha1.Channel{},
 			eventingv1alpha1.SchemeGroupVersion.WithKind("ClusterProvisioner"): &eventingv1alpha1.ClusterProvisioner{},

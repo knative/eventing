@@ -27,9 +27,12 @@ import (
 
 type DuckV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	ChannelsGetter
+	ChannelableRevesGetter
+	GenerationalsGetter
 	KResourcesGetter
+	SinksGetter
 	TargetsGetter
-	TopicsGetter
 }
 
 // DuckV1alpha1Client is used to interact with features provided by the duck.knative.dev group.
@@ -37,16 +40,28 @@ type DuckV1alpha1Client struct {
 	restClient rest.Interface
 }
 
+func (c *DuckV1alpha1Client) Channels(namespace string) ChannelInterface {
+	return newChannels(c, namespace)
+}
+
+func (c *DuckV1alpha1Client) ChannelableReves(namespace string) ChannelableRefInterface {
+	return newChannelableReves(c, namespace)
+}
+
+func (c *DuckV1alpha1Client) Generationals(namespace string) GenerationalInterface {
+	return newGenerationals(c, namespace)
+}
+
 func (c *DuckV1alpha1Client) KResources(namespace string) KResourceInterface {
 	return newKResources(c, namespace)
 }
 
-func (c *DuckV1alpha1Client) Targets(namespace string) TargetInterface {
-	return newTargets(c, namespace)
+func (c *DuckV1alpha1Client) Sinks(namespace string) SinkInterface {
+	return newSinks(c, namespace)
 }
 
-func (c *DuckV1alpha1Client) Topics(namespace string) TopicInterface {
-	return newTopics(c, namespace)
+func (c *DuckV1alpha1Client) Targets(namespace string) TargetInterface {
+	return newTargets(c, namespace)
 }
 
 // NewForConfig creates a new DuckV1alpha1Client for the given config.

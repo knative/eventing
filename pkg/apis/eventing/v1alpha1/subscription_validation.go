@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"reflect"
-	//	"strings"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -94,7 +93,7 @@ func isFromEmpty(f corev1.ObjectReference) bool {
 
 // Valid from only contains the following fields:
 // - Kind       == 'Channel'
-// - APIVersion == 'channels.knative.dev/v1alpha1'
+// - APIVersion == 'eventing.knative.dev/v1alpha1'
 // - Name       == not empty
 func isValidFrom(f corev1.ObjectReference) *apis.FieldError {
 	fe := isValidObjectReference(f)
@@ -107,9 +106,9 @@ func isValidFrom(f corev1.ObjectReference) *apis.FieldError {
 		fe.Details = "only 'Channel' kind is allowed"
 		return fe
 	}
-	if f.APIVersion != "channels.knative.dev/v1alpha1" {
+	if f.APIVersion != "eventing.knative.dev/v1alpha1" {
 		fe := apis.ErrInvalidValue(f.APIVersion, "apiVersion")
-		fe.Details = "only channels.knative.dev/v1alpha1 is allowed for apiVersion"
+		fe.Details = "only eventing.knative.dev/v1alpha1 is allowed for apiVersion"
 		return fe
 	}
 	return nil
@@ -124,8 +123,18 @@ func isValidResultStrategy(r *ResultStrategy) *apis.FieldError {
 	if fe != nil {
 		return fe.ViaField("target")
 	}
+	if r.Target.Kind != "Channel" {
+		fe := apis.ErrInvalidValue(r.Target.Kind, "kind")
+		fe.Paths = []string{"kind"}
+		fe.Details = "only 'Channel' kind is allowed"
+		return fe
+	}
+	if r.Target.APIVersion != "eventing.knative.dev/v1alpha1" {
+		fe := apis.ErrInvalidValue(r.Target.APIVersion, "apiVersion")
+		fe.Details = "only eventing.knative.dev/v1alpha1 is allowed for apiVersion"
+		return fe
+	}
 	return nil
-
 }
 
 func isValidObjectReference(f corev1.ObjectReference) *apis.FieldError {

@@ -24,12 +24,18 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// Channels returns a ChannelInformer.
+	Channels() ChannelInformer
+	// ChannelableReves returns a ChannelableRefInformer.
+	ChannelableReves() ChannelableRefInformer
+	// Generationals returns a GenerationalInformer.
+	Generationals() GenerationalInformer
 	// KResources returns a KResourceInformer.
 	KResources() KResourceInformer
+	// Sinks returns a SinkInformer.
+	Sinks() SinkInformer
 	// Targets returns a TargetInformer.
 	Targets() TargetInformer
-	// Topics returns a TopicInformer.
-	Topics() TopicInformer
 }
 
 type version struct {
@@ -43,17 +49,32 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
+// Channels returns a ChannelInformer.
+func (v *version) Channels() ChannelInformer {
+	return &channelInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// ChannelableReves returns a ChannelableRefInformer.
+func (v *version) ChannelableReves() ChannelableRefInformer {
+	return &channelableRefInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Generationals returns a GenerationalInformer.
+func (v *version) Generationals() GenerationalInformer {
+	return &generationalInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
 // KResources returns a KResourceInformer.
 func (v *version) KResources() KResourceInformer {
 	return &kResourceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
+// Sinks returns a SinkInformer.
+func (v *version) Sinks() SinkInformer {
+	return &sinkInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
 // Targets returns a TargetInformer.
 func (v *version) Targets() TargetInformer {
 	return &targetInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
-// Topics returns a TopicInformer.
-func (v *version) Topics() TopicInformer {
-	return &topicInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

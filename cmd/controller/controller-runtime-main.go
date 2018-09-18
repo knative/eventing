@@ -17,8 +17,10 @@ package main
 
 import (
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	subscriptionsv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	flowsv1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
+	"github.com/knative/eventing/pkg/controller/eventing/subscription"
 	"github.com/knative/eventing/pkg/controller/feed"
 	"github.com/knative/eventing/pkg/controller/flow"
 
@@ -58,6 +60,7 @@ func controllerRuntimeStart() error {
 		feedsv1alpha1.AddToScheme,
 		flowsv1alpha1.AddToScheme,
 		istiov1alpha3.AddToScheme,
+		subscriptionsv1alpha1.AddToScheme,
 	}
 	for _, schemeFunc := range schemeFuncs {
 		schemeFunc(mrg.GetScheme())
@@ -69,6 +72,7 @@ func controllerRuntimeStart() error {
 		eventtype.ProvideController,
 		feed.ProvideController,
 		flow.ProvideController,
+		subscription.ProvideController,
 	}
 
 	for _, provider := range providers {

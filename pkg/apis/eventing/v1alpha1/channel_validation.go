@@ -33,11 +33,11 @@ func (cs *ChannelSpec) Validate() *apis.FieldError {
 		return apis.ErrMissingField("provisioner")
 	}
 
-	for i, subscriber := range cs.Subscribers {
-		if subscriber.Call == nil && subscriber.Result == nil {
+	for i, subscriber := range cs.Channelable.Subscribers {
+		if subscriber.Sinkable == "" {
 			//TODO collect all errors instead of returning the first. This isn't
 			// possible yet with knative/pkg validation.
-			return apis.ErrMissingField("call", "result").ViaField(fmt.Sprintf("subscriber[%d]", i))
+			return apis.ErrMissingField("sinkable").ViaField(fmt.Sprintf("subscriber[%d]", i))
 		}
 	}
 

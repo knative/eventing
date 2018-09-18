@@ -18,6 +18,30 @@ limitations under the License.
 
 package v1alpha1
 
+// ChannelListerExpansion allows custom methods to be added to
+// ChannelLister.
+type ChannelListerExpansion interface{}
+
+// ChannelNamespaceListerExpansion allows custom methods to be added to
+// ChannelNamespaceLister.
+type ChannelNamespaceListerExpansion interface{}
+
+// ChannelableRefListerExpansion allows custom methods to be added to
+// ChannelableRefLister.
+type ChannelableRefListerExpansion interface{}
+
+// ChannelableRefNamespaceListerExpansion allows custom methods to be added to
+// ChannelableRefNamespaceLister.
+type ChannelableRefNamespaceListerExpansion interface{}
+
+// GenerationalListerExpansion allows custom methods to be added to
+// GenerationalLister.
+type GenerationalListerExpansion interface{}
+
+// GenerationalNamespaceListerExpansion allows custom methods to be added to
+// GenerationalNamespaceLister.
+type GenerationalNamespaceListerExpansion interface{}
+
 // KResourceListerExpansion allows custom methods to be added to
 // KResourceLister.
 type KResourceListerExpansion interface{}
@@ -26,6 +50,14 @@ type KResourceListerExpansion interface{}
 // KResourceNamespaceLister.
 type KResourceNamespaceListerExpansion interface{}
 
+// SinkListerExpansion allows custom methods to be added to
+// SinkLister.
+type SinkListerExpansion interface{}
+
+// SinkNamespaceListerExpansion allows custom methods to be added to
+// SinkNamespaceLister.
+type SinkNamespaceListerExpansion interface{}
+
 // TargetListerExpansion allows custom methods to be added to
 // TargetLister.
 type TargetListerExpansion interface{}
@@ -33,11 +65,3 @@ type TargetListerExpansion interface{}
 // TargetNamespaceListerExpansion allows custom methods to be added to
 // TargetNamespaceLister.
 type TargetNamespaceListerExpansion interface{}
-
-// TopicListerExpansion allows custom methods to be added to
-// TopicLister.
-type TopicListerExpansion interface{}
-
-// TopicNamespaceListerExpansion allows custom methods to be added to
-// TopicNamespaceLister.
-type TopicNamespaceListerExpansion interface{}
