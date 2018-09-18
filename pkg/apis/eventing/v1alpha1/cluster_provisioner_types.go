@@ -22,7 +22,8 @@ import (
 
 	"encoding/json"
 	"github.com/knative/pkg/apis"
-	duck "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/apis/duck"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/webhook"
 )
 
@@ -53,7 +54,10 @@ var _ runtime.Object = (*ClusterProvisioner)(nil)
 var _ webhook.GenericCRD = (*ClusterProvisioner)(nil)
 
 // Check that ConfigurationStatus may have its conditions managed.
-var _ duck.ConditionsAccessor = (*ClusterProvisionerStatus)(nil)
+var _ duckv1alpha1.ConditionsAccessor = (*ClusterProvisionerStatus)(nil)
+
+// Check that ClusterProvisioner implements the Conditions duck type.
+var _ = duck.VerifyType(&ClusterProvisioner{}, &duckv1alpha1.Conditions{})
 
 // ClusterProvisionerSpec is the spec for a ClusterProvisioner resource.
 type ClusterProvisionerSpec struct {
@@ -70,12 +74,12 @@ type ClusterProvisionerSpec struct {
 	Reconciles metav1.GroupKind `json:"reconciles"`
 }
 
-var cProvCondSet = duck.NewLivingConditionSet()
+var cProvCondSet = duckv1alpha1.NewLivingConditionSet()
 
 // ClusterProvisionerStatus is the status for a ClusterProvisioner resource
 type ClusterProvisionerStatus struct {
 	// Conditions holds the state of a cluster provisioner at a point in time.
-	Conditions duck.Conditions `json:"conditions,omitempty"`
+	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
 	// ObservedGeneration is the 'Generation' of the ClusterProvisioner that
 	// was last reconciled by the controller.
@@ -88,6 +92,23 @@ func (p *ClusterProvisioner) GetSpecJSON() ([]byte, error) {
 	return json.Marshal(p.Spec)
 }
 
+// GetCondition returns the condition currently associated with the given type, or nil.
+func (p *ClusterProvisionerStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
+	return cProvCondSet.Manage(p).GetCondition(t)
+}
+
+// GetConditions returns the Conditions array. This enables generic handling of
+// conditions by implementing the duckv1alpha1.Conditions interface.
+func (ps *ClusterProvisionerStatus) GetConditions() duckv1alpha1.Conditions {
+	return ps.Conditions
+}
+
+// SetConditions sets the Conditions array. This enables generic handling of
+// conditions by implementing the duckv1alpha1.Conditions interface.
+func (ps *ClusterProvisionerStatus) SetConditions(conditions duckv1alpha1.Conditions) {
+	ps.Conditions = conditions
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ClusterProvisionerList is a list of ClusterProvisioner resources
@@ -96,16 +117,4 @@ type ClusterProvisionerList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []ClusterProvisioner `json:"items"`
-}
-
-// GetConditions returns the Conditions array. This enables generic handling of
-// conditions by implementing the duck.Conditions interface.
-func (ps *ClusterProvisionerStatus) GetConditions() duck.Conditions {
-	return ps.Conditions
-}
-
-// SetConditions sets the Conditions array. This enables generic handling of
-// conditions by implementing the duck.Conditions interface.
-func (ps *ClusterProvisionerStatus) SetConditions(conditions duck.Conditions) {
-	ps.Conditions = conditions
 }
