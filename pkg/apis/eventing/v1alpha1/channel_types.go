@@ -20,8 +20,9 @@ import (
 	"encoding/json"
 
 	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/apis/duck"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/webhook"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -54,6 +55,12 @@ var _ apis.Defaultable = (*Channel)(nil)
 var _ apis.Immutable = (*Channel)(nil)
 var _ runtime.Object = (*Channel)(nil)
 var _ webhook.GenericCRD = (*Channel)(nil)
+
+// Check that ConfigurationStatus may have its conditions managed.
+var _ duckv1alpha1.ConditionsAccessor = (*ChannelStatus)(nil)
+
+// Check that Subscription implements the Conditions duck type.
+var _ = duck.VerifyType(&Channel{}, &duckv1alpha1.Conditions{})
 
 // ChannelSpec specifies the Provisioner backing a channel and the configuration
 // arguments for a Channel.
@@ -94,6 +101,8 @@ type ChannelSubscriberSpec struct {
 	Result *ResultStrategy `json:"result,omitempty"`
 }
 
+var chanCondSet = duckv1alpha1.NewLivingConditionSet(ChannelConditionProvisioned)
+
 // ChannelStatus represents the current state of a Channel.
 type ChannelStatus struct {
 	// ObservedGeneration is the most recent generation observed for this Channel.
@@ -116,49 +125,34 @@ type ChannelStatus struct {
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
-	Conditions []ChannelCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
-
-type ChannelConditionType string
 
 const (
-	// ChannelConditionReady has status True when the Channel is ready to accept
-	// traffic.
-	ChannelConditionReady ChannelConditionType = "Ready"
-
 	// ChannelConditionProvisioned has status True when the Channel's backing
 	// resources have been provisioned.
-	ChannelConditionProvisioned ChannelConditionType = "Provisioned"
+	ChannelConditionProvisioned duckv1alpha1.ConditionType = "Provisioned"
 )
-
-// ChannelCondition describes the state of a channel at a point in time.
-type ChannelCondition struct {
-	// Type of channel condition.
-	Type ChannelConditionType `json:"type"`
-	// Status of the condition, one of True, False, Unknown.
-	Status corev1.ConditionStatus `json:"status"`
-	// LastTransitionTime from one status to another.
-	// We use VolatileTime in place of metav1.Time to exclude this from creating equality.Semantic
-	// differences (all other things held constant).
-	LastTransitionTime apis.VolatileTime `json:"lastTransitionTime,omitempty"`
-	// Reason for the condition's last transition.
-	Reason string `json:"reason,omitempty"`
-	// Message is a human readable message indicating details about the
-	// last transition.
-	Message string `json:"message,omitempty"`
-}
-
-func (cs *ChannelStatus) GetCondition(t ChannelConditionType) *ChannelCondition {
-	for _, cond := range cs.Conditions {
-		if cond.Type == t {
-			return &cond
-		}
-	}
-	return nil
-}
 
 func (c *Channel) GetSpecJSON() ([]byte, error) {
 	return json.Marshal(c.Spec)
+}
+
+// GetCondition returns the condition currently associated with the given type, or nil.
+func (cs *ChannelStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
+	return chanCondSet.Manage(cs).GetCondition(t)
+}
+
+// GetConditions returns the Conditions array. This enables generic handling of
+// conditions by implementing the duckv1alpha1.Conditions interface.
+func (cs *ChannelStatus) GetConditions() duckv1alpha1.Conditions {
+	return cs.Conditions
+}
+
+// SetConditions sets the Conditions array. This enables generic handling of
+// conditions by implementing the duckv1alpha1.Conditions interface.
+func (cs *ChannelStatus) SetConditions(conditions duckv1alpha1.Conditions) {
+	cs.Conditions = conditions
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

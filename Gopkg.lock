@@ -1043,6 +1043,7 @@
     "github.com/google/go-github/github",
     "github.com/google/uuid",
     "github.com/knative/pkg/apis",
+    "github.com/knative/pkg/apis/duck",
     "github.com/knative/pkg/apis/duck/v1alpha1",
     "github.com/knative/pkg/apis/istio/v1alpha3",
     "github.com/knative/pkg/client/clientset/versioned",

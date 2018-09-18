@@ -20,16 +20,17 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-var condReady = ChannelCondition{
-	Type:   ChannelConditionReady,
+var condReady = duckv1alpha1.Condition{
+	Type:   duckv1alpha1.ConditionReady,
 	Status: corev1.ConditionTrue,
 }
 
-var condUnprovisioned = ChannelCondition{
+var condUnprovisioned = duckv1alpha1.Condition{
 	Type:   ChannelConditionProvisioned,
 	Status: corev1.ConditionFalse,
 }
@@ -38,21 +39,21 @@ func TestChannelGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
 		cs        *ChannelStatus
-		condQuery ChannelConditionType
-		want      *ChannelCondition
+		condQuery duckv1alpha1.ConditionType
+		want      *duckv1alpha1.Condition
 	}{{
 		name: "single condition",
 		cs: &ChannelStatus{
-			Conditions: []ChannelCondition{
+			Conditions: []duckv1alpha1.Condition{
 				condReady,
 			},
 		},
-		condQuery: ChannelConditionReady,
+		condQuery: duckv1alpha1.ConditionReady,
 		want:      &condReady,
 	}, {
 		name: "multiple conditions",
 		cs: &ChannelStatus{
-			Conditions: []ChannelCondition{
+			Conditions: []duckv1alpha1.Condition{
 				condReady,
 				condUnprovisioned,
 			},
@@ -62,12 +63,12 @@ func TestChannelGetCondition(t *testing.T) {
 	}, {
 		name: "unknown condition",
 		cs: &ChannelStatus{
-			Conditions: []ChannelCondition{
+			Conditions: []duckv1alpha1.Condition{
 				condReady,
 				condUnprovisioned,
 			},
 		},
-		condQuery: ChannelConditionType("foo"),
+		condQuery: duckv1alpha1.ConditionType("foo"),
 		want:      nil,
 	}}
 
@@ -78,6 +79,18 @@ func TestChannelGetCondition(t *testing.T) {
 				t.Errorf("unexpected condition (-want, +got) = %v", diff)
 			}
 		})
+	}
+}
+
+func TestChannelSetConditions(t *testing.T) {
+	c := &Channel{
+		Status: ChannelStatus{},
+	}
+	want := duckv1alpha1.Conditions{condReady}
+	c.Status.SetConditions(want)
+	got := c.Status.GetConditions()
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("unexpected conditions (-want, +got) = %v", diff)
 	}
 }
 
