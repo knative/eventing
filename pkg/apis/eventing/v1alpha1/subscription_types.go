@@ -20,7 +20,8 @@ import (
 	"encoding/json"
 
 	"github.com/knative/pkg/apis"
-	duck "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/apis/duck"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/webhook"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,7 +50,10 @@ var _ runtime.Object = (*Subscription)(nil)
 var _ webhook.GenericCRD = (*Subscription)(nil)
 
 // Check that ConfigurationStatus may have its conditions managed.
-var _ duck.ConditionsAccessor = (*SubscriptionStatus)(nil)
+var _ duckv1alpha1.ConditionsAccessor = (*SubscriptionStatus)(nil)
+
+// Check that Subscription implements the Conditions duck type.
+var _ = duck.VerifyType(&Subscription{}, &duckv1alpha1.Conditions{})
 
 // SubscriptionSpec specifies the Channel for incoming events, a Call target for
 // processing those events and where to put the result of the processing. Only
@@ -163,14 +167,14 @@ type ResultStrategy struct {
 	Target *corev1.ObjectReference `json:"target,omitempty"`
 }
 
-var subCondSet = duck.NewLivingConditionSet()
+var subCondSet = duckv1alpha1.NewLivingConditionSet()
 
 // SubscriptionStatus (computed) for a subscription
 type SubscriptionStatus struct {
 	// Represents the latest available observations of a subscription's current state.
 	// +patchMergeKey=type
 	// +patchStrategy=merge
-	Conditions duck.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 // GetSpecJSON returns spec as json
@@ -179,19 +183,19 @@ func (s *Subscription) GetSpecJSON() ([]byte, error) {
 }
 
 // GetCondition returns the condition currently associated with the given type, or nil.
-func (ss *SubscriptionStatus) GetCondition(t duck.ConditionType) *duck.Condition {
+func (ss *SubscriptionStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
 	return subCondSet.Manage(ss).GetCondition(t)
 }
 
 // GetConditions returns the Conditions array. This enables generic handling of
-// conditions by implementing the duck.Conditions interface.
-func (ss *SubscriptionStatus) GetConditions() duck.Conditions {
+// conditions by implementing the duckv1alpha1.Conditions interface.
+func (ss *SubscriptionStatus) GetConditions() duckv1alpha1.Conditions {
 	return ss.Conditions
 }
 
 // SetConditions sets the Conditions array. This enables generic handling of
-// conditions by implementing the duck.Conditions interface.
-func (ss *SubscriptionStatus) SetConditions(conditions duck.Conditions) {
+// conditions by implementing the duckv1alpha1.Conditions interface.
+func (ss *SubscriptionStatus) SetConditions(conditions duckv1alpha1.Conditions) {
 	ss.Conditions = conditions
 }
 
