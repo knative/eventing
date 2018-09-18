@@ -31,10 +31,9 @@ import (
 // +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Channel represents a named endpoint on which a Bus accepts event delivery and
-// corresponds to the channels.channels.knative.dev CRD. The Bus handles
-// provisioning channels, delivering events to Channels, and delivering events
-// from Channels to their Subscriptions.
+// Channel is an abstract resource that implements the Subscribable and Sinkable
+// contracts. The Provisioner provisions infrastructure to accepts events and
+// deliver to Subscriptions.
 type Channel struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
@@ -59,7 +58,7 @@ var _ webhook.GenericCRD = (*Channel)(nil)
 // Check that ConfigurationStatus may have its conditions managed.
 var _ duckv1alpha1.ConditionsAccessor = (*ChannelStatus)(nil)
 
-// Check that Subscription implements the Conditions duck type.
+// Check that Channel implements the Conditions duck type.
 var _ = duck.VerifyType(&Channel{}, &duckv1alpha1.Conditions{})
 
 // ChannelSpec specifies the Provisioner backing a channel and the configuration
@@ -108,7 +107,7 @@ type ChannelStatus struct {
 	// ObservedGeneration is the most recent generation observed for this Channel.
 	// It corresponds to the Channel's generation, which is updated on mutation by
 	// the API Server.
-	//TODO The above comment is only true once
+	// TODO: The above comment is only true once
 	// https://github.com/kubernetes/kubernetes/issues/58778 is fixed.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
@@ -116,7 +115,7 @@ type ChannelStatus struct {
 	// DomainInternal holds the top-level domain that will distribute traffic
 	// over the provided targets from inside the cluster. It generally has the
 	// form {channel}.{namespace}.svc.cluster.local
-	//TODO move this to a struct that can be embedded similar to ObjectMeta and
+	// TODO: move this to a struct that can be embedded similar to ObjectMeta and
 	// TypeMeta.
 	// +optional
 	DomainInternal string `json:"domainInternal,omitempty"`
