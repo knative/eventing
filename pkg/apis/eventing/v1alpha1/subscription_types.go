@@ -173,21 +173,14 @@ type SubscriptionStatus struct {
 	Conditions duck.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
-func (ss *SubscriptionStatus) GetCondition(t duck.ConditionType) *duck.Condition {
-	return subCondSet.Manage(ss).GetCondition(t)
-}
-
+// GetSpecJSON returns spec as json
 func (s *Subscription) GetSpecJSON() ([]byte, error) {
 	return json.Marshal(s.Spec)
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// SubscriptionList returned in list operations
-type SubscriptionList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-	Items           []Subscription `json:"items"`
+// GetCondition returns the condition currently associated with the given type, or nil.
+func (ss *SubscriptionStatus) GetCondition(t duck.ConditionType) *duck.Condition {
+	return subCondSet.Manage(ss).GetCondition(t)
 }
 
 // GetConditions returns the Conditions array. This enables generic handling of
@@ -200,4 +193,13 @@ func (ss *SubscriptionStatus) GetConditions() duck.Conditions {
 // conditions by implementing the duck.Conditions interface.
 func (ss *SubscriptionStatus) SetConditions(conditions duck.Conditions) {
 	ss.Conditions = conditions
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// SubscriptionList returned in list operations
+type SubscriptionList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []Subscription `json:"items"`
 }

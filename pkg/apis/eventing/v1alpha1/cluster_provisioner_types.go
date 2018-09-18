@@ -75,7 +75,7 @@ var cProvCondSet = duck.NewLivingConditionSet()
 // ClusterProvisionerStatus is the status for a ClusterProvisioner resource
 type ClusterProvisionerStatus struct {
 	// Conditions holds the state of a cluster provisioner at a point in time.
-	Conditions duck.Conditions `json:"conditions,omitempty"`
+	Conditions duck.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
 	// ObservedGeneration is the 'Generation' of the ClusterProvisioner that
 	// was last reconciled by the controller.
@@ -88,14 +88,9 @@ func (p *ClusterProvisioner) GetSpecJSON() ([]byte, error) {
 	return json.Marshal(p.Spec)
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ClusterProvisionerList is a list of ClusterProvisioner resources
-type ClusterProvisionerList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []ClusterProvisioner `json:"items"`
+// GetCondition returns the condition currently associated with the given type, or nil.
+func (p *ClusterProvisionerStatus) GetCondition(t duck.ConditionType) *duck.Condition {
+	return cProvCondSet.Manage(p).GetCondition(t)
 }
 
 // GetConditions returns the Conditions array. This enables generic handling of
@@ -108,4 +103,14 @@ func (ps *ClusterProvisionerStatus) GetConditions() duck.Conditions {
 // conditions by implementing the duck.Conditions interface.
 func (ps *ClusterProvisionerStatus) SetConditions(conditions duck.Conditions) {
 	ps.Conditions = conditions
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ClusterProvisionerList is a list of ClusterProvisioner resources
+type ClusterProvisionerList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ClusterProvisioner `json:"items"`
 }
