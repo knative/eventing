@@ -31,6 +31,29 @@ CODE_PACKAGES_STR="${CODE_PACKAGES[*]}"
 CODE_PACKAGES_STR="./${CODE_PACKAGES_STR// /\/... .\/}/..."
 readonly CODE_PACKAGES_STR
 
+# Check for subdirs which do not contain any test module but contain code.
+# This is to prevent an issue where these directories are skipped in coverage
+# reports resulting in inaccurately high coverage results. Fix by adding a
+# stub_tests.go with no tests to these directories.
+# This function namespaced with eventing to allow adding to test-infra without name collision
+function check_eventing_subdirs_without_tests() {
+  ret=0
+  for code_dir in "$1"; do
+    for dir in $(find $code_dir -type d); do
+      if echo "$dir" | grep -q "$2"; then
+        continue
+      fi
+      if ls -l $dir/*.go 1> /dev/null 2>&1; then
+        if ! ls -l $dir/*_test.go 1> /dev/null 2>&1; then
+          echo "Warning: no tests in directory: $dir"
+          ret=1
+        fi
+      fi
+    done
+  done
+  return ${ret}
+}
+
 function build_tests() {
   header "Running build tests"
   local result=0
@@ -40,6 +63,8 @@ function build_tests() {
   # Check that we don't have any forbidden licenses in our images.
   subheader "Checking for forbidden licenses"
   check_licenses ./cmd/* || result=1
+  subheader "Checking for subdirs with no tests"
+  check_eventing_subdirs_without_tests "${CODE_PACKAGES[*]}" "pkg/client" || result=1
   return ${result}
 }
 
