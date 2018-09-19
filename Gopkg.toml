@@ -93,8 +93,5 @@ required = [
 
 [[constraint]]
   name = "sigs.k8s.io/controller-runtime"
-  # TODO when https://github.com/kubernetes-sigs/controller-runtime/pull/108 lands,
-  #      re-point back at sigs.k8s.io/controller-runtime fork
-  source = "github.com/n3wscott/controller-runtime"
-  # HEAD as of 2018-08-13
-  revision = "21388f002e2c9d66214326bcd3486f0e1b5f4857"
+  # HEAD as of 2018-09-19
+  revision = "5373e8e1f3188ff4266902a6fc86372bc14b3815"

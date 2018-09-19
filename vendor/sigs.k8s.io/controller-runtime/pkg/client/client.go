@@ -111,15 +111,18 @@ func (c *client) Update(ctx context.Context, obj runtime.Object) error {
 }
 
 // Delete implements client.Client
-func (c *client) Delete(ctx context.Context, obj runtime.Object) error {
+func (c *client) Delete(ctx context.Context, obj runtime.Object, opts ...DeleteOptionFunc) error {
 	o, err := c.cache.getObjMeta(obj)
 	if err != nil {
 		return err
 	}
+
+	deleteOpts := DeleteOptions{}
 	return o.Delete().
 		NamespaceIfScoped(o.GetNamespace(), o.isNamespaced()).
 		Resource(o.resource()).
 		Name(o.GetName()).
+		Body(deleteOpts.ApplyOptions(opts).AsDeleteOptions()).
 		Do().
 		Error()
 }
@@ -151,6 +154,39 @@ func (c *client) List(ctx context.Context, opts *ListOptions, obj runtime.Object
 		Resource(r.resource()).
 		Body(obj).
 		VersionedParams(opts.AsListOptions(), c.paramCodec).
+		Do().
+		Into(obj)
+}
+
+// Status implements client.StatusClient
+func (c *client) Status() StatusWriter {
+	return &statusWriter{client: c}
+}
+
+// statusWriter is client.StatusWriter that writes status subresource
+type statusWriter struct {
+	client *client
+}
+
+// ensure statusWriter implements client.StatusWriter
+var _ StatusWriter = &statusWriter{}
+
+// Update implements client.StatusWriter
+func (sw *statusWriter) Update(_ context.Context, obj runtime.Object) error {
+	o, err := sw.client.cache.getObjMeta(obj)
+	if err != nil {
+		return err
+	}
+	// TODO(droot): examine the returned error and check if it error needs to be
+	// wrapped to improve the UX ?
+	// It will be nice to receive an error saying the object doesn't implement
+	// status subresource and check CRD definition
+	return o.Put().
+		NamespaceIfScoped(o.GetNamespace(), o.isNamespaced()).
+		Resource(o.resource()).
+		Name(o.GetName()).
+		SubResource("status").
+		Body(obj).
 		Do().
 		Into(obj)
 }

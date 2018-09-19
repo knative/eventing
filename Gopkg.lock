@@ -362,6 +362,14 @@
   version = "1.0.0"
 
 [[projects]]
+  digest = "1:93b1d84c5fa6d1ea52f4114c37714cddd84d5b78f151b62bb101128dd51399bf"
+  name = "github.com/pborman/uuid"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "adf5a7427709b9deb95d29d3fa8a2bf9cfd388f1"
+  version = "v1.2"
+
+[[projects]]
   branch = "master"
   digest = "1:3bf17a6e6eaa6ad24152148a631d18662f7212e21637c2699bff3369b7f00fa2"
   name = "github.com/petar/GoLLRB"
@@ -756,7 +764,7 @@
   version = "kubernetes-1.11.0"
 
 [[projects]]
-  digest = "1:4b0d523ee389c762d02febbcfa0734c4530ebe87abe925db18f05422adcb33e8"
+  digest = "1:b9cccdbacdbdad18685fbafe0f65efd91380c2db233ee4e812cbe934fcc2ac5b"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/equality",
@@ -794,6 +802,7 @@
     "pkg/util/sets",
     "pkg/util/sets/types",
     "pkg/util/strategicpatch",
+    "pkg/util/uuid",
     "pkg/util/validation",
     "pkg/util/validation/field",
     "pkg/util/wait",
@@ -808,7 +817,7 @@
   version = "kubernetes-1.11.0"
 
 [[projects]]
-  digest = "1:460f9e74b2a51f2393c946f060f3dc382b00cfe671a838e4e0970835a79ffcea"
+  digest = "1:b2b13a7c98cee7405ee7e1cf93296d66de435196fc9a19047e31132f90a72030"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -928,6 +937,8 @@
     "tools/clientcmd/api",
     "tools/clientcmd/api/latest",
     "tools/clientcmd/api/v1",
+    "tools/leaderelection",
+    "tools/leaderelection/resourcelock",
     "tools/metrics",
     "tools/pager",
     "tools/record",
@@ -1001,7 +1012,7 @@
   revision = "8a9b82f00b3a86eac24681da3f9fe6c34c01cea2"
 
 [[projects]]
-  digest = "1:d7f34929f9fd9822b69a72fd59d987baf5e2d01eb8fb42831504741c2d9f20c1"
+  digest = "1:b18104b0089c9483846dfcd124fd25a65361697004684b03d4de86546e9808d6"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/cache",
@@ -1015,7 +1026,9 @@
     "pkg/handler",
     "pkg/internal/controller",
     "pkg/internal/recorder",
+    "pkg/leaderelection",
     "pkg/manager",
+    "pkg/patch",
     "pkg/predicate",
     "pkg/reconcile",
     "pkg/recorder",
@@ -1024,10 +1037,12 @@
     "pkg/runtime/signals",
     "pkg/source",
     "pkg/source/internal",
+    "pkg/webhook/admission",
+    "pkg/webhook/admission/types",
+    "pkg/webhook/types",
   ]
   pruneopts = "NUT"
-  revision = "21388f002e2c9d66214326bcd3486f0e1b5f4857"
-  source = "github.com/n3wscott/controller-runtime"
+  revision = "5373e8e1f3188ff4266902a6fc86372bc14b3815"
 
 [solve-meta]
   analyzer-name = "dep"

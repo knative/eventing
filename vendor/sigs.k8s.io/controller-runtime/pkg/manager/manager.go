@@ -20,16 +20,22 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	internalrecorder "sigs.k8s.io/controller-runtime/pkg/internal/recorder"
+	"sigs.k8s.io/controller-runtime/pkg/leaderelection"
 	"sigs.k8s.io/controller-runtime/pkg/recorder"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/types"
 )
 
 // Manager initializes shared dependencies such as Caches and Clients, and provides them to Runnables.
@@ -54,6 +60,9 @@ type Manager interface {
 	// GetScheme returns and initialized Scheme
 	GetScheme() *runtime.Scheme
 
+	// GetAdmissionDecoder returns the runtime.Decoder based on the scheme.
+	GetAdmissionDecoder() types.Decoder
+
 	// GetClient returns a client configured with the Config
 	GetClient() client.Client
 
@@ -65,6 +74,9 @@ type Manager interface {
 
 	// GetRecorder returns a new EventRecorder for the provided name
 	GetRecorder(name string) record.EventRecorder
+
+	// GetRESTMapper returns a RESTMapper
+	GetRESTMapper() meta.RESTMapper
 }
 
 // Options are the arguments for creating a new Manager
@@ -76,18 +88,30 @@ type Options struct {
 	// MapperProvider provides the rest mapper used to map go types to Kubernetes APIs
 	MapperProvider func(c *rest.Config) (meta.RESTMapper, error)
 
-	// SyncPeriod determines the minimum frequency at which watched objects are
-	// reconciled. A lower period will correct entropy more quickly but reduce
-	// responsiveness to change. Choose a low value if reconciles are fast and/or
-	// there are few objects to reconcile. Choose a high value if reconciles are
-	// slow and/or there are many object to reconcile. Defaults to 10 hours if
-	// unset.
+	// SyncPeriod determines the minimum frequency at which watched resources are
+	// reconciled. A lower period will correct entropy more quickly, but reduce
+	// responsiveness to change if there are many watched resources. Change this
+	// value only if you know what you are doing. Defaults to 10 hours if unset.
 	SyncPeriod *time.Duration
+
+	// LeaderElection determines whether or not to use leader election when
+	// starting the manager.
+	LeaderElection bool
+
+	// LeaderElectionNamespace determines the namespace in which the leader
+	// election configmap will be created.
+	LeaderElectionNamespace string
+
+	// LeaderElectionID determines the name of the configmap that leader election
+	// will use for holding the leader lock.
+	LeaderElectionID string
 
 	// Dependency injection for testing
 	newCache            func(config *rest.Config, opts cache.Options) (cache.Cache, error)
 	newClient           func(config *rest.Config, options client.Options) (client.Client, error)
-	newRecorderProvider func(config *rest.Config, scheme *runtime.Scheme) (recorder.Provider, error)
+	newRecorderProvider func(config *rest.Config, scheme *runtime.Scheme, logger logr.Logger) (recorder.Provider, error)
+	newResourceLock     func(config *rest.Config, recorderProvider recorder.Provider, options leaderelection.Options) (resourcelock.Interface, error)
+	newAdmissionDecoder func(scheme *runtime.Scheme) (types.Decoder, error)
 }
 
 // Runnable allows a component to be started.
@@ -132,10 +156,26 @@ func New(config *rest.Config, options Options) (Manager, error) {
 	cache, err := options.newCache(config, cache.Options{Scheme: options.Scheme, Mapper: mapper, Resync: options.SyncPeriod})
 	if err != nil {
 		return nil, err
-
 	}
 	// Create the recorder provider to inject event recorders for the components.
-	recorderProvider, err := options.newRecorderProvider(config, options.Scheme)
+	// TODO(directxman12): the log for the event provider should have a context (name, tags, etc) specific
+	// to the particular controller that it's being injected into, rather than a generic one like is here.
+	recorderProvider, err := options.newRecorderProvider(config, options.Scheme, log.WithName("events"))
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the resource lock to enable leader election)
+	resourceLock, err := options.newResourceLock(config, recorderProvider, leaderelection.Options{
+		LeaderElection:          options.LeaderElection,
+		LeaderElectionID:        options.LeaderElectionID,
+		LeaderElectionNamespace: options.LeaderElectionNamespace,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	admissionDecoder, err := options.newAdmissionDecoder(options.Scheme)
 	if err != nil {
 		return nil, err
 	}
@@ -143,11 +183,14 @@ func New(config *rest.Config, options Options) (Manager, error) {
 	return &controllerManager{
 		config:           config,
 		scheme:           options.Scheme,
+		admissionDecoder: admissionDecoder,
 		errChan:          make(chan error),
 		cache:            cache,
 		fieldIndexes:     cache,
-		client:           client.DelegatingClient{Reader: cache, Writer: writeObj},
+		client:           client.DelegatingClient{Reader: cache, Writer: writeObj, StatusClient: writeObj},
 		recorderProvider: recorderProvider,
+		resourceLock:     resourceLock,
+		mapper:           mapper,
 	}, nil
 }
 
@@ -175,6 +218,15 @@ func setOptionsDefaults(options Options) Options {
 	// Allow newRecorderProvider to be mocked
 	if options.newRecorderProvider == nil {
 		options.newRecorderProvider = internalrecorder.NewProvider
+	}
+
+	// Allow newResourceLock to be mocked
+	if options.newResourceLock == nil {
+		options.newResourceLock = leaderelection.NewResourceLock
+	}
+
+	if options.newAdmissionDecoder == nil {
+		options.newAdmissionDecoder = admission.NewDecoder
 	}
 
 	return options

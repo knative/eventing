@@ -17,16 +17,22 @@ limitations under the License.
 package manager
 
 import (
+	"fmt"
 	"sync"
+	"time"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/leaderelection"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/recorder"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/types"
 )
 
 var log = logf.KBLog.WithName("manager")
@@ -38,6 +44,8 @@ type controllerManager struct {
 	// scheme is the scheme injected into Controllers, EventHandlers, Sources and Predicates.  Defaults
 	// to scheme.scheme.
 	scheme *runtime.Scheme
+	// admissionDecoder is used to decode an admission.Request.
+	admissionDecoder types.Decoder
 
 	// runnables is the set of Controllers that the controllerManager injects deps into and Starts.
 	runnables []Runnable
@@ -55,6 +63,12 @@ type controllerManager struct {
 	// recorderProvider is used to generate event recorders that will be injected into Controllers
 	// (and EventHandlers, Sources and Predicates).
 	recorderProvider recorder.Provider
+
+	// resourceLock
+	resourceLock resourcelock.Interface
+
+	// mapper is used to map resources to kind, and map kind and version.
+	mapper meta.RESTMapper
 
 	mu      sync.Mutex
 	started bool
@@ -105,6 +119,9 @@ func (cm *controllerManager) SetFields(i interface{}) error {
 	if _, err := inject.StopChannelInto(cm.stop, i); err != nil {
 		return err
 	}
+	if _, err := inject.DecoderInto(cm.admissionDecoder, i); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -120,6 +137,10 @@ func (cm *controllerManager) GetScheme() *runtime.Scheme {
 	return cm.scheme
 }
 
+func (cm *controllerManager) GetAdmissionDecoder() types.Decoder {
+	return cm.admissionDecoder
+}
+
 func (cm *controllerManager) GetFieldIndexer() client.FieldIndexer {
 	return cm.fieldIndexes
 }
@@ -132,7 +153,57 @@ func (cm *controllerManager) GetRecorder(name string) record.EventRecorder {
 	return cm.recorderProvider.GetEventRecorderFor(name)
 }
 
+func (cm *controllerManager) GetRESTMapper() meta.RESTMapper {
+	return cm.mapper
+}
+
 func (cm *controllerManager) Start(stop <-chan struct{}) error {
+	if cm.resourceLock == nil {
+		go cm.start(stop)
+		select {
+		case <-stop:
+			// we are done
+			return nil
+		case err := <-cm.errChan:
+			// Error starting a controller
+			return err
+		}
+	}
+
+	l, err := leaderelection.NewLeaderElector(leaderelection.LeaderElectionConfig{
+		Lock: cm.resourceLock,
+		// Values taken from: https://github.com/kubernetes/apiserver/blob/master/pkg/apis/config/v1alpha1/defaults.go
+		// TODO(joelspeed): These timings should be configurable
+		LeaseDuration: 15 * time.Second,
+		RenewDeadline: 10 * time.Second,
+		RetryPeriod:   2 * time.Second,
+		Callbacks: leaderelection.LeaderCallbacks{
+			OnStartedLeading: cm.start,
+			OnStoppedLeading: func() {
+				// Most implementations of leader election log.Fatal() here.
+				// Since Start is wrapped in log.Fatal when called, we can just return
+				// an error here which will cause the program to exit.
+				cm.errChan <- fmt.Errorf("leader election lost")
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	go l.Run()
+
+	select {
+	case <-stop:
+		// We are done
+		return nil
+	case err := <-cm.errChan:
+		// Error starting a controller
+		return err
+	}
+}
+
+func (cm *controllerManager) start(stop <-chan struct{}) {
 	func() {
 		cm.mu.Lock()
 		defer cm.mu.Unlock()
@@ -169,9 +240,6 @@ func (cm *controllerManager) Start(stop <-chan struct{}) error {
 	select {
 	case <-stop:
 		// We are done
-		return nil
-	case err := <-cm.errChan:
-		// Error starting a controller
-		return err
+		return
 	}
 }
