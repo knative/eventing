@@ -93,14 +93,24 @@ func (p *ClusterProvisioner) GetSpecJSON() ([]byte, error) {
 }
 
 // GetCondition returns the condition currently associated with the given type, or nil.
-func (p *ClusterProvisionerStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
-	return cProvCondSet.Manage(p).GetCondition(t)
+func (ps *ClusterProvisionerStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
+	return cProvCondSet.Manage(ps).GetCondition(t)
 }
 
 // GetConditions returns the Conditions array. This enables generic handling of
 // conditions by implementing the duckv1alpha1.Conditions interface.
 func (ps *ClusterProvisionerStatus) GetConditions() duckv1alpha1.Conditions {
 	return ps.Conditions
+}
+
+// IsReady returns true if the resource is ready overall.
+func (ps *ClusterProvisionerStatus) IsReady() bool {
+	return cProvCondSet.Manage(ps).IsHappy()
+}
+
+// InitializeConditions sets relevant unset conditions to Unknown state.
+func (ps *ClusterProvisionerStatus) InitializeConditions() {
+	cProvCondSet.Manage(ps).InitializeConditions()
 }
 
 // SetConditions sets the Conditions array. This enables generic handling of
