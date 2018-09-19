@@ -14,13 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package client
+/*
+Package patch provides method to calculate JSON patch between 2 k8s objects.
 
-// DelegatingClient forms an interface Client by composing separate
-// reader, writer and statusclient interfaces.  This way, you can have an Client that
-// reads from a cache and writes to the API server.
-type DelegatingClient struct {
-	Reader
-	Writer
-	StatusClient
-}
+Calculate JSON patch
+
+	oldDeployment := appsv1.Deployment{
+		// some fields
+	}
+	newDeployment := appsv1.Deployment{
+		// some different fields
+	}
+	patch, err := NewJSONPatch(oldDeployment, newDeployment)
+	if err != nil {
+		// handle error
+	}
+*/
+package patch
