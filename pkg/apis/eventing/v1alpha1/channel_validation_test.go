@@ -31,7 +31,7 @@ func TestChannelValidation(t *testing.T) {
 	tests := []struct {
 		name string
 		c    *Channel
-		want *apis.FieldError
+		want string
 	}{{
 		name: "valid",
 		c: &Channel{
@@ -43,13 +43,13 @@ func TestChannelValidation(t *testing.T) {
 				},
 			},
 		},
-		want: nil,
+		want: "",
 	}, {
 		name: "empty",
 		c: &Channel{
 			Spec: ChannelSpec{},
 		},
-		want: apis.ErrMissingField("spec.provisioner"),
+		want: apis.ErrMissingField("spec.provisioner").Error(),
 	}, {
 		name: "subscribers array",
 		c: &Channel{
@@ -85,7 +85,7 @@ func TestChannelValidation(t *testing.T) {
 				}},
 			},
 		},
-		want: nil,
+		want: "",
 	}, {
 		name: "empty subscriber",
 		c: &Channel{
@@ -105,12 +105,12 @@ func TestChannelValidation(t *testing.T) {
 				},
 			},
 		},
-		want: apis.ErrMissingField("spec.subscriber[1].call", "spec.subscriber[1].result"),
+		want: apis.ErrMissingField("spec.subscriber[1].call", "spec.subscriber[1].result").Error(),
 	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.c.Validate()
+			got := test.c.Validate().Error()
 			if diff := cmp.Diff(test.want, got); diff != "" {
 				t.Errorf("validateChannel (-want, +got) = %v", diff)
 			}
@@ -123,7 +123,7 @@ func TestChannelImmutableFields(t *testing.T) {
 		name string
 		new  apis.Immutable
 		old  apis.Immutable
-		want *apis.FieldError
+		want string
 	}{{
 		name: "good (new)",
 		new: &Channel{
@@ -136,7 +136,7 @@ func TestChannelImmutableFields(t *testing.T) {
 			},
 		},
 		old:  nil,
-		want: nil,
+		want: "",
 	}, {
 		name: "good (no change)",
 		new: &Channel{
@@ -157,7 +157,7 @@ func TestChannelImmutableFields(t *testing.T) {
 				},
 			},
 		},
-		want: nil,
+		want: "",
 	}, {
 		name: "good (arguments change)",
 		new: &Channel{
@@ -184,7 +184,7 @@ func TestChannelImmutableFields(t *testing.T) {
 				},
 			},
 		},
-		want: nil,
+		want: "",
 	}, {
 		name: "bad (not channel)",
 		new: &Channel{
@@ -197,9 +197,9 @@ func TestChannelImmutableFields(t *testing.T) {
 			},
 		},
 		old: &Subscription{},
-		want: &apis.FieldError{
+		want: (&apis.FieldError{
 			Message: "The provided resource was not a Channel",
-		},
+		}).Error(),
 	}, {
 		name: "bad (provisioner changes)",
 		new: &Channel{
@@ -220,15 +220,15 @@ func TestChannelImmutableFields(t *testing.T) {
 				},
 			},
 		},
-		want: &apis.FieldError{
+		want: (&apis.FieldError{
 			Message: "Immutable fields changed",
 			Paths:   []string{"spec.provisioner"},
-		},
+		}).Error(),
 	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.new.CheckImmutableFields(test.old)
+			got := test.new.CheckImmutableFields(test.old).Error()
 			if diff := cmp.Diff(test.want, got); diff != "" {
 				t.Errorf("Validate (-want, +got) = %v", diff)
 			}
