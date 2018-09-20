@@ -29,26 +29,24 @@ func (c *Channel) Validate() *apis.FieldError {
 }
 
 func (cs *ChannelSpec) Validate() *apis.FieldError {
+	var errs *apis.FieldError
 	if cs.Provisioner == nil {
-		return apis.ErrMissingField("provisioner")
+		errs = errs.Also(apis.ErrMissingField("provisioner"))
 	}
 
 	for i, subscriber := range cs.Subscribers {
 		if subscriber.Call == nil && subscriber.Result == nil {
-			//TODO collect all errors instead of returning the first. This isn't
-			// possible yet with knative/pkg validation.
-			return apis.ErrMissingField("call", "result").ViaField(fmt.Sprintf("subscriber[%d]", i))
+			errs = errs.Also(apis.ErrMissingField("call", "result").ViaField(fmt.Sprintf("subscriber[%d]", i)))
 		}
 	}
 
-	return nil
+	return errs
 }
 
 func (current *Channel) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
 	if og == nil {
 		return nil
 	}
-
 	original, ok := og.(*Channel)
 	if !ok {
 		return &apis.FieldError{Message: "The provided resource was not a Channel"}

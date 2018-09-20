@@ -268,7 +268,7 @@
   revision = "5c1d8c8469d1ed34b2aecf4c2305b3a57fff2ee3"
 
 [[projects]]
-  digest = "1:321fbe5b0e77758eca3271807cb003d25b76d99b819f86e01956bb9accea2494"
+  digest = "1:89864a5a6728be62bc3397a082ad80cb84c4e0049f77606833037a647e47c74f"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -282,18 +282,14 @@
     "client/clientset/versioned",
     "client/clientset/versioned/scheme",
     "client/clientset/versioned/typed/authentication/v1alpha1",
-    "client/clientset/versioned/typed/duck/v1alpha1",
     "client/clientset/versioned/typed/istio/v1alpha3",
     "client/informers/externalversions",
     "client/informers/externalversions/authentication",
     "client/informers/externalversions/authentication/v1alpha1",
-    "client/informers/externalversions/duck",
-    "client/informers/externalversions/duck/v1alpha1",
     "client/informers/externalversions/internalinterfaces",
     "client/informers/externalversions/istio",
     "client/informers/externalversions/istio/v1alpha3",
     "client/listers/authentication/v1alpha1",
-    "client/listers/duck/v1alpha1",
     "client/listers/istio/v1alpha3",
     "configmap",
     "logging",
@@ -302,7 +298,7 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "67830c7a64431edc38ee19628dc7116b0c6d99b5"
+  revision = "a133825579436877df315e7cb6d8aeba49b9f575"
 
 [[projects]]
   digest = "1:63f3974f3afe3dc5b6a115c0d53b0897cd01be6880c4bf5d014fc69a95db6ed1"

@@ -34,14 +34,13 @@ func (s *Subscription) Validate() *apis.FieldError {
 // We require always From
 // Also at least one of 'call' and 'result' must be defined (non-nill and non-empty)
 func (ss *SubscriptionSpec) Validate() *apis.FieldError {
+	var errs *apis.FieldError
 	if isFromEmpty(ss.From) {
 		fe := apis.ErrMissingField("from")
 		fe.Details = "the Subscription must reference a from channel"
 		return fe
-	}
-
-	if fe := isValidFrom(ss.From); fe != nil {
-		return fe.ViaField("from")
+	} else if fe := isValidFrom(ss.From); fe != nil {
+		errs = errs.Also(fe.ViaField("from"))
 	}
 
 	missingCallable := isCallableNilOrEmpty(ss.Call)
@@ -49,22 +48,22 @@ func (ss *SubscriptionSpec) Validate() *apis.FieldError {
 	if missingCallable && missingResultStrategy {
 		fe := apis.ErrMissingField("result", "call")
 		fe.Details = "the Subscription must reference at least one of (result channel or a call)"
-		return fe
+		errs = errs.Also(fe)
 	}
 
 	if !missingCallable {
 		if fe := isValidCallable(*ss.Call); fe != nil {
-			return fe.ViaField("call")
+			errs = errs.Also(fe.ViaField("call"))
 		}
 	}
 
 	if !missingResultStrategy {
 		if fe := isValidResultStrategy(ss.Result); fe != nil {
-			return fe.ViaField("result")
+			errs = errs.Also(fe.ViaField("result"))
 		}
 	}
 
-	return nil
+	return errs
 }
 
 func isCallableNilOrEmpty(c *Callable) bool {
@@ -74,18 +73,19 @@ func isCallableNilOrEmpty(c *Callable) bool {
 }
 
 func isValidCallable(c Callable) *apis.FieldError {
+	var errs *apis.FieldError
 	if c.TargetURI != nil && *c.TargetURI != "" && c.Target != nil && !equality.Semantic.DeepEqual(c.Target, &corev1.ObjectReference{}) {
-		return apis.ErrMultipleOneOf("target", "targetURI")
+		errs = errs.Also(apis.ErrMultipleOneOf("target", "targetURI"))
 	}
 
 	// If Target given, check the fields.
 	if c.Target != nil && !equality.Semantic.DeepEqual(c.Target, &corev1.ObjectReference{}) {
 		fe := isValidObjectReference(*c.Target)
 		if fe != nil {
-			return fe.ViaField("target")
+			errs = errs.Also(fe.ViaField("target"))
 		}
 	}
-	return nil
+	return errs
 }
 
 func isFromEmpty(f corev1.ObjectReference) bool {
@@ -97,22 +97,20 @@ func isFromEmpty(f corev1.ObjectReference) bool {
 // - APIVersion == 'channels.knative.dev/v1alpha1'
 // - Name       == not empty
 func isValidFrom(f corev1.ObjectReference) *apis.FieldError {
-	fe := isValidObjectReference(f)
-	if fe != nil {
-		return fe
-	}
+	errs := isValidObjectReference(f)
+
 	if f.Kind != "Channel" {
 		fe := apis.ErrInvalidValue(f.Kind, "kind")
 		fe.Paths = []string{"kind"}
 		fe.Details = "only 'Channel' kind is allowed"
-		return fe
+		errs = errs.Also(fe)
 	}
 	if f.APIVersion != "channels.knative.dev/v1alpha1" {
 		fe := apis.ErrInvalidValue(f.APIVersion, "apiVersion")
 		fe.Details = "only channels.knative.dev/v1alpha1 is allowed for apiVersion"
-		return fe
+		errs = errs.Also(fe)
 	}
-	return nil
+	return errs
 }
 
 func isResultStrategyNilOrEmpty(r *ResultStrategy) bool {
@@ -120,35 +118,28 @@ func isResultStrategyNilOrEmpty(r *ResultStrategy) bool {
 }
 
 func isValidResultStrategy(r *ResultStrategy) *apis.FieldError {
-	fe := isValidObjectReference(*r.Target)
-	if fe != nil {
-		return fe.ViaField("target")
-	}
-	return nil
-
+	return isValidObjectReference(*r.Target).ViaField("target")
 }
 
 func isValidObjectReference(f corev1.ObjectReference) *apis.FieldError {
-	fe := checkRequiredFields(f)
-	if fe != nil {
-		return fe
-	}
-	return checkDisallowedFields(f)
+	return checkRequiredFields(f).
+		Also(checkDisallowedFields(f))
 }
 
 // Check the corev1.ObjectReference to make sure it has the required fields. They
 // are not checked for anything more except that they are set.
 func checkRequiredFields(f corev1.ObjectReference) *apis.FieldError {
+	var errs *apis.FieldError
 	if f.Name == "" {
-		return apis.ErrMissingField("name")
+		errs = errs.Also(apis.ErrMissingField("name"))
 	}
 	if f.APIVersion == "" {
-		return apis.ErrMissingField("apiVersion")
+		errs = errs.Also(apis.ErrMissingField("apiVersion"))
 	}
 	if f.Kind == "" {
-		return apis.ErrMissingField("kind")
+		errs = errs.Also(apis.ErrMissingField("kind"))
 	}
-	return nil
+	return errs
 }
 
 // Check the corev1.ObjectReference to make sure it only has the following fields set:

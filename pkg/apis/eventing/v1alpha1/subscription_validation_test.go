@@ -82,7 +82,7 @@ func TestSubscriptionValidation(t *testing.T) {
 
 	t.Run(name, func(t *testing.T) {
 		got := c.Validate()
-		if diff := cmp.Diff(want, got); diff != "" {
+		if diff := cmp.Diff(want.Error(), got.Error()); diff != "" {
 			t.Errorf("Subscription.Validate (-want, +got) = %v", diff)
 		}
 	})
@@ -118,6 +118,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 				Kind:       channelKind,
 				APIVersion: channelAPIVersion,
 			},
+			Call: getValidCall(),
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("from.name")
@@ -176,6 +177,19 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		},
 		want: nil,
 	}, {
+		name: "missing name in from, and missing call, result",
+		c: &SubscriptionSpec{
+			From: corev1.ObjectReference{
+				Kind:       channelKind,
+				APIVersion: channelAPIVersion,
+			},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("result", "call")
+			fe.Details = "the Subscription must reference at least one of (result channel or a call)"
+			return apis.ErrMissingField("from.name").Also(fe)
+		}(),
+	}, {
 		name: "empty",
 		c:    &SubscriptionSpec{},
 		want: func() *apis.FieldError {
@@ -218,8 +232,8 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.c.Validate()
-			if diff := cmp.Diff(test.want, got); diff != "" {
-				t.Errorf("validateFrom (-want, +got) = %v", diff)
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
+				t.Errorf("%s: validateFrom (-want, +got) = %v", test.name, diff)
 			}
 		})
 	}
@@ -348,7 +362,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.c.CheckImmutableFields(test.og)
-			if diff := cmp.Diff(test.want, got); diff != "" {
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("CheckImmutableFields (-want, +got) = %v", diff)
 			}
 		})
@@ -369,7 +383,7 @@ func TestInvalidImmutableType(t *testing.T) {
 	}
 	t.Run(name, func(t *testing.T) {
 		got := c.CheckImmutableFields(og)
-		if diff := cmp.Diff(want, got); diff != "" {
+		if diff := cmp.Diff(want.Error(), got.Error()); diff != "" {
 			t.Errorf("CheckImmutableFields (-want, +got) = %v", diff)
 		}
 	})
@@ -405,8 +419,9 @@ func TestValidFrom(t *testing.T) {
 			Kind: channelKind,
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("apiVersion")
-			return fe
+			fe := apis.ErrInvalidValue("", "apiVersion")
+			fe.Details = "only channels.knative.dev/v1alpha1 is allowed for apiVersion"
+			return apis.ErrMissingField("apiVersion").Also(fe)
 		}(),
 	}, {
 		name: "missing kind",
@@ -415,8 +430,9 @@ func TestValidFrom(t *testing.T) {
 			APIVersion: channelAPIVersion,
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("kind")
-			return fe
+			fe := apis.ErrInvalidValue("", "kind")
+			fe.Details = "only 'Channel' kind is allowed"
+			return apis.ErrMissingField("kind").Also(fe)
 		}(),
 	}, {
 		name: "invalid kind",
@@ -484,7 +500,7 @@ func TestValidFrom(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := isValidFrom(test.c)
-			if diff := cmp.Diff(test.want, got); diff != "" {
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("isValidFrom (-want, +got) = %v", diff)
 			}
 		})
@@ -511,6 +527,7 @@ func TestValidCallable(t *testing.T) {
 		name: "both target and targetURI given",
 		c: Callable{
 			Target: &corev1.ObjectReference{
+				Name:       fromChannelName,
 				APIVersion: channelAPIVersion,
 				Kind:       channelKind,
 			},
@@ -588,8 +605,8 @@ func TestValidCallable(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := isValidCallable(test.c)
-			if diff := cmp.Diff(test.want, got); diff != "" {
-				t.Errorf("isValidFrom (-want, +got) = %v", diff)
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
+				t.Errorf("%s: isValidFrom (-want, +got) = %v", test.name, diff)
 			}
 		})
 	}
@@ -615,6 +632,7 @@ func TestValidResultStrategy(t *testing.T) {
 		name: "both target and targetURI given",
 		c: Callable{
 			Target: &corev1.ObjectReference{
+				Name:       fromChannelName,
 				APIVersion: channelAPIVersion,
 				Kind:       channelKind,
 			},
@@ -692,8 +710,8 @@ func TestValidResultStrategy(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := isValidCallable(test.c)
-			if diff := cmp.Diff(test.want, got); diff != "" {
-				t.Errorf("isValidFrom (-want, +got) = %v", diff)
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
+				t.Errorf("%s: isValidFrom (-want, +got) = %v", test.name, diff)
 			}
 		})
 	}
