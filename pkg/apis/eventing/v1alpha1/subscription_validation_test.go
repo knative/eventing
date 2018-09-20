@@ -177,6 +177,19 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		},
 		want: nil,
 	}, {
+		name: "missing name in from, and missing call, result",
+		c: &SubscriptionSpec{
+			From: corev1.ObjectReference{
+				Kind:       channelKind,
+				APIVersion: channelAPIVersion,
+			},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("result", "call")
+			fe.Details = "the Subscription must reference at least one of (result channel or a call)"
+			return apis.ErrMissingField("from.name").Also(fe)
+		}(),
+	}, {
 		name: "empty",
 		c:    &SubscriptionSpec{},
 		want: func() *apis.FieldError {
