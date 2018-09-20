@@ -81,40 +81,43 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 	deletionTimestamp := accessor.GetDeletionTimestamp()
 	glog.Infof("DeletionTimestamp: %v", deletionTimestamp)
 
-	// First resolve the From channel
+	// Reconcile the subscription to the From channel that's consuming events that are either
+	// going to the call or if there's no call, directly to result.
 	from, err := r.resolveFromChannelable(subscription.Namespace, &subscription.Spec.From)
 	if err != nil {
-		glog.Warningf("Failed to resolve From %v : %v", subscription.Spec.From, err)
+		glog.Warningf("Failed to resolve From %+v : %s", subscription.Spec.From, err)
 		return err
 	}
-	glog.Infof("Resolved From channel to Channelable %+v", *from)
+	if from.Status.Subscribable == nil {
+		glog.Warningf("Failed to resolve the from %+v", subscription.Spec.From)
+		return fmt.Errorf("Failed to resolve the from %+v", subscription.Spec.From)
+	}
 
+	callDomain := ""
 	if subscription.Spec.Call != nil {
-		call, err := r.resolveCall(subscription.Namespace, *subscription.Spec.Call)
+		callDomain, err = r.resolveCall(subscription.Namespace, *subscription.Spec.Call)
 		if err != nil {
 			glog.Warningf("Failed to resolve Call %v : %v", *subscription.Spec.Call, err)
 		}
-		glog.Infof("Resolved call to: %q", call)
+		glog.Infof("Resolved call to: %q", callDomain)
 	}
 
+	resultDomain := ""
 	if subscription.Spec.Result != nil {
-		result, err := r.resolveResult(subscription.Namespace, *subscription.Spec.Result)
+		resultDomain, err = r.resolveResult(subscription.Namespace, *subscription.Spec.Result)
 		if err != nil {
 			glog.Warningf("Failed to resolve Result %v : %v", subscription.Spec.Result, err)
 		}
-		glog.Infof("Resolved result to: %q", result)
+		glog.Infof("Resolved result to: %q", resultDomain)
 	}
 
-	// Reconcile the subscription to the From channel that's consuming events that are either
-	// going to the call or if there's no call, directly to result.
-	// TODO: deal with deletion and remove the subscription
-	// Targetable and Sinkable have different transport contracts so it's little tricky...
-	// TODO: WIP: What's the right abstraction here. I'm fairly certain it is not the
-	// Call/Result pair because I think it's something that should be resolved at this
-	// level and subscription should not know wheether there's a Call or a Result. I think
-	// the right abstraction is Sinkable, since it has the contract that it either accepts
-	// teh event for further pcessing (details be damned) or it doesnt
-
+	// Ok, now that we have the From and at least one of the Call/Result, let's greconcile
+	// the From with this information.
+	err = r.reconcileFromChannel(subscription.Namespace, from.Status.Subscribable.Channelable, callDomain, resultDomain, deletionTimestamp != nil)
+	if err != nil {
+		glog.Warningf("Failed to resolve from Channel : %s", err)
+		return err
+	}
 	return nil
 }
 
@@ -139,6 +142,8 @@ func (r *reconciler) updateStatus(subscription *v1alpha1.Subscription) (*v1alpha
 
 // resolveCall resolves the Spec.Call object. If it's an ObjectReference will resolve the object
 // and treat it as a Targetable.If it's TargetURI then it's used as is.
+// TODO: Once Service Routes, etc. support Targetable, use that.
+//
 func (r *reconciler) resolveCall(namespace string, callable v1alpha1.Callable) (string, error) {
 	if callable.TargetURI != nil && *callable.TargetURI != "" {
 		return *callable.TargetURI, nil
@@ -149,16 +154,21 @@ func (r *reconciler) resolveCall(namespace string, callable v1alpha1.Callable) (
 		glog.Warningf("Feiled to fetch Callable target %+v: %s", callable.Target, err)
 		return "", err
 	}
-	t := duckv1alpha1.Target{}
+	t := duckv1alpha1.LegacyTarget{}
+	// Once Knative services support Targetable, switch to using this.
+	//t := duckv1alpha1.Target{}
 	err = util.FromUnstructured(*obj, &t)
 	if err != nil {
-		glog.Warningf("Feiled to unserialize target: %s", err)
+		glog.Warningf("Feiled to unserialize legacy target: %s", err)
 		return "", err
 	}
-	if t.Status.Targetable != nil {
-		return t.Status.Targetable.DomainInternal, nil
-	}
-	return "", fmt.Errorf("status does not contain targetable")
+
+	return t.Status.DomainInternal, nil
+	// Once Knative services support Targetable, switch to using this
+	// 	if t.Status.Targetable != nil {
+	//		return t.Status.Targetable.DomainInternal, nil
+	//	}
+	//return "", fmt.Errorf("status does not contain targetable")
 }
 
 // resolveResult resolves the Spec.Result object.
@@ -204,6 +214,24 @@ func (r *reconciler) fetchObjectReference(namespace string, ref *corev1.ObjectRe
 	}
 
 	return resourceClient.Get(ref.Name, metav1.GetOptions{})
+}
+
+func (r *reconciler) reconcileFromChannel(namespace string, subscribable corev1.ObjectReference, callDomain string, resultDomain string, deleted bool) error {
+	glog.Infof("Reconciling From Channel: %+v call: %q result %q deleted: %v", subscribable, callDomain, resultDomain, deleted)
+
+	s, err := r.fetchObjectReference(namespace, &subscribable)
+	if err != nil {
+		return err
+	}
+
+	c := duckv1alpha1.Channel{}
+	err = util.FromUnstructured(*s, &c)
+	if err != nil {
+		return err
+	}
+
+	glog.Infof("Found From Channelable: %+v", c)
+	return nil
 }
 
 const (

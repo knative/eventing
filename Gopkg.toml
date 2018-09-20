@@ -79,7 +79,7 @@ required = [
   # This here until this lands:
   # https://github.com/knative/pkg/pull/79
   source = "github.com/vaikas-google/pkg"
-  revision = "2f3dd5d6cdf31d88f9bd90db0fe3de5bb4c978bc"
+  revision = "18e88e39408fb349133463f8edf4e4fc69b19213"
 
 [[constraint]]
   name = "github.com/knative/serving"

@@ -268,7 +268,7 @@
   revision = "5c1d8c8469d1ed34b2aecf4c2305b3a57fff2ee3"
 
 [[projects]]
-  digest = "1:514501dc6eef02a2d3b15e94c0b8bf0a888312cf2295bc756da22f232c4f13d4"
+  digest = "1:84794b3aec1c791e9b1882b1e403af130d711441b52f69765b20c519a16e2664"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -303,7 +303,7 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "2f3dd5d6cdf31d88f9bd90db0fe3de5bb4c978bc"
+  revision = "18e88e39408fb349133463f8edf4e4fc69b19213"
   source = "github.com/vaikas-google/pkg"
 
 [[projects]]

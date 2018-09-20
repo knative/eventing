@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/pkg/apis"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -59,31 +60,12 @@ func TestChannelValidation(t *testing.T) {
 						Name: "foo",
 					},
 				},
-				Subscribers: []ChannelSubscriberSpec{{
-					Call: &Callable{
-						TargetURI: &targetURI,
-					},
-				}, {
-					Result: &ResultStrategy{
-						Target: &corev1.ObjectReference{
-							APIVersion: "eventing.knative.dev/v1alpha1",
-							Kind:       "Channel",
-							Name:       "to-chan",
-						},
-					},
-				}, {
-					Call: &Callable{
-						TargetURI: &targetURI,
-					},
-					Result: &ResultStrategy{
-						Target: &corev1.ObjectReference{
-							APIVersion: "eventing.knative.dev/v1alpha1",
-							Kind:       "Channel",
-							Name:       "to-chan",
-						},
-					},
+				Channelable: &Channelable{
+					Subscribers: []ChannelSubscriberSpec{{
+						CallableDomain: "callableendpoint",
+						SinkableDomain: "resultendpoint",
+					}},
 				}},
-			},
 		},
 		want: nil,
 	}, {
@@ -95,15 +77,12 @@ func TestChannelValidation(t *testing.T) {
 						Name: "foo",
 					},
 				},
-				Subscribers: []ChannelSubscriberSpec{
-					{
-						Call: &Callable{
-							TargetURI: &targetURI,
-						},
-					},
-					{},
-				},
-			},
+				Channelable: &Channelable{
+					Subscribers: []ChannelSubscriberSpec{{
+						CallableDomain: "callableendpoint",
+						SinkableDomain: "callableendpoint",
+					}},
+				}},
 		},
 		want: apis.ErrMissingField("spec.subscriber[1].call", "spec.subscriber[1].result"),
 	}}

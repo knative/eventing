@@ -33,11 +33,13 @@ func (cs *ChannelSpec) Validate() *apis.FieldError {
 		return apis.ErrMissingField("provisioner")
 	}
 
-	for i, subscriber := range cs.Channelable.Subscribers {
-		if subscriber.SinkableDomain == "" {
-			//TODO collect all errors instead of returning the first. This isn't
-			// possible yet with knative/pkg validation.
-			return apis.ErrMissingField("sinkableDomain").ViaField(fmt.Sprintf("subscriber[%d]", i))
+	if cs.Channelable != nil {
+		for i, subscriber := range cs.Channelable.Subscribers {
+			if subscriber.SinkableDomain == "" {
+				//TODO collect all errors instead of returning the first. This isn't
+				// possible yet with knative/pkg validation.
+				return apis.ErrMissingField("sinkableDomain").ViaField(fmt.Sprintf("subscriber[%d]", i)).ViaField("channelable")
+			}
 		}
 	}
 
