@@ -17,21 +17,16 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"encoding/json"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/knative/pkg/apis/duck"
 )
 
+// Targetable is very similar concept as Sinkable. However, at the
+// transport level they have different contracts and hence Sinkable
+// and Targetable are two distinct resources.
+
 // Targetable is the schema for the targetable portion of the payload
-// It would be better to have one level of indirection from Status.
-// The way this is currently put in at the same level as the other Status
-// resources. Hence the objects supporting Targetable (Knative Route for
-// example), will expose it as: Status.DomainInternal
-// For new resources that are built from scratch, they should probably
-// introduce an extra level of indirection.
 type Targetable struct {
 	DomainInternal string `json:"domainInternal,omitempty"`
 }
@@ -53,7 +48,13 @@ type Target struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Status Targetable `json:"status"`
+	Status TargetableStatus `json:"status"`
+}
+
+// TargetableStatus shows how we expect folks to embed Targetable in
+// their Status field.
+type TargetableStatus struct {
+	Targetable *Targetable `json:"targetable,omitempty"`
 }
 
 // In order for Targetable to be Implementable, Target must be Populatable.
@@ -66,9 +67,11 @@ func (_ *Targetable) GetFullType() duck.Populatable {
 
 // Populate implements duck.Populatable
 func (t *Target) Populate() {
-	t.Status = Targetable{
-		// Populate ALL fields
-		DomainInternal: "this is not empty",
+	t.Status = TargetableStatus{
+		&Targetable{
+			// Populate ALL fields
+			DomainInternal: "this is not empty",
+		},
 	}
 }
 
@@ -80,22 +83,4 @@ type TargetList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []Target `json:"items"`
-}
-
-func TargetableFromUnstructured(obj *unstructured.Unstructured) (*Target, error) {
-	if obj == nil {
-		return nil, nil
-	}
-
-	// Use the unstructured marshaller to ensure it's proper JSON
-	raw, err := obj.MarshalJSON()
-	if err != nil {
-		return nil, err
-	}
-
-	r := &Target{}
-	if err := json.Unmarshal(raw, r); err != nil {
-		return nil, err
-	}
-	return r, nil
 }

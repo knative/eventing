@@ -268,11 +268,12 @@
   revision = "5c1d8c8469d1ed34b2aecf4c2305b3a57fff2ee3"
 
 [[projects]]
-  digest = "1:7b5ca4b24061a29cd9c77cb54cd164bc02c21675d8a47f951eb6321e448d1ab5"
+  digest = "1:514501dc6eef02a2d3b15e94c0b8bf0a888312cf2295bc756da22f232c4f13d4"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
     "apis/duck",
+    "apis/duck/util",
     "apis/duck/v1alpha1",
     "apis/istio",
     "apis/istio/authentication",
@@ -302,7 +303,7 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "9f7eff5271474d5abf3c6115f67c2c87bc880b78"
+  revision = "2f3dd5d6cdf31d88f9bd90db0fe3de5bb4c978bc"
   source = "github.com/vaikas-google/pkg"
 
 [[projects]]
@@ -1060,6 +1061,7 @@
     "github.com/google/uuid",
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
+    "github.com/knative/pkg/apis/duck/util",
     "github.com/knative/pkg/apis/duck/v1alpha1",
     "github.com/knative/pkg/apis/istio/v1alpha3",
     "github.com/knative/pkg/client/clientset/versioned",

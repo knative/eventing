@@ -60,13 +60,9 @@ var _ duckv1alpha1.ConditionsAccessor = (*ChannelStatus)(nil)
 
 // Check that Channel implements the Conditions duck type.
 var _ = duck.VerifyType(&Channel{}, &duckv1alpha1.Conditions{})
-
-// Channelable is our duct type wrapper for holding our subscribers
-type Channelable struct {
-	// Subscribers is a list of the Subscribers to this channel. This is filled in
-	// by the Subscriptions controller. Users should not mutate this field.
-	Subscribers []ChannelSubscriberSpec `json:"subscribers,omitempty"`
-}
+var _ = duck.VerifyType(&Channel{}, &duckv1alpha1.Channelable{})
+var _ = duck.VerifyType(&Channel{}, &duckv1alpha1.Subscribable{})
+var _ = duck.VerifyType(&Channel{}, &duckv1alpha1.Sinkable{})
 
 // ChannelSpec specifies the Provisioner backing a channel and the configuration
 // arguments for a Channel.
@@ -87,12 +83,8 @@ type ChannelSpec struct {
 	// +optional
 	Arguments *runtime.RawExtension `json:"arguments,omitempty"`
 
-	Channelable *Channelable `json:"channelable,omitempty"`
-}
-
-// ChannelSubscriberSpec defines a single subscriber to a Channel.
-type ChannelSubscriberSpec struct {
-	Sinkable string `json:"sinkable"`
+	// Channel conforms to Duck type Channelable.
+	Channelable *duckv1alpha1.Channelable `json:"channelable,omitempty"`
 }
 
 var chanCondSet = duckv1alpha1.NewLivingConditionSet(ChannelConditionProvisioned)
@@ -107,13 +99,10 @@ type ChannelStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// DomainInternal holds the top-level domain that will distribute traffic
-	// over the provided targets from inside the cluster. It generally has the
-	// form {channel}.{namespace}.svc.cluster.local
-	// TODO: move this to a struct that can be embedded similar to ObjectMeta and
-	// TypeMeta.
-	// +optional
-	DomainInternal string `json:"domainInternal,omitempty"`
+	// Channel is Sinkable. It currently exposes the endpoint as top-level domain
+	// that will distribute traffic over the provided targets from inside the cluster.
+	// It generally has the form {channel}.{namespace}.svc.cluster.local
+	Sinkable duckv1alpha1.Sinkable `json:"sinkable,omitempty"`
 
 	// Channel is Subscribable. It just points to itself
 	Subscribable duckv1alpha1.Subscribable `json:"subscribable,omitempty"`

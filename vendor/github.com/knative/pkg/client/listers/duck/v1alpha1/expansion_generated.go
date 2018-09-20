@@ -26,14 +26,6 @@ type ChannelListerExpansion interface{}
 // ChannelNamespaceLister.
 type ChannelNamespaceListerExpansion interface{}
 
-// ChannelableRefListerExpansion allows custom methods to be added to
-// ChannelableRefLister.
-type ChannelableRefListerExpansion interface{}
-
-// ChannelableRefNamespaceListerExpansion allows custom methods to be added to
-// ChannelableRefNamespaceLister.
-type ChannelableRefNamespaceListerExpansion interface{}
-
 // GenerationalListerExpansion allows custom methods to be added to
 // GenerationalLister.
 type GenerationalListerExpansion interface{}
@@ -50,6 +42,14 @@ type KResourceListerExpansion interface{}
 // KResourceNamespaceLister.
 type KResourceNamespaceListerExpansion interface{}
 
+// LegacyTargetListerExpansion allows custom methods to be added to
+// LegacyTargetLister.
+type LegacyTargetListerExpansion interface{}
+
+// LegacyTargetNamespaceListerExpansion allows custom methods to be added to
+// LegacyTargetNamespaceLister.
+type LegacyTargetNamespaceListerExpansion interface{}
+
 // SinkListerExpansion allows custom methods to be added to
 // SinkLister.
 type SinkListerExpansion interface{}
@@ -57,6 +57,14 @@ type SinkListerExpansion interface{}
 // SinkNamespaceListerExpansion allows custom methods to be added to
 // SinkNamespaceLister.
 type SinkNamespaceListerExpansion interface{}
+
+// SubscriptionListerExpansion allows custom methods to be added to
+// SubscriptionLister.
+type SubscriptionListerExpansion interface{}
+
+// SubscriptionNamespaceListerExpansion allows custom methods to be added to
+// SubscriptionNamespaceLister.
+type SubscriptionNamespaceListerExpansion interface{}
 
 // TargetListerExpansion allows custom methods to be added to
 // TargetLister.

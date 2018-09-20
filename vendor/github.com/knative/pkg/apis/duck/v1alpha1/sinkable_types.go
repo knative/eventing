@@ -14,25 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Sinkable is very similar concept as Targetable. However, at the
-// transport level they have different contracts and hence Sinkable
-// and Targetable are two distinct resources.
-// It would be better to have one level of indirection from Status.
-// The way this is currently put in at the same level as the other Status
-// resources. Hence the objects supporting Sinkable (Knative channel for
-// example), will expose it as: Status.DomainInternal
-// For new resources that are built from scratch, they should probably
-// introduce an extra level of indirection.
 package v1alpha1
 
 import (
-	"encoding/json"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/knative/pkg/apis/duck"
 )
+
+// Sinkable is very similar concept as Targetable. However, at the
+// transport level they have different contracts and hence Sinkable
+// and Targetable are two distinct resources.
 
 // Sinkable is the schema for the sinkable portion of the payload
 type Sinkable struct {
@@ -56,7 +48,13 @@ type Sink struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Status Sinkable `json:"status"`
+	Status SinkableStatus `json:"status"`
+}
+
+// SinkableStatus shows how we expect folks to embed Sinkable in
+// their Status field.
+type SinkableStatus struct {
+	Sinkable *Sinkable `json:"sinkable,omitempty"`
 }
 
 // In order for Sinkable to be Implementable, Sink must be Populatable.
@@ -69,9 +67,11 @@ func (_ *Sinkable) GetFullType() duck.Populatable {
 
 // Populate implements duck.Populatable
 func (t *Sink) Populate() {
-	t.Status = Sinkable{
-		// Populate ALL fields
-		DomainInternal: "this is not empty",
+	t.Status = SinkableStatus{
+		&Sinkable{
+			// Populate ALL fields
+			DomainInternal: "this is not empty",
+		},
 	}
 }
 
@@ -83,22 +83,4 @@ type SinkList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []Sink `json:"items"`
-}
-
-func SinkableFromUnstructured(obj *unstructured.Unstructured) (*Sink, error) {
-	if obj == nil {
-		return nil, nil
-	}
-
-	// Use the unstructured marshaller to ensure it's proper JSON
-	raw, err := obj.MarshalJSON()
-	if err != nil {
-		return nil, err
-	}
-
-	r := &Sink{}
-	if err := json.Unmarshal(raw, r); err != nil {
-		return nil, err
-	}
-	return r, nil
 }

@@ -76,8 +76,10 @@ required = [
 [[constraint]]
   name = "github.com/knative/pkg"
   # TODO: Do not check in...
+  # This here until this lands:
+  # https://github.com/knative/pkg/pull/79
   source = "github.com/vaikas-google/pkg"
-  revision = "9f7eff5271474d5abf3c6115f67c2c87bc880b78"
+  revision = "2f3dd5d6cdf31d88f9bd90db0fe3de5bb4c978bc"
 
 [[constraint]]
   name = "github.com/knative/serving"

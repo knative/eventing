@@ -61,14 +61,16 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		// Group=duck.knative.dev, Version=v1alpha1
 	case duckv1alpha1.SchemeGroupVersion.WithResource("channels"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Duck().V1alpha1().Channels().Informer()}, nil
-	case duckv1alpha1.SchemeGroupVersion.WithResource("channelablereves"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Duck().V1alpha1().ChannelableReves().Informer()}, nil
 	case duckv1alpha1.SchemeGroupVersion.WithResource("generationals"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Duck().V1alpha1().Generationals().Informer()}, nil
 	case duckv1alpha1.SchemeGroupVersion.WithResource("kresources"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Duck().V1alpha1().KResources().Informer()}, nil
+	case duckv1alpha1.SchemeGroupVersion.WithResource("legacytargets"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Duck().V1alpha1().LegacyTargets().Informer()}, nil
 	case duckv1alpha1.SchemeGroupVersion.WithResource("sinks"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Duck().V1alpha1().Sinks().Informer()}, nil
+	case duckv1alpha1.SchemeGroupVersion.WithResource("subscriptions"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Duck().V1alpha1().Subscriptions().Informer()}, nil
 	case duckv1alpha1.SchemeGroupVersion.WithResource("targets"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Duck().V1alpha1().Targets().Informer()}, nil
 

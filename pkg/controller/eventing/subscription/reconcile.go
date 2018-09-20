@@ -18,10 +18,12 @@ package subscription
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/golang/glog"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/pkg/apis/duck/util"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -32,9 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
-
-// What field do we assume Object Reference exports as a resolvable target
-const targetFieldName = "domainInternal"
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Subscription resource
@@ -150,44 +149,50 @@ func (r *reconciler) resolveCall(namespace string, callable v1alpha1.Callable) (
 		glog.Warningf("Feiled to fetch Callable target %+v: %s", callable.Target, err)
 		return "", err
 	}
-
-	t, err := duckv1alpha1.TargetableFromUnstructured(obj)
+	t := duckv1alpha1.Target{}
+	err = util.FromUnstructured(*obj, &t)
 	if err != nil {
 		glog.Warningf("Feiled to unserialize target: %s", err)
 		return "", err
 	}
-	return t.Status.DomainInternal, nil
+	if t.Status.Targetable != nil {
+		return t.Status.Targetable.DomainInternal, nil
+	}
+	return "", fmt.Errorf("status does not contain targetable")
 }
 
 // resolveResult resolves the Spec.Result object.
 func (r *reconciler) resolveResult(namespace string, resultStrategy v1alpha1.ResultStrategy) (string, error) {
-	glog.Infof("Resolving Result target: %+v", resultStrategy)
-
 	obj, err := r.fetchObjectReference(namespace, resultStrategy.Target)
 	if err != nil {
 		glog.Warningf("Feiled to fetch ResultStrategy target %+v: %s", resultStrategy, err)
 		return "", err
 	}
-
-	t, err := duckv1alpha1.SinkableFromUnstructured(obj)
+	s := duckv1alpha1.Sink{}
+	err = util.FromUnstructured(*obj, &s)
 	if err != nil {
 		glog.Warningf("Feiled to unserialize Sinkable target: %s", err)
 		return "", err
 	}
-	return t.Status.DomainInternal, nil
+	if s.Status.Sinkable != nil {
+		return s.Status.Sinkable.DomainInternal, nil
+	}
+	return "", fmt.Errorf("status does not contain targetable")
 }
 
 // resolveFromChannelable fetches an object based on ObjectReference. It assumes that the
 // fetched object then implements Subscribable interface and returns the ObjectReference
 // representing the Channelable interface.
-func (r *reconciler) resolveFromChannelable(namespace string, ref *corev1.ObjectReference) (*duckv1alpha1.ChannelableRef, error) {
+func (r *reconciler) resolveFromChannelable(namespace string, ref *corev1.ObjectReference) (*duckv1alpha1.Subscription, error) {
 	obj, err := r.fetchObjectReference(namespace, ref)
 	if err != nil {
 		glog.Warningf("Feiled to fetch ResultStrategy target %+v: %s", ref, err)
 		return nil, err
 	}
 
-	return duckv1alpha1.ChannelableRefromUnstructured(obj)
+	c := duckv1alpha1.Subscription{}
+	err = util.FromUnstructured(*obj, &c)
+	return &c, err
 }
 
 // fetchObjectReference fetches an object based on ObjectReference.

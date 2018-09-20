@@ -55,6 +55,9 @@ var _ duckv1alpha1.ConditionsAccessor = (*SubscriptionStatus)(nil)
 // Check that Subscription implements the Conditions duck type.
 var _ = duck.VerifyType(&Subscription{}, &duckv1alpha1.Conditions{})
 
+// And it's Subscribable
+var _ = duck.VerifyType(&Subscription{}, &duckv1alpha1.Subscribable{})
+
 // SubscriptionSpec specifies the Channel for incoming events, a Call target for
 // processing those events and where to put the result of the processing. Only
 // From (where the events are coming from) is always required. You can optionally
@@ -175,6 +178,10 @@ type SubscriptionStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+
+	// Subscription might be Subscribable. This depends if there's a Result channel
+	// In that case, this points to that resource.
+	Subscribable duckv1alpha1.Subscribable `json:"subscribable,omitempty"`
 }
 
 // GetSpecJSON returns spec as json

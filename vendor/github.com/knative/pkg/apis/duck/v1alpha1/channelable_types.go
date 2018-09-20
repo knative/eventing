@@ -27,18 +27,18 @@ import (
 type Channelable struct {
 	// TODO: What is actually required here for Channel spec.
 	// This is the list of subscriptions for this channel.
-	Subscribers []ChannelSubsciberSpec `json:"subscribers,omitempty"`
+	Subscribers []ChannelSubscriberSpec `json:"subscribers,omitempty"`
 }
 
 // ChannelSubscriberSpec defines a single subscriber to a Channel.
-// TODO: I think the subscriber contract should be Sinkable. You either
-// take it on as your pboblem to deal with, or you reject it. I think
-// a subscription should have no knowledge of what happens down the line
+// Endpoint should conform to Sinkable transport contract. You either
+// take the events on as your pboblem to deal with, or you reject it.
+// Subscription should have no knowledge of what happens down the line
 // and if there are calls, or results follwoing on. You subsribe to me
-// and I give you events and you deal with them??
+// and I give you events and you deal with them.
 // of Call or Result must be present.
 type ChannelSubscriberSpec struct {
-	Sinkable string `json:"sinkable"`
+	SinkableDomain string `json:"sinkableDomain"`
 }
 
 // Implementations can verify that they implement Channelable via:
@@ -58,14 +58,14 @@ type Channel struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// ChannelableSpec is the part where Channelable object is
+	// ChannelSpec is the part where Channelable object is
 	// configured as to be compatible with Channelable contract.
-	Spec ChannelableSpec `json:"spec"`
+	Spec ChannelSpec `json:"spec"`
 }
 
-// ChannelableSpec shows how we expect folks to embed Channelable in
+// ChannelSpec shows how we expect folks to embed Channelable in
 // their Spec field.
-type ChannelableSpec struct {
+type ChannelSpec struct {
 	Channelable *Channelable `json:"channelable,omitempty"`
 }
 
@@ -81,7 +81,7 @@ func (_ *Channelable) GetFullType() duck.Populatable {
 func (t *Channel) Populate() {
 	t.Spec.Channelable = &Channelable{
 		// Populate ALL fields
-		Subscriptions: []string{"subscription1", "subscription2"},
+		Subscribers: []ChannelSubscriberSpec{{"subscription1"}, {"subscription2"}},
 	}
 }
 
