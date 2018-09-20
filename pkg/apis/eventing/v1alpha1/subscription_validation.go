@@ -97,22 +97,20 @@ func isFromEmpty(f corev1.ObjectReference) bool {
 // - APIVersion == 'channels.knative.dev/v1alpha1'
 // - Name       == not empty
 func isValidFrom(f corev1.ObjectReference) *apis.FieldError {
-	fe := isValidObjectReference(f)
-	if fe != nil {
-		return fe
-	}
+	errs := isValidObjectReference(f)
+
 	if f.Kind != "Channel" {
 		fe := apis.ErrInvalidValue(f.Kind, "kind")
 		fe.Paths = []string{"kind"}
 		fe.Details = "only 'Channel' kind is allowed"
-		return fe
+		errs = errs.Also(fe)
 	}
 	if f.APIVersion != "channels.knative.dev/v1alpha1" {
 		fe := apis.ErrInvalidValue(f.APIVersion, "apiVersion")
 		fe.Details = "only channels.knative.dev/v1alpha1 is allowed for apiVersion"
-		return fe
+		errs = errs.Also(fe)
 	}
-	return nil
+	return errs
 }
 
 func isResultStrategyNilOrEmpty(r *ResultStrategy) bool {
@@ -124,26 +122,24 @@ func isValidResultStrategy(r *ResultStrategy) *apis.FieldError {
 }
 
 func isValidObjectReference(f corev1.ObjectReference) *apis.FieldError {
-	fe := checkRequiredFields(f)
-	if fe != nil {
-		return fe
-	}
-	return checkDisallowedFields(f)
+	return checkRequiredFields(f).
+		Also(checkDisallowedFields(f))
 }
 
 // Check the corev1.ObjectReference to make sure it has the required fields. They
 // are not checked for anything more except that they are set.
 func checkRequiredFields(f corev1.ObjectReference) *apis.FieldError {
+	var errs *apis.FieldError
 	if f.Name == "" {
-		return apis.ErrMissingField("name")
+		errs = errs.Also(apis.ErrMissingField("name"))
 	}
 	if f.APIVersion == "" {
-		return apis.ErrMissingField("apiVersion")
+		errs = errs.Also(apis.ErrMissingField("apiVersion"))
 	}
 	if f.Kind == "" {
-		return apis.ErrMissingField("kind")
+		errs = errs.Also(apis.ErrMissingField("kind"))
 	}
-	return nil
+	return errs
 }
 
 // Check the corev1.ObjectReference to make sure it only has the following fields set:

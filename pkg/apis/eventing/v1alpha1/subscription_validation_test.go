@@ -406,8 +406,9 @@ func TestValidFrom(t *testing.T) {
 			Kind: channelKind,
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("apiVersion")
-			return fe
+			fe := apis.ErrInvalidValue("", "apiVersion")
+			fe.Details = "only channels.knative.dev/v1alpha1 is allowed for apiVersion"
+			return apis.ErrMissingField("apiVersion").Also(fe)
 		}(),
 	}, {
 		name: "missing kind",
@@ -416,8 +417,9 @@ func TestValidFrom(t *testing.T) {
 			APIVersion: channelAPIVersion,
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("kind")
-			return fe
+			fe := apis.ErrInvalidValue("", "kind")
+			fe.Details = "only 'Channel' kind is allowed"
+			return apis.ErrMissingField("kind").Also(fe)
 		}(),
 	}, {
 		name: "invalid kind",
