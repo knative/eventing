@@ -95,17 +95,28 @@ func TestChannelValidation(t *testing.T) {
 						Name: "foo",
 					},
 				},
-				Subscribers: []ChannelSubscriberSpec{
-					{
-						Call: &Callable{
-							TargetURI: &targetURI,
-						},
+				Subscribers: []ChannelSubscriberSpec{{
+					Call: &Callable{
+						TargetURI: &targetURI,
 					},
-					{},
-				},
+				}, {}},
 			},
 		},
 		want: apis.ErrMissingField("spec.subscriber[1].call", "spec.subscriber[1].result"),
+	}, {
+		name: "2 empty subscribers",
+		c: &Channel{
+			Spec: ChannelSpec{
+				Provisioner: &ProvisionerReference{
+					Ref: &corev1.ObjectReference{
+						Name: "foo",
+					},
+				},
+				Subscribers: []ChannelSubscriberSpec{{}, {}},
+			},
+		},
+		want: apis.ErrMissingField("spec.subscriber[0].call", "spec.subscriber[0].result").
+			Also(apis.ErrMissingField("spec.subscriber[1].call", "spec.subscriber[1].result")),
 	}}
 
 	for _, test := range tests {
