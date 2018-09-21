@@ -28,6 +28,8 @@ type Interface interface {
 	Channels() ChannelInformer
 	// ClusterProvisioners returns a ClusterProvisionerInformer.
 	ClusterProvisioners() ClusterProvisionerInformer
+	// Sources returns a SourceInformer.
+	Sources() SourceInformer
 	// Subscriptions returns a SubscriptionInformer.
 	Subscriptions() SubscriptionInformer
 }
@@ -51,6 +53,11 @@ func (v *version) Channels() ChannelInformer {
 // ClusterProvisioners returns a ClusterProvisionerInformer.
 func (v *version) ClusterProvisioners() ClusterProvisionerInformer {
 	return &clusterProvisionerInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// Sources returns a SourceInformer.
+func (v *version) Sources() SourceInformer {
+	return &sourceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Subscriptions returns a SubscriptionInformer.
