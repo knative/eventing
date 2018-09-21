@@ -25,7 +25,7 @@ import (
 
 const (
 	channelKind       = "Channel"
-	channelAPIVersion = "channels.knative.dev/v1alpha1"
+	channelAPIVersion = "eventing.knative.dev/v1alpha1"
 	routeKind         = "Route"
 	routeAPIVersion   = "serving.knative.dev/v1alpha1"
 	fromChannelName   = "fromChannel"
@@ -420,7 +420,7 @@ func TestValidFrom(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrInvalidValue("", "apiVersion")
-			fe.Details = "only channels.knative.dev/v1alpha1 is allowed for apiVersion"
+			fe.Details = "only eventing.knative.dev/v1alpha1 is allowed for apiVersion"
 			return apis.ErrMissingField("apiVersion").Also(fe)
 		}(),
 	}, {
@@ -455,7 +455,7 @@ func TestValidFrom(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrInvalidValue("wrongapiversion", "apiVersion")
-			fe.Details = "only channels.knative.dev/v1alpha1 is allowed for apiVersion"
+			fe.Details = "only eventing.knative.dev/v1alpha1 is allowed for apiVersion"
 			return fe
 		}(),
 	}, {

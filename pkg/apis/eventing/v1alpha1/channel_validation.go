@@ -36,10 +36,10 @@ func (cs *ChannelSpec) Validate() *apis.FieldError {
 
 	if cs.Channelable != nil {
 		for i, subscriber := range cs.Channelable.Subscribers {
-			if subscriber.SinkableDomain == "" {
-				//TODO collect all errors instead of returning the first. This isn't
-				// possible yet with knative/pkg validation.
-				return apis.ErrMissingField("sinkableDomain").ViaField(fmt.Sprintf("subscriber[%d]", i)).ViaField("channelable")
+			if subscriber.SinkableDomain == "" && subscriber.CallableDomain == "" {
+				fe := apis.ErrMissingField("sinkableDomain", "callableDomain")
+				fe.Details = "expected at least one of, got none"
+				errs = errs.Also(fe.ViaField(fmt.Sprintf("subscriber[%d]", i)).ViaField("channelable"))
 			}
 		}
 	}
