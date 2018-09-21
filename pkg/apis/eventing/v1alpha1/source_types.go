@@ -30,7 +30,9 @@ import (
 // +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Source
+// Source resource Describes a specific configuration (credentials, etc) of a
+// source system which can be used to supply events. Sources emit events using a
+// channel specified in their status. They cannot receive events.
 type Source struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
