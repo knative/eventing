@@ -28,13 +28,9 @@ import (
 var targetURI = "https://example.com"
 
 func TestChannelValidation(t *testing.T) {
-	tests := []struct {
-		name string
-		c    *Channel
-		want *apis.FieldError
-	}{{
+	tests := []CRDTest{{
 		name: "valid",
-		c: &Channel{
+		cr: &Channel{
 			Spec: ChannelSpec{
 				Provisioner: &ProvisionerReference{
 					Ref: &corev1.ObjectReference{
@@ -46,13 +42,13 @@ func TestChannelValidation(t *testing.T) {
 		want: nil,
 	}, {
 		name: "empty",
-		c: &Channel{
+		cr: &Channel{
 			Spec: ChannelSpec{},
 		},
 		want: apis.ErrMissingField("spec.provisioner"),
 	}, {
 		name: "subscribers array",
-		c: &Channel{
+		cr: &Channel{
 			Spec: ChannelSpec{
 				Provisioner: &ProvisionerReference{
 					Ref: &corev1.ObjectReference{
@@ -88,7 +84,7 @@ func TestChannelValidation(t *testing.T) {
 		want: nil,
 	}, {
 		name: "empty subscriber",
-		c: &Channel{
+		cr: &Channel{
 			Spec: ChannelSpec{
 				Provisioner: &ProvisionerReference{
 					Ref: &corev1.ObjectReference{
@@ -105,7 +101,7 @@ func TestChannelValidation(t *testing.T) {
 		want: apis.ErrMissingField("spec.subscriber[1].call", "spec.subscriber[1].result"),
 	}, {
 		name: "2 empty subscribers",
-		c: &Channel{
+		cr: &Channel{
 			Spec: ChannelSpec{
 				Provisioner: &ProvisionerReference{
 					Ref: &corev1.ObjectReference{
@@ -119,14 +115,7 @@ func TestChannelValidation(t *testing.T) {
 			Also(apis.ErrMissingField("spec.subscriber[1].call", "spec.subscriber[1].result")),
 	}}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := test.c.Validate()
-			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("validateChannel (-want, +got) = %v", diff)
-			}
-		})
-	}
+	doValidateTest(t, tests)
 }
 
 func TestChannelImmutableFields(t *testing.T) {

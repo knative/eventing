@@ -79,6 +79,9 @@ var cProvCondSet = duckv1alpha1.NewLivingConditionSet()
 // ClusterProvisionerStatus is the status for a ClusterProvisioner resource
 type ClusterProvisionerStatus struct {
 	// Conditions holds the state of a cluster provisioner at a point in time.
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
 	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
 	// ObservedGeneration is the 'Generation' of the ClusterProvisioner that

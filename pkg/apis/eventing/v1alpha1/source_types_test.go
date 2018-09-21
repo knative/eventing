@@ -45,7 +45,10 @@ func TestSourceStatusIsReady(t *testing.T) {
 		name: "ready true condition",
 		s: &SourceStatus{
 			Conditions: []duckv1alpha1.Condition{{
-				Type:   ChannelConditionReady,
+				Type:   SourceConditionReady,
+				Status: corev1.ConditionTrue,
+			}, {
+				Type:   SourceConditionProvisioned,
 				Status: corev1.ConditionTrue,
 			}},
 		},
@@ -54,8 +57,11 @@ func TestSourceStatusIsReady(t *testing.T) {
 		name: "ready false condition",
 		s: &SourceStatus{
 			Conditions: []duckv1alpha1.Condition{{
-				Type:   ChannelConditionReady,
+				Type:   SourceConditionReady,
 				Status: corev1.ConditionFalse,
+			}, {
+				Type:   SourceConditionProvisioned,
+				Status: corev1.ConditionTrue,
 			}},
 		},
 		want: false,
@@ -67,6 +73,24 @@ func TestSourceStatusIsReady(t *testing.T) {
 				Status: corev1.ConditionTrue,
 			}},
 		},
+		want: false,
+	}, {
+		name: "mark provisioned",
+		s: func() *SourceStatus {
+			s := &SourceStatus{}
+			s.InitializeConditions()
+			s.MarkProvisioned()
+			return s
+		}(),
+		want: true,
+	}, {
+		name: "mark deprovisioned",
+		s: func() *SourceStatus {
+			s := &SourceStatus{}
+			s.InitializeConditions()
+			s.MarkDeprovisioned("Testing", "Just a test")
+			return s
+		}(),
 		want: false,
 	}}
 

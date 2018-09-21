@@ -22,6 +22,8 @@ import (
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/webhook"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -64,15 +66,47 @@ type SourceSpec struct {
 	// +optional
 	Generation int64 `json:"generation,omitempty"`
 
-	Todo string `json:"todo,omitempty"`
-	// TODO: add real params.
+	// Provisioner is used to create any backing resources and configuration.
+	// +required
+	Provisioner *ProvisionerReference `json:"provisioner,omitempty"`
+
+	// Arguments defines the arguments to pass to the Provisioner which provisions
+	// this Source.
+	// +optional
+	Arguments *runtime.RawExtension `json:"arguments,omitempty"`
+
+	// Specify an existing channel to use to emit events. If empty, create a new
+	// Channel using the cluster/namespace default.
+	//
+	// This object must fulfill the Subscribable contract.
+	//
+	// You can specify only the following fields of the ObjectReference:
+	//   - Kind
+	//   - APIVersion
+	//   - Name
+	// Currently Kind must be "Channel" and
+	// APIVersion must be "channels.knative.dev/v1alpha1"
+	// +optional
+	Channel *corev1.ObjectReference `json:"target,omitempty"`
 }
 
-var sourceCondSet = duckv1alpha1.NewLivingConditionSet()
+const (
+	// SourceConditionReady has status True when the Source is ready to send events.
+	SourceConditionReady = duckv1alpha1.ConditionReady
+
+	// SourceConditionProvisioned has status True when the Source's backing
+	// resources have been provisioned.
+	SourceConditionProvisioned duckv1alpha1.ConditionType = "Provisioned"
+)
+
+var sourceCondSet = duckv1alpha1.NewLivingConditionSet(SourceConditionProvisioned)
 
 // SourceStatus is the status for a Source resource
 type SourceStatus struct {
-	// Conditions holds the state of a cluster provisioner at a point in time.
+	// Conditions holds the state of a source at a point in time.
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
 	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
 	// ObservedGeneration is the 'Generation' of the Source that
@@ -100,6 +134,16 @@ func (ss *SourceStatus) IsReady() bool {
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (ss *SourceStatus) InitializeConditions() {
 	sourceCondSet.Manage(ss).InitializeConditions()
+}
+
+// MarkProvisioned sets the condition that the source has had it's backing resources created.
+func (ss *SourceStatus) MarkProvisioned() {
+	sourceCondSet.Manage(ss).MarkTrue(SourceConditionProvisioned)
+}
+
+// MarkDeprovisioned sets the condition that the source has had it's backing resources removed.
+func (ss *SourceStatus) MarkDeprovisioned(reason, messageFormat string, messageA ...interface{}) {
+	sourceCondSet.Manage(ss).MarkFalse(SourceConditionProvisioned, reason, messageFormat, messageA)
 }
 
 // SetConditions sets the Conditions array. This enables generic handling of

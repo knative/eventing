@@ -29,11 +29,15 @@ func (s *Source) Validate() *apis.FieldError {
 // Validate validates the Source spec
 func (ss *SourceSpec) Validate() *apis.FieldError {
 	if equality.Semantic.DeepEqual(ss, &SourceSpec{}) {
-		return apis.ErrMissingField("todo")
+		return apis.ErrMissingField("provisioner")
 	}
 	var errs *apis.FieldError
 
-	// TODO: add real validation after adding fields.
+	if ss.Channel != nil {
+		errs = errs.Also(isValidSubscribable(*ss.Channel).ViaField("channel"))
+	}
+
+	// TODO: could validate that arguments are json if that is a requirement.
 
 	return errs
 }

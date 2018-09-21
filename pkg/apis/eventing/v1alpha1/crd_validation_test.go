@@ -34,7 +34,7 @@ func doValidateTest(t *testing.T, tests []CRDTest) {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.cr.Validate()
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("validate (-want, +got) = %v", diff)
+				t.Errorf("%s: validate (-want, +got) = %v", test.name, diff)
 			}
 		})
 	}
