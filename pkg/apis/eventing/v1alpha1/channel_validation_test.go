@@ -85,12 +85,26 @@ func TestChannelValidation(t *testing.T) {
 				}},
 		},
 		want: apis.ErrMissingField("spec.subscriber[1].call", "spec.subscriber[1].result"),
+	}, {
+		name: "2 empty subscribers",
+		c: &Channel{
+			Spec: ChannelSpec{
+				Provisioner: &ProvisionerReference{
+					Ref: &corev1.ObjectReference{
+						Name: "foo",
+					},
+				},
+				Subscribers: []ChannelSubscriberSpec{{}, {}},
+			},
+		},
+		want: apis.ErrMissingField("spec.subscriber[0].call", "spec.subscriber[0].result").
+			Also(apis.ErrMissingField("spec.subscriber[1].call", "spec.subscriber[1].result")),
 	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.c.Validate()
-			if diff := cmp.Diff(test.want, got); diff != "" {
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("validateChannel (-want, +got) = %v", diff)
 			}
 		})
@@ -208,7 +222,7 @@ func TestChannelImmutableFields(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.new.CheckImmutableFields(test.old)
-			if diff := cmp.Diff(test.want, got); diff != "" {
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("Validate (-want, +got) = %v", diff)
 			}
 		})

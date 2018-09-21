@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/knative/pkg/apis"
 	"testing"
 )
@@ -48,8 +47,7 @@ func TestClusterEventTypeSpecValidation(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.et.Validate()
-			ignoreArguments := cmpopts.IgnoreFields(apis.FieldError{}, "Details")
-			if diff := cmp.Diff(test.want, got, ignoreArguments); diff != "" {
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("validateClusterEventType (-want, +got) = %v", diff)
 			}
 		})
@@ -115,7 +113,7 @@ func TestClusterEventTypeImmutableFields(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.new.CheckImmutableFields(test.old)
-			if diff := cmp.Diff(test.want, got); diff != "" {
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("Validate (-want, +got) = %v", diff)
 			}
 		})

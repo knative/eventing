@@ -31,13 +31,13 @@ func (ps *ClusterProvisionerSpec) Validate() *apis.FieldError {
 	if equality.Semantic.DeepEqual(ps, &ClusterProvisionerSpec{}) {
 		return apis.ErrMissingField("reconciles")
 	}
-
+	var errs *apis.FieldError
 	if ps.Reconciles.Kind == "" {
-		return apis.ErrMissingField("kind").ViaField("reconciles")
+		errs = errs.Also(apis.ErrMissingField("kind").ViaField("reconciles"))
 	}
 	if ps.Reconciles.Group == "" {
-		return apis.ErrMissingField("group").ViaField("reconciles")
+		errs = errs.Also(apis.ErrMissingField("group").ViaField("reconciles"))
 	}
 
-	return nil
+	return errs
 }

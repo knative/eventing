@@ -27,10 +27,10 @@ import (
 // It is a reference to actual object that implements Channelable duck
 // type.
 type Subscribable struct {
-	// Channelable is a reference to the actual Channelable
-	// interface that provides the Subscription capabilities. This may
-	// point to object itself or to another object providing the
-	// actual implementation.
+	// Channelable is a reference to the actual resource
+	// that provides the ability to perform Subscription capabilities.
+	// This may point to object itself (for example Channel) or to another
+	// object providing the actual capabilities..
 	Channelable corev1.ObjectReference `json:"channelable,omitempty"`
 }
 
@@ -43,24 +43,26 @@ var _ duck.Implementable = (*Subscribable)(nil)
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Subscribable is a skeleton type wrapping Subscribable in the manner we expect
-// resource writers defining compatible resources to embed it.  We will
-// typically use this type to deserialize Subscription ObjectReferences and
-// access the Subscription data.  This is not a real resource.
+// Subscription is a skeleton type wrapping the notion that this object
+// can be subscribed to. SubscriptionStatus provides the reference
+// (in a form of Subscribable) to the object that you can actually create
+// a subscription to.
+// We will typically use this type to deserialize Subscription objects
+// to access the Subscripion data.  This is not a real resource.
 type Subscription struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// SubscribableStatus is the part of the Status where a Subscribable
+	// SubscriptionStatus is the part of the Status where a Subscribable
 	// object points to the underlying Channelable object that fullfills
 	// the SubscribableSpec contract. Note that this can be a self-link
 	// for example for concrete Channel implementations.
-	Status SubscribableStatus `json:"status"`
+	Status SubscriptionStatus `json:"status"`
 }
 
-// SubscribableStatus shows how we expect folks to embed Subscribable in
+// SubscriptionStatus shows how we expect folks to embed Subscribable in
 // their Status field.
-type SubscribableStatus struct {
+type SubscriptionStatus struct {
 	Subscribable *Subscribable `json:"subscribable,omitempty"`
 }
 

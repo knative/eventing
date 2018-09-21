@@ -35,8 +35,10 @@ type Channelable struct {
 // SinkableDomain is the endpoint for the result
 // One of them must be present
 type ChannelSubscriberSpec struct {
-	CallableDomain string `json:"callableDomain"`
-	SinkableDomain string `json:"sinkableDomain"`
+	// +optional
+	CallableDomain string `json:"callableDomain,omitempty"`
+	// +optional
+	SinkableDomain string `json:"sinkableDomain,omitempty"`
 }
 
 // Implementations can verify that they implement Channelable via:

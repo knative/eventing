@@ -23,7 +23,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/pkg/apis/duck/util"
+	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -157,7 +157,7 @@ func (r *reconciler) resolveCall(namespace string, callable v1alpha1.Callable) (
 	t := duckv1alpha1.LegacyTarget{}
 	// Once Knative services support Targetable, switch to using this.
 	//t := duckv1alpha1.Target{}
-	err = util.FromUnstructured(*obj, &t)
+	err = duck.FromUnstructured(*obj, &t)
 	if err != nil {
 		glog.Warningf("Feiled to unserialize legacy target: %s", err)
 		return "", err
@@ -179,7 +179,7 @@ func (r *reconciler) resolveResult(namespace string, resultStrategy v1alpha1.Res
 		return "", err
 	}
 	s := duckv1alpha1.Sink{}
-	err = util.FromUnstructured(*obj, &s)
+	err = duck.FromUnstructured(*obj, &s)
 	if err != nil {
 		glog.Warningf("Feiled to unserialize Sinkable target: %s", err)
 		return "", err
@@ -201,7 +201,7 @@ func (r *reconciler) resolveFromChannelable(namespace string, ref *corev1.Object
 	}
 
 	c := duckv1alpha1.Subscription{}
-	err = util.FromUnstructured(*obj, &c)
+	err = duck.FromUnstructured(*obj, &c)
 	return &c, err
 }
 
@@ -225,7 +225,7 @@ func (r *reconciler) reconcileFromChannel(namespace string, subscribable corev1.
 	}
 
 	c := duckv1alpha1.Channel{}
-	err = util.FromUnstructured(*s, &c)
+	err = duck.FromUnstructured(*s, &c)
 	if err != nil {
 		return err
 	}

@@ -48,12 +48,12 @@ type Sink struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Status SinkableStatus `json:"status"`
+	Status SinkStatus `json:"status"`
 }
 
-// SinkableStatus shows how we expect folks to embed Sinkable in
+// SinkStatus shows how we expect folks to embed Sinkable in
 // their Status field.
-type SinkableStatus struct {
+type SinkStatus struct {
 	Sinkable *Sinkable `json:"sinkable,omitempty"`
 }
 
@@ -67,7 +67,7 @@ func (_ *Sinkable) GetFullType() duck.Populatable {
 
 // Populate implements duck.Populatable
 func (t *Sink) Populate() {
-	t.Status = SinkableStatus{
+	t.Status = SinkStatus{
 		&Sinkable{
 			// Populate ALL fields
 			DomainInternal: "this is not empty",

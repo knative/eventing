@@ -26,48 +26,56 @@ import (
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		name string
-		ps   *ClusterProvisionerSpec
+		p    *ClusterProvisioner
 		want *apis.FieldError
 	}{{
 		name: "valid",
-		ps: &ClusterProvisionerSpec{
-			Reconciles: metav1.GroupKind{
-				Group: "knative.dev",
-				Kind:  "Channel",
+		p: &ClusterProvisioner{
+			Spec: ClusterProvisionerSpec{
+				Reconciles: metav1.GroupKind{
+					Group: "knative.dev",
+					Kind:  "Channel",
+				},
 			},
 		},
 	}, {
 		name: "invalid cluster provisioner, empty reconciles",
-		ps: &ClusterProvisionerSpec{
-			Reconciles: metav1.GroupKind{},
+		p: &ClusterProvisioner{
+			Spec: ClusterProvisionerSpec{
+				Reconciles: metav1.GroupKind{},
+			},
 		},
-		want: apis.ErrMissingField("reconciles"),
+		want: apis.ErrMissingField("spec.reconciles"),
 	}, {
 		name: "invalid cluster provisioner, empty kind",
-		ps: &ClusterProvisionerSpec{
-			Reconciles: metav1.GroupKind{
-				Group: "eventing.knative.test",
+		p: &ClusterProvisioner{
+			Spec: ClusterProvisionerSpec{
+				Reconciles: metav1.GroupKind{
+					Group: "eventing.knative.test",
+				},
 			},
 		},
-		want: apis.ErrMissingField("reconciles.kind"),
+		want: apis.ErrMissingField("spec.reconciles.kind"),
 	}, {
 		name: "invalid cluster provisioner",
-		ps: &ClusterProvisionerSpec{
-			Reconciles: metav1.GroupKind{
-				Kind: "Channel",
+		p: &ClusterProvisioner{
+			Spec: ClusterProvisionerSpec{
+				Reconciles: metav1.GroupKind{
+					Kind: "Channel",
+				},
 			},
 		},
-		want: apis.ErrMissingField("reconciles.group"),
+		want: apis.ErrMissingField("spec.reconciles.group"),
 	}, {
 		name: "empty",
-		ps:   &ClusterProvisionerSpec{},
-		want: apis.ErrMissingField("reconciles"),
+		p:    &ClusterProvisioner{},
+		want: apis.ErrMissingField("spec.reconciles"),
 	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.ps.Validate()
-			if diff := cmp.Diff(test.want, got); diff != "" {
+			got := test.p.Validate()
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("validate (-want, +got) = %v", diff)
 			}
 		})

@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/knative/pkg/apis"
 	"k8s.io/api/core/v1"
 	"testing"
@@ -171,8 +170,7 @@ func TestFlowSpecValidation(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.f.Validate()
-			ignoreArguments := cmpopts.IgnoreFields(apis.FieldError{}, "Details")
-			if diff := cmp.Diff(test.want, got, ignoreArguments); diff != "" {
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("validateFlow (-want, +got) = %v", diff)
 			}
 		})

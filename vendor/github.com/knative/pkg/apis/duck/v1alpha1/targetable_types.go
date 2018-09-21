@@ -48,12 +48,12 @@ type Target struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Status TargetableStatus `json:"status"`
+	Status TargetStatus `json:"status"`
 }
 
-// TargetableStatus shows how we expect folks to embed Targetable in
+// TargetStatus shows how we expect folks to embed Targetable in
 // their Status field.
-type TargetableStatus struct {
+type TargetStatus struct {
 	Targetable *Targetable `json:"targetable,omitempty"`
 }
 
@@ -67,7 +67,7 @@ func (_ *Targetable) GetFullType() duck.Populatable {
 
 // Populate implements duck.Populatable
 func (t *Target) Populate() {
-	t.Status = TargetableStatus{
+	t.Status = TargetStatus{
 		&Targetable{
 			// Populate ALL fields
 			DomainInternal: "this is not empty",

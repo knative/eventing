@@ -29,8 +29,9 @@ func (c *Channel) Validate() *apis.FieldError {
 }
 
 func (cs *ChannelSpec) Validate() *apis.FieldError {
+	var errs *apis.FieldError
 	if cs.Provisioner == nil {
-		return apis.ErrMissingField("provisioner")
+		errs = errs.Also(apis.ErrMissingField("provisioner"))
 	}
 
 	if cs.Channelable != nil {
@@ -43,14 +44,13 @@ func (cs *ChannelSpec) Validate() *apis.FieldError {
 		}
 	}
 
-	return nil
+	return errs
 }
 
 func (current *Channel) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
 	if og == nil {
 		return nil
 	}
-
 	original, ok := og.(*Channel)
 	if !ok {
 		return &apis.FieldError{Message: "The provided resource was not a Channel"}
