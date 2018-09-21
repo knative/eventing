@@ -57,7 +57,7 @@ func (ss *SubscriptionSpec) Validate() *apis.FieldError {
 	}
 
 	if !missingResultStrategy {
-		if fe := isValidResultStrategy(ss.Result); fe != nil {
+		if fe := isValidResultStrategy(*ss.Result); fe != nil {
 			errs = errs.Also(fe.ViaField("result"))
 		}
 	}
@@ -116,7 +116,7 @@ func isResultStrategyNilOrEmpty(r *ResultStrategy) bool {
 	return r == nil || equality.Semantic.DeepEqual(r, &ResultStrategy{}) || equality.Semantic.DeepEqual(r.Target, &corev1.ObjectReference{})
 }
 
-func isValidResultStrategy(r *ResultStrategy) *apis.FieldError {
+func isValidResultStrategy(r ResultStrategy) *apis.FieldError {
 	fe := isValidObjectReference(*r.Target)
 	if fe != nil {
 		return fe.ViaField("target")

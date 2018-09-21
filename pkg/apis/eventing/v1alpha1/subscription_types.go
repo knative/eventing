@@ -184,6 +184,19 @@ type SubscriptionStatus struct {
 	Subscribable duckv1alpha1.Subscribable `json:"subscribable,omitempty"`
 }
 
+const (
+	// SubscriptionConditionReady has status True when all subcondtions below have been set to True.
+	SubscriptionConditionReady = duckv1alpha1.ConditionReady
+
+	// SubscriptionReferencesResolved has status True when all the specified references have been successfully
+	// resolved.
+	SubscriptionConditionReferencesResolved duckv1alpha1.ConditionType = "Resolved"
+
+	// SubscriptionConditionFromReady has status True when controller has successfully added a subscription to From
+	// resource.
+	SubscriptionConditionFromReady duckv1alpha1.ConditionType = "Subscribed"
+)
+
 // GetSpecJSON returns spec as json
 func (s *Subscription) GetSpecJSON() ([]byte, error) {
 	return json.Marshal(s.Spec)
