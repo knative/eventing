@@ -813,12 +813,13 @@
   version = "kubernetes-1.11.0"
 
 [[projects]]
-  digest = "1:b2b13a7c98cee7405ee7e1cf93296d66de435196fc9a19047e31132f90a72030"
+  digest = "1:52e713cd6ac68d1ab506149a488466cdf0ecb1e524e970fcaef67ba21aeae9ff"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
     "discovery/fake",
     "dynamic",
+    "dynamic/fake",
     "informers",
     "informers/admissionregistration",
     "informers/admissionregistration/v1alpha1",
@@ -1068,6 +1069,7 @@
     "github.com/knative/serving/pkg/apis/serving/v1alpha1",
     "github.com/knative/serving/pkg/client/clientset/versioned",
     "github.com/knative/test-infra",
+    "github.com/mattbaird/jsonpatch",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "go.uber.org/zap",
     "go.uber.org/zap/zapcore",
@@ -1101,6 +1103,7 @@
     "k8s.io/client-go/discovery",
     "k8s.io/client-go/discovery/fake",
     "k8s.io/client-go/dynamic",
+    "k8s.io/client-go/dynamic/fake",
     "k8s.io/client-go/informers",
     "k8s.io/client-go/informers/core/v1",
     "k8s.io/client-go/kubernetes",

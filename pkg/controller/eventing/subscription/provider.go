@@ -17,9 +17,8 @@ limitations under the License.
 package subscription
 
 import (
-	//	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	//	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,9 +36,10 @@ const (
 )
 
 type reconciler struct {
-	client     client.Client
-	restConfig *rest.Config
-	recorder   record.EventRecorder
+	client        client.Client
+	restConfig    *rest.Config
+	dynamicClient dynamic.Interface
+	recorder      record.EventRecorder
 }
 
 // Verify the struct implements reconcile.Reconciler
@@ -62,24 +62,6 @@ func ProvideController(mgr manager.Manager) (controller.Controller, error) {
 		return nil, err
 	}
 
-	// In addition to watching Subscription objects, watch for objects that a Subscription creates and own and when changes
-	// are made to them, enqueue owning Subscription object for reconcile loop.
-	// TODO: DO NOT CHECK IN
-	/*
-		if err := c.Watch(&source.Kind{Type: &channelsv1alpha1.Channel{}},
-			&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Subscription{}, IsController: true}); err != nil {
-			return nil, err
-		}
-		if err := c.Watch(&source.Kind{Type: &channelsv1alpha1.Subscription{}},
-			&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Subscription{}, IsController: true}); err != nil {
-			return nil, err
-		}
-		if err := c.Watch(&source.Kind{Type: &feedsv1alpha1.Feed{}},
-			&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Subscription{}, IsController: true}); err != nil {
-			return nil, err
-		}
-	*/
-
 	return c, nil
 }
 
@@ -90,5 +72,7 @@ func (r *reconciler) InjectClient(c client.Client) error {
 
 func (r *reconciler) InjectConfig(c *rest.Config) error {
 	r.restConfig = c
-	return nil
+	var err error
+	r.dynamicClient, err = dynamic.NewForConfig(c)
+	return err
 }

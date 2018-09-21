@@ -22,18 +22,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 
-	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
-	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
-	flowsv1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
-	"github.com/knative/eventing/pkg/system"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 var (
@@ -42,26 +41,31 @@ var (
 )
 
 const (
-	targetDNS = "myservice.mynamespace.svc.cluster.local"
-	eventType = "myeventtype"
-	flowName  = "test-flow"
+	fromChannelName   = "from-channel"
+	resultChannelName = "result-channel"
+	ChannelKind       = "Channel"
+	targetDNS         = "myservice.mynamespace.svc.cluster.local"
+	eventType         = "myeventtype"
+	subscriptionName  = "test-subscription"
+	testNS            = "test-namespace"
 )
 
 func init() {
 	// Add types to scheme
-	feedsv1alpha1.AddToScheme(scheme.Scheme)
-	flowsv1alpha1.AddToScheme(scheme.Scheme)
-	channelsv1alpha1.AddToScheme(scheme.Scheme)
+	eventingv1alpha1.AddToScheme(scheme.Scheme)
+	duckv1alpha1.AddToScheme(scheme.Scheme)
 }
 
 var injectDomainInternalMocks = controllertesting.Mocks{
 	MockCreates: []controllertesting.MockCreate{
 		func(innerClient client.Client, ctx context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
 			// If we are creating a Channel, then fill in the status, in particular the DomainInternal as
-			// it used to control whether the Feed is created.
-			if channel, ok := obj.(*channelsv1alpha1.Channel); ok {
+			// it is used to control whether the Feed is created.
+			if channel, ok := obj.(*eventingv1alpha1.Channel); ok {
 				err := innerClient.Create(ctx, obj)
-				channel.Status.DomainInternal = targetDNS
+				channel.Status.Sinkable = duckv1alpha1.Sinkable{
+					DomainInternal: targetDNS,
+				}
 				return controllertesting.Handled, err
 			}
 			return controllertesting.Unhandled, nil
@@ -71,40 +75,61 @@ var injectDomainInternalMocks = controllertesting.Mocks{
 
 var testCases = []controllertesting.TestCase{
 	{
-		Name: "new flow: adds status, action target resolved",
+		Name: "new subscription: adds status, from target resolved",
 		InitialState: []runtime.Object{
-			getNewFlow(),
-			getFlowControllerConfigMap(),
+			getNewFromChannel(),
+			getNewResultChannel(),
+			getNewSubscription(),
 		},
-		ReconcileKey: "test/test-flow",
+		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
 		WantResult:   reconcile.Result{},
 		WantPresent: []runtime.Object{
-			getActionTargetResolvedFlow(),
-			func() *channelsv1alpha1.Channel {
-				c := getNewChannel()
-				c.Spec.ClusterBus = "special-bus"
+			//			getActionTargetResolvedFlow(),
+			func() *eventingv1alpha1.Channel {
+				c := getNewChannel(fromChannelName)
+				c.Spec.Channelable = &duckv1alpha1.Channelable{
+					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{
+						{
+							CallableDomain: "dummy",
+						},
+					},
+				}
 				return c
 			}(),
 			getNewSubscription(),
-			getNewFeed(),
 		},
 		Mocks: injectDomainInternalMocks,
+		Objects: []runtime.Object{&unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+				"kind":       "Channel",
+				"name":       fromChannelName,
+				"status": map[string]interface{}{
+					"extra": "fields",
+					"fooable": map[string]interface{}{
+						"field1": "foo",
+						"field2": "bar",
+					},
+				},
+			}}},
 	},
-	{
-		Name: "new flow: adds status, action target resolved, no flow controller config map, use default 'stub' bus",
-		InitialState: []runtime.Object{
-			getNewFlow(),
+	/*
+		{
+			Name: "new flow: adds status, action target resolved, no flow controller config map, use default 'stub' bus",
+			InitialState: []runtime.Object{
+				getNewSubscription(),
+			},
+			ReconcileKey: "test/test-flow",
+			WantResult:   reconcile.Result{},
+			WantPresent: []runtime.Object{
+				//			getActionTargetResolvedFlow(),
+				getNewChannel(),
+				getNewSubscription(),
+				//			getNewFeed(),
+			},
+			Mocks: injectDomainInternalMocks,
 		},
-		ReconcileKey: "test/test-flow",
-		WantResult:   reconcile.Result{},
-		WantPresent: []runtime.Object{
-			getActionTargetResolvedFlow(),
-			getNewChannel(),
-			getNewSubscription(),
-			getNewFeed(),
-		},
-		Mocks: injectDomainInternalMocks,
-	},
+	*/
 }
 
 func TestAllCases(t *testing.T) {
@@ -112,16 +137,20 @@ func TestAllCases(t *testing.T) {
 
 	for _, tc := range testCases {
 		c := tc.GetClient()
+		dc := tc.GetDynamicClient()
 		r := &reconciler{
-			client:   c,
-			recorder: recorder,
+			client:        c,
+			dynamicClient: dc,
+			restConfig:    &rest.Config{},
+			recorder:      recorder,
 		}
 		t.Run(tc.Name, tc.Runner(t, r, c))
 	}
 }
 
+/*
 func getActionTargetResolvedFlow() *flowsv1alpha1.Flow {
-	newFlow := getNewFlow()
+	newFlow := getNewSubscription()
 	newFlow.Status = flowsv1alpha1.FlowStatus{
 		Conditions: []flowsv1alpha1.FlowCondition{{
 			Type:   flowsv1alpha1.FlowConditionReady,
@@ -135,33 +164,21 @@ func getActionTargetResolvedFlow() *flowsv1alpha1.Flow {
 	}
 	return newFlow
 }
+*/
 
-func getNewFlow() *flowsv1alpha1.Flow {
-	return &flowsv1alpha1.Flow{
-		TypeMeta:   flowType(),
-		ObjectMeta: om("test", flowName),
-		Spec: flowsv1alpha1.FlowSpec{
-			Action: flowsv1alpha1.FlowAction{
-				TargetURI: &targetURI,
-			},
-			Trigger: flowsv1alpha1.EventTrigger{
-				EventType:      eventType,
-				Resource:       "myresource",
-				Service:        "",
-				Parameters:     nil,
-				ParametersFrom: nil,
-			},
-		},
-	}
+func getNewFromChannel() *eventingv1alpha1.Channel {
+	return getNewChannel(fromChannelName)
 }
 
-func getNewChannel() *channelsv1alpha1.Channel {
-	channel := &channelsv1alpha1.Channel{
+func getNewResultChannel() *eventingv1alpha1.Channel {
+	return getNewChannel(resultChannelName)
+}
+
+func getNewChannel(name string) *eventingv1alpha1.Channel {
+	channel := &eventingv1alpha1.Channel{
 		TypeMeta:   channelType(),
-		ObjectMeta: om("test", flowName),
-		Spec: channelsv1alpha1.ChannelSpec{
-			ClusterBus: "stub",
-		},
+		ObjectMeta: om("test", name),
+		Spec:       eventingv1alpha1.ChannelSpec{},
 	}
 	channel.ObjectMeta.OwnerReferences = append(channel.ObjectMeta.OwnerReferences, getOwnerReference(false))
 
@@ -170,13 +187,18 @@ func getNewChannel() *channelsv1alpha1.Channel {
 	return channel
 }
 
-func getNewSubscription() *channelsv1alpha1.Subscription {
-	subscription := &channelsv1alpha1.Subscription{
+func getNewSubscription() *eventingv1alpha1.Subscription {
+	subscription := &eventingv1alpha1.Subscription{
 		TypeMeta:   subscriptionType(),
-		ObjectMeta: om("test", flowName),
-		Spec: channelsv1alpha1.SubscriptionSpec{
-			Channel:    flowName,
-			Subscriber: targetURI,
+		ObjectMeta: om(testNS, subscriptionName),
+		Spec: eventingv1alpha1.SubscriptionSpec{
+			From: corev1.ObjectReference{
+				Name:       fromChannelName,
+				Kind:       ChannelKind,
+				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+			},
+			//			Channel:    subscriptionName,
+			//			Subscriber: targetURI,
 		},
 	}
 	subscription.ObjectMeta.OwnerReferences = append(subscription.ObjectMeta.OwnerReferences, getOwnerReference(false))
@@ -186,6 +208,7 @@ func getNewSubscription() *channelsv1alpha1.Subscription {
 	return subscription
 }
 
+/*
 func getNewFeed() *feedsv1alpha1.Feed {
 	return &feedsv1alpha1.Feed{
 		TypeMeta:   feedType(),
@@ -204,40 +227,18 @@ func getNewFeed() *feedsv1alpha1.Feed {
 		},
 	}
 }
-
-func getFlowControllerConfigMap() *corev1.ConfigMap {
-	return &corev1.ConfigMap{
-		ObjectMeta: om(system.Namespace, controllerConfigMapName),
-		Data: map[string]string{
-			defaultClusterBusConfigMapKey: "special-bus",
-		},
-	}
-}
-
-func flowType() metav1.TypeMeta {
-	return metav1.TypeMeta{
-		APIVersion: flowsv1alpha1.SchemeGroupVersion.String(),
-		Kind:       "Flow",
-	}
-}
-
-func feedType() metav1.TypeMeta {
-	return metav1.TypeMeta{
-		APIVersion: feedsv1alpha1.SchemeGroupVersion.String(),
-		Kind:       "Feed",
-	}
-}
+*/
 
 func channelType() metav1.TypeMeta {
 	return metav1.TypeMeta{
-		APIVersion: channelsv1alpha1.SchemeGroupVersion.String(),
+		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 		Kind:       "Channel",
 	}
 }
 
 func subscriptionType() metav1.TypeMeta {
 	return metav1.TypeMeta{
-		APIVersion: channelsv1alpha1.SchemeGroupVersion.String(),
+		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 		Kind:       "Subscription",
 	}
 }
@@ -261,9 +262,9 @@ func feedObjectMeta(namespace, generateName string) metav1.ObjectMeta {
 
 func getOwnerReference(blockOwnerDeletion bool) metav1.OwnerReference {
 	return metav1.OwnerReference{
-		APIVersion:         flowsv1alpha1.SchemeGroupVersion.String(),
-		Kind:               "Flow",
-		Name:               flowName,
+		APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
+		Kind:               "Subscription",
+		Name:               subscriptionName,
 		Controller:         &trueVal,
 		BlockOwnerDeletion: &blockOwnerDeletion,
 	}
