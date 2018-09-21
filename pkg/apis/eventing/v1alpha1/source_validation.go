@@ -33,7 +33,7 @@ func (ss *SourceSpec) Validate() *apis.FieldError {
 	}
 	var errs *apis.FieldError
 
-	if ss.Channel != nil {
+	if ss.Channel != nil && !isSubscribableEmpty(*ss.Channel) {
 		errs = errs.Also(isValidSubscribable(*ss.Channel).ViaField("channel"))
 	}
 
