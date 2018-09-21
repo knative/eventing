@@ -556,6 +556,10 @@ func newDispatcherDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.De
 			Name:  "BUS_NAME",
 			Value: clusterBus.Name,
 		},
+		corev1.EnvVar{
+			Name:  "BUS_UID",
+			Value: string(clusterBus.UID),
+		},
 	)
 	volumes := []corev1.Volume{}
 	if clusterBus.Spec.Volumes != nil {
@@ -608,6 +612,10 @@ func newProvisionerDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.D
 		corev1.EnvVar{
 			Name:  "BUS_NAME",
 			Value: clusterBus.Name,
+		},
+		corev1.EnvVar{
+			Name:  "BUS_UID",
+			Value: string(clusterBus.UID),
 		},
 	)
 	volumes := []corev1.Volume{}

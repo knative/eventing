@@ -18,6 +18,7 @@ package gcppubsub
 
 import (
 	"context"
+	"crypto/sha1"
 	"fmt"
 
 	"cloud.google.com/go/pubsub"
@@ -29,7 +30,7 @@ import (
 const BusType = "gcppubsub"
 
 type CloudPubSubBus struct {
-	ref         buses.BusReference
+	id          string
 	reconciler  *buses.Reconciler
 	dispatcher  buses.BusDispatcher
 	provisioner buses.BusProvisioner
@@ -40,7 +41,7 @@ type CloudPubSubBus struct {
 	logger *zap.SugaredLogger
 }
 
-func NewCloudPubSubBusDispatcher(ref buses.BusReference, projectID string, opts *buses.BusOpts) (*CloudPubSubBus, error) {
+func NewCloudPubSubBusDispatcher(ref buses.BusReference, busUID string, projectID string, opts *buses.BusOpts) (*CloudPubSubBus, error) {
 	ctx := context.Background()
 	pubsubClient, err := pubsub.NewClient(ctx, projectID)
 	if err != nil {
@@ -48,7 +49,7 @@ func NewCloudPubSubBusDispatcher(ref buses.BusReference, projectID string, opts 
 	}
 
 	bus := &CloudPubSubBus{
-		ref:          ref,
+		id:           busId(busUID),
 		pubsubClient: pubsubClient,
 	}
 	eventHandlers := buses.EventHandlerFuncs{
@@ -70,7 +71,7 @@ func NewCloudPubSubBusDispatcher(ref buses.BusReference, projectID string, opts 
 	return bus, nil
 }
 
-func NewCloudPubSubBusProvisioner(ref buses.BusReference, projectID string, opts *buses.BusOpts) (*CloudPubSubBus, error) {
+func NewCloudPubSubBusProvisioner(ref buses.BusReference, busUID string, projectID string, opts *buses.BusOpts) (*CloudPubSubBus, error) {
 	ctx := context.Background()
 	pubsubClient, err := pubsub.NewClient(ctx, projectID)
 	if err != nil {
@@ -78,7 +79,7 @@ func NewCloudPubSubBusProvisioner(ref buses.BusReference, projectID string, opts
 	}
 
 	bus := &CloudPubSubBus{
-		ref:          ref,
+		id:           busId(busUID),
 		pubsubClient: pubsubClient,
 	}
 	eventHandlers := buses.EventHandlerFuncs{
@@ -284,9 +285,18 @@ func (b *CloudPubSubBus) deleteSubscription(ref buses.SubscriptionReference) err
 }
 
 func (b *CloudPubSubBus) topicID(channel buses.ChannelReference) string {
-	return fmt.Sprintf("channel-%s-%s-%s", b.ref.Name, channel.Namespace, channel.Name)
+	return fmt.Sprintf("channel-%s-%s-%s", channel.Namespace, channel.Name, b.id)
 }
 
 func (b *CloudPubSubBus) subscriptionID(subscription buses.SubscriptionReference) string {
-	return fmt.Sprintf("subscription-%s-%s-%s", b.ref.Name, subscription.Namespace, subscription.Name)
+	return fmt.Sprintf("subscription-%s-%s-%s", subscription.Namespace, subscription.Name, b.id)
+}
+
+// busId generates a short unique identifier for a bus from the Bus's UID.
+// This value is used as a component of the topic and subscription IDs
+func busId(uid string) string {
+	h := sha1.New()
+	h.Write([]byte(uid))
+	bs := h.Sum(nil)
+	return fmt.Sprintf("%x", bs)[0:5]
 }

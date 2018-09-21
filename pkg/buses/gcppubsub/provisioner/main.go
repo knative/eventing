@@ -35,6 +35,7 @@ func main() {
 		os.Getenv("BUS_NAME"),
 		os.Getenv("BUS_NAMESPACE"),
 	)
+	busUID := os.Getenv("BUS_UID")
 
 	config := buses.NewLoggingConfig()
 	logger := buses.NewBusLoggerFromConfig(config)
@@ -51,13 +52,14 @@ func main() {
 	}
 
 	opts := &buses.BusOpts{
-		Logger: logger}
+		Logger: logger,
+	}
 
 	flag.StringVar(&opts.KubeConfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 	flag.StringVar(&opts.MasterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	flag.Parse()
 
-	bus, err := gcppubsub.NewCloudPubSubBusProvisioner(ref, projectID, opts)
+	bus, err := gcppubsub.NewCloudPubSubBusProvisioner(ref, busUID, projectID, opts)
 	if err != nil {
 		logger.Fatalf("Error starting pub/sub bus provisioner: %v", err)
 	}
