@@ -107,7 +107,11 @@ func (tc *TestCase) Runner(t *testing.T, r reconcile.Reconciler, c *MockClient) 
 
 // GetDynamicClient returns the mockDynamicClient to use for this test case.
 func (tc *TestCase) GetDynamicClient() dynamic.Interface {
-	return dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
+	if tc.Scheme == nil {
+		return dynamicfake.NewSimpleDynamicClient(runtime.NewScheme(), tc.Objects...)
+	} else {
+		return dynamicfake.NewSimpleDynamicClient(tc.Scheme, tc.Objects...)
+	}
 }
 
 // GetClient returns the mockClient to use for this test case.

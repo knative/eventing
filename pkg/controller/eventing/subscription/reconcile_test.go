@@ -17,9 +17,7 @@ limitations under the License.
 package subscription
 
 import (
-	"context"
 	"fmt"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -41,36 +39,22 @@ var (
 )
 
 const (
-	fromChannelName   = "from-channel"
-	resultChannelName = "result-channel"
+	fromChannelName   = "fromchannel"
+	resultChannelName = "resultchannel"
+	routeName         = "callroute"
 	ChannelKind       = "Channel"
-	targetDNS         = "myservice.mynamespace.svc.cluster.local"
+	routeKind         = "Route"
+	targetDNS         = "myfunction.mynamespace.svc.cluster.local"
+	sinkableDNS       = "myresultchannel.mynamespace.svc.cluster.local"
 	eventType         = "myeventtype"
-	subscriptionName  = "test-subscription"
-	testNS            = "test-namespace"
+	subscriptionName  = "testsubscription"
+	testNS            = "testnamespace"
 )
 
 func init() {
 	// Add types to scheme
 	eventingv1alpha1.AddToScheme(scheme.Scheme)
 	duckv1alpha1.AddToScheme(scheme.Scheme)
-}
-
-var injectDomainInternalMocks = controllertesting.Mocks{
-	MockCreates: []controllertesting.MockCreate{
-		func(innerClient client.Client, ctx context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-			// If we are creating a Channel, then fill in the status, in particular the DomainInternal as
-			// it is used to control whether the Feed is created.
-			if channel, ok := obj.(*eventingv1alpha1.Channel); ok {
-				err := innerClient.Create(ctx, obj)
-				channel.Status.Sinkable = duckv1alpha1.Sinkable{
-					DomainInternal: targetDNS,
-				}
-				return controllertesting.Handled, err
-			}
-			return controllertesting.Unhandled, nil
-		},
-	},
 }
 
 var testCases = []controllertesting.TestCase{
@@ -84,7 +68,6 @@ var testCases = []controllertesting.TestCase{
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
 		WantResult:   reconcile.Result{},
 		WantPresent: []runtime.Object{
-			//			getActionTargetResolvedFlow(),
 			func() *eventingv1alpha1.Channel {
 				c := getNewChannel(fromChannelName)
 				c.Spec.Channelable = &duckv1alpha1.Channelable{
@@ -98,38 +81,70 @@ var testCases = []controllertesting.TestCase{
 			}(),
 			getNewSubscription(),
 		},
-		Mocks: injectDomainInternalMocks,
-		Objects: []runtime.Object{&unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-				"kind":       "Channel",
-				"name":       fromChannelName,
-				"status": map[string]interface{}{
-					"extra": "fields",
-					"fooable": map[string]interface{}{
-						"field1": "foo",
-						"field2": "bar",
+		Scheme: scheme.Scheme,
+		Objects: []runtime.Object{
+			// Source channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       ChannelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      fromChannelName,
 					},
-				},
-			}}},
-	},
-	/*
-		{
-			Name: "new flow: adds status, action target resolved, no flow controller config map, use default 'stub' bus",
-			InitialState: []runtime.Object{
-				getNewSubscription(),
-			},
-			ReconcileKey: "test/test-flow",
-			WantResult:   reconcile.Result{},
-			WantPresent: []runtime.Object{
-				//			getActionTargetResolvedFlow(),
-				getNewChannel(),
-				getNewSubscription(),
-				//			getNewFeed(),
-			},
-			Mocks: injectDomainInternalMocks,
+					"spec": map[string]interface{}{
+						"channelable": map[string]interface{}{},
+					},
+					"status": map[string]interface{}{
+						"subscribable": map[string]interface{}{
+							"channelable": map[string]interface{}{
+								"kind":       ChannelKind,
+								"name":       fromChannelName,
+								"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+							},
+						},
+					},
+				}},
+			// Call (using knative route)
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "serving.knative.dev/v1alpha1",
+					"kind":       routeKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      routeName,
+					},
+					"status": map[string]interface{}{
+						"domainInternal": targetDNS,
+					},
+				}},
+			// Result channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       ChannelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      resultChannelName,
+					},
+					"spec": map[string]interface{}{
+						"channelable": map[string]interface{}{},
+					},
+					"status": map[string]interface{}{
+						"subscribable": map[string]interface{}{
+							"channelable": map[string]interface{}{
+								"kind":       ChannelKind,
+								"name":       fromChannelName,
+								"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+							},
+						},
+						"sinkable": map[string]interface{}{
+							"domainInternal": sinkableDNS,
+						},
+					},
+				}},
 		},
-	*/
+	},
 }
 
 func TestAllCases(t *testing.T) {
@@ -138,6 +153,7 @@ func TestAllCases(t *testing.T) {
 	for _, tc := range testCases {
 		c := tc.GetClient()
 		dc := tc.GetDynamicClient()
+
 		r := &reconciler{
 			client:        c,
 			dynamicClient: dc,
@@ -147,24 +163,6 @@ func TestAllCases(t *testing.T) {
 		t.Run(tc.Name, tc.Runner(t, r, c))
 	}
 }
-
-/*
-func getActionTargetResolvedFlow() *flowsv1alpha1.Flow {
-	newFlow := getNewSubscription()
-	newFlow.Status = flowsv1alpha1.FlowStatus{
-		Conditions: []flowsv1alpha1.FlowCondition{{
-			Type:   flowsv1alpha1.FlowConditionReady,
-			Status: corev1.ConditionUnknown,
-		}, {
-			Type:    flowsv1alpha1.FlowConditionActionTargetResolved,
-			Status:  corev1.ConditionTrue,
-			Reason:  "ActionTargetResolved",
-			Message: fmt.Sprintf("Resolved to: %q", targetURI),
-		}},
-	}
-	return newFlow
-}
-*/
 
 func getNewFromChannel() *eventingv1alpha1.Channel {
 	return getNewChannel(fromChannelName)
@@ -197,8 +195,20 @@ func getNewSubscription() *eventingv1alpha1.Subscription {
 				Kind:       ChannelKind,
 				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 			},
-			//			Channel:    subscriptionName,
-			//			Subscriber: targetURI,
+			Call: &eventingv1alpha1.Callable{
+				Target: &corev1.ObjectReference{
+					Name:       routeName,
+					Kind:       routeKind,
+					APIVersion: "serving.knative.dev/v1alpha1",
+				},
+			},
+			Result: &eventingv1alpha1.ResultStrategy{
+				Target: &corev1.ObjectReference{
+					Name:       resultChannelName,
+					Kind:       ChannelKind,
+					APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+				},
+			},
 		},
 	}
 	subscription.ObjectMeta.OwnerReferences = append(subscription.ObjectMeta.OwnerReferences, getOwnerReference(false))

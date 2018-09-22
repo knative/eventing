@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/golang/glog"
@@ -82,7 +81,8 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 	// See if the subscription has been deleted
 	accessor, err := meta.Accessor(subscription)
 	if err != nil {
-		log.Fatalf("Failed to get metadata: %s", err)
+		glog.Warningf("Failed to get metadata accessor: %s", err)
+		return err
 	}
 	deletionTimestamp := accessor.GetDeletionTimestamp()
 	glog.Infof("DeletionTimestamp: %v", deletionTimestamp)
@@ -104,6 +104,11 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 		callDomain, err = r.resolveCall(subscription.Namespace, *subscription.Spec.Call)
 		if err != nil {
 			glog.Warningf("Failed to resolve Call %v : %v", *subscription.Spec.Call, err)
+			return err
+		}
+		if callDomain == "" {
+			glog.Warningf("Failed to resolve Call %v to actual domain", *subscription.Spec.Call)
+			return err
 		}
 		glog.Infof("Resolved call to: %q", callDomain)
 	}
@@ -113,11 +118,16 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 		resultDomain, err = r.resolveResult(subscription.Namespace, *subscription.Spec.Result)
 		if err != nil {
 			glog.Warningf("Failed to resolve Result %v : %v", subscription.Spec.Result, err)
+			return err
+		}
+		if resultDomain == "" {
+			glog.Warningf("Failed to resolve result %v to actual domain", *subscription.Spec.Result)
+			return err
 		}
 		glog.Infof("Resolved result to: %q", resultDomain)
 	}
 
-	// Ok, now that we have the From and at least one of the Call/Result, let's greconcile
+	// Ok, now that we have the From and at least one of the Call/Result, let's reconcile
 	// the From with this information.
 	err = r.reconcileFromChannel(subscription.Namespace, from.Status.Subscribable.Channelable, callDomain, resultDomain, deletionTimestamp != nil)
 	if err != nil {
@@ -157,7 +167,7 @@ func (r *reconciler) resolveCall(namespace string, callable v1alpha1.Callable) (
 
 	obj, err := r.fetchObjectReference(namespace, callable.Target)
 	if err != nil {
-		glog.Warningf("Feiled to fetch Callable target %+v: %s", callable.Target, err)
+		glog.Warningf("Failed to fetch Callable target %+v: %s", callable.Target, err)
 		return "", err
 	}
 	t := duckv1alpha1.LegacyTarget{}
@@ -165,7 +175,7 @@ func (r *reconciler) resolveCall(namespace string, callable v1alpha1.Callable) (
 	//t := duckv1alpha1.Target{}
 	err = duck.FromUnstructured(*obj, &t)
 	if err != nil {
-		glog.Warningf("Feiled to unserialize legacy target: %s", err)
+		glog.Warningf("Failed to unserialize legacy target: %s", err)
 		return "", err
 	}
 
@@ -181,19 +191,19 @@ func (r *reconciler) resolveCall(namespace string, callable v1alpha1.Callable) (
 func (r *reconciler) resolveResult(namespace string, resultStrategy v1alpha1.ResultStrategy) (string, error) {
 	obj, err := r.fetchObjectReference(namespace, resultStrategy.Target)
 	if err != nil {
-		glog.Warningf("Feiled to fetch ResultStrategy target %+v: %s", resultStrategy, err)
+		glog.Warningf("Failed to fetch ResultStrategy target %+v: %s", resultStrategy, err)
 		return "", err
 	}
 	s := duckv1alpha1.Sink{}
 	err = duck.FromUnstructured(*obj, &s)
 	if err != nil {
-		glog.Warningf("Feiled to unserialize Sinkable target: %s", err)
+		glog.Warningf("Failed to unserialize Sinkable target: %s", err)
 		return "", err
 	}
 	if s.Status.Sinkable != nil {
 		return s.Status.Sinkable.DomainInternal, nil
 	}
-	return "", fmt.Errorf("status does not contain targetable")
+	return "", fmt.Errorf("status does not contain sinkable")
 }
 
 // resolveFromChannelable fetches an object based on ObjectReference. It assumes that the
@@ -226,32 +236,33 @@ func (r *reconciler) fetchObjectReference(namespace string, ref *corev1.ObjectRe
 func (r *reconciler) reconcileFromChannel(namespace string, subscribable corev1.ObjectReference, callDomain string, resultDomain string, deleted bool) error {
 	glog.Infof("Reconciling From Channel: %+v call: %q result %q deleted: %v", subscribable, callDomain, resultDomain, deleted)
 
+	// First get the original object and convert it to only the bits we care about
 	s, err := r.fetchObjectReference(namespace, &subscribable)
 	if err != nil {
 		return err
 	}
-
-	c := duckv1alpha1.Channel{}
-	err = duck.FromUnstructured(*s, &c)
+	original := duckv1alpha1.Channel{}
+	err = duck.FromUnstructured(*s, &original)
 	if err != nil {
 		return err
 	}
 
-	glog.Infof("Found From Channelable: %+v", c)
+	// TODO: Handle deletes.
 
-	// Add our subscription to the object
-	after := c.DeepCopyObject().(*duckv1alpha1.Channel)
+	after := original.DeepCopy()
 	after.Spec.Channelable = &duckv1alpha1.Channelable{
-		Subscribers: []duckv1alpha1.ChannelSubscriberSpec{{CallableDomain: "foobar"}},
+		Subscribers: []duckv1alpha1.ChannelSubscriberSpec{{CallableDomain: callDomain, SinkableDomain: resultDomain}},
 	}
 
-	patch, err := createPatch(c, after)
+	patch, err := createPatch(original, after)
 	if err != nil {
 		return err
 	}
-	glog.Infof("PATCH is: %+v", patch)
 
-	patchBytes, err := patch[0].MarshalJSON()
+	// Note that we have to just use normal JSON to marshal here even though
+	// jsonpatch provides a Marshal method because we need to pass an array
+	// to k8s and there's no way to serialize the whole jsonpatch array.
+	patchBytes, err := json.Marshal(patch)
 	if err != nil {
 		glog.Warningf("failed to marshal json patch: %s", err)
 		return err
@@ -262,9 +273,10 @@ func (r *reconciler) reconcileFromChannel(namespace string, subscribable corev1.
 		glog.Warningf("failed to create dynamic client resource: %v", err)
 		return err
 	}
-	patched, err := resourceClient.Patch(c.Name, types.JSONPatchType, patchBytes)
+	patched, err := resourceClient.Patch(original.Name, types.JSONPatchType, patchBytes)
 	if err != nil {
 		glog.Warningf("Failed to patch the object: %s", err)
+		glog.Warningf("Patch was: %+v", patch)
 		return err
 	}
 	glog.Warningf("Patched resource: %+v", patched)
@@ -313,19 +325,3 @@ func createPatch(before, after interface{}) ([]jsonpatch.JsonPatchOperation, err
 
 	return jsonpatch.CreatePatch(rawBefore, rawAfter)
 }
-
-const (
-	// controllerConfigMapName is the name of the configmap in the eventing
-	// namespace that holds the configuration for this controller.
-	controllerConfigMapName = "subscription-controller-config"
-
-	// defaultClusterBusConfigMapKey is the name of the key in this controller's
-	// ConfigMap that contains the name of the default cluster bus for the subscription
-	// controller to use.
-	defaultClusterBusConfigMapKey = "default-cluster-bus"
-
-	// fallbackClusterBusName is the name of the cluster bus that will be used
-	// for subscriptions if the controller's configmap does not exist or does not
-	// contain the 'default-cluster-bus' key.
-	fallbackClusterBusName = "stub"
-)

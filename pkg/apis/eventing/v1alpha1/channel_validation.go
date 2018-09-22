@@ -55,7 +55,7 @@ func (current *Channel) CheckImmutableFields(og apis.Immutable) *apis.FieldError
 	if !ok {
 		return &apis.FieldError{Message: "The provided resource was not a Channel"}
 	}
-	ignoreArguments := cmpopts.IgnoreFields(ChannelSpec{}, "Arguments")
+	ignoreArguments := cmpopts.IgnoreFields(ChannelSpec{}, "Arguments", "Channelable")
 	if diff := cmp.Diff(original.Spec, current.Spec, ignoreArguments); diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed",
