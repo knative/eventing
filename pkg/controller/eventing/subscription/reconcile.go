@@ -78,6 +78,10 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 }
 
 func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
+	// TODO: Should this just also set up a defer call for subscription.SetConditions.
+	// No time right now as I'm turning into a pumpking but seems reasonable.
+	conditions := []duckv1alpha1.Condition{}
+
 	// See if the subscription has been deleted
 	accessor, err := meta.Accessor(subscription)
 	if err != nil {
@@ -125,6 +129,12 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 		glog.Infof("Resolved result to: %q", resultDomain)
 	}
 
+	// Everything that was supposed to be resolved was, so flip the status bit on that.
+	conditions = append(conditions, duckv1alpha1.Condition{
+		Type:   v1alpha1.SubscriptionConditionReferencesResolved,
+		Status: corev1.ConditionTrue,
+	})
+
 	// Ok, now that we have the From and at least one of the Call/Result, let's reconcile
 	// the From with this information.
 	err = r.reconcileFromChannel(subscription.Namespace, from.Status.Subscribable.Channelable, callDomain, resultDomain, deletionTimestamp != nil)
@@ -132,6 +142,12 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 		glog.Warningf("Failed to resolve from Channel : %s", err)
 		return err
 	}
+	// Everything went well, set the fact that subscriptions have been modified
+	conditions = append(conditions, duckv1alpha1.Condition{
+		Type:   duckv1alpha1.ConditionReady,
+		Status: corev1.ConditionTrue,
+	})
+	subscription.Status.SetConditions(conditions)
 	return nil
 }
 
