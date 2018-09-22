@@ -59,29 +59,245 @@ func init() {
 
 var testCases = []controllertesting.TestCase{
 	{
+		Name:         "non existent key",
+		ReconcileKey: "non-existent-test-ns/non-existent-test-key",
+		WantErr:      false,
+	}, {
+		Name: "subscription but From channel does not exist",
+		InitialState: []runtime.Object{
+			getNewSubscription(),
+		},
+		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
+		WantErrMsg:   `channels.eventing.knative.dev "fromchannel" not found`,
+	}, {
+		Name: "subscription, but From is not subscribable",
+		InitialState: []runtime.Object{
+			getNewSubscription(),
+		},
+		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
+		WantErrMsg:   "from is not subscribable Channel testnamespace/fromchannel",
+		Scheme:       scheme.Scheme,
+		Objects: []runtime.Object{
+			// Source channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       ChannelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      fromChannelName,
+					},
+					"spec": map[string]interface{}{
+						"channelable": map[string]interface{}{},
+					},
+					"status": map[string]interface{}{
+						"notsubscribable": map[string]interface{}{
+							"channelable": map[string]interface{}{
+								"kind":       ChannelKind,
+								"name":       fromChannelName,
+								"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+							},
+						},
+					},
+				}},
+		},
+	}, {
+		Name: "Valid from, call does not exist",
+		InitialState: []runtime.Object{
+			getNewSubscription(),
+		},
+		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
+		WantErrMsg:   `routes.serving.knative.dev "callroute" not found`,
+		Scheme:       scheme.Scheme,
+		Objects: []runtime.Object{
+			// Source channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       ChannelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      fromChannelName,
+					},
+					"spec": map[string]interface{}{
+						"channelable": map[string]interface{}{},
+					},
+					"status": map[string]interface{}{
+						"subscribable": map[string]interface{}{
+							"channelable": map[string]interface{}{
+								"kind":       ChannelKind,
+								"name":       fromChannelName,
+								"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+							},
+						},
+					},
+				}},
+		},
+	}, {
+		Name: "Valid from, call is not targetable",
+		InitialState: []runtime.Object{
+			getNewSubscription(),
+		},
+		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
+		WantErrMsg:   "could not get domain from call (is it not targetable?)",
+		Scheme:       scheme.Scheme,
+		Objects: []runtime.Object{
+			// Source channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       ChannelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      fromChannelName,
+					},
+					"spec": map[string]interface{}{
+						"channelable": map[string]interface{}{},
+					},
+					"status": map[string]interface{}{
+						"subscribable": map[string]interface{}{
+							"channelable": map[string]interface{}{
+								"kind":       ChannelKind,
+								"name":       fromChannelName,
+								"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+							},
+						},
+					},
+				}},
+			// Call (using knative route)
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "serving.knative.dev/v1alpha1",
+					"kind":       routeKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      routeName,
+					},
+					"status": map[string]interface{}{
+						"someotherstuff": targetDNS,
+					},
+				}},
+		},
+	}, {
+		Name: "Valid from and call, result does not exist",
+		InitialState: []runtime.Object{
+			getNewSubscription(),
+		},
+		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
+		WantErrMsg:   `channels.eventing.knative.dev "resultchannel" not found`,
+		Scheme:       scheme.Scheme,
+		Objects: []runtime.Object{
+			// Source channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       ChannelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      fromChannelName,
+					},
+					"spec": map[string]interface{}{
+						"channelable": map[string]interface{}{},
+					},
+					"status": map[string]interface{}{
+						"subscribable": map[string]interface{}{
+							"channelable": map[string]interface{}{
+								"kind":       ChannelKind,
+								"name":       fromChannelName,
+								"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+							},
+						},
+					},
+				}},
+			// Call (using knative route)
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "serving.knative.dev/v1alpha1",
+					"kind":       routeKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      routeName,
+					},
+					"status": map[string]interface{}{
+						"domainInternal": targetDNS,
+					},
+				}},
+		},
+	}, {
+		Name: "valid from, call, result is not sinkable",
+		InitialState: []runtime.Object{
+			getNewSubscription(),
+		},
+		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
+		WantErrMsg:   "status does not contain sinkable",
+		Scheme:       scheme.Scheme,
+		Objects: []runtime.Object{
+			// Source channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       ChannelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      fromChannelName,
+					},
+					"spec": map[string]interface{}{
+						"channelable": map[string]interface{}{},
+					},
+					"status": map[string]interface{}{
+						"subscribable": map[string]interface{}{
+							"channelable": map[string]interface{}{
+								"kind":       ChannelKind,
+								"name":       fromChannelName,
+								"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+							},
+						},
+					},
+				}},
+			// Call (using knative route)
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "serving.knative.dev/v1alpha1",
+					"kind":       routeKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      routeName,
+					},
+					"status": map[string]interface{}{
+						"domainInternal": targetDNS,
+					},
+				}},
+			// Result channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       ChannelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      resultChannelName,
+					},
+					"spec": map[string]interface{}{
+						"channelable": map[string]interface{}{},
+					},
+					"status": map[string]interface{}{
+						"subscribable": map[string]interface{}{
+							"channelable": map[string]interface{}{
+								"kind":       ChannelKind,
+								"name":       fromChannelName,
+								"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+							},
+						},
+					},
+				}},
+		},
+	}, {
 		Name: "new subscription: adds status, from target resolved",
 		InitialState: []runtime.Object{
-			getNewFromChannel(),
-			getNewResultChannel(),
 			getNewSubscription(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
 		WantResult:   reconcile.Result{},
-		WantPresent: []runtime.Object{
-			func() *eventingv1alpha1.Channel {
-				c := getNewChannel(fromChannelName)
-				c.Spec.Channelable = &duckv1alpha1.Channelable{
-					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{
-						{
-							CallableDomain: "dummy",
-						},
-					},
-				}
-				return c
-			}(),
-			getNewSubscription(),
-		},
-		Scheme: scheme.Scheme,
+		Scheme:       scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
 			&unstructured.Unstructured{
@@ -217,27 +433,6 @@ func getNewSubscription() *eventingv1alpha1.Subscription {
 	subscription.ObjectMeta.SelfLink = ""
 	return subscription
 }
-
-/*
-func getNewFeed() *feedsv1alpha1.Feed {
-	return &feedsv1alpha1.Feed{
-		TypeMeta:   feedType(),
-		ObjectMeta: feedObjectMeta("test", "test-flow-"),
-		Spec: feedsv1alpha1.FeedSpec{
-			Action: feedsv1alpha1.FeedAction{
-				DNSName: targetDNS,
-			},
-			Trigger: feedsv1alpha1.EventTrigger{
-				EventType:      eventType,
-				Resource:       "myresource",
-				Service:        "",
-				Parameters:     nil,
-				ParametersFrom: nil,
-			},
-		},
-	}
-}
-*/
 
 func channelType() metav1.TypeMeta {
 	return metav1.TypeMeta{

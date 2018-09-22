@@ -95,20 +95,18 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 		return err
 	}
 	if from.Status.Subscribable == nil {
-		glog.Warningf("Failed to resolve the from %+v", subscription.Spec.From)
-		return fmt.Errorf("Failed to resolve the from %+v", subscription.Spec.From)
+		return fmt.Errorf("from is not subscribable %s %s/%s", subscription.Spec.From.Kind, subscription.Namespace, subscription.Spec.From.Name)
 	}
 
 	callDomain := ""
 	if subscription.Spec.Call != nil {
 		callDomain, err = r.resolveCall(subscription.Namespace, *subscription.Spec.Call)
 		if err != nil {
-			glog.Warningf("Failed to resolve Call %v : %v", *subscription.Spec.Call, err)
+			glog.Warningf("Failed to resolve Call %+v : %s", *subscription.Spec.Call, err)
 			return err
 		}
 		if callDomain == "" {
-			glog.Warningf("Failed to resolve Call %v to actual domain", *subscription.Spec.Call)
-			return err
+			return fmt.Errorf("could not get domain from call (is it not targetable?)")
 		}
 		glog.Infof("Resolved call to: %q", callDomain)
 	}
