@@ -25,7 +25,7 @@ import (
 
 const (
 	channelKind       = "Channel"
-	channelAPIVersion = "channels.knative.dev/v1alpha1"
+	channelAPIVersion = "eventing.knative.dev/v1alpha1"
 	routeKind         = "Route"
 	routeAPIVersion   = "serving.knative.dev/v1alpha1"
 	fromChannelName   = "fromChannel"
@@ -41,7 +41,7 @@ func getValidFromRef() corev1.ObjectReference {
 	}
 }
 
-func getValidResultRef() *ResultStrategy {
+func getValidResultStrategy() *ResultStrategy {
 	return &ResultStrategy{
 		Target: &corev1.ObjectReference{
 			Name:       resultChannelName,
@@ -165,7 +165,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		name: "missing Call",
 		c: &SubscriptionSpec{
 			From:   getValidFromRef(),
-			Result: getValidResultRef(),
+			Result: getValidResultStrategy(),
 		},
 		want: nil,
 	}, {
@@ -173,7 +173,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		c: &SubscriptionSpec{
 			From:   getValidFromRef(),
 			Call:   &Callable{},
-			Result: getValidResultRef(),
+			Result: getValidResultStrategy(),
 		},
 		want: nil,
 	}, {
@@ -246,7 +246,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 	newCall := getValidCall()
 	newCall.Target.Name = "newCall"
 
-	newResult := getValidResultRef()
+	newResult := getValidResultStrategy()
 	newResult.Target.Name = "newResultChannel"
 
 	tests := []struct {
@@ -297,7 +297,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 		c: &Subscription{
 			Spec: SubscriptionSpec{
 				From:   getValidFromRef(),
-				Result: getValidResultRef(),
+				Result: getValidResultStrategy(),
 			},
 		},
 		og: &Subscription{
@@ -312,7 +312,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 		c: &Subscription{
 			Spec: SubscriptionSpec{
 				From:   getValidFromRef(),
-				Result: getValidResultRef(),
+				Result: getValidResultStrategy(),
 			},
 		},
 		og: &Subscription{
@@ -333,7 +333,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 		og: &Subscription{
 			Spec: SubscriptionSpec{
 				From:   getValidFromRef(),
-				Result: getValidResultRef(),
+				Result: getValidResultStrategy(),
 			},
 		},
 		want: nil,
@@ -420,7 +420,7 @@ func TestValidFrom(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrInvalidValue("", "apiVersion")
-			fe.Details = "only channels.knative.dev/v1alpha1 is allowed for apiVersion"
+			fe.Details = "only eventing.knative.dev/v1alpha1 is allowed for apiVersion"
 			return apis.ErrMissingField("apiVersion").Also(fe)
 		}(),
 	}, {
@@ -455,7 +455,7 @@ func TestValidFrom(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrInvalidValue("wrongapiversion", "apiVersion")
-			fe.Details = "only channels.knative.dev/v1alpha1 is allowed for apiVersion"
+			fe.Details = "only eventing.knative.dev/v1alpha1 is allowed for apiVersion"
 			return fe
 		}(),
 	}, {
@@ -613,38 +613,17 @@ func TestValidCallable(t *testing.T) {
 }
 
 func TestValidResultStrategy(t *testing.T) {
-	targetURI := "http://example.com"
 	tests := []struct {
 		name string
-		c    Callable
+		c    ResultStrategy
 		want *apis.FieldError
 	}{{
 		name: "valid target",
-		c:    *getValidCall(),
+		c:    *getValidResultStrategy(),
 		want: nil,
-	}, {
-		name: "valid targetURI",
-		c: Callable{
-			TargetURI: &targetURI,
-		},
-		want: nil,
-	}, {
-		name: "both target and targetURI given",
-		c: Callable{
-			Target: &corev1.ObjectReference{
-				Name:       fromChannelName,
-				APIVersion: channelAPIVersion,
-				Kind:       channelKind,
-			},
-			TargetURI: &targetURI,
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMultipleOneOf("target", "targetURI")
-			return fe
-		}(),
 	}, {
 		name: "missing name in target",
-		c: Callable{
+		c: ResultStrategy{
 			Target: &corev1.ObjectReference{
 				APIVersion: channelAPIVersion,
 				Kind:       channelKind,
@@ -656,7 +635,7 @@ func TestValidResultStrategy(t *testing.T) {
 		}(),
 	}, {
 		name: "missing apiVersion in target",
-		c: Callable{
+		c: ResultStrategy{
 			Target: &corev1.ObjectReference{
 				Name: fromChannelName,
 				Kind: channelKind,
@@ -668,7 +647,7 @@ func TestValidResultStrategy(t *testing.T) {
 		}(),
 	}, {
 		name: "missing kind in target",
-		c: Callable{
+		c: ResultStrategy{
 			Target: &corev1.ObjectReference{
 				Name:       fromChannelName,
 				APIVersion: channelAPIVersion,
@@ -679,8 +658,36 @@ func TestValidResultStrategy(t *testing.T) {
 			return fe
 		}(),
 	}, {
+		name: "invalid kind",
+		c: ResultStrategy{
+			Target: &corev1.ObjectReference{
+				Name:       fromChannelName,
+				APIVersion: channelAPIVersion,
+				Kind:       "subscription",
+			},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrInvalidValue("subscription", "kind")
+			fe.Details = "only 'Channel' kind is allowed"
+			return fe
+		}(),
+	}, {
+		name: "invalid apiVersion",
+		c: ResultStrategy{
+			Target: &corev1.ObjectReference{
+				Name:       fromChannelName,
+				APIVersion: "wrongapiversion",
+				Kind:       channelKind,
+			},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrInvalidValue("wrongapiversion", "apiVersion")
+			fe.Details = "only eventing.knative.dev/v1alpha1 is allowed for apiVersion"
+			return fe
+		}(),
+	}, {
 		name: "extra field, namespace",
-		c: Callable{
+		c: ResultStrategy{
 			Target: &corev1.ObjectReference{
 				Name:       fromChannelName,
 				APIVersion: channelAPIVersion,
@@ -696,7 +703,7 @@ func TestValidResultStrategy(t *testing.T) {
 	}, {
 		// Make sure that if an empty field for namespace is given, it's treated as not there.
 		name: "valid extra field, namespace empty",
-		c: Callable{
+		c: ResultStrategy{
 			Target: &corev1.ObjectReference{
 				Name:       fromChannelName,
 				APIVersion: channelAPIVersion,
@@ -709,7 +716,7 @@ func TestValidResultStrategy(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := isValidCallable(test.c)
+			got := isValidResultStrategy(test.c)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("%s: isValidFrom (-want, +got) = %v", test.name, diff)
 			}
