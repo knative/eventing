@@ -225,32 +225,3 @@ func TestSubscriptionSetConditions(t *testing.T) {
 		t.Errorf("unexpected conditions (-want, +got) = %v", diff)
 	}
 }
-
-func TestSubscriptionGetSpecJSON(t *testing.T) {
-	targetURI := "http://example.com"
-	c := &Subscription{
-		Spec: SubscriptionSpec{
-			From: corev1.ObjectReference{
-				Name: "foo",
-			},
-			Call: &Callable{
-				TargetURI: &targetURI,
-			},
-			Result: &ResultStrategy{
-				Target: &corev1.ObjectReference{
-					Name: "result",
-				},
-			},
-		},
-	}
-
-	want := `{"from":{"name":"foo"},"call":{"targetURI":"http://example.com"},"result":{"target":{"name":"result"}}}`
-	got, err := c.GetSpecJSON()
-	if err != nil {
-		t.Fatalf("unexpected spec JSON error: %v", err)
-	}
-
-	if diff := cmp.Diff(want, string(got)); diff != "" {
-		t.Errorf("unexpected spec JSON (-want, +got) = %v", diff)
-	}
-}

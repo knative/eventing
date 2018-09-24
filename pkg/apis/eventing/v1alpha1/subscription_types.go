@@ -17,8 +17,6 @@
 package v1alpha1
 
 import (
-	"encoding/json"
-
 	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
@@ -54,6 +52,10 @@ var _ duckv1alpha1.ConditionsAccessor = (*SubscriptionStatus)(nil)
 
 // Check that Subscription implements the Conditions duck type.
 var _ = duck.VerifyType(&Subscription{}, &duckv1alpha1.Conditions{})
+
+// Check that the Subscription implements the Generation duck type.
+var emptyGen duckv1alpha1.Generation
+var _ = duck.VerifyType(&Subscription{}, &emptyGen)
 
 // And it's Subscribable
 var _ = duck.VerifyType(&Subscription{}, &duckv1alpha1.Subscribable{})
@@ -200,11 +202,6 @@ const (
 	// resource.
 	SubscriptionConditionFromReady duckv1alpha1.ConditionType = "FromReady"
 )
-
-// GetSpecJSON returns spec as json
-func (s *Subscription) GetSpecJSON() ([]byte, error) {
-	return json.Marshal(s.Spec)
-}
 
 // GetCondition returns the condition currently associated with the given type, or nil.
 func (ss *SubscriptionStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
