@@ -172,7 +172,9 @@ type ResultStrategy struct {
 	Target *corev1.ObjectReference `json:"target,omitempty"`
 }
 
-var subCondSet = duckv1alpha1.NewLivingConditionSet()
+// subCondSet is a condition set with Ready as the happy condition and
+// ReferencesResolved and FromReady as the dependent conditions.
+var subCondSet = duckv1alpha1.NewLivingConditionSet(SubscriptionConditionReferencesResolved, SubscriptionConditionFromReady)
 
 // SubscriptionStatus (computed) for a subscription
 type SubscriptionStatus struct {
@@ -213,6 +215,26 @@ func (ss *SubscriptionStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1
 // conditions by implementing the duckv1alpha1.Conditions interface.
 func (ss *SubscriptionStatus) GetConditions() duckv1alpha1.Conditions {
 	return ss.Conditions
+}
+
+// IsReady returns true if the resource is ready overall.
+func (ss *SubscriptionStatus) IsReady() bool {
+	return subCondSet.Manage(ss).IsHappy()
+}
+
+// InitializeConditions sets relevant unset conditions to Unknown state.
+func (ss *SubscriptionStatus) InitializeConditions() {
+	subCondSet.Manage(ss).InitializeConditions()
+}
+
+// MarkReferencesResolved sets the ReferencesResolved condition to True state.
+func (ss *SubscriptionStatus) MarkReferencesResolved() {
+	subCondSet.Manage(ss).MarkTrue(SubscriptionConditionReferencesResolved)
+}
+
+// MarkFromReady sets the FromReady condition to True state.
+func (ss *SubscriptionStatus) MarkFromReady() {
+	subCondSet.Manage(ss).MarkTrue(SubscriptionConditionFromReady)
 }
 
 // SetConditions sets the Conditions array. This enables generic handling of
