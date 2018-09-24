@@ -87,7 +87,7 @@ type SourceSpec struct {
 	//   - APIVersion
 	//   - Name
 	// Currently Kind must be "Channel" and
-	// APIVersion must be "channels.knative.dev/v1alpha1"
+	// APIVersion must be "eventing.knative.dev/v1alpha1"
 	// +optional
 	Channel *corev1.ObjectReference `json:"target,omitempty"`
 }

@@ -31,7 +31,7 @@ func isSubscribableEmpty(f corev1.ObjectReference) bool {
 
 // Valid from only contains the following fields:
 // - Kind       == 'Channel'
-// - APIVersion == 'channels.knative.dev/v1alpha1'
+// - APIVersion == 'eventing.knative.dev/v1alpha1'
 // - Name       == not empty
 func isValidSubscribable(f corev1.ObjectReference) *apis.FieldError {
 	errs := isValidObjectReference(f)
