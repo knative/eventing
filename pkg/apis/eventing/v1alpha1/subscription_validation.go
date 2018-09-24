@@ -55,7 +55,7 @@ func (ss *SubscriptionSpec) Validate() *apis.FieldError {
 	}
 
 	if !missingResultStrategy {
-		if fe := isValidResultStrategy(ss.Result); fe != nil {
+		if fe := isValidResultStrategy(*ss.Result); fe != nil {
 			errs = errs.Also(fe.ViaField("result"))
 		}
 	}
@@ -101,8 +101,23 @@ func isResultStrategyNilOrEmpty(r *ResultStrategy) bool {
 	return r == nil || equality.Semantic.DeepEqual(r, &ResultStrategy{}) || equality.Semantic.DeepEqual(r.Target, &corev1.ObjectReference{})
 }
 
-func isValidResultStrategy(r *ResultStrategy) *apis.FieldError {
-	return isValidObjectReference(*r.Target).ViaField("target")
+func isValidResultStrategy(r ResultStrategy) *apis.FieldError {
+	fe := isValidObjectReference(*r.Target)
+	if fe != nil {
+		return fe.ViaField("target")
+	}
+	if r.Target.Kind != "Channel" {
+		fe := apis.ErrInvalidValue(r.Target.Kind, "kind")
+		fe.Paths = []string{"kind"}
+		fe.Details = "only 'Channel' kind is allowed"
+		return fe
+	}
+	if r.Target.APIVersion != "eventing.knative.dev/v1alpha1" {
+		fe := apis.ErrInvalidValue(r.Target.APIVersion, "apiVersion")
+		fe.Details = "only eventing.knative.dev/v1alpha1 is allowed for apiVersion"
+		return fe
+	}
+	return nil
 }
 
 func (current *Subscription) CheckImmutableFields(og apis.Immutable) *apis.FieldError {

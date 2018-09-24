@@ -29,6 +29,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -69,6 +71,12 @@ type TestCase struct {
 
 	// Mocks that tamper with the client's responses.
 	Mocks Mocks
+
+	// Scheme for the dynamic client
+	Scheme *runtime.Scheme
+
+	// Fake dynamic objects
+	Objects []runtime.Object
 }
 
 // Runner returns a testing func that can be passed to t.Run.
@@ -94,6 +102,15 @@ func (tc *TestCase) Runner(t *testing.T, r reconcile.Reconciler, c *MockClient) 
 		if err := tc.VerifyWantAbsent(c); err != nil {
 			t.Error(err)
 		}
+	}
+}
+
+// GetDynamicClient returns the mockDynamicClient to use for this test case.
+func (tc *TestCase) GetDynamicClient() dynamic.Interface {
+	if tc.Scheme == nil {
+		return dynamicfake.NewSimpleDynamicClient(runtime.NewScheme(), tc.Objects...)
+	} else {
+		return dynamicfake.NewSimpleDynamicClient(tc.Scheme, tc.Objects...)
 	}
 }
 
