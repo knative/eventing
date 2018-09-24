@@ -24,6 +24,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/knative/pkg/apis"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -77,6 +78,9 @@ type TestCase struct {
 
 	// Fake dynamic objects
 	Objects []runtime.Object
+
+	// IgnoreTimes causes comparisons to ignore fields of type apis.VolatileTime.
+	IgnoreTimes bool
 }
 
 // Runner returns a testing func that can be passed to t.Run.
@@ -203,9 +207,18 @@ func (tc *TestCase) VerifyWantPresent(c client.Client) error {
 			}
 		}
 
-		// Ignore TypeMeta, since the objects created by the controller won't have
-		// it
-		if diff := cmp.Diff(wp, o, cmpopts.IgnoreTypes(metav1.TypeMeta{})); diff != "" {
+		diffOpts := cmp.Options{
+			// Ignore TypeMeta, since the objects created by the controller won't have
+			// it
+			cmpopts.IgnoreTypes(metav1.TypeMeta{}),
+		}
+
+		if tc.IgnoreTimes {
+			// Ignore VolatileTime fields, since they rarely compare correctly.
+			diffOpts = append(diffOpts, cmpopts.IgnoreTypes(apis.VolatileTime{}))
+		}
+
+		if diff := cmp.Diff(wp, o, diffOpts...); diff != "" {
 			errs.errors = append(errs.errors, fmt.Errorf("Unexpected present %T %s/%s (-want +got):\n%v", wp, acc.GetNamespace(), acc.GetName(), diff))
 		}
 	}
