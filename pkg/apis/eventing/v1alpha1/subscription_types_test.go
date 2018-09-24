@@ -42,12 +42,12 @@ var subscriptionConditionFromReady = duckv1alpha1.Condition{
 func TestSubscriptionGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
-		cs        *SubscriptionStatus
+		ss        *SubscriptionStatus
 		condQuery duckv1alpha1.ConditionType
 		want      *duckv1alpha1.Condition
 	}{{
 		name: "single condition",
-		cs: &SubscriptionStatus{
+		ss: &SubscriptionStatus{
 			Conditions: []duckv1alpha1.Condition{
 				subscriptionConditionReady,
 			},
@@ -56,7 +56,7 @@ func TestSubscriptionGetCondition(t *testing.T) {
 		want:      &subscriptionConditionReady,
 	}, {
 		name: "multiple conditions",
-		cs: &SubscriptionStatus{
+		ss: &SubscriptionStatus{
 			Conditions: []duckv1alpha1.Condition{
 				subscriptionConditionReady,
 				subscriptionConditionReferencesResolved,
@@ -66,7 +66,7 @@ func TestSubscriptionGetCondition(t *testing.T) {
 		want:      &subscriptionConditionReferencesResolved,
 	}, {
 		name: "multiple conditions, condition true",
-		cs: &SubscriptionStatus{
+		ss: &SubscriptionStatus{
 			Conditions: []duckv1alpha1.Condition{
 				subscriptionConditionReady,
 				subscriptionConditionFromReady,
@@ -76,7 +76,7 @@ func TestSubscriptionGetCondition(t *testing.T) {
 		want:      &subscriptionConditionFromReady,
 	}, {
 		name: "unknown condition",
-		cs: &SubscriptionStatus{
+		ss: &SubscriptionStatus{
 			Conditions: []duckv1alpha1.Condition{
 				subscriptionConditionReady,
 				subscriptionConditionReferencesResolved,
@@ -88,7 +88,7 @@ func TestSubscriptionGetCondition(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.cs.GetCondition(test.condQuery)
+			got := test.ss.GetCondition(test.condQuery)
 			if diff := cmp.Diff(test.want, got); diff != "" {
 				t.Errorf("unexpected condition (-want, +got) = %v", diff)
 			}

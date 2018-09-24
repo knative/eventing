@@ -157,6 +157,8 @@ type Callable struct {
 	TargetURI *string `json:"targetURI,omitempty"`
 }
 
+// ResultStrategy specifies the handling of the Callable's returned result. If
+// no Callable is specified, the identity function is assumed.
 type ResultStrategy struct {
 	// This object must fulfill the Sinkable contract.
 	//
@@ -188,7 +190,7 @@ const (
 	// SubscriptionConditionReady has status True when all subconditions below have been set to True.
 	SubscriptionConditionReady = duckv1alpha1.ConditionReady
 
-	// SubscriptionReferencesResolved has status True when all the specified references have been successfully
+	// SubscriptionConditionReferencesResolved has status True when all the specified references have been successfully
 	// resolved.
 	SubscriptionConditionReferencesResolved duckv1alpha1.ConditionType = "Resolved"
 
