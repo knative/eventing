@@ -49,9 +49,6 @@ type Source struct {
 // Check that Source can be validated and can be defaulted.
 var _ webhook.GenericCRD = (*Source)(nil)
 
-// Check that SourceStatus may have its conditions managed.
-var _ duckv1alpha1.ConditionsAccessor = (*SourceStatus)(nil)
-
 // Check that Source implements the Conditions duck type.
 var _ = duck.VerifyType(&Source{}, &duckv1alpha1.Conditions{})
 
@@ -128,12 +125,6 @@ func (ss *SourceStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1
 	return sourceCondSet.Manage(ss).GetCondition(t)
 }
 
-// GetConditions returns the Conditions array. This enables generic handling of
-// conditions by implementing the duckv1alpha1.Conditions interface.
-func (ss *SourceStatus) GetConditions() duckv1alpha1.Conditions {
-	return ss.Conditions
-}
-
 // IsReady returns true if the resource is ready overall.
 func (ss *SourceStatus) IsReady() bool {
 	return sourceCondSet.Manage(ss).IsHappy()
@@ -152,12 +143,6 @@ func (ss *SourceStatus) MarkProvisioned() {
 // MarkDeprovisioned sets the condition that the source has had its backing resources removed.
 func (ss *SourceStatus) MarkDeprovisioned(reason, messageFormat string, messageA ...interface{}) {
 	sourceCondSet.Manage(ss).MarkFalse(SourceConditionProvisioned, reason, messageFormat, messageA)
-}
-
-// SetConditions sets the Conditions array. This enables generic handling of
-// conditions by implementing the duckv1alpha1.Conditions interface.
-func (ss *SourceStatus) SetConditions(conditions duckv1alpha1.Conditions) {
-	ss.Conditions = conditions
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
