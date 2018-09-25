@@ -38,7 +38,7 @@ type Source struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the Types provisioned by this Source.
+	// Spec defines the the Provisioner and arguments provided for this Source.
 	Spec SourceSpec `json:"spec"`
 
 	// Status is the current status of the Source.
@@ -138,12 +138,12 @@ func (ss *SourceStatus) InitializeConditions() {
 	sourceCondSet.Manage(ss).InitializeConditions()
 }
 
-// MarkProvisioned sets the condition that the source has had it's backing resources created.
+// MarkProvisioned sets the condition that the source has had its backing resources created.
 func (ss *SourceStatus) MarkProvisioned() {
 	sourceCondSet.Manage(ss).MarkTrue(SourceConditionProvisioned)
 }
 
-// MarkDeprovisioned sets the condition that the source has had it's backing resources removed.
+// MarkDeprovisioned sets the condition that the source has had its backing resources removed.
 func (ss *SourceStatus) MarkDeprovisioned(reason, messageFormat string, messageA ...interface{}) {
 	sourceCondSet.Manage(ss).MarkFalse(SourceConditionProvisioned, reason, messageFormat, messageA)
 }
