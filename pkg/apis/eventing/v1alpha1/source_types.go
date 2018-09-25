@@ -59,6 +59,9 @@ var _ = duck.VerifyType(&Source{}, &duckv1alpha1.Conditions{})
 var emptyGenSource duckv1alpha1.Generation
 var _ = duck.VerifyType(&Source{}, &emptyGenSource)
 
+// And it's Subscribable
+var _ = duck.VerifyType(&Subscription{}, &duckv1alpha1.Subscribable{})
+
 // SourceSpec is the spec for a Source resource.
 type SourceSpec struct {
 	// TODO: Generation does not work correctly with CRD. They are scrubbed
@@ -80,7 +83,7 @@ type SourceSpec struct {
 	// Specify an existing channel to use to emit events. If empty, create a new
 	// Channel using the cluster/namespace default.
 	//
-	// This object must fulfill the Subscribable contract.
+	// This object must fulfill the Channelable contract.
 	//
 	// You can specify only the following fields of the ObjectReference:
 	//   - Kind
@@ -115,6 +118,9 @@ type SourceStatus struct {
 	// was last reconciled by the controller.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// Source might be Subscribable. This points to the Channelable object.
+	Subscribable duckv1alpha1.Subscribable `json:"subscribable,omitempty"`
 }
 
 // GetCondition returns the condition currently associated with the given type, or nil.

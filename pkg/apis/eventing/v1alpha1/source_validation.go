@@ -33,8 +33,8 @@ func (ss *SourceSpec) Validate() *apis.FieldError {
 	}
 	var errs *apis.FieldError
 
-	if ss.Channel != nil && !isSubscribableEmpty(*ss.Channel) {
-		errs = errs.Also(isValidSubscribable(*ss.Channel).ViaField("channel"))
+	if ss.Channel != nil && !isChannelableEmpty(*ss.Channel) {
+		errs = errs.Also(isValidChannelable(*ss.Channel).ViaField("channel"))
 	}
 
 	// TODO: could validate that arguments are json if that is a requirement.
