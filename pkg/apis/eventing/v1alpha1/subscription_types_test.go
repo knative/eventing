@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -42,12 +43,12 @@ var subscriptionConditionFromReady = duckv1alpha1.Condition{
 func TestSubscriptionGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
-		cs        *SubscriptionStatus
+		ss        *SubscriptionStatus
 		condQuery duckv1alpha1.ConditionType
 		want      *duckv1alpha1.Condition
 	}{{
 		name: "single condition",
-		cs: &SubscriptionStatus{
+		ss: &SubscriptionStatus{
 			Conditions: []duckv1alpha1.Condition{
 				subscriptionConditionReady,
 			},
@@ -56,7 +57,7 @@ func TestSubscriptionGetCondition(t *testing.T) {
 		want:      &subscriptionConditionReady,
 	}, {
 		name: "multiple conditions",
-		cs: &SubscriptionStatus{
+		ss: &SubscriptionStatus{
 			Conditions: []duckv1alpha1.Condition{
 				subscriptionConditionReady,
 				subscriptionConditionReferencesResolved,
@@ -66,7 +67,7 @@ func TestSubscriptionGetCondition(t *testing.T) {
 		want:      &subscriptionConditionReferencesResolved,
 	}, {
 		name: "multiple conditions, condition true",
-		cs: &SubscriptionStatus{
+		ss: &SubscriptionStatus{
 			Conditions: []duckv1alpha1.Condition{
 				subscriptionConditionReady,
 				subscriptionConditionFromReady,
@@ -76,7 +77,7 @@ func TestSubscriptionGetCondition(t *testing.T) {
 		want:      &subscriptionConditionFromReady,
 	}, {
 		name: "unknown condition",
-		cs: &SubscriptionStatus{
+		ss: &SubscriptionStatus{
 			Conditions: []duckv1alpha1.Condition{
 				subscriptionConditionReady,
 				subscriptionConditionReferencesResolved,
@@ -88,9 +89,126 @@ func TestSubscriptionGetCondition(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.cs.GetCondition(test.condQuery)
+			got := test.ss.GetCondition(test.condQuery)
 			if diff := cmp.Diff(test.want, got); diff != "" {
 				t.Errorf("unexpected condition (-want, +got) = %v", diff)
+			}
+		})
+	}
+}
+
+func TestSubscriptionInitializeConditions(t *testing.T) {
+	tests := []struct {
+		name string
+		ss   *SubscriptionStatus
+		want *SubscriptionStatus
+	}{{
+		name: "empty",
+		ss:   &SubscriptionStatus{},
+		want: &SubscriptionStatus{
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   SubscriptionConditionFromReady,
+				Status: corev1.ConditionUnknown,
+			}, {
+				Type:   SubscriptionConditionReady,
+				Status: corev1.ConditionUnknown,
+			}, {
+				Type:   SubscriptionConditionReferencesResolved,
+				Status: corev1.ConditionUnknown,
+			}},
+		},
+	}, {
+		name: "one false",
+		ss: &SubscriptionStatus{
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   SubscriptionConditionFromReady,
+				Status: corev1.ConditionFalse,
+			}},
+		},
+		want: &SubscriptionStatus{
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   SubscriptionConditionFromReady,
+				Status: corev1.ConditionFalse,
+			}, {
+				Type:   SubscriptionConditionReady,
+				Status: corev1.ConditionUnknown,
+			}, {
+				Type:   SubscriptionConditionReferencesResolved,
+				Status: corev1.ConditionUnknown,
+			}},
+		},
+	}, {
+		name: "one true",
+		ss: &SubscriptionStatus{
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   SubscriptionConditionReferencesResolved,
+				Status: corev1.ConditionTrue,
+			}},
+		},
+		want: &SubscriptionStatus{
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   SubscriptionConditionFromReady,
+				Status: corev1.ConditionUnknown,
+			}, {
+				Type:   SubscriptionConditionReady,
+				Status: corev1.ConditionUnknown,
+			}, {
+				Type:   SubscriptionConditionReferencesResolved,
+				Status: corev1.ConditionTrue,
+			}},
+		},
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			test.ss.InitializeConditions()
+			ignore := cmpopts.IgnoreFields(duckv1alpha1.Condition{}, "LastTransitionTime")
+			if diff := cmp.Diff(test.want, test.ss, ignore); diff != "" {
+				t.Errorf("unexpected conditions (-want, +got) = %v", diff)
+			}
+		})
+	}
+}
+
+func TestSubscriptionIsReady(t *testing.T) {
+	tests := []struct {
+		name          string
+		markResolved  bool
+		markFromReady bool
+		wantReady     bool
+	}{{
+		name:          "all happy",
+		markResolved:  true,
+		markFromReady: true,
+		wantReady:     true,
+	}, {
+		name:          "one sad",
+		markResolved:  false,
+		markFromReady: true,
+		wantReady:     false,
+	}, {
+		name:          "other sad",
+		markResolved:  true,
+		markFromReady: false,
+		wantReady:     false,
+	}, {
+		name:          "both sad",
+		markResolved:  false,
+		markFromReady: false,
+		wantReady:     false,
+	}}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ss := &SubscriptionStatus{}
+			if test.markResolved {
+				ss.MarkReferencesResolved()
+			}
+			if test.markFromReady {
+				ss.MarkFromReady()
+			}
+			got := ss.IsReady()
+			if test.wantReady != got {
+				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
 			}
 		})
 	}
@@ -105,34 +223,5 @@ func TestSubscriptionSetConditions(t *testing.T) {
 	got := c.Status.GetConditions()
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("unexpected conditions (-want, +got) = %v", diff)
-	}
-}
-
-func TestSubscriptionGetSpecJSON(t *testing.T) {
-	targetURI := "http://example.com"
-	c := &Subscription{
-		Spec: SubscriptionSpec{
-			From: corev1.ObjectReference{
-				Name: "foo",
-			},
-			Call: &Callable{
-				TargetURI: &targetURI,
-			},
-			Result: &ResultStrategy{
-				Target: &corev1.ObjectReference{
-					Name: "result",
-				},
-			},
-		},
-	}
-
-	want := `{"from":{"name":"foo"},"call":{"targetURI":"http://example.com"},"result":{"target":{"name":"result"}}}`
-	got, err := c.GetSpecJSON()
-	if err != nil {
-		t.Fatalf("unexpected spec JSON error: %v", err)
-	}
-
-	if diff := cmp.Diff(want, string(got)); diff != "" {
-		t.Errorf("unexpected spec JSON (-want, +got) = %v", diff)
 	}
 }
