@@ -85,7 +85,7 @@ func TestChannelValidation(t *testing.T) {
 				}},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("spec.channelable.subscriber[1].sinkableDomain", "spec.channelable.subscriber[1].callableDomain")
+			fe := apis.ErrMissingField("spec.channelable.subscriber[1].callableDomain", "spec.channelable.subscriber[1].sinkableDomain")
 			fe.Details = "expected at least one of, got none"
 			return fe
 		}(),
@@ -105,10 +105,10 @@ func TestChannelValidation(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
-			fe := apis.ErrMissingField("spec.channelable.subscriber[0].sinkableDomain", "spec.channelable.subscriber[0].callableDomain")
+			fe := apis.ErrMissingField("spec.channelable.subscriber[0].callableDomain", "spec.channelable.subscriber[0].sinkableDomain")
 			fe.Details = "expected at least one of, got none"
 			errs = errs.Also(fe)
-			fe = apis.ErrMissingField("spec.channelable.subscriber[1].sinkableDomain", "spec.channelable.subscriber[1].callableDomain")
+			fe = apis.ErrMissingField("spec.channelable.subscriber[1].callableDomain", "spec.channelable.subscriber[1].sinkableDomain")
 			fe.Details = "expected at least one of, got none"
 			errs = errs.Also(fe)
 			return errs
