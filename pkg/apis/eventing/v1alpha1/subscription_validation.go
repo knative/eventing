@@ -17,8 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"reflect"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/knative/pkg/apis"
@@ -88,7 +86,7 @@ func isValidCallable(c Callable) *apis.FieldError {
 }
 
 func isFromEmpty(f corev1.ObjectReference) bool {
-	return equality.Semantic.DeepEqual(f, corev1.ObjectReference{})
+	return isSubscribableEmpty(f)
 }
 
 // Valid from only contains the following fields:
@@ -96,20 +94,7 @@ func isFromEmpty(f corev1.ObjectReference) bool {
 // - APIVersion == 'eventing.knative.dev/v1alpha1'
 // - Name       == not empty
 func isValidFrom(f corev1.ObjectReference) *apis.FieldError {
-	errs := isValidObjectReference(f)
-
-	if f.Kind != "Channel" {
-		fe := apis.ErrInvalidValue(f.Kind, "kind")
-		fe.Paths = []string{"kind"}
-		fe.Details = "only 'Channel' kind is allowed"
-		errs = errs.Also(fe)
-	}
-	if f.APIVersion != "eventing.knative.dev/v1alpha1" {
-		fe := apis.ErrInvalidValue(f.APIVersion, "apiVersion")
-		fe.Details = "only eventing.knative.dev/v1alpha1 is allowed for apiVersion"
-		errs = errs.Also(fe)
-	}
-	return errs
+	return isValidSubscribable(f)
 }
 
 func isResultStrategyNilOrEmpty(r *ResultStrategy) bool {
@@ -133,56 +118,6 @@ func isValidResultStrategy(r ResultStrategy) *apis.FieldError {
 		return fe
 	}
 	return nil
-}
-
-func isValidObjectReference(f corev1.ObjectReference) *apis.FieldError {
-	return checkRequiredFields(f).
-		Also(checkDisallowedFields(f))
-}
-
-// Check the corev1.ObjectReference to make sure it has the required fields. They
-// are not checked for anything more except that they are set.
-func checkRequiredFields(f corev1.ObjectReference) *apis.FieldError {
-	var errs *apis.FieldError
-	if f.Name == "" {
-		errs = errs.Also(apis.ErrMissingField("name"))
-	}
-	if f.APIVersion == "" {
-		errs = errs.Also(apis.ErrMissingField("apiVersion"))
-	}
-	if f.Kind == "" {
-		errs = errs.Also(apis.ErrMissingField("kind"))
-	}
-	return errs
-}
-
-// Check the corev1.ObjectReference to make sure it only has the following fields set:
-// Name, Kind, APIVersion
-// If any other fields are set and is not the Zero value, returns an apis.FieldError
-// with the fieldpaths for all those fields.
-func checkDisallowedFields(f corev1.ObjectReference) *apis.FieldError {
-	disallowedFields := []string{}
-	// See if there are any fields that have been set that should not be.
-	// TODO: Hoist this kind of stuff into pkg repository.
-	s := reflect.ValueOf(f)
-	typeOf := s.Type()
-	for i := 0; i < s.NumField(); i++ {
-		field := s.Field(i)
-		fieldName := typeOf.Field(i).Name
-		if fieldName == "Name" || fieldName == "Kind" || fieldName == "APIVersion" {
-			continue
-		}
-		if !cmp.Equal(field.Interface(), reflect.Zero(field.Type()).Interface()) {
-			disallowedFields = append(disallowedFields, fieldName)
-		}
-	}
-	if len(disallowedFields) > 0 {
-		fe := apis.ErrDisallowedFields(disallowedFields...)
-		fe.Details = "only name, apiVersion and kind are supported fields"
-		return fe
-	}
-	return nil
-
 }
 
 func (current *Subscription) CheckImmutableFields(og apis.Immutable) *apis.FieldError {

@@ -23,7 +23,7 @@ import (
 	"testing"
 )
 
-func TestValidate(t *testing.T) {
+func TestClusterProvisionerValidate(t *testing.T) {
 	tests := []struct {
 		name string
 		p    *ClusterProvisioner
