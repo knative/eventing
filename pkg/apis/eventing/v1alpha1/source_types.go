@@ -56,8 +56,8 @@ var _ duckv1alpha1.ConditionsAccessor = (*SourceStatus)(nil)
 var _ = duck.VerifyType(&Source{}, &duckv1alpha1.Conditions{})
 
 // Check that Source implements the Generation duck type.
-var emptyGen duckv1alpha1.Generation
-var _ = duck.VerifyType(&Source{}, &emptyGen)
+var emptyGenSource duckv1alpha1.Generation
+var _ = duck.VerifyType(&Source{}, &emptyGenSource)
 
 // SourceSpec is the spec for a Source resource.
 type SourceSpec struct {
