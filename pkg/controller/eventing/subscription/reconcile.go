@@ -18,7 +18,6 @@ package subscription
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -26,7 +25,6 @@ import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	"github.com/mattbaird/jsonpatch"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -259,15 +257,12 @@ func (r *reconciler) reconcileFromChannel(namespace string, subscribable corev1.
 		Subscribers: []duckv1alpha1.ChannelSubscriberSpec{{CallableDomain: callDomain, SinkableDomain: resultDomain}},
 	}
 
-	patch, err := createPatch(original, after)
+	patch, err := duck.CreatePatch(original, after)
 	if err != nil {
 		return err
 	}
 
-	// Note that we have to just use normal JSON to marshal here even though
-	// jsonpatch provides a Marshal method because we need to pass an array
-	// to k8s and there's no way to serialize the whole jsonpatch array.
-	patchBytes, err := json.Marshal(patch)
+	patchBytes, err := patch.MarshalJSON()
 	if err != nil {
 		glog.Warningf("failed to marshal json patch: %s", err)
 		return err
@@ -314,19 +309,4 @@ func pluralizeKind(kind string) string {
 		return fmt.Sprintf("%ses", ret)
 	}
 	return fmt.Sprintf("%ss", ret)
-}
-
-func createPatch(before, after interface{}) ([]jsonpatch.JsonPatchOperation, error) {
-	// Marshal the before and after.
-	rawBefore, err := json.Marshal(before)
-	if err != nil {
-		return nil, err
-	}
-
-	rawAfter, err := json.Marshal(after)
-	if err != nil {
-		return nil, err
-	}
-
-	return jsonpatch.CreatePatch(rawBefore, rawAfter)
 }
