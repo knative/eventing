@@ -86,7 +86,7 @@ func isValidCallable(c Callable) *apis.FieldError {
 }
 
 func isFromEmpty(f corev1.ObjectReference) bool {
-	return equality.Semantic.DeepEqual(f, corev1.ObjectReference{})
+	return isSubscribableEmpty(f)
 }
 
 // Valid from only contains the following fields:
