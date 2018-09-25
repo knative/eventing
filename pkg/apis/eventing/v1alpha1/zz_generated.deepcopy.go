@@ -454,6 +454,7 @@ func (in *SourceStatus) DeepCopyInto(out *SourceStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	out.Subscribable = in.Subscribable
 	return
 }
 
