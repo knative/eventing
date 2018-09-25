@@ -234,9 +234,10 @@ var testCases = []controllertesting.TestCase{
 			// TODO: Again this works on gke cluster, but I need to set
 			// something else up here. later...
 			// getNewSubscriptionWithReferencesResolvedStatus(),
-			getNewSubscription(),
+			getNewSubscriptionWithUnknownConditions(),
 		},
-		Scheme: scheme.Scheme,
+		IgnoreTimes: true,
+		Scheme:      scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
 			&unstructured.Unstructured{
@@ -412,15 +413,6 @@ func getNewChannel(name string) *eventingv1alpha1.Channel {
 	return channel
 }
 
-func getNewSubscriptionWithReferencesResolvedStatus() *eventingv1alpha1.Subscription {
-	s := getNewSubscription()
-	s.Status.SetConditions([]duckv1alpha1.Condition{{
-		Type:   eventingv1alpha1.SubscriptionConditionReferencesResolved,
-		Status: corev1.ConditionTrue,
-	}})
-	return s
-}
-
 func getNewSubscription() *eventingv1alpha1.Subscription {
 	subscription := &eventingv1alpha1.Subscription{
 		TypeMeta:   subscriptionType(),
@@ -452,6 +444,18 @@ func getNewSubscription() *eventingv1alpha1.Subscription {
 	// selflink is not filled in when we create the object, so clear it
 	subscription.ObjectMeta.SelfLink = ""
 	return subscription
+}
+
+func getNewSubscriptionWithUnknownConditions() *eventingv1alpha1.Subscription {
+	s := getNewSubscription()
+	s.Status.InitializeConditions()
+	return s
+}
+
+func getNewSubscriptionWithReferencesResolvedStatus() *eventingv1alpha1.Subscription {
+	s := getNewSubscriptionWithUnknownConditions()
+	s.Status.MarkReferencesResolved()
+	return s
 }
 
 func channelType() metav1.TypeMeta {

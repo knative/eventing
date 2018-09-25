@@ -17,8 +17,6 @@
 package v1alpha1
 
 import (
-	"encoding/json"
-
 	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
@@ -54,6 +52,10 @@ var _ duckv1alpha1.ConditionsAccessor = (*SubscriptionStatus)(nil)
 
 // Check that Subscription implements the Conditions duck type.
 var _ = duck.VerifyType(&Subscription{}, &duckv1alpha1.Conditions{})
+
+// Check that the Subscription implements the Generation duck type.
+var emptyGen duckv1alpha1.Generation
+var _ = duck.VerifyType(&Subscription{}, &emptyGen)
 
 // And it's Subscribable
 var _ = duck.VerifyType(&Subscription{}, &duckv1alpha1.Subscribable{})
@@ -157,6 +159,8 @@ type Callable struct {
 	TargetURI *string `json:"targetURI,omitempty"`
 }
 
+// ResultStrategy specifies the handling of the Callable's returned result. If
+// no Callable is specified, the identity function is assumed.
 type ResultStrategy struct {
 	// This object must fulfill the Sinkable contract.
 	//
@@ -170,7 +174,9 @@ type ResultStrategy struct {
 	Target *corev1.ObjectReference `json:"target,omitempty"`
 }
 
-var subCondSet = duckv1alpha1.NewLivingConditionSet()
+// subCondSet is a condition set with Ready as the happy condition and
+// ReferencesResolved and FromReady as the dependent conditions.
+var subCondSet = duckv1alpha1.NewLivingConditionSet(SubscriptionConditionReferencesResolved, SubscriptionConditionFromReady)
 
 // SubscriptionStatus (computed) for a subscription
 type SubscriptionStatus struct {
@@ -188,7 +194,7 @@ const (
 	// SubscriptionConditionReady has status True when all subconditions below have been set to True.
 	SubscriptionConditionReady = duckv1alpha1.ConditionReady
 
-	// SubscriptionReferencesResolved has status True when all the specified references have been successfully
+	// SubscriptionConditionReferencesResolved has status True when all the specified references have been successfully
 	// resolved.
 	SubscriptionConditionReferencesResolved duckv1alpha1.ConditionType = "Resolved"
 
@@ -196,11 +202,6 @@ const (
 	// resource.
 	SubscriptionConditionFromReady duckv1alpha1.ConditionType = "FromReady"
 )
-
-// GetSpecJSON returns spec as json
-func (s *Subscription) GetSpecJSON() ([]byte, error) {
-	return json.Marshal(s.Spec)
-}
 
 // GetCondition returns the condition currently associated with the given type, or nil.
 func (ss *SubscriptionStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
@@ -211,6 +212,26 @@ func (ss *SubscriptionStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1
 // conditions by implementing the duckv1alpha1.Conditions interface.
 func (ss *SubscriptionStatus) GetConditions() duckv1alpha1.Conditions {
 	return ss.Conditions
+}
+
+// IsReady returns true if the resource is ready overall.
+func (ss *SubscriptionStatus) IsReady() bool {
+	return subCondSet.Manage(ss).IsHappy()
+}
+
+// InitializeConditions sets relevant unset conditions to Unknown state.
+func (ss *SubscriptionStatus) InitializeConditions() {
+	subCondSet.Manage(ss).InitializeConditions()
+}
+
+// MarkReferencesResolved sets the ReferencesResolved condition to True state.
+func (ss *SubscriptionStatus) MarkReferencesResolved() {
+	subCondSet.Manage(ss).MarkTrue(SubscriptionConditionReferencesResolved)
+}
+
+// MarkFromReady sets the FromReady condition to True state.
+func (ss *SubscriptionStatus) MarkFromReady() {
+	subCondSet.Manage(ss).MarkTrue(SubscriptionConditionFromReady)
 }
 
 // SetConditions sets the Conditions array. This enables generic handling of
