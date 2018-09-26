@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/knative/eventing/pkg/sidecar/clientfactory/fake"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
 	"io"
 	"io/ioutil"
@@ -129,30 +130,30 @@ func TestDomainToUrl(t *testing.T) {
 func TestServeHTTP(t *testing.T) {
 	testCases := []struct {
 		name           string
-		subs           []Subscription
+		subs           []duckv1alpha1.ChannelSubscriberSpec
 		cf             *fake.ClientFactory
 		origBody       io.Reader
 		expectedStatus int
 	}{
 		{
 			name:           "cannot read orig body",
-			subs:           []Subscription{},
+			subs:           []duckv1alpha1.ChannelSubscriberSpec{},
 			origBody:       &failingReader{},
 			cf:             &fake.ClientFactory{},
 			expectedStatus: http.StatusInternalServerError,
 		},
 		{
 			name:           "no subs",
-			subs:           []Subscription{},
+			subs:           []duckv1alpha1.ChannelSubscriberSpec{},
 			origBody:       body(""),
 			cf:             &fake.ClientFactory{},
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name: "one sub -- failed",
-			subs: []Subscription{
+			subs: []duckv1alpha1.ChannelSubscriberSpec{
 				{
-					ToDomain: "todomain",
+					SinkableDomain: "todomain",
 				},
 			},
 			origBody: body(""),
@@ -168,9 +169,9 @@ func TestServeHTTP(t *testing.T) {
 		},
 		{
 			name: "one sub -- succeeded",
-			subs: []Subscription{
+			subs: []duckv1alpha1.ChannelSubscriberSpec{
 				{
-					ToDomain: "todomain",
+					SinkableDomain: "todomain",
 				},
 			},
 			origBody: body(""),
@@ -186,12 +187,12 @@ func TestServeHTTP(t *testing.T) {
 		},
 		{
 			name: "two subs -- one fails",
-			subs: []Subscription{
+			subs: []duckv1alpha1.ChannelSubscriberSpec{
 				{
-					ToDomain: "todomain",
+					SinkableDomain: "todomain",
 				},
 				{
-					CallDomain: "calldomain",
+					CallableDomain: "calldomain",
 				},
 			},
 			origBody: body(""),
@@ -211,12 +212,12 @@ func TestServeHTTP(t *testing.T) {
 		},
 		{
 			name: "two subs -- both succeed",
-			subs: []Subscription{
+			subs: []duckv1alpha1.ChannelSubscriberSpec{
 				{
-					ToDomain: "todomain",
+					SinkableDomain: "todomain",
 				},
 				{
-					CallDomain: "calldomain",
+					CallableDomain: "calldomain",
 				},
 			},
 			origBody: body(""),
@@ -254,7 +255,7 @@ func TestMakeFanoutRequest(t *testing.T) {
 	testCases := []struct {
 		name              string
 		cf                *fake.ClientFactory
-		sub               Subscription
+		sub               duckv1alpha1.ChannelSubscriberSpec
 		origBody          string
 		expectedErr       bool
 		expectedNumReq    int
@@ -262,8 +263,8 @@ func TestMakeFanoutRequest(t *testing.T) {
 	}{
 		{
 			name: "`call` fails",
-			sub: Subscription{
-				CallDomain: "calldomain",
+			sub: duckv1alpha1.ChannelSubscriberSpec{
+				CallableDomain: "calldomain",
 			},
 			cf: &fake.ClientFactory{
 				RespErr: errors.New("error making request"),
@@ -273,8 +274,8 @@ func TestMakeFanoutRequest(t *testing.T) {
 		},
 		{
 			name: "`call` non-2xx",
-			sub: Subscription{
-				CallDomain: "calldomain",
+			sub: duckv1alpha1.ChannelSubscriberSpec{
+				CallableDomain: "calldomain",
 			},
 			cf: &fake.ClientFactory{
 				Resp: []*http.Response{
@@ -289,8 +290,8 @@ func TestMakeFanoutRequest(t *testing.T) {
 		},
 		{
 			name: "`only `call`",
-			sub: Subscription{
-				CallDomain: "calldomain",
+			sub: duckv1alpha1.ChannelSubscriberSpec{
+				CallableDomain: "calldomain",
 			},
 			cf: &fake.ClientFactory{
 				Resp: []*http.Response{
@@ -308,8 +309,8 @@ func TestMakeFanoutRequest(t *testing.T) {
 		},
 		{
 			name: "`to` fails",
-			sub: Subscription{
-				ToDomain: "todomain",
+			sub: duckv1alpha1.ChannelSubscriberSpec{
+				SinkableDomain: "todomain",
 			},
 			cf: &fake.ClientFactory{
 				RespErr: errors.New("error making request"),
@@ -319,8 +320,8 @@ func TestMakeFanoutRequest(t *testing.T) {
 		},
 		{
 			name: "`to` non-2xx",
-			sub: Subscription{
-				ToDomain: "todomain",
+			sub: duckv1alpha1.ChannelSubscriberSpec{
+				SinkableDomain: "todomain",
 			},
 			cf: &fake.ClientFactory{
 				Resp: []*http.Response{
@@ -335,8 +336,8 @@ func TestMakeFanoutRequest(t *testing.T) {
 		},
 		{
 			name: "only `to`",
-			sub: Subscription{
-				ToDomain: "todomain",
+			sub: duckv1alpha1.ChannelSubscriberSpec{
+				SinkableDomain: "todomain",
 			},
 			cf: &fake.ClientFactory{
 				Resp: []*http.Response{
@@ -354,9 +355,9 @@ func TestMakeFanoutRequest(t *testing.T) {
 		},
 		{
 			name: "`call` and `to`",
-			sub: Subscription{
-				CallDomain: "calldomain",
-				ToDomain:   "todomain",
+			sub: duckv1alpha1.ChannelSubscriberSpec{
+				CallableDomain: "calldomain",
+				SinkableDomain:   "todomain",
 			},
 			cf: &fake.ClientFactory{
 				Resp: []*http.Response{

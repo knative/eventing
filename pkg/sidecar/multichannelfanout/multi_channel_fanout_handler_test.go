@@ -21,6 +21,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/eventing/pkg/sidecar/clientfactory/fake"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
@@ -51,65 +52,6 @@ func TestMakeChannelKey(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			if key := MakeChannelKey(tc.namespace, tc.name); key != tc.key {
 				t.Errorf("Unexpected ChannelKey. Expected '%v'. Actual '%v'", tc.key, key)
-			}
-		})
-	}
-}
-
-func TestGetChannelKey(t *testing.T) {
-	testCases := []struct {
-		name        string
-		headers     map[string]string
-		expected    string
-		expectedErr bool
-	}{
-		{
-			name:        "no header",
-			expectedErr: true,
-		},
-		{
-			name: "header missing",
-			headers: map[string]string{
-				"User-Agent": "1234",
-			},
-			expectedErr: true,
-		},
-		{
-			name: "header present without value",
-			headers: map[string]string{
-				ChannelKeyHeader: "",
-			},
-			expected: "",
-		},
-		{
-			name: "header present",
-			headers: map[string]string{
-				ChannelKeyHeader: "default/c1",
-			},
-			expected: "default/c1",
-		},
-	}
-	requestWithHeaders := func(headers map[string]string) *http.Request {
-		r := httptest.NewRequest("POST", "http://target/", strings.NewReader("{}"))
-		for existing := range r.Header {
-			r.Header.Del(existing)
-		}
-		for h, v := range headers {
-			r.Header.Set(h, v)
-		}
-		return r
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			r := requestWithHeaders(tc.headers)
-			key, err := getChannelKey(r)
-			if tc.expectedErr {
-				if err == nil {
-					t.Errorf("Expected an error, did not get one.")
-				}
-			}
-			if key != tc.expected {
-				t.Errorf("Incorrect channel key. Expected '%v'. Actual '%v'", tc.expected, key)
 			}
 		})
 	}
@@ -163,9 +105,9 @@ func TestCopyWithNewConfig(t *testing.T) {
 				Namespace: "default",
 				Name:      "c1",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []fanout.Subscription{
+					Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 						{
-							CallDomain: "calldomain",
+							CallableDomain: "calldomain",
 						},
 					},
 				},
@@ -178,9 +120,9 @@ func TestCopyWithNewConfig(t *testing.T) {
 				Namespace: "default",
 				Name:      "somethingdifferent",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []fanout.Subscription{
+					Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 						{
-							ToDomain: "todomain",
+							SinkableDomain: "todomain",
 						},
 					},
 				},
@@ -221,9 +163,9 @@ func TestConfigDiff(t *testing.T) {
 				Namespace: "default",
 				Name:      "c1",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []fanout.Subscription{
+					Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 						{
-							CallDomain: "calldomain",
+							CallableDomain: "calldomain",
 						},
 					},
 				},
@@ -251,9 +193,9 @@ func TestConfigDiff(t *testing.T) {
 						Namespace: "default",
 						Name:      "c1",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []fanout.Subscription{
+							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 								{
-									CallDomain: "different",
+									CallableDomain: "different",
 								},
 							},
 						},
@@ -292,7 +234,7 @@ func TestServeHTTP(t *testing.T) {
 			name:               "non-existent channel",
 			config:             Config{},
 			cf:                 &fake.ClientFactory{},
-			key:                "default/does-not-exist",
+			key:                "default.does-not-exist",
 			expectedStatusCode: http.StatusInternalServerError,
 		},
 		{
@@ -310,9 +252,9 @@ func TestServeHTTP(t *testing.T) {
 						Namespace: "default",
 						Name:      "first-channel",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []fanout.Subscription{
+							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 								{
-									ToDomain: "first-to-domain",
+									SinkableDomain: "first-to-domain",
 								},
 							},
 						},
@@ -327,7 +269,7 @@ func TestServeHTTP(t *testing.T) {
 					},
 				},
 			},
-			key:                "default/first-channel",
+			key:                "first-channel.default",
 			expectedStatusCode: http.StatusInternalServerError,
 		},
 		{
@@ -338,9 +280,9 @@ func TestServeHTTP(t *testing.T) {
 						Namespace: "default",
 						Name:      "first-channel",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []fanout.Subscription{
+							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 								{
-									ToDomain: "first-to-domain",
+									SinkableDomain: "first-to-domain",
 								},
 							},
 						},
@@ -349,9 +291,9 @@ func TestServeHTTP(t *testing.T) {
 						Namespace: "default",
 						Name:      "second-channel",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []fanout.Subscription{
+							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 								{
-									CallDomain: "second-call-domain",
+									CallableDomain: "second-call-domain",
 								},
 							},
 						},
@@ -366,16 +308,13 @@ func TestServeHTTP(t *testing.T) {
 					},
 				},
 			},
-			key:                "default/second-channel",
+			key:                "second-channel.default",
 			requestDomain:      "second-call-domain",
 			expectedStatusCode: http.StatusOK,
 		},
 	}
 	requestWithChannelKey := func(key string) *http.Request {
-		r := httptest.NewRequest("POST", "http://target/", strings.NewReader("{}"))
-		if key != "" {
-			r.Header.Set(ChannelKeyHeader, key)
-		}
+		r := httptest.NewRequest("POST", fmt.Sprintf("http://%s/", key), strings.NewReader("{}"))
 		return r
 	}
 	for _, tc := range testCases {

@@ -22,6 +22,7 @@ import (
 	"github.com/knative/eventing/pkg/sidecar/clientfactory/fake"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
 	"io"
 	"io/ioutil"
@@ -102,16 +103,16 @@ func TestReadConfigMap(t *testing.T) {
 						Namespace: "default",
 						Name:      "c1",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []fanout.Subscription{
+							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 								{
-									CallDomain: "event-changer.default.svc.cluster.local",
-									ToDomain:   "message-dumper-bar.default.svc.cluster.local",
+									CallableDomain: "event-changer.default.svc.cluster.local",
+									SinkableDomain:   "message-dumper-bar.default.svc.cluster.local",
 								},
 								{
-									CallDomain: "message-dumper-foo.default.svc.cluster.local",
+									CallableDomain: "message-dumper-foo.default.svc.cluster.local",
 								},
 								{
-									ToDomain: "message-dumper-bar.default.svc.cluster.local",
+									SinkableDomain: "message-dumper-bar.default.svc.cluster.local",
 								},
 							},
 						},
@@ -120,9 +121,9 @@ func TestReadConfigMap(t *testing.T) {
 						Namespace: "default",
 						Name:      "c2",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []fanout.Subscription{
+							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 								{
-									ToDomain: "message-dumper-foo.default.svc.cluster.local",
+									SinkableDomain: "message-dumper-foo.default.svc.cluster.local",
 								},
 							},
 						},
@@ -131,9 +132,9 @@ func TestReadConfigMap(t *testing.T) {
 						Namespace: "other",
 						Name:      "c3",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []fanout.Subscription{
+							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 								{
-									ToDomain: "message-dumper-foo.default.svc.cluster.local",
+									SinkableDomain: "message-dumper-foo.default.svc.cluster.local",
 								},
 							},
 						},

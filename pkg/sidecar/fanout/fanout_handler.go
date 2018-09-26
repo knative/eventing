@@ -91,7 +91,7 @@ func (f *fanoutHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	f.logger.Debug("Pulling message", zap.String("key", key))
-	m, err := f.receivedMessages.Pull(key)
+	m, err := f.receivedMessages.pull(key)
 	if err != nil {
 		f.logger.Info("Could not find tracked message", zap.Error(err), zap.Any("key", r.Header[uniqueFanoutHeader]))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -157,7 +157,7 @@ func (ms *messageStorage) Put(m *buses.Message) {
 	ms.messages[key] = m
 }
 
-func (ms *messageStorage) Pull(key string) (*buses.Message, error) {
+func (ms *messageStorage) pull(key string) (*buses.Message, error) {
 	ms.messagesLock.Lock()
 	defer ms.messagesLock.Unlock()
 
