@@ -140,15 +140,3 @@ func TestSourceStatusGetCondition(t *testing.T) {
 		})
 	}
 }
-
-func TestSourceGetSetConditions(t *testing.T) {
-	c := &Source{
-		Status: SourceStatus{},
-	}
-	want := duckv1alpha1.Conditions{condReady}
-	c.Status.SetConditions(want)
-	got := c.Status.GetConditions()
-	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("unexpected conditions (-want, +got) = %v", diff)
-	}
-}

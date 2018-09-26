@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
@@ -176,7 +175,7 @@ func (r *reconciler) resolveCall(namespace string, callable v1alpha1.Callable) (
 	t := duckv1alpha1.LegacyTarget{}
 	// Once Knative services support Targetable, switch to using this.
 	//t := duckv1alpha1.Target{}
-	err = duck.FromUnstructured(*obj, &t)
+	err = duck.FromUnstructured(obj, &t)
 	if err != nil {
 		glog.Warningf("Failed to unserialize legacy target: %s", err)
 		return "", err
@@ -198,7 +197,7 @@ func (r *reconciler) resolveResult(namespace string, resultStrategy v1alpha1.Res
 		return "", err
 	}
 	s := duckv1alpha1.Sink{}
-	err = duck.FromUnstructured(*obj, &s)
+	err = duck.FromUnstructured(obj, &s)
 	if err != nil {
 		glog.Warningf("Failed to unserialize Sinkable target: %s", err)
 		return "", err
@@ -220,12 +219,12 @@ func (r *reconciler) resolveFromChannelable(namespace string, ref *corev1.Object
 	}
 
 	c := duckv1alpha1.Subscription{}
-	err = duck.FromUnstructured(*obj, &c)
+	err = duck.FromUnstructured(obj, &c)
 	return &c, err
 }
 
 // fetchObjectReference fetches an object based on ObjectReference.
-func (r *reconciler) fetchObjectReference(namespace string, ref *corev1.ObjectReference) (*unstructured.Unstructured, error) {
+func (r *reconciler) fetchObjectReference(namespace string, ref *corev1.ObjectReference) (duck.Marshalable, error) {
 	//	resourceClient, err := r.CreateResourceInterface2(r.restConfig, ref, namespace)
 	resourceClient, err := r.CreateResourceInterface(namespace, ref)
 	if err != nil {
@@ -245,7 +244,7 @@ func (r *reconciler) reconcileFromChannel(namespace string, subscribable corev1.
 		return err
 	}
 	original := duckv1alpha1.Channel{}
-	err = duck.FromUnstructured(*s, &original)
+	err = duck.FromUnstructured(s, &original)
 	if err != nil {
 		return err
 	}
