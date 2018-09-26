@@ -29,9 +29,14 @@ import (
 
 const correlationIDHeaderName = "Knative-Correlation-Id"
 
+// httpDoer is an interface for making HTTP requests.
+type httpDoer interface {
+	Do(*http.Request) (*http.Response, error)
+}
+
 // MessageDispatcher dispatches messages to a destination over HTTP.
 type MessageDispatcher struct {
-	httpClient       *http.Client
+	httpClient       httpDoer
 	forwardHeaders   map[string]bool
 	forwardPrefixes  []string
 	supportedSchemes map[string]bool
@@ -42,7 +47,6 @@ type MessageDispatcher struct {
 // DispatchDefaults provides default parameter values used when dispatching a message.
 type DispatchDefaults struct {
 	Namespace string
-	ReplyTo   string
 }
 
 // NewMessageDispatcher creates a new message dispatcher that can dispatch
@@ -66,14 +70,21 @@ func NewMessageDispatcher(logger *zap.SugaredLogger) *MessageDispatcher {
 // The destination and replyTo are DNS names. For names with a single label,
 // the default namespace is used to expand it into a fully qualified name
 // within the cluster.
-func (d *MessageDispatcher) DispatchMessage(message *Message, destination string, defaults DispatchDefaults) error {
-	destinationURL := d.resolveURL(destination, defaults.Namespace)
-	reply, err := d.executeRequest(destinationURL, message)
-	if err != nil {
-		return fmt.Errorf("Unable to complete request %v", err)
+func (d *MessageDispatcher) DispatchMessage(message *Message, destination, replyTo string, defaults DispatchDefaults) error {
+	var err error
+	// Default to replying with the original message. If there is a destination, then replace it
+	// with the response from the call to the destination instead.
+	reply := message
+	if destination != "" {
+		destinationURL := d.resolveURL(destination, defaults.Namespace)
+		reply, err = d.executeRequest(destinationURL, message)
+		if err != nil {
+			return fmt.Errorf("Unable to complete request %v", err)
+		}
 	}
-	if defaults.ReplyTo != "" && reply != nil {
-		replyToURL := d.resolveURL(defaults.ReplyTo, defaults.Namespace)
+
+	if replyTo != "" && reply != nil {
+		replyToURL := d.resolveURL(replyTo, defaults.Namespace)
 		_, err = d.executeRequest(replyToURL, reply)
 		if err != nil {
 			return fmt.Errorf("Failed to forward reply %v", err)
