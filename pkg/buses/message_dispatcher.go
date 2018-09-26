@@ -104,23 +104,24 @@ func (d *MessageDispatcher) executeRequest(url *url.URL, message *Message) (*Mes
 	if err != nil {
 		return nil, err
 	}
-	if res != nil {
-		if res.StatusCode < 200 || res.StatusCode >= 300 {
-			// reject non-successful (2xx) responses
-			return nil, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", res.StatusCode)
-		}
-		headers := d.fromHTTPHeaders(res.Header)
-		// TODO: add configurable whitelisting of propagated headers/prefixes (configmap?)
-		if correlationID, ok := message.Headers[correlationIDHeaderName]; ok {
-			headers[correlationIDHeaderName] = correlationID
-		}
-		payload, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return nil, fmt.Errorf("Unable to read response %v", err)
-		}
-		return &Message{headers, payload}, nil
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		// reject non-successful (2xx) responses
+		return nil, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", res.StatusCode)
 	}
-	return nil, nil
+	headers := d.fromHTTPHeaders(res.Header)
+	// TODO: add configurable whitelisting of propagated headers/prefixes (configmap?)
+	if correlationID, ok := message.Headers[correlationIDHeaderName]; ok {
+		headers[correlationIDHeaderName] = correlationID
+	}
+	payload, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to read response %v", err)
+	}
+	if len(payload) == 0 {
+		// The response body is empty, the event has 'finished'.
+		return nil, nil
+	}
+	return &Message{headers, payload}, nil
 }
 
 // toHTTPHeaders converts message headers to HTTP headers.
