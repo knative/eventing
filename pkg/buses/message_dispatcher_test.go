@@ -28,64 +28,308 @@ import (
 
 func TestDispatchMessage(t *testing.T) {
 	testCases := map[string]struct {
-		message         *Message
-		expectedHeaders http.Header
+		destination          string
+		replyTo              string
+		message              *Message
+		fakeResponse         *http.Response
+		expectedErr          bool
+		expectedDestRequest  *requestValidation
+		expectedReplyRequest *requestValidation
 	}{
-		"filter unwanted headers": {
+		"destination - only": {
+			destination: "test-destination-svc.test-namespace.svc.cluster.local",
 			message: &Message{
 				Headers: map[string]string{
+					// do-not-forward should not get forwarded.
 					"do-not-forward": "header",
+					"x-request-id":   "id123",
+					"knative-1":      "knative-1-value",
+					"knative-2":      "knative-2-value",
+					"ce-abc":         "ce-abc-value",
 				},
-				Payload: []byte("{}"),
+				Payload: []byte("destination"),
 			},
-			expectedHeaders: map[string][]string{},
+			expectedDestRequest: &requestValidation{
+				url: "http://test-destination-svc.test-namespace.svc.cluster.local/",
+				headers: map[string][]string{
+					"x-request-id": {"id123"},
+					"knative-1":    {"knative-1-value"},
+					"knative-2":    {"knative-2-value"},
+					"ce-abc":       {"ce-abc-value"},
+				},
+				body: "destination",
+			},
 		},
-		"multiple forward prefixes": {
+		"destination - only -- error": {
+			destination: "test-destination-svc.test-namespace.svc.cluster.local",
 			message: &Message{
 				Headers: map[string]string{
-					"x-request-id": "id123",
-					"knative-1":    "knative-1-value",
-					"knative-2":    "knative-2-value",
-					"ce-abc":       "ce-abc-value",
+					// do-not-forward should not get forwarded.
+					"do-not-forward": "header",
+					"x-request-id":   "id123",
+					"knative-1":      "knative-1-value",
+					"knative-2":      "knative-2-value",
+					"ce-abc":         "ce-abc-value",
 				},
-				Payload: []byte("{}"),
+				Payload: []byte("destination"),
 			},
-			expectedHeaders: map[string][]string{
-				"x-request-id": {"id123"},
-				"knative-1":    {"knative-1-value"},
-				"knative-2":    {"knative-2-value"},
-				"ce-abc":       {"ce-abc-value"},
+			expectedDestRequest: &requestValidation{
+				url: "http://test-destination-svc.test-namespace.svc.cluster.local/",
+				headers: map[string][]string{
+					"x-request-id": {"id123"},
+					"knative-1":    {"knative-1-value"},
+					"knative-2":    {"knative-2-value"},
+					"ce-abc":       {"ce-abc-value"},
+				},
+				body: "destination",
+			},
+			fakeResponse: &http.Response{
+				StatusCode: http.StatusNotFound,
+				Body:       ioutil.NopCloser(bytes.NewBufferString("destination-response")),
+			},
+			expectedErr: true,
+		},
+		"reply - only": {
+			replyTo: "test-reply-svc.test-namespace.svc.cluster.local",
+			message: &Message{
+				Headers: map[string]string{
+					// do-not-forward should not get forwarded.
+					"do-not-forward": "header",
+					"x-request-id":   "id123",
+					"knative-1":      "knative-1-value",
+					"knative-2":      "knative-2-value",
+					"ce-abc":         "ce-abc-value",
+				},
+				Payload: []byte("replyTo"),
+			},
+			expectedReplyRequest: &requestValidation{
+				url: "http://test-reply-svc.test-namespace.svc.cluster.local/",
+				headers: map[string][]string{
+					"x-request-id": {"id123"},
+					"knative-1":    {"knative-1-value"},
+					"knative-2":    {"knative-2-value"},
+					"ce-abc":       {"ce-abc-value"},
+				},
+				body: "replyTo",
+			},
+		},
+		"reply - only -- error": {
+			replyTo: "test-reply-svc.test-namespace.svc.cluster.local",
+			message: &Message{
+				Headers: map[string]string{
+					// do-not-forward should not get forwarded.
+					"do-not-forward": "header",
+					"x-request-id":   "id123",
+					"knative-1":      "knative-1-value",
+					"knative-2":      "knative-2-value",
+					"ce-abc":         "ce-abc-value",
+				},
+				Payload: []byte("replyTo"),
+			},
+			expectedReplyRequest: &requestValidation{
+				url: "http://test-reply-svc.test-namespace.svc.cluster.local/",
+				headers: map[string][]string{
+					"x-request-id": {"id123"},
+					"knative-1":    {"knative-1-value"},
+					"knative-2":    {"knative-2-value"},
+					"ce-abc":       {"ce-abc-value"},
+				},
+				body: "replyTo",
+			},
+			fakeResponse: &http.Response{
+				StatusCode: http.StatusNotFound,
+				Body:       ioutil.NopCloser(bytes.NewBufferString("destination-response")),
+			},
+			expectedErr: true,
+		},
+		"destination and reply - dest returns bad status code": {
+			destination: "test-destination-svc.test-namespace.svc.cluster.local",
+			replyTo:     "test-reply-svc.test-namespace.svc.cluster.local",
+			message: &Message{
+				Headers: map[string]string{
+					// do-not-forward should not get forwarded.
+					"do-not-forward": "header",
+					"x-request-id":   "id123",
+					"knative-1":      "knative-1-value",
+					"knative-2":      "knative-2-value",
+					"ce-abc":         "ce-abc-value",
+				},
+				Payload: []byte("destination"),
+			},
+			expectedDestRequest: &requestValidation{
+				url: "http://test-destination-svc.test-namespace.svc.cluster.local/",
+				headers: map[string][]string{
+					"x-request-id": {"id123"},
+					"knative-1":    {"knative-1-value"},
+					"knative-2":    {"knative-2-value"},
+					"ce-abc":       {"ce-abc-value"},
+				},
+				body: "destination",
+			},
+			fakeResponse: &http.Response{
+				StatusCode: http.StatusInternalServerError,
+				Body:       ioutil.NopCloser(bytes.NewBufferString("destination-response")),
+			},
+			expectedErr: true,
+		},
+		"destination and reply - dest returns empty body": {
+			destination: "test-destination-svc.test-namespace.svc.cluster.local",
+			replyTo:     "test-reply-svc.test-namespace.svc.cluster.local",
+			message: &Message{
+				Headers: map[string]string{
+					// do-not-forward should not get forwarded.
+					"do-not-forward": "header",
+					"x-request-id":   "id123",
+					"knative-1":      "knative-1-value",
+					"knative-2":      "knative-2-value",
+					"ce-abc":         "ce-abc-value",
+				},
+				Payload: []byte("destination"),
+			},
+			expectedDestRequest: &requestValidation{
+				url: "http://test-destination-svc.test-namespace.svc.cluster.local/",
+				headers: map[string][]string{
+					"x-request-id": {"id123"},
+					"knative-1":    {"knative-1-value"},
+					"knative-2":    {"knative-2-value"},
+					"ce-abc":       {"ce-abc-value"},
+				},
+				body: "destination",
+			},
+			fakeResponse: &http.Response{
+				StatusCode: http.StatusAccepted,
+				Header: map[string][]string{
+					"do-not-passthrough": {"no"},
+					"x-request-id":       {"altered-id"},
+					"knative-1":          {"new-knative-1-value"},
+					"ce-abc":             {"new-ce-abc-value"},
+				},
+				Body: ioutil.NopCloser(bytes.NewBufferString("")),
+			},
+		},
+		"destination and reply": {
+			destination: "test-destination-svc.test-namespace.svc.cluster.local",
+			replyTo:     "test-reply-svc.test-namespace.svc.cluster.local",
+			message: &Message{
+				Headers: map[string]string{
+					// do-not-forward should not get forwarded.
+					"do-not-forward": "header",
+					"x-request-id":   "id123",
+					"knative-1":      "knative-1-value",
+					"knative-2":      "knative-2-value",
+					"ce-abc":         "ce-abc-value",
+				},
+				Payload: []byte("destination"),
+			},
+			expectedDestRequest: &requestValidation{
+				url: "http://test-destination-svc.test-namespace.svc.cluster.local/",
+				headers: map[string][]string{
+					"x-request-id": {"id123"},
+					"knative-1":    {"knative-1-value"},
+					"knative-2":    {"knative-2-value"},
+					"ce-abc":       {"ce-abc-value"},
+				},
+				body: "destination",
+			},
+			fakeResponse: &http.Response{
+				StatusCode: http.StatusAccepted,
+				Header: map[string][]string{
+					"do-not-passthrough": {"no"},
+					"x-request-id":       {"altered-id"},
+					"knative-1":          {"new-knative-1-value"},
+					"ce-abc":             {"new-ce-abc-value"},
+				},
+				Body: ioutil.NopCloser(bytes.NewBufferString("destination-response")),
+			},
+			expectedReplyRequest: &requestValidation{
+				url: "http://test-reply-svc.test-namespace.svc.cluster.local/",
+				headers: map[string][]string{
+					"x-request-id": {"altered-id"},
+					"knative-1":    {"new-knative-1-value"},
+					"ce-abc":       {"new-ce-abc-value"},
+				},
+				body: "destination-response",
 			},
 		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			md := NewMessageDispatcher(zap.NewNop().Sugar())
-			fc := &fakeHttpClient{}
-			md.httpClient = fc
-			err := md.DispatchMessage(tc.message, "destination", "", DispatchDefaults{})
-			if err != nil {
-				t.Errorf("Unexpected error dispatching message: %v", err)
+			fc := &fakeHttpClient{
+				response: tc.fakeResponse,
 			}
-			if diff := headerDiff(tc.expectedHeaders, fc.requestHeaders); diff != "" {
-				t.Errorf("Unexpected request headers (-wanted, +got): %v", diff)
+			md.httpClient = fc
+			err := md.DispatchMessage(tc.message, tc.destination, tc.replyTo, DispatchDefaults{})
+			if tc.expectedErr != (err != nil) {
+				t.Errorf("Unexpected error from DispatchRequest. Expected %v. Actual: %v", tc.expectedErr, err)
+			}
+			if tc.expectedDestRequest != nil {
+				rv := fc.popRequest(t)
+				assertEquality(t, *tc.expectedDestRequest, rv)
+			}
+			if tc.expectedReplyRequest != nil {
+				rv := fc.popRequest(t)
+				assertEquality(t, *tc.expectedReplyRequest, rv)
+			}
+			if len(fc.requests) != 0 {
+				t.Errorf("Unexpected requests: %+v", fc.requests)
 			}
 		})
 	}
 }
 
+type requestValidation struct {
+	url     string
+	headers http.Header
+	body    string
+}
+
 type fakeHttpClient struct {
-	requestHeaders http.Header
+	t        *testing.T
+	response *http.Response
+	requests []requestValidation
 }
 
 var _ httpDoer = &fakeHttpClient{}
 
 func (f *fakeHttpClient) Do(r *http.Request) (*http.Response, error) {
-	f.requestHeaders = r.Header
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		f.t.Error("Failed to read the request body")
+	}
+	f.requests = append(f.requests, requestValidation{
+		url:     r.URL.String(),
+		headers: r.Header,
+		body:    string(body),
+	})
+	if f.response != nil {
+		return f.response, nil
+	}
 	return &http.Response{
 		StatusCode: http.StatusAccepted,
 		Body:       ioutil.NopCloser(bytes.NewBufferString("body")),
 	}, nil
+}
+
+func (f *fakeHttpClient) popRequest(t *testing.T) requestValidation {
+	if len(f.requests) == 0 {
+		t.Error("Unable to pop request")
+	}
+	rv := f.requests[0]
+	f.requests = f.requests[1:]
+	return rv
+}
+
+func assertEquality(t *testing.T, expected, actual requestValidation) {
+	if diff := cmp.Diff(expected.url, actual.url); diff != "" {
+		t.Errorf("Unexpected URL (-wanted, +got): %v", diff)
+	}
+	if diff := headerDiff(expected.headers, actual.headers); diff != "" {
+		t.Errorf("Unexpected request headers (-wanted, +got): %v", diff)
+	}
+	if diff := cmp.Diff(expected.body, actual.body); diff != "" {
+		t.Errorf("Unexpected body (-want, +got): %v", diff)
+	}
 }
 
 func headerDiff(expected http.Header, actual http.Header) string {
