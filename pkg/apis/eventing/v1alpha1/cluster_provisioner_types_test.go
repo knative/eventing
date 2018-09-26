@@ -22,7 +22,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestClusterProvisionerStatusIsReady(t *testing.T) {
@@ -115,38 +114,5 @@ func TestClusterProvisionerStatusGetCondition(t *testing.T) {
 				t.Errorf("unexpected condition (-want, +got) = %v", diff)
 			}
 		})
-	}
-}
-
-func TestClusterProvisionerGetSetConditions(t *testing.T) {
-	c := &ClusterProvisioner{
-		Status: ClusterProvisionerStatus{},
-	}
-	want := duckv1alpha1.Conditions{condReady}
-	c.Status.SetConditions(want)
-	got := c.Status.GetConditions()
-	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("unexpected conditions (-want, +got) = %v", diff)
-	}
-}
-
-func TestClusterProvisionerGetSpecJSON(t *testing.T) {
-	c := &ClusterProvisioner{
-		Spec: ClusterProvisionerSpec{
-			Reconciles: metav1.GroupKind{
-				Group: "ThisGroup",
-				Kind:  "ThisKind",
-			},
-		},
-	}
-
-	want := `{"reconciles":{"group":"ThisGroup","kind":"ThisKind"}}`
-	got, err := c.GetSpecJSON()
-	if err != nil {
-		t.Fatalf("unexpected spec JSON error: %v", err)
-	}
-
-	if diff := cmp.Diff(want, string(got)); diff != "" {
-		t.Errorf("unexpected spec JSON (-want, +got) = %v", diff)
 	}
 }

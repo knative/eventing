@@ -213,15 +213,3 @@ func TestSubscriptionIsReady(t *testing.T) {
 		})
 	}
 }
-
-func TestSubscriptionSetConditions(t *testing.T) {
-	c := &Subscription{
-		Status: SubscriptionStatus{},
-	}
-	want := duckv1alpha1.Conditions{subscriptionConditionReady}
-	c.Status.SetConditions(want)
-	got := c.Status.GetConditions()
-	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("unexpected conditions (-want, +got) = %v", diff)
-	}
-}
