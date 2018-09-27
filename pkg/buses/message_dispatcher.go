@@ -29,14 +29,9 @@ import (
 
 const correlationIDHeaderName = "Knative-Correlation-Id"
 
-// httpDoer is an interface for making HTTP requests.
-type httpDoer interface {
-	Do(*http.Request) (*http.Response, error)
-}
-
 // MessageDispatcher dispatches messages to a destination over HTTP.
 type MessageDispatcher struct {
-	httpClient       httpDoer
+	httpClient       *http.Client
 	forwardHeaders   map[string]bool
 	forwardPrefixes  []string
 	supportedSchemes map[string]bool
