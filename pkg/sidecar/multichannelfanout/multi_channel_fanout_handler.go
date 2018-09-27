@@ -25,12 +25,6 @@ import (
 	"net/http"
 )
 
-const (
-	// The header injected into requests to state which `Channel` this request is being sent on. The
-	// value is in the format created by multichannelfanout.MakeChannelKey().
-	ChannelKeyHeader = "X-Channel-Key"
-)
-
 // The configuration of this handler.
 type Config struct {
 	// The configuration of each channel in this handler.
@@ -46,14 +40,14 @@ type ChannelConfig struct {
 // MakeChannelKey creates the value to be sent in the HTTP header
 // multichannelfanout.ChannelKeyHeader. This represents the `Channel` the request is being sent
 // upon.
-func MakeChannelKey(namespace, name string) string {
+func makeChannelKey(namespace, name string) string {
 	return fmt.Sprintf("%s/%s", namespace, name)
 }
 
 // makeChannelKeyFromConfig creates the channel key for a given channelConfig. It is a helper around
 // MakeChannelKey.
 func makeChannelKeyFromConfig(config ChannelConfig) string {
-	return MakeChannelKey(config.Namespace, config.Name)
+	return makeChannelKey(config.Namespace, config.Name)
 }
 
 // getChannelKey extracts the channel key from the given HTTP request.

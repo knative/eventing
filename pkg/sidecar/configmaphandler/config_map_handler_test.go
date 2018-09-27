@@ -19,10 +19,10 @@ package configmaphandler
 import (
 	"fmt"
 	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/pkg/sidecar/clientfactory/fake"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"io"
 	"io/ioutil"
@@ -32,6 +32,10 @@ import (
 	"strings"
 	"testing"
 	"time"
+)
+
+const (
+	replaceDomain = "replaceDomain"
 )
 
 func TestReadConfigMap(t *testing.T) {
@@ -82,20 +86,20 @@ func TestReadConfigMap(t *testing.T) {
 					name: c1
 					fanoutConfig:
 					  subscriptions:
-						- callDomain: event-changer.default.svc.cluster.local
-						  toDomain: message-dumper-bar.default.svc.cluster.local
-						- callDomain: message-dumper-foo.default.svc.cluster.local
-						- toDomain: message-dumper-bar.default.svc.cluster.local
+						- callableDomain: event-changer.default.svc.cluster.local
+						  sinkableDomain: message-dumper-bar.default.svc.cluster.local
+						- callableDomain: message-dumper-foo.default.svc.cluster.local
+						- sinkableDomain: message-dumper-bar.default.svc.cluster.local
 				  - namespace: default
 					name: c2
 					fanoutConfig:
 					  subscriptions:
-						- toDomain: message-dumper-foo.default.svc.cluster.local
+						- sinkableDomain: message-dumper-foo.default.svc.cluster.local
 				  - namespace: other
 					name: c3
 					fanoutConfig:
 					  subscriptions:
-						- toDomain: message-dumper-foo.default.svc.cluster.local
+						- sinkableDomain: message-dumper-foo.default.svc.cluster.local
 				`,
 			expected: multichannelfanout.Config{
 				ChannelConfigs: []multichannelfanout.ChannelConfig{
@@ -106,7 +110,7 @@ func TestReadConfigMap(t *testing.T) {
 							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 								{
 									CallableDomain: "event-changer.default.svc.cluster.local",
-									SinkableDomain:   "message-dumper-bar.default.svc.cluster.local",
+									SinkableDomain: "message-dumper-bar.default.svc.cluster.local",
 								},
 								{
 									CallableDomain: "message-dumper-foo.default.svc.cluster.local",
@@ -227,11 +231,12 @@ func TestNewHandler(t *testing.T) {
 
 func TestServeHTTP(t *testing.T) {
 	testCases := []struct {
-		name                  string
-		initialConfig         string
-		updatedConfig         string
-		expectedInitialDomain string
-		expectedUpdatedDomain string
+		name                       string
+		initialConfig              string
+		updatedConfig              string
+		initialRequests            int32
+		initialRequestsAfterUpdate int32
+		updateRequests             int32
 	}{
 		{
 			name: "send to config",
@@ -241,9 +246,9 @@ func TestServeHTTP(t *testing.T) {
 					name: c1
 					fanoutConfig:
 						subscriptions:
-						  - toDomain: initial-domain
+						  - sinkableDomain: replaceDomain
 				`,
-			expectedInitialDomain: "initial-domain",
+			initialRequests: 1,
 		},
 		{
 			name: "change config",
@@ -253,18 +258,18 @@ func TestServeHTTP(t *testing.T) {
 					name: c1
 					fanoutConfig:
 						subscriptions:
-						  - toDomain: initial-domain
+						  - sinkableDomain: replaceDomain
 				`,
-			expectedInitialDomain: "initial-domain",
+			initialRequests: 1,
 			updatedConfig: `
 				channelConfigs:
 				  - namespace: default
 					name: c1
 					fanoutConfig:
 						subscriptions:
-						  - toDomain: updated-domain
+						  - sinkableDomain: replaceDomain
 				`,
-			expectedUpdatedDomain: "updated-domain",
+			updateRequests: 1,
 		},
 		{
 			name: "bad config update -- keeps serving old config",
@@ -274,40 +279,39 @@ func TestServeHTTP(t *testing.T) {
 					name: c1
 					fanoutConfig:
 						subscriptions:
-						  - toDomain: initial-domain
+						  - sinkableDomain: replaceDomain
 				`,
-			expectedInitialDomain: "initial-domain",
+			initialRequests: 1,
 			updatedConfig: `
 				channelConfigs:
 				  - namespace: default
 					name: c1
 					fanoutConfig:
 						subscriptions:
-						  - toDomain: updated-domain
+						  - sinkableDomain: replaceDomain
 				  # Duplicate namespace/name
 				  - namespace: default
 					name: c1
 					fanoutConfig:
 						subscriptions:
-						  - toDomain: updated-domain
+						  - sinkableDomain: replaceDomain
 				`,
-			expectedUpdatedDomain: "initial-domain",
+			initialRequestsAfterUpdate: 2,
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			initialHandler := &fakeHandler{}
+			initialServer := httptest.NewServer(initialHandler)
+			defer initialServer.Close()
+			updateHandler := &fakeHandler{}
+			updateServer := httptest.NewServer(updateHandler)
+			defer updateServer.Close()
+
 			dir := createTempDir(t)
 			defer os.RemoveAll(dir)
-			writeConfig(t, dir, tc.initialConfig)
+			writeConfig(t, dir, replaceDomains(tc.initialConfig, initialServer.URL[7:]))
 
-			cf := &fake.ClientFactory{
-				Resp: []*http.Response{
-					{
-						StatusCode: http.StatusOK,
-						Body:       body(""),
-					},
-				},
-			}
 			cmh, _ := NewHandler(zap.NewNop(), dir)
 
 			w := httptest.NewRecorder()
@@ -315,12 +319,13 @@ func TestServeHTTP(t *testing.T) {
 			if w.Result().StatusCode != http.StatusOK {
 				t.Errorf("Unexpected initial status code: %v", w.Result().StatusCode)
 			}
-			if initialHost := cf.GetRequests()[0].Host; initialHost != tc.expectedInitialDomain {
-				t.Errorf("Sent initial request to wrong domain. Expected: '%v'. Actual '%v'", tc.expectedInitialDomain, initialHost)
+			if tc.initialRequests != initialHandler.requests.Load() {
+				t.Errorf("Incorrect initial request count. Expected %v. Actual %v.",
+					tc.initialRequests, initialHandler.requests.Load())
 			}
 
 			if tc.updatedConfig != "" {
-				writeConfig(t, dir, tc.updatedConfig)
+				writeConfig(t, dir, replaceDomains(tc.updatedConfig, updateServer.URL[7:]))
 				// The watcher is running in another routine, give it some time to notice the
 				// change.
 				time.Sleep(100 * time.Millisecond)
@@ -329,8 +334,12 @@ func TestServeHTTP(t *testing.T) {
 				if w.Result().StatusCode != http.StatusOK {
 					t.Errorf("Unexpected updated status code: %v", w.Result().StatusCode)
 				}
-				if updatedDomain := cf.GetRequests()[1].Host; updatedDomain != tc.expectedUpdatedDomain {
-					t.Errorf("Sent updated request to wrong domain. Expected: '%v'. Actual: '%v'", tc.expectedUpdatedDomain, updatedDomain)
+				if tc.updateRequests != updateHandler.requests.Load() {
+					t.Errorf("Incorrect update request count. Expected %v. Actual %v.", tc.updateRequests, updateHandler.requests.Load())
+				}
+				if tc.initialRequestsAfterUpdate != 0 && tc.initialRequestsAfterUpdate != initialHandler.requests.Load() {
+					t.Errorf("Incorrect requests to initialHandler after config update. Expected %v, actual %v",
+						tc.initialRequestsAfterUpdate, initialHandler.requests.Load())
 				}
 			}
 		})
@@ -362,7 +371,20 @@ func body(body string) io.ReadCloser {
 }
 
 func makeRequest(namespace, name string) *http.Request {
-	r := httptest.NewRequest("POST", "http://example/", body(""))
-	r.Header.Add(multichannelfanout.ChannelKeyHeader, multichannelfanout.MakeChannelKey(namespace, name))
+	r := httptest.NewRequest("POST", fmt.Sprintf("http://%s.%s/", name, namespace), body(""))
 	return r
+}
+
+type fakeHandler struct {
+	requests atomic.Int32
+}
+
+func (h *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	w.WriteHeader(http.StatusOK)
+	h.requests.Inc()
+}
+
+func replaceDomains(config, replacement string) string {
+	return strings.Replace(config, replaceDomain, replacement, -1)
 }

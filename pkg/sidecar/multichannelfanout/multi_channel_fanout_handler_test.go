@@ -53,7 +53,7 @@ func TestMakeChannelKey(t *testing.T) {
 	for _, tc := range testCases {
 		name := fmt.Sprintf("%s, %s -> %s", tc.namespace, tc.name, tc.key)
 		t.Run(name, func(t *testing.T) {
-			if key := MakeChannelKey(tc.namespace, tc.name); key != tc.key {
+			if key := makeChannelKey(tc.namespace, tc.name); key != tc.key {
 				t.Errorf("Unexpected ChannelKey. Expected '%v'. Actual '%v'", tc.key, key)
 			}
 		})

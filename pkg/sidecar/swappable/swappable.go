@@ -32,12 +32,12 @@ type Handler struct {
 }
 
 // NewHandler creates a new swappable.Handler.
-func NewHandler(handler *multichannelfanout.Handler, logger *zap.Logger) (*Handler, error) {
+func NewHandler(handler *multichannelfanout.Handler, logger *zap.Logger) *Handler {
 	h := &Handler{
 		logger: logger.With(zap.String("httpHandler", "swappable")),
 	}
 	h.SetMultiChannelFanoutHandler(handler)
-	return h, nil
+	return h
 }
 
 func NewEmptyHandler(logger *zap.Logger) (*Handler, error) {
@@ -45,7 +45,7 @@ func NewEmptyHandler(logger *zap.Logger) (*Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewHandler(h, logger)
+	return NewHandler(h, logger), nil
 }
 
 // getMultiChannelFanoutHandler gets the current multichannelfanout.Handler to delegate all HTTP
