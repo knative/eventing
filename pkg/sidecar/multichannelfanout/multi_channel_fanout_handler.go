@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/eventing/pkg/buses"
-	"github.com/knative/eventing/pkg/sidecar/clientfactory"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"go.uber.org/zap"
 	"net/http"
@@ -67,18 +66,17 @@ func getChannelKey(r *http.Request) string {
 // multichannelfanout.ChannelKeyHeader and uses its value to determine which fanout.Handler to
 // delegate the request to.
 type Handler struct {
-	logger        *zap.Logger
-	handlers      map[string]http.Handler
-	config        Config
-	clientFactory clientfactory.ClientFactory
+	logger   *zap.Logger
+	handlers map[string]http.Handler
+	config   Config
 }
 
-func NewHandler(logger *zap.Logger, conf Config, cf clientfactory.ClientFactory) (*Handler, error) {
+func NewHandler(logger *zap.Logger, conf Config) (*Handler, error) {
 	handlers := make(map[string]http.Handler, len(conf.ChannelConfigs))
 
 	for _, cc := range conf.ChannelConfigs {
 		key := makeChannelKeyFromConfig(cc)
-		handler := fanout.NewHandler(logger, cc.FanoutConfig, cf)
+		handler := fanout.NewHandler(logger, cc.FanoutConfig)
 		if _, present := handlers[key]; present {
 			logger.Error("Duplicate channel key", zap.String("channelKey", key))
 			return nil, fmt.Errorf("duplicate channel key: %v", key)
@@ -87,10 +85,9 @@ func NewHandler(logger *zap.Logger, conf Config, cf clientfactory.ClientFactory)
 	}
 
 	return &Handler{
-		logger:        logger,
-		config:        conf,
-		handlers:      handlers,
-		clientFactory: cf,
+		logger:   logger,
+		config:   conf,
+		handlers: handlers,
 	}, nil
 }
 
@@ -104,13 +101,13 @@ func (h *Handler) ConfigDiff(updated Config) string {
 // CopyWithNewConfig creates a new copy of this Handler with all the fields identical, except the
 // new Handler uses conf, rather than copying the existing Handler's config.
 func (h *Handler) CopyWithNewConfig(conf Config) (*Handler, error) {
-	return NewHandler(h.logger, conf, h.clientFactory)
+	return NewHandler(h.logger, conf)
 }
 
 // ServeHTTP delegates the actual handling of the request to a fanout.Handler, based on the
 // request's channel key.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	channelKey:= getChannelKey(r)
+	channelKey := getChannelKey(r)
 	fh, ok := h.handlers[channelKey]
 	if !ok {
 		h.logger.Error("Unable to find a handler for request", zap.String("channelKey", channelKey))

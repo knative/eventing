@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
-	"github.com/knative/eventing/pkg/sidecar/clientfactory"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	"github.com/knative/pkg/configmap"
 	"go.uber.org/zap"
@@ -51,7 +50,7 @@ type configMapHandler struct {
 }
 
 // NewHandler creates a new configmaphandler.Handler.
-func NewHandler(logger *zap.Logger, dir string, clientFactory clientfactory.ClientFactory) (http.Handler, error) {
+func NewHandler(logger *zap.Logger, dir string) (http.Handler, error) {
 	conf, err := readConfigMap(logger, dir)
 	if err != nil {
 		logger.Error("Unable to read configMap", zap.Error(err))
@@ -60,7 +59,7 @@ func NewHandler(logger *zap.Logger, dir string, clientFactory clientfactory.Clie
 
 	logger.Info("Read initial configMap", zap.Any("conf", conf))
 
-	mcfh, err := multichannelfanout.NewHandler(logger, conf, clientFactory)
+	mcfh, err := multichannelfanout.NewHandler(logger, conf)
 	if err != nil {
 		logger.Error("Unable to create multichannelfanout.Handler: %v", zap.Error(err))
 		return nil, err

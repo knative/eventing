@@ -19,19 +19,22 @@ package fanout
 import (
 	"fmt"
 	"github.com/knative/eventing/pkg/buses"
-	"github.com/knative/eventing/pkg/sidecar/clientfactory"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
 	"math/rand"
 	"net/http"
 	"sync"
+	"time"
 )
 
 const (
 	// The header attached to requests sent through the MessageReceiver. It is used to correlate the
-	// request going into the MessageReceiver and the request coming out of the MessageReceiver.
-	// Note that it _must_ be in the headers forwarded by the MessageReceiver.
+	// request going into the MessageReceiver and the request coming out of the MessageReceiver. It
+	// is removed before being sent downstream.
+	// Note that it MUST be in the headers forwarded by the MessageReceiver.
 	uniqueFanoutHeader = "Knative-Fanout-Message-Tracker"
+
+	defaultTimeout = 1 * time.Minute
 )
 
 // Configuration for a fanout.Handler.
@@ -41,27 +44,28 @@ type Config struct {
 
 // http.Handler that takes a single request in and fans it out to N other servers.
 type fanoutHandler struct {
-	logger        *zap.Logger
-	config        Config
-	clientFactory clientfactory.ClientFactory
+	config Config
 
 	receivedMessages *messageStorage
+	receiver         *buses.MessageReceiver
+	dispatcher       *buses.MessageDispatcher
 
-	receiver *buses.MessageReceiver
-	dispatcher *buses.MessageDispatcher
+	timeout time.Duration
+
+	logger *zap.Logger
 }
 
 var _ http.Handler = &fanoutHandler{}
 
-func NewHandler(logger *zap.Logger, config Config, cf clientfactory.ClientFactory) http.Handler {
+func NewHandler(logger *zap.Logger, config Config) http.Handler {
 	handler := &fanoutHandler{
-		logger:        logger,
-		config:        config,
-		clientFactory: cf,
-		dispatcher : buses.NewMessageDispatcher(logger.Sugar()),
+		logger:     logger,
+		config:     config,
+		dispatcher: buses.NewMessageDispatcher(logger.Sugar()),
 		receivedMessages: &messageStorage{
 			messages: make(map[string]*buses.Message),
 		},
+		timeout: defaultTimeout,
 	}
 	// The receiver function needs to point back at the handler itself, so setup it after
 	// initialization.
@@ -107,10 +111,18 @@ func (f *fanoutHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sc := http.StatusOK
+Loop:
 	for range f.config.Subscriptions {
-		if err = <-errorCh; err != nil {
-			f.logger.Error("Fanout had an error", zap.Error(err))
+		select {
+		case err := <-errorCh:
+			if err != nil {
+				f.logger.Error("Fanout had an error", zap.Error(err))
+				sc = http.StatusInternalServerError
+			}
+		case <-time.After(f.timeout):
+			f.logger.Error("Fanout timed out")
 			sc = http.StatusInternalServerError
+			break Loop
 		}
 	}
 
@@ -142,10 +154,9 @@ func (r *response) WriteHeader(statusCode int) {
 	r.statusCode = statusCode
 }
 
-
 type messageStorage struct {
 	messagesLock sync.Mutex
-	messages map[string]*buses.Message
+	messages     map[string]*buses.Message
 }
 
 func (ms *messageStorage) Put(m *buses.Message) {

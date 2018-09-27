@@ -17,7 +17,6 @@ limitations under the License.
 package swappable
 
 import (
-	"github.com/knative/eventing/pkg/sidecar/clientfactory"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	"go.uber.org/zap"
 	"net/http"
@@ -41,8 +40,8 @@ func NewHandler(handler *multichannelfanout.Handler, logger *zap.Logger) (*Handl
 	return h, nil
 }
 
-func NewEmptyHandler(logger *zap.Logger, cf clientfactory.ClientFactory) (*Handler, error) {
-	h, err := multichannelfanout.NewHandler(logger, multichannelfanout.Config{}, cf)
+func NewEmptyHandler(logger *zap.Logger) (*Handler, error) {
+	h, err := multichannelfanout.NewHandler(logger, multichannelfanout.Config{})
 	if err != nil {
 		return nil, err
 	}

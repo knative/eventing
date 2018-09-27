@@ -83,7 +83,7 @@ func TestNewHandler(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := NewHandler(zap.NewNop(), tc.config, &fake.ClientFactory{})
+			_, err := NewHandler(zap.NewNop(), tc.config)
 			if tc.createErr != "" {
 				if err == nil {
 					t.Errorf("Expected NewHandler error: '%v'. Actual nil", tc.createErr)
@@ -107,7 +107,7 @@ func TestCopyWithNewConfig(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 						{
-							CallableDomain: "calldomain",
+							CallableDomain: "callabledomain",
 						},
 					},
 				},
@@ -122,7 +122,7 @@ func TestCopyWithNewConfig(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 						{
-							SinkableDomain: "todomain",
+							SinkableDomain: "sinkabledomain",
 						},
 					},
 				},
@@ -132,9 +132,7 @@ func TestCopyWithNewConfig(t *testing.T) {
 	if cmp.Equal(orig, updated) {
 		t.Errorf("Orig and updated must be different")
 	}
-	h, err := NewHandler(zap.NewNop(), orig, &fake.ClientFactory{
-		CreateErr: fmt.Errorf("random error that makes this client unique"),
-	})
+	h, err := NewHandler(zap.NewNop(), orig)
 	if err != nil {
 		t.Errorf("Unable to create handler, %v", err)
 	}
@@ -147,9 +145,6 @@ func TestCopyWithNewConfig(t *testing.T) {
 	}
 	if h.logger != newH.logger {
 		t.Errorf("Did not copy logger")
-	}
-	if h.clientFactory != newH.clientFactory {
-		t.Errorf("Did not copy clientFactory")
 	}
 	if !cmp.Equal(newH.config, updated) {
 		t.Errorf("Incorrect copied config. Expected '%v'. Actual '%v'", updated, newH.config)
@@ -165,7 +160,7 @@ func TestConfigDiff(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 						{
-							CallableDomain: "calldomain",
+							CallableDomain: "callabledomain",
 						},
 					},
 				},
@@ -207,7 +202,7 @@ func TestConfigDiff(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			h, err := NewHandler(zap.NewNop(), tc.orig, &fake.ClientFactory{})
+			h, err := NewHandler(zap.NewNop(), tc.orig)
 			if err != nil {
 				t.Errorf("Unable to create handler: %v", err)
 			}
@@ -224,7 +219,6 @@ func TestServeHTTP(t *testing.T) {
 	testCases := []struct {
 		name               string
 		config             Config
-		cf                 *fake.ClientFactory
 		h                  http.Header
 		key                string
 		expectedStatusCode int
@@ -233,14 +227,12 @@ func TestServeHTTP(t *testing.T) {
 		{
 			name:               "non-existent channel",
 			config:             Config{},
-			cf:                 &fake.ClientFactory{},
 			key:                "default.does-not-exist",
 			expectedStatusCode: http.StatusInternalServerError,
 		},
 		{
 			name:               "no channel key",
 			config:             Config{},
-			cf:                 &fake.ClientFactory{},
 			key:                "",
 			expectedStatusCode: http.StatusBadRequest,
 		},
@@ -319,7 +311,7 @@ func TestServeHTTP(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			h, err := NewHandler(zap.NewNop(), tc.config, tc.cf)
+			h, err := NewHandler(zap.NewNop(), tc.config)
 			if err != nil {
 				t.Errorf("Unexpected NewHandler error: '%v'", err)
 			}
