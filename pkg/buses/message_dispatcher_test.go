@@ -50,14 +50,14 @@ func TestDispatchMessage(t *testing.T) {
 				Payload: []byte("destination"),
 			},
 			expectedDestRequest: &requestValidation{
-				url: "http://test-destination-svc.test-namespace.svc.cluster.local/",
-				headers: map[string][]string{
+				Url: "http://test-destination-svc.test-namespace.svc.cluster.local/",
+				Headers: map[string][]string{
 					"x-request-id": {"id123"},
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
 				},
-				body: "destination",
+				Body: "destination",
 			},
 		},
 		"destination - only -- error": {
@@ -74,14 +74,14 @@ func TestDispatchMessage(t *testing.T) {
 				Payload: []byte("destination"),
 			},
 			expectedDestRequest: &requestValidation{
-				url: "http://test-destination-svc.test-namespace.svc.cluster.local/",
-				headers: map[string][]string{
+				Url: "http://test-destination-svc.test-namespace.svc.cluster.local/",
+				Headers: map[string][]string{
 					"x-request-id": {"id123"},
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
 				},
-				body: "destination",
+				Body: "destination",
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusNotFound,
@@ -103,14 +103,14 @@ func TestDispatchMessage(t *testing.T) {
 				Payload: []byte("replyTo"),
 			},
 			expectedReplyRequest: &requestValidation{
-				url: "http://test-reply-svc.test-namespace.svc.cluster.local/",
-				headers: map[string][]string{
+				Url: "http://test-reply-svc.test-namespace.svc.cluster.local/",
+				Headers: map[string][]string{
 					"x-request-id": {"id123"},
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
 				},
-				body: "replyTo",
+				Body: "replyTo",
 			},
 		},
 		"reply - only -- error": {
@@ -127,14 +127,14 @@ func TestDispatchMessage(t *testing.T) {
 				Payload: []byte("replyTo"),
 			},
 			expectedReplyRequest: &requestValidation{
-				url: "http://test-reply-svc.test-namespace.svc.cluster.local/",
-				headers: map[string][]string{
+				Url: "http://test-reply-svc.test-namespace.svc.cluster.local/",
+				Headers: map[string][]string{
 					"x-request-id": {"id123"},
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
 				},
-				body: "replyTo",
+				Body: "replyTo",
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusNotFound,
@@ -157,14 +157,14 @@ func TestDispatchMessage(t *testing.T) {
 				Payload: []byte("destination"),
 			},
 			expectedDestRequest: &requestValidation{
-				url: "http://test-destination-svc.test-namespace.svc.cluster.local/",
-				headers: map[string][]string{
+				Url: "http://test-destination-svc.test-namespace.svc.cluster.local/",
+				Headers: map[string][]string{
 					"x-request-id": {"id123"},
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
 				},
-				body: "destination",
+				Body: "destination",
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusInternalServerError,
@@ -187,14 +187,14 @@ func TestDispatchMessage(t *testing.T) {
 				Payload: []byte("destination"),
 			},
 			expectedDestRequest: &requestValidation{
-				url: "http://test-destination-svc.test-namespace.svc.cluster.local/",
-				headers: map[string][]string{
+				Url: "http://test-destination-svc.test-namespace.svc.cluster.local/",
+				Headers: map[string][]string{
 					"x-request-id": {"id123"},
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
 				},
-				body: "destination",
+				Body: "destination",
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusAccepted,
@@ -222,14 +222,14 @@ func TestDispatchMessage(t *testing.T) {
 				Payload: []byte("destination"),
 			},
 			expectedDestRequest: &requestValidation{
-				url: "http://test-destination-svc.test-namespace.svc.cluster.local/",
-				headers: map[string][]string{
+				Url: "http://test-destination-svc.test-namespace.svc.cluster.local/",
+				Headers: map[string][]string{
 					"x-request-id": {"id123"},
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
 				},
-				body: "destination",
+				Body: "destination",
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusAccepted,
@@ -242,13 +242,13 @@ func TestDispatchMessage(t *testing.T) {
 				Body: ioutil.NopCloser(bytes.NewBufferString("destination-response")),
 			},
 			expectedReplyRequest: &requestValidation{
-				url: "http://test-reply-svc.test-namespace.svc.cluster.local/",
-				headers: map[string][]string{
+				Url: "http://test-reply-svc.test-namespace.svc.cluster.local/",
+				Headers: map[string][]string{
 					"x-request-id": {"altered-id"},
 					"knative-1":    {"new-knative-1-value"},
 					"ce-abc":       {"new-ce-abc-value"},
 				},
-				body: "destination-response",
+				Body: "destination-response",
 			},
 		},
 	}
@@ -279,9 +279,9 @@ func TestDispatchMessage(t *testing.T) {
 }
 
 type requestValidation struct {
-	url     string
-	headers http.Header
-	body    string
+	Url     string
+	Headers http.Header
+	Body    string
 }
 
 type fakeHttpClient struct {
@@ -298,9 +298,9 @@ func (f *fakeHttpClient) Do(r *http.Request) (*http.Response, error) {
 		f.t.Error("Failed to read the request body")
 	}
 	f.requests = append(f.requests, requestValidation{
-		url:     r.URL.String(),
-		headers: r.Header,
-		body:    string(body),
+		Url:     r.URL.String(),
+		Headers: r.Header,
+		Body:    string(body),
 	})
 	if f.response != nil {
 		return f.response, nil
@@ -321,24 +321,19 @@ func (f *fakeHttpClient) popRequest(t *testing.T) requestValidation {
 }
 
 func assertEquality(t *testing.T, expected, actual requestValidation) {
-	if diff := cmp.Diff(expected.url, actual.url); diff != "" {
-		t.Errorf("Unexpected URL (-wanted, +got): %v", diff)
-	}
-	if diff := headerDiff(expected.headers, actual.headers); diff != "" {
-		t.Errorf("Unexpected request headers (-wanted, +got): %v", diff)
-	}
-	if diff := cmp.Diff(expected.body, actual.body); diff != "" {
-		t.Errorf("Unexpected body (-want, +got): %v", diff)
+	canonicalizeHeaders(expected, actual)
+	if diff := cmp.Diff(expected, actual); diff != "" {
+		t.Errorf("Unexpected difference (-want, +got): %v", diff)
 	}
 }
 
-func headerDiff(expected http.Header, actual http.Header) string {
+func canonicalizeHeaders(rvs ...requestValidation) {
 	// HTTP header names are case-insensitive, so normalize them to lower case for comparison.
-	for _, headers := range []http.Header{expected, actual} {
+	for _, rv := range rvs {
+		headers := rv.Headers
 		for n, v := range headers {
 			delete(headers, n)
 			headers[strings.ToLower(n)] = v
 		}
 	}
-	return cmp.Diff(expected, actual)
 }
