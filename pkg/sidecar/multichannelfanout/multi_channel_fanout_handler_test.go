@@ -19,15 +19,18 @@ package multichannelfanout
 import (
 	"fmt"
 	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/pkg/sidecar/clientfactory/fake"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+)
+
+const (
+	// The httptest.Server's host name will replace this value in all ChannelConfigs.
+	replaceDomain = "replaceDomain"
 )
 
 func TestMakeChannelKey(t *testing.T) {
@@ -216,28 +219,19 @@ func TestConfigDiff(t *testing.T) {
 }
 
 func TestServeHTTP(t *testing.T) {
-	testCases := []struct {
+	testCases := map[string]struct {
 		name               string
 		config             Config
-		h                  http.Header
+		respStatusCode     int
 		key                string
 		expectedStatusCode int
-		requestDomain      string
 	}{
-		{
-			name:               "non-existent channel",
+		"non-existent channel": {
 			config:             Config{},
 			key:                "default.does-not-exist",
 			expectedStatusCode: http.StatusInternalServerError,
 		},
-		{
-			name:               "no channel key",
-			config:             Config{},
-			key:                "",
-			expectedStatusCode: http.StatusBadRequest,
-		},
-		{
-			name: "pass through failure",
+		"pass through failure": {
 			config: Config{
 				ChannelConfigs: []ChannelConfig{
 					{
@@ -246,26 +240,18 @@ func TestServeHTTP(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 								{
-									SinkableDomain: "first-to-domain",
+									SinkableDomain: replaceDomain,
 								},
 							},
 						},
 					},
 				},
 			},
-			cf: &fake.ClientFactory{
-				Resp: []*http.Response{
-					{
-						StatusCode: http.StatusInternalServerError,
-						Body:       ioutil.NopCloser(strings.NewReader("{}")),
-					},
-				},
-			},
+			respStatusCode:     http.StatusInternalServerError,
 			key:                "first-channel.default",
 			expectedStatusCode: http.StatusInternalServerError,
 		},
-		{
-			name: "choose channel",
+		"choose channel": {
 			config: Config{
 				ChannelConfigs: []ChannelConfig{
 					{
@@ -285,23 +271,15 @@ func TestServeHTTP(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 								{
-									CallableDomain: "second-call-domain",
+									CallableDomain: replaceDomain,
 								},
 							},
 						},
 					},
 				},
 			},
-			cf: &fake.ClientFactory{
-				Resp: []*http.Response{
-					{
-						StatusCode: http.StatusOK,
-						Body:       ioutil.NopCloser(strings.NewReader("{}")),
-					},
-				},
-			},
+			respStatusCode:     http.StatusOK,
 			key:                "second-channel.default",
-			requestDomain:      "second-call-domain",
 			expectedStatusCode: http.StatusOK,
 		},
 	}
@@ -309,8 +287,14 @@ func TestServeHTTP(t *testing.T) {
 		r := httptest.NewRequest("POST", fmt.Sprintf("http://%s/", key), strings.NewReader("{}"))
 		return r
 	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			server := httptest.NewServer(&fakeHandler{statusCode: tc.respStatusCode})
+			defer server.Close()
+
+			// Rewrite the replaceDomains to call the server we just created.
+			replaceDomains(tc.config, server.URL[7:])
+
 			h, err := NewHandler(zap.NewNop(), tc.config)
 			if err != nil {
 				t.Errorf("Unexpected NewHandler error: '%v'", err)
@@ -326,12 +310,30 @@ func TestServeHTTP(t *testing.T) {
 			if w.Body.String() != "" {
 				t.Errorf("Expected empty response body. Actual: %v", w.Body)
 			}
-			if tc.requestDomain != "" {
-				reqs := tc.cf.GetRequests()
-				if reqs[0].Host != tc.requestDomain {
-					t.Errorf("Called incorrect domain. Expected: '%v'. Actual '%v'", tc.requestDomain, reqs[0].Host)
-				}
-			}
 		})
 	}
+}
+
+func replaceDomains(config Config, replacement string) {
+	for i, cc := range config.ChannelConfigs {
+		for j, sub := range cc.FanoutConfig.Subscriptions {
+			if sub.CallableDomain == replaceDomain {
+				sub.CallableDomain = replacement
+			}
+			if sub.SinkableDomain == replaceDomain {
+				sub.SinkableDomain = replacement
+			}
+			cc.FanoutConfig.Subscriptions[j] = sub
+		}
+		config.ChannelConfigs[i] = cc
+	}
+}
+
+type fakeHandler struct {
+	statusCode int
+}
+
+func (h *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	w.WriteHeader(h.statusCode)
 }
