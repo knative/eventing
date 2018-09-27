@@ -19,7 +19,7 @@ spec:
   group: eventing.knative.dev
   version: v1alpha1
   names:
-    kind: Sources
+    kind: Source
     plural: sources
     singular: source
     categories:
