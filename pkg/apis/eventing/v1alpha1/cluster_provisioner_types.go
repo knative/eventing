@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"encoding/json"
+
 	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
@@ -74,7 +75,7 @@ type ClusterProvisionerSpec struct {
 	Reconciles metav1.GroupKind `json:"reconciles"`
 }
 
-var cProvCondSet = duckv1alpha1.NewLivingConditionSet()
+var cProvCondSet = duckv1alpha1.NewLivingConditionSet(ClusterProvisionerConditionProvisionerReady)
 
 // ClusterProvisionerStatus is the status for a ClusterProvisioner resource
 type ClusterProvisionerStatus struct {
@@ -89,6 +90,15 @@ type ClusterProvisionerStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
+
+const (
+
+	// ClusterProvisionerConditionReady has status True when all subconditions below have been set to True.
+	ClusterProvisionerConditionReady = duckv1alpha1.ConditionReady
+
+	// ClusterProvisionerConditionProvisionerReady has status True when the provisioner is ready
+	ClusterProvisionerConditionProvisionerReady duckv1alpha1.ConditionType = "ProvisionerReady"
+)
 
 // GetSpecJSON returns spec as json
 func (p *ClusterProvisioner) GetSpecJSON() ([]byte, error) {
@@ -109,6 +119,16 @@ func (ps *ClusterProvisionerStatus) GetConditions() duckv1alpha1.Conditions {
 // IsReady returns true if the resource is ready overall.
 func (ps *ClusterProvisionerStatus) IsReady() bool {
 	return cProvCondSet.Manage(ps).IsHappy()
+}
+
+// MarkProvisionerReady sets the condition that the provisioner is ready to provision backing resource.
+func (ps *ClusterProvisionerStatus) MarkProvisionerReady() {
+	cProvCondSet.Manage(ps).MarkTrue(ClusterProvisionerConditionProvisionerReady)
+}
+
+// MarkProvisionerNotReady sets the condition that the provisioner is not ready to provision backing resource.
+func (ps *ClusterProvisionerStatus) MarkProvisionerNotReady(reason, messageFormat string, messageA ...interface{}) {
+	cProvCondSet.Manage(ps).MarkFalse(ClusterProvisionerConditionProvisionerReady, reason, messageFormat, messageA...)
 }
 
 // InitializeConditions sets relevant unset conditions to Unknown state.

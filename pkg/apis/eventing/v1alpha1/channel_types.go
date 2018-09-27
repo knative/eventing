@@ -145,6 +145,16 @@ func (cs *ChannelStatus) SetConditions(conditions duckv1alpha1.Conditions) {
 	cs.Conditions = conditions
 }
 
+// InitializeConditions sets relevant unset conditions to Unknown state.
+func (cs *ChannelStatus) InitializeConditions() {
+	chanCondSet.Manage(cs).InitializeConditions()
+}
+
+// InitializeConditions sets relevant unset conditions to Unknown state.
+func (cs *ChannelStatus) MarkAsNotProvisioned(reason, messageFormat string, messageA ...interface{}) {
+	chanCondSet.Manage(cs).MarkFalse(ChannelConditionProvisioned, reason, messageFormat, messageA...)
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ChannelList is a collection of Channels.
