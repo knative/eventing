@@ -22,7 +22,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 var condReady = duckv1alpha1.Condition{
@@ -79,42 +78,5 @@ func TestChannelGetCondition(t *testing.T) {
 				t.Errorf("unexpected condition (-want, +got) = %v", diff)
 			}
 		})
-	}
-}
-
-func TestChannelSetConditions(t *testing.T) {
-	c := &Channel{
-		Status: ChannelStatus{},
-	}
-	want := duckv1alpha1.Conditions{condReady}
-	c.Status.SetConditions(want)
-	got := c.Status.GetConditions()
-	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("unexpected conditions (-want, +got) = %v", diff)
-	}
-}
-
-func TestChannelGetSpecJSON(t *testing.T) {
-	c := &Channel{
-		Spec: ChannelSpec{
-			Provisioner: &ProvisionerReference{
-				Ref: &corev1.ObjectReference{
-					Name: "foo",
-				},
-			},
-			Arguments: &runtime.RawExtension{
-				Raw: []byte(`{"foo":"baz"}`),
-			},
-		},
-	}
-
-	want := `{"provisioner":{"ref":{"name":"foo"}},"arguments":{"foo":"baz"}}`
-	got, err := c.GetSpecJSON()
-	if err != nil {
-		t.Fatalf("unexpected spec JSON error: %v", err)
-	}
-
-	if diff := cmp.Diff(want, string(got)); diff != "" {
-		t.Errorf("unexpected spec JSON (-want, +got) = %v", diff)
 	}
 }
