@@ -209,7 +209,7 @@ func TestNewHandler(t *testing.T) {
 				dir = "/tmp/doesNotExist"
 			}
 			writeConfig(t, dir, tc.config)
-			cmh, err := NewHandler(zap.NewNop(), dir, &fake.ClientFactory{})
+			cmh, err := NewHandler(zap.NewNop(), dir)
 			if err == nil {
 				// This is not yet about the logic of the test, just ensuring we don't accidentally
 				// leave the channel open, which will leave the watcher running.
@@ -308,7 +308,7 @@ func TestServeHTTP(t *testing.T) {
 					},
 				},
 			}
-			cmh, _ := NewHandler(zap.NewNop(), dir, cf)
+			cmh, _ := NewHandler(zap.NewNop(), dir)
 
 			w := httptest.NewRecorder()
 			cmh.ServeHTTP(w, makeRequest("default", "c1"))

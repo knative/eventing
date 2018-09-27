@@ -22,7 +22,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/knative/eventing/pkg/sidecar/clientfactory"
 	"github.com/knative/eventing/pkg/sidecar/configmaphandler"
 	"go.uber.org/zap"
 	"net/http"
@@ -46,7 +45,7 @@ func main() {
 		panic(err)
 	}
 
-	cmh, err := configmaphandler.NewHandler(logger, configmaphandler.ConfigDir, &clientfactory.Standard{})
+	cmh, err := configmaphandler.NewHandler(logger, configmaphandler.ConfigDir)
 	if err != nil {
 		logger.Fatal("Unable to create configmaphandler.Handler", zap.Error(err))
 	}
