@@ -34,13 +34,11 @@ func (cs *ChannelSpec) Validate() *apis.FieldError {
 		errs = errs.Also(apis.ErrMissingField("provisioner"))
 	}
 
-	if cs.Channelable != nil {
-		for i, subscriber := range cs.Channelable.Subscribers {
-			if subscriber.SinkableDomain == "" && subscriber.CallableDomain == "" {
-				fe := apis.ErrMissingField("sinkableDomain", "callableDomain")
-				fe.Details = "expected at least one of, got none"
-				errs = errs.Also(fe.ViaField(fmt.Sprintf("subscriber[%d]", i)).ViaField("channelable"))
-			}
+	for i, subscriber := range cs.Subscribers {
+		if subscriber.SinkableDomain == "" && subscriber.CallableDomain == "" {
+			fe := apis.ErrMissingField("sinkableDomain", "callableDomain")
+			fe.Details = "expected at least one of, got none"
+			errs = errs.Also(fe.ViaField(fmt.Sprintf("subscriber[%d]", i)))
 		}
 	}
 
@@ -55,7 +53,7 @@ func (current *Channel) CheckImmutableFields(og apis.Immutable) *apis.FieldError
 	if !ok {
 		return &apis.FieldError{Message: "The provided resource was not a Channel"}
 	}
-	ignoreArguments := cmpopts.IgnoreFields(ChannelSpec{}, "Arguments", "Channelable")
+	ignoreArguments := cmpopts.IgnoreFields(ChannelSpec{}, "Arguments", "Subscribers")
 	if diff := cmp.Diff(original.Spec, current.Spec, ignoreArguments); diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed",

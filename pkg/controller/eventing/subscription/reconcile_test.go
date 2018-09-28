@@ -88,7 +88,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribers": []interface{}{},
 					},
 					"status": map[string]interface{}{
 						"notsubscribable": map[string]interface{}{
@@ -120,7 +120,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribers": []interface{}{},
 					},
 					"status": map[string]interface{}{
 						"subscribable": map[string]interface{}{
@@ -152,7 +152,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribers": []interface{}{},
 					},
 					"status": map[string]interface{}{
 						"subscribable": map[string]interface{}{
@@ -197,7 +197,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribers": []interface{}{},
 					},
 					"status": map[string]interface{}{
 						"subscribable": map[string]interface{}{
@@ -249,7 +249,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribers": []interface{}{},
 					},
 					"status": map[string]interface{}{
 						"subscribable": map[string]interface{}{
@@ -284,7 +284,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      resultChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribers": []interface{}{},
 					},
 					"status": map[string]interface{}{
 						"subscribable": map[string]interface{}{
@@ -321,7 +321,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribers": []interface{}{},
 					},
 					"status": map[string]interface{}{
 						"subscribable": map[string]interface{}{
@@ -356,7 +356,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      resultChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribers": []interface{}{},
 					},
 					"status": map[string]interface{}{
 						"subscribable": map[string]interface{}{
@@ -477,15 +477,6 @@ func om(namespace, name string) metav1.ObjectMeta {
 		Namespace: namespace,
 		Name:      name,
 		SelfLink:  fmt.Sprintf("/apis/eventing/v1alpha1/namespaces/%s/object/%s", namespace, name),
-	}
-}
-func feedObjectMeta(namespace, generateName string) metav1.ObjectMeta {
-	return metav1.ObjectMeta{
-		Namespace:    namespace,
-		GenerateName: generateName,
-		OwnerReferences: []metav1.OwnerReference{
-			getOwnerReference(true),
-		},
 	}
 }
 

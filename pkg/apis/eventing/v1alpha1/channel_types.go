@@ -78,8 +78,20 @@ type ChannelSpec struct {
 	// +optional
 	Arguments *runtime.RawExtension `json:"arguments,omitempty"`
 
-	// Channel conforms to Duck type Channelable.
-	Channelable *duckv1alpha1.Channelable `json:"channelable,omitempty"`
+	// Subscribers is information about subscriptions used to implement message forwarding.
+	Subscribers []ChannelSubscriberSpec `json:"subscribers,omitempty"`
+}
+
+// ChannelSubscriberSpec defines a single subscriber to a Channel.
+type ChannelSubscriberSpec struct {
+	// CallableDomain is the endpoint for the call
+	// +OneOf(CallableDomain, SinkableDomain)
+	// +optional
+	CallableDomain string `json:"callableDomain,omitempty"`
+	// SinkableDomain is the endpoint for the result
+	// +OneOf(CallableDomain, SinkableDomain)
+	// +optional
+	SinkableDomain string `json:"sinkableDomain,omitempty"`
 }
 
 var chanCondSet = duckv1alpha1.NewLivingConditionSet(ChannelConditionProvisioned)

@@ -21,7 +21,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/pkg/apis"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -56,12 +55,11 @@ func TestChannelValidation(t *testing.T) {
 						Name: "foo",
 					},
 				},
-				Channelable: &duckv1alpha1.Channelable{
-					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{{
-						CallableDomain: "callableendpoint",
-						SinkableDomain: "resultendpoint",
-					}},
+				Subscribers: []ChannelSubscriberSpec{{
+					CallableDomain: "callableendpoint",
+					SinkableDomain: "resultendpoint",
 				}},
+			},
 		},
 		want: nil,
 	}, {
@@ -73,15 +71,14 @@ func TestChannelValidation(t *testing.T) {
 						Name: "foo",
 					},
 				},
-				Channelable: &duckv1alpha1.Channelable{
-					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{{
-						CallableDomain: "callableendpoint",
-						SinkableDomain: "callableendpoint",
-					}, {}},
-				}},
+				Subscribers: []ChannelSubscriberSpec{{
+					CallableDomain: "callableendpoint",
+					SinkableDomain: "callableendpoint",
+				}, {}},
+			},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("spec.channelable.subscriber[1].callableDomain", "spec.channelable.subscriber[1].sinkableDomain")
+			fe := apis.ErrMissingField("spec.subscriber[1].callableDomain", "spec.subscriber[1].sinkableDomain")
 			fe.Details = "expected at least one of, got none"
 			return fe
 		}(),
@@ -94,17 +91,15 @@ func TestChannelValidation(t *testing.T) {
 						Name: "foo",
 					},
 				},
-				Channelable: &duckv1alpha1.Channelable{
-					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{{}, {}},
-				},
+				Subscribers: []ChannelSubscriberSpec{{}, {}},
 			},
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
-			fe := apis.ErrMissingField("spec.channelable.subscriber[0].callableDomain", "spec.channelable.subscriber[0].sinkableDomain")
+			fe := apis.ErrMissingField("spec.subscriber[0].callableDomain", "spec.subscriber[0].sinkableDomain")
 			fe.Details = "expected at least one of, got none"
 			errs = errs.Also(fe)
-			fe = apis.ErrMissingField("spec.channelable.subscriber[1].callableDomain", "spec.channelable.subscriber[1].sinkableDomain")
+			fe = apis.ErrMissingField("spec.subscriber[1].callableDomain", "spec.subscriber[1].sinkableDomain")
 			fe.Details = "expected at least one of, got none"
 			errs = errs.Also(fe)
 			return errs
