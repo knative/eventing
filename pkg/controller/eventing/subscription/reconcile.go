@@ -252,9 +252,7 @@ func (r *reconciler) reconcileFromChannel(namespace string, subscribable corev1.
 	// TODO: Handle deletes.
 
 	after := original.DeepCopy()
-	after.Spec.Channelable = &duckv1alpha1.Channelable{
-		Subscribers: []duckv1alpha1.ChannelSubscriberSpec{{CallableDomain: callDomain, SinkableDomain: resultDomain}},
-	}
+	after.Spec.Subscribers = []duckv1alpha1.ChannelSubscriberSpec{{CallableDomain: callDomain, SinkableDomain: resultDomain}}
 
 	patch, err := duck.CreatePatch(original, after)
 	if err != nil {
