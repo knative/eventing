@@ -20,8 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"encoding/json"
-
 	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
@@ -53,9 +51,6 @@ var _ apis.Validatable = (*ClusterProvisioner)(nil)
 var _ apis.Defaultable = (*ClusterProvisioner)(nil)
 var _ runtime.Object = (*ClusterProvisioner)(nil)
 var _ webhook.GenericCRD = (*ClusterProvisioner)(nil)
-
-// Check that ConfigurationStatus may have its conditions managed.
-var _ duckv1alpha1.ConditionsAccessor = (*ClusterProvisionerStatus)(nil)
 
 // Check that ClusterProvisioner implements the Conditions duck type.
 var _ = duck.VerifyType(&ClusterProvisioner{}, &duckv1alpha1.Conditions{})
@@ -100,20 +95,9 @@ const (
 	ClusterProvisionerConditionProvisionerReady duckv1alpha1.ConditionType = "ProvisionerReady"
 )
 
-// GetSpecJSON returns spec as json
-func (p *ClusterProvisioner) GetSpecJSON() ([]byte, error) {
-	return json.Marshal(p.Spec)
-}
-
 // GetCondition returns the condition currently associated with the given type, or nil.
 func (ps *ClusterProvisionerStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
 	return cProvCondSet.Manage(ps).GetCondition(t)
-}
-
-// GetConditions returns the Conditions array. This enables generic handling of
-// conditions by implementing the duckv1alpha1.Conditions interface.
-func (ps *ClusterProvisionerStatus) GetConditions() duckv1alpha1.Conditions {
-	return ps.Conditions
 }
 
 // IsReady returns true if the resource is ready overall.
@@ -134,12 +118,6 @@ func (ps *ClusterProvisionerStatus) MarkProvisionerNotReady(reason, messageForma
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (ps *ClusterProvisionerStatus) InitializeConditions() {
 	cProvCondSet.Manage(ps).InitializeConditions()
-}
-
-// SetConditions sets the Conditions array. This enables generic handling of
-// conditions by implementing the duckv1alpha1.Conditions interface.
-func (ps *ClusterProvisionerStatus) SetConditions(conditions duckv1alpha1.Conditions) {
-	ps.Conditions = conditions
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

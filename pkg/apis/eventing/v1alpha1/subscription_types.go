@@ -47,9 +47,6 @@ var _ apis.Immutable = (*Subscription)(nil)
 var _ runtime.Object = (*Subscription)(nil)
 var _ webhook.GenericCRD = (*Subscription)(nil)
 
-// Check that ConfigurationStatus may have its conditions managed.
-var _ duckv1alpha1.ConditionsAccessor = (*SubscriptionStatus)(nil)
-
 // Check that Subscription implements the Conditions duck type.
 var _ = duck.VerifyType(&Subscription{}, &duckv1alpha1.Conditions{})
 
@@ -208,12 +205,6 @@ func (ss *SubscriptionStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1
 	return subCondSet.Manage(ss).GetCondition(t)
 }
 
-// GetConditions returns the Conditions array. This enables generic handling of
-// conditions by implementing the duckv1alpha1.Conditions interface.
-func (ss *SubscriptionStatus) GetConditions() duckv1alpha1.Conditions {
-	return ss.Conditions
-}
-
 // IsReady returns true if the resource is ready overall.
 func (ss *SubscriptionStatus) IsReady() bool {
 	return subCondSet.Manage(ss).IsHappy()
@@ -232,12 +223,6 @@ func (ss *SubscriptionStatus) MarkReferencesResolved() {
 // MarkFromReady sets the FromReady condition to True state.
 func (ss *SubscriptionStatus) MarkFromReady() {
 	subCondSet.Manage(ss).MarkTrue(SubscriptionConditionFromReady)
-}
-
-// SetConditions sets the Conditions array. This enables generic handling of
-// conditions by implementing the duckv1alpha1.Conditions interface.
-func (ss *SubscriptionStatus) SetConditions(conditions duckv1alpha1.Conditions) {
-	ss.Conditions = conditions
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
