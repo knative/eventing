@@ -26,14 +26,16 @@ type SchemeFunc func(*runtime.Scheme) error
 // ProvideFunc adds a controller to a Manager.
 type ProvideFunc func(mgr manager.Manager, log logr.Logger) (controller.Controller, error)
 
-// controllerRuntimeStart runs controllers written for controller-runtime. It's
-// intended to be called from main(). Any controllers migrated to use
-// controller-runtime should move their initialization to this function.
-func controllerRuntimeStart() error {
+func main() {
+	flag.Parse()
+	logf.SetLogger(logf.ZapLogger(false))
+	entryLog := log.WithName("entrypoint")
+
 	// Setup a Manager
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
 	if err != nil {
-		return err
+		entryLog.Error(err, "unable to run controller manager")
+		os.Exit(1)
 	}
 
 	// Add custom types to this array to get them into the manager's scheme.
@@ -53,19 +55,10 @@ func controllerRuntimeStart() error {
 
 	for _, provider := range providers {
 		if _, err := provider(mgr, log); err != nil {
-			return err
+			entryLog.Error(err, "unable to run controller manager")
+			os.Exit(1)
 		}
 	}
 
-	return mgr.Start(signals.SetupSignalHandler())
-}
-
-func main() {
-	flag.Parse()
-	logf.SetLogger(logf.ZapLogger(false))
-	entryLog := log.WithName("entrypoint")
-	if err := controllerRuntimeStart(); err != nil {
-		entryLog.Error(err, "unable to run controller manager")
-		os.Exit(1)
-	}
+	mgr.Start(signals.SetupSignalHandler())
 }

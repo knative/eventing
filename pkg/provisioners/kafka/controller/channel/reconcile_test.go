@@ -56,14 +56,30 @@ var testCases = []controllertesting.TestCase{
 	{
 		Name: "new channel with valid provisioner: adds not provisioned status",
 		InitialState: []runtime.Object{
-			getNewClusterProvisioner(clusterProvisionerName),
+			getNewClusterProvisioner(clusterProvisionerName, true),
 			getNewChannel(channelName, clusterProvisionerName),
 			getControllerConfigMap(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
 		WantResult:   reconcile.Result{},
 		WantPresent: []runtime.Object{
-			getNewChannelUnknownStatus(channelName, clusterProvisionerName),
+			getNewChannelNotProvisionedStatus(channelName, clusterProvisionerName, "NotImplemented"),
+		},
+		IgnoreTimes: true,
+	},
+	{
+		Name: "new channel with provisioner not ready: error",
+		InitialState: []runtime.Object{
+			getNewClusterProvisioner(clusterProvisionerName, false),
+			getNewChannel(channelName, clusterProvisionerName),
+			getControllerConfigMap(),
+		},
+		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
+		WantResult:   reconcile.Result{},
+		WantErrMsg:   "ClusterProvisioner " + clusterProvisionerName + " is not ready",
+		WantPresent: []runtime.Object{
+			getNewChannelNotProvisionedStatus(channelName, clusterProvisionerName,
+				"ClusterProvisioner "+clusterProvisionerName+" is not ready"),
 		},
 		IgnoreTimes: true,
 	},
@@ -82,8 +98,8 @@ var testCases = []controllertesting.TestCase{
 		Name: "new channel with provisioner not managed by this controller: skips channel",
 		InitialState: []runtime.Object{
 			getNewChannel(channelName, "not-our-provisioner"),
-			getNewClusterProvisioner("not-our-provisioner"),
-			getNewClusterProvisioner(clusterProvisionerName),
+			getNewClusterProvisioner("not-our-provisioner", true),
+			getNewClusterProvisioner(clusterProvisionerName, true),
 			getControllerConfigMap(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
@@ -154,7 +170,7 @@ func getNewChannel(name, provisioner string) *eventingv1alpha1.Channel {
 	return channel
 }
 
-func getNewChannelUnknownStatus(name, provisioner string) *eventingv1alpha1.Channel {
+func getNewChannelNotProvisionedStatus(name, provisioner, msg string) *eventingv1alpha1.Channel {
 	c := getNewChannel(name, provisioner)
 	c.Status = eventingv1alpha1.ChannelStatus{
 		Conditions: []duckv1alpha1.Condition{
@@ -162,12 +178,12 @@ func getNewChannelUnknownStatus(name, provisioner string) *eventingv1alpha1.Chan
 				Type:    eventingv1alpha1.ChannelConditionProvisioned,
 				Status:  corev1.ConditionFalse,
 				Reason:  "NotProvisioned",
-				Message: "NotImplemented"},
+				Message: msg},
 			{
 				Type:    eventingv1alpha1.ChannelConditionReady,
 				Status:  corev1.ConditionFalse,
 				Reason:  "NotProvisioned",
-				Message: "NotImplemented",
+				Message: msg,
 			},
 		},
 	}
@@ -181,7 +197,13 @@ func channelType() metav1.TypeMeta {
 	}
 }
 
-func getNewClusterProvisioner(name string) *eventingv1alpha1.ClusterProvisioner {
+func getNewClusterProvisioner(name string, isReady bool) *eventingv1alpha1.ClusterProvisioner {
+	var condStatus corev1.ConditionStatus
+	if isReady {
+		condStatus = corev1.ConditionTrue
+	} else {
+		condStatus = corev1.ConditionFalse
+	}
 	clusterProvisioner := &eventingv1alpha1.ClusterProvisioner{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
@@ -198,11 +220,11 @@ func getNewClusterProvisioner(name string) *eventingv1alpha1.ClusterProvisioner 
 			Conditions: []duckv1alpha1.Condition{
 				{
 					Type:   eventingv1alpha1.ClusterProvisionerConditionProvisionerReady,
-					Status: corev1.ConditionTrue,
+					Status: condStatus,
 				},
 				{
 					Type:   eventingv1alpha1.ClusterProvisionerConditionReady,
-					Status: corev1.ConditionTrue,
+					Status: condStatus,
 				},
 			},
 		},
@@ -224,9 +246,8 @@ func getControllerConfigMap() *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: om(system.Namespace, controller.ControllerConfigMapName),
 		Data: map[string]string{
-			controller.ProvisionerNameConfigMapKey:      clusterProvisionerName,
-			controller.ProvisionerNamespaceConfigMapKey: "",
-			controller.BrokerConfigMapKey:               "test-broker",
+			controller.ClusterProvisionerNameConfigMapKey: clusterProvisionerName,
+			controller.BrokerConfigMapKey:                 "test-broker",
 		},
 	}
 }

@@ -166,9 +166,8 @@ func getControllerConfigMap() *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: om(system.Namespace, ControllerConfigMapName),
 		Data: map[string]string{
-			ProvisionerNameConfigMapKey:      clusterProvisionerName,
-			ProvisionerNamespaceConfigMapKey: "",
-			BrokerConfigMapKey:               "test-broker",
+			ClusterProvisionerNameConfigMapKey: clusterProvisionerName,
+			BrokerConfigMapKey:                 "test-broker",
 		},
 	}
 }

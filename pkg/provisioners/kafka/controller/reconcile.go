@@ -92,7 +92,7 @@ func (r *reconciler) reconcile(provisioner *v1alpha1.ClusterProvisioner) error {
 	}
 
 	// Skip channel provisioners that we don't manage
-	if provisioner.Name != config.Name || provisioner.Namespace != config.Namespace {
+	if provisioner.Name != config.Name {
 		return nil
 	}
 

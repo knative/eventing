@@ -100,8 +100,8 @@ func (r *reconciler) reconcile(channel *v1alpha1.Channel) error {
 
 	// The provisioner must be ready
 	if !clusterProvisioner.Status.IsReady() {
-		r.log.Info("provisioner is not ready", "provisioner", clusterProvisioner)
-		return nil
+		channel.Status.MarkAsNotProvisioned("NotProvisioned", "ClusterProvisioner %s is not ready", clusterProvisioner.Name)
+		return fmt.Errorf("ClusterProvisioner %s is not ready", clusterProvisioner.Name)
 	}
 
 	// TODO: provision channel
@@ -117,8 +117,7 @@ func (r *reconciler) getClusterProvisioner() (*v1alpha1.ClusterProvisioner, erro
 	}
 	clusterProvisioner := &v1alpha1.ClusterProvisioner{}
 	objKey := client.ObjectKey{
-		Namespace: config.Namespace,
-		Name:      config.Name,
+		Name: config.Name,
 	}
 	if err = r.client.Get(context.TODO(), objKey, clusterProvisioner); err != nil {
 		return nil, err

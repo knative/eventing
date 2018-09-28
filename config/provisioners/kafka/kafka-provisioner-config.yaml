@@ -19,8 +19,6 @@ metadata:
   namespace: knative-eventing
 data:
   # Name of the provisioner that this controller represents
-  provisioner-name: kafka
-  # Leave namespace empty string for cluster provisioner
-  provisioner-namespace: ""
+  cluster-provisioner-name: kafka
   # Broker URL's for the provisioner
   brokers: kafkabroker.kafka:9092

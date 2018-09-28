@@ -16,15 +16,13 @@ const (
 	// namespace that holds the configuration for this controller.
 	ControllerConfigMapName = "kafka-provisioner-config"
 
-	ProvisionerNameConfigMapKey      = "provisioner-name"
-	ProvisionerNamespaceConfigMapKey = "provisioner-namespace"
-	BrokerConfigMapKey               = "brokers"
+	ClusterProvisionerNameConfigMapKey = "cluster-provisioner-name"
+	BrokerConfigMapKey                 = "brokers"
 )
 
 type KafkaProvisionerConfig struct {
-	Name      string
-	Namespace string
-	Brokers   []string
+	Name    string
+	Brokers []string
 }
 
 // GetProvisionerConfig returns the details of the associated Provisioner/ClusterProvisioner object
@@ -41,16 +39,10 @@ func GetProvisionerConfig(client runtimeClient.Client) (*KafkaProvisionerConfig,
 
 	config := &KafkaProvisionerConfig{}
 
-	if value, ok := configMap.Data[ProvisionerNameConfigMapKey]; ok {
+	if value, ok := configMap.Data[ClusterProvisionerNameConfigMapKey]; ok {
 		config.Name = value
 	} else {
-		return nil, fmt.Errorf("missing key %s in config map %s", ProvisionerNameConfigMapKey, ControllerConfigMapName)
-	}
-
-	if value, ok := configMap.Data[ProvisionerNamespaceConfigMapKey]; ok {
-		config.Namespace = value
-	} else {
-		return nil, fmt.Errorf("missing key %s in config map %s", ProvisionerNamespaceConfigMapKey, ControllerConfigMapName)
+		return nil, fmt.Errorf("missing key %s in config map %s", ClusterProvisionerNameConfigMapKey, ControllerConfigMapName)
 	}
 
 	if value, ok := configMap.Data[BrokerConfigMapKey]; ok {
