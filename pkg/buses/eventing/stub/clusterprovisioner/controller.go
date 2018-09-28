@@ -78,6 +78,7 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 	return c, h, nil
 }
 
+// swapHttpHandlerConfig creates a function that will lock
 func swapHttpHandlerConfig(s *swappable.Handler, sLock sync.Mutex) func(multichannelfanout.Config) error {
 	return func(config multichannelfanout.Config) error {
 		sLock.Lock()
