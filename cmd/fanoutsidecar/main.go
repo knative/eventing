@@ -22,14 +22,22 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/knative/eventing/pkg/sidecar/configmaphandler"
+	"github.com/knative/eventing/pkg/sidecar/configmap/filesystem"
+	"github.com/knative/eventing/pkg/sidecar/configmap/watcher"
+	"github.com/knative/eventing/pkg/sidecar/swappable"
+	"github.com/knative/eventing/pkg/system"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"net/http"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 	"time"
 )
 
 const (
-	port = 11235
+	configMapName = "in-memory-bus-config"
 )
 
 var (
@@ -38,6 +46,9 @@ var (
 )
 
 func main() {
+	portFlag := flag.Int("sidecar_port", -1, "The port to run the sidecar on.")
+	configMapFlag := flag.String("config_map_noticer", "", "The system to notice changes to the ConfigMap. Valid values are: 'volume', 'watcher'.")
+
 	flag.Parse()
 
 	logger, err := zap.NewProduction()
@@ -45,17 +56,60 @@ func main() {
 		panic(err)
 	}
 
-	cmh, err := configmaphandler.NewHandler(logger, configmaphandler.ConfigDir)
-	if err != nil {
-		logger.Fatal("Unable to create configmaphandler.Handler", zap.Error(err))
+	if *portFlag < 0 {
+		logger.Fatal("--sidecar_port flag must be set")
 	}
+
+	sh, err := swappable.NewEmptyHandler(logger)
+	if err != nil {
+		logger.Fatal("Unable to create swappable.Handler", zap.Error(err))
+	}
+
+	// Setup something to notice that the ConfigMap has updated.
+	switch *configMapFlag {
+	case "volume":
+		_, err = filesystem.NewConfigMapWatcher(logger, filesystem.ConfigDir, sh.UpdateConfig)
+		if err != nil {
+			logger.Fatal("Unable to create filesystem.configMapWatcher", zap.Error(err))
+		}
+	case "watcher":
+		setupWatcher(logger, sh.UpdateConfig)
+	default:
+		logger.Fatal("Need to provide the --config_map_noticer flag")
+	}
+
 	s := &http.Server{
-		Addr:         fmt.Sprintf(":%v", port),
-		Handler:      cmh,
+		Addr:         fmt.Sprintf(":%d", *portFlag),
+		Handler:      sh,
 		ErrorLog:     zap.NewStdLog(logger),
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 	}
 	logger.Info("Fanout sidecar Listening...")
 	s.ListenAndServe()
+}
+
+func setupWatcher(logger *zap.Logger, configUpdated swappable.UpdateConfig) {
+	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
+	if err != nil {
+		logger.Fatal("Error starting manager.", zap.Error(err))
+	}
+
+	// Add custom types to this array to get them into the manager's scheme.
+	corev1.AddToScheme(mgr.GetScheme())
+
+
+	cmName := types.NamespacedName{
+		Namespace: system.Namespace,
+		Name: configMapName,
+	}
+	_, err = watcher.NewWatcher(logger, mgr, cmName, configUpdated)
+	if err != nil {
+		logger.Fatal("Unable to create watcher.configMapWatcher", zap.Error(err))
+	}
+
+	// set up signals so we handle the first shutdown signal gracefully
+	stopCh := signals.SetupSignalHandler()
+	// Start blocks forever.
+	go mgr.Start(stopCh)
 }

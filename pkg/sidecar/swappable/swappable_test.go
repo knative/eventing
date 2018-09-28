@@ -86,20 +86,101 @@ func TestHandler(t *testing.T) {
 	}
 }
 
+func TestHandler_InvalidConfigChange(t *testing.T) {
+	testCases := map[string]struct {
+		initialConfig   multichannelfanout.Config
+		badUpdateConfig multichannelfanout.Config
+	}{
+		"invalid config change": {
+			initialConfig: multichannelfanout.Config{
+				ChannelConfigs: []multichannelfanout.ChannelConfig{
+					{
+						Namespace: namespace,
+						Name:      name,
+						FanoutConfig: fanout.Config{
+							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+								{
+									CallableDomain: replaceDomain,
+								},
+							},
+						},
+					},
+				},
+			},
+			badUpdateConfig: multichannelfanout.Config{
+				// Duplicate (namespace, name).
+				ChannelConfigs: []multichannelfanout.ChannelConfig{
+					{
+						Namespace: namespace,
+						Name:      name,
+					},
+					{
+						Namespace: namespace,
+						Name:      name,
+					},
+				},
+			},
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			h, err := NewEmptyHandler(zap.NewNop())
+			if err != nil {
+				t.Errorf("Unexpected error creating handler: %v", err)
+			}
+
+			server := httptest.NewServer(&successHandler{})
+			defer server.Close()
+
+			rc := replaceDomains(tc.initialConfig, server.URL[7:])
+			err = h.UpdateConfig(&rc)
+			if err != nil {
+				t.Errorf("Unexpected error updating to initial config: %v", tc.initialConfig)
+			}
+			assertRequestOK(t, h)
+
+			// Try to update to the new config, it will fail. But we should still be able to hit the
+			// original server.
+			ruc := replaceDomains(tc.badUpdateConfig, server.URL[7:])
+			err = h.UpdateConfig(&ruc)
+			if err == nil {
+				t.Errorf("Expected an error when updating to a bad config.")
+			}
+			assertRequestOK(t, h)
+		})
+	}
+}
+
+func TestHandler_NilConfigChange(t *testing.T) {
+	h, err := NewEmptyHandler(zap.NewNop())
+	if err != nil {
+		t.Errorf("Unexpected error creating handler: %v", err)
+	}
+
+	err = h.UpdateConfig(nil)
+	if err == nil {
+		t.Errorf("Expected an error when updating to a nil config.")
+	}
+}
+
 func updateConfigAndTest(t *testing.T, h *Handler, config multichannelfanout.Config) {
 	server := httptest.NewServer(&successHandler{})
 	defer server.Close()
 
-	nh, err := multichannelfanout.NewHandler(zap.NewNop(), replaceDomains(config, server.URL[7:]))
+	rc := replaceDomains(config, server.URL[7:])
+	orig := h.fanout.Load()
+	err := h.UpdateConfig(&rc)
 	if err != nil {
-		t.Errorf("Unexpected error creating multiChannelFanoutHandler: %v", err)
+		t.Errorf("Unexpected error updating config: %+v", err)
 	}
-	orig := h.GetMultiChannelFanoutHandler()
-	h.SetMultiChannelFanoutHandler(nh)
-	if orig == h.GetMultiChannelFanoutHandler() {
+	if orig == h.fanout.Load() {
 		t.Errorf("Expected the inner multiChannelFanoutHandler to change, it didn't: %v", orig)
 	}
 
+	assertRequestOK(t, h)
+}
+
+func assertRequestOK(t *testing.T, h *Handler) {
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, makeRequest(namespace, name))
 	if w.Code != http.StatusOK {
