@@ -193,7 +193,6 @@ func (b *bus) dispatchMessage(subscription *channelsv1alpha1.Subscription, messa
 	subscriber := subscription.Spec.Subscriber
 	defaults := DispatchDefaults{
 		Namespace: subscription.Namespace,
-		ReplyTo:   subscription.Spec.ReplyTo,
 	}
-	return b.dispatcher.DispatchMessage(message, subscriber, defaults)
+	return b.dispatcher.DispatchMessage(message, subscriber, subscription.Spec.ReplyTo, defaults)
 }
