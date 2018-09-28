@@ -20,6 +20,8 @@ import (
 	"context"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/controller"
+	cpcontroller "github.com/knative/eventing/pkg/controller/eventing/stub/clusterprovisioner"
+	multichannelfanoutparse "github.com/knative/eventing/pkg/sidecar/configmap/parse"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	"github.com/knative/eventing/pkg/system"
@@ -32,6 +34,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,8 +42,9 @@ import (
 )
 
 const (
-	PortName = "http"
-	PortNumber = 80
+	PortName      = "http"
+	PortNumber    = 80
+	finalizerName = controllerAgentName
 )
 
 type reconciler struct {
@@ -48,12 +52,7 @@ type reconciler struct {
 	restConfig *rest.Config
 	recorder   record.EventRecorder
 
-	// This reconciler controls Channels provisioned by this stubProvisioner.
-	stubProvisioner *corev1.ObjectReference
-
-	config multichannelfanout.Config
-
-	syncHttpChannelConfig func() error
+	configMapKey client.ObjectKey
 
 	logger *zap.Logger
 }
@@ -67,7 +66,7 @@ func (r *reconciler) InjectClient(c client.Client) error {
 }
 
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	//TODO use this to store the logger and set a deadline
+	// TODO: use this to store the logger and set a deadline
 	ctx := context.TODO()
 	logger := r.logger.With(zap.Any("request", request))
 
@@ -89,10 +88,10 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	// Does this Controller control this Channel?
 	if !r.shouldReconcile(c) {
-		logger.Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("stubProvisioner", r.stubProvisioner), zap.Any("ref", c.Spec.Provisioner.Ref))
+		logger.Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("ref", c.Spec.Provisioner.Ref))
 		return reconcile.Result{}, nil
 	}
-	logger.Debug("Reconciling Channel")
+	logger.Info("Reconciling Channel")
 
 	err = r.reconcile(ctx, c)
 	if err != nil {
@@ -101,7 +100,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		// regardless of the error.
 	}
 
-	updateStatusErr := r.updateChannelStatus(ctx, c)
+	updateStatusErr := r.updateChannel(ctx, c)
 	if updateStatusErr != nil {
 		logger.Info("Error updating Channel Status", zap.Error(updateStatusErr))
 		return reconcile.Result{}, updateStatusErr
@@ -113,7 +112,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 // shouldReconcile determines if this Controller should control (and therefore reconcile) a given
 // ClusterProvisioner. This Controller only handles Stub buses.
 func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
-	return equality.Semantic.DeepEqual(r.stubProvisioner, c.Spec.Provisioner.Ref)
+	return cpcontroller.IsControlled(c.Spec.Provisioner)
 }
 
 func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) error {
@@ -122,39 +121,31 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	// We are syncing three things:
 	// 1. The K8s Service to talk to this Channel.
 	// 2. The Istio VirtualService to talk to this Channel.
-	// 3. The configuration of Channel's subscriptions.
+	// 3. The configuration of all Channel subscriptions.
 
 	// We always need to sync the Channel config, so do it first.
 	err := r.syncChannelConfig(ctx)
 	if err != nil {
-		logger.Info("Error removing the Channel's config", zap.Error(err))
+		logger.Info("Error updating syncing the Channel config", zap.Error(err))
 		return err
 	}
 
 	if c.DeletionTimestamp != nil {
-		err := r.deleteVirtualService(ctx, c)
-		if err != nil {
-			logger.Info("Error deleting the Provisioner Controller for the ClusterProvisioner.", zap.Error(err))
-			return err
-		}
-		err = r.deleteK8sService(ctx, c)
-		if err != nil {
-			logger.Info("Error deleting the ClusterProvisioner's K8s Service", zap.Error(err))
-			return err
-		}
+		// K8s garbage collection will delete the K8s service and VirtualService for this channel.
+		// We use a finalizer to ensure the channel config has been synced.
+		r.removeFinalizer(c)
 		return nil
 	}
 
-	err = r.syncChannelConfig(ctx)
-	if err != nil {
-		logger.Info("Error syncing the Channel config", zap.Error(err))
-		return err
-	}
-	err = r.createK8sService(ctx, c)
+	r.addFinalizer(c)
+	r.makeSubscribable(c)
+
+	svc, err := r.createK8sService(ctx, c)
 	if err != nil {
 		logger.Info("Error creating the Channel's K8s Service", zap.Error(err))
 		return err
 	}
+	r.makeSinkable(c, svc)
 
 	err = r.createVirtualService(ctx, c)
 	if err != nil {
@@ -166,8 +157,36 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	return nil
 }
 
+// makeSubscribable alters the Channel to conform to the Knative Eventing Subscribable interface.
+func (r *reconciler) makeSubscribable(c *eventingv1alpha1.Channel) {
+	// Point at itself.
+	c.Status.Subscribable.Channelable = corev1.ObjectReference{
+		Kind: "Channel",
+		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+		Namespace: c.Namespace,
+		Name: c.Name,
+	}
+}
+
+// makeSinkable alters the Channel to conform to the Knative Eventing Sinkable interface.
+func (r *reconciler) makeSinkable(c *eventingv1alpha1.Channel, svc *corev1.Service) {
+	c.Status.Sinkable.DomainInternal = controller.ServiceHostName(svc.Name, svc.Namespace)
+}
+
+func (r *reconciler) addFinalizer(c *eventingv1alpha1.Channel) {
+	finalizers := sets.NewString(c.Finalizers...)
+	finalizers.Insert(finalizerName)
+	c.Finalizers = finalizers.List()
+}
+
+func (r *reconciler) removeFinalizer(c *eventingv1alpha1.Channel) {
+	finalizers := sets.NewString(c.Finalizers...)
+	finalizers.Delete(finalizerName)
+	c.Finalizers = finalizers.List()
+}
+
 func (r *reconciler) getK8sService(ctx context.Context, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
-		svcKey := types.NamespacedName{
+	svcKey := types.NamespacedName{
 		Namespace: c.Namespace,
 		Name:      controller.ChannelServiceName(c.Name),
 	}
@@ -176,7 +195,7 @@ func (r *reconciler) getK8sService(ctx context.Context, c *eventingv1alpha1.Chan
 	return svc, err
 }
 
-func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.Channel) error {
+func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
 	svc, err := r.getK8sService(ctx, c)
 
 	if errors.IsNotFound(err) {
@@ -186,41 +205,25 @@ func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.C
 
 	// If an error occurred in either Get or Create, we need to reconcile again.
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// Ensure this Channel is the owner of the K8s service.
+	// Check if this Channel is the owner of the K8s service.
 	if !metav1.IsControlledBy(svc, c) {
 		r.logger.Warn("Channel's K8s Service is not owned by the Channel", zap.Any("channel", c), zap.Any("service", svc))
 	}
-	return nil
+	return svc, nil
 }
 
-func (r *reconciler) deleteK8sService(ctx context.Context, c *eventingv1alpha1.Channel) error {
-	// TODO: Rely on the garbage collector?
-	svc, err := r.getK8sService(ctx, c)
-
-	if errors.IsNotFound(err) {
-		// Nothing to delete.
-		return nil
+func (r *reconciler) getVirtualService(ctx context.Context, c *eventingv1alpha1.Channel) (*istiov1alpha3.VirtualService, error) {
+	vsk := client.ObjectKey{
+		Namespace: c.Namespace,
+		Name:      controller.ChannelVirtualServiceName(c.ObjectMeta.Name),
 	}
-
-	if err != nil {
-		return err
-	}
-
-	// Verify that we own the Service before deleting it.
-	if metav1.IsControlledBy(svc, c) {
-		return r.client.Delete(ctx, svc)
-	} else {
-		r.logger.Warn("Channel's K8s Service is not owned by the Channel. Not deleting it.", zap.Any("channel", c), zap.Any("service", svc))
-		return nil
-	}
+	vs := &istiov1alpha3.VirtualService{}
+	err := r.client.Get(ctx, vsk, vs)
+	return vs, err
 }
-
-
-
-
 
 func (r *reconciler) createVirtualService(ctx context.Context, c *eventingv1alpha1.Channel) error {
 	virtualService, err := r.getVirtualService(ctx, c)
@@ -246,43 +249,12 @@ func (r *reconciler) createVirtualService(ctx context.Context, c *eventingv1alph
 	return nil
 }
 
-func (r *reconciler) deleteVirtualService(ctx context.Context, c *eventingv1alpha1.Channel) error {
-	virtualService, err := r.getVirtualService(ctx, c)
-
-	// If the resource doesn't exist, there is nothing to delete.
-	if errors.IsNotFound(err) {
-		return nil
-	}
-
-	if err != nil {
-		return err
-	}
-
-	// Verify that we own the VirtualService before deleting it.
-	if metav1.IsControlledBy(virtualService, c) {
-		return r.client.Delete(ctx, virtualService)
-	} else {
-		r.logger.Warn("VirtualService exists, but not owned by Channel. Not deleting it.", zap.Any("channel", c), zap.Any("virtualService", virtualService))
-		return nil
-	}
-}
-
-func (r *reconciler) getVirtualService(ctx context.Context, c *eventingv1alpha1.Channel) (*istiov1alpha3.VirtualService, error) {
-	vsk := client.ObjectKey{
-		Namespace: c.Namespace,
-		Name: controller.ChannelVirtualServiceName(c.ObjectMeta.Name),
-	}
-	vs := &istiov1alpha3.VirtualService{}
-	err := r.client.Get(ctx, vsk, vs)
-	return vs, err
-}
-
-// newService creates a new Service for a Channel resource. It also sets
-// the appropriate OwnerReferences on the resource so handleObject can discover
-// the Channel resource that 'owns' it.
+// newK8sService creates a new Service for a Channel resource. It also sets the appropriate
+// OwnerReferences on the resource so handleObject can discover the Channel resource that 'owns' it.
+// As well as being garbage collected when the Channel is deleted.
 func newK8sService(c *eventingv1alpha1.Channel) *corev1.Service {
 	labels := map[string]string{
-		"channel": c.Name,
+		"channel":     c.Name,
 		"provisioner": c.Spec.Provisioner.Ref.Name,
 	}
 	return &corev1.Service{
@@ -309,9 +281,9 @@ func newK8sService(c *eventingv1alpha1.Channel) *corev1.Service {
 	}
 }
 
-// newVirtualService creates a new VirtualService for a Channel resource. It also sets
-// the appropriate OwnerReferences on the resource so handleObject can discover
-// the Channel resource that 'owns' it.
+// newVirtualService creates a new VirtualService for a Channel resource. It also sets the
+// appropriate OwnerReferences on the resource so handleObject can discover the Channel resource
+// that 'owns' it. As well as being garbage collected when the Channel is deleted.
 func newVirtualService(channel *eventingv1alpha1.Channel) *istiov1alpha3.VirtualService {
 	labels := map[string]string{
 		"channel":     channel.Name,
@@ -361,7 +333,7 @@ func (r *reconciler) setStatusReady(c *eventingv1alpha1.Channel) {
 		},
 	}
 }
-func (r *reconciler) updateChannelStatus(ctx context.Context, u *eventingv1alpha1.Channel) error {
+func (r *reconciler) updateChannel(ctx context.Context, u *eventingv1alpha1.Channel) error {
 	o := &eventingv1alpha1.Channel{}
 	err := r.client.Get(ctx, client.ObjectKey{Namespace: u.Namespace, Name: u.Name}, o)
 	if err != nil {
@@ -369,8 +341,17 @@ func (r *reconciler) updateChannelStatus(ctx context.Context, u *eventingv1alpha
 		return err
 	}
 
+	updated := false
+	if !equality.Semantic.DeepEqual(o.Finalizers, u.Finalizers) {
+		updated = true
+		o.SetFinalizers(u.Finalizers)
+	}
 	if !equality.Semantic.DeepEqual(o.Status, u.Status) {
+		updated = true
 		o.Status = u.Status
+	}
+
+	if updated {
 		return r.client.Update(ctx, o)
 	}
 	return nil
@@ -383,15 +364,52 @@ func (r *reconciler) syncChannelConfig(ctx context.Context) error {
 		return err
 	}
 	config := multiChannelFanoutConfig(channels)
-	r.config = config
-	return r.syncHttpChannelConfig()
+	return r.writeConfigMap(ctx, config)
 }
 
-func (r *reconciler) getConfig() multichannelfanout.Config {
-	return r.config
+func (r *reconciler) writeConfigMap(ctx context.Context, config *multichannelfanout.Config) error {
+	logger := r.logger.With(zap.Any("configMap", r.configMapKey))
+
+	updated, err := multichannelfanoutparse.SerializeConfig(*config)
+	if err != nil {
+		r.logger.Error("Unable to serialize config", zap.Error(err), zap.Any("config", config))
+		return err
+	}
+
+	cm := &corev1.ConfigMap{}
+	err = r.client.Get(ctx, r.configMapKey, cm)
+	if errors.IsNotFound(err) {
+		cm = r.createNewConfigMap(updated)
+		err = r.client.Create(ctx, cm)
+	}
+	if err != nil {
+		logger.Info("Unable to get/create ConfigMap", zap.Error(err))
+		return err
+	}
+
+	cur := cm.Data[multichannelfanoutparse.MultiChannelFanoutConfigKey]
+	if equality.Semantic.DeepEqual(cur, updated) {
+		// Nothing to update.
+		return nil
+	}
+
+	cm.Data[multichannelfanoutparse.MultiChannelFanoutConfigKey] = updated
+	return r.client.Update(ctx, cm)
 }
 
-func multiChannelFanoutConfig(channels []eventingv1alpha1.Channel) multichannelfanout.Config {
+func (r *reconciler) createNewConfigMap(config string) *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: r.configMapKey.Namespace,
+			Name: r.configMapKey.Name,
+		},
+		Data: map[string]string{
+			multichannelfanoutparse.MultiChannelFanoutConfigKey: config,
+		},
+	}
+}
+
+func multiChannelFanoutConfig(channels []eventingv1alpha1.Channel) *multichannelfanout.Config {
 	cc := make([]multichannelfanout.ChannelConfig, 0)
 	for _, c := range channels {
 		channelable := c.Spec.Channelable
@@ -405,7 +423,7 @@ func multiChannelFanoutConfig(channels []eventingv1alpha1.Channel) multichannelf
 			})
 		}
 	}
-	return multichannelfanout.Config{
+	return &multichannelfanout.Config{
 		ChannelConfigs: cc,
 	}
 }

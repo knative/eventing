@@ -19,9 +19,7 @@ package clusterprovisioner
 import (
 	"context"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/buses/eventing/stub/channel"
 	"github.com/knative/eventing/pkg/controller"
-	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	"github.com/knative/eventing/pkg/system"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
@@ -37,20 +35,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"strings"
-	"sync"
 )
 
 type reconciler struct {
-	mgr    manager.Manager
+	mgr        manager.Manager
 	client     client.Client
 	restConfig *rest.Config
 	recorder   record.EventRecorder
-
-	channelControllersLock sync.Mutex
-	channelControllers map[corev1.ObjectReference]*channel.ConfigAndStopCh
-
-	swapHttpHandlerConfig func(config multichannelfanout.Config) error
 
 	logger *zap.Logger
 }
@@ -85,10 +76,11 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	// Does this Controller control this ClusterProvisioner?
-	if !shouldReconcile(cp) {
+	if !shouldReconcile(cp.Namespace, cp.Name) {
 		logger.Info("Not reconciling ClusterProvisioner, it is not controlled by this Controller", zap.String("APIVersion", cp.APIVersion), zap.String("Kind", cp.Kind), zap.String("Namespace", cp.Namespace), zap.String("name", cp.Name))
 		return reconcile.Result{}, nil
 	}
+	logger.Info("Reconciling ClusterProvisioner.")
 
 	err = r.reconcile(ctx, cp)
 	if err != nil {
@@ -106,46 +98,35 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	return reconcile.Result{}, err
 }
 
+func IsControlled(ref *eventingv1alpha1.ProvisionerReference) bool {
+	if ref != nil {
+		return shouldReconcile(ref.Ref.Namespace, ref.Ref.Name)
+	}
+	return false
+}
+
 // shouldReconcile determines if this Controller should control (and therefore reconcile) a given
 // ClusterProvisioner. This Controller only handles Stub buses.
-func shouldReconcile(cp *eventingv1alpha1.ClusterProvisioner) bool {
-	return cp.Namespace == "" && strings.HasPrefix(cp.Name, "stub-bus-provisioner-dispatcher")
+func shouldReconcile(namespace, name string) bool {
+	return namespace == "" && name == "stub-bus-provisioner"
 }
 
 func (r *reconciler) reconcile(ctx context.Context, cp *eventingv1alpha1.ClusterProvisioner) error {
 	logger := r.logger.With(zap.Any("clusterProvisioner", cp))
 
-	// We are syncing two things:
+	// We are syncing one thing.
 	// 1. The K8s Service to talk to this Stub bus.
 	//     - There is a single K8s Service for all requests going to this Stub bus.
-	// 2. The in-memory Controller watching for Channels using this ClusterProvisioner.
 
 	if cp.DeletionTimestamp != nil {
-		// Delete the in-memory controller for the channels.
-		// Delete the K8s service.
-		err := r.deleteProvisioner(ctx, cp)
-		if err != nil {
-			logger.Info("Error deleting the Provisioner Controller for the ClusterProvisioner.", zap.Error(err))
-			return err
-		}
-		err = r.deleteDispatcherService(ctx, cp)
-		if err != nil {
-			logger.Info("Error deleting the ClusterProvisioner's K8s Service", zap.Error(err))
-			return err
-		}
-		// TODO: Delete the ClusterProvisioner? Remove a finalizer?
+		// K8s garbage collection will delete the dispatcher service, once this ClusterProvisioner
+		// is deleted, so we don't need to do anything.
 		return nil
 	}
 
 	err := r.createDispatcherService(ctx, cp)
 	if err != nil {
 		logger.Info("Error creating the ClusterProvisioner's K8s Service", zap.Error(err))
-		return err
-	}
-
-	err = r.syncProvisioner(ctx, cp)
-	if err != nil {
-		logger.Info("Error creating the Provisioner Controller for the ClusterProvisioner", zap.Error(err))
 		return err
 	}
 
@@ -172,97 +153,11 @@ func (r *reconciler) createDispatcherService(ctx context.Context, cp *eventingv1
 		return err
 	}
 
-	// Ensure this ClusterProvisioner is the owner of the K8s service.
+	// Check if this ClusterProvisioner is the owner of the K8s service.
 	if !metav1.IsControlledBy(svc, cp) {
 		r.logger.Warn("ClusterProvisioner's K8s Service is not owned by the ClusterProvisioner", zap.Any("clusterProvisioner", cp), zap.Any("service", svc))
 	}
 	return nil
-}
-
-func (r *reconciler) deleteDispatcherService(ctx context.Context, cp *eventingv1alpha1.ClusterProvisioner) error {
-	// TODO: Rely on the garbage collector?
-	return nil
-}
-
-func (r *reconciler) syncProvisioner(ctx context.Context, cp *eventingv1alpha1.ClusterProvisioner) error {
-	cpRef := objectRef(cp)
-
-	cas, err := func() (*channel.ConfigAndStopCh, error) {
-		r.channelControllersLock.Lock()
-		defer r.channelControllersLock.Unlock()
-
-		if _, ok := r.channelControllers[cpRef]; !ok {
-			cas, err := channel.ProvideController(r.mgr, r.logger, &cpRef, r.syncAllChannelsToHttpHandler)
-			if err != nil {
-				return nil, err
-			}
-			r.channelControllers[cpRef] = cas
-			return cas, nil
-		} else {
-			return nil, nil
-		}
-	}()
-	if err != nil {
-		return err
-	}
-	if cas != nil {
-		cas.BackgroundStart()
-		r.logger.Info("Starting Channel Controller", zap.Any("clusterProvisioner", cp))
-	}
-	return nil
-}
-
-func (r *reconciler) deleteProvisioner(ctx context.Context, cp *eventingv1alpha1.ClusterProvisioner) error {
-	cpRef := objectRef(cp)
-
-	// Keep the lock for as little time as possible.
-	stopCh := func () chan<- struct{} {
-		r.channelControllersLock.Lock()
-		defer r.channelControllersLock.Unlock()
-
-		if cc, ok := r.channelControllers[cpRef]; ok {
-			delete(r.channelControllers, cpRef)
-			return cc.StopCh
-		} else {
-			return nil
-		}
-	}()
-	if stopCh != nil {
-		stopCh <- struct{}{}
-		r.logger.Info("Stopping Channel Controller", zap.Any("clusterProvisioner", cp))
-	}
-	return nil
-}
-
-func (r *reconciler) syncAllChannelsToHttpHandler() error {
-	// Do in a function to hold the lock for as short a time as possible.
-	configs := func() []multichannelfanout.Config {
-		configs := make([]multichannelfanout.Config, 0)
-		r.channelControllersLock.Lock()
-		defer r.channelControllersLock.Unlock()
-		for _, cas := range r.channelControllers {
-			configs = append(configs, cas.Config())
-		}
-		return configs
-	}()
-
-	channelConfigs := make([]multichannelfanout.ChannelConfig, 0)
-	for _, config := range configs {
-		channelConfigs = append(channelConfigs, config.ChannelConfigs...)
-	}
-	combined := multichannelfanout.Config{
-		ChannelConfigs: channelConfigs,
-	}
-	return r.swapHttpHandlerConfig(combined)
-}
-
-func objectRef(cp *eventingv1alpha1.ClusterProvisioner) corev1.ObjectReference {
-	return corev1.ObjectReference{
-		Namespace: cp.Namespace,
-		Name: cp.Name,
-		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-		Kind: "ClusterProvisioner",
-	}
 }
 
 func (r *reconciler) setStatusReady(cp *eventingv1alpha1.ClusterProvisioner) {
@@ -273,6 +168,7 @@ func (r *reconciler) setStatusReady(cp *eventingv1alpha1.ClusterProvisioner) {
 		},
 	}
 }
+
 func (r *reconciler) updateClusterProvisionerStatus(ctx context.Context, u *eventingv1alpha1.ClusterProvisioner) error {
 	o := &eventingv1alpha1.ClusterProvisioner{}
 	err := r.client.Get(ctx, client.ObjectKey{Namespace: u.Namespace, Name: u.Name}, o)
@@ -322,7 +218,6 @@ func newDispatcherService(cp *eventingv1alpha1.ClusterProvisioner) *corev1.Servi
 func dispatcherLabels(cpName string) map[string]string {
 	return map[string]string{
 		"clusterProvisioner": cpName,
-		"role":               "controller-dispatcher",
+		"role":               "dispatcher",
 	}
 }
-

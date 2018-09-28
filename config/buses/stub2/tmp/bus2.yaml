@@ -1,13 +1,3 @@
-apiVersion: eventing.knative.dev/v1alpha1
-kind: ClusterProvisioner
-metadata:
-  name: stub-bus-provisioner-dispatcher-foo
-spec:
-  reconciles:
-    group: eventing.knative.dev/v1alpha1
-    kind: Channel
-
----
 
 apiVersion: eventing.knative.dev/v1alpha1
 kind: Channel
@@ -18,21 +8,12 @@ spec:
     ref:
       apiVersion: eventing.knative.dev/v1alpha1
       kind: ClusterProvisioner
-      name: stub-bus-provisioner-dispatcher
+      name: stub-bus-provisioner
   channelable:
     subscribers:
       - sinkableDomain: message-dumper-foo.default.svc.cluster.local # Already exists
         callableDomain: event-changer.default.svc.cluster.local
----
-
-apiVersion: eventing.knative.dev/v1alpha1
-kind: ClusterProvisioner
-metadata:
-  name: stub-bus-provisioner-dispatcher-bar
-spec:
-  reconciles:
-    group: eventing.knative.dev/v1alpha1
-    kind: Channel
+      - sinkableDomain: message-dumper-bar.default.svc.cluster.local # Already exists
 
 ---
 
@@ -45,7 +26,7 @@ spec:
     ref:
       apiVersion: eventing.knative.dev/v1alpha1
       kind: ClusterProvisioner
-      name: stub-bus-provisioner-dispatcher
+      name: stub-bus-provisioner
   channelable:
     subscribers:
       - sinkableDomain: message-dumper-bar.default.svc.cluster.local # Already exists

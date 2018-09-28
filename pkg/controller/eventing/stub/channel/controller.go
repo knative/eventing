@@ -18,9 +18,9 @@ package channel
 
 import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
+	"github.com/knative/eventing/pkg/system"
 	"go.uber.org/zap"
-	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -30,21 +30,25 @@ import (
 const (
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName = "stub-bus-cluster-provisioner-controller"
+	controllerAgentName = "stub-bus-channel-controller"
+	configMapName       = "stub-bus-dispatcher-config-map"
+)
+
+var (
+	DefaultConfigMapKey = types.NamespacedName{
+		Namespace: system.Namespace,
+		Name:      configMapName,
+	}
 )
 
 // ProvideController returns a flow controller.
-func ProvideController(mgr manager.Manager, logger *zap.Logger, cpRef *corev1.ObjectReference, syncHttpChannelConfig func() error) (*ConfigAndStopCh, error) {
-	logger = logger.With(zap.String("clusterProvisioner", cpRef.Name))
-
+func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Channels that belong to this Cluster Provisioner (Stub
 	// buses).
-	r :=  &reconciler{
-		recorder: mgr.GetRecorder(controllerAgentName),
-		logger: logger,
-		stubProvisioner: cpRef,
-
-		syncHttpChannelConfig: syncHttpChannelConfig,
+	r := &reconciler{
+		configMapKey: DefaultConfigMapKey,
+		recorder:     mgr.GetRecorder(controllerAgentName),
+		logger:       logger,
 	}
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: r,
@@ -66,22 +70,5 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger, cpRef *corev1.Ob
 	// TODO: Should we watch the K8s service and Istio Virtual Service as well? If they change, we
 	// probably should change it back.
 
-	return &ConfigAndStopCh{
-		controller: c,
-		Config: r.getConfig,
-		StopCh: make(chan struct{}, 1),
-	}, nil
-}
-
-type ConfigAndStopCh struct {
-	controller controller.Controller
-	Config func() multichannelfanout.Config
-	StopCh chan<- struct{}
-}
-
-func (cas *ConfigAndStopCh) BackgroundStart() {
-	stopCh := make(chan struct{}, 1)
-	go func() {
-		cas.controller.Start(stopCh)
-	}()
+	return c, nil
 }

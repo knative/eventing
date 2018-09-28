@@ -17,9 +17,11 @@ limitations under the License.
 package swappable
 
 import (
+	"errors"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	"go.uber.org/zap"
 	"net/http"
+	"sync"
 	"sync/atomic"
 )
 
@@ -28,15 +30,20 @@ type Handler struct {
 	// The current multichannelfanout.Handler to delegate HTTP requests to. Never use this directly,
 	// instead use {get,set}MultiChannelFanoutHandler, which enforces the type we expect.
 	fanout atomic.Value
+	updateLock sync.Mutex
 	logger *zap.Logger
 }
 
+type UpdateConfig func(config *multichannelfanout.Config) error
+
+var _ UpdateConfig = (&Handler{}).UpdateConfig
+
 // NewHandler creates a new swappable.Handler.
-func NewHandler(handler *multichannelfanout.Handler, logger *zap.Logger) *Handler {
+func NewHandler(handler *multichannelfanout.Handler, logger *zap.Logger) *Handler  {
 	h := &Handler{
 		logger: logger.With(zap.String("httpHandler", "swappable")),
 	}
-	h.SetMultiChannelFanoutHandler(handler)
+	h.setMultiChannelFanoutHandler(handler)
 	return h
 }
 
@@ -50,19 +57,43 @@ func NewEmptyHandler(logger *zap.Logger) (*Handler, error) {
 
 // getMultiChannelFanoutHandler gets the current multichannelfanout.Handler to delegate all HTTP
 // requests to.
-func (h *Handler) GetMultiChannelFanoutHandler() *multichannelfanout.Handler {
+func (h *Handler) getMultiChannelFanoutHandler() *multichannelfanout.Handler {
 	return h.fanout.Load().(*multichannelfanout.Handler)
 }
 
 // setMultiChannelFanoutHandler sets a new multichannelfanout.Handler to delegate all subsequent
 // HTTP requests to.
-func (h *Handler) SetMultiChannelFanoutHandler(new *multichannelfanout.Handler) {
+func (h *Handler) setMultiChannelFanoutHandler(new *multichannelfanout.Handler) {
 	h.fanout.Store(new)
+}
+
+// UpdateConfig copies the current inner multichannelfanout.Handler with the new configuration. If
+// the new configuration is valid, then the new inner handler is swapped in and will start serving
+// HTTP traffic.
+func (h *Handler) UpdateConfig(config *multichannelfanout.Config) error {
+	if config == nil {
+		return errors.New("nil config")
+	}
+
+	h.updateLock.Lock()
+	defer h.updateLock.Unlock()
+
+	ih := h.getMultiChannelFanoutHandler()
+	if diff := ih.ConfigDiff(*config); diff != "" {
+		h.logger.Info("Updating config (-old +new)", zap.String("diff", diff))
+		newIh, err := ih.CopyWithNewConfig(*config)
+		if err != nil {
+			h.logger.Info("Unable to update config", zap.Error(err), zap.Any("config", config))
+			return err
+		}
+		h.setMultiChannelFanoutHandler(newIh)
+	}
+	return nil
 }
 
 // ServeHTTP delegates all HTTP requests to the current multichannelfanout.Handler.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Hand work off to the current multi channel fanout handler.
 	h.logger.Debug("ServeHTTP request received")
-	h.GetMultiChannelFanoutHandler().ServeHTTP(w, r)
+	h.getMultiChannelFanoutHandler().ServeHTTP(w, r)
 }

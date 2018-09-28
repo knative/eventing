@@ -18,17 +18,11 @@ package clusterprovisioner
 
 import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/buses/eventing/stub/channel"
-	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
-	"github.com/knative/eventing/pkg/sidecar/swappable"
 	"go.uber.org/zap"
-	corev1 "k8s.io/api/core/v1"
-	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"sync"
 )
 
 const (
@@ -38,29 +32,21 @@ const (
 )
 
 // ProvideController returns a flow controller.
-func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, http.Handler, error) {
+func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	logger = logger.With(zap.String("controller", controllerAgentName))
-
-	h, err := swappable.NewEmptyHandler(logger)
-	if err != nil {
-		logger.Error("Unable to create HTTP handler", zap.Error(err))
-		return nil, nil, err
-	}
 
 	// Setup a new controller to Reconcile ClusterProvisioners that are Stub buses.
 	r :=  &reconciler{
 		mgr: mgr,
 		recorder: mgr.GetRecorder(controllerAgentName),
 		logger: logger,
-		swapHttpHandlerConfig: swapHttpHandlerConfig(h, sync.Mutex{}),
-		channelControllers: make(map[corev1.ObjectReference]*channel.ConfigAndStopCh),
 	}
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: r,
 	})
 	if err != nil {
 		logger.Error("Unable to create controller.", zap.Error(err))
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Watch ClusterProvisioners.
@@ -69,28 +55,11 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 	}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		logger.Error("Unable to watch ClusterProvisioners.", zap.Error(err), zap.Any("type", &eventingv1alpha1.ClusterProvisioner{}))
-		return nil, nil, err
+		return nil, err
 	}
 
 	// TODO: Should we watch the K8s service as well? If it changes, we probably should change it
 	// back.
 
-	return c, h, nil
-}
-
-// swapHttpHandlerConfig creates a function that will lock
-func swapHttpHandlerConfig(s *swappable.Handler, sLock sync.Mutex) func(multichannelfanout.Config) error {
-	return func(config multichannelfanout.Config) error {
-		sLock.Lock()
-		defer sLock.Unlock()
-		mch := s.GetMultiChannelFanoutHandler()
-		if diff := mch.ConfigDiff(config); diff != "" {
-			newH, err := mch.CopyWithNewConfig(config)
-			if err != nil {
-				return err
-			}
-			s.SetMultiChannelFanoutHandler(newH)
-		}
-		return nil
-	}
+	return c, nil
 }

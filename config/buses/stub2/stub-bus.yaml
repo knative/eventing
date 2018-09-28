@@ -15,7 +15,7 @@
 apiVersion: eventing.knative.dev/v1alpha1
 kind: ClusterProvisioner
 metadata:
-  name: stub-bus-provisioner-dispatcher
+  name: stub-bus-provisioner
 spec:
   reconciles:
     group: eventing.knative.dev/v1alpha1
@@ -26,27 +26,23 @@ spec:
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: stub-bus-controller-dispatcher
+  name: stub-bus-controller
   namespace: &namespace knative-eventing
 spec:
   replicas: 1
   selector:
     matchLabels: &labels
-      clusterProvisioner: stub-bus-provisioner-dispatcher
-      role: controller-dispatcher
+      clusterProvisioner: stub-bus-provisioner
+      role: controller
   template:
     metadata:
-      annotations:
-        sidecar.istio.io/inject: "true"
       labels: *labels
     spec:
       serviceAccountName: eventing-controller
       containers:
       - name: controller-dispatcher
-        image: github.com/knative/eventing/pkg/buses/eventing/stub/dispatcher
+        image: github.com/knative/eventing/pkg/controller/eventing/stub/controller
         env:
-        - name: PORT
-          value: "8080"
         - name: BUS_NAME
           value: stub
         - name: BUS_NAMESPACE
@@ -55,3 +51,31 @@ spec:
         - -logtostderr
         - -stderrthreshold
         - INFO
+
+---
+
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: stub-bus-disptacher
+  namespace: knative-eventing
+spec:
+  replicas: 1
+  selector:
+    matchLabels: &labels
+      clusterProvisioner: stub-bus-provisioner
+      role: dispatcher
+  template:
+    metadata:
+      annotations:
+        sidecar.isio.io/inject: "true"
+      labels: *labels
+    spec:
+      serviceAccountName: eventing-controller # TODO: Change to something much less powerful.
+      containers:
+        - name: dispatcher
+          image: github.com/knative/eventing/cmd/fanoutsidecar
+          args:
+            - --sidecar_port=8080
+            - --config_map_noticer=watcher
+
