@@ -34,13 +34,11 @@ func (cs *ChannelSpec) Validate() *apis.FieldError {
 		errs = errs.Also(apis.ErrMissingField("provisioner"))
 	}
 
-	if cs.Channelable != nil {
-		for i, subscriber := range cs.Channelable.Subscribers {
-			if subscriber.SinkableDomain == "" && subscriber.CallableDomain == "" {
-				fe := apis.ErrMissingField("sinkableDomain", "callableDomain")
-				fe.Details = "expected at least one of, got none"
-				errs = errs.Also(fe.ViaField(fmt.Sprintf("subscriber[%d]", i)).ViaField("channelable"))
-			}
+	for i, subscriber := range cs.Subscribers {
+		if subscriber.SinkableDomain == "" && subscriber.CallableDomain == "" {
+			fe := apis.ErrMissingField("sinkableDomain", "callableDomain")
+			fe.Details = "expected at least one of, got none"
+			errs = errs.Also(fe.ViaField(fmt.Sprintf("subscriber[%d]", i)))
 		}
 	}
 
