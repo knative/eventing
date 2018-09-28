@@ -91,6 +91,8 @@ func (f *fanoutHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if receiverResponse.statusCode != http.StatusAccepted {
 		f.logger.Info("MessageReceiver rejected the request", zap.Int("statusCode", receiverResponse.statusCode))
 		w.WriteHeader(receiverResponse.statusCode)
+		// We don't care about the message, we just don't want it to stay in the map forever.
+		f.receivedMessages.pull(key)
 		return
 	}
 
