@@ -1,3 +1,5 @@
+<!-- TODO: this is the raw output of https://docs.google.com/document/d/1JZtFkz_C3orG9IfDxxGkAmuuGxUQ434ji-rdl3oKObE/edit -->
+
 # Eventing Specification - v1alpha1
 
 # Overview
@@ -636,16 +638,6 @@ _Describes a direct linkage between an event publisher and an action._
    </td>
   </tr>
   <tr>
-   <td>filter
-   </td>
-   <td>FilterSpec
-   </td>
-   <td>Optional filter
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
    <td>call<sup>1</sup>
    </td>
    <td>EndpointSpec
@@ -753,9 +745,7 @@ _Describes a direct linkage between an event publisher and an action._
 
 # Shared Object Schema
 
-
 ## ProvisionerReference
-
 
 <table>
   <tr>
@@ -790,12 +780,9 @@ _Describes a direct linkage between an event publisher and an action._
   </tr>
 </table>
 
-
 1: One of (name, selector), Required.
 
-
 ## EndpointSpec
-
 
 <table>
   <tr>
@@ -830,140 +817,9 @@ _Describes a direct linkage between an event publisher and an action._
   </tr>
 </table>
 
-
 1: One of (targetRef, dnsName), Required.
 
-
-## FilterSpec
-
-
-<table>
-  <tr>
-   <td><strong>Field</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-   <td><strong>Description</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>by
-   </td>
-   <td>String
-   </td>
-   <td>Uses <strong>Filter Language</strong> to specify which event should be passed on the link. 
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>eventType*
-   </td>
-   <td>EventTypeTrigger
-   </td>
-   <td>A single event type trigger.
-   </td>
-   <td>
-   </td>
-  </tr>
-</table>
-
-
-
-## EventTypeTrigger
-
-
-<table>
-  <tr>
-   <td><strong>Field</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-   <td><strong>Description</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>name<sup>1</sup>
-   </td>
-   <td>String
-   </td>
-   <td>Name of an event type.
-   </td>
-   <td>Must be the name of a kind:EventType in the same namespace.
-   </td>
-  </tr>
-  <tr>
-   <td>selector<sup>1</sup>
-   </td>
-   <td>LabelSelector
-   </td>
-   <td>a label selector
-   </td>
-   <td>Limited to kind:EventType.
-   </td>
-  </tr>
-</table>
-
-
-1: OneOf(name, selector), Required.
-
-
-## ArgumentSpec
-
-
-<table>
-  <tr>
-   <td><strong>Field</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-   <td><strong>Description</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>name*
-   </td>
-   <td>String
-   </td>
-   <td>Name of the key.
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>value<sup>1</sup>
-   </td>
-   <td>String
-   </td>
-   <td>Value.
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>valueFrom<sup>1</sup>
-   </td>
-   <td>ArgumentValueReference
-   </td>
-   <td>Value retrieved from an existing Secret or ConfigMap.
-   </td>
-   <td>
-   </td>
-  </tr>
-</table>
-
-
-1: OneOf (value, valueFrom), Required.
-
-
 ## ParameterSpec
-
 
 <table>
   <tr>
@@ -1028,12 +884,9 @@ _Describes a direct linkage between an event publisher and an action._
   </tr>
 </table>
 
-
 1: OneOf (default, defaultFrom)
 
-
 ## ArgumentValueReference
-
 
 <table>
   <tr>
@@ -1068,12 +921,9 @@ _Describes a direct linkage between an event publisher and an action._
   </tr>
 </table>
 
-
 1: OneOf (secretKeyRef, configMapRef), Required.
 
-
 ## ProvisionedObjectStatus
-
 
 <table>
   <tr>
@@ -1128,8 +978,6 @@ _Describes a direct linkage between an event publisher and an action._
   </tr>
 </table>
 
-
-
 ## SubscriptionResolutionsStatus
 
 
@@ -1166,10 +1014,7 @@ _Describes a direct linkage between an event publisher and an action._
   </tr>
 </table>
 
-
-
 ## Subscribable
-
 
 <table>
   <tr>
@@ -1194,10 +1039,7 @@ _Describes a direct linkage between an event publisher and an action._
   </tr>
 </table>
 
-
-
 ## Channelable
-
 
 <table>
   <tr>
@@ -1222,10 +1064,7 @@ _Describes a direct linkage between an event publisher and an action._
   </tr>
 </table>
 
-
-
 ## ChannelSubscriberSpec
-
 
 <table>
   <tr>
