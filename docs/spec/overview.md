@@ -103,4 +103,12 @@ buffering).
 
 For more details, see [Kind: Provider](spec.md#kind-provisioner).
 
+--- 
+
+*Next*:
+
+* [Motivation and goals](motivation.md)
+* [Resource type overview](overview.md)
+* [Interface contracts](interfaces.md)
+* [Object model specification](spec.md)
 

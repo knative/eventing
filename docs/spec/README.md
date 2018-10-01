@@ -13,7 +13,7 @@ Docs in this directory:
 * [Motivation and goals](motivation.md)
 * [Resource type overview](overview.md)
 * [Interface contracts](interfaces.md)
-* [Object Model Specification](spec.md)
+* [Object model specification](spec.md)
 <!-- TODO(n3wscott): * [Error conditions and reporting](errors.md) -->
 <!-- TODO(n3wscott): * [Sample API usage](normative_examples.md) -->
 

@@ -73,3 +73,12 @@ referenced in the _result_ section of a _Subscription_.
 
 A **Sinkable** resource will only respond to requests by ACK/NACK. It must not
 return events to the caller.
+
+--- 
+
+*Next*:
+
+* [Motivation and goals](motivation.md)
+* [Resource type overview](overview.md)
+* [Interface contracts](interfaces.md)
+* [Object model specification](spec.md)
