@@ -35,8 +35,8 @@ Kubernetes Ingress resource).
    _Callable_) and optional storage of a returned event. 
 
  * A **Source** represents an ongoing selection of events from an external
-   system. A Flow is used to connect these events to subsequent processing
-   steps.
+   system. A Subscription is used to connect these events to subsequent
+   processing steps.
 
  * A **Channel** provides event storage and fanout of events from a well-known
    input address to multiple outputs described by Subscriptions. 

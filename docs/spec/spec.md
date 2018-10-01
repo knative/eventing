@@ -29,12 +29,6 @@ their status. They cannot receive events._
 
 \*: Required
 
-#### Metadata
-
-##### Owner References
-
- * Owned by a Flow if created by a Flow.
-
 #### Status
 
 | Field | Type | Description | Limitations |
@@ -58,7 +52,7 @@ their status. They cannot receive events._
 | --- | --- | --- |
 | Create | Provisioner controller watches for Sources and creates the backing resources depending on implementation. | |
 | Update | Provisioner controller synchronizes backing implementation on changes. | |
-| Delete | Provisioner controller will deprovision backing resources depending on implementation. | Flow controller will recreate a Source after deletion if the Source originated from a Flow. |
+| Delete | Provisioner controller will deprovision backing resources depending on implementation. | |
 
 ## kind: Channel
 

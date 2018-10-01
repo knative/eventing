@@ -11,7 +11,7 @@ to a _Targetable_ or _Sinkable_ resource.
 ### Control Plane
 
 A **Subscribable** resource may be referenced in the _from_ section of a
-_Flow_. The **Subscribable** resource MUST expose a _channel_ field (an
+_Subscription_. The **Subscribable** resource MUST expose a _channel_ field (an
 ObjectReference) in its _status_ section. This _channel_ field MUST be
 _Channelable_, and _channel_ MAY refer back to the **Subscribable** resource.
 
