@@ -18,6 +18,7 @@ package buses
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -97,15 +98,21 @@ func (d *MessageDispatcher) executeRequest(url *url.URL, message *Message) (*Mes
 	d.logger.Infof("Dispatching message to %s", url.String())
 	req, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewReader(message.Payload))
 	if err != nil {
-		return nil, fmt.Errorf("Unable to create request %v", err)
+		return nil, fmt.Errorf("unable to create request %v", err)
 	}
 	req.Header = d.toHTTPHeaders(message.Headers)
 	res, err := d.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		// reject non-successful (2xx) responses
+	if res == nil {
+		// I don't think this is actually reachable with http.Client.Do(), but just to be sure we
+		// check anyway.
+		return nil, errors.New("non-error nil result from http.Client.Do()")
+	}
+	defer res.Body.Close()
+	if isFailure(res.StatusCode) {
+		// reject non-successful responses
 		return nil, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", res.StatusCode)
 	}
 	headers := d.fromHTTPHeaders(res.Header)
@@ -122,6 +129,12 @@ func (d *MessageDispatcher) executeRequest(url *url.URL, message *Message) (*Mes
 		return nil, nil
 	}
 	return &Message{headers, payload}, nil
+}
+
+// isFailure returns true if the status code is not a successful HTTP status.
+func isFailure(statusCode int) bool {
+	return statusCode < http.StatusOK /* 200 */ ||
+		statusCode >= http.StatusMultipleChoices /* 300 */
 }
 
 // toHTTPHeaders converts message headers to HTTP headers.

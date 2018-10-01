@@ -22,14 +22,26 @@ import (
 	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 )
 
+var (
+	// Headers that are added to the response, but we don't want to check in our assertions.
+	unimportantHeaders = map[string]struct{}{
+		"accept-encoding": {},
+		"content-length":  {},
+		"content-type":    {},
+		"user-agent":      {},
+	}
+)
+
 func TestDispatchMessage(t *testing.T) {
 	testCases := map[string]struct {
-		destination          string
-		replyTo              string
+		sendToDestination    bool
+		sendToReply          bool
 		message              *Message
 		fakeResponse         *http.Response
 		expectedErr          bool
@@ -37,7 +49,7 @@ func TestDispatchMessage(t *testing.T) {
 		expectedReplyRequest *requestValidation
 	}{
 		"destination - only": {
-			destination: "test-destination-svc.test-namespace.svc.cluster.local",
+			sendToDestination: true,
 			message: &Message{
 				Headers: map[string]string{
 					// do-not-forward should not get forwarded.
@@ -50,18 +62,17 @@ func TestDispatchMessage(t *testing.T) {
 				Payload: []byte("destination"),
 			},
 			expectedDestRequest: &requestValidation{
-				url: "http://test-destination-svc.test-namespace.svc.cluster.local/",
-				headers: map[string][]string{
+				Headers: map[string][]string{
 					"x-request-id": {"id123"},
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
 				},
-				body: "destination",
+				Body: "destination",
 			},
 		},
 		"destination - only -- error": {
-			destination: "test-destination-svc.test-namespace.svc.cluster.local",
+			sendToDestination: true,
 			message: &Message{
 				Headers: map[string]string{
 					// do-not-forward should not get forwarded.
@@ -74,14 +85,13 @@ func TestDispatchMessage(t *testing.T) {
 				Payload: []byte("destination"),
 			},
 			expectedDestRequest: &requestValidation{
-				url: "http://test-destination-svc.test-namespace.svc.cluster.local/",
-				headers: map[string][]string{
+				Headers: map[string][]string{
 					"x-request-id": {"id123"},
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
 				},
-				body: "destination",
+				Body: "destination",
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusNotFound,
@@ -90,7 +100,7 @@ func TestDispatchMessage(t *testing.T) {
 			expectedErr: true,
 		},
 		"reply - only": {
-			replyTo: "test-reply-svc.test-namespace.svc.cluster.local",
+			sendToReply: true,
 			message: &Message{
 				Headers: map[string]string{
 					// do-not-forward should not get forwarded.
@@ -103,18 +113,17 @@ func TestDispatchMessage(t *testing.T) {
 				Payload: []byte("replyTo"),
 			},
 			expectedReplyRequest: &requestValidation{
-				url: "http://test-reply-svc.test-namespace.svc.cluster.local/",
-				headers: map[string][]string{
+				Headers: map[string][]string{
 					"x-request-id": {"id123"},
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
 				},
-				body: "replyTo",
+				Body: "replyTo",
 			},
 		},
 		"reply - only -- error": {
-			replyTo: "test-reply-svc.test-namespace.svc.cluster.local",
+			sendToReply: true,
 			message: &Message{
 				Headers: map[string]string{
 					// do-not-forward should not get forwarded.
@@ -127,14 +136,13 @@ func TestDispatchMessage(t *testing.T) {
 				Payload: []byte("replyTo"),
 			},
 			expectedReplyRequest: &requestValidation{
-				url: "http://test-reply-svc.test-namespace.svc.cluster.local/",
-				headers: map[string][]string{
+				Headers: map[string][]string{
 					"x-request-id": {"id123"},
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
 				},
-				body: "replyTo",
+				Body: "replyTo",
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusNotFound,
@@ -143,8 +151,8 @@ func TestDispatchMessage(t *testing.T) {
 			expectedErr: true,
 		},
 		"destination and reply - dest returns bad status code": {
-			destination: "test-destination-svc.test-namespace.svc.cluster.local",
-			replyTo:     "test-reply-svc.test-namespace.svc.cluster.local",
+			sendToDestination: true,
+			sendToReply:       true,
 			message: &Message{
 				Headers: map[string]string{
 					// do-not-forward should not get forwarded.
@@ -157,14 +165,13 @@ func TestDispatchMessage(t *testing.T) {
 				Payload: []byte("destination"),
 			},
 			expectedDestRequest: &requestValidation{
-				url: "http://test-destination-svc.test-namespace.svc.cluster.local/",
-				headers: map[string][]string{
+				Headers: map[string][]string{
 					"x-request-id": {"id123"},
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
 				},
-				body: "destination",
+				Body: "destination",
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusInternalServerError,
@@ -173,8 +180,8 @@ func TestDispatchMessage(t *testing.T) {
 			expectedErr: true,
 		},
 		"destination and reply - dest returns empty body": {
-			destination: "test-destination-svc.test-namespace.svc.cluster.local",
-			replyTo:     "test-reply-svc.test-namespace.svc.cluster.local",
+			sendToDestination: true,
+			sendToReply:       true,
 			message: &Message{
 				Headers: map[string]string{
 					// do-not-forward should not get forwarded.
@@ -187,14 +194,13 @@ func TestDispatchMessage(t *testing.T) {
 				Payload: []byte("destination"),
 			},
 			expectedDestRequest: &requestValidation{
-				url: "http://test-destination-svc.test-namespace.svc.cluster.local/",
-				headers: map[string][]string{
+				Headers: map[string][]string{
 					"x-request-id": {"id123"},
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
 				},
-				body: "destination",
+				Body: "destination",
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusAccepted,
@@ -208,8 +214,8 @@ func TestDispatchMessage(t *testing.T) {
 			},
 		},
 		"destination and reply": {
-			destination: "test-destination-svc.test-namespace.svc.cluster.local",
-			replyTo:     "test-reply-svc.test-namespace.svc.cluster.local",
+			sendToDestination: true,
+			sendToReply:       true,
 			message: &Message{
 				Headers: map[string]string{
 					// do-not-forward should not get forwarded.
@@ -222,14 +228,13 @@ func TestDispatchMessage(t *testing.T) {
 				Payload: []byte("destination"),
 			},
 			expectedDestRequest: &requestValidation{
-				url: "http://test-destination-svc.test-namespace.svc.cluster.local/",
-				headers: map[string][]string{
+				Headers: map[string][]string{
 					"x-request-id": {"id123"},
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
 				},
-				body: "destination",
+				Body: "destination",
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusAccepted,
@@ -242,76 +247,113 @@ func TestDispatchMessage(t *testing.T) {
 				Body: ioutil.NopCloser(bytes.NewBufferString("destination-response")),
 			},
 			expectedReplyRequest: &requestValidation{
-				url: "http://test-reply-svc.test-namespace.svc.cluster.local/",
-				headers: map[string][]string{
+				Headers: map[string][]string{
 					"x-request-id": {"altered-id"},
 					"knative-1":    {"new-knative-1-value"},
 					"ce-abc":       {"new-ce-abc-value"},
 				},
-				body: "destination-response",
+				Body: "destination-response",
 			},
 		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			md := NewMessageDispatcher(zap.NewNop().Sugar())
-			fc := &fakeHttpClient{
+			destHandler := &fakeHandler{
+				t:        t,
 				response: tc.fakeResponse,
+				requests: make([]requestValidation, 0),
 			}
-			md.httpClient = fc
-			err := md.DispatchMessage(tc.message, tc.destination, tc.replyTo, DispatchDefaults{})
+			destServer := httptest.NewServer(destHandler)
+			defer destServer.Close()
+			replyHandler := &fakeHandler{
+				t:        t,
+				response: tc.fakeResponse,
+				requests: make([]requestValidation, 0),
+			}
+			replyServer := httptest.NewServer(replyHandler)
+			defer replyServer.Close()
+
+			md := NewMessageDispatcher(zap.NewNop().Sugar())
+			err := md.DispatchMessage(tc.message,
+				getDomain(t, tc.sendToDestination, destServer.URL),
+				getDomain(t, tc.sendToReply, replyServer.URL),
+				DispatchDefaults{})
 			if tc.expectedErr != (err != nil) {
 				t.Errorf("Unexpected error from DispatchRequest. Expected %v. Actual: %v", tc.expectedErr, err)
 			}
 			if tc.expectedDestRequest != nil {
-				rv := fc.popRequest(t)
-				assertEquality(t, *tc.expectedDestRequest, rv)
+				rv := destHandler.popRequest(t)
+				assertEquality(t, destServer.URL, *tc.expectedDestRequest, rv)
 			}
 			if tc.expectedReplyRequest != nil {
-				rv := fc.popRequest(t)
-				assertEquality(t, *tc.expectedReplyRequest, rv)
+				rv := replyHandler.popRequest(t)
+				assertEquality(t, replyServer.URL, *tc.expectedReplyRequest, rv)
 			}
-			if len(fc.requests) != 0 {
-				t.Errorf("Unexpected requests: %+v", fc.requests)
+			if len(destHandler.requests) != 0 {
+				t.Errorf("Unexpected destination requests: %+v", destHandler.requests)
+			}
+			if len(replyHandler.requests) != 0 {
+				t.Errorf("Unexpected reply requests: %+v", replyHandler.requests)
 			}
 		})
 	}
 }
 
-type requestValidation struct {
-	url     string
-	headers http.Header
-	body    string
+func getDomain(t *testing.T, shouldSend bool, serverURL string) string {
+	if shouldSend {
+		server, err := url.Parse(serverURL)
+		if err != nil {
+			t.Errorf("Bad serverURL: %q", serverURL)
+		}
+		return server.Host
+	}
+	return ""
 }
 
-type fakeHttpClient struct {
+type requestValidation struct {
+	Host    string
+	Headers http.Header
+	Body    string
+}
+
+type fakeHandler struct {
 	t        *testing.T
 	response *http.Response
 	requests []requestValidation
 }
 
-var _ httpDoer = &fakeHttpClient{}
+func (f *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 
-func (f *fakeHttpClient) Do(r *http.Request) (*http.Response, error) {
+	// Make a copy of the request.
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		f.t.Error("Failed to read the request body")
 	}
 	f.requests = append(f.requests, requestValidation{
-		url:     r.URL.String(),
-		headers: r.Header,
-		body:    string(body),
+		Host:    r.Host,
+		Headers: r.Header,
+		Body:    string(body),
 	})
+
+	// Write the response.
 	if f.response != nil {
-		return f.response, nil
+		for h, vs := range f.response.Header {
+			for _, v := range vs {
+				w.Header().Add(h, v)
+			}
+		}
+		w.WriteHeader(f.response.StatusCode)
+		var buf bytes.Buffer
+		buf.ReadFrom(f.response.Body)
+		w.Write(buf.Bytes())
+	} else {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(""))
 	}
-	return &http.Response{
-		StatusCode: http.StatusAccepted,
-		Body:       ioutil.NopCloser(bytes.NewBufferString("body")),
-	}, nil
 }
 
-func (f *fakeHttpClient) popRequest(t *testing.T) requestValidation {
+func (f *fakeHandler) popRequest(t *testing.T) requestValidation {
 	if len(f.requests) == 0 {
 		t.Error("Unable to pop request")
 	}
@@ -320,25 +362,28 @@ func (f *fakeHttpClient) popRequest(t *testing.T) requestValidation {
 	return rv
 }
 
-func assertEquality(t *testing.T, expected, actual requestValidation) {
-	if diff := cmp.Diff(expected.url, actual.url); diff != "" {
-		t.Errorf("Unexpected URL (-wanted, +got): %v", diff)
+func assertEquality(t *testing.T, replacementURL string, expected, actual requestValidation) {
+	server, err := url.Parse(replacementURL)
+	if err != nil {
+		t.Errorf("Bad replacement URL: %q", replacementURL)
 	}
-	if diff := headerDiff(expected.headers, actual.headers); diff != "" {
-		t.Errorf("Unexpected request headers (-wanted, +got): %v", diff)
-	}
-	if diff := cmp.Diff(expected.body, actual.body); diff != "" {
-		t.Errorf("Unexpected body (-want, +got): %v", diff)
+	expected.Host = server.Host
+	canonicalizeHeaders(expected, actual)
+	if diff := cmp.Diff(expected, actual); diff != "" {
+		t.Errorf("Unexpected difference (-want, +got): %v", diff)
 	}
 }
 
-func headerDiff(expected http.Header, actual http.Header) string {
+func canonicalizeHeaders(rvs ...requestValidation) {
 	// HTTP header names are case-insensitive, so normalize them to lower case for comparison.
-	for _, headers := range []http.Header{expected, actual} {
+	for _, rv := range rvs {
+		headers := rv.Headers
 		for n, v := range headers {
 			delete(headers, n)
-			headers[strings.ToLower(n)] = v
+			ln := strings.ToLower(n)
+			if _, present := unimportantHeaders[ln]; !present {
+				headers[ln] = v
+			}
 		}
 	}
-	return cmp.Diff(expected, actual)
 }

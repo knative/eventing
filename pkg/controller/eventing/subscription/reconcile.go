@@ -96,6 +96,8 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 		return fmt.Errorf("from is not subscribable %s %s/%s", subscription.Spec.From.Kind, subscription.Namespace, subscription.Spec.From.Name)
 	}
 
+	glog.Infof("Resolved from subscribable to: %+v", from.Status.Subscribable.Channelable)
+
 	callDomain := ""
 	if subscription.Spec.Call != nil {
 		callDomain, err = r.resolveCall(subscription.Namespace, *subscription.Spec.Call)
