@@ -58,9 +58,9 @@ through optional transformations (such as a Knative Service which processes
 CloudEvents over HTTP). A **Subscription** resolves the addresses of
 transformations (`call`) and destination storage (`result`) through the
 _Callable_ and _Sinkable_ interface contracts, and writes the resolved
-addresses to the _Subscribable_ `from` resource. A **Subscriptions** do not
-need to specify both a transformation and a storage destination, but at least
-one must be provided.
+addresses to the _Subscribable_ `from` resource. **Subscriptions** do not need
+to specify both a transformation and a storage destination, but at least one
+must be provided.
 
 All event transport over a **Subscription** is 1:1 – only a single `from`,
 `call`, and `result` may be provided.

@@ -127,7 +127,6 @@ or a Channel system that receives and delivers events._
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
 | type*| TypeMeta<sup>1</sup> | The type of the resource to be provisioned. | Must be Source or Channel. |
-| parameters |[]ParameterSpec| Parameters are used for validation of arguments. | |
 
 \*: Required
 
@@ -187,12 +186,6 @@ _Describes a direct linkage between an event publisher and an action._
 
  * If a resource controller created this Subscription: Owned by the originating resource.
 
-#### Status
-
-| Field | Type | Description | Limitations |
-| --- | --- | --- | --- |
-| resolutions | SubscriptionResolutionsStatus | Resolved targets for the spec's call and continue fields. | |
-
 ##### Conditions
 
  * **Ready.**
@@ -235,29 +228,6 @@ _Describes a direct linkage between an event publisher and an action._
 
 1: One of (targetRef, dnsName), Required.
 
-### ParameterSpec
-
-| Field | Type | Description | Limitations |
-| --- | --- | --- | --- |
-| name*| String | The unique name of this template parameter. | |
-| description | String | A human-readable explanation of this template parameter. | |
-| required | Boolean | If the parameter is required. | If true, default / defaultFrom should not be provided. Immutable. |
-| default<sup>1</sup> | String | Default value if not provided by arguments. | |
-| defaultFrom<sup>1</sup> | ArgumentValueReference | Default value retrieved from an existing Secret or ConfigMap if not provided by arguments. | |
-
-\*: Required
-
-1: OneOf (default, defaultFrom)
-
-### ArgumentValueReference
-
-| Field | Type | Description | Limitations |
-| --- | --- | --- | --- |
-| secretKeyRef<sup>1</sup> | SecretReference | A reference to a value contained in a Secret at the given key. | |
-| configMapRef<sup>1</sup> | ConfigMapReference | A reference to a value contained in a ConfigMap at the given key. | |
-
-1: OneOf (secretKeyRef, configMapRef), Required.
-
 ### ProvisionedObjectStatus
 
 | Field | Type | Description | Limitations |
@@ -268,13 +238,6 @@ _Describes a direct linkage between an event publisher and an action._
 | reason | String | Detailed description describing current relationship status. | |
 
 \*: Required
-
-### SubscriptionResolutionsStatus
-
-| Field | Type | Description | Limitations |
-| --- | --- | --- | --- |
-| call | String | Resolved target for the spec's call field. Empty string if spec.call is nil. | Must be a domain name |
-| continue | String | Resolved target for the spec's continue field. Empty string if spec.continue is nil. | Must be a domain name |
 
 ### Subscribable
 
