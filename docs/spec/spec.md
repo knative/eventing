@@ -35,8 +35,7 @@ their status. They cannot receive events._
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
-| channel | ObjectReference | The channel used to emit events. | |
-| Subscribable | Subscribable | Pointer to a channel which can be subscribed to in order to receive events from this source. | |
+| subscribable | Subscribable | Pointer to a channel which can be subscribed to in order to receive events from this source. | |
 | provisioned |[]ProvisionedObjectStatus| Creation status of each Channel and errors therein. | It is expected that a Source list all produced Channels. |
 
 ##### Conditions
@@ -91,7 +90,7 @@ Subscription's call parameter._
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
 | Sinkable | Sinkable | Address to the endpoint as top-level domain that will distribute traffic over the provided targets from inside the cluster. | |
-| Subscribable | Subscribable | | |
+| subscribable | Subscribable | | |
 | Conditions | Conditions | Standard Subscriptions| |
 
 ##### Conditions
