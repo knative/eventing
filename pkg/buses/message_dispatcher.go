@@ -18,6 +18,7 @@ package buses
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -42,7 +43,6 @@ type MessageDispatcher struct {
 // DispatchDefaults provides default parameter values used when dispatching a message.
 type DispatchDefaults struct {
 	Namespace string
-	ReplyTo   string
 }
 
 // NewMessageDispatcher creates a new message dispatcher that can dispatch
@@ -66,14 +66,21 @@ func NewMessageDispatcher(logger *zap.SugaredLogger) *MessageDispatcher {
 // The destination and replyTo are DNS names. For names with a single label,
 // the default namespace is used to expand it into a fully qualified name
 // within the cluster.
-func (d *MessageDispatcher) DispatchMessage(message *Message, destination string, defaults DispatchDefaults) error {
-	destinationURL := d.resolveURL(destination, defaults.Namespace)
-	reply, err := d.executeRequest(destinationURL, message)
-	if err != nil {
-		return fmt.Errorf("Unable to complete request %v", err)
+func (d *MessageDispatcher) DispatchMessage(message *Message, destination, replyTo string, defaults DispatchDefaults) error {
+	var err error
+	// Default to replying with the original message. If there is a destination, then replace it
+	// with the response from the call to the destination instead.
+	reply := message
+	if destination != "" {
+		destinationURL := d.resolveURL(destination, defaults.Namespace)
+		reply, err = d.executeRequest(destinationURL, message)
+		if err != nil {
+			return fmt.Errorf("Unable to complete request %v", err)
+		}
 	}
-	if defaults.ReplyTo != "" && reply != nil {
-		replyToURL := d.resolveURL(defaults.ReplyTo, defaults.Namespace)
+
+	if replyTo != "" && reply != nil {
+		replyToURL := d.resolveURL(replyTo, defaults.Namespace)
 		_, err = d.executeRequest(replyToURL, reply)
 		if err != nil {
 			return fmt.Errorf("Failed to forward reply %v", err)
@@ -86,30 +93,43 @@ func (d *MessageDispatcher) executeRequest(url *url.URL, message *Message) (*Mes
 	d.logger.Infof("Dispatching message to %s", url.String())
 	req, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewReader(message.Payload))
 	if err != nil {
-		return nil, fmt.Errorf("Unable to create request %v", err)
+		return nil, fmt.Errorf("unable to create request %v", err)
 	}
 	req.Header = d.toHTTPHeaders(message.Headers)
 	res, err := d.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	if res != nil {
-		if res.StatusCode < 200 || res.StatusCode >= 300 {
-			// reject non-successful (2xx) responses
-			return nil, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", res.StatusCode)
-		}
-		headers := d.fromHTTPHeaders(res.Header)
-		// TODO: add configurable whitelisting of propagated headers/prefixes (configmap?)
-		if correlationID, ok := message.Headers[correlationIDHeaderName]; ok {
-			headers[correlationIDHeaderName] = correlationID
-		}
-		payload, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return nil, fmt.Errorf("Unable to read response %v", err)
-		}
-		return &Message{headers, payload}, nil
+	if res == nil {
+		// I don't think this is actually reachable with http.Client.Do(), but just to be sure we
+		// check anyway.
+		return nil, errors.New("non-error nil result from http.Client.Do()")
 	}
-	return nil, nil
+	defer res.Body.Close()
+	if isFailure(res.StatusCode) {
+		// reject non-successful responses
+		return nil, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", res.StatusCode)
+	}
+	headers := d.fromHTTPHeaders(res.Header)
+	// TODO: add configurable whitelisting of propagated headers/prefixes (configmap?)
+	if correlationID, ok := message.Headers[correlationIDHeaderName]; ok {
+		headers[correlationIDHeaderName] = correlationID
+	}
+	payload, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to read response %v", err)
+	}
+	if len(payload) == 0 {
+		// The response body is empty, the event has 'finished'.
+		return nil, nil
+	}
+	return &Message{headers, payload}, nil
+}
+
+// isFailure returns true if the status code is not a successful HTTP status.
+func isFailure(statusCode int) bool {
+	return statusCode < http.StatusOK /* 200 */ ||
+		statusCode >= http.StatusMultipleChoices /* 300 */
 }
 
 // toHTTPHeaders converts message headers to HTTP headers.
