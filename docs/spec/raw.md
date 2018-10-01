@@ -1041,12 +1041,14 @@ _Describes a direct linkage between an event publisher and an action._
 
 ## Channelable
 
+|||||
 |--- |--- |--- |--- |
 |Field|Type|Description|Limitations|
 |subscribers|ChannelSubscriberSpec[]|Information about subscriptions used to implement message forwarding.|Filled out by Subscription Controller.|
 
 ## ChannelSubscriberSpec
 
+|||||
 |--- |--- |--- |--- |
 |Field|Type|Description|Limitations|
 |callableDomain|String|The domain name of the endpoint for the call.||
