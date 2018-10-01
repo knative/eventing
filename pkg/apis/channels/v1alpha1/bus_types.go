@@ -142,6 +142,10 @@ func (b *Bus) GetSpec() *BusSpec {
 	return &b.Spec
 }
 
+func (b *Bus) GetStatus() *BusStatus {
+	return &b.Status
+}
+
 func (b *Bus) GetSpecJSON() ([]byte, error) {
 	return json.Marshal(b.Spec)
 }
@@ -161,6 +165,7 @@ type GenericBus interface {
 	meta_v1.ObjectMetaAccessor
 	BacksChannel(channel *Channel) bool
 	GetSpec() *BusSpec
+	GetStatus() *BusStatus
 
 	// Needed for generic webhook support
 	apis.Defaultable

@@ -17,8 +17,6 @@
 package v1alpha1
 
 import (
-	"encoding/json"
-
 	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
@@ -54,9 +52,6 @@ var _ apis.Defaultable = (*Channel)(nil)
 var _ apis.Immutable = (*Channel)(nil)
 var _ runtime.Object = (*Channel)(nil)
 var _ webhook.GenericCRD = (*Channel)(nil)
-
-// Check that ConfigurationStatus may have its conditions managed.
-var _ duckv1alpha1.ConditionsAccessor = (*ChannelStatus)(nil)
 
 // Check that Channel implements the Conditions duck type.
 var _ = duck.VerifyType(&Channel{}, &duckv1alpha1.Conditions{})
@@ -124,25 +119,9 @@ const (
 	ChannelConditionProvisioned duckv1alpha1.ConditionType = "Provisioned"
 )
 
-func (c *Channel) GetSpecJSON() ([]byte, error) {
-	return json.Marshal(c.Spec)
-}
-
 // GetCondition returns the condition currently associated with the given type, or nil.
 func (cs *ChannelStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
 	return chanCondSet.Manage(cs).GetCondition(t)
-}
-
-// GetConditions returns the Conditions array. This enables generic handling of
-// conditions by implementing the duckv1alpha1.Conditions interface.
-func (cs *ChannelStatus) GetConditions() duckv1alpha1.Conditions {
-	return cs.Conditions
-}
-
-// SetConditions sets the Conditions array. This enables generic handling of
-// conditions by implementing the duckv1alpha1.Conditions interface.
-func (cs *ChannelStatus) SetConditions(conditions duckv1alpha1.Conditions) {
-	cs.Conditions = conditions
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

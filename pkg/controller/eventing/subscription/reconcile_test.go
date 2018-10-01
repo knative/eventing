@@ -139,7 +139,7 @@ var testCases = []controllertesting.TestCase{
 			getNewSubscription(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
-		WantErrMsg:   "could not get domain from call (is it not targetable?)",
+		WantErrMsg:   "status does not contain targetable",
 		Scheme:       scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
@@ -219,7 +219,9 @@ var testCases = []controllertesting.TestCase{
 						"name":      routeName,
 					},
 					"status": map[string]interface{}{
-						"domainInternal": targetDNS,
+						"targetable": map[string]interface{}{
+							"domainInternal": targetDNS,
+						},
 					},
 				}},
 		},
@@ -271,7 +273,9 @@ var testCases = []controllertesting.TestCase{
 						"name":      routeName,
 					},
 					"status": map[string]interface{}{
-						"domainInternal": targetDNS,
+						"targetable": map[string]interface{}{
+							"domainInternal": targetDNS,
+						},
 					},
 				}},
 			// Result channel
@@ -343,7 +347,9 @@ var testCases = []controllertesting.TestCase{
 						"name":      routeName,
 					},
 					"status": map[string]interface{}{
-						"domainInternal": targetDNS,
+						"targetable": map[string]interface{}{
+							"domainInternal": targetDNS,
+						},
 					},
 				}},
 			// Result channel
