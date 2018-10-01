@@ -113,7 +113,7 @@ _Channelable_, and _channel_ MAY refer back to the **Subscribable** resource.
 ### Data Plane
 
 A **Subscribable** resource is an event producer or forwarder, events that it
-produces or forwards are delivered via its _status.channel _resource.
+produces or forwards are delivered via its _status.channel_ resource.
 
 ## Channelable
 
@@ -201,7 +201,6 @@ their status. They cannot receive events._
 | channel | ObjectReference | The channel used to emit events. | |
 | Subscribable | Subscribable | Pointer to a channel which can be subscribed to in order to receive events from this source. | |
 | provisioned |[]ProvisionedObjectStatus| Creation status of each Channel and errors therein. | It is expected that a Source list all produced Channels. |
-
 
 #### Conditions
 
