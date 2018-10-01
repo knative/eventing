@@ -448,7 +448,9 @@ var testCases = []controllertesting.TestCase{
 						"name":      routeName,
 					},
 					"status": map[string]interface{}{
-						"domainInternal": targetDNS,
+						"targetable": map[string]interface{}{
+							"domainInternal": targetDNS,
+						},
 					},
 				}},
 			// Result channel
