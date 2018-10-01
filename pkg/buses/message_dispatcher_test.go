@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -274,8 +275,8 @@ func TestDispatchMessage(t *testing.T) {
 
 			md := NewMessageDispatcher(zap.NewNop().Sugar())
 			err := md.DispatchMessage(tc.message,
-				getDomain(tc.sendToDestination, destServer.URL[7:]),
-				getDomain(tc.sendToReply, replyServer.URL[7:]),
+				getDomain(t, tc.sendToDestination, destServer.URL),
+				getDomain(t, tc.sendToReply, replyServer.URL),
 				DispatchDefaults{})
 			if tc.expectedErr != (err != nil) {
 				t.Errorf("Unexpected error from DispatchRequest. Expected %v. Actual: %v", tc.expectedErr, err)
@@ -298,9 +299,13 @@ func TestDispatchMessage(t *testing.T) {
 	}
 }
 
-func getDomain(shouldSend bool, domain string) string {
+func getDomain(t *testing.T, shouldSend bool, serverURL string) string {
 	if shouldSend {
-		return domain
+		server, err := url.Parse(serverURL)
+		if err != nil {
+			t.Errorf("Bad serverURL: %q", serverURL)
+		}
+		return server.Host
 	}
 	return ""
 }
@@ -358,7 +363,11 @@ func (f *fakeHandler) popRequest(t *testing.T) requestValidation {
 }
 
 func assertEquality(t *testing.T, replacementURL string, expected, actual requestValidation) {
-	expected.Host = replacementURL[7:]
+	server, err := url.Parse(replacementURL)
+	if err != nil {
+		t.Errorf("Bad replacement URL: %q", replacementURL)
+	}
+	expected.Host = server.Host
 	canonicalizeHeaders(expected, actual)
 	if diff := cmp.Diff(expected, actual); diff != "" {
 		t.Errorf("Unexpected difference (-want, +got): %v", diff)
