@@ -208,6 +208,56 @@ _Describes a direct linkage between an event publisher and an action._
 
 ---
 
+
+## kind: EventType
+
+NOTE: EventType is out of scope for 0.1 release. This is future documentation.
+
+### group: eventing.knative.dev/v1alpha1
+
+_Describes a particular schema of Events which may be produced by one or more
+source systems._
+
+### Object Schema
+
+#### Spec
+
+| Field | Type | Description | Limitations |
+| --- | --- | --- | --- |
+| jsonSchema | String | The Json Schema that represents an event in flight. | Only for JSON transport types. |
+
+#### Metadata
+
+##### Owner References
+
+EventType is owned by *Provisioners*. Each *Provisioner* creates a
+non-controlling OwnerReference on the EventType resources it knows about.
+
+#### Status
+
+| Field | Type | Description | Limitations |
+| --- | --- | --- | --- |
+| referenceCount | Integer | Number of Owners for this EventType | |
+
+##### Conditions
+
+ * **Pinned**. True when the EventType cannot be deleted.
+
+#### Events
+
+ * **Owned.** When EventType has a new Provisioner Owner.
+ * **Released.** When a Provisioner removes Ownership from the EventType.
+
+### Life Cycle
+
+| Action | Reactions | Limitations |
+| --- | --- | --- |
+| Create | | |
+| Update | | |
+| Delete | | Blocked until all provisioners release it. |
+
+---
+
 ## Shared Object Schema
 
 ### ProvisionerReference
