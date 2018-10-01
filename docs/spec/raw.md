@@ -1041,62 +1041,15 @@ _Describes a direct linkage between an event publisher and an action._
 
 ## Channelable
 
-<table>
-  <tr>
-   <td><strong>Field</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-   <td><strong>Description</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>subscribers
-   </td>
-   <td>ChannelSubscriberSpec[]
-   </td>
-   <td>Information about subscriptions used to implement message forwarding.
-   </td>
-   <td>Filled out by Subscription Controller.
-   </td>
-  </tr>
-</table>
+|--- |--- |--- |--- |
+|Field|Type|Description|Limitations|
+|subscribers|ChannelSubscriberSpec[]|Information about subscriptions used to implement message forwarding.|Filled out by Subscription Controller.|
 
 ## ChannelSubscriberSpec
 
-<table>
-  <tr>
-   <td><strong>Field</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-   <td><strong>Description</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>callableDomain
-   </td>
-   <td>String
-   </td>
-   <td>The domain name of the endpoint for the call.
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>sinkableDomain
-   </td>
-   <td>String
-   </td>
-   <td>The domain name of the endpoint for the result.
-   </td>
-   <td>
-   </td>
-  </tr>
-</table>
+|--- |--- |--- |--- |
+|Field|Type|Description|Limitations|
+|callableDomain|String|The domain name of the endpoint for the call.||
+|sinkableDomain|String|The domain name of the endpoint for the result.||
 
 
