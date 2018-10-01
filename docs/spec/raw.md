@@ -1,4 +1,4 @@
-<!-- TODO: this is the raw output of https://docs.google.com/document/d/1JZtFkz_C3orG9IfDxxGkAmuuGxUQ434ji-rdl3oKObE/edit -->
+<!-- TODO: this is the heavily modified output of https://docs.google.com/document/d/1JZtFkz_C3orG9IfDxxGkAmuuGxUQ434ji-rdl3oKObE/edit -->
 
 # Eventing Specification - v1alpha1
 
@@ -184,9 +184,9 @@ their status. They cannot receive events._
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
-|provisioner*|ProvisionerReference|The provisioner used to create any backing resources and configuration.|Immutable.|
-|arguments|runtime.RawExtension (JSON object)|Arguments passed to the provisioner for this specific source.|Arguments must validate against provisioner's parameters.|
-|channel|ObjectRef|Specify an existing channel to use to emit events. If empty, create a new Channel using the cluster/namespace default.|Source will not emit events until channel exists.|
+| provisioner*| ProvisionerReference | The provisioner used to create any backing resources and configuration. | Immutable. |
+| arguments | runtime.RawExtension (JSON object)| Arguments passed to the provisioner for this specific source. | Arguments must validate against provisioner's parameters. |
+| channel | ObjectRef | Specify an existing channel to use to emit events. If empty, create a new Channel using the cluster/namespace default. | Source will not emit events until channel exists. |
 
 ### Metadata
 
@@ -198,9 +198,9 @@ their status. They cannot receive events._
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
-|channel|ObjectReference|The channel used to emit events.||
-|Subscribable|Subscribable|Pointer to a channel which can be subscribed to in order to receive events from this source.||
-|provisioned|[]ProvisionedObjectStatus|Creation status of each Channel and errors therein.|It is expected that a Source list all produced Channels.|
+| channel | ObjectReference | The channel used to emit events. | |
+| Subscribable | Subscribable | Pointer to a channel which can be subscribed to in order to receive events from this source. | |
+| provisioned |[]ProvisionedObjectStatus| Creation status of each Channel and errors therein. | It is expected that a Source list all produced Channels. |
 
 
 #### Conditions
@@ -216,9 +216,9 @@ their status. They cannot receive events._
 
 | Action | Reactions | Limitations |
 | --- | --- | --- |
-|Create|Provisioner controller watches for Sources and creates the backing resources depending on implementation.||
-|Update|Provisioner controller synchronizes backing implementation on changes.||
-|Delete|Provisioner controller will deprovision backing resources depending on implementation.|Flow controller will recreate a Source after deletion if the Source originated from a Flow.|
+| Create | Provisioner controller watches for Sources and creates the backing resources depending on implementation. | |
+| Update | Provisioner controller synchronizes backing implementation on changes. | |
+| Delete | Provisioner controller will deprovision backing resources depending on implementation. | Flow controller will recreate a Source after deletion if the Source originated from a Flow. |
 
 # kind: Channel
 
@@ -234,10 +234,10 @@ Subscription's call parameter._
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
-|provisioner*|ProvisionerReference|The name of the provisioner to create the resources that back the Channel.|Immutable.|
-|arguments|runtime.RawExtension (JSON object)|Arguments to be passed to the provisioner.||
-|channelable|Channelable|Holds a list of downstream subscribers for the channel.||
-|eventTypes|[]String|An array of event types that will be passed on the Channel.|Must be objects with kind:EventType.|
+| provisioner*| ProvisionerReference | The name of the provisioner to create the resources that back the Channel. | Immutable. |
+| arguments | runtime.RawExtension (JSON object)| Arguments to be passed to the provisioner. | |
+| channelable | Channelable | Holds a list of downstream subscribers for the channel. | |
+| eventTypes |[]String| An array of event types that will be passed on the Channel. | Must be objects with kind:EventType. |
 
 ### Metadata
 
@@ -250,9 +250,9 @@ Subscription's call parameter._
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
-|Sinkable|Sinkable|Address to||
-|Subscribable|Subscribable|||
-|Conditions|Conditions|Standard Subscriptions||
+| Sinkable | Sinkable | Address to the endpoint as top-level domain that will distribute traffic over the provided targets from inside the cluster. | |
+| Subscribable | Subscribable | | |
+| Conditions | Conditions | Standard Subscriptions| |
 
 #### Conditions
 
@@ -268,9 +268,9 @@ Subscription's call parameter._
 
 | Action | Reactions | Limitations |
 | --- | --- | --- |
-|Create|The Provisioner referenced will take ownership of the Channel and begin provisioning the backing resources required for the Channel depending on implementation.|Only one Provisioner is allowed to be the Owner for a given Channel.|
-|Update|The Provisioner will synchronize the Channel backing resources to reflect the update.||
-|Delete|The Provisioner will deprovision the backing resources if no longer required depending on implementation.||
+| Create | The Provisioner referenced will take ownership of the Channel and begin provisioning the backing resources required for the Channel depending on implementation. | Only one Provisioner is allowed to be the Owner for a given Channel. |
+| Update | The Provisioner will synchronize the Channel backing resources to reflect the update. | |
+| Delete | The Provisioner will deprovision the backing resources if no longer required depending on implementation. | |
 
 # kind: Provisioner
 
@@ -285,9 +285,8 @@ or a Channel system that receives and delivers events._
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
-|Field|Type|Description|Limitations|
-|type*|TypeMeta1|The type of the resource to be provisioned.|Must be Source or Channel.|
-|parameters|[]ParameterSpec|Parameters are used for validation of arguments.||
+| type*| TypeMeta<sup>1</sup> | The type of the resource to be provisioned. | Must be Source or Channel. |
+| parameters |[]ParameterSpec| Parameters are used for validation of arguments. | |
 
 1: Kubernetes type.
 
@@ -301,7 +300,7 @@ or a Channel system that receives and delivers events._
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
-|provisioned|[]ProvisionedObjectStatus|Status of creation or adoption of each EventType and errors therein.|It is expected that a provisioner list all produced EventTypes, if applicable.|
+| provisioned |[]ProvisionedObjectStatus| Status of creation or adoption of each EventType and errors therein. | It is expected that a provisioner list all produced EventTypes, if applicable. |
 
 ### Events
 
@@ -313,9 +312,9 @@ or a Channel system that receives and delivers events._
 
 | Action | Reactions | Limitations |
 | --- | --- | --- |
-|Create|Creates and owns EventTypes produced, or adds Owner ref to existing EventTypes.|Verifies Json Schema provided by existing EventTypes; Not allowed to edit EventType if previously Owned;|
-|Update|Synchronizes EventTypes.||
-|Delete|Removes Owner ref from EventTypes.||
+| Create | Creates and owns EventTypes produced, or adds Owner ref to existing EventTypes. | Verifies Json Schema provided by existing EventTypes; Not allowed to edit EventType if previously Owned; |
+| Update | Synchronizes EventTypes. | |
+| Delete | Removes Owner ref from EventTypes. | |
 
 # kind: Subscription
 
@@ -329,10 +328,9 @@ _Describes a direct linkage between an event publisher and an action._
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
-|Field|Type|Description|Limitations|
-|from*|ObjectRef|The originating Channel for the link.|Must be a Channel.|
-|call<sup>1</sup>|EndpointSpec|Optional processing on the event. The result of call will be sent to result.||
-|result1|ObjectRef|The continuation Channel for the link.|Must be a Channel.|
+| from*| ObjectRef | The originating Channel for the link. | Must be a Channel. |
+| call<sup>1</sup> | EndpointSpec | Optional processing on the event. The result of call will be sent to result. | |
+| result<sup>1</sup> | ObjectRef | The continuation Channel for the link. | Must be a Channel. |
 
 1: At Least One(call, result)
 
@@ -346,7 +344,7 @@ _Describes a direct linkage between an event publisher and an action._
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
-|resolutions|SubscriptionResolutionsStatus|Resolved targets for the spec's call and continue fields.||
+| resolutions | SubscriptionResolutionsStatus | Resolved targets for the spec's call and continue fields. | |
 
 #### Conditions
 
@@ -364,9 +362,9 @@ _Describes a direct linkage between an event publisher and an action._
 
 | Action | Reactions | Limitations |
 | --- | --- | --- |
-|Create|The publisher referenced needs to be watching for Subscriptions.||
-|Update|||
-|Delete|||
+| Create | The publisher referenced needs to be watching for Subscriptions. | |
+| Update | | |
+| Delete | | |
 
 # Shared Object Schema
 
@@ -374,8 +372,8 @@ _Describes a direct linkage between an event publisher and an action._
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
-|ref1|ObjectReference|||
-|selector1|LabelSelector|||
+| ref<sup>1</sup> | ObjectReference | | |
+| selector<sup>1</sup> | LabelSelector | | |
 
 1: One of (name, selector), Required.
 
@@ -383,8 +381,8 @@ _Describes a direct linkage between an event publisher and an action._
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
-|targetRef1|ObjectReference||Must adhere to Targetable.|
-|dnsName1|String|||
+| targetRef<sup>1</sup> | ObjectReference | | Must adhere to Targetable. |
+| dnsName<sup>1</sup> | String | | |
 
 1: One of (targetRef, dnsName), Required.
 
@@ -392,11 +390,11 @@ _Describes a direct linkage between an event publisher and an action._
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
-|name*|String|The unique name of this template parameter.||
-|description|String|A human-readable explanation of this template parameter.||
-|required|Boolean|If the parameter is required.|If true, default / defaultFrom should not be provided. Immutable.|
-|default1|String|Default value if not provided by arguments.||
-|defaultFrom1|ArgumentValueReference|Default value retrieved from an existing Secret or ConfigMap if not provided by arguments.||
+| name*| String | The unique name of this template parameter. | |
+| description | String | A human-readable explanation of this template parameter. | |
+| required | Boolean | If the parameter is required. | If true, default / defaultFrom should not be provided. Immutable. |
+| default<sup>1</sup> | String | Default value if not provided by arguments. | |
+| defaultFrom<sup>1</sup> | ArgumentValueReference | Default value retrieved from an existing Secret or ConfigMap if not provided by arguments. | |
 
 1: OneOf (default, defaultFrom)
 
@@ -404,8 +402,8 @@ _Describes a direct linkage between an event publisher and an action._
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
-|secretKeyRef1|SecretReference|A reference to a value contained in a Secret at the given key.||
-|configMapRef1|ConfigMapReference|A reference to a value contained in a ConfigMap at the given key.||
+| secretKeyRef<sup>1</sup> | SecretReference | A reference to a value contained in a Secret at the given key. | |
+| configMapRef<sup>1</sup> | ConfigMapReference | A reference to a value contained in a ConfigMap at the given key. | |
 
 1: OneOf (secretKeyRef, configMapRef), Required.
 
@@ -413,35 +411,35 @@ _Describes a direct linkage between an event publisher and an action._
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
-|name*|String|Name of Object||
-|type*|String|Fully Qualified Object type.||
-|status*|String|Current relationship between Provisioner and Object||
-|reason|String|Detailed description describing current relationship status.||
+| name*| String | Name of Object| |
+| type*| String | Fully Qualified Object type. | |
+| status*| String | Current relationship between Provisioner and Object| |
+| reason | String | Detailed description describing current relationship status. | |
 
 ## SubscriptionResolutionsStatus
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
-|call|String|Resolved target for the spec's call field. Empty string if spec.call is nil.|Must be a domain name|
-|continue|String|Resolved target for the spec's continue field. Empty string if spec.continue is nil.|Must be a domain name|
+| call | String | Resolved target for the spec's call field. Empty string if spec.call is nil. | Must be a domain name |
+| continue | String | Resolved target for the spec's continue field. Empty string if spec.continue is nil. | Must be a domain name |
 
 ## Subscribable
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
-|channelable|ObjectReference|The channel used to emit events.||
+| channelable | ObjectReference | The channel used to emit events. | |
 
 ## Channelable
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
-|subscribers|ChannelSubscriberSpec[]|Information about subscriptions used to implement message forwarding.|Filled out by Subscription Controller.|
+| subscribers | ChannelSubscriberSpec[]| Information about subscriptions used to implement message forwarding. | Filled out by Subscription Controller. |
 
 ## ChannelSubscriberSpec
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
-|callableDomain|String|The domain name of the endpoint for the call.||
-|sinkableDomain|String|The domain name of the endpoint for the result.||
+| callableDomain | String | The domain name of the endpoint for the call. | |
+| sinkableDomain | String | The domain name of the endpoint for the result. | |
 
 
