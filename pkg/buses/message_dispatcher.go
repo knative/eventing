@@ -100,13 +100,13 @@ func (d *MessageDispatcher) executeRequest(url *url.URL, message *Message) (*Mes
 		return nil, err
 	}
 	if res == nil {
-		// I don't think this is actually rechable with http.Client.Do(), but just to be sure we
+		// I don't think this is actually reachable with http.Client.Do(), but just to be sure we
 		// check anyway.
 		return nil, nil
 	}
 	defer res.Body.Close()
-	if res.StatusCode < http.StatusOK /* 200 */ || res.StatusCode >= http.StatusMultipleChoices /* 300 */ {
-		// reject non-successful (2xx) responses
+	if isFailure(res.StatusCode) {
+		// reject non-successful responses
 		return nil, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", res.StatusCode)
 	}
 	headers := d.fromHTTPHeaders(res.Header)
@@ -123,6 +123,12 @@ func (d *MessageDispatcher) executeRequest(url *url.URL, message *Message) (*Mes
 		return nil, nil
 	}
 	return &Message{headers, payload}, nil
+}
+
+// isFailure returns true if the status code is not a successful HTTP status.
+func isFailure(statusCode int) bool {
+	return statusCode < http.StatusOK /* 200 */ ||
+		statusCode >= http.StatusMultipleChoices /* 300 */
 }
 
 // toHTTPHeaders converts message headers to HTTP headers.
