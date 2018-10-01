@@ -25,7 +25,7 @@ import (
 	"sync/atomic"
 )
 
-// http.Handler that atomically swapping between underlying handlers.
+// http.Handler that atomically swaps between underlying handlers.
 type Handler struct {
 	// The current multichannelfanout.Handler to delegate HTTP requests to. Never use this directly,
 	// instead use {get,set}MultiChannelFanoutHandler, which enforces the type we expect.

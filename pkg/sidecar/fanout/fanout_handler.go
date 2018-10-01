@@ -18,10 +18,10 @@ package fanout
 
 import (
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/knative/eventing/pkg/buses"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
-	"math/rand"
 	"net/http"
 	"sync"
 	"time"
@@ -81,8 +81,9 @@ func createReceiverFunction(f *fanoutHandler) func(buses.ChannelReference, *buse
 	}
 }
 
-// ServeHTTP takes the request, fans it out to each subscription in f.config. If all the fanned out
-// requests return successfully, then return successfully. Else, return failure.
+// ServeHTTP takes the request and fans it out to each subscription in f.config. If all the fanned
+// out requests have successful response codes, then this response will have a successful response
+// code. Else, this response will have a failure response code.
 func (f *fanoutHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	key := addTrackingHeader(r)
 	receiverResponse := &response{}
@@ -144,10 +145,12 @@ type response struct {
 
 var _ http.ResponseWriter = &response{}
 
+// Header doesn't do anything. Just here so that response is an http.ResponseWriter.
 func (*response) Header() http.Header {
 	return http.Header{}
 }
 
+// Write doesn't do anything. Just here so that response is an http.ResponseWriter.
 func (*response) Write(b []byte) (int, error) {
 	return len(b), nil
 }
@@ -183,8 +186,7 @@ func (ms *messageStorage) pull(key string) (*buses.Message, error) {
 }
 
 func addTrackingHeader(r *http.Request) string {
-	// Use two random 63 bit ints, as a poor approximation of a UUID.
-	key := fmt.Sprintf("%X-%X", rand.Int63(), rand.Int63())
+	key := uuid.New().String()
 	r.Header.Set(uniqueFanoutHeader, key)
 	return key
 }
