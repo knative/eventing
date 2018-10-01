@@ -171,7 +171,7 @@ func (r *reconciler) resolveCall(namespace string, callable v1alpha1.Callable) (
 		glog.Warningf("Failed to fetch Callable target %+v: %s", callable.Target, err)
 		return "", err
 	}
-	t := duckv1alpha1.LegacyTarget{}
+	t := duckv1alpha1.Target{}
 	// Once Knative services support Targetable, switch to using this.
 	//t := duckv1alpha1.Target{}
 	err = duck.FromUnstructured(obj, &t)
@@ -180,12 +180,10 @@ func (r *reconciler) resolveCall(namespace string, callable v1alpha1.Callable) (
 		return "", err
 	}
 
-	return t.Status.DomainInternal, nil
-	// Once Knative services support Targetable, switch to using this
-	// 	if t.Status.Targetable != nil {
-	//		return t.Status.Targetable.DomainInternal, nil
-	//	}
-	//return "", fmt.Errorf("status does not contain targetable")
+	if t.Status.Targetable != nil {
+		return t.Status.Targetable.DomainInternal, nil
+	}
+	return "", fmt.Errorf("status does not contain targetable")
 }
 
 // resolveResult resolves the Spec.Result object.
