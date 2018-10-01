@@ -17,6 +17,7 @@ limitations under the License.
 package clusterprovisioner
 
 import (
+	"fmt"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -85,4 +86,5 @@ func TestReconcile(t *testing.T) {
 			Name: "Sync provisioners",
 		},
 	}
+	fmt.Sprintf("%v", testCases)
 }

@@ -1,12 +1,9 @@
 /*
 Copyright 2018 The Knative Authors
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,8 +16,10 @@ package filesystem
 import (
 	"fmt"
 	"github.com/google/go-cmp/cmp"
+	"github.com/knative/eventing/pkg/sidecar/configmap/parse"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
+	"github.com/knative/eventing/pkg/sidecar/swappable"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
@@ -43,7 +42,7 @@ func TestReadConfigMap(t *testing.T) {
 		name        string
 		createDir   bool
 		config      string
-		expected    multichannelfanout.Config
+		expected    *multichannelfanout.Config
 		expectedErr bool
 	}{
 		{
@@ -101,7 +100,7 @@ func TestReadConfigMap(t *testing.T) {
 					  subscriptions:
 						- sinkableDomain: message-dumper-foo.default.svc.cluster.local
 				`,
-			expected: multichannelfanout.Config{
+			expected: &multichannelfanout.Config{
 				ChannelConfigs: []multichannelfanout.ChannelConfig{
 					{
 						Namespace: "default",
@@ -166,64 +165,6 @@ func TestReadConfigMap(t *testing.T) {
 			}
 			if !cmp.Equal(c, tc.expected) {
 				t.Errorf("Unexpected config. Expected '%v'. Actual '%v'.", tc.expected, c)
-			}
-		})
-	}
-}
-
-func TestNewHandler(t *testing.T) {
-	testCases := []struct {
-		name      string
-		createDir bool
-		config    string
-		expectErr bool
-	}{
-		{
-			name:      "dir does not exist",
-			createDir: false,
-			expectErr: true,
-		},
-		{
-			name:      "duplicate channel key",
-			createDir: true,
-			config: `
-				channelConfigs:
-				  - namespace: default
-					name: duplicate
-				  - namespace: default
-					name: duplicate
-				`,
-			expectErr: true,
-		},
-		{
-			name:      "success",
-			createDir: true,
-			config: `
-				channelConfigs: []
-				`,
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			var dir string
-			if tc.createDir {
-				dir = createTempDir(t)
-				defer os.RemoveAll(dir)
-			} else {
-				dir = "/tmp/doesNotExist"
-			}
-			writeConfig(t, dir, tc.config)
-			cmh, err := NewHandler(zap.NewNop(), dir)
-			if err == nil {
-				// This is not yet about the logic of the test, just ensuring we don't accidentally
-				// leave the channel open, which will leave the watcher running.
-				defer close(cmh.(*configMapWatcher).watcherStopCh)
-			}
-			if tc.expectErr {
-				if err == nil {
-					t.Errorf("Expected an error, actually nil")
-				}
-				return
 			}
 		})
 	}
@@ -312,10 +253,17 @@ func TestServeHTTP(t *testing.T) {
 			defer os.RemoveAll(dir)
 			writeConfig(t, dir, replaceDomains(tc.initialConfig, initialServer.URL[7:]))
 
-			cmh, _ := NewHandler(zap.NewNop(), dir)
+			sh, err := swappable.NewEmptyHandler(zap.NewNop())
+			if err != nil {
+				t.Errorf("Unexpected error making swappable.Handler: %+v", err)
+			}
+			_, err = NewConfigMapWatcher(zap.NewNop(), dir, sh.UpdateConfig)
+			if err != nil {
+				t.Errorf("Unexpected error making filesystem.configMapWatcher")
+			}
 
 			w := httptest.NewRecorder()
-			cmh.ServeHTTP(w, makeRequest("default", "c1"))
+			sh.ServeHTTP(w, makeRequest("default", "c1"))
 			if w.Result().StatusCode != http.StatusOK {
 				t.Errorf("Unexpected initial status code: %v", w.Result().StatusCode)
 			}
@@ -330,7 +278,7 @@ func TestServeHTTP(t *testing.T) {
 				// change.
 				time.Sleep(100 * time.Millisecond)
 				w = httptest.NewRecorder()
-				cmh.ServeHTTP(w, makeRequest("default", "c1"))
+				sh.ServeHTTP(w, makeRequest("default", "c1"))
 				if w.Result().StatusCode != http.StatusOK {
 					t.Errorf("Unexpected updated status code: %v", w.Result().StatusCode)
 				}
@@ -359,7 +307,7 @@ func writeConfig(t *testing.T, dir, config string) {
 		// Golang editors tend to replace leading spaces with tabs. YAML is left whitespace
 		// sensitive, so let's replace the tabs with spaces.
 		leftSpaceConfig := strings.Replace(config, "\t", "    ", -1)
-		err := ioutil.WriteFile(fmt.Sprintf("%s/%s", dir, multiChannelFanoutConfigKey), []byte(leftSpaceConfig), 0700)
+		err := ioutil.WriteFile(fmt.Sprintf("%s/%s", dir, parse.MultiChannelFanoutConfigKey), []byte(leftSpaceConfig), 0700)
 		if err != nil {
 			t.Errorf("Problem writing the config file: %v", err)
 		}

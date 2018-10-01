@@ -94,9 +94,9 @@ func updateConfigAndTest(t *testing.T, h *Handler, config multichannelfanout.Con
 	if err != nil {
 		t.Errorf("Unexpected error creating multiChannelFanoutHandler: %v", err)
 	}
-	orig := h.GetMultiChannelFanoutHandler()
-	h.SetMultiChannelFanoutHandler(nh)
-	if orig == h.GetMultiChannelFanoutHandler() {
+	orig := h.getMultiChannelFanoutHandler()
+	h.setMultiChannelFanoutHandler(nh)
+	if orig == h.getMultiChannelFanoutHandler() {
 		t.Errorf("Expected the inner multiChannelFanoutHandler to change, it didn't: %v", orig)
 	}
 
