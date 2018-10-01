@@ -25,10 +25,11 @@ surface, which provides control mechanism for Knative eventing.
 # Resource Types
 
 The eventing API defines several resource types as well as interfaces which may
-be fulfilled by other Kubernetes objects ([Callable](#callable), [Subscribable](#subscribable), [Channelable](#channelable), [Targetable](#targetable)).
-The API defines and provides a complete implementation for
-[Subscription](#kind-subscription), and abstract resource definitions for
-[Sources](#kind-source), [Channels](#kind-channel), and
+be fulfilled by other Kubernetes objects ([Callable](#callable),
+[Subscribable](#subscribable), [Channelable](#channelable),
+[Targetable](#targetable)). The API defines and provides a complete
+implementation for [Subscription](#kind-subscription), and abstract resource
+definitions for [Sources](#kind-source), [Channels](#kind-channel), and
 [Providers](#kind-provisioner) which may be fulfilled by multiple backing
 implementations (much like the Kubernetes Ingress resource).
 
@@ -195,7 +196,7 @@ their status. They cannot receive events._
 
 #### Owner References
 
-*   Owned by a Flow if created by a Flow.
+ * Owned by a Flow if created by a Flow.
 
 ### Status
 
@@ -207,12 +208,12 @@ their status. They cannot receive events._
 
 #### Conditions
 
-*   **Ready.** True when the Source is provisioned and ready to emit events.
-*   ** Provisioned.** True when the Source has been provisioned by a controller.
+ * **Ready.** True when the Source is provisioned and ready to emit events.
+ * ** Provisioned.** True when the Source has been provisioned by a controller.
 
 ### Events
 
-*   Provisioned - describes each resource that is provisioned.
+ * Provisioned - describes each resource that is provisioned.
 
 ## Life Cycle
 
@@ -247,8 +248,8 @@ Subscription's call parameter._
 
 #### Owner References
 
-*   If the Pipeline controller created this Channel: Owned by the originating Pipeline.
-*   Owned by the Provisioner used to provision the Channel.
+ * If the Pipeline controller created this Channel: Owned by the originating Pipeline.
+ * Owned by the Provisioner used to provision the Channel.
 
 ### Status
 
@@ -260,13 +261,13 @@ Subscription's call parameter._
 
 #### Conditions
 
-*   **Ready.** True when the Channel is provisioned and ready to accept events.
-*   **Provisioned.** True when the Channel has been provisioned by a controller.
+ * **Ready.** True when the Channel is provisioned and ready to accept events.
+ * **Provisioned.** True when the Channel has been provisioned by a controller.
 
 ### Events
 
-*   Provisioned
-*   Deprovisioned
+ * Provisioned
+ * Deprovisioned
 
 ## Life Cycle
 
@@ -293,13 +294,14 @@ or a Channel system that receives and delivers events._
 | parameters |[]ParameterSpec| Parameters are used for validation of arguments. | |
 
 \*: Required
+
 1: Kubernetes type.
 
 ### Metadata
 
 #### Owner References
 
-*   Owns EventTypes.
+ * Owns EventTypes.
 
 ### Status
 
@@ -309,9 +311,9 @@ or a Channel system that receives and delivers events._
 
 ### Events
 
-*   Source created
-*   Source deleted
-*   Event types installed
+ * Source created
+ * Source deleted
+ * Event types installed
 
 ## Life Cycle
 
@@ -338,13 +340,14 @@ _Describes a direct linkage between an event publisher and an action._
 | result<sup>1</sup> | ObjectRef | The continuation Channel for the link. | Must be a Channel. |
 
 \*: Required
+
 1: At Least One(call, result)
 
 ### Metadata
 
 #### Owner References
 
-*   If a resource controller created this Subscription: Owned by the originating resource.
+ * If a resource controller created this Subscription: Owned by the originating resource.
 
 ### Status
 
@@ -354,15 +357,15 @@ _Describes a direct linkage between an event publisher and an action._
 
 #### Conditions
 
-*   **Ready.** True ~~when the publisher resource is also ready.
-*   **FromReady.**
-*   **CallActive. **True if the call is sinking events without error.
-*   **Resolved**
+ * **Ready.** True ~~when the publisher resource is also ready.
+ * **FromReady.**
+ * **CallActive. **True if the call is sinking events without error.
+ * **Resolved**
 
 ### Events
 
-*   PublisherAcknowledged
-*   ActionFailed
+ * PublisherAcknowledged
+ * ActionFailed
 
 ## Life Cycle
 
@@ -403,6 +406,7 @@ _Describes a direct linkage between an event publisher and an action._
 | defaultFrom<sup>1</sup> | ArgumentValueReference | Default value retrieved from an existing Secret or ConfigMap if not provided by arguments. | |
 
 \*: Required
+
 1: OneOf (default, defaultFrom)
 
 ## ArgumentValueReference
@@ -450,5 +454,3 @@ _Describes a direct linkage between an event publisher and an action._
 | --- | --- | --- | --- |
 | callableDomain | String | The domain name of the endpoint for the call. | |
 | sinkableDomain | String | The domain name of the endpoint for the result. | |
-
-
