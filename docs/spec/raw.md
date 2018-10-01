@@ -182,48 +182,11 @@ their status. They cannot receive events._
 
 ### Spec
 
-<table>
-  <tr>
-   <td><strong>Field</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-   <td><strong>Description</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>provisioner*
-   </td>
-   <td>ProvisionerReference
-   </td>
-   <td>The provisioner used to create any backing resources and configuration.
-   </td>
-   <td>Immutable.
-   </td>
-  </tr>
-  <tr>
-   <td>arguments
-   </td>
-   <td>runtime.RawExtension (JSON object)
-   </td>
-   <td>Arguments passed to the provisioner for this specific source.
-   </td>
-   <td>Arguments must validate against provisioner's parameters.
-   </td>
-  </tr>
-  <tr>
-   <td>channel
-   </td>
-   <td>ObjectRef
-   </td>
-   <td>Specify an existing channel to use to emit events. If empty, create a new Channel using the cluster/namespace default.
-   </td>
-   <td>Source will not emit events until channel exists.
-   </td>
-  </tr>
-</table>
+| Field | Type | Description | Limitations |
+| --- | --- | --- | --- |
+|provisioner*|ProvisionerReference|The provisioner used to create any backing resources and configuration.|Immutable.|
+|arguments|runtime.RawExtension (JSON object)|Arguments passed to the provisioner for this specific source.|Arguments must validate against provisioner's parameters.|
+|channel|ObjectRef|Specify an existing channel to use to emit events. If empty, create a new Channel using the cluster/namespace default.|Source will not emit events until channel exists.|
 
 ### Metadata
 
@@ -233,48 +196,12 @@ their status. They cannot receive events._
 
 ### Status
 
-<table>
-  <tr>
-   <td><strong>Field</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-   <td><strong>Description</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>channel
-   </td>
-   <td>ObjectReference
-   </td>
-   <td>The channel used to emit events.
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>Subscribable
-   </td>
-   <td>Subscribable
-   </td>
-   <td>Pointer to a channel which can be subscribed to in order to receive events from this source.
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>provisioned
-   </td>
-   <td>[]ProvisionedObjectStatus
-   </td>
-   <td>Creation status of each Channel and errors therein.
-   </td>
-   <td>It is expected that a Source list all produced Channels.
-   </td>
-  </tr>
-</table>
+| Field | Type | Description | Limitations |
+| --- | --- | --- | --- |
+|channel|ObjectReference|The channel used to emit events.||
+|Subscribable|Subscribable|Pointer to a channel which can be subscribed to in order to receive events from this source.||
+|provisioned|[]ProvisionedObjectStatus|Creation status of each Channel and errors therein.|It is expected that a Source list all produced Channels.|
+
 
 #### Conditions
 
@@ -287,40 +214,11 @@ their status. They cannot receive events._
 
 ## Life Cycle
 
-<table>
-  <tr>
-   <td><strong>Action</strong>
-   </td>
-   <td><strong>Reactions</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>Create
-   </td>
-   <td>Provisioner controller watches for Sources and creates the backing resources depending on implementation.
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>Update
-   </td>
-   <td>Provisioner controller synchronizes backing implementation on changes.
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>Delete
-   </td>
-   <td>Provisioner controller will deprovision backing resources depending on implementation. 
-   </td>
-   <td>Flow controller will recreate a Source after deletion if the Source originated from a Flow.
-   </td>
-  </tr>
-</table>
+| Action | Reactions | Limitations |
+| --- | --- | --- |
+|Create|Provisioner controller watches for Sources and creates the backing resources depending on implementation.||
+|Update|Provisioner controller synchronizes backing implementation on changes.||
+|Delete|Provisioner controller will deprovision backing resources depending on implementation.|Flow controller will recreate a Source after deletion if the Source originated from a Flow.|
 
 # kind: Channel
 
@@ -334,58 +232,12 @@ Subscription's call parameter._
 
 ### Spec
 
-<table>
-  <tr>
-   <td><strong>Field</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-   <td><strong>Description</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>provisioner*
-   </td>
-   <td>ProvisionerReference
-   </td>
-   <td>The name of the provisioner to create the resources that back the Channel.
-   </td>
-   <td>Immutable.
-   </td>
-  </tr>
-  <tr>
-   <td>arguments
-   </td>
-   <td>runtime.RawExtension (JSON object)
-   </td>
-   <td>Arguments to be passed to the provisioner.
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>channelable
-   </td>
-   <td>Channelable
-   </td>
-   <td>Holds a list of downstream subscribers for the channel.
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>eventTypes
-   </td>
-   <td>[]String
-   </td>
-   <td>An array of event types that will be passed on the Channel.
-   </td>
-   <td>Must be objects with kind:EventType.
-   </td>
-  </tr>
-</table>
+| Field | Type | Description | Limitations |
+| --- | --- | --- | --- |
+|provisioner*|ProvisionerReference|The name of the provisioner to create the resources that back the Channel.|Immutable.|
+|arguments|runtime.RawExtension (JSON object)|Arguments to be passed to the provisioner.||
+|channelable|Channelable|Holds a list of downstream subscribers for the channel.||
+|eventTypes|[]String|An array of event types that will be passed on the Channel.|Must be objects with kind:EventType.|
 
 ### Metadata
 
@@ -396,48 +248,11 @@ Subscription's call parameter._
 
 ### Status
 
-<table>
-  <tr>
-   <td><strong>Field</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-   <td><strong>Description</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>Sinkable
-   </td>
-   <td>Sinkable
-   </td>
-   <td>Address to 
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>Subscribable
-   </td>
-   <td>Subscribable
-   </td>
-   <td>
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>Conditions
-   </td>
-   <td>Conditions
-   </td>
-   <td>Standard Subscriptions
-   </td>
-   <td>
-   </td>
-  </tr>
-</table>
+| Field | Type | Description | Limitations |
+| --- | --- | --- | --- |
+|Sinkable|Sinkable|Address to||
+|Subscribable|Subscribable|||
+|Conditions|Conditions|Standard Subscriptions||
 
 #### Conditions
 
@@ -451,40 +266,11 @@ Subscription's call parameter._
 
 ## Life Cycle
 
-<table>
-  <tr>
-   <td><strong>Action</strong>
-   </td>
-   <td><strong>Reactions</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>Create
-   </td>
-   <td>The Provisioner referenced will take ownership of the Channel and begin provisioning the backing resources required for the Channel depending on implementation.
-   </td>
-   <td>Only one Provisioner is allowed to be the Owner for a given Channel.
-   </td>
-  </tr>
-  <tr>
-   <td>Update
-   </td>
-   <td>The Provisioner will synchronize the Channel backing resources to reflect the update.
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>Delete
-   </td>
-   <td>The Provisioner will deprovision the backing resources if no longer required depending on implementation.
-   </td>
-   <td>
-   </td>
-  </tr>
-</table>
+| Action | Reactions | Limitations |
+| --- | --- | --- |
+|Create|The Provisioner referenced will take ownership of the Channel and begin provisioning the backing resources required for the Channel depending on implementation.|Only one Provisioner is allowed to be the Owner for a given Channel.|
+|Update|The Provisioner will synchronize the Channel backing resources to reflect the update.||
+|Delete|The Provisioner will deprovision the backing resources if no longer required depending on implementation.||
 
 # kind: Provisioner
 
@@ -497,38 +283,11 @@ or a Channel system that receives and delivers events._
 
 ### Spec
 
-<table>
-  <tr>
-   <td><strong>Field</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-   <td><strong>Description</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>type*
-   </td>
-   <td>TypeMeta<sup>1</sup>
-   </td>
-   <td>The type of the resource to be provisioned.
-   </td>
-   <td>Must be Source or Channel.
-   </td>
-  </tr>
-  <tr>
-   <td>parameters
-   </td>
-   <td>[]ParameterSpec
-   </td>
-   <td>Parameters are used for validation of arguments.
-   </td>
-   <td>
-   </td>
-  </tr>
-</table>
+| Field | Type | Description | Limitations |
+| --- | --- | --- | --- |
+|Field|Type|Description|Limitations|
+|type*|TypeMeta1|The type of the resource to be provisioned.|Must be Source or Channel.|
+|parameters|[]ParameterSpec|Parameters are used for validation of arguments.||
 
 1: Kubernetes type.
 
@@ -540,28 +299,9 @@ or a Channel system that receives and delivers events._
 
 ### Status
 
-<table>
-  <tr>
-   <td><strong>Field</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-   <td><strong>Description</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>provisioned
-   </td>
-   <td>[]ProvisionedObjectStatus
-   </td>
-   <td>Status of creation or adoption of each EventType and errors therein.
-   </td>
-   <td>It is expected that a provisioner list all produced EventTypes, if applicable.
-   </td>
-  </tr>
-</table>
+| Field | Type | Description | Limitations |
+| --- | --- | --- | --- |
+|provisioned|[]ProvisionedObjectStatus|Status of creation or adoption of each EventType and errors therein.|It is expected that a provisioner list all produced EventTypes, if applicable.|
 
 ### Events
 
@@ -571,40 +311,11 @@ or a Channel system that receives and delivers events._
 
 ## Life Cycle
 
-<table>
-  <tr>
-   <td><strong>Action</strong>
-   </td>
-   <td><strong>Reactions</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>Create
-   </td>
-   <td>Creates and owns EventTypes produced, or adds Owner ref to existing EventTypes.
-   </td>
-   <td>Verifies Json Schema provided by existing EventTypes; Not allowed to edit EventType if previously Owned;
-   </td>
-  </tr>
-  <tr>
-   <td>Update
-   </td>
-   <td>Synchronizes EventTypes.
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>Delete
-   </td>
-   <td>Removes Owner ref from EventTypes.
-   </td>
-   <td>
-   </td>
-  </tr>
-</table>
+| Action | Reactions | Limitations |
+| --- | --- | --- |
+|Create|Creates and owns EventTypes produced, or adds Owner ref to existing EventTypes.|Verifies Json Schema provided by existing EventTypes; Not allowed to edit EventType if previously Owned;|
+|Update|Synchronizes EventTypes.||
+|Delete|Removes Owner ref from EventTypes.||
 
 # kind: Subscription
 
@@ -616,48 +327,12 @@ _Describes a direct linkage between an event publisher and an action._
 
 ### Spec
 
-<table>
-  <tr>
-   <td><strong>Field</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-   <td><strong>Description</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>from*
-   </td>
-   <td>ObjectRef
-   </td>
-   <td>The originating Channel for the link.
-   </td>
-   <td>Must be a Channel. 
-   </td>
-  </tr>
-  <tr>
-   <td>call<sup>1</sup>
-   </td>
-   <td>EndpointSpec
-   </td>
-   <td>Optional processing on the event. The result of <em>call</em> will be sent to result.
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>result<sup>1</sup>
-   </td>
-   <td>ObjectRef
-   </td>
-   <td>The continuation Channel for the link.
-   </td>
-   <td>Must be a Channel. 
-   </td>
-  </tr>
-</table>
+| Field | Type | Description | Limitations |
+| --- | --- | --- | --- |
+|Field|Type|Description|Limitations|
+|from*|ObjectRef|The originating Channel for the link.|Must be a Channel.|
+|call<sup>1</sup>|EndpointSpec|Optional processing on the event. The result of call will be sent to result.||
+|result1|ObjectRef|The continuation Channel for the link.|Must be a Channel.|
 
 1: At Least One(call, result)
 
@@ -669,28 +344,9 @@ _Describes a direct linkage between an event publisher and an action._
 
 ### Status
 
-<table>
-  <tr>
-   <td><strong>Field</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-   <td><strong>Description</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>resolutions
-   </td>
-   <td>SubscriptionResolutionsStatus
-   </td>
-   <td>Resolved targets for the spec's call and continue fields.
-   </td>
-   <td>
-   </td>
-  </tr>
-</table>
+| Field | Type | Description | Limitations |
+| --- | --- | --- | --- |
+|resolutions|SubscriptionResolutionsStatus|Resolved targets for the spec's call and continue fields.||
 
 #### Conditions
 
@@ -706,351 +362,85 @@ _Describes a direct linkage between an event publisher and an action._
 
 ## Life Cycle
 
-<table>
-  <tr>
-   <td><strong>Action</strong>
-   </td>
-   <td><strong>Reactions</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>Create
-   </td>
-   <td>The publisher referenced needs to be watching for Subscriptions.
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>Update
-   </td>
-   <td>
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>Delete
-   </td>
-   <td>
-   </td>
-   <td>
-   </td>
-  </tr>
-</table>
-
-
+| Action | Reactions | Limitations |
+| --- | --- | --- |
+|Create|The publisher referenced needs to be watching for Subscriptions.||
+|Update|||
+|Delete|||
 
 # Shared Object Schema
 
 ## ProvisionerReference
 
-<table>
-  <tr>
-   <td><strong>Field</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-   <td><strong>Description</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>ref<sup>1</sup>
-   </td>
-   <td>ObjectReference
-   </td>
-   <td>
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>selector<sup>1</sup>
-   </td>
-   <td>LabelSelector
-   </td>
-   <td>
-   </td>
-   <td>
-   </td>
-  </tr>
-</table>
+| Field | Type | Description | Limitations |
+| --- | --- | --- | --- |
+|ref1|ObjectReference|||
+|selector1|LabelSelector|||
 
 1: One of (name, selector), Required.
 
 ## EndpointSpec
 
-<table>
-  <tr>
-   <td><strong>Field</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-   <td><strong>Description</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>targetRef<sup>1</sup>
-   </td>
-   <td>ObjectReference
-   </td>
-   <td>
-   </td>
-   <td>Must adhere to <strong>Targetable</strong>.
-   </td>
-  </tr>
-  <tr>
-   <td>dnsName<sup>1</sup>
-   </td>
-   <td>String
-   </td>
-   <td>
-   </td>
-   <td>
-   </td>
-  </tr>
-</table>
+| Field | Type | Description | Limitations |
+| --- | --- | --- | --- |
+|targetRef1|ObjectReference||Must adhere to Targetable.|
+|dnsName1|String|||
 
 1: One of (targetRef, dnsName), Required.
 
 ## ParameterSpec
 
-<table>
-  <tr>
-   <td><strong>Field</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-   <td><strong>Description</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>name*
-   </td>
-   <td>String
-   </td>
-   <td>The unique name of this template parameter.
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>description
-   </td>
-   <td>String
-   </td>
-   <td>A human-readable explanation of this template parameter.
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>required
-   </td>
-   <td>Boolean
-   </td>
-   <td>If the parameter is required.
-   </td>
-   <td>If true, default / defaultFrom should not be provided. Immutable.
-   </td>
-  </tr>
-  <tr>
-   <td>default<sup>1</sup>
-   </td>
-   <td>String
-   </td>
-   <td>Default value if not provided by arguments.
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>defaultFrom<sup>1</sup>
-   </td>
-   <td>ArgumentValueReference
-   </td>
-   <td>Default value retrieved from an existing Secret or ConfigMap if not provided by arguments.
-   </td>
-   <td>
-   </td>
-  </tr>
-</table>
+| Field | Type | Description | Limitations |
+| --- | --- | --- | --- |
+|name*|String|The unique name of this template parameter.||
+|description|String|A human-readable explanation of this template parameter.||
+|required|Boolean|If the parameter is required.|If true, default / defaultFrom should not be provided. Immutable.|
+|default1|String|Default value if not provided by arguments.||
+|defaultFrom1|ArgumentValueReference|Default value retrieved from an existing Secret or ConfigMap if not provided by arguments.||
 
 1: OneOf (default, defaultFrom)
 
 ## ArgumentValueReference
 
-<table>
-  <tr>
-   <td><strong>Field</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-   <td><strong>Description</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>secretKeyRef<sup>1</sup>
-   </td>
-   <td>SecretReference
-   </td>
-   <td>A reference to a value contained in a Secret at the given key.
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>configMapRef<sup>1</sup>
-   </td>
-   <td>ConfigMapReference
-   </td>
-   <td>A reference to a value contained in a ConfigMap at the given key.
-   </td>
-   <td>
-   </td>
-  </tr>
-</table>
+| Field | Type | Description | Limitations |
+| --- | --- | --- | --- |
+|secretKeyRef1|SecretReference|A reference to a value contained in a Secret at the given key.||
+|configMapRef1|ConfigMapReference|A reference to a value contained in a ConfigMap at the given key.||
 
 1: OneOf (secretKeyRef, configMapRef), Required.
 
 ## ProvisionedObjectStatus
 
-<table>
-  <tr>
-   <td><strong>Field</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-   <td><strong>Description</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>name*
-   </td>
-   <td>String
-   </td>
-   <td>Name of Object
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>type*
-   </td>
-   <td>String
-   </td>
-   <td>Fully Qualified Object type.
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>status*
-   </td>
-   <td>String
-   </td>
-   <td>Current relationship between Provisioner and Object
-   </td>
-   <td>
-   </td>
-  </tr>
-  <tr>
-   <td>reason
-   </td>
-   <td>String
-   </td>
-   <td>Detailed description describing current relationship status.
-   </td>
-   <td>
-   </td>
-  </tr>
-</table>
+| Field | Type | Description | Limitations |
+| --- | --- | --- | --- |
+|name*|String|Name of Object||
+|type*|String|Fully Qualified Object type.||
+|status*|String|Current relationship between Provisioner and Object||
+|reason|String|Detailed description describing current relationship status.||
 
 ## SubscriptionResolutionsStatus
 
-
-<table>
-  <tr>
-   <td><strong>Field</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-   <td><strong>Description</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>call
-   </td>
-   <td>String
-   </td>
-   <td>Resolved target for the spec's call field. Empty string if spec.call is nil.
-   </td>
-   <td>Must be a domain name
-   </td>
-  </tr>
-  <tr>
-   <td>continue
-   </td>
-   <td>String
-   </td>
-   <td>Resolved target for the spec's continue field. Empty string if spec.continue is nil.
-   </td>
-   <td>Must be a domain name
-   </td>
-  </tr>
-</table>
+| Field | Type | Description | Limitations |
+| --- | --- | --- | --- |
+|call|String|Resolved target for the spec's call field. Empty string if spec.call is nil.|Must be a domain name|
+|continue|String|Resolved target for the spec's continue field. Empty string if spec.continue is nil.|Must be a domain name|
 
 ## Subscribable
 
-<table>
-  <tr>
-   <td><strong>Field</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-   <td><strong>Description</strong>
-   </td>
-   <td><strong>Limitations</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>channelable
-   </td>
-   <td>ObjectReference
-   </td>
-   <td>The channel used to emit events.
-   </td>
-   <td>
-   </td>
-  </tr>
-</table>
+| Field | Type | Description | Limitations |
+| --- | --- | --- | --- |
+|channelable|ObjectReference|The channel used to emit events.||
 
 ## Channelable
 
-|||||
-|--- |--- |--- |--- |
-|Field|Type|Description|Limitations|
+| Field | Type | Description | Limitations |
+| --- | --- | --- | --- |
 |subscribers|ChannelSubscriberSpec[]|Information about subscriptions used to implement message forwarding.|Filled out by Subscription Controller.|
 
 ## ChannelSubscriberSpec
 
-|||||
-|--- |--- |--- |--- |
-|Field|Type|Description|Limitations|
+| Field | Type | Description | Limitations |
+| --- | --- | --- | --- |
 |callableDomain|String|The domain name of the endpoint for the call.||
 |sinkableDomain|String|The domain name of the endpoint for the result.||
 
