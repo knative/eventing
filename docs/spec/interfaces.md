@@ -3,6 +3,8 @@
 <!-- This image is sourced from https://drive.google.com/open?id=1Mgn0Oz85M9W1Pwfnw3u0OhZmIIxSxcM3lZUEZyPCoB0 -->
 ![Interface Contracts Overview](images/interface-contracts-overview.svg)
 
+---
+
 ## Subscribable
 
 A **Subscribable** resource will emit events that a _Subscription_ can direct
@@ -20,6 +22,8 @@ _Channelable_, and _channel_ MAY refer back to the **Subscribable** resource.
 A **Subscribable** resource is an event producer or forwarder, events that it
 produces or forwards are delivered via its _status.channel_ resource.
 
+---
+
 ## Channelable
 
 A **Channelable** resource owns a list of subscribers for delivery of events.
@@ -34,6 +38,8 @@ populate the Channelable's list of _subscribers_.
 
 **Channelable** resources will attempt delivery to each of they _subscribers_
 at least once, and retry if the callie returns errors.
+
+---
 
 ## Targetable
 
@@ -56,6 +62,8 @@ and a mutated version back to the caller. The **Targetable** can prevent the
 event from continuing to the next stage by returning 200 and an empty body. All
 other response codes are considered an error and the caller will attempt to
 call again.
+
+---
 
 ## Sinkable
 

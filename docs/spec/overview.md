@@ -21,7 +21,7 @@ surface, which provides control mechanism for Knative eventing.
 # Resource Types
 
 The eventing API defines several resource types as well as interfaces which may
-be fulfilled by other Kubernetes objects ([Callable](interfaces.md#callable),
+be fulfilled by other Kubernetes objects ([Sinkable](interfaces.md#sinkable),
 [Subscribable](interfaces.md#subscribable),
 [Channelable](interfaces.md#channelable),
 [Targetable](interfaces.md#targetable)). The API defines and provides a

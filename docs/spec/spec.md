@@ -9,6 +9,8 @@ context, see the [overview](overview.md), [motivation](motivation.md), and the
  * [Subscription](#kind-subscription)
  * [Provider](#kind-provisioner)
 
+---
+
 ## kind: Source
 
 ### group: eventing.knative.dev/v1alpha1
@@ -53,6 +55,8 @@ their status. They cannot receive events._
 | Create | Provisioner controller watches for Sources and creates the backing resources depending on implementation. | |
 | Update | Provisioner controller synchronizes backing implementation on changes. | |
 | Delete | Provisioner controller will deprovision backing resources depending on implementation. | |
+
+---
 
 ## kind: Channel
 
@@ -108,6 +112,8 @@ Subscription's call parameter._
 | Update | The Provisioner will synchronize the Channel backing resources to reflect the update. | |
 | Delete | The Provisioner will deprovision the backing resources if no longer required depending on implementation. | |
 
+---
+
 ## kind: Provisioner
 
 ### group: eventing.knative.dev/v1alpha1
@@ -153,6 +159,8 @@ or a Channel system that receives and delivers events._
 | Create | Creates and owns EventTypes produced, or adds Owner ref to existing EventTypes. | Verifies Json Schema provided by existing EventTypes; Not allowed to edit EventType if previously Owned; |
 | Update | Synchronizes EventTypes. | |
 | Delete | Removes Owner ref from EventTypes. | |
+
+---
 
 ## kind: Subscription
 
@@ -205,6 +213,8 @@ _Describes a direct linkage between an event publisher and an action._
 | Create | The publisher referenced needs to be watching for Subscriptions. | |
 | Update | | |
 | Delete | | |
+
+---
 
 ## Shared Object Schema
 
