@@ -41,12 +41,12 @@ Kubernetes Ingress resource).
  * A **Channel** provides event storage and fanout of events from a well-known
    input address to multiple outputs described by Subscriptions. 
 
-<!-- TODO(): insert the source subscriptions -->
+![Resource Types Overview](images/resource-types-overview.svg)
 
  * **Provisioners** act as a catalog of the types of Sources and Channels
    currently active in the eventing system.
 
-<!-- TODO(): insert the source and channel -->
+![Resource Types Provisioners](images/resource-types-provisioner.svg)
 
 ## Subscription
 
@@ -98,14 +98,6 @@ The eventing API has parallel constructs for event _sources_ (systems which
 create events based on internal or external changes) and event _transports_
 (middleware which add value to the event delivery chain, such as persistence or
 buffering).
-
-
-<!-- TODO: update the overview image. -->
- 
-![Object Model](images/overview-reference.png)
-
-<!-- TODO: update the knative/docs page. -->
-
 
 For more details, see [Kind: Provider](spec.md#kind-provisioner).
 

@@ -1,6 +1,6 @@
 # Interface Contracts
 
-<!-- TODO: Insert drawing of interfaces. -->
+!Interface Contracts Overview](images/interface-contracts-overview.svg)
 
 ## Subscribable
 
