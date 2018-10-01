@@ -18,6 +18,7 @@ package buses
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -102,7 +103,7 @@ func (d *MessageDispatcher) executeRequest(url *url.URL, message *Message) (*Mes
 	if res == nil {
 		// I don't think this is actually reachable with http.Client.Do(), but just to be sure we
 		// check anyway.
-		return nil, nil
+		return nil, errors.New("non-error nil result from http.Client.Do()")
 	}
 	defer res.Body.Close()
 	if isFailure(res.StatusCode) {
