@@ -1,188 +1,25 @@
-<!-- TODO: this is the heavily modified output of https://docs.google.com/document/d/1JZtFkz_C3orG9IfDxxGkAmuuGxUQ434ji-rdl3oKObE/edit -->
+# Object Model
 
-# Eventing Specification - v1alpha1
+This is the detailed specification of the Knative Eventing Object Model. For
+context, see the [overview](overview.md), [motivation](motivation.md), and the
+[interface contract](interfaces.md) documents.
 
-# Overview
+ * [Source](#kind-source) 
+ * [Channel](#kind-channel)
+ * [Subscription](#kind-subscription)
+ * [Provider](#kind-provisioner)
 
-In the serverless model, computation and storage can be intertwined by having
-storage and compute systems publish events which are handled asynchronously by
-further compute services. Event delivery provides common infrastructure for
-decoupling event producers and consumers such that the linking between them can
-be performed without change to either. Loosely coupled eventing systems enable
-composable services which retain the ability to scale independently.
-Declarative event binding reduces the effort to create a scalable system that
-combines managed services and custom code.
+## kind: Source
 
-Knative eventing implements common components of an event delivery ecosystem:
-enumeration and discovery of event sources, configuration and management of
-event transport, and declarative binding of events (generated either by storage
-services or earlier computation) to further event processing and persistence.
-
-The following is a detailed specification for the `eventing.knative.dev` API
-surface, which provides control mechanism for Knative eventing.
-
-
-# Resource Types
-
-The eventing API defines several resource types as well as interfaces which may
-be fulfilled by other Kubernetes objects ([Callable](#callable),
-[Subscribable](#subscribable), [Channelable](#channelable),
-[Targetable](#targetable)). The API defines and provides a complete
-implementation for [Subscription](#kind-subscription), and abstract resource
-definitions for [Sources](#kind-source), [Channels](#kind-channel), and
-[Providers](#kind-provisioner) which may be fulfilled by multiple backing
-implementations (much like the Kubernetes Ingress resource).
-
- * A **Subscription** describes the transformation of an event (via a
-   _Callable_) and optional storage of a returned event.
-
- * A **Source** represents an ongoing selection of events from an external
-   system. A Flow is used to connect these events to subsequent processing
-   steps.
-
- * A **Channel** provides event storage and fanout of events from a well-known
-   input address to multiple outputs described by Flows.
-
-<!-- TODO(): insert the source subscriptions -->
-
- * **Provisioners** act as a catalog of the types of Sources and Channels
-   currently active in the eventing system.
-
-<!-- TODO(): insert the source and channel -->
-
-## Subscription
-
-**Subscriptions** define the transport of events from one storage location
-(typically, **Source** or **Channel**) to the next (typically, a **Channel**)
-through optional transformations (such as a Knative Service which processes
-CloudEvents over HTTP). A **Subscription** resolves the addresses of
-transformations (`call`) and destination storage (`result`) through the
-_Callable_ and _Sinkable_ interface contracts, and writes the resolved
-addresses to the _Subscribable_ `from` resource. A **Subscriptions** do not
-need to specify both a transformation and a storage destination, but at least
-one must be provided.
-
-All event transport over a **Subscription** is 1:1 – only a single `from`,
-`call`, and `result` may be provided.
-
-## Source
-
-**Source** represents an ongoing selection of events from an external system,
-such as object creation events in a specific storage bucket, database updates
-in a particular table, or Kubernetes resource state changes. Because a
-**Source** represents an external system, it only produces events (and is
-therefore _Subscribable_ by **Subscriptions**). **Source** configures an
-external system and may include parameters such as specific resource names,
-event types, or credentials which should be used to establish the connection to
-the external system. The set of allowed configuration parameters is described
-by the **Provisioner** which is referenced by the **Source**.
-
-Event selection on a **Source** is 1:N – a single **Source** may fan out to
-multiple **Subscriptions**.
-
-## Channel
-
-**Channel** provides a durable event storage mechanism which can fan out
-received events to multiple destinations via **Subscriptions**. A **Channel**
-has a single inbound _Sinkable_ interface which may accept events from multiple
-**Subscriptions** or even direct delivery from external systems. Different
-**Channels** may implement different degrees of persistence,
-
-## Provisioner
-
-The eventing API has parallel constructs for event _sources_ (systems which
-create events based on internal or external changes) and event _transports_
-(middleware which add value to the event delivery chain, such as persistence or
-buffering).
-
-
-# Interface Contracts
-
-<!-- TODO: Insert drawing of interfaces. -->
-
-## Subscribable
-
-A **Subscribable** resource will emit events that a _Subscription_ can direct
-to a _Targetable_ or _Sinkable_ resource.
-
-### Control Plane
-
-A **Subscribable** resource may be referenced in the _from_ section of a
-_Flow_. The **Subscribable** resource MUST expose a _channel_ field (an
-ObjectReference) in its _status_ section. This _channel_ field MUST be
-_Channelable_, and _channel_ MAY refer back to the **Subscribable** resource.
-
-### Data Plane
-
-A **Subscribable** resource is an event producer or forwarder, events that it
-produces or forwards are delivered via its _status.channel_ resource.
-
-## Channelable
-
-A **Channelable** resource owns a list of subscribers for delivery of events.
-
-### Control Plane
-
-The **Channelable** resource has a list of _subscribers_ within the resources
-_spec_. In practice, the resolved _subscription_ _call_ and _result_ endpoints
-populate the Channelable's list of _subscribers_.
-
-### Data Plane
-
-**Channelable** resources will attempt delivery to each of they _subscribers_
-at least once, and retry if the callie returns errors.
-
-## Targetable
-
-A **Targetable** resource represents a unit of work to be done on/to/with an
-event. They allow for event modification and flow control without taking
-ownership of the event. Typically a **Targetable** is a function.
-
-### Control Plane
-
-A **Targetable** resource MUST expose a _targetable.domainInternal_ field in
-its _status_ section. The _domainInternal_ value is an internal domain name
-that is capable of receiving event deliveries. **Targetable** resources may be
-referenced in the _call_ section of a _Subscription_.
-
-### Data Plane
-
-The **Targetable** resource does not ownership of the event that was passed to
-it, but it is allowed to modify the event by returning a response code of 200
-and a mutated version back to the caller. The **Targetable** can prevent the
-event from continuing to the next stage by returning 200 and an empty body. All
-other response codes are considered an error and the caller will attempt to
-call again.
-
-## Sinkable
-
-A **Sinkable** resource takes ownership of an event. Typically a **Sinkable**
-is a Channel.
-
-### Control Plane
-
-A **Sinkable** resource MUST expose a _targetable.domainInternal_ field in its
-_status_ section. The _domainInternal_ value is an internal domain name that is
-capable of receiving event deliveries. **Sinkable** resources** **may be
-referenced in the _result_ section of a _Subscription_.
-
-### Data Plane
-
-A **Sinkable** resource will only respond to requests by ACK/NACK. It must not
-return events to the caller.
-
-
-# kind: Source
-
-## group: eventing.knative.dev/v1alpha1
+### group: eventing.knative.dev/v1alpha1
 
 _Describes a specific configuration (credentials, etc) of a source system which
 can be used to supply events. Sources emit events using a channel specified in
 their status. They cannot receive events._
 
-## Object Schema
+### Object Schema
 
-### Spec
+#### Spec
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
@@ -192,13 +29,13 @@ their status. They cannot receive events._
 
 \*: Required
 
-### Metadata
+#### Metadata
 
-#### Owner References
+##### Owner References
 
  * Owned by a Flow if created by a Flow.
 
-### Status
+#### Status
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
@@ -206,16 +43,16 @@ their status. They cannot receive events._
 | Subscribable | Subscribable | Pointer to a channel which can be subscribed to in order to receive events from this source. | |
 | provisioned |[]ProvisionedObjectStatus| Creation status of each Channel and errors therein. | It is expected that a Source list all produced Channels. |
 
-#### Conditions
+##### Conditions
 
  * **Ready.** True when the Source is provisioned and ready to emit events.
  * ** Provisioned.** True when the Source has been provisioned by a controller.
 
-### Events
+#### Events
 
  * Provisioned - describes each resource that is provisioned.
 
-## Life Cycle
+### Life Cycle
 
 | Action | Reactions | Limitations |
 | --- | --- | --- |
@@ -223,17 +60,17 @@ their status. They cannot receive events._
 | Update | Provisioner controller synchronizes backing implementation on changes. | |
 | Delete | Provisioner controller will deprovision backing resources depending on implementation. | Flow controller will recreate a Source after deletion if the Source originated from a Flow. |
 
-# kind: Channel
+## kind: Channel
 
-## group: eventing.knative.dev/v1alpha1
+### group: eventing.knative.dev/v1alpha1
 
 _A Channel logically receives events on its input domain and forwards them to
 its subscribers. Additional behavior may be introduced by using the
 Subscription's call parameter._
 
-## Object Schema
+### Object Schema
 
-### Spec
+#### Spec
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
@@ -244,14 +81,14 @@ Subscription's call parameter._
 
 \*: Required
 
-### Metadata
+#### Metadata
 
-#### Owner References
+##### Owner References
 
  * If the Pipeline controller created this Channel: Owned by the originating Pipeline.
  * Owned by the Provisioner used to provision the Channel.
 
-### Status
+#### Status
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
@@ -259,17 +96,17 @@ Subscription's call parameter._
 | Subscribable | Subscribable | | |
 | Conditions | Conditions | Standard Subscriptions| |
 
-#### Conditions
+##### Conditions
 
  * **Ready.** True when the Channel is provisioned and ready to accept events.
  * **Provisioned.** True when the Channel has been provisioned by a controller.
 
-### Events
+#### Events
 
  * Provisioned
  * Deprovisioned
 
-## Life Cycle
+### Life Cycle
 
 | Action | Reactions | Limitations |
 | --- | --- | --- |
@@ -277,16 +114,16 @@ Subscription's call parameter._
 | Update | The Provisioner will synchronize the Channel backing resources to reflect the update. | |
 | Delete | The Provisioner will deprovision the backing resources if no longer required depending on implementation. | |
 
-# kind: Provisioner
+## kind: Provisioner
 
-## group: eventing.knative.dev/v1alpha1
+### group: eventing.knative.dev/v1alpha1
 
 _Describes an abstract configuration of a Source system which produces events
 or a Channel system that receives and delivers events._
 
-## Object Schema
+### Object Schema
 
-### Spec
+#### Spec
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
@@ -297,25 +134,25 @@ or a Channel system that receives and delivers events._
 
 1: Kubernetes type.
 
-### Metadata
+#### Metadata
 
-#### Owner References
+##### Owner References
 
  * Owns EventTypes.
 
-### Status
+#### Status
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
 | provisioned |[]ProvisionedObjectStatus| Status of creation or adoption of each EventType and errors therein. | It is expected that a provisioner list all produced EventTypes, if applicable. |
 
-### Events
+#### Events
 
  * Source created
  * Source deleted
  * Event types installed
 
-## Life Cycle
+### Life Cycle
 
 | Action | Reactions | Limitations |
 | --- | --- | --- |
@@ -323,15 +160,15 @@ or a Channel system that receives and delivers events._
 | Update | Synchronizes EventTypes. | |
 | Delete | Removes Owner ref from EventTypes. | |
 
-# kind: Subscription
+## kind: Subscription
 
-## group: eventing.knative.dev/v1alpha1
+### group: eventing.knative.dev/v1alpha1
 
 _Describes a direct linkage between an event publisher and an action._
 
-## Object Schema
+### Object Schema
 
-### Spec
+#### Spec
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
@@ -343,31 +180,31 @@ _Describes a direct linkage between an event publisher and an action._
 
 1: At Least One(call, result)
 
-### Metadata
+#### Metadata
 
-#### Owner References
+##### Owner References
 
  * If a resource controller created this Subscription: Owned by the originating resource.
 
-### Status
+#### Status
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
 | resolutions | SubscriptionResolutionsStatus | Resolved targets for the spec's call and continue fields. | |
 
-#### Conditions
+##### Conditions
 
  * **Ready.** True ~~when the publisher resource is also ready.
  * **FromReady.**
  * **CallActive. **True if the call is sinking events without error.
  * **Resolved**
 
-### Events
+#### Events
 
  * PublisherAcknowledged
  * ActionFailed
 
-## Life Cycle
+### Life Cycle
 
 | Action | Reactions | Limitations |
 | --- | --- | --- |
@@ -375,9 +212,9 @@ _Describes a direct linkage between an event publisher and an action._
 | Update | | |
 | Delete | | |
 
-# Shared Object Schema
+## Shared Object Schema
 
-## ProvisionerReference
+### ProvisionerReference
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
@@ -386,7 +223,7 @@ _Describes a direct linkage between an event publisher and an action._
 
 1: One of (name, selector), Required.
 
-## EndpointSpec
+### EndpointSpec
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
@@ -395,7 +232,7 @@ _Describes a direct linkage between an event publisher and an action._
 
 1: One of (targetRef, dnsName), Required.
 
-## ParameterSpec
+### ParameterSpec
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
@@ -409,7 +246,7 @@ _Describes a direct linkage between an event publisher and an action._
 
 1: OneOf (default, defaultFrom)
 
-## ArgumentValueReference
+### ArgumentValueReference
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
@@ -418,7 +255,7 @@ _Describes a direct linkage between an event publisher and an action._
 
 1: OneOf (secretKeyRef, configMapRef), Required.
 
-## ProvisionedObjectStatus
+### ProvisionedObjectStatus
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
@@ -429,26 +266,26 @@ _Describes a direct linkage between an event publisher and an action._
 
 \*: Required
 
-## SubscriptionResolutionsStatus
+### SubscriptionResolutionsStatus
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
 | call | String | Resolved target for the spec's call field. Empty string if spec.call is nil. | Must be a domain name |
 | continue | String | Resolved target for the spec's continue field. Empty string if spec.continue is nil. | Must be a domain name |
 
-## Subscribable
+### Subscribable
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
 | channelable | ObjectReference | The channel used to emit events. | |
 
-## Channelable
+### Channelable
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
 | subscribers | ChannelSubscriberSpec[]| Information about subscriptions used to implement message forwarding. | Filled out by Subscription Controller. |
 
-## ChannelSubscriberSpec
+### ChannelSubscriberSpec
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
