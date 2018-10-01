@@ -1,7 +1,7 @@
 # Interface Contracts
 
 <!-- This image is sourced from https://drive.google.com/open?id=1Mgn0Oz85M9W1Pwfnw3u0OhZmIIxSxcM3lZUEZyPCoB0 -->
-!Interface Contracts Overview](images/interface-contracts-overview.svg)
+![Interface Contracts Overview](images/interface-contracts-overview.svg)
 
 ## Subscribable
 
