@@ -25,11 +25,12 @@ surface, which provides control mechanism for Knative eventing.
 # Resource Types
 
 The eventing API defines several resource types as well as interfaces which may
-be fulfilled by other Kubernetes objects (Callable, Subscribable, Channelable).
-The API defines and provides a complete implementation for Flow, and abstract
-resource definitions for Sources, Channels, and Providers which may be
-fulfilled by multiple backing implementations (much like the Kubernetes Ingress
-resource).
+be fulfilled by other Kubernetes objects ([Callable](#callable), [Subscribable](#subscribable), [Channelable](#channelable), [Targetable](#targetable)).
+The API defines and provides a complete implementation for
+[Subscription](#kind-subscription), and abstract resource definitions for
+[Sources](#kind-source), [Channels](#kind-channel), and
+[Providers](#kind-provisioner) which may be fulfilled by multiple backing
+implementations (much like the Kubernetes Ingress resource).
 
  * A **Subscription** describes the transformation of an event (via a
    _Callable_) and optional storage of a returned event.
