@@ -80,5 +80,5 @@ return events to the caller.
 
 * [Motivation and goals](motivation.md)
 * [Resource type overview](overview.md)
-* [Interface contracts](interfaces.md)
+<!-- * [Interface contracts](interfaces.md) -->
 * [Object model specification](spec.md)

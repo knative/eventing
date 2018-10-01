@@ -39,7 +39,7 @@ API](https://github.com/knative/build).
 
 *Next*:
 
-* [Motivation and goals](motivation.md)
+<!-- * [Motivation and goals](motivation.md) -->
 * [Resource type overview](overview.md)
 * [Interface contracts](interfaces.md)
 * [Object model specification](spec.md)
