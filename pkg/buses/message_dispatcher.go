@@ -100,8 +100,11 @@ func (d *MessageDispatcher) executeRequest(url *url.URL, message *Message) (*Mes
 		return nil, err
 	}
 	if res == nil {
+		// I don't think this is actually rechable with http.Client.Do(), but just to be sure we
+		// check anyway.
 		return nil, nil
 	}
+	defer res.Body.Close()
 	if res.StatusCode < http.StatusOK /* 200 */ || res.StatusCode >= http.StatusMultipleChoices /* 300 */ {
 		// reject non-successful (2xx) responses
 		return nil, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", res.StatusCode)
