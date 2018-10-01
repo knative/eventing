@@ -398,7 +398,7 @@ func main() {
 	}
 
 	sources.RunEventSource(NewGithubEventSource(kubeClient, servingClient, feedNamespace, feedServiceAccountName, p.Image))
-	log.Printf("GitHub Feedlet finsihed")
+	log.Printf("GitHub Feedlet finished")
 }
 
 func webhookIDFrom(feedContext sources.FeedContext) (int64, error) {
