@@ -92,14 +92,17 @@ func (d *MessageDispatcher) executeRequest(url *url.URL, message *Message) (*Mes
 	d.logger.Infof("Dispatching message to %s", url.String())
 	req, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewReader(message.Payload))
 	if err != nil {
-		return nil, fmt.Errorf("Unable to create request %v", err)
+		return nil, fmt.Errorf("unable to create request %v", err)
 	}
 	req.Header = d.toHTTPHeaders(message.Headers)
 	res, err := d.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	if res.StatusCode < 200 || res.StatusCode >= 300 {
+	if res == nil {
+		return nil, nil
+	}
+	if res.StatusCode < http.StatusOK /* 200 */ || res.StatusCode >= http.StatusMultipleChoices /* 300 */ {
 		// reject non-successful (2xx) responses
 		return nil, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", res.StatusCode)
 	}
