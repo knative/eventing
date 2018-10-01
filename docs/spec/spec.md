@@ -40,7 +40,7 @@ their status. They cannot receive events._
 ##### Conditions
 
  * **Ready.** True when the Source is provisioned and ready to emit events.
- * ** Provisioned.** True when the Source has been provisioned by a controller.
+ * **Provisioned.** True when the Source has been provisioned by a controller.
 
 #### Events
 
@@ -188,10 +188,10 @@ _Describes a direct linkage between an event publisher and an action._
 
 ##### Conditions
 
- * **Ready.** True ~~when the publisher resource is also ready.
+ * **Ready.**
  * **FromReady.**
- * **CallActive. **True if the call is sinking events without error.
- * **Resolved**
+ * **CallActive.** True if the call is sinking events without error.
+ * **Resolved.**
 
 #### Events
 
