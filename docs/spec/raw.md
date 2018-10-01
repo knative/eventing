@@ -140,8 +140,8 @@ ownership of the event. Typically a **Targetable** is a function.
 
 A **Targetable** resource MUST expose a _targetable.domainInternal_ field in
 its _status_ section. The _domainInternal_ value is an internal domain name
-that is capable of receiving event deliveries. **Targetable** resources** **may
-be referenced in the _call_ section of a _Subscription_.
+that is capable of receiving event deliveries. **Targetable** resources may be
+referenced in the _call_ section of a _Subscription_.
 
 ### Data Plane
 
@@ -187,6 +187,8 @@ their status. They cannot receive events._
 | provisioner*| ProvisionerReference | The provisioner used to create any backing resources and configuration. | Immutable. |
 | arguments | runtime.RawExtension (JSON object)| Arguments passed to the provisioner for this specific source. | Arguments must validate against provisioner's parameters. |
 | channel | ObjectRef | Specify an existing channel to use to emit events. If empty, create a new Channel using the cluster/namespace default. | Source will not emit events until channel exists. |
+
+\*: Required
 
 ### Metadata
 
@@ -238,6 +240,8 @@ Subscription's call parameter._
 | channelable | Channelable | Holds a list of downstream subscribers for the channel. | |
 | eventTypes |[]String| An array of event types that will be passed on the Channel. | Must be objects with kind:EventType. |
 
+\*: Required
+
 ### Metadata
 
 #### Owner References
@@ -287,6 +291,7 @@ or a Channel system that receives and delivers events._
 | type*| TypeMeta<sup>1</sup> | The type of the resource to be provisioned. | Must be Source or Channel. |
 | parameters |[]ParameterSpec| Parameters are used for validation of arguments. | |
 
+\*: Required
 1: Kubernetes type.
 
 ### Metadata
@@ -331,6 +336,7 @@ _Describes a direct linkage between an event publisher and an action._
 | call<sup>1</sup> | EndpointSpec | Optional processing on the event. The result of call will be sent to result. | |
 | result<sup>1</sup> | ObjectRef | The continuation Channel for the link. | Must be a Channel. |
 
+\*: Required
 1: At Least One(call, result)
 
 ### Metadata
@@ -395,6 +401,7 @@ _Describes a direct linkage between an event publisher and an action._
 | default<sup>1</sup> | String | Default value if not provided by arguments. | |
 | defaultFrom<sup>1</sup> | ArgumentValueReference | Default value retrieved from an existing Secret or ConfigMap if not provided by arguments. | |
 
+\*: Required
 1: OneOf (default, defaultFrom)
 
 ## ArgumentValueReference
@@ -414,6 +421,8 @@ _Describes a direct linkage between an event publisher and an action._
 | type*| String | Fully Qualified Object type. | |
 | status*| String | Current relationship between Provisioner and Object| |
 | reason | String | Detailed description describing current relationship status. | |
+
+\*: Required
 
 ## SubscriptionResolutionsStatus
 
