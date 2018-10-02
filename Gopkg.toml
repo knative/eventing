@@ -73,10 +73,10 @@ required = [
   name = "cloud.google.com/go"
   revision = "90f2606161ee6a14efe2ca79fc05ac2b8efe250b"
 
-[[constraint]]
+[[override]]
   name = "github.com/knative/pkg"
-  # HEAD as of 2018-09-25
-  revision = "07104dad53e803457a95306e5b1322024bd69af3"
+  # HEAD as of 2018-09-28
+  revision = "3155feb33006c8e0379a58237a819a36fae98c2d"
 
 [[constraint]]
   name = "github.com/knative/serving"

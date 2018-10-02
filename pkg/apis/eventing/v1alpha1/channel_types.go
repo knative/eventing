@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"github.com/knative/pkg/apis"
-	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/webhook"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,12 +51,6 @@ var _ apis.Defaultable = (*Channel)(nil)
 var _ apis.Immutable = (*Channel)(nil)
 var _ runtime.Object = (*Channel)(nil)
 var _ webhook.GenericCRD = (*Channel)(nil)
-
-// Check that Channel implements the Conditions duck type.
-var _ = duck.VerifyType(&Channel{}, &duckv1alpha1.Conditions{})
-var _ = duck.VerifyType(&Channel{}, &duckv1alpha1.Channelable{})
-var _ = duck.VerifyType(&Channel{}, &duckv1alpha1.Subscribable{})
-var _ = duck.VerifyType(&Channel{}, &duckv1alpha1.Sinkable{})
 
 // ChannelSpec specifies the Provisioner backing a channel and the configuration
 // arguments for a Channel.
