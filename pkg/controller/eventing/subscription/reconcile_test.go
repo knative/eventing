@@ -51,6 +51,7 @@ const (
 	eventType         = "myeventtype"
 	subscriptionName  = "testsubscription"
 	testNS            = "testnamespace"
+	k8sServiceName    = "testk8sservice"
 )
 
 func init() {
@@ -381,6 +382,78 @@ var testCases = []controllertesting.TestCase{
 				}},
 		},
 	}, {
+		Name: "new subscription to K8s Service: adds status, all targets resolved, subscribers modified",
+		InitialState: []runtime.Object{
+			getNewSubscriptionToK8sService(),
+		},
+		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
+		// TODO: JSON patch is not working for some reason. Is this the array vs. non-array, or
+		// k8s accepting something the fake doesn't, or is there a real bug somewhere?
+		// it works correctly on the k8s cluster. so need to figure this out
+		// Marking this as expecting a failure. Needs to be fixed obviously.
+		WantResult: reconcile.Result{},
+		WantErrMsg: "invalid JSON document",
+		Scheme:     scheme.Scheme,
+		Objects: []runtime.Object{
+			// Source channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       channelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      fromChannelName,
+					},
+					"spec": map[string]interface{}{
+						"channelable": map[string]interface{}{},
+					},
+					"status": map[string]interface{}{
+						"subscribable": map[string]interface{}{
+							"channelable": map[string]interface{}{
+								"kind":       channelKind,
+								"name":       fromChannelName,
+								"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+							},
+						},
+					},
+				}},
+			// Call (using K8s Service)
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Service",
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      k8sServiceName,
+					},
+				}},
+			// Result channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       channelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      resultChannelName,
+					},
+					"spec": map[string]interface{}{
+						"channelable": map[string]interface{}{},
+					},
+					"status": map[string]interface{}{
+						"subscribable": map[string]interface{}{
+							"channelable": map[string]interface{}{
+								"kind":       channelKind,
+								"name":       fromChannelName,
+								"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+							},
+						},
+						"sinkable": map[string]interface{}{
+							"domainInternal": sinkableDNS,
+						},
+					},
+				}},
+		},
+	}, {
 		Name: "new subscription with source: adds status, all targets resolved, subscribers modified",
 		InitialState: []runtime.Object{
 			getNewSubscriptionWithSource(),
@@ -551,6 +624,18 @@ func getNewSubscription() *eventingv1alpha1.Subscription {
 	// selflink is not filled in when we create the object, so clear it
 	subscription.ObjectMeta.SelfLink = ""
 	return subscription
+}
+
+func getNewSubscriptionToK8sService() *eventingv1alpha1.Subscription {
+	sub := getNewSubscription()
+	sub.Spec.Call = &eventingv1alpha1.Callable{
+		Target: &corev1.ObjectReference{
+			Name:       k8sServiceName,
+			Kind:       "Service",
+			APIVersion: "v1",
+		},
+	}
+	return sub
 }
 
 func getNewSubscriptionWithSource() *eventingv1alpha1.Subscription {

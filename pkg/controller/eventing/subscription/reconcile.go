@@ -19,9 +19,9 @@ package subscription
 import (
 	"context"
 	"fmt"
-
 	"github.com/golang/glog"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/controller"
 	duckapis "github.com/knative/pkg/apis"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
@@ -178,14 +178,24 @@ func (r *reconciler) resolveCall(namespace string, callable v1alpha1.Callable) (
 	//t := duckv1alpha1.Target{}
 	err = duck.FromUnstructured(obj, &t)
 	if err != nil {
-		glog.Warningf("Failed to unserialize legacy target: %s", err)
+		glog.Warningf("Failed to deserialize legacy target: %s", err)
 		return "", err
 	}
 
 	if t.Status.Targetable != nil {
 		return t.Status.Targetable.DomainInternal, nil
 	}
-	return "", fmt.Errorf("status does not contain targetable")
+
+	// K8s Services are special cased.
+	svc := corev1.Service{}
+	err = duck.FromUnstructured(obj, &svc)
+	// duck will deserialize anything that looks even vaguely right, so we need to check that the
+	// deserialized object is actually a K8s Service.
+	if err != nil || svc.APIVersion != "v1" || svc.Kind != "Service" {
+		// Normal return of things that are neither Targetable nor a K8s Service.
+		return "", fmt.Errorf("status does not contain targetable")
+	}
+	return controller.ServiceHostName(svc.Name, svc.Namespace), nil
 }
 
 // resolveResult resolves the Spec.Result object.
@@ -198,7 +208,7 @@ func (r *reconciler) resolveResult(namespace string, resultStrategy v1alpha1.Res
 	s := duckv1alpha1.Sink{}
 	err = duck.FromUnstructured(obj, &s)
 	if err != nil {
-		glog.Warningf("Failed to unserialize Sinkable target: %s", err)
+		glog.Warningf("Failed to deserialize Sinkable target: %s", err)
 		return "", err
 	}
 	if s.Status.Sinkable != nil {
