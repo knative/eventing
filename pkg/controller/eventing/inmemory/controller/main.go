@@ -20,8 +20,8 @@ import (
 	"flag"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/buses"
-	"github.com/knative/eventing/pkg/controller/eventing/stub/channel"
-	"github.com/knative/eventing/pkg/controller/eventing/stub/clusterprovisioner"
+	"github.com/knative/eventing/pkg/controller/eventing/inmemory/channel"
+	"github.com/knative/eventing/pkg/controller/eventing/inmemory/clusterprovisioner"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
@@ -42,7 +42,7 @@ func main() {
 	logger = logger.With(
 		// TODO: probably replace, Bus isn't really a thing anymore.
 		zap.String("eventing.knative.dev/bus", ref.String()),
-		zap.String("eventing.knative.dev/busType", "stub"),
+		zap.String("eventing.knative.dev/busType", "in-memory"),
 		zap.String("eventing.knative.dev/busComponent", buses.Provisioner),
 	)
 	flag.Parse()

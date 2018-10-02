@@ -106,17 +106,17 @@ func IsControlled(ref *eventingv1alpha1.ProvisionerReference) bool {
 }
 
 // shouldReconcile determines if this Controller should control (and therefore reconcile) a given
-// ClusterProvisioner. This Controller only handles Stub buses.
+// ClusterProvisioner. This Controller only handles in-memory buses.
 func shouldReconcile(namespace, name string) bool {
-	return namespace == "" && name == "stub-bus-provisioner"
+	return namespace == "" && name == "in-memory-bus-provisioner"
 }
 
 func (r *reconciler) reconcile(ctx context.Context, cp *eventingv1alpha1.ClusterProvisioner) error {
 	logger := r.logger.With(zap.Any("clusterProvisioner", cp))
 
 	// We are syncing one thing.
-	// 1. The K8s Service to talk to this Stub bus.
-	//     - There is a single K8s Service for all requests going to this Stub bus.
+	// 1. The K8s Service to talk to this in-memory bus.
+	//     - There is a single K8s Service for all requests going to this in-memory bus.
 
 	if cp.DeletionTimestamp != nil {
 		// K8s garbage collection will delete the dispatcher service, once this ClusterProvisioner

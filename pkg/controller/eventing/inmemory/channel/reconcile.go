@@ -20,7 +20,7 @@ import (
 	"context"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/controller"
-	cpcontroller "github.com/knative/eventing/pkg/controller/eventing/stub/clusterprovisioner"
+	cpcontroller "github.com/knative/eventing/pkg/controller/eventing/inmemory/clusterprovisioner"
 	multichannelfanoutparse "github.com/knative/eventing/pkg/sidecar/configmap/parse"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
@@ -110,7 +110,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 }
 
 // shouldReconcile determines if this Controller should control (and therefore reconcile) a given
-// ClusterProvisioner. This Controller only handles Stub buses.
+// ClusterProvisioner. This Controller only handles in-memory buses.
 func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 	return cpcontroller.IsControlled(c.Spec.Provisioner)
 }

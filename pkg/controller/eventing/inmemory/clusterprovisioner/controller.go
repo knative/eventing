@@ -14,13 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package channel
+package clusterprovisioner
 
 import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/system"
 	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -30,25 +28,18 @@ import (
 const (
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName = "stub-bus-channel-controller"
-	configMapName       = "stub-bus-dispatcher-config-map"
-)
-
-var (
-	DefaultConfigMapKey = types.NamespacedName{
-		Namespace: system.Namespace,
-		Name:      configMapName,
-	}
+	controllerAgentName = "in-memory-bus-cluster-provisioner-controller"
 )
 
 // ProvideController returns a flow controller.
 func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
-	// Setup a new controller to Reconcile Channels that belong to this Cluster Provisioner (Stub
-	// buses).
-	r := &reconciler{
-		configMapKey: DefaultConfigMapKey,
-		recorder:     mgr.GetRecorder(controllerAgentName),
-		logger:       logger,
+	logger = logger.With(zap.String("controller", controllerAgentName))
+
+	// Setup a new controller to Reconcile ClusterProvisioners that are in-memory buses.
+	r :=  &reconciler{
+		mgr: mgr,
+		recorder: mgr.GetRecorder(controllerAgentName),
+		logger: logger,
 	}
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: r,
@@ -58,17 +49,17 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 		return nil, err
 	}
 
-	// Watch Channels.
+	// Watch ClusterProvisioners.
 	err = c.Watch(&source.Kind{
-		Type: &eventingv1alpha1.Channel{},
+		Type: &eventingv1alpha1.ClusterProvisioner{},
 	}, &handler.EnqueueRequestForObject{})
 	if err != nil {
-		logger.Error("Unable to watch Channels.", zap.Error(err), zap.Any("type", &eventingv1alpha1.Channel{}))
+		logger.Error("Unable to watch ClusterProvisioners.", zap.Error(err), zap.Any("type", &eventingv1alpha1.ClusterProvisioner{}))
 		return nil, err
 	}
 
-	// TODO: Should we watch the K8s service and Istio Virtual Service as well? If they change, we
-	// probably should change it back.
+	// TODO: Should we watch the K8s service as well? If it changes, we probably should change it
+	// back.
 
 	return c, nil
 }

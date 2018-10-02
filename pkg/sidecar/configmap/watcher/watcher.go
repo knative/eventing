@@ -18,6 +18,7 @@ package watcher
 
 import (
 	"context"
+	"github.com/knative/eventing/pkg/controller/eventing/inmemory/channel"
 	"github.com/knative/eventing/pkg/sidecar/configmap/parse"
 	"github.com/knative/eventing/pkg/sidecar/swappable"
 	"go.uber.org/zap"
@@ -74,7 +75,7 @@ func (r *reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 
 
 	// DO NOT SUBMIT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	if req.Name != "stub-bus-dispatcher-config-map" {
+	if req.Name != channel.ConfigMapName {
 		return reconcile.Result{}, nil
 	}
 

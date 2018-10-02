@@ -15,7 +15,7 @@
 apiVersion: eventing.knative.dev/v1alpha1
 kind: ClusterProvisioner
 metadata:
-  name: stub-bus-provisioner
+  name: in-memory-bus-provisioner
 spec:
   reconciles:
     group: eventing.knative.dev/v1alpha1
@@ -26,13 +26,13 @@ spec:
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: stub-bus-controller
+  name: in-memory-bus-controller
   namespace: &namespace knative-eventing
 spec:
   replicas: 1
   selector:
     matchLabels: &labels
-      clusterProvisioner: stub-bus-provisioner
+      clusterProvisioner: in-memory-bus-provisioner
       role: controller
   template:
     metadata:
@@ -40,11 +40,11 @@ spec:
     spec:
       serviceAccountName: eventing-controller
       containers:
-      - name: controller-dispatcher
-        image: github.com/knative/eventing/pkg/controller/eventing/stub/controller
+      - name: controller
+        image: github.com/knative/eventing/pkg/controller/eventing/inmemory/controller
         env:
         - name: BUS_NAME
-          value: stub
+          value: in-memory
         - name: BUS_NAMESPACE
           value: *namespace
         args:
@@ -57,13 +57,13 @@ spec:
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: stub-bus-disptacher
+  name: in-memory-bus-dispatcher
   namespace: knative-eventing
 spec:
   replicas: 1
   selector:
     matchLabels: &labels
-      clusterProvisioner: stub-bus-provisioner
+      clusterProvisioner: in-memory-bus-provisioner
       role: dispatcher
   template:
     metadata:
@@ -78,4 +78,3 @@ spec:
           args:
             - --sidecar_port=8080
             - --config_map_noticer=watcher
-
