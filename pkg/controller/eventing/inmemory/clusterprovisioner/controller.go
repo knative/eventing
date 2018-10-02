@@ -36,10 +36,9 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 	logger = logger.With(zap.String("controller", controllerAgentName))
 
 	// Setup a new controller to Reconcile ClusterProvisioners that are in-memory buses.
-	r :=  &reconciler{
-		mgr: mgr,
+	r := &reconciler{
 		recorder: mgr.GetRecorder(controllerAgentName),
-		logger: logger,
+		logger:   logger,
 	}
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: r,

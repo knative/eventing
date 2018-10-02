@@ -35,7 +35,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -48,13 +47,11 @@ const (
 )
 
 type reconciler struct {
-	client     client.Client
-	restConfig *rest.Config
-	recorder   record.EventRecorder
+	client   client.Client
+	recorder record.EventRecorder
+	logger   *zap.Logger
 
 	configMapKey client.ObjectKey
-
-	logger *zap.Logger
 }
 
 // Verify the struct implements reconcile.Reconciler
@@ -161,10 +158,10 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 func (r *reconciler) makeSubscribable(c *eventingv1alpha1.Channel) {
 	// Point at itself.
 	c.Status.Subscribable.Channelable = corev1.ObjectReference{
-		Kind: "Channel",
+		Kind:       "Channel",
 		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-		Namespace: c.Namespace,
-		Name: c.Name,
+		Namespace:  c.Namespace,
+		Name:       c.Name,
 	}
 }
 
@@ -401,7 +398,7 @@ func (r *reconciler) createNewConfigMap(config string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.configMapKey.Namespace,
-			Name: r.configMapKey.Name,
+			Name:      r.configMapKey.Name,
 		},
 		Data: map[string]string{
 			multichannelfanoutparse.MultiChannelFanoutConfigKey: config,

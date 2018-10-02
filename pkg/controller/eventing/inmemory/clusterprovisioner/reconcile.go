@@ -30,20 +30,19 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-type reconciler struct {
-	mgr        manager.Manager
-	client     client.Client
-	restConfig *rest.Config
-	recorder   record.EventRecorder
+const (
+	cpName = "in-memory-bus-provisioner"
+)
 
-	logger *zap.Logger
+type reconciler struct {
+	client   client.Client
+	recorder record.EventRecorder
+	logger   *zap.Logger
 }
 
 // Verify the struct implements reconcile.Reconciler
@@ -99,7 +98,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 }
 
 func IsControlled(ref *eventingv1alpha1.ProvisionerReference) bool {
-	if ref != nil {
+	if ref != nil && ref.Ref != nil {
 		return shouldReconcile(ref.Ref.Namespace, ref.Ref.Name)
 	}
 	return false
@@ -108,7 +107,7 @@ func IsControlled(ref *eventingv1alpha1.ProvisionerReference) bool {
 // shouldReconcile determines if this Controller should control (and therefore reconcile) a given
 // ClusterProvisioner. This Controller only handles in-memory buses.
 func shouldReconcile(namespace, name string) bool {
-	return namespace == "" && name == "in-memory-bus-provisioner"
+	return namespace == "" && name == cpName
 }
 
 func (r *reconciler) reconcile(ctx context.Context, cp *eventingv1alpha1.ClusterProvisioner) error {
