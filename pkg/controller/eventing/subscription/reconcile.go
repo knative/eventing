@@ -168,6 +168,22 @@ func (r *reconciler) resolveCall(namespace string, callable v1alpha1.Callable) (
 		return *callable.TargetURI, nil
 	}
 
+	// K8s services are special cased. They can be called, even though they do not satisfy the
+	// Targetable interface.
+	if callable.Target != nil && callable.Target.APIVersion == "v1" && callable.Target.Kind == "Service" {
+		svc := &corev1.Service{}
+		svcKey := types.NamespacedName{
+			Namespace: namespace,
+			Name:      callable.Target.Name,
+		}
+		err := r.client.Get(context.TODO(), svcKey, svc)
+		if err != nil {
+			glog.Warningf("Failed to fetch Callable target as a K8s Service %+v: %s", callable.Target, err)
+			return "", err
+		}
+		return controller.ServiceHostName(svc.Name, svc.Namespace), nil
+	}
+
 	obj, err := r.fetchObjectReference(namespace, callable.Target)
 	if err != nil {
 		glog.Warningf("Failed to fetch Callable target %+v: %s", callable.Target, err)
@@ -185,17 +201,7 @@ func (r *reconciler) resolveCall(namespace string, callable v1alpha1.Callable) (
 	if t.Status.Targetable != nil {
 		return t.Status.Targetable.DomainInternal, nil
 	}
-
-	// K8s Services are special cased.
-	svc := corev1.Service{}
-	err = duck.FromUnstructured(obj, &svc)
-	// duck will deserialize anything that looks even vaguely right, so we need to check that the
-	// deserialized object is actually a K8s Service.
-	if err != nil || svc.APIVersion != "v1" || svc.Kind != "Service" {
-		// Normal return of things that are neither Targetable nor a K8s Service.
-		return "", fmt.Errorf("status does not contain targetable")
-	}
-	return controller.ServiceHostName(svc.Name, svc.Namespace), nil
+	return "", fmt.Errorf("status does not contain targetable")
 }
 
 // resolveResult resolves the Spec.Result object.

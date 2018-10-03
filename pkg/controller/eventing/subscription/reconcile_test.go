@@ -385,6 +385,7 @@ var testCases = []controllertesting.TestCase{
 		Name: "new subscription to K8s Service: adds status, all targets resolved, subscribers modified",
 		InitialState: []runtime.Object{
 			getNewSubscriptionToK8sService(),
+			getK8sService(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
 		// TODO: JSON patch is not working for some reason. Is this the array vs. non-array, or
@@ -694,6 +695,19 @@ func subscriptionType() metav1.TypeMeta {
 	return metav1.TypeMeta{
 		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 		Kind:       "Subscription",
+	}
+}
+
+func getK8sService() *corev1.Service {
+	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNS,
+			Name:      k8sServiceName,
+		},
 	}
 }
 
