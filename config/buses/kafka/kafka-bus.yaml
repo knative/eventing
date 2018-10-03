@@ -16,11 +16,11 @@ spec:
       "-stderrthreshold", "INFO",
     ]
     env: &env
-    - name: KAFKA_BROKERS
+    - name: KAFKA_BOOTSTRAP_SERVERS
       valueFrom:
         configMapKeyRef:
           name: kafka-bus-config
-          key: KAFKA_BROKERS
+          key: KAFKA_BOOTSTRAP_SERVERS
   dispatcher:
     name: dispatcher
     image: github.com/knative/eventing/pkg/buses/kafka/dispatcher
