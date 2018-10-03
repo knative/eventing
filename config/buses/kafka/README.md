@@ -7,6 +7,10 @@ Deployment steps:
     kubectl create namespace kafka
     kubectl apply -n kafka -f config/buses/kafka/broker/kafka-broker.yaml
     ```
+    > Note: If you are running Knative on OpenShift you will need to run the following command first to allow the Kafka broker to run as root.
+      ```
+      oc adm policy add-scc-to-user anyuid -z default -n kafka
+      ```
 1. Configure the bus to use the Kafka broker, replace the broker URL if not using the provided broker:
     ```
     kubectl -n knative-eventing create configmap kafka-bus-config --from-literal=KAFKA_BROKERS=kafkabroker.kafka:9092
