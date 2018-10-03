@@ -5,8 +5,6 @@ This directory contains tests and testing docs for `Knative Eventing`.
 * [Unit tests](#running-unit-tests) reside in the codebase alongside the code they test
 * [End-to-end tests](#running-end-to-end-tests) reside in [`/test/e2e`](./e2e)
 
-If you want to add more tests, see [adding_tests.md](./adding_tests.md).
-
 ## Running unit tests
 
 Use `go test`:
@@ -27,15 +25,12 @@ This script, and consequently, the e2e tests will be run before every code submi
 test/presubmit-tests.sh
 ```
 
-_Note that to run `presubmit-tests.sh` or `e2e-tests.sh` scripts, you'll need kubernetes `kubetest` installed:_
-
-```bash
-go get -u k8s.io/test-infra/kubetest
-```
+_Note that to run `presubmit-tests.sh` or `e2e-tests.sh` scripts, you need to have a running environment that meets
+[the e2e test environment requirements](#environment-requirements)_
 
 ## Running end-to-end tests
 
-To run [the e2e tests](./e2e) and [the conformance tests](./conformance), you need to have a running environment that meets
+To run [the e2e tests](./e2e), you need to have a running environment that meets
 [the e2e test environment requirements](#environment-requirements), and you need to specify the build tag `e2e`.
 
 ```bash
