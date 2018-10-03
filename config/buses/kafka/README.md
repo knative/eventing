@@ -2,12 +2,6 @@
 
 Deployment steps:
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md)
-1. If you want to set the default Knative Bus to Kafka run the following command to edit the Knative Eventing configuration:
-    ```shell
-    kubectl get cm flow-controller-config -n knative-eventing -oyaml  \
-    | sed -e 's/stub/kafka/' \
-    | kubectl replace -f -
-    ```
 1. Install a Kafka broker. A simple setup is provided:
     ```
     kubectl create namespace kafka
@@ -21,6 +15,12 @@ Deployment steps:
 1. Apply the Kafka Bus:
     ```
     ko apply -f config/buses/kafka/
+    ```
+1. If you want to set the default Knative Bus to Kafka run the following command to edit the Knative Eventing configuration (requires the above change in kind from `Bus` to `ClusterBus`):
+    ```shell
+    kubectl get cm flow-controller-config -n knative-eventing -oyaml  \
+    | sed -e 's/default-cluster-bus: stub/  default-cluster-bus: kafka/' \
+    | kubectl replace -f -
     ```
 1. Create Channels that reference the 'kafka' Bus
 1. (Optional) Install [Kail](https://github.com/boz/kail) - Kubernetes tail
