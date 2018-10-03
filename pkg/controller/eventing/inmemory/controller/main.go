@@ -25,25 +25,17 @@ import (
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 func main() {
-	ref := buses.NewBusReferenceFromNames(
-		os.Getenv("BUS_NAME"),
-		os.Getenv("BUS_NAMESPACE"),
-	)
-
 	logConfig := buses.NewLoggingConfig()
 	logger := buses.NewBusLoggerFromConfig(logConfig)
 	defer logger.Sync()
 	logger = logger.With(
-		// TODO: probably replace, Bus isn't really a thing anymore.
-		zap.String("eventing.knative.dev/bus", ref.String()),
-		zap.String("eventing.knative.dev/busType", "in-memory"),
-		zap.String("eventing.knative.dev/busComponent", buses.Provisioner),
+		zap.String("eventing.knative.dev/clusterProvisioner", clusterprovisioner.Name),
+		zap.String("eventing.knative.dev/clusterProvisionerComponent", "Controller"),
 	)
 	flag.Parse()
 

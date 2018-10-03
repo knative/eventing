@@ -30,8 +30,8 @@ import (
 const (
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName = "in-memory-bus-channel-controller"
-	ConfigMapName       = "in-memory-bus-dispatcher-config-map"
+	controllerAgentName = "in-memory-channel-controller"
+	ConfigMapName       = "in-memory-channel-dispatcher-config-map"
 )
 
 var (
@@ -44,7 +44,7 @@ var (
 // ProvideController returns a flow controller.
 func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Channels that belong to this Cluster Provisioner
-	// (in-memory buses).
+	// (in-memory channels).
 	r := &reconciler{
 		configMapKey: DefaultConfigMapKey,
 		recorder:     mgr.GetRecorder(controllerAgentName),

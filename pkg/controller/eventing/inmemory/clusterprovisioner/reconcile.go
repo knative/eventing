@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	cpName = "in-memory-bus-provisioner"
+	Name = "in-memory-channel"
 )
 
 type reconciler struct {
@@ -105,17 +105,17 @@ func IsControlled(ref *eventingv1alpha1.ProvisionerReference) bool {
 }
 
 // shouldReconcile determines if this Controller should control (and therefore reconcile) a given
-// ClusterProvisioner. This Controller only handles in-memory buses.
+// ClusterProvisioner. This Controller only handles in-memory channels.
 func shouldReconcile(namespace, name string) bool {
-	return namespace == "" && name == cpName
+	return namespace == "" && name == Name
 }
 
 func (r *reconciler) reconcile(ctx context.Context, cp *eventingv1alpha1.ClusterProvisioner) error {
 	logger := r.logger.With(zap.Any("clusterProvisioner", cp))
 
 	// We are syncing one thing.
-	// 1. The K8s Service to talk to this in-memory bus.
-	//     - There is a single K8s Service for all requests going to this in-memory bus.
+	// 1. The K8s Service to talk to all in-memory Channels.
+	//     - There is a single K8s Service for all requests going any in-memory Channel.
 
 	if cp.DeletionTimestamp != nil {
 		// K8s garbage collection will delete the dispatcher service, once this ClusterProvisioner

@@ -15,7 +15,7 @@ spec:
     ref:
       apiVersion: eventing.knative.dev/v1alpha1
       kind: ClusterProvisioner
-      name: in-memory-bus-provisioner
+      name: in-memory-channel
 
 ---
 
@@ -28,7 +28,7 @@ spec:
     ref:
       apiVersion: eventing.knative.dev/v1alpha1
       kind: ClusterProvisioner
-      name: in-memory-bus-provisioner
+      name: in-memory-channel
 
 ---
 

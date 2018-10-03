@@ -28,14 +28,14 @@ import (
 const (
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName = "in-memory-bus-cluster-provisioner-controller"
+	controllerAgentName = "in-memory-channel-controller"
 )
 
 // ProvideController returns a flow controller.
 func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	logger = logger.With(zap.String("controller", controllerAgentName))
 
-	// Setup a new controller to Reconcile ClusterProvisioners that are in-memory buses.
+	// Setup a new controller to Reconcile ClusterProvisioners that are in-memory channels.
 	r := &reconciler{
 		recorder: mgr.GetRecorder(controllerAgentName),
 		logger:   logger,

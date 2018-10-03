@@ -8,7 +8,7 @@ spec:
     ref:
       apiVersion: eventing.knative.dev/v1alpha1
       kind: ClusterProvisioner
-      name: in-memory-bus-provisioner
+      name: in-memory-channel
   channelable:
     subscribers:
       - sinkableDomain: message-dumper-foo.default.svc.cluster.local # Already exists
@@ -26,7 +26,7 @@ spec:
     ref:
       apiVersion: eventing.knative.dev/v1alpha1
       kind: ClusterProvisioner
-      name: in-memory-bus-provisioner
+      name: in-memory-channel
   channelable:
     subscribers:
       - sinkableDomain: message-dumper-bar.default.svc.cluster.local # Already exists

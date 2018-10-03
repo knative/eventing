@@ -91,7 +91,7 @@ func TestIsControlled(t *testing.T) {
 			ref: &eventingv1alpha1.ProvisionerReference{
 				Ref: &corev1.ObjectReference{
 					Namespace: "other",
-					Name:      cpName,
+					Name:      Name,
 				},
 			},
 			isControlled: false,
@@ -107,7 +107,7 @@ func TestIsControlled(t *testing.T) {
 		"is controlled": {
 			ref: &eventingv1alpha1.ProvisionerReference{
 				Ref: &corev1.ObjectReference{
-					Name: cpName,
+					Name: Name,
 				},
 			},
 			isControlled: true,
@@ -143,7 +143,7 @@ func TestReconcile(t *testing.T) {
 				&eventingv1alpha1.ClusterProvisioner{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "not empty string",
-						Name:      cpName,
+						Name:      Name,
 					},
 				},
 			},
@@ -244,7 +244,7 @@ func TestReconcile(t *testing.T) {
 			logger:   zap.NewNop(),
 		}
 		if tc.ReconcileKey == "" {
-			tc.ReconcileKey = fmt.Sprintf("/%s", cpName)
+			tc.ReconcileKey = fmt.Sprintf("/%s", Name)
 		}
 		t.Run(tc.Name, tc.Runner(t, r, c))
 	}
@@ -257,7 +257,7 @@ func makeClusterProvisioner() *eventingv1alpha1.ClusterProvisioner {
 			Kind:       "ClusterProvisioner",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: cpName,
+			Name: Name,
 			UID:  cpUid,
 		},
 	}
@@ -288,21 +288,21 @@ func makeK8sService() *corev1.Service {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: system.Namespace,
-			Name:      fmt.Sprintf("%s-clusterbus", cpName),
+			Name:      fmt.Sprintf("%s-clusterbus", Name),
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
 					Kind:               "ClusterProvisioner",
-					Name:               cpName,
+					Name:               Name,
 					UID:                cpUid,
 					Controller:         &truePointer,
 					BlockOwnerDeletion: &truePointer,
 				},
 			},
-			Labels: dispatcherLabels(cpName),
+			Labels: dispatcherLabels(Name),
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: dispatcherLabels(cpName),
+			Selector: dispatcherLabels(Name),
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "http",

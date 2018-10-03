@@ -15,7 +15,7 @@
 apiVersion: eventing.knative.dev/v1alpha1
 kind: ClusterProvisioner
 metadata:
-  name: in-memory-bus-provisioner
+  name: in-memory-channel
 spec:
   reconciles:
     group: eventing.knative.dev/v1alpha1
@@ -26,13 +26,13 @@ spec:
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: in-memory-bus-controller
+  name: in-memory-channel-controller
   namespace: &namespace knative-eventing
 spec:
   replicas: 1
   selector:
     matchLabels: &labels
-      clusterProvisioner: in-memory-bus-provisioner
+      clusterProvisioner: in-memory-channel
       role: controller
   template:
     metadata:
@@ -42,28 +42,19 @@ spec:
       containers:
       - name: controller
         image: github.com/knative/eventing/pkg/controller/eventing/inmemory/controller
-        env:
-        - name: BUS_NAME
-          value: in-memory
-        - name: BUS_NAMESPACE
-          value: *namespace
-        args:
-        - -logtostderr
-        - -stderrthreshold
-        - INFO
 
 ---
 
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: in-memory-bus-dispatcher
+  name: in-memory-channel-dispatcher
   namespace: knative-eventing
 spec:
   replicas: 1
   selector:
     matchLabels: &labels
-      clusterProvisioner: in-memory-bus-provisioner
+      clusterProvisioner: in-memory-channel
       role: dispatcher
   template:
     metadata:
