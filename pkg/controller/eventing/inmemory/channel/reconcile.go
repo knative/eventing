@@ -85,7 +85,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	// Does this Controller control this Channel?
 	if !r.shouldReconcile(c) {
-		logger.Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("ref", c.Spec.Provisioner.Ref))
+		logger.Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("ref", c.Spec))
 		return reconcile.Result{}, nil
 	}
 	logger.Info("Reconciling Channel")
@@ -109,7 +109,10 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 // shouldReconcile determines if this Controller should control (and therefore reconcile) a given
 // ClusterProvisioner. This Controller only handles in-memory buses.
 func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
-	return cpcontroller.IsControlled(c.Spec.Provisioner)
+	if c.Spec.Provisioner != nil {
+		return cpcontroller.IsControlled(c.Spec.Provisioner)
+	}
+	return false
 }
 
 func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) error {
@@ -390,6 +393,10 @@ func (r *reconciler) writeConfigMap(ctx context.Context, config *multichannelfan
 		return nil
 	}
 
+	if cm.Data == nil {
+		cm.Data = map[string]string{}
+	}
+
 	cm.Data[multichannelfanoutparse.MultiChannelFanoutConfigKey] = updated
 	return r.client.Update(ctx, cm)
 }
@@ -428,7 +435,16 @@ func multiChannelFanoutConfig(channels []eventingv1alpha1.Channel) *multichannel
 func (r *reconciler) listAllChannels(ctx context.Context) ([]eventingv1alpha1.Channel, error) {
 	channels := make([]eventingv1alpha1.Channel, 0)
 
-	opts := &client.ListOptions{}
+	opts := &client.ListOptions{
+		// TODO this is here because the fake client needs it. Remove this when it's no longer
+		// needed.
+		Raw: &metav1.ListOptions{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "Channel",
+			},
+		},
+	}
 	for {
 		cl := &eventingv1alpha1.ChannelList{}
 		err := r.client.List(ctx, opts, cl)
@@ -444,7 +460,7 @@ func (r *reconciler) listAllChannels(ctx context.Context) ([]eventingv1alpha1.Ch
 		if cl.Continue != "" {
 			opts.Raw.Continue = cl.Continue
 		} else {
-			return channels, err
+			return channels, nil
 		}
 	}
 }

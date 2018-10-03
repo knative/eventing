@@ -237,8 +237,6 @@ func TestReconcile(t *testing.T) {
 	}
 	recorder := record.NewBroadcaster().NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 	for _, tc := range testCases {
-		if tc.Name != "Create dispatcher - already exists" {
-		}
 		c := tc.GetClient()
 		r := &reconciler{
 			client:   c,
