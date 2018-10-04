@@ -13,7 +13,7 @@ Deployment steps:
       ```
 1. Configure the bus to use the Kafka broker, replace the broker URL if not using the provided broker:
     ```
-    kubectl -n knative-eventing create configmap kafka-bus-config --from-literal=KAFKA_BROKERS=kafkabroker.kafka:9092
+    kubectl -n knative-eventing create configmap kafka-bus-config --from-literal=KAFKA_BOOTSTRAP_SERVERS=kafkabroker.kafka:9092
     ```
 1. For cluster wide deployment, change the kind in `config/buses/kafka/kafka-bus.yaml` from `Bus` to `ClusterBus`.
 1. Apply the Kafka Bus:
