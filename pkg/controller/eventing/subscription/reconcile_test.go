@@ -310,10 +310,9 @@ var testCases = []controllertesting.TestCase{
 			getNewSubscription(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
-		// TODO: JSON patch is not working for some reason. Is this the array vs. non-array, or
-		// k8s accepting something the fake doesn't, or is there a real bug somewhere?
-		// it works correctly on the k8s cluster. so need to figure this out
-		// Marking this as expecting a failure. Needs to be fixed obviously.
+		// TODO: JSON patch is not working on the fake, see
+		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+		// failure for now, until upstream is fixed.
 		WantResult: reconcile.Result{},
 		WantErrMsg: "invalid JSON document",
 		Scheme:     scheme.Scheme,
@@ -388,10 +387,9 @@ var testCases = []controllertesting.TestCase{
 			getK8sService(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
-		// TODO: JSON patch is not working for some reason. Is this the array vs. non-array, or
-		// k8s accepting something the fake doesn't, or is there a real bug somewhere?
-		// it works correctly on the k8s cluster. so need to figure this out
-		// Marking this as expecting a failure. Needs to be fixed obviously.
+		// TODO: JSON patch is not working on the fake, see
+		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+		// failure for now, until upstream is fixed.
 		WantResult: reconcile.Result{},
 		WantErrMsg: "invalid JSON document",
 		Scheme:     scheme.Scheme,
@@ -460,10 +458,9 @@ var testCases = []controllertesting.TestCase{
 			getNewSubscriptionWithSource(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
-		// TODO: JSON patch is not working for some reason. Is this the array vs. non-array, or
-		// k8s accepting something the fake doesn't, or is there a real bug somewhere?
-		// it works correctly on the k8s cluster. so need to figure this out
-		// Marking this as expecting a failure. Needs to be fixed obviously.
+		// TODO: JSON patch is not working on the fake, see
+		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+		// failure for now, until upstream is fixed.
 		WantResult: reconcile.Result{},
 		WantErrMsg: "invalid JSON document",
 		Scheme:     scheme.Scheme,

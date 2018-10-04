@@ -190,8 +190,6 @@ func (r *reconciler) resolveCall(namespace string, callable v1alpha1.Callable) (
 		return "", err
 	}
 	t := duckv1alpha1.Target{}
-	// Once Knative services support Targetable, switch to using this.
-	//t := duckv1alpha1.Target{}
 	err = duck.FromUnstructured(obj, &t)
 	if err != nil {
 		glog.Warningf("Failed to deserialize legacy target: %s", err)
