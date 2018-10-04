@@ -10,4 +10,4 @@
       oc adm policy add-scc-to-user anyuid -z default -n kafka
       ```
 
-To contine the configuration of Knative Eventing, contine with [step `3`](../).
+Continue the configuration of Knative Eventing with [step `3`](../).

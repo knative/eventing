@@ -2,16 +2,23 @@
 
 [Strimzi](http://strimzi.io) makes it easy to run a production grade Apache Kafka installation on OpenShift or Kubernetes. It implements the _Kubernetes Operator pattern_ for mananging `clusters`, `topics` or `users` based on custom resource files. 
 
-Installing the Strimzi Operator is simple and requires only a few steps:
+Installing the Strimzi Cluster Operator is simple and requires only a few steps.
 
-1. Create the `kafka` namespace and apply the Strimzi Roles, CRDs and the deployment:
+1. Create the `kafka` namespace in your Kubernetes cluster:
     ```
     kubectl create namespace kafka
-    kubectl apply -f resources -n kafka
     ```
-    This will create a deployment for the `strimzi-cluster-operator` pod, which is able to install the Apache Kafka broker, based on a `Kafka` custom resource file.
 
-1. Install the cluster by providing the `kafka-persistent.yaml` custom resource file:
+1. Install the Strimzi _Cluster Operator_:
+
+    * Applying yaml files from the [Strimzi release bundle](https://github.com/strimzi/strimzi-kafka-operator/releases/latest)
+    * Using the Strimzi Helm Chart
+
+    Both ways for installing the _Cluster Operator_ are described in the [Strimzi documentation](http://strimzi.io/docs/master/#cluster-operator-str) itself
+
+    > Note: Once this is done, you will have a `strimzi-cluster-operator` pod, which is able to install the Apache Kafka broker based on a `Kafka` custom resource file.
+
+1. Install the Apache Kafka cluster by providing the `kafka-persistent.yaml` Strimzi resource file from _this_ folder:
       ```
       kubectl apply -f kafka-persistent.yaml -n kafka
       ```
@@ -19,4 +26,6 @@ Installing the Strimzi Operator is simple and requires only a few steps:
 
     This provisions the complete installation of your Apache Kafka cluster.
 
-To contine the configuration of Knative Eventing, contine with [step `3`](../).
+> Note: For learning more about Strimiz, please consult its [website](http://strimzi.io).
+
+Continue the configuration of Knative Eventing with [step `3`](../).
