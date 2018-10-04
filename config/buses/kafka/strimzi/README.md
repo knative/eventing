@@ -19,4 +19,4 @@ Installing the Strimzi Operator is simple and requires only a few steps:
 
     This provisions the complete installation of your Apache Kafka cluster.
 
-To contine the configuration of Strimzi, contine with [step `3`](../).
+To contine the configuration of Knative Eventing, contine with [step `3`](../).
