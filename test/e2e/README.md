@@ -2,16 +2,15 @@
 
 * [Running e2e tests](../README.md#running-e2e-tests)
 
-## Tests
+## Adding end to end tests
 
-### k8s_events_test
- 1. install the k8sevents as an event source (ko apply -f pkg/sources/k8sevents)
- 2. create a test namespace (e2etest) and testfn namespace (e2etestfn)
- 3. create service account and role binding (ko apply -f test/e2e/k8sevents/serviceaccount*.yaml)
- 4. install a stub bus (ko apply -f test/e2e/k8sevents/stub.yaml)
- 5. create a channel (ko apply -f test/e2e/k8sevents/channel.yaml)
- 6. install a function (ko apply -f test/e2e/k8sevents/function.yaml)
- 7. subscribe function to channel (ko apply -f test/e2e/k8sevents/subscription.yaml)
- 8. create a feed, watching namespace #3 (ko apply -f test/e2e/k8sevents/feed-channel.yaml)
- 9. create a pod in that namespace (ko apply -f test/e2e/k8sevents/pod.yaml)
- 10. check the logs of the function and check that events show up
+Knative Eventing e2e tests [test the end to end functionality of the Knative Eventing API](#requirements) to verify the behavior of this specific implementation.
+
+### Requirements
+
+The e2e tests are used to test whether the flow of Knative Eventing is performing as designed from start to finish.
+
+The e2e tests **MUST**:
+
+1. Provide frequent output describing what actions they are undertaking, especially before performing long running operations.
+2. Follow Golang best practices.

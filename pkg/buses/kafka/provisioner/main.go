@@ -52,9 +52,9 @@ func main() {
 		Logger: logger,
 	}
 
-	brokers := strings.Split(os.Getenv("KAFKA_BROKERS"), ",")
+	brokers := strings.Split(os.Getenv("KAFKA_BOOTSTRAP_SERVERS"), ",")
 	if len(brokers) == 0 {
-		logger.Fatalf("Environment variable KAFKA_BROKERS not set")
+		logger.Fatalf("Environment variable KAFKA_BOOTSTRAP_SERVERS not set")
 	}
 
 	flag.StringVar(&opts.KubeConfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
