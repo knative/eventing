@@ -1,20 +1,16 @@
-# Kafka - Knative Bus
+# Apache Kafka - Knative Bus
 
 Deployment steps:
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md)
-1. Install a Kafka broker. A simple setup is provided:
-    ```
-    kubectl create namespace kafka
-    kubectl apply -n kafka -f config/buses/kafka/broker/kafka-broker.yaml
-    ```
-    > Note: If you are running Knative on OpenShift you will need to run the following command first to allow the Kafka broker to run as root.
-      ```
-      oc adm policy add-scc-to-user anyuid -z default -n kafka
-      ```
-1. Configure the bus to use the Kafka broker, replace the broker URL if not using the provided broker:
+1. Install an Apache Kafka cluster. There are two choices:
+   * Simple installation of [Apache Kafka](broker).
+   * A production grade installation using the [Strimzi Kafka Operator](strimzi).
+
+1. Now that the Apache Kafka is installed, configure the bus to use the Kafka broker, replace the broker URL if not using the provided broker:
     ```
     kubectl -n knative-eventing create configmap kafka-bus-config --from-literal=KAFKA_BOOTSTRAP_SERVERS=kafkabroker.kafka:9092
     ```
+    > Note: If you are using Strimzi, the value for the URL is `my-cluster-kafka-bootstrap.kafka.9092`.
 1. For cluster wide deployment, change the kind in `config/buses/kafka/kafka-bus.yaml` from `Bus` to `ClusterBus`.
 1. Apply the Kafka Bus:
     ```
