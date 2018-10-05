@@ -304,7 +304,7 @@ const (
 )
 
 // getDefaultClusterBusName returns the value of the 'default-cluster-bus' key in
-// the knative-system/flow-controller-config configmap or an error. If the
+// the knative-eventing/flow-controller-config configmap or an error. If the
 // 'default-cluster-bus' key is not set, it returns the default value "stub".
 func (r *reconciler) getDefaultClusterBusName() (string, error) {
 	configMapKey := client.ObjectKey{
