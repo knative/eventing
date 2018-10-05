@@ -1,0 +1,20 @@
+apiVersion: channels.knative.dev/v1alpha1
+kind: Bus
+metadata:
+  name: natss
+spec:
+  provisioner:
+    name: provisioner
+    image: github.com/knative/eventing/pkg/buses/natss/provisioner
+    args: [
+      "-logtostderr",
+      "-stderrthreshold", "INFO",
+    ]
+  dispatcher:
+    name: dispatcher
+    image: github.com/knative/eventing/pkg/buses/natss/dispatcher
+    args: [
+      "-logtostderr",
+      "-stderrthreshold", "INFO",
+    ]
+
