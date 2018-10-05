@@ -51,6 +51,7 @@ const (
 	eventType         = "myeventtype"
 	subscriptionName  = "testsubscription"
 	testNS            = "testnamespace"
+	k8sServiceName    = "testk8sservice"
 )
 
 func init() {
@@ -309,10 +310,9 @@ var testCases = []controllertesting.TestCase{
 			getNewSubscription(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
-		// TODO: JSON patch is not working for some reason. Is this the array vs. non-array, or
-		// k8s accepting something the fake doesn't, or is there a real bug somewhere?
-		// it works correctly on the k8s cluster. so need to figure this out
-		// Marking this as expecting a failure. Needs to be fixed obviously.
+		// TODO: JSON patch is not working on the fake, see
+		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+		// failure for now, until upstream is fixed.
 		WantResult: reconcile.Result{},
 		WantErrMsg: "invalid JSON document",
 		Scheme:     scheme.Scheme,
@@ -381,15 +381,86 @@ var testCases = []controllertesting.TestCase{
 				}},
 		},
 	}, {
+		Name: "new subscription to K8s Service: adds status, all targets resolved, subscribers modified",
+		InitialState: []runtime.Object{
+			getNewSubscriptionToK8sService(),
+			getK8sService(),
+		},
+		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
+		// TODO: JSON patch is not working on the fake, see
+		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+		// failure for now, until upstream is fixed.
+		WantResult: reconcile.Result{},
+		WantErrMsg: "invalid JSON document",
+		Scheme:     scheme.Scheme,
+		Objects: []runtime.Object{
+			// Source channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       channelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      fromChannelName,
+					},
+					"spec": map[string]interface{}{
+						"channelable": map[string]interface{}{},
+					},
+					"status": map[string]interface{}{
+						"subscribable": map[string]interface{}{
+							"channelable": map[string]interface{}{
+								"kind":       channelKind,
+								"name":       fromChannelName,
+								"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+							},
+						},
+					},
+				}},
+			// Call (using K8s Service)
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Service",
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      k8sServiceName,
+					},
+				}},
+			// Result channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       channelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      resultChannelName,
+					},
+					"spec": map[string]interface{}{
+						"channelable": map[string]interface{}{},
+					},
+					"status": map[string]interface{}{
+						"subscribable": map[string]interface{}{
+							"channelable": map[string]interface{}{
+								"kind":       channelKind,
+								"name":       fromChannelName,
+								"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+							},
+						},
+						"sinkable": map[string]interface{}{
+							"domainInternal": sinkableDNS,
+						},
+					},
+				}},
+		},
+	}, {
 		Name: "new subscription with source: adds status, all targets resolved, subscribers modified",
 		InitialState: []runtime.Object{
 			getNewSubscriptionWithSource(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
-		// TODO: JSON patch is not working for some reason. Is this the array vs. non-array, or
-		// k8s accepting something the fake doesn't, or is there a real bug somewhere?
-		// it works correctly on the k8s cluster. so need to figure this out
-		// Marking this as expecting a failure. Needs to be fixed obviously.
+		// TODO: JSON patch is not working on the fake, see
+		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+		// failure for now, until upstream is fixed.
 		WantResult: reconcile.Result{},
 		WantErrMsg: "invalid JSON document",
 		Scheme:     scheme.Scheme,
@@ -553,6 +624,18 @@ func getNewSubscription() *eventingv1alpha1.Subscription {
 	return subscription
 }
 
+func getNewSubscriptionToK8sService() *eventingv1alpha1.Subscription {
+	sub := getNewSubscription()
+	sub.Spec.Call = &eventingv1alpha1.Callable{
+		Target: &corev1.ObjectReference{
+			Name:       k8sServiceName,
+			Kind:       "Service",
+			APIVersion: "v1",
+		},
+	}
+	return sub
+}
+
 func getNewSubscriptionWithSource() *eventingv1alpha1.Subscription {
 	subscription := &eventingv1alpha1.Subscription{
 		TypeMeta:   subscriptionType(),
@@ -609,6 +692,19 @@ func subscriptionType() metav1.TypeMeta {
 	return metav1.TypeMeta{
 		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 		Kind:       "Subscription",
+	}
+}
+
+func getK8sService() *corev1.Service {
+	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNS,
+			Name:      k8sServiceName,
+		},
 	}
 }
 
