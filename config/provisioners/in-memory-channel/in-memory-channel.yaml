@@ -177,7 +177,7 @@ spec:
   template:
     metadata:
       annotations:
-        sidecar.isio.io/inject: "true"
+        sidecar.istio.io/inject: "true"
       labels: *labels
     spec:
       serviceAccountName: in-memory-channel-dispatcher
