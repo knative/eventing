@@ -72,6 +72,14 @@
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:1b91ae0dc69a41d4c2ed23ea5cffb721ea63f5037ca4b81e6d6771fbb8f45129"
+  name = "github.com/fsnotify/fsnotify"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
+  version = "v1.4.7"
+
+[[projects]]
   digest = "1:81466b4218bf6adddac2572a30ac733a9255919bc2f470b4827a317bd4ee1756"
   name = "github.com/ghodss/yaml"
   packages = ["."]
@@ -268,7 +276,7 @@
   revision = "5c1d8c8469d1ed34b2aecf4c2305b3a57fff2ee3"
 
 [[projects]]
-  digest = "1:3032bf41e1ec7fe0093c6db659b3cf202ef528c421c26376a7fe209467a9fd74"
+  digest = "1:a3f465e8fba2ec1a371c52063ce81f17fbf7356a8cadbc160b2f94796ff5e785"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -1052,6 +1060,7 @@
     "github.com/Shopify/sarama",
     "github.com/bsm/sarama-cluster",
     "github.com/davecgh/go-spew/spew",
+    "github.com/fsnotify/fsnotify",
     "github.com/golang/glog",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
@@ -1077,6 +1086,7 @@
     "github.com/knative/test-infra",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "go.opencensus.io/trace",
+    "go.uber.org/atomic",
     "go.uber.org/zap",
     "go.uber.org/zap/zapcore",
     "golang.org/x/net/context",
@@ -1106,6 +1116,7 @@
     "k8s.io/apimachinery/pkg/util/sets/types",
     "k8s.io/apimachinery/pkg/util/validation",
     "k8s.io/apimachinery/pkg/util/wait",
+    "k8s.io/apimachinery/pkg/util/yaml",
     "k8s.io/apimachinery/pkg/watch",
     "k8s.io/client-go/discovery",
     "k8s.io/client-go/discovery/fake",
