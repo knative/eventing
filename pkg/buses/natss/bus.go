@@ -76,7 +76,7 @@ func NewNatssBusProvisioner(ref buses.BusReference, opts *buses.BusOpts) (*Natss
 				}
 			}
 			// subscribe to a NATSS subject
-			if natsStreamingSub, err := (*natsConn).Subscribe(channel.Name, mcb /*nmh.msgh*/, stan.DurableName(subscription.Name)); err != nil {
+			if natsStreamingSub, err := (*natsConn).Subscribe(channel.Name, mcb, stan.DurableName(subscription.Name)); err != nil {
 				bus.logger.Errorf(" Create new NATSS Subscription failed: %+v", err)
 			} else {
 				bus.logger.Info("NATSS Subscription created: %+v", natsStreamingSub)
@@ -130,7 +130,7 @@ func (b *NatssBus) Run(threadness int, stopCh <-chan struct{}, clientId string) 
 	b.logger.Infof("try to connect to NATSS from %s", clientId)
 	var err error
 	for i:=0; i<60; i++ {
-		if natsConn, err = stanutil.Connect("knative-nats-streaming", clientId, "nats://nats-streaming-headless.default.svc.cluster.local:4222"); err != nil {
+		if natsConn, err = stanutil.Connect("knative-nats-streaming", clientId, "nats://nats-streaming.default.svc.cluster.local:4222"); err != nil {
 			b.logger.Errorf(" Create new connection failed: %+v", err)
 			time.Sleep(time.Duration(1)*time.Second)
 		} else {

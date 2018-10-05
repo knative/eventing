@@ -14,14 +14,12 @@ metadata:
 apiVersion: v1
 kind: Service
 metadata:
-  name: nats-streaming-headless
+  name: nats-streaming
   namespace: default
   labels:
     app: nats-streaming
 spec:
-#  type: NodePort
   type: ClusterIP
-#  clusterIP: None
   ports:
   - name: client
     port: 4222
@@ -41,12 +39,11 @@ metadata:
   labels:
     app: nats-streaming
 spec:
-  serviceName: nats-streaming-headless
+  serviceName: nats-streaming
   replicas: 1
   selector:
     matchLabels:
       app: nats-streaming
-  serviceName: nats-streaming-headless
   template:
     metadata:
       annotations:
