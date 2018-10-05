@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/knative/pkg/apis"
-	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/webhook"
 )
@@ -51,9 +50,6 @@ var _ apis.Validatable = (*ClusterProvisioner)(nil)
 var _ apis.Defaultable = (*ClusterProvisioner)(nil)
 var _ runtime.Object = (*ClusterProvisioner)(nil)
 var _ webhook.GenericCRD = (*ClusterProvisioner)(nil)
-
-// Check that ClusterProvisioner implements the Conditions duck type.
-var _ = duck.VerifyType(&ClusterProvisioner{}, &duckv1alpha1.Conditions{})
 
 // ClusterProvisionerSpec is the spec for a ClusterProvisioner resource.
 type ClusterProvisionerSpec struct {

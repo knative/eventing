@@ -19,9 +19,9 @@ package subscription
 import (
 	"context"
 	"fmt"
-
 	"github.com/golang/glog"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/controller"
 	duckapis "github.com/knative/pkg/apis"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
@@ -168,17 +168,31 @@ func (r *reconciler) resolveCall(namespace string, callable v1alpha1.Callable) (
 		return *callable.TargetURI, nil
 	}
 
+	// K8s services are special cased. They can be called, even though they do not satisfy the
+	// Targetable interface.
+	if callable.Target != nil && callable.Target.APIVersion == "v1" && callable.Target.Kind == "Service" {
+		svc := &corev1.Service{}
+		svcKey := types.NamespacedName{
+			Namespace: namespace,
+			Name:      callable.Target.Name,
+		}
+		err := r.client.Get(context.TODO(), svcKey, svc)
+		if err != nil {
+			glog.Warningf("Failed to fetch Callable target as a K8s Service %+v: %s", callable.Target, err)
+			return "", err
+		}
+		return controller.ServiceHostName(svc.Name, svc.Namespace), nil
+	}
+
 	obj, err := r.fetchObjectReference(namespace, callable.Target)
 	if err != nil {
 		glog.Warningf("Failed to fetch Callable target %+v: %s", callable.Target, err)
 		return "", err
 	}
 	t := duckv1alpha1.Target{}
-	// Once Knative services support Targetable, switch to using this.
-	//t := duckv1alpha1.Target{}
 	err = duck.FromUnstructured(obj, &t)
 	if err != nil {
-		glog.Warningf("Failed to unserialize legacy target: %s", err)
+		glog.Warningf("Failed to deserialize legacy target: %s", err)
 		return "", err
 	}
 
@@ -198,7 +212,7 @@ func (r *reconciler) resolveResult(namespace string, resultStrategy v1alpha1.Res
 	s := duckv1alpha1.Sink{}
 	err = duck.FromUnstructured(obj, &s)
 	if err != nil {
-		glog.Warningf("Failed to unserialize Sinkable target: %s", err)
+		glog.Warningf("Failed to deserialize Sinkable target: %s", err)
 		return "", err
 	}
 	if s.Status.Sinkable != nil {
