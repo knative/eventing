@@ -174,6 +174,14 @@ type SubscriptionStatus struct {
 	// Subscription might be Subscribable. This depends if there's a Result channel
 	// In that case, this points to that resource.
 	Subscribable duckv1alpha1.Subscribable `json:"subscribable,omitempty"`
+
+	PhysicalSubscription SubscriptionStatusPhysicalSubscription `json:"physicalSubscription,omitEmpty"`
+}
+
+type SubscriptionStatusPhysicalSubscription struct {
+	From corev1.ObjectReference `json:"from,omitEmpty"`
+	CallDomain string `json:"callDomain,omitEmpty"`
+	ResultDomain string `json:"resultDomain,omitEmpty"`
 }
 
 const (

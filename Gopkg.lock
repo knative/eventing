@@ -268,7 +268,7 @@
   revision = "5c1d8c8469d1ed34b2aecf4c2305b3a57fff2ee3"
 
 [[projects]]
-  digest = "1:3032bf41e1ec7fe0093c6db659b3cf202ef528c421c26376a7fe209467a9fd74"
+  digest = "1:a3f465e8fba2ec1a371c52063ce81f17fbf7356a8cadbc160b2f94796ff5e785"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
