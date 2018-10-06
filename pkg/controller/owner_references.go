@@ -25,31 +25,32 @@ import (
 	channelsv1alpha "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	feedsv1alpha "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	flowsv1alpha "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
+	"github.com/knative/eventing/pkg/system"
 )
 
 func kind(obj metav1.Object) schema.GroupVersionKind {
 	switch obj.(type) {
 	// Channels
 	case *channelsv1alpha.Bus:
-		return channelsv1alpha.SchemeGroupVersion.WithKind("Bus")
+		return channelsv1alpha.SchemeGroupVersion.WithKind(system.KindBus)
 	case *channelsv1alpha.Channel:
-		return channelsv1alpha.SchemeGroupVersion.WithKind("Channel")
+		return channelsv1alpha.SchemeGroupVersion.WithKind(system.KindChannel)
 	case *channelsv1alpha.ClusterBus:
-		return channelsv1alpha.SchemeGroupVersion.WithKind("ClusterBus")
+		return channelsv1alpha.SchemeGroupVersion.WithKind(system.KindClusterBus)
 
 	// Feeds
 	case *feedsv1alpha.ClusterEventType:
-		return feedsv1alpha.SchemeGroupVersion.WithKind("ClusterEventType")
+		return feedsv1alpha.SchemeGroupVersion.WithKind(system.KindClusterEventType)
 	case *feedsv1alpha.ClusterEventSource:
-		return feedsv1alpha.SchemeGroupVersion.WithKind("ClusterEventSource")
+		return feedsv1alpha.SchemeGroupVersion.WithKind(system.KindClusterEventSource)
 	case *feedsv1alpha.EventType:
-		return feedsv1alpha.SchemeGroupVersion.WithKind("EventType")
+		return feedsv1alpha.SchemeGroupVersion.WithKind(system.KindEventType)
 	case *feedsv1alpha.EventSource:
-		return feedsv1alpha.SchemeGroupVersion.WithKind("EventSource")
+		return feedsv1alpha.SchemeGroupVersion.WithKind(system.KindEventSource)
 
 	// Flows
 	case *flowsv1alpha.Flow:
-		return flowsv1alpha.SchemeGroupVersion.WithKind("Flow")
+		return flowsv1alpha.SchemeGroupVersion.WithKind(system.KindFlow)
 
 	default:
 		panic(fmt.Sprintf("Unsupported object type %T", obj))

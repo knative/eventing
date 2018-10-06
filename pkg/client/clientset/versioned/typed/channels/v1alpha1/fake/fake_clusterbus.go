@@ -35,7 +35,7 @@ type FakeClusterBuses struct {
 
 var clusterbusesResource = schema.GroupVersionResource{Group: "channels.knative.dev", Version: "v1alpha1", Resource: "clusterbuses"}
 
-var clusterbusesKind = schema.GroupVersionKind{Group: "channels.knative.dev", Version: "v1alpha1", Kind: "ClusterBus"}
+var clusterbusesKind = schema.GroupVersionKind{Group: "channels.knative.dev", Version: "v1alpha1", Kind: system.KindClusterBus}
 
 // Get takes name of the clusterBus, and returns the corresponding clusterBus object, and an error if there is any.
 func (c *FakeClusterBuses) Get(name string, options v1.GetOptions) (result *v1alpha1.ClusterBus, err error) {

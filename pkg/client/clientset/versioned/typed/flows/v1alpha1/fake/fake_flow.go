@@ -36,7 +36,7 @@ type FakeFlows struct {
 
 var flowsResource = schema.GroupVersionResource{Group: "flows.knative.dev", Version: "v1alpha1", Resource: "flows"}
 
-var flowsKind = schema.GroupVersionKind{Group: "flows.knative.dev", Version: "v1alpha1", Kind: "Flow"}
+var flowsKind = schema.GroupVersionKind{Group: "flows.knative.dev", Version: "v1alpha1", Kind: system.KinFlow}
 
 // Get takes name of the flow, and returns the corresponding flow object, and an error if there is any.
 func (c *FakeFlows) Get(name string, options v1.GetOptions) (result *v1alpha1.Flow, err error) {

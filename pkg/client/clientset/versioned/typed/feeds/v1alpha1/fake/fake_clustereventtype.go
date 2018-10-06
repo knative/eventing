@@ -35,7 +35,7 @@ type FakeClusterEventTypes struct {
 
 var clustereventtypesResource = schema.GroupVersionResource{Group: "feeds.knative.dev", Version: "v1alpha1", Resource: "clustereventtypes"}
 
-var clustereventtypesKind = schema.GroupVersionKind{Group: "feeds.knative.dev", Version: "v1alpha1", Kind: "ClusterEventType"}
+var clustereventtypesKind = schema.GroupVersionKind{Group: "feeds.knative.dev", Version: "v1alpha1", Kind: system.KinClusterEventType}
 
 // Get takes name of the clusterEventType, and returns the corresponding clusterEventType object, and an error if there is any.
 func (c *FakeClusterEventTypes) Get(name string, options v1.GetOptions) (result *v1alpha1.ClusterEventType, err error) {

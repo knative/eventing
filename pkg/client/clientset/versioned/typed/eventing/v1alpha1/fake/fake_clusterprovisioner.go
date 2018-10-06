@@ -35,7 +35,7 @@ type FakeClusterProvisioners struct {
 
 var clusterprovisionersResource = schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1alpha1", Resource: "clusterprovisioners"}
 
-var clusterprovisionersKind = schema.GroupVersionKind{Group: "eventing.knative.dev", Version: "v1alpha1", Kind: "ClusterProvisioner"}
+var clusterprovisionersKind = schema.GroupVersionKind{Group: "eventing.knative.dev", Version: "v1alpha1", Kind: system.KindClusterProvisioner}
 
 // Get takes name of the clusterProvisioner, and returns the corresponding clusterProvisioner object, and an error if there is any.
 func (c *FakeClusterProvisioners) Get(name string, options v1.GetOptions) (result *v1alpha1.ClusterProvisioner, err error) {

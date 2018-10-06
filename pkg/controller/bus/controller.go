@@ -544,7 +544,7 @@ func (c *Controller) handleObject(obj interface{}) {
 	if ownerRef := metav1.GetControllerOf(object); ownerRef != nil {
 		// If this object is not owned by a Bus, we should not do anything more
 		// with it.
-		if ownerRef.Kind != "Bus" {
+		if ownerRef.Kind != system.KindBus {
 			return
 		}
 
@@ -573,7 +573,7 @@ func newDispatcherService(bus *channelsv1alpha1.Bus) *corev1.Service {
 				*metav1.NewControllerRef(bus, schema.GroupVersionKind{
 					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
 					Version: channelsv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Bus",
+					Kind:    system.KindBus,
 				}),
 			},
 		},
@@ -623,7 +623,7 @@ func newDispatcherDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 				*metav1.NewControllerRef(bus, schema.GroupVersionKind{
 					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
 					Version: channelsv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Bus",
+					Kind:    system.KindBus,
 				}),
 			},
 		},
@@ -680,7 +680,7 @@ func newProvisionerDeployment(bus *channelsv1alpha1.Bus) *appsv1.Deployment {
 				*metav1.NewControllerRef(bus, schema.GroupVersionKind{
 					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
 					Version: channelsv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Bus",
+					Kind:    system.KindBus,
 				}),
 			},
 		},

@@ -22,6 +22,7 @@ import (
 
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	"github.com/knative/eventing/pkg/sources"
+	"github.com/knative/eventing/pkg/system"
 
 	"fmt"
 
@@ -94,7 +95,7 @@ func MakeJob(feed *feedsv1alpha1.Feed, source *feedsv1alpha1.EventSource, trigge
 			Name:            JobName(feed),
 			Namespace:       feed.Namespace,
 			Labels:          labels,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(feed, feedsv1alpha1.SchemeGroupVersion.WithKind("Feed"))},
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(feed, feedsv1alpha1.SchemeGroupVersion.WithKind(system.KindFeed))},
 		},
 		Spec: batchv1.JobSpec{
 			Template:              *podTemplate,

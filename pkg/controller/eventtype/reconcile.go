@@ -19,7 +19,10 @@ package eventtype
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
+	"github.com/knative/eventing/pkg/system"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -28,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"strings"
 )
 
 const (
@@ -153,7 +155,7 @@ func (r *reconciler) findFeedsUsingEventType(ctx context.Context, et *feedsv1alp
 	listOptions.Raw = &metav1.ListOptions{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: feedsv1alpha1.SchemeGroupVersion.String(),
-			Kind:       "Feed",
+			Kind:       system.KindFeed,
 		},
 	}
 	err := r.client.List(ctx, listOptions, allFeeds)

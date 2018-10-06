@@ -20,4 +20,17 @@ const (
 	// Namespace holds the K8s namespace where our eventing system
 	// components run.
 	Namespace = "knative-eventing"
+
+	KindClusterProvisioner = "ClusterProvisioner"
+	KindBus                = "Bus"
+	KindClusterBus         = "ClusterBus"
+	KindChannel            = "Channel"
+	KindEventSource        = "EventSource"
+	KindClusterEventSource = "ClusterEventSource"
+	KindEventType          = "EventType"
+	KindClusterEventType   = "ClusterEventType"
+	KindFeed               = "Feed"
+	KindFlow               = "Flow"
+	KindSource             = "Source"
+	KindSubscription       = "Subscription"
 )

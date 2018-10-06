@@ -20,6 +20,7 @@ package fake
 
 import (
 	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/system"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -36,7 +37,7 @@ type FakeChannels struct {
 
 var channelsResource = schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1alpha1", Resource: "channels"}
 
-var channelsKind = schema.GroupVersionKind{Group: "eventing.knative.dev", Version: "v1alpha1", Kind: "Channel"}
+var channelsKind = schema.GroupVersionKind{Group: "eventing.knative.dev", Version: "v1alpha1", Kind: system.KindChannel}
 
 // Get takes name of the channel, and returns the corresponding channel object, and an error if there is any.
 func (c *FakeChannels) Get(name string, options v1.GetOptions) (result *v1alpha1.Channel, err error) {

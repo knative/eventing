@@ -468,7 +468,7 @@ func (c *Controller) handleObject(obj interface{}) {
 	if ownerRef := metav1.GetControllerOf(object); ownerRef != nil {
 		// If this object is not owned by a Channel, we should not do anything more
 		// with it.
-		if ownerRef.Kind != "Channel" {
+		if ownerRef.Kind != system.KindChannel {
 			return
 		}
 
@@ -499,7 +499,7 @@ func newService(channel *channelsv1alpha1.Channel) *corev1.Service {
 				*metav1.NewControllerRef(channel, schema.GroupVersionKind{
 					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
 					Version: channelsv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Channel",
+					Kind:    system.KindChannel,
 				}),
 			},
 		},
@@ -536,7 +536,7 @@ func newVirtualService(channel *channelsv1alpha1.Channel) *istiov1alpha3.Virtual
 				*metav1.NewControllerRef(channel, schema.GroupVersionKind{
 					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
 					Version: channelsv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Channel",
+					Kind:    system.KindChannel,
 				}),
 			},
 		},

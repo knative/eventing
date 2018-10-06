@@ -26,6 +26,7 @@ import (
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	"github.com/knative/eventing/pkg/controller/feed/resources"
 	"github.com/knative/eventing/pkg/sources"
+	"github.com/knative/eventing/pkg/system"
 	"gopkg.in/yaml.v2"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -349,7 +350,7 @@ func (r *reconciler) setClusterEventTypeOwnerReference(ctx context.Context, feed
 
 	blockOwnerDeletion := true
 	isController := false
-	ref := metav1.NewControllerRef(et, feedsv1alpha1.SchemeGroupVersion.WithKind("ClusterEventType"))
+	ref := metav1.NewControllerRef(et, feedsv1alpha1.SchemeGroupVersion.WithKind(system.KindClusterEventType))
 	ref.BlockOwnerDeletion = &blockOwnerDeletion
 	ref.Controller = &isController
 

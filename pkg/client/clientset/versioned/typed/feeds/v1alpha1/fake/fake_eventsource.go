@@ -36,7 +36,7 @@ type FakeEventSources struct {
 
 var eventsourcesResource = schema.GroupVersionResource{Group: "feeds.knative.dev", Version: "v1alpha1", Resource: "eventsources"}
 
-var eventsourcesKind = schema.GroupVersionKind{Group: "feeds.knative.dev", Version: "v1alpha1", Kind: "EventSource"}
+var eventsourcesKind = schema.GroupVersionKind{Group: "feeds.knative.dev", Version: "v1alpha1", Kind: system.KindEventSource}
 
 // Get takes name of the eventSource, and returns the corresponding eventSource object, and an error if there is any.
 func (c *FakeEventSources) Get(name string, options v1.GetOptions) (result *v1alpha1.EventSource, err error) {

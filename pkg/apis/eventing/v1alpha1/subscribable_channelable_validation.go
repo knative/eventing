@@ -20,6 +20,7 @@ import (
 	"reflect"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/knative/eventing/pkg/system"
 	"github.com/knative/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -36,7 +37,7 @@ func isSubscribableEmpty(f corev1.ObjectReference) bool {
 func isValidSubscribable(f corev1.ObjectReference) *apis.FieldError {
 	errs := isValidObjectReference(f)
 
-	if f.Kind != "Channel" && f.Kind != "Source" {
+	if f.Kind != system.KindChannel && f.Kind != system.KindSource {
 		fe := apis.ErrInvalidValue(f.Kind, "kind")
 		fe.Paths = []string{"kind"}
 		fe.Details = "only 'Channel' or 'Source' kind is allowed"
@@ -61,7 +62,7 @@ func isChannelableEmpty(f corev1.ObjectReference) bool {
 func isValidChannelable(f corev1.ObjectReference) *apis.FieldError {
 	errs := isValidObjectReference(f)
 
-	if f.Kind != "Channel" {
+	if f.Kind != system.KindChannel {
 		fe := apis.ErrInvalidValue(f.Kind, "kind")
 		fe.Paths = []string{"kind"}
 		fe.Details = "only 'Channel' kind is allowed"

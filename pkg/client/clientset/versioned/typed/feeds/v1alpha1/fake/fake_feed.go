@@ -20,6 +20,7 @@ package fake
 
 import (
 	v1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
+	"github.com/knative/eventing/pkg/system"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -36,7 +37,7 @@ type FakeFeeds struct {
 
 var feedsResource = schema.GroupVersionResource{Group: "feeds.knative.dev", Version: "v1alpha1", Resource: "feeds"}
 
-var feedsKind = schema.GroupVersionKind{Group: "feeds.knative.dev", Version: "v1alpha1", Kind: "Feed"}
+var feedsKind = schema.GroupVersionKind{Group: "feeds.knative.dev", Version: "v1alpha1", Kind: system.KindFeed}
 
 // Get takes name of the feed, and returns the corresponding feed object, and an error if there is any.
 func (c *FakeFeeds) Get(name string, options v1.GetOptions) (result *v1alpha1.Feed, err error) {

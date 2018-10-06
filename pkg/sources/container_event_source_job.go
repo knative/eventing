@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 
 	v1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
+	"github.com/knative/eventing/pkg/system"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -79,7 +80,7 @@ func MakeJob(feed *v1alpha1.Feed, spec *v1alpha1.EventSourceSpec, op FeedOperati
 			Name:            "feedlet",
 			Namespace:       feed.Namespace,
 			Labels:          labels,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(feed, v1alpha1.SchemeGroupVersion.WithKind("Feed"))},
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(feed, v1alpha1.SchemeGroupVersion.WithKind(system.KindFeed))},
 		},
 		Spec: batchv1.JobSpec{
 			Template: *podTemplate,

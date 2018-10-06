@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/knative/eventing/pkg/system"
 	"github.com/knative/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -106,7 +107,7 @@ func isValidResultStrategy(r ResultStrategy) *apis.FieldError {
 	if fe != nil {
 		return fe.ViaField("target")
 	}
-	if r.Target.Kind != "Channel" {
+	if r.Target.Kind != system.KindChannel {
 		fe := apis.ErrInvalidValue(r.Target.Kind, "kind")
 		fe.Paths = []string{"kind"}
 		fe.Details = "only 'Channel' kind is allowed"

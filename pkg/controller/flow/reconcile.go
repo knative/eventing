@@ -337,7 +337,7 @@ func (r *reconciler) getFeed(ctx context.Context, flow *v1alpha1.Flow) (*feedsv1
 			Raw: &metav1.ListOptions{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: feedsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       "Feed",
+					Kind:       system.KindFeed,
 				},
 			},
 		},

@@ -28,6 +28,7 @@ import (
 	eventingscheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	channelslisters "github.com/knative/eventing/pkg/client/listers/channels/v1alpha1"
+	"github.com/knative/eventing/pkg/system"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -46,11 +47,6 @@ const (
 	Dispatcher = "dispatcher"
 	// Provisioner manages the control plane for a bus
 	Provisioner = "provisioner"
-
-	busKind          = "Bus"
-	clusterBusKind   = "ClusterBus"
-	channelKind      = "Channel"
-	subscriptionKind = "Subscription"
 )
 
 // Reconciler is a utility mix-in intended to be used by Bus authors to easily
@@ -253,7 +249,7 @@ func NewReconciler(
 // when a long lived receiver is interrupted by an asynchronous error.
 func (r *Reconciler) RequeueSubscription(subscription SubscriptionReference) {
 	r.logger.Infof("Requeue subscription %q", subscription.String())
-	r.workqueue.AddRateLimited(makeWorkqueueKey(subscriptionKind, subscription.Namespace, subscription.Name))
+	r.workqueue.AddRateLimited(makeWorkqueueKey(system.KindSubscription, subscription.Namespace, subscription.Name))
 }
 
 // RecordBusEventf creates a new event for the reconciled bus and records it
@@ -423,13 +419,13 @@ func (r *Reconciler) syncHandler(key string) error {
 	}
 
 	switch kind {
-	case busKind:
+	case system.KindBus:
 		err = r.syncBus(namespace, name)
-	case clusterBusKind:
+	case system.KindClusterBus:
 		err = r.syncClusterBus(name)
-	case channelKind:
+	case system.KindChannel:
 		err = r.syncChannel(namespace, name)
-	case subscriptionKind:
+	case system.KindSubscription:
 		err = r.syncSubscription(namespace, name)
 	default:
 		runtime.HandleError(fmt.Errorf("Unknown resource kind %s", kind))
@@ -650,19 +646,19 @@ func (r *Reconciler) removeSubscription(ref SubscriptionReference) error {
 }
 
 func makeWorkqueueKeyForBus(bus *channelsv1alpha1.Bus) string {
-	return makeWorkqueueKey(busKind, bus.Namespace, bus.Name)
+	return makeWorkqueueKey(system.KindBus, bus.Namespace, bus.Name)
 }
 
 func makeWorkqueueKeyForClusterBus(clusterBus *channelsv1alpha1.ClusterBus) string {
-	return makeWorkqueueKey(clusterBusKind, "", clusterBus.Name)
+	return makeWorkqueueKey(system.KindClusterBus, "", clusterBus.Name)
 }
 
 func makeWorkqueueKeyForChannel(channel *channelsv1alpha1.Channel) string {
-	return makeWorkqueueKey(channelKind, channel.Namespace, channel.Name)
+	return makeWorkqueueKey(system.KindChannel, channel.Namespace, channel.Name)
 }
 
 func makeWorkqueueKeyForSubscription(subscription *channelsv1alpha1.Subscription) string {
-	return makeWorkqueueKey(subscriptionKind, subscription.Namespace, subscription.Name)
+	return makeWorkqueueKey(system.KindSubscription, subscription.Namespace, subscription.Name)
 }
 
 func makeWorkqueueKey(kind string, namespace string, name string) string {

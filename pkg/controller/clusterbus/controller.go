@@ -530,7 +530,7 @@ func (c *Controller) handleObject(obj interface{}) {
 	if ownerRef := metav1.GetControllerOf(object); ownerRef != nil {
 		// If this object is not owned by a ClusterBus, we should not do anything more
 		// with it.
-		if ownerRef.Kind != "ClusterBus" {
+		if ownerRef.Kind != system.KindClusterBus {
 			return
 		}
 
@@ -559,7 +559,7 @@ func newDispatcherService(clusterBus *channelsv1alpha1.ClusterBus) *corev1.Servi
 				*metav1.NewControllerRef(clusterBus, schema.GroupVersionKind{
 					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
 					Version: channelsv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "ClusterBus",
+					Kind:    system.KindClusterBus,
 				}),
 			},
 		},
@@ -605,7 +605,7 @@ func newDispatcherDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.De
 				*metav1.NewControllerRef(clusterBus, schema.GroupVersionKind{
 					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
 					Version: channelsv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "ClusterBus",
+					Kind:    system.KindClusterBus,
 				}),
 			},
 		},
@@ -658,7 +658,7 @@ func newProvisionerDeployment(clusterBus *channelsv1alpha1.ClusterBus) *appsv1.D
 				*metav1.NewControllerRef(clusterBus, schema.GroupVersionKind{
 					Group:   channelsv1alpha1.SchemeGroupVersion.Group,
 					Version: channelsv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "ClusterBus",
+					Kind:    system.KindClusterBus,
 				}),
 			},
 		},
