@@ -126,7 +126,7 @@ or a Channel system that receives and delivers events._
 
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
-| type*| TypeMeta<sup>1</sup> | The type of the resource to be provisioned. | Must be Source or Channel. |
+| type*| GroupKind<sup>1</sup> | The type of the resource to be provisioned. | Must be Source or Channel. |
 
 \*: Required
 

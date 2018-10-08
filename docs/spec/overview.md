@@ -12,103 +12,116 @@ combines managed services and custom code.
 Knative eventing implements common components of an event delivery ecosystem:
 enumeration and discovery of event sources, configuration and management of
 event transport, and declarative binding of events (generated either by storage
-services or earlier computation) to further event processing and persistence.
+services or earlier computation) for further event processing and persistence.
 
 The following is a detailed specification for the `eventing.knative.dev` API
 surface, which provides control mechanism for Knative eventing.
 
-
 # Resource Types
 
-The eventing API defines several resource types as well as interfaces which may
-be fulfilled by other Kubernetes objects ([Sinkable](interfaces.md#sinkable),
-[Subscribable](interfaces.md#subscribable),
-[Channelable](interfaces.md#channelable),
-[Targetable](interfaces.md#targetable)). The API defines and provides a
-complete implementation for [Subscription](spec.md#kind-subscription), and
-abstract resource definitions for [Sources](spec.md#kind-source),
-[Channels](spec.md#kind-channel), and [Providers](spec.md#kind-provisioner)
-which may be fulfilled by multiple backing implementations (much like the
-Kubernetes Ingress resource).
+The API defines and provides a complete implementation for
+[Subscription](spec.md#kind-subscription), and abstract resource definitions
+for [Sources](spec.md#kind-source), [Channels](spec.md#kind-channel), and
+[Providers](spec.md#kind-provisioner) which may be fulfilled by multiple
+backing implementations (much like the Kubernetes Ingress resource).
 
- * A **Subscription** describes the transformation of an event (via a
-   _Callable_) and optional storage of a returned event. 
+- A **Subscription** describes the transformation of an event and optional
+  forwarding of a returned event.
 
- * A **Source** represents an ongoing selection of events from an external
-   system. A Subscription is used to connect these events to subsequent
-   processing steps.
+- A **Source** allows an incoming events from an external system to be
+  _Subscribable_. A _Subscription_ is used to connect these events to
+  subsequent processing steps.
 
- * A **Channel** provides event storage and fanout of events from a well-known
-   input address to multiple outputs described by Subscriptions. 
+- A **Channel** provides event persistance and fanout of events from a
+  well-known input address to multiple outputs described by _Subscriptions_.
 
 <!-- This image is sourced from https://drive.google.com/open?id=10mmXzDb8S_4_ZG_hcBr7s4HPISyBqcqeJLTXLwkilRc -->
+
 ![Resource Types Overview](images/resource-types-overview.svg)
 
- * **Provisioners** act as a catalog of the types of Sources and Channels
-   currently active in the eventing system.
+- **Provisioners** implement strategies for realizing backing resources for
+  different implementations of _Sources_ and _Channels_ currently active in the
+  eventing system.
 
 <!-- This image is sourced from https://drive.google.com/open?id=1o_0Xh5VjwpQ7Px08h_Q4qnaOdMjt4yCEPixRFwJQjh8 -->
+
 ![Resource Types Provisioners](images/resource-types-provisioner.svg)
+
+With extendibility and compostability as a goal of Knative Eventing, the
+eventing API defines several resources that can be reduced down to a well
+understood contracts. These eventing resource interfaces may be fulfilled by
+other Kubernetes objects and then composed in the same way as the concreate
+objects. The interfaces are ([Sinkable](interfaces.md#sinkable),
+[Subscribable](interfaces.md#subscribable),
+[Channelable](interfaces.md#channelable),
+[Targetable](interfaces.md#targetable)). For more details, see
+[Interface Contracts](interfaces.md).
 
 ## Subscription
 
-**Subscriptions** define the transport of events from one storage location
-(typically, **Source** or **Channel**) to the next (typically, a **Channel**)
-through optional transformations (such as a Knative Service which processes
-CloudEvents over HTTP). A **Subscription** resolves the addresses of
+**Subscriptions** describe a flow of events from one event producer or
+forwarder (typically, _Source_ or _Channel_) to the next (typically, a
+_Channel_) through transformations (such as a Knative Service which processes
+CloudEvents over HTTP). A _Subscription_ controller resolves the addresses of
 transformations (`call`) and destination storage (`result`) through the
-_Callable_ and _Sinkable_ interface contracts, and writes the resolved
-addresses to the _Subscribable_ `from` resource. **Subscriptions** do not need
-to specify both a transformation and a storage destination, but at least one
-must be provided.
+_Targetable_ and _Sinkable_ interface contracts, and writes the resolved
+addresses to the _Subscribable_ `from` resource. _Subscriptions_ do not need to
+specify both a transformation and a storage destination, but at least one must
+be provided.
 
-All event transport over a **Subscription** is 1:1 – only a single `from`,
-`call`, and `result` may be provided.
+All event delivery linkage from a **Subscription** is 1:1 – only a single
+`from`, `call`, and `result` may be provided.
 
 For more details, see [Kind: Subscription](spec.md#kind-subscription).
 
 ## Source
 
-**Source** represents an ongoing selection of events from an external system,
-such as object creation events in a specific storage bucket, database updates
-in a particular table, or Kubernetes resource state changes. Because a
-**Source** represents an external system, it only produces events (and is
-therefore _Subscribable_ by **Subscriptions**). **Source** configures an
-external system and may include parameters such as specific resource names,
-event types, or credentials which should be used to establish the connection to
-the external system. The set of allowed configuration parameters is described
-by the **Provisioner** which is referenced by the **Source**.
+**Source** represents incoming events from an external system, such as object
+creation events in a specific storage bucket, database updates in a particular
+table, or Kubernetes resource state changes. Because a _Source_ represents an
+external system, it only produces events (and is therefore _Subscribable_ by
+_Subscriptions_). _Source_ may include parameters such as specific resource
+names, event types, or credentials which should be used to establish the
+connection to the external system. The set of allowed configuration parameters
+is described by the _Provisioner_ which is referenced by the _Source_.
 
-Event selection on a **Source** is 1:N – a single **Source** may fan out to
-multiple **Subscriptions**.
+Event selection on a _Source_ is 1:N – a single _Source_ may fan out to
+multiple _Subscriptions_.
 
 For more details, see [Kind: Source](spec.md#kind-source).
 
 ## Channel
 
-**Channel** provides a durable event storage mechanism which can fan out
-received events to multiple destinations via **Subscriptions**. A **Channel**
+**Channel** provides an at least once event delivery mechanism which can fan
+out received events to multiple destinations via _Subscriptions_. A _Channel_
 has a single inbound _Sinkable_ interface which may accept events from multiple
-**Subscriptions** or even direct delivery from external systems. Different
-**Channels** may implement different degrees of persistence.
+_Subscriptions_ or even direct delivery from external systems. Different
+_Channels_ may implement different degrees of persistence. Event delivery order
+is dependent on the backing implementation of the _Channel_ provided by the
+_Provisioner_.
+
+Event selection on a _Channel_ is 1:N – a single _Channel_ may fan out to
+multiple _Subscriptions_.
 
 See [Kind: Channel](spec.md#kind-channel).
 
 ## Provisioner
 
-The eventing API has parallel constructs for event _sources_ (systems which
-create events based on internal or external changes) and event _transports_
-(middleware which add value to the event delivery chain, such as persistence or
-buffering).
+**Provisioner** catalogs available implementations of event _Sources_ and
+_Channels_. _Provisioners_ hold a JSON Schema that is used to validate the
+_Source_ and _Channel_ input parameters. _Provisioners_ make it possible to
+provide cluster wide defaults for the _Sources_ and _Channels_ they provision.
+
+_Provisioners_ do not directly handle events. They are 1:N with _Sources_ and
+_Channels_.
 
 For more details, see [Kind: Provider](spec.md#kind-provisioner).
 
---- 
+---
 
-*Next*:
+_Navigation_:
 
-* [Motivation and goals](motivation.md)
-<!-- * [Resource type overview](overview.md) -->
-* [Interface contracts](interfaces.md)
-* [Object model specification](spec.md)
-
+- [Motivation and goals](motivation.md)
+- **Resource type overview**
+- [Interface contracts](interfaces.md)
+- [Object model specification](spec.md)
