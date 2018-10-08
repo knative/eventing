@@ -61,7 +61,6 @@ func controllerRuntimeStart(logger *zap.SugaredLogger) error {
 	cm, err := configmap.Load("/etc/config-controllers")
 	if err != nil {
 		logger.Info("Error loading controller configuration: %v\nUsing defaults.", zap.Error(err))
-		cm = map[string]string{"all": "true"}
 	}
 
 	// Setup a Manager
