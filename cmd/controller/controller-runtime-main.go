@@ -45,7 +45,13 @@ type SchemeFunc func(*runtime.Scheme) error
 // ProvideFunc adds a controller to a Manager.
 type ProvideFunc func(manager.Manager) (controller.Controller, error)
 
-var knownProvideControllers = map[string]ProvideFunc{
+// KnownProvideControllers is a list of controllers that will be used inside
+// controller-runtime. Config is expecting the following values:
+// - eventtype.feeds.knative.dev
+// - feed.feeds.knative.dev
+// - flow.flows.knative.dev
+// - subscription.eventing.knative.dev
+var KnownProvideControllers = map[string]ProvideFunc{
 	"eventtype.feeds.knative.dev":       eventtype.ProvideController,
 	"feed.feeds.knative.dev":            feed.ProvideController,
 	"flow.flows.knative.dev":            flow.ProvideController,
@@ -58,6 +64,7 @@ var knownProvideControllers = map[string]ProvideFunc{
 func controllerRuntimeStart(logger *zap.SugaredLogger) error {
 	logf.SetLogger(logf.ZapLogger(false))
 
+	// Load the mapped configmap value, controller will not watch for changes.
 	cm, err := configmap.Load("/etc/config-controllers")
 	if err != nil {
 		logger.Info("Error loading controller configuration: %v\nUsing defaults.", zap.Error(err))
@@ -83,17 +90,21 @@ func controllerRuntimeStart(logger *zap.SugaredLogger) error {
 
 	// Add each controller's ProvideController func to this list to have the
 	// manager run it by config.
-	providers := make([]ProvideFunc, 0, len(knownProvideControllers))
+	providers := make([]ProvideFunc, 0, len(KnownProvideControllers))
 	if len(cm) == 0 {
-		for _, f := range knownProvideControllers {
+		for _, f := range KnownProvideControllers {
 			providers = append(providers, f)
 		}
 	} else {
 		for k, v := range cm {
 			if strings.ToLower(v) == "true" {
-				if f, ok := knownProvideControllers[k]; ok {
+				if f, ok := KnownProvideControllers[k]; !ok {
+					logger.Infof("Failed to find a known controller for %q.", k)
+				} else {
 					providers = append(providers, f)
 				}
+			} else {
+				logger.Infof("Skipping controller for %q.", k)
 			}
 		}
 	}

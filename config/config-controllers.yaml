@@ -19,6 +19,7 @@ metadata:
   namespace: knative-eventing
 data:
   # Expected to be a list of fully qualified resource names as keys and true or
-  # false. If empty, default to all known controllers.
-  # Example:
+  # false. If empty, default to all known controllers. The controller will not
+  # watch for changes, restart the knative-eventing pods to load updated config.
+  # Example value:
   # subscription.eventing.knative.dev: true
