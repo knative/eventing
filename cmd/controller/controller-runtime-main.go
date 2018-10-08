@@ -23,7 +23,6 @@ import (
 	"github.com/knative/eventing/pkg/controller/eventing/subscription"
 	"github.com/knative/eventing/pkg/controller/feed"
 	"github.com/knative/eventing/pkg/controller/flow"
-	"github.com/knative/pkg/configmap"
 	"go.uber.org/zap"
 	"strings"
 
@@ -45,30 +44,18 @@ type SchemeFunc func(*runtime.Scheme) error
 // ProvideFunc adds a controller to a Manager.
 type ProvideFunc func(manager.Manager) (controller.Controller, error)
 
-// KnownProvideControllers is a list of controllers that will be used inside
-// controller-runtime. Config is expecting the following values:
-// - eventtype.feeds.knative.dev
-// - feed.feeds.knative.dev
-// - flow.flows.knative.dev
-// - subscription.eventing.knative.dev
-var KnownProvideControllers = map[string]ProvideFunc{
-	"eventtype.feeds.knative.dev":       eventtype.ProvideController,
-	"feed.feeds.knative.dev":            feed.ProvideController,
-	"flow.flows.knative.dev":            flow.ProvideController,
+// ExperimentalControllers is a list of controllers that can be injected into
+// controller-runtime. When the controllers are no longer experimental they may
+// be added to the default providers list.
+var ExperimentalControllers = map[string]ProvideFunc{
 	"subscription.eventing.knative.dev": subscription.ProvideController,
 }
 
 // controllerRuntimeStart runs controllers written for controller-runtime. It's
 // intended to be called from main(). Any controllers migrated to use
 // controller-runtime should move their initialization to this function.
-func controllerRuntimeStart(logger *zap.SugaredLogger) error {
+func controllerRuntimeStart(logger *zap.SugaredLogger, experimental string) error {
 	logf.SetLogger(logf.ZapLogger(false))
-
-	// Load the mapped configmap value, controller will not watch for changes.
-	cm, err := configmap.Load("/etc/config-controllers")
-	if err != nil {
-		logger.Info("Error loading controller configuration: %v\nUsing defaults.", zap.Error(err))
-	}
 
 	// Setup a Manager
 	mrg, err := manager.New(config.GetConfigOrDie(), manager.Options{})
@@ -89,25 +76,14 @@ func controllerRuntimeStart(logger *zap.SugaredLogger) error {
 	}
 
 	// Add each controller's ProvideController func to this list to have the
-	// manager run it by config.
-	providers := make([]ProvideFunc, 0, len(KnownProvideControllers))
-	if len(cm) == 0 {
-		for _, f := range KnownProvideControllers {
-			providers = append(providers, f)
-		}
-	} else {
-		for k, v := range cm {
-			if strings.ToLower(v) == "true" {
-				if f, ok := KnownProvideControllers[k]; !ok {
-					logger.Infof("Failed to find a known controller for %q.", k)
-				} else {
-					providers = append(providers, f)
-				}
-			} else {
-				logger.Infof("Skipping controller for %q.", k)
-			}
-		}
+	// manager run it.
+	providers := []ProvideFunc{
+		eventtype.ProvideController,
+		feed.ProvideController,
+		flow.ProvideController,
 	}
+
+	providers = addExperimentalControllers(logger, experimental, providers)
 
 	for _, provider := range providers {
 		if _, err := provider(mrg); err != nil {
@@ -116,4 +92,21 @@ func controllerRuntimeStart(logger *zap.SugaredLogger) error {
 	}
 
 	return mrg.Start(signals.SetupSignalHandler())
+}
+
+func addExperimentalControllers(logger *zap.SugaredLogger, experimental string, providers []ProvideFunc) []ProvideFunc {
+	if len(experimental) == 0 {
+		for _, f := range ExperimentalControllers {
+			providers = append(providers, f)
+		}
+	} else {
+		for _, k := range strings.Split(experimental, ",") {
+			if f, ok := ExperimentalControllers[k]; !ok {
+				logger.Infof("Failed to find a known controller for %q.", k)
+			} else {
+				providers = append(providers, f)
+			}
+		}
+	}
+	return providers
 }
