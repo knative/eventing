@@ -154,7 +154,7 @@ func main() {
 
 	// Start the controller-runtime controllers.
 	go func() {
-		if err := controllerRuntimeStart(); err != nil {
+		if err := controllerRuntimeStart(logger); err != nil {
 			logger.Fatalf("Error running controller-runtime controllers: %v", err)
 		}
 	}()

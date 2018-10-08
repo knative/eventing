@@ -17,12 +17,15 @@ package main
 
 import (
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
-	subscriptionsv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	flowsv1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 	"github.com/knative/eventing/pkg/controller/eventing/subscription"
 	"github.com/knative/eventing/pkg/controller/feed"
 	"github.com/knative/eventing/pkg/controller/flow"
+	"github.com/knative/pkg/configmap"
+	"go.uber.org/zap"
+	"strings"
 
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 
@@ -42,11 +45,24 @@ type SchemeFunc func(*runtime.Scheme) error
 // ProvideFunc adds a controller to a Manager.
 type ProvideFunc func(manager.Manager) (controller.Controller, error)
 
+var knownProvideControllers = map[string]ProvideFunc{
+	"eventtype.feeds.knative.dev":       eventtype.ProvideController,
+	"feed.feeds.knative.dev":            feed.ProvideController,
+	"flow.flows.knative.dev":            flow.ProvideController,
+	"subscription.eventing.knative.dev": subscription.ProvideController,
+}
+
 // controllerRuntimeStart runs controllers written for controller-runtime. It's
 // intended to be called from main(). Any controllers migrated to use
 // controller-runtime should move their initialization to this function.
-func controllerRuntimeStart() error {
+func controllerRuntimeStart(logger *zap.SugaredLogger) error {
 	logf.SetLogger(logf.ZapLogger(false))
+
+	cm, err := configmap.Load("/etc/config-controllers")
+	if err != nil {
+		logger.Info("Error loading controller configuration: %v\nUsing defaults.", zap.Error(err))
+		cm = map[string]string{"all": "true"}
+	}
 
 	// Setup a Manager
 	mrg, err := manager.New(config.GetConfigOrDie(), manager.Options{})
@@ -60,19 +76,27 @@ func controllerRuntimeStart() error {
 		feedsv1alpha1.AddToScheme,
 		flowsv1alpha1.AddToScheme,
 		istiov1alpha3.AddToScheme,
-		subscriptionsv1alpha1.AddToScheme,
+		eventingv1alpha1.AddToScheme,
 	}
 	for _, schemeFunc := range schemeFuncs {
 		schemeFunc(mrg.GetScheme())
 	}
 
 	// Add each controller's ProvideController func to this list to have the
-	// manager run it.
-	providers := []ProvideFunc{
-		eventtype.ProvideController,
-		feed.ProvideController,
-		flow.ProvideController,
-		subscription.ProvideController,
+	// manager run it by config.
+	providers := make([]ProvideFunc, 0, len(knownProvideControllers))
+	if len(cm) == 0 {
+		for _, f := range knownProvideControllers {
+			providers = append(providers, f)
+		}
+	} else {
+		for k, v := range cm {
+			if strings.ToLower(v) == "true" {
+				if f, ok := knownProvideControllers[k]; ok {
+					providers = append(providers, f)
+				}
+			}
+		}
 	}
 
 	for _, provider := range providers {
