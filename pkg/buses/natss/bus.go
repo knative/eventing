@@ -29,7 +29,6 @@ import (
 const BusType = "natss"
 
 type NatssBus struct {
-	natsConn *stan.Conn
 	subscribers map[string]*stan.Subscription
 
 	ref         buses.BusReference
