@@ -19,10 +19,10 @@ package subscription
 import (
 	"context"
 	"fmt"
-	"strings"
-
 	"github.com/golang/glog"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/controller"
+	duckapis "github.com/knative/pkg/apis"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -96,6 +95,8 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 	if from.Status.Subscribable == nil {
 		return fmt.Errorf("from is not subscribable %s %s/%s", subscription.Spec.From.Kind, subscription.Namespace, subscription.Spec.From.Name)
 	}
+
+	glog.Infof("Resolved from subscribable to: %+v", from.Status.Subscribable.Channelable)
 
 	callDomain := ""
 	if subscription.Spec.Call != nil {
@@ -167,26 +168,38 @@ func (r *reconciler) resolveCall(namespace string, callable v1alpha1.Callable) (
 		return *callable.TargetURI, nil
 	}
 
+	// K8s services are special cased. They can be called, even though they do not satisfy the
+	// Targetable interface.
+	if callable.Target != nil && callable.Target.APIVersion == "v1" && callable.Target.Kind == "Service" {
+		svc := &corev1.Service{}
+		svcKey := types.NamespacedName{
+			Namespace: namespace,
+			Name:      callable.Target.Name,
+		}
+		err := r.client.Get(context.TODO(), svcKey, svc)
+		if err != nil {
+			glog.Warningf("Failed to fetch Callable target as a K8s Service %+v: %s", callable.Target, err)
+			return "", err
+		}
+		return controller.ServiceHostName(svc.Name, svc.Namespace), nil
+	}
+
 	obj, err := r.fetchObjectReference(namespace, callable.Target)
 	if err != nil {
 		glog.Warningf("Failed to fetch Callable target %+v: %s", callable.Target, err)
 		return "", err
 	}
-	t := duckv1alpha1.LegacyTarget{}
-	// Once Knative services support Targetable, switch to using this.
-	//t := duckv1alpha1.Target{}
+	t := duckv1alpha1.Target{}
 	err = duck.FromUnstructured(obj, &t)
 	if err != nil {
-		glog.Warningf("Failed to unserialize legacy target: %s", err)
+		glog.Warningf("Failed to deserialize legacy target: %s", err)
 		return "", err
 	}
 
-	return t.Status.DomainInternal, nil
-	// Once Knative services support Targetable, switch to using this
-	// 	if t.Status.Targetable != nil {
-	//		return t.Status.Targetable.DomainInternal, nil
-	//	}
-	//return "", fmt.Errorf("status does not contain targetable")
+	if t.Status.Targetable != nil {
+		return t.Status.Targetable.DomainInternal, nil
+	}
+	return "", fmt.Errorf("status does not contain targetable")
 }
 
 // resolveResult resolves the Spec.Result object.
@@ -199,7 +212,7 @@ func (r *reconciler) resolveResult(namespace string, resultStrategy v1alpha1.Res
 	s := duckv1alpha1.Sink{}
 	err = duck.FromUnstructured(obj, &s)
 	if err != nil {
-		glog.Warningf("Failed to unserialize Sinkable target: %s", err)
+		glog.Warningf("Failed to deserialize Sinkable target: %s", err)
 		return "", err
 	}
 	if s.Status.Sinkable != nil {
@@ -225,7 +238,6 @@ func (r *reconciler) resolveFromChannelable(namespace string, ref *corev1.Object
 
 // fetchObjectReference fetches an object based on ObjectReference.
 func (r *reconciler) fetchObjectReference(namespace string, ref *corev1.ObjectReference) (duck.Marshalable, error) {
-	//	resourceClient, err := r.CreateResourceInterface2(r.restConfig, ref, namespace)
 	resourceClient, err := r.CreateResourceInterface(namespace, ref)
 	if err != nil {
 		glog.Warningf("failed to create dynamic client resource: %v", err)
@@ -283,29 +295,11 @@ func (r *reconciler) reconcileFromChannel(namespace string, subscribable corev1.
 }
 
 func (r *reconciler) CreateResourceInterface(namespace string, ref *corev1.ObjectReference) (dynamic.ResourceInterface, error) {
-	gvk := ref.GroupVersionKind()
+	rc := r.dynamicClient.Resource(duckapis.KindToResource(ref.GroupVersionKind()))
 
-	rc := r.dynamicClient.Resource(schema.GroupVersionResource{
-		Group:    gvk.Group,
-		Version:  gvk.Version,
-		Resource: pluralizeKind(gvk.Kind),
-	})
 	if rc == nil {
 		return nil, fmt.Errorf("failed to create dynamic client resource")
 	}
 	return rc.Namespace(namespace), nil
 
-}
-
-// takes a kind and pluralizes it. This is super terrible, but I am
-// not aware of a generic way to do this.
-// I am not alone in thinking this and I haven't found a better solution:
-// This seems relevant:
-// https://github.com/kubernetes/kubernetes/issues/18622
-func pluralizeKind(kind string) string {
-	ret := strings.ToLower(kind)
-	if strings.HasSuffix(ret, "s") {
-		return fmt.Sprintf("%ses", ret)
-	}
-	return fmt.Sprintf("%ss", ret)
 }

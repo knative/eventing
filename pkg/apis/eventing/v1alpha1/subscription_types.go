@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"github.com/knative/pkg/apis"
-	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/webhook"
 	corev1 "k8s.io/api/core/v1"
@@ -46,16 +45,6 @@ var _ apis.Defaultable = (*Subscription)(nil)
 var _ apis.Immutable = (*Subscription)(nil)
 var _ runtime.Object = (*Subscription)(nil)
 var _ webhook.GenericCRD = (*Subscription)(nil)
-
-// Check that Subscription implements the Conditions duck type.
-var _ = duck.VerifyType(&Subscription{}, &duckv1alpha1.Conditions{})
-
-// Check that the Subscription implements the Generation duck type.
-var emptyGen duckv1alpha1.Generation
-var _ = duck.VerifyType(&Subscription{}, &emptyGen)
-
-// And it's Subscribable
-var _ = duck.VerifyType(&Subscription{}, &duckv1alpha1.Subscribable{})
 
 // SubscriptionSpec specifies the Channel for incoming events, a Call target for
 // processing those events and where to put the result of the processing. Only

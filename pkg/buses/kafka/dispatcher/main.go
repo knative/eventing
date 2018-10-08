@@ -48,9 +48,9 @@ func main() {
 	)
 	sarama.Logger = zap.NewStdLog(logger.With(zap.Namespace("Sarama")).Desugar())
 
-	brokers := strings.Split(os.Getenv("KAFKA_BROKERS"), ",")
+	brokers := strings.Split(os.Getenv("KAFKA_BOOTSTRAP_SERVERS"), ",")
 	if len(brokers) == 0 {
-		logger.Fatalf("Environment variable KAFKA_BROKERS not set")
+		logger.Fatalf("Environment variable KAFKA_BOOTSTRAP_SERVERS not set")
 	}
 
 	opts := &buses.BusOpts{
