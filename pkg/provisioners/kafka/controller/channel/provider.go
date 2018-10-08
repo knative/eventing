@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	common "github.com/knative/eventing/pkg/provisioners/kafka/controller"
 )
 
 const (
@@ -41,18 +42,20 @@ type reconciler struct {
 	restConfig *rest.Config
 	recorder   record.EventRecorder
 	log        logr.Logger
+	config     *common.KafkaProvisionerConfig
 }
 
 // Verify the struct implements reconcile.Reconciler
 var _ reconcile.Reconciler = &reconciler{}
 
 // ProvideController returns a Channel controller.
-func ProvideController(mgr manager.Manager, log logr.Logger) (controller.Controller, error) {
+func ProvideController(mgr manager.Manager, config *common.KafkaProvisionerConfig, log logr.Logger) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Channel.
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: &reconciler{
 			recorder: mgr.GetRecorder(controllerAgentName),
 			log:      log,
+			config:   config,
 		},
 	})
 	if err != nil {

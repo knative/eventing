@@ -32,3 +32,10 @@ spec:
               "-logtostderr",
               "-stderrthreshold", "INFO",
         ]
+        volumeMounts:
+          - name: kafka-provisioner-config
+            mountPath: /etc/config-provisioner
+      volumes:
+        - name: kafka-provisioner-config
+          configMap:
+            name: kafka-provisioner-config

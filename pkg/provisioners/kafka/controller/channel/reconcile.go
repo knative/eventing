@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners/kafka/controller"
 )
 
 // Reconcile compares the actual state with the desired, and attempts to
@@ -111,15 +110,11 @@ func (r *reconciler) reconcile(channel *v1alpha1.Channel) error {
 }
 
 func (r *reconciler) getClusterProvisioner() (*v1alpha1.ClusterProvisioner, error) {
-	config, err := controller.GetProvisionerConfig(r.client)
-	if err != nil {
-		return nil, err
-	}
 	clusterProvisioner := &v1alpha1.ClusterProvisioner{}
 	objKey := client.ObjectKey{
-		Name: config.Name,
+		Name: r.config.Name,
 	}
-	if err = r.client.Get(context.TODO(), objKey, clusterProvisioner); err != nil {
+	if err := r.client.Get(context.TODO(), objKey, clusterProvisioner); err != nil {
 		return nil, err
 	}
 	return clusterProvisioner, nil

@@ -33,7 +33,6 @@ import (
 	"github.com/knative/eventing/pkg/apis/eventing"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
-	"github.com/knative/eventing/pkg/system"
 )
 
 var (
@@ -65,7 +64,6 @@ var testCases = []controllertesting.TestCase{
 		Name: "new channel clusterprovisioner: adds status",
 		InitialState: []runtime.Object{
 			GetNewChannelClusterProvisioner(clusterProvisionerName),
-			getControllerConfigMap(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, clusterProvisionerName),
 		WantResult:   reconcile.Result{},
@@ -78,7 +76,6 @@ var testCases = []controllertesting.TestCase{
 		Name: "reconciles only channel kind",
 		InitialState: []runtime.Object{
 			getNewClusterProvisioner(clusterProvisionerName, "Source"),
-			getControllerConfigMap(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, clusterProvisionerName),
 		WantResult:   reconcile.Result{},
@@ -90,7 +87,6 @@ var testCases = []controllertesting.TestCase{
 		Name: "reconciles only associated provisioner",
 		InitialState: []runtime.Object{
 			GetNewChannelClusterProvisioner("not-default-provisioner"),
-			getControllerConfigMap(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, "not-default-provisioner"),
 		WantResult:   reconcile.Result{},
@@ -110,6 +106,7 @@ func TestAllCases(t *testing.T) {
 			restConfig: &rest.Config{},
 			recorder:   recorder,
 			log:        log,
+			config:     getControllerConfig(),
 		}
 		t.Logf("Running test %s", tc.Name)
 		t.Run(tc.Name, tc.Runner(t, r, c))
@@ -162,12 +159,9 @@ func om(namespace, name string) metav1.ObjectMeta {
 	}
 }
 
-func getControllerConfigMap() *corev1.ConfigMap {
-	return &corev1.ConfigMap{
-		ObjectMeta: om(system.Namespace, ControllerConfigMapName),
-		Data: map[string]string{
-			ClusterProvisionerNameConfigMapKey: clusterProvisionerName,
-			BrokerConfigMapKey:                 "test-broker",
-		},
+func getControllerConfig() *KafkaProvisionerConfig {
+	return &KafkaProvisionerConfig{
+		Name:    clusterProvisionerName,
+		Brokers: []string{"test-broker"},
 	}
 }

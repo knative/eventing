@@ -34,7 +34,6 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
 	"github.com/knative/eventing/pkg/provisioners/kafka/controller"
-	"github.com/knative/eventing/pkg/system"
 )
 
 var (
@@ -58,7 +57,6 @@ var testCases = []controllertesting.TestCase{
 		InitialState: []runtime.Object{
 			getNewClusterProvisioner(clusterProvisionerName, true),
 			getNewChannel(channelName, clusterProvisionerName),
-			getControllerConfigMap(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
 		WantResult:   reconcile.Result{},
@@ -72,7 +70,6 @@ var testCases = []controllertesting.TestCase{
 		InitialState: []runtime.Object{
 			getNewClusterProvisioner(clusterProvisionerName, false),
 			getNewChannel(channelName, clusterProvisionerName),
-			getControllerConfigMap(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
 		WantResult:   reconcile.Result{},
@@ -87,7 +84,6 @@ var testCases = []controllertesting.TestCase{
 		Name: "new channel with missing provisioner: error",
 		InitialState: []runtime.Object{
 			getNewChannel(channelName, clusterProvisionerName),
-			getControllerConfigMap(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
 		WantResult:   reconcile.Result{},
@@ -100,7 +96,6 @@ var testCases = []controllertesting.TestCase{
 			getNewChannel(channelName, "not-our-provisioner"),
 			getNewClusterProvisioner("not-our-provisioner", true),
 			getNewClusterProvisioner(clusterProvisionerName, true),
-			getControllerConfigMap(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
 		WantResult:   reconcile.Result{},
@@ -113,7 +108,6 @@ var testCases = []controllertesting.TestCase{
 		Name: "new channel with missing provisioner reference: skips channel",
 		InitialState: []runtime.Object{
 			getNewChannelNoProvisioner(channelName),
-			getControllerConfigMap(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
 		WantResult:   reconcile.Result{},
@@ -134,6 +128,7 @@ func TestAllCases(t *testing.T) {
 			restConfig: &rest.Config{},
 			recorder:   recorder,
 			log:        log,
+			config:     getControllerConfig(),
 		}
 		t.Logf("Running test %s", tc.Name)
 		t.Run(tc.Name, tc.Runner(t, r, c))
@@ -242,12 +237,9 @@ func om(namespace, name string) metav1.ObjectMeta {
 	}
 }
 
-func getControllerConfigMap() *corev1.ConfigMap {
-	return &corev1.ConfigMap{
-		ObjectMeta: om(system.Namespace, controller.ControllerConfigMapName),
-		Data: map[string]string{
-			controller.ClusterProvisionerNameConfigMapKey: clusterProvisionerName,
-			controller.BrokerConfigMapKey:                 "test-broker",
-		},
+func getControllerConfig() *controller.KafkaProvisionerConfig {
+	return &controller.KafkaProvisionerConfig{
+		Name:    clusterProvisionerName,
+		Brokers: []string{"test-broker"},
 	}
 }

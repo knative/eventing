@@ -81,18 +81,13 @@ func (r *reconciler) reconcile(provisioner *v1alpha1.ClusterProvisioner) error {
 		return nil
 	}
 
-	// Only reconcile channel provisioners
-	if provisioner.Spec.Reconciles.Group != eventing.GroupName || provisioner.Spec.Reconciles.Kind != "Channel" {
+	// Skip channel provisioners that we don't manage
+	if provisioner.Name != r.config.Name {
 		return nil
 	}
 
-	config, err := GetProvisionerConfig(r.client)
-	if err != nil {
-		return err
-	}
-
-	// Skip channel provisioners that we don't manage
-	if provisioner.Name != config.Name {
+	// Only reconcile channel provisioners
+	if provisioner.Spec.Reconciles.Group != eventing.GroupName || provisioner.Spec.Reconciles.Kind != "Channel" {
 		return nil
 	}
 
