@@ -82,8 +82,9 @@ Subscription's call parameter._
 
 ##### Owner References
 
- * If the Pipeline controller created this Channel: Owned by the originating Pipeline.
- * Owned by the Provisioner used to provision the Channel.
+ * If the Source controller created this Channel: Owned by the originating
+   Source.
+ * Owned (non-controlling) by the Provisioner used to provision the Channel.
 
 #### Status
 
@@ -164,7 +165,7 @@ or a Channel system that receives and delivers events._
 
 ### group: eventing.knative.dev/v1alpha1
 
-_Describes a direct linkage between an event publisher and an action._
+_Describes a linkage between a Subscribable and a Targetable and/or Sinkable._
 
 ### Object Schema
 
@@ -265,7 +266,7 @@ non-controlling OwnerReference on the EventType resources it knows about.
 | Field | Type | Description | Limitations |
 | --- | --- | --- | --- |
 | ref<sup>1</sup> | ObjectReference | | |
-| selector<sup>1</sup> | LabelSelector | | |
+| selector<sup>1</sup> | LabelSelector | | Must match only one resource. |
 
 1: One of (name, selector), Required.
 
@@ -284,7 +285,7 @@ non-controlling OwnerReference on the EventType resources it knows about.
 | --- | --- | --- | --- |
 | name*| String | Name of Object| |
 | type*| String | Fully Qualified Object type. | |
-| status*| String | Current relationship between Provisioner and Object| |
+| status*| String | Current relationship between Provisioner and Object. | |
 | reason | String | Detailed description describing current relationship status. | |
 
 \*: Required
