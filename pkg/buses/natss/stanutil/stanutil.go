@@ -19,26 +19,26 @@ package stanutil
 import (
 	"errors"
 	"fmt"
-	"github.com/golang/glog"
+	"go.uber.org/zap"
 
 	stan "github.com/nats-io/go-nats-streaming"
 )
 
 // Connect creates a new NATS-Streaming connection
-func Connect(clusterID string, clientID string, natsURL string) (*stan.Conn, error) {
+func Connect(clusterID string, clientID string, natsURL string, logger *zap.SugaredLogger) (*stan.Conn, error) {
 	sc, err := stan.Connect(clusterID, clientID, stan.NatsURL(natsURL))
 	if err != nil {
-		glog.Errorf("Can't connect to: %s ; error: %v; NATS URL: %s", clusterID, err, natsURL)
+		logger.Errorf("Can't connect to: %s ; error: %v; NATS URL: %s", clusterID, err, natsURL)
 	}
 	return &sc, err
 }
 
 // Close must be the last call to close the connection
-func Close(sc *stan.Conn) (err error) {
+func Close(sc *stan.Conn, logger *zap.SugaredLogger) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("recovered from: %v", r)
-			glog.Errorf("Close(): %v\n", err.Error())
+			logger.Errorf("Close(): %v\n", err.Error())
 		}
 	}()
 
@@ -48,17 +48,17 @@ func Close(sc *stan.Conn) (err error) {
 	}
 	err = (*sc).Close()
 	if err != nil {
-		glog.Errorf("Can't close connection: %+v\n", err)
+		logger.Errorf("Can't close connection: %+v\n", err)
 	}
 	return
 }
 
 // Publish a message to a subject
-func Publish(sc *stan.Conn, subj string, msg *[]byte) (err error) {
+func Publish(sc *stan.Conn, subj string, msg *[]byte,logger *zap.SugaredLogger) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("recovered from: %v", r)
-			glog.Errorf("Publish(): %v\n", err.Error())
+			logger.Errorf("Publish(): %v\n", err.Error())
 		}
 	}()
 
@@ -68,26 +68,7 @@ func Publish(sc *stan.Conn, subj string, msg *[]byte) (err error) {
 	}
 	err = (*sc).Publish(subj, *msg)
 	if err != nil {
-		glog.Errorf("Error during publish: %v\n", err)
+		logger.Errorf("Error during publish: %v\n", err)
 	}
 	return
 }
-
-// IsConnected ....
-func IsConnected(sc *stan.Conn) (ok bool) {
-	defer func() {
-		if r := recover(); r != nil {
-			ok = false
-			glog.Errorf("IsConnected() recovered: %v\n", r)
-		}
-	}()
-
-	if sc != nil && sc != (*stan.Conn)(nil) && (*sc).NatsConn() != nil {
-		ok = (*sc).NatsConn().IsConnected()
-	} else {
-		ok = false
-	}
-	return
-}
-
-

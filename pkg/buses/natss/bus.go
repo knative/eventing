@@ -46,7 +46,6 @@ var (
 func NewNatssBusProvisioner(ref buses.BusReference, opts *buses.BusOpts) (*NatssBus, error) {
 	bus := &NatssBus{
 		ref: ref,
-		subscribers: make(map[string]*stan.Subscription),
 	}
 	eventHandlers := buses.EventHandlerFuncs{
 		ProvisionFunc: func(channel buses.ChannelReference, parameters buses.ResolvedParameters) error {
@@ -61,64 +60,31 @@ func NewNatssBusProvisioner(ref buses.BusReference, opts *buses.BusOpts) (*Natss
 			// TODO delete a NATSS subject
 			return nil
 		},
-		SubscribeFunc: func(channel buses.ChannelReference, subscription buses.SubscriptionReference, parameters buses.ResolvedParameters) error {
-			bus.logger.Infof("Subscribe %q to %q channel\n", subscription.Name, channel.Name)
-			bus.logger.Info("subscription= %+v; parameters=%+v", subscription, parameters)
-
-			mcb := func(msg *stan.Msg) {
-				bus.logger.Info("NATSS message received: %+v", msg)
-				message := buses.Message{
-					Headers: map[string]string{},
-					Payload: []byte(msg.String()),
-				}
-				if err := bus.dispatcher.DispatchMessage(subscription, &message); err != nil {
-					bus.logger.Warnf("Failed to dispatch message: %v", err)
-				}
-			}
-			// subscribe to a NATSS subject
-			if natsStreamingSub, err := (*natsConn).Subscribe(channel.Name, mcb, stan.DurableName(subscription.Name)); err != nil {
-				bus.logger.Errorf(" Create new NATSS Subscription failed: %+v", err)
-			} else {
-				bus.logger.Info("NATSS Subscription created: %+v", natsStreamingSub)
-				bus.subscribers[subscription.Name] = &natsStreamingSub
-			}
-			return nil
-		},
-		UnsubscribeFunc: func(channel buses.ChannelReference, subscription buses.SubscriptionReference) error {
-			bus.logger.Infof("Unsubscribe %q from %q channel\n", subscription.Name, channel.Name)
-			bus.logger.Info("subscription= %+v", subscription)
-
-			// unsubscribe from a NATSS subject
-			if natsStreamingSub, ok := bus.subscribers[subscription.Name]; ok {
-				if err := (*natsStreamingSub).Unsubscribe(); err  != nil {
-					bus.logger.Errorf(" Unsubscribe() failed: %+v", err)
-				} else {
-					bus.logger.Errorf(" Unsubscribe() successful.")
-				}
-			}
-			return nil
-		},
 	}
 
 	bus.provisioner = buses.NewBusProvisioner(ref, eventHandlers, opts)
-	bus.dispatcher = buses.NewBusDispatcher(ref, buses.EventHandlerFuncs{}, opts)
 	bus.logger = opts.Logger
 
 	return bus, nil
 }
 
 func NewNatssBusDispatcher(ref buses.BusReference, opts *buses.BusOpts) (*NatssBus, error) {
-	bus := &NatssBus{}
+	bus := &NatssBus{
+		ref: ref,
+		subscribers: make(map[string]*stan.Subscription),
+	}
 	handlerFuncs := buses.EventHandlerFuncs{
 		ReceiveMessageFunc: func(channel buses.ChannelReference, message *buses.Message) error {
 			bus.logger.Infof("Recieved message for %q channel", channel.String())
-			if err := stanutil.Publish(natsConn, channel.Name, &message.Payload); err != nil {
+			if err := stanutil.Publish(natsConn, channel.Name, &message.Payload, bus.logger); err != nil {
 				bus.logger.Errorf("Error during publish: %+v", err)
-			} else {
-				bus.logger.Infof("Published [%s] : '%s'", channel.String(), message)
+				return err
 			}
+			bus.logger.Infof("Published [%s] : '%s'", channel.String(), message)
 			return nil
 		},
+		SubscribeFunc: bus.subscribe,
+		UnsubscribeFunc: bus.unsubscribe,
 	}
 	bus.dispatcher = buses.NewBusDispatcher(ref, handlerFuncs, opts)
 	bus.logger = opts.Logger
@@ -130,7 +96,7 @@ func (b *NatssBus) Run(threadness int, stopCh <-chan struct{}, clientId string) 
 	b.logger.Infof("try to connect to NATSS from %s", clientId)
 	var err error
 	for i:=0; i<60; i++ {
-		if natsConn, err = stanutil.Connect("knative-nats-streaming", clientId, "nats://nats-streaming.default.svc.cluster.local:4222"); err != nil {
+		if natsConn, err = stanutil.Connect("knative-nats-streaming", clientId, "nats://nats-streaming.knative-eventing.svc.cluster.local:4222", b.logger); err != nil {
 			b.logger.Errorf(" Create new connection failed: %+v", err)
 			time.Sleep(time.Duration(1)*time.Second)
 		} else {
@@ -149,5 +115,51 @@ func (b *NatssBus) Run(threadness int, stopCh <-chan struct{}, clientId string) 
 	if b.provisioner != nil {
 		b.provisioner.Run(threadness, stopCh)
 	}
+}
+
+func (bus *NatssBus) subscribe(channel buses.ChannelReference, subscription buses.SubscriptionReference, parameters buses.ResolvedParameters) error {
+	bus.logger.Infof("Subscribe %q to %q channel\n", subscription.Name, channel.Name)
+	bus.logger.Info("subscription= %+v; parameters=%+v", subscription, parameters)
+
+	mcb := func(msg *stan.Msg) {
+		bus.logger.Info("NATSS message received: %+v", msg)
+		message := buses.Message{
+			Headers: map[string]string{},
+			Payload: []byte(msg.String()),
+		}
+		if err := bus.dispatcher.DispatchMessage(subscription, &message); err != nil {
+			bus.logger.Warnf("Failed to dispatch message: %v", err)
+			return
+		}
+		if err := msg.Ack(); err != nil {
+			bus.logger.Warnf("Failed to acknowledge message: %v", err)
+		}
+	}
+	// subscribe to a NATSS subject
+	aw, _ := time.ParseDuration("60s")
+	if natsStreamingSub, err := (*natsConn).Subscribe(channel.Name, mcb, stan.DurableName(subscription.Name), stan.SetManualAckMode(), stan.AckWait(aw)); err != nil {
+		bus.logger.Errorf(" Create new NATSS Subscription failed: %+v", err)
+		return err
+	} else {
+		bus.logger.Info("NATSS Subscription created: %+v", natsStreamingSub)
+		bus.subscribers[subscription.Name] = &natsStreamingSub
+	}
+	return nil
+}
+
+func (bus *NatssBus) unsubscribe(channel buses.ChannelReference, subscription buses.SubscriptionReference) error {
+	bus.logger.Infof("Unsubscribe %q from %q channel\n", subscription.Name, channel.Name)
+	bus.logger.Info("subscription= %+v", subscription)
+
+	// unsubscribe from a NATSS subject
+	if natsStreamingSub, ok := bus.subscribers[subscription.Name]; ok {
+		if err := (*natsStreamingSub).Unsubscribe(); err  != nil {
+			bus.logger.Errorf(" Unsubscribe() failed: %+v", err)
+			return err
+		}
+		delete(bus.subscribers, subscription.Name)
+		bus.logger.Errorf(" Unsubscribe() successful.")
+	}
+	return nil
 }
 
