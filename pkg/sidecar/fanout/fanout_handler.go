@@ -14,6 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package fanout provides an http.Handler that takes in one request and fans it out to N other
+// requests, based on a list of Subscriptions. Logically, it represents all the Subscriptions to a
+// single Knative Channel.
+// It will normally be used in conjunction with multichannelfanout.Handler, which contains multiple
+// fanout.Handlers, each corresponding to a single Knative Channel.
 package fanout
 
 import (
@@ -40,10 +45,10 @@ type Config struct {
 type Handler struct {
 	config Config
 
-	receivedMessages chan *message
+	receivedMessages chan *forwardMessage
 	receiver         *buses.MessageReceiver
 	dispatcher       *buses.MessageDispatcher
-	stopCh chan<- struct{}
+	stopCh           chan<- struct{}
 
 	timeout time.Duration
 
@@ -52,9 +57,9 @@ type Handler struct {
 
 var _ http.Handler = &Handler{}
 
-// message is passed between the Receiver and the Dispatcher.
-type message struct {
-	msg *buses.Message
+// forwardMessage is passed between the Receiver and the Dispatcher.
+type forwardMessage struct {
+	msg  *buses.Message
 	done chan<- error
 }
 
@@ -63,14 +68,14 @@ type message struct {
 func NewHandler(logger *zap.Logger, config Config) *Handler {
 	stopCh := make(chan struct{}, 1)
 	handler := &Handler{
-		logger:     logger,
-		config:     config,
-		dispatcher: buses.NewMessageDispatcher(logger.Sugar()),
-		receivedMessages: make(chan *message, messageBufferSize),
-		stopCh: stopCh,
-		timeout: defaultTimeout,
+		logger:           logger,
+		config:           config,
+		dispatcher:       buses.NewMessageDispatcher(logger.Sugar()),
+		receivedMessages: make(chan *forwardMessage, messageBufferSize),
+		stopCh:           stopCh,
+		timeout:          defaultTimeout,
 	}
-	// The receiver function needs to point back at the handler itself, so setup it after
+	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
 	handler.receiver = buses.NewMessageReceiver(createReceiverFunction(handler), logger.Sugar())
 
@@ -81,8 +86,8 @@ func NewHandler(logger *zap.Logger, config Config) *Handler {
 func createReceiverFunction(f *Handler) func(buses.ChannelReference, *buses.Message) error {
 	return func(_ buses.ChannelReference, m *buses.Message) error {
 		done := make(chan error)
-		msg := &message{
-			msg: m,
+		msg := &forwardMessage{
+			msg:  m,
 			done: done,
 		}
 
@@ -120,7 +125,7 @@ func (f *Handler) Stop() {
 func (f *Handler) foreverDispatch(stopCh <-chan struct{}) {
 	for {
 		select {
-		case msg := <- f.receivedMessages:
+		case msg := <-f.receivedMessages:
 			f.dispatch(msg)
 		case <-stopCh:
 			f.logger.Info("Fanout dispatch thread stopping.")
@@ -131,7 +136,7 @@ func (f *Handler) foreverDispatch(stopCh <-chan struct{}) {
 
 // ServeHTTP takes the request, fans it out to each subscription in f.config. If all the fanned out
 // requests return successfully, then return successfully. Else, return failure.
-func (f *Handler) dispatch(msg *message) {
+func (f *Handler) dispatch(msg *forwardMessage) {
 	msg.done <- func() error {
 		errorCh := make(chan error, len(f.config.Subscriptions))
 		for _, sub := range f.config.Subscriptions {
@@ -152,13 +157,13 @@ func (f *Handler) dispatch(msg *message) {
 				return errors.New("fanout timed out")
 			}
 		}
-		// All Subscriptions returned err=nil.
+		// All Subscriptions returned err = nil.
 		return nil
 	}()
 }
 
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
-// the `to` portions of the subscription.
+// the `sink` portions of the subscription.
 func (f *Handler) makeFanoutRequest(m buses.Message, sub duckv1alpha1.ChannelSubscriberSpec) error {
 	return f.dispatcher.DispatchMessage(&m, sub.CallableDomain, sub.SinkableDomain, buses.DispatchDefaults{})
 }

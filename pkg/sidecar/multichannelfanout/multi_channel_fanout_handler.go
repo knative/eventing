@@ -14,6 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package multichannelfanout provides an http.Handler that takes in one request to a Knative
+// Channel and fans it out to N other requests. Logically, it represents multiple Knative Channels.
+// It is made up of a map, map[channel]fanout.Handler and each incoming request is inspected to
+// determine which Channel it is on. This Handler delegates the HTTP handling to the fanout.Handler
+// corresponding to the incoming request's Channel.
+// It is often used in conjunction with a swappable.Handler. The swappable.Handler delegates all its
+// requests to the multichannelfanout.Handler. When a new configuration is available, a new
+// multichannelfanout.Handler is created and swapped in for all subsequent requests. The old
+// multichannelfanout.Handler is discarded.
 package multichannelfanout
 
 import (
@@ -37,9 +46,7 @@ type ChannelConfig struct {
 	FanoutConfig fanout.Config `json:"fanoutConfig"`
 }
 
-// MakeChannelKey creates the value to be sent in the HTTP header
-// multichannelfanout.ChannelKeyHeader. This represents the `Channel` the request is being sent
-// upon.
+// MakeChannelKey creates the key used for this Channel in the Handler's handlers map.
 func makeChannelKey(namespace, name string) string {
 	return fmt.Sprintf("%s/%s", namespace, name)
 }
@@ -53,18 +60,19 @@ func makeChannelKeyFromConfig(config ChannelConfig) string {
 // getChannelKey extracts the channel key from the given HTTP request.
 func getChannelKey(r *http.Request) string {
 	cr := buses.ParseChannel(r.Host)
-	return fmt.Sprintf("%s/%s", cr.Namespace, cr.Name)
+	return makeChannelKey(cr.Namespace, cr.Name)
 }
 
-// Handler is an http.Handler that looks in the HTTP headers of a request for the
-// multichannelfanout.ChannelKeyHeader and uses its value to determine which fanout.Handler to
-// delegate the request to.
+// Handler is an http.Handler that introspects the incoming request to determine what Channel it is
+// on, and then delegates handling of that request to the single fanout.Handler corresponding to
+// that Channel.
 type Handler struct {
 	logger   *zap.Logger
 	handlers map[string]*fanout.Handler
 	config   Config
 }
 
+// NewHandler creates a new Handler. The caller is responsible for calling handler.Stop().
 func NewHandler(logger *zap.Logger, conf Config) (*Handler, error) {
 	handlers := make(map[string]*fanout.Handler, len(conf.ChannelConfigs))
 

@@ -17,8 +17,9 @@ limitations under the License.
 package filesystem
 
 import (
+	"errors"
 	"github.com/fsnotify/fsnotify"
-	"github.com/knative/eventing/pkg/sidecar/configmap/parse"
+	sidecarconfigmap "github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	"github.com/knative/eventing/pkg/sidecar/swappable"
 	"github.com/knative/pkg/configmap"
@@ -43,7 +44,9 @@ type configMapWatcher struct {
 	configUpdated swappable.UpdateConfig
 }
 
-func NewConfigMapWatcher(logger *zap.Logger, dir string, updateConfig swappable.UpdateConfig) (chan<- bool, error) {
+// NewConfigMapWatcher creates a new filesystem.configMapWatcher. The caller is responsible for
+// calling Start(<-chan), likely via a controller-runtime Manager.
+func NewConfigMapWatcher(logger *zap.Logger, dir string, updateConfig swappable.UpdateConfig) (*configMapWatcher, error) {
 	conf, err := readConfigMap(logger, dir)
 	if err != nil {
 		logger.Error("Unable to read configMap", zap.Error(err))
@@ -63,27 +66,20 @@ func NewConfigMapWatcher(logger *zap.Logger, dir string, updateConfig swappable.
 		dir:           dir,
 		configUpdated: updateConfig,
 	}
-	watcherStopCh, err := cmw.startWatcher(dir)
-	if err != nil {
-		logger.Error("Unable to start the configMap file watcher", zap.Error(err))
-		return nil, err
-	}
-	return watcherStopCh, nil
+	return cmw, nil
 }
 
 // readConfigMap attempts to read the configMap from the attached volume.
 func readConfigMap(logger *zap.Logger, dir string) (*multichannelfanout.Config, error) {
 	cm, err := configmap.Load(dir)
 	if err != nil {
-		logger.Error("Unable to read configMap", zap.Error(err))
 		return nil, err
 	}
-	return parse.ConfigMapData(logger, cm)
+	return sidecarconfigmap.NewFanoutConfig(logger, cm)
 }
 
-// readConfigMapAndUpdateSubs reads the configMap data and calls `configUpdate` with the updated
-// value.
-func (cmw *configMapWatcher) readConfigMapAndUpdateConfig() {
+// updateConfig reads the configMap data and calls `configUpdated` with the updated value.
+func (cmw *configMapWatcher) updateConfig() {
 	conf, err := readConfigMap(cmw.logger, cmw.dir)
 	if err != nil {
 		cmw.logger.Error("Unable to read the configMap", zap.Error(err))
@@ -96,39 +92,36 @@ func (cmw *configMapWatcher) readConfigMapAndUpdateConfig() {
 	}
 }
 
-// startWatcher starts a background go routine that gets events when the filesystem in configDir is
-// changed.
-func (cmw *configMapWatcher) startWatcher(dir string) (chan<- bool, error) {
+func (cmw *configMapWatcher) Start(stopCh <-chan struct{}) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	stopCh := make(chan bool)
-	go func() {
-		for {
-			select {
-			case _, ok := <-watcher.Events:
-				if !ok {
-					// Channel closed.
-					cmw.logger.Error("watcher.Events channel closed") // TODO: Should this panic?
-					return
-				}
-				cmw.readConfigMapAndUpdateConfig()
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					// Channel closed.
-					cmw.logger.Error("watcher.Errors channel closed") // TODO: Should this panic?
-					return
-				}
-				cmw.logger.Error("watcher.Errors", zap.Error(err))
-			case _, ok := <-stopCh:
-				if !ok {
-					// stopCh has been closed
-					return
-				}
+
+	err = watcher.Add(cmw.dir)
+	if err != nil {
+		return err
+	}
+
+	for {
+		select {
+		case _, ok := <-watcher.Events:
+			if !ok {
+				// Channel closed.
+				return errors.New("watcher.Events channel closed")
+			}
+			cmw.updateConfig()
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				// Channel closed.
+				return errors.New("watcher.Errors channel closed")
+			}
+			cmw.logger.Error("watcher.Errors", zap.Error(err))
+		case _, ok := <-stopCh:
+			if !ok {
+				// stopCh has been closed
+				return nil
 			}
 		}
-	}()
-
-	return stopCh, watcher.Add(dir)
+	}
 }

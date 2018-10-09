@@ -14,6 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package swappable provides an http.Handler that delegates all HTTP requests to an underlying
+// multichannelfanout.Handler. When a new configuration is available, a new
+// multichannelfanout.Handler is created and swapped in. All subsequent requests go to the new
+// handler.
+// It is often used in conjunction with something that notices changes to ConfigMaps, such as
+// configmap.watcher or configmap.filesystem.
 package swappable
 
 import (

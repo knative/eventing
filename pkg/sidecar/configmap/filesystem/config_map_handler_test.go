@@ -19,7 +19,7 @@ package filesystem
 import (
 	"fmt"
 	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/pkg/sidecar/configmap/parse"
+	"github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	"github.com/knative/eventing/pkg/sidecar/swappable"
@@ -245,6 +245,9 @@ func TestServeHTTP(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			if tc.name != "change config" {
+				return
+			}
 			initialHandler := &fakeHandler{}
 			initialServer := httptest.NewServer(initialHandler)
 			defer initialServer.Close()
@@ -260,10 +263,16 @@ func TestServeHTTP(t *testing.T) {
 			if err != nil {
 				t.Errorf("Unexpected error making swappable.Handler: %+v", err)
 			}
-			_, err = NewConfigMapWatcher(zap.NewNop(), dir, sh.UpdateConfig)
+			cmw, err := NewConfigMapWatcher(zap.NewNop(), dir, sh.UpdateConfig)
 			if err != nil {
 				t.Errorf("Unexpected error making filesystem.configMapWatcher")
 			}
+
+			stopCh := make(chan struct{})
+			go cmw.Start(stopCh)
+			defer func() {
+				stopCh <- struct{}{}
+			}()
 
 			w := httptest.NewRecorder()
 			sh.ServeHTTP(w, makeRequest("default", "c1"))
@@ -310,7 +319,7 @@ func writeConfig(t *testing.T, dir, config string) {
 		// Golang editors tend to replace leading spaces with tabs. YAML is left whitespace
 		// sensitive, so let's replace the tabs with spaces.
 		leftSpaceConfig := strings.Replace(config, "\t", "    ", -1)
-		err := ioutil.WriteFile(fmt.Sprintf("%s/%s", dir, parse.MultiChannelFanoutConfigKey), []byte(leftSpaceConfig), 0700)
+		err := ioutil.WriteFile(fmt.Sprintf("%s/%s", dir, configmap.MultiChannelFanoutConfigKey), []byte(leftSpaceConfig), 0700)
 		if err != nil {
 			t.Errorf("Problem writing the config file: %v", err)
 		}

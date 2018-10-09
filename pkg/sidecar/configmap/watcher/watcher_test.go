@@ -21,7 +21,7 @@ import (
 	"errors"
 	"github.com/google/go-cmp/cmp"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
-	"github.com/knative/eventing/pkg/sidecar/configmap/parse"
+	"github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
@@ -57,21 +57,21 @@ func TestReconcile(t *testing.T) {
 		},
 		"cannot parse cm": {
 			config: map[string]string{
-				parse.MultiChannelFanoutConfigKey: "invalid config",
+				configmap.MultiChannelFanoutConfigKey: "invalid config",
 			},
 			expectedErr: true,
 		},
 		"configUpdated fails": {
 			expectedErr: true,
 			config: map[string]string{
-				parse.MultiChannelFanoutConfigKey: "",
+				configmap.MultiChannelFanoutConfigKey: "",
 			},
 			updateConfigErr: errors.New("test-error"),
 			expectedConfig:  &multichannelfanout.Config{},
 		},
 		"success": {
 			config: map[string]string{
-				parse.MultiChannelFanoutConfigKey: `
+				configmap.MultiChannelFanoutConfigKey: `
                     channelConfigs:
                         - name: foo
                           namespace: bar
@@ -126,7 +126,7 @@ func TestReconcile(t *testing.T) {
 				configUpdated: cuc.updateConfig,
 				cmName: types.NamespacedName{
 					Namespace: namespace,
-					Name: name,
+					Name:      name,
 				},
 			}
 

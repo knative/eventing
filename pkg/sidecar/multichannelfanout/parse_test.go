@@ -14,12 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package parse
+package multichannelfanout
 
 import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
-	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
 	"strings"
@@ -29,23 +28,16 @@ import (
 func TestConfigMapData(t *testing.T) {
 	testCases := []struct {
 		name        string
-		createDir   bool
 		config      string
-		expected    *multichannelfanout.Config
+		expected    *Config
 		expectedErr bool
 	}{
 		{
-			name:      "dir does not exist",
-			createDir: false,
-		},
-		{
 			name:        "no data",
-			createDir:   true,
-			expectedErr: true,
+			expected: &Config {},
 		},
 		{
 			name:      "invalid YAML",
-			createDir: true,
 			config: `
 				key:
 				  - value
@@ -56,18 +48,15 @@ func TestConfigMapData(t *testing.T) {
 		{
 			name:        "valid YAML -- invalid JSON",
 			config:      "{ nil: Key }",
-			createDir:   true,
 			expectedErr: true,
 		},
 		{
 			name:        "unknown field",
 			config:      "{ channelConfigs: [ { not: a-defined-field } ] }",
-			createDir:   true,
 			expectedErr: true,
 		},
 		{
 			name:      "valid",
-			createDir: true,
 			config: `
 				channelConfigs:
 				  - namespace: default
@@ -89,8 +78,8 @@ func TestConfigMapData(t *testing.T) {
 					  subscriptions:
 						- sinkableDomain: message-dumper-foo.default.svc.cluster.local
 				`,
-			expected: &multichannelfanout.Config{
-				ChannelConfigs: []multichannelfanout.ChannelConfig{
+			expected: &Config{
+				ChannelConfigs: []ChannelConfig{
 					{
 						Namespace: "default",
 						Name:      "c1",
@@ -137,8 +126,8 @@ func TestConfigMapData(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			data := formatData(tc.config)
-			c, e := ConfigMapData(zap.NewNop(), data)
+			if tc.name != "valid" { return }
+			c, e := Parse(zap.NewNop(), formatData(tc.config))
 			if tc.expectedErr {
 				if e == nil {
 					t.Errorf("Expected an error, actual nil")
@@ -152,13 +141,8 @@ func TestConfigMapData(t *testing.T) {
 	}
 }
 
-func formatData(config string) map[string]string {
-	data := make(map[string]string)
-	if config != "" {
-		// Golang editors tend to replace leading spaces with tabs. YAML is left whitespace
-		// sensitive, so let's replace the tabs with four spaces.
-		leftSpaceConfig := strings.Replace(config, "\t", "    ", -1)
-		data[MultiChannelFanoutConfigKey] = leftSpaceConfig
-	}
-	return data
+func formatData(config string) string {
+	// Golang editors tend to replace leading spaces with tabs. YAML is left whitespace
+	// sensitive and disallows tabs, so let's replace the tabs with four spaces.
+	return strings.Replace(config, "\t", "    ", -1)
 }

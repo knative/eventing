@@ -18,7 +18,7 @@ package watcher
 
 import (
 	"context"
-	"github.com/knative/eventing/pkg/sidecar/configmap/parse"
+	"github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/swappable"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -99,7 +99,7 @@ func (r *reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		return reconcile.Result{}, err
 	}
 
-	config, err := parse.ConfigMapData(r.logger, cm.Data)
+	config, err := configmap.NewFanoutConfig(r.logger, cm.Data)
 	if err != nil {
 		r.logger.Error("Could not parse ConfigMap", zap.Error(err),
 			zap.Any("configMap.Data", cm.Data))
