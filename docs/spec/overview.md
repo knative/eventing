@@ -1,22 +1,3 @@
-# Overview
-
-In the serverless model, computation and storage can be intertwined by having
-storage and compute systems publish events which are handled asynchronously by
-further compute services. Event delivery provides common infrastructure for
-decoupling event producers and consumers such that the linking between them can
-be performed without change to either. Loosely coupled eventing systems enable
-composable services which retain the ability to scale independently.
-Declarative event binding reduces the effort to create a scalable system that
-combines managed services and custom code.
-
-Knative eventing implements common components of an event delivery ecosystem:
-enumeration and discovery of event sources, configuration and management of
-event transport, and declarative binding of events (generated either by storage
-services or earlier computation) for further event processing and persistence.
-
-The following is a detailed specification for the `eventing.knative.dev` API
-surface, which provides control mechanism for Knative eventing.
-
 # Resource Types
 
 The API defines and provides a complete implementation for

@@ -1,8 +1,13 @@
 # Object Model
 
-This is the detailed specification of the Knative Eventing Object Model. For
-context, see the [overview](overview.md), [motivation](motivation.md), and the
-[interface contract](interfaces.md) documents.
+Knative ships with several objects which implement useful sets of
+[interfaces](interfaces.md). It is expected that additional objects which
+implement other sets of interfaces will be added over time. For context, see
+the [overview](overview.md) and [motivations](motivation.md) sections.
+
+These are Kubernetes resources that been introduced using Custom Resource
+Definitions. They will have the expected _ObjectMeta_, _Spec_, _Status_ fields.
+This document details our _Spec_ and _Status_ customizations.
 
 - [Source](#kind-source)
 - [Channel](#kind-channel)
@@ -16,8 +21,9 @@ context, see the [overview](overview.md), [motivation](motivation.md), and the
 ### group: eventing.knative.dev/v1alpha1
 
 _Describes a specific configuration (credentials, etc) of a source system which
-can be used to supply events. Sources emit events using a channel specified in
-their status. They cannot receive events._
+can be used to supply events. A common pattern is for Sources to emit events to
+Channel to allow event delivery to be fanned-out within the cluster. They
+cannot receive events._
 
 ### Object Schema
 
@@ -37,6 +43,7 @@ their status. They cannot receive events._
 | ------------ | ------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | subscribable | Subscribable              | Pointer to a channel which can be subscribed to in order to receive events from this source. |                                                          |
 | provisioned  | []ProvisionedObjectStatus | Creation status of each Channel and errors therein.                                          | It is expected that a Source list all produced Channels. |
+| conditions   | Conditions                | Source conditions.                                                                           |                                                          |
 
 ##### Conditions
 
@@ -90,9 +97,9 @@ Subscription's call parameter._
 
 | Field        | Type         | Description                                                                                                                 | Limitations |
 | ------------ | ------------ | --------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| Sinkable     | Sinkable     | Address to the endpoint as top-level domain that will distribute traffic over the provided targets from inside the cluster. |             |
+| sinkable     | Sinkable     | Address to the endpoint as top-level domain that will distribute traffic over the provided targets from inside the cluster. |             |
 | subscribable | Subscribable |                                                                                                                             |             |
-| Conditions   | Conditions   | Standard Subscriptions                                                                                                      |             |
+| conditions   | Conditions   | Standard Subscriptions                                                                                                      |             |
 
 ##### Conditions
 
@@ -111,53 +118,6 @@ Subscription's call parameter._
 | Create | The Provisioner referenced will take ownership of the Channel and begin provisioning the backing resources required for the Channel depending on implementation. | Only one Provisioner is allowed to be the Owner for a given Channel. |
 | Update | The Provisioner will synchronize the Channel backing resources to reflect the update.                                                                            |                                                                      |
 | Delete | The Provisioner will deprovision the backing resources if no longer required depending on implementation.                                                        |                                                                      |
-
----
-
-## kind: Provisioner
-
-### group: eventing.knative.dev/v1alpha1
-
-_Describes an abstract configuration of a Source system which produces events
-or a Channel system that receives and delivers events._
-
-### Object Schema
-
-#### Spec
-
-| Field  | Type                  | Description                                 | Limitations                |
-| ------ | --------------------- | ------------------------------------------- | -------------------------- |
-| type\* | GroupKind<sup>1</sup> | The type of the resource to be provisioned. | Must be Source or Channel. |
-
-\*: Required
-
-1: Kubernetes type.
-
-#### Metadata
-
-##### Owner References
-
-- Owns EventTypes.
-
-#### Status
-
-| Field       | Type                      | Description                                                          | Limitations                                                                    |
-| ----------- | ------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| provisioned | []ProvisionedObjectStatus | Status of creation or adoption of each EventType and errors therein. | It is expected that a provisioner list all produced EventTypes, if applicable. |
-
-#### Events
-
-- Source created
-- Source deleted
-- Event types installed
-
-### Life Cycle
-
-| Action | Reactions                                                                       | Limitations                                                                                              |
-| ------ | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Create | Creates and owns EventTypes produced, or adds Owner ref to existing EventTypes. | Verifies Json Schema provided by existing EventTypes; Not allowed to edit EventType if previously Owned; |
-| Update | Synchronizes EventTypes.                                                        |                                                                                                          |
-| Delete | Removes Owner ref from EventTypes.                                              |                                                                                                          |
 
 ---
 
@@ -210,6 +170,56 @@ _Describes a linkage between a Subscribable and a Targetable and/or Sinkable._
 
 ---
 
+## kind: Provisioner
+
+### group: eventing.knative.dev/v1alpha1
+
+_Describes an abstract configuration of a Source system which produces events
+or a Channel system that receives and delivers events._
+
+### Object Schema
+
+#### Spec
+
+| Field  | Type                                                                            | Description                                 | Limitations                |
+| ------ | ------------------------------------------------------------------------------- | ------------------------------------------- | -------------------------- |
+| type\* | [GroupKind](https://godoc.org/k8s.io/apimachinery/pkg/runtime/schema#GroupKind) | The type of the resource to be provisioned. | Must be Source or Channel. |
+
+\*: Required
+
+#### Metadata
+
+##### Owner References
+
+- Owns EventTypes.
+
+#### Status
+
+| Field       | Type                      | Description                                                          | Limitations                                                                    |
+| ----------- | ------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| provisioned | []ProvisionedObjectStatus | Status of creation or adoption of each EventType and errors therein. | It is expected that a provisioner list all produced EventTypes, if applicable. |
+| conditions  | Conditions                | Provisioner conditions                                               |                                                                                |
+
+##### Conditions
+
+- **Ready.**
+
+#### Events
+
+- Source created
+- Source deleted
+- Event types installed
+
+### Life Cycle
+
+| Action | Reactions                                                                       | Limitations                                                                                              |
+| ------ | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Create | Creates and owns EventTypes produced, or adds Owner ref to existing EventTypes. | Verifies Json Schema provided by existing EventTypes; Not allowed to edit EventType if previously Owned; |
+| Update | Synchronizes EventTypes.                                                        |                                                                                                          |
+| Delete | Removes Owner ref from EventTypes.                                              |                                                                                                          |
+
+---
+
 ## kind: EventType
 
 NOTE: EventType is out of scope for 0.1 release. This is future documentation.
@@ -239,10 +249,6 @@ non-controlling OwnerReference on the EventType resources it knows about.
 | Field          | Type    | Description                         | Limitations |
 | -------------- | ------- | ----------------------------------- | ----------- |
 | referenceCount | Integer | Number of Owners for this EventType |             |
-
-##### Conditions
-
-- **Pinned**. True when the EventType cannot be deleted.
 
 #### Events
 

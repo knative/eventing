@@ -34,9 +34,9 @@ for delivering events to each of them.
 
 ### Control Plane
 
-The **Channelable** resource has a list of _subscribers_ within the resources
-_spec.channelable_. In practice, the resolved _subscription_ _call_ and
-_result_ endpoints populate the Channelable's list of _subscribers_.
+The **Channelable** resource stores a list of resolved _Subscriptions_. The
+Subscription Controller is responsible for resolving any ObjectReferences (such
+as _call_ and _result_) in the _Subscription_ to network addresses.
 
 ### Data Plane
 
