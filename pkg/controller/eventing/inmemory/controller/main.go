@@ -51,10 +51,19 @@ func main() {
 	// The controllers for both the ClusterProvisioner and the Channels created by that
 	// ClusterProvisioner run in this process.
 	_, err = clusterprovisioner.ProvideController(mgr, logger.Desugar())
+	if err != nil {
+		logger.Fatal("Unable to create Provisioner controller", zap.Error(err))
+	}
 	_, err = channel.ProvideController(mgr, logger.Desugar())
+	if err != nil {
+		logger.Fatal("Unable to create Channel controller", zap.Error(err))
+	}
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 	// Start blocks forever.
-	mgr.Start(stopCh)
+	err = mgr.Start(stopCh)
+	if err != nil {
+		logger.Fatal("Manager.Start() returned an error", zap.Error(err))
+	}
 }

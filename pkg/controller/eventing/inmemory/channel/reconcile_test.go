@@ -588,8 +588,8 @@ func makeK8sService() *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
-					Name: PortName,
-					Port: PortNumber,
+					Name: portName,
+					Port: portNumber,
 				},
 			},
 		},
@@ -639,7 +639,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 					Destination: istiov1alpha3.Destination{
 						Host: "in-memory-channel-clusterbus.knative-eventing.svc.cluster.local",
 						Port: istiov1alpha3.PortSelector{
-							Number: PortNumber,
+							Number: portNumber,
 						},
 					}},
 				}},

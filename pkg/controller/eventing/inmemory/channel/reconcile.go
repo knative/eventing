@@ -41,8 +41,8 @@ import (
 )
 
 const (
-	PortName      = "http"
-	PortNumber    = 80
+	portName      = "http"
+	portNumber    = 80
 	finalizerName = controllerAgentName
 )
 
@@ -273,8 +273,8 @@ func newK8sService(c *eventingv1alpha1.Channel) *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
-					Name: PortName,
-					Port: PortNumber,
+					Name: portName,
+					Port: portNumber,
 				},
 			},
 		},
@@ -316,7 +316,7 @@ func newVirtualService(channel *eventingv1alpha1.Channel) *istiov1alpha3.Virtual
 					Destination: istiov1alpha3.Destination{
 						Host: destinationHost,
 						Port: istiov1alpha3.PortSelector{
-							Number: PortNumber,
+							Number: portNumber,
 						},
 					}},
 				}},
