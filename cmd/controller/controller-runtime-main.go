@@ -95,17 +95,11 @@ func controllerRuntimeStart(logger *zap.SugaredLogger, experimental string) erro
 }
 
 func addExperimentalControllers(logger *zap.SugaredLogger, experimental string, providers []ProvideFunc) []ProvideFunc {
-	if len(experimental) == 0 {
-		for _, f := range ExperimentalControllers {
+	for _, k := range strings.Split(experimental, ",") {
+		if f, ok := ExperimentalControllers[k]; !ok {
+			logger.Infof("Failed to find a known controller for %q.", k)
+		} else {
 			providers = append(providers, f)
-		}
-	} else {
-		for _, k := range strings.Split(experimental, ",") {
-			if f, ok := ExperimentalControllers[k]; !ok {
-				logger.Infof("Failed to find a known controller for %q.", k)
-			} else {
-				providers = append(providers, f)
-			}
 		}
 	}
 	return providers
