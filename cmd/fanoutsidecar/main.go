@@ -29,8 +29,7 @@ import (
 	"github.com/knative/eventing/pkg/system"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 	"log"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -147,16 +146,16 @@ func setupConfigMapVolume(logger *zap.Logger, mgr manager.Manager, configUpdated
 }
 
 func setupConfigMapWatcher(logger *zap.Logger, mgr manager.Manager, configUpdated swappable.UpdateConfig) error {
-	// Add custom types to this array to get them into the manager's scheme.
-	corev1.AddToScheme(mgr.GetScheme())
-
-	cmName := types.NamespacedName{
-		Namespace: configMapNamespace,
-		Name:      configMapName,
-	}
-	if _, err := watcher.NewWatcher(logger, mgr, cmName, configUpdated); err != nil {
+	kc, err := kubernetes.NewForConfig(mgr.GetConfig())
+	if err != nil {
 		return err
 	}
 
+	cmw, err := watcher.NewWatcher(logger, kc, configMapNamespace, configMapName, configUpdated)
+	if err != nil {
+		return err
+	}
+
+	mgr.Add(cmw)
 	return nil
 }

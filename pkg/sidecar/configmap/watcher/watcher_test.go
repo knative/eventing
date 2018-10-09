@@ -17,21 +17,16 @@ limitations under the License.
 package watcher
 
 import (
-	"context"
 	"errors"
 	"github.com/google/go-cmp/cmp"
-	controllertesting "github.com/knative/eventing/pkg/controller/testing"
-	"github.com/knative/eventing/pkg/sidecar/configmap"
+	sidecarconfigmap "github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/configmap"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 )
 
@@ -43,35 +38,29 @@ const (
 func TestReconcile(t *testing.T) {
 	testCases := map[string]struct {
 		config          map[string]string
-		getErr          error
 		updateConfigErr error
-		expectedErr     bool
 		expectedConfig  *multichannelfanout.Config
 	}{
-		"cm not found": {
-			expectedErr: false,
-		},
-		"get cm error": {
-			expectedErr: true,
-			getErr:      errors.New("test-error"),
+		"missing key": {
+			config:         map[string]string{},
+			expectedConfig: nil,
 		},
 		"cannot parse cm": {
 			config: map[string]string{
-				configmap.MultiChannelFanoutConfigKey: "invalid config",
+				sidecarconfigmap.MultiChannelFanoutConfigKey: "invalid config",
 			},
-			expectedErr: true,
+			expectedConfig: nil,
 		},
 		"configUpdated fails": {
-			expectedErr: true,
 			config: map[string]string{
-				configmap.MultiChannelFanoutConfigKey: "",
+				sidecarconfigmap.MultiChannelFanoutConfigKey: "",
 			},
 			updateConfigErr: errors.New("test-error"),
 			expectedConfig:  &multichannelfanout.Config{},
 		},
 		"success": {
 			config: map[string]string{
-				configmap.MultiChannelFanoutConfigKey: `
+				sidecarconfigmap.MultiChannelFanoutConfigKey: `
                     channelConfigs:
                         - name: foo
                           namespace: bar
@@ -100,48 +89,22 @@ func TestReconcile(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			mocks := controllertesting.Mocks{
-				MockGets: []controllertesting.MockGet{
-					func(innerClient client.Client, ctx context.Context, key client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if tc.getErr != nil {
-							return controllertesting.Handled, tc.getErr
-						}
-						if tc.config != nil {
-							obj.(*corev1.ConfigMap).Data = tc.config
-							return controllertesting.Handled, nil
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			}
-			c := controllertesting.NewMockClient(fake.NewFakeClient(), mocks)
-
 			cuc := &configUpdatedChecker{
 				updateConfigErr: tc.updateConfigErr,
 			}
 
-			r := reconciler{
-				logger:        zap.NewNop(),
-				client:        c,
-				configUpdated: cuc.updateConfig,
-				cmName: types.NamespacedName{
-					Namespace: namespace,
-					Name:      name,
-				},
+			r, err := NewWatcher(zap.NewNop(), nil, namespace, name, cuc.updateConfig)
+			if err != nil {
+				t.Errorf("Error creating watcher: %v", err)
 			}
-
-			result, err := r.Reconcile(reconcile.Request{
-				NamespacedName: types.NamespacedName{
+			iw := r.(*configmap.InformedWatcher)
+			iw.OnChange(&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,
 					Name:      name,
 				},
+				Data: tc.config,
 			})
-			if tc.expectedErr != (err != nil) {
-				t.Errorf("Unexpected error. Expected %v. Actual %v.", tc.expectedErr, err)
-			}
-			if diff := cmp.Diff(reconcile.Result{}, result); diff != "" {
-				t.Errorf("Unexpected result (-want +got): %v", diff)
-			}
 
 			if diff := cmp.Diff(tc.expectedConfig, cuc.config); diff != "" {
 				t.Errorf("Unexpected config (-want +got): %v", diff)

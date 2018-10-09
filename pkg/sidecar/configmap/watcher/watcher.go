@@ -17,105 +17,33 @@ limitations under the License.
 package watcher
 
 import (
-	"context"
-	"github.com/knative/eventing/pkg/sidecar/configmap"
+	sidecarconfigmap "github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/swappable"
+	"github.com/knative/pkg/configmap"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const (
-	watcherName = "config-map-k8s-watcher"
-)
+// NewWatcher creates a new InformedWatcher that watches the specified ConfigMap and on any change
+// that results in a valid multichannelfanout.Config calls configUpdated.
+func NewWatcher(logger *zap.Logger, kc kubernetes.Interface, cmNamespace, cmName string, configUpdated swappable.UpdateConfig) (manager.Runnable, error) {
+	iw := configmap.NewInformedWatcher(kc, cmNamespace)
+	iw.Watch(cmName, func(cm *corev1.ConfigMap) {
+		config, err := sidecarconfigmap.NewFanoutConfig(logger, cm.Data)
+		if err != nil {
+			logger.Error("Could not parse ConfigMap", zap.Error(err),
+				zap.Any("configMap.Data", cm.Data))
+			return
+		}
 
-func NewWatcher(logger *zap.Logger, mgr manager.Manager, cmName types.NamespacedName, configUpdated swappable.UpdateConfig) (controller.Controller, error) {
-	// We use the controller-runtime pattern of setting up a controller exclusively to watch changes
-	// to the ConfigMap. We do not write to the API server for any object.
-	r := &reconciler{
-		logger:        logger,
-		configUpdated: configUpdated,
-		cmName:        cmName,
-	}
-	c, err := controller.New(watcherName, mgr, controller.Options{
-		Reconciler: r,
+		err = configUpdated(config)
+		if err != nil {
+			logger.Error("Unable to update config", zap.Error(err))
+			return
+		}
 	})
-	if err != nil {
-		logger.Error("Unable to create controller.", zap.Error(err))
-		return nil, err
-	}
 
-	// Watch ConfigMaps.
-	err = c.Watch(&source.Kind{
-		Type: &corev1.ConfigMap{},
-	}, &handler.EnqueueRequestForObject{})
-	if err != nil {
-		logger.Error("Unable to watch ConfigMaps.", zap.Error(err))
-		return nil, err
-	}
-	return c, nil
-}
-
-var _ reconcile.Reconciler = &reconciler{}
-
-type reconciler struct {
-	logger        *zap.Logger
-	client        client.Client
-	configUpdated swappable.UpdateConfig
-	cmName        types.NamespacedName
-}
-
-func (r *reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) {
-	//TODO use this to store the logger and set a deadline
-	ctx := context.TODO()
-
-	if req.Namespace != r.cmName.Namespace || req.Name != r.cmName.Name {
-		// Not the ConfigMap we are interested in.
-		return reconcile.Result{}, nil
-	}
-
-	cm := &corev1.ConfigMap{}
-	err := r.client.Get(ctx, req.NamespacedName, cm)
-
-	// The ConfigMap may have been deleted since it was added to the workqueue. If so
-	// there's nothing to be done.
-	if errors.IsNotFound(err) {
-		r.logger.Error("ConfigMap not found", zap.Any("request", req))
-		return reconcile.Result{}, nil
-	}
-
-	// If the ConfigMap exists but could not be retrieved, then we should retry.
-	if err != nil {
-		r.logger.Error("Could not get ConfigMap",
-			zap.Any("request", req),
-			zap.Error(err))
-		return reconcile.Result{}, err
-	}
-
-	config, err := configmap.NewFanoutConfig(r.logger, cm.Data)
-	if err != nil {
-		r.logger.Error("Could not parse ConfigMap", zap.Error(err),
-			zap.Any("configMap.Data", cm.Data))
-		return reconcile.Result{}, err
-	}
-
-	err = r.configUpdated(config)
-	if err != nil {
-		r.logger.Error("Unable to update config", zap.Error(err))
-		return reconcile.Result{}, err
-	}
-
-	return reconcile.Result{}, nil
-}
-
-func (r *reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
+	return iw, nil
 }
