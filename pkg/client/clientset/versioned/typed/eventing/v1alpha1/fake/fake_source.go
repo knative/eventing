@@ -37,7 +37,7 @@ type FakeSources struct {
 
 var sourcesResource = schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1alpha1", Resource: "sources"}
 
-var sourcesKind = schema.GroupVersionKind{Group: "eventing.knative.dev", Version: "v1alpha1", Kind: system.KinSource}
+var sourcesKind = schema.GroupVersionKind{Group: "eventing.knative.dev", Version: "v1alpha1", Kind: system.KindSource}
 
 // Get takes name of the source, and returns the corresponding source object, and an error if there is any.
 func (c *FakeSources) Get(name string, options v1.GetOptions) (result *v1alpha1.Source, err error) {

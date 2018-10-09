@@ -37,7 +37,7 @@ type FakeSubscriptions struct {
 
 var subscriptionsResource = schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1alpha1", Resource: "subscriptions"}
 
-var subscriptionsKind = schema.GroupVersionKind{Group: "eventing.knative.dev", Version: "v1alpha1", Kind: system.KinSubscription}
+var subscriptionsKind = schema.GroupVersionKind{Group: "eventing.knative.dev", Version: "v1alpha1", Kind: system.KindSubscription}
 
 // Get takes name of the subscription, and returns the corresponding subscription object, and an error if there is any.
 func (c *FakeSubscriptions) Get(name string, options v1.GetOptions) (result *v1alpha1.Subscription, err error) {
