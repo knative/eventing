@@ -12,6 +12,7 @@ import (
 	"github.com/knative/eventing/test"
 	pkgTest "github.com/knative/pkg/test"
 	"github.com/knative/pkg/test/logging"
+	servingV1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	rbacV1beta1 "k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,14 +44,14 @@ func Setup(t *testing.T, logger *logging.BaseLogger) (*test.Clients, *test.Clean
 	if err != nil {
 		t.Fatalf("Couldn't initialize clients: %v", err)
 	}
-	cleaner := test.NewCleaner(logger, clients)
+	cleaner := test.NewCleaner(logger, clients.Dynamic)
 
 	return clients, cleaner
 }
 
 // TearDown will delete created names using clients.
 func TearDown(clients *test.Clients, cleaner *test.Cleaner, logger *logging.BaseLogger) {
-	cleaner.Clean()
+	cleaner.Clean(true)
 
 	// There seems to be an Istio bug where if we delete / create
 	// VirtualServices too quickly we will hit pro-longed "No health
@@ -71,15 +72,15 @@ func CreateRouteAndConfig(clients *test.Clients, logger *logging.BaseLogger, cle
 	if err != nil {
 		return err
 	}
-	cleaner.Add(configurations, config.ObjectMeta.Name)
+	cleaner.Add(servingV1alpha1.SchemeGroupVersion.Group, servingV1alpha1.SchemeGroupVersion.Version, "configurations", pkgTest.Flags.Namespace, config.ObjectMeta.Name)
 
 	routes := clients.Serving.ServingV1alpha1().Routes(pkgTest.Flags.Namespace)
 	route, err := routes.Create(
-		test.Route(name, defaultNamespaceName, name))
+		test.Route(name, pkgTest.Flags.Namespace, name))
 	if err != nil {
 		return err
 	}
-	cleaner.Add(routes, route.ObjectMeta.Name)
+	cleaner.Add(servingV1alpha1.SchemeGroupVersion.Group, servingV1alpha1.SchemeGroupVersion.Version, "routes", pkgTest.Flags.Namespace, route.ObjectMeta.Name)
 	return nil
 }
 
@@ -103,7 +104,7 @@ func CreateFlow(clients *test.Clients, flow *flowsV1alpha1.Flow, logger *logging
 	if err != nil {
 		return err
 	}
-	cleaner.Add(flows, res.ObjectMeta.Name)
+	cleaner.Add(flowsV1alpha1.SchemeGroupVersion.Group, flowsV1alpha1.SchemeGroupVersion.Version, "flows", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
 	return nil
 }
 
@@ -127,7 +128,7 @@ func CreateChannel(clients *test.Clients, channel *channelsV1alpha1.Channel, log
 	if err != nil {
 		return err
 	}
-	cleaner.Add(channels, res.ObjectMeta.Name)
+	cleaner.Add(channelsV1alpha1.SchemeGroupVersion.Group, channelsV1alpha1.SchemeGroupVersion.Version, "channels", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
 	return nil
 }
 
@@ -138,7 +139,7 @@ func CreateSubscription(clients *test.Clients, subs *channelsV1alpha1.Subscripti
 	if err != nil {
 		return err
 	}
-	cleaner.Add(subscriptions, res.ObjectMeta.Name)
+	cleaner.Add(channelsV1alpha1.SchemeGroupVersion.Group, channelsV1alpha1.SchemeGroupVersion.Version, "subscriptions", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
 	return nil
 }
 
@@ -149,7 +150,7 @@ func CreateServiceAccount(clients *test.Clients, sa *corev1.ServiceAccount, logg
 	if err != nil {
 		return err
 	}
-	cleaner.Add(sas, res.ObjectMeta.Name)
+	cleaner.Add(corev1.SchemeGroupVersion.Group, corev1.SchemeGroupVersion.Version, "serviceaccounts", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
 	return nil
 }
 
@@ -160,7 +161,7 @@ func CreateClusterRoleBinding(clients *test.Clients, crb *rbacV1beta1.ClusterRol
 	if err != nil {
 		return err
 	}
-	cleaner.Add(clusterRoleBindings, res.ObjectMeta.Name)
+	cleaner.Add(rbacV1beta1.SchemeGroupVersion.Group, rbacV1beta1.SchemeGroupVersion.Version, "clusterrolebindings", "", res.ObjectMeta.Name)
 	return nil
 }
 
@@ -208,7 +209,7 @@ func CreateClusterBus(clients *test.Clients, cbus *channelsV1alpha1.ClusterBus, 
 	if err != nil {
 		return err
 	}
-	cleaner.Add(cbuses, res.ObjectMeta.Name)
+	cleaner.Add(channelsV1alpha1.SchemeGroupVersion.Group, channelsV1alpha1.SchemeGroupVersion.Version, "clusterbuses", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
 	return nil
 }
 
@@ -219,7 +220,7 @@ func CreateEventSource(clients *test.Clients, es *feedsV1alpha1.EventSource, log
 	if err != nil {
 		return err
 	}
-	cleaner.Add(esources, res.ObjectMeta.Name)
+	cleaner.Add(feedsV1alpha1.SchemeGroupVersion.Group, feedsV1alpha1.SchemeGroupVersion.Version, "eventsources", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
 	return nil
 }
 
@@ -230,7 +231,7 @@ func CreateEventType(clients *test.Clients, et *feedsV1alpha1.EventType, logger 
 	if err != nil {
 		return err
 	}
-	cleaner.Add(eTypes, res.ObjectMeta.Name)
+	cleaner.Add(feedsV1alpha1.SchemeGroupVersion.Group, feedsV1alpha1.SchemeGroupVersion.Version, "eventtypes", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
 	return nil
 }
 
@@ -241,7 +242,7 @@ func CreatePod(clients *test.Clients, pod *corev1.Pod, logger *logging.BaseLogge
 	if err != nil {
 		return err
 	}
-	cleaner.Add(pods, res.ObjectMeta.Name)
+	cleaner.Add(corev1.SchemeGroupVersion.Group, corev1.SchemeGroupVersion.Version, "pods", res.ObjectMeta.Namespace, res.ObjectMeta.Name)
 	return nil
 }
 

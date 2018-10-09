@@ -19,16 +19,9 @@ package test
 
 import (
 	eventing "github.com/knative/eventing/pkg/client/clientset/versioned"
-	channelstyped "github.com/knative/eventing/pkg/client/clientset/versioned/typed/channels/v1alpha1"
-	feedstyped "github.com/knative/eventing/pkg/client/clientset/versioned/typed/feeds/v1alpha1"
-	flowstyped "github.com/knative/eventing/pkg/client/clientset/versioned/typed/flows/v1alpha1"
 	"github.com/knative/pkg/test"
 	serving "github.com/knative/serving/pkg/client/clientset/versioned"
-	servingtyped "github.com/knative/serving/pkg/client/clientset/versioned/typed/serving/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
-	coretyped "k8s.io/client-go/kubernetes/typed/core/v1"
-	rbactyped "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -38,6 +31,7 @@ type Clients struct {
 	Kube     *test.KubeClient
 	Serving  *serving.Clientset
 	Eventing *eventing.Clientset
+	Dynamic  dynamic.Interface
 }
 
 // NewClients instantiates and returns several clientsets required for making request to the
@@ -64,121 +58,12 @@ func NewClients(configPath string, clusterName string, namespace string) (*Clien
 		return nil, err
 	}
 
+	clients.Dynamic, err = dynamic.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	return clients, nil
-}
-
-// DeleterInterface has the method that is called in order to delete a resource
-type DeleterInterface interface {
-	Delete(name string, options *metav1.DeleteOptions) error
-}
-
-// Delete will delete all resources and wait until they're deleted
-func (clients *Clients) Delete(resource interface{}, name string) error {
-	if res, ok := resource.(DeleterInterface); ok {
-		if err := res.Delete(name, nil); err != nil {
-			return err
-		}
-	}
-
-	if res, ok := resource.(coretyped.PodInterface); ok {
-		return wait.PollImmediate(interval, timeout, func() (bool, error) {
-			if _, err := res.Get(name, metav1.GetOptions{}); err != nil {
-				return true, nil
-			}
-			return false, nil
-		})
-	}
-
-	if res, ok := resource.(coretyped.ServiceAccountInterface); ok {
-		return wait.PollImmediate(interval, timeout, func() (bool, error) {
-			if _, err := res.Get(name, metav1.GetOptions{}); err != nil {
-				return true, nil
-			}
-			return false, nil
-		})
-	}
-
-	if res, ok := resource.(rbactyped.ClusterRoleBindingInterface); ok {
-		return wait.PollImmediate(interval, timeout, func() (bool, error) {
-			if _, err := res.Get(name, metav1.GetOptions{}); err != nil {
-				return true, nil
-			}
-			return false, nil
-		})
-	}
-
-	if res, ok := resource.(servingtyped.RouteInterface); ok {
-		return wait.PollImmediate(interval, timeout, func() (bool, error) {
-			if _, err := res.Get(name, metav1.GetOptions{}); err != nil {
-				return true, nil
-			}
-			return false, nil
-		})
-	}
-
-	if res, ok := resource.(servingtyped.ConfigurationInterface); ok {
-		return wait.PollImmediate(interval, timeout, func() (bool, error) {
-			if _, err := res.Get(name, metav1.GetOptions{}); err != nil {
-				return true, nil
-			}
-			return false, nil
-		})
-	}
-
-	if res, ok := resource.(flowstyped.FlowInterface); ok {
-		return wait.PollImmediate(interval, timeout, func() (bool, error) {
-			if _, err := res.Get(name, metav1.GetOptions{}); err != nil {
-				return true, nil
-			}
-			return false, nil
-		})
-	}
-
-	if res, ok := resource.(channelstyped.ClusterBusInterface); ok {
-		return wait.PollImmediate(interval, timeout, func() (bool, error) {
-			if _, err := res.Get(name, metav1.GetOptions{}); err != nil {
-				return true, nil
-			}
-			return false, nil
-		})
-	}
-
-	if res, ok := resource.(channelstyped.ChannelInterface); ok {
-		return wait.PollImmediate(interval, timeout, func() (bool, error) {
-			if _, err := res.Get(name, metav1.GetOptions{}); err != nil {
-				return true, nil
-			}
-			return false, nil
-		})
-	}
-
-	if res, ok := resource.(feedstyped.EventSourceInterface); ok {
-		return wait.PollImmediate(interval, timeout, func() (bool, error) {
-			if _, err := res.Get(name, metav1.GetOptions{}); err != nil {
-				return true, nil
-			}
-			return false, nil
-		})
-	}
-
-	if res, ok := resource.(feedstyped.EventTypeInterface); ok {
-		return wait.PollImmediate(interval, timeout, func() (bool, error) {
-			if _, err := res.Get(name, metav1.GetOptions{}); err != nil {
-				return true, nil
-			}
-			return false, nil
-		})
-	}
-
-	if res, ok := resource.(channelstyped.SubscriptionInterface); ok {
-		return wait.PollImmediate(interval, timeout, func() (bool, error) {
-			if _, err := res.Get(name, metav1.GetOptions{}); err != nil {
-				return true, nil
-			}
-			return false, nil
-		})
-	}
-	return nil
 }
 
 func buildClientConfig(kubeConfigPath string, clusterName string) (*rest.Config, error) {

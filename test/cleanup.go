@@ -22,6 +22,11 @@ import (
 	"os"
 	"os/signal"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/dynamic"
+
 	"github.com/knative/pkg/test/logging"
 )
 
@@ -29,23 +34,47 @@ import (
 type Cleaner struct {
 	resourcesToClean []ResourceDeleter
 	logger           *logging.BaseLogger
-	clients          *Clients
+	dynamicClient    dynamic.Interface
+}
+
+// ResourceDeleter holds the cleaner and name of resource to be cleaned
+type ResourceDeleter struct {
+	Resource dynamic.ResourceInterface
+	Name     string
 }
 
 // NewCleaner creates a new Cleaner
-func NewCleaner(log *logging.BaseLogger, testClients *Clients) *Cleaner {
+func NewCleaner(log *logging.BaseLogger, client dynamic.Interface) *Cleaner {
 	cleaner := &Cleaner{
 		resourcesToClean: make([]ResourceDeleter, 0, 10),
 		logger:           log,
-		clients:          testClients,
+		dynamicClient:    client,
 	}
 	return cleaner
 }
 
-// Add will register a resources to be cleaned by the Clean function
-func (cleaner *Cleaner) Add(resource interface{}, name string) error {
-	res := ResourceDeleter{
+// Add will register a resource to be cleaned by the Clean function
+// This function is generic enough so as to be able to register any resources
+// Each resource is identified by:
+// * group (e.g. serving.knative.dev)
+// * version (e.g. v1alpha1)
+// * resource's plural (e.g. routes)
+// * namespace (use "" if the resource is not tied to any namespace)
+// * actual name of the resource (e.g. myroute)
+func (cleaner *Cleaner) Add(group string, version string, resource string, namespace string, name string) error {
+	gvr := schema.GroupVersionResource{
+		Group:    group,
+		Version:  version,
 		Resource: resource,
+	}
+	var unstructured dynamic.ResourceInterface
+	if namespace != "" {
+		unstructured = cleaner.dynamicClient.Resource(gvr).Namespace(namespace)
+	} else {
+		unstructured = cleaner.dynamicClient.Resource(gvr)
+	}
+	res := ResourceDeleter{
+		Resource: unstructured,
 		Name:     name,
 	}
 	//this is actually a prepend, we want to delete resources in reverse order
@@ -54,17 +83,25 @@ func (cleaner *Cleaner) Add(resource interface{}, name string) error {
 }
 
 // Clean will delete all registered resources
-func (cleaner *Cleaner) Clean() error {
-	for _, resource := range cleaner.resourcesToClean {
-		cleaner.clients.Delete(resource.Resource, resource.Name)
+func (cleaner *Cleaner) Clean(awaitDeletion bool) error {
+	for _, deleter := range cleaner.resourcesToClean {
+		err := deleter.Resource.Delete(deleter.Name, nil)
+		if err != nil {
+			cleaner.logger.Errorf("Error: %v", err)
+		} else if awaitDeletion {
+			cleaner.logger.Debugf("Waiting for %s to be deleted", deleter.Name)
+			err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+				if _, err := deleter.Resource.Get(deleter.Name, metav1.GetOptions{}); err != nil {
+					return true, nil
+				}
+				return false, nil
+			})
+			if err != nil {
+				cleaner.logger.Errorf("Error: %v", err)
+			}
+		}
 	}
 	return nil
-}
-
-// ResourceDeleter holds the cleaner and name of resource to be cleaned
-type ResourceDeleter struct {
-	Resource interface{}
-	Name     string
 }
 
 // CleanupOnInterrupt will execute the function cleanup if an interrupt signal is caught
