@@ -83,7 +83,7 @@ func controllerRuntimeStart(logger *zap.SugaredLogger, experimental string) erro
 		flow.ProvideController,
 	}
 
-	providers = addExperimentalControllers(logger, experimental, providers)
+	providers = append(providers, getExperimentalControllers(logger, experimental)...)
 
 	for _, provider := range providers {
 		if _, err := provider(mrg); err != nil {
@@ -94,7 +94,8 @@ func controllerRuntimeStart(logger *zap.SugaredLogger, experimental string) erro
 	return mrg.Start(signals.SetupSignalHandler())
 }
 
-func addExperimentalControllers(logger *zap.SugaredLogger, experimental string, providers []ProvideFunc) []ProvideFunc {
+func getExperimentalControllers(logger *zap.SugaredLogger, experimental string) []ProvideFunc {
+	var providers []ProvideFunc
 	for _, k := range strings.Split(experimental, ",") {
 		if f, ok := ExperimentalControllers[k]; !ok {
 			logger.Infof("Failed to find a known controller for %q.", k)
