@@ -267,7 +267,7 @@ func TestServeHTTP(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			sh.ServeHTTP(w, makeRequest("default", "c1"))
-			if w.Result().StatusCode != http.StatusOK {
+			if w.Result().StatusCode != http.StatusAccepted {
 				t.Errorf("Unexpected initial status code: %v", w.Result().StatusCode)
 			}
 			if tc.initialRequests != initialHandler.requests.Load() {
@@ -282,7 +282,7 @@ func TestServeHTTP(t *testing.T) {
 				time.Sleep(100 * time.Millisecond)
 				w = httptest.NewRecorder()
 				sh.ServeHTTP(w, makeRequest("default", "c1"))
-				if w.Result().StatusCode != http.StatusOK {
+				if w.Result().StatusCode != http.StatusAccepted {
 					t.Errorf("Unexpected updated status code: %v", w.Result().StatusCode)
 				}
 				if tc.updateRequests != updateHandler.requests.Load() {

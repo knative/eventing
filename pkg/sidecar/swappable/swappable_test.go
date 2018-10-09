@@ -137,7 +137,7 @@ func TestHandler_InvalidConfigChange(t *testing.T) {
 			if err != nil {
 				t.Errorf("Unexpected error updating to initial config: %v", tc.initialConfig)
 			}
-			assertRequestOK(t, h)
+			assertRequestAccepted(t, h)
 
 			// Try to update to the new config, it will fail. But we should still be able to hit the
 			// original server.
@@ -146,7 +146,7 @@ func TestHandler_InvalidConfigChange(t *testing.T) {
 			if err == nil {
 				t.Errorf("Expected an error when updating to a bad config.")
 			}
-			assertRequestOK(t, h)
+			assertRequestAccepted(t, h)
 		})
 	}
 }
@@ -177,14 +177,14 @@ func updateConfigAndTest(t *testing.T, h *Handler, config multichannelfanout.Con
 		t.Errorf("Expected the inner multiChannelFanoutHandler to change, it didn't: %v", orig)
 	}
 
-	assertRequestOK(t, h)
+	assertRequestAccepted(t, h)
 }
 
-func assertRequestOK(t *testing.T, h *Handler) {
+func assertRequestAccepted(t *testing.T, h *Handler) {
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, makeRequest(namespace, name))
-	if w.Code != http.StatusOK {
-		t.Errorf("Unexpected response code. Expected 200. Actual %v", w.Code)
+	if w.Code != http.StatusAccepted {
+		t.Errorf("Unexpected response code. Expected 202. Actual %v", w.Code)
 	}
 }
 

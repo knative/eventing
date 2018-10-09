@@ -86,7 +86,10 @@ func TestNewHandler(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := NewHandler(zap.NewNop(), tc.config)
+			h, err := NewHandler(zap.NewNop(), tc.config)
+			if err == nil {
+				defer h.Stop()
+			}
 			if tc.createErr != "" {
 				if err == nil {
 					t.Errorf("Expected NewHandler error: '%v'. Actual nil", tc.createErr)
@@ -139,6 +142,7 @@ func TestCopyWithNewConfig(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unable to create handler, %v", err)
 	}
+	defer h.Stop()
 	if !cmp.Equal(h.config, orig) {
 		t.Errorf("Incorrect config. Expected '%v'. Actual '%v'", orig, h.config)
 	}
@@ -209,6 +213,7 @@ func TestConfigDiff(t *testing.T) {
 			if err != nil {
 				t.Errorf("Unable to create handler: %v", err)
 			}
+			defer h.Stop()
 			diff := h.ConfigDiff(tc.updated)
 
 			if hasDiff := diff != ""; hasDiff != tc.expectedDiff {
@@ -280,7 +285,7 @@ func TestServeHTTP(t *testing.T) {
 			},
 			respStatusCode:     http.StatusOK,
 			key:                "second-channel.default",
-			expectedStatusCode: http.StatusOK,
+			expectedStatusCode: http.StatusAccepted,
 		},
 	}
 	requestWithChannelKey := func(key string) *http.Request {
@@ -299,6 +304,7 @@ func TestServeHTTP(t *testing.T) {
 			if err != nil {
 				t.Errorf("Unexpected NewHandler error: '%v'", err)
 			}
+			defer h.Stop()
 
 			r := requestWithChannelKey(tc.key)
 			w := httptest.NewRecorder()

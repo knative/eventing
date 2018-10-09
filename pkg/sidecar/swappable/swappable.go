@@ -87,6 +87,7 @@ func (h *Handler) UpdateConfig(config *multichannelfanout.Config) error {
 			return err
 		}
 		h.setMultiChannelFanoutHandler(newIh)
+		defer ih.Stop()
 	}
 	return nil
 }

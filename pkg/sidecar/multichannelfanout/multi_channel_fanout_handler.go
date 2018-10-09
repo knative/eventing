@@ -61,12 +61,12 @@ func getChannelKey(r *http.Request) string {
 // delegate the request to.
 type Handler struct {
 	logger   *zap.Logger
-	handlers map[string]http.Handler
+	handlers map[string]*fanout.Handler
 	config   Config
 }
 
 func NewHandler(logger *zap.Logger, conf Config) (*Handler, error) {
-	handlers := make(map[string]http.Handler, len(conf.ChannelConfigs))
+	handlers := make(map[string]*fanout.Handler, len(conf.ChannelConfigs))
 
 	for _, cc := range conf.ChannelConfigs {
 		key := makeChannelKeyFromConfig(cc)
@@ -83,6 +83,12 @@ func NewHandler(logger *zap.Logger, conf Config) (*Handler, error) {
 		config:   conf,
 		handlers: handlers,
 	}, nil
+}
+
+func (h *Handler) Stop() {
+	for _, fh := range h.handlers {
+		fh.Stop()
+	}
 }
 
 // ConfigDiffs diffs the new config with the existing config. If there are no differences, then the

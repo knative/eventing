@@ -18,7 +18,6 @@ package fanout
 
 import (
 	"errors"
-	"fmt"
 	"github.com/knative/eventing/pkg/buses"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/atomic"
@@ -67,14 +66,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 	}{
 		"rejected by receiver": {
 			receiverFunc: func(buses.ChannelReference, *buses.Message) error {
-				return errors.New("Rejected by test-receiver")
-			},
-			expectedStatus: http.StatusInternalServerError,
-		},
-		"could not find tracked message": {
-			receiverFunc: func(buses.ChannelReference, *buses.Message) error {
-				// Not being written to messageStorage.
-				return nil
+				return errors.New("rejected by test-receiver")
 			},
 			expectedStatus: http.StatusInternalServerError,
 		},
@@ -87,19 +79,19 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			},
 			callable: func(writer http.ResponseWriter, _ *http.Request) {
 				time.Sleep(10 * time.Millisecond)
-				writer.WriteHeader(http.StatusOK)
+				writer.WriteHeader(http.StatusAccepted)
 			},
 			expectedStatus: http.StatusInternalServerError,
 		},
 		"zero subs succeed": {
 			subs:           []duckv1alpha1.ChannelSubscriberSpec{},
-			expectedStatus: http.StatusOK,
+			expectedStatus: http.StatusAccepted,
 		},
 		"empty sub succeeds": {
 			subs: []duckv1alpha1.ChannelSubscriberSpec{
 				{},
 			},
-			expectedStatus: http.StatusOK,
+			expectedStatus: http.StatusAccepted,
 		},
 		"sinkable fails": {
 			subs: []duckv1alpha1.ChannelSubscriberSpec{
@@ -147,7 +139,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			sinkable: func(writer http.ResponseWriter, _ *http.Request) {
 				writer.WriteHeader(http.StatusAccepted)
 			},
-			expectedStatus: http.StatusOK,
+			expectedStatus: http.StatusAccepted,
 		},
 		"one sub succeeds, one sub fails": {
 			subs: []duckv1alpha1.ChannelSubscriberSpec{
@@ -183,10 +175,13 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			sinkable: func(writer http.ResponseWriter, _ *http.Request) {
 				writer.WriteHeader(http.StatusAccepted)
 			},
-			expectedStatus: http.StatusOK,
+			expectedStatus: http.StatusAccepted,
 		},
 	}
 	for n, tc := range testCases {
+		if n != "fanout times out" {
+			//continue
+		}
 		t.Run(n, func(t *testing.T) {
 			callableServer := httptest.NewServer(&fakeHandler{
 				handler: tc.callable,
@@ -209,16 +204,19 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 				subs = append(subs, sub)
 			}
 
-			h := NewHandler(zap.NewNop(), Config{Subscriptions: subs}).(*fanoutHandler)
+			h := NewHandler(zap.NewNop(), Config{Subscriptions: subs})
+			defer h.Stop()
 			if tc.receiverFunc != nil {
 				h.receiver = buses.NewMessageReceiver(tc.receiverFunc, zap.NewNop().Sugar())
 			}
 			if tc.timeout != 0 {
 				h.timeout = tc.timeout
+			} else {
+				// Reasonable timeout for the tests.
+				h.timeout = 100 * time.Millisecond
 			}
 
 			w := httptest.NewRecorder()
-			fmt.Sprintf("hello %v", n)
 			h.ServeHTTP(w, cloudEventReq)
 			if w.Code != tc.expectedStatus {
 				t.Errorf("Unexpected status code. Expected %v, Actual %v", tc.expectedStatus, w.Code)
@@ -242,7 +240,7 @@ type succeedOnce struct {
 
 func (s *succeedOnce) handler(w http.ResponseWriter, _ *http.Request) {
 	if s.called.CAS(false, true) {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusAccepted)
 	} else {
 		w.WriteHeader(http.StatusForbidden)
 	}

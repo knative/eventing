@@ -17,24 +17,18 @@ limitations under the License.
 package fanout
 
 import (
-	"fmt"
-	"github.com/google/uuid"
+	"errors"
 	"github.com/knative/eventing/pkg/buses"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
 	"net/http"
-	"sync"
 	"time"
 )
 
 const (
-	// The header attached to requests sent through the MessageReceiver. It is used to correlate the
-	// request going into the MessageReceiver and the request coming out of the MessageReceiver. It
-	// is removed before being sent downstream.
-	// Note that it MUST be in the headers forwarded by the MessageReceiver.
-	uniqueFanoutHeader = "Knative-Fanout-Message-Tracker"
-
 	defaultTimeout = 1 * time.Minute
+
+	messageBufferSize = 500
 )
 
 // Configuration for a fanout.Handler.
@@ -43,154 +37,128 @@ type Config struct {
 }
 
 // http.Handler that takes a single request in and fans it out to N other servers.
-type fanoutHandler struct {
+type Handler struct {
 	config Config
 
-	receivedMessages *messageStorage
+	receivedMessages chan *message
 	receiver         *buses.MessageReceiver
 	dispatcher       *buses.MessageDispatcher
+	stopCh chan<- struct{}
 
 	timeout time.Duration
 
 	logger *zap.Logger
 }
 
-var _ http.Handler = &fanoutHandler{}
+var _ http.Handler = &Handler{}
 
-func NewHandler(logger *zap.Logger, config Config) http.Handler {
-	handler := &fanoutHandler{
+// message is passed between the Receiver and the Dispatcher.
+type message struct {
+	msg *buses.Message
+	done chan<- error
+}
+
+// NewHandler creates a new fanout.Handler and starts a background goroutine to make it work. The
+// caller is responsible for calling handler.Stop(), when the handler is to be stopped.
+func NewHandler(logger *zap.Logger, config Config) *Handler {
+	stopCh := make(chan struct{}, 1)
+	handler := &Handler{
 		logger:     logger,
 		config:     config,
 		dispatcher: buses.NewMessageDispatcher(logger.Sugar()),
-		receivedMessages: &messageStorage{
-			messages: make(map[string]*buses.Message),
-		},
+		receivedMessages: make(chan *message, messageBufferSize),
+		stopCh: stopCh,
 		timeout: defaultTimeout,
 	}
 	// The receiver function needs to point back at the handler itself, so setup it after
 	// initialization.
 	handler.receiver = buses.NewMessageReceiver(createReceiverFunction(handler), logger.Sugar())
+
+	go handler.foreverDispatch(stopCh)
 	return handler
 }
 
-func createReceiverFunction(f *fanoutHandler) func(buses.ChannelReference, *buses.Message) error {
+func createReceiverFunction(f *Handler) func(buses.ChannelReference, *buses.Message) error {
 	return func(_ buses.ChannelReference, m *buses.Message) error {
-		f.logger.Debug("Putting message", zap.String("key", m.Headers[uniqueFanoutHeader]))
-		f.receivedMessages.Put(m)
-		return nil
+		done := make(chan error)
+		msg := &message{
+			msg: m,
+			done: done,
+		}
+
+		select {
+		case f.receivedMessages <- msg:
+			// Continue to next select.
+		default:
+			f.logger.Debug("Unable to add message to channel, dropping it.", zap.Any("msg", msg))
+			return errors.New("unable to add message to channel, dropping it")
+		}
+
+		select {
+		case possibleErr := <-done:
+			f.logger.Debug("Responding", zap.Any("possibleErr", possibleErr))
+			return possibleErr
+		case <-time.After(f.timeout):
+			f.logger.Debug("Timeout waiting for dispatch")
+			return errors.New("timeout waiting for dispatch")
+		}
 	}
 }
 
-// ServeHTTP takes the request and fans it out to each subscription in f.config. If all the fanned
-// out requests have successful response codes, then this response will have a successful response
-// code. Else, this response will have a failure response code.
-func (f *fanoutHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	key := addTrackingHeader(r)
-	receiverResponse := &response{}
-	f.receiver.HandleRequest(receiverResponse, r)
+func (f *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	f.receiver.HandleRequest(w, r)
+}
 
-	if receiverResponse.statusCode != http.StatusAccepted {
-		f.logger.Info("MessageReceiver rejected the request", zap.Int("statusCode", receiverResponse.statusCode))
-		w.WriteHeader(receiverResponse.statusCode)
-		// We don't care about the message, we just don't want it to stay in the map forever.
-		f.receivedMessages.pull(key)
-		return
-	}
+// Stop stops the background goroutine. Once this is called, this Handler will no longer properly
+// Serve HTTP traffic.
+func (f *Handler) Stop() {
+	f.stopCh <- struct{}{}
+}
 
-	f.logger.Debug("Pulling message", zap.String("key", key))
-	m, err := f.receivedMessages.pull(key)
-	if err != nil {
-		f.logger.Info("Could not find tracked message", zap.Error(err), zap.Any("key", r.Header[uniqueFanoutHeader]))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	removeTrackingHeader(m)
-
-	errorCh := make(chan error, len(f.config.Subscriptions))
-	for _, sub := range f.config.Subscriptions {
-		go func(s duckv1alpha1.ChannelSubscriberSpec) {
-			errorCh <- f.makeFanoutRequest(r, *m, s)
-		}(sub)
-	}
-
-	sc := http.StatusOK
-Loop:
-	for range f.config.Subscriptions {
+// foreverDispatch dispatches received messages in an infinite loop. It exits only when
+// Handler.stopCh receives a message. It is meant to be run as a goroutine.
+func (f *Handler) foreverDispatch(stopCh <-chan struct{}) {
+	for {
 		select {
-		case err := <-errorCh:
-			if err != nil {
-				f.logger.Error("Fanout had an error", zap.Error(err))
-				sc = http.StatusInternalServerError
-			}
-		case <-time.After(f.timeout):
-			f.logger.Error("Fanout timed out")
-			sc = http.StatusInternalServerError
-			break Loop
+		case msg := <- f.receivedMessages:
+			f.dispatch(msg)
+		case <-stopCh:
+			f.logger.Info("Fanout dispatch thread stopping.")
+			return
 		}
 	}
+}
 
-	w.WriteHeader(sc)
+// ServeHTTP takes the request, fans it out to each subscription in f.config. If all the fanned out
+// requests return successfully, then return successfully. Else, return failure.
+func (f *Handler) dispatch(msg *message) {
+	msg.done <- func() error {
+		errorCh := make(chan error, len(f.config.Subscriptions))
+		for _, sub := range f.config.Subscriptions {
+			go func(s duckv1alpha1.ChannelSubscriberSpec) {
+				errorCh <- f.makeFanoutRequest(*msg.msg, s)
+			}(sub)
+		}
+
+		for range f.config.Subscriptions {
+			select {
+			case err := <-errorCh:
+				if err != nil {
+					f.logger.Error("Fanout had an error", zap.Error(err))
+					return err
+				}
+			case <-time.After(f.timeout):
+				f.logger.Error("Fanout timed out")
+				return errors.New("fanout timed out")
+			}
+		}
+		// All Subscriptions returned err=nil.
+		return nil
+	}()
 }
 
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
 // the `to` portions of the subscription.
-func (f *fanoutHandler) makeFanoutRequest(r *http.Request, m buses.Message, sub duckv1alpha1.ChannelSubscriberSpec) error {
+func (f *Handler) makeFanoutRequest(m buses.Message, sub duckv1alpha1.ChannelSubscriberSpec) error {
 	return f.dispatcher.DispatchMessage(&m, sub.CallableDomain, sub.SinkableDomain, buses.DispatchDefaults{})
-}
-
-// response is used to capture the statusCode returned by the messageReceiver.
-type response struct {
-	statusCode int
-}
-
-var _ http.ResponseWriter = &response{}
-
-// Header doesn't do anything. Just here so that response is an http.ResponseWriter.
-func (*response) Header() http.Header {
-	return http.Header{}
-}
-
-// Write doesn't do anything. Just here so that response is an http.ResponseWriter.
-func (*response) Write(b []byte) (int, error) {
-	return len(b), nil
-}
-
-func (r *response) WriteHeader(statusCode int) {
-	r.statusCode = statusCode
-}
-
-type messageStorage struct {
-	messagesLock sync.Mutex
-	messages     map[string]*buses.Message
-}
-
-func (ms *messageStorage) Put(m *buses.Message) {
-	key := m.Headers[uniqueFanoutHeader]
-
-	ms.messagesLock.Lock()
-	defer ms.messagesLock.Unlock()
-
-	ms.messages[key] = m
-}
-
-func (ms *messageStorage) pull(key string) (*buses.Message, error) {
-	ms.messagesLock.Lock()
-	defer ms.messagesLock.Unlock()
-
-	if m, ok := ms.messages[key]; ok {
-		delete(ms.messages, key)
-		return m, nil
-	} else {
-		return nil, fmt.Errorf("could not find message: %v", key)
-	}
-}
-
-func addTrackingHeader(r *http.Request) string {
-	key := uuid.New().String()
-	r.Header.Set(uniqueFanoutHeader, key)
-	return key
-}
-
-func removeTrackingHeader(m *buses.Message) {
-	delete(m.Headers, uniqueFanoutHeader)
 }
