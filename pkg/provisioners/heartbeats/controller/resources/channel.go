@@ -31,7 +31,7 @@ func MakeChannel(source *v1alpha1.Source, org *v1alpha1.Channel, args *HeartBeat
 			Kind:       "Channel",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: args.Name,
+			GenerateName: args.Name + "-",
 			Namespace:    args.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*controller.NewControllerRef(source, false),

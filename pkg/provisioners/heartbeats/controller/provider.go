@@ -18,6 +18,7 @@ package controller
 
 import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
@@ -59,6 +60,18 @@ func ProvideController(mgr manager.Manager) (controller.Controller, error) {
 
 	// Watch Source events and enqueue Source object key.
 	if err := c.Watch(&source.Kind{Type: &v1alpha1.Source{}}, &handler.EnqueueRequestForObject{}); err != nil {
+		return nil, err
+	}
+
+	// Watch Channels and enqueue owning Source key.
+	if err := c.Watch(&source.Kind{Type: &v1alpha1.Channel{}},
+		&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Source{}, IsController: true}); err != nil {
+		return nil, err
+	}
+
+	// Watch Pods and enqueue owning Source key.
+	if err := c.Watch(&source.Kind{Type: &corev1.Pod{}},
+		&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Source{}, IsController: true}); err != nil {
 		return nil, err
 	}
 

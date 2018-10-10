@@ -52,13 +52,16 @@ func MakePod(source *v1alpha1.Source, org *corev1.Pod, channel *v1alpha1.Channel
 			Kind:       "Pod",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: args.Name,
+			GenerateName: args.Name + "-",
 			Namespace:    args.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*controller.NewControllerRef(source, false),
 			},
 			Annotations: map[string]string{
 				"sidecar.istio.io/inject": "true",
+			},
+			Labels: map[string]string{
+				//"provisonereventing.knative.dev"
 			},
 		},
 		Spec: corev1.PodSpec{

@@ -19,13 +19,15 @@ package controller
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners/heartbeats/controller/resources"
 	"github.com/knative/pkg/logging"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -105,9 +107,9 @@ func (r *reconciler) reconcile(ctx context.Context, source *v1alpha1.Source) err
 	args.Name = source.Name
 	args.Namespace = source.Namespace
 
-	channel := &v1alpha1.Channel{}
-	if err := r.client.Get(ctx, client.ObjectKey{Namespace: args.Namespace, Name: args.Name}, channel); err != nil {
-		fqn := fmt.Sprintf("%s/%s", channel.Kind, channel.APIVersion)
+	channel, err := r.getChannel(ctx, source)
+	if err != nil {
+		fqn := "Channel.eventing.knative.dev/v1alpha1"
 		if errors.IsNotFound(err) {
 			channel, err = r.createChannel(ctx, source, nil, args)
 			if err != nil {
@@ -129,9 +131,9 @@ func (r *reconciler) reconcile(ctx context.Context, source *v1alpha1.Source) err
 
 	}
 
-	pod := &corev1.Pod{}
-	if err := r.client.Get(ctx, client.ObjectKey{Namespace: args.Namespace, Name: args.Name}, pod); err != nil {
-		fqn := fmt.Sprintf("%s/%s", pod.Kind, pod.APIVersion)
+	pod, err := r.getPod(ctx, source)
+	if err != nil {
+		fqn := "Pod.core/v1"
 		if errors.IsNotFound(err) {
 			pod, err = r.createPod(ctx, source, nil, channel, args)
 			if err != nil {
@@ -174,6 +176,37 @@ func (r *reconciler) updateStatus(source *v1alpha1.Source) (*v1alpha1.Source, er
 	return newSource, nil
 }
 
+func (r *reconciler) getChannel(ctx context.Context, source *v1alpha1.Source) (*v1alpha1.Channel, error) {
+	logger := logging.FromContext(ctx)
+
+	list := &v1alpha1.ChannelList{}
+	err := r.client.List(
+		ctx,
+		&client.ListOptions{
+			Namespace:     source.Namespace,
+			LabelSelector: labels.Everything(),
+			// TODO this is here because the fake client needs it. Remove this when it's no longer
+			// needed.
+			Raw: &metav1.ListOptions{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1alpha1.SchemeGroupVersion.String(),
+					Kind:       "Channel",
+				},
+			},
+		},
+		list)
+	if err != nil {
+		logger.Errorf("Unable to list channels: %v", err)
+		return nil, err
+	}
+	for _, c := range list.Items {
+		if metav1.IsControlledBy(&c, source) {
+			return &c, nil
+		}
+	}
+	return nil, errors.NewNotFound(schema.GroupResource{}, "")
+}
+
 func (r *reconciler) createChannel(ctx context.Context, source *v1alpha1.Source, org *v1alpha1.Channel, args *resources.HeartBeatArguments) (*v1alpha1.Channel, error) {
 	channel, err := resources.MakeChannel(source, org, args)
 	if err != nil {
@@ -184,6 +217,37 @@ func (r *reconciler) createChannel(ctx context.Context, source *v1alpha1.Source,
 		return nil, err
 	}
 	return channel, nil
+}
+
+func (r *reconciler) getPod(ctx context.Context, source *v1alpha1.Source) (*corev1.Pod, error) {
+	logger := logging.FromContext(ctx)
+
+	list := &corev1.PodList{}
+	err := r.client.List(
+		ctx,
+		&client.ListOptions{
+			Namespace:     source.Namespace,
+			LabelSelector: labels.Everything(),
+			// TODO this is here because the fake client needs it. Remove this when it's no longer
+			// needed.
+			Raw: &metav1.ListOptions{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Pod",
+				},
+			},
+		},
+		list)
+	if err != nil {
+		logger.Errorf("Unable to list pods: %v", err)
+		return nil, err
+	}
+	for _, c := range list.Items {
+		if metav1.IsControlledBy(&c, source) {
+			return &c, nil
+		}
+	}
+	return nil, errors.NewNotFound(schema.GroupResource{}, "")
 }
 
 func (r *reconciler) createPod(ctx context.Context, source *v1alpha1.Source, org *corev1.Pod, channel *v1alpha1.Channel, args *resources.HeartBeatArguments) (*corev1.Pod, error) {
