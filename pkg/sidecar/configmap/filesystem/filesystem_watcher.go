@@ -120,7 +120,7 @@ func (cmw *configMapWatcher) Start(stopCh <-chan struct{}) error {
 		case _, ok := <-stopCh:
 			if !ok {
 				// stopCh has been closed
-				return nil
+				return watcher.Close()
 			}
 		}
 	}

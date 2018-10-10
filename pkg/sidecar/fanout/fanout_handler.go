@@ -126,11 +126,16 @@ func (f *Handler) foreverDispatch(stopCh <-chan struct{}) {
 	for {
 		select {
 		case msg := <-f.receivedMessages:
-			f.dispatch(msg)
+			go f.dispatch(msg)
 		case <-stopCh:
 			f.logger.Info("Fanout dispatch thread stopping.")
-			return
+			break
 		}
+	}
+	// Finish any work already enqueued. Nothing new should be enqueued.
+	for len(f.receivedMessages) > 0 {
+		msg := <-f.receivedMessages
+		f.dispatch(msg)
 	}
 }
 
