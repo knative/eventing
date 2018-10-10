@@ -19,7 +19,9 @@ package channel
 import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/system"
+	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -35,7 +37,7 @@ const (
 	// ConfigMapName is the name of the ConfigMap in the knative-eventing namespace that contains
 	// the subscription information for all in-memory Channels. The Provisioner writes to it and the
 	// Dispatcher reads from it.
-	ConfigMapName       = "in-memory-channel-dispatcher-config-map"
+	ConfigMapName = "in-memory-channel-dispatcher-config-map"
 )
 
 var (
@@ -71,8 +73,23 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 		return nil, err
 	}
 
-	// TODO: Should we watch the K8s service and Istio Virtual Service as well? If they change, we
-	// probably should change it back.
+	// Watch the K8s Services that are owned by Channels.
+	err = c.Watch(&source.Kind{
+		Type: &corev1.Service{},
+	}, &handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.Channel{}, IsController: true})
+	if err != nil {
+		logger.Error("Unable to watch K8s Services.", zap.Error(err))
+		return nil, err
+	}
+
+	// Watch the VirtualServices that are owned by Channels.
+	err = c.Watch(&source.Kind{
+		Type: &istiov1alpha3.VirtualService{},
+	}, &handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.Channel{}, IsController: true})
+	if err != nil {
+		logger.Error("Unable to watch VirtualServices.", zap.Error(err))
+		return nil, err
+	}
 
 	return c, nil
 }

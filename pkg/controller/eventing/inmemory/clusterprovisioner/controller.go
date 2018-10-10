@@ -19,6 +19,7 @@ package clusterprovisioner
 import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -57,8 +58,14 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 		return nil, err
 	}
 
-	// TODO: Should we watch the K8s service as well? If it changes, we probably should change it
-	// back.
+	// Watch the K8s Services that are owned by ClusterProvisioners.
+	err = c.Watch(&source.Kind{
+		Type: &corev1.Service{},
+	}, &handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.ClusterProvisioner{}, IsController: true})
+	if err != nil {
+		logger.Error("Unable to watch K8s Services.", zap.Error(err))
+		return nil, err
+	}
 
 	return c, nil
 }
