@@ -8,5 +8,5 @@ spec:
     ref:
       name: heartbeats
   arguments:
-    label: "grant hello"
+    label: "<3"
     period: 2
