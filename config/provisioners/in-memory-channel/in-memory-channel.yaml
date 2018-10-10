@@ -47,40 +47,32 @@ rules:
       - watch
       - update
   - apiGroups:
-    - "" # Core API group.
+      - "" # Core API group.
     resources:
-    - services
+      - configmaps
+      - services
     verbs:
-    - get
-    - list
-    - watch
-    - create
+      - get
+      - list
+      - watch
+      - create
   - apiGroups:
-    - networking.istio.io
+      - "" # Core API Group.
     resources:
-    - virtualservices
-    verbs:
-    - get
-    - list
-    - watch
-    - create
-  - apiGroups:
-    - "" # Core API Group.
-    resources:
-    - configmaps
-    verbs:
-    - get
-    - list
-    - watch
-  - apiGroups:
-    - "" # Core API Group.
-    resources:
-    - configmaps
+      - configmaps
     resourceNames:
-    - in-memory-channel-dispatcher-config-map
+      - in-memory-channel-dispatcher-config-map
     verbs:
-    - create
-    - update
+      - update
+  - apiGroups:
+      - networking.istio.io
+    resources:
+      - virtualservices
+    verbs:
+      - get
+      - list
+      - watch
+      - create
 
 ---
 
