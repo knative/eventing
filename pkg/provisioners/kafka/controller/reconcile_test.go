@@ -17,6 +17,7 @@ limitations under the License.
 package controller
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -27,6 +28,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
@@ -57,6 +59,18 @@ var ClusterProvisionerConditionReady = duckv1alpha1.Condition{
 var ClusterProvisionerConditionProvisionerReady = duckv1alpha1.Condition{
 	Type:   eventingv1alpha1.ClusterProvisionerConditionProvisionerReady,
 	Status: corev1.ConditionTrue,
+}
+
+var mockFetchError = controllertesting.Mocks{
+	MockGets: []controllertesting.MockGet{
+		func(innerClient client.Client, ctx context.Context, key client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
+			if _, ok := obj.(*eventingv1alpha1.ClusterProvisioner); ok {
+				err := fmt.Errorf("error fetching")
+				return controllertesting.Handled, err
+			}
+			return controllertesting.Unhandled, nil
+		},
+	},
 }
 
 var testCases = []controllertesting.TestCase{
@@ -92,6 +106,36 @@ var testCases = []controllertesting.TestCase{
 		WantResult:   reconcile.Result{},
 		WantPresent: []runtime.Object{
 			GetNewChannelClusterProvisioner("not-default-provisioner"),
+		},
+	},
+	{
+		Name:         "clusterprovisioner not found",
+		InitialState: []runtime.Object{},
+		ReconcileKey: fmt.Sprintf("%s/%s", testNS, clusterProvisionerName),
+		WantResult:   reconcile.Result{},
+		WantPresent:  []runtime.Object{},
+	},
+	{
+		Name: "error fetching clusterprovisioner",
+		InitialState: []runtime.Object{
+			GetNewChannelClusterProvisioner(clusterProvisionerName),
+		},
+		Mocks:        mockFetchError,
+		ReconcileKey: fmt.Sprintf("%s/%s", testNS, clusterProvisionerName),
+		WantErrMsg:   "error fetching",
+		WantPresent: []runtime.Object{
+			GetNewChannelClusterProvisioner(clusterProvisionerName),
+		},
+	},
+	{
+		Name: "deleted clusterprovisioner",
+		InitialState: []runtime.Object{
+			GetNewChannelClusterProvisionerDeleted(clusterProvisionerName),
+		},
+		ReconcileKey: fmt.Sprintf("%s/%s", testNS, clusterProvisionerName),
+		WantResult:   reconcile.Result{},
+		WantPresent: []runtime.Object{
+			GetNewChannelClusterProvisionerDeleted(clusterProvisionerName),
 		},
 	},
 }
@@ -141,6 +185,13 @@ func GetNewChannelClusterProvisionerReady(name string) *eventingv1alpha1.Cluster
 			ClusterProvisionerConditionReady,
 		},
 	}
+	return c
+}
+
+func GetNewChannelClusterProvisionerDeleted(name string) *eventingv1alpha1.ClusterProvisioner {
+	c := GetNewChannelClusterProvisioner(name)
+	deletedTime := metav1.Now().Rfc3339Copy()
+	c.DeletionTimestamp = &deletedTime
 	return c
 }
 

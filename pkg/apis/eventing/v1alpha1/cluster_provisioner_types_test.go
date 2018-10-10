@@ -68,7 +68,26 @@ func TestClusterProvisionerStatusIsReady(t *testing.T) {
 			}},
 		},
 		want: false,
-	}}
+	}, {
+		name: "mark provisioner ready",
+		ps: func() *ClusterProvisionerStatus {
+			ps := &ClusterProvisionerStatus{}
+			ps.InitializeConditions()
+			ps.MarkProvisionerReady()
+			return ps
+		}(),
+		want: true,
+	},
+		{
+			name: "mark provisioner not ready",
+			ps: func() *ClusterProvisionerStatus {
+				ps := &ClusterProvisionerStatus{}
+				ps.InitializeConditions()
+				ps.MarkProvisionerNotReady("Not Ready", "testing")
+				return ps
+			}(),
+			want: false,
+		}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

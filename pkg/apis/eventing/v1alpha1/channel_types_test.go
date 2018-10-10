@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -78,5 +79,91 @@ func TestChannelGetCondition(t *testing.T) {
 				t.Errorf("unexpected condition (-want, +got) = %v", diff)
 			}
 		})
+	}
+}
+
+func TestChannelInitializeConditions(t *testing.T) {
+	tests := []struct {
+		name string
+		cs   *ChannelStatus
+		want *ChannelStatus
+	}{{
+		name: "empty",
+		cs:   &ChannelStatus{},
+		want: &ChannelStatus{
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   ChannelConditionProvisioned,
+				Status: corev1.ConditionUnknown,
+			}, {
+				Type:   ChannelConditionReady,
+				Status: corev1.ConditionUnknown,
+			}},
+		},
+	}, {
+		name: "one false",
+		cs: &ChannelStatus{
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   ChannelConditionProvisioned,
+				Status: corev1.ConditionFalse,
+			}},
+		},
+		want: &ChannelStatus{
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   ChannelConditionProvisioned,
+				Status: corev1.ConditionFalse,
+			}, {
+				Type:   ChannelConditionReady,
+				Status: corev1.ConditionUnknown,
+			}},
+		},
+	}, {
+		name: "one true",
+		cs: &ChannelStatus{
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   ChannelConditionProvisioned,
+				Status: corev1.ConditionTrue,
+			}},
+		},
+		want: &ChannelStatus{
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   ChannelConditionProvisioned,
+				Status: corev1.ConditionTrue,
+			}, {
+				Type:   ChannelConditionReady,
+				Status: corev1.ConditionUnknown,
+			}}},
+	},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			test.cs.InitializeConditions()
+			ignore := cmpopts.IgnoreFields(duckv1alpha1.Condition{}, "LastTransitionTime")
+			if diff := cmp.Diff(test.want, test.cs, ignore); diff != "" {
+				t.Errorf("unexpected conditions (-want, +got) = %v", diff)
+			}
+		})
+	}
+}
+
+func TestChannelStatus_MarkAsNotProvisioned(t *testing.T) {
+	cs := &ChannelStatus{}
+	cs.InitializeConditions()
+	want := &ChannelStatus{
+		Conditions: []duckv1alpha1.Condition{{
+			Type:    ChannelConditionProvisioned,
+			Status:  corev1.ConditionFalse,
+			Reason:  "Not Provisioned",
+			Message: "testing",
+		}, {
+			Type:    ChannelConditionReady,
+			Status:  corev1.ConditionFalse,
+			Reason:  "Not Provisioned",
+			Message: "testing",
+		}}}
+	ignore := cmpopts.IgnoreFields(duckv1alpha1.Condition{}, "LastTransitionTime")
+	cs.MarkAsNotProvisioned("Not Provisioned", "testing")
+	if diff := cmp.Diff(want, cs, ignore); diff != "" {
+		t.Errorf("unexpected conditions (-want, +got) = %v", diff)
 	}
 }

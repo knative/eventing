@@ -17,6 +17,7 @@ limitations under the License.
 package channel
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -27,6 +28,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
@@ -49,6 +51,18 @@ const (
 func init() {
 	// Add types to scheme
 	eventingv1alpha1.AddToScheme(scheme.Scheme)
+}
+
+var mockFetchError = controllertesting.Mocks{
+	MockGets: []controllertesting.MockGet{
+		func(innerClient client.Client, ctx context.Context, key client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
+			if _, ok := obj.(*eventingv1alpha1.Channel); ok {
+				err := fmt.Errorf("error fetching")
+				return controllertesting.Handled, err
+			}
+			return controllertesting.Unhandled, nil
+		},
+	},
 }
 
 var testCases = []controllertesting.TestCase{
@@ -115,6 +129,28 @@ var testCases = []controllertesting.TestCase{
 			getNewChannelNoProvisioner(channelName),
 		},
 		IgnoreTimes: true,
+	},
+	{
+		Name:         "channel not found",
+		InitialState: []runtime.Object{},
+		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
+		WantResult:   reconcile.Result{},
+		WantPresent:  []runtime.Object{},
+		IgnoreTimes:  true,
+	},
+	{
+		Name: "error fetching channel",
+		InitialState: []runtime.Object{
+			getNewClusterProvisioner(clusterProvisionerName, true),
+			getNewChannel(channelName, clusterProvisionerName),
+		},
+		Mocks:        mockFetchError,
+		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
+		WantErrMsg:   "error fetching",
+		WantPresent: []runtime.Object{
+			getNewClusterProvisioner(clusterProvisionerName, true),
+			getNewChannel(channelName, clusterProvisionerName),
+		},
 	},
 }
 
