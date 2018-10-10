@@ -113,7 +113,10 @@ func main() {
 	if err != nil {
 		logger.Error("Either the HTTP server or the ConfigMap noticer failed.", zap.Error(err))
 	}
-	s.Shutdown(context.TODO())
+
+	ctx, cancel := context.WithTimeout(context.Background(), writeTimeout)
+	defer cancel()
+	s.Shutdown(ctx)
 }
 
 func setupConfigMapNoticer(logger *zap.Logger, configUpdated swappable.UpdateConfig) (manager.Manager, error) {
