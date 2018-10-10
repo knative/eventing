@@ -40,7 +40,7 @@ func MakeChannel(source *v1alpha1.Source, org *v1alpha1.Channel, args *HeartBeat
 		Spec: v1alpha1.ChannelSpec{
 			Provisioner: &v1alpha1.ProvisionerReference{
 				Ref: &corev1.ObjectReference{
-					Name:       "in-memory-bus-provisioner",
+					Name:       "in-memory-channel",
 					APIVersion: "eventing.knative.dev/v1alpha1",
 					Kind:       "ClusterProvisioner",
 				},
