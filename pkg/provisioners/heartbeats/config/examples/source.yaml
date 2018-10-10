@@ -1,0 +1,12 @@
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Source
+metadata:
+  name: love
+  namespace: default
+spec:
+  provisioner:
+    ref:
+      name: heartbeats
+  arguments:
+    label: "<3"
+    period: 2

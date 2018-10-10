@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/knative/pkg/apis/duck"
@@ -111,6 +112,12 @@ type SourceStatus struct {
 	// +patchStrategy=merge
 	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
+	// Provisioned holds the status of a Provisioned Object at a point in time.
+	// +optional
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	Provisioned []ProvisionedObjectStatus `json:"provisioned,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+
 	// ObservedGeneration is the 'Generation' of the Source that
 	// was last reconciled by the controller.
 	// +optional
@@ -118,6 +125,17 @@ type SourceStatus struct {
 
 	// Source might be Subscribable. This points to the Channelable object.
 	Subscribable duckv1alpha1.Subscribable `json:"subscribable,omitempty"`
+}
+
+type ProvisionedObjectStatus struct {
+	// Name of Object
+	Name string `json:"name,omitempty"`
+	// Type is the fully qualified object type.
+	Type string `json:"type,omitempty"`
+	// Status is the current relationship between Source and Object.
+	Status string `json:"status,omitempty"`
+	// Reason is the detailed description describing current relationship status.
+	Reason string `json:"reason,omitempty"`
 }
 
 // GetCondition returns the condition currently associated with the given type, or nil.
@@ -143,6 +161,26 @@ func (ss *SourceStatus) MarkProvisioned() {
 // MarkDeprovisioned sets the condition that the source has had its backing resources removed.
 func (ss *SourceStatus) MarkDeprovisioned(reason, messageFormat string, messageA ...interface{}) {
 	sourceCondSet.Manage(ss).MarkFalse(SourceConditionProvisioned, reason, messageFormat, messageA...)
+}
+
+// MarkProvisioned sets the condition that the source has had its backing resources created.
+func (ss *SourceStatus) SetProvisionedObjectState(name, objType, status, reasonFormat string, reasonA ...interface{}) {
+	reason := fmt.Sprintf(reasonFormat, reasonA...)
+	newP := ProvisionedObjectStatus{
+		Name:   name,
+		Type:   objType,
+		Status: status,
+		Reason: reason,
+	}
+	newProvisioned := make([]ProvisionedObjectStatus, 0, len(ss.Provisioned))
+	for _, p := range ss.Provisioned {
+		if p.Name == newP.Name {
+			newProvisioned = append(newProvisioned, newP)
+		} else {
+			newProvisioned = append(newProvisioned, p)
+		}
+	}
+	ss.Provisioned = newProvisioned
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
