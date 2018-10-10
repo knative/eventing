@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Shopify/sarama"
+	"github.com/ghodss/yaml"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -28,6 +30,11 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"go.uber.org/zap"
+)
+
+const (
+	ArgumentNumPartitions = "NumPartitions"
+	DefaultNumPartitions  = 1
 )
 
 // Reconcile compares the actual state with the desired, and attempts to
@@ -104,10 +111,48 @@ func (r *reconciler) reconcile(channel *v1alpha1.Channel) error {
 		return nil
 	}
 
-	// TODO: provision channel
 	channel.Status.InitializeConditions()
-	channel.Status.MarkNotProvisioned("NotProvisioned", "NotImplemented")
+	if err := r.provisionChannel(channel); err != nil {
+		channel.Status.MarkNotProvisioned("NotProvisioned", "error while provisioning: %s", err)
+		return err
+	}
+	channel.Status.MarkProvisioned()
 	return nil
+}
+
+func (r *reconciler) provisionChannel(channel *v1alpha1.Channel) error {
+	topicName := topicName(channel)
+	r.logger.Info("provisioning topic on kafka cluster", zap.String("topic", topicName))
+
+	partitions := DefaultNumPartitions
+
+	if channel.Spec.Arguments != nil {
+		var err error
+		arguments, err := unmarshalArguments(channel.Spec.Arguments.Raw)
+		if err != nil {
+			return err
+		}
+		if num, ok := arguments[ArgumentNumPartitions]; ok {
+			parsedNum, ok := num.(float64)
+			if !ok {
+				return fmt.Errorf("could not parse argument %s for channel %s", ArgumentNumPartitions, fmt.Sprintf("%s/%s", channel.Namespace, channel.Name))
+			}
+			partitions = int(parsedNum)
+		}
+	}
+
+	err := r.kafkaClusterAdmin.CreateTopic(topicName, &sarama.TopicDetail{
+		ReplicationFactor: 1,
+		NumPartitions:     int32(partitions),
+	}, false)
+	if err == sarama.ErrTopicAlreadyExists {
+		return nil
+	} else if err != nil {
+		r.logger.Error("error creating topic", zap.String("topic", topicName), zap.Error(err))
+	} else {
+		r.logger.Info("successfully created topic", zap.String("topic", topicName))
+	}
+	return err
 }
 
 func (r *reconciler) getClusterProvisioner() (*v1alpha1.ClusterProvisioner, error) {
@@ -138,4 +183,19 @@ func (r *reconciler) updateStatus(channel *v1alpha1.Channel) (*v1alpha1.Channel,
 		return nil, err
 	}
 	return newChannel, nil
+}
+
+func topicName(channel *v1alpha1.Channel) string {
+	return fmt.Sprintf("%s.%s", channel.Namespace, channel.Name)
+}
+
+// unmarshalArguments unmarshal's a json/yaml serialized input and returns a map structure
+func unmarshalArguments(bytes []byte) (map[string]interface{}, error) {
+	arguments := make(map[string]interface{})
+	if len(bytes) > 0 {
+		if err := yaml.Unmarshal(bytes, &arguments); err != nil {
+			return nil, err
+		}
+	}
+	return arguments, nil
 }

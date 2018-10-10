@@ -17,6 +17,9 @@ limitations under the License.
 package channel
 
 import (
+	"fmt"
+
+	"github.com/Shopify/sarama"
 	"go.uber.org/zap"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,10 +40,11 @@ const (
 )
 
 type reconciler struct {
-	client   client.Client
-	recorder record.EventRecorder
-	logger   *zap.Logger
-	config   *common.KafkaProvisionerConfig
+	client            client.Client
+	recorder          record.EventRecorder
+	logger            *zap.Logger
+	config            *common.KafkaProvisionerConfig
+	kafkaClusterAdmin sarama.ClusterAdmin
 }
 
 // Verify the struct implements reconcile.Reconciler
@@ -49,11 +53,16 @@ var _ reconcile.Reconciler = &reconciler{}
 // ProvideController returns a Channel controller.
 func ProvideController(mgr manager.Manager, config *common.KafkaProvisionerConfig, logger *zap.Logger) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Channel.
+	clusterAdmin, err := getKafkaAdminClient(config)
+	if err != nil {
+		return nil, fmt.Errorf("unable to build kafka admin client: %s", err)
+	}
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: &reconciler{
-			recorder: mgr.GetRecorder(controllerAgentName),
-			logger:   logger,
-			config:   config,
+			recorder:          mgr.GetRecorder(controllerAgentName),
+			logger:            logger,
+			config:            config,
+			kafkaClusterAdmin: clusterAdmin,
 		},
 	})
 	if err != nil {
@@ -66,6 +75,14 @@ func ProvideController(mgr manager.Manager, config *common.KafkaProvisionerConfi
 	}
 
 	return c, nil
+}
+
+func getKafkaAdminClient(config *common.KafkaProvisionerConfig) (sarama.ClusterAdmin, error) {
+	saramaConf := sarama.NewConfig()
+	saramaConf.Version = sarama.V1_1_0_0
+	saramaConf.ClientID = controllerAgentName
+
+	return sarama.NewClusterAdmin(config.Brokers, saramaConf)
 }
 
 func (r *reconciler) InjectClient(c client.Client) error {
