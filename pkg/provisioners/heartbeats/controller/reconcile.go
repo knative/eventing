@@ -121,6 +121,12 @@ func (r *reconciler) reconcile(ctx context.Context, source *v1alpha1.Source) err
 				source.Status.SetProvisionedObjectState(channel.Name, fqn, "Ready", "")
 			}
 		}
+
+		source.Status.Subscribable.Channelable.Namespace = channel.Namespace
+		source.Status.Subscribable.Channelable.Name = channel.Name
+		source.Status.Subscribable.Channelable.APIVersion = "eventing.knative.dev/v1alpha1"
+		source.Status.Subscribable.Channelable.Kind = "Channel"
+
 	}
 
 	pod := &corev1.Pod{}

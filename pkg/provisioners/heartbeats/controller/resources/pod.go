@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	image = "gcr.io/plori-nicholss/cmd-f2e9e0e7e0a0f8a66b5b6f8d85f4c98b@sha256:76ae26763af3e8ce04f78a056de610ac6625b51fa9d6f72adb70788c9d3a9779"
+	image = "gcr.io/plori-nicholss/cmd-f2e9e0e7e0a0f8a66b5b6f8d85f4c98b@sha256:d64b5fd7b4c8c5fdc70cca7732fcf384d3069a4a1762a69e58d701a040345aed"
 )
 
 func MakePod(source *v1alpha1.Source, org *corev1.Pod, channel *v1alpha1.Channel, args *HeartBeatArguments) (*corev1.Pod, error) {
@@ -52,10 +52,13 @@ func MakePod(source *v1alpha1.Source, org *corev1.Pod, channel *v1alpha1.Channel
 			Kind:       "Pod",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      args.Name,
-			Namespace: args.Namespace,
+			GenerateName: args.Name,
+			Namespace:    args.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*controller.NewControllerRef(source, false),
+			},
+			Annotations: map[string]string{
+				"sidecar.istio.io/inject": "true",
 			},
 		},
 		Spec: corev1.PodSpec{

@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-type heartbeat struct {
+type Heartbeat struct {
 	Sequence int    `json:"id"`
 	Label    string `json:"label"`
 }
@@ -21,7 +21,7 @@ var (
 	label    string
 	period   int
 	sequence int
-	hb       *heartbeat
+	hb       *Heartbeat
 )
 
 func init() {
@@ -33,7 +33,7 @@ func init() {
 func main() {
 	flag.Parse()
 
-	hb = &heartbeat{
+	hb = &Heartbeat{
 		Sequence: 0,
 		Label:    label,
 	}
@@ -45,10 +45,10 @@ func main() {
 }
 
 func send() {
-	sequence++
+	hb.Sequence++
 	resp, err := http.Post(remote, "application/json", body())
 	if err != nil {
-		log.Printf("Unable to make request: %v, %+v", sequence, err)
+		log.Printf("Unable to make request: %+v, %v", hb, err)
 		return
 	}
 	defer resp.Body.Close()
@@ -56,7 +56,7 @@ func send() {
 
 func body() io.Reader {
 	b, err := json.Marshal(hb)
-	if err == nil {
+	if err != nil {
 		return strings.NewReader("{\"error\":\"true\"}")
 	}
 	return bytes.NewBuffer(b)
