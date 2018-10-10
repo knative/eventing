@@ -20,6 +20,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -108,9 +109,11 @@ func main() {
 	})
 	logger.Info("Fanout sidecar Listening...", zap.String("Address", s.Addr))
 	g.Go(s.ListenAndServe)
-	if err = g.Wait(); err != nil {
-		logger.Fatal("Either the HTTP server or the ConfigMap noticer failed.", zap.Error(err))
+	err = g.Wait()
+	if err != nil {
+		logger.Error("Either the HTTP server or the ConfigMap noticer failed.", zap.Error(err))
 	}
+	s.Shutdown(context.TODO())
 }
 
 func setupConfigMapNoticer(logger *zap.Logger, configUpdated swappable.UpdateConfig) (manager.Manager, error) {

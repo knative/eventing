@@ -117,11 +117,8 @@ func (cmw *configMapWatcher) Start(stopCh <-chan struct{}) error {
 				return errors.New("watcher.Errors channel closed")
 			}
 			cmw.logger.Error("watcher.Errors", zap.Error(err))
-		case _, ok := <-stopCh:
-			if !ok {
-				// stopCh has been closed
-				return watcher.Close()
-			}
+		case <-stopCh:
+			return watcher.Close()
 		}
 	}
 }

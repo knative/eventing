@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
-// ConfigMapData attempts to parse the YAML string into a multichannelfanout.Config.
+// Parse attempts to parse the YAML string into a multichannelfanout.Config.
 func Parse(logger *zap.Logger, str string) (*Config, error) {
 	jb, err := yaml.ToJSON([]byte(str))
 	if err != nil {

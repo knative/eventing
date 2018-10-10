@@ -69,8 +69,8 @@ func (h *Handler) getMultiChannelFanoutHandler() *multichannelfanout.Handler {
 
 // setMultiChannelFanoutHandler sets a new multichannelfanout.Handler to delegate all subsequent
 // HTTP requests to.
-func (h *Handler) setMultiChannelFanoutHandler(new *multichannelfanout.Handler) {
-	h.fanout.Store(new)
+func (h *Handler) setMultiChannelFanoutHandler(nh *multichannelfanout.Handler) {
+	h.fanout.Store(nh)
 }
 
 // UpdateConfig copies the current inner multichannelfanout.Handler with the new configuration. If
