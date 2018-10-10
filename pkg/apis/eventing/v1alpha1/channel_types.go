@@ -117,12 +117,22 @@ func (cs *ChannelStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha
 	return chanCondSet.Manage(cs).GetCondition(t)
 }
 
+// IsReady returns true if the resource is ready overall.
+func (cs *ChannelStatus) IsReady() bool {
+	return chanCondSet.Manage(cs).IsHappy()
+}
+
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (cs *ChannelStatus) InitializeConditions() {
 	chanCondSet.Manage(cs).InitializeConditions()
 }
 
-// InitializeConditions sets relevant unset conditions to Unknown state.
+// MarkAsProvisioned sets ChannelConditionProvisioned condition to True state.
+func (cs *ChannelStatus) MarkAsProvisioned() {
+	chanCondSet.Manage(cs).MarkTrue(ChannelConditionProvisioned)
+}
+
+// MarkAsNotProvisioned sets ChannelConditionProvisioned condition to False state.
 func (cs *ChannelStatus) MarkAsNotProvisioned(reason, messageFormat string, messageA ...interface{}) {
 	chanCondSet.Manage(cs).MarkFalse(ChannelConditionProvisioned, reason, messageFormat, messageA...)
 }

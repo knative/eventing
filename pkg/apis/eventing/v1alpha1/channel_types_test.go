@@ -146,6 +146,36 @@ func TestChannelInitializeConditions(t *testing.T) {
 	}
 }
 
+func TestChannelIsReady(t *testing.T) {
+	tests := []struct {
+		name            string
+		markProvisioned bool
+		wantReady       bool
+	}{{
+		name:            "all happy",
+		markProvisioned: true,
+		wantReady:       true,
+	}, {
+		name:            "one sad",
+		markProvisioned: false,
+		wantReady:       false,
+	}}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cs := &ChannelStatus{}
+			if test.markProvisioned {
+				cs.MarkAsProvisioned()
+			} else {
+				cs.MarkAsNotProvisioned("NotProvisioned", "testing")
+			}
+			got := cs.IsReady()
+			if test.wantReady != got {
+				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
+			}
+		})
+	}
+}
+
 func TestChannelStatus_MarkAsNotProvisioned(t *testing.T) {
 	cs := &ChannelStatus{}
 	cs.InitializeConditions()
