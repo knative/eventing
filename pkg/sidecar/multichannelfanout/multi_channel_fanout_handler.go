@@ -72,7 +72,7 @@ type Handler struct {
 	config   Config
 }
 
-// NewHandler creates a new Handler. The caller is responsible for calling handler.Stop().
+// NewHandler creates a new Handler.
 func NewHandler(logger *zap.Logger, conf Config) (*Handler, error) {
 	handlers := make(map[string]*fanout.Handler, len(conf.ChannelConfigs))
 
@@ -91,12 +91,6 @@ func NewHandler(logger *zap.Logger, conf Config) (*Handler, error) {
 		config:   conf,
 		handlers: handlers,
 	}, nil
-}
-
-func (h *Handler) Stop() {
-	for _, fh := range h.handlers {
-		fh.Stop()
-	}
 }
 
 // ConfigDiffs diffs the new config with the existing config. If there are no differences, then the

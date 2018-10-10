@@ -205,7 +205,6 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			}
 
 			h := NewHandler(zap.NewNop(), Config{Subscriptions: subs})
-			defer h.Stop()
 			if tc.receiverFunc != nil {
 				h.receiver = buses.NewMessageReceiver(tc.receiverFunc, zap.NewNop().Sugar())
 			}
