@@ -56,8 +56,9 @@ const (
 )
 
 var (
-	masterURL  string
-	kubeconfig string
+	masterURL               string
+	kubeconfig              string
+	experimentalControllers string
 )
 
 func main() {
@@ -154,7 +155,7 @@ func main() {
 
 	// Start the controller-runtime controllers.
 	go func() {
-		if err := controllerRuntimeStart(); err != nil {
+		if err := controllerRuntimeStart(logger, experimentalControllers); err != nil {
 			logger.Fatalf("Error running controller-runtime controllers: %v", err)
 		}
 	}()
@@ -181,4 +182,5 @@ func init() {
 	// These are commented because they're also defined by controller-runtime.
 	// flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 	// flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	flag.StringVar(&experimentalControllers, "experimentalControllers", "", "List of experimental controllers to include in the Knative Controller.")
 }

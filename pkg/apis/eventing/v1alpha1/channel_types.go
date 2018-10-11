@@ -127,13 +127,13 @@ func (cs *ChannelStatus) InitializeConditions() {
 	chanCondSet.Manage(cs).InitializeConditions()
 }
 
-// MarkAsProvisioned sets ChannelConditionProvisioned condition to True state.
-func (cs *ChannelStatus) MarkAsProvisioned() {
+// MarkProvisioned sets ChannelConditionProvisioned condition to True state.
+func (cs *ChannelStatus) MarkProvisioned() {
 	chanCondSet.Manage(cs).MarkTrue(ChannelConditionProvisioned)
 }
 
-// MarkAsNotProvisioned sets ChannelConditionProvisioned condition to False state.
-func (cs *ChannelStatus) MarkAsNotProvisioned(reason, messageFormat string, messageA ...interface{}) {
+// MarkNotProvisioned sets ChannelConditionProvisioned condition to False state.
+func (cs *ChannelStatus) MarkNotProvisioned(reason, messageFormat string, messageA ...interface{}) {
 	chanCondSet.Manage(cs).MarkFalse(ChannelConditionProvisioned, reason, messageFormat, messageA...)
 }
 

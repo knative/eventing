@@ -164,36 +164,14 @@ func TestChannelIsReady(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			cs := &ChannelStatus{}
 			if test.markProvisioned {
-				cs.MarkAsProvisioned()
+				cs.MarkProvisioned()
 			} else {
-				cs.MarkAsNotProvisioned("NotProvisioned", "testing")
+				cs.MarkNotProvisioned("NotProvisioned", "testing")
 			}
 			got := cs.IsReady()
 			if test.wantReady != got {
 				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
 			}
 		})
-	}
-}
-
-func TestChannelStatus_MarkAsNotProvisioned(t *testing.T) {
-	cs := &ChannelStatus{}
-	cs.InitializeConditions()
-	want := &ChannelStatus{
-		Conditions: []duckv1alpha1.Condition{{
-			Type:    ChannelConditionProvisioned,
-			Status:  corev1.ConditionFalse,
-			Reason:  "Not Provisioned",
-			Message: "testing",
-		}, {
-			Type:    ChannelConditionReady,
-			Status:  corev1.ConditionFalse,
-			Reason:  "Not Provisioned",
-			Message: "testing",
-		}}}
-	ignore := cmpopts.IgnoreFields(duckv1alpha1.Condition{}, "LastTransitionTime")
-	cs.MarkAsNotProvisioned("Not Provisioned", "testing")
-	if diff := cmp.Diff(want, cs, ignore); diff != "" {
-		t.Errorf("unexpected conditions (-want, +got) = %v", diff)
 	}
 }
