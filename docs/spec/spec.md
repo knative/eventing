@@ -131,11 +131,11 @@ _Describes a linkage between a Subscribable and a Targetable and/or Sinkable._
 
 #### Spec
 
-| Field              | Type         | Description                                                                  | Limitations        |
-| ------------------ | ------------ | ---------------------------------------------------------------------------- | ------------------ |
-| from\*             | ObjectRef    | The originating Channel for the link.                                        | Must be a Channel. |
-| call<sup>1</sup>   | EndpointSpec | Optional processing on the event. The result of call will be sent to result. |                    |
-| result<sup>1</sup> | ObjectRef    | The continuation Channel for the link.                                       | Must be a Channel. |
+| Field              | Type           | Description                                                                  | Limitations        |
+| ------------------ | -------------- | ---------------------------------------------------------------------------- | ------------------ |
+| from\*             | ObjectRef      | The originating Channel for the link.                                        | Must be a Channel. |
+| call<sup>1</sup>   | EndpointSpec   | Optional processing on the event. The result of call will be sent to result. |                    |
+| result<sup>1</sup> | ResultStrategy | The continuation for the link.                                               |                    |
 
 \*: Required
 
@@ -314,3 +314,11 @@ non-controlling OwnerReference on the EventType resources it knows about.
 | -------------- | ------ | ----------------------------------------------- | ----------- |
 | callableDomain | String | The domain name of the endpoint for the call.   |             |
 | sinkableDomain | String | The domain name of the endpoint for the result. |             |
+
+### ResultStrategy
+
+| Field    | Type      | Description                            | Limitations        |
+| -------- | --------- | -------------------------------------- | ------------------ |
+| target\* | ObjectRef | The continuation Channel for the link. | Must be a Channel. |
+
+\*: Required
