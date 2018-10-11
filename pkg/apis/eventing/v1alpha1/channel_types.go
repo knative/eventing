@@ -117,6 +117,16 @@ func (cs *ChannelStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha
 	return chanCondSet.Manage(cs).GetCondition(t)
 }
 
+// IsReady returns true if the resource is ready overall.
+func (cs *ChannelStatus) IsReady() bool {
+	return chanCondSet.Manage(cs).IsHappy()
+}
+
+// InitializeConditions sets relevant unset conditions to Unknown state.
+func (cs *ChannelStatus) InitializeConditions() {
+	chanCondSet.Manage(cs).InitializeConditions()
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ChannelList is a collection of Channels.
