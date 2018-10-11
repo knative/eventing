@@ -61,7 +61,7 @@ func NewCleaner(log *logging.BaseLogger, client dynamic.Interface) *Cleaner {
 // * resource's plural (e.g. routes)
 // * namespace (use "" if the resource is not tied to any namespace)
 // * actual name of the resource (e.g. myroute)
-func (cleaner *Cleaner) Add(group string, version string, resource string, namespace string, name string) error {
+func (c *Cleaner) Add(group string, version string, resource string, namespace string, name string) error {
 	gvr := schema.GroupVersionResource{
 		Group:    group,
 		Version:  version,
@@ -69,35 +69,33 @@ func (cleaner *Cleaner) Add(group string, version string, resource string, names
 	}
 	var unstructured dynamic.ResourceInterface
 	if namespace != "" {
-		unstructured = cleaner.dynamicClient.Resource(gvr).Namespace(namespace)
+		unstructured = c.dynamicClient.Resource(gvr).Namespace(namespace)
 	} else {
-		unstructured = cleaner.dynamicClient.Resource(gvr)
+		unstructured = c.dynamicClient.Resource(gvr)
 	}
 	res := ResourceDeleter{
 		Resource: unstructured,
 		Name:     name,
 	}
 	//this is actually a prepend, we want to delete resources in reverse order
-	cleaner.resourcesToClean = append([]ResourceDeleter{res}, cleaner.resourcesToClean...)
+	c.resourcesToClean = append([]ResourceDeleter{res}, c.resourcesToClean...)
 	return nil
 }
 
 // Clean will delete all registered resources
-func (cleaner *Cleaner) Clean(awaitDeletion bool) error {
-	for _, deleter := range cleaner.resourcesToClean {
-		err := deleter.Resource.Delete(deleter.Name, nil)
-		if err != nil {
-			cleaner.logger.Errorf("Error: %v", err)
+func (c *Cleaner) Clean(awaitDeletion bool) error {
+	for _, deleter := range c.resourcesToClean {
+		if err := deleter.Resource.Delete(deleter.Name, nil); err != nil {
+			c.logger.Errorf("Error: %v", err)
 		} else if awaitDeletion {
-			cleaner.logger.Debugf("Waiting for %s to be deleted", deleter.Name)
-			err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+			c.logger.Debugf("Waiting for %s to be deleted", deleter.Name)
+			if err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 				if _, err := deleter.Resource.Get(deleter.Name, metav1.GetOptions{}); err != nil {
 					return true, nil
 				}
 				return false, nil
-			})
-			if err != nil {
-				cleaner.logger.Errorf("Error: %v", err)
+			}); err != nil {
+				c.logger.Errorf("Error: %v", err)
 			}
 		}
 	}
