@@ -127,6 +127,8 @@ type SourceStatus struct {
 	Subscribable duckv1alpha1.Subscribable `json:"subscribable,omitempty"`
 }
 
+// ProvisionedObjectStatus holds the provisioning state of a resource that was
+// provisioned on behalf of the current object.
 type ProvisionedObjectStatus struct {
 	// Name of Object
 	Name string `json:"name,omitempty"`
@@ -163,7 +165,7 @@ func (ss *SourceStatus) MarkDeprovisioned(reason, messageFormat string, messageA
 	sourceCondSet.Manage(ss).MarkFalse(SourceConditionProvisioned, reason, messageFormat, messageA...)
 }
 
-// MarkProvisioned sets the condition that the source has had its backing resources created.
+// SetProvisionedObjectState sets the status of an object this resource provisioned.
 func (ss *SourceStatus) SetProvisionedObjectState(name, objType, status, reasonFormat string, reasonA ...interface{}) {
 	reason := fmt.Sprintf(reasonFormat, reasonA...)
 	newP := ProvisionedObjectStatus{
