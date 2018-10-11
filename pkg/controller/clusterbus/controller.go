@@ -21,6 +21,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/knative/eventing/pkg/buses"
+
 	"github.com/golang/glog"
 	"github.com/knative/eventing/pkg/controller"
 	appsv1 "k8s.io/api/apps/v1"
@@ -569,7 +571,7 @@ func newDispatcherService(clusterBus *channelsv1alpha1.ClusterBus) *corev1.Servi
 				{
 					Name:       "http",
 					Port:       80,
-					TargetPort: intstr.FromInt(8080),
+					TargetPort: intstr.FromInt(buses.MessageReceiverPort),
 				},
 			},
 		},

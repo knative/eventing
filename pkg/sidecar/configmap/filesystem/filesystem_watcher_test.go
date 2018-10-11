@@ -1,9 +1,12 @@
 /*
 Copyright 2018 The Knative Authors
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,27 +17,21 @@ limitations under the License.
 package filesystem
 
 import (
+	"errors"
 	"fmt"
 	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/pkg/sidecar/configmap/parse"
+	"github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
-	"github.com/knative/eventing/pkg/sidecar/swappable"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	"go.uber.org/atomic"
 	"go.uber.org/zap"
-	"io"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
-)
-
-const (
-	replaceDomain = "replaceDomain"
 )
 
 func TestReadConfigMap(t *testing.T) {
@@ -155,7 +152,7 @@ func TestReadConfigMap(t *testing.T) {
 			} else {
 				dir = "/tmp/doesNotExist"
 			}
-			writeConfig(t, dir, tc.config)
+			writeConfigString(t, dir, tc.config)
 			c, e := readConfigMap(zap.NewNop(), dir)
 			if tc.expectedErr {
 				if e == nil {
@@ -170,128 +167,164 @@ func TestReadConfigMap(t *testing.T) {
 	}
 }
 
-func TestServeHTTP(t *testing.T) {
-	testCases := []struct {
-		name                       string
-		initialConfig              string
-		updatedConfig              string
-		initialRequests            int32
-		initialRequestsAfterUpdate int32
-		updateRequests             int32
+func TestWatch(t *testing.T) {
+	testCases := map[string]struct {
+		initialConfigErr error
+		initialConfig    *multichannelfanout.Config
+		updateConfigErr  error
+		updateConfig     *multichannelfanout.Config
 	}{
-		{
-			name: "send to config",
-			initialConfig: `
-				channelConfigs:
-				  - namespace: default
-					name: c1
-					fanoutConfig:
-						subscriptions:
-						  - sinkableDomain: replaceDomain
-				`,
-			initialRequests: 1,
+		"error applying initial config": {
+			initialConfig:    &multichannelfanout.Config{},
+			initialConfigErr: errors.New("test-induced error"),
 		},
-		{
-			name: "change config",
-			initialConfig: `
-				channelConfigs:
-				  - namespace: default
-					name: c1
-					fanoutConfig:
-						subscriptions:
-						  - sinkableDomain: replaceDomain
-				`,
-			initialRequests: 1,
-			updatedConfig: `
-				channelConfigs:
-				  - namespace: default
-					name: c1
-					fanoutConfig:
-						subscriptions:
-						  - sinkableDomain: replaceDomain
-				`,
-			updateRequests: 1,
+		"read initial config": {
+			initialConfig: &multichannelfanout.Config{
+				ChannelConfigs: []multichannelfanout.ChannelConfig{
+					{
+						Namespace: "default",
+						Name:      "c1",
+						FanoutConfig: fanout.Config{
+							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+								{
+									SinkableDomain: "foo.bar",
+								},
+							},
+						},
+					},
+				},
+			},
 		},
-		{
-			name: "bad config update -- keeps serving old config",
-			initialConfig: `
-				channelConfigs:
-				  - namespace: default
-					name: c1
-					fanoutConfig:
-						subscriptions:
-						  - sinkableDomain: replaceDomain
-				`,
-			initialRequests: 1,
-			updatedConfig: `
-				channelConfigs:
-				  - namespace: default
-					name: c1
-					fanoutConfig:
-						subscriptions:
-						  - sinkableDomain: replaceDomain
-				  # Duplicate namespace/name
-				  - namespace: default
-					name: c1
-					fanoutConfig:
-						subscriptions:
-						  - sinkableDomain: replaceDomain
-				`,
-			initialRequestsAfterUpdate: 2,
+		"error apply updated config": {
+			initialConfig: &multichannelfanout.Config{
+				ChannelConfigs: []multichannelfanout.ChannelConfig{
+					{
+						Namespace: "default",
+						Name:      "c1",
+						FanoutConfig: fanout.Config{
+							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+								{
+									SinkableDomain: "foo.bar",
+								},
+							},
+						},
+					},
+				},
+			},
+			updateConfigErr: errors.New("test-induced error"),
+		},
+		"update config": {
+			initialConfig: &multichannelfanout.Config{
+				ChannelConfigs: []multichannelfanout.ChannelConfig{
+					{
+						Namespace: "default",
+						Name:      "c1",
+						FanoutConfig: fanout.Config{
+							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+								{
+									SinkableDomain: "foo.bar",
+								},
+							},
+						},
+					},
+				},
+			},
+			updateConfig: &multichannelfanout.Config{
+				ChannelConfigs: []multichannelfanout.ChannelConfig{
+					{
+						Namespace: "default",
+						Name:      "new-channel",
+						FanoutConfig: fanout.Config{
+							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+								{
+									CallableDomain: "baz.qux",
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			initialHandler := &fakeHandler{}
-			initialServer := httptest.NewServer(initialHandler)
-			defer initialServer.Close()
-			updateHandler := &fakeHandler{}
-			updateServer := httptest.NewServer(updateHandler)
-			defer updateServer.Close()
-
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
 			dir := createTempDir(t)
 			defer os.RemoveAll(dir)
-			writeConfig(t, dir, replaceDomains(tc.initialConfig, initialServer.URL[7:]))
+			writeConfig(t, dir, tc.initialConfig)
 
-			sh, err := swappable.NewEmptyHandler(zap.NewNop())
+			cuc := &configUpdatedChecker{
+				updateConfigErr: tc.initialConfigErr,
+			}
+			cmw, err := NewConfigMapWatcher(zap.NewNop(), dir, cuc.updateConfig)
 			if err != nil {
-				t.Errorf("Unexpected error making swappable.Handler: %+v", err)
+				if tc.initialConfigErr != err {
+					t.Errorf("Unexpected error making ConfigMapWatcher. Expected: '%v'. Actual '%v'", tc.initialConfigErr, err)
+				}
+				return
 			}
-			_, err = NewConfigMapWatcher(zap.NewNop(), dir, sh.UpdateConfig)
-			if err != nil {
-				t.Errorf("Unexpected error making filesystem.configMapWatcher")
+			ac := cuc.getConfig()
+			if !cmp.Equal(tc.initialConfig, ac) {
+				t.Errorf("Unexpected initial config. Expected '%v'. Actual '%v'", tc.initialConfig, ac)
 			}
 
-			w := httptest.NewRecorder()
-			sh.ServeHTTP(w, makeRequest("default", "c1"))
-			if w.Result().StatusCode != http.StatusOK {
-				t.Errorf("Unexpected initial status code: %v", w.Result().StatusCode)
-			}
-			if tc.initialRequests != initialHandler.requests.Load() {
-				t.Errorf("Incorrect initial request count. Expected %v. Actual %v.",
-					tc.initialRequests, initialHandler.requests.Load())
+			stopCh := make(chan struct{})
+			go cmw.Start(stopCh)
+			defer func() {
+				close(stopCh)
+			}()
+			// Sadly, the test is flaky unless we sleep here, waiting for the file system
+			// watcher to truly start.
+			time.Sleep(100 * time.Millisecond)
+
+			if tc.updateConfigErr != nil {
+				cuc.updateConfigErr = tc.updateConfigErr
 			}
 
-			if tc.updatedConfig != "" {
-				writeConfig(t, dir, replaceDomains(tc.updatedConfig, updateServer.URL[7:]))
-				// The watcher is running in another routine, give it some time to notice the
-				// change.
-				time.Sleep(100 * time.Millisecond)
-				w = httptest.NewRecorder()
-				sh.ServeHTTP(w, makeRequest("default", "c1"))
-				if w.Result().StatusCode != http.StatusOK {
-					t.Errorf("Unexpected updated status code: %v", w.Result().StatusCode)
-				}
-				if tc.updateRequests != updateHandler.requests.Load() {
-					t.Errorf("Incorrect update request count. Expected %v. Actual %v.", tc.updateRequests, updateHandler.requests.Load())
-				}
-				if tc.initialRequestsAfterUpdate != 0 && tc.initialRequestsAfterUpdate != initialHandler.requests.Load() {
-					t.Errorf("Incorrect requests to initialHandler after config update. Expected %v, actual %v",
-						tc.initialRequestsAfterUpdate, initialHandler.requests.Load())
-				}
+			expected := tc.initialConfig
+			if tc.updateConfig != nil {
+				expected = tc.updateConfig
+			}
+
+			cuc.updateCalled = make(chan struct{}, 1)
+			writeConfig(t, dir, expected)
+			// The watcher is running in another goroutine, give it some time to notice the
+			// change.
+			select {
+			case <-cuc.updateCalled:
+				break
+			case <-time.After(5 * time.Second):
+				t.Errorf("Time out waiting for watcher to notice change.")
+			}
+
+			ac = cuc.getConfig()
+			if !cmp.Equal(ac, expected) {
+				t.Errorf("Unexpected update config. Expected '%v'. Actual '%v'", expected, ac)
 			}
 		})
 	}
+}
+
+type configUpdatedChecker struct {
+	configLock      sync.Mutex
+	config          *multichannelfanout.Config
+	updateCalled    chan struct{}
+	updateConfigErr error
+}
+
+func (cuc *configUpdatedChecker) updateConfig(config *multichannelfanout.Config) error {
+	cuc.configLock.Lock()
+	defer cuc.configLock.Unlock()
+	cuc.config = config
+	if cuc.updateCalled != nil {
+		cuc.updateCalled <- struct{}{}
+	}
+	return cuc.updateConfigErr
+}
+
+func (cuc *configUpdatedChecker) getConfig() *multichannelfanout.Config {
+	cuc.configLock.Lock()
+	defer cuc.configLock.Unlock()
+	return cuc.config
 }
 
 func createTempDir(t *testing.T) string {
@@ -302,37 +335,24 @@ func createTempDir(t *testing.T) string {
 	return dir
 }
 
-func writeConfig(t *testing.T, dir, config string) {
+func writeConfig(t *testing.T, dir string, config *multichannelfanout.Config) {
+	if config != nil {
+		yb, err := yaml.Marshal(config)
+		if err != nil {
+			t.Errorf("Unable to marshal the config")
+		}
+		writeConfigString(t, dir, string(yb))
+	}
+}
+
+func writeConfigString(t *testing.T, dir, config string) {
 	if config != "" {
 		// Golang editors tend to replace leading spaces with tabs. YAML is left whitespace
 		// sensitive, so let's replace the tabs with spaces.
 		leftSpaceConfig := strings.Replace(config, "\t", "    ", -1)
-		err := ioutil.WriteFile(fmt.Sprintf("%s/%s", dir, parse.MultiChannelFanoutConfigKey), []byte(leftSpaceConfig), 0700)
+		err := ioutil.WriteFile(fmt.Sprintf("%s/%s", dir, configmap.MultiChannelFanoutConfigKey), []byte(leftSpaceConfig), 0700)
 		if err != nil {
 			t.Errorf("Problem writing the config file: %v", err)
 		}
 	}
-}
-
-func body(body string) io.ReadCloser {
-	return ioutil.NopCloser(strings.NewReader(body))
-}
-
-func makeRequest(namespace, name string) *http.Request {
-	r := httptest.NewRequest("POST", fmt.Sprintf("http://%s.%s/", name, namespace), body(""))
-	return r
-}
-
-type fakeHandler struct {
-	requests atomic.Int32
-}
-
-func (h *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-	w.WriteHeader(http.StatusOK)
-	h.requests.Inc()
-}
-
-func replaceDomains(config, replacement string) string {
-	return strings.Replace(config, replaceDomain, replacement, -1)
 }

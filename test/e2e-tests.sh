@@ -76,7 +76,7 @@ function publish_test_images() {
     if [ $(echo "$IMAGE" | grep -v -e "^#") ]; then
       ko publish -P $IMAGE
       local IMAGE=$KO_DOCKER_REPO/$IMAGE
-      local DIGEST=$(gcloud container images list-tags --format='get(digest)' $IMAGE)
+      local DIGEST=$(gcloud container images list-tags --filter="tags:latest" --format='get(digest)' $IMAGE)
       echo "Tagging $IMAGE:$DIGEST with $DOCKER_TAG"
       gcloud -q container images add-tag $IMAGE@$DIGEST $IMAGE:$DOCKER_TAG
     fi

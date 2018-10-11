@@ -14,6 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package swappable provides an http.Handler that delegates all HTTP requests to an underlying
+// multichannelfanout.Handler. When a new configuration is available, a new
+// multichannelfanout.Handler is created and swapped in. All subsequent requests go to the new
+// handler.
+// It is often used in conjunction with something that notices changes to ConfigMaps, such as
+// configmap.watcher or configmap.filesystem.
 package swappable
 
 import (
@@ -25,13 +31,13 @@ import (
 	"sync/atomic"
 )
 
-// http.Handler that atomically swapping between underlying handlers.
+// http.Handler that atomically swaps between underlying handlers.
 type Handler struct {
 	// The current multichannelfanout.Handler to delegate HTTP requests to. Never use this directly,
 	// instead use {get,set}MultiChannelFanoutHandler, which enforces the type we expect.
-	fanout atomic.Value
+	fanout     atomic.Value
 	updateLock sync.Mutex
-	logger *zap.Logger
+	logger     *zap.Logger
 }
 
 type UpdateConfig func(config *multichannelfanout.Config) error
@@ -39,7 +45,7 @@ type UpdateConfig func(config *multichannelfanout.Config) error
 var _ UpdateConfig = (&Handler{}).UpdateConfig
 
 // NewHandler creates a new swappable.Handler.
-func NewHandler(handler *multichannelfanout.Handler, logger *zap.Logger) *Handler  {
+func NewHandler(handler *multichannelfanout.Handler, logger *zap.Logger) *Handler {
 	h := &Handler{
 		logger: logger.With(zap.String("httpHandler", "swappable")),
 	}
@@ -63,8 +69,8 @@ func (h *Handler) getMultiChannelFanoutHandler() *multichannelfanout.Handler {
 
 // setMultiChannelFanoutHandler sets a new multichannelfanout.Handler to delegate all subsequent
 // HTTP requests to.
-func (h *Handler) setMultiChannelFanoutHandler(new *multichannelfanout.Handler) {
-	h.fanout.Store(new)
+func (h *Handler) setMultiChannelFanoutHandler(nh *multichannelfanout.Handler) {
+	h.fanout.Store(nh)
 }
 
 // UpdateConfig copies the current inner multichannelfanout.Handler with the new configuration. If

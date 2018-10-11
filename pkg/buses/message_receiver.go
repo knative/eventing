@@ -17,6 +17,7 @@
 package buses
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -26,6 +27,10 @@ import (
 
 // MessageReceiver starts a server to receive new messages for the bus. The new
 // message is emitted via the receiver function.
+const (
+	MessageReceiverPort = 8080
+)
+
 type MessageReceiver struct {
 	receiverFunc    func(ChannelReference, *Message) error
 	forwardHeaders  map[string]bool
@@ -64,7 +69,7 @@ func (r *MessageReceiver) Run(stopCh <-chan struct{}) {
 func (r *MessageReceiver) start() *http.Server {
 	r.logger.Info("Starting web server")
 	srv := &http.Server{
-		Addr: ":8080",
+		Addr: fmt.Sprintf(":%d", MessageReceiverPort),
 		Handler: http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 			if req.URL.Path != "/" {
 				res.WriteHeader(http.StatusNotFound)

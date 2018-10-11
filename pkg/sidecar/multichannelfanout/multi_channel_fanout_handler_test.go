@@ -280,7 +280,7 @@ func TestServeHTTP(t *testing.T) {
 			},
 			respStatusCode:     http.StatusOK,
 			key:                "second-channel.default",
-			expectedStatusCode: http.StatusOK,
+			expectedStatusCode: http.StatusAccepted,
 		},
 	}
 	requestWithChannelKey := func(key string) *http.Request {

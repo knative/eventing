@@ -14,27 +14,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package fanout provides an http.Handler that takes in one request and fans it out to N other
+// requests, based on a list of Subscriptions. Logically, it represents all the Subscriptions to a
+// single Knative Channel.
+// It will normally be used in conjunction with multichannelfanout.Handler, which contains multiple
+// fanout.Handlers, each corresponding to a single Knative Channel.
 package fanout
 
 import (
-	"fmt"
+	"errors"
 	"github.com/knative/eventing/pkg/buses"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
-	"math/rand"
 	"net/http"
-	"sync"
 	"time"
 )
 
 const (
-	// The header attached to requests sent through the MessageReceiver. It is used to correlate the
-	// request going into the MessageReceiver and the request coming out of the MessageReceiver. It
-	// is removed before being sent downstream.
-	// Note that it MUST be in the headers forwarded by the MessageReceiver.
-	uniqueFanoutHeader = "Knative-Fanout-Message-Tracker"
-
 	defaultTimeout = 1 * time.Minute
+
+	messageBufferSize = 500
 )
 
 // Configuration for a fanout.Handler.
@@ -43,150 +42,82 @@ type Config struct {
 }
 
 // http.Handler that takes a single request in and fans it out to N other servers.
-type fanoutHandler struct {
+type Handler struct {
 	config Config
 
-	receivedMessages *messageStorage
+	receivedMessages chan *forwardMessage
 	receiver         *buses.MessageReceiver
 	dispatcher       *buses.MessageDispatcher
 
+	// TODO: Plumb context through the receiver and dispatcher and use that to store the timeout,
+	// rather than a member variable.
 	timeout time.Duration
 
 	logger *zap.Logger
 }
 
-var _ http.Handler = &fanoutHandler{}
+var _ http.Handler = &Handler{}
 
-func NewHandler(logger *zap.Logger, config Config) http.Handler {
-	handler := &fanoutHandler{
-		logger:     logger,
-		config:     config,
-		dispatcher: buses.NewMessageDispatcher(logger.Sugar()),
-		receivedMessages: &messageStorage{
-			messages: make(map[string]*buses.Message),
-		},
-		timeout: defaultTimeout,
+// forwardMessage is passed between the Receiver and the Dispatcher.
+type forwardMessage struct {
+	msg  *buses.Message
+	done chan<- error
+}
+
+// NewHandler creates a new fanout.Handler.
+func NewHandler(logger *zap.Logger, config Config) *Handler {
+	handler := &Handler{
+		logger:           logger,
+		config:           config,
+		dispatcher:       buses.NewMessageDispatcher(logger.Sugar()),
+		receivedMessages: make(chan *forwardMessage, messageBufferSize),
+		timeout:          defaultTimeout,
 	}
-	// The receiver function needs to point back at the handler itself, so setup it after
+	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
 	handler.receiver = buses.NewMessageReceiver(createReceiverFunction(handler), logger.Sugar())
+
 	return handler
 }
 
-func createReceiverFunction(f *fanoutHandler) func(buses.ChannelReference, *buses.Message) error {
+func createReceiverFunction(f *Handler) func(buses.ChannelReference, *buses.Message) error {
 	return func(_ buses.ChannelReference, m *buses.Message) error {
-		f.logger.Debug("Putting message", zap.String("key", m.Headers[uniqueFanoutHeader]))
-		f.receivedMessages.Put(m)
-		return nil
+		return f.dispatch(m)
 	}
 }
 
-// ServeHTTP takes the request, fans it out to each subscription in f.config. If all the fanned out
-// requests return successfully, then return successfully. Else, return failure.
-func (f *fanoutHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	key := addTrackingHeader(r)
-	receiverResponse := &response{}
-	f.receiver.HandleRequest(receiverResponse, r)
+func (f *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	f.receiver.HandleRequest(w, r)
+}
 
-	if receiverResponse.statusCode != http.StatusAccepted {
-		f.logger.Info("MessageReceiver rejected the request", zap.Int("statusCode", receiverResponse.statusCode))
-		w.WriteHeader(receiverResponse.statusCode)
-		return
-	}
-
-	f.logger.Debug("Pulling message", zap.String("key", key))
-	m, err := f.receivedMessages.pull(key)
-	if err != nil {
-		f.logger.Info("Could not find tracked message", zap.Error(err), zap.Any("key", r.Header[uniqueFanoutHeader]))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	removeTrackingHeader(m)
-
+// dispatch takes the request, fans it out to each subscription in f.config. If all the fanned out
+// requests return successfully, then return nil. Else, return an error.
+func (f *Handler) dispatch(msg *buses.Message) error {
 	errorCh := make(chan error, len(f.config.Subscriptions))
 	for _, sub := range f.config.Subscriptions {
 		go func(s duckv1alpha1.ChannelSubscriberSpec) {
-			errorCh <- f.makeFanoutRequest(r, *m, s)
+			errorCh <- f.makeFanoutRequest(*msg, s)
 		}(sub)
 	}
 
-	sc := http.StatusOK
-Loop:
 	for range f.config.Subscriptions {
 		select {
 		case err := <-errorCh:
 			if err != nil {
 				f.logger.Error("Fanout had an error", zap.Error(err))
-				sc = http.StatusInternalServerError
+				return err
 			}
 		case <-time.After(f.timeout):
 			f.logger.Error("Fanout timed out")
-			sc = http.StatusInternalServerError
-			break Loop
+			return errors.New("fanout timed out")
 		}
 	}
-
-	w.WriteHeader(sc)
+	// All Subscriptions returned err = nil.
+	return nil
 }
 
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
-// the `to` portions of the subscription.
-func (f *fanoutHandler) makeFanoutRequest(r *http.Request, m buses.Message, sub duckv1alpha1.ChannelSubscriberSpec) error {
+// the `sink` portions of the subscription.
+func (f *Handler) makeFanoutRequest(m buses.Message, sub duckv1alpha1.ChannelSubscriberSpec) error {
 	return f.dispatcher.DispatchMessage(&m, sub.CallableDomain, sub.SinkableDomain, buses.DispatchDefaults{})
-}
-
-// response is used to capture the statusCode returned by the messageReceiver.
-type response struct {
-	statusCode int
-}
-
-var _ http.ResponseWriter = &response{}
-
-func (*response) Header() http.Header {
-	return http.Header{}
-}
-
-func (*response) Write(b []byte) (int, error) {
-	return len(b), nil
-}
-
-func (r *response) WriteHeader(statusCode int) {
-	r.statusCode = statusCode
-}
-
-type messageStorage struct {
-	messagesLock sync.Mutex
-	messages     map[string]*buses.Message
-}
-
-func (ms *messageStorage) Put(m *buses.Message) {
-	key := m.Headers[uniqueFanoutHeader]
-
-	ms.messagesLock.Lock()
-	defer ms.messagesLock.Unlock()
-
-	ms.messages[key] = m
-}
-
-func (ms *messageStorage) pull(key string) (*buses.Message, error) {
-	ms.messagesLock.Lock()
-	defer ms.messagesLock.Unlock()
-
-	if m, ok := ms.messages[key]; ok {
-		delete(ms.messages, key)
-		return m, nil
-	} else {
-		return nil, fmt.Errorf("could not find message: %v", key)
-	}
-}
-
-func addTrackingHeader(r *http.Request) string {
-	// Use two random 63 bit ints, as a poor approximation of a UUID.
-	key := fmt.Sprintf("%X-%X", rand.Int63(), rand.Int63())
-	r.Header.Set(uniqueFanoutHeader, key)
-	return key
-}
-
-func removeTrackingHeader(m *buses.Message) {
-	delete(m.Headers, uniqueFanoutHeader)
 }

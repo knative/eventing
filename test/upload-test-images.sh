@@ -27,8 +27,8 @@ while read -r IMAGE || [[ -n "$IMAGE" ]]; do
         ko publish -P $IMAGE
         if [ -n "$DOCKER_TAG" ]; then
             IMAGE=$KO_DOCKER_REPO/$IMAGE
-            DIGEST=$(gcloud container images list-tags --format='get(digest)' $IMAGE)
-            echo "Tagging $IMAGE:$DIGEST with $DOCKER_TAG"
+            DIGEST=$(gcloud container images list-tags --filter="tags:latest" --format='get(digest)' $IMAGE)
+            echo "Tagging $IMAGE@$DIGEST with $DOCKER_TAG"
             gcloud -q container images add-tag $IMAGE@$DIGEST $IMAGE:$DOCKER_TAG
         fi
     fi
