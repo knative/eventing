@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"testing"
+
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/system"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
@@ -32,7 +34,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"testing"
 
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
 )

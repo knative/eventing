@@ -18,6 +18,7 @@ package clusterprovisioner
 
 import (
 	"context"
+
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/controller"
 	"github.com/knative/eventing/pkg/system"
