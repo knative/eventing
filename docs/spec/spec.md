@@ -269,12 +269,11 @@ non-controlling OwnerReference on the EventType resources it knows about.
 
 ### ProvisionerReference
 
-| Field                | Type            | Description | Limitations                   |
-| -------------------- | --------------- | ----------- | ----------------------------- |
-| ref<sup>1</sup>      | ObjectReference |             |                               |
-| selector<sup>1</sup> | LabelSelector   |             | Must match only one resource. |
+| Field | Type            | Description | Limitations |
+| ----- | --------------- | ----------- | ----------- |
+| ref\* | ObjectReference |             |             |
 
-1: One of (name, selector), Required.
+\*: Required
 
 ### EndpointSpec
 
