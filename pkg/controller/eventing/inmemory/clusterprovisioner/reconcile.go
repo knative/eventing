@@ -89,8 +89,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		// regardless of the error.
 	}
 
-	updateStatusErr := r.updateClusterProvisionerStatus(ctx, cp)
-	if updateStatusErr != nil {
+	if updateStatusErr := r.updateClusterProvisionerStatus(ctx, cp); updateStatusErr != nil {
 		logger.Info("Error updating ClusterProvisioner Status", zap.Error(updateStatusErr))
 		return reconcile.Result{}, updateStatusErr
 	}
@@ -124,8 +123,7 @@ func (r *reconciler) reconcile(ctx context.Context, cp *eventingv1alpha1.Cluster
 		return nil
 	}
 
-	err := r.createDispatcherService(ctx, cp)
-	if err != nil {
+	if err := r.createDispatcherService(ctx, cp); err != nil {
 		logger.Info("Error creating the ClusterProvisioner's K8s Service", zap.Error(err))
 		return err
 	}
@@ -171,8 +169,7 @@ func (r *reconciler) setStatusReady(cp *eventingv1alpha1.ClusterProvisioner) {
 
 func (r *reconciler) updateClusterProvisionerStatus(ctx context.Context, u *eventingv1alpha1.ClusterProvisioner) error {
 	o := &eventingv1alpha1.ClusterProvisioner{}
-	err := r.client.Get(ctx, client.ObjectKey{Namespace: u.Namespace, Name: u.Name}, o)
-	if err != nil {
+	if err := r.client.Get(ctx, client.ObjectKey{Namespace: u.Namespace, Name: u.Name}, o); err != nil {
 		r.logger.Info("Error getting ClusterProvisioner for status update", zap.Error(err), zap.Any("updatedClusterProvisioner", u))
 		return err
 	}

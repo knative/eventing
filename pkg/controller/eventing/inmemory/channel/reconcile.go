@@ -98,8 +98,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		// regardless of the error.
 	}
 
-	updateStatusErr := r.updateChannel(ctx, c)
-	if updateStatusErr != nil {
+	if updateStatusErr := r.updateChannel(ctx, c); updateStatusErr != nil {
 		logger.Info("Error updating Channel Status", zap.Error(updateStatusErr))
 		return reconcile.Result{}, updateStatusErr
 	}
@@ -125,8 +124,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	// 3. The configuration of all Channel subscriptions.
 
 	// We always need to sync the Channel config, so do it first.
-	err := r.syncChannelConfig(ctx)
-	if err != nil {
+	if err := r.syncChannelConfig(ctx); err != nil {
 		logger.Info("Error updating syncing the Channel config", zap.Error(err))
 		return err
 	}
@@ -141,15 +139,14 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	r.addFinalizer(c)
 	r.makeSubscribable(c)
 
-	svc, err := r.createK8sService(ctx, c)
-	if err != nil {
+	if svc, err := r.createK8sService(ctx, c); err != nil {
 		logger.Info("Error creating the Channel's K8s Service", zap.Error(err))
 		return err
+	} else {
+		r.makeSinkable(c, svc)
 	}
-	r.makeSinkable(c, svc)
 
-	err = r.createVirtualService(ctx, c)
-	if err != nil {
+	if err := r.createVirtualService(ctx, c); err != nil {
 		logger.Info("Error creating the Virtual Service for the Channel", zap.Error(err))
 		return err
 	}
@@ -334,10 +331,10 @@ func (r *reconciler) setStatusReady(c *eventingv1alpha1.Channel) {
 		},
 	}
 }
+
 func (r *reconciler) updateChannel(ctx context.Context, u *eventingv1alpha1.Channel) error {
 	o := &eventingv1alpha1.Channel{}
-	err := r.client.Get(ctx, client.ObjectKey{Namespace: u.Namespace, Name: u.Name}, o)
-	if err != nil {
+	if err := r.client.Get(ctx, client.ObjectKey{Namespace: u.Namespace, Name: u.Name}, o); err != nil {
 		r.logger.Info("Error getting Channel for status update", zap.Error(err), zap.Any("updatedChannel", u))
 		return err
 	}
@@ -441,8 +438,7 @@ func (r *reconciler) listAllChannels(ctx context.Context) ([]eventingv1alpha1.Ch
 	}
 	for {
 		cl := &eventingv1alpha1.ChannelList{}
-		err := r.client.List(ctx, opts, cl)
-		if err != nil {
+		if err := r.client.List(ctx, opts, cl); err != nil {
 			return nil, err
 		}
 
