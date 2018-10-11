@@ -9,9 +9,7 @@ backing implementations (much like the Kubernetes Ingress resource).
 - A **Subscription** describes the transformation of an event and optional
   forwarding of a returned event.
 
-- A **Source** allows an incoming events from an external system to be
-  _Subscribable_. A _Subscription_ is used to connect these events to
-  subsequent processing steps.
+- A **Source** emits incoming events to a _Channel_.
 
 - A **Channel** provides event persistance and fanout of events from a
   well-known input address to multiple outputs described by _Subscriptions_.
@@ -33,7 +31,6 @@ eventing API defines several resources that can be reduced down to a well
 understood contracts. These eventing resource interfaces may be fulfilled by
 other Kubernetes objects and then composed in the same way as the concreate
 objects. The interfaces are ([Sinkable](interfaces.md#sinkable),
-[Subscribable](interfaces.md#subscribable),
 [Channelable](interfaces.md#channelable),
 [Targetable](interfaces.md#targetable)). For more details, see
 [Interface Contracts](interfaces.md).
@@ -46,9 +43,9 @@ _Channel_) through transformations (such as a Knative Service which processes
 CloudEvents over HTTP). A _Subscription_ controller resolves the addresses of
 transformations (`call`) and destination storage (`result`) through the
 _Targetable_ and _Sinkable_ interface contracts, and writes the resolved
-addresses to the _Subscribable_ `from` resource. _Subscriptions_ do not need to
-specify both a transformation and a storage destination, but at least one must
-be provided.
+addresses to the _Channel_ in the `from` reference. _Subscriptions_ do not
+need to specify both a transformation and a storage destination, but at least
+one must be provided.
 
 All event delivery linkage from a **Subscription** is 1:1 – only a single
 `from`, `call`, and `result` may be provided.
@@ -60,11 +57,11 @@ For more details, see [Kind: Subscription](spec.md#kind-subscription).
 **Source** represents incoming events from an external system, such as object
 creation events in a specific storage bucket, database updates in a particular
 table, or Kubernetes resource state changes. Because a _Source_ represents an
-external system, it only produces events (and is therefore _Subscribable_ by
-_Subscriptions_). _Source_ may include parameters such as specific resource
-names, event types, or credentials which should be used to establish the
-connection to the external system. The set of allowed configuration parameters
-is described by the _Provisioner_ which is referenced by the _Source_.
+external system, it only emits events. _Source_ may include parameters such as
+specific resource names, event types, or credentials which should be used to
+establish the connection to the external system. The set of allowed
+configuration parameters is described by the _Provisioner_ which is referenced
+by the _Source_.
 
 Event selection on a _Source_ is 1:N – a single _Source_ may fan out to
 multiple _Subscriptions_.

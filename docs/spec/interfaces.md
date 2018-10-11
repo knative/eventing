@@ -6,27 +6,6 @@
 
 ---
 
-## Subscribable
-
-A **Subscribable** resource will emit events that one or more _Subscription_
-can direct to their configured destination.
-
-### Control Plane
-
-A **Subscribable** resource may be referenced in the _from_ field of a
-_Subscription_. The _Subscribable_ resource MUST expose a
-_status.subscribable.channelable_ field (an _ObjectReference_). The resource
-referenced in the _status.subscribable.channelable_ field MUST be a
-_Channelable_ resource; the field MAY refer back to this _Subscribable_ as a
-self referenced resource.
-
-### Data Plane
-
-A **Subscribable** resource produces or forwards events via its
-_status.subscribable.channelable_ resource.
-
----
-
 ## Channelable
 
 A **Channelable** resource contains a list of subscribers and is responsible
