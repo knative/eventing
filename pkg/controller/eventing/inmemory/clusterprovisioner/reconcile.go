@@ -37,7 +37,11 @@ import (
 )
 
 const (
+	// The name of the in-memory channel ClusterProvisioner.
 	Name = "in-memory-channel"
+
+	// The name of the Channel resource in eventing.knative.dev/v1alpha1.
+	channel = "Channel"
 )
 
 type reconciler struct {
@@ -76,7 +80,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	// Does this Controller control this ClusterProvisioner?
-	if !shouldReconcile(cp.Namespace, cp.Name) {
+	if !shouldReconcile(cp.Namespace, cp.Name, cp.Spec.Reconciles.Kind) {
 		logger.Info("Not reconciling ClusterProvisioner, it is not controlled by this Controller", zap.String("APIVersion", cp.APIVersion), zap.String("Kind", cp.Kind), zap.String("Namespace", cp.Namespace), zap.String("name", cp.Name))
 		return reconcile.Result{}, nil
 	}
@@ -97,17 +101,20 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	return reconcile.Result{}, err
 }
 
-func IsControlled(ref *eventingv1alpha1.ProvisionerReference) bool {
+// IsControlled determines if the in-memory Channel Controller should control (and therefore
+// reconcile) a given object, based on that object's ClusterProvisioner reference. kind is the kind
+// of that object.
+func IsControlled(ref *eventingv1alpha1.ProvisionerReference, kind string) bool {
 	if ref != nil && ref.Ref != nil {
-		return shouldReconcile(ref.Ref.Namespace, ref.Ref.Name)
+		return shouldReconcile(ref.Ref.Namespace, ref.Ref.Name, kind)
 	}
 	return false
 }
 
 // shouldReconcile determines if this Controller should control (and therefore reconcile) a given
 // ClusterProvisioner. This Controller only handles in-memory channels.
-func shouldReconcile(namespace, name string) bool {
-	return namespace == "" && name == Name
+func shouldReconcile(namespace, name, kind string) bool {
+	return namespace == "" && name == Name && kind == channel
 }
 
 func (r *reconciler) reconcile(ctx context.Context, cp *eventingv1alpha1.ClusterProvisioner) error {

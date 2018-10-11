@@ -76,16 +76,19 @@ func TestInjectClient(t *testing.T) {
 func TestIsControlled(t *testing.T) {
 	testCases := map[string]struct {
 		ref          *eventingv1alpha1.ProvisionerReference
+		kind         string
 		isControlled bool
 	}{
 		"nil": {
 			ref:          nil,
+			kind:         "Channel",
 			isControlled: false,
 		},
 		"ref nil": {
 			ref: &eventingv1alpha1.ProvisionerReference{
 				Ref: nil,
 			},
+			kind:         "Channel",
 			isControlled: false,
 		},
 		"wrong namespace": {
@@ -95,6 +98,7 @@ func TestIsControlled(t *testing.T) {
 					Name:      Name,
 				},
 			},
+			kind:         "Channel",
 			isControlled: false,
 		},
 		"wrong name": {
@@ -103,6 +107,16 @@ func TestIsControlled(t *testing.T) {
 					Name: "other-name",
 				},
 			},
+			kind:         "Channel",
+			isControlled: false,
+		},
+		"wrong kind": {
+			ref: &eventingv1alpha1.ProvisionerReference{
+				Ref: &corev1.ObjectReference{
+					Name: Name,
+				},
+			},
+			kind:         "Source",
 			isControlled: false,
 		},
 		"is controlled": {
@@ -111,12 +125,13 @@ func TestIsControlled(t *testing.T) {
 					Name: Name,
 				},
 			},
+			kind:         "Channel",
 			isControlled: true,
 		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			isControlled := IsControlled(tc.ref)
+			isControlled := IsControlled(tc.ref, tc.kind)
 			if isControlled != tc.isControlled {
 				t.Errorf("Expected: %v. Actual: %v", tc.isControlled, isControlled)
 			}
@@ -260,6 +275,12 @@ func makeClusterProvisioner() *eventingv1alpha1.ClusterProvisioner {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: Name,
 			UID:  cpUid,
+		},
+		Spec: eventingv1alpha1.ClusterProvisionerSpec{
+			Reconciles: metav1.GroupKind{
+				Group: "eventing.knative.dev/v1alpha1",
+				Kind:  "Channel",
+			},
 		},
 	}
 }

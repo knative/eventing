@@ -107,6 +107,9 @@ var (
 				Namespace: cNamespace,
 				Name:      "c1",
 			},
+			TypeMeta: metav1.TypeMeta{
+				Kind: "Channel",
+			},
 			Spec: eventingv1alpha1.ChannelSpec{
 				Provisioner: &eventingv1alpha1.ProvisionerReference{
 					Ref: &corev1.ObjectReference{
@@ -134,6 +137,9 @@ var (
 				Namespace: cNamespace,
 				Name:      "c2",
 			},
+			TypeMeta: metav1.TypeMeta{
+				Kind: "Channel",
+			},
 			Spec: eventingv1alpha1.ChannelSpec{
 				Provisioner: &eventingv1alpha1.ProvisionerReference{
 					Ref: &corev1.ObjectReference{
@@ -153,6 +159,9 @@ var (
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: cNamespace,
 				Name:      "c3",
+			},
+			TypeMeta: metav1.TypeMeta{
+				Kind: "Channel",
 			},
 			Spec: eventingv1alpha1.ChannelSpec{
 				Provisioner: &eventingv1alpha1.ProvisionerReference{
