@@ -62,9 +62,9 @@ creation events in a specific storage bucket, database updates in a particular
 table, or Kubernetes resource state changes. Because a _Source_ represents an
 external system, it only produces events (and is therefore _Subscribable_ by
 _Subscriptions_). _Source_ may include parameters such as specific resource
-names, event types, or credentials which should be used to establish the
-connection to the external system. The set of allowed configuration parameters
-is described by the _Provisioner_ which is referenced by the _Source_.
+names, or credentials which should be used to establish the connection to the
+external system. The set of allowed configuration parameters is described by
+the _Provisioner_ which is referenced by the _Source_.
 
 Event selection on a _Source_ is 1:N – a single _Source_ may fan out to
 multiple _Subscriptions_.
