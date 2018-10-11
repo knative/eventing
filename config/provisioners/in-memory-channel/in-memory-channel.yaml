@@ -179,3 +179,5 @@ spec:
           args:
             - --sidecar_port=8080
             - --config_map_noticer=watcher
+            - --config_map_namespace=knative-eventing
+            - --config_map_name=in-memory-channel-dispatcher-config-map

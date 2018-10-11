@@ -36,11 +36,11 @@ import (
 )
 
 const (
-	// The name of the in-memory channel ClusterProvisioner.
+	// Name is the name of the in-memory channel ClusterProvisioner.
 	Name = "in-memory-channel"
 
-	// The name of the Channel resource in eventing.knative.dev/v1alpha1.
-	channel = "Channel"
+	// Channel is the name of the Channel resource in eventing.knative.dev/v1alpha1.
+	Channel = "Channel"
 )
 
 type reconciler struct {
@@ -116,7 +116,7 @@ func IsControlled(ref *eventingv1alpha1.ProvisionerReference, kind string) bool 
 // shouldReconcile determines if this Controller should control (and therefore reconcile) a given
 // ClusterProvisioner. This Controller only handles in-memory channels.
 func shouldReconcile(namespace, name, kind string) bool {
-	return namespace == "" && name == Name && kind == channel
+	return namespace == "" && name == Name && kind == Channel
 }
 
 func (r *reconciler) reconcile(ctx context.Context, cp *eventingv1alpha1.ClusterProvisioner) error {
