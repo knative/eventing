@@ -20,6 +20,7 @@ import (
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/webhook"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -75,7 +76,7 @@ type ChannelSpec struct {
 	Channelable *duckv1alpha1.Channelable `json:"channelable,omitempty"`
 }
 
-var chanCondSet = duckv1alpha1.NewLivingConditionSet(ChannelConditionProvisioned)
+var chanCondSet = duckv1alpha1.NewLivingConditionSet(ChannelConditionProvisioned, ChannelConditionSinkable, ChannelConditionSubscribable)
 
 // ChannelStatus represents the current state of a Channel.
 type ChannelStatus struct {
@@ -110,6 +111,14 @@ const (
 	// ChannelConditionProvisioned has status True when the Channel's backing
 	// resources have been provisioned.
 	ChannelConditionProvisioned duckv1alpha1.ConditionType = "Provisioned"
+
+	// ChannelConditionSinkable has status true when this Channel meets the Sinkable contract and
+	// has a non-empty domainInternal.
+	ChannelConditionSinkable duckv1alpha1.ConditionType = "Sinkable"
+
+	// ChannelConditionSubscribable has status true when this Channel meets the Subscribable
+	// contract and has a non-empty Channelable object reference.
+	ChannelConditionSubscribable duckv1alpha1.ConditionType = "Subscribable"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
@@ -130,6 +139,36 @@ func (cs *ChannelStatus) InitializeConditions() {
 // MarkProvisioned sets ChannelConditionProvisioned condition to True state.
 func (cs *ChannelStatus) MarkProvisioned() {
 	chanCondSet.Manage(cs).MarkTrue(ChannelConditionProvisioned)
+}
+
+// SetSubscribable makes this Channel Subscribable, by having it point at itself. The 'name' and
+// 'namespace' should be the name and namespace of the Channel this ChannelStatus is on. It also
+// sets the ChannelConditionSubscribable to true.
+func (cs *ChannelStatus) SetSubscribable(namespace, name string) {
+	if namespace != "" || name != "" {
+		cs.Subscribable.Channelable = corev1.ObjectReference{
+			Kind:       "Channel",
+			APIVersion: SchemeGroupVersion.String(),
+			Namespace:  namespace,
+			Name:       name,
+		}
+		chanCondSet.Manage(cs).MarkTrue(ChannelConditionSubscribable)
+	} else {
+		cs.Subscribable.Channelable = corev1.ObjectReference{}
+		chanCondSet.Manage(cs).MarkFalse(ChannelConditionSubscribable, "notSubscribable", "not Subscribable")
+	}
+
+}
+
+// SetSinkable makes this Channel sinkable by setting the domainInternal. It also sets the
+// ChannelConditionSinkable to true.
+func (cs *ChannelStatus) SetSinkable(domainInternal string) {
+	cs.Sinkable.DomainInternal = domainInternal
+	if domainInternal != "" {
+		chanCondSet.Manage(cs).MarkTrue(ChannelConditionSinkable)
+	} else {
+		chanCondSet.Manage(cs).MarkFalse(ChannelConditionSinkable, "emptyDomainInternal", "domainInternal is the empty string")
+	}
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

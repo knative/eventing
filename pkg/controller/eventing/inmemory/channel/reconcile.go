@@ -26,7 +26,6 @@ import (
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	"github.com/knative/eventing/pkg/system"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -91,6 +90,9 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 	logger.Info("Reconciling Channel")
 
+	// Modify a copy, not the original.
+	c = c.DeepCopy()
+
 	err = r.reconcile(ctx, c)
 	if err != nil {
 		logger.Info("Error reconciling Channel", zap.Error(err))
@@ -118,6 +120,8 @@ func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) error {
 	logger := r.logger.With(zap.Any("channel", c))
 
+	c.Status.InitializeConditions()
+
 	// We are syncing three things:
 	// 1. The K8s Service to talk to this Channel.
 	// 2. The Istio VirtualService to talk to this Channel.
@@ -137,13 +141,13 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	}
 
 	r.addFinalizer(c)
-	r.makeSubscribable(c)
+	c.Status.SetSubscribable(c.Namespace, c.Name)
 
 	if svc, err := r.createK8sService(ctx, c); err != nil {
 		logger.Info("Error creating the Channel's K8s Service", zap.Error(err))
 		return err
 	} else {
-		r.makeSinkable(c, svc)
+		c.Status.SetSinkable(controller.ServiceHostName(svc.Name, svc.Namespace))
 	}
 
 	if err := r.createVirtualService(ctx, c); err != nil {
@@ -151,24 +155,8 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		return err
 	}
 
-	r.setStatusReady(c)
+	c.Status.MarkProvisioned()
 	return nil
-}
-
-// makeSubscribable alters the Channel to conform to the Knative Eventing Subscribable interface.
-func (r *reconciler) makeSubscribable(c *eventingv1alpha1.Channel) {
-	// Point at itself.
-	c.Status.Subscribable.Channelable = corev1.ObjectReference{
-		Kind:       "Channel",
-		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-		Namespace:  c.Namespace,
-		Name:       c.Name,
-	}
-}
-
-// makeSinkable alters the Channel to conform to the Knative Eventing Sinkable interface.
-func (r *reconciler) makeSinkable(c *eventingv1alpha1.Channel, svc *corev1.Service) {
-	c.Status.Sinkable.DomainInternal = controller.ServiceHostName(svc.Name, svc.Namespace)
 }
 
 func (r *reconciler) addFinalizer(c *eventingv1alpha1.Channel) {
@@ -319,15 +307,6 @@ func newVirtualService(channel *eventingv1alpha1.Channel) *istiov1alpha3.Virtual
 					}},
 				}},
 			},
-		},
-	}
-}
-
-func (r *reconciler) setStatusReady(c *eventingv1alpha1.Channel) {
-	c.Status.Conditions = []duckv1alpha1.Condition{
-		{
-			Type:   duckv1alpha1.ConditionReady,
-			Status: corev1.ConditionTrue,
 		},
 	}
 }

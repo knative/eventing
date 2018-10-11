@@ -262,6 +262,7 @@ func TestReconcile(t *testing.T) {
 		if tc.ReconcileKey == "" {
 			tc.ReconcileKey = fmt.Sprintf("/%s", Name)
 		}
+		tc.IgnoreTimes = true
 		t.Run(tc.Name, tc.Runner(t, r, c))
 	}
 }

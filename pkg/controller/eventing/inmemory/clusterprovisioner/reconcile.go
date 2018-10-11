@@ -22,7 +22,6 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/controller"
 	"github.com/knative/eventing/pkg/system"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -86,6 +85,9 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 	logger.Info("Reconciling ClusterProvisioner.")
 
+	// Modify a copy of this object, rather than the original.
+	cp = cp.DeepCopy()
+
 	err = r.reconcile(ctx, cp)
 	if err != nil {
 		logger.Info("Error reconciling ClusterProvisioner", zap.Error(err))
@@ -135,7 +137,7 @@ func (r *reconciler) reconcile(ctx context.Context, cp *eventingv1alpha1.Cluster
 		return err
 	}
 
-	r.setStatusReady(cp)
+	cp.Status.MarkReady()
 	return nil
 }
 
@@ -163,15 +165,6 @@ func (r *reconciler) createDispatcherService(ctx context.Context, cp *eventingv1
 		r.logger.Warn("ClusterProvisioner's K8s Service is not owned by the ClusterProvisioner", zap.Any("clusterProvisioner", cp), zap.Any("service", svc))
 	}
 	return nil
-}
-
-func (r *reconciler) setStatusReady(cp *eventingv1alpha1.ClusterProvisioner) {
-	cp.Status.Conditions = []duckv1alpha1.Condition{
-		{
-			Type:   duckv1alpha1.ConditionReady,
-			Status: corev1.ConditionTrue,
-		},
-	}
 }
 
 func (r *reconciler) updateClusterProvisionerStatus(ctx context.Context, u *eventingv1alpha1.ClusterProvisioner) error {

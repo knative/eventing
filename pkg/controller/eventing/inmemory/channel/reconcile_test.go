@@ -455,12 +455,13 @@ func TestReconcile(t *testing.T) {
 		if tc.ReconcileKey == "" {
 			tc.ReconcileKey = fmt.Sprintf("/%s", cName)
 		}
+		tc.IgnoreTimes = true
 		t.Run(tc.Name, tc.Runner(t, r, c))
 	}
 }
 
 func makeChannel() *eventingv1alpha1.Channel {
-	return &eventingv1alpha1.Channel{
+	c := &eventingv1alpha1.Channel{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 			Kind:       "Channel",
@@ -478,34 +479,26 @@ func makeChannel() *eventingv1alpha1.Channel {
 			},
 		},
 	}
+	c.Status.InitializeConditions()
+	return c
 }
 
 func makeChannelWithFinalizerAndSubscribable() *eventingv1alpha1.Channel {
 	c := makeChannelWithFinalizer()
-	c.Status.Subscribable.Channelable = corev1.ObjectReference{
-		Kind:       "Channel",
-		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-		Namespace:  c.Namespace,
-		Name:       c.Name,
-	}
+	c.Status.SetSubscribable(c.Namespace, c.Name)
 	return c
 }
 
 func makeChannelWithFinalizerAndSubscribableAndSinkable() *eventingv1alpha1.Channel {
 	c := makeChannelWithFinalizerAndSubscribable()
-	c.Status.Sinkable.DomainInternal = fmt.Sprintf("%s-channel.%s.svc.cluster.local", cName, cNamespace)
+	c.Status.SetSinkable(fmt.Sprintf("%s-channel.%s.svc.cluster.local", c.Name, c.Namespace))
 	return c
 }
 
 func makeReadyChannel() *eventingv1alpha1.Channel {
 	// Ready channels have the finalizer and are Subscribable and Sinkable.
 	c := makeChannelWithFinalizerAndSubscribableAndSinkable()
-	c.Status.Conditions = []duckv1alpha1.Condition{
-		{
-			Type:   duckv1alpha1.ConditionReady,
-			Status: corev1.ConditionTrue,
-		},
-	}
+	c.Status.MarkProvisioned()
 	return c
 }
 
