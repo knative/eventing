@@ -21,7 +21,7 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/controller"
 	cpcontroller "github.com/knative/eventing/pkg/controller/eventing/inmemory/clusterprovisioner"
-	multichannelfanoutparse "github.com/knative/eventing/pkg/sidecar/configmap/parse"
+	"github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	"github.com/knative/eventing/pkg/system"
@@ -370,7 +370,7 @@ func (r *reconciler) syncChannelConfig(ctx context.Context) error {
 func (r *reconciler) writeConfigMap(ctx context.Context, config *multichannelfanout.Config) error {
 	logger := r.logger.With(zap.Any("configMap", r.configMapKey))
 
-	updated, err := multichannelfanoutparse.SerializeConfig(*config)
+	updated, err := configmap.SerializeConfig(*config)
 	if err != nil {
 		r.logger.Error("Unable to serialize config", zap.Error(err), zap.Any("config", config))
 		return err
@@ -387,29 +387,22 @@ func (r *reconciler) writeConfigMap(ctx context.Context, config *multichannelfan
 		return err
 	}
 
-	cur := cm.Data[multichannelfanoutparse.MultiChannelFanoutConfigKey]
-	if equality.Semantic.DeepEqual(cur, updated) {
+	if equality.Semantic.DeepEqual(cm.Data, updated) {
 		// Nothing to update.
 		return nil
 	}
 
-	if cm.Data == nil {
-		cm.Data = map[string]string{}
-	}
-
-	cm.Data[multichannelfanoutparse.MultiChannelFanoutConfigKey] = updated
+	cm.Data = updated
 	return r.client.Update(ctx, cm)
 }
 
-func (r *reconciler) createNewConfigMap(config string) *corev1.ConfigMap {
+func (r *reconciler) createNewConfigMap(data map[string]string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.configMapKey.Namespace,
 			Name:      r.configMapKey.Name,
 		},
-		Data: map[string]string{
-			multichannelfanoutparse.MultiChannelFanoutConfigKey: config,
-		},
+		Data: data,
 	}
 }
 

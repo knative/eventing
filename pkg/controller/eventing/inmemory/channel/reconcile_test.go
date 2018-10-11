@@ -24,7 +24,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
-	"github.com/knative/eventing/pkg/sidecar/configmap/parse"
+	"github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
@@ -557,7 +557,7 @@ func makeConfigMap() *corev1.ConfigMap {
 func makeConfigMapWithVerifyConfigMapData() *corev1.ConfigMap {
 	cm := makeConfigMap()
 	cm.Data = map[string]string{}
-	cm.Data[parse.MultiChannelFanoutConfigKey] = insertedByVerifyConfigMapData
+	cm.Data[configmap.MultiChannelFanoutConfigKey] = insertedByVerifyConfigMapData
 	return cm
 }
 
@@ -798,7 +798,7 @@ func verifyConfigMapData() []controllertesting.MockUpdate {
 	return []controllertesting.MockUpdate{
 		func(innerClient client.Client, ctx context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
 			if cm, ok := obj.(*corev1.ConfigMap); ok {
-				s := cm.Data[parse.MultiChannelFanoutConfigKey]
+				s := cm.Data[configmap.MultiChannelFanoutConfigKey]
 				c := multichannelfanout.Config{}
 				err := json.Unmarshal([]byte(s), &c)
 				if err != nil {
@@ -811,7 +811,7 @@ func verifyConfigMapData() []controllertesting.MockUpdate {
 				}
 				// Verified it is correct, now so that we can verify this actually occurred, swap
 				// out the data with a known value for later comparison.
-				cm.Data[parse.MultiChannelFanoutConfigKey] = insertedByVerifyConfigMapData
+				cm.Data[configmap.MultiChannelFanoutConfigKey] = insertedByVerifyConfigMapData
 				return controllertesting.Handled, innerClient.Update(ctx, obj)
 			}
 			return controllertesting.Unhandled, nil
