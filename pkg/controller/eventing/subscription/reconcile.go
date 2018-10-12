@@ -19,6 +19,7 @@ package subscription
 import (
 	"context"
 	"fmt"
+
 	"github.com/golang/glog"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/controller"
@@ -96,8 +97,8 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 		return fmt.Errorf("from is not subscribable %s %s/%s", subscription.Spec.From.Kind, subscription.Namespace, subscription.Spec.From.Name)
 	}
 
+	subscription.Status.PhysicalSubscription.From = from.Status.Subscribable.Channelable
 	glog.Infof("Resolved from subscribable to: %+v", from.Status.Subscribable.Channelable)
-	r.savePhysicalFrom(subscription, from.Status.Subscribable.Channelable)
 
 	callDomain := ""
 	if subscription.Spec.Call != nil {
@@ -109,8 +110,8 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 		if callDomain == "" {
 			return fmt.Errorf("could not get domain from call (is it not targetable?)")
 		}
+		subscription.Status.PhysicalSubscription.CallDomain = callDomain
 		glog.Infof("Resolved call to: %q", callDomain)
-		r.saveCallDomain(subscription, callDomain)
 	}
 
 	resultDomain := ""
@@ -124,8 +125,8 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 			glog.Warningf("Failed to resolve result %v to actual domain", *subscription.Spec.Result)
 			return err
 		}
+		subscription.Status.PhysicalSubscription.ResultDomain = resultDomain
 		glog.Infof("Resolved result to: %q", resultDomain)
-		r.saveResultDomain(subscription, resultDomain)
 	}
 
 	// Everything that was supposed to be resolved was, so flip the status bit on that.
@@ -160,18 +161,6 @@ func (r *reconciler) updateStatus(subscription *v1alpha1.Subscription) (*v1alpha
 		return nil, err
 	}
 	return newSubscription, nil
-}
-
-func (r *reconciler) savePhysicalFrom(sub *v1alpha1.Subscription, physicalFrom corev1.ObjectReference) {
-	sub.Status.PhysicalSubscription.From = physicalFrom
-}
-
-func (r *reconciler) saveCallDomain(sub *v1alpha1.Subscription, callDomain string) {
-	sub.Status.PhysicalSubscription.CallDomain = callDomain
-}
-
-func (r *reconciler) saveResultDomain(sub *v1alpha1.Subscription, resultDomain string) {
-	sub.Status.PhysicalSubscription.ResultDomain = resultDomain
 }
 
 // resolveCall resolves the Spec.Call object. If it's an ObjectReference will resolve the object
@@ -265,7 +254,7 @@ func (r *reconciler) fetchObjectReference(namespace string, ref *corev1.ObjectRe
 func (r *reconciler) syncPhysicalFromChannel(sub *v1alpha1.Subscription) error {
 	glog.Infof("Reconciling Physical From Channel: %+v", sub)
 
-	subs, err := r.listAllChannelsWithPhysicalFrom(&sub.Status.PhysicalSubscription.From)
+	subs, err := r.listAllSubscriptionsWithPhysicalFrom(&sub.Status.PhysicalSubscription.From)
 	if err != nil {
 		glog.Infof("Unable to list all channels with physical from: %+v", err)
 		return err
@@ -276,7 +265,7 @@ func (r *reconciler) syncPhysicalFromChannel(sub *v1alpha1.Subscription) error {
 	return r.patchPhysicalFrom(sub.Namespace, sub.Status.PhysicalSubscription.From, channelable)
 }
 
-func (r *reconciler) listAllChannelsWithPhysicalFrom(physicalFrom *corev1.ObjectReference) ([]v1alpha1.Subscription, error) {
+func (r *reconciler) listAllSubscriptionsWithPhysicalFrom(physicalFrom *corev1.ObjectReference) ([]v1alpha1.Subscription, error) {
 	subs := make([]v1alpha1.Subscription, 0)
 	opts := &client.ListOptions{
 		// TODO this is here because the fake client needs it. Remove this when it's no longer
@@ -296,7 +285,7 @@ func (r *reconciler) listAllChannelsWithPhysicalFrom(physicalFrom *corev1.Object
 			return nil, err
 		}
 		for _, s := range sl.Items {
-			if r.hasPhysicalFrom(physicalFrom, &s) {
+			if *physicalFrom == s.Status.PhysicalSubscription.From {
 				subs = append(subs, s)
 			}
 		}
@@ -306,10 +295,6 @@ func (r *reconciler) listAllChannelsWithPhysicalFrom(physicalFrom *corev1.Object
 			return subs, nil
 		}
 	}
-}
-
-func (r *reconciler) hasPhysicalFrom(physicalFrom *corev1.ObjectReference, sub *v1alpha1.Subscription) bool {
-	return *physicalFrom == sub.Status.PhysicalSubscription.From
 }
 
 func (r *reconciler) createChannelable(subs []v1alpha1.Subscription) *duckv1alpha1.Channelable {
