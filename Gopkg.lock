@@ -72,6 +72,14 @@
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:1b91ae0dc69a41d4c2ed23ea5cffb721ea63f5037ca4b81e6d6771fbb8f45129"
+  name = "github.com/fsnotify/fsnotify"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
+  version = "v1.4.7"
+
+[[projects]]
   digest = "1:81466b4218bf6adddac2572a30ac733a9255919bc2f470b4827a317bd4ee1756"
   name = "github.com/ghodss/yaml"
   packages = ["."]
@@ -724,7 +732,7 @@
   version = "v2.2.1"
 
 [[projects]]
-  digest = "1:5bb189391eeca2d7a48b6fc5b6121bc77aae69613ae7197bc54b5a8da2768c93"
+  digest = "1:ba83efacee6fc544aaebcc643ec8ad8d345bfa7f6cd5afb1492fb19cd994cc4a"
   name = "k8s.io/api"
   packages = [
     "admission/v1beta1",
@@ -759,8 +767,8 @@
     "storage/v1beta1",
   ]
   pruneopts = "NUT"
-  revision = "072894a440bdee3a891dea811fe42902311cd2a3"
-  version = "kubernetes-1.11.0"
+  revision = "2d6f90ab1293a1fb871cf149423ebb72aa7423aa"
+  version = "kubernetes-1.11.2"
 
 [[projects]]
   digest = "1:b9cccdbacdbdad18685fbafe0f65efd91380c2db233ee4e812cbe934fcc2ac5b"
@@ -813,10 +821,10 @@
   ]
   pruneopts = "NUT"
   revision = "103fd098999dc9c0c88536f5c9ad2e5da39373ae"
-  version = "kubernetes-1.11.0"
+  version = "kubernetes-1.11.2"
 
 [[projects]]
-  digest = "1:52e713cd6ac68d1ab506149a488466cdf0ecb1e524e970fcaef67ba21aeae9ff"
+  digest = "1:068111a18af6fd1f3fd7ad2f031de434be239ef89982b097e041c2297a0d9393"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -955,8 +963,8 @@
     "util/workqueue",
   ]
   pruneopts = "NUT"
-  revision = "7d04d0e2a0a1a4d4a1cd6baa432a2301492e4e65"
-  version = "kubernetes-1.11.0"
+  revision = "1f13a808da65775f22cbf47862c4e5898d8f4ca1"
+  version = "kubernetes-1.11.2"
 
 [[projects]]
   digest = "1:8ab487a323486c8bbbaa3b689850487fdccc6cbea8690620e083b2d230a4447e"
@@ -984,7 +992,7 @@
   ]
   pruneopts = "T"
   revision = "6702109cc68eb6fe6350b83e14407c8d7309fd1a"
-  version = "kubernetes-1.11.0"
+  version = "kubernetes-1.11.2"
 
 [[projects]]
   branch = "master"
@@ -1052,6 +1060,7 @@
     "github.com/Shopify/sarama",
     "github.com/bsm/sarama-cluster",
     "github.com/davecgh/go-spew/spew",
+    "github.com/fsnotify/fsnotify",
     "github.com/golang/glog",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
@@ -1077,6 +1086,7 @@
     "github.com/knative/test-infra",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "go.opencensus.io/trace",
+    "go.uber.org/atomic",
     "go.uber.org/zap",
     "go.uber.org/zap/zapcore",
     "golang.org/x/net/context",
@@ -1106,6 +1116,7 @@
     "k8s.io/apimachinery/pkg/util/sets/types",
     "k8s.io/apimachinery/pkg/util/validation",
     "k8s.io/apimachinery/pkg/util/wait",
+    "k8s.io/apimachinery/pkg/util/yaml",
     "k8s.io/apimachinery/pkg/watch",
     "k8s.io/client-go/discovery",
     "k8s.io/client-go/discovery/fake",

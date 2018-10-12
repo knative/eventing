@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -76,6 +77,98 @@ func TestChannelGetCondition(t *testing.T) {
 			got := test.cs.GetCondition(test.condQuery)
 			if diff := cmp.Diff(test.want, got); diff != "" {
 				t.Errorf("unexpected condition (-want, +got) = %v", diff)
+			}
+		})
+	}
+}
+
+func TestChannelInitializeConditions(t *testing.T) {
+	tests := []struct {
+		name string
+		cs   *ChannelStatus
+		want *ChannelStatus
+	}{{
+		name: "empty",
+		cs:   &ChannelStatus{},
+		want: &ChannelStatus{
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   ChannelConditionProvisioned,
+				Status: corev1.ConditionUnknown,
+			}, {
+				Type:   ChannelConditionReady,
+				Status: corev1.ConditionUnknown,
+			}},
+		},
+	}, {
+		name: "one false",
+		cs: &ChannelStatus{
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   ChannelConditionProvisioned,
+				Status: corev1.ConditionFalse,
+			}},
+		},
+		want: &ChannelStatus{
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   ChannelConditionProvisioned,
+				Status: corev1.ConditionFalse,
+			}, {
+				Type:   ChannelConditionReady,
+				Status: corev1.ConditionUnknown,
+			}},
+		},
+	}, {
+		name: "one true",
+		cs: &ChannelStatus{
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   ChannelConditionProvisioned,
+				Status: corev1.ConditionTrue,
+			}},
+		},
+		want: &ChannelStatus{
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   ChannelConditionProvisioned,
+				Status: corev1.ConditionTrue,
+			}, {
+				Type:   ChannelConditionReady,
+				Status: corev1.ConditionUnknown,
+			}}},
+	},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			test.cs.InitializeConditions()
+			ignore := cmpopts.IgnoreFields(duckv1alpha1.Condition{}, "LastTransitionTime")
+			if diff := cmp.Diff(test.want, test.cs, ignore); diff != "" {
+				t.Errorf("unexpected conditions (-want, +got) = %v", diff)
+			}
+		})
+	}
+}
+
+func TestChannelIsReady(t *testing.T) {
+	tests := []struct {
+		name            string
+		markProvisioned bool
+		wantReady       bool
+	}{{
+		name:            "all happy",
+		markProvisioned: true,
+		wantReady:       true,
+	}, {
+		name:            "one sad",
+		markProvisioned: false,
+		wantReady:       false,
+	}}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cs := &ChannelStatus{}
+			if test.markProvisioned {
+				cs.MarkProvisioned()
+			}
+			got := cs.IsReady()
+			if test.wantReady != got {
+				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
 			}
 		})
 	}

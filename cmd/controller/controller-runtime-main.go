@@ -17,12 +17,14 @@ package main
 
 import (
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
-	subscriptionsv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	flowsv1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 	"github.com/knative/eventing/pkg/controller/eventing/subscription"
 	"github.com/knative/eventing/pkg/controller/feed"
 	"github.com/knative/eventing/pkg/controller/flow"
+	"go.uber.org/zap"
+	"strings"
 
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 
@@ -42,10 +44,17 @@ type SchemeFunc func(*runtime.Scheme) error
 // ProvideFunc adds a controller to a Manager.
 type ProvideFunc func(manager.Manager) (controller.Controller, error)
 
+// ExperimentalControllers is a list of controllers that can be injected into
+// controller-runtime. When the controllers are no longer experimental they may
+// be added to the default providers list.
+var ExperimentalControllers = map[string]ProvideFunc{
+	"subscription.eventing.knative.dev": subscription.ProvideController,
+}
+
 // controllerRuntimeStart runs controllers written for controller-runtime. It's
 // intended to be called from main(). Any controllers migrated to use
 // controller-runtime should move their initialization to this function.
-func controllerRuntimeStart() error {
+func controllerRuntimeStart(logger *zap.SugaredLogger, experimental string) error {
 	logf.SetLogger(logf.ZapLogger(false))
 
 	// Setup a Manager
@@ -60,7 +69,7 @@ func controllerRuntimeStart() error {
 		feedsv1alpha1.AddToScheme,
 		flowsv1alpha1.AddToScheme,
 		istiov1alpha3.AddToScheme,
-		subscriptionsv1alpha1.AddToScheme,
+		eventingv1alpha1.AddToScheme,
 	}
 	for _, schemeFunc := range schemeFuncs {
 		schemeFunc(mrg.GetScheme())
@@ -72,8 +81,9 @@ func controllerRuntimeStart() error {
 		eventtype.ProvideController,
 		feed.ProvideController,
 		flow.ProvideController,
-		subscription.ProvideController,
 	}
+
+	providers = append(providers, getExperimentalControllers(logger, experimental)...)
 
 	for _, provider := range providers {
 		if _, err := provider(mrg); err != nil {
@@ -82,4 +92,16 @@ func controllerRuntimeStart() error {
 	}
 
 	return mrg.Start(signals.SetupSignalHandler())
+}
+
+func getExperimentalControllers(logger *zap.SugaredLogger, experimental string) []ProvideFunc {
+	var providers []ProvideFunc
+	for _, k := range strings.Split(experimental, ",") {
+		if f, ok := ExperimentalControllers[k]; !ok {
+			logger.Errorf("Failed to find a known controller for %q.", k)
+		} else {
+			providers = append(providers, f)
+		}
+	}
+	return providers
 }
