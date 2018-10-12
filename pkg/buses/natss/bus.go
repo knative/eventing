@@ -50,13 +50,11 @@ func NewNatssBusProvisioner(ref buses.BusReference, opts *buses.BusOpts) (*Natss
 		ProvisionFunc: func(channel buses.ChannelReference, parameters buses.ResolvedParameters) error {
 			bus.logger.Infof("Provision channel %q\n", channel.Name)
 			bus.logger.Info("channel=%+v; parameters=%+v", channel, parameters)
-			// TODO create a NATSS subject
 			return nil
 		},
 		UnprovisionFunc: func(channel buses.ChannelReference) error {
 			bus.logger.Infof("Unprovision channel %q\n", channel.Name)
 			bus.logger.Info("channel=%+v", channel)
-			// TODO delete a NATSS subject
 			return nil
 		},
 	}
@@ -97,7 +95,7 @@ func (b *NatssBus) Run(threadness int, stopCh <-chan struct{}, clientId string) 
 	for i:=0; i<60; i++ {
 		if natsConn, err = stanutil.Connect("knative-nats-streaming", clientId, "nats://nats-streaming.knative-eventing.svc.cluster.local:4222", b.logger); err != nil {
 			b.logger.Errorf(" Create new connection failed: %+v", err)
-			time.Sleep(time.Duration(1)*time.Second)
+			time.Sleep(1 * time.Second)
 		} else {
 			break
 		}
@@ -135,8 +133,7 @@ func (bus *NatssBus) subscribe(channel buses.ChannelReference, subscription buse
 		}
 	}
 	// subscribe to a NATSS subject
-	aw, _ := time.ParseDuration("60s")
-	if natsStreamingSub, err := (*natsConn).Subscribe(channel.Name, mcb, stan.DurableName(subscription.Name), stan.SetManualAckMode(), stan.AckWait(aw)); err != nil {
+	if natsStreamingSub, err := (*natsConn).Subscribe(channel.Name, mcb, stan.DurableName(subscription.Name), stan.SetManualAckMode(), stan.AckWait(1 * time.Minute)); err != nil {
 		bus.logger.Errorf(" Create new NATSS Subscription failed: %+v", err)
 		return err
 	} else {
@@ -157,7 +154,7 @@ func (bus *NatssBus) unsubscribe(channel buses.ChannelReference, subscription bu
 			return err
 		}
 		delete(bus.subscribers, subscription.Name)
-		bus.logger.Errorf(" Unsubscribe() successful.")
+		bus.logger.Info(" Unsubscribe() successful.")
 	}
 	return nil
 }
