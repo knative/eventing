@@ -77,8 +77,8 @@ type SubscriptionSpec struct {
 	//   - Kind
 	//   - APIVersion
 	//   - Name
-	// Currently Kind must be "Channel" and
-	// APIVersion must be "channels.knative.dev/v1alpha1"
+	// Currently Kind must be "Channel" or "Source" and
+	// APIVersion must be "eventing.knative.dev/v1alpha1"
 	//
 	// This field is immutable. We have no good answer on what happens to
 	// the events that are currently in the channel being consumed from
@@ -175,12 +175,20 @@ type SubscriptionStatus struct {
 	// In that case, this points to that resource.
 	Subscribable duckv1alpha1.Subscribable `json:"subscribable,omitempty"`
 
+	// PhysicalSubscription is the fully resolved values that this Subscription represents.
 	PhysicalSubscription SubscriptionStatusPhysicalSubscription `json:"physicalSubscription,omitEmpty"`
 }
 
+// SubscriptionStatusPhysicalSubscription represents the fully resolved values for this
+// Subscription.
 type SubscriptionStatusPhysicalSubscription struct {
+	// From is the object pointed to in status.from's Subscribable contract.
 	From corev1.ObjectReference `json:"from,omitEmpty"`
+
+	// CallDomain is the fully resolved domain for spec.callable.
 	CallDomain string `json:"callDomain,omitEmpty"`
+
+	// ResultDomain is the fully resolved domain for the spec.result.
 	ResultDomain string `json:"resultDomain,omitEmpty"`
 }
 
