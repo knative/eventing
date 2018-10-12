@@ -65,9 +65,9 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		// This is important because the copy we loaded from the informer's
 		// cache may be stale and we don't want to overwrite a prior update
 		// to status with this stale state.
-	} else if _, err := r.updateStatus(subscription); err != nil {
-		glog.Warningf("Failed to update subscription status: %v", err)
-		return reconcile.Result{}, err
+	} else if _, updateStatusErr := r.updateStatus(subscription); updateStatusErr != nil {
+		glog.Warningf("Failed to update subscription status: %v", updateStatusErr)
+		return reconcile.Result{}, updateStatusErr
 	}
 
 	// Requeue if the resource is not ready:
@@ -254,7 +254,7 @@ func (r *reconciler) fetchObjectReference(namespace string, ref *corev1.ObjectRe
 func (r *reconciler) syncPhysicalFromChannel(sub *v1alpha1.Subscription) error {
 	glog.Infof("Reconciling Physical From Channel: %+v", sub)
 
-	subs, err := r.listAllSubscriptionsWithPhysicalFrom(&sub.Status.PhysicalSubscription.From)
+	subs, err := r.listAllSubscriptionsWithPhysicalFrom(sub)
 	if err != nil {
 		glog.Infof("Unable to list all channels with physical from: %+v", err)
 		return err
@@ -265,8 +265,14 @@ func (r *reconciler) syncPhysicalFromChannel(sub *v1alpha1.Subscription) error {
 	return r.patchPhysicalFrom(sub.Namespace, sub.Status.PhysicalSubscription.From, channelable)
 }
 
-func (r *reconciler) listAllSubscriptionsWithPhysicalFrom(physicalFrom *corev1.ObjectReference) ([]v1alpha1.Subscription, error) {
+func (r *reconciler) listAllSubscriptionsWithPhysicalFrom(sub *v1alpha1.Subscription) ([]v1alpha1.Subscription, error) {
 	subs := make([]v1alpha1.Subscription, 0)
+
+	// The sub we are currently reconciling has not yet written any updated status, so when listing
+	// it won't show any updates to the Status.PhysicalSubscription. We know that we are listing
+	// for subscriptions with the same PhysicalSubscription.From, so just add this one manually.
+	subs = append(subs, *sub)
+
 	opts := &client.ListOptions{
 		// TODO this is here because the fake client needs it. Remove this when it's no longer
 		// needed.
@@ -285,7 +291,11 @@ func (r *reconciler) listAllSubscriptionsWithPhysicalFrom(physicalFrom *corev1.O
 			return nil, err
 		}
 		for _, s := range sl.Items {
-			if *physicalFrom == s.Status.PhysicalSubscription.From {
+			if sub.UID == s.UID {
+				// This is the sub that is being reconciled. It has already been added to the list.
+				continue
+			}
+			if equality.Semantic.DeepEqual(sub.Status.PhysicalSubscription.From, s.Status.PhysicalSubscription.From) {
 				subs = append(subs, s)
 			}
 		}
