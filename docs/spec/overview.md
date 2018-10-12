@@ -90,7 +90,7 @@ See [Kind: Channel](spec.md#kind-channel).
 
 **Provisioner** catalogs available implementations of event _Sources_ and
 _Channels_. _Provisioners_ hold a JSON Schema that is used to validate the
-_Source_ and _Channel_ input parameters. _Provisioners_ make it possible to
+_Source_ and _Channel_ input arguments. _Provisioners_ make it possible to
 provide cluster wide defaults for the _Sources_ and _Channels_ they provision.
 
 _Provisioners_ do not directly handle events. They are 1:N with _Sources_ and
