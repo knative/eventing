@@ -18,16 +18,15 @@ package controller
 
 import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/provisioners/sdk"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
@@ -43,39 +42,18 @@ type reconciler struct {
 	recorder      record.EventRecorder
 }
 
-// Verify the struct implements reconcile.Reconciler
-var _ reconcile.Reconciler = &reconciler{}
-
 // ProvideController returns a Subscription controller.
 func ProvideController(mgr manager.Manager) (controller.Controller, error) {
-	// Setup a new controller to Reconcile Subscriptions.
-	c, err := controller.New(controllerAgentName, mgr, controller.Options{
+	p := &sdk.Provider{
+		AgentName: controllerAgentName,
+		Parent:    &v1alpha1.Source{},
+		Owns:      []runtime.Object{&corev1.Pod{}, &v1alpha1.Channel{}},
 		Reconciler: &reconciler{
 			recorder: mgr.GetRecorder(controllerAgentName),
 		},
-	})
-	if err != nil {
-		return nil, err
 	}
 
-	// Watch Source events and enqueue Source object key.
-	if err := c.Watch(&source.Kind{Type: &v1alpha1.Source{}}, &handler.EnqueueRequestForObject{}); err != nil {
-		return nil, err
-	}
-
-	// Watch Channels and enqueue owning Source key.
-	if err := c.Watch(&source.Kind{Type: &v1alpha1.Channel{}},
-		&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Source{}, IsController: true}); err != nil {
-		return nil, err
-	}
-
-	// Watch Pods and enqueue owning Source key.
-	if err := c.Watch(&source.Kind{Type: &corev1.Pod{}},
-		&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Source{}, IsController: true}); err != nil {
-		return nil, err
-	}
-
-	return c, nil
+	return p.ProvideController(mgr)
 }
 
 func (r *reconciler) InjectClient(c client.Client) error {

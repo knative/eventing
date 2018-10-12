@@ -23,13 +23,12 @@ import (
 	"github.com/knative/eventing/pkg/provisioners/heartbeats/controller/resources"
 	"github.com/knative/pkg/logging"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -38,53 +37,20 @@ const (
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two.
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	ctx := context.TODO()
+
+func (r *reconciler) Reconcile(ctx context.Context, object runtime.Object) (runtime.Object, error) {
 	logger := logging.FromContext(ctx)
 
-	logger.Infof("Reconciling source %v", request)
-	source := &v1alpha1.Source{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, source)
-
-	if errors.IsNotFound(err) {
-		logger.Errorf("could not find source %v\n", request)
-		return reconcile.Result{}, nil
-	}
-
-	if err != nil {
-		logger.Errorf("could not fetch Source %v for %+v\n", err, request)
-		return reconcile.Result{}, err
+	source, ok := object.(*v1alpha1.Source)
+	if !ok {
+		logger.Errorf("could not find source %v\n", object)
+		return object, nil
 	}
 
 	if source.Spec.Provisioner.Ref.Name != provisionerName {
 		logger.Errorf("heartbeats skipping source %s, provisioned by %s\n", source.Name, source.Spec.Provisioner.Ref.Name)
-		return reconcile.Result{}, nil
+		return source, nil
 	}
-
-	original := source.DeepCopy()
-
-	// Reconcile this copy of the Source and then write back any status
-	// updates regardless of whether the reconcile error out.
-	err = r.reconcile(ctx, source)
-	if err != nil {
-		logger.Warnf("Failed to reconcile source: %v", err)
-	}
-	if equality.Semantic.DeepEqual(original.Status, source.Status) {
-		// If we didn't change anything then don't call updateStatus.
-		// This is important because the copy we loaded from the informer's
-		// cache may be stale and we don't want to overwrite a prior update
-		// to status with this stale state.
-	} else if _, err := r.updateStatus(source); err != nil {
-		logger.Warnf("Failed to update source status: %v", err)
-		return reconcile.Result{}, err
-	}
-
-	// Requeue if the resource is not ready:
-	return reconcile.Result{}, err
-}
-
-func (r *reconciler) reconcile(ctx context.Context, source *v1alpha1.Source) error {
-	logger := logging.FromContext(ctx)
 
 	source.Status.InitializeConditions()
 
@@ -113,7 +79,7 @@ func (r *reconciler) reconcile(ctx context.Context, source *v1alpha1.Source) err
 		if errors.IsNotFound(err) {
 			channel, err = r.createChannel(ctx, source, nil, args)
 			if err != nil {
-				return err
+				return object, err
 			}
 			r.recorder.Eventf(source, corev1.EventTypeNormal, "Provisioned", "Created channel %q", channel.Name)
 			source.Status.SetProvisionedObjectState(channel.Name, fqn, "Created", "Created channel %q", channel.Name)
@@ -139,7 +105,7 @@ func (r *reconciler) reconcile(ctx context.Context, source *v1alpha1.Source) err
 			if err != nil {
 				r.recorder.Eventf(source, corev1.EventTypeNormal, "Blocked", "waiting for %v", err)
 				source.Status.SetProvisionedObjectState(args.Name, fqn, "Blocked", "waiting for %v", args.Name, err)
-				return err
+				return object, err
 			}
 			r.recorder.Eventf(source, corev1.EventTypeNormal, "Provisioned", "Created pod %q", pod.Name)
 			source.Status.SetProvisionedObjectState(pod.Name, fqn, "Created", "Created pod %q", pod.Name)
@@ -154,26 +120,7 @@ func (r *reconciler) reconcile(ctx context.Context, source *v1alpha1.Source) err
 
 	// TODO: need informers for the object we are controlling
 
-	return nil
-}
-
-func (r *reconciler) updateStatus(source *v1alpha1.Source) (*v1alpha1.Source, error) {
-	newSource := &v1alpha1.Source{}
-	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: source.Namespace, Name: source.Name}, newSource)
-
-	if err != nil {
-		return nil, err
-	}
-	newSource.Status = source.Status
-
-	// Until #38113 is merged, we must use Update instead of UpdateStatus to
-	// update the Status block of the Source resource. UpdateStatus will not
-	// allow changes to the Spec of the resource, which is ideal for ensuring
-	// nothing other than resource status has been updated.
-	if err = r.client.Update(context.TODO(), newSource); err != nil {
-		return nil, err
-	}
-	return newSource, nil
+	return source, nil
 }
 
 func (r *reconciler) getChannel(ctx context.Context, source *v1alpha1.Source) (*v1alpha1.Channel, error) {
