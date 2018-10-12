@@ -52,6 +52,7 @@ const (
 	subscriptionName  = "testsubscription"
 	testNS            = "testnamespace"
 	k8sServiceName    = "testk8sservice"
+	k8sServiceDNS     = "testk8sservice.testnamespace.svc.cluster.local"
 )
 
 func init() {
@@ -111,7 +112,10 @@ var testCases = []controllertesting.TestCase{
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
 		WantErrMsg:   `routes.serving.knative.dev "callroute" not found`,
-		Scheme:       scheme.Scheme,
+		WantPresent: []runtime.Object{
+			getNewSubscriptionWithUnknownConditionsAndPhysicalFrom(),
+		},
+		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
 			&unstructured.Unstructured{
@@ -142,8 +146,11 @@ var testCases = []controllertesting.TestCase{
 			getNewSubscription(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
-		WantErrMsg:   "status does not contain targetable",
-		Scheme:       scheme.Scheme,
+		WantPresent: []runtime.Object{
+			getNewSubscriptionWithUnknownConditionsAndPhysicalFrom(),
+		},
+		WantErrMsg: "status does not contain targetable",
+		Scheme:     scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
 			&unstructured.Unstructured{
@@ -187,8 +194,11 @@ var testCases = []controllertesting.TestCase{
 			getNewSubscription(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
-		WantErrMsg:   `channels.eventing.knative.dev "resultchannel" not found`,
-		Scheme:       scheme.Scheme,
+		WantPresent: []runtime.Object{
+			getNewSubscriptionWithUnknownConditionsAndPhysicalFromCall(),
+		},
+		WantErrMsg: `channels.eventing.knative.dev "resultchannel" not found`,
+		Scheme:     scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
 			&unstructured.Unstructured{
@@ -239,10 +249,9 @@ var testCases = []controllertesting.TestCase{
 			// TODO: Again this works on gke cluster, but I need to set
 			// something else up here. later...
 			// getNewSubscriptionWithReferencesResolvedStatus(),
-			getNewSubscriptionWithUnknownConditions(),
+			getNewSubscriptionWithUnknownConditionsAndPhysicalFromCall(),
 		},
-		IgnoreTimes: true,
-		Scheme:      scheme.Scheme,
+		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
 			&unstructured.Unstructured{
@@ -314,6 +323,9 @@ var testCases = []controllertesting.TestCase{
 		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
 		// failure for now, until upstream is fixed.
 		WantResult: reconcile.Result{},
+		WantPresent: []runtime.Object{
+			getNewSubscriptionWithReferencesResolvedAndPhysicalFromCallResult(),
+		},
 		WantErrMsg: "invalid JSON document",
 		Scheme:     scheme.Scheme,
 		Objects: []runtime.Object{
@@ -391,6 +403,9 @@ var testCases = []controllertesting.TestCase{
 		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
 		// failure for now, until upstream is fixed.
 		WantResult: reconcile.Result{},
+		WantPresent: []runtime.Object{
+			getNewSubscriptionToK8sServiceWithReferencesResolvedAndPhysicalFromCallResult(),
+		},
 		WantErrMsg: "invalid JSON document",
 		Scheme:     scheme.Scheme,
 		Objects: []runtime.Object{
@@ -463,7 +478,10 @@ var testCases = []controllertesting.TestCase{
 		// failure for now, until upstream is fixed.
 		WantResult: reconcile.Result{},
 		WantErrMsg: "invalid JSON document",
-		Scheme:     scheme.Scheme,
+		WantPresent: []runtime.Object{
+			getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromCallResult(),
+		},
+		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source with a reference to the From Channel
 			&unstructured.Unstructured{
@@ -566,6 +584,7 @@ func TestAllCases(t *testing.T) {
 			restConfig:    &rest.Config{},
 			recorder:      recorder,
 		}
+		tc.IgnoreTimes = true
 		t.Run(tc.Name, tc.Runner(t, r, c))
 	}
 }
@@ -672,6 +691,55 @@ func getNewSubscriptionWithSource() *eventingv1alpha1.Subscription {
 func getNewSubscriptionWithUnknownConditions() *eventingv1alpha1.Subscription {
 	s := getNewSubscription()
 	s.Status.InitializeConditions()
+	return s
+}
+
+func getNewSubscriptionWithUnknownConditionsAndPhysicalFrom() *eventingv1alpha1.Subscription {
+	s := getNewSubscriptionWithUnknownConditions()
+	// The original From is a Channel, so points at itself.
+	s.Status.PhysicalSubscription.From = s.Spec.From
+	return s
+}
+
+func getNewSubscriptionWithUnknownConditionsAndPhysicalFromCall() *eventingv1alpha1.Subscription {
+	s := getNewSubscriptionWithUnknownConditionsAndPhysicalFrom()
+	s.Status.PhysicalSubscription.CallDomain = targetDNS
+	return s
+}
+
+func getNewSubscriptionWithReferencesResolvedAndPhysicalFromCallResult() *eventingv1alpha1.Subscription {
+	s := getNewSubscriptionWithUnknownConditionsAndPhysicalFrom()
+	s.Status.MarkReferencesResolved()
+	s.Status.PhysicalSubscription.CallDomain = targetDNS
+	s.Status.PhysicalSubscription.ResultDomain = sinkableDNS
+	return s
+}
+
+func getNewSubscriptionToK8sServiceWithReferencesResolvedAndPhysicalFromCallResult() *eventingv1alpha1.Subscription {
+	s := getNewSubscriptionToK8sService()
+	s.Status.InitializeConditions()
+	s.Status.MarkReferencesResolved()
+	s.Status.PhysicalSubscription = eventingv1alpha1.SubscriptionStatusPhysicalSubscription{
+		From:         s.Spec.From,
+		CallDomain:   k8sServiceDNS,
+		ResultDomain: sinkableDNS,
+	}
+	return s
+}
+
+func getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromCallResult() *eventingv1alpha1.Subscription {
+	s := getNewSubscriptionWithSource()
+	s.Status.InitializeConditions()
+	s.Status.MarkReferencesResolved()
+	s.Status.PhysicalSubscription = eventingv1alpha1.SubscriptionStatusPhysicalSubscription{
+		From: corev1.ObjectReference{
+			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+			Kind:       channelKind,
+			Name:       fromChannelName,
+		},
+		CallDomain:   targetDNS,
+		ResultDomain: sinkableDNS,
+	}
 	return s
 }
 
