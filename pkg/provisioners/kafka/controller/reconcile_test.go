@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -53,11 +52,6 @@ func init() {
 
 var ClusterProvisionerConditionReady = duckv1alpha1.Condition{
 	Type:   eventingv1alpha1.ClusterProvisionerConditionReady,
-	Status: corev1.ConditionTrue,
-}
-
-var ClusterProvisionerConditionProvisionerReady = duckv1alpha1.Condition{
-	Type:   eventingv1alpha1.ClusterProvisionerConditionProvisionerReady,
 	Status: corev1.ConditionTrue,
 }
 
@@ -146,11 +140,10 @@ func TestAllCases(t *testing.T) {
 	for _, tc := range testCases {
 		c := tc.GetClient()
 		r := &reconciler{
-			client:     c,
-			restConfig: &rest.Config{},
-			recorder:   recorder,
-			log:        log,
-			config:     getControllerConfig(),
+			client:   c,
+			recorder: recorder,
+			log:      log,
+			config:   getControllerConfig(),
 		}
 		t.Logf("Running test %s", tc.Name)
 		t.Run(tc.Name, tc.Runner(t, r, c))
@@ -181,7 +174,6 @@ func GetNewChannelClusterProvisionerReady(name string) *eventingv1alpha1.Cluster
 	c := GetNewChannelClusterProvisioner(name)
 	c.Status = eventingv1alpha1.ClusterProvisionerStatus{
 		Conditions: []duckv1alpha1.Condition{
-			ClusterProvisionerConditionProvisionerReady,
 			ClusterProvisionerConditionReady,
 		},
 	}

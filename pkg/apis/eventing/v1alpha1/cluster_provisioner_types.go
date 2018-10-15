@@ -66,7 +66,7 @@ type ClusterProvisionerSpec struct {
 	Reconciles metav1.GroupKind `json:"reconciles"`
 }
 
-var cProvCondSet = duckv1alpha1.NewLivingConditionSet(ClusterProvisionerConditionProvisionerReady)
+var cProvCondSet = duckv1alpha1.NewLivingConditionSet()
 
 // ClusterProvisionerStatus is the status for a ClusterProvisioner resource
 type ClusterProvisionerStatus struct {
@@ -84,11 +84,8 @@ type ClusterProvisionerStatus struct {
 
 const (
 
-	// ClusterProvisionerConditionReady has status True when all subconditions below have been set to True.
+	// ClusterProvisionerConditionReady has status True when provisioner is ready to provision backing resource.
 	ClusterProvisionerConditionReady = duckv1alpha1.ConditionReady
-
-	// ClusterProvisionerConditionProvisionerReady has status True when the provisioner is ready
-	ClusterProvisionerConditionProvisionerReady duckv1alpha1.ConditionType = "ProvisionerReady"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
@@ -102,13 +99,13 @@ func (ps *ClusterProvisionerStatus) IsReady() bool {
 }
 
 // MarkProvisionerReady sets the condition that the provisioner is ready to provision backing resource.
-func (ps *ClusterProvisionerStatus) MarkProvisionerReady() {
-	cProvCondSet.Manage(ps).MarkTrue(ClusterProvisionerConditionProvisionerReady)
+func (ps *ClusterProvisionerStatus) MarkReady() {
+	cProvCondSet.Manage(ps).MarkTrue(ClusterProvisionerConditionReady)
 }
 
 // MarkProvisionerNotReady sets the condition that the provisioner is not ready to provision backing resource.
-func (ps *ClusterProvisionerStatus) MarkProvisionerNotReady(reason, messageFormat string, messageA ...interface{}) {
-	cProvCondSet.Manage(ps).MarkFalse(ClusterProvisionerConditionProvisionerReady, reason, messageFormat, messageA...)
+func (ps *ClusterProvisionerStatus) MarkNotReady(reason, messageFormat string, messageA ...interface{}) {
+	cProvCondSet.Manage(ps).MarkFalse(ClusterProvisionerConditionReady, reason, messageFormat, messageA...)
 }
 
 // InitializeConditions sets relevant unset conditions to Unknown state.

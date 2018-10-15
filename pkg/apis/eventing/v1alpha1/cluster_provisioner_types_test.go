@@ -43,21 +43,21 @@ func TestClusterProvisionerStatusIsReady(t *testing.T) {
 		want: false,
 	}, {
 		name: "ready true condition",
-		ps: &ClusterProvisionerStatus{
-			Conditions: []duckv1alpha1.Condition{{
-				Type:   ChannelConditionReady,
-				Status: corev1.ConditionTrue,
-			}},
-		},
+		ps: func() *ClusterProvisionerStatus {
+			ps := &ClusterProvisionerStatus{}
+			ps.InitializeConditions()
+			ps.MarkReady()
+			return ps
+		}(),
 		want: true,
 	}, {
 		name: "ready false condition",
-		ps: &ClusterProvisionerStatus{
-			Conditions: []duckv1alpha1.Condition{{
-				Type:   ChannelConditionReady,
-				Status: corev1.ConditionFalse,
-			}},
-		},
+		ps: func() *ClusterProvisionerStatus {
+			ps := &ClusterProvisionerStatus{}
+			ps.InitializeConditions()
+			ps.MarkNotReady("Not Ready", "testing")
+			return ps
+		}(),
 		want: false,
 	}, {
 		name: "unknown condition",
@@ -68,26 +68,7 @@ func TestClusterProvisionerStatusIsReady(t *testing.T) {
 			}},
 		},
 		want: false,
-	}, {
-		name: "mark provisioner ready",
-		ps: func() *ClusterProvisionerStatus {
-			ps := &ClusterProvisionerStatus{}
-			ps.InitializeConditions()
-			ps.MarkProvisionerReady()
-			return ps
-		}(),
-		want: true,
-	},
-		{
-			name: "mark provisioner not ready",
-			ps: func() *ClusterProvisionerStatus {
-				ps := &ClusterProvisionerStatus{}
-				ps.InitializeConditions()
-				ps.MarkProvisionerNotReady("Not Ready", "testing")
-				return ps
-			}(),
-			want: false,
-		}}
+	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

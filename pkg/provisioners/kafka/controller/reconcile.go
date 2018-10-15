@@ -48,6 +48,16 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
+	// Skip channel provisioners that we don't manage
+	if provisioner.Name != r.config.Name {
+		return reconcile.Result{}, nil
+	}
+
+	// Only reconcile channel provisioners
+	if provisioner.Spec.Reconciles.Group != eventing.GroupName || provisioner.Spec.Reconciles.Kind != "Channel" {
+		return reconcile.Result{}, nil
+	}
+
 	original := provisioner.DeepCopy()
 
 	// Reconcile this copy of the Provisioner and then write back any status
@@ -81,19 +91,9 @@ func (r *reconciler) reconcile(provisioner *v1alpha1.ClusterProvisioner) error {
 		return nil
 	}
 
-	// Skip channel provisioners that we don't manage
-	if provisioner.Name != r.config.Name {
-		return nil
-	}
-
-	// Only reconcile channel provisioners
-	if provisioner.Spec.Reconciles.Group != eventing.GroupName || provisioner.Spec.Reconciles.Kind != "Channel" {
-		return nil
-	}
-
 	provisioner.Status.InitializeConditions()
 	// Update Status as Ready
-	provisioner.Status.MarkProvisionerReady()
+	provisioner.Status.MarkReady()
 
 	return nil
 }

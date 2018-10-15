@@ -47,11 +47,33 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
+	// Skip Channel as it is not targeting any provisioner
+	if channel.Spec.Provisioner == nil || channel.Spec.Provisioner.Ref == nil {
+		return reconcile.Result{}, nil
+	}
+
+	// Skip channel not managed by this provisioner
+	provisionerRef := channel.Spec.Provisioner.Ref
+	clusterProvisioner, err := r.getClusterProvisioner()
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if provisionerRef.Name != clusterProvisioner.Name || provisionerRef.Namespace != clusterProvisioner.Namespace {
+		return reconcile.Result{}, nil
+	}
+
 	original := channel.DeepCopy()
 
-	// Reconcile this copy of the Channel and then write back any status
-	// updates regardless of whether the reconcile error out.
-	err = r.reconcile(channel)
+	if clusterProvisioner.Status.IsReady() {
+		// Reconcile this copy of the Channel and then write back any status
+		// updates regardless of whether the reconcile error out.
+		err = r.reconcile(channel)
+	} else {
+		channel.Status.MarkNotProvisioned("NotProvisioned", "ClusterProvisioner %s is not ready", clusterProvisioner.Name)
+		err = fmt.Errorf("ClusterProvisioner %s is not ready", clusterProvisioner.Name)
+	}
+
 	if !equality.Semantic.DeepEqual(original.Status, channel.Status) {
 		// If we didn't change anything then don't call updateStatus.
 		// This is important because the copy we loaded from the informer's
@@ -81,31 +103,9 @@ func (r *reconciler) reconcile(channel *v1alpha1.Channel) error {
 		return nil
 	}
 
-	// Skip Channel as it is not targeting any provisioner
-	if channel.Spec.Provisioner == nil || channel.Spec.Provisioner.Ref == nil {
-		return nil
-	}
-
-	// Skip channel not managed by this provisioner
-	provisionerRef := channel.Spec.Provisioner.Ref
-	clusterProvisioner, err := r.getClusterProvisioner()
-	if err != nil {
-		return err
-	}
-	// TODO: Is there a better way to compare ref?
-	if provisionerRef.Name != clusterProvisioner.Name || provisionerRef.Namespace != clusterProvisioner.Namespace {
-		return nil
-	}
-
-	// The provisioner must be ready
-	if !clusterProvisioner.Status.IsReady() {
-		channel.Status.MarkAsNotProvisioned("NotProvisioned", "ClusterProvisioner %s is not ready", clusterProvisioner.Name)
-		return fmt.Errorf("ClusterProvisioner %s is not ready", clusterProvisioner.Name)
-	}
-
 	// TODO: provision channel
 	channel.Status.InitializeConditions()
-	channel.Status.MarkAsNotProvisioned("NotProvisioned", "NotImplemented")
+	channel.Status.MarkNotProvisioned("NotProvisioned", "NotImplemented")
 	return nil
 }
 
@@ -118,7 +118,6 @@ func (r *reconciler) getClusterProvisioner() (*v1alpha1.ClusterProvisioner, erro
 		return nil, err
 	}
 	return clusterProvisioner, nil
-
 }
 
 func (r *reconciler) updateStatus(channel *v1alpha1.Channel) (*v1alpha1.Channel, error) {

@@ -18,7 +18,6 @@ package controller
 
 import (
 	"github.com/go-logr/logr"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -37,11 +36,10 @@ const (
 )
 
 type reconciler struct {
-	client     client.Client
-	restConfig *rest.Config
-	recorder   record.EventRecorder
-	log        logr.Logger
-	config     *KafkaProvisionerConfig
+	client   client.Client
+	recorder record.EventRecorder
+	log      logr.Logger
+	config   *KafkaProvisionerConfig
 }
 
 // Verify the struct implements reconcile.Reconciler
@@ -71,10 +69,5 @@ func ProvideController(mgr manager.Manager, config *KafkaProvisionerConfig, log 
 
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
-	return nil
-}
-
-func (r *reconciler) InjectConfig(c *rest.Config) error {
-	r.restConfig = c
 	return nil
 }

@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -160,11 +159,10 @@ func TestAllCases(t *testing.T) {
 	for _, tc := range testCases {
 		c := tc.GetClient()
 		r := &reconciler{
-			client:     c,
-			restConfig: &rest.Config{},
-			recorder:   recorder,
-			log:        log,
-			config:     getControllerConfig(),
+			client:   c,
+			recorder: recorder,
+			log:      log,
+			config:   getControllerConfig(),
 		}
 		t.Logf("Running test %s", tc.Name)
 		t.Run(tc.Name, tc.Runner(t, r, c))
@@ -249,10 +247,6 @@ func getNewClusterProvisioner(name string, isReady bool) *eventingv1alpha1.Clust
 		},
 		Status: eventingv1alpha1.ClusterProvisionerStatus{
 			Conditions: []duckv1alpha1.Condition{
-				{
-					Type:   eventingv1alpha1.ClusterProvisionerConditionProvisionerReady,
-					Status: condStatus,
-				},
 				{
 					Type:   eventingv1alpha1.ClusterProvisionerConditionReady,
 					Status: condStatus,

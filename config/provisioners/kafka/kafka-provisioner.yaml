@@ -12,6 +12,59 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+apiVersion: eventing.knative.dev/v1alpha1
+kind: ClusterProvisioner
+metadata:
+  name: kafka
+spec:
+  reconciles:
+    group: eventing.knative.dev
+    kind: Channel
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kafka-provisioner
+  namespace: knative-eventing
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kafka-provisioner
+rules:
+- apiGroups: ["eventing.knative.dev"]
+  resources: ["clusterprovisioners", "channels"]
+  verbs: ["get", "watch", "list", "update"]
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: kafka-provisioner-manage
+subjects:
+  - kind: ServiceAccount
+    name: kafka-provisioner
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: kafka-provisioner
+  apiGroup: rbac.authorization.k8s.io
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-provisioner-config
+  namespace: knative-eventing
+data:
+  # Name of the provisioner that this controller represents
+  cluster-provisioner-name: kafka
+  # Broker URL's for the provisioner
+  brokers: kafkabroker.kafka:9092
+---
+
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
@@ -28,10 +81,6 @@ spec:
       containers:
       - name: kafka-provisioner-controller
         image: github.com/knative/eventing/pkg/provisioners/kafka
-        args: [
-              "-logtostderr",
-              "-stderrthreshold", "INFO",
-        ]
         volumeMounts:
           - name: kafka-provisioner-config
             mountPath: /etc/config-provisioner
