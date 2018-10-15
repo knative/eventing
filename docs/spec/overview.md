@@ -57,11 +57,17 @@ For more details, see [Kind: Subscription](spec.md#kind-subscription).
 **Source** represents incoming events from an external system, such as object
 creation events in a specific storage bucket, database updates in a particular
 table, or Kubernetes resource state changes. Because a _Source_ represents an
-external system, it only emits events. _Source_ may include parameters such as
-specific resource names, event types, or credentials which should be used to
+external system, it only emits events to a _Channel_. A _Source_ may include `arguments`
+such as specific resource names, event types, or credentials which should be used to
 establish the connection to the external system. The set of allowed
 configuration parameters is described by the _Provisioner_ which is referenced
 by the _Source_.
+
+Every _Source_ has exactly one _Channel_, ensuring that each _Source_ is responsible for a _single_ event delivery.
+
+### Fanout Example
+
+If we take Cloud PubSub as an example, the _Source_ resource would reference the topic name it wants to bind to. The _Provisioner_ for the _Source_ would create a PubSub subscription for it and the _Source_ starts receiving messages. If we also want to bind the **same** PubSub topic to multiple destinations, we will create a new _Source_ for **each** destination. In this model each new _Source_ will create an **independent** PubSub subscription to the **same** topic, ensuring that each Source is responsible for a single event delivery. The actual fanout is now pushed into the Cloud PubSub, yet still is resilient to failed deliveries.
 
 For more details, see [Kind: Source](spec.md#kind-source).
 
