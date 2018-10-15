@@ -6,7 +6,9 @@ metadata:
 spec:
   provisioner:
     ref:
-      name: heartbeats
+      name: container
   arguments:
-    label: "<3"
-    period: 2
+    image: github.com/knative/eventing/pkg/provisioners/heartbeats/cmd/
+    args:
+      label: "<3"
+      period: 2

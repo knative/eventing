@@ -19,7 +19,7 @@ package controller
 import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners/sdk"
-	corev1 "k8s.io/api/core/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
@@ -32,7 +32,7 @@ import (
 const (
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName = "heartbeats-provisioner-controller"
+	controllerAgentName = "container-provisioner-controller"
 )
 
 type reconciler struct {
@@ -47,7 +47,7 @@ func ProvideController(mgr manager.Manager) (controller.Controller, error) {
 	p := &sdk.Provider{
 		AgentName: controllerAgentName,
 		Parent:    &v1alpha1.Source{},
-		Owns:      []runtime.Object{&corev1.Pod{}, &v1alpha1.Channel{}},
+		Owns:      []runtime.Object{&appsv1.Deployment{}, &v1alpha1.Channel{}},
 		Reconciler: &reconciler{
 			recorder: mgr.GetRecorder(controllerAgentName),
 		},

@@ -20,8 +20,9 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners/heartbeats/controller/resources"
+	"github.com/knative/eventing/pkg/provisioners/container_provisioner/controller/resources"
 	"github.com/knative/pkg/logging"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,7 +33,7 @@ import (
 )
 
 const (
-	provisionerName = "heartbeats"
+	provisionerName = "container"
 )
 
 // Reconcile compares the actual state with the desired, and attempts to
@@ -48,7 +49,7 @@ func (r *reconciler) Reconcile(ctx context.Context, object runtime.Object) (runt
 	}
 
 	if source.Spec.Provisioner.Ref.Name != provisionerName {
-		logger.Errorf("heartbeats skipping source %s, provisioned by %s\n", source.Name, source.Spec.Provisioner.Ref.Name)
+		logger.Errorf("skipping source %s, provisioned by %s\n", source.Name, source.Spec.Provisioner.Ref.Name)
 		return source, nil
 	}
 
@@ -63,8 +64,7 @@ func (r *reconciler) Reconcile(ctx context.Context, object runtime.Object) (runt
 	//}
 	//deletionTimestamp := accessor.GetDeletionTimestamp()
 
-	args := &resources.HeartBeatArguments{}
-
+	args := &resources.ContainerArguments{}
 	if source.Spec.Arguments != nil {
 		if err := json.Unmarshal(source.Spec.Arguments.Raw, args); err != nil {
 			logger.Infof("Error: %s failed to unmarshal arguments, %v", source.Name, err)
@@ -97,28 +97,26 @@ func (r *reconciler) Reconcile(ctx context.Context, object runtime.Object) (runt
 
 	}
 
-	pod, err := r.getPod(ctx, source)
+	deploy, err := r.getDeployment(ctx, source)
 	if err != nil {
-		fqn := "Pod.core/v1"
+		fqn := "Deployment.apps/v1"
 		if errors.IsNotFound(err) {
-			pod, err = r.createPod(ctx, source, nil, channel, args)
+			deploy, err = r.createDeployment(ctx, source, nil, channel, args)
 			if err != nil {
 				r.recorder.Eventf(source, corev1.EventTypeNormal, "Blocked", "waiting for %v", err)
 				source.Status.SetProvisionedObjectState(args.Name, fqn, "Blocked", "waiting for %v", args.Name, err)
 				return object, err
 			}
-			r.recorder.Eventf(source, corev1.EventTypeNormal, "Provisioned", "Created pod %q", pod.Name)
-			source.Status.SetProvisionedObjectState(pod.Name, fqn, "Created", "Created pod %q", pod.Name)
+			r.recorder.Eventf(source, corev1.EventTypeNormal, "Provisioned", "Created deployment %q", deploy.Name)
+			source.Status.SetProvisionedObjectState(deploy.Name, fqn, "Created", "Created deployment %q", deploy.Name)
 			source.Status.MarkDeprovisioned("Provisioning", "Provisioning Pod %s", args.Name)
 		} else {
-			if pod.Status.Phase == corev1.PodRunning {
-				source.Status.SetProvisionedObjectState(pod.Name, fqn, "Ready", "")
+			if deploy.Status.ReadyReplicas > 0 {
+				source.Status.SetProvisionedObjectState(deploy.Name, fqn, "Ready", "")
 				source.Status.MarkProvisioned()
 			}
 		}
 	}
-
-	// TODO: need informers for the object we are controlling
 
 	return source, nil
 }
@@ -154,7 +152,7 @@ func (r *reconciler) getChannel(ctx context.Context, source *v1alpha1.Source) (*
 	return nil, errors.NewNotFound(schema.GroupResource{}, "")
 }
 
-func (r *reconciler) createChannel(ctx context.Context, source *v1alpha1.Source, org *v1alpha1.Channel, args *resources.HeartBeatArguments) (*v1alpha1.Channel, error) {
+func (r *reconciler) createChannel(ctx context.Context, source *v1alpha1.Source, org *v1alpha1.Channel, args *resources.ContainerArguments) (*v1alpha1.Channel, error) {
 	channel, err := resources.MakeChannel(source, org, args)
 	if err != nil {
 		return nil, err
@@ -166,10 +164,10 @@ func (r *reconciler) createChannel(ctx context.Context, source *v1alpha1.Source,
 	return channel, nil
 }
 
-func (r *reconciler) getPod(ctx context.Context, source *v1alpha1.Source) (*corev1.Pod, error) {
+func (r *reconciler) getDeployment(ctx context.Context, source *v1alpha1.Source) (*appsv1.Deployment, error) {
 	logger := logging.FromContext(ctx)
 
-	list := &corev1.PodList{}
+	list := &appsv1.DeploymentList{}
 	err := r.client.List(
 		ctx,
 		&client.ListOptions{
@@ -179,14 +177,14 @@ func (r *reconciler) getPod(ctx context.Context, source *v1alpha1.Source) (*core
 			// needed.
 			Raw: &metav1.ListOptions{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: corev1.SchemeGroupVersion.String(),
-					Kind:       "Pod",
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "Deployment",
 				},
 			},
 		},
 		list)
 	if err != nil {
-		logger.Errorf("Unable to list pods: %v", err)
+		logger.Errorf("Unable to list deployments: %v", err)
 		return nil, err
 	}
 	for _, c := range list.Items {
@@ -197,14 +195,14 @@ func (r *reconciler) getPod(ctx context.Context, source *v1alpha1.Source) (*core
 	return nil, errors.NewNotFound(schema.GroupResource{}, "")
 }
 
-func (r *reconciler) createPod(ctx context.Context, source *v1alpha1.Source, org *corev1.Pod, channel *v1alpha1.Channel, args *resources.HeartBeatArguments) (*corev1.Pod, error) {
-	pod, err := resources.MakePod(source, org, channel, args)
+func (r *reconciler) createDeployment(ctx context.Context, source *v1alpha1.Source, org *appsv1.Deployment, channel *v1alpha1.Channel, args *resources.ContainerArguments) (*appsv1.Deployment, error) {
+	deployment, err := resources.MakeDeployment(source, org, channel, args)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := r.client.Create(ctx, pod); err != nil {
+	if err := r.client.Create(ctx, deployment); err != nil {
 		return nil, err
 	}
-	return pod, nil
+	return deployment, nil
 }

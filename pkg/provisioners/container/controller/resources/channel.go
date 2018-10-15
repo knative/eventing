@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func MakeChannel(source *v1alpha1.Source, org *v1alpha1.Channel, args *HeartBeatArguments) (*v1alpha1.Channel, error) {
+func MakeChannel(source *v1alpha1.Source, org *v1alpha1.Channel, args *ContainerArguments) (*v1alpha1.Channel, error) {
 	channel := &v1alpha1.Channel{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "eventing.knative.dev/v1alpha1",
@@ -40,7 +40,7 @@ func MakeChannel(source *v1alpha1.Source, org *v1alpha1.Channel, args *HeartBeat
 		Spec: v1alpha1.ChannelSpec{
 			Provisioner: &v1alpha1.ProvisionerReference{
 				Ref: &corev1.ObjectReference{
-					Name:       "in-memory-channel",
+					Name:       "in-memory-channel", // TODO: this should be changeable
 					APIVersion: "eventing.knative.dev/v1alpha1",
 					Kind:       "ClusterProvisioner",
 				},

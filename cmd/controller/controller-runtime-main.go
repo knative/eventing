@@ -23,7 +23,7 @@ import (
 	"github.com/knative/eventing/pkg/controller/eventing/subscription"
 	"github.com/knative/eventing/pkg/controller/feed"
 	"github.com/knative/eventing/pkg/controller/flow"
-	heartbeatcontroller "github.com/knative/eventing/pkg/provisioners/heartbeats/controller"
+	containercontroller "github.com/knative/eventing/pkg/provisioners/container/controller"
 	"go.uber.org/zap"
 	"strings"
 
@@ -50,7 +50,7 @@ type ProvideFunc func(manager.Manager) (controller.Controller, error)
 // be added to the default providers list.
 var ExperimentalControllers = map[string]ProvideFunc{
 	"subscription.eventing.knative.dev": subscription.ProvideController,
-	"heartbeats-provisioner":            heartbeatcontroller.ProvideController,
+	"container-provisioner":             containercontroller.ProvideController,
 }
 
 // controllerRuntimeStart runs controllers written for controller-runtime. It's

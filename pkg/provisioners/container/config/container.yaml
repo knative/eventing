@@ -1,7 +1,7 @@
 apiVersion: eventing.knative.dev/v1alpha1
 kind: ClusterProvisioner
 metadata:
-  name: heartbeats
+  name: container
 spec:
   reconciles:
     group: eventing.knative.dev

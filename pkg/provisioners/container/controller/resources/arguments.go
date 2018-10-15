@@ -16,9 +16,9 @@ limitations under the License.
 
 package resources
 
-type HeartBeatArguments struct {
-	Name      string `json:"-"`
-	Namespace string `json:"-"`
-	Label     string `json:"label"`
-	Period    int    `json:"period"`
+type ContainerArguments struct {
+	Name      string            `json:"-"`
+	Namespace string            `json:"-"`
+	Image     string            `json:"image"`
+	Args      map[string]string `json:"args"`
 }
