@@ -41,9 +41,11 @@ import (
 )
 
 const (
-	portName      = "http"
 	portNumber    = 80
 	finalizerName = controllerAgentName
+	// knativeIngressGateway is the ingress service for Knative Serving.
+	// TODO: Replace with an ingress gateway for Knative Eventing that is not publicly exposed.
+	knativeIngressGateway = "knative-ingressgateway.istio-system.svc.cluster.local"
 )
 
 type reconciler struct {
@@ -257,12 +259,8 @@ func newK8sService(c *eventingv1alpha1.Channel) *corev1.Service {
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name: portName,
-					Port: portNumber,
-				},
-			},
+			// Keep in sync with the Gateway in newVirtualService().
+			ExternalName: knativeIngressGateway,
 		},
 	}
 }
@@ -290,6 +288,12 @@ func newVirtualService(channel *eventingv1alpha1.Channel) *istiov1alpha3.Virtual
 			},
 		},
 		Spec: istiov1alpha3.VirtualServiceSpec{
+			Gateways: []string{
+				// TODO: Create a Knative Eventing gateway that is not publicly exposed and replace
+				// this public gateway with that one.
+				knativeIngressGateway,
+				"mesh",
+			},
 			Hosts: []string{
 				controller.ServiceHostName(controller.ChannelServiceName(channel.Name), channel.Namespace),
 				controller.ChannelHostName(channel.Name, channel.Namespace),

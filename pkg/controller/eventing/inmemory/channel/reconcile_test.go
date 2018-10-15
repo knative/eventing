@@ -589,12 +589,7 @@ func makeK8sService() *corev1.Service {
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name: portName,
-					Port: portNumber,
-				},
-			},
+			ExternalName: knativeIngressGateway,
 		},
 	}
 }
@@ -630,6 +625,10 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 			},
 		},
 		Spec: istiov1alpha3.VirtualServiceSpec{
+			Gateways: []string{
+				knativeIngressGateway,
+				"mesh",
+			},
 			Hosts: []string{
 				fmt.Sprintf("%s-channel.%s.svc.cluster.local", cName, cNamespace),
 				fmt.Sprintf("%s.%s.channels.cluster.local", cName, cNamespace),
