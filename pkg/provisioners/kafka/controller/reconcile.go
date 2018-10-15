@@ -28,23 +28,24 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/eventing"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"go.uber.org/zap"
 )
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Provisioner resource
 // with the current status of the resource.
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	r.log.Info("reconciling ClusterProvisioner", "request", request)
+	r.logger.Info("reconciling ClusterProvisioner", zap.Any("request", request))
 	provisioner := &v1alpha1.ClusterProvisioner{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, provisioner)
 
 	if errors.IsNotFound(err) {
-		r.log.Info("could not find ClusterProvisioner", "request", request)
+		r.logger.Info("could not find ClusterProvisioner", zap.Any("request", request))
 		return reconcile.Result{}, nil
 	}
 
 	if err != nil {
-		r.log.Error(err, "could not fetch ClusterProvisioner", "request", request)
+		r.logger.Error("could not fetch ClusterProvisioner", zap.Error(err))
 		return reconcile.Result{}, err
 	}
 
@@ -69,7 +70,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		// cache may be stale and we don't want to overwrite a prior update
 		// to status with this stale state.
 		if _, err := r.updateStatus(provisioner); err != nil {
-			r.log.Info("failed to update Provisioner status", "error", err)
+			r.logger.Info("failed to update Provisioner status", zap.Error(err))
 			return reconcile.Result{}, err
 		}
 	}
@@ -82,12 +83,12 @@ func (r *reconciler) reconcile(provisioner *v1alpha1.ClusterProvisioner) error {
 	// See if the provisioner has been deleted
 	accessor, err := meta.Accessor(provisioner)
 	if err != nil {
-		r.log.Info("failed to get metadata", "error", err)
+		r.logger.Info("failed to get metadata", zap.Error(err))
 		return err
 	}
 	deletionTimestamp := accessor.GetDeletionTimestamp()
 	if deletionTimestamp != nil {
-		r.log.Info(fmt.Sprintf("DeletionTimestamp: %v", deletionTimestamp))
+		r.logger.Info(fmt.Sprintf("DeletionTimestamp: %v", deletionTimestamp))
 		return nil
 	}
 

@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/go-logr/logr"
+	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/provisioners"
 	provisionerController "github.com/knative/eventing/pkg/provisioners/kafka/controller"
 	"github.com/knative/eventing/pkg/provisioners/kafka/controller/channel"
 	"github.com/knative/pkg/configmap"
@@ -26,23 +27,23 @@ const (
 	BrokerConfigMapKey                 = "brokers"
 )
 
-var log = logf.Log.WithName("kafka-provisioner")
-
 // SchemeFunc adds types to a Scheme.
 type SchemeFunc func(*runtime.Scheme) error
 
 // ProvideFunc adds a controller to a Manager.
-type ProvideFunc func(mgr manager.Manager, config *provisionerController.KafkaProvisionerConfig, log logr.Logger) (controller.Controller, error)
+type ProvideFunc func(mgr manager.Manager, config *provisionerController.KafkaProvisionerConfig, logger *zap.Logger) (controller.Controller, error)
 
 func main() {
 	flag.Parse()
 	logf.SetLogger(logf.ZapLogger(false))
-	entryLog := log.WithName("entrypoint")
+
+	logger := provisioners.NewProvisionerLoggerFromConfig(provisioners.NewLoggingConfig())
+	defer logger.Sync()
 
 	// Setup a Manager
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
 	if err != nil {
-		entryLog.Error(err, "unable to run controller manager")
+		logger.Error(err, "unable to run controller manager")
 		os.Exit(1)
 	}
 
@@ -64,13 +65,13 @@ func main() {
 	provisionerConfig, err := getProvisionerConfig()
 
 	if err != nil {
-		entryLog.Error(err, "unable to run controller manager")
+		logger.Error(err, "unable to run controller manager")
 		os.Exit(1)
 	}
 
 	for _, provider := range providers {
-		if _, err := provider(mgr, provisionerConfig, log); err != nil {
-			entryLog.Error(err, "unable to run controller manager")
+		if _, err := provider(mgr, provisionerConfig, logger.Desugar()); err != nil {
+			logger.Error(err, "unable to run controller manager")
 			os.Exit(1)
 		}
 	}

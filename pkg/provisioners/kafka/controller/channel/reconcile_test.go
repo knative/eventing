@@ -29,16 +29,12 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	"github.com/knative/eventing/pkg/apis/eventing"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
+	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/provisioners/kafka/controller"
-)
-
-var (
-	log = logf.Log.WithName("testing")
 )
 
 const (
@@ -158,10 +154,11 @@ func TestAllCases(t *testing.T) {
 
 	for _, tc := range testCases {
 		c := tc.GetClient()
+		logger := provisioners.NewProvisionerLoggerFromConfig(provisioners.NewLoggingConfig())
 		r := &reconciler{
 			client:   c,
 			recorder: recorder,
-			log:      log,
+			logger:   logger.Desugar(),
 			config:   getControllerConfig(),
 		}
 		t.Logf("Running test %s", tc.Name)

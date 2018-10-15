@@ -17,7 +17,7 @@ limitations under the License.
 package controller
 
 import (
-	"github.com/go-logr/logr"
+	"go.uber.org/zap"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -38,7 +38,7 @@ const (
 type reconciler struct {
 	client   client.Client
 	recorder record.EventRecorder
-	log      logr.Logger
+	logger   *zap.Logger
 	config   *KafkaProvisionerConfig
 }
 
@@ -46,12 +46,12 @@ type reconciler struct {
 var _ reconcile.Reconciler = &reconciler{}
 
 // ProvideController returns a Provisioner controller.
-func ProvideController(mgr manager.Manager, config *KafkaProvisionerConfig, log logr.Logger) (controller.Controller, error) {
+func ProvideController(mgr manager.Manager, config *KafkaProvisionerConfig, logger *zap.Logger) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Provisioners.
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: &reconciler{
 			recorder: mgr.GetRecorder(controllerAgentName),
-			log:      log,
+			logger:   logger,
 			config:   config,
 		},
 	})

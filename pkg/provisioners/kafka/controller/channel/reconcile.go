@@ -27,23 +27,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"go.uber.org/zap"
 )
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Channel resource
 // with the current status of the resource.
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	r.log.Info("Reconciling channel", "request", request)
+	r.logger.Info("Reconciling channel", zap.Any("request", request))
 	channel := &v1alpha1.Channel{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, channel)
 
 	if errors.IsNotFound(err) {
-		r.log.Info("could not find channel", "request", request)
+		r.logger.Info("could not find channel", zap.Any("request", request))
 		return reconcile.Result{}, nil
 	}
 
 	if err != nil {
-		r.log.Error(err, "could not fetch Channel", "request", request)
+		r.logger.Error("could not fetch channel", zap.Error(err))
 		return reconcile.Result{}, err
 	}
 
@@ -80,7 +81,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		// cache may be stale and we don't want to overwrite a prior update
 		// to status with this stale state.
 		if _, err := r.updateStatus(channel); err != nil {
-			r.log.Info("Failed to update channel status", "error", err)
+			r.logger.Info("failed to update channel status", zap.Error(err))
 			return reconcile.Result{}, err
 		}
 	}
@@ -93,12 +94,12 @@ func (r *reconciler) reconcile(channel *v1alpha1.Channel) error {
 	// See if the channel has been deleted
 	accessor, err := meta.Accessor(channel)
 	if err != nil {
-		r.log.Info("failed to get metadata", "error", err)
+		r.logger.Info("failed to get metadata", zap.Error(err))
 		return err
 	}
 	deletionTimestamp := accessor.GetDeletionTimestamp()
 	if deletionTimestamp != nil {
-		r.log.Info(fmt.Sprintf("DeletionTimestamp: %v", deletionTimestamp))
+		r.logger.Info(fmt.Sprintf("DeletionTimestamp: %v", deletionTimestamp))
 		//TODO: Handle deletion
 		return nil
 	}

@@ -17,7 +17,7 @@ limitations under the License.
 package channel
 
 import (
-	"github.com/go-logr/logr"
+	"go.uber.org/zap"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -39,7 +39,7 @@ const (
 type reconciler struct {
 	client   client.Client
 	recorder record.EventRecorder
-	log      logr.Logger
+	logger   *zap.Logger
 	config   *common.KafkaProvisionerConfig
 }
 
@@ -47,12 +47,12 @@ type reconciler struct {
 var _ reconcile.Reconciler = &reconciler{}
 
 // ProvideController returns a Channel controller.
-func ProvideController(mgr manager.Manager, config *common.KafkaProvisionerConfig, log logr.Logger) (controller.Controller, error) {
+func ProvideController(mgr manager.Manager, config *common.KafkaProvisionerConfig, logger *zap.Logger) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Channel.
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: &reconciler{
 			recorder: mgr.GetRecorder(controllerAgentName),
-			log:      log,
+			logger:   logger,
 			config:   config,
 		},
 	})
