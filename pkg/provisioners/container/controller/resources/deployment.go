@@ -53,9 +53,6 @@ func MakeDeployment(source *v1alpha1.Source, org *appsv1.Deployment, channel *v1
 			OwnerReferences: []metav1.OwnerReference{
 				*controller.NewControllerRef(source, false),
 			},
-			Annotations: map[string]string{
-				"sidecar.istio.io/inject": "true",
-			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: func() *int32 { var i int32 = 1; return &i }(),
@@ -71,7 +68,6 @@ func MakeDeployment(source *v1alpha1.Source, org *appsv1.Deployment, channel *v1
 					},
 				},
 				Spec: corev1.PodSpec{
-					RestartPolicy: corev1.RestartPolicyOnFailure,
 					Containers: []corev1.Container{
 						{
 							Name:            "source",

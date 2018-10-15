@@ -20,11 +20,12 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners/container_provisioner/controller/resources"
+	"github.com/knative/eventing/pkg/provisioners/container/controller/resources"
 	"github.com/knative/pkg/logging"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -53,16 +54,19 @@ func (r *reconciler) Reconcile(ctx context.Context, object runtime.Object) (runt
 		return source, nil
 	}
 
-	source.Status.InitializeConditions()
+	// See if the source has been deleted
+	accessor, err := meta.Accessor(source)
+	if err != nil {
+		logger.Warnf("Failed to get metadata accessor: %s", err)
+		return object, err
+	}
+	// No need to reconcile if the source has been marked for deletion.
+	deletionTimestamp := accessor.GetDeletionTimestamp()
+	if deletionTimestamp != nil {
+		return object, err
+	}
 
-	// TODO:
-	//// See if the source has been deleted
-	//accessor, err := meta.Accessor(source)
-	//if err != nil {
-	//	logger.Warnf("Failed to get metadata accessor: %s", err)
-	//	return err
-	//}
-	//deletionTimestamp := accessor.GetDeletionTimestamp()
+	source.Status.InitializeConditions()
 
 	args := &resources.ContainerArguments{}
 	if source.Spec.Arguments != nil {
@@ -109,7 +113,7 @@ func (r *reconciler) Reconcile(ctx context.Context, object runtime.Object) (runt
 			}
 			r.recorder.Eventf(source, corev1.EventTypeNormal, "Provisioned", "Created deployment %q", deploy.Name)
 			source.Status.SetProvisionedObjectState(deploy.Name, fqn, "Created", "Created deployment %q", deploy.Name)
-			source.Status.MarkDeprovisioned("Provisioning", "Provisioning Pod %s", args.Name)
+			source.Status.MarkDeprovisioned("Provisioning", "Provisioning deployment %s", args.Name)
 		} else {
 			if deploy.Status.ReadyReplicas > 0 {
 				source.Status.SetProvisionedObjectState(deploy.Name, fqn, "Ready", "")

@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -17,17 +18,18 @@ type Heartbeat struct {
 }
 
 var (
-	remote   string
-	label    string
-	period   int
-	sequence int
-	hb       *Heartbeat
+	remote    string
+	label     string
+	periodStr string
+	period    int
+	sequence  int
+	hb        *Heartbeat
 )
 
 func init() {
 	flag.StringVar(&remote, "remote", "", "the host url to heartbeat to")
 	flag.StringVar(&label, "label", "", "a special label")
-	flag.IntVar(&period, "period", 5, "the number of seconds between heartbeats")
+	flag.StringVar(&periodStr, "period", "5", "the number of seconds between heartbeats")
 }
 
 func main() {
@@ -36,6 +38,11 @@ func main() {
 	hb = &Heartbeat{
 		Sequence: 0,
 		Label:    label,
+	}
+
+	period, err := strconv.Atoi(periodStr)
+	if err != nil {
+		period = 5
 	}
 
 	for {
@@ -50,6 +57,8 @@ func send() {
 	if err != nil {
 		log.Printf("Unable to make request: %+v, %v", hb, err)
 		return
+	} else {
+		log.Printf("[%d]: %+v", resp.StatusCode, hb)
 	}
 	defer resp.Body.Close()
 }

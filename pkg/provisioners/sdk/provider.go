@@ -50,6 +50,7 @@ func (p *Provider) ProvideController(mgr manager.Manager) (controller.Controller
 	// Setup a new controller to Reconcile Subscriptions.
 	c, err := controller.New(p.AgentName, mgr, controller.Options{
 		Reconciler: &reconciler{
+			provider: *p,
 			recorder: mgr.GetRecorder(p.AgentName),
 		},
 	})

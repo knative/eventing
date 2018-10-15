@@ -89,7 +89,9 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
-	r.provider.Reconciler.InjectClient(c)
+	if r.provider.Reconciler != nil {
+		r.provider.Reconciler.InjectClient(c)
+	}
 	return nil
 }
 
@@ -97,7 +99,9 @@ func (r *reconciler) InjectConfig(c *rest.Config) error {
 	r.restConfig = c
 	var err error
 	r.dynamicClient, err = dynamic.NewForConfig(c)
-	r.provider.Reconciler.InjectConfig(c)
+	if r.provider.Reconciler != nil {
+		r.provider.Reconciler.InjectConfig(c)
+	}
 	return err
 }
 

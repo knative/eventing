@@ -1,14 +1,14 @@
 apiVersion: eventing.knative.dev/v1alpha1
 kind: Source
 metadata:
-  name: love
+  name: heartbeats
   namespace: default
 spec:
   provisioner:
     ref:
       name: container
   arguments:
-    image: github.com/knative/eventing/pkg/provisioners/heartbeats/cmd/
+    image: github.com/knative/eventing/pkg/sources/heartbeats/cmd/
     args:
       label: "<3"
-      period: 2
+      period: "2"
