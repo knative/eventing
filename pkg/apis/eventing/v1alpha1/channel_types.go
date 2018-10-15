@@ -127,6 +127,11 @@ func (cs *ChannelStatus) InitializeConditions() {
 	chanCondSet.Manage(cs).InitializeConditions()
 }
 
+// MarkProvisioned sets ChannelConditionProvisioned condition to True state.
+func (cs *ChannelStatus) MarkProvisioned() {
+	chanCondSet.Manage(cs).MarkTrue(ChannelConditionProvisioned)
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ChannelList is a collection of Channels.
