@@ -48,6 +48,9 @@ func MakeChannel(source *v1alpha1.Source, org *v1alpha1.Channel, args *Container
 		},
 	}
 	if org != nil {
+		// We need to keep the generation from the original channel until we use the correct
+		// generation generation. The knative/pkg webhook will reject the update if we do not
+		// do this.
 		channel.Spec.Generation = org.Spec.Generation
 	}
 	return channel, nil
