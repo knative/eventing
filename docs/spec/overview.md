@@ -63,9 +63,6 @@ establish the connection to the external system. The set of allowed
 configuration parameters is described by the _Provisioner_ which is referenced
 by the _Source_.
 
-Event selection on a _Source_ is 1:N – a single _Source_ may fan out to
-multiple _Subscriptions_.
-
 For more details, see [Kind: Source](spec.md#kind-source).
 
 ## Channel
