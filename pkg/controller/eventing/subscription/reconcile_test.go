@@ -63,17 +63,20 @@ func init() {
 var testCases = []controllertesting.TestCase{
 	{
 		Name:         "non existent key",
+		Reconciles:   &eventingv1alpha1.Subscription{},
 		ReconcileKey: "non-existent-test-ns/non-existent-test-key",
 		WantErr:      false,
 	}, {
-		Name: "subscription but From channel does not exist",
+		Name:       "subscription but From channel does not exist",
+		Reconciles: &eventingv1alpha1.Subscription{},
 		InitialState: []runtime.Object{
 			getNewSubscription(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
 		WantErrMsg:   `channels.eventing.knative.dev "fromchannel" not found`,
 	}, {
-		Name: "subscription, but From is not subscribable",
+		Name:       "subscription, but From is not subscribable",
+		Reconciles: &eventingv1alpha1.Subscription{},
 		InitialState: []runtime.Object{
 			getNewSubscription(),
 		},
@@ -105,7 +108,8 @@ var testCases = []controllertesting.TestCase{
 				}},
 		},
 	}, {
-		Name: "Valid from, call does not exist",
+		Name:       "Valid from, call does not exist",
+		Reconciles: &eventingv1alpha1.Subscription{},
 		InitialState: []runtime.Object{
 			getNewSubscription(),
 		},
@@ -137,7 +141,8 @@ var testCases = []controllertesting.TestCase{
 				}},
 		},
 	}, {
-		Name: "Valid from, call is not targetable",
+		Name:       "Valid from, call is not targetable",
+		Reconciles: &eventingv1alpha1.Subscription{},
 		InitialState: []runtime.Object{
 			getNewSubscription(),
 		},
@@ -182,7 +187,8 @@ var testCases = []controllertesting.TestCase{
 				}},
 		},
 	}, {
-		Name: "Valid from and call, result does not exist",
+		Name:       "Valid from and call, result does not exist",
+		Reconciles: &eventingv1alpha1.Subscription{},
 		InitialState: []runtime.Object{
 			getNewSubscription(),
 		},
@@ -229,7 +235,8 @@ var testCases = []controllertesting.TestCase{
 				}},
 		},
 	}, {
-		Name: "valid from, call, result is not sinkable",
+		Name:       "valid from, call, result is not sinkable",
+		Reconciles: &eventingv1alpha1.Subscription{},
 		InitialState: []runtime.Object{
 			getNewSubscription(),
 		},
@@ -305,7 +312,8 @@ var testCases = []controllertesting.TestCase{
 				}},
 		},
 	}, {
-		Name: "new subscription: adds status, all targets resolved, subscribers modified",
+		Name:       "new subscription: adds status, all targets resolved, subscribers modified",
+		Reconciles: &eventingv1alpha1.Subscription{},
 		InitialState: []runtime.Object{
 			getNewSubscription(),
 		},
@@ -381,7 +389,8 @@ var testCases = []controllertesting.TestCase{
 				}},
 		},
 	}, {
-		Name: "new subscription to K8s Service: adds status, all targets resolved, subscribers modified",
+		Name:       "new subscription to K8s Service: adds status, all targets resolved, subscribers modified",
+		Reconciles: &eventingv1alpha1.Subscription{},
 		InitialState: []runtime.Object{
 			getNewSubscriptionToK8sService(),
 			getK8sService(),
@@ -453,7 +462,8 @@ var testCases = []controllertesting.TestCase{
 				}},
 		},
 	}, {
-		Name: "new subscription with source: adds status, all targets resolved, subscribers modified",
+		Name:       "new subscription with source: adds status, all targets resolved, subscribers modified",
+		Reconciles: &eventingv1alpha1.Subscription{},
 		InitialState: []runtime.Object{
 			getNewSubscriptionWithSource(),
 		},
@@ -566,7 +576,7 @@ func TestAllCases(t *testing.T) {
 			restConfig:    &rest.Config{},
 			recorder:      recorder,
 		}
-		t.Run(tc.Name, tc.Runner(t, r, c))
+		t.Run(tc.Name, tc.RunnerSDK(t, r, c))
 	}
 }
 

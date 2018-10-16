@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-type reconciler struct {
+type Reconciler struct {
 	client        client.Client
 	restConfig    *rest.Config
 	dynamicClient dynamic.Interface
@@ -39,11 +39,11 @@ type reconciler struct {
 }
 
 // Verify the struct implements reconcile.Reconciler
-var _ reconcile.Reconciler = &reconciler{}
+var _ reconcile.Reconciler = &Reconciler{}
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two.
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	ctx := context.TODO()
 	logger := logging.FromContext(ctx)
 
@@ -87,7 +87,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	return reconcile.Result{}, err
 }
 
-func (r *reconciler) InjectClient(c client.Client) error {
+func (r *Reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	if r.provider.Reconciler != nil {
 		r.provider.Reconciler.InjectClient(c)
@@ -95,7 +95,7 @@ func (r *reconciler) InjectClient(c client.Client) error {
 	return nil
 }
 
-func (r *reconciler) InjectConfig(c *rest.Config) error {
+func (r *Reconciler) InjectConfig(c *rest.Config) error {
 	r.restConfig = c
 	var err error
 	r.dynamicClient, err = dynamic.NewForConfig(c)
@@ -105,7 +105,7 @@ func (r *reconciler) InjectConfig(c *rest.Config) error {
 	return err
 }
 
-func (r *reconciler) statusHasChanged(ctx context.Context, old, new runtime.Object) (bool, error) {
+func (r *Reconciler) statusHasChanged(ctx context.Context, old, new runtime.Object) (bool, error) {
 	if old == nil {
 		return true, nil
 	}
@@ -123,7 +123,7 @@ func (r *reconciler) statusHasChanged(ctx context.Context, old, new runtime.Obje
 	return true, nil
 }
 
-func (r *reconciler) updateStatus(ctx context.Context, request reconcile.Request, object runtime.Object) (runtime.Object, error) {
+func (r *Reconciler) updateStatus(ctx context.Context, request reconcile.Request, object runtime.Object) (runtime.Object, error) {
 	freshObj := r.provider.Parent.DeepCopyObject()
 	if err := r.client.Get(ctx, request.NamespacedName, freshObj); err != nil {
 		return nil, err

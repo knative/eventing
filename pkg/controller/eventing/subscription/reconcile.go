@@ -25,52 +25,37 @@ import (
 	duckapis "github.com/knative/pkg/apis"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/logging"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+type reconciler struct {
+	client        client.Client
+	restConfig    *rest.Config
+	dynamicClient dynamic.Interface
+	recorder      record.EventRecorder
+}
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Subscription resource
 // with the current status of the resource.
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	glog.Infof("Reconciling subscription %v", request)
-	subscription := &v1alpha1.Subscription{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, subscription)
+func (r *reconciler) Reconcile(ctx context.Context, object runtime.Object) (runtime.Object, error) {
+	logger := logging.FromContext(ctx)
 
-	if errors.IsNotFound(err) {
-		glog.Errorf("could not find subscription %v\n", request)
-		return reconcile.Result{}, nil
+	subscription, ok := object.(*v1alpha1.Subscription)
+	if !ok {
+		logger.Errorf("could not find subscription %v\n", object)
+		return object, nil
 	}
-
-	if err != nil {
-		glog.Errorf("could not fetch Subscription %v for %+v\n", err, request)
-		return reconcile.Result{}, err
-	}
-
-	original := subscription.DeepCopy()
-
-	// Reconcile this copy of the Subscription and then write back any status
-	// updates regardless of whether the reconcile error out.
-	err = r.reconcile(subscription)
-	if equality.Semantic.DeepEqual(original.Status, subscription.Status) {
-		// If we didn't change anything then don't call updateStatus.
-		// This is important because the copy we loaded from the informer's
-		// cache may be stale and we don't want to overwrite a prior update
-		// to status with this stale state.
-	} else if _, err := r.updateStatus(subscription); err != nil {
-		glog.Warningf("Failed to update subscription status: %v", err)
-		return reconcile.Result{}, err
-	}
-
-	// Requeue if the resource is not ready:
-	return reconcile.Result{}, err
+	return subscription, r.reconcile(subscription)
 }
 
 func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
@@ -138,25 +123,6 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 	// Everything went well, set the fact that subscriptions have been modified
 	subscription.Status.MarkFromReady()
 	return nil
-}
-
-func (r *reconciler) updateStatus(subscription *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
-	newSubscription := &v1alpha1.Subscription{}
-	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: subscription.Namespace, Name: subscription.Name}, newSubscription)
-
-	if err != nil {
-		return nil, err
-	}
-	newSubscription.Status = subscription.Status
-
-	// Until #38113 is merged, we must use Update instead of UpdateStatus to
-	// update the Status block of the Subscription resource. UpdateStatus will not
-	// allow changes to the Spec of the resource, which is ideal for ensuring
-	// nothing other than resource status has been updated.
-	if err = r.client.Update(context.TODO(), newSubscription); err != nil {
-		return nil, err
-	}
-	return newSubscription, nil
 }
 
 // resolveCall resolves the Spec.Call object. If it's an ObjectReference will resolve the object
@@ -302,4 +268,16 @@ func (r *reconciler) CreateResourceInterface(namespace string, ref *corev1.Objec
 	}
 	return rc.Namespace(namespace), nil
 
+}
+
+func (r *reconciler) InjectClient(c client.Client) error {
+	r.client = c
+	return nil
+}
+
+func (r *reconciler) InjectConfig(c *rest.Config) error {
+	r.restConfig = c
+	var err error
+	r.dynamicClient, err = dynamic.NewForConfig(c)
+	return err
 }

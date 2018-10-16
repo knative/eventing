@@ -18,13 +18,9 @@ package controller
 
 import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners/sdk"
+	"github.com/knative/eventing/pkg/controller/sdk"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -34,13 +30,6 @@ const (
 	// itself when creating events.
 	controllerAgentName = "container-provisioner-controller"
 )
-
-type reconciler struct {
-	client        client.Client
-	restConfig    *rest.Config
-	dynamicClient dynamic.Interface
-	recorder      record.EventRecorder
-}
 
 // ProvideController returns a Subscription controller.
 func ProvideController(mgr manager.Manager) (controller.Controller, error) {
@@ -54,16 +43,4 @@ func ProvideController(mgr manager.Manager) (controller.Controller, error) {
 	}
 
 	return p.ProvideController(mgr)
-}
-
-func (r *reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
-}
-
-func (r *reconciler) InjectConfig(c *rest.Config) error {
-	r.restConfig = c
-	var err error
-	r.dynamicClient, err = dynamic.NewForConfig(c)
-	return err
 }

@@ -24,6 +24,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/knative/eventing/pkg/controller/sdk"
 	"github.com/knative/pkg/apis"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -48,6 +49,8 @@ type TestCase struct {
 	// starts.
 	InitialState []runtime.Object
 
+	Reconciles runtime.Object
+
 	// ReconcileKey is the key of the object to reconcile in namespace/name form.
 	ReconcileKey string
 
@@ -61,6 +64,10 @@ type TestCase struct {
 	// WantResult is the reconcile result we expect to be returned from the
 	// Reconcile function.
 	WantResult reconcile.Result
+
+	// WantResultObject is the reconcile result we expect to be returned from the
+	// Reconcile function.
+	WantResultObject runtime.Object
 
 	// WantPresent holds the non-exclusive set of objects we expect to exist
 	// after reconciliation completes.
@@ -109,6 +116,33 @@ func (tc *TestCase) Runner(t *testing.T, r reconcile.Reconciler, c *MockClient) 
 	}
 }
 
+// Runner returns a testing func that can be passed to t.Run.
+func (tc *TestCase) RunnerSDK(t *testing.T, r sdk.KnativeReconciler, c *MockClient) func(t *testing.T) {
+	return func(t *testing.T) {
+		result, recErr := tc.ReconcileSDK(c, r)
+
+		if err := tc.VerifyErr(recErr); err != nil {
+			t.Error(err)
+		}
+
+		// Push back the reconciled changes into the client.
+		if result != nil {
+			c.Update(context.TODO(), result)
+		}
+
+		// Verifying should be done against the innerClient, never against mocks.
+		c.stopMocking()
+
+		if err := tc.VerifyWantPresent(c); err != nil {
+			t.Error(err)
+		}
+
+		if err := tc.VerifyWantAbsent(c); err != nil {
+			t.Error(err)
+		}
+	}
+}
+
 // GetDynamicClient returns the mockDynamicClient to use for this test case.
 func (tc *TestCase) GetDynamicClient() dynamic.Interface {
 	if tc.Scheme == nil {
@@ -141,6 +175,25 @@ func (tc *TestCase) Reconcile(r reconcile.Reconciler) (reconcile.Result, error) 
 	})
 }
 
+func (tc *TestCase) ReconcileSDK(c client.Client, r sdk.KnativeReconciler) (runtime.Object, error) {
+	if tc.ReconcileKey == "" {
+		return nil, fmt.Errorf("test did not set ReconcileKey")
+	}
+	ns, n, err := cache.SplitMetaNamespaceKey(tc.ReconcileKey)
+	if err != nil {
+		return nil, err
+	}
+
+	obj := tc.Reconciles.DeepCopyObject()
+	err = c.Get(context.TODO(), client.ObjectKey{Namespace: ns, Name: n}, obj)
+	if err != nil {
+		// Not found is not an error.
+		return nil, nil
+	}
+
+	return r.Reconcile(context.TODO(), obj)
+}
+
 // VerifyErr verifies that the given error returned from Reconcile is the error
 // expected by the test case.
 func (tc *TestCase) VerifyErr(err error) error {
@@ -168,6 +221,15 @@ func (tc *TestCase) VerifyErr(err error) error {
 func (tc *TestCase) VerifyResult(result reconcile.Result) error {
 	if diff := cmp.Diff(tc.WantResult, result); diff != "" {
 		return fmt.Errorf("unexpected reconcile Result (-want +got) %v", diff)
+	}
+	return nil
+}
+
+// VerifyResult verifies that the given result returned from Reconcile is the
+// result expected by the test case.
+func (tc *TestCase) VerifyResultSDK(result runtime.Object) error {
+	if diff := cmp.Diff(tc.WantResultObject, result); diff != "" {
+		return fmt.Errorf("unexpected reconcile Result Object (-want +got) %v", diff)
 	}
 	return nil
 }

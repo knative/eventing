@@ -49,7 +49,7 @@ type Provider struct {
 func (p *Provider) ProvideController(mgr manager.Manager) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Subscriptions.
 	c, err := controller.New(p.AgentName, mgr, controller.Options{
-		Reconciler: &reconciler{
+		Reconciler: &Reconciler{
 			provider: *p,
 			recorder: mgr.GetRecorder(p.AgentName),
 		},
