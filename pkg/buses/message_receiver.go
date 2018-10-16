@@ -108,7 +108,7 @@ func (r *MessageReceiver) stop(srv *http.Server) {
 func (r *MessageReceiver) HandleRequest(res http.ResponseWriter, req *http.Request) {
 	host := req.Host
 	r.logger.Infof("Received request for %s", host)
-	channel := r.parseChannel(host)
+	channel := ParseChannel(host)
 
 	message, err := r.fromRequest(req)
 	if err != nil {
@@ -170,7 +170,7 @@ func (r *MessageReceiver) fromHTTPHeaders(headers http.Header) map[string]string
 
 // parseChannel converts the channel's hostname into a channel
 // reference.
-func (r *MessageReceiver) parseChannel(host string) ChannelReference {
+func ParseChannel(host string) ChannelReference {
 	chunks := strings.Split(host, ".")
 	return ChannelReference{
 		Name:      chunks[0],
