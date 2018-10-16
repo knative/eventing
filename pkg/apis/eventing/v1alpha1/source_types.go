@@ -18,12 +18,11 @@ package v1alpha1
 
 import (
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/webhook"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -114,9 +113,9 @@ type SourceStatus struct {
 
 	// Provisioned holds the status of a Provisioned Object at a point in time.
 	// +optional
-	// +patchMergeKey=name
+	// +patchMergeKey=ref
 	// +patchStrategy=merge
-	Provisioned []ProvisionedObjectStatus `json:"provisioned,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Provisioned []ProvisionedObjectStatus `json:"provisioned,omitempty" patchStrategy:"merge" patchMergeKey:"ref"`
 
 	// ObservedGeneration is the 'Generation' of the Source that
 	// was last reconciled by the controller.
@@ -130,10 +129,8 @@ type SourceStatus struct {
 // ProvisionedObjectStatus holds the provisioning state of a resource that was
 // provisioned on behalf of the current object.
 type ProvisionedObjectStatus struct {
-	// Name of Object
-	Name string `json:"name,omitempty"`
-	// Type is the fully qualified object type.
-	Type string `json:"type,omitempty"`
+	// Ref of Object
+	Ref corev1.ObjectReference `json:"ref,omitempty"`
 	// Status is the current relationship between Source and Object.
 	Status string `json:"status,omitempty"`
 	// Reason is the detailed description describing current relationship status.
@@ -166,21 +163,25 @@ func (ss *SourceStatus) MarkDeprovisioned(reason, messageFormat string, messageA
 }
 
 // SetProvisionedObjectState sets the status of an object this resource provisioned.
-func (ss *SourceStatus) SetProvisionedObjectState(name, objType, status, reasonFormat string, reasonA ...interface{}) {
+func (ss *SourceStatus) SetProvisionedObjectState(ref corev1.ObjectReference, status, reasonFormat string, reasonA ...interface{}) {
 	reason := fmt.Sprintf(reasonFormat, reasonA...)
 	newP := ProvisionedObjectStatus{
-		Name:   name,
-		Type:   objType,
+		Ref:    ref,
 		Status: status,
 		Reason: reason,
 	}
 	newProvisioned := make([]ProvisionedObjectStatus, 0, len(ss.Provisioned))
+	added := false
 	for _, p := range ss.Provisioned {
-		if p.Name == newP.Name {
+		if p.Ref == newP.Ref {
 			newProvisioned = append(newProvisioned, newP)
+			added = true
 		} else {
 			newProvisioned = append(newProvisioned, p)
 		}
+	}
+	if !added {
+		newProvisioned = append(newProvisioned, newP)
 	}
 	ss.Provisioned = newProvisioned
 }

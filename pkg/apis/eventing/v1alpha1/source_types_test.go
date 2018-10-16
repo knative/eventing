@@ -140,3 +140,109 @@ func TestSourceStatusGetCondition(t *testing.T) {
 		})
 	}
 }
+
+func TestSourceStatusSetProvisionedObjectState(t *testing.T) {
+	tests := []struct {
+		name   string
+		s      *SourceStatus
+		update ProvisionedObjectStatus
+		extra  []interface{}
+		want   []ProvisionedObjectStatus
+	}{{
+		name: "empty to one",
+		s:    &SourceStatus{},
+		update: ProvisionedObjectStatus{
+			Ref: corev1.ObjectReference{
+				Name: "t",
+			},
+			Status: "Test",
+			Reason: "a test",
+		},
+		want: []ProvisionedObjectStatus{{
+			Ref: corev1.ObjectReference{
+				Name: "t",
+			},
+			Status: "Test",
+			Reason: "a test",
+		}},
+	}, {
+		name: "update one to one",
+		s: &SourceStatus{
+			Provisioned: []ProvisionedObjectStatus{{
+				Ref: corev1.ObjectReference{
+					Name: "t",
+				},
+			}},
+		},
+		update: ProvisionedObjectStatus{
+			Ref: corev1.ObjectReference{
+				Name: "t",
+			},
+			Status: "Test",
+			Reason: "a test",
+		},
+		want: []ProvisionedObjectStatus{{
+			Ref: corev1.ObjectReference{
+				Name: "t",
+			},
+			Status: "Test",
+			Reason: "a test",
+		}},
+	}, {
+		name: "update one with many",
+		s: &SourceStatus{
+			Provisioned: []ProvisionedObjectStatus{{
+				Ref: corev1.ObjectReference{
+					Name: "t",
+					Kind: "OneKind",
+				},
+			}, {
+				Ref: corev1.ObjectReference{
+					Name: "t2",
+				},
+			}, {
+				Ref: corev1.ObjectReference{
+					Name: "t",
+					Kind: "AnotherKind",
+				},
+			}},
+		},
+		update: ProvisionedObjectStatus{
+			Ref: corev1.ObjectReference{
+				Name: "t",
+				Kind: "OneKind",
+			},
+			Status: "Test",
+			Reason: "a test",
+		},
+		want: []ProvisionedObjectStatus{{
+			Ref: corev1.ObjectReference{
+				Name: "t",
+				Kind: "OneKind",
+			},
+			Status: "Test",
+			Reason: "a test",
+		}, {
+			Ref: corev1.ObjectReference{
+				Name: "t2",
+			},
+		}, {
+			Ref: corev1.ObjectReference{
+				Name: "t",
+				Kind: "AnotherKind",
+			},
+		}},
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			u := test.update
+			test.s.SetProvisionedObjectState(u.Ref, u.Status, u.Reason, test.extra...)
+
+			got := test.s.Provisioned
+			if diff := cmp.Diff(test.want, got); diff != "" {
+				t.Errorf("%s: unexpected (-want, +got) = %v", test.name, diff)
+			}
+		})
+	}
+}
