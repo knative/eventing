@@ -26,27 +26,35 @@ import (
 )
 
 // BusType is the type of the stub bus
-const BusType = "natss"
+const (
+	BusType = "natss"
+	NatssUrl = "nats://nats-streaming.knative-eventing.svc.cluster.local:4222"
+)
 
 type NatssBus struct {
+	natsUrl     string
 	subscribers map[string]*stan.Subscription
 
-	ref         buses.BusReference
-	dispatcher  buses.BusDispatcher
-	provisioner buses.BusProvisioner
+	ref         		buses.BusReference
+	dispatcher  		buses.BusDispatcher
+	dispEventHandler 	buses.EventHandlerFuncs
+	provisioner 		buses.BusProvisioner
+	provEventHandler 	buses.EventHandlerFuncs
 
-	logger *zap.SugaredLogger
+	logger      *zap.SugaredLogger
 }
+
+type SetupNatssBus func(*NatssBus) error
 
 var (
 	natsConn *stan.Conn
 )
 
-func NewNatssBusProvisioner(ref buses.BusReference, opts *buses.BusOpts) (*NatssBus, error) {
+func NewNatssBusProvisioner(ref buses.BusReference, setup SetupNatssBus) (*NatssBus, error) {
 	bus := &NatssBus{
 		ref: ref,
 	}
-	eventHandlers := buses.EventHandlerFuncs{
+	bus.provEventHandler = buses.EventHandlerFuncs{
 		ProvisionFunc: func(channel buses.ChannelReference, parameters buses.ResolvedParameters) error {
 			bus.logger.Infof("Provision channel %q\n", channel.Name)
 			bus.logger.Info("channel=%+v; parameters=%+v", channel, parameters)
@@ -58,19 +66,16 @@ func NewNatssBusProvisioner(ref buses.BusReference, opts *buses.BusOpts) (*Natss
 			return nil
 		},
 	}
-
-	bus.provisioner = buses.NewBusProvisioner(ref, eventHandlers, opts)
-	bus.logger = opts.Logger
-
+	setup(bus)
 	return bus, nil
 }
 
-func NewNatssBusDispatcher(ref buses.BusReference, opts *buses.BusOpts) (*NatssBus, error) {
+func NewNatssBusDispatcher(ref buses.BusReference, setup SetupNatssBus) (*NatssBus, error) {
 	bus := &NatssBus{
-		ref: ref,
+		ref:         ref,
 		subscribers: make(map[string]*stan.Subscription),
 	}
-	handlerFuncs := buses.EventHandlerFuncs{
+	bus.dispEventHandler = buses.EventHandlerFuncs{
 		ReceiveMessageFunc: func(channel buses.ChannelReference, message *buses.Message) error {
 			bus.logger.Infof("Recieved message for %q channel", channel.String())
 			if err := stanutil.Publish(natsConn, channel.Name, &message.Payload, bus.logger); err != nil {
@@ -83,9 +88,7 @@ func NewNatssBusDispatcher(ref buses.BusReference, opts *buses.BusOpts) (*NatssB
 		SubscribeFunc: bus.subscribe,
 		UnsubscribeFunc: bus.unsubscribe,
 	}
-	bus.dispatcher = buses.NewBusDispatcher(ref, handlerFuncs, opts)
-	bus.logger = opts.Logger
-
+	setup(bus)
 	return bus, nil
 }
 
@@ -93,7 +96,7 @@ func (b *NatssBus) Run(threadness int, stopCh <-chan struct{}, clientId string) 
 	b.logger.Infof("try to connect to NATSS from %s", clientId)
 	var err error
 	for i:=0; i<60; i++ {
-		if natsConn, err = stanutil.Connect("knative-nats-streaming", clientId, "nats://nats-streaming.knative-eventing.svc.cluster.local:4222", b.logger); err != nil {
+		if natsConn, err = stanutil.Connect("knative-nats-streaming", clientId, b.natsUrl, b.logger); err != nil {
 			b.logger.Errorf(" Create new connection failed: %+v", err)
 			time.Sleep(1 * time.Second)
 		} else {
@@ -114,6 +117,24 @@ func (b *NatssBus) Run(threadness int, stopCh <-chan struct{}, clientId string) 
 	}
 }
 
+func SetNewBusProvisioner(opts *buses.BusOpts) SetupNatssBus {
+	return func(b *NatssBus) error {
+		b.natsUrl = NatssUrl
+		b.provisioner = buses.NewBusProvisioner(b.ref, b.dispEventHandler, opts)
+		b.logger = opts.Logger
+		return nil
+	}
+}
+
+func SetNewBusDispatcher(opts *buses.BusOpts) SetupNatssBus {
+	return func(b *NatssBus) error {
+		b.natsUrl = NatssUrl
+		b.dispatcher = buses.NewBusDispatcher(b.ref, b.dispEventHandler, opts)
+		b.logger = opts.Logger
+		return nil
+	}
+}
+
 func (bus *NatssBus) subscribe(channel buses.ChannelReference, subscription buses.SubscriptionReference, parameters buses.ResolvedParameters) error {
 	bus.logger.Infof("Subscribe %q to %q channel\n", subscription.Name, channel.Name)
 	bus.logger.Info("subscription= %+v; parameters=%+v", subscription, parameters)
@@ -122,7 +143,7 @@ func (bus *NatssBus) subscribe(channel buses.ChannelReference, subscription buse
 		bus.logger.Info("NATSS message received: %+v", msg)
 		message := buses.Message{
 			Headers: map[string]string{},
-			Payload: []byte(msg.String()),
+			Payload: []byte(msg.Data),
 		}
 		if err := bus.dispatcher.DispatchMessage(subscription, &message); err != nil {
 			bus.logger.Warnf("Failed to dispatch message: %v", err)
@@ -158,4 +179,3 @@ func (bus *NatssBus) unsubscribe(channel buses.ChannelReference, subscription bu
 	}
 	return nil
 }
-

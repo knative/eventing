@@ -53,7 +53,7 @@ func main() {
 	flag.StringVar(&opts.MasterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	flag.Parse()
 
-	bus, err := natss.NewNatssBusDispatcher(ref, opts)
+	bus, err := natss.NewNatssBusDispatcher(ref, natss.SetNewBusDispatcher(opts))
 	if err != nil {
 		logger.Fatalf("Error starting natss bus dispatcher: %v", err)
 	}

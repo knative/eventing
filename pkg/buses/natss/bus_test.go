@@ -16,9 +16,140 @@ limitations under the License.
 
 package natss
 
-import "testing"
+import (
+	"os"
+	"testing"
+	"time"
+	"go.uber.org/zap"
+	"github.com/knative/eventing/pkg/buses"
+	"github.com/nats-io/nats-streaming-server/server"
+	"github.com/stretchr/testify/assert"
+	"github.com/knative/pkg/signals"
+)
 
-func TestStub(t *testing.T) {
-	// TODO: Implement tests in this directory, please.
-	// This file is used to make code coverage on this directly count.
+const (
+	clusterId = "knative-nats-streaming"
+	natssTestUrl = "nats://localhost:4222"
+	messagePayload = "test-message-1"
+)
+
+var (
+	logger *zap.SugaredLogger
+	done = make(chan struct{})
+)
+
+func TestMain(m *testing.M) {
+	logger = buses.NewBusLoggerFromConfig(buses.NewLoggingConfig())
+	defer logger.Sync()
+
+	stanServer, err := startNatss()
+	if err != nil {
+		panic(err)
+	}
+
+	retCode := m.Run()
+
+	stopNatss(stanServer)
+	os.Exit(retCode)
+}
+
+func TestNatss(t *testing.T) {
+	ref := buses.NewBusReferenceFromNames("NATSS_TEST_NAME","NATSS_TAEST_NAMESPACE")
+	opts := &buses.BusOpts{
+		Logger: logger,
+		KubeConfig: "",
+		MasterURL: "",
+	}
+
+	busProv, err := NewNatssBusProvisioner(ref, setNewTestBusProvisioner(t, opts))
+	assert.Nil(t, err)
+
+	busDisp, err := NewNatssBusDispatcher(ref, setNewTestBusDispatcher(t, opts))
+	assert.Nil(t, err)
+
+	stopCh := signals.SetupSignalHandler()
+	busProv.Run(1, stopCh, "test-provisioner-natss")
+	busDisp.Run(1, stopCh, "test-dispatcher-natss")
+
+	// create adummy channel
+	channel := buses.ChannelReference{"default", "test-channel"}
+	busProv.provEventHandler.ProvisionFunc(channel, make(buses.ResolvedParameters))
+
+	// create a dummy subscription
+	subscription := buses.SubscriptionReference{"default", "test-subscription"}
+	busDisp.dispEventHandler.SubscribeFunc(channel, subscription, make(buses.ResolvedParameters))
+
+    // send a message ....
+	message := buses.Message{make(map[string]string),[]byte(messagePayload)}
+    busDisp.dispEventHandler.ReceiveMessageFunc(channel, &message)
+
+	// wait for subscriber to respond
+	select {
+	case <-done: logger.Infof("Subscriber finished")
+	case <-time.After(5 * time.Second): logger.Info("Subscriber timeout")
+	}
+}
+
+func startNatss() (*server.StanServer, error) {
+	return server.RunServer(clusterId)
+}
+
+func stopNatss(server *server.StanServer) {
+	server.Shutdown()
+}
+
+// set dummy provisioner
+func setNewTestBusProvisioner(t *testing.T, opts *buses.BusOpts) SetupNatssBus {
+	return func(b *NatssBus) error {
+		b.natsUrl = natssTestUrl
+		b.provisioner = newDummyProvisioner(t, b.provEventHandler)
+		b.logger = opts.Logger
+		return nil
+	}
+}
+
+func newDummyProvisioner(t *testing.T, handlerFuncs buses.EventHandlerFuncs) buses.BusProvisioner {
+	var b = &dummyBusProvisioner{
+		t : t,
+	}
+    return b
+}
+
+type dummyBusProvisioner struct {
+	t *testing.T
+	logger *zap.SugaredLogger
+}
+
+func (m *dummyBusProvisioner) Run(threadiness int, stopCh <-chan struct{}) {}
+
+//set dummy dispatcher
+func setNewTestBusDispatcher(t *testing.T, opts *buses.BusOpts) SetupNatssBus {
+	return func(b *NatssBus) error {
+		b.natsUrl = natssTestUrl
+		b.dispatcher = newDummyDispatcher(t, b.ref, b.dispEventHandler, opts)
+		b.logger = opts.Logger
+		return nil
+	}
+}
+
+func newDummyDispatcher(t *testing.T, ref buses.BusReference, handlerFuncs buses.EventHandlerFuncs, opts *buses.BusOpts) buses.BusDispatcher {
+	var b = &dummyBusDispatcher{
+		t : t,
+	}
+	return b
+}
+
+type dummyBusDispatcher struct {
+	t *testing.T
+	logger *zap.SugaredLogger
+}
+
+func (m *dummyBusDispatcher) Run(threadiness int, stopCh <-chan struct{}) {}
+
+func (m *dummyBusDispatcher) DispatchMessage(subscription buses.SubscriptionReference, message *buses.Message) error {
+	payload := string(message.Payload)
+	logger.Infof("dummyBusDispatcher(): received message %s:", payload)
+	assert.Equal(m.t, messagePayload, payload)
+	done <- struct{}{}
+	return nil
 }
