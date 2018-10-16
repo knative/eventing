@@ -22,17 +22,20 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/ghodss/yaml"
+	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"go.uber.org/zap"
 )
 
 const (
+	finalizerName = controllerAgentName
+
 	ArgumentNumPartitions = "NumPartitions"
 	DefaultNumPartitions  = 1
 )
@@ -41,6 +44,7 @@ const (
 // converge the two. It then updates the Status block of the Channel resource
 // with the current status of the resource.
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	ctx := context.TODO()
 	r.logger.Info("Reconciling channel", zap.Any("request", request))
 	channel := &v1alpha1.Channel{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, channel)
@@ -71,26 +75,20 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
-	original := channel.DeepCopy()
+	newChannel := channel.DeepCopy()
 
 	if clusterProvisioner.Status.IsReady() {
 		// Reconcile this copy of the Channel and then write back any status
 		// updates regardless of whether the reconcile error out.
-		err = r.reconcile(channel)
+		err = r.reconcile(newChannel)
 	} else {
-		channel.Status.MarkNotProvisioned("NotProvisioned", "ClusterProvisioner %s is not ready", clusterProvisioner.Name)
+		newChannel.Status.MarkNotProvisioned("NotProvisioned", "ClusterProvisioner %s is not ready", clusterProvisioner.Name)
 		err = fmt.Errorf("ClusterProvisioner %s is not ready", clusterProvisioner.Name)
 	}
 
-	if !equality.Semantic.DeepEqual(original.Status, channel.Status) {
-		// If we didn't change anything then don't call updateStatus.
-		// This is important because the copy we loaded from the informer's
-		// cache may be stale and we don't want to overwrite a prior update
-		// to status with this stale state.
-		if _, err := r.updateStatus(channel); err != nil {
-			r.logger.Info("failed to update channel status", zap.Error(err))
-			return reconcile.Result{}, err
-		}
+	if err := r.updateChannel(ctx, newChannel); err != nil {
+		r.logger.Info("failed to update channel status", zap.Error(err))
+		return reconcile.Result{}, err
 	}
 
 	// Requeue if the resource is not ready:
@@ -107,10 +105,14 @@ func (r *reconciler) reconcile(channel *v1alpha1.Channel) error {
 	deletionTimestamp := accessor.GetDeletionTimestamp()
 	if deletionTimestamp != nil {
 		r.logger.Info(fmt.Sprintf("DeletionTimestamp: %v", deletionTimestamp))
-		//TODO: Handle deletion
+		if err := r.deprovisionChannel(channel); err != nil {
+			return err
+		}
+		r.removeFinalizer(channel)
 		return nil
 	}
 
+	r.addFinalizer(channel)
 	channel.Status.InitializeConditions()
 	if err := r.provisionChannel(channel); err != nil {
 		channel.Status.MarkNotProvisioned("NotProvisioned", "error while provisioning: %s", err)
@@ -122,7 +124,7 @@ func (r *reconciler) reconcile(channel *v1alpha1.Channel) error {
 
 func (r *reconciler) provisionChannel(channel *v1alpha1.Channel) error {
 	topicName := topicName(channel)
-	r.logger.Info("provisioning topic on kafka cluster", zap.String("topic", topicName))
+	r.logger.Info("creating topic on kafka cluster", zap.String("topic", topicName))
 
 	partitions := DefaultNumPartitions
 
@@ -155,34 +157,66 @@ func (r *reconciler) provisionChannel(channel *v1alpha1.Channel) error {
 	return err
 }
 
+func (r *reconciler) deprovisionChannel(channel *v1alpha1.Channel) error {
+	topicName := topicName(channel)
+	r.logger.Info("deleting topic on kafka cluster", zap.String("topic", topicName))
+
+	err := r.kafkaClusterAdmin.DeleteTopic(topicName)
+	if err == sarama.ErrUnknownTopicOrPartition {
+		return nil
+	} else if err != nil {
+		r.logger.Error("error deleting topic", zap.String("topic", topicName), zap.Error(err))
+	} else {
+		r.logger.Info("successfully deleted topic %s", zap.String("topic", topicName))
+	}
+	return err
+}
+
 func (r *reconciler) getClusterProvisioner() (*v1alpha1.ClusterProvisioner, error) {
 	clusterProvisioner := &v1alpha1.ClusterProvisioner{}
 	objKey := client.ObjectKey{
 		Name: r.config.Name,
 	}
-	if err := r.client.Get(context.TODO(), objKey, clusterProvisioner); err != nil {
+	if err := r.client.Get(context.Background(), objKey, clusterProvisioner); err != nil {
 		return nil, err
 	}
 	return clusterProvisioner, nil
 }
 
-func (r *reconciler) updateStatus(channel *v1alpha1.Channel) (*v1alpha1.Channel, error) {
-	newChannel := &v1alpha1.Channel{}
-	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: channel.Namespace, Name: channel.Name}, newChannel)
-
+func (r *reconciler) updateChannel(ctx context.Context, u *v1alpha1.Channel) error {
+	channel := &v1alpha1.Channel{}
+	err := r.client.Get(ctx, client.ObjectKey{Namespace: u.Namespace, Name: u.Name}, channel)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	newChannel.Status = channel.Status
 
-	// Until #38113 is merged, we must use Update instead of UpdateStatus to
-	// update the Status block of the Channel resource. UpdateStatus will not
-	// allow changes to the Spec of the resource, which is ideal for ensuring
-	// nothing other than resource status has been updated.
-	if err = r.client.Update(context.TODO(), newChannel); err != nil {
-		return nil, err
+	updated := false
+	if !equality.Semantic.DeepEqual(channel.Finalizers, u.Finalizers) {
+		channel.SetFinalizers(u.ObjectMeta.Finalizers)
+		updated = true
 	}
-	return newChannel, nil
+
+	if !equality.Semantic.DeepEqual(channel.Status, u.Status) {
+		channel.Status = u.Status
+		updated = true
+	}
+
+	if updated == false {
+		return nil
+	}
+	return r.client.Update(ctx, channel)
+}
+
+func (r *reconciler) addFinalizer(channel *v1alpha1.Channel) {
+	finalizers := sets.NewString(channel.Finalizers...)
+	finalizers.Insert(finalizerName)
+	channel.Finalizers = finalizers.List()
+}
+
+func (r *reconciler) removeFinalizer(channel *v1alpha1.Channel) {
+	finalizers := sets.NewString(channel.Finalizers...)
+	finalizers.Delete(finalizerName)
+	channel.Finalizers = finalizers.List()
 }
 
 func topicName(channel *v1alpha1.Channel) string {

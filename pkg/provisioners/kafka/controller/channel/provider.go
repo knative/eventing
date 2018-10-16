@@ -81,7 +81,6 @@ func getKafkaAdminClient(config *common.KafkaProvisionerConfig) (sarama.ClusterA
 	saramaConf := sarama.NewConfig()
 	saramaConf.Version = sarama.V1_1_0_0
 	saramaConf.ClientID = controllerAgentName
-
 	return sarama.NewClusterAdmin(config.Brokers, saramaConf)
 }
 

@@ -46,6 +46,10 @@ const (
 	testNS                 = "test-namespace"
 )
 
+var (
+	deletedTs = metav1.Now().Rfc3339Copy()
+)
+
 func init() {
 	// Add types to scheme
 	eventingv1alpha1.AddToScheme(scheme.Scheme)
@@ -65,6 +69,7 @@ var mockFetchError = controllertesting.Mocks{
 
 type mockClusterAdmin struct {
 	mockCreateTopicFunc func(topic string, detail *sarama.TopicDetail, validateOnly bool) error
+	mockDeleteTopicFunc func(topic string) error
 }
 
 func (ca *mockClusterAdmin) CreateTopic(topic string, detail *sarama.TopicDetail, validateOnly bool) error {
@@ -79,6 +84,9 @@ func (ca *mockClusterAdmin) Close() error {
 }
 
 func (ca *mockClusterAdmin) DeleteTopic(topic string) error {
+	if ca.mockDeleteTopicFunc != nil {
+		return ca.mockDeleteTopicFunc(topic)
+	}
 	return nil
 }
 
@@ -197,6 +205,17 @@ var testCases = []controllertesting.TestCase{
 			getNewChannel(channelName, clusterProvisionerName),
 		},
 	},
+	{
+		Name: "deleted channel",
+		InitialState: []runtime.Object{
+			getNewClusterProvisioner(clusterProvisionerName, true),
+			getNewChannelDeleted(channelName, clusterProvisionerName),
+		},
+		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
+		WantResult:   reconcile.Result{},
+		WantPresent:  []runtime.Object{},
+		IgnoreTimes:  true,
+	},
 }
 
 func TestAllCases(t *testing.T) {
@@ -227,7 +246,7 @@ func TestProvisionChannel(t *testing.T) {
 		wantError       string
 	}{
 		{
-			name:          "no channel arguments - uses default",
+			name:          "provision with no channel arguments - uses default",
 			c:             getNewChannel(channelName, clusterProvisionerName),
 			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
 			wantTopicDetail: &sarama.TopicDetail{
@@ -236,7 +255,7 @@ func TestProvisionChannel(t *testing.T) {
 			},
 		},
 		{
-			name:          "with unknown channel arguments - uses default",
+			name:          "provision with unknown channel arguments - uses default",
 			c:             getNewChannelWithArgs(channelName, map[string]interface{}{"testing": "testing"}),
 			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
 			wantTopicDetail: &sarama.TopicDetail{
@@ -245,12 +264,12 @@ func TestProvisionChannel(t *testing.T) {
 			},
 		},
 		{
-			name:      "with invalid channel arguments - errors",
+			name:      "provision with invalid channel arguments - errors",
 			c:         getNewChannelWithArgs(channelName, map[string]interface{}{ArgumentNumPartitions: "invalid"}),
 			wantError: fmt.Sprintf("could not parse argument %s for channel test-namespace/test-channel", ArgumentNumPartitions),
 		},
 		{
-			name: "with unmarshallable channel arguments - errors",
+			name: "provision with unmarshallable channel arguments - errors",
 			c: func() *eventingv1alpha1.Channel {
 				channel := getNewChannel(channelName, clusterProvisionerName)
 				channel.Spec.Arguments = &runtime.RawExtension{
@@ -261,7 +280,7 @@ func TestProvisionChannel(t *testing.T) {
 			wantError: "error unmarshaling JSON: json: cannot unmarshal string into Go value of type map[string]interface {}",
 		},
 		{
-			name:          "with valid channel arguments",
+			name:          "provision with valid channel arguments",
 			c:             getNewChannelWithArgs(channelName, map[string]interface{}{ArgumentNumPartitions: 2}),
 			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
 			wantTopicDetail: &sarama.TopicDetail{
@@ -270,7 +289,7 @@ func TestProvisionChannel(t *testing.T) {
 			},
 		},
 		{
-			name:          "topic already exists - no error",
+			name:          "provision but topic already exists - no error",
 			c:             getNewChannelWithArgs(channelName, map[string]interface{}{ArgumentNumPartitions: 2}),
 			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
 			wantTopicDetail: &sarama.TopicDetail{
@@ -280,7 +299,7 @@ func TestProvisionChannel(t *testing.T) {
 			mockError: sarama.ErrTopicAlreadyExists,
 		},
 		{
-			name:          "error creating topic",
+			name:          "provision but error creating topic",
 			c:             getNewChannelWithArgs(channelName, map[string]interface{}{ArgumentNumPartitions: 2}),
 			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
 			wantTopicDetail: &sarama.TopicDetail{
@@ -296,15 +315,13 @@ func TestProvisionChannel(t *testing.T) {
 		logger := provisioners.NewProvisionerLoggerFromConfig(provisioners.NewLoggingConfig())
 		r := &reconciler{
 			logger: logger.Desugar(),
-			kafkaClusterAdmin: &mockClusterAdmin{mockCreateTopicFunc: func(topic string, detail *sarama.TopicDetail, validateOnly bool) error {
-				if topic != tc.wantTopicName {
-					t.Errorf("expected topic name: %+v got: %+v", tc.wantTopicName, topic)
-				}
-				if diff := cmp.Diff(tc.wantTopicDetail, detail); diff != "" {
-					t.Errorf("unexpected detail (-want, +got) = %v", diff)
-				}
-				return tc.mockError
-			}},
+			kafkaClusterAdmin: &mockClusterAdmin{
+				mockCreateTopicFunc: func(topic string, detail *sarama.TopicDetail, validateOnly bool) error {
+					if topic != tc.wantTopicName {
+						t.Errorf("expected topic name: %+v got: %+v", tc.wantTopicName, topic)
+					}
+					return tc.mockError
+				}},
 		}
 		err := r.provisionChannel(tc.c)
 		var got string
@@ -315,7 +332,57 @@ func TestProvisionChannel(t *testing.T) {
 			t.Errorf("unexpected error (-want, +got) = %v", diff)
 		}
 	}
+}
 
+func TestDeprovisionChannel(t *testing.T) {
+	deprovisionTestCases := []struct {
+		name          string
+		c             *eventingv1alpha1.Channel
+		wantTopicName string
+		mockError     error
+		wantError     string
+	}{
+		{
+			name:          "deprovision channel - unknown error",
+			c:             getNewChannel(channelName, clusterProvisionerName),
+			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
+			mockError:     fmt.Errorf("unknown sarama error"),
+			wantError:     "unknown sarama error",
+		},
+		{
+			name:          "deprovision channel - topic already deleted",
+			c:             getNewChannel(channelName, clusterProvisionerName),
+			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
+			mockError:     sarama.ErrUnknownTopicOrPartition,
+		},
+		{
+			name:          "deprovision channel - success",
+			c:             getNewChannel(channelName, clusterProvisionerName),
+			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
+		}}
+
+	for _, tc := range deprovisionTestCases {
+		t.Logf("running test %s", tc.name)
+		logger := provisioners.NewProvisionerLoggerFromConfig(provisioners.NewLoggingConfig())
+		r := &reconciler{
+			logger: logger.Desugar(),
+			kafkaClusterAdmin: &mockClusterAdmin{
+				mockDeleteTopicFunc: func(topic string) error {
+					if topic != tc.wantTopicName {
+						t.Errorf("expected topic name: %+v got: %+v", tc.wantTopicName, topic)
+					}
+					return tc.mockError
+				}},
+		}
+		err := r.deprovisionChannel(tc.c)
+		var got string
+		if err != nil {
+			got = err.Error()
+		}
+		if diff := cmp.Diff(tc.wantError, got); diff != "" {
+			t.Errorf("unexpected error (-want, +got) = %v", diff)
+		}
+	}
 }
 
 func getNewChannelNoProvisioner(name string) *eventingv1alpha1.Channel {
@@ -361,6 +428,13 @@ func getNewChannelProvisionedStatus(name, provisioner string) *eventingv1alpha1.
 	c := getNewChannel(name, provisioner)
 	c.Status.InitializeConditions()
 	c.Status.MarkProvisioned()
+	c.Finalizers = []string{finalizerName}
+	return c
+}
+
+func getNewChannelDeleted(name, provisioner string) *eventingv1alpha1.Channel {
+	c := getNewChannelProvisionedStatus(name, provisioner)
+	c.DeletionTimestamp = &deletedTs
 	return c
 }
 
