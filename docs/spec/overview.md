@@ -2,14 +2,12 @@
 
 The API defines and provides a complete implementation for
 [Subscription](spec.md#kind-subscription), and abstract resource definitions
-for [Sources](spec.md#kind-source), [Channels](spec.md#kind-channel), and
-[Providers](spec.md#kind-provisioner) which may be fulfilled by multiple
-backing implementations (much like the Kubernetes Ingress resource).
+for [Channels](spec.md#kind-channel) and [Providers](spec.md#kind-provisioner)
+which may be fulfilled by multiple backing implementations (much like the
+Kubernetes Ingress resource).
 
 - A **Subscription** describes the transformation of an event and optional
   forwarding of a returned event.
-
-- A **Source** emits incoming events to a _Channel_.
 
 - A **Channel** provides event persistance and fanout of events from a
   well-known input address to multiple outputs described by _Subscriptions_.
@@ -31,40 +29,25 @@ eventing API defines several resources that can be reduced down to a well
 understood contracts. These eventing resource interfaces may be fulfilled by
 other Kubernetes objects and then composed in the same way as the concreate
 objects. The interfaces are ([Sinkable](interfaces.md#sinkable),
-[Channelable](interfaces.md#channelable),
+[Subscribable](interfaces.md#Subscribable),
 [Targetable](interfaces.md#targetable)). For more details, see
 [Interface Contracts](interfaces.md).
 
 ## Subscription
 
-**Subscriptions** describe a flow of events from one event producer or
-forwarder (typically, _Source_ or _Channel_) to the next (typically, a
-_Channel_) through transformations (such as a Knative Service which processes
+**Subscriptions** describe a flow of events from one _Channel_) to the next
+Channel_ through transformations (such as a Knative Service which processes
 CloudEvents over HTTP). A _Subscription_ controller resolves the addresses of
 transformations (`call`) and destination storage (`result`) through the
 _Targetable_ and _Sinkable_ interface contracts, and writes the resolved
-addresses to the _Channel_ in the `from` reference. _Subscriptions_ do not
-need to specify both a transformation and a storage destination, but at least
-one must be provided.
+addresses to the _Channel_ in the `from` reference. _Subscriptions_ do not need
+to specify both a transformation and a storage destination, but at least one
+must be provided.
 
 All event delivery linkage from a **Subscription** is 1:1 – only a single
 `from`, `call`, and `result` may be provided.
 
 For more details, see [Kind: Subscription](spec.md#kind-subscription).
-
-## Source
-
-**Source** represents incoming events from an external system, such as object
-creation events in a specific storage bucket, database updates in a particular
-table, or Kubernetes resource state changes. Because a _Source_ represents an
-
-Every _Source_ has exactly one _Channel_, ensuring that each _Source_ is responsible for a _single_ event delivery.
-
-### Fanout Example
-
-If we take Cloud PubSub as an example, the _Source_ resource would reference the topic name it wants to bind to. The _Provisioner_ for the _Source_ would create a PubSub subscription for it and the _Source_ starts receiving messages. If we also want to bind the **same** PubSub topic to multiple destinations, we will create a new _Source_ for **each** destination. In this model each new _Source_ will create an **independent** PubSub subscription to the **same** topic, ensuring that each Source is responsible for a single event delivery. The actual fanout is now pushed into the Cloud PubSub, yet still is resilient to failed deliveries.
-
-For more details, see [Kind: Source](spec.md#kind-source).
 
 ## Channel
 
@@ -83,13 +66,12 @@ See [Kind: Channel](spec.md#kind-channel).
 
 ## Provisioner
 
-**Provisioner** catalogs available implementations of event _Sources_ and
-_Channels_. _Provisioners_ hold a JSON Schema that is used to validate the
-_Source_ and _Channel_ input arguments. _Provisioners_ make it possible to
-provide cluster wide defaults for the _Sources_ and _Channels_ they provision.
+**Provisioner** catalogs available implementations of _Channels_.
+_Provisioners_ hold a JSON Schema that is used to validate the _Source_ and
+_Channel_ input arguments. _Provisioners_ make it possible to provide cluster
+wide defaults for the _Channels_ they provision.
 
-_Provisioners_ do not directly handle events. They are 1:N with _Sources_ and
-_Channels_.
+_Provisioners_ do not directly handle events. They are 1:N with _Channels_.
 
 For more details, see [Kind: Provider](spec.md#kind-provisioner).
 
