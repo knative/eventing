@@ -22,7 +22,7 @@ Kubernetes Ingress resource).
 
 <!-- This image is sourced from https://drive.google.com/open?id=1o_0Xh5VjwpQ7Px08h_Q4qnaOdMjt4yCEPixRFwJQjh8 -->
 
-![Resource Types ClusterProvisioners](images/resource-types-provisioner.svg | width=300)
+<img alt="Resource Types ClusterProvisioners" src="images/resource-types-provisioner.svg" width="300">
 
 With extendibility and compostability as a goal of Knative Eventing, the
 eventing API defines several resources that can be reduced down to a well
