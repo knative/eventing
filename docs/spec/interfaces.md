@@ -6,14 +6,14 @@
 
 ---
 
-## Channelable
+## Subscribable
 
-A **Channelable** resource contains a list of subscribers and is responsible
+A **Subscribable** resource contains a list of subscribers and is responsible
 for delivering events to each of them.
 
 ### Control Plane
 
-The **Channelable** resource stores a list of resolved _Subscriptions_. The
+The **Subscribable** resource stores a list of resolved _Subscriptions_. The
 Subscription Controller is responsible for resolving any ObjectReferences (such
 as _call_ and _result_) in the _Subscription_ to network addresses.
 

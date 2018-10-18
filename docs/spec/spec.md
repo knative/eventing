@@ -9,59 +9,9 @@ These are Kubernetes resources that been introduced using Custom Resource
 Definitions. They will have the expected _ObjectMeta_, _Spec_, _Status_ fields.
 This document details our _Spec_ and _Status_ customizations.
 
-- [Source](#kind-source)
 - [Channel](#kind-channel)
 - [Subscription](#kind-subscription)
 - [Provider](#kind-provisioner)
-
----
-
-## kind: Source
-
-### group: eventing.knative.dev/v1alpha1
-
-_Describes a specific configuration (credentials, etc) of a source system which
-can be used to supply events. A common pattern is for Sources to emit events to
-Channel to allow event delivery to be fanned-out within the cluster. They
-cannot receive events._
-
-### Object Schema
-
-#### Spec
-
-| Field         | Type                               | Description                                                                                                            | Limitations                                               |
-| ------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| provisioner\* | ProvisionerReference               | The provisioner used to create any backing resources and configuration.                                                | Immutable.                                                |
-| arguments     | runtime.RawExtension (JSON object) | Arguments passed to the provisioner for this specific source.                                                          | Arguments must validate against provisioner's parameters. |
-| channel\*     | ObjectRef                          | Specify a Channel to target.                                                                                           | Source will not emit events until channel exists.         |
-
-\*: Required
-
-#### Status
-
-| Field        | Type                      | Description                                                                                  | Limitations                                              |
-| ------------ | ------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| provisioned  | []ProvisionedObjectStatus | Creation status of each Channel and errors therein.                                          | It is expected that a Source list all produced Channels. |
-| conditions   | Conditions                | Source conditions.                                                                           |                                                          |
-
-##### Conditions
-
-- **Ready.** True when the Source is provisioned and ready to emit events.
-- **Provisioned.** True when the Source has been provisioned by a controller.
-
-#### Events
-
-- Provisioned - describes each resource that is provisioned.
-
-### Life Cycle
-
-| Action | Reactions                                                                                                 | Limitations |
-| ------ | --------------------------------------------------------------------------------------------------------- | ----------- |
-| Create | Provisioner controller watches for Sources and creates the backing resources depending on implementation. |             |
-| Update | Provisioner controller synchronizes backing implementation on changes.                                    |             |
-| Delete | Provisioner controller will deprovision backing resources depending on implementation.                    |             |
-
----
 
 ## kind: Channel
 
@@ -75,11 +25,10 @@ Subscription's call parameter._
 
 #### Spec
 
-| Field         | Type                               | Description                                                                | Limitations                          |
-| ------------- | ---------------------------------- | -------------------------------------------------------------------------- | ------------------------------------ |
-| provisioner\* | ProvisionerReference               | The name of the provisioner to create the resources that back the Channel. | Immutable.                           |
-| arguments     | runtime.RawExtension (JSON object) | Arguments to be passed to the provisioner.                                 |                                      |
-| channelable   | Channelable                        | Holds a list of downstream subscribers for the channel.                    |                                      |
+| Field         | Type                               | Description                                                                | Limitations |
+| ------------- | ---------------------------------- | -------------------------------------------------------------------------- | ----------- |
+| provisioner\* | ProvisionerReference               | The name of the provisioner to create the resources that back the Channel. | Immutable.  |
+| arguments     | runtime.RawExtension (JSON object) | Arguments to be passed to the provisioner.                                 |             |
 
 \*: Required
 
@@ -87,16 +36,14 @@ Subscription's call parameter._
 
 ##### Owner References
 
-- If the Source controller created this Channel: Owned by the originating
-  Source.
 - Owned (non-controlling) by the Provisioner used to provision the Channel.
 
 #### Status
 
-| Field        | Type         | Description                                                                                                                 | Limitations |
-| ------------ | ------------ | --------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| sinkable     | Sinkable     | Address to the endpoint as top-level domain that will distribute traffic over the provided targets from inside the cluster. |             |
-| conditions   | Conditions   | Standard Subscriptions                                                                                                      |             |
+| Field      | Type       | Description                                                                                                                 | Limitations |
+| ---------- | ---------- | --------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| sinkable   | Sinkable   | Address to the endpoint as top-level domain that will distribute traffic over the provided targets from inside the cluster. |             |
+| conditions | Conditions | Standard Subscriptions                                                                                                      |             |
 
 ##### Conditions
 
@@ -178,18 +125,18 @@ or a Channel system that receives and delivers events._
 
 #### Spec
 
-| Field      | Type                                                                            | Description                                                                 | Limitations                |
-| ---------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------------------------- |
-| type\*     | [GroupKind](https://godoc.org/k8s.io/apimachinery/pkg/runtime/schema#GroupKind) | The type of the resource to be provisioned.                                 | Must be Source or Channel. |
-| parameters | runtime.RawExtension (JSON object)                                              | Description of the arguments able to be passed by the provisioned resource. | JSON Schema                |
+| Field      | Type                                                                            | Description                                                                 | Limitations      |
+| ---------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ---------------- |
+| type\*     | [GroupKind](https://godoc.org/k8s.io/apimachinery/pkg/runtime/schema#GroupKind) | The type of the resource to be provisioned.                                 | Must be Channel. |
+| parameters | runtime.RawExtension (JSON object)                                              | Description of the arguments able to be passed by the provisioned resource. | JSON Schema      |
 
 \*: Required
 
 #### Status
 
-| Field       | Type                      | Description            | Limitations |
-| ----------- | ------------------------- | ---------------------- | ----------- |
-| conditions  | Conditions                | Provisioner conditions |             |
+| Field      | Type       | Description            | Limitations |
+| ---------- | ---------- | ---------------------- | ----------- |
+| conditions | Conditions | Provisioner conditions |             |
 
 ##### Conditions
 
@@ -197,8 +144,8 @@ or a Channel system that receives and delivers events._
 
 #### Events
 
-- Source created
-- Source deleted
+- Resource Created.
+- Resource Removed.
 
 ---
 
@@ -232,7 +179,7 @@ or a Channel system that receives and delivers events._
 
 \*: Required
 
-### Channelable
+### Subscribable
 
 | Field       | Type                    | Description                                                           | Limitations                            |
 | ----------- | ----------------------- | --------------------------------------------------------------------- | -------------------------------------- |
