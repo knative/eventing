@@ -82,6 +82,12 @@ type ClusterProvisionerStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
+const (
+	// ClusterProvisionerConditionReady has status True when the Controller reconciling objects
+	// controlled by it is ready to control them.
+	ClusterProvisionerConditionReady = duckv1alpha1.ConditionReady
+)
+
 // GetCondition returns the condition currently associated with the given type, or nil.
 func (ps *ClusterProvisionerStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
 	return cProvCondSet.Manage(ps).GetCondition(t)
@@ -95,6 +101,14 @@ func (ps *ClusterProvisionerStatus) IsReady() bool {
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (ps *ClusterProvisionerStatus) InitializeConditions() {
 	cProvCondSet.Manage(ps).InitializeConditions()
+}
+
+// MarkReady marks this ClusterProvisioner as Ready=true.
+//
+// Note that this is not the normal pattern for duck conditions, but because there is (currently)
+// no other condition on ClusterProvisioners, the normal IsReady() logic doesn't work well.
+func (ps *ClusterProvisionerStatus) MarkReady() {
+	cProvCondSet.Manage(ps).MarkTrue(ClusterProvisionerConditionReady)
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
