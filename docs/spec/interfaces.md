@@ -19,7 +19,7 @@ as _call_ and _result_) in the _Subscription_ to network addresses.
 
 ### Data Plane
 
-**Channelable** resources will attempt delivery to each of the _subscribers_
+**Subscribable** resources will attempt delivery to each of the _subscribers_
 at least once, and retry if the subscriber returns errors.
 
 ---
@@ -39,8 +39,8 @@ _call_ section of a _Subscription_.
 
 ### Data Plane
 
-The **Targetable** resource receives one event and returns zero or more events in
-response. The returned events are not required to be related to the received
+The **Targetable** resource receives one event and returns zero or more events
+in response. The returned events are not required to be related to the received
 event. The _Targetable_ should return a successful response if the event was
 processed successfully.
 
