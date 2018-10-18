@@ -17,6 +17,7 @@ limitations under the License.
 package configmap
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	"go.uber.org/zap"
@@ -29,6 +30,7 @@ const (
 )
 
 // ConfigMapData attempts to parse the config map's data into a multichannelfanout.Config.
+// orig == NewFanoutConfig(SerializeConfig(orig))
 func NewFanoutConfig(logger *zap.Logger, data map[string]string) (*multichannelfanout.Config, error) {
 	str, present := data[MultiChannelFanoutConfigKey]
 	if !present {
@@ -36,4 +38,16 @@ func NewFanoutConfig(logger *zap.Logger, data map[string]string) (*multichannelf
 		return nil, fmt.Errorf("expected key not found: %v", MultiChannelFanoutConfigKey)
 	}
 	return multichannelfanout.Parse(logger, str)
+}
+
+// SerializeConfig takes in a multichannelfanout.Config and generates the ConfigMap equivalent.
+// orig == NewFanoutConfig(SerializeConfig(orig))
+func SerializeConfig(config multichannelfanout.Config) (map[string]string, error) {
+	jb, err := json.Marshal(config)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]string{
+		MultiChannelFanoutConfigKey: string(jb),
+	}, nil
 }

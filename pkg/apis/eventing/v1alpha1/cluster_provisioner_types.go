@@ -83,7 +83,6 @@ type ClusterProvisionerStatus struct {
 }
 
 const (
-
 	// ClusterProvisionerConditionReady has status True when provisioner is ready to provision backing resource.
 	ClusterProvisionerConditionReady = duckv1alpha1.ConditionReady
 )
@@ -98,11 +97,6 @@ func (ps *ClusterProvisionerStatus) IsReady() bool {
 	return cProvCondSet.Manage(ps).IsHappy()
 }
 
-// MarkProvisionerReady sets the condition that the provisioner is ready to provision backing resource.
-func (ps *ClusterProvisionerStatus) MarkReady() {
-	cProvCondSet.Manage(ps).MarkTrue(ClusterProvisionerConditionReady)
-}
-
 // MarkProvisionerNotReady sets the condition that the provisioner is not ready to provision backing resource.
 func (ps *ClusterProvisionerStatus) MarkNotReady(reason, messageFormat string, messageA ...interface{}) {
 	cProvCondSet.Manage(ps).MarkFalse(ClusterProvisionerConditionReady, reason, messageFormat, messageA...)
@@ -111,6 +105,14 @@ func (ps *ClusterProvisionerStatus) MarkNotReady(reason, messageFormat string, m
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (ps *ClusterProvisionerStatus) InitializeConditions() {
 	cProvCondSet.Manage(ps).InitializeConditions()
+}
+
+// MarkReady marks this ClusterProvisioner as Ready=true.
+//
+// Note that this is not the normal pattern for duck conditions, but because there is (currently)
+// no other condition on ClusterProvisioners, the normal IsReady() logic doesn't work well.
+func (ps *ClusterProvisionerStatus) MarkReady() {
+	cProvCondSet.Manage(ps).MarkTrue(ClusterProvisionerConditionReady)
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

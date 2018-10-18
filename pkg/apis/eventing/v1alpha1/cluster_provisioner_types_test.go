@@ -116,3 +116,15 @@ func TestClusterProvisionerStatusGetCondition(t *testing.T) {
 		})
 	}
 }
+
+func TestClusterProvisionerStatus_MarkReady(t *testing.T) {
+	ps := ClusterProvisionerStatus{}
+	ps.InitializeConditions()
+	if ps.IsReady() {
+		t.Errorf("Should not be ready when initialized.")
+	}
+	ps.MarkReady()
+	if !ps.IsReady() {
+		t.Errorf("Should be ready after MarkReady() was called.")
+	}
+}

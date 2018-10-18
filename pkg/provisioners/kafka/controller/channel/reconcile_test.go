@@ -24,7 +24,6 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/ghodss/yaml"
 	"github.com/google/go-cmp/cmp"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -204,6 +203,7 @@ var testCases = []controllertesting.TestCase{
 			getNewClusterProvisioner(clusterProvisionerName, true),
 			getNewChannel(channelName, clusterProvisionerName),
 		},
+		IgnoreTimes: true,
 	},
 	{
 		Name: "deleted channel",
@@ -453,12 +453,6 @@ func channelType() metav1.TypeMeta {
 }
 
 func getNewClusterProvisioner(name string, isReady bool) *eventingv1alpha1.ClusterProvisioner {
-	var condStatus corev1.ConditionStatus
-	if isReady {
-		condStatus = corev1.ConditionTrue
-	} else {
-		condStatus = corev1.ConditionFalse
-	}
 	clusterProvisioner := &eventingv1alpha1.ClusterProvisioner{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
@@ -471,14 +465,12 @@ func getNewClusterProvisioner(name string, isReady bool) *eventingv1alpha1.Clust
 				Group: eventing.GroupName,
 			},
 		},
-		Status: eventingv1alpha1.ClusterProvisionerStatus{
-			Conditions: []duckv1alpha1.Condition{
-				{
-					Type:   eventingv1alpha1.ClusterProvisionerConditionReady,
-					Status: condStatus,
-				},
-			},
-		},
+	}
+	clusterProvisioner.Status.InitializeConditions()
+	if isReady {
+		clusterProvisioner.Status.MarkReady()
+	} else {
+		clusterProvisioner.Status.MarkNotReady("NotReady", "testing")
 	}
 	// selflink is not filled in when we create the object, so clear it
 	clusterProvisioner.ObjectMeta.SelfLink = ""

@@ -77,6 +77,8 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	newChannel := channel.DeepCopy()
 
+	newChannel.Status.InitializeConditions()
+
 	if clusterProvisioner.Status.IsReady() {
 		// Reconcile this copy of the Channel and then write back any status
 		// updates regardless of whether the reconcile error out.
@@ -113,7 +115,6 @@ func (r *reconciler) reconcile(channel *v1alpha1.Channel) error {
 	}
 
 	r.addFinalizer(channel)
-	channel.Status.InitializeConditions()
 	if err := r.provisionChannel(channel); err != nil {
 		channel.Status.MarkNotProvisioned("NotProvisioned", "error while provisioning: %s", err)
 		return err
