@@ -589,6 +589,7 @@ func makeK8sService() *corev1.Service {
 			},
 		},
 		Spec: corev1.ServiceSpec{
+			Type:         corev1.ServiceTypeExternalName,
 			ExternalName: knativeIngressGateway,
 		},
 	}

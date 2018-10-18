@@ -260,6 +260,7 @@ func newK8sService(c *eventingv1alpha1.Channel) *corev1.Service {
 			},
 		},
 		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeExternalName,
 			// Keep in sync with the Gateway in newVirtualService().
 			ExternalName: knativeIngressGateway,
 		},
