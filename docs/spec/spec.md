@@ -33,7 +33,7 @@ cannot receive events._
 | ------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | provisioner\* | ProvisionerReference               | The provisioner used to create any backing resources and configuration.                                                | Immutable.                                                |
 | arguments     | runtime.RawExtension (JSON object) | Arguments passed to the provisioner for this specific source.                                                          | Arguments must validate against provisioner's parameters. |
-| channel       | ObjectRef                          | Specify an existing channel to use to emit events. If empty, create a new Channel using the cluster/namespace default. | Source will not emit events until channel exists.         |
+| channel\*     | ObjectRef                          | Specify a Channel to target.                                                                                           | Source will not emit events until channel exists.         |
 
 \*: Required
 
@@ -41,7 +41,6 @@ cannot receive events._
 
 | Field        | Type                      | Description                                                                                  | Limitations                                              |
 | ------------ | ------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| subscribable | Subscribable              | Pointer to a channel which can be subscribed to in order to receive events from this source. |                                                          |
 | provisioned  | []ProvisionedObjectStatus | Creation status of each Channel and errors therein.                                          | It is expected that a Source list all produced Channels. |
 | conditions   | Conditions                | Source conditions.                                                                           |                                                          |
 
@@ -97,7 +96,6 @@ Subscription's call parameter._
 | Field        | Type         | Description                                                                                                                 | Limitations |
 | ------------ | ------------ | --------------------------------------------------------------------------------------------------------------------------- | ----------- |
 | sinkable     | Sinkable     | Address to the endpoint as top-level domain that will distribute traffic over the provided targets from inside the cluster. |             |
-| subscribable | Subscribable |                                                                                                                             |             |
 | conditions   | Conditions   | Standard Subscriptions                                                                                                      |             |
 
 ##### Conditions
@@ -124,7 +122,7 @@ Subscription's call parameter._
 
 ### group: eventing.knative.dev/v1alpha1
 
-_Describes a linkage between a Subscribable and a Targetable and/or Sinkable._
+_Describes a linkage between a Channel and a Targetable and/or Sinkable._
 
 ### Object Schema
 
@@ -232,12 +230,6 @@ or a Channel system that receives and delivers events._
 | reason   | String | Detailed description describing current relationship status. |             |
 
 \*: Required
-
-### Subscribable
-
-| Field       | Type            | Description                      | Limitations |
-| ----------- | --------------- | -------------------------------- | ----------- |
-| channelable | ObjectReference | The channel used to emit events. |             |
 
 ### Channelable
 
