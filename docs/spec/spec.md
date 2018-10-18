@@ -81,7 +81,6 @@ Subscription's call parameter._
 | provisioner\* | ProvisionerReference               | The name of the provisioner to create the resources that back the Channel. | Immutable.                           |
 | arguments     | runtime.RawExtension (JSON object) | Arguments to be passed to the provisioner.                                 |                                      |
 | channelable   | Channelable                        | Holds a list of downstream subscribers for the channel.                    |                                      |
-| eventTypes    | []String                           | An array of event types that will be passed on the Channel.                | Must be objects with kind:EventType. |
 
 \*: Required
 
@@ -187,18 +186,11 @@ or a Channel system that receives and delivers events._
 
 \*: Required
 
-#### Metadata
-
-##### Owner References
-
-- Owns EventTypes.
-
 #### Status
 
-| Field       | Type                      | Description                                                          | Limitations                                                                    |
-| ----------- | ------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| provisioned | []ProvisionedObjectStatus | Status of creation or adoption of each EventType and errors therein. | It is expected that a provisioner list all produced EventTypes, if applicable. |
-| conditions  | Conditions                | Provisioner conditions                                               |                                                                                |
+| Field       | Type                      | Description            | Limitations |
+| ----------- | ------------------------- | ---------------------- | ----------- |
+| conditions  | Conditions                | Provisioner conditions |             |
 
 ##### Conditions
 
@@ -208,60 +200,6 @@ or a Channel system that receives and delivers events._
 
 - Source created
 - Source deleted
-- Event types installed
-
-### Life Cycle
-
-| Action | Reactions                                                                       | Limitations                                                                                              |
-| ------ | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Create | Creates and owns EventTypes produced, or adds Owner ref to existing EventTypes. | Verifies Json Schema provided by existing EventTypes; Not allowed to edit EventType if previously Owned; |
-| Update | Synchronizes EventTypes.                                                        |                                                                                                          |
-| Delete | Removes Owner ref from EventTypes.                                              |                                                                                                          |
-
----
-
-## kind: EventType
-
-NOTE: EventType is out of scope for 0.1 release. This is future documentation.
-
-### group: eventing.knative.dev/v1alpha1
-
-_Describes a particular schema of Events which may be produced by one or more
-source systems._
-
-### Object Schema
-
-#### Spec
-
-| Field      | Type   | Description                                         | Limitations                    |
-| ---------- | ------ | --------------------------------------------------- | ------------------------------ |
-| jsonSchema | String | The Json Schema that represents an event in flight. | Only for JSON transport types. |
-
-#### Metadata
-
-##### Owner References
-
-EventType is owned by _Provisioners_. Each _Provisioner_ creates a
-non-controlling OwnerReference on the EventType resources it knows about.
-
-#### Status
-
-| Field          | Type    | Description                         | Limitations |
-| -------------- | ------- | ----------------------------------- | ----------- |
-| referenceCount | Integer | Number of Owners for this EventType |             |
-
-#### Events
-
-- **Owned.** When EventType has a new Provisioner Owner.
-- **Released.** When a Provisioner removes Ownership from the EventType.
-
-### Life Cycle
-
-| Action | Reactions | Limitations                                |
-| ------ | --------- | ------------------------------------------ |
-| Create |           |                                            |
-| Update |           |                                            |
-| Delete |           | Blocked until all provisioners release it. |
 
 ---
 
