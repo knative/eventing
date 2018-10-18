@@ -251,12 +251,12 @@
   revision = "0fb14efe8c47ae851c0034ed7a448854d3d34cf3"
 
 [[projects]]
-  digest = "1:f0818bc212054788d1086e015b5ba32d01ef8e12c615bbb625570eefbe684a1e"
+  digest = "1:9a52adf44086cead3b384e5d0dbf7a1c1cce65e67552ee3383a8561c42a18cd3"
   name = "github.com/imdario/mergo"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "9d5f1277e9a8ed20c3684bda8fde67c05628518c"
-  version = "v0.3.4"
+  revision = "9f23e2d6bd2a77f959b2bf6acdbefd708a83a4a4"
+  version = "v0.3.6"
 
 [[projects]]
   digest = "1:0243cffa4a3410f161ee613dfdd903a636d07e838a42d341da95d81f42cd1d41"
@@ -276,7 +276,7 @@
   revision = "5c1d8c8469d1ed34b2aecf4c2305b3a57fff2ee3"
 
 [[projects]]
-  digest = "1:a3f465e8fba2ec1a371c52063ce81f17fbf7356a8cadbc160b2f94796ff5e785"
+  digest = "1:aac2721aace98ec22ca32041a292bdb42edec971684e831e3e24c4f5a8d4d893"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -309,7 +309,7 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "3155feb33006c8e0379a58237a819a36fae98c2d"
+  revision = "ba1a828cd571f605684f9a4506e85bc13cb65b8d"
 
 [[projects]]
   digest = "1:63f3974f3afe3dc5b6a115c0d53b0897cd01be6880c4bf5d014fc69a95db6ed1"
@@ -732,7 +732,7 @@
   version = "v2.2.1"
 
 [[projects]]
-  digest = "1:ba83efacee6fc544aaebcc643ec8ad8d345bfa7f6cd5afb1492fb19cd994cc4a"
+  digest = "1:6dd53537a34d9b612e66acd39859953cf7ad70e5b5953937bed5ea998355e7b8"
   name = "k8s.io/api"
   packages = [
     "admission/v1beta1",
@@ -767,11 +767,11 @@
     "storage/v1beta1",
   ]
   pruneopts = "NUT"
-  revision = "2d6f90ab1293a1fb871cf149423ebb72aa7423aa"
-  version = "kubernetes-1.11.2"
+  revision = "4e7be11eab3ffcfc1876898b8272df53785a9504"
+  version = "kubernetes-1.11.3"
 
 [[projects]]
-  digest = "1:b9cccdbacdbdad18685fbafe0f65efd91380c2db233ee4e812cbe934fcc2ac5b"
+  digest = "1:0ca7d060afe7cd61d64079fdc767c895f4e16eec9426eda4b8c2206b68f0336d"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/equality",
@@ -820,11 +820,11 @@
     "third_party/forked/golang/reflect",
   ]
   pruneopts = "NUT"
-  revision = "103fd098999dc9c0c88536f5c9ad2e5da39373ae"
-  version = "kubernetes-1.11.2"
+  revision = "def12e63c512da17043b4f0293f52d1006603d9f"
+  version = "kubernetes-1.11.3"
 
 [[projects]]
-  digest = "1:068111a18af6fd1f3fd7ad2f031de434be239ef89982b097e041c2297a0d9393"
+  digest = "1:8b1aa34f1f8a1ec989611790fb61f54dd7d4d568edae6af75c34f62598e9894f"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -963,11 +963,11 @@
     "util/workqueue",
   ]
   pruneopts = "NUT"
-  revision = "1f13a808da65775f22cbf47862c4e5898d8f4ca1"
-  version = "kubernetes-1.11.2"
+  revision = "2cefa64ff137e128daeddbd1775cd775708a05bf"
+  version = "kubernetes-1.11.3"
 
 [[projects]]
-  digest = "1:8ab487a323486c8bbbaa3b689850487fdccc6cbea8690620e083b2d230a4447e"
+  digest = "1:3b9c82e73290987c719062ba514f47cc95a7b1e10d9868b1e083e48044c0820b"
   name = "k8s.io/code-generator"
   packages = [
     "cmd/client-gen",
@@ -991,8 +991,8 @@
     "pkg/util",
   ]
   pruneopts = "T"
-  revision = "6702109cc68eb6fe6350b83e14407c8d7309fd1a"
-  version = "kubernetes-1.11.2"
+  revision = "8c97d6ab64da020f8b151e9d3ed8af3172f5c390"
+  version = "kubernetes-1.11.3"
 
 [[projects]]
   branch = "master"
@@ -1091,6 +1091,7 @@
     "go.uber.org/zap/zapcore",
     "golang.org/x/net/context",
     "golang.org/x/oauth2",
+    "golang.org/x/sync/errgroup",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/status",
     "gopkg.in/go-playground/webhooks.v3",
