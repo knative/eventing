@@ -43,6 +43,7 @@ import (
 const (
 	portNumber    = 80
 	finalizerName = controllerAgentName
+
 	// knativeIngressGateway is the ingress service for Knative Serving.
 	// TODO: Replace with an ingress gateway for Knative Eventing that is not publicly exposed.
 	knativeIngressGateway = "knative-ingressgateway.istio-system.svc.cluster.local"
