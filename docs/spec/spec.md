@@ -207,12 +207,11 @@ or a Channel system that receives and delivers events._
 
 ### ProvisionerReference
 
-| Field                | Type            | Description | Limitations                   |
-| -------------------- | --------------- | ----------- | ----------------------------- |
-| ref<sup>1</sup>      | ObjectReference |             |                               |
-| selector<sup>1</sup> | LabelSelector   |             | Must match only one resource. |
+| Field | Type            | Description | Limitations |
+| ----- | --------------- | ----------- | ----------- |
+| ref\* | ObjectReference |             |             |
 
-1: One of (name, selector), Required.
+\*: Required
 
 ### EndpointSpec
 
