@@ -178,9 +178,10 @@ or a Channel system that receives and delivers events._
 
 #### Spec
 
-| Field  | Type                                                                            | Description                                 | Limitations                |
-| ------ | ------------------------------------------------------------------------------- | ------------------------------------------- | -------------------------- |
-| type\* | [GroupKind](https://godoc.org/k8s.io/apimachinery/pkg/runtime/schema#GroupKind) | The type of the resource to be provisioned. | Must be Source or Channel. |
+| Field      | Type                                                                            | Description                                                                 | Limitations                |
+| ---------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------------------------- |
+| type\*     | [GroupKind](https://godoc.org/k8s.io/apimachinery/pkg/runtime/schema#GroupKind) | The type of the resource to be provisioned.                                 | Must be Source or Channel. |
+| parameters | runtime.RawExtension (JSON object)                                              | Description of the arguments able to be passed by the provisioned resource. | JSON Schema                |
 
 \*: Required
 
