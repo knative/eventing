@@ -9,7 +9,8 @@
 ## Subscribable
 
 A **Subscribable** resource contains a list of subscribers and is responsible
-for delivering events to each of them.
+for delivering events to each of them. One example of a Subscribable is a
+_Channel_ as the target of a _Subscription_'s _from_ field.
 
 ### Control Plane
 
@@ -54,7 +55,8 @@ if it previously indicated success.
 
 A **Sinkable** resource receives events and takes responsibility for further
 delivery. Unlike _Targetable_, a _Sinkable_ cannot return events in its
-response. One example of a _Sinkable_ is a _Channel_.
+response. One example of a _Sinkable_ is a _Channel_ as the target of a
+_Subscription_'s _result_ field.
 
 ### Control Plane
 

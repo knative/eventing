@@ -36,7 +36,8 @@ Subscription's call parameter._
 
 ##### Owner References
 
-- Owned (non-controlling) by the Provisioner used to provision the Channel.
+- Owned (non-controlling) by the ClusterProvisioner used to provision the
+  Channel.
 
 #### Status
 
@@ -57,11 +58,11 @@ Subscription's call parameter._
 
 ### Life Cycle
 
-| Action | Reactions                                                                                                                                                        | Limitations                                                          |
-| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| Create | The Provisioner referenced will take ownership of the Channel and begin provisioning the backing resources required for the Channel depending on implementation. | Only one Provisioner is allowed to be the Owner for a given Channel. |
-| Update | The Provisioner will synchronize the Channel backing resources to reflect the update.                                                                            |                                                                      |
-| Delete | The Provisioner will deprovision the backing resources if no longer required depending on implementation.                                                        |                                                                      |
+| Action | Reactions                                                                                                                                                               | Limitations                                                                 |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Create | The ClusterProvisioner referenced will take ownership of the Channel and begin provisioning the backing resources required for the Channel depending on implementation. | Only one ClusterProvisioner is allowed to be the Owner for a given Channel. |
+| Update | The ClusterProvisioner will synchronize the Channel backing resources to reflect the update.                                                                            |                                                                             |
+| Delete | The ClusterProvisioner will deprovision the backing resources if no longer required depending on implementation.                                                        |                                                                             |
 
 ---
 
@@ -114,7 +115,7 @@ _Describes a linkage between a Channel and a Targetable and/or Sinkable._
 
 ---
 
-## kind: Provisioner
+## kind: ClusterProvisioner
 
 ### group: eventing.knative.dev/v1alpha1
 
@@ -134,9 +135,9 @@ or a Channel system that receives and delivers events._
 
 #### Status
 
-| Field      | Type       | Description            | Limitations |
-| ---------- | ---------- | ---------------------- | ----------- |
-| conditions | Conditions | Provisioner conditions |             |
+| Field      | Type       | Description                   | Limitations |
+| ---------- | ---------- | ----------------------------- | ----------- |
+| conditions | Conditions | ClusterProvisioner conditions |             |
 
 ##### Conditions
 
@@ -174,7 +175,7 @@ or a Channel system that receives and delivers events._
 | -------- | ------ | ------------------------------------------------------------ | ----------- |
 | name\*   | String | Name of Object                                               |             |
 | type\*   | String | Fully Qualified Object type.                                 |             |
-| status\* | String | Current relationship between Provisioner and Object.         |             |
+| status\* | String | Current relationship between ClusterProvisioner and Object.  |             |
 | reason   | String | Detailed description describing current relationship status. |             |
 
 \*: Required

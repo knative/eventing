@@ -18,16 +18,6 @@ Docs in this directory:
 <!-- TODO(n3wscott): * [Error conditions and reporting](errors.md) -->
 <!-- TODO(n3wscott): * [Sample API usage](normative_examples.md) -->
 
-<!-- TODO(evankanderson):
-`This may be the right place, but it seems like it would be useful to include a
-section on either "Known issues" with the API and/or patterns that we've agreed
-upon. In particular, the use of containers/images for extension of Buses and
-Sources is probably worth highlighting somewhere.`
-
-The Parameters/ParametersFrom pattern for passing args to the images is
-probably also worth documenting.
--->
-
 See the [Knative Eventing Docs
 Architecture](https://github.com/knative/docs/blob/master/eventing/README.md#architecture)
 for more high level details. <!-- TODO(#498): Update the docs/Architecture page. -->
