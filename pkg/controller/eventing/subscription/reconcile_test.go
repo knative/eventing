@@ -453,9 +453,9 @@ var testCases = []controllertesting.TestCase{
 				}},
 		},
 	}, {
-		Name: "new subscription with source: adds status, all targets resolved, subscribers modified",
+		Name: "new subscription with from channel: adds status, all targets resolved, subscribers modified",
 		InitialState: []runtime.Object{
-			getNewSubscriptionWithSource(),
+			getNewSubscriptionWithFromChannel(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, subscriptionName),
 		// TODO: JSON patch is not working on the fake, see
@@ -636,14 +636,14 @@ func getNewSubscriptionToK8sService() *eventingv1alpha1.Subscription {
 	return sub
 }
 
-func getNewSubscriptionWithSource() *eventingv1alpha1.Subscription {
+func getNewSubscriptionWithFromChannel() *eventingv1alpha1.Subscription {
 	subscription := &eventingv1alpha1.Subscription{
 		TypeMeta:   subscriptionType(),
 		ObjectMeta: om(testNS, subscriptionName),
 		Spec: eventingv1alpha1.SubscriptionSpec{
 			From: corev1.ObjectReference{
-				Name:       sourceName,
-				Kind:       sourceKind,
+				Name:       fromChannelName,
+				Kind:       channelKind,
 				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 			},
 			Call: &eventingv1alpha1.Callable{
