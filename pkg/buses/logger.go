@@ -24,8 +24,6 @@ import (
 
 const (
 	busLoggingComponent        = "bus"
-	reconcilerLoggingComponent = "reconciler"
-	handlerLoggingComponent    = "handler"
 	dispatcherLoggingComponent = "dispatcher"
 	receiverLoggingComponent   = "receiver"
 )

@@ -16,7 +16,7 @@ limitations under the License.
 package test
 
 import (
-	flowsV1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
+	eventingV1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -44,10 +44,10 @@ func IsRouteReady(r *v1alpha1.Route) (bool, error) {
 	return r.Status.IsReady(), nil
 }
 
-// IsFlowReady will check the status conditions of the flow and return true if the flow is
+// IsChannelReady will check the status conditions of the channel and return true if the channel is
 // ready.
-func IsFlowReady(f *flowsV1alpha1.Flow) (bool, error) {
-	return f.Status.IsReady(), nil
+func IsChannelReady(c *eventingV1alpha1.Channel) (bool, error) {
+	return c.Status.IsReady(), nil
 }
 
 // PodsRunning will check the status conditions of the pod list and return true all pods are Running
