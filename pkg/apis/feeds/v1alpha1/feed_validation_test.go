@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/knative/pkg/apis"
 	"testing"
 )
@@ -104,14 +103,14 @@ func TestFeedSpecValidation(t *testing.T) {
 		want: &apis.FieldError{
 			Message: `invalid value "inv@lid.com"`,
 			Paths:   []string{"action.dnsName"},
+			Details: "a DNS-1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')",
 		},
 	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.f.Validate()
-			ignoreArguments := cmpopts.IgnoreFields(apis.FieldError{}, "Details")
-			if diff := cmp.Diff(test.want, got, ignoreArguments); diff != "" {
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("validateFeed (-want, +got) = %v", diff)
 			}
 		})

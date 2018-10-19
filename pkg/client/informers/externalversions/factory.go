@@ -25,6 +25,7 @@ import (
 
 	versioned "github.com/knative/eventing/pkg/client/clientset/versioned"
 	channels "github.com/knative/eventing/pkg/client/informers/externalversions/channels"
+	eventing "github.com/knative/eventing/pkg/client/informers/externalversions/eventing"
 	feeds "github.com/knative/eventing/pkg/client/informers/externalversions/feeds"
 	flows "github.com/knative/eventing/pkg/client/informers/externalversions/flows"
 	internalinterfaces "github.com/knative/eventing/pkg/client/informers/externalversions/internalinterfaces"
@@ -175,12 +176,17 @@ type SharedInformerFactory interface {
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
 	Channels() channels.Interface
+	Eventing() eventing.Interface
 	Feeds() feeds.Interface
 	Flows() flows.Interface
 }
 
 func (f *sharedInformerFactory) Channels() channels.Interface {
 	return channels.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Eventing() eventing.Interface {
+	return eventing.New(f, f.namespace, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Feeds() feeds.Interface {

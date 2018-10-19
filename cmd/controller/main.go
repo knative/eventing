@@ -23,10 +23,11 @@ import (
 	"net/http"
 	"time"
 
+	controllerruntime "sigs.k8s.io/controller-runtime/pkg/client/config"
+
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
+
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
@@ -56,18 +57,16 @@ const (
 )
 
 var (
-	masterURL  string
-	kubeconfig string
+	experimentalControllers string
+	hardcodedLoggingConfig  bool
 )
 
 func main() {
 	flag.Parse()
 
 	// Read the logging config and setup a logger.
-	cm, err := configmap.Load("/etc/config-logging")
-	if err != nil {
-		log.Fatalf("Error loading logging configuration: %v", err)
-	}
+	cm := getLoggingConfigOrDie()
+
 	config, err := logging.NewConfigFromMap(cm, logconfig.Controller)
 	if err != nil {
 		log.Fatalf("Error parsing logging configuration: %v", err)
@@ -80,8 +79,7 @@ func main() {
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
-
-	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
+	cfg, err := controllerruntime.GetConfig()
 	if err != nil {
 		logger.Fatalf("Error building kubeconfig: %v", err)
 	}
@@ -101,21 +99,12 @@ func main() {
 		logger.Fatalf("Error building shared clientset: %v", err)
 	}
 
-	// TODO: Rip this out from all the controllers since we can get it
-	// from provider.
-	// Build a rest.Config from configuration injected into the Pod by
-	// Kubernetes. Clients will use the Pod's ServiceAccount principal.
-	restConfig, err := rest.InClusterConfig()
-	if err != nil {
-		logger.Fatalf("Error building rest config: %v", err)
-	}
-
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
 	sharedInformerFactory := sharedinformers.NewSharedInformerFactory(sharedClient, time.Second*30)
 
 	// Watch the logging config map and dynamically update logging levels.
-	configMapWatcher := configmap.NewDefaultWatcher(kubeClient, system.Namespace)
+	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace)
 	configMapWatcher.Watch(logconfig.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller, logconfig.Controller))
 	if err = configMapWatcher.Start(stopCh); err != nil {
 		logger.Fatalf("failed to start controller config map watcher: %v", err)
@@ -134,7 +123,7 @@ func main() {
 	controllers := make([]controller.Interface, 0, len(ctors))
 	for _, ctor := range ctors {
 		controllers = append(controllers,
-			ctor(kubeClient, client, sharedClient, restConfig, kubeInformerFactory, informerFactory, sharedInformerFactory))
+			ctor(kubeClient, client, sharedClient, cfg, kubeInformerFactory, informerFactory, sharedInformerFactory))
 	}
 
 	go kubeInformerFactory.Start(stopCh)
@@ -154,7 +143,7 @@ func main() {
 
 	// Start the controller-runtime controllers.
 	go func() {
-		if err := controllerRuntimeStart(); err != nil {
+		if err := controllerRuntimeStart(logger, experimentalControllers); err != nil {
 			logger.Fatalf("Error running controller-runtime controllers: %v", err)
 		}
 	}()
@@ -178,7 +167,40 @@ func main() {
 }
 
 func init() {
-	// These are commented because they're also defined by controller-runtime.
-	// flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-	// flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	flag.StringVar(&experimentalControllers, "experimentalControllers", "", "List of experimental controllers to include in the Knative Controller.")
+	flag.BoolVar(&hardcodedLoggingConfig, "hardCodedLoggingConfig", false, "If true, use the hard coded logging config. It is intended to be used only when debugging outside a Kubernetes cluster.")
+}
+
+func getLoggingConfigOrDie() map[string]string {
+	if hardcodedLoggingConfig {
+		return map[string]string{
+			"loglevel.controller": "info",
+			"zap-logger-config": `
+				{
+					"level": "info",
+					"development": false,
+					"outputPaths": ["stdout"],
+					"errorOutputPaths": ["stderr"],
+					"encoding": "json",
+					"encoderConfig": {
+					"timeKey": "ts",
+					"levelKey": "level",
+					"nameKey": "logger",
+					"callerKey": "caller",
+					"messageKey": "msg",
+					"stacktraceKey": "stacktrace",
+					"lineEnding": "",
+					"levelEncoder": "",
+					"timeEncoder": "iso8601",
+					"durationEncoder": "",
+					"callerEncoder": ""
+				}`,
+		}
+	} else {
+		cm, err := configmap.Load("/etc/config-logging")
+		if err != nil {
+			log.Fatalf("Error loading logging configuration: %v", err)
+		}
+		return cm
+	}
 }

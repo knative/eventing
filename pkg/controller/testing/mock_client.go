@@ -43,6 +43,8 @@ type MockCreate func(innerClient client.Client, ctx context.Context, obj runtime
 type MockDelete func(innerClient client.Client, ctx context.Context, obj runtime.Object) (MockHandled, error)
 type MockUpdate func(innerClient client.Client, ctx context.Context, obj runtime.Object) (MockHandled, error)
 
+var _ client.Client = (*MockClient)(nil)
+
 // mockClient is a client.Client that allows mock responses to be returned, instead of calling the
 // inner client.Client.
 type MockClient struct {
@@ -119,7 +121,7 @@ func (m *MockClient) Create(ctx context.Context, obj runtime.Object) error {
 	return m.innerClient.Create(ctx, obj)
 }
 
-func (m *MockClient) Delete(ctx context.Context, obj runtime.Object) error {
+func (m *MockClient) Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOptionFunc) error {
 	for i, mockDelete := range m.mocks.MockDeletes {
 		handled, err := mockDelete(m.innerClient, ctx, obj)
 		if handled == Handled {
@@ -129,7 +131,7 @@ func (m *MockClient) Delete(ctx context.Context, obj runtime.Object) error {
 			return err
 		}
 	}
-	return m.innerClient.Delete(ctx, obj)
+	return m.innerClient.Delete(ctx, obj, opts...)
 }
 
 func (m *MockClient) Update(ctx context.Context, obj runtime.Object) error {
@@ -143,4 +145,8 @@ func (m *MockClient) Update(ctx context.Context, obj runtime.Object) error {
 		}
 	}
 	return m.innerClient.Update(ctx, obj)
+}
+
+func (m *MockClient) Status() client.StatusWriter {
+	return m.innerClient.Status()
 }

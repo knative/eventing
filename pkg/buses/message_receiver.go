@@ -17,6 +17,7 @@
 package buses
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -26,6 +27,10 @@ import (
 
 // MessageReceiver starts a server to receive new messages for the bus. The new
 // message is emitted via the receiver function.
+const (
+	MessageReceiverPort = 8080
+)
+
 type MessageReceiver struct {
 	receiverFunc    func(ChannelReference, *Message) error
 	forwardHeaders  map[string]bool
@@ -64,7 +69,7 @@ func (r *MessageReceiver) Run(stopCh <-chan struct{}) {
 func (r *MessageReceiver) start() *http.Server {
 	r.logger.Info("Starting web server")
 	srv := &http.Server{
-		Addr: ":8080",
+		Addr: fmt.Sprintf(":%d", MessageReceiverPort),
 		Handler: http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 			if req.URL.Path != "/" {
 				res.WriteHeader(http.StatusNotFound)
@@ -103,7 +108,7 @@ func (r *MessageReceiver) stop(srv *http.Server) {
 func (r *MessageReceiver) HandleRequest(res http.ResponseWriter, req *http.Request) {
 	host := req.Host
 	r.logger.Infof("Received request for %s", host)
-	channelReference := r.parseChannelReference(host)
+	channel := ParseChannel(host)
 
 	message, err := r.fromRequest(req)
 	if err != nil {
@@ -111,7 +116,7 @@ func (r *MessageReceiver) HandleRequest(res http.ResponseWriter, req *http.Reque
 		return
 	}
 
-	err = r.receiverFunc(channelReference, message)
+	err = r.receiverFunc(channel, message)
 	if err != nil {
 		if err == ErrUnknownChannel {
 			res.WriteHeader(http.StatusNotFound)
@@ -163,9 +168,9 @@ func (r *MessageReceiver) fromHTTPHeaders(headers http.Header) map[string]string
 	return safe
 }
 
-// parseChannelReference converts the channel's hostname into a channel
+// ParseChannel converts the channel's hostname into a channel
 // reference.
-func (r *MessageReceiver) parseChannelReference(host string) ChannelReference {
+func ParseChannel(host string) ChannelReference {
 	chunks := strings.Split(host, ".")
 	return ChannelReference{
 		Name:      chunks[0],

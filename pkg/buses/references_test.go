@@ -86,24 +86,47 @@ func TestNewBusReferenceFromNames_ClusterBus(t *testing.T) {
 	}
 }
 
-func TestBusReference_String(t *testing.T) {
+func TestBusReference_IsNamespaced(t *testing.T) {
 	busRef := buses.BusReference{
 		Name:      referencesTestBusName,
 		Namespace: referencesTestNamespace,
 	}
+	expected := true
+	actual := busRef.IsNamespaced()
+	if expected != actual {
+		t.Errorf("%s expected: %+v got: %+v", "IsNamespaced", expected, actual)
+	}
+}
+
+func TestBusReference_IsNamespaced_ClusterBus(t *testing.T) {
+	busRef := buses.BusReference{
+		Name: referencesTestClusterBusName,
+	}
+	expected := false
+	actual := busRef.IsNamespaced()
+	if expected != actual {
+		t.Errorf("%s expected: %+v got: %+v", "IsNamespaced", expected, actual)
+	}
+}
+
+func TestBusReference_String(t *testing.T) {
+	ref := buses.BusReference{
+		Name:      referencesTestBusName,
+		Namespace: referencesTestNamespace,
+	}
 	expected := fmt.Sprintf("%s/%s", referencesTestNamespace, referencesTestBusName)
-	actual := busRef.String()
+	actual := ref.String()
 	if expected != actual {
 		t.Errorf("%s expected: %+v got: %+v", "BusReference", expected, actual)
 	}
 }
 
 func TestBusReference_String_ClusterBus(t *testing.T) {
-	busRef := buses.BusReference{
+	ref := buses.BusReference{
 		Name: referencesTestClusterBusName,
 	}
 	expected := referencesTestClusterBusName
-	actual := busRef.String()
+	actual := ref.String()
 	if expected != actual {
 		t.Errorf("%s expected: %+v got: %+v", "BusReference", expected, actual)
 	}
@@ -158,12 +181,12 @@ func TestNewChannelReferenceFromNames(t *testing.T) {
 }
 
 func TestChannelReference_String(t *testing.T) {
-	channelRef := buses.ChannelReference{
+	ref := buses.ChannelReference{
 		Name:      referencesTestChannelName,
 		Namespace: referencesTestNamespace,
 	}
 	expected := fmt.Sprintf("%s/%s", referencesTestNamespace, referencesTestChannelName)
-	actual := channelRef.String()
+	actual := ref.String()
 	if expected != actual {
 		t.Errorf("%s expected: %+v got: %+v", "ChannelReference", expected, actual)
 	}
@@ -198,12 +221,12 @@ func TestNewSubscriptionReferenceFromNames(t *testing.T) {
 }
 
 func TestSubscriptionReference_String(t *testing.T) {
-	subscriptionRef := buses.SubscriptionReference{
+	ref := buses.SubscriptionReference{
 		Name:      referencesTestSubscriptionName,
 		Namespace: referencesTestNamespace,
 	}
 	expected := fmt.Sprintf("%s/%s", referencesTestNamespace, referencesTestSubscriptionName)
-	actual := subscriptionRef.String()
+	actual := ref.String()
 	if expected != actual {
 		t.Errorf("%s expected: %+v got: %+v", "SubscriptionReference", expected, actual)
 	}

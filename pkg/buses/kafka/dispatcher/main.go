@@ -33,7 +33,7 @@ const (
 )
 
 func main() {
-	busRef := buses.NewBusReferenceFromNames(
+	ref := buses.NewBusReferenceFromNames(
 		os.Getenv("BUS_NAME"),
 		os.Getenv("BUS_NAMESPACE"),
 	)
@@ -42,15 +42,15 @@ func main() {
 	logger := buses.NewBusLoggerFromConfig(config)
 	defer logger.Sync()
 	logger = logger.With(
-		zap.String("channels.knative.dev/bus", busRef.String()),
+		zap.String("channels.knative.dev/bus", ref.String()),
 		zap.String("channels.knative.dev/busType", kafka.BusType),
 		zap.String("channels.knative.dev/busComponent", buses.Dispatcher),
 	)
 	sarama.Logger = zap.NewStdLog(logger.With(zap.Namespace("Sarama")).Desugar())
 
-	brokers := strings.Split(os.Getenv("KAFKA_BROKERS"), ",")
+	brokers := strings.Split(os.Getenv("KAFKA_BOOTSTRAP_SERVERS"), ",")
 	if len(brokers) == 0 {
-		logger.Fatalf("Environment variable KAFKA_BROKERS not set")
+		logger.Fatalf("Environment variable KAFKA_BOOTSTRAP_SERVERS not set")
 	}
 
 	opts := &buses.BusOpts{
@@ -61,7 +61,7 @@ func main() {
 	flag.StringVar(&opts.MasterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	flag.Parse()
 
-	bus, err := kafka.NewKafkaBusDispatcher(busRef, brokers, opts)
+	bus, err := kafka.NewKafkaBusDispatcher(ref, brokers, opts)
 	if err != nil {
 		logger.Fatalf("Error starting kafka bus dispatcher: %v", err)
 	}

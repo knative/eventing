@@ -68,11 +68,11 @@ func RemoveBusCondition(status *v1alpha1.BusStatus, condType v1alpha1.BusConditi
 
 // ConsolidateBusCondition computes and sets the overall "Ready" condition of the bus
 // given all other sub-conditions.
-func ConsolidateBusCondition(bus *v1alpha1.Bus) {
-	dispatching := GetBusCondition(bus.Status, v1alpha1.BusDispatching)
-	provisioning := GetBusCondition(bus.Status, v1alpha1.BusProvisioning)
-	serviceable := GetBusCondition(bus.Status, v1alpha1.BusServiceable)
-	needsProvitioner := bus.Spec.Provisioner != nil
+func ConsolidateBusCondition(bus v1alpha1.GenericBus) {
+	dispatching := GetBusCondition(*bus.GetStatus(), v1alpha1.BusDispatching)
+	provisioning := GetBusCondition(*bus.GetStatus(), v1alpha1.BusProvisioning)
+	serviceable := GetBusCondition(*bus.GetStatus(), v1alpha1.BusServiceable)
+	needsProvitioner := bus.GetSpec().Provisioner != nil
 
 	var cond *v1alpha1.BusCondition
 
@@ -83,7 +83,7 @@ func ConsolidateBusCondition(bus *v1alpha1.Bus) {
 	} else {
 		cond = NewBusCondition(v1alpha1.BusReady, v1.ConditionFalse, "", "")
 	}
-	SetBusCondition(&bus.Status, *cond)
+	SetBusCondition(bus.GetStatus(), *cond)
 }
 
 // IsBusReady returns whether all readiness conditions of a bus are met, as a boolean.

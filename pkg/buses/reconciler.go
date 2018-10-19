@@ -63,6 +63,7 @@ const (
 // Subscribe/Unsubscribe happen.
 type Reconciler struct {
 	bus     channelsv1alpha1.GenericBus
+	ref     BusReference
 	handler EventHandlerFuncs
 	cache   *Cache
 
@@ -97,6 +98,7 @@ type Reconciler struct {
 // kubeconfig: the path of a kubeconfig file to create a client connection to the masterURL with
 // handler: a EventHandlerFuncs with handler functions for the reconciler to call
 func NewReconciler(
+	ref BusReference,
 	component, masterURL, kubeconfig string,
 	cache *Cache, handler EventHandlerFuncs,
 	logger *zap.SugaredLogger,
@@ -133,6 +135,7 @@ func NewReconciler(
 
 	reconciler := &Reconciler{
 		bus:     nil,
+		ref:     ref,
 		handler: handler,
 		cache:   cache,
 
@@ -154,44 +157,47 @@ func NewReconciler(
 	}
 
 	logger.Info("Setting up event handlers")
-	// Set up an event handler for when Bus resources change
-	busInformer.Informer().AddEventHandler(informercache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			bus := obj.(*channelsv1alpha1.Bus)
-			reconciler.workqueue.AddRateLimited(makeWorkqueueKeyForBus(bus))
-		},
-		UpdateFunc: func(old, new interface{}) {
-			oldBus := old.(*channelsv1alpha1.Bus)
-			newBus := new.(*channelsv1alpha1.Bus)
+	if reconciler.ref.IsNamespaced() {
+		// Set up an event handler for when Bus resources change
+		busInformer.Informer().AddEventHandler(informercache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				bus := obj.(*channelsv1alpha1.Bus)
+				reconciler.workqueue.AddRateLimited(makeWorkqueueKeyForBus(bus))
+			},
+			UpdateFunc: func(old, new interface{}) {
+				oldBus := old.(*channelsv1alpha1.Bus)
+				newBus := new.(*channelsv1alpha1.Bus)
 
-			if oldBus.ResourceVersion == newBus.ResourceVersion {
-				// Periodic resync will send update events for all known Buses.
-				// Two different versions of the same Bus will always have different RVs.
-				return
-			}
+				if oldBus.ResourceVersion == newBus.ResourceVersion {
+					// Periodic resync will send update events for all known Buses.
+					// Two different versions of the same Bus will always have different RVs.
+					return
+				}
 
-			reconciler.workqueue.AddRateLimited(makeWorkqueueKeyForBus(newBus))
-		},
-	})
-	// Set up an event handler for when ClusterBus resources change
-	clusterBusInformer.Informer().AddEventHandler(informercache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			clusterBus := obj.(*channelsv1alpha1.ClusterBus)
-			reconciler.workqueue.AddRateLimited(makeWorkqueueKeyForClusterBus(clusterBus))
-		},
-		UpdateFunc: func(old, new interface{}) {
-			oldClusterBus := old.(*channelsv1alpha1.ClusterBus)
-			newClusterBus := new.(*channelsv1alpha1.ClusterBus)
+				reconciler.workqueue.AddRateLimited(makeWorkqueueKeyForBus(newBus))
+			},
+		})
+	} else {
+		// Set up an event handler for when ClusterBus resources change
+		clusterBusInformer.Informer().AddEventHandler(informercache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				clusterBus := obj.(*channelsv1alpha1.ClusterBus)
+				reconciler.workqueue.AddRateLimited(makeWorkqueueKeyForClusterBus(clusterBus))
+			},
+			UpdateFunc: func(old, new interface{}) {
+				oldClusterBus := old.(*channelsv1alpha1.ClusterBus)
+				newClusterBus := new.(*channelsv1alpha1.ClusterBus)
 
-			if oldClusterBus.ResourceVersion == newClusterBus.ResourceVersion {
-				// Periodic resync will send update events for all known ClusterBuses.
-				// Two different versions of the same ClusterBus will always have different RVs.
-				return
-			}
+				if oldClusterBus.ResourceVersion == newClusterBus.ResourceVersion {
+					// Periodic resync will send update events for all known ClusterBuses.
+					// Two different versions of the same ClusterBus will always have different RVs.
+					return
+				}
 
-			reconciler.workqueue.AddRateLimited(makeWorkqueueKeyForClusterBus(newClusterBus))
-		},
-	})
+				reconciler.workqueue.AddRateLimited(makeWorkqueueKeyForClusterBus(newClusterBus))
+			},
+		})
+	}
 	// Set up an event handler for when Channel resources change
 	channelInformer.Informer().AddEventHandler(informercache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -245,9 +251,9 @@ func NewReconciler(
 // RequeueSubscription will add the Subscription to the workqueue for future
 // processing. Reprocessing a Subscription is often used within a dispatcher
 // when a long lived receiver is interrupted by an asynchronous error.
-func (r *Reconciler) RequeueSubscription(subscriptionRef SubscriptionReference) {
-	r.logger.Infof("Requeue subscription %q", subscriptionRef.String())
-	r.workqueue.AddRateLimited(makeWorkqueueKey(subscriptionKind, subscriptionRef.Namespace, subscriptionRef.Name))
+func (r *Reconciler) RequeueSubscription(subscription SubscriptionReference) {
+	r.logger.Infof("Requeue subscription %q", subscription.String())
+	r.workqueue.AddRateLimited(makeWorkqueueKey(subscriptionKind, subscription.Namespace, subscription.Name))
 }
 
 // RecordBusEventf creates a new event for the reconciled bus and records it
@@ -259,8 +265,8 @@ func (r *Reconciler) RecordBusEventf(eventtype, reason, messageFmt string, args 
 // RecordChannelEventf creates a new event for the channel and records it with
 // the api server. Attempts to records an event for an unknown channel are
 // ignored.
-func (r *Reconciler) RecordChannelEventf(channelRef ChannelReference, eventtype, reason, messageFmt string, args ...interface{}) {
-	channel, err := r.cache.Channel(channelRef)
+func (r *Reconciler) RecordChannelEventf(ref ChannelReference, eventtype, reason, messageFmt string, args ...interface{}) {
+	channel, err := r.cache.Channel(ref)
 	if err != nil {
 		// TODO handle error
 		return
@@ -271,8 +277,8 @@ func (r *Reconciler) RecordChannelEventf(channelRef ChannelReference, eventtype,
 // RecordSubscriptionEventf creates a new event for the subscription and
 // records it with the api server. Attempts to records an event for an unknown
 // subscription are ignored.
-func (r *Reconciler) RecordSubscriptionEventf(subscriptionRef SubscriptionReference, eventtype, reason, messageFmt string, args ...interface{}) {
-	subscription, err := r.cache.Subscription(subscriptionRef)
+func (r *Reconciler) RecordSubscriptionEventf(ref SubscriptionReference, eventtype, reason, messageFmt string, args ...interface{}) {
+	subscription, err := r.cache.Subscription(ref)
 	if err != nil {
 		// TODO handle error
 		return
@@ -284,7 +290,7 @@ func (r *Reconciler) RecordSubscriptionEventf(subscriptionRef SubscriptionRefere
 // as syncing informer caches and starting workers. It will block until stopCh
 // is closed, at which point it will shutdown the workqueue and wait for
 // workers to finish processing their current work items.
-func (r *Reconciler) Run(busRef BusReference, threadiness int, stopCh <-chan struct{}) error {
+func (r *Reconciler) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer runtime.HandleCrash()
 	defer r.workqueue.ShutDown()
 
@@ -298,20 +304,20 @@ func (r *Reconciler) Run(busRef BusReference, threadiness int, stopCh <-chan str
 		return err
 	}
 
-	if len(busRef.Namespace) == 0 {
-		// reconciler is for a ClusterBus
-		clusterBus, err := r.clusterBusesLister.Get(busRef.Name)
-		if err != nil {
-			r.logger.Fatalf("Unknown clusterbus %q: %v", busRef.Name, err)
-		}
-		r.bus = clusterBus.DeepCopy()
-	} else {
+	if r.ref.IsNamespaced() {
 		// reconciler is for a namespaced Bus
-		bus, err := r.busesLister.Buses(busRef.Namespace).Get(busRef.Name)
+		bus, err := r.busesLister.Buses(r.ref.Namespace).Get(r.ref.Name)
 		if err != nil {
-			r.logger.Fatalf("Unknown bus %q: %v", busRef, err)
+			r.logger.Fatalf("Unknown bus %q: %v", r.ref.String(), err)
 		}
 		r.bus = bus.DeepCopy()
+	} else {
+		// reconciler is for a ClusterBus
+		clusterBus, err := r.clusterBusesLister.Get(r.ref.Name)
+		if err != nil {
+			r.logger.Fatalf("Unknown clusterbus %q: %v", r.ref.String(), err)
+		}
+		r.bus = clusterBus.DeepCopy()
 	}
 
 	r.logger.Info("Starting workers")
@@ -330,7 +336,14 @@ func (r *Reconciler) Run(busRef BusReference, threadiness int, stopCh <-chan str
 // WaitForCacheSync blocks returning until the reconciler's informers have
 // synchronized. It returns an error if the caches cannot sync.
 func (r *Reconciler) WaitForCacheSync(stopCh <-chan struct{}) error {
-	if ok := informercache.WaitForCacheSync(stopCh, r.busesSynced, r.clusterBusesSynced, r.channelsSynced, r.subscriptionsSynced); !ok {
+	var busesSynced informercache.InformerSynced
+	// get correct synced reference for bus type
+	if r.ref.IsNamespaced() {
+		busesSynced = r.busesSynced
+	} else {
+		busesSynced = r.clusterBusesSynced
+	}
+	if ok := informercache.WaitForCacheSync(stopCh, busesSynced, r.channelsSynced, r.subscriptionsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 	return nil
@@ -365,7 +378,7 @@ func (r *Reconciler) processNextWorkItem() bool {
 		var key string
 		var ok bool
 		// We expect strings to come off the workqueue. These are of the
-		// form namespace/name. We do this as the delayed nature of the
+		// form kind/namespace/name. We do this as the delayed nature of the
 		// workqueue means the items in the informer cache may actually be
 		// more up to date that when the item was initially put onto the
 		// workqueue.
@@ -377,7 +390,8 @@ func (r *Reconciler) processNextWorkItem() bool {
 			runtime.HandleError(fmt.Errorf("expected string in workqueue but got %#v", obj))
 			return nil
 		}
-		// Run the syncHandler, passing it the name string of the resource to be synced.
+		// Run the syncHandler, passing it the kind/namespace/name key of the
+		// resource to be synced.
 		if err := r.syncHandler(key); err != nil {
 			r.workqueue.AddRateLimited(obj)
 			return fmt.Errorf("error syncing reconciler '%s': %v", key, err)
@@ -401,16 +415,11 @@ func (r *Reconciler) processNextWorkItem() bool {
 // converge the two. It then updates the Status block of the resource with the
 // current status.
 func (r *Reconciler) syncHandler(key string) error {
-	// Convert the namespace/name string into a distinct namespace and name
+	// Convert the kind/namespace/name string into a distinct kind, namespace and name
 	kind, namespace, name, err := splitWorkqueueKey(key)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
 		return nil
-	}
-
-	if r.bus == nil && !(kind == busKind || kind == clusterBusKind) {
-		// don't attempt to sync until we have seen the bus for this reconciler
-		return fmt.Errorf("Unknown bus for reconciler")
 	}
 
 	switch kind {
@@ -448,7 +457,7 @@ func (r *Reconciler) syncBus(namespace string, name string) error {
 	}
 
 	// Sync the Bus
-	err = r.createOrUpdateBus(bus)
+	err = r.createOrUpdateBus(bus.DeepCopy())
 	if err != nil {
 		return err
 	}
@@ -470,7 +479,7 @@ func (r *Reconciler) syncClusterBus(name string) error {
 	}
 
 	// Sync the ClusterBus
-	err = r.createOrUpdateClusterBus(clusterBus)
+	err = r.createOrUpdateBus(clusterBus.DeepCopy())
 	if err != nil {
 		return err
 	}
@@ -484,8 +493,8 @@ func (r *Reconciler) syncChannel(namespace string, name string) error {
 	if err != nil {
 		// The Channel resource may no longer exist
 		if errors.IsNotFound(err) {
-			channelRef := NewChannelReferenceFromNames(name, namespace)
-			err = r.removeChannel(channelRef)
+			ref := NewChannelReferenceFromNames(name, namespace)
+			err = r.removeChannel(ref)
 			if err != nil {
 				return err
 			}
@@ -510,8 +519,8 @@ func (r *Reconciler) syncSubscription(namespace string, name string) error {
 	if err != nil {
 		// The Subscription resource may no longer exist
 		if errors.IsNotFound(err) {
-			subscriptionRef := NewSubscriptionReferenceFromNames(name, namespace)
-			err = r.removeSubscription(subscriptionRef)
+			ref := NewSubscriptionReferenceFromNames(name, namespace)
+			err = r.removeSubscription(ref)
 			if err != nil {
 				return err
 			}
@@ -530,39 +539,41 @@ func (r *Reconciler) syncSubscription(namespace string, name string) error {
 	return nil
 }
 
-func (r *Reconciler) createOrUpdateBus(bus *channelsv1alpha1.Bus) error {
-	if r.bus.GetObjectKind().GroupVersionKind().Kind != bus.Kind ||
-		bus.Namespace != r.bus.GetObjectMeta().GetNamespace() ||
-		bus.Name != r.bus.GetObjectMeta().GetName() {
-		// this is not our bus
+func (r *Reconciler) createOrUpdateBus(bus channelsv1alpha1.GenericBus) error {
+	if r.ref != NewBusReference(bus) {
+		// not the bus for this reconciler
 		return nil
 	}
 
-	previousBus := r.bus
-	r.bus = bus.DeepCopy()
-	if !equality.Semantic.DeepEqual(r.bus.GetSpec(), previousBus.GetSpec()) {
+	// stash the new bus on the reconciler while retaining the old bus. This
+	// operation is threadsafe because there is only a single Bus/ClusterBus
+	// that is valid for the Reconciler and the workqueue guarantees that it
+	// will not emit the same key concurrently. Any bus received is an updated
+	// revision of the current bus.
+	bus, r.bus = r.bus, bus
+
+	if !equality.Semantic.DeepEqual(r.bus.GetSpec(), bus.GetSpec()) {
 		err := r.handler.onBus(r.bus, r)
 		if err != nil {
 			return err
 		}
-	}
 
-	return nil
-}
+		oldParams := bus.GetSpec().Parameters
+		newParams := r.bus.GetSpec().Parameters
+		// If channel parameters changed we need to reprovision
+		if !equality.Semantic.DeepEqual(oldParams.Channel, newParams.Channel) {
+			r.logger.Infof("Bus channel parameters changed. Reprovisioning channels.")
+			for _, channel := range r.cache.AllChannels() {
+				r.workqueue.AddRateLimited(makeWorkqueueKeyForChannel(channel))
+			}
+		}
 
-func (r *Reconciler) createOrUpdateClusterBus(clusterBus *channelsv1alpha1.ClusterBus) error {
-	if r.bus.GetObjectKind().GroupVersionKind().Kind != clusterBus.Kind ||
-		clusterBus.Name != r.bus.GetObjectMeta().GetName() {
-		// this is not our clusterbus
-		return nil
-	}
-
-	previousBus := r.bus
-	r.bus = clusterBus.DeepCopy()
-	if !equality.Semantic.DeepEqual(r.bus.GetSpec(), previousBus.GetSpec()) {
-		err := r.handler.onBus(r.bus, r)
-		if err != nil {
-			return err
+		// If subscription parameters changed we need to resubscribe
+		if !equality.Semantic.DeepEqual(oldParams.Subscription, newParams.Subscription) {
+			r.logger.Infof("Bus subscription parameters changed. Resubscribing.")
+			for _, subscription := range r.cache.AllSubscriptions() {
+				r.workqueue.AddRateLimited(makeWorkqueueKeyForSubscription(subscription))
+			}
 		}
 	}
 
@@ -583,8 +594,8 @@ func (r *Reconciler) createOrUpdateChannel(channel *channelsv1alpha1.Channel) er
 	return nil
 }
 
-func (r *Reconciler) removeChannel(channelRef ChannelReference) error {
-	channel, err := r.cache.Channel(channelRef)
+func (r *Reconciler) removeChannel(ref ChannelReference) error {
+	channel, err := r.cache.Channel(ref)
 	if err != nil {
 		// the channel isn't provisioned
 		return nil
@@ -600,11 +611,11 @@ func (r *Reconciler) removeChannel(channelRef ChannelReference) error {
 }
 
 func (r *Reconciler) createOrUpdateSubscription(subscription *channelsv1alpha1.Subscription) error {
-	channelRef := NewChannelReferenceFromSubscription(subscription)
-	_, err := r.cache.Channel(channelRef)
+	ref := NewChannelReferenceFromSubscription(subscription)
+	_, err := r.cache.Channel(ref)
 	if err != nil {
 		// channel is not provisioned, before erring we need to check if the channel is provionable
-		channel, errS := r.channelsLister.Channels(channelRef.Namespace).Get(channelRef.Name)
+		channel, errS := r.channelsLister.Channels(ref.Namespace).Get(ref.Name)
 		if errS != nil {
 			return err
 		}
@@ -623,8 +634,8 @@ func (r *Reconciler) createOrUpdateSubscription(subscription *channelsv1alpha1.S
 	return nil
 }
 
-func (r *Reconciler) removeSubscription(subscriptionRef SubscriptionReference) error {
-	subscription, err := r.cache.Subscription(subscriptionRef)
+func (r *Reconciler) removeSubscription(ref SubscriptionReference) error {
+	subscription, err := r.cache.Subscription(ref)
 	if err != nil {
 		return nil
 	}

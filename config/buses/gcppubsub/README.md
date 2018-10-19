@@ -13,9 +13,12 @@ Deployment steps:
         kubectl create configmap gcppubsub-bus-config --namespace knative-eventing --from-literal=GOOGLE_CLOUD_PROJECT=$PROJECT_ID
         ```
 1. For cluster wide deployment, change the kind in `config/buses/gcppubsub/gcppubsub-bus.yaml` from `Bus` to `ClusterBus`.
-1. Apply the 'gcppubsub' bus:
-    ```
-    ko apply -f config/buses/gcppubsub/
+1. Apply the 'gcppubsub' Bus `ko apply -f config/buses/gcppubsub/`
+1. If you want to set the default Knative Bus to GCP Cloud Pub/Sub run the following command to edit the Knative Eventing configuration (requires the above change in kind from `Bus` to `ClusterBus`):
+    ```shell
+    kubectl get cm flow-controller-config -n knative-eventing -oyaml  \
+    | sed -e 's/default-cluster-bus: stub/  default-cluster-bus: gcppubsub/' \
+    | kubectl replace -f -
     ```
 1. Create Channels that reference the 'gcppubsub' Bus
 1. (Optional) Install [Kail](https://github.com/boz/kail) - Kubernetes tail

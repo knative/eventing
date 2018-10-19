@@ -50,15 +50,18 @@ var _ webhook.GenericCRD = (*ClusterBus)(nil)
 type ClusterBusSpec = BusSpec
 
 // ClusterBusStatus (computed) for a clusterbus
-type ClusterBusStatus struct {
-}
+type ClusterBusStatus = BusStatus
 
 func (b *ClusterBus) BacksChannel(channel *Channel) bool {
 	return len(b.Namespace) == 0 && b.Name == channel.Spec.ClusterBus
 }
 
-func (b *ClusterBus) GetSpec() *BusSpec {
+func (b *ClusterBus) GetSpec() *ClusterBusSpec {
 	return &b.Spec
+}
+
+func (b *ClusterBus) GetStatus() *ClusterBusStatus {
+	return &b.Status
 }
 
 func (b *ClusterBus) GetSpecJSON() ([]byte, error) {

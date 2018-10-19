@@ -28,12 +28,12 @@ import (
 	"github.com/knative/pkg/webhook"
 
 	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	flowsv1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/system"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -70,7 +70,7 @@ func main() {
 	}
 
 	// Watch the logging config map and dynamically update logging levels.
-	configMapWatcher := configmap.NewDefaultWatcher(kubeClient, system.Namespace)
+	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace)
 
 	configMapWatcher.Watch(logconfig.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Webhook, logconfig.Webhook))
 	if err = configMapWatcher.Start(stopCh); err != nil {
@@ -88,7 +88,13 @@ func main() {
 	controller := webhook.AdmissionController{
 		Client:  kubeClient,
 		Options: options,
-		Handlers: map[schema.GroupVersionKind]runtime.Object{
+		Handlers: map[schema.GroupVersionKind]webhook.GenericCRD{
+			// For group eventing.knative.dev,
+			eventingv1alpha1.SchemeGroupVersion.WithKind("Channel"):            &eventingv1alpha1.Channel{},
+			eventingv1alpha1.SchemeGroupVersion.WithKind("ClusterProvisioner"): &eventingv1alpha1.ClusterProvisioner{},
+			eventingv1alpha1.SchemeGroupVersion.WithKind("Source"):             &eventingv1alpha1.Source{},
+			eventingv1alpha1.SchemeGroupVersion.WithKind("Subscription"):       &eventingv1alpha1.Subscription{},
+
 			// For group channels.knative.dev,
 			channelsv1alpha1.SchemeGroupVersion.WithKind("Bus"):          &channelsv1alpha1.Bus{},
 			channelsv1alpha1.SchemeGroupVersion.WithKind("ClusterBus"):   &channelsv1alpha1.ClusterBus{},

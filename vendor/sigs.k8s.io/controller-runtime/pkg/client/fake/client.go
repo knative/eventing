@@ -105,7 +105,7 @@ func (c *fakeClient) Create(ctx context.Context, obj runtime.Object) error {
 	return c.tracker.Create(gvr, obj, accessor.GetNamespace())
 }
 
-func (c *fakeClient) Delete(ctx context.Context, obj runtime.Object) error {
+func (c *fakeClient) Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOptionFunc) error {
 	gvr, err := getGVRFromObject(obj)
 	if err != nil {
 		return err
@@ -114,6 +114,7 @@ func (c *fakeClient) Delete(ctx context.Context, obj runtime.Object) error {
 	if err != nil {
 		return err
 	}
+	//TODO: implement propagation
 	return c.tracker.Delete(gvr, accessor.GetNamespace(), accessor.GetName())
 }
 
@@ -129,6 +130,10 @@ func (c *fakeClient) Update(ctx context.Context, obj runtime.Object) error {
 	return c.tracker.Update(gvr, obj, accessor.GetNamespace())
 }
 
+func (c *fakeClient) Status() client.StatusWriter {
+	return &fakeStatusWriter{client: c}
+}
+
 func getGVRFromObject(obj runtime.Object) (schema.GroupVersionResource, error) {
 	gvk, err := apiutil.GVKForObject(obj, scheme.Scheme)
 	if err != nil {
@@ -136,4 +141,14 @@ func getGVRFromObject(obj runtime.Object) (schema.GroupVersionResource, error) {
 	}
 	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
 	return gvr, nil
+}
+
+type fakeStatusWriter struct {
+	client *fakeClient
+}
+
+func (sw *fakeStatusWriter) Update(ctx context.Context, obj runtime.Object) error {
+	// TODO(droot): This results in full update of the obj (spec + status). Need
+	// a way to update status field only.
+	return sw.client.Update(ctx, obj)
 }

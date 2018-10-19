@@ -1,0 +1,104 @@
+# This sets up two channels and some subscriptions:
+#  qux-1 -> event-changer -> qux-2 -> message-dumper-foo
+#     V                            L> message-dumper-bar
+#  message-dumper-foo
+#
+# So any message going to qux-1 is expected to appear in message-dumper-foo twice (one of which is
+# altered) and message-dumper-bar once.
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Channel
+metadata:
+  name: qux-1
+spec:
+  provisioner:
+    ref:
+      apiVersion: eventing.knative.dev/v1alpha1
+      kind: ClusterProvisioner
+      name: in-memory-channel
+
+---
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Channel
+metadata:
+  name: qux-2
+spec:
+  provisioner:
+    ref:
+      apiVersion: eventing.knative.dev/v1alpha1
+      kind: ClusterProvisioner
+      name: in-memory-channel
+
+---
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Subscription
+metadata:
+  name: qux-1-dumper-foo
+spec:
+  from:
+    apiVersion: eventing.knative.dev/v1alpha1
+    kind: Channel
+    name: qux-1
+  call:
+    target:
+      apiVersion: v1
+      kind: Service
+      name: message-dumper-foo
+
+---
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Subscription
+metadata:
+  name: qux-changer
+spec:
+  from:
+    apiVersion: eventing.knative.dev/v1alpha1
+    kind: Channel
+    name: qux-1
+  call:
+    target:
+      apiVersion: v1
+      kind: Service
+      name: event-changer
+  result:
+    target:
+      apiVersion: eventing.knative.dev/v1alpha1
+      kind: Channel
+      name: qux-2
+
+---
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Subscription
+metadata:
+  name: qux-2-dumper-foo
+spec:
+  from:
+    apiVersion: eventing.knative.dev/v1alpha1
+    kind: Channel
+    name: qux-2
+  call:
+    target:
+      apiVersion: v1
+      kind: Service
+      name: message-dumper-foo
+
+---
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Subscription
+metadata:
+  name: qux-2-dumper-bar
+spec:
+  from:
+    apiVersion: eventing.knative.dev/v1alpha1
+    kind: Channel
+    name: qux-2
+  call:
+    target:
+      apiVersion: v1
+      kind: Service
+      name: message-dumper-bar

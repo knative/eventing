@@ -46,8 +46,13 @@ func NewBusReferenceFromNames(name, namespace string) BusReference {
 	}
 }
 
+// IsNamespaced returns true is the reference is for a Bus and not a ClusterBus
+func (r *BusReference) IsNamespaced() bool {
+	return r.Namespace != ""
+}
+
 func (r *BusReference) String() string {
-	if r.Namespace != "" {
+	if r.IsNamespaced() {
 		return fmt.Sprintf("%s/%s", r.Namespace, r.Name)
 	}
 	return r.Name
