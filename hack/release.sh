@@ -29,7 +29,7 @@ COMPONENTS["in-memory-channel.yaml"]="config/provisioners/in-memory-channel"
 readonly COMPONENTS
 
 declare -A RELEASES
-RELEASES["release.yaml"]=("eventing.yaml", "in-memory-channel.yaml")
+RELEASES["release.yaml"]="eventing.yaml;in-memory-channel.yaml"
 readonly RELEASES
 
 # Script entry point.
@@ -65,10 +65,11 @@ done
 
 # Assemble the release
 for yaml in "${!RELEASES[@]}"; do
-  components="${RELEASES[${yaml}]}"
   echo "Assembling Knative Eventing - ${yaml}"
-  touch ${yaml}
-  for component in ${components[@]}; do
+  echo -n "" > ${yaml}
+  for component in $(echo ${RELEASES[${yaml}]} | tr ";" "\n"); do
+    echo "---" >> ${yaml}
+    echo "# ${component}" >> ${yaml}
     cat ${component} >> ${yaml}
   done
   all_yamls+=(${yaml})
