@@ -26,10 +26,10 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	defer stopNatss(stanServer)
 
 	retCode := m.Run()
 
+	stopNatss(stanServer)
 	os.Exit(retCode)
 }
 
