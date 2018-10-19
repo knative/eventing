@@ -45,10 +45,10 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
+	defer stopNatss(stanServer)
 
 	retCode := m.Run()
 
-	stopNatss(stanServer)
 	os.Exit(retCode)
 }
 
@@ -103,7 +103,20 @@ func TestNatss(t *testing.T) {
 }
 
 func startNatss() (*server.StanServer, error) {
-	return server.RunServer(clusterId)
+	var err error
+	var stanServer *server.StanServer
+	for i := 0; i < 10; i++ {
+		if stanServer, err = server.RunServer(clusterId); err != nil {
+			logger.Errorf("Start NATSS failed: %+v", err)
+			time.Sleep(1 * time.Second)
+		} else {
+			break
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	return stanServer, nil
 }
 
 func stopNatss(server *server.StanServer) {
