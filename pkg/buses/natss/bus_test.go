@@ -17,25 +17,24 @@ limitations under the License.
 package natss
 
 import (
+	"github.com/google/go-cmp/cmp"
+	"github.com/knative/eventing/pkg/buses"
+	"github.com/nats-io/nats-streaming-server/server"
+	"go.uber.org/zap"
 	"os"
 	"testing"
 	"time"
-	"go.uber.org/zap"
-	"github.com/knative/eventing/pkg/buses"
-	"github.com/nats-io/nats-streaming-server/server"
-	"github.com/stretchr/testify/assert"
-	"github.com/knative/pkg/signals"
 )
 
 const (
-	clusterId = "knative-nats-streaming"
-	natssTestUrl = "nats://localhost:4222"
+	clusterId      = "knative-nats-streaming"
+	natssTestUrl   = "nats://localhost:4222"
 	messagePayload = "test-message-1"
 )
 
 var (
 	logger *zap.SugaredLogger
-	done = make(chan struct{})
+	done   = make(chan string)
 )
 
 func TestMain(m *testing.M) {
@@ -46,32 +45,37 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
+	defer stopNatss(stanServer)
 
 	retCode := m.Run()
 
-	stopNatss(stanServer)
 	os.Exit(retCode)
 }
 
 func TestNatss(t *testing.T) {
-	ref := buses.NewBusReferenceFromNames("NATSS_TEST_NAME","NATSS_TAEST_NAMESPACE")
+	ref := buses.NewBusReferenceFromNames("NATSS_TEST_NAME", "NATSS_TEST_NAMESPACE")
 	opts := &buses.BusOpts{
-		Logger: logger,
+		Logger:     logger,
 		KubeConfig: "",
-		MasterURL: "",
+		MasterURL:  "",
 	}
 
 	busProv, err := NewNatssBusProvisioner(ref, setNewTestBusProvisioner(t, opts))
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatalf("Unexpected error from NewNatssBusProvisioner: %v", err)
+	}
 
 	busDisp, err := NewNatssBusDispatcher(ref, setNewTestBusDispatcher(t, opts))
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatalf("Unexpected error from NewNatssBusDispatcher: %v", err)
+	}
 
-	stopCh := signals.SetupSignalHandler()
+	stopCh := make(chan struct{})
+	defer close(stopCh)
 	busProv.Run(1, stopCh, "test-provisioner-natss")
 	busDisp.Run(1, stopCh, "test-dispatcher-natss")
 
-	// create adummy channel
+	// create a dummy channel
 	channel := buses.ChannelReference{"default", "test-channel"}
 	busProv.provEventHandler.ProvisionFunc(channel, make(buses.ResolvedParameters))
 
@@ -79,15 +83,23 @@ func TestNatss(t *testing.T) {
 	subscription := buses.SubscriptionReference{"default", "test-subscription"}
 	busDisp.dispEventHandler.SubscribeFunc(channel, subscription, make(buses.ResolvedParameters))
 
-    // send a message ....
-	message := buses.Message{make(map[string]string),[]byte(messagePayload)}
-    busDisp.dispEventHandler.ReceiveMessageFunc(channel, &message)
+	// send a message ....
+	message := buses.Message{make(map[string]string), []byte(messagePayload)}
+	busDisp.dispEventHandler.ReceiveMessageFunc(channel, &message)
 
 	// wait for subscriber to respond
 	select {
-	case <-done: logger.Infof("Subscriber finished")
-	case <-time.After(5 * time.Second): logger.Info("Subscriber timeout")
+	case payload := <-done:
+		logger.Info("Subscriber finished")
+		if diff := cmp.Diff(messagePayload, payload); diff != "" {
+			t.Errorf("Unexpected message payload (-want, +got): %v", diff)
+		}
+	case <-time.After(5 * time.Second):
+		t.Error("Subscriber timeout")
 	}
+
+	// unsubscribe
+	busDisp.dispEventHandler.UnsubscribeFunc(channel, subscription)
 }
 
 func startNatss() (*server.StanServer, error) {
@@ -101,22 +113,21 @@ func stopNatss(server *server.StanServer) {
 // set dummy provisioner
 func setNewTestBusProvisioner(t *testing.T, opts *buses.BusOpts) SetupNatssBus {
 	return func(b *NatssBus) error {
-		b.natsUrl = natssTestUrl
-		b.provisioner = newDummyProvisioner(t, b.provEventHandler)
+		b.natssUrl = natssTestUrl
+		b.provisioner = newDummyProvisioner(opts.Logger)
 		b.logger = opts.Logger
 		return nil
 	}
 }
 
-func newDummyProvisioner(t *testing.T, handlerFuncs buses.EventHandlerFuncs) buses.BusProvisioner {
+func newDummyProvisioner(logger *zap.SugaredLogger) buses.BusProvisioner {
 	var b = &dummyBusProvisioner{
-		t : t,
+		logger: logger,
 	}
-    return b
+	return b
 }
 
 type dummyBusProvisioner struct {
-	t *testing.T
 	logger *zap.SugaredLogger
 }
 
@@ -125,22 +136,21 @@ func (m *dummyBusProvisioner) Run(threadiness int, stopCh <-chan struct{}) {}
 //set dummy dispatcher
 func setNewTestBusDispatcher(t *testing.T, opts *buses.BusOpts) SetupNatssBus {
 	return func(b *NatssBus) error {
-		b.natsUrl = natssTestUrl
-		b.dispatcher = newDummyDispatcher(t, b.ref, b.dispEventHandler, opts)
+		b.natssUrl = natssTestUrl
+		b.dispatcher = newDummyDispatcher(opts.Logger)
 		b.logger = opts.Logger
 		return nil
 	}
 }
 
-func newDummyDispatcher(t *testing.T, ref buses.BusReference, handlerFuncs buses.EventHandlerFuncs, opts *buses.BusOpts) buses.BusDispatcher {
+func newDummyDispatcher(logger *zap.SugaredLogger) buses.BusDispatcher {
 	var b = &dummyBusDispatcher{
-		t : t,
+		logger: logger,
 	}
 	return b
 }
 
 type dummyBusDispatcher struct {
-	t *testing.T
 	logger *zap.SugaredLogger
 }
 
@@ -148,8 +158,7 @@ func (m *dummyBusDispatcher) Run(threadiness int, stopCh <-chan struct{}) {}
 
 func (m *dummyBusDispatcher) DispatchMessage(subscription buses.SubscriptionReference, message *buses.Message) error {
 	payload := string(message.Payload)
-	logger.Infof("dummyBusDispatcher(): received message %s:", payload)
-	assert.Equal(m.t, messagePayload, payload)
-	done <- struct{}{}
+	m.logger.Infof("dummyBusDispatcher() - received message: %s", payload)
+	done <- payload
 	return nil
 }

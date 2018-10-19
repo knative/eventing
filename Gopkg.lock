@@ -604,14 +604,6 @@
   revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
 
 [[projects]]
-  digest = "1:bacb8b590716ab7c33f2277240972c9582d389593ee8d66fc10074e0508b8126"
-  name = "github.com/stretchr/testify"
-  packages = ["assert"]
-  pruneopts = "NUT"
-  revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
-  version = "v1.2.2"
-
-[[projects]]
   digest = "1:773b6907f497ea5abddc9ee90cdde179b119c0c8a04b0f02cb2fff955ed8cab4"
   name = "go.opencensus.io"
   packages = [
@@ -1245,7 +1237,6 @@
     "github.com/nats-io/go-nats-streaming",
     "github.com/nats-io/nats-streaming-server/server",
     "github.com/prometheus/client_golang/prometheus/promhttp",
-    "github.com/stretchr/testify/assert",
     "go.opencensus.io/trace",
     "go.uber.org/atomic",
     "go.uber.org/zap",

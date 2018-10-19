@@ -21,9 +21,9 @@ import (
 	"os"
 
 	"github.com/knative/eventing/pkg/buses"
+	"github.com/knative/eventing/pkg/buses/natss"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
-	"github.com/knative/eventing/pkg/buses/natss"
 )
 
 const (

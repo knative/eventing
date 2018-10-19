@@ -38,7 +38,7 @@ func Close(sc *stan.Conn, logger *zap.SugaredLogger) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("recovered from: %v", r)
-			logger.Errorf("Close(): %v\n", err.Error())
+			logger.Errorf("Close(): %v", err.Error())
 		}
 	}()
 
@@ -48,17 +48,17 @@ func Close(sc *stan.Conn, logger *zap.SugaredLogger) (err error) {
 	}
 	err = (*sc).Close()
 	if err != nil {
-		logger.Errorf("Can't close connection: %+v\n", err)
+		logger.Errorf("Can't close connection: %+v", err)
 	}
 	return
 }
 
 // Publish a message to a subject
-func Publish(sc *stan.Conn, subj string, msg *[]byte,logger *zap.SugaredLogger) (err error) {
+func Publish(sc *stan.Conn, subj string, msg *[]byte, logger *zap.SugaredLogger) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("recovered from: %v", r)
-			logger.Errorf("Publish(): %v\n", err.Error())
+			logger.Errorf("Publish(): %v", err.Error())
 		}
 	}()
 

@@ -1,18 +1,17 @@
 package stanutil
 
 import (
-	"testing"
-	"os"
 	"github.com/knative/eventing/pkg/buses"
 	"github.com/nats-io/nats-streaming-server/server"
-	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
+	"os"
+	"testing"
 )
 
 const (
 	clusterId = "knative-eventing"
-	clientId = "testClient"
-    natssUrl = "nats://localhost:4222"
+	clientId  = "testClient"
+	natssUrl  = "nats://localhost:4222"
 )
 
 var (
@@ -27,26 +26,27 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
+	defer stopNatss(stanServer)
+
 	retCode := m.Run()
 
-	stopNatss(stanServer)
 	os.Exit(retCode)
 }
 
 func TestConnectPublishClose(t *testing.T) {
 	// connect
-	natsConn, err := Connect(clusterId, clientId, natssUrl, logger)
-	assert.Nil(t, err)
-	logger.Info("natsConn: %v", natsConn)
+	natssConn, err := Connect(clusterId, clientId, natssUrl, logger)
+	if err != nil {
+		t.Errorf("Connect failed: %v", err)
+	}
+	logger.Infof("natssConn: %v", natssConn)
 
 	//publish
 	msg := []byte("testMessage")
-	err = Publish(natsConn, "testTopic",&msg,logger)
-	assert.Nil(t, err)
-
-	//close
-	Close(natsConn, logger)
-	assert.Nil(t, err)
+	err = Publish(natssConn, "testTopic", &msg, logger)
+	if err != nil {
+		t.Errorf("Publish failed: %v", err)
+	}
 }
 
 func startNatss() (*server.StanServer, error) {
