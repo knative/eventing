@@ -154,7 +154,7 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, logger *
 	}
 	crb := &rbacV1beta1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "e2e-feed-admin",
+			Name: fmt.Sprintf("%s-admin", name),
 		},
 		Subjects: []rbacV1beta1.Subject{
 			{
@@ -178,7 +178,7 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, logger *
 
 // CreateClusterProvisioner will create a ClusterProvisioner
 func CreateClusterProvisioner(clients *test.Clients, cprovisioner *eventingV1alpha1.ClusterProvisioner, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
-	cprovisioners := clients.Eventing.EventingV1alpha1().ClusterProvisioner()
+	cprovisioners := clients.Eventing.EventingV1alpha1().ClusterProvisioners()
 	res, err := cprovisioners.Create(cprovisioner)
 	if err != nil {
 		return err
