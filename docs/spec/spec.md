@@ -97,7 +97,7 @@ _Describes a linkage between a Channel and a Targetable and/or Sinkable._
 
 - **Ready.**
 - **FromReady.**
-- **Resolved.**
+- **Resolved.** True if `from`, `call`, and `result` all resolve into valid object references which implement the appropriate spec.
 
 #### Events
 
