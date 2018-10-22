@@ -3,7 +3,7 @@
 The API defines and provides a complete implementation for
 [Subscription](spec.md#kind-subscription), and abstract resource definitions
 for [Channels](spec.md#kind-channel) and
-[ClusterChannelProvisioners](spec.md#kind-cluster-channe-provisioner) which may
+[ClusterChannelProvisioners](spec.md#kind-cluster-channel-provisioner) which may
 be fulfilled by multiple backing implementations (much like the Kubernetes
 Ingress resource).
 
