@@ -44,7 +44,7 @@ its subscribers._
 | Field      | Type       | Description                                                                                                                 | Limitations |
 | ---------- | ---------- | --------------------------------------------------------------------------------------------------------------------------- | ----------- |
 | sinkable   | Sinkable   | Address to the endpoint as top-level domain that will distribute traffic over the provided targets from inside the cluster. |             |
-| conditions | Conditions | Standard Subscriptions                                                                                                      |             |
+| conditions | Conditions | Channel conditions.                                                                                                         |             |
 
 ##### Conditions
 
@@ -78,7 +78,7 @@ _Describes a linkage between a Channel and a Targetable and/or Sinkable._
 
 | Field              | Type           | Description                                                                  | Limitations        |
 | ------------------ | -------------- | ---------------------------------------------------------------------------- | ------------------ |
-| from\*             | ObjectRef      | The originating Channel for the link.                                        | Must be a Channel. |
+| from\*             | ObjectRef      | The originating _Subscribable_ for the link.                                 | Must be a Channel. |
 | call<sup>1</sup>   | EndpointSpec   | Optional processing on the event. The result of call will be sent to result. |                    |
 | result<sup>1</sup> | ResultStrategy | The continuation for the link.                                               |                    |
 
@@ -106,11 +106,11 @@ _Describes a linkage between a Channel and a Targetable and/or Sinkable._
 
 ### Life Cycle
 
-| Action | Reactions                                                        | Limitations |
-| ------ | ---------------------------------------------------------------- | ----------- |
-| Create | The publisher referenced needs to be watching for Subscriptions. |             |
-| Update |                                                                  |             |
-| Delete |                                                                  |             |
+| Action | Reactions                                                                                                                                   | Limitations |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| Create | The subscription controller adds the resolved URIs of `call` and `result` to the `subscribers` field in the `from` _Subscribable_ resource. |             |
+| Update |                                                                                                                                             |             |
+| Delete |                                                                                                                                             |             |
 
 ---
 
