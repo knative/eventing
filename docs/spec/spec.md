@@ -167,29 +167,12 @@ or a Channel system that receives and delivers events._
 
 1: One of (targetRef, dnsName), Required.
 
-### ProvisionedObjectStatus
-
-| Field    | Type   | Description                                                        | Limitations |
-| -------- | ------ | ------------------------------------------------------------------ | ----------- |
-| name\*   | String | Name of Object                                                     |             |
-| type\*   | String | Fully Qualified Object type.                                       |             |
-| status\* | String | Current relationship between ClusterChannelProvisioner and Object. |             |
-| reason   | String | Detailed description describing current relationship status.       |             |
-
-\*: Required
-
-### Subscribable
-
-| Field       | Type                    | Description                                                           | Limitations                            |
-| ----------- | ----------------------- | --------------------------------------------------------------------- | -------------------------------------- |
-| subscribers | ChannelSubscriberSpec[] | Information about subscriptions used to implement message forwarding. | Filled out by Subscription Controller. |
-
 ### ChannelSubscriberSpec
 
-| Field          | Type   | Description                                     | Limitations |
-| -------------- | ------ | ----------------------------------------------- | ----------- |
-| callableDomain | String | The domain name of the endpoint for the call.   |             |
-| sinkableDomain | String | The domain name of the endpoint for the result. |             |
+| Field       | Type   | Description                                  | Limitations    |
+| ----------- | ------ | -------------------------------------------- | -------------- |
+| callableURI | String | The URI name of the endpoint for the call.   | Must be a URL. |
+| sinkableURI | String | The URI name of the endpoint for the result. | Must be a URL. |
 
 ### ResultStrategy
 
