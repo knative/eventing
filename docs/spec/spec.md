@@ -25,10 +25,11 @@ Subscription's call parameter._
 
 #### Spec
 
-| Field         | Type                               | Description                                                                | Limitations |
-| ------------- | ---------------------------------- | -------------------------------------------------------------------------- | ----------- |
-| provisioner\* | ProvisionerReference               | The name of the provisioner to create the resources that back the Channel. | Immutable.  |
-| arguments     | runtime.RawExtension (JSON object) | Arguments to be passed to the provisioner.                                 |             |
+| Field         | Type                               | Description                                                                | Limitations                            |
+| ------------- | ---------------------------------- | -------------------------------------------------------------------------- | -------------------------------------- |
+| provisioner\* | ProvisionerReference               | The name of the provisioner to create the resources that back the Channel. | Immutable.                             |
+| arguments     | runtime.RawExtension (JSON object) | Arguments to be passed to the provisioner.                                 |                                        |
+| subscribers   | ChannelSubscriberSpec[]            | Information about subscriptions used to implement message forwarding.      | Filled out by Subscription Controller. |
 
 \*: Required
 
