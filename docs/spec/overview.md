@@ -16,13 +16,13 @@ Kubernetes Ingress resource).
 
 ![Resource Types Overview](images/resource-types-overview.svg)
 
-- **ClusterProvisioners** implement strategies for realizing backing resources
+- **ClusterChannelProvisioners** implement strategies for realizing backing resources
   for different implementations of _Channels_ currently active in the eventing
   system.
 
 <!-- This image is sourced from https://drive.google.com/open?id=1o_0Xh5VjwpQ7Px08h_Q4qnaOdMjt4yCEPixRFwJQjh8 -->
 
-<img alt="Resource Types ClusterProvisioners" src="images/resource-types-provisioner.svg" width="200">
+<img alt="Resource Types ClusterChannelProvisioners" src="images/resource-types-provisioner.svg" width="200">
 
 With extendibility and compostability as a goal of Knative Eventing, the
 eventing API defines several resources that can be reduced down to a well
@@ -57,25 +57,25 @@ has a single inbound _Sinkable_ interface which may accept events from multiple
 _Subscriptions_ or even direct delivery from external systems. Different
 _Channels_ may implement different degrees of persistence. Event delivery order
 is dependent on the backing implementation of the _Channel_ provided by the
-_ClusterProvisioner_.
+_ClusterChannelProvisioner_.
 
 Event selection on a _Channel_ is 1:N – a single _Channel_ may fan out to
 multiple _Subscriptions_.
 
 See [Kind: Channel](spec.md#kind-channel).
 
-## ClusterProvisioner
+## ClusterChannelProvisioner
 
-**ClusterProvisioner** catalogs available implementations of _Channels_.
-_ClusterProvisioners_ hold a JSON Schema that is used to validate the _Channel_
-input arguments. _ClusterProvisioners_ make it possible to provide cluster wide
-defaults for the _Channels_ they provision.
+**ClusterChannelProvisioner** catalogs available implementations of _Channels_.
+_ClusterChannelProvisioners_ hold a JSON Schema that is used to validate the
+_Channel_ input arguments. _ClusterChannelProvisioners_ make it possible to
+provide cluster wide defaults for the _Channels_ they provision.
 
-_ClusterProvisioners_ do not directly handle events. They are 1:N with
+_ClusterChannelProvisioners_ do not directly handle events. They are 1:N with
 _Channels_.
 
 For more details, see [Kind:
-ClusterProvisioner](spec.md#kind-cluster-provisioner).
+ClusterChannelProvisioner](spec.md#kind-cluster-channel-provisioner).
 
 
 ---
