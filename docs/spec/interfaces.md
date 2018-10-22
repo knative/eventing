@@ -63,7 +63,7 @@ _Subscription_'s _result_ field.
 A **Sinkable** resource MUST expose a _status.sinkable.domainInternal_ field.
 The _domainInternal_ value is an internal domain name that is capable of
 receiving event deliveries. _Sinkable_ resources may be referenced in the
-_result_ section of a _Subscription_.
+_result_ section of a _Subscription_, and also by other custom resources acting as an event Source.
 
 ### Data Plane
 
