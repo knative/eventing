@@ -68,7 +68,7 @@ _result_ section of a _Subscription_, and also by other custom resources acting 
 ### Data Plane
 
 A **Sinkable** resource will only respond to requests with success of failure.
-Events returned to the caller will be reported or ignored.
+Any payload (including a valid CloudEvent) returned to the sender will be ignored.
 
 ---
 
