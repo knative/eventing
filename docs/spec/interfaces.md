@@ -58,6 +58,15 @@ delivery. Unlike _Targetable_, a _Sinkable_ cannot return events in its
 response. One example of a _Sinkable_ is a _Channel_ as the target of a
 _Subscription_'s _result_ field.
 
+<!-- TODO(evankanderson):
+I don't like this example, as it conflates two different things:
+
+That Channel implements Sinkable.
+That Subscription expects a Sinkable in its spec.from.
+I think it would be clearer to separate the two (and possibly cover the second
+item only in the object specs).
+-->
+
 ### Control Plane
 
 A **Sinkable** resource MUST expose a _status.sinkable.domainInternal_ field.
@@ -68,7 +77,9 @@ _result_ section of a _Subscription_, and also by other custom resources acting 
 ### Data Plane
 
 A **Sinkable** resource will only respond to requests with success of failure.
-Any payload (including a valid CloudEvent) returned to the sender will be ignored.
+Any payload (including a valid CloudEvent) returned to the sender will be
+ignored. It may receive the same event multiple times even if it previously
+indicated success.
 
 ---
 

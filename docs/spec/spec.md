@@ -2,8 +2,8 @@
 
 Knative ships with several objects which implement useful sets of
 [interfaces](interfaces.md). It is expected that additional objects which
-implement other sets of interfaces will be added over time. For context, see
-the [overview](overview.md) and [motivations](motivation.md) sections.
+implement these interfaces will be added over time. For context, see the
+[overview](overview.md) and [motivations](motivation.md) sections.
 
 These are Kubernetes resources that been introduced using Custom Resource
 Definitions. They will have the expected _ObjectMeta_, _Spec_, _Status_ fields.
@@ -18,8 +18,7 @@ This document details our _Spec_ and _Status_ customizations.
 ### group: eventing.knative.dev/v1alpha1
 
 _A Channel logically receives events on its input domain and forwards them to
-its subscribers. Additional behavior may be introduced by using the
-Subscription's call parameter._
+its subscribers._
 
 ### Object Schema
 

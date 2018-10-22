@@ -2,9 +2,19 @@
 
 The API defines and provides a complete implementation for
 [Subscription](spec.md#kind-subscription), and abstract resource definitions
-for [Channels](spec.md#kind-channel) and [Providers](spec.md#kind-provisioner)
-which may be fulfilled by multiple backing implementations (much like the
-Kubernetes Ingress resource).
+for [Channels](spec.md#kind-channel) and
+[ClusterChannelProvisioners](spec.md#kind-cluster-channe-provisioner) which may
+be fulfilled by multiple backing implementations (much like the Kubernetes
+Ingress resource).
+
+With extendibility and compostability as a goal of Knative Eventing, the
+eventing API defines several resources that can be reduced down to a well
+understood contracts. These eventing resource interfaces may be fulfilled by
+other Kubernetes objects and then composed in the same way as the concreate
+objects. The interfaces are ([Sinkable](interfaces.md#sinkable),
+[Subscribable](interfaces.md#Subscribable),
+[Targetable](interfaces.md#targetable)). For more details, see
+[Interface Contracts](interfaces.md).
 
 - A **Subscription** describes the transformation of an event and optional
   forwarding of a returned event.
@@ -24,14 +34,9 @@ Kubernetes Ingress resource).
 
 <img alt="Resource Types ClusterChannelProvisioners" src="images/resource-types-provisioner.svg" width="200">
 
-With extendibility and compostability as a goal of Knative Eventing, the
-eventing API defines several resources that can be reduced down to a well
-understood contracts. These eventing resource interfaces may be fulfilled by
-other Kubernetes objects and then composed in the same way as the concreate
-objects. The interfaces are ([Sinkable](interfaces.md#sinkable),
-[Subscribable](interfaces.md#Subscribable),
-[Targetable](interfaces.md#targetable)). For more details, see
-[Interface Contracts](interfaces.md).
+Sources are defined by independent CRDs that can be installed into a cluster.
+For more information see [Knative Eventing
+Sources](https://github.com/knative/eventing-sources).
 
 ## Subscription
 
