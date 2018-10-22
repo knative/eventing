@@ -11,7 +11,7 @@ This document details our _Spec_ and _Status_ customizations.
 
 - [Channel](#kind-channel)
 - [Subscription](#kind-subscription)
-- [Provider](#kind-provisioner)
+- [ClusterChannelProvisioner](#kind-clusterchannelprovisioner)
 
 ## kind: Channel
 
