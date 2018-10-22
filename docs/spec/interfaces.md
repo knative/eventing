@@ -9,7 +9,7 @@
 ## Subscribable
 
 A **Subscribable** resource contains a list of subscribers and is responsible
-for delivering events to each of them. One example of a Subscribable is a
+for delivering events to each of them. Subscriptions only allow Channels to be Subscribable (via `spec.from` on the Subscription) at the moment, but this may be revisited with future experience.
 _Channel_ as the target of a _Subscription_'s _from_ field.
 
 ### Control Plane
