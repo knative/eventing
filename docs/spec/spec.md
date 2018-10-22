@@ -97,7 +97,6 @@ _Describes a linkage between a Channel and a Targetable and/or Sinkable._
 
 - **Ready.**
 - **FromReady.**
-- **CallActive.** True if the call is sinking events without error.
 - **Resolved.**
 
 #### Events
