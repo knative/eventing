@@ -19,19 +19,20 @@ package filesystem
 import (
 	"errors"
 	"fmt"
-	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/pkg/sidecar/configmap"
-	"github.com/knative/eventing/pkg/sidecar/fanout"
-	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	"go.uber.org/zap"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/knative/eventing/pkg/sidecar/configmap"
+	"github.com/knative/eventing/pkg/sidecar/fanout"
+	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"go.uber.org/zap"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func TestReadConfigMap(t *testing.T) {
@@ -82,20 +83,20 @@ func TestReadConfigMap(t *testing.T) {
 					name: c1
 					fanoutConfig:
 					  subscriptions:
-						- callableDomain: event-changer.default.svc.cluster.local
-						  sinkableDomain: message-dumper-bar.default.svc.cluster.local
-						- callableDomain: message-dumper-foo.default.svc.cluster.local
-						- sinkableDomain: message-dumper-bar.default.svc.cluster.local
+						- callableURI: event-changer.default.svc.cluster.local
+						  sinkableURI: message-dumper-bar.default.svc.cluster.local
+						- callableURI: message-dumper-foo.default.svc.cluster.local
+						- sinkableURI: message-dumper-bar.default.svc.cluster.local
 				  - namespace: default
 					name: c2
 					fanoutConfig:
 					  subscriptions:
-						- sinkableDomain: message-dumper-foo.default.svc.cluster.local
+						- sinkableURI: message-dumper-foo.default.svc.cluster.local
 				  - namespace: other
 					name: c3
 					fanoutConfig:
 					  subscriptions:
-						- sinkableDomain: message-dumper-foo.default.svc.cluster.local
+						- sinkableURI: message-dumper-foo.default.svc.cluster.local
 				`,
 			expected: &multichannelfanout.Config{
 				ChannelConfigs: []multichannelfanout.ChannelConfig{
@@ -105,14 +106,14 @@ func TestReadConfigMap(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 								{
-									CallableDomain: "event-changer.default.svc.cluster.local",
-									SinkableDomain: "message-dumper-bar.default.svc.cluster.local",
+									CallableURI: "event-changer.default.svc.cluster.local",
+									SinkableURI: "message-dumper-bar.default.svc.cluster.local",
 								},
 								{
-									CallableDomain: "message-dumper-foo.default.svc.cluster.local",
+									CallableURI: "message-dumper-foo.default.svc.cluster.local",
 								},
 								{
-									SinkableDomain: "message-dumper-bar.default.svc.cluster.local",
+									SinkableURI: "message-dumper-bar.default.svc.cluster.local",
 								},
 							},
 						},
@@ -123,7 +124,7 @@ func TestReadConfigMap(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 								{
-									SinkableDomain: "message-dumper-foo.default.svc.cluster.local",
+									SinkableURI: "message-dumper-foo.default.svc.cluster.local",
 								},
 							},
 						},
@@ -134,7 +135,7 @@ func TestReadConfigMap(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 								{
-									SinkableDomain: "message-dumper-foo.default.svc.cluster.local",
+									SinkableURI: "message-dumper-foo.default.svc.cluster.local",
 								},
 							},
 						},
@@ -187,7 +188,7 @@ func TestWatch(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 								{
-									SinkableDomain: "foo.bar",
+									SinkableURI: "foo.bar",
 								},
 							},
 						},
@@ -204,7 +205,7 @@ func TestWatch(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 								{
-									SinkableDomain: "foo.bar",
+									SinkableURI: "foo.bar",
 								},
 							},
 						},
@@ -222,7 +223,7 @@ func TestWatch(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 								{
-									SinkableDomain: "foo.bar",
+									SinkableURI: "foo.bar",
 								},
 							},
 						},
@@ -237,7 +238,7 @@ func TestWatch(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 								{
-									CallableDomain: "baz.qux",
+									CallableURI: "baz.qux",
 								},
 							},
 						},

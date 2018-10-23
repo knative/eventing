@@ -185,11 +185,11 @@ type SubscriptionStatusPhysicalSubscription struct {
 	// From is the object pointed to in status.from's Subscribable contract.
 	From corev1.ObjectReference `json:"from,omitEmpty"`
 
-	// CallDomain is the fully resolved domain for spec.callable.
-	CallDomain string `json:"callDomain,omitEmpty"`
+	// CallURI is the fully resolved URI for spec.callable.
+	CallURI string `json:"callURI,omitEmpty"`
 
-	// ResultDomain is the fully resolved domain for the spec.result.
-	ResultDomain string `json:"resultDomain,omitEmpty"`
+	// ResultURI is the fully resolved URI for the spec.result.
+	ResultURI string `json:"resultURI,omitEmpty"`
 }
 
 const (

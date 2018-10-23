@@ -724,8 +724,8 @@ func getNewChannel(name string) *eventingv1alpha1.Channel {
 func rename(sub *eventingv1alpha1.Subscription) *eventingv1alpha1.Subscription {
 	sub.Name = "renamed"
 	sub.UID = "renamed-UID"
-	sub.Status.PhysicalSubscription.CallDomain = ""
-	sub.Status.PhysicalSubscription.ResultDomain = otherSinkableDNS
+	sub.Status.PhysicalSubscription.CallURI = ""
+	sub.Status.PhysicalSubscription.ResultURI = otherSinkableDNS
 	return sub
 }
 
@@ -822,15 +822,15 @@ func getNewSubscriptionWithUnknownConditionsAndPhysicalFrom() *eventingv1alpha1.
 
 func getNewSubscriptionWithUnknownConditionsAndPhysicalFromCall() *eventingv1alpha1.Subscription {
 	s := getNewSubscriptionWithUnknownConditionsAndPhysicalFrom()
-	s.Status.PhysicalSubscription.CallDomain = targetDNS
+	s.Status.PhysicalSubscription.CallURI = domainToURL(targetDNS)
 	return s
 }
 
 func getNewSubscriptionWithReferencesResolvedAndPhysicalFromCallResult() *eventingv1alpha1.Subscription {
 	s := getNewSubscriptionWithUnknownConditionsAndPhysicalFrom()
 	s.Status.MarkReferencesResolved()
-	s.Status.PhysicalSubscription.CallDomain = targetDNS
-	s.Status.PhysicalSubscription.ResultDomain = sinkableDNS
+	s.Status.PhysicalSubscription.CallURI = domainToURL(targetDNS)
+	s.Status.PhysicalSubscription.ResultURI = domainToURL(sinkableDNS)
 	return s
 }
 
@@ -839,9 +839,9 @@ func getNewSubscriptionToK8sServiceWithReferencesResolvedAndPhysicalFromCallResu
 	s.Status.InitializeConditions()
 	s.Status.MarkReferencesResolved()
 	s.Status.PhysicalSubscription = eventingv1alpha1.SubscriptionStatusPhysicalSubscription{
-		From:         s.Spec.From,
-		CallDomain:   k8sServiceDNS,
-		ResultDomain: sinkableDNS,
+		From:      s.Spec.From,
+		CallURI:   domainToURL(k8sServiceDNS),
+		ResultURI: domainToURL(sinkableDNS),
 	}
 	return s
 }
@@ -856,8 +856,8 @@ func getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromCallResult
 			Kind:       channelKind,
 			Name:       fromChannelName,
 		},
-		CallDomain:   targetDNS,
-		ResultDomain: sinkableDNS,
+		CallURI:   domainToURL(targetDNS),
+		ResultURI: domainToURL(sinkableDNS),
 	}
 	return s
 }
@@ -873,7 +873,7 @@ func getSubscriptionWithDifferentChannel() *eventingv1alpha1.Subscription {
 	s.Name = "different-channel"
 	s.UID = "different-channel-UID"
 	s.Status.PhysicalSubscription.From.Name = "other-channel"
-	s.Status.PhysicalSubscription.CallDomain = "some-other-domain"
+	s.Status.PhysicalSubscription.CallURI = "some-other-domain"
 	return s
 }
 
@@ -915,11 +915,11 @@ func getChannelWithMultipleSubscriptions() *eventingv1alpha1.Channel {
 			Channelable: &duckv1alpha1.Channelable{
 				Subscribers: []duckv1alpha1.ChannelSubscriberSpec{
 					{
-						CallableDomain: targetDNS,
-						SinkableDomain: sinkableDNS,
+						CallableURI: targetDNS,
+						SinkableURI: sinkableDNS,
 					},
 					{
-						SinkableDomain: otherSinkableDNS,
+						SinkableURI: otherSinkableDNS,
 					},
 				},
 			},

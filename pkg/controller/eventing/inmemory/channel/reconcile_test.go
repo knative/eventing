@@ -75,14 +75,14 @@ var (
 				FanoutConfig: fanout.Config{
 					Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 						{
-							CallableDomain: "foo",
+							CallableURI: "foo",
 						},
 						{
-							SinkableDomain: "bar",
+							SinkableURI: "bar",
 						},
 						{
-							CallableDomain: "baz",
-							SinkableDomain: "qux",
+							CallableURI: "baz",
+							SinkableURI: "qux",
 						},
 					},
 				},
@@ -93,7 +93,7 @@ var (
 				FanoutConfig: fanout.Config{
 					Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 						{
-							CallableDomain: "steve",
+							CallableURI: "steve",
 						},
 					},
 				},
@@ -119,14 +119,14 @@ var (
 				Channelable: &duckv1alpha1.Channelable{
 					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{
 						{
-							CallableDomain: "foo",
+							CallableURI: "foo",
 						},
 						{
-							SinkableDomain: "bar",
+							SinkableURI: "bar",
 						},
 						{
-							CallableDomain: "baz",
-							SinkableDomain: "qux",
+							CallableURI: "baz",
+							SinkableURI: "qux",
 						},
 					},
 				},
@@ -149,7 +149,7 @@ var (
 				Channelable: &duckv1alpha1.Channelable{
 					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{
 						{
-							CallableDomain: "anything",
+							CallableURI: "anything",
 						},
 					},
 				},
@@ -172,7 +172,7 @@ var (
 				Channelable: &duckv1alpha1.Channelable{
 					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{
 						{
-							CallableDomain: "steve",
+							CallableURI: "steve",
 						},
 					},
 				},

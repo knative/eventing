@@ -18,10 +18,6 @@ package fanout
 
 import (
 	"errors"
-	"github.com/knative/eventing/pkg/buses"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	"go.uber.org/atomic"
-	"go.uber.org/zap"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -29,6 +25,11 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/knative/eventing/pkg/buses"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
 )
 
 // Domains used in subscriptions, which will be replaced by the real domains of the started HTTP
@@ -74,7 +75,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			timeout: time.Millisecond,
 			subs: []duckv1alpha1.ChannelSubscriberSpec{
 				{
-					CallableDomain: replaceCallable,
+					CallableURI: replaceCallable,
 				},
 			},
 			callable: func(writer http.ResponseWriter, _ *http.Request) {
@@ -96,7 +97,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		"sinkable fails": {
 			subs: []duckv1alpha1.ChannelSubscriberSpec{
 				{
-					SinkableDomain: replaceSinkable,
+					SinkableURI: replaceSinkable,
 				},
 			},
 			sinkable: func(writer http.ResponseWriter, _ *http.Request) {
@@ -107,7 +108,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		"callable fails": {
 			subs: []duckv1alpha1.ChannelSubscriberSpec{
 				{
-					CallableDomain: replaceCallable,
+					CallableURI: replaceCallable,
 				},
 			},
 			callable: func(writer http.ResponseWriter, _ *http.Request) {
@@ -118,8 +119,8 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		"callable succeeds, sinkable fails": {
 			subs: []duckv1alpha1.ChannelSubscriberSpec{
 				{
-					CallableDomain: replaceCallable,
-					SinkableDomain: replaceSinkable,
+					CallableURI: replaceCallable,
+					SinkableURI: replaceSinkable,
 				},
 			},
 			callable: callableSucceed,
@@ -131,8 +132,8 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		"one sub succeeds": {
 			subs: []duckv1alpha1.ChannelSubscriberSpec{
 				{
-					CallableDomain: replaceCallable,
-					SinkableDomain: replaceSinkable,
+					CallableURI: replaceCallable,
+					SinkableURI: replaceSinkable,
 				},
 			},
 			callable: callableSucceed,
@@ -144,12 +145,12 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		"one sub succeeds, one sub fails": {
 			subs: []duckv1alpha1.ChannelSubscriberSpec{
 				{
-					CallableDomain: replaceCallable,
-					SinkableDomain: replaceSinkable,
+					CallableURI: replaceCallable,
+					SinkableURI: replaceSinkable,
 				},
 				{
-					CallableDomain: replaceCallable,
-					SinkableDomain: replaceSinkable,
+					CallableURI: replaceCallable,
+					SinkableURI: replaceSinkable,
 				},
 			},
 			callable:       callableSucceed,
@@ -159,16 +160,16 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		"all subs succeed": {
 			subs: []duckv1alpha1.ChannelSubscriberSpec{
 				{
-					CallableDomain: replaceCallable,
-					SinkableDomain: replaceSinkable,
+					CallableURI: replaceCallable,
+					SinkableURI: replaceSinkable,
 				},
 				{
-					CallableDomain: replaceCallable,
-					SinkableDomain: replaceSinkable,
+					CallableURI: replaceCallable,
+					SinkableURI: replaceSinkable,
 				},
 				{
-					CallableDomain: replaceCallable,
-					SinkableDomain: replaceSinkable,
+					CallableURI: replaceCallable,
+					SinkableURI: replaceSinkable,
 				},
 			},
 			callable: callableSucceed,
@@ -195,11 +196,11 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			// Rewrite the subs to use the servers we just started.
 			subs := make([]duckv1alpha1.ChannelSubscriberSpec, 0)
 			for _, sub := range tc.subs {
-				if sub.CallableDomain == replaceCallable {
-					sub.CallableDomain = callableServer.URL[7:] // strip the leading 'http://'
+				if sub.CallableURI == replaceCallable {
+					sub.CallableURI = callableServer.URL[7:] // strip the leading 'http://'
 				}
-				if sub.SinkableDomain == replaceSinkable {
-					sub.SinkableDomain = sinkableServer.URL[7:] // strip the leading 'http://'
+				if sub.SinkableURI == replaceSinkable {
+					sub.SinkableURI = sinkableServer.URL[7:] // strip the leading 'http://'
 				}
 				subs = append(subs, sub)
 			}

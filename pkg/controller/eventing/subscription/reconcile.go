@@ -19,6 +19,7 @@ package subscription
 import (
 	"context"
 	"fmt"
+	"net/url"
 
 	"github.com/golang/glog"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -100,33 +101,33 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 	subscription.Status.PhysicalSubscription.From = from.Status.Subscribable.Channelable
 	glog.Infof("Resolved from subscribable to: %+v", from.Status.Subscribable.Channelable)
 
-	callDomain := ""
+	callURI := ""
 	if subscription.Spec.Call != nil {
-		callDomain, err = r.resolveEndpointSpec(subscription.Namespace, *subscription.Spec.Call)
+		callURI, err = r.resolveEndpointSpec(subscription.Namespace, *subscription.Spec.Call)
 		if err != nil {
 			glog.Warningf("Failed to resolve Call %+v : %s", *subscription.Spec.Call, err)
 			return err
 		}
-		if callDomain == "" {
+		if callURI == "" {
 			return fmt.Errorf("could not get domain from call (is it not targetable?)")
 		}
-		subscription.Status.PhysicalSubscription.CallDomain = callDomain
-		glog.Infof("Resolved call to: %q", callDomain)
+		subscription.Status.PhysicalSubscription.CallURI = callURI
+		glog.Infof("Resolved call to: %q", callURI)
 	}
 
-	resultDomain := ""
+	resultURI := ""
 	if subscription.Spec.Result != nil {
-		resultDomain, err = r.resolveResult(subscription.Namespace, *subscription.Spec.Result)
+		resultURI, err = r.resolveResult(subscription.Namespace, *subscription.Spec.Result)
 		if err != nil {
 			glog.Warningf("Failed to resolve Result %v : %v", subscription.Spec.Result, err)
 			return err
 		}
-		if resultDomain == "" {
+		if resultURI == "" {
 			glog.Warningf("Failed to resolve result %v to actual domain", *subscription.Spec.Result)
 			return err
 		}
-		subscription.Status.PhysicalSubscription.ResultDomain = resultDomain
-		glog.Infof("Resolved result to: %q", resultDomain)
+		subscription.Status.PhysicalSubscription.ResultURI = resultURI
+		glog.Infof("Resolved result to: %q", resultURI)
 	}
 
 	// Everything that was supposed to be resolved was, so flip the status bit on that.
@@ -186,7 +187,7 @@ func (r *reconciler) resolveEndpointSpec(namespace string, es v1alpha1.EndpointS
 			glog.Warningf("Failed to fetch EndpointSpec target as a K8s Service %+v: %s", es.TargetRef, err)
 			return "", err
 		}
-		return controller.ServiceHostName(svc.Name, svc.Namespace), nil
+		return domainToURL(controller.ServiceHostName(svc.Name, svc.Namespace)), nil
 	}
 
 	obj, err := r.fetchObjectReference(namespace, es.TargetRef)
@@ -202,7 +203,7 @@ func (r *reconciler) resolveEndpointSpec(namespace string, es v1alpha1.EndpointS
 	}
 
 	if t.Status.Targetable != nil {
-		return t.Status.Targetable.DomainInternal, nil
+		return domainToURL(t.Status.Targetable.DomainInternal), nil
 	}
 	return "", fmt.Errorf("status does not contain targetable")
 }
@@ -221,7 +222,7 @@ func (r *reconciler) resolveResult(namespace string, resultStrategy v1alpha1.Res
 		return "", err
 	}
 	if s.Status.Sinkable != nil {
-		return s.Status.Sinkable.DomainInternal, nil
+		return domainToURL(s.Status.Sinkable.DomainInternal), nil
 	}
 	return "", fmt.Errorf("status does not contain sinkable")
 }
@@ -250,6 +251,15 @@ func (r *reconciler) fetchObjectReference(namespace string, ref *corev1.ObjectRe
 	}
 
 	return resourceClient.Get(ref.Name, metav1.GetOptions{})
+}
+
+func domainToURL(domain string) string {
+	u := url.URL{
+		Scheme: "http",
+		Host:   domain,
+		Path:   "/",
+	}
+	return u.String()
 }
 
 func (r *reconciler) syncPhysicalFromChannel(sub *v1alpha1.Subscription) error {
@@ -311,10 +321,10 @@ func (r *reconciler) listAllSubscriptionsWithPhysicalFrom(sub *v1alpha1.Subscrip
 func (r *reconciler) createChannelable(subs []v1alpha1.Subscription) *duckv1alpha1.Channelable {
 	rv := &duckv1alpha1.Channelable{}
 	for _, sub := range subs {
-		if sub.Status.PhysicalSubscription.CallDomain != "" || sub.Status.PhysicalSubscription.ResultDomain != "" {
+		if sub.Status.PhysicalSubscription.CallURI != "" || sub.Status.PhysicalSubscription.ResultURI != "" {
 			rv.Subscribers = append(rv.Subscribers, duckv1alpha1.ChannelSubscriberSpec{
-				CallableDomain: sub.Status.PhysicalSubscription.CallDomain,
-				SinkableDomain: sub.Status.PhysicalSubscription.ResultDomain,
+				CallableURI: sub.Status.PhysicalSubscription.CallURI,
+				SinkableURI: sub.Status.PhysicalSubscription.ResultURI,
 			})
 		}
 	}

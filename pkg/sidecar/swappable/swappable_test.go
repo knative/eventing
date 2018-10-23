@@ -18,14 +18,15 @@ package swappable
 
 import (
 	"fmt"
-	"github.com/knative/eventing/pkg/sidecar/fanout"
-	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	"go.uber.org/zap"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/knative/eventing/pkg/sidecar/fanout"
+	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"go.uber.org/zap"
 )
 
 const (
@@ -48,7 +49,7 @@ func TestHandler(t *testing.T) {
 							FanoutConfig: fanout.Config{
 								Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 									{
-										CallableDomain: replaceDomain,
+										CallableURI: replaceDomain,
 									},
 								},
 							},
@@ -63,7 +64,7 @@ func TestHandler(t *testing.T) {
 							FanoutConfig: fanout.Config{
 								Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 									{
-										SinkableDomain: replaceDomain,
+										SinkableURI: replaceDomain,
 									},
 								},
 							},
@@ -100,7 +101,7 @@ func TestHandler_InvalidConfigChange(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
 								{
-									CallableDomain: replaceDomain,
+									CallableURI: replaceDomain,
 								},
 							},
 						},
@@ -203,11 +204,11 @@ func makeRequest(namespace, name string) *http.Request {
 func replaceDomains(c multichannelfanout.Config, replacement string) multichannelfanout.Config {
 	for i, cc := range c.ChannelConfigs {
 		for j, sub := range cc.FanoutConfig.Subscriptions {
-			if sub.SinkableDomain == replaceDomain {
-				sub.SinkableDomain = replacement
+			if sub.SinkableURI == replaceDomain {
+				sub.SinkableURI = replacement
 			}
-			if sub.CallableDomain == replaceDomain {
-				sub.CallableDomain = replacement
+			if sub.CallableURI == replaceDomain {
+				sub.CallableURI = replacement
 			}
 			cc.FanoutConfig.Subscriptions[j] = sub
 		}

@@ -58,8 +58,8 @@ func TestChannelValidation(t *testing.T) {
 				},
 				Channelable: &duckv1alpha1.Channelable{
 					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{{
-						CallableDomain: "callableendpoint",
-						SinkableDomain: "resultendpoint",
+						CallableURI: "callableendpoint",
+						SinkableURI: "resultendpoint",
 					}},
 				}},
 		},
@@ -75,13 +75,13 @@ func TestChannelValidation(t *testing.T) {
 				},
 				Channelable: &duckv1alpha1.Channelable{
 					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{{
-						CallableDomain: "callableendpoint",
-						SinkableDomain: "callableendpoint",
+						CallableURI: "callableendpoint",
+						SinkableURI: "callableendpoint",
 					}, {}},
 				}},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("spec.channelable.subscriber[1].callableDomain", "spec.channelable.subscriber[1].sinkableDomain")
+			fe := apis.ErrMissingField("spec.channelable.subscriber[1].callableURI", "spec.channelable.subscriber[1].sinkableURI")
 			fe.Details = "expected at least one of, got none"
 			return fe
 		}(),
@@ -101,10 +101,10 @@ func TestChannelValidation(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
-			fe := apis.ErrMissingField("spec.channelable.subscriber[0].callableDomain", "spec.channelable.subscriber[0].sinkableDomain")
+			fe := apis.ErrMissingField("spec.channelable.subscriber[0].callableURI", "spec.channelable.subscriber[0].sinkableURI")
 			fe.Details = "expected at least one of, got none"
 			errs = errs.Also(fe)
-			fe = apis.ErrMissingField("spec.channelable.subscriber[1].callableDomain", "spec.channelable.subscriber[1].sinkableDomain")
+			fe = apis.ErrMissingField("spec.channelable.subscriber[1].callableURI", "spec.channelable.subscriber[1].sinkableURI")
 			fe.Details = "expected at least one of, got none"
 			errs = errs.Also(fe)
 			return errs
