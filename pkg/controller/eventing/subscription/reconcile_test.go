@@ -566,7 +566,7 @@ var testCases = []controllertesting.TestCase{
 		InitialState: []runtime.Object{
 			// The first two Subscriptions both have the same physical From, so we should see that
 			// Channel updated with both Subscriptions.
-			getNewSubscriptionWithSource(),
+			getNewSubscriptionWithFromChannel(),
 			rename(getNewSubscriptionWithReferencesResolvedAndPhysicalFromCallResult()),
 			// This subscription has a different physical From, so we should not see it in the same
 			// Channel as the first two.
@@ -848,7 +848,7 @@ func getNewSubscriptionToK8sServiceWithReferencesResolvedAndPhysicalFromCallResu
 }
 
 func getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromCallResult() *eventingv1alpha1.Subscription {
-	s := getNewSubscriptionWithSource()
+	s := getNewSubscriptionWithFromChannel()
 	s.Status.InitializeConditions()
 	s.Status.MarkReferencesResolved()
 	s.Status.PhysicalSubscription = eventingv1alpha1.SubscriptionStatusPhysicalSubscription{
