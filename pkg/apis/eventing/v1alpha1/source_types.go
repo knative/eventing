@@ -70,7 +70,7 @@ type SourceSpec struct {
 
 	// Provisioner is used to create any backing resources and configuration.
 	// +required
-	Provisioner *ProvisionerReference `json:"provisioner,omitempty"`
+	Provisioner *corev1.ObjectReference `json:"provisioner,omitempty"`
 
 	// Arguments defines the arguments to pass to the Provisioner which provisions
 	// this Source.

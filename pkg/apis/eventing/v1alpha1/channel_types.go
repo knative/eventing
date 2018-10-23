@@ -64,8 +64,7 @@ type ChannelSpec struct {
 	Generation int64 `json:"generation,omitempty"`
 
 	// Provisioner defines the name of the Provisioner backing this channel.
-	// TODO: +optional If missing, a default Provisioner may be selected for the Channel.
-	Provisioner *ProvisionerReference `json:"provisioner,omitempty"`
+	Provisioner *corev1.ObjectReference `json:"provisioner,omitempty"`
 
 	// Arguments defines the arguments to pass to the Provisioner which provisions
 	// this Channel.

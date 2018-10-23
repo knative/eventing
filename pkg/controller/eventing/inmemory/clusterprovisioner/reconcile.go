@@ -104,11 +104,11 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 }
 
 // IsControlled determines if the in-memory Channel Controller should control (and therefore
-// reconcile) a given object, based on that object's ClusterProvisioner reference. kind is the kind
+// reconcile) a given object, based on that object's provisioner reference. kind is the kind
 // of that object.
-func IsControlled(ref *eventingv1alpha1.ProvisionerReference, kind string) bool {
-	if ref != nil && ref.Ref != nil {
-		return shouldReconcile(ref.Ref.Namespace, ref.Ref.Name, kind)
+func IsControlled(ref *corev1.ObjectReference, kind string) bool {
+	if ref != nil {
+		return shouldReconcile(ref.Namespace, ref.Name, kind)
 	}
 	return false
 }

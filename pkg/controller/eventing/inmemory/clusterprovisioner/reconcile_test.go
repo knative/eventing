@@ -75,7 +75,7 @@ func TestInjectClient(t *testing.T) {
 
 func TestIsControlled(t *testing.T) {
 	testCases := map[string]struct {
-		ref          *eventingv1alpha1.ProvisionerReference
+		ref          *corev1.ObjectReference
 		kind         string
 		isControlled bool
 	}{
@@ -84,46 +84,31 @@ func TestIsControlled(t *testing.T) {
 			kind:         "Channel",
 			isControlled: false,
 		},
-		"ref nil": {
-			ref: &eventingv1alpha1.ProvisionerReference{
-				Ref: nil,
-			},
-			kind:         "Channel",
-			isControlled: false,
-		},
 		"wrong namespace": {
-			ref: &eventingv1alpha1.ProvisionerReference{
-				Ref: &corev1.ObjectReference{
-					Namespace: "other",
-					Name:      Name,
-				},
+			ref: &corev1.ObjectReference{
+				Namespace: "other",
+				Name:      Name,
 			},
 			kind:         "Channel",
 			isControlled: false,
 		},
 		"wrong name": {
-			ref: &eventingv1alpha1.ProvisionerReference{
-				Ref: &corev1.ObjectReference{
-					Name: "other-name",
-				},
+			ref: &corev1.ObjectReference{
+				Name: "other-name",
 			},
 			kind:         "Channel",
 			isControlled: false,
 		},
 		"wrong kind": {
-			ref: &eventingv1alpha1.ProvisionerReference{
-				Ref: &corev1.ObjectReference{
-					Name: Name,
-				},
+			ref: &corev1.ObjectReference{
+				Name: Name,
 			},
 			kind:         "Source",
 			isControlled: false,
 		},
 		"is controlled": {
-			ref: &eventingv1alpha1.ProvisionerReference{
-				Ref: &corev1.ObjectReference{
-					Name: Name,
-				},
+			ref: &corev1.ObjectReference{
+				Name: Name,
 			},
 			kind:         "Channel",
 			isControlled: true,

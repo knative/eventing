@@ -35,10 +35,8 @@ func TestSourceValidate(t *testing.T) {
 		name: "minimum valid",
 		cr: &Source{
 			Spec: SourceSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 			},
 		},
@@ -46,10 +44,8 @@ func TestSourceValidate(t *testing.T) {
 		name: "full valid",
 		cr: &Source{
 			Spec: SourceSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 				Arguments: &runtime.RawExtension{
 					Raw: []byte(`{"foo":"baz"}`),
@@ -65,10 +61,8 @@ func TestSourceValidate(t *testing.T) {
 		name: "invalid, set extra channel parameters",
 		cr: &Source{
 			Spec: SourceSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 				Channel: &corev1.ObjectReference{
 					Name:            "bar",
@@ -87,10 +81,8 @@ func TestSourceValidate(t *testing.T) {
 		name: "invalid, set extra channel as not a channel",
 		cr: &Source{
 			Spec: SourceSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 				Channel: &corev1.ObjectReference{
 					Name:       "backwards",
