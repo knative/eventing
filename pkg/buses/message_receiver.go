@@ -168,7 +168,7 @@ func (r *MessageReceiver) fromHTTPHeaders(headers http.Header) map[string]string
 	return safe
 }
 
-// parseChannel converts the channel's hostname into a channel
+// ParseChannel converts the channel's hostname into a channel
 // reference.
 func ParseChannel(host string) ChannelReference {
 	chunks := strings.Split(host, ".")

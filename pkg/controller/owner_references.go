@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	channelsv1alpha "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
+	eventingv1alpha "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	feedsv1alpha "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
 	flowsv1alpha "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 )
@@ -50,6 +51,16 @@ func kind(obj metav1.Object) schema.GroupVersionKind {
 	// Flows
 	case *flowsv1alpha.Flow:
 		return flowsv1alpha.SchemeGroupVersion.WithKind("Flow")
+
+	// Eventing
+	case *eventingv1alpha.Source:
+		return eventingv1alpha.SchemeGroupVersion.WithKind("Source")
+	case *eventingv1alpha.Channel:
+		return eventingv1alpha.SchemeGroupVersion.WithKind("Channel")
+	case *eventingv1alpha.ClusterProvisioner:
+		return eventingv1alpha.SchemeGroupVersion.WithKind("ClusterProvisioner")
+	case *eventingv1alpha.Subscription:
+		return eventingv1alpha.SchemeGroupVersion.WithKind("Subscription")
 
 	default:
 		panic(fmt.Sprintf("Unsupported object type %T", obj))

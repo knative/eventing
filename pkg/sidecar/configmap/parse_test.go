@@ -38,7 +38,7 @@ func TestNewFanoutConfig(t *testing.T) {
 			expectedErr: true,
 		},
 		{
-			name:      "invalid YAML",
+			name: "invalid YAML",
 			config: `
 				key:
 				  - value
@@ -57,7 +57,7 @@ func TestNewFanoutConfig(t *testing.T) {
 			expectedErr: true,
 		},
 		{
-			name:      "valid",
+			name: "valid",
 			config: `
 				channelConfigs:
 				  - namespace: default
@@ -137,6 +137,64 @@ func TestNewFanoutConfig(t *testing.T) {
 			}
 			if !cmp.Equal(c, tc.expected) {
 				t.Errorf("Unexpected config. Expected '%v'. Actual '%v'.", tc.expected, c)
+			}
+		})
+	}
+}
+
+func TestSerializeConfig(t *testing.T) {
+	testCases := map[string]struct {
+		config *multichannelfanout.Config
+	}{
+		"empty config": {
+			config: &multichannelfanout.Config{},
+		},
+		"full config": {
+			config: &multichannelfanout.Config{
+				ChannelConfigs: []multichannelfanout.ChannelConfig{
+					{
+						Namespace: "default",
+						Name:      "c1",
+						FanoutConfig: fanout.Config{
+							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+								{
+									CallableDomain: "foo.example.com",
+									SinkableDomain: "bar.example.com",
+								},
+								{
+									SinkableDomain: "qux.example.com",
+								},
+								{
+									CallableDomain: "baz.example.com",
+								},
+								{},
+							},
+						},
+					},
+					{
+						Namespace: "other",
+						Name:      "no-subs",
+						FanoutConfig: fanout.Config{
+							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			s, err := SerializeConfig(*tc.config)
+			if err != nil {
+				t.Errorf("Unexpected error serializing config: %v", err)
+			}
+			rt, err := NewFanoutConfig(zap.NewNop(), s)
+			if err != nil {
+				t.Errorf("Unexpected error deserializing: %v", err)
+			}
+			if diff := cmp.Diff(tc.config, rt); diff != "" {
+				t.Errorf("Unexpected error roundtripping the config (-want, +got): %v", diff)
 			}
 		})
 	}

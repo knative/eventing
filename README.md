@@ -1,4 +1,4 @@
-# Knative eventing
+# Knative Eventing
 
 [![GoDoc](https://godoc.org/github.com/knative/eventing?status.svg)](https://godoc.org/github.com/knative/eventing)
 [![Go Report Card](https://goreportcard.com/badge/knative/eventing)](https://goreportcard.com/report/knative/eventing)

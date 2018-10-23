@@ -207,9 +207,11 @@ func (b *KafkaBus) provision(channel buses.ChannelReference, parameters buses.Re
 	partitions := 1
 	if p, ok := parameters[numPartitions]; ok {
 		var err error
-		partitions, err = strconv.Atoi(p)
+		intPartitions, err := strconv.Atoi(p)
 		if err != nil {
 			b.logger.Warnf("Could not parse partition count for %q: %s", channel.String(), p)
+		} else {
+			partitions = intPartitions
 		}
 	}
 

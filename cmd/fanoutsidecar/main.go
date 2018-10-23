@@ -21,9 +21,13 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
+	"log"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/knative/eventing/pkg/sidecar/configmap/filesystem"
 	"github.com/knative/eventing/pkg/sidecar/configmap/watcher"
 	"github.com/knative/eventing/pkg/sidecar/swappable"
@@ -31,17 +35,13 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/client-go/kubernetes"
-	"log"
-	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
-	"strings"
-	"time"
 )
 
 const (
-	defaultConfigMapName = "in-memory-bus-config"
+	defaultConfigMapName = "in-memory-channel-dispatcher-config-map"
 
 	// The following are the only valid values of the config_map_noticer flag.
 	cmnfVolume  = "volume"
@@ -60,12 +60,12 @@ var (
 
 func init() {
 	flag.IntVar(&port, "sidecar_port", -1, "The port to run the sidecar on.")
-	flag.StringVar(&configMapNoticer, "config_map_noticer", "", fmt.Sprintf("The system to notice changes to the ConfigMap. Valid values are: %s", configMapNoticerFlags()))
+	flag.StringVar(&configMapNoticer, "config_map_noticer", "", fmt.Sprintf("The system to notice changes to the ConfigMap. Valid values are: %s", configMapNoticerValues()))
 	flag.StringVar(&configMapNamespace, "config_map_namespace", system.Namespace, "The namespace of the ConfigMap that is watched for configuration.")
 	flag.StringVar(&configMapName, "config_map_name", defaultConfigMapName, "The name of the ConfigMap that is watched for configuration.")
 }
 
-func configMapNoticerFlags() string {
+func configMapNoticerValues() string {
 	return strings.Join([]string{cmnfVolume, cmnfWatcher}, ", ")
 }
 
@@ -132,7 +132,7 @@ func setupConfigMapNoticer(logger *zap.Logger, configUpdated swappable.UpdateCon
 	case cmnfWatcher:
 		err = setupConfigMapWatcher(logger, mgr, configUpdated)
 	default:
-		err = errors.New("need to provide the --config_map_noticer flag")
+		err = fmt.Errorf("need to provide the --config_map_noticer flag (valid values are %s)", configMapNoticerValues())
 	}
 	if err != nil {
 		return nil, err

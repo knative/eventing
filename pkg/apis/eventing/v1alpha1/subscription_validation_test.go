@@ -431,7 +431,7 @@ func TestValidFrom(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrInvalidValue("", "kind")
-			fe.Details = "only 'Channel' or 'Source' kind is allowed"
+			fe.Details = "only 'Channel' kind is allowed"
 			return apis.ErrMissingField("kind").Also(fe)
 		}(),
 	}, {
@@ -443,7 +443,7 @@ func TestValidFrom(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrInvalidValue("subscription", "kind")
-			fe.Details = "only 'Channel' or 'Source' kind is allowed"
+			fe.Details = "only 'Channel' kind is allowed"
 			return fe
 		}(),
 	}, {
