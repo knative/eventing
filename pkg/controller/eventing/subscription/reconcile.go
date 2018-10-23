@@ -102,7 +102,7 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 
 	callDomain := ""
 	if subscription.Spec.Call != nil {
-		callDomain, err = r.resolveCall(subscription.Namespace, *subscription.Spec.Call)
+		callDomain, err = r.resolveEndpointSpec(subscription.Namespace, *subscription.Spec.Call)
 		if err != nil {
 			glog.Warningf("Failed to resolve Call %+v : %s", *subscription.Spec.Call, err)
 			return err
@@ -163,34 +163,35 @@ func (r *reconciler) updateStatus(subscription *v1alpha1.Subscription) (*v1alpha
 	return newSubscription, nil
 }
 
-// resolveCall resolves the Spec.Call object. If it's an ObjectReference will resolve the object
-// and treat it as a Targetable.If it's TargetURI then it's used as is.
+// resolveEndpointSpec resolves the Spec.Call object. If it's an
+// ObjectReference will resolve the object and treat it as a Targetable. If
+// it's DNSName then it's used as is.
 // TODO: Once Service Routes, etc. support Targetable, use that.
 //
-func (r *reconciler) resolveCall(namespace string, callable v1alpha1.Callable) (string, error) {
-	if callable.TargetURI != nil && *callable.TargetURI != "" {
-		return *callable.TargetURI, nil
+func (r *reconciler) resolveEndpointSpec(namespace string, es v1alpha1.EndpointSpec) (string, error) {
+	if es.DNSName != nil && *es.DNSName != "" {
+		return *es.DNSName, nil
 	}
 
 	// K8s services are special cased. They can be called, even though they do not satisfy the
 	// Targetable interface.
-	if callable.Target != nil && callable.Target.APIVersion == "v1" && callable.Target.Kind == "Service" {
+	if es.TargetRef != nil && es.TargetRef.APIVersion == "v1" && es.TargetRef.Kind == "Service" {
 		svc := &corev1.Service{}
 		svcKey := types.NamespacedName{
 			Namespace: namespace,
-			Name:      callable.Target.Name,
+			Name:      es.TargetRef.Name,
 		}
 		err := r.client.Get(context.TODO(), svcKey, svc)
 		if err != nil {
-			glog.Warningf("Failed to fetch Callable target as a K8s Service %+v: %s", callable.Target, err)
+			glog.Warningf("Failed to fetch EndpointSpec target as a K8s Service %+v: %s", es.TargetRef, err)
 			return "", err
 		}
 		return controller.ServiceHostName(svc.Name, svc.Namespace), nil
 	}
 
-	obj, err := r.fetchObjectReference(namespace, callable.Target)
+	obj, err := r.fetchObjectReference(namespace, es.TargetRef)
 	if err != nil {
-		glog.Warningf("Failed to fetch Callable target %+v: %s", callable.Target, err)
+		glog.Warningf("Failed to fetch EndpointSpec target %+v: %s", es.TargetRef, err)
 		return "", err
 	}
 	t := duckv1alpha1.Target{}
