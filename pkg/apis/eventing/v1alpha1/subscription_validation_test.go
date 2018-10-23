@@ -51,9 +51,9 @@ func getValidResultStrategy() *ResultStrategy {
 	}
 }
 
-func getValidCall() *Callable {
-	return &Callable{
-		Target: &corev1.ObjectReference{
+func getValidEndpointSpec() *EndpointSpec {
+	return &EndpointSpec{
+		TargetRef: &corev1.ObjectReference{
 			Name:       callName,
 			Kind:       routeKind,
 			APIVersion: routeAPIVersion,
@@ -98,7 +98,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		name: "valid",
 		c: &SubscriptionSpec{
 			From: getValidFromRef(),
-			Call: getValidCall(),
+			Call: getValidEndpointSpec(),
 		},
 		want: nil,
 	}, {
@@ -118,7 +118,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 				Kind:       channelKind,
 				APIVersion: channelAPIVersion,
 			},
-			Call: getValidCall(),
+			Call: getValidEndpointSpec(),
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("from.name")
@@ -138,7 +138,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		name: "empty Call and Result",
 		c: &SubscriptionSpec{
 			From:   getValidFromRef(),
-			Call:   &Callable{},
+			Call:   &EndpointSpec{},
 			Result: &ResultStrategy{},
 		},
 		want: func() *apis.FieldError {
@@ -150,14 +150,14 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		name: "missing Result",
 		c: &SubscriptionSpec{
 			From: getValidFromRef(),
-			Call: getValidCall(),
+			Call: getValidEndpointSpec(),
 		},
 		want: nil,
 	}, {
 		name: "empty Result",
 		c: &SubscriptionSpec{
 			From:   getValidFromRef(),
-			Call:   getValidCall(),
+			Call:   getValidEndpointSpec(),
 			Result: &ResultStrategy{},
 		},
 		want: nil,
@@ -172,7 +172,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		name: "empty Call",
 		c: &SubscriptionSpec{
 			From:   getValidFromRef(),
-			Call:   &Callable{},
+			Call:   &EndpointSpec{},
 			Result: getValidResultStrategy(),
 		},
 		want: nil,
@@ -198,22 +198,22 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			return fe
 		}(),
 	}, {
-		name: "missing name in Call.Target",
+		name: "missing name in Call.TargetRef",
 		c: &SubscriptionSpec{
 			From: getValidFromRef(),
-			Call: &Callable{
-				Target: &corev1.ObjectReference{
+			Call: &EndpointSpec{
+				TargetRef: &corev1.ObjectReference{
 					Kind:       channelKind,
 					APIVersion: channelAPIVersion,
 				},
 			},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("call.target.name")
+			fe := apis.ErrMissingField("call.targetRef.name")
 			return fe
 		}(),
 	}, {
-		name: "missing name in Result.Target",
+		name: "missing name in Result.TargetRef",
 		c: &SubscriptionSpec{
 			From: getValidFromRef(),
 			Result: &ResultStrategy{
@@ -243,8 +243,8 @@ func TestSubscriptionImmutable(t *testing.T) {
 	newFrom := getValidFromRef()
 	newFrom.Name = "newFromChannel"
 
-	newCall := getValidCall()
-	newCall.Target.Name = "newCall"
+	newCall := getValidEndpointSpec()
+	newCall.TargetRef.Name = "newCall"
 
 	newResult := getValidResultStrategy()
 	newResult.Target.Name = "newResultChannel"
@@ -272,7 +272,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 		c: &Subscription{
 			Spec: SubscriptionSpec{
 				From: getValidFromRef(),
-				Call: getValidCall(),
+				Call: getValidEndpointSpec(),
 			},
 		},
 		og:   nil,
@@ -282,7 +282,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 		c: &Subscription{
 			Spec: SubscriptionSpec{
 				From: getValidFromRef(),
-				Call: getValidCall(),
+				Call: getValidEndpointSpec(),
 			},
 		},
 		og: &Subscription{
@@ -318,7 +318,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 		og: &Subscription{
 			Spec: SubscriptionSpec{
 				From: getValidFromRef(),
-				Call: getValidCall(),
+				Call: getValidEndpointSpec(),
 			},
 		},
 		want: nil,
@@ -327,7 +327,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 		c: &Subscription{
 			Spec: SubscriptionSpec{
 				From: getValidFromRef(),
-				Call: getValidCall(),
+				Call: getValidEndpointSpec(),
 			},
 		},
 		og: &Subscription{
@@ -374,7 +374,7 @@ func TestInvalidImmutableType(t *testing.T) {
 	c := &Subscription{
 		Spec: SubscriptionSpec{
 			From: getValidFromRef(),
-			Call: getValidCall(),
+			Call: getValidEndpointSpec(),
 		},
 	}
 	og := &DummyImmutableType{}
@@ -507,76 +507,76 @@ func TestValidFrom(t *testing.T) {
 	}
 }
 
-func TestValidCallable(t *testing.T) {
-	targetURI := "http://example.com"
+func TestValidgetValidEndpointSpec(t *testing.T) {
+	dnsName := "example.com"
 	tests := []struct {
 		name string
-		c    Callable
+		e    EndpointSpec
 		want *apis.FieldError
 	}{{
-		name: "valid target",
-		c:    *getValidCall(),
+		name: "valid targetRef",
+		e:    *getValidEndpointSpec(),
 		want: nil,
 	}, {
-		name: "valid targetURI",
-		c: Callable{
-			TargetURI: &targetURI,
+		name: "valid dnsName",
+		e: EndpointSpec{
+			DNSName: &dnsName,
 		},
 		want: nil,
 	}, {
-		name: "both target and targetURI given",
-		c: Callable{
-			Target: &corev1.ObjectReference{
+		name: "both targetRef and dnsName given",
+		e: EndpointSpec{
+			TargetRef: &corev1.ObjectReference{
 				Name:       fromChannelName,
 				APIVersion: channelAPIVersion,
 				Kind:       channelKind,
 			},
-			TargetURI: &targetURI,
+			DNSName: &dnsName,
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMultipleOneOf("target", "targetURI")
+			fe := apis.ErrMultipleOneOf("targetRef", "dnsName")
 			return fe
 		}(),
 	}, {
-		name: "missing name in target",
-		c: Callable{
-			Target: &corev1.ObjectReference{
+		name: "missing name in targetRef",
+		e: EndpointSpec{
+			TargetRef: &corev1.ObjectReference{
 				APIVersion: channelAPIVersion,
 				Kind:       channelKind,
 			},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("target.name")
+			fe := apis.ErrMissingField("targetRef.name")
 			return fe
 		}(),
 	}, {
-		name: "missing apiVersion in target",
-		c: Callable{
-			Target: &corev1.ObjectReference{
+		name: "missing apiVersion in targetRef",
+		e: EndpointSpec{
+			TargetRef: &corev1.ObjectReference{
 				Name: fromChannelName,
 				Kind: channelKind,
 			},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("target.apiVersion")
+			fe := apis.ErrMissingField("targetRef.apiVersion")
 			return fe
 		}(),
 	}, {
-		name: "missing kind in target",
-		c: Callable{
-			Target: &corev1.ObjectReference{
+		name: "missing kind in targetRef",
+		e: EndpointSpec{
+			TargetRef: &corev1.ObjectReference{
 				Name:       fromChannelName,
 				APIVersion: channelAPIVersion,
 			},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("target.kind")
+			fe := apis.ErrMissingField("targetRef.kind")
 			return fe
 		}(),
 	}, {
 		name: "extra field, namespace",
-		c: Callable{
-			Target: &corev1.ObjectReference{
+		e: EndpointSpec{
+			TargetRef: &corev1.ObjectReference{
 				Name:       fromChannelName,
 				APIVersion: channelAPIVersion,
 				Kind:       channelKind,
@@ -584,15 +584,15 @@ func TestValidCallable(t *testing.T) {
 			},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrDisallowedFields("target.Namespace")
+			fe := apis.ErrDisallowedFields("targetRef.Namespace")
 			fe.Details = "only name, apiVersion and kind are supported fields"
 			return fe
 		}(),
 	}, {
 		// Make sure that if an empty field for namespace is given, it's treated as not there.
 		name: "valid extra field, namespace empty",
-		c: Callable{
-			Target: &corev1.ObjectReference{
+		e: EndpointSpec{
+			TargetRef: &corev1.ObjectReference{
 				Name:       fromChannelName,
 				APIVersion: channelAPIVersion,
 				Kind:       channelKind,
@@ -604,7 +604,7 @@ func TestValidCallable(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := isValidCallable(test.c)
+			got := isValidEndpointSpec(test.e)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("%s: isValidFrom (-want, +got) = %v", test.name, diff)
 			}
