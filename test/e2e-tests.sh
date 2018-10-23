@@ -77,7 +77,7 @@ function publish_test_images() {
       ko publish -P $IMAGE
       local IMAGE=$KO_DOCKER_REPO/$IMAGE
       local DIGEST=$(gcloud container images list-tags --filter="tags:latest" --format='get(digest)' $IMAGE)
-      echo "Tagging $IMAGE:$DIGEST with $DOCKER_TAG"
+      echo "Tagging $IMAGE@$DIGEST with $DOCKER_TAG"
       gcloud -q container images add-tag $IMAGE@$DIGEST $IMAGE:$DOCKER_TAG
     fi
   done < "$IMAGE_PATHS_FILE"
