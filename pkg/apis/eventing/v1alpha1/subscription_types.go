@@ -77,7 +77,7 @@ type SubscriptionSpec struct {
 	//   - Kind
 	//   - APIVersion
 	//   - Name
-	// Currently Kind must be "Channel" or "Source" and
+	// Currently Kind must be "Channel" and
 	// APIVersion must be "eventing.knative.dev/v1alpha1"
 	//
 	// This field is immutable. We have no good answer on what happens to
