@@ -590,7 +590,7 @@ func makeK8sService() *corev1.Service {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:         corev1.ServiceTypeExternalName,
-			ExternalName: knativeIngressGateway,
+			ExternalName: privateEventingIngressGateway,
 		},
 	}
 }
@@ -627,7 +627,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 		},
 		Spec: istiov1alpha3.VirtualServiceSpec{
 			Gateways: []string{
-				knativeIngressGateway,
+				privateEventingIngressGateway,
 				"mesh",
 			},
 			Hosts: []string{
