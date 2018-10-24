@@ -30,8 +30,8 @@ func TestTypesImplements(t *testing.T) {
 		{instance: &Channel{}, iface: &duckv1alpha1.Channelable{}},
 		{instance: &Channel{}, iface: &duckv1alpha1.Subscribable{}},
 		{instance: &Channel{}, iface: &duckv1alpha1.Sinkable{}},
-		// ClusterProvisioner
-		{instance: &ClusterProvisioner{}, iface: &duckv1alpha1.Conditions{}},
+		// ClusterChannelProvisioner
+		{instance: &ClusterChannelProvisioner{}, iface: &duckv1alpha1.Conditions{}},
 		// Subscription
 		{instance: &Subscription{}, iface: &duckv1alpha1.Conditions{}},
 		{instance: &Subscription{}, iface: &emptyGen},

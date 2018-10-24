@@ -21,14 +21,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 )
 
-// Validate validates the ClusterProvisioner resource.
-func (p *ClusterProvisioner) Validate() *apis.FieldError {
+// Validate validates the ClusterChannelProvisioner resource.
+func (p *ClusterChannelProvisioner) Validate() *apis.FieldError {
 	return p.Spec.Validate().ViaField("spec")
 }
 
-// Validate validates the ClusterProvisioner spec
-func (ps *ClusterProvisionerSpec) Validate() *apis.FieldError {
-	if equality.Semantic.DeepEqual(ps, &ClusterProvisionerSpec{}) {
+// Validate validates the ClusterChannelProvisioner spec
+func (ps *ClusterChannelProvisionerSpec) Validate() *apis.FieldError {
+	if equality.Semantic.DeepEqual(ps, &ClusterChannelProvisionerSpec{}) {
 		return apis.ErrMissingField("reconciles")
 	}
 	var errs *apis.FieldError

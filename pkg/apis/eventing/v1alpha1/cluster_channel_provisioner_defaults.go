@@ -16,10 +16,12 @@ limitations under the License.
 
 package v1alpha1
 
-import "testing"
+// SetDefaults defaults
+func (p *ClusterChannelProvisioner) SetDefaults() {
+	p.Spec.SetDefaults()
+}
 
-// No-op test because method does nothing.
-func TestClusterProvisionerSetDefaults(t *testing.T) {
-	p := ClusterProvisioner{}
-	p.SetDefaults()
+// SetDefaults defaults the ClusterChannelProvisioner spec.
+func (ps *ClusterChannelProvisionerSpec) SetDefaults() {
+	// no defaults
 }

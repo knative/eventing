@@ -17,21 +17,22 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/pkg/apis"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
-func TestClusterProvisionerValidate(t *testing.T) {
+func TestClusterChannelProvisionerValidate(t *testing.T) {
 	tests := []struct {
 		name string
-		p    *ClusterProvisioner
+		p    *ClusterChannelProvisioner
 		want *apis.FieldError
 	}{{
 		name: "valid",
-		p: &ClusterProvisioner{
-			Spec: ClusterProvisionerSpec{
+		p: &ClusterChannelProvisioner{
+			Spec: ClusterChannelProvisionerSpec{
 				Reconciles: metav1.GroupKind{
 					Group: "knative.dev",
 					Kind:  "Channel",
@@ -40,16 +41,16 @@ func TestClusterProvisionerValidate(t *testing.T) {
 		},
 	}, {
 		name: "invalid cluster provisioner, empty reconciles",
-		p: &ClusterProvisioner{
-			Spec: ClusterProvisionerSpec{
+		p: &ClusterChannelProvisioner{
+			Spec: ClusterChannelProvisionerSpec{
 				Reconciles: metav1.GroupKind{},
 			},
 		},
 		want: apis.ErrMissingField("spec.reconciles"),
 	}, {
 		name: "invalid cluster provisioner, empty kind",
-		p: &ClusterProvisioner{
-			Spec: ClusterProvisionerSpec{
+		p: &ClusterChannelProvisioner{
+			Spec: ClusterChannelProvisionerSpec{
 				Reconciles: metav1.GroupKind{
 					Group: "eventing.knative.test",
 				},
@@ -58,8 +59,8 @@ func TestClusterProvisionerValidate(t *testing.T) {
 		want: apis.ErrMissingField("spec.reconciles.kind"),
 	}, {
 		name: "invalid cluster provisioner",
-		p: &ClusterProvisioner{
-			Spec: ClusterProvisionerSpec{
+		p: &ClusterChannelProvisioner{
+			Spec: ClusterChannelProvisionerSpec{
 				Reconciles: metav1.GroupKind{
 					Kind: "Channel",
 				},
@@ -68,7 +69,7 @@ func TestClusterProvisionerValidate(t *testing.T) {
 		want: apis.ErrMissingField("spec.reconciles.group"),
 	}, {
 		name: "empty",
-		p:    &ClusterProvisioner{},
+		p:    &ClusterChannelProvisioner{},
 		want: apis.ErrMissingField("spec.reconciles"),
 	}}
 

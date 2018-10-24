@@ -20,7 +20,7 @@ package v1alpha1
 
 type ChannelExpansion interface{}
 
-type ClusterProvisionerExpansion interface{}
+type ClusterChannelProvisionerExpansion interface{}
 
 type SourceExpansion interface{}
 
