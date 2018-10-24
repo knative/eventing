@@ -219,18 +219,6 @@ func (r *reconciler) resolveResult(namespace string, resultStrategy v1alpha1.Res
 	return "", fmt.Errorf("status does not contain sinkable")
 }
 
-// validateFrom gets `from` and verifies that it is a Channelable (in fact it should always be a
-// Channel).
-func (r *reconciler) validateFrom(namespace string, from *corev1.ObjectReference) error {
-	obj, err := r.fetchObjectReference(namespace, from)
-	if err != nil {
-		return err
-	}
-	c := duckv1alpha1.Channel{}
-	err = duck.FromUnstructured(obj, &c)
-	return err
-}
-
 // fetchObjectReference fetches an object based on ObjectReference.
 func (r *reconciler) fetchObjectReference(namespace string, ref *corev1.ObjectReference) (duck.Marshalable, error) {
 	resourceClient, err := r.CreateResourceInterface(namespace, ref)
