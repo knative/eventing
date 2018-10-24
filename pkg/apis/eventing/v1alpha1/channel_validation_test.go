@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-var targetURI = "https://example.com"
+var dnsName = "example.com"
 
 func TestChannelValidation(t *testing.T) {
 	tests := []CRDTest{{

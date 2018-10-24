@@ -78,7 +78,7 @@ type SubscriptionSpec struct {
 	//   - APIVersion
 	//   - Name
 	// Currently Kind must be "Channel" and
-	// APIVersion must be "channels.knative.dev/v1alpha1"
+	// APIVersion must be "eventing.knative.dev/v1alpha1"
 	//
 	// This field is immutable. We have no good answer on what happens to
 	// the events that are currently in the channel being consumed from
@@ -93,7 +93,7 @@ type SubscriptionSpec struct {
 	// Events from the From channel will be delivered here and replies
 	// are sent to a channel as specified by the Result.
 	// +optional
-	Call *Callable `json:"call,omitempty"`
+	Call *EndpointSpec `json:"call,omitempty"`
 
 	// Result specifies (optionally) how to handle events returned from
 	// the Call target.
@@ -101,7 +101,7 @@ type SubscriptionSpec struct {
 	Result *ResultStrategy `json:"result,omitempty"`
 }
 
-// Callable specifies the reference to an object that's expected to
+// EndpointSpec specifies the reference to an object that's expected to
 // provide the resolved target of the action.
 // Currently we inspect the objects Status and see if there's a predefined
 // Status field that we will then use to dispatch events to be processed by
@@ -116,13 +116,13 @@ type SubscriptionSpec struct {
 //
 // This ensures that we can support external targets and for ease of use
 // we also allow for an URI to be specified.
-// There of course is also a requirement for the resolved Callable to
+// There of course is also a requirement for the resolved EndpointSpec to
 // behave properly at the data plane level.
 // TODO: Add a pointer to a real spec for this.
 // For now, this means: Receive an event payload, and respond with one of:
 // success and an optional response event, or failure.
 // Delivery failures may be retried by the from Channel
-type Callable struct {
+type EndpointSpec struct {
 	// Only one of these can be specified
 
 	// Reference to an object that will be used to find the target
@@ -136,17 +136,17 @@ type Callable struct {
 	//   - APIVersion
 	//   - Name
 	// +optional
-	Target *corev1.ObjectReference `json:"target,omitempty"`
+	TargetRef *corev1.ObjectReference `json:"targetRef,omitempty"`
 
 	// Reference to a 'known' endpoint where no resolving is done.
 	// http://k8s-service for example
 	// http://myexternalhandler.example.com/foo/bar
 	// +optional
-	TargetURI *string `json:"targetURI,omitempty"`
+	DNSName *string `json:"dnsName,omitempty"`
 }
 
-// ResultStrategy specifies the handling of the Callable's returned result. If
-// no Callable is specified, the identity function is assumed.
+// ResultStrategy specifies the handling of the EndpointSpec's returned result.
+// If no EndpointSpec is specified, the identity function is assumed.
 type ResultStrategy struct {
 	// This object must fulfill the Sinkable contract.
 	//
@@ -174,6 +174,22 @@ type SubscriptionStatus struct {
 	// Subscription might be Subscribable. This depends if there's a Result channel
 	// In that case, this points to that resource.
 	Subscribable duckv1alpha1.Subscribable `json:"subscribable,omitempty"`
+
+	// PhysicalSubscription is the fully resolved values that this Subscription represents.
+	PhysicalSubscription SubscriptionStatusPhysicalSubscription `json:"physicalSubscription,omitEmpty"`
+}
+
+// SubscriptionStatusPhysicalSubscription represents the fully resolved values for this
+// Subscription.
+type SubscriptionStatusPhysicalSubscription struct {
+	// From is the object pointed to in status.from's Subscribable contract.
+	From corev1.ObjectReference `json:"from,omitEmpty"`
+
+	// CallDomain is the fully resolved domain for spec.callable.
+	CallDomain string `json:"callDomain,omitEmpty"`
+
+	// ResultDomain is the fully resolved domain for the spec.result.
+	ResultDomain string `json:"resultDomain,omitEmpty"`
 }
 
 const (

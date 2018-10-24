@@ -23,11 +23,12 @@ package fanout
 
 import (
 	"errors"
+	"net/http"
+	"time"
+
 	"github.com/knative/eventing/pkg/buses"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
-	"net/http"
-	"time"
 )
 
 const (
