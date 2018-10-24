@@ -12,8 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	controllerRuntime "sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeRuntime "sigs.k8s.io/controller-runtime/pkg/client"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/controller"
@@ -38,7 +37,7 @@ func RemoveFinalizer(c *eventingv1alpha1.Channel, finalizerName string) {
 	c.Finalizers = finalizers.List()
 }
 
-func getK8sService(ctx context.Context, client client.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
+func getK8sService(ctx context.Context, client runtimeRuntime.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
 	svcKey := types.NamespacedName{
 		Namespace: c.Namespace,
 		Name:      controller.ChannelServiceName(c.Name),
@@ -48,7 +47,7 @@ func getK8sService(ctx context.Context, client client.Client, c *eventingv1alpha
 	return svc, err
 }
 
-func CreateK8sService(ctx context.Context, client client.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
+func CreateK8sService(ctx context.Context, client runtimeRuntime.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
 	svc, err := getK8sService(ctx, client, c)
 
 	if errors.IsNotFound(err) {
@@ -69,8 +68,8 @@ func CreateK8sService(ctx context.Context, client client.Client, c *eventingv1al
 	return svc, nil
 }
 
-func getVirtualService(ctx context.Context, client client.Client, c *eventingv1alpha1.Channel) (*istiov1alpha3.VirtualService, error) {
-	vsk := controllerRuntime.ObjectKey{
+func getVirtualService(ctx context.Context, client runtimeRuntime.Client, c *eventingv1alpha1.Channel) (*istiov1alpha3.VirtualService, error) {
+	vsk := runtimeRuntime.ObjectKey{
 		Namespace: c.Namespace,
 		Name:      controller.ChannelVirtualServiceName(c.ObjectMeta.Name),
 	}
@@ -79,7 +78,7 @@ func getVirtualService(ctx context.Context, client client.Client, c *eventingv1a
 	return vs, err
 }
 
-func CreateVirtualService(ctx context.Context, client client.Client, c *eventingv1alpha1.Channel) error {
+func CreateVirtualService(ctx context.Context, client runtimeRuntime.Client, c *eventingv1alpha1.Channel) error {
 	virtualService, err := getVirtualService(ctx, client, c)
 
 	// If the resource doesn't exist, we'll create it
@@ -104,9 +103,9 @@ func CreateVirtualService(ctx context.Context, client client.Client, c *eventing
 	return nil
 }
 
-func UpdateChannel(ctx context.Context, client client.Client, u *eventingv1alpha1.Channel) error {
+func UpdateChannel(ctx context.Context, client runtimeRuntime.Client, u *eventingv1alpha1.Channel) error {
 	channel := &eventingv1alpha1.Channel{}
-	err := client.Get(ctx, controllerRuntime.ObjectKey{Namespace: u.Namespace, Name: u.Name}, channel)
+	err := client.Get(ctx, runtimeRuntime.ObjectKey{Namespace: u.Namespace, Name: u.Name}, channel)
 	if err != nil {
 		return err
 	}
@@ -122,10 +121,10 @@ func UpdateChannel(ctx context.Context, client client.Client, u *eventingv1alpha
 		updated = true
 	}
 
-	if updated == false {
-		return nil
+	if updated {
+		return client.Update(ctx, channel)
 	}
-	return client.Update(ctx, channel)
+	return nil
 }
 
 // newK8sService creates a new Service for a Channel resource. It also sets the appropriate
