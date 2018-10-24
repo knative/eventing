@@ -38,9 +38,9 @@ type Channelable struct {
 // One of them must be present
 type ChannelSubscriberSpec struct {
 	// +optional
-	CallableURI string `json:"callableURI,omitempty"`
+	CallableDomain string `json:"callableDomain,omitempty"`
 	// +optional
-	SinkableURI string `json:"sinkableURI,omitempty"`
+	SinkableDomain string `json:"sinkableDomain,omitempty"`
 }
 
 

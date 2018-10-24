@@ -21,10 +21,10 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	sidecarconfigmap "github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/configmap"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -76,7 +76,7 @@ func TestReconcile(t *testing.T) {
 						Name:      "foo",
 						Namespace: "bar",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
 									CallableURI: "callable",
 									SinkableURI: "sinkable",

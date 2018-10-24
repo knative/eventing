@@ -22,6 +22,7 @@ import (
 	"net/url"
 
 	"github.com/golang/glog"
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/controller"
 	duckapis "github.com/knative/pkg/apis"
@@ -308,11 +309,11 @@ func (r *reconciler) listAllSubscriptionsWithPhysicalFrom(sub *v1alpha1.Subscrip
 	}
 }
 
-func (r *reconciler) createChannelable(subs []v1alpha1.Subscription) *duckv1alpha1.Channelable {
-	rv := &duckv1alpha1.Channelable{}
+func (r *reconciler) createChannelable(subs []v1alpha1.Subscription) *eventingduck.Channelable {
+	rv := &eventingduck.Channelable{}
 	for _, sub := range subs {
 		if sub.Status.PhysicalSubscription.CallURI != "" || sub.Status.PhysicalSubscription.ResultURI != "" {
-			rv.Subscribers = append(rv.Subscribers, duckv1alpha1.ChannelSubscriberSpec{
+			rv.Subscribers = append(rv.Subscribers, eventingduck.ChannelSubscriberSpec{
 				CallableURI: sub.Status.PhysicalSubscription.CallURI,
 				SinkableURI: sub.Status.PhysicalSubscription.ResultURI,
 			})
@@ -321,13 +322,13 @@ func (r *reconciler) createChannelable(subs []v1alpha1.Subscription) *duckv1alph
 	return rv
 }
 
-func (r *reconciler) patchPhysicalFrom(namespace string, physicalFrom corev1.ObjectReference, subs *duckv1alpha1.Channelable) error {
+func (r *reconciler) patchPhysicalFrom(namespace string, physicalFrom corev1.ObjectReference, subs *eventingduck.Channelable) error {
 	// First get the original object and convert it to only the bits we care about
 	s, err := r.fetchObjectReference(namespace, &physicalFrom)
 	if err != nil {
 		return err
 	}
-	original := duckv1alpha1.Channel{}
+	original := eventingduck.Channel{}
 	err = duck.FromUnstructured(s, &original)
 	if err != nil {
 		return err

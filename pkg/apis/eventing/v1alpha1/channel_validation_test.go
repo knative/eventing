@@ -20,8 +20,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/apis"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -56,8 +56,8 @@ func TestChannelValidation(t *testing.T) {
 						Name: "foo",
 					},
 				},
-				Channelable: &duckv1alpha1.Channelable{
-					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{{
+				Channelable: &eventingduck.Channelable{
+					Subscribers: []eventingduck.ChannelSubscriberSpec{{
 						CallableURI: "callableendpoint",
 						SinkableURI: "resultendpoint",
 					}},
@@ -73,8 +73,8 @@ func TestChannelValidation(t *testing.T) {
 						Name: "foo",
 					},
 				},
-				Channelable: &duckv1alpha1.Channelable{
-					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{{
+				Channelable: &eventingduck.Channelable{
+					Subscribers: []eventingduck.ChannelSubscriberSpec{{
 						CallableURI: "callableendpoint",
 						SinkableURI: "callableendpoint",
 					}, {}},
@@ -94,8 +94,8 @@ func TestChannelValidation(t *testing.T) {
 						Name: "foo",
 					},
 				},
-				Channelable: &duckv1alpha1.Channelable{
-					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{{}, {}},
+				Channelable: &eventingduck.Channelable{
+					Subscribers: []eventingduck.ChannelSubscriberSpec{{}, {}},
 				},
 			},
 		},

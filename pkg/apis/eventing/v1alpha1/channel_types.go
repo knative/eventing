@@ -17,6 +17,7 @@
 package v1alpha1
 
 import (
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/webhook"
@@ -72,7 +73,7 @@ type ChannelSpec struct {
 	Arguments *runtime.RawExtension `json:"arguments,omitempty"`
 
 	// Channel conforms to Duck type Channelable.
-	Channelable *duckv1alpha1.Channelable `json:"channelable,omitempty"`
+	Channelable *eventingduck.Channelable `json:"channelable,omitempty"`
 }
 
 var chanCondSet = duckv1alpha1.NewLivingConditionSet(ChannelConditionProvisioned, ChannelConditionSinkable)

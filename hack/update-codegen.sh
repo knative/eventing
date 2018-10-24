@@ -31,5 +31,11 @@ ${CODEGEN_PKG}/generate-groups.sh "deepcopy,client,informer,lister" \
   "channels:v1alpha1 feeds:v1alpha1 flows:v1alpha1 eventing:v1alpha1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
+# Only deepcopy the Duck types, as they are not real resources.
+${CODEGEN_PKG}/generate-groups.sh "deepcopy" \
+  github.com/knative/eventing/pkg/client github.com/knative/eventing/pkg/apis \
+  "duck:v1alpha1" \
+  --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
+
 # Make sure our dependencies are up-to-date
 ${REPO_ROOT_DIR}/hack/update-deps.sh

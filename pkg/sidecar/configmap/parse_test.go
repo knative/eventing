@@ -21,9 +21,9 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
 )
 
@@ -86,7 +86,7 @@ func TestNewFanoutConfig(t *testing.T) {
 						Namespace: "default",
 						Name:      "c1",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
 									CallableURI: "event-changer.default.svc.cluster.local",
 									SinkableURI: "message-dumper-bar.default.svc.cluster.local",
@@ -104,7 +104,7 @@ func TestNewFanoutConfig(t *testing.T) {
 						Namespace: "default",
 						Name:      "c2",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
 									SinkableURI: "message-dumper-foo.default.svc.cluster.local",
 								},
@@ -115,7 +115,7 @@ func TestNewFanoutConfig(t *testing.T) {
 						Namespace: "other",
 						Name:      "c3",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
 									SinkableURI: "message-dumper-foo.default.svc.cluster.local",
 								},
@@ -157,7 +157,7 @@ func TestSerializeConfig(t *testing.T) {
 						Namespace: "default",
 						Name:      "c1",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
 									CallableURI: "foo.example.com",
 									SinkableURI: "bar.example.com",
@@ -176,7 +176,7 @@ func TestSerializeConfig(t *testing.T) {
 						Namespace: "other",
 						Name:      "no-subs",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{},
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{},
 						},
 					},
 				},

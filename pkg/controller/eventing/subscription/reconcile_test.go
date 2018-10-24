@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"testing"
 
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
@@ -829,8 +830,8 @@ func getChannelWithMultipleSubscriptions() *eventingv1alpha1.Channel {
 		},
 		ObjectMeta: om(testNS, fromChannelName),
 		Spec: eventingv1alpha1.ChannelSpec{
-			Channelable: &duckv1alpha1.Channelable{
-				Subscribers: []duckv1alpha1.ChannelSubscriberSpec{
+			Channelable: &eventingduck.Channelable{
+				Subscribers: []eventingduck.ChannelSubscriberSpec{
 					{
 						CallableURI: targetDNS,
 						SinkableURI: sinkableDNS,

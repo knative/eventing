@@ -21,7 +21,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	duck_v1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duck_v1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	apis_duck_v1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -136,7 +137,7 @@ func (in *ChannelStatus) DeepCopyInto(out *ChannelStatus) {
 	out.Sinkable = in.Sinkable
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make(duck_v1alpha1.Conditions, len(*in))
+		*out = make(apis_duck_v1alpha1.Conditions, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -237,7 +238,7 @@ func (in *ClusterProvisionerStatus) DeepCopyInto(out *ClusterProvisionerStatus) 
 	*out = *in
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make(duck_v1alpha1.Conditions, len(*in))
+		*out = make(apis_duck_v1alpha1.Conditions, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -448,7 +449,7 @@ func (in *SourceStatus) DeepCopyInto(out *SourceStatus) {
 	*out = *in
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make(duck_v1alpha1.Conditions, len(*in))
+		*out = make(apis_duck_v1alpha1.Conditions, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -567,7 +568,7 @@ func (in *SubscriptionStatus) DeepCopyInto(out *SubscriptionStatus) {
 	*out = *in
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make(duck_v1alpha1.Conditions, len(*in))
+		*out = make(apis_duck_v1alpha1.Conditions, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}

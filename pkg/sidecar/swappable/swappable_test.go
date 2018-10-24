@@ -23,9 +23,9 @@ import (
 	"strings"
 	"testing"
 
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
 )
 
@@ -47,7 +47,7 @@ func TestHandler(t *testing.T) {
 							Namespace: namespace,
 							Name:      name,
 							FanoutConfig: fanout.Config{
-								Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+								Subscriptions: []eventingduck.ChannelSubscriberSpec{
 									{
 										CallableURI: replaceDomain,
 									},
@@ -62,7 +62,7 @@ func TestHandler(t *testing.T) {
 							Namespace: namespace,
 							Name:      name,
 							FanoutConfig: fanout.Config{
-								Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+								Subscriptions: []eventingduck.ChannelSubscriberSpec{
 									{
 										SinkableURI: replaceDomain,
 									},
@@ -99,7 +99,7 @@ func TestHandler_InvalidConfigChange(t *testing.T) {
 						Namespace: namespace,
 						Name:      name,
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
 									CallableURI: replaceDomain,
 								},

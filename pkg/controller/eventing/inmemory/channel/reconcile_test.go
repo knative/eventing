@@ -24,12 +24,12 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
 	"github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -73,7 +73,7 @@ var (
 				Namespace: cNamespace,
 				Name:      "c1",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+					Subscriptions: []eventingduck.ChannelSubscriberSpec{
 						{
 							CallableURI: "foo",
 						},
@@ -91,7 +91,7 @@ var (
 				Namespace: cNamespace,
 				Name:      "c3",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+					Subscriptions: []eventingduck.ChannelSubscriberSpec{
 						{
 							CallableURI: "steve",
 						},
@@ -116,8 +116,8 @@ var (
 						Name: cpName,
 					},
 				},
-				Channelable: &duckv1alpha1.Channelable{
-					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{
+				Channelable: &eventingduck.Channelable{
+					Subscribers: []eventingduck.ChannelSubscriberSpec{
 						{
 							CallableURI: "foo",
 						},
@@ -146,8 +146,8 @@ var (
 						Name: "some-other-provisioner",
 					},
 				},
-				Channelable: &duckv1alpha1.Channelable{
-					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{
+				Channelable: &eventingduck.Channelable{
+					Subscribers: []eventingduck.ChannelSubscriberSpec{
 						{
 							CallableURI: "anything",
 						},
@@ -169,8 +169,8 @@ var (
 						Name: cpName,
 					},
 				},
-				Channelable: &duckv1alpha1.Channelable{
-					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{
+				Channelable: &eventingduck.Channelable{
+					Subscribers: []eventingduck.ChannelSubscriberSpec{
 						{
 							CallableURI: "steve",
 						},
