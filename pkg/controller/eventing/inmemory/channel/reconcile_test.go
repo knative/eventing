@@ -314,7 +314,7 @@ func TestReconcile(t *testing.T) {
 				MockGets: errorGettingK8sService(),
 			},
 			WantPresent: []runtime.Object{
-				makeChannelWithFinalizerAndSubscribable(),
+				makeChannelWithFinalizer(),
 			},
 			WantErrMsg: testErrorMessage,
 		},
@@ -329,7 +329,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantPresent: []runtime.Object{
 				// TODO: This should have a useful error message saying that the K8s Service failed.
-				makeChannelWithFinalizerAndSubscribable(),
+				makeChannelWithFinalizer(),
 			},
 			WantErrMsg: testErrorMessage,
 		},
@@ -358,7 +358,7 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				// TODO: This should have a useful error message saying that the VirtualService
 				// failed.
-				makeChannelWithFinalizerAndSubscribableAndSinkable(),
+				makeChannelWithFinalizerAndSinkable(),
 			},
 			WantErrMsg: testErrorMessage,
 		},
@@ -375,7 +375,7 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				// TODO: This should have a useful error message saying that the VirtualService
 				// failed.
-				makeChannelWithFinalizerAndSubscribableAndSinkable(),
+				makeChannelWithFinalizerAndSinkable(),
 			},
 			WantErrMsg: testErrorMessage,
 		},
@@ -483,21 +483,15 @@ func makeChannel() *eventingv1alpha1.Channel {
 	return c
 }
 
-func makeChannelWithFinalizerAndSubscribable() *eventingv1alpha1.Channel {
+func makeChannelWithFinalizerAndSinkable() *eventingv1alpha1.Channel {
 	c := makeChannelWithFinalizer()
-	c.Status.SetSubscribable(c.Namespace, c.Name)
-	return c
-}
-
-func makeChannelWithFinalizerAndSubscribableAndSinkable() *eventingv1alpha1.Channel {
-	c := makeChannelWithFinalizerAndSubscribable()
 	c.Status.SetSinkable(fmt.Sprintf("%s-channel.%s.svc.cluster.local", c.Name, c.Namespace))
 	return c
 }
 
 func makeReadyChannel() *eventingv1alpha1.Channel {
-	// Ready channels have the finalizer and are Subscribable and Sinkable.
-	c := makeChannelWithFinalizerAndSubscribableAndSinkable()
+	// Ready channels have the finalizer and are Sinkable.
+	c := makeChannelWithFinalizerAndSinkable()
 	c.Status.MarkProvisioned()
 	return c
 }
