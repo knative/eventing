@@ -112,7 +112,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 // ClusterChannelProvisioner. This Controller only handles in-memory channels.
 func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 	if c.Spec.Provisioner != nil {
-		return ccpcontroller.IsControlled(c.Spec.Provisioner, ccpcontroller.Channel)
+		return ccpcontroller.IsControlled(c.Spec.Provisioner)
 	}
 	return false
 }

@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"github.com/knative/pkg/apis"
-	"k8s.io/apimachinery/pkg/api/equality"
 )
 
 // Validate validates the ClusterChannelProvisioner resource.
@@ -28,16 +27,7 @@ func (p *ClusterChannelProvisioner) Validate() *apis.FieldError {
 
 // Validate validates the ClusterChannelProvisioner spec
 func (ps *ClusterChannelProvisionerSpec) Validate() *apis.FieldError {
-	if equality.Semantic.DeepEqual(ps, &ClusterChannelProvisionerSpec{}) {
-		return apis.ErrMissingField("reconciles")
-	}
 	var errs *apis.FieldError
-	if ps.Reconciles.Kind == "" {
-		errs = errs.Also(apis.ErrMissingField("kind").ViaField("reconciles"))
-	}
-	if ps.Reconciles.Group == "" {
-		errs = errs.Also(apis.ErrMissingField("group").ViaField("reconciles"))
-	}
 
 	return errs
 }

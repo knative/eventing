@@ -79,7 +79,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	// Does this Controller control this ClusterChannelProvisioner?
-	if !shouldReconcile(ccp.Namespace, ccp.Name, ccp.Spec.Reconciles.Kind) {
+	if !shouldReconcile(ccp.Namespace, ccp.Name) {
 		logger.Info("Not reconciling ClusterChannelProvisioner, it is not controlled by this Controller", zap.String("APIVersion", ccp.APIVersion), zap.String("Kind", ccp.Kind), zap.String("Namespace", ccp.Namespace), zap.String("name", ccp.Name))
 		return reconcile.Result{}, nil
 	}
@@ -106,17 +106,17 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 // IsControlled determines if the in-memory Channel Controller should control (and therefore
 // reconcile) a given object, based on that object's ClusterChannelProvisioner reference. kind is the kind
 // of that object.
-func IsControlled(ref *eventingv1alpha1.ProvisionerReference, kind string) bool {
+func IsControlled(ref *eventingv1alpha1.ProvisionerReference) bool {
 	if ref != nil && ref.Ref != nil {
-		return shouldReconcile(ref.Ref.Namespace, ref.Ref.Name, kind)
+		return shouldReconcile(ref.Ref.Namespace, ref.Ref.Name)
 	}
 	return false
 }
 
 // shouldReconcile determines if this Controller should control (and therefore reconcile) a given
 // ClusterChannelProvisioner. This Controller only handles in-memory channels.
-func shouldReconcile(namespace, name, kind string) bool {
-	return namespace == "" && name == Name && kind == Channel
+func shouldReconcile(namespace, name string) bool {
+	return namespace == "" && name == Name
 }
 
 func (r *reconciler) reconcile(ctx context.Context, ccp *eventingv1alpha1.ClusterChannelProvisioner) error {

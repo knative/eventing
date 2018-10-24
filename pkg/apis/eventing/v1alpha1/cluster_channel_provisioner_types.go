@@ -59,11 +59,6 @@ type ClusterChannelProvisionerSpec struct {
 	// ObjectMeta.Generation instead.
 	// +optional
 	Generation int64 `json:"generation,omitempty"`
-
-	// Reconciles is the kind of the resource the provisioner controller watches to
-	// produce required  backing resources.
-	// +required
-	Reconciles metav1.GroupKind `json:"reconciles"`
 }
 
 var ccProvCondSet = duckv1alpha1.NewLivingConditionSet()
