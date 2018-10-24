@@ -28,14 +28,12 @@ func TestTypesImplements(t *testing.T) {
 		// Channel
 		{instance: &Channel{}, iface: &duckv1alpha1.Conditions{}},
 		{instance: &Channel{}, iface: &duckv1alpha1.Channelable{}},
-		{instance: &Channel{}, iface: &duckv1alpha1.Subscribable{}},
 		{instance: &Channel{}, iface: &duckv1alpha1.Sinkable{}},
 		// ClusterProvisioner
 		{instance: &ClusterProvisioner{}, iface: &duckv1alpha1.Conditions{}},
 		// Subscription
 		{instance: &Subscription{}, iface: &duckv1alpha1.Conditions{}},
 		{instance: &Subscription{}, iface: &emptyGen},
-		{instance: &Subscription{}, iface: &duckv1alpha1.Subscribable{}},
 	}
 	for _, tc := range testCases {
 		if err := duck.VerifyType(tc.instance, tc.iface); err != nil {
