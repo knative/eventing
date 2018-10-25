@@ -71,8 +71,6 @@ type SubscriptionSpec struct {
 	// for receiving events. The object must have spec.subscriptions
 	// list which will then be modified accordingly.
 	//
-	// This object must fulfill the Subscribable contract.
-	//
 	// You can specify only the following fields of the ObjectReference:
 	//   - Kind
 	//   - APIVersion
@@ -171,10 +169,6 @@ type SubscriptionStatus struct {
 	// +patchStrategy=merge
 	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
-	// Subscription might be Subscribable. This depends if there's a Result channel
-	// In that case, this points to that resource.
-	Subscribable duckv1alpha1.Subscribable `json:"subscribable,omitempty"`
-
 	// PhysicalSubscription is the fully resolved values that this Subscription represents.
 	PhysicalSubscription SubscriptionStatusPhysicalSubscription `json:"physicalSubscription,omitEmpty"`
 }
@@ -182,9 +176,6 @@ type SubscriptionStatus struct {
 // SubscriptionStatusPhysicalSubscription represents the fully resolved values for this
 // Subscription.
 type SubscriptionStatusPhysicalSubscription struct {
-	// From is the object pointed to in status.from's Subscribable contract.
-	From corev1.ObjectReference `json:"from,omitEmpty"`
-
 	// CallDomain is the fully resolved domain for spec.callable.
 	CallDomain string `json:"callDomain,omitEmpty"`
 

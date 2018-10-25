@@ -137,7 +137,6 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	}
 
 	util.AddFinalizer(c, finalizerName)
-	c.Status.SetSubscribable(c.Namespace, c.Name)
 
 	svc, err := util.CreateK8sService(ctx, r.client, c)
 	if err != nil {
