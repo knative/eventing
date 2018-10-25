@@ -24,7 +24,7 @@ its subscribers._
 
 #### Spec
 
-| Field         | Type                               | Description                                                                | Limitations                            |
+| Field         | Type                               | Description                                                                | Constraints                            |
 | ------------- | ---------------------------------- | -------------------------------------------------------------------------- | -------------------------------------- |
 | provisioner\* | ProvisionerReference               | The name of the provisioner to create the resources that back the Channel. | Immutable.                             |
 | arguments     | runtime.RawExtension (JSON object) | Arguments to be passed to the provisioner.                                 |                                        |
@@ -41,7 +41,7 @@ its subscribers._
 
 #### Status
 
-| Field      | Type       | Description                                                                                                                 | Limitations |
+| Field      | Type       | Description                                                                                                                 | Constraints |
 | ---------- | ---------- | --------------------------------------------------------------------------------------------------------------------------- | ----------- |
 | sinkable   | Sinkable   | Address to the endpoint as top-level domain that will distribute traffic over the provided targets from inside the cluster. |             |
 | conditions | Conditions | Channel conditions.                                                                                                         |             |
@@ -58,7 +58,7 @@ its subscribers._
 
 ### Life Cycle
 
-| Action | Reactions                                                                                                                                                                      | Limitations                                                                        |
+| Action | Reactions                                                                                                                                                                      | Constraints                                                                        |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
 | Create | The ClusterChannelProvisioner referenced will take ownership of the Channel and begin provisioning the backing resources required for the Channel depending on implementation. | Only one ClusterChannelProvisioner is allowed to be the Owner for a given Channel. |
 | Update | The ClusterChannelProvisioner will synchronize the Channel backing resources to reflect the update.                                                                            |                                                                                    |
@@ -76,7 +76,7 @@ _Describes a linkage between a Channel and a Targetable and/or Sinkable._
 
 #### Spec
 
-| Field              | Type           | Description                                                                  | Limitations        |
+| Field              | Type           | Description                                                                  | Constraints        |
 | ------------------ | -------------- | ---------------------------------------------------------------------------- | ------------------ |
 | from\*             | ObjectRef      | The originating _Subscribable_ for the link.                                 | Must be a Channel. |
 | call<sup>1</sup>   | EndpointSpec   | Optional processing on the event. The result of call will be sent to result. |                    |
@@ -106,7 +106,7 @@ _Describes a linkage between a Channel and a Targetable and/or Sinkable._
 
 ### Life Cycle
 
-| Action | Reactions                                                                                                                                   | Limitations |
+| Action | Reactions                                                                                                                                   | Constraints |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
 | Create | The subscription controller adds the resolved URIs of `call` and `result` to the `subscribers` field in the `from` _Subscribable_ resource. |             |
 | Update |                                                                                                                                             |             |
@@ -125,7 +125,7 @@ or a Channel system that receives and delivers events._
 
 #### Spec
 
-| Field      | Type                               | Description                                                                                       | Limitations      |
+| Field      | Type                               | Description                                                                                       | Constraints      |
 | ---------- | ---------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------- |
 | parameters | runtime.RawExtension (JSON object) | Description of the arguments able to be passed by the provisioned resource (not enforced in 0.1). | JSON Schema      |
 
@@ -133,7 +133,7 @@ or a Channel system that receives and delivers events._
 
 #### Status
 
-| Field      | Type       | Description                          | Limitations |
+| Field      | Type       | Description                          | Constraints |
 | ---------- | ---------- | ------------------------------------ | ----------- |
 | conditions | Conditions | ClusterChannelProvisioner conditions |             |
 
@@ -152,7 +152,7 @@ or a Channel system that receives and delivers events._
 
 ### ProvisionerReference
 
-| Field | Type            | Description | Limitations |
+| Field | Type            | Description | Constraints |
 | ----- | --------------- | ----------- | ----------- |
 | ref\* | ObjectReference |             |             |
 
@@ -160,7 +160,7 @@ or a Channel system that receives and delivers events._
 
 ### EndpointSpec
 
-| Field                 | Type            | Description | Limitations                |
+| Field                 | Type            | Description | Constraints                |
 | --------------------- | --------------- | ----------- | -------------------------- |
 | targetRef<sup>1</sup> | ObjectReference |             | Must adhere to Targetable. |
 | dnsName<sup>1</sup>   | String          |             |                            |
@@ -169,14 +169,14 @@ or a Channel system that receives and delivers events._
 
 ### ChannelSubscriberSpec
 
-| Field       | Type   | Description                                  | Limitations    |
+| Field       | Type   | Description                                  | Constraints    |
 | ----------- | ------ | -------------------------------------------- | -------------- |
 | callableURI | String | The URI name of the endpoint for the call.   | Must be a URL. |
 | sinkableURI | String | The URI name of the endpoint for the result. | Must be a URL. |
 
 ### ResultStrategy
 
-| Field    | Type      | Description                            | Limitations        |
+| Field    | Type      | Description                            | Constraints        |
 | -------- | --------- | -------------------------------------- | ------------------ |
 | target\* | ObjectRef | The continuation Channel for the link. | Must be a Channel. |
 
