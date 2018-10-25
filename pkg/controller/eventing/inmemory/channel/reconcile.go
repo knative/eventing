@@ -19,7 +19,6 @@ package channel
 import (
 	"context"
 
-	"github.com/knative/pkg/logging"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -161,7 +160,6 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	// If the Virtual Service is not controlled by this Channel, we should log a warning, but don't
 	// consider it an error.
 	if !metav1.IsControlledBy(virtualService, c) {
-		logger := logging.FromContext(ctx)
 		logger.Warn("VirtualService not owned by Channel", zap.Any("channel", c), zap.Any("virtualService", virtualService))
 	}
 
