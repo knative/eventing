@@ -4,15 +4,13 @@ import (
 	"context"
 
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
-	"github.com/knative/pkg/logging"
-	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	runtimeRuntime "sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/controller"
@@ -37,7 +35,7 @@ func RemoveFinalizer(c *eventingv1alpha1.Channel, finalizerName string) {
 	c.Finalizers = finalizers.List()
 }
 
-func getK8sService(ctx context.Context, client runtimeRuntime.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
+func getK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
 	svcKey := types.NamespacedName{
 		Namespace: c.Namespace,
 		Name:      controller.ChannelServiceName(c.Name),
@@ -47,7 +45,7 @@ func getK8sService(ctx context.Context, client runtimeRuntime.Client, c *eventin
 	return svc, err
 }
 
-func CreateK8sService(ctx context.Context, client runtimeRuntime.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
+func CreateK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
 	svc, err := getK8sService(ctx, client, c)
 
 	if errors.IsNotFound(err) {
@@ -60,16 +58,11 @@ func CreateK8sService(ctx context.Context, client runtimeRuntime.Client, c *even
 		return nil, err
 	}
 
-	// Check if this Channel is the owner of the K8s service.
-	if !metav1.IsControlledBy(svc, c) {
-		logger := logging.FromContext(ctx)
-		logger.Warn("Channel's K8s Service is not owned by the Channel", zap.Any("channel", c), zap.Any("service", svc))
-	}
 	return svc, nil
 }
 
-func getVirtualService(ctx context.Context, client runtimeRuntime.Client, c *eventingv1alpha1.Channel) (*istiov1alpha3.VirtualService, error) {
-	vsk := runtimeRuntime.ObjectKey{
+func getVirtualService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*istiov1alpha3.VirtualService, error) {
+	vsk := runtimeClient.ObjectKey{
 		Namespace: c.Namespace,
 		Name:      controller.ChannelVirtualServiceName(c.ObjectMeta.Name),
 	}
@@ -78,7 +71,7 @@ func getVirtualService(ctx context.Context, client runtimeRuntime.Client, c *eve
 	return vs, err
 }
 
-func CreateVirtualService(ctx context.Context, client runtimeRuntime.Client, c *eventingv1alpha1.Channel) error {
+func CreateVirtualService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*istiov1alpha3.VirtualService, error) {
 	virtualService, err := getVirtualService(ctx, client, c)
 
 	// If the resource doesn't exist, we'll create it
@@ -91,21 +84,15 @@ func CreateVirtualService(ctx context.Context, client runtimeRuntime.Client, c *
 	// attempt processing again later. This could have been caused by a
 	// temporary network failure, or any other transient reason.
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// If the Virtual Service is not controlled by this Channel, we should log a warning, but don't
-	// consider it an error.
-	if !metav1.IsControlledBy(virtualService, c) {
-		logger := logging.FromContext(ctx)
-		logger.Warn("VirtualService not owned by Channel", zap.Any("channel", c), zap.Any("virtualService", virtualService))
-	}
-	return nil
+	return virtualService, nil
 }
 
-func UpdateChannel(ctx context.Context, client runtimeRuntime.Client, u *eventingv1alpha1.Channel) error {
+func UpdateChannel(ctx context.Context, client runtimeClient.Client, u *eventingv1alpha1.Channel) error {
 	channel := &eventingv1alpha1.Channel{}
-	err := client.Get(ctx, runtimeRuntime.ObjectKey{Namespace: u.Namespace, Name: u.Name}, channel)
+	err := client.Get(ctx, runtimeClient.ObjectKey{Namespace: u.Namespace, Name: u.Name}, channel)
 	if err != nil {
 		return err
 	}

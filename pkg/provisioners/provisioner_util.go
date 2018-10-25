@@ -19,7 +19,7 @@ import (
 	"github.com/knative/pkg/logging"
 )
 
-func CreateDispatcherService(ctx context.Context, client runtimeClient.Client, cp *eventingv1alpha1.ClusterProvisioner) error {
+func CreateDispatcherService(ctx context.Context, client runtimeClient.Client, cp *eventingv1alpha1.ClusterProvisioner) (*corev1.Service, error) {
 	svcName := controller.ClusterBusDispatcherServiceName(cp.Name)
 	svcKey := types.NamespacedName{
 		Namespace: system.Namespace,
@@ -35,15 +35,10 @@ func CreateDispatcherService(ctx context.Context, client runtimeClient.Client, c
 
 	// If an error occurred in either Get or Create, we need to reconcile again.
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// Check if this ClusterProvisioner is the owner of the K8s service.
-	if !metav1.IsControlledBy(svc, cp) {
-		logger := logging.FromContext(ctx)
-		logger.Warn("ClusterProvisioner's K8s Service is not owned by the ClusterProvisioner", zap.Any("clusterProvisioner", cp), zap.Any("service", svc))
-	}
-	return nil
+	return svc, nil
 }
 
 func UpdateClusterProvisionerStatus(ctx context.Context, client runtimeClient.Client, u *eventingv1alpha1.ClusterProvisioner) error {

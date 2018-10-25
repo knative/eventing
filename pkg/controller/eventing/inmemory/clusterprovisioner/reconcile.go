@@ -21,6 +21,7 @@ import (
 
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -126,9 +127,16 @@ func (r *reconciler) reconcile(ctx context.Context, cp *eventingv1alpha1.Cluster
 		return nil
 	}
 
-	if err := util.CreateDispatcherService(ctx, r.client, cp); err != nil {
+	svc, err := util.CreateDispatcherService(ctx, r.client, cp)
+
+	if err != nil {
 		logger.Info("Error creating the ClusterProvisioner's K8s Service", zap.Error(err))
 		return err
+	}
+
+	// Check if this ClusterProvisioner is the owner of the K8s service.
+	if !metav1.IsControlledBy(svc, cp) {
+		logger.Warn("ClusterProvisioner's K8s Service is not owned by the ClusterProvisioner", zap.Any("clusterProvisioner", cp), zap.Any("service", svc))
 	}
 
 	cp.Status.MarkReady()
