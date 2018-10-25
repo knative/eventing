@@ -176,11 +176,11 @@ type SubscriptionStatus struct {
 // SubscriptionStatusPhysicalSubscription represents the fully resolved values for this
 // Subscription.
 type SubscriptionStatusPhysicalSubscription struct {
-	// CallDomain is the fully resolved domain for spec.callable.
-	CallDomain string `json:"callDomain,omitEmpty"`
+	// CallURI is the fully resolved URI for spec.callable.
+	CallURI string `json:"callURI,omitEmpty"`
 
-	// ResultDomain is the fully resolved domain for the spec.result.
-	ResultDomain string `json:"resultDomain,omitEmpty"`
+	// ResultURI is the fully resolved URI for the spec.result.
+	ResultURI string `json:"resultURI,omitEmpty"`
 }
 
 const (

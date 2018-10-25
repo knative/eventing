@@ -15,6 +15,7 @@ package v1alpha1
 import (
 	"testing"
 
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
@@ -27,7 +28,7 @@ func TestTypesImplements(t *testing.T) {
 	}{
 		// Channel
 		{instance: &Channel{}, iface: &duckv1alpha1.Conditions{}},
-		{instance: &Channel{}, iface: &duckv1alpha1.Channelable{}},
+		{instance: &Channel{}, iface: &eventingduck.Channelable{}},
 		{instance: &Channel{}, iface: &duckv1alpha1.Sinkable{}},
 		// ClusterProvisioner
 		{instance: &ClusterProvisioner{}, iface: &duckv1alpha1.Conditions{}},

@@ -17,12 +17,13 @@ limitations under the License.
 package multichannelfanout
 
 import (
-	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/pkg/sidecar/fanout"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	"go.uber.org/zap"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	"github.com/knative/eventing/pkg/sidecar/fanout"
+	"go.uber.org/zap"
 )
 
 func TestConfigMapData(t *testing.T) {
@@ -33,11 +34,11 @@ func TestConfigMapData(t *testing.T) {
 		expectedErr bool
 	}{
 		{
-			name:        "no data",
-			expected: &Config {},
+			name:     "no data",
+			expected: &Config{},
 		},
 		{
-			name:      "invalid YAML",
+			name: "invalid YAML",
 			config: `
 				key:
 				  - value
@@ -56,27 +57,27 @@ func TestConfigMapData(t *testing.T) {
 			expectedErr: true,
 		},
 		{
-			name:      "valid",
+			name: "valid",
 			config: `
 				channelConfigs:
 				  - namespace: default
 					name: c1
 					fanoutConfig:
 					  subscriptions:
-						- callableDomain: event-changer.default.svc.cluster.local
-						  sinkableDomain: message-dumper-bar.default.svc.cluster.local
-						- callableDomain: message-dumper-foo.default.svc.cluster.local
-						- sinkableDomain: message-dumper-bar.default.svc.cluster.local
+						- callableURI: event-changer.default.svc.cluster.local
+						  sinkableURI: message-dumper-bar.default.svc.cluster.local
+						- callableURI: message-dumper-foo.default.svc.cluster.local
+						- sinkableURI: message-dumper-bar.default.svc.cluster.local
 				  - namespace: default
 					name: c2
 					fanoutConfig:
 					  subscriptions:
-						- sinkableDomain: message-dumper-foo.default.svc.cluster.local
+						- sinkableURI: message-dumper-foo.default.svc.cluster.local
 				  - namespace: other
 					name: c3
 					fanoutConfig:
 					  subscriptions:
-						- sinkableDomain: message-dumper-foo.default.svc.cluster.local
+						- sinkableURI: message-dumper-foo.default.svc.cluster.local
 				`,
 			expected: &Config{
 				ChannelConfigs: []ChannelConfig{
@@ -84,16 +85,16 @@ func TestConfigMapData(t *testing.T) {
 						Namespace: "default",
 						Name:      "c1",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									CallableDomain: "event-changer.default.svc.cluster.local",
-									SinkableDomain: "message-dumper-bar.default.svc.cluster.local",
+									CallableURI: "event-changer.default.svc.cluster.local",
+									SinkableURI: "message-dumper-bar.default.svc.cluster.local",
 								},
 								{
-									CallableDomain: "message-dumper-foo.default.svc.cluster.local",
+									CallableURI: "message-dumper-foo.default.svc.cluster.local",
 								},
 								{
-									SinkableDomain: "message-dumper-bar.default.svc.cluster.local",
+									SinkableURI: "message-dumper-bar.default.svc.cluster.local",
 								},
 							},
 						},
@@ -102,9 +103,9 @@ func TestConfigMapData(t *testing.T) {
 						Namespace: "default",
 						Name:      "c2",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									SinkableDomain: "message-dumper-foo.default.svc.cluster.local",
+									SinkableURI: "message-dumper-foo.default.svc.cluster.local",
 								},
 							},
 						},
@@ -113,9 +114,9 @@ func TestConfigMapData(t *testing.T) {
 						Namespace: "other",
 						Name:      "c3",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									SinkableDomain: "message-dumper-foo.default.svc.cluster.local",
+									SinkableURI: "message-dumper-foo.default.svc.cluster.local",
 								},
 							},
 						},
@@ -126,7 +127,9 @@ func TestConfigMapData(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.name != "valid" { return }
+			if tc.name != "valid" {
+				return
+			}
 			c, e := Parse(zap.NewNop(), formatData(tc.config))
 			if tc.expectedErr {
 				if e == nil {
