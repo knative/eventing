@@ -86,19 +86,12 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 	deletionTimestamp := accessor.GetDeletionTimestamp()
 	glog.Infof("DeletionTimestamp: %v", deletionTimestamp)
 
-	// Reconcile the subscription to the From channel that's consuming events that are either
-	// going to the call or if there's no call, directly to result.
-	from, err := r.resolveFromChannelable(subscription.Namespace, &subscription.Spec.From)
+	// Verify that `from` exists.
+	_, err = r.fetchObjectReference(subscription.Namespace, &subscription.Spec.From)
 	if err != nil {
-		glog.Warningf("Failed to resolve From %+v : %s", subscription.Spec.From, err)
+		glog.Warningf("Failed to validate `from` exists: %+v, %v", subscription.Spec.From, err)
 		return err
 	}
-	if from.Status.Subscribable == nil {
-		return fmt.Errorf("from is not subscribable %s %s/%s", subscription.Spec.From.Kind, subscription.Namespace, subscription.Spec.From.Name)
-	}
-
-	subscription.Status.PhysicalSubscription.From = from.Status.Subscribable.Channelable
-	glog.Infof("Resolved from subscribable to: %+v", from.Status.Subscribable.Channelable)
 
 	callDomain := ""
 	if subscription.Spec.Call != nil {
@@ -226,21 +219,6 @@ func (r *reconciler) resolveResult(namespace string, resultStrategy v1alpha1.Res
 	return "", fmt.Errorf("status does not contain sinkable")
 }
 
-// resolveFromChannelable fetches an object based on ObjectReference. It assumes that the
-// fetched object then implements Subscribable interface and returns the ObjectReference
-// representing the Channelable interface.
-func (r *reconciler) resolveFromChannelable(namespace string, ref *corev1.ObjectReference) (*duckv1alpha1.Subscription, error) {
-	obj, err := r.fetchObjectReference(namespace, ref)
-	if err != nil {
-		glog.Warningf("Failed to fetch From target %+v: %s", ref, err)
-		return nil, err
-	}
-
-	c := duckv1alpha1.Subscription{}
-	err = duck.FromUnstructured(obj, &c)
-	return &c, err
-}
-
 // fetchObjectReference fetches an object based on ObjectReference.
 func (r *reconciler) fetchObjectReference(namespace string, ref *corev1.ObjectReference) (duck.Marshalable, error) {
 	resourceClient, err := r.CreateResourceInterface(namespace, ref)
@@ -263,7 +241,7 @@ func (r *reconciler) syncPhysicalFromChannel(sub *v1alpha1.Subscription) error {
 
 	channelable := r.createChannelable(subs)
 
-	return r.patchPhysicalFrom(sub.Namespace, sub.Status.PhysicalSubscription.From, channelable)
+	return r.patchPhysicalFrom(sub.Namespace, sub.Spec.From, channelable)
 }
 
 func (r *reconciler) listAllSubscriptionsWithPhysicalFrom(sub *v1alpha1.Subscription) ([]v1alpha1.Subscription, error) {
@@ -296,7 +274,7 @@ func (r *reconciler) listAllSubscriptionsWithPhysicalFrom(sub *v1alpha1.Subscrip
 				// This is the sub that is being reconciled. It has already been added to the list.
 				continue
 			}
-			if equality.Semantic.DeepEqual(sub.Status.PhysicalSubscription.From, s.Status.PhysicalSubscription.From) {
+			if equality.Semantic.DeepEqual(sub.Spec.From, s.Spec.From) {
 				subs = append(subs, s)
 			}
 		}
