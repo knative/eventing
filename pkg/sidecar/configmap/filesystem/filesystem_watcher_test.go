@@ -19,19 +19,20 @@ package filesystem
 import (
 	"errors"
 	"fmt"
-	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/pkg/sidecar/configmap"
-	"github.com/knative/eventing/pkg/sidecar/fanout"
-	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	"go.uber.org/zap"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/knative/eventing/pkg/sidecar/configmap"
+	"github.com/knative/eventing/pkg/sidecar/fanout"
+	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"go.uber.org/zap"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func TestReadConfigMap(t *testing.T) {
@@ -350,9 +351,24 @@ func writeConfigString(t *testing.T, dir, config string) {
 		// Golang editors tend to replace leading spaces with tabs. YAML is left whitespace
 		// sensitive, so let's replace the tabs with spaces.
 		leftSpaceConfig := strings.Replace(config, "\t", "    ", -1)
-		err := ioutil.WriteFile(fmt.Sprintf("%s/%s", dir, configmap.MultiChannelFanoutConfigKey), []byte(leftSpaceConfig), 0700)
+		err := atomicWriteFile(t, fmt.Sprintf("%s/%s", dir, configmap.MultiChannelFanoutConfigKey), []byte(leftSpaceConfig), 0700)
 		if err != nil {
 			t.Errorf("Problem writing the config file: %v", err)
 		}
 	}
+}
+
+func atomicWriteFile(t *testing.T, file string, bytes []byte, perm os.FileMode) error {
+	// In order to more closely replicate how K8s writes ConfigMaps to the file system, we will
+	// atomically swap out the file by writing it to a temp directory, then renaming it into the
+	// directory we are watching.
+	tempDir := createTempDir(t)
+	defer os.RemoveAll(tempDir)
+
+	tempFile := fmt.Sprintf("%s/%s", tempDir, "temp")
+	err := ioutil.WriteFile(tempFile, bytes, perm)
+	if err != nil {
+		return err
+	}
+	return os.Rename(tempFile, file)
 }
