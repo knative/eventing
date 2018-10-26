@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package clusterprovisioner
+package clusterchannelprovisioner
 
 import (
 	"context"
@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	// Name is the name of the in-memory channel ClusterProvisioner.
+	// Name is the name of the in-memory channel ClusterChannelProvisioner.
 	Name = "in-memory-channel"
 
 	// Channel is the name of the Channel resource in eventing.knative.dev/v1alpha1.
@@ -62,41 +62,41 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	ctx := context.TODO()
 	logger := r.logger.With(zap.Any("request", request))
 
-	cp := &eventingv1alpha1.ClusterProvisioner{}
-	err := r.client.Get(ctx, request.NamespacedName, cp)
+	ccp := &eventingv1alpha1.ClusterChannelProvisioner{}
+	err := r.client.Get(ctx, request.NamespacedName, ccp)
 
-	// The ClusterProvisioner may have been deleted since it was added to the workqueue. If so,
+	// The ClusterChannelProvisioner may have been deleted since it was added to the workqueue. If so,
 	// there is nothing to be done.
 	if errors.IsNotFound(err) {
-		logger.Info("Could not find ClusterProvisioner", zap.Error(err))
+		logger.Info("Could not find ClusterChannelProvisioner", zap.Error(err))
 		return reconcile.Result{}, nil
 	}
 
 	// Any other error should be retried in another reconciliation.
 	if err != nil {
-		logger.Error("Unable to Get ClusterProvisioner", zap.Error(err))
+		logger.Error("Unable to Get ClusterChannelProvisioner", zap.Error(err))
 		return reconcile.Result{}, err
 	}
 
-	// Does this Controller control this ClusterProvisioner?
-	if !shouldReconcile(cp.Namespace, cp.Name, cp.Spec.Reconciles.Kind) {
-		logger.Info("Not reconciling ClusterProvisioner, it is not controlled by this Controller", zap.String("APIVersion", cp.APIVersion), zap.String("Kind", cp.Kind), zap.String("Namespace", cp.Namespace), zap.String("name", cp.Name))
+	// Does this Controller control this ClusterChannelProvisioner?
+	if !shouldReconcile(ccp.Namespace, ccp.Name) {
+		logger.Info("Not reconciling ClusterChannelProvisioner, it is not controlled by this Controller", zap.String("APIVersion", ccp.APIVersion), zap.String("Kind", ccp.Kind), zap.String("Namespace", ccp.Namespace), zap.String("name", ccp.Name))
 		return reconcile.Result{}, nil
 	}
-	logger.Info("Reconciling ClusterProvisioner.")
+	logger.Info("Reconciling ClusterChannelProvisioner.")
 
 	// Modify a copy of this object, rather than the original.
-	cp = cp.DeepCopy()
+	ccp = ccp.DeepCopy()
 
-	err = r.reconcile(ctx, cp)
+	err = r.reconcile(ctx, ccp)
 	if err != nil {
-		logger.Info("Error reconciling ClusterProvisioner", zap.Error(err))
+		logger.Info("Error reconciling ClusterChannelProvisioner", zap.Error(err))
 		// Note that we do not return the error here, because we want to update the Status
 		// regardless of the error.
 	}
 
-	if updateStatusErr := r.updateClusterProvisionerStatus(ctx, cp); updateStatusErr != nil {
-		logger.Info("Error updating ClusterProvisioner Status", zap.Error(updateStatusErr))
+	if updateStatusErr := r.updateClusterChannelProvisionerStatus(ctx, ccp); updateStatusErr != nil {
+		logger.Info("Error updating ClusterChannelProvisioner Status", zap.Error(updateStatusErr))
 		return reconcile.Result{}, updateStatusErr
 	}
 
@@ -104,45 +104,44 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 }
 
 // IsControlled determines if the in-memory Channel Controller should control (and therefore
-// reconcile) a given object, based on that object's ClusterProvisioner reference. kind is the kind
-// of that object.
-func IsControlled(ref *eventingv1alpha1.ProvisionerReference, kind string) bool {
+// reconcile) a given object, based on that object's ClusterChannelProvisioner reference.
+func IsControlled(ref *eventingv1alpha1.ProvisionerReference) bool {
 	if ref != nil && ref.Ref != nil {
-		return shouldReconcile(ref.Ref.Namespace, ref.Ref.Name, kind)
+		return shouldReconcile(ref.Ref.Namespace, ref.Ref.Name)
 	}
 	return false
 }
 
 // shouldReconcile determines if this Controller should control (and therefore reconcile) a given
-// ClusterProvisioner. This Controller only handles in-memory channels.
-func shouldReconcile(namespace, name, kind string) bool {
-	return namespace == "" && name == Name && kind == Channel
+// ClusterChannelProvisioner. This Controller only handles in-memory channels.
+func shouldReconcile(namespace, name string) bool {
+	return namespace == "" && name == Name
 }
 
-func (r *reconciler) reconcile(ctx context.Context, cp *eventingv1alpha1.ClusterProvisioner) error {
-	logger := r.logger.With(zap.Any("clusterProvisioner", cp))
+func (r *reconciler) reconcile(ctx context.Context, ccp *eventingv1alpha1.ClusterChannelProvisioner) error {
+	logger := r.logger.With(zap.Any("clusterChannelProvisioner", ccp))
 
 	// We are syncing one thing.
 	// 1. The K8s Service to talk to all in-memory Channels.
 	//     - There is a single K8s Service for all requests going any in-memory Channel.
 
-	if cp.DeletionTimestamp != nil {
-		// K8s garbage collection will delete the dispatcher service, once this ClusterProvisioner
+	if ccp.DeletionTimestamp != nil {
+		// K8s garbage collection will delete the dispatcher service, once this ClusterChannelProvisioner
 		// is deleted, so we don't need to do anything.
 		return nil
 	}
 
-	if err := r.createDispatcherService(ctx, cp); err != nil {
-		logger.Info("Error creating the ClusterProvisioner's K8s Service", zap.Error(err))
+	if err := r.createDispatcherService(ctx, ccp); err != nil {
+		logger.Info("Error creating the ClusterChannelProvisioner's K8s Service", zap.Error(err))
 		return err
 	}
 
-	cp.Status.MarkReady()
+	ccp.Status.MarkReady()
 	return nil
 }
 
-func (r *reconciler) createDispatcherService(ctx context.Context, cp *eventingv1alpha1.ClusterProvisioner) error {
-	svcName := controller.ClusterBusDispatcherServiceName(cp.Name)
+func (r *reconciler) createDispatcherService(ctx context.Context, ccp *eventingv1alpha1.ClusterChannelProvisioner) error {
+	svcName := controller.ClusterBusDispatcherServiceName(ccp.Name)
 	svcKey := types.NamespacedName{
 		Namespace: system.Namespace,
 		Name:      svcName,
@@ -151,7 +150,7 @@ func (r *reconciler) createDispatcherService(ctx context.Context, cp *eventingv1
 	err := r.client.Get(ctx, svcKey, svc)
 
 	if errors.IsNotFound(err) {
-		svc = newDispatcherService(cp)
+		svc = newDispatcherService(ccp)
 		err = r.client.Create(ctx, svc)
 	}
 
@@ -160,17 +159,17 @@ func (r *reconciler) createDispatcherService(ctx context.Context, cp *eventingv1
 		return err
 	}
 
-	// Check if this ClusterProvisioner is the owner of the K8s service.
-	if !metav1.IsControlledBy(svc, cp) {
-		r.logger.Warn("ClusterProvisioner's K8s Service is not owned by the ClusterProvisioner", zap.Any("clusterProvisioner", cp), zap.Any("service", svc))
+	// Check if this ClusterChannelProvisioner is the owner of the K8s service.
+	if !metav1.IsControlledBy(svc, ccp) {
+		r.logger.Warn("ClusterChannelProvisioner's K8s Service is not owned by the ClusterChannelProvisioner", zap.Any("clusterChannelProvisioner", ccp), zap.Any("service", svc))
 	}
 	return nil
 }
 
-func (r *reconciler) updateClusterProvisionerStatus(ctx context.Context, u *eventingv1alpha1.ClusterProvisioner) error {
-	o := &eventingv1alpha1.ClusterProvisioner{}
+func (r *reconciler) updateClusterChannelProvisionerStatus(ctx context.Context, u *eventingv1alpha1.ClusterChannelProvisioner) error {
+	o := &eventingv1alpha1.ClusterChannelProvisioner{}
 	if err := r.client.Get(ctx, client.ObjectKey{Namespace: u.Namespace, Name: u.Name}, o); err != nil {
-		r.logger.Info("Error getting ClusterProvisioner for status update", zap.Error(err), zap.Any("updatedClusterProvisioner", u))
+		r.logger.Info("Error getting ClusterChannelProvisioner for status update", zap.Error(err), zap.Any("updatedClusterChannelProvisioner", u))
 		return err
 	}
 
@@ -184,18 +183,18 @@ func (r *reconciler) updateClusterProvisionerStatus(ctx context.Context, u *even
 // newDispatcherService creates a new Service for a ClusterBus resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the ClusterBus resource that 'owns' it.
-func newDispatcherService(cp *eventingv1alpha1.ClusterProvisioner) *corev1.Service {
-	labels := dispatcherLabels(cp.Name)
+func newDispatcherService(ccp *eventingv1alpha1.ClusterChannelProvisioner) *corev1.Service {
+	labels := dispatcherLabels(ccp.Name)
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.ClusterBusDispatcherServiceName(cp.Name),
+			Name:      controller.ClusterBusDispatcherServiceName(ccp.Name),
 			Namespace: system.Namespace,
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(cp, schema.GroupVersionKind{
+				*metav1.NewControllerRef(ccp, schema.GroupVersionKind{
 					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
 					Version: eventingv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "ClusterProvisioner",
+					Kind:    "ClusterChannelProvisioner",
 				}),
 			},
 		},
@@ -212,9 +211,9 @@ func newDispatcherService(cp *eventingv1alpha1.ClusterProvisioner) *corev1.Servi
 	}
 }
 
-func dispatcherLabels(cpName string) map[string]string {
+func dispatcherLabels(ccpName string) map[string]string {
 	return map[string]string{
-		"clusterProvisioner": cpName,
-		"role":               "dispatcher",
+		"clusterChannelProvisioner": ccpName,
+		"role":                      "dispatcher",
 	}
 }

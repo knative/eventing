@@ -24,26 +24,26 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func TestClusterProvisionerStatusIsReady(t *testing.T) {
+func TestClusterChannelProvisionerStatusIsReady(t *testing.T) {
 	tests := []struct {
 		name string
-		ps   *ClusterProvisionerStatus
+		ps   *ClusterChannelProvisionerStatus
 		want bool
 	}{{
 		name: "uninitialized",
-		ps:   &ClusterProvisionerStatus{},
+		ps:   &ClusterChannelProvisionerStatus{},
 		want: false,
 	}, {
 		name: "initialized",
-		ps: func() *ClusterProvisionerStatus {
-			ps := &ClusterProvisionerStatus{}
+		ps: func() *ClusterChannelProvisionerStatus {
+			ps := &ClusterChannelProvisionerStatus{}
 			ps.InitializeConditions()
 			return ps
 		}(),
 		want: false,
 	}, {
 		name: "ready true condition",
-		ps: &ClusterProvisionerStatus{
+		ps: &ClusterChannelProvisionerStatus{
 			Conditions: []duckv1alpha1.Condition{{
 				Type:   ChannelConditionReady,
 				Status: corev1.ConditionTrue,
@@ -52,7 +52,7 @@ func TestClusterProvisionerStatusIsReady(t *testing.T) {
 		want: true,
 	}, {
 		name: "ready false condition",
-		ps: &ClusterProvisionerStatus{
+		ps: &ClusterChannelProvisionerStatus{
 			Conditions: []duckv1alpha1.Condition{{
 				Type:   ChannelConditionReady,
 				Status: corev1.ConditionFalse,
@@ -61,7 +61,7 @@ func TestClusterProvisionerStatusIsReady(t *testing.T) {
 		want: false,
 	}, {
 		name: "unknown condition",
-		ps: &ClusterProvisionerStatus{
+		ps: &ClusterChannelProvisionerStatus{
 			Conditions: []duckv1alpha1.Condition{{
 				Type:   "foo",
 				Status: corev1.ConditionTrue,
@@ -80,15 +80,15 @@ func TestClusterProvisionerStatusIsReady(t *testing.T) {
 	}
 }
 
-func TestClusterProvisionerStatusGetCondition(t *testing.T) {
+func TestClusterChannelProvisionerStatusGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
-		ps        *ClusterProvisionerStatus
+		ps        *ClusterChannelProvisionerStatus
 		condQuery duckv1alpha1.ConditionType
 		want      *duckv1alpha1.Condition
 	}{{
 		name: "single condition",
-		ps: &ClusterProvisionerStatus{
+		ps: &ClusterChannelProvisionerStatus{
 			Conditions: []duckv1alpha1.Condition{
 				condReady,
 			},
@@ -97,7 +97,7 @@ func TestClusterProvisionerStatusGetCondition(t *testing.T) {
 		want:      &condReady,
 	}, {
 		name: "unknown condition",
-		ps: &ClusterProvisionerStatus{
+		ps: &ClusterChannelProvisionerStatus{
 			Conditions: []duckv1alpha1.Condition{
 				condReady,
 				condUnprovisioned,
@@ -117,8 +117,8 @@ func TestClusterProvisionerStatusGetCondition(t *testing.T) {
 	}
 }
 
-func TestClusterProvisionerStatus_MarkReady(t *testing.T) {
-	ps := ClusterProvisionerStatus{}
+func TestClusterChannelProvisionerStatus_MarkReady(t *testing.T) {
+	ps := ClusterChannelProvisionerStatus{}
 	ps.InitializeConditions()
 	if ps.IsReady() {
 		t.Errorf("Should not be ready when initialized.")

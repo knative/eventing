@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package clusterprovisioner
+package clusterchannelprovisioner
 
 import (
 	"context"
@@ -39,7 +39,7 @@ import (
 )
 
 const (
-	cpUid            = "test-uid"
+	ccpUid           = "test-uid"
 	testErrorMessage = "test-induced-error"
 )
 
@@ -76,19 +76,16 @@ func TestInjectClient(t *testing.T) {
 func TestIsControlled(t *testing.T) {
 	testCases := map[string]struct {
 		ref          *eventingv1alpha1.ProvisionerReference
-		kind         string
 		isControlled bool
 	}{
 		"nil": {
 			ref:          nil,
-			kind:         "Channel",
 			isControlled: false,
 		},
 		"ref nil": {
 			ref: &eventingv1alpha1.ProvisionerReference{
 				Ref: nil,
 			},
-			kind:         "Channel",
 			isControlled: false,
 		},
 		"wrong namespace": {
@@ -98,7 +95,6 @@ func TestIsControlled(t *testing.T) {
 					Name:      Name,
 				},
 			},
-			kind:         "Channel",
 			isControlled: false,
 		},
 		"wrong name": {
@@ -107,16 +103,6 @@ func TestIsControlled(t *testing.T) {
 					Name: "other-name",
 				},
 			},
-			kind:         "Channel",
-			isControlled: false,
-		},
-		"wrong kind": {
-			ref: &eventingv1alpha1.ProvisionerReference{
-				Ref: &corev1.ObjectReference{
-					Name: Name,
-				},
-			},
-			kind:         "Source",
 			isControlled: false,
 		},
 		"is controlled": {
@@ -125,13 +111,12 @@ func TestIsControlled(t *testing.T) {
 					Name: Name,
 				},
 			},
-			kind:         "Channel",
 			isControlled: true,
 		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			isControlled := IsControlled(tc.ref, tc.kind)
+			isControlled := IsControlled(tc.ref)
 			if isControlled != tc.isControlled {
 				t.Errorf("Expected: %v. Actual: %v", tc.isControlled, isControlled)
 			}
@@ -142,13 +127,13 @@ func TestIsControlled(t *testing.T) {
 func TestReconcile(t *testing.T) {
 	testCases := []controllertesting.TestCase{
 		{
-			Name: "CP not found",
+			Name: "CCP not found",
 		},
 		{
-			Name: "Unable to get CP",
+			Name: "Unable to get CCP",
 			Mocks: controllertesting.Mocks{
 				MockGets: []controllertesting.MockGet{
-					errorGettingClusterProvisioner(),
+					errorGettingClusterChannelProvisioner(),
 				},
 			},
 			WantErrMsg: testErrorMessage,
@@ -156,7 +141,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Should not reconcile - namespace",
 			InitialState: []runtime.Object{
-				&eventingv1alpha1.ClusterProvisioner{
+				&eventingv1alpha1.ClusterChannelProvisioner{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "not empty string",
 						Name:      Name,
@@ -167,7 +152,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Should not reconcile - name",
 			InitialState: []runtime.Object{
-				&eventingv1alpha1.ClusterProvisioner{
+				&eventingv1alpha1.ClusterChannelProvisioner{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "wrong-name",
 					},
@@ -179,13 +164,13 @@ func TestReconcile(t *testing.T) {
 			Name: "Delete succeeds",
 			// Deleting does nothing.
 			InitialState: []runtime.Object{
-				makeDeletingClusterProvisioner(),
+				makeDeletingClusterChannelProvisioner(),
 			},
 		},
 		{
 			Name: "Create dispatcher fails",
 			InitialState: []runtime.Object{
-				makeClusterProvisioner(),
+				makeClusterChannelProvisioner(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockGets: []controllertesting.MockGet{
@@ -197,50 +182,50 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Create dispatcher - already exists",
 			InitialState: []runtime.Object{
-				makeClusterProvisioner(),
+				makeClusterChannelProvisioner(),
 				makeK8sService(),
 			},
 			WantPresent: []runtime.Object{
-				makeReadyClusterProvisioner(),
+				makeReadyClusterChannelProvisioner(),
 			},
 		},
 		{
-			Name: "Create dispatcher - not owned by CP",
+			Name: "Create dispatcher - not owned by CCP",
 			InitialState: []runtime.Object{
-				makeClusterProvisioner(),
-				makeK8sServiceNotOwnedByClusterProvisioner(),
+				makeClusterChannelProvisioner(),
+				makeK8sServiceNotOwnedByClusterChannelProvisioner(),
 			},
 			WantPresent: []runtime.Object{
-				makeReadyClusterProvisioner(),
+				makeReadyClusterChannelProvisioner(),
 			},
 		},
 		{
 			Name: "Create dispatcher succeeds",
 			InitialState: []runtime.Object{
-				makeClusterProvisioner(),
+				makeClusterChannelProvisioner(),
 			},
 			WantPresent: []runtime.Object{
-				makeReadyClusterProvisioner(),
+				makeReadyClusterChannelProvisioner(),
 				makeK8sService(),
 			},
 		},
 		{
-			Name: "Error getting CP for updating Status",
-			// Nothing to create or update other than the status of CP itself.
+			Name: "Error getting CCP for updating Status",
+			// Nothing to create or update other than the status of CCP itself.
 			InitialState: []runtime.Object{
-				makeClusterProvisioner(),
+				makeClusterChannelProvisioner(),
 				makeK8sService(),
 			},
 			Mocks: controllertesting.Mocks{
-				MockGets: oneSuccessfulClusterProvisionerGet(),
+				MockGets: oneSuccessfulClusterChannelProvisionerGet(),
 			},
 			WantErrMsg: testErrorMessage,
 		},
 		{
 			Name: "Error updating Status",
-			// Nothing to create or update other than the status of CP itself.
+			// Nothing to create or update other than the status of CCP itself.
 			InitialState: []runtime.Object{
-				makeClusterProvisioner(),
+				makeClusterChannelProvisioner(),
 				makeK8sService(),
 			},
 			Mocks: controllertesting.Mocks{
@@ -267,40 +252,35 @@ func TestReconcile(t *testing.T) {
 	}
 }
 
-func makeClusterProvisioner() *eventingv1alpha1.ClusterProvisioner {
-	return &eventingv1alpha1.ClusterProvisioner{
+func makeClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvisioner {
+	return &eventingv1alpha1.ClusterChannelProvisioner{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-			Kind:       "ClusterProvisioner",
+			Kind:       "ClusterChannelProvisioner",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: Name,
-			UID:  cpUid,
+			UID:  ccpUid,
 		},
-		Spec: eventingv1alpha1.ClusterProvisionerSpec{
-			Reconciles: metav1.GroupKind{
-				Group: "eventing.knative.dev/v1alpha1",
-				Kind:  "Channel",
-			},
-		},
+		Spec: eventingv1alpha1.ClusterChannelProvisionerSpec{},
 	}
 }
 
-func makeReadyClusterProvisioner() *eventingv1alpha1.ClusterProvisioner {
-	cp := makeClusterProvisioner()
-	cp.Status.Conditions = []duckv1alpha1.Condition{
+func makeReadyClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvisioner {
+	ccp := makeClusterChannelProvisioner()
+	ccp.Status.Conditions = []duckv1alpha1.Condition{
 		{
 			Type:   duckv1alpha1.ConditionReady,
 			Status: corev1.ConditionTrue,
 		},
 	}
-	return cp
+	return ccp
 }
 
-func makeDeletingClusterProvisioner() *eventingv1alpha1.ClusterProvisioner {
-	cp := makeClusterProvisioner()
-	cp.DeletionTimestamp = &deletionTime
-	return cp
+func makeDeletingClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvisioner {
+	ccp := makeClusterChannelProvisioner()
+	ccp.DeletionTimestamp = &deletionTime
+	return ccp
 }
 
 func makeK8sService() *corev1.Service {
@@ -315,9 +295,9 @@ func makeK8sService() *corev1.Service {
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
-					Kind:               "ClusterProvisioner",
+					Kind:               "ClusterChannelProvisioner",
 					Name:               Name,
-					UID:                cpUid,
+					UID:                ccpUid,
 					Controller:         &truePointer,
 					BlockOwnerDeletion: &truePointer,
 				},
@@ -337,13 +317,13 @@ func makeK8sService() *corev1.Service {
 	}
 }
 
-func makeK8sServiceNotOwnedByClusterProvisioner() *corev1.Service {
+func makeK8sServiceNotOwnedByClusterChannelProvisioner() *corev1.Service {
 	svc := makeK8sService()
 	svc.OwnerReferences = nil
 	return svc
 }
 
-func errorGettingClusterProvisioner() controllertesting.MockGet {
+func errorGettingClusterChannelProvisioner() controllertesting.MockGet {
 	return func(client.Client, context.Context, client.ObjectKey, runtime.Object) (controllertesting.MockHandled, error) {
 		return controllertesting.Handled, errors.New(testErrorMessage)
 	}
@@ -358,16 +338,16 @@ func errorGettingK8sService() controllertesting.MockGet {
 	}
 }
 
-func oneSuccessfulClusterProvisionerGet() []controllertesting.MockGet {
+func oneSuccessfulClusterChannelProvisionerGet() []controllertesting.MockGet {
 	return []controllertesting.MockGet{
 		// The first one is a pass through.
 		func(innerClient client.Client, ctx context.Context, key client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
 			err := innerClient.Get(ctx, key, obj)
 			return controllertesting.Handled, err
 		},
-		// All subsequent ClusterProvisioner Gets fail.
+		// All subsequent ClusterChannelProvisioner Gets fail.
 		func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-			if _, ok := obj.(*eventingv1alpha1.ClusterProvisioner); ok {
+			if _, ok := obj.(*eventingv1alpha1.ClusterChannelProvisioner); ok {
 				return controllertesting.Handled, errors.New(testErrorMessage)
 			}
 			return controllertesting.Unhandled, nil
