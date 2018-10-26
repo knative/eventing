@@ -79,7 +79,7 @@ _Describes a linkage between a Channel and a Targetable and/or Sinkable._
 | Field                  | Type           | Description                                                                        | Constraints        |
 | ---------------------- | -------------- | ---------------------------------------------------------------------------------- | ------------------ |
 | channel\*              | ObjectRef      | The originating _Subscribable_ for the link.                                       | Must be a Channel. |
-| subscriber<sup>1</sup> | EndpointSpec   | Optional processing on the event. The result of subscriber will be sent to result. |                    |
+| subscriber<sup>1</sup> | SubscriberSpec | Optional processing on the event. The result of subscriber will be sent to result. |                    |
 | result<sup>1</sup>     | ResultStrategy | The continuation for the link.                                                     |                    |
 
 \*: Required
@@ -150,14 +150,14 @@ or a Channel system that receives and delivers events._
 
 ## Shared Object Schema
 
-### EndpointSpec
+### SubscriberSpec
 
-| Field                 | Type            | Description | Constraints                |
-| --------------------- | --------------- | ----------- | -------------------------- |
-| targetRef<sup>1</sup> | ObjectReference |             | Must adhere to Targetable. |
-| dnsName<sup>1</sup>   | String          |             |                            |
+| Field               | Type            | Description | Constraints                |
+| ------------------- | --------------- | ----------- | -------------------------- |
+| ref<sup>1</sup>     | ObjectReference |             | Must adhere to Targetable. |
+| dnsName<sup>1</sup> | String          |             |                            |
 
-1: One of (targetRef, dnsName), Required.
+1: One of (ref, dnsName), Required.
 
 ### ChannelSubscriberSpec
 

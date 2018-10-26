@@ -662,8 +662,8 @@ func getNewSubscription() *eventingv1alpha1.Subscription {
 				Kind:       channelKind,
 				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 			},
-			Subscriber: &eventingv1alpha1.EndpointSpec{
-				TargetRef: &corev1.ObjectReference{
+			Subscriber: &eventingv1alpha1.SubscriberSpec{
+				Ref: &corev1.ObjectReference{
 					Name:       routeName,
 					Kind:       routeKind,
 					APIVersion: "serving.knative.dev/v1alpha1",
@@ -697,8 +697,8 @@ func getNewSourceSubscription() *eventingv1alpha1.Subscription {
 
 func getNewSubscriptionToK8sService() *eventingv1alpha1.Subscription {
 	sub := getNewSubscription()
-	sub.Spec.Subscriber = &eventingv1alpha1.EndpointSpec{
-		TargetRef: &corev1.ObjectReference{
+	sub.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{
+		Ref: &corev1.ObjectReference{
 			Name:       k8sServiceName,
 			Kind:       "Service",
 			APIVersion: "v1",
@@ -717,8 +717,8 @@ func getNewSubscriptionWithFromChannel() *eventingv1alpha1.Subscription {
 				Kind:       channelKind,
 				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 			},
-			Subscriber: &eventingv1alpha1.EndpointSpec{
-				TargetRef: &corev1.ObjectReference{
+			Subscriber: &eventingv1alpha1.SubscriberSpec{
+				Ref: &corev1.ObjectReference{
 					Name:       routeName,
 					Kind:       routeKind,
 					APIVersion: "serving.knative.dev/v1alpha1",

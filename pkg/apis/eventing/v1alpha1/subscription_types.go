@@ -91,7 +91,7 @@ type SubscriptionSpec struct {
 	// Events from the Channel will be delivered here and replies are
 	// sent to a channel as specified by the Result.
 	// +optional
-	Subscriber *EndpointSpec `json:"subscriber,omitempty"`
+	Subscriber *SubscriberSpec `json:"subscriber,omitempty"`
 
 	// Result specifies (optionally) how to handle events returned from
 	// the Subscriber target.
@@ -99,7 +99,7 @@ type SubscriptionSpec struct {
 	Result *ResultStrategy `json:"result,omitempty"`
 }
 
-// EndpointSpec specifies the reference to an object that's expected to
+// SubscriberSpec specifies the reference to an object that's expected to
 // provide the resolved target of the action.
 // Currently we inspect the objects Status and see if there's a predefined
 // Status field that we will then use to dispatch events to be processed by
@@ -114,13 +114,13 @@ type SubscriptionSpec struct {
 //
 // This ensures that we can support external targets and for ease of use
 // we also allow for an URI to be specified.
-// There of course is also a requirement for the resolved EndpointSpec to
+// There of course is also a requirement for the resolved SubscriberSpec to
 // behave properly at the data plane level.
 // TODO: Add a pointer to a real spec for this.
 // For now, this means: Receive an event payload, and respond with one of:
 // success and an optional response event, or failure.
 // Delivery failures may be retried by the channel
-type EndpointSpec struct {
+type SubscriberSpec struct {
 	// Only one of these can be specified
 
 	// Reference to an object that will be used to find the target
@@ -134,7 +134,7 @@ type EndpointSpec struct {
 	//   - APIVersion
 	//   - Name
 	// +optional
-	TargetRef *corev1.ObjectReference `json:"targetRef,omitempty"`
+	Ref *corev1.ObjectReference `json:"ref,omitempty"`
 
 	// Reference to a 'known' endpoint where no resolving is done.
 	// http://k8s-service for example
@@ -143,8 +143,8 @@ type EndpointSpec struct {
 	DNSName *string `json:"dnsName,omitempty"`
 }
 
-// ResultStrategy specifies the handling of the EndpointSpec's returned result.
-// If no EndpointSpec is specified, the identity function is assumed.
+// ResultStrategy specifies the handling of the SubscriberSpec's returned result.
+// If no SubscriberSpec is specified, the identity function is assumed.
 type ResultStrategy struct {
 	// This object must fulfill the Sinkable contract.
 	//

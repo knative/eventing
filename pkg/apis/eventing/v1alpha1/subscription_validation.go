@@ -40,7 +40,7 @@ func (ss *SubscriptionSpec) Validate() *apis.FieldError {
 		errs = errs.Also(fe.ViaField("channel"))
 	}
 
-	missingSubscriber := isEndpointSpecNilOrEmpty(ss.Subscriber)
+	missingSubscriber := isSubscriberSpecNilOrEmpty(ss.Subscriber)
 	missingResultStrategy := isResultStrategyNilOrEmpty(ss.Result)
 	if missingSubscriber && missingResultStrategy {
 		fe := apis.ErrMissingField("result", "subscriber")
@@ -49,7 +49,7 @@ func (ss *SubscriptionSpec) Validate() *apis.FieldError {
 	}
 
 	if !missingSubscriber {
-		if fe := isValidEndpointSpec(*ss.Subscriber); fe != nil {
+		if fe := isValidSubscriberSpec(*ss.Subscriber); fe != nil {
 			errs = errs.Also(fe.ViaField("subscriber"))
 		}
 	}
@@ -63,23 +63,23 @@ func (ss *SubscriptionSpec) Validate() *apis.FieldError {
 	return errs
 }
 
-func isEndpointSpecNilOrEmpty(e *EndpointSpec) bool {
-	return e == nil || equality.Semantic.DeepEqual(e, &EndpointSpec{}) ||
-		(equality.Semantic.DeepEqual(e.TargetRef, &corev1.ObjectReference{}) && e.DNSName == nil)
+func isSubscriberSpecNilOrEmpty(s *SubscriberSpec) bool {
+	return s == nil || equality.Semantic.DeepEqual(s, &SubscriberSpec{}) ||
+		(equality.Semantic.DeepEqual(s.Ref, &corev1.ObjectReference{}) && s.DNSName == nil)
 
 }
 
-func isValidEndpointSpec(e EndpointSpec) *apis.FieldError {
+func isValidSubscriberSpec(s SubscriberSpec) *apis.FieldError {
 	var errs *apis.FieldError
-	if e.DNSName != nil && *e.DNSName != "" && e.TargetRef != nil && !equality.Semantic.DeepEqual(e.TargetRef, &corev1.ObjectReference{}) {
-		errs = errs.Also(apis.ErrMultipleOneOf("targetRef", "dnsName"))
+	if s.DNSName != nil && *s.DNSName != "" && s.Ref != nil && !equality.Semantic.DeepEqual(s.Ref, &corev1.ObjectReference{}) {
+		errs = errs.Also(apis.ErrMultipleOneOf("ref", "dnsName"))
 	}
 
-	// If TargetRef given, check the fields.
-	if e.TargetRef != nil && !equality.Semantic.DeepEqual(e.TargetRef, &corev1.ObjectReference{}) {
-		fe := isValidObjectReference(*e.TargetRef)
+	// If Ref given, check the fields.
+	if s.Ref != nil && !equality.Semantic.DeepEqual(s.Ref, &corev1.ObjectReference{}) {
+		fe := isValidObjectReference(*s.Ref)
 		if fe != nil {
-			errs = errs.Also(fe.ViaField("targetRef"))
+			errs = errs.Also(fe.ViaField("ref"))
 		}
 	}
 	return errs
