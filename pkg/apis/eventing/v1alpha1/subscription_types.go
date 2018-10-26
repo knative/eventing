@@ -46,17 +46,17 @@ var _ apis.Immutable = (*Subscription)(nil)
 var _ runtime.Object = (*Subscription)(nil)
 var _ webhook.GenericCRD = (*Subscription)(nil)
 
-// SubscriptionSpec specifies the Channel for incoming events, a Call target for
-// processing those events and where to put the result of the processing. Only
+// SubscriptionSpec specifies the Channel for incoming events, a Subscriber target
+// for processing those events and where to put the result of the processing. Only
 // From (where the events are coming from) is always required. You can optionally
 // only Process the events (results in no output events) by leaving out the Result.
 // You can also perform an identity transformation on the invoming events by leaving
-// out the Call and only specifying Result.
+// out the Subscriber and only specifying Result.
 //
 // The following are all valid specifications:
-// channel --[call]--> result
+// channel --[subscriber]--> result
 // Sink, no outgoing events:
-// channel -- call
+// channel -- subscriber
 // no-op function (identity transformation):
 // channel --> result
 type SubscriptionSpec struct {
@@ -87,14 +87,14 @@ type SubscriptionSpec struct {
 	// etc.)
 	Channel corev1.ObjectReference `json:"channel"`
 
-	// Call is reference to (optional) function for processing events.
+	// Subscriber is reference to (optional) function for processing events.
 	// Events from the Channel will be delivered here and replies are
 	// sent to a channel as specified by the Result.
 	// +optional
-	Call *EndpointSpec `json:"call,omitempty"`
+	Subscriber *EndpointSpec `json:"subscriber,omitempty"`
 
 	// Result specifies (optionally) how to handle events returned from
-	// the Call target.
+	// the Subscriber target.
 	// +optional
 	Result *ResultStrategy `json:"result,omitempty"`
 }
@@ -176,8 +176,8 @@ type SubscriptionStatus struct {
 // SubscriptionStatusPhysicalSubscription represents the fully resolved values for this
 // Subscription.
 type SubscriptionStatusPhysicalSubscription struct {
-	// CallURI is the fully resolved URI for spec.callable.
-	CallURI string `json:"callURI,omitEmpty"`
+	// SubscriberURI is the fully resolved URI for spec.subscriber.
+	SubscriberURI string `json:"subscriberURI,omitEmpty"`
 
 	// ResultURI is the fully resolved URI for the spec.result.
 	ResultURI string `json:"resultURI,omitEmpty"`

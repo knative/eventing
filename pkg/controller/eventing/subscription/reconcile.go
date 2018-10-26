@@ -95,18 +95,18 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 		return err
 	}
 
-	callURI := ""
-	if subscription.Spec.Call != nil {
-		callURI, err = r.resolveEndpointSpec(subscription.Namespace, *subscription.Spec.Call)
+	subscriberURI := ""
+	if subscription.Spec.Subscriber != nil {
+		subscriberURI, err = r.resolveEndpointSpec(subscription.Namespace, *subscription.Spec.Subscriber)
 		if err != nil {
-			glog.Warningf("Failed to resolve Call %+v : %s", *subscription.Spec.Call, err)
+			glog.Warningf("Failed to resolve Subscriber %+v : %s", *subscription.Spec.Subscriber, err)
 			return err
 		}
-		if callURI == "" {
-			return fmt.Errorf("could not get domain from call (is it not targetable?)")
+		if subscriberURI == "" {
+			return fmt.Errorf("could not get domain from subscriber (is it not targetable?)")
 		}
-		subscription.Status.PhysicalSubscription.CallURI = callURI
-		glog.Infof("Resolved call to: %q", callURI)
+		subscription.Status.PhysicalSubscription.SubscriberURI = subscriberURI
+		glog.Infof("Resolved subscriber to: %q", subscriberURI)
 	}
 
 	resultURI := ""
@@ -300,10 +300,10 @@ func (r *reconciler) listAllSubscriptionsWithPhysicalChannel(sub *v1alpha1.Subsc
 func (r *reconciler) createChannelable(subs []v1alpha1.Subscription) *eventingduck.Channelable {
 	rv := &eventingduck.Channelable{}
 	for _, sub := range subs {
-		if sub.Status.PhysicalSubscription.CallURI != "" || sub.Status.PhysicalSubscription.ResultURI != "" {
+		if sub.Status.PhysicalSubscription.SubscriberURI != "" || sub.Status.PhysicalSubscription.ResultURI != "" {
 			rv.Subscribers = append(rv.Subscribers, eventingduck.ChannelSubscriberSpec{
-				CallableURI: sub.Status.PhysicalSubscription.CallURI,
-				SinkableURI: sub.Status.PhysicalSubscription.ResultURI,
+				SubscriberURI: sub.Status.PhysicalSubscription.SubscriberURI,
+				SinkableURI:   sub.Status.PhysicalSubscription.ResultURI,
 			})
 		}
 	}

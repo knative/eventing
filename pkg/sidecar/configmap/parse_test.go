@@ -65,9 +65,9 @@ func TestNewFanoutConfig(t *testing.T) {
 					name: c1
 					fanoutConfig:
 					  subscriptions:
-						- callableURI: event-changer.default.svc.cluster.local
+						- subscriberURI: event-changer.default.svc.cluster.local
 						  sinkableURI: message-dumper-bar.default.svc.cluster.local
-						- callableURI: message-dumper-foo.default.svc.cluster.local
+						- subscriberURI: message-dumper-foo.default.svc.cluster.local
 						- sinkableURI: message-dumper-bar.default.svc.cluster.local
 				  - namespace: default
 					name: c2
@@ -88,11 +88,11 @@ func TestNewFanoutConfig(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									CallableURI: "event-changer.default.svc.cluster.local",
-									SinkableURI: "message-dumper-bar.default.svc.cluster.local",
+									SubscriberURI: "event-changer.default.svc.cluster.local",
+									SinkableURI:   "message-dumper-bar.default.svc.cluster.local",
 								},
 								{
-									CallableURI: "message-dumper-foo.default.svc.cluster.local",
+									SubscriberURI: "message-dumper-foo.default.svc.cluster.local",
 								},
 								{
 									SinkableURI: "message-dumper-bar.default.svc.cluster.local",
@@ -159,14 +159,14 @@ func TestSerializeConfig(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									CallableURI: "foo.example.com",
-									SinkableURI: "bar.example.com",
+									SubscriberURI: "foo.example.com",
+									SinkableURI:   "bar.example.com",
 								},
 								{
 									SinkableURI: "qux.example.com",
 								},
 								{
-									CallableURI: "baz.example.com",
+									SubscriberURI: "baz.example.com",
 								},
 								{},
 							},

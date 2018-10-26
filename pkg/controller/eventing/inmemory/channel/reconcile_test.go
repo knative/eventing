@@ -75,14 +75,14 @@ var (
 				FanoutConfig: fanout.Config{
 					Subscriptions: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableURI: "foo",
+							SubscriberURI: "foo",
 						},
 						{
 							SinkableURI: "bar",
 						},
 						{
-							CallableURI: "baz",
-							SinkableURI: "qux",
+							SubscriberURI: "baz",
+							SinkableURI:   "qux",
 						},
 					},
 				},
@@ -93,7 +93,7 @@ var (
 				FanoutConfig: fanout.Config{
 					Subscriptions: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableURI: "steve",
+							SubscriberURI: "steve",
 						},
 					},
 				},
@@ -117,14 +117,14 @@ var (
 				Channelable: &eventingduck.Channelable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableURI: "foo",
+							SubscriberURI: "foo",
 						},
 						{
 							SinkableURI: "bar",
 						},
 						{
-							CallableURI: "baz",
-							SinkableURI: "qux",
+							SubscriberURI: "baz",
+							SinkableURI:   "qux",
 						},
 					},
 				},
@@ -145,7 +145,7 @@ var (
 				Channelable: &eventingduck.Channelable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableURI: "anything",
+							SubscriberURI: "anything",
 						},
 					},
 				},
@@ -166,7 +166,7 @@ var (
 				Channelable: &eventingduck.Channelable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableURI: "steve",
+							SubscriberURI: "steve",
 						},
 					},
 				},

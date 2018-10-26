@@ -67,7 +67,7 @@ func TestReconcile(t *testing.T) {
                           namespace: bar
                           fanoutConfig:
                               subscriptions:
-                                  - callableURI: callable
+                                  - subscriberURI: subscriber
                                     sinkableURI: sinkable`,
 			},
 			expectedConfig: &multichannelfanout.Config{
@@ -78,8 +78,8 @@ func TestReconcile(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									CallableURI: "callable",
-									SinkableURI: "sinkable",
+									SubscriberURI: "subscriber",
+									SinkableURI:   "sinkable",
 								},
 							},
 						},

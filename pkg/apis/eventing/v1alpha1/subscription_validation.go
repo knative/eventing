@@ -29,7 +29,7 @@ func (s *Subscription) Validate() *apis.FieldError {
 }
 
 // We require always From
-// Also at least one of 'call' and 'result' must be defined (non-nill and non-empty)
+// Also at least one of 'subscriber' and 'result' must be defined (non-nill and non-empty)
 func (ss *SubscriptionSpec) Validate() *apis.FieldError {
 	var errs *apis.FieldError
 	if isChannelEmpty(ss.Channel) {
@@ -40,17 +40,17 @@ func (ss *SubscriptionSpec) Validate() *apis.FieldError {
 		errs = errs.Also(fe.ViaField("channel"))
 	}
 
-	missingCall := isEndpointSpecNilOrEmpty(ss.Call)
+	missingSubscriber := isEndpointSpecNilOrEmpty(ss.Subscriber)
 	missingResultStrategy := isResultStrategyNilOrEmpty(ss.Result)
-	if missingCall && missingResultStrategy {
-		fe := apis.ErrMissingField("result", "call")
-		fe.Details = "the Subscription must reference at least one of (result channel or a call)"
+	if missingSubscriber && missingResultStrategy {
+		fe := apis.ErrMissingField("result", "subscriber")
+		fe.Details = "the Subscription must reference at least one of (result channel or a subscriber)"
 		errs = errs.Also(fe)
 	}
 
-	if !missingCall {
-		if fe := isValidEndpointSpec(*ss.Call); fe != nil {
-			errs = errs.Also(fe.ViaField("call"))
+	if !missingSubscriber {
+		if fe := isValidEndpointSpec(*ss.Subscriber); fe != nil {
+			errs = errs.Also(fe.ViaField("subscriber"))
 		}
 	}
 
@@ -117,8 +117,8 @@ func (current *Subscription) CheckImmutableFields(og apis.Immutable) *apis.Field
 		return nil
 	}
 
-	// Only Call and Result are mutable.
-	ignoreArguments := cmpopts.IgnoreFields(SubscriptionSpec{}, "Call", "Result")
+	// Only Subscriber and Result are mutable.
+	ignoreArguments := cmpopts.IgnoreFields(SubscriptionSpec{}, "Subscriber", "Result")
 	if diff := cmp.Diff(original.Spec, current.Spec, ignoreArguments); diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",

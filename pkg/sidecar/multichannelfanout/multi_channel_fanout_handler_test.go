@@ -111,7 +111,7 @@ func TestCopyWithNewConfig(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableURI: "callabledomain",
+							SubscriberURI: "subscriberdomain",
 						},
 					},
 				},
@@ -164,7 +164,7 @@ func TestConfigDiff(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableURI: "callabledomain",
+							SubscriberURI: "subscriberdomain",
 						},
 					},
 				},
@@ -194,7 +194,7 @@ func TestConfigDiff(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									CallableURI: "different",
+									SubscriberURI: "different",
 								},
 							},
 						},
@@ -272,7 +272,7 @@ func TestServeHTTP(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									CallableURI: replaceDomain,
+									SubscriberURI: replaceDomain,
 								},
 							},
 						},
@@ -318,8 +318,8 @@ func TestServeHTTP(t *testing.T) {
 func replaceDomains(config Config, replacement string) {
 	for i, cc := range config.ChannelConfigs {
 		for j, sub := range cc.FanoutConfig.Subscriptions {
-			if sub.CallableURI == replaceDomain {
-				sub.CallableURI = replacement
+			if sub.SubscriberURI == replaceDomain {
+				sub.SubscriberURI = replacement
 			}
 			if sub.SinkableURI == replaceDomain {
 				sub.SinkableURI = replacement

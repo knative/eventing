@@ -379,8 +379,8 @@ func (in *SubscriptionList) DeepCopyObject() runtime.Object {
 func (in *SubscriptionSpec) DeepCopyInto(out *SubscriptionSpec) {
 	*out = *in
 	out.Channel = in.Channel
-	if in.Call != nil {
-		in, out := &in.Call, &out.Call
+	if in.Subscriber != nil {
+		in, out := &in.Subscriber, &out.Subscriber
 		if *in == nil {
 			*out = nil
 		} else {

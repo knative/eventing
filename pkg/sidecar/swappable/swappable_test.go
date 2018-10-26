@@ -49,7 +49,7 @@ func TestHandler(t *testing.T) {
 							FanoutConfig: fanout.Config{
 								Subscriptions: []eventingduck.ChannelSubscriberSpec{
 									{
-										CallableURI: replaceDomain,
+										SubscriberURI: replaceDomain,
 									},
 								},
 							},
@@ -101,7 +101,7 @@ func TestHandler_InvalidConfigChange(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									CallableURI: replaceDomain,
+									SubscriberURI: replaceDomain,
 								},
 							},
 						},
@@ -207,8 +207,8 @@ func replaceDomains(c multichannelfanout.Config, replacement string) multichanne
 			if sub.SinkableURI == replaceDomain {
 				sub.SinkableURI = replacement
 			}
-			if sub.CallableURI == replaceDomain {
-				sub.CallableURI = replacement
+			if sub.SubscriberURI == replaceDomain {
+				sub.SubscriberURI = replacement
 			}
 			cc.FanoutConfig.Subscriptions[j] = sub
 		}

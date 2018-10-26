@@ -76,15 +76,15 @@ _Describes a linkage between a Channel and a Targetable and/or Sinkable._
 
 #### Spec
 
-| Field              | Type           | Description                                                                  | Constraints        |
-| ------------------ | -------------- | ---------------------------------------------------------------------------- | ------------------ |
-| channel\*          | ObjectRef      | The originating _Subscribable_ for the link.                                 | Must be a Channel. |
-| call<sup>1</sup>   | EndpointSpec   | Optional processing on the event. The result of call will be sent to result. |                    |
-| result<sup>1</sup> | ResultStrategy | The continuation for the link.                                               |                    |
+| Field                  | Type           | Description                                                                        | Constraints        |
+| ---------------------- | -------------- | ---------------------------------------------------------------------------------- | ------------------ |
+| channel\*              | ObjectRef      | The originating _Subscribable_ for the link.                                       | Must be a Channel. |
+| subscriber<sup>1</sup> | EndpointSpec   | Optional processing on the event. The result of subscriber will be sent to result. |                    |
+| result<sup>1</sup>     | ResultStrategy | The continuation for the link.                                                     |                    |
 
 \*: Required
 
-1: At Least One(call, result)
+1: At Least One(subscriber, result)
 
 #### Metadata
 
@@ -97,7 +97,7 @@ _Describes a linkage between a Channel and a Targetable and/or Sinkable._
 
 - **Ready.**
 - **FromReady.**
-- **Resolved.** True if `channel`, `call`, and `result` all resolve into valid object references which implement the appropriate spec.
+- **Resolved.** True if `channel`, `subscriber`, and `result` all resolve into valid object references which implement the appropriate spec.
 
 #### Events
 
@@ -106,11 +106,11 @@ _Describes a linkage between a Channel and a Targetable and/or Sinkable._
 
 ### Life Cycle
 
-| Action | Reactions                                                                                                                                   | Constraints |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| Create | The subscription controller adds the resolved URIs of `call` and `result` to the `subscribers` field in the `from` _Subscribable_ resource. |             |
-| Update |                                                                                                                                             |             |
-| Delete |                                                                                                                                             |             |
+| Action | Reactions                                                                                                                                         | Constraints |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| Create | The subscription controller adds the resolved URIs of `subscriber` and `result` to the `subscribers` field in the `from` _Subscribable_ resource. |             |
+| Update |                                                                                                                                                   |             |
+| Delete |                                                                                                                                                   |             |
 
 ---
 
@@ -161,10 +161,10 @@ or a Channel system that receives and delivers events._
 
 ### ChannelSubscriberSpec
 
-| Field       | Type   | Description                                  | Constraints    |
-| ----------- | ------ | -------------------------------------------- | -------------- |
-| callableURI | String | The URI name of the endpoint for the call.   | Must be a URL. |
-| sinkableURI | String | The URI name of the endpoint for the result. | Must be a URL. |
+| Field         | Type   | Description                                      | Constraints    |
+| ------------- | ------ | ------------------------------------------------ | -------------- |
+| subscriberURI | String | The URI name of the endpoint for the subscriber. | Must be a URL. |
+| sinkableURI   | String | The URI name of the endpoint for the result.     | Must be a URL. |
 
 ### ResultStrategy
 

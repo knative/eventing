@@ -30,7 +30,7 @@ const (
 	routeAPIVersion   = "serving.knative.dev/v1alpha1"
 	channelName       = "subscribedChannel"
 	resultChannelName = "toChannel"
-	callName          = "call"
+	subscriberName    = "subscriber"
 )
 
 func getValidChannelRef() corev1.ObjectReference {
@@ -54,7 +54,7 @@ func getValidResultStrategy() *ResultStrategy {
 func getValidEndpointSpec() *EndpointSpec {
 	return &EndpointSpec{
 		TargetRef: &corev1.ObjectReference{
-			Name:       callName,
+			Name:       subscriberName,
 			Kind:       routeKind,
 			APIVersion: routeAPIVersion,
 		},
@@ -97,8 +97,8 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 	}{{
 		name: "valid",
 		c: &SubscriptionSpec{
-			Channel: getValidChannelRef(),
-			Call:    getValidEndpointSpec(),
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidEndpointSpec(),
 		},
 		want: nil,
 	}, {
@@ -118,66 +118,66 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 				Kind:       channelKind,
 				APIVersion: channelAPIVersion,
 			},
-			Call: getValidEndpointSpec(),
+			Subscriber: getValidEndpointSpec(),
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channel.name")
 			return fe
 		}(),
 	}, {
-		name: "missing Call and Result",
+		name: "missing Subscriber and Result",
 		c: &SubscriptionSpec{
 			Channel: getValidChannelRef(),
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("result", "call")
-			fe.Details = "the Subscription must reference at least one of (result channel or a call)"
+			fe := apis.ErrMissingField("result", "subscriber")
+			fe.Details = "the Subscription must reference at least one of (result channel or a subscriber)"
 			return fe
 		}(),
 	}, {
-		name: "empty Call and Result",
+		name: "empty Subscriber and Result",
 		c: &SubscriptionSpec{
-			Channel: getValidChannelRef(),
-			Call:    &EndpointSpec{},
-			Result:  &ResultStrategy{},
+			Channel:    getValidChannelRef(),
+			Subscriber: &EndpointSpec{},
+			Result:     &ResultStrategy{},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("result", "call")
-			fe.Details = "the Subscription must reference at least one of (result channel or a call)"
+			fe := apis.ErrMissingField("result", "subscriber")
+			fe.Details = "the Subscription must reference at least one of (result channel or a subscriber)"
 			return fe
 		}(),
 	}, {
 		name: "missing Result",
 		c: &SubscriptionSpec{
-			Channel: getValidChannelRef(),
-			Call:    getValidEndpointSpec(),
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidEndpointSpec(),
 		},
 		want: nil,
 	}, {
 		name: "empty Result",
 		c: &SubscriptionSpec{
-			Channel: getValidChannelRef(),
-			Call:    getValidEndpointSpec(),
-			Result:  &ResultStrategy{},
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidEndpointSpec(),
+			Result:     &ResultStrategy{},
 		},
 		want: nil,
 	}, {
-		name: "missing Call",
+		name: "missing Subscriber",
 		c: &SubscriptionSpec{
 			Channel: getValidChannelRef(),
 			Result:  getValidResultStrategy(),
 		},
 		want: nil,
 	}, {
-		name: "empty Call",
+		name: "empty Subscriber",
 		c: &SubscriptionSpec{
-			Channel: getValidChannelRef(),
-			Call:    &EndpointSpec{},
-			Result:  getValidResultStrategy(),
+			Channel:    getValidChannelRef(),
+			Subscriber: &EndpointSpec{},
+			Result:     getValidResultStrategy(),
 		},
 		want: nil,
 	}, {
-		name: "missing name in channel, and missing call, result",
+		name: "missing name in channel, and missing subscriber, result",
 		c: &SubscriptionSpec{
 			Channel: corev1.ObjectReference{
 				Kind:       channelKind,
@@ -185,8 +185,8 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("result", "call")
-			fe.Details = "the Subscription must reference at least one of (result channel or a call)"
+			fe := apis.ErrMissingField("result", "subscriber")
+			fe.Details = "the Subscription must reference at least one of (result channel or a subscriber)"
 			return apis.ErrMissingField("channel.name").Also(fe)
 		}(),
 	}, {
@@ -198,10 +198,10 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			return fe
 		}(),
 	}, {
-		name: "missing name in Call.TargetRef",
+		name: "missing name in Subscriber.TargetRef",
 		c: &SubscriptionSpec{
 			Channel: getValidChannelRef(),
-			Call: &EndpointSpec{
+			Subscriber: &EndpointSpec{
 				TargetRef: &corev1.ObjectReference{
 					Kind:       channelKind,
 					APIVersion: channelAPIVersion,
@@ -209,7 +209,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("call.targetRef.name")
+			fe := apis.ErrMissingField("subscriber.targetRef.name")
 			return fe
 		}(),
 	}, {
@@ -243,8 +243,8 @@ func TestSubscriptionImmutable(t *testing.T) {
 	newChannel := getValidChannelRef()
 	newChannel.Name = "newChannel"
 
-	newCall := getValidEndpointSpec()
-	newCall.TargetRef.Name = "newCall"
+	newSubscriber := getValidEndpointSpec()
+	newSubscriber.TargetRef.Name = "newSubscriber"
 
 	newResult := getValidResultStrategy()
 	newResult.Target.Name = "newResultChannel"
@@ -271,24 +271,24 @@ func TestSubscriptionImmutable(t *testing.T) {
 		name: "new nil is ok",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
-				Channel: getValidChannelRef(),
-				Call:    getValidEndpointSpec(),
+				Channel:    getValidChannelRef(),
+				Subscriber: getValidEndpointSpec(),
 			},
 		},
 		og:   nil,
 		want: nil,
 	}, {
-		name: "valid, new Call",
+		name: "valid, new Subscriber",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
-				Channel: getValidChannelRef(),
-				Call:    getValidEndpointSpec(),
+				Channel:    getValidChannelRef(),
+				Subscriber: getValidEndpointSpec(),
 			},
 		},
 		og: &Subscription{
 			Spec: SubscriptionSpec{
-				Channel: getValidChannelRef(),
-				Call:    newCall,
+				Channel:    getValidChannelRef(),
+				Subscriber: newSubscriber,
 			},
 		},
 		want: nil,
@@ -308,7 +308,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 		},
 		want: nil,
 	}, {
-		name: "valid, have Result, remove and replace with Call",
+		name: "valid, have Result, remove and replace with Subscriber",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
 				Channel: getValidChannelRef(),
@@ -317,17 +317,17 @@ func TestSubscriptionImmutable(t *testing.T) {
 		},
 		og: &Subscription{
 			Spec: SubscriptionSpec{
-				Channel: getValidChannelRef(),
-				Call:    getValidEndpointSpec(),
+				Channel:    getValidChannelRef(),
+				Subscriber: getValidEndpointSpec(),
 			},
 		},
 		want: nil,
 	}, {
-		name: "valid, have Call, remove and replace with Result",
+		name: "valid, have Subscriber, remove and replace with Result",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
-				Channel: getValidChannelRef(),
-				Call:    getValidEndpointSpec(),
+				Channel:    getValidChannelRef(),
+				Subscriber: getValidEndpointSpec(),
 			},
 		},
 		og: &Subscription{
@@ -373,8 +373,8 @@ func TestInvalidImmutableType(t *testing.T) {
 	name := "invalid type"
 	c := &Subscription{
 		Spec: SubscriptionSpec{
-			Channel: getValidChannelRef(),
-			Call:    getValidEndpointSpec(),
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidEndpointSpec(),
 		},
 	}
 	og := &DummyImmutableType{}
