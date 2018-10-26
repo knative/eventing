@@ -68,8 +68,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		// Group=eventing.knative.dev, Version=v1alpha1
 	case eventing_v1alpha1.SchemeGroupVersion.WithResource("channels"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().Channels().Informer()}, nil
-	case eventing_v1alpha1.SchemeGroupVersion.WithResource("clusterprovisioners"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().ClusterProvisioners().Informer()}, nil
+	case eventing_v1alpha1.SchemeGroupVersion.WithResource("clusterchannelprovisioners"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().ClusterChannelProvisioners().Informer()}, nil
 	case eventing_v1alpha1.SchemeGroupVersion.WithResource("subscriptions"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().Subscriptions().Informer()}, nil
 

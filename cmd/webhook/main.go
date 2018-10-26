@@ -90,9 +90,9 @@ func main() {
 		Options: options,
 		Handlers: map[schema.GroupVersionKind]webhook.GenericCRD{
 			// For group eventing.knative.dev,
-			eventingv1alpha1.SchemeGroupVersion.WithKind("Channel"):            &eventingv1alpha1.Channel{},
-			eventingv1alpha1.SchemeGroupVersion.WithKind("ClusterProvisioner"): &eventingv1alpha1.ClusterProvisioner{},
-			eventingv1alpha1.SchemeGroupVersion.WithKind("Subscription"):       &eventingv1alpha1.Subscription{},
+			eventingv1alpha1.SchemeGroupVersion.WithKind("Channel"):                   &eventingv1alpha1.Channel{},
+			eventingv1alpha1.SchemeGroupVersion.WithKind("ClusterChannelProvisioner"): &eventingv1alpha1.ClusterChannelProvisioner{},
+			eventingv1alpha1.SchemeGroupVersion.WithKind("Subscription"):              &eventingv1alpha1.Subscription{},
 
 			// For group channels.knative.dev,
 			channelsv1alpha1.SchemeGroupVersion.WithKind("Bus"):          &channelsv1alpha1.Bus{},

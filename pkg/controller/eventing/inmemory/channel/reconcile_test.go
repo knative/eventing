@@ -43,7 +43,7 @@ import (
 )
 
 const (
-	cpName = "in-memory-channel"
+	ccpName = "in-memory-channel"
 
 	cNamespace = "test-namespace"
 	cName      = "test-channel"
@@ -112,7 +112,7 @@ var (
 			},
 			Spec: eventingv1alpha1.ChannelSpec{
 				Provisioner: &corev1.ObjectReference{
-					Name: cpName,
+					Name: ccpName,
 				},
 				Channelable: &eventingduck.Channelable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{
@@ -161,7 +161,7 @@ var (
 			},
 			Spec: eventingv1alpha1.ChannelSpec{
 				Provisioner: &corev1.ObjectReference{
-					Name: cpName,
+					Name: ccpName,
 				},
 				Channelable: &eventingduck.Channelable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{
@@ -467,7 +467,7 @@ func makeChannel() *eventingv1alpha1.Channel {
 		},
 		Spec: eventingv1alpha1.ChannelSpec{
 			Provisioner: &corev1.ObjectReference{
-				Name: cpName,
+				Name: ccpName,
 			},
 		},
 	}
@@ -555,7 +555,7 @@ func makeK8sService() *corev1.Service {
 			Namespace: cNamespace,
 			Labels: map[string]string{
 				"channel":     cName,
-				"provisioner": cpName,
+				"provisioner": ccpName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -596,7 +596,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 			Namespace: cNamespace,
 			Labels: map[string]string{
 				"channel":     cName,
-				"provisioner": cpName,
+				"provisioner": ccpName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{

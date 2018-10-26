@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package clusterprovisioner
+package clusterchannelprovisioner
 
 import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -36,7 +36,7 @@ const (
 func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	logger = logger.With(zap.String("controller", controllerAgentName))
 
-	// Setup a new controller to Reconcile ClusterProvisioners that are in-memory channels.
+	// Setup a new controller to Reconcile ClusterChannelProvisioners that are in-memory channels.
 	r := &reconciler{
 		recorder: mgr.GetRecorder(controllerAgentName),
 		logger:   logger,
@@ -49,19 +49,19 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 		return nil, err
 	}
 
-	// Watch ClusterProvisioners.
+	// Watch ClusterChannelProvisioners.
 	err = c.Watch(&source.Kind{
-		Type: &eventingv1alpha1.ClusterProvisioner{},
+		Type: &eventingv1alpha1.ClusterChannelProvisioner{},
 	}, &handler.EnqueueRequestForObject{})
 	if err != nil {
-		logger.Error("Unable to watch ClusterProvisioners.", zap.Error(err), zap.Any("type", &eventingv1alpha1.ClusterProvisioner{}))
+		logger.Error("Unable to watch ClusterChannelProvisioners.", zap.Error(err), zap.Any("type", &eventingv1alpha1.ClusterChannelProvisioner{}))
 		return nil, err
 	}
 
-	// Watch the K8s Services that are owned by ClusterProvisioners.
+	// Watch the K8s Services that are owned by ClusterChannelProvisioners.
 	err = c.Watch(&source.Kind{
 		Type: &corev1.Service{},
-	}, &handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.ClusterProvisioner{}, IsController: true})
+	}, &handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.ClusterChannelProvisioner{}, IsController: true})
 	if err != nil {
 		logger.Error("Unable to watch K8s Services.", zap.Error(err))
 		return nil, err
