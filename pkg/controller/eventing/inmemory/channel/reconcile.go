@@ -141,7 +141,6 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	}
 
 	r.addFinalizer(c)
-	c.Status.SetSubscribable(c.Namespace, c.Name)
 
 	if svc, err := r.createK8sService(ctx, c); err != nil {
 		logger.Info("Error creating the Channel's K8s Service", zap.Error(err))

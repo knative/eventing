@@ -24,12 +24,12 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
 	"github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -73,16 +73,16 @@ var (
 				Namespace: cNamespace,
 				Name:      "c1",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+					Subscriptions: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableDomain: "foo",
+							CallableURI: "foo",
 						},
 						{
-							SinkableDomain: "bar",
+							SinkableURI: "bar",
 						},
 						{
-							CallableDomain: "baz",
-							SinkableDomain: "qux",
+							CallableURI: "baz",
+							SinkableURI: "qux",
 						},
 					},
 				},
@@ -91,9 +91,9 @@ var (
 				Namespace: cNamespace,
 				Name:      "c3",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+					Subscriptions: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableDomain: "steve",
+							CallableURI: "steve",
 						},
 					},
 				},
@@ -116,17 +116,17 @@ var (
 						Name: ccpName,
 					},
 				},
-				Channelable: &duckv1alpha1.Channelable{
-					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{
+				Channelable: &eventingduck.Channelable{
+					Subscribers: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableDomain: "foo",
+							CallableURI: "foo",
 						},
 						{
-							SinkableDomain: "bar",
+							SinkableURI: "bar",
 						},
 						{
-							CallableDomain: "baz",
-							SinkableDomain: "qux",
+							CallableURI: "baz",
+							SinkableURI: "qux",
 						},
 					},
 				},
@@ -146,10 +146,10 @@ var (
 						Name: "some-other-provisioner",
 					},
 				},
-				Channelable: &duckv1alpha1.Channelable{
-					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{
+				Channelable: &eventingduck.Channelable{
+					Subscribers: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableDomain: "anything",
+							CallableURI: "anything",
 						},
 					},
 				},
@@ -169,10 +169,10 @@ var (
 						Name: ccpName,
 					},
 				},
-				Channelable: &duckv1alpha1.Channelable{
-					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{
+				Channelable: &eventingduck.Channelable{
+					Subscribers: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableDomain: "steve",
+							CallableURI: "steve",
 						},
 					},
 				},
@@ -314,7 +314,7 @@ func TestReconcile(t *testing.T) {
 				MockGets: errorGettingK8sService(),
 			},
 			WantPresent: []runtime.Object{
-				makeChannelWithFinalizerAndSubscribable(),
+				makeChannelWithFinalizer(),
 			},
 			WantErrMsg: testErrorMessage,
 		},
@@ -329,7 +329,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantPresent: []runtime.Object{
 				// TODO: This should have a useful error message saying that the K8s Service failed.
-				makeChannelWithFinalizerAndSubscribable(),
+				makeChannelWithFinalizer(),
 			},
 			WantErrMsg: testErrorMessage,
 		},
@@ -358,7 +358,7 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				// TODO: This should have a useful error message saying that the VirtualService
 				// failed.
-				makeChannelWithFinalizerAndSubscribableAndSinkable(),
+				makeChannelWithFinalizerAndSinkable(),
 			},
 			WantErrMsg: testErrorMessage,
 		},
@@ -375,7 +375,7 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				// TODO: This should have a useful error message saying that the VirtualService
 				// failed.
-				makeChannelWithFinalizerAndSubscribableAndSinkable(),
+				makeChannelWithFinalizerAndSinkable(),
 			},
 			WantErrMsg: testErrorMessage,
 		},
@@ -483,21 +483,15 @@ func makeChannel() *eventingv1alpha1.Channel {
 	return c
 }
 
-func makeChannelWithFinalizerAndSubscribable() *eventingv1alpha1.Channel {
+func makeChannelWithFinalizerAndSinkable() *eventingv1alpha1.Channel {
 	c := makeChannelWithFinalizer()
-	c.Status.SetSubscribable(c.Namespace, c.Name)
-	return c
-}
-
-func makeChannelWithFinalizerAndSubscribableAndSinkable() *eventingv1alpha1.Channel {
-	c := makeChannelWithFinalizerAndSubscribable()
 	c.Status.SetSinkable(fmt.Sprintf("%s-channel.%s.svc.cluster.local", c.Name, c.Namespace))
 	return c
 }
 
 func makeReadyChannel() *eventingv1alpha1.Channel {
-	// Ready channels have the finalizer and are Subscribable and Sinkable.
-	c := makeChannelWithFinalizerAndSubscribableAndSinkable()
+	// Ready channels have the finalizer and are Sinkable.
+	c := makeChannelWithFinalizerAndSinkable()
 	c.Status.MarkProvisioned()
 	return c
 }

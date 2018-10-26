@@ -22,6 +22,4 @@ type ChannelExpansion interface{}
 
 type ClusterChannelProvisionerExpansion interface{}
 
-type SourceExpansion interface{}
-
 type SubscriptionExpansion interface{}
