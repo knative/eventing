@@ -88,10 +88,10 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 	deletionTimestamp := accessor.GetDeletionTimestamp()
 	glog.Infof("DeletionTimestamp: %v", deletionTimestamp)
 
-	// Verify that `from` exists.
-	_, err = r.fetchObjectReference(subscription.Namespace, &subscription.Spec.From)
+	// Verify that `channel` exists.
+	_, err = r.fetchObjectReference(subscription.Namespace, &subscription.Spec.Channel)
 	if err != nil {
-		glog.Warningf("Failed to validate `from` exists: %+v, %v", subscription.Spec.From, err)
+		glog.Warningf("Failed to validate `channel` exists: %+v, %v", subscription.Spec.Channel, err)
 		return err
 	}
 
@@ -127,11 +127,11 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 	// Everything that was supposed to be resolved was, so flip the status bit on that.
 	subscription.Status.MarkReferencesResolved()
 
-	// Ok, now that we have the From and at least one of the Call/Result, let's reconcile
-	// the From with this information.
-	err = r.syncPhysicalFromChannel(subscription)
+	// Ok, now that we have the Channel and at least one of the Call/Result, let's reconcile
+	// the Channel with this information.
+	err = r.syncPhysicalChannel(subscription)
 	if err != nil {
-		glog.Warningf("Failed to sync physical from Channel : %s", err)
+		glog.Warningf("Failed to sync physical Channel : %s", err)
 		return err
 	}
 	// Everything went well, set the fact that subscriptions have been modified
@@ -241,21 +241,21 @@ func domainToURL(domain string) string {
 	return u.String()
 }
 
-func (r *reconciler) syncPhysicalFromChannel(sub *v1alpha1.Subscription) error {
+func (r *reconciler) syncPhysicalChannel(sub *v1alpha1.Subscription) error {
 	glog.Infof("Reconciling Physical From Channel: %+v", sub)
 
-	subs, err := r.listAllSubscriptionsWithPhysicalFrom(sub)
+	subs, err := r.listAllSubscriptionsWithPhysicalChannel(sub)
 	if err != nil {
-		glog.Infof("Unable to list all channels with physical from: %+v", err)
+		glog.Infof("Unable to list all subscriptions with physical channel: %+v", err)
 		return err
 	}
 
 	channelable := r.createChannelable(subs)
 
-	return r.patchPhysicalFrom(sub.Namespace, sub.Spec.From, channelable)
+	return r.patchPhysicalFrom(sub.Namespace, sub.Spec.Channel, channelable)
 }
 
-func (r *reconciler) listAllSubscriptionsWithPhysicalFrom(sub *v1alpha1.Subscription) ([]v1alpha1.Subscription, error) {
+func (r *reconciler) listAllSubscriptionsWithPhysicalChannel(sub *v1alpha1.Subscription) ([]v1alpha1.Subscription, error) {
 	subs := make([]v1alpha1.Subscription, 0)
 
 	// The sub we are currently reconciling has not yet written any updated status, so when listing
@@ -285,7 +285,7 @@ func (r *reconciler) listAllSubscriptionsWithPhysicalFrom(sub *v1alpha1.Subscrip
 				// This is the sub that is being reconciled. It has already been added to the list.
 				continue
 			}
-			if equality.Semantic.DeepEqual(sub.Spec.From, s.Spec.From) {
+			if equality.Semantic.DeepEqual(sub.Spec.Channel, s.Spec.Channel) {
 				subs = append(subs, s)
 			}
 		}

@@ -657,7 +657,7 @@ func getNewSubscription() *eventingv1alpha1.Subscription {
 		TypeMeta:   subscriptionType(),
 		ObjectMeta: om(testNS, subscriptionName),
 		Spec: eventingv1alpha1.SubscriptionSpec{
-			From: corev1.ObjectReference{
+			Channel: corev1.ObjectReference{
 				Name:       fromChannelName,
 				Kind:       channelKind,
 				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
@@ -687,7 +687,7 @@ func getNewSubscription() *eventingv1alpha1.Subscription {
 
 func getNewSourceSubscription() *eventingv1alpha1.Subscription {
 	sub := getNewSubscription()
-	sub.Spec.From = corev1.ObjectReference{
+	sub.Spec.Channel = corev1.ObjectReference{
 		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 		Kind:       sourceKind,
 		Name:       sourceName,
@@ -712,7 +712,7 @@ func getNewSubscriptionWithFromChannel() *eventingv1alpha1.Subscription {
 		TypeMeta:   subscriptionType(),
 		ObjectMeta: om(testNS, subscriptionName),
 		Spec: eventingv1alpha1.SubscriptionSpec{
-			From: corev1.ObjectReference{
+			Channel: corev1.ObjectReference{
 				Name:       fromChannelName,
 				Kind:       channelKind,
 				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),

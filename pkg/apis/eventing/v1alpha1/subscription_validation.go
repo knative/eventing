@@ -32,12 +32,12 @@ func (s *Subscription) Validate() *apis.FieldError {
 // Also at least one of 'call' and 'result' must be defined (non-nill and non-empty)
 func (ss *SubscriptionSpec) Validate() *apis.FieldError {
 	var errs *apis.FieldError
-	if isFromEmpty(ss.From) {
-		fe := apis.ErrMissingField("from")
-		fe.Details = "the Subscription must reference a from channel"
+	if isChannelEmpty(ss.Channel) {
+		fe := apis.ErrMissingField("channel")
+		fe.Details = "the Subscription must reference a channel"
 		return fe
-	} else if fe := isValidFrom(ss.From); fe != nil {
-		errs = errs.Also(fe.ViaField("from"))
+	} else if fe := isValidChannel(ss.Channel); fe != nil {
+		errs = errs.Also(fe.ViaField("channel"))
 	}
 
 	missingCall := isEndpointSpecNilOrEmpty(ss.Call)
@@ -83,18 +83,6 @@ func isValidEndpointSpec(e EndpointSpec) *apis.FieldError {
 		}
 	}
 	return errs
-}
-
-func isFromEmpty(f corev1.ObjectReference) bool {
-	return isChannelEmpty(f)
-}
-
-// Valid from only contains the following fields:
-// - Kind       == 'Channel'
-// - APIVersion == 'eventing.knative.dev/v1alpha1'
-// - Name       == not empty
-func isValidFrom(f corev1.ObjectReference) *apis.FieldError {
-	return isValidChannel(f)
 }
 
 func isResultStrategyNilOrEmpty(r *ResultStrategy) bool {

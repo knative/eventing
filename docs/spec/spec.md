@@ -78,7 +78,7 @@ _Describes a linkage between a Channel and a Targetable and/or Sinkable._
 
 | Field              | Type           | Description                                                                  | Constraints        |
 | ------------------ | -------------- | ---------------------------------------------------------------------------- | ------------------ |
-| from\*             | ObjectRef      | The originating _Subscribable_ for the link.                                 | Must be a Channel. |
+| channel\*          | ObjectRef      | The originating _Subscribable_ for the link.                                 | Must be a Channel. |
 | call<sup>1</sup>   | EndpointSpec   | Optional processing on the event. The result of call will be sent to result. |                    |
 | result<sup>1</sup> | ResultStrategy | The continuation for the link.                                               |                    |
 
@@ -97,7 +97,7 @@ _Describes a linkage between a Channel and a Targetable and/or Sinkable._
 
 - **Ready.**
 - **FromReady.**
-- **Resolved.** True if `from`, `call`, and `result` all resolve into valid object references which implement the appropriate spec.
+- **Resolved.** True if `channel`, `call`, and `result` all resolve into valid object references which implement the appropriate spec.
 
 #### Events
 

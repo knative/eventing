@@ -54,11 +54,11 @@ var _ webhook.GenericCRD = (*Subscription)(nil)
 // out the Call and only specifying Result.
 //
 // The following are all valid specifications:
-// from --[call]--> result
+// channel --[call]--> result
 // Sink, no outgoing events:
-// from -- call
+// channel -- call
 // no-op function (identity transformation):
-// from --> result
+// channel --> result
 type SubscriptionSpec struct {
 	// TODO: Generation used to not work correctly with CRD. They were scrubbed
 	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
@@ -67,16 +67,16 @@ type SubscriptionSpec struct {
 	// +optional
 	Generation int64 `json:"generation,omitempty"`
 
-	// Reference to an object that will be used to create the subscription
-	// for receiving events. The object must have spec.subscriptions
+	// Reference to a channel that will be used to create the subscription
+	// for receiving events. The channel must have spec.subscriptions
 	// list which will then be modified accordingly.
 	//
 	// You can specify only the following fields of the ObjectReference:
 	//   - Kind
 	//   - APIVersion
 	//   - Name
-	// Currently Kind must be "Channel" and
-	// APIVersion must be "eventing.knative.dev/v1alpha1"
+	// Kind must be "Channel" and APIVersion must be
+	// "eventing.knative.dev/v1alpha1"
 	//
 	// This field is immutable. We have no good answer on what happens to
 	// the events that are currently in the channel being consumed from
@@ -85,11 +85,11 @@ type SubscriptionSpec struct {
 	// channel, giving the user more control over what semantics should
 	// be used (drain the channel first, possibly have events dropped,
 	// etc.)
-	From corev1.ObjectReference `json:"from"`
+	Channel corev1.ObjectReference `json:"channel"`
 
 	// Call is reference to (optional) function for processing events.
-	// Events from the From channel will be delivered here and replies
-	// are sent to a channel as specified by the Result.
+	// Events from the Channel will be delivered here and replies are
+	// sent to a channel as specified by the Result.
 	// +optional
 	Call *EndpointSpec `json:"call,omitempty"`
 
@@ -119,7 +119,7 @@ type SubscriptionSpec struct {
 // TODO: Add a pointer to a real spec for this.
 // For now, this means: Receive an event payload, and respond with one of:
 // success and an optional response event, or failure.
-// Delivery failures may be retried by the from Channel
+// Delivery failures may be retried by the channel
 type EndpointSpec struct {
 	// Only one of these can be specified
 
