@@ -240,7 +240,7 @@ func (r *reconciler) createVirtualService(ctx context.Context, c *eventingv1alph
 func newK8sService(c *eventingv1alpha1.Channel) *corev1.Service {
 	labels := map[string]string{
 		"channel":     c.Name,
-		"provisioner": c.Spec.Provisioner.Ref.Name,
+		"provisioner": c.Spec.Provisioner.Name,
 	}
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -272,9 +272,9 @@ func newK8sService(c *eventingv1alpha1.Channel) *corev1.Service {
 func newVirtualService(channel *eventingv1alpha1.Channel) *istiov1alpha3.VirtualService {
 	labels := map[string]string{
 		"channel":     channel.Name,
-		"provisioner": channel.Spec.Provisioner.Ref.Name,
+		"provisioner": channel.Spec.Provisioner.Name,
 	}
-	destinationHost := controller.ServiceHostName(controller.ClusterBusDispatcherServiceName(channel.Spec.Provisioner.Ref.Name), system.Namespace)
+	destinationHost := controller.ServiceHostName(controller.ClusterBusDispatcherServiceName(channel.Spec.Provisioner.Name), system.Namespace)
 	return &istiov1alpha3.VirtualService{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      controller.ChannelVirtualServiceName(channel.Name),

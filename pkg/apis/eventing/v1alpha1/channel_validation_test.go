@@ -33,10 +33,8 @@ func TestChannelValidation(t *testing.T) {
 		name: "valid",
 		cr: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 			},
 		},
@@ -51,10 +49,8 @@ func TestChannelValidation(t *testing.T) {
 		name: "subscribers array",
 		cr: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 				Channelable: &eventingduck.Channelable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{{
@@ -68,10 +64,8 @@ func TestChannelValidation(t *testing.T) {
 		name: "empty subscriber at index 1",
 		cr: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 				Channelable: &eventingduck.Channelable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{{
@@ -89,10 +83,8 @@ func TestChannelValidation(t *testing.T) {
 		name: "2 empty subscribers",
 		cr: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 				Channelable: &eventingduck.Channelable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{{}, {}},
@@ -124,10 +116,8 @@ func TestChannelImmutableFields(t *testing.T) {
 		name: "good (new)",
 		new: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 			},
 		},
@@ -137,19 +127,15 @@ func TestChannelImmutableFields(t *testing.T) {
 		name: "good (no change)",
 		new: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 			},
 		},
 		old: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 			},
 		},
@@ -158,10 +144,8 @@ func TestChannelImmutableFields(t *testing.T) {
 		name: "good (arguments change)",
 		new: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 				Arguments: &runtime.RawExtension{
 					Raw: []byte("\"foo\":\"bar\""),
@@ -170,10 +154,8 @@ func TestChannelImmutableFields(t *testing.T) {
 		},
 		old: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 				Arguments: &runtime.RawExtension{
 					Raw: []byte(`{"foo":"baz"}`),
@@ -185,10 +167,8 @@ func TestChannelImmutableFields(t *testing.T) {
 		name: "bad (not channel)",
 		new: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 			},
 		},
@@ -200,19 +180,15 @@ func TestChannelImmutableFields(t *testing.T) {
 		name: "bad (provisioner changes)",
 		new: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 			},
 		},
 		old: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "bar",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "bar",
 				},
 			},
 		},

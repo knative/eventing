@@ -111,10 +111,8 @@ var (
 				Kind: "Channel",
 			},
 			Spec: eventingv1alpha1.ChannelSpec{
-				Provisioner: &eventingv1alpha1.ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: ccpName,
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: ccpName,
 				},
 				Channelable: &eventingduck.Channelable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{
@@ -141,10 +139,8 @@ var (
 				Kind: "Channel",
 			},
 			Spec: eventingv1alpha1.ChannelSpec{
-				Provisioner: &eventingv1alpha1.ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "some-other-provisioner",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "some-other-provisioner",
 				},
 				Channelable: &eventingduck.Channelable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{
@@ -164,10 +160,8 @@ var (
 				Kind: "Channel",
 			},
 			Spec: eventingv1alpha1.ChannelSpec{
-				Provisioner: &eventingv1alpha1.ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: ccpName,
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: ccpName,
 				},
 				Channelable: &eventingduck.Channelable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{
@@ -225,7 +219,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Channel not reconciled - nil ref",
 			InitialState: []runtime.Object{
-				makeChannelNilRef(),
+				makeChannelNilProvisioner(),
 			},
 		},
 		{
@@ -472,10 +466,8 @@ func makeChannel() *eventingv1alpha1.Channel {
 			UID:       cUID,
 		},
 		Spec: eventingv1alpha1.ChannelSpec{
-			Provisioner: &eventingv1alpha1.ProvisionerReference{
-				Ref: &corev1.ObjectReference{
-					Name: ccpName,
-				},
+			Provisioner: &corev1.ObjectReference{
+				Name: ccpName,
 			},
 		},
 	}
@@ -502,21 +494,15 @@ func makeChannelNilProvisioner() *eventingv1alpha1.Channel {
 	return c
 }
 
-func makeChannelNilRef() *eventingv1alpha1.Channel {
-	c := makeChannel()
-	c.Spec.Provisioner.Ref = nil
-	return c
-}
-
 func makeChannelWithWrongProvisionerNamespace() *eventingv1alpha1.Channel {
 	c := makeChannel()
-	c.Spec.Provisioner.Ref.Namespace = "wrong-namespace"
+	c.Spec.Provisioner.Namespace = "wrong-namespace"
 	return c
 }
 
 func makeChannelWithWrongProvisionerName() *eventingv1alpha1.Channel {
 	c := makeChannel()
-	c.Spec.Provisioner.Ref.Name = "wrong-name"
+	c.Spec.Provisioner.Name = "wrong-name"
 	return c
 }
 
