@@ -78,11 +78,11 @@ var (
 							SubscriberURI: "foo",
 						},
 						{
-							SinkableURI: "bar",
+							ReplyToURI: "bar",
 						},
 						{
 							SubscriberURI: "baz",
-							SinkableURI:   "qux",
+							ReplyToURI:    "qux",
 						},
 					},
 				},
@@ -120,11 +120,11 @@ var (
 							SubscriberURI: "foo",
 						},
 						{
-							SinkableURI: "bar",
+							ReplyToURI: "bar",
 						},
 						{
 							SubscriberURI: "baz",
-							SinkableURI:   "qux",
+							ReplyToURI:    "qux",
 						},
 					},
 				},

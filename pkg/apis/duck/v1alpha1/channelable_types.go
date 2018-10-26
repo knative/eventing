@@ -31,14 +31,14 @@ type Channelable struct {
 }
 
 // ChannelSubscriberSpec defines a single subscriber to a Channel.
-// subscriberURI is the endpoint for the subscriber
-// SinkableURI is the endpoint for the result
+// SubscriberURI is the endpoint for the subscriber
+// ReplyToURI is the endpoint for the replyTo
 // At least one of them must be present
 type ChannelSubscriberSpec struct {
 	// +optional
 	SubscriberURI string `json:"subscriberURI,omitempty"`
 	// +optional
-	SinkableURI string `json:"sinkableURI,omitempty"`
+	ReplyToURI string `json:"replyToURI,omitempty"`
 }
 
 // DuckChannel is a skeleton type wrapping Channelable in the manner we expect resource writers

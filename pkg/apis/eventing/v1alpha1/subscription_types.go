@@ -54,11 +54,11 @@ var _ webhook.GenericCRD = (*Subscription)(nil)
 // out the Subscriber and only specifying Result.
 //
 // The following are all valid specifications:
-// channel --[subscriber]--> result
+// channel --[subscriber]--> replyTo
 // Sink, no outgoing events:
 // channel -- subscriber
 // no-op function (identity transformation):
-// channel --> result
+// channel --> replyTo
 type SubscriptionSpec struct {
 	// TODO: Generation used to not work correctly with CRD. They were scrubbed
 	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
@@ -89,14 +89,14 @@ type SubscriptionSpec struct {
 
 	// Subscriber is reference to (optional) function for processing events.
 	// Events from the Channel will be delivered here and replies are
-	// sent to a channel as specified by the Result.
+	// sent to a channel as specified by the ReplyTo.
 	// +optional
 	Subscriber *SubscriberSpec `json:"subscriber,omitempty"`
 
-	// Result specifies (optionally) how to handle events returned from
+	// ReplyTo specifies (optionally) how to handle events returned from
 	// the Subscriber target.
 	// +optional
-	Result *ResultStrategy `json:"result,omitempty"`
+	ReplyTo *ReplyStrategy `json:"replyTo,omitempty"`
 }
 
 // SubscriberSpec specifies the reference to an object that's expected to
@@ -143,19 +143,19 @@ type SubscriberSpec struct {
 	DNSName *string `json:"dnsName,omitempty"`
 }
 
-// ResultStrategy specifies the handling of the SubscriberSpec's returned result.
+// ReplyStrategy specifies the handling of the SubscriberSpec's returned replies.
 // If no SubscriberSpec is specified, the identity function is assumed.
-type ResultStrategy struct {
-	// This object must fulfill the Sinkable contract.
+type ReplyStrategy struct {
+	// This object must be a Channel.
 	//
-	// TODO: Specify the required fields the target object must
-	// have in the status.
 	// You can specify only the following fields of the ObjectReference:
 	//   - Kind
 	//   - APIVersion
 	//   - Name
+	// Kind must be "Channel" and APIVersion must be
+	// "eventing.knative.dev/v1alpha1"
 	// +optional
-	Target *corev1.ObjectReference `json:"target,omitempty"`
+	Channel *corev1.ObjectReference `json:"target,omitempty"`
 }
 
 // subCondSet is a condition set with Ready as the happy condition and
@@ -179,8 +179,8 @@ type SubscriptionStatusPhysicalSubscription struct {
 	// SubscriberURI is the fully resolved URI for spec.subscriber.
 	SubscriberURI string `json:"subscriberURI,omitEmpty"`
 
-	// ResultURI is the fully resolved URI for the spec.result.
-	ResultURI string `json:"resultURI,omitEmpty"`
+	// ReplyToURI is the fully resolved URI for the spec.replyTo.
+	ReplyToURI string `json:"replyToURI,omitEmpty"`
 }
 
 const (

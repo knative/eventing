@@ -109,19 +109,19 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 		glog.Infof("Resolved subscriber to: %q", subscriberURI)
 	}
 
-	resultURI := ""
-	if subscription.Spec.Result != nil {
-		resultURI, err = r.resolveResult(subscription.Namespace, *subscription.Spec.Result)
+	replyToURI := ""
+	if subscription.Spec.ReplyTo != nil {
+		replyToURI, err = r.resolveResult(subscription.Namespace, *subscription.Spec.ReplyTo)
 		if err != nil {
-			glog.Warningf("Failed to resolve Result %v : %v", subscription.Spec.Result, err)
+			glog.Warningf("Failed to resolve Result %v : %v", subscription.Spec.ReplyTo, err)
 			return err
 		}
-		if resultURI == "" {
-			glog.Warningf("Failed to resolve result %v to actual domain", *subscription.Spec.Result)
+		if replyToURI == "" {
+			glog.Warningf("Failed to resolve replyTo %v to actual domain", *subscription.Spec.ReplyTo)
 			return err
 		}
-		subscription.Status.PhysicalSubscription.ResultURI = resultURI
-		glog.Infof("Resolved result to: %q", resultURI)
+		subscription.Status.PhysicalSubscription.ReplyToURI = replyToURI
+		glog.Infof("Resolved replyTo to: %q", replyToURI)
 	}
 
 	// Everything that was supposed to be resolved was, so flip the status bit on that.
@@ -203,10 +203,10 @@ func (r *reconciler) resolveSubscriberSpec(namespace string, s v1alpha1.Subscrib
 }
 
 // resolveResult resolves the Spec.Result object.
-func (r *reconciler) resolveResult(namespace string, resultStrategy v1alpha1.ResultStrategy) (string, error) {
-	obj, err := r.fetchObjectReference(namespace, resultStrategy.Target)
+func (r *reconciler) resolveResult(namespace string, replyStrategy v1alpha1.ReplyStrategy) (string, error) {
+	obj, err := r.fetchObjectReference(namespace, replyStrategy.Channel)
 	if err != nil {
-		glog.Warningf("Failed to fetch ResultStrategy target %+v: %s", resultStrategy, err)
+		glog.Warningf("Failed to fetch ReplyStrategy channel %+v: %s", replyStrategy, err)
 		return "", err
 	}
 	s := duckv1alpha1.Sink{}
@@ -300,10 +300,10 @@ func (r *reconciler) listAllSubscriptionsWithPhysicalChannel(sub *v1alpha1.Subsc
 func (r *reconciler) createChannelable(subs []v1alpha1.Subscription) *eventingduck.Channelable {
 	rv := &eventingduck.Channelable{}
 	for _, sub := range subs {
-		if sub.Status.PhysicalSubscription.SubscriberURI != "" || sub.Status.PhysicalSubscription.ResultURI != "" {
+		if sub.Status.PhysicalSubscription.SubscriberURI != "" || sub.Status.PhysicalSubscription.ReplyToURI != "" {
 			rv.Subscribers = append(rv.Subscribers, eventingduck.ChannelSubscriberSpec{
 				SubscriberURI: sub.Status.PhysicalSubscription.SubscriberURI,
-				SinkableURI:   sub.Status.PhysicalSubscription.ResultURI,
+				ReplyToURI:    sub.Status.PhysicalSubscription.ReplyToURI,
 			})
 		}
 	}

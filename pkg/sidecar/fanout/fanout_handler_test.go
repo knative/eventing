@@ -94,10 +94,10 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			},
 			expectedStatus: http.StatusAccepted,
 		},
-		"sinkable fails": {
+		"replyTo fails": {
 			subs: []eventingduck.ChannelSubscriberSpec{
 				{
-					SinkableURI: replaceSinkable,
+					ReplyToURI: replaceSinkable,
 				},
 			},
 			sinkable: func(writer http.ResponseWriter, _ *http.Request) {
@@ -120,7 +120,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			subs: []eventingduck.ChannelSubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
-					SinkableURI:   replaceSinkable,
+					ReplyToURI:    replaceSinkable,
 				},
 			},
 			subscriber: callableSucceed,
@@ -133,7 +133,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			subs: []eventingduck.ChannelSubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
-					SinkableURI:   replaceSinkable,
+					ReplyToURI:    replaceSinkable,
 				},
 			},
 			subscriber: callableSucceed,
@@ -146,11 +146,11 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			subs: []eventingduck.ChannelSubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
-					SinkableURI:   replaceSinkable,
+					ReplyToURI:    replaceSinkable,
 				},
 				{
 					SubscriberURI: replaceSubscriber,
-					SinkableURI:   replaceSinkable,
+					ReplyToURI:    replaceSinkable,
 				},
 			},
 			subscriber:     callableSucceed,
@@ -161,15 +161,15 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			subs: []eventingduck.ChannelSubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
-					SinkableURI:   replaceSinkable,
+					ReplyToURI:    replaceSinkable,
 				},
 				{
 					SubscriberURI: replaceSubscriber,
-					SinkableURI:   replaceSinkable,
+					ReplyToURI:    replaceSinkable,
 				},
 				{
 					SubscriberURI: replaceSubscriber,
-					SinkableURI:   replaceSinkable,
+					ReplyToURI:    replaceSinkable,
 				},
 			},
 			subscriber: callableSucceed,
@@ -199,8 +199,8 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 				if sub.SubscriberURI == replaceSubscriber {
 					sub.SubscriberURI = callableServer.URL[7:] // strip the leading 'http://'
 				}
-				if sub.SinkableURI == replaceSinkable {
-					sub.SinkableURI = sinkableServer.URL[7:] // strip the leading 'http://'
+				if sub.ReplyToURI == replaceSinkable {
+					sub.ReplyToURI = sinkableServer.URL[7:] // strip the leading 'http://'
 				}
 				subs = append(subs, sub)
 			}

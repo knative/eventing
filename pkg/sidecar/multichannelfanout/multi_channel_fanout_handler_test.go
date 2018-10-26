@@ -126,7 +126,7 @@ func TestCopyWithNewConfig(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []eventingduck.ChannelSubscriberSpec{
 						{
-							SinkableURI: "sinkabledomain",
+							ReplyToURI: "replytodomain",
 						},
 					},
 				},
@@ -241,7 +241,7 @@ func TestServeHTTP(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									SinkableURI: replaceDomain,
+									ReplyToURI: replaceDomain,
 								},
 							},
 						},
@@ -261,7 +261,7 @@ func TestServeHTTP(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									SinkableURI: "first-to-domain",
+									ReplyToURI: "first-to-domain",
 								},
 							},
 						},
@@ -321,8 +321,8 @@ func replaceDomains(config Config, replacement string) {
 			if sub.SubscriberURI == replaceDomain {
 				sub.SubscriberURI = replacement
 			}
-			if sub.SinkableURI == replaceDomain {
-				sub.SinkableURI = replacement
+			if sub.ReplyToURI == replaceDomain {
+				sub.ReplyToURI = replacement
 			}
 			cc.FanoutConfig.Subscriptions[j] = sub
 		}
