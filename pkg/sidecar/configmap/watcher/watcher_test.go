@@ -18,16 +18,17 @@ package watcher
 
 import (
 	"errors"
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	sidecarconfigmap "github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/configmap"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 const (
@@ -66,8 +67,8 @@ func TestReconcile(t *testing.T) {
                           namespace: bar
                           fanoutConfig:
                               subscriptions:
-                                  - callableDomain: callable
-                                    sinkableDomain: sinkable`,
+                                  - callableURI: callable
+                                    sinkableURI: sinkable`,
 			},
 			expectedConfig: &multichannelfanout.Config{
 				ChannelConfigs: []multichannelfanout.ChannelConfig{
@@ -75,10 +76,10 @@ func TestReconcile(t *testing.T) {
 						Name:      "foo",
 						Namespace: "bar",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									CallableDomain: "callable",
-									SinkableDomain: "sinkable",
+									CallableURI: "callable",
+									SinkableURI: "sinkable",
 								},
 							},
 						},

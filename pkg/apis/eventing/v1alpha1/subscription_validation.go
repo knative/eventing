@@ -86,7 +86,7 @@ func isValidEndpointSpec(e EndpointSpec) *apis.FieldError {
 }
 
 func isFromEmpty(f corev1.ObjectReference) bool {
-	return isSubscribableEmpty(f)
+	return isChannelEmpty(f)
 }
 
 // Valid from only contains the following fields:
@@ -94,7 +94,7 @@ func isFromEmpty(f corev1.ObjectReference) bool {
 // - APIVersion == 'eventing.knative.dev/v1alpha1'
 // - Name       == not empty
 func isValidFrom(f corev1.ObjectReference) *apis.FieldError {
-	return isValidSubscribable(f)
+	return isValidChannel(f)
 }
 
 func isResultStrategyNilOrEmpty(r *ResultStrategy) bool {
