@@ -18,11 +18,11 @@ package channel
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 
 	"github.com/Shopify/sarama"
-	"github.com/ghodss/yaml"
 	"github.com/google/go-cmp/cmp"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -276,7 +276,7 @@ func TestProvisionChannel(t *testing.T) {
 				}
 				return channel
 			}(),
-			wantError: "error unmarshaling JSON: json: cannot unmarshal string into Go value of type map[string]interface {}",
+			wantError: "error unmarshalling arguments: invalid character 'i' looking for beginning of value",
 		},
 		{
 			name:          "provision with valid channel arguments",
@@ -414,7 +414,7 @@ func getNewChannel(name, provisioner string) *eventingv1alpha1.Channel {
 
 func getNewChannelWithArgs(name string, args map[string]interface{}) *eventingv1alpha1.Channel {
 	c := getNewChannelNoProvisioner(name)
-	bytes, _ := yaml.Marshal(args)
+	bytes, _ := json.Marshal(args)
 	c.Spec.Arguments = &runtime.RawExtension{
 		Raw: bytes,
 	}

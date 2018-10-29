@@ -18,10 +18,10 @@ package channel
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/Shopify/sarama"
-	"github.com/ghodss/yaml"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -227,8 +227,8 @@ func topicName(channel *v1alpha1.Channel) string {
 func unmarshalArguments(bytes []byte) (map[string]interface{}, error) {
 	arguments := make(map[string]interface{})
 	if len(bytes) > 0 {
-		if err := yaml.Unmarshal(bytes, &arguments); err != nil {
-			return nil, err
+		if err := json.Unmarshal(bytes, &arguments); err != nil {
+			return nil, fmt.Errorf("error unmarshalling arguments: %s", err)
 		}
 	}
 	return arguments, nil

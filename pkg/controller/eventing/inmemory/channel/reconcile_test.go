@@ -111,10 +111,8 @@ var (
 				Kind: "Channel",
 			},
 			Spec: eventingv1alpha1.ChannelSpec{
-				Provisioner: &eventingv1alpha1.ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: ccpName,
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: ccpName,
 				},
 				Channelable: &eventingduck.Channelable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{
@@ -162,10 +160,8 @@ var (
 				Kind: "Channel",
 			},
 			Spec: eventingv1alpha1.ChannelSpec{
-				Provisioner: &eventingv1alpha1.ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: ccpName,
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: ccpName,
 				},
 				Channelable: &eventingduck.Channelable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{
@@ -470,10 +466,8 @@ func makeChannel() *eventingv1alpha1.Channel {
 			UID:       cUID,
 		},
 		Spec: eventingv1alpha1.ChannelSpec{
-			Provisioner: &eventingv1alpha1.ProvisionerReference{
-				Ref: &corev1.ObjectReference{
-					Name: ccpName,
-				},
+			Provisioner: &corev1.ObjectReference{
+				Name: ccpName,
 			},
 		},
 	}

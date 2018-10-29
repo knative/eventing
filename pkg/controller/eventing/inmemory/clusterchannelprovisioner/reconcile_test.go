@@ -75,17 +75,11 @@ func TestInjectClient(t *testing.T) {
 
 func TestIsControlled(t *testing.T) {
 	testCases := map[string]struct {
-		ref          *eventingv1alpha1.ProvisionerReference
+		ref          *corev1.ObjectReference
 		isControlled bool
 	}{
 		"nil": {
 			ref:          nil,
-			isControlled: false,
-		},
-		"ref nil": {
-			ref: &eventingv1alpha1.ProvisionerReference{
-				Ref: nil,
-			},
 			isControlled: false,
 		},
 		"wrong namespace": {
@@ -96,10 +90,8 @@ func TestIsControlled(t *testing.T) {
 			isControlled: false,
 		},
 		"wrong name": {
-			ref: &eventingv1alpha1.ProvisionerReference{
-				Ref: &corev1.ObjectReference{
-					Name: "other-name",
-				},
+			ref: &corev1.ObjectReference{
+				Name: "other-name",
 			},
 			isControlled: false,
 		},
