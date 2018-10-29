@@ -109,12 +109,12 @@ func (in *ChannelSpec) DeepCopyInto(out *ChannelSpec) {
 			(*in).DeepCopyInto(*out)
 		}
 	}
-	if in.Channelable != nil {
-		in, out := &in.Channelable, &out.Channelable
+	if in.Subscribable != nil {
+		in, out := &in.Subscribable, &out.Subscribable
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(duck_v1alpha1.Channelable)
+			*out = new(duck_v1alpha1.Subscribable)
 			(*in).DeepCopyInto(*out)
 		}
 	}

@@ -18,61 +18,65 @@ package v1alpha1
 
 import (
 	"github.com/knative/pkg/apis/duck"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// Channelable is the schema for the channelable portion of the spec
+// Subscribable is the schema for the subscribable portion of the spec
 // section of the resource.
-type Channelable struct {
+type Subscribable struct {
 	// TODO: What is actually required here for Channel spec.
 	// This is the list of subscriptions for this channel.
 	Subscribers []ChannelSubscriberSpec `json:"subscribers,omitempty"`
 }
 
 // ChannelSubscriberSpec defines a single subscriber to a Channel.
+// Subscription is a reference to the Subscription this ChannelSubscriberSpec was created for
 // CallableURI is the endpoint for the call
 // SinkableURI is the endpoint for the result
 // At least one of them must be present
 type ChannelSubscriberSpec struct {
+	// +optional
+	Ref *corev1.ObjectReference `json:"ref,omitempty"`
 	// +optional
 	CallableURI string `json:"callableURI,omitempty"`
 	// +optional
 	SinkableURI string `json:"sinkableURI,omitempty"`
 }
 
-// DuckChannel is a skeleton type wrapping Channelable in the manner we expect resource writers
+// Channel is a skeleton type wrapping Subscribable in the manner we expect resource writers
 // defining compatible resources to embed it. We will typically use this type to deserialize
-// Channelable ObjectReferences and access the Channelable data.  This is not a real resource.
+// Channel ObjectReferences and access the Subscription data.  This is not a real resource.
 type Channel struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// ChannelSpec is the part where Channelable object is
-	// configured as to be compatible with Channelable contract.
+	// ChannelSpec is the part where Subscribable object is
+	// configured as to be compatible with Subscribable contract.
 	Spec ChannelSpec `json:"spec"`
 }
 
-// DuckChannelSpec shows how we expect folks to embed Channelable in their Spec field.
+// ChannelSpec shows how we expect folks to embed Subscribable in their Spec field.
 type ChannelSpec struct {
-	Channelable *Channelable `json:"channelable,omitempty"`
+	Subscribable *Subscribable `json:"subscribable,omitempty"`
 }
 
 // GetFullType implements duck.Implementable
-func (_ *Channelable) GetFullType() duck.Populatable {
+func (s *Subscribable) GetFullType() duck.Populatable {
 	return &Channel{}
 }
 
 // Populate implements duck.Populatable
-func (t *Channel) Populate() {
-	t.Spec.Channelable = &Channelable{
+func (c *Channel) Populate() {
+	c.Spec.Subscribable = &Subscribable{
 		// Populate ALL fields
-		Subscribers: []ChannelSubscriberSpec{{"call1", "sink2"}, {"call2", "sink2"}},
+		Subscribers: []ChannelSubscriberSpec{{nil, "call1", "sink2"}, {nil, "call2", "sink2"}},
 	}
 }
 
 // GetListType implements apis.Listable
-func (r *Channel) GetListType() runtime.Object {
+func (c *Channel) GetListType() runtime.Object {
 	return &ChannelList{}
 }
 

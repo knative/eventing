@@ -50,7 +50,7 @@ func isValidChannel(f corev1.ObjectReference) *apis.FieldError {
 	return errs
 }
 
-func isChannelableEmpty(f corev1.ObjectReference) bool {
+func isSubscribableEmpty(f corev1.ObjectReference) bool {
 	return equality.Semantic.DeepEqual(f, corev1.ObjectReference{})
 }
 
@@ -58,7 +58,7 @@ func isChannelableEmpty(f corev1.ObjectReference) bool {
 // - Kind       == 'Channel'
 // - APIVersion == 'eventing.knative.dev/v1alpha1'
 // - Name       == not empty
-func isValidChannelable(f corev1.ObjectReference) *apis.FieldError {
+func isValidSubscribable(f corev1.ObjectReference) *apis.FieldError {
 	errs := isValidObjectReference(f)
 
 	if f.Kind != "Channel" {

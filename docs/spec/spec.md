@@ -24,11 +24,11 @@ its subscribers._
 
 #### Spec
 
-| Field         | Type                               | Description                                                                | Constraints                            |
-| ------------- | ---------------------------------- | -------------------------------------------------------------------------- | -------------------------------------- |
-| provisioner\* | ObjectReference                    | The name of the provisioner to create the resources that back the Channel. | Immutable.                             |
-| arguments     | runtime.RawExtension (JSON object) | Arguments to be passed to the provisioner.                                 |                                        |
-| subscribers   | ChannelSubscriberSpec[]            | Information about subscriptions used to implement message forwarding.      | Filled out by Subscription Controller. |
+| Field                    | Type                               | Description                                                                | Constraints                            |
+| ------------------------ | ---------------------------------- | -------------------------------------------------------------------------- | -------------------------------------- |
+| provisioner\*            | ObjectReference                    | The name of the provisioner to create the resources that back the Channel. | Immutable.                             |
+| arguments                | runtime.RawExtension (JSON object) | Arguments to be passed to the provisioner.                                 |                                        |
+| subscribable.subscribers | ChannelSubscriberSpec[]            | Information about subscriptions used to implement message forwarding.      | Filled out by Subscription Controller. |
 
 \*: Required
 
@@ -161,10 +161,11 @@ or a Channel system that receives and delivers events._
 
 ### ChannelSubscriberSpec
 
-| Field       | Type   | Description                                  | Constraints    |
-| ----------- | ------ | -------------------------------------------- | -------------- |
-| callableURI | String | The URI name of the endpoint for the call.   | Must be a URL. |
-| sinkableURI | String | The URI name of the endpoint for the result. | Must be a URL. |
+| Field       | Type            | Description                                                    | Constraints    |
+| ----------- | --------------- | -------------------------------------------------------------- | -------------- |
+| ref         | ObjectReference | The Subscription this ChannelSubscriberSpec was resolved from. |                |
+| callableURI | String          | The URI name of the endpoint for the call.                     | Must be a URL. |
+| sinkableURI | String          | The URI name of the endpoint for the result.                   | Must be a URL. |
 
 ### ResultStrategy
 

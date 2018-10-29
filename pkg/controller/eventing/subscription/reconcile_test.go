@@ -46,6 +46,7 @@ const (
 	channelKind       = "Channel"
 	routeKind         = "Route"
 	sourceKind        = "Source"
+	subscriptionKind  = "Subscription"
 	targetDNS         = "myfunction.mynamespace.svc.cluster.local"
 	sinkableDNS       = "myresultchannel.mynamespace.svc.cluster.local"
 	eventType         = "myeventtype"
@@ -73,7 +74,7 @@ var testCases = []controllertesting.TestCase{
 		},
 		WantErrMsg: `channels.eventing.knative.dev "fromchannel" not found`,
 	}, {
-		Name: "subscription, but From is not channelable",
+		Name: "subscription, but From is not subscribable",
 		InitialState: []runtime.Object{
 			getNewSourceSubscription(),
 		},
@@ -122,7 +123,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      resultChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 					"status": map[string]interface{}{
 						"sinkable": map[string]interface{}{
@@ -153,7 +154,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
@@ -179,7 +180,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
@@ -219,7 +220,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
@@ -264,7 +265,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
@@ -294,7 +295,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      resultChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
@@ -324,7 +325,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
@@ -354,7 +355,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      resultChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 					"status": map[string]interface{}{
 						"sinkable": map[string]interface{}{
@@ -390,7 +391,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
@@ -415,7 +416,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      resultChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 					"status": map[string]interface{}{
 						"sinkable": map[string]interface{}{
@@ -450,7 +451,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      sourceName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
@@ -464,7 +465,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
@@ -494,7 +495,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      resultChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 					"status": map[string]interface{}{
 						"sinkable": map[string]interface{}{
@@ -545,7 +546,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      sourceName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
@@ -559,7 +560,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
@@ -589,7 +590,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      resultChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 					"status": map[string]interface{}{
 						"sinkable": map[string]interface{}{
@@ -830,13 +831,27 @@ func getChannelWithMultipleSubscriptions() *eventingv1alpha1.Channel {
 		},
 		ObjectMeta: om(testNS, fromChannelName),
 		Spec: eventingv1alpha1.ChannelSpec{
-			Channelable: &eventingduck.Channelable{
+			Subscribable: &eventingduck.Subscribable{
 				Subscribers: []eventingduck.ChannelSubscriberSpec{
 					{
+						Ref: &corev1.ObjectReference{
+							APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+							Kind:       subscriptionKind,
+							Namespace:  testNS,
+							Name:       subscriptionName,
+							UID:        "",
+						},
 						CallableURI: targetDNS,
 						SinkableURI: sinkableDNS,
 					},
 					{
+						Ref: &corev1.ObjectReference{
+							APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+							Kind:       subscriptionKind,
+							Namespace:  testNS,
+							Name:       "renamed",
+							UID:        "renamed-UID",
+						},
 						SinkableURI: otherSinkableDNS,
 					},
 				},
