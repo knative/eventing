@@ -6,6 +6,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/provisioners"
+	provisionerController "github.com/knative/eventing/pkg/provisioners/kafka/controller"
+	"github.com/knative/eventing/pkg/provisioners/kafka/controller/channel"
+	"github.com/knative/pkg/configmap"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -14,17 +19,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
-
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners"
-	provisionerController "github.com/knative/eventing/pkg/provisioners/kafka/controller"
-	"github.com/knative/eventing/pkg/provisioners/kafka/controller/channel"
-	"github.com/knative/pkg/configmap"
 )
 
 const (
-	ClusterProvisionerNameConfigMapKey = "cluster-provisioner-name"
-	BrokerConfigMapKey                 = "brokers"
+	ClusterChannelProvisionerNameConfigMapKey = "cluster-provisioner-name"
+	BrokerConfigMapKey                        = "brokers"
 )
 
 // SchemeFunc adds types to a Scheme.
@@ -79,7 +78,7 @@ func main() {
 	mgr.Start(signals.SetupSignalHandler())
 }
 
-// getProvisionerConfig returns the details of the associated Provisioner/ClusterProvisioner object
+// getProvisionerConfig returns the details of the associated Provisioner/ClusterChannelProvisioner object
 func getProvisionerConfig() (*provisionerController.KafkaProvisionerConfig, error) {
 	configMap, err := configmap.Load("/etc/config-provisioner")
 	if err != nil {
@@ -92,10 +91,10 @@ func getProvisionerConfig() (*provisionerController.KafkaProvisionerConfig, erro
 
 	config := &provisionerController.KafkaProvisionerConfig{}
 
-	if value, ok := configMap[ClusterProvisionerNameConfigMapKey]; ok {
+	if value, ok := configMap[ClusterChannelProvisionerNameConfigMapKey]; ok {
 		config.Name = value
 	} else {
-		return nil, fmt.Errorf("missing key %s in provisioner configuration", ClusterProvisionerNameConfigMapKey)
+		return nil, fmt.Errorf("missing key %s in provisioner configuration", ClusterChannelProvisionerNameConfigMapKey)
 	}
 
 	if value, ok := configMap[BrokerConfigMapKey]; ok {

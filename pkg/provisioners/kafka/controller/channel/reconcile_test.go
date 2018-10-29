@@ -24,6 +24,12 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/ghodss/yaml"
 	"github.com/google/go-cmp/cmp"
+	"github.com/knative/eventing/pkg/apis/eventing"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	controllertesting "github.com/knative/eventing/pkg/controller/testing"
+	"github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/eventing/pkg/provisioners/kafka/controller"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,18 +37,12 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"github.com/knative/eventing/pkg/apis/eventing"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	controllertesting "github.com/knative/eventing/pkg/controller/testing"
-	"github.com/knative/eventing/pkg/provisioners"
-	"github.com/knative/eventing/pkg/provisioners/kafka/controller"
 )
 
 const (
-	channelName            = "test-channel"
-	clusterProvisionerName = "kafka"
-	testNS                 = "test-namespace"
+	channelName                   = "test-channel"
+	clusterChannelProvisionerName = "kafka"
+	testNS                        = "test-namespace"
 )
 
 var (
@@ -121,47 +121,47 @@ var testCases = []controllertesting.TestCase{
 	{
 		Name: "new channel with valid provisioner: adds provisioned status",
 		InitialState: []runtime.Object{
-			getNewClusterProvisioner(clusterProvisionerName, true),
-			getNewChannel(channelName, clusterProvisionerName),
+			getNewClusterChannelProvisioner(clusterChannelProvisionerName, true),
+			getNewChannel(channelName, clusterChannelProvisionerName),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
 		WantResult:   reconcile.Result{},
 		WantPresent: []runtime.Object{
-			getNewChannelProvisionedStatus(channelName, clusterProvisionerName),
+			getNewChannelProvisionedStatus(channelName, clusterChannelProvisionerName),
 		},
 		IgnoreTimes: true,
 	},
 	{
 		Name: "new channel with provisioner not ready: error",
 		InitialState: []runtime.Object{
-			getNewClusterProvisioner(clusterProvisionerName, false),
-			getNewChannel(channelName, clusterProvisionerName),
+			getNewClusterChannelProvisioner(clusterChannelProvisionerName, false),
+			getNewChannel(channelName, clusterChannelProvisionerName),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
 		WantResult:   reconcile.Result{},
-		WantErrMsg:   "ClusterProvisioner " + clusterProvisionerName + " is not ready",
+		WantErrMsg:   "ClusterChannelProvisioner " + clusterChannelProvisionerName + " is not ready",
 		WantPresent: []runtime.Object{
-			getNewChannelNotProvisionedStatus(channelName, clusterProvisionerName,
-				"ClusterProvisioner "+clusterProvisionerName+" is not ready"),
+			getNewChannelNotProvisionedStatus(channelName, clusterChannelProvisionerName,
+				"ClusterChannelProvisioner "+clusterChannelProvisionerName+" is not ready"),
 		},
 		IgnoreTimes: true,
 	},
 	{
 		Name: "new channel with missing provisioner: error",
 		InitialState: []runtime.Object{
-			getNewChannel(channelName, clusterProvisionerName),
+			getNewChannel(channelName, clusterChannelProvisionerName),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
 		WantResult:   reconcile.Result{},
-		WantErrMsg:   "clusterprovisioners.eventing.knative.dev \"" + clusterProvisionerName + "\" not found",
+		WantErrMsg:   "clusterChannelProvisioners.eventing.knative.dev \"" + clusterChannelProvisionerName + "\" not found",
 		IgnoreTimes:  true,
 	},
 	{
 		Name: "new channel with provisioner not managed by this controller: skips channel",
 		InitialState: []runtime.Object{
 			getNewChannel(channelName, "not-our-provisioner"),
-			getNewClusterProvisioner("not-our-provisioner", true),
-			getNewClusterProvisioner(clusterProvisionerName, true),
+			getNewClusterChannelProvisioner("not-our-provisioner", true),
+			getNewClusterChannelProvisioner(clusterChannelProvisionerName, true),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
 		WantResult:   reconcile.Result{},
@@ -193,23 +193,22 @@ var testCases = []controllertesting.TestCase{
 	{
 		Name: "error fetching channel",
 		InitialState: []runtime.Object{
-			getNewClusterProvisioner(clusterProvisionerName, true),
-			getNewChannel(channelName, clusterProvisionerName),
+			getNewClusterChannelProvisioner(clusterChannelProvisionerName, true),
+			getNewChannel(channelName, clusterChannelProvisionerName),
 		},
 		Mocks:        mockFetchError,
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
 		WantErrMsg:   "error fetching",
 		WantPresent: []runtime.Object{
-			getNewClusterProvisioner(clusterProvisionerName, true),
-			getNewChannel(channelName, clusterProvisionerName),
+			getNewClusterChannelProvisioner(clusterChannelProvisionerName, true),
+			getNewChannel(channelName, clusterChannelProvisionerName),
 		},
-		IgnoreTimes: true,
 	},
 	{
 		Name: "deleted channel",
 		InitialState: []runtime.Object{
-			getNewClusterProvisioner(clusterProvisionerName, true),
-			getNewChannelDeleted(channelName, clusterProvisionerName),
+			getNewClusterChannelProvisioner(clusterChannelProvisionerName, true),
+			getNewChannelDeleted(channelName, clusterChannelProvisionerName),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
 		WantResult:   reconcile.Result{},
@@ -247,7 +246,7 @@ func TestProvisionChannel(t *testing.T) {
 	}{
 		{
 			name:          "provision with no channel arguments - uses default",
-			c:             getNewChannel(channelName, clusterProvisionerName),
+			c:             getNewChannel(channelName, clusterChannelProvisionerName),
 			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
 			wantTopicDetail: &sarama.TopicDetail{
 				ReplicationFactor: 1,
@@ -271,7 +270,7 @@ func TestProvisionChannel(t *testing.T) {
 		{
 			name: "provision with unmarshallable channel arguments - errors",
 			c: func() *eventingv1alpha1.Channel {
-				channel := getNewChannel(channelName, clusterProvisionerName)
+				channel := getNewChannel(channelName, clusterChannelProvisionerName)
 				channel.Spec.Arguments = &runtime.RawExtension{
 					Raw: []byte("invalid"),
 				}
@@ -344,20 +343,20 @@ func TestDeprovisionChannel(t *testing.T) {
 	}{
 		{
 			name:          "deprovision channel - unknown error",
-			c:             getNewChannel(channelName, clusterProvisionerName),
+			c:             getNewChannel(channelName, clusterChannelProvisionerName),
 			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
 			mockError:     fmt.Errorf("unknown sarama error"),
 			wantError:     "unknown sarama error",
 		},
 		{
 			name:          "deprovision channel - topic already deleted",
-			c:             getNewChannel(channelName, clusterProvisionerName),
+			c:             getNewChannel(channelName, clusterChannelProvisionerName),
 			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
 			mockError:     sarama.ErrUnknownTopicOrPartition,
 		},
 		{
 			name:          "deprovision channel - success",
-			c:             getNewChannel(channelName, clusterProvisionerName),
+			c:             getNewChannel(channelName, clusterChannelProvisionerName),
 			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
 		}}
 
@@ -404,7 +403,7 @@ func getNewChannel(name, provisioner string) *eventingv1alpha1.Channel {
 			Provisioner: &eventingv1alpha1.ProvisionerReference{
 				Ref: &corev1.ObjectReference{
 					Name:       provisioner,
-					Kind:       "ClusterProvisioner",
+					Kind:       "ClusterChannelProvisioner",
 					APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 				},
 			},
@@ -452,29 +451,37 @@ func channelType() metav1.TypeMeta {
 	}
 }
 
-func getNewClusterProvisioner(name string, isReady bool) *eventingv1alpha1.ClusterProvisioner {
-	clusterProvisioner := &eventingv1alpha1.ClusterProvisioner{
+func getNewClusterChannelProvisioner(name string, isReady bool) *eventingv1alpha1.ClusterChannelProvisioner {
+	var condStatus corev1.ConditionStatus
+	if isReady {
+		condStatus = corev1.ConditionTrue
+	} else {
+		condStatus = corev1.ConditionFalse
+	}
+	clusterChannelProvisioner := &eventingv1alpha1.ClusterChannelProvisioner{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-			Kind:       "ClusterProvisioner",
+			Kind:       "ClusterChannelProvisioner",
 		},
 		ObjectMeta: om("", name),
-		Spec: eventingv1alpha1.ClusterProvisionerSpec{
+		Spec: eventingv1alpha1.ClusterChannelProvisionerSpec{
 			Reconciles: metav1.GroupKind{
 				Kind:  "Channel",
 				Group: eventing.GroupName,
 			},
 		},
-	}
-	clusterProvisioner.Status.InitializeConditions()
-	if isReady {
-		clusterProvisioner.Status.MarkReady()
-	} else {
-		clusterProvisioner.Status.MarkNotReady("NotReady", "testing")
+		Status: eventingv1alpha1.ClusterChannelProvisionerStatus{
+			Conditions: []duckv1alpha1.Condition{
+				{
+					Type:   eventingv1alpha1.ClusterChannelProvisionerConditionReady,
+					Status: condStatus,
+				},
+			},
+		},
 	}
 	// selflink is not filled in when we create the object, so clear it
-	clusterProvisioner.ObjectMeta.SelfLink = ""
-	return clusterProvisioner
+	clusterChannelProvisioner.ObjectMeta.SelfLink = ""
+	return clusterChannelProvisioner
 }
 
 func om(namespace, name string) metav1.ObjectMeta {
@@ -487,7 +494,7 @@ func om(namespace, name string) metav1.ObjectMeta {
 
 func getControllerConfig() *controller.KafkaProvisionerConfig {
 	return &controller.KafkaProvisionerConfig{
-		Name:    clusterProvisionerName,
+		Name:    clusterChannelProvisionerName,
 		Brokers: []string{"test-broker"},
 	}
 }

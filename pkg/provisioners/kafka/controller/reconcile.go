@@ -20,32 +20,31 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/knative/eventing/pkg/apis/eventing"
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"github.com/knative/eventing/pkg/apis/eventing"
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"go.uber.org/zap"
 )
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Provisioner resource
 // with the current status of the resource.
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	r.logger.Info("reconciling ClusterProvisioner", zap.Any("request", request))
-	provisioner := &v1alpha1.ClusterProvisioner{}
+	r.logger.Info("reconciling ClusterChannelProvisioner", zap.Any("request", request))
+	provisioner := &v1alpha1.ClusterChannelProvisioner{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, provisioner)
 
 	if errors.IsNotFound(err) {
-		r.logger.Info("could not find ClusterProvisioner", zap.Any("request", request))
+		r.logger.Info("could not find ClusterChannelProvisioner", zap.Any("request", request))
 		return reconcile.Result{}, nil
 	}
 
 	if err != nil {
-		r.logger.Error("could not fetch ClusterProvisioner", zap.Error(err))
+		r.logger.Error("could not fetch ClusterChannelProvisioner", zap.Error(err))
 		return reconcile.Result{}, err
 	}
 
@@ -79,7 +78,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	return reconcile.Result{}, err
 }
 
-func (r *reconciler) reconcile(provisioner *v1alpha1.ClusterProvisioner) error {
+func (r *reconciler) reconcile(provisioner *v1alpha1.ClusterChannelProvisioner) error {
 	// See if the provisioner has been deleted
 	accessor, err := meta.Accessor(provisioner)
 	if err != nil {
@@ -99,8 +98,8 @@ func (r *reconciler) reconcile(provisioner *v1alpha1.ClusterProvisioner) error {
 	return nil
 }
 
-func (r *reconciler) updateStatus(provisioner *v1alpha1.ClusterProvisioner) (*v1alpha1.ClusterProvisioner, error) {
-	newProvisioner := &v1alpha1.ClusterProvisioner{}
+func (r *reconciler) updateStatus(provisioner *v1alpha1.ClusterChannelProvisioner) (*v1alpha1.ClusterChannelProvisioner, error) {
+	newProvisioner := &v1alpha1.ClusterChannelProvisioner{}
 	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: provisioner.Namespace, Name: provisioner.Name}, newProvisioner)
 
 	if err != nil {

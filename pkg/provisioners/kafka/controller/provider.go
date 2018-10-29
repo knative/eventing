@@ -17,6 +17,7 @@ limitations under the License.
 package controller
 
 import (
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"go.uber.org/zap"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,8 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 )
 
 const (
@@ -59,8 +58,8 @@ func ProvideController(mgr manager.Manager, config *KafkaProvisionerConfig, logg
 		return nil, err
 	}
 
-	// Watch ClusterProvisioner events and enqueue ClusterProvisioner object key.
-	if err := c.Watch(&source.Kind{Type: &v1alpha1.ClusterProvisioner{}}, &handler.EnqueueRequestForObject{}); err != nil {
+	// Watch ClusterChannelProvisioner events and enqueue ClusterChannelProvisioner object key.
+	if err := c.Watch(&source.Kind{Type: &v1alpha1.ClusterChannelProvisioner{}}, &handler.EnqueueRequestForObject{}); err != nil {
 		return nil, err
 	}
 

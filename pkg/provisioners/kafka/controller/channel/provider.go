@@ -20,6 +20,8 @@ import (
 	"fmt"
 
 	"github.com/Shopify/sarama"
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	common "github.com/knative/eventing/pkg/provisioners/kafka/controller"
 	"go.uber.org/zap"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,9 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	common "github.com/knative/eventing/pkg/provisioners/kafka/controller"
 )
 
 const (

@@ -22,6 +22,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/ghodss/yaml"
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -29,8 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 )
 
 const (
@@ -66,26 +65,24 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	// Skip channel not managed by this provisioner
 	provisionerRef := channel.Spec.Provisioner.Ref
-	clusterProvisioner, err := r.getClusterProvisioner()
+	clusterChannelProvisioner, err := r.getClusterChannelProvisioner()
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if provisionerRef.Name != clusterProvisioner.Name || provisionerRef.Namespace != clusterProvisioner.Namespace {
+	if provisionerRef.Name != clusterChannelProvisioner.Name || provisionerRef.Namespace != clusterChannelProvisioner.Namespace {
 		return reconcile.Result{}, nil
 	}
 
 	newChannel := channel.DeepCopy()
 
-	newChannel.Status.InitializeConditions()
-
-	if clusterProvisioner.Status.IsReady() {
+	if clusterChannelProvisioner.Status.IsReady() {
 		// Reconcile this copy of the Channel and then write back any status
 		// updates regardless of whether the reconcile error out.
 		err = r.reconcile(newChannel)
 	} else {
-		newChannel.Status.MarkNotProvisioned("NotProvisioned", "ClusterProvisioner %s is not ready", clusterProvisioner.Name)
-		err = fmt.Errorf("ClusterProvisioner %s is not ready", clusterProvisioner.Name)
+		newChannel.Status.MarkNotProvisioned("NotProvisioned", "ClusterChannelProvisioner %s is not ready", clusterChannelProvisioner.Name)
+		err = fmt.Errorf("ClusterChannelProvisioner %s is not ready", clusterChannelProvisioner.Name)
 	}
 
 	if err := r.updateChannel(ctx, newChannel); err != nil {
@@ -115,6 +112,7 @@ func (r *reconciler) reconcile(channel *v1alpha1.Channel) error {
 	}
 
 	r.addFinalizer(channel)
+	channel.Status.InitializeConditions()
 	if err := r.provisionChannel(channel); err != nil {
 		channel.Status.MarkNotProvisioned("NotProvisioned", "error while provisioning: %s", err)
 		return err
@@ -173,15 +171,15 @@ func (r *reconciler) deprovisionChannel(channel *v1alpha1.Channel) error {
 	return err
 }
 
-func (r *reconciler) getClusterProvisioner() (*v1alpha1.ClusterProvisioner, error) {
-	clusterProvisioner := &v1alpha1.ClusterProvisioner{}
+func (r *reconciler) getClusterChannelProvisioner() (*v1alpha1.ClusterChannelProvisioner, error) {
+	clusterChannelProvisioner := &v1alpha1.ClusterChannelProvisioner{}
 	objKey := client.ObjectKey{
 		Name: r.config.Name,
 	}
-	if err := r.client.Get(context.Background(), objKey, clusterProvisioner); err != nil {
+	if err := r.client.Get(context.Background(), objKey, clusterChannelProvisioner); err != nil {
 		return nil, err
 	}
-	return clusterProvisioner, nil
+	return clusterChannelProvisioner, nil
 }
 
 func (r *reconciler) updateChannel(ctx context.Context, u *v1alpha1.Channel) error {

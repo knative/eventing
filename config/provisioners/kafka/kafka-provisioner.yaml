@@ -13,50 +13,50 @@
 # limitations under the License.
 
 apiVersion: eventing.knative.dev/v1alpha1
-kind: ClusterProvisioner
+kind: ClusterChannelProvisioner
 metadata:
-  name: kafka
+  name: kafka-channel
 spec:
   reconciles:
-    group: eventing.knative.dev
+    group: eventing.knative.dev/v1alpha1
     kind: Channel
 ---
 
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: kafka-provisioner
+  name: kafka-channel-controller
   namespace: knative-eventing
 ---
 
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: kafka-provisioner
+  name: kafka-channel-controller
 rules:
 - apiGroups: ["eventing.knative.dev"]
-  resources: ["clusterprovisioners", "channels"]
+  resources: ["clusterchannelprovisioners", "channels"]
   verbs: ["get", "watch", "list", "update"]
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: kafka-provisioner-manage
+  name: kafka-channel-controller-manage
 subjects:
   - kind: ServiceAccount
-    name: kafka-provisioner
+    name: kafka-channel-controller
     namespace: knative-eventing
 roleRef:
   kind: ClusterRole
-  name: kafka-provisioner
+  name: kafka-channel-controller
   apiGroup: rbac.authorization.k8s.io
 ---
 
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kafka-provisioner-config
+  name: kafka-channel-controller-config
   namespace: knative-eventing
 data:
   # Name of the provisioner that this controller represents
@@ -68,23 +68,23 @@ data:
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: kafka-provisioner
+  name: kafka-channel-controller
   namespace: knative-eventing
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: kafka-provisioner
+        app: kafka-channel-controller
     spec:
-      serviceAccountName: kafka-provisioner
+      serviceAccountName: kafka-channel-controller
       containers:
-      - name: kafka-provisioner-controller
+      - name: kafka-channel-controller-controller
         image: github.com/knative/eventing/pkg/provisioners/kafka
         volumeMounts:
-          - name: kafka-provisioner-config
+          - name: kafka-channel-controller-config
             mountPath: /etc/config-provisioner
       volumes:
-        - name: kafka-provisioner-config
+        - name: kafka-channel-controller-config
           configMap:
-            name: kafka-provisioner-config
+            name: kafka-channel-controller-config
