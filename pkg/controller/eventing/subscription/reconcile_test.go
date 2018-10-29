@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"testing"
 
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
@@ -646,8 +647,8 @@ func getNewChannel(name string) *eventingv1alpha1.Channel {
 func rename(sub *eventingv1alpha1.Subscription) *eventingv1alpha1.Subscription {
 	sub.Name = "renamed"
 	sub.UID = "renamed-UID"
-	sub.Status.PhysicalSubscription.CallDomain = ""
-	sub.Status.PhysicalSubscription.ResultDomain = otherSinkableDNS
+	sub.Status.PhysicalSubscription.CallURI = ""
+	sub.Status.PhysicalSubscription.ResultURI = otherSinkableDNS
 	return sub
 }
 
@@ -744,18 +745,17 @@ func getNewSubscriptionWithUnknownConditions() *eventingv1alpha1.Subscription {
 	s.Status.InitializeConditions()
 	return s
 }
-
 func getNewSubscriptionWithUnknownConditionsAndPhysicalCall() *eventingv1alpha1.Subscription {
 	s := getNewSubscriptionWithUnknownConditions()
-	s.Status.PhysicalSubscription.CallDomain = targetDNS
+	s.Status.PhysicalSubscription.CallURI = domainToURL(targetDNS)
 	return s
 }
 
 func getNewSubscriptionWithReferencesResolvedAndPhysicalCallResult() *eventingv1alpha1.Subscription {
 	s := getNewSubscriptionWithUnknownConditions()
 	s.Status.MarkReferencesResolved()
-	s.Status.PhysicalSubscription.CallDomain = targetDNS
-	s.Status.PhysicalSubscription.ResultDomain = sinkableDNS
+	s.Status.PhysicalSubscription.CallURI = domainToURL(targetDNS)
+	s.Status.PhysicalSubscription.ResultURI = domainToURL(sinkableDNS)
 	return s
 }
 
@@ -764,8 +764,8 @@ func getNewSubscriptionToK8sServiceWithReferencesResolvedAndPhysicalFromCallResu
 	s.Status.InitializeConditions()
 	s.Status.MarkReferencesResolved()
 	s.Status.PhysicalSubscription = eventingv1alpha1.SubscriptionStatusPhysicalSubscription{
-		CallDomain:   k8sServiceDNS,
-		ResultDomain: sinkableDNS,
+		CallURI:   domainToURL(k8sServiceDNS),
+		ResultURI: domainToURL(sinkableDNS),
 	}
 	return s
 }
@@ -775,8 +775,8 @@ func getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromCallResult
 	s.Status.InitializeConditions()
 	s.Status.MarkReferencesResolved()
 	s.Status.PhysicalSubscription = eventingv1alpha1.SubscriptionStatusPhysicalSubscription{
-		CallDomain:   targetDNS,
-		ResultDomain: sinkableDNS,
+		CallURI:   domainToURL(targetDNS),
+		ResultURI: domainToURL(sinkableDNS),
 	}
 	return s
 }
@@ -791,7 +791,7 @@ func getSubscriptionWithDifferentChannel() *eventingv1alpha1.Subscription {
 	s := getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromCallResult()
 	s.Name = "different-channel"
 	s.UID = "different-channel-UID"
-	s.Status.PhysicalSubscription.CallDomain = "some-other-domain"
+	s.Status.PhysicalSubscription.CallURI = "some-other-domain"
 	return s
 }
 
@@ -830,14 +830,14 @@ func getChannelWithMultipleSubscriptions() *eventingv1alpha1.Channel {
 		},
 		ObjectMeta: om(testNS, fromChannelName),
 		Spec: eventingv1alpha1.ChannelSpec{
-			Channelable: &duckv1alpha1.Channelable{
-				Subscribers: []duckv1alpha1.ChannelSubscriberSpec{
+			Channelable: &eventingduck.Channelable{
+				Subscribers: []eventingduck.ChannelSubscriberSpec{
 					{
-						CallableDomain: targetDNS,
-						SinkableDomain: sinkableDNS,
+						CallableURI: targetDNS,
+						SinkableURI: sinkableDNS,
 					},
 					{
-						SinkableDomain: otherSinkableDNS,
+						SinkableURI: otherSinkableDNS,
 					},
 				},
 			},

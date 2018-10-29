@@ -22,7 +22,7 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/buses"
 	"github.com/knative/eventing/pkg/controller/eventing/inmemory/channel"
-	"github.com/knative/eventing/pkg/controller/eventing/inmemory/clusterprovisioner"
+	"github.com/knative/eventing/pkg/controller/eventing/inmemory/clusterchannelprovisioner"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
@@ -35,8 +35,8 @@ func main() {
 	logger := buses.NewBusLoggerFromConfig(logConfig)
 	defer logger.Sync()
 	logger = logger.With(
-		zap.String("eventing.knative.dev/clusterProvisioner", clusterprovisioner.Name),
-		zap.String("eventing.knative.dev/clusterProvisionerComponent", "Controller"),
+		zap.String("eventing.knative.dev/clusterChannelProvisioner", clusterchannelprovisioner.Name),
+		zap.String("eventing.knative.dev/clusterChannelProvisionerComponent", "Controller"),
 	)
 	flag.Parse()
 
@@ -49,9 +49,9 @@ func main() {
 	eventingv1alpha1.AddToScheme(mgr.GetScheme())
 	istiov1alpha3.AddToScheme(mgr.GetScheme())
 
-	// The controllers for both the ClusterProvisioner and the Channels created by that
-	// ClusterProvisioner run in this process.
-	_, err = clusterprovisioner.ProvideController(mgr, logger.Desugar())
+	// The controllers for both the ClusterChannelProvisioner and the Channels created by that
+	// ClusterChannelProvisioner run in this process.
+	_, err = clusterchannelprovisioner.ProvideController(mgr, logger.Desugar())
 	if err != nil {
 		logger.Fatal("Unable to create Provisioner controller", zap.Error(err))
 	}

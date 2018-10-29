@@ -24,7 +24,13 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	controllertesting "github.com/knative/eventing/pkg/controller/testing"
+	util "github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/eventing/pkg/sidecar/configmap"
+	"github.com/knative/eventing/pkg/sidecar/fanout"
+	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -35,17 +41,10 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	controllertesting "github.com/knative/eventing/pkg/controller/testing"
-	util "github.com/knative/eventing/pkg/provisioners"
-	"github.com/knative/eventing/pkg/sidecar/configmap"
-	"github.com/knative/eventing/pkg/sidecar/fanout"
-	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 )
 
 const (
-	cpName = "in-memory-channel"
+	ccpName = "in-memory-channel"
 
 	cNamespace = "test-namespace"
 	cName      = "test-channel"
@@ -75,16 +74,16 @@ var (
 				Namespace: cNamespace,
 				Name:      "c1",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+					Subscriptions: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableDomain: "foo",
+							CallableURI: "foo",
 						},
 						{
-							SinkableDomain: "bar",
+							SinkableURI: "bar",
 						},
 						{
-							CallableDomain: "baz",
-							SinkableDomain: "qux",
+							CallableURI: "baz",
+							SinkableURI: "qux",
 						},
 					},
 				},
@@ -93,9 +92,9 @@ var (
 				Namespace: cNamespace,
 				Name:      "c3",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+					Subscriptions: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableDomain: "steve",
+							CallableURI: "steve",
 						},
 					},
 				},
@@ -113,22 +112,20 @@ var (
 				Kind: "Channel",
 			},
 			Spec: eventingv1alpha1.ChannelSpec{
-				Provisioner: &eventingv1alpha1.ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: cpName,
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: ccpName,
 				},
-				Channelable: &duckv1alpha1.Channelable{
-					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{
+				Channelable: &eventingduck.Channelable{
+					Subscribers: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableDomain: "foo",
+							CallableURI: "foo",
 						},
 						{
-							SinkableDomain: "bar",
+							SinkableURI: "bar",
 						},
 						{
-							CallableDomain: "baz",
-							SinkableDomain: "qux",
+							CallableURI: "baz",
+							SinkableURI: "qux",
 						},
 					},
 				},
@@ -143,15 +140,13 @@ var (
 				Kind: "Channel",
 			},
 			Spec: eventingv1alpha1.ChannelSpec{
-				Provisioner: &eventingv1alpha1.ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "some-other-provisioner",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "some-other-provisioner",
 				},
-				Channelable: &duckv1alpha1.Channelable{
-					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{
+				Channelable: &eventingduck.Channelable{
+					Subscribers: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableDomain: "anything",
+							CallableURI: "anything",
 						},
 					},
 				},
@@ -166,15 +161,13 @@ var (
 				Kind: "Channel",
 			},
 			Spec: eventingv1alpha1.ChannelSpec{
-				Provisioner: &eventingv1alpha1.ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: cpName,
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: ccpName,
 				},
-				Channelable: &duckv1alpha1.Channelable{
-					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{
+				Channelable: &eventingduck.Channelable{
+					Subscribers: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableDomain: "steve",
+							CallableURI: "steve",
 						},
 					},
 				},
@@ -227,7 +220,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Channel not reconciled - nil ref",
 			InitialState: []runtime.Object{
-				makeChannelNilRef(),
+				makeChannelNilProvisioner(),
 			},
 		},
 		{
@@ -474,10 +467,8 @@ func makeChannel() *eventingv1alpha1.Channel {
 			UID:       cUID,
 		},
 		Spec: eventingv1alpha1.ChannelSpec{
-			Provisioner: &eventingv1alpha1.ProvisionerReference{
-				Ref: &corev1.ObjectReference{
-					Name: cpName,
-				},
+			Provisioner: &corev1.ObjectReference{
+				Name: ccpName,
 			},
 		},
 	}
@@ -504,21 +495,15 @@ func makeChannelNilProvisioner() *eventingv1alpha1.Channel {
 	return c
 }
 
-func makeChannelNilRef() *eventingv1alpha1.Channel {
-	c := makeChannel()
-	c.Spec.Provisioner.Ref = nil
-	return c
-}
-
 func makeChannelWithWrongProvisionerNamespace() *eventingv1alpha1.Channel {
 	c := makeChannel()
-	c.Spec.Provisioner.Ref.Namespace = "wrong-namespace"
+	c.Spec.Provisioner.Namespace = "wrong-namespace"
 	return c
 }
 
 func makeChannelWithWrongProvisionerName() *eventingv1alpha1.Channel {
 	c := makeChannel()
-	c.Spec.Provisioner.Ref.Name = "wrong-name"
+	c.Spec.Provisioner.Name = "wrong-name"
 	return c
 }
 
@@ -571,7 +556,7 @@ func makeK8sService() *corev1.Service {
 			Namespace: cNamespace,
 			Labels: map[string]string{
 				"channel":     cName,
-				"provisioner": cpName,
+				"provisioner": ccpName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -612,7 +597,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 			Namespace: cNamespace,
 			Labels: map[string]string{
 				"channel":     cName,
-				"provisioner": cpName,
+				"provisioner": ccpName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{

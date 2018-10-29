@@ -17,9 +17,11 @@
 package v1alpha1
 
 import (
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/webhook"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -63,8 +65,7 @@ type ChannelSpec struct {
 	Generation int64 `json:"generation,omitempty"`
 
 	// Provisioner defines the name of the Provisioner backing this channel.
-	// TODO: +optional If missing, a default Provisioner may be selected for the Channel.
-	Provisioner *ProvisionerReference `json:"provisioner,omitempty"`
+	Provisioner *corev1.ObjectReference `json:"provisioner,omitempty"`
 
 	// Arguments defines the arguments to pass to the Provisioner which provisions
 	// this Channel.
@@ -72,7 +73,7 @@ type ChannelSpec struct {
 	Arguments *runtime.RawExtension `json:"arguments,omitempty"`
 
 	// Channel conforms to Duck type Channelable.
-	Channelable *duckv1alpha1.Channelable `json:"channelable,omitempty"`
+	Channelable *eventingduck.Channelable `json:"channelable,omitempty"`
 }
 
 var chanCondSet = duckv1alpha1.NewLivingConditionSet(ChannelConditionProvisioned, ChannelConditionSinkable)

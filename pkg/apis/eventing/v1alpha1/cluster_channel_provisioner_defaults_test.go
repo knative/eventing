@@ -19,7 +19,7 @@ package v1alpha1
 import "testing"
 
 // No-op test because method does nothing.
-func TestClusterProvisionerSetDefaults(t *testing.T) {
-	p := ClusterProvisioner{}
+func TestClusterChannelProvisionerSetDefaults(t *testing.T) {
+	p := ClusterChannelProvisioner{}
 	p.SetDefaults()
 }

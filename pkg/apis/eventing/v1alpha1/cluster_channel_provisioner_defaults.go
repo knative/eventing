@@ -14,11 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package logkey
+package v1alpha1
 
-const (
-	kNative = "knative.dev/"
+// SetDefaults defaults
+func (p *ClusterChannelProvisioner) SetDefaults() {
+	p.Spec.SetDefaults()
+}
 
-	// ClusterChannelProvisioner is the key used for cluster provisioner names in structured logs
-	ClusterChannelProvisioner = kNative + "clusterchannelprovisioner"
-)
+// SetDefaults defaults the ClusterChannelProvisioner spec.
+func (ps *ClusterChannelProvisionerSpec) SetDefaults() {
+	// no defaults
+}
