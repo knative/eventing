@@ -20,8 +20,6 @@ package v1alpha1
 
 type ChannelExpansion interface{}
 
-type ClusterProvisionerExpansion interface{}
-
-type SourceExpansion interface{}
+type ClusterChannelProvisionerExpansion interface{}
 
 type SubscriptionExpansion interface{}

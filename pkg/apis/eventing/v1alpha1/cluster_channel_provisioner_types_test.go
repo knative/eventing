@@ -24,79 +24,55 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func TestSourceStatusIsReady(t *testing.T) {
+func TestClusterChannelProvisionerStatusIsReady(t *testing.T) {
 	tests := []struct {
 		name string
-		s    *SourceStatus
+		ps   *ClusterChannelProvisionerStatus
 		want bool
 	}{{
 		name: "uninitialized",
-		s:    &SourceStatus{},
+		ps:   &ClusterChannelProvisionerStatus{},
 		want: false,
 	}, {
 		name: "initialized",
-		s: func() *SourceStatus {
-			s := &SourceStatus{}
-			s.InitializeConditions()
-			return s
+		ps: func() *ClusterChannelProvisionerStatus {
+			ps := &ClusterChannelProvisionerStatus{}
+			ps.InitializeConditions()
+			return ps
 		}(),
 		want: false,
 	}, {
 		name: "ready true condition",
-		s: &SourceStatus{
-			Conditions: []duckv1alpha1.Condition{{
-				Type:   SourceConditionReady,
-				Status: corev1.ConditionTrue,
-			}, {
-				Type:   SourceConditionProvisioned,
-				Status: corev1.ConditionTrue,
-			}},
-		},
+		ps: func() *ClusterChannelProvisionerStatus {
+			ps := &ClusterChannelProvisionerStatus{}
+			ps.InitializeConditions()
+			ps.MarkReady()
+			return ps
+		}(),
 		want: true,
 	}, {
 		name: "ready false condition",
-		s: &SourceStatus{
-			Conditions: []duckv1alpha1.Condition{{
-				Type:   SourceConditionReady,
-				Status: corev1.ConditionFalse,
-			}, {
-				Type:   SourceConditionProvisioned,
-				Status: corev1.ConditionTrue,
-			}},
-		},
+		ps: func() *ClusterChannelProvisionerStatus {
+			ps := &ClusterChannelProvisionerStatus{}
+			ps.InitializeConditions()
+			ps.MarkNotReady("Not Ready", "testing")
+			return ps
+		}(),
 		want: false,
 	}, {
 		name: "unknown condition",
-		s: &SourceStatus{
+		ps: &ClusterChannelProvisionerStatus{
 			Conditions: []duckv1alpha1.Condition{{
 				Type:   "foo",
 				Status: corev1.ConditionTrue,
 			}},
 		},
 		want: false,
-	}, {
-		name: "mark provisioned",
-		s: func() *SourceStatus {
-			s := &SourceStatus{}
-			s.InitializeConditions()
-			s.MarkProvisioned()
-			return s
-		}(),
-		want: true,
-	}, {
-		name: "mark deprovisioned",
-		s: func() *SourceStatus {
-			s := &SourceStatus{}
-			s.InitializeConditions()
-			s.MarkDeprovisioned("Testing", "Just a test")
-			return s
-		}(),
-		want: false,
 	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.s.IsReady()
+			got := test.ps.IsReady()
 			if diff := cmp.Diff(test.want, got); diff != "" {
 				t.Errorf("%s: unexpected condition (-want, +got) = %v", test.name, diff)
 			}
@@ -104,15 +80,15 @@ func TestSourceStatusIsReady(t *testing.T) {
 	}
 }
 
-func TestSourceStatusGetCondition(t *testing.T) {
+func TestClusterChannelProvisionerStatusGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
-		s         *SourceStatus
+		ps        *ClusterChannelProvisionerStatus
 		condQuery duckv1alpha1.ConditionType
 		want      *duckv1alpha1.Condition
 	}{{
 		name: "single condition",
-		s: &SourceStatus{
+		ps: &ClusterChannelProvisionerStatus{
 			Conditions: []duckv1alpha1.Condition{
 				condReady,
 			},
@@ -121,7 +97,7 @@ func TestSourceStatusGetCondition(t *testing.T) {
 		want:      &condReady,
 	}, {
 		name: "unknown condition",
-		s: &SourceStatus{
+		ps: &ClusterChannelProvisionerStatus{
 			Conditions: []duckv1alpha1.Condition{
 				condReady,
 				condUnprovisioned,
@@ -133,10 +109,22 @@ func TestSourceStatusGetCondition(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.s.GetCondition(test.condQuery)
+			got := test.ps.GetCondition(test.condQuery)
 			if diff := cmp.Diff(test.want, got); diff != "" {
 				t.Errorf("unexpected condition (-want, +got) = %v", diff)
 			}
 		})
+	}
+}
+
+func TestClusterChannelProvisionerStatus_MarkReady(t *testing.T) {
+	ps := ClusterChannelProvisionerStatus{}
+	ps.InitializeConditions()
+	if ps.IsReady() {
+		t.Errorf("Should not be ready when initialized.")
+	}
+	ps.MarkReady()
+	if !ps.IsReady() {
+		t.Errorf("Should be ready after MarkReady() was called.")
 	}
 }

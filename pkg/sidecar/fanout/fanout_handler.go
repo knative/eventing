@@ -26,8 +26,8 @@ import (
 	"net/http"
 	"time"
 
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/buses"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
 )
 
@@ -39,7 +39,7 @@ const (
 
 // Configuration for a fanout.Handler.
 type Config struct {
-	Subscriptions []duckv1alpha1.ChannelSubscriberSpec `json:"subscriptions"`
+	Subscriptions []eventingduck.ChannelSubscriberSpec `json:"subscriptions"`
 }
 
 // http.Handler that takes a single request in and fans it out to N other servers.
@@ -96,7 +96,7 @@ func (f *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (f *Handler) dispatch(msg *buses.Message) error {
 	errorCh := make(chan error, len(f.config.Subscriptions))
 	for _, sub := range f.config.Subscriptions {
-		go func(s duckv1alpha1.ChannelSubscriberSpec) {
+		go func(s eventingduck.ChannelSubscriberSpec) {
 			errorCh <- f.makeFanoutRequest(*msg, s)
 		}(sub)
 	}
@@ -119,6 +119,6 @@ func (f *Handler) dispatch(msg *buses.Message) error {
 
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
 // the `sink` portions of the subscription.
-func (f *Handler) makeFanoutRequest(m buses.Message, sub duckv1alpha1.ChannelSubscriberSpec) error {
-	return f.dispatcher.DispatchMessage(&m, sub.CallableDomain, sub.SinkableDomain, buses.DispatchDefaults{})
+func (f *Handler) makeFanoutRequest(m buses.Message, sub eventingduck.ChannelSubscriberSpec) error {
+	return f.dispatcher.DispatchMessage(&m, sub.CallableURI, sub.SinkableURI, buses.DispatchDefaults{})
 }

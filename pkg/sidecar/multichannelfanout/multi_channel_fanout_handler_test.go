@@ -18,14 +18,15 @@ package multichannelfanout
 
 import (
 	"fmt"
-	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/pkg/sidecar/fanout"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	"go.uber.org/zap"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	"github.com/knative/eventing/pkg/sidecar/fanout"
+	"go.uber.org/zap"
 )
 
 const (
@@ -108,9 +109,9 @@ func TestCopyWithNewConfig(t *testing.T) {
 				Namespace: "default",
 				Name:      "c1",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+					Subscriptions: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableDomain: "callabledomain",
+							CallableURI: "callabledomain",
 						},
 					},
 				},
@@ -123,9 +124,9 @@ func TestCopyWithNewConfig(t *testing.T) {
 				Namespace: "default",
 				Name:      "somethingdifferent",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+					Subscriptions: []eventingduck.ChannelSubscriberSpec{
 						{
-							SinkableDomain: "sinkabledomain",
+							SinkableURI: "sinkabledomain",
 						},
 					},
 				},
@@ -161,9 +162,9 @@ func TestConfigDiff(t *testing.T) {
 				Namespace: "default",
 				Name:      "c1",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+					Subscriptions: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableDomain: "callabledomain",
+							CallableURI: "callabledomain",
 						},
 					},
 				},
@@ -191,9 +192,9 @@ func TestConfigDiff(t *testing.T) {
 						Namespace: "default",
 						Name:      "c1",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									CallableDomain: "different",
+									CallableURI: "different",
 								},
 							},
 						},
@@ -238,9 +239,9 @@ func TestServeHTTP(t *testing.T) {
 						Namespace: "default",
 						Name:      "first-channel",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									SinkableDomain: replaceDomain,
+									SinkableURI: replaceDomain,
 								},
 							},
 						},
@@ -258,9 +259,9 @@ func TestServeHTTP(t *testing.T) {
 						Namespace: "default",
 						Name:      "first-channel",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									SinkableDomain: "first-to-domain",
+									SinkableURI: "first-to-domain",
 								},
 							},
 						},
@@ -269,9 +270,9 @@ func TestServeHTTP(t *testing.T) {
 						Namespace: "default",
 						Name:      "second-channel",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									CallableDomain: replaceDomain,
+									CallableURI: replaceDomain,
 								},
 							},
 						},
@@ -317,11 +318,11 @@ func TestServeHTTP(t *testing.T) {
 func replaceDomains(config Config, replacement string) {
 	for i, cc := range config.ChannelConfigs {
 		for j, sub := range cc.FanoutConfig.Subscriptions {
-			if sub.CallableDomain == replaceDomain {
-				sub.CallableDomain = replacement
+			if sub.CallableURI == replaceDomain {
+				sub.CallableURI = replacement
 			}
-			if sub.SinkableDomain == replaceDomain {
-				sub.SinkableDomain = replacement
+			if sub.SinkableURI == replaceDomain {
+				sub.SinkableURI = replacement
 			}
 			cc.FanoutConfig.Subscriptions[j] = sub
 		}

@@ -1,16 +1,16 @@
 # Resource Types
 
 The API defines and provides a complete implementation for
-[Subscription](spec.md#kind-subscription), and abstract resource definitions
+[Subscription](spec.md#kind-subscription) and abstract resource definitions
 for [Channels](spec.md#kind-channel) and
 [ClusterChannelProvisioners](spec.md#kind-clusterchannelprovisioner) which may
 be fulfilled by multiple backing implementations (much like the Kubernetes
 Ingress resource).
 
-With extendibility and compostability as a goal of Knative Eventing, the
-eventing API defines several resources that can be reduced down to a well
+With extensibility and composability as a goal of Knative Eventing, the
+eventing API defines several resources that can be reduced down to well
 understood contracts. These eventing resource interfaces may be fulfilled by
-other Kubernetes objects and then composed in the same way as the concreate
+other Kubernetes objects and then composed in the same way as the concrete
 objects. The interfaces are ([Sinkable](interfaces.md#sinkable),
 [Subscribable](interfaces.md#Subscribable),
 [Targetable](interfaces.md#targetable)). For more details, see
@@ -19,7 +19,7 @@ objects. The interfaces are ([Sinkable](interfaces.md#sinkable),
 - A **Subscription** describes the transformation of an event and optional
   forwarding of a returned event.
 
-- A **Channel** provides event persistance and fanout of events from a
+- A **Channel** provides event persistence and fanout of events from a
   well-known input address to multiple outputs described by _Subscriptions_.
 
 <!-- This image is sourced from https://drive.google.com/open?id=10mmXzDb8S_4_ZG_hcBr7s4HPISyBqcqeJLTXLwkilRc -->
@@ -40,7 +40,7 @@ Sources](https://github.com/knative/eventing-sources).
 
 ## Subscription
 
-**Subscriptions** describe a flow of events from one _Channel_) to the next
+**Subscriptions** describe a flow of events from one _Channel_ to the next
 Channel\* through transformations (such as a Knative Service which processes
 CloudEvents over HTTP). A _Subscription_ controller resolves the addresses of
 transformations (`call`) and destination storage (`result`) through the
@@ -56,12 +56,12 @@ For more details, see [Kind: Subscription](spec.md#kind-subscription).
 
 ## Channel
 
-**Channel** provides an at least once event delivery mechanism which can fan
-out received events to multiple destinations via _Subscriptions_. A _Channel_
-has a single inbound _Sinkable_ interface which may accept events from multiple
-_Subscriptions_ or even direct delivery from external systems. Different
-_Channels_ may implement different degrees of persistence. Event delivery order
-is dependent on the backing implementation of the _Channel_ provided by the
+**Channel** provides an event delivery mechanism which can fan out received
+events to multiple destinations via _Subscriptions_. A _Channel_ has a single
+inbound _Sinkable_ interface which may accept events delivered directly or
+forwarded from multiple _Subscriptions_. Different _Channels_ may implement
+different degrees of persistence. Event delivery order is dependent on the
+backing implementation of the _Channel_ provided by the
 _ClusterChannelProvisioner_.
 
 Event selection on a _Channel_ is 1:N – a single _Channel_ may fan out to

@@ -19,19 +19,20 @@ package filesystem
 import (
 	"errors"
 	"fmt"
-	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/pkg/sidecar/configmap"
-	"github.com/knative/eventing/pkg/sidecar/fanout"
-	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	"go.uber.org/zap"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	"github.com/knative/eventing/pkg/sidecar/configmap"
+	"github.com/knative/eventing/pkg/sidecar/fanout"
+	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
+	"go.uber.org/zap"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func TestReadConfigMap(t *testing.T) {
@@ -82,20 +83,20 @@ func TestReadConfigMap(t *testing.T) {
 					name: c1
 					fanoutConfig:
 					  subscriptions:
-						- callableDomain: event-changer.default.svc.cluster.local
-						  sinkableDomain: message-dumper-bar.default.svc.cluster.local
-						- callableDomain: message-dumper-foo.default.svc.cluster.local
-						- sinkableDomain: message-dumper-bar.default.svc.cluster.local
+						- callableURI: event-changer.default.svc.cluster.local
+						  sinkableURI: message-dumper-bar.default.svc.cluster.local
+						- callableURI: message-dumper-foo.default.svc.cluster.local
+						- sinkableURI: message-dumper-bar.default.svc.cluster.local
 				  - namespace: default
 					name: c2
 					fanoutConfig:
 					  subscriptions:
-						- sinkableDomain: message-dumper-foo.default.svc.cluster.local
+						- sinkableURI: message-dumper-foo.default.svc.cluster.local
 				  - namespace: other
 					name: c3
 					fanoutConfig:
 					  subscriptions:
-						- sinkableDomain: message-dumper-foo.default.svc.cluster.local
+						- sinkableURI: message-dumper-foo.default.svc.cluster.local
 				`,
 			expected: &multichannelfanout.Config{
 				ChannelConfigs: []multichannelfanout.ChannelConfig{
@@ -103,16 +104,16 @@ func TestReadConfigMap(t *testing.T) {
 						Namespace: "default",
 						Name:      "c1",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									CallableDomain: "event-changer.default.svc.cluster.local",
-									SinkableDomain: "message-dumper-bar.default.svc.cluster.local",
+									CallableURI: "event-changer.default.svc.cluster.local",
+									SinkableURI: "message-dumper-bar.default.svc.cluster.local",
 								},
 								{
-									CallableDomain: "message-dumper-foo.default.svc.cluster.local",
+									CallableURI: "message-dumper-foo.default.svc.cluster.local",
 								},
 								{
-									SinkableDomain: "message-dumper-bar.default.svc.cluster.local",
+									SinkableURI: "message-dumper-bar.default.svc.cluster.local",
 								},
 							},
 						},
@@ -121,9 +122,9 @@ func TestReadConfigMap(t *testing.T) {
 						Namespace: "default",
 						Name:      "c2",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									SinkableDomain: "message-dumper-foo.default.svc.cluster.local",
+									SinkableURI: "message-dumper-foo.default.svc.cluster.local",
 								},
 							},
 						},
@@ -132,9 +133,9 @@ func TestReadConfigMap(t *testing.T) {
 						Namespace: "other",
 						Name:      "c3",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									SinkableDomain: "message-dumper-foo.default.svc.cluster.local",
+									SinkableURI: "message-dumper-foo.default.svc.cluster.local",
 								},
 							},
 						},
@@ -185,9 +186,9 @@ func TestWatch(t *testing.T) {
 						Namespace: "default",
 						Name:      "c1",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									SinkableDomain: "foo.bar",
+									SinkableURI: "foo.bar",
 								},
 							},
 						},
@@ -202,9 +203,9 @@ func TestWatch(t *testing.T) {
 						Namespace: "default",
 						Name:      "c1",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									SinkableDomain: "foo.bar",
+									SinkableURI: "foo.bar",
 								},
 							},
 						},
@@ -220,9 +221,9 @@ func TestWatch(t *testing.T) {
 						Namespace: "default",
 						Name:      "c1",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									SinkableDomain: "foo.bar",
+									SinkableURI: "foo.bar",
 								},
 							},
 						},
@@ -235,9 +236,9 @@ func TestWatch(t *testing.T) {
 						Namespace: "default",
 						Name:      "new-channel",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []duckv1alpha1.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									CallableDomain: "baz.qux",
+									CallableURI: "baz.qux",
 								},
 							},
 						},
@@ -350,9 +351,24 @@ func writeConfigString(t *testing.T, dir, config string) {
 		// Golang editors tend to replace leading spaces with tabs. YAML is left whitespace
 		// sensitive, so let's replace the tabs with spaces.
 		leftSpaceConfig := strings.Replace(config, "\t", "    ", -1)
-		err := ioutil.WriteFile(fmt.Sprintf("%s/%s", dir, configmap.MultiChannelFanoutConfigKey), []byte(leftSpaceConfig), 0700)
+		err := atomicWriteFile(t, fmt.Sprintf("%s/%s", dir, configmap.MultiChannelFanoutConfigKey), []byte(leftSpaceConfig), 0700)
 		if err != nil {
 			t.Errorf("Problem writing the config file: %v", err)
 		}
 	}
+}
+
+func atomicWriteFile(t *testing.T, file string, bytes []byte, perm os.FileMode) error {
+	// In order to more closely replicate how K8s writes ConfigMaps to the file system, we will
+	// atomically swap out the file by writing it to a temp directory, then renaming it into the
+	// directory we are watching.
+	tempDir := createTempDir(t)
+	defer os.RemoveAll(tempDir)
+
+	tempFile := fmt.Sprintf("%s/%s", tempDir, "temp")
+	err := ioutil.WriteFile(tempFile, bytes, perm)
+	if err != nil {
+		return err
+	}
+	return os.Rename(tempFile, file)
 }

@@ -26,7 +26,7 @@ its subscribers._
 
 | Field         | Type                               | Description                                                                | Constraints                            |
 | ------------- | ---------------------------------- | -------------------------------------------------------------------------- | -------------------------------------- |
-| provisioner\* | ProvisionerReference               | The name of the provisioner to create the resources that back the Channel. | Immutable.                             |
+| provisioner\* | ObjectReference                    | The name of the provisioner to create the resources that back the Channel. | Immutable.                             |
 | arguments     | runtime.RawExtension (JSON object) | Arguments to be passed to the provisioner.                                 |                                        |
 | subscribers   | ChannelSubscriberSpec[]            | Information about subscriptions used to implement message forwarding.      | Filled out by Subscription Controller. |
 
@@ -125,9 +125,9 @@ or a Channel system that receives and delivers events._
 
 #### Spec
 
-| Field      | Type                               | Description                                                                                       | Constraints      |
-| ---------- | ---------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------- |
-| parameters | runtime.RawExtension (JSON object) | Description of the arguments able to be passed by the provisioned resource (not enforced in 0.1). | JSON Schema      |
+| Field      | Type                               | Description                                                                                       | Constraints |
+| ---------- | ---------------------------------- | ------------------------------------------------------------------------------------------------- | ----------- |
+| parameters | runtime.RawExtension (JSON object) | Description of the arguments able to be passed by the provisioned resource (not enforced in 0.1). | JSON Schema |
 
 \*: Required
 
@@ -149,14 +149,6 @@ or a Channel system that receives and delivers events._
 ---
 
 ## Shared Object Schema
-
-### ProvisionerReference
-
-| Field | Type            | Description | Constraints |
-| ----- | --------------- | ----------- | ----------- |
-| ref\* | ObjectReference |             |             |
-
-\*: Required
 
 ### EndpointSpec
 

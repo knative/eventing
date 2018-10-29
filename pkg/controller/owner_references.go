@@ -53,12 +53,10 @@ func kind(obj metav1.Object) schema.GroupVersionKind {
 		return flowsv1alpha.SchemeGroupVersion.WithKind("Flow")
 
 	// Eventing
-	case *eventingv1alpha.Source:
-		return eventingv1alpha.SchemeGroupVersion.WithKind("Source")
 	case *eventingv1alpha.Channel:
 		return eventingv1alpha.SchemeGroupVersion.WithKind("Channel")
-	case *eventingv1alpha.ClusterProvisioner:
-		return eventingv1alpha.SchemeGroupVersion.WithKind("ClusterProvisioner")
+	case *eventingv1alpha.ClusterChannelProvisioner:
+		return eventingv1alpha.SchemeGroupVersion.WithKind("ClusterChannelProvisioner")
 	case *eventingv1alpha.Subscription:
 		return eventingv1alpha.SchemeGroupVersion.WithKind("Subscription")
 

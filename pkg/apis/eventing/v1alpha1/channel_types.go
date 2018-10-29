@@ -17,6 +17,7 @@
 package v1alpha1
 
 import (
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/webhook"
@@ -29,8 +30,8 @@ import (
 // +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Channel is an abstract resource that implements the Subscribable and Sinkable
-// contracts. The Provisioner provisions infrastructure to accepts events and
+// Channel is an abstract resource that implements the Sinkable contract.
+// The Provisioner provisions infrastructure to accepts events and
 // deliver to Subscriptions.
 type Channel struct {
 	metav1.TypeMeta `json:",inline"`
@@ -64,8 +65,7 @@ type ChannelSpec struct {
 	Generation int64 `json:"generation,omitempty"`
 
 	// Provisioner defines the name of the Provisioner backing this channel.
-	// TODO: +optional If missing, a default Provisioner may be selected for the Channel.
-	Provisioner *ProvisionerReference `json:"provisioner,omitempty"`
+	Provisioner *corev1.ObjectReference `json:"provisioner,omitempty"`
 
 	// Arguments defines the arguments to pass to the Provisioner which provisions
 	// this Channel.
@@ -73,10 +73,10 @@ type ChannelSpec struct {
 	Arguments *runtime.RawExtension `json:"arguments,omitempty"`
 
 	// Channel conforms to Duck type Channelable.
-	Channelable *duckv1alpha1.Channelable `json:"channelable,omitempty"`
+	Channelable *eventingduck.Channelable `json:"channelable,omitempty"`
 }
 
-var chanCondSet = duckv1alpha1.NewLivingConditionSet(ChannelConditionProvisioned, ChannelConditionSinkable, ChannelConditionSubscribable)
+var chanCondSet = duckv1alpha1.NewLivingConditionSet(ChannelConditionProvisioned, ChannelConditionSinkable)
 
 // ChannelStatus represents the current state of a Channel.
 type ChannelStatus struct {
@@ -92,9 +92,6 @@ type ChannelStatus struct {
 	// that will distribute traffic over the provided targets from inside the cluster.
 	// It generally has the form {channel}.{namespace}.svc.cluster.local
 	Sinkable duckv1alpha1.Sinkable `json:"sinkable,omitempty"`
-
-	// Channel is Subscribable. It just points to itself
-	Subscribable duckv1alpha1.Subscribable `json:"subscribable,omitempty"`
 
 	// Represents the latest available observations of a channel's current state.
 	// +optional
@@ -115,10 +112,6 @@ const (
 	// ChannelConditionSinkable has status true when this Channel meets the Sinkable contract and
 	// has a non-empty domainInternal.
 	ChannelConditionSinkable duckv1alpha1.ConditionType = "Sinkable"
-
-	// ChannelConditionSubscribable has status true when this Channel meets the Subscribable
-	// contract and has a non-empty Channelable object reference.
-	ChannelConditionSubscribable duckv1alpha1.ConditionType = "Subscribable"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
@@ -144,25 +137,6 @@ func (cs *ChannelStatus) MarkProvisioned() {
 // MarkNotProvisioned sets ChannelConditionProvisioned condition to False state.
 func (cs *ChannelStatus) MarkNotProvisioned(reason, messageFormat string, messageA ...interface{}) {
 	chanCondSet.Manage(cs).MarkFalse(ChannelConditionProvisioned, reason, messageFormat, messageA...)
-}
-
-// SetSubscribable makes this Channel Subscribable, by having it point at itself. The 'name' and
-// 'namespace' should be the name and namespace of the Channel this ChannelStatus is on. It also
-// sets the ChannelConditionSubscribable to true.
-func (cs *ChannelStatus) SetSubscribable(namespace, name string) {
-	if namespace != "" || name != "" {
-		cs.Subscribable.Channelable = corev1.ObjectReference{
-			Kind:       "Channel",
-			APIVersion: SchemeGroupVersion.String(),
-			Namespace:  namespace,
-			Name:       name,
-		}
-		chanCondSet.Manage(cs).MarkTrue(ChannelConditionSubscribable)
-	} else {
-		cs.Subscribable.Channelable = corev1.ObjectReference{}
-		chanCondSet.Manage(cs).MarkFalse(ChannelConditionSubscribable, "notSubscribable", "not Subscribable")
-	}
-
 }
 
 // SetSinkable makes this Channel sinkable by setting the domainInternal. It also sets the

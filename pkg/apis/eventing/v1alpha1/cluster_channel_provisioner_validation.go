@@ -18,26 +18,16 @@ package v1alpha1
 
 import (
 	"github.com/knative/pkg/apis"
-	"k8s.io/apimachinery/pkg/api/equality"
 )
 
-// Validate validates the Source resource.
-func (s *Source) Validate() *apis.FieldError {
-	return s.Spec.Validate().ViaField("spec")
+// Validate validates the ClusterChannelProvisioner resource.
+func (p *ClusterChannelProvisioner) Validate() *apis.FieldError {
+	return p.Spec.Validate().ViaField("spec")
 }
 
-// Validate validates the Source spec
-func (ss *SourceSpec) Validate() *apis.FieldError {
-	if equality.Semantic.DeepEqual(ss, &SourceSpec{}) {
-		return apis.ErrMissingField("provisioner")
-	}
+// Validate validates the ClusterChannelProvisioner spec
+func (ps *ClusterChannelProvisionerSpec) Validate() *apis.FieldError {
 	var errs *apis.FieldError
-
-	if ss.Channel != nil && !isChannelableEmpty(*ss.Channel) {
-		errs = errs.Also(isValidChannelable(*ss.Channel).ViaField("channel"))
-	}
-
-	// TODO: could validate that arguments are json if that is a requirement.
 
 	return errs
 }

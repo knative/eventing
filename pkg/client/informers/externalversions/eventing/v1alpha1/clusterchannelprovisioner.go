@@ -31,59 +31,58 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 )
 
-// SourceInformer provides access to a shared informer and lister for
-// Sources.
-type SourceInformer interface {
+// ClusterChannelProvisionerInformer provides access to a shared informer and lister for
+// ClusterChannelProvisioners.
+type ClusterChannelProvisionerInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.SourceLister
+	Lister() v1alpha1.ClusterChannelProvisionerLister
 }
 
-type sourceInformer struct {
+type clusterChannelProvisionerInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
-// NewSourceInformer constructs a new informer for Source type.
+// NewClusterChannelProvisionerInformer constructs a new informer for ClusterChannelProvisioner type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewSourceInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredSourceInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewClusterChannelProvisionerInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredClusterChannelProvisionerInformer(client, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredSourceInformer constructs a new informer for Source type.
+// NewFilteredClusterChannelProvisionerInformer constructs a new informer for ClusterChannelProvisioner type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredSourceInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredClusterChannelProvisionerInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1alpha1().Sources(namespace).List(options)
+				return client.EventingV1alpha1().ClusterChannelProvisioners().List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1alpha1().Sources(namespace).Watch(options)
+				return client.EventingV1alpha1().ClusterChannelProvisioners().Watch(options)
 			},
 		},
-		&eventing_v1alpha1.Source{},
+		&eventing_v1alpha1.ClusterChannelProvisioner{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *sourceInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredSourceInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *clusterChannelProvisionerInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredClusterChannelProvisionerInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *sourceInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&eventing_v1alpha1.Source{}, f.defaultInformer)
+func (f *clusterChannelProvisionerInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&eventing_v1alpha1.ClusterChannelProvisioner{}, f.defaultInformer)
 }
 
-func (f *sourceInformer) Lister() v1alpha1.SourceLister {
-	return v1alpha1.NewSourceLister(f.Informer().GetIndexer())
+func (f *clusterChannelProvisionerInformer) Lister() v1alpha1.ClusterChannelProvisionerLister {
+	return v1alpha1.NewClusterChannelProvisionerLister(f.Informer().GetIndexer())
 }
