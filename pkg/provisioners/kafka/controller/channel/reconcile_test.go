@@ -24,11 +24,6 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/ghodss/yaml"
 	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/pkg/apis/eventing"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	controllertesting "github.com/knative/eventing/pkg/controller/testing"
-	"github.com/knative/eventing/pkg/provisioners"
-	"github.com/knative/eventing/pkg/provisioners/kafka/controller"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,6 +32,11 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	controllertesting "github.com/knative/eventing/pkg/controller/testing"
+	"github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/eventing/pkg/provisioners/kafka/controller"
 )
 
 const (
@@ -153,7 +153,7 @@ var testCases = []controllertesting.TestCase{
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
 		WantResult:   reconcile.Result{},
-		WantErrMsg:   "clusterChannelProvisioners.eventing.knative.dev \"" + clusterChannelProvisionerName + "\" not found",
+		WantErrMsg:   "clusterchannelprovisioners.eventing.knative.dev \"" + clusterChannelProvisionerName + "\" not found",
 		IgnoreTimes:  true,
 	},
 	{
@@ -400,12 +400,10 @@ func getNewChannel(name, provisioner string) *eventingv1alpha1.Channel {
 		TypeMeta:   channelType(),
 		ObjectMeta: om(testNS, name),
 		Spec: eventingv1alpha1.ChannelSpec{
-			Provisioner: &eventingv1alpha1.ProvisionerReference{
-				Ref: &corev1.ObjectReference{
-					Name:       provisioner,
-					Kind:       "ClusterChannelProvisioner",
-					APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-				},
+			Provisioner: &corev1.ObjectReference{
+				Name:       provisioner,
+				Kind:       "ClusterChannelProvisioner",
+				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 			},
 		},
 	}
@@ -464,17 +462,16 @@ func getNewClusterChannelProvisioner(name string, isReady bool) *eventingv1alpha
 			Kind:       "ClusterChannelProvisioner",
 		},
 		ObjectMeta: om("", name),
-		Spec: eventingv1alpha1.ClusterChannelProvisionerSpec{
-			Reconciles: metav1.GroupKind{
-				Kind:  "Channel",
-				Group: eventing.GroupName,
-			},
-		},
+		Spec:       eventingv1alpha1.ClusterChannelProvisionerSpec{},
 		Status: eventingv1alpha1.ClusterChannelProvisionerStatus{
 			Conditions: []duckv1alpha1.Condition{
 				{
 					Type:   eventingv1alpha1.ClusterChannelProvisionerConditionReady,
 					Status: condStatus,
+				},
+				{
+					Type:   eventingv1alpha1.ChannelConditionSinkable,
+					Status: "Unknown",
 				},
 			},
 		},

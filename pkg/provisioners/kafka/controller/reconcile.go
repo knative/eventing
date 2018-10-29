@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/knative/eventing/pkg/apis/eventing"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -50,11 +49,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	// Skip channel provisioners that we don't manage
 	if provisioner.Name != r.config.Name {
-		return reconcile.Result{}, nil
-	}
-
-	// Only reconcile channel provisioners
-	if provisioner.Spec.Reconciles.Group != eventing.GroupName || provisioner.Spec.Reconciles.Kind != "Channel" {
 		return reconcile.Result{}, nil
 	}
 

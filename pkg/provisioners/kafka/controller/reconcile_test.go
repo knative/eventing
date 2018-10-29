@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/knative/eventing/pkg/apis/eventing"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
 	"github.com/knative/eventing/pkg/provisioners"
@@ -74,17 +73,6 @@ var testCases = []controllertesting.TestCase{
 			GetNewChannelClusterChannelProvisionerReady(clusterChannelProvisionerName),
 		},
 		IgnoreTimes: true,
-	},
-	{
-		Name: "reconciles only channel kind",
-		InitialState: []runtime.Object{
-			getNewClusterChannelProvisioner(clusterChannelProvisionerName, "Source"),
-		},
-		ReconcileKey: fmt.Sprintf("%s/%s", testNS, clusterChannelProvisionerName),
-		WantResult:   reconcile.Result{},
-		WantPresent: []runtime.Object{
-			getNewClusterChannelProvisioner(clusterChannelProvisionerName, "Source"),
-		},
 	},
 	{
 		Name: "reconciles only associated provisioner",
@@ -154,12 +142,7 @@ func getNewClusterChannelProvisioner(name string, reconcileKind string) *eventin
 	clusterChannelProvisioner := &eventingv1alpha1.ClusterChannelProvisioner{
 		TypeMeta:   ClusterProvisonerType(),
 		ObjectMeta: om(testNS, name),
-		Spec: eventingv1alpha1.ClusterChannelProvisionerSpec{
-			Reconciles: metav1.GroupKind{
-				Kind:  reconcileKind,
-				Group: eventing.GroupName,
-			},
-		},
+		Spec:       eventingv1alpha1.ClusterChannelProvisionerSpec{},
 	}
 	// selflink is not filled in when we create the object, so clear it
 	clusterChannelProvisioner.ObjectMeta.SelfLink = ""

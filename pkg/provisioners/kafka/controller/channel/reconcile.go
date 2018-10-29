@@ -59,22 +59,23 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	// Skip Channel as it is not targeting any provisioner
-	if channel.Spec.Provisioner == nil || channel.Spec.Provisioner.Ref == nil {
+	if channel.Spec.Provisioner == nil {
 		return reconcile.Result{}, nil
 	}
 
 	// Skip channel not managed by this provisioner
-	provisionerRef := channel.Spec.Provisioner.Ref
 	clusterChannelProvisioner, err := r.getClusterChannelProvisioner()
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-
+	provisionerRef := channel.Spec.Provisioner
 	if provisionerRef.Name != clusterChannelProvisioner.Name || provisionerRef.Namespace != clusterChannelProvisioner.Namespace {
 		return reconcile.Result{}, nil
 	}
 
 	newChannel := channel.DeepCopy()
+
+	newChannel.Status.InitializeConditions()
 
 	if clusterChannelProvisioner.Status.IsReady() {
 		// Reconcile this copy of the Channel and then write back any status
@@ -112,7 +113,7 @@ func (r *reconciler) reconcile(channel *v1alpha1.Channel) error {
 	}
 
 	r.addFinalizer(channel)
-	channel.Status.InitializeConditions()
+
 	if err := r.provisionChannel(channel); err != nil {
 		channel.Status.MarkNotProvisioned("NotProvisioned", "error while provisioning: %s", err)
 		return err
