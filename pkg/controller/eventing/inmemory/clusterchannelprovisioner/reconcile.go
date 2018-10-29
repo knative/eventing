@@ -19,8 +19,6 @@ package clusterchannelprovisioner
 import (
 	"context"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	util "github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -28,6 +26,9 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	util "github.com/knative/eventing/pkg/provisioners"
 )
 
 const (
@@ -133,9 +134,9 @@ func (r *reconciler) reconcile(ctx context.Context, ccp *eventingv1alpha1.Cluste
 		return err
 	}
 
-	// Check if this ClusterProvisioner is the owner of the K8s service.
+	// Check if this ClusterChannelProvisioner is the owner of the K8s service.
 	if !metav1.IsControlledBy(svc, ccp) {
-		logger.Warn("ClusterChannelProvisioner's K8s Service is not owned by the ClusterProvisioner", zap.Any("clusterProvisioner", cp), zap.Any("service", svc))
+		logger.Warn("ClusterChannelProvisioner's K8s Service is not owned by the ClusterChannelProvisioner", zap.Any("clusterChannelProvisioner", ccp), zap.Any("service", svc))
 	}
 
 	ccp.Status.MarkReady()

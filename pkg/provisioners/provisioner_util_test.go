@@ -15,18 +15,17 @@ import (
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/knative/eventing/pkg/apis/eventing"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 )
 
 const (
-	clusterProvisionerName = "kafka"
+	clusterChannelProvisionerName = "kafka"
 )
 
 func TestCreateDispatcherService(t *testing.T) {
 	want := makeDispatcherService()
 	client := fake.NewFakeClient()
-	got, _ := CreateDispatcherService(context.TODO(), client, getNewClusterProvisioner())
+	got, _ := CreateDispatcherService(context.TODO(), client, getNewClusterChannelProvisioner())
 
 	ignore := cmpopts.IgnoreTypes(apis.VolatileTime{})
 	if diff := cmp.Diff(want, got, ignore); diff != "" {
@@ -37,7 +36,7 @@ func TestCreateDispatcherService(t *testing.T) {
 func TestCreateDispatcherService_Existing(t *testing.T) {
 	want := makeDispatcherService()
 	client := fake.NewFakeClient(want)
-	got, _ := CreateDispatcherService(context.TODO(), client, getNewClusterProvisioner())
+	got, _ := CreateDispatcherService(context.TODO(), client, getNewClusterChannelProvisioner())
 
 	ignore := cmpopts.IgnoreTypes(apis.VolatileTime{})
 	if diff := cmp.Diff(want, got, ignore); diff != "" {
@@ -45,20 +44,20 @@ func TestCreateDispatcherService_Existing(t *testing.T) {
 	}
 }
 
-func TestUpdateClusterProvisioner(t *testing.T) {
-	cp := getNewClusterProvisioner()
-	client := fake.NewFakeClient(cp)
+func TestUpdateClusterChannelProvisioner(t *testing.T) {
+	ccp := getNewClusterChannelProvisioner()
+	client := fake.NewFakeClient(ccp)
 
 	// Update more than just Status
-	cp.Status.MarkReady()
-	cp.ObjectMeta.Annotations = map[string]string{"test-annotation": "testing"}
-	UpdateClusterProvisionerStatus(context.TODO(), client, cp)
+	ccp.Status.MarkReady()
+	ccp.ObjectMeta.Annotations = map[string]string{"test-annotation": "testing"}
+	UpdateClusterChannelProvisionerStatus(context.TODO(), client, ccp)
 
-	got := &eventingv1alpha1.ClusterProvisioner{}
-	client.Get(context.TODO(), runtimeClient.ObjectKey{Namespace: testNS, Name: clusterProvisionerName}, got)
+	got := &eventingv1alpha1.ClusterChannelProvisioner{}
+	client.Get(context.TODO(), runtimeClient.ObjectKey{Namespace: testNS, Name: clusterChannelProvisionerName}, got)
 
 	// Only status should be updated
-	want := getNewClusterProvisioner()
+	want := getNewClusterChannelProvisioner()
 	want.Status.MarkReady()
 
 	ignore := cmpopts.IgnoreTypes(apis.VolatileTime{})
@@ -67,26 +66,21 @@ func TestUpdateClusterProvisioner(t *testing.T) {
 	}
 }
 
-func getNewClusterProvisioner() *eventingv1alpha1.ClusterProvisioner {
-	clusterProvisioner := &eventingv1alpha1.ClusterProvisioner{
+func getNewClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvisioner {
+	clusterChannelProvisioner := &eventingv1alpha1.ClusterChannelProvisioner{
 		TypeMeta:   ClusterProvisonerType(),
-		ObjectMeta: om(testNS, clusterProvisionerName),
-		Spec: eventingv1alpha1.ClusterProvisionerSpec{
-			Reconciles: metav1.GroupKind{
-				Kind:  "Channel",
-				Group: eventing.GroupName,
-			},
-		},
+		ObjectMeta: om(testNS, clusterChannelProvisionerName),
+		Spec:       eventingv1alpha1.ClusterChannelProvisionerSpec{},
 	}
 	// selflink is not filled in when we create the object, so clear it
-	clusterProvisioner.ObjectMeta.SelfLink = ""
-	return clusterProvisioner
+	clusterChannelProvisioner.ObjectMeta.SelfLink = ""
+	return clusterChannelProvisioner
 }
 
 func ClusterProvisonerType() metav1.TypeMeta {
 	return metav1.TypeMeta{
 		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-		Kind:       "ClusterProvisioner",
+		Kind:       "ClusterChannelProvisioner",
 	}
 }
 
@@ -94,20 +88,20 @@ func makeDispatcherService() *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: system.Namespace,
-			Name:      fmt.Sprintf("%s-clusterbus", clusterProvisionerName),
+			Name:      fmt.Sprintf("%s-clusterbus", clusterChannelProvisionerName),
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
-					Kind:               "ClusterProvisioner",
-					Name:               clusterProvisionerName,
+					Kind:               "ClusterChannelProvisioner",
+					Name:               clusterChannelProvisionerName,
 					Controller:         &truePointer,
 					BlockOwnerDeletion: &truePointer,
 				},
 			},
-			Labels: DispatcherLabels(clusterProvisionerName),
+			Labels: DispatcherLabels(clusterChannelProvisionerName),
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: DispatcherLabels(clusterProvisionerName),
+			Selector: DispatcherLabels(clusterChannelProvisionerName),
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "http",

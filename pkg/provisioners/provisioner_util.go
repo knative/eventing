@@ -19,8 +19,8 @@ import (
 	"github.com/knative/pkg/logging"
 )
 
-func CreateDispatcherService(ctx context.Context, client runtimeClient.Client, cp *eventingv1alpha1.ClusterProvisioner) (*corev1.Service, error) {
-	svcName := controller.ClusterBusDispatcherServiceName(cp.Name)
+func CreateDispatcherService(ctx context.Context, client runtimeClient.Client, ccp *eventingv1alpha1.ClusterChannelProvisioner) (*corev1.Service, error) {
+	svcName := controller.ClusterBusDispatcherServiceName(ccp.Name)
 	svcKey := types.NamespacedName{
 		Namespace: system.Namespace,
 		Name:      svcName,
@@ -29,7 +29,7 @@ func CreateDispatcherService(ctx context.Context, client runtimeClient.Client, c
 	err := client.Get(ctx, svcKey, svc)
 
 	if errors.IsNotFound(err) {
-		svc = newDispatcherService(cp)
+		svc = newDispatcherService(ccp)
 		err = client.Create(ctx, svc)
 	}
 
@@ -41,11 +41,11 @@ func CreateDispatcherService(ctx context.Context, client runtimeClient.Client, c
 	return svc, nil
 }
 
-func UpdateClusterProvisionerStatus(ctx context.Context, client runtimeClient.Client, u *eventingv1alpha1.ClusterProvisioner) error {
-	o := &eventingv1alpha1.ClusterProvisioner{}
+func UpdateClusterChannelProvisionerStatus(ctx context.Context, client runtimeClient.Client, u *eventingv1alpha1.ClusterChannelProvisioner) error {
+	o := &eventingv1alpha1.ClusterChannelProvisioner{}
 	if err := client.Get(ctx, runtimeClient.ObjectKey{Namespace: u.Namespace, Name: u.Name}, o); err != nil {
 		logger := logging.FromContext(ctx)
-		logger.Info("Error getting ClusterProvisioner for status update", zap.Error(err), zap.Any("updatedClusterProvisioner", u))
+		logger.Info("Error getting ClusterChannelProvisioner for status update", zap.Error(err), zap.Any("updatedClusterChannelProvisioner", u))
 		return err
 	}
 
@@ -56,21 +56,21 @@ func UpdateClusterProvisionerStatus(ctx context.Context, client runtimeClient.Cl
 	return nil
 }
 
-// newDispatcherService creates a new Service for a ClusterBus resource. It also sets
+// newDispatcherService creates a new Service for a ClusterChannelProvisioner resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
-// the ClusterBus resource that 'owns' it.
-func newDispatcherService(cp *eventingv1alpha1.ClusterProvisioner) *corev1.Service {
-	labels := DispatcherLabels(cp.Name)
+// the ClusterChannelProvisioner resource that 'owns' it.
+func newDispatcherService(ccp *eventingv1alpha1.ClusterChannelProvisioner) *corev1.Service {
+	labels := DispatcherLabels(ccp.Name)
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.ClusterBusDispatcherServiceName(cp.Name),
+			Name:      controller.ClusterBusDispatcherServiceName(ccp.Name),
 			Namespace: system.Namespace,
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(cp, schema.GroupVersionKind{
+				*metav1.NewControllerRef(ccp, schema.GroupVersionKind{
 					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
 					Version: eventingv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "ClusterProvisioner",
+					Kind:    "ClusterChannelProvisioner",
 				}),
 			},
 		},
@@ -87,9 +87,9 @@ func newDispatcherService(cp *eventingv1alpha1.ClusterProvisioner) *corev1.Servi
 	}
 }
 
-func DispatcherLabels(cpName string) map[string]string {
+func DispatcherLabels(ccpName string) map[string]string {
 	return map[string]string{
-		"clusterProvisioner": cpName,
-		"role":               "dispatcher",
+		"clusterChannelProvisioner": ccpName,
+		"role": "dispatcher",
 	}
 }

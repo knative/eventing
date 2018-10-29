@@ -19,9 +19,8 @@ import (
 )
 
 const (
-	channelName                   = "test-channel"
-	testNS                        = "test-namespace"
-	channelClusterProvisionerName = "channel-cluster-provisioner"
+	channelName = "test-channel"
+	testNS      = "test-namespace"
 )
 
 var (
@@ -101,12 +100,10 @@ func getNewChannel() *eventingv1alpha1.Channel {
 		TypeMeta:   channelType(),
 		ObjectMeta: om(testNS, channelName),
 		Spec: eventingv1alpha1.ChannelSpec{
-			Provisioner: &eventingv1alpha1.ProvisionerReference{
-				Ref: &corev1.ObjectReference{
-					Name:       channelClusterProvisionerName,
-					Kind:       "ClusterProvisioner",
-					APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-				},
+			Provisioner: &corev1.ObjectReference{
+				Name:       clusterChannelProvisionerName,
+				Kind:       "ClusterProvisioner",
+				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 			},
 		},
 	}
@@ -136,7 +133,7 @@ func makeK8sService() *corev1.Service {
 			Namespace: testNS,
 			Labels: map[string]string{
 				"channel":     channelName,
-				"provisioner": channelClusterProvisionerName,
+				"provisioner": clusterChannelProvisionerName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -166,7 +163,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 			Namespace: testNS,
 			Labels: map[string]string{
 				"channel":     channelName,
-				"provisioner": channelClusterProvisionerName,
+				"provisioner": clusterChannelProvisionerName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -189,7 +186,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 				},
 				Route: []istiov1alpha3.DestinationWeight{{
 					Destination: istiov1alpha3.Destination{
-						Host: "channel-cluster-provisioner-clusterbus.knative-eventing.svc.cluster.local",
+						Host: fmt.Sprintf("%s-clusterbus.knative-eventing.svc.cluster.local", clusterChannelProvisionerName),
 						Port: istiov1alpha3.PortSelector{
 							Number: PortNumber,
 						},
