@@ -31,10 +31,9 @@ They differ from most Channels in that they have:
       name: foo
     spec:
       provisioner:
-        ref:
-          apiVersion: eventing.knative.dev/v1alpha1
-          kind: ClusterChannelProvisioner
-          name: in-memory-channel
+        apiVersion: eventing.knative.dev/v1alpha1
+        kind: ClusterChannelProvisioner
+        name: in-memory-channel
     ```
 
 ### Components
