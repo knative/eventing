@@ -16,10 +16,7 @@ apiVersion: eventing.knative.dev/v1alpha1
 kind: ClusterChannelProvisioner
 metadata:
   name: in-memory-channel
-spec:
-  reconciles:
-    group: eventing.knative.dev/v1alpha1
-    kind: Channel
+spec: {}
 
 ---
 
