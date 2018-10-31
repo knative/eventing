@@ -31,6 +31,7 @@ required = [
 [[override]]
   name = "github.com/spf13/cobra"
   revision = "615425954c3b0d9485a7027d4d451fdcdfdee84e"
+
 [[override]]
   name = "github.com/spf13/pflag"
   revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
@@ -75,8 +76,8 @@ required = [
 
 [[override]]
   name = "github.com/knative/pkg"
-  # HEAD as of 2018-10-09
-  revision = "ba1a828cd571f605684f9a4506e85bc13cb65b8d"
+  # HEAD as of 2018-10-30
+  revision = "d247efe41d5855f43133f9894f95ce8f9caa195f"
 
 [[constraint]]
   name = "github.com/knative/serving"

@@ -31,4 +31,5 @@ rm -rf $(find vendor/ -name 'BUILD.bazel')
 # Keep the only dir in knative/test-infra we're interested in
 find vendor/github.com/knative/test-infra -mindepth 1 -maxdepth 1 ! -name scripts -exec rm -fr {} \;
 
-update_licenses third_party/VENDOR-LICENSE "./cmd/*"
+update_licenses third_party/VENDOR-LICENSE \
+  $(find . -name "*.go" | grep -v vendor | xargs grep "package main" | cut -d: -f1 | xargs -n1 dirname | uniq)

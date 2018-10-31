@@ -14,21 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This is a helper script to run the presubmit tests. To use it:
-# 1. Source this script.
-# 2. Define the functions build_tests(), unit_tests() and
-#    integration_tests(). They should run all tests (i.e., not fail
-#    fast), and return 0 if all passed, 1 if a failure occurred.
-#    The environment variables RUN_BUILD_TESTS, RUN_UNIT_TESTS and
-#    RUN_INTEGRATION_TESTS are set to 0 (false) or 1 (true) accordingly.
-#    If --emit-metrics is passed, EMIT_METRICS will be set to 1.
-# 3. Call the main() function passing $@ (without quotes).
-#
-# Running the script without parameters, or with the --all-tests
-# flag, causes all tests to be executed, in the right order.
-# Use the flags --build-tests, --unit-tests and --integration-tests
-# to run a specific set of tests. The flag --emit-metrics is used
-# to emit metrics when running the tests.
+# This is a helper script for Knative presubmit test scripts.
+# See README.md for instructions on how to use it.
 
 source $(dirname ${BASH_SOURCE})/library.sh
 
@@ -64,6 +51,19 @@ function exit_if_presubmit_not_required() {
 # Process flags and run tests accordingly.
 function main() {
   exit_if_presubmit_not_required
+
+  # Show the version of the tools we're using
+  if (( IS_PROW )); then
+    # Disable gcloud update notifications
+    gcloud config set component_manager/disable_update_check true
+    header "Current test setup"
+    echo ">> gcloud SDK version"
+    gcloud version
+    echo ">> kubectl version"
+    kubectl version
+    echo ">> go version"
+    go version
+  fi
 
   local all_parameters=$@
   [[ -z $1 ]] && all_parameters="--all-tests"
@@ -108,15 +108,29 @@ function main() {
 
   # Tests to be performed, in the right order if --all-tests is passed.
 
-  local result=0
+  local failed=0
   if (( RUN_BUILD_TESTS )); then
-    build_tests || result=1
+    build_tests || failed=1
   fi
   if (( RUN_UNIT_TESTS )); then
-    unit_tests || result=1
+    unit_tests || failed=1
   fi
   if (( RUN_INTEGRATION_TESTS )); then
-    integration_tests || result=1
+    if function_exists pre_integration_tests; then
+      pre_integration_tests || failed=1
+    fi
+    if (( ! failed )); then
+      if function_exists integration_tests; then
+        integration_tests || failed=1
+      else
+       local options=""
+       (( EMIT_METRICS )) && options="--emit-metrics"
+       ./test/e2e-tests.sh ${options} || failed=1
+      fi
+    fi
+    if (( ! failed )) && function_exists post_integration_tests; then
+      post_integration_tests || failed=1
+    fi
   fi
-  exit ${result}
+  exit ${failed}
 }
