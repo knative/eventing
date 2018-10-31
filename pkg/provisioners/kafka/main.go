@@ -22,8 +22,7 @@ import (
 )
 
 const (
-	ClusterChannelProvisionerNameConfigMapKey = "cluster-provisioner-name"
-	BrokerConfigMapKey                        = "brokers"
+	BrokerConfigMapKey = "brokers"
 )
 
 // SchemeFunc adds types to a Scheme.
@@ -90,12 +89,6 @@ func getProvisionerConfig() (*provisionerController.KafkaProvisionerConfig, erro
 	}
 
 	config := &provisionerController.KafkaProvisionerConfig{}
-
-	if value, ok := configMap[ClusterChannelProvisionerNameConfigMapKey]; ok {
-		config.Name = value
-	} else {
-		return nil, fmt.Errorf("missing key %s in provisioner configuration", ClusterChannelProvisionerNameConfigMapKey)
-	}
 
 	if value, ok := configMap[BrokerConfigMapKey]; ok {
 		brokers := strings.Split(value, ",")

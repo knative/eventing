@@ -29,6 +29,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const (
+	// Name is the name of the kafka ClusterChannelProvisioner.
+	Name = "kafka-channel"
+)
+
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Provisioner resource
 // with the current status of the resource.
@@ -48,7 +53,8 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	// Skip channel provisioners that we don't manage
-	if provisioner.Name != r.config.Name {
+	if provisioner.Name != Name {
+		r.logger.Info("not reconciling ClusterChannelProvisioner, it is not controlled by this Controller", zap.Any("request", request))
 		return reconcile.Result{}, nil
 	}
 

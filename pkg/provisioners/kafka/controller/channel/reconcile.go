@@ -30,6 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/knative/eventing/pkg/provisioners/kafka/controller"
 )
 
 const (
@@ -69,7 +71,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 	provisionerRef := channel.Spec.Provisioner
-	if provisionerRef.Name != clusterChannelProvisioner.Name || provisionerRef.Namespace != clusterChannelProvisioner.Namespace {
+	if provisionerRef.Name != clusterChannelProvisioner.Name {
 		return reconcile.Result{}, nil
 	}
 
@@ -175,7 +177,7 @@ func (r *reconciler) deprovisionChannel(channel *v1alpha1.Channel) error {
 func (r *reconciler) getClusterChannelProvisioner() (*v1alpha1.ClusterChannelProvisioner, error) {
 	clusterChannelProvisioner := &v1alpha1.ClusterChannelProvisioner{}
 	objKey := client.ObjectKey{
-		Name: r.config.Name,
+		Name: controller.Name,
 	}
 	if err := r.client.Get(context.Background(), objKey, clusterChannelProvisioner); err != nil {
 		return nil, err

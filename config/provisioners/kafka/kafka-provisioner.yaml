@@ -56,8 +56,6 @@ metadata:
   name: kafka-channel-controller-config
   namespace: knative-eventing
 data:
-  # Name of the provisioner that this controller represents
-  cluster-provisioner-name: kafka
   # Broker URL's for the provisioner
   brokers: kafkabroker.kafka:9092
 ---

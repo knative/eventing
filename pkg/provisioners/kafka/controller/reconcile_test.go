@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	clusterChannelProvisionerName = "kafka"
+	clusterChannelProvisionerName = "kafka-channel"
 	testNS                        = ""
 )
 
@@ -183,7 +183,6 @@ func om(namespace, name string) metav1.ObjectMeta {
 
 func getControllerConfig() *KafkaProvisionerConfig {
 	return &KafkaProvisionerConfig{
-		Name:    clusterChannelProvisionerName,
 		Brokers: []string{"test-broker"},
 	}
 }
