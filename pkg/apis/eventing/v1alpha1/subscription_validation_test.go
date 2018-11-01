@@ -224,7 +224,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("reply.target.name")
+			fe := apis.ErrMissingField("reply.channel.name")
 			return fe
 		}(),
 	}}
@@ -630,7 +630,7 @@ func TestValidReply(t *testing.T) {
 			},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("target.name")
+			fe := apis.ErrMissingField("channel.name")
 			return fe
 		}(),
 	}, {
@@ -642,7 +642,7 @@ func TestValidReply(t *testing.T) {
 			},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("target.apiVersion")
+			fe := apis.ErrMissingField("channel.apiVersion")
 			return fe
 		}(),
 	}, {
@@ -654,7 +654,7 @@ func TestValidReply(t *testing.T) {
 			},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("target.kind")
+			fe := apis.ErrMissingField("channel.kind")
 			return fe
 		}(),
 	}, {
@@ -696,7 +696,7 @@ func TestValidReply(t *testing.T) {
 			},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrDisallowedFields("target.Namespace")
+			fe := apis.ErrDisallowedFields("channel.Namespace")
 			fe.Details = "only name, apiVersion and kind are supported fields"
 			return fe
 		}(),
