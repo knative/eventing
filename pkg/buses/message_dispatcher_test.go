@@ -18,14 +18,15 @@ package buses
 
 import (
 	"bytes"
-	"github.com/google/go-cmp/cmp"
-	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"go.uber.org/zap"
 )
 
 var (
@@ -110,7 +111,7 @@ func TestDispatchMessage(t *testing.T) {
 					"knative-2":      "knative-2-value",
 					"ce-abc":         "ce-abc-value",
 				},
-				Payload: []byte("replyTo"),
+				Payload: []byte("reply"),
 			},
 			expectedReplyRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -119,7 +120,7 @@ func TestDispatchMessage(t *testing.T) {
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
 				},
-				Body: "replyTo",
+				Body: "reply",
 			},
 		},
 		"reply - only -- error": {
@@ -133,7 +134,7 @@ func TestDispatchMessage(t *testing.T) {
 					"knative-2":      "knative-2-value",
 					"ce-abc":         "ce-abc-value",
 				},
-				Payload: []byte("replyTo"),
+				Payload: []byte("reply"),
 			},
 			expectedReplyRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -142,7 +143,7 @@ func TestDispatchMessage(t *testing.T) {
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
 				},
-				Body: "replyTo",
+				Body: "reply",
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusNotFound,

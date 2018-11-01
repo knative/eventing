@@ -84,19 +84,19 @@ func TestReadConfigMap(t *testing.T) {
 					fanoutConfig:
 					  subscriptions:
 						- subscriberURI: event-changer.default.svc.cluster.local
-						  replyToURI: message-dumper-bar.default.svc.cluster.local
+						  replyURI: message-dumper-bar.default.svc.cluster.local
 						- subscriberURI: message-dumper-foo.default.svc.cluster.local
-						- replyToURI: message-dumper-bar.default.svc.cluster.local
+						- replyURI: message-dumper-bar.default.svc.cluster.local
 				  - namespace: default
 					name: c2
 					fanoutConfig:
 					  subscriptions:
-						- replyToURI: message-dumper-foo.default.svc.cluster.local
+						- replyURI: message-dumper-foo.default.svc.cluster.local
 				  - namespace: other
 					name: c3
 					fanoutConfig:
 					  subscriptions:
-						- replyToURI: message-dumper-foo.default.svc.cluster.local
+						- replyURI: message-dumper-foo.default.svc.cluster.local
 				`,
 			expected: &multichannelfanout.Config{
 				ChannelConfigs: []multichannelfanout.ChannelConfig{
@@ -107,13 +107,13 @@ func TestReadConfigMap(t *testing.T) {
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
 									SubscriberURI: "event-changer.default.svc.cluster.local",
-									ReplyToURI:    "message-dumper-bar.default.svc.cluster.local",
+									ReplyURI:      "message-dumper-bar.default.svc.cluster.local",
 								},
 								{
 									SubscriberURI: "message-dumper-foo.default.svc.cluster.local",
 								},
 								{
-									ReplyToURI: "message-dumper-bar.default.svc.cluster.local",
+									ReplyURI: "message-dumper-bar.default.svc.cluster.local",
 								},
 							},
 						},
@@ -124,7 +124,7 @@ func TestReadConfigMap(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									ReplyToURI: "message-dumper-foo.default.svc.cluster.local",
+									ReplyURI: "message-dumper-foo.default.svc.cluster.local",
 								},
 							},
 						},
@@ -135,7 +135,7 @@ func TestReadConfigMap(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									ReplyToURI: "message-dumper-foo.default.svc.cluster.local",
+									ReplyURI: "message-dumper-foo.default.svc.cluster.local",
 								},
 							},
 						},
@@ -188,7 +188,7 @@ func TestWatch(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									ReplyToURI: "foo.bar",
+									ReplyURI: "foo.bar",
 								},
 							},
 						},
@@ -205,7 +205,7 @@ func TestWatch(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									ReplyToURI: "foo.bar",
+									ReplyURI: "foo.bar",
 								},
 							},
 						},
@@ -223,7 +223,7 @@ func TestWatch(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									ReplyToURI: "foo.bar",
+									ReplyURI: "foo.bar",
 								},
 							},
 						},

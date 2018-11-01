@@ -64,7 +64,7 @@ func TestHandler(t *testing.T) {
 							FanoutConfig: fanout.Config{
 								Subscriptions: []eventingduck.ChannelSubscriberSpec{
 									{
-										ReplyToURI: replaceDomain,
+										ReplyURI: replaceDomain,
 									},
 								},
 							},
@@ -204,8 +204,8 @@ func makeRequest(namespace, name string) *http.Request {
 func replaceDomains(c multichannelfanout.Config, replacement string) multichannelfanout.Config {
 	for i, cc := range c.ChannelConfigs {
 		for j, sub := range cc.FanoutConfig.Subscriptions {
-			if sub.ReplyToURI == replaceDomain {
-				sub.ReplyToURI = replacement
+			if sub.ReplyURI == replaceDomain {
+				sub.ReplyURI = replacement
 			}
 			if sub.SubscriberURI == replaceDomain {
 				sub.SubscriberURI = replacement

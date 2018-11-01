@@ -109,19 +109,19 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 		glog.Infof("Resolved subscriber to: %q", subscriberURI)
 	}
 
-	replyToURI := ""
-	if subscription.Spec.ReplyTo != nil {
-		replyToURI, err = r.resolveResult(subscription.Namespace, *subscription.Spec.ReplyTo)
+	replyURI := ""
+	if subscription.Spec.Reply != nil {
+		replyURI, err = r.resolveResult(subscription.Namespace, *subscription.Spec.Reply)
 		if err != nil {
-			glog.Warningf("Failed to resolve Result %v : %v", subscription.Spec.ReplyTo, err)
+			glog.Warningf("Failed to resolve Result %v : %v", subscription.Spec.Reply, err)
 			return err
 		}
-		if replyToURI == "" {
-			glog.Warningf("Failed to resolve replyTo %v to actual domain", *subscription.Spec.ReplyTo)
+		if replyURI == "" {
+			glog.Warningf("Failed to resolve reply %v to actual domain", *subscription.Spec.Reply)
 			return err
 		}
-		subscription.Status.PhysicalSubscription.ReplyToURI = replyToURI
-		glog.Infof("Resolved replyTo to: %q", replyToURI)
+		subscription.Status.PhysicalSubscription.ReplyURI = replyURI
+		glog.Infof("Resolved reply to: %q", replyURI)
 	}
 
 	// Everything that was supposed to be resolved was, so flip the status bit on that.
@@ -300,10 +300,10 @@ func (r *reconciler) listAllSubscriptionsWithPhysicalChannel(sub *v1alpha1.Subsc
 func (r *reconciler) createChannelable(subs []v1alpha1.Subscription) *eventingduck.Channelable {
 	rv := &eventingduck.Channelable{}
 	for _, sub := range subs {
-		if sub.Status.PhysicalSubscription.SubscriberURI != "" || sub.Status.PhysicalSubscription.ReplyToURI != "" {
+		if sub.Status.PhysicalSubscription.SubscriberURI != "" || sub.Status.PhysicalSubscription.ReplyURI != "" {
 			rv.Subscribers = append(rv.Subscribers, eventingduck.ChannelSubscriberSpec{
 				SubscriberURI: sub.Status.PhysicalSubscription.SubscriberURI,
-				ReplyToURI:    sub.Status.PhysicalSubscription.ReplyToURI,
+				ReplyURI:      sub.Status.PhysicalSubscription.ReplyURI,
 			})
 		}
 	}

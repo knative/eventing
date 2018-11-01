@@ -78,11 +78,11 @@ var (
 							SubscriberURI: "foo",
 						},
 						{
-							ReplyToURI: "bar",
+							ReplyURI: "bar",
 						},
 						{
 							SubscriberURI: "baz",
-							ReplyToURI:    "qux",
+							ReplyURI:      "qux",
 						},
 					},
 				},
@@ -120,11 +120,11 @@ var (
 							SubscriberURI: "foo",
 						},
 						{
-							ReplyToURI: "bar",
+							ReplyURI: "bar",
 						},
 						{
 							SubscriberURI: "baz",
-							ReplyToURI:    "qux",
+							ReplyURI:      "qux",
 						},
 					},
 				},

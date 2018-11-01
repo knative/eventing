@@ -29,7 +29,7 @@ func (s *Subscription) Validate() *apis.FieldError {
 }
 
 // We require always Channel
-// Also at least one of 'subscriber' and 'replyTo' must be defined (non-nill and non-empty)
+// Also at least one of 'subscriber' and 'reply' must be defined (non-nill and non-empty)
 func (ss *SubscriptionSpec) Validate() *apis.FieldError {
 	var errs *apis.FieldError
 	if isChannelEmpty(ss.Channel) {
@@ -41,10 +41,10 @@ func (ss *SubscriptionSpec) Validate() *apis.FieldError {
 	}
 
 	missingSubscriber := isSubscriberSpecNilOrEmpty(ss.Subscriber)
-	missingReplyTo := isReplyStrategyNilOrEmpty(ss.ReplyTo)
-	if missingSubscriber && missingReplyTo {
-		fe := apis.ErrMissingField("replyTo", "subscriber")
-		fe.Details = "the Subscription must reference at least one of (replyTo or a subscriber)"
+	missingReply := isReplyStrategyNilOrEmpty(ss.Reply)
+	if missingSubscriber && missingReply {
+		fe := apis.ErrMissingField("reply", "subscriber")
+		fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
 		errs = errs.Also(fe)
 	}
 
@@ -54,9 +54,9 @@ func (ss *SubscriptionSpec) Validate() *apis.FieldError {
 		}
 	}
 
-	if !missingReplyTo {
-		if fe := isValidReplyTo(*ss.ReplyTo); fe != nil {
-			errs = errs.Also(fe.ViaField("replyTo"))
+	if !missingReply {
+		if fe := isValidReply(*ss.Reply); fe != nil {
+			errs = errs.Also(fe.ViaField("reply"))
 		}
 	}
 
@@ -89,7 +89,7 @@ func isReplyStrategyNilOrEmpty(r *ReplyStrategy) bool {
 	return r == nil || equality.Semantic.DeepEqual(r, &ReplyStrategy{}) || equality.Semantic.DeepEqual(r.Channel, &corev1.ObjectReference{})
 }
 
-func isValidReplyTo(r ReplyStrategy) *apis.FieldError {
+func isValidReply(r ReplyStrategy) *apis.FieldError {
 	fe := isValidObjectReference(*r.Channel)
 	if fe != nil {
 		return fe.ViaField("target")
@@ -117,8 +117,8 @@ func (current *Subscription) CheckImmutableFields(og apis.Immutable) *apis.Field
 		return nil
 	}
 
-	// Only Subscriber and ReplyTo are mutable.
-	ignoreArguments := cmpopts.IgnoreFields(SubscriptionSpec{}, "Subscriber", "ReplyTo")
+	// Only Subscriber and Reply are mutable.
+	ignoreArguments := cmpopts.IgnoreFields(SubscriptionSpec{}, "Subscriber", "Reply")
 	if diff := cmp.Diff(original.Spec, current.Spec, ignoreArguments); diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",

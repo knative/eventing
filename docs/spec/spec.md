@@ -76,15 +76,15 @@ _Describes a linkage between a Channel and a Targetable and/or Sinkable._
 
 #### Spec
 
-| Field                  | Type           | Description                                                                         | Constraints        |
-| ---------------------- | -------------- | ----------------------------------------------------------------------------------- | ------------------ |
-| channel\*              | ObjectRef      | The originating _Subscribable_ for the link.                                        | Must be a Channel. |
-| subscriber<sup>1</sup> | SubscriberSpec | Optional processing on the event. The result of subscriber will be sent to replyTo. |                    |
-| replyTo<sup>1</sup>    | ReplyStrategy  | The continuation for the link.                                                      |                    |
+| Field                  | Type           | Description                                                                       | Constraints        |
+| ---------------------- | -------------- | --------------------------------------------------------------------------------- | ------------------ |
+| channel\*              | ObjectRef      | The originating _Subscribable_ for the link.                                      | Must be a Channel. |
+| subscriber<sup>1</sup> | SubscriberSpec | Optional processing on the event. The result of subscriber will be sent to reply. |                    |
+| reply<sup>1</sup>      | ReplyStrategy  | The continuation for the link.                                                    |                    |
 
 \*: Required
 
-1: At Least One(subscriber, replyTo)
+1: At Least One(subscriber, reply)
 
 #### Metadata
 
@@ -97,7 +97,7 @@ _Describes a linkage between a Channel and a Targetable and/or Sinkable._
 
 - **Ready.**
 - **FromReady.**
-- **Resolved.** True if `channel`, `subscriber`, and `replyTo` all resolve into valid object references which implement the appropriate spec.
+- **Resolved.** True if `channel`, `subscriber`, and `reply` all resolve into valid object references which implement the appropriate spec.
 
 #### Events
 
@@ -108,7 +108,7 @@ _Describes a linkage between a Channel and a Targetable and/or Sinkable._
 
 | Action | Reactions                                                                                                                                             | Constraints |
 | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| Create | The subscription controller adds the resolved URIs of `subscriber` and `replyTo` to the `subscribers` field in the `channel` _Subscribable_ resource. |             |
+| Create | The subscription controller adds the resolved URIs of `subscriber` and `reply` to the `subscribers` field in the `channel` _Subscribable_ resource. |             |
 | Update |                                                                                                                                                       |             |
 | Delete |                                                                                                                                                       |             |
 
@@ -164,7 +164,7 @@ or a Channel system that receives and delivers events._
 | Field         | Type   | Description                                      | Constraints    |
 | ------------- | ------ | ------------------------------------------------ | -------------- |
 | subscriberURI | String | The URI name of the endpoint for the subscriber. | Must be a URL. |
-| replyToURI    | String | The URI name of the endpoint for the reply.      | Must be a URL. |
+| replyURI    | String | The URI name of the endpoint for the reply.      | Must be a URL. |
 
 ### ReplyStrategy
 

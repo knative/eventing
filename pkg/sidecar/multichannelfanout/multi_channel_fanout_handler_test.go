@@ -126,7 +126,7 @@ func TestCopyWithNewConfig(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []eventingduck.ChannelSubscriberSpec{
 						{
-							ReplyToURI: "replytodomain",
+							ReplyURI: "replydomain",
 						},
 					},
 				},
@@ -241,7 +241,7 @@ func TestServeHTTP(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									ReplyToURI: replaceDomain,
+									ReplyURI: replaceDomain,
 								},
 							},
 						},
@@ -261,7 +261,7 @@ func TestServeHTTP(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									ReplyToURI: "first-to-domain",
+									ReplyURI: "first-to-domain",
 								},
 							},
 						},
@@ -321,8 +321,8 @@ func replaceDomains(config Config, replacement string) {
 			if sub.SubscriberURI == replaceDomain {
 				sub.SubscriberURI = replacement
 			}
-			if sub.ReplyToURI == replaceDomain {
-				sub.ReplyToURI = replacement
+			if sub.ReplyURI == replaceDomain {
+				sub.ReplyURI = replacement
 			}
 			cc.FanoutConfig.Subscriptions[j] = sub
 		}

@@ -388,8 +388,8 @@ func (in *SubscriptionSpec) DeepCopyInto(out *SubscriptionSpec) {
 			(*in).DeepCopyInto(*out)
 		}
 	}
-	if in.ReplyTo != nil {
-		in, out := &in.ReplyTo, &out.ReplyTo
+	if in.Reply != nil {
+		in, out := &in.Reply, &out.Reply
 		if *in == nil {
 			*out = nil
 		} else {

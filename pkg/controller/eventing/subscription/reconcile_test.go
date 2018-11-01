@@ -112,7 +112,7 @@ var testCases = []controllertesting.TestCase{
 					},
 				},
 			},
-			// ReplyTo channel
+			// Reply channel
 			&unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
@@ -284,7 +284,7 @@ var testCases = []controllertesting.TestCase{
 					},
 				},
 			},
-			// ReplyTo channel
+			// Reply channel
 			&unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
@@ -309,7 +309,7 @@ var testCases = []controllertesting.TestCase{
 		// failure for now, until upstream is fixed.
 		WantResult: reconcile.Result{},
 		WantPresent: []runtime.Object{
-			getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberReplyTo(),
+			getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberReply(),
 		},
 		WantErrMsg: "invalid JSON document",
 		Scheme:     scheme.Scheme,
@@ -344,7 +344,7 @@ var testCases = []controllertesting.TestCase{
 					},
 				},
 			},
-			// ReplyTo channel
+			// Reply channel
 			&unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
@@ -375,7 +375,7 @@ var testCases = []controllertesting.TestCase{
 		// failure for now, until upstream is fixed.
 		WantResult: reconcile.Result{},
 		WantPresent: []runtime.Object{
-			getNewSubscriptionToK8sServiceWithReferencesResolvedAndPhysicalFromSubscriberReplyTo(),
+			getNewSubscriptionToK8sServiceWithReferencesResolvedAndPhysicalFromSubscriberReply(),
 		},
 		WantErrMsg: "invalid JSON document",
 		Scheme:     scheme.Scheme,
@@ -405,7 +405,7 @@ var testCases = []controllertesting.TestCase{
 					},
 				},
 			},
-			// ReplyTo channel
+			// Reply channel
 			&unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
@@ -436,7 +436,7 @@ var testCases = []controllertesting.TestCase{
 		WantResult: reconcile.Result{},
 		WantErrMsg: "invalid JSON document",
 		WantPresent: []runtime.Object{
-			getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromSubscriberReplyTo(),
+			getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromSubscriberReply(),
 		},
 		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
@@ -484,7 +484,7 @@ var testCases = []controllertesting.TestCase{
 					},
 				},
 			},
-			// ReplyTo channel
+			// Reply channel
 			&unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
@@ -511,7 +511,7 @@ var testCases = []controllertesting.TestCase{
 			// The first two Subscriptions both have the same physical From, so we should see that
 			// Channel updated with both Subscriptions.
 			getNewSubscriptionWithFromChannel(),
-			rename(getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberReplyTo()),
+			rename(getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberReply()),
 			// This subscription has a different physical From, so we should not see it in the same
 			// Channel as the first two.
 			getSubscriptionWithDifferentChannel(),
@@ -528,9 +528,9 @@ var testCases = []controllertesting.TestCase{
 			// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
 			// out.
 			//getChannelWithMultipleSubscriptions(),
-			getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromSubscriberReplyTo(),
+			getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromSubscriberReply(),
 			// Unaltered because this Subscription was not reconciled.
-			rename(getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberReplyTo()),
+			rename(getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberReply()),
 			getSubscriptionWithDifferentChannel(),
 		},
 		Scheme: scheme.Scheme,
@@ -579,7 +579,7 @@ var testCases = []controllertesting.TestCase{
 					},
 				},
 			},
-			// ReplyTo channel
+			// Reply channel
 			&unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
@@ -625,7 +625,7 @@ func getNewFromChannel() *eventingv1alpha1.Channel {
 	return getNewChannel(fromChannelName)
 }
 
-func getNewReplyToChannel() *eventingv1alpha1.Channel {
+func getNewReplyChannel() *eventingv1alpha1.Channel {
 	return getNewChannel(resultChannelName)
 }
 
@@ -648,7 +648,7 @@ func rename(sub *eventingv1alpha1.Subscription) *eventingv1alpha1.Subscription {
 	sub.Name = "renamed"
 	sub.UID = "renamed-UID"
 	sub.Status.PhysicalSubscription.SubscriberURI = ""
-	sub.Status.PhysicalSubscription.ReplyToURI = otherSinkableDNS
+	sub.Status.PhysicalSubscription.ReplyURI = otherSinkableDNS
 	return sub
 }
 
@@ -669,7 +669,7 @@ func getNewSubscription() *eventingv1alpha1.Subscription {
 					APIVersion: "serving.knative.dev/v1alpha1",
 				},
 			},
-			ReplyTo: &eventingv1alpha1.ReplyStrategy{
+			Reply: &eventingv1alpha1.ReplyStrategy{
 				Channel: &corev1.ObjectReference{
 					Name:       resultChannelName,
 					Kind:       channelKind,
@@ -724,7 +724,7 @@ func getNewSubscriptionWithFromChannel() *eventingv1alpha1.Subscription {
 					APIVersion: "serving.knative.dev/v1alpha1",
 				},
 			},
-			ReplyTo: &eventingv1alpha1.ReplyStrategy{
+			Reply: &eventingv1alpha1.ReplyStrategy{
 				Channel: &corev1.ObjectReference{
 					Name:       resultChannelName,
 					Kind:       channelKind,
@@ -751,32 +751,32 @@ func getNewSubscriptionWithUnknownConditionsAndPhysicalSubscriber() *eventingv1a
 	return s
 }
 
-func getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberReplyTo() *eventingv1alpha1.Subscription {
+func getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberReply() *eventingv1alpha1.Subscription {
 	s := getNewSubscriptionWithUnknownConditions()
 	s.Status.MarkReferencesResolved()
 	s.Status.PhysicalSubscription.SubscriberURI = domainToURL(targetDNS)
-	s.Status.PhysicalSubscription.ReplyToURI = domainToURL(sinkableDNS)
+	s.Status.PhysicalSubscription.ReplyURI = domainToURL(sinkableDNS)
 	return s
 }
 
-func getNewSubscriptionToK8sServiceWithReferencesResolvedAndPhysicalFromSubscriberReplyTo() *eventingv1alpha1.Subscription {
+func getNewSubscriptionToK8sServiceWithReferencesResolvedAndPhysicalFromSubscriberReply() *eventingv1alpha1.Subscription {
 	s := getNewSubscriptionToK8sService()
 	s.Status.InitializeConditions()
 	s.Status.MarkReferencesResolved()
 	s.Status.PhysicalSubscription = eventingv1alpha1.SubscriptionStatusPhysicalSubscription{
 		SubscriberURI: domainToURL(k8sServiceDNS),
-		ReplyToURI:    domainToURL(sinkableDNS),
+		ReplyURI:      domainToURL(sinkableDNS),
 	}
 	return s
 }
 
-func getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromSubscriberReplyTo() *eventingv1alpha1.Subscription {
+func getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromSubscriberReply() *eventingv1alpha1.Subscription {
 	s := getNewSubscriptionWithFromChannel()
 	s.Status.InitializeConditions()
 	s.Status.MarkReferencesResolved()
 	s.Status.PhysicalSubscription = eventingv1alpha1.SubscriptionStatusPhysicalSubscription{
 		SubscriberURI: domainToURL(targetDNS),
-		ReplyToURI:    domainToURL(sinkableDNS),
+		ReplyURI:      domainToURL(sinkableDNS),
 	}
 	return s
 }
@@ -788,7 +788,7 @@ func getNewSubscriptionWithReferencesResolvedStatus() *eventingv1alpha1.Subscrip
 }
 
 func getSubscriptionWithDifferentChannel() *eventingv1alpha1.Subscription {
-	s := getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromSubscriberReplyTo()
+	s := getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromSubscriberReply()
 	s.Name = "different-channel"
 	s.UID = "different-channel-UID"
 	s.Status.PhysicalSubscription.SubscriberURI = "some-other-domain"
@@ -834,10 +834,10 @@ func getChannelWithMultipleSubscriptions() *eventingv1alpha1.Channel {
 				Subscribers: []eventingduck.ChannelSubscriberSpec{
 					{
 						SubscriberURI: targetDNS,
-						ReplyToURI:    sinkableDNS,
+						ReplyURI:      sinkableDNS,
 					},
 					{
-						ReplyToURI: otherSinkableDNS,
+						ReplyURI: otherSinkableDNS,
 					},
 				},
 			},

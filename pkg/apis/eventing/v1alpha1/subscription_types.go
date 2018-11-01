@@ -54,11 +54,11 @@ var _ webhook.GenericCRD = (*Subscription)(nil)
 // out the Subscriber and only specifying Result.
 //
 // The following are all valid specifications:
-// channel --[subscriber]--> replyTo
+// channel --[subscriber]--> reply
 // Sink, no outgoing events:
 // channel -- subscriber
 // no-op function (identity transformation):
-// channel --> replyTo
+// channel --> reply
 type SubscriptionSpec struct {
 	// TODO: Generation used to not work correctly with CRD. They were scrubbed
 	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
@@ -89,14 +89,14 @@ type SubscriptionSpec struct {
 
 	// Subscriber is reference to (optional) function for processing events.
 	// Events from the Channel will be delivered here and replies are
-	// sent to a channel as specified by the ReplyTo.
+	// sent to a channel as specified by the Reply.
 	// +optional
 	Subscriber *SubscriberSpec `json:"subscriber,omitempty"`
 
-	// ReplyTo specifies (optionally) how to handle events returned from
+	// Reply specifies (optionally) how to handle events returned from
 	// the Subscriber target.
 	// +optional
-	ReplyTo *ReplyStrategy `json:"replyTo,omitempty"`
+	Reply *ReplyStrategy `json:"reply,omitempty"`
 }
 
 // SubscriberSpec specifies the reference to an object that's expected to
@@ -179,8 +179,8 @@ type SubscriptionStatusPhysicalSubscription struct {
 	// SubscriberURI is the fully resolved URI for spec.subscriber.
 	SubscriberURI string `json:"subscriberURI,omitEmpty"`
 
-	// ReplyToURI is the fully resolved URI for the spec.replyTo.
-	ReplyToURI string `json:"replyToURI,omitEmpty"`
+	// ReplyURI is the fully resolved URI for the spec.reply.
+	ReplyURI string `json:"replyURI,omitEmpty"`
 }
 
 const (

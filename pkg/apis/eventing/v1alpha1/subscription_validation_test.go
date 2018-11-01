@@ -24,13 +24,13 @@ import (
 )
 
 const (
-	channelKind        = "Channel"
-	channelAPIVersion  = "eventing.knative.dev/v1alpha1"
-	routeKind          = "Route"
-	routeAPIVersion    = "serving.knative.dev/v1alpha1"
-	channelName        = "subscribedChannel"
-	replyToChannelName = "toChannel"
-	subscriberName     = "subscriber"
+	channelKind       = "Channel"
+	channelAPIVersion = "eventing.knative.dev/v1alpha1"
+	routeKind         = "Route"
+	routeAPIVersion   = "serving.knative.dev/v1alpha1"
+	channelName       = "subscribedChannel"
+	replyChannelName  = "toChannel"
+	subscriberName    = "subscriber"
 )
 
 func getValidChannelRef() corev1.ObjectReference {
@@ -44,7 +44,7 @@ func getValidChannelRef() corev1.ObjectReference {
 func getValidReplyStrategy() *ReplyStrategy {
 	return &ReplyStrategy{
 		Channel: &corev1.ObjectReference{
-			Name:       replyToChannelName,
+			Name:       replyChannelName,
 			Kind:       channelKind,
 			APIVersion: channelAPIVersion,
 		},
@@ -125,47 +125,47 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			return fe
 		}(),
 	}, {
-		name: "missing Subscriber and ReplyTo",
+		name: "missing Subscriber and Reply",
 		c: &SubscriptionSpec{
 			Channel: getValidChannelRef(),
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("replyTo", "subscriber")
-			fe.Details = "the Subscription must reference at least one of (replyTo or a subscriber)"
+			fe := apis.ErrMissingField("reply", "subscriber")
+			fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
 			return fe
 		}(),
 	}, {
-		name: "empty Subscriber and ReplyTo",
+		name: "empty Subscriber and Reply",
 		c: &SubscriptionSpec{
 			Channel:    getValidChannelRef(),
 			Subscriber: &SubscriberSpec{},
-			ReplyTo:    &ReplyStrategy{},
+			Reply:      &ReplyStrategy{},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("replyTo", "subscriber")
-			fe.Details = "the Subscription must reference at least one of (replyTo or a subscriber)"
+			fe := apis.ErrMissingField("reply", "subscriber")
+			fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
 			return fe
 		}(),
 	}, {
-		name: "missing ReplyTo",
+		name: "missing Reply",
 		c: &SubscriptionSpec{
 			Channel:    getValidChannelRef(),
 			Subscriber: getValidSubscriberSpec(),
 		},
 		want: nil,
 	}, {
-		name: "empty ReplyTo",
+		name: "empty Reply",
 		c: &SubscriptionSpec{
 			Channel:    getValidChannelRef(),
 			Subscriber: getValidSubscriberSpec(),
-			ReplyTo:    &ReplyStrategy{},
+			Reply:      &ReplyStrategy{},
 		},
 		want: nil,
 	}, {
 		name: "missing Subscriber",
 		c: &SubscriptionSpec{
 			Channel: getValidChannelRef(),
-			ReplyTo: getValidReplyStrategy(),
+			Reply:   getValidReplyStrategy(),
 		},
 		want: nil,
 	}, {
@@ -173,11 +173,11 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		c: &SubscriptionSpec{
 			Channel:    getValidChannelRef(),
 			Subscriber: &SubscriberSpec{},
-			ReplyTo:    getValidReplyStrategy(),
+			Reply:      getValidReplyStrategy(),
 		},
 		want: nil,
 	}, {
-		name: "missing name in channel, and missing subscriber, replyTo",
+		name: "missing name in channel, and missing subscriber, reply",
 		c: &SubscriptionSpec{
 			Channel: corev1.ObjectReference{
 				Kind:       channelKind,
@@ -185,8 +185,8 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("replyTo", "subscriber")
-			fe.Details = "the Subscription must reference at least one of (replyTo or a subscriber)"
+			fe := apis.ErrMissingField("reply", "subscriber")
+			fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
 			return apis.ErrMissingField("channel.name").Also(fe)
 		}(),
 	}, {
@@ -213,10 +213,10 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			return fe
 		}(),
 	}, {
-		name: "missing name in ReplyTo.Ref",
+		name: "missing name in Reply.Ref",
 		c: &SubscriptionSpec{
 			Channel: getValidChannelRef(),
-			ReplyTo: &ReplyStrategy{
+			Reply: &ReplyStrategy{
 				Channel: &corev1.ObjectReference{
 					Kind:       channelKind,
 					APIVersion: channelAPIVersion,
@@ -224,7 +224,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("replyTo.target.name")
+			fe := apis.ErrMissingField("reply.target.name")
 			return fe
 		}(),
 	}}
@@ -246,8 +246,8 @@ func TestSubscriptionImmutable(t *testing.T) {
 	newSubscriber := getValidSubscriberSpec()
 	newSubscriber.Ref.Name = "newSubscriber"
 
-	newReplyTo := getValidReplyStrategy()
-	newReplyTo.Channel.Name = "newReplyToChannel"
+	newReply := getValidReplyStrategy()
+	newReply.Channel.Name = "newReplyChannel"
 
 	tests := []struct {
 		name string
@@ -293,26 +293,26 @@ func TestSubscriptionImmutable(t *testing.T) {
 		},
 		want: nil,
 	}, {
-		name: "valid, new ReplyTo",
+		name: "valid, new Reply",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
 				Channel: getValidChannelRef(),
-				ReplyTo: getValidReplyStrategy(),
+				Reply:   getValidReplyStrategy(),
 			},
 		},
 		og: &Subscription{
 			Spec: SubscriptionSpec{
 				Channel: getValidChannelRef(),
-				ReplyTo: newReplyTo,
+				Reply:   newReply,
 			},
 		},
 		want: nil,
 	}, {
-		name: "valid, have ReplyTo, remove and replace with Subscriber",
+		name: "valid, have Reply, remove and replace with Subscriber",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
 				Channel: getValidChannelRef(),
-				ReplyTo: getValidReplyStrategy(),
+				Reply:   getValidReplyStrategy(),
 			},
 		},
 		og: &Subscription{
@@ -323,7 +323,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 		},
 		want: nil,
 	}, {
-		name: "valid, have Subscriber, remove and replace with ReplyTo",
+		name: "valid, have Subscriber, remove and replace with Reply",
 		c: &Subscription{
 			Spec: SubscriptionSpec{
 				Channel:    getValidChannelRef(),
@@ -333,7 +333,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 		og: &Subscription{
 			Spec: SubscriptionSpec{
 				Channel: getValidChannelRef(),
-				ReplyTo: getValidReplyStrategy(),
+				Reply:   getValidReplyStrategy(),
 			},
 		},
 		want: nil,
@@ -612,7 +612,7 @@ func TestValidgetValidSubscriber(t *testing.T) {
 	}
 }
 
-func TestValidReplyTo(t *testing.T) {
+func TestValidReply(t *testing.T) {
 	tests := []struct {
 		name string
 		r    ReplyStrategy
@@ -716,9 +716,9 @@ func TestValidReplyTo(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := isValidReplyTo(test.r)
+			got := isValidReply(test.r)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("%s: isValidReplyTo (-want, +got) = %v", test.name, diff)
+				t.Errorf("%s: isValidReply (-want, +got) = %v", test.name, diff)
 			}
 		})
 	}
