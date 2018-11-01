@@ -385,16 +385,16 @@ func (r *reconciler) createNewConfigMap(data map[string]string) *corev1.ConfigMa
 func multiChannelFanoutConfig(channels []eventingv1alpha1.Channel) *multichannelfanout.Config {
 	cc := make([]multichannelfanout.ChannelConfig, 0)
 	for _, c := range channels {
-		subscribable := c.Spec.Subscribable
-		if subscribable != nil {
-			cc = append(cc, multichannelfanout.ChannelConfig{
-				Namespace: c.Namespace,
-				Name:      c.Name,
-				FanoutConfig: fanout.Config{
-					Subscriptions: c.Spec.Subscribable.Subscribers,
-				},
-			})
+		channelConfig := multichannelfanout.ChannelConfig{
+			Namespace: c.Namespace,
+			Name:      c.Name,
 		}
+		if c.Spec.Subscribable != nil {
+			channelConfig.FanoutConfig = fanout.Config{
+				Subscriptions: c.Spec.Subscribable.Subscribers,
+			}
+		}
+		cc = append(cc, channelConfig)
 	}
 	return &multichannelfanout.Config{
 		ChannelConfigs: cc,

@@ -20,7 +20,7 @@ They differ from most Channels in that they have:
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md).
 1. Apply the 'in-memory-channel' ClusterChannelProvisioner, Controller, and Dispatcher.
      ```shell
-     ko apply -f config/providers/in-memory-channel/in-memory-channel.yaml
+     ko apply -f config/provisioners/in-memory-channel/in-memory-channel.yaml
      ````
 1. Create Channels that reference the 'in-memory-channel'.
 
@@ -31,10 +31,9 @@ They differ from most Channels in that they have:
       name: foo
     spec:
       provisioner:
-        ref:
-          apiVersion: eventing.knative.dev/v1alpha1
-          kind: ClusterChannelProvisioner
-          name: in-memory-channel
+        apiVersion: eventing.knative.dev/v1alpha1
+        kind: ClusterChannelProvisioner
+        name: in-memory-channel
     ```
 
 ### Components

@@ -423,7 +423,47 @@ func TestReconcile(t *testing.T) {
 				// not string equality, so it can't be done in WantPresent. Instead, we verify
 				// during the update call, swapping out the data and WantPresent with that inserted
 				// data.
-				MockUpdates: verifyConfigMapData(),
+				MockUpdates: verifyConfigMapData(channelsConfig),
+			},
+			WantPresent: []runtime.Object{
+				makeReadyChannel(),
+				makeK8sService(),
+				makeVirtualService(),
+				makeConfigMapWithVerifyConfigMapData(),
+			},
+		},
+		{
+			Name: "Channel reconcile successful - Channel has no subscribers",
+			InitialState: []runtime.Object{
+				makeChannel(),
+				makeConfigMap(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockLists: (&paginatedChannelsListStruct{channels: []eventingv1alpha1.Channel{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "high-consul",
+							Name:      "duarte",
+						},
+						Spec: eventingv1alpha1.ChannelSpec{
+							Provisioner: &corev1.ObjectReference{
+								Name: ccpName,
+							},
+						},
+					},
+				}}).MockLists(),
+				// This is more accurate to be in WantPresent, but we need to check JSON equality,
+				// not string equality, so it can't be done in WantPresent. Instead, we verify
+				// during the update call, swapping out the data and WantPresent with that inserted
+				// data.
+				MockUpdates: verifyConfigMapData(multichannelfanout.Config{
+					ChannelConfigs: []multichannelfanout.ChannelConfig{
+						{
+							Namespace: "high-consul",
+							Name:      "duarte",
+						},
+					},
+				}),
 			},
 			WantPresent: []runtime.Object{
 				makeReadyChannel(),
@@ -777,7 +817,7 @@ func (p *paginatedChannelsListStruct) MockLists() []controllertesting.MockList {
 	}
 }
 
-func verifyConfigMapData() []controllertesting.MockUpdate {
+func verifyConfigMapData(expected multichannelfanout.Config) []controllertesting.MockUpdate {
 	return []controllertesting.MockUpdate{
 		func(innerClient client.Client, ctx context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
 			if cm, ok := obj.(*corev1.ConfigMap); ok {
@@ -788,7 +828,7 @@ func verifyConfigMapData() []controllertesting.MockUpdate {
 					return controllertesting.Handled,
 						fmt.Errorf("test is unable to unmarshal ConfigMap data: %v", err)
 				}
-				if diff := cmp.Diff(c, channelsConfig); diff != "" {
+				if diff := cmp.Diff(c, expected); diff != "" {
 					return controllertesting.Handled,
 						fmt.Errorf("test got unwanted ChannelsConfig (-want +got) %s", diff)
 				}
