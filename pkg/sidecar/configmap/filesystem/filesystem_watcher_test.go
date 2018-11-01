@@ -83,20 +83,20 @@ func TestReadConfigMap(t *testing.T) {
 					name: c1
 					fanoutConfig:
 					  subscriptions:
-						- callableURI: event-changer.default.svc.cluster.local
-						  sinkableURI: message-dumper-bar.default.svc.cluster.local
-						- callableURI: message-dumper-foo.default.svc.cluster.local
-						- sinkableURI: message-dumper-bar.default.svc.cluster.local
+						- subscriberURI: event-changer.default.svc.cluster.local
+						  replyURI: message-dumper-bar.default.svc.cluster.local
+						- subscriberURI: message-dumper-foo.default.svc.cluster.local
+						- replyURI: message-dumper-bar.default.svc.cluster.local
 				  - namespace: default
 					name: c2
 					fanoutConfig:
 					  subscriptions:
-						- sinkableURI: message-dumper-foo.default.svc.cluster.local
+						- replyURI: message-dumper-foo.default.svc.cluster.local
 				  - namespace: other
 					name: c3
 					fanoutConfig:
 					  subscriptions:
-						- sinkableURI: message-dumper-foo.default.svc.cluster.local
+						- replyURI: message-dumper-foo.default.svc.cluster.local
 				`,
 			expected: &multichannelfanout.Config{
 				ChannelConfigs: []multichannelfanout.ChannelConfig{
@@ -106,14 +106,14 @@ func TestReadConfigMap(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									CallableURI: "event-changer.default.svc.cluster.local",
-									SinkableURI: "message-dumper-bar.default.svc.cluster.local",
+									SubscriberURI: "event-changer.default.svc.cluster.local",
+									ReplyURI:      "message-dumper-bar.default.svc.cluster.local",
 								},
 								{
-									CallableURI: "message-dumper-foo.default.svc.cluster.local",
+									SubscriberURI: "message-dumper-foo.default.svc.cluster.local",
 								},
 								{
-									SinkableURI: "message-dumper-bar.default.svc.cluster.local",
+									ReplyURI: "message-dumper-bar.default.svc.cluster.local",
 								},
 							},
 						},
@@ -124,7 +124,7 @@ func TestReadConfigMap(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									SinkableURI: "message-dumper-foo.default.svc.cluster.local",
+									ReplyURI: "message-dumper-foo.default.svc.cluster.local",
 								},
 							},
 						},
@@ -135,7 +135,7 @@ func TestReadConfigMap(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									SinkableURI: "message-dumper-foo.default.svc.cluster.local",
+									ReplyURI: "message-dumper-foo.default.svc.cluster.local",
 								},
 							},
 						},
@@ -188,7 +188,7 @@ func TestWatch(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									SinkableURI: "foo.bar",
+									ReplyURI: "foo.bar",
 								},
 							},
 						},
@@ -205,7 +205,7 @@ func TestWatch(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									SinkableURI: "foo.bar",
+									ReplyURI: "foo.bar",
 								},
 							},
 						},
@@ -223,7 +223,7 @@ func TestWatch(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									SinkableURI: "foo.bar",
+									ReplyURI: "foo.bar",
 								},
 							},
 						},
@@ -238,7 +238,7 @@ func TestWatch(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									CallableURI: "baz.qux",
+									SubscriberURI: "baz.qux",
 								},
 							},
 						},

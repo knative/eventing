@@ -88,50 +88,50 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 	deletionTimestamp := accessor.GetDeletionTimestamp()
 	glog.Infof("DeletionTimestamp: %v", deletionTimestamp)
 
-	// Verify that `from` exists.
-	_, err = r.fetchObjectReference(subscription.Namespace, &subscription.Spec.From)
+	// Verify that `channel` exists.
+	_, err = r.fetchObjectReference(subscription.Namespace, &subscription.Spec.Channel)
 	if err != nil {
-		glog.Warningf("Failed to validate `from` exists: %+v, %v", subscription.Spec.From, err)
+		glog.Warningf("Failed to validate `channel` exists: %+v, %v", subscription.Spec.Channel, err)
 		return err
 	}
 
-	callURI := ""
-	if subscription.Spec.Call != nil {
-		callURI, err = r.resolveEndpointSpec(subscription.Namespace, *subscription.Spec.Call)
+	subscriberURI := ""
+	if subscription.Spec.Subscriber != nil {
+		subscriberURI, err = r.resolveSubscriberSpec(subscription.Namespace, *subscription.Spec.Subscriber)
 		if err != nil {
-			glog.Warningf("Failed to resolve Call %+v : %s", *subscription.Spec.Call, err)
+			glog.Warningf("Failed to resolve Subscriber %+v : %s", *subscription.Spec.Subscriber, err)
 			return err
 		}
-		if callURI == "" {
-			return fmt.Errorf("could not get domain from call (is it not targetable?)")
+		if subscriberURI == "" {
+			return fmt.Errorf("could not get domain from subscriber (is it not targetable?)")
 		}
-		subscription.Status.PhysicalSubscription.CallURI = callURI
-		glog.Infof("Resolved call to: %q", callURI)
+		subscription.Status.PhysicalSubscription.SubscriberURI = subscriberURI
+		glog.Infof("Resolved subscriber to: %q", subscriberURI)
 	}
 
-	resultURI := ""
-	if subscription.Spec.Result != nil {
-		resultURI, err = r.resolveResult(subscription.Namespace, *subscription.Spec.Result)
+	replyURI := ""
+	if subscription.Spec.Reply != nil {
+		replyURI, err = r.resolveResult(subscription.Namespace, *subscription.Spec.Reply)
 		if err != nil {
-			glog.Warningf("Failed to resolve Result %v : %v", subscription.Spec.Result, err)
+			glog.Warningf("Failed to resolve Result %v : %v", subscription.Spec.Reply, err)
 			return err
 		}
-		if resultURI == "" {
-			glog.Warningf("Failed to resolve result %v to actual domain", *subscription.Spec.Result)
+		if replyURI == "" {
+			glog.Warningf("Failed to resolve reply %v to actual domain", *subscription.Spec.Reply)
 			return err
 		}
-		subscription.Status.PhysicalSubscription.ResultURI = resultURI
-		glog.Infof("Resolved result to: %q", resultURI)
+		subscription.Status.PhysicalSubscription.ReplyURI = replyURI
+		glog.Infof("Resolved reply to: %q", replyURI)
 	}
 
 	// Everything that was supposed to be resolved was, so flip the status bit on that.
 	subscription.Status.MarkReferencesResolved()
 
-	// Ok, now that we have the From and at least one of the Call/Result, let's reconcile
-	// the From with this information.
-	err = r.syncPhysicalFromChannel(subscription)
+	// Ok, now that we have the Channel and at least one of the Call/Result, let's reconcile
+	// the Channel with this information.
+	err = r.syncPhysicalChannel(subscription)
 	if err != nil {
-		glog.Warningf("Failed to sync physical from Channel : %s", err)
+		glog.Warningf("Failed to sync physical Channel : %s", err)
 		return err
 	}
 	// Everything went well, set the fact that subscriptions have been modified
@@ -158,35 +158,35 @@ func (r *reconciler) updateStatus(subscription *v1alpha1.Subscription) (*v1alpha
 	return newSubscription, nil
 }
 
-// resolveEndpointSpec resolves the Spec.Call object. If it's an
+// resolveSubscriberSpec resolves the Spec.Call object. If it's an
 // ObjectReference will resolve the object and treat it as a Targetable. If
 // it's DNSName then it's used as is.
 // TODO: Once Service Routes, etc. support Targetable, use that.
 //
-func (r *reconciler) resolveEndpointSpec(namespace string, es v1alpha1.EndpointSpec) (string, error) {
-	if es.DNSName != nil && *es.DNSName != "" {
-		return *es.DNSName, nil
+func (r *reconciler) resolveSubscriberSpec(namespace string, s v1alpha1.SubscriberSpec) (string, error) {
+	if s.DNSName != nil && *s.DNSName != "" {
+		return *s.DNSName, nil
 	}
 
 	// K8s services are special cased. They can be called, even though they do not satisfy the
 	// Targetable interface.
-	if es.TargetRef != nil && es.TargetRef.APIVersion == "v1" && es.TargetRef.Kind == "Service" {
+	if s.Ref != nil && s.Ref.APIVersion == "v1" && s.Ref.Kind == "Service" {
 		svc := &corev1.Service{}
 		svcKey := types.NamespacedName{
 			Namespace: namespace,
-			Name:      es.TargetRef.Name,
+			Name:      s.Ref.Name,
 		}
 		err := r.client.Get(context.TODO(), svcKey, svc)
 		if err != nil {
-			glog.Warningf("Failed to fetch EndpointSpec target as a K8s Service %+v: %s", es.TargetRef, err)
+			glog.Warningf("Failed to fetch SubscriberSpec target as a K8s Service %+v: %s", s.Ref, err)
 			return "", err
 		}
 		return domainToURL(controller.ServiceHostName(svc.Name, svc.Namespace)), nil
 	}
 
-	obj, err := r.fetchObjectReference(namespace, es.TargetRef)
+	obj, err := r.fetchObjectReference(namespace, s.Ref)
 	if err != nil {
-		glog.Warningf("Failed to fetch EndpointSpec target %+v: %s", es.TargetRef, err)
+		glog.Warningf("Failed to fetch SubscriberSpec target %+v: %s", s.Ref, err)
 		return "", err
 	}
 	t := duckv1alpha1.Target{}
@@ -203,10 +203,10 @@ func (r *reconciler) resolveEndpointSpec(namespace string, es v1alpha1.EndpointS
 }
 
 // resolveResult resolves the Spec.Result object.
-func (r *reconciler) resolveResult(namespace string, resultStrategy v1alpha1.ResultStrategy) (string, error) {
-	obj, err := r.fetchObjectReference(namespace, resultStrategy.Target)
+func (r *reconciler) resolveResult(namespace string, replyStrategy v1alpha1.ReplyStrategy) (string, error) {
+	obj, err := r.fetchObjectReference(namespace, replyStrategy.Channel)
 	if err != nil {
-		glog.Warningf("Failed to fetch ResultStrategy target %+v: %s", resultStrategy, err)
+		glog.Warningf("Failed to fetch ReplyStrategy channel %+v: %s", replyStrategy, err)
 		return "", err
 	}
 	s := duckv1alpha1.Sink{}
@@ -241,21 +241,21 @@ func domainToURL(domain string) string {
 	return u.String()
 }
 
-func (r *reconciler) syncPhysicalFromChannel(sub *v1alpha1.Subscription) error {
+func (r *reconciler) syncPhysicalChannel(sub *v1alpha1.Subscription) error {
 	glog.Infof("Reconciling Physical From Channel: %+v", sub)
 
-	subs, err := r.listAllSubscriptionsWithPhysicalFrom(sub)
+	subs, err := r.listAllSubscriptionsWithPhysicalChannel(sub)
 	if err != nil {
-		glog.Infof("Unable to list all channels with physical from: %+v", err)
+		glog.Infof("Unable to list all subscriptions with physical channel: %+v", err)
 		return err
 	}
 
 	channelable := r.createChannelable(subs)
 
-	return r.patchPhysicalFrom(sub.Namespace, sub.Spec.From, channelable)
+	return r.patchPhysicalFrom(sub.Namespace, sub.Spec.Channel, channelable)
 }
 
-func (r *reconciler) listAllSubscriptionsWithPhysicalFrom(sub *v1alpha1.Subscription) ([]v1alpha1.Subscription, error) {
+func (r *reconciler) listAllSubscriptionsWithPhysicalChannel(sub *v1alpha1.Subscription) ([]v1alpha1.Subscription, error) {
 	subs := make([]v1alpha1.Subscription, 0)
 
 	// The sub we are currently reconciling has not yet written any updated status, so when listing
@@ -285,7 +285,7 @@ func (r *reconciler) listAllSubscriptionsWithPhysicalFrom(sub *v1alpha1.Subscrip
 				// This is the sub that is being reconciled. It has already been added to the list.
 				continue
 			}
-			if equality.Semantic.DeepEqual(sub.Spec.From, s.Spec.From) {
+			if equality.Semantic.DeepEqual(sub.Spec.Channel, s.Spec.Channel) {
 				subs = append(subs, s)
 			}
 		}
@@ -300,10 +300,10 @@ func (r *reconciler) listAllSubscriptionsWithPhysicalFrom(sub *v1alpha1.Subscrip
 func (r *reconciler) createChannelable(subs []v1alpha1.Subscription) *eventingduck.Channelable {
 	rv := &eventingduck.Channelable{}
 	for _, sub := range subs {
-		if sub.Status.PhysicalSubscription.CallURI != "" || sub.Status.PhysicalSubscription.ResultURI != "" {
+		if sub.Status.PhysicalSubscription.SubscriberURI != "" || sub.Status.PhysicalSubscription.ReplyURI != "" {
 			rv.Subscribers = append(rv.Subscribers, eventingduck.ChannelSubscriberSpec{
-				CallableURI: sub.Status.PhysicalSubscription.CallURI,
-				SinkableURI: sub.Status.PhysicalSubscription.ResultURI,
+				SubscriberURI: sub.Status.PhysicalSubscription.SubscriberURI,
+				ReplyURI:      sub.Status.PhysicalSubscription.ReplyURI,
 			})
 		}
 	}

@@ -35,8 +35,8 @@ import (
 // Domains used in subscriptions, which will be replaced by the real domains of the started HTTP
 // servers.
 const (
-	replaceCallable = "replaceCallable"
-	replaceSinkable = "replaceSinkable"
+	replaceSubscriber = "replaceSubscriber"
+	replaceSinkable   = "replaceSinkable"
 )
 
 var (
@@ -61,7 +61,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		receiverFunc   func(buses.ChannelReference, *buses.Message) error
 		timeout        time.Duration
 		subs           []eventingduck.ChannelSubscriberSpec
-		callable       func(http.ResponseWriter, *http.Request)
+		subscriber     func(http.ResponseWriter, *http.Request)
 		sinkable       func(http.ResponseWriter, *http.Request)
 		expectedStatus int
 	}{
@@ -75,10 +75,10 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			timeout: time.Millisecond,
 			subs: []eventingduck.ChannelSubscriberSpec{
 				{
-					CallableURI: replaceCallable,
+					SubscriberURI: replaceSubscriber,
 				},
 			},
-			callable: func(writer http.ResponseWriter, _ *http.Request) {
+			subscriber: func(writer http.ResponseWriter, _ *http.Request) {
 				time.Sleep(10 * time.Millisecond)
 				writer.WriteHeader(http.StatusAccepted)
 			},
@@ -94,10 +94,10 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			},
 			expectedStatus: http.StatusAccepted,
 		},
-		"sinkable fails": {
+		"reply fails": {
 			subs: []eventingduck.ChannelSubscriberSpec{
 				{
-					SinkableURI: replaceSinkable,
+					ReplyURI: replaceSinkable,
 				},
 			},
 			sinkable: func(writer http.ResponseWriter, _ *http.Request) {
@@ -105,25 +105,25 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			},
 			expectedStatus: http.StatusInternalServerError,
 		},
-		"callable fails": {
+		"subscriber fails": {
 			subs: []eventingduck.ChannelSubscriberSpec{
 				{
-					CallableURI: replaceCallable,
+					SubscriberURI: replaceSubscriber,
 				},
 			},
-			callable: func(writer http.ResponseWriter, _ *http.Request) {
+			subscriber: func(writer http.ResponseWriter, _ *http.Request) {
 				writer.WriteHeader(http.StatusNotFound)
 			},
 			expectedStatus: http.StatusInternalServerError,
 		},
-		"callable succeeds, sinkable fails": {
+		"subscriber succeeds, sinkable fails": {
 			subs: []eventingduck.ChannelSubscriberSpec{
 				{
-					CallableURI: replaceCallable,
-					SinkableURI: replaceSinkable,
+					SubscriberURI: replaceSubscriber,
+					ReplyURI:      replaceSinkable,
 				},
 			},
-			callable: callableSucceed,
+			subscriber: callableSucceed,
 			sinkable: func(writer http.ResponseWriter, _ *http.Request) {
 				writer.WriteHeader(http.StatusForbidden)
 			},
@@ -132,11 +132,11 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		"one sub succeeds": {
 			subs: []eventingduck.ChannelSubscriberSpec{
 				{
-					CallableURI: replaceCallable,
-					SinkableURI: replaceSinkable,
+					SubscriberURI: replaceSubscriber,
+					ReplyURI:      replaceSinkable,
 				},
 			},
-			callable: callableSucceed,
+			subscriber: callableSucceed,
 			sinkable: func(writer http.ResponseWriter, _ *http.Request) {
 				writer.WriteHeader(http.StatusAccepted)
 			},
@@ -145,34 +145,34 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		"one sub succeeds, one sub fails": {
 			subs: []eventingduck.ChannelSubscriberSpec{
 				{
-					CallableURI: replaceCallable,
-					SinkableURI: replaceSinkable,
+					SubscriberURI: replaceSubscriber,
+					ReplyURI:      replaceSinkable,
 				},
 				{
-					CallableURI: replaceCallable,
-					SinkableURI: replaceSinkable,
+					SubscriberURI: replaceSubscriber,
+					ReplyURI:      replaceSinkable,
 				},
 			},
-			callable:       callableSucceed,
+			subscriber:     callableSucceed,
 			sinkable:       (&succeedOnce{}).handler,
 			expectedStatus: http.StatusInternalServerError,
 		},
 		"all subs succeed": {
 			subs: []eventingduck.ChannelSubscriberSpec{
 				{
-					CallableURI: replaceCallable,
-					SinkableURI: replaceSinkable,
+					SubscriberURI: replaceSubscriber,
+					ReplyURI:      replaceSinkable,
 				},
 				{
-					CallableURI: replaceCallable,
-					SinkableURI: replaceSinkable,
+					SubscriberURI: replaceSubscriber,
+					ReplyURI:      replaceSinkable,
 				},
 				{
-					CallableURI: replaceCallable,
-					SinkableURI: replaceSinkable,
+					SubscriberURI: replaceSubscriber,
+					ReplyURI:      replaceSinkable,
 				},
 			},
-			callable: callableSucceed,
+			subscriber: callableSucceed,
 			sinkable: func(writer http.ResponseWriter, _ *http.Request) {
 				writer.WriteHeader(http.StatusAccepted)
 			},
@@ -185,7 +185,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		}
 		t.Run(n, func(t *testing.T) {
 			callableServer := httptest.NewServer(&fakeHandler{
-				handler: tc.callable,
+				handler: tc.subscriber,
 			})
 			defer callableServer.Close()
 			sinkableServer := httptest.NewServer(&fakeHandler{
@@ -196,11 +196,11 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			// Rewrite the subs to use the servers we just started.
 			subs := make([]eventingduck.ChannelSubscriberSpec, 0)
 			for _, sub := range tc.subs {
-				if sub.CallableURI == replaceCallable {
-					sub.CallableURI = callableServer.URL[7:] // strip the leading 'http://'
+				if sub.SubscriberURI == replaceSubscriber {
+					sub.SubscriberURI = callableServer.URL[7:] // strip the leading 'http://'
 				}
-				if sub.SinkableURI == replaceSinkable {
-					sub.SinkableURI = sinkableServer.URL[7:] // strip the leading 'http://'
+				if sub.ReplyURI == replaceSinkable {
+					sub.ReplyURI = sinkableServer.URL[7:] // strip the leading 'http://'
 				}
 				subs = append(subs, sub)
 			}
