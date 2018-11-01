@@ -155,7 +155,7 @@ type ReplyStrategy struct {
 	// Kind must be "Channel" and APIVersion must be
 	// "eventing.knative.dev/v1alpha1"
 	// +optional
-	Channel *corev1.ObjectReference `json:"target,omitempty"`
+	Channel *corev1.ObjectReference `json:"channel,omitempty"`
 }
 
 // subCondSet is a condition set with Ready as the happy condition and
