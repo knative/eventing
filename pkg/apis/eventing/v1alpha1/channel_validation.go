@@ -36,8 +36,8 @@ func (cs *ChannelSpec) Validate() *apis.FieldError {
 
 	if cs.Subscribable != nil {
 		for i, subscriber := range cs.Subscribable.Subscribers {
-			if subscriber.SinkableURI == "" && subscriber.CallableURI == "" {
-				fe := apis.ErrMissingField("sinkableURI", "callableURI")
+			if subscriber.ReplyURI == "" && subscriber.SubscriberURI == "" {
+				fe := apis.ErrMissingField("replyURI", "subscriberURI")
 				fe.Details = "expected at least one of, got none"
 				errs = errs.Also(fe.ViaField(fmt.Sprintf("subscriber[%d]", i)).ViaField("subscribable"))
 			}

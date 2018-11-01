@@ -46,19 +46,19 @@ var _ apis.Immutable = (*Subscription)(nil)
 var _ runtime.Object = (*Subscription)(nil)
 var _ webhook.GenericCRD = (*Subscription)(nil)
 
-// SubscriptionSpec specifies the Channel for incoming events, a Call target for
-// processing those events and where to put the result of the processing. Only
+// SubscriptionSpec specifies the Channel for incoming events, a Subscriber target
+// for processing those events and where to put the result of the processing. Only
 // From (where the events are coming from) is always required. You can optionally
 // only Process the events (results in no output events) by leaving out the Result.
 // You can also perform an identity transformation on the invoming events by leaving
-// out the Call and only specifying Result.
+// out the Subscriber and only specifying Result.
 //
 // The following are all valid specifications:
-// from --[call]--> result
+// channel --[subscriber]--> reply
 // Sink, no outgoing events:
-// from -- call
+// channel -- subscriber
 // no-op function (identity transformation):
-// from --> result
+// channel --> reply
 type SubscriptionSpec struct {
 	// TODO: Generation used to not work correctly with CRD. They were scrubbed
 	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
@@ -67,16 +67,16 @@ type SubscriptionSpec struct {
 	// +optional
 	Generation int64 `json:"generation,omitempty"`
 
-	// Reference to an object that will be used to create the subscription
-	// for receiving events. The object must have spec.subscriptions
+	// Reference to a channel that will be used to create the subscription
+	// for receiving events. The channel must have spec.subscriptions
 	// list which will then be modified accordingly.
 	//
 	// You can specify only the following fields of the ObjectReference:
 	//   - Kind
 	//   - APIVersion
 	//   - Name
-	// Currently Kind must be "Channel" and
-	// APIVersion must be "eventing.knative.dev/v1alpha1"
+	// Kind must be "Channel" and APIVersion must be
+	// "eventing.knative.dev/v1alpha1"
 	//
 	// This field is immutable. We have no good answer on what happens to
 	// the events that are currently in the channel being consumed from
@@ -85,21 +85,21 @@ type SubscriptionSpec struct {
 	// channel, giving the user more control over what semantics should
 	// be used (drain the channel first, possibly have events dropped,
 	// etc.)
-	From corev1.ObjectReference `json:"from"`
+	Channel corev1.ObjectReference `json:"channel"`
 
-	// Call is reference to (optional) function for processing events.
-	// Events from the From channel will be delivered here and replies
-	// are sent to a channel as specified by the Result.
+	// Subscriber is reference to (optional) function for processing events.
+	// Events from the Channel will be delivered here and replies are
+	// sent to a channel as specified by the Reply.
 	// +optional
-	Call *EndpointSpec `json:"call,omitempty"`
+	Subscriber *SubscriberSpec `json:"subscriber,omitempty"`
 
-	// Result specifies (optionally) how to handle events returned from
-	// the Call target.
+	// Reply specifies (optionally) how to handle events returned from
+	// the Subscriber target.
 	// +optional
-	Result *ResultStrategy `json:"result,omitempty"`
+	Reply *ReplyStrategy `json:"reply,omitempty"`
 }
 
-// EndpointSpec specifies the reference to an object that's expected to
+// SubscriberSpec specifies the reference to an object that's expected to
 // provide the resolved target of the action.
 // Currently we inspect the objects Status and see if there's a predefined
 // Status field that we will then use to dispatch events to be processed by
@@ -114,13 +114,13 @@ type SubscriptionSpec struct {
 //
 // This ensures that we can support external targets and for ease of use
 // we also allow for an URI to be specified.
-// There of course is also a requirement for the resolved EndpointSpec to
+// There of course is also a requirement for the resolved SubscriberSpec to
 // behave properly at the data plane level.
 // TODO: Add a pointer to a real spec for this.
 // For now, this means: Receive an event payload, and respond with one of:
 // success and an optional response event, or failure.
-// Delivery failures may be retried by the from Channel
-type EndpointSpec struct {
+// Delivery failures may be retried by the channel
+type SubscriberSpec struct {
 	// Only one of these can be specified
 
 	// Reference to an object that will be used to find the target
@@ -134,7 +134,7 @@ type EndpointSpec struct {
 	//   - APIVersion
 	//   - Name
 	// +optional
-	TargetRef *corev1.ObjectReference `json:"targetRef,omitempty"`
+	Ref *corev1.ObjectReference `json:"ref,omitempty"`
 
 	// Reference to a 'known' endpoint where no resolving is done.
 	// http://k8s-service for example
@@ -143,19 +143,19 @@ type EndpointSpec struct {
 	DNSName *string `json:"dnsName,omitempty"`
 }
 
-// ResultStrategy specifies the handling of the EndpointSpec's returned result.
-// If no EndpointSpec is specified, the identity function is assumed.
-type ResultStrategy struct {
-	// This object must fulfill the Sinkable contract.
+// ReplyStrategy specifies the handling of the SubscriberSpec's returned replies.
+// If no SubscriberSpec is specified, the identity function is assumed.
+type ReplyStrategy struct {
+	// This object must be a Channel.
 	//
-	// TODO: Specify the required fields the target object must
-	// have in the status.
 	// You can specify only the following fields of the ObjectReference:
 	//   - Kind
 	//   - APIVersion
 	//   - Name
+	// Kind must be "Channel" and APIVersion must be
+	// "eventing.knative.dev/v1alpha1"
 	// +optional
-	Target *corev1.ObjectReference `json:"target,omitempty"`
+	Channel *corev1.ObjectReference `json:"target,omitempty"`
 }
 
 // subCondSet is a condition set with Ready as the happy condition and
@@ -176,11 +176,11 @@ type SubscriptionStatus struct {
 // SubscriptionStatusPhysicalSubscription represents the fully resolved values for this
 // Subscription.
 type SubscriptionStatusPhysicalSubscription struct {
-	// CallURI is the fully resolved URI for spec.callable.
-	CallURI string `json:"callURI,omitEmpty"`
+	// SubscriberURI is the fully resolved URI for spec.subscriber.
+	SubscriberURI string `json:"subscriberURI,omitEmpty"`
 
-	// ResultURI is the fully resolved URI for the spec.result.
-	ResultURI string `json:"resultURI,omitEmpty"`
+	// ReplyURI is the fully resolved URI for the spec.reply.
+	ReplyURI string `json:"replyURI,omitEmpty"`
 }
 
 const (

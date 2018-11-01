@@ -32,17 +32,17 @@ type Subscribable struct {
 }
 
 // ChannelSubscriberSpec defines a single subscriber to a Channel.
-// Subscription is a reference to the Subscription this ChannelSubscriberSpec was created for
-// CallableURI is the endpoint for the call
-// SinkableURI is the endpoint for the result
-// At least one of them must be present
+// Ref is a reference to the Subscription this ChannelSubscriberSpec was created for
+// SubscriberURI is the endpoint for the subscriber
+// ReplyURI is the endpoint for the reply
+// At least one of SubscriberURI and ReplyURI them must be present
 type ChannelSubscriberSpec struct {
 	// +optional
 	Ref *corev1.ObjectReference `json:"ref,omitempty"`
 	// +optional
-	CallableURI string `json:"callableURI,omitempty"`
+	SubscriberURI string `json:"subscriberURI,omitempty"`
 	// +optional
-	SinkableURI string `json:"sinkableURI,omitempty"`
+	ReplyURI string `json:"replyURI,omitempty"`
 }
 
 // Channel is a skeleton type wrapping Subscribable in the manner we expect resource writers
