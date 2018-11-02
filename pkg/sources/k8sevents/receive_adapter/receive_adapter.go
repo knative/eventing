@@ -26,7 +26,7 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
-	"github.com/knative/eventing/pkg/event"
+	"github.com/knative/pkg/cloudevents"
 	"github.com/knative/pkg/signals"
 	corev1 "k8s.io/api/core/v1"
 	coreinformers "k8s.io/client-go/informers/core/v1"
@@ -156,10 +156,10 @@ func createSelfLink(o corev1.ObjectReference) string {
 //		Type:Normal,
 //		EventTime:0001-01-01 00:00:00 +0000 UTC,
 //	}
-func cloudEventsContext(m *corev1.Event) *event.EventContext {
-	return &event.EventContext{
+func cloudEventsContext(m *corev1.Event) *cloudevents.EventContext {
+	return &cloudevents.EventContext{
 		// Events are themselves object and have a unique UUID. Could also have used the UID
-		CloudEventsVersion: event.CloudEventsVersion,
+		CloudEventsVersion: cloudevents.CloudEventsVersion,
 		EventType:          "dev.knative.k8s.event",
 		EventID:            string(m.ObjectMeta.UID),
 		Source:             createSelfLink(m.InvolvedObject),
@@ -174,7 +174,7 @@ func postMessage(target string, m *corev1.Event) error {
 	log.Printf("Posting to %q", URL)
 	// Explicitly using Binary encoding so that Istio, et. al. can better inspect
 	// event metadata.
-	req, err := event.Binary.NewRequest(URL, m, *ctx)
+	req, err := cloudevents.Binary.NewRequest(URL, m, *ctx)
 	if err != nil {
 		log.Printf("Failed to create http request: %s", err)
 		return err

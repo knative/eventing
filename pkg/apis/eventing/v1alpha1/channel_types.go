@@ -72,8 +72,8 @@ type ChannelSpec struct {
 	// +optional
 	Arguments *runtime.RawExtension `json:"arguments,omitempty"`
 
-	// Channel conforms to Duck type Channelable.
-	Channelable *eventingduck.Channelable `json:"channelable,omitempty"`
+	// Channel conforms to Duck type Subscribable.
+	Subscribable *eventingduck.Subscribable `json:"subscribable,omitempty"`
 }
 
 var chanCondSet = duckv1alpha1.NewLivingConditionSet(ChannelConditionProvisioned, ChannelConditionSinkable)

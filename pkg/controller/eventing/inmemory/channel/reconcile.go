@@ -389,9 +389,9 @@ func multiChannelFanoutConfig(channels []eventingv1alpha1.Channel) *multichannel
 			Namespace: c.Namespace,
 			Name:      c.Name,
 		}
-		if c.Spec.Channelable != nil {
+		if c.Spec.Subscribable != nil {
 			channelConfig.FanoutConfig = fanout.Config{
-				Subscriptions: c.Spec.Channelable.Subscribers,
+				Subscriptions: c.Spec.Subscribable.Subscribers,
 			}
 		}
 		cc = append(cc, channelConfig)

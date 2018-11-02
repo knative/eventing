@@ -52,7 +52,7 @@ func TestChannelValidation(t *testing.T) {
 				Provisioner: &corev1.ObjectReference{
 					Name: "foo",
 				},
-				Channelable: &eventingduck.Channelable{
+				Subscribable: &eventingduck.Subscribable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{{
 						SubscriberURI: "subscriberendpoint",
 						ReplyURI:      "resultendpoint",
@@ -67,7 +67,7 @@ func TestChannelValidation(t *testing.T) {
 				Provisioner: &corev1.ObjectReference{
 					Name: "foo",
 				},
-				Channelable: &eventingduck.Channelable{
+				Subscribable: &eventingduck.Subscribable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{{
 						SubscriberURI: "subscriberendpoint",
 						ReplyURI:      "replyendpoint",
@@ -75,7 +75,7 @@ func TestChannelValidation(t *testing.T) {
 				}},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("spec.channelable.subscriber[1].replyURI", "spec.channelable.subscriber[1].subscriberURI")
+			fe := apis.ErrMissingField("spec.subscribable.subscriber[1].replyURI", "spec.subscribable.subscriber[1].subscriberURI")
 			fe.Details = "expected at least one of, got none"
 			return fe
 		}(),
@@ -86,17 +86,17 @@ func TestChannelValidation(t *testing.T) {
 				Provisioner: &corev1.ObjectReference{
 					Name: "foo",
 				},
-				Channelable: &eventingduck.Channelable{
+				Subscribable: &eventingduck.Subscribable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{{}, {}},
 				},
 			},
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
-			fe := apis.ErrMissingField("spec.channelable.subscriber[0].replyURI", "spec.channelable.subscriber[0].subscriberURI")
+			fe := apis.ErrMissingField("spec.subscribable.subscriber[0].replyURI", "spec.subscribable.subscriber[0].subscriberURI")
 			fe.Details = "expected at least one of, got none"
 			errs = errs.Also(fe)
-			fe = apis.ErrMissingField("spec.channelable.subscriber[1].replyURI", "spec.channelable.subscriber[1].subscriberURI")
+			fe = apis.ErrMissingField("spec.subscribable.subscriber[1].replyURI", "spec.subscribable.subscriber[1].subscriberURI")
 			fe.Details = "expected at least one of, got none"
 			errs = errs.Also(fe)
 			return errs

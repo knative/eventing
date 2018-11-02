@@ -30,8 +30,8 @@ import (
 
 	ghclient "github.com/google/go-github/github"
 	"github.com/google/uuid"
-	"github.com/knative/eventing/pkg/event"
 	"github.com/knative/eventing/pkg/sources/github"
+	"github.com/knative/pkg/cloudevents"
 	"log"
 	"time"
 )
@@ -120,14 +120,14 @@ func main() {
 func postMessage(target string, payload interface{}, source, eventType, eventID string) error {
 	URL := fmt.Sprintf("http://%s/", target)
 
-	ctx := event.EventContext{
-		CloudEventsVersion: event.CloudEventsVersion,
+	ctx := cloudevents.EventContext{
+		CloudEventsVersion: cloudevents.CloudEventsVersion,
 		EventType:          eventType,
 		EventID:            eventID,
 		EventTime:          time.Now(),
 		Source:             source,
 	}
-	req, err := event.Binary.NewRequest(URL, payload, ctx)
+	req, err := cloudevents.Binary.NewRequest(URL, payload, ctx)
 	if err != nil {
 		log.Printf("Failed to marshal the message: %+v : %s", payload, err)
 		return err

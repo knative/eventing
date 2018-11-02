@@ -10,7 +10,7 @@ import (
 
 	// Imports the Google Cloud Pub/Sub client package.
 	"cloud.google.com/go/pubsub"
-	"github.com/knative/eventing/pkg/event"
+	"github.com/knative/pkg/cloudevents"
 	"golang.org/x/net/context"
 )
 
@@ -70,14 +70,14 @@ func main() {
 
 func postMessage(target string, source string, m *pubsub.Message) error {
 	URL := fmt.Sprintf("http://%s/", target)
-	ctx := event.EventContext{
-		CloudEventsVersion: event.CloudEventsVersion,
+	ctx := cloudevents.EventContext{
+		CloudEventsVersion: cloudevents.CloudEventsVersion,
 		EventType:          "google.pubsub.topic.publish",
 		EventID:            m.ID,
 		EventTime:          m.PublishTime,
 		Source:             source,
 	}
-	req, err := event.Binary.NewRequest(URL, m, ctx)
+	req, err := cloudevents.Binary.NewRequest(URL, m, ctx)
 	if err != nil {
 		log.Printf("Failed to marshal the message: %+v : %s", m, err)
 		return err

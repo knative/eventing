@@ -159,8 +159,8 @@ type ReplyStrategy struct {
 }
 
 // subCondSet is a condition set with Ready as the happy condition and
-// ReferencesResolved and FromReady as the dependent conditions.
-var subCondSet = duckv1alpha1.NewLivingConditionSet(SubscriptionConditionReferencesResolved, SubscriptionConditionFromReady)
+// ReferencesResolved and ChannelReady as the dependent conditions.
+var subCondSet = duckv1alpha1.NewLivingConditionSet(SubscriptionConditionReferencesResolved, SubscriptionConditionChannelReady)
 
 // SubscriptionStatus (computed) for a subscription
 type SubscriptionStatus struct {
@@ -191,9 +191,9 @@ const (
 	// resolved.
 	SubscriptionConditionReferencesResolved duckv1alpha1.ConditionType = "Resolved"
 
-	// SubscriptionConditionFromReady has status True when controller has successfully added a subscription to From
-	// resource.
-	SubscriptionConditionFromReady duckv1alpha1.ConditionType = "FromReady"
+	// SubscriptionConditionChannelReady has status True when controller has successfully added a
+	// subscription to the spec.channel resource.
+	SubscriptionConditionChannelReady duckv1alpha1.ConditionType = "ChannelReady"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
@@ -216,9 +216,9 @@ func (ss *SubscriptionStatus) MarkReferencesResolved() {
 	subCondSet.Manage(ss).MarkTrue(SubscriptionConditionReferencesResolved)
 }
 
-// MarkFromReady sets the FromReady condition to True state.
-func (ss *SubscriptionStatus) MarkFromReady() {
-	subCondSet.Manage(ss).MarkTrue(SubscriptionConditionFromReady)
+// MarkChannelReady sets the ChannelReady condition to True state.
+func (ss *SubscriptionStatus) MarkChannelReady() {
+	subCondSet.Manage(ss).MarkTrue(SubscriptionConditionChannelReady)
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

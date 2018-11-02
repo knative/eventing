@@ -114,7 +114,7 @@ var (
 				Provisioner: &corev1.ObjectReference{
 					Name: ccpName,
 				},
-				Channelable: &eventingduck.Channelable{
+				Subscribable: &eventingduck.Subscribable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{
 						{
 							SubscriberURI: "foo",
@@ -142,7 +142,7 @@ var (
 				Provisioner: &corev1.ObjectReference{
 					Name: "some-other-provisioner",
 				},
-				Channelable: &eventingduck.Channelable{
+				Subscribable: &eventingduck.Subscribable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{
 						{
 							SubscriberURI: "anything",
@@ -163,7 +163,7 @@ var (
 				Provisioner: &corev1.ObjectReference{
 					Name: ccpName,
 				},
-				Channelable: &eventingduck.Channelable{
+				Subscribable: &eventingduck.Subscribable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{
 						{
 							SubscriberURI: "steve",

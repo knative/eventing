@@ -24,11 +24,11 @@ its subscribers._
 
 #### Spec
 
-| Field         | Type                               | Description                                                                | Constraints                            |
-| ------------- | ---------------------------------- | -------------------------------------------------------------------------- | -------------------------------------- |
-| provisioner\* | ObjectReference                    | The name of the provisioner to create the resources that back the Channel. | Immutable.                             |
-| arguments     | runtime.RawExtension (JSON object) | Arguments to be passed to the provisioner.                                 |                                        |
-| subscribers   | ChannelSubscriberSpec[]            | Information about subscriptions used to implement message forwarding.      | Filled out by Subscription Controller. |
+| Field                    | Type                               | Description                                                                | Constraints                            |
+| ------------------------ | ---------------------------------- | -------------------------------------------------------------------------- | -------------------------------------- |
+| provisioner\*            | ObjectReference                    | The name of the provisioner to create the resources that back the Channel. | Immutable.                             |
+| arguments                | runtime.RawExtension (JSON object) | Arguments to be passed to the provisioner.                                 |                                        |
+| subscribable.subscribers | ChannelSubscriberSpec[]            | Information about subscriptions used to implement message forwarding.      | Filled out by Subscription Controller. |
 
 \*: Required
 
@@ -106,11 +106,11 @@ _Describes a linkage between a Channel and a Targetable and/or Sinkable._
 
 ### Life Cycle
 
-| Action | Reactions                                                                                                                                             | Constraints |
-| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| Action | Reactions                                                                                                                                           | Constraints |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
 | Create | The subscription controller adds the resolved URIs of `subscriber` and `reply` to the `subscribers` field in the `channel` _Subscribable_ resource. |             |
-| Update |                                                                                                                                                       |             |
-| Delete |                                                                                                                                                       |             |
+| Update |                                                                                                                                                     |             |
+| Delete |                                                                                                                                                     |             |
 
 ---
 
@@ -161,10 +161,11 @@ or a Channel system that receives and delivers events._
 
 ### ChannelSubscriberSpec
 
-| Field         | Type   | Description                                      | Constraints    |
-| ------------- | ------ | ------------------------------------------------ | -------------- |
-| subscriberURI | String | The URI name of the endpoint for the subscriber. | Must be a URL. |
-| replyURI    | String | The URI name of the endpoint for the reply.      | Must be a URL. |
+| Field         | Type            | Description                                                    | Constraints    |
+| ------------- | --------------- | -------------------------------------------------------------- | -------------- |
+| ref           | ObjectReference | The Subscription this ChannelSubscriberSpec was resolved from. |                |
+| subscriberURI | String          | The URI name of the endpoint for the subscriber.               | Must be a URL. |
+| replyURI      | String          | The URI name of the endpoint for the reply.                    | Must be a URL. |
 
 ### ReplyStrategy
 
