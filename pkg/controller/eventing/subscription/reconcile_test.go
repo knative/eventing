@@ -365,6 +365,101 @@ var testCases = []controllertesting.TestCase{
 			},
 		},
 	}, {
+		Name: "new subscription: adds status, all targets resolved, subscribers modified -- empty but non-nil reply",
+		InitialState: []runtime.Object{
+			getNewSubscriptionWithEmptyNonNilReply(),
+		},
+		// TODO: JSON patch is not working on the fake, see
+		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+		// failure for now, until upstream is fixed.
+		WantResult: reconcile.Result{},
+		WantPresent: []runtime.Object{
+			getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberAndNoReply(),
+		},
+		WantErrMsg: "invalid JSON document",
+		Scheme:     scheme.Scheme,
+		Objects: []runtime.Object{
+			// Source channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       channelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      fromChannelName,
+					},
+					"spec": map[string]interface{}{
+						"channelable": map[string]interface{}{},
+					},
+				},
+			},
+			// Subscriber (using knative route)
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "serving.knative.dev/v1alpha1",
+					"kind":       routeKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      routeName,
+					},
+					"status": map[string]interface{}{
+						"targetable": map[string]interface{}{
+							"domainInternal": targetDNS,
+						},
+					},
+				},
+			},
+		},
+	}, {
+		Name: "new subscription: adds status, all targets resolved, subscribers modified -- empty but non-nil subscriber",
+		InitialState: []runtime.Object{
+			getNewSubscriptionWithEmptyNonNilSubscriber(),
+		},
+		// TODO: JSON patch is not working on the fake, see
+		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+		// failure for now, until upstream is fixed.
+		WantResult: reconcile.Result{},
+		WantPresent: []runtime.Object{
+			getNewSubscriptionWithReferencesResolvedAndPhysicalReplyAndNoSubscriber(),
+		},
+		WantErrMsg: "invalid JSON document",
+		Scheme:     scheme.Scheme,
+		Objects: []runtime.Object{
+			// Source channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       channelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      fromChannelName,
+					},
+					"spec": map[string]interface{}{
+						"channelable": map[string]interface{}{},
+					},
+				},
+			},
+			// Reply channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       channelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      resultChannelName,
+					},
+					"spec": map[string]interface{}{
+						"channelable": map[string]interface{}{},
+					},
+					"status": map[string]interface{}{
+						"sinkable": map[string]interface{}{
+							"domainInternal": sinkableDNS,
+						},
+					},
+				},
+			},
+		},
+	}, {
 		Name: "new subscription to K8s Service: adds status, all targets resolved, subscribers modified",
 		InitialState: []runtime.Object{
 			getNewSubscriptionToK8sService(),
@@ -685,6 +780,18 @@ func getNewSubscription() *eventingv1alpha1.Subscription {
 	return subscription
 }
 
+func getNewSubscriptionWithEmptyNonNilReply() *eventingv1alpha1.Subscription {
+	sub := getNewSubscription()
+	sub.Spec.Reply = &eventingv1alpha1.ReplyStrategy{}
+	return sub
+}
+
+func getNewSubscriptionWithEmptyNonNilSubscriber() *eventingv1alpha1.Subscription {
+	sub := getNewSubscription()
+	sub.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{}
+	return sub
+}
+
 func getNewSourceSubscription() *eventingv1alpha1.Subscription {
 	sub := getNewSubscription()
 	sub.Spec.Channel = corev1.ObjectReference{
@@ -748,6 +855,22 @@ func getNewSubscriptionWithUnknownConditions() *eventingv1alpha1.Subscription {
 func getNewSubscriptionWithUnknownConditionsAndPhysicalSubscriber() *eventingv1alpha1.Subscription {
 	s := getNewSubscriptionWithUnknownConditions()
 	s.Status.PhysicalSubscription.SubscriberURI = domainToURL(targetDNS)
+	return s
+}
+
+func getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberAndNoReply() *eventingv1alpha1.Subscription {
+	s := getNewSubscriptionWithEmptyNonNilReply()
+	s.Status.InitializeConditions()
+	s.Status.MarkReferencesResolved()
+	s.Status.PhysicalSubscription.SubscriberURI = domainToURL(targetDNS)
+	return s
+}
+
+func getNewSubscriptionWithReferencesResolvedAndPhysicalReplyAndNoSubscriber() *eventingv1alpha1.Subscription {
+	s := getNewSubscriptionWithEmptyNonNilSubscriber()
+	s.Status.InitializeConditions()
+	s.Status.MarkReferencesResolved()
+	s.Status.PhysicalSubscription.ReplyURI = domainToURL(sinkableDNS)
 	return s
 }
 
