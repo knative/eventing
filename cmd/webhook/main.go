@@ -73,6 +73,10 @@ func main() {
 	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace)
 
 	configMapWatcher.Watch(logconfig.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Webhook, logconfig.Webhook))
+
+	eventingv1alpha1.Singleton = eventingv1alpha1.New(logger.Desugar())
+	configMapWatcher.Watch(eventingv1alpha1.ConfigMapName, eventingv1alpha1.Singleton.UpdateConfigMap)
+
 	if err = configMapWatcher.Start(stopCh); err != nil {
 		logger.Fatalf("failed to start webhook configmap watcher: %v", err)
 	}
