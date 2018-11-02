@@ -135,7 +135,7 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 		return err
 	}
 	// Everything went well, set the fact that subscriptions have been modified
-	subscription.Status.MarkFromReady()
+	subscription.Status.MarkChannelReady()
 	return nil
 }
 
