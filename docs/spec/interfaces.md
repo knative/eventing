@@ -4,9 +4,9 @@
 
 A **Subscribable** resource contains a list of subscribers and is responsible
 for delivering events to each of them. Subscriptions only allow Channels to be
-Subscribable (via `spec.from` on the Subscription) at the moment, but this may
+Subscribable (via `spec.channel` on the `Subscription`) at the moment, but this may
 be revisited with future experience. _Channel_ as the target of a
-_Subscription_'s `from` field.
+_Subscription_'s `channel` field.
 
 
 ### Control Plane
@@ -56,7 +56,7 @@ if it previously indicated success.
 A **Sinkable** resource receives events and takes responsibility for further
 delivery. Unlike _Targetable_, a _Sinkable_ cannot return events in its
 response. One example of a _Sinkable_ is a _Channel_ as the target of a
-_Subscription_'s _result_ field.
+_Subscription_'s _reply_ field.
 
 <!-- TODO(evankanderson):
 I don't like this example, as it conflates two different things:
