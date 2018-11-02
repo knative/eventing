@@ -1,30 +1,5 @@
 # Interface Contracts
 
-## Subscribable
-
-A **Subscribable** resource contains a list of subscribers and is responsible
-for delivering events to each of them. Subscriptions only allow Channels to be
-Subscribable (via `spec.from` on the Subscription) at the moment, but this may
-be revisited with future experience. _Channel_ as the target of a
-_Subscription_'s `from` field.
-
-
-### Control Plane
-
-The **Subscribable** resource stores a list of resolved _Subscriptions_ in the
-resource's `spec.subscribers` field. The Subscription Controller is responsible
-for resolving any ObjectReferences (such as _call_ and _result_) in the
-_Subscription_ to network addresses.
-
-### Data Plane
-
-**Subscribable** resources will attempt delivery to each of the _subscribers_
-at least once, and retry if the subscriber returns errors.
-
-<!--TODO(https://github.com/knative/eventing/issues/502) Expand the data plane definitions. -->
-
----
-
 ## Targetable
 
 A **Targetable** resource represents an endpoint that receives events and

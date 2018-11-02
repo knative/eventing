@@ -28,7 +28,7 @@ func TestTypesImplements(t *testing.T) {
 	}{
 		// Channel
 		{instance: &Channel{}, iface: &duckv1alpha1.Conditions{}},
-		{instance: &Channel{}, iface: &eventingduck.Channelable{}},
+		{instance: &Channel{}, iface: &eventingduck.Subscribable{}},
 		{instance: &Channel{}, iface: &duckv1alpha1.Sinkable{}},
 		// ClusterChannelProvisioner
 		{instance: &ClusterChannelProvisioner{}, iface: &duckv1alpha1.Conditions{}},

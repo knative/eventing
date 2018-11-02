@@ -34,12 +34,12 @@ func (cs *ChannelSpec) Validate() *apis.FieldError {
 		errs = errs.Also(apis.ErrMissingField("provisioner"))
 	}
 
-	if cs.Channelable != nil {
-		for i, subscriber := range cs.Channelable.Subscribers {
+	if cs.Subscribable != nil {
+		for i, subscriber := range cs.Subscribable.Subscribers {
 			if subscriber.ReplyURI == "" && subscriber.SubscriberURI == "" {
 				fe := apis.ErrMissingField("replyURI", "subscriberURI")
 				fe.Details = "expected at least one of, got none"
-				errs = errs.Also(fe.ViaField(fmt.Sprintf("subscriber[%d]", i)).ViaField("channelable"))
+				errs = errs.Also(fe.ViaField(fmt.Sprintf("subscriber[%d]", i)).ViaField("subscribable"))
 			}
 		}
 	}
@@ -55,7 +55,7 @@ func (current *Channel) CheckImmutableFields(og apis.Immutable) *apis.FieldError
 	if !ok {
 		return &apis.FieldError{Message: "The provided resource was not a Channel"}
 	}
-	ignoreArguments := cmpopts.IgnoreFields(ChannelSpec{}, "Arguments", "Channelable")
+	ignoreArguments := cmpopts.IgnoreFields(ChannelSpec{}, "Arguments", "Subscribable")
 	if diff := cmp.Diff(original.Spec, current.Spec, ignoreArguments); diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed",

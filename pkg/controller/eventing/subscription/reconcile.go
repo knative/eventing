@@ -258,9 +258,9 @@ func (r *reconciler) syncPhysicalChannel(sub *v1alpha1.Subscription) error {
 		return err
 	}
 
-	channelable := r.createChannelable(subs)
+	subscribable := r.createSubscribable(subs)
 
-	return r.patchPhysicalFrom(sub.Namespace, sub.Spec.Channel, channelable)
+	return r.patchPhysicalFrom(sub.Namespace, sub.Spec.Channel, subscribable)
 }
 
 func (r *reconciler) listAllSubscriptionsWithPhysicalChannel(sub *v1alpha1.Subscription) ([]v1alpha1.Subscription, error) {
@@ -305,11 +305,18 @@ func (r *reconciler) listAllSubscriptionsWithPhysicalChannel(sub *v1alpha1.Subsc
 	}
 }
 
-func (r *reconciler) createChannelable(subs []v1alpha1.Subscription) *eventingduck.Channelable {
-	rv := &eventingduck.Channelable{}
+func (r *reconciler) createSubscribable(subs []v1alpha1.Subscription) *eventingduck.Subscribable {
+	rv := &eventingduck.Subscribable{}
 	for _, sub := range subs {
 		if sub.Status.PhysicalSubscription.SubscriberURI != "" || sub.Status.PhysicalSubscription.ReplyURI != "" {
 			rv.Subscribers = append(rv.Subscribers, eventingduck.ChannelSubscriberSpec{
+				Ref: &corev1.ObjectReference{
+					APIVersion: sub.APIVersion,
+					Kind:       sub.Kind,
+					Namespace:  sub.Namespace,
+					Name:       sub.Name,
+					UID:        sub.UID,
+				},
 				SubscriberURI: sub.Status.PhysicalSubscription.SubscriberURI,
 				ReplyURI:      sub.Status.PhysicalSubscription.ReplyURI,
 			})
@@ -318,7 +325,7 @@ func (r *reconciler) createChannelable(subs []v1alpha1.Subscription) *eventingdu
 	return rv
 }
 
-func (r *reconciler) patchPhysicalFrom(namespace string, physicalFrom corev1.ObjectReference, subs *eventingduck.Channelable) error {
+func (r *reconciler) patchPhysicalFrom(namespace string, physicalFrom corev1.ObjectReference, subs *eventingduck.Subscribable) error {
 	// First get the original object and convert it to only the bits we care about
 	s, err := r.fetchObjectReference(namespace, &physicalFrom)
 	if err != nil {
@@ -331,7 +338,7 @@ func (r *reconciler) patchPhysicalFrom(namespace string, physicalFrom corev1.Obj
 	}
 
 	after := original.DeepCopy()
-	after.Spec.Channelable = subs
+	after.Spec.Subscribable = subs
 
 	patch, err := duck.CreatePatch(original, after)
 	if err != nil {
