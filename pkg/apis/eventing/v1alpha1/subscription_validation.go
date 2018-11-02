@@ -90,9 +90,8 @@ func isReplyStrategyNilOrEmpty(r *ReplyStrategy) bool {
 }
 
 func isValidReply(r ReplyStrategy) *apis.FieldError {
-	fe := isValidObjectReference(*r.Channel)
-	if fe != nil {
-		return fe.ViaField("target")
+	if fe := isValidObjectReference(*r.Channel); fe != nil {
+		return fe.ViaField("channel")
 	}
 	if r.Channel.Kind != "Channel" {
 		fe := apis.ErrInvalidValue(r.Channel.Kind, "kind")
