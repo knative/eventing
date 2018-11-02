@@ -5,15 +5,14 @@
 A **Subscribable** resource contains a list of subscribers and is responsible
 for delivering events to each of them. Subscriptions only allow Channels to be
 Subscribable (via `spec.channel` on the `Subscription`) at the moment, but this may
-be revisited with future experience. _Channel_ as the target of a
-_Subscription_'s `channel` field.
+be revisited with future experience.
 
 
 ### Control Plane
 
 The **Subscribable** resource stores a list of resolved _Subscriptions_ in the
 resource's `spec.subscribers` field. The Subscription Controller is responsible
-for resolving any ObjectReferences (such as _call_ and _result_) in the
+for resolving any ObjectReferences (such as `subscriber` and `reply`) in the
 _Subscription_ to network addresses.
 
 ### Data Plane
@@ -33,10 +32,10 @@ is a function.
 
 ### Control Plane
 
-A **Targetable** resource MUST expose a _status.targetable.domainInternal_
+A **Targetable** resource MUST expose a `status.targetable.domainInternal`
 field. The _domainInternal_ value is an internal domain name that is capable of
 receiving event deliveries. _Targetable_ resources may be referenced in the
-_call_ section of a _Subscription_.
+`subscriber` section of a _Subscription_.
 
 ### Data Plane
 
@@ -56,23 +55,23 @@ if it previously indicated success.
 A **Sinkable** resource receives events and takes responsibility for further
 delivery. Unlike _Targetable_, a _Sinkable_ cannot return events in its
 response. One example of a _Sinkable_ is a _Channel_ as the target of a
-_Subscription_'s _reply_ field.
+_Subscription_'s `reply` field.
 
 <!-- TODO(evankanderson):
 I don't like this example, as it conflates two different things:
 
 That Channel implements Sinkable.
-That Subscription expects a Sinkable in its spec.from.
+That Subscription expects a Sinkable in its spec.reply.
 I think it would be clearer to separate the two (and possibly cover the second
 item only in the object specs).
 -->
 
 ### Control Plane
 
-A **Sinkable** resource MUST expose a _status.sinkable.domainInternal_ field.
+A **Sinkable** resource MUST expose a `status.sinkable.domainInternal` field.
 The _domainInternal_ value is an internal domain name that is capable of
 receiving event deliveries. _Sinkable_ resources may be referenced in the
-_result_ section of a _Subscription_, and also by other custom resources acting as an event Source.
+`reply` section of a _Subscription_, and also by other custom resources acting as an event Source.
 
 ### Data Plane
 
