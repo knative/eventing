@@ -14,9 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package event implements utilities for handling CloudEvents.
+// Package cloudevents implements utilities for handling CloudEvents.
 // For information on the spec, see
 // https://github.com/cloudevents/spec/blob/v0.1/http-transport-binding.md
 // and
 // https://github.com/cloudevents/spec/blob/v0.1/spec.md
-package event
+
+package cloudevents
