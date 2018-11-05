@@ -104,10 +104,17 @@ func (r *reconciler) reconcile(channel *v1alpha1.Channel) error {
 		r.logger.Info("failed to get metadata", zap.Error(err))
 		return err
 	}
+
+	kafkaClusterAdmin, err := createKafkaAdminClient(r.config)
+	if err != nil {
+		r.logger.Fatal("unable to build kafka admin client", zap.Error(err))
+		return err
+	}
+
 	deletionTimestamp := accessor.GetDeletionTimestamp()
 	if deletionTimestamp != nil {
 		r.logger.Info(fmt.Sprintf("DeletionTimestamp: %v", deletionTimestamp))
-		if err := r.deprovisionChannel(channel); err != nil {
+		if err := r.deprovisionChannel(channel, kafkaClusterAdmin); err != nil {
 			return err
 		}
 		r.removeFinalizer(channel)
@@ -116,15 +123,19 @@ func (r *reconciler) reconcile(channel *v1alpha1.Channel) error {
 
 	r.addFinalizer(channel)
 
-	if err := r.provisionChannel(channel); err != nil {
+	if err := r.provisionChannel(channel, kafkaClusterAdmin); err != nil {
 		channel.Status.MarkNotProvisioned("NotProvisioned", "error while provisioning: %s", err)
 		return err
 	}
 	channel.Status.MarkProvisioned()
+
+	// close the connection
+	kafkaClusterAdmin.Close();
+
 	return nil
 }
 
-func (r *reconciler) provisionChannel(channel *v1alpha1.Channel) error {
+func (r *reconciler) provisionChannel(channel *v1alpha1.Channel, kafkaClusterAdmin sarama.ClusterAdmin) error {
 	topicName := topicName(channel)
 	r.logger.Info("creating topic on kafka cluster", zap.String("topic", topicName))
 
@@ -145,7 +156,7 @@ func (r *reconciler) provisionChannel(channel *v1alpha1.Channel) error {
 		}
 	}
 
-	err := r.kafkaClusterAdmin.CreateTopic(topicName, &sarama.TopicDetail{
+	err := kafkaClusterAdmin.CreateTopic(topicName, &sarama.TopicDetail{
 		ReplicationFactor: 1,
 		NumPartitions:     int32(partitions),
 	}, false)
@@ -159,11 +170,11 @@ func (r *reconciler) provisionChannel(channel *v1alpha1.Channel) error {
 	return err
 }
 
-func (r *reconciler) deprovisionChannel(channel *v1alpha1.Channel) error {
+func (r *reconciler) deprovisionChannel(channel *v1alpha1.Channel, kafkaClusterAdmin sarama.ClusterAdmin) error {
 	topicName := topicName(channel)
 	r.logger.Info("deleting topic on kafka cluster", zap.String("topic", topicName))
 
-	err := r.kafkaClusterAdmin.DeleteTopic(topicName)
+	err := kafkaClusterAdmin.DeleteTopic(topicName)
 	if err == sarama.ErrUnknownTopicOrPartition {
 		return nil
 	} else if err != nil {
@@ -219,6 +230,13 @@ func (r *reconciler) removeFinalizer(channel *v1alpha1.Channel) {
 	finalizers := sets.NewString(channel.Finalizers...)
 	finalizers.Delete(finalizerName)
 	channel.Finalizers = finalizers.List()
+}
+
+func createKafkaAdminClient(config *controller.KafkaProvisionerConfig) (sarama.ClusterAdmin, error) {
+	saramaConf := sarama.NewConfig()
+	saramaConf.Version = sarama.V1_1_0_0
+	saramaConf.ClientID = controllerAgentName
+	return sarama.NewClusterAdmin(config.Brokers, saramaConf)
 }
 
 func topicName(channel *v1alpha1.Channel) string {
