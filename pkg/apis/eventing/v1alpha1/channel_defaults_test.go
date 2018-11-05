@@ -16,10 +16,84 @@ limitations under the License.
 
 package v1alpha1
 
-import "testing"
+import (
+	"testing"
 
-// No-op test because method does nothing.
+	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/google/go-cmp/cmp"
+)
+
+var (
+	defaultChannelProvisioner = "default-channel-provisioner"
+)
+
 func TestChannelSetDefaults(t *testing.T) {
-	c := Channel{}
-	c.SetDefaults()
+	testCases := map[string]struct {
+		nilChannelDefaulter bool
+		def                 *string
+		initial             Channel
+		expected            Channel
+	}{
+		"nil ChannelDefaulter": {
+			nilChannelDefaulter: true,
+			expected:            Channel{},
+		},
+		"unset ChannelDefaulter": {
+			expected: Channel{},
+		},
+		"set ChannelDefaulter": {
+			def: &defaultChannelProvisioner,
+			expected: Channel{
+				Spec: ChannelSpec{
+					Provisioner: &corev1.ObjectReference{
+						APIVersion: SchemeGroupVersion.String(),
+						Kind:       "ClusterChannelProvisioner",
+						Name:       defaultChannelProvisioner,
+					},
+				},
+			},
+		},
+		"provisioner already specified": {
+			def: &defaultChannelProvisioner,
+			initial: Channel{
+				Spec: ChannelSpec{
+					Provisioner: &corev1.ObjectReference{
+						APIVersion: SchemeGroupVersion.String(),
+						Kind:       "ClusterChannelProvisioner",
+						Name:       "already-specified",
+					},
+				},
+			},
+			expected: Channel{
+				Spec: ChannelSpec{
+					Provisioner: &corev1.ObjectReference{
+						APIVersion: SchemeGroupVersion.String(),
+						Kind:       "ClusterChannelProvisioner",
+						Name:       "already-specified",
+					},
+				},
+			},
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			if !tc.nilChannelDefaulter {
+				ChannelDefaulterSingleton = NewChannelDefaulter(zap.NewNop())
+				defer func() { ChannelDefaulterSingleton = nil }()
+			}
+			if tc.def != nil {
+				ChannelDefaulterSingleton.UpdateConfigMap(&corev1.ConfigMap{
+					Data: map[string]string{
+						channelDefaulterKey: *tc.def,
+					},
+				})
+			}
+			tc.initial.SetDefaults()
+			if diff := cmp.Diff(tc.expected, tc.initial); diff != "" {
+				t.Fatalf("Unexpected defaults (-want, +got): %s", diff)
+			}
+		})
+	}
 }

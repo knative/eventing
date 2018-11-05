@@ -75,6 +75,7 @@ func (cd *ChannelDefaulter) UpdateConfigMap(cm *corev1.ConfigMap) {
 	}
 	if defaultProvisionerName == "" {
 		cd.logger.Info("ConfigMap's value is the empty string", zap.String("key", channelDefaulterKey), zap.Any("configMap", cm))
+		cd.setConfig(nil)
 		return
 	}
 
@@ -93,7 +94,10 @@ func (cd *ChannelDefaulter) setConfig(provisioner *corev1.ObjectReference) {
 
 // getConfig is a typed wrapper around config.
 func (cd *ChannelDefaulter) getConfig() *corev1.ObjectReference {
-	return cd.config.Load().(*corev1.ObjectReference)
+	if or, ok := cd.config.Load().(*corev1.ObjectReference); ok {
+		return or
+	}
+	return nil
 }
 
 // setDefaultProvisioner sets the provisioner of the provided channel to the current default
@@ -101,6 +105,9 @@ func (cd *ChannelDefaulter) getConfig() *corev1.ObjectReference {
 func (cd *ChannelDefaulter) setDefaultProvisioner(c *ChannelSpec) {
 	// Because we are treating this as a singleton, be tolerant to it having not been setup at all.
 	if cd == nil {
+		return
+	}
+	if c == nil {
 		return
 	}
 	// TODO Don't use a single default, instead use the Channel's arguments to determine the type of
