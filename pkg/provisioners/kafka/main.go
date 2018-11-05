@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	BrokerConfigMapKey = "brokers"
+	BrokerConfigMapKey = "bootstrap_servers"
 )
 
 // SchemeFunc adds types to a Scheme.
@@ -91,12 +91,11 @@ func getProvisionerConfig() (*provisionerController.KafkaProvisionerConfig, erro
 	config := &provisionerController.KafkaProvisionerConfig{}
 
 	if value, ok := configMap[BrokerConfigMapKey]; ok {
-		brokers := strings.Split(value, ",")
-		if len(brokers) == 0 {
-			return nil, fmt.Errorf("missing kafka brokers in provisioner configuration")
+		bootstrapServers := strings.Split(value, ",")
+		if len(bootstrapServers) != 0 {
+			config.Brokers = bootstrapServers
+			return config, nil
 		}
-		config.Brokers = brokers
-		return config, nil
 	}
 
 	return nil, fmt.Errorf("missing key %s in provisioner configuration", BrokerConfigMapKey)
