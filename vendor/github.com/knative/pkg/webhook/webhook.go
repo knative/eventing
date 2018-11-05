@@ -578,14 +578,6 @@ func updateGeneration(ctx context.Context, patches *[]jsonpatch.JsonPatchOperati
 	after := before.DeepCopyObject().(*duckv1alpha1.Generational)
 	after.Spec.Generation = after.Spec.Generation + 1
 
-	if after.Name == "default"{
-		*patches = append(*patches, jsonpatch.JsonPatchOperation{
-			Operation: "add",
-			Path: "/spec",
-			Value: map[string]interface{}{},
-		})
-	}
-
 	genBump, err := duck.CreatePatch(before, after)
 	if err != nil {
 		return err
