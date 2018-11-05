@@ -14,20 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package channeldefaulter
 
 import (
 	"testing"
 
-	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/google/go-cmp/cmp"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 )
 
 var (
 	def = &corev1.ObjectReference{
-		APIVersion: SchemeGroupVersion.String(),
+		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 		Kind:       "ClusterChannelProvisioner",
 		Name:       "test-channel-provisioner",
 	}
@@ -37,23 +39,36 @@ func TestChannelDefaulter_setDefaultProvider(t *testing.T) {
 	testCases := map[string]struct {
 		nilChannelDefaulter bool
 		def                 *corev1.ObjectReference
-		spec                *ChannelSpec
-		expected            *ChannelSpec
+		spec                *eventingv1alpha1.ChannelSpec
+		expected            *eventingv1alpha1.ChannelSpec
 	}{
 		"nil channel defaulter": {
 			nilChannelDefaulter: true,
 		},
 		"nil spec": {},
 		"no default set": {
-			spec: &ChannelSpec{},
-			expected: &ChannelSpec{
+			spec: &eventingv1alpha1.ChannelSpec{},
+			expected: &eventingv1alpha1.ChannelSpec{
 				Provisioner: nil,
 			},
 		},
 		"defaulted": {
 			def:  def,
-			spec: &ChannelSpec{},
-			expected: &ChannelSpec{
+			spec: &eventingv1alpha1.ChannelSpec{},
+			expected: &eventingv1alpha1.ChannelSpec{
+				Provisioner: def,
+			},
+		},
+		"defaulted - removing arguments": {
+			def: def,
+			spec: &eventingv1alpha1.ChannelSpec{
+				Arguments: &runtime.RawExtension{
+					Object: &corev1.ObjectReference{
+						Name: "will-be-removed",
+					},
+				},
+			},
+			expected: &eventingv1alpha1.ChannelSpec{
 				Provisioner: def,
 			},
 		},
@@ -62,13 +77,13 @@ func TestChannelDefaulter_setDefaultProvider(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			var cd *ChannelDefaulter
 			if !tc.nilChannelDefaulter {
-				cd = NewChannelDefaulter(zap.NewNop())
+				cd = New(zap.NewNop())
 			}
 			if tc.def != nil {
 				cd.setConfig(tc.def)
 			}
 			spec := tc.spec
-			cd.setDefaultProvisioner(spec)
+			cd.SetChannelProvisioner(spec)
 			if diff := cmp.Diff(tc.expected, spec); diff != "" {
 				t.Fatalf("Unexpetec result (-want, +got): %s", diff)
 			}
@@ -79,13 +94,13 @@ func TestChannelDefaulter_setDefaultProvider(t *testing.T) {
 func TestChannelDefaulter_UpdateConfigMap(t *testing.T) {
 	testCases := map[string]struct {
 		initialConfig        *corev1.ConfigMap
-		expectedAfterInitial *ChannelSpec
+		expectedAfterInitial *eventingv1alpha1.ChannelSpec
 		updatedConfig        *corev1.ConfigMap
-		expectedAfterUpdate  *ChannelSpec
+		expectedAfterUpdate  *eventingv1alpha1.ChannelSpec
 	}{
 		"nil config map": {
-			expectedAfterInitial: &ChannelSpec{},
-			expectedAfterUpdate:  &ChannelSpec{},
+			expectedAfterInitial: &eventingv1alpha1.ChannelSpec{},
+			expectedAfterUpdate:  &eventingv1alpha1.ChannelSpec{},
 		},
 		"key missing": {
 			initialConfig: &corev1.ConfigMap{
@@ -93,11 +108,11 @@ func TestChannelDefaulter_UpdateConfigMap(t *testing.T) {
 					channelDefaulterKey: def.Name,
 				},
 			},
-			expectedAfterInitial: &ChannelSpec{
+			expectedAfterInitial: &eventingv1alpha1.ChannelSpec{
 				Provisioner: def,
 			},
 			updatedConfig: &corev1.ConfigMap{},
-			expectedAfterUpdate: &ChannelSpec{
+			expectedAfterUpdate: &eventingv1alpha1.ChannelSpec{
 				Provisioner: def,
 			},
 		},
@@ -107,7 +122,7 @@ func TestChannelDefaulter_UpdateConfigMap(t *testing.T) {
 					channelDefaulterKey: def.Name,
 				},
 			},
-			expectedAfterInitial: &ChannelSpec{
+			expectedAfterInitial: &eventingv1alpha1.ChannelSpec{
 				Provisioner: def,
 			},
 			updatedConfig: &corev1.ConfigMap{
@@ -115,7 +130,7 @@ func TestChannelDefaulter_UpdateConfigMap(t *testing.T) {
 					channelDefaulterKey: "",
 				},
 			},
-			expectedAfterUpdate: &ChannelSpec{},
+			expectedAfterUpdate: &eventingv1alpha1.ChannelSpec{},
 		},
 		"update to same provisioner": {
 			initialConfig: &corev1.ConfigMap{
@@ -123,7 +138,7 @@ func TestChannelDefaulter_UpdateConfigMap(t *testing.T) {
 					channelDefaulterKey: def.Name,
 				},
 			},
-			expectedAfterInitial: &ChannelSpec{
+			expectedAfterInitial: &eventingv1alpha1.ChannelSpec{
 				Provisioner: def,
 			},
 			updatedConfig: &corev1.ConfigMap{
@@ -131,7 +146,7 @@ func TestChannelDefaulter_UpdateConfigMap(t *testing.T) {
 					channelDefaulterKey: def.Name,
 				},
 			},
-			expectedAfterUpdate: &ChannelSpec{
+			expectedAfterUpdate: &eventingv1alpha1.ChannelSpec{
 				Provisioner: def,
 			},
 		},
@@ -141,7 +156,7 @@ func TestChannelDefaulter_UpdateConfigMap(t *testing.T) {
 					channelDefaulterKey: def.Name,
 				},
 			},
-			expectedAfterInitial: &ChannelSpec{
+			expectedAfterInitial: &eventingv1alpha1.ChannelSpec{
 				Provisioner: def,
 			},
 			updatedConfig: &corev1.ConfigMap{
@@ -149,7 +164,7 @@ func TestChannelDefaulter_UpdateConfigMap(t *testing.T) {
 					channelDefaulterKey: "some-other-name",
 				},
 			},
-			expectedAfterUpdate: &ChannelSpec{
+			expectedAfterUpdate: &eventingv1alpha1.ChannelSpec{
 				Provisioner: &corev1.ObjectReference{
 					APIVersion: def.APIVersion,
 					Kind:       def.Kind,
@@ -160,18 +175,18 @@ func TestChannelDefaulter_UpdateConfigMap(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			cd := NewChannelDefaulter(zap.NewNop())
+			cd := New(zap.NewNop())
 			cd.UpdateConfigMap(tc.initialConfig)
 
-			initialSpec := &ChannelSpec{}
-			cd.setDefaultProvisioner(initialSpec)
+			initialSpec := &eventingv1alpha1.ChannelSpec{}
+			cd.SetChannelProvisioner(initialSpec)
 			if diff := cmp.Diff(tc.expectedAfterInitial, initialSpec); diff != "" {
 				t.Fatalf("Unexpected difference after intial configMap update (-want, +got): %s", diff)
 			}
 
 			cd.UpdateConfigMap(tc.updatedConfig)
-			updateSpec := &ChannelSpec{}
-			cd.setDefaultProvisioner(updateSpec)
+			updateSpec := &eventingv1alpha1.ChannelSpec{}
+			cd.SetChannelProvisioner(updateSpec)
 			if diff := cmp.Diff(tc.expectedAfterUpdate, updateSpec); diff != "" {
 				t.Fatalf("Unexpected difference after update configMap update (-want, +got): %s", diff)
 			}

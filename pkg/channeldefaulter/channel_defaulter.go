@@ -14,31 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package channeldefaulter
 
 import (
 	"sync/atomic"
 
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 )
 
 const (
-	// ChannelDefaulterConfigMapName is the name of the ConfigMap that contains the configuration
-	// for the default ClusterChannelProvisioner.
-	ChannelDefaulterConfigMapName = "default-channel-webhook"
+	// ConfigMapName is the name of the ConfigMap that contains the configuration for the default
+	// ClusterChannelProvisioner.
+	ConfigMapName = "default-channel-webhook"
 
-	// channelDefaulterKey ey is the key in the ConfigMap to get the name of the default
+	// channelDefaulterKey is the key in the ConfigMap to get the name of the default
 	// ClusterChannelProvisioner.
 	channelDefaulterKey = "default-provisioner-name"
-)
-
-var (
-	// ChannelDefaulterSingleton is the singleton for applying the default ClusterChannelProvisioner
-	// to all Channels that do not have a provisioner specified. It is setup by main():
-	//
-	// eventingv1alpha1.ChannelDefaulterSingleton = eventingv1alpha1.NewChannelDefaulter(logger)
-	ChannelDefaulterSingleton *ChannelDefaulter
 )
 
 // ChannelDefaulter adds a default ClusterChannelProvisioner to Channels that do not have any
@@ -51,11 +44,14 @@ type ChannelDefaulter struct {
 	logger *zap.Logger
 }
 
-// NewChannelDefaulter creates a new ChannelDefaulter. The caller is expected to set this as the
-// global singleton:
+var _ eventingv1alpha1.ChannelProvisionerDefaulter = &ChannelDefaulter{}
+
+// New creates a new ChannelDefaulter. The caller is expected to set this as the global singleton.
 //
-// eventingv1alpha1.ChannelDefaulterSingleton = eventingv1alpha1.NewChannelDefaulter(logger)
-func NewChannelDefaulter(logger *zap.Logger) *ChannelDefaulter {
+// channelDefaulter := channeldefaulter.New(logger)
+// eventingv1alpha1.ChannelDefaulterSingleton = channelDefaulter
+// configMapWatcher.Watch(channeldefaulter.ConfigMapName, channelDefaulter.UpdateConfigMap)
+func New(logger *zap.Logger) *ChannelDefaulter {
 	return &ChannelDefaulter{
 		logger: logger.With(zap.String("role", "channelDefaulter")),
 	}
@@ -80,7 +76,7 @@ func (cd *ChannelDefaulter) UpdateConfigMap(cm *corev1.ConfigMap) {
 	}
 
 	config := &corev1.ObjectReference{
-		APIVersion: SchemeGroupVersion.String(),
+		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 		Kind:       "ClusterChannelProvisioner",
 		Name:       defaultProvisionerName,
 	}
@@ -102,7 +98,7 @@ func (cd *ChannelDefaulter) getConfig() *corev1.ObjectReference {
 
 // setDefaultProvisioner sets the provisioner of the provided channel to the current default
 // ClusterChannelProvisioner.
-func (cd *ChannelDefaulter) setDefaultProvisioner(c *ChannelSpec) {
+func (cd *ChannelDefaulter) SetChannelProvisioner(c *eventingv1alpha1.ChannelSpec) {
 	// Because we are treating this as a singleton, be tolerant to it having not been setup at all.
 	if cd == nil {
 		return
@@ -115,4 +111,7 @@ func (cd *ChannelDefaulter) setDefaultProvisioner(c *ChannelSpec) {
 	dp := cd.getConfig()
 	cd.logger.Info("Defaulting the ClusterChannelProvisioner", zap.Any("defaultClusterChannelProvisioner", dp))
 	c.Provisioner = dp
+	// In the future the defaulter itself may use the arguments. So any arguments should not apply
+	// to the chosen provisioner, clear them out.
+	c.Arguments = nil
 }

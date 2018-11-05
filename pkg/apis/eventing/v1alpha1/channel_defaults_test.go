@@ -19,20 +19,23 @@ package v1alpha1
 import (
 	"testing"
 
-	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/google/go-cmp/cmp"
 )
 
 var (
-	defaultChannelProvisioner = "default-channel-provisioner"
+	defaultChannelProvisioner = &corev1.ObjectReference{
+		APIVersion: SchemeGroupVersion.String(),
+		Kind:       "ClusterChannelProvisioner",
+		Name:       "default-channel-provisioner",
+	}
 )
 
 func TestChannelSetDefaults(t *testing.T) {
 	testCases := map[string]struct {
 		nilChannelDefaulter bool
-		def                 *string
+		def                 *corev1.ObjectReference
 		initial             Channel
 		expected            Channel
 	}{
@@ -44,19 +47,15 @@ func TestChannelSetDefaults(t *testing.T) {
 			expected: Channel{},
 		},
 		"set ChannelDefaulter": {
-			def: &defaultChannelProvisioner,
+			def: defaultChannelProvisioner,
 			expected: Channel{
 				Spec: ChannelSpec{
-					Provisioner: &corev1.ObjectReference{
-						APIVersion: SchemeGroupVersion.String(),
-						Kind:       "ClusterChannelProvisioner",
-						Name:       defaultChannelProvisioner,
-					},
+					Provisioner: defaultChannelProvisioner,
 				},
 			},
 		},
 		"provisioner already specified": {
-			def: &defaultChannelProvisioner,
+			def: defaultChannelProvisioner,
 			initial: Channel{
 				Spec: ChannelSpec{
 					Provisioner: &corev1.ObjectReference{
@@ -80,15 +79,10 @@ func TestChannelSetDefaults(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			if !tc.nilChannelDefaulter {
-				ChannelDefaulterSingleton = NewChannelDefaulter(zap.NewNop())
+				ChannelDefaulterSingleton = &channelDefaulter{
+					def: tc.def,
+				}
 				defer func() { ChannelDefaulterSingleton = nil }()
-			}
-			if tc.def != nil {
-				ChannelDefaulterSingleton.UpdateConfigMap(&corev1.ConfigMap{
-					Data: map[string]string{
-						channelDefaulterKey: *tc.def,
-					},
-				})
 			}
 			tc.initial.SetDefaults()
 			if diff := cmp.Diff(tc.expected, tc.initial); diff != "" {
@@ -96,4 +90,12 @@ func TestChannelSetDefaults(t *testing.T) {
 			}
 		})
 	}
+}
+
+type channelDefaulter struct {
+	def *corev1.ObjectReference
+}
+
+func (cd *channelDefaulter) SetChannelProvisioner(cs *ChannelSpec) {
+	cs.Provisioner = cd.def
 }

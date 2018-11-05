@@ -16,16 +16,30 @@ limitations under the License.
 
 package v1alpha1
 
-//TODO replace this with openapi defaults when
-// https://github.com/kubernetes/features/issues/575 lands (scheduled for 1.13)
+// ChannelProvisionerDefaulter sets the default Provisioner and Arguments on Channels that do not
+// specify any Provisioner.
+type ChannelProvisionerDefaulter interface {
+	// SetChannelProvisioner mutates the provided ChannelSpec by applying a provisioner and
+	// arguments (overwriting anything already present).
+	SetChannelProvisioner(cs *ChannelSpec)
+}
+
+var (
+	// ChannelDefaulterSingleton is the global singleton used to default Channels that do not
+	// specify any provisioner.
+	ChannelDefaulterSingleton ChannelProvisionerDefaulter
+)
+
 func (c *Channel) SetDefaults() {
 	c.Spec.SetDefaults()
 }
 
-func (fs *ChannelSpec) SetDefaults() {
-	if fs.Provisioner == nil {
+func (cs *ChannelSpec) SetDefaults() {
+	if cs.Provisioner == nil {
+		// The singleton may not have been set, if so ignore it and validation will reject the
+		// ChannelSpec.
 		if cd := ChannelDefaulterSingleton; cd != nil {
-			cd.setDefaultProvisioner(fs)
+			cd.SetChannelProvisioner(cs)
 		}
 	}
 }

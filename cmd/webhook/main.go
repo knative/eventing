@@ -19,6 +19,8 @@ import (
 	"flag"
 	"log"
 
+	"github.com/knative/eventing/pkg/channeldefaulter"
+
 	"go.uber.org/zap"
 
 	"github.com/knative/pkg/configmap"
@@ -76,8 +78,9 @@ func main() {
 
 	// Watch the default-channel-webhook ConfigMap and dynamically update the default
 	// ClusterChannelProvisioner.
-	eventingv1alpha1.ChannelDefaulterSingleton = eventingv1alpha1.NewChannelDefaulter(logger.Desugar())
-	configMapWatcher.Watch(eventingv1alpha1.ChannelDefaulterConfigMapName, eventingv1alpha1.ChannelDefaulterSingleton.UpdateConfigMap)
+	channelDefaulter := channeldefaulter.New(logger.Desugar())
+	eventingv1alpha1.ChannelDefaulterSingleton = channelDefaulter
+	configMapWatcher.Watch(channeldefaulter.ConfigMapName, channelDefaulter.UpdateConfigMap)
 
 	if err = configMapWatcher.Start(stopCh); err != nil {
 		logger.Fatalf("failed to start webhook configmap watcher: %v", err)
