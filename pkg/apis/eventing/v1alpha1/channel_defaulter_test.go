@@ -16,16 +16,8 @@ limitations under the License.
 
 package v1alpha1
 
-//TODO replace this with openapi defaults when
-// https://github.com/kubernetes/features/issues/575 lands (scheduled for 1.13)
-func (c *Channel) SetDefaults() {
-	c.Spec.SetDefaults()
-}
+import "testing"
 
-func (fs *ChannelSpec) SetDefaults() {
-	if fs.Provisioner == nil {
-		if cd := ChannelDefaulterSingleton; cd != nil {
-			cd.setDefaultProvisioner(fs)
-		}
-	}
+func TestChannelDefaulter(t *testing.T) {
+
 }

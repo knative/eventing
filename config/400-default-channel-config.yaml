@@ -18,5 +18,5 @@ metadata:
   name: default-channel-webhook
   namespace: knative-eventing
 data:
-  # Configuration for the flow controller
+  # Configuration for defaulting channels that do not specify provisioners.
   default-provisioner-name: in-memory-channel
