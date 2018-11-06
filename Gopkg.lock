@@ -301,7 +301,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7777b78ab28a8f10918bdcdb043f4150d27da3181fafd69a1b15935197bf9d4c"
+  digest = "1:e1ae53a5b5dc5fa6f8cb5fa4596a4436d2754921510766569386efc9c07d839c"
   name = "github.com/knative/eventing-sources"
   packages = [
     "pkg/apis/sources/v1alpha1",
@@ -313,7 +313,7 @@
   revision = "aa113a015beb91c94a8e173c8f0ac18512a83954"
 
 [[projects]]
-  digest = "1:9dd034878e35ffe80dd0a4d7991521acce80f33cc7d3d5e21c7944bb2874e037"
+  digest = "1:7777b78ab28a8f10918bdcdb043f4150d27da3181fafd69a1b15935197bf9d4c"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
