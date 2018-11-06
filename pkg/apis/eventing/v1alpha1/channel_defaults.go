@@ -16,12 +16,17 @@ limitations under the License.
 
 package v1alpha1
 
+import (
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+)
+
 // ChannelProvisionerDefaulter sets the default Provisioner and Arguments on Channels that do not
 // specify any Provisioner.
 type ChannelProvisionerDefaulter interface {
-	// SetChannelProvisioner mutates the provided ChannelSpec by applying a provisioner and
-	// arguments (overwriting anything already present).
-	SetChannelProvisioner(cs *ChannelSpec)
+	// GetChannel determines the default provisioner and arguments for the given channel. It does
+	// not modify the given channel. It may return nil for either or both.
+	GetDefault(c *Channel) (*corev1.ObjectReference, *runtime.RawExtension)
 }
 
 var (
@@ -31,15 +36,16 @@ var (
 )
 
 func (c *Channel) SetDefaults() {
+	if c != nil && c.Spec.Provisioner == nil {
+		// The singleton may not have been set, if so ignore it and validation will reject the
+		// Channel.
+		if cd := ChannelDefaulterSingleton; cd != nil {
+			prov, args := cd.GetDefault(c.DeepCopy())
+			c.Spec.Provisioner = prov
+			c.Spec.Arguments = args
+		}
+	}
 	c.Spec.SetDefaults()
 }
 
-func (cs *ChannelSpec) SetDefaults() {
-	if cs.Provisioner == nil {
-		// The singleton may not have been set, if so ignore it and validation will reject the
-		// ChannelSpec.
-		if cd := ChannelDefaulterSingleton; cd != nil {
-			cd.SetChannelProvisioner(cs)
-		}
-	}
-}
+func (cs *ChannelSpec) SetDefaults() {}

@@ -19,6 +19,9 @@ package channeldefaulter
 import (
 	"sync/atomic"
 
+	yaml "gopkg.in/yaml.v2"
+	"k8s.io/apimachinery/pkg/runtime"
+
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -31,15 +34,26 @@ const (
 
 	// channelDefaulterKey is the key in the ConfigMap to get the name of the default
 	// ClusterChannelProvisioner.
-	channelDefaulterKey = "default-provisioner-name"
+	channelDefaulterKey = "default-channel-config"
 )
+
+// Config is the data structure serialized to YAML in the config map. When a Channel needs to be
+// defaulted, the Channel's namespace will be used as a key into NamespaceDefaults, if there is
+// something present, then that is used. If not, then the ClusterDefault is used.
+type Config struct {
+	// NamespaceDefaults are the default Channel provisioner for each namespace. namespace is the
+	// key, the value is the default provisioner to use.
+	NamespaceDefaults map[string]*corev1.ObjectReference `json:"namespaceDefaults,omitempty"`
+	// ClusterDefault is the default Channel provisioner for all namespaces that are not in
+	// NamespaceDefaults.
+	ClusterDefault *corev1.ObjectReference `json:"clusterDefault,omitempty"`
+}
 
 // ChannelDefaulter adds a default ClusterChannelProvisioner to Channels that do not have any
 // provisioner specified. The default is stored in a ConfigMap and can be updated at runtime.
 type ChannelDefaulter struct {
 	// The current default ClusterChannelProvisioner to set. This should only be accessed via
-	// getConfig() and setConfig(), as they correctly enforce the type we require
-	// (*corev1.ObjectReference).
+	// getConfig() and setConfig(), as they correctly enforce the type we require (*Config).
 	config atomic.Value
 	logger *zap.Logger
 }
@@ -64,54 +78,64 @@ func (cd *ChannelDefaulter) UpdateConfigMap(cm *corev1.ConfigMap) {
 		cd.logger.Info("UpdateConfigMap on a nil map")
 		return
 	}
-	defaultProvisionerName, present := cm.Data[channelDefaulterKey]
+	defaultChannelConfig, present := cm.Data[channelDefaulterKey]
 	if !present {
 		cd.logger.Info("ConfigMap is missing key", zap.String("key", channelDefaulterKey), zap.Any("configMap", cm))
 		return
 	}
-	if defaultProvisionerName == "" {
-		cd.logger.Info("ConfigMap's value is the empty string", zap.String("key", channelDefaulterKey), zap.Any("configMap", cm))
-		cd.setConfig(nil)
+
+	if defaultChannelConfig == "" {
+		cd.logger.Info("ConfigMap's value was the empty string, ignoring it.", zap.Any("configMap", cm))
 		return
 	}
 
-	config := &corev1.ObjectReference{
-		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-		Kind:       "ClusterChannelProvisioner",
-		Name:       defaultProvisionerName,
+	config := Config{}
+	if err := yaml.UnmarshalStrict([]byte(defaultChannelConfig), &config); err != nil {
+		cd.logger.Error("ConfigMap's value could not be unmarshaled.", zap.Error(err), zap.Any("configMap", cm))
+		return
 	}
-	cd.setConfig(config)
+
+	cd.logger.Info("Updated channelDefaulter config", zap.Any("config", config))
+	cd.setConfig(&config)
 }
 
 // setConfig is a typed wrapper around config.
-func (cd *ChannelDefaulter) setConfig(provisioner *corev1.ObjectReference) {
-	cd.config.Store(provisioner)
+func (cd *ChannelDefaulter) setConfig(config *Config) {
+	cd.config.Store(config)
 }
 
 // getConfig is a typed wrapper around config.
-func (cd *ChannelDefaulter) getConfig() *corev1.ObjectReference {
-	if or, ok := cd.config.Load().(*corev1.ObjectReference); ok {
-		return or
+func (cd *ChannelDefaulter) getConfig() *Config {
+	if config, ok := cd.config.Load().(*Config); ok {
+		return config
 	}
 	return nil
 }
 
-// setDefaultProvisioner sets the provisioner of the provided channel to the current default
-// ClusterChannelProvisioner.
-func (cd *ChannelDefaulter) SetChannelProvisioner(c *eventingv1alpha1.ChannelSpec) {
+// GetDefault determines the default provisioner and arguments for the provided channel.
+func (cd *ChannelDefaulter) GetDefault(c *eventingv1alpha1.Channel) (*corev1.ObjectReference, *runtime.RawExtension) {
 	// Because we are treating this as a singleton, be tolerant to it having not been setup at all.
 	if cd == nil {
-		return
+		return nil, nil
 	}
 	if c == nil {
-		return
+		return nil, nil
 	}
+	config := cd.getConfig()
+	if config == nil {
+		return nil, nil
+	}
+
 	// TODO Don't use a single default, instead use the Channel's arguments to determine the type of
 	// Channel to use (e.g. it can say whether it needs to be persistent, strictly ordered, etc.).
-	dp := cd.getConfig()
+	dp := getDefaultProvisioner(config, c.Namespace)
 	cd.logger.Info("Defaulting the ClusterChannelProvisioner", zap.Any("defaultClusterChannelProvisioner", dp))
-	c.Provisioner = dp
-	// In the future the defaulter itself may use the arguments. So any arguments should not apply
-	// to the chosen provisioner, clear them out.
-	c.Arguments = nil
+	return dp, nil
+}
+
+func getDefaultProvisioner(config *Config, namespace string) *corev1.ObjectReference {
+	if dp, ok := config.NamespaceDefaults[namespace]; ok {
+		return dp
+	}
+	return config.ClusterDefault
 }

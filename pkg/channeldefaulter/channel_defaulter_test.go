@@ -17,60 +17,74 @@ limitations under the License.
 package channeldefaulter
 
 import (
+	"strings"
 	"testing"
-
-	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/google/go-cmp/cmp"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"go.uber.org/zap"
+	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
-	def = &corev1.ObjectReference{
-		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-		Kind:       "ClusterChannelProvisioner",
-		Name:       "test-channel-provisioner",
+	config = &Config{
+		ClusterDefault: &corev1.ObjectReference{
+			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+			Kind:       "ClusterChannelProvisioner",
+			Name:       "test-channel-provisioner",
+		},
+	}
+	// configYaml is the YAML form of config. It is generated in init().
+	configYaml string
+
+	testNamespace       = "test-namespace"
+	configWithNamespace = &Config{
+		ClusterDefault: &corev1.ObjectReference{
+			Name: "cluster-default",
+		},
+		NamespaceDefaults: map[string]*corev1.ObjectReference{
+			testNamespace: {
+				Name: "namespace-default",
+			},
+		},
 	}
 )
 
-func TestChannelDefaulter_setDefaultProvider(t *testing.T) {
+func init() {
+	configYamlBytes, _ := yaml.Marshal(config)
+	configYaml = string(configYamlBytes)
+}
+
+func TestChannelDefaulter_getDefaultProvider(t *testing.T) {
 	testCases := map[string]struct {
 		nilChannelDefaulter bool
-		def                 *corev1.ObjectReference
-		spec                *eventingv1alpha1.ChannelSpec
-		expected            *eventingv1alpha1.ChannelSpec
+		config              *Config
+		channel             *eventingv1alpha1.Channel
+		expectedProv        *corev1.ObjectReference
 	}{
 		"nil channel defaulter": {
 			nilChannelDefaulter: true,
 		},
 		"nil spec": {},
 		"no default set": {
-			spec: &eventingv1alpha1.ChannelSpec{},
-			expected: &eventingv1alpha1.ChannelSpec{
-				Provisioner: nil,
-			},
+			channel:      &eventingv1alpha1.Channel{},
+			expectedProv: nil,
 		},
-		"defaulted": {
-			def:  def,
-			spec: &eventingv1alpha1.ChannelSpec{},
-			expected: &eventingv1alpha1.ChannelSpec{
-				Provisioner: def,
-			},
+		"cluster defaulted": {
+			config:       config,
+			channel:      &eventingv1alpha1.Channel{},
+			expectedProv: config.ClusterDefault,
 		},
-		"defaulted - removing arguments": {
-			def: def,
-			spec: &eventingv1alpha1.ChannelSpec{
-				Arguments: &runtime.RawExtension{
-					Object: &corev1.ObjectReference{
-						Name: "will-be-removed",
-					},
+		"namespace defaulted": {
+			config: configWithNamespace,
+			channel: &eventingv1alpha1.Channel{
+				ObjectMeta: v1.ObjectMeta{
+					Namespace: testNamespace,
 				},
 			},
-			expected: &eventingv1alpha1.ChannelSpec{
-				Provisioner: def,
-			},
+			expectedProv: configWithNamespace.NamespaceDefaults[testNamespace],
 		},
 	}
 	for n, tc := range testCases {
@@ -79,13 +93,15 @@ func TestChannelDefaulter_setDefaultProvider(t *testing.T) {
 			if !tc.nilChannelDefaulter {
 				cd = New(zap.NewNop())
 			}
-			if tc.def != nil {
-				cd.setConfig(tc.def)
+			if tc.config != nil {
+				cd.setConfig(tc.config)
 			}
-			spec := tc.spec
-			cd.SetChannelProvisioner(spec)
-			if diff := cmp.Diff(tc.expected, spec); diff != "" {
-				t.Fatalf("Unexpetec result (-want, +got): %s", diff)
+			prov, args := cd.GetDefault(tc.channel)
+			if diff := cmp.Diff(tc.expectedProv, prov); diff != "" {
+				t.Fatalf("Unexpected provisioner (-want, +got): %s", diff)
+			}
+			if args != nil {
+				t.Fatalf("Unexpected args, expected nil: %v", args)
 			}
 		})
 	}
@@ -94,82 +110,96 @@ func TestChannelDefaulter_setDefaultProvider(t *testing.T) {
 func TestChannelDefaulter_UpdateConfigMap(t *testing.T) {
 	testCases := map[string]struct {
 		initialConfig        *corev1.ConfigMap
-		expectedAfterInitial *eventingv1alpha1.ChannelSpec
+		expectedAfterInitial *corev1.ObjectReference
 		updatedConfig        *corev1.ConfigMap
-		expectedAfterUpdate  *eventingv1alpha1.ChannelSpec
+		expectedAfterUpdate  *corev1.ObjectReference
 	}{
 		"nil config map": {
-			expectedAfterInitial: &eventingv1alpha1.ChannelSpec{},
-			expectedAfterUpdate:  &eventingv1alpha1.ChannelSpec{},
+			expectedAfterInitial: nil,
+			expectedAfterUpdate:  nil,
 		},
-		"key missing": {
+		"key missing in update": {
 			initialConfig: &corev1.ConfigMap{
 				Data: map[string]string{
-					channelDefaulterKey: def.Name,
+					channelDefaulterKey: configYaml,
 				},
 			},
-			expectedAfterInitial: &eventingv1alpha1.ChannelSpec{
-				Provisioner: def,
-			},
-			updatedConfig: &corev1.ConfigMap{},
-			expectedAfterUpdate: &eventingv1alpha1.ChannelSpec{
-				Provisioner: def,
-			},
+			expectedAfterInitial: config.ClusterDefault,
+			updatedConfig:        &corev1.ConfigMap{},
+			expectedAfterUpdate:  config.ClusterDefault,
 		},
-		"default is empty string": {
+		"bad yaml is ignored": {
 			initialConfig: &corev1.ConfigMap{
 				Data: map[string]string{
-					channelDefaulterKey: def.Name,
+					channelDefaulterKey: configYaml,
 				},
 			},
-			expectedAfterInitial: &eventingv1alpha1.ChannelSpec{
-				Provisioner: def,
+			expectedAfterInitial: config.ClusterDefault,
+			updatedConfig: &corev1.ConfigMap{
+				Data: map[string]string{
+					channelDefaulterKey: "{foo: bar}",
+				},
 			},
+			expectedAfterUpdate: config.ClusterDefault,
+		},
+		"empty config is accepted": {
+			initialConfig: &corev1.ConfigMap{
+				Data: map[string]string{
+					channelDefaulterKey: configYaml,
+				},
+			},
+			expectedAfterInitial: config.ClusterDefault,
+			updatedConfig: &corev1.ConfigMap{
+				Data: map[string]string{
+					channelDefaulterKey: "{}",
+				},
+			},
+			expectedAfterUpdate: nil,
+		},
+		"empty string is ignored": {
+			initialConfig: &corev1.ConfigMap{
+				Data: map[string]string{
+					channelDefaulterKey: configYaml,
+				},
+			},
+			expectedAfterInitial: config.ClusterDefault,
 			updatedConfig: &corev1.ConfigMap{
 				Data: map[string]string{
 					channelDefaulterKey: "",
 				},
 			},
-			expectedAfterUpdate: &eventingv1alpha1.ChannelSpec{},
+			expectedAfterUpdate: config.ClusterDefault,
 		},
 		"update to same provisioner": {
 			initialConfig: &corev1.ConfigMap{
 				Data: map[string]string{
-					channelDefaulterKey: def.Name,
+					channelDefaulterKey: configYaml,
 				},
 			},
-			expectedAfterInitial: &eventingv1alpha1.ChannelSpec{
-				Provisioner: def,
-			},
+			expectedAfterInitial: config.ClusterDefault,
 			updatedConfig: &corev1.ConfigMap{
 				Data: map[string]string{
-					channelDefaulterKey: def.Name,
+					channelDefaulterKey: configYaml,
 				},
 			},
-			expectedAfterUpdate: &eventingv1alpha1.ChannelSpec{
-				Provisioner: def,
-			},
+			expectedAfterUpdate: config.ClusterDefault,
 		},
 		"update to different provisioner": {
 			initialConfig: &corev1.ConfigMap{
 				Data: map[string]string{
-					channelDefaulterKey: def.Name,
+					channelDefaulterKey: configYaml,
 				},
 			},
-			expectedAfterInitial: &eventingv1alpha1.ChannelSpec{
-				Provisioner: def,
-			},
+			expectedAfterInitial: config.ClusterDefault,
 			updatedConfig: &corev1.ConfigMap{
 				Data: map[string]string{
-					channelDefaulterKey: "some-other-name",
+					channelDefaulterKey: strings.Replace(configYaml, config.ClusterDefault.Name, "some-other-name", -1),
 				},
 			},
-			expectedAfterUpdate: &eventingv1alpha1.ChannelSpec{
-				Provisioner: &corev1.ObjectReference{
-					APIVersion: def.APIVersion,
-					Kind:       def.Kind,
-					Name:       "some-other-name",
-				},
+			expectedAfterUpdate: &corev1.ObjectReference{
+				APIVersion: config.ClusterDefault.APIVersion,
+				Kind:       config.ClusterDefault.Kind,
+				Name:       "some-other-name",
 			},
 		},
 	}
@@ -178,17 +208,21 @@ func TestChannelDefaulter_UpdateConfigMap(t *testing.T) {
 			cd := New(zap.NewNop())
 			cd.UpdateConfigMap(tc.initialConfig)
 
-			initialSpec := &eventingv1alpha1.ChannelSpec{}
-			cd.SetChannelProvisioner(initialSpec)
-			if diff := cmp.Diff(tc.expectedAfterInitial, initialSpec); diff != "" {
+			prov, args := cd.GetDefault(&eventingv1alpha1.Channel{})
+			if diff := cmp.Diff(tc.expectedAfterInitial, prov); diff != "" {
 				t.Fatalf("Unexpected difference after intial configMap update (-want, +got): %s", diff)
+			}
+			if args != nil {
+				t.Fatalf("Unexpected args after initial configMap update. Expected nil. %v", args)
 			}
 
 			cd.UpdateConfigMap(tc.updatedConfig)
-			updateSpec := &eventingv1alpha1.ChannelSpec{}
-			cd.SetChannelProvisioner(updateSpec)
-			if diff := cmp.Diff(tc.expectedAfterUpdate, updateSpec); diff != "" {
+			prov, args = cd.GetDefault(&eventingv1alpha1.Channel{})
+			if diff := cmp.Diff(tc.expectedAfterUpdate, prov); diff != "" {
 				t.Fatalf("Unexpected difference after update configMap update (-want, +got): %s", diff)
+			}
+			if args != nil {
+				t.Fatalf("Unexpected args after initial configMap update. Expected nil. %v", args)
 			}
 		})
 	}

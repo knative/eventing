@@ -19,6 +19,8 @@ package v1alpha1
 import (
 	"testing"
 
+	"k8s.io/apimachinery/pkg/runtime"
+
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/google/go-cmp/cmp"
@@ -30,12 +32,18 @@ var (
 		Kind:       "ClusterChannelProvisioner",
 		Name:       "default-channel-provisioner",
 	}
+	defaultChannelArgs = &runtime.RawExtension{
+		Object: &corev1.ObjectReference{
+			Name: "default-args",
+		},
+	}
 )
 
 func TestChannelSetDefaults(t *testing.T) {
 	testCases := map[string]struct {
 		nilChannelDefaulter bool
-		def                 *corev1.ObjectReference
+		prov                *corev1.ObjectReference
+		args                *runtime.RawExtension
 		initial             Channel
 		expected            Channel
 	}{
@@ -47,15 +55,18 @@ func TestChannelSetDefaults(t *testing.T) {
 			expected: Channel{},
 		},
 		"set ChannelDefaulter": {
-			def: defaultChannelProvisioner,
+			prov: defaultChannelProvisioner,
+			args: defaultChannelArgs,
 			expected: Channel{
 				Spec: ChannelSpec{
 					Provisioner: defaultChannelProvisioner,
+					Arguments:   defaultChannelArgs,
 				},
 			},
 		},
 		"provisioner already specified": {
-			def: defaultChannelProvisioner,
+			prov: defaultChannelProvisioner,
+			args: defaultChannelArgs,
 			initial: Channel{
 				Spec: ChannelSpec{
 					Provisioner: &corev1.ObjectReference{
@@ -80,7 +91,8 @@ func TestChannelSetDefaults(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			if !tc.nilChannelDefaulter {
 				ChannelDefaulterSingleton = &channelDefaulter{
-					def: tc.def,
+					prov: tc.prov,
+					args: tc.args,
 				}
 				defer func() { ChannelDefaulterSingleton = nil }()
 			}
@@ -93,9 +105,10 @@ func TestChannelSetDefaults(t *testing.T) {
 }
 
 type channelDefaulter struct {
-	def *corev1.ObjectReference
+	prov *corev1.ObjectReference
+	args *runtime.RawExtension
 }
 
-func (cd *channelDefaulter) SetChannelProvisioner(cs *ChannelSpec) {
-	cs.Provisioner = cd.def
+func (cd *channelDefaulter) GetDefault(_ *Channel) (*corev1.ObjectReference, *runtime.RawExtension) {
+	return cd.prov, cd.args
 }
