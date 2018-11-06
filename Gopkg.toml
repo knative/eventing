@@ -71,10 +71,6 @@ required = [
   revision = "cdc340f7c179dbbfa4afd43b7614e8fcadde4269"
 
 [[override]]
-  name = "cloud.google.com/go"
-  revision = "90f2606161ee6a14efe2ca79fc05ac2b8efe250b"
-
-[[override]]
   name = "github.com/knative/pkg"
   # HEAD as of 2018-11-02
   revision = "a8160c7d728d26da67e596c5b1975877082a26e6"
@@ -82,15 +78,6 @@ required = [
 [[constraint]]
   name = "github.com/knative/serving"
   version = "v0.1.1"
-
-[[override]]
-  name = "github.com/Shopify/sarama"
-  revision = "46cf3e2cf1acef7876068f66cf69ec31aad2d0b2" # includes higher level admin client
-#  version = "1.17.0"
-
-[[constraint]]
-  name = "github.com/bsm/sarama-cluster"
-  version = "2.1.13"
 
 [[constraint]]
   name = "sigs.k8s.io/controller-runtime"

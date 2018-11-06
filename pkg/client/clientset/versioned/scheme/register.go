@@ -19,10 +19,7 @@ limitations under the License.
 package scheme
 
 import (
-	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
-	flowsv1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -53,8 +50,5 @@ func init() {
 // After this, RawExtensions in Kubernetes types will serialize kube-aggregator types
 // correctly.
 func AddToScheme(scheme *runtime.Scheme) {
-	channelsv1alpha1.AddToScheme(scheme)
 	eventingv1alpha1.AddToScheme(scheme)
-	feedsv1alpha1.AddToScheme(scheme)
-	flowsv1alpha1.AddToScheme(scheme)
 }
