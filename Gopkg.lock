@@ -17,11 +17,12 @@
   revision = "90f2606161ee6a14efe2ca79fc05ac2b8efe250b"
 
 [[projects]]
-  digest = "1:f2bb07cb70ceaecfffa034919e418793eef0960480474c276173b725449fdb1f"
+  digest = "1:a074ae0f4788ea4c4c7045ab37f21943920bc20cf6ff8afcb2d971154cfa87ab"
   name = "github.com/Shopify/sarama"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "46cf3e2cf1acef7876068f66cf69ec31aad2d0b2"
+  revision = "ec843464b50d4c8b56403ec9d589cf41ea30e722"
+  version = "v1.19.0"
 
 [[projects]]
   branch = "master"

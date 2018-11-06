@@ -57,7 +57,7 @@ metadata:
   namespace: knative-eventing
 data:
   # Broker URL's for the provisioner
-  brokers: kafkabroker.kafka:9092
+  bootstrap_servers: kafkabroker.kafka:9092
 ---
 
 apiVersion: apps/v1beta1

@@ -1,4 +1,4 @@
-# Apache Kakfa - simple installation
+# Apache Kafka - simple installation
 
 1. For an installation of a simple Apache Kafka cluster, a setup is provided:
     ```
