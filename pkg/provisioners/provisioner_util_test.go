@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/system"
 	"github.com/knative/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
@@ -14,8 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 )
 
 const (
@@ -62,13 +61,13 @@ func TestUpdateClusterChannelProvisioner(t *testing.T) {
 
 	ignore := cmpopts.IgnoreTypes(apis.VolatileTime{})
 	if diff := cmp.Diff(want, got, ignore); diff != "" {
-		t.Errorf("ClusterProvisioner (-want, +got) = %v", diff)
+		t.Errorf("ClusterChannelProvisioner (-want, +got) = %v", diff)
 	}
 }
 
 func getNewClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvisioner {
 	clusterChannelProvisioner := &eventingv1alpha1.ClusterChannelProvisioner{
-		TypeMeta:   ClusterProvisonerType(),
+		TypeMeta:   ClusterChannelProvisionerType(),
 		ObjectMeta: om(testNS, clusterChannelProvisionerName),
 		Spec:       eventingv1alpha1.ClusterChannelProvisionerSpec{},
 	}
@@ -77,7 +76,7 @@ func getNewClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvision
 	return clusterChannelProvisioner
 }
 
-func ClusterProvisonerType() metav1.TypeMeta {
+func ClusterChannelProvisionerType() metav1.TypeMeta {
 	return metav1.TypeMeta{
 		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 		Kind:       "ClusterChannelProvisioner",
