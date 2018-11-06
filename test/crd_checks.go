@@ -23,8 +23,8 @@ import (
 	"fmt"
 	"time"
 
-	eventingV1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	eventingtyped "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
+	flowsV1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
+	flowstyped "github.com/knative/eventing/pkg/client/clientset/versioned/typed/flows/v1alpha1"
 	servingV1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	servingtyped "github.com/knative/serving/pkg/client/clientset/versioned/typed/serving/v1alpha1"
 	"go.opencensus.io/trace"
@@ -55,12 +55,12 @@ func WaitForRouteState(client servingtyped.RouteInterface, name string, inState 
 	})
 }
 
-// WaitForChannelState polls the status of the Channel called name
+// WaitForFlowState polls the status of the Flow called name
 // from client every interval until inState returns `true` indicating it
 // is done, returns an error or timeout. desc will be used to name the metric
 // that is emitted to track how long it took for name to get into the state checked by inState.
-func WaitForChannelState(client eventingtyped.ChannelInterface, name string, inState func(s *eventingV1alpha1.Channel) (bool, error), desc string) error {
-	metricName := fmt.Sprintf("WaitForChannelState/%s/%s", name, desc)
+func WaitForFlowState(client flowstyped.FlowInterface, name string, inState func(s *flowsV1alpha1.Flow) (bool, error), desc string) error {
+	metricName := fmt.Sprintf("WaitForFlowState/%s/%s", name, desc)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
 

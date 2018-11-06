@@ -6,7 +6,8 @@ import (
 	"testing"
 	"time"
 
-	eventingV1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	sourcesv1alpha1 "github.com/knative/eventing-sources/pkg/apis/sources/v1alpha1"
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/test"
 	pkgTest "github.com/knative/pkg/test"
 	"github.com/knative/pkg/test/logging"
@@ -95,25 +96,36 @@ func WithRouteReady(clients *test.Clients, logger *logging.BaseLogger, cleaner *
 	return nil
 }
 
+// CreateKubernetesEventSource creates a KubernetesEventSource
+func CreateKubernetesEventSource(clients *test.Clients, source *sourcesv1alpha1.KubernetesEventSource, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+	k8sSources := clients.Sources.SourcesV1alpha1().KubernetesEventSources(pkgTest.Flags.Namespace)
+	res, err := k8sSources.Create(source)
+	if err != nil {
+		return err
+	}
+	cleaner.Add(sourcesv1alpha1.SchemeGroupVersion.Group, sourcesv1alpha1.SchemeGroupVersion.Version, "kuberneteseventsources", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
+	return nil
+}
+
 // CreateChannel will create a Channel
-func CreateChannel(clients *test.Clients, channel *eventingV1alpha1.Channel, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+func CreateChannel(clients *test.Clients, channel *v1alpha1.Channel, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
 	channels := clients.Eventing.EventingV1alpha1().Channels(pkgTest.Flags.Namespace)
 	res, err := channels.Create(channel)
 	if err != nil {
 		return err
 	}
-	cleaner.Add(eventingV1alpha1.SchemeGroupVersion.Group, eventingV1alpha1.SchemeGroupVersion.Version, "channels", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
+	cleaner.Add(v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version, "channels", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
 	return nil
 }
 
 // CreateSubscription will create a Subscription
-func CreateSubscription(clients *test.Clients, subs *eventingV1alpha1.Subscription, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+func CreateSubscription(clients *test.Clients, subs *v1alpha1.Subscription, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
 	subscriptions := clients.Eventing.EventingV1alpha1().Subscriptions(pkgTest.Flags.Namespace)
 	res, err := subscriptions.Create(subs)
 	if err != nil {
 		return err
 	}
-	cleaner.Add(eventingV1alpha1.SchemeGroupVersion.Group, eventingV1alpha1.SchemeGroupVersion.Version, "subscriptions", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
+	cleaner.Add(v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version, "subscriptions", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
 	return nil
 }
 
@@ -154,7 +166,7 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, logger *
 	}
 	crb := &rbacV1beta1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-admin", name),
+			Name: "e2e-tests-admin",
 		},
 		Subjects: []rbacV1beta1.Subject{
 			{
@@ -173,17 +185,6 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, logger *
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-// CreateClusterChannelProvisioner will create a ClusterChannelProvisioner
-func CreateClusterChannelProvisioner(clients *test.Clients, cprovisioner *eventingV1alpha1.ClusterChannelProvisioner, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
-	cprovisioners := clients.Eventing.EventingV1alpha1().ClusterChannelProvisioners()
-	res, err := cprovisioners.Create(cprovisioner)
-	if err != nil {
-		return err
-	}
-	cleaner.Add(eventingV1alpha1.SchemeGroupVersion.Group, eventingV1alpha1.SchemeGroupVersion.Version, "clusterchannelprovisioners", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
 	return nil
 }
 
