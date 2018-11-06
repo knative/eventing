@@ -314,15 +314,15 @@ func TestProvisionChannel(t *testing.T) {
 		logger := provisioners.NewProvisionerLoggerFromConfig(provisioners.NewLoggingConfig())
 		r := &reconciler{
 			logger: logger.Desugar(),
-			kafkaClusterAdmin: &mockClusterAdmin{
-				mockCreateTopicFunc: func(topic string, detail *sarama.TopicDetail, validateOnly bool) error {
-					if topic != tc.wantTopicName {
-						t.Errorf("expected topic name: %+v got: %+v", tc.wantTopicName, topic)
-					}
-					return tc.mockError
-				}},
 		}
-		err := r.provisionChannel(tc.c)
+		kafkaClusterAdmin := &mockClusterAdmin{
+			mockCreateTopicFunc: func(topic string, detail *sarama.TopicDetail, validateOnly bool) error {
+				if topic != tc.wantTopicName {
+					t.Errorf("expected topic name: %+v got: %+v", tc.wantTopicName, topic)
+				}
+				return tc.mockError
+			}}
+		err := r.provisionChannel(tc.c, kafkaClusterAdmin)
 		var got string
 		if err != nil {
 			got = err.Error()
@@ -364,16 +364,16 @@ func TestDeprovisionChannel(t *testing.T) {
 		t.Logf("running test %s", tc.name)
 		logger := provisioners.NewProvisionerLoggerFromConfig(provisioners.NewLoggingConfig())
 		r := &reconciler{
-			logger: logger.Desugar(),
-			kafkaClusterAdmin: &mockClusterAdmin{
-				mockDeleteTopicFunc: func(topic string) error {
-					if topic != tc.wantTopicName {
-						t.Errorf("expected topic name: %+v got: %+v", tc.wantTopicName, topic)
-					}
-					return tc.mockError
-				}},
-		}
-		err := r.deprovisionChannel(tc.c)
+			logger: logger.Desugar()}
+		kafkaClusterAdmin := &mockClusterAdmin{
+			mockDeleteTopicFunc: func(topic string) error {
+				if topic != tc.wantTopicName {
+					t.Errorf("expected topic name: %+v got: %+v", tc.wantTopicName, topic)
+				}
+				return tc.mockError
+			}}
+
+		err := r.deprovisionChannel(tc.c, kafkaClusterAdmin)
 		var got string
 		if err != nil {
 			got = err.Error()
@@ -468,10 +468,6 @@ func getNewClusterChannelProvisioner(name string, isReady bool) *eventingv1alpha
 				{
 					Type:   eventingv1alpha1.ClusterChannelProvisionerConditionReady,
 					Status: condStatus,
-				},
-				{
-					Type:   eventingv1alpha1.ChannelConditionSinkable,
-					Status: "Unknown",
 				},
 			},
 		},

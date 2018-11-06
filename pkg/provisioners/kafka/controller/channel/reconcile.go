@@ -105,10 +105,13 @@ func (r *reconciler) reconcile(channel *v1alpha1.Channel) error {
 		return err
 	}
 
-	kafkaClusterAdmin, err := createKafkaAdminClient(r.config)
-	if err != nil {
-		r.logger.Fatal("unable to build kafka admin client", zap.Error(err))
-		return err
+	kafkaClusterAdmin := r.kafkaClusterAdmin
+	if kafkaClusterAdmin == nil {
+		kafkaClusterAdmin, err = createKafkaAdminClient(r.config)
+		if err != nil {
+			r.logger.Fatal("unable to build kafka admin client", zap.Error(err))
+			return err
+		}
 	}
 
 	deletionTimestamp := accessor.GetDeletionTimestamp()
@@ -130,7 +133,7 @@ func (r *reconciler) reconcile(channel *v1alpha1.Channel) error {
 	channel.Status.MarkProvisioned()
 
 	// close the connection
-	kafkaClusterAdmin.Close();
+	kafkaClusterAdmin.Close()
 
 	return nil
 }

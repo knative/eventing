@@ -17,8 +17,7 @@ limitations under the License.
 package channel
 
 import (
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	common "github.com/knative/eventing/pkg/provisioners/kafka/controller"
+	"github.com/Shopify/sarama"
 	"go.uber.org/zap"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,6 +26,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	common "github.com/knative/eventing/pkg/provisioners/kafka/controller"
 )
 
 const (
@@ -36,10 +38,13 @@ const (
 )
 
 type reconciler struct {
-	client            client.Client
-	recorder          record.EventRecorder
-	logger            *zap.Logger
-	config            *common.KafkaProvisionerConfig
+	client   client.Client
+	recorder record.EventRecorder
+	logger   *zap.Logger
+	config   *common.KafkaProvisionerConfig
+	// Using a shared kafkaClusterAdmin does not work currently because of an issue with
+	// Shopify/sarama, see https://github.com/Shopify/sarama/issues/1162.
+	kafkaClusterAdmin sarama.ClusterAdmin
 }
 
 // Verify the struct implements reconcile.Reconciler
@@ -50,9 +55,9 @@ func ProvideController(mgr manager.Manager, config *common.KafkaProvisionerConfi
 	// Setup a new controller to Reconcile Channel.
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: &reconciler{
-			recorder:          mgr.GetRecorder(controllerAgentName),
-			logger:            logger,
-			config:            config,
+			recorder: mgr.GetRecorder(controllerAgentName),
+			logger:   logger,
+			config:   config,
 		},
 	})
 	if err != nil {
