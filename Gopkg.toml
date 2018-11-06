@@ -77,7 +77,7 @@ required = [
 [[override]]
   name = "github.com/knative/pkg"
   # HEAD as of 2018-11-02
-  revision = "04b40fd38ac1cf17e0426b79860c792fd593ce71"
+  revision = "a8160c7d728d26da67e596c5b1975877082a26e6"
 
 [[constraint]]
   name = "github.com/knative/serving"

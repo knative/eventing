@@ -28,8 +28,9 @@ func TestTypesImplements(t *testing.T) {
 	}{
 		// Channel
 		{instance: &Channel{}, iface: &duckv1alpha1.Conditions{}},
+		{instance: &Channel{}, iface: &emptyGen},
 		{instance: &Channel{}, iface: &eventingduck.Subscribable{}},
-		{instance: &Channel{}, iface: &duckv1alpha1.Sinkable{}},
+		{instance: &Channel{}, iface: &duckv1alpha1.Addressable{}},
 		// ClusterChannelProvisioner
 		{instance: &ClusterChannelProvisioner{}, iface: &duckv1alpha1.Conditions{}},
 		// Subscription

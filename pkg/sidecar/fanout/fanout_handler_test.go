@@ -36,7 +36,7 @@ import (
 // servers.
 const (
 	replaceSubscriber = "replaceSubscriber"
-	replaceSinkable   = "replaceSinkable"
+	replaceChannel   = "replaceChannel"
 )
 
 var (
@@ -62,7 +62,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		timeout        time.Duration
 		subs           []eventingduck.ChannelSubscriberSpec
 		subscriber     func(http.ResponseWriter, *http.Request)
-		sinkable       func(http.ResponseWriter, *http.Request)
+		channel       func(http.ResponseWriter, *http.Request)
 		expectedStatus int
 	}{
 		"rejected by receiver": {
@@ -97,10 +97,10 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		"reply fails": {
 			subs: []eventingduck.ChannelSubscriberSpec{
 				{
-					ReplyURI: replaceSinkable,
+					ReplyURI: replaceChannel,
 				},
 			},
-			sinkable: func(writer http.ResponseWriter, _ *http.Request) {
+			channel: func(writer http.ResponseWriter, _ *http.Request) {
 				writer.WriteHeader(http.StatusNotFound)
 			},
 			expectedStatus: http.StatusInternalServerError,
@@ -116,15 +116,15 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			},
 			expectedStatus: http.StatusInternalServerError,
 		},
-		"subscriber succeeds, sinkable fails": {
+		"subscriber succeeds, result fails": {
 			subs: []eventingduck.ChannelSubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceSinkable,
+					ReplyURI:      replaceChannel,
 				},
 			},
 			subscriber: callableSucceed,
-			sinkable: func(writer http.ResponseWriter, _ *http.Request) {
+			channel: func(writer http.ResponseWriter, _ *http.Request) {
 				writer.WriteHeader(http.StatusForbidden)
 			},
 			expectedStatus: http.StatusInternalServerError,
@@ -133,11 +133,11 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			subs: []eventingduck.ChannelSubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceSinkable,
+					ReplyURI:      replaceChannel,
 				},
 			},
 			subscriber: callableSucceed,
-			sinkable: func(writer http.ResponseWriter, _ *http.Request) {
+			channel: func(writer http.ResponseWriter, _ *http.Request) {
 				writer.WriteHeader(http.StatusAccepted)
 			},
 			expectedStatus: http.StatusAccepted,
@@ -146,34 +146,34 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			subs: []eventingduck.ChannelSubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceSinkable,
+					ReplyURI:      replaceChannel,
 				},
 				{
 					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceSinkable,
+					ReplyURI:      replaceChannel,
 				},
 			},
 			subscriber:     callableSucceed,
-			sinkable:       (&succeedOnce{}).handler,
+			channel:       (&succeedOnce{}).handler,
 			expectedStatus: http.StatusInternalServerError,
 		},
 		"all subs succeed": {
 			subs: []eventingduck.ChannelSubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceSinkable,
+					ReplyURI:      replaceChannel,
 				},
 				{
 					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceSinkable,
+					ReplyURI:      replaceChannel,
 				},
 				{
 					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceSinkable,
+					ReplyURI:      replaceChannel,
 				},
 			},
 			subscriber: callableSucceed,
-			sinkable: func(writer http.ResponseWriter, _ *http.Request) {
+			channel: func(writer http.ResponseWriter, _ *http.Request) {
 				writer.WriteHeader(http.StatusAccepted)
 			},
 			expectedStatus: http.StatusAccepted,
@@ -188,10 +188,10 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 				handler: tc.subscriber,
 			})
 			defer callableServer.Close()
-			sinkableServer := httptest.NewServer(&fakeHandler{
-				handler: tc.sinkable,
+			channelServer := httptest.NewServer(&fakeHandler{
+				handler: tc.channel,
 			})
-			defer sinkableServer.Close()
+			defer channelServer.Close()
 
 			// Rewrite the subs to use the servers we just started.
 			subs := make([]eventingduck.ChannelSubscriberSpec, 0)
@@ -199,8 +199,8 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 				if sub.SubscriberURI == replaceSubscriber {
 					sub.SubscriberURI = callableServer.URL[7:] // strip the leading 'http://'
 				}
-				if sub.ReplyURI == replaceSinkable {
-					sub.ReplyURI = sinkableServer.URL[7:] // strip the leading 'http://'
+				if sub.ReplyURI == replaceChannel {
+					sub.ReplyURI = channelServer.URL[7:] // strip the leading 'http://'
 				}
 				subs = append(subs, sub)
 			}

@@ -54,7 +54,7 @@ const (
 	testNS            = "testnamespace"
 	k8sServiceName    = "testk8sservice"
 	k8sServiceDNS     = "testk8sservice.testnamespace.svc.cluster.local"
-	otherSinkableDNS  = "other-sinkable-channel.mynamespace.svc.cluster.local"
+	otherAddressableDNS  = "other-sinkable-channel.mynamespace.svc.cluster.local"
 )
 
 func init() {
@@ -107,8 +107,8 @@ var testCases = []controllertesting.TestCase{
 						"name":      routeName,
 					},
 					"status": map[string]interface{}{
-						"targetable": map[string]interface{}{
-							"domainInternal": targetDNS,
+						"address": map[string]interface{}{
+							"hostname": targetDNS,
 						},
 					},
 				},
@@ -126,8 +126,8 @@ var testCases = []controllertesting.TestCase{
 						"subscribable": map[string]interface{}{},
 					},
 					"status": map[string]interface{}{
-						"sinkable": map[string]interface{}{
-							"domainInternal": sinkableDNS,
+						"address": map[string]interface{}{
+							"hostname": sinkableDNS,
 						},
 					},
 				},
@@ -160,14 +160,14 @@ var testCases = []controllertesting.TestCase{
 			},
 		},
 	}, {
-		Name: "Valid channel, subscriber is not targetable",
+		Name: "Valid channel, subscriber is not callable",
 		InitialState: []runtime.Object{
 			getNewSubscription(),
 		},
 		WantPresent: []runtime.Object{
 			getNewSubscriptionWithUnknownConditions(),
 		},
-		WantErrMsg: "status does not contain targetable",
+		WantErrMsg: "status does not contain address",
 		Scheme:     scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
@@ -234,19 +234,19 @@ var testCases = []controllertesting.TestCase{
 						"name":      routeName,
 					},
 					"status": map[string]interface{}{
-						"targetable": map[string]interface{}{
-							"domainInternal": targetDNS,
+						"address": map[string]interface{}{
+							"hostname": targetDNS,
 						},
 					},
 				},
 			},
 		},
 	}, {
-		Name: "valid channel, subscriber, result is not sinkable",
+		Name: "valid channel, subscriber, result is not addressable",
 		InitialState: []runtime.Object{
 			getNewSubscription(),
 		},
-		WantErrMsg: "status does not contain sinkable",
+		WantErrMsg: "status does not contain address",
 		WantPresent: []runtime.Object{
 			// TODO: Again this works on gke cluster, but I need to set
 			// something else up here. later...
@@ -279,8 +279,8 @@ var testCases = []controllertesting.TestCase{
 						"name":      routeName,
 					},
 					"status": map[string]interface{}{
-						"targetable": map[string]interface{}{
-							"domainInternal": targetDNS,
+						"address": map[string]interface{}{
+							"hostname": targetDNS,
 						},
 					},
 				},
@@ -339,8 +339,8 @@ var testCases = []controllertesting.TestCase{
 						"name":      routeName,
 					},
 					"status": map[string]interface{}{
-						"targetable": map[string]interface{}{
-							"domainInternal": targetDNS,
+						"address": map[string]interface{}{
+							"hostname": targetDNS,
 						},
 					},
 				},
@@ -358,8 +358,8 @@ var testCases = []controllertesting.TestCase{
 						"subscribable": map[string]interface{}{},
 					},
 					"status": map[string]interface{}{
-						"sinkable": map[string]interface{}{
-							"domainInternal": sinkableDNS,
+						"address": map[string]interface{}{
+							"hostname": sinkableDNS,
 						},
 					},
 				},
@@ -390,7 +390,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
@@ -404,8 +404,8 @@ var testCases = []controllertesting.TestCase{
 						"name":      routeName,
 					},
 					"status": map[string]interface{}{
-						"targetable": map[string]interface{}{
-							"domainInternal": targetDNS,
+						"address": map[string]interface{}{
+							"hostname": targetDNS,
 						},
 					},
 				},
@@ -436,7 +436,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
@@ -450,11 +450,11 @@ var testCases = []controllertesting.TestCase{
 						"name":      resultChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 					"status": map[string]interface{}{
-						"sinkable": map[string]interface{}{
-							"domainInternal": sinkableDNS,
+						"address": map[string]interface{}{
+							"hostname": sinkableDNS,
 						},
 					},
 				},
@@ -514,8 +514,8 @@ var testCases = []controllertesting.TestCase{
 						"subscribable": map[string]interface{}{},
 					},
 					"status": map[string]interface{}{
-						"sinkable": map[string]interface{}{
-							"domainInternal": sinkableDNS,
+						"address": map[string]interface{}{
+							"hostname": sinkableDNS,
 						},
 					},
 				},
@@ -574,8 +574,8 @@ var testCases = []controllertesting.TestCase{
 						"name":      routeName,
 					},
 					"status": map[string]interface{}{
-						"targetable": map[string]interface{}{
-							"domainInternal": targetDNS,
+						"address": map[string]interface{}{
+							"hostname": targetDNS,
 						},
 					},
 				},
@@ -593,8 +593,8 @@ var testCases = []controllertesting.TestCase{
 						"subscribable": map[string]interface{}{},
 					},
 					"status": map[string]interface{}{
-						"sinkable": map[string]interface{}{
-							"domainInternal": sinkableDNS,
+						"address": map[string]interface{}{
+							"hostname": sinkableDNS,
 						},
 					},
 				},
@@ -669,8 +669,8 @@ var testCases = []controllertesting.TestCase{
 						"name":      routeName,
 					},
 					"status": map[string]interface{}{
-						"targetable": map[string]interface{}{
-							"domainInternal": targetDNS,
+						"address": map[string]interface{}{
+							"hostname": targetDNS,
 						},
 					},
 				},
@@ -688,8 +688,8 @@ var testCases = []controllertesting.TestCase{
 						"subscribable": map[string]interface{}{},
 					},
 					"status": map[string]interface{}{
-						"sinkable": map[string]interface{}{
-							"domainInternal": sinkableDNS,
+						"address": map[string]interface{}{
+							"hostname": sinkableDNS,
 						},
 					},
 				},
@@ -744,7 +744,7 @@ func rename(sub *eventingv1alpha1.Subscription) *eventingv1alpha1.Subscription {
 	sub.Name = "renamed"
 	sub.UID = "renamed-UID"
 	sub.Status.PhysicalSubscription.SubscriberURI = ""
-	sub.Status.PhysicalSubscription.ReplyURI = otherSinkableDNS
+	sub.Status.PhysicalSubscription.ReplyURI = otherAddressableDNS
 	return sub
 }
 
@@ -975,7 +975,7 @@ func getChannelWithMultipleSubscriptions() *eventingv1alpha1.Channel {
 							Name:       "renamed",
 							UID:        "renamed-UID",
 						},
-						ReplyURI: otherSinkableDNS,
+						ReplyURI: otherAddressableDNS,
 					},
 				},
 			},

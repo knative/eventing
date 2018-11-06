@@ -94,13 +94,13 @@ func TestChannelInitializeConditions(t *testing.T) {
 		cs:   &ChannelStatus{},
 		want: &ChannelStatus{
 			Conditions: []duckv1alpha1.Condition{{
+				Type:   ChannelConditionAddressable,
+				Status: corev1.ConditionUnknown,
+			}, {
 				Type:   ChannelConditionProvisioned,
 				Status: corev1.ConditionUnknown,
 			}, {
 				Type:   ChannelConditionReady,
-				Status: corev1.ConditionUnknown,
-			}, {
-				Type:   ChannelConditionSinkable,
 				Status: corev1.ConditionUnknown,
 			}},
 		},
@@ -114,13 +114,13 @@ func TestChannelInitializeConditions(t *testing.T) {
 		},
 		want: &ChannelStatus{
 			Conditions: []duckv1alpha1.Condition{{
+				Type:   ChannelConditionAddressable,
+				Status: corev1.ConditionUnknown,
+			}, {
 				Type:   ChannelConditionProvisioned,
 				Status: corev1.ConditionFalse,
 			}, {
 				Type:   ChannelConditionReady,
-				Status: corev1.ConditionUnknown,
-			}, {
-				Type:   ChannelConditionSinkable,
 				Status: corev1.ConditionUnknown,
 			}},
 		},
@@ -134,13 +134,13 @@ func TestChannelInitializeConditions(t *testing.T) {
 		},
 		want: &ChannelStatus{
 			Conditions: []duckv1alpha1.Condition{{
+				Type:   ChannelConditionAddressable,
+				Status: corev1.ConditionUnknown,
+			}, {
 				Type:   ChannelConditionProvisioned,
 				Status: corev1.ConditionTrue,
 			}, {
 				Type:   ChannelConditionReady,
-				Status: corev1.ConditionUnknown,
-			}, {
-				Type:   ChannelConditionSinkable,
 				Status: corev1.ConditionUnknown,
 			}}},
 	},
@@ -161,17 +161,17 @@ func TestChannelIsReady(t *testing.T) {
 	tests := []struct {
 		name            string
 		markProvisioned bool
-		setSinkable     bool
+		setAddress      bool
 		wantReady       bool
 	}{{
 		name:            "all happy",
 		markProvisioned: true,
-		setSinkable:     true,
+		setAddress:      true,
 		wantReady:       true,
 	}, {
 		name:            "one sad",
 		markProvisioned: false,
-		setSinkable:     true,
+		setAddress:      true,
 		wantReady:       false,
 	}}
 	for _, test := range tests {
@@ -180,8 +180,8 @@ func TestChannelIsReady(t *testing.T) {
 			if test.markProvisioned {
 				cs.MarkProvisioned()
 			}
-			if test.setSinkable {
-				cs.SetSinkable("foo.bar")
+			if test.setAddress {
+				cs.SetAddress("foo.bar")
 			}
 			got := cs.IsReady()
 			if test.wantReady != got {
@@ -191,7 +191,7 @@ func TestChannelIsReady(t *testing.T) {
 	}
 }
 
-func TestChannelStatus_SetSinkable(t *testing.T) {
+func TestChannelStatus_SetAddressable(t *testing.T) {
 	testCases := map[string]struct {
 		domainInternal string
 		want           *ChannelStatus
@@ -199,14 +199,14 @@ func TestChannelStatus_SetSinkable(t *testing.T) {
 		"empty string": {
 			want: &ChannelStatus{
 				Conditions: []duckv1alpha1.Condition{
+					{
+						Type:   ChannelConditionAddressable,
+						Status: corev1.ConditionFalse,
+					},
 					// Note that Ready is here because when the condition is marked False, duck
 					// automatically sets Ready to false.
 					{
 						Type:   ChannelConditionReady,
-						Status: corev1.ConditionFalse,
-					},
-					{
-						Type:   ChannelConditionSinkable,
 						Status: corev1.ConditionFalse,
 					},
 				},
@@ -215,12 +215,12 @@ func TestChannelStatus_SetSinkable(t *testing.T) {
 		"has domain": {
 			domainInternal: "test-domain",
 			want: &ChannelStatus{
-				Sinkable: duckv1alpha1.Sinkable{
-					DomainInternal: "test-domain",
+				Address: duckv1alpha1.Addressable{
+					Hostname: "test-domain",
 				},
 				Conditions: []duckv1alpha1.Condition{
 					{
-						Type:   ChannelConditionSinkable,
+						Type:   ChannelConditionAddressable,
 						Status: corev1.ConditionTrue,
 					},
 				},
@@ -230,7 +230,7 @@ func TestChannelStatus_SetSinkable(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			cs := &ChannelStatus{}
-			cs.SetSinkable(tc.domainInternal)
+			cs.SetAddress(tc.domainInternal)
 			if diff := cmp.Diff(tc.want, cs, ignoreTransitionTimeMessageAndReason); diff != "" {
 				t.Errorf("unexpected conditions (-want, +got) = %v", diff)
 			}

@@ -167,9 +167,9 @@ func (r *reconciler) updateStatus(subscription *v1alpha1.Subscription) (*v1alpha
 }
 
 // resolveSubscriberSpec resolves the Spec.Call object. If it's an
-// ObjectReference will resolve the object and treat it as a Targetable. If
+// ObjectReference will resolve the object and treat it as a Callable. If
 // it's DNSName then it's used as is.
-// TODO: Once Service Routes, etc. support Targetable, use that.
+// TODO: Once Service Routes, etc. support Callable, use that.
 //
 func (r *reconciler) resolveSubscriberSpec(namespace string, s v1alpha1.SubscriberSpec) (string, error) {
 	if s.DNSName != nil && *s.DNSName != "" {
@@ -177,7 +177,7 @@ func (r *reconciler) resolveSubscriberSpec(namespace string, s v1alpha1.Subscrib
 	}
 
 	// K8s services are special cased. They can be called, even though they do not satisfy the
-	// Targetable interface.
+	// Callable interface.
 	if s.Ref != nil && s.Ref.APIVersion == "v1" && s.Ref.Kind == "Service" {
 		svc := &corev1.Service{}
 		svcKey := types.NamespacedName{
@@ -197,17 +197,17 @@ func (r *reconciler) resolveSubscriberSpec(namespace string, s v1alpha1.Subscrib
 		glog.Warningf("Failed to fetch SubscriberSpec target %+v: %s", s.Ref, err)
 		return "", err
 	}
-	t := duckv1alpha1.Target{}
+	t := duckv1alpha1.AddressableType{}
 	err = duck.FromUnstructured(obj, &t)
 	if err != nil {
 		glog.Warningf("Failed to deserialize legacy target: %s", err)
 		return "", err
 	}
 
-	if t.Status.Targetable != nil {
-		return domainToURL(t.Status.Targetable.DomainInternal), nil
+	if t.Status.Address != nil {
+		return domainToURL(t.Status.Address.Hostname), nil
 	}
-	return "", fmt.Errorf("status does not contain targetable")
+	return "", fmt.Errorf("status does not contain address")
 }
 
 // resolveResult resolves the Spec.Result object.
@@ -217,16 +217,16 @@ func (r *reconciler) resolveResult(namespace string, replyStrategy v1alpha1.Repl
 		glog.Warningf("Failed to fetch ReplyStrategy channel %+v: %s", replyStrategy, err)
 		return "", err
 	}
-	s := duckv1alpha1.Sink{}
+	s := duckv1alpha1.AddressableType{}
 	err = duck.FromUnstructured(obj, &s)
 	if err != nil {
-		glog.Warningf("Failed to deserialize Sinkable target: %s", err)
+		glog.Warningf("Failed to deserialize Addressable target: %s", err)
 		return "", err
 	}
-	if s.Status.Sinkable != nil {
-		return domainToURL(s.Status.Sinkable.DomainInternal), nil
+	if s.Status.Address != nil {
+		return domainToURL(s.Status.Address.Hostname), nil
 	}
-	return "", fmt.Errorf("status does not contain sinkable")
+	return "", fmt.Errorf("status does not contain address")
 }
 
 // fetchObjectReference fetches an object based on ObjectReference.

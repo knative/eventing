@@ -352,7 +352,7 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				// TODO: This should have a useful error message saying that the VirtualService
 				// failed.
-				makeChannelWithFinalizerAndSinkable(),
+				makeChannelWithFinalizerAndAddress(),
 			},
 			WantErrMsg: testErrorMessage,
 		},
@@ -369,7 +369,7 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				// TODO: This should have a useful error message saying that the VirtualService
 				// failed.
-				makeChannelWithFinalizerAndSinkable(),
+				makeChannelWithFinalizerAndAddress(),
 			},
 			WantErrMsg: testErrorMessage,
 		},
@@ -515,15 +515,15 @@ func makeChannel() *eventingv1alpha1.Channel {
 	return c
 }
 
-func makeChannelWithFinalizerAndSinkable() *eventingv1alpha1.Channel {
+func makeChannelWithFinalizerAndAddress() *eventingv1alpha1.Channel {
 	c := makeChannelWithFinalizer()
-	c.Status.SetSinkable(fmt.Sprintf("%s-channel.%s.svc.cluster.local", c.Name, c.Namespace))
+	c.Status.SetAddress(fmt.Sprintf("%s-channel.%s.svc.cluster.local", c.Name, c.Namespace))
 	return c
 }
 
 func makeReadyChannel() *eventingv1alpha1.Channel {
-	// Ready channels have the finalizer and are Sinkable.
-	c := makeChannelWithFinalizerAndSinkable()
+	// Ready channels have the finalizer and are Addressable.
+	c := makeChannelWithFinalizerAndAddress()
 	c.Status.MarkProvisioned()
 	return c
 }

@@ -146,7 +146,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		logger.Info("Error creating the Channel's K8s Service", zap.Error(err))
 		return err
 	} else {
-		c.Status.SetSinkable(controller.ServiceHostName(svc.Name, svc.Namespace))
+		c.Status.SetAddress(controller.ServiceHostName(svc.Name, svc.Namespace))
 	}
 
 	if err := r.createVirtualService(ctx, c); err != nil {
