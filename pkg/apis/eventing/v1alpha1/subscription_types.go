@@ -124,7 +124,7 @@ type SubscriberSpec struct {
 	// Only one of these can be specified
 
 	// Reference to an object that will be used to find the target
-	// endpoint.
+	// endpoint, which should implement the Addressable duck type.
 	// For example, this could be a reference to a Route resource
 	// or a Knative Service resource.
 	// TODO: Specify the required fields the target object must

@@ -41,10 +41,10 @@ its subscribers._
 
 #### Status
 
-| Field      | Type       | Description                                                                                                                 | Constraints |
-| ---------- | ---------- | --------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| sinkable   | Sinkable   | Address to the endpoint as top-level domain that will distribute traffic over the provided targets from inside the cluster. |             |
-| conditions | Conditions | Channel conditions.                                                                                                         |             |
+| Field      | Type        | Description                                                                                  | Constraints |
+| ---------- | ----------- | -------------------------------------------------------------------------------------------- | ----------- |
+| address    | Addressable | Address of the endpoint which meets the [_Addressable_ contract](interfaces.md#addressable). |             |
+| conditions | Conditions  | Channel conditions.                                                                          |             |
 
 ##### Conditions
 
@@ -70,7 +70,7 @@ its subscribers._
 
 ### group: eventing.knative.dev/v1alpha1
 
-_Describes a linkage between a Channel and a Targetable and/or Sinkable._
+_Describes a linkage between a Channel and a Callable and/or Addressable channel._
 
 ### Object Schema
 
@@ -152,10 +152,10 @@ or a Channel system that receives and delivers events._
 
 ### SubscriberSpec
 
-| Field               | Type            | Description | Constraints                |
-| ------------------- | --------------- | ----------- | -------------------------- |
-| ref<sup>1</sup>     | ObjectReference |             | Must adhere to Targetable. |
-| dnsName<sup>1</sup> | String          |             |                            |
+| Field               | Type            | Description | Constraints              |
+| ------------------- | --------------- | ----------- | ------------------------ |
+| ref<sup>1</sup>     | ObjectReference |             | Must adhere to Callable. |
+| dnsName<sup>1</sup> | String          |             |                          |
 
 1: One of (ref, dnsName), Required.
 
