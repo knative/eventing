@@ -26,4 +26,6 @@ spec:
     - all
     - knative
     - eventing
+    shortNames:
+    - ccp
   scope: Cluster

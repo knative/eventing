@@ -63,25 +63,25 @@ func NewMessageDispatcher(logger *zap.SugaredLogger) *MessageDispatcher {
 
 // DispatchMessage dispatches a message to a destination over HTTP.
 //
-// The destination and replyTo are DNS names. For names with a single label,
+// The destination and reply are DNS names. For names with a single label,
 // the default namespace is used to expand it into a fully qualified name
 // within the cluster.
-func (d *MessageDispatcher) DispatchMessage(message *Message, destination, replyTo string, defaults DispatchDefaults) error {
+func (d *MessageDispatcher) DispatchMessage(message *Message, destination, reply string, defaults DispatchDefaults) error {
 	var err error
 	// Default to replying with the original message. If there is a destination, then replace it
 	// with the response from the call to the destination instead.
-	reply := message
+	response := message
 	if destination != "" {
 		destinationURL := d.resolveURL(destination, defaults.Namespace)
-		reply, err = d.executeRequest(destinationURL, message)
+		response, err = d.executeRequest(destinationURL, message)
 		if err != nil {
 			return fmt.Errorf("Unable to complete request %v", err)
 		}
 	}
 
-	if replyTo != "" && reply != nil {
-		replyToURL := d.resolveURL(replyTo, defaults.Namespace)
-		_, err = d.executeRequest(replyToURL, reply)
+	if reply != "" && response != nil {
+		replyURL := d.resolveURL(reply, defaults.Namespace)
+		_, err = d.executeRequest(replyURL, response)
 		if err != nil {
 			return fmt.Errorf("Failed to forward reply %v", err)
 		}

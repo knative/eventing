@@ -42,10 +42,11 @@ const (
 	fromChannelName   = "fromchannel"
 	resultChannelName = "resultchannel"
 	sourceName        = "source"
-	routeName         = "callroute"
+	routeName         = "subscriberroute"
 	channelKind       = "Channel"
 	routeKind         = "Route"
 	sourceKind        = "Source"
+	subscriptionKind  = "Subscription"
 	targetDNS         = "myfunction.mynamespace.svc.cluster.local"
 	sinkableDNS       = "myresultchannel.mynamespace.svc.cluster.local"
 	eventType         = "myeventtype"
@@ -53,7 +54,7 @@ const (
 	testNS            = "testnamespace"
 	k8sServiceName    = "testk8sservice"
 	k8sServiceDNS     = "testk8sservice.testnamespace.svc.cluster.local"
-	otherSinkableDNS  = "other-sinkable-channel.mynamespace.svc.cluster.local"
+	otherAddressableDNS  = "other-sinkable-channel.mynamespace.svc.cluster.local"
 )
 
 func init() {
@@ -73,7 +74,7 @@ var testCases = []controllertesting.TestCase{
 		},
 		WantErrMsg: `channels.eventing.knative.dev "fromchannel" not found`,
 	}, {
-		Name: "subscription, but From is not channelable",
+		Name: "subscription, but From is not subscribable",
 		InitialState: []runtime.Object{
 			getNewSourceSubscription(),
 		},
@@ -96,7 +97,7 @@ var testCases = []controllertesting.TestCase{
 					"spec": map[string]interface{}{},
 				},
 			},
-			// Call (using knative route)
+			// Subscriber (using knative route)
 			&unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": "serving.knative.dev/v1alpha1",
@@ -106,13 +107,13 @@ var testCases = []controllertesting.TestCase{
 						"name":      routeName,
 					},
 					"status": map[string]interface{}{
-						"targetable": map[string]interface{}{
-							"domainInternal": targetDNS,
+						"address": map[string]interface{}{
+							"hostname": targetDNS,
 						},
 					},
 				},
 			},
-			// Result channel
+			// Reply channel
 			&unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
@@ -122,22 +123,22 @@ var testCases = []controllertesting.TestCase{
 						"name":      resultChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 					"status": map[string]interface{}{
-						"sinkable": map[string]interface{}{
-							"domainInternal": sinkableDNS,
+						"address": map[string]interface{}{
+							"hostname": sinkableDNS,
 						},
 					},
 				},
 			},
 		},
 	}, {
-		Name: "Valid from, call does not exist",
+		Name: "Valid channel, subscriber does not exist",
 		InitialState: []runtime.Object{
 			getNewSubscription(),
 		},
-		WantErrMsg: `routes.serving.knative.dev "callroute" not found`,
+		WantErrMsg: `routes.serving.knative.dev "subscriberroute" not found`,
 		WantPresent: []runtime.Object{
 			getNewSubscriptionWithUnknownConditions(),
 		},
@@ -153,20 +154,20 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
 		},
 	}, {
-		Name: "Valid from, call is not targetable",
+		Name: "Valid channel, subscriber is not callable",
 		InitialState: []runtime.Object{
 			getNewSubscription(),
 		},
 		WantPresent: []runtime.Object{
 			getNewSubscriptionWithUnknownConditions(),
 		},
-		WantErrMsg: "status does not contain targetable",
+		WantErrMsg: "status does not contain address",
 		Scheme:     scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
@@ -179,11 +180,11 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
-			// Call (using knative route)
+			// Subscriber (using knative route)
 			&unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": "serving.knative.dev/v1alpha1",
@@ -199,12 +200,12 @@ var testCases = []controllertesting.TestCase{
 			},
 		},
 	}, {
-		Name: "Valid from and call, result does not exist",
+		Name: "Valid channel and subscriber, result does not exist",
 		InitialState: []runtime.Object{
 			getNewSubscription(),
 		},
 		WantPresent: []runtime.Object{
-			getNewSubscriptionWithUnknownConditionsAndPhysicalCall(),
+			getNewSubscriptionWithUnknownConditionsAndPhysicalSubscriber(),
 		},
 		WantErrMsg: `channels.eventing.knative.dev "resultchannel" not found`,
 		Scheme:     scheme.Scheme,
@@ -219,11 +220,11 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
-			// Call (using knative route)
+			// Subscriber (using knative route)
 			&unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": "serving.knative.dev/v1alpha1",
@@ -233,24 +234,24 @@ var testCases = []controllertesting.TestCase{
 						"name":      routeName,
 					},
 					"status": map[string]interface{}{
-						"targetable": map[string]interface{}{
-							"domainInternal": targetDNS,
+						"address": map[string]interface{}{
+							"hostname": targetDNS,
 						},
 					},
 				},
 			},
 		},
 	}, {
-		Name: "valid from, call, result is not sinkable",
+		Name: "valid channel, subscriber, result is not addressable",
 		InitialState: []runtime.Object{
 			getNewSubscription(),
 		},
-		WantErrMsg: "status does not contain sinkable",
+		WantErrMsg: "status does not contain address",
 		WantPresent: []runtime.Object{
 			// TODO: Again this works on gke cluster, but I need to set
 			// something else up here. later...
 			// getNewSubscriptionWithReferencesResolvedStatus(),
-			getNewSubscriptionWithUnknownConditionsAndPhysicalCall(),
+			getNewSubscriptionWithUnknownConditionsAndPhysicalSubscriber(),
 		},
 		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
@@ -264,11 +265,11 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
-			// Call (using knative route)
+			// Subscriber (using knative route)
 			&unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": "serving.knative.dev/v1alpha1",
@@ -278,13 +279,13 @@ var testCases = []controllertesting.TestCase{
 						"name":      routeName,
 					},
 					"status": map[string]interface{}{
-						"targetable": map[string]interface{}{
-							"domainInternal": targetDNS,
+						"address": map[string]interface{}{
+							"hostname": targetDNS,
 						},
 					},
 				},
 			},
-			// Result channel
+			// Reply channel
 			&unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
@@ -294,7 +295,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      resultChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
@@ -309,7 +310,7 @@ var testCases = []controllertesting.TestCase{
 		// failure for now, until upstream is fixed.
 		WantResult: reconcile.Result{},
 		WantPresent: []runtime.Object{
-			getNewSubscriptionWithReferencesResolvedAndPhysicalCallResult(),
+			getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberReply(),
 		},
 		WantErrMsg: "invalid JSON document",
 		Scheme:     scheme.Scheme,
@@ -324,11 +325,11 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
-			// Call (using knative route)
+			// Subscriber (using knative route)
 			&unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": "serving.knative.dev/v1alpha1",
@@ -338,13 +339,13 @@ var testCases = []controllertesting.TestCase{
 						"name":      routeName,
 					},
 					"status": map[string]interface{}{
-						"targetable": map[string]interface{}{
-							"domainInternal": targetDNS,
+						"address": map[string]interface{}{
+							"hostname": targetDNS,
 						},
 					},
 				},
 			},
-			// Result channel
+			// Reply channel
 			&unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
@@ -354,11 +355,106 @@ var testCases = []controllertesting.TestCase{
 						"name":      resultChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 					"status": map[string]interface{}{
-						"sinkable": map[string]interface{}{
-							"domainInternal": sinkableDNS,
+						"address": map[string]interface{}{
+							"hostname": sinkableDNS,
+						},
+					},
+				},
+			},
+		},
+	}, {
+		Name: "new subscription: adds status, all targets resolved, subscribers modified -- empty but non-nil reply",
+		InitialState: []runtime.Object{
+			getNewSubscriptionWithEmptyNonNilReply(),
+		},
+		// TODO: JSON patch is not working on the fake, see
+		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+		// failure for now, until upstream is fixed.
+		WantResult: reconcile.Result{},
+		WantPresent: []runtime.Object{
+			getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberAndNoReply(),
+		},
+		WantErrMsg: "invalid JSON document",
+		Scheme:     scheme.Scheme,
+		Objects: []runtime.Object{
+			// Source channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       channelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      fromChannelName,
+					},
+					"spec": map[string]interface{}{
+						"subscribable": map[string]interface{}{},
+					},
+				},
+			},
+			// Subscriber (using knative route)
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "serving.knative.dev/v1alpha1",
+					"kind":       routeKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      routeName,
+					},
+					"status": map[string]interface{}{
+						"address": map[string]interface{}{
+							"hostname": targetDNS,
+						},
+					},
+				},
+			},
+		},
+	}, {
+		Name: "new subscription: adds status, all targets resolved, subscribers modified -- empty but non-nil subscriber",
+		InitialState: []runtime.Object{
+			getNewSubscriptionWithEmptyNonNilSubscriber(),
+		},
+		// TODO: JSON patch is not working on the fake, see
+		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+		// failure for now, until upstream is fixed.
+		WantResult: reconcile.Result{},
+		WantPresent: []runtime.Object{
+			getNewSubscriptionWithReferencesResolvedAndPhysicalReplyAndNoSubscriber(),
+		},
+		WantErrMsg: "invalid JSON document",
+		Scheme:     scheme.Scheme,
+		Objects: []runtime.Object{
+			// Source channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       channelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      fromChannelName,
+					},
+					"spec": map[string]interface{}{
+						"subscribable": map[string]interface{}{},
+					},
+				},
+			},
+			// Reply channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       channelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      resultChannelName,
+					},
+					"spec": map[string]interface{}{
+						"subscribable": map[string]interface{}{},
+					},
+					"status": map[string]interface{}{
+						"address": map[string]interface{}{
+							"hostname": sinkableDNS,
 						},
 					},
 				},
@@ -375,7 +471,7 @@ var testCases = []controllertesting.TestCase{
 		// failure for now, until upstream is fixed.
 		WantResult: reconcile.Result{},
 		WantPresent: []runtime.Object{
-			getNewSubscriptionToK8sServiceWithReferencesResolvedAndPhysicalFromCallResult(),
+			getNewSubscriptionToK8sServiceWithReferencesResolvedAndPhysicalFromSubscriberReply(),
 		},
 		WantErrMsg: "invalid JSON document",
 		Scheme:     scheme.Scheme,
@@ -390,11 +486,11 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
-			// Call (using K8s Service)
+			// Subscriber (using K8s Service)
 			&unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": "v1",
@@ -405,7 +501,7 @@ var testCases = []controllertesting.TestCase{
 					},
 				},
 			},
-			// Result channel
+			// Reply channel
 			&unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
@@ -415,11 +511,11 @@ var testCases = []controllertesting.TestCase{
 						"name":      resultChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 					"status": map[string]interface{}{
-						"sinkable": map[string]interface{}{
-							"domainInternal": sinkableDNS,
+						"address": map[string]interface{}{
+							"hostname": sinkableDNS,
 						},
 					},
 				},
@@ -436,7 +532,7 @@ var testCases = []controllertesting.TestCase{
 		WantResult: reconcile.Result{},
 		WantErrMsg: "invalid JSON document",
 		WantPresent: []runtime.Object{
-			getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromCallResult(),
+			getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromSubscriberReply(),
 		},
 		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
@@ -450,7 +546,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      sourceName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
@@ -464,11 +560,11 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
-			// Call (using knative route)
+			// Subscriber (using knative route)
 			&unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": "serving.knative.dev/v1alpha1",
@@ -478,13 +574,13 @@ var testCases = []controllertesting.TestCase{
 						"name":      routeName,
 					},
 					"status": map[string]interface{}{
-						"targetable": map[string]interface{}{
-							"domainInternal": targetDNS,
+						"address": map[string]interface{}{
+							"hostname": targetDNS,
 						},
 					},
 				},
 			},
-			// Result channel
+			// Reply channel
 			&unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
@@ -494,11 +590,11 @@ var testCases = []controllertesting.TestCase{
 						"name":      resultChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 					"status": map[string]interface{}{
-						"sinkable": map[string]interface{}{
-							"domainInternal": sinkableDNS,
+						"address": map[string]interface{}{
+							"hostname": sinkableDNS,
 						},
 					},
 				},
@@ -511,7 +607,7 @@ var testCases = []controllertesting.TestCase{
 			// The first two Subscriptions both have the same physical From, so we should see that
 			// Channel updated with both Subscriptions.
 			getNewSubscriptionWithFromChannel(),
-			rename(getNewSubscriptionWithReferencesResolvedAndPhysicalCallResult()),
+			rename(getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberReply()),
 			// This subscription has a different physical From, so we should not see it in the same
 			// Channel as the first two.
 			getSubscriptionWithDifferentChannel(),
@@ -528,9 +624,9 @@ var testCases = []controllertesting.TestCase{
 			// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
 			// out.
 			//getChannelWithMultipleSubscriptions(),
-			getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromCallResult(),
+			getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromSubscriberReply(),
 			// Unaltered because this Subscription was not reconciled.
-			rename(getNewSubscriptionWithReferencesResolvedAndPhysicalCallResult()),
+			rename(getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberReply()),
 			getSubscriptionWithDifferentChannel(),
 		},
 		Scheme: scheme.Scheme,
@@ -545,7 +641,7 @@ var testCases = []controllertesting.TestCase{
 						"name":      sourceName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
@@ -559,11 +655,11 @@ var testCases = []controllertesting.TestCase{
 						"name":      fromChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 				},
 			},
-			// Call (using knative route)
+			// Subscriber (using knative route)
 			&unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": "serving.knative.dev/v1alpha1",
@@ -573,13 +669,13 @@ var testCases = []controllertesting.TestCase{
 						"name":      routeName,
 					},
 					"status": map[string]interface{}{
-						"targetable": map[string]interface{}{
-							"domainInternal": targetDNS,
+						"address": map[string]interface{}{
+							"hostname": targetDNS,
 						},
 					},
 				},
 			},
-			// Result channel
+			// Reply channel
 			&unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
@@ -589,11 +685,11 @@ var testCases = []controllertesting.TestCase{
 						"name":      resultChannelName,
 					},
 					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{},
+						"subscribable": map[string]interface{}{},
 					},
 					"status": map[string]interface{}{
-						"sinkable": map[string]interface{}{
-							"domainInternal": sinkableDNS,
+						"address": map[string]interface{}{
+							"hostname": sinkableDNS,
 						},
 					},
 				},
@@ -625,7 +721,7 @@ func getNewFromChannel() *eventingv1alpha1.Channel {
 	return getNewChannel(fromChannelName)
 }
 
-func getNewResultChannel() *eventingv1alpha1.Channel {
+func getNewReplyChannel() *eventingv1alpha1.Channel {
 	return getNewChannel(resultChannelName)
 }
 
@@ -647,8 +743,8 @@ func getNewChannel(name string) *eventingv1alpha1.Channel {
 func rename(sub *eventingv1alpha1.Subscription) *eventingv1alpha1.Subscription {
 	sub.Name = "renamed"
 	sub.UID = "renamed-UID"
-	sub.Status.PhysicalSubscription.CallURI = ""
-	sub.Status.PhysicalSubscription.ResultURI = otherSinkableDNS
+	sub.Status.PhysicalSubscription.SubscriberURI = ""
+	sub.Status.PhysicalSubscription.ReplyURI = otherAddressableDNS
 	return sub
 }
 
@@ -657,20 +753,20 @@ func getNewSubscription() *eventingv1alpha1.Subscription {
 		TypeMeta:   subscriptionType(),
 		ObjectMeta: om(testNS, subscriptionName),
 		Spec: eventingv1alpha1.SubscriptionSpec{
-			From: corev1.ObjectReference{
+			Channel: corev1.ObjectReference{
 				Name:       fromChannelName,
 				Kind:       channelKind,
 				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 			},
-			Call: &eventingv1alpha1.EndpointSpec{
-				TargetRef: &corev1.ObjectReference{
+			Subscriber: &eventingv1alpha1.SubscriberSpec{
+				Ref: &corev1.ObjectReference{
 					Name:       routeName,
 					Kind:       routeKind,
 					APIVersion: "serving.knative.dev/v1alpha1",
 				},
 			},
-			Result: &eventingv1alpha1.ResultStrategy{
-				Target: &corev1.ObjectReference{
+			Reply: &eventingv1alpha1.ReplyStrategy{
+				Channel: &corev1.ObjectReference{
 					Name:       resultChannelName,
 					Kind:       channelKind,
 					APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
@@ -685,9 +781,21 @@ func getNewSubscription() *eventingv1alpha1.Subscription {
 	return subscription
 }
 
+func getNewSubscriptionWithEmptyNonNilReply() *eventingv1alpha1.Subscription {
+	sub := getNewSubscription()
+	sub.Spec.Reply = &eventingv1alpha1.ReplyStrategy{}
+	return sub
+}
+
+func getNewSubscriptionWithEmptyNonNilSubscriber() *eventingv1alpha1.Subscription {
+	sub := getNewSubscription()
+	sub.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{}
+	return sub
+}
+
 func getNewSourceSubscription() *eventingv1alpha1.Subscription {
 	sub := getNewSubscription()
-	sub.Spec.From = corev1.ObjectReference{
+	sub.Spec.Channel = corev1.ObjectReference{
 		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 		Kind:       sourceKind,
 		Name:       sourceName,
@@ -697,8 +805,8 @@ func getNewSourceSubscription() *eventingv1alpha1.Subscription {
 
 func getNewSubscriptionToK8sService() *eventingv1alpha1.Subscription {
 	sub := getNewSubscription()
-	sub.Spec.Call = &eventingv1alpha1.EndpointSpec{
-		TargetRef: &corev1.ObjectReference{
+	sub.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{
+		Ref: &corev1.ObjectReference{
 			Name:       k8sServiceName,
 			Kind:       "Service",
 			APIVersion: "v1",
@@ -712,20 +820,20 @@ func getNewSubscriptionWithFromChannel() *eventingv1alpha1.Subscription {
 		TypeMeta:   subscriptionType(),
 		ObjectMeta: om(testNS, subscriptionName),
 		Spec: eventingv1alpha1.SubscriptionSpec{
-			From: corev1.ObjectReference{
+			Channel: corev1.ObjectReference{
 				Name:       fromChannelName,
 				Kind:       channelKind,
 				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 			},
-			Call: &eventingv1alpha1.EndpointSpec{
-				TargetRef: &corev1.ObjectReference{
+			Subscriber: &eventingv1alpha1.SubscriberSpec{
+				Ref: &corev1.ObjectReference{
 					Name:       routeName,
 					Kind:       routeKind,
 					APIVersion: "serving.knative.dev/v1alpha1",
 				},
 			},
-			Result: &eventingv1alpha1.ResultStrategy{
-				Target: &corev1.ObjectReference{
+			Reply: &eventingv1alpha1.ReplyStrategy{
+				Channel: &corev1.ObjectReference{
 					Name:       resultChannelName,
 					Kind:       channelKind,
 					APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
@@ -745,38 +853,54 @@ func getNewSubscriptionWithUnknownConditions() *eventingv1alpha1.Subscription {
 	s.Status.InitializeConditions()
 	return s
 }
-func getNewSubscriptionWithUnknownConditionsAndPhysicalCall() *eventingv1alpha1.Subscription {
+func getNewSubscriptionWithUnknownConditionsAndPhysicalSubscriber() *eventingv1alpha1.Subscription {
 	s := getNewSubscriptionWithUnknownConditions()
-	s.Status.PhysicalSubscription.CallURI = domainToURL(targetDNS)
+	s.Status.PhysicalSubscription.SubscriberURI = domainToURL(targetDNS)
 	return s
 }
 
-func getNewSubscriptionWithReferencesResolvedAndPhysicalCallResult() *eventingv1alpha1.Subscription {
+func getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberAndNoReply() *eventingv1alpha1.Subscription {
+	s := getNewSubscriptionWithEmptyNonNilReply()
+	s.Status.InitializeConditions()
+	s.Status.MarkReferencesResolved()
+	s.Status.PhysicalSubscription.SubscriberURI = domainToURL(targetDNS)
+	return s
+}
+
+func getNewSubscriptionWithReferencesResolvedAndPhysicalReplyAndNoSubscriber() *eventingv1alpha1.Subscription {
+	s := getNewSubscriptionWithEmptyNonNilSubscriber()
+	s.Status.InitializeConditions()
+	s.Status.MarkReferencesResolved()
+	s.Status.PhysicalSubscription.ReplyURI = domainToURL(sinkableDNS)
+	return s
+}
+
+func getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberReply() *eventingv1alpha1.Subscription {
 	s := getNewSubscriptionWithUnknownConditions()
 	s.Status.MarkReferencesResolved()
-	s.Status.PhysicalSubscription.CallURI = domainToURL(targetDNS)
-	s.Status.PhysicalSubscription.ResultURI = domainToURL(sinkableDNS)
+	s.Status.PhysicalSubscription.SubscriberURI = domainToURL(targetDNS)
+	s.Status.PhysicalSubscription.ReplyURI = domainToURL(sinkableDNS)
 	return s
 }
 
-func getNewSubscriptionToK8sServiceWithReferencesResolvedAndPhysicalFromCallResult() *eventingv1alpha1.Subscription {
+func getNewSubscriptionToK8sServiceWithReferencesResolvedAndPhysicalFromSubscriberReply() *eventingv1alpha1.Subscription {
 	s := getNewSubscriptionToK8sService()
 	s.Status.InitializeConditions()
 	s.Status.MarkReferencesResolved()
 	s.Status.PhysicalSubscription = eventingv1alpha1.SubscriptionStatusPhysicalSubscription{
-		CallURI:   domainToURL(k8sServiceDNS),
-		ResultURI: domainToURL(sinkableDNS),
+		SubscriberURI: domainToURL(k8sServiceDNS),
+		ReplyURI:      domainToURL(sinkableDNS),
 	}
 	return s
 }
 
-func getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromCallResult() *eventingv1alpha1.Subscription {
+func getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromSubscriberReply() *eventingv1alpha1.Subscription {
 	s := getNewSubscriptionWithFromChannel()
 	s.Status.InitializeConditions()
 	s.Status.MarkReferencesResolved()
 	s.Status.PhysicalSubscription = eventingv1alpha1.SubscriptionStatusPhysicalSubscription{
-		CallURI:   domainToURL(targetDNS),
-		ResultURI: domainToURL(sinkableDNS),
+		SubscriberURI: domainToURL(targetDNS),
+		ReplyURI:      domainToURL(sinkableDNS),
 	}
 	return s
 }
@@ -788,10 +912,10 @@ func getNewSubscriptionWithReferencesResolvedStatus() *eventingv1alpha1.Subscrip
 }
 
 func getSubscriptionWithDifferentChannel() *eventingv1alpha1.Subscription {
-	s := getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromCallResult()
+	s := getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromSubscriberReply()
 	s.Name = "different-channel"
 	s.UID = "different-channel-UID"
-	s.Status.PhysicalSubscription.CallURI = "some-other-domain"
+	s.Status.PhysicalSubscription.SubscriberURI = "some-other-domain"
 	return s
 }
 
@@ -830,14 +954,28 @@ func getChannelWithMultipleSubscriptions() *eventingv1alpha1.Channel {
 		},
 		ObjectMeta: om(testNS, fromChannelName),
 		Spec: eventingv1alpha1.ChannelSpec{
-			Channelable: &eventingduck.Channelable{
+			Subscribable: &eventingduck.Subscribable{
 				Subscribers: []eventingduck.ChannelSubscriberSpec{
 					{
-						CallableURI: targetDNS,
-						SinkableURI: sinkableDNS,
+						Ref: &corev1.ObjectReference{
+							APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+							Kind:       subscriptionKind,
+							Namespace:  testNS,
+							Name:       subscriptionName,
+							UID:        "",
+						},
+						SubscriberURI: targetDNS,
+						ReplyURI:      sinkableDNS,
 					},
 					{
-						SinkableURI: otherSinkableDNS,
+						Ref: &corev1.ObjectReference{
+							APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+							Kind:       subscriptionKind,
+							Namespace:  testNS,
+							Name:       "renamed",
+							UID:        "renamed-UID",
+						},
+						ReplyURI: otherAddressableDNS,
 					},
 				},
 			},

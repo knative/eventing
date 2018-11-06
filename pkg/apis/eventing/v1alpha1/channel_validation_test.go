@@ -52,10 +52,10 @@ func TestChannelValidation(t *testing.T) {
 				Provisioner: &corev1.ObjectReference{
 					Name: "foo",
 				},
-				Channelable: &eventingduck.Channelable{
+				Subscribable: &eventingduck.Subscribable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{{
-						CallableURI: "callableendpoint",
-						SinkableURI: "resultendpoint",
+						SubscriberURI: "subscriberendpoint",
+						ReplyURI:      "resultendpoint",
 					}},
 				}},
 		},
@@ -67,15 +67,15 @@ func TestChannelValidation(t *testing.T) {
 				Provisioner: &corev1.ObjectReference{
 					Name: "foo",
 				},
-				Channelable: &eventingduck.Channelable{
+				Subscribable: &eventingduck.Subscribable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{{
-						CallableURI: "callableendpoint",
-						SinkableURI: "callableendpoint",
+						SubscriberURI: "subscriberendpoint",
+						ReplyURI:      "replyendpoint",
 					}, {}},
 				}},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("spec.channelable.subscriber[1].callableURI", "spec.channelable.subscriber[1].sinkableURI")
+			fe := apis.ErrMissingField("spec.subscribable.subscriber[1].replyURI", "spec.subscribable.subscriber[1].subscriberURI")
 			fe.Details = "expected at least one of, got none"
 			return fe
 		}(),
@@ -86,17 +86,17 @@ func TestChannelValidation(t *testing.T) {
 				Provisioner: &corev1.ObjectReference{
 					Name: "foo",
 				},
-				Channelable: &eventingduck.Channelable{
+				Subscribable: &eventingduck.Subscribable{
 					Subscribers: []eventingduck.ChannelSubscriberSpec{{}, {}},
 				},
 			},
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
-			fe := apis.ErrMissingField("spec.channelable.subscriber[0].callableURI", "spec.channelable.subscriber[0].sinkableURI")
+			fe := apis.ErrMissingField("spec.subscribable.subscriber[0].replyURI", "spec.subscribable.subscriber[0].subscriberURI")
 			fe.Details = "expected at least one of, got none"
 			errs = errs.Also(fe)
-			fe = apis.ErrMissingField("spec.channelable.subscriber[1].callableURI", "spec.channelable.subscriber[1].sinkableURI")
+			fe = apis.ErrMissingField("spec.subscribable.subscriber[1].replyURI", "spec.subscribable.subscriber[1].subscriberURI")
 			fe.Details = "expected at least one of, got none"
 			errs = errs.Also(fe)
 			return errs

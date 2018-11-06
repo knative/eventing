@@ -85,6 +85,12 @@ func (c *Cleaner) Add(group string, version string, resource string, namespace s
 // Clean will delete all registered resources
 func (c *Cleaner) Clean(awaitDeletion bool) error {
 	for _, deleter := range c.resourcesToClean {
+		r, err := deleter.Resource.Get(deleter.Name, metav1.GetOptions{})
+		if err != nil {
+			c.logger.Errorf("Failed to get to-be cleaned resource %q : %s", deleter.Name, err)
+		} else {
+			c.logger.Infof("Cleaning resource: %q\n%+v", deleter.Name, r)
+		}
 		if err := deleter.Resource.Delete(deleter.Name, nil); err != nil {
 			c.logger.Errorf("Error: %v", err)
 		} else if awaitDeletion {
