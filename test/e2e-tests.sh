@@ -47,7 +47,7 @@ function teardown() {
   wait_until_object_does_not_exist namespaces knative-eventing
   wait_until_object_does_not_exist customresourcedefinitions subscriptions.eventing.knative.dev
   wait_until_object_does_not_exist customresourcedefinitions channels.eventing.knative.dev
-  wait_until_object_does_not_exist customresourcedefinitions clusterprovisioners.eventing.knative.dev
+  wait_until_object_does_not_exist customresourcedefinitions clusterchannelprovisioners.eventing.knative.dev
 }
 
 function setup_events_test_resources() {

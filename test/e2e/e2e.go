@@ -176,14 +176,14 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, logger *
 	return nil
 }
 
-// CreateClusterProvisioner will create a ClusterProvisioner
-func CreateClusterProvisioner(clients *test.Clients, cprovisioner *eventingV1alpha1.ClusterProvisioner, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
-	cprovisioners := clients.Eventing.EventingV1alpha1().ClusterProvisioners()
+// CreateClusterChannelProvisioner will create a ClusterChannelProvisioner
+func CreateClusterChannelProvisioner(clients *test.Clients, cprovisioner *eventingV1alpha1.ClusterChannelProvisioner, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+	cprovisioners := clients.Eventing.EventingV1alpha1().ClusterChannelProvisioners()
 	res, err := cprovisioners.Create(cprovisioner)
 	if err != nil {
 		return err
 	}
-	cleaner.Add(eventingV1alpha1.SchemeGroupVersion.Group, eventingV1alpha1.SchemeGroupVersion.Version, "clusterprovisioners", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
+	cleaner.Add(eventingV1alpha1.SchemeGroupVersion.Group, eventingV1alpha1.SchemeGroupVersion.Version, "clusterchannelprovisioners", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
 	return nil
 }
 
