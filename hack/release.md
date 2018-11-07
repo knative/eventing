@@ -15,13 +15,13 @@ build, unit and end-to-end tests are run and they all must pass for the
 release to be built.
 * `--tag-release`, `--notag-release` Tag (or not) the generated images
 with either `vYYYYMMDD-<commit_short_hash>` (for nightly releases) or
-`vX.Y.Z` for versioned releases. *For versioned releases, a tag is always
-added.*
+`vX.Y.Z` for versioned releases. These are docker tags. *For versioned
+releases, a tag is always added.*
 * `--publish`, `--nopublish` Whether the generated images should be published
 to a GCR, and the generated manifests written to a GCS bucket or not. If yes,
 the destination GCR is defined by the environment variable
 `$EVENTING_RELEASE_GCR` (defaults to `gcr.io/knative-releases`) and
-ther destination GCS bucket is defined by the environment variable
+the destination GCS bucket is defined by the environment variable
 `$EVENTING_RELEASE_GCS` (defaults to `knative-releases/eventing`). If no, the
 images will be pushed to the `ko.local` registry, and the manifests written to
 the local disk only (in the repository root directory).
