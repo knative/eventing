@@ -16,19 +16,12 @@ limitations under the License.
 package main
 
 import (
-	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
-	flowsv1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
-	"github.com/knative/eventing/pkg/controller/eventing/subscription"
-	"github.com/knative/eventing/pkg/controller/feed"
-	"github.com/knative/eventing/pkg/controller/flow"
-	"go.uber.org/zap"
 	"strings"
 
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/controller/eventing/subscription"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
-
-	"github.com/knative/eventing/pkg/controller/eventtype"
+	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -65,9 +58,6 @@ func controllerRuntimeStart(logger *zap.SugaredLogger, experimental string) erro
 
 	// Add custom types to this array to get them into the manager's scheme.
 	schemeFuncs := []SchemeFunc{
-		channelsv1alpha1.AddToScheme,
-		feedsv1alpha1.AddToScheme,
-		flowsv1alpha1.AddToScheme,
 		istiov1alpha3.AddToScheme,
 		eventingv1alpha1.AddToScheme,
 	}
@@ -77,12 +67,7 @@ func controllerRuntimeStart(logger *zap.SugaredLogger, experimental string) erro
 
 	// Add each controller's ProvideController func to this list to have the
 	// manager run it.
-	providers := []ProvideFunc{
-		eventtype.ProvideController,
-		feed.ProvideController,
-		flow.ProvideController,
-	}
-
+	providers := []ProvideFunc{}
 	providers = append(providers, getExperimentalControllers(logger, experimental)...)
 
 	for _, provider := range providers {

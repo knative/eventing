@@ -23,31 +23,19 @@ import (
 	"net/http"
 	"time"
 
-	controllerruntime "sigs.k8s.io/controller-runtime/pkg/client/config"
-
-	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
-
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-
-	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	"github.com/knative/eventing/pkg/controller"
-	"github.com/knative/eventing/pkg/controller/bus"
-	"github.com/knative/eventing/pkg/controller/channel"
-	"github.com/knative/eventing/pkg/controller/clusterbus"
-	sharedclientset "github.com/knative/pkg/client/clientset/versioned"
-	sharedinformers "github.com/knative/pkg/client/informers/externalversions"
-	"github.com/knative/pkg/signals"
 
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/system"
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/logging/logkey"
+	"github.com/knative/pkg/signals"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
+	"k8s.io/client-go/kubernetes"
+	controllerruntime "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 const (
@@ -79,6 +67,7 @@ func main() {
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
+
 	cfg, err := controllerruntime.GetConfig()
 	if err != nil {
 		logger.Fatalf("Error building kubeconfig: %v", err)
@@ -89,56 +78,11 @@ func main() {
 		logger.Fatalf("Error building kubernetes clientset: %v", err)
 	}
 
-	client, err := clientset.NewForConfig(cfg)
-	if err != nil {
-		logger.Fatalf("Error building clientset: %v", err)
-	}
-
-	sharedClient, err := sharedclientset.NewForConfig(cfg)
-	if err != nil {
-		logger.Fatalf("Error building shared clientset: %v", err)
-	}
-
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
-	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
-	sharedInformerFactory := sharedinformers.NewSharedInformerFactory(sharedClient, time.Second*30)
-
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace)
 	configMapWatcher.Watch(logconfig.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller, logconfig.Controller))
 	if err = configMapWatcher.Start(stopCh); err != nil {
 		logger.Fatalf("failed to start controller config map watcher: %v", err)
-	}
-
-	// Add new controllers here, except controllers that use controller-runtime.
-	// Those should be added to controller-runtime-main.go.
-	ctors := []controller.Constructor{
-		bus.NewController,
-		clusterbus.NewController,
-		channel.NewController,
-	}
-
-	// TODO(n3wscott): Send the logger to the controllers.
-	// Build all of our controllers, with the clients constructed above.
-	controllers := make([]controller.Interface, 0, len(ctors))
-	for _, ctor := range ctors {
-		controllers = append(controllers,
-			ctor(kubeClient, client, sharedClient, cfg, kubeInformerFactory, informerFactory, sharedInformerFactory))
-	}
-
-	go kubeInformerFactory.Start(stopCh)
-	go informerFactory.Start(stopCh)
-	go sharedInformerFactory.Start(stopCh)
-
-	// Start all of the controllers.
-	for _, ctrlr := range controllers {
-		go func(ctrlr controller.Interface) {
-			// We don't expect this to return until stop is called,
-			// but if it does, propagate it back.
-			if err := ctrlr.Run(threadsPerController, stopCh); err != nil {
-				logger.Fatalf("Error running controller: %v", err)
-			}
-		}(ctrlr)
 	}
 
 	// Start the controller-runtime controllers.

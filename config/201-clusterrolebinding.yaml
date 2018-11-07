@@ -23,17 +23,3 @@ roleRef:
   kind: ClusterRole
   name: cluster-admin
   apiGroup: rbac.authorization.k8s.io
-
----
-apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: ClusterRoleBinding
-metadata:
-  name: bus-operator-manage
-subjects:
-  - kind: ServiceAccount
-    name: bus-operator
-    namespace: knative-eventing
-roleRef:
-  kind: ClusterRole
-  name: knative-channels-bus
-  apiGroup: rbac.authorization.k8s.io

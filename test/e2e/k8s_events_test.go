@@ -27,11 +27,12 @@ import (
 )
 
 const (
-	serviceAccount = "e2e-feed"
-	eventSource    = "k8sevents"
-	eventType      = "dev.knative.k8s.event"
-	routeName      = "e2e-k8s-events-function"
-	flowName       = "e2e-k8s-events-example"
+	serviceAccount   = "e2e-receive-adapter"
+	eventSource      = "k8sevents"
+	routeName        = "e2e-k8s-events-function"
+	channelName      = "e2e-k8s-events-channel"
+	provisionerName  = "in-memory-channel"
+	subscriptionName = "e2e-k8s-events-subscription"
 )
 
 func TestKubernetesEvents(t *testing.T) {
@@ -50,38 +51,21 @@ func TestKubernetesEvents(t *testing.T) {
 		t.Fatalf("Failed to create ServiceAccount or Binding: %v", err)
 	}
 
-	logger.Infof("Creating ClusterBus")
-
-	// The dispatcher used by the ClusterBus to dispatch messages between channels and subscriptions
-	dispatcherImagePath := ImagePath("github.com/knative/eventing/pkg/buses/stub/dispatcher")
-	stub := test.ClusterBus("stub", defaultNamespaceName, dispatcherImagePath)
-	err = CreateClusterBus(clients, stub, logger, cleaner)
+	logger.Infof("Creating Channel")
+	channel := test.Channel(channelName, defaultNamespaceName, test.ClusterChannelProvisioner(provisionerName))
+	err = CreateChannel(clients, channel, logger, cleaner)
 	if err != nil {
-		t.Fatalf("Failed to create ClusterBus: %v", err)
+		t.Fatalf("Failed to create Channel: %v", err)
 	}
 
 	logger.Infof("Creating EventSource")
-
-	// The event source wrapper for Kubernetes events
-	eventSourceImagePath := ImagePath("github.com/knative/eventing/pkg/sources/k8sevents")
-	// The actual event source which receives events and posts them to the given Route
-	receiverAdapterImagePath := ImagePath("github.com/knative/eventing/pkg/sources/k8sevents/receive_adapter")
-	eSource := test.EventSource(eventSource, defaultNamespaceName, eventSourceImagePath, receiverAdapterImagePath)
-	err = CreateEventSource(clients, eSource, logger, cleaner)
+	k8sSource := test.KubernetesEventSource(eventSource, defaultNamespaceName, testNamespace, serviceAccount, test.ChannelRef(channelName))
+	err = CreateKubernetesEventSource(clients, k8sSource, logger, cleaner)
 	if err != nil {
-		t.Fatalf("Failed to create EventSource: %v", err)
-	}
-
-	logger.Infof("Creating EventType")
-
-	eType := test.EventType(eventType, defaultNamespaceName, eventSource)
-	err = CreateEventType(clients, eType, logger, cleaner)
-	if err != nil {
-		t.Fatalf("Failed to create EventType: %v", err)
+		t.Fatalf("Failed to create KubernetesEventSource: %v", err)
 	}
 
 	logger.Infof("Creating Route and Config")
-
 	// The receiver of events which is accessible through Route
 	configImagePath := ImagePath("github.com/knative/eventing/test/e2e/k8sevents")
 	err = WithRouteReady(clients, logger, cleaner, routeName, configImagePath)
@@ -89,12 +73,11 @@ func TestKubernetesEvents(t *testing.T) {
 		t.Fatalf("The Route was not marked as Ready to serve traffic: %v", err)
 	}
 
-	logger.Infof("Creating Flow")
-
-	flow := test.Flow(flowName, defaultNamespaceName, serviceAccount, eventType, eventSource, routeName, testNamespace)
-	err = WithFlowReady(clients, flow, logger, cleaner)
+	logger.Infof("Creating Subscription")
+	subscription := test.Subscription(subscriptionName, defaultNamespaceName, test.ChannelRef(channelName), test.SubscriberSpecForRoute(routeName), nil)
+	err = CreateSubscription(clients, subscription, logger, cleaner)
 	if err != nil {
-		t.Fatalf("Failed to create Flow: %v", err)
+		t.Fatalf("Failed to create Subscription: %v", err)
 	}
 
 	//Work around for: https://github.com/knative/eventing/issues/125

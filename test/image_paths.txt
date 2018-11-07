@@ -1,8 +1,2 @@
-# The dispatcher used by the ClusterBus to dispatch messages between channels and subscriptions 
-github.com/knative/eventing/pkg/buses/stub/dispatcher
-# The event source wrapper for Kubernetes events
-github.com/knative/eventing/pkg/sources/k8sevents
-# The actual event source which receives events and posts them to the given Route
-github.com/knative/eventing/pkg/sources/k8sevents/receive_adapter
 # The receiver of events which is accessible through Route
 github.com/knative/eventing/test/e2e/k8sevents
