@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/pkg/apis"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
@@ -15,6 +14,8 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 )
 
 const (
@@ -82,7 +83,7 @@ func TestUpdateChannel(t *testing.T) {
 
 	want := getNewChannel()
 	AddFinalizer(want, "test-finalizer")
-	want.Status.SetSinkable("test-domain")
+	want.Status.SetAddress("test-domain")
 	UpdateChannel(context.TODO(), client, want)
 
 	got := &eventingv1alpha1.Channel{}
