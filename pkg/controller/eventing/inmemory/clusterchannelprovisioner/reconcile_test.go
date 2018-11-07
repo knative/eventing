@@ -22,8 +22,6 @@ import (
 	"fmt"
 	"testing"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/system"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -35,7 +33,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
+	util "github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/eventing/pkg/system"
 )
 
 const (
@@ -290,10 +291,10 @@ func makeK8sService() *corev1.Service {
 					BlockOwnerDeletion: &truePointer,
 				},
 			},
-			Labels: dispatcherLabels(Name),
+			Labels: util.DispatcherLabels(Name),
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: dispatcherLabels(Name),
+			Selector: util.DispatcherLabels(Name),
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "http",
