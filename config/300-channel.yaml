@@ -14,9 +14,9 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: channels.channels.knative.dev
+  name: channels.eventing.knative.dev
 spec:
-  group: channels.knative.dev
+  group: eventing.knative.dev
   version: v1alpha1
   names:
     kind: Channel

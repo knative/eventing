@@ -49,7 +49,7 @@ func TestHandler(t *testing.T) {
 							FanoutConfig: fanout.Config{
 								Subscriptions: []eventingduck.ChannelSubscriberSpec{
 									{
-										CallableURI: replaceDomain,
+										SubscriberURI: replaceDomain,
 									},
 								},
 							},
@@ -64,7 +64,7 @@ func TestHandler(t *testing.T) {
 							FanoutConfig: fanout.Config{
 								Subscriptions: []eventingduck.ChannelSubscriberSpec{
 									{
-										SinkableURI: replaceDomain,
+										ReplyURI: replaceDomain,
 									},
 								},
 							},
@@ -101,7 +101,7 @@ func TestHandler_InvalidConfigChange(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									CallableURI: replaceDomain,
+									SubscriberURI: replaceDomain,
 								},
 							},
 						},
@@ -204,11 +204,11 @@ func makeRequest(namespace, name string) *http.Request {
 func replaceDomains(c multichannelfanout.Config, replacement string) multichannelfanout.Config {
 	for i, cc := range c.ChannelConfigs {
 		for j, sub := range cc.FanoutConfig.Subscriptions {
-			if sub.SinkableURI == replaceDomain {
-				sub.SinkableURI = replacement
+			if sub.ReplyURI == replaceDomain {
+				sub.ReplyURI = replacement
 			}
-			if sub.CallableURI == replaceDomain {
-				sub.CallableURI = replacement
+			if sub.SubscriberURI == replaceDomain {
+				sub.SubscriberURI = replacement
 			}
 			cc.FanoutConfig.Subscriptions[j] = sub
 		}

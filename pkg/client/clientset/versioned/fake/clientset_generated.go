@@ -20,14 +20,8 @@ package fake
 
 import (
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
-	channelsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/channels/v1alpha1"
-	fakechannelsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/channels/v1alpha1/fake"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
 	fakeeventingv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1/fake"
-	feedsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/feeds/v1alpha1"
-	fakefeedsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/feeds/v1alpha1/fake"
-	flowsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/flows/v1alpha1"
-	fakeflowsv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/flows/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -77,16 +71,6 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 
 var _ clientset.Interface = &Clientset{}
 
-// ChannelsV1alpha1 retrieves the ChannelsV1alpha1Client
-func (c *Clientset) ChannelsV1alpha1() channelsv1alpha1.ChannelsV1alpha1Interface {
-	return &fakechannelsv1alpha1.FakeChannelsV1alpha1{Fake: &c.Fake}
-}
-
-// Channels retrieves the ChannelsV1alpha1Client
-func (c *Clientset) Channels() channelsv1alpha1.ChannelsV1alpha1Interface {
-	return &fakechannelsv1alpha1.FakeChannelsV1alpha1{Fake: &c.Fake}
-}
-
 // EventingV1alpha1 retrieves the EventingV1alpha1Client
 func (c *Clientset) EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interface {
 	return &fakeeventingv1alpha1.FakeEventingV1alpha1{Fake: &c.Fake}
@@ -95,24 +79,4 @@ func (c *Clientset) EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interfac
 // Eventing retrieves the EventingV1alpha1Client
 func (c *Clientset) Eventing() eventingv1alpha1.EventingV1alpha1Interface {
 	return &fakeeventingv1alpha1.FakeEventingV1alpha1{Fake: &c.Fake}
-}
-
-// FeedsV1alpha1 retrieves the FeedsV1alpha1Client
-func (c *Clientset) FeedsV1alpha1() feedsv1alpha1.FeedsV1alpha1Interface {
-	return &fakefeedsv1alpha1.FakeFeedsV1alpha1{Fake: &c.Fake}
-}
-
-// Feeds retrieves the FeedsV1alpha1Client
-func (c *Clientset) Feeds() feedsv1alpha1.FeedsV1alpha1Interface {
-	return &fakefeedsv1alpha1.FakeFeedsV1alpha1{Fake: &c.Fake}
-}
-
-// FlowsV1alpha1 retrieves the FlowsV1alpha1Client
-func (c *Clientset) FlowsV1alpha1() flowsv1alpha1.FlowsV1alpha1Interface {
-	return &fakeflowsv1alpha1.FakeFlowsV1alpha1{Fake: &c.Fake}
-}
-
-// Flows retrieves the FlowsV1alpha1Client
-func (c *Clientset) Flows() flowsv1alpha1.FlowsV1alpha1Interface {
-	return &fakeflowsv1alpha1.FakeFlowsV1alpha1{Fake: &c.Fake}
 }

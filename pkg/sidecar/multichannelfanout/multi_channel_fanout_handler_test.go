@@ -111,7 +111,7 @@ func TestCopyWithNewConfig(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableURI: "callabledomain",
+							SubscriberURI: "subscriberdomain",
 						},
 					},
 				},
@@ -126,7 +126,7 @@ func TestCopyWithNewConfig(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []eventingduck.ChannelSubscriberSpec{
 						{
-							SinkableURI: "sinkabledomain",
+							ReplyURI: "replydomain",
 						},
 					},
 				},
@@ -164,7 +164,7 @@ func TestConfigDiff(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []eventingduck.ChannelSubscriberSpec{
 						{
-							CallableURI: "callabledomain",
+							SubscriberURI: "subscriberdomain",
 						},
 					},
 				},
@@ -194,7 +194,7 @@ func TestConfigDiff(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									CallableURI: "different",
+									SubscriberURI: "different",
 								},
 							},
 						},
@@ -241,7 +241,7 @@ func TestServeHTTP(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									SinkableURI: replaceDomain,
+									ReplyURI: replaceDomain,
 								},
 							},
 						},
@@ -261,7 +261,7 @@ func TestServeHTTP(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									SinkableURI: "first-to-domain",
+									ReplyURI: "first-to-domain",
 								},
 							},
 						},
@@ -272,7 +272,7 @@ func TestServeHTTP(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									CallableURI: replaceDomain,
+									SubscriberURI: replaceDomain,
 								},
 							},
 						},
@@ -318,11 +318,11 @@ func TestServeHTTP(t *testing.T) {
 func replaceDomains(config Config, replacement string) {
 	for i, cc := range config.ChannelConfigs {
 		for j, sub := range cc.FanoutConfig.Subscriptions {
-			if sub.CallableURI == replaceDomain {
-				sub.CallableURI = replacement
+			if sub.SubscriberURI == replaceDomain {
+				sub.SubscriberURI = replacement
 			}
-			if sub.SinkableURI == replaceDomain {
-				sub.SinkableURI = replacement
+			if sub.ReplyURI == replaceDomain {
+				sub.ReplyURI = replacement
 			}
 			cc.FanoutConfig.Subscriptions[j] = sub
 		}

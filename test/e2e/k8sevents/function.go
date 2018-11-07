@@ -15,21 +15,20 @@ package main
 
 import (
 	"context"
+	"github.com/knative/pkg/cloudevents"
 	"log"
 	"net/http"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-
-	"github.com/knative/eventing/pkg/event"
 )
 
 func handler(ctx context.Context, e *corev1.Event) {
-	metadata := event.FromContext(ctx)
+	metadata := cloudevents.FromContext(ctx)
 	log.Printf("[%s] %s : %q", metadata.EventTime.Format(time.RFC3339), metadata.Source, e.Message)
 }
 
 func main() {
 	log.Print("Ready and listening on port 8080")
-	log.Fatal(http.ListenAndServe(":8080", event.Handler(handler)))
+	log.Fatal(http.ListenAndServe(":8080", cloudevents.Handler(handler)))
 }
