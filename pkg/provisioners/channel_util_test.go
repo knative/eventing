@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/pkg/apis"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
@@ -12,10 +15,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 )
 
 const (
@@ -102,7 +101,7 @@ func getNewChannel() *eventingv1alpha1.Channel {
 		Spec: eventingv1alpha1.ChannelSpec{
 			Provisioner: &corev1.ObjectReference{
 				Name:       clusterChannelProvisionerName,
-				Kind:       "ClusterProvisioner",
+				Kind:       "ClusterChannelProvisioner",
 				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 			},
 		},
