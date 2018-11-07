@@ -36,25 +36,29 @@ import (
 
 var (
 	trueVal = true
+
+	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
+	// truncates to seconds to match the loss of precision during serialization.
+	deletionTime = metav1.Now().Rfc3339Copy()
 )
 
 const (
-	fromChannelName   = "fromchannel"
-	resultChannelName = "resultchannel"
-	sourceName        = "source"
-	routeName         = "subscriberroute"
-	channelKind       = "Channel"
-	routeKind         = "Route"
-	sourceKind        = "Source"
-	subscriptionKind  = "Subscription"
-	targetDNS         = "myfunction.mynamespace.svc.cluster.local"
-	sinkableDNS       = "myresultchannel.mynamespace.svc.cluster.local"
-	eventType         = "myeventtype"
-	subscriptionName  = "testsubscription"
-	testNS            = "testnamespace"
-	k8sServiceName    = "testk8sservice"
-	k8sServiceDNS     = "testk8sservice.testnamespace.svc.cluster.local"
-	otherAddressableDNS  = "other-sinkable-channel.mynamespace.svc.cluster.local"
+	fromChannelName     = "fromchannel"
+	resultChannelName   = "resultchannel"
+	sourceName          = "source"
+	routeName           = "subscriberroute"
+	channelKind         = "Channel"
+	routeKind           = "Route"
+	sourceKind          = "Source"
+	subscriptionKind    = "Subscription"
+	targetDNS           = "myfunction.mynamespace.svc.cluster.local"
+	sinkableDNS         = "myresultchannel.mynamespace.svc.cluster.local"
+	eventType           = "myeventtype"
+	subscriptionName    = "testsubscription"
+	testNS              = "testnamespace"
+	k8sServiceName      = "testk8sservice"
+	k8sServiceDNS       = "testk8sservice.testnamespace.svc.cluster.local"
+	otherAddressableDNS = "other-sinkable-channel.mynamespace.svc.cluster.local"
 )
 
 func init() {
@@ -696,6 +700,60 @@ var testCases = []controllertesting.TestCase{
 			},
 		},
 	},
+	{
+		Name: "delete subscription with from channel: subscribers modified",
+		InitialState: []runtime.Object{
+			getNewDeletedSubscriptionWithChannelReady(),
+		},
+		// TODO: JSON patch is not working on the fake, see
+		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+		// failure for now, until upstream is fixed.
+		WantResult: reconcile.Result{},
+		WantErrMsg: "invalid JSON document",
+		WantAbsent: []runtime.Object{
+			// TODO: JSON patch is not working on the fake, see
+			// https://github.com/kubernetes/client-go/issues/478. The entire test is really to
+			// verify the following, but can't be done because the call to Patch fails (it assumes
+			// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
+			// out.
+			//getNewDeletedSubscriptionWithChannelReady(),
+		},
+		WantPresent: []runtime.Object{
+			// TODO: JSON patch is not working on the fake, see
+			// https://github.com/kubernetes/client-go/issues/478. The entire test is really to
+			// verify the following, but can't be done because the call to Patch fails (it assumes
+			// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
+			// out.
+			//getChannelWithOtherSubscription(),
+		},
+		Objects: []runtime.Object{
+			// Source channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       channelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      fromChannelName,
+					},
+					"spec": map[string]interface{}{
+						"channelable": map[string]interface{}{
+							"subscribers": []interface{}{
+								map[string]interface{}{
+									"subscriberURI": targetDNS,
+									"replyURI":      sinkableDNS,
+								},
+								map[string]interface{}{
+									"replyURI": otherAddressableDNS,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Scheme: scheme.Scheme,
+	},
 }
 
 func TestAllCases(t *testing.T) {
@@ -919,6 +977,16 @@ func getSubscriptionWithDifferentChannel() *eventingv1alpha1.Subscription {
 	return s
 }
 
+func getNewDeletedSubscriptionWithChannelReady() *eventingv1alpha1.Subscription {
+	s := getNewSubscriptionWithUnknownConditions()
+	s.Status.MarkReferencesResolved()
+	s.Status.PhysicalSubscription.SubscriberURI = domainToURL(targetDNS)
+	s.Status.PhysicalSubscription.ReplyURI = domainToURL(sinkableDNS)
+	s.Status.MarkChannelReady()
+	s.ObjectMeta.DeletionTimestamp = &deletionTime
+	return s
+}
+
 func channelType() metav1.TypeMeta {
 	return metav1.TypeMeta{
 		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
@@ -975,6 +1043,25 @@ func getChannelWithMultipleSubscriptions() *eventingv1alpha1.Channel {
 							Name:       "renamed",
 							UID:        "renamed-UID",
 						},
+						ReplyURI: otherAddressableDNS,
+					},
+				},
+			},
+		},
+	}
+}
+
+func getChannelWithOtherSubscription() *eventingv1alpha1.Channel {
+	return &eventingv1alpha1.Channel{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+			Kind:       channelKind,
+		},
+		ObjectMeta: om(testNS, fromChannelName),
+		Spec: eventingv1alpha1.ChannelSpec{
+			Subscribable: &eventingduck.Subscribable{
+				Subscribers: []eventingduck.ChannelSubscriberSpec{
+					{
 						ReplyURI: otherAddressableDNS,
 					},
 				},
