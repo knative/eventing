@@ -257,12 +257,11 @@ func makeClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvisioner
 
 func makeReadyClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvisioner {
 	ccp := makeClusterChannelProvisioner()
-	ccp.Status.Conditions = []duckv1alpha1.Condition{
-		{
-			Type:   duckv1alpha1.ConditionReady,
-			Status: corev1.ConditionTrue,
-		},
-	}
+	ccp.Status.Conditions = []duckv1alpha1.Condition{{
+		Type:     duckv1alpha1.ConditionReady,
+		Status:   corev1.ConditionTrue,
+		Severity: duckv1alpha1.ConditionSeverityError,
+	}}
 	return ccp
 }
 

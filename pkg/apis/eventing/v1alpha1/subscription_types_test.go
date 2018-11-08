@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -162,8 +161,7 @@ func TestSubscriptionInitializeConditions(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			test.ss.InitializeConditions()
-			ignore := cmpopts.IgnoreFields(duckv1alpha1.Condition{}, "LastTransitionTime")
-			if diff := cmp.Diff(test.want, test.ss, ignore); diff != "" {
+			if diff := cmp.Diff(test.want, test.ss, ignoreAllButTypeAndStatus); diff != "" {
 				t.Errorf("unexpected conditions (-want, +got) = %v", diff)
 			}
 		})

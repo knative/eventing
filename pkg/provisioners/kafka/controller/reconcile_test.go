@@ -45,8 +45,9 @@ func init() {
 }
 
 var ClusterChannelProvisionerConditionReady = duckv1alpha1.Condition{
-	Type:   eventingv1alpha1.ClusterChannelProvisionerConditionReady,
-	Status: corev1.ConditionTrue,
+	Type:     eventingv1alpha1.ClusterChannelProvisionerConditionReady,
+	Status:   corev1.ConditionTrue,
+	Severity: duckv1alpha1.ConditionSeverityError,
 }
 
 var mockFetchError = controllertesting.Mocks{
