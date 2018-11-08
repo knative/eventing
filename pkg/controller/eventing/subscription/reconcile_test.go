@@ -803,15 +803,13 @@ func TestAllCases(t *testing.T) {
 	}
 }
 
-type finalizerTestCase struct {
-	name     string
-	original sets.String
-	add      bool
-	want     sets.String
-}
-
 func TestFinalizers(t *testing.T) {
-	testcases := []finalizerTestCase{
+	var testcases = []struct {
+		name     string
+		original sets.String
+		add      bool
+		want     sets.String
+	}{
 		{
 			name:     "empty, add",
 			original: sets.NewString(),
