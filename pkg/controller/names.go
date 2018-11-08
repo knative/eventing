@@ -18,26 +18,6 @@ package controller
 
 import "fmt"
 
-func BusProvisionerDeploymentName(busName, namespace string) string {
-	return fmt.Sprintf("%s-%s-bus-provisioner", busName, namespace)
-}
-
-func BusDispatcherDeploymentName(busName, namespace string) string {
-	return fmt.Sprintf("%s-%s-bus-dispatcher", busName, namespace)
-}
-
-func BusDispatcherServiceName(busName, namespace string) string {
-	return fmt.Sprintf("%s-%s-bus", busName, namespace)
-}
-
-func ClusterBusProvisionerDeploymentName(clusterBusName string) string {
-	return fmt.Sprintf("%s-clusterbus-provisioner", clusterBusName)
-}
-
-func ClusterBusDispatcherDeploymentName(clusterBusName string) string {
-	return fmt.Sprintf("%s-clusterbus-dispatcher", clusterBusName)
-}
-
 func ClusterBusDispatcherServiceName(clusterBusName string) string {
 	return fmt.Sprintf("%s-clusterbus", clusterBusName)
 }
