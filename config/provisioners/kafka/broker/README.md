@@ -1,6 +1,6 @@
 # Apache Kafka - simple installation
 
-1. For an installation of a simple Apache Kafka cluster, a setup is provided:
+1. For an installation of a simple (**non production**) Apache Kafka cluster, a setup is provided:
     ```
     kubectl create namespace kafka
     kubectl apply -n kafka -f kafka-broker.yaml
