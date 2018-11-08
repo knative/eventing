@@ -34,9 +34,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+)
+
+const (
+	finalizerName = controllerAgentName
 )
 
 // Reconcile compares the actual state with the desired, and attempts to
@@ -57,17 +62,10 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
-	original := subscription.DeepCopy()
-
 	// Reconcile this copy of the Subscription and then write back any status
 	// updates regardless of whether the reconcile error out.
 	err = r.reconcile(subscription)
-	if equality.Semantic.DeepEqual(original.Status, subscription.Status) {
-		// If we didn't change anything then don't call updateStatus.
-		// This is important because the copy we loaded from the informer's
-		// cache may be stale and we don't want to overwrite a prior update
-		// to status with this stale state.
-	} else if _, updateStatusErr := r.updateStatus(subscription); updateStatusErr != nil {
+	if _, updateStatusErr := r.updateStatus(subscription.DeepCopy()); updateStatusErr != nil {
 		glog.Warningf("Failed to update subscription status: %v", updateStatusErr)
 		return reconcile.Result{}, updateStatusErr
 	}
@@ -87,6 +85,20 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 	}
 	deletionTimestamp := accessor.GetDeletionTimestamp()
 	glog.Infof("DeletionTimestamp: %v", deletionTimestamp)
+
+	if subscription.DeletionTimestamp != nil {
+		// If the subscription is Ready, then we have to remove it
+		// from the channel's subscriber list.
+		if subscription.Status.IsReady() {
+			err := r.syncPhysicalChannel(subscription, true)
+			if err != nil {
+				glog.Warningf("Failed to sync physical from Channel : %s", err)
+				return err
+			}
+		}
+		removeFinalizer(subscription)
+		return nil
+	}
 
 	// Verify that `channel` exists.
 	_, err = r.fetchObjectReference(subscription.Namespace, &subscription.Spec.Channel)
@@ -129,13 +141,14 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 
 	// Ok, now that we have the Channel and at least one of the Call/Result, let's reconcile
 	// the Channel with this information.
-	err = r.syncPhysicalChannel(subscription)
+	err = r.syncPhysicalChannel(subscription, false)
 	if err != nil {
 		glog.Warningf("Failed to sync physical Channel : %s", err)
 		return err
 	}
 	// Everything went well, set the fact that subscriptions have been modified
 	subscription.Status.MarkChannelReady()
+	addFinalizer(subscription)
 	return nil
 }
 
@@ -154,15 +167,28 @@ func (r *reconciler) updateStatus(subscription *v1alpha1.Subscription) (*v1alpha
 	if err != nil {
 		return nil, err
 	}
-	newSubscription.Status = subscription.Status
 
-	// Until #38113 is merged, we must use Update instead of UpdateStatus to
-	// update the Status block of the Subscription resource. UpdateStatus will not
-	// allow changes to the Spec of the resource, which is ideal for ensuring
-	// nothing other than resource status has been updated.
-	if err = r.client.Update(context.TODO(), newSubscription); err != nil {
-		return nil, err
+	updated := false
+	if !equality.Semantic.DeepEqual(newSubscription.Finalizers, subscription.Finalizers) {
+		newSubscription.SetFinalizers(subscription.ObjectMeta.Finalizers)
+		updated = true
 	}
+
+	if !equality.Semantic.DeepEqual(newSubscription.Status, subscription.Status) {
+		newSubscription.Status = subscription.Status
+		updated = true
+	}
+
+	if updated {
+		// Until #38113 is merged, we must use Update instead of UpdateStatus to
+		// update the Status block of the Subscription resource. UpdateStatus will not
+		// allow changes to the Spec of the resource, which is ideal for ensuring
+		// nothing other than resource status has been updated.
+		if err = r.client.Update(context.TODO(), newSubscription); err != nil {
+			return nil, err
+		}
+	}
+
 	return newSubscription, nil
 }
 
@@ -249,7 +275,7 @@ func domainToURL(domain string) string {
 	return u.String()
 }
 
-func (r *reconciler) syncPhysicalChannel(sub *v1alpha1.Subscription) error {
+func (r *reconciler) syncPhysicalChannel(sub *v1alpha1.Subscription, isDeleted bool) error {
 	glog.Infof("Reconciling Physical From Channel: %+v", sub)
 
 	subs, err := r.listAllSubscriptionsWithPhysicalChannel(sub)
@@ -258,6 +284,12 @@ func (r *reconciler) syncPhysicalChannel(sub *v1alpha1.Subscription) error {
 		return err
 	}
 
+	if !isDeleted {
+		// The sub we are currently reconciling has not yet written any updated status, so when listing
+		// it won't show any updates to the Status.PhysicalSubscription. We know that we are listing
+		// for subscriptions with the same PhysicalSubscription.From, so just add this one manually.
+		subs = append(subs, *sub)
+	}
 	subscribable := r.createSubscribable(subs)
 
 	return r.patchPhysicalFrom(sub.Namespace, sub.Spec.Channel, subscribable)
@@ -265,11 +297,6 @@ func (r *reconciler) syncPhysicalChannel(sub *v1alpha1.Subscription) error {
 
 func (r *reconciler) listAllSubscriptionsWithPhysicalChannel(sub *v1alpha1.Subscription) ([]v1alpha1.Subscription, error) {
 	subs := make([]v1alpha1.Subscription, 0)
-
-	// The sub we are currently reconciling has not yet written any updated status, so when listing
-	// it won't show any updates to the Status.PhysicalSubscription. We know that we are listing
-	// for subscriptions with the same PhysicalSubscription.From, so just add this one manually.
-	subs = append(subs, *sub)
 
 	opts := &client.ListOptions{
 		// TODO this is here because the fake client needs it. Remove this when it's no longer
@@ -290,7 +317,7 @@ func (r *reconciler) listAllSubscriptionsWithPhysicalChannel(sub *v1alpha1.Subsc
 		}
 		for _, s := range sl.Items {
 			if sub.UID == s.UID {
-				// This is the sub that is being reconciled. It has already been added to the list.
+				// This is the sub that is being reconciled. Skip it.
 				continue
 			}
 			if equality.Semantic.DeepEqual(sub.Spec.Channel, s.Spec.Channel) {
@@ -374,4 +401,16 @@ func (r *reconciler) CreateResourceInterface(namespace string, ref *corev1.Objec
 	}
 	return rc.Namespace(namespace), nil
 
+}
+
+func addFinalizer(sub *v1alpha1.Subscription) {
+	finalizers := sets.NewString(sub.Finalizers...)
+	finalizers.Insert(finalizerName)
+	sub.Finalizers = finalizers.List()
+}
+
+func removeFinalizer(sub *v1alpha1.Subscription) {
+	finalizers := sets.NewString(sub.Finalizers...)
+	finalizers.Delete(finalizerName)
+	sub.Finalizers = finalizers.List()
 }

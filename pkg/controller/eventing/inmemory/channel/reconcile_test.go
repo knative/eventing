@@ -27,6 +27,7 @@ import (
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
+	util "github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
@@ -611,8 +612,8 @@ func makeK8sService() *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
-					Name: portName,
-					Port: portNumber,
+					Name: util.PortName,
+					Port: util.PortNumber,
 				},
 			},
 		},
@@ -662,7 +663,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 					Destination: istiov1alpha3.Destination{
 						Host: "in-memory-channel-clusterbus.knative-eventing.svc.cluster.local",
 						Port: istiov1alpha3.PortSelector{
-							Number: portNumber,
+							Number: util.PortNumber,
 						},
 					}},
 				}},
