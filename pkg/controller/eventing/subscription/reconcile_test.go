@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
@@ -465,6 +466,33 @@ var testCases = []controllertesting.TestCase{
 			},
 		},
 	}, {
+		Name: "new subscription to non-existent K8s Service: fails with no service found",
+		InitialState: []runtime.Object{
+			getNewSubscriptionToK8sService(),
+		},
+		WantResult: reconcile.Result{},
+		WantPresent: []runtime.Object{
+			getNewSubscriptionToK8sServiceWithUnknownConditions(),
+		},
+		WantErrMsg: "services \"testk8sservice\" not found",
+		Scheme:     scheme.Scheme,
+		Objects: []runtime.Object{
+			// Source channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       channelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      fromChannelName,
+					},
+					"spec": map[string]interface{}{
+						"subscribable": map[string]interface{}{},
+					},
+				},
+			},
+		},
+	}, {
 		Name: "new subscription to K8s Service: adds status, all targets resolved, subscribers modified",
 		InitialState: []runtime.Object{
 			getNewSubscriptionToK8sService(),
@@ -775,6 +803,62 @@ func TestAllCases(t *testing.T) {
 	}
 }
 
+func TestFinalizers(t *testing.T) {
+	var testcases = []struct {
+		name     string
+		original sets.String
+		add      bool
+		want     sets.String
+	}{
+		{
+			name:     "empty, add",
+			original: sets.NewString(),
+			add:      true,
+			want:     sets.NewString(finalizerName),
+		}, {
+			name:     "empty, delete",
+			original: sets.NewString(),
+			add:      false,
+			want:     sets.NewString(),
+		}, {
+			name:     "existing, delete",
+			original: sets.NewString(finalizerName),
+			add:      false,
+			want:     sets.NewString(),
+		}, {
+			name:     "existing, add",
+			original: sets.NewString(finalizerName),
+			add:      true,
+			want:     sets.NewString(finalizerName),
+		}, {
+			name:     "existing two, delete",
+			original: sets.NewString(finalizerName, "someother"),
+			add:      false,
+			want:     sets.NewString("someother"),
+		}, {
+			name:     "existing two, no change",
+			original: sets.NewString(finalizerName, "someother"),
+			add:      true,
+			want:     sets.NewString(finalizerName, "someother"),
+		},
+	}
+
+	for _, tc := range testcases {
+		original := &eventingv1alpha1.Subscription{}
+		original.Finalizers = tc.original.List()
+		if tc.add {
+			addFinalizer(original)
+		} else {
+			removeFinalizer(original)
+		}
+		has := sets.NewString(original.Finalizers...)
+		diff := has.Difference(tc.want)
+		if diff.Len() > 0 {
+			t.Errorf("%q failed, diff: %+v", tc.name, diff)
+		}
+	}
+}
+
 func getNewFromChannel() *eventingv1alpha1.Channel {
 	return getNewChannel(fromChannelName)
 }
@@ -870,6 +954,12 @@ func getNewSubscriptionToK8sService() *eventingv1alpha1.Subscription {
 			APIVersion: "v1",
 		},
 	}
+	return sub
+}
+
+func getNewSubscriptionToK8sServiceWithUnknownConditions() *eventingv1alpha1.Subscription {
+	sub := getNewSubscriptionToK8sService()
+	sub.Status.InitializeConditions()
 	return sub
 }
 
