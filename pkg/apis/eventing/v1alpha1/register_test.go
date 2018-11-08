@@ -14,8 +14,8 @@ package v1alpha1
 
 import (
 	"github.com/google/go-cmp/cmp"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/kubernetes/scheme"
 	"testing"
 )
 
@@ -49,8 +49,10 @@ func TestKind(t *testing.T) {
 
 // TestKnownTypes makes sure that expected types get added.
 func TestKnownTypes(t *testing.T) {
-	addKnownTypes(scheme.Scheme)
-	types := scheme.Scheme.KnownTypes(SchemeGroupVersion)
+	scheme := runtime.NewScheme()
+	addKnownTypes(scheme)
+	types := scheme.KnownTypes(SchemeGroupVersion)
+
 	for _, name := range []string{
 		"Channel",
 		"ChannelList",
