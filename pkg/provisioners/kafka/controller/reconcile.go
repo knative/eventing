@@ -20,13 +20,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	util "github.com/knative/eventing/pkg/provisioners"
 )
 
 const (
@@ -38,6 +38,7 @@ const (
 // converge the two. It then updates the Status block of the Provisioner resource
 // with the current status of the resource.
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	ctx := context.TODO()
 	r.logger.Info("reconciling ClusterChannelProvisioner", zap.Any("request", request))
 	provisioner := &v1alpha1.ClusterChannelProvisioner{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, provisioner)
@@ -58,20 +59,14 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
-	original := provisioner.DeepCopy()
+	newProvisioner := provisioner.DeepCopy()
 
 	// Reconcile this copy of the Provisioner and then write back any status
 	// updates regardless of whether the reconcile error out.
-	err = r.reconcile(provisioner)
-	if !equality.Semantic.DeepEqual(original.Status, provisioner.Status) {
-		// If we didn't change anything then don't call updateStatus.
-		// This is important because the copy we loaded from the informer's
-		// cache may be stale and we don't want to overwrite a prior update
-		// to status with this stale state.
-		if _, err := r.updateStatus(provisioner); err != nil {
-			r.logger.Info("failed to update Provisioner status", zap.Error(err))
-			return reconcile.Result{}, err
-		}
+	err = r.reconcile(newProvisioner)
+	if updateStatusErr := util.UpdateClusterChannelProvisionerStatus(ctx, r.client, newProvisioner); updateStatusErr != nil {
+		r.logger.Info("error updating ClusterChannelProvisioner Status", zap.Error(updateStatusErr))
+		return reconcile.Result{}, updateStatusErr
 	}
 
 	// Requeue if the resource is not ready:
@@ -96,23 +91,4 @@ func (r *reconciler) reconcile(provisioner *v1alpha1.ClusterChannelProvisioner) 
 	provisioner.Status.MarkReady()
 
 	return nil
-}
-
-func (r *reconciler) updateStatus(provisioner *v1alpha1.ClusterChannelProvisioner) (*v1alpha1.ClusterChannelProvisioner, error) {
-	newProvisioner := &v1alpha1.ClusterChannelProvisioner{}
-	err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: provisioner.Namespace, Name: provisioner.Name}, newProvisioner)
-
-	if err != nil {
-		return nil, err
-	}
-	newProvisioner.Status = provisioner.Status
-
-	// Until #38113 is merged, we must use Update instead of UpdateStatus to
-	// update the Status block of the Provisioner resource. UpdateStatus will not
-	// allow changes to the Spec of the resource, which is ideal for ensuring
-	// nothing other than resource status has been updated.
-	if err = r.client.Update(context.TODO(), newProvisioner); err != nil {
-		return nil, err
-	}
-	return newProvisioner, nil
 }

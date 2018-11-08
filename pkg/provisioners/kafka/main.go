@@ -60,6 +60,7 @@ func main() {
 		channel.ProvideController,
 	}
 
+	// TODO the underlying config map needs to be watched and the config should be reloaded if there is a change.
 	provisionerConfig, err := getProvisionerConfig()
 
 	if err != nil {

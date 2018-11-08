@@ -37,9 +37,12 @@ import (
 const (
 	finalizerName = controllerAgentName
 
-	ArgumentNumPartitions = "NumPartitions"
-	DefaultNumPartitions  = 1
+	DefaultNumPartitions = 1
 )
+
+type channelArgs struct {
+	NumPartitions int32 `json:"NumPartitions,omitempty"`
+}
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Channel resource
@@ -50,11 +53,14 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	channel := &v1alpha1.Channel{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, channel)
 
+	// The Channel may have been deleted since it was added to the workqueue. If so, there is
+	// nothing to be done since the dependent resources would have been deleted as well.
 	if errors.IsNotFound(err) {
 		r.logger.Info("could not find channel", zap.Any("request", request))
 		return reconcile.Result{}, nil
 	}
 
+	// Any other error should be retried in another reconciliation.
 	if err != nil {
 		r.logger.Error("could not fetch channel", zap.Error(err))
 		return reconcile.Result{}, err
@@ -88,9 +94,9 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		err = fmt.Errorf("ClusterChannelProvisioner %s is not ready", clusterChannelProvisioner.Name)
 	}
 
-	if err := r.updateChannel(ctx, newChannel); err != nil {
-		r.logger.Info("failed to update channel status", zap.Error(err))
-		return reconcile.Result{}, err
+	if updateChannelErr := r.updateChannel(ctx, newChannel); updateChannelErr != nil {
+		r.logger.Info("failed to update channel status", zap.Error(updateChannelErr))
+		return reconcile.Result{}, updateChannelErr
 	}
 
 	// Requeue if the resource is not ready:
@@ -98,15 +104,14 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 }
 
 func (r *reconciler) reconcile(channel *v1alpha1.Channel) error {
-	// See if the channel has been deleted
-	accessor, err := meta.Accessor(channel)
-	if err != nil {
-		r.logger.Info("failed to get metadata", zap.Error(err))
-		return err
-	}
 
+	// We don't currently initialize r.kafkaClusterAdmin, hence we end up creating the cluster admin client every time.
+	// This is because of an issue with Shopify/sarama. See https://github.com/Shopify/sarama/issues/1162.
+	// Once the issue is fixed we should use a shared cluster admin client. Also, r.kafkaClusterAdmin is currently
+	// used to pass a fake admin client in the tests.
 	kafkaClusterAdmin := r.kafkaClusterAdmin
 	if kafkaClusterAdmin == nil {
+		var err error
 		kafkaClusterAdmin, err = createKafkaAdminClient(r.config)
 		if err != nil {
 			r.logger.Fatal("unable to build kafka admin client", zap.Error(err))
@@ -114,6 +119,12 @@ func (r *reconciler) reconcile(channel *v1alpha1.Channel) error {
 		}
 	}
 
+	// See if the channel has been deleted
+	accessor, err := meta.Accessor(channel)
+	if err != nil {
+		r.logger.Info("failed to get metadata", zap.Error(err))
+		return err
+	}
 	deletionTimestamp := accessor.GetDeletionTimestamp()
 	if deletionTimestamp != nil {
 		r.logger.Info(fmt.Sprintf("DeletionTimestamp: %v", deletionTimestamp))
@@ -142,26 +153,23 @@ func (r *reconciler) provisionChannel(channel *v1alpha1.Channel, kafkaClusterAdm
 	topicName := topicName(channel)
 	r.logger.Info("creating topic on kafka cluster", zap.String("topic", topicName))
 
-	partitions := DefaultNumPartitions
+	var arguments channelArgs
 
 	if channel.Spec.Arguments != nil {
 		var err error
-		arguments, err := unmarshalArguments(channel.Spec.Arguments.Raw)
+		arguments, err = unmarshalArguments(channel.Spec.Arguments.Raw)
 		if err != nil {
 			return err
 		}
-		if num, ok := arguments[ArgumentNumPartitions]; ok {
-			parsedNum, ok := num.(float64)
-			if !ok {
-				return fmt.Errorf("could not parse argument %s for channel %s", ArgumentNumPartitions, fmt.Sprintf("%s/%s", channel.Namespace, channel.Name))
-			}
-			partitions = int(parsedNum)
-		}
+	}
+
+	if arguments.NumPartitions == 0 {
+		arguments.NumPartitions = DefaultNumPartitions
 	}
 
 	err := kafkaClusterAdmin.CreateTopic(topicName, &sarama.TopicDetail{
 		ReplicationFactor: 1,
-		NumPartitions:     int32(partitions),
+		NumPartitions:     arguments.NumPartitions,
 	}, false)
 	if err == sarama.ErrTopicAlreadyExists {
 		return nil
@@ -246,12 +254,12 @@ func topicName(channel *v1alpha1.Channel) string {
 	return fmt.Sprintf("%s.%s", channel.Namespace, channel.Name)
 }
 
-// unmarshalArguments unmarshal's a json/yaml serialized input and returns a map structure
-func unmarshalArguments(bytes []byte) (map[string]interface{}, error) {
-	arguments := make(map[string]interface{})
+// unmarshalArguments unmarshal's a json/yaml serialized input and returns channelArgs
+func unmarshalArguments(bytes []byte) (channelArgs, error) {
+	var arguments channelArgs
 	if len(bytes) > 0 {
 		if err := json.Unmarshal(bytes, &arguments); err != nil {
-			return nil, fmt.Errorf("error unmarshalling arguments: %s", err)
+			return arguments, fmt.Errorf("error unmarshalling arguments: %s", err)
 		}
 	}
 	return arguments, nil

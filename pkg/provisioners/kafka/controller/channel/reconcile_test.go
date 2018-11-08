@@ -43,6 +43,7 @@ const (
 	channelName                   = "test-channel"
 	clusterChannelProvisionerName = "kafka-channel"
 	testNS                        = "test-namespace"
+	argumentNumPartitions         = "NumPartitions"
 )
 
 var (
@@ -264,8 +265,8 @@ func TestProvisionChannel(t *testing.T) {
 		},
 		{
 			name:      "provision with invalid channel arguments - errors",
-			c:         getNewChannelWithArgs(channelName, map[string]interface{}{ArgumentNumPartitions: "invalid"}),
-			wantError: fmt.Sprintf("could not parse argument %s for channel test-namespace/test-channel", ArgumentNumPartitions),
+			c:         getNewChannelWithArgs(channelName, map[string]interface{}{argumentNumPartitions: "invalid"}),
+			wantError: fmt.Sprintf("error unmarshalling arguments: json: cannot unmarshal string into Go struct field channelArgs.%s of type int32", argumentNumPartitions),
 		},
 		{
 			name: "provision with unmarshallable channel arguments - errors",
@@ -280,7 +281,7 @@ func TestProvisionChannel(t *testing.T) {
 		},
 		{
 			name:          "provision with valid channel arguments",
-			c:             getNewChannelWithArgs(channelName, map[string]interface{}{ArgumentNumPartitions: 2}),
+			c:             getNewChannelWithArgs(channelName, map[string]interface{}{argumentNumPartitions: 2}),
 			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
 			wantTopicDetail: &sarama.TopicDetail{
 				ReplicationFactor: 1,
@@ -289,7 +290,7 @@ func TestProvisionChannel(t *testing.T) {
 		},
 		{
 			name:          "provision but topic already exists - no error",
-			c:             getNewChannelWithArgs(channelName, map[string]interface{}{ArgumentNumPartitions: 2}),
+			c:             getNewChannelWithArgs(channelName, map[string]interface{}{argumentNumPartitions: 2}),
 			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
 			wantTopicDetail: &sarama.TopicDetail{
 				ReplicationFactor: 1,
@@ -299,7 +300,7 @@ func TestProvisionChannel(t *testing.T) {
 		},
 		{
 			name:          "provision but error creating topic",
-			c:             getNewChannelWithArgs(channelName, map[string]interface{}{ArgumentNumPartitions: 2}),
+			c:             getNewChannelWithArgs(channelName, map[string]interface{}{argumentNumPartitions: 2}),
 			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
 			wantTopicDetail: &sarama.TopicDetail{
 				ReplicationFactor: 1,
