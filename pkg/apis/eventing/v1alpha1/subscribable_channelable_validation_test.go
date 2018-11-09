@@ -98,16 +98,6 @@ func TestIsValidChannel(t *testing.T) {
 		})
 	}
 }
-func TestIsValidSubscribable(t *testing.T) {
-	for _, test := range validationTests {
-		t.Run(test.name, func(t *testing.T) {
-			got := isValidSubscribable(test.ref)
-			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("%s: validation (-want, +got) = %v", test.name, diff)
-			}
-		})
-	}
-}
 
 func TestIsValidObjectReference(t *testing.T) {
 	tests := []struct {
