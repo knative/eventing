@@ -59,20 +59,7 @@ func isSubscribableEmpty(f corev1.ObjectReference) bool {
 // - APIVersion == 'eventing.knative.dev/v1alpha1'
 // - Name       == not empty
 func isValidSubscribable(f corev1.ObjectReference) *apis.FieldError {
-	errs := isValidObjectReference(f)
-
-	if f.Kind != "Channel" {
-		fe := apis.ErrInvalidValue(f.Kind, "kind")
-		fe.Paths = []string{"kind"}
-		fe.Details = "only 'Channel' kind is allowed"
-		errs = errs.Also(fe)
-	}
-	if f.APIVersion != "eventing.knative.dev/v1alpha1" {
-		fe := apis.ErrInvalidValue(f.APIVersion, "apiVersion")
-		fe.Details = "only eventing.knative.dev/v1alpha1 is allowed for apiVersion"
-		errs = errs.Also(fe)
-	}
-	return errs
+	return isValidChannel(f)
 }
 
 func isValidObjectReference(f corev1.ObjectReference) *apis.FieldError {
