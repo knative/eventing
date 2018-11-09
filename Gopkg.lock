@@ -272,7 +272,7 @@
   revision = "aa113a015beb91c94a8e173c8f0ac18512a83954"
 
 [[projects]]
-  digest = "1:7777b78ab28a8f10918bdcdb043f4150d27da3181fafd69a1b15935197bf9d4c"
+  digest = "1:760be297dcd17acd32d2b4a7b9494be96e66451bfce53fc6fbaccad4ab2a5fa8"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -283,6 +283,7 @@
     "apis/istio/authentication/v1alpha1",
     "apis/istio/common/v1alpha1",
     "apis/istio/v1alpha3",
+    "changeset",
     "client/clientset/versioned",
     "client/clientset/versioned/scheme",
     "client/clientset/versioned/typed/authentication/v1alpha1",
@@ -307,7 +308,7 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "a8160c7d728d26da67e596c5b1975877082a26e6"
+  revision = "4b704fa7948ad9ae8ec90d1cd5b4a34516b252ea"
 
 [[projects]]
   digest = "1:63f3974f3afe3dc5b6a115c0d53b0897cd01be6880c4bf5d014fc69a95db6ed1"

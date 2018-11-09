@@ -35,7 +35,9 @@ var condUnprovisioned = duckv1alpha1.Condition{
 	Status: corev1.ConditionFalse,
 }
 
-var ignoreTransitionTimeMessageAndReason = cmpopts.IgnoreFields(duckv1alpha1.Condition{}, "LastTransitionTime", "Message", "Reason")
+var ignoreAllButTypeAndStatus = cmpopts.IgnoreFields(
+	duckv1alpha1.Condition{},
+	"LastTransitionTime", "Message", "Reason", "Severity")
 
 func TestChannelGetCondition(t *testing.T) {
 	tests := []struct {
@@ -149,8 +151,7 @@ func TestChannelInitializeConditions(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			test.cs.InitializeConditions()
-			ignore := cmpopts.IgnoreFields(duckv1alpha1.Condition{}, "LastTransitionTime")
-			if diff := cmp.Diff(test.want, test.cs, ignore); diff != "" {
+			if diff := cmp.Diff(test.want, test.cs, ignoreAllButTypeAndStatus); diff != "" {
 				t.Errorf("unexpected conditions (-want, +got) = %v", diff)
 			}
 		})
@@ -233,7 +234,7 @@ func TestChannelStatus_SetAddressable(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			cs := &ChannelStatus{}
 			cs.SetAddress(tc.domainInternal)
-			if diff := cmp.Diff(tc.want, cs, ignoreTransitionTimeMessageAndReason); diff != "" {
+			if diff := cmp.Diff(tc.want, cs, ignoreAllButTypeAndStatus); diff != "" {
 				t.Errorf("unexpected conditions (-want, +got) = %v", diff)
 			}
 		})
