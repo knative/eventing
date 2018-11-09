@@ -114,7 +114,7 @@ ko apply -f config/provisioners/in-memory-channel/in-memory-channel.yaml
 wait_until_pods_running knative-eventing
 
 # Publish test images
-sh upload_test_images.sh e2e
+sh $(dirname $0)/upload-test-images.sh e2e
 
 # Handle test failures ourselves, so we can dump useful info.
 set +o errexit
