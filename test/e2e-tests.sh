@@ -37,7 +37,7 @@ function run_e2e_tests() {
   header "Running tests in $1"
   local options=""
   (( EMIT_METRICS )) && options="-emitmetrics"
-  report_go_test -v -tags=e2e -count=1 ./test/$1 -dockerrepo $DOCKER_REPO_OVERRIDE ${options}
+  report_go_test -v -tags=e2e -count=1 ./test/$1 ${options}
   return $?
 }
 
@@ -114,8 +114,7 @@ ko apply -f config/provisioners/in-memory-channel/in-memory-channel.yaml
 wait_until_pods_running knative-eventing
 
 # Publish test images
-echo $SHELL
-/bin/bash $(dirname $0)/upload-test-images.sh e2e
+bash $(dirname $0)/upload-test-images.sh e2e
 
 # Handle test failures ourselves, so we can dump useful info.
 set +o errexit
