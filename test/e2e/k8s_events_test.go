@@ -67,7 +67,7 @@ func TestKubernetesEvents(t *testing.T) {
 
 	logger.Infof("Creating Route and Config")
 	// The receiver of events which is accessible through Route
-	configImagePath := ImagePath("github.com/knative/eventing/test/e2e/k8sevents")
+	configImagePath := ImagePath("k8sevents")
 	err = WithRouteReady(clients, logger, cleaner, routeName, configImagePath)
 	if err != nil {
 		t.Fatalf("The Route was not marked as Ready to serve traffic: %v", err)

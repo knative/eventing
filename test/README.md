@@ -84,7 +84,7 @@ A docker tag is mandatory to avoid issues with using `latest` tag for images dep
 
 ### Adding new test images
 
-New test image paths should be placed in `./test/image_paths.txt`.
+New test images should be placed in `./test/test_images`.
 
 ## Flags
 

@@ -1,2 +1,0 @@
-# The receiver of events which is accessible through Route
-github.com/knative/eventing/test/e2e/k8sevents

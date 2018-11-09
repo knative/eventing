@@ -16,20 +16,25 @@
 
 set -o errexit
 
+function upload_test_images() {
+  echo ">> Publishing test images"
+  local IMAGE_DIRS="$(find $(dirname $0)/test_images -mindepth 1 -maxdepth 1 -type d)"
+  local DOCKER_TAG=$1
+
+  for image_dir in ${IMAGE_DIRS}; do
+      IMAGE="github.com/knative/eventing/test/test_images/$(basename ${image_dir})"
+      ko publish -P $IMAGE
+      if [ -n "$DOCKER_TAG" ]; then
+          local IMAGE=$KO_DOCKER_REPO/$IMAGE
+          local DIGEST=$(gcloud container images list-tags --filter="tags:latest" --format='get(digest)' $IMAGE)
+          echo "Tagging $IMAGE@$DIGEST with $DOCKER_TAG"
+          gcloud -q container images add-tag $IMAGE@$DIGEST $IMAGE:$DOCKER_TAG
+      fi
+  done
+}
+
 : ${DOCKER_REPO_OVERRIDE:?"You must set 'DOCKER_REPO_OVERRIDE', see DEVELOPMENT.md"}
 
 export KO_DOCKER_REPO=${DOCKER_REPO_OVERRIDE}
-IMAGE_PATHS_FILE="$(dirname $0)/image_paths.txt"
-DOCKER_TAG=$1
 
-while read -r IMAGE || [[ -n "$IMAGE" ]]; do
-    if [ $(echo "$IMAGE" | grep -v -e "^#") ]; then
-        ko publish -P $IMAGE
-        if [ -n "$DOCKER_TAG" ]; then
-            IMAGE=$KO_DOCKER_REPO/$IMAGE
-            DIGEST=$(gcloud container images list-tags --filter="tags:latest" --format='get(digest)' $IMAGE)
-            echo "Tagging $IMAGE@$DIGEST with $DOCKER_TAG"
-            gcloud -q container images add-tag $IMAGE@$DIGEST $IMAGE:$DOCKER_TAG
-        fi
-    fi
-done < "$IMAGE_PATHS_FILE"
+upload_test_images $@
