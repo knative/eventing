@@ -26,7 +26,6 @@
 # the tests and delete the cluster.
 
 source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/e2e-tests.sh
-source $(dirname $0)/upload-test-images.sh
 
 readonly KNATIVE_EVENTING_SOURCES_RELEASE=https://knative-releases.storage.googleapis.com/eventing-sources/latest/release.yaml
 
@@ -115,7 +114,7 @@ ko apply -f config/provisioners/in-memory-channel/in-memory-channel.yaml
 wait_until_pods_running knative-eventing
 
 # Publish test images
-upload_test_images e2e
+sh upload_test_images.sh e2e
 
 # Handle test failures ourselves, so we can dump useful info.
 set +o errexit
