@@ -93,6 +93,11 @@ func (ps *ClusterChannelProvisionerStatus) IsReady() bool {
 	return ccProvCondSet.Manage(ps).IsHappy()
 }
 
+// MarkProvisionerNotReady sets the condition that the provisioner is not ready to provision backing resource.
+func (ps *ClusterChannelProvisionerStatus) MarkNotReady(reason, messageFormat string, messageA ...interface{}) {
+	ccProvCondSet.Manage(ps).MarkFalse(ClusterChannelProvisionerConditionReady, reason, messageFormat, messageA...)
+}
+
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (ps *ClusterChannelProvisionerStatus) InitializeConditions() {
 	ccProvCondSet.Manage(ps).InitializeConditions()

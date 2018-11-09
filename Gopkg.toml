@@ -79,6 +79,10 @@ required = [
   name = "github.com/knative/serving"
   version = "v0.1.1"
 
+[[override]]
+  name = "github.com/Shopify/sarama"
+  version = "1.19.0"
+
 [[constraint]]
   name = "sigs.k8s.io/controller-runtime"
   # HEAD as of 2018-09-19

@@ -1,0 +1,87 @@
+########################################## KAFKA BROKER ######################################
+# The following does not need to live in the same namespace as the bus.
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: kafka-broker
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: kafka-broker
+    spec:
+      containers:
+      - name: kafka-broker
+        image: wurstmeister/kafka:1.1.0
+        ports:
+        - containerPort: 9092
+        env:
+          - name: MY_POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: KAFKA_BROKER_ID
+            value: "0"
+          - name: KAFKA_LISTENERS
+            value: "INTERNAL://:9093,EXTERNAL://:9092"
+          - name: KAFKA_ADVERTISED_LISTENERS
+            value: "INTERNAL://:9093,EXTERNAL://kafkabroker.$(MY_POD_NAMESPACE):9092"
+          - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+            value: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"
+          - name: KAFKA_INTER_BROKER_LISTENER_NAME
+            value: "INTERNAL"
+          - name: KAFKA_ZOOKEEPER_CONNECT
+            value: "zookeeper.$(MY_POD_NAMESPACE):2181"
+          - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
+            value: "false"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafkabroker
+spec:
+  type: NodePort
+  selector:
+    app: kafka-broker
+  ports:
+  - port: 9092
+    name: kafka
+    protocol: TCP
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: zookeeper
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: zookeeper
+    spec:
+      containers:
+      - name: zookeeper
+        image: wurstmeister/zookeeper:3.4.6
+        ports:
+        - containerPort: 2181
+        env:
+        - name: ZOOKEEPER_ID
+          value: "1"
+        - name: ZOOKEEPER_SERVER_1
+          value: zookeeper
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zookeeper
+spec:
+  selector:
+    app: zookeeper
+  ports:
+  - port: 2181
+    name: zookeeper
+    protocol: TCP
+

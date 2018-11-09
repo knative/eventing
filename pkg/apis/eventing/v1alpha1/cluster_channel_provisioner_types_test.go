@@ -43,21 +43,21 @@ func TestClusterChannelProvisionerStatusIsReady(t *testing.T) {
 		want: false,
 	}, {
 		name: "ready true condition",
-		ps: &ClusterChannelProvisionerStatus{
-			Conditions: []duckv1alpha1.Condition{{
-				Type:   ChannelConditionReady,
-				Status: corev1.ConditionTrue,
-			}},
-		},
+		ps: func() *ClusterChannelProvisionerStatus {
+			ps := &ClusterChannelProvisionerStatus{}
+			ps.InitializeConditions()
+			ps.MarkReady()
+			return ps
+		}(),
 		want: true,
 	}, {
 		name: "ready false condition",
-		ps: &ClusterChannelProvisionerStatus{
-			Conditions: []duckv1alpha1.Condition{{
-				Type:   ChannelConditionReady,
-				Status: corev1.ConditionFalse,
-			}},
-		},
+		ps: func() *ClusterChannelProvisionerStatus {
+			ps := &ClusterChannelProvisionerStatus{}
+			ps.InitializeConditions()
+			ps.MarkNotReady("Not Ready", "testing")
+			return ps
+		}(),
 		want: false,
 	}, {
 		name: "unknown condition",

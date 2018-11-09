@@ -179,6 +179,8 @@ func TestChannelIsReady(t *testing.T) {
 			cs := &ChannelStatus{}
 			if test.markProvisioned {
 				cs.MarkProvisioned()
+			} else {
+				cs.MarkNotProvisioned("NotProvisioned", "testing")
 			}
 			if test.setAddress {
 				cs.SetAddress("foo.bar")

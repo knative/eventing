@@ -136,6 +136,11 @@ func (cs *ChannelStatus) MarkProvisioned() {
 	chanCondSet.Manage(cs).MarkTrue(ChannelConditionProvisioned)
 }
 
+// MarkNotProvisioned sets ChannelConditionProvisioned condition to False state.
+func (cs *ChannelStatus) MarkNotProvisioned(reason, messageFormat string, messageA ...interface{}) {
+	chanCondSet.Manage(cs).MarkFalse(ChannelConditionProvisioned, reason, messageFormat, messageA...)
+}
+
 // SetAddress makes this Channel addressable by setting the hostname. It also
 // sets the ChannelConditionAddressable to true.
 func (cs *ChannelStatus) SetAddress(hostname string) {
