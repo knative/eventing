@@ -31,9 +31,16 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: kafka-channel-controller
 rules:
-- apiGroups: ["eventing.knative.dev"]
-  resources: ["clusterchannelprovisioners", "channels"]
-  verbs: ["get", "watch", "list", "update"]
+  - apiGroups:
+      - eventing.knative.dev
+    resources:
+      - channels
+      - clusterchannelprovisioners
+    verbs:
+      - get
+      - list
+      - watch
+      - update
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1beta1
