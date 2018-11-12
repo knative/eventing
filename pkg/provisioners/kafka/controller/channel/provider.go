@@ -21,6 +21,7 @@ import (
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -31,19 +32,32 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	common "github.com/knative/eventing/pkg/provisioners/kafka/controller"
+	"github.com/knative/eventing/pkg/system"
 )
 
 const (
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
 	controllerAgentName = "kafka-provisioner-channel-controller"
+	// ConfigMapName is the name of the ConfigMap in the knative-eventing namespace that contains
+	// the subscription information for all kafka Channels. The Provisioner writes to it and the
+	// Dispatcher reads from it.
+	ConfigMapName = "kafka-channel-dispatcher-config-map"
+)
+
+var (
+	defaultConfigMapKey = types.NamespacedName{
+		Namespace: system.Namespace,
+		Name:      ConfigMapName,
+	}
 )
 
 type reconciler struct {
-	client   client.Client
-	recorder record.EventRecorder
-	logger   *zap.Logger
-	config   *common.KafkaProvisionerConfig
+	client       client.Client
+	recorder     record.EventRecorder
+	logger       *zap.Logger
+	config       *common.KafkaProvisionerConfig
+	configMapKey client.ObjectKey
 	// Using a shared kafkaClusterAdmin does not work currently because of an issue with
 	// Shopify/sarama, see https://github.com/Shopify/sarama/issues/1162.
 	kafkaClusterAdmin sarama.ClusterAdmin
@@ -57,9 +71,10 @@ func ProvideController(mgr manager.Manager, config *common.KafkaProvisionerConfi
 	// Setup a new controller to Reconcile Channel.
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: &reconciler{
-			recorder: mgr.GetRecorder(controllerAgentName),
-			logger:   logger,
-			config:   config,
+			recorder:     mgr.GetRecorder(controllerAgentName),
+			logger:       logger,
+			config:       config,
+			configMapKey: defaultConfigMapKey,
 		},
 	})
 	if err != nil {
