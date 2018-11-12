@@ -249,14 +249,15 @@
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
 [[projects]]
-  digest = "1:3b8adce8bbe5865d7155ddfadbd063915265f04a22ab47a3f5cddd7b32333d1e"
+  digest = "1:345bbba667abadd6263391c915251ede8d9fa6f6852839c60bb6738b6122b89c"
   name = "github.com/knative/build"
   packages = [
     "pkg/apis/build",
     "pkg/apis/build/v1alpha1",
   ]
   pruneopts = "NUT"
-  revision = "5c1d8c8469d1ed34b2aecf4c2305b3a57fff2ee3"
+  revision = "94859753e2c6724df2be86f6a254f810895fa3eb"
+  version = "v0.2.0"
 
 [[projects]]
   branch = "master"
@@ -272,7 +273,7 @@
   revision = "aa113a015beb91c94a8e173c8f0ac18512a83954"
 
 [[projects]]
-  digest = "1:760be297dcd17acd32d2b4a7b9494be96e66451bfce53fc6fbaccad4ab2a5fa8"
+  digest = "1:9870368d47209c3a52b9000fd00420c51832604c00a65aa0a56b6e60a2ff3664"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -298,6 +299,7 @@
     "client/listers/istio/v1alpha3",
     "cloudevents",
     "configmap",
+    "kmeta",
     "logging",
     "logging/logkey",
     "signals",
@@ -311,21 +313,24 @@
   revision = "4b704fa7948ad9ae8ec90d1cd5b4a34516b252ea"
 
 [[projects]]
-  digest = "1:63f3974f3afe3dc5b6a115c0d53b0897cd01be6880c4bf5d014fc69a95db6ed1"
+  digest = "1:cf62a9e49c586f87503a2ca683f636afae817333b6056c7529f2643ec285ed7e"
   name = "github.com/knative/serving"
   packages = [
-    "pkg/apis/istio",
-    "pkg/apis/istio/v1alpha3",
+    "pkg/apis/autoscaling",
+    "pkg/apis/autoscaling/v1alpha1",
+    "pkg/apis/networking",
+    "pkg/apis/networking/v1alpha1",
     "pkg/apis/serving",
     "pkg/apis/serving/v1alpha1",
     "pkg/client/clientset/versioned",
     "pkg/client/clientset/versioned/scheme",
-    "pkg/client/clientset/versioned/typed/istio/v1alpha3",
+    "pkg/client/clientset/versioned/typed/autoscaling/v1alpha1",
+    "pkg/client/clientset/versioned/typed/networking/v1alpha1",
     "pkg/client/clientset/versioned/typed/serving/v1alpha1",
   ]
   pruneopts = "NUT"
-  revision = "37c640555a3241ed707962ba6b29d6c7fe68f937"
-  version = "v0.1.1"
+  revision = "1036f34badadfa711d88378a1c09a3527bb1584b"
+  version = "v0.2.1"
 
 [[projects]]
   branch = "master"

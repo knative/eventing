@@ -77,7 +77,7 @@ required = [
 
 [[constraint]]
   name = "github.com/knative/serving"
-  version = "v0.1.1"
+  version = "v0.2.1"
 
 [[override]]
   name = "github.com/Shopify/sarama"
