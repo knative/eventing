@@ -18,17 +18,17 @@ set -o errexit
 
 function upload_test_images() {
   echo ">> Publishing test images"
-  local IMAGE_DIRS="$(find $(dirname $0)/test_images -mindepth 1 -maxdepth 1 -type d)"
-  local DOCKER_TAG=$1
+  local image_dirs="$(find $(dirname $0)/test_images -mindepth 1 -maxdepth 1 -type d)"
+  local docker_tag=$1
 
-  for image_dir in ${IMAGE_DIRS}; do
-      IMAGE="github.com/knative/eventing/test/test_images/$(basename ${image_dir})"
-      ko publish -P $IMAGE
-      if [ -n "$DOCKER_TAG" ]; then
-          local IMAGE=$KO_DOCKER_REPO/$IMAGE
-          local DIGEST=$(gcloud container images list-tags --filter="tags:latest" --format='get(digest)' $IMAGE)
-          echo "Tagging $IMAGE@$DIGEST with $DOCKER_TAG"
-          gcloud -q container images add-tag $IMAGE@$DIGEST $IMAGE:$DOCKER_TAG
+  for image_dir in ${image_dirs}; do
+      local image="github.com/knative/eventing/test/test_images/$(basename ${image_dir})"
+      ko publish -P ${image}
+      if [ -n "$docker_tag" ]; then
+          image=$KO_DOCKER_REPO/${image}
+          local digest=$(gcloud container images list-tags --filter="tags:latest" --format='get(digest)' ${image})
+          echo "Tagging ${image}@${digest} with $docker_tag"
+          gcloud -q container images add-tag ${image}@${digest} ${image}:$docker_tag
       fi
   done
 }
