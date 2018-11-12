@@ -25,6 +25,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/google/go-cmp/cmp"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,6 +37,7 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
 	"github.com/knative/eventing/pkg/provisioners"
+	util "github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/provisioners/kafka/controller"
 )
 
@@ -43,16 +45,20 @@ const (
 	channelName                   = "test-channel"
 	clusterChannelProvisionerName = "kafka-channel"
 	testNS                        = "test-namespace"
+	testUID                       = "test-uid"
 	argumentNumPartitions         = "NumPartitions"
 )
 
 var (
+	truePointer = true
+
 	deletedTs = metav1.Now().Rfc3339Copy()
 )
 
 func init() {
 	// Add types to scheme
 	eventingv1alpha1.AddToScheme(scheme.Scheme)
+	istiov1alpha3.AddToScheme(scheme.Scheme)
 }
 
 var mockFetchError = controllertesting.Mocks{
@@ -124,6 +130,7 @@ var testCases = []controllertesting.TestCase{
 		InitialState: []runtime.Object{
 			getNewClusterChannelProvisioner(clusterChannelProvisionerName, true),
 			getNewChannel(channelName, clusterChannelProvisionerName),
+			makeVirtualService(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
 		WantResult:   reconcile.Result{},
@@ -425,6 +432,7 @@ func getNewChannelWithArgs(name string, args map[string]interface{}) *eventingv1
 func getNewChannelProvisionedStatus(name, provisioner string) *eventingv1alpha1.Channel {
 	c := getNewChannel(name, provisioner)
 	c.Status.InitializeConditions()
+	c.Status.SetAddress(fmt.Sprintf("%s-channel.%s.svc.cluster.local", c.Name, c.Namespace))
 	c.Status.MarkProvisioned()
 	c.Finalizers = []string{finalizerName}
 	return c
@@ -476,6 +484,52 @@ func getNewClusterChannelProvisioner(name string, isReady bool) *eventingv1alpha
 	// selflink is not filled in when we create the object, so clear it
 	clusterChannelProvisioner.ObjectMeta.SelfLink = ""
 	return clusterChannelProvisioner
+}
+
+func makeVirtualService() *istiov1alpha3.VirtualService {
+	return &istiov1alpha3.VirtualService{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: istiov1alpha3.SchemeGroupVersion.String(),
+			Kind:       "VirtualService",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-channel", testNS),
+			Namespace: testNS,
+			Labels: map[string]string{
+				"channel":     channelName,
+				"provisioner": clusterChannelProvisionerName,
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
+					Kind:               "Channel",
+					Name:               channelName,
+					UID:                testUID,
+					Controller:         &truePointer,
+					BlockOwnerDeletion: &truePointer,
+				},
+			},
+		},
+		Spec: istiov1alpha3.VirtualServiceSpec{
+			Hosts: []string{
+				fmt.Sprintf("%s-channel.%s.svc.cluster.local", channelName, testNS),
+				fmt.Sprintf("%s.%s.channels.cluster.local", channelName, testNS),
+			},
+			Http: []istiov1alpha3.HTTPRoute{{
+				Rewrite: &istiov1alpha3.HTTPRewrite{
+					Authority: fmt.Sprintf("%s.%s.channels.cluster.local", channelName, testNS),
+				},
+				Route: []istiov1alpha3.DestinationWeight{{
+					Destination: istiov1alpha3.Destination{
+						Host: "kafka-provisioner.knative-eventing.svc.cluster.local",
+						Port: istiov1alpha3.PortSelector{
+							Number: util.PortNumber,
+						},
+					}},
+				}},
+			},
+		},
+	}
 }
 
 func om(namespace, name string) metav1.ObjectMeta {

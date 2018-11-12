@@ -17,8 +17,8 @@ limitations under the License.
 package controller
 
 import (
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -26,6 +26,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 )
 
 const (
@@ -60,6 +63,13 @@ func ProvideController(mgr manager.Manager, config *KafkaProvisionerConfig, logg
 
 	// Watch ClusterChannelProvisioner events and enqueue ClusterChannelProvisioner object key.
 	if err := c.Watch(&source.Kind{Type: &v1alpha1.ClusterChannelProvisioner{}}, &handler.EnqueueRequestForObject{}); err != nil {
+		return nil, err
+	}
+
+	// Watch the K8s Services that are owned by ClusterChannelProvisioners.
+	err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.ClusterChannelProvisioner{}, IsController: true})
+	if err != nil {
+		logger.Error("unable to watch K8s Services.", zap.Error(err))
 		return nil, err
 	}
 
