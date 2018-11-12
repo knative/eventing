@@ -24,7 +24,7 @@ import (
 // ChannelProvisionerDefaulter sets the default Provisioner and Arguments on Channels that do not
 // specify any Provisioner.
 type ChannelProvisionerDefaulter interface {
-	// GetChannel determines the default provisioner and arguments for the given channel. It does
+	// GetDefault determines the default provisioner and arguments for the given channel. It does
 	// not modify the given channel. It may return nil for either or both.
 	GetDefault(c *Channel) (*corev1.ObjectReference, *runtime.RawExtension)
 }
