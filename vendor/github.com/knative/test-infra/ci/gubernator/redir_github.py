@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python
 
 # Copyright 2018 The Knative Authors
 #
@@ -14,19 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -o errexit
-set -o nounset
-set -o pipefail
+"""Simple redirection handler to Gubernator's GitHub service."""
 
-source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/library.sh
+import webapp2
 
-cd ${REPO_ROOT_DIR}
+class GitHubRedirect(webapp2.RequestHandler):
+  def get(self):
+    self.redirect("https://github-dot-knative-tests.appspot.com" + self.request.path_qs)
 
-# Ensure we have everything we need under vendor/
-dep ensure
-
-rm -rf $(find vendor/ -name 'BUILD')
-rm -rf $(find vendor/ -name 'BUILD.bazel')
-
-update_licenses third_party/VENDOR-LICENSE \
-  $(find . -name "*.go" | grep -v vendor | xargs grep "package main" | cut -d: -f1 | xargs -n1 dirname | uniq)
+app = webapp2.WSGIApplication([(r'/.*', GitHubRedirect),], debug=True, config={})
