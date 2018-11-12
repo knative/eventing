@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # Copyright 2018 The Knative Authors
 #
@@ -14,19 +14,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -o errexit
-set -o nounset
-set -o pipefail
+source $(dirname $0)/../../scripts/presubmit-tests.sh
 
-source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/library.sh
+function failed() {
+  echo $1
+  exit 1
+}
 
-cd ${REPO_ROOT_DIR}
+function pre_integration_tests() {
+  PRE_INTEGRATION_TESTS=1
+}
 
-# Ensure we have everything we need under vendor/
-dep ensure
+function integration_tests() {
+  CUSTOM_INTEGRATION_TESTS=1
+}
 
-rm -rf $(find vendor/ -name 'BUILD')
-rm -rf $(find vendor/ -name 'BUILD.bazel')
+function post_integration_tests() {
+  POST_INTEGRATION_TESTS=1
+}
 
-update_licenses third_party/VENDOR-LICENSE \
-  $(find . -name "*.go" | grep -v vendor | xargs grep "package main" | cut -d: -f1 | xargs -n1 dirname | uniq)
+function build_tests() {
+  return 0
+}
+
+function unit_tests() {
+  return 0
+}
+
+PRE_INTEGRATION_TESTS=0
+CUSTOM_INTEGRATION_TESTS=0
+POST_INTEGRATION_TESTS=0
+
+trap check_results EXIT

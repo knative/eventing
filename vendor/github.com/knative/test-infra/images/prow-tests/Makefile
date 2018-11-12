@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Copyright 2018 The Knative Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,19 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -o errexit
-set -o nounset
-set -o pipefail
+IMG = gcr.io/knative-tests/test-infra/prow-tests
+TAG := $(shell date +v%Y%m%d)-$(shell git describe --tags --always --dirty)
 
-source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/library.sh
+all: build
 
-cd ${REPO_ROOT_DIR}
+build:
+	make -C ../../tools/githubhelper
+	docker build -t $(IMG):$(TAG) -f Dockerfile ../..
+	docker tag $(IMG):$(TAG) $(IMG):latest
 
-# Ensure we have everything we need under vendor/
-dep ensure
+push_versioned: build
+	docker push $(IMG):$(TAG)
 
-rm -rf $(find vendor/ -name 'BUILD')
-rm -rf $(find vendor/ -name 'BUILD.bazel')
+push_latest: build
+	docker push $(IMG):latest
 
-update_licenses third_party/VENDOR-LICENSE \
-  $(find . -name "*.go" | grep -v vendor | xargs grep "package main" | cut -d: -f1 | xargs -n1 dirname | uniq)
+clean:
+	rm -fr githubhelper dep-collector
+
+push: push_versioned push_latest clean

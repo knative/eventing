@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # Copyright 2018 The Knative Authors
 #
@@ -14,19 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -o errexit
-set -o nounset
-set -o pipefail
+# Test that pre/post integration tests don't run if unset.
 
-source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/library.sh
+source $(dirname $0)/presubmit-integration-tests-common.sh
 
-cd ${REPO_ROOT_DIR}
+function check_results() {
+  (( ! PRE_INTEGRATION_TESTS )) || failed "Pre integration tests did run"
+  (( CUSTOM_INTEGRATION_TESTS )) || failed "Custom integration tests did not run"
+  (( ! POST_INTEGRATION_TESTS )) || failed "Post integration tests did run"
+  echo "Test passed"
+}
 
-# Ensure we have everything we need under vendor/
-dep ensure
+echo "Testing custom test integration function"
 
-rm -rf $(find vendor/ -name 'BUILD')
-rm -rf $(find vendor/ -name 'BUILD.bazel')
+unset -f pre_integration_tests
+unset -f post_integration_tests
 
-update_licenses third_party/VENDOR-LICENSE \
-  $(find . -name "*.go" | grep -v vendor | xargs grep "package main" | cut -d: -f1 | xargs -n1 dirname | uniq)
+main $@

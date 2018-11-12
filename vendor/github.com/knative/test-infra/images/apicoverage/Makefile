@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 
 # Copyright 2018 The Knative Authors
 #
@@ -14,19 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -o errexit
-set -o nounset
-set -o pipefail
+REGISTRY ?= gcr.io
+PROJECT  ?= knative-tests/test-infra
+PUSH     ?= docker push
 
-source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/library.sh
-
-cd ${REPO_ROOT_DIR}
-
-# Ensure we have everything we need under vendor/
-dep ensure
-
-rm -rf $(find vendor/ -name 'BUILD')
-rm -rf $(find vendor/ -name 'BUILD.bazel')
-
-update_licenses third_party/VENDOR-LICENSE \
-  $(find . -name "*.go" | grep -v vendor | xargs grep "package main" | cut -d: -f1 | xargs -n1 dirname | uniq)
+apicoverage-image:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build ../../tools/apicoverage
+	docker build -t "$(REGISTRY)/$(PROJECT)/apicoverage:latest" .
+	$(PUSH) "$(REGISTRY)/$(PROJECT)/apicoverage:latest"
