@@ -93,6 +93,6 @@ for yaml in ${all_yamls[@]}; do
   publish_yaml ${yaml} ${EVENTING_RELEASE_GCS} ${TAG}
 done
 
-branch_release "Knative Eventing" "${all_yamls[@]}"
+branch_release "Knative Eventing" "${all_yamls[*]}"
 
 echo "New release published successfully"
