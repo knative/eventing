@@ -18,20 +18,25 @@ package channel
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"golang.org/x/oauth2/google"
+	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 
-	"k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
+	eventduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+
+	"github.com/knative/pkg/logging"
 
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/errors"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"cloud.google.com/go/pubsub"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/controller"
 	util "github.com/knative/eventing/pkg/provisioners"
@@ -42,10 +47,18 @@ const (
 	finalizerName = controllerAgentName
 )
 
+type pubsubArgs struct {
+	GoogleCloudProject string
+	Secret             v1.ObjectReference
+	Key                string
+}
+
 type reconciler struct {
 	client   client.Client
 	recorder record.EventRecorder
 	logger   *zap.Logger
+
+	pubSubClientCreator pubSubClientCreator
 }
 
 // Verify the struct implements reconcile.Reconciler
@@ -87,7 +100,13 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// Modify a copy, not the original.
 	c = c.DeepCopy()
 
-	err = r.reconcile(ctx, c)
+	args, err := unmarshalArguments(c.Spec.Arguments.Raw)
+	if err != nil {
+		logger.Info("Unable to unmarshal the Arguments")
+		return reconcile.Result{}, err
+	}
+
+	err = r.reconcile(ctx, c, args)
 	if err != nil {
 		logger.Info("Error reconciling Channel", zap.Error(err))
 		// Note that we do not return the error here, because we want to update the Status
@@ -111,126 +130,226 @@ func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 	return false
 }
 
-func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) error {
-	logger := r.logger.With(zap.Any("channel", c))
+func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel, args pubsubArgs) error {
+	ctx = logging.WithLogger(ctx, r.logger.With(zap.Any("channel", c)).Sugar())
 
 	c.Status.InitializeConditions()
 
-	// We are syncing three things:
+	// We are syncing four things:
 	// 1. The K8s Service to talk to this Channel.
 	// 2. The Istio VirtualService to talk to this Channel.
-	// 3. The Gateway Deployment that is running in the same namespace as the Channel.
+	// 3. The GCP PubSub Topic.
+	// 4. The GCP PubSub Subscriptions.
+
+	// Regardless of what we are going to do, we need GCP credentials to do it.
+	gcpCreds, err := r.getCredential(ctx, args.Secret, args.Key)
+	if err != nil {
+		logging.FromContext(ctx).Info("Unable to generate GCP creds", zap.Error(err))
+		return err
+	}
 
 	if c.DeletionTimestamp != nil {
 		// K8s garbage collection will delete the K8s service and VirtualService for this channel.
+		// We use a finalizer to ensure the GCP PubSub Topic and Subscriptions are deleted.
+		err = r.deleteSubscriptions(ctx, c, gcpCreds, args.GoogleCloudProject)
+		if err != nil {
+			logging.FromContext(ctx).Info("Unable to delete subscriptions", zap.Error(err))
+			return err
+		}
+		err = r.deleteTopic(ctx, c, gcpCreds, args.GoogleCloudProject)
+		if err != nil {
+			logging.FromContext(ctx).Info("Unable to delete topic", zap.Error(err))
+			return err
+		}
+		util.RemoveFinalizer(c, finalizerName)
 		return nil
 	}
 
-	svc, err := util.CreateK8sService(ctx, r.client, c)
+	util.AddFinalizer(c, finalizerName)
+
+	err = r.createK8sService(ctx, c)
 	if err != nil {
-		logger.Info("Error creating the Channel's K8s Service", zap.Error(err))
 		return err
 	}
 
-	// Check if this Channel is the owner of the K8s service.
-	if !metav1.IsControlledBy(svc, c) {
-		logger.Warn("Channel's K8s Service is not owned by the Channel", zap.Any("channel", c), zap.Any("service", svc))
-	}
-
-	c.Status.SetAddress(controller.ServiceHostName(svc.Name, svc.Namespace))
-
-	virtualService, err := util.CreateVirtualService(ctx, r.client, c) ///////////////////////////////////////////////////////////////// Need to replace to point at the namespaced dispatcher.
-
+	err = r.createVirtualService(ctx, c)
 	if err != nil {
-		logger.Info("Error creating the Virtual Service for the Channel", zap.Error(err))
 		return err
 	}
 
-	// If the Virtual Service is not controlled by this Channel, we should log a warning, but don't
-	// consider it an error.
-	if !metav1.IsControlledBy(virtualService, c) {
-		logger.Warn("VirtualService not owned by Channel", zap.Any("channel", c), zap.Any("virtualService", virtualService))
+	topic, err := r.createTopic(ctx, c, gcpCreds, args.GoogleCloudProject)
+	if err != nil {
+		return err
 	}
 
-	_, err = r.createGateway(ctx, c.Namespace, logger)
+	err = r.createSubscriptions(ctx, c, gcpCreds, args.GoogleCloudProject, topic)
 	if err != nil {
-		logger.Info("Error creating the Channel's Gateway", zap.Error(err))
+		return err
 	}
 
 	c.Status.MarkProvisioned()
 	return nil
 }
 
-func (r *reconciler) createGateway(ctx context.Context, namespace string, logger *zap.Logger) (*v1.Deployment, error) {
-	gateway, err := r.getGateway(ctx, namespace)
+func (r *reconciler) getCredential(ctx context.Context, ref v1.ObjectReference, key string) (*google.Credentials, error) {
+	secret := &v1.Secret{}
+	err := r.client.Get(ctx, types.NamespacedName{Namespace: ref.Namespace, Name: ref.Name}, secret)
 	if err != nil {
+		logging.FromContext(ctx).Info("Unable to read the secret", zap.Any("secretRef", ref))
 		return nil, err
 	}
-	if gateway != nil {
-		logger.Info("Re-using existing gateway", zap.Any("gateway", gateway))
-		return gateway, nil
+
+	bytes, present := secret.Data[key]
+	if !present {
+		logging.FromContext(ctx).Info("Secret did not contain the key", zap.String("key", key))
+		return nil, fmt.Errorf("secret did not contain the key '%s'", key)
 	}
 
-	gateway = r.newGateway(ctx, namespace)
-	err = r.client.Create(ctx, gateway)
-	return gateway, err
+	creds, err := google.CredentialsFromJSON(ctx, bytes, pubsub.ScopePubSub)
+	if err != nil {
+		logging.FromContext(ctx).Info("Unable to create the GCP credential", zap.Error(err))
+		return nil, err
+	}
+	return creds, nil
 }
 
-func (r *reconciler) getGateway(ctx context.Context, namespace string) (*v1.Deployment, error) {
-	dl := &v1.DeploymentList{}
-	err := r.client.List(ctx, &client.ListOptions{
-		Namespace:     namespace,
-		LabelSelector: r.getLabelSelector(),
-		// TODO this is only needed by the fake client. Real K8s does not need it. Remove it once
-		// the fake is fixed.
-		Raw: &metav1.ListOptions{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: v1.SchemeGroupVersion.String(),
-				Kind:       "Deployment",
-			},
-		},
-	},
-		dl)
+func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.Channel) error {
+	svc, err := util.CreateK8sService(ctx, r.client, c)
+	if err != nil {
+		logging.FromContext(ctx).Info("Error creating the Channel's K8s Service", zap.Error(err))
+		return err
+	}
+
+	// Check if this Channel is the owner of the K8s service.
+	if !metav1.IsControlledBy(svc, c) {
+		logging.FromContext(ctx).Warn("Channel's K8s Service is not owned by the Channel", zap.Any("channel", c), zap.Any("service", svc))
+	}
+
+	c.Status.SetAddress(controller.ServiceHostName(svc.Name, svc.Namespace))
+	return nil
+}
+
+func (r *reconciler) createVirtualService(ctx context.Context, c *eventingv1alpha1.Channel) error {
+	virtualService, err := util.CreateVirtualService(ctx, r.client, c)
+	if err != nil {
+		logging.FromContext(ctx).Info("Error creating the Virtual Service for the Channel", zap.Error(err))
+		return err
+	}
+
+	// If the Virtual Service is not controlled by this Channel, we should log a warning, but don't
+	// consider it an error.
+	if !metav1.IsControlledBy(virtualService, c) {
+		logging.FromContext(ctx).Warn("VirtualService not owned by Channel", zap.Any("channel", c), zap.Any("virtualService", virtualService))
+	}
+	return nil
+}
+
+func (r *reconciler) createTopic(ctx context.Context, c *eventingv1alpha1.Channel, gcpCreds *google.Credentials, gcpProject string) (pubSubTopic, error) {
+	psc, err := r.pubSubClientCreator(ctx, gcpCreds, gcpProject)
 	if err != nil {
 		return nil, err
 	}
-	for _, dep := range dl.Items {
-		if metav1.IsControlledBy(&dep, src) {
-			return &dep, nil
+	topic := psc.Topic(generateTopicName(c))
+	exists, err := topic.Exists(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return topic, nil
+	}
+
+	return psc.CreateTopic(ctx, topic.ID())
+}
+
+func (r *reconciler) deleteTopic(ctx context.Context, c *eventingv1alpha1.Channel, gcpCreds *google.Credentials, gcpProject string) error {
+	psc, err := r.pubSubClientCreator(ctx, gcpCreds, gcpProject)
+	if err != nil {
+		return err
+	}
+	topic := psc.Topic(generateTopicName(c))
+	exists, err := topic.Exists(ctx)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return nil
+	}
+	return topic.Delete(ctx)
+}
+
+func (r *reconciler) createSubscriptions(ctx context.Context, c *eventingv1alpha1.Channel, gcpCreds *google.Credentials, gcpProject string, topic pubSubTopic) error {
+	for _, sub := range c.Spec.Subscribable.Subscribers {
+		_, err := r.createSubscription(ctx, gcpCreds, gcpProject, topic, &sub)
+		if err != nil {
+			logging.FromContext(ctx).Info("Unable to create subscribers", zap.Error(err), zap.Any("channelSubscriber", sub))
+			return err
 		}
 	}
-	return nil, apierrors.NewNotFound(schema.GroupResource{}, "")
+	return nil
 }
 
-func (r *reconciler) newGateway(ctx context.Context, namespace string) *v1.Deployment {
-	labels := r.gatewayLabels()
-	return &v1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    namespace,
-			GenerateName: "gcppubsub-channel-gateway",
-			Labels:       labels,
-		},
-		Spec: v1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"sidecar.istio.io/inject": "true",
-					},
-					Labels: labels,
-				},
-				Spec: corev1.PodSpec{
-					ServiceAccountName: r.gatewayServiceAccountName,
-					Containers: []corev1.Container{
-						{
-							Name:  "receive-adapter",
-							Image: r.gatewayImage,
-						},
-					},
-				},
-			},
-		},
+func (r *reconciler) createSubscription(ctx context.Context, gcpCreds *google.Credentials, gcpProject string, topic pubSubTopic, cs *eventduck.ChannelSubscriberSpec) (pubSubSubscription, error) {
+	psc, err := r.pubSubClientCreator(ctx, gcpCreds, gcpProject)
+	if err != nil {
+		return nil, err
 	}
+	sub := psc.SubscriptionInProject(generateSubName(cs), gcpProject)
+	if exists, err := sub.Exists(ctx); err != nil {
+		return nil, err
+	} else if exists {
+		logging.FromContext(ctx).Info("Reusing existing subscription.")
+		return sub, nil
+	}
+
+	createdSub, err := psc.CreateSubscription(ctx, sub.ID(), topic)
+	if err != nil {
+		logging.FromContext(ctx).Info("Error creating new subscription", zap.Error(err))
+	} else {
+		logging.FromContext(ctx).Info("Created new subscription", zap.Any("subscription", createdSub))
+	}
+	return createdSub, err
+}
+
+func (r *reconciler) deleteSubscriptions(ctx context.Context, c *eventingv1alpha1.Channel, gcpCreds *google.Credentials, gcpProject string) error {
+	for _, sub := range c.Spec.Subscribable.Subscribers {
+		err := r.deleteSubscription(ctx, gcpCreds, gcpProject, &sub)
+		if err != nil {
+			logging.FromContext(ctx).Info("Unable to create subscribers", zap.Error(err), zap.Any("channelSubscriber", sub))
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *reconciler) deleteSubscription(ctx context.Context, gcpCreds *google.Credentials, gcpProject string, cs *eventduck.ChannelSubscriberSpec) error {
+	psc, err := r.pubSubClientCreator(ctx, gcpCreds, gcpProject)
+	if err != nil {
+		return err
+	}
+	sub := psc.SubscriptionInProject(generateSubName(cs), gcpProject)
+	if exists, err := sub.Exists(ctx); err != nil {
+		return err
+	} else if !exists {
+		return nil
+	}
+	return sub.Delete(ctx)
+}
+
+func generateTopicName(c *eventingv1alpha1.Channel) string {
+	return fmt.Sprintf("knative-eventing-channel-%s-%s-%s", c.Namespace, c.Name, c.UID)
+}
+
+func generateSubName(cs *eventduck.ChannelSubscriberSpec) string {
+	return fmt.Sprintf("knative-eventing-channel-%s-%s", cs.Ref.Name, cs.Ref.UID)
+}
+
+// unmarshalArguments unmarshal's a json/yaml serialized input and returns channelArgs
+func unmarshalArguments(bytes []byte) (pubsubArgs, error) {
+	var arguments pubsubArgs
+	if len(bytes) > 0 {
+		if err := json.Unmarshal(bytes, &arguments); err != nil {
+			return arguments, fmt.Errorf("error unmarshalling arguments: %s", err)
+		}
+	}
+	return arguments, nil
 }
