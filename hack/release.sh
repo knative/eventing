@@ -70,7 +70,7 @@ done
 # Assemble the release
 for yaml in "${!RELEASES[@]}"; do
   echo "Assembling Knative Eventing - ${yaml}"
-  touch ${yaml}
+  echo "" > ${yaml}
   for component in ${RELEASES[${yaml}]}; do
     echo "---" >> ${yaml}
     echo "# ${component}" >> ${yaml}
