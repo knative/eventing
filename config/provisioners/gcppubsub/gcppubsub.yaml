@@ -23,7 +23,7 @@ spec: {}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: gcp-pubsub-channel
+  name: gcp-pubsub-channel-controller
   namespace: knative-eventing
 
 ---
@@ -31,7 +31,7 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: gcp-pubsub-channel
+  name: gcp-pubsub-channel-controller
 rules:
   - apiGroups:
       - eventing.knative.dev
@@ -48,19 +48,12 @@ rules:
     resources:
       - configmaps
       - services
+      - secrets
     verbs:
       - get
       - list
       - watch
       - create
-  - apiGroups:
-      - "" # Core API Group.
-    resources:
-      - configmaps
-    resourceNames:
-      - in-memory-channel-dispatcher-config-map
-    verbs:
-      - update
   - apiGroups:
       - networking.istio.io
     resources:
@@ -76,15 +69,15 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: gcp-pubsub-channel
+  name: gcp-pubsub-channel-controller
   namespace: knative-eventing
 subjects:
   - kind: ServiceAccount
-    name: gcp-pubsub-channel
+    name: gcp-pubsub-channel-controller
     namespace: knative-eventing
 roleRef:
   kind: ClusterRole
-  name: gcp-pubsub-channel
+  name: gcp-pubsub-channel-controller
   apiGroup: rbac.authorization.k8s.io
 
 ---
@@ -92,7 +85,7 @@ roleRef:
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: in-memory-channel-controller
+  name: gcp-pubsub-channel-controller
   namespace: knative-eventing
 spec:
   replicas: 1
@@ -104,8 +97,90 @@ spec:
     metadata:
       labels: *labels
     spec:
-      serviceAccountName: gcp-pubsub-channel
+      serviceAccountName: gcp-pubsub-channel-controller
       containers:
         - name: controller
           image: github.com/knative/eventing/pkg/provisioners/gcppubsub/controller
+          env:
+          - name: DEFAULT_GCP_PROJECT
+            value: REPLACE_WITH_GCP_PROJECT
+          - name: DEFAULT_SECRET_NAMESPACE
+            value: knative-eventing
+          - name: DEFAULT_SECRET_NAME
+            value: gcppubsub-channel-key
+          - name: DEFAULT_SECRET_KEY
+            value: key.json
 
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gcp-pubsub-channel-dispatcher
+  namespace: knative-eventing
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gcp-pubsub-channel-dispatcher
+  namespace: knative-eventing
+rules:
+  - apiGroups:
+      - "" # Core API group.
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: gcp-pubsub-channel-dispatcher
+  namespace: knative-eventing
+subjects:
+  - kind: ServiceAccount
+    name: gcp-pubsub-channel-dispatcher
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: gcp-pubsub-channel-dispatcher
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: gcp-pubsub-channel-dispatcher
+  namespace: knative-eventing
+spec:
+  replicas: 1
+  selector:
+    matchLabels: &labels
+      clusterChannelProvisioner: gcp-pubsub
+      role: dispatcher
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+      labels: *labels
+    spec:
+      serviceAccountName: in-memory-channel-dispatcher
+      containers:
+        - name: dispatcher
+          image: github.com/knative/eventing/pkg/provisioners/gcppubsub/dispatcher
+          env:
+            - name: DEFAULT_GCP_PROJECT
+              value: REPLACE_WITH_GCP_PROJECT
+            - name: DEFAULT_SECRET_NAMESPACE
+              value: knative-eventing
+            - name: DEFAULT_SECRET_NAME
+              value: gcppubsub-channel-key
+            - name: DEFAULT_SECRET_KEY
+              value: key.json
