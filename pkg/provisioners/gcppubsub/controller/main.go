@@ -18,6 +18,8 @@ package main
 
 import (
 	"flag"
+	"log"
+	"os"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/buses"
@@ -26,8 +28,16 @@ import (
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
+	"k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+)
+
+const (
+	defaultGcpProjectEnv      = "DEFAULT_GCP_PROJECT"
+	defaultSecretNamespaceEnv = "DEFAULT_SECRET_NAMESPACE"
+	defaultSecretNameEnv      = "DEFAULT_SECRET_NAME"
+	defaultSecretKeyEnv       = "DEFAULT_SECRET_KEY"
 )
 
 func main() {
@@ -55,7 +65,15 @@ func main() {
 	if err != nil {
 		logger.Fatal("Unable to create Provisioner controller", zap.Error(err))
 	}
-	_, err = channel.ProvideController(mgr, logger.Desugar())
+	defaultGcpProject := getRequiredEnv(defaultGcpProjectEnv)
+	defaultSecret := v1.ObjectReference{
+		APIVersion: v1.SchemeGroupVersion.String(),
+		Kind:       "Secret",
+		Namespace:  getRequiredEnv(defaultSecretNamespaceEnv),
+		Name:       getRequiredEnv(defaultSecretNameEnv),
+	}
+	defaultSecretKey := getRequiredEnv(defaultSecretKeyEnv)
+	_, err = channel.ProvideController(defaultGcpProject, defaultSecret, defaultSecretKey)(mgr, logger.Desugar())
 	if err != nil {
 		logger.Fatal("Unable to create Channel controller", zap.Error(err))
 	}
@@ -67,4 +85,12 @@ func main() {
 	if err != nil {
 		logger.Fatal("Manager.Start() returned an error", zap.Error(err))
 	}
+}
+
+func getRequiredEnv(envKey string) string {
+	val, defined := os.LookupEnv(envKey)
+	if !defined {
+		log.Fatalf("required environment variable not defined '%s'", envKey)
+	}
+	return val
 }

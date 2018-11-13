@@ -34,47 +34,54 @@ const (
 )
 
 // ProvideController returns a Controller that represents the in-memory-channel Provisioner.
-func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
-	// Setup a new controller to Reconcile Channels that belong to this Cluster Provisioner
-	// (in-memory channels).
-	r := &reconciler{
-		recorder: mgr.GetRecorder(controllerAgentName),
-		logger:   logger,
-	}
-	c, err := controller.New(controllerAgentName, mgr, controller.Options{
-		Reconciler: r,
-	})
-	if err != nil {
-		logger.Error("Unable to create controller.", zap.Error(err))
-		return nil, err
-	}
+func ProvideController(defaultGcpProject string, defaultSecret corev1.ObjectReference, defaultSecretKey string) func(manager.Manager, *zap.Logger) (controller.Controller, error) {
+	return func(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
+		// Setup a new controller to Reconcile Channels that belong to this Cluster Provisioner
+		// (in-memory channels).
+		r := &reconciler{
+			recorder: mgr.GetRecorder(controllerAgentName),
+			logger:   logger,
 
-	// Watch Channels.
-	err = c.Watch(&source.Kind{
-		Type: &eventingv1alpha1.Channel{},
-	}, &handler.EnqueueRequestForObject{})
-	if err != nil {
-		logger.Error("Unable to watch Channels.", zap.Error(err), zap.Any("type", &eventingv1alpha1.Channel{}))
-		return nil, err
-	}
+			defaultGcpProject:   defaultGcpProject,
+			defaultSecret:       defaultSecret,
+			defaultSecretKey:    defaultSecretKey,
+			pubSubClientCreator: gcpPubSubClientCreator,
+		}
+		c, err := controller.New(controllerAgentName, mgr, controller.Options{
+			Reconciler: r,
+		})
+		if err != nil {
+			logger.Error("Unable to create controller.", zap.Error(err))
+			return nil, err
+		}
 
-	// Watch the K8s Services that are owned by Channels.
-	err = c.Watch(&source.Kind{
-		Type: &corev1.Service{},
-	}, &handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.Channel{}, IsController: true})
-	if err != nil {
-		logger.Error("Unable to watch K8s Services.", zap.Error(err))
-		return nil, err
-	}
+		// Watch Channels.
+		err = c.Watch(&source.Kind{
+			Type: &eventingv1alpha1.Channel{},
+		}, &handler.EnqueueRequestForObject{})
+		if err != nil {
+			logger.Error("Unable to watch Channels.", zap.Error(err), zap.Any("type", &eventingv1alpha1.Channel{}))
+			return nil, err
+		}
 
-	// Watch the VirtualServices that are owned by Channels.
-	err = c.Watch(&source.Kind{
-		Type: &istiov1alpha3.VirtualService{},
-	}, &handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.Channel{}, IsController: true})
-	if err != nil {
-		logger.Error("Unable to watch VirtualServices.", zap.Error(err))
-		return nil, err
-	}
+		// Watch the K8s Services that are owned by Channels.
+		err = c.Watch(&source.Kind{
+			Type: &corev1.Service{},
+		}, &handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.Channel{}, IsController: true})
+		if err != nil {
+			logger.Error("Unable to watch K8s Services.", zap.Error(err))
+			return nil, err
+		}
 
-	return c, nil
+		// Watch the VirtualServices that are owned by Channels.
+		err = c.Watch(&source.Kind{
+			Type: &istiov1alpha3.VirtualService{},
+		}, &handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.Channel{}, IsController: true})
+		if err != nil {
+			logger.Error("Unable to watch VirtualServices.", zap.Error(err))
+			return nil, err
+		}
+
+		return c, nil
+	}
 }

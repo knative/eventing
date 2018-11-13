@@ -18,40 +18,29 @@ package channel
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
-	"golang.org/x/oauth2/google"
-	"k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-
-	eventduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-
-	"github.com/knative/pkg/logging"
-
-	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	"cloud.google.com/go/pubsub"
+	eventduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/controller"
 	util "github.com/knative/eventing/pkg/provisioners"
 	ccpcontroller "github.com/knative/eventing/pkg/provisioners/gcppubsub/clusterchannelprovisioner"
+	"github.com/knative/pkg/logging"
+	"go.uber.org/zap"
+	"golang.org/x/oauth2/google"
+	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
 	finalizerName = controllerAgentName
 )
-
-type pubsubArgs struct {
-	GoogleCloudProject string
-	Secret             v1.ObjectReference
-	Key                string
-}
 
 type reconciler struct {
 	client   client.Client
@@ -59,6 +48,10 @@ type reconciler struct {
 	logger   *zap.Logger
 
 	pubSubClientCreator pubSubClientCreator
+
+	defaultGcpProject string
+	defaultSecret     v1.ObjectReference
+	defaultSecretKey  string
 }
 
 // Verify the struct implements reconcile.Reconciler
@@ -100,13 +93,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// Modify a copy, not the original.
 	c = c.DeepCopy()
 
-	args, err := unmarshalArguments(c.Spec.Arguments.Raw)
-	if err != nil {
-		logger.Info("Unable to unmarshal the Arguments")
-		return reconcile.Result{}, err
-	}
-
-	err = r.reconcile(ctx, c, args)
+	err = r.reconcile(ctx, c)
 	if err != nil {
 		logger.Info("Error reconciling Channel", zap.Error(err))
 		// Note that we do not return the error here, because we want to update the Status
@@ -130,7 +117,7 @@ func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 	return false
 }
 
-func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel, args pubsubArgs) error {
+func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) error {
 	ctx = logging.WithLogger(ctx, r.logger.With(zap.Any("channel", c)).Sugar())
 
 	c.Status.InitializeConditions()
@@ -142,7 +129,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel,
 	// 4. The GCP PubSub Subscriptions.
 
 	// Regardless of what we are going to do, we need GCP credentials to do it.
-	gcpCreds, err := r.getCredential(ctx, args.Secret, args.Key)
+	gcpCreds, err := r.getCredential(ctx, r.defaultSecret, r.defaultSecretKey)
 	if err != nil {
 		logging.FromContext(ctx).Info("Unable to generate GCP creds", zap.Error(err))
 		return err
@@ -151,12 +138,12 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel,
 	if c.DeletionTimestamp != nil {
 		// K8s garbage collection will delete the K8s service and VirtualService for this channel.
 		// We use a finalizer to ensure the GCP PubSub Topic and Subscriptions are deleted.
-		err = r.deleteSubscriptions(ctx, c, gcpCreds, args.GoogleCloudProject)
+		err = r.deleteSubscriptions(ctx, c, gcpCreds, r.defaultGcpProject)
 		if err != nil {
 			logging.FromContext(ctx).Info("Unable to delete subscriptions", zap.Error(err))
 			return err
 		}
-		err = r.deleteTopic(ctx, c, gcpCreds, args.GoogleCloudProject)
+		err = r.deleteTopic(ctx, c, gcpCreds, r.defaultGcpProject)
 		if err != nil {
 			logging.FromContext(ctx).Info("Unable to delete topic", zap.Error(err))
 			return err
@@ -177,12 +164,12 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel,
 		return err
 	}
 
-	topic, err := r.createTopic(ctx, c, gcpCreds, args.GoogleCloudProject)
+	topic, err := r.createTopic(ctx, c, gcpCreds, r.defaultGcpProject)
 	if err != nil {
 		return err
 	}
 
-	err = r.createSubscriptions(ctx, c, gcpCreds, args.GoogleCloudProject, topic)
+	err = r.createSubscriptions(ctx, c, gcpCreds, r.defaultGcpProject, topic)
 	if err != nil {
 		return err
 	}
@@ -341,15 +328,4 @@ func generateTopicName(c *eventingv1alpha1.Channel) string {
 
 func generateSubName(cs *eventduck.ChannelSubscriberSpec) string {
 	return fmt.Sprintf("knative-eventing-channel-%s-%s", cs.Ref.Name, cs.Ref.UID)
-}
-
-// unmarshalArguments unmarshal's a json/yaml serialized input and returns channelArgs
-func unmarshalArguments(bytes []byte) (pubsubArgs, error) {
-	var arguments pubsubArgs
-	if len(bytes) > 0 {
-		if err := json.Unmarshal(bytes, &arguments); err != nil {
-			return arguments, fmt.Errorf("error unmarshalling arguments: %s", err)
-		}
-	}
-	return arguments, nil
 }

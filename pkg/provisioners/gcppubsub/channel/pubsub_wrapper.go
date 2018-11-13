@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 
+	"google.golang.org/api/option"
+
 	"golang.org/x/oauth2/google"
 
 	"cloud.google.com/go/pubsub"
@@ -29,6 +31,20 @@ import (
 
 // pubSubClientCreator creates a pubSubClient.
 type pubSubClientCreator func(ctx context.Context, creds *google.Credentials, googleCloudProject string) (pubSubClient, error)
+
+// gcpPubSubClientCreator creates a real GCP PubSub client. It should always be used, except during
+// unit tests.
+func gcpPubSubClientCreator(ctx context.Context, creds *google.Credentials, googleCloudProject string) (pubSubClient, error) {
+	// Auth to GCP is handled by having the GOOGLE_APPLICATION_CREDENTIALS environment variable
+	// pointing at a credential file.
+	psc, err := pubsub.NewClient(ctx, googleCloudProject, option.WithCredentials(creds))
+	if err != nil {
+		return nil, err
+	}
+	return &realGcpPubSubClient{
+		client: psc,
+	}, nil
+}
 
 // pubSubClient is the set of methods we use on pubsub.Client.
 type pubSubClient interface {
