@@ -128,9 +128,18 @@ metadata:
   namespace: knative-eventing
 rules:
   - apiGroups:
+      - eventing.knative.dev
+    resources:
+      - channels
+    verbs:
+      - get
+      - list
+      - watch
+      - update
+  - apiGroups:
       - "" # Core API group.
     resources:
-      - configmaps
+      - secrets
     verbs:
       - get
       - list
@@ -171,10 +180,10 @@ spec:
         sidecar.istio.io/inject: "true"
       labels: *labels
     spec:
-      serviceAccountName: in-memory-channel-dispatcher
+      serviceAccountName: gcp-pubsub-channel-dispatcher
       containers:
         - name: dispatcher
-          image: github.com/knative/eventing/pkg/provisioners/gcppubsub/dispatcher
+          image: github.com/knative/eventing/pkg/provisioners/gcppubsub/dispatcher/cmd
           env:
             - name: DEFAULT_GCP_PROJECT
               value: REPLACE_WITH_GCP_PROJECT
@@ -184,3 +193,21 @@ spec:
               value: gcppubsub-channel-key
             - name: DEFAULT_SECRET_KEY
               value: key.json
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: gcp-pubsub-clusterbus
+  namespace: knative-eventing
+spec:
+  type: ClusterIP
+  selector:
+    clusterChannelProvisioner: gcp-pubsub
+    role: dispatcher
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080

@@ -21,14 +21,16 @@ import (
 	"log"
 	"os"
 
+	"github.com/knative/eventing/pkg/provisioners/gcppubsub/dispatcher/receiver"
+	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
+	"k8s.io/api/core/v1"
+
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/buses"
-	"github.com/knative/eventing/pkg/provisioners/gcppubsub/channel"
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/clusterchannelprovisioner"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
-	"k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -50,6 +52,8 @@ func main() {
 	)
 	flag.Parse()
 
+	logger.Info("Starting...")
+
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
 	if err != nil {
 		logger.Fatal("Error starting up.", zap.Error(err))
@@ -59,12 +63,6 @@ func main() {
 	eventingv1alpha1.AddToScheme(mgr.GetScheme())
 	istiov1alpha3.AddToScheme(mgr.GetScheme())
 
-	// The controllers for both the ClusterChannelProvisioner and the Channels created by that
-	// ClusterChannelProvisioner run in this process.
-	_, err = clusterchannelprovisioner.ProvideController(mgr, logger.Desugar())
-	if err != nil {
-		logger.Fatal("Unable to create Provisioner controller", zap.Error(err))
-	}
 	defaultGcpProject := getRequiredEnv(defaultGcpProjectEnv)
 	defaultSecret := v1.ObjectReference{
 		APIVersion: v1.SchemeGroupVersion.String(),
@@ -73,14 +71,20 @@ func main() {
 		Name:       getRequiredEnv(defaultSecretNameEnv),
 	}
 	defaultSecretKey := getRequiredEnv(defaultSecretKeyEnv)
-	_, err = channel.ProvideController(defaultGcpProject, defaultSecret, defaultSecretKey)(mgr, logger.Desugar())
-	if err != nil {
-		logger.Fatal("Unable to create Channel controller", zap.Error(err))
-	}
+	// _, err = channel.ProvideController(defaultGcpProject, defaultSecret, defaultSecretKey)(mgr, logger.Desugar())
+	// if err != nil {
+	// 	logger.Fatal("Unable to create Channel controller", zap.Error(err))
+	// }
+
+	r := receiver.New(logger.Desugar(), mgr.GetClient(), util.GcpPubSubClientCreator, defaultGcpProject, defaultSecret, defaultSecretKey)
+	mr := r.NewMessageReceiver()
+	mgr.Add(mr)
+	logger.Info("Adding message receiver")
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 	// Start blocks forever.
+	logger.Info("Manager starting...")
 	err = mgr.Start(stopCh)
 	if err != nil {
 		logger.Fatal("Manager.Start() returned an error", zap.Error(err))

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package channel
+package util
 
 import (
 	"context"
@@ -30,11 +30,11 @@ import (
 // This file exists so that we can unit test failures with the PubSub client.
 
 // pubSubClientCreator creates a pubSubClient.
-type pubSubClientCreator func(ctx context.Context, creds *google.Credentials, googleCloudProject string) (pubSubClient, error)
+type PubSubClientCreator func(ctx context.Context, creds *google.Credentials, googleCloudProject string) (PubSubClient, error)
 
 // gcpPubSubClientCreator creates a real GCP PubSub client. It should always be used, except during
 // unit tests.
-func gcpPubSubClientCreator(ctx context.Context, creds *google.Credentials, googleCloudProject string) (pubSubClient, error) {
+func GcpPubSubClientCreator(ctx context.Context, creds *google.Credentials, googleCloudProject string) (PubSubClient, error) {
 	// Auth to GCP is handled by having the GOOGLE_APPLICATION_CREDENTIALS environment variable
 	// pointing at a credential file.
 	psc, err := pubsub.NewClient(ctx, googleCloudProject, option.WithCredentials(creds))
@@ -47,16 +47,16 @@ func gcpPubSubClientCreator(ctx context.Context, creds *google.Credentials, goog
 }
 
 // pubSubClient is the set of methods we use on pubsub.Client.
-type pubSubClient interface {
-	SubscriptionInProject(id, projectId string) pubSubSubscription
-	CreateSubscription(ctx context.Context, id string, topic pubSubTopic) (pubSubSubscription, error)
-	Topic(id string) pubSubTopic
-	CreateTopic(ctx context.Context, id string) (pubSubTopic, error)
+type PubSubClient interface {
+	SubscriptionInProject(id, projectId string) PubSubSubscription
+	CreateSubscription(ctx context.Context, id string, topic PubSubTopic) (PubSubSubscription, error)
+	Topic(id string) PubSubTopic
+	CreateTopic(ctx context.Context, id string) (PubSubTopic, error)
 }
 
 // realGcpPubSubClient is the client that will be used everywhere except unit tests. Verify that it
 // satisfies the interface.
-var _ pubSubClient = &realGcpPubSubClient{}
+var _ PubSubClient = &realGcpPubSubClient{}
 
 // realGcpPubSubClient wraps a real GCP PubSub client, so that it matches the pubSubClient
 // interface. It is needed because the real SubscriptionInProject returns a struct and does not
@@ -65,33 +65,34 @@ type realGcpPubSubClient struct {
 	client *pubsub.Client
 }
 
-func (c *realGcpPubSubClient) SubscriptionInProject(id, projectId string) pubSubSubscription {
+func (c *realGcpPubSubClient) SubscriptionInProject(id, projectId string) PubSubSubscription {
 	return c.client.SubscriptionInProject(id, projectId)
 }
 
-func (c *realGcpPubSubClient) CreateSubscription(ctx context.Context, id string, topic pubSubTopic) (pubSubSubscription, error) {
+func (c *realGcpPubSubClient) CreateSubscription(ctx context.Context, id string, topic PubSubTopic) (PubSubSubscription, error) {
 	// We are using the real client, so this better be a real *pubsub.Topic...
-	realTopic, ok := topic.(*pubsub.Topic)
+	realTopic, ok := topic.(*realGcpPubSubTopic)
 	if !ok {
-		return nil, errors.New("topic was not a real *pubsub.Topic")
+		return nil, errors.New("topic was not a *realGcpPubSubTopic")
 	}
 	cfg := pubsub.SubscriptionConfig{
-		Topic: realTopic,
+		Topic: realTopic.topic,
 	}
 	return c.client.CreateSubscription(ctx, id, cfg)
 }
 
-func (c *realGcpPubSubClient) Topic(id string) pubSubTopic {
-	return c.client.Topic(id)
+func (c *realGcpPubSubClient) Topic(id string) PubSubTopic {
+	return &realGcpPubSubTopic{topic: c.client.Topic(id)}
 }
 
-func (c *realGcpPubSubClient) CreateTopic(ctx context.Context, id string) (pubSubTopic, error) {
-	return c.client.CreateTopic(ctx, id)
+func (c *realGcpPubSubClient) CreateTopic(ctx context.Context, id string) (PubSubTopic, error) {
+	topic, err := c.client.CreateTopic(ctx, id)
+	return &realGcpPubSubTopic{topic: topic}, err
 }
 
 // pubSubSubscription is the set of methods we use on pubsub.Subscription. It exists to make
 // pubSubClient unit testable.
-type pubSubSubscription interface {
+type PubSubSubscription interface {
 	Exists(ctx context.Context) (bool, error)
 	ID() string
 	Delete(ctx context.Context) error
@@ -99,12 +100,45 @@ type pubSubSubscription interface {
 
 // pubsub.Subscription is the real pubSubSubscription that is used everywhere except unit tests.
 // Verify that it satisfies the interface.
-var _ pubSubSubscription = &pubsub.Subscription{}
+var _ PubSubSubscription = &pubsub.Subscription{}
 
-type pubSubTopic interface {
+type PubSubTopic interface {
 	Exists(ctx context.Context) (bool, error)
 	ID() string
 	Delete(ctx context.Context) error
+	Publish(ctx context.Context, msg *pubsub.Message) PubSubPublishResult
+	Stop()
 }
 
-var _ pubSubTopic = &pubsub.Topic{}
+type realGcpPubSubTopic struct {
+	topic *pubsub.Topic
+}
+
+var _ PubSubTopic = &realGcpPubSubTopic{}
+
+func (t *realGcpPubSubTopic) Exists(ctx context.Context) (bool, error) {
+	return t.topic.Exists(ctx)
+}
+
+func (t *realGcpPubSubTopic) ID() string {
+	return t.topic.ID()
+}
+
+func (t *realGcpPubSubTopic) Delete(ctx context.Context) error {
+	return t.topic.Delete(ctx)
+}
+
+func (t *realGcpPubSubTopic) Publish(ctx context.Context, msg *pubsub.Message) PubSubPublishResult {
+	return t.topic.Publish(ctx, msg)
+}
+
+func (t *realGcpPubSubTopic) Stop() {
+	t.topic.Stop()
+}
+
+type PubSubPublishResult interface {
+	Ready() <-chan struct{}
+	Get(ctx context.Context) (serverID string, err error)
+}
+
+var _ PubSubPublishResult = &pubsub.PublishResult{}

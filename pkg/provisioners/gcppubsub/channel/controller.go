@@ -18,6 +18,7 @@ package channel
 
 import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	pubsubutil "github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -45,7 +46,7 @@ func ProvideController(defaultGcpProject string, defaultSecret corev1.ObjectRefe
 			defaultGcpProject:   defaultGcpProject,
 			defaultSecret:       defaultSecret,
 			defaultSecretKey:    defaultSecretKey,
-			pubSubClientCreator: gcpPubSubClientCreator,
+			pubSubClientCreator: pubsubutil.GcpPubSubClientCreator,
 		}
 		c, err := controller.New(controllerAgentName, mgr, controller.Options{
 			Reconciler: r,

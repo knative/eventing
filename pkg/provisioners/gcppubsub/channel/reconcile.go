@@ -18,21 +18,19 @@ package channel
 
 import (
 	"context"
-	"fmt"
 
-	"cloud.google.com/go/pubsub"
 	eventduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/controller"
 	util "github.com/knative/eventing/pkg/provisioners"
 	ccpcontroller "github.com/knative/eventing/pkg/provisioners/gcppubsub/clusterchannelprovisioner"
+	pubsubutil "github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
 	"github.com/knative/pkg/logging"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2/google"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -47,7 +45,7 @@ type reconciler struct {
 	recorder record.EventRecorder
 	logger   *zap.Logger
 
-	pubSubClientCreator pubSubClientCreator
+	pubSubClientCreator pubsubutil.PubSubClientCreator
 
 	defaultGcpProject string
 	defaultSecret     v1.ObjectReference
@@ -129,7 +127,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	// 4. The GCP PubSub Subscriptions.
 
 	// Regardless of what we are going to do, we need GCP credentials to do it.
-	gcpCreds, err := r.getCredential(ctx, r.defaultSecret, r.defaultSecretKey)
+	gcpCreds, err := pubsubutil.GetCredentials(ctx, r.client, r.defaultSecret, r.defaultSecretKey)
 	if err != nil {
 		logging.FromContext(ctx).Info("Unable to generate GCP creds", zap.Error(err))
 		return err
@@ -178,28 +176,6 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	return nil
 }
 
-func (r *reconciler) getCredential(ctx context.Context, ref v1.ObjectReference, key string) (*google.Credentials, error) {
-	secret := &v1.Secret{}
-	err := r.client.Get(ctx, types.NamespacedName{Namespace: ref.Namespace, Name: ref.Name}, secret)
-	if err != nil {
-		logging.FromContext(ctx).Info("Unable to read the secret", zap.Any("secretRef", ref))
-		return nil, err
-	}
-
-	bytes, present := secret.Data[key]
-	if !present {
-		logging.FromContext(ctx).Info("Secret did not contain the key", zap.String("key", key))
-		return nil, fmt.Errorf("secret did not contain the key '%s'", key)
-	}
-
-	creds, err := google.CredentialsFromJSON(ctx, bytes, pubsub.ScopePubSub)
-	if err != nil {
-		logging.FromContext(ctx).Info("Unable to create the GCP credential", zap.Error(err))
-		return nil, err
-	}
-	return creds, nil
-}
-
 func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.Channel) error {
 	svc, err := util.CreateK8sService(ctx, r.client, c)
 	if err != nil {
@@ -231,12 +207,12 @@ func (r *reconciler) createVirtualService(ctx context.Context, c *eventingv1alph
 	return nil
 }
 
-func (r *reconciler) createTopic(ctx context.Context, c *eventingv1alpha1.Channel, gcpCreds *google.Credentials, gcpProject string) (pubSubTopic, error) {
+func (r *reconciler) createTopic(ctx context.Context, c *eventingv1alpha1.Channel, gcpCreds *google.Credentials, gcpProject string) (pubsubutil.PubSubTopic, error) {
 	psc, err := r.pubSubClientCreator(ctx, gcpCreds, gcpProject)
 	if err != nil {
 		return nil, err
 	}
-	topic := psc.Topic(generateTopicName(c))
+	topic := psc.Topic(pubsubutil.GenerateTopicName(c.Namespace, c.Name))
 	exists, err := topic.Exists(ctx)
 	if err != nil {
 		return nil, err
@@ -253,7 +229,7 @@ func (r *reconciler) deleteTopic(ctx context.Context, c *eventingv1alpha1.Channe
 	if err != nil {
 		return err
 	}
-	topic := psc.Topic(generateTopicName(c))
+	topic := psc.Topic(pubsubutil.GenerateTopicName(c.Namespace, c.Name))
 	exists, err := topic.Exists(ctx)
 	if err != nil {
 		return err
@@ -264,7 +240,7 @@ func (r *reconciler) deleteTopic(ctx context.Context, c *eventingv1alpha1.Channe
 	return topic.Delete(ctx)
 }
 
-func (r *reconciler) createSubscriptions(ctx context.Context, c *eventingv1alpha1.Channel, gcpCreds *google.Credentials, gcpProject string, topic pubSubTopic) error {
+func (r *reconciler) createSubscriptions(ctx context.Context, c *eventingv1alpha1.Channel, gcpCreds *google.Credentials, gcpProject string, topic pubsubutil.PubSubTopic) error {
 	if c.Spec.Subscribable != nil {
 		for _, sub := range c.Spec.Subscribable.Subscribers {
 			_, err := r.createSubscription(ctx, gcpCreds, gcpProject, topic, &sub)
@@ -277,12 +253,12 @@ func (r *reconciler) createSubscriptions(ctx context.Context, c *eventingv1alpha
 	return nil
 }
 
-func (r *reconciler) createSubscription(ctx context.Context, gcpCreds *google.Credentials, gcpProject string, topic pubSubTopic, cs *eventduck.ChannelSubscriberSpec) (pubSubSubscription, error) {
+func (r *reconciler) createSubscription(ctx context.Context, gcpCreds *google.Credentials, gcpProject string, topic pubsubutil.PubSubTopic, cs *eventduck.ChannelSubscriberSpec) (pubsubutil.PubSubSubscription, error) {
 	psc, err := r.pubSubClientCreator(ctx, gcpCreds, gcpProject)
 	if err != nil {
 		return nil, err
 	}
-	sub := psc.SubscriptionInProject(generateSubName(cs), gcpProject)
+	sub := psc.SubscriptionInProject(pubsubutil.GenerateSubName(cs), gcpProject)
 	if exists, err := sub.Exists(ctx); err != nil {
 		return nil, err
 	} else if exists {
@@ -315,19 +291,11 @@ func (r *reconciler) deleteSubscription(ctx context.Context, gcpCreds *google.Cr
 	if err != nil {
 		return err
 	}
-	sub := psc.SubscriptionInProject(generateSubName(cs), gcpProject)
+	sub := psc.SubscriptionInProject(pubsubutil.GenerateSubName(cs), gcpProject)
 	if exists, err := sub.Exists(ctx); err != nil {
 		return err
 	} else if !exists {
 		return nil
 	}
 	return sub.Delete(ctx)
-}
-
-func generateTopicName(c *eventingv1alpha1.Channel) string {
-	return fmt.Sprintf("knative-eventing-channel-%s-%s-%s", c.Namespace, c.Name, c.UID)
-}
-
-func generateSubName(cs *eventduck.ChannelSubscriberSpec) string {
-	return fmt.Sprintf("knative-eventing-channel-%s-%s", cs.Ref.Name, cs.Ref.UID)
 }
