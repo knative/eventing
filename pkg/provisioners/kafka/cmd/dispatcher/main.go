@@ -17,10 +17,9 @@ limitations under the License.
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
-	"strings"
+	"os"
 
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -31,38 +30,24 @@ import (
 
 	provisionerController "github.com/knative/eventing/pkg/provisioners/kafka/controller"
 	"github.com/knative/eventing/pkg/provisioners/kafka/dispatcher"
-	"github.com/knative/eventing/pkg/sidecar/configmap/filesystem"
 	"github.com/knative/eventing/pkg/sidecar/configmap/watcher"
-	"github.com/knative/eventing/pkg/sidecar/swappable"
 	"github.com/knative/eventing/pkg/system"
 )
 
 const (
 	defaultConfigMapName = "kafka-channel-dispatcher-config-map"
-
-	// The following are the only valid values of the config_map_noticer flag.
-	cmnfVolume  = "volume"
-	cmnfWatcher = "watcher"
 )
-
-var (
-	configMapNoticer   string
-	configMapNamespace string
-	configMapName      string
-)
-
-func init() {
-	flag.StringVar(&configMapNoticer, "config_map_noticer", "", fmt.Sprintf("The system to notice changes to the ConfigMap. Valid values are: %s", configMapNoticerValues()))
-	flag.StringVar(&configMapNamespace, "config_map_namespace", system.Namespace, "The namespace of the ConfigMap that is watched for configuration.")
-	flag.StringVar(&configMapName, "config_map_name", defaultConfigMapName, "The name of the ConfigMap that is watched for configuration.")
-}
-
-func configMapNoticerValues() string {
-	return strings.Join([]string{cmnfVolume, cmnfWatcher}, ", ")
-}
 
 func main() {
-	flag.Parse()
+
+	configMapName := os.Getenv("DISPATCHER_CONFIGMAP_NAME")
+	if configMapName == "" {
+		configMapName = defaultConfigMapName
+	}
+	configMapNamespace := os.Getenv("DISPATCHER_CONFIGMAP_NAMESPACE")
+	if configMapNamespace == "" {
+		configMapNamespace = system.Namespace
+	}
 
 	logger, err := zap.NewProduction()
 	if err != nil {
@@ -84,10 +69,16 @@ func main() {
 		logger.Fatal("unable to create kafka dispatcher.", zap.Error(err))
 	}
 
-	err = setupConfigMapNoticer(mgr, logger, kafkaDispatcher.UpdateConfig)
+	kc, err := kubernetes.NewForConfig(mgr.GetConfig())
 	if err != nil {
-		logger.Fatal("unable to create configMap noticer.", zap.Error(err))
+		logger.Fatal("unable to create kubernetes client.", zap.Error(err))
 	}
+
+	cmw, err := watcher.NewWatcher(logger, kc, configMapNamespace, configMapName, kafkaDispatcher.UpdateConfig)
+	if err != nil {
+		logger.Fatal("unable to create configmap watcher", zap.String("configmap", fmt.Sprintf("%s/%s", configMapNamespace, configMapName)))
+	}
+	mgr.Add(cmw)
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
@@ -109,45 +100,4 @@ func main() {
 		logger.Error("Either the kafka message receiver or the ConfigMap noticer failed.", zap.Error(err))
 	}
 
-}
-
-func setupConfigMapNoticer(mgr manager.Manager, logger *zap.Logger, configUpdated swappable.UpdateConfig) error {
-	var err error
-	switch configMapNoticer {
-	case cmnfVolume:
-		err = setupConfigMapVolume(logger, mgr, configUpdated)
-	case cmnfWatcher:
-		err = setupConfigMapWatcher(logger, mgr, configUpdated)
-	default:
-		err = fmt.Errorf("need to provide the --config_map_noticer flag (valid values are %s)", configMapNoticerValues())
-	}
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func setupConfigMapVolume(logger *zap.Logger, mgr manager.Manager, configUpdated swappable.UpdateConfig) error {
-	cmn, err := filesystem.NewConfigMapWatcher(logger, filesystem.ConfigDir, configUpdated)
-	if err != nil {
-		logger.Error("Unable to create filesystem.ConifgMapWatcher", zap.Error(err))
-		return err
-	}
-	mgr.Add(cmn)
-	return nil
-}
-
-func setupConfigMapWatcher(logger *zap.Logger, mgr manager.Manager, configUpdated swappable.UpdateConfig) error {
-	kc, err := kubernetes.NewForConfig(mgr.GetConfig())
-	if err != nil {
-		return err
-	}
-
-	cmw, err := watcher.NewWatcher(logger, kc, configMapNamespace, configMapName, configUpdated)
-	if err != nil {
-		return err
-	}
-
-	mgr.Add(cmw)
-	return nil
 }

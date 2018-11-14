@@ -182,10 +182,13 @@ spec:
       containers:
         - name: dispatcher
           image: github.com/knative/eventing/pkg/provisioners/kafka/cmd/dispatcher
-          args:
-            - --config_map_noticer=watcher
-            - --config_map_namespace=knative-eventing
-            - --config_map_name=kafka-channel-dispatcher-config-map
+          env:
+            - name: DISPATCHER_CONFIGMAP_NAME
+              value: kafka-channel-dispatcher-config-map
+            - name: DISPATCHER_CONFIGMAP_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           volumeMounts:
             - name: kafka-channel-controller-config
               mountPath: /etc/config-provisioner

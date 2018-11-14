@@ -84,7 +84,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	if !r.shouldReconcile(channel, clusterChannelProvisioner) {
-		return reconcile.Result{}, err
+		return reconcile.Result{}, nil
 	}
 
 	newChannel := channel.DeepCopy()
@@ -275,9 +275,13 @@ func (r *reconciler) writeConfigMap(ctx context.Context, config *multichannelfan
 	if errors.IsNotFound(err) {
 		cm = r.createNewConfigMap(updated)
 		err = r.client.Create(ctx, cm)
+		if err != nil {
+			logger.Info("Unable to create ConfigMap", zap.Error(err))
+			return err
+		}
 	}
 	if err != nil {
-		logger.Info("Unable to get/create ConfigMap", zap.Error(err))
+		logger.Info("Unable to get ConfigMap", zap.Error(err))
 		return err
 	}
 

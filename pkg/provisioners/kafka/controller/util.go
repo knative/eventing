@@ -24,10 +24,12 @@ func GetProvisionerConfig(path string) (*KafkaProvisionerConfig, error) {
 
 	config := &KafkaProvisionerConfig{}
 
-	if value, ok := configMap[BrokerConfigMapKey]; ok {
-		bootstrapServers := strings.Split(value, ",")
-		if len(bootstrapServers) == 0 {
-			return nil, fmt.Errorf("missing kafka brokers in provisioner configuration")
+	if brokers, ok := configMap[BrokerConfigMapKey]; ok {
+		bootstrapServers := strings.Split(brokers, ",")
+		for _, s := range bootstrapServers {
+			if len(s) == 0 {
+				return nil, fmt.Errorf("empty %s value in provisioner configuration", BrokerConfigMapKey)
+			}
 		}
 		config.Brokers = bootstrapServers
 		return config, nil
