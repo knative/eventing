@@ -276,11 +276,13 @@ func (r *reconciler) createSubscription(ctx context.Context, gcpCreds *google.Cr
 }
 
 func (r *reconciler) deleteSubscriptions(ctx context.Context, c *eventingv1alpha1.Channel, gcpCreds *google.Credentials, gcpProject string) error {
-	for _, sub := range c.Spec.Subscribable.Subscribers {
-		err := r.deleteSubscription(ctx, gcpCreds, gcpProject, &sub)
-		if err != nil {
-			logging.FromContext(ctx).Info("Unable to create subscribers", zap.Error(err), zap.Any("channelSubscriber", sub))
-			return err
+	if c.Spec.Subscribable != nil {
+		for _, sub := range c.Spec.Subscribable.Subscribers {
+			err := r.deleteSubscription(ctx, gcpCreds, gcpProject, &sub)
+			if err != nil {
+				logging.FromContext(ctx).Info("Unable to create subscribers", zap.Error(err), zap.Any("channelSubscriber", sub))
+				return err
+			}
 		}
 	}
 	return nil

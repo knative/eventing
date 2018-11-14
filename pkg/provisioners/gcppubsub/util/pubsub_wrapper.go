@@ -115,11 +115,11 @@ func (s *realGcpPubSubSubscription) Exists(ctx context.Context) (bool, error) {
 }
 
 func (s *realGcpPubSubSubscription) ID() string {
-	return s.ID()
+	return s.sub.ID()
 }
 
 func (s *realGcpPubSubSubscription) Delete(ctx context.Context) error {
-	return s.Delete(ctx)
+	return s.sub.Delete(ctx)
 }
 
 func (s *realGcpPubSubSubscription) Receive(ctx context.Context, f func(context.Context, PubSubMessage)) error {

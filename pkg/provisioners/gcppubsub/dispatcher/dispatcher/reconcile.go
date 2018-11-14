@@ -160,7 +160,10 @@ func subscriptionKey(sub *v1alpha1.ChannelSubscriberSpec) types.NamespacedName {
 func (r *reconciler) stopAllSubscriptions(ctx context.Context, c *eventingv1alpha1.Channel) {
 	r.subscriptionsLock.Lock()
 	defer r.subscriptionsLock.Unlock()
+	r.stopAllSubscriptionsUnderLock(ctx, c)
+}
 
+func (r *reconciler) stopAllSubscriptionsUnderLock(ctx context.Context, c *eventingv1alpha1.Channel) {
 	channelKey := key(c)
 	if subscribers, present := r.subscriptions[channelKey]; present {
 		for _, subCancel := range subscribers {
@@ -177,7 +180,7 @@ func (r *reconciler) syncSubscriptions(ctx context.Context, c *eventingv1alpha1.
 	subscribers := c.Spec.Subscribable
 	if subscribers == nil {
 		// There are no subscribers.
-		r.stopAllSubscriptions(ctx, c)
+		r.stopAllSubscriptionsUnderLock(ctx, c)
 		return nil
 	}
 
@@ -185,7 +188,7 @@ func (r *reconciler) syncSubscriptions(ctx context.Context, c *eventingv1alpha1.
 	// copy.
 	subscribers = subscribers.DeepCopy()
 	for _, subscriber := range subscribers.Subscribers {
-		err := r.createSubscription(ctx, c, &subscriber)
+		err := r.createSubscriptionUnderLock(ctx, c, &subscriber)
 		if err != nil {
 			return err
 		}
@@ -211,11 +214,11 @@ func (r *reconciler) syncSubscriptions(ctx context.Context, c *eventingv1alpha1.
 	return nil
 }
 
-func (r *reconciler) createSubscription(ctx context.Context, c *eventingv1alpha1.Channel, sub *v1alpha1.ChannelSubscriberSpec) error {
+func (r *reconciler) createSubscriptionUnderLock(ctx context.Context, c *eventingv1alpha1.Channel, sub *v1alpha1.ChannelSubscriberSpec) error {
 	ctxWithCancel, cancelFunc := context.WithCancel(ctx)
 
 	channelKey := key(c)
-	if r.subscriptions[channelKey] != nil {
+	if r.subscriptions[channelKey] == nil {
 		r.subscriptions[channelKey] = map[types.NamespacedName]context.CancelFunc{}
 	}
 	subKey := subscriptionKey(sub)
@@ -238,7 +241,8 @@ func (r *reconciler) createSubscription(ctx context.Context, c *eventingv1alpha1
 
 	// subscription.Receive blocks, so run it in a goroutine.
 	go func() {
-		err := subscription.Receive(ctxWithCancel, func(ctx context.Context, msg pubsubutil.PubSubMessage) {
+		r.logger.Info("subscription.Receive start", zap.Any("sub", sub))
+		receiveErr := subscription.Receive(ctxWithCancel, func(ctx context.Context, msg pubsubutil.PubSubMessage) {
 			message := &buses.Message{
 				Headers: msg.Attributes(),
 				Payload: msg.Data(),
@@ -248,20 +252,25 @@ func (r *reconciler) createSubscription(ctx context.Context, c *eventingv1alpha1
 				r.logger.Info("Message dispatch failed", zap.Error(err), zap.String("pubSubMessageId", msg.ID()), zap.Any("sub", sub))
 				msg.Nack()
 			} else {
-				r.logger.Debug("Message dispatch succeeded", zap.String("pubSubMessageId", msg.ID()), zap.Any("sub", sub))
+				r.logger.Info("Message dispatch succeeded", zap.String("pubSubMessageId", msg.ID()), zap.Any("sub", sub))
 				msg.Ack()
 			}
 		})
-		if err != nil {
-			r.logger.Error("Error receiving messages", zap.Error(err), zap.Any("sub", sub))
-		}
-		r.subscriptionsLock.Lock()
-		defer r.subscriptionsLock.Unlock()
-		delete(r.subscriptions[channelKey], subKey)
-
-		r.reconcileChan <- event.GenericEvent{
-			Meta:   c.GetObjectMeta(),
-			Object: c,
+		// We want to minimize holding the lock. r.reconcileChan may block, so definitely do not do
+		// it under lock. But, to prevent a race condition, we must delete from r.subscriptions
+		// before using r.reconcileChan.
+		func() {
+			r.subscriptionsLock.Lock()
+			defer r.subscriptionsLock.Unlock()
+			delete(r.subscriptions[channelKey], subKey)
+		}()
+		r.logger.Info("subscription.Receive stopped", zap.Any("sub", sub))
+		if receiveErr != nil {
+			r.logger.Error("Error receiving messages", zap.Error(receiveErr), zap.Any("sub", sub))
+			r.reconcileChan <- event.GenericEvent{
+				Meta:   c.GetObjectMeta(),
+				Object: c,
+			}
 		}
 	}()
 	return nil
