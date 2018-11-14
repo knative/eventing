@@ -296,9 +296,8 @@ func (r *reconciler) syncPhysicalChannel(sub *v1alpha1.Subscription, isDeleted b
 		if isDeleted && errors.IsNotFound(patchErr) {
 			glog.Infof("could not find channel %v\n", sub.Spec.Channel)
 			return nil
-		} else {
-			return patchErr
-		}
+		} 
+		return patchErr
 	}
 	return nil
 }
