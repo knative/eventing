@@ -85,7 +85,7 @@ func New(mgr manager.Manager, logger *zap.Logger, defaultGcpProject string, defa
 	}, &handler.EnqueueRequestForOwner{})
 	if err != nil {
 		logger.Error("Unable to watch the reconcile Channel", zap.Error(err))
-		////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	return nil, err
+		return nil, err
 	}
 
 	return c, nil
