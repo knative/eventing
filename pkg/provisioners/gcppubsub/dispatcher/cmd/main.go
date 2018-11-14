@@ -21,9 +21,11 @@ import (
 	"log"
 	"os"
 
+	"github.com/knative/eventing/pkg/provisioners/gcppubsub/dispatcher/dispatcher"
+	"k8s.io/api/core/v1"
+
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/dispatcher/receiver"
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
-	"k8s.io/api/core/v1"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/buses"
@@ -79,7 +81,11 @@ func main() {
 	r := receiver.New(logger.Desugar(), mgr.GetClient(), util.GcpPubSubClientCreator, defaultGcpProject, defaultSecret, defaultSecretKey)
 	mr := r.NewMessageReceiver()
 	mgr.Add(mr)
-	logger.Info("Adding message receiver")
+
+	_, err = dispatcher.New(mgr, logger.Desugar(), defaultGcpProject, defaultSecret, defaultSecretKey)
+	if err != nil {
+		logger.Fatal("Unable to create the dispatcher", zap.Error(err))
+	}
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()

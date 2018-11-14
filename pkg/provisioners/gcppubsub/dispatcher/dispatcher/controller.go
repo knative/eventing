@@ -14,14 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package channel
+package dispatcher
 
 import (
+	"context"
+	"sync"
+
+	"sigs.k8s.io/controller-runtime/pkg/event"
+
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/buses"
 	pubsubutil "github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -35,54 +41,51 @@ const (
 )
 
 // ProvideController returns a Controller that represents the in-memory-channel Provisioner.
-func ProvideController(defaultGcpProject string, defaultSecret corev1.ObjectReference, defaultSecretKey string) func(manager.Manager, *zap.Logger) (controller.Controller, error) {
-	return func(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
-		// Setup a new controller to Reconcile Channels that belong to this Cluster Provisioner
-		// (in-memory channels).
-		r := &reconciler{
-			recorder: mgr.GetRecorder(controllerAgentName),
-			logger:   logger,
+func New(mgr manager.Manager, logger *zap.Logger, defaultGcpProject string, defaultSecret corev1.ObjectReference, defaultSecretKey string) (controller.Controller, error) {
+	reconcileChan := make(chan event.GenericEvent)
 
-			defaultGcpProject:   defaultGcpProject,
-			defaultSecret:       defaultSecret,
-			defaultSecretKey:    defaultSecretKey,
-			pubSubClientCreator: pubsubutil.GcpPubSubClientCreator,
-		}
-		c, err := controller.New(controllerAgentName, mgr, controller.Options{
-			Reconciler: r,
-		})
-		if err != nil {
-			logger.Error("Unable to create controller.", zap.Error(err))
-			return nil, err
-		}
+	// Setup a new controller to Reconcile Channels that belong to this Cluster Provisioner
+	// (in-memory channels).
+	r := &reconciler{
+		recorder: mgr.GetRecorder(controllerAgentName),
+		logger:   logger,
 
-		// Watch Channels.
-		err = c.Watch(&source.Kind{
-			Type: &eventingv1alpha1.Channel{},
-		}, &handler.EnqueueRequestForObject{})
-		if err != nil {
-			logger.Error("Unable to watch Channels.", zap.Error(err), zap.Any("type", &eventingv1alpha1.Channel{}))
-			return nil, err
-		}
+		dispatcher:    buses.NewMessageDispatcher(logger.Sugar()),
+		reconcileChan: reconcileChan,
 
-		// Watch the K8s Services that are owned by Channels.
-		err = c.Watch(&source.Kind{
-			Type: &corev1.Service{},
-		}, &handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.Channel{}, IsController: true})
-		if err != nil {
-			logger.Error("Unable to watch K8s Services.", zap.Error(err))
-			return nil, err
-		}
+		defaultGcpProject:   defaultGcpProject,
+		defaultSecret:       defaultSecret,
+		defaultSecretKey:    defaultSecretKey,
+		pubSubClientCreator: pubsubutil.GcpPubSubClientCreator,
 
-		// Watch the VirtualServices that are owned by Channels.
-		err = c.Watch(&source.Kind{
-			Type: &istiov1alpha3.VirtualService{},
-		}, &handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.Channel{}, IsController: true})
-		if err != nil {
-			logger.Error("Unable to watch VirtualServices.", zap.Error(err))
-			return nil, err
-		}
-
-		return c, nil
+		subscriptionsLock: sync.Mutex{},
+		subscriptions:     map[types.NamespacedName]map[types.NamespacedName]context.CancelFunc{},
 	}
+
+	c, err := controller.New(controllerAgentName, mgr, controller.Options{
+		Reconciler: r,
+	})
+	if err != nil {
+		logger.Error("Unable to create controller.", zap.Error(err))
+		return nil, err
+	}
+
+	// Watch Channels.
+	err = c.Watch(&source.Kind{
+		Type: &eventingv1alpha1.Channel{},
+	}, &handler.EnqueueRequestForObject{})
+	if err != nil {
+		logger.Error("Unable to watch Channels.", zap.Error(err), zap.Any("type", &eventingv1alpha1.Channel{}))
+		return nil, err
+	}
+
+	err = c.Watch(&source.Channel{
+		Source: reconcileChan,
+	}, &handler.EnqueueRequestForOwner{})
+	if err != nil {
+		logger.Error("Unable to watch the reconcile Channel", zap.Error(err))
+		return nil, err
+	}
+
+	return c, nil
 }

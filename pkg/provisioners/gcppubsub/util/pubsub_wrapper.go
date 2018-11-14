@@ -66,7 +66,9 @@ type realGcpPubSubClient struct {
 }
 
 func (c *realGcpPubSubClient) SubscriptionInProject(id, projectId string) PubSubSubscription {
-	return c.client.SubscriptionInProject(id, projectId)
+	return &realGcpPubSubSubscription{
+		sub: c.client.SubscriptionInProject(id, projectId),
+	}
 }
 
 func (c *realGcpPubSubClient) CreateSubscription(ctx context.Context, id string, topic PubSubTopic) (PubSubSubscription, error) {
@@ -78,7 +80,8 @@ func (c *realGcpPubSubClient) CreateSubscription(ctx context.Context, id string,
 	cfg := pubsub.SubscriptionConfig{
 		Topic: realTopic.topic,
 	}
-	return c.client.CreateSubscription(ctx, id, cfg)
+	sub, err := c.client.CreateSubscription(ctx, id, cfg)
+	return &realGcpPubSubSubscription{sub: sub}, err
 }
 
 func (c *realGcpPubSubClient) Topic(id string) PubSubTopic {
@@ -96,11 +99,35 @@ type PubSubSubscription interface {
 	Exists(ctx context.Context) (bool, error)
 	ID() string
 	Delete(ctx context.Context) error
+	Receive(ctx context.Context, f func(context.Context, PubSubMessage)) error
+}
+
+type realGcpPubSubSubscription struct {
+	sub *pubsub.Subscription
 }
 
 // pubsub.Subscription is the real pubSubSubscription that is used everywhere except unit tests.
 // Verify that it satisfies the interface.
-var _ PubSubSubscription = &pubsub.Subscription{}
+var _ PubSubSubscription = &realGcpPubSubSubscription{}
+
+func (s *realGcpPubSubSubscription) Exists(ctx context.Context) (bool, error) {
+	return s.sub.Exists(ctx)
+}
+
+func (s *realGcpPubSubSubscription) ID() string {
+	return s.ID()
+}
+
+func (s *realGcpPubSubSubscription) Delete(ctx context.Context) error {
+	return s.Delete(ctx)
+}
+
+func (s *realGcpPubSubSubscription) Receive(ctx context.Context, f func(context.Context, PubSubMessage)) error {
+	fWrapper := func(ctx context.Context, msg *pubsub.Message) {
+		f(ctx, &realGcpPubSubMessage{msg: msg})
+	}
+	return s.sub.Receive(ctx, fWrapper)
+}
 
 type PubSubTopic interface {
 	Exists(ctx context.Context) (bool, error)
@@ -142,3 +169,37 @@ type PubSubPublishResult interface {
 }
 
 var _ PubSubPublishResult = &pubsub.PublishResult{}
+
+type PubSubMessage interface {
+	ID() string
+	Data() []byte
+	Attributes() map[string]string
+	Ack()
+	Nack()
+}
+
+type realGcpPubSubMessage struct {
+	msg *pubsub.Message
+}
+
+var _ PubSubMessage = &realGcpPubSubMessage{}
+
+func (m *realGcpPubSubMessage) ID() string {
+	return m.msg.ID
+}
+
+func (m *realGcpPubSubMessage) Data() []byte {
+	return m.msg.Data
+}
+
+func (m *realGcpPubSubMessage) Attributes() map[string]string {
+	return m.msg.Attributes
+}
+
+func (m *realGcpPubSubMessage) Ack() {
+	m.msg.Ack()
+}
+
+func (m *realGcpPubSubMessage) Nack() {
+	m.msg.Nack()
+}

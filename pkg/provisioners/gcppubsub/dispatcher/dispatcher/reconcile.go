@@ -14,11 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package channel
+package dispatcher
 
 import (
 	"context"
 	"sync"
+
+	"sigs.k8s.io/controller-runtime/pkg/event"
+
+	"github.com/knative/eventing/pkg/buses"
 
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 
@@ -45,6 +49,9 @@ type reconciler struct {
 	client   client.Client
 	recorder record.EventRecorder
 	logger   *zap.Logger
+
+	dispatcher    *buses.MessageDispatcher
+	reconcileChan chan<- event.GenericEvent
 
 	pubSubClientCreator pubsubutil.PubSubClientCreator
 
@@ -133,8 +140,8 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 	util.AddFinalizer(c, finalizerName)
 
-	r.syncSubscriptions(ctx, c)
-	return nil
+	err := r.syncSubscriptions(ctx, c)
+	return err
 }
 
 func key(c *eventingv1alpha1.Channel) types.NamespacedName {
@@ -154,14 +161,16 @@ func (r *reconciler) stopAllSubscriptions(ctx context.Context, c *eventingv1alph
 	r.subscriptionsLock.Lock()
 	defer r.subscriptionsLock.Unlock()
 
-	if subscribers, present := r.subscriptions[key(c)]; present {
+	channelKey := key(c)
+	if subscribers, present := r.subscriptions[channelKey]; present {
 		for _, subCancel := range subscribers {
 			subCancel()
 		}
 	}
+	delete(r.subscriptions, channelKey)
 }
 
-func (r *reconciler) syncSubscriptions(ctx context.Context, c *eventingv1alpha1.Channel) {
+func (r *reconciler) syncSubscriptions(ctx context.Context, c *eventingv1alpha1.Channel) error {
 	r.subscriptionsLock.Lock()
 	defer r.subscriptionsLock.Unlock()
 
@@ -169,21 +178,24 @@ func (r *reconciler) syncSubscriptions(ctx context.Context, c *eventingv1alpha1.
 	if subscribers == nil {
 		// There are no subscribers.
 		r.stopAllSubscriptions(ctx, c)
-		return
+		return nil
 	}
 
 	// We are going to manipulate subscribers, but don't want it written back, so make a throw away
 	// copy.
 	subscribers = subscribers.DeepCopy()
 	for _, subscriber := range subscribers.Subscribers {
-		r.createSubscription(ctx, c, &subscriber)
+		err := r.createSubscription(ctx, c, &subscriber)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Now remove all subscriptions that are no longer present.
 	channelKey := key(c)
 	activeSubscribers := r.subscriptions[channelKey]
 	if len(subscribers.Subscribers) == len(activeSubscribers) {
-		return
+		return nil
 	}
 
 	subsToDelete := map[types.NamespacedName]bool{}
@@ -196,16 +208,61 @@ func (r *reconciler) syncSubscriptions(ctx context.Context, c *eventingv1alpha1.
 	for subToDelete := range subsToDelete {
 		r.subscriptions[channelKey][subToDelete]()
 	}
+	return nil
 }
 
-func (r *reconciler) createSubscription(ctx context.Context, c *eventingv1alpha1.Channel, sub *v1alpha1.ChannelSubscriberSpec) {
+func (r *reconciler) createSubscription(ctx context.Context, c *eventingv1alpha1.Channel, sub *v1alpha1.ChannelSubscriberSpec) error {
 	ctxWithCancel, cancelFunc := context.WithCancel(ctx)
-
-	// TODO Actually make the subscription, then add this controller to the main func.
 
 	channelKey := key(c)
 	if r.subscriptions[channelKey] != nil {
 		r.subscriptions[channelKey] = map[types.NamespacedName]context.CancelFunc{}
 	}
-	r.subscriptions[channelKey][subscriptionKey(sub)] = cancelFunc
+	subKey := subscriptionKey(sub)
+	r.subscriptions[channelKey][subKey] = cancelFunc
+
+	gcpProject := r.defaultGcpProject
+	creds, err := pubsubutil.GetCredentials(ctx, r.client, r.defaultSecret, r.defaultSecretKey)
+	if err != nil {
+		return err
+	}
+	psc, err := r.pubSubClientCreator(ctxWithCancel, creds, gcpProject)
+	if err != nil {
+		return err
+	}
+
+	subscription := psc.SubscriptionInProject(pubsubutil.GenerateSubName(sub), gcpProject)
+	defaults := buses.DispatchDefaults{
+		Namespace: c.Namespace,
+	}
+
+	// subscription.Receive blocks, so run it in a goroutine.
+	go func() {
+		err := subscription.Receive(ctxWithCancel, func(ctx context.Context, msg pubsubutil.PubSubMessage) {
+			message := &buses.Message{
+				Headers: msg.Attributes(),
+				Payload: msg.Data(),
+			}
+			err := r.dispatcher.DispatchMessage(message, sub.SubscriberURI, sub.ReplyURI, defaults)
+			if err != nil {
+				r.logger.Info("Message dispatch failed", zap.Error(err), zap.String("pubSubMessageId", msg.ID()), zap.Any("sub", sub))
+				msg.Nack()
+			} else {
+				r.logger.Debug("Message dispatch succeeded", zap.String("pubSubMessageId", msg.ID()), zap.Any("sub", sub))
+				msg.Ack()
+			}
+		})
+		if err != nil {
+			r.logger.Error("Error receiving messages", zap.Error(err), zap.Any("sub", sub))
+		}
+		r.subscriptionsLock.Lock()
+		defer r.subscriptionsLock.Unlock()
+		delete(r.subscriptions[channelKey], subKey)
+
+		r.reconcileChan <- event.GenericEvent{
+			Meta:   c.GetObjectMeta(),
+			Object: c,
+		}
+	}()
+	return nil
 }
