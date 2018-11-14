@@ -28,7 +28,7 @@ import (
 func Connect(clusterID string, clientID string, natsURL string, logger *zap.SugaredLogger) (*stan.Conn, error) {
 	sc, err := stan.Connect(clusterID, clientID, stan.NatsURL(natsURL))
 	if err != nil {
-		logger.Errorf("Can't connect to: %s ; error: %v; NATS URL: %s", clusterID, err, natsURL)
+		logger.Errorf("Can't connect with clusterID: %s; clientID: %s; error: %v; NATS URL: %s", clusterID, clientID, err, natsURL)
 	}
 	return &sc, err
 }

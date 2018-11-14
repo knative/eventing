@@ -28,10 +28,8 @@ import (
 )
 
 const (
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
+	// controllerAgentName is the string used by this controller to identify itself when creating events.
 	controllerAgentName = "natss-provisioner-controller"
-	BusType             = "natss"
 	NatssUrl            = "nats://nats-streaming.knative-eventing.svc.cluster.local:4222"
     clientId            = "knative-natss-controller"
 )
@@ -40,10 +38,10 @@ const (
 func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	logger = logger.With(zap.String("controller", controllerAgentName))
 
-	// connect to NATSS
+	// check the connection to NATSS
 	var err error
-	if _, err := stanutil.GetNatssConnection(NatssUrl, clientId, logger.Sugar()); err != nil {
-		logger.Sugar().Errorf("GetNatssConnection(): %v", err)
+	if _, err := stanutil.InitNatssConnection(NatssUrl, clientId, logger.Sugar()); err != nil {
+		logger.Error("InitNatssConnection() failed: ", zap.Error(err))
 		return nil, err
 	}
 

@@ -48,9 +48,9 @@ var (
 )
 
 // ProvideController returns a Controller that represents the NATSS Provisioner.
-func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
+func ProvideController(ss *dispatcher.SubscriptionsSupervisor, mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Channels that belong to this Cluster Provisioner
-	ss, _ := dispatcher.NewDispatcher(logger)
+	//ss, _ := dispatcher.NewDispatcher(logger)
 	r := &reconciler{
 		configMapKey: defaultConfigMapKey,
 		recorder:     mgr.GetRecorder(controllerAgentName),

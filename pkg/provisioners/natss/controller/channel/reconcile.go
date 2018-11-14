@@ -114,7 +114,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 	c.Status.InitializeConditions()
 
-	// We are syncing three things:
+	// We are syncing two things:
 	// 1. The K8s Service to talk to this Channel.
 	// 2. The Istio VirtualService to talk to this Channel.
 
@@ -147,6 +147,6 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		logger.Warn("VirtualService not owned by Channel", zap.Any("channel", c), zap.Any("virtualService", virtualService))
 	}
 
-//	c.Status.MarkProvisioned()
+	c.Status.MarkProvisioned()
 	return nil
 }
