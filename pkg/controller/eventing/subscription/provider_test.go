@@ -25,6 +25,26 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+func TestProvideController(t *testing.T) {
+	//TODO(grantr) This needs a mock of manager.Manager. Creating a manager
+	// with a fake Config fails because the Manager tries to contact the
+	// apiserver.
+
+	// cfg := &rest.Config{
+	// 	Host: "http://foo:80",
+	// }
+	//
+	// mgr, err := manager.New(cfg, manager.Options{})
+	// if err != nil {
+	// 	t.Fatalf("Error creating manager: %v", err)
+	// }
+	//
+	// _, err = ProvideController(mgr)
+	// if err != nil {
+	// 	t.Fatalf("Error in ProvideController: %v", err)
+	// }
+}
+
 func TestInjectClient(t *testing.T) {
 	r := &reconciler{}
 	orig := r.client
