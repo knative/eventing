@@ -1,0 +1,27 @@
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Channel
+metadata:
+  name: aloha
+spec:
+  provisioner:
+    apiVersion: eventing.knative.dev/v1alpha1
+    kind: ClusterChannelProvisioner
+#    name: in-memory-channel
+    name: natss
+---
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Subscription
+metadata:
+  name: aloha2hello
+spec:
+  channel:
+    apiVersion: eventing.knative.dev/v1alpha1
+    kind: Channel
+    name: aloha
+  subscriber:
+#    targetRef:
+#      apiVersion: serving.knative.dev/v1alpha1
+#      kind: Service
+#      name: hello-00001-service
+    dnsName: hello-00001-service.default
