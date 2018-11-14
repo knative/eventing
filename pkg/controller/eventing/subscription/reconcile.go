@@ -307,6 +307,7 @@ func (r *reconciler) listAllSubscriptionsWithPhysicalChannel(sub *v1alpha1.Subsc
 				Kind:       "Subscription",
 			},
 		},
+		Namespace: sub.Namespace,
 	}
 	ctx := context.TODO()
 	for {
