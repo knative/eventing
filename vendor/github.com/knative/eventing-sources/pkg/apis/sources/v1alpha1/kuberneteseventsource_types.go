@@ -99,6 +99,7 @@ func (s *KubernetesEventSourceStatus) MarkUnready(reason, messageFormat string, 
 
 // KubernetesEventSource is the Schema for the kuberneteseventsources API
 // +k8s:openapi-gen=true
+// +kubebuilder:categories=all,knative,eventing,sources
 type KubernetesEventSource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

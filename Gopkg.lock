@@ -344,7 +344,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e1ae53a5b5dc5fa6f8cb5fa4596a4436d2754921510766569386efc9c07d839c"
+  digest = "1:17edbc665c4d51f95723ed372ed59bb04bf57cbc04b8eae86c5a470b445f5b9d"
   name = "github.com/knative/eventing-sources"
   packages = [
     "pkg/apis/sources/v1alpha1",
@@ -353,7 +353,7 @@
     "pkg/client/clientset/versioned/typed/sources/v1alpha1",
   ]
   pruneopts = "NUT"
-  revision = "aa113a015beb91c94a8e173c8f0ac18512a83954"
+  revision = "1e2a5cac15504e8c6d9ea973121f0db7e8fe2908"
 
 [[projects]]
   digest = "1:9870368d47209c3a52b9000fd00420c51832604c00a65aa0a56b6e60a2ff3664"
@@ -561,15 +561,16 @@
   version = "v2.0.7"
 
 [[projects]]
-  digest = "1:03bca087b180bf24c4f9060775f137775550a0834e18f0bca0520a868679dbd7"
+  digest = "1:a8512715947d49f24e6aa2d0fdd06f46bdd8d2e792517ba0ac95a2c089eaae28"
   name = "github.com/prometheus/client_golang"
   packages = [
     "prometheus",
+    "prometheus/internal",
     "prometheus/promhttp",
   ]
   pruneopts = "NUT"
-  revision = "c5b7fccd204277076155f10851dad72b76a49317"
-  version = "v0.8.0"
+  revision = "abad2d1bd44235a26707c172eab6bca5bf2dbad3"
+  version = "v0.9.1"
 
 [[projects]]
   branch = "master"
@@ -1185,7 +1186,7 @@
   revision = "8a9b82f00b3a86eac24681da3f9fe6c34c01cea2"
 
 [[projects]]
-  digest = "1:63139e4089c9b034ec98d8ae54e87c91cd3f5ce5bf9d50dba412c08a363659c4"
+  digest = "1:951803ae23d7f5671c4ebc0f51f09b67b7ba51827be4559265864129df092c8d"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/cache",
@@ -1198,9 +1199,11 @@
     "pkg/event",
     "pkg/handler",
     "pkg/internal/controller",
+    "pkg/internal/controller/metrics",
     "pkg/internal/recorder",
     "pkg/leaderelection",
     "pkg/manager",
+    "pkg/metrics",
     "pkg/patch",
     "pkg/predicate",
     "pkg/reconcile",
@@ -1216,7 +1219,7 @@
     "pkg/webhook/types",
   ]
   pruneopts = "NUT"
-  revision = "5373e8e1f3188ff4266902a6fc86372bc14b3815"
+  revision = "0f0740db56812f732d90ff7df3520a291a9f04c9"
 
 [solve-meta]
   analyzer-name = "dep"
