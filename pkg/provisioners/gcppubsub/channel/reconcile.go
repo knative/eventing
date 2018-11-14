@@ -138,7 +138,6 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		// We use a finalizer to ensure the GCP PubSub Topic and Subscriptions are deleted.
 		err = r.deleteSubscriptions(ctx, c, gcpCreds, r.defaultGcpProject)
 		if err != nil {
-			logging.FromContext(ctx).Info("Unable to delete subscriptions", zap.Error(err))
 			return err
 		}
 		err = r.deleteTopic(ctx, c, gcpCreds, r.defaultGcpProject)
@@ -227,17 +226,24 @@ func (r *reconciler) createTopic(ctx context.Context, c *eventingv1alpha1.Channe
 func (r *reconciler) deleteTopic(ctx context.Context, c *eventingv1alpha1.Channel, gcpCreds *google.Credentials, gcpProject string) error {
 	psc, err := r.pubSubClientCreator(ctx, gcpCreds, gcpProject)
 	if err != nil {
+		logging.FromContext(ctx).Info("Unable to create PubSubClient", zap.Error(err))
 		return err
 	}
 	topic := psc.Topic(pubsubutil.GenerateTopicName(c.Namespace, c.Name))
 	exists, err := topic.Exists(ctx)
 	if err != nil {
+		logging.FromContext(ctx).Info("Unable to check if Topic exists", zap.Error(err))
 		return err
 	}
 	if !exists {
 		return nil
 	}
-	return topic.Delete(ctx)
+	err = topic.Delete(ctx)
+	if err != nil {
+		logging.FromContext(ctx).Info("Topic deletion failed", zap.Error(err))
+		return err
+	}
+	return nil
 }
 
 func (r *reconciler) createSubscriptions(ctx context.Context, c *eventingv1alpha1.Channel, gcpCreds *google.Credentials, gcpProject string, topic pubsubutil.PubSubTopic) error {

@@ -30,7 +30,6 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/buses"
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/clusterchannelprovisioner"
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -63,7 +62,6 @@ func main() {
 
 	// Add custom types to this array to get them into the manager's scheme.
 	eventingv1alpha1.AddToScheme(mgr.GetScheme())
-	istiov1alpha3.AddToScheme(mgr.GetScheme())
 
 	defaultGcpProject := getRequiredEnv(defaultGcpProjectEnv)
 	defaultSecret := v1.ObjectReference{
@@ -73,22 +71,29 @@ func main() {
 		Name:       getRequiredEnv(defaultSecretNameEnv),
 	}
 	defaultSecretKey := getRequiredEnv(defaultSecretKeyEnv)
-	// _, err = channel.ProvideController(defaultGcpProject, defaultSecret, defaultSecretKey)(mgr, logger.Desugar())
-	// if err != nil {
-	// 	logger.Fatal("Unable to create Channel controller", zap.Error(err))
-	// }
+
+	// We are running both the receiver (takes messages in from the cluster and writes them to
+	// PubSub) and the dispatcher (takes messages in PubSub and sends them in cluster) in this
+	// binary.
 
 	r := receiver.New(logger.Desugar(), mgr.GetClient(), util.GcpPubSubClientCreator, defaultGcpProject, defaultSecret, defaultSecretKey)
 	mr := r.NewMessageReceiver()
-	mgr.Add(mr)
+	err = mgr.Add(mr)
+	if err != nil {
+		logger.Fatal("Unable to add the MessageReceiver to the manager", zap.Error(err))
+	}
 
-	_, err = dispatcher.New(mgr, logger.Desugar(), defaultGcpProject, defaultSecret, defaultSecretKey)
+	// TODO Move this to just before mgr.Start(). We need to pass the stopCh to dispatcher.New
+	// because of https://github.com/kubernetes-sigs/controller-runtime/issues/103.
+
+	// set up signals so we handle the first shutdown signal gracefully
+	stopCh := signals.SetupSignalHandler()
+
+	_, err = dispatcher.New(mgr, logger.Desugar(), defaultGcpProject, defaultSecret, defaultSecretKey, stopCh)
 	if err != nil {
 		logger.Fatal("Unable to create the dispatcher", zap.Error(err))
 	}
 
-	// set up signals so we handle the first shutdown signal gracefully
-	stopCh := signals.SetupSignalHandler()
 	// Start blocks forever.
 	logger.Info("Manager starting...")
 	err = mgr.Start(stopCh)

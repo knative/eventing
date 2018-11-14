@@ -65,6 +65,7 @@ func main() {
 	if err != nil {
 		logger.Fatal("Unable to create Provisioner controller", zap.Error(err))
 	}
+
 	defaultGcpProject := getRequiredEnv(defaultGcpProjectEnv)
 	defaultSecret := v1.ObjectReference{
 		APIVersion: v1.SchemeGroupVersion.String(),

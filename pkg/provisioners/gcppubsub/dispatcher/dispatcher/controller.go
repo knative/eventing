@@ -40,12 +40,13 @@ const (
 	controllerAgentName = "gcp-pubsub-channel-dispatcher"
 )
 
-// ProvideController returns a Controller that represents the in-memory-channel Provisioner.
-func New(mgr manager.Manager, logger *zap.Logger, defaultGcpProject string, defaultSecret corev1.ObjectReference, defaultSecretKey string) (controller.Controller, error) {
+// ProvideController returns a Controller that represents the dispatcher portion (messages from GCP
+// PubSub are sent into the cluster) of the GCP PubSub dispatcher.
+func New(mgr manager.Manager, logger *zap.Logger, defaultGcpProject string, defaultSecret corev1.ObjectReference, defaultSecretKey string, stopCh <-chan struct{}) (controller.Controller, error) {
 	reconcileChan := make(chan event.GenericEvent)
 
-	// Setup a new controller to Reconcile Channels that belong to this Cluster Provisioner
-	// (in-memory channels).
+	// Setup a new controller to pull messages from GCP PubSub for Channels that belong to this
+	// Cluster Provisioner (gcp-pubsub).
 	r := &reconciler{
 		recorder: mgr.GetRecorder(controllerAgentName),
 		logger:   logger,
@@ -79,10 +80,18 @@ func New(mgr manager.Manager, logger *zap.Logger, defaultGcpProject string, defa
 		return nil, err
 	}
 
-	logger.Info("***** reconcileChan *****", zap.Any("reconcileChane", reconcileChan))
-	err = c.Watch(&source.Channel{
+	// The PubSub library may fail when receiving messages. If it does so, then we need to reconcile
+	// that Channel again.
+	// TODO Once https://github.com/kubernetes-sigs/controller-runtime/issues/103 is fixed, switch
+	// to:
+	// err = c.Watch(&source.Channel{
+	// 	Source: reconcileChan,
+	// }, &handler.EnqueueRequestForOwner{})
+	src := &source.Channel{
 		Source: reconcileChan,
-	}, &handler.EnqueueRequestForOwner{})
+	}
+	src.InjectStopChannel(stopCh)
+	err = c.Watch(src, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		logger.Error("Unable to watch the reconcile Channel", zap.Error(err))
 		return nil, err

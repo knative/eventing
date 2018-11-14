@@ -46,7 +46,6 @@ rules:
   - apiGroups:
       - "" # Core API group.
     resources:
-      - configmaps
       - services
       - secrets
     verbs:

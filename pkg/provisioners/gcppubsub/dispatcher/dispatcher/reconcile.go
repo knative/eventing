@@ -50,7 +50,9 @@ type reconciler struct {
 	recorder record.EventRecorder
 	logger   *zap.Logger
 
-	dispatcher    *buses.MessageDispatcher
+	// dispatcher is used to make the actual HTTP requests to subscribers.
+	dispatcher *buses.MessageDispatcher
+	// reconcileChan is a Go channel to
 	reconcileChan chan<- event.GenericEvent
 
 	pubSubClientCreator pubsubutil.PubSubClientCreator
@@ -60,7 +62,10 @@ type reconciler struct {
 	defaultSecretKey  string
 
 	subscriptionsLock sync.Mutex
-	subscriptions     map[types.NamespacedName]map[types.NamespacedName]context.CancelFunc
+	// subscriptions contains the cancel functions for all hanging PubSub Subscriptions. The cancel
+	// function must be called when we no longer want that subscription to be active. Logically it
+	// is a map from Channel name to Subscription name to CancelFunc.
+	subscriptions map[types.NamespacedName]map[types.NamespacedName]context.CancelFunc
 }
 
 // Verify the struct implements reconcile.Reconciler
@@ -72,9 +77,7 @@ func (r *reconciler) InjectClient(c client.Client) error {
 }
 
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	// TODO: use this to store the logger and set a deadline
-	ctx := context.TODO()
-	logger := r.logger.With(zap.Any("request", request))
+	ctx := logging.WithLogger(context.TODO(), r.logger.With(zap.Any("request", request)).Sugar())
 
 	c := &eventingv1alpha1.Channel{}
 	err := r.client.Get(ctx, request.NamespacedName, c)
@@ -82,35 +85,36 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// The Channel may have been deleted since it was added to the workqueue. If so, there is
 	// nothing to be done.
 	if errors.IsNotFound(err) {
-		logger.Info("Could not find Channel", zap.Error(err))
+		logging.FromContext(ctx).Info("Could not find Channel", zap.Error(err))
 		return reconcile.Result{}, nil
 	}
 
 	// Any other error should be retried in another reconciliation.
 	if err != nil {
-		logger.Error("Unable to Get Channel", zap.Error(err))
+		logging.FromContext(ctx).Error("Unable to Get Channel", zap.Error(err))
 		return reconcile.Result{}, err
 	}
 
 	// Does this Controller control this Channel?
 	if !r.shouldReconcile(c) {
-		logger.Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("ref", c.Spec))
+		logging.FromContext(ctx).Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("ref", c.Spec))
 		return reconcile.Result{}, nil
 	}
-	logger.Info("Reconciling Channel")
+	logging.FromContext(ctx).Info("Reconciling Channel")
 
 	// Modify a copy, not the original.
 	c = c.DeepCopy()
 
+	ctx = logging.WithLogger(ctx, r.logger.With(zap.Any("channel", c)).Sugar())
 	err = r.reconcile(ctx, c)
 	if err != nil {
-		logger.Info("Error reconciling Channel", zap.Error(err))
+		logging.FromContext(ctx).Info("Error reconciling Channel", zap.Error(err))
 		// Note that we do not return the error here, because we want to update the finalizers
 		// regardless of the error.
 	}
 
 	if updateStatusErr := util.UpdateChannel(ctx, r.client, c); updateStatusErr != nil {
-		logger.Info("Error updating Channel Status", zap.Error(updateStatusErr))
+		logging.FromContext(ctx).Info("Error updating Channel Status", zap.Error(updateStatusErr))
 		return reconcile.Result{}, updateStatusErr
 	}
 
@@ -127,9 +131,7 @@ func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 }
 
 func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) error {
-	ctx = logging.WithLogger(ctx, r.logger.With(zap.Any("channel", c)).Sugar())
-
-	// We are syncing all the subscribers:
+	// We are syncing all the subscribers on this Channel. Every subscriber will have a goroutine
 
 	if c.DeletionTimestamp != nil {
 		// We use a finalizer to ensure we stop listening on the subscriptions.

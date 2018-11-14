@@ -111,7 +111,7 @@ func shouldReconcile(namespace, name string) bool {
 }
 
 func (r *reconciler) reconcile(ctx context.Context, ccp *eventingv1alpha1.ClusterChannelProvisioner) error {
-	// We are syncing nothing! Just mark it immediately ready.
+	// We are syncing nothing! Just mark it ready.
 
 	if ccp.DeletionTimestamp != nil {
 		// K8s garbage collection will delete the dispatcher service, once this ClusterChannelProvisioner
