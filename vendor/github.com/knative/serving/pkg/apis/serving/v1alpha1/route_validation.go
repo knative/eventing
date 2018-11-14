@@ -1,5 +1,6 @@
 /*
-Copyright 2017 The Knative Authors
+Copyright 2018 The Knative Authors
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -19,15 +20,19 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/equality"
+
+	"github.com/knative/pkg/apis"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
-func (rt *Route) Validate() *FieldError {
-	return rt.Spec.Validate().ViaField("spec")
+func (r *Route) Validate() *apis.FieldError {
+	return ValidateObjectMetadata(r.GetObjectMeta()).ViaField("metadata").
+		Also(r.Spec.Validate().ViaField("spec"))
 }
 
-func (rs *RouteSpec) Validate() *FieldError {
+func (rs *RouteSpec) Validate() *apis.FieldError {
 	if equality.Semantic.DeepEqual(rs, &RouteSpec{}) {
-		return errMissingField(currentField)
+		return apis.ErrMissingField(apis.CurrentField)
 	}
 
 	// Where a named traffic target points
@@ -40,11 +45,11 @@ func (rs *RouteSpec) Validate() *FieldError {
 	// Track the targets of named TrafficTarget entries (to detect duplicates).
 	trafficMap := make(map[string]namedTarget)
 
+	var errs *apis.FieldError
 	percentSum := 0
 	for i, tt := range rs.Traffic {
-		if err := tt.Validate(); err != nil {
-			return err.ViaField(fmt.Sprintf("traffic[%d]", i))
-		}
+		errs = errs.Also(tt.Validate().ViaFieldIndex("traffic", i))
+
 		percentSum += tt.Percent
 
 		if tt.Name == "" {
@@ -60,43 +65,43 @@ func (rs *RouteSpec) Validate() *FieldError {
 			// No entry exists, so add ours
 			trafficMap[tt.Name] = nt
 		} else if ent.r != nt.r || ent.c != nt.c {
-			return &FieldError{
+			errs = errs.Also(&apis.FieldError{
 				Message: fmt.Sprintf("Multiple definitions for %q", tt.Name),
 				Paths: []string{
 					fmt.Sprintf("traffic[%d].name", ent.i),
 					fmt.Sprintf("traffic[%d].name", nt.i),
 				},
-			}
+			})
 		}
 	}
 
 	if percentSum != 100 {
-		return &FieldError{
+		errs = errs.Also(&apis.FieldError{
 			Message: fmt.Sprintf("Traffic targets sum to %d, want 100", percentSum),
 			Paths:   []string{"traffic"},
-		}
+		})
 	}
-	return nil
+	return errs
 }
 
-func (tt *TrafficTarget) Validate() *FieldError {
+func (tt *TrafficTarget) Validate() *apis.FieldError {
+	var errs *apis.FieldError
 	switch {
 	case tt.RevisionName != "" && tt.ConfigurationName != "":
-		return &FieldError{
-			Message: "Expected exactly one, got both",
-			Paths:   []string{"revisionName", "configurationName"},
-		}
+		errs = apis.ErrMultipleOneOf("revisionName", "configurationName")
 	case tt.RevisionName != "":
-	case tt.ConfigurationName != "":
-		// These are fine.
-	default:
-		return &FieldError{
-			Message: "Expected exactly one, got neither",
-			Paths:   []string{"revisionName", "configurationName"},
+		if verrs := validation.IsQualifiedName(tt.RevisionName); len(verrs) > 0 {
+			errs = apis.ErrInvalidKeyName(tt.RevisionName, "revisionName", verrs...)
 		}
+	case tt.ConfigurationName != "":
+		if verrs := validation.IsQualifiedName(tt.ConfigurationName); len(verrs) > 0 {
+			errs = apis.ErrInvalidKeyName(tt.ConfigurationName, "configurationName", verrs...)
+		}
+	default:
+		errs = apis.ErrMissingOneOf("revisionName", "configurationName")
 	}
 	if tt.Percent < 0 || tt.Percent > 100 {
-		return errInvalidValue(fmt.Sprintf("%d", tt.Percent), "percent")
+		errs = errs.Also(apis.ErrInvalidValue(fmt.Sprintf("%d", tt.Percent), "percent"))
 	}
-	return nil
+	return errs
 }

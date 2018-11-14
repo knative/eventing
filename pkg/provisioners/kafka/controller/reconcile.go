@@ -23,6 +23,8 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -63,7 +65,12 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	// Reconcile this copy of the Provisioner and then write back any status
 	// updates regardless of whether the reconcile error out.
-	err = r.reconcile(newProvisioner)
+	err = r.reconcile(ctx, newProvisioner)
+	if err != nil {
+		r.logger.Info("error reconciling ClusterProvisioner", zap.Error(err))
+		// Note that we do not return the error here, because we want to update the Status
+		// regardless of the error.
+	}
 	if updateStatusErr := util.UpdateClusterChannelProvisionerStatus(ctx, r.client, newProvisioner); updateStatusErr != nil {
 		r.logger.Info("error updating ClusterChannelProvisioner Status", zap.Error(updateStatusErr))
 		return reconcile.Result{}, updateStatusErr
@@ -73,7 +80,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	return reconcile.Result{}, err
 }
 
-func (r *reconciler) reconcile(provisioner *v1alpha1.ClusterChannelProvisioner) error {
+func (r *reconciler) reconcile(ctx context.Context, provisioner *v1alpha1.ClusterChannelProvisioner) error {
 	// See if the provisioner has been deleted
 	accessor, err := meta.Accessor(provisioner)
 	if err != nil {
@@ -87,6 +94,18 @@ func (r *reconciler) reconcile(provisioner *v1alpha1.ClusterChannelProvisioner) 
 	}
 
 	provisioner.Status.InitializeConditions()
+
+	svc, err := util.CreateDispatcherService(ctx, r.client, provisioner)
+	if err != nil {
+		r.logger.Info("error creating the ClusterProvisioner's K8s Service", zap.Error(err))
+		return err
+	}
+
+	// Check if this ClusterChannelProvisioner is the owner of the K8s service.
+	if !metav1.IsControlledBy(svc, provisioner) {
+		r.logger.Warn("ClusterChannelProvisioner's K8s Service is not owned by the ClusterChannelProvisioner", zap.Any("clusterChannelProvisioner", provisioner), zap.Any("service", svc))
+	}
+
 	// Update Status as Ready
 	provisioner.Status.MarkReady()
 

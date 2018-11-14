@@ -22,15 +22,16 @@ import (
 	"fmt"
 
 	"github.com/Shopify/sarama"
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/util/sets"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingController "github.com/knative/eventing/pkg/controller"
+	util "github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/provisioners/kafka/controller"
 )
 
@@ -41,7 +42,7 @@ const (
 )
 
 type channelArgs struct {
-	NumPartitions int32 `json:"NumPartitions,omitempty"`
+	NumPartitions int32
 }
 
 // Reconcile compares the actual state with the desired, and attempts to
@@ -88,13 +89,13 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	if clusterChannelProvisioner.Status.IsReady() {
 		// Reconcile this copy of the Channel and then write back any status
 		// updates regardless of whether the reconcile error out.
-		err = r.reconcile(newChannel)
+		err = r.reconcile(ctx, newChannel)
 	} else {
 		newChannel.Status.MarkNotProvisioned("NotProvisioned", "ClusterChannelProvisioner %s is not ready", clusterChannelProvisioner.Name)
 		err = fmt.Errorf("ClusterChannelProvisioner %s is not ready", clusterChannelProvisioner.Name)
 	}
 
-	if updateChannelErr := r.updateChannel(ctx, newChannel); updateChannelErr != nil {
+	if updateChannelErr := util.UpdateChannel(ctx, r.client, newChannel); updateChannelErr != nil {
 		r.logger.Info("failed to update channel status", zap.Error(updateChannelErr))
 		return reconcile.Result{}, updateChannelErr
 	}
@@ -103,7 +104,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	return reconcile.Result{}, err
 }
 
-func (r *reconciler) reconcile(channel *v1alpha1.Channel) error {
+func (r *reconciler) reconcile(ctx context.Context, channel *v1alpha1.Channel) error {
 
 	// We don't currently initialize r.kafkaClusterAdmin, hence we end up creating the cluster admin client every time.
 	// This is because of an issue with Shopify/sarama. See https://github.com/Shopify/sarama/issues/1162.
@@ -131,16 +132,44 @@ func (r *reconciler) reconcile(channel *v1alpha1.Channel) error {
 		if err := r.deprovisionChannel(channel, kafkaClusterAdmin); err != nil {
 			return err
 		}
-		r.removeFinalizer(channel)
+		util.RemoveFinalizer(channel, finalizerName)
 		return nil
 	}
 
-	r.addFinalizer(channel)
+	util.AddFinalizer(channel, finalizerName)
 
 	if err := r.provisionChannel(channel, kafkaClusterAdmin); err != nil {
 		channel.Status.MarkNotProvisioned("NotProvisioned", "error while provisioning: %s", err)
 		return err
 	}
+
+	svc, err := util.CreateK8sService(ctx, r.client, channel)
+
+	if err != nil {
+		r.logger.Info("error creating the Channel's K8s Service", zap.Error(err))
+		return err
+	}
+
+	// Check if this Channel is the owner of the K8s service.
+	if !metav1.IsControlledBy(svc, channel) {
+		r.logger.Warn("Channel's K8s Service is not owned by the Channel", zap.Any("channel", channel), zap.Any("service", svc))
+	}
+
+	channel.Status.SetAddress(eventingController.ServiceHostName(svc.Name, svc.Namespace))
+
+	virtualService, err := util.CreateVirtualService(ctx, r.client, channel)
+
+	if err != nil {
+		r.logger.Info("error creating the Virtual Service for the Channel", zap.Error(err))
+		return err
+	}
+
+	// If the Virtual Service is not controlled by this Channel, we should log a warning, but don't
+	// consider it an error.
+	if !metav1.IsControlledBy(virtualService, channel) {
+		r.logger.Warn("VirtualService not owned by Channel", zap.Any("channel", channel), zap.Any("virtualService", virtualService))
+	}
+
 	channel.Status.MarkProvisioned()
 
 	// close the connection
@@ -205,42 +234,6 @@ func (r *reconciler) getClusterChannelProvisioner() (*v1alpha1.ClusterChannelPro
 		return nil, err
 	}
 	return clusterChannelProvisioner, nil
-}
-
-func (r *reconciler) updateChannel(ctx context.Context, u *v1alpha1.Channel) error {
-	channel := &v1alpha1.Channel{}
-	err := r.client.Get(ctx, client.ObjectKey{Namespace: u.Namespace, Name: u.Name}, channel)
-	if err != nil {
-		return err
-	}
-
-	updated := false
-	if !equality.Semantic.DeepEqual(channel.Finalizers, u.Finalizers) {
-		channel.SetFinalizers(u.ObjectMeta.Finalizers)
-		updated = true
-	}
-
-	if !equality.Semantic.DeepEqual(channel.Status, u.Status) {
-		channel.Status = u.Status
-		updated = true
-	}
-
-	if updated == false {
-		return nil
-	}
-	return r.client.Update(ctx, channel)
-}
-
-func (r *reconciler) addFinalizer(channel *v1alpha1.Channel) {
-	finalizers := sets.NewString(channel.Finalizers...)
-	finalizers.Insert(finalizerName)
-	channel.Finalizers = finalizers.List()
-}
-
-func (r *reconciler) removeFinalizer(channel *v1alpha1.Channel) {
-	finalizers := sets.NewString(channel.Finalizers...)
-	finalizers.Delete(finalizerName)
-	channel.Finalizers = finalizers.List()
 }
 
 func createKafkaAdminClient(config *controller.KafkaProvisionerConfig) (sarama.ClusterAdmin, error) {

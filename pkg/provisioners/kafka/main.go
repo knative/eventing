@@ -6,11 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners"
-	provisionerController "github.com/knative/eventing/pkg/provisioners/kafka/controller"
-	"github.com/knative/eventing/pkg/provisioners/kafka/controller/channel"
-	"github.com/knative/pkg/configmap"
+	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -19,6 +15,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+
+	eventingv1alpha "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/provisioners"
+	provisionerController "github.com/knative/eventing/pkg/provisioners/kafka/controller"
+	"github.com/knative/eventing/pkg/provisioners/kafka/controller/channel"
+	"github.com/knative/pkg/configmap"
 )
 
 const (
@@ -47,7 +49,8 @@ func main() {
 
 	// Add custom types to this array to get them into the manager's scheme.
 	schemeFuncs := []SchemeFunc{
-		v1alpha1.AddToScheme,
+		eventingv1alpha.AddToScheme,
+		istiov1alpha3.AddToScheme,
 	}
 	for _, schemeFunc := range schemeFuncs {
 		schemeFunc(mgr.GetScheme())
