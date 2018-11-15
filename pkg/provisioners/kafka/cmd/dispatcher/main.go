@@ -34,15 +34,11 @@ import (
 	"github.com/knative/eventing/pkg/system"
 )
 
-const (
-	defaultConfigMapName = "kafka-channel-dispatcher-config-map"
-)
-
 func main() {
 
 	configMapName := os.Getenv("DISPATCHER_CONFIGMAP_NAME")
 	if configMapName == "" {
-		configMapName = defaultConfigMapName
+		configMapName = provisionerController.DispatcherConfigMapName
 	}
 	configMapNamespace := os.Getenv("DISPATCHER_CONFIGMAP_NAMESPACE")
 	if configMapNamespace == "" {

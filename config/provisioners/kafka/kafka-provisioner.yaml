@@ -56,7 +56,7 @@ rules:
     resources:
       - configmaps
     resourceNames:
-      - kafka-channel-dispatcher-config-map
+      - kafka-channel-dispatcher
     verbs:
       - update
   - apiGroups:
@@ -90,7 +90,7 @@ metadata:
   name: kafka-channel-controller-config
   namespace: knative-eventing
 data:
-  # Broker URL's for the provisioner
+  # Broker URL's for the provisioner. Replace this with the URL's for your kafka cluster.
   bootstrap_servers: kafkabroker.kafka:9092
 ---
 
@@ -184,7 +184,7 @@ spec:
           image: github.com/knative/eventing/pkg/provisioners/kafka/cmd/dispatcher
           env:
             - name: DISPATCHER_CONFIGMAP_NAME
-              value: kafka-channel-dispatcher-config-map
+              value: kafka-channel-dispatcher
             - name: DISPATCHER_CONFIGMAP_NAMESPACE
               valueFrom:
                 fieldRef:

@@ -103,7 +103,10 @@ func (d *KafkaDispatcher) UpdateConfig(config *multichannelfanout.Config) error 
 				sub := newSubscription(subSpec)
 				if _, ok := d.kafkaConsumers[channelRef][sub]; ok {
 					// subscribe can be called multiple times for the same subscription,
-					//unsubscribe before we resubscribe
+					// unsubscribe before we resubscribe.
+					// TODO The behavior to unsubscribe and re-subscribe is retained from the older kafka bus
+					// implementation. It is not clear as to why this is needed instead of just re-using the same
+					// consumer.
 					err := d.unsubscribe(channelRef, sub)
 					if err != nil {
 						return err

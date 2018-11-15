@@ -39,16 +39,12 @@ const (
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
 	controllerAgentName = "kafka-provisioner-channel-controller"
-	// ConfigMapName is the name of the ConfigMap in the knative-eventing namespace that contains
-	// the subscription information for all kafka Channels. The Provisioner writes to it and the
-	// Dispatcher reads from it.
-	ConfigMapName = "kafka-channel-dispatcher-config-map"
 )
 
 var (
 	defaultConfigMapKey = types.NamespacedName{
 		Namespace: system.Namespace,
-		Name:      ConfigMapName,
+		Name:      common.DispatcherConfigMapName,
 	}
 )
 

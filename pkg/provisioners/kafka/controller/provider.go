@@ -35,6 +35,10 @@ const (
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
 	controllerAgentName = "kafka-provisioner-controller"
+	// ConfigMapName is the name of the ConfigMap in the knative-eventing namespace that contains
+	// the subscription information for all kafka Channels. The Provisioner writes to it and the
+	// Dispatcher reads from it.
+	DispatcherConfigMapName = "kafka-channel-dispatcher"
 )
 
 type reconciler struct {
