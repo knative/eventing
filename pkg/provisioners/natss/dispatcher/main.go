@@ -1,28 +1,19 @@
 package main
 
 import (
-//	"flag"
-//	"fmt"
-	"log"
-//	"net/http"
-	"time"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners/natss/dispatcher/channel"
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
+	"github.com/knative/eventing/pkg/provisioners/natss/dispatcher/dispatcher"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
+	"log"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-//	"github.com/knative/eventing/pkg/sidecar/swappable"
-//	"github.com/knative/eventing/pkg/sidecar/configmap/filesystem"
-//	"github.com/knative/eventing/pkg/sidecar/configmap/watcher"
-//	"github.com/knative/eventing/pkg/system"
-	"golang.org/x/sync/errgroup"
-//	"k8s.io/client-go/kubernetes"
-//	"strings"
-	"github.com/knative/eventing/pkg/provisioners/natss/dispatcher/dispatcher"
-)
+	"time"
 
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
+)
 
 var (
 	readTimeout  = 1 * time.Minute

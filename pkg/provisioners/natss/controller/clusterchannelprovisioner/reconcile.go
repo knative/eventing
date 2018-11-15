@@ -19,19 +19,20 @@ package clusterchannelprovisioner
 import (
 	"context"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"github.com/knative/eventing/pkg/provisioners"
+
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	// Name is the name of the in-memory channel ClusterChannelProvisioner.
+	// Name is the name of NATSS ClusterChannelProvisioner.
 	Name = "natss"
 
 	// Channel is the name of the Channel resource in eventing.knative.dev/v1alpha1.
@@ -53,7 +54,6 @@ func (r *reconciler) InjectClient(c client.Client) error {
 }
 
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	//TODO use this to store the logger and set a deadline
 	ctx := context.TODO()
 	logger := r.logger.With(zap.Any("request", request))
 
@@ -128,11 +128,7 @@ func (r *reconciler) reconcile(ctx context.Context, ccp *eventingv1alpha1.Cluste
 
 	svc, err := provisioners.CreateDispatcherService(ctx, r.client, ccp)
 	if err != nil {
-		logger.Info("Error creating the ClusterChannelProvisioner's K8s Service", zap.Error(err))
-		return err
-	}
-	if err != nil {
-		logger.Info("Error creating the ClusterChannelProvisioner's K8s Service", zap.Error(err))
+		logger.Info("Error creating the ClusterChannelProvisioner's Dispatcher", zap.Error(err))
 		return err
 	}
 	// Check if this ClusterChannelProvisioner is the owner of the K8s service.

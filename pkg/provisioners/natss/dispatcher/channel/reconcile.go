@@ -18,30 +18,24 @@ package channel
 
 import (
 	"context"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	ccpcontroller "github.com/knative/eventing/pkg/provisioners/natss/controller/clusterchannelprovisioner"
-	"go.uber.org/zap"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
 	"github.com/knative/eventing/pkg/provisioners"
-	dispatcher "github.com/knative/eventing/pkg/provisioners/natss/dispatcher/dispatcher"
+	"github.com/knative/eventing/pkg/provisioners/natss/dispatcher/dispatcher"
+	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-)
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-const (
-	portName      = "http"
-	portNumber    = 80
-	finalizerName = controllerAgentName
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	ccpcontroller "github.com/knative/eventing/pkg/provisioners/natss/controller/clusterchannelprovisioner"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type reconciler struct {
 	client   client.Client
 	recorder record.EventRecorder
 	logger   *zap.Logger
-
-	configMapKey client.ObjectKey
 
 	subscriptionsSupervisor *dispatcher.SubscriptionsSupervisor
 }
@@ -116,16 +110,13 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 	c.Status.InitializeConditions()
 
-	// We are syncing:
-	// 3. The configuration of all Channel subscriptions.
-
-	// We always need to sync the Channel config, so do it first.
+	// We are syncing Channel subscriptions
 	if err := r.syncChannel(ctx); err != nil {
 		logger.Error("Error updating syncing the Channel config", zap.Error(err))
 		return err
 	}
 
-//	c.Status.MarkProvisioned()
+	//	c.Status.MarkProvisioned()
 	return nil
 }
 
@@ -136,7 +127,7 @@ func (r *reconciler) syncChannel(ctx context.Context) error {
 		return err
 	}
 
-    // try to subscribe
+	// try to subscribe
 	for _, c := range channels {
 		r.logger.Info("syncChannel() channel:" + c.Name + "." + c.Namespace)
 		if err := r.subscriptionsSupervisor.UpdateSubscriptions(c); err != nil {
@@ -150,8 +141,7 @@ func (r *reconciler) listAllChannels(ctx context.Context) ([]eventingv1alpha1.Ch
 	channels := make([]eventingv1alpha1.Channel, 0)
 
 	opts := &client.ListOptions{
-		// TODO this is here because the fake client needs it. Remove this when it's no longer
-		// needed.
+		// TODO this is here because the fake client needs it. Remove this when it's no longer needed.
 		Raw: &metav1.ListOptions{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),

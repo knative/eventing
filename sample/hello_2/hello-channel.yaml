@@ -10,7 +10,7 @@ spec:
 #    name: in-memory-channel
     name: natss
 
-# put the subscriptoin in a separate file
+# put the subscription in a separate file
 #---
 #apiVersion: eventing.knative.dev/v1alpha1
 #kind: Subscription

@@ -1,18 +1,16 @@
 package dispatcher
 
 import (
-	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-
 	"fmt"
+
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 )
 
-// subscription.Ref.Name + "." + subscription.Ref.Namespace
-
 type subscriptionReference struct {
-	Name      string
-	Namespace string
+	Name          string
+	Namespace     string
 	SubscriberURI string
-	ReplyURI string
+	ReplyURI      string
 }
 
 func newSubscriptionReference(spec eventingduck.ChannelSubscriberSpec) subscriptionReference {
@@ -27,4 +25,3 @@ func newSubscriptionReference(spec eventingduck.ChannelSubscriberSpec) subscript
 func (r *subscriptionReference) String() string {
 	return fmt.Sprintf("%s.%s", r.Name, r.Namespace)
 }
-

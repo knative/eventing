@@ -1,16 +1,17 @@
 package stanutil
 
 import (
-	"github.com/knative/eventing/pkg/buses"
-	"github.com/nats-io/nats-streaming-server/server"
-	"go.uber.org/zap"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/knative/eventing/pkg/buses"
+	"github.com/nats-io/nats-streaming-server/server"
+	"go.uber.org/zap"
 )
 
 const (
-	clusterId = "knative-eventing"
+	clusterId = "testClusterId"
 	clientId  = "testClient"
 	natssUrl  = "nats://localhost:4222"
 )

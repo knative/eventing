@@ -111,47 +111,6 @@ spec:
 
 ---
 
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: natss-dispatcher
-  namespace: knative-eventing
-
----
-
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: natss-dispatcher
-  namespace: knative-eventing
-rules:
-  - apiGroups:
-      - "" # Core API group.
-    resources:
-      - configmaps
-    verbs:
-      - get
-      - list
-      - watch
-
----
-
-apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: ClusterRoleBinding
-metadata:
-  name: natss-dispatcher
-  namespace: knative-eventing
-subjects:
-  - kind: ServiceAccount
-    name: natss-dispatcher
-    namespace: knative-eventing
-roleRef:
-  kind: ClusterRole
-  name: natss-dispatcher
-  apiGroup: rbac.authorization.k8s.io
-
----
-
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
@@ -169,15 +128,7 @@ spec:
         sidecar.istio.io/inject: "true"
       labels: *labels
     spec:
-      #serviceAccountName: natss-dispatcher
       serviceAccountName: natss-controller
       containers:
         - name: dispatcher
-          #image: github.com/knative/eventing/cmd/fanoutsidecar
-          #image: github.com/knative/eventing/cmd/natss_sidecar
           image: github.com/knative/eventing/pkg/provisioners/natss/dispatcher
-          args:
-            - --sidecar_port=8080
-            - --config_map_noticer=watcher
-            - --config_map_namespace=knative-eventing
-            - --config_map_name=natss-dispatcher-config-map

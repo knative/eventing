@@ -1,41 +1,44 @@
 package dispatcher
 
 import (
-	"github.com/knative/eventing/pkg/buses"
-	"github.com/nats-io/go-nats-streaming"
+	"sync"
+	"time"
 
+	"github.com/knative/eventing/pkg/buses"
+	"github.com/knative/eventing/pkg/provisioners/natss/controller/clusterchannelprovisioner"
+	"github.com/knative/eventing/pkg/provisioners/natss/stanutil"
+	"github.com/nats-io/go-nats-streaming"
 	"go.uber.org/zap"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners/natss/stanutil"
-	"github.com/knative/eventing/pkg/provisioners/natss/controller/clusterchannelprovisioner"
-	"time"
 )
 
 const (
-	clientId            = "knative-natss-dispatcher"
+	clientId = "knative-natss-dispatcher"
 )
 
 // SubscriptionsSupervisor manages the state of NATS Streaming subscriptions
 type SubscriptionsSupervisor struct {
 	logger *zap.Logger
 
-	receiver         *buses.MessageReceiver
-	dispatcher       *buses.MessageDispatcher
+	receiver   *buses.MessageReceiver
+	dispatcher *buses.MessageDispatcher
 
-	natssConn 		 *stan.Conn
+	natssConn *stan.Conn
+
+	subscriptionsMux sync.Mutex
 	subscriptions    map[buses.ChannelReference]map[subscriptionReference]*stan.Subscription
 }
 
 func NewDispatcher(logger *zap.Logger) (*SubscriptionsSupervisor, error) {
-	d := &SubscriptionsSupervisor {
-		logger: logger,
-		dispatcher: buses.NewMessageDispatcher(logger.Sugar()),
+	d := &SubscriptionsSupervisor{
+		logger:        logger,
+		dispatcher:    buses.NewMessageDispatcher(logger.Sugar()),
 		subscriptions: make(map[buses.ChannelReference]map[subscriptionReference]*stan.Subscription),
 	}
-	nConn, err := stanutil.InitNatssConnection(clusterchannelprovisioner.NatssUrl, clientId, d.logger.Sugar())
+	nConn, err := stanutil.Connect(clusterchannelprovisioner.ClusterId, clientId, clusterchannelprovisioner.NatssUrl, d.logger.Sugar())
 	if err != nil {
-		logger.Error("InitNatssConnection failed: ", zap.Error(err))
+		logger.Error("Connect() failed: ", zap.Error(err))
 	}
 	d.natssConn = nConn
 	d.receiver = buses.NewMessageReceiver(createReceiverFunction(d, logger.Sugar()), logger.Sugar())
@@ -47,7 +50,7 @@ func createReceiverFunction(s *SubscriptionsSupervisor, logger *zap.SugaredLogge
 	return func(channel buses.ChannelReference, m *buses.Message) error {
 		logger.Infof("Received message from %q channel", channel.String())
 		// publish to Natss
-		ch := channel.Name +"." + channel.Namespace
+		ch := channel.Name + "." + channel.Namespace
 		if err := stanutil.Publish(s.natssConn, ch, &m.Payload, logger); err != nil {
 			logger.Errorf("Error during publish: %+v", err)
 			return err
@@ -73,6 +76,10 @@ func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel eventingv1alpha1.C
 	activeSubs := make(map[subscriptionReference]bool)
 
 	cRef := buses.NewChannelReferenceFromNames(channel.Name, channel.Namespace)
+
+	s.subscriptionsMux.Lock()
+	defer s.subscriptionsMux.Unlock()
+
 	chMap, ok := s.subscriptions[cRef]
 	if !ok {
 		chMap = make(map[subscriptionReference]*stan.Subscription)
@@ -110,7 +117,7 @@ func (s *SubscriptionsSupervisor) subscribe(channel buses.ChannelReference, subs
 	s.logger.Info("Subscribe to channel:", zap.Any("channel", channel), zap.Any("subscription", subscription))
 
 	mcb := func(msg *stan.Msg) {
-		s.logger.Sugar().Infof("NATSS message received: %+v", msg)  // TODO don't log the message
+		s.logger.Sugar().Infof("NATSS message received: %+v", msg) // TODO don't log the message
 		message := buses.Message{
 			Headers: map[string]string{},
 			Payload: []byte(msg.Data),
