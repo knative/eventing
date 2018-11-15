@@ -27,19 +27,31 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// Receiver parses Cloud Events and sends them to GCP PubSub.
 type Receiver struct {
 	logger *zap.Logger
 	client client.Client
 
 	pubSubClientCreator util.PubSubClientCreator
 
+	// Note that for all the default* parameters below, these must be kept in lock-step with the
+	// GCP PubSub Dispatcher's reconciler.
+	// Eventually, individual Channels should be allowed to specify different projects and secrets,
+	// but for now all Channels use the same project and secret.
+
+	// defaultGcpProject is the GCP project ID where PubSub Topics and Subscriptions are created.
 	defaultGcpProject string
-	defaultSecret     v1.ObjectReference
-	defaultSecretKey  string
+	// defaultSecret and defaultSecretKey are the K8s Secret and key in that secret that contain a
+	// JSON format GCP service account token, see
+	// https://cloud.google.com/iam/docs/creating-managing-service-account-keys#iam-service-account-keys-create-gcloud
+	defaultSecret    v1.ObjectReference
+	defaultSecretKey string
 }
 
-func New(logger *zap.Logger, client client.Client, pubSubClientCreator util.PubSubClientCreator, defaultGcpProject string, defaultSecret v1.ObjectReference, defaultSecretKey string) *Receiver {
-	return &Receiver{
+// New creates a new Receiver and its associated MessageReceiver. The caller is responsible for
+// Start()ing the returned MessageReceiver.
+func New(logger *zap.Logger, client client.Client, pubSubClientCreator util.PubSubClientCreator, defaultGcpProject string, defaultSecret v1.ObjectReference, defaultSecretKey string) (*Receiver, *buses.MessageReceiver) {
+	r := &Receiver{
 		logger: logger,
 		client: client,
 
@@ -49,14 +61,14 @@ func New(logger *zap.Logger, client client.Client, pubSubClientCreator util.PubS
 		defaultSecret:     defaultSecret,
 		defaultSecretKey:  defaultSecretKey,
 	}
+	return r, r.newMessageReceiver()
 }
 
-func (r *Receiver) NewMessageReceiver() *buses.MessageReceiver {
+func (r *Receiver) newMessageReceiver() *buses.MessageReceiver {
 	return buses.NewMessageReceiver(r.sendEventToTopic, r.logger.Sugar())
 }
 
-// sendEventToTopic sends a message to the Cloud Pub/Sub Topic backing the
-// Channel.
+// sendEventToTopic sends a message to the Cloud Pub/Sub Topic backing the Channel.
 func (r *Receiver) sendEventToTopic(channel buses.ChannelReference, message *buses.Message) error {
 	r.logger.Info("received message")
 	ctx := context.Background()

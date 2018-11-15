@@ -43,6 +43,10 @@ const (
 	defaultSecretKeyEnv       = "DEFAULT_SECRET_KEY"
 )
 
+// This is the main method for the GCP PubSub Channel dispatcher. It handles all the data-plane
+// activity for GCP PubSub Channels. It receives all events being sent to any gcp-pubsub Channel
+// (via the receiver below) and watches all GCP PubSub Subscriptions (via the dispatcher below),
+// sending events out when any are available.
 func main() {
 	logConfig := buses.NewLoggingConfig()
 	logger := buses.NewBusLoggerFromConfig(logConfig)
@@ -76,8 +80,7 @@ func main() {
 	// PubSub) and the dispatcher (takes messages in PubSub and sends them in cluster) in this
 	// binary.
 
-	r := receiver.New(logger.Desugar(), mgr.GetClient(), util.GcpPubSubClientCreator, defaultGcpProject, defaultSecret, defaultSecretKey)
-	mr := r.NewMessageReceiver()
+	_, mr := receiver.New(logger.Desugar(), mgr.GetClient(), util.GcpPubSubClientCreator, defaultGcpProject, defaultSecret, defaultSecretKey)
 	err = mgr.Add(mr)
 	if err != nil {
 		logger.Fatal("Unable to add the MessageReceiver to the manager", zap.Error(err))

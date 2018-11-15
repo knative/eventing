@@ -40,6 +40,9 @@ const (
 	finalizerName = controllerAgentName
 )
 
+// reconciler reconciles GCP-PubSub Channels by creating the K8s Service and Istio VirtualService
+// allowing other processes to send data to them. It also creates the GCP PubSub Topics (one per
+// Channel) and GCP PubSub Subscriptions (one per Subscriber).
 type reconciler struct {
 	client   client.Client
 	recorder record.EventRecorder
@@ -47,9 +50,18 @@ type reconciler struct {
 
 	pubSubClientCreator pubsubutil.PubSubClientCreator
 
+	// Note that for all the default* parameters below, these must be kept in lock-step with the
+	// GCP PubSub Dispatcher's reconciler.
+	// Eventually, individual Channels should be allowed to specify different projects and secrets,
+	// but for now all Channels use the same project and secret.
+
+	// defaultGcpProject is the GCP project ID where PubSub Topics and Subscriptions are created.
 	defaultGcpProject string
-	defaultSecret     v1.ObjectReference
-	defaultSecretKey  string
+	// defaultSecret and defaultSecretKey are the K8s Secret and key in that secret that contain a
+	// JSON format GCP service account token, see
+	// https://cloud.google.com/iam/docs/creating-managing-service-account-keys#iam-service-account-keys-create-gcloud
+	defaultSecret    v1.ObjectReference
+	defaultSecretKey string
 }
 
 // Verify the struct implements reconcile.Reconciler
@@ -61,9 +73,8 @@ func (r *reconciler) InjectClient(c client.Client) error {
 }
 
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	// TODO: use this to store the logger and set a deadline
 	ctx := context.TODO()
-	logger := r.logger.With(zap.Any("request", request))
+	ctx = logging.WithLogger(ctx, r.logger.With(zap.Any("request", request)).Sugar())
 
 	c := &eventingv1alpha1.Channel{}
 	err := r.client.Get(ctx, request.NamespacedName, c)
@@ -71,43 +82,44 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// The Channel may have been deleted since it was added to the workqueue. If so, there is
 	// nothing to be done.
 	if errors.IsNotFound(err) {
-		logger.Info("Could not find Channel", zap.Error(err))
+		logging.FromContext(ctx).Info("Could not find Channel", zap.Error(err))
 		return reconcile.Result{}, nil
 	}
 
 	// Any other error should be retried in another reconciliation.
 	if err != nil {
-		logger.Error("Unable to Get Channel", zap.Error(err))
+		logging.FromContext(ctx).Error("Unable to Get Channel", zap.Error(err))
 		return reconcile.Result{}, err
 	}
 
 	// Does this Controller control this Channel?
 	if !r.shouldReconcile(c) {
-		logger.Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("ref", c.Spec))
+		logging.FromContext(ctx).Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("ref", c.Spec))
 		return reconcile.Result{}, nil
 	}
-	logger.Info("Reconciling Channel")
+	logging.FromContext(ctx).Info("Reconciling Channel")
 
 	// Modify a copy, not the original.
 	c = c.DeepCopy()
 
-	err = r.reconcile(ctx, c)
-	if err != nil {
-		logger.Info("Error reconciling Channel", zap.Error(err))
+	ctx = logging.WithLogger(ctx, logging.FromContext(ctx).With(zap.Any("channel", c)))
+	reconcileErr := r.reconcile(ctx, c)
+	if reconcileErr != nil {
+		logging.FromContext(ctx).Info("Error reconciling Channel", zap.Error(reconcileErr))
 		// Note that we do not return the error here, because we want to update the Status
 		// regardless of the error.
 	}
 
-	if updateStatusErr := util.UpdateChannel(ctx, r.client, c); updateStatusErr != nil {
-		logger.Info("Error updating Channel Status", zap.Error(updateStatusErr))
-		return reconcile.Result{}, updateStatusErr
+	if err = util.UpdateChannel(ctx, r.client, c); err != nil {
+		logging.FromContext(ctx).Info("Error updating Channel Status", zap.Error(err))
+		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{}, err
+	return reconcile.Result{}, reconcileErr
 }
 
 // shouldReconcile determines if this Controller should control (and therefore reconcile) a given
-// ClusterChannelProvisioner. This Controller only handles in-memory channels.
+// Channel. This Controller only handles gcp-pubsub channels.
 func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 	if c.Spec.Provisioner != nil {
 		return ccpcontroller.IsControlled(c.Spec.Provisioner)
@@ -116,15 +128,13 @@ func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 }
 
 func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) error {
-	ctx = logging.WithLogger(ctx, r.logger.With(zap.Any("channel", c)).Sugar())
-
 	c.Status.InitializeConditions()
 
 	// We are syncing four things:
 	// 1. The K8s Service to talk to this Channel.
 	// 2. The Istio VirtualService to talk to this Channel.
-	// 3. The GCP PubSub Topic.
-	// 4. The GCP PubSub Subscriptions.
+	// 3. The GCP PubSub Topic (one for the Channel).
+	// 4. The GCP PubSub Subscriptions (one for each Subscriber of the Channel).
 
 	// Regardless of what we are going to do, we need GCP credentials to do it.
 	gcpCreds, err := pubsubutil.GetCredentials(ctx, r.client, r.defaultSecret, r.defaultSecretKey)
@@ -135,20 +145,19 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 	if c.DeletionTimestamp != nil {
 		// K8s garbage collection will delete the K8s service and VirtualService for this channel.
-		// We use a finalizer to ensure the GCP PubSub Topic and Subscriptions are deleted.
 		err = r.deleteSubscriptions(ctx, c, gcpCreds, r.defaultGcpProject)
 		if err != nil {
 			return err
 		}
 		err = r.deleteTopic(ctx, c, gcpCreds, r.defaultGcpProject)
 		if err != nil {
-			logging.FromContext(ctx).Info("Unable to delete topic", zap.Error(err))
 			return err
 		}
 		util.RemoveFinalizer(c, finalizerName)
 		return nil
 	}
 
+	// We use a finalizer to ensure the GCP PubSub Topic and Subscriptions are deleted.
 	util.AddFinalizer(c, finalizerName)
 
 	err = r.createK8sService(ctx, c)
@@ -209,18 +218,25 @@ func (r *reconciler) createVirtualService(ctx context.Context, c *eventingv1alph
 func (r *reconciler) createTopic(ctx context.Context, c *eventingv1alpha1.Channel, gcpCreds *google.Credentials, gcpProject string) (pubsubutil.PubSubTopic, error) {
 	psc, err := r.pubSubClientCreator(ctx, gcpCreds, gcpProject)
 	if err != nil {
+		logging.FromContext(ctx).Info("Unable to create PubSub client", zap.Error(err))
 		return nil, err
 	}
 	topic := psc.Topic(pubsubutil.GenerateTopicName(c.Namespace, c.Name))
 	exists, err := topic.Exists(ctx)
 	if err != nil {
+		logging.FromContext(ctx).Info("Unable to check Topic existence", zap.Error(err))
 		return nil, err
 	}
 	if exists {
 		return topic, nil
 	}
 
-	return psc.CreateTopic(ctx, topic.ID())
+	createdTopic, err := psc.CreateTopic(ctx, topic.ID())
+	if err != nil {
+		logging.FromContext(ctx).Info("Unable to create topic", zap.Error(err))
+		return nil, err
+	}
+	return createdTopic, nil
 }
 
 func (r *reconciler) deleteTopic(ctx context.Context, c *eventingv1alpha1.Channel, gcpCreds *google.Credentials, gcpProject string) error {

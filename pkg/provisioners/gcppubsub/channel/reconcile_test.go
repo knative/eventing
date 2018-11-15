@@ -482,10 +482,9 @@ func TestReconcile(t *testing.T) {
 		}
 		c := tc.GetClient()
 		r := &reconciler{
-			client:       c,
-			recorder:     recorder,
-			logger:       zap.NewNop(),
-			configMapKey: configMapKey,
+			client:   c,
+			recorder: recorder,
+			logger:   zap.NewNop(),
 		}
 		if tc.ReconcileKey == "" {
 			tc.ReconcileKey = fmt.Sprintf("/%s", cName)

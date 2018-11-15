@@ -31,11 +31,12 @@ const (
 	controllerAgentName = "gcp-pubsub-clusterchannelprovisioner-controller"
 )
 
-// ProvideController returns a flow controller.
+// ProvideController returns a Controller that represents the gcp-pubsub channel Provisioner. It
+// reconciles only the ClusterChannelProvisioner.
 func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	logger = logger.With(zap.String("controller", controllerAgentName))
 
-	// Setup a new controller to Reconcile ClusterChannelProvisioners that are in-memory channels.
+	// Setup a new controller to Reconcile ClusterChannelProvisioners that are gcp-pubsub channels.
 	r := &reconciler{
 		recorder: mgr.GetRecorder(controllerAgentName),
 		logger:   logger,

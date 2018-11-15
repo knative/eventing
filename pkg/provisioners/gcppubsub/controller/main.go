@@ -34,12 +34,16 @@ import (
 )
 
 const (
+	// These are Environment variable names.
 	defaultGcpProjectEnv      = "DEFAULT_GCP_PROJECT"
 	defaultSecretNamespaceEnv = "DEFAULT_SECRET_NAMESPACE"
 	defaultSecretNameEnv      = "DEFAULT_SECRET_NAME"
 	defaultSecretKeyEnv       = "DEFAULT_SECRET_KEY"
 )
 
+// This is the main method for the GCP PubSub Channel controller. It reconciles the
+// ClusterChannelProvisioner itself and Channels that use the 'gcp-pubsub' provisioner. It does not
+// handle the anything at the data layer.
 func main() {
 	logConfig := buses.NewLoggingConfig()
 	logger := buses.NewBusLoggerFromConfig(logConfig)

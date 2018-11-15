@@ -35,14 +35,16 @@ import (
 )
 
 const (
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
+	// controllerAgentName is the string used by this controller to identify itself when creating
+	// events.
 	controllerAgentName = "gcp-pubsub-channel-dispatcher"
 )
 
 // ProvideController returns a Controller that represents the dispatcher portion (messages from GCP
-// PubSub are sent into the cluster) of the GCP PubSub dispatcher.
+// PubSub are sent into the cluster) of the GCP PubSub dispatcher. We use a reconcile loop to watch
+// all Channels and notice changes to them.
 func New(mgr manager.Manager, logger *zap.Logger, defaultGcpProject string, defaultSecret corev1.ObjectReference, defaultSecretKey string, stopCh <-chan struct{}) (controller.Controller, error) {
+	// reconcileChan is used when the dispatcher itself needs to force reconciliation of a Channel.
 	reconcileChan := make(chan event.GenericEvent)
 
 	// Setup a new controller to pull messages from GCP PubSub for Channels that belong to this

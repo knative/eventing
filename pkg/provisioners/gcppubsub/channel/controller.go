@@ -29,16 +29,17 @@ import (
 )
 
 const (
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
+	// controllerAgentName is the string used by this controller to identify itself when creating
+	// events.
 	controllerAgentName = "gcp-pubsub-channel-controller"
 )
 
-// ProvideController returns a Controller that represents the in-memory-channel Provisioner.
+// ProvideController returns a Controller that represents the gcp-pubsub channel Provisioner. It
+// reconciles only Channels.
 func ProvideController(defaultGcpProject string, defaultSecret corev1.ObjectReference, defaultSecretKey string) func(manager.Manager, *zap.Logger) (controller.Controller, error) {
 	return func(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
-		// Setup a new controller to Reconcile Channels that belong to this Cluster Provisioner
-		// (in-memory channels).
+		// Setup a new controller to Reconcile Channels that belong to this Cluster Channel
+		// Provisioner (gcp-pubsub).
 		r := &reconciler{
 			recorder: mgr.GetRecorder(controllerAgentName),
 			logger:   logger,
