@@ -18,25 +18,18 @@ package channel
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
 	util "github.com/knative/eventing/pkg/provisioners"
-	"github.com/knative/eventing/pkg/sidecar/configmap"
-	"github.com/knative/eventing/pkg/sidecar/fanout"
-	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,18 +37,16 @@ import (
 )
 
 const (
-	ccpName = "in-memory-channel"
+	ccpName = "gcp-pubsub"
 
 	cNamespace = "test-namespace"
 	cName      = "test-channel"
 	cUID       = "test-uid"
 
-	cmNamespace = cNamespace
-	cmName      = "test-config-map"
-
 	testErrorMessage = "test induced error"
 
-	insertedByVerifyConfigMapData = "data inserted by verifyConfigMapData so that it can be WantPresent"
+	gcpProject = "gcp-project"
+	secretKey  = "key.json"
 )
 
 var (
@@ -65,114 +56,11 @@ var (
 
 	truePointer = true
 
-	// channelsConfig and channels are linked together. A change to one, will likely require a
-	// change to the other. channelsConfig is the serialized config of channels for everything
-	// provisioned by the in-memory-provisioner.
-	channelsConfig = multichannelfanout.Config{
-		ChannelConfigs: []multichannelfanout.ChannelConfig{
-			{
-				Namespace: cNamespace,
-				Name:      "c1",
-				FanoutConfig: fanout.Config{
-					Subscriptions: []eventingduck.ChannelSubscriberSpec{
-						{
-							SubscriberURI: "foo",
-						},
-						{
-							ReplyURI: "bar",
-						},
-						{
-							SubscriberURI: "baz",
-							ReplyURI:      "qux",
-						},
-					},
-				},
-			},
-			{
-				Namespace: cNamespace,
-				Name:      "c3",
-				FanoutConfig: fanout.Config{
-					Subscriptions: []eventingduck.ChannelSubscriberSpec{
-						{
-							SubscriberURI: "steve",
-						},
-					},
-				},
-			},
-		},
-	}
-
-	channels = []eventingv1alpha1.Channel{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: cNamespace,
-				Name:      "c1",
-			},
-			TypeMeta: metav1.TypeMeta{
-				Kind: "Channel",
-			},
-			Spec: eventingv1alpha1.ChannelSpec{
-				Provisioner: &corev1.ObjectReference{
-					Name: ccpName,
-				},
-				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.ChannelSubscriberSpec{
-						{
-							SubscriberURI: "foo",
-						},
-						{
-							ReplyURI: "bar",
-						},
-						{
-							SubscriberURI: "baz",
-							ReplyURI:      "qux",
-						},
-					},
-				},
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: cNamespace,
-				Name:      "c2",
-			},
-			TypeMeta: metav1.TypeMeta{
-				Kind: "Channel",
-			},
-			Spec: eventingv1alpha1.ChannelSpec{
-				Provisioner: &corev1.ObjectReference{
-					Name: "some-other-provisioner",
-				},
-				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.ChannelSubscriberSpec{
-						{
-							SubscriberURI: "anything",
-						},
-					},
-				},
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: cNamespace,
-				Name:      "c3",
-			},
-			TypeMeta: metav1.TypeMeta{
-				Kind: "Channel",
-			},
-			Spec: eventingv1alpha1.ChannelSpec{
-				Provisioner: &corev1.ObjectReference{
-					Name: ccpName,
-				},
-				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.ChannelSubscriberSpec{
-						{
-							SubscriberURI: "steve",
-						},
-					},
-				},
-			},
-		},
+	secret = &corev1.ObjectReference{
+		APIVersion: "v1",
+		Kind:       "Secret",
+		Namespace:  "secret-namespace",
+		Name:       "secret-name",
 	}
 )
 
@@ -236,23 +124,10 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			Name: "Channel deleted - Channel config sync fails",
-			InitialState: []runtime.Object{
-				makeDeletingChannel(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockLists: errorListingChannels(),
-			},
-			WantPresent: []runtime.Object{
-				// Finalizer has not been removed.
-				makeDeletingChannel(),
-			},
-			WantErrMsg: testErrorMessage,
-		},
-		{
 			Name: "Channel deleted - finalizer removed",
 			InitialState: []runtime.Object{
 				makeDeletingChannel(),
+				makeSecretWithCreds(),
 			},
 			WantPresent: []runtime.Object{
 				makeDeletingChannelWithoutFinalizer(),
@@ -269,41 +144,9 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 		},
 		{
-			Name: "Channel config sync fails - can't get ConfigMap",
-			InitialState: []runtime.Object{
-				makeChannel(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockGets: errorGettingConfigMap(),
-			},
-			WantErrMsg: testErrorMessage,
-		},
-		{
-			Name: "Channel config sync fails - can't create ConfigMap",
-			InitialState: []runtime.Object{
-				makeChannel(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockCreates: errorCreatingConfigMap(),
-			},
-			WantErrMsg: testErrorMessage,
-		},
-		{
-			Name: "Channel config sync fails - can't update ConfigMap",
-			InitialState: []runtime.Object{
-				makeChannel(),
-				makeConfigMap(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockUpdates: errorUpdatingConfigMap(),
-			},
-			WantErrMsg: testErrorMessage,
-		},
-		{
 			Name: "K8s service get fails",
 			InitialState: []runtime.Object{
 				makeChannel(),
-				makeConfigMap(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockGets: errorGettingK8sService(),
@@ -317,7 +160,6 @@ func TestReconcile(t *testing.T) {
 			Name: "K8s service creation fails",
 			InitialState: []runtime.Object{
 				makeChannel(),
-				makeConfigMap(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockCreates: errorCreatingK8sService(),
@@ -332,7 +174,6 @@ func TestReconcile(t *testing.T) {
 			Name: "K8s service already exists - not owned by Channel",
 			InitialState: []runtime.Object{
 				makeChannel(),
-				makeConfigMap(),
 				makeK8sServiceNotOwnedByChannel(),
 			},
 			WantPresent: []runtime.Object{
@@ -343,7 +184,6 @@ func TestReconcile(t *testing.T) {
 			Name: "Virtual service get fails",
 			InitialState: []runtime.Object{
 				makeChannel(),
-				makeConfigMap(),
 				makeK8sService(),
 				makeVirtualService(),
 			},
@@ -361,7 +201,6 @@ func TestReconcile(t *testing.T) {
 			Name: "Virtual service creation fails",
 			InitialState: []runtime.Object{
 				makeChannel(),
-				makeConfigMap(),
 				makeK8sService(),
 			},
 			Mocks: controllertesting.Mocks{
@@ -378,7 +217,6 @@ func TestReconcile(t *testing.T) {
 			Name: "VirtualService already exists - not owned by Channel",
 			InitialState: []runtime.Object{
 				makeChannel(),
-				makeConfigMap(),
 				makeK8sService(),
 				makeVirtualServiceNowOwnedByChannel(),
 			},
@@ -390,7 +228,6 @@ func TestReconcile(t *testing.T) {
 			Name: "Channel get for update fails",
 			InitialState: []runtime.Object{
 				makeChannel(),
-				makeConfigMap(),
 				makeK8sService(),
 				makeVirtualService(),
 			},
@@ -403,7 +240,6 @@ func TestReconcile(t *testing.T) {
 			Name: "Channel update fails",
 			InitialState: []runtime.Object{
 				makeChannel(),
-				makeConfigMap(),
 				makeK8sService(),
 				makeVirtualService(),
 			},
@@ -412,79 +248,22 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 		},
-		{
-			Name: "Channel reconcile successful - Channel list follows pagination",
-			InitialState: []runtime.Object{
-				makeChannel(),
-				makeConfigMap(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockLists: (&paginatedChannelsListStruct{channels: channels}).MockLists(),
-				// This is more accurate to be in WantPresent, but we need to check JSON equality,
-				// not string equality, so it can't be done in WantPresent. Instead, we verify
-				// during the update call, swapping out the data and WantPresent with that inserted
-				// data.
-				MockUpdates: verifyConfigMapData(channelsConfig),
-			},
-			WantPresent: []runtime.Object{
-				makeReadyChannel(),
-				makeK8sService(),
-				makeVirtualService(),
-				makeConfigMapWithVerifyConfigMapData(),
-			},
-		},
-		{
-			Name: "Channel reconcile successful - Channel has no subscribers",
-			InitialState: []runtime.Object{
-				makeChannel(),
-				makeConfigMap(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockLists: (&paginatedChannelsListStruct{channels: []eventingv1alpha1.Channel{
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "high-consul",
-							Name:      "duarte",
-						},
-						Spec: eventingv1alpha1.ChannelSpec{
-							Provisioner: &corev1.ObjectReference{
-								Name: ccpName,
-							},
-						},
-					},
-				}}).MockLists(),
-				// This is more accurate to be in WantPresent, but we need to check JSON equality,
-				// not string equality, so it can't be done in WantPresent. Instead, we verify
-				// during the update call, swapping out the data and WantPresent with that inserted
-				// data.
-				MockUpdates: verifyConfigMapData(multichannelfanout.Config{
-					ChannelConfigs: []multichannelfanout.ChannelConfig{
-						{
-							Namespace: "high-consul",
-							Name:      "duarte",
-						},
-					},
-				}),
-			},
-			WantPresent: []runtime.Object{
-				makeReadyChannel(),
-				makeK8sService(),
-				makeVirtualService(),
-				makeConfigMapWithVerifyConfigMapData(),
-			},
-		},
 	}
 	recorder := record.NewBroadcaster().NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 	for _, tc := range testCases {
-		configMapKey := types.NamespacedName{
-			Namespace: cmNamespace,
-			Name:      cmName,
+		if tc.Name != "Channel deleted - finalizer removed" {
+			continue
 		}
 		c := tc.GetClient()
 		r := &reconciler{
 			client:   c,
 			recorder: recorder,
 			logger:   zap.NewNop(),
+
+			pubSubClientCreator: foo,
+			defaultGcpProject:   gcpProject,
+			defaultSecret:       secret,
+			defaultSecretKey:    secretKey,
 		}
 		if tc.ReconcileKey == "" {
 			tc.ReconcileKey = fmt.Sprintf("/%s", cName)
@@ -562,26 +341,6 @@ func makeDeletingChannelWithoutFinalizer() *eventingv1alpha1.Channel {
 	c := makeDeletingChannel()
 	c.Finalizers = nil
 	return c
-}
-
-func makeConfigMap() *corev1.ConfigMap {
-	return &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: cmNamespace,
-			Name:      cmName,
-		},
-	}
-}
-
-func makeConfigMapWithVerifyConfigMapData() *corev1.ConfigMap {
-	cm := makeConfigMap()
-	cm.Data = map[string]string{}
-	cm.Data[configmap.MultiChannelFanoutConfigKey] = insertedByVerifyConfigMapData
-	return cm
 }
 
 func makeK8sService() *corev1.Service {
@@ -697,17 +456,6 @@ func errorGettingChannel() []controllertesting.MockGet {
 	}
 }
 
-func errorGettingConfigMap() []controllertesting.MockGet {
-	return []controllertesting.MockGet{
-		func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-			if _, ok := obj.(*corev1.ConfigMap); ok {
-				return controllertesting.Handled, errors.New(testErrorMessage)
-			}
-			return controllertesting.Unhandled, nil
-		},
-	}
-}
-
 func errorGettingK8sService() []controllertesting.MockGet {
 	return []controllertesting.MockGet{
 		func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
@@ -734,17 +482,6 @@ func errorListingChannels() []controllertesting.MockList {
 	return []controllertesting.MockList{
 		func(client.Client, context.Context, *client.ListOptions, runtime.Object) (controllertesting.MockHandled, error) {
 			return controllertesting.Handled, errors.New(testErrorMessage)
-		},
-	}
-}
-
-func errorCreatingConfigMap() []controllertesting.MockCreate {
-	return []controllertesting.MockCreate{
-		func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-			if _, ok := obj.(*corev1.ConfigMap); ok {
-				return controllertesting.Handled, errors.New(testErrorMessage)
-			}
-			return controllertesting.Unhandled, nil
 		},
 	}
 }
@@ -776,66 +513,6 @@ func errorUpdatingChannel() []controllertesting.MockUpdate {
 		func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
 			if _, ok := obj.(*eventingv1alpha1.Channel); ok {
 				return controllertesting.Handled, errors.New(testErrorMessage)
-			}
-			return controllertesting.Unhandled, nil
-		},
-	}
-}
-
-func errorUpdatingConfigMap() []controllertesting.MockUpdate {
-	return []controllertesting.MockUpdate{
-		func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-			if _, ok := obj.(*corev1.ConfigMap); ok {
-				return controllertesting.Handled, errors.New(testErrorMessage)
-			}
-			return controllertesting.Unhandled, nil
-		},
-	}
-}
-
-type paginatedChannelsListStruct struct {
-	channels []eventingv1alpha1.Channel
-}
-
-func (p *paginatedChannelsListStruct) MockLists() []controllertesting.MockList {
-	return []controllertesting.MockList{
-		func(_ client.Client, _ context.Context, _ *client.ListOptions, list runtime.Object) (controllertesting.MockHandled, error) {
-			if l, ok := list.(*eventingv1alpha1.ChannelList); ok {
-
-				if len(p.channels) > 0 {
-					c := p.channels[0]
-					p.channels = p.channels[1:]
-					l.Continue = "yes"
-					l.Items = []eventingv1alpha1.Channel{
-						c,
-					}
-				}
-				return controllertesting.Handled, nil
-			}
-			return controllertesting.Unhandled, nil
-		},
-	}
-}
-
-func verifyConfigMapData(expected multichannelfanout.Config) []controllertesting.MockUpdate {
-	return []controllertesting.MockUpdate{
-		func(innerClient client.Client, ctx context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-			if cm, ok := obj.(*corev1.ConfigMap); ok {
-				s := cm.Data[configmap.MultiChannelFanoutConfigKey]
-				c := multichannelfanout.Config{}
-				err := json.Unmarshal([]byte(s), &c)
-				if err != nil {
-					return controllertesting.Handled,
-						fmt.Errorf("test is unable to unmarshal ConfigMap data: %v", err)
-				}
-				if diff := cmp.Diff(c, expected); diff != "" {
-					return controllertesting.Handled,
-						fmt.Errorf("test got unwanted ChannelsConfig (-want +got) %s", diff)
-				}
-				// Verified it is correct, now so that we can verify this actually occurred, swap
-				// out the data with a known value for later comparison.
-				cm.Data[configmap.MultiChannelFanoutConfigKey] = insertedByVerifyConfigMapData
-				return controllertesting.Handled, innerClient.Update(ctx, obj)
 			}
 			return controllertesting.Unhandled, nil
 		},

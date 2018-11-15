@@ -33,7 +33,7 @@ import (
 // GetCredentials gets GCP credentials from a secret. The credentials must be stored in JSON format
 // in the secret.
 // Note that this function relies on having a logger in the context (see logging.FromContext).
-func GetCredentials(ctx context.Context, client client.Client, secretRef v1.ObjectReference, key string) (*google.Credentials, error) {
+func GetCredentials(ctx context.Context, client client.Client, secretRef *v1.ObjectReference, key string) (*google.Credentials, error) {
 	secret := &v1.Secret{}
 	err := client.Get(ctx, types.NamespacedName{Namespace: secretRef.Namespace, Name: secretRef.Name}, secret)
 	if err != nil {

@@ -45,6 +45,9 @@ const (
 	finalizerName = controllerAgentName
 )
 
+type channelName = types.NamespacedName
+type subscriptionName = types.NamespacedName
+
 // reconciler reconciles Channels with the gcp-pubsub provisioner. It sets up hanging polling for
 // every Subscription to any Channel.
 type reconciler struct {
@@ -69,14 +72,14 @@ type reconciler struct {
 	// defaultSecret and defaultSecretKey are the K8s Secret and key in that secret that contain a
 	// JSON format GCP service account token, see
 	// https://cloud.google.com/iam/docs/creating-managing-service-account-keys#iam-service-account-keys-create-gcloud
-	defaultSecret    v1.ObjectReference
+	defaultSecret    *v1.ObjectReference
 	defaultSecretKey string
 
 	subscriptionsLock sync.Mutex
 	// subscriptions contains the cancel functions for all hanging PubSub Subscriptions. The cancel
 	// function must be called when we no longer want that subscription to be active. Logically it
 	// is a map from Channel name to Subscription name to CancelFunc.
-	subscriptions map[types.NamespacedName]map[types.NamespacedName]context.CancelFunc
+	subscriptions map[channelName]map[subscriptionName]context.CancelFunc
 }
 
 // Verify the struct implements reconcile.Reconciler
@@ -158,7 +161,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 }
 
 // key creates the first index into reconciler.subscriptions, based on the Channel's name.
-func key(c *eventingv1alpha1.Channel) types.NamespacedName {
+func key(c *eventingv1alpha1.Channel) channelName {
 	return types.NamespacedName{
 		Namespace: c.Namespace,
 		Name:      c.Name,
@@ -167,7 +170,7 @@ func key(c *eventingv1alpha1.Channel) types.NamespacedName {
 
 // subscriptionKey creates the second index into reconciler.subscriptions, based on the Subscriber's
 // name.
-func subscriptionKey(sub *v1alpha1.ChannelSubscriberSpec) types.NamespacedName {
+func subscriptionKey(sub *v1alpha1.ChannelSubscriberSpec) subscriptionName {
 	return types.NamespacedName{
 		Namespace: sub.Ref.Namespace,
 		Name:      sub.Ref.Name,
@@ -225,7 +228,7 @@ func (r *reconciler) syncSubscriptions(ctx context.Context, c *eventingv1alpha1.
 	}
 
 	// subsToDelete is logically a set, not a map (values have no meaning).
-	subsToDelete := map[types.NamespacedName]bool{}
+	subsToDelete := map[subscriptionName]bool{}
 	for sub := range activeSubscribers {
 		subsToDelete[sub] = true
 	}
@@ -246,7 +249,7 @@ func (r *reconciler) createSubscriptionUnderLock(ctx context.Context, c *eventin
 
 	channelKey := key(c)
 	if r.subscriptions[channelKey] == nil {
-		r.subscriptions[channelKey] = map[types.NamespacedName]context.CancelFunc{}
+		r.subscriptions[channelKey] = map[subscriptionName]context.CancelFunc{}
 	}
 	subKey := subscriptionKey(sub)
 	r.subscriptions[channelKey][subKey] = cancelFunc

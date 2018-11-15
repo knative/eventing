@@ -80,7 +80,7 @@ func main() {
 	// PubSub) and the dispatcher (takes messages in PubSub and sends them in cluster) in this
 	// binary.
 
-	_, mr := receiver.New(logger.Desugar(), mgr.GetClient(), util.GcpPubSubClientCreator, defaultGcpProject, defaultSecret, defaultSecretKey)
+	_, mr := receiver.New(logger.Desugar(), mgr.GetClient(), util.GcpPubSubClientCreator, defaultGcpProject, &defaultSecret, defaultSecretKey)
 	err = mgr.Add(mr)
 	if err != nil {
 		logger.Fatal("Unable to add the MessageReceiver to the manager", zap.Error(err))
@@ -92,7 +92,7 @@ func main() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	_, err = dispatcher.New(mgr, logger.Desugar(), defaultGcpProject, defaultSecret, defaultSecretKey, stopCh)
+	_, err = dispatcher.New(mgr, logger.Desugar(), defaultGcpProject, &defaultSecret, defaultSecretKey, stopCh)
 	if err != nil {
 		logger.Fatal("Unable to create the dispatcher", zap.Error(err))
 	}

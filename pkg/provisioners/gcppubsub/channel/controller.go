@@ -36,7 +36,7 @@ const (
 
 // ProvideController returns a Controller that represents the gcp-pubsub channel Provisioner. It
 // reconciles only Channels.
-func ProvideController(defaultGcpProject string, defaultSecret corev1.ObjectReference, defaultSecretKey string) func(manager.Manager, *zap.Logger) (controller.Controller, error) {
+func ProvideController(defaultGcpProject string, defaultSecret *corev1.ObjectReference, defaultSecretKey string) func(manager.Manager, *zap.Logger) (controller.Controller, error) {
 	return func(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 		// Setup a new controller to Reconcile Channels that belong to this Cluster Channel
 		// Provisioner (gcp-pubsub).

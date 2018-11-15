@@ -78,7 +78,7 @@ func main() {
 		Name:       getRequiredEnv(defaultSecretNameEnv),
 	}
 	defaultSecretKey := getRequiredEnv(defaultSecretKeyEnv)
-	_, err = channel.ProvideController(defaultGcpProject, defaultSecret, defaultSecretKey)(mgr, logger.Desugar())
+	_, err = channel.ProvideController(defaultGcpProject, &defaultSecret, defaultSecretKey)(mgr, logger.Desugar())
 	if err != nil {
 		logger.Fatal("Unable to create Channel controller", zap.Error(err))
 	}

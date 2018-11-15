@@ -60,7 +60,7 @@ type reconciler struct {
 	// defaultSecret and defaultSecretKey are the K8s Secret and key in that secret that contain a
 	// JSON format GCP service account token, see
 	// https://cloud.google.com/iam/docs/creating-managing-service-account-keys#iam-service-account-keys-create-gcloud
-	defaultSecret    v1.ObjectReference
+	defaultSecret    *v1.ObjectReference
 	defaultSecretKey string
 }
 

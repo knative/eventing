@@ -27,7 +27,6 @@ import (
 	pubsubutil "github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -43,7 +42,7 @@ const (
 // ProvideController returns a Controller that represents the dispatcher portion (messages from GCP
 // PubSub are sent into the cluster) of the GCP PubSub dispatcher. We use a reconcile loop to watch
 // all Channels and notice changes to them.
-func New(mgr manager.Manager, logger *zap.Logger, defaultGcpProject string, defaultSecret corev1.ObjectReference, defaultSecretKey string, stopCh <-chan struct{}) (controller.Controller, error) {
+func New(mgr manager.Manager, logger *zap.Logger, defaultGcpProject string, defaultSecret *corev1.ObjectReference, defaultSecretKey string, stopCh <-chan struct{}) (controller.Controller, error) {
 	// reconcileChan is used when the dispatcher itself needs to force reconciliation of a Channel.
 	reconcileChan := make(chan event.GenericEvent)
 
@@ -62,7 +61,7 @@ func New(mgr manager.Manager, logger *zap.Logger, defaultGcpProject string, defa
 		pubSubClientCreator: pubsubutil.GcpPubSubClientCreator,
 
 		subscriptionsLock: sync.Mutex{},
-		subscriptions:     map[types.NamespacedName]map[types.NamespacedName]context.CancelFunc{},
+		subscriptions:     map[channelName]map[subscriptionName]context.CancelFunc{},
 	}
 
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
