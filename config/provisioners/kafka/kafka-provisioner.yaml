@@ -45,11 +45,20 @@ rules:
       - "" # Core API group.
     resources:
       - services
+      - configmaps
     verbs:
       - get
       - list
       - watch
       - create
+  - apiGroups:
+      - "" # Core API Group.
+    resources:
+      - configmaps
+    resourceNames:
+      - kafka-channel-dispatcher
+    verbs:
+      - update
   - apiGroups:
       - networking.istio.io
     resources:
@@ -81,7 +90,7 @@ metadata:
   name: kafka-channel-controller-config
   namespace: knative-eventing
 data:
-  # Broker URL's for the provisioner
+  # Broker URL's for the provisioner. Replace this with the URL's for your kafka cluster.
   bootstrap_servers: kafkabroker.kafka:9092
 ---
 
@@ -100,10 +109,89 @@ spec:
       serviceAccountName: kafka-channel-controller
       containers:
       - name: kafka-channel-controller-controller
-        image: github.com/knative/eventing/pkg/provisioners/kafka
+        image: github.com/knative/eventing/pkg/provisioners/kafka/cmd/controller
         volumeMounts:
           - name: kafka-channel-controller-config
             mountPath: /etc/config-provisioner
+      volumes:
+        - name: kafka-channel-controller-config
+          configMap:
+            name: kafka-channel-controller-config
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kafka-channel-dispatcher
+  namespace: knative-eventing
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kafka-channel-dispatcher
+  namespace: knative-eventing
+rules:
+  - apiGroups:
+      - "" # Core API group.
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: kafka-channel-dispatcher
+  namespace: knative-eventing
+subjects:
+  - kind: ServiceAccount
+    name: kafka-channel-dispatcher
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: kafka-channel-dispatcher
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kafka-channel-dispatcher
+  namespace: knative-eventing
+spec:
+  replicas: 1
+  selector:
+    matchLabels: &labels
+      clusterChannelProvisioner: kafka-channel
+      role: dispatcher
+  serviceName: kafka-channel-dispatcher-service
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+      labels: *labels
+    spec:
+      serviceAccountName: kafka-channel-dispatcher
+      containers:
+        - name: dispatcher
+          image: github.com/knative/eventing/pkg/provisioners/kafka/cmd/dispatcher
+          env:
+            - name: DISPATCHER_CONFIGMAP_NAME
+              value: kafka-channel-dispatcher
+            - name: DISPATCHER_CONFIGMAP_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+            - name: kafka-channel-controller-config
+              mountPath: /etc/config-provisioner
       volumes:
         - name: kafka-channel-controller-config
           configMap:
