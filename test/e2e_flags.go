@@ -21,6 +21,7 @@ package test
 import (
 	"flag"
 	"os"
+	"path"
 
 	pkgTest "github.com/knative/pkg/test"
 	"github.com/knative/pkg/test/logging"
@@ -38,7 +39,7 @@ type EventingEnvironmentFlags struct {
 func initializeEventingFlags() *EventingEnvironmentFlags {
 	var f EventingEnvironmentFlags
 
-	defaultRepo := os.Getenv("DOCKER_REPO_OVERRIDE")
+	defaultRepo := path.Join(os.Getenv("DOCKER_REPO_OVERRIDE"), "github.com/knative/eventing/test/test_images")
 	flag.StringVar(&f.DockerRepo, "dockerrepo", defaultRepo,
 		"Provide the uri of the docker repo you have uploaded the test image to using `uploadtestimage.sh`. Defaults to $DOCKER_REPO_OVERRIDE")
 

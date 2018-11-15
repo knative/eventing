@@ -292,7 +292,14 @@ func (r *reconciler) syncPhysicalChannel(sub *v1alpha1.Subscription, isDeleted b
 	}
 	subscribable := r.createSubscribable(subs)
 
-	return r.patchPhysicalFrom(sub.Namespace, sub.Spec.Channel, subscribable)
+	if patchErr := r.patchPhysicalFrom(sub.Namespace, sub.Spec.Channel, subscribable); patchErr != nil {
+		if isDeleted && errors.IsNotFound(patchErr) {
+			glog.Infof("could not find channel %v\n", sub.Spec.Channel)
+			return nil
+		} 
+		return patchErr
+	}
+	return nil
 }
 
 func (r *reconciler) listAllSubscriptionsWithPhysicalChannel(sub *v1alpha1.Subscription) ([]v1alpha1.Subscription, error) {
@@ -307,6 +314,7 @@ func (r *reconciler) listAllSubscriptionsWithPhysicalChannel(sub *v1alpha1.Subsc
 				Kind:       "Subscription",
 			},
 		},
+		Namespace: sub.Namespace,
 	}
 	ctx := context.TODO()
 	for {
