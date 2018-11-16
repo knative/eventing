@@ -169,6 +169,8 @@ func (d *KafkaDispatcher) subscribe(channelRef buses.ChannelReference, sub subsc
 	group := fmt.Sprintf("%s.%s.%s", controller.Name, sub.Namespace, sub.Name)
 	consumer, err := d.kafkaCluster.NewConsumer(group, []string{topicName})
 	if err != nil {
+		// we can not create a consumer - logging that, with reason
+		d.logger.Info("Could not create proper consumer", zap.Error(err))
 		return err
 	}
 
