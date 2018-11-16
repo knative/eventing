@@ -279,7 +279,7 @@ func makeK8sService() *corev1.Service {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: system.Namespace,
-			Name:      fmt.Sprintf("%s-clusterbus", Name),
+			Name:      fmt.Sprintf("%s-dispatcher", Name),
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),

@@ -2,6 +2,7 @@ package provisioners
 
 import (
 	"context"
+	"fmt"
 
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
@@ -38,7 +39,7 @@ func RemoveFinalizer(c *eventingv1alpha1.Channel, finalizerName string) {
 func getK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
 	svcKey := types.NamespacedName{
 		Namespace: c.Namespace,
-		Name:      controller.ChannelServiceName(c.Name),
+		Name:      ChannelServiceName(c.Name),
 	}
 	svc := &corev1.Service{}
 	err := client.Get(ctx, svcKey, svc)
@@ -64,7 +65,7 @@ func CreateK8sService(ctx context.Context, client runtimeClient.Client, c *event
 func getVirtualService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*istiov1alpha3.VirtualService, error) {
 	vsk := runtimeClient.ObjectKey{
 		Namespace: c.Namespace,
-		Name:      controller.ChannelVirtualServiceName(c.ObjectMeta.Name),
+		Name:      ChannelVirtualServiceName(c.ObjectMeta.Name),
 	}
 	vs := &istiov1alpha3.VirtualService{}
 	err := client.Get(ctx, vsk, vs)
@@ -124,7 +125,7 @@ func newK8sService(c *eventingv1alpha1.Channel) *corev1.Service {
 	}
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.ChannelServiceName(c.ObjectMeta.Name),
+			Name:      ChannelServiceName(c.ObjectMeta.Name),
 			Namespace: c.Namespace,
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
@@ -154,10 +155,10 @@ func newVirtualService(channel *eventingv1alpha1.Channel) *istiov1alpha3.Virtual
 		"channel":     channel.Name,
 		"provisioner": channel.Spec.Provisioner.Name,
 	}
-	destinationHost := controller.ServiceHostName(controller.ClusterBusDispatcherServiceName(channel.Spec.Provisioner.Name), system.Namespace)
+	destinationHost := controller.ServiceHostName(ChannelDispatcherServiceName(channel.Spec.Provisioner.Name), system.Namespace)
 	return &istiov1alpha3.VirtualService{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.ChannelVirtualServiceName(channel.Name),
+			Name:      ChannelVirtualServiceName(channel.Name),
 			Namespace: channel.Namespace,
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
@@ -170,12 +171,12 @@ func newVirtualService(channel *eventingv1alpha1.Channel) *istiov1alpha3.Virtual
 		},
 		Spec: istiov1alpha3.VirtualServiceSpec{
 			Hosts: []string{
-				controller.ServiceHostName(controller.ChannelServiceName(channel.Name), channel.Namespace),
-				controller.ChannelHostName(channel.Name, channel.Namespace),
+				controller.ServiceHostName(ChannelServiceName(channel.Name), channel.Namespace),
+				ChannelHostName(channel.Name, channel.Namespace),
 			},
 			Http: []istiov1alpha3.HTTPRoute{{
 				Rewrite: &istiov1alpha3.HTTPRewrite{
-					Authority: controller.ChannelHostName(channel.Name, channel.Namespace),
+					Authority: ChannelHostName(channel.Name, channel.Namespace),
 				},
 				Route: []istiov1alpha3.DestinationWeight{{
 					Destination: istiov1alpha3.Destination{
@@ -188,4 +189,16 @@ func newVirtualService(channel *eventingv1alpha1.Channel) *istiov1alpha3.Virtual
 			},
 		},
 	}
+}
+
+func ChannelVirtualServiceName(channelName string) string {
+	return fmt.Sprintf("%s-channel", channelName)
+}
+
+func ChannelServiceName(channelName string) string {
+	return fmt.Sprintf("%s-channel", channelName)
+}
+
+func ChannelHostName(channelName, namespace string) string {
+	return fmt.Sprintf("%s.%s.channels.cluster.local", channelName, namespace)
 }

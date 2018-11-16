@@ -661,7 +661,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 				},
 				Route: []istiov1alpha3.DestinationWeight{{
 					Destination: istiov1alpha3.Destination{
-						Host: "in-memory-channel-clusterbus.knative-eventing.svc.cluster.local",
+						Host: "in-memory-channel-dispatcher.knative-eventing.svc.cluster.local",
 						Port: istiov1alpha3.PortSelector{
 							Number: util.PortNumber,
 						},

@@ -88,7 +88,7 @@ func makeDispatcherService() *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: system.Namespace,
-			Name:      fmt.Sprintf("%s-clusterbus", clusterChannelProvisionerName),
+			Name:      fmt.Sprintf("%s-dispatcher", clusterChannelProvisionerName),
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
@@ -110,5 +110,27 @@ func makeDispatcherService() *corev1.Service {
 				},
 			},
 		},
+	}
+}
+
+func TestNames(t *testing.T) {
+	testCases := []struct {
+		Name string
+		F    func() string
+		Want string
+	}{{
+		Name: "ChannelDispatcherServiceName",
+		F: func() string {
+			return ChannelDispatcherServiceName("foo")
+		},
+		Want: "foo-dispatcher",
+	}}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			if got := tc.F(); got != tc.Want {
+				t.Errorf("want %v, got %v", tc.Want, got)
+			}
+		})
 	}
 }

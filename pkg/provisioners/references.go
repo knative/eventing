@@ -14,12 +14,10 @@
  * limitations under the License.
  */
 
-package buses
+package provisioners
 
 import (
 	"fmt"
-
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 )
 
 // ChannelReference references a Channel within the cluster by name and
@@ -27,26 +25,6 @@ import (
 type ChannelReference struct {
 	Namespace string
 	Name      string
-}
-
-// NewChannelReference creates a ChannelReference from a Channel
-func NewChannelReference(channel *eventingv1alpha1.Channel) ChannelReference {
-	return NewChannelReferenceFromNames(channel.Name, channel.Namespace)
-}
-
-// NewChannelReferenceFromSubscription creates a ChannelReference from a
-// Subscription for a Channel.
-func NewChannelReferenceFromSubscription(subscription *eventingv1alpha1.Subscription) ChannelReference {
-	return NewChannelReferenceFromNames(subscription.Spec.Channel.Name, subscription.Namespace)
-}
-
-// NewChannelReferenceFromNames creates a ChannelReference for a name and
-// namespace.
-func NewChannelReferenceFromNames(name, namespace string) ChannelReference {
-	return ChannelReference{
-		Namespace: namespace,
-		Name:      name,
-	}
 }
 
 func (r *ChannelReference) String() string {

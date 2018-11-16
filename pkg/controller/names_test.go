@@ -26,30 +26,6 @@ func TestNames(t *testing.T) {
 		F    func() string
 		Want string
 	}{{
-		Name: "ClusterBusDispatcherServiceName",
-		F: func() string {
-			return ClusterBusDispatcherServiceName("foo")
-		},
-		Want: "foo-clusterbus",
-	}, {
-		Name: "ChannelVirtualServiceName",
-		F: func() string {
-			return ChannelVirtualServiceName("foo")
-		},
-		Want: "foo-channel",
-	}, {
-		Name: "ChannelServiceName",
-		F: func() string {
-			return ChannelServiceName("foo")
-		},
-		Want: "foo-channel",
-	}, {
-		Name: "ChannelHostName",
-		F: func() string {
-			return ChannelHostName("foo", "namespace")
-		},
-		Want: "foo.namespace.channels.cluster.local",
-	}, {
 		Name: "ServiceHostName",
 		F: func() string {
 			return ServiceHostName("foo", "namespace")

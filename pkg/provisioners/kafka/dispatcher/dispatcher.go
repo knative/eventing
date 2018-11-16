@@ -27,7 +27,7 @@ import (
 	"go.uber.org/zap"
 
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"github.com/knative/eventing/pkg/buses"
+	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/provisioners/kafka/controller"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 )
@@ -36,11 +36,11 @@ type KafkaDispatcher struct {
 	config     atomic.Value
 	updateLock sync.Mutex
 
-	receiver   *buses.MessageReceiver
-	dispatcher *buses.MessageDispatcher
+	receiver   *provisioners.MessageReceiver
+	dispatcher *provisioners.MessageDispatcher
 
 	kafkaAsyncProducer sarama.AsyncProducer
-	kafkaConsumers     map[buses.ChannelReference]map[subscription]KafkaConsumer
+	kafkaConsumers     map[provisioners.ChannelReference]map[subscription]KafkaConsumer
 	kafkaCluster       KafkaCluster
 
 	logger *zap.Logger
@@ -95,7 +95,7 @@ func (d *KafkaDispatcher) UpdateConfig(config *multichannelfanout.Config) error 
 
 		// Subscribe to new subscriptions
 		for _, cc := range config.ChannelConfigs {
-			channelRef := buses.ChannelReference{
+			channelRef := provisioners.ChannelReference{
 				Name:      cc.Name,
 				Namespace: cc.Namespace,
 			}
@@ -160,7 +160,7 @@ func (d *KafkaDispatcher) Start(stopCh <-chan struct{}) error {
 	return nil
 }
 
-func (d *KafkaDispatcher) subscribe(channelRef buses.ChannelReference, sub subscription) error {
+func (d *KafkaDispatcher) subscribe(channelRef provisioners.ChannelReference, sub subscription) error {
 
 	d.logger.Info("Subscribing", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
 
@@ -201,7 +201,7 @@ func (d *KafkaDispatcher) subscribe(channelRef buses.ChannelReference, sub subsc
 	return nil
 }
 
-func (d *KafkaDispatcher) unsubscribe(channel buses.ChannelReference, sub subscription) error {
+func (d *KafkaDispatcher) unsubscribe(channel provisioners.ChannelReference, sub subscription) error {
 	d.logger.Info("Unsubscribing from channel", zap.Any("channel", channel), zap.Any("subscription", sub))
 	if consumer, ok := d.kafkaConsumers[channel][sub]; ok {
 		delete(d.kafkaConsumers[channel], sub)
@@ -212,8 +212,8 @@ func (d *KafkaDispatcher) unsubscribe(channel buses.ChannelReference, sub subscr
 
 // dispatchMessage sends the request to exactly one subscription. It handles both the `call` and
 // the `sink` portions of the subscription.
-func (d *KafkaDispatcher) dispatchMessage(m *buses.Message, sub subscription) error {
-	return d.dispatcher.DispatchMessage(m, sub.SubscriberURI, sub.ReplyURI, buses.DispatchDefaults{})
+func (d *KafkaDispatcher) dispatchMessage(m *provisioners.Message, sub subscription) error {
+	return d.dispatcher.DispatchMessage(m, sub.SubscriberURI, sub.ReplyURI, provisioners.DispatchDefaults{})
 }
 
 func (d *KafkaDispatcher) getConfig() *multichannelfanout.Config {
@@ -240,16 +240,16 @@ func NewDispatcher(brokers []string, logger *zap.Logger) (*KafkaDispatcher, erro
 	}
 
 	dispatcher := &KafkaDispatcher{
-		dispatcher: buses.NewMessageDispatcher(logger.Sugar()),
+		dispatcher: provisioners.NewMessageDispatcher(logger.Sugar()),
 
 		kafkaCluster:       &saramaCluster{kafkaBrokers: brokers},
-		kafkaConsumers:     make(map[buses.ChannelReference]map[subscription]KafkaConsumer),
+		kafkaConsumers:     make(map[provisioners.ChannelReference]map[subscription]KafkaConsumer),
 		kafkaAsyncProducer: producer,
 
 		logger: logger,
 	}
-	receiverFunc := buses.NewMessageReceiver(
-		func(channel buses.ChannelReference, message *buses.Message) error {
+	receiverFunc := provisioners.NewMessageReceiver(
+		func(channel provisioners.ChannelReference, message *provisioners.Message) error {
 			dispatcher.kafkaAsyncProducer.Input() <- toKafkaMessage(channel, message)
 			return nil
 		}, logger.Sugar())
@@ -258,19 +258,19 @@ func NewDispatcher(brokers []string, logger *zap.Logger) (*KafkaDispatcher, erro
 	return dispatcher, nil
 }
 
-func fromKafkaMessage(kafkaMessage *sarama.ConsumerMessage) *buses.Message {
+func fromKafkaMessage(kafkaMessage *sarama.ConsumerMessage) *provisioners.Message {
 	headers := make(map[string]string)
 	for _, header := range kafkaMessage.Headers {
 		headers[string(header.Key)] = string(header.Value)
 	}
-	message := buses.Message{
+	message := provisioners.Message{
 		Headers: headers,
 		Payload: kafkaMessage.Value,
 	}
 	return &message
 }
 
-func toKafkaMessage(channel buses.ChannelReference, message *buses.Message) *sarama.ProducerMessage {
+func toKafkaMessage(channel provisioners.ChannelReference, message *provisioners.Message) *sarama.ProducerMessage {
 	kafkaMessage := sarama.ProducerMessage{
 		Topic: topicName(channel),
 		Value: sarama.ByteEncoder(message.Payload),
@@ -284,7 +284,7 @@ func toKafkaMessage(channel buses.ChannelReference, message *buses.Message) *sar
 	return &kafkaMessage
 }
 
-func topicName(channel buses.ChannelReference) string {
+func topicName(channel provisioners.ChannelReference) string {
 	return fmt.Sprintf("%s.%s", channel.Namespace, channel.Name)
 }
 

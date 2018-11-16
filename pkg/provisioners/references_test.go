@@ -14,31 +14,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package buses_test
+package provisioners
 
 import (
+	"fmt"
 	"testing"
-
-	"go.uber.org/zap"
-
-	"github.com/knative/eventing/pkg/buses"
 )
 
-func TestNewLoggingConfig(t *testing.T) {
-	config := buses.NewLoggingConfig()
-	expected := zap.InfoLevel
-	actual := config.LoggingLevel["bus"]
-	if expected != actual {
-		t.Errorf("%s expected: %+v got: %+v", "Logging level", expected, actual)
-	}
-}
+const (
+	referencesTestNamespace   = "test-namespace"
+	referencesTestChannelName = "test-channel"
+)
 
-func TestNewBusLoggerFromConfig(t *testing.T) {
-	config := buses.NewLoggingConfig()
-	logger := buses.NewBusLoggerFromConfig(config)
-	expected := true
-	actual := logger.Desugar().Core().Enabled(zap.InfoLevel)
+func TestChannelReference_String(t *testing.T) {
+	ref := ChannelReference{
+		Name:      referencesTestChannelName,
+		Namespace: referencesTestNamespace,
+	}
+	expected := fmt.Sprintf("%s/%s", referencesTestNamespace, referencesTestChannelName)
+	actual := ref.String()
 	if expected != actual {
-		t.Errorf("%s expected: %+v got: %+v", "Logging level", expected, actual)
+		t.Errorf("%s expected: %+v got: %+v", "ChannelReference", expected, actual)
 	}
 }

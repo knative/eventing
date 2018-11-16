@@ -27,11 +27,12 @@ package multichannelfanout
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/pkg/buses"
+	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"go.uber.org/zap"
-	"net/http"
 )
 
 // The configuration of this handler.
@@ -59,7 +60,7 @@ func makeChannelKeyFromConfig(config ChannelConfig) string {
 
 // getChannelKey extracts the channel key from the given HTTP request.
 func getChannelKey(r *http.Request) string {
-	cr := buses.ParseChannel(r.Host)
+	cr := provisioners.ParseChannel(r.Host)
 	return makeChannelKey(cr.Namespace, cr.Name)
 }
 

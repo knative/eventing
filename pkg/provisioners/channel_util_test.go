@@ -186,7 +186,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 				},
 				Route: []istiov1alpha3.DestinationWeight{{
 					Destination: istiov1alpha3.Destination{
-						Host: fmt.Sprintf("%s-clusterbus.knative-eventing.svc.cluster.local", clusterChannelProvisionerName),
+						Host: fmt.Sprintf("%s-dispatcher.knative-eventing.svc.cluster.local", clusterChannelProvisionerName),
 						Port: istiov1alpha3.PortSelector{
 							Number: PortNumber,
 						},
@@ -194,5 +194,39 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 				}},
 			},
 		},
+	}
+}
+
+func TestChannelNames(t *testing.T) {
+	testCases := []struct {
+		Name string
+		F    func() string
+		Want string
+	}{{
+		Name: "ChannelVirtualServiceName",
+		F: func() string {
+			return ChannelVirtualServiceName("foo")
+		},
+		Want: "foo-channel",
+	}, {
+		Name: "ChannelServiceName",
+		F: func() string {
+			return ChannelServiceName("foo")
+		},
+		Want: "foo-channel",
+	}, {
+		Name: "ChannelHostName",
+		F: func() string {
+			return ChannelHostName("foo", "namespace")
+		},
+		Want: "foo.namespace.channels.cluster.local",
+	}}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			if got := tc.F(); got != tc.Want {
+				t.Errorf("want %v, got %v", tc.Want, got)
+			}
+		})
 	}
 }
