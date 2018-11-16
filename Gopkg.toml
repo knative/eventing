@@ -87,3 +87,15 @@ required = [
   name = "sigs.k8s.io/controller-runtime"
   # HEAD as of 2018-09-19
   revision = "5373e8e1f3188ff4266902a6fc86372bc14b3815"
+
+[[override]]
+  name = "github.com/nats-io/go-nats"
+  version = "1.6.0"
+
+[[override]]
+  name = "github.com/nats-io/go-nats-streaming"
+  version = "0.4.0"
+
+[[override]]
+  name = "github.com/nats-io/nats-streaming-server"
+  version = "0.11.0"

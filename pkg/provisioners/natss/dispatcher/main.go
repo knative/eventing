@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The Knative Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
@@ -41,7 +57,6 @@ func main() {
 	eventingv1alpha1.AddToScheme(mgr.GetScheme())
 	istiov1alpha3.AddToScheme(mgr.GetScheme())
 
-	// Start both the manager (which notices ConfigMap changes) and the HTTP server.
 	stopCh := signals.SetupSignalHandler()
 	var g errgroup.Group
 
@@ -52,7 +67,6 @@ func main() {
 	}
 
 	g.Go(func() error {
-		// Setups message receiver and blocks
 		return dispatcher.Start(stopCh)
 	})
 
@@ -62,7 +76,7 @@ func main() {
 	}
 
 	logger.Info("Dispatcher controller starting...")
-	// Start blocks forever.
+
 	err = mgr.Start(stopCh)
 	if err != nil {
 		logger.Fatal("Manager.Start() returned an error", zap.Error(err))

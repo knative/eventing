@@ -49,47 +49,44 @@ func (r *reconciler) InjectClient(c client.Client) error {
 }
 
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	r.logger.Info("request:" + request.String())
+	r.logger.Info("Reconcile: ", zap.Any("request", request))
 
-	// TODO: use this to store the logger and set a deadline
 	ctx := context.TODO()
-	logger := r.logger.With(zap.Any("request", request))
-
 	c := &eventingv1alpha1.Channel{}
 	err := r.client.Get(ctx, request.NamespacedName, c)
 
 	// The Channel may have been deleted since it was added to the workqueue. If so, there is
 	// nothing to be done.
 	if errors.IsNotFound(err) {
-		logger.Error("Could not find Channel", zap.Error(err))
+		r.logger.Error("Could not find Channel", zap.Error(err))
 		return reconcile.Result{}, nil
 	}
 
 	// Any other error should be retried in another reconciliation.
 	if err != nil {
-		logger.Error("Unable to Get Channel", zap.Error(err))
+		r.logger.Error("Unable to Get Channel", zap.Error(err))
 		return reconcile.Result{}, err
 	}
 
 	// Does this Controller control this Channel?
 	if !r.shouldReconcile(c) {
-		logger.Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("ref", c.Spec))
+		r.logger.Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("ref", c.Spec))
 		return reconcile.Result{}, nil
 	}
-	logger.Sugar().Infof("Reconciling Channel: %+v", c)
+	r.logger.Info("Reconciling Channel:", zap.Any("channel", c))
 
 	// Modify a copy, not the original.
 	c = c.DeepCopy()
 
 	err = r.reconcile(ctx, c)
 	if err != nil {
-		logger.Error("Error reconciling Channel", zap.Error(err))
+		r.logger.Error("Error reconciling Channel", zap.Error(err))
 		// Note that we do not return the error here, because we want to update the Status
 		// regardless of the error.
 	}
 
 	if updateStatusErr := provisioners.UpdateChannel(ctx, r.client, c); updateStatusErr != nil {
-		logger.Error("Error updating Channel Status", zap.Error(updateStatusErr))
+		r.logger.Error("Error updating Channel Status", zap.Error(updateStatusErr))
 		return reconcile.Result{}, updateStatusErr
 	}
 
@@ -104,15 +101,11 @@ func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 }
 
 func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) error {
-	r.logger.Sugar().Infof("reconcile() channel: %+v", c)
-
-	logger := r.logger.With(zap.Any("channel", c))
-
 	c.Status.InitializeConditions()
 
 	// We are syncing Channel subscriptions
 	if err := r.syncChannel(ctx); err != nil {
-		logger.Error("Error updating syncing the Channel config", zap.Error(err))
+		r.logger.Error("Error updating syncing the Channel config", zap.Error(err))
 		return err
 	}
 
@@ -129,7 +122,6 @@ func (r *reconciler) syncChannel(ctx context.Context) error {
 
 	// try to subscribe
 	for _, c := range channels {
-		r.logger.Info("syncChannel() channel:" + c.Name + "." + c.Namespace)
 		if err := r.subscriptionsSupervisor.UpdateSubscriptions(c); err != nil {
 			r.logger.Error("UpdateSubscriptions() failed: ", zap.Error(err))
 		}

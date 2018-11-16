@@ -29,15 +29,13 @@ import (
 )
 
 const (
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
+	// controllerAgentName is the string used by this controller to identify itself when creating events.
 	controllerAgentName = "natss-controller"
 )
 
 // ProvideController returns a Controller that represents the NATSS Provisioner.
 func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Channels that belong to this Cluster Provisioner
-	// (in-memory channels).
 	r := &reconciler{
 		recorder:     mgr.GetRecorder(controllerAgentName),
 		logger:       logger,

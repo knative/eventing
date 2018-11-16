@@ -34,7 +34,6 @@ import (
 const (
 	// Name is the name of NATSS ClusterChannelProvisioner.
 	Name = "natss"
-
 	// Channel is the name of the Channel resource in eventing.knative.dev/v1alpha1.
 	Channel = "Channel"
 )
@@ -54,44 +53,44 @@ func (r *reconciler) InjectClient(c client.Client) error {
 }
 
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	ctx := context.TODO()
-	logger := r.logger.With(zap.Any("request", request))
+	r.logger.Info("Reconcile: ", zap.Any("request", request))
 
+	ctx := context.TODO()
 	ccp := &eventingv1alpha1.ClusterChannelProvisioner{}
 	err := r.client.Get(ctx, request.NamespacedName, ccp)
 
 	// The ClusterChannelProvisioner may have been deleted since it was added to the workqueue. If so,
 	// there is nothing to be done.
 	if errors.IsNotFound(err) {
-		logger.Info("Could not find ClusterChannelProvisioner", zap.Error(err))
+		r.logger.Warn("Could not find ClusterChannelProvisioner", zap.Error(err))
 		return reconcile.Result{}, nil
 	}
 
 	// Any other error should be retried in another reconciliation.
 	if err != nil {
-		logger.Error("Unable to Get ClusterChannelProvisioner", zap.Error(err))
+		r.logger.Error("Unable to Get ClusterChannelProvisioner", zap.Error(err))
 		return reconcile.Result{}, err
 	}
 
 	// Does this Controller control this ClusterChannelProvisioner?
 	if !shouldReconcile(ccp.Namespace, ccp.Name) {
-		logger.Info("Not reconciling ClusterChannelProvisioner, it is not controlled by this Controller", zap.String("APIVersion", ccp.APIVersion), zap.String("Kind", ccp.Kind), zap.String("Namespace", ccp.Namespace), zap.String("name", ccp.Name))
+		r.logger.Info("Not reconciling ClusterChannelProvisioner, it is not controlled by this Controller", zap.String("APIVersion", ccp.APIVersion), zap.String("Kind", ccp.Kind), zap.String("Namespace", ccp.Namespace), zap.String("name", ccp.Name))
 		return reconcile.Result{}, nil
 	}
-	logger.Info("Reconciling ClusterChannelProvisioner.")
+	r.logger.Info("Reconciling ClusterChannelProvisioner.")
 
 	// Modify a copy of this object, rather than the original.
 	ccp = ccp.DeepCopy()
 
 	err = r.reconcile(ctx, ccp)
 	if err != nil {
-		logger.Info("Error reconciling ClusterChannelProvisioner", zap.Error(err))
+		r.logger.Info("Error reconciling ClusterChannelProvisioner", zap.Error(err))
 		// Note that we do not return the error here, because we want to update the Status
 		// regardless of the error.
 	}
 
 	if updateStatusErr := provisioners.UpdateClusterChannelProvisionerStatus(ctx, r.client, ccp); updateStatusErr != nil {
-		logger.Info("Error updating ClusterChannelProvisioner Status", zap.Error(updateStatusErr))
+		r.logger.Error("Error updating ClusterChannelProvisioner Status", zap.Error(updateStatusErr))
 		return reconcile.Result{}, updateStatusErr
 	}
 
@@ -114,12 +113,6 @@ func shouldReconcile(namespace, name string) bool {
 }
 
 func (r *reconciler) reconcile(ctx context.Context, ccp *eventingv1alpha1.ClusterChannelProvisioner) error {
-	logger := r.logger.With(zap.Any("clusterChannelProvisioner", ccp))
-
-	// We are syncing one thing.
-	// 1. The K8s Service to talk to all Natss Channels.
-	//     - There is a single K8s Service for all requests going any Natss Channel.
-
 	if ccp.DeletionTimestamp != nil {
 		// K8s garbage collection will delete the dispatcher service, once this ClusterChannelProvisioner
 		// is deleted, so we don't need to do anything.
@@ -128,12 +121,12 @@ func (r *reconciler) reconcile(ctx context.Context, ccp *eventingv1alpha1.Cluste
 
 	svc, err := provisioners.CreateDispatcherService(ctx, r.client, ccp)
 	if err != nil {
-		logger.Info("Error creating the ClusterChannelProvisioner's Dispatcher", zap.Error(err))
+		r.logger.Error("Error creating the ClusterChannelProvisioner's Dispatcher", zap.Error(err))
 		return err
 	}
 	// Check if this ClusterChannelProvisioner is the owner of the K8s service.
 	if !metav1.IsControlledBy(svc, ccp) {
-		logger.Warn("ClusterChannelProvisioner's K8s Service is not owned by the ClusterChannelProvisioner", zap.Any("clusterChannelProvisioner", ccp), zap.Any("service", svc))
+		r.logger.Warn("ClusterChannelProvisioner's K8s Service is not owned by the ClusterChannelProvisioner", zap.Any("clusterChannelProvisioner", ccp), zap.Any("service", svc))
 	}
 
 	ccp.Status.MarkReady()

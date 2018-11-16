@@ -51,54 +51,49 @@ func (r *reconciler) InjectClient(c client.Client) error {
 }
 
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	// TODO: use this to store the logger and set a deadline
-	ctx := context.TODO()
-	logger := r.logger.With(zap.Any("request", request))
+	r.logger.Info("Reconcile: ", zap.Any("request", request))
 
+	ctx := context.TODO()
 	c := &eventingv1alpha1.Channel{}
 	err := r.client.Get(ctx, request.NamespacedName, c)
 
 	// The Channel may have been deleted since it was added to the workqueue. If so, there is
 	// nothing to be done.
 	if errors.IsNotFound(err) {
-		logger.Info("Could not find Channel", zap.Error(err))
+		r.logger.Info("Could not find Channel", zap.Error(err))
 		return reconcile.Result{}, nil
 	}
 
 	// Any other error should be retried in another reconciliation.
 	if err != nil {
-		logger.Error("Unable to Get Channel", zap.Error(err))
+		r.logger.Error("Unable to Get Channel", zap.Error(err))
 		return reconcile.Result{}, err
 	}
 
 	// Does this Controller control this Channel?
 	if !r.shouldReconcile(c) {
-		logger.Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("ref", c.Spec))
+		r.logger.Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("ref", c.Spec))
 		return reconcile.Result{}, nil
 	}
-	logger.Sugar().Infof("Reconciling Channel: %+v", c)
+	//r.logger.Info("Reconciling Channel:", zap.Any("channel", c))
 
 	// Modify a copy, not the original.
 	c = c.DeepCopy()
-	logger.Sugar().Infof("Start reconciling Channel: %+v", c)
-
 	err = r.reconcile(ctx, c)
 	if err != nil {
-		logger.Info("Error reconciling Channel", zap.Error(err))
+		r.logger.Info("Error reconciling Channel", zap.Error(err))
 		// Note that we do not return the error here, because we want to update the Status
 		// regardless of the error.
 	}
 
 	if updateStatusErr := provisioners.UpdateChannel(ctx, r.client, c); updateStatusErr != nil {
-		logger.Info("Error updating Channel Status", zap.Error(updateStatusErr))
+		r.logger.Info("Error updating Channel Status", zap.Error(updateStatusErr))
 		return reconcile.Result{}, updateStatusErr
 	}
 
 	return reconcile.Result{}, err
 }
 
-// shouldReconcile determines if this Controller should control (and therefore reconcile) a given
-// ClusterChannelProvisioner. This Controller only handles in-memory channels.
 func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 	if c.Spec.Provisioner != nil {
 		return ccpcontroller.IsControlled(c.Spec.Provisioner)
@@ -107,8 +102,6 @@ func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 }
 
 func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) error {
-	logger := r.logger.With(zap.Any("channel", c))
-
 	c.Status.InitializeConditions()
 
 	// We are syncing two things:
@@ -126,22 +119,22 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 	svc, err := provisioners.CreateK8sService(ctx, r.client, c)
 	if err != nil {
-		logger.Info("Error creating the Channel's K8s Service", zap.Error(err))
+		r.logger.Info("Error creating the Channel's K8s Service", zap.Error(err))
 		return err
 	}
 	// Check if this Channel is the owner of the K8s service.
 	if !metav1.IsControlledBy(svc, c) {
-		logger.Warn("Channel's K8s Service is not owned by the Channel", zap.Any("channel", c), zap.Any("service", svc))
+		r.logger.Warn("Channel's K8s Service is not owned by the Channel", zap.Any("channel", c), zap.Any("service", svc))
 	}
 	c.Status.SetAddress(controller.ServiceHostName(svc.Name, svc.Namespace))
 
 	virtualService, err := provisioners.CreateVirtualService(ctx, r.client, c)
 	if err != nil {
-		logger.Info("Error creating the Virtual Service for the Channel", zap.Error(err))
+		r.logger.Info("Error creating the Virtual Service for the Channel", zap.Error(err))
 		return err
 	}
 	if !metav1.IsControlledBy(virtualService, c) {
-		logger.Warn("VirtualService not owned by Channel", zap.Any("channel", c), zap.Any("virtualService", virtualService))
+		r.logger.Warn("VirtualService not owned by Channel", zap.Any("channel", c), zap.Any("virtualService", virtualService))
 	}
 
 	c.Status.MarkProvisioned()

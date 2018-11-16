@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The Knative Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package dispatcher
 
 import (
@@ -52,10 +68,10 @@ func createReceiverFunction(s *SubscriptionsSupervisor, logger *zap.SugaredLogge
 		// publish to Natss
 		ch := channel.Name + "." + channel.Namespace
 		if err := stanutil.Publish(s.natssConn, ch, &m.Payload, logger); err != nil {
-			logger.Errorf("Error during publish: %+v", err)
+			logger.Errorf("Error during publish: %v", err)
 			return err
 		}
-		logger.Infof("Published [%s] : '%s'", channel.String(), m)
+		logger.Infof("Published [%s] : '%s'", channel.String(), m.Headers)
 		return nil
 	}
 }
@@ -66,7 +82,6 @@ func (s *SubscriptionsSupervisor) Start(stopCh <-chan struct{}) error {
 }
 
 func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel eventingv1alpha1.Channel) error {
-	s.logger.Sugar().Infof("UpdateSubscriptions() for channel: %v", channel)
 	if channel.Spec.Subscribable == nil {
 		s.logger.Sugar().Infof("Empty subscriptions for channel: %v ; nothing to update ", channel)
 		return nil
@@ -117,7 +132,7 @@ func (s *SubscriptionsSupervisor) subscribe(channel buses.ChannelReference, subs
 	s.logger.Info("Subscribe to channel:", zap.Any("channel", channel), zap.Any("subscription", subscription))
 
 	mcb := func(msg *stan.Msg) {
-		s.logger.Sugar().Infof("NATSS message received: %+v", msg) // TODO don't log the message
+		s.logger.Sugar().Infof("NATSS message received from subject: %v; sequence: %v; timestamp: %v", msg.Subject, msg.Sequence, msg.Timestamp)
 		message := buses.Message{
 			Headers: map[string]string{},
 			Payload: []byte(msg.Data),
@@ -131,7 +146,6 @@ func (s *SubscriptionsSupervisor) subscribe(channel buses.ChannelReference, subs
 		}
 	}
 	// subscribe to a NATSS subject
-	// TODO the channel name + namespace should be part of the subject
 	ch := channel.Name + "." + channel.Namespace
 	sub := subscription.Name + "." + subscription.Namespace
 	if natssSub, err := (*s.natssConn).Subscribe(ch, mcb, stan.DurableName(sub), stan.SetManualAckMode(), stan.AckWait(1*time.Minute)); err != nil {
@@ -144,7 +158,7 @@ func (s *SubscriptionsSupervisor) subscribe(channel buses.ChannelReference, subs
 }
 
 func (s *SubscriptionsSupervisor) unsubscribe(channel buses.ChannelReference, subscription subscriptionReference) error {
-	s.logger.Info("Unsubscribing from channel:", zap.Any("channel", channel), zap.Any("subscription", subscription))
+	s.logger.Info("Unsubscribe from channel:", zap.Any("channel", channel), zap.Any("subscription", subscription))
 
 	if stanSub, ok := s.subscriptions[channel][subscription]; ok {
 		// delete from NATSS

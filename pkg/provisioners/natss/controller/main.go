@@ -49,8 +49,6 @@ func main() {
 	eventingv1alpha1.AddToScheme(mgr.GetScheme())
 	istiov1alpha3.AddToScheme(mgr.GetScheme())
 
-	// The controllers for both the ClusterChannelProvisioner and the Channels created by that
-	// ClusterChannelProvisioner run in this process.
 	_, err = clusterchannelprovisioner.ProvideController(mgr, logger.Desugar())
 	if err != nil {
 		logger.Fatal("Unable to create Provisioner controller", zap.Error(err))
@@ -60,9 +58,8 @@ func main() {
 		logger.Fatal("Unable to create Channel controller", zap.Error(err))
 	}
 
-	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
-	// Start blocks forever.
+
 	err = mgr.Start(stopCh)
 	if err != nil {
 		logger.Fatal("Manager.Start() returned an error", zap.Error(err))
