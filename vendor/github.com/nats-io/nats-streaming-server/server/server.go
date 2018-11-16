@@ -47,7 +47,7 @@ import (
 // Server defaults.
 const (
 	// VERSION is the current version for the NATS Streaming server.
-	VERSION = "0.11.0"
+	VERSION = "0.11.2"
 
 	DefaultClusterID      = "test-cluster"
 	DefaultDiscoverPrefix = "_STAN.discover"
@@ -1806,6 +1806,7 @@ func (s *StanServer) startRaftNode(hasStreamingState bool) error {
 							// Node shutdown, just return.
 							return
 						case err == raft.ErrLeadershipLost:
+						case err == raft.ErrNotLeader:
 							// Node lost leadership, continue loop.
 							continue
 						default:
@@ -2818,15 +2819,8 @@ func (s *StanServer) checkClientHealth(clientID string) {
 func (s *StanServer) closeClient(clientID string) error {
 	s.closeMu.Lock()
 	defer s.closeMu.Unlock()
-	// Remove from our clientStore.
-	client, err := s.clients.unregister(clientID)
-	// The above call may return an error (due to storage) but still return
-	// the client that is being unregistered. So log error an proceed.
-	if err != nil {
-		s.log.Errorf("Error unregistering client %q: %v", clientID, err)
-	}
-	// This would mean that the client was already unregistered or was never
-	// registered.
+	// Lookup client first, will unregister only after removing its subscriptions
+	client := s.clients.lookup(clientID)
 	if client == nil {
 		s.log.Errorf("Unknown client %q in close request", clientID)
 		return ErrUnknownClient
@@ -2834,6 +2828,11 @@ func (s *StanServer) closeClient(clientID string) error {
 
 	// Remove all non-durable subscribers.
 	s.removeAllNonDurableSubscribers(client)
+
+	// Remove from our clientStore.
+	if _, err := s.clients.unregister(clientID); err != nil {
+		s.log.Errorf("Error unregistering client %q: %v", clientID, err)
+	}
 
 	if s.debug {
 		client.RLock()
@@ -3282,7 +3281,7 @@ func (s *StanServer) performAckExpirationRedelivery(sub *subState, isStartup boo
 			// We do this only after confirmation that it was successfully added
 			// as pending on the other queue subscriber.
 			if pick != sub && sent {
-				s.processAck(c, sub, m.Sequence)
+				s.processAck(c, sub, m.Sequence, false)
 			}
 		} else {
 			sub.Lock()
@@ -3313,7 +3312,7 @@ func (s *StanServer) getMsgForRedelivery(c *channel, sub *subState, seq uint64) 
 				sub.ID, seq, err)
 		}
 		// Ack it so that it does not reincarnate on restart
-		s.processAck(c, sub, seq)
+		s.processAck(c, sub, seq, false)
 		return nil
 	}
 	// The store implementation does not return a copy, we need one
@@ -3891,10 +3890,14 @@ func (s *StanServer) removeAllNonDurableSubscribers(client *client) {
 	// subscriptions, so it is safe to use the original.
 	client.RLock()
 	subs := client.subs
+	clientID := client.info.ID
 	client.RUnlock()
+	var storesToFlush map[string]stores.SubStore
 	for _, sub := range subs {
 		sub.RLock()
 		subject := sub.subject
+		isDurable := sub.IsDurable
+		subStore := sub.store
 		sub.RUnlock()
 		// Get the channel
 		c := s.channels.get(subject)
@@ -3903,6 +3906,22 @@ func (s *StanServer) removeAllNonDurableSubscribers(client *client) {
 		}
 		// Don't remove durables
 		c.ss.Remove(c, sub, false)
+		// If the sub is a durable, there may have been an update to storage,
+		// so we will want to flush the store. In clustering, during replay,
+		// subStore may be nil.
+		if isDurable && subStore != nil {
+			if storesToFlush == nil {
+				storesToFlush = make(map[string]stores.SubStore, 16)
+			}
+			storesToFlush[subject] = subStore
+		}
+	}
+	if len(storesToFlush) > 0 {
+		for subject, subStore := range storesToFlush {
+			if err := subStore.Flush(); err != nil {
+				s.log.Errorf("[Client:%s] Error flushing store while removing subscriptions: subject=%s, err=%v", clientID, subject, err)
+			}
+		}
 	}
 }
 
@@ -4005,10 +4024,10 @@ func (s *StanServer) unsubscribe(req *pb.UnsubscribeRequest, isSubClose bool) er
 			req.ClientID, action, req.Inbox)
 		return ErrInvalidSub
 	}
-	return s.unsubscribeSub(c, req.ClientID, action, sub, isSubClose)
+	return s.unsubscribeSub(c, req.ClientID, action, sub, isSubClose, true)
 }
 
-func (s *StanServer) unsubscribeSub(c *channel, clientID, action string, sub *subState, isSubClose bool) error {
+func (s *StanServer) unsubscribeSub(c *channel, clientID, action string, sub *subState, isSubClose, shouldFlush bool) error {
 	// Remove from Client
 	if !s.clients.removeSub(clientID, sub) {
 		s.log.Errorf("[Client:%s] %s request for missing client", clientID, action)
@@ -4017,10 +4036,17 @@ func (s *StanServer) unsubscribeSub(c *channel, clientID, action string, sub *su
 	// Remove the subscription
 	unsubscribe := !isSubClose
 	c.ss.Remove(c, sub, unsubscribe)
+	var err error
+	if shouldFlush {
+		sub.RLock()
+		ss := sub.store
+		sub.RUnlock()
+		err = ss.Flush()
+	}
 	s.monMu.Lock()
 	s.numSubs--
 	s.monMu.Unlock()
-	return nil
+	return err
 }
 
 func (s *StanServer) replicateRemoveSubscription(req *pb.UnsubscribeRequest) error {
@@ -4499,12 +4525,15 @@ func (s *StanServer) processSubscriptionRequest(m *nats.Msg) {
 				_, seq, err = s.setSubStartSequence(c, sr)
 				if err == nil {
 					// Convert to a SequenceStart start position with the proper sequence
-					// number.
+					// number. Since setSubStartSequence() is returning what should be
+					// the lastSent, we need to bump the count by 1.
 					sr.StartPosition = pb.StartPosition_SequenceStart
-					sr.StartSequence = seq
+					sr.StartSequence = seq + 1
 				}
 			}
-			sub, err = s.replicateSub(sr, ackInbox)
+			if err == nil {
+				sub, err = s.replicateSub(sr, ackInbox)
+			}
 		} else {
 			sub, err = s.processSub(c, sr, ackInbox)
 		}
@@ -4638,11 +4667,11 @@ func (s *StanServer) processAckMsg(m *nats.Msg) {
 	if sub == nil {
 		return
 	}
-	s.processAck(c, sub, ack.Sequence)
+	s.processAck(c, sub, ack.Sequence, true)
 }
 
 // processAck processes an ack and if needed sends more messages.
-func (s *StanServer) processAck(c *channel, sub *subState, sequence uint64) {
+func (s *StanServer) processAck(c *channel, sub *subState, sequence uint64, fromUser bool) {
 	var stalled bool
 
 	// This is immutable, so can grab outside of sub's lock.
@@ -4655,28 +4684,55 @@ func (s *StanServer) processAck(c *channel, sub *subState, sequence uint64) {
 
 	sub.Lock()
 
-	// If in cluster mode, replicate the ack but leader
-	// does not wait on quorum result.
-	if s.isClustered {
-		s.replicateSentOrAck(sub, replicateAck, sequence)
-	}
-
-	if s.trace {
-		s.log.Tracef("[Client:%s] Processing ack for subid=%d, subject=%s, seq=%d",
-			sub.ClientID, sub.ID, sub.subject, sequence)
-	}
-
-	if err := sub.store.AckSeqPending(sub.ID, sequence); err != nil {
-		s.log.Errorf("[Client:%s] Unable to persist ack for subid=%d, subject=%s, seq=%d, err=%v",
-			sub.ClientID, sub.ID, sub.subject, sequence, err)
-		sub.Unlock()
-		if qs != nil {
-			qs.Unlock()
+	persistAck := func(aSub *subState) bool {
+		if err := aSub.store.AckSeqPending(aSub.ID, sequence); err != nil {
+			s.log.Errorf("[Client:%s] Unable to persist ack for subid=%d, subject=%s, seq=%d, err=%v",
+				aSub.ClientID, aSub.ID, aSub.subject, sequence, err)
+			return false
 		}
-		return
+		return true
 	}
 
-	delete(sub.acksPending, sequence)
+	if _, found := sub.acksPending[sequence]; found {
+		// If in cluster mode, replicate the ack but leader
+		// does not wait on quorum result.
+		if s.isClustered {
+			s.replicateSentOrAck(sub, replicateAck, sequence)
+		}
+		if s.trace && fromUser {
+			s.log.Tracef("[Client:%s] Processing ack for subid=%d, subject=%s, seq=%d",
+				sub.ClientID, sub.ID, sub.subject, sequence)
+		}
+		if !persistAck(sub) {
+			sub.Unlock()
+			if qs != nil {
+				qs.Unlock()
+			}
+			return
+		}
+		delete(sub.acksPending, sequence)
+	} else if qs != nil && fromUser {
+		// For queue members, if this is not an internally generated ACK
+		// and we don't find the sequence in this sub's pending, we are
+		// going to look for it in other members and process it if found.
+		sub.Unlock()
+		for _, qsub := range qs.subs {
+			if qsub == sub {
+				continue
+			}
+			qsub.Lock()
+			if _, found := qsub.acksPending[sequence]; found {
+				delete(qsub.acksPending, sequence)
+				persistAck(qsub)
+				qsub.Unlock()
+				break
+			}
+			qsub.Unlock()
+		}
+		sub.Lock()
+		// Proceed with original sub (regardless if member was found
+		// or not) so that server sends more messages if needed.
+	}
 	if sub.stalled && int32(len(sub.acksPending)) < sub.MaxInFlight {
 		// For queue, we must not check the queue stalled count here. The queue
 		// as a whole may not be stalled, yet, if this sub was stalled, it is
