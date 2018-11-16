@@ -79,6 +79,11 @@ type TestCase struct {
 	// Fake dynamic objects
 	Objects []runtime.Object
 
+	// OtherTestData is arbitrary data needed for the test. It is not used directly by the table
+	// testing framework. Instead it is used in the test method. E.g. setting up the responses for a
+	// fake GCP PubSub client can go in here, as no other field makes sense for it.
+	OtherTestData map[string]interface{}
+
 	// IgnoreTimes causes comparisons to ignore fields of type apis.VolatileTime.
 	IgnoreTimes bool
 }

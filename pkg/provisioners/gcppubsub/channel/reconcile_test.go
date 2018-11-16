@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/fakepubsub"
+
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
 	util "github.com/knative/eventing/pkg/provisioners"
@@ -47,6 +49,8 @@ const (
 
 	gcpProject = "gcp-project"
 	secretKey  = "key.json"
+
+	pscData = "pscData"
 )
 
 var (
@@ -260,7 +264,7 @@ func TestReconcile(t *testing.T) {
 			recorder: recorder,
 			logger:   zap.NewNop(),
 
-			pubSubClientCreator: foo,
+			pubSubClientCreator: fakepubsub.Creator(tc.OtherTestData[pscData]),
 			defaultGcpProject:   gcpProject,
 			defaultSecret:       secret,
 			defaultSecretKey:    secretKey,
@@ -341,6 +345,22 @@ func makeDeletingChannelWithoutFinalizer() *eventingv1alpha1.Channel {
 	c := makeDeletingChannel()
 	c.Finalizers = nil
 	return c
+}
+
+func makeSecretWithCreds() *corev1.Secret {
+	return &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: secret.APIVersion,
+			Kind:       secret.Kind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secret.Name,
+			Namespace: secret.Namespace,
+		},
+		Data: map[string][]byte{
+			secretKey: []byte{},
+		},
+	}
 }
 
 func makeK8sService() *corev1.Service {
