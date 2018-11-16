@@ -71,6 +71,12 @@ var (
 					UID:  "sub-uid",
 				},
 			},
+			{
+				Ref: &corev1.ObjectReference{
+					Name: "sub-2-name",
+					UID:  "sub-2-uid",
+				},
+			},
 		},
 	}
 )
@@ -613,9 +619,6 @@ func TestReconcile(t *testing.T) {
 	}
 	recorder := record.NewBroadcaster().NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 	for _, tc := range testCases {
-		if tc.Name != "Create Topic - problem creating client" {
-			//continue
-		}
 		c := tc.GetClient()
 		r := &reconciler{
 			client:   c,
