@@ -27,42 +27,45 @@ import (
 
 func TestGetCredentials(t *testing.T) {
 	testCases := map[string]struct {
-		secret *v1.ObjectReference
-		key    string
-		valid  bool
-		err    bool
+		secretRef *v1.ObjectReference
+		key       string
+		secret    *v1.Secret
+		err       bool
 	}{
-		"secret not found": {
-			secret: &v1.ObjectReference{
+		"secretRef not found": {
+			secretRef: &v1.ObjectReference{
 				APIVersion: "v1",
 				Kind:       "Secret",
 				Namespace:  "some-other-namespace",
 				Name:       "some-other-name",
 			},
-			err: true,
-		},
-		"secret key not present": {
-			secret: testcreds.Secret,
-			key:    "some-other-key",
+			secret: testcreds.MakeSecretWithCreds(),
 			err:    true,
+		},
+		"secretRef key not present": {
+			secretRef: testcreds.Secret,
+			secret:    testcreds.MakeSecretWithCreds(),
+			key:       "some-other-key",
+			err:       true,
 		},
 		"unable to create credentials": {
-			secret: testcreds.Secret,
-			key:    testcreds.SecretKey,
-			err:    true,
+			secretRef: testcreds.Secret,
+			secret:    testcreds.MakeSecretWithInvalidCreds(),
+			key:       testcreds.SecretKey,
+			err:       true,
 		},
 		"success": {
-			secret: testcreds.Secret,
-			key:    testcreds.SecretKey,
-			valid:  true,
-			err:    false,
+			secretRef: testcreds.Secret,
+			secret:    testcreds.MakeSecretWithCreds(),
+			key:       testcreds.SecretKey,
+			err:       false,
 		},
 	}
 
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			client := fake.NewFakeClient(makeSecret(tc.valid))
-			actual, actualErr := GetCredentials(context.TODO(), client, tc.secret, tc.key)
+			client := fake.NewFakeClient(tc.secret)
+			actual, actualErr := GetCredentials(context.TODO(), client, tc.secretRef, tc.key)
 			if tc.err {
 				if actualErr == nil {
 					t.Fatalf("Expected an error.")
@@ -77,12 +80,4 @@ func TestGetCredentials(t *testing.T) {
 			}
 		})
 	}
-}
-
-func makeSecret(valid bool) *v1.Secret {
-	secret := testcreds.MakeSecretWithCreds()
-	if !valid {
-		secret.Data[testcreds.SecretKey] = []byte("")
-	}
-	return secret
 }

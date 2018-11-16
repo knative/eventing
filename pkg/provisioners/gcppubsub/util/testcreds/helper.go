@@ -21,7 +21,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// InvalidCredsError is the error string returned when using MakeSecretWithInvalidCreds().
+	InvalidCredsError = "unexpected end of JSON input"
+)
+
 var (
+	// Secret is a reference to the Secret created by either MakeSecretWithCreds() and
+	// MakeSecretWithInvalidCreds().
 	Secret = &v1.ObjectReference{
 		APIVersion: "v1",
 		Kind:       "Secret",
@@ -29,6 +36,7 @@ var (
 		Name:       "secret-name",
 	}
 
+	// SecretKey is the key in the Secret data that contains the JSON credential token.
 	SecretKey = "key.json"
 )
 
@@ -48,4 +56,12 @@ func MakeSecretWithCreds() *v1.Secret {
 			SecretKey: []byte(`{"type": "authorized_user"}`),
 		},
 	}
+}
+
+// MakeSecretWithInvalidCreds makes a Secret that fails to pass GetCredential. Only tests should be
+// calling this.
+func MakeSecretWithInvalidCreds() *v1.Secret {
+	secret := MakeSecretWithCreds()
+	secret.Data[SecretKey] = []byte("")
+	return secret
 }

@@ -22,6 +22,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+
+	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/testcreds"
+
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/fakepubsub"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -48,7 +52,6 @@ const (
 	testErrorMessage = "test induced error"
 
 	gcpProject = "gcp-project"
-	secretKey  = "key.json"
 
 	pscData = "pscData"
 )
@@ -60,11 +63,15 @@ var (
 
 	truePointer = true
 
-	secret = &corev1.ObjectReference{
-		APIVersion: "v1",
-		Kind:       "Secret",
-		Namespace:  "secret-namespace",
-		Name:       "secret-name",
+	subscribers = &v1alpha1.Subscribable{
+		Subscribers: []v1alpha1.ChannelSubscriberSpec{
+			{
+				Ref: &corev1.ObjectReference{
+					Name: "sub-name",
+					UID:  "sub-uid",
+				},
+			},
+		},
 	}
 )
 
@@ -128,29 +135,205 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
+			Name: "Channel deleted - problem creating client to delete subscriptions",
+			InitialState: []runtime.Object{
+				makeDeletingChannelWithSubscribers(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientCreateErr: errors.New(testErrorMessage),
+				},
+			},
+			WantErrMsg: testErrorMessage,
+			WantPresent: []runtime.Object{
+				makeDeletingChannelWithSubscribers(),
+			},
+		},
+		{
+			Name: "Channel deleted - problem checking subscription existence",
+			InitialState: []runtime.Object{
+				makeDeletingChannelWithSubscribers(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientData: fakepubsub.ClientData{
+						SubscriptionData: fakepubsub.SubscriptionData{
+							ExistsErr: errors.New(testErrorMessage),
+						},
+					},
+				},
+			},
+			WantErrMsg: testErrorMessage,
+			WantPresent: []runtime.Object{
+				makeDeletingChannelWithSubscribers(),
+			},
+		},
+		{
+			Name: "Channel deleted - subscription does not exist",
+			InitialState: []runtime.Object{
+				makeDeletingChannelWithSubscribers(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientData: fakepubsub.ClientData{
+						SubscriptionData: fakepubsub.SubscriptionData{
+							Exists: false,
+						},
+					},
+				},
+			},
+			WantPresent: []runtime.Object{
+				makeDeletingChannelWithSubscribersWithoutFinalizer(),
+			},
+		},
+		{
+			Name: "Channel deleted - subscription deletion fails",
+			InitialState: []runtime.Object{
+				makeDeletingChannelWithSubscribers(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientData: fakepubsub.ClientData{
+						SubscriptionData: fakepubsub.SubscriptionData{
+							Exists:    true,
+							DeleteErr: errors.New(testErrorMessage),
+						},
+					},
+				},
+			},
+			WantErrMsg: testErrorMessage,
+			WantPresent: []runtime.Object{
+				makeDeletingChannelWithSubscribers(),
+			},
+		},
+		{
+			Name: "Channel deleted - subscription deletion succeeds",
+			InitialState: []runtime.Object{
+				makeDeletingChannelWithSubscribers(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientData: fakepubsub.ClientData{
+						SubscriptionData: fakepubsub.SubscriptionData{
+							Exists: true,
+						},
+					},
+				},
+			},
+			WantPresent: []runtime.Object{
+				makeDeletingChannelWithSubscribersWithoutFinalizer(),
+			},
+		},
+		{
+			Name: "Channel deleted - problem checking topic existence",
+			InitialState: []runtime.Object{
+				makeDeletingChannelWithSubscribers(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientData: fakepubsub.ClientData{
+						TopicData: fakepubsub.TopicData{
+							ExistsErr: errors.New(testErrorMessage),
+						},
+					},
+				},
+			},
+			WantErrMsg: testErrorMessage,
+			WantPresent: []runtime.Object{
+				makeDeletingChannelWithSubscribers(),
+			},
+		},
+		{
+			Name: "Channel deleted - topic does not exist",
+			InitialState: []runtime.Object{
+				makeDeletingChannelWithSubscribers(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientData: fakepubsub.ClientData{
+						TopicData: fakepubsub.TopicData{
+							Exists: false,
+						},
+					},
+				},
+			},
+			WantPresent: []runtime.Object{
+				makeDeletingChannelWithSubscribersWithoutFinalizer(),
+			},
+		},
+		{
+			Name: "Channel deleted - topic deletion fails",
+			InitialState: []runtime.Object{
+				makeDeletingChannelWithSubscribers(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientData: fakepubsub.ClientData{
+						TopicData: fakepubsub.TopicData{
+							Exists:    true,
+							DeleteErr: errors.New(testErrorMessage),
+						},
+					},
+				},
+			},
+			WantErrMsg: testErrorMessage,
+			WantPresent: []runtime.Object{
+				makeDeletingChannelWithSubscribers(),
+			},
+		},
+		{
+			Name: "Channel deleted - topic deletion succeeds",
+			InitialState: []runtime.Object{
+				makeDeletingChannelWithSubscribers(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientData: fakepubsub.ClientData{
+						TopicData: fakepubsub.TopicData{
+							Exists: true,
+						},
+					},
+				},
+			},
+			WantPresent: []runtime.Object{
+				makeDeletingChannelWithSubscribersWithoutFinalizer(),
+			},
+		},
+		{
 			Name: "Channel deleted - finalizer removed",
 			InitialState: []runtime.Object{
 				makeDeletingChannel(),
-				makeSecretWithCreds(),
+				testcreds.MakeSecretWithCreds(),
 			},
 			WantPresent: []runtime.Object{
 				makeDeletingChannelWithoutFinalizer(),
 			},
 		},
 		{
-			Name: "Channel config sync fails - can't list Channels",
+			Name: "GetCredential fails",
 			InitialState: []runtime.Object{
 				makeChannel(),
+				testcreds.MakeSecretWithInvalidCreds(),
 			},
-			Mocks: controllertesting.Mocks{
-				MockLists: errorListingChannels(),
+			WantPresent: []runtime.Object{
+				makeChannel(),
 			},
-			WantErrMsg: testErrorMessage,
+			WantErrMsg: testcreds.InvalidCredsError,
 		},
 		{
 			Name: "K8s service get fails",
 			InitialState: []runtime.Object{
 				makeChannel(),
+				testcreds.MakeSecretWithCreds(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockGets: errorGettingK8sService(),
@@ -164,6 +347,7 @@ func TestReconcile(t *testing.T) {
 			Name: "K8s service creation fails",
 			InitialState: []runtime.Object{
 				makeChannel(),
+				testcreds.MakeSecretWithCreds(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockCreates: errorCreatingK8sService(),
@@ -179,6 +363,7 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeChannel(),
 				makeK8sServiceNotOwnedByChannel(),
+				testcreds.MakeSecretWithCreds(),
 			},
 			WantPresent: []runtime.Object{
 				makeReadyChannel(),
@@ -190,6 +375,7 @@ func TestReconcile(t *testing.T) {
 				makeChannel(),
 				makeK8sService(),
 				makeVirtualService(),
+				testcreds.MakeSecretWithCreds(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockGets: errorGettingVirtualService(),
@@ -206,6 +392,7 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeChannel(),
 				makeK8sService(),
+				testcreds.MakeSecretWithCreds(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockCreates: errorCreatingVirtualService(),
@@ -222,10 +409,179 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeChannel(),
 				makeK8sService(),
-				makeVirtualServiceNowOwnedByChannel(),
+				makeVirtualServiceNotOwnedByChannel(),
+				testcreds.MakeSecretWithCreds(),
 			},
 			WantPresent: []runtime.Object{
 				makeReadyChannel(),
+			},
+		},
+		{
+			Name: "Create Topic - problem creating client",
+			InitialState: []runtime.Object{
+				makeChannel(),
+				makeK8sService(),
+				makeVirtualService(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientCreateErr: errors.New(testErrorMessage),
+				},
+			},
+			WantErrMsg: testErrorMessage,
+			WantPresent: []runtime.Object{
+				makeChannelWithFinalizerAndAddress(),
+			},
+		},
+		{
+			Name: "Create Topic - problem checking existence",
+			InitialState: []runtime.Object{
+				makeChannel(),
+				makeK8sService(),
+				makeVirtualService(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientData: fakepubsub.ClientData{
+						TopicData: fakepubsub.TopicData{
+							ExistsErr: errors.New(testErrorMessage),
+						},
+					},
+				},
+			},
+			WantErrMsg: testErrorMessage,
+			WantPresent: []runtime.Object{
+				makeChannelWithFinalizerAndAddress(),
+			},
+		},
+		{
+			Name: "Create Topic - topic already exists",
+			InitialState: []runtime.Object{
+				makeChannel(),
+				makeK8sService(),
+				makeVirtualService(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientData: fakepubsub.ClientData{
+						TopicData: fakepubsub.TopicData{
+							Exists: true,
+						},
+					},
+				},
+			},
+			WantPresent: []runtime.Object{
+				makeReadyChannel(),
+			},
+		},
+		{
+			Name: "Create Topic - error creating topic",
+			InitialState: []runtime.Object{
+				makeChannel(),
+				makeK8sService(),
+				makeVirtualService(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientData: fakepubsub.ClientData{
+						CreateTopicErr: errors.New(testErrorMessage),
+					},
+				},
+			},
+			WantErrMsg: testErrorMessage,
+			WantPresent: []runtime.Object{
+				makeChannelWithFinalizerAndAddress(),
+			},
+		},
+		{
+			Name: "Create Topic - topic create succeeds",
+			InitialState: []runtime.Object{
+				makeChannel(),
+				makeK8sService(),
+				makeVirtualService(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			WantPresent: []runtime.Object{
+				makeReadyChannel(),
+			},
+		},
+		{
+			Name: "Create Subscriptions - problem checking exists",
+			InitialState: []runtime.Object{
+				makeChannelWithSubscribers(),
+				makeK8sService(),
+				makeVirtualService(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientData: fakepubsub.ClientData{
+						SubscriptionData: fakepubsub.SubscriptionData{
+							ExistsErr: errors.New(testErrorMessage),
+						},
+					},
+				},
+			},
+			WantErrMsg: testErrorMessage,
+			WantPresent: []runtime.Object{
+				makeChannelWithSubscribersAndFinalizerAndAddress(),
+			},
+		},
+		{
+			Name: "Create Subscriptions - already exists",
+			InitialState: []runtime.Object{
+				makeChannelWithSubscribers(),
+				makeK8sService(),
+				makeVirtualService(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientData: fakepubsub.ClientData{
+						SubscriptionData: fakepubsub.SubscriptionData{
+							Exists: true,
+						},
+					},
+				},
+			},
+			WantPresent: []runtime.Object{
+				makeReadyChannelWithSubscribers(),
+			},
+		},
+		{
+			Name: "Create Subscriptions - create fails",
+			InitialState: []runtime.Object{
+				makeChannelWithSubscribers(),
+				makeK8sService(),
+				makeVirtualService(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientData: fakepubsub.ClientData{
+						CreateSubErr: errors.New(testErrorMessage),
+					},
+				},
+			},
+			WantErrMsg: testErrorMessage,
+			WantPresent: []runtime.Object{
+				makeChannelWithSubscribersAndFinalizerAndAddress(),
+			},
+		},
+		{
+			Name: "Create Subscriptions - create succeeds",
+			InitialState: []runtime.Object{
+				makeChannelWithSubscribers(),
+				makeK8sService(),
+				makeVirtualService(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			WantPresent: []runtime.Object{
+				makeReadyChannelWithSubscribers(),
 			},
 		},
 		{
@@ -234,6 +590,7 @@ func TestReconcile(t *testing.T) {
 				makeChannel(),
 				makeK8sService(),
 				makeVirtualService(),
+				testcreds.MakeSecretWithCreds(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockGets: errorOnSecondChannelGet(),
@@ -246,6 +603,7 @@ func TestReconcile(t *testing.T) {
 				makeChannel(),
 				makeK8sService(),
 				makeVirtualService(),
+				testcreds.MakeSecretWithCreds(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockUpdates: errorUpdatingChannel(),
@@ -255,8 +613,8 @@ func TestReconcile(t *testing.T) {
 	}
 	recorder := record.NewBroadcaster().NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 	for _, tc := range testCases {
-		if tc.Name != "Channel deleted - finalizer removed" {
-			continue
+		if tc.Name != "Create Topic - problem creating client" {
+			//continue
 		}
 		c := tc.GetClient()
 		r := &reconciler{
@@ -266,8 +624,8 @@ func TestReconcile(t *testing.T) {
 
 			pubSubClientCreator: fakepubsub.Creator(tc.OtherTestData[pscData]),
 			defaultGcpProject:   gcpProject,
-			defaultSecret:       secret,
-			defaultSecretKey:    secretKey,
+			defaultSecret:       testcreds.Secret,
+			defaultSecretKey:    testcreds.SecretKey,
 		}
 		if tc.ReconcileKey == "" {
 			tc.ReconcileKey = fmt.Sprintf("/%s", cName)
@@ -329,9 +687,27 @@ func makeChannelWithWrongProvisionerName() *eventingv1alpha1.Channel {
 	return c
 }
 
+func makeChannelWithSubscribers() *eventingv1alpha1.Channel {
+	c := makeChannel()
+	c.Spec.Subscribable = subscribers
+	return c
+}
+
+func makeChannelWithSubscribersAndFinalizerAndAddress() *eventingv1alpha1.Channel {
+	c := makeChannelWithFinalizerAndAddress()
+	c.Spec.Subscribable = subscribers
+	return c
+}
+
 func makeChannelWithFinalizer() *eventingv1alpha1.Channel {
 	c := makeChannel()
 	c.Finalizers = []string{finalizerName}
+	return c
+}
+
+func makeReadyChannelWithSubscribers() *eventingv1alpha1.Channel {
+	c := makeReadyChannel()
+	c.Spec.Subscribable = subscribers
 	return c
 }
 
@@ -347,20 +723,16 @@ func makeDeletingChannelWithoutFinalizer() *eventingv1alpha1.Channel {
 	return c
 }
 
-func makeSecretWithCreds() *corev1.Secret {
-	return &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: secret.APIVersion,
-			Kind:       secret.Kind,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secret.Name,
-			Namespace: secret.Namespace,
-		},
-		Data: map[string][]byte{
-			secretKey: []byte{},
-		},
-	}
+func makeDeletingChannelWithSubscribers() *eventingv1alpha1.Channel {
+	c := makeDeletingChannel()
+	c.Spec.Subscribable = subscribers
+	return c
+}
+
+func makeDeletingChannelWithSubscribersWithoutFinalizer() *eventingv1alpha1.Channel {
+	c := makeDeletingChannelWithSubscribers()
+	c.Finalizers = nil
+	return c
 }
 
 func makeK8sService() *corev1.Service {
@@ -450,7 +822,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 	}
 }
 
-func makeVirtualServiceNowOwnedByChannel() *istiov1alpha3.VirtualService {
+func makeVirtualServiceNotOwnedByChannel() *istiov1alpha3.VirtualService {
 	vs := makeVirtualService()
 	vs.OwnerReferences = nil
 	return vs
@@ -494,14 +866,6 @@ func errorGettingVirtualService() []controllertesting.MockGet {
 				return controllertesting.Handled, errors.New(testErrorMessage)
 			}
 			return controllertesting.Unhandled, nil
-		},
-	}
-}
-
-func errorListingChannels() []controllertesting.MockList {
-	return []controllertesting.MockList{
-		func(client.Client, context.Context, *client.ListOptions, runtime.Object) (controllertesting.MockHandled, error) {
-			return controllertesting.Handled, errors.New(testErrorMessage)
 		},
 	}
 }
