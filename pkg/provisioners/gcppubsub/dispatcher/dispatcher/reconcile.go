@@ -269,7 +269,7 @@ func (r *reconciler) createSubscriptionUnderLock(ctx context.Context, c *eventin
 	}
 
 	// receiveMessageBlocking blocks, so run it in a goroutine.
-	go r.receiveMessagesBlocking(ctxWithCancel, c, sub, gcpProject, psc)
+	go r.receiveMessagesBlocking(ctxWithCancel, c, sub.DeepCopy(), gcpProject, psc)
 
 	return nil
 }

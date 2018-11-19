@@ -219,7 +219,6 @@ func TestReconcile(t *testing.T) {
 						if e.Meta.GetNamespace() != cNamespace || e.Meta.GetName() != cName {
 							t.Errorf("Unexpected reconcileChan message: %v", e)
 						}
-					// Expected
 					case <-time.After(time.Second):
 						t.Error("Timed out waiting for the reconcileChan to get the Channel")
 					}
