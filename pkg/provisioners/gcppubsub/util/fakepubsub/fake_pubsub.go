@@ -161,9 +161,9 @@ func (t *Topic) Stop() {
 }
 
 type PublishResultData struct {
-	GetID  string
-	GetErr error
-	Ready  <-chan struct{}
+	ID    string
+	Err   error
+	Ready <-chan struct{}
 }
 
 type PublishResult struct {
@@ -177,7 +177,7 @@ func (r *PublishResult) Ready() <-chan struct{} {
 }
 
 func (r *PublishResult) Get(ctx context.Context) (serverID string, err error) {
-	return r.Data.GetID, r.Data.GetErr
+	return r.Data.ID, r.Data.Err
 }
 
 type MessageData struct {
