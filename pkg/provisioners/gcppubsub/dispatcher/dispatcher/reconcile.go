@@ -56,7 +56,7 @@ type reconciler struct {
 	logger   *zap.Logger
 
 	// dispatcher is used to make the actual HTTP requests to downstream subscribers.
-	dispatcher *buses.MessageDispatcher
+	dispatcher buses.Dispatcher
 	// reconcileChan is a Go channel that allows the reconciler to force reconcilation of a Channel.
 	reconcileChan chan<- event.GenericEvent
 
@@ -252,6 +252,10 @@ func (r *reconciler) createSubscriptionUnderLock(ctx context.Context, c *eventin
 		r.subscriptions[channelKey] = map[subscriptionName]context.CancelFunc{}
 	}
 	subKey := subscriptionKey(sub)
+	if r.subscriptions[channelKey][subKey] != nil {
+		// There is already a Goroutine watching this subscription.
+		return nil
+	}
 	r.subscriptions[channelKey][subKey] = cancelFunc
 
 	gcpProject := r.defaultGcpProject
@@ -282,20 +286,9 @@ func (r *reconciler) receiveMessagesBlocking(ctxWithCancel context.Context, c *e
 	subKey := subscriptionKey(sub)
 
 	logging.FromContext(ctxWithCancel).Info("subscription.Receive start")
-	receiveErr := subscription.Receive(ctxWithCancel, func(ctx context.Context, msg pubsubutil.PubSubMessage) {
-		message := &buses.Message{
-			Headers: msg.Attributes(),
-			Payload: msg.Data(),
-		}
-		err := r.dispatcher.DispatchMessage(message, sub.SubscriberURI, sub.ReplyURI, defaults)
-		if err != nil {
-			logging.FromContext(ctxWithCancel).Info("Message dispatch failed", zap.Error(err), zap.String("pubSubMessageId", msg.ID()))
-			msg.Nack()
-		} else {
-			logging.FromContext(ctxWithCancel).Info("Message dispatch succeeded", zap.String("pubSubMessageId", msg.ID()))
-			msg.Ack()
-		}
-	})
+	receiveErr := subscription.Receive(
+		ctxWithCancel,
+		receiveFunc(logging.FromContext(ctxWithCancel), sub, defaults, r.dispatcher))
 	// We want to minimize holding the lock. r.reconcileChan may block, so definitely do not do
 	// it under lock. But, to prevent a race condition, we must delete from r.subscriptions
 	// before using r.reconcileChan.
@@ -311,6 +304,23 @@ func (r *reconciler) receiveMessagesBlocking(ctxWithCancel context.Context, c *e
 		r.reconcileChan <- event.GenericEvent{
 			Meta:   c.GetObjectMeta(),
 			Object: c,
+		}
+	}
+}
+
+func receiveFunc(logger *zap.SugaredLogger, sub *v1alpha1.ChannelSubscriberSpec, defaults buses.DispatchDefaults, dispatcher buses.Dispatcher) func(context.Context, pubsubutil.PubSubMessage) {
+	return func(ctx context.Context, msg pubsubutil.PubSubMessage) {
+		message := &buses.Message{
+			Headers: msg.Attributes(),
+			Payload: msg.Data(),
+		}
+		err := dispatcher.DispatchMessage(message, sub.SubscriberURI, sub.ReplyURI, defaults)
+		if err != nil {
+			logger.Info("Message dispatch failed", zap.Error(err), zap.String("pubSubMessageId", msg.ID()))
+			msg.Nack()
+		} else {
+			logger.Info("Message dispatch succeeded", zap.String("pubSubMessageId", msg.ID()))
+			msg.Ack()
 		}
 	}
 }

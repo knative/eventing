@@ -84,6 +84,10 @@ type TestCase struct {
 	// fake GCP PubSub client can go in here, as no other field makes sense for it.
 	OtherTestData map[string]interface{}
 
+	// AdditionalVerification is for any verification that needs to be done on top of the normal
+	// result/error verification and WantPresent/WantAbsent.
+	AdditionalVerification []func(t *testing.T, tc *TestCase)
+
 	// IgnoreTimes causes comparisons to ignore fields of type apis.VolatileTime.
 	IgnoreTimes bool
 }
@@ -110,6 +114,10 @@ func (tc *TestCase) Runner(t *testing.T, r reconcile.Reconciler, c *MockClient) 
 
 		if err := tc.VerifyWantAbsent(c); err != nil {
 			t.Error(err)
+		}
+
+		for _, av := range tc.AdditionalVerification {
+			av(t, tc)
 		}
 	}
 }

@@ -22,6 +22,11 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/event"
+
+	"github.com/knative/eventing/pkg/buses"
 
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 
@@ -52,8 +57,10 @@ const (
 
 	gcpProject = "gcp-project"
 
-	pscData          = "pscData"
-	subscriptionsKey = "subscriptionsKey"
+	pscData             = "pscData"
+	reconcileChan       = "reconcileChan"
+	shouldBeCanceled    = "shouldBeCanceled"
+	shouldNotBeCanceled = "shouldNotBeCanceled"
 )
 
 var (
@@ -67,6 +74,12 @@ var (
 				Ref: &corev1.ObjectReference{
 					Name: "sub-name",
 					UID:  "sub-uid",
+				},
+			},
+			{
+				Ref: &corev1.ObjectReference{
+					Name: "sub-2-name",
+					UID:  "sub-2-uid",
 				},
 			},
 		},
@@ -137,6 +150,14 @@ func TestReconcile(t *testing.T) {
 				makeDeletingChannelWithSubscribers(),
 				testcreds.MakeSecretWithCreds(),
 			},
+			OtherTestData: map[string]interface{}{
+				shouldBeCanceled: map[channelName]subscriptionName{
+					key(makeChannel()): {
+						Namespace: cNamespace,
+						Name:      "sub-name",
+					},
+				},
+			},
 			WantPresent: []runtime.Object{
 				makeDeletingChannelWithSubscribersWithoutFinalizer(),
 			},
@@ -163,6 +184,96 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testcreds.InvalidCredsError,
 		},
 		{
+			Name: "Channel update fails - cannot create PubSub client",
+			InitialState: []runtime.Object{
+				makeChannelWithSubscribers(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientCreateErr: errors.New(testErrorMessage),
+				},
+			},
+			WantErrMsg: testErrorMessage,
+		},
+		{
+			Name: "Receive errors",
+			InitialState: []runtime.Object{
+				makeChannelWithSubscribers(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				reconcileChan: make(chan event.GenericEvent),
+				pscData: fakepubsub.CreatorData{
+					ClientData: fakepubsub.ClientData{
+						SubscriptionData: fakepubsub.SubscriptionData{
+							ReceiveErr: errors.New(testErrorMessage),
+						},
+					},
+				},
+			},
+			AdditionalVerification: []func(*testing.T, *controllertesting.TestCase){
+				func(t *testing.T, tc *controllertesting.TestCase) {
+					select {
+					case e := <-tc.OtherTestData[reconcileChan].(chan event.GenericEvent):
+						if e.Meta.GetNamespace() != cNamespace || e.Meta.GetName() != cName {
+							t.Errorf("Unexpected reconcileChan message: %v", e)
+						}
+					// Expected
+					case <-time.After(time.Second):
+						t.Error("Timed out waiting for the reconcileChan to get the Channel")
+					}
+				},
+			},
+			WantPresent: []runtime.Object{
+				makeChannelWithSubscribersAndFinalizer(),
+			},
+		},
+		{
+			Name: "PubSub Subscription.Receive already running",
+			InitialState: []runtime.Object{
+				makeChannelWithSubscribers(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientData: fakepubsub.ClientData{
+						SubscriptionData: fakepubsub.SubscriptionData{
+							ReceiveErr: errors.New(testErrorMessage),
+						},
+					},
+				},
+				shouldNotBeCanceled: map[channelName]subscriptionName{
+					key(makeChannel()): {Namespace: subscribers.Subscribers[0].Ref.Namespace, Name: subscribers.Subscribers[0].Ref.Name},
+				},
+			},
+			WantPresent: []runtime.Object{
+				makeChannelWithSubscribersAndFinalizer(),
+			},
+		},
+		{
+			Name: "Delete old Subscriptions",
+			InitialState: []runtime.Object{
+				makeChannelWithSubscribers(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientData: fakepubsub.ClientData{
+						SubscriptionData: fakepubsub.SubscriptionData{
+							ReceiveErr: errors.New(testErrorMessage),
+						},
+					},
+				},
+				shouldBeCanceled: map[channelName]subscriptionName{
+					key(makeChannel()): {Namespace: cNamespace, Name: "old-sub"},
+				},
+			},
+			WantPresent: []runtime.Object{
+				makeChannelWithSubscribersAndFinalizer(),
+			},
+		},
+		{
 			Name: "Channel update fails",
 			InitialState: []runtime.Object{
 				makeChannel(),
@@ -176,9 +287,6 @@ func TestReconcile(t *testing.T) {
 	}
 	recorder := record.NewBroadcaster().NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 	for _, tc := range testCases {
-		if tc.Name != "Create Topic - problem creating client" {
-			//continue
-		}
 		c := tc.GetClient()
 		r := &reconciler{
 			client:   c,
@@ -194,14 +302,80 @@ func TestReconcile(t *testing.T) {
 			subscriptionsLock: sync.Mutex{},
 			subscriptions:     map[channelName]map[subscriptionName]context.CancelFunc{},
 		}
+		if tc.OtherTestData[reconcileChan] != nil {
+			r.reconcileChan = tc.OtherTestData[reconcileChan].(chan event.GenericEvent)
+		} else {
+			r.reconcileChan = make(chan event.GenericEvent)
+		}
+
 		if tc.ReconcileKey == "" {
 			tc.ReconcileKey = fmt.Sprintf("/%s", cName)
 		}
-		if tc.OtherTestData[subscriptionsKey] != nil {
-			r.subscriptions = tc.OtherTestData[subscriptionsKey].(map[channelName]map[subscriptionName]context.CancelFunc)
+		cc := &cancelChecker{
+			shouldCancel:         map[channelAndSubName]bool{},
+			cancelledIncorrectly: map[channelAndSubName]bool{},
 		}
+		if tc.OtherTestData[shouldBeCanceled] != nil {
+			for c, s := range tc.OtherTestData[shouldBeCanceled].(map[channelName]subscriptionName) {
+				if r.subscriptions[c] == nil {
+					r.subscriptions[c] = map[subscriptionName]context.CancelFunc{}
+				}
+				r.subscriptions[c][s] = cc.wantCancel(c, s)
+			}
+		}
+		if tc.OtherTestData[shouldNotBeCanceled] != nil {
+			for c, s := range tc.OtherTestData[shouldNotBeCanceled].(map[channelName]subscriptionName) {
+				if r.subscriptions[c] == nil {
+					r.subscriptions[c] = map[subscriptionName]context.CancelFunc{}
+				}
+				r.subscriptions[c][s] = cc.wantNotCancel(c, s)
+			}
+		}
+		tc.AdditionalVerification = append(tc.AdditionalVerification, cc.verify)
 		tc.IgnoreTimes = true
 		t.Run(tc.Name, tc.Runner(t, r, c))
+	}
+}
+
+func TestReceiveFunc(t *testing.T) {
+	testCases := map[string]struct {
+		ack           bool
+		dispatcherErr error
+	}{
+		"dispatch error": {
+			ack:           false,
+			dispatcherErr: errors.New(testErrorMessage),
+		},
+		"dispatch success": {
+			ack: true,
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			sub := &v1alpha1.ChannelSubscriberSpec{
+				SubscriberURI: "subscriber-uri",
+				ReplyURI:      "reply-uri",
+			}
+			defaults := buses.DispatchDefaults{
+				Namespace: cNamespace,
+			}
+			rf := receiveFunc(zap.NewNop().Sugar(), sub, defaults, &fakeDispatcher{err: tc.dispatcherErr})
+			msg := fakepubsub.Message{}
+			rf(context.TODO(), &msg)
+
+			if msg.MessageData.Ack && msg.MessageData.Nack {
+				t.Error("Message both Acked and Nacked")
+			}
+			if tc.ack {
+				if !msg.MessageData.Ack {
+					t.Error("Message should have been Acked. It wasn't.")
+				}
+			} else {
+				if !msg.MessageData.Nack {
+					t.Error("Message should have been Nacked. It wasn't.")
+				}
+			}
+		})
 	}
 }
 
@@ -308,4 +482,52 @@ func errorUpdatingChannel() []controllertesting.MockUpdate {
 			return controllertesting.Unhandled, nil
 		},
 	}
+}
+
+type channelAndSubName struct {
+	c channelName
+	s subscriptionName
+}
+
+type cancelChecker struct {
+	shouldCancel         map[channelAndSubName]bool
+	cancelledIncorrectly map[channelAndSubName]bool
+}
+
+func (cc *cancelChecker) wantCancel(c channelName, s subscriptionName) context.CancelFunc {
+	n := channelAndSubName{
+		c: c,
+		s: s,
+	}
+	cc.shouldCancel[n] = false
+	return func() {
+		delete(cc.shouldCancel, n)
+	}
+}
+
+func (cc *cancelChecker) wantNotCancel(c channelName, s subscriptionName) context.CancelFunc {
+	return func() {
+		n := channelAndSubName{
+			c: c,
+			s: s,
+		}
+		cc.cancelledIncorrectly[n] = false
+	}
+}
+
+func (cc *cancelChecker) verify(t *testing.T, _ *controllertesting.TestCase) {
+	for n := range cc.shouldCancel {
+		t.Errorf("Expected to be canceled, but wasn't: %v", n)
+	}
+	for n := range cc.cancelledIncorrectly {
+		t.Errorf("Expected not to be canceled, but was: %v", n)
+	}
+}
+
+type fakeDispatcher struct {
+	err error
+}
+
+func (d *fakeDispatcher) DispatchMessage(_ *buses.Message, _, _ string, _ buses.DispatchDefaults) error {
+	return d.err
 }
