@@ -48,8 +48,6 @@ function unit_tests() {
   report_go_test ${CODE_PACKAGES_STR}
 }
 
-function integration_tests() {
-  ./test/e2e-tests.sh
-}
+# We use the default integration test runner.
 
 main $@
