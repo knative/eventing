@@ -10,7 +10,7 @@ Deployment steps:
 
 1. Now that Apache Kafka is installed, you need to configure the
 `bootstrap_servers` value  in the `kafka-channel-controller-config` ConfigMap,
-located inside the `config/provisioners/kafka/kafka-provisioner.yaml` file:
+located inside the `config/provisioners/kafka/kafka-channel.yaml` file:
     ```
     ...
     apiVersion: v1
@@ -29,7 +29,7 @@ located inside the `config/provisioners/kafka/kafka-provisioner.yaml` file:
     `my-cluster-kafka-bootstrap.mynamespace:9092`.
 1. Apply the 'Kafka' ClusterChannelProvisioner, Controller, and Dispatcher:
     ```
-    ko apply -f config/provisioners/kafka/kafka-provisioner.yaml
+    ko apply -f config/provisioners/kafka/kafka-channel.yaml
     ```
 1. Create Channels that reference the 'kafka-channel'.
 
