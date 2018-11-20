@@ -15,7 +15,7 @@
 apiVersion: eventing.knative.dev/v1alpha1
 kind: ClusterChannelProvisioner
 metadata:
-  name: kafka-channel
+  name: kafka
 spec: {}
 ---
 
@@ -169,7 +169,7 @@ spec:
   replicas: 1
   selector:
     matchLabels: &labels
-      clusterChannelProvisioner: kafka-channel
+      clusterChannelProvisioner: kafka
       role: dispatcher
   serviceName: kafka-channel-dispatcher-service
   template:

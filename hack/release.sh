@@ -27,7 +27,7 @@ declare -A COMPONENTS
 COMPONENTS=(
   ["eventing.yaml"]="config"
   ["in-memory-channel.yaml"]="config/provisioners/in-memory-channel"
-  ["kafka-channel.yaml"]="config/provisioners/kafka"
+  ["kafka.yaml"]="config/provisioners/kafka"
 )
 readonly COMPONENTS
 
