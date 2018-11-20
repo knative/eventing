@@ -82,8 +82,8 @@ kubectl get deployment -n knative-eventing gcp-pubsub-channel-controller
 ```
 
 The `Channel Dispatcher` handles all the data plane portions of the `Channel`. It receives events
-from the cluster and writes them to GCP PubSub `Topic`s. It also polls `Topic`s and sends events
-back into the cluster. It runs in the Deployment:
+from the cluster and writes them to GCP PubSub `Topic`s. It also polls `Subscriptions`s and sends
+events back into the cluster. It runs in the Deployment:
 
 ```shell
 kubectl get deployment -n knative-eventing gcp-pubsub-channel-dispatcher
