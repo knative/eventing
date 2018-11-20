@@ -60,6 +60,14 @@ rules:
       - watch
       - create
   - apiGroups:
+        - "" # Core API group.
+    resources:
+      - services
+    resourceNames:
+      - in-memory-channel-clusterbus
+    verbs:
+      - delete
+  - apiGroups:
       - "" # Core API Group.
     resources:
       - configmaps
@@ -76,6 +84,7 @@ rules:
       - list
       - watch
       - create
+      - update
 
 ---
 

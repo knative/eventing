@@ -25,7 +25,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// MessageReceiver starts a server to receive new messages for the bus. The new
+// MessageReceiver starts a server to receive new messages for the channel dispatcher. The new
 // message is emitted via the receiver function.
 const (
 	MessageReceiverPort = 8080

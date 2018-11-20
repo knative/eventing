@@ -19,14 +19,18 @@ package provisioners
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func TestNewLoggingConfig(t *testing.T) {
 	config := NewLoggingConfig()
-	expected := zap.InfoLevel
-	actual := config.LoggingLevel["bus"]
-	if expected != actual {
+	expected := map[string]zapcore.Level{
+		"provisioner": zap.InfoLevel,
+	}
+	actual := config.LoggingLevel
+	if cmp.Diff(expected, actual) != "" {
 		t.Errorf("%s expected: %+v got: %+v", "Logging level", expected, actual)
 	}
 }
