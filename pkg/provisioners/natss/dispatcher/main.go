@@ -28,7 +28,6 @@ import (
 	"time"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 )
 
 var (
@@ -55,7 +54,6 @@ func main() {
 
 	// Add custom types to this array to get them into the manager's scheme.
 	eventingv1alpha1.AddToScheme(mgr.GetScheme())
-	istiov1alpha3.AddToScheme(mgr.GetScheme())
 
 	stopCh := signals.SetupSignalHandler()
 	var g errgroup.Group

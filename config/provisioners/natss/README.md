@@ -25,9 +25,14 @@
 ### Components
 
 The major components are:
+* NATS Streaming
 * ClusterChannelProvisioner Controller
 * Channel Controller
 * Channel Dispatcher
+
+NATS Streaming is deployed as a StatefulSet. 
+For tuning NATS Streaming, see:
+https://github.com/nats-io/nats-streaming-server#configuring
 
 The ClusterChannelProvisioner Controller and the Channel Controller are colocated in one Pod.
 ```shell
