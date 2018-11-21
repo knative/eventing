@@ -45,6 +45,7 @@ const (
 	channelName                   = "test-channel"
 	clusterChannelProvisionerName = "kafka-channel"
 	testNS                        = "test-namespace"
+	topicPrefix                   = "knative-eventing-channel"
 	testUID                       = "test-uid"
 	argumentNumPartitions         = "NumPartitions"
 )
@@ -255,7 +256,7 @@ func TestProvisionChannel(t *testing.T) {
 		{
 			name:          "provision with no channel arguments - uses default",
 			c:             getNewChannel(channelName, clusterChannelProvisionerName),
-			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
+			wantTopicName: fmt.Sprintf("%s_%s.%s", topicPrefix, testNS, channelName),
 			wantTopicDetail: &sarama.TopicDetail{
 				ReplicationFactor: 1,
 				NumPartitions:     1,
@@ -264,7 +265,7 @@ func TestProvisionChannel(t *testing.T) {
 		{
 			name:          "provision with unknown channel arguments - uses default",
 			c:             getNewChannelWithArgs(channelName, map[string]interface{}{"testing": "testing"}),
-			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
+			wantTopicName: fmt.Sprintf("%s_%s.%s", topicPrefix, testNS, channelName),
 			wantTopicDetail: &sarama.TopicDetail{
 				ReplicationFactor: 1,
 				NumPartitions:     1,
@@ -289,7 +290,7 @@ func TestProvisionChannel(t *testing.T) {
 		{
 			name:          "provision with valid channel arguments",
 			c:             getNewChannelWithArgs(channelName, map[string]interface{}{argumentNumPartitions: 2}),
-			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
+			wantTopicName: fmt.Sprintf("%s_%s.%s", topicPrefix, testNS, channelName),
 			wantTopicDetail: &sarama.TopicDetail{
 				ReplicationFactor: 1,
 				NumPartitions:     2,
@@ -298,7 +299,7 @@ func TestProvisionChannel(t *testing.T) {
 		{
 			name:          "provision but topic already exists - no error",
 			c:             getNewChannelWithArgs(channelName, map[string]interface{}{argumentNumPartitions: 2}),
-			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
+			wantTopicName: fmt.Sprintf("%s_%s.%s", topicPrefix, testNS, channelName),
 			wantTopicDetail: &sarama.TopicDetail{
 				ReplicationFactor: 1,
 				NumPartitions:     2,
@@ -308,7 +309,7 @@ func TestProvisionChannel(t *testing.T) {
 		{
 			name:          "provision but error creating topic",
 			c:             getNewChannelWithArgs(channelName, map[string]interface{}{argumentNumPartitions: 2}),
-			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
+			wantTopicName: fmt.Sprintf("%s_%s.%s", topicPrefix, testNS, channelName),
 			wantTopicDetail: &sarama.TopicDetail{
 				ReplicationFactor: 1,
 				NumPartitions:     2,
@@ -352,20 +353,20 @@ func TestDeprovisionChannel(t *testing.T) {
 		{
 			name:          "deprovision channel - unknown error",
 			c:             getNewChannel(channelName, clusterChannelProvisionerName),
-			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
+			wantTopicName: fmt.Sprintf("%s_%s.%s", topicPrefix, testNS, channelName),
 			mockError:     fmt.Errorf("unknown sarama error"),
 			wantError:     "unknown sarama error",
 		},
 		{
 			name:          "deprovision channel - topic already deleted",
 			c:             getNewChannel(channelName, clusterChannelProvisionerName),
-			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
+			wantTopicName: fmt.Sprintf("%s_%s.%s", topicPrefix, testNS, channelName),
 			mockError:     sarama.ErrUnknownTopicOrPartition,
 		},
 		{
 			name:          "deprovision channel - success",
 			c:             getNewChannel(channelName, clusterChannelProvisionerName),
-			wantTopicName: fmt.Sprintf("%s.%s", testNS, channelName),
+			wantTopicName: fmt.Sprintf("%s_%s.%s", topicPrefix, testNS, channelName),
 		}}
 
 	for _, tc := range deprovisionTestCases {
