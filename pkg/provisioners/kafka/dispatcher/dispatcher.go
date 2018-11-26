@@ -119,7 +119,7 @@ func (d *KafkaDispatcher) UpdateConfig(config *multichannelfanout.Config) error 
 
 		// Unsubscribe and close consumer for any deleted subscriptions
 		for channelRef, subMap := range d.kafkaConsumers {
-			for sub, _ := range subMap {
+			for sub := range subMap {
 				if ok := newSubs[sub]; !ok {
 					d.unsubscribe(channelRef, sub)
 				}

@@ -90,6 +90,6 @@ func newDispatcherService(ccp *eventingv1alpha1.ClusterChannelProvisioner) *core
 func DispatcherLabels(ccpName string) map[string]string {
 	return map[string]string{
 		"clusterChannelProvisioner": ccpName,
-		"role": "dispatcher",
+		"role":                      "dispatcher",
 	}
 }
