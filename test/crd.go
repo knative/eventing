@@ -35,7 +35,7 @@ func Route(name string, namespace string, configName string) *servingv1alpha1.Ro
 		},
 		Spec: servingv1alpha1.RouteSpec{
 			Traffic: []servingv1alpha1.TrafficTarget{
-				servingv1alpha1.TrafficTarget{
+				{
 					ConfigurationName: configName,
 					Percent:           100,
 				},

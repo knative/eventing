@@ -36,7 +36,7 @@ import (
 // servers.
 const (
 	replaceSubscriber = "replaceSubscriber"
-	replaceChannel   = "replaceChannel"
+	replaceChannel    = "replaceChannel"
 )
 
 var (
@@ -62,7 +62,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		timeout        time.Duration
 		subs           []eventingduck.ChannelSubscriberSpec
 		subscriber     func(http.ResponseWriter, *http.Request)
-		channel       func(http.ResponseWriter, *http.Request)
+		channel        func(http.ResponseWriter, *http.Request)
 		expectedStatus int
 	}{
 		"rejected by receiver": {
@@ -154,7 +154,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 				},
 			},
 			subscriber:     callableSucceed,
-			channel:       (&succeedOnce{}).handler,
+			channel:        (&succeedOnce{}).handler,
 			expectedStatus: http.StatusInternalServerError,
 		},
 		"all subs succeed": {
