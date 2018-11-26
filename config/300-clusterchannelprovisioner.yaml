@@ -26,6 +26,7 @@ spec:
     - all
     - knative
     - eventing
+    - provisioner
     shortNames:
     - ccp
   scope: Cluster
