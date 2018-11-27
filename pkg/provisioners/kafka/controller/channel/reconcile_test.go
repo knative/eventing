@@ -43,7 +43,7 @@ import (
 
 const (
 	channelName                   = "test-channel"
-	clusterChannelProvisionerName = "kafka-channel"
+	clusterChannelProvisionerName = "kafka"
 	testNS                        = "test-namespace"
 	testUID                       = "test-uid"
 	argumentNumPartitions         = "NumPartitions"

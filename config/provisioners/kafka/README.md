@@ -29,9 +29,9 @@ located inside the `config/provisioners/kafka/kafka-channel.yaml` file:
     `my-cluster-kafka-bootstrap.mynamespace:9092`.
 1. Apply the 'Kafka' ClusterChannelProvisioner, Controller, and Dispatcher:
     ```
-    ko apply -f config/provisioners/kafka/kafka-channel.yaml
+    ko apply -f config/provisioners/kafka/kafka.yaml
     ```
-1. Create Channels that reference the 'kafka-channel'.
+1. Create Channels that reference the 'kafka' ClusterChannelProvisioner.
 
     ```yaml
     apiVersion: eventing.knative.dev/v1alpha1
@@ -42,7 +42,7 @@ located inside the `config/provisioners/kafka/kafka-channel.yaml` file:
       provisioner:
         apiVersion: eventing.knative.dev/v1alpha1
         kind: ClusterChannelProvisioner
-        name: kafka-channel
+        name: kafka
     ```
 
 ## Components
