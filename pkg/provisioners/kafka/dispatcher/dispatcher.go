@@ -29,6 +29,7 @@ import (
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/buses"
 	"github.com/knative/eventing/pkg/provisioners/kafka/controller"
+	topicUtils "github.com/knative/eventing/pkg/provisioners/utils"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 )
 
@@ -164,7 +165,7 @@ func (d *KafkaDispatcher) subscribe(channelRef buses.ChannelReference, sub subsc
 
 	d.logger.Info("Subscribing", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
 
-	topicName := topicName(channelRef)
+	topicName := topicUtils.TopicName(controller.KafkaChannelSeparator, channelRef.Namespace, channelRef.Name)
 
 	group := fmt.Sprintf("%s.%s.%s", controller.Name, sub.Namespace, sub.Name)
 	consumer, err := d.kafkaCluster.NewConsumer(group, []string{topicName})
@@ -274,7 +275,7 @@ func fromKafkaMessage(kafkaMessage *sarama.ConsumerMessage) *buses.Message {
 
 func toKafkaMessage(channel buses.ChannelReference, message *buses.Message) *sarama.ProducerMessage {
 	kafkaMessage := sarama.ProducerMessage{
-		Topic: topicName(channel),
+		Topic: topicUtils.TopicName(controller.KafkaChannelSeparator, channel.Namespace, channel.Name),
 		Value: sarama.ByteEncoder(message.Payload),
 	}
 	for h, v := range message.Headers {
@@ -284,10 +285,6 @@ func toKafkaMessage(channel buses.ChannelReference, message *buses.Message) *sar
 		})
 	}
 	return &kafkaMessage
-}
-
-func topicName(channel buses.ChannelReference) string {
-	return fmt.Sprintf("%s.%s", channel.Namespace, channel.Name)
 }
 
 func newSubscription(spec eventingduck.ChannelSubscriberSpec) subscription {

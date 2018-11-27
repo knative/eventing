@@ -8,7 +8,8 @@ import (
 )
 
 const (
-	BrokerConfigMapKey = "bootstrap_servers"
+	BrokerConfigMapKey    = "bootstrap_servers"
+	KafkaChannelSeparator = "."
 )
 
 // GetProvisionerConfig returns the details of the associated ClusterChannelProvisioner object

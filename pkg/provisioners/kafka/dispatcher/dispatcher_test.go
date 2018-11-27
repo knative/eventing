@@ -326,7 +326,7 @@ func TestToKafkaMessage(t *testing.T) {
 		Payload: data,
 	}
 	want := &sarama.ProducerMessage{
-		Topic: "test-ns.test-channel",
+		Topic: "knative-eventing-channel.test-ns.test-channel",
 		Headers: []sarama.RecordHeader{
 			{
 				Key:   []byte("k1"),
