@@ -26,10 +26,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 
-	topicUtils "github.com/knative/eventing/pkg/provisioners/utils"
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/buses"
 	"github.com/knative/eventing/pkg/provisioners/kafka/controller"
+	topicUtils "github.com/knative/eventing/pkg/provisioners/utils"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 )
 
@@ -165,7 +165,7 @@ func (d *KafkaDispatcher) subscribe(channelRef buses.ChannelReference, sub subsc
 
 	d.logger.Info("Subscribing", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
 
-	topicName := topicUtils.TopicName(channelRef.Namespace, channelRef.Name)
+	topicName := topicUtils.TopicName(controller.KafkaChannelSeparator, channelRef.Namespace, channelRef.Name)
 
 	group := fmt.Sprintf("%s.%s.%s", controller.Name, sub.Namespace, sub.Name)
 	consumer, err := d.kafkaCluster.NewConsumer(group, []string{topicName})
@@ -275,7 +275,7 @@ func fromKafkaMessage(kafkaMessage *sarama.ConsumerMessage) *buses.Message {
 
 func toKafkaMessage(channel buses.ChannelReference, message *buses.Message) *sarama.ProducerMessage {
 	kafkaMessage := sarama.ProducerMessage{
-		Topic: topicUtils.TopicName(channel.Namespace, channel.Name),
+		Topic: topicUtils.TopicName(controller.KafkaChannelSeparator, channel.Namespace, channel.Name),
 		Value: sarama.ByteEncoder(message.Payload),
 	}
 	for h, v := range message.Headers {

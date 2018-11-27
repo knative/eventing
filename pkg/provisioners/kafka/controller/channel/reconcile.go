@@ -33,8 +33,8 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventingController "github.com/knative/eventing/pkg/controller"
 	util "github.com/knative/eventing/pkg/provisioners"
-	topicUtils "github.com/knative/eventing/pkg/provisioners/utils"
 	"github.com/knative/eventing/pkg/provisioners/kafka/controller"
+	topicUtils "github.com/knative/eventing/pkg/provisioners/utils"
 	"github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
@@ -195,7 +195,7 @@ func (r *reconciler) shouldReconcile(channel *eventingv1alpha1.Channel, clusterC
 }
 
 func (r *reconciler) provisionChannel(channel *eventingv1alpha1.Channel, kafkaClusterAdmin sarama.ClusterAdmin) error {
-	topicName := topicUtils.TopicName(channel.Namespace, channel.Name)
+	topicName := topicUtils.TopicName(controller.KafkaChannelSeparator, channel.Namespace, channel.Name)
 	r.logger.Info("creating topic on kafka cluster", zap.String("topic", topicName))
 
 	var arguments channelArgs
@@ -227,7 +227,7 @@ func (r *reconciler) provisionChannel(channel *eventingv1alpha1.Channel, kafkaCl
 }
 
 func (r *reconciler) deprovisionChannel(channel *eventingv1alpha1.Channel, kafkaClusterAdmin sarama.ClusterAdmin) error {
-	topicName := topicUtils.TopicName(channel.Namespace, channel.Name)
+	topicName := topicUtils.TopicName(controller.KafkaChannelSeparator, channel.Namespace, channel.Name)
 	r.logger.Info("deleting topic on kafka cluster", zap.String("topic", topicName))
 
 	err := kafkaClusterAdmin.DeleteTopic(topicName)
