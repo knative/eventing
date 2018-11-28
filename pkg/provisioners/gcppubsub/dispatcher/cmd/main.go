@@ -21,14 +21,15 @@ import (
 	"log"
 	"os"
 
-	"github.com/knative/eventing/pkg/provisioners/gcppubsub/dispatcher/dispatcher"
+	"github.com/knative/eventing/pkg/provisioners"
 	"k8s.io/api/core/v1"
+
+	"github.com/knative/eventing/pkg/provisioners/gcppubsub/dispatcher/dispatcher"
 
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/dispatcher/receiver"
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/buses"
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/clusterchannelprovisioner"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
@@ -48,8 +49,8 @@ const (
 // (via the receiver below) and watches all GCP PubSub Subscriptions (via the dispatcher below),
 // sending events out when any are available.
 func main() {
-	logConfig := buses.NewLoggingConfig()
-	logger := buses.NewBusLoggerFromConfig(logConfig)
+	logConfig := provisioners.NewLoggingConfig()
+	logger := provisioners.NewProvisionerLoggerFromConfig(logConfig)
 	defer logger.Sync()
 	logger = logger.With(
 		zap.String("eventing.knative.dev/clusterChannelProvisioner", clusterchannelprovisioner.Name),

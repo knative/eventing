@@ -22,7 +22,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
-	"github.com/knative/eventing/pkg/buses"
+	"github.com/knative/eventing/pkg/provisioners"
 
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 
@@ -56,7 +56,7 @@ type reconciler struct {
 	logger   *zap.Logger
 
 	// dispatcher is used to make the actual HTTP requests to downstream subscribers.
-	dispatcher buses.Dispatcher
+	dispatcher provisioners.Dispatcher
 	// reconcileChan is a Go channel that allows the reconciler to force reconcilation of a Channel.
 	reconcileChan chan<- event.GenericEvent
 
@@ -279,7 +279,7 @@ func (r *reconciler) createSubscriptionUnderLock(ctx context.Context, c *eventin
 // reconciler.reconcileChan.
 func (r *reconciler) receiveMessagesBlocking(ctxWithCancel context.Context, c *eventingv1alpha1.Channel, sub *v1alpha1.ChannelSubscriberSpec, gcpProject string, psc pubsubutil.PubSubClient) {
 	subscription := psc.SubscriptionInProject(pubsubutil.GenerateSubName(sub), gcpProject)
-	defaults := buses.DispatchDefaults{
+	defaults := provisioners.DispatchDefaults{
 		Namespace: c.Namespace,
 	}
 	channelKey := key(c)
@@ -308,9 +308,9 @@ func (r *reconciler) receiveMessagesBlocking(ctxWithCancel context.Context, c *e
 	}
 }
 
-func receiveFunc(logger *zap.SugaredLogger, sub *v1alpha1.ChannelSubscriberSpec, defaults buses.DispatchDefaults, dispatcher buses.Dispatcher) func(context.Context, pubsubutil.PubSubMessage) {
+func receiveFunc(logger *zap.SugaredLogger, sub *v1alpha1.ChannelSubscriberSpec, defaults provisioners.DispatchDefaults, dispatcher provisioners.Dispatcher) func(context.Context, pubsubutil.PubSubMessage) {
 	return func(ctx context.Context, msg pubsubutil.PubSubMessage) {
-		message := &buses.Message{
+		message := &provisioners.Message{
 			Headers: msg.Attributes(),
 			Payload: msg.Data(),
 		}

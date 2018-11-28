@@ -21,14 +21,15 @@ import (
 	"log"
 	"os"
 
+	"github.com/knative/eventing/pkg/provisioners"
+	"k8s.io/api/core/v1"
+
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/buses"
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/channel"
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/clusterchannelprovisioner"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
-	"k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -45,8 +46,8 @@ const (
 // ClusterChannelProvisioner itself and Channels that use the 'gcp-pubsub' provisioner. It does not
 // handle the anything at the data layer.
 func main() {
-	logConfig := buses.NewLoggingConfig()
-	logger := buses.NewBusLoggerFromConfig(logConfig)
+	logConfig := provisioners.NewLoggingConfig()
+	logger := provisioners.NewProvisionerLoggerFromConfig(logConfig)
 	defer logger.Sync()
 	logger = logger.With(
 		zap.String("eventing.knative.dev/clusterChannelProvisioner", clusterchannelprovisioner.Name),

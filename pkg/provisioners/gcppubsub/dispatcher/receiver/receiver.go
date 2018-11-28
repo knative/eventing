@@ -19,11 +19,12 @@ package receiver
 import (
 	"context"
 
+	"github.com/knative/eventing/pkg/provisioners"
+	"k8s.io/api/core/v1"
+
 	"cloud.google.com/go/pubsub"
-	"github.com/knative/eventing/pkg/buses"
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
 	"go.uber.org/zap"
-	"k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -50,7 +51,7 @@ type Receiver struct {
 
 // New creates a new Receiver and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned MessageReceiver.
-func New(logger *zap.Logger, client client.Client, pubSubClientCreator util.PubSubClientCreator, defaultGcpProject string, defaultSecret *v1.ObjectReference, defaultSecretKey string) (*Receiver, *buses.MessageReceiver) {
+func New(logger *zap.Logger, client client.Client, pubSubClientCreator util.PubSubClientCreator, defaultGcpProject string, defaultSecret *v1.ObjectReference, defaultSecretKey string) (*Receiver, *provisioners.MessageReceiver) {
 	r := &Receiver{
 		logger: logger,
 		client: client,
@@ -64,12 +65,12 @@ func New(logger *zap.Logger, client client.Client, pubSubClientCreator util.PubS
 	return r, r.newMessageReceiver()
 }
 
-func (r *Receiver) newMessageReceiver() *buses.MessageReceiver {
-	return buses.NewMessageReceiver(r.sendEventToTopic, r.logger.Sugar())
+func (r *Receiver) newMessageReceiver() *provisioners.MessageReceiver {
+	return provisioners.NewMessageReceiver(r.sendEventToTopic, r.logger.Sugar())
 }
 
 // sendEventToTopic sends a message to the Cloud Pub/Sub Topic backing the Channel.
-func (r *Receiver) sendEventToTopic(channel buses.ChannelReference, message *buses.Message) error {
+func (r *Receiver) sendEventToTopic(channel provisioners.ChannelReference, message *provisioners.Message) error {
 	r.logger.Info("received message")
 	ctx := context.Background()
 

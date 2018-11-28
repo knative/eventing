@@ -24,9 +24,9 @@ import (
 	"testing"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/event"
+	"github.com/knative/eventing/pkg/provisioners"
 
-	"github.com/knative/eventing/pkg/buses"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 
@@ -355,7 +355,7 @@ func TestReceiveFunc(t *testing.T) {
 				SubscriberURI: "subscriber-uri",
 				ReplyURI:      "reply-uri",
 			}
-			defaults := buses.DispatchDefaults{
+			defaults := provisioners.DispatchDefaults{
 				Namespace: cNamespace,
 			}
 			rf := receiveFunc(zap.NewNop().Sugar(), sub, defaults, &fakeDispatcher{err: tc.dispatcherErr})
@@ -527,6 +527,6 @@ type fakeDispatcher struct {
 	err error
 }
 
-func (d *fakeDispatcher) DispatchMessage(_ *buses.Message, _, _ string, _ buses.DispatchDefaults) error {
+func (d *fakeDispatcher) DispatchMessage(_ *provisioners.Message, _, _ string, _ provisioners.DispatchDefaults) error {
 	return d.err
 }

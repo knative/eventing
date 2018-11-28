@@ -23,7 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/buses"
+	"github.com/knative/eventing/pkg/provisioners"
 	pubsubutil "github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -52,7 +52,7 @@ func New(mgr manager.Manager, logger *zap.Logger, defaultGcpProject string, defa
 		recorder: mgr.GetRecorder(controllerAgentName),
 		logger:   logger,
 
-		dispatcher:    buses.NewMessageDispatcher(logger.Sugar()),
+		dispatcher:    provisioners.NewMessageDispatcher(logger.Sugar()),
 		reconcileChan: reconcileChan,
 
 		defaultGcpProject:   defaultGcpProject,
