@@ -82,9 +82,9 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// Modify a copy of this object, rather than the original.
 	ccp = ccp.DeepCopy()
 
-	err = r.reconcile(ctx, ccp)
-	if err != nil {
-		r.logger.Info("Error reconciling ClusterChannelProvisioner", zap.Error(err))
+	reconcileErr := r.reconcile(ctx, ccp)
+	if reconcileErr != nil {
+		r.logger.Info("Error reconciling ClusterChannelProvisioner", zap.Error(reconcileErr))
 		// Note that we do not return the error here, because we want to update the Status
 		// regardless of the error.
 	}
@@ -94,7 +94,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, updateStatusErr
 	}
 
-	return reconcile.Result{}, err
+	return reconcile.Result{}, reconcileErr
 }
 
 // IsControlled determines if the in-memory Channel Controller should control (and therefore

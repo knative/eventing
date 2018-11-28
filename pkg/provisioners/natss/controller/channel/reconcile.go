@@ -124,8 +124,6 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 	if c.DeletionTimestamp != nil {
 		// K8s garbage collection will delete the K8s service and VirtualService for this channel.
-		// We use a finalizer to ensure the channel config has been synced.
-		provisioners.RemoveFinalizer(c, finalizerName)
 		return nil
 	}
 

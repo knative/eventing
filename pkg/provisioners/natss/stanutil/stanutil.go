@@ -19,23 +19,15 @@ package stanutil
 import (
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/nats-io/go-nats-streaming"
 	"go.uber.org/zap"
 )
 
-var (
-	natsConnMux sync.Mutex
-)
-
 // Connect creates a new NATS-Streaming connection
 func Connect(clusterId string, clientId string, natsUrl string, logger *zap.SugaredLogger) (*stan.Conn, error) {
 	logger.Infof("Connect(): clusterId: %v; clientId: %v; natssUrl: %v", clusterId, clientId, natsUrl)
-	natsConnMux.Lock()
-	defer natsConnMux.Unlock()
-
 	var sc stan.Conn
 	var err error
 	for i := 0; i < 60; i++ {
@@ -56,7 +48,7 @@ func Connect(clusterId string, clientId string, natsUrl string, logger *zap.Suga
 
 // Close must be the last call to close the connection
 func Close(sc *stan.Conn, logger *zap.SugaredLogger) (err error) {
-	defer func() {
+	defer func() {  // the NATSS client could panic if the underlying connectivity is damaged
 		if r := recover(); r != nil {
 			err = fmt.Errorf("recovered from: %v", r)
 			logger.Errorf("Close(): %v", err.Error())
@@ -76,7 +68,7 @@ func Close(sc *stan.Conn, logger *zap.SugaredLogger) (err error) {
 
 // Publish a message to a subject
 func Publish(sc *stan.Conn, subj string, msg *[]byte, logger *zap.SugaredLogger) (err error) {
-	defer func() {
+	defer func() { // the NATSS client could panic if the underlying connectivity is damaged
 		if r := recover(); r != nil {
 			err = fmt.Errorf("recovered from: %v", r)
 			logger.Errorf("Publish(): %v", err.Error())

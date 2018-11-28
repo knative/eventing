@@ -55,6 +55,7 @@ func NewDispatcher(logger *zap.Logger) (*SubscriptionsSupervisor, error) {
 	nConn, err := stanutil.Connect(clusterchannelprovisioner.ClusterId, clientId, clusterchannelprovisioner.NatssUrl, d.logger.Sugar())
 	if err != nil {
 		logger.Error("Connect() failed: ", zap.Error(err))
+		return nil, err
 	}
 	d.natssConn = nConn
 	d.receiver = provisioners.NewMessageReceiver(createReceiverFunction(d, logger.Sugar()), logger.Sugar())
@@ -66,7 +67,7 @@ func createReceiverFunction(s *SubscriptionsSupervisor, logger *zap.SugaredLogge
 	return func(channel provisioners.ChannelReference, m *provisioners.Message) error {
 		logger.Infof("Received message from %q channel", channel.String())
 		// publish to Natss
-		ch := channel.Name + "." + channel.Namespace
+		ch := getSubject(channel)
 		if err := stanutil.Publish(s.natssConn, ch, &m.Payload, logger); err != nil {
 			logger.Errorf("Error during publish: %v", err)
 			return err
@@ -82,15 +83,15 @@ func (s *SubscriptionsSupervisor) Start(stopCh <-chan struct{}) error {
 }
 
 func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel eventingv1alpha1.Channel) error {
-	if channel.Spec.Subscribable == nil {
+	if channel.Spec.Subscribable == nil { // TODO see the related comments
 		s.logger.Sugar().Infof("Empty subscriptions for channel: %v ; nothing to update ", channel)
 		return nil
 	}
 
 	subscriptions := channel.Spec.Subscribable.Subscribers
-	activeSubs := make(map[subscriptionReference]bool)
+	activeSubs := make(map[subscriptionReference]bool) // it's logically a set
 
-	cRef := provisioners.ChannelReference{Namespace: channel.Namespace, Name: channel.Name} // buses.NewChannelReferenceFromNames(channel.Name, channel.Namespace)
+	cRef := provisioners.ChannelReference{Namespace: channel.Namespace, Name: channel.Name}
 
 	s.subscriptionsMux.Lock()
 	defer s.subscriptionsMux.Unlock()
@@ -102,17 +103,18 @@ func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel eventingv1alpha1.C
 	}
 	for _, sub := range subscriptions {
 		// check if the subscribtion already exist and do nothing in this case
-		if _, ok := chMap[newSubscriptionReference(sub)]; ok {
-			activeSubs[newSubscriptionReference(sub)] = true
+		subRef := newSubscriptionReference(sub)
+		if _, ok := chMap[subRef]; ok {
+			activeSubs[subRef] = true
 			s.logger.Sugar().Infof("Subscription: %v already active for channel: %v", sub, cRef)
 			continue
 		}
 		// subscribe
-		if natssSub, err := s.subscribe(cRef, newSubscriptionReference(sub)); err != nil {
+		if natssSub, err := s.subscribe(cRef, subRef); err != nil {
 			return err
 		} else {
-			chMap[newSubscriptionReference(sub)] = natssSub
-			activeSubs[newSubscriptionReference(sub)] = true
+			chMap[subRef] = natssSub
+			activeSubs[subRef] = true
 		}
 	}
 	// Unsubscribe for deleted subscriptions
@@ -146,8 +148,8 @@ func (s *SubscriptionsSupervisor) subscribe(channel provisioners.ChannelReferenc
 		}
 	}
 	// subscribe to a NATSS subject
-	ch := channel.Name + "." + channel.Namespace
-	sub := subscription.Name + "." + subscription.Namespace
+	ch := getSubject(channel)
+	sub := subscription.String()
 	if natssSub, err := (*s.natssConn).Subscribe(ch, mcb, stan.DurableName(sub), stan.SetManualAckMode(), stan.AckWait(1*time.Minute)); err != nil {
 		s.logger.Error(" Create new NATSS Subscription failed: ", zap.Error(err))
 		return nil, err
@@ -157,6 +159,7 @@ func (s *SubscriptionsSupervisor) subscribe(channel provisioners.ChannelReferenc
 	}
 }
 
+// should be called only while holding subscriptionsMux
 func (s *SubscriptionsSupervisor) unsubscribe(channel provisioners.ChannelReference, subscription subscriptionReference) error {
 	s.logger.Info("Unsubscribe from channel:", zap.Any("channel", channel), zap.Any("subscription", subscription))
 
@@ -164,8 +167,13 @@ func (s *SubscriptionsSupervisor) unsubscribe(channel provisioners.ChannelRefere
 		// delete from NATSS
 		if err := (*stanSub).Unsubscribe(); err != nil {
 			s.logger.Error("Unsubscribing NATS Streaming subscription failed: ", zap.Error(err))
+			return err
 		}
 		delete(s.subscriptions[channel], subscription)
 	}
 	return nil
+}
+
+func getSubject(channel provisioners.ChannelReference) string {
+	return channel.Name + "." + channel.Namespace
 }
