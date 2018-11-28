@@ -22,12 +22,12 @@
 readonly SERVING_GKE_VERSION=latest
 readonly SERVING_GKE_IMAGE=cos
 
-# Public images and yaml files.
-readonly KNATIVE_ISTIO_CRD_YAML=https://storage.googleapis.com/knative-releases/serving/latest/istio-crds.yaml
-readonly KNATIVE_ISTIO_YAML=https://storage.googleapis.com/knative-releases/serving/latest/istio.yaml
-readonly KNATIVE_SERVING_RELEASE=https://storage.googleapis.com/knative-releases/serving/latest/release.yaml
-readonly KNATIVE_BUILD_RELEASE=https://storage.googleapis.com/knative-releases/build/latest/release.yaml
-readonly KNATIVE_EVENTING_RELEASE=https://storage.googleapis.com/knative-releases/eventing/latest/release.yaml
+# Public latest stable nightly images and yaml files.
+readonly KNATIVE_ISTIO_CRD_YAML=https://storage.googleapis.com/knative-nightly/serving/latest/istio-crds.yaml
+readonly KNATIVE_ISTIO_YAML=https://storage.googleapis.com/knative-nightly/serving/latest/istio.yaml
+readonly KNATIVE_SERVING_RELEASE=https://storage.googleapis.com/knative-nightly/serving/latest/release.yaml
+readonly KNATIVE_BUILD_RELEASE=https://storage.googleapis.com/knative-nightly/build/latest/release.yaml
+readonly KNATIVE_EVENTING_RELEASE=https://storage.googleapis.com/knative-nightly/eventing/latest/release.yaml
 
 # Conveniently set GOPATH if unset
 if [[ -z "${GOPATH:-}" ]]; then
@@ -47,7 +47,7 @@ readonly REPO_ROOT_DIR="$(git rev-parse --show-toplevel)"
 #             $2 - banner message.
 function make_banner() {
     local msg="$1$1$1$1 $2 $1$1$1$1"
-    local border="${msg//[-0-9A-Za-z _.,]/$1}"
+    local border="${msg//[-0-9A-Za-z _.,\/]/$1}"
     echo -e "${border}\n${msg}\n${border}"
 }
 
@@ -100,7 +100,10 @@ function wait_until_object_does_not_exist() {
   fi
   echo -n "Waiting until ${DESCRIPTION} does not exist"
   for i in {1..150}; do  # timeout after 5 minutes
-    kubectl ${KUBECTL_ARGS} > /dev/null 2>&1 || return 0
+    if kubectl ${KUBECTL_ARGS} > /dev/null 2>&1; then
+      echo "\n${DESCRIPTION} does not exist"
+      return 0
+    fi
     echo -n "."
     sleep 2
   done
@@ -182,9 +185,8 @@ function wait_until_routable() {
 # Parameters: $1 - app name.
 #             $2 - namespace (optional).
 function get_app_pod() {
-  local namespace=""
-  [[ -n $2 ]] && namespace="-n $2"
-  kubectl get pods ${namespace} --selector=app=$1 --output=jsonpath="{.items[0].metadata.name}"
+  local pods=($(get_app_pods $1 $2))
+  echo "${pods[0]}"
 }
 
 # Returns the name of all pods of the given app.
@@ -235,8 +237,8 @@ function acquire_cluster_admin_role() {
 function report_go_test() {
   # Run tests in verbose mode to capture details.
   # go doesn't like repeating -v, so remove if passed.
-  local args=("${@/-v}")
-  local go_test="go test -race -v ${args[@]}"
+  local args=" $@ "
+  local go_test="go test -race -v ${args/ -v / }"
   # Just run regular go tests if not on Prow.
   if (( ! IS_PROW )); then
     ${go_test}
@@ -246,6 +248,7 @@ function report_go_test() {
   local report=$(mktemp)
   local failed=0
   local test_count=0
+  local tests_failed=0
   ${go_test} > ${report} || failed=$?
   echo "Finished run, return code is ${failed}"
   # Tests didn't run.
@@ -298,6 +301,7 @@ function report_go_test() {
         local src="${name}.sh"
         echo "exit 0" > ${src}
         if [[ "${field1}" == "FAIL:" ]]; then
+          tests_failed=$(( tests_failed + 1 ))
           [[ -z "${error}" ]] && read error
           echo "cat <<ERROR-EOF" > ${src}
           echo "${error}" >> ${src}
@@ -324,13 +328,13 @@ function report_go_test() {
       fi
     fi
   done < ${report}
-  echo "Done parsing ${test_count} tests"
+  echo "Done parsing ${test_count} tests, ${tests_failed} tests failed"
   # If any test failed, show the detailed report.
   # Otherwise, we already shown the summary.
   # Exception: when emitting metrics, dump the full report.
   if (( failed )) || [[ "$@" == *" -emitmetrics"* ]]; then
     if (( failed )); then
-      echo "At least one test failed, full log:"
+      echo "There were ${tests_failed} test failures, full log:"
     else
       echo "Dumping full log as metrics were requested:"
     fi
