@@ -53,7 +53,6 @@ func ProvideController(defaultGcpProject string, defaultSecret *corev1.ObjectRef
 			Reconciler: r,
 		})
 		if err != nil {
-			logger.Error("Unable to create controller.", zap.Error(err))
 			return nil, err
 		}
 

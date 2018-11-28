@@ -1,11 +1,12 @@
 # GCP PubSub Channels
 
-GCP PubSub channels are production quality Channels that are backed by 
+GCP PubSub channels are production-quality Channels that are backed by
 [GCP PubSub](https://cloud.google.com/pubsub/).
 
 They offer:
 * Persistence
-    - If a Pod goes down, all events already ACKed will persist.
+    - If the Channel's Pod goes down, all events already ACKed by the Channel will persist and be
+      retransmitted when the Pod restarts.
 * Redelivery attempts
     - If downstream rejects an event, that request is attempted again.
  

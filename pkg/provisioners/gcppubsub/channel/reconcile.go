@@ -252,6 +252,7 @@ func (r *reconciler) deleteTopic(ctx context.Context, c *eventingv1alpha1.Channe
 		return err
 	}
 	if !exists {
+		logging.FromContext(ctx).Debug("Topic did not exist")
 		return nil
 	}
 	err = topic.Delete(ctx)
@@ -281,10 +282,12 @@ func (r *reconciler) createSubscription(ctx context.Context, gcpCreds *google.Cr
 		return nil, err
 	}
 	sub := psc.SubscriptionInProject(pubsubutil.GenerateSubName(cs), gcpProject)
-	if exists, err := sub.Exists(ctx); err != nil {
+	exists, err := sub.Exists(ctx)
+	if err != nil {
 		return nil, err
-	} else if exists {
-		logging.FromContext(ctx).Info("Reusing existing subscription.")
+	}
+	if exists {
+		logging.FromContext(ctx).Debug("Reusing existing subscription.")
 		return sub, nil
 	}
 
@@ -316,9 +319,11 @@ func (r *reconciler) deleteSubscription(ctx context.Context, gcpCreds *google.Cr
 		return err
 	}
 	sub := psc.SubscriptionInProject(pubsubutil.GenerateSubName(cs), gcpProject)
-	if exists, err := sub.Exists(ctx); err != nil {
+	exists, err := sub.Exists(ctx)
+	if err != nil {
 		return err
-	} else if !exists {
+	}
+	if !exists {
 		return nil
 	}
 	return sub.Delete(ctx)
