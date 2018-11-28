@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/knative/eventing/pkg/buses"
+	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/nats-io/nats-streaming-server/server"
 	"go.uber.org/zap"
 )
@@ -37,7 +37,7 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	logger = buses.NewBusLoggerFromConfig(buses.NewLoggingConfig())
+	logger = provisioners.NewProvisionerLoggerFromConfig(provisioners.NewLoggingConfig())
 	defer logger.Sync()
 
 	stanServer, err := startNatss()
