@@ -35,7 +35,7 @@ func Route(name string, namespace string, configName string) *servingv1alpha1.Ro
 		},
 		Spec: servingv1alpha1.RouteSpec{
 			Traffic: []servingv1alpha1.TrafficTarget{
-				servingv1alpha1.TrafficTarget{
+				{
 					ConfigurationName: configName,
 					Percent:           100,
 				},
@@ -45,7 +45,7 @@ func Route(name string, namespace string, configName string) *servingv1alpha1.Ro
 }
 
 // Configuration returns a Configuration object in namespace with the name names.Config
-// that uses the image specifed by imagePath.
+// that uses the image specified by imagePath.
 func Configuration(name string, namespace string, imagePath string) *servingv1alpha1.Configuration {
 	return &servingv1alpha1.Configuration{
 		ObjectMeta: metav1.ObjectMeta{

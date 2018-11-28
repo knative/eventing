@@ -33,7 +33,7 @@ import (
 
 const (
 	// Name is the name of the kafka ClusterChannelProvisioner.
-	Name = "kafka-channel"
+	Name = "kafka"
 )
 
 // Reconcile compares the actual state with the desired, and attempts to

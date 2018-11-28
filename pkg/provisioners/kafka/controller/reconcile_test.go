@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	clusterChannelProvisionerName = "kafka-channel"
+	clusterChannelProvisionerName = "kafka"
 	testNS                        = ""
 )
 

@@ -252,7 +252,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 			}
 			oldSubscribers := make(map[string]bool)
 			for _, subMap := range d.kafkaConsumers {
-				for sub, _ := range subMap {
+				for sub := range subMap {
 					oldSubscribers[sub.Name] = true
 				}
 			}
@@ -277,7 +277,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 
 			var newSubscribers []string
 			for _, subMap := range d.kafkaConsumers {
-				for sub, _ := range subMap {
+				for sub := range subMap {
 					newSubscribers = append(newSubscribers, sub.Name)
 				}
 			}
@@ -326,7 +326,7 @@ func TestToKafkaMessage(t *testing.T) {
 		Payload: data,
 	}
 	want := &sarama.ProducerMessage{
-		Topic: "test-ns.test-channel",
+		Topic: "knative-eventing-channel.test-ns.test-channel",
 		Headers: []sarama.RecordHeader{
 			{
 				Key:   []byte("k1"),
