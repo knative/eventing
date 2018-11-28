@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/knative/eventing/pkg/buses"
+	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/provisioners/natss/controller/clusterchannelprovisioner"
 	"github.com/knative/eventing/pkg/provisioners/natss/stanutil"
 	"github.com/nats-io/go-nats-streaming"
@@ -37,33 +37,33 @@ const (
 type SubscriptionsSupervisor struct {
 	logger *zap.Logger
 
-	receiver   *buses.MessageReceiver
-	dispatcher *buses.MessageDispatcher
+	receiver   *provisioners.MessageReceiver
+	dispatcher *provisioners.MessageDispatcher
 
 	natssConn *stan.Conn
 
 	subscriptionsMux sync.Mutex
-	subscriptions    map[buses.ChannelReference]map[subscriptionReference]*stan.Subscription
+	subscriptions    map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription
 }
 
 func NewDispatcher(logger *zap.Logger) (*SubscriptionsSupervisor, error) {
 	d := &SubscriptionsSupervisor{
 		logger:        logger,
-		dispatcher:    buses.NewMessageDispatcher(logger.Sugar()),
-		subscriptions: make(map[buses.ChannelReference]map[subscriptionReference]*stan.Subscription),
+		dispatcher:    provisioners.NewMessageDispatcher(logger.Sugar()),
+		subscriptions: make(map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription),
 	}
 	nConn, err := stanutil.Connect(clusterchannelprovisioner.ClusterId, clientId, clusterchannelprovisioner.NatssUrl, d.logger.Sugar())
 	if err != nil {
 		logger.Error("Connect() failed: ", zap.Error(err))
 	}
 	d.natssConn = nConn
-	d.receiver = buses.NewMessageReceiver(createReceiverFunction(d, logger.Sugar()), logger.Sugar())
+	d.receiver = provisioners.NewMessageReceiver(createReceiverFunction(d, logger.Sugar()), logger.Sugar())
 
 	return d, nil
 }
 
-func createReceiverFunction(s *SubscriptionsSupervisor, logger *zap.SugaredLogger) func(buses.ChannelReference, *buses.Message) error {
-	return func(channel buses.ChannelReference, m *buses.Message) error {
+func createReceiverFunction(s *SubscriptionsSupervisor, logger *zap.SugaredLogger) func(provisioners.ChannelReference, *provisioners.Message) error {
+	return func(channel provisioners.ChannelReference, m *provisioners.Message) error {
 		logger.Infof("Received message from %q channel", channel.String())
 		// publish to Natss
 		ch := channel.Name + "." + channel.Namespace
@@ -90,7 +90,7 @@ func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel eventingv1alpha1.C
 	subscriptions := channel.Spec.Subscribable.Subscribers
 	activeSubs := make(map[subscriptionReference]bool)
 
-	cRef := buses.NewChannelReferenceFromNames(channel.Name, channel.Namespace)
+	cRef := provisioners.ChannelReference{Namespace: channel.Namespace, Name: channel.Name} // buses.NewChannelReferenceFromNames(channel.Name, channel.Namespace)
 
 	s.subscriptionsMux.Lock()
 	defer s.subscriptionsMux.Unlock()
@@ -128,16 +128,16 @@ func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel eventingv1alpha1.C
 	return nil
 }
 
-func (s *SubscriptionsSupervisor) subscribe(channel buses.ChannelReference, subscription subscriptionReference) (*stan.Subscription, error) {
+func (s *SubscriptionsSupervisor) subscribe(channel provisioners.ChannelReference, subscription subscriptionReference) (*stan.Subscription, error) {
 	s.logger.Info("Subscribe to channel:", zap.Any("channel", channel), zap.Any("subscription", subscription))
 
 	mcb := func(msg *stan.Msg) {
 		s.logger.Sugar().Infof("NATSS message received from subject: %v; sequence: %v; timestamp: %v", msg.Subject, msg.Sequence, msg.Timestamp)
-		message := buses.Message{
+		message := provisioners.Message{
 			Headers: map[string]string{},
 			Payload: []byte(msg.Data),
 		}
-		if err := s.dispatcher.DispatchMessage(&message, subscription.SubscriberURI, subscription.ReplyURI, buses.DispatchDefaults{}); err != nil {
+		if err := s.dispatcher.DispatchMessage(&message, subscription.SubscriberURI, subscription.ReplyURI, provisioners.DispatchDefaults{}); err != nil {
 			s.logger.Error("Failed to dispatch message: ", zap.Error(err))
 			return
 		}
@@ -157,7 +157,7 @@ func (s *SubscriptionsSupervisor) subscribe(channel buses.ChannelReference, subs
 	}
 }
 
-func (s *SubscriptionsSupervisor) unsubscribe(channel buses.ChannelReference, subscription subscriptionReference) error {
+func (s *SubscriptionsSupervisor) unsubscribe(channel provisioners.ChannelReference, subscription subscriptionReference) error {
 	s.logger.Info("Unsubscribe from channel:", zap.Any("channel", channel), zap.Any("subscription", subscription))
 
 	if stanSub, ok := s.subscriptions[channel][subscription]; ok {

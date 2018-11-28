@@ -20,7 +20,7 @@ import (
 	"flag"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/buses"
+	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/provisioners/natss/controller/channel"
 	"github.com/knative/eventing/pkg/provisioners/natss/controller/clusterchannelprovisioner"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
@@ -31,8 +31,8 @@ import (
 )
 
 func main() {
-	logConfig := buses.NewLoggingConfig()
-	logger := buses.NewBusLoggerFromConfig(logConfig)
+	logConfig := provisioners.NewLoggingConfig()
+	logger := provisioners.NewProvisionerLoggerFromConfig(logConfig)
 	defer logger.Sync()
 	logger = logger.With(
 		zap.String("eventing.knative.dev/clusterChannelProvisioner", clusterchannelprovisioner.Name),
