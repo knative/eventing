@@ -18,6 +18,7 @@ package channel
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/knative/eventing/pkg/controller"
 	"github.com/knative/eventing/pkg/provisioners"
@@ -75,15 +76,28 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		r.logger.Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("ref", c.Spec))
 		return reconcile.Result{}, nil
 	}
-	//r.logger.Info("Reconciling Channel:", zap.Any("channel", c))
 
 	// Modify a copy, not the original.
 	c = c.DeepCopy()
-	err = r.reconcile(ctx, c)
+	c.Status.InitializeConditions()
+
+	ccp, err := r.getClusterChannelProvisioner()
 	if err != nil {
-		r.logger.Info("Error reconciling Channel", zap.Error(err))
-		// Note that we do not return the error here, because we want to update the Status
-		// regardless of the error.
+		r.logger.Error("Unable to Get Cluster Channel Provisioner", zap.Error(err))
+		return reconcile.Result{}, err
+	}
+
+	var reconcileErr error
+	if ccp.Status.IsReady() {
+		// Reconcile this copy of the Channel and then write back any status
+		// updates regardless of whether the reconcile error out.
+		reconcileErr = r.reconcile(ctx, c)
+		if reconcileErr != nil {
+			r.logger.Info("Error reconciling Channel", zap.Error(reconcileErr))
+		}
+	} else {
+		c.Status.MarkNotProvisioned("NotProvisioned", "ClusterChannelProvisioner %s is not ready", ccpcontroller.Name)
+		reconcileErr = fmt.Errorf("ClusterChannelProvisioner %s is not ready", ccpcontroller.Name)
 	}
 
 	if updateStatusErr := provisioners.UpdateChannel(ctx, r.client, c); updateStatusErr != nil {
@@ -91,7 +105,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, updateStatusErr
 	}
 
-	return reconcile.Result{}, err
+	return reconcile.Result{}, reconcileErr
 }
 
 func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
@@ -139,4 +153,15 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 	c.Status.MarkProvisioned()
 	return nil
+}
+
+func (r *reconciler) getClusterChannelProvisioner() (*eventingv1alpha1.ClusterChannelProvisioner, error) {
+	ccp := &eventingv1alpha1.ClusterChannelProvisioner{}
+	objKey := client.ObjectKey{
+		Name: ccpcontroller.Name,
+	}
+	if err := r.client.Get(context.Background(), objKey, ccp); err != nil {
+		return nil, err
+	}
+	return ccp, nil
 }

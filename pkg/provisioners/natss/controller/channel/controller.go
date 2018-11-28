@@ -37,8 +37,8 @@ const (
 func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Channels that belong to this Cluster Provisioner
 	r := &reconciler{
-		recorder:     mgr.GetRecorder(controllerAgentName),
-		logger:       logger,
+		recorder: mgr.GetRecorder(controllerAgentName),
+		logger:   logger,
 	}
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: r,

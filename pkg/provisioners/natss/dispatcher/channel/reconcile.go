@@ -101,7 +101,7 @@ func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 }
 
 func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) error {
-	c.Status.InitializeConditions()
+	c.Status.InitializeConditions()  // TODO see comments
 
 	// We are syncing Channel subscriptions
 	if err := r.syncChannel(ctx); err != nil {
