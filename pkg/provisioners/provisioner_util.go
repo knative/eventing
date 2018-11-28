@@ -32,13 +32,26 @@ func CreateDispatcherService(ctx context.Context, client runtimeClient.Client, c
 	if errors.IsNotFound(err) {
 		svc = newDispatcherService(ccp)
 		err = client.Create(ctx, svc)
+		if err != nil {
+			return nil, err
+		}
+		return svc, nil
 	}
-
-	// If an error occurred in either Get or Create, we need to reconcile again.
 	if err != nil {
 		return nil, err
 	}
 
+	expected := newDispatcherService(ccp)
+	if !equality.Semantic.DeepDerivative(expected.Spec, svc.Spec) {
+		// spec.clusterIP is immutable hence retain it in the
+		clusterIP := svc.Spec.ClusterIP
+		svc.Spec = expected.Spec
+		svc.Spec.ClusterIP = clusterIP
+		err := client.Update(ctx, svc)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return svc, nil
 }
 

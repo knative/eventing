@@ -68,6 +68,14 @@ rules:
     verbs:
       - delete
   - apiGroups:
+      - "" # Core API group.
+    resources:
+      - services
+    resourceNames:
+      - in-memory-channel-dispatcher
+    verbs:
+      - update
+  - apiGroups:
       - "" # Core API Group.
     resources:
       - configmaps

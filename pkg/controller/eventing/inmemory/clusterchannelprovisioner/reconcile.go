@@ -130,14 +130,6 @@ func (r *reconciler) reconcile(ctx context.Context, ccp *eventingv1alpha1.Cluste
 		return nil
 	}
 
-	// The name of the svc has changed since version 0.2.1. Hence, delete old dispatcher service (in-memory-channel-clusterbus)
-	// that was created previously in version 0.2.0 to ensure backwards compatibility.
-	err := r.deleteOldDispatcherService(ctx, ccp)
-	if err != nil {
-		logger.Info("Error deleting the old ClusterChannelProvisioner's K8s Service", zap.Error(err))
-		return err
-	}
-
 	svc, err := util.CreateDispatcherService(ctx, r.client, ccp)
 
 	if err != nil {
@@ -148,6 +140,14 @@ func (r *reconciler) reconcile(ctx context.Context, ccp *eventingv1alpha1.Cluste
 	// Check if this ClusterChannelProvisioner is the owner of the K8s service.
 	if !metav1.IsControlledBy(svc, ccp) {
 		logger.Warn("ClusterChannelProvisioner's K8s Service is not owned by the ClusterChannelProvisioner", zap.Any("clusterChannelProvisioner", ccp), zap.Any("service", svc))
+	}
+
+	// The name of the svc has changed since version 0.2.1. Hence, delete old dispatcher service (in-memory-channel-clusterbus)
+	// that was created previously in version 0.2.0 to ensure backwards compatibility.
+	err = r.deleteOldDispatcherService(ctx, ccp)
+	if err != nil {
+		logger.Info("Error deleting the old ClusterChannelProvisioner's K8s Service", zap.Error(err))
+		return err
 	}
 
 	ccp.Status.MarkReady()

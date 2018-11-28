@@ -19,7 +19,9 @@ import (
 )
 
 const (
-	clusterChannelProvisionerName = "kafka"
+	clusterChannelProvisionerName      = "kafka"
+	otherClusterChannelProvisionerName = "kafka-new"
+	testClusterIP                      = "10.59.249.3"
 )
 
 func TestProvisionerUtils(t *testing.T) {
@@ -42,6 +44,39 @@ func TestProvisionerUtils(t *testing.T) {
 			return CreateDispatcherService(context.TODO(), client, getNewClusterChannelProvisioner())
 		},
 		want: makeDispatcherService(),
+	}, {
+		name: "CreateDispatcherService_ModifiedSpec",
+		f: func() (metav1.Object, error) {
+			existing := makeDispatcherService()
+			existing.Spec.Selector = map[string]string{
+				"clusterChannelProvisioner": otherClusterChannelProvisionerName,
+				"role": "dispatcher",
+			}
+			client := fake.NewFakeClient(existing)
+			CreateDispatcherService(context.TODO(), client, getNewClusterChannelProvisioner())
+
+			got := &corev1.Service{}
+			err := client.Get(context.TODO(), runtimeClient.ObjectKey{Namespace: system.Namespace, Name: fmt.Sprintf("%s-dispatcher", clusterChannelProvisionerName)}, got)
+			return got, err
+		},
+		want: makeDispatcherService(),
+	}, {
+		name: "CreateDispatcherService_DoNotModifyClusterIP",
+		f: func() (metav1.Object, error) {
+			existing := makeDispatcherService()
+			existing.Spec.ClusterIP = testClusterIP
+			client := fake.NewFakeClient(existing)
+			CreateDispatcherService(context.TODO(), client, getNewClusterChannelProvisioner())
+
+			got := &corev1.Service{}
+			err := client.Get(context.TODO(), runtimeClient.ObjectKey{Namespace: system.Namespace, Name: fmt.Sprintf("%s-dispatcher", clusterChannelProvisionerName)}, got)
+			return got, err
+		},
+		want: func() metav1.Object {
+			svc := makeDispatcherService()
+			svc.Spec.ClusterIP = testClusterIP
+			return svc
+		}(),
 	}, {
 		name: "UpdateClusterChannelProvisioner",
 		f: func() (metav1.Object, error) {
