@@ -42,11 +42,11 @@ func CreateDispatcherService(ctx context.Context, client runtimeClient.Client, c
 	}
 
 	expected := newDispatcherService(ccp)
+	// spec.clusterIP is immutable and is set on existing services. If we don't set this
+	// to the same value, we will encounter an error while updating.
+	expected.Spec.ClusterIP = svc.Spec.ClusterIP
 	if !equality.Semantic.DeepDerivative(expected.Spec, svc.Spec) {
-		// spec.clusterIP is immutable hence retain it in the
-		clusterIP := svc.Spec.ClusterIP
 		svc.Spec = expected.Spec
-		svc.Spec.ClusterIP = clusterIP
 		err := client.Update(ctx, svc)
 		if err != nil {
 			return nil, err
