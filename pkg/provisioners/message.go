@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package buses
+package provisioners
 
 import (
 	"errors"
@@ -36,7 +36,7 @@ var forwardPrefixes = []string{
 	"x-ot-",
 }
 
-// Message represents an chunk of data within a bus. The message contains both
+// Message represents an chunk of data within a channel dispatcher. The message contains both
 // a map of string headers and a binary payload.
 //
 // A message may represent a CloudEvent.
@@ -51,7 +51,7 @@ type Message struct {
 	Payload []byte
 }
 
-// ErrUnknownChannel is returned when a message is received by a bus for a
+// ErrUnknownChannel is returned when a message is received by a channel dispatcher for a
 // channel that does not exist.
 var ErrUnknownChannel = errors.New("unknown channel")
 

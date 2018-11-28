@@ -14,7 +14,7 @@ import (
 	"k8s.io/api/core/v1"
 
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"github.com/knative/eventing/pkg/buses"
+	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 )
@@ -239,7 +239,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 			t.Logf("Running %s", t.Name())
 			d := &KafkaDispatcher{
 				kafkaCluster:   &mockSaramaCluster{closed: true},
-				kafkaConsumers: make(map[buses.ChannelReference]map[subscription]KafkaConsumer),
+				kafkaConsumers: make(map[provisioners.ChannelReference]map[subscription]KafkaConsumer),
 
 				logger: zap.NewNop(),
 			}
@@ -301,7 +301,7 @@ func TestFromKafkaMessage(t *testing.T) {
 		},
 		Value: data,
 	}
-	want := &buses.Message{
+	want := &provisioners.Message{
 		Headers: map[string]string{
 			"k1": "v1",
 		},
@@ -315,11 +315,11 @@ func TestFromKafkaMessage(t *testing.T) {
 
 func TestToKafkaMessage(t *testing.T) {
 	data := []byte("data")
-	channelRef := buses.ChannelReference{
+	channelRef := provisioners.ChannelReference{
 		Name:      "test-channel",
 		Namespace: "test-ns",
 	}
-	msg := &buses.Message{
+	msg := &provisioners.Message{
 		Headers: map[string]string{
 			"k1": "v1",
 		},
@@ -365,8 +365,8 @@ func TestSubscribe(t *testing.T) {
 	data := []byte("data")
 	d := &KafkaDispatcher{
 		kafkaCluster:   sc,
-		kafkaConsumers: make(map[buses.ChannelReference]map[subscription]KafkaConsumer),
-		dispatcher:     buses.NewMessageDispatcher(zap.NewNop().Sugar()),
+		kafkaConsumers: make(map[provisioners.ChannelReference]map[subscription]KafkaConsumer),
+		dispatcher:     provisioners.NewMessageDispatcher(zap.NewNop().Sugar()),
 		logger:         zap.NewNop(),
 	}
 
@@ -378,7 +378,7 @@ func TestSubscribe(t *testing.T) {
 	server := httptest.NewServer(testHandler)
 	defer server.Close()
 
-	channelRef := buses.ChannelReference{
+	channelRef := provisioners.ChannelReference{
 		Name:      "test-channel",
 		Namespace: "test-ns",
 	}
@@ -416,7 +416,7 @@ func TestSubscribeError(t *testing.T) {
 		logger:       zap.NewNop(),
 	}
 
-	channelRef := buses.ChannelReference{
+	channelRef := provisioners.ChannelReference{
 		Name:      "test-channel",
 		Namespace: "test-ns",
 	}
@@ -440,7 +440,7 @@ func TestUnsubscribeUnknownSub(t *testing.T) {
 		logger:       zap.NewNop(),
 	}
 
-	channelRef := buses.ChannelReference{
+	channelRef := provisioners.ChannelReference{
 		Name:      "test-channel",
 		Namespace: "test-ns",
 	}
@@ -462,7 +462,7 @@ func TestKafkaDispatcher_Start(t *testing.T) {
 		t.Errorf("expected error want %s, got %s", "message receiver is not set", err)
 	}
 
-	d.receiver = buses.NewMessageReceiver(func(channel buses.ChannelReference, message *buses.Message) error {
+	d.receiver = provisioners.NewMessageReceiver(func(channel provisioners.ChannelReference, message *provisioners.Message) error {
 		return nil
 	}, zap.NewNop().Sugar())
 	err = d.Start(make(chan struct{}))

@@ -52,6 +52,14 @@ rules:
       - watch
       - create
   - apiGroups:
+      - "" # Core API group.
+    resources:
+      - services
+    resourceNames:
+      - kafka-dispatcher
+    verbs:
+      - update
+  - apiGroups:
       - "" # Core API Group.
     resources:
       - configmaps
@@ -68,6 +76,7 @@ rules:
       - list
       - watch
       - create
+      - update
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1beta1

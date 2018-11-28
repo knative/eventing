@@ -13,14 +13,15 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	"fmt"
+
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/controller"
 	"github.com/knative/eventing/pkg/system"
 	"github.com/knative/pkg/logging"
 )
 
 func CreateDispatcherService(ctx context.Context, client runtimeClient.Client, ccp *eventingv1alpha1.ClusterChannelProvisioner) (*corev1.Service, error) {
-	svcName := controller.ClusterBusDispatcherServiceName(ccp.Name)
+	svcName := ChannelDispatcherServiceName(ccp.Name)
 	svcKey := types.NamespacedName{
 		Namespace: system.Namespace,
 		Name:      svcName,
@@ -31,13 +32,26 @@ func CreateDispatcherService(ctx context.Context, client runtimeClient.Client, c
 	if errors.IsNotFound(err) {
 		svc = newDispatcherService(ccp)
 		err = client.Create(ctx, svc)
+		if err != nil {
+			return nil, err
+		}
+		return svc, nil
 	}
-
-	// If an error occurred in either Get or Create, we need to reconcile again.
 	if err != nil {
 		return nil, err
 	}
 
+	expected := newDispatcherService(ccp)
+	// spec.clusterIP is immutable and is set on existing services. If we don't set this
+	// to the same value, we will encounter an error while updating.
+	expected.Spec.ClusterIP = svc.Spec.ClusterIP
+	if !equality.Semantic.DeepDerivative(expected.Spec, svc.Spec) {
+		svc.Spec = expected.Spec
+		err := client.Update(ctx, svc)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return svc, nil
 }
 
@@ -63,7 +77,7 @@ func newDispatcherService(ccp *eventingv1alpha1.ClusterChannelProvisioner) *core
 	labels := DispatcherLabels(ccp.Name)
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.ClusterBusDispatcherServiceName(ccp.Name),
+			Name:      ChannelDispatcherServiceName(ccp.Name),
 			Namespace: system.Namespace,
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
@@ -92,4 +106,8 @@ func DispatcherLabels(ccpName string) map[string]string {
 		"clusterChannelProvisioner": ccpName,
 		"role": "dispatcher",
 	}
+}
+
+func ChannelDispatcherServiceName(ccpName string) string {
+	return fmt.Sprintf("%s-dispatcher", ccpName)
 }
