@@ -33,14 +33,6 @@ readonly KNATIVE_EVENTING_SOURCES_RELEASE=https://knative-releases.storage.googl
 readonly E2E_TEST_NAMESPACE=e2etest
 readonly E2E_TEST_FUNCTION_NAMESPACE=e2etestfn3
 
-function run_e2e_tests() {
-  header "Running tests in $1"
-  local options=""
-  (( EMIT_METRICS )) && options="-emitmetrics"
-  report_go_test -v -tags=e2e -count=1 ./test/$1 ${options}
-  return $?
-}
-
 # Helper functions.
 
 # Install the latest stable Knative/serving in the current cluster.
@@ -123,6 +115,6 @@ set +o pipefail
 # Setup resources common to all eventing tests
 setup_events_test_resources
 
-run_e2e_tests e2e || fail_test
+go_test_e2e ./test/e2e || fail_test
 
 success

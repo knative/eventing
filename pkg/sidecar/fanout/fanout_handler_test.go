@@ -27,7 +27,7 @@ import (
 	"time"
 
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"github.com/knative/eventing/pkg/buses"
+	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 )
@@ -36,7 +36,7 @@ import (
 // servers.
 const (
 	replaceSubscriber = "replaceSubscriber"
-	replaceChannel   = "replaceChannel"
+	replaceChannel    = "replaceChannel"
 )
 
 var (
@@ -58,15 +58,15 @@ var (
 
 func TestFanoutHandler_ServeHTTP(t *testing.T) {
 	testCases := map[string]struct {
-		receiverFunc   func(buses.ChannelReference, *buses.Message) error
+		receiverFunc   func(provisioners.ChannelReference, *provisioners.Message) error
 		timeout        time.Duration
 		subs           []eventingduck.ChannelSubscriberSpec
 		subscriber     func(http.ResponseWriter, *http.Request)
-		channel       func(http.ResponseWriter, *http.Request)
+		channel        func(http.ResponseWriter, *http.Request)
 		expectedStatus int
 	}{
 		"rejected by receiver": {
-			receiverFunc: func(buses.ChannelReference, *buses.Message) error {
+			receiverFunc: func(provisioners.ChannelReference, *provisioners.Message) error {
 				return errors.New("rejected by test-receiver")
 			},
 			expectedStatus: http.StatusInternalServerError,
@@ -154,7 +154,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 				},
 			},
 			subscriber:     callableSucceed,
-			channel:       (&succeedOnce{}).handler,
+			channel:        (&succeedOnce{}).handler,
 			expectedStatus: http.StatusInternalServerError,
 		},
 		"all subs succeed": {
@@ -207,7 +207,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 
 			h := NewHandler(zap.NewNop(), Config{Subscriptions: subs})
 			if tc.receiverFunc != nil {
-				h.receiver = buses.NewMessageReceiver(tc.receiverFunc, zap.NewNop().Sugar())
+				h.receiver = provisioners.NewMessageReceiver(tc.receiverFunc, zap.NewNop().Sugar())
 			}
 			if tc.timeout != 0 {
 				h.timeout = tc.timeout

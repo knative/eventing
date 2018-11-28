@@ -179,6 +179,20 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
+			Name: "Delete old dispatcher",
+			InitialState: []runtime.Object{
+				makeClusterChannelProvisioner(),
+				makeOldK8sService(),
+			},
+			WantPresent: []runtime.Object{
+				makeReadyClusterChannelProvisioner(),
+				makeK8sService(),
+			},
+			WantAbsent: []runtime.Object{
+				makeOldK8sService(),
+			},
+		},
+		{
 			Name: "Create dispatcher - not owned by CCP",
 			InitialState: []runtime.Object{
 				makeClusterChannelProvisioner(),
@@ -279,7 +293,7 @@ func makeK8sService() *corev1.Service {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: system.Namespace,
-			Name:      fmt.Sprintf("%s-clusterbus", Name),
+			Name:      fmt.Sprintf("%s-dispatcher", Name),
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
@@ -303,6 +317,12 @@ func makeK8sService() *corev1.Service {
 			},
 		},
 	}
+}
+
+func makeOldK8sService() *corev1.Service {
+	svc := makeK8sService()
+	svc.ObjectMeta.Name = fmt.Sprintf("%s-clusterbus", Name)
+	return svc
 }
 
 func makeK8sServiceNotOwnedByClusterChannelProvisioner() *corev1.Service {

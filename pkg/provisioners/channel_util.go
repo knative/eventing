@@ -2,6 +2,7 @@ package provisioners
 
 import (
 	"context"
+	"fmt"
 
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
@@ -38,7 +39,7 @@ func RemoveFinalizer(c *eventingv1alpha1.Channel, finalizerName string) {
 func getK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
 	svcKey := types.NamespacedName{
 		Namespace: c.Namespace,
-		Name:      controller.ChannelServiceName(c.Name),
+		Name:      ChannelServiceName(c.Name),
 	}
 	svc := &corev1.Service{}
 	err := client.Get(ctx, svcKey, svc)
@@ -64,29 +65,40 @@ func CreateK8sService(ctx context.Context, client runtimeClient.Client, c *event
 func getVirtualService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*istiov1alpha3.VirtualService, error) {
 	vsk := runtimeClient.ObjectKey{
 		Namespace: c.Namespace,
-		Name:      controller.ChannelVirtualServiceName(c.ObjectMeta.Name),
+		Name:      ChannelVirtualServiceName(c.ObjectMeta.Name),
 	}
 	vs := &istiov1alpha3.VirtualService{}
 	err := client.Get(ctx, vsk, vs)
 	return vs, err
 }
 
-func CreateVirtualService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*istiov1alpha3.VirtualService, error) {
-	virtualService, err := getVirtualService(ctx, client, c)
+func CreateVirtualService(ctx context.Context, client runtimeClient.Client, channel *eventingv1alpha1.Channel) (*istiov1alpha3.VirtualService, error) {
+	virtualService, err := getVirtualService(ctx, client, channel)
 
 	// If the resource doesn't exist, we'll create it
 	if errors.IsNotFound(err) {
-		virtualService = newVirtualService(c)
+		virtualService = newVirtualService(channel)
 		err = client.Create(ctx, virtualService)
+		if err != nil {
+			return nil, err
+		}
+		return virtualService, nil
 	}
-
-	// If an error occurs during Get/Create, we'll requeue the item so we can
-	// attempt processing again later. This could have been caused by a
-	// temporary network failure, or any other transient reason.
 	if err != nil {
 		return nil, err
 	}
 
+	// Update VirtualService if it has changed. This is possible since in version 0.2.0, the destinationHost in
+	// spec.HTTP.Route for the dispatcher was changed from *-clusterbus to *-dispatcher. Even otherwise, this
+	// reconciliation is useful for the future mutations to the object.
+	expected := newVirtualService(channel)
+	if !equality.Semantic.DeepDerivative(expected.Spec, virtualService.Spec) {
+		virtualService.Spec = expected.Spec
+		err := client.Update(ctx, virtualService)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return virtualService, nil
 }
 
@@ -124,7 +136,7 @@ func newK8sService(c *eventingv1alpha1.Channel) *corev1.Service {
 	}
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.ChannelServiceName(c.ObjectMeta.Name),
+			Name:      ChannelServiceName(c.ObjectMeta.Name),
 			Namespace: c.Namespace,
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
@@ -154,10 +166,10 @@ func newVirtualService(channel *eventingv1alpha1.Channel) *istiov1alpha3.Virtual
 		"channel":     channel.Name,
 		"provisioner": channel.Spec.Provisioner.Name,
 	}
-	destinationHost := controller.ServiceHostName(controller.ClusterBusDispatcherServiceName(channel.Spec.Provisioner.Name), system.Namespace)
+	destinationHost := controller.ServiceHostName(ChannelDispatcherServiceName(channel.Spec.Provisioner.Name), system.Namespace)
 	return &istiov1alpha3.VirtualService{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.ChannelVirtualServiceName(channel.Name),
+			Name:      ChannelVirtualServiceName(channel.Name),
 			Namespace: channel.Namespace,
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
@@ -170,12 +182,12 @@ func newVirtualService(channel *eventingv1alpha1.Channel) *istiov1alpha3.Virtual
 		},
 		Spec: istiov1alpha3.VirtualServiceSpec{
 			Hosts: []string{
-				controller.ServiceHostName(controller.ChannelServiceName(channel.Name), channel.Namespace),
-				controller.ChannelHostName(channel.Name, channel.Namespace),
+				controller.ServiceHostName(ChannelServiceName(channel.Name), channel.Namespace),
+				ChannelHostName(channel.Name, channel.Namespace),
 			},
 			Http: []istiov1alpha3.HTTPRoute{{
 				Rewrite: &istiov1alpha3.HTTPRewrite{
-					Authority: controller.ChannelHostName(channel.Name, channel.Namespace),
+					Authority: ChannelHostName(channel.Name, channel.Namespace),
 				},
 				Route: []istiov1alpha3.DestinationWeight{{
 					Destination: istiov1alpha3.Destination{
@@ -188,4 +200,16 @@ func newVirtualService(channel *eventingv1alpha1.Channel) *istiov1alpha3.Virtual
 			},
 		},
 	}
+}
+
+func ChannelVirtualServiceName(channelName string) string {
+	return fmt.Sprintf("%s-channel", channelName)
+}
+
+func ChannelServiceName(channelName string) string {
+	return fmt.Sprintf("%s-channel", channelName)
+}
+
+func ChannelHostName(channelName, namespace string) string {
+	return fmt.Sprintf("%s.%s.channels.cluster.local", channelName, namespace)
 }
