@@ -17,7 +17,7 @@ limitations under the License.
 package util
 
 import (
-	"fmt"
+	"github.com/knative/eventing/pkg/provisioners/utils"
 
 	eventduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 )
@@ -30,7 +30,7 @@ import (
 // Note that it must be stable. The controller and dispatcher rely on this being generated
 // identically.
 func GenerateTopicName(channelNamespace, channelName string) string {
-	return fmt.Sprintf("knative-eventing-channel_%s_%s", channelNamespace, channelName)
+	return utils.TopicName("_", channelNamespace, channelName)
 }
 
 // GenerateSubname Generates the GCP PubSub Subscription name given the Knative Channel's
@@ -39,5 +39,5 @@ func GenerateTopicName(channelNamespace, channelName string) string {
 // Note that it must be stable. The controller and dispatcher rely on this being generated
 // identically.
 func GenerateSubName(cs *eventduck.ChannelSubscriberSpec) string {
-	return fmt.Sprintf("knative-eventing-channel_%s_%s", cs.Ref.Name, cs.Ref.UID)
+	return utils.TopicName("_", cs.Ref.Name, string(cs.Ref.UID))
 }
