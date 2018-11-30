@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
 	"github.com/Shopify/sarama"
 	"github.com/google/go-cmp/cmp"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -131,7 +133,9 @@ var testCases = []controllertesting.TestCase{
 			getNewChannel(channelName, clusterChannelProvisionerName),
 			makeVirtualService(),
 		},
-		WantErrMsg: util.FinalizerAddedError.Error(),
+		WantResult: reconcile.Result{
+			Requeue: true,
+		},
 		WantPresent: []runtime.Object{
 			getNewChannelWithStatusAndFinalizer(channelName, clusterChannelProvisionerName),
 		},

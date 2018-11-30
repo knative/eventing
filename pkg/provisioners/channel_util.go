@@ -2,7 +2,6 @@ package provisioners
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
@@ -32,12 +31,6 @@ const (
 	FinalizerAlreadyPresent AddFinalizerResult = false
 	FinalizerAdded          AddFinalizerResult = true
 )
-
-// FinalizerAddedError is the error that the reconcile loop should return when a finalizer has been
-// added and needs to be persisted to the API server before other portions of the reconcile loop can
-// run. Returning an error will cause the reconcile loop to run again. This error is named to make
-// it easy to see that this is an 'expected' error.
-var FinalizerAddedError = errors.New("finalizer-added")
 
 // AddFinalizer adds finalizerName to the Channel.
 func AddFinalizer(c *eventingv1alpha1.Channel, finalizerName string) AddFinalizerResult {
