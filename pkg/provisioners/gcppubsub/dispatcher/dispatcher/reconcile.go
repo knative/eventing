@@ -31,7 +31,7 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	util "github.com/knative/eventing/pkg/provisioners"
-	ccpcontroller "github.com/knative/eventing/pkg/provisioners/gcppubsub/clusterchannelprovisioner"
+	ccpcontroller "github.com/knative/eventing/pkg/provisioners/gcppubsub/controller/clusterchannelprovisioner"
 	pubsubutil "github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
 	"github.com/knative/pkg/logging"
 	"go.uber.org/zap"

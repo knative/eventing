@@ -30,7 +30,7 @@ import (
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners/gcppubsub/clusterchannelprovisioner"
+	"github.com/knative/eventing/pkg/provisioners/gcppubsub/controller/clusterchannelprovisioner"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
