@@ -24,10 +24,23 @@ const (
 	PortNumber = 80
 )
 
-func AddFinalizer(c *eventingv1alpha1.Channel, finalizerName string) {
+// AddFinalizerResult is used indicate whether a finalizer was added or already present.
+type AddFinalizerResult bool
+
+const (
+	FinalizerAlreadyPresent AddFinalizerResult = false
+	FinalizerAdded          AddFinalizerResult = true
+)
+
+// AddFinalizer adds finalizerName to the Channel.
+func AddFinalizer(c *eventingv1alpha1.Channel, finalizerName string) AddFinalizerResult {
 	finalizers := sets.NewString(c.Finalizers...)
+	if finalizers.Has(finalizerName) {
+		return FinalizerAlreadyPresent
+	}
 	finalizers.Insert(finalizerName)
 	c.Finalizers = finalizers.List()
+	return FinalizerAdded
 }
 
 func RemoveFinalizer(c *eventingv1alpha1.Channel, finalizerName string) {
