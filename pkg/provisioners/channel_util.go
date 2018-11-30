@@ -2,11 +2,12 @@ package provisioners
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -31,6 +32,12 @@ const (
 	FinalizerAlreadyPresent AddFinalizerResult = false
 	FinalizerAdded          AddFinalizerResult = true
 )
+
+// FinalizerAddedError is the error that the reconcile loop should return when a finalizer has been
+// added and needs to be persisted to the API server before other portions of the reconcile loop can
+// run. Returning an error will cause the reconcile loop to run again. This error is named to make
+// it easy to see that this is an 'expected' error.
+var FinalizerAddedError = errors.New("finalizer-added")
 
 // AddFinalizer adds finalizerName to the Channel.
 func AddFinalizer(c *eventingv1alpha1.Channel, finalizerName string) AddFinalizerResult {
@@ -62,7 +69,7 @@ func getK8sService(ctx context.Context, client runtimeClient.Client, c *eventing
 func CreateK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
 	svc, err := getK8sService(ctx, client, c)
 
-	if errors.IsNotFound(err) {
+	if k8serrors.IsNotFound(err) {
 		svc = newK8sService(c)
 		err = client.Create(ctx, svc)
 	}
@@ -89,7 +96,7 @@ func CreateVirtualService(ctx context.Context, client runtimeClient.Client, chan
 	virtualService, err := getVirtualService(ctx, client, channel)
 
 	// If the resource doesn't exist, we'll create it
-	if errors.IsNotFound(err) {
+	if k8serrors.IsNotFound(err) {
 		virtualService = newVirtualService(channel)
 		err = client.Create(ctx, virtualService)
 		if err != nil {

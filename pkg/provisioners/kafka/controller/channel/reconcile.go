@@ -148,7 +148,12 @@ func (r *reconciler) reconcile(ctx context.Context, channel *eventingv1alpha1.Ch
 		return nil
 	}
 
-	util.AddFinalizer(channel, finalizerName)
+	// If we are adding the finalizer for the first time, then ensure that finalizer is persisted
+	// before manipulating Kafka, which will not be automatically garbage collected by K8s if this
+	// Channel is deleted.
+	if addFinalizerResult := util.AddFinalizer(channel, finalizerName); addFinalizerResult == util.FinalizerAdded {
+		return util.FinalizerAddedError
+	}
 
 	if err := r.provisionChannel(channel, kafkaClusterAdmin); err != nil {
 		channel.Status.MarkNotProvisioned("NotProvisioned", "error while provisioning: %s", err)
