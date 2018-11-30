@@ -147,7 +147,6 @@ func getNewChannelProvisionedStatus(name, provisioner string) *eventingv1alpha1.
 	c.Status.InitializeConditions()
 	c.Status.SetAddress(fmt.Sprintf("%s-channel.%s.svc.cluster.local", c.Name, c.Namespace))
 	c.Status.MarkProvisioned()
-	c.Finalizers = []string{finalizerName}
 	return c
 }
 
