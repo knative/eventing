@@ -42,6 +42,7 @@ import (
 const (
 	ccpUid           = "test-uid"
 	testErrorMessage = "test-induced-error"
+	testNS           = "test-ns"
 )
 
 var (
@@ -211,6 +212,17 @@ func TestReconcile(t *testing.T) {
 				makeReadyClusterChannelProvisioner(),
 				makeK8sService(),
 			},
+		},
+		{
+			Name: "Create dispatcher succeeds - request is namespace-scoped",
+			InitialState: []runtime.Object{
+				makeClusterChannelProvisioner(),
+			},
+			WantPresent: []runtime.Object{
+				makeReadyClusterChannelProvisioner(),
+				makeK8sService(),
+			},
+			ReconcileKey: fmt.Sprintf("%s/%s", testNS, Name),
 		},
 		{
 			Name: "Error getting CCP for updating Status",
