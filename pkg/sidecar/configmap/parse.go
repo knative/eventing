@@ -19,6 +19,7 @@ package configmap
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	"go.uber.org/zap"
 )

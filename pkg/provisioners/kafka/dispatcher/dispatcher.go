@@ -22,7 +22,6 @@ import (
 	"sync/atomic"
 
 	"github.com/Shopify/sarama"
-	"github.com/bsm/sarama-cluster"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 
