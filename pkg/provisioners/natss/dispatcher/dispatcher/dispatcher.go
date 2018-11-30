@@ -82,19 +82,29 @@ func (s *SubscriptionsSupervisor) Start(stopCh <-chan struct{}) error {
 	return nil
 }
 
-func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel eventingv1alpha1.Channel) error {
-	if channel.Spec.Subscribable == nil { // TODO see the related comments
-		s.logger.Sugar().Infof("Empty subscriptions for channel: %v ; nothing to update ", channel)
+func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel *eventingv1alpha1.Channel) error {
+	s.subscriptionsMux.Lock()
+	defer s.subscriptionsMux.Unlock()
+
+	cRef := provisioners.ChannelReference{Namespace: channel.Namespace, Name: channel.Name}
+
+	if channel.Spec.Subscribable == nil {
+		s.logger.Sugar().Infof("Empty subscriptions for channel Ref: %v; unsubscribe all active subscriptions, if any", cRef)
+		chMap, ok := s.subscriptions[cRef]
+		if !ok {
+			// nothing to do
+			s.logger.Sugar().Infof("No channel Ref %v found in subscriptions map", cRef)
+			return nil
+		}
+		for sub := range chMap {
+			s.unsubscribe(cRef, sub)
+		}
+		delete(s.subscriptions, cRef)
 		return nil
 	}
 
 	subscriptions := channel.Spec.Subscribable.Subscribers
 	activeSubs := make(map[subscriptionReference]bool) // it's logically a set
-
-	cRef := provisioners.ChannelReference{Namespace: channel.Namespace, Name: channel.Name}
-
-	s.subscriptionsMux.Lock()
-	defer s.subscriptionsMux.Unlock()
 
 	chMap, ok := s.subscriptions[cRef]
 	if !ok {

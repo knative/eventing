@@ -55,10 +55,16 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	c := &eventingv1alpha1.Channel{}
 	err := r.client.Get(ctx, request.NamespacedName, c)
 
-	// The Channel may have been deleted since it was added to the workqueue. If so, there is
-	// nothing to be done.
+	// The Channel may have been deleted since it was added to the workqueue.
 	if errors.IsNotFound(err) {
 		r.logger.Info("Could not find Channel", zap.Error(err))
+		// unsubscribe all active subscribtions subscriptions for this channel
+		c.Namespace = request.NamespacedName.Namespace
+		c.Name = request.NamespacedName.Name
+		if err := r.subscriptionsSupervisor.UpdateSubscriptions(c); err != nil {
+			r.logger.Error("UpdateSubscriptions() failed: ", zap.Error(err))
+			return reconcile.Result{}, err
+		}
 		return reconcile.Result{}, nil
 	}
 
@@ -73,7 +79,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		r.logger.Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("ref", c.Spec))
 		return reconcile.Result{}, nil
 	}
-	r.logger.Info("Reconciling Channel:", zap.Any("channel", c))
 
 	// Modify a copy, not the original.
 	c = c.DeepCopy()
@@ -81,8 +86,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	reconcileErr := r.reconcile(ctx, c)
 	if reconcileErr != nil {
 		r.logger.Error("Error reconciling Channel", zap.Error(reconcileErr))
-		// Note that we do not return the error here, because we want to update the Status
-		// regardless of the error.
+		// Note that we do not return the error here, because we want to update the Status regardless of the error.
 	}
 
 	if updateStatusErr := provisioners.UpdateChannel(ctx, r.client, c); updateStatusErr != nil {
@@ -101,7 +105,6 @@ func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 }
 
 func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) error {
-	// We are syncing Channel subscriptions
 	if err := r.syncChannel(ctx); err != nil {
 		r.logger.Error("Error updating syncing the Channel config", zap.Error(err))
 		return err
@@ -119,7 +122,7 @@ func (r *reconciler) syncChannel(ctx context.Context) error {
 	// try to subscribe
 	var updateErr error
 	for _, c := range channels {
-		if err := r.subscriptionsSupervisor.UpdateSubscriptions(c); err != nil {
+		if err := r.subscriptionsSupervisor.UpdateSubscriptions(&c); err != nil {
 			r.logger.Error("UpdateSubscriptions() failed: ", zap.Error(err))
 			updateErr = err
 		}

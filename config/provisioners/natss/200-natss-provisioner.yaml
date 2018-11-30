@@ -46,21 +46,12 @@ rules:
   - apiGroups:
       - "" # Core API group.
     resources:
-      - configmaps
       - services
     verbs:
       - get
       - list
       - watch
       - create
-  - apiGroups:
-      - "" # Core API Group.
-    resources:
-      - configmaps
-    resourceNames:
-      - natss-dispatcher-config-map
-    verbs:
-      - update
   - apiGroups:
       - networking.istio.io
     resources:
