@@ -47,6 +47,7 @@ const (
 
 type channelName = types.NamespacedName
 type subscriptionName = types.NamespacedName
+type empty struct{}
 
 // reconciler reconciles Channels with the gcp-pubsub provisioner. It sets up hanging polling for
 // every Subscription to any Channel.
@@ -204,9 +205,7 @@ func (r *reconciler) syncSubscriptions(ctx context.Context, c *eventingv1alpha1.
 	r.subscriptionsLock.Lock()
 	defer r.subscriptionsLock.Unlock()
 
-	// We are going to manipulate subscribers, but don't want it written back, so make a throw away
-	// copy.
-	subscribers := c.Spec.Subscribable.DeepCopy()
+	subscribers := c.Spec.Subscribable
 	if subscribers == nil {
 		// There are no subscribers.
 		r.stopAllSubscriptionsUnderLock(ctx, c)
@@ -228,9 +227,9 @@ func (r *reconciler) syncSubscriptions(ctx context.Context, c *eventingv1alpha1.
 	}
 
 	// subsToDelete is logically a set, not a map (values have no meaning).
-	subsToDelete := map[subscriptionName]bool{}
+	subsToDelete := make(map[subscriptionName]empty, len(activeSubscribers))
 	for sub := range activeSubscribers {
-		subsToDelete[sub] = true
+		subsToDelete[sub] = empty{}
 	}
 	for _, sub := range subscribers.Subscribers {
 		delete(subsToDelete, subscriptionKey(&sub))
@@ -245,17 +244,16 @@ func (r *reconciler) syncSubscriptions(ctx context.Context, c *eventingv1alpha1.
 // GCP PubSub Subscription.
 // Note that it can only be called if reconciler.subscriptionsLock is held.
 func (r *reconciler) createSubscriptionUnderLock(ctx context.Context, c *eventingv1alpha1.Channel, sub *v1alpha1.ChannelSubscriberSpec) error {
-	ctxWithCancel, cancelFunc := context.WithCancel(ctx)
-
 	channelKey := key(c)
 	if r.subscriptions[channelKey] == nil {
-		r.subscriptions[channelKey] = map[subscriptionName]context.CancelFunc{}
+		r.subscriptions[channelKey] = make(map[subscriptionName]context.CancelFunc)
 	}
 	subKey := subscriptionKey(sub)
 	if r.subscriptions[channelKey][subKey] != nil {
 		// There is already a Goroutine watching this subscription.
 		return nil
 	}
+	ctxWithCancel, cancelFunc := context.WithCancel(ctx)
 	r.subscriptions[channelKey][subKey] = cancelFunc
 
 	gcpProject := r.defaultGcpProject
@@ -295,7 +293,12 @@ func (r *reconciler) receiveMessagesBlocking(ctxWithCancel context.Context, c *e
 	func() {
 		r.subscriptionsLock.Lock()
 		defer r.subscriptionsLock.Unlock()
-		delete(r.subscriptions[channelKey], subKey)
+		// It is possible that r.stopAllSubscriptions has been called, which has called
+		// delete(r.subscriptions, channelKey). If the channel has already been deleted from
+		// r.subscriptions, then we don't need to delete anything.
+		if subMap, present := r.subscriptions[channelKey]; present {
+			delete(subMap, subKey)
+		}
 	}()
 
 	logging.FromContext(ctxWithCancel).Info("subscription.Receive stopped")
