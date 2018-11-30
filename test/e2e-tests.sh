@@ -59,7 +59,6 @@ function teardown() {
 
 function setup_events_test_resources() {
   kubectl create namespace $E2E_TEST_NAMESPACE
-  kubectl label namespace $E2E_TEST_NAMESPACE istio-injection=enabled --overwrite
   kubectl create namespace $E2E_TEST_FUNCTION_NAMESPACE
 }
 
