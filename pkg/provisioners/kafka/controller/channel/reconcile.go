@@ -113,6 +113,9 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}, err
 }
 
+// reconcile reconciles this Channel so that the real world matches the intended state. The returned
+// boolean indicates if this Channel should be immediately requeued for another reconcile loop. The
+// returned error indicates an error during reconciliation.
 func (r *reconciler) reconcile(ctx context.Context, channel *eventingv1alpha1.Channel) (bool, error) {
 
 	// We always need to sync the Channel config, so do it first.
