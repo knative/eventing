@@ -27,7 +27,7 @@
 
 source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/e2e-tests.sh
 
-readonly KNATIVE_EVENTING_SOURCES_RELEASE=https://knative-releases.storage.googleapis.com/eventing-sources/latest/release.yaml
+readonly KNATIVE_EVENTING_SOURCES_RELEASE=https://knative-nightly.storage.googleapis.com/eventing-sources/latest/release.yaml
 
 # Names of the Resources used in the tests.
 readonly E2E_TEST_NAMESPACE=e2etest
