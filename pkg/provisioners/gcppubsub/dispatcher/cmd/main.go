@@ -81,10 +81,12 @@ func main() {
 	// PubSub) and the dispatcher (takes messages in PubSub and sends them in cluster) in this
 	// binary.
 
-	_, mr := receiver.New(logger.Desugar(), mgr.GetClient(), util.GcpPubSubClientCreator, defaultGcpProject, &defaultSecret, defaultSecretKey)
-	err = mgr.Add(mr)
-	if err != nil {
-		logger.Fatal("Unable to add the MessageReceiver to the manager", zap.Error(err))
+	_, runnables := receiver.New(logger.Desugar(), mgr.GetClient(), util.GcpPubSubClientCreator, defaultGcpProject, &defaultSecret, defaultSecretKey)
+	for _, runnable := range runnables {
+		err = mgr.Add(runnable)
+		if err != nil {
+			logger.Fatal("Unable to start the receivers runnables", zap.Error(err), zap.Any("runnable", runnable))
+		}
 	}
 
 	// TODO Move this to just before mgr.Start(). We need to pass the stopCh to dispatcher.New

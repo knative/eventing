@@ -18,6 +18,7 @@ package channel
 
 import (
 	"context"
+	"encoding/json"
 
 	eventduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -174,13 +175,29 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	if err != nil {
 		return err
 	}
+	pbs := &pubsubutil.GcpPubSubChannelStatus{
+		Topic: topic.ID(),
+	}
 
-	err = r.createSubscriptions(ctx, c, gcpCreds, r.defaultGcpProject, topic)
+	err = r.createSubscriptions(ctx, c, gcpCreds, r.defaultGcpProject, topic, pbs)
 	if err != nil {
+		return err
+	}
+	if err = saveRawStatus(ctx, c, pbs); err != nil {
 		return err
 	}
 
 	c.Status.MarkProvisioned()
+	return nil
+}
+
+func saveRawStatus(ctx context.Context, c *eventingv1alpha1.Channel, pbs *pubsubutil.GcpPubSubChannelStatus) error {
+	jb, err := json.Marshal(pbs)
+	if err != nil {
+		logging.FromContext(ctx).Info("Error saving the raw status", zap.Error(err), zap.Any("pbs", pbs))
+		return err
+	}
+	c.Status.Raw.Raw = jb
 	return nil
 }
 
@@ -221,7 +238,7 @@ func (r *reconciler) createTopic(ctx context.Context, c *eventingv1alpha1.Channe
 		logging.FromContext(ctx).Info("Unable to create PubSub client", zap.Error(err))
 		return nil, err
 	}
-	topic := psc.Topic(pubsubutil.GenerateTopicName(c.Namespace, c.Name))
+	topic := psc.Topic(generateTopicName(c.Namespace, c.Name))
 	exists, err := topic.Exists(ctx)
 	if err != nil {
 		logging.FromContext(ctx).Info("Unable to check Topic existence", zap.Error(err))
@@ -245,7 +262,7 @@ func (r *reconciler) deleteTopic(ctx context.Context, c *eventingv1alpha1.Channe
 		logging.FromContext(ctx).Info("Unable to create PubSubClient", zap.Error(err))
 		return err
 	}
-	topic := psc.Topic(pubsubutil.GenerateTopicName(c.Namespace, c.Name))
+	topic := psc.Topic(generateTopicName(c.Namespace, c.Name))
 	exists, err := topic.Exists(ctx)
 	if err != nil {
 		logging.FromContext(ctx).Info("Unable to check if Topic exists", zap.Error(err))
@@ -263,14 +280,21 @@ func (r *reconciler) deleteTopic(ctx context.Context, c *eventingv1alpha1.Channe
 	return nil
 }
 
-func (r *reconciler) createSubscriptions(ctx context.Context, c *eventingv1alpha1.Channel, gcpCreds *google.Credentials, gcpProject string, topic pubsubutil.PubSubTopic) error {
+func (r *reconciler) createSubscriptions(ctx context.Context, c *eventingv1alpha1.Channel, gcpCreds *google.Credentials, gcpProject string, topic pubsubutil.PubSubTopic, pbs *pubsubutil.GcpPubSubChannelStatus) error {
 	if c.Spec.Subscribable != nil {
+		pbs.Subscriptions = make([]pubsubutil.GcpPubSubSubscriptionStatus, 0, len(c.Spec.Subscribable.Subscribers))
 		for _, sub := range c.Spec.Subscribable.Subscribers {
-			_, err := r.createSubscription(ctx, gcpCreds, gcpProject, topic, &sub)
+			s, err := r.createSubscription(ctx, gcpCreds, gcpProject, topic, &sub)
 			if err != nil {
 				logging.FromContext(ctx).Info("Unable to create subscribers", zap.Error(err), zap.Any("channelSubscriber", sub))
 				return err
 			}
+			pbs.Subscriptions = append(pbs.Subscriptions, pubsubutil.GcpPubSubSubscriptionStatus{
+				Ref:           sub.Ref,
+				SubscriberURI: sub.SubscriberURI,
+				ReplyURI:      sub.ReplyURI,
+				Subscription:  s.ID(),
+			})
 		}
 	}
 	return nil
@@ -281,7 +305,7 @@ func (r *reconciler) createSubscription(ctx context.Context, gcpCreds *google.Cr
 	if err != nil {
 		return nil, err
 	}
-	sub := psc.SubscriptionInProject(pubsubutil.GenerateSubName(cs), gcpProject)
+	sub := psc.SubscriptionInProject(generateSubName(cs), gcpProject)
 	exists, err := sub.Exists(ctx)
 	if err != nil {
 		return nil, err
@@ -318,7 +342,7 @@ func (r *reconciler) deleteSubscription(ctx context.Context, gcpCreds *google.Cr
 	if err != nil {
 		return err
 	}
-	sub := psc.SubscriptionInProject(pubsubutil.GenerateSubName(cs), gcpProject)
+	sub := psc.SubscriptionInProject(generateSubName(cs), gcpProject)
 	exists, err := sub.Exists(ctx)
 	if err != nil {
 		return err
