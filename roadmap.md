@@ -9,7 +9,7 @@ the [README](README.md).
    generated from that source
    [Proposal](https://github.com/knative/eventing/issues/39)
 1. kubectl command to set up a trigger where a specific event will cause a
-  specific action
+   specific action
 1. Example source generating an event
 1. Example action
 1. Events conform to [CloudEvents](https://github.com/cloudevents/spec)

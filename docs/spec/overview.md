@@ -82,7 +82,6 @@ _Channels_.
 For more details, see [Kind:
 ClusterChannelProvisioner](spec.md#kind-clusterchannelprovisioner).
 
-
 ---
 
 _Navigation_:
