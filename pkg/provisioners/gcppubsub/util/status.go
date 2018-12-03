@@ -47,6 +47,16 @@ type GcpPubSubSubscriptionStatus struct {
 	Subscription string `json:"subscription,omitempty"`
 }
 
+func SaveRawStatus(ctx context.Context, c *eventingv1alpha1.Channel, pbs *GcpPubSubChannelStatus) error {
+	jb, err := json.Marshal(pbs)
+	if err != nil {
+		logging.FromContext(ctx).Error("Error saving the raw status", zap.Error(err), zap.Any("pbs", pbs))
+		return err
+	}
+	c.Status.Raw.Raw = jb
+	return nil
+}
+
 func ReadRawStatus(ctx context.Context, c *eventingv1alpha1.Channel) (*GcpPubSubChannelStatus, error) {
 	bytes := c.Status.Raw.Raw
 	if len(bytes) == 0 {
@@ -54,7 +64,7 @@ func ReadRawStatus(ctx context.Context, c *eventingv1alpha1.Channel) (*GcpPubSub
 	}
 	var pbs GcpPubSubChannelStatus
 	if err := json.Unmarshal(bytes, pbs); err != nil {
-		logging.FromContext(ctx).Info("Unable to parse the raw status", zap.Error(err))
+		logging.FromContext(ctx).Error("Unable to parse the raw status", zap.Error(err))
 		return nil, err
 	}
 	return &pbs, nil
