@@ -329,6 +329,6 @@ func receiveFunc(logger *zap.SugaredLogger, sub *v1alpha1.ChannelSubscriberSpec,
 }
 
 func loggingWith(ctx context.Context, fields ...zap.Field) context.Context {
-	logger := logging.FromContext(ctx)
-	return logging.WithLogger(ctx, logger.With(fields))
+	logger := logging.FromContext(ctx).Desugar()
+	return logging.WithLogger(ctx, logger.With(fields...).Sugar())
 }
