@@ -37,6 +37,7 @@ import (
 const (
 	clusterChannelProvisionerName = "kafka"
 	testNS                        = ""
+	otherTestNS                   = "testing"
 )
 
 func init() {
@@ -85,6 +86,18 @@ var testCases = []controllertesting.TestCase{
 		WantPresent: []runtime.Object{
 			GetNewChannelClusterChannelProvisioner("not-default-provisioner"),
 		},
+	},
+	{
+		Name: "reconciles even when request is namespace-scoped",
+		InitialState: []runtime.Object{
+			GetNewChannelClusterChannelProvisioner(clusterChannelProvisionerName),
+		},
+		ReconcileKey: fmt.Sprintf("%s/%s", otherTestNS, clusterChannelProvisionerName),
+		WantResult:   reconcile.Result{},
+		WantPresent: []runtime.Object{
+			GetNewChannelClusterChannelProvisionerReady(clusterChannelProvisionerName),
+		},
+		IgnoreTimes: true,
 	},
 	{
 		Name:         "clusterChannelProvisioner not found",
