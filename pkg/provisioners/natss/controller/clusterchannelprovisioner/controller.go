@@ -31,7 +31,7 @@ import (
 const (
 	// NATSS
 	ClusterId = "knative-nats-streaming"
-	NatssUrl  = "nats://nats-streaming.knative-eventing.svc.cluster.local:4222"
+	NatssUrl  = "nats://nats-streaming.natss.svc.cluster.local:4222"
 	clientId  = "knative-natss-controller"
 	// controllerAgentName is the string used by this controller to identify itself when creating events.
 	controllerAgentName = "natss-provisioner-controller"

@@ -4,6 +4,10 @@
 ### Deployment steps:
 
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md).
+1. ```sbtshell
+   kubectl create namespace natss
+   kubectl label namespace natss istio-injection=enabled
+   ``` 
 1. Apply the 'natss' ClusterChannelProvisioner, Controller, and Dispatcher.
      ```shell
      ko apply -f config/provisioners/natss/
