@@ -1,9 +1,8 @@
 # Knative Personas
 
 When discussing user actions, it is often helpful to [define specific
-user roles](https://en.wikipedia.org/wiki/Persona_(user_experience)) who
+user roles](<https://en.wikipedia.org/wiki/Persona_(user_experience)>) who
 might want to do the action.
-
 
 ## Knative Events
 
@@ -18,9 +17,10 @@ which is reusing existing packaged functions to build a workflow
 without writing code.
 
 User stories:
-* Determine what event sources are available
-* Trigger my service when certain events happen (event feed)
-* Filter events from a provider
+
+- Determine what event sources are available
+- Trigger my service when certain events happen (event feed)
+- Filter events from a provider
 
 ### Event producer
 
@@ -28,9 +28,9 @@ An event producer owns a data source or system which produces events
 which can be acted on by event consumers.
 
 User stories:
-* Publish events
-* Control who can create Feeds
 
+- Publish events
+- Control who can create Feeds
 
 ## Contributors
 
@@ -38,15 +38,15 @@ Contributors are an important part of the Knative project. As such, we
 will also consider how various infrastructure encourages and enables
 contributors to the project, as well as the impact on end-users.
 
-* Hobbyist or newcomer
-* Motivated user
-* Corporate (employed) maintainer
-* Consultant
+- Hobbyist or newcomer
+- Motivated user
+- Corporate (employed) maintainer
+- Consultant
 
 User stories:
-* Check out the code
-* Build and run the code
-* Run tests
-* View test status
-* Run performance tests
 
+- Check out the code
+- Build and run the code
+- Run tests
+- View test status
+- Run performance tests

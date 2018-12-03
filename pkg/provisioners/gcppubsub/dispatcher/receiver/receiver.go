@@ -17,25 +17,19 @@
 package receiver
 
 import (
+	"cloud.google.com/go/pubsub"
 	"context"
 	"errors"
 	"fmt"
-
-	"github.com/knative/pkg/logging"
-
-	"k8s.io/apimachinery/pkg/types"
-
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-
 	"github.com/knative/eventing/pkg/provisioners"
-
-	"cloud.google.com/go/pubsub"
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/dispatcher/receiver/cache"
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
+	"github.com/knative/pkg/logging"
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // Receiver parses Cloud Events and sends them to GCP PubSub.
@@ -68,7 +62,7 @@ func (r *Receiver) newMessageReceiver() *provisioners.MessageReceiver {
 
 // sendEventToTopic sends a message to the Cloud Pub/Sub Topic backing the Channel.
 func (r *Receiver) sendEventToTopic(channel provisioners.ChannelReference, message *provisioners.Message) error {
-	r.logger.Info("received message")
+	r.logger.Debug("received message")
 	ctx := context.Background()
 
 	c, err := r.getChannel(ctx, channel)
@@ -106,7 +100,7 @@ func (r *Receiver) sendEventToTopic(channel provisioners.ChannelReference, messa
 		return err
 	}
 
-	r.logger.Info("Published a message", zap.String("topicName", pbs.Topic), zap.String("pubSubMessageId", id))
+	r.logger.Debug("Published a message", zap.String("topicName", pbs.Topic), zap.String("pubSubMessageId", id))
 	return nil
 }
 

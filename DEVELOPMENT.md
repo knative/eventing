@@ -20,8 +20,7 @@ You must have the core of [Knative](http://github.com/knative/serving) running
 on your cluster.
 
 You must have
-[ko](https://github.com/google/go-containerregistry/blob/master/cmd/ko/README.md
-) installed.
+[ko](https://github.com/google/go-containerregistry/blob/master/cmd/ko/README.md) installed.
 
 ### Checkout your fork
 
@@ -33,14 +32,15 @@ To check out this repository:
 
 1. Create your own [fork of this repo](https://help.github.com/articles/fork-a-repo/)
 2. Clone it to your machine:
-  ```shell
-  mkdir -p ${GOPATH}/src/github.com/knative
-  cd ${GOPATH}/src/github.com/knative
-  git clone git@github.com:${YOUR_GITHUB_USERNAME}/eventing.git
-  cd eventing
-  git remote add upstream git@github.com:knative/eventing.git
-  git remote set-url --push upstream no_push
-  ```
+
+```shell
+mkdir -p ${GOPATH}/src/github.com/knative
+cd ${GOPATH}/src/github.com/knative
+git clone git@github.com:${YOUR_GITHUB_USERNAME}/eventing.git
+cd eventing
+git remote add upstream git@github.com:knative/eventing.git
+git remote set-url --push upstream no_push
+```
 
 _Adding the `upstream` remote sets you up nicely for regularly [syncing your
 fork](https://help.github.com/articles/syncing-a-fork/)._
@@ -78,7 +78,6 @@ As you make changes to the code-base, there are two special cases to be aware of
   [`./hack/update-codegen.sh`](./hack/update-codegen.sh).
 - **If you change a package's deps** (including adding external dep), then you must run
   [`./hack/update-deps.sh`](./hack/update-deps.sh).
-
 
 These are both idempotent, and we expect that running these at `HEAD` to have
 no diffs.

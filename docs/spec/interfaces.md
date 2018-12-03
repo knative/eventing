@@ -20,7 +20,7 @@ as an event Source.
 ### Data Plane
 
 An **Addressable** resource will only respond to requests with success or
-failure.  Any payload (including a valid CloudEvent) returned to the sender
+failure. Any payload (including a valid CloudEvent) returned to the sender
 will be ignored. An _Addressable_ may receive the same event multiple times
 even if it previously indicated success.
 

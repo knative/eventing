@@ -19,24 +19,20 @@ package dispatcher
 import (
 	"context"
 	"errors"
-	"sync"
-
-	"sigs.k8s.io/controller-runtime/pkg/event"
-
-	"github.com/knative/eventing/pkg/provisioners"
-
-	"k8s.io/apimachinery/pkg/types"
-
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/provisioners"
 	util "github.com/knative/eventing/pkg/provisioners"
 	ccpcontroller "github.com/knative/eventing/pkg/provisioners/gcppubsub/controller/clusterchannelprovisioner"
 	pubsubutil "github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
 	"github.com/knative/pkg/logging"
 	"go.uber.org/zap"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sync"
 )
 
 const (
@@ -60,11 +56,6 @@ type reconciler struct {
 	reconcileChan chan<- event.GenericEvent
 
 	pubSubClientCreator pubsubutil.PubSubClientCreator
-
-	// Note that for all the default* parameters below, these must be kept in lock-step with the
-	// GCP PubSub Dispatcher's reconciler.
-	// Eventually, individual Channels should be allowed to specify different projects and secrets,
-	// but for now all Channels use the same project and secret.
 
 	subscriptionsLock sync.Mutex
 	// subscriptions contains the cancel functions for all hanging PubSub Subscriptions. The cancel
@@ -317,16 +308,16 @@ func receiveFunc(logger *zap.SugaredLogger, sub pubsubutil.GcpPubSubSubscription
 		}
 		err := dispatcher.DispatchMessage(message, sub.SubscriberURI, sub.ReplyURI, defaults)
 		if err != nil {
-			logger.Info("Message dispatch failed", zap.Error(err), zap.String("pubSubMessageId", msg.ID()))
+			logger.Error("Message dispatch failed", zap.Error(err), zap.String("pubSubMessageId", msg.ID()))
 			msg.Nack()
 		} else {
-			logger.Info("Message dispatch succeeded", zap.String("pubSubMessageId", msg.ID()))
+			logger.Debug("Message dispatch succeeded", zap.String("pubSubMessageId", msg.ID()))
 			msg.Ack()
 		}
 	}
 }
 
 func loggingWith(ctx context.Context, fields ...zap.Field) context.Context {
-	logger := logging.FromContext(ctx)
-	return logging.WithLogger(ctx, logger.With(fields))
+	logger := logging.FromContext(ctx).Desugar()
+	return logging.WithLogger(ctx, logger.With(fields...).Sugar())
 }
