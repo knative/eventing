@@ -4,3 +4,15 @@ approvers:
 - inlined
 - scothis
 - vaikas-google
+
+# Reviewers are suggested from the reviewers list first, then the approvers
+# list. To add reviewers while spreading the load among existing approvers,
+# copy the approvers to the reviewers list too.
+reviewers:
+- evankanderson
+- grantr
+- inlined
+- scothis
+- vaikas-google
+# Add reviewers below
+- Harwayne
