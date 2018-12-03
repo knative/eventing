@@ -8,10 +8,10 @@ import (
 type Key string
 
 type TTL struct {
-	itemsLock sync.Mutex
-	items     map[Key]*Item
-	ttl       time.Duration
-	reaping   time.Duration
+	itemsLock     sync.Mutex
+	items         map[Key]*Item
+	ttl           time.Duration
+	reapingPeriod time.Duration
 }
 
 type Item struct {
@@ -25,9 +25,10 @@ type Stoppable interface {
 
 func NewTTL() *TTL {
 	return &TTL{
-		items:   make(map[Key]*Item),
-		ttl:     5 * time.Minute,
-		reaping: 5 * time.Minute,
+		itemsLock:     sync.Mutex{},
+		items:         make(map[Key]*Item),
+		ttl:           5 * time.Minute,
+		reapingPeriod: 5 * time.Minute,
 	}
 }
 
@@ -47,12 +48,6 @@ func (c *TTL) Insert(key string, value Stoppable) Stoppable {
 		c.items[k] = item
 		return value
 	}
-}
-
-func (c *TTL) Delete(key string) func() {
-	c.itemsLock.Lock()
-	defer c.itemsLock.Unlock()
-	return c.deleteUnderLock(Key(key))
 }
 
 func (c *TTL) deleteUnderLock(key Key) func() {
@@ -81,7 +76,7 @@ func (c *TTL) Start(stopCh <-chan struct{}) error {
 		select {
 		case <-stopCh:
 			return nil
-		case <-time.After(c.reaping):
+		case <-time.After(c.reapingPeriod):
 			c.cull()
 		}
 	}

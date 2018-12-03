@@ -176,7 +176,10 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		return err
 	}
 	pbs := &pubsubutil.GcpPubSubChannelStatus{
-		Topic: topic.ID(),
+		Secret:     r.defaultSecret,
+		SecretKey:  r.defaultSecretKey,
+		GCPProject: r.defaultGcpProject,
+		Topic:      topic.ID(),
 	}
 
 	err = r.createSubscriptions(ctx, c, gcpCreds, r.defaultGcpProject, topic, pbs)

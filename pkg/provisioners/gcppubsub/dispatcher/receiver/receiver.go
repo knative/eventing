@@ -18,11 +18,11 @@ package receiver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/knative/pkg/logging"
 
-	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -45,34 +45,17 @@ type Receiver struct {
 
 	pubSubClientCreator util.PubSubClientCreator
 
-	// Note that for all the default* parameters below, these must be kept in lock-step with the
-	// GCP PubSub Dispatcher's reconciler.
-	// Eventually, individual Channels should be allowed to specify different projects and secrets,
-	// but for now all Channels use the same project and secret.
-
-	// defaultGcpProject is the GCP project ID where PubSub Topics and Subscriptions are created.
-	defaultGcpProject string
-	// defaultSecret and defaultSecretKey are the K8s Secret and key in that secret that contain a
-	// JSON format GCP service account token, see
-	// https://cloud.google.com/iam/docs/creating-managing-service-account-keys#iam-service-account-keys-create-gcloud
-	defaultSecret    *v1.ObjectReference
-	defaultSecretKey string
-
 	cache *cache.TTL
 }
 
 // New creates a new Receiver and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned MessageReceiver.
-func New(logger *zap.Logger, client client.Client, pubSubClientCreator util.PubSubClientCreator, defaultGcpProject string, defaultSecret *v1.ObjectReference, defaultSecretKey string) (*Receiver, []manager.Runnable) {
+func New(logger *zap.Logger, client client.Client, pubSubClientCreator util.PubSubClientCreator) (*Receiver, []manager.Runnable) {
 	r := &Receiver{
 		logger: logger,
 		client: client,
 
 		pubSubClientCreator: pubSubClientCreator,
-
-		defaultGcpProject: defaultGcpProject,
-		defaultSecret:     defaultSecret,
-		defaultSecretKey:  defaultSecretKey,
 
 		cache: cache.NewTTL(),
 	}
@@ -96,6 +79,9 @@ func (r *Receiver) sendEventToTopic(channel provisioners.ChannelReference, messa
 	pbs, err := util.ReadRawStatus(ctx, c)
 	if err != nil {
 		return err
+	} else if pbs == &(util.GcpPubSubChannelStatus{}) {
+		logging.FromContext(ctx).Info("Raw status is blank")
+		return errors.New("raw status is blank")
 	}
 
 	cached := r.cache.Get(pbs.Topic)
@@ -125,14 +111,13 @@ func (r *Receiver) sendEventToTopic(channel provisioners.ChannelReference, messa
 }
 
 func (r *Receiver) createPubSubReceiver(ctx context.Context, pbs *util.GcpPubSubChannelStatus) (cache.Stoppable, error) {
-
-	creds, err := util.GetCredentials(ctx, r.client, r.defaultSecret, r.defaultSecretKey)
+	creds, err := util.GetCredentials(ctx, r.client, pbs.Secret, pbs.SecretKey)
 	if err != nil {
 		r.logger.Info("Failed to extract creds", zap.Error(err))
 		return nil, err
 	}
 
-	psc, err := r.pubSubClientCreator(ctx, creds, r.defaultGcpProject)
+	psc, err := r.pubSubClientCreator(ctx, creds, pbs.GCPProject)
 	if err != nil {
 		r.logger.Info("Failed to create PubSub client", zap.Error(err))
 		return nil, err

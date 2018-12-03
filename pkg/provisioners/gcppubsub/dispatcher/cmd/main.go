@@ -18,11 +18,8 @@ package main
 
 import (
 	"flag"
-	"log"
-	"os"
 
 	"github.com/knative/eventing/pkg/provisioners"
-	"k8s.io/api/core/v1"
 
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/dispatcher/dispatcher"
 
@@ -35,13 +32,6 @@ import (
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-)
-
-const (
-	defaultGcpProjectEnv      = "DEFAULT_GCP_PROJECT"
-	defaultSecretNamespaceEnv = "DEFAULT_SECRET_NAMESPACE"
-	defaultSecretNameEnv      = "DEFAULT_SECRET_NAME"
-	defaultSecretKeyEnv       = "DEFAULT_SECRET_KEY"
 )
 
 // This is the main method for the GCP PubSub Channel dispatcher. It handles all the data-plane
@@ -68,20 +58,11 @@ func main() {
 	// Add custom types to this array to get them into the manager's scheme.
 	eventingv1alpha1.AddToScheme(mgr.GetScheme())
 
-	defaultGcpProject := getRequiredEnv(defaultGcpProjectEnv)
-	defaultSecret := v1.ObjectReference{
-		APIVersion: v1.SchemeGroupVersion.String(),
-		Kind:       "Secret",
-		Namespace:  getRequiredEnv(defaultSecretNamespaceEnv),
-		Name:       getRequiredEnv(defaultSecretNameEnv),
-	}
-	defaultSecretKey := getRequiredEnv(defaultSecretKeyEnv)
-
 	// We are running both the receiver (takes messages in from the cluster and writes them to
 	// PubSub) and the dispatcher (takes messages in PubSub and sends them in cluster) in this
 	// binary.
 
-	_, runnables := receiver.New(logger.Desugar(), mgr.GetClient(), util.GcpPubSubClientCreator, defaultGcpProject, &defaultSecret, defaultSecretKey)
+	_, runnables := receiver.New(logger.Desugar(), mgr.GetClient(), util.GcpPubSubClientCreator)
 	for _, runnable := range runnables {
 		err = mgr.Add(runnable)
 		if err != nil {
@@ -95,7 +76,7 @@ func main() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	_, err = dispatcher.New(mgr, logger.Desugar(), defaultGcpProject, &defaultSecret, defaultSecretKey, stopCh)
+	_, err = dispatcher.New(mgr, logger.Desugar(), stopCh)
 	if err != nil {
 		logger.Fatal("Unable to create the dispatcher", zap.Error(err))
 	}
@@ -106,12 +87,4 @@ func main() {
 	if err != nil {
 		logger.Fatal("Manager.Start() returned an error", zap.Error(err))
 	}
-}
-
-func getRequiredEnv(envKey string) string {
-	val, defined := os.LookupEnv(envKey)
-	if !defined {
-		log.Fatalf("required environment variable not defined '%s'", envKey)
-	}
-	return val
 }

@@ -28,6 +28,10 @@ import (
 )
 
 type GcpPubSubChannelStatus struct {
+	Secret    *corev1.ObjectReference `json:"secret"`
+	SecretKey string                  `json:"secretKey"`
+
+	GCPProject    string                        `json:"gcpProject"`
 	Topic         string                        `json:"topic,omitempty"`
 	Subscriptions []GcpPubSubSubscriptionStatus `json:"subscriptions,omitempty"`
 }
