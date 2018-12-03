@@ -319,10 +319,10 @@ func receiveFunc(logger *zap.SugaredLogger, sub *v1alpha1.ChannelSubscriberSpec,
 		}
 		err := dispatcher.DispatchMessage(message, sub.SubscriberURI, sub.ReplyURI, defaults)
 		if err != nil {
-			logger.Info("Message dispatch failed", zap.Error(err), zap.String("pubSubMessageId", msg.ID()))
+			logger.Error("Message dispatch failed", zap.Error(err), zap.String("pubSubMessageId", msg.ID()))
 			msg.Nack()
 		} else {
-			logger.Info("Message dispatch succeeded", zap.String("pubSubMessageId", msg.ID()))
+			logger.Debug("Message dispatch succeeded", zap.String("pubSubMessageId", msg.ID()))
 			msg.Ack()
 		}
 	}

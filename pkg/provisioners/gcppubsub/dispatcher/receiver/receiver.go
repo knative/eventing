@@ -71,18 +71,18 @@ func (r *Receiver) newMessageReceiver() *provisioners.MessageReceiver {
 
 // sendEventToTopic sends a message to the Cloud Pub/Sub Topic backing the Channel.
 func (r *Receiver) sendEventToTopic(channel provisioners.ChannelReference, message *provisioners.Message) error {
-	r.logger.Info("received message")
+	r.logger.Debug("received message")
 	ctx := context.Background()
 
 	creds, err := util.GetCredentials(ctx, r.client, r.defaultSecret, r.defaultSecretKey)
 	if err != nil {
-		r.logger.Info("Failed to extract creds", zap.Error(err))
+		r.logger.Error("Failed to extract creds", zap.Error(err))
 		return err
 	}
 
 	psc, err := r.pubSubClientCreator(ctx, creds, r.defaultGcpProject)
 	if err != nil {
-		r.logger.Info("Failed to create PubSub client", zap.Error(err))
+		r.logger.Error("Failed to create PubSub client", zap.Error(err))
 		return err
 	}
 	topicName := util.GenerateTopicName(channel.Namespace, channel.Name)
@@ -100,6 +100,6 @@ func (r *Receiver) sendEventToTopic(channel provisioners.ChannelReference, messa
 	// TODO allow topics to be reused between publish events, call .Stop after an idle period
 	topic.Stop()
 
-	r.logger.Info("Published a message", zap.String("topicName", topicName), zap.String("pubSubMessageId", id))
+	r.logger.Debug("Published a message", zap.String("topicName", topicName), zap.String("pubSubMessageId", id))
 	return nil
 }

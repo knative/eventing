@@ -36,19 +36,19 @@ func GetCredentials(ctx context.Context, client client.Client, secretRef *v1.Obj
 	secret := &v1.Secret{}
 	err := client.Get(ctx, types.NamespacedName{Namespace: secretRef.Namespace, Name: secretRef.Name}, secret)
 	if err != nil {
-		logging.FromContext(ctx).Info("Unable to read the secretRef", zap.Any("secretRef", secretRef))
+		logging.FromContext(ctx).Error("Unable to read the secretRef", zap.Any("secretRef", secretRef))
 		return nil, err
 	}
 
 	bytes, present := secret.Data[key]
 	if !present {
-		logging.FromContext(ctx).Info("Secret did not contain the key", zap.String("key", key))
+		logging.FromContext(ctx).Error("Secret did not contain the key", zap.String("key", key))
 		return nil, fmt.Errorf("secretRef did not contain the key '%s'", key)
 	}
 
 	creds, err := google.CredentialsFromJSON(ctx, bytes, pubsub.ScopePubSub)
 	if err != nil {
-		logging.FromContext(ctx).Info("Unable to create the GCP credential", zap.Error(err))
+		logging.FromContext(ctx).Error("Unable to create the GCP credential", zap.Error(err))
 		return nil, err
 	}
 	return creds, nil
