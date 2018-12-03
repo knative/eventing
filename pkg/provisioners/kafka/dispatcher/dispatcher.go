@@ -22,7 +22,7 @@ import (
 	"sync/atomic"
 
 	"github.com/Shopify/sarama"
-	"github.com/bsm/sarama-cluster"
+	cluster "github.com/bsm/sarama-cluster"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 
@@ -156,9 +156,7 @@ func (d *KafkaDispatcher) Start(stopCh <-chan struct{}) error {
 		}
 	}()
 
-	d.receiver.Run(stopCh)
-
-	return nil
+	return d.receiver.Start(stopCh)
 }
 
 func (d *KafkaDispatcher) subscribe(channelRef provisioners.ChannelReference, sub subscription) error {

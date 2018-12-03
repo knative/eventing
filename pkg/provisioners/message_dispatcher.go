@@ -30,6 +30,18 @@ import (
 
 const correlationIDHeaderName = "Knative-Correlation-Id"
 
+type Dispatcher interface {
+	// DispatchMessage dispatches a message to a destination over HTTP.
+	//
+	// The destination and reply are DNS names. For names with a single label,
+	// the default namespace is used to expand it into a fully qualified name
+	// within the cluster.
+	DispatchMessage(message *Message, destination, reply string, defaults DispatchDefaults) error
+}
+
+// MessageDispatcher is the 'real' Dispatcher used everywhere except unit tests.
+var _ Dispatcher = &MessageDispatcher{}
+
 // MessageDispatcher dispatches messages to a destination over HTTP.
 type MessageDispatcher struct {
 	httpClient       *http.Client

@@ -59,11 +59,12 @@ func NewMessageReceiver(receiverFunc func(ChannelReference, *Message) error, log
 // server.
 //
 // This method will block until a message is received on the stop channel.
-func (r *MessageReceiver) Run(stopCh <-chan struct{}) {
+func (r *MessageReceiver) Start(stopCh <-chan struct{}) error {
 	svr := r.start()
 	defer r.stop(svr)
 
 	<-stopCh
+	return nil
 }
 
 func (r *MessageReceiver) start() *http.Server {
