@@ -199,7 +199,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: gcp-pubsub-clusterbus
+  name: gcp-pubsub-dispatcher
   namespace: knative-eventing
 spec:
   type: ClusterIP
