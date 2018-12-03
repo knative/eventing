@@ -19,6 +19,7 @@ package util
 import (
 	"context"
 	"encoding/json"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 
@@ -53,17 +54,22 @@ func SaveRawStatus(ctx context.Context, c *eventingv1alpha1.Channel, pbs *GcpPub
 		logging.FromContext(ctx).Error("Error saving the raw status", zap.Error(err), zap.Any("pbs", pbs))
 		return err
 	}
-	c.Status.Raw.Raw = jb
+	c.Status.Raw = &runtime.RawExtension{
+		Raw: jb,
+	}
 	return nil
 }
 
 func ReadRawStatus(ctx context.Context, c *eventingv1alpha1.Channel) (*GcpPubSubChannelStatus, error) {
+	if c.Status.Raw == nil {
+		return &GcpPubSubChannelStatus{}, nil
+	}
 	bytes := c.Status.Raw.Raw
 	if len(bytes) == 0 {
 		return &GcpPubSubChannelStatus{}, nil
 	}
 	var pbs GcpPubSubChannelStatus
-	if err := json.Unmarshal(bytes, pbs); err != nil {
+	if err := json.Unmarshal(bytes, &pbs); err != nil {
 		logging.FromContext(ctx).Error("Unable to parse the raw status", zap.Error(err))
 		return nil, err
 	}
