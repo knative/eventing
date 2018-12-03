@@ -1077,6 +1077,132 @@ func getNewDeletedSubscriptionWithChannelReady() *eventingv1alpha1.Subscription 
 	return s
 }
 
+type SubscriptionBuilder struct {
+	*eventingv1alpha1.Subscription
+}
+
+// Verify the Builder implements Buildable
+var _ controllertesting.Buildable = &SubscriptionBuilder{}
+
+func Subscription() *SubscriptionBuilder {
+	subscription := &eventingv1alpha1.Subscription{
+		TypeMeta:   subscriptionType(),
+		ObjectMeta: om(testNS, subscriptionName),
+		Spec: eventingv1alpha1.SubscriptionSpec{
+			Channel: corev1.ObjectReference{
+				Name:       fromChannelName,
+				Kind:       channelKind,
+				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+			},
+			Subscriber: &eventingv1alpha1.SubscriberSpec{
+				Ref: &corev1.ObjectReference{
+					Name:       routeName,
+					Kind:       routeKind,
+					APIVersion: "serving.knative.dev/v1alpha1",
+				},
+			},
+			Reply: &eventingv1alpha1.ReplyStrategy{
+				Channel: &corev1.ObjectReference{
+					Name:       resultChannelName,
+					Kind:       channelKind,
+					APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+				},
+			},
+		},
+	}
+	subscription.ObjectMeta.OwnerReferences = append(subscription.ObjectMeta.OwnerReferences, getOwnerReference(false))
+
+	// selflink is not filled in when we create the object, so clear it
+	subscription.ObjectMeta.SelfLink = ""
+
+	return &SubscriptionBuilder{
+		Subscription: subscription,
+	}
+}
+
+func (s *SubscriptionBuilder) Build() runtime.Object {
+	return s.Subscription
+}
+
+func (s *SubscriptionBuilder) EmptyNonNilReply() *SubscriptionBuilder {
+	s.Spec.Reply = &eventingv1alpha1.ReplyStrategy{}
+	return s
+}
+
+func (s *SubscriptionBuilder) EmptyNonNilSubscriber() *SubscriptionBuilder {
+	s.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{}
+	return s
+}
+
+func (s *SubscriptionBuilder) FromSource() *SubscriptionBuilder {
+	s.Spec.Channel = corev1.ObjectReference{
+		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+		Kind:       sourceKind,
+		Name:       sourceName,
+	}
+	return s
+}
+
+func (s *SubscriptionBuilder) ToK8sService() *SubscriptionBuilder {
+	s.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{
+		Ref: &corev1.ObjectReference{
+			Name:       k8sServiceName,
+			Kind:       "Service",
+			APIVersion: "v1",
+		},
+	}
+	return s
+}
+
+func (s *SubscriptionBuilder) UnknownConditions() *SubscriptionBuilder {
+	s.Status.InitializeConditions()
+	return s
+}
+
+func (s *SubscriptionBuilder) PhysicalSubscriber(dns string) *SubscriptionBuilder {
+	s.Status.PhysicalSubscription.SubscriberURI = domainToURL(dns)
+	return s
+}
+
+func (s *SubscriptionBuilder) ReferencesResolved() *SubscriptionBuilder {
+	s = s.UnknownConditions()
+	s.Status.MarkReferencesResolved()
+	return s
+}
+
+func (s *SubscriptionBuilder) Reply() *SubscriptionBuilder {
+	s.Status.PhysicalSubscription.ReplyURI = domainToURL(sinkableDNS)
+	return s
+}
+
+func (s *SubscriptionBuilder) DifferentChannel() *SubscriptionBuilder {
+	s.Name = "different-channel"
+	s.UID = "different-channel-UID"
+	s.Status.PhysicalSubscription.SubscriberURI = "some-other-domain"
+	return s
+}
+
+func (s *SubscriptionBuilder) ChannelReady() *SubscriptionBuilder {
+	s = s.ReferencesResolved()
+	s.Status.MarkChannelReady()
+	return s
+}
+
+func (s *SubscriptionBuilder) Deleted() *SubscriptionBuilder {
+	s.ObjectMeta.DeletionTimestamp = &deletionTime
+	return s
+}
+
+// Renamed renames the subscription. It is intended to be used in tests that create multiple
+// Subscriptions, so that there are no naming conflicts.
+func (s *SubscriptionBuilder) Renamed() *SubscriptionBuilder {
+	s.Name = "renamed"
+	s.UID = "renamed-UID"
+	s.Status.PhysicalSubscription.SubscriberURI = ""
+	s.Status.PhysicalSubscription.ReplyURI = otherAddressableDNS
+	return s
+}
+
 func channelType() metav1.TypeMeta {
 	return metav1.TypeMeta{
 		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
