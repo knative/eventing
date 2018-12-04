@@ -15,10 +15,11 @@ package main
 
 import (
 	"context"
-	"github.com/knative/pkg/cloudevents"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/knative/pkg/cloudevents"
 
 	corev1 "k8s.io/api/core/v1"
 )
