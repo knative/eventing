@@ -739,20 +739,20 @@ var testCases = []controllertesting.TestCase{
 		WantResult: reconcile.Result{},
 		WantErrMsg: "invalid JSON document",
 		WantAbsent: []runtime.Object{
-		// TODO: JSON patch is not working on the fake, see
-		// https://github.com/kubernetes/client-go/issues/478. The entire test is really to
-		// verify the following, but can't be done because the call to Patch fails (it assumes
-		// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
-		// out.
-		//getNewDeletedSubscriptionWithChannelReady(),
+			// TODO: JSON patch is not working on the fake, see
+			// https://github.com/kubernetes/client-go/issues/478. The entire test is really to
+			// verify the following, but can't be done because the call to Patch fails (it assumes
+			// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
+			// out.
+			//getNewDeletedSubscriptionWithChannelReady(),
 		},
 		WantPresent: []runtime.Object{
-		// TODO: JSON patch is not working on the fake, see
-		// https://github.com/kubernetes/client-go/issues/478. The entire test is really to
-		// verify the following, but can't be done because the call to Patch fails (it assumes
-		// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
-		// out.
-		//getChannelWithOtherSubscription(),
+			// TODO: JSON patch is not working on the fake, see
+			// https://github.com/kubernetes/client-go/issues/478. The entire test is really to
+			// verify the following, but can't be done because the call to Patch fails (it assumes
+			// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
+			// out.
+			//getChannelWithOtherSubscription(),
 		},
 		Objects: []runtime.Object{
 			// Source channel
