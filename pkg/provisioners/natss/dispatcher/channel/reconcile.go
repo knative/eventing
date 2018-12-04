@@ -58,7 +58,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// The Channel may have been deleted since it was added to the workqueue.
 	if errors.IsNotFound(err) {
 		r.logger.Info("Could not find Channel", zap.Error(err))
-		// unsubscribe all active subscribtions subscriptions for this channel
+		// unsubscribe all active subscriptions for this channel
 		c.Namespace = request.NamespacedName.Namespace
 		c.Name = request.NamespacedName.Name
 		if err := r.subscriptionsSupervisor.UpdateSubscriptions(c); err != nil {
