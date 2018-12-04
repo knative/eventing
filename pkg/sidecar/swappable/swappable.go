@@ -24,11 +24,12 @@ package swappable
 
 import (
 	"errors"
-	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
-	"go.uber.org/zap"
 	"net/http"
 	"sync"
 	"sync/atomic"
+
+	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
+	"go.uber.org/zap"
 )
 
 // http.Handler that atomically swaps between underlying handlers.
