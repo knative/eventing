@@ -6,16 +6,18 @@ Deployment steps:
 1. If not done already, install an Apache Kafka cluster. There are two choices:
 
    - Simple installation of [Apache Kafka](broker).
-   - A production grade installation using the [Strimzi Kafka Operator](strimzi).
-     Installation [guides](http://strimzi.io/quickstarts/) are provided for
-     kubernetes and Openshift.
+   - A production grade installation using the
+     [Strimzi Kafka Operator](strimzi). Installation
+     [guides](http://strimzi.io/quickstarts/) are provided for kubernetes and
+     Openshift.
 
 1. Now that Apache Kafka is installed, you need to configure the
    `bootstrap_servers` value in the `kafka-channel-controller-config` ConfigMap,
    located inside the `config/provisioners/kafka/kafka-channel.yaml` file:
-   `... apiVersion: v1 kind: ConfigMap metadata: name: kafka-channel-controller-config namespace: knative-eventing data: # Broker URL's for the provisioner bootstrap_servers: kafkabroker.kafka:9092 ...` > Note: The `bootstrap_servers` needs to contain the address of at least
-   one broker of your Apache Kafka cluster. If you are using Strimzi, you need
-   to update the `bootstrap_servers` value to
+   `... apiVersion: v1 kind: ConfigMap metadata: name: kafka-channel-controller-config namespace: knative-eventing data: # Broker URL's for the provisioner bootstrap_servers: kafkabroker.kafka:9092 ...` >
+   Note: The `bootstrap_servers` needs to contain the address of at least one
+   broker of your Apache Kafka cluster. If you are using Strimzi, you need to
+   update the `bootstrap_servers` value to
    `my-cluster-kafka-bootstrap.mynamespace:9092`.
 1. Apply the 'Kafka' ClusterChannelProvisioner, Controller, and Dispatcher:
    ```
@@ -45,8 +47,8 @@ The major components are:
 - Channel Dispatcher
 - Channel Dispatcher Config Map.
 
-The ClusterChannelProvisioner Controller and the Channel Controller are colocated
-in one Pod:
+The ClusterChannelProvisioner Controller and the Channel Controller are
+colocated in one Pod:
 
 ```shell
 kubectl get deployment -n knative-eventing kafka-channel-controller
