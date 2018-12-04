@@ -332,7 +332,7 @@
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
 [[projects]]
-  digest = "1:345bbba667abadd6263391c915251ede8d9fa6f6852839c60bb6738b6122b89c"
+  digest = "1:a7fbae75911cf06dde6f427b4f29d2ac78ebb70412cf07b2659437dd94ca810e"
   name = "github.com/knative/build"
   packages = [
     "pkg/apis/build",
@@ -396,7 +396,7 @@
   revision = "4b704fa7948ad9ae8ec90d1cd5b4a34516b252ea"
 
 [[projects]]
-  digest = "1:cf62a9e49c586f87503a2ca683f636afae817333b6056c7529f2643ec285ed7e"
+  digest = "1:69b9d12ba98492cb25c8b74cdd4675ebb918fb0f4874b61ac78f54a8d9649a38"
   name = "github.com/knative/serving"
   packages = [
     "pkg/apis/autoscaling",
