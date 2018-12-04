@@ -120,7 +120,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// Modify a copy, not the original.
 	c = c.DeepCopy()
 
-	reconcileErr := r.reconcile(loggingWith(ctx, zap.Any("channel", c)), c)
+	requeue, reconcileErr := r.reconcile(loggingWith(ctx, zap.Any("channel", c)), c)
 	if reconcileErr != nil {
 		logging.FromContext(ctx).Info("Error reconciling Channel", zap.Error(reconcileErr))
 		// Note that we do not return the error here, because we want to update the finalizers
@@ -132,7 +132,9 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{}, reconcileErr
+	return reconcile.Result{
+		Requeue: requeue,
+	}, reconcileErr
 }
 
 // shouldReconcile determines if this Controller should control (and therefore reconcile) a given
@@ -144,7 +146,10 @@ func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 	return false
 }
 
-func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) error {
+// reconcile reconciles this Channel so that the real world matches the intended state. The returned
+// boolean indicates if this Channel should be immediately requeued for another reconcile loop. The
+// returned error indicates an error during reconciliation.
+func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) (bool, error) {
 	// We are syncing all the subscribers on this Channel. Every subscriber will have a goroutine
 	// running in the background polling the GCP PubSub Subscription.
 
@@ -152,13 +157,17 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		// We use a finalizer to ensure we stop listening on the GCP PubSub Subscriptions.
 		r.stopAllSubscriptions(ctx, c)
 		util.RemoveFinalizer(c, finalizerName)
-		return nil
+		return false, nil
 	}
 
-	util.AddFinalizer(c, finalizerName)
+	// If we are adding the finalizer for the first time, then ensure that finalizer is persisted
+	// before interacting with GCP PubSub.
+	if addFinalizerResult := util.AddFinalizer(c, finalizerName); addFinalizerResult == util.FinalizerAdded {
+		return true, nil
+	}
 
 	err := r.syncSubscriptions(ctx, c)
-	return err
+	return false, err
 }
 
 // key creates the first index into reconciler.subscriptions, based on the Channel's name.
