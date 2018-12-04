@@ -210,7 +210,7 @@ func TestChannelDefaulter_UpdateConfigMap(t *testing.T) {
 
 			prov, args := cd.GetDefault(&eventingv1alpha1.Channel{})
 			if diff := cmp.Diff(tc.expectedAfterInitial, prov); diff != "" {
-				t.Fatalf("Unexpected difference after intial configMap update (-want, +got): %s", diff)
+				t.Fatalf("Unexpected difference after initial configMap update (-want, +got): %s", diff)
 			}
 			if args != nil {
 				t.Fatalf("Unexpected args after initial configMap update. Expected nil. %v", args)

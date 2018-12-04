@@ -18,17 +18,20 @@ package clusterchannelprovisioner
 
 import (
 	"context"
+	"fmt"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	util "github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/eventing/pkg/system"
 )
 
 const (
@@ -57,6 +60,12 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	//TODO use this to store the logger and set a deadline
 	ctx := context.TODO()
 	logger := r.logger.With(zap.Any("request", request))
+
+	// Workaround until https://github.com/kubernetes-sigs/controller-runtime/issues/214 is fixed.
+	// The reconcile requests will include a namespace if they are triggered because of changes to the
+	// objects owned by this ClusterChannelProvisioner (e.g k8s service). Since ClusterChannelProvisioner is
+	// cluster-scoped we need to unset the namespace or otherwise the provisioner object cannot be looked up.
+	request.NamespacedName.Namespace = ""
 
 	ccp := &eventingv1alpha1.ClusterChannelProvisioner{}
 	err := r.client.Get(ctx, request.NamespacedName, ccp)
@@ -139,6 +148,32 @@ func (r *reconciler) reconcile(ctx context.Context, ccp *eventingv1alpha1.Cluste
 		logger.Warn("ClusterChannelProvisioner's K8s Service is not owned by the ClusterChannelProvisioner", zap.Any("clusterChannelProvisioner", ccp), zap.Any("service", svc))
 	}
 
+	// The name of the svc has changed since version 0.2.1. Hence, delete old dispatcher service (in-memory-channel-clusterbus)
+	// that was created previously in version 0.2.0 to ensure backwards compatibility.
+	err = r.deleteOldDispatcherService(ctx, ccp)
+	if err != nil {
+		logger.Info("Error deleting the old ClusterChannelProvisioner's K8s Service", zap.Error(err))
+		return err
+	}
+
 	ccp.Status.MarkReady()
 	return nil
+}
+
+func (r *reconciler) deleteOldDispatcherService(ctx context.Context, ccp *eventingv1alpha1.ClusterChannelProvisioner) error {
+	svcName := fmt.Sprintf("%s-clusterbus", ccp.Name)
+	svcKey := types.NamespacedName{
+		Namespace: system.Namespace,
+		Name:      svcName,
+	}
+	svc := &corev1.Service{}
+	err := r.client.Get(ctx, svcKey, svc)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	return r.client.Delete(ctx, svc)
 }

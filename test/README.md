@@ -2,8 +2,8 @@
 
 This directory contains tests and testing docs for `Knative Eventing`.
 
-* [Unit tests](#running-unit-tests) reside in the codebase alongside the code they test
-* [End-to-end tests](#running-end-to-end-tests) reside in [`/test/e2e`](./e2e)
+- [Unit tests](#running-unit-tests) reside in the codebase alongside the code they test
+- [End-to-end tests](#running-end-to-end-tests) reside in [`/test/e2e`](./e2e)
 
 ## Running unit tests
 
@@ -50,9 +50,9 @@ go test -v -tags=e2e -count=1 ./test/e2e -run ^TestKubernetesEvents$
 There's couple of things you need to install before running e2e tests locally.
 
 1. `kubetest` installed:
-    ```bash
-    go get -u k8s.io/test-infra/kubetest
-    ```
+   ```bash
+   go get -u k8s.io/test-infra/kubetest
+   ```
 2. [A running `Knative Serving` cluster.]
 3. A docker repo containing [the test images](#test-images)
 
@@ -70,16 +70,17 @@ Note: this is only required when you run e2e tests locally with `go test` comman
 
 The [`upload-test-images.sh`](./upload-test-images.sh) script can be used to build and push the test images used by the e2e tests. It requires:
 
-* [`DOCKER_REPO_OVERRIDE`](https://github.com/knative/serving/blob/master/DEVELOPMENT.md#environment-setup) to be set
-* You to be [authenticated with your
+- [`DOCKER_REPO_OVERRIDE`](https://github.com/knative/serving/blob/master/DEVELOPMENT.md#environment-setup) to be set
+- You to be [authenticated with your
   `DOCKER_REPO_OVERRIDE`](https://github.com/knative/serving/blob/master/DEVELOPMENT.md#environment-setup)
-* [`docker`](https://docs.docker.com/install/) to be installed
+- [`docker`](https://docs.docker.com/install/) to be installed
 
 To run the script for all end to end test images:
 
 ```bash
 ./test/upload-test-images.sh e2e
 ```
+
 A docker tag is mandatory to avoid issues with using `latest` tag for images deployed in GCR.
 
 ### Adding new test images
@@ -92,4 +93,3 @@ When uploading test images, `ko` will build an image from this folder.
 ## Flags
 
 Flags are similar to those in [`Knative Serving`](https://github.com/knative/serving/blob/master/test/README.md#flags-1)
-

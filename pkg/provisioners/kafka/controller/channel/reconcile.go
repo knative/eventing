@@ -34,6 +34,7 @@ import (
 	eventingController "github.com/knative/eventing/pkg/controller"
 	util "github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/provisioners/kafka/controller"
+	topicUtils "github.com/knative/eventing/pkg/provisioners/utils"
 	"github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
@@ -194,7 +195,7 @@ func (r *reconciler) shouldReconcile(channel *eventingv1alpha1.Channel, clusterC
 }
 
 func (r *reconciler) provisionChannel(channel *eventingv1alpha1.Channel, kafkaClusterAdmin sarama.ClusterAdmin) error {
-	topicName := topicName(channel)
+	topicName := topicUtils.TopicName(controller.KafkaChannelSeparator, channel.Namespace, channel.Name)
 	r.logger.Info("creating topic on kafka cluster", zap.String("topic", topicName))
 
 	var arguments channelArgs
@@ -226,7 +227,7 @@ func (r *reconciler) provisionChannel(channel *eventingv1alpha1.Channel, kafkaCl
 }
 
 func (r *reconciler) deprovisionChannel(channel *eventingv1alpha1.Channel, kafkaClusterAdmin sarama.ClusterAdmin) error {
-	topicName := topicName(channel)
+	topicName := topicUtils.TopicName(controller.KafkaChannelSeparator, channel.Namespace, channel.Name)
 	r.logger.Info("deleting topic on kafka cluster", zap.String("topic", topicName))
 
 	err := kafkaClusterAdmin.DeleteTopic(topicName)
@@ -365,10 +366,6 @@ func createKafkaAdminClient(config *controller.KafkaProvisionerConfig) (sarama.C
 	saramaConf.Version = sarama.V1_1_0_0
 	saramaConf.ClientID = controllerAgentName
 	return sarama.NewClusterAdmin(config.Brokers, saramaConf)
-}
-
-func topicName(channel *eventingv1alpha1.Channel) string {
-	return fmt.Sprintf("%s.%s", channel.Namespace, channel.Name)
 }
 
 // unmarshalArguments unmarshal's a json/yaml serialized input and returns channelArgs

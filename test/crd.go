@@ -35,7 +35,7 @@ func Route(name string, namespace string, configName string) *servingv1alpha1.Ro
 		},
 		Spec: servingv1alpha1.RouteSpec{
 			Traffic: []servingv1alpha1.TrafficTarget{
-				servingv1alpha1.TrafficTarget{
+				{
 					ConfigurationName: configName,
 					Percent:           100,
 				},
@@ -45,7 +45,7 @@ func Route(name string, namespace string, configName string) *servingv1alpha1.Ro
 }
 
 // Configuration returns a Configuration object in namespace with the name names.Config
-// that uses the image specifed by imagePath.
+// that uses the image specified by imagePath.
 func Configuration(name string, namespace string, imagePath string) *servingv1alpha1.Configuration {
 	return &servingv1alpha1.Configuration{
 		ObjectMeta: metav1.ObjectMeta{
@@ -174,8 +174,9 @@ func Subscription(name string, namespace string, channel *corev1.ObjectReference
 func NGinxPod(namespace string) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "nginx",
-			Namespace: namespace,
+			Name:        "nginx",
+			Namespace:   namespace,
+			Annotations: map[string]string{"sidecar.istio.io/inject": "true"},
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{

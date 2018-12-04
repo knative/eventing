@@ -30,7 +30,7 @@ import (
 	"net/http"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/pkg/buses"
+	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"go.uber.org/zap"
 )
@@ -60,7 +60,7 @@ func makeChannelKeyFromConfig(config ChannelConfig) string {
 
 // getChannelKey extracts the channel key from the given HTTP request.
 func getChannelKey(r *http.Request) (string, error) {
-	cr, err := buses.ParseChannel(r.Host)
+	cr, err := provisioners.ParseChannel(r.Host)
 	if err != nil {
 		return "", err
 	}

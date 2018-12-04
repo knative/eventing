@@ -17,8 +17,8 @@
 source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/release.sh
 
 # Set default GCS/GCR
-: ${EVENTING_RELEASE_GCS:="knative-releases/eventing"}
-: ${EVENTING_RELEASE_GCR:="gcr.io/knative-releases"}
+: ${EVENTING_RELEASE_GCS:="knative-nightly/eventing"}
+: ${EVENTING_RELEASE_GCR:="gcr.io/knative-nightly"}
 readonly EVENTING_RELEASE_GCS
 readonly EVENTING_RELEASE_GCR
 
@@ -27,7 +27,7 @@ declare -A COMPONENTS
 COMPONENTS=(
   ["eventing.yaml"]="config"
   ["in-memory-channel.yaml"]="config/provisioners/in-memory-channel"
-  ["kafka-channel.yaml"]="config/provisioners/kafka"
+  ["kafka.yaml"]="config/provisioners/kafka"
 )
 readonly COMPONENTS
 
