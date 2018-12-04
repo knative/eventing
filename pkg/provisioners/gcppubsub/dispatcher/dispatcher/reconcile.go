@@ -58,7 +58,7 @@ type reconciler struct {
 
 	// dispatcher is used to make the actual HTTP requests to downstream subscribers.
 	dispatcher provisioners.Dispatcher
-	// reconcileChan is a Go channel that allows the reconciler to force reconcilation of a Channel.
+	// reconcileChan is a Go channel that allows the reconciler to force reconciliation of a Channel.
 	reconcileChan chan<- event.GenericEvent
 
 	pubSubClientCreator pubsubutil.PubSubClientCreator
