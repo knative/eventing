@@ -65,11 +65,22 @@ func CreateK8sService(ctx context.Context, client runtimeClient.Client, c *event
 	if k8serrors.IsNotFound(err) {
 		svc = newK8sService(c)
 		err = client.Create(ctx, svc)
+		if err != nil {
+			return nil, err
+		}
+		return svc, nil
+	} else if err != nil {
+		return nil, err
 	}
 
-	// If an error occurred in either Get or Create, we need to reconcile again.
-	if err != nil {
-		return nil, err
+	// Update the Service if it has changed.
+	expected := newK8sService(c)
+	if !equality.Semantic.DeepDerivative(expected.Spec, svc.Spec) {
+		svc.Spec = expected.Spec
+		err = client.Update(ctx, svc)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return svc, nil
@@ -96,8 +107,7 @@ func CreateVirtualService(ctx context.Context, client runtimeClient.Client, chan
 			return nil, err
 		}
 		return virtualService, nil
-	}
-	if err != nil {
+	} else if err != nil {
 		return nil, err
 	}
 
