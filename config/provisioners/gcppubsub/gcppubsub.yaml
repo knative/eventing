@@ -52,7 +52,13 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+      - "" # Core API group.
+    resources:
+      - services
+    verbs:
       - create
+      - update
   - apiGroups:
       - networking.istio.io
     resources:
