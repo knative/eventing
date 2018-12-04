@@ -78,7 +78,7 @@ func createReceiverFunction(s *SubscriptionsSupervisor, logger *zap.SugaredLogge
 }
 
 func (s *SubscriptionsSupervisor) Start(stopCh <-chan struct{}) error {
-	s.receiver.Run(stopCh)
+	s.receiver.Start(stopCh)
 	return nil
 }
 
