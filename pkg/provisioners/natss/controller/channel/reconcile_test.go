@@ -57,21 +57,21 @@ var testCases = []controllertesting.TestCase{
 	{
 		Name: "new channel with valid provisioner",
 		InitialState: []runtime.Object{
-			getNewClusterChannelProvisioner(clusterChannelProvisionerName, true),
-			getNewChannel(channelName, clusterChannelProvisionerName),
+			makeNewClusterChannelProvisioner(clusterChannelProvisionerName, true),
+			makeNewChannel(channelName, clusterChannelProvisionerName),
 			makeVirtualService(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
 		WantResult:   reconcile.Result{},
 		WantPresent: []runtime.Object{
-			getNewChannelProvisionedStatus(channelName, clusterChannelProvisionerName),
+			makeNewChannelProvisionedStatus(channelName, clusterChannelProvisionerName),
 		},
 		IgnoreTimes: true,
 	},
 	{
 		Name: "new channel with missing provisioner",
 		InitialState: []runtime.Object{
-			getNewChannel(channelName, clusterChannelProvisionerName),
+			makeNewChannel(channelName, clusterChannelProvisionerName),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
 		WantResult:   reconcile.Result{},
@@ -81,28 +81,28 @@ var testCases = []controllertesting.TestCase{
 	{
 		Name: "new channel with provisioner not managed by this controller",
 		InitialState: []runtime.Object{
-			getNewChannel(channelName, "not-our-provisioner"),
-			getNewClusterChannelProvisioner("not-our-provisioner", true),
-			getNewClusterChannelProvisioner(clusterChannelProvisionerName, true),
+			makeNewChannel(channelName, "not-our-provisioner"),
+			makeNewClusterChannelProvisioner("not-our-provisioner", true),
+			makeNewClusterChannelProvisioner(clusterChannelProvisionerName, true),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
 		WantResult:   reconcile.Result{},
 		WantPresent: []runtime.Object{
-			getNewChannel(channelName, "not-our-provisioner"),
+			makeNewChannel(channelName, "not-our-provisioner"),
 		},
 		IgnoreTimes: true,
 	},
 	{
 		Name: "new channel with provisioner not ready: error",
 		InitialState: []runtime.Object{
-			getNewClusterChannelProvisioner(clusterChannelProvisionerName, false),
-			getNewChannel(channelName, clusterChannelProvisionerName),
+			makeNewClusterChannelProvisioner(clusterChannelProvisionerName, false),
+			makeNewChannel(channelName, clusterChannelProvisionerName),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
 		WantResult:   reconcile.Result{},
 		WantErrMsg:   "ClusterChannelProvisioner " + clusterChannelProvisionerName + " is not ready",
 		WantPresent: []runtime.Object{
-			getNewChannelNotProvisionedStatus(channelName, clusterChannelProvisionerName,
+			makeNewChannelNotProvisionedStatus(channelName, clusterChannelProvisionerName,
 				"ClusterChannelProvisioner "+clusterChannelProvisionerName+" is not ready"),
 		},
 		IgnoreTimes: true,
@@ -125,7 +125,7 @@ func TestAllCases(t *testing.T) {
 	}
 }
 
-func getNewChannel(name, provisioner string) *eventingv1alpha1.Channel {
+func makeNewChannel(name, provisioner string) *eventingv1alpha1.Channel {
 	channel := &eventingv1alpha1.Channel{
 		TypeMeta:   channelType(),
 		ObjectMeta: om(testNS, name),
@@ -142,16 +142,16 @@ func getNewChannel(name, provisioner string) *eventingv1alpha1.Channel {
 	return channel
 }
 
-func getNewChannelProvisionedStatus(name, provisioner string) *eventingv1alpha1.Channel {
-	c := getNewChannel(name, provisioner)
+func makeNewChannelProvisionedStatus(name, provisioner string) *eventingv1alpha1.Channel {
+	c := makeNewChannel(name, provisioner)
 	c.Status.InitializeConditions()
 	c.Status.SetAddress(fmt.Sprintf("%s-channel.%s.svc.cluster.local", c.Name, c.Namespace))
 	c.Status.MarkProvisioned()
 	return c
 }
 
-func getNewChannelNotProvisionedStatus(name, provisioner, msg string) *eventingv1alpha1.Channel {
-	c := getNewChannel(name, provisioner)
+func makeNewChannelNotProvisionedStatus(name, provisioner, msg string) *eventingv1alpha1.Channel {
+	c := makeNewChannel(name, provisioner)
 	c.Status.InitializeConditions()
 	c.Status.MarkNotProvisioned("NotProvisioned", msg)
 	return c
@@ -164,7 +164,7 @@ func channelType() metav1.TypeMeta {
 	}
 }
 
-func getNewClusterChannelProvisioner(name string, isReady bool) *eventingv1alpha1.ClusterChannelProvisioner {
+func makeNewClusterChannelProvisioner(name string, isReady bool) *eventingv1alpha1.ClusterChannelProvisioner {
 	var condStatus corev1.ConditionStatus
 	if isReady {
 		condStatus = corev1.ConditionTrue

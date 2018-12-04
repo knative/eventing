@@ -28,6 +28,7 @@ import (
 	"time"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/provisioners/natss/controller/clusterchannelprovisioner"
 )
 
 var (
@@ -59,7 +60,7 @@ func main() {
 	var g errgroup.Group
 
 	logger.Info("Dispatcher starting...")
-	dispatcher, err := dispatcher.NewDispatcher(logger)
+	dispatcher, err := dispatcher.NewDispatcher(clusterchannelprovisioner.NatssUrl, logger)
 	if err != nil {
 		logger.Fatal("Unable to create NATSS dispatcher.", zap.Error(err))
 	}

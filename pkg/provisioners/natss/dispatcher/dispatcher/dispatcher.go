@@ -46,13 +46,13 @@ type SubscriptionsSupervisor struct {
 	subscriptions    map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription
 }
 
-func NewDispatcher(logger *zap.Logger) (*SubscriptionsSupervisor, error) {
+func NewDispatcher(natssUrl string, logger *zap.Logger) (*SubscriptionsSupervisor, error) {
 	d := &SubscriptionsSupervisor{
 		logger:        logger,
 		dispatcher:    provisioners.NewMessageDispatcher(logger.Sugar()),
 		subscriptions: make(map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription),
 	}
-	nConn, err := stanutil.Connect(clusterchannelprovisioner.ClusterId, clientId, clusterchannelprovisioner.NatssUrl, d.logger.Sugar())
+	nConn, err := stanutil.Connect(clusterchannelprovisioner.ClusterId, clientId, natssUrl, d.logger.Sugar())
 	if err != nil {
 		logger.Error("Connect() failed: ", zap.Error(err))
 		return nil, err

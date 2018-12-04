@@ -65,7 +65,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
-	// Any other error should be retried in another reconciliation.
+	// Any other error should be retrieved in another reconciliation.
 	if err != nil {
 		r.logger.Error("Unable to Get Channel", zap.Error(err))
 		return reconcile.Result{}, err
