@@ -49,21 +49,19 @@ func RemoveFinalizer(c *eventingv1alpha1.Channel, finalizerName string) {
 	c.Finalizers = finalizers.List()
 }
 
-func getK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
+func CreateK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
 	svcKey := types.NamespacedName{
 		Namespace: c.Namespace,
 		Name:      ChannelServiceName(c.Name),
 	}
-	svc := &corev1.Service{}
-	err := client.Get(ctx, svcKey, svc)
-	return svc, err
+	return createK8sService(ctx, client, svcKey, newK8sService(c))
 }
 
-func CreateK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
-	svc, err := getK8sService(ctx, client, c)
+func createK8sService(ctx context.Context, client runtimeClient.Client, svcKey types.NamespacedName, svc *corev1.Service) (*corev1.Service, error) {
+	current := &corev1.Service{}
+	err := client.Get(ctx, svcKey, current)
 
 	if k8serrors.IsNotFound(err) {
-		svc = newK8sService(c)
 		err = client.Create(ctx, svc)
 		if err != nil {
 			return nil, err
@@ -73,17 +71,17 @@ func CreateK8sService(ctx context.Context, client runtimeClient.Client, c *event
 		return nil, err
 	}
 
-	// Update the Service if it has changed.
-	expected := newK8sService(c)
-	if !equality.Semantic.DeepDerivative(expected.Spec, svc.Spec) {
-		svc.Spec = expected.Spec
-		err = client.Update(ctx, svc)
+	// spec.clusterIP is immutable and is set on existing services. If we don't set this
+	// to the same value, we will encounter an error while updating.
+	svc.Spec.ClusterIP = current.Spec.ClusterIP
+	if !equality.Semantic.DeepDerivative(svc.Spec, current.Spec) {
+		current.Spec = svc.Spec
+		err = client.Update(ctx, current)
 		if err != nil {
 			return nil, err
 		}
 	}
-
-	return svc, nil
+	return current, nil
 }
 
 func getVirtualService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*istiov1alpha3.VirtualService, error) {
