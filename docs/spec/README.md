@@ -5,8 +5,8 @@ implemented in [`eventing.knative.dev`](/pkg/apis/eventing/v1alpha1) and
 verified via [the e2e test](/test/e2e).
 
 **Updates to this spec should include a corresponding change to the API
-implementation for [eventing](/pkg/apis/eventing/v1alpha1) and [the e2e
-test](/test/e2e).**
+implementation for [eventing](/pkg/apis/eventing/v1alpha1) and
+[the e2e test](/test/e2e).**
 
 Docs in this directory:
 
@@ -18,6 +18,7 @@ Docs in this directory:
 <!-- TODO(n3wscott): * [Error conditions and reporting](errors.md) -->
 <!-- TODO(n3wscott): * [Sample API usage](normative_examples.md) -->
 
-See the [Knative Eventing Docs
-Architecture](https://github.com/knative/docs/blob/master/eventing/README.md#architecture)
-for more high level details. <!-- TODO(#498): Update the docs/Architecture page. -->
+See the
+[Knative Eventing Docs Architecture](https://github.com/knative/docs/blob/master/eventing/README.md#architecture)
+for more high level details.
+<!-- TODO(#498): Update the docs/Architecture page. -->

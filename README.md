@@ -19,6 +19,6 @@ For complete Knative Eventing documentation, see
 [Knative eventing](https://github.com/knative/docs/tree/master/eventing) or
 [Knative docs](https://github.com/knative/docs/) to learn about Knative.
 
-If you are interested in contributing, see
-[CONTRIBUTING.md](./CONTRIBUTING.md), [DEVELOPMENT.md](./DEVELOPMENT.md) and
+If you are interested in contributing, see [CONTRIBUTING.md](./CONTRIBUTING.md),
+[DEVELOPMENT.md](./DEVELOPMENT.md) and
 [Knative WORKING-GROUPS.md](https://github.com/knative/docs/blob/master/community/WORKING-GROUPS.md#events).

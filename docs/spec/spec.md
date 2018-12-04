@@ -36,8 +36,8 @@ its subscribers._
 
 ##### Owner References
 
-- Owned (non-controlling) by the ClusterChannelProvisioner used to provision
-  the Channel.
+- Owned (non-controlling) by the ClusterChannelProvisioner used to provision the
+  Channel.
 
 #### Status
 
@@ -70,7 +70,8 @@ its subscribers._
 
 ### group: eventing.knative.dev/v1alpha1
 
-_Describes a linkage between a Channel and a Callable and/or Addressable channel._
+_Describes a linkage between a Channel and a Callable and/or Addressable
+channel._
 
 ### Object Schema
 
@@ -97,7 +98,8 @@ _Describes a linkage between a Channel and a Callable and/or Addressable channel
 
 - **Ready.**
 - **FromReady.**
-- **Resolved.** True if `channel`, `subscriber`, and `reply` all resolve into valid object references which implement the appropriate spec.
+- **Resolved.** True if `channel`, `subscriber`, and `reply` all resolve into
+  valid object references which implement the appropriate spec.
 
 #### Events
 
@@ -118,8 +120,8 @@ _Describes a linkage between a Channel and a Callable and/or Addressable channel
 
 ### group: eventing.knative.dev/v1alpha1
 
-_Describes an abstract configuration of a Source system which produces events
-or a Channel system that receives and delivers events._
+_Describes an abstract configuration of a Source system which produces events or
+a Channel system that receives and delivers events._
 
 ### Object Schema
 

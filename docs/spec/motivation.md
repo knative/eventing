@@ -7,12 +7,12 @@ enable late-binding event sources and event consumers.
 
 Knative Eventing has following principles:
 
-1. Services are loosely coupled during development and deployed independently
-   on a variety of platforms (Kubernetes, VMs, SaaS or FaaS).
+1. Services are loosely coupled during development and deployed independently on
+   a variety of platforms (Kubernetes, VMs, SaaS or FaaS).
 
-1. A producer can generate events before a consumer is listening, and a
-   consumer can express an interest in an event or class of events that is not
-   yet being produced.
+1. A producer can generate events before a consumer is listening, and a consumer
+   can express an interest in an event or class of events that is not yet being
+   produced.
 
 1. Services can be connected to create new applications
    - without modifying producer or consumer.
@@ -20,8 +20,8 @@ Knative Eventing has following principles:
      producer
 
 These primitives enable producing and consuming events adhering to the
-[CloudEvents Specification](https://github.com/cloudevents/spec), in a
-decoupled way.
+[CloudEvents Specification](https://github.com/cloudevents/spec), in a decoupled
+way.
 
 Kubernetes has no primitives related to event processing, yet this is an
 essential component in serverless workloads. Eventing introduces high-level
@@ -36,8 +36,8 @@ event transport, and declarative binding of events (generated either by storage
 services or earlier computation) to further event processing and persistence.
 
 The Knative Eventing API is intended to operate independently, and interoperate
-well with the [Serving API](https://github.com/knative/serving) and [Build
-API](https://github.com/knative/build).
+well with the [Serving API](https://github.com/knative/serving) and
+[Build API](https://github.com/knative/build).
 
 ---
 

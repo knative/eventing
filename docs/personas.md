@@ -1,20 +1,19 @@
 # Knative Personas
 
-When discussing user actions, it is often helpful to [define specific
-user roles](<https://en.wikipedia.org/wiki/Persona_(user_experience)>) who
-might want to do the action.
+When discussing user actions, it is often helpful to
+[define specific user roles](<https://en.wikipedia.org/wiki/Persona_(user_experience)>)
+who might want to do the action.
 
 ## Knative Events
 
-Event generation and consumption is a core part of the serverless
-(particularly function as a service) computing model. Event generation
-and dispatch enables decoupling of event producers from consumers.
+Event generation and consumption is a core part of the serverless (particularly
+function as a service) computing model. Event generation and dispatch enables
+decoupling of event producers from consumers.
 
 ### Event consumer (developer)
 
-An event consumer may be a software developer, or may be an integrator
-which is reusing existing packaged functions to build a workflow
-without writing code.
+An event consumer may be a software developer, or may be an integrator which is
+reusing existing packaged functions to build a workflow without writing code.
 
 User stories:
 
@@ -24,8 +23,8 @@ User stories:
 
 ### Event producer
 
-An event producer owns a data source or system which produces events
-which can be acted on by event consumers.
+An event producer owns a data source or system which produces events which can
+be acted on by event consumers.
 
 User stories:
 
@@ -34,9 +33,9 @@ User stories:
 
 ## Contributors
 
-Contributors are an important part of the Knative project. As such, we
-will also consider how various infrastructure encourages and enables
-contributors to the project, as well as the impact on end-users.
+Contributors are an important part of the Knative project. As such, we will also
+consider how various infrastructure encourages and enables contributors to the
+project, as well as the impact on end-users.
 
 - Hobbyist or newcomer
 - Motivated user
