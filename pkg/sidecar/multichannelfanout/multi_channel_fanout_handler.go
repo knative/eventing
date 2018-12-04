@@ -59,9 +59,12 @@ func makeChannelKeyFromConfig(config ChannelConfig) string {
 }
 
 // getChannelKey extracts the channel key from the given HTTP request.
-func getChannelKey(r *http.Request) string {
-	cr := provisioners.ParseChannel(r.Host)
-	return makeChannelKey(cr.Namespace, cr.Name)
+func getChannelKey(r *http.Request) (string, error) {
+	cr, err := provisioners.ParseChannel(r.Host)
+	if err != nil {
+		return "", err
+	}
+	return makeChannelKey(cr.Namespace, cr.Name), nil
 }
 
 // Handler is an http.Handler that introspects the incoming request to determine what Channel it is
@@ -110,7 +113,12 @@ func (h *Handler) CopyWithNewConfig(conf Config) (*Handler, error) {
 // ServeHTTP delegates the actual handling of the request to a fanout.Handler, based on the
 // request's channel key.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	channelKey := getChannelKey(r)
+	channelKey, err := getChannelKey(r)
+	if err != nil {
+		h.logger.Error("Unable to extract channelKey", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	fh, ok := h.handlers[channelKey]
 	if !ok {
 		h.logger.Error("Unable to find a handler for request", zap.String("channelKey", channelKey))
