@@ -75,13 +75,13 @@ var testCases = []controllertesting.TestCase{
 	}, {
 		Name: "subscription but From channel does not exist",
 		InitialState: []runtime.Object{
-			getNewSubscription(),
+			Subscription(),
 		},
 		WantErrMsg: `channels.eventing.knative.dev "fromchannel" not found`,
 	}, {
 		Name: "subscription, but From is not subscribable",
 		InitialState: []runtime.Object{
-			getNewSourceSubscription(),
+			Subscription().FromSource(),
 		},
 		// TODO: JSON patch is not working on the fake, see
 		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
@@ -141,11 +141,11 @@ var testCases = []controllertesting.TestCase{
 	}, {
 		Name: "Valid channel, subscriber does not exist",
 		InitialState: []runtime.Object{
-			getNewSubscription(),
+			Subscription(),
 		},
 		WantErrMsg: `routes.serving.knative.dev "subscriberroute" not found`,
 		WantPresent: []runtime.Object{
-			getNewSubscriptionWithUnknownConditions(),
+			Subscription().UnknownConditions(),
 		},
 		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
@@ -167,10 +167,10 @@ var testCases = []controllertesting.TestCase{
 	}, {
 		Name: "Valid channel, subscriber is not callable",
 		InitialState: []runtime.Object{
-			getNewSubscription(),
+			Subscription(),
 		},
 		WantPresent: []runtime.Object{
-			getNewSubscriptionWithUnknownConditions(),
+			Subscription().UnknownConditions(),
 		},
 		WantErrMsg: "status does not contain address",
 		Scheme:     scheme.Scheme,
@@ -207,10 +207,10 @@ var testCases = []controllertesting.TestCase{
 	}, {
 		Name: "Valid channel and subscriber, result does not exist",
 		InitialState: []runtime.Object{
-			getNewSubscription(),
+			Subscription(),
 		},
 		WantPresent: []runtime.Object{
-			getNewSubscriptionWithUnknownConditionsAndPhysicalSubscriber(),
+			Subscription().UnknownConditions().PhysicalSubscriber(targetDNS),
 		},
 		WantErrMsg: `channels.eventing.knative.dev "resultchannel" not found`,
 		Scheme:     scheme.Scheme,
@@ -249,14 +249,14 @@ var testCases = []controllertesting.TestCase{
 	}, {
 		Name: "valid channel, subscriber, result is not addressable",
 		InitialState: []runtime.Object{
-			getNewSubscription(),
+			Subscription(),
 		},
 		WantErrMsg: "status does not contain address",
 		WantPresent: []runtime.Object{
 			// TODO: Again this works on gke cluster, but I need to set
 			// something else up here. later...
-			// getNewSubscriptionWithReferencesResolvedStatus(),
-			getNewSubscriptionWithUnknownConditionsAndPhysicalSubscriber(),
+			// Subscription().ReferencesResolved(),
+			Subscription().UnknownConditions().PhysicalSubscriber(targetDNS),
 		},
 		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
@@ -308,14 +308,14 @@ var testCases = []controllertesting.TestCase{
 	}, {
 		Name: "new subscription: adds status, all targets resolved, subscribers modified",
 		InitialState: []runtime.Object{
-			getNewSubscription(),
+			Subscription(),
 		},
 		// TODO: JSON patch is not working on the fake, see
 		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
 		// failure for now, until upstream is fixed.
 		WantResult: reconcile.Result{},
 		WantPresent: []runtime.Object{
-			getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberReply(),
+			Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
 		},
 		WantErrMsg: "invalid JSON document",
 		Scheme:     scheme.Scheme,
@@ -373,14 +373,14 @@ var testCases = []controllertesting.TestCase{
 	}, {
 		Name: "new subscription: adds status, all targets resolved, subscribers modified -- empty but non-nil reply",
 		InitialState: []runtime.Object{
-			getNewSubscriptionWithEmptyNonNilReply(),
+			Subscription().EmptyNonNilReply(),
 		},
 		// TODO: JSON patch is not working on the fake, see
 		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
 		// failure for now, until upstream is fixed.
 		WantResult: reconcile.Result{},
 		WantPresent: []runtime.Object{
-			getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberAndNoReply(),
+			Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).EmptyNonNilReply(),
 		},
 		WantErrMsg: "invalid JSON document",
 		Scheme:     scheme.Scheme,
@@ -419,14 +419,14 @@ var testCases = []controllertesting.TestCase{
 	}, {
 		Name: "new subscription: adds status, all targets resolved, subscribers modified -- empty but non-nil subscriber",
 		InitialState: []runtime.Object{
-			getNewSubscriptionWithEmptyNonNilSubscriber(),
+			Subscription().EmptyNonNilSubscriber(),
 		},
 		// TODO: JSON patch is not working on the fake, see
 		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
 		// failure for now, until upstream is fixed.
 		WantResult: reconcile.Result{},
 		WantPresent: []runtime.Object{
-			getNewSubscriptionWithReferencesResolvedAndPhysicalReplyAndNoSubscriber(),
+			Subscription().EmptyNonNilSubscriber().ReferencesResolved().Reply(),
 		},
 		WantErrMsg: "invalid JSON document",
 		Scheme:     scheme.Scheme,
@@ -468,11 +468,11 @@ var testCases = []controllertesting.TestCase{
 	}, {
 		Name: "new subscription to non-existent K8s Service: fails with no service found",
 		InitialState: []runtime.Object{
-			getNewSubscriptionToK8sService(),
+			Subscription().ToK8sService(),
 		},
 		WantResult: reconcile.Result{},
 		WantPresent: []runtime.Object{
-			getNewSubscriptionToK8sServiceWithUnknownConditions(),
+			Subscription().ToK8sService().UnknownConditions(),
 		},
 		WantErrMsg: "services \"testk8sservice\" not found",
 		Scheme:     scheme.Scheme,
@@ -495,7 +495,7 @@ var testCases = []controllertesting.TestCase{
 	}, {
 		Name: "new subscription to K8s Service: adds status, all targets resolved, subscribers modified",
 		InitialState: []runtime.Object{
-			getNewSubscriptionToK8sService(),
+			Subscription().ToK8sService(),
 			getK8sService(),
 		},
 		// TODO: JSON patch is not working on the fake, see
@@ -503,7 +503,7 @@ var testCases = []controllertesting.TestCase{
 		// failure for now, until upstream is fixed.
 		WantResult: reconcile.Result{},
 		WantPresent: []runtime.Object{
-			getNewSubscriptionToK8sServiceWithReferencesResolvedAndPhysicalFromSubscriberReply(),
+			Subscription().ToK8sService().ReferencesResolved().PhysicalSubscriber(k8sServiceDNS).Reply(),
 		},
 		WantErrMsg: "invalid JSON document",
 		Scheme:     scheme.Scheme,
@@ -556,7 +556,7 @@ var testCases = []controllertesting.TestCase{
 	}, {
 		Name: "new subscription with from channel: adds status, all targets resolved, subscribers modified",
 		InitialState: []runtime.Object{
-			getNewSubscriptionWithFromChannel(),
+			Subscription(),
 		},
 		// TODO: JSON patch is not working on the fake, see
 		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
@@ -564,7 +564,7 @@ var testCases = []controllertesting.TestCase{
 		WantResult: reconcile.Result{},
 		WantErrMsg: "invalid JSON document",
 		WantPresent: []runtime.Object{
-			getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromSubscriberReply(),
+			Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
 		},
 		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
@@ -638,11 +638,11 @@ var testCases = []controllertesting.TestCase{
 		InitialState: []runtime.Object{
 			// The first two Subscriptions both have the same physical From, so we should see that
 			// Channel updated with both Subscriptions.
-			getNewSubscriptionWithFromChannel(),
-			rename(getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberReply()),
+			Subscription(),
+			Subscription().Renamed().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
 			// This subscription has a different physical From, so we should not see it in the same
 			// Channel as the first two.
-			getSubscriptionWithDifferentChannel(),
+			Subscription().DifferentChannel(),
 		},
 		// TODO: JSON patch is not working on the fake, see
 		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
@@ -656,10 +656,10 @@ var testCases = []controllertesting.TestCase{
 			// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
 			// out.
 			//getChannelWithMultipleSubscriptions(),
-			getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromSubscriberReply(),
+			Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
 			// Unaltered because this Subscription was not reconciled.
-			rename(getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberReply()),
-			getSubscriptionWithDifferentChannel(),
+			Subscription().Renamed().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
+			Subscription().DifferentChannel(),
 		},
 		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
@@ -731,7 +731,7 @@ var testCases = []controllertesting.TestCase{
 	{
 		Name: "delete subscription with from channel: subscribers modified",
 		InitialState: []runtime.Object{
-			getNewDeletedSubscriptionWithChannelReady(),
+			Subscription().Deleted().ChannelReady(),
 		},
 		// TODO: JSON patch is not working on the fake, see
 		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
@@ -739,20 +739,20 @@ var testCases = []controllertesting.TestCase{
 		WantResult: reconcile.Result{},
 		WantErrMsg: "invalid JSON document",
 		WantAbsent: []runtime.Object{
-			// TODO: JSON patch is not working on the fake, see
-			// https://github.com/kubernetes/client-go/issues/478. The entire test is really to
-			// verify the following, but can't be done because the call to Patch fails (it assumes
-			// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
-			// out.
-			//getNewDeletedSubscriptionWithChannelReady(),
+		// TODO: JSON patch is not working on the fake, see
+		// https://github.com/kubernetes/client-go/issues/478. The entire test is really to
+		// verify the following, but can't be done because the call to Patch fails (it assumes
+		// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
+		// out.
+		//getNewDeletedSubscriptionWithChannelReady(),
 		},
 		WantPresent: []runtime.Object{
-			// TODO: JSON patch is not working on the fake, see
-			// https://github.com/kubernetes/client-go/issues/478. The entire test is really to
-			// verify the following, but can't be done because the call to Patch fails (it assumes
-			// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
-			// out.
-			//getChannelWithOtherSubscription(),
+		// TODO: JSON patch is not working on the fake, see
+		// https://github.com/kubernetes/client-go/issues/478. The entire test is really to
+		// verify the following, but can't be done because the call to Patch fails (it assumes
+		// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
+		// out.
+		//getChannelWithOtherSubscription(),
 		},
 		Objects: []runtime.Object{
 			// Source channel
@@ -880,17 +880,14 @@ func getNewChannel(name string) *eventingv1alpha1.Channel {
 	return channel
 }
 
-// rename renames the subscription. It is intended to be used in tests that create multiple
-// Subscriptions, so that there are no naming conflicts.
-func rename(sub *eventingv1alpha1.Subscription) *eventingv1alpha1.Subscription {
-	sub.Name = "renamed"
-	sub.UID = "renamed-UID"
-	sub.Status.PhysicalSubscription.SubscriberURI = ""
-	sub.Status.PhysicalSubscription.ReplyURI = otherAddressableDNS
-	return sub
+type SubscriptionBuilder struct {
+	*eventingv1alpha1.Subscription
 }
 
-func getNewSubscription() *eventingv1alpha1.Subscription {
+// Verify the Builder implements Buildable
+var _ controllertesting.Buildable = &SubscriptionBuilder{}
+
+func Subscription() *SubscriptionBuilder {
 	subscription := &eventingv1alpha1.Subscription{
 		TypeMeta:   subscriptionType(),
 		ObjectMeta: om(testNS, subscriptionName),
@@ -920,160 +917,92 @@ func getNewSubscription() *eventingv1alpha1.Subscription {
 
 	// selflink is not filled in when we create the object, so clear it
 	subscription.ObjectMeta.SelfLink = ""
-	return subscription
+
+	return &SubscriptionBuilder{
+		Subscription: subscription,
+	}
 }
 
-func getNewSubscriptionWithEmptyNonNilReply() *eventingv1alpha1.Subscription {
-	sub := getNewSubscription()
-	sub.Spec.Reply = &eventingv1alpha1.ReplyStrategy{}
-	return sub
+func (s *SubscriptionBuilder) Build() runtime.Object {
+	return s.Subscription
 }
 
-func getNewSubscriptionWithEmptyNonNilSubscriber() *eventingv1alpha1.Subscription {
-	sub := getNewSubscription()
-	sub.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{}
-	return sub
+func (s *SubscriptionBuilder) EmptyNonNilReply() *SubscriptionBuilder {
+	s.Spec.Reply = &eventingv1alpha1.ReplyStrategy{}
+	return s
 }
 
-func getNewSourceSubscription() *eventingv1alpha1.Subscription {
-	sub := getNewSubscription()
-	sub.Spec.Channel = corev1.ObjectReference{
+func (s *SubscriptionBuilder) EmptyNonNilSubscriber() *SubscriptionBuilder {
+	s.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{}
+	return s
+}
+
+func (s *SubscriptionBuilder) FromSource() *SubscriptionBuilder {
+	s.Spec.Channel = corev1.ObjectReference{
 		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 		Kind:       sourceKind,
 		Name:       sourceName,
 	}
-	return sub
+	return s
 }
 
-func getNewSubscriptionToK8sService() *eventingv1alpha1.Subscription {
-	sub := getNewSubscription()
-	sub.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{
+func (s *SubscriptionBuilder) ToK8sService() *SubscriptionBuilder {
+	s.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{
 		Ref: &corev1.ObjectReference{
 			Name:       k8sServiceName,
 			Kind:       "Service",
 			APIVersion: "v1",
 		},
 	}
-	return sub
-}
-
-func getNewSubscriptionToK8sServiceWithUnknownConditions() *eventingv1alpha1.Subscription {
-	sub := getNewSubscriptionToK8sService()
-	sub.Status.InitializeConditions()
-	return sub
-}
-
-func getNewSubscriptionWithFromChannel() *eventingv1alpha1.Subscription {
-	subscription := &eventingv1alpha1.Subscription{
-		TypeMeta:   subscriptionType(),
-		ObjectMeta: om(testNS, subscriptionName),
-		Spec: eventingv1alpha1.SubscriptionSpec{
-			Channel: corev1.ObjectReference{
-				Name:       fromChannelName,
-				Kind:       channelKind,
-				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-			},
-			Subscriber: &eventingv1alpha1.SubscriberSpec{
-				Ref: &corev1.ObjectReference{
-					Name:       routeName,
-					Kind:       routeKind,
-					APIVersion: "serving.knative.dev/v1alpha1",
-				},
-			},
-			Reply: &eventingv1alpha1.ReplyStrategy{
-				Channel: &corev1.ObjectReference{
-					Name:       resultChannelName,
-					Kind:       channelKind,
-					APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-				},
-			},
-		},
-	}
-	subscription.ObjectMeta.OwnerReferences = append(subscription.ObjectMeta.OwnerReferences, getOwnerReference(false))
-
-	// selflink is not filled in when we create the object, so clear it
-	subscription.ObjectMeta.SelfLink = ""
-	return subscription
-}
-
-func getNewSubscriptionWithUnknownConditions() *eventingv1alpha1.Subscription {
-	s := getNewSubscription()
-	s.Status.InitializeConditions()
-	return s
-}
-func getNewSubscriptionWithUnknownConditionsAndPhysicalSubscriber() *eventingv1alpha1.Subscription {
-	s := getNewSubscriptionWithUnknownConditions()
-	s.Status.PhysicalSubscription.SubscriberURI = domainToURL(targetDNS)
 	return s
 }
 
-func getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberAndNoReply() *eventingv1alpha1.Subscription {
-	s := getNewSubscriptionWithEmptyNonNilReply()
+func (s *SubscriptionBuilder) UnknownConditions() *SubscriptionBuilder {
 	s.Status.InitializeConditions()
+	return s
+}
+
+func (s *SubscriptionBuilder) PhysicalSubscriber(dns string) *SubscriptionBuilder {
+	s.Status.PhysicalSubscription.SubscriberURI = domainToURL(dns)
+	return s
+}
+
+func (s *SubscriptionBuilder) ReferencesResolved() *SubscriptionBuilder {
+	s = s.UnknownConditions()
 	s.Status.MarkReferencesResolved()
-	s.Status.PhysicalSubscription.SubscriberURI = domainToURL(targetDNS)
 	return s
 }
 
-func getNewSubscriptionWithReferencesResolvedAndPhysicalReplyAndNoSubscriber() *eventingv1alpha1.Subscription {
-	s := getNewSubscriptionWithEmptyNonNilSubscriber()
-	s.Status.InitializeConditions()
-	s.Status.MarkReferencesResolved()
+func (s *SubscriptionBuilder) Reply() *SubscriptionBuilder {
 	s.Status.PhysicalSubscription.ReplyURI = domainToURL(sinkableDNS)
 	return s
 }
 
-func getNewSubscriptionWithReferencesResolvedAndPhysicalSubscriberReply() *eventingv1alpha1.Subscription {
-	s := getNewSubscriptionWithUnknownConditions()
-	s.Status.MarkReferencesResolved()
-	s.Status.PhysicalSubscription.SubscriberURI = domainToURL(targetDNS)
-	s.Status.PhysicalSubscription.ReplyURI = domainToURL(sinkableDNS)
-	return s
-}
-
-func getNewSubscriptionToK8sServiceWithReferencesResolvedAndPhysicalFromSubscriberReply() *eventingv1alpha1.Subscription {
-	s := getNewSubscriptionToK8sService()
-	s.Status.InitializeConditions()
-	s.Status.MarkReferencesResolved()
-	s.Status.PhysicalSubscription = eventingv1alpha1.SubscriptionStatusPhysicalSubscription{
-		SubscriberURI: domainToURL(k8sServiceDNS),
-		ReplyURI:      domainToURL(sinkableDNS),
-	}
-	return s
-}
-
-func getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromSubscriberReply() *eventingv1alpha1.Subscription {
-	s := getNewSubscriptionWithFromChannel()
-	s.Status.InitializeConditions()
-	s.Status.MarkReferencesResolved()
-	s.Status.PhysicalSubscription = eventingv1alpha1.SubscriptionStatusPhysicalSubscription{
-		SubscriberURI: domainToURL(targetDNS),
-		ReplyURI:      domainToURL(sinkableDNS),
-	}
-	return s
-}
-
-func getNewSubscriptionWithReferencesResolvedStatus() *eventingv1alpha1.Subscription {
-	s := getNewSubscriptionWithUnknownConditions()
-	s.Status.MarkReferencesResolved()
-	return s
-}
-
-func getSubscriptionWithDifferentChannel() *eventingv1alpha1.Subscription {
-	s := getNewSubscriptionWithSourceWithReferencesResolvedAndPhysicalFromSubscriberReply()
+func (s *SubscriptionBuilder) DifferentChannel() *SubscriptionBuilder {
 	s.Name = "different-channel"
 	s.UID = "different-channel-UID"
 	s.Status.PhysicalSubscription.SubscriberURI = "some-other-domain"
 	return s
 }
 
-func getNewDeletedSubscriptionWithChannelReady() *eventingv1alpha1.Subscription {
-	s := getNewSubscriptionWithUnknownConditions()
-	s.Status.MarkReferencesResolved()
-	s.Status.PhysicalSubscription.SubscriberURI = domainToURL(targetDNS)
-	s.Status.PhysicalSubscription.ReplyURI = domainToURL(sinkableDNS)
+func (s *SubscriptionBuilder) ChannelReady() *SubscriptionBuilder {
+	s = s.ReferencesResolved()
 	s.Status.MarkChannelReady()
+	return s
+}
+
+func (s *SubscriptionBuilder) Deleted() *SubscriptionBuilder {
 	s.ObjectMeta.DeletionTimestamp = &deletionTime
+	return s
+}
+
+// Renamed renames the subscription. It is intended to be used in tests that create multiple
+// Subscriptions, so that there are no naming conflicts.
+func (s *SubscriptionBuilder) Renamed() *SubscriptionBuilder {
+	s.Name = "renamed"
+	s.UID = "renamed-UID"
+	s.Status.PhysicalSubscription.SubscriberURI = ""
+	s.Status.PhysicalSubscription.ReplyURI = otherAddressableDNS
 	return s
 }
 

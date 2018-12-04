@@ -132,7 +132,8 @@ func (tc *TestCase) GetDynamicClient() dynamic.Interface {
 
 // GetClient returns the mockClient to use for this test case.
 func (tc *TestCase) GetClient() *MockClient {
-	innerClient := fake.NewFakeClient(tc.InitialState...)
+	builtObjects := buildAllObjects(tc.InitialState)
+	innerClient := fake.NewFakeClient(builtObjects...)
 	return NewMockClient(innerClient, tc.Mocks)
 }
 
@@ -201,7 +202,8 @@ func (se stateErrors) Error() string {
 // to be present after reconciliation.
 func (tc *TestCase) VerifyWantPresent(c client.Client) error {
 	var errs stateErrors
-	for _, wp := range tc.WantPresent {
+	builtObjects := buildAllObjects(tc.WantPresent)
+	for _, wp := range builtObjects {
 		o, err := scheme.Scheme.New(wp.GetObjectKind().GroupVersionKind())
 		if err != nil {
 			errs.errors = append(errs.errors, fmt.Errorf("error creating a copy of %T: %v", wp, err))
@@ -261,4 +263,15 @@ func (tc *TestCase) VerifyWantAbsent(c client.Client) error {
 		return errs
 	}
 	return nil
+}
+
+func buildAllObjects(objs []runtime.Object) []runtime.Object {
+	builtObjs := []runtime.Object{}
+	for _, obj := range objs {
+		if builder, ok := obj.(Buildable); ok {
+			obj = builder.Build()
+		}
+		builtObjs = append(builtObjs, obj)
+	}
+	return builtObjs
 }
