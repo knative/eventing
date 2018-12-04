@@ -6,7 +6,6 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -26,33 +25,7 @@ func CreateDispatcherService(ctx context.Context, client runtimeClient.Client, c
 		Namespace: system.Namespace,
 		Name:      svcName,
 	}
-	svc := &corev1.Service{}
-	err := client.Get(ctx, svcKey, svc)
-
-	if errors.IsNotFound(err) {
-		svc = newDispatcherService(ccp)
-		err = client.Create(ctx, svc)
-		if err != nil {
-			return nil, err
-		}
-		return svc, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	expected := newDispatcherService(ccp)
-	// spec.clusterIP is immutable and is set on existing services. If we don't set this
-	// to the same value, we will encounter an error while updating.
-	expected.Spec.ClusterIP = svc.Spec.ClusterIP
-	if !equality.Semantic.DeepDerivative(expected.Spec, svc.Spec) {
-		svc.Spec = expected.Spec
-		err := client.Update(ctx, svc)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return svc, nil
+	return createK8sService(ctx, client, svcKey, newDispatcherService(ccp))
 }
 
 func UpdateClusterChannelProvisionerStatus(ctx context.Context, client runtimeClient.Client, u *eventingv1alpha1.ClusterChannelProvisioner) error {

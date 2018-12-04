@@ -184,6 +184,9 @@ func TestCreateK8sService(t *testing.T) {
 			},
 			update: func(_ runtimeClient.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
 				svc := obj.(*corev1.Service)
+				if svc.Spec.ClusterIP != "set in get" {
+					return controllertesting.Handled, errors.New("clusterIP should have been overwritten with the version returned by get")
+				}
 				makeTamperedK8sService().DeepCopyInto(svc)
 				return controllertesting.Handled, nil
 			},
