@@ -6,7 +6,7 @@ import (
 
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -24,10 +24,23 @@ const (
 	PortNumber = 80
 )
 
-func AddFinalizer(c *eventingv1alpha1.Channel, finalizerName string) {
+// AddFinalizerResult is used indicate whether a finalizer was added or already present.
+type AddFinalizerResult bool
+
+const (
+	FinalizerAlreadyPresent AddFinalizerResult = false
+	FinalizerAdded          AddFinalizerResult = true
+)
+
+// AddFinalizer adds finalizerName to the Channel.
+func AddFinalizer(c *eventingv1alpha1.Channel, finalizerName string) AddFinalizerResult {
 	finalizers := sets.NewString(c.Finalizers...)
+	if finalizers.Has(finalizerName) {
+		return FinalizerAlreadyPresent
+	}
 	finalizers.Insert(finalizerName)
 	c.Finalizers = finalizers.List()
+	return FinalizerAdded
 }
 
 func RemoveFinalizer(c *eventingv1alpha1.Channel, finalizerName string) {
@@ -49,7 +62,7 @@ func getK8sService(ctx context.Context, client runtimeClient.Client, c *eventing
 func CreateK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
 	svc, err := getK8sService(ctx, client, c)
 
-	if errors.IsNotFound(err) {
+	if k8serrors.IsNotFound(err) {
 		svc = newK8sService(c)
 		err = client.Create(ctx, svc)
 	}
@@ -76,7 +89,7 @@ func CreateVirtualService(ctx context.Context, client runtimeClient.Client, chan
 	virtualService, err := getVirtualService(ctx, client, channel)
 
 	// If the resource doesn't exist, we'll create it
-	if errors.IsNotFound(err) {
+	if k8serrors.IsNotFound(err) {
 		virtualService = newVirtualService(channel)
 		err = client.Create(ctx, virtualService)
 		if err != nil {

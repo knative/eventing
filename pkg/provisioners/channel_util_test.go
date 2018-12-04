@@ -118,6 +118,36 @@ func TestChannelUtils(t *testing.T) {
 	}
 }
 
+func TestAddFinalizer(t *testing.T) {
+	testCases := map[string]struct {
+		alreadyPresent bool
+	}{
+		"not present": {
+			alreadyPresent: false,
+		},
+		"already present": {
+			alreadyPresent: true,
+		},
+	}
+	finalizer := "test-finalizer"
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			c := getNewChannel()
+			if tc.alreadyPresent {
+				c.Finalizers = []string{finalizer}
+			} else {
+				c.Finalizers = []string{}
+			}
+			addFinalizerResult := AddFinalizer(c, finalizer)
+			if tc.alreadyPresent && addFinalizerResult != FinalizerAlreadyPresent {
+				t.Errorf("Finalizer already present, expected FinalizerAlreadyPresent. Actual %v", addFinalizerResult)
+			} else if !tc.alreadyPresent && addFinalizerResult != FinalizerAdded {
+				t.Errorf("Finalizer not already present, expected FinalizerAdded. Actual %v", addFinalizerResult)
+			}
+		})
+	}
+}
+
 func TestChannelNames(t *testing.T) {
 	testCases := []struct {
 		Name string
