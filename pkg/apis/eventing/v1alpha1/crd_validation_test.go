@@ -17,10 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/webhook"
-	"testing"
 )
 
 type CRDTest struct {

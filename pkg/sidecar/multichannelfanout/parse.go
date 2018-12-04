@@ -19,6 +19,7 @@ package multichannelfanout
 import (
 	"bytes"
 	"encoding/json"
+
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
