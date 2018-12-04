@@ -4,13 +4,10 @@
 ### Deployment steps:
 
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md).
-1. ```sbtshell
-   kubectl create namespace natss
-   kubectl label namespace natss istio-injection=enabled
-   ``` 
+1. If not done already, install a [NATS Streaming](natss)  
 1. Apply the 'natss' ClusterChannelProvisioner, Controller, and Dispatcher.
      ```shell
-     ko apply -f config/provisioners/natss/
+     ko apply -f config/provisioners/natss/provisioner.yaml
      ````
 1. Create Channels that reference the 'natss'.
 
@@ -33,10 +30,6 @@ The major components are:
 * ClusterChannelProvisioner Controller
 * Channel Controller
 * Channel Dispatcher
-
-NATS Streaming is deployed as a StatefulSet. 
-For tuning NATS Streaming, see:
-https://github.com/nats-io/nats-streaming-server#configuring
 
 The ClusterChannelProvisioner Controller and the Channel Controller are colocated in one Pod.
 ```shell
