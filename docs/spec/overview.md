@@ -1,20 +1,19 @@
 # Resource Types
 
 The API defines and provides a complete implementation for
-[Subscription](spec.md#kind-subscription) and abstract resource definitions
-for [Channels](spec.md#kind-channel) and
-[ClusterChannelProvisioners](spec.md#kind-clusterchannelprovisioner) which
-may be fulfilled by multiple backing implementations (much like the
-Kubernetes Ingress resource).
+[Subscription](spec.md#kind-subscription) and abstract resource definitions for
+[Channels](spec.md#kind-channel) and
+[ClusterChannelProvisioners](spec.md#kind-clusterchannelprovisioner) which may
+be fulfilled by multiple backing implementations (much like the Kubernetes
+Ingress resource).
 
-With extensibility and composability as a goal of Knative Eventing, the
-eventing API defines several resources that can be reduced down to well
-understood contracts. These eventing resource interfaces may be fulfilled by
-other Kubernetes objects and then composed in the same way as the concrete
-objects. The interfaces are ([Addressable](interfaces.md#addressable),
-[Subscribable](interfaces.md#Subscribable),
-[Callable](interfaces.md#callable)). For more details, see
-[Interface Contracts](interfaces.md).
+With extensibility and composability as a goal of Knative Eventing, the eventing
+API defines several resources that can be reduced down to well understood
+contracts. These eventing resource interfaces may be fulfilled by other
+Kubernetes objects and then composed in the same way as the concrete objects.
+The interfaces are ([Addressable](interfaces.md#addressable),
+[Subscribable](interfaces.md#Subscribable), [Callable](interfaces.md#callable)).
+For more details, see [Interface Contracts](interfaces.md).
 
 - A **Subscription** describes the transformation of an event and optional
   forwarding of a returned event.
@@ -26,17 +25,17 @@ objects. The interfaces are ([Addressable](interfaces.md#addressable),
 
 ![Resource Types Overview](images/resource-types-overview.svg)
 
-- **ClusterChannelProvisioners** implement strategies for realizing backing resources
-  for different implementations of _Channels_ currently active in the eventing
-  system.
+- **ClusterChannelProvisioners** implement strategies for realizing backing
+  resources for different implementations of _Channels_ currently active in the
+  eventing system.
 
 <!-- This image is sourced from https://drive.google.com/open?id=1o_0Xh5VjwpQ7Px08h_Q4qnaOdMjt4yCEPixRFwJQjh8 -->
 
 <img alt="Resource Types ClusterChannelProvisioners" src="images/resource-types-provisioner.svg" width="200">
 
 Sources are defined by independent CRDs that can be installed into a cluster.
-For more information see [Knative Eventing
-Sources](https://github.com/knative/eventing-sources).
+For more information see
+[Knative Eventing Sources](https://github.com/knative/eventing-sources).
 
 ## Subscription
 
@@ -79,8 +78,8 @@ provide cluster wide defaults for the _Channels_ they provision.
 _ClusterChannelProvisioners_ do not directly handle events. They are 1:N with
 _Channels_.
 
-For more details, see [Kind:
-ClusterChannelProvisioner](spec.md#kind-clusterchannelprovisioner).
+For more details, see
+[Kind: ClusterChannelProvisioner](spec.md#kind-clusterchannelprovisioner).
 
 ---
 

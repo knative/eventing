@@ -12,24 +12,25 @@ the [README](README.md).
    specific action
 1. Example source generating an event
 1. Example action
-1. Events conform to [CloudEvents](https://github.com/cloudevents/spec)
-   0.1 specification
+1. Events conform to [CloudEvents](https://github.com/cloudevents/spec) 0.1
+   specification
 
 ## 0.2 Friendly Repo
 
 1. Easy installation [issue#51](https://github.com/knative/eventing/issues/51)
 1. We have clear guidelines for how we use Prow
-1. All the contributing info is tested and someone new to the repo has made a
-   PR by following the directions
+1. All the contributing info is tested and someone new to the repo has made a PR
+   by following the directions
 
 ## 0.3 Functions
 
-1. An event can trigger Knative function [issue#52](https://github.com/knative/eventing/issues/52)
+1. An event can trigger Knative function
+   [issue#52](https://github.com/knative/eventing/issues/52)
 1. A local event can trigger a Google Cloud Function
 1. A Google source can trigger an action local within the Knative cluster.
    Likely this will use some scaffolding on the Google side to validate the
-   interaction between systems, such as deploying a Cloud Function that
-   forwards the Google Event to the Knative cluster.
+   interaction between systems, such as deploying a Cloud Function that forwards
+   the Google Event to the Knative cluster.
 
 ## 0.4 Event Persistence
 

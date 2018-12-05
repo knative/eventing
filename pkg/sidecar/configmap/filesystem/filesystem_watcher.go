@@ -18,6 +18,7 @@ package filesystem
 
 import (
 	"errors"
+
 	"github.com/fsnotify/fsnotify"
 	sidecarconfigmap "github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"

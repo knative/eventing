@@ -103,7 +103,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	c = c.DeepCopy()
 
 	ctx = logging.WithLogger(ctx, logging.FromContext(ctx).With(zap.Any("channel", c)))
-	reconcileErr := r.reconcile(ctx, c)
+	requeue, reconcileErr := r.reconcile(ctx, c)
 	if reconcileErr != nil {
 		logging.FromContext(ctx).Info("Error reconciling Channel", zap.Error(reconcileErr))
 		// Note that we do not return the error here, because we want to update the Status
@@ -115,7 +115,9 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{}, reconcileErr
+	return reconcile.Result{
+		Requeue: requeue,
+	}, reconcileErr
 }
 
 // shouldReconcile determines if this Controller should control (and therefore reconcile) a given
@@ -127,7 +129,10 @@ func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 	return false
 }
 
-func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) error {
+// reconcile reconciles this Channel so that the real world matches the intended state. The returned
+// boolean indicates if this Channel should be immediately requeued for another reconcile loop. The
+// returned error indicates an error during reconciliation.
+func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) (bool, error) {
 	c.Status.InitializeConditions()
 
 	// We are syncing four things:
@@ -140,48 +145,52 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	gcpCreds, err := pubsubutil.GetCredentials(ctx, r.client, r.defaultSecret, r.defaultSecretKey)
 	if err != nil {
 		logging.FromContext(ctx).Info("Unable to generate GCP creds", zap.Error(err))
-		return err
+		return false, err
 	}
 
 	if c.DeletionTimestamp != nil {
 		// K8s garbage collection will delete the K8s service and VirtualService for this channel.
 		err = r.deleteSubscriptions(ctx, c, gcpCreds, r.defaultGcpProject)
 		if err != nil {
-			return err
+			return false, err
 		}
 		err = r.deleteTopic(ctx, c, gcpCreds, r.defaultGcpProject)
 		if err != nil {
-			return err
+			return false, err
 		}
 		util.RemoveFinalizer(c, finalizerName)
-		return nil
+		return false, nil
 	}
 
-	// We use a finalizer to ensure the GCP PubSub Topic and Subscriptions are deleted.
-	util.AddFinalizer(c, finalizerName)
+	// If we are adding the finalizer for the first time, then ensure that finalizer is persisted
+	// before manipulating GCP PubSub, which will not be automatically garbage collected by K8s if
+	// this Channel is deleted.
+	if addFinalizerResult := util.AddFinalizer(c, finalizerName); addFinalizerResult == util.FinalizerAdded {
+		return true, nil
+	}
 
 	err = r.createK8sService(ctx, c)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	err = r.createVirtualService(ctx, c)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	topic, err := r.createTopic(ctx, c, gcpCreds, r.defaultGcpProject)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	err = r.createSubscriptions(ctx, c, gcpCreds, r.defaultGcpProject, topic)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	c.Status.MarkProvisioned()
-	return nil
+	return false, nil
 }
 
 func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.Channel) error {
