@@ -21,4 +21,5 @@ Docs in this directory:
 See the
 [Knative Eventing Docs Architecture](https://github.com/knative/docs/blob/master/eventing/README.md#architecture)
 for more high level details.
+
 <!-- TODO(#498): Update the docs/Architecture page. -->
