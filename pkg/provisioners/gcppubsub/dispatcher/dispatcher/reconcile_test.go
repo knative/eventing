@@ -173,13 +173,13 @@ func TestReconcile(t *testing.T) {
 				makeDeletingChannelWithoutFinalizer(),
 			},
 		},
-				{
+		{
 			Name: "Finalizer added",
 			InitialState: []runtime.Object{
 				makeChannelWithSubscribers(),
 			},
 			WantResult: reconcile.Result{
-				Requeue:true,
+				Requeue: true,
 			},
 			WantPresent: []runtime.Object{
 				makeChannelWithSubscribersAndFinalizer(),
