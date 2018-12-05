@@ -356,21 +356,21 @@ func TestChannelNames(t *testing.T) {
 		F    func() string
 		Want string
 	}{{
-		Name: "ChannelVirtualServiceName",
+		Name: "channelVirtualServiceName",
 		F: func() string {
-			return ChannelVirtualServiceName("foo")
+			return channelVirtualServiceName("foo")
 		},
 		Want: "foo-channel",
 	}, {
-		Name: "ChannelServiceName",
+		Name: "channelServiceName",
 		F: func() string {
-			return ChannelServiceName("foo")
+			return channelServiceName("foo")
 		},
 		Want: "foo-channel",
 	}, {
-		Name: "ChannelHostName",
+		Name: "channelHostName",
 		F: func() string {
-			return ChannelHostName("foo", "namespace")
+			return channelHostName("foo", "namespace")
 		},
 		Want: "foo.namespace.channels.cluster.local",
 	}}

@@ -169,12 +169,12 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		return true, nil
 	}
 
-	err = r.createK8sService(ctx, c)
+	svc, err := r.createK8sService(ctx, c)
 	if err != nil {
 		return false, err
 	}
 
-	err = r.createVirtualService(ctx, c)
+	err = r.createVirtualService(ctx, c, svc)
 	if err != nil {
 		return false, err
 	}
@@ -193,11 +193,11 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	return false, nil
 }
 
-func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.Channel) error {
+func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.Channel) (*v1.Service, error) {
 	svc, err := util.CreateK8sService(ctx, r.client, c)
 	if err != nil {
 		logging.FromContext(ctx).Info("Error creating the Channel's K8s Service", zap.Error(err))
-		return err
+		return nil, err
 	}
 
 	// Check if this Channel is the owner of the K8s service.
@@ -206,11 +206,11 @@ func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.C
 	}
 
 	c.Status.SetAddress(controller.ServiceHostName(svc.Name, svc.Namespace))
-	return nil
+	return svc, nil
 }
 
-func (r *reconciler) createVirtualService(ctx context.Context, c *eventingv1alpha1.Channel) error {
-	virtualService, err := util.CreateVirtualService(ctx, r.client, c)
+func (r *reconciler) createVirtualService(ctx context.Context, c *eventingv1alpha1.Channel, svc *v1.Service) error {
+	virtualService, err := util.CreateVirtualService(ctx, r.client, c, svc)
 	if err != nil {
 		logging.FromContext(ctx).Info("Error creating the Virtual Service for the Channel", zap.Error(err))
 		return err

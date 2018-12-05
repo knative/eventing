@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/labels"
+
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -50,17 +51,44 @@ func RemoveFinalizer(c *eventingv1alpha1.Channel, finalizerName string) {
 }
 
 func CreateK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
-	svcKey := types.NamespacedName{
-		Namespace: c.Namespace,
-		Name:      ChannelServiceName(c.Name),
+	getSvc := func() (*corev1.Service, error) {
+		return getK8sService(ctx, client, c)
 	}
-	return createK8sService(ctx, client, svcKey, newK8sService(c))
+	return createK8sService(ctx, client, getSvc, newK8sService(c))
 }
 
-func createK8sService(ctx context.Context, client runtimeClient.Client, svcKey types.NamespacedName, svc *corev1.Service) (*corev1.Service, error) {
-	current := &corev1.Service{}
-	err := client.Get(ctx, svcKey, current)
+func getK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
+	list := &corev1.ServiceList{}
+	opts := &runtimeClient.ListOptions{
+		Namespace:     c.Namespace,
+		LabelSelector: labels.SelectorFromSet(k8sServiceLabels(c)),
+		// TODO this is here because the fake client needs it. Remove this when it's no longer
+		// needed.
+		Raw: &metav1.ListOptions{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: corev1.SchemeGroupVersion.String(),
+				Kind:       "Service",
+			},
+		},
+	}
 
+	err := client.List(ctx, opts, list)
+	if err != nil {
+		return nil, err
+	}
+	for _, svc := range list.Items {
+		if metav1.IsControlledBy(&svc, c) {
+			return &svc, nil
+		}
+	}
+
+	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
+}
+
+type getService func() (*corev1.Service, error)
+
+func createK8sService(ctx context.Context, client runtimeClient.Client, getSvc getService, svc *corev1.Service) (*corev1.Service, error) {
+	current, err := getSvc()
 	if k8serrors.IsNotFound(err) {
 		err = client.Create(ctx, svc)
 		if err != nil {
@@ -85,21 +113,39 @@ func createK8sService(ctx context.Context, client runtimeClient.Client, svcKey t
 }
 
 func getVirtualService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*istiov1alpha3.VirtualService, error) {
-	vsk := runtimeClient.ObjectKey{
-		Namespace: c.Namespace,
-		Name:      ChannelVirtualServiceName(c.ObjectMeta.Name),
+	list := &istiov1alpha3.VirtualServiceList{}
+	opts := &runtimeClient.ListOptions{
+		Namespace:     c.Namespace,
+		LabelSelector: labels.SelectorFromSet(virtualServiceLabels(c)),
+		// TODO this is here because the fake client needs it. Remove this when it's no longer
+		// needed.
+		Raw: &metav1.ListOptions{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: istiov1alpha3.SchemeGroupVersion.String(),
+				Kind:       "VirtualService",
+			},
+		},
 	}
-	vs := &istiov1alpha3.VirtualService{}
-	err := client.Get(ctx, vsk, vs)
-	return vs, err
+
+	err := client.List(ctx, opts, list)
+	if err != nil {
+		return nil, err
+	}
+	for _, vs := range list.Items {
+		if metav1.IsControlledBy(&vs, c) {
+			return &vs, nil
+		}
+	}
+
+	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
 }
 
-func CreateVirtualService(ctx context.Context, client runtimeClient.Client, channel *eventingv1alpha1.Channel) (*istiov1alpha3.VirtualService, error) {
+func CreateVirtualService(ctx context.Context, client runtimeClient.Client, channel *eventingv1alpha1.Channel, svc *corev1.Service) (*istiov1alpha3.VirtualService, error) {
 	virtualService, err := getVirtualService(ctx, client, channel)
 
 	// If the resource doesn't exist, we'll create it
 	if k8serrors.IsNotFound(err) {
-		virtualService = newVirtualService(channel)
+		virtualService = newVirtualService(channel, svc)
 		err = client.Create(ctx, virtualService)
 		if err != nil {
 			return nil, err
@@ -112,7 +158,7 @@ func CreateVirtualService(ctx context.Context, client runtimeClient.Client, chan
 	// Update VirtualService if it has changed. This is possible since in version 0.2.0, the destinationHost in
 	// spec.HTTP.Route for the dispatcher was changed from *-clusterbus to *-dispatcher. Even otherwise, this
 	// reconciliation is useful for the future mutations to the object.
-	expected := newVirtualService(channel)
+	expected := newVirtualService(channel, svc)
 	if !equality.Semantic.DeepDerivative(expected.Spec, virtualService.Spec) {
 		virtualService.Spec = expected.Spec
 		err := client.Update(ctx, virtualService)
@@ -151,15 +197,11 @@ func UpdateChannel(ctx context.Context, client runtimeClient.Client, u *eventing
 // OwnerReferences on the resource so handleObject can discover the Channel resource that 'owns' it.
 // As well as being garbage collected when the Channel is deleted.
 func newK8sService(c *eventingv1alpha1.Channel) *corev1.Service {
-	labels := map[string]string{
-		"channel":     c.Name,
-		"provisioner": c.Spec.Provisioner.Name,
-	}
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      ChannelServiceName(c.ObjectMeta.Name),
-			Namespace: c.Namespace,
-			Labels:    labels,
+			GenerateName: channelServiceName(c.ObjectMeta.Name),
+			Namespace:    c.Namespace,
+			Labels:       k8sServiceLabels(c),
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(c, schema.GroupVersionKind{
 					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
@@ -179,20 +221,28 @@ func newK8sService(c *eventingv1alpha1.Channel) *corev1.Service {
 	}
 }
 
+func k8sServiceLabels(c *eventingv1alpha1.Channel) map[string]string {
+	return map[string]string{
+		"channel":     c.Name,
+		"provisioner": c.Spec.Provisioner.Name,
+	}
+}
+
+func virtualServiceLabels(c *eventingv1alpha1.Channel) map[string]string {
+	// Use the same labels as the K8s service.
+	return k8sServiceLabels(c)
+}
+
 // newVirtualService creates a new VirtualService for a Channel resource. It also sets the
 // appropriate OwnerReferences on the resource so handleObject can discover the Channel resource
 // that 'owns' it. As well as being garbage collected when the Channel is deleted.
-func newVirtualService(channel *eventingv1alpha1.Channel) *istiov1alpha3.VirtualService {
-	labels := map[string]string{
-		"channel":     channel.Name,
-		"provisioner": channel.Spec.Provisioner.Name,
-	}
-	destinationHost := controller.ServiceHostName(ChannelDispatcherServiceName(channel.Spec.Provisioner.Name), system.Namespace)
+func newVirtualService(channel *eventingv1alpha1.Channel, svc *corev1.Service) *istiov1alpha3.VirtualService {
+	destinationHost := controller.ServiceHostName(channelDispatcherServiceName(channel.Spec.Provisioner.Name), system.Namespace)
 	return &istiov1alpha3.VirtualService{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      ChannelVirtualServiceName(channel.Name),
-			Namespace: channel.Namespace,
-			Labels:    labels,
+			GenerateName: channelVirtualServiceName(channel.Name),
+			Namespace:    channel.Namespace,
+			Labels:       virtualServiceLabels(channel),
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(channel, schema.GroupVersionKind{
 					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
@@ -203,12 +253,12 @@ func newVirtualService(channel *eventingv1alpha1.Channel) *istiov1alpha3.Virtual
 		},
 		Spec: istiov1alpha3.VirtualServiceSpec{
 			Hosts: []string{
-				controller.ServiceHostName(ChannelServiceName(channel.Name), channel.Namespace),
-				ChannelHostName(channel.Name, channel.Namespace),
+				controller.ServiceHostName(svc.Name, channel.Namespace),
+				channelHostName(channel.Name, channel.Namespace),
 			},
 			Http: []istiov1alpha3.HTTPRoute{{
 				Rewrite: &istiov1alpha3.HTTPRewrite{
-					Authority: ChannelHostName(channel.Name, channel.Namespace),
+					Authority: channelHostName(channel.Name, channel.Namespace),
 				},
 				Route: []istiov1alpha3.DestinationWeight{{
 					Destination: istiov1alpha3.Destination{
@@ -223,14 +273,14 @@ func newVirtualService(channel *eventingv1alpha1.Channel) *istiov1alpha3.Virtual
 	}
 }
 
-func ChannelVirtualServiceName(channelName string) string {
-	return fmt.Sprintf("%s-channel", channelName)
+func channelVirtualServiceName(channelName string) string {
+	return fmt.Sprintf("%s-channel-", channelName)
 }
 
-func ChannelServiceName(channelName string) string {
-	return fmt.Sprintf("%s-channel", channelName)
+func channelServiceName(channelName string) string {
+	return fmt.Sprintf("%s-channel-", channelName)
 }
 
-func ChannelHostName(channelName, namespace string) string {
+func channelHostName(channelName, namespace string) string {
 	return fmt.Sprintf("%s.%s.channels.cluster.local", channelName, namespace)
 }

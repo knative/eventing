@@ -120,9 +120,9 @@ func TestNames(t *testing.T) {
 		F    func() string
 		Want string
 	}{{
-		Name: "ChannelDispatcherServiceName",
+		Name: "channelDispatcherServiceName",
 		F: func() string {
-			return ChannelDispatcherServiceName("foo")
+			return channelDispatcherServiceName("foo")
 		},
 		Want: "foo-dispatcher",
 	}}

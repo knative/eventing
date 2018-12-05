@@ -150,8 +150,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 	c.Status.SetAddress(controller.ServiceHostName(svc.Name, svc.Namespace))
 
-	virtualService, err := util.CreateVirtualService(ctx, r.client, c)
-
+	virtualService, err := util.CreateVirtualService(ctx, r.client, c, svc)
 	if err != nil {
 		logger.Info("Error creating the Virtual Service for the Channel", zap.Error(err))
 		return err
