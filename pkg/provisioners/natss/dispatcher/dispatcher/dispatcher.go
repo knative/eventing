@@ -82,13 +82,13 @@ func (s *SubscriptionsSupervisor) Start(stopCh <-chan struct{}) error {
 	return nil
 }
 
-func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel *eventingv1alpha1.Channel) error {
+func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel *eventingv1alpha1.Channel, isFinalizer bool) error {
 	s.subscriptionsMux.Lock()
 	defer s.subscriptionsMux.Unlock()
 
 	cRef := provisioners.ChannelReference{Namespace: channel.Namespace, Name: channel.Name}
 
-	if channel.Spec.Subscribable == nil {
+	if (channel.Spec.Subscribable == nil || isFinalizer) {
 		s.logger.Sugar().Infof("Empty subscriptions for channel Ref: %v; unsubscribe all active subscriptions, if any", cRef)
 		chMap, ok := s.subscriptions[cRef]
 		if !ok {

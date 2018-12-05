@@ -32,6 +32,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 const (
@@ -122,6 +123,22 @@ func TestAllCases(t *testing.T) {
 		}
 		t.Logf("Running test %s", tc.Name)
 		t.Run(tc.Name, tc.Runner(t, r, c))
+	}
+}
+
+func TestInjectClient(t *testing.T) {
+	r := &reconciler{}
+	orig := r.client
+	n := fake.NewFakeClient()
+	if orig == n {
+		t.Errorf("Original and new clients are identical: %v", orig)
+	}
+	err := r.InjectClient(n)
+	if err != nil {
+		t.Errorf("Unexpected error injecting the client: %v", err)
+	}
+	if n != r.client {
+		t.Errorf("Unexpected client. Expected: '%v'. Actual: '%v'", n, r.client)
 	}
 }
 

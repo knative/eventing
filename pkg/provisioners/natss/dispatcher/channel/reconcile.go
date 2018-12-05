@@ -29,7 +29,6 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	ccpcontroller "github.com/knative/eventing/pkg/provisioners/natss/controller/clusterchannelprovisioner"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type reconciler struct {
@@ -39,6 +38,10 @@ type reconciler struct {
 
 	subscriptionsSupervisor *dispatcher.SubscriptionsSupervisor
 }
+
+const (
+	finalizerName = controllerAgentName
+)
 
 // Verify the struct implements reconcile.Reconciler
 var _ reconcile.Reconciler = &reconciler{}
@@ -58,13 +61,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// The Channel may have been deleted since it was added to the workqueue.
 	if errors.IsNotFound(err) {
 		r.logger.Info("Could not find Channel", zap.Error(err))
-		// unsubscribe all active subscriptions for this channel
-		c.Namespace = request.NamespacedName.Namespace
-		c.Name = request.NamespacedName.Name
-		if err := r.subscriptionsSupervisor.UpdateSubscriptions(c); err != nil {
-			r.logger.Error("UpdateSubscriptions() failed: ", zap.Error(err))
-			return reconcile.Result{}, err
-		}
 		return reconcile.Result{}, nil
 	}
 
@@ -83,7 +79,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// Modify a copy, not the original.
 	c = c.DeepCopy()
 
-	reconcileErr := r.reconcile(ctx, c)
+	requeue, reconcileErr := r.reconcile(ctx, c)
 	if reconcileErr != nil {
 		r.logger.Error("Error reconciling Channel", zap.Error(reconcileErr))
 		// Note that we do not return the error here, because we want to update the Status regardless of the error.
@@ -94,7 +90,9 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, updateStatusErr
 	}
 
-	return reconcile.Result{}, reconcileErr
+	return reconcile.Result{
+		Requeue: requeue,
+	}, reconcileErr
 }
 
 func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
@@ -104,59 +102,25 @@ func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 	return false
 }
 
-func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) error {
-	if err := r.syncChannel(ctx); err != nil {
-		r.logger.Error("Error updating syncing the Channel config", zap.Error(err))
-		return err
+func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) (bool, error) {
+	if !c.DeletionTimestamp.IsZero() {
+		if err := r.subscriptionsSupervisor.UpdateSubscriptions(c, true); err != nil {
+			r.logger.Error("UpdateSubscriptions() failed: ", zap.Error(err))
+			return false, err
+		}
+		provisioners.RemoveFinalizer(c, finalizerName)
+		return false, nil
 	}
-	return nil
-}
 
-func (r *reconciler) syncChannel(ctx context.Context) error {
-	channels, err := r.listAllChannels(ctx)
-	if err != nil {
-		r.logger.Error("Unable to list channels", zap.Error(err))
-		return err
+	// If we are adding the finalizer for the first time, then ensure that finalizer is persisted
+	if addFinalizerResult := provisioners.AddFinalizer(c, finalizerName); addFinalizerResult == provisioners.FinalizerAdded {
+		return true, nil
 	}
 
 	// try to subscribe
-	var updateErr error
-	for _, c := range channels {
-		if err := r.subscriptionsSupervisor.UpdateSubscriptions(&c); err != nil {
-			r.logger.Error("UpdateSubscriptions() failed: ", zap.Error(err))
-			updateErr = err
-		}
+	if err := r.subscriptionsSupervisor.UpdateSubscriptions(c, false); err != nil {
+		r.logger.Error("UpdateSubscriptions() failed: ", zap.Error(err))
+		return false, err
 	}
-	return updateErr
-}
-
-func (r *reconciler) listAllChannels(ctx context.Context) ([]eventingv1alpha1.Channel, error) {
-	channels := make([]eventingv1alpha1.Channel, 0)
-
-	opts := &client.ListOptions{
-		// TODO this is here because the fake client needs it. Remove this when it's no longer needed.
-		Raw: &metav1.ListOptions{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-				Kind:       "Channel",
-			},
-		},
-	}
-	for {
-		cl := &eventingv1alpha1.ChannelList{}
-		if err := r.client.List(ctx, opts, cl); err != nil {
-			return nil, err
-		}
-
-		for _, c := range cl.Items {
-			if r.shouldReconcile(&c) {
-				channels = append(channels, c)
-			}
-		}
-		if cl.Continue != "" {
-			opts.Raw.Continue = cl.Continue
-		} else {
-			return channels, nil
-		}
-	}
+	return false, nil
 }
