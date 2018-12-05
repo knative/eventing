@@ -55,8 +55,6 @@ rules:
       - "" # Core API group.
     resources:
       - services
-    resourceNames:
-      - kafka-dispatcher
     verbs:
       - update
   - apiGroups:
