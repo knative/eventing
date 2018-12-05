@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/knative/pkg/apis"
@@ -23,7 +25,7 @@ const (
 	otherClusterChannelProvisionerName = "kafka-new"
 	testClusterIP                      = "10.59.249.3"
 
-	ccpUID = "test-ccp-uid"
+	ccpUID = types.UID("test-ccp-uid")
 )
 
 func TestProvisionerUtils(t *testing.T) {
@@ -141,10 +143,9 @@ func TestNames(t *testing.T) {
 func getNewClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvisioner {
 	clusterChannelProvisioner := &eventingv1alpha1.ClusterChannelProvisioner{
 		TypeMeta:   ClusterChannelProvisionerType(),
-		ObjectMeta: om(testNS, clusterChannelProvisionerName),
+		ObjectMeta: om(testNS, clusterChannelProvisionerName, ccpUID),
 		Spec:       eventingv1alpha1.ClusterChannelProvisionerSpec{},
 	}
-	clusterChannelProvisioner.UID = ccpUID
 	// selflink is not filled in when we create the object, so clear it
 	clusterChannelProvisioner.ObjectMeta.SelfLink = ""
 	return clusterChannelProvisioner

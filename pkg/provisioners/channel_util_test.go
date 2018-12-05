@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -26,7 +28,7 @@ import (
 
 const (
 	channelName = "test-channel"
-	channelUID  = "test-channel-uid"
+	channelUID  = types.UID("test-channel-uid")
 	testNS      = "test-namespace"
 )
 
@@ -437,7 +439,7 @@ func TestChannelNames(t *testing.T) {
 func getNewChannel() *eventingv1alpha1.Channel {
 	channel := &eventingv1alpha1.Channel{
 		TypeMeta:   channelType(),
-		ObjectMeta: om(testNS, channelName),
+		ObjectMeta: om(testNS, channelName, channelUID),
 		Spec: eventingv1alpha1.ChannelSpec{
 			Provisioner: &corev1.ObjectReference{
 				Name:       clusterChannelProvisionerName,
@@ -458,11 +460,11 @@ func channelType() metav1.TypeMeta {
 	}
 }
 
-func om(namespace, name string) metav1.ObjectMeta {
+func om(namespace, name string, uid types.UID) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
 		Namespace: namespace,
 		Name:      name,
-		UID:       channelUID,
+		UID:       uid,
 		SelfLink:  fmt.Sprintf("/apis/eventing/v1alpha1/namespaces/%s/object/%s", namespace, name),
 	}
 }
