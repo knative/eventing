@@ -20,8 +20,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"testing"
+
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 
