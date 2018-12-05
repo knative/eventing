@@ -16,12 +16,6 @@
 
 source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/release.sh
 
-# Set default GCS/GCR
-: ${EVENTING_RELEASE_GCS:="knative-nightly/eventing"}
-: ${EVENTING_RELEASE_GCR:="gcr.io/knative-nightly"}
-readonly EVENTING_RELEASE_GCS
-readonly EVENTING_RELEASE_GCR
-
 # Yaml files to generate, and the source config dir for them.
 declare -A COMPONENTS
 COMPONENTS=(
@@ -37,9 +31,6 @@ RELEASES=(
 )
 readonly RELEASES
 
-# Set the repository
-export KO_DOCKER_REPO=${EVENTING_RELEASE_GCR}
-
 # Script entry point.
 
 initialize $@
@@ -49,12 +40,9 @@ set -o pipefail
 
 run_validation_tests ./test/presubmit-tests.sh
 
-banner "Building the release"
+# Build the release
 
-echo "- Destination GCR: ${KO_DOCKER_REPO}"
-if (( PUBLISH_RELEASE )); then
-  echo "- Destination GCS: ${EVENTING_RELEASE_GCS}"
-fi
+banner "Building the release"
 
 # Build the components
 
@@ -64,7 +52,7 @@ for yaml in "${!COMPONENTS[@]}"; do
   config="${COMPONENTS[${yaml}]}"
   echo "Building Knative Eventing - ${config}"
   ko resolve ${KO_FLAGS} -f ${config}/ > ${yaml}
-  tag_images_in_yaml ${yaml} ${KO_DOCKER_REPO} ${TAG}
+  tag_images_in_yaml ${yaml}
   all_yamls+=(${yaml})
 done
 
@@ -77,7 +65,7 @@ for yaml in "${!RELEASES[@]}"; do
     echo "# ${component}" >> ${yaml}
     cat ${component} >> ${yaml}
   done
-  tag_images_in_yaml ${yaml} ${KO_DOCKER_REPO} ${TAG}
+  tag_images_in_yaml ${yaml}
   all_yamls+=(${yaml})
 done
 
@@ -90,8 +78,7 @@ fi
 # Publish the release
 
 for yaml in ${all_yamls[@]}; do
-  echo "Publishing ${yaml}"
-  publish_yaml ${yaml} ${EVENTING_RELEASE_GCS} ${TAG}
+  publish_yaml ${yaml}
 done
 
 branch_release "Knative Eventing" "${all_yamls[*]}"
