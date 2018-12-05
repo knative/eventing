@@ -22,6 +22,8 @@ const (
 	clusterChannelProvisionerName      = "kafka"
 	otherClusterChannelProvisionerName = "kafka-new"
 	testClusterIP                      = "10.59.249.3"
+
+	ccpUID = "test-ccp-uid"
 )
 
 func TestProvisionerUtils(t *testing.T) {
@@ -142,6 +144,7 @@ func getNewClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvision
 		ObjectMeta: om(testNS, clusterChannelProvisionerName),
 		Spec:       eventingv1alpha1.ClusterChannelProvisionerSpec{},
 	}
+	clusterChannelProvisioner.UID = ccpUID
 	// selflink is not filled in when we create the object, so clear it
 	clusterChannelProvisioner.ObjectMeta.SelfLink = ""
 	return clusterChannelProvisioner
@@ -164,6 +167,7 @@ func makeDispatcherService() *corev1.Service {
 					APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
 					Kind:               "ClusterChannelProvisioner",
 					Name:               clusterChannelProvisionerName,
+					UID:                ccpUID,
 					Controller:         &truePointer,
 					BlockOwnerDeletion: &truePointer,
 				},

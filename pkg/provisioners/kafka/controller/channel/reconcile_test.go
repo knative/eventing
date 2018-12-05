@@ -54,6 +54,10 @@ var (
 	truePointer = true
 
 	deletedTs = metav1.Now().Rfc3339Copy()
+
+	// serviceAddress is the address of the K8s Service. It uses a GeneratedName and the fake client
+	// does not fill in Name, so the name is the empty string.
+	serviceAddress = fmt.Sprintf("%s.%s.svc.cluster.local", "", testNS)
 )
 
 func init() {
@@ -445,7 +449,7 @@ func getNewChannelWithArgs(name string, args map[string]interface{}) *eventingv1
 func getNewChannelProvisionedStatus(name, provisioner string) *eventingv1alpha1.Channel {
 	c := getNewChannel(name, provisioner)
 	c.Status.InitializeConditions()
-	c.Status.SetAddress(fmt.Sprintf("%s-channel.%s.svc.cluster.local", c.Name, c.Namespace))
+	c.Status.SetAddress(serviceAddress)
 	c.Status.MarkProvisioned()
 	c.Finalizers = []string{finalizerName}
 	return c
@@ -525,7 +529,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 		},
 		Spec: istiov1alpha3.VirtualServiceSpec{
 			Hosts: []string{
-				fmt.Sprintf("%s-channel.%s.svc.cluster.local", channelName, testNS),
+				serviceAddress,
 				fmt.Sprintf("%s.%s.channels.cluster.local", channelName, testNS),
 			},
 			Http: []istiov1alpha3.HTTPRoute{{

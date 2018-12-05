@@ -28,9 +28,8 @@ import (
 	"github.com/knative/pkg/logging"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2/google"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -200,26 +199,15 @@ func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.C
 		return nil, err
 	}
 
-	// Check if this Channel is the owner of the K8s service.
-	if !metav1.IsControlledBy(svc, c) {
-		logging.FromContext(ctx).Warn("Channel's K8s Service is not owned by the Channel", zap.Any("channel", c), zap.Any("service", svc))
-	}
-
 	c.Status.SetAddress(controller.ServiceHostName(svc.Name, svc.Namespace))
 	return svc, nil
 }
 
 func (r *reconciler) createVirtualService(ctx context.Context, c *eventingv1alpha1.Channel, svc *v1.Service) error {
-	virtualService, err := util.CreateVirtualService(ctx, r.client, c, svc)
+	_, err := util.CreateVirtualService(ctx, r.client, c, svc)
 	if err != nil {
 		logging.FromContext(ctx).Info("Error creating the Virtual Service for the Channel", zap.Error(err))
 		return err
-	}
-
-	// If the Virtual Service is not controlled by this Channel, we should log a warning, but don't
-	// consider it an error.
-	if !metav1.IsControlledBy(virtualService, c) {
-		logging.FromContext(ctx).Warn("VirtualService not owned by Channel", zap.Any("channel", c), zap.Any("virtualService", virtualService))
 	}
 	return nil
 }

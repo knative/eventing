@@ -65,6 +65,10 @@ var (
 
 	truePointer = true
 
+	// serviceAddress is the address of the K8s Service. It uses a GeneratedName and the fake client
+	// does not fill in Name, so the name is the empty string.
+	serviceAddress = fmt.Sprintf("%s.%s.svc.cluster.local", "", cNamespace)
+
 	// channelsConfig and channels are linked together. A change to one, will likely require a
 	// change to the other. channelsConfig is the serialized config of channels for everything
 	// provisioned by the in-memory-provisioner.
@@ -306,7 +310,7 @@ func TestReconcile(t *testing.T) {
 				makeConfigMap(),
 			},
 			Mocks: controllertesting.Mocks{
-				MockGets: errorGettingK8sService(),
+				MockLists: errorListingK8sService(),
 			},
 			WantPresent: []runtime.Object{
 				makeChannelWithFinalizer(),
@@ -329,17 +333,6 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 		},
 		{
-			Name: "K8s service already exists - not owned by Channel",
-			InitialState: []runtime.Object{
-				makeChannel(),
-				makeConfigMap(),
-				makeK8sServiceNotOwnedByChannel(),
-			},
-			WantPresent: []runtime.Object{
-				makeReadyChannel(),
-			},
-		},
-		{
 			Name: "Virtual service get fails",
 			InitialState: []runtime.Object{
 				makeChannel(),
@@ -348,7 +341,7 @@ func TestReconcile(t *testing.T) {
 				makeVirtualService(),
 			},
 			Mocks: controllertesting.Mocks{
-				MockGets: errorGettingVirtualService(),
+				MockLists: errorListingVirtualService(),
 			},
 			WantPresent: []runtime.Object{
 				// TODO: This should have a useful error message saying that the VirtualService
@@ -373,18 +366,6 @@ func TestReconcile(t *testing.T) {
 				makeChannelWithFinalizerAndAddress(),
 			},
 			WantErrMsg: testErrorMessage,
-		},
-		{
-			Name: "VirtualService already exists - not owned by Channel",
-			InitialState: []runtime.Object{
-				makeChannel(),
-				makeConfigMap(),
-				makeK8sService(),
-				makeVirtualServiceNowOwnedByChannel(),
-			},
-			WantPresent: []runtime.Object{
-				makeReadyChannel(),
-			},
 		},
 		{
 			Name: "Channel get for update fails",
@@ -518,7 +499,7 @@ func makeChannel() *eventingv1alpha1.Channel {
 
 func makeChannelWithFinalizerAndAddress() *eventingv1alpha1.Channel {
 	c := makeChannelWithFinalizer()
-	c.Status.SetAddress(fmt.Sprintf("%s-channel.%s.svc.cluster.local", c.Name, c.Namespace))
+	c.Status.SetAddress(serviceAddress)
 	return c
 }
 
@@ -592,8 +573,8 @@ func makeK8sService() *corev1.Service {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-channel", cName),
-			Namespace: cNamespace,
+			GenerateName: fmt.Sprintf("%s-channel-", cName),
+			Namespace:    cNamespace,
 			Labels: map[string]string{
 				"channel":     cName,
 				"provisioner": ccpName,
@@ -620,12 +601,6 @@ func makeK8sService() *corev1.Service {
 	}
 }
 
-func makeK8sServiceNotOwnedByChannel() *corev1.Service {
-	svc := makeK8sService()
-	svc.OwnerReferences = nil
-	return svc
-}
-
 func makeVirtualService() *istiov1alpha3.VirtualService {
 	return &istiov1alpha3.VirtualService{
 		TypeMeta: metav1.TypeMeta{
@@ -633,8 +608,8 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 			Kind:       "VirtualService",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-channel", cName),
-			Namespace: cNamespace,
+			GenerateName: fmt.Sprintf("%s-channel-", cName),
+			Namespace:    cNamespace,
 			Labels: map[string]string{
 				"channel":     cName,
 				"provisioner": ccpName,
@@ -652,7 +627,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 		},
 		Spec: istiov1alpha3.VirtualServiceSpec{
 			Hosts: []string{
-				fmt.Sprintf("%s-channel.%s.svc.cluster.local", cName, cNamespace),
+				serviceAddress,
 				fmt.Sprintf("%s.%s.channels.cluster.local", cName, cNamespace),
 			},
 			Http: []istiov1alpha3.HTTPRoute{{
@@ -670,12 +645,6 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 			},
 		},
 	}
-}
-
-func makeVirtualServiceNowOwnedByChannel() *istiov1alpha3.VirtualService {
-	vs := makeVirtualService()
-	vs.OwnerReferences = nil
-	return vs
 }
 
 func errorOnSecondChannelGet() []controllertesting.MockGet {
@@ -709,10 +678,10 @@ func errorGettingConfigMap() []controllertesting.MockGet {
 	}
 }
 
-func errorGettingK8sService() []controllertesting.MockGet {
-	return []controllertesting.MockGet{
-		func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-			if _, ok := obj.(*corev1.Service); ok {
+func errorListingK8sService() []controllertesting.MockList {
+	return []controllertesting.MockList{
+		func(_ client.Client, _ context.Context, _ *client.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
+			if _, ok := obj.(*corev1.ServiceList); ok {
 				return controllertesting.Handled, errors.New(testErrorMessage)
 			}
 			return controllertesting.Unhandled, nil
@@ -720,10 +689,10 @@ func errorGettingK8sService() []controllertesting.MockGet {
 	}
 }
 
-func errorGettingVirtualService() []controllertesting.MockGet {
-	return []controllertesting.MockGet{
-		func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-			if _, ok := obj.(*istiov1alpha3.VirtualService); ok {
+func errorListingVirtualService() []controllertesting.MockList {
+	return []controllertesting.MockList{
+		func(_ client.Client, _ context.Context, _ *client.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
+			if _, ok := obj.(*istiov1alpha3.VirtualServiceList); ok {
 				return controllertesting.Handled, errors.New(testErrorMessage)
 			}
 			return controllertesting.Unhandled, nil
