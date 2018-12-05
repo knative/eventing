@@ -52,6 +52,7 @@ rules:
       - list
       - watch
       - create
+      - update
   - apiGroups:
       - networking.istio.io
     resources:
