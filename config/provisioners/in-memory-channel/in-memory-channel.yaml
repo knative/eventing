@@ -71,8 +71,6 @@ rules:
       - "" # Core API group.
     resources:
       - services
-    resourceNames:
-      - in-memory-channel-dispatcher
     verbs:
       - update
   - apiGroups:
