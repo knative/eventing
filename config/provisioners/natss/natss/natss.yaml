@@ -1,0 +1,101 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: nats-streaming
+  name: nats-streaming
+  namespace: natss
+data:
+  gnatsd.conf: |
+    # configuration file used to override default NATS server settings
+  stan.conf: |
+    # content of configuration file used to override default NATS Streaming server settings
+---  
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats-streaming
+  namespace: natss
+  labels:
+    app: nats-streaming
+spec:
+  type: ClusterIP
+  ports:
+  - name: client
+    port: 4222
+    protocol: TCP
+    targetPort: client
+  selector:
+    app: nats-streaming
+  sessionAffinity: None
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: nats-streaming
+  namespace: natss
+  labels:
+    app: nats-streaming
+spec:
+  serviceName: nats-streaming
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nats-streaming
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+      labels:
+        app: nats-streaming
+    spec:
+      containers:
+        - name: nats-streaming
+          image: nats-streaming:0.11.0
+          imagePullPolicy: IfNotPresent
+          args:
+          - -D
+          - -SD
+          - --cluster_id=knative-nats-streaming
+          - --http_port=8222
+          - --max_age=24h
+          - --store=FILE
+          - --dir=/var/lib/nats-streaming/core-nats-streaming/$(POD_NAME)
+          - --port=4222
+          - --config=/etc/nats-streaming/core-nats-streaming/gnatsd.conf
+          - --stan_config=/etc/nats-streaming/core-nats-streaming/stan.conf
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          ports:
+          - containerPort: 4222
+            name: client
+            protocol: TCP
+          - containerPort: 8222
+            name: monitoring
+            protocol: TCP            
+          volumeMounts:
+          - mountPath: /var/lib/nats-streaming/core-nats-streaming
+            name: datadir
+          - mountPath: /etc/nats-streaming/core-nats-streaming
+            name: config-volume
+          resources:
+            requests:
+              cpu: "100m"
+            limits:
+              memory: "32M"          
+      volumes:
+      - configMap:
+          name: nats-streaming
+        name: config-volume
+  volumeClaimTemplates:
+  - metadata:
+      name: datadir
+    spec:
+      accessModes:
+        - "ReadWriteOnce"
+      resources:
+        requests:
+          storage: "1Gi"
