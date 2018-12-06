@@ -18,18 +18,18 @@ release.
   either `vYYYYMMDD-<commit_short_hash>` (for nightly releases) or `vX.Y.Z` for
   versioned releases. These are docker tags. _For versioned releases, a tag is
   always added._
-- `--release-gcs` Defines the GCS bucket where the manifests will be stored.
-  By default, this is `knative-nightly/eventing`. This flag is ignored if the
+- `--release-gcs` Defines the GCS bucket where the manifests will be stored. By
+  default, this is `knative-nightly/eventing`. This flag is ignored if the
   release is not being published.
 - `--release-gcr` Defines the GCR where the images will be stored. By default,
   this is `gcr.io/knative-nightly`. This flag is ignored if the release is not
   being published.
 - `--publish`, `--nopublish` Whether the generated images should be published to
-  a GCR, and the generated manifests written to a GCS bucket or not. If yes,
-  the `--release-gcs` and `--release-gcr` flags can be used to change the
-  default values of the GCR/GCS used. If no, the images will be pushed to the
-  `ko.local` registry, and the manifests written to the local disk only (in the
-  repository root directory).
+  a GCR, and the generated manifests written to a GCS bucket or not. If yes, the
+  `--release-gcs` and `--release-gcr` flags can be used to change the default
+  values of the GCR/GCS used. If no, the images will be pushed to the `ko.local`
+  registry, and the manifests written to the local disk only (in the repository
+  root directory).
 
 ## Creating nightly releases
 
