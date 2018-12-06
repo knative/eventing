@@ -112,7 +112,7 @@ func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel *eventingv1alpha1.
 		s.subscriptions[cRef] = chMap
 	}
 	for _, sub := range subscriptions {
-		// check if the subscribtion already exist and do nothing in this case
+		// check if the subscription already exist and do nothing in this case
 		subRef := newSubscriptionReference(sub)
 		if _, ok := chMap[subRef]; ok {
 			activeSubs[subRef] = true
