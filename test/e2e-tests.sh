@@ -27,7 +27,11 @@
 
 source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/e2e-tests.sh
 
-readonly KNATIVE_EVENTING_SOURCES_RELEASE=https://knative-nightly.storage.googleapis.com/eventing-sources/latest/release.yaml
+# Using the most recent good release of eventing-sources to unblock tests. This
+# should be replaced with the commented line below when eventing-sources nightly
+# is known good again.
+readonly KNATIVE_EVENTING_SOURCES_RELEASE=https://knative-nightly.storage.googleapis.com/eventing-sources/previous/v20181205-fbac942/release.yaml
+#readonly KNATIVE_EVENTING_SOURCES_RELEASE=https://knative-nightly.storage.googleapis.com/eventing-sources/latest/release.yaml
 
 # Names of the Resources used in the tests.
 readonly E2E_TEST_NAMESPACE=e2etest
