@@ -88,7 +88,7 @@ func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel *eventingv1alpha1.
 
 	cRef := provisioners.ChannelReference{Namespace: channel.Namespace, Name: channel.Name}
 
-	if (channel.Spec.Subscribable == nil || isFinalizer) {
+	if channel.Spec.Subscribable == nil || isFinalizer {
 		s.logger.Sugar().Infof("Empty subscriptions for channel Ref: %v; unsubscribe all active subscriptions, if any", cRef)
 		chMap, ok := s.subscriptions[cRef]
 		if !ok {
