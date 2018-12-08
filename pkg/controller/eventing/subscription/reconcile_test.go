@@ -417,6 +417,50 @@ var testCases = []controllertesting.TestCase{
 			},
 		},
 	}, {
+		Name: "new subscription: adds status, target points to the legacy targetable interface",
+		InitialState: []runtime.Object{
+			Subscription().EmptyNonNilReply(),
+		},
+		// TODO: JSON patch is not working on the fake, see
+		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+		// failure for now, until upstream is fixed.
+		WantResult: reconcile.Result{},
+		WantPresent: []runtime.Object{
+			Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).EmptyNonNilReply(),
+		},
+		WantErrMsg: "invalid JSON document",
+		Scheme:     scheme.Scheme,
+		Objects: []runtime.Object{
+			// Source channel
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+					"kind":       channelKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      fromChannelName,
+					},
+					"spec": map[string]interface{}{
+						"subscribable": map[string]interface{}{},
+					},
+				},
+			},
+			// Subscriber (using knative route)
+			&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "serving.knative.dev/v1alpha1",
+					"kind":       routeKind,
+					"metadata": map[string]interface{}{
+						"namespace": testNS,
+						"name":      routeName,
+					},
+					"status": map[string]interface{}{
+						"domainInternal": targetDNS,
+					},
+				},
+			},
+		},
+	}, {
 		Name: "new subscription: adds status, all targets resolved, subscribers modified -- empty but non-nil subscriber",
 		InitialState: []runtime.Object{
 			Subscription().EmptyNonNilSubscriber(),

@@ -224,15 +224,19 @@ func (r *reconciler) resolveSubscriberSpec(namespace string, s v1alpha1.Subscrib
 		return "", err
 	}
 	t := duckv1alpha1.AddressableType{}
-	err = duck.FromUnstructured(obj, &t)
-	if err != nil {
-		glog.Warningf("Failed to deserialize legacy target: %s", err)
-		return "", err
+	if err := duck.FromUnstructured(obj, &t); err == nil {
+		if t.Status.Address != nil {
+			return domainToURL(t.Status.Address.Hostname), nil
+		}
 	}
 
-	if t.Status.Address != nil {
-		return domainToURL(t.Status.Address.Hostname), nil
+	legacy := duckv1alpha1.LegacyTarget{}
+	if err := duck.FromUnstructured(obj, &legacy); err == nil {
+		if legacy.Status.DomainInternal != "" {
+			return domainToURL(legacy.Status.DomainInternal), nil
+		}
 	}
+
 	return "", fmt.Errorf("status does not contain address")
 }
 
