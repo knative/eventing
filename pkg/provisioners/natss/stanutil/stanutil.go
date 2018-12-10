@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nats-io/go-nats-streaming"
+	stan "github.com/nats-io/go-nats-streaming"
 	"go.uber.org/zap"
 )
 
@@ -48,7 +48,7 @@ func Connect(clusterId string, clientId string, natsUrl string, logger *zap.Suga
 
 // Close must be the last call to close the connection
 func Close(sc *stan.Conn, logger *zap.SugaredLogger) (err error) {
-	defer func() {  // the NATSS client could panic if the underlying connectivity is damaged
+	defer func() { // the NATSS client could panic if the underlying connectivity is damaged
 		if r := recover(); r != nil {
 			err = fmt.Errorf("recovered from: %v", r)
 			logger.Errorf("Close(): %v", err.Error())

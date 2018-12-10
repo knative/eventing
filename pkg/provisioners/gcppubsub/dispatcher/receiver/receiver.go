@@ -20,7 +20,7 @@ import (
 	"context"
 
 	"github.com/knative/eventing/pkg/provisioners"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util"

@@ -23,7 +23,7 @@ import (
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/provisioners/natss/controller/clusterchannelprovisioner"
 	"github.com/knative/eventing/pkg/provisioners/natss/stanutil"
-	"github.com/nats-io/go-nats-streaming"
+	stan "github.com/nats-io/go-nats-streaming"
 	"go.uber.org/zap"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -88,7 +88,7 @@ func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel *eventingv1alpha1.
 
 	cRef := provisioners.ChannelReference{Namespace: channel.Namespace, Name: channel.Name}
 
-	if (channel.Spec.Subscribable == nil || isFinalizer) {
+	if channel.Spec.Subscribable == nil || isFinalizer {
 		s.logger.Sugar().Infof("Empty subscriptions for channel Ref: %v; unsubscribe all active subscriptions, if any", cRef)
 		chMap, ok := s.subscriptions[cRef]
 		if !ok {
@@ -112,7 +112,7 @@ func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel *eventingv1alpha1.
 		s.subscriptions[cRef] = chMap
 	}
 	for _, sub := range subscriptions {
-		// check if the subscribtion already exist and do nothing in this case
+		// check if the subscription already exist and do nothing in this case
 		subRef := newSubscriptionReference(sub)
 		if _, ok := chMap[subRef]; ok {
 			activeSubs[subRef] = true

@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 // These tests are here so that any changes made to the generation algorithm are noticed. Because

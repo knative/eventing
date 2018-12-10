@@ -17,15 +17,16 @@ limitations under the License.
 package main
 
 import (
+	"log"
+	"time"
+
 	"github.com/knative/eventing/pkg/provisioners/natss/dispatcher/channel"
 	"github.com/knative/eventing/pkg/provisioners/natss/dispatcher/dispatcher"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
-	"log"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"time"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners/natss/controller/clusterchannelprovisioner"
