@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nats-io/go-nats-streaming"
+	stan "github.com/nats-io/go-nats-streaming"
 	"go.uber.org/zap"
 )
 
