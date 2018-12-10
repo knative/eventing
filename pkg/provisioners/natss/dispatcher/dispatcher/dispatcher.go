@@ -23,7 +23,7 @@ import (
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/provisioners/natss/controller/clusterchannelprovisioner"
 	"github.com/knative/eventing/pkg/provisioners/natss/stanutil"
-	"github.com/nats-io/go-nats-streaming"
+	stan "github.com/nats-io/go-nats-streaming"
 	"go.uber.org/zap"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"

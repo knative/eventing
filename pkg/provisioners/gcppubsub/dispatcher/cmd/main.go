@@ -22,7 +22,7 @@ import (
 	"os"
 
 	"github.com/knative/eventing/pkg/provisioners"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/dispatcher/dispatcher"
 
