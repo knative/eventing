@@ -11,26 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
-package stats
+// Package opencensus contains Go support for OpenCensus.
+package opencensus // import "go.opencensus.io"
 
-// Int64Measure is a measure for int64 values.
-type Int64Measure struct {
-	*measureDescriptor
-}
-
-// M creates a new int64 measurement.
-// Use Record to record measurements.
-func (m *Int64Measure) M(v int64) Measurement {
-	return Measurement{m: m.measureDescriptor, v: float64(v)}
-}
-
-// Int64 creates a new measure for int64 values.
-//
-// See the documentation for interface Measure for more guidance on the
-// parameters of this function.
-func Int64(name, description, unit string) *Int64Measure {
-	mi := registerMeasureHandle(name, description, unit)
-	return &Int64Measure{mi}
+// Version is the current release version of OpenCensus in use.
+func Version() string {
+	return "0.18.0"
 }

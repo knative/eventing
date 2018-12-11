@@ -630,9 +630,11 @@
   revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
 
 [[projects]]
-  digest = "1:aa6db268bb3cd8783ddb4d08e17f2f16e6d54c4e3f054ec174748e3972ec0699"
+  digest = "1:5622c6893f87955f945c430461d41ebf6e26498214559cbaf93d284e2c8e9047"
   name = "go.opencensus.io"
   packages = [
+    ".",
+    "exemplar",
     "internal",
     "internal/tagencoding",
     "plugin/ocgrpc",
@@ -645,10 +647,11 @@
     "trace",
     "trace/internal",
     "trace/propagation",
+    "trace/tracestate",
   ]
   pruneopts = "NUT"
-  revision = "c3ed530f775d85e577ca652cb052a52c078aad26"
-  version = "v0.11.0"
+  revision = "b7bf3cdb64150a8c8c53b769fdeb2ba581bd4d4b"
+  version = "v0.18.0"
 
 [[projects]]
   digest = "1:22f696cee54865fb8e9ff91df7b633f6b8f22037a8015253c6b6a71ca82219c7"

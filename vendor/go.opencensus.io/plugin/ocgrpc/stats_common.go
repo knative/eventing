@@ -56,10 +56,16 @@ var (
 	DefaultMessageCountDistribution = view.Distribution(0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536)
 )
 
+// Server tags are applied to the context used to process each RPC, as well as
+// the measures at the end of each RPC.
 var (
 	KeyServerMethod, _ = tag.NewKey("grpc_server_method")
-	KeyClientMethod, _ = tag.NewKey("grpc_client_method")
 	KeyServerStatus, _ = tag.NewKey("grpc_server_status")
+)
+
+// Client tags are applied to measures at the end of each RPC.
+var (
+	KeyClientMethod, _ = tag.NewKey("grpc_client_method")
 	KeyClientStatus, _ = tag.NewKey("grpc_client_status")
 )
 
@@ -136,18 +142,21 @@ func handleRPCEnd(ctx context.Context, s *stats.End) {
 
 	latencyMillis := float64(elapsedTime) / float64(time.Millisecond)
 	if s.Client {
-		ctx, _ = tag.New(ctx,
-			tag.Upsert(KeyClientMethod, methodName(d.method)),
-			tag.Upsert(KeyClientStatus, st))
-		ocstats.Record(ctx,
+		ocstats.RecordWithTags(ctx,
+			[]tag.Mutator{
+				tag.Upsert(KeyClientMethod, methodName(d.method)),
+				tag.Upsert(KeyClientStatus, st),
+			},
 			ClientSentBytesPerRPC.M(atomic.LoadInt64(&d.sentBytes)),
 			ClientSentMessagesPerRPC.M(atomic.LoadInt64(&d.sentCount)),
 			ClientReceivedMessagesPerRPC.M(atomic.LoadInt64(&d.recvCount)),
 			ClientReceivedBytesPerRPC.M(atomic.LoadInt64(&d.recvBytes)),
 			ClientRoundtripLatency.M(latencyMillis))
 	} else {
-		ctx, _ = tag.New(ctx, tag.Upsert(KeyServerStatus, st))
-		ocstats.Record(ctx,
+		ocstats.RecordWithTags(ctx,
+			[]tag.Mutator{
+				tag.Upsert(KeyServerStatus, st),
+			},
 			ServerSentBytesPerRPC.M(atomic.LoadInt64(&d.sentBytes)),
 			ServerSentMessagesPerRPC.M(atomic.LoadInt64(&d.sentCount)),
 			ServerReceivedMessagesPerRPC.M(atomic.LoadInt64(&d.recvCount)),
