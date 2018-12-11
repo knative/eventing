@@ -413,8 +413,8 @@
     "pkg/client/clientset/versioned/typed/serving/v1alpha1",
   ]
   pruneopts = "NUT"
-  revision = "1036f34badadfa711d88378a1c09a3527bb1584b"
-  version = "v0.2.1"
+  revision = "f69d5efe522edecc5ff5bc3e23f1a7ff206a7726"
+  version = "v0.2.2"
 
 [[projects]]
   branch = "master"
