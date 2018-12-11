@@ -17,7 +17,10 @@
 package provisioners
 
 import (
+	"encoding/json"
 	"errors"
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"k8s.io/api/core/v1"
 )
 
 var forwardHeaders = []string{
@@ -36,12 +39,16 @@ var forwardPrefixes = []string{
 	"x-ot-",
 }
 
+const (
+	// messageHistoryHeader is the header containing all channels in the message history
+	messageHistoryHeader = "knative-message-history"
+)
+
 // Message represents an chunk of data within a channel dispatcher. The message contains both
 // a map of string headers and a binary payload.
 //
 // A message may represent a CloudEvent.
 type Message struct {
-
 	// Headers provide metadata about the message payload. All header keys
 	// should be lowercase.
 	Headers map[string]string
@@ -61,4 +68,61 @@ func headerSet(headers []string) map[string]bool {
 		set[header] = true
 	}
 	return set
+}
+
+// History returns the list channel references where the message has been into
+func (m *Message) History() ([]v1.ObjectReference, error) {
+	if m.Headers == nil {
+		return nil, nil
+	}
+	if h, ok := m.Headers[messageHistoryHeader]; ok {
+		return decodeMessageHistory(h)
+	}
+	return nil, nil
+}
+
+// AppendToHistory append a new channel reference at the end of the list of channel references of the message
+func (m *Message) AppendToHistory(reference ChannelReference, overwriteUnreadable bool) error {
+	objectReference := v1.ObjectReference{
+		Name:       reference.Name,
+		Namespace:  reference.Namespace,
+		Kind:       "Channel",
+		APIVersion: v1alpha1.SchemeGroupVersion.String(),
+	}
+	history, err := m.History()
+	if err != nil && !overwriteUnreadable {
+		return err
+	} else if err != nil {
+		// overwrite unreadable data
+		history = make([]v1.ObjectReference, 0)
+	}
+	newHistory := append(history, objectReference)
+	return m.SetHistory(newHistory)
+}
+
+// SetHistory sets the message history to the given value
+func (m *Message) SetHistory(history []v1.ObjectReference) error {
+	historyStr, err := encodeMessageHistory(history)
+	if err != nil {
+		return err
+	}
+	if m.Headers == nil {
+		m.Headers = make(map[string]string)
+	}
+	m.Headers[messageHistoryHeader] = historyStr
+	return nil
+}
+
+func encodeMessageHistory(history []v1.ObjectReference) (string, error) {
+	data, err := json.Marshal(history)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func decodeMessageHistory(historyStr string) ([]v1.ObjectReference, error) {
+	history := make([]v1.ObjectReference, 0)
+	err := json.Unmarshal([]byte(historyStr), &history)
+	return history, err
 }

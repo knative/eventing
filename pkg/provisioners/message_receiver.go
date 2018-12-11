@@ -126,6 +126,10 @@ func (r *MessageReceiver) HandleRequest(res http.ResponseWriter, req *http.Reque
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	// setting common channel information in the request
+	if err := message.AppendToHistory(channel, true); err != nil {
+		r.logger.Warn("Could not append channel to message history", zap.Error(err))
+	}
 
 	err = r.receiverFunc(channel, message)
 	if err != nil {
