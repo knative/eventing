@@ -2,7 +2,7 @@
 
 
 [[projects]]
-  digest = "1:97bdeb31587a8bee3e13eb4519db4cc592bff017632bb07cbcd7c02925d8d621"
+  digest = "1:b1831dd9e209127129e5e967b26fe69f92ce95b32776b6a6d91612be6b2a45fe"
   name = "cloud.google.com/go"
   packages = [
     "compute/metadata",
@@ -14,7 +14,8 @@
     "pubsub/internal/distribution",
   ]
   pruneopts = "NUT"
-  revision = "90f2606161ee6a14efe2ca79fc05ac2b8efe250b"
+  revision = "0ebda48a7f143b1cce9eb37a8c1106ac762a3430"
+  version = "v0.34.0"
 
 [[projects]]
   digest = "1:a074ae0f4788ea4c4c7045ab37f21943920bc20cf6ff8afcb2d971154cfa87ab"
