@@ -101,13 +101,16 @@ data:
   bootstrap_servers: kafkabroker.kafka:9092
 ---
 
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kafka-channel-controller
   namespace: knative-eventing
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-channel-controller
   template:
     metadata:
       labels:
