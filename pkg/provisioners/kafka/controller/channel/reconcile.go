@@ -147,7 +147,7 @@ func (r *reconciler) reconcile(ctx context.Context, channel *eventingv1alpha1.Ch
 	deletionTimestamp := accessor.GetDeletionTimestamp()
 	if deletionTimestamp != nil {
 		r.logger.Info(fmt.Sprintf("DeletionTimestamp: %v", deletionTimestamp))
-		if err := r.deprovisionChannel(channel, kafkaClusterAdmin); err != nil {
+		if err = r.deprovisionChannel(channel, kafkaClusterAdmin); err != nil {
 			return false, err
 		}
 		util.RemoveFinalizer(channel, finalizerName)
@@ -161,42 +161,32 @@ func (r *reconciler) reconcile(ctx context.Context, channel *eventingv1alpha1.Ch
 		return true, nil
 	}
 
-	if err := r.provisionChannel(channel, kafkaClusterAdmin); err != nil {
+	if err = r.provisionChannel(channel, kafkaClusterAdmin); err != nil {
 		channel.Status.MarkNotProvisioned("NotProvisioned", "error while provisioning: %s", err)
 		return false, err
 	}
 
 	svc, err := util.CreateK8sService(ctx, r.client, channel)
-
 	if err != nil {
 		r.logger.Info("error creating the Channel's K8s Service", zap.Error(err))
 		return false, err
 	}
-
-	// Check if this Channel is the owner of the K8s service.
-	if !metav1.IsControlledBy(svc, channel) {
-		r.logger.Warn("Channel's K8s Service is not owned by the Channel", zap.Any("channel", channel), zap.Any("service", svc))
-	}
-
 	channel.Status.SetAddress(eventingController.ServiceHostName(svc.Name, svc.Namespace))
 
-	virtualService, err := util.CreateVirtualService(ctx, r.client, channel)
-
+	_, err = util.CreateVirtualService(ctx, r.client, channel, svc)
 	if err != nil {
 		r.logger.Info("error creating the Virtual Service for the Channel", zap.Error(err))
 		return false, err
 	}
 
-	// If the Virtual Service is not controlled by this Channel, we should log a warning, but don't
-	// consider it an error.
-	if !metav1.IsControlledBy(virtualService, channel) {
-		r.logger.Warn("VirtualService not owned by Channel", zap.Any("channel", channel), zap.Any("virtualService", virtualService))
-	}
-
 	channel.Status.MarkProvisioned()
 
 	// close the connection
-	kafkaClusterAdmin.Close()
+	err = kafkaClusterAdmin.Close()
+	if err != nil {
+		r.logger.Error("error closing the connection", zap.Error(err))
+		return false, err
+	}
 
 	return false, nil
 }
@@ -355,7 +345,7 @@ func (r *reconciler) listAllChannels(ctx context.Context) ([]eventingv1alpha1.Ch
 	}
 	for {
 		cl := &eventingv1alpha1.ChannelList{}
-		if err := r.client.List(ctx, opts, cl); err != nil {
+		if err = r.client.List(ctx, opts, cl); err != nil {
 			return nil, err
 		}
 

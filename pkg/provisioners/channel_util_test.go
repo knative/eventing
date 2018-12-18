@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -26,6 +28,7 @@ import (
 
 const (
 	channelName = "test-channel"
+	channelUID  = types.UID("test-channel-uid")
 	testNS      = "test-namespace"
 )
 
@@ -66,7 +69,7 @@ func TestChannelUtils(t *testing.T) {
 		name: "CreateVirtualService",
 		f: func() (metav1.Object, error) {
 			client := fake.NewFakeClient()
-			return CreateVirtualService(context.TODO(), client, getNewChannel())
+			return CreateVirtualService(context.TODO(), client, getNewChannel(), makeK8sService())
 		},
 		want: makeVirtualService(),
 	}, {
@@ -74,7 +77,7 @@ func TestChannelUtils(t *testing.T) {
 		f: func() (metav1.Object, error) {
 			existing := makeVirtualService()
 			client := fake.NewFakeClient(existing)
-			return CreateVirtualService(context.TODO(), client, getNewChannel())
+			return CreateVirtualService(context.TODO(), client, getNewChannel(), makeK8sService())
 		},
 		want: makeVirtualService(),
 	}, {
@@ -84,10 +87,10 @@ func TestChannelUtils(t *testing.T) {
 			destHost := fmt.Sprintf("%s-clusterbus.knative-eventing.svc.cluster.local", clusterChannelProvisionerName)
 			existing.Spec.Http[0].Route[0].Destination.Host = destHost
 			client := fake.NewFakeClient(existing)
-			CreateVirtualService(context.TODO(), client, getNewChannel())
+			CreateVirtualService(context.TODO(), client, getNewChannel(), makeK8sService())
 
 			got := &istiov1alpha3.VirtualService{}
-			err := client.Get(context.TODO(), runtimeClient.ObjectKey{Namespace: testNS, Name: fmt.Sprintf("%s-channel", channelName)}, got)
+			got, err := getVirtualService(context.TODO(), client, getNewChannel())
 			return got, err
 		},
 		want: makeVirtualService(),
@@ -130,30 +133,25 @@ func TestChannelUtils(t *testing.T) {
 func TestCreateK8sService(t *testing.T) {
 	testCases := map[string]struct {
 		get      controllertesting.MockGet
+		list     controllertesting.MockList
 		create   controllertesting.MockCreate
 		update   controllertesting.MockUpdate
 		expected *corev1.Service
 		err      error
 	}{
 		"error getting svc": {
-			get: func(_ runtimeClient.Client, _ context.Context, _ runtimeClient.ObjectKey, _ runtime.Object) (controllertesting.MockHandled, error) {
+			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, _ runtime.Object) (controllertesting.MockHandled, error) {
 				return controllertesting.Handled, testInducedError
 			},
 			err: testInducedError,
 		},
 		"not found - create error": {
-			get: func(_ runtimeClient.Client, _ context.Context, _ runtimeClient.ObjectKey, _ runtime.Object) (controllertesting.MockHandled, error) {
-				return controllertesting.Handled, notFound
-			},
 			create: func(_ runtimeClient.Client, _ context.Context, _ runtime.Object) (controllertesting.MockHandled, error) {
 				return controllertesting.Handled, testInducedError
 			},
 			err: testInducedError,
 		},
 		"not found - create succeeds": {
-			get: func(_ runtimeClient.Client, _ context.Context, _ runtimeClient.ObjectKey, _ runtime.Object) (controllertesting.MockHandled, error) {
-				return controllertesting.Handled, notFound
-			},
 			create: func(_ runtimeClient.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
 				svc := obj.(*corev1.Service)
 				svc.Spec = makeTamperedK8sService().Spec
@@ -162,10 +160,22 @@ func TestCreateK8sService(t *testing.T) {
 			expected: makeTamperedK8sService(),
 		},
 		"different spec - update fails": {
-			get: func(_ runtimeClient.Client, _ context.Context, _ runtimeClient.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-				svc := obj.(*corev1.Service)
-				svc.Spec = corev1.ServiceSpec{
-					ClusterIP: "set in get",
+			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
+				l := obj.(*corev1.ServiceList)
+				l.Items = []corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							OwnerReferences: []metav1.OwnerReference{
+								{
+									Controller: &truePointer,
+									UID:        channelUID,
+								},
+							},
+						},
+						Spec: corev1.ServiceSpec{
+							ClusterIP: "set in get",
+						},
+					},
 				}
 				return controllertesting.Handled, nil
 			},
@@ -175,10 +185,22 @@ func TestCreateK8sService(t *testing.T) {
 			err: testInducedError,
 		},
 		"different spec - update succeeds": {
-			get: func(_ runtimeClient.Client, _ context.Context, _ runtimeClient.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-				svc := obj.(*corev1.Service)
-				svc.Spec = corev1.ServiceSpec{
-					ClusterIP: "set in get",
+			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
+				l := obj.(*corev1.ServiceList)
+				l.Items = []corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							OwnerReferences: []metav1.OwnerReference{
+								{
+									Controller: &truePointer,
+									UID:        channelUID,
+								},
+							},
+						},
+						Spec: corev1.ServiceSpec{
+							ClusterIP: "set in get",
+						},
+					},
 				}
 				return controllertesting.Handled, nil
 			},
@@ -193,9 +215,9 @@ func TestCreateK8sService(t *testing.T) {
 			expected: makeTamperedK8sService(),
 		},
 		"found doesn't need altering": {
-			get: func(_ runtimeClient.Client, _ context.Context, _ runtimeClient.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-				svc := obj.(*corev1.Service)
-				makeK8sService().DeepCopyInto(svc)
+			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
+				l := obj.(*corev1.ServiceList)
+				l.Items = []corev1.Service{*makeK8sService()}
 				return controllertesting.Handled, nil
 			},
 			create: func(_ runtimeClient.Client, _ context.Context, _ runtime.Object) (controllertesting.MockHandled, error) {
@@ -209,11 +231,17 @@ func TestCreateK8sService(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			client := controllertesting.NewMockClient(fake.NewFakeClient(), controllertesting.Mocks{
-				MockGets:    []controllertesting.MockGet{tc.get},
-				MockCreates: []controllertesting.MockCreate{tc.create},
-				MockUpdates: []controllertesting.MockUpdate{tc.update},
-			})
+			mocks := controllertesting.Mocks{}
+			if tc.list != nil {
+				mocks.MockLists = []controllertesting.MockList{tc.list}
+			}
+			if tc.create != nil {
+				mocks.MockCreates = []controllertesting.MockCreate{tc.create}
+			}
+			if tc.update != nil {
+				mocks.MockUpdates = []controllertesting.MockUpdate{tc.update}
+			}
+			client := controllertesting.NewMockClient(fake.NewFakeClient(), mocks)
 			svc, err := CreateK8sService(context.TODO(), client, getNewChannel())
 			if tc.err != err {
 				t.Fatalf("Unexpected error. Expected '%s', actual '%v'", tc.err, err)
@@ -227,31 +255,25 @@ func TestCreateK8sService(t *testing.T) {
 
 func TestCreateVirtualService(t *testing.T) {
 	testCases := map[string]struct {
-		get      controllertesting.MockGet
+		list     controllertesting.MockList
 		create   controllertesting.MockCreate
 		update   controllertesting.MockUpdate
 		expected *istiov1alpha3.VirtualService
 		err      error
 	}{
 		"error getting svc": {
-			get: func(_ runtimeClient.Client, _ context.Context, _ runtimeClient.ObjectKey, _ runtime.Object) (controllertesting.MockHandled, error) {
+			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, _ runtime.Object) (controllertesting.MockHandled, error) {
 				return controllertesting.Handled, testInducedError
 			},
 			err: testInducedError,
 		},
 		"not found - create error": {
-			get: func(_ runtimeClient.Client, _ context.Context, _ runtimeClient.ObjectKey, _ runtime.Object) (controllertesting.MockHandled, error) {
-				return controllertesting.Handled, notFound
-			},
 			create: func(_ runtimeClient.Client, _ context.Context, _ runtime.Object) (controllertesting.MockHandled, error) {
 				return controllertesting.Handled, testInducedError
 			},
 			err: testInducedError,
 		},
 		"not found - create succeeds": {
-			get: func(_ runtimeClient.Client, _ context.Context, _ runtimeClient.ObjectKey, _ runtime.Object) (controllertesting.MockHandled, error) {
-				return controllertesting.Handled, notFound
-			},
 			create: func(_ runtimeClient.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
 				vs := obj.(*istiov1alpha3.VirtualService)
 				vs.Spec = makeTamperedVirtualService().Spec
@@ -260,10 +282,22 @@ func TestCreateVirtualService(t *testing.T) {
 			expected: makeTamperedVirtualService(),
 		},
 		"different spec - update fails": {
-			get: func(_ runtimeClient.Client, _ context.Context, _ runtimeClient.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-				vs := obj.(*istiov1alpha3.VirtualService)
-				vs.Spec = istiov1alpha3.VirtualServiceSpec{
-					Gateways: []string{"set in get"},
+			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
+				l := obj.(*istiov1alpha3.VirtualServiceList)
+				l.Items = []istiov1alpha3.VirtualService{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							OwnerReferences: []metav1.OwnerReference{
+								{
+									Controller: &truePointer,
+									UID:        channelUID,
+								},
+							},
+						},
+						Spec: istiov1alpha3.VirtualServiceSpec{
+							Gateways: []string{"set in get"},
+						},
+					},
 				}
 				return controllertesting.Handled, nil
 			},
@@ -273,10 +307,22 @@ func TestCreateVirtualService(t *testing.T) {
 			err: testInducedError,
 		},
 		"different spec - update succeeds": {
-			get: func(_ runtimeClient.Client, _ context.Context, _ runtimeClient.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-				vs := obj.(*istiov1alpha3.VirtualService)
-				vs.Spec = istiov1alpha3.VirtualServiceSpec{
-					Gateways: []string{"set in get"},
+			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
+				l := obj.(*istiov1alpha3.VirtualServiceList)
+				l.Items = []istiov1alpha3.VirtualService{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							OwnerReferences: []metav1.OwnerReference{
+								{
+									Controller: &truePointer,
+									UID:        channelUID,
+								},
+							},
+						},
+						Spec: istiov1alpha3.VirtualServiceSpec{
+							Gateways: []string{"set in get"},
+						},
+					},
 				}
 				return controllertesting.Handled, nil
 			},
@@ -288,9 +334,9 @@ func TestCreateVirtualService(t *testing.T) {
 			expected: makeTamperedVirtualService(),
 		},
 		"found doesn't need altering": {
-			get: func(_ runtimeClient.Client, _ context.Context, _ runtimeClient.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-				vs := obj.(*istiov1alpha3.VirtualService)
-				makeVirtualService().DeepCopyInto(vs)
+			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
+				l := obj.(*istiov1alpha3.VirtualServiceList)
+				l.Items = []istiov1alpha3.VirtualService{*makeVirtualService()}
 				return controllertesting.Handled, nil
 			},
 			create: func(_ runtimeClient.Client, _ context.Context, _ runtime.Object) (controllertesting.MockHandled, error) {
@@ -304,16 +350,22 @@ func TestCreateVirtualService(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			client := controllertesting.NewMockClient(fake.NewFakeClient(), controllertesting.Mocks{
-				MockGets:    []controllertesting.MockGet{tc.get},
-				MockCreates: []controllertesting.MockCreate{tc.create},
-				MockUpdates: []controllertesting.MockUpdate{tc.update},
-			})
-			svc, err := CreateVirtualService(context.TODO(), client, getNewChannel())
+			mocks := controllertesting.Mocks{}
+			if tc.list != nil {
+				mocks.MockLists = []controllertesting.MockList{tc.list}
+			}
+			if tc.create != nil {
+				mocks.MockCreates = []controllertesting.MockCreate{tc.create}
+			}
+			if tc.update != nil {
+				mocks.MockUpdates = []controllertesting.MockUpdate{tc.update}
+			}
+			client := controllertesting.NewMockClient(fake.NewFakeClient(), mocks)
+			vs, err := CreateVirtualService(context.TODO(), client, getNewChannel(), makeK8sService())
 			if tc.err != err {
 				t.Fatalf("Unexpected error. Expected '%s', actual '%v'", tc.err, err)
 			}
-			if diff := cmp.Diff(tc.expected, svc); diff != "" {
+			if diff := cmp.Diff(tc.expected, vs); diff != "" {
 				t.Fatalf("Unexpected virtual service (-want +got): %s", diff)
 			}
 		})
@@ -356,21 +408,21 @@ func TestChannelNames(t *testing.T) {
 		F    func() string
 		Want string
 	}{{
-		Name: "ChannelVirtualServiceName",
+		Name: "channelVirtualServiceName",
 		F: func() string {
-			return ChannelVirtualServiceName("foo")
+			return channelVirtualServiceName("foo")
 		},
-		Want: "foo-channel",
+		Want: "foo-channel-",
 	}, {
-		Name: "ChannelServiceName",
+		Name: "channelServiceName",
 		F: func() string {
-			return ChannelServiceName("foo")
+			return channelServiceName("foo")
 		},
-		Want: "foo-channel",
+		Want: "foo-channel-",
 	}, {
-		Name: "ChannelHostName",
+		Name: "channelHostName",
 		F: func() string {
-			return ChannelHostName("foo", "namespace")
+			return channelHostName("foo", "namespace")
 		},
 		Want: "foo.namespace.channels.cluster.local",
 	}}
@@ -387,7 +439,7 @@ func TestChannelNames(t *testing.T) {
 func getNewChannel() *eventingv1alpha1.Channel {
 	channel := &eventingv1alpha1.Channel{
 		TypeMeta:   channelType(),
-		ObjectMeta: om(testNS, channelName),
+		ObjectMeta: om(testNS, channelName, channelUID),
 		Spec: eventingv1alpha1.ChannelSpec{
 			Provisioner: &corev1.ObjectReference{
 				Name:       clusterChannelProvisionerName,
@@ -407,10 +459,12 @@ func channelType() metav1.TypeMeta {
 		Kind:       "Channel",
 	}
 }
-func om(namespace, name string) metav1.ObjectMeta {
+
+func om(namespace, name string, uid types.UID) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
 		Namespace: namespace,
 		Name:      name,
+		UID:       uid,
 		SelfLink:  fmt.Sprintf("/apis/eventing/v1alpha1/namespaces/%s/object/%s", namespace, name),
 	}
 }
@@ -418,8 +472,8 @@ func om(namespace, name string) metav1.ObjectMeta {
 func makeK8sService() *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-channel", channelName),
-			Namespace: testNS,
+			GenerateName: fmt.Sprintf("%s-channel-", channelName),
+			Namespace:    testNS,
 			Labels: map[string]string{
 				"channel":     channelName,
 				"provisioner": clusterChannelProvisionerName,
@@ -429,6 +483,7 @@ func makeK8sService() *corev1.Service {
 					APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
 					Kind:               "Channel",
 					Name:               channelName,
+					UID:                channelUID,
 					Controller:         &truePointer,
 					BlockOwnerDeletion: &truePointer,
 				},
@@ -456,8 +511,8 @@ func makeTamperedK8sService() *corev1.Service {
 func makeVirtualService() *istiov1alpha3.VirtualService {
 	return &istiov1alpha3.VirtualService{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-channel", channelName),
-			Namespace: testNS,
+			GenerateName: fmt.Sprintf("%s-channel-", channelName),
+			Namespace:    testNS,
 			Labels: map[string]string{
 				"channel":     channelName,
 				"provisioner": clusterChannelProvisionerName,
@@ -467,6 +522,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 					APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
 					Kind:               "Channel",
 					Name:               channelName,
+					UID:                channelUID,
 					Controller:         &truePointer,
 					BlockOwnerDeletion: &truePointer,
 				},
@@ -474,7 +530,9 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 		},
 		Spec: istiov1alpha3.VirtualServiceSpec{
 			Hosts: []string{
-				fmt.Sprintf("%s-channel.%s.svc.cluster.local", channelName, testNS),
+				// The fake client doesn't fill in a Name when GeneratedName is used, so the
+				// Channel's Name will be the empty string.
+				fmt.Sprintf("%s.%s.svc.cluster.local", "", testNS),
 				fmt.Sprintf("%s.%s.channels.cluster.local", channelName, testNS),
 			},
 			Http: []istiov1alpha3.HTTPRoute{{

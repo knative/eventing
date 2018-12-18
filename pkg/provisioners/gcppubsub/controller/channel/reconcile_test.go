@@ -357,7 +357,7 @@ func TestReconcile(t *testing.T) {
 				testcreds.MakeSecretWithCreds(),
 			},
 			Mocks: controllertesting.Mocks{
-				MockGets: errorGettingK8sService(),
+				MockLists: errorListingK8sService(),
 			},
 			WantPresent: []runtime.Object{
 				makeChannelWithFinalizer(),
@@ -380,17 +380,6 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 		},
 		{
-			Name: "K8s service already exists - not owned by Channel",
-			InitialState: []runtime.Object{
-				makeChannelWithFinalizer(),
-				makeK8sServiceNotOwnedByChannel(),
-				testcreds.MakeSecretWithCreds(),
-			},
-			WantPresent: []runtime.Object{
-				makeReadyChannel(),
-			},
-		},
-		{
 			Name: "Virtual service get fails",
 			InitialState: []runtime.Object{
 				makeChannelWithFinalizer(),
@@ -399,7 +388,7 @@ func TestReconcile(t *testing.T) {
 				testcreds.MakeSecretWithCreds(),
 			},
 			Mocks: controllertesting.Mocks{
-				MockGets: errorGettingVirtualService(),
+				MockLists: errorListingVirtualService(),
 			},
 			WantPresent: []runtime.Object{
 				// TODO: This should have a useful error message saying that the VirtualService
@@ -872,10 +861,10 @@ func errorGettingChannel() []controllertesting.MockGet {
 	}
 }
 
-func errorGettingK8sService() []controllertesting.MockGet {
-	return []controllertesting.MockGet{
-		func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-			if _, ok := obj.(*corev1.Service); ok {
+func errorListingK8sService() []controllertesting.MockList {
+	return []controllertesting.MockList{
+		func(_ client.Client, _ context.Context, _ *client.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
+			if _, ok := obj.(*corev1.ServiceList); ok {
 				return controllertesting.Handled, errors.New(testErrorMessage)
 			}
 			return controllertesting.Unhandled, nil
@@ -883,10 +872,10 @@ func errorGettingK8sService() []controllertesting.MockGet {
 	}
 }
 
-func errorGettingVirtualService() []controllertesting.MockGet {
-	return []controllertesting.MockGet{
-		func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-			if _, ok := obj.(*istiov1alpha3.VirtualService); ok {
+func errorListingVirtualService() []controllertesting.MockList {
+	return []controllertesting.MockList{
+		func(_ client.Client, _ context.Context, _ *client.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
+			if _, ok := obj.(*istiov1alpha3.VirtualServiceList); ok {
 				return controllertesting.Handled, errors.New(testErrorMessage)
 			}
 			return controllertesting.Unhandled, nil

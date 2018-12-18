@@ -20,12 +20,16 @@ import (
 )
 
 func CreateDispatcherService(ctx context.Context, client runtimeClient.Client, ccp *eventingv1alpha1.ClusterChannelProvisioner) (*corev1.Service, error) {
-	svcName := ChannelDispatcherServiceName(ccp.Name)
 	svcKey := types.NamespacedName{
 		Namespace: system.Namespace,
-		Name:      svcName,
+		Name:      channelDispatcherServiceName(ccp.Name),
 	}
-	return createK8sService(ctx, client, svcKey, newDispatcherService(ccp))
+	getSvc := func() (*corev1.Service, error) {
+		svc := &corev1.Service{}
+		err := client.Get(ctx, svcKey, svc)
+		return svc, err
+	}
+	return createK8sService(ctx, client, getSvc, newDispatcherService(ccp))
 }
 
 func UpdateClusterChannelProvisionerStatus(ctx context.Context, client runtimeClient.Client, u *eventingv1alpha1.ClusterChannelProvisioner) error {
@@ -50,7 +54,7 @@ func newDispatcherService(ccp *eventingv1alpha1.ClusterChannelProvisioner) *core
 	labels := DispatcherLabels(ccp.Name)
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      ChannelDispatcherServiceName(ccp.Name),
+			Name:      channelDispatcherServiceName(ccp.Name),
 			Namespace: system.Namespace,
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
@@ -81,6 +85,6 @@ func DispatcherLabels(ccpName string) map[string]string {
 	}
 }
 
-func ChannelDispatcherServiceName(ccpName string) string {
+func channelDispatcherServiceName(ccpName string) string {
 	return fmt.Sprintf("%s-dispatcher", ccpName)
 }

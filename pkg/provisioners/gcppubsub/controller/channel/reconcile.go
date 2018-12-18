@@ -30,7 +30,6 @@ import (
 	"golang.org/x/oauth2/google"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -169,12 +168,12 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		return true, nil
 	}
 
-	err = r.createK8sService(ctx, c)
+	svc, err := r.createK8sService(ctx, c)
 	if err != nil {
 		return false, err
 	}
 
-	err = r.createVirtualService(ctx, c)
+	err = r.createVirtualService(ctx, c, svc)
 	if err != nil {
 		return false, err
 	}
@@ -193,33 +192,22 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	return false, nil
 }
 
-func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.Channel) error {
+func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.Channel) (*v1.Service, error) {
 	svc, err := util.CreateK8sService(ctx, r.client, c)
 	if err != nil {
 		logging.FromContext(ctx).Info("Error creating the Channel's K8s Service", zap.Error(err))
-		return err
-	}
-
-	// Check if this Channel is the owner of the K8s service.
-	if !metav1.IsControlledBy(svc, c) {
-		logging.FromContext(ctx).Warn("Channel's K8s Service is not owned by the Channel", zap.Any("channel", c), zap.Any("service", svc))
+		return nil, err
 	}
 
 	c.Status.SetAddress(controller.ServiceHostName(svc.Name, svc.Namespace))
-	return nil
+	return svc, nil
 }
 
-func (r *reconciler) createVirtualService(ctx context.Context, c *eventingv1alpha1.Channel) error {
-	virtualService, err := util.CreateVirtualService(ctx, r.client, c)
+func (r *reconciler) createVirtualService(ctx context.Context, c *eventingv1alpha1.Channel, svc *v1.Service) error {
+	_, err := util.CreateVirtualService(ctx, r.client, c, svc)
 	if err != nil {
 		logging.FromContext(ctx).Info("Error creating the Virtual Service for the Channel", zap.Error(err))
 		return err
-	}
-
-	// If the Virtual Service is not controlled by this Channel, we should log a warning, but don't
-	// consider it an error.
-	if !metav1.IsControlledBy(virtualService, c) {
-		logging.FromContext(ctx).Warn("VirtualService not owned by Channel", zap.Any("channel", c), zap.Any("virtualService", virtualService))
 	}
 	return nil
 }

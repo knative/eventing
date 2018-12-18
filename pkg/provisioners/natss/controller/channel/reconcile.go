@@ -30,11 +30,6 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	ccpcontroller "github.com/knative/eventing/pkg/provisioners/natss/controller/clusterchannelprovisioner"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-const (
-	finalizerName = controllerAgentName
 )
 
 type reconciler struct {
@@ -132,19 +127,12 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		r.logger.Info("Error creating the Channel's K8s Service", zap.Error(err))
 		return err
 	}
-	// Check if this Channel is the owner of the K8s service.
-	if !metav1.IsControlledBy(svc, c) {
-		r.logger.Warn("Channel's K8s Service is not owned by the Channel", zap.Any("channel", c), zap.Any("service", svc))
-	}
 	c.Status.SetAddress(controller.ServiceHostName(svc.Name, svc.Namespace))
 
-	virtualService, err := provisioners.CreateVirtualService(ctx, r.client, c)
+	_, err = provisioners.CreateVirtualService(ctx, r.client, c, svc)
 	if err != nil {
 		r.logger.Info("Error creating the Virtual Service for the Channel", zap.Error(err))
 		return err
-	}
-	if !metav1.IsControlledBy(virtualService, c) {
-		r.logger.Warn("VirtualService not owned by Channel", zap.Any("channel", c), zap.Any("virtualService", virtualService))
 	}
 
 	c.Status.MarkProvisioned()
