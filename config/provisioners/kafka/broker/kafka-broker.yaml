@@ -1,12 +1,15 @@
 ########################################## KAFKA BROKER ######################################
 # The following does not need to live in the same namespace as the bus.
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kafka-broker
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-broker
   template:
     metadata:
       labels:
@@ -50,12 +53,15 @@ spec:
     name: kafka
     protocol: TCP
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: zookeeper
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      app: zookeeper
   template:
     metadata:
       labels:

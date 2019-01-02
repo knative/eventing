@@ -22,7 +22,7 @@ import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -78,19 +78,19 @@ func ServiceAccount(name string, namespace string) *corev1.ServiceAccount {
 }
 
 // ClusterRoleBinding returns ClusterRoleBinding for given subject and role
-func ClusterRoleBinding(name string, namespace string, serviceAccount string, role string) *rbacv1beta1.ClusterRoleBinding {
-	return &rbacv1beta1.ClusterRoleBinding{
+func ClusterRoleBinding(name string, namespace string, serviceAccount string, role string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Subjects: []rbacv1beta1.Subject{
+		Subjects: []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
 				Name:      serviceAccount,
 				Namespace: namespace,
 			},
 		},
-		RoleRef: rbacv1beta1.RoleRef{
+		RoleRef: rbacv1.RoleRef{
 			Kind:     "ClusterRole",
 			Name:     role,
 			APIGroup: "rbac.authorization.k8s.io",

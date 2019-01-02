@@ -13,7 +13,7 @@ import (
 	"github.com/knative/pkg/test/logging"
 	servingV1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	rbacV1beta1 "k8s.io/api/rbac/v1beta1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -141,13 +141,13 @@ func CreateServiceAccount(clients *test.Clients, sa *corev1.ServiceAccount, logg
 }
 
 // CreateClusterRoleBinding will create a service account binding
-func CreateClusterRoleBinding(clients *test.Clients, crb *rbacV1beta1.ClusterRoleBinding, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
-	clusterRoleBindings := clients.Kube.Kube.RbacV1beta1().ClusterRoleBindings()
+func CreateClusterRoleBinding(clients *test.Clients, crb *rbacv1.ClusterRoleBinding, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+	clusterRoleBindings := clients.Kube.Kube.RbacV1().ClusterRoleBindings()
 	res, err := clusterRoleBindings.Create(crb)
 	if err != nil {
 		return err
 	}
-	cleaner.Add(rbacV1beta1.SchemeGroupVersion.Group, rbacV1beta1.SchemeGroupVersion.Version, "clusterrolebindings", "", res.ObjectMeta.Name)
+	cleaner.Add(rbacv1.SchemeGroupVersion.Group, rbacv1.SchemeGroupVersion.Version, "clusterrolebindings", "", res.ObjectMeta.Name)
 	return nil
 }
 
@@ -164,18 +164,18 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, logger *
 	if err != nil {
 		return err
 	}
-	crb := &rbacV1beta1.ClusterRoleBinding{
+	crb := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "e2e-tests-admin",
 		},
-		Subjects: []rbacV1beta1.Subject{
+		Subjects: []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
 				Name:      name,
 				Namespace: defaultNamespaceName,
 			},
 		},
-		RoleRef: rbacV1beta1.RoleRef{
+		RoleRef: rbacv1.RoleRef{
 			Kind:     "ClusterRole",
 			Name:     "cluster-admin",
 			APIGroup: "rbac.authorization.k8s.io",
