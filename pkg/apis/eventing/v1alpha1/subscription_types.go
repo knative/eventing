@@ -170,17 +170,17 @@ type SubscriptionStatus struct {
 	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
 	// PhysicalSubscription is the fully resolved values that this Subscription represents.
-	PhysicalSubscription SubscriptionStatusPhysicalSubscription `json:"physicalSubscription,omitEmpty"`
+	PhysicalSubscription SubscriptionStatusPhysicalSubscription `json:"physicalSubscription,omitempty"`
 }
 
 // SubscriptionStatusPhysicalSubscription represents the fully resolved values for this
 // Subscription.
 type SubscriptionStatusPhysicalSubscription struct {
 	// SubscriberURI is the fully resolved URI for spec.subscriber.
-	SubscriberURI string `json:"subscriberURI,omitEmpty"`
+	SubscriberURI string `json:"subscriberURI,omitempty"`
 
 	// ReplyURI is the fully resolved URI for the spec.reply.
-	ReplyURI string `json:"replyURI,omitEmpty"`
+	ReplyURI string `json:"replyURI,omitempty"`
 }
 
 const (
