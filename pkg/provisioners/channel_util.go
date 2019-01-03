@@ -223,8 +223,8 @@ func newK8sService(c *eventingv1alpha1.Channel) *corev1.Service {
 
 func k8sServiceLabels(c *eventingv1alpha1.Channel) map[string]string {
 	return map[string]string{
-		"channel":     c.Name,
-		"provisioner": c.Spec.Provisioner.Name,
+		"eventing.knative.dev/channel":     c.Name,
+		"eventing.knative.dev/provisioner": c.Spec.Provisioner.Name,
 	}
 }
 
