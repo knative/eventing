@@ -210,12 +210,6 @@ func addExpectedLabels(actual, expected map[string]string) map[string]string {
 	}
 	// Second add all missing expected labels
 	for k, v := range expected {
-		if va, ok := consolidated[k]; ok {
-			if strings.Compare(v, va) != 0 {
-				consolidated[k] = v
-			}
-			continue
-		}
 		consolidated[k] = v
 	}
 	return consolidated
