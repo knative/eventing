@@ -18,6 +18,7 @@ package channel
 
 import (
 	"context"
+
 	eventduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/controller"
@@ -27,9 +28,8 @@ import (
 	"github.com/knative/pkg/logging"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2/google"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -102,7 +102,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	c = c.DeepCopy()
 
 	ctx = logging.WithLogger(ctx, logging.FromContext(ctx).With(zap.Any("channel", c)))
-	reconcileErr := r.reconcile(ctx, c)
+	requeue, reconcileErr := r.reconcile(ctx, c)
 	if reconcileErr != nil {
 		logging.FromContext(ctx).Info("Error reconciling Channel", zap.Error(reconcileErr))
 		// Note that we do not return the error here, because we want to update the Status
@@ -114,7 +114,9 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{}, reconcileErr
+	return reconcile.Result{
+		Requeue: requeue,
+	}, reconcileErr
 }
 
 // shouldReconcile determines if this Controller should control (and therefore reconcile) a given
@@ -126,7 +128,10 @@ func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 	return false
 }
 
-func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) error {
+// reconcile reconciles this Channel so that the real world matches the intended state. The returned
+// boolean indicates if this Channel should be immediately requeued for another reconcile loop. The
+// returned error indicates an error during reconciliation.
+func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) (bool, error) {
 	c.Status.InitializeConditions()
 
 	// We are syncing four things:
@@ -139,39 +144,43 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	gcpCreds, err := pubsubutil.GetCredentials(ctx, r.client, r.defaultSecret, r.defaultSecretKey)
 	if err != nil {
 		logging.FromContext(ctx).Info("Unable to generate GCP creds", zap.Error(err))
-		return err
+		return false, err
 	}
 
 	if c.DeletionTimestamp != nil {
 		// K8s garbage collection will delete the K8s service and VirtualService for this channel.
 		err = r.deleteSubscriptions(ctx, c, gcpCreds, r.defaultGcpProject)
 		if err != nil {
-			return err
+			return false, err
 		}
 		err = r.deleteTopic(ctx, c, gcpCreds, r.defaultGcpProject)
 		if err != nil {
-			return err
+			return false, err
 		}
 		util.RemoveFinalizer(c, finalizerName)
-		return nil
+		return false, nil
 	}
 
-	// We use a finalizer to ensure the GCP PubSub Topic and Subscriptions are deleted.
-	util.AddFinalizer(c, finalizerName)
-
-	err = r.createK8sService(ctx, c)
-	if err != nil {
-		return err
+	// If we are adding the finalizer for the first time, then ensure that finalizer is persisted
+	// before manipulating GCP PubSub, which will not be automatically garbage collected by K8s if
+	// this Channel is deleted.
+	if addFinalizerResult := util.AddFinalizer(c, finalizerName); addFinalizerResult == util.FinalizerAdded {
+		return true, nil
 	}
 
-	err = r.createVirtualService(ctx, c)
+	svc, err := r.createK8sService(ctx, c)
 	if err != nil {
-		return err
+		return false, err
+	}
+
+	err = r.createVirtualService(ctx, c, svc)
+	if err != nil {
+		return false, err
 	}
 
 	topic, err := r.createTopic(ctx, c, gcpCreds, r.defaultGcpProject)
 	if err != nil {
-		return err
+		return false, err
 	}
 	pbs := &pubsubutil.GcpPubSubChannelStatus{
 		Secret:     r.defaultSecret,
@@ -182,44 +191,32 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 	err = r.createSubscriptions(ctx, c, gcpCreds, r.defaultGcpProject, topic, pbs)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if err = pubsubutil.SaveRawStatus(ctx, c, pbs); err != nil {
-		return err
+		return false, err
 	}
 
 	c.Status.MarkProvisioned()
-	return nil
+	return false, nil
 }
 
-
-func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.Channel) error {
+func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.Channel) (*v1.Service, error) {
 	svc, err := util.CreateK8sService(ctx, r.client, c)
 	if err != nil {
 		logging.FromContext(ctx).Info("Error creating the Channel's K8s Service", zap.Error(err))
-		return err
-	}
-
-	// Check if this Channel is the owner of the K8s service.
-	if !metav1.IsControlledBy(svc, c) {
-		logging.FromContext(ctx).Warn("Channel's K8s Service is not owned by the Channel", zap.Any("channel", c), zap.Any("service", svc))
+		return nil, err
 	}
 
 	c.Status.SetAddress(controller.ServiceHostName(svc.Name, svc.Namespace))
-	return nil
+	return svc, nil
 }
 
-func (r *reconciler) createVirtualService(ctx context.Context, c *eventingv1alpha1.Channel) error {
-	virtualService, err := util.CreateVirtualService(ctx, r.client, c)
+func (r *reconciler) createVirtualService(ctx context.Context, c *eventingv1alpha1.Channel, svc *v1.Service) error {
+	_, err := util.CreateVirtualService(ctx, r.client, c, svc)
 	if err != nil {
 		logging.FromContext(ctx).Info("Error creating the Virtual Service for the Channel", zap.Error(err))
 		return err
-	}
-
-	// If the Virtual Service is not controlled by this Channel, we should log a warning, but don't
-	// consider it an error.
-	if !metav1.IsControlledBy(virtualService, c) {
-		logging.FromContext(ctx).Warn("VirtualService not owned by Channel", zap.Any("channel", c), zap.Any("virtualService", virtualService))
 	}
 	return nil
 }

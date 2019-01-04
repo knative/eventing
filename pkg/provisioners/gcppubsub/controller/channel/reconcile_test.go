@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/testcreds"
@@ -325,24 +327,37 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			Name: "GetCredential fails",
+			Name: "Finalizer added",
 			InitialState: []runtime.Object{
 				makeChannel(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			WantResult: reconcile.Result{
+				Requeue: true,
+			},
+			WantPresent: []runtime.Object{
+				makeChannelWithFinalizer(),
+			},
+		},
+		{
+			Name: "GetCredential fails",
+			InitialState: []runtime.Object{
+				makeChannelWithFinalizer(),
 				testcreds.MakeSecretWithInvalidCreds(),
 			},
 			WantPresent: []runtime.Object{
-				makeChannel(),
+				makeChannelWithFinalizer(),
 			},
 			WantErrMsg: testcreds.InvalidCredsError,
 		},
 		{
 			Name: "K8s service get fails",
 			InitialState: []runtime.Object{
-				makeChannel(),
+				makeChannelWithFinalizer(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			Mocks: controllertesting.Mocks{
-				MockGets: errorGettingK8sService(),
+				MockLists: errorListingK8sService(),
 			},
 			WantPresent: []runtime.Object{
 				makeChannelWithFinalizer(),
@@ -352,7 +367,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "K8s service creation fails",
 			InitialState: []runtime.Object{
-				makeChannel(),
+				makeChannelWithFinalizer(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			Mocks: controllertesting.Mocks{
@@ -365,26 +380,15 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 		},
 		{
-			Name: "K8s service already exists - not owned by Channel",
-			InitialState: []runtime.Object{
-				makeChannel(),
-				makeK8sServiceNotOwnedByChannel(),
-				testcreds.MakeSecretWithCreds(),
-			},
-			WantPresent: []runtime.Object{
-				makeReadyChannel(),
-			},
-		},
-		{
 			Name: "Virtual service get fails",
 			InitialState: []runtime.Object{
-				makeChannel(),
+				makeChannelWithFinalizer(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			Mocks: controllertesting.Mocks{
-				MockGets: errorGettingVirtualService(),
+				MockLists: errorListingVirtualService(),
 			},
 			WantPresent: []runtime.Object{
 				// TODO: This should have a useful error message saying that the VirtualService
@@ -396,7 +400,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Virtual service creation fails",
 			InitialState: []runtime.Object{
-				makeChannel(),
+				makeChannelWithFinalizer(),
 				makeK8sService(),
 				testcreds.MakeSecretWithCreds(),
 			},
@@ -413,7 +417,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "VirtualService already exists - not owned by Channel",
 			InitialState: []runtime.Object{
-				makeChannel(),
+				makeChannelWithFinalizer(),
 				makeK8sService(),
 				makeVirtualServiceNotOwnedByChannel(),
 				testcreds.MakeSecretWithCreds(),
@@ -425,7 +429,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Create Topic - problem creating client",
 			InitialState: []runtime.Object{
-				makeChannel(),
+				makeChannelWithFinalizer(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -443,7 +447,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Create Topic - problem checking existence",
 			InitialState: []runtime.Object{
-				makeChannel(),
+				makeChannelWithFinalizer(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -465,7 +469,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Create Topic - topic already exists",
 			InitialState: []runtime.Object{
-				makeChannel(),
+				makeChannelWithFinalizer(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -486,7 +490,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Create Topic - error creating topic",
 			InitialState: []runtime.Object{
-				makeChannel(),
+				makeChannelWithFinalizer(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -506,7 +510,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Create Topic - topic create succeeds",
 			InitialState: []runtime.Object{
-				makeChannel(),
+				makeChannelWithFinalizer(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -518,7 +522,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Create Subscriptions - problem checking exists",
 			InitialState: []runtime.Object{
-				makeChannelWithSubscribers(),
+				makeChannelWithSubscribersAndFinalizer(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -540,7 +544,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Create Subscriptions - already exists",
 			InitialState: []runtime.Object{
-				makeChannelWithSubscribers(),
+				makeChannelWithSubscribersAndFinalizer(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -561,7 +565,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Create Subscriptions - create fails",
 			InitialState: []runtime.Object{
-				makeChannelWithSubscribers(),
+				makeChannelWithSubscribersAndFinalizer(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -581,7 +585,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Create Subscriptions - create succeeds",
 			InitialState: []runtime.Object{
-				makeChannelWithSubscribers(),
+				makeChannelWithSubscribersAndFinalizer(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -593,7 +597,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Channel get for update fails",
 			InitialState: []runtime.Object{
-				makeChannel(),
+				makeChannelWithFinalizer(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -606,7 +610,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Channel update fails",
 			InitialState: []runtime.Object{
-				makeChannel(),
+				makeChannelWithFinalizer(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -693,6 +697,12 @@ func makeChannelWithWrongProvisionerName() *eventingv1alpha1.Channel {
 func makeChannelWithSubscribers() *eventingv1alpha1.Channel {
 	c := makeChannel()
 	c.Spec.Subscribable = subscribers
+	return c
+}
+
+func makeChannelWithSubscribersAndFinalizer() *eventingv1alpha1.Channel {
+	c := makeChannelWithSubscribers()
+	c.Finalizers = []string{finalizerName}
 	return c
 }
 
@@ -851,10 +861,10 @@ func errorGettingChannel() []controllertesting.MockGet {
 	}
 }
 
-func errorGettingK8sService() []controllertesting.MockGet {
-	return []controllertesting.MockGet{
-		func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-			if _, ok := obj.(*corev1.Service); ok {
+func errorListingK8sService() []controllertesting.MockList {
+	return []controllertesting.MockList{
+		func(_ client.Client, _ context.Context, _ *client.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
+			if _, ok := obj.(*corev1.ServiceList); ok {
 				return controllertesting.Handled, errors.New(testErrorMessage)
 			}
 			return controllertesting.Unhandled, nil
@@ -862,10 +872,10 @@ func errorGettingK8sService() []controllertesting.MockGet {
 	}
 }
 
-func errorGettingVirtualService() []controllertesting.MockGet {
-	return []controllertesting.MockGet{
-		func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-			if _, ok := obj.(*istiov1alpha3.VirtualService); ok {
+func errorListingVirtualService() []controllertesting.MockList {
+	return []controllertesting.MockList{
+		func(_ client.Client, _ context.Context, _ *client.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
+			if _, ok := obj.(*istiov1alpha3.VirtualServiceList); ok {
 				return controllertesting.Handled, errors.New(testErrorMessage)
 			}
 			return controllertesting.Unhandled, nil

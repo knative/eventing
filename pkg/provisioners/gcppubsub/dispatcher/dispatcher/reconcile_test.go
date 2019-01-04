@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
 	"github.com/knative/eventing/pkg/provisioners"
 
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -173,9 +175,21 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			Name: "GetCredential fails",
+			Name: "Finalizer added",
 			InitialState: []runtime.Object{
 				makeChannelWithSubscribers(),
+			},
+			WantResult: reconcile.Result{
+				Requeue: true,
+			},
+			WantPresent: []runtime.Object{
+				makeChannelWithSubscribersAndFinalizer(),
+			},
+		},
+		{
+			Name: "GetCredential fails",
+			InitialState: []runtime.Object{
+				makeChannelWithSubscribersAndFinalizer(),
 				testcreds.MakeSecretWithInvalidCreds(),
 			},
 			WantPresent: []runtime.Object{
@@ -186,7 +200,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Channel update fails - cannot create PubSub client",
 			InitialState: []runtime.Object{
-				makeChannelWithSubscribers(),
+				makeChannelWithSubscribersAndFinalizer(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			OtherTestData: map[string]interface{}{
@@ -199,7 +213,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Receive errors",
 			InitialState: []runtime.Object{
-				makeChannelWithSubscribers(),
+				makeChannelWithSubscribersAndFinalizer(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			OtherTestData: map[string]interface{}{
@@ -231,7 +245,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "PubSub Subscription.Receive already running",
 			InitialState: []runtime.Object{
-				makeChannelWithSubscribers(),
+				makeChannelWithSubscribersAndFinalizer(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			OtherTestData: map[string]interface{}{
@@ -253,7 +267,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Delete old Subscriptions",
 			InitialState: []runtime.Object{
-				makeChannelWithSubscribers(),
+				makeChannelWithSubscribersAndFinalizer(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			OtherTestData: map[string]interface{}{

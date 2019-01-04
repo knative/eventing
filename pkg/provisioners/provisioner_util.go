@@ -6,7 +6,6 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -21,38 +20,16 @@ import (
 )
 
 func CreateDispatcherService(ctx context.Context, client runtimeClient.Client, ccp *eventingv1alpha1.ClusterChannelProvisioner) (*corev1.Service, error) {
-	svcName := ChannelDispatcherServiceName(ccp.Name)
 	svcKey := types.NamespacedName{
 		Namespace: system.Namespace,
-		Name:      svcName,
+		Name:      channelDispatcherServiceName(ccp.Name),
 	}
-	svc := &corev1.Service{}
-	err := client.Get(ctx, svcKey, svc)
-
-	if errors.IsNotFound(err) {
-		svc = newDispatcherService(ccp)
-		err = client.Create(ctx, svc)
-		if err != nil {
-			return nil, err
-		}
-		return svc, nil
+	getSvc := func() (*corev1.Service, error) {
+		svc := &corev1.Service{}
+		err := client.Get(ctx, svcKey, svc)
+		return svc, err
 	}
-	if err != nil {
-		return nil, err
-	}
-
-	expected := newDispatcherService(ccp)
-	// spec.clusterIP is immutable and is set on existing services. If we don't set this
-	// to the same value, we will encounter an error while updating.
-	expected.Spec.ClusterIP = svc.Spec.ClusterIP
-	if !equality.Semantic.DeepDerivative(expected.Spec, svc.Spec) {
-		svc.Spec = expected.Spec
-		err := client.Update(ctx, svc)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return svc, nil
+	return createK8sService(ctx, client, getSvc, newDispatcherService(ccp))
 }
 
 func UpdateClusterChannelProvisionerStatus(ctx context.Context, client runtimeClient.Client, u *eventingv1alpha1.ClusterChannelProvisioner) error {
@@ -77,7 +54,7 @@ func newDispatcherService(ccp *eventingv1alpha1.ClusterChannelProvisioner) *core
 	labels := DispatcherLabels(ccp.Name)
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      ChannelDispatcherServiceName(ccp.Name),
+			Name:      channelDispatcherServiceName(ccp.Name),
 			Namespace: system.Namespace,
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
@@ -108,6 +85,6 @@ func DispatcherLabels(ccpName string) map[string]string {
 	}
 }
 
-func ChannelDispatcherServiceName(ccpName string) string {
+func channelDispatcherServiceName(ccpName string) string {
 	return fmt.Sprintf("%s-dispatcher", ccpName)
 }

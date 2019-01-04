@@ -17,13 +17,15 @@
 package receiver
 
 import (
-	"cloud.google.com/go/pubsub"
 	"context"
 	"errors"
 	"fmt"
+
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/dispatcher/receiver/cache"
+
+	"cloud.google.com/go/pubsub"
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
 	"github.com/knative/pkg/logging"
 	"go.uber.org/zap"

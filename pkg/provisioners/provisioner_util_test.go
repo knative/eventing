@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/knative/pkg/apis"
@@ -22,6 +24,8 @@ const (
 	clusterChannelProvisionerName      = "kafka"
 	otherClusterChannelProvisionerName = "kafka-new"
 	testClusterIP                      = "10.59.249.3"
+
+	ccpUID = types.UID("test-ccp-uid")
 )
 
 func TestProvisionerUtils(t *testing.T) {
@@ -120,9 +124,9 @@ func TestNames(t *testing.T) {
 		F    func() string
 		Want string
 	}{{
-		Name: "ChannelDispatcherServiceName",
+		Name: "channelDispatcherServiceName",
 		F: func() string {
-			return ChannelDispatcherServiceName("foo")
+			return channelDispatcherServiceName("foo")
 		},
 		Want: "foo-dispatcher",
 	}}
@@ -139,7 +143,7 @@ func TestNames(t *testing.T) {
 func getNewClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvisioner {
 	clusterChannelProvisioner := &eventingv1alpha1.ClusterChannelProvisioner{
 		TypeMeta:   ClusterChannelProvisionerType(),
-		ObjectMeta: om(testNS, clusterChannelProvisionerName),
+		ObjectMeta: om(testNS, clusterChannelProvisionerName, ccpUID),
 		Spec:       eventingv1alpha1.ClusterChannelProvisionerSpec{},
 	}
 	// selflink is not filled in when we create the object, so clear it
@@ -164,6 +168,7 @@ func makeDispatcherService() *corev1.Service {
 					APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
 					Kind:               "ClusterChannelProvisioner",
 					Name:               clusterChannelProvisionerName,
+					UID:                ccpUID,
 					Controller:         &truePointer,
 					BlockOwnerDeletion: &truePointer,
 				},

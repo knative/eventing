@@ -232,6 +232,11 @@ func TestServeHTTP(t *testing.T) {
 			key:                "default.does-not-exist",
 			expectedStatusCode: http.StatusInternalServerError,
 		},
+		"bad host": {
+			config:             Config{},
+			key:                "no-dot",
+			expectedStatusCode: http.StatusInternalServerError,
+		},
 		"pass through failure": {
 			config: Config{
 				ChannelConfigs: []ChannelConfig{

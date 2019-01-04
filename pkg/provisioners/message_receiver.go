@@ -70,19 +70,8 @@ func (r *MessageReceiver) Start(stopCh <-chan struct{}) error {
 func (r *MessageReceiver) start() *http.Server {
 	r.logger.Info("Starting web server")
 	srv := &http.Server{
-		Addr: fmt.Sprintf(":%d", MessageReceiverPort),
-		Handler: http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-			if req.URL.Path != "/" {
-				res.WriteHeader(http.StatusNotFound)
-				return
-			}
-			if req.Method != http.MethodPost {
-				res.WriteHeader(http.StatusMethodNotAllowed)
-				return
-			}
-
-			r.HandleRequest(res, req)
-		}),
+		Addr:    fmt.Sprintf(":%d", MessageReceiverPort),
+		Handler: r.handler(),
 	}
 	go func() {
 		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
@@ -99,17 +88,38 @@ func (r *MessageReceiver) stop(srv *http.Server) {
 	}
 }
 
+// handler creates the http.Handler used by the http.Server started in MessageReceiver.Run.
+func (r *MessageReceiver) handler() http.Handler {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		if req.URL.Path != "/" {
+			res.WriteHeader(http.StatusNotFound)
+			return
+		}
+		if req.Method != http.MethodPost {
+			res.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		r.HandleRequest(res, req)
+	})
+}
+
 // HandleRequest is an http Handler function. The request is converted to a
 // Message and emitted to the receiver func.
 //
 // The response status codes:
-//   202 - the message was sent to subscibers
+//   202 - the message was sent to subscribers
 //   404 - the request was for an unknown channel
 //   500 - an error occurred processing the request
 func (r *MessageReceiver) HandleRequest(res http.ResponseWriter, req *http.Request) {
 	host := req.Host
 	r.logger.Infof("Received request for %s", host)
-	channel := ParseChannel(host)
+	channel, err := ParseChannel(host)
+	if err != nil {
+		r.logger.Info("Could not extract channel", zap.Error(err))
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	message, err := r.fromRequest(req)
 	if err != nil {
@@ -171,10 +181,13 @@ func (r *MessageReceiver) fromHTTPHeaders(headers http.Header) map[string]string
 
 // ParseChannel converts the channel's hostname into a channel
 // reference.
-func ParseChannel(host string) ChannelReference {
+func ParseChannel(host string) (ChannelReference, error) {
 	chunks := strings.Split(host, ".")
+	if len(chunks) < 2 {
+		return ChannelReference{}, fmt.Errorf("bad host format '%s'", host)
+	}
 	return ChannelReference{
 		Name:      chunks[0],
 		Namespace: chunks[1],
-	}
+	}, nil
 }

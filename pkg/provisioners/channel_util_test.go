@@ -2,8 +2,16 @@ package provisioners
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/types"
+
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+
+	controllertesting "github.com/knative/eventing/pkg/controller/testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -20,11 +28,15 @@ import (
 
 const (
 	channelName = "test-channel"
+	channelUID  = types.UID("test-channel-uid")
 	testNS      = "test-namespace"
 )
 
 var (
 	truePointer = true
+
+	notFound         = k8serrors.NewNotFound(corev1.Resource("any"), "any")
+	testInducedError = errors.New("test-induced-error")
 )
 
 func init() {
@@ -57,7 +69,7 @@ func TestChannelUtils(t *testing.T) {
 		name: "CreateVirtualService",
 		f: func() (metav1.Object, error) {
 			client := fake.NewFakeClient()
-			return CreateVirtualService(context.TODO(), client, getNewChannel())
+			return CreateVirtualService(context.TODO(), client, getNewChannel(), makeK8sService())
 		},
 		want: makeVirtualService(),
 	}, {
@@ -65,7 +77,7 @@ func TestChannelUtils(t *testing.T) {
 		f: func() (metav1.Object, error) {
 			existing := makeVirtualService()
 			client := fake.NewFakeClient(existing)
-			return CreateVirtualService(context.TODO(), client, getNewChannel())
+			return CreateVirtualService(context.TODO(), client, getNewChannel(), makeK8sService())
 		},
 		want: makeVirtualService(),
 	}, {
@@ -75,10 +87,10 @@ func TestChannelUtils(t *testing.T) {
 			destHost := fmt.Sprintf("%s-clusterbus.knative-eventing.svc.cluster.local", clusterChannelProvisionerName)
 			existing.Spec.Http[0].Route[0].Destination.Host = destHost
 			client := fake.NewFakeClient(existing)
-			CreateVirtualService(context.TODO(), client, getNewChannel())
+			CreateVirtualService(context.TODO(), client, getNewChannel(), makeK8sService())
 
 			got := &istiov1alpha3.VirtualService{}
-			err := client.Get(context.TODO(), runtimeClient.ObjectKey{Namespace: testNS, Name: fmt.Sprintf("%s-channel", channelName)}, got)
+			got, err := getVirtualService(context.TODO(), client, getNewChannel())
 			return got, err
 		},
 		want: makeVirtualService(),
@@ -118,27 +130,299 @@ func TestChannelUtils(t *testing.T) {
 	}
 }
 
+func TestCreateK8sService(t *testing.T) {
+	testCases := map[string]struct {
+		get      controllertesting.MockGet
+		list     controllertesting.MockList
+		create   controllertesting.MockCreate
+		update   controllertesting.MockUpdate
+		expected *corev1.Service
+		err      error
+	}{
+		"error getting svc": {
+			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, _ runtime.Object) (controllertesting.MockHandled, error) {
+				return controllertesting.Handled, testInducedError
+			},
+			err: testInducedError,
+		},
+		"not found - create error": {
+			create: func(_ runtimeClient.Client, _ context.Context, _ runtime.Object) (controllertesting.MockHandled, error) {
+				return controllertesting.Handled, testInducedError
+			},
+			err: testInducedError,
+		},
+		"not found - create succeeds": {
+			create: func(_ runtimeClient.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+				svc := obj.(*corev1.Service)
+				svc.Spec = makeTamperedK8sService().Spec
+				return controllertesting.Handled, nil
+			},
+			expected: makeTamperedK8sService(),
+		},
+		"different spec - update fails": {
+			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
+				l := obj.(*corev1.ServiceList)
+				l.Items = []corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							OwnerReferences: []metav1.OwnerReference{
+								{
+									Controller: &truePointer,
+									UID:        channelUID,
+								},
+							},
+						},
+						Spec: corev1.ServiceSpec{
+							ClusterIP: "set in get",
+						},
+					},
+				}
+				return controllertesting.Handled, nil
+			},
+			update: func(_ runtimeClient.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+				return controllertesting.Handled, testInducedError
+			},
+			err: testInducedError,
+		},
+		"different spec - update succeeds": {
+			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
+				l := obj.(*corev1.ServiceList)
+				l.Items = []corev1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							OwnerReferences: []metav1.OwnerReference{
+								{
+									Controller: &truePointer,
+									UID:        channelUID,
+								},
+							},
+						},
+						Spec: corev1.ServiceSpec{
+							ClusterIP: "set in get",
+						},
+					},
+				}
+				return controllertesting.Handled, nil
+			},
+			update: func(_ runtimeClient.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+				svc := obj.(*corev1.Service)
+				if svc.Spec.ClusterIP != "set in get" {
+					return controllertesting.Handled, errors.New("clusterIP should have been overwritten with the version returned by get")
+				}
+				makeTamperedK8sService().DeepCopyInto(svc)
+				return controllertesting.Handled, nil
+			},
+			expected: makeTamperedK8sService(),
+		},
+		"found doesn't need altering": {
+			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
+				l := obj.(*corev1.ServiceList)
+				l.Items = []corev1.Service{*makeK8sService()}
+				return controllertesting.Handled, nil
+			},
+			create: func(_ runtimeClient.Client, _ context.Context, _ runtime.Object) (controllertesting.MockHandled, error) {
+				return controllertesting.Handled, errors.New("create should not have been called")
+			},
+			update: func(_ runtimeClient.Client, _ context.Context, _ runtime.Object) (controllertesting.MockHandled, error) {
+				return controllertesting.Handled, errors.New("update should not have been called")
+			},
+			expected: makeK8sService(),
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			mocks := controllertesting.Mocks{}
+			if tc.list != nil {
+				mocks.MockLists = []controllertesting.MockList{tc.list}
+			}
+			if tc.create != nil {
+				mocks.MockCreates = []controllertesting.MockCreate{tc.create}
+			}
+			if tc.update != nil {
+				mocks.MockUpdates = []controllertesting.MockUpdate{tc.update}
+			}
+			client := controllertesting.NewMockClient(fake.NewFakeClient(), mocks)
+			svc, err := CreateK8sService(context.TODO(), client, getNewChannel())
+			if tc.err != err {
+				t.Fatalf("Unexpected error. Expected '%s', actual '%v'", tc.err, err)
+			}
+			if diff := cmp.Diff(tc.expected, svc); diff != "" {
+				t.Fatalf("Unexpected service (-want +got): %s", diff)
+			}
+		})
+	}
+}
+
+func TestCreateVirtualService(t *testing.T) {
+	testCases := map[string]struct {
+		list     controllertesting.MockList
+		create   controllertesting.MockCreate
+		update   controllertesting.MockUpdate
+		expected *istiov1alpha3.VirtualService
+		err      error
+	}{
+		"error getting svc": {
+			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, _ runtime.Object) (controllertesting.MockHandled, error) {
+				return controllertesting.Handled, testInducedError
+			},
+			err: testInducedError,
+		},
+		"not found - create error": {
+			create: func(_ runtimeClient.Client, _ context.Context, _ runtime.Object) (controllertesting.MockHandled, error) {
+				return controllertesting.Handled, testInducedError
+			},
+			err: testInducedError,
+		},
+		"not found - create succeeds": {
+			create: func(_ runtimeClient.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+				vs := obj.(*istiov1alpha3.VirtualService)
+				vs.Spec = makeTamperedVirtualService().Spec
+				return controllertesting.Handled, nil
+			},
+			expected: makeTamperedVirtualService(),
+		},
+		"different spec - update fails": {
+			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
+				l := obj.(*istiov1alpha3.VirtualServiceList)
+				l.Items = []istiov1alpha3.VirtualService{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							OwnerReferences: []metav1.OwnerReference{
+								{
+									Controller: &truePointer,
+									UID:        channelUID,
+								},
+							},
+						},
+						Spec: istiov1alpha3.VirtualServiceSpec{
+							Gateways: []string{"set in get"},
+						},
+					},
+				}
+				return controllertesting.Handled, nil
+			},
+			update: func(_ runtimeClient.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+				return controllertesting.Handled, testInducedError
+			},
+			err: testInducedError,
+		},
+		"different spec - update succeeds": {
+			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
+				l := obj.(*istiov1alpha3.VirtualServiceList)
+				l.Items = []istiov1alpha3.VirtualService{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							OwnerReferences: []metav1.OwnerReference{
+								{
+									Controller: &truePointer,
+									UID:        channelUID,
+								},
+							},
+						},
+						Spec: istiov1alpha3.VirtualServiceSpec{
+							Gateways: []string{"set in get"},
+						},
+					},
+				}
+				return controllertesting.Handled, nil
+			},
+			update: func(_ runtimeClient.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+				vs := obj.(*istiov1alpha3.VirtualService)
+				makeTamperedVirtualService().DeepCopyInto(vs)
+				return controllertesting.Handled, nil
+			},
+			expected: makeTamperedVirtualService(),
+		},
+		"found doesn't need altering": {
+			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
+				l := obj.(*istiov1alpha3.VirtualServiceList)
+				l.Items = []istiov1alpha3.VirtualService{*makeVirtualService()}
+				return controllertesting.Handled, nil
+			},
+			create: func(_ runtimeClient.Client, _ context.Context, _ runtime.Object) (controllertesting.MockHandled, error) {
+				return controllertesting.Handled, errors.New("create should not have been called")
+			},
+			update: func(_ runtimeClient.Client, _ context.Context, _ runtime.Object) (controllertesting.MockHandled, error) {
+				return controllertesting.Handled, errors.New("update should not have been called")
+			},
+			expected: makeVirtualService(),
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			mocks := controllertesting.Mocks{}
+			if tc.list != nil {
+				mocks.MockLists = []controllertesting.MockList{tc.list}
+			}
+			if tc.create != nil {
+				mocks.MockCreates = []controllertesting.MockCreate{tc.create}
+			}
+			if tc.update != nil {
+				mocks.MockUpdates = []controllertesting.MockUpdate{tc.update}
+			}
+			client := controllertesting.NewMockClient(fake.NewFakeClient(), mocks)
+			vs, err := CreateVirtualService(context.TODO(), client, getNewChannel(), makeK8sService())
+			if tc.err != err {
+				t.Fatalf("Unexpected error. Expected '%s', actual '%v'", tc.err, err)
+			}
+			if diff := cmp.Diff(tc.expected, vs); diff != "" {
+				t.Fatalf("Unexpected virtual service (-want +got): %s", diff)
+			}
+		})
+	}
+}
+
+func TestAddFinalizer(t *testing.T) {
+	testCases := map[string]struct {
+		alreadyPresent bool
+	}{
+		"not present": {
+			alreadyPresent: false,
+		},
+		"already present": {
+			alreadyPresent: true,
+		},
+	}
+	finalizer := "test-finalizer"
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			c := getNewChannel()
+			if tc.alreadyPresent {
+				c.Finalizers = []string{finalizer}
+			} else {
+				c.Finalizers = []string{}
+			}
+			addFinalizerResult := AddFinalizer(c, finalizer)
+			if tc.alreadyPresent && addFinalizerResult != FinalizerAlreadyPresent {
+				t.Errorf("Finalizer already present, expected FinalizerAlreadyPresent. Actual %v", addFinalizerResult)
+			} else if !tc.alreadyPresent && addFinalizerResult != FinalizerAdded {
+				t.Errorf("Finalizer not already present, expected FinalizerAdded. Actual %v", addFinalizerResult)
+			}
+		})
+	}
+}
+
 func TestChannelNames(t *testing.T) {
 	testCases := []struct {
 		Name string
 		F    func() string
 		Want string
 	}{{
-		Name: "ChannelVirtualServiceName",
+		Name: "channelVirtualServiceName",
 		F: func() string {
-			return ChannelVirtualServiceName("foo")
+			return channelVirtualServiceName("foo")
 		},
-		Want: "foo-channel",
+		Want: "foo-channel-",
 	}, {
-		Name: "ChannelServiceName",
+		Name: "channelServiceName",
 		F: func() string {
-			return ChannelServiceName("foo")
+			return channelServiceName("foo")
 		},
-		Want: "foo-channel",
+		Want: "foo-channel-",
 	}, {
-		Name: "ChannelHostName",
+		Name: "channelHostName",
 		F: func() string {
-			return ChannelHostName("foo", "namespace")
+			return channelHostName("foo", "namespace")
 		},
 		Want: "foo.namespace.channels.cluster.local",
 	}}
@@ -152,10 +436,111 @@ func TestChannelNames(t *testing.T) {
 	}
 }
 
+func TestExpectedLabelsPresent(t *testing.T) {
+	tests := []struct {
+		name       string
+		actual     map[string]string
+		expected   map[string]string
+		shouldFail bool
+	}{
+		{
+			name:   "actual nil",
+			actual: nil,
+			expected: map[string]string{
+				EventingChannelLabel:        "channel-1",
+				OldEventingChannelLabel:     "channel-1",
+				EventingProvisionerLabel:    "provisioner-1",
+				OldEventingProvisionerLabel: "provisioner-1",
+			},
+			shouldFail: true,
+		},
+		{
+			name: "missing some labels",
+			actual: map[string]string{
+				OldEventingChannelLabel:     "channel-1",
+				OldEventingProvisionerLabel: "provisioner-1",
+			},
+			expected: map[string]string{
+				EventingChannelLabel:        "channel-1",
+				OldEventingChannelLabel:     "channel-1",
+				EventingProvisionerLabel:    "provisioner-1",
+				OldEventingProvisionerLabel: "provisioner-1",
+			},
+			shouldFail: true,
+		},
+		{
+			name: "all labels but mismatched value",
+			actual: map[string]string{
+				EventingChannelLabel:        "channel-1",
+				OldEventingChannelLabel:     "channel-1",
+				EventingProvisionerLabel:    "provisioner",
+				OldEventingProvisionerLabel: "provisioner-1",
+			},
+			expected: map[string]string{
+				EventingChannelLabel:        "channel-1",
+				OldEventingChannelLabel:     "channel-1",
+				EventingProvisionerLabel:    "provisioner-1",
+				OldEventingProvisionerLabel: "provisioner-1",
+			},
+			shouldFail: true,
+		},
+		{
+			name: "all good",
+			actual: map[string]string{
+				EventingChannelLabel:        "channel-1",
+				OldEventingChannelLabel:     "channel-1",
+				EventingProvisionerLabel:    "provisioner-1",
+				OldEventingProvisionerLabel: "provisioner-1",
+			},
+			expected: map[string]string{
+				EventingChannelLabel:        "channel-1",
+				OldEventingChannelLabel:     "channel-1",
+				EventingProvisionerLabel:    "provisioner-1",
+				OldEventingProvisionerLabel: "provisioner-1",
+			},
+			shouldFail: false,
+		},
+		{
+			name: "all good but with extra label",
+			actual: map[string]string{
+				EventingChannelLabel:                 "channel-1",
+				OldEventingChannelLabel:              "channel-1",
+				EventingProvisionerLabel:             "provisioner-1",
+				OldEventingProvisionerLabel:          "provisioner-1",
+				"extra-label-that-should-be-ignored": "foo",
+			},
+			expected: map[string]string{
+				EventingChannelLabel:        "channel-1",
+				OldEventingChannelLabel:     "channel-1",
+				EventingProvisionerLabel:    "provisioner-1",
+				OldEventingProvisionerLabel: "provisioner-1",
+			},
+			shouldFail: false,
+		},
+	}
+
+	for _, test := range tests {
+		result := expectedLabelsPresent(test.actual, test.expected)
+		if result && test.shouldFail {
+			t.Errorf("Test: %s supposed to %v but %v", test.name, func(v bool) string {
+				if v {
+					return "fail"
+				}
+				return "succeed"
+			}(test.shouldFail), func(v bool) string {
+				if v {
+					return "fail"
+				}
+				return "succeed"
+			}(result))
+		}
+	}
+}
+
 func getNewChannel() *eventingv1alpha1.Channel {
 	channel := &eventingv1alpha1.Channel{
 		TypeMeta:   channelType(),
-		ObjectMeta: om(testNS, channelName),
+		ObjectMeta: om(testNS, channelName, channelUID),
 		Spec: eventingv1alpha1.ChannelSpec{
 			Provisioner: &corev1.ObjectReference{
 				Name:       clusterChannelProvisionerName,
@@ -175,10 +560,12 @@ func channelType() metav1.TypeMeta {
 		Kind:       "Channel",
 	}
 }
-func om(namespace, name string) metav1.ObjectMeta {
+
+func om(namespace, name string, uid types.UID) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
 		Namespace: namespace,
 		Name:      name,
+		UID:       uid,
 		SelfLink:  fmt.Sprintf("/apis/eventing/v1alpha1/namespaces/%s/object/%s", namespace, name),
 	}
 }
@@ -186,17 +573,20 @@ func om(namespace, name string) metav1.ObjectMeta {
 func makeK8sService() *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-channel", channelName),
-			Namespace: testNS,
+			GenerateName: fmt.Sprintf("%s-channel-", channelName),
+			Namespace:    testNS,
 			Labels: map[string]string{
-				"channel":     channelName,
-				"provisioner": clusterChannelProvisionerName,
+				EventingChannelLabel:        channelName,
+				OldEventingChannelLabel:     channelName,
+				EventingProvisionerLabel:    clusterChannelProvisionerName,
+				OldEventingProvisionerLabel: clusterChannelProvisionerName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
 					Kind:               "Channel",
 					Name:               channelName,
+					UID:                channelUID,
 					Controller:         &truePointer,
 					BlockOwnerDeletion: &truePointer,
 				},
@@ -213,20 +603,31 @@ func makeK8sService() *corev1.Service {
 	}
 }
 
+func makeTamperedK8sService() *corev1.Service {
+	svc := makeK8sService()
+	svc.Spec = corev1.ServiceSpec{
+		ClusterIP: "tampered by the unit tests",
+	}
+	return svc
+}
+
 func makeVirtualService() *istiov1alpha3.VirtualService {
 	return &istiov1alpha3.VirtualService{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-channel", channelName),
-			Namespace: testNS,
+			GenerateName: fmt.Sprintf("%s-channel-", channelName),
+			Namespace:    testNS,
 			Labels: map[string]string{
-				"channel":     channelName,
-				"provisioner": clusterChannelProvisionerName,
+				EventingChannelLabel:        channelName,
+				OldEventingChannelLabel:     channelName,
+				EventingProvisionerLabel:    clusterChannelProvisionerName,
+				OldEventingProvisionerLabel: clusterChannelProvisionerName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
 					Kind:               "Channel",
 					Name:               channelName,
+					UID:                channelUID,
 					Controller:         &truePointer,
 					BlockOwnerDeletion: &truePointer,
 				},
@@ -234,7 +635,9 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 		},
 		Spec: istiov1alpha3.VirtualServiceSpec{
 			Hosts: []string{
-				fmt.Sprintf("%s-channel.%s.svc.cluster.local", channelName, testNS),
+				// The fake client doesn't fill in a Name when GeneratedName is used, so the
+				// Channel's Name will be the empty string.
+				fmt.Sprintf("%s.%s.svc.cluster.local", "", testNS),
 				fmt.Sprintf("%s.%s.channels.cluster.local", channelName, testNS),
 			},
 			Http: []istiov1alpha3.HTTPRoute{{
@@ -252,4 +655,12 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 			},
 		},
 	}
+}
+
+func makeTamperedVirtualService() *istiov1alpha3.VirtualService {
+	vs := makeVirtualService()
+	vs.Spec = istiov1alpha3.VirtualServiceSpec{
+		Gateways: []string{"tamped by the unit tests"},
+	}
+	return vs
 }

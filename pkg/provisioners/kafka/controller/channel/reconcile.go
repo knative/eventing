@@ -92,10 +92,11 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	newChannel.Status.InitializeConditions()
 
+	var requeue = false
 	if clusterChannelProvisioner.Status.IsReady() {
 		// Reconcile this copy of the Channel and then write back any status
 		// updates regardless of whether the reconcile error out.
-		err = r.reconcile(ctx, newChannel)
+		requeue, err = r.reconcile(ctx, newChannel)
 	} else {
 		newChannel.Status.MarkNotProvisioned("NotProvisioned", "ClusterChannelProvisioner %s is not ready", clusterChannelProvisioner.Name)
 		err = fmt.Errorf("ClusterChannelProvisioner %s is not ready", clusterChannelProvisioner.Name)
@@ -107,15 +108,20 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	// Requeue if the resource is not ready:
-	return reconcile.Result{}, err
+	return reconcile.Result{
+		Requeue: requeue,
+	}, err
 }
 
-func (r *reconciler) reconcile(ctx context.Context, channel *eventingv1alpha1.Channel) error {
+// reconcile reconciles this Channel so that the real world matches the intended state. The returned
+// boolean indicates if this Channel should be immediately requeued for another reconcile loop. The
+// returned error indicates an error during reconciliation.
+func (r *reconciler) reconcile(ctx context.Context, channel *eventingv1alpha1.Channel) (bool, error) {
 
 	// We always need to sync the Channel config, so do it first.
 	if err := r.syncChannelConfig(ctx); err != nil {
 		r.logger.Info("error updating syncing the Channel config", zap.Error(err))
-		return err
+		return false, err
 	}
 
 	// We don't currently initialize r.kafkaClusterAdmin, hence we end up creating the cluster admin client every time.
@@ -128,7 +134,7 @@ func (r *reconciler) reconcile(ctx context.Context, channel *eventingv1alpha1.Ch
 		kafkaClusterAdmin, err = createKafkaAdminClient(r.config)
 		if err != nil {
 			r.logger.Fatal("unable to build kafka admin client", zap.Error(err))
-			return err
+			return false, err
 		}
 	}
 
@@ -136,58 +142,53 @@ func (r *reconciler) reconcile(ctx context.Context, channel *eventingv1alpha1.Ch
 	accessor, err := meta.Accessor(channel)
 	if err != nil {
 		r.logger.Info("failed to get metadata", zap.Error(err))
-		return err
+		return false, err
 	}
 	deletionTimestamp := accessor.GetDeletionTimestamp()
 	if deletionTimestamp != nil {
 		r.logger.Info(fmt.Sprintf("DeletionTimestamp: %v", deletionTimestamp))
-		if err := r.deprovisionChannel(channel, kafkaClusterAdmin); err != nil {
-			return err
+		if err = r.deprovisionChannel(channel, kafkaClusterAdmin); err != nil {
+			return false, err
 		}
 		util.RemoveFinalizer(channel, finalizerName)
-		return nil
+		return false, nil
 	}
 
-	util.AddFinalizer(channel, finalizerName)
+	// If we are adding the finalizer for the first time, then ensure that finalizer is persisted
+	// before manipulating Kafka, which will not be automatically garbage collected by K8s if this
+	// Channel is deleted.
+	if addFinalizerResult := util.AddFinalizer(channel, finalizerName); addFinalizerResult == util.FinalizerAdded {
+		return true, nil
+	}
 
-	if err := r.provisionChannel(channel, kafkaClusterAdmin); err != nil {
+	if err = r.provisionChannel(channel, kafkaClusterAdmin); err != nil {
 		channel.Status.MarkNotProvisioned("NotProvisioned", "error while provisioning: %s", err)
-		return err
+		return false, err
 	}
 
 	svc, err := util.CreateK8sService(ctx, r.client, channel)
-
 	if err != nil {
 		r.logger.Info("error creating the Channel's K8s Service", zap.Error(err))
-		return err
+		return false, err
 	}
-
-	// Check if this Channel is the owner of the K8s service.
-	if !metav1.IsControlledBy(svc, channel) {
-		r.logger.Warn("Channel's K8s Service is not owned by the Channel", zap.Any("channel", channel), zap.Any("service", svc))
-	}
-
 	channel.Status.SetAddress(eventingController.ServiceHostName(svc.Name, svc.Namespace))
 
-	virtualService, err := util.CreateVirtualService(ctx, r.client, channel)
-
+	_, err = util.CreateVirtualService(ctx, r.client, channel, svc)
 	if err != nil {
 		r.logger.Info("error creating the Virtual Service for the Channel", zap.Error(err))
-		return err
-	}
-
-	// If the Virtual Service is not controlled by this Channel, we should log a warning, but don't
-	// consider it an error.
-	if !metav1.IsControlledBy(virtualService, channel) {
-		r.logger.Warn("VirtualService not owned by Channel", zap.Any("channel", channel), zap.Any("virtualService", virtualService))
+		return false, err
 	}
 
 	channel.Status.MarkProvisioned()
 
 	// close the connection
-	kafkaClusterAdmin.Close()
+	err = kafkaClusterAdmin.Close()
+	if err != nil {
+		r.logger.Error("error closing the connection", zap.Error(err))
+		return false, err
+	}
 
-	return nil
+	return false, nil
 }
 
 func (r *reconciler) shouldReconcile(channel *eventingv1alpha1.Channel, clusterChannelProvisioner *eventingv1alpha1.ClusterChannelProvisioner) bool {
@@ -344,7 +345,7 @@ func (r *reconciler) listAllChannels(ctx context.Context) ([]eventingv1alpha1.Ch
 	}
 	for {
 		cl := &eventingv1alpha1.ChannelList{}
-		if err := r.client.List(ctx, opts, cl); err != nil {
+		if err = r.client.List(ctx, opts, cl); err != nil {
 			return nil, err
 		}
 
