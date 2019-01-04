@@ -43,6 +43,7 @@ type MockList func(innerClient client.Client, ctx context.Context, opts *client.
 type MockCreate func(innerClient client.Client, ctx context.Context, obj runtime.Object) (MockHandled, error)
 type MockDelete func(innerClient client.Client, ctx context.Context, obj runtime.Object) (MockHandled, error)
 type MockUpdate func(innerClient client.Client, ctx context.Context, obj runtime.Object) (MockHandled, error)
+type MockStatusUpdate func(innerClient client.Client, ctx context.Context, obj runtime.Object) (MockHandled, error)
 
 var _ client.Client = (*MockClient)(nil)
 
@@ -53,16 +54,21 @@ type MockClient struct {
 	mocks       Mocks
 }
 
+type mockStatusWriter struct {
+	parent *MockClient
+}
+
 // The mocks to run on each function type. Each function will run through the mocks in its list
 // until one responds with 'Handled'. If there is more than one mock in the list, then the one that
 // responds 'Handled' will be removed and not run on subsequent calls to the function. If no mocks
 // respond 'Handled', then the real underlying client is called.
 type Mocks struct {
-	MockGets    []MockGet
-	MockLists   []MockList
-	MockCreates []MockCreate
-	MockDeletes []MockDelete
-	MockUpdates []MockUpdate
+	MockGets          []MockGet
+	MockLists         []MockList
+	MockCreates       []MockCreate
+	MockDeletes       []MockDelete
+	MockUpdates       []MockUpdate
+	MockStatusUpdates []MockStatusUpdate
 }
 
 func NewMockClient(innerClient client.Client, mocks Mocks) *MockClient {
@@ -149,5 +155,22 @@ func (m *MockClient) Update(ctx context.Context, obj runtime.Object) error {
 }
 
 func (m *MockClient) Status() client.StatusWriter {
-	return m.innerClient.Status()
+	return &mockStatusWriter{
+		parent: m,
+	}
+}
+
+func (w *mockStatusWriter) Update(ctx context.Context, obj runtime.Object) error {
+	mocks := w.parent.mocks.MockStatusUpdates
+
+	for i, mock := range mocks {
+		handled, err := mock(w.parent.innerClient, ctx, obj)
+		if handled == Handled {
+			if len(w.parent.mocks.MockStatusUpdates) > 1 {
+				w.parent.mocks.MockStatusUpdates = append(mocks[:i], mocks[i+1:]...)
+			}
+			return err
+		}
+	}
+	return w.parent.innerClient.Status().Update(ctx, obj)
 }

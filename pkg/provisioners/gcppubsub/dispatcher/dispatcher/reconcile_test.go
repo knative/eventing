@@ -297,6 +297,8 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 		},
+		// Note - we do not test update status since this dispatcher only adds
+		// finalizers to the channel
 	}
 	recorder := record.NewBroadcaster().NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 	for _, tc := range testCases {

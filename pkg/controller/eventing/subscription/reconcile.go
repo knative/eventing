@@ -168,23 +168,16 @@ func (r *reconciler) updateStatus(subscription *v1alpha1.Subscription) (*v1alpha
 		return nil, err
 	}
 
-	updated := false
 	if !equality.Semantic.DeepEqual(newSubscription.Finalizers, subscription.Finalizers) {
 		newSubscription.SetFinalizers(subscription.ObjectMeta.Finalizers)
-		updated = true
+		if err = r.client.Update(context.TODO(), newSubscription); err != nil {
+			return nil, err
+		}
 	}
 
 	if !equality.Semantic.DeepEqual(newSubscription.Status, subscription.Status) {
 		newSubscription.Status = subscription.Status
-		updated = true
-	}
-
-	if updated {
-		// Until #38113 is merged, we must use Update instead of UpdateStatus to
-		// update the Status block of the Subscription resource. UpdateStatus will not
-		// allow changes to the Spec of the resource, which is ideal for ensuring
-		// nothing other than resource status has been updated.
-		if err = r.client.Update(context.TODO(), newSubscription); err != nil {
+		if err = r.client.Status().Update(context.TODO(), newSubscription); err != nil {
 			return nil, err
 		}
 	}
