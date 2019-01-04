@@ -3,6 +3,7 @@ package provisioners
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/labels"
 
@@ -114,8 +115,10 @@ func createK8sService(ctx context.Context, client runtimeClient.Client, getSvc g
 	// spec.clusterIP is immutable and is set on existing services. If we don't set this
 	// to the same value, we will encounter an error while updating.
 	svc.Spec.ClusterIP = current.Spec.ClusterIP
-	if !equality.Semantic.DeepDerivative(svc.Spec, current.Spec) {
+	if !equality.Semantic.DeepDerivative(svc.Spec, current.Spec) ||
+		!checkExpectedLabels(current.ObjectMeta.Labels, svc.ObjectMeta.Labels) {
 		current.Spec = svc.Spec
+		current.ObjectMeta.Labels = addExpectedLabels(current.ObjectMeta.Labels, svc.ObjectMeta.Labels)
 		err = client.Update(ctx, current)
 		if err != nil {
 			return nil, err
@@ -172,14 +175,50 @@ func CreateVirtualService(ctx context.Context, client runtimeClient.Client, chan
 	// spec.HTTP.Route for the dispatcher was changed from *-clusterbus to *-dispatcher. Even otherwise, this
 	// reconciliation is useful for the future mutations to the object.
 	expected := newVirtualService(channel, svc)
-	if !equality.Semantic.DeepDerivative(expected.Spec, virtualService.Spec) {
+	if !equality.Semantic.DeepDerivative(expected.Spec, virtualService.Spec) ||
+		!checkExpectedLabels(virtualService.ObjectMeta.Labels, expected.ObjectMeta.Labels) {
 		virtualService.Spec = expected.Spec
+		virtualService.ObjectMeta.Labels = addExpectedLabels(virtualService.ObjectMeta.Labels, expected.ObjectMeta.Labels)
 		err := client.Update(ctx, virtualService)
 		if err != nil {
 			return nil, err
 		}
 	}
 	return virtualService, nil
+}
+
+// checkExpectedLabels checks the presence of expected labels and its values and return true
+// if all labels are found.
+func checkExpectedLabels(actual, expected map[string]string) bool {
+	for ke, ve := range expected {
+		if va, ok := actual[ke]; ok {
+			if strings.Compare(ve, va) == 0 {
+				continue
+			}
+		}
+		return false
+	}
+	return true
+}
+
+// addExpectedLabels adds expected labels
+func addExpectedLabels(actual, expected map[string]string) map[string]string {
+	consolidated := make(map[string]string, 0)
+	// First store all exisiting labels
+	for k, v := range actual {
+		consolidated[k] = v
+	}
+	// Second add all missing expected labels
+	for k, v := range expected {
+		if va, ok := consolidated[k]; ok {
+			if strings.Compare(v, va) != 0 {
+				consolidated[k] = v
+			}
+			continue
+		}
+		consolidated[k] = v
+	}
+	return consolidated
 }
 
 func UpdateChannel(ctx context.Context, client runtimeClient.Client, u *eventingv1alpha1.Channel) error {
