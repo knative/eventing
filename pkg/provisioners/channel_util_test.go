@@ -436,7 +436,7 @@ func TestChannelNames(t *testing.T) {
 	}
 }
 
-func TestCheckExpectedLabels(t *testing.T) {
+func TestExpectedLabelsPresent(t *testing.T) {
 	tests := []struct {
 		name       string
 		actual     map[string]string
@@ -500,10 +500,27 @@ func TestCheckExpectedLabels(t *testing.T) {
 			},
 			shouldFail: false,
 		},
+		{
+			name: "all good but with extra label",
+			actual: map[string]string{
+				EventingChannelLabel:                 "channel-1",
+				OldEventingChannelLabel:              "channel-1",
+				EventingProvisionerLabel:             "provisioner-1",
+				OldEventingProvisionerLabel:          "provisioner-1",
+				"extra-label-that-should-be-ignored": "foo",
+			},
+			expected: map[string]string{
+				EventingChannelLabel:        "channel-1",
+				OldEventingChannelLabel:     "channel-1",
+				EventingProvisionerLabel:    "provisioner-1",
+				OldEventingProvisionerLabel: "provisioner-1",
+			},
+			shouldFail: false,
+		},
 	}
 
 	for _, test := range tests {
-		result := checkExpectedLabels(test.actual, test.expected)
+		result := expectedLabelsPresent(test.actual, test.expected)
 		if result && test.shouldFail {
 			t.Errorf("Test: %s supposed to %v but %v", test.name, func(v bool) string {
 				if v {

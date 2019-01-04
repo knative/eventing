@@ -116,7 +116,7 @@ func createK8sService(ctx context.Context, client runtimeClient.Client, getSvc g
 	// to the same value, we will encounter an error while updating.
 	svc.Spec.ClusterIP = current.Spec.ClusterIP
 	if !equality.Semantic.DeepDerivative(svc.Spec, current.Spec) ||
-		!checkExpectedLabels(current.ObjectMeta.Labels, svc.ObjectMeta.Labels) {
+		!expectedLabelsPresent(current.ObjectMeta.Labels, svc.ObjectMeta.Labels) {
 		current.Spec = svc.Spec
 		current.ObjectMeta.Labels = addExpectedLabels(current.ObjectMeta.Labels, svc.ObjectMeta.Labels)
 		err = client.Update(ctx, current)
@@ -176,7 +176,7 @@ func CreateVirtualService(ctx context.Context, client runtimeClient.Client, chan
 	// reconciliation is useful for the future mutations to the object.
 	expected := newVirtualService(channel, svc)
 	if !equality.Semantic.DeepDerivative(expected.Spec, virtualService.Spec) ||
-		!checkExpectedLabels(virtualService.ObjectMeta.Labels, expected.ObjectMeta.Labels) {
+		!expectedLabelsPresent(virtualService.ObjectMeta.Labels, expected.ObjectMeta.Labels) {
 		virtualService.Spec = expected.Spec
 		virtualService.ObjectMeta.Labels = addExpectedLabels(virtualService.ObjectMeta.Labels, expected.ObjectMeta.Labels)
 		err := client.Update(ctx, virtualService)
@@ -189,7 +189,7 @@ func CreateVirtualService(ctx context.Context, client runtimeClient.Client, chan
 
 // checkExpectedLabels checks the presence of expected labels and its values and return true
 // if all labels are found.
-func checkExpectedLabels(actual, expected map[string]string) bool {
+func expectedLabelsPresent(actual, expected map[string]string) bool {
 	for ke, ve := range expected {
 		if va, ok := actual[ke]; ok {
 			if strings.Compare(ve, va) == 0 {
