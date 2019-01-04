@@ -37,6 +37,7 @@ rules:
       - eventing.knative.dev
     resources:
       - channels
+      - channels/status
       - clusterchannelprovisioners
     verbs:
       - get
@@ -137,6 +138,7 @@ rules:
       - eventing.knative.dev
     resources:
       - channels
+      - channels/status
     verbs:
       - get
       - list
