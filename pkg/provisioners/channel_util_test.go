@@ -436,6 +436,90 @@ func TestChannelNames(t *testing.T) {
 	}
 }
 
+func TestCheckExpectedLabels(t *testing.T) {
+	tests := []struct {
+		name       string
+		actual     map[string]string
+		expected   map[string]string
+		shouldFail bool
+	}{
+		{
+			name:   "actual nil",
+			actual: nil,
+			expected: map[string]string{
+				EventingChannelLabel:        "channel-1",
+				OldEventingChannelLabel:     "channel-1",
+				EventingProvisionerLabel:    "provisioner-1",
+				OldEventingProvisionerLabel: "provisioner-1",
+			},
+			shouldFail: true,
+		},
+		{
+			name: "missing some labels",
+			actual: map[string]string{
+				OldEventingChannelLabel:     "channel-1",
+				OldEventingProvisionerLabel: "provisioner-1",
+			},
+			expected: map[string]string{
+				EventingChannelLabel:        "channel-1",
+				OldEventingChannelLabel:     "channel-1",
+				EventingProvisionerLabel:    "provisioner-1",
+				OldEventingProvisionerLabel: "provisioner-1",
+			},
+			shouldFail: true,
+		},
+		{
+			name: "all labels but mismatched value",
+			actual: map[string]string{
+				EventingChannelLabel:        "channel-1",
+				OldEventingChannelLabel:     "channel-1",
+				EventingProvisionerLabel:    "provisioner",
+				OldEventingProvisionerLabel: "provisioner-1",
+			},
+			expected: map[string]string{
+				EventingChannelLabel:        "channel-1",
+				OldEventingChannelLabel:     "channel-1",
+				EventingProvisionerLabel:    "provisioner-1",
+				OldEventingProvisionerLabel: "provisioner-1",
+			},
+			shouldFail: true,
+		},
+		{
+			name: "all good",
+			actual: map[string]string{
+				EventingChannelLabel:        "channel-1",
+				OldEventingChannelLabel:     "channel-1",
+				EventingProvisionerLabel:    "provisioner-1",
+				OldEventingProvisionerLabel: "provisioner-1",
+			},
+			expected: map[string]string{
+				EventingChannelLabel:        "channel-1",
+				OldEventingChannelLabel:     "channel-1",
+				EventingProvisionerLabel:    "provisioner-1",
+				OldEventingProvisionerLabel: "provisioner-1",
+			},
+			shouldFail: false,
+		},
+	}
+
+	for _, test := range tests {
+		result := checkExpectedLabels(test.actual, test.expected)
+		if result && test.shouldFail {
+			t.Errorf("Test: %s supposed to %v but %v", test.name, func(v bool) string {
+				if v {
+					return "fail"
+				}
+				return "succeed"
+			}(test.shouldFail), func(v bool) string {
+				if v {
+					return "fail"
+				}
+				return "succeed"
+			}(result))
+		}
+	}
+}
+
 func getNewChannel() *eventingv1alpha1.Channel {
 	channel := &eventingv1alpha1.Channel{
 		TypeMeta:   channelType(),
