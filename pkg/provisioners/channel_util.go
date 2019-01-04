@@ -23,6 +23,10 @@ import (
 const (
 	PortName   = "http"
 	PortNumber = 80
+	// EventingChannelLabel carries the name of knative's label for the channel
+	EventingChannelLabel = "eventing.knative.dev/channel"
+	// EventingProvisionerLabel carries the name of knative's label for the provisioner
+	EventingProvisionerLabel = "eventing.knative.dev/provisioner"
 )
 
 // AddFinalizerResult is used indicate whether a finalizer was added or already present.
@@ -221,10 +225,11 @@ func newK8sService(c *eventingv1alpha1.Channel) *corev1.Service {
 	}
 }
 
+// K8SServiceLabels returns a map with eventing channel and provisioner labels
 func k8sServiceLabels(c *eventingv1alpha1.Channel) map[string]string {
 	return map[string]string{
-		"eventing.knative.dev/channel":     c.Name,
-		"eventing.knative.dev/provisioner": c.Spec.Provisioner.Name,
+		EventingChannelLabel:     c.Name,
+		EventingProvisionerLabel: c.Spec.Provisioner.Name,
 	}
 }
 

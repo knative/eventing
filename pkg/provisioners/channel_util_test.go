@@ -475,8 +475,8 @@ func makeK8sService() *corev1.Service {
 			GenerateName: fmt.Sprintf("%s-channel-", channelName),
 			Namespace:    testNS,
 			Labels: map[string]string{
-				"eventing.knative.dev/channel":     channelName,
-				"eventing.knative.dev/provisioner": clusterChannelProvisionerName,
+				EventingChannelLabel:     channelName,
+				EventingProvisionerLabel: clusterChannelProvisionerName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -514,8 +514,8 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 			GenerateName: fmt.Sprintf("%s-channel-", channelName),
 			Namespace:    testNS,
 			Labels: map[string]string{
-				"eventing.knative.dev/channel":     channelName,
-				"eventing.knative.dev/provisioner": clusterChannelProvisionerName,
+				EventingChannelLabel:     channelName,
+				EventingProvisionerLabel: clusterChannelProvisionerName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
