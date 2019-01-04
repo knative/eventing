@@ -27,6 +27,13 @@ const (
 	EventingChannelLabel = "eventing.knative.dev/channel"
 	// EventingProvisionerLabel carries the name of knative's label for the provisioner
 	EventingProvisionerLabel = "eventing.knative.dev/provisioner"
+
+	// TODO: Remove selection based on old labels ater the release
+
+	// OldEventingChannelLabel carries the name of knative's old label for the channel
+	OldEventingChannelLabel = "channel"
+	// OldEventingProvisionerLabel carries the name of knative's old label for the provisioner
+	OldEventingProvisionerLabel = "provisioner"
 )
 
 // AddFinalizerResult is used indicate whether a finalizer was added or already present.
@@ -64,8 +71,9 @@ func CreateK8sService(ctx context.Context, client runtimeClient.Client, c *event
 func getK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
 	list := &corev1.ServiceList{}
 	opts := &runtimeClient.ListOptions{
-		Namespace:     c.Namespace,
-		LabelSelector: labels.SelectorFromSet(k8sServiceLabels(c)),
+		Namespace: c.Namespace,
+		// TODO After the full release start selecting on new set of labels by using k8sServiceLabels(c)
+		LabelSelector: labels.SelectorFromSet(k8sOldServiceLabels(c)),
 		// TODO this is here because the fake client needs it. Remove this when it's no longer
 		// needed.
 		Raw: &metav1.ListOptions{
@@ -119,8 +127,9 @@ func createK8sService(ctx context.Context, client runtimeClient.Client, getSvc g
 func getVirtualService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*istiov1alpha3.VirtualService, error) {
 	list := &istiov1alpha3.VirtualServiceList{}
 	opts := &runtimeClient.ListOptions{
-		Namespace:     c.Namespace,
-		LabelSelector: labels.SelectorFromSet(virtualServiceLabels(c)),
+		Namespace: c.Namespace,
+		// TODO After the full release start selecting on new set of labels by using virtualServiceLabels(c)
+		LabelSelector: labels.SelectorFromSet(virtualOldServiceLabels(c)),
 		// TODO this is here because the fake client needs it. Remove this when it's no longer
 		// needed.
 		Raw: &metav1.ListOptions{
@@ -225,17 +234,32 @@ func newK8sService(c *eventingv1alpha1.Channel) *corev1.Service {
 	}
 }
 
-// K8SServiceLabels returns a map with eventing channel and provisioner labels
+// k8sOldServiceLabels returns a map with only old eventing channel and provisioner labels
+func k8sOldServiceLabels(c *eventingv1alpha1.Channel) map[string]string {
+	return map[string]string{
+		OldEventingChannelLabel:     c.Name,
+		OldEventingProvisionerLabel: c.Spec.Provisioner.Name,
+	}
+}
+
+// k8sServiceLabels returns a map with eventing channel and provisioner labels
 func k8sServiceLabels(c *eventingv1alpha1.Channel) map[string]string {
 	return map[string]string{
-		EventingChannelLabel:     c.Name,
-		EventingProvisionerLabel: c.Spec.Provisioner.Name,
+		EventingChannelLabel:        c.Name,
+		OldEventingChannelLabel:     c.Name,
+		EventingProvisionerLabel:    c.Spec.Provisioner.Name,
+		OldEventingProvisionerLabel: c.Spec.Provisioner.Name,
 	}
 }
 
 func virtualServiceLabels(c *eventingv1alpha1.Channel) map[string]string {
 	// Use the same labels as the K8s service.
 	return k8sServiceLabels(c)
+}
+
+func virtualOldServiceLabels(c *eventingv1alpha1.Channel) map[string]string {
+	// Use the same labels as the K8s service.
+	return k8sOldServiceLabels(c)
 }
 
 // newVirtualService creates a new VirtualService for a Channel resource. It also sets the

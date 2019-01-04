@@ -475,8 +475,10 @@ func makeK8sService() *corev1.Service {
 			GenerateName: fmt.Sprintf("%s-channel-", channelName),
 			Namespace:    testNS,
 			Labels: map[string]string{
-				EventingChannelLabel:     channelName,
-				EventingProvisionerLabel: clusterChannelProvisionerName,
+				EventingChannelLabel:        channelName,
+				OldEventingChannelLabel:     channelName,
+				EventingProvisionerLabel:    clusterChannelProvisionerName,
+				OldEventingProvisionerLabel: clusterChannelProvisionerName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -514,8 +516,10 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 			GenerateName: fmt.Sprintf("%s-channel-", channelName),
 			Namespace:    testNS,
 			Labels: map[string]string{
-				EventingChannelLabel:     channelName,
-				EventingProvisionerLabel: clusterChannelProvisionerName,
+				EventingChannelLabel:        channelName,
+				OldEventingChannelLabel:     channelName,
+				EventingProvisionerLabel:    clusterChannelProvisionerName,
+				OldEventingProvisionerLabel: clusterChannelProvisionerName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
