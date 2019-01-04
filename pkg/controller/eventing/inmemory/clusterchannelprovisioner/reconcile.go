@@ -36,7 +36,7 @@ import (
 
 const (
 	// Name is the name of the in-memory channel ClusterChannelProvisioner.
-	Name = "in-memory-channel"
+	Name = "in-memory"
 
 	// Channel is the name of the Channel resource in eventing.knative.dev/v1alpha1.
 	Channel = "Channel"
@@ -148,7 +148,7 @@ func (r *reconciler) reconcile(ctx context.Context, ccp *eventingv1alpha1.Cluste
 		logger.Warn("ClusterChannelProvisioner's K8s Service is not owned by the ClusterChannelProvisioner", zap.Any("clusterChannelProvisioner", ccp), zap.Any("service", svc))
 	}
 
-	// The name of the svc has changed since version 0.2.1. Hence, delete old dispatcher service (in-memory-channel-clusterbus)
+	// The name of the svc has changed since version 0.2.1. Hence, delete old dispatcher service (in-memory-clusterbus)
 	// that was created previously in version 0.2.0 to ensure backwards compatibility.
 	err = r.deleteOldDispatcherService(ctx, ccp)
 	if err != nil {

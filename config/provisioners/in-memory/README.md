@@ -18,12 +18,12 @@ They differ from most Channels in that they have:
 ### Deployment steps:
 
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md).
-1. Apply the 'in-memory-channel' ClusterChannelProvisioner, Controller, and
+1. Apply the 'in-memory' ClusterChannelProvisioner, Controller, and
    Dispatcher.
    ```shell
-   ko apply -f config/provisioners/in-memory-channel/in-memory-channel.yaml
+   ko apply -f config/provisioners/in-memory/in-memory.yaml
    ```
-1. Create Channels that reference the 'in-memory-channel'.
+1. Create Channels that reference the 'in-memory'.
 
    ```yaml
    apiVersion: eventing.knative.dev/v1alpha1
@@ -34,7 +34,7 @@ They differ from most Channels in that they have:
      provisioner:
        apiVersion: eventing.knative.dev/v1alpha1
        kind: ClusterChannelProvisioner
-       name: in-memory-channel
+       name: in-memory
    ```
 
 ### Components
@@ -50,14 +50,14 @@ The ClusterChannelProvisioner Controller and the Channel Controller are
 colocated in one Pod.
 
 ```shell
-kubectl get deployment -n knative-eventing in-memory-channel-controller
+kubectl get deployment -n knative-eventing in-memory-controller
 ```
 
 The Channel Dispatcher receives and distributes all events. There is a single
 Dispatcher for all in-memory Channels.
 
 ```shell
-kubectl get deployment -n knative-eventing in-memory-channel-dispatcher
+kubectl get deployment -n knative-eventing in-memory-dispatcher
 ```
 
 The Channel Dispatcher Config Map is used to send information about Channels and

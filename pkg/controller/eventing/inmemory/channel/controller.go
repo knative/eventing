@@ -32,7 +32,9 @@ import (
 const (
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName = "in-memory-channel-controller"
+	controllerAgentName = "in-memory-controller"
+
+	// TODO, change configmap name to "in-memory-dispatcher-config-map" post 0.4.0
 
 	// ConfigMapName is the name of the ConfigMap in the knative-eventing namespace that contains
 	// the subscription information for all in-memory Channels. The Provisioner writes to it and the
@@ -47,7 +49,7 @@ var (
 	}
 )
 
-// ProvideController returns a Controller that represents the in-memory-channel Provisioner.
+// ProvideController returns a Controller that represents the in-memory channels Provisioner.
 func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Channels that belong to this Cluster Provisioner
 	// (in-memory channels).
