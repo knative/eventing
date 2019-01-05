@@ -50,7 +50,7 @@ function start_latest_eventing_sources() {
 
 function teardown() {
   teardown_events_test_resources
-#  ko delete --ignore-not-found=true -f config/provisioners/in-memory-channel/in-memory-channel.yaml
+#  ko delete --ignore-not-found=true -f config/provisioners/in-memory/in-memory.yaml
   ko delete --ignore-not-found=true -f config/
   ko delete --ignore-not-found=true -f ${KNATIVE_EVENTING_SOURCES_RELEASE}
 
@@ -104,8 +104,8 @@ ko apply -f config/
 wait_until_pods_running knative-eventing
 
 header "Standing up In-Memory ClusterChannelProvisioner"
-ko resolve -f config/provisioners/in-memory-channel/in-memory-channel.yaml
-ko apply -f config/provisioners/in-memory-channel/in-memory-channel.yaml
+ko resolve -f config/provisioners/in-memory/in-memory.yaml
+ko apply -f config/provisioners/in-memory/in-memory.yaml
 wait_until_pods_running knative-eventing
 
 # Publish test images

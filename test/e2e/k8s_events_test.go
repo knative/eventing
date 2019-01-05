@@ -31,7 +31,7 @@ const (
 	eventSource      = "k8sevents"
 	routeName        = "e2e-k8s-events-function"
 	channelName      = "e2e-k8s-events-channel"
-	provisionerName  = "in-memory-channel"
+	provisionerName  = "in-memory"
 	subscriptionName = "e2e-k8s-events-subscription"
 )
 

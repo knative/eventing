@@ -20,14 +20,14 @@ source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/release.sh
 declare -A COMPONENTS
 COMPONENTS=(
   ["eventing.yaml"]="config"
-  ["in-memory-channel.yaml"]="config/provisioners/in-memory-channel"
+  ["in-memory.yaml"]="config/provisioners/in-memory"
   ["kafka.yaml"]="config/provisioners/kafka"
 )
 readonly COMPONENTS
 
 declare -A RELEASES
 RELEASES=(
-  ["release.yaml"]="eventing.yaml in-memory-channel.yaml"
+  ["release.yaml"]="eventing.yaml in-memory.yaml"
 )
 readonly RELEASES
 
