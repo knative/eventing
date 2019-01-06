@@ -29,7 +29,7 @@ import (
 const (
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName = "in-memory-channel-controller"
+	controllerAgentName = "in-memory-controller"
 )
 
 // ProvideController returns a flow controller.
