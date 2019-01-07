@@ -17,13 +17,12 @@ limitations under the License.
 package provisioners
 
 import (
-	"k8s.io/api/core/v1"
 	"testing"
 )
 
 func TestMessageHistoryEmpty(t *testing.T) {
 	m := Message{}
-	history := getHistoryOrFail(t, &m)
+	history := m.History()
 	if len(history) != 0 {
 		t.Error("history not empty")
 	}
@@ -31,77 +30,36 @@ func TestMessageHistoryEmpty(t *testing.T) {
 
 func TestMessageHistoryAppendSet(t *testing.T) {
 	m := Message{}
-	m.AppendToHistory(ChannelReference{
-		Namespace: "namespace1",
-		Name:      "name1",
-	}, true)
-	history := getHistoryOrFail(t, &m)
+	m.AppendToHistory("name1.ns1.service.local")
+	history := m.History()
 	if len(history) != 1 {
 		t.Error("history does not contain first element")
 	}
-	m.AppendToHistory(ChannelReference{
-		Namespace: "namespace2",
-		Name:      "name2",
-	}, true)
-	history = getHistoryOrFail(t, &m)
+	m.AppendToHistory("name2.ns2.service.local")
+	history = m.History()
 	if len(history) != 2 {
 		t.Error("history does not contain all elements")
 	}
-	if history[0].Name != "name1" {
+	if history[0] != "name1.ns1.service.local" {
 		t.Error("wrong name")
 	}
-	if history[0].Namespace != "namespace1" {
-		t.Error("wrong namespace")
-	}
-	if history[1].Name != "name2" {
+	if history[1] != "name2.ns2.service.local" {
 		t.Error("wrong name")
 	}
-	if history[1].Namespace != "namespace2" {
-		t.Error("wrong namespace")
-	}
-	newHistory := []v1.ObjectReference{
-		{
-			Namespace: "namespace3",
-			Name:      "name3",
-		},
-	}
+	newHistory := []string{"name3.ns3.service.local"}
 	m.SetHistory(newHistory)
-	history = getHistoryOrFail(t, &m)
+	history = m.History()
 	if len(history) != 1 {
 		t.Error("history does not contain the new element")
 	}
 	if history[0] != newHistory[0] {
 		t.Error("wrong history element")
 	}
-}
-
-func TestMessageHistoryAppendOverwrite(t *testing.T) {
-	m := Message{}
-	m.Headers = make(map[string]string)
-	m.Headers[messageHistoryHeader] = "-unparsable-"
-	if _, err := m.History(); err == nil {
-		t.Error("read error not thrown")
+	m.AppendToHistory("")
+	m.AppendToHistory(" ")
+	m.AppendToHistory("  ")
+	history = m.History()
+	if len(history) != 1 {
+		t.Error("history contains unexpected elements")
 	}
-	ch := ChannelReference{
-		Name: "err",
-	}
-	if err := m.AppendToHistory(ch, false); err == nil {
-		t.Error("append error not thrown")
-	}
-	ch.Name = "name"
-	if err := m.AppendToHistory(ch, true); err != nil {
-		t.Error("unexpected error thrown")
-	}
-	history := getHistoryOrFail(t, &m)
-	if len(history) != 1 || history[0].Name != "name" {
-		t.Error("wrong history")
-	}
-}
-
-func getHistoryOrFail(t *testing.T, m *Message) []v1.ObjectReference {
-	history, err := m.History()
-	if err != nil {
-		t.Errorf("got %v when getting history", err)
-	}
-	return history
 }

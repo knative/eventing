@@ -17,10 +17,8 @@
 package provisioners
 
 import (
-	"encoding/json"
 	"errors"
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"k8s.io/api/core/v1"
+	"strings"
 )
 
 var forwardHeaders = []string{
@@ -40,8 +38,9 @@ var forwardPrefixes = []string{
 }
 
 const (
-	// messageHistoryHeader is the header containing all channels in the message history
-	messageHistoryHeader = "knative-message-history"
+	// MessageHistoryHeader is the header containing all hosts in the message history
+	MessageHistoryHeader    = "ce-knativehistory"
+	MessageHistorySeparator = ";"
 )
 
 // Message represents an chunk of data within a channel dispatcher. The message contains both
@@ -70,59 +69,48 @@ func headerSet(headers []string) map[string]bool {
 	return set
 }
 
-// History returns the list channel references where the message has been into
-func (m *Message) History() ([]v1.ObjectReference, error) {
+// History returns the list of hosts where the message has been into
+func (m *Message) History() []string {
 	if m.Headers == nil {
-		return nil, nil
+		return nil
 	}
-	if h, ok := m.Headers[messageHistoryHeader]; ok {
+	if h, ok := m.Headers[MessageHistoryHeader]; ok {
 		return decodeMessageHistory(h)
 	}
-	return nil, nil
-}
-
-// AppendToHistory append a new channel reference at the end of the list of channel references of the message
-func (m *Message) AppendToHistory(reference ChannelReference, overwriteUnreadable bool) error {
-	objectReference := v1.ObjectReference{
-		Name:       reference.Name,
-		Namespace:  reference.Namespace,
-		Kind:       "Channel",
-		APIVersion: v1alpha1.SchemeGroupVersion.String(),
-	}
-	history, err := m.History()
-	if err != nil && !overwriteUnreadable {
-		return err
-	} else if err != nil {
-		// overwrite unreadable data
-		history = make([]v1.ObjectReference, 0)
-	}
-	newHistory := append(history, objectReference)
-	return m.SetHistory(newHistory)
-}
-
-// SetHistory sets the message history to the given value
-func (m *Message) SetHistory(history []v1.ObjectReference) error {
-	historyStr, err := encodeMessageHistory(history)
-	if err != nil {
-		return err
-	}
-	if m.Headers == nil {
-		m.Headers = make(map[string]string)
-	}
-	m.Headers[messageHistoryHeader] = historyStr
 	return nil
 }
 
-func encodeMessageHistory(history []v1.ObjectReference) (string, error) {
-	data, err := json.Marshal(history)
-	if err != nil {
-		return "", err
+// AppendToHistory append a new host at the end of the list of hosts of the message history
+func (m *Message) AppendToHistory(host string) {
+	host = cleanupMessageHistoryItem(host)
+	if host == "" {
+		return
 	}
-	return string(data), nil
+	history := m.History()
+	if history == nil {
+		history = make([]string, 0)
+	}
+	newHistory := append(history, host)
+	m.SetHistory(newHistory)
 }
 
-func decodeMessageHistory(historyStr string) ([]v1.ObjectReference, error) {
-	history := make([]v1.ObjectReference, 0)
-	err := json.Unmarshal([]byte(historyStr), &history)
-	return history, err
+// SetHistory sets the message history to the given value
+func (m *Message) SetHistory(history []string) {
+	historyStr := encodeMessageHistory(history)
+	if m.Headers == nil {
+		m.Headers = make(map[string]string)
+	}
+	m.Headers[MessageHistoryHeader] = historyStr
+}
+
+func cleanupMessageHistoryItem(host string) string {
+	return strings.Trim(host, " ")
+}
+
+func encodeMessageHistory(history []string) string {
+	return strings.Join(history, MessageHistorySeparator)
+}
+
+func decodeMessageHistory(historyStr string) []string {
+	return strings.Split(historyStr, MessageHistorySeparator)
 }
