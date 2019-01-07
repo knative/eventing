@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
+
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/knative/eventing/pkg/provisioners"
@@ -308,9 +310,6 @@ func TestReconcile(t *testing.T) {
 
 			dispatcher:          nil,
 			pubSubClientCreator: fakepubsub.Creator(tc.OtherTestData[pscData]),
-			defaultGcpProject:   gcpProject,
-			defaultSecret:       testcreds.Secret,
-			defaultSecretKey:    testcreds.SecretKey,
 
 			subscriptionsLock: sync.Mutex{},
 			subscriptions:     map[channelName]map[subscriptionName]context.CancelFunc{},
@@ -365,9 +364,10 @@ func TestReceiveFunc(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			sub := &v1alpha1.ChannelSubscriberSpec{
+			sub := util.GcpPubSubSubscriptionStatus{
 				SubscriberURI: "subscriber-uri",
 				ReplyURI:      "reply-uri",
+				Subscription:  "foo",
 			}
 			defaults := provisioners.DispatchDefaults{
 				Namespace: cNamespace,

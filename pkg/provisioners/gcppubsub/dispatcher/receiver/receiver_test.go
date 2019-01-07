@@ -33,8 +33,6 @@ import (
 )
 
 const (
-	gcpProject = "my-gcp-project"
-
 	validMessage = `{
     "cloudEventsVersion" : "0.1",
     "eventType" : "com.example.someevent",
@@ -94,16 +92,13 @@ func TestReceiver(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			_, mr := New(
+			mr, _ := New(
 				zap.NewNop(),
 				fake.NewFakeClient(tc.initialState...),
-				fakepubsub.Creator(tc.pubSubData),
-				gcpProject,
-				testcreds.Secret,
-				testcreds.SecretKey)
+				fakepubsub.Creator(tc.pubSubData))
 			resp := httptest.NewRecorder()
 			req := httptest.NewRequest("POST", "/", strings.NewReader(validMessage))
-			mr.HandleRequest(resp, req)
+			mr.newMessageReceiver().HandleRequest(resp, req)
 			if tc.expectedErr {
 				if resp.Result().StatusCode >= 200 && resp.Result().StatusCode < 300 {
 					t.Errorf("Expected an error. Actual: %v", resp.Result())

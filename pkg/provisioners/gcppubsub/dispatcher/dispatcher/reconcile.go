@@ -102,7 +102,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		logging.FromContext(ctx).Info("Unable to read the raw status", zap.Error(err))
 		return reconcile.Result{}, err
 	} else if pbs == &(pubsubutil.GcpPubSubChannelStatus{}) {
-		logging.FromContext(ctx).Info("Raw status is blank")
 		return reconcile.Result{}, errors.New("raw status is blank")
 	}
 
