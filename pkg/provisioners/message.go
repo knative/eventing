@@ -18,8 +18,18 @@ package provisioners
 
 import (
 	"errors"
+	"regexp"
 	"strings"
 )
+
+const (
+	// MessageHistoryHeader is the header containing all channel hosts traversed by the message
+	// This is an experimental header: https://github.com/knative/eventing/issues/638
+	MessageHistoryHeader    = "ce-knativehistory"
+	MessageHistorySeparator = "; "
+)
+
+var historySplitter = regexp.MustCompile(`\s*` + regexp.QuoteMeta(MessageHistorySeparator) + `\s*`)
 
 var forwardHeaders = []string{
 	"content-type",
@@ -36,12 +46,6 @@ var forwardPrefixes = []string{
 	"x-b3-",
 	"x-ot-",
 }
-
-const (
-	// MessageHistoryHeader is the header containing all hosts in the message history
-	MessageHistoryHeader    = "ce-knativehistory"
-	MessageHistorySeparator = ";"
-)
 
 // Message represents an chunk of data within a channel dispatcher. The message contains both
 // a map of string headers and a binary payload.
@@ -112,5 +116,14 @@ func encodeMessageHistory(history []string) string {
 }
 
 func decodeMessageHistory(historyStr string) []string {
-	return strings.Split(historyStr, MessageHistorySeparator)
+	readHistory := historySplitter.Split(historyStr, -1)
+	// Filter and cleanup in-place
+	history := readHistory[:0]
+	for _, item := range readHistory {
+		cleanItem := cleanupMessageHistoryItem(item)
+		if cleanItem != "" {
+			history = append(history, cleanItem)
+		}
+	}
+	return history
 }

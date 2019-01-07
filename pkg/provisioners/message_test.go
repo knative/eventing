@@ -20,46 +20,85 @@ import (
 	"testing"
 )
 
-func TestMessageHistoryEmpty(t *testing.T) {
-	m := Message{}
-	history := m.History()
-	if len(history) != 0 {
-		t.Error("history not empty")
+func TestMessageHistory(t *testing.T) {
+	var cases = []struct {
+		start    string
+		set      []string
+		append   []string
+		expected string
+		len      int
+	}{
+		{
+			expected: "",
+			len:      0,
+		},
+		{
+			append:   []string{"name.ns.service.local"},
+			expected: "name.ns.service.local",
+			len:      1,
+		},
+		{
+			append:   []string{"name.withspace.service.local  "},
+			expected: "name.withspace.service.local",
+			len:      1,
+		},
+		{
+			append:   []string{"name1.ns1.service.local", "name2.ns2.service.local"},
+			expected: "name1.ns1.service.local; name2.ns2.service.local",
+			len:      2,
+		},
+		{
+			start:    "name1.ns1.service.local",
+			append:   []string{"name2.ns2.service.local", "name3.ns3.service.local"},
+			expected: "name1.ns1.service.local; name2.ns2.service.local; name3.ns3.service.local",
+			len:      3,
+		},
+		{
+			start:    "name1.ns1.service.local; name2.ns2.service.local",
+			append:   []string{"nameadd.nsadd.service.local"},
+			expected: "name1.ns1.service.local; name2.ns2.service.local; nameadd.nsadd.service.local",
+			len:      3,
+		},
+		{
+			start:    "name1.ns1.service.local; name2.ns2.service.local",
+			set:      []string{"name3.ns3.service.local"},
+			expected: "name3.ns3.service.local",
+			len:      1,
+		},
+		{
+			start:    "  ",
+			append:   []string{"name1.ns1.service.local"},
+			expected: "name1.ns1.service.local",
+			len:      1,
+		},
+		{
+			start:    "  ",
+			append:   []string{" ", "name.multispace.service.local", "  ", "   "},
+			expected: "name.multispace.service.local",
+			len:      1,
+		},
 	}
-}
 
-func TestMessageHistoryAppendSet(t *testing.T) {
-	m := Message{}
-	m.AppendToHistory("name1.ns1.service.local")
-	history := m.History()
-	if len(history) != 1 {
-		t.Error("history does not contain first element")
-	}
-	m.AppendToHistory("name2.ns2.service.local")
-	history = m.History()
-	if len(history) != 2 {
-		t.Error("history does not contain all elements")
-	}
-	if history[0] != "name1.ns1.service.local" {
-		t.Error("wrong name")
-	}
-	if history[1] != "name2.ns2.service.local" {
-		t.Error("wrong name")
-	}
-	newHistory := []string{"name3.ns3.service.local"}
-	m.SetHistory(newHistory)
-	history = m.History()
-	if len(history) != 1 {
-		t.Error("history does not contain the new element")
-	}
-	if history[0] != newHistory[0] {
-		t.Error("wrong history element")
-	}
-	m.AppendToHistory("")
-	m.AppendToHistory(" ")
-	m.AppendToHistory("  ")
-	history = m.History()
-	if len(history) != 1 {
-		t.Error("history contains unexpected elements")
+	for _, tc := range cases {
+		t.Run(tc.expected, func(t *testing.T) {
+			m := Message{}
+			if tc.start != "" {
+				m.Headers = make(map[string]string)
+				m.Headers[MessageHistoryHeader] = tc.start
+			}
+			if tc.set != nil {
+				m.SetHistory(tc.set)
+			}
+			for _, name := range tc.append {
+				m.AppendToHistory(name)
+			}
+			history := m.History()
+			if len(history) != tc.len {
+				t.Errorf("Unexpected number of elements. Want %d, got %d", tc.len, len(history))
+			}
+			if m.Headers[MessageHistoryHeader] != tc.expected {
+				t.Errorf("Unexpected history. Want %q, got %q", tc.expected, m.Headers[MessageHistoryHeader])
+			}
+		})
 	}
 }
