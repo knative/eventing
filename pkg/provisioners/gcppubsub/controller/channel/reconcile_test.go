@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	pubsubutil "github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
+
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
@@ -673,6 +675,15 @@ func makeReadyChannel() *eventingv1alpha1.Channel {
 	// Ready channels have the finalizer and are Addressable.
 	c := makeChannelWithFinalizerAndAddress()
 	c.Status.MarkProvisioned()
+	pbs := &pubsubutil.GcpPubSubChannelStatus{
+		Secret:     testcreds.Secret,
+		SecretKey:  testcreds.SecretKey,
+		GCPProject: gcpProject,
+		Topic:      "test-topic-ID",
+	}
+	if err := pubsubutil.SaveRawStatus(context.Background(), c, pbs); err != nil {
+		panic(err)
+	}
 	return c
 }
 
@@ -720,7 +731,7 @@ func makeChannelWithFinalizer() *eventingv1alpha1.Channel {
 
 func makeReadyChannelWithSubscribers() *eventingv1alpha1.Channel {
 	c := makeReadyChannel()
-	c.Spec.Subscribable = subscribers
+	addSubscribers(c, subscribers)
 	return c
 }
 
@@ -746,6 +757,26 @@ func makeDeletingChannelWithSubscribersWithoutFinalizer() *eventingv1alpha1.Chan
 	c := makeDeletingChannelWithSubscribers()
 	c.Finalizers = nil
 	return c
+}
+
+func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscribable) {
+	c.Spec.Subscribable = subscribable
+	pbs, err := pubsubutil.ReadRawStatus(context.Background(), c)
+	if err != nil {
+		panic(err)
+	}
+	for _, sub := range subscribable.Subscribers {
+		pbs.Subscriptions = append(pbs.Subscriptions, pubsubutil.GcpPubSubSubscriptionStatus{
+			Ref:           sub.Ref,
+			ReplyURI:      sub.ReplyURI,
+			SubscriberURI: sub.SubscriberURI,
+			Subscription:  "test-subscription-id",
+		})
+	}
+	err = pubsubutil.SaveRawStatus(context.Background(), c, pbs)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func makeK8sService() *corev1.Service {
@@ -781,12 +812,6 @@ func makeK8sService() *corev1.Service {
 			},
 		},
 	}
-}
-
-func makeK8sServiceNotOwnedByChannel() *corev1.Service {
-	svc := makeK8sService()
-	svc.OwnerReferences = nil
-	return svc
 }
 
 func makeVirtualService() *istiov1alpha3.VirtualService {

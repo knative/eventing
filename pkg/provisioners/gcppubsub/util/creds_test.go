@@ -32,6 +32,12 @@ func TestGetCredentials(t *testing.T) {
 		secret    *v1.Secret
 		err       bool
 	}{
+		"nil secretRef": {
+			secretRef: nil,
+			secret:    testcreds.MakeSecretWithCreds(),
+			key:       testcreds.SecretKey,
+			err:       true,
+		},
 		"secretRef not found": {
 			secretRef: &v1.ObjectReference{
 				APIVersion: "v1",

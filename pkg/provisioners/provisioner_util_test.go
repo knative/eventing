@@ -54,7 +54,7 @@ func TestProvisionerUtils(t *testing.T) {
 			existing := makeDispatcherService()
 			existing.Spec.Selector = map[string]string{
 				"clusterChannelProvisioner": otherClusterChannelProvisionerName,
-				"role":                      "dispatcher",
+				"role": "dispatcher",
 			}
 			client := fake.NewFakeClient(existing)
 			CreateDispatcherService(context.TODO(), client, getNewClusterChannelProvisioner())

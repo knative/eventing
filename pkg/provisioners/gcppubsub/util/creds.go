@@ -18,6 +18,7 @@ package util
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,6 +34,9 @@ import (
 // GetCredentials gets GCP credentials from a secretRef. The credentials must be stored in JSON format
 // in the secretRef.
 func GetCredentials(ctx context.Context, client client.Client, secretRef *v1.ObjectReference, key string) (*google.Credentials, error) {
+	if secretRef == nil {
+		return nil, errors.New("nil secretRef")
+	}
 	secret := &v1.Secret{}
 	err := client.Get(ctx, types.NamespacedName{Namespace: secretRef.Namespace, Name: secretRef.Name}, secret)
 	if err != nil {

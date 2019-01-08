@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package util
+package channel
 
 import (
 	"github.com/knative/eventing/pkg/provisioners/utils"
@@ -25,19 +25,15 @@ import (
 // Underscore is used as a separator between the namespace and name so the concatenated version
 // can't accidentally overlap.
 
-// GenerateTopicName generates the GCP PubSub Topic name given the Knative Channel's namespace and
+// generateTopicName generates the GCP PubSub Topic name given the Knative Channel's namespace and
 // name.
-// Note that it must be stable. The controller and dispatcher rely on this being generated
-// identically.
-func GenerateTopicName(channelNamespace, channelName string) string {
+func generateTopicName(channelNamespace, channelName string) string {
 	return utils.TopicName("_", channelNamespace, channelName)
 }
 
-// GenerateSubname Generates the GCP PubSub Subscription name given the Knative Channel's
+// generateSubName Generates the GCP PubSub Subscription name given the Knative Channel's
 // subscriber's namespace and name.
 // Note that this requires the subscriber's ref to be set correctly.
-// Note that it must be stable. The controller and dispatcher rely on this being generated
-// identically.
-func GenerateSubName(cs *eventduck.ChannelSubscriberSpec) string {
+func generateSubName(cs *eventduck.ChannelSubscriberSpec) string {
 	return utils.TopicName("_", cs.Ref.Name, string(cs.Ref.UID))
 }

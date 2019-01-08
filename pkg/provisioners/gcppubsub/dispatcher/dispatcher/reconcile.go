@@ -18,26 +18,21 @@ package dispatcher
 
 import (
 	"context"
+	"errors"
 	"sync"
 
-	"sigs.k8s.io/controller-runtime/pkg/event"
-
-	"github.com/knative/eventing/pkg/provisioners"
-
-	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/provisioners"
 	util "github.com/knative/eventing/pkg/provisioners"
 	ccpcontroller "github.com/knative/eventing/pkg/provisioners/gcppubsub/controller/clusterchannelprovisioner"
 	pubsubutil "github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
 	"github.com/knative/pkg/logging"
 	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -63,19 +58,6 @@ type reconciler struct {
 
 	pubSubClientCreator pubsubutil.PubSubClientCreator
 
-	// Note that for all the default* parameters below, these must be kept in lock-step with the
-	// GCP PubSub Dispatcher's reconciler.
-	// Eventually, individual Channels should be allowed to specify different projects and secrets,
-	// but for now all Channels use the same project and secret.
-
-	// defaultGcpProject is the GCP project ID where PubSub Topics and Subscriptions are created.
-	defaultGcpProject string
-	// defaultSecret and defaultSecretKey are the K8s Secret and key in that secret that contain a
-	// JSON format GCP service account token, see
-	// https://cloud.google.com/iam/docs/creating-managing-service-account-keys#iam-service-account-keys-create-gcloud
-	defaultSecret    *v1.ObjectReference
-	defaultSecretKey string
-
 	subscriptionsLock sync.Mutex
 	// subscriptions contains the cancel functions for all hanging PubSub Subscriptions. The cancel
 	// function must be called when we no longer want that subscription to be active. Logically it
@@ -99,7 +81,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	// The Channel may have been deleted since it was added to the workqueue. If so, there is
 	// nothing to be done.
-	if errors.IsNotFound(err) {
+	if k8serrors.IsNotFound(err) {
 		logging.FromContext(ctx).Info("Could not find Channel", zap.Error(err))
 		return reconcile.Result{}, nil
 	}
@@ -115,12 +97,20 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		logging.FromContext(ctx).Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("ref", c.Spec))
 		return reconcile.Result{}, nil
 	}
+	pbs, err := pubsubutil.ReadRawStatus(ctx, c)
+	if err != nil {
+		logging.FromContext(ctx).Info("Unable to read the raw status", zap.Error(err))
+		return reconcile.Result{}, err
+	} else if pbs.IsEmpty() {
+		return reconcile.Result{}, errors.New("raw status is blank")
+	}
+
 	logging.FromContext(ctx).Info("Reconciling Channel")
 
 	// Modify a copy, not the original.
 	c = c.DeepCopy()
 
-	requeue, reconcileErr := r.reconcile(loggingWith(ctx, zap.Any("channel", c)), c)
+	requeue, reconcileErr := r.reconcile(loggingWith(ctx, zap.Any("channel", c)), c, pbs)
 	if reconcileErr != nil {
 		logging.FromContext(ctx).Info("Error reconciling Channel", zap.Error(reconcileErr))
 		// Note that we do not return the error here, because we want to update the finalizers
@@ -149,7 +139,7 @@ func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 // reconcile reconciles this Channel so that the real world matches the intended state. The returned
 // boolean indicates if this Channel should be immediately requeued for another reconcile loop. The
 // returned error indicates an error during reconciliation.
-func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) (bool, error) {
+func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel, pbs *pubsubutil.GcpPubSubChannelStatus) (bool, error) {
 	// We are syncing all the subscribers on this Channel. Every subscriber will have a goroutine
 	// running in the background polling the GCP PubSub Subscription.
 
@@ -166,7 +156,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		return true, nil
 	}
 
-	err := r.syncSubscriptions(ctx, c)
+	err := r.syncSubscriptions(ctx, c, pbs)
 	return false, err
 }
 
@@ -180,7 +170,7 @@ func key(c *eventingv1alpha1.Channel) channelName {
 
 // subscriptionKey creates the second index into reconciler.subscriptions, based on the Subscriber's
 // name.
-func subscriptionKey(sub *v1alpha1.ChannelSubscriberSpec) subscriptionName {
+func subscriptionKey(sub *pubsubutil.GcpPubSubSubscriptionStatus) subscriptionName {
 	return types.NamespacedName{
 		Namespace: sub.Ref.Namespace,
 		Name:      sub.Ref.Name,
@@ -210,19 +200,19 @@ func (r *reconciler) stopAllSubscriptionsUnderLock(ctx context.Context, c *event
 // syncSubscriptions ensures all subscribers of the Channel have a background Goroutine that is
 // polling the GCP PubSub Subscriptions representing it. It also removes listeners from Subscribers
 // that no longer exist.
-func (r *reconciler) syncSubscriptions(ctx context.Context, c *eventingv1alpha1.Channel) error {
+func (r *reconciler) syncSubscriptions(ctx context.Context, c *eventingv1alpha1.Channel, pbs *pubsubutil.GcpPubSubChannelStatus) error {
 	r.subscriptionsLock.Lock()
 	defer r.subscriptionsLock.Unlock()
 
-	subscribers := c.Spec.Subscribable
+	subscribers := pbs.Subscriptions
 	if subscribers == nil {
 		// There are no subscribers.
 		r.stopAllSubscriptionsUnderLock(ctx, c)
 		return nil
 	}
 
-	for _, subscriber := range subscribers.Subscribers {
-		err := r.createSubscriptionUnderLock(loggingWith(ctx, zap.Any("subscriber", subscriber)), c, &subscriber)
+	for _, subscriber := range subscribers {
+		err := r.createSubscriptionUnderLock(loggingWith(ctx, zap.Any("subscriber", subscriber)), c, pbs, subscriber)
 		if err != nil {
 			return err
 		}
@@ -231,7 +221,7 @@ func (r *reconciler) syncSubscriptions(ctx context.Context, c *eventingv1alpha1.
 	// Now remove all subscriptions that are no longer present.
 	channelKey := key(c)
 	activeSubscribers := r.subscriptions[channelKey]
-	if len(subscribers.Subscribers) == len(activeSubscribers) {
+	if len(subscribers) == len(activeSubscribers) {
 		return nil
 	}
 
@@ -240,7 +230,7 @@ func (r *reconciler) syncSubscriptions(ctx context.Context, c *eventingv1alpha1.
 	for sub := range activeSubscribers {
 		subsToDelete[sub] = empty{}
 	}
-	for _, sub := range subscribers.Subscribers {
+	for _, sub := range subscribers {
 		delete(subsToDelete, subscriptionKey(&sub))
 	}
 	for subToDelete := range subsToDelete {
@@ -252,12 +242,12 @@ func (r *reconciler) syncSubscriptions(ctx context.Context, c *eventingv1alpha1.
 // createSubscriptionUnderLock starts a background Goroutine for a single subscriber polling its
 // GCP PubSub Subscription.
 // Note that it can only be called if reconciler.subscriptionsLock is held.
-func (r *reconciler) createSubscriptionUnderLock(ctx context.Context, c *eventingv1alpha1.Channel, sub *v1alpha1.ChannelSubscriberSpec) error {
+func (r *reconciler) createSubscriptionUnderLock(ctx context.Context, c *eventingv1alpha1.Channel, pbs *pubsubutil.GcpPubSubChannelStatus, sub pubsubutil.GcpPubSubSubscriptionStatus) error {
 	channelKey := key(c)
 	if r.subscriptions[channelKey] == nil {
 		r.subscriptions[channelKey] = make(map[subscriptionName]context.CancelFunc)
 	}
-	subKey := subscriptionKey(sub)
+	subKey := subscriptionKey(&sub)
 	if r.subscriptions[channelKey][subKey] != nil {
 		// There is already a Goroutine watching this subscription.
 		return nil
@@ -265,18 +255,17 @@ func (r *reconciler) createSubscriptionUnderLock(ctx context.Context, c *eventin
 	ctxWithCancel, cancelFunc := context.WithCancel(ctx)
 	r.subscriptions[channelKey][subKey] = cancelFunc
 
-	gcpProject := r.defaultGcpProject
-	creds, err := pubsubutil.GetCredentials(ctx, r.client, r.defaultSecret, r.defaultSecretKey)
+	creds, err := pubsubutil.GetCredentials(ctx, r.client, pbs.Secret, pbs.SecretKey)
 	if err != nil {
 		return err
 	}
-	psc, err := r.pubSubClientCreator(ctxWithCancel, creds, gcpProject)
+	psc, err := r.pubSubClientCreator(ctxWithCancel, creds, pbs.GCPProject)
 	if err != nil {
 		return err
 	}
 
 	// receiveMessageBlocking blocks, so run it in a goroutine.
-	go r.receiveMessagesBlocking(ctxWithCancel, c, sub.DeepCopy(), gcpProject, psc)
+	go r.receiveMessagesBlocking(ctxWithCancel, c, sub, pbs.GCPProject, psc)
 
 	return nil
 }
@@ -284,13 +273,13 @@ func (r *reconciler) createSubscriptionUnderLock(ctx context.Context, c *eventin
 // receiveMessagesBlocking receives messages from GCP PubSub, while blocking forever. If the receive
 // fails for any reason, then it will instruct the reconciler to process this Channel again via
 // reconciler.reconcileChan.
-func (r *reconciler) receiveMessagesBlocking(ctxWithCancel context.Context, c *eventingv1alpha1.Channel, sub *v1alpha1.ChannelSubscriberSpec, gcpProject string, psc pubsubutil.PubSubClient) {
-	subscription := psc.SubscriptionInProject(pubsubutil.GenerateSubName(sub), gcpProject)
+func (r *reconciler) receiveMessagesBlocking(ctxWithCancel context.Context, c *eventingv1alpha1.Channel, sub pubsubutil.GcpPubSubSubscriptionStatus, gcpProject string, psc pubsubutil.PubSubClient) {
+	subscription := psc.SubscriptionInProject(sub.Subscription, gcpProject)
 	defaults := provisioners.DispatchDefaults{
 		Namespace: c.Namespace,
 	}
 	channelKey := key(c)
-	subKey := subscriptionKey(sub)
+	subKey := subscriptionKey(&sub)
 
 	logging.FromContext(ctxWithCancel).Info("subscription.Receive start")
 	receiveErr := subscription.Receive(
@@ -320,7 +309,7 @@ func (r *reconciler) receiveMessagesBlocking(ctxWithCancel context.Context, c *e
 	}
 }
 
-func receiveFunc(logger *zap.SugaredLogger, sub *v1alpha1.ChannelSubscriberSpec, defaults provisioners.DispatchDefaults, dispatcher provisioners.Dispatcher) func(context.Context, pubsubutil.PubSubMessage) {
+func receiveFunc(logger *zap.SugaredLogger, sub pubsubutil.GcpPubSubSubscriptionStatus, defaults provisioners.DispatchDefaults, dispatcher provisioners.Dispatcher) func(context.Context, pubsubutil.PubSubMessage) {
 	return func(ctx context.Context, msg pubsubutil.PubSubMessage) {
 		message := &provisioners.Message{
 			Headers: msg.Attributes(),
