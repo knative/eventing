@@ -163,40 +163,40 @@ func isNilOrEmptyReply(reply *v1alpha1.ReplyStrategy) bool {
 // updateStatus may in fact update the subscription's finalizers in addition to the status
 func (r *reconciler) updateStatus(subscription *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
 	objectKey := client.ObjectKey{Namespace: subscription.Namespace, Name: subscription.Name}
-	newSubscription := &v1alpha1.Subscription{}
+	latestSubscription := &v1alpha1.Subscription{}
 
-	if err := r.client.Get(context.TODO(), objectKey, newSubscription); err != nil {
+	if err := r.client.Get(context.TODO(), objectKey, latestSubscription); err != nil {
 		return nil, err
 	}
 
 	subscriptionChanged := false
 
-	if !equality.Semantic.DeepEqual(newSubscription.Finalizers, subscription.Finalizers) {
-		newSubscription.SetFinalizers(subscription.ObjectMeta.Finalizers)
-		if err := r.client.Update(context.TODO(), newSubscription); err != nil {
+	if !equality.Semantic.DeepEqual(latestSubscription.Finalizers, subscription.Finalizers) {
+		latestSubscription.SetFinalizers(subscription.ObjectMeta.Finalizers)
+		if err := r.client.Update(context.TODO(), latestSubscription); err != nil {
 			return nil, err
 		}
 		subscriptionChanged = true
 	}
 
-	if equality.Semantic.DeepEqual(newSubscription.Status, subscription.Status) {
-		return newSubscription, nil
+	if equality.Semantic.DeepEqual(latestSubscription.Status, subscription.Status) {
+		return latestSubscription, nil
 	}
 
 	if subscriptionChanged {
 		// Refetch
-		newSubscription := &v1alpha1.Subscription{}
-		if err := r.client.Get(context.TODO(), objectKey, newSubscription); err != nil {
+		latestSubscription = &v1alpha1.Subscription{}
+		if err := r.client.Get(context.TODO(), objectKey, latestSubscription); err != nil {
 			return nil, err
 		}
 	}
 
-	newSubscription.Status = subscription.Status
-	if err := r.client.Status().Update(context.TODO(), newSubscription); err != nil {
+	latestSubscription.Status = subscription.Status
+	if err := r.client.Status().Update(context.TODO(), latestSubscription); err != nil {
 		return nil, err
 	}
 
-	return newSubscription, nil
+	return latestSubscription, nil
 }
 
 // resolveSubscriberSpec resolves the Spec.Call object. If it's an
