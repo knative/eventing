@@ -29,25 +29,37 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// GcpPubSubChannelStatus is the struct saved to Channel's status.raw if the Channel's provisioner
+// is gcp-pubsub. It is used to send data to the dispatcher from the controller.
 type GcpPubSubChannelStatus struct {
-	Secret    *corev1.ObjectReference `json:"secret"`
-	SecretKey string                  `json:"secretKey"`
+	// Secret is the Secret that contains the credential to use.
+	Secret *corev1.ObjectReference `json:"secret"`
+	// SecretKey is the key in Secret that contains the credential to use.
+	SecretKey string `json:"secretKey"`
 
-	GCPProject    string                        `json:"gcpProject"`
-	Topic         string                        `json:"topic,omitempty"`
+	// GCPProject is the GCP project where the Topic and Subscription exist.
+	GCPProject string `json:"gcpProject"`
+	// Topic is the name of the PubSub Topic created in GCP to represent this Channel.
+	Topic string `json:"topic,omitempty"`
+	// Subscriptions is the list of Subscriptions to this Channel and the PubSub Subscription in GCP
+	// that represents the Knative Eventing Subscription.
 	Subscriptions []GcpPubSubSubscriptionStatus `json:"subscriptions,omitempty"`
 }
 
+// GcpPubSubSubscriptionStatus represents the saved status of a gcp-pubsub Channel.
 type GcpPubSubSubscriptionStatus struct {
+	// Ref is a reference to the Knative Eventing Subscription that this status represents.
 	// +optional
 	Ref *corev1.ObjectReference `json:"ref,omitempty"`
+	// SubscriberURI is a copy of the SubscriberURI of this Subscription.
 	// +optional
 	SubscriberURI string `json:"subscriberURI,omitempty"`
+	// ReplyURI is a copy of the ReplyURI of this Subscription.
 	// +optional
 	ReplyURI string `json:"replyURI,omitempty"`
 
 	// Subscription is the name of the PubSub Subscription resource in GCP that represents this
-	// Knative eventing Subscription.
+	// Knative Eventing Subscription.
 	Subscription string `json:"subscription,omitempty"`
 }
 

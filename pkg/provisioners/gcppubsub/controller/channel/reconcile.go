@@ -227,6 +227,8 @@ func (r *reconciler) createTopic(ctx context.Context, c *eventingv1alpha1.Channe
 		logging.FromContext(ctx).Info("Unable to create PubSub client", zap.Error(err))
 		return nil, err
 	}
+	// TODO Search the existing GcpPubSubChannelStatus for a topic name and if it is present, use it
+	// rather than generating a new one.
 	topic := psc.Topic(generateTopicName(c.Namespace, c.Name))
 	exists, err := topic.Exists(ctx)
 	if err != nil {
@@ -251,6 +253,8 @@ func (r *reconciler) deleteTopic(ctx context.Context, c *eventingv1alpha1.Channe
 		logging.FromContext(ctx).Info("Unable to create PubSubClient", zap.Error(err))
 		return err
 	}
+	// TODO Search the existing GcpPubSubChannelStatus for a topic name and if it is present, use it
+	// rather than generating a new one.
 	topic := psc.Topic(generateTopicName(c.Namespace, c.Name))
 	exists, err := topic.Exists(ctx)
 	if err != nil {
@@ -271,20 +275,23 @@ func (r *reconciler) deleteTopic(ctx context.Context, c *eventingv1alpha1.Channe
 
 func (r *reconciler) createSubscriptions(ctx context.Context, c *eventingv1alpha1.Channel, gcpCreds *google.Credentials, gcpProject string, topic pubsubutil.PubSubTopic, pbs *pubsubutil.GcpPubSubChannelStatus) error {
 	if c.Spec.Subscribable != nil {
-		pbs.Subscriptions = make([]pubsubutil.GcpPubSubSubscriptionStatus, 0, len(c.Spec.Subscribable.Subscribers))
+		newSubs := make([]pubsubutil.GcpPubSubSubscriptionStatus, 0, len(c.Spec.Subscribable.Subscribers))
 		for _, sub := range c.Spec.Subscribable.Subscribers {
+			// TODO Search pbs.Subscriptions for this subscription and use its stored names, rather
+			// than making a new one.
 			s, err := r.createSubscription(ctx, gcpCreds, gcpProject, topic, &sub)
 			if err != nil {
 				logging.FromContext(ctx).Info("Unable to create subscribers", zap.Error(err), zap.Any("channelSubscriber", sub))
 				return err
 			}
-			pbs.Subscriptions = append(pbs.Subscriptions, pubsubutil.GcpPubSubSubscriptionStatus{
+			newSubs = append(newSubs, pubsubutil.GcpPubSubSubscriptionStatus{
 				Ref:           sub.Ref,
 				SubscriberURI: sub.SubscriberURI,
 				ReplyURI:      sub.ReplyURI,
 				Subscription:  s.ID(),
 			})
 		}
+		pbs.Subscriptions = newSubs
 	}
 	return nil
 }
@@ -331,6 +338,8 @@ func (r *reconciler) deleteSubscription(ctx context.Context, gcpCreds *google.Cr
 	if err != nil {
 		return err
 	}
+	// TODO Search pbs.Subscriptions for this subscription and use its stored names, rather
+	// than making a new one.
 	sub := psc.SubscriptionInProject(generateSubName(cs), gcpProject)
 	exists, err := sub.Exists(ctx)
 	if err != nil {
