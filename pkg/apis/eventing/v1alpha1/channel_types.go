@@ -27,7 +27,6 @@ import (
 )
 
 // +genclient
-// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Channel is an abstract resource that implements the Addressable contract.
@@ -57,12 +56,14 @@ var _ webhook.GenericCRD = (*Channel)(nil)
 // ChannelSpec specifies the Provisioner backing a channel and the configuration
 // arguments for a Channel.
 type ChannelSpec struct {
-	// TODO: Generation does not work correctly with CRD. They are scrubbed
-	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
-	// So, we add Generation here. Once that gets fixed, remove this and use
-	// ObjectMeta.Generation instead.
+	// TODO By enabling the status subresource metadata.generation should increment
+	// thus making this property obsolete.
+	//
+	// We should be able to drop this property with a CRD conversion webhook
+	// in the future
+	//
 	// +optional
-	Generation int64 `json:"generation,omitempty"`
+	DeprecatedGeneration int64 `json:"generation,omitempty"`
 
 	// Provisioner defines the name of the Provisioner backing this channel.
 	Provisioner *corev1.ObjectReference `json:"provisioner,omitempty"`

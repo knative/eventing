@@ -216,26 +216,42 @@ func addExpectedLabels(actual, expected map[string]string) map[string]string {
 }
 
 func UpdateChannel(ctx context.Context, client runtimeClient.Client, u *eventingv1alpha1.Channel) error {
+	objectKey := runtimeClient.ObjectKey{Namespace: u.Namespace, Name: u.Name}
 	channel := &eventingv1alpha1.Channel{}
-	err := client.Get(ctx, runtimeClient.ObjectKey{Namespace: u.Namespace, Name: u.Name}, channel)
-	if err != nil {
+
+	if err := client.Get(ctx, objectKey, channel); err != nil {
 		return err
 	}
 
-	updated := false
+	channelChanged := false
+
 	if !equality.Semantic.DeepEqual(channel.Finalizers, u.Finalizers) {
 		channel.SetFinalizers(u.ObjectMeta.Finalizers)
-		updated = true
+		if err := client.Update(ctx, channel); err != nil {
+			return err
+		}
+
+		channelChanged = true
 	}
 
-	if !equality.Semantic.DeepEqual(channel.Status, u.Status) {
-		channel.Status = u.Status
-		updated = true
+	if equality.Semantic.DeepEqual(channel.Status, u.Status) {
+		return nil
 	}
 
-	if updated {
-		return client.Update(ctx, channel)
+	if channelChanged {
+		// Refetch
+		channel = &eventingv1alpha1.Channel{}
+		if err := client.Get(ctx, objectKey, channel); err != nil {
+			return err
+		}
 	}
+
+	channel.Status = u.Status
+
+	if err := client.Status().Update(ctx, channel); err != nil {
+		return err
+	}
+
 	return nil
 }
 

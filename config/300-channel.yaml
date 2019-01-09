@@ -29,3 +29,5 @@ spec:
     shortNames:
     - chan
   scope: Namespaced
+  subresources:
+    status: {}
