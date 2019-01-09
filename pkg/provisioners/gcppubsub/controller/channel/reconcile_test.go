@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	pubsubutil "github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
 
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -261,6 +263,30 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
+			Name: "Channel deleted - No raw status",
+			InitialState: []runtime.Object{
+				makeDeletingChannelWithoutPBS(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientData: fakepubsub.ClientData{
+						TopicData: fakepubsub.TopicData{
+							ExistsErr: errors.New("should not be seen"),
+							DeleteErr: errors.New("should not be seen"),
+						},
+						SubscriptionData: fakepubsub.SubscriptionData{
+							ExistsErr: errors.New("should not be seen"),
+							DeleteErr: errors.New("should not be seen"),
+						},
+					},
+				},
+			},
+			WantPresent: []runtime.Object{
+				makeDeletingChannelWithoutFinalizerOrPBS(),
+			},
+		},
+		{
 			Name: "Channel deleted - topic does not exist",
 			InitialState: []runtime.Object{
 				makeDeletingChannelWithSubscribers(),
@@ -354,6 +380,13 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testcreds.InvalidCredsError,
 		},
 		{
+			Name: "Error reading status.raw",
+			InitialState: []runtime.Object{
+				makeChannelWithBadRawStatus(),
+			},
+			WantErrMsg: "json: cannot unmarshal number into Go struct field GcpPubSubChannelStatus.topic of type string",
+		},
+		{
 			Name: "K8s service get fails",
 			InitialState: []runtime.Object{
 				makeChannelWithFinalizerAndPBS(),
@@ -427,6 +460,30 @@ func TestReconcile(t *testing.T) {
 			},
 			WantPresent: []runtime.Object{
 				makeReadyChannel(),
+			},
+		},
+		{
+			Name: "Error planning - subscriber missing UID",
+			InitialState: []runtime.Object{
+				makeChannelWithFinalizerAndSubscriberWithoutUID(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			WantPresent: []runtime.Object{
+				makeChannelWithFinalizerAndSubscriberWithoutUID(),
+			},
+			WantErrMsg: "empty reference UID: {&ObjectReference{Kind:,Namespace:,Name:,UID:,APIVersion:,ResourceVersion:,FieldPath:,} http://foo/ }",
+		},
+		{
+			Name: "Persist plan",
+			InitialState: []runtime.Object{
+				makeChannelWithFinalizerAndPossiblyOutdatedPlan(true),
+				testcreds.MakeSecretWithCreds(),
+			},
+			WantPresent: []runtime.Object{
+				makeChannelWithFinalizerAndPossiblyOutdatedPlan(false),
+			},
+			WantResult: reconcile.Result{
+				Requeue: true,
 			},
 		},
 		{
@@ -753,9 +810,21 @@ func makeDeletingChannel() *eventingv1alpha1.Channel {
 	return c
 }
 
+func makeDeletingChannelWithoutPBS() *eventingv1alpha1.Channel {
+	c := makeDeletingChannel()
+	c.Status.Raw = nil
+	return c
+}
+
 func makeDeletingChannelWithoutFinalizer() *eventingv1alpha1.Channel {
 	c := makeDeletingChannel()
 	c.Finalizers = nil
+	return c
+}
+
+func makeDeletingChannelWithoutFinalizerOrPBS() *eventingv1alpha1.Channel {
+	c := makeDeletingChannelWithoutFinalizer()
+	c.Status.Raw = nil
 	return c
 }
 
@@ -768,6 +837,89 @@ func makeDeletingChannelWithSubscribers() *eventingv1alpha1.Channel {
 func makeDeletingChannelWithSubscribersWithoutFinalizer() *eventingv1alpha1.Channel {
 	c := makeDeletingChannelWithSubscribers()
 	c.Finalizers = nil
+	return c
+}
+
+func makeChannelWithBadRawStatus() *eventingv1alpha1.Channel {
+	c := makeChannel()
+	c.Status.Raw = &runtime.RawExtension{
+		// The topic field is a string, so this will have an error during unmarshal.
+		Raw: []byte(`{"topic": 123}`),
+	}
+	return c
+}
+
+func makeChannelWithFinalizerAndSubscriberWithoutUID() *eventingv1alpha1.Channel {
+	c := makeChannelWithFinalizer()
+	c.Spec.Subscribable = &v1alpha1.Subscribable{
+		Subscribers: []v1alpha1.ChannelSubscriberSpec{
+			{
+				Ref: &corev1.ObjectReference{
+					UID: "",
+				},
+				SubscriberURI: "http://foo/",
+			},
+		},
+	}
+	return c
+}
+
+func makeChannelWithFinalizerAndPossiblyOutdatedPlan(outdated bool) *eventingv1alpha1.Channel {
+	c := makeChannelWithFinalizerAndPBS()
+	pbs, err := pubsubutil.ReadRawStatus(context.Background(), c)
+	if err != nil {
+		panic(err)
+	}
+
+	// Add all subs to the plan.
+	var plannedSubUIDs []types.UID
+	if outdated {
+		// If it is outdated, then the plan does not yet contain add-sub, which is present in the
+		// spec.
+		plannedSubUIDs = []types.UID{"keep-sub", "delete-sub"}
+	} else {
+		// If it is not outdated, then it still contains delete-sub (which isn't in the spec)
+		// because delete-sub needs to be retained so that it can be deleted on the subsequent
+		// reconcile.
+		plannedSubUIDs = []types.UID{"keep-sub", "add-sub", "delete-sub"}
+	}
+	for _, plannedSubUID := range plannedSubUIDs {
+		sub := pubsubutil.GcpPubSubSubscriptionStatus{
+			Ref: &corev1.ObjectReference{
+				Name: string(plannedSubUID),
+				UID:  plannedSubUID,
+			},
+			Subscription: "will-be-retained-in-the-plan-without-recalculation",
+		}
+		if plannedSubUID == "add-sub" {
+			sub.Subscription = "knative-eventing-channel_add-sub_add-sub"
+		}
+		pbs.Subscriptions = append(pbs.Subscriptions, sub)
+	}
+
+	err = pubsubutil.SaveRawStatus(context.Background(), c, pbs)
+	if err != nil {
+		panic(err)
+	}
+
+	// Overwrite the spec subs.
+	c.Spec.Subscribable = &v1alpha1.Subscribable{
+		Subscribers: []v1alpha1.ChannelSubscriberSpec{
+			{
+				Ref: &corev1.ObjectReference{
+					Name: "keep-sub",
+					UID:  "keep-sub",
+				},
+			},
+			{
+				Ref: &corev1.ObjectReference{
+					Name: "add-sub",
+					UID:  "add-sub",
+				},
+			},
+		},
+	}
+
 	return c
 }
 

@@ -154,16 +154,16 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	// First we will plan all the names out for steps 3 and 4 persist them to status.raw. Then, on a
 	// subsequent reconcile, we manipulate all the GCP resources in steps 3 and 4.
 
+	originalPBS, err := pubsubutil.ReadRawStatus(ctx, c)
+	if err != nil {
+		logging.FromContext(ctx).Info("Unable to read the raw status", zap.Error(err))
+		return false, err
+	}
+
 	// Regardless of what we are going to do, we need GCP credentials to do it.
 	gcpCreds, err := pubsubutil.GetCredentials(ctx, r.client, r.defaultSecret, r.defaultSecretKey)
 	if err != nil {
 		logging.FromContext(ctx).Info("Unable to generate GCP creds", zap.Error(err))
-		return false, err
-	}
-
-	originalPBS, err := pubsubutil.ReadRawStatus(ctx, c)
-	if err != nil {
-		logging.FromContext(ctx).Info("Unable to read the raw status", zap.Error(err))
 		return false, err
 	}
 
@@ -247,13 +247,17 @@ func (r *reconciler) planGcpResources(ctx context.Context, c *eventingv1alpha1.C
 		subsToDelete: make([]pubsubutil.GcpPubSubSubscriptionStatus, 0),
 	}
 
+	topicName := originalPBS.Topic
+	if topicName == "" {
+		topicName = generateTopicName(c)
+	}
 	// Everything except the subscriptions.
 	newPBS := &pubsubutil.GcpPubSubChannelStatus{
 		// TODO Allow arguments to set the secret and project.
 		Secret:     r.defaultSecret,
 		SecretKey:  r.defaultSecretKey,
 		GCPProject: r.defaultGcpProject,
-		Topic:      generateTopicName(c),
+		Topic:      topicName,
 	}
 	if !equality.Semantic.DeepEqual(originalPBS.Secret, newPBS.Secret) || originalPBS.SecretKey != newPBS.SecretKey || originalPBS.GCPProject != newPBS.GCPProject || originalPBS.Topic != newPBS.Topic {
 		persist = persistStatus
