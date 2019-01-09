@@ -17,22 +17,21 @@ limitations under the License.
 package channel
 
 import (
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners/utils"
 
 	eventduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 )
 
-// Underscore is used as a separator between the namespace and name so the concatenated version
-// can't accidentally overlap.
+// Underscore is used as a separator so the concatenated version can't accidentally overlap.
 
-// generateTopicName generates the GCP PubSub Topic name given the Knative Channel's namespace and
-// name.
-func generateTopicName(channelNamespace, channelName string) string {
-	return utils.TopicName("_", channelNamespace, channelName)
+// generateTopicName generates the GCP PubSub Topic name given the Knative Channel.
+func generateTopicName(c *v1alpha1.Channel) string {
+	return utils.TopicName("_", c.Name, string(c.UID))
 }
 
 // generateSubName Generates the GCP PubSub Subscription name given the Knative Channel's
-// subscriber's namespace and name.
+// subscriber.
 // Note that this requires the subscriber's ref to be set correctly.
 func generateSubName(cs *eventduck.ChannelSubscriberSpec) string {
 	return utils.TopicName("_", cs.Ref.Name, string(cs.Ref.UID))
