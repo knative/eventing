@@ -392,8 +392,19 @@ func TestReconcile(t *testing.T) {
 				MockUpdates: errorUpdatingChannel(),
 			},
 			WantErrMsg: testErrorMessage,
-		},
-		{
+		}, {
+			Name: "Channel status update fails",
+			InitialState: []runtime.Object{
+				makeChannel(),
+				makeConfigMap(),
+				makeK8sService(),
+				makeVirtualService(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockStatusUpdates: errorUpdatingChannelStatus(),
+			},
+			WantErrMsg: testErrorMessage,
+		}, {
 			Name: "Channel reconcile successful - Channel list follows pagination",
 			InitialState: []runtime.Object{
 				makeChannel(),
@@ -747,6 +758,17 @@ func errorCreatingVirtualService() []controllertesting.MockCreate {
 
 func errorUpdatingChannel() []controllertesting.MockUpdate {
 	return []controllertesting.MockUpdate{
+		func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+			if _, ok := obj.(*eventingv1alpha1.Channel); ok {
+				return controllertesting.Handled, errors.New(testErrorMessage)
+			}
+			return controllertesting.Unhandled, nil
+		},
+	}
+}
+
+func errorUpdatingChannelStatus() []controllertesting.MockStatusUpdate {
+	return []controllertesting.MockStatusUpdate{
 		func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
 			if _, ok := obj.(*eventingv1alpha1.Channel); ok {
 				return controllertesting.Handled, errors.New(testErrorMessage)

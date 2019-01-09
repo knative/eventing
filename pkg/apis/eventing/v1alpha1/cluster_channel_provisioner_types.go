@@ -53,12 +53,14 @@ var _ webhook.GenericCRD = (*ClusterChannelProvisioner)(nil)
 
 // ClusterChannelProvisionerSpec is the spec for a ClusterChannelProvisioner resource.
 type ClusterChannelProvisionerSpec struct {
-	// TODO: Generation does not work correctly with CRD. They are scrubbed
-	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
-	// So, we add Generation here. Once that gets fixed, remove this and use
-	// ObjectMeta.Generation instead.
+	// TODO By enabling the status subresource metadata.generation should increment
+	// thus making this property obsolete.
+	//
+	// We should be able to drop this property with a CRD conversion webhook
+	// in the future
+	//
 	// +optional
-	Generation int64 `json:"generation,omitempty"`
+	DeprecatedGeneration int64 `json:"generation,omitempty"`
 }
 
 var ccProvCondSet = duckv1alpha1.NewLivingConditionSet()

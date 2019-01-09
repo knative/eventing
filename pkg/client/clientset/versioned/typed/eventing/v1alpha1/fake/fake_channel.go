@@ -100,6 +100,18 @@ func (c *FakeChannels) Update(channel *v1alpha1.Channel) (result *v1alpha1.Chann
 	return obj.(*v1alpha1.Channel), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeChannels) UpdateStatus(channel *v1alpha1.Channel) (*v1alpha1.Channel, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(channelsResource, "status", c.ns, channel), &v1alpha1.Channel{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.Channel), err
+}
+
 // Delete takes name of the channel and deletes it. Returns an error if one occurs.
 func (c *FakeChannels) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
