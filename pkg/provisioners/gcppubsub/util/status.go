@@ -61,12 +61,6 @@ type GcpPubSubSubscriptionStatus struct {
 	// Subscription is the name of the PubSub Subscription resource in GCP that represents this
 	// Knative Eventing Subscription.
 	Subscription string `json:"subscription,omitempty"`
-
-	// ShouldDispatch is used by the dispatcher to determine if it should dispatch this
-	// Subscription. It is expected to be false when the controller first saves the Subscription
-	// status, before actually creating the resource. This being false does not mean that it has not
-	// been created (e.g. the controller created it and crashed before writing to the API server).
-	ShouldDispatch bool `json:"shouldDispatch,omitempty"`
 }
 
 // IsEmpty determines if this GcpPubSubChannelStatus is equivalent to &GcpPubSubChannelStatus{}. It
