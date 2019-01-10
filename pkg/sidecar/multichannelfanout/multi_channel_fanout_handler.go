@@ -71,18 +71,19 @@ func getChannelKey(r *http.Request) (string, error) {
 // on, and then delegates handling of that request to the single fanout.Handler corresponding to
 // that Channel.
 type Handler struct {
-	logger   *zap.Logger
-	handlers map[string]*fanout.Handler
-	config   Config
+	logger       *zap.Logger
+	handlers     map[string]*fanout.Handler
+	config       Config
+	staticConfig fanout.StaticConfig
 }
 
 // NewHandler creates a new Handler.
-func NewHandler(logger *zap.Logger, conf Config) (*Handler, error) {
+func NewHandler(logger *zap.Logger, conf Config, staticConf fanout.StaticConfig) (*Handler, error) {
 	handlers := make(map[string]*fanout.Handler, len(conf.ChannelConfigs))
 
 	for _, cc := range conf.ChannelConfigs {
 		key := makeChannelKeyFromConfig(cc)
-		handler := fanout.NewHandler(logger, cc.FanoutConfig)
+		handler := fanout.NewHandler(logger, cc.FanoutConfig, staticConf)
 		if _, present := handlers[key]; present {
 			logger.Error("Duplicate channel key", zap.String("channelKey", key))
 			return nil, fmt.Errorf("duplicate channel key: %v", key)
@@ -91,9 +92,10 @@ func NewHandler(logger *zap.Logger, conf Config) (*Handler, error) {
 	}
 
 	return &Handler{
-		logger:   logger,
-		config:   conf,
-		handlers: handlers,
+		logger:       logger,
+		config:       conf,
+		staticConfig: staticConf,
+		handlers:     handlers,
 	}, nil
 }
 
@@ -107,7 +109,7 @@ func (h *Handler) ConfigDiff(updated Config) string {
 // CopyWithNewConfig creates a new copy of this Handler with all the fields identical, except the
 // new Handler uses conf, rather than copying the existing Handler's config.
 func (h *Handler) CopyWithNewConfig(conf Config) (*Handler, error) {
-	return NewHandler(h.logger, conf)
+	return NewHandler(h.logger, conf, h.staticConfig)
 }
 
 // ServeHTTP delegates the actual handling of the request to a fanout.Handler, based on the

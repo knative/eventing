@@ -76,7 +76,7 @@ func TestHandler(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			h, err := NewEmptyHandler(zap.NewNop())
+			h, err := NewEmptyHandler(zap.NewNop(), fanout.StaticConfig{})
 			if err != nil {
 				t.Errorf("Unexpected error creating handler: %v", err)
 			}
@@ -125,7 +125,7 @@ func TestHandler_InvalidConfigChange(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			h, err := NewEmptyHandler(zap.NewNop())
+			h, err := NewEmptyHandler(zap.NewNop(), fanout.StaticConfig{})
 			if err != nil {
 				t.Errorf("Unexpected error creating handler: %v", err)
 			}
@@ -153,7 +153,7 @@ func TestHandler_InvalidConfigChange(t *testing.T) {
 }
 
 func TestHandler_NilConfigChange(t *testing.T) {
-	h, err := NewEmptyHandler(zap.NewNop())
+	h, err := NewEmptyHandler(zap.NewNop(), fanout.StaticConfig{})
 	if err != nil {
 		t.Errorf("Unexpected error creating handler: %v", err)
 	}

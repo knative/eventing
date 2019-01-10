@@ -64,11 +64,13 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		subscriber     func(http.ResponseWriter, *http.Request)
 		channel        func(http.ResponseWriter, *http.Request)
 		expectedStatus int
+		staticConfig   StaticConfig
 	}{
 		"rejected by receiver": {
 			receiverFunc: func(provisioners.ChannelReference, *provisioners.Message) error {
 				return errors.New("rejected by test-receiver")
 			},
+			staticConfig:   StaticConfig{Blocking: true},
 			expectedStatus: http.StatusInternalServerError,
 		},
 		"fanout times out": {
@@ -82,16 +84,33 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 				time.Sleep(10 * time.Millisecond)
 				writer.WriteHeader(http.StatusAccepted)
 			},
+			staticConfig:   StaticConfig{Blocking: true},
 			expectedStatus: http.StatusInternalServerError,
+		},
+		"fanout times out, non-blocking": {
+			timeout: time.Millisecond,
+			subs: []eventingduck.ChannelSubscriberSpec{
+				{
+					SubscriberURI: replaceSubscriber,
+				},
+			},
+			subscriber: func(writer http.ResponseWriter, _ *http.Request) {
+				time.Sleep(10 * time.Millisecond)
+				writer.WriteHeader(http.StatusAccepted)
+			},
+			staticConfig:   StaticConfig{Blocking: false},
+			expectedStatus: http.StatusAccepted,
 		},
 		"zero subs succeed": {
 			subs:           []eventingduck.ChannelSubscriberSpec{},
+			staticConfig:   StaticConfig{Blocking: true},
 			expectedStatus: http.StatusAccepted,
 		},
 		"empty sub succeeds": {
 			subs: []eventingduck.ChannelSubscriberSpec{
 				{},
 			},
+			staticConfig:   StaticConfig{Blocking: true},
 			expectedStatus: http.StatusAccepted,
 		},
 		"reply fails": {
@@ -103,6 +122,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			channel: func(writer http.ResponseWriter, _ *http.Request) {
 				writer.WriteHeader(http.StatusNotFound)
 			},
+			staticConfig:   StaticConfig{Blocking: true},
 			expectedStatus: http.StatusInternalServerError,
 		},
 		"subscriber fails": {
@@ -114,7 +134,20 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			subscriber: func(writer http.ResponseWriter, _ *http.Request) {
 				writer.WriteHeader(http.StatusNotFound)
 			},
+			staticConfig:   StaticConfig{Blocking: true},
 			expectedStatus: http.StatusInternalServerError,
+		},
+		"subscriber fails, non-blocking": {
+			subs: []eventingduck.ChannelSubscriberSpec{
+				{
+					SubscriberURI: replaceSubscriber,
+				},
+			},
+			subscriber: func(writer http.ResponseWriter, _ *http.Request) {
+				writer.WriteHeader(http.StatusNotFound)
+			},
+			staticConfig:   StaticConfig{Blocking: false},
+			expectedStatus: http.StatusAccepted,
 		},
 		"subscriber succeeds, result fails": {
 			subs: []eventingduck.ChannelSubscriberSpec{
@@ -127,6 +160,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			channel: func(writer http.ResponseWriter, _ *http.Request) {
 				writer.WriteHeader(http.StatusForbidden)
 			},
+			staticConfig:   StaticConfig{Blocking: true},
 			expectedStatus: http.StatusInternalServerError,
 		},
 		"one sub succeeds": {
@@ -140,6 +174,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			channel: func(writer http.ResponseWriter, _ *http.Request) {
 				writer.WriteHeader(http.StatusAccepted)
 			},
+			staticConfig:   StaticConfig{Blocking: true},
 			expectedStatus: http.StatusAccepted,
 		},
 		"one sub succeeds, one sub fails": {
@@ -155,6 +190,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			},
 			subscriber:     callableSucceed,
 			channel:        (&succeedOnce{}).handler,
+			staticConfig:   StaticConfig{Blocking: true},
 			expectedStatus: http.StatusInternalServerError,
 		},
 		"all subs succeed": {
@@ -176,6 +212,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			channel: func(writer http.ResponseWriter, _ *http.Request) {
 				writer.WriteHeader(http.StatusAccepted)
 			},
+			staticConfig:   StaticConfig{Blocking: true},
 			expectedStatus: http.StatusAccepted,
 		},
 	}
@@ -205,7 +242,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 				subs = append(subs, sub)
 			}
 
-			h := NewHandler(zap.NewNop(), Config{Subscriptions: subs})
+			h := NewHandler(zap.NewNop(), Config{Subscriptions: subs}, tc.staticConfig)
 			if tc.receiverFunc != nil {
 				h.receiver = provisioners.NewMessageReceiver(tc.receiverFunc, zap.NewNop().Sugar())
 			}

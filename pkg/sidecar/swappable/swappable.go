@@ -28,6 +28,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	"go.uber.org/zap"
 )
@@ -54,8 +55,8 @@ func NewHandler(handler *multichannelfanout.Handler, logger *zap.Logger) *Handle
 	return h
 }
 
-func NewEmptyHandler(logger *zap.Logger) (*Handler, error) {
-	h, err := multichannelfanout.NewHandler(logger, multichannelfanout.Config{})
+func NewEmptyHandler(logger *zap.Logger, staticConfig fanout.StaticConfig) (*Handler, error) {
+	h, err := multichannelfanout.NewHandler(logger, multichannelfanout.Config{}, staticConfig)
 	if err != nil {
 		return nil, err
 	}

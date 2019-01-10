@@ -30,7 +30,7 @@ import (
 
 	"github.com/knative/eventing/pkg/sidecar/configmap/filesystem"
 	"github.com/knative/eventing/pkg/sidecar/configmap/watcher"
-	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
+	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/swappable"
 	"github.com/knative/eventing/pkg/system"
 	"go.uber.org/zap"
@@ -84,12 +84,12 @@ func main() {
 		logger.Fatal("--sidecar_port flag must be set")
 	}
 
-	sh, err := swappable.NewEmptyHandler(logger)
+	sh, err := swappable.NewEmptyHandler(logger, fanout.StaticConfig{Blocking: blocking})
 	if err != nil {
 		logger.Fatal("Unable to create swappable.Handler", zap.Error(err))
 	}
 
-	mgr, err := setupConfigMapNoticer(logger, sh.UpdateConfig, blocking)
+	mgr, err := setupConfigMapNoticer(logger, sh.UpdateConfig)
 	if err != nil {
 		logger.Fatal("Unable to create configMap noticer.", zap.Error(err))
 	}
@@ -122,26 +122,18 @@ func main() {
 	s.Shutdown(ctx)
 }
 
-func setupConfigMapNoticer(logger *zap.Logger, configUpdated swappable.UpdateConfig, blocking bool) (manager.Manager, error) {
+func setupConfigMapNoticer(logger *zap.Logger, configUpdated swappable.UpdateConfig) (manager.Manager, error) {
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
 	if err != nil {
 		return nil, err
 		logger.Error("Error starting manager.", zap.Error(err))
 	}
 
-	wrappedConfigUpdated := func(config *multichannelfanout.Config) error {
-		// update fanout config for blocking
-		for _, c := range config.ChannelConfigs {
-			c.FanoutConfig.Blocking = blocking
-		}
-		return configUpdated(config)
-	}
-
 	switch configMapNoticer {
 	case cmnfVolume:
-		err = setupConfigMapVolume(logger, mgr, wrappedConfigUpdated)
+		err = setupConfigMapVolume(logger, mgr, configUpdated)
 	case cmnfWatcher:
-		err = setupConfigMapWatcher(logger, mgr, wrappedConfigUpdated)
+		err = setupConfigMapWatcher(logger, mgr, configUpdated)
 	default:
 		err = fmt.Errorf("need to provide the --config_map_noticer flag (valid values are %s)", configMapNoticerValues())
 	}

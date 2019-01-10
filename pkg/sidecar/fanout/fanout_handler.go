@@ -40,12 +40,16 @@ const (
 // Configuration for a fanout.Handler.
 type Config struct {
 	Subscriptions []eventingduck.ChannelSubscriberSpec `json:"subscriptions"`
-	Blocking      bool                                 `json:"-"`
+}
+
+type StaticConfig struct {
+	Blocking bool
 }
 
 // http.Handler that takes a single request in and fans it out to N other servers.
 type Handler struct {
-	config Config
+	config       Config
+	staticConfig StaticConfig
 
 	receivedMessages chan *forwardMessage
 	receiver         *provisioners.MessageReceiver
@@ -67,10 +71,11 @@ type forwardMessage struct {
 }
 
 // NewHandler creates a new fanout.Handler.
-func NewHandler(logger *zap.Logger, config Config) *Handler {
+func NewHandler(logger *zap.Logger, config Config, staticConfig StaticConfig) *Handler {
 	handler := &Handler{
 		logger:           logger,
 		config:           config,
+		staticConfig:     staticConfig,
 		dispatcher:       provisioners.NewMessageDispatcher(logger.Sugar()),
 		receivedMessages: make(chan *forwardMessage, messageBufferSize),
 		timeout:          defaultTimeout,
@@ -84,11 +89,11 @@ func NewHandler(logger *zap.Logger, config Config) *Handler {
 
 func createReceiverFunction(f *Handler) func(provisioners.ChannelReference, *provisioners.Message) error {
 	return func(_ provisioners.ChannelReference, m *provisioners.Message) error {
-		if f.config.Blocking {
-			// hold receive open until dispatch finishes, reporting dispatch errors
+		if f.staticConfig.Blocking {
+			// hold receive open until dispatch finishes, report dispatch errors
 			return f.dispatch(m)
 		}
-		// ack receive immediately, ignoring dispatch errors
+		// ack receive immediately, dispatch is good faith attempt, ignore errors
 		go f.dispatch(m)
 		return nil
 	}

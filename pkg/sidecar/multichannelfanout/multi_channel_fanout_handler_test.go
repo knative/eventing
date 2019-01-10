@@ -87,7 +87,7 @@ func TestNewHandler(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := NewHandler(zap.NewNop(), tc.config)
+			_, err := NewHandler(zap.NewNop(), tc.config, fanout.StaticConfig{})
 			if tc.createErr != "" {
 				if err == nil {
 					t.Errorf("Expected NewHandler error: '%v'. Actual nil", tc.createErr)
@@ -136,7 +136,7 @@ func TestCopyWithNewConfig(t *testing.T) {
 	if cmp.Equal(orig, updated) {
 		t.Errorf("Orig and updated must be different")
 	}
-	h, err := NewHandler(zap.NewNop(), orig)
+	h, err := NewHandler(zap.NewNop(), orig, fanout.StaticConfig{})
 	if err != nil {
 		t.Errorf("Unable to create handler, %v", err)
 	}
@@ -152,6 +152,9 @@ func TestCopyWithNewConfig(t *testing.T) {
 	}
 	if !cmp.Equal(newH.config, updated) {
 		t.Errorf("Incorrect copied config. Expected '%v'. Actual '%v'", updated, newH.config)
+	}
+	if h.staticConfig != newH.staticConfig {
+		t.Errorf("Incorrect copied static config. Expected '%v'. Actual '%v'", h.staticConfig, newH.staticConfig)
 	}
 }
 
@@ -206,7 +209,7 @@ func TestConfigDiff(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			h, err := NewHandler(zap.NewNop(), tc.orig)
+			h, err := NewHandler(zap.NewNop(), tc.orig, fanout.StaticConfig{})
 			if err != nil {
 				t.Errorf("Unable to create handler: %v", err)
 			}
@@ -223,6 +226,7 @@ func TestServeHTTP(t *testing.T) {
 	testCases := map[string]struct {
 		name               string
 		config             Config
+		staticConfig       fanout.StaticConfig
 		respStatusCode     int
 		key                string
 		expectedStatusCode int
@@ -237,7 +241,7 @@ func TestServeHTTP(t *testing.T) {
 			key:                "no-dot",
 			expectedStatusCode: http.StatusInternalServerError,
 		},
-		"pass through failure": {
+		"pass through failure, blocking": {
 			config: Config{
 				ChannelConfigs: []ChannelConfig{
 					{
@@ -253,9 +257,32 @@ func TestServeHTTP(t *testing.T) {
 					},
 				},
 			},
+			staticConfig:       fanout.StaticConfig{Blocking: true},
 			respStatusCode:     http.StatusInternalServerError,
 			key:                "first-channel.default",
 			expectedStatusCode: http.StatusInternalServerError,
+		},
+		"pass through failure, non-blocking": {
+			config: Config{
+				ChannelConfigs: []ChannelConfig{
+					{
+						Namespace: "default",
+						Name:      "first-channel",
+						FanoutConfig: fanout.Config{
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+								{
+									ReplyURI: replaceDomain,
+								},
+							},
+						},
+					},
+				},
+			},
+			// because the config is non-blocking, even though the dispatch response fails, the receiver response is accepted
+			staticConfig:       fanout.StaticConfig{Blocking: false},
+			respStatusCode:     http.StatusInternalServerError,
+			key:                "first-channel.default",
+			expectedStatusCode: http.StatusAccepted,
 		},
 		"choose channel": {
 			config: Config{
@@ -301,7 +328,7 @@ func TestServeHTTP(t *testing.T) {
 			// Rewrite the replaceDomains to call the server we just created.
 			replaceDomains(tc.config, server.URL[7:])
 
-			h, err := NewHandler(zap.NewNop(), tc.config)
+			h, err := NewHandler(zap.NewNop(), tc.config, tc.staticConfig)
 			if err != nil {
 				t.Errorf("Unexpected NewHandler error: '%v'", err)
 			}
