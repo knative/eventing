@@ -90,16 +90,11 @@ func (m *Message) AppendToHistory(host string) {
 	if host == "" {
 		return
 	}
-	history := m.History()
-	if history == nil {
-		history = make([]string, 0)
-	}
-	newHistory := append(history, host)
-	m.SetHistory(newHistory)
+	m.setHistory(append(m.History(), host))
 }
 
-// SetHistory sets the message history to the given value
-func (m *Message) SetHistory(history []string) {
+// setHistory sets the message history to the given value
+func (m *Message) setHistory(history []string) {
 	historyStr := encodeMessageHistory(history)
 	if m.Headers == nil {
 		m.Headers = make(map[string]string)

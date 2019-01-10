@@ -73,7 +73,7 @@ func TestMessageHistory(t *testing.T) {
 		},
 		{
 			start:    "  ",
-			append:   []string{" ", "name.multispace.service.local", "  ", "   "},
+			append:   []string{" ", "name.multispace.service.local", "  "},
 			expected: "name.multispace.service.local",
 			len:      1,
 		},
@@ -87,7 +87,7 @@ func TestMessageHistory(t *testing.T) {
 				m.Headers[MessageHistoryHeader] = tc.start
 			}
 			if tc.set != nil {
-				m.SetHistory(tc.set)
+				m.setHistory(tc.set)
 			}
 			for _, name := range tc.append {
 				m.AppendToHistory(name)
