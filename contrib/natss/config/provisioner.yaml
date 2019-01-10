@@ -103,6 +103,11 @@ spec:
       containers:
         - name: controller
           image: github.com/knative/eventing/contrib/natss/pkg/controller
+        env:
+        - name: SYSTEM_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
 
 ---
 
@@ -174,4 +179,13 @@ spec:
       serviceAccountName: natss-dispatcher
       containers:
         - name: dispatcher
+<<<<<<< HEAD
           image: github.com/knative/eventing/contrib/natss/pkg/dispatcher
+=======
+          image: github.com/knative/eventing/pkg/provisioners/natss/dispatcher
+        env:
+        - name: SYSTEM_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+>>>>>>> User can specify the namespace in yaml for knative-eventing

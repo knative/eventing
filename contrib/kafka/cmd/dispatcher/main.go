@@ -42,7 +42,7 @@ func main() {
 	}
 	configMapNamespace := os.Getenv("DISPATCHER_CONFIGMAP_NAMESPACE")
 	if configMapNamespace == "" {
-		configMapNamespace = system.Namespace
+		configMapNamespace = system.Namespace()
 	}
 
 	logger, err := zap.NewProduction()

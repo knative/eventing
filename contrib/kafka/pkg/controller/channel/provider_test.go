@@ -19,6 +19,7 @@ package channel
 import (
 	"testing"
 
+	_ "github.com/knative/eventing/pkg/system/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 

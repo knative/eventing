@@ -69,7 +69,7 @@ func main() {
 	}
 
 	// Watch the logging config map and dynamically update logging levels.
-	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace)
+	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
 
 	configMapWatcher.Watch(logconfig.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Webhook, logconfig.Webhook))
 
@@ -86,7 +86,7 @@ func main() {
 	options := webhook.ControllerOptions{
 		ServiceName:    "webhook",
 		DeploymentName: "webhook",
-		Namespace:      system.Namespace,
+		Namespace:      system.Namespace(),
 		Port:           443,
 		SecretName:     "webhook-certs",
 		WebhookName:    "webhook.eventing.knative.dev",

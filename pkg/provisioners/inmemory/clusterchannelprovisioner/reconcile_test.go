@@ -36,6 +36,7 @@ import (
 	util "github.com/knative/eventing/pkg/provisioners"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/system"
+    _ "github.com/knative/eventing/pkg/system/testing"
 )
 
 const (
@@ -340,7 +341,7 @@ func makeK8sService() *corev1.Service {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: system.Namespace,
+			Namespace: system.Namespace(),
 			Name:      fmt.Sprintf("%s-dispatcher", Name),
 			OwnerReferences: []metav1.OwnerReference{
 				{

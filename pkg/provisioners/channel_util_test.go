@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	_ "github.com/knative/eventing/pkg/system/testing"
 	"github.com/knative/eventing/pkg/utils"
 )
 

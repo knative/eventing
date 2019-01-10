@@ -124,6 +124,11 @@ spec:
         volumeMounts:
           - name: kafka-channel-controller-config
             mountPath: /etc/config-provisioner
+        env:
+        - name: SYSTEM_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
       volumes:
         - name: kafka-channel-controller-config
           configMap:

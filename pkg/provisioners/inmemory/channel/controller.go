@@ -42,7 +42,7 @@ const (
 
 var (
 	defaultConfigMapKey = types.NamespacedName{
-		Namespace: system.Namespace,
+		Namespace: system.Namespace(),
 		Name:      ConfigMapName,
 	}
 )
