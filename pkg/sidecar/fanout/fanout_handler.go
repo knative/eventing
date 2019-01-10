@@ -40,6 +40,7 @@ const (
 // Configuration for a fanout.Handler.
 type Config struct {
 	Subscriptions []eventingduck.ChannelSubscriberSpec `json:"subscriptions"`
+	Blocking      bool                                 `json:"-"`
 }
 
 // http.Handler that takes a single request in and fans it out to N other servers.
@@ -83,7 +84,13 @@ func NewHandler(logger *zap.Logger, config Config) *Handler {
 
 func createReceiverFunction(f *Handler) func(provisioners.ChannelReference, *provisioners.Message) error {
 	return func(_ provisioners.ChannelReference, m *provisioners.Message) error {
-		return f.dispatch(m)
+		if f.config.Blocking {
+			// hold receive open until dispatch finishes, reporting dispatch errors
+			return f.dispatch(m)
+		}
+		// ack receive immediately, ignoring dispatch errors
+		go f.dispatch(m)
+		return nil
 	}
 }
 
