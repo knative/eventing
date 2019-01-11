@@ -48,6 +48,8 @@ func New(logger *zap.Logger, client client.Client, pubSubClientCreator util.PubS
 
 		pubSubClientCreator: pubSubClientCreator,
 	}
+	// This currently only returns a single Runnable, but is expected to return multiple soon (i.e.
+	// for a TTL cache).
 	return r, []manager.Runnable{r.newMessageReceiver()}
 }
 
