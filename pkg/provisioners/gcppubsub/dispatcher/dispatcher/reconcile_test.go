@@ -450,12 +450,12 @@ func makeChannel() *eventingv1alpha1.Channel {
 	c.Status.InitializeConditions()
 	c.Status.SetAddress(fmt.Sprintf("%s-channel.%s.svc.cluster.local", c.Name, c.Namespace))
 	c.Status.MarkProvisioned()
-	pbs := &util.GcpPubSubChannelStatus{
+	pcs := &util.GcpPubSubChannelStatus{
 		GCPProject: gcpProject,
 		Secret:     testcreds.Secret,
 		SecretKey:  testcreds.SecretKey,
 	}
-	if err := util.SaveRawStatus(context.Background(), c, pbs); err != nil {
+	if err := util.SaveRawStatus(context.Background(), c, pcs); err != nil {
 		panic(err)
 	}
 	return c
@@ -538,18 +538,18 @@ func makeChannelWithBlankRawStatus() *eventingv1alpha1.Channel {
 
 func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscribable) {
 	c.Spec.Subscribable = subscribable
-	pbs, err := util.ReadRawStatus(context.Background(), c)
+	pcs, err := util.ReadRawStatus(context.Background(), c)
 	if err != nil {
 		panic(err)
 	}
 	for _, sub := range subscribable.Subscribers {
-		pbs.Subscriptions = append(pbs.Subscriptions, util.GcpPubSubSubscriptionStatus{
+		pcs.Subscriptions = append(pcs.Subscriptions, util.GcpPubSubSubscriptionStatus{
 			Ref:           sub.Ref,
 			ReplyURI:      sub.ReplyURI,
 			SubscriberURI: sub.SubscriberURI,
 		})
 	}
-	err = util.SaveRawStatus(context.Background(), c, pbs)
+	err = util.SaveRawStatus(context.Background(), c, pcs)
 	if err != nil {
 		panic(err)
 	}

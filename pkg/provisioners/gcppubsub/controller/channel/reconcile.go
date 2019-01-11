@@ -154,7 +154,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	// First we will plan all the names out for steps 3 and 4 persist them to status.raw. Then, on a
 	// subsequent reconcile, we manipulate all the GCP resources in steps 3 and 4.
 
-	originalPBS, err := pubsubutil.ReadRawStatus(ctx, c)
+	originalPCS, err := pubsubutil.ReadRawStatus(ctx, c)
 	if err != nil {
 		logging.FromContext(ctx).Info("Unable to read the raw status", zap.Error(err))
 		return false, err
@@ -171,14 +171,14 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		// K8s garbage collection will delete the K8s service and VirtualService for this channel.
 		// All the subs should be deleted.
 		subsToSync := &syncSubs{
-			subsToDelete: originalPBS.Subscriptions,
+			subsToDelete: originalPCS.Subscriptions,
 		}
 		// Topic is nil because it is only used for sub creation, not deletion.
-		err = r.syncSubscriptions(ctx, originalPBS, gcpCreds, nil, subsToSync)
+		err = r.syncSubscriptions(ctx, originalPCS, gcpCreds, nil, subsToSync)
 		if err != nil {
 			return false, err
 		}
-		err = r.deleteTopic(ctx, originalPBS, gcpCreds)
+		err = r.deleteTopic(ctx, originalPCS, gcpCreds)
 		if err != nil {
 			return false, err
 		}
@@ -197,12 +197,12 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	// and persist them to our status before creating anything. That way during delete we know
 	// everything to look for. In fact, all manipulations of GCP resources will be done looking
 	// only at the status, not the spec.
-	persist, plannedPBS, subsToSync, err := r.planGcpResources(ctx, c, originalPBS)
+	persist, plannedPCS, subsToSync, err := r.planGcpResources(ctx, c, originalPCS)
 	if err != nil {
 		return false, err
 	}
 	if persist == persistStatus {
-		if err = pubsubutil.SaveRawStatus(ctx, c, plannedPBS); err != nil {
+		if err = pubsubutil.SaveRawStatus(ctx, c, plannedPCS); err != nil {
 			return false, err
 		}
 		// Persist this and run another reconcile loop to enact it.
@@ -219,18 +219,18 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		return false, err
 	}
 
-	topic, err := r.createTopic(ctx, plannedPBS, gcpCreds)
+	topic, err := r.createTopic(ctx, plannedPCS, gcpCreds)
 	if err != nil {
 		return false, err
 	}
 
-	err = r.syncSubscriptions(ctx, plannedPBS, gcpCreds, topic, subsToSync)
+	err = r.syncSubscriptions(ctx, plannedPCS, gcpCreds, topic, subsToSync)
 	if err != nil {
 		return false, err
 	}
 	// Now that the subs have synced successfully, remove the old ones from the status.
-	plannedPBS.Subscriptions = subsToSync.subsToCreate
-	if err = pubsubutil.SaveRawStatus(ctx, c, plannedPBS); err != nil {
+	plannedPCS.Subscriptions = subsToSync.subsToCreate
+	if err = pubsubutil.SaveRawStatus(ctx, c, plannedPCS); err != nil {
 		return false, err
 	}
 
@@ -240,31 +240,31 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 // planGcpResources creates the plan for every resource that needs to be created outside of the
 // cluster. Their names are all saved to the returned in the updated status.
-func (r *reconciler) planGcpResources(ctx context.Context, c *eventingv1alpha1.Channel, originalPBS *pubsubutil.GcpPubSubChannelStatus) (persistence, *pubsubutil.GcpPubSubChannelStatus, *syncSubs, error) {
+func (r *reconciler) planGcpResources(ctx context.Context, c *eventingv1alpha1.Channel, originalPCS *pubsubutil.GcpPubSubChannelStatus) (persistence, *pubsubutil.GcpPubSubChannelStatus, *syncSubs, error) {
 	persist := noNeedToPersist
 	subsToSync := &syncSubs{
 		subsToCreate: make([]pubsubutil.GcpPubSubSubscriptionStatus, 0),
 		subsToDelete: make([]pubsubutil.GcpPubSubSubscriptionStatus, 0),
 	}
 
-	topicName := originalPBS.Topic
+	topicName := originalPCS.Topic
 	if topicName == "" {
 		topicName = generateTopicName(c)
 	}
 	// Everything except the subscriptions.
-	newPBS := &pubsubutil.GcpPubSubChannelStatus{
+	newPCS := &pubsubutil.GcpPubSubChannelStatus{
 		// TODO Allow arguments to set the secret and project.
 		Secret:     r.defaultSecret,
 		SecretKey:  r.defaultSecretKey,
 		GCPProject: r.defaultGcpProject,
 		Topic:      topicName,
 	}
-	if !equality.Semantic.DeepEqual(originalPBS.Secret, newPBS.Secret) || originalPBS.SecretKey != newPBS.SecretKey || originalPBS.GCPProject != newPBS.GCPProject || originalPBS.Topic != newPBS.Topic {
+	if !equality.Semantic.DeepEqual(originalPCS.Secret, newPCS.Secret) || originalPCS.SecretKey != newPCS.SecretKey || originalPCS.GCPProject != newPCS.GCPProject || originalPCS.Topic != newPCS.Topic {
 		persist = persistStatus
 	}
 
-	existingSubs := make(map[types.UID]pubsubutil.GcpPubSubSubscriptionStatus, len(originalPBS.Subscriptions))
-	for _, existingSub := range originalPBS.Subscriptions {
+	existingSubs := make(map[types.UID]pubsubutil.GcpPubSubSubscriptionStatus, len(originalPCS.Subscriptions))
+	for _, existingSub := range originalPCS.Subscriptions {
 		// I don't think this can ever happen, but let's just be sure.
 		if existingSub.Ref != nil && existingSub.Ref.UID != "" {
 			existingSubs[existingSub.Ref.UID] = existingSub
@@ -303,14 +303,14 @@ func (r *reconciler) planGcpResources(ctx context.Context, c *eventingv1alpha1.C
 
 	// Generate the subs for the status by copying all the subs to create and all the subs to
 	// delete.
-	newPBS.Subscriptions = make([]pubsubutil.GcpPubSubSubscriptionStatus, 0, len(subsToSync.subsToCreate)+len(subsToSync.subsToDelete))
+	newPCS.Subscriptions = make([]pubsubutil.GcpPubSubSubscriptionStatus, 0, len(subsToSync.subsToCreate)+len(subsToSync.subsToDelete))
 	for _, sub := range subsToSync.subsToCreate {
-		newPBS.Subscriptions = append(newPBS.Subscriptions, sub)
+		newPCS.Subscriptions = append(newPCS.Subscriptions, sub)
 	}
 	for _, sub := range subsToSync.subsToDelete {
-		newPBS.Subscriptions = append(newPBS.Subscriptions, sub)
+		newPCS.Subscriptions = append(newPCS.Subscriptions, sub)
 	}
-	return persist, newPBS, subsToSync, nil
+	return persist, newPCS, subsToSync, nil
 }
 
 func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.Channel) (*v1.Service, error) {
@@ -333,14 +333,14 @@ func (r *reconciler) createVirtualService(ctx context.Context, c *eventingv1alph
 	return nil
 }
 
-func (r *reconciler) createTopic(ctx context.Context, plannedPBS *pubsubutil.GcpPubSubChannelStatus, gcpCreds *google.Credentials) (pubsubutil.PubSubTopic, error) {
-	psc, err := r.pubSubClientCreator(ctx, gcpCreds, plannedPBS.GCPProject)
+func (r *reconciler) createTopic(ctx context.Context, plannedPCS *pubsubutil.GcpPubSubChannelStatus, gcpCreds *google.Credentials) (pubsubutil.PubSubTopic, error) {
+	psc, err := r.pubSubClientCreator(ctx, gcpCreds, plannedPCS.GCPProject)
 	if err != nil {
 		logging.FromContext(ctx).Info("Unable to create PubSub client", zap.Error(err))
 		return nil, err
 	}
 
-	topic := psc.Topic(plannedPBS.Topic)
+	topic := psc.Topic(plannedPCS.Topic)
 	exists, err := topic.Exists(ctx)
 	if err != nil {
 		logging.FromContext(ctx).Info("Unable to check Topic existence", zap.Error(err))
@@ -358,18 +358,18 @@ func (r *reconciler) createTopic(ctx context.Context, plannedPBS *pubsubutil.Gcp
 	return createdTopic, nil
 }
 
-func (r *reconciler) deleteTopic(ctx context.Context, pbs *pubsubutil.GcpPubSubChannelStatus, gcpCreds *google.Credentials) error {
-	if pbs.Topic == "" {
+func (r *reconciler) deleteTopic(ctx context.Context, pcs *pubsubutil.GcpPubSubChannelStatus, gcpCreds *google.Credentials) error {
+	if pcs.Topic == "" {
 		// The topic was never planned, let alone created, so there is nothing to delete.
 		return nil
 	}
-	psc, err := r.pubSubClientCreator(ctx, gcpCreds, pbs.GCPProject)
+	psc, err := r.pubSubClientCreator(ctx, gcpCreds, pcs.GCPProject)
 	if err != nil {
 		logging.FromContext(ctx).Info("Unable to create PubSubClient", zap.Error(err))
 		return err
 	}
 
-	topic := psc.Topic(pbs.Topic)
+	topic := psc.Topic(pcs.Topic)
 	exists, err := topic.Exists(ctx)
 	if err != nil {
 		logging.FromContext(ctx).Info("Unable to check if Topic exists", zap.Error(err))
@@ -392,9 +392,9 @@ type syncSubs struct {
 	subsToDelete []pubsubutil.GcpPubSubSubscriptionStatus
 }
 
-func (r *reconciler) syncSubscriptions(ctx context.Context, plannedPBS *pubsubutil.GcpPubSubChannelStatus, gcpCreds *google.Credentials, topic pubsubutil.PubSubTopic, subsToSync *syncSubs) error {
+func (r *reconciler) syncSubscriptions(ctx context.Context, plannedPCS *pubsubutil.GcpPubSubChannelStatus, gcpCreds *google.Credentials, topic pubsubutil.PubSubTopic, subsToSync *syncSubs) error {
 	for _, subToCreate := range subsToSync.subsToCreate {
-		_, err := r.createSubscription(ctx, gcpCreds, plannedPBS.GCPProject, topic, subToCreate.Subscription)
+		_, err := r.createSubscription(ctx, gcpCreds, plannedPCS.GCPProject, topic, subToCreate.Subscription)
 		if err != nil {
 			logging.FromContext(ctx).Info("Unable to create subscriber", zap.Error(err), zap.Any("channelSubscriber", subToCreate))
 			return err
@@ -402,7 +402,7 @@ func (r *reconciler) syncSubscriptions(ctx context.Context, plannedPBS *pubsubut
 	}
 
 	for _, subToDelete := range subsToSync.subsToDelete {
-		err := r.deleteSubscription(ctx, gcpCreds, plannedPBS.GCPProject, &subToDelete)
+		err := r.deleteSubscription(ctx, gcpCreds, plannedPCS.GCPProject, &subToDelete)
 		if err != nil {
 			logging.FromContext(ctx).Info("Unable to delete subscriber", zap.Error(err), zap.Any("channelSubscriber", subToDelete))
 			return err

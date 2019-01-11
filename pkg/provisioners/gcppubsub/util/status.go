@@ -63,20 +63,20 @@ type GcpPubSubSubscriptionStatus struct {
 
 // IsEmpty determines if this GcpPubSubChannelStatus is equivalent to &GcpPubSubChannelStatus{}. It
 // exists because slices are not compared by golang's ==.
-func (pbs *GcpPubSubChannelStatus) IsEmpty() bool {
-	if pbs.Secret != nil {
+func (pcs *GcpPubSubChannelStatus) IsEmpty() bool {
+	if pcs.Secret != nil {
 		return false
 	}
-	if pbs.SecretKey != "" {
+	if pcs.SecretKey != "" {
 		return false
 	}
-	if pbs.GCPProject != "" {
+	if pcs.GCPProject != "" {
 		return false
 	}
-	if pbs.Topic != "" {
+	if pcs.Topic != "" {
 		return false
 	}
-	if len(pbs.Subscriptions) > 0 {
+	if len(pcs.Subscriptions) > 0 {
 		return false
 	}
 	return true
@@ -84,10 +84,10 @@ func (pbs *GcpPubSubChannelStatus) IsEmpty() bool {
 
 // SaveRawStatus saves GcpPubSubChannelStatus to the given Channel, which should only be one whose
 // provisioner is gcp-pubsub.
-func SaveRawStatus(ctx context.Context, c *eventingv1alpha1.Channel, pbs *GcpPubSubChannelStatus) error {
-	jb, err := json.Marshal(pbs)
+func SaveRawStatus(ctx context.Context, c *eventingv1alpha1.Channel, pcs *GcpPubSubChannelStatus) error {
+	jb, err := json.Marshal(pcs)
 	if err != nil {
-		logging.FromContext(ctx).Error("Error saving the raw status", zap.Error(err), zap.Any("pbs", pbs))
+		logging.FromContext(ctx).Error("Error saving the raw status", zap.Error(err), zap.Any("pcs", pcs))
 		return err
 	}
 	c.Status.Raw = &runtime.RawExtension{
@@ -107,11 +107,11 @@ func ReadRawStatus(ctx context.Context, c *eventingv1alpha1.Channel) (*GcpPubSub
 	if len(bytes) == 0 {
 		return &GcpPubSubChannelStatus{}, nil
 	}
-	var pbs GcpPubSubChannelStatus
-	if err := json.Unmarshal(bytes, &pbs); err != nil {
+	var pcs GcpPubSubChannelStatus
+	if err := json.Unmarshal(bytes, &pcs); err != nil {
 		logging.FromContext(ctx).Error("Unable to parse the raw status", zap.Error(err))
 		return nil, err
 	}
-	return &pbs, nil
+	return &pcs, nil
 
 }

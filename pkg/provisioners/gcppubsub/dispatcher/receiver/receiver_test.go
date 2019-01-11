@@ -160,12 +160,12 @@ func makeChannel() *eventingv1alpha1.Channel {
 			Name:      "test-channel",
 		},
 	}
-	pbs := &util.GcpPubSubChannelStatus{
+	pcs := &util.GcpPubSubChannelStatus{
 		GCPProject: "project",
 		Secret:     testcreds.Secret,
 		SecretKey:  testcreds.SecretKey,
 	}
-	if err := util.SaveRawStatus(context.Background(), c, pbs); err != nil {
+	if err := util.SaveRawStatus(context.Background(), c, pcs); err != nil {
 		panic(err)
 	}
 	return c

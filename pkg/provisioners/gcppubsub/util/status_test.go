@@ -30,11 +30,11 @@ import (
 
 func TestIsEmpty(t *testing.T) {
 	testCases := map[string]struct {
-		pbs      *GcpPubSubChannelStatus
+		pcs      *GcpPubSubChannelStatus
 		expected bool
 	}{
 		"secret": {
-			pbs: &GcpPubSubChannelStatus{
+			pcs: &GcpPubSubChannelStatus{
 				Secret: &v1.ObjectReference{
 					Name: "some-name",
 				},
@@ -42,25 +42,25 @@ func TestIsEmpty(t *testing.T) {
 			expected: false,
 		},
 		"secretKey": {
-			pbs: &GcpPubSubChannelStatus{
+			pcs: &GcpPubSubChannelStatus{
 				SecretKey: "some-key",
 			},
 			expected: false,
 		},
 		"gcpProject": {
-			pbs: &GcpPubSubChannelStatus{
+			pcs: &GcpPubSubChannelStatus{
 				GCPProject: "some-project",
 			},
 			expected: false,
 		},
 		"topic": {
-			pbs: &GcpPubSubChannelStatus{
+			pcs: &GcpPubSubChannelStatus{
 				Topic: "some-topic",
 			},
 			expected: false,
 		},
 		"subscriptions": {
-			pbs: &GcpPubSubChannelStatus{
+			pcs: &GcpPubSubChannelStatus{
 				Subscriptions: []GcpPubSubSubscriptionStatus{
 					{
 						Subscription: "some-subscription",
@@ -70,13 +70,13 @@ func TestIsEmpty(t *testing.T) {
 			expected: false,
 		},
 		"empty": {
-			pbs:      &GcpPubSubChannelStatus{},
+			pcs:      &GcpPubSubChannelStatus{},
 			expected: true,
 		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			actual := tc.pbs.IsEmpty()
+			actual := tc.pcs.IsEmpty()
 			if actual != tc.expected {
 				t.Errorf("Expected %v. Actual %v", tc.expected, actual)
 			}
@@ -123,11 +123,11 @@ func TestReadRawStatus(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			c := &v1alpha1.Channel{}
 			c.Status.Raw = tc.raw
-			pbs, err := ReadRawStatus(context.Background(), c)
+			pcs, err := ReadRawStatus(context.Background(), c)
 			if tc.err != (err != nil) {
 				t.Fatalf("Unexpected error. Expected %v. Actual %v", tc.err, err)
 			}
-			if diff := cmp.Diff(tc.expected, pbs); diff != "" {
+			if diff := cmp.Diff(tc.expected, pcs); diff != "" {
 				t.Fatalf("Unexpected difference (-want +got): %v", diff)
 			}
 		})
@@ -136,10 +136,10 @@ func TestReadRawStatus(t *testing.T) {
 
 func TestRawStatusRoundTrip(t *testing.T) {
 	testCases := map[string]struct {
-		pbs *GcpPubSubChannelStatus
+		pcs *GcpPubSubChannelStatus
 	}{
 		"all fields set": {
-			pbs: &GcpPubSubChannelStatus{
+			pcs: &GcpPubSubChannelStatus{
 				Secret: &v1.ObjectReference{
 					Name: "some-name",
 				},
@@ -157,15 +157,15 @@ func TestRawStatusRoundTrip(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			c := &v1alpha1.Channel{}
-			err := SaveRawStatus(context.Background(), c, tc.pbs)
+			err := SaveRawStatus(context.Background(), c, tc.pcs)
 			if err != nil {
 				t.Errorf("Unexpected error saving raw status. %v", err)
 			}
-			pbs, err := ReadRawStatus(context.Background(), c)
+			pcs, err := ReadRawStatus(context.Background(), c)
 			if err != nil {
 				t.Errorf("Unexpected error reading raw status. %v", err)
 			}
-			if diff := cmp.Diff(tc.pbs, pbs); diff != "" {
+			if diff := cmp.Diff(tc.pcs, pcs); diff != "" {
 				t.Errorf("Unexpected parsed raw status (-want +got): %v", diff)
 			}
 		})
