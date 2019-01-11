@@ -100,6 +100,7 @@ func TestMessageReceiver_HandleRequest(t *testing.T) {
 					"cE-pass-through":           "true",
 					"x-B3-pass":                 "true",
 					"x-ot-pass":                 "true",
+					"ce-knativehistory":         "test-name.test-namespace.svc.cluster.local",
 				}
 				if diff := cmp.Diff(expectedHeaders, m.Headers); diff != "" {
 					return fmt.Errorf("test receiver func -- bad headers (-want, +got): %s", diff)
