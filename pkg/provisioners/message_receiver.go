@@ -126,6 +126,8 @@ func (r *MessageReceiver) HandleRequest(res http.ResponseWriter, req *http.Reque
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	// setting common channel information in the request
+	message.AppendToHistory(host)
 
 	err = r.receiverFunc(channel, message)
 	if err != nil {
