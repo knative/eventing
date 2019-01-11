@@ -19,17 +19,15 @@ package clusterchannelprovisioner
 import (
 	"context"
 
-	"github.com/knative/pkg/logging"
-
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	util "github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/logging"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	util "github.com/knative/eventing/pkg/provisioners"
 )
 
 const (
@@ -53,7 +51,7 @@ func (r *reconciler) InjectClient(c client.Client) error {
 
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	ctx := context.TODO()
-	ctx = logging.WithLogger(ctx, r.logger.With(zap.Any("request", request)).Sugar())
+	ctx = logging.WithLogger(ctx, r.logger.With(zap.Any("request", request)))
 
 	ccp := &eventingv1alpha1.ClusterChannelProvisioner{}
 	err := r.client.Get(ctx, request.NamespacedName, ccp)

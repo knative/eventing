@@ -20,12 +20,11 @@ import (
 	"context"
 	"errors"
 
+	"cloud.google.com/go/pubsub"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
-
-	"cloud.google.com/go/pubsub"
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
-	"github.com/knative/pkg/logging"
+	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/logging"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"

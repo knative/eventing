@@ -20,11 +20,9 @@ import (
 	"context"
 	"errors"
 
-	"google.golang.org/api/option"
-
-	"golang.org/x/oauth2/google"
-
 	"cloud.google.com/go/pubsub"
+	"golang.org/x/oauth2/google"
+	"google.golang.org/api/option"
 )
 
 // This file exists so that we can unit test failures with the PubSub client.

@@ -26,7 +26,7 @@ import (
 	util "github.com/knative/eventing/pkg/provisioners"
 	ccpcontroller "github.com/knative/eventing/pkg/provisioners/gcppubsub/controller/clusterchannelprovisioner"
 	pubsubutil "github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
-	"github.com/knative/pkg/logging"
+	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/logging"
 	"go.uber.org/zap"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -74,7 +74,7 @@ func (r *reconciler) InjectClient(c client.Client) error {
 }
 
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	ctx := logging.WithLogger(context.TODO(), r.logger.With(zap.Any("request", request)).Sugar())
+	ctx := logging.WithLogger(context.TODO(), r.logger.With(zap.Any("request", request)))
 
 	c := &eventingv1alpha1.Channel{}
 	err := r.client.Get(ctx, request.NamespacedName, c)
@@ -110,7 +110,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// Modify a copy, not the original.
 	c = c.DeepCopy()
 
-	requeue, reconcileErr := r.reconcile(loggingWith(ctx, zap.Any("channel", c)), c, pbs)
+	requeue, reconcileErr := r.reconcile(logging.With(ctx, zap.Any("channel", c)), c, pbs)
 	if reconcileErr != nil {
 		logging.FromContext(ctx).Info("Error reconciling Channel", zap.Error(reconcileErr))
 		// Note that we do not return the error here, because we want to update the finalizers
@@ -212,7 +212,7 @@ func (r *reconciler) syncSubscriptions(ctx context.Context, c *eventingv1alpha1.
 	}
 
 	for _, subscriber := range subscribers {
-		err := r.createSubscriptionUnderLock(loggingWith(ctx, zap.Any("subscriber", subscriber)), c, pbs, subscriber)
+		err := r.createSubscriptionUnderLock(logging.With(ctx, zap.Any("subscriber", subscriber)), c, pbs, subscriber)
 		if err != nil {
 			return err
 		}
@@ -284,7 +284,7 @@ func (r *reconciler) receiveMessagesBlocking(ctxWithCancel context.Context, c *e
 	logging.FromContext(ctxWithCancel).Info("subscription.Receive start")
 	receiveErr := subscription.Receive(
 		ctxWithCancel,
-		receiveFunc(logging.FromContext(ctxWithCancel), sub, defaults, r.dispatcher))
+		receiveFunc(logging.FromContext(ctxWithCancel).Sugar(), sub, defaults, r.dispatcher))
 	// We want to minimize holding the lock. r.reconcileChan may block, so definitely do not do
 	// it under lock. But, to prevent a race condition, we must delete from r.subscriptions
 	// before using r.reconcileChan.
@@ -324,9 +324,4 @@ func receiveFunc(logger *zap.SugaredLogger, sub pubsubutil.GcpPubSubSubscription
 			msg.Ack()
 		}
 	}
-}
-
-func loggingWith(ctx context.Context, fields ...zap.Field) context.Context {
-	logger := logging.FromContext(ctx).Desugar()
-	return logging.WithLogger(ctx, logger.With(fields...).Sugar())
 }
