@@ -39,8 +39,8 @@ import (
 )
 
 const (
-	metricsScrapeAddr    = ":9090"
-	metricsScrapePath    = "/metrics"
+	metricsScrapeAddr = ":9090"
+	metricsScrapePath = "/metrics"
 )
 
 var (
