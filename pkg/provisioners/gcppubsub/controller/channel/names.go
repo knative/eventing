@@ -27,12 +27,12 @@ import (
 
 // generateTopicName generates the GCP PubSub Topic name given the Knative Channel.
 func generateTopicName(c *v1alpha1.Channel) string {
-	return utils.TopicName("_", c.Name, string(c.UID))
+	return utils.TopicNameWithUID("_", c.Name, c.UID)
 }
 
 // generateSubName Generates the GCP PubSub Subscription name given the Knative Channel's
 // subscriber.
 // Note that this requires the subscriber's ref to be set correctly.
 func generateSubName(cs *eventduck.ChannelSubscriberSpec) string {
-	return utils.TopicName("_", cs.Ref.Name, string(cs.Ref.UID))
+	return utils.TopicNameWithUID("_", cs.Ref.Name, cs.Ref.UID)
 }
