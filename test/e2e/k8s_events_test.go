@@ -52,14 +52,14 @@ func TestKubernetesEvents(t *testing.T) {
 	}
 
 	logger.Infof("Creating Channel")
-	channel := test.Channel(channelName, defaultNamespaceName, test.ClusterChannelProvisioner(provisionerName))
+	channel := test.Channel(channelName, pkgTest.Flags.Namespace, test.ClusterChannelProvisioner(provisionerName))
 	err = CreateChannel(clients, channel, logger, cleaner)
 	if err != nil {
 		t.Fatalf("Failed to create Channel: %v", err)
 	}
 
 	logger.Infof("Creating EventSource")
-	k8sSource := test.KubernetesEventSource(eventSource, defaultNamespaceName, testNamespace, serviceAccount, test.ChannelRef(channelName))
+	k8sSource := test.KubernetesEventSource(eventSource, pkgTest.Flags.Namespace, testNamespace, serviceAccount, test.ChannelRef(channelName))
 	err = CreateKubernetesEventSource(clients, k8sSource, logger, cleaner)
 	if err != nil {
 		t.Fatalf("Failed to create KubernetesEventSource: %v", err)
@@ -74,7 +74,7 @@ func TestKubernetesEvents(t *testing.T) {
 	}
 
 	logger.Infof("Creating Subscription")
-	subscription := test.Subscription(subscriptionName, defaultNamespaceName, test.ChannelRef(channelName), test.SubscriberSpecForRoute(routeName), nil)
+	subscription := test.Subscription(subscriptionName, pkgTest.Flags.Namespace, test.ChannelRef(channelName), test.SubscriberSpecForRoute(routeName), nil)
 	err = CreateSubscription(clients, subscription, logger, cleaner)
 	if err != nil {
 		t.Fatalf("Failed to create Subscription: %v", err)

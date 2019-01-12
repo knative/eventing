@@ -157,7 +157,7 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, logger *
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: defaultNamespaceName,
+			Namespace: pkgTest.Flags.Namespace,
 		},
 	}
 	err := CreateServiceAccount(clients, sa, logger, cleaner)
@@ -172,7 +172,7 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, logger *
 			{
 				Kind:      "ServiceAccount",
 				Name:      name,
-				Namespace: defaultNamespaceName,
+				Namespace: pkgTest.Flags.Namespace,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
