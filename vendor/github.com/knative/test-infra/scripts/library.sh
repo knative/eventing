@@ -26,7 +26,7 @@ readonly SERVING_GKE_IMAGE=cos
 readonly KNATIVE_BASE_YAML_SOURCE=https://storage.googleapis.com/knative-nightly/@/latest
 readonly KNATIVE_ISTIO_CRD_YAML=${KNATIVE_BASE_YAML_SOURCE/@/serving}/istio-crds.yaml
 readonly KNATIVE_ISTIO_YAML=${KNATIVE_BASE_YAML_SOURCE/@/serving}/istio.yaml
-readonly KNATIVE_SERVING_RELEASE=${KNATIVE_BASE_YAML_SOURCE/@/serving}/release.yaml
+readonly KNATIVE_SERVING_RELEASE=${KNATIVE_BASE_YAML_SOURCE/@/serving}/serving.yaml
 readonly KNATIVE_BUILD_RELEASE=${KNATIVE_BASE_YAML_SOURCE/@/build}/release.yaml
 readonly KNATIVE_EVENTING_RELEASE=${KNATIVE_BASE_YAML_SOURCE/@/eventing}/release.yaml
 
@@ -43,6 +43,9 @@ fi
 readonly IS_PROW
 readonly REPO_ROOT_DIR="$(git rev-parse --show-toplevel)"
 readonly REPO_NAME="$(basename ${REPO_ROOT_DIR})"
+
+# On a Prow job, redirect stderr to stdout so it's synchronously added to log
+(( IS_PROW )) && exec 2>&1
 
 # Print error message and exit 1
 # Parameters: $1..$n - error message to be displayed
@@ -247,7 +250,10 @@ function report_go_test() {
   # Install go-junit-report if necessary.
   run_go_tool github.com/jstemmer/go-junit-report go-junit-report --help > /dev/null 2>&1
   local xml=$(mktemp ${ARTIFACTS}/junit_XXXXXXXX.xml)
-  cat ${report} | go-junit-report > ${xml}
+  cat ${report} \
+      | go-junit-report \
+      | sed -e "s#\"github.com/knative/${REPO_NAME}/#\"#g" \
+      > ${xml}
   echo "XML report written to ${xml}"
   return ${failed}
 }
@@ -262,6 +268,9 @@ function start_latest_knative_serving() {
   kubectl apply -f ${KNATIVE_ISTIO_YAML} || return 1
   wait_until_pods_running istio-system || return 1
   kubectl label namespace default istio-injection=enabled || return 1
+  subheader "Installing Knative Build"
+  echo "Installing Build from ${KNATIVE_BUILD_RELEASE}"
+  kubectl apply -f ${KNATIVE_BUILD_RELEASE} || return 1
   subheader "Installing Knative Serving"
   echo "Installing Serving from ${KNATIVE_SERVING_RELEASE}"
   kubectl apply -f ${KNATIVE_SERVING_RELEASE} || return 1
@@ -273,9 +282,11 @@ function start_latest_knative_serving() {
 function start_latest_knative_build() {
   header "Starting Knative Build"
   subheader "Installing Istio"
+  echo "Installing Istio from ${KNATIVE_ISTIO_YAML}"
   kubectl apply -f ${KNATIVE_ISTIO_YAML} || return 1
   wait_until_pods_running istio-system || return 1
   subheader "Installing Knative Build"
+  echo "Installing Build from ${KNATIVE_BUILD_RELEASE}"
   kubectl apply -f ${KNATIVE_BUILD_RELEASE} || return 1
   wait_until_pods_running knative-build || return 1
 }
