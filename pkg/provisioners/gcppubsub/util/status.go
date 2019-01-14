@@ -82,12 +82,15 @@ func (pcs *GcpPubSubChannelStatus) IsEmpty() bool {
 	return true
 }
 
-// SaveRawStatus saves GcpPubSubChannelStatus to the given Channel, which should only be one whose
+// SetRawStatus saves GcpPubSubChannelStatus to the given Channel, which should only be one whose
 // provisioner is gcp-pubsub.
-func SaveRawStatus(ctx context.Context, c *eventingv1alpha1.Channel, pcs *GcpPubSubChannelStatus) error {
+func SetRawStatus(ctx context.Context, c *eventingv1alpha1.Channel, pcs *GcpPubSubChannelStatus) error {
 	jb, err := json.Marshal(pcs)
 	if err != nil {
-		logging.FromContext(ctx).Error("Error saving the raw status", zap.Error(err), zap.Any("pcs", pcs))
+		// I don't think this is reachable, because the GcpPubSubChannelStatus struct is designed to
+		// marshal to JSON and therefore doesn't have any incompatible fields. Nevertheless, this is
+		// here just in case.
+		logging.FromContext(ctx).Error("Error setting the raw status", zap.Error(err), zap.Any("pcs", pcs))
 		return err
 	}
 	c.Status.Raw = &runtime.RawExtension{
@@ -96,10 +99,10 @@ func SaveRawStatus(ctx context.Context, c *eventingv1alpha1.Channel, pcs *GcpPub
 	return nil
 }
 
-// ReadRawStatus reads GcpPubSubChannelStatus from the given Channel, which should only be one whose
+// GetRawStatus reads GcpPubSubChannelStatus from the given Channel, which should only be one whose
 // provisioner is gcp-pubsub. If the raw status is not set, then the empty GcpPubSubChannelStatus is
 // returned.
-func ReadRawStatus(ctx context.Context, c *eventingv1alpha1.Channel) (*GcpPubSubChannelStatus, error) {
+func GetRawStatus(ctx context.Context, c *eventingv1alpha1.Channel) (*GcpPubSubChannelStatus, error) {
 	if c.Status.Raw == nil {
 		return &GcpPubSubChannelStatus{}, nil
 	}

@@ -455,7 +455,7 @@ func makeChannel() *eventingv1alpha1.Channel {
 		Secret:     testcreds.Secret,
 		SecretKey:  testcreds.SecretKey,
 	}
-	if err := util.SaveRawStatus(context.Background(), c, pcs); err != nil {
+	if err := util.SetRawStatus(context.Background(), c, pcs); err != nil {
 		panic(err)
 	}
 	return c
@@ -538,7 +538,7 @@ func makeChannelWithBlankRawStatus() *eventingv1alpha1.Channel {
 
 func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscribable) {
 	c.Spec.Subscribable = subscribable
-	pcs, err := util.ReadRawStatus(context.Background(), c)
+	pcs, err := util.GetRawStatus(context.Background(), c)
 	if err != nil {
 		panic(err)
 	}
@@ -549,7 +549,7 @@ func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscrib
 			SubscriberURI: sub.SubscriberURI,
 		})
 	}
-	err = util.SaveRawStatus(context.Background(), c, pcs)
+	err = util.SetRawStatus(context.Background(), c, pcs)
 	if err != nil {
 		panic(err)
 	}

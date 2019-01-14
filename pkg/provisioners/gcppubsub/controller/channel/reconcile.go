@@ -154,9 +154,9 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	// First we will plan all the names out for steps 3 and 4 persist them to status.raw. Then, on a
 	// subsequent reconcile, we manipulate all the GCP resources in steps 3 and 4.
 
-	originalPCS, err := pubsubutil.ReadRawStatus(ctx, c)
+	originalPCS, err := pubsubutil.GetRawStatus(ctx, c)
 	if err != nil {
-		logging.FromContext(ctx).Info("Unable to read the raw status", zap.Error(err))
+		logging.FromContext(ctx).Error("Unable to read the raw status", zap.Error(err))
 		return false, err
 	}
 
@@ -202,7 +202,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		return false, err
 	}
 	if persist == persistStatus {
-		if err = pubsubutil.SaveRawStatus(ctx, c, plannedPCS); err != nil {
+		if err = pubsubutil.SetRawStatus(ctx, c, plannedPCS); err != nil {
 			return false, err
 		}
 		// Persist this and run another reconcile loop to enact it.
@@ -230,7 +230,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	}
 	// Now that the subs have synced successfully, remove the old ones from the status.
 	plannedPCS.Subscriptions = subsToSync.subsToCreate
-	if err = pubsubutil.SaveRawStatus(ctx, c, plannedPCS); err != nil {
+	if err = pubsubutil.SetRawStatus(ctx, c, plannedPCS); err != nil {
 		return false, err
 	}
 
@@ -239,7 +239,10 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 }
 
 // planGcpResources creates the plan for every resource that needs to be created outside of the
-// cluster. Their names are all saved to the returned in the updated status.
+// cluster. The plan is returned as both the GcpPubSubChannelStatus to save to the Channel object,
+// as well as a list of the Subscriptions to create and a list of the Subscriptions to delete in the
+// form of syncSubs. syncSubs should be used to drive the reconciliation of Subscriptions for the
+// remainder of this reconcile loop (it contains a superset of the information in the status).
 func (r *reconciler) planGcpResources(ctx context.Context, c *eventingv1alpha1.Channel, originalPCS *pubsubutil.GcpPubSubChannelStatus) (persistence, *pubsubutil.GcpPubSubChannelStatus, *syncSubs, error) {
 	persist := noNeedToPersist
 	subsToSync := &syncSubs{

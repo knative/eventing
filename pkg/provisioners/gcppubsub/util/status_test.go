@@ -123,7 +123,7 @@ func TestReadRawStatus(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			c := &v1alpha1.Channel{}
 			c.Status.Raw = tc.raw
-			pcs, err := ReadRawStatus(context.Background(), c)
+			pcs, err := GetRawStatus(context.Background(), c)
 			if tc.err != (err != nil) {
 				t.Fatalf("Unexpected error. Expected %v. Actual %v", tc.err, err)
 			}
@@ -157,11 +157,11 @@ func TestRawStatusRoundTrip(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			c := &v1alpha1.Channel{}
-			err := SaveRawStatus(context.Background(), c, tc.pcs)
+			err := SetRawStatus(context.Background(), c, tc.pcs)
 			if err != nil {
 				t.Errorf("Unexpected error saving raw status. %v", err)
 			}
-			pcs, err := ReadRawStatus(context.Background(), c)
+			pcs, err := GetRawStatus(context.Background(), c)
 			if err != nil {
 				t.Errorf("Unexpected error reading raw status. %v", err)
 			}

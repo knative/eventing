@@ -67,7 +67,7 @@ func (r *Receiver) sendEventToTopic(channel provisioners.ChannelReference, messa
 		logging.FromContext(ctx).Info("Unable to get the Channel", zap.Error(err), zap.Any("channelRef", channel))
 		return err
 	}
-	pcs, err := util.ReadRawStatus(ctx, c)
+	pcs, err := util.GetRawStatus(ctx, c)
 	if err != nil {
 		return err
 	} else if pcs.IsEmpty() {

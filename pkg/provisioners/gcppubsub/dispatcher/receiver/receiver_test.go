@@ -165,7 +165,7 @@ func makeChannel() *eventingv1alpha1.Channel {
 		Secret:     testcreds.Secret,
 		SecretKey:  testcreds.SecretKey,
 	}
-	if err := util.SaveRawStatus(context.Background(), c, pcs); err != nil {
+	if err := util.SetRawStatus(context.Background(), c, pcs); err != nil {
 		panic(err)
 	}
 	return c

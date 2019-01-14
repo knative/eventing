@@ -786,7 +786,7 @@ func makeChannelWithFinalizer() *eventingv1alpha1.Channel {
 
 func makeChannelWithFinalizerAndPCS() *eventingv1alpha1.Channel {
 	c := makeChannelWithFinalizer()
-	err := pubsubutil.SaveRawStatus(context.Background(), c, &pubsubutil.GcpPubSubChannelStatus{
+	err := pubsubutil.SetRawStatus(context.Background(), c, &pubsubutil.GcpPubSubChannelStatus{
 		Secret:     testcreds.Secret,
 		SecretKey:  testcreds.SecretKey,
 		GCPProject: gcpProject,
@@ -866,7 +866,7 @@ func makeChannelWithFinalizerAndSubscriberWithoutUID() *eventingv1alpha1.Channel
 
 func makeChannelWithFinalizerAndPossiblyOutdatedPlan(outdated bool) *eventingv1alpha1.Channel {
 	c := makeChannelWithFinalizerAndPCS()
-	pcs, err := pubsubutil.ReadRawStatus(context.Background(), c)
+	pcs, err := pubsubutil.GetRawStatus(context.Background(), c)
 	if err != nil {
 		panic(err)
 	}
@@ -897,7 +897,7 @@ func makeChannelWithFinalizerAndPossiblyOutdatedPlan(outdated bool) *eventingv1a
 		pcs.Subscriptions = append(pcs.Subscriptions, sub)
 	}
 
-	err = pubsubutil.SaveRawStatus(context.Background(), c, pcs)
+	err = pubsubutil.SetRawStatus(context.Background(), c, pcs)
 	if err != nil {
 		panic(err)
 	}
@@ -925,7 +925,7 @@ func makeChannelWithFinalizerAndPossiblyOutdatedPlan(outdated bool) *eventingv1a
 
 func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscribable) {
 	c.Spec.Subscribable = subscribable
-	pcs, err := pubsubutil.ReadRawStatus(context.Background(), c)
+	pcs, err := pubsubutil.GetRawStatus(context.Background(), c)
 	if err != nil {
 		panic(err)
 	}
@@ -937,7 +937,7 @@ func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscrib
 			Subscription:  "test-subscription-id",
 		})
 	}
-	err = pubsubutil.SaveRawStatus(context.Background(), c, pcs)
+	err = pubsubutil.SetRawStatus(context.Background(), c, pcs)
 	if err != nil {
 		panic(err)
 	}

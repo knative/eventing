@@ -97,7 +97,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		logging.FromContext(ctx).Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("ref", c.Spec))
 		return reconcile.Result{}, nil
 	}
-	pcs, err := pubsubutil.ReadRawStatus(ctx, c)
+	pcs, err := pubsubutil.GetRawStatus(ctx, c)
 	if err != nil {
 		logging.FromContext(ctx).Info("Unable to read the raw status", zap.Error(err))
 		return reconcile.Result{}, err
