@@ -93,7 +93,7 @@ type ChannelStatus struct {
 	// fully-qualified DNS name which will distribute traffic over the
 	// provided targets from inside the cluster.
 	//
-	// It generally has the form {channel}.{namespace}.svc.cluster.local
+	// It generally has the form {channel}.{namespace}.svc.{cluster domain name}
 	Address duckv1alpha1.Addressable `json:"address,omitempty"`
 
 	// Represents the latest available observations of a channel's current state.
