@@ -18,6 +18,7 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/controller"
 	"github.com/knative/eventing/pkg/system"
+	"github.com/knative/eventing/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/equality"
 )
 
@@ -230,7 +231,6 @@ func UpdateChannel(ctx context.Context, client runtimeClient.Client, u *eventing
 		if err := client.Update(ctx, channel); err != nil {
 			return err
 		}
-
 		channelChanged = true
 	}
 
@@ -360,5 +360,5 @@ func channelServiceName(channelName string) string {
 }
 
 func channelHostName(channelName, namespace string) string {
-	return fmt.Sprintf("%s.%s.channels.cluster.local", channelName, namespace)
+	return fmt.Sprintf("%s.%s.channels.%s", channelName, namespace, utils.GetClusterDomainName())
 }

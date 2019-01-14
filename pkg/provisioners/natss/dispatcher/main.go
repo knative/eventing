@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners/natss/controller/clusterchannelprovisioner"
+	"github.com/knative/eventing/pkg/utils"
 )
 
 var (
@@ -61,7 +63,8 @@ func main() {
 	var g errgroup.Group
 
 	logger.Info("Dispatcher starting...")
-	dispatcher, err := dispatcher.NewDispatcher(clusterchannelprovisioner.NatssUrl, logger)
+	natssUrl := fmt.Sprintf(clusterchannelprovisioner.NatssUrlTmpl, utils.GetClusterDomainName())
+	dispatcher, err := dispatcher.NewDispatcher(natssUrl, logger)
 	if err != nil {
 		logger.Fatal("Unable to create NATSS dispatcher.", zap.Error(err))
 	}

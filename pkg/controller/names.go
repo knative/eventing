@@ -16,8 +16,11 @@
 
 package controller
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/knative/eventing/pkg/utils"
+)
 
 func ServiceHostName(serviceName, namespace string) string {
-	return fmt.Sprintf("%s.%s.svc.cluster.local", serviceName, namespace)
+	return fmt.Sprintf("%s.%s.svc.%s", serviceName, namespace, utils.GetClusterDomainName())
 }

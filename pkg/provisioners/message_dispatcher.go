@@ -20,12 +20,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 
-	"go.uber.org/zap"
+	"github.com/knative/eventing/pkg/utils"
 )
 
 const correlationIDHeaderName = "Knative-Correlation-Id"
@@ -201,7 +202,7 @@ func (d *MessageDispatcher) resolveURL(destination string, defaultNamespace stri
 		return url
 	}
 	if strings.Index(destination, ".") == -1 {
-		destination = fmt.Sprintf("%s.%s.svc.cluster.local", destination, defaultNamespace)
+		destination = fmt.Sprintf("%s.%s.svc.%s", destination, defaultNamespace, utils.GetClusterDomainName())
 	}
 	return &url.URL{
 		Scheme: "http",
