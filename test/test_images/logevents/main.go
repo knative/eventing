@@ -20,13 +20,16 @@ import (
 	"time"
 
 	"github.com/knative/pkg/cloudevents"
-
-	corev1 "k8s.io/api/core/v1"
 )
 
-func handler(ctx context.Context, e *corev1.Event) {
+type Heartbeat struct {
+	Sequence int    `json:"id"`
+	Data     string `json:"data"`
+}
+
+func handler(ctx context.Context, hb *Heartbeat) {
 	metadata := cloudevents.FromContext(ctx)
-	log.Printf("[%s] %s : %q", metadata.EventTime.Format(time.RFC3339), metadata.Source, e.Message)
+	log.Printf("[%s] %s %s: %d,%q", metadata.EventTime.Format(time.RFC3339), metadata.ContentType, metadata.Source, hb.Sequence, hb.Data)
 }
 
 func main() {

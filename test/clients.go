@@ -18,7 +18,6 @@ limitations under the License.
 package test
 
 import (
-	sources "github.com/knative/eventing-sources/pkg/client/clientset/versioned"
 	eventing "github.com/knative/eventing/pkg/client/clientset/versioned"
 	"github.com/knative/pkg/test"
 	serving "github.com/knative/serving/pkg/client/clientset/versioned"
@@ -33,7 +32,6 @@ type Clients struct {
 	Serving  *serving.Clientset
 	Eventing *eventing.Clientset
 	Dynamic  dynamic.Interface
-	Sources  *sources.Clientset
 }
 
 // NewClients instantiates and returns several clientsets required for making request to the
@@ -61,11 +59,6 @@ func NewClients(configPath string, clusterName string, namespace string) (*Clien
 	}
 
 	clients.Dynamic, err = dynamic.NewForConfig(cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	clients.Sources, err = sources.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
