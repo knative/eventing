@@ -539,7 +539,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 				},
 				Route: []istiov1alpha3.DestinationWeight{{
 					Destination: istiov1alpha3.Destination{
-						Host: "kafka-provisioner.knative-eventing.svc." + utils.GetClusterDomainName(),
+						Host: "kafka-provisioner.knative-testing.svc." + utils.GetClusterDomainName(),
 						Port: istiov1alpha3.PortSelector{
 							Number: util.PortNumber,
 						},
