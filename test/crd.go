@@ -228,7 +228,7 @@ func EventLoggerPod(name string, namespace string, selector map[string]string) *
 }
 
 // Service creates a Kubernetes Service with the given name, namespace, and
-// selector. Port 80 is assumed.
+// selector. Port 8080 is assumedthe target port.
 func Service(name string, namespace string, selector map[string]string) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -246,33 +246,3 @@ func Service(name string, namespace string, selector map[string]string) *corev1.
 		},
 	}
 }
-
-// // EventLoggerPodAndService creates a Pod that logs events and a Service
-// // that
-// func EventLoggerPodAndService(name string, namespace string, address string, event CloudEvent) *corev1.Pod {
-// 	return &corev1.Pod{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name:        name,
-// 			Namespace:   namespace,
-// 			Annotations: map[string]string{"sidecar.istio.io/inject": "true"},
-// 		},
-// 		Spec: corev1.PodSpec{
-// 			Containers: []corev1.Container{{
-// 				Name:  "sendevent",
-// 				Image: ImagePath("sendevent"),
-// 				Args: []string{
-// 					"-event-id",
-// 					event.ID,
-// 					"-event-type",
-// 					event.Type,
-// 					"-source",
-// 					event.Source,
-// 					"-data",
-// 					event.Data,
-// 					address,
-// 				},
-// 			}},
-// 			RestartPolicy: corev1.RestartPolicyNever,
-// 		},
-// 	}
-// }
