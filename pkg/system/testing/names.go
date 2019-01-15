@@ -7,5 +7,5 @@ import (
 )
 
 func init() {
-	os.Setenv(system.NamespaceEnvKey, "knative-eventing")
+	os.Setenv(system.NamespaceEnvKey, "knative-testing")
 }
