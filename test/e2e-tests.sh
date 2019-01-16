@@ -34,7 +34,6 @@ readonly E2E_TEST_NAMESPACE=e2etest-knative-eventing
 # Helper functions.
 
 function teardown() {
-  echo "teardown"
   teardown_events_test_resources
   ko delete --ignore-not-found=true -f config/
 

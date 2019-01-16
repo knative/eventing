@@ -17,10 +17,13 @@ limitations under the License.
 package main
 
 import (
+	"encoding/json"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -42,17 +45,19 @@ var (
 	periodStr string
 	delayStr  string
 	maxMsgStr string
+	encoding  string
 )
 
 func init() {
 	flag.StringVar(&sink, "sink", "", "The sink url for the message destination.")
-	flag.StringVar(&data, "data", "", "Special data.")
+	flag.StringVar(&data, "data", `{"hello": "world!"}`, "Cloudevent data body.")
 	flag.StringVar(&eventID, "event-id", "", "Event ID to use. Defaults to a generated UUID")
 	flag.StringVar(&eventType, "event-type", "knative.eventing.test.e2e", "The Event Type to use.")
 	flag.StringVar(&source, "source", "", "Source URI to use. Defaults to the current machine's hostname")
 	flag.StringVar(&periodStr, "period", "5", "The number of seconds between messages.")
 	flag.StringVar(&delayStr, "delay", "5", "The number of seconds to wait before sending messages.")
 	flag.StringVar(&maxMsgStr, "max-messages", "1", "The number of messages to attempt to send. 0 for unlimited.")
+	flag.StringVar(&encoding, "encoding", "binary", "The encoding of the cloud event, one of(binary, structured).")
 }
 
 func parseDurationStr(durationStr string, defaultDuration int) time.Duration {
@@ -71,7 +76,7 @@ func main() {
 	delay := parseDurationStr(delayStr, 5)
 
 	maxMsg := 1
-	if m, err := strconv.Atoi(maxMsgStr); err != nil {
+	if m, err := strconv.Atoi(maxMsgStr); err == nil {
 		maxMsg = m
 	}
 
@@ -89,18 +94,25 @@ func main() {
 		source = "localhost"
 	}
 
-	hb := &Heartbeat{
-		Sequence: 0,
-		Data:     data,
+	var untyped map[string]interface{}
+	if err := json.Unmarshal([]byte(data), &untyped); err != nil {
+		fmt.Println("Currently sendevent only supports JSON event data")
+		os.Exit(1)
 	}
+
+	sequence := 0
+
 	ticker := time.NewTicker(period)
 	for {
-		hb.Sequence++
-		postMessage(sink, hb)
+		sequence++
+		untyped["sequence"] = fmt.Sprintf("%d", sequence)
+		if err := postMessage(sink, untyped); err != nil {
+			fmt.Printf("postMessage returned an error: %v\n", err)
+		}
 		// Wait for next tick
 		<-ticker.C
 		// Only send a limited number of messages.
-		if maxMsg != 0 && maxMsg == hb.Sequence {
+		if maxMsg != 0 && maxMsg == sequence {
 			return
 		}
 	}
@@ -117,13 +129,23 @@ func cloudEventsContext() *cloudevents.EventContext {
 	}
 }
 
-func postMessage(target string, hb *Heartbeat) error {
+func postMessage(target string, data map[string]interface{}) error {
 	ctx := cloudEventsContext()
 
-	log.Printf("posting to %q, %d", target, hb.Sequence)
-	// Explicitly using Binary encoding so that Istio, et. al. can better inspect
-	// event metadata.
-	req, err := cloudevents.Binary.NewRequest(target, hb, *ctx)
+	log.Printf("posting to %q, sequence %q", target, data["sequence"])
+
+	var req *http.Request
+	var err error
+	switch encoding {
+	case "binary":
+		req, err = cloudevents.Binary.NewRequest(target, data, *ctx)
+
+	case "structured":
+		req, err = cloudevents.Structured.NewRequest(target, data, *ctx)
+	default:
+		fmt.Printf("unsupported encoding option: %q\n", encoding)
+		os.Exit(1)
+	}
 	if err != nil {
 		log.Printf("failed to create http request: %s", err)
 		return err
@@ -140,4 +162,5 @@ func postMessage(target string, hb *Heartbeat) error {
 	body, _ := ioutil.ReadAll(resp.Body)
 	log.Printf("response Body: %s", string(body))
 	return nil
+
 }

@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -27,9 +27,9 @@ type Heartbeat struct {
 	Data     string `json:"data"`
 }
 
-func handler(ctx context.Context, hb *Heartbeat) {
+func handler(ctx context.Context, data map[string]interface{}) {
 	metadata := cloudevents.FromContext(ctx)
-	log.Printf("[%s] %s %s: %d,%q", metadata.EventTime.Format(time.RFC3339), metadata.ContentType, metadata.Source, hb.Sequence, hb.Data)
+	log.Printf("[%s] %s %s: %+v", metadata.EventTime.Format(time.RFC3339), metadata.ContentType, metadata.Source, data)
 }
 
 func main() {

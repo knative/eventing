@@ -19,15 +19,15 @@ package e2e
 
 import (
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"testing"
-
 	"github.com/knative/eventing/test"
 	pkgTest "github.com/knative/pkg/test"
 	"github.com/knative/pkg/test/logging"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"testing"
+	"time"
 )
 
 const (
@@ -56,13 +56,37 @@ func namespaceExists(t *testing.T, clients *test.Clients) (string, func()) {
 		} else {
 			shutdown = func() {
 				clients.Kube.Kube.CoreV1().Namespaces().Delete(nsSpec.Name, nil)
+				// TODO: this is a bit hacky but in order for the tests to work
+				// correctly for a clean namespace to be created we need to also
+				// wait for it to be removed.
+				// To fix this we could generate namespace names.
+				// This only happens when the namespace provided does not exist.
+				//
+				// wait up to 120 seconds for the namespace to be removed.
+				logger.Infof("Deleting Namespace: %s", ns)
+				for i := 0; i < 120; i++ {
+					time.Sleep(1 * time.Second)
+					if _, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{}); err != nil && errors.IsNotFound(err) {
+						logger.Info("Namespace has been deleted")
+						// the namespace is gone.
+						break
+					}
+				}
 			}
 		}
 	}
 	return ns, shutdown
 }
 
-func TestSingleEvent(t *testing.T) {
+func TestSingleBinaryEvent(t *testing.T) {
+	SingleEvent(t, test.CloudEventEncodingBinary)
+}
+
+func TestSingleStructuredEvent(t *testing.T) {
+	SingleEvent(t, test.CloudEventEncodingStructured)
+}
+
+func SingleEvent(t *testing.T, encoding string) {
 	logger := logging.GetContextLogger("TestSingleEvent")
 
 	clients, cleaner := Setup(t, logger)
@@ -114,9 +138,10 @@ func TestSingleEvent(t *testing.T) {
 	logger.Infof("Creating event sender")
 	body := fmt.Sprintf("TestSingleEvent %s", uuid.NewUUID())
 	event := test.CloudEvent{
-		Source: senderName,
-		Type:   "test.eventing.knative.dev",
-		Data:   fmt.Sprintf(`{"msg":%q}`, body),
+		Source:   senderName,
+		Type:     "test.eventing.knative.dev",
+		Data:     fmt.Sprintf(`{"msg":%q}`, body),
+		Encoding: encoding,
 	}
 	url := fmt.Sprintf("http://%s", channel.Status.Address.Hostname)
 	pod := test.EventSenderPod(senderName, ns, url, event)
