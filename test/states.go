@@ -16,35 +16,52 @@ limitations under the License.
 package test
 
 import (
-	"github.com/knative/serving/pkg/apis/serving/v1alpha1"
+	"log"
+
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
-
-// states contains functions for asserting against the state of Knative Serving
-// crds to see if they have achieved the states specified in the spec
-// (https://github.com/knative/serving/blob/master/docs/spec/spec.md).
 
 // IsRevisionReady will check the status conditions of the revision and return true if the revision is
 // ready to serve traffic. It will return false if the status indicates a state other than deploying
 // or being ready. It will also return false if the type of the condition is unexpected.
-func IsRevisionReady(r *v1alpha1.Revision) (bool, error) {
+func IsRevisionReady(r *servingv1alpha1.Revision) (bool, error) {
 	return r.Status.IsReady(), nil
 }
 
 // IsServiceReady will check the status conditions of the service and return true if the service is
 // ready. This means that its configurations and routes have all reported ready.
-func IsServiceReady(s *v1alpha1.Service) (bool, error) {
+func IsServiceReady(s *servingv1alpha1.Service) (bool, error) {
 	return s.Status.IsReady(), nil
 }
 
 // IsRouteReady will check the status conditions of the route and return true if the route is
 // ready.
-func IsRouteReady(r *v1alpha1.Route) (bool, error) {
+func IsRouteReady(r *servingv1alpha1.Route) (bool, error) {
 	return r.Status.IsReady(), nil
 }
 
-// PodsRunning will check the status conditions of the pod list and return true all pods are Running
+// IsChannelReady will check the status conditions of the Channel and return true
+// if the Channel is ready.
+func IsChannelReady(c *eventingv1alpha1.Channel) (bool, error) {
+	return c.Status.IsReady(), nil
+}
+
+// IsSubscriptionReady will check the status conditions of the Subscription and
+// return true if the Subscription is ready.
+func IsSubscriptionReady(s *eventingv1alpha1.Subscription) (bool, error) {
+	return s.Status.IsReady(), nil
+}
+
+// PodsRunning will check the status conditions of the pod list and return true
+// if all pods are Running.
 func PodsRunning(podList *corev1.PodList) (bool, error) {
+	var names []string
+	for _, p := range podList.Items {
+		names = append(names, p.Name)
+	}
+	log.Printf("Checking pods: %v", names)
 	for _, pod := range podList.Items {
 		if pod.Status.Phase != corev1.PodRunning && pod.Status.Phase != corev1.PodSucceeded {
 			return false, nil

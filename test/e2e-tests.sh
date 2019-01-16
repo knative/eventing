@@ -14,8 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script runs the end-to-end tests against the eventing
-# built from source.
+# This script runs the end-to-end tests against eventing built from source.
 
 # If you already have the *_OVERRIDE environment variables set, call
 # this script with the --run-tests arguments and it will use the cluster
@@ -27,49 +26,28 @@
 
 source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/e2e-tests.sh
 
-# Using the most recent good release of eventing-sources to unblock tests. This
-# should be replaced with the commented line below when eventing-sources nightly
-# is known good again.
-readonly KNATIVE_EVENTING_SOURCES_RELEASE=https://knative-nightly.storage.googleapis.com/eventing-sources/previous/v20181205-fbac942/release.yaml
-#readonly KNATIVE_EVENTING_SOURCES_RELEASE=https://knative-nightly.storage.googleapis.com/eventing-sources/latest/release.yaml
-
 # Names of the Resources used in the tests.
-readonly E2E_TEST_NAMESPACE=e2etest
-readonly E2E_TEST_FUNCTION_NAMESPACE=e2etestfn3
+# Currently this namespace must be the same as the namespace specified in
+# test/e2e/e2e.go.
+readonly E2E_TEST_NAMESPACE=e2etest-knative-eventing
 
 # Helper functions.
-
-# Install the latest stable Knative/serving in the current cluster.
-function start_latest_eventing_sources() {
-  subheader "Installing Knative Eventing Sources"
-  kubectl apply -f ${KNATIVE_EVENTING_SOURCES_RELEASE} || return 1
-  wait_until_pods_running knative-sources || return 1
-}
-
 
 function teardown() {
   teardown_events_test_resources
   ko delete --ignore-not-found=true -f config/
-  ko delete --ignore-not-found=true -f ${KNATIVE_EVENTING_SOURCES_RELEASE}
 
   wait_until_object_does_not_exist namespaces knative-eventing
-  wait_until_object_does_not_exist namespaces knative-sources
 
   wait_until_object_does_not_exist customresourcedefinitions subscriptions.eventing.knative.dev
   wait_until_object_does_not_exist customresourcedefinitions channels.eventing.knative.dev
 }
 
 function setup_events_test_resources() {
-  kubectl create namespace ${E2E_TEST_NAMESPACE} || return 1
-  kubectl create namespace ${E2E_TEST_FUNCTION_NAMESPACE}
+  kubectl create namespace ${E2E_TEST_NAMESPACE}
 }
 
 function teardown_events_test_resources() {
-  # Delete the function namespace
-  echo "Deleting namespace ${E2E_TEST_FUNCTION_NAMESPACE}"
-  kubectl --ignore-not-found=true delete namespace ${E2E_TEST_FUNCTION_NAMESPACE}
-  wait_until_object_does_not_exist namespaces ${E2E_TEST_FUNCTION_NAMESPACE} || return 1
-
   # Delete the test namespace
   echo "Deleting namespace $E2E_TEST_NAMESPACE"
   kubectl --ignore-not-found=true delete namespace ${E2E_TEST_NAMESPACE}
@@ -90,9 +68,6 @@ set +o pipefail
 if (( ! USING_EXISTING_CLUSTER )); then
   start_latest_knative_serving || fail_test "Serving did not come up"
 fi
-
-# Install Knative Eventing Sources
-start_latest_eventing_sources || fail_test "Eventing Sources did not come up"
 
 # Clean up anything that might still be around
 teardown_events_test_resources || fail_test "Error cleaning up test resources"
