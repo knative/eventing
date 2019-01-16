@@ -107,31 +107,18 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 		return err
 	}
 
-	subscriberURI := ""
-	if !isNilOrEmptySubscriber(subscription.Spec.Subscriber) {
-		subscriberURI, err = r.resolveSubscriberSpec(subscription.Namespace, *subscription.Spec.Subscriber)
-		if err != nil {
-			glog.Warningf("Failed to resolve Subscriber %+v : %s", *subscription.Spec.Subscriber, err)
-			return err
-		}
-		if subscriberURI == "" {
-			return fmt.Errorf("could not get domain from subscriber (is it not targetable?)")
-		}
+	if subscriberURI, err := r.resolveSubscriberSpec(subscription.Namespace, subscription.Spec.Subscriber); err != nil {
+		glog.Warningf("Failed to resolve Subscriber %+v : %s", *subscription.Spec.Subscriber, err)
+		return err
+	} else {
 		subscription.Status.PhysicalSubscription.SubscriberURI = subscriberURI
 		glog.Infof("Resolved subscriber to: %q", subscriberURI)
 	}
 
-	replyURI := ""
-	if !isNilOrEmptyReply(subscription.Spec.Reply) {
-		replyURI, err = r.resolveResult(subscription.Namespace, *subscription.Spec.Reply)
-		if err != nil {
-			glog.Warningf("Failed to resolve Result %v : %v", subscription.Spec.Reply, err)
-			return err
-		}
-		if replyURI == "" {
-			glog.Warningf("Failed to resolve reply %v to actual domain", *subscription.Spec.Reply)
-			return err
-		}
+	if replyURI, err := r.resolveResult(subscription.Namespace, subscription.Spec.Reply); err != nil {
+		glog.Warningf("Failed to resolve Result %v : %v", subscription.Spec.Reply, err)
+		return err
+	} else {
 		subscription.Status.PhysicalSubscription.ReplyURI = replyURI
 		glog.Infof("Resolved reply to: %q", replyURI)
 	}
@@ -204,7 +191,10 @@ func (r *reconciler) updateStatus(subscription *v1alpha1.Subscription) (*v1alpha
 // it's DNSName then it's used as is.
 // TODO: Once Service Routes, etc. support Callable, use that.
 //
-func (r *reconciler) resolveSubscriberSpec(namespace string, s v1alpha1.SubscriberSpec) (string, error) {
+func (r *reconciler) resolveSubscriberSpec(namespace string, s *v1alpha1.SubscriberSpec) (string, error) {
+	if isNilOrEmptySubscriber(s) {
+		return "", nil
+	}
 	if s.DNSName != nil && *s.DNSName != "" {
 		return *s.DNSName, nil
 	}
@@ -248,7 +238,10 @@ func (r *reconciler) resolveSubscriberSpec(namespace string, s v1alpha1.Subscrib
 }
 
 // resolveResult resolves the Spec.Result object.
-func (r *reconciler) resolveResult(namespace string, replyStrategy v1alpha1.ReplyStrategy) (string, error) {
+func (r *reconciler) resolveResult(namespace string, replyStrategy *v1alpha1.ReplyStrategy) (string, error) {
+	if isNilOrEmptyReply(replyStrategy) {
+		return "", nil
+	}
 	obj, err := r.fetchObjectReference(namespace, replyStrategy.Channel)
 	if err != nil {
 		glog.Warningf("Failed to fetch ReplyStrategy channel %+v: %s", replyStrategy, err)

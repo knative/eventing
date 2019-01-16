@@ -19,8 +19,8 @@
 
 source $(dirname ${BASH_SOURCE})/library.sh
 
-# Github upstream.
-readonly KNATIVE_UPSTREAM="github.com/knative/${REPO_NAME}"
+# GitHub upstream.
+readonly KNATIVE_UPSTREAM="https://github.com/knative/${REPO_NAME}"
 
 # Simple banner for logging purposes.
 # Parameters: $1 - message to display.
@@ -105,11 +105,15 @@ function setup_upstream() {
   local upstream="$(git config --get remote.upstream.url)"
   echo "Remote upstream URL is '${upstream}'"
   if [[ -z "${upstream}" ]]; then
-    upstream="https://${KNATIVE_UPSTREAM}"
-    echo "Setting remote upstream URL to '${upstream}'"
-    git remote add upstream ${upstream}
+    echo "Setting remote upstream URL to '${KNATIVE_UPSTREAM}'"
+    git remote add upstream ${KNATIVE_UPSTREAM}
   fi
-  git fetch --all
+}
+
+# Fetch the release branch, so we can check it out.
+function setup_branch() {
+  [[ -z "${RELEASE_BRANCH}" ]] && return
+  git fetch ${KNATIVE_UPSTREAM} ${RELEASE_BRANCH}:upstream/${RELEASE_BRANCH}
 }
 
 # Setup version, branch and release notes for a "dot" release.
@@ -137,6 +141,7 @@ function prepare_dot_release() {
     echo "Last release branch is ${RELEASE_BRANCH}"
   fi
   # Ensure there are new commits in the branch, otherwise we don't create a new release
+  setup_branch
   local last_release_commit="$(git rev-list -n 1 ${last_version})"
   local release_branch_commit="$(git rev-list -n 1 upstream/${RELEASE_BRANCH})"
   [[ -n "${last_release_commit}" ]] || abort "cannot get last release commit"
@@ -189,7 +194,8 @@ function parse_flags() {
         case ${parameter} in
           --github-token)
             [[ ! -f "$1" ]] && abort "file $1 doesn't exist"
-            GITHUB_TOKEN="$(cat $1)"
+            # Remove any trailing newline/space from token
+            GITHUB_TOKEN="$(echo -n $(cat $1))"
             [[ -n "${GITHUB_TOKEN}" ]] || abort "file $1 is empty"
             ;;
           --release-gcr)
@@ -297,6 +303,7 @@ function initialize() {
   # Checkout specific branch, if necessary
   if (( BRANCH_RELEASE )); then
     setup_upstream
+    setup_branch
     git checkout upstream/${RELEASE_BRANCH} || abort "cannot checkout branch ${RELEASE_BRANCH}"
   fi
 }
@@ -321,8 +328,8 @@ function branch_release() {
   fi
   git tag -a ${TAG} -m "${title}"
   local repo_url="${KNATIVE_UPSTREAM}"
-  [[ -n "${GITHUB_TOKEN}}" ]] && repo_url="${GITHUB_TOKEN}@${repo_url}"
-  hub_tool push https://${repo_url} tag ${TAG}
+  [[ -n "${GITHUB_TOKEN}}" ]] && repo_url="${repo_url/:\/\//:\/\/${GITHUB_TOKEN}@}"
+  hub_tool push ${repo_url} tag ${TAG}
 
   hub_tool release create \
       --prerelease \

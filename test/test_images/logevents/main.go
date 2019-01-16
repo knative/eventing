@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -20,13 +20,16 @@ import (
 	"time"
 
 	"github.com/knative/pkg/cloudevents"
-
-	corev1 "k8s.io/api/core/v1"
 )
 
-func handler(ctx context.Context, e *corev1.Event) {
+type Heartbeat struct {
+	Sequence int    `json:"id"`
+	Data     string `json:"data"`
+}
+
+func handler(ctx context.Context, data map[string]interface{}) {
 	metadata := cloudevents.FromContext(ctx)
-	log.Printf("[%s] %s : %q", metadata.EventTime.Format(time.RFC3339), metadata.Source, e.Message)
+	log.Printf("[%s] %s %s: %+v", metadata.EventTime.Format(time.RFC3339), metadata.ContentType, metadata.Source, data)
 }
 
 func main() {

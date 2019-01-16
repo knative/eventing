@@ -351,19 +351,6 @@
   version = "v0.2.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:e1ae53a5b5dc5fa6f8cb5fa4596a4436d2754921510766569386efc9c07d839c"
-  name = "github.com/knative/eventing-sources"
-  packages = [
-    "pkg/apis/sources/v1alpha1",
-    "pkg/client/clientset/versioned",
-    "pkg/client/clientset/versioned/scheme",
-    "pkg/client/clientset/versioned/typed/sources/v1alpha1",
-  ]
-  pruneopts = "NUT"
-  revision = "aa113a015beb91c94a8e173c8f0ac18512a83954"
-
-[[projects]]
   digest = "1:c7f661f0d73e7797d0522e658a5f793c19be60088db74f01c57e0060d4f4d1c0"
   name = "github.com/knative/pkg"
   packages = [
@@ -426,14 +413,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:952653aef2cb8b8a60637b1458591359e0dd0e89a816410dd175a76520796066"
+  digest = "1:9d69ed4186e0a6ba97c525dbdc3a1327fa70e6844a878c27e8e3010ad6afe416"
   name = "github.com/knative/test-infra"
   packages = [
     "scripts",
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "fd150c6b0e760cfe85be17403e95e28fc6e38790"
+  revision = "4e05cee6f044bab8af13e7608167b58a89c2030d"
 
 [[projects]]
   digest = "1:56dbf15e091bf7926cb33a57cb6bdfc658fc6d3498d2f76f10a97ce7856f1fde"
@@ -1198,7 +1185,7 @@
   revision = "8a9b82f00b3a86eac24681da3f9fe6c34c01cea2"
 
 [[projects]]
-  digest = "1:63139e4089c9b034ec98d8ae54e87c91cd3f5ce5bf9d50dba412c08a363659c4"
+  digest = "1:b18104b0089c9483846dfcd124fd25a65361697004684b03d4de86546e9808d6"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/cache",
@@ -1220,7 +1207,6 @@
     "pkg/recorder",
     "pkg/runtime/inject",
     "pkg/runtime/log",
-    "pkg/runtime/scheme",
     "pkg/runtime/signals",
     "pkg/source",
     "pkg/source/internal",
@@ -1243,8 +1229,6 @@
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/uuid",
-    "github.com/knative/eventing-sources/pkg/apis/sources/v1alpha1",
-    "github.com/knative/eventing-sources/pkg/client/clientset/versioned",
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
     "github.com/knative/pkg/apis/duck/v1alpha1",
@@ -1290,6 +1274,7 @@
     "k8s.io/apimachinery/pkg/util/intstr",
     "k8s.io/apimachinery/pkg/util/sets",
     "k8s.io/apimachinery/pkg/util/sets/types",
+    "k8s.io/apimachinery/pkg/util/uuid",
     "k8s.io/apimachinery/pkg/util/wait",
     "k8s.io/apimachinery/pkg/util/yaml",
     "k8s.io/apimachinery/pkg/watch",
