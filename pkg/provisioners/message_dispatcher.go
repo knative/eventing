@@ -20,11 +20,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"go.uber.org/zap"
 
 	"github.com/knative/eventing/pkg/utils"
 )
