@@ -648,7 +648,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 				},
 				Route: []istiov1alpha3.DestinationWeight{{
 					Destination: istiov1alpha3.Destination{
-						Host: fmt.Sprintf("%s-dispatcher.knative-eventing.svc.%s", clusterChannelProvisionerName, utils.GetClusterDomainName()),
+						Host: fmt.Sprintf("%s-dispatcher.knative-testing.svc.%s", clusterChannelProvisionerName, utils.GetClusterDomainName()),
 						Port: istiov1alpha3.PortSelector{
 							Number: PortNumber,
 						},

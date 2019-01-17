@@ -36,7 +36,7 @@ import (
 	util "github.com/knative/eventing/pkg/provisioners"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/system"
-    _ "github.com/knative/eventing/pkg/system/testing"
+	_ "github.com/knative/eventing/pkg/system/testing"
 )
 
 const (
