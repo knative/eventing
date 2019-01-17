@@ -165,7 +165,7 @@ func makeChannel() *eventingv1alpha1.Channel {
 		Secret:     testcreds.Secret,
 		SecretKey:  testcreds.SecretKey,
 	}
-	if err := util.SetRawStatus(context.Background(), c, pcs); err != nil {
+	if err := util.SetInternalStatus(context.Background(), c, pcs); err != nil {
 		panic(err)
 	}
 	return c
@@ -179,7 +179,7 @@ func makeChannelWithBlankStatus() *eventingv1alpha1.Channel {
 
 func makeChannelWithBadStatus() *eventingv1alpha1.Channel {
 	c := makeChannel()
-	c.Status.Raw = &runtime.RawExtension{
+	c.Status.Internal = &runtime.RawExtension{
 		// SecretKey must be a string, not an integer, so this will fail during json.Unmarshal.
 		Raw: []byte(`{"secretKey": 123}`),
 	}

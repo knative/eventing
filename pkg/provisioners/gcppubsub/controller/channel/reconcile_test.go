@@ -263,7 +263,7 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			Name: "Channel deleted - No raw status",
+			Name: "Channel deleted - No status.internal",
 			InitialState: []runtime.Object{
 				makeDeletingChannelWithoutPCS(),
 				testcreds.MakeSecretWithCreds(),
@@ -380,9 +380,9 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testcreds.InvalidCredsError,
 		},
 		{
-			Name: "Error reading status.raw",
+			Name: "Error reading status.internal",
 			InitialState: []runtime.Object{
-				makeChannelWithBadRawStatus(),
+				makeChannelWithBadInternalStatus(),
 			},
 			WantErrMsg: "json: cannot unmarshal number into Go struct field GcpPubSubChannelStatus.topic of type string",
 		},
@@ -786,7 +786,7 @@ func makeChannelWithFinalizer() *eventingv1alpha1.Channel {
 
 func makeChannelWithFinalizerAndPCS() *eventingv1alpha1.Channel {
 	c := makeChannelWithFinalizer()
-	err := pubsubutil.SetRawStatus(context.Background(), c, &pubsubutil.GcpPubSubChannelStatus{
+	err := pubsubutil.SetInternalStatus(context.Background(), c, &pubsubutil.GcpPubSubChannelStatus{
 		Secret:     testcreds.Secret,
 		SecretKey:  testcreds.SecretKey,
 		GCPProject: gcpProject,
@@ -812,7 +812,7 @@ func makeDeletingChannel() *eventingv1alpha1.Channel {
 
 func makeDeletingChannelWithoutPCS() *eventingv1alpha1.Channel {
 	c := makeDeletingChannel()
-	c.Status.Raw = nil
+	c.Status.Internal = nil
 	return c
 }
 
@@ -824,7 +824,7 @@ func makeDeletingChannelWithoutFinalizer() *eventingv1alpha1.Channel {
 
 func makeDeletingChannelWithoutFinalizerOrPCS() *eventingv1alpha1.Channel {
 	c := makeDeletingChannelWithoutFinalizer()
-	c.Status.Raw = nil
+	c.Status.Internal = nil
 	return c
 }
 
@@ -840,9 +840,9 @@ func makeDeletingChannelWithSubscribersWithoutFinalizer() *eventingv1alpha1.Chan
 	return c
 }
 
-func makeChannelWithBadRawStatus() *eventingv1alpha1.Channel {
+func makeChannelWithBadInternalStatus() *eventingv1alpha1.Channel {
 	c := makeChannel()
-	c.Status.Raw = &runtime.RawExtension{
+	c.Status.Internal = &runtime.RawExtension{
 		// The topic field is a string, so this will have an error during unmarshal.
 		Raw: []byte(`{"topic": 123}`),
 	}
@@ -866,7 +866,7 @@ func makeChannelWithFinalizerAndSubscriberWithoutUID() *eventingv1alpha1.Channel
 
 func makeChannelWithFinalizerAndPossiblyOutdatedPlan(outdated bool) *eventingv1alpha1.Channel {
 	c := makeChannelWithFinalizerAndPCS()
-	pcs, err := pubsubutil.GetRawStatus(context.Background(), c)
+	pcs, err := pubsubutil.GetInternalStatus(context.Background(), c)
 	if err != nil {
 		panic(err)
 	}
@@ -897,7 +897,7 @@ func makeChannelWithFinalizerAndPossiblyOutdatedPlan(outdated bool) *eventingv1a
 		pcs.Subscriptions = append(pcs.Subscriptions, sub)
 	}
 
-	err = pubsubutil.SetRawStatus(context.Background(), c, pcs)
+	err = pubsubutil.SetInternalStatus(context.Background(), c, pcs)
 	if err != nil {
 		panic(err)
 	}
@@ -925,7 +925,7 @@ func makeChannelWithFinalizerAndPossiblyOutdatedPlan(outdated bool) *eventingv1a
 
 func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscribable) {
 	c.Spec.Subscribable = subscribable
-	pcs, err := pubsubutil.GetRawStatus(context.Background(), c)
+	pcs, err := pubsubutil.GetInternalStatus(context.Background(), c)
 	if err != nil {
 		panic(err)
 	}
@@ -937,7 +937,7 @@ func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscrib
 			Subscription:  "test-subscription-id",
 		})
 	}
-	err = pubsubutil.SetRawStatus(context.Background(), c, pcs)
+	err = pubsubutil.SetInternalStatus(context.Background(), c, pcs)
 	if err != nil {
 		panic(err)
 	}

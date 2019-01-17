@@ -84,33 +84,33 @@ func TestIsEmpty(t *testing.T) {
 	}
 }
 
-func TestReadRawStatus(t *testing.T) {
+func TestReadInternalStatus(t *testing.T) {
 	testCases := map[string]struct {
-		raw      *runtime.RawExtension
+		internal *runtime.RawExtension
 		expected *GcpPubSubChannelStatus
 		err      bool
 	}{
 		"nil": {
-			raw:      nil,
+			internal: nil,
 			expected: &GcpPubSubChannelStatus{},
 			err:      false,
 		},
 		"empty": {
-			raw: &runtime.RawExtension{
+			internal: &runtime.RawExtension{
 				Raw: []byte{},
 			},
 			expected: &GcpPubSubChannelStatus{},
 			err:      false,
 		},
 		"can't unmarshal": {
-			raw: &runtime.RawExtension{
+			internal: &runtime.RawExtension{
 				// The topic field is a string, so this will have an error during unmarshal.
 				Raw: []byte(`{"topic": 123}`),
 			},
 			err: true,
 		},
 		"success": {
-			raw: &runtime.RawExtension{
+			internal: &runtime.RawExtension{
 				Raw: []byte(`{"topic":"gcp-topic"}`),
 			},
 			expected: &GcpPubSubChannelStatus{
@@ -122,8 +122,8 @@ func TestReadRawStatus(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			c := &v1alpha1.Channel{}
-			c.Status.Raw = tc.raw
-			pcs, err := GetRawStatus(context.Background(), c)
+			c.Status.Internal = tc.internal
+			pcs, err := GetInternalStatus(context.Background(), c)
 			if tc.err != (err != nil) {
 				t.Fatalf("Unexpected error. Expected %v. Actual %v", tc.err, err)
 			}
@@ -134,7 +134,7 @@ func TestReadRawStatus(t *testing.T) {
 	}
 }
 
-func TestRawStatusRoundTrip(t *testing.T) {
+func TestInternalStatusRoundTrip(t *testing.T) {
 	testCases := map[string]struct {
 		pcs *GcpPubSubChannelStatus
 	}{
@@ -157,16 +157,16 @@ func TestRawStatusRoundTrip(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			c := &v1alpha1.Channel{}
-			err := SetRawStatus(context.Background(), c, tc.pcs)
+			err := SetInternalStatus(context.Background(), c, tc.pcs)
 			if err != nil {
-				t.Errorf("Unexpected error saving raw status. %v", err)
+				t.Errorf("Unexpected error saving internal status. %v", err)
 			}
-			pcs, err := GetRawStatus(context.Background(), c)
+			pcs, err := GetInternalStatus(context.Background(), c)
 			if err != nil {
-				t.Errorf("Unexpected error reading raw status. %v", err)
+				t.Errorf("Unexpected error reading internal status. %v", err)
 			}
 			if diff := cmp.Diff(tc.pcs, pcs); diff != "" {
-				t.Errorf("Unexpected parsed raw status (-want +got): %v", diff)
+				t.Errorf("Unexpected parsed internal status (-want +got): %v", diff)
 			}
 		})
 	}

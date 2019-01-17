@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// GcpPubSubChannelStatus is the struct saved to Channel's status.raw if the Channel's provisioner
+// GcpPubSubChannelStatus is the struct saved to Channel's status.internal if the Channel's provisioner
 // is gcp-pubsub. It is used to send data to the dispatcher from the controller.
 type GcpPubSubChannelStatus struct {
 	// Secret is the Secret that contains the credential to use.
@@ -82,39 +82,38 @@ func (pcs *GcpPubSubChannelStatus) IsEmpty() bool {
 	return true
 }
 
-// SetRawStatus saves GcpPubSubChannelStatus to the given Channel, which should only be one whose
+// SetInternalStatus saves GcpPubSubChannelStatus to the given Channel, which should only be one whose
 // provisioner is gcp-pubsub.
-func SetRawStatus(ctx context.Context, c *eventingv1alpha1.Channel, pcs *GcpPubSubChannelStatus) error {
+func SetInternalStatus(ctx context.Context, c *eventingv1alpha1.Channel, pcs *GcpPubSubChannelStatus) error {
 	jb, err := json.Marshal(pcs)
 	if err != nil {
 		// I don't think this is reachable, because the GcpPubSubChannelStatus struct is designed to
 		// marshal to JSON and therefore doesn't have any incompatible fields. Nevertheless, this is
 		// here just in case.
-		logging.FromContext(ctx).Error("Error setting the raw status", zap.Error(err), zap.Any("pcs", pcs))
+		logging.FromContext(ctx).Error("Error setting the status.internal", zap.Error(err), zap.Any("pcs", pcs))
 		return err
 	}
-	c.Status.Raw = &runtime.RawExtension{
+	c.Status.Internal = &runtime.RawExtension{
 		Raw: jb,
 	}
 	return nil
 }
 
-// GetRawStatus reads GcpPubSubChannelStatus from the given Channel, which should only be one whose
-// provisioner is gcp-pubsub. If the raw status is not set, then the empty GcpPubSubChannelStatus is
+// GetInternalStatus reads GcpPubSubChannelStatus from the given Channel, which should only be one whose
+// provisioner is gcp-pubsub. If the internal status is not set, then the empty GcpPubSubChannelStatus is
 // returned.
-func GetRawStatus(ctx context.Context, c *eventingv1alpha1.Channel) (*GcpPubSubChannelStatus, error) {
-	if c.Status.Raw == nil {
+func GetInternalStatus(ctx context.Context, c *eventingv1alpha1.Channel) (*GcpPubSubChannelStatus, error) {
+	if c.Status.Internal == nil {
 		return &GcpPubSubChannelStatus{}, nil
 	}
-	bytes := c.Status.Raw.Raw
+	bytes := c.Status.Internal.Raw
 	if len(bytes) == 0 {
 		return &GcpPubSubChannelStatus{}, nil
 	}
 	var pcs GcpPubSubChannelStatus
 	if err := json.Unmarshal(bytes, &pcs); err != nil {
-		logging.FromContext(ctx).Error("Unable to parse the raw status", zap.Error(err))
+		logging.FromContext(ctx).Error("Unable to parse status.internal", zap.Error(err))
 		return nil, err
 	}
 	return &pcs, nil
-
 }

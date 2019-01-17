@@ -102,9 +102,9 @@ type ChannelStatus struct {
 	// +patchStrategy=merge
 	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
-	// Raw is status unique to each ClusterChannelProvisioner.
+	// Internal is status unique to each ClusterChannelProvisioner.
 	// +optional
-	Raw *runtime.RawExtension `json:"raw,omitempty"`
+	Internal *runtime.RawExtension `json:"raw,omitempty"`
 }
 
 const (

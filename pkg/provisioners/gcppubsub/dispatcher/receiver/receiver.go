@@ -67,12 +67,12 @@ func (r *Receiver) sendEventToTopic(channel provisioners.ChannelReference, messa
 		logging.FromContext(ctx).Info("Unable to get the Channel", zap.Error(err), zap.Any("channelRef", channel))
 		return err
 	}
-	pcs, err := util.GetRawStatus(ctx, c)
+	pcs, err := util.GetInternalStatus(ctx, c)
 	if err != nil {
 		return err
 	} else if pcs.IsEmpty() {
-		logging.FromContext(ctx).Info("Raw status is blank")
-		return errors.New("raw status is blank")
+		logging.FromContext(ctx).Info("status.internal is blank")
+		return errors.New("status.internal is blank")
 	}
 
 	psr, err := r.createPubSubReceiver(ctx, pcs)

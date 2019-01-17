@@ -142,8 +142,8 @@ func (in *ChannelStatus) DeepCopyInto(out *ChannelStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.Raw != nil {
-		in, out := &in.Raw, &out.Raw
+	if in.Internal != nil {
+		in, out := &in.Internal, &out.Internal
 		if *in == nil {
 			*out = nil
 		} else {

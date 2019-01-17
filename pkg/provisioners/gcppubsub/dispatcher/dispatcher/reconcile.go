@@ -97,12 +97,12 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		logging.FromContext(ctx).Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("ref", c.Spec))
 		return reconcile.Result{}, nil
 	}
-	pcs, err := pubsubutil.GetRawStatus(ctx, c)
+	pcs, err := pubsubutil.GetInternalStatus(ctx, c)
 	if err != nil {
-		logging.FromContext(ctx).Info("Unable to read the raw status", zap.Error(err))
+		logging.FromContext(ctx).Info("Unable to read the status.internal", zap.Error(err))
 		return reconcile.Result{}, err
 	} else if pcs.IsEmpty() {
-		return reconcile.Result{}, errors.New("raw status is blank")
+		return reconcile.Result{}, errors.New("status.internal is blank")
 	}
 
 	logging.FromContext(ctx).Info("Reconciling Channel")

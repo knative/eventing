@@ -151,12 +151,12 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	// 3. The GCP PubSub Topic (one for the Channel).
 	// 4. The GCP PubSub Subscriptions (one for each Subscriber of the Channel).
 
-	// First we will plan all the names out for steps 3 and 4 persist them to status.raw. Then, on a
+	// First we will plan all the names out for steps 3 and 4 persist them to status.internal. Then, on a
 	// subsequent reconcile, we manipulate all the GCP resources in steps 3 and 4.
 
-	originalPCS, err := pubsubutil.GetRawStatus(ctx, c)
+	originalPCS, err := pubsubutil.GetInternalStatus(ctx, c)
 	if err != nil {
-		logging.FromContext(ctx).Error("Unable to read the raw status", zap.Error(err))
+		logging.FromContext(ctx).Error("Unable to read the status.internal", zap.Error(err))
 		return false, err
 	}
 
@@ -202,7 +202,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		return false, err
 	}
 	if persist == persistStatus {
-		if err = pubsubutil.SetRawStatus(ctx, c, plannedPCS); err != nil {
+		if err = pubsubutil.SetInternalStatus(ctx, c, plannedPCS); err != nil {
 			return false, err
 		}
 		// Persist this and run another reconcile loop to enact it.
@@ -230,7 +230,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	}
 	// Now that the subs have synced successfully, remove the old ones from the status.
 	plannedPCS.Subscriptions = subsToSync.subsToCreate
-	if err = pubsubutil.SetRawStatus(ctx, c, plannedPCS); err != nil {
+	if err = pubsubutil.SetInternalStatus(ctx, c, plannedPCS); err != nil {
 		return false, err
 	}
 

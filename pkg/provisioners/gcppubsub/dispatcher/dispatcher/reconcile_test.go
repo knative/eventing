@@ -149,18 +149,18 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			Name: "Unable to read Raw Status",
+			Name: "Unable to read Internal Status",
 			InitialState: []runtime.Object{
-				makeChannelWithBadRawStatus(),
+				makeChannelWithBadInternalStatus(),
 			},
 			WantErrMsg: "json: cannot unmarshal number into Go struct field GcpPubSubChannelStatus.secretKey of type string",
 		},
 		{
-			Name: "Empty raw status",
+			Name: "Empty status.internal",
 			InitialState: []runtime.Object{
-				makeChannelWithBlankRawStatus(),
+				makeChannelWithBlankInternalStatus(),
 			},
-			WantErrMsg: "raw status is blank",
+			WantErrMsg: "status.internal is blank",
 		},
 		{
 			Name: "Channel deleted - subscribers",
@@ -455,7 +455,7 @@ func makeChannel() *eventingv1alpha1.Channel {
 		Secret:     testcreds.Secret,
 		SecretKey:  testcreds.SecretKey,
 	}
-	if err := util.SetRawStatus(context.Background(), c, pcs); err != nil {
+	if err := util.SetInternalStatus(context.Background(), c, pcs); err != nil {
 		panic(err)
 	}
 	return c
@@ -521,24 +521,24 @@ func makeDeletingChannelWithSubscribersWithoutFinalizer() *eventingv1alpha1.Chan
 	return c
 }
 
-func makeChannelWithBadRawStatus() *eventingv1alpha1.Channel {
+func makeChannelWithBadInternalStatus() *eventingv1alpha1.Channel {
 	c := makeChannel()
-	c.Status.Raw = &runtime.RawExtension{
+	c.Status.Internal = &runtime.RawExtension{
 		// SecretKey must be a string, not an integer, so this will fail during json.Unmarshal.
 		Raw: []byte(`{"secretKey": 123}`),
 	}
 	return c
 }
 
-func makeChannelWithBlankRawStatus() *eventingv1alpha1.Channel {
+func makeChannelWithBlankInternalStatus() *eventingv1alpha1.Channel {
 	c := makeChannel()
-	c.Status.Raw = nil
+	c.Status.Internal = nil
 	return c
 }
 
 func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscribable) {
 	c.Spec.Subscribable = subscribable
-	pcs, err := util.GetRawStatus(context.Background(), c)
+	pcs, err := util.GetInternalStatus(context.Background(), c)
 	if err != nil {
 		panic(err)
 	}
@@ -549,7 +549,7 @@ func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscrib
 			SubscriberURI: sub.SubscriberURI,
 		})
 	}
-	err = util.SetRawStatus(context.Background(), c, pcs)
+	err = util.SetInternalStatus(context.Background(), c, pcs)
 	if err != nil {
 		panic(err)
 	}
