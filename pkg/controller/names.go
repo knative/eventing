@@ -18,6 +18,7 @@ package controller
 
 import (
 	"fmt"
+
 	"github.com/knative/eventing/pkg/utils"
 )
 

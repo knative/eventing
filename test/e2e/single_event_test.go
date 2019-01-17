@@ -19,6 +19,9 @@ package e2e
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/knative/eventing/test"
 	pkgTest "github.com/knative/pkg/test"
 	"github.com/knative/pkg/test/logging"
@@ -26,8 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"testing"
-	"time"
 )
 
 const (
