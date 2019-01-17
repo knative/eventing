@@ -85,38 +85,6 @@ $(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test image
 # Setup resources common to all eventing tests
 setup_events_test_resources|| fail_test "Error setting up test resources"
 
-go_test_e2e ./test/e2e
-exit_result=$?
-if [ ${exit_result} -ne 0 ]; then
-  # Collecting logs from all knative's eventing pods
-  echo "====== Collecting logs for namespace: knative-eventing ========"
-  for pod in $(kubectl get pod -n knative-eventing | grep Running | awk '{print $1}' ); do
-    echo "========== Collecting logs for pod: "${pod}" ================="
-    for container in $(kubectl get pod "${pod}" -n knative-eventing -ojsonpath='{.spec.containers[*].name}'); do
-      echo "----------------------------------------------------------"
-      echo "Container: "${container}
-      kubectl logs -n knative-eventing "${pod}" -c "${container}" || true
-      echo "----------------------------------------------------------"
-      kubectl logs -p -n knative-eventing "${pod}" -c "${container}" || true
-      echo "----------------------------------------------------------"
-    done
-    echo "============================================================"
-  done
-  # Collecting logs from the test namespace pods.
-  echo "====== Collecting logs for namespace: "${E2E_TEST_NAMESPACE}" ========"
-  for pod in $(kubectl get pod -n "${E2E_TEST_NAMESPACE}" | grep Running | awk '{print $1}' ); do
-      echo "========== Collecting logs for pod: "${pod}" ================="
-      for container in $(kubectl get pod "${pod}" -n ${E2E_TEST_NAMESPACE} -ojsonpath='{.spec.containers[*].name}'); do
-        echo "----------------------------------------------------------"
-        echo "Container: "${container}
-        kubectl logs -n "${E2E_TEST_NAMESPACE}" "${pod}" -c "${container}" || true
-        echo "----------------------------------------------------------"
-        kubectl logs -p -n "${E2E_TEST_NAMESPACE}" "${pod}" -c "${container}" || true
-        echo "----------------------------------------------------------"
-      done
-      echo "============================================================"
-    done
-  fail_test
-fi
+go_test_e2e ./test/e2e || fail_test
 
 success
