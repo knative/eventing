@@ -20,10 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/api/equality"
-
-	"k8s.io/apimachinery/pkg/types"
-
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/controller"
 	util "github.com/knative/eventing/pkg/provisioners"
@@ -33,7 +29,9 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/oauth2/google"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -262,9 +260,21 @@ func (r *reconciler) planGcpResources(ctx context.Context, c *eventingv1alpha1.C
 		GCPProject: r.defaultGcpProject,
 		Topic:      topicName,
 	}
+	// Note that when we allow Channels to provide arguments for GCPProject and Topic, we probably
+	// won't want to let them change once the GCP resources have been created. So the following
+	// logic to detect a change will be insufficient.
 	if !equality.Semantic.DeepEqual(originalPCS.Secret, newPCS.Secret) || originalPCS.SecretKey != newPCS.SecretKey || originalPCS.GCPProject != newPCS.GCPProject || originalPCS.Topic != newPCS.Topic {
 		persist = persistStatus
 	}
+
+	// We are going to correlate subscriptions from the spec and the existing status. We use the
+	// Subscription's UID to correlate between the two lists. If for any reason we can't get the UID
+	// of a Subscription in the spec, then immediately error (another option would be to do all the
+	// work we know we need to do, but then we need to make sure we don't delete anything as it may
+	// match the unknown Subscription). We always expect to see the Subscription UID in the status
+	// because this is the only code that writes out the status message and won't do it unless the
+	// UID is present. But, if for some reason its not there, ignore that entry and allow the others
+	// to process normally.
 
 	existingSubs := make(map[types.UID]pubsubutil.GcpPubSubSubscriptionStatus, len(originalPCS.Subscriptions))
 	for _, existingSub := range originalPCS.Subscriptions {
@@ -399,7 +409,7 @@ func (r *reconciler) syncSubscriptions(ctx context.Context, plannedPCS *pubsubut
 	for _, subToCreate := range subsToSync.subsToCreate {
 		_, err := r.createSubscription(ctx, gcpCreds, plannedPCS.GCPProject, topic, subToCreate.Subscription)
 		if err != nil {
-			logging.FromContext(ctx).Info("Unable to create subscriber", zap.Error(err), zap.Any("channelSubscriber", subToCreate))
+			logging.FromContext(ctx).Error("Unable to create subscriber", zap.Error(err), zap.Any("channelSubscriber", subToCreate))
 			return err
 		}
 	}
@@ -407,7 +417,7 @@ func (r *reconciler) syncSubscriptions(ctx context.Context, plannedPCS *pubsubut
 	for _, subToDelete := range subsToSync.subsToDelete {
 		err := r.deleteSubscription(ctx, gcpCreds, plannedPCS.GCPProject, &subToDelete)
 		if err != nil {
-			logging.FromContext(ctx).Info("Unable to delete subscriber", zap.Error(err), zap.Any("channelSubscriber", subToDelete))
+			logging.FromContext(ctx).Error("Unable to delete subscriber", zap.Error(err), zap.Any("channelSubscriber", subToDelete))
 			return err
 		}
 	}

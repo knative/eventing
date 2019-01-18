@@ -39,8 +39,8 @@ type GcpPubSubChannelStatus struct {
 	GCPProject string `json:"gcpProject"`
 	// Topic is the name of the PubSub Topic created in GCP to represent this Channel.
 	Topic string `json:"topic,omitempty"`
-	// Subscriptions is the list of Subscriptions to this Channel and the PubSub Subscription in GCP
-	// that represents the Knative Eventing Subscription.
+	// Subscriptions is the list of Knative Eventing Subscriptions to this Channel, each paired with
+	// the PubSub Subscription in GCP that represents it.
 	Subscriptions []GcpPubSubSubscriptionStatus `json:"subscriptions,omitempty"`
 }
 

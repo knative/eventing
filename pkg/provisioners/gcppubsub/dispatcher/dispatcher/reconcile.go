@@ -143,9 +143,11 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel,
 	// We are syncing all the subscribers on this Channel. Every subscriber will have a goroutine
 	// running in the background polling the GCP PubSub Subscription.
 
+	channelKey := key(c)
+
 	if c.DeletionTimestamp != nil {
 		// We use a finalizer to ensure we stop listening on the GCP PubSub Subscriptions.
-		r.stopAllSubscriptions(ctx, c)
+		r.stopAllSubscriptions(ctx, channelKey)
 		util.RemoveFinalizer(c, finalizerName)
 		return false, nil
 	}
@@ -156,7 +158,15 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel,
 		return true, nil
 	}
 
-	err := r.syncSubscriptions(ctx, c, pcs)
+	// enqueueChannelForReconciliation is a function that when run will force this Channel to be
+	// reconciled again.
+	enqueueChannelForReconciliation := func() {
+		r.reconcileChan <- event.GenericEvent{
+			Meta:   c.GetObjectMeta(),
+			Object: c,
+		}
+	}
+	err := r.syncSubscriptions(ctx, enqueueChannelForReconciliation, channelKey, pcs)
 	return false, err
 }
 
@@ -178,17 +188,16 @@ func subscriptionKey(sub *pubsubutil.GcpPubSubSubscriptionStatus) subscriptionNa
 }
 
 // stopAllSubscriptions stops listening to all GCP PubSub Subscriptions for the given Channel.
-func (r *reconciler) stopAllSubscriptions(ctx context.Context, c *eventingv1alpha1.Channel) {
+func (r *reconciler) stopAllSubscriptions(ctx context.Context, channelKey channelName) {
 	r.subscriptionsLock.Lock()
 	defer r.subscriptionsLock.Unlock()
-	r.stopAllSubscriptionsUnderLock(ctx, c)
+	r.stopAllSubscriptionsUnderLock(ctx, channelKey)
 }
 
 // stopAllSubscriptionsUnderLock stops listening to all GCP PubSub Subscriptions for the given
 // Channel.
 // Note that it can only be called if reconciler.subscriptionsLock is held.
-func (r *reconciler) stopAllSubscriptionsUnderLock(ctx context.Context, c *eventingv1alpha1.Channel) {
-	channelKey := key(c)
+func (r *reconciler) stopAllSubscriptionsUnderLock(ctx context.Context, channelKey channelName) {
 	if subscribers, present := r.subscriptions[channelKey]; present {
 		for _, subCancel := range subscribers {
 			subCancel()
@@ -200,26 +209,25 @@ func (r *reconciler) stopAllSubscriptionsUnderLock(ctx context.Context, c *event
 // syncSubscriptions ensures all subscribers of the Channel have a background Goroutine that is
 // polling the GCP PubSub Subscriptions representing it. It also removes listeners from Subscribers
 // that no longer exist.
-func (r *reconciler) syncSubscriptions(ctx context.Context, c *eventingv1alpha1.Channel, pcs *pubsubutil.GcpPubSubChannelStatus) error {
+func (r *reconciler) syncSubscriptions(ctx context.Context, enqueueChannelForReconciliation func(), channelKey channelName, pcs *pubsubutil.GcpPubSubChannelStatus) error {
 	r.subscriptionsLock.Lock()
 	defer r.subscriptionsLock.Unlock()
 
 	subscribers := pcs.Subscriptions
 	if subscribers == nil {
 		// There are no subscribers.
-		r.stopAllSubscriptionsUnderLock(ctx, c)
+		r.stopAllSubscriptionsUnderLock(ctx, channelKey)
 		return nil
 	}
 
 	for _, subscriber := range subscribers {
-		err := r.createSubscriptionUnderLock(logging.With(ctx, zap.Any("subscriber", subscriber)), c, pcs, subscriber)
+		err := r.createSubscriptionUnderLock(logging.With(ctx, zap.Any("subscriber", subscriber)), enqueueChannelForReconciliation, channelKey, pcs, subscriber)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Now remove all subscriptions that are no longer present.
-	channelKey := key(c)
 	activeSubscribers := r.subscriptions[channelKey]
 	if len(subscribers) == len(activeSubscribers) {
 		return nil
@@ -242,8 +250,7 @@ func (r *reconciler) syncSubscriptions(ctx context.Context, c *eventingv1alpha1.
 // createSubscriptionUnderLock starts a background Goroutine for a single subscriber polling its
 // GCP PubSub Subscription.
 // Note that it can only be called if reconciler.subscriptionsLock is held.
-func (r *reconciler) createSubscriptionUnderLock(ctx context.Context, c *eventingv1alpha1.Channel, pcs *pubsubutil.GcpPubSubChannelStatus, sub pubsubutil.GcpPubSubSubscriptionStatus) error {
-	channelKey := key(c)
+func (r *reconciler) createSubscriptionUnderLock(ctx context.Context, enqueueChannelForReconciliation func(), channelKey channelName, pcs *pubsubutil.GcpPubSubChannelStatus, sub pubsubutil.GcpPubSubSubscriptionStatus) error {
 	if r.subscriptions[channelKey] == nil {
 		r.subscriptions[channelKey] = make(map[subscriptionName]context.CancelFunc)
 	}
@@ -265,7 +272,7 @@ func (r *reconciler) createSubscriptionUnderLock(ctx context.Context, c *eventin
 	}
 
 	// receiveMessageBlocking blocks, so run it in a goroutine.
-	go r.receiveMessagesBlocking(ctxWithCancel, c, sub, pcs.GCPProject, psc)
+	go r.receiveMessagesBlocking(ctxWithCancel, enqueueChannelForReconciliation, channelKey, sub, pcs.GCPProject, psc)
 
 	return nil
 }
@@ -273,12 +280,11 @@ func (r *reconciler) createSubscriptionUnderLock(ctx context.Context, c *eventin
 // receiveMessagesBlocking receives messages from GCP PubSub, while blocking forever. If the receive
 // fails for any reason, then it will instruct the reconciler to process this Channel again via
 // reconciler.reconcileChan.
-func (r *reconciler) receiveMessagesBlocking(ctxWithCancel context.Context, c *eventingv1alpha1.Channel, sub pubsubutil.GcpPubSubSubscriptionStatus, gcpProject string, psc pubsubutil.PubSubClient) {
+func (r *reconciler) receiveMessagesBlocking(ctxWithCancel context.Context, enqueueChannelForReconciliation func(), channelKey channelName, sub pubsubutil.GcpPubSubSubscriptionStatus, gcpProject string, psc pubsubutil.PubSubClient) {
 	subscription := psc.SubscriptionInProject(sub.Subscription, gcpProject)
 	defaults := provisioners.DispatchDefaults{
-		Namespace: c.Namespace,
+		Namespace: channelKey.Namespace,
 	}
-	channelKey := key(c)
 	subKey := subscriptionKey(&sub)
 
 	logging.FromContext(ctxWithCancel).Info("subscription.Receive start")
@@ -302,10 +308,7 @@ func (r *reconciler) receiveMessagesBlocking(ctxWithCancel context.Context, c *e
 	logging.FromContext(ctxWithCancel).Info("subscription.Receive stopped")
 	if receiveErr != nil {
 		logging.FromContext(ctxWithCancel).Error("Error receiving messages", zap.Error(receiveErr))
-		r.reconcileChan <- event.GenericEvent{
-			Meta:   c.GetObjectMeta(),
-			Object: c,
-		}
+		enqueueChannelForReconciliation()
 	}
 }
 
