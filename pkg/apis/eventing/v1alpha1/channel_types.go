@@ -104,7 +104,7 @@ type ChannelStatus struct {
 
 	// Internal is status unique to each ClusterChannelProvisioner.
 	// +optional
-	Internal *runtime.RawExtension `json:"raw,omitempty"`
+	Internal *runtime.RawExtension `json:"internal,omitempty"`
 }
 
 const (
