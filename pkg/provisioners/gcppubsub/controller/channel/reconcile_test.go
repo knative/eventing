@@ -22,6 +22,10 @@ import (
 	"fmt"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/types"
+
+	pubsubutil "github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
+
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
@@ -50,6 +54,7 @@ const (
 	cNamespace = "test-namespace"
 	cName      = "test-channel"
 	cUID       = "test-uid"
+	topicName  = "knative-eventing-channel_test-channel_test-uid"
 
 	testErrorMessage = "test induced error"
 
@@ -258,6 +263,30 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
+			Name: "Channel deleted - No status.internal",
+			InitialState: []runtime.Object{
+				makeDeletingChannelWithoutPCS(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientData: fakepubsub.ClientData{
+						TopicData: fakepubsub.TopicData{
+							ExistsErr: errors.New("should not be seen"),
+							DeleteErr: errors.New("should not be seen"),
+						},
+						SubscriptionData: fakepubsub.SubscriptionData{
+							ExistsErr: errors.New("should not be seen"),
+							DeleteErr: errors.New("should not be seen"),
+						},
+					},
+				},
+			},
+			WantPresent: []runtime.Object{
+				makeDeletingChannelWithoutFinalizerOrPCS(),
+			},
+		},
+		{
 			Name: "Channel deleted - topic does not exist",
 			InitialState: []runtime.Object{
 				makeDeletingChannelWithSubscribers(),
@@ -351,23 +380,30 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testcreds.InvalidCredsError,
 		},
 		{
+			Name: "Error reading status.internal",
+			InitialState: []runtime.Object{
+				makeChannelWithBadInternalStatus(),
+			},
+			WantErrMsg: "json: cannot unmarshal number into Go struct field GcpPubSubChannelStatus.topic of type string",
+		},
+		{
 			Name: "K8s service get fails",
 			InitialState: []runtime.Object{
-				makeChannelWithFinalizer(),
+				makeChannelWithFinalizerAndPCS(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockLists: errorListingK8sService(),
 			},
 			WantPresent: []runtime.Object{
-				makeChannelWithFinalizer(),
+				makeChannelWithFinalizerAndPCS(),
 			},
 			WantErrMsg: testErrorMessage,
 		},
 		{
 			Name: "K8s service creation fails",
 			InitialState: []runtime.Object{
-				makeChannelWithFinalizer(),
+				makeChannelWithFinalizerAndPCS(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			Mocks: controllertesting.Mocks{
@@ -375,14 +411,14 @@ func TestReconcile(t *testing.T) {
 			},
 			WantPresent: []runtime.Object{
 				// TODO: This should have a useful error message saying that the K8s Service failed.
-				makeChannelWithFinalizer(),
+				makeChannelWithFinalizerAndPCS(),
 			},
 			WantErrMsg: testErrorMessage,
 		},
 		{
 			Name: "Virtual service get fails",
 			InitialState: []runtime.Object{
-				makeChannelWithFinalizer(),
+				makeChannelWithFinalizerAndPCS(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -393,14 +429,14 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				// TODO: This should have a useful error message saying that the VirtualService
 				// failed.
-				makeChannelWithFinalizerAndAddress(),
+				makeChannelWithFinalizerAndPCSAndAddress(),
 			},
 			WantErrMsg: testErrorMessage,
 		},
 		{
 			Name: "Virtual service creation fails",
 			InitialState: []runtime.Object{
-				makeChannelWithFinalizer(),
+				makeChannelWithFinalizerAndPCS(),
 				makeK8sService(),
 				testcreds.MakeSecretWithCreds(),
 			},
@@ -410,14 +446,14 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				// TODO: This should have a useful error message saying that the VirtualService
 				// failed.
-				makeChannelWithFinalizerAndAddress(),
+				makeChannelWithFinalizerAndPCSAndAddress(),
 			},
 			WantErrMsg: testErrorMessage,
 		},
 		{
 			Name: "VirtualService already exists - not owned by Channel",
 			InitialState: []runtime.Object{
-				makeChannelWithFinalizer(),
+				makeChannelWithFinalizerAndPCS(),
 				makeK8sService(),
 				makeVirtualServiceNotOwnedByChannel(),
 				testcreds.MakeSecretWithCreds(),
@@ -427,9 +463,33 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
+			Name: "Error planning - subscriber missing UID",
+			InitialState: []runtime.Object{
+				makeChannelWithFinalizerAndSubscriberWithoutUID(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			WantPresent: []runtime.Object{
+				makeChannelWithFinalizerAndSubscriberWithoutUID(),
+			},
+			WantErrMsg: "empty reference UID: {&ObjectReference{Kind:,Namespace:,Name:,UID:,APIVersion:,ResourceVersion:,FieldPath:,} http://foo/ }",
+		},
+		{
+			Name: "Persist plan",
+			InitialState: []runtime.Object{
+				makeChannelWithFinalizerAndPossiblyOutdatedPlan(true),
+				testcreds.MakeSecretWithCreds(),
+			},
+			WantPresent: []runtime.Object{
+				makeChannelWithFinalizerAndPossiblyOutdatedPlan(false),
+			},
+			WantResult: reconcile.Result{
+				Requeue: true,
+			},
+		},
+		{
 			Name: "Create Topic - problem creating client",
 			InitialState: []runtime.Object{
-				makeChannelWithFinalizer(),
+				makeChannelWithFinalizerAndPCS(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -441,13 +501,13 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantPresent: []runtime.Object{
-				makeChannelWithFinalizerAndAddress(),
+				makeChannelWithFinalizerAndPCSAndAddress(),
 			},
 		},
 		{
 			Name: "Create Topic - problem checking existence",
 			InitialState: []runtime.Object{
-				makeChannelWithFinalizer(),
+				makeChannelWithFinalizerAndPCS(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -463,13 +523,13 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantPresent: []runtime.Object{
-				makeChannelWithFinalizerAndAddress(),
+				makeChannelWithFinalizerAndPCSAndAddress(),
 			},
 		},
 		{
 			Name: "Create Topic - topic already exists",
 			InitialState: []runtime.Object{
-				makeChannelWithFinalizer(),
+				makeChannelWithFinalizerAndPCS(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -490,7 +550,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Create Topic - error creating topic",
 			InitialState: []runtime.Object{
-				makeChannelWithFinalizer(),
+				makeChannelWithFinalizerAndPCS(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -504,13 +564,13 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantPresent: []runtime.Object{
-				makeChannelWithFinalizerAndAddress(),
+				makeChannelWithFinalizerAndPCSAndAddress(),
 			},
 		},
 		{
 			Name: "Create Topic - topic create succeeds",
 			InitialState: []runtime.Object{
-				makeChannelWithFinalizer(),
+				makeChannelWithFinalizerAndPCS(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -522,7 +582,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Create Subscriptions - problem checking exists",
 			InitialState: []runtime.Object{
-				makeChannelWithSubscribersAndFinalizer(),
+				makeChannelWithSubscribersAndFinalizerAndPCS(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -538,13 +598,13 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantPresent: []runtime.Object{
-				makeChannelWithSubscribersAndFinalizerAndAddress(),
+				makeChannelWithSubscribersAndFinalizerAndPCSAndAddress(),
 			},
 		},
 		{
 			Name: "Create Subscriptions - already exists",
 			InitialState: []runtime.Object{
-				makeChannelWithSubscribersAndFinalizer(),
+				makeChannelWithSubscribersAndFinalizerAndPCS(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -565,7 +625,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Create Subscriptions - create fails",
 			InitialState: []runtime.Object{
-				makeChannelWithSubscribersAndFinalizer(),
+				makeChannelWithSubscribersAndFinalizerAndPCS(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -579,13 +639,13 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantPresent: []runtime.Object{
-				makeChannelWithSubscribersAndFinalizerAndAddress(),
+				makeChannelWithSubscribersAndFinalizerAndPCSAndAddress(),
 			},
 		},
 		{
 			Name: "Create Subscriptions - create succeeds",
 			InitialState: []runtime.Object{
-				makeChannelWithSubscribersAndFinalizer(),
+				makeChannelWithSubscribersAndFinalizerAndPCS(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -597,7 +657,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Channel get for update fails",
 			InitialState: []runtime.Object{
-				makeChannelWithFinalizer(),
+				makeChannelWithFinalizerAndPCS(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -622,7 +682,7 @@ func TestReconcile(t *testing.T) {
 		}, {
 			Name: "Channel status update fails",
 			InitialState: []runtime.Object{
-				makeChannelWithFinalizer(),
+				makeChannelWithFinalizerAndPCS(),
 				makeK8sService(),
 				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
@@ -675,15 +735,15 @@ func makeChannel() *eventingv1alpha1.Channel {
 	return c
 }
 
-func makeChannelWithFinalizerAndAddress() *eventingv1alpha1.Channel {
-	c := makeChannelWithFinalizer()
+func makeChannelWithFinalizerAndPCSAndAddress() *eventingv1alpha1.Channel {
+	c := makeChannelWithFinalizerAndPCS()
 	c.Status.SetAddress(fmt.Sprintf("%s-channel.%s.svc.cluster.local", c.Name, c.Namespace))
 	return c
 }
 
 func makeReadyChannel() *eventingv1alpha1.Channel {
 	// Ready channels have the finalizer and are Addressable.
-	c := makeChannelWithFinalizerAndAddress()
+	c := makeChannelWithFinalizerAndPCSAndAddress()
 	c.Status.MarkProvisioned()
 	return c
 }
@@ -706,21 +766,15 @@ func makeChannelWithWrongProvisionerName() *eventingv1alpha1.Channel {
 	return c
 }
 
-func makeChannelWithSubscribers() *eventingv1alpha1.Channel {
-	c := makeChannel()
-	c.Spec.Subscribable = subscribers
+func makeChannelWithSubscribersAndFinalizerAndPCS() *eventingv1alpha1.Channel {
+	c := makeChannelWithFinalizerAndPCS()
+	addSubscribers(c, subscribers)
 	return c
 }
 
-func makeChannelWithSubscribersAndFinalizer() *eventingv1alpha1.Channel {
-	c := makeChannelWithSubscribers()
-	c.Finalizers = []string{finalizerName}
-	return c
-}
-
-func makeChannelWithSubscribersAndFinalizerAndAddress() *eventingv1alpha1.Channel {
-	c := makeChannelWithFinalizerAndAddress()
-	c.Spec.Subscribable = subscribers
+func makeChannelWithSubscribersAndFinalizerAndPCSAndAddress() *eventingv1alpha1.Channel {
+	c := makeChannelWithFinalizerAndPCSAndAddress()
+	addSubscribers(c, subscribers)
 	return c
 }
 
@@ -730,15 +784,35 @@ func makeChannelWithFinalizer() *eventingv1alpha1.Channel {
 	return c
 }
 
+func makeChannelWithFinalizerAndPCS() *eventingv1alpha1.Channel {
+	c := makeChannelWithFinalizer()
+	err := pubsubutil.SetInternalStatus(context.Background(), c, &pubsubutil.GcpPubSubChannelStatus{
+		Secret:     testcreds.Secret,
+		SecretKey:  testcreds.SecretKey,
+		GCPProject: gcpProject,
+		Topic:      topicName,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
 func makeReadyChannelWithSubscribers() *eventingv1alpha1.Channel {
 	c := makeReadyChannel()
-	c.Spec.Subscribable = subscribers
+	addSubscribers(c, subscribers)
 	return c
 }
 
 func makeDeletingChannel() *eventingv1alpha1.Channel {
-	c := makeChannelWithFinalizer()
+	c := makeChannelWithFinalizerAndPCS()
 	c.DeletionTimestamp = &deletionTime
+	return c
+}
+
+func makeDeletingChannelWithoutPCS() *eventingv1alpha1.Channel {
+	c := makeDeletingChannel()
+	c.Status.Internal = nil
 	return c
 }
 
@@ -748,9 +822,15 @@ func makeDeletingChannelWithoutFinalizer() *eventingv1alpha1.Channel {
 	return c
 }
 
+func makeDeletingChannelWithoutFinalizerOrPCS() *eventingv1alpha1.Channel {
+	c := makeDeletingChannelWithoutFinalizer()
+	c.Status.Internal = nil
+	return c
+}
+
 func makeDeletingChannelWithSubscribers() *eventingv1alpha1.Channel {
 	c := makeDeletingChannel()
-	c.Spec.Subscribable = subscribers
+	addSubscribers(c, subscribers)
 	return c
 }
 
@@ -758,6 +838,109 @@ func makeDeletingChannelWithSubscribersWithoutFinalizer() *eventingv1alpha1.Chan
 	c := makeDeletingChannelWithSubscribers()
 	c.Finalizers = nil
 	return c
+}
+
+func makeChannelWithBadInternalStatus() *eventingv1alpha1.Channel {
+	c := makeChannel()
+	c.Status.Internal = &runtime.RawExtension{
+		// The topic field is a string, so this will have an error during unmarshal.
+		Raw: []byte(`{"topic": 123}`),
+	}
+	return c
+}
+
+func makeChannelWithFinalizerAndSubscriberWithoutUID() *eventingv1alpha1.Channel {
+	c := makeChannelWithFinalizer()
+	c.Spec.Subscribable = &v1alpha1.Subscribable{
+		Subscribers: []v1alpha1.ChannelSubscriberSpec{
+			{
+				Ref: &corev1.ObjectReference{
+					UID: "",
+				},
+				SubscriberURI: "http://foo/",
+			},
+		},
+	}
+	return c
+}
+
+func makeChannelWithFinalizerAndPossiblyOutdatedPlan(outdated bool) *eventingv1alpha1.Channel {
+	c := makeChannelWithFinalizerAndPCS()
+	pcs, err := pubsubutil.GetInternalStatus(c)
+	if err != nil {
+		panic(err)
+	}
+
+	// Add all subs to the plan.
+	var plannedSubUIDs []types.UID
+	if outdated {
+		// If it is outdated, then the plan does not yet contain add-sub, which is present in the
+		// spec.
+		plannedSubUIDs = []types.UID{"keep-sub", "delete-sub"}
+	} else {
+		// If it is not outdated, then it still contains delete-sub (which isn't in the spec)
+		// because delete-sub needs to be retained so that it can be deleted on the subsequent
+		// reconcile.
+		plannedSubUIDs = []types.UID{"keep-sub", "add-sub", "delete-sub"}
+	}
+	for _, plannedSubUID := range plannedSubUIDs {
+		sub := pubsubutil.GcpPubSubSubscriptionStatus{
+			Ref: &corev1.ObjectReference{
+				Name: string(plannedSubUID),
+				UID:  plannedSubUID,
+			},
+			Subscription: "will-be-retained-in-the-plan-without-recalculation",
+		}
+		if plannedSubUID == "add-sub" {
+			sub.Subscription = "knative-eventing-channel_add-sub_add-sub"
+		}
+		pcs.Subscriptions = append(pcs.Subscriptions, sub)
+	}
+
+	err = pubsubutil.SetInternalStatus(context.Background(), c, pcs)
+	if err != nil {
+		panic(err)
+	}
+
+	// Overwrite the spec subs.
+	c.Spec.Subscribable = &v1alpha1.Subscribable{
+		Subscribers: []v1alpha1.ChannelSubscriberSpec{
+			{
+				Ref: &corev1.ObjectReference{
+					Name: "keep-sub",
+					UID:  "keep-sub",
+				},
+			},
+			{
+				Ref: &corev1.ObjectReference{
+					Name: "add-sub",
+					UID:  "add-sub",
+				},
+			},
+		},
+	}
+
+	return c
+}
+
+func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscribable) {
+	c.Spec.Subscribable = subscribable
+	pcs, err := pubsubutil.GetInternalStatus(c)
+	if err != nil {
+		panic(err)
+	}
+	for _, sub := range subscribable.Subscribers {
+		pcs.Subscriptions = append(pcs.Subscriptions, pubsubutil.GcpPubSubSubscriptionStatus{
+			Ref:           sub.Ref,
+			ReplyURI:      sub.ReplyURI,
+			SubscriberURI: sub.SubscriberURI,
+			Subscription:  "test-subscription-id",
+		})
+	}
+	err = pubsubutil.SetInternalStatus(context.Background(), c, pcs)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func makeK8sService() *corev1.Service {
@@ -793,12 +976,6 @@ func makeK8sService() *corev1.Service {
 			},
 		},
 	}
-}
-
-func makeK8sServiceNotOwnedByChannel() *corev1.Service {
-	svc := makeK8sService()
-	svc.OwnerReferences = nil
-	return svc
 }
 
 func makeVirtualService() *istiov1alpha3.VirtualService {

@@ -17,14 +17,21 @@
 package receiver
 
 import (
+	"context"
 	"errors"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
+
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"k8s.io/client-go/kubernetes/scheme"
+
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/fakepubsub"
 	"go.uber.org/zap"
 
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -33,8 +40,6 @@ import (
 )
 
 const (
-	gcpProject = "my-gcp-project"
-
 	validMessage = `{
     "cloudEventsVersion" : "0.1",
     "eventType" : "com.example.someevent",
@@ -50,21 +55,48 @@ const (
 }`
 )
 
+func init() {
+	// Add types to scheme.
+	eventingv1alpha1.AddToScheme(scheme.Scheme)
+}
+
 func TestReceiver(t *testing.T) {
 	testCases := map[string]struct {
 		initialState []runtime.Object
 		pubSubData   fakepubsub.CreatorData
 		expectedErr  bool
 	}{
+		"can't get channel": {
+			initialState: []runtime.Object{
+				testcreds.MakeSecretWithInvalidCreds(),
+			},
+			expectedErr: true,
+		},
+		"can't read status": {
+			initialState: []runtime.Object{
+				testcreds.MakeSecretWithInvalidCreds(),
+				makeChannelWithBadStatus(),
+			},
+			expectedErr: true,
+		},
+		"blank status": {
+			initialState: []runtime.Object{
+				testcreds.MakeSecretWithInvalidCreds(),
+				makeChannelWithBlankStatus(),
+			},
+			expectedErr: true,
+		},
 		"credential fails": {
 			initialState: []runtime.Object{
 				testcreds.MakeSecretWithInvalidCreds(),
+				makeChannel(),
 			},
 			expectedErr: true,
 		},
 		"PubSub client fails": {
 			initialState: []runtime.Object{
 				testcreds.MakeSecretWithCreds(),
+				makeChannel(),
 			},
 			pubSubData: fakepubsub.CreatorData{
 				ClientCreateErr: errors.New("testInducedError"),
@@ -74,6 +106,7 @@ func TestReceiver(t *testing.T) {
 		"Publish fails": {
 			initialState: []runtime.Object{
 				testcreds.MakeSecretWithCreds(),
+				makeChannel(),
 			},
 			pubSubData: fakepubsub.CreatorData{
 				ClientData: fakepubsub.ClientData{
@@ -89,21 +122,20 @@ func TestReceiver(t *testing.T) {
 		"Publish succeeds": {
 			initialState: []runtime.Object{
 				testcreds.MakeSecretWithCreds(),
+				makeChannel(),
 			},
 		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			_, mr := New(
+			mr, _ := New(
 				zap.NewNop(),
 				fake.NewFakeClient(tc.initialState...),
-				fakepubsub.Creator(tc.pubSubData),
-				gcpProject,
-				testcreds.Secret,
-				testcreds.SecretKey)
+				fakepubsub.Creator(tc.pubSubData))
 			resp := httptest.NewRecorder()
 			req := httptest.NewRequest("POST", "/", strings.NewReader(validMessage))
-			mr.HandleRequest(resp, req)
+			req.Host = "test-channel.test-namespace.channels.cluster.local"
+			mr.newMessageReceiver().HandleRequest(resp, req)
 			if tc.expectedErr {
 				if resp.Result().StatusCode >= 200 && resp.Result().StatusCode < 300 {
 					t.Errorf("Expected an error. Actual: %v", resp.Result())
@@ -115,4 +147,41 @@ func TestReceiver(t *testing.T) {
 			}
 		})
 	}
+}
+
+func makeChannel() *eventingv1alpha1.Channel {
+	c := &eventingv1alpha1.Channel{
+		TypeMeta: v1.TypeMeta{
+			APIVersion: "eventing.knative.dev/v1alpha1",
+			Kind:       "Channel",
+		},
+		ObjectMeta: v1.ObjectMeta{
+			Namespace: "test-namespace",
+			Name:      "test-channel",
+		},
+	}
+	pcs := &util.GcpPubSubChannelStatus{
+		GCPProject: "project",
+		Secret:     testcreds.Secret,
+		SecretKey:  testcreds.SecretKey,
+	}
+	if err := util.SetInternalStatus(context.Background(), c, pcs); err != nil {
+		panic(err)
+	}
+	return c
+}
+
+func makeChannelWithBlankStatus() *eventingv1alpha1.Channel {
+	c := makeChannel()
+	c.Status = eventingv1alpha1.ChannelStatus{}
+	return c
+}
+
+func makeChannelWithBadStatus() *eventingv1alpha1.Channel {
+	c := makeChannel()
+	c.Status.Internal = &runtime.RawExtension{
+		// SecretKey must be a string, not an integer, so this will fail during json.Unmarshal.
+		Raw: []byte(`{"secretKey": 123}`),
+	}
+	return c
 }

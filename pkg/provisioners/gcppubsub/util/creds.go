@@ -18,12 +18,14 @@ package util
 
 import (
 	"context"
+	"errors"
 	"fmt"
+
+	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/logging"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"cloud.google.com/go/pubsub"
-	"github.com/knative/pkg/logging"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2/google"
 	v1 "k8s.io/api/core/v1"
@@ -33,6 +35,9 @@ import (
 // GetCredentials gets GCP credentials from a secretRef. The credentials must be stored in JSON format
 // in the secretRef.
 func GetCredentials(ctx context.Context, client client.Client, secretRef *v1.ObjectReference, key string) (*google.Credentials, error) {
+	if secretRef == nil {
+		return nil, errors.New("nil secretRef")
+	}
 	secret := &v1.Secret{}
 	err := client.Get(ctx, types.NamespacedName{Namespace: secretRef.Namespace, Name: secretRef.Name}, secret)
 	if err != nil {

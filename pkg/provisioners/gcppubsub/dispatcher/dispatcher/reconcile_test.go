@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
+
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/knative/eventing/pkg/provisioners"
@@ -145,6 +147,20 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeChannelWithWrongProvisionerName(),
 			},
+		},
+		{
+			Name: "Unable to read Internal Status",
+			InitialState: []runtime.Object{
+				makeChannelWithBadInternalStatus(),
+			},
+			WantErrMsg: "json: cannot unmarshal number into Go struct field GcpPubSubChannelStatus.secretKey of type string",
+		},
+		{
+			Name: "Empty status.internal",
+			InitialState: []runtime.Object{
+				makeChannelWithBlankInternalStatus(),
+			},
+			WantErrMsg: "status.internal is blank",
 		},
 		{
 			Name: "Channel deleted - subscribers",
@@ -287,6 +303,28 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
+			Name: "Delete all old Subscriptions",
+			InitialState: []runtime.Object{
+				makeChannelWithFinalizer(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			OtherTestData: map[string]interface{}{
+				pscData: fakepubsub.CreatorData{
+					ClientData: fakepubsub.ClientData{
+						SubscriptionData: fakepubsub.SubscriptionData{
+							ReceiveErr: errors.New(testErrorMessage),
+						},
+					},
+				},
+				shouldBeCanceled: map[channelName]subscriptionName{
+					key(makeChannel()): {Namespace: cNamespace, Name: "old-sub"},
+				},
+			},
+			WantPresent: []runtime.Object{
+				makeChannelWithFinalizer(),
+			},
+		},
+		{
 			Name: "Channel update fails",
 			InitialState: []runtime.Object{
 				makeChannel(),
@@ -310,9 +348,6 @@ func TestReconcile(t *testing.T) {
 
 			dispatcher:          nil,
 			pubSubClientCreator: fakepubsub.Creator(tc.OtherTestData[pscData]),
-			defaultGcpProject:   gcpProject,
-			defaultSecret:       testcreds.Secret,
-			defaultSecretKey:    testcreds.SecretKey,
 
 			subscriptionsLock: sync.Mutex{},
 			subscriptions:     map[channelName]map[subscriptionName]context.CancelFunc{},
@@ -367,9 +402,10 @@ func TestReceiveFunc(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			sub := &v1alpha1.ChannelSubscriberSpec{
+			sub := util.GcpPubSubSubscriptionStatus{
 				SubscriberURI: "subscriber-uri",
 				ReplyURI:      "reply-uri",
+				Subscription:  "foo",
 			}
 			defaults := provisioners.DispatchDefaults{
 				Namespace: cNamespace,
@@ -414,6 +450,14 @@ func makeChannel() *eventingv1alpha1.Channel {
 	c.Status.InitializeConditions()
 	c.Status.SetAddress(fmt.Sprintf("%s-channel.%s.svc.cluster.local", c.Name, c.Namespace))
 	c.Status.MarkProvisioned()
+	pcs := &util.GcpPubSubChannelStatus{
+		GCPProject: gcpProject,
+		Secret:     testcreds.Secret,
+		SecretKey:  testcreds.SecretKey,
+	}
+	if err := util.SetInternalStatus(context.Background(), c, pcs); err != nil {
+		panic(err)
+	}
 	return c
 }
 
@@ -437,13 +481,13 @@ func makeChannelWithWrongProvisionerName() *eventingv1alpha1.Channel {
 
 func makeChannelWithSubscribers() *eventingv1alpha1.Channel {
 	c := makeChannel()
-	c.Spec.Subscribable = subscribers
+	addSubscribers(c, subscribers)
 	return c
 }
 
 func makeChannelWithSubscribersAndFinalizer() *eventingv1alpha1.Channel {
 	c := makeChannelWithFinalizer()
-	c.Spec.Subscribable = subscribers
+	addSubscribers(c, subscribers)
 	return c
 }
 
@@ -467,7 +511,7 @@ func makeDeletingChannelWithoutFinalizer() *eventingv1alpha1.Channel {
 
 func makeDeletingChannelWithSubscribers() *eventingv1alpha1.Channel {
 	c := makeDeletingChannel()
-	c.Spec.Subscribable = subscribers
+	addSubscribers(c, subscribers)
 	return c
 }
 
@@ -475,6 +519,40 @@ func makeDeletingChannelWithSubscribersWithoutFinalizer() *eventingv1alpha1.Chan
 	c := makeDeletingChannelWithSubscribers()
 	c.Finalizers = nil
 	return c
+}
+
+func makeChannelWithBadInternalStatus() *eventingv1alpha1.Channel {
+	c := makeChannel()
+	c.Status.Internal = &runtime.RawExtension{
+		// SecretKey must be a string, not an integer, so this will fail during json.Unmarshal.
+		Raw: []byte(`{"secretKey": 123}`),
+	}
+	return c
+}
+
+func makeChannelWithBlankInternalStatus() *eventingv1alpha1.Channel {
+	c := makeChannel()
+	c.Status.Internal = nil
+	return c
+}
+
+func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscribable) {
+	c.Spec.Subscribable = subscribable
+	pcs, err := util.GetInternalStatus(c)
+	if err != nil {
+		panic(err)
+	}
+	for _, sub := range subscribable.Subscribers {
+		pcs.Subscriptions = append(pcs.Subscriptions, util.GcpPubSubSubscriptionStatus{
+			Ref:           sub.Ref,
+			ReplyURI:      sub.ReplyURI,
+			SubscriberURI: sub.SubscriberURI,
+		})
+	}
+	err = util.SetInternalStatus(context.Background(), c, pcs)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func errorGettingChannel() []controllertesting.MockGet {

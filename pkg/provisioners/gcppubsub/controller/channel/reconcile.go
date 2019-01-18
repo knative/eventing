@@ -18,18 +18,20 @@ package channel
 
 import (
 	"context"
+	"fmt"
 
-	eventduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/controller"
 	util "github.com/knative/eventing/pkg/provisioners"
 	ccpcontroller "github.com/knative/eventing/pkg/provisioners/gcppubsub/controller/clusterchannelprovisioner"
 	pubsubutil "github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
-	"github.com/knative/pkg/logging"
+	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/logging"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2/google"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -37,6 +39,13 @@ import (
 
 const (
 	finalizerName = controllerAgentName
+)
+
+type persistence int
+
+const (
+	persistStatus persistence = iota
+	noNeedToPersist
 )
 
 // reconciler reconciles GCP-PubSub Channels by creating the K8s Service and Istio VirtualService
@@ -73,7 +82,7 @@ func (r *reconciler) InjectClient(c client.Client) error {
 
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	ctx := context.TODO()
-	ctx = logging.WithLogger(ctx, r.logger.With(zap.Any("request", request)).Sugar())
+	ctx = logging.WithLogger(ctx, r.logger.With(zap.Any("request", request)))
 
 	c := &eventingv1alpha1.Channel{}
 	err := r.client.Get(ctx, request.NamespacedName, c)
@@ -140,6 +149,15 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	// 3. The GCP PubSub Topic (one for the Channel).
 	// 4. The GCP PubSub Subscriptions (one for each Subscriber of the Channel).
 
+	// First we will plan all the names out for steps 3 and 4 persist them to status.internal. Then, on a
+	// subsequent reconcile, we manipulate all the GCP resources in steps 3 and 4.
+
+	originalPCS, err := pubsubutil.GetInternalStatus(c)
+	if err != nil {
+		logging.FromContext(ctx).Error("Unable to read the status.internal", zap.Error(err))
+		return false, err
+	}
+
 	// Regardless of what we are going to do, we need GCP credentials to do it.
 	gcpCreds, err := pubsubutil.GetCredentials(ctx, r.client, r.defaultSecret, r.defaultSecretKey)
 	if err != nil {
@@ -149,11 +167,16 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 	if c.DeletionTimestamp != nil {
 		// K8s garbage collection will delete the K8s service and VirtualService for this channel.
-		err = r.deleteSubscriptions(ctx, c, gcpCreds, r.defaultGcpProject)
+		// All the subs should be deleted.
+		subsToSync := &syncSubs{
+			subsToDelete: originalPCS.Subscriptions,
+		}
+		// Topic is nil because it is only used for sub creation, not deletion.
+		err = r.syncSubscriptions(ctx, originalPCS, gcpCreds, nil, subsToSync)
 		if err != nil {
 			return false, err
 		}
-		err = r.deleteTopic(ctx, c, gcpCreds, r.defaultGcpProject)
+		err = r.deleteTopic(ctx, originalPCS, gcpCreds)
 		if err != nil {
 			return false, err
 		}
@@ -168,6 +191,22 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		return true, nil
 	}
 
+	// We don't want to leak any external resources, so we will generate all the names we will use
+	// and persist them to our status before creating anything. That way during delete we know
+	// everything to look for. In fact, all manipulations of GCP resources will be done looking
+	// only at the status, not the spec.
+	persist, plannedPCS, subsToSync, err := r.planGcpResources(ctx, c, originalPCS)
+	if err != nil {
+		return false, err
+	}
+	if persist == persistStatus {
+		if err = pubsubutil.SetInternalStatus(ctx, c, plannedPCS); err != nil {
+			return false, err
+		}
+		// Persist this and run another reconcile loop to enact it.
+		return true, nil
+	}
+
 	svc, err := r.createK8sService(ctx, c)
 	if err != nil {
 		return false, err
@@ -178,18 +217,113 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		return false, err
 	}
 
-	topic, err := r.createTopic(ctx, c, gcpCreds, r.defaultGcpProject)
+	topic, err := r.createTopic(ctx, plannedPCS, gcpCreds)
 	if err != nil {
 		return false, err
 	}
 
-	err = r.createSubscriptions(ctx, c, gcpCreds, r.defaultGcpProject, topic)
+	err = r.syncSubscriptions(ctx, plannedPCS, gcpCreds, topic, subsToSync)
 	if err != nil {
+		return false, err
+	}
+	// Now that the subs have synced successfully, remove the old ones from the status.
+	plannedPCS.Subscriptions = subsToSync.subsToCreate
+	if err = pubsubutil.SetInternalStatus(ctx, c, plannedPCS); err != nil {
 		return false, err
 	}
 
 	c.Status.MarkProvisioned()
 	return false, nil
+}
+
+// planGcpResources creates the plan for every resource that needs to be created outside of the
+// cluster. The plan is returned as both the GcpPubSubChannelStatus to save to the Channel object,
+// as well as a list of the Subscriptions to create and a list of the Subscriptions to delete in the
+// form of syncSubs. syncSubs should be used to drive the reconciliation of Subscriptions for the
+// remainder of this reconcile loop (it contains a superset of the information in the status).
+func (r *reconciler) planGcpResources(ctx context.Context, c *eventingv1alpha1.Channel, originalPCS *pubsubutil.GcpPubSubChannelStatus) (persistence, *pubsubutil.GcpPubSubChannelStatus, *syncSubs, error) {
+	persist := noNeedToPersist
+	subsToSync := &syncSubs{
+		subsToCreate: make([]pubsubutil.GcpPubSubSubscriptionStatus, 0),
+		subsToDelete: make([]pubsubutil.GcpPubSubSubscriptionStatus, 0),
+	}
+
+	topicName := originalPCS.Topic
+	if topicName == "" {
+		topicName = generateTopicName(c)
+	}
+	// Everything except the subscriptions.
+	newPCS := &pubsubutil.GcpPubSubChannelStatus{
+		// TODO Allow arguments to set the secret and project.
+		Secret:     r.defaultSecret,
+		SecretKey:  r.defaultSecretKey,
+		GCPProject: r.defaultGcpProject,
+		Topic:      topicName,
+	}
+	// Note that when we allow Channels to provide arguments for GCPProject and Topic, we probably
+	// won't want to let them change once the GCP resources have been created. So the following
+	// logic to detect a change will be insufficient.
+	if !equality.Semantic.DeepEqual(originalPCS.Secret, newPCS.Secret) || originalPCS.SecretKey != newPCS.SecretKey || originalPCS.GCPProject != newPCS.GCPProject || originalPCS.Topic != newPCS.Topic {
+		persist = persistStatus
+	}
+
+	// We are going to correlate subscriptions from the spec and the existing status. We use the
+	// Subscription's UID to correlate between the two lists. If for any reason we can't get the UID
+	// of a Subscription in the spec, then immediately error (another option would be to do all the
+	// work we know we need to do, but then we need to make sure we don't delete anything as it may
+	// match the unknown Subscription). We always expect to see the Subscription UID in the status
+	// because this is the only code that writes out the status message and won't do it unless the
+	// UID is present. But, if for some reason its not there, ignore that entry and allow the others
+	// to process normally.
+
+	existingSubs := make(map[types.UID]pubsubutil.GcpPubSubSubscriptionStatus, len(originalPCS.Subscriptions))
+	for _, existingSub := range originalPCS.Subscriptions {
+		// I don't think this can ever happen, but let's just be sure.
+		if existingSub.Ref != nil && existingSub.Ref.UID != "" {
+			existingSubs[existingSub.Ref.UID] = existingSub
+		}
+	}
+	if c.Spec.Subscribable != nil {
+		for _, subscriber := range c.Spec.Subscribable.Subscribers {
+			if subscriber.Ref == nil || subscriber.Ref.UID == "" {
+				return noNeedToPersist, nil, nil, fmt.Errorf("empty reference UID: %v", subscriber)
+			}
+			// Have we already synced this Subscription before? If so, reuse its existing
+			// subscription. Everything else is allowed to change to the new values and doesn't need
+			// to be persisted before processing (as it only affects the dispatcher, not anything in
+			// GCP).
+			var subscription string
+			if existingSub, present := existingSubs[subscriber.Ref.UID]; present {
+				delete(existingSubs, subscriber.Ref.UID)
+				subscription = existingSub.Subscription
+			} else {
+				persist = persistStatus
+				subscription = generateSubName(&subscriber)
+			}
+			subsToSync.subsToCreate = append(subsToSync.subsToCreate, pubsubutil.GcpPubSubSubscriptionStatus{
+				Ref:           subscriber.Ref,
+				SubscriberURI: subscriber.SubscriberURI,
+				ReplyURI:      subscriber.ReplyURI,
+				Subscription:  subscription,
+			})
+		}
+	}
+
+	// Any remaining existingSubs are no longer in the Channel spec, so should be deleted.
+	for _, existingSub := range existingSubs {
+		subsToSync.subsToDelete = append(subsToSync.subsToDelete, existingSub)
+	}
+
+	// Generate the subs for the status by copying all the subs to create and all the subs to
+	// delete.
+	newPCS.Subscriptions = make([]pubsubutil.GcpPubSubSubscriptionStatus, 0, len(subsToSync.subsToCreate)+len(subsToSync.subsToDelete))
+	for _, sub := range subsToSync.subsToCreate {
+		newPCS.Subscriptions = append(newPCS.Subscriptions, sub)
+	}
+	for _, sub := range subsToSync.subsToDelete {
+		newPCS.Subscriptions = append(newPCS.Subscriptions, sub)
+	}
+	return persist, newPCS, subsToSync, nil
 }
 
 func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.Channel) (*v1.Service, error) {
@@ -212,13 +346,14 @@ func (r *reconciler) createVirtualService(ctx context.Context, c *eventingv1alph
 	return nil
 }
 
-func (r *reconciler) createTopic(ctx context.Context, c *eventingv1alpha1.Channel, gcpCreds *google.Credentials, gcpProject string) (pubsubutil.PubSubTopic, error) {
-	psc, err := r.pubSubClientCreator(ctx, gcpCreds, gcpProject)
+func (r *reconciler) createTopic(ctx context.Context, plannedPCS *pubsubutil.GcpPubSubChannelStatus, gcpCreds *google.Credentials) (pubsubutil.PubSubTopic, error) {
+	psc, err := r.pubSubClientCreator(ctx, gcpCreds, plannedPCS.GCPProject)
 	if err != nil {
 		logging.FromContext(ctx).Info("Unable to create PubSub client", zap.Error(err))
 		return nil, err
 	}
-	topic := psc.Topic(pubsubutil.GenerateTopicName(c.Namespace, c.Name))
+
+	topic := psc.Topic(plannedPCS.Topic)
 	exists, err := topic.Exists(ctx)
 	if err != nil {
 		logging.FromContext(ctx).Info("Unable to check Topic existence", zap.Error(err))
@@ -236,13 +371,18 @@ func (r *reconciler) createTopic(ctx context.Context, c *eventingv1alpha1.Channe
 	return createdTopic, nil
 }
 
-func (r *reconciler) deleteTopic(ctx context.Context, c *eventingv1alpha1.Channel, gcpCreds *google.Credentials, gcpProject string) error {
-	psc, err := r.pubSubClientCreator(ctx, gcpCreds, gcpProject)
+func (r *reconciler) deleteTopic(ctx context.Context, pcs *pubsubutil.GcpPubSubChannelStatus, gcpCreds *google.Credentials) error {
+	if pcs.Topic == "" {
+		// The topic was never planned, let alone created, so there is nothing to delete.
+		return nil
+	}
+	psc, err := r.pubSubClientCreator(ctx, gcpCreds, pcs.GCPProject)
 	if err != nil {
 		logging.FromContext(ctx).Info("Unable to create PubSubClient", zap.Error(err))
 		return err
 	}
-	topic := psc.Topic(pubsubutil.GenerateTopicName(c.Namespace, c.Name))
+
+	topic := psc.Topic(pcs.Topic)
 	exists, err := topic.Exists(ctx)
 	if err != nil {
 		logging.FromContext(ctx).Info("Unable to check if Topic exists", zap.Error(err))
@@ -260,25 +400,37 @@ func (r *reconciler) deleteTopic(ctx context.Context, c *eventingv1alpha1.Channe
 	return nil
 }
 
-func (r *reconciler) createSubscriptions(ctx context.Context, c *eventingv1alpha1.Channel, gcpCreds *google.Credentials, gcpProject string, topic pubsubutil.PubSubTopic) error {
-	if c.Spec.Subscribable != nil {
-		for _, sub := range c.Spec.Subscribable.Subscribers {
-			_, err := r.createSubscription(ctx, gcpCreds, gcpProject, topic, &sub)
-			if err != nil {
-				logging.FromContext(ctx).Info("Unable to create subscribers", zap.Error(err), zap.Any("channelSubscriber", sub))
-				return err
-			}
+type syncSubs struct {
+	subsToCreate []pubsubutil.GcpPubSubSubscriptionStatus
+	subsToDelete []pubsubutil.GcpPubSubSubscriptionStatus
+}
+
+func (r *reconciler) syncSubscriptions(ctx context.Context, plannedPCS *pubsubutil.GcpPubSubChannelStatus, gcpCreds *google.Credentials, topic pubsubutil.PubSubTopic, subsToSync *syncSubs) error {
+	for _, subToCreate := range subsToSync.subsToCreate {
+		_, err := r.createSubscription(ctx, gcpCreds, plannedPCS.GCPProject, topic, subToCreate.Subscription)
+		if err != nil {
+			logging.FromContext(ctx).Error("Unable to create subscriber", zap.Error(err), zap.Any("channelSubscriber", subToCreate))
+			return err
 		}
 	}
+
+	for _, subToDelete := range subsToSync.subsToDelete {
+		err := r.deleteSubscription(ctx, gcpCreds, plannedPCS.GCPProject, &subToDelete)
+		if err != nil {
+			logging.FromContext(ctx).Error("Unable to delete subscriber", zap.Error(err), zap.Any("channelSubscriber", subToDelete))
+			return err
+		}
+	}
+
 	return nil
 }
 
-func (r *reconciler) createSubscription(ctx context.Context, gcpCreds *google.Credentials, gcpProject string, topic pubsubutil.PubSubTopic, cs *eventduck.ChannelSubscriberSpec) (pubsubutil.PubSubSubscription, error) {
+func (r *reconciler) createSubscription(ctx context.Context, gcpCreds *google.Credentials, gcpProject string, topic pubsubutil.PubSubTopic, subName string) (pubsubutil.PubSubSubscription, error) {
 	psc, err := r.pubSubClientCreator(ctx, gcpCreds, gcpProject)
 	if err != nil {
 		return nil, err
 	}
-	sub := psc.SubscriptionInProject(pubsubutil.GenerateSubName(cs), gcpProject)
+	sub := psc.SubscriptionInProject(subName, gcpProject)
 	exists, err := sub.Exists(ctx)
 	if err != nil {
 		return nil, err
@@ -297,25 +449,12 @@ func (r *reconciler) createSubscription(ctx context.Context, gcpCreds *google.Cr
 	return createdSub, err
 }
 
-func (r *reconciler) deleteSubscriptions(ctx context.Context, c *eventingv1alpha1.Channel, gcpCreds *google.Credentials, gcpProject string) error {
-	if c.Spec.Subscribable != nil {
-		for _, sub := range c.Spec.Subscribable.Subscribers {
-			err := r.deleteSubscription(ctx, gcpCreds, gcpProject, &sub)
-			if err != nil {
-				logging.FromContext(ctx).Info("Unable to create subscribers", zap.Error(err), zap.Any("channelSubscriber", sub))
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (r *reconciler) deleteSubscription(ctx context.Context, gcpCreds *google.Credentials, gcpProject string, cs *eventduck.ChannelSubscriberSpec) error {
+func (r *reconciler) deleteSubscription(ctx context.Context, gcpCreds *google.Credentials, gcpProject string, subStatus *pubsubutil.GcpPubSubSubscriptionStatus) error {
 	psc, err := r.pubSubClientCreator(ctx, gcpCreds, gcpProject)
 	if err != nil {
 		return err
 	}
-	sub := psc.SubscriptionInProject(pubsubutil.GenerateSubName(cs), gcpProject)
+	sub := psc.SubscriptionInProject(subStatus.Subscription, gcpProject)
 	exists, err := sub.Exists(ctx)
 	if err != nil {
 		return err

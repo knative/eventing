@@ -192,15 +192,6 @@ spec:
       containers:
         - name: dispatcher
           image: github.com/knative/eventing/pkg/provisioners/gcppubsub/dispatcher/cmd
-          env:
-            - name: DEFAULT_GCP_PROJECT
-              value: REPLACE_WITH_GCP_PROJECT
-            - name: DEFAULT_SECRET_NAMESPACE
-              value: knative-eventing
-            - name: DEFAULT_SECRET_NAME
-              value: gcppubsub-channel-key
-            - name: DEFAULT_SECRET_KEY
-              value: key.json
 
 ---
 

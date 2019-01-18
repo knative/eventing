@@ -14,23 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package util
+package channel
 
 import (
 	"testing"
 
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // These tests are here so that any changes made to the generation algorithm are noticed. Because
-// the name is assumed to be stable and is calculated in both the controller and the dispatcher.
-// TODO Generate the names in the controller and pass them through the Channel's status to the
-// dispatcher.
+// the name is assumed to be stable across controller runs.
 
 func TestGenerateTopicName(t *testing.T) {
-	expected := "knative-eventing-channel_channel-namespace_channel-name"
-	actual := GenerateTopicName("channel-namespace", "channel-name")
+	expected := "knative-eventing-channel_channel-name_channel-uid"
+	actual := generateTopicName(&eventingv1alpha1.Channel{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "channel-name",
+			UID:  "channel-uid",
+		},
+	})
 	if expected != actual {
 		t.Errorf("Expected '%s'. Actual '%s'", expected, actual)
 	}
@@ -38,7 +43,7 @@ func TestGenerateTopicName(t *testing.T) {
 
 func TestGenerateSubName(t *testing.T) {
 	expected := "knative-eventing-channel_sub-name_sub-uid"
-	actual := GenerateSubName(&v1alpha1.ChannelSubscriberSpec{
+	actual := generateSubName(&v1alpha1.ChannelSubscriberSpec{
 		Ref: &v1.ObjectReference{
 			Name: "sub-name",
 			UID:  "sub-uid",

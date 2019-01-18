@@ -26,7 +26,6 @@ import (
 	"github.com/knative/eventing/pkg/provisioners"
 	pubsubutil "github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
 	"go.uber.org/zap"
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -42,7 +41,7 @@ const (
 // New returns a Controller that represents the dispatcher portion (messages from GCP PubSub are
 // sent into the cluster) of the GCP PubSub dispatcher. We use a reconcile loop to watch all
 // Channels and notice changes to them.
-func New(mgr manager.Manager, logger *zap.Logger, defaultGcpProject string, defaultSecret *corev1.ObjectReference, defaultSecretKey string, stopCh <-chan struct{}) (controller.Controller, error) {
+func New(mgr manager.Manager, logger *zap.Logger, stopCh <-chan struct{}) (controller.Controller, error) {
 	// reconcileChan is used when the dispatcher itself needs to force reconciliation of a Channel.
 	reconcileChan := make(chan event.GenericEvent)
 
@@ -55,9 +54,6 @@ func New(mgr manager.Manager, logger *zap.Logger, defaultGcpProject string, defa
 		dispatcher:    provisioners.NewMessageDispatcher(logger.Sugar()),
 		reconcileChan: reconcileChan,
 
-		defaultGcpProject:   defaultGcpProject,
-		defaultSecret:       defaultSecret,
-		defaultSecretKey:    defaultSecretKey,
 		pubSubClientCreator: pubsubutil.GcpPubSubClientCreator,
 
 		subscriptionsLock: sync.Mutex{},
@@ -91,7 +87,11 @@ func New(mgr manager.Manager, logger *zap.Logger, defaultGcpProject string, defa
 	src := &source.Channel{
 		Source: reconcileChan,
 	}
-	src.InjectStopChannel(stopCh)
+	err = src.InjectStopChannel(stopCh)
+	if err != nil {
+		logger.Error("Unable to inject the stop channel", zap.Error(err))
+		return nil, err
+	}
 	err = c.Watch(src, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		logger.Error("Unable to watch the reconcile Channel", zap.Error(err))
