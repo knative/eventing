@@ -866,7 +866,7 @@ func makeChannelWithFinalizerAndSubscriberWithoutUID() *eventingv1alpha1.Channel
 
 func makeChannelWithFinalizerAndPossiblyOutdatedPlan(outdated bool) *eventingv1alpha1.Channel {
 	c := makeChannelWithFinalizerAndPCS()
-	pcs, err := pubsubutil.GetInternalStatus(context.Background(), c)
+	pcs, err := pubsubutil.GetInternalStatus(c)
 	if err != nil {
 		panic(err)
 	}
@@ -925,7 +925,7 @@ func makeChannelWithFinalizerAndPossiblyOutdatedPlan(outdated bool) *eventingv1a
 
 func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscribable) {
 	c.Spec.Subscribable = subscribable
-	pcs, err := pubsubutil.GetInternalStatus(context.Background(), c)
+	pcs, err := pubsubutil.GetInternalStatus(c)
 	if err != nil {
 		panic(err)
 	}

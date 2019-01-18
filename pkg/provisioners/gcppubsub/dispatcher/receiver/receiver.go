@@ -67,8 +67,9 @@ func (r *Receiver) sendEventToTopic(channel provisioners.ChannelReference, messa
 		logging.FromContext(ctx).Info("Unable to get the Channel", zap.Error(err), zap.Any("channelRef", channel))
 		return err
 	}
-	pcs, err := util.GetInternalStatus(ctx, c)
+	pcs, err := util.GetInternalStatus(c)
 	if err != nil {
+		logging.FromContext(ctx).Error("Unable to read status.internal", zap.Error(err), zap.Any("channel", c))
 		return err
 	} else if pcs.IsEmpty() {
 		logging.FromContext(ctx).Info("status.internal is blank")

@@ -123,7 +123,7 @@ func TestReadInternalStatus(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			c := &v1alpha1.Channel{}
 			c.Status.Internal = tc.internal
-			pcs, err := GetInternalStatus(context.Background(), c)
+			pcs, err := GetInternalStatus(c)
 			if tc.err != (err != nil) {
 				t.Fatalf("Unexpected error. Expected %v. Actual %v", tc.err, err)
 			}
@@ -161,7 +161,7 @@ func TestInternalStatusRoundTrip(t *testing.T) {
 			if err != nil {
 				t.Errorf("Unexpected error saving internal status. %v", err)
 			}
-			pcs, err := GetInternalStatus(context.Background(), c)
+			pcs, err := GetInternalStatus(c)
 			if err != nil {
 				t.Errorf("Unexpected error reading internal status. %v", err)
 			}

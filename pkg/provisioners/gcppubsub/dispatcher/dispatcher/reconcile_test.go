@@ -538,7 +538,7 @@ func makeChannelWithBlankInternalStatus() *eventingv1alpha1.Channel {
 
 func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscribable) {
 	c.Spec.Subscribable = subscribable
-	pcs, err := util.GetInternalStatus(context.Background(), c)
+	pcs, err := util.GetInternalStatus(c)
 	if err != nil {
 		panic(err)
 	}

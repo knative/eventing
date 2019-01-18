@@ -102,7 +102,7 @@ func SetInternalStatus(ctx context.Context, c *eventingv1alpha1.Channel, pcs *Gc
 // GetInternalStatus reads GcpPubSubChannelStatus from the given Channel, which should only be one whose
 // provisioner is gcp-pubsub. If the internal status is not set, then the empty GcpPubSubChannelStatus is
 // returned.
-func GetInternalStatus(ctx context.Context, c *eventingv1alpha1.Channel) (*GcpPubSubChannelStatus, error) {
+func GetInternalStatus(c *eventingv1alpha1.Channel) (*GcpPubSubChannelStatus, error) {
 	if c.Status.Internal == nil {
 		return &GcpPubSubChannelStatus{}, nil
 	}
@@ -112,7 +112,6 @@ func GetInternalStatus(ctx context.Context, c *eventingv1alpha1.Channel) (*GcpPu
 	}
 	var pcs GcpPubSubChannelStatus
 	if err := json.Unmarshal(bytes, &pcs); err != nil {
-		logging.FromContext(ctx).Error("Unable to parse status.internal", zap.Error(err))
 		return nil, err
 	}
 	return &pcs, nil

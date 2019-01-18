@@ -152,7 +152,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	// First we will plan all the names out for steps 3 and 4 persist them to status.internal. Then, on a
 	// subsequent reconcile, we manipulate all the GCP resources in steps 3 and 4.
 
-	originalPCS, err := pubsubutil.GetInternalStatus(ctx, c)
+	originalPCS, err := pubsubutil.GetInternalStatus(c)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to read the status.internal", zap.Error(err))
 		return false, err
