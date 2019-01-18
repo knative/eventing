@@ -166,7 +166,7 @@ func Subscription(name string, namespace string, channel *corev1.ObjectReference
 	}
 }
 
-// CloudEvent specifices the arguments for a CloudEvent sent by the sendevent
+// CloudEvent specifies the arguments for a CloudEvent sent by the sendevent
 // binary.
 type CloudEvent struct {
 	ID       string
