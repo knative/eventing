@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -988,6 +987,9 @@ var testCases = []controllertesting.TestCase{
 			// out.
 			//getChannelWithOtherSubscription(),
 		},
+		WantEvent: []corev1.Event{
+			{Reason: "PhysicalChannelSyncFailed", Type: corev1.EventTypeWarning,},
+		},
 		Objects: []runtime.Object{
 			// Source channel
 			&unstructured.Unstructured{
@@ -1019,11 +1021,11 @@ var testCases = []controllertesting.TestCase{
 }
 
 func TestAllCases(t *testing.T) {
-	recorder := record.NewBroadcaster().NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
 	for _, tc := range testCases {
 		c := tc.GetClient()
 		dc := tc.GetDynamicClient()
+		recorder := tc.GetEventRecorder()
 
 		r := &reconciler{
 			client:        c,
@@ -1033,7 +1035,7 @@ func TestAllCases(t *testing.T) {
 		}
 		tc.ReconcileKey = fmt.Sprintf("%s/%s", testNS, subscriptionName)
 		tc.IgnoreTimes = true
-		t.Run(tc.Name, tc.Runner(t, r, c))
+		t.Run(tc.Name, tc.Runner(t, r, c, recorder))
 	}
 }
 
