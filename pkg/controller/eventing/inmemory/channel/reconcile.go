@@ -91,6 +91,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	err = r.reconcile(ctx, c)
 	if err != nil {
 		logger.Info("Error reconciling Channel", zap.Error(err))
+		r.recorder.Eventf(c, corev1.EventTypeWarning, "ChannelReconcileFailed", "Failed to reconcile Channel: %v", err)
 		// Note that we do not return the error here, because we want to update the Status
 		// regardless of the error.
 	}
@@ -124,9 +125,11 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 	// We always need to sync the Channel config, so do it first.
 	if err := r.syncChannelConfig(ctx); err != nil {
-		logger.Info("Error updating syncing the Channel config", zap.Error(err))
+		logger.Info("Error syncing the Channel config", zap.Error(err))
+		r.recorder.Eventf(c, corev1.EventTypeWarning, "ChannelConfigSyncFailed", "Failed to sync Channel config: %v", err)
 		return err
 	}
+	r.recorder.Eventf(c, corev1.EventTypeNormal, "ChannelConfigSynced", "Channel config synced")
 
 	if c.DeletionTimestamp != nil {
 		// K8s garbage collection will delete the K8s service and VirtualService for this channel.
@@ -140,17 +143,22 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	svc, err := util.CreateK8sService(ctx, r.client, c)
 	if err != nil {
 		logger.Info("Error creating the Channel's K8s Service", zap.Error(err))
+		r.recorder.Eventf(c, corev1.EventTypeWarning, "K8sServiceCreateFailed", "Failed to create Channel's K8s Service: %v", err)
 		return err
 	}
 	c.Status.SetAddress(controller.ServiceHostName(svc.Name, svc.Namespace))
+	r.recorder.Eventf(c, corev1.EventTypeNormal, "K8sServiceCreated", "Channel's K8s Service created: %q", svc.Name)
 
-	_, err = util.CreateVirtualService(ctx, r.client, c, svc)
+	virtualService, err := util.CreateVirtualService(ctx, r.client, c, svc)
 	if err != nil {
 		logger.Info("Error creating the Virtual Service for the Channel", zap.Error(err))
+		r.recorder.Eventf(c, corev1.EventTypeWarning, "VirtualServiceCreateFailed", "Failed to create Virtual Service for the Channel: %v", err)
 		return err
 	}
+	r.recorder.Eventf(c, corev1.EventTypeNormal, "VirtualServiceCreated", "Virtual Service for the Channel created: %q", virtualService.Name)
 
 	c.Status.MarkProvisioned()
+	r.recorder.Eventf(c, corev1.EventTypeNormal, "ChannelProvisioned", "Channel Provisioned")
 	return nil
 }
 

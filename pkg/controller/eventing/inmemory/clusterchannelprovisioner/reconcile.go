@@ -96,6 +96,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	err = r.reconcile(ctx, ccp)
 	if err != nil {
 		logger.Info("Error reconciling ClusterChannelProvisioner", zap.Error(err))
+		r.recorder.Eventf(ccp, corev1.EventTypeWarning, "ReconcileClusterChannelProvisionerFailed", "Failed to reconcile ClusterChannelProvisioner: %v", err)
 		// Note that we do not return the error here, because we want to update the Status
 		// regardless of the error.
 	}
@@ -140,8 +141,10 @@ func (r *reconciler) reconcile(ctx context.Context, ccp *eventingv1alpha1.Cluste
 
 	if err != nil {
 		logger.Info("Error creating the ClusterChannelProvisioner's K8s Service", zap.Error(err))
+		r.recorder.Eventf(ccp, corev1.EventTypeWarning, "CreateK8sServiceFailed", "Failed to create ClusterChannelProvisioner's K8s Service: %v", err)
 		return err
 	}
+	r.recorder.Eventf(ccp, corev1.EventTypeNormal, "K8sServiceCreated", "ClusterChannelProvisioner's K8s Service created: %q", svc.Name)
 
 	// Check if this ClusterChannelProvisioner is the owner of the K8s service.
 	if !metav1.IsControlledBy(svc, ccp) {
@@ -153,10 +156,12 @@ func (r *reconciler) reconcile(ctx context.Context, ccp *eventingv1alpha1.Cluste
 	err = r.deleteOldDispatcherService(ctx, ccp)
 	if err != nil {
 		logger.Info("Error deleting the old ClusterChannelProvisioner's K8s Service", zap.Error(err))
+		r.recorder.Eventf(ccp, corev1.EventTypeWarning, "DeleteOldK8sServiceFailed", "Failed to delete the old ClusterChannelProvisioner's K8s Service: %v", err)
 		return err
 	}
 
 	ccp.Status.MarkReady()
+	r.recorder.Eventf(ccp, corev1.EventTypeNormal, "ClusterChannelProvisionerReady", "ClusterChannelProvisioner ready: %q", ccp.Name)
 	return nil
 }
 
