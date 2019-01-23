@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Copyright 2018 The Knative Authors
 #
@@ -22,10 +22,11 @@ function upload_test_images() {
   local docker_tag=$1
 
   for image_dir in ${image_dirs}; do
-      local image="github.com/knative/eventing/test/test_images/$(basename ${image_dir})"
-      ko publish -P ${image}
+      local image_name="$(basename ${image_dir})"
+      local image="github.com/knative/eventing/test/test_images/${image_name}"
+      ko publish -B ${image}
       if [ -n "$docker_tag" ]; then
-          image=$KO_DOCKER_REPO/${image}
+          image=$KO_DOCKER_REPO/${image_name}
           local digest=$(gcloud container images list-tags --filter="tags:latest" --format='get(digest)' ${image})
           echo "Tagging ${image}@${digest} with $docker_tag"
           gcloud -q container images add-tag ${image}@${digest} ${image}:$docker_tag
