@@ -40,6 +40,17 @@ var (
 	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
 	// truncates to seconds to match the loss of precision during serialization.
 	deletionTime = metav1.Now().Rfc3339Copy()
+
+	// map of events to set test cases' expectations easier
+	events = map[string]corev1.Event{
+		subscriptionReconciled:         {Reason: subscriptionReconciled, Type: corev1.EventTypeNormal},
+		subscriptionReconcileFailed:    {Reason: subscriptionReconcileFailed, Type: corev1.EventTypeWarning},
+		subscriptionUpdateStatusFailed: {Reason: subscriptionUpdateStatusFailed, Type: corev1.EventTypeWarning},
+		physicalChannelSyncFailed:      {Reason: physicalChannelSyncFailed, Type: corev1.EventTypeWarning},
+		objectReferenceFetchFailed:     {Reason: objectReferenceFetchFailed, Type: corev1.EventTypeWarning},
+		subscriberResolveFailed:        {Reason: subscriberResolveFailed, Type: corev1.EventTypeWarning},
+		resultResolveFailed:            {Reason: resultResolveFailed, Type: corev1.EventTypeWarning},
+	}
 )
 
 const (
@@ -77,6 +88,9 @@ var testCases = []controllertesting.TestCase{
 			Subscription(),
 		},
 		WantErrMsg: `channels.eventing.knative.dev "fromchannel" not found`,
+		WantEvent: []corev1.Event{
+			events[objectReferenceFetchFailed], events[subscriptionReconcileFailed],
+		},
 	}, {
 		Name: "subscription, but From is not subscribable",
 		InitialState: []runtime.Object{
@@ -87,7 +101,10 @@ var testCases = []controllertesting.TestCase{
 		// failure for now, until upstream is fixed. It should actually fail saying that there is no
 		// Spec.Subscribers field.
 		WantErrMsg: "invalid JSON document",
-		Scheme:     scheme.Scheme,
+		WantEvent: []corev1.Event{
+			events[physicalChannelSyncFailed], events[subscriptionReconcileFailed],
+		},
+		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
 			&unstructured.Unstructured{
@@ -146,6 +163,9 @@ var testCases = []controllertesting.TestCase{
 		WantPresent: []runtime.Object{
 			Subscription().UnknownConditions(),
 		},
+		WantEvent: []corev1.Event{
+			events[subscriberResolveFailed], events[subscriptionReconcileFailed],
+		},
 		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
@@ -172,7 +192,10 @@ var testCases = []controllertesting.TestCase{
 			Subscription().UnknownConditions(),
 		},
 		WantErrMsg: "status does not contain address",
-		Scheme:     scheme.Scheme,
+		WantEvent: []corev1.Event{
+			events[subscriberResolveFailed], events[subscriptionReconcileFailed],
+		},
+		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
 			&unstructured.Unstructured{
@@ -212,7 +235,10 @@ var testCases = []controllertesting.TestCase{
 			Subscription().UnknownConditions().PhysicalSubscriber(targetDNS),
 		},
 		WantErrMsg: `channels.eventing.knative.dev "resultchannel" not found`,
-		Scheme:     scheme.Scheme,
+		WantEvent: []corev1.Event{
+			events[resultResolveFailed], events[subscriptionReconcileFailed],
+		},
+		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
 			&unstructured.Unstructured{
@@ -256,6 +282,9 @@ var testCases = []controllertesting.TestCase{
 			// something else up here. later...
 			// Subscription().ReferencesResolved(),
 			Subscription().UnknownConditions().PhysicalSubscriber(targetDNS),
+		},
+		WantEvent: []corev1.Event{
+			events[resultResolveFailed], events[subscriptionReconcileFailed],
 		},
 		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
@@ -317,7 +346,10 @@ var testCases = []controllertesting.TestCase{
 			Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
 		},
 		WantErrMsg: "invalid JSON document",
-		Scheme:     scheme.Scheme,
+		WantEvent: []corev1.Event{
+			events[physicalChannelSyncFailed], events[subscriptionReconcileFailed],
+		},
+		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
 			&unstructured.Unstructured{
@@ -382,7 +414,10 @@ var testCases = []controllertesting.TestCase{
 			Subscription().NilReply().ReferencesResolved().PhysicalSubscriber(targetDNS),
 		},
 		WantErrMsg: "invalid JSON document",
-		Scheme:     scheme.Scheme,
+		WantEvent: []corev1.Event{
+			events[physicalChannelSyncFailed], events[subscriptionReconcileFailed],
+		},
+		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
 			&unstructured.Unstructured{
@@ -428,7 +463,10 @@ var testCases = []controllertesting.TestCase{
 			Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).EmptyNonNilReply(),
 		},
 		WantErrMsg: "invalid JSON document",
-		Scheme:     scheme.Scheme,
+		WantEvent: []corev1.Event{
+			events[physicalChannelSyncFailed], events[subscriptionReconcileFailed],
+		},
+		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
 			&unstructured.Unstructured{
@@ -474,7 +512,10 @@ var testCases = []controllertesting.TestCase{
 			Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).EmptyNonNilReply(),
 		},
 		WantErrMsg: "invalid JSON document",
-		Scheme:     scheme.Scheme,
+		WantEvent: []corev1.Event{
+			events[physicalChannelSyncFailed], events[subscriptionReconcileFailed],
+		},
+		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
 			&unstructured.Unstructured{
@@ -519,7 +560,10 @@ var testCases = []controllertesting.TestCase{
 			Subscription().NilSubscriber().ReferencesResolved().Reply(),
 		},
 		WantErrMsg: "invalid JSON document",
-		Scheme:     scheme.Scheme,
+		WantEvent: []corev1.Event{
+			events[physicalChannelSyncFailed], events[subscriptionReconcileFailed],
+		},
+		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
 			&unstructured.Unstructured{
@@ -569,7 +613,10 @@ var testCases = []controllertesting.TestCase{
 			Subscription().NilReply().ReferencesResolved().PhysicalSubscriber(targetDNS),
 		},
 		WantErrMsg: "invalid JSON document",
-		Scheme:     scheme.Scheme,
+		WantEvent: []corev1.Event{
+			events[physicalChannelSyncFailed], events[subscriptionReconcileFailed],
+		},
+		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
 			&unstructured.Unstructured{
@@ -613,7 +660,10 @@ var testCases = []controllertesting.TestCase{
 			Subscription().NilSubscriber().ReferencesResolved().Reply(),
 		},
 		WantErrMsg: "invalid JSON document",
-		Scheme:     scheme.Scheme,
+		WantEvent: []corev1.Event{
+			events[physicalChannelSyncFailed], events[subscriptionReconcileFailed],
+		},
+		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
 			&unstructured.Unstructured{
@@ -662,7 +712,10 @@ var testCases = []controllertesting.TestCase{
 			Subscription().EmptyNonNilSubscriber().ReferencesResolved().Reply(),
 		},
 		WantErrMsg: "invalid JSON document",
-		Scheme:     scheme.Scheme,
+		WantEvent: []corev1.Event{
+			events[physicalChannelSyncFailed], events[subscriptionReconcileFailed],
+		},
+		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
 			&unstructured.Unstructured{
@@ -708,7 +761,10 @@ var testCases = []controllertesting.TestCase{
 			Subscription().ToK8sService().UnknownConditions(),
 		},
 		WantErrMsg: "services \"testk8sservice\" not found",
-		Scheme:     scheme.Scheme,
+		WantEvent: []corev1.Event{
+			events[subscriberResolveFailed], events[subscriptionReconcileFailed],
+		},
+		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
 			&unstructured.Unstructured{
@@ -739,7 +795,10 @@ var testCases = []controllertesting.TestCase{
 			Subscription().ToK8sService().ReferencesResolved().PhysicalSubscriber(k8sServiceDNS).Reply(),
 		},
 		WantErrMsg: "invalid JSON document",
-		Scheme:     scheme.Scheme,
+		WantEvent: []corev1.Event{
+			events[physicalChannelSyncFailed], events[subscriptionReconcileFailed],
+		},
+		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source channel
 			&unstructured.Unstructured{
@@ -798,6 +857,9 @@ var testCases = []controllertesting.TestCase{
 		WantErrMsg: "invalid JSON document",
 		WantPresent: []runtime.Object{
 			Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
+		},
+		WantEvent: []corev1.Event{
+			events[physicalChannelSyncFailed], events[subscriptionReconcileFailed],
 		},
 		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
@@ -894,6 +956,9 @@ var testCases = []controllertesting.TestCase{
 			Subscription().Renamed().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
 			Subscription().DifferentChannel(),
 		},
+		WantEvent: []corev1.Event{
+			events[physicalChannelSyncFailed], events[subscriptionReconcileFailed],
+		},
 		Scheme: scheme.Scheme,
 		Objects: []runtime.Object{
 			// Source with a reference to the From Channel
@@ -988,7 +1053,7 @@ var testCases = []controllertesting.TestCase{
 			//getChannelWithOtherSubscription(),
 		},
 		WantEvent: []corev1.Event{
-			{Reason: "PhysicalChannelSyncFailed", Type: corev1.EventTypeWarning,},
+			events[physicalChannelSyncFailed], events[subscriptionReconcileFailed],
 		},
 		Objects: []runtime.Object{
 			// Source channel

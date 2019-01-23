@@ -42,6 +42,15 @@ import (
 
 const (
 	finalizerName = controllerAgentName
+
+	// Name of the corev1.Events emitted from the reconciliation process
+	subscriptionReconciled         = "SubscriptionReconciled"
+	subscriptionReconcileFailed    = "SubscriptionReconcileFailed"
+	subscriptionUpdateStatusFailed = "SubscriptionUpdateStatusFailed"
+	physicalChannelSyncFailed      = "PhysicalChannelSyncFailed"
+	objectReferenceFetchFailed     = "ObjectReferenceFetchFailed"
+	subscriberResolveFailed        = "SubscriberResolveFailed"
+	resultResolveFailed            = "ResultResolveFailed"
 )
 
 // Reconcile compares the actual state with the desired, and attempts to
@@ -65,9 +74,17 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// Reconcile this copy of the Subscription and then write back any status
 	// updates regardless of whether the reconcile error out.
 	err = r.reconcile(subscription)
+	if err != nil {
+		glog.Warningf("Error reconciling Subscription: %v", err)
+		r.recorder.Eventf(subscription, corev1.EventTypeWarning, subscriptionReconcileFailed, "Failed to reconcile Subscription: %v", err)
+	} else {
+		glog.Info("Subscription reconciled")
+		r.recorder.Eventf(subscription, corev1.EventTypeNormal, subscriptionReconciled, "Subscription reconciled: %q", subscription.Name)
+	}
+
 	if _, updateStatusErr := r.updateStatus(subscription.DeepCopy()); updateStatusErr != nil {
 		glog.Warningf("Failed to update subscription status: %v", updateStatusErr)
-		r.recorder.Eventf(subscription, corev1.EventTypeWarning, "SubscriptionReconcileFailed", "Failed to reconcile Subscription: %v", err)
+		r.recorder.Eventf(subscription, corev1.EventTypeWarning, subscriptionUpdateStatusFailed, "Failed to update Subscription's status: %v", err)
 		return reconcile.Result{}, updateStatusErr
 	}
 
@@ -94,10 +111,9 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 			err := r.syncPhysicalChannel(subscription, true)
 			if err != nil {
 				glog.Warningf("Failed to sync physical from Channel : %s", err)
-				r.recorder.Eventf(subscription, corev1.EventTypeWarning, "PhysicalChannelSyncFailed", "Failed to sync physical Channel: %v", err)
+				r.recorder.Eventf(subscription, corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
 				return err
 			}
-			r.recorder.Eventf(subscription, corev1.EventTypeNormal, "PhysicalChannelSynced", "Physical Channel synced")
 		}
 		removeFinalizer(subscription)
 		return nil
@@ -107,29 +123,26 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 	_, err = r.fetchObjectReference(subscription.Namespace, &subscription.Spec.Channel)
 	if err != nil {
 		glog.Warningf("Failed to validate `channel` exists: %+v, %v", subscription.Spec.Channel, err)
-		r.recorder.Eventf(subscription, corev1.EventTypeWarning, "ObjectReferenceFetchFailed", "Failed to validate Channel exists: %v", err)
+		r.recorder.Eventf(subscription, corev1.EventTypeWarning, objectReferenceFetchFailed, "Failed to validate Channel exists: %v", err)
 		return err
 	}
-	r.recorder.Eventf(subscription, corev1.EventTypeNormal, "ObjectReferenceFetched", "Validated Channel exists: %q", subscription.Spec.Channel.Name)
 
 	if subscriberURI, err := r.resolveSubscriberSpec(subscription.Namespace, subscription.Spec.Subscriber); err != nil {
 		glog.Warningf("Failed to resolve Subscriber %+v : %s", *subscription.Spec.Subscriber, err)
-		r.recorder.Eventf(subscription, corev1.EventTypeWarning, "SubscriberResolveFailed", "Failed to resolve Subscriber: %v", err)
+		r.recorder.Eventf(subscription, corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve Subscriber: %v", err)
 		return err
 	} else {
 		subscription.Status.PhysicalSubscription.SubscriberURI = subscriberURI
 		glog.Infof("Resolved subscriber to: %q", subscriberURI)
-		r.recorder.Eventf(subscription, corev1.EventTypeNormal, "SubscriberResolved", "Subscriber resolved to: %q", subscriberURI)
 	}
 
 	if replyURI, err := r.resolveResult(subscription.Namespace, subscription.Spec.Reply); err != nil {
 		glog.Warningf("Failed to resolve Result %v : %v", subscription.Spec.Reply, err)
-		r.recorder.Eventf(subscription, corev1.EventTypeWarning, "ResultResolveFailed", "Failed to resolve Result: %v", err)
+		r.recorder.Eventf(subscription, corev1.EventTypeWarning, resultResolveFailed, "Failed to resolve Result: %v", err)
 		return err
 	} else {
 		subscription.Status.PhysicalSubscription.ReplyURI = replyURI
 		glog.Infof("Resolved reply to: %q", replyURI)
-		r.recorder.Eventf(subscription, corev1.EventTypeNormal, "ResultResolved", "Resolved Response to: %q", replyURI)
 	}
 
 	// Everything that was supposed to be resolved was, so flip the status bit on that.
@@ -140,12 +153,11 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 	err = r.syncPhysicalChannel(subscription, false)
 	if err != nil {
 		glog.Warningf("Failed to sync physical Channel : %s", err)
-		r.recorder.Eventf(subscription, corev1.EventTypeWarning, "PhysicalChannelSyncFailed", "Failed to sync physical Channel: %v", err)
+		r.recorder.Eventf(subscription, corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
 		return err
 	}
 	// Everything went well, set the fact that subscriptions have been modified
 	subscription.Status.MarkChannelReady()
-	r.recorder.Eventf(subscription, corev1.EventTypeNormal, "SubscriptionReady", "Subscription Ready")
 	addFinalizer(subscription)
 	return nil
 }

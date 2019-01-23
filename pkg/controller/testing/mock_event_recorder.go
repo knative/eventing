@@ -20,10 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
 )
-
-var _ record.EventRecorder = (*MockEventRecorder)(nil)
 
 // mockEventRecorder is a recorder.EventRecorder that allows to save v1 Events emitted.
 type MockEventRecorder struct {
@@ -35,23 +32,28 @@ func NewEventRecorder() *MockEventRecorder {
 }
 
 func (m *MockEventRecorder) Eventf(object runtime.Object, eventtype, reason, messageFmt string, args ...interface{}) {
-	// Create an event with only the information that we need to verify in the test.
-	// Should include more information if we want to check other fields
+	appendEvent(eventtype, reason, m)
+}
+
+func (m *MockEventRecorder) Event(object runtime.Object, eventtype, reason, message string) {
+	appendEvent(eventtype, reason, m)
+}
+
+func (m *MockEventRecorder) PastEventf(object runtime.Object, timestamp metav1.Time, eventtype, reason, messageFmt string, args ...interface{}) {
+	appendEvent(eventtype, reason, m)
+}
+
+func (m *MockEventRecorder) AnnotatedEventf(object runtime.Object, annotations map[string]string, eventtype, reason, messageFmt string, args ...interface{}) {
+	appendEvent(eventtype, reason, m)
+}
+
+// Helper function to append an event type and reason to the MockEventRecorder
+// Only interested in type and reason of Events for now. If we are planning on verifying other fields in
+// the test cases, we need to include them here.
+func appendEvent(eventtype, reason string, m *MockEventRecorder) {
 	event := corev1.Event{
 		Reason: reason,
 		Type:   eventtype,
 	}
 	m.events = append(m.events, event)
-}
-
-func (m *MockEventRecorder) Event(object runtime.Object, eventtype, reason, message string) {
-	panic("not implemented")
-}
-
-func (m *MockEventRecorder) PastEventf(object runtime.Object, timestamp metav1.Time, eventtype, reason, messageFmt string, args ...interface{}) {
-	panic("not implemented")
-}
-
-func (m *MockEventRecorder) AnnotatedEventf(object runtime.Object, annotations map[string]string, eventtype, reason, messageFmt string, args ...interface{}) {
-	panic("not implemented")
 }
