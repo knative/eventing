@@ -28,48 +28,70 @@ required = [
 
 # Use HEAD (2018-04-21) to pick up:
 # https://github.com/spf13/cobra/pull/662
+# TODO this can be changed to a version constraint on 0.0.3 which has this commit
+# [[constraint]]
+#   name = "github.com/spf13/cobra"
+#   version = "0.0.3"
 [[override]]
   name = "github.com/spf13/cobra"
   revision = "615425954c3b0d9485a7027d4d451fdcdfdee84e"
 
+# TODO this can be changed to a version constraint on 1.0.3 which has this commit
+# [[constraint]]
+#   name = "github.com/spf13/pflag"
+#   version = "1.0.3"
 [[override]]
   name = "github.com/spf13/pflag"
   revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
 
+# TODO why is this overridden?
 [[override]]
   name = "gopkg.in/yaml.v2"
   version = "v2.2.1"
 
+# Overridden to ensure compatibility with GKE
+# GKE version as of 2019-01-24 is 1.11
 [[override]]
   name = "k8s.io/api"
   version = "kubernetes-1.11.3"
 
+# Overridden to ensure compatibility with GKE
+# GKE version as of 2019-01-24 is 1.11
 [[override]]
   name = "k8s.io/apimachinery"
   version = "kubernetes-1.11.3"
 
+# Overridden to ensure compatibility with GKE
+# GKE version as of 2019-01-24 is 1.11
 [[override]]
   name = "k8s.io/code-generator"
   version = "kubernetes-1.11.3"
 
+# Overridden to ensure compatibility with GKE
+# GKE version as of 2019-01-24 is 1.11
 [[override]]
   name = "k8s.io/client-go"
   version = "kubernetes-1.11.3"
 
+# This is the commit at which k8s depends on this in 1.11
+# It seems to be broken at HEAD.
+# TODO When we upgrade to k8s 1.13 we can remove this override
+# thanks to https://github.com/kubernetes/kubernetes/pull/71296.
 [[override]]
   name = "github.com/json-iterator/go"
-  # This is the commit at which k8s depends on this in 1.11
-  # It seems to be broken at HEAD.
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
+# TODO why is this overridden?
 [[override]]
   name = "github.com/golang/protobuf"
   version = "v1.1.0"
 
+# TODO why is this overridden?
 [[override]]
   name = "golang.org/x/oauth2"
   revision = "cdc340f7c179dbbfa4afd43b7614e8fcadde4269"
 
+# TODO why is this overridden?
 [[override]]
   name = "github.com/knative/pkg"
   # HEAD as of 2019-01-16
@@ -79,23 +101,28 @@ required = [
   name = "github.com/knative/serving"
   version = "v0.3.0"
 
+# TODO why is this overridden?
 [[override]]
   name = "github.com/Shopify/sarama"
   version = "1.19.0"
 
+# TODO switch to a version constraint
 [[constraint]]
   name = "sigs.k8s.io/controller-runtime"
   # HEAD as of 2018-09-19
   revision = "5373e8e1f3188ff4266902a6fc86372bc14b3815"
 
+# TODO why is this overridden?
 [[override]]
   name = "github.com/nats-io/go-nats"
   version = "1.6.0"
 
+# TODO why is this overridden?
 [[override]]
   name = "github.com/nats-io/go-nats-streaming"
   version = "0.4.0"
 
+# TODO why is this overridden?
 [[override]]
   name = "github.com/nats-io/nats-streaming-server"
   version = "0.11.0"
