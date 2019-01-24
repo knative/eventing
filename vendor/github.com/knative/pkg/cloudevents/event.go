@@ -48,10 +48,10 @@ const (
 	// HeaderContentType is the standard HTTP header "Content-Type"
 	HeaderContentType = "Content-Type"
 
+	// required attributes
 	fieldCloudEventsVersion = "CloudEventsVersion"
 	fieldEventID            = "EventID"
 	fieldEventType          = "EventType"
-	fieldEventTime          = "EventTime"
 	fieldSource             = "Source"
 )
 

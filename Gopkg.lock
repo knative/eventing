@@ -213,6 +213,13 @@
   version = "v0.2.0"
 
 [[projects]]
+  digest = "1:5ae77b6deaf1be337861bb792537719511f7372cb3b05905b47a45730d85f122"
+  name = "github.com/google/go-containerregistry"
+  packages = ["pkg/name"]
+  pruneopts = "NUT"
+  revision = "5f7b0e4895413d785ff15b84d218d73e8a47866a"
+
+[[projects]]
   branch = "master"
   digest = "1:52c5834e2bebac9030c97cc0798ac11c3aa8a39f098aeb419f142533da6cd3cc"
   name = "github.com/google/gofuzz"
@@ -344,7 +351,7 @@
   version = "v0.2.0"
 
 [[projects]]
-  digest = "1:9870368d47209c3a52b9000fd00420c51832604c00a65aa0a56b6e60a2ff3664"
+  digest = "1:156488613943416b3801ce597037d9b7df0745df43eebd3746df0843801d89be"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -371,6 +378,7 @@
     "cloudevents",
     "configmap",
     "kmeta",
+    "kmp",
     "logging",
     "logging/logkey",
     "signals",
@@ -381,10 +389,10 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "4b704fa7948ad9ae8ec90d1cd5b4a34516b252ea"
+  revision = "d3a9e54be7d4213b4018135d82b586de45f6a694"
 
 [[projects]]
-  digest = "1:cf62a9e49c586f87503a2ca683f636afae817333b6056c7529f2643ec285ed7e"
+  digest = "1:9a3d5c1186e9299dc3c3b9f28c3521abdf6abf0834f8ddd169ab005762097378"
   name = "github.com/knative/serving"
   packages = [
     "pkg/apis/autoscaling",
@@ -400,8 +408,8 @@
     "pkg/client/clientset/versioned/typed/serving/v1alpha1",
   ]
   pruneopts = "NUT"
-  revision = "f69d5efe522edecc5ff5bc3e23f1a7ff206a7726"
-  version = "v0.2.2"
+  revision = "4d198db8756db2f8a3c228302a97fb3a216a9475"
+  version = "v0.3.0"
 
 [[projects]]
   branch = "master"

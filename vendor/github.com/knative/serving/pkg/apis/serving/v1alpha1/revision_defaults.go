@@ -16,6 +16,11 @@ limitations under the License.
 
 package v1alpha1
 
+const (
+	// defaultTimeoutSeconds will be set if timeoutSeconds not specified.
+	defaultTimeoutSeconds = 5 * 60
+)
+
 func (r *Revision) SetDefaults() {
 	r.Spec.SetDefaults()
 }
@@ -25,5 +30,9 @@ func (rs *RevisionSpec) SetDefaults() {
 	// is not (0), use the ConcurrencyModel value.
 	if rs.ConcurrencyModel == RevisionRequestConcurrencyModelSingle && rs.ContainerConcurrency == 0 {
 		rs.ContainerConcurrency = 1
+	}
+
+	if rs.TimeoutSeconds == 0 {
+		rs.TimeoutSeconds = defaultTimeoutSeconds
 	}
 }

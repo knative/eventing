@@ -24,8 +24,10 @@ import (
 	"log"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/google/uuid"
 )
 
 type handler struct {
@@ -45,7 +47,7 @@ type errAndHandler interface {
 
 const (
 	inParamUsage  = "Expected a function taking either no parameters, a context.Context, or (context.Context, any)"
-	outParamUsage = "Expected a function returning either nothing, an error, or (any, error)"
+	outParamUsage = "Expected a function returning either nothing, an error, (any, error), or (any, EventContext, error)"
 )
 
 var (
@@ -57,8 +59,9 @@ var (
 	// it leaves this stack frame. The workaround is to pass a pointer to an interface and then
 	// get the type of its reference.
 	// For example, see: https://play.golang.org/p/_dxLvdkvqvg
-	contextType = reflect.TypeOf((*context.Context)(nil)).Elem()
-	errorType   = reflect.TypeOf((*error)(nil)).Elem()
+	contextType      = reflect.TypeOf((*context.Context)(nil)).Elem()
+	errorType        = reflect.TypeOf((*error)(nil)).Elem()
+	eventContextType = reflect.TypeOf((*EventContext)(nil)).Elem()
 )
 
 // Verifies that the inputs to a function have a valid signature; panics otherwise.
@@ -85,6 +88,12 @@ func validateInParamSignature(fnType reflect.Type) error {
 // (), (error), (any, error)
 func validateOutParamSignature(fnType reflect.Type) error {
 	switch fnType.NumOut() {
+	case 3:
+		contextType := fnType.Out(1)
+		if !contextType.ConvertibleTo(eventContextType) {
+			return fmt.Errorf("%s; cannot convert return type 1 from %s to EventContext", outParamUsage, contextType)
+		}
+		fallthrough
 	case 2:
 		fallthrough
 	case 1:
@@ -135,37 +144,58 @@ func allocate(t reflect.Type) (asPtr interface{}, asValue reflect.Value) {
 	return
 }
 
-func unwrapReturnValues(res []reflect.Value) (interface{}, error) {
+func unwrapReturnValues(res []reflect.Value) (interface{}, *EventContext, error) {
 	switch len(res) {
 	case 0:
-		return nil, nil
+		return nil, nil, nil
 	case 1:
 		if res[0].IsNil() {
-			return nil, nil
+			return nil, nil, nil
 		}
 		// Should be a safe cast due to assertEventHandler()
-		return nil, res[0].Interface().(error)
+		return nil, nil, res[0].Interface().(error)
 	case 2:
 		if res[1].IsNil() {
-			return res[0].Interface(), nil
+			return res[0].Interface(), nil, nil
 		}
 		// Should be a safe cast due to assertEventHandler()
-		return nil, res[1].Interface().(error)
+		return nil, nil, res[1].Interface().(error)
+	case 3:
+		if res[2].IsNil() {
+			ec := res[1].Interface().(EventContext)
+			return res[0].Interface(), &ec, nil
+		}
+		return nil, nil, res[2].Interface().(error)
 	default:
 		// Should never happen due to assertEventHandler()
-		panic("Cannot unmarshal more than 2 return values")
+		panic("Cannot unmarshal more than 3 return values")
 	}
 }
 
 // Accepts the results from a handler functions and translates them to an HTTP response
-func respondHTTP(outparams []reflect.Value, w http.ResponseWriter) {
-	res, err := unwrapReturnValues(outparams)
+func respondHTTP(outparams []reflect.Value, fn reflect.Value, w http.ResponseWriter) {
+	res, ec, err := unwrapReturnValues(outparams)
 
 	if err != nil {
 		log.Print("Failed to handle event: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(`Internal server error`))
 		return
+	}
+	if ec == nil {
+		eventType := strings.Replace(fn.Type().PkgPath(), "/", ".", -1)
+		if eventType != "" {
+			eventType += "."
+		}
+		eventType += fn.Type().Name()
+		if eventType == "" {
+			eventType = "dev.knative.pkg.cloudevents.unknown"
+		}
+		ec = &EventContext{
+			EventID:   uuid.New().String(),
+			EventType: eventType,
+			Source:    "unknown", // TODO: anything useful here, maybe incoming Host header?
+		}
 	}
 
 	if res != nil {
@@ -174,9 +204,16 @@ func respondHTTP(outparams []reflect.Value, w http.ResponseWriter) {
 			log.Printf("Failed to marshal return value %+v: %s", res, err)
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(`Internal server error`))
-		} else {
-			w.Write(json)
+			return
 		}
+		err = Binary.ToHeaders(ec, w.Header())
+		if err != nil {
+			log.Printf("Failed to marshal headers for response: %+v: %s", ec, err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`Internal server error`))
+			return
+		}
+		w.Write(json)
 		return
 	}
 
@@ -190,12 +227,15 @@ func respondHTTP(outparams []reflect.Value, w http.ResponseWriter) {
 // * func()
 // * func() error
 // * func() (anything, error)
+// * func() (anything, EventContext, error)
 // * func(context.Context)
 // * func(context.Context) error
 // * func(context.Context) (anything, error)
+// * func(context.Context) (anything, EventContext, error)
 // * func(context.Context, anything)
 // * func(context.Context, anything) error
 // * func(context.Context, anything) (anything, error)
+// * func(context.Context, anything) (anything, EventContext, error)
 //
 // CloudEvent contexts are available from the context.Context parameter
 // CloudEvent data will be deserialized into the "anything" parameter.
@@ -205,7 +245,8 @@ func respondHTTP(outparams []reflect.Value, w http.ResponseWriter) {
 // HTTP responses are generated based on the return value of fn:
 // * any error return value will cause a StatusInternalServerError response
 // * a function with no return type or a function returning nil will cause a StatusNoContent response
-// * a function that returns a value will cause a StatusOK and render the response as JSON
+// * a function that returns a value will cause a StatusOK and render the response as JSON,
+//   with headers from an EventContext, if appropriate
 func Handler(fn interface{}) http.Handler {
 	fnType := reflect.TypeOf(fn)
 	err := validateFunction(fnType)
@@ -248,7 +289,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res := h.fnValue.Call(args)
-	respondHTTP(res, w)
+	respondHTTP(res, h.fnValue, w)
 }
 
 func (h failedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -349,5 +390,5 @@ func (m Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res := h.fnValue.Call(args)
-	respondHTTP(res, w)
+	respondHTTP(res, h.fnValue, w)
 }
