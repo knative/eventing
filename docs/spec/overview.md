@@ -42,14 +42,14 @@ For more information see
 **Subscriptions** describe a flow of events from one _Channel_ to the next
 Channel\* through transformations (such as a Knative Service which processes
 CloudEvents over HTTP). A _Subscription_ controller resolves the addresses of
-transformations (`subscriber`) and destination storage (`result`) through the
+transformations (`subscriber`) and destination storage (`reply`) through the
 _Callable_ and _Addressable_ interface contracts, and writes the resolved
 addresses to the _Channel_ in the `channel` reference. _Subscriptions_ do not
 need to specify both a transformation and a storage destination, but at least
 one must be provided.
 
 All event delivery linkage from a **Subscription** is 1:1 – only a single
-`channel`, `subscriber`, and `result` may be provided.
+`channel`, `subscriber`, and `reply` may be provided.
 
 For more details, see [Kind: Subscription](spec.md#kind-subscription).
 
