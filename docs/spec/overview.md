@@ -31,7 +31,7 @@ For more details, see [Interface Contracts](interfaces.md).
 
 <!-- This image is sourced from https://drive.google.com/open?id=1o_0Xh5VjwpQ7Px08h_Q4qnaOdMjt4yCEPixRFwJQjh8 -->
 
-<img alt="Resource Types ClusterChannelProvisioners" src="images/resource-types-provisioner.svg" width="200">
+![Resource Types ClusterChannelProvisioners](images/resource-types-provisioner.png)
 
 Sources are defined by independent CRDs that can be installed into a cluster.
 For more information see
