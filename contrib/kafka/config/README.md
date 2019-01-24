@@ -7,7 +7,7 @@ Deployment steps:
 
    - Simple installation of [Apache Kafka](broker).
    - A production grade installation using the
-     [Strimzi Kafka Operator](strimzi). Installation
+     [Strimzi Kafka Operator](http://strimzi.io). Installation
      [guides](http://strimzi.io/quickstarts/) are provided for kubernetes and
      Openshift.
 
@@ -20,9 +20,11 @@ Deployment steps:
    update the `bootstrap_servers` value to
    `my-cluster-kafka-bootstrap.mynamespace:9092`.
 1. Apply the 'Kafka' ClusterChannelProvisioner, Controller, and Dispatcher:
+
    ```
-   ko apply -f config/provisioners/kafka/kafka.yaml
+   ko apply -f contrib/kafka/config/kafka.yaml
    ```
+
 1. Create Channels that reference the 'kafka' ClusterChannelProvisioner.
 
    ```yaml

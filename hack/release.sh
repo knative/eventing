@@ -21,7 +21,7 @@ declare -A COMPONENTS
 COMPONENTS=(
   ["eventing.yaml"]="config"
   ["in-memory-channel.yaml"]="config/provisioners/in-memory-channel"
-  ["kafka.yaml"]="config/provisioners/kafka"
+  ["kafka.yaml"]="contrib/kafka/config"
 # uncomment when gcp-pubsub is ready to be published
 #  ["gcp-pubsub.yaml"]="config/provisioners/gcppubsub"
   ["natss.yaml"]="config/provisioners/natss"

@@ -28,8 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 
-	provisionerController "github.com/knative/eventing/pkg/provisioners/kafka/controller"
-	"github.com/knative/eventing/pkg/provisioners/kafka/dispatcher"
+	provisionerController "github.com/knative/eventing/contrib/kafka/pkg/controller"
+	"github.com/knative/eventing/contrib/kafka/pkg/dispatcher"
 	"github.com/knative/eventing/pkg/sidecar/configmap/watcher"
 	"github.com/knative/eventing/pkg/system"
 )

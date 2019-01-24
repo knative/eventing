@@ -30,7 +30,7 @@ import (
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
 	"github.com/knative/eventing/pkg/provisioners"
 	util "github.com/knative/eventing/pkg/provisioners"
-	"github.com/knative/eventing/pkg/provisioners/kafka/controller"
+	"github.com/knative/eventing/contrib/kafka/pkg/controller"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
