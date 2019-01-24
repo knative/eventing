@@ -138,8 +138,8 @@ func postMessage(target string, data map[string]interface{}) error {
 	var err error
 	switch encoding {
 	case "binary":
+		ctx.ContentType = cloudevents.ContentTypeBinaryJSON
 		req, err = cloudevents.Binary.NewRequest(target, data, *ctx)
-
 	case "structured":
 		req, err = cloudevents.Structured.NewRequest(target, data, *ctx)
 	default:

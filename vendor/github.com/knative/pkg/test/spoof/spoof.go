@@ -30,6 +30,7 @@ import (
 
 	"github.com/knative/pkg/test/logging"
 	zipkin "github.com/knative/pkg/test/zipkin"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -43,9 +44,13 @@ const (
 	requestInterval = 1 * time.Second
 	requestTimeout  = 5 * time.Minute
 	// TODO(tcnghia): These probably shouldn't be hard-coded here?
-	ingressName      = "knative-ingressgateway"
 	ingressNamespace = "istio-system"
 )
+
+// Temporary work around the upgrade test issue for knative/serving#2434.
+// TODO(lichuqiang): remove the backward compatibility for knative-ingressgateway
+// once knative/serving#2434 is merged
+var ingressNames = []string{"knative-ingressgateway", "istio-ingressgateway"}
 
 // Response is a stripped down subset of http.Response. The is primarily useful
 // for ResponseCheckers to inspect the response body without consuming it.
@@ -73,7 +78,7 @@ var _ Interface = (*SpoofingClient)(nil)
 // https://github.com/kubernetes/apimachinery/blob/cf7ae2f57dabc02a3d215f15ca61ae1446f3be8f/pkg/util/wait/wait.go#L172
 type ResponseChecker func(resp *Response) (done bool, err error)
 
-// SpoofingClient is a minimal http client wrapper that spoofs the domain of requests
+// SpoofingClient is a minimal HTTP client wrapper that spoofs the domain of requests
 // for non-resolvable domains.
 type SpoofingClient struct {
 	Client          *http.Client
@@ -118,27 +123,44 @@ func New(kubeClientset *kubernetes.Clientset, logger *logging.BaseLogger, domain
 	return &sc, nil
 }
 
-// GetServiceEndpoint gets the endpoint IP or hostname to use for the service
+// GetServiceEndpoint gets the endpoint IP or hostname to use for the service.
 func GetServiceEndpoint(kubeClientset *kubernetes.Clientset) (*string, error) {
-	var endpoint string
-	ingress, err := kubeClientset.CoreV1().Services(ingressNamespace).Get(ingressName, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	ingresses := ingress.Status.LoadBalancer.Ingress
-	if len(ingresses) != 1 {
-		return nil, fmt.Errorf("Expected exactly one ingress load balancer, instead had %d: %s", len(ingresses), ingresses)
-	}
-	ingressToUse := ingresses[0]
-	if ingressToUse.IP == "" {
-		if ingressToUse.Hostname == "" {
-			return nil, fmt.Errorf("Expected ingress loadbalancer IP or hostname for %s to be set, instead was empty", ingressName)
+	var err error
+
+	for _, ingressName := range ingressNames {
+		var ingress *v1.Service
+		ingress, err = kubeClientset.CoreV1().Services(ingressNamespace).Get(ingressName, metav1.GetOptions{})
+		if err != nil {
+			continue
 		}
-		endpoint = ingressToUse.Hostname
-	} else {
-		endpoint = ingressToUse.IP
+
+		var endpoint string
+		endpoint, err = endpointFromService(ingress)
+		if err != nil {
+			continue
+		}
+
+		return &endpoint, nil
 	}
-	return &endpoint, nil
+	return nil, err
+}
+
+// endpointFromService extracts the endpoint from the service's ingress.
+func endpointFromService(svc *v1.Service) (string, error) {
+	ingresses := svc.Status.LoadBalancer.Ingress
+	if len(ingresses) != 1 {
+		return "", fmt.Errorf("Expected exactly one ingress load balancer, instead had %d: %v", len(ingresses), ingresses)
+	}
+	itu := ingresses[0]
+
+	switch {
+	case itu.IP != "":
+		return itu.IP, nil
+	case itu.Hostname != "":
+		return itu.Hostname, nil
+	default:
+		return "", fmt.Errorf("Expected ingress loadbalancer IP or hostname for %s to be set, instead was empty", svc.Name)
+	}
 }
 
 // Do dispatches to the underlying http.Client.Do, spoofing domains as needed
@@ -191,7 +213,7 @@ func (sc *SpoofingClient) Poll(req *http.Request, inState ResponseChecker) (*Res
 		resp, err = sc.Do(req)
 		if err != nil {
 			if err, ok := err.(net.Error); ok && err.Timeout() {
-				sc.logger.Infof("Retrying for TCP timeout %v", err)
+				sc.logger.Infof("Retrying %s for TCP timeout %v", req.URL.String(), err)
 				return false, nil
 			}
 			return true, err
