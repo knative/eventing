@@ -21,8 +21,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/knative/eventing/pkg/provisioners/natss/dispatcher/channel"
-	"github.com/knative/eventing/pkg/provisioners/natss/dispatcher/dispatcher"
+	"github.com/knative/eventing/contrib/natss/pkg/dispatcher/channel"
+	"github.com/knative/eventing/contrib/natss/pkg/dispatcher/dispatcher"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners/natss/controller/clusterchannelprovisioner"
+	"github.com/knative/eventing/contrib/natss/pkg/controller/clusterchannelprovisioner"
 	"github.com/knative/eventing/pkg/utils"
 )
 

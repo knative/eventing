@@ -19,7 +19,7 @@ package clusterchannelprovisioner
 import (
 	"fmt"
 
-	"github.com/knative/eventing/pkg/provisioners/natss/stanutil"
+	"github.com/knative/eventing/contrib/natss/pkg/stanutil"
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"

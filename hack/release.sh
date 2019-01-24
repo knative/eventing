@@ -24,7 +24,7 @@ COMPONENTS=(
   ["kafka.yaml"]="contrib/kafka/config"
 # uncomment when gcp-pubsub is ready to be published
 #  ["gcp-pubsub.yaml"]="config/provisioners/gcppubsub"
-  ["natss.yaml"]="config/provisioners/natss"
+  ["natss.yaml"]="contrib/natss/config"
 )
 readonly COMPONENTS
 

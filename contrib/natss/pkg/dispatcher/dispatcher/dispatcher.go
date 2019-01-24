@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/knative/eventing/pkg/provisioners"
-	"github.com/knative/eventing/pkg/provisioners/natss/controller/clusterchannelprovisioner"
-	"github.com/knative/eventing/pkg/provisioners/natss/stanutil"
+	"github.com/knative/eventing/contrib/natss/pkg/controller/clusterchannelprovisioner"
+	"github.com/knative/eventing/contrib/natss/pkg/stanutil"
 	stan "github.com/nats-io/go-nats-streaming"
 	"go.uber.org/zap"
 
