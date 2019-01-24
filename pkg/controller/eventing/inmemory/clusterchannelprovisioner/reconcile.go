@@ -43,7 +43,6 @@ const (
 
 	// Name of the corev1.Events emitted from the reconciliation process
 	ccpReconciled          = "CcpReconciled"
-	ccpReconcileFailed     = "CcpReconcileFailed"
 	ccpUpdateStatusFailed  = "CcpUpdateStatusFailed"
 	k8sServiceCreateFailed = "K8sServiceCreateFailed"
 	k8sServiceDeleteFailed = "K8sServiceDeleteFailed"
@@ -103,7 +102,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	err = r.reconcile(ctx, ccp)
 	if err != nil {
 		logger.Info("Error reconciling ClusterChannelProvisioner", zap.Error(err))
-		r.recorder.Eventf(ccp, corev1.EventTypeWarning, ccpReconcileFailed, "Failed to reconcile ClusterChannelProvisioner: %v", err)
 		// Note that we do not return the error here, because we want to update the Status
 		// regardless of the error.
 	} else {
@@ -152,7 +150,7 @@ func (r *reconciler) reconcile(ctx context.Context, ccp *eventingv1alpha1.Cluste
 
 	if err != nil {
 		logger.Info("Error creating the ClusterChannelProvisioner's K8s Service", zap.Error(err))
-		r.recorder.Eventf(ccp, corev1.EventTypeWarning, k8sServiceCreateFailed, "Failed to create ClusterChannelProvisioner's K8s Service: %v", err)
+		r.recorder.Eventf(ccp, corev1.EventTypeWarning, k8sServiceCreateFailed, "Failed to reconcile ClusterChannelProvisioner's K8s Service: %v", err)
 		return err
 	}
 

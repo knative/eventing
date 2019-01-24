@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// mockEventRecorder is a recorder.EventRecorder that allows to save v1 Events emitted.
+// MockEventRecorder is a recorder.EventRecorder that saves emitted v1 Events.
 type MockEventRecorder struct {
 	events []corev1.Event
 }

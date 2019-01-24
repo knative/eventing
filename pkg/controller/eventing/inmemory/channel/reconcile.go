@@ -42,7 +42,6 @@ const (
 
 	// Name of the corev1.Events emitted from the reconciliation process
 	channelReconciled          = "ChannelReconciled"
-	channelReconcileFailed     = "ChannelReconcileFailed"
 	channelUpdateStatusFailed  = "ChannelUpdateStatusFailed"
 	channelConfigSyncFailed    = "ChannelConfigSyncFailed"
 	k8sServiceCreateFailed     = "K8sServiceCreateFailed"
@@ -99,7 +98,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	err = r.reconcile(ctx, c)
 	if err != nil {
 		logger.Info("Error reconciling Channel", zap.Error(err))
-		r.recorder.Eventf(c, corev1.EventTypeWarning, channelReconcileFailed, "Failed to reconcile Channel: %v", err)
 		// Note that we do not return the error here, because we want to update the Status
 		// regardless of the error.
 	} else {
@@ -154,7 +152,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	svc, err := util.CreateK8sService(ctx, r.client, c)
 	if err != nil {
 		logger.Info("Error creating the Channel's K8s Service", zap.Error(err))
-		r.recorder.Eventf(c, corev1.EventTypeWarning, k8sServiceCreateFailed, "Failed to create Channel's K8s Service: %v", err)
+		r.recorder.Eventf(c, corev1.EventTypeWarning, k8sServiceCreateFailed, "Failed to reconcile Channel's K8s Service: %v", err)
 		return err
 	}
 	c.Status.SetAddress(controller.ServiceHostName(svc.Name, svc.Namespace))
@@ -162,7 +160,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	_, err = util.CreateVirtualService(ctx, r.client, c, svc)
 	if err != nil {
 		logger.Info("Error creating the Virtual Service for the Channel", zap.Error(err))
-		r.recorder.Eventf(c, corev1.EventTypeWarning, virtualServiceCreateFailed, "Failed to create Virtual Service for the Channel: %v", err)
+		r.recorder.Eventf(c, corev1.EventTypeWarning, virtualServiceCreateFailed, "Failed to reconcile Virtual Service for the Channel: %v", err)
 		return err
 	}
 

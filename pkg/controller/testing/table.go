@@ -19,10 +19,11 @@ package testing
 import (
 	"context"
 	"fmt"
-	corev1 "k8s.io/api/core/v1"
 	"reflect"
 	"strings"
 	"testing"
+
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -281,7 +282,7 @@ func (tc *TestCase) VerifyWantAbsent(c client.Client) error {
 }
 
 // VerifyWantEvent verifies that the eventRecorder does contain the events
-// expected to be emitted after reconciliation.
+// expected in the same order as they were emitted after reconciliation.
 func (tc *TestCase) VerifyWantEvent(eventRecorder *MockEventRecorder) error {
 	if !reflect.DeepEqual(tc.WantEvent, eventRecorder.events) {
 		return fmt.Errorf("expected %s, got %s", getEventsAsString(tc.WantEvent), getEventsAsString(eventRecorder.events))
@@ -290,7 +291,7 @@ func (tc *TestCase) VerifyWantEvent(eventRecorder *MockEventRecorder) error {
 }
 
 func getEventsAsString(events []corev1.Event) []string {
-	eventsAsString := make([]string, 0)
+	eventsAsString := make([]string, len(events))
 	for _, event := range events {
 		eventsAsString = append(eventsAsString, fmt.Sprintf("(%s,%s)", event.Reason, event.Type))
 	}

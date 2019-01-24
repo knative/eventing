@@ -54,7 +54,6 @@ var (
 	// map of events to set test cases' expectations easier
 	events = map[string]corev1.Event{
 		ccpReconciled:          {Reason: ccpReconciled, Type: corev1.EventTypeNormal},
-		ccpReconcileFailed:     {Reason: ccpReconcileFailed, Type: corev1.EventTypeWarning},
 		ccpUpdateStatusFailed:  {Reason: ccpUpdateStatusFailed, Type: corev1.EventTypeWarning},
 		k8sServiceCreateFailed: {Reason: k8sServiceCreateFailed, Type: corev1.EventTypeWarning},
 		k8sServiceDeleteFailed: {Reason: k8sServiceDeleteFailed, Type: corev1.EventTypeWarning},
@@ -180,7 +179,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
-				events[k8sServiceCreateFailed], events[ccpReconcileFailed],
+				events[k8sServiceCreateFailed],
 			},
 		},
 		{

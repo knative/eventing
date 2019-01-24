@@ -180,7 +180,6 @@ var (
 
 	// map of events to set test cases' expectations easier
 	events = map[string]corev1.Event{
-		channelReconcileFailed:     {Reason: channelReconcileFailed, Type: corev1.EventTypeWarning},
 		channelReconciled:          {Reason: channelReconciled, Type: corev1.EventTypeNormal},
 		channelUpdateStatusFailed:  {Reason: channelUpdateStatusFailed, Type: corev1.EventTypeWarning},
 		channelConfigSyncFailed:    {Reason: channelConfigSyncFailed, Type: corev1.EventTypeWarning},
@@ -262,7 +261,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
-				events[channelConfigSyncFailed], events[channelReconcileFailed],
+				events[channelConfigSyncFailed],
 			},
 		},
 		{
@@ -287,7 +286,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
-				events[channelConfigSyncFailed], events[channelReconcileFailed],
+				events[channelConfigSyncFailed],
 			},
 		},
 		{
@@ -300,7 +299,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
-				events[channelConfigSyncFailed], events[channelReconcileFailed],
+				events[channelConfigSyncFailed],
 			},
 		},
 		{
@@ -313,7 +312,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
-				events[channelConfigSyncFailed], events[channelReconcileFailed],
+				events[channelConfigSyncFailed],
 			},
 		},
 		{
@@ -327,7 +326,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
-				events[channelConfigSyncFailed], events[channelReconcileFailed],
+				events[channelConfigSyncFailed],
 			},
 		},
 		{
@@ -344,7 +343,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
-				events[k8sServiceCreateFailed], events[channelReconcileFailed],
+				events[k8sServiceCreateFailed],
 			},
 		},
 		{
@@ -362,7 +361,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
-				events[k8sServiceCreateFailed], events[channelReconcileFailed],
+				events[k8sServiceCreateFailed],
 			},
 		},
 		{
@@ -383,7 +382,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
-				events[virtualServiceCreateFailed], events[channelReconcileFailed],
+				events[virtualServiceCreateFailed],
 			},
 		},
 		{
@@ -403,7 +402,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
-				events[virtualServiceCreateFailed], events[channelReconcileFailed],
+				events[virtualServiceCreateFailed],
 			},
 		},
 		{
