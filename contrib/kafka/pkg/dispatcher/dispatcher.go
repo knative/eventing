@@ -26,9 +26,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 
+	"github.com/knative/eventing/contrib/kafka/pkg/controller"
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
-	"github.com/knative/eventing/contrib/kafka/pkg/controller"
 	topicUtils "github.com/knative/eventing/pkg/provisioners/utils"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 )
