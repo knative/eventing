@@ -291,7 +291,7 @@ func (tc *TestCase) VerifyWantEvent(eventRecorder *MockEventRecorder) error {
 }
 
 func getEventsAsString(events []corev1.Event) []string {
-	eventsAsString := make([]string, len(events))
+	eventsAsString := make([]string, 0, len(events))
 	for _, event := range events {
 		eventsAsString = append(eventsAsString, fmt.Sprintf("(%s,%s)", event.Reason, event.Type))
 	}
