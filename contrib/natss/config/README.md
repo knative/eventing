@@ -1,13 +1,15 @@
 # NATS Streaming Channels
 
-### Deployment steps:
+## Deployment steps
 
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md).
-1. If not done already, install a [NATS Streaming](natss)
+1. If not done already, install a [NATS Streaming](broker)
 1. Apply the 'natss' ClusterChannelProvisioner, Controller, and Dispatcher.
+
    ```shell
-   ko apply -f config/provisioners/natss/provisioner.yaml
+   ko apply -f contrib/natss/config/provisioner.yaml
    ```
+
 1. Create Channels that reference the 'natss'.
 
    ```yaml
@@ -22,7 +24,7 @@
        name: natss
    ```
 
-### Components
+## Components
 
 The major components are:
 
