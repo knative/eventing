@@ -33,8 +33,7 @@ spec:
         image: github.com/knative/eventing/cmd/controller
         args: [
           "-logtostderr",
-          "-stderrthreshold", "INFO",
-          "--experimentalControllers=subscription.eventing.knative.dev" # comma separated list.
+          "-stderrthreshold", "INFO"
         ]
         volumeMounts:
           - name: config-logging
