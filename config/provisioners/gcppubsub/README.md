@@ -17,9 +17,9 @@ They do not offer:
   - Events seen downstream may not occur in the same order they were inserted
     into the Channel.
 
-### Deployment Steps
+## Deployment Steps
 
-#### Prerequisites
+### Prerequisites
 
 1. Create a
    [Google Cloud Project](https://cloud.google.com/resource-manager/docs/creating-managing-projects).
@@ -43,7 +43,7 @@ They do not offer:
 
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md).
 
-#### Deployment
+### Deployment
 
 1. Set the shell variable with the correct value:
 
@@ -71,13 +71,13 @@ They do not offer:
        name: gcp-pubsub
    ```
 
-### Components
+## Components
 
 The major components are:
 
 - [Channel Controller](../../../pkg/provisioners/gcppubsub/controller)
-  - [ClusterChannelProvisioner Controller](../../../pkg/provisioners/gcppubsub/clusterchannelprovisioner)
-  - [Channel Controller](../../../pkg/provisioners/gcppubsub/channel)
+  - [ClusterChannelProvisioner Controller](../../../pkg/provisioners/gcppubsub/controller/clusterchannelprovisioner)
+  - [Channel Controller](../../../pkg/provisioners/gcppubsub/controller/channel)
 - [Channel Dispatcher](../../../pkg/provisioners/gcppubsub/dispatcher/cmd)
   - [Dispatcher](../../../pkg/provisioners/gcppubsub/dispatcher/dispatcher)
   - [Receiver](../../../pkg/provisioners/gcppubsub/dispatcher/receiver)

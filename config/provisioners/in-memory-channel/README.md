@@ -15,14 +15,16 @@ They differ from most Channels in that they have:
   - If downstream rejects a request, a log message is written, but that request
     is never sent again.
 
-### Deployment steps:
+## Deployment steps:
 
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md).
 1. Apply the 'in-memory-channel' ClusterChannelProvisioner, Controller, and
    Dispatcher.
+
    ```shell
    ko apply -f config/provisioners/in-memory-channel/in-memory-channel.yaml
    ```
+
 1. Create Channels that reference the 'in-memory-channel'.
 
    ```yaml
@@ -37,7 +39,7 @@ They differ from most Channels in that they have:
        name: in-memory-channel
    ```
 
-### Components
+## Components
 
 The major components are:
 
