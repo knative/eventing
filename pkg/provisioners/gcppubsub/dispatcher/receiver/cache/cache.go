@@ -89,6 +89,11 @@ func NewTTL() *TTL {
 //     // Note that cachedValue may either be value or something that was already in the cache.
 //     cachedValue.Start()
 func (c *TTL) Insert(keyString string, value Stoppable) Stoppable {
+	// Don't let nil values in, it will cause panics when they get Stop()ed. As well as blocking a
+	// non-nil value from getting in.
+	if value == nil {
+		return nil
+	}
 	newItem := &item{
 		value: value,
 		ttl:   c.currentTime().Add(c.ttl),
@@ -150,6 +155,7 @@ func (c *TTL) Start(stopCh <-chan struct{}) error {
 	for {
 		select {
 		case <-stopCh:
+			c.deleteAllItems()
 			return nil
 		case <-time.After(c.reapingPeriod):
 			c.cull()
@@ -191,4 +197,20 @@ func (c *TTL) deleteUnderLock(k key) func() {
 	// I don't think this can happen, as this can only be called under lock and should only be
 	// called if the key is present, but just in case return a nop function.
 	return func() {}
+}
+
+// deleteAllItems is expected to be called only when the cache is stopped. It removes all items from
+// the cache and Stop()s them.
+func (c *TTL) deleteAllItems() {
+	oldItems := func() map[key]*item {
+		c.itemsLock.Lock()
+		defer c.itemsLock.Unlock()
+		oldItems := c.items
+		// Any subsequent cache gets should not return any of these items, so just make a new map.
+		c.items = make(map[key]*item)
+		return oldItems
+	}()
+	for _, stop := range oldItems {
+		stop.value.Stop()
+	}
 }

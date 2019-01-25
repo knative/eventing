@@ -148,6 +148,32 @@ func TestTTL_Insert(t *testing.T) {
 	}
 }
 
+func TestTTL_InsertNil(t *testing.T) {
+	cache := NewTTL()
+
+	const k = "my-key"
+	if inserted := cache.Insert(k, nil); inserted != nil {
+		t.Fatalf("Insert returned non-nil: %v", inserted)
+	}
+
+	// Use a backdoor to clean the cache, this demonstrates that we don't panic if nil is inserted.
+	cache.deleteAllItems()
+
+	// Insert nil, then a real item to show that it 'overwrites' the nil.
+	i := &entry{
+		differentiator: 1,
+	}
+	if inserted := cache.Insert(k, nil); inserted != nil {
+		t.Fatalf("Insert returned non-nil: %v", inserted)
+	}
+	if inserted := cache.Insert(k, i); inserted != i {
+		t.Fatalf("Insert did not return i: %v", inserted)
+	}
+	if cached := cache.Get(k); cached != i {
+		t.Fatalf("Get did not return i: %v", cached)
+	}
+}
+
 func TestTTL_Cull(t *testing.T) {
 	cache := NewTTL()
 	tc := &testClock{
@@ -291,6 +317,45 @@ func TestTTL_Start(t *testing.T) {
 	}
 	if !i.getStopCalled() {
 		t.Fatal("Stop not called")
+	}
+}
+
+func TestTTL_deleteAllItems(t *testing.T) {
+	cache := NewTTL()
+
+	const k1 = "my-key-1"
+	i1 := &entry{
+		differentiator: 1,
+	}
+	const k2 = "my-key-2"
+	i2 := &entry{
+		differentiator: 2,
+	}
+
+	cache.Insert(k1, i1)
+	cache.Insert(k2, i2)
+
+	if cache.Get(k1) != i1 || cache.Get(k2) != i2 {
+		t.Fatalf("Cache did not have expected values. i1: %v, i2: %v", cache.Get(k1), cache.Get(k2))
+	}
+
+	stopCh := make(chan struct{})
+	close(stopCh)
+	if err := cache.Start(stopCh); err != nil {
+		t.Fatalf("unexpected error from Start(): %v", err)
+	}
+
+	// First ensure nothing is in the cache anymore.
+	if cache.Get(k1) != nil || cache.Get(k2) != nil {
+		t.Fatalf("Cache had values, which it shouldn't. i1: %v, i2: %v", cache.Get(k1), cache.Get(k2))
+	}
+
+	// Now ensure everything was stopped.
+	if !i1.stopCalled {
+		t.Error("i1.Stop() not called")
+	}
+	if !i2.stopCalled {
+		t.Error("i2.Stop() not called")
 	}
 }
 
