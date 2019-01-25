@@ -113,6 +113,7 @@ required = [
 # 0.1.9 is most recent version as of 2019-01-24. Includes required fixes.
 [[constraint]]
   name = "sigs.k8s.io/controller-runtime"
+  # >=0.1.9, <0.2.0. See https://golang.github.io/dep/docs/Gopkg.toml.html#version-rules
   version = "^0.1.9"
 
 # TODO why is this overridden?
