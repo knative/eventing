@@ -19,8 +19,11 @@ package testing
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
+
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -70,6 +73,10 @@ type TestCase struct {
 	// after reconciliation completes.
 	WantAbsent []runtime.Object
 
+	// WantEvent holds the list of events expected to exist after
+	// reconciliation completes.
+	WantEvent []corev1.Event
+
 	// Mocks that tamper with the client's responses.
 	Mocks Mocks
 
@@ -93,7 +100,7 @@ type TestCase struct {
 }
 
 // Runner returns a testing func that can be passed to t.Run.
-func (tc *TestCase) Runner(t *testing.T, r reconcile.Reconciler, c *MockClient) func(t *testing.T) {
+func (tc *TestCase) Runner(t *testing.T, r reconcile.Reconciler, c *MockClient, recorder *MockEventRecorder) func(t *testing.T) {
 	return func(t *testing.T) {
 		result, recErr := tc.Reconcile(r)
 
@@ -116,6 +123,10 @@ func (tc *TestCase) Runner(t *testing.T, r reconcile.Reconciler, c *MockClient) 
 			t.Error(err)
 		}
 
+		if err := tc.VerifyWantEvent(recorder); err != nil {
+			t.Error(err)
+		}
+
 		for _, av := range tc.AdditionalVerification {
 			av(t, tc)
 		}
@@ -135,6 +146,11 @@ func (tc *TestCase) GetClient() *MockClient {
 	builtObjects := buildAllObjects(tc.InitialState)
 	innerClient := fake.NewFakeClient(builtObjects...)
 	return NewMockClient(innerClient, tc.Mocks)
+}
+
+// GetEventRecorder returns the mockEventRecorder to use for this test case.
+func (tc *TestCase) GetEventRecorder() *MockEventRecorder {
+	return NewEventRecorder()
 }
 
 // Reconcile calls the given reconciler's Reconcile() function with the test
@@ -263,6 +279,23 @@ func (tc *TestCase) VerifyWantAbsent(c client.Client) error {
 		return errs
 	}
 	return nil
+}
+
+// VerifyWantEvent verifies that the eventRecorder does contain the events
+// expected in the same order as they were emitted after reconciliation.
+func (tc *TestCase) VerifyWantEvent(eventRecorder *MockEventRecorder) error {
+	if !reflect.DeepEqual(tc.WantEvent, eventRecorder.events) {
+		return fmt.Errorf("expected %s, got %s", getEventsAsString(tc.WantEvent), getEventsAsString(eventRecorder.events))
+	}
+	return nil
+}
+
+func getEventsAsString(events []corev1.Event) []string {
+	eventsAsString := make([]string, 0, len(events))
+	for _, event := range events {
+		eventsAsString = append(eventsAsString, fmt.Sprintf("(%s,%s)", event.Reason, event.Type))
+	}
+	return eventsAsString
 }
 
 func buildAllObjects(objs []runtime.Object) []runtime.Object {

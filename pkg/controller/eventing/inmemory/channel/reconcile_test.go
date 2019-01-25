@@ -38,7 +38,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -178,6 +177,15 @@ var (
 			},
 		},
 	}
+
+	// map of events to set test cases' expectations easier
+	events = map[string]corev1.Event{
+		channelReconciled:          {Reason: channelReconciled, Type: corev1.EventTypeNormal},
+		channelUpdateStatusFailed:  {Reason: channelUpdateStatusFailed, Type: corev1.EventTypeWarning},
+		channelConfigSyncFailed:    {Reason: channelConfigSyncFailed, Type: corev1.EventTypeWarning},
+		k8sServiceCreateFailed:     {Reason: k8sServiceCreateFailed, Type: corev1.EventTypeWarning},
+		virtualServiceCreateFailed: {Reason: virtualServiceCreateFailed, Type: corev1.EventTypeWarning},
+	}
 )
 
 func init() {
@@ -252,6 +260,9 @@ func TestReconcile(t *testing.T) {
 				makeDeletingChannel(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[channelConfigSyncFailed],
+			},
 		},
 		{
 			Name: "Channel deleted - finalizer removed",
@@ -260,6 +271,9 @@ func TestReconcile(t *testing.T) {
 			},
 			WantPresent: []runtime.Object{
 				makeDeletingChannelWithoutFinalizer(),
+			},
+			WantEvent: []corev1.Event{
+				events[channelReconciled],
 			},
 		},
 		{
@@ -271,6 +285,9 @@ func TestReconcile(t *testing.T) {
 				MockLists: errorListingChannels(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[channelConfigSyncFailed],
+			},
 		},
 		{
 			Name: "Channel config sync fails - can't get ConfigMap",
@@ -281,6 +298,9 @@ func TestReconcile(t *testing.T) {
 				MockGets: errorGettingConfigMap(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[channelConfigSyncFailed],
+			},
 		},
 		{
 			Name: "Channel config sync fails - can't create ConfigMap",
@@ -291,6 +311,9 @@ func TestReconcile(t *testing.T) {
 				MockCreates: errorCreatingConfigMap(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[channelConfigSyncFailed],
+			},
 		},
 		{
 			Name: "Channel config sync fails - can't update ConfigMap",
@@ -302,6 +325,9 @@ func TestReconcile(t *testing.T) {
 				MockUpdates: errorUpdatingConfigMap(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[channelConfigSyncFailed],
+			},
 		},
 		{
 			Name: "K8s service get fails",
@@ -316,6 +342,9 @@ func TestReconcile(t *testing.T) {
 				makeChannelWithFinalizer(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[k8sServiceCreateFailed],
+			},
 		},
 		{
 			Name: "K8s service creation fails",
@@ -331,6 +360,9 @@ func TestReconcile(t *testing.T) {
 				makeChannelWithFinalizer(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[k8sServiceCreateFailed],
+			},
 		},
 		{
 			Name: "Virtual service get fails",
@@ -349,6 +381,9 @@ func TestReconcile(t *testing.T) {
 				makeChannelWithFinalizerAndAddress(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[virtualServiceCreateFailed],
+			},
 		},
 		{
 			Name: "Virtual service creation fails",
@@ -366,6 +401,9 @@ func TestReconcile(t *testing.T) {
 				makeChannelWithFinalizerAndAddress(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[virtualServiceCreateFailed],
+			},
 		},
 		{
 			Name: "Channel get for update fails",
@@ -379,6 +417,9 @@ func TestReconcile(t *testing.T) {
 				MockGets: errorOnSecondChannelGet(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[channelReconciled], events[channelUpdateStatusFailed],
+			},
 		},
 		{
 			Name: "Channel update fails",
@@ -392,6 +433,9 @@ func TestReconcile(t *testing.T) {
 				MockUpdates: errorUpdatingChannel(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[channelReconciled], events[channelUpdateStatusFailed],
+			},
 		}, {
 			Name: "Channel status update fails",
 			InitialState: []runtime.Object{
@@ -404,6 +448,9 @@ func TestReconcile(t *testing.T) {
 				MockStatusUpdates: errorUpdatingChannelStatus(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[channelReconciled], events[channelUpdateStatusFailed],
+			},
 		}, {
 			Name: "Channel reconcile successful - Channel list follows pagination",
 			InitialState: []runtime.Object{
@@ -423,6 +470,9 @@ func TestReconcile(t *testing.T) {
 				makeK8sService(),
 				makeVirtualService(),
 				makeConfigMapWithVerifyConfigMapData(),
+			},
+			WantEvent: []corev1.Event{
+				events[channelReconciled],
 			},
 		},
 		{
@@ -464,15 +514,19 @@ func TestReconcile(t *testing.T) {
 				makeVirtualService(),
 				makeConfigMapWithVerifyConfigMapData(),
 			},
+			WantEvent: []corev1.Event{
+				events[channelReconciled],
+			},
 		},
 	}
-	recorder := record.NewBroadcaster().NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
+
 	for _, tc := range testCases {
 		configMapKey := types.NamespacedName{
 			Namespace: cmNamespace,
 			Name:      cmName,
 		}
 		c := tc.GetClient()
+		recorder := tc.GetEventRecorder()
 		r := &reconciler{
 			client:       c,
 			recorder:     recorder,
@@ -483,7 +537,7 @@ func TestReconcile(t *testing.T) {
 			tc.ReconcileKey = fmt.Sprintf("/%s", cName)
 		}
 		tc.IgnoreTimes = true
-		t.Run(tc.Name, tc.Runner(t, r, c))
+		t.Run(tc.Name, tc.Runner(t, r, c, recorder))
 	}
 }
 

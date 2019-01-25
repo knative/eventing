@@ -31,7 +31,7 @@ For more details, see [Interface Contracts](interfaces.md).
 
 <!-- This image is sourced from https://drive.google.com/open?id=1o_0Xh5VjwpQ7Px08h_Q4qnaOdMjt4yCEPixRFwJQjh8 -->
 
-<img alt="Resource Types ClusterChannelProvisioners" src="images/resource-types-provisioner.svg" width="200">
+![Resource Types ClusterChannelProvisioners](images/resource-types-provisioner.png)
 
 Sources are defined by independent CRDs that can be installed into a cluster.
 For more information see
@@ -42,14 +42,14 @@ For more information see
 **Subscriptions** describe a flow of events from one _Channel_ to the next
 Channel\* through transformations (such as a Knative Service which processes
 CloudEvents over HTTP). A _Subscription_ controller resolves the addresses of
-transformations (`subscriber`) and destination storage (`result`) through the
+transformations (`subscriber`) and destination storage (`reply`) through the
 _Callable_ and _Addressable_ interface contracts, and writes the resolved
 addresses to the _Channel_ in the `channel` reference. _Subscriptions_ do not
 need to specify both a transformation and a storage destination, but at least
 one must be provided.
 
 All event delivery linkage from a **Subscription** is 1:1 – only a single
-`channel`, `subscriber`, and `result` may be provided.
+`channel`, `subscriber`, and `reply` may be provided.
 
 For more details, see [Kind: Subscription](spec.md#kind-subscription).
 
