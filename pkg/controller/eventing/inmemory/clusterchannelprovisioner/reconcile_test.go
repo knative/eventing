@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -51,6 +50,14 @@ var (
 	deletionTime = metav1.Now().Rfc3339Copy()
 
 	truePointer = true
+
+	// map of events to set test cases' expectations easier
+	events = map[string]corev1.Event{
+		ccpReconciled:          {Reason: ccpReconciled, Type: corev1.EventTypeNormal},
+		ccpUpdateStatusFailed:  {Reason: ccpUpdateStatusFailed, Type: corev1.EventTypeWarning},
+		k8sServiceCreateFailed: {Reason: k8sServiceCreateFailed, Type: corev1.EventTypeWarning},
+		k8sServiceDeleteFailed: {Reason: k8sServiceDeleteFailed, Type: corev1.EventTypeWarning},
+	}
 )
 
 func init() {
@@ -156,6 +163,9 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeDeletingClusterChannelProvisioner(),
 			},
+			WantEvent: []corev1.Event{
+				events[ccpReconciled],
+			},
 		},
 		{
 			Name: "Create dispatcher fails",
@@ -168,6 +178,9 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[k8sServiceCreateFailed],
+			},
 		},
 		{
 			Name: "Create dispatcher - already exists",
@@ -177,6 +190,9 @@ func TestReconcile(t *testing.T) {
 			},
 			WantPresent: []runtime.Object{
 				makeReadyClusterChannelProvisioner(),
+			},
+			WantEvent: []corev1.Event{
+				events[ccpReconciled],
 			},
 		},
 		{
@@ -192,6 +208,9 @@ func TestReconcile(t *testing.T) {
 			WantAbsent: []runtime.Object{
 				makeOldK8sService(),
 			},
+			WantEvent: []corev1.Event{
+				events[ccpReconciled],
+			},
 		},
 		{
 			Name: "Create dispatcher - not owned by CCP",
@@ -202,6 +221,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeReadyClusterChannelProvisioner(),
 			},
+			WantEvent: []corev1.Event{
+				events[ccpReconciled],
+			},
 		},
 		{
 			Name: "Create dispatcher succeeds",
@@ -211,6 +233,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeReadyClusterChannelProvisioner(),
 				makeK8sService(),
+			},
+			WantEvent: []corev1.Event{
+				events[ccpReconciled],
 			},
 		},
 		{
@@ -223,6 +248,9 @@ func TestReconcile(t *testing.T) {
 				makeK8sService(),
 			},
 			ReconcileKey: fmt.Sprintf("%s/%s", testNS, Name),
+			WantEvent: []corev1.Event{
+				events[ccpReconciled],
+			},
 		},
 		{
 			Name: "Error getting CCP for updating Status",
@@ -235,6 +263,9 @@ func TestReconcile(t *testing.T) {
 				MockGets: oneSuccessfulClusterChannelProvisionerGet(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[ccpReconciled], events[ccpUpdateStatusFailed],
+			},
 		},
 		{
 			Name: "Error updating Status",
@@ -249,11 +280,15 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[ccpReconciled], events[ccpUpdateStatusFailed],
+			},
 		},
 	}
-	recorder := record.NewBroadcaster().NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
+
 	for _, tc := range testCases {
 		c := tc.GetClient()
+		recorder := tc.GetEventRecorder()
 		r := &reconciler{
 			client:   c,
 			recorder: recorder,
@@ -263,7 +298,7 @@ func TestReconcile(t *testing.T) {
 			tc.ReconcileKey = fmt.Sprintf("/%s", Name)
 		}
 		tc.IgnoreTimes = true
-		t.Run(tc.Name, tc.Runner(t, r, c))
+		t.Run(tc.Name, tc.Runner(t, r, c, recorder))
 	}
 }
 

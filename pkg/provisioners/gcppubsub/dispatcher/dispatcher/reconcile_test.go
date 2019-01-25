@@ -45,7 +45,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -338,9 +337,10 @@ func TestReconcile(t *testing.T) {
 		// Note - we do not test update status since this dispatcher only adds
 		// finalizers to the channel
 	}
-	recorder := record.NewBroadcaster().NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
+
 	for _, tc := range testCases {
 		c := tc.GetClient()
+		recorder := tc.GetEventRecorder()
 		r := &reconciler{
 			client:   c,
 			recorder: recorder,
@@ -383,7 +383,7 @@ func TestReconcile(t *testing.T) {
 		}
 		tc.AdditionalVerification = append(tc.AdditionalVerification, cc.verify)
 		tc.IgnoreTimes = true
-		t.Run(tc.Name, tc.Runner(t, r, c))
+		t.Run(tc.Name, tc.Runner(t, r, c, recorder))
 	}
 }
 
