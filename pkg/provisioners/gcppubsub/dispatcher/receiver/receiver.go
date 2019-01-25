@@ -52,8 +52,6 @@ func New(logger *zap.Logger, client client.Client, pubSubClientCreator util.PubS
 		pubSubClientCreator: pubSubClientCreator,
 		cache:               cache.NewTTL(),
 	}
-	// This currently only returns a single Runnable, but is expected to return multiple soon (i.e.
-	// for a TTL cache).
 	return r, []manager.Runnable{r.newMessageReceiver(), r.cache}
 }
 
@@ -91,6 +89,7 @@ func (r *Receiver) sendEventToTopic(channel provisioners.ChannelReference, messa
 
 	psr, ok := cached.(*pubSubReceiver)
 	if !ok {
+		r.cache.DeleteIfPresent(pcs.Topic, psr)
 		return fmt.Errorf("unexpected type in the cache[%s] - %T", pcs.Topic, cached)
 	}
 
@@ -120,6 +119,9 @@ func (r *Receiver) createPubSubReceiver(ctx context.Context, pcs *util.GcpPubSub
 		r.logger.Info("Failed to create PubSub client", zap.Error(err))
 		return nil, err
 	}
+	// Note that creating topic does not actually start any background work. So this struct can be
+	// discarded without any problems. Once topic.Publish is called, then background work starts and
+	// topic.Stop must be called eventually.
 	topic := psc.Topic(pcs.Topic)
 	psr := r.cache.Insert(pcs.Topic, &pubSubReceiver{
 		topic: topic,

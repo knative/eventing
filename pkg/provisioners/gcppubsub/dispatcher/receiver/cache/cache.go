@@ -125,6 +125,26 @@ func (i *item) extend(currentTime func() time.Time, ttl time.Duration) {
 	i.ttl = currentTime().Add(ttl)
 }
 
+// DeleteIfPresent deletes an entry from the cache if its value in the cache is equal to value.
+func (c *TTL) DeleteIfPresent(keyString string, value Stoppable) {
+	stoppable := func() Stoppable {
+		c.itemsLock.Lock()
+		defer c.itemsLock.Unlock()
+		k := key(keyString)
+		actualValue, present := c.items[k]
+		if present {
+			if actualValue.value == value {
+				delete(c.items, k)
+				return value
+			}
+		}
+		return nil
+	}()
+	if stoppable != nil {
+		stoppable.Stop()
+	}
+}
+
 // Start continuously culls the old items from the cache. It should be run in a goroutine.
 func (c *TTL) Start(stopCh <-chan struct{}) error {
 	for {
@@ -137,7 +157,7 @@ func (c *TTL) Start(stopCh <-chan struct{}) error {
 	}
 }
 
-// cull culls all items from the cache that are past their time to live.
+// cull all items from the cache that are past their time to live.
 func (c *TTL) cull() {
 	// Minimize time when the lock is held by collecting all the functions that will be stopped, but
 	// not running them, under lock.

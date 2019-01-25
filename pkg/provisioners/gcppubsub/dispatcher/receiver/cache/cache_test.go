@@ -199,6 +199,58 @@ func TestTTL_deleteUnderLock_NotPresent(t *testing.T) {
 	stopFn()
 }
 
+func TestTTL_DeleteIfPresent(t *testing.T) {
+	const k = "my-key"
+	testCases := map[string]struct {
+		deleteValueInCache bool
+		otherValueInCache  bool
+	}{
+		"nothing in cache": {},
+		"different item in cache": {
+			otherValueInCache: true,
+		},
+		"deleted from cache": {
+			deleteValueInCache: true,
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			cache := NewTTL()
+
+			deleteValue := &entry{
+				differentiator: 1,
+			}
+			otherValue := &entry{
+				differentiator: deleteValue.differentiator + 1,
+			}
+			if tc.deleteValueInCache {
+				cache.Insert(k, deleteValue)
+			} else if tc.otherValueInCache {
+				cache.Insert(k, otherValue)
+			}
+
+			cache.DeleteIfPresent(k, deleteValue)
+
+			// First check the state of the cache.
+			if tc.otherValueInCache {
+				if actual := cache.Get(k); actual != otherValue {
+					t.Errorf("otherValue should be in the cache, actual %v", actual)
+				}
+			} else if actual := cache.Get(k); actual != nil {
+				t.Errorf("cache should have been empty, actually %v", actual)
+			}
+
+			// Now check the state Stop()'s.
+			if tc.deleteValueInCache != deleteValue.stopCalled {
+				t.Errorf("deleteValue's Stop() incorrect. Expected to be called %v. Actually called %v", tc.deleteValueInCache, deleteValue.stopCalled)
+			}
+			if otherValue.stopCalled {
+				t.Errorf("otherValue's Stop() was called, it shouldn't have been")
+			}
+		})
+	}
+}
+
 func TestTTL_Start(t *testing.T) {
 	// Test to ensure start continuously culls in the background.
 	cache := NewTTL()
