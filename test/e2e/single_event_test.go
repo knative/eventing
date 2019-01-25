@@ -33,7 +33,6 @@ import (
 
 const (
 	channelName      = "e2e-singleevent"
-	provisionerName  = "in-memory-channel"
 	subscriberName   = "e2e-singleevent-subscriber"
 	senderName       = "e2e-singleevent-sender"
 	subscriptionName = "e2e-singleevent-subscription"
@@ -125,7 +124,7 @@ func SingleEvent(t *testing.T, encoding string) {
 	// create channel
 
 	logger.Infof("Creating Channel and Subscription")
-	channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(provisionerName))
+	channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(test.EventingFlags.Provisioner))
 	logger.Infof("channel: %#v", channel)
 	sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelName), test.SubscriberSpecForService(routeName), nil)
 	logger.Infof("sub: %#v", sub)
