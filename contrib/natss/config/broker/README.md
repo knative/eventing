@@ -11,4 +11,5 @@
    NATS Streaming is deployed as a StatefulSet, using "nats-streaming" ConfigMap
    in the namespace "natss".
 
-For tuning NATS Streaming, see [here](https://github.com/nats-io/nats-streaming-server#configuring)
+For tuning NATS Streaming, see
+[here](https://github.com/nats-io/nats-streaming-server#configuring)
