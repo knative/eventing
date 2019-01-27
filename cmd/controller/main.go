@@ -19,13 +19,14 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/knative/eventing/pkg/controller/eventing/subscription"
-	"k8s.io/apimachinery/pkg/runtime"
 	"log"
 	"net/http"
+	"time"
+
+	"github.com/knative/eventing/pkg/controller/eventing/subscription"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"time"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"

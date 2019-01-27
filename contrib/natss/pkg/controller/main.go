@@ -19,10 +19,10 @@ package main
 import (
 	"flag"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/contrib/natss/pkg/controller/channel"
 	"github.com/knative/eventing/contrib/natss/pkg/controller/clusterchannelprovisioner"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/provisioners"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
