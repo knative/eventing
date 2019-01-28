@@ -52,7 +52,7 @@ func defaultBrokerSpecSelector(brokerName string) *v1.LabelSelector {
 
 func defaultBrokerSpecChannelTemplate(brokerName string) *ChannelTemplateSpec {
 	return &ChannelTemplateSpec{
-		metadata: v1.ObjectMeta{
+		Metadata: v1.ObjectMeta{
 			Labels: defaultBrokerLabels(brokerName),
 		},
 		// Spec is left blank so that the created Channel defaulter will default the provisioner

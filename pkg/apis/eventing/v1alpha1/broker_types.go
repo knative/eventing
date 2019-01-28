@@ -60,7 +60,7 @@ type BrokerSpec struct {
 }
 
 type ChannelTemplateSpec struct {
-	metadata metav1.ObjectMeta `json:"metadata,omitempty"`
+	Metadata metav1.ObjectMeta `json:"metadata,omitempty"`
 	Spec     *ChannelSpec      `json:"spec,omitempty"`
 }
 
@@ -95,35 +95,35 @@ const (
 
 // GetCondition returns the condition currently associated with the given type, or nil.
 func (bs *BrokerStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
-	return chanCondSet.Manage(bs).GetCondition(t)
+	return brokerCondSet.Manage(bs).GetCondition(t)
 }
 
 // IsReady returns true if the resource is ready overall.
 func (bs *BrokerStatus) IsReady() bool {
-	return chanCondSet.Manage(bs).IsHappy()
+	return brokerCondSet.Manage(bs).IsHappy()
 }
 
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (bs *BrokerStatus) InitializeConditions() {
-	chanCondSet.Manage(bs).InitializeConditions()
+	brokerCondSet.Manage(bs).InitializeConditions()
 }
 
 func (bs *BrokerStatus) MarkChannelTemplateMatchesSelector() {
-	chanCondSet.Manage(bs).MarkTrue(BrokerConditionChannelTemplateSelector)
+	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionChannelTemplateSelector)
 }
 
 func (bs *BrokerStatus) MarkChannelTemplateDoesNotMatchSelector() {
-	chanCondSet.Manage(bs).MarkFalse(BrokerConditionChannelTemplateSelector, "selectorDoesNotMatchTemplate", "`spec.selector` does not match `spec.channelTempalte.meta.labels`")
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionChannelTemplateSelector, "selectorDoesNotMatchTemplate", "`spec.selector` does not match `spec.channelTempalte.meta.labels`")
 }
 
 // MarkProvisioned sets BrokerConditionProvisioned condition to True state.
 func (bs *BrokerStatus) MarkSubscribableResourcesExist() {
-	chanCondSet.Manage(bs).MarkTrue(BrokerConditionSubscribableResourcesExist)
+	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionSubscribableResourcesExist)
 }
 
 // MarkNotProvisioned sets BrokerConditionProvisioned condition to False state.
 func (bs *BrokerStatus) MarkSubscribableResourcesDoNotExist(reason, messageFormat string, messageA ...interface{}) {
-	chanCondSet.Manage(bs).MarkFalse(BrokerConditionSubscribableResourcesExist, reason, messageFormat, messageA...)
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionSubscribableResourcesExist, reason, messageFormat, messageA...)
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

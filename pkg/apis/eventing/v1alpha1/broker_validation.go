@@ -42,7 +42,7 @@ func (bs *BrokerSpec) Validate() *apis.FieldError {
 		fe.Details = "the Broker must have a channelTemplate"
 		errs = errs.Also(fe)
 	} else if !selectorMatchesTemplateLabels(bs.Selector, bs.ChannelTemplate) {
-		fe := apis.ErrInvalidValue(fmt.Sprint(bs.ChannelTemplate.metadata.Labels), "channelTemplate.metadata.labels")
+		fe := apis.ErrInvalidValue(fmt.Sprint(bs.ChannelTemplate.Metadata.Labels), "channelTemplate.metadata.labels")
 		errs = errs.Also(fe)
 	}
 
@@ -60,7 +60,7 @@ func isSelectorNotPresentOrEmpty(s *v1.LabelSelector) bool {
 
 func selectorMatchesTemplateLabels(s *v1.LabelSelector, ct *ChannelTemplateSpec) bool {
 	// TODO Improve this so it supports something other than direct label equality.
-	return equality.Semantic.DeepEqual(s.MatchLabels, ct.metadata.Labels)
+	return equality.Semantic.DeepEqual(s.MatchLabels, ct.Metadata.Labels)
 }
 
 func channelsInSubscribableResources(sr []v1.GroupVersionKind) bool {
