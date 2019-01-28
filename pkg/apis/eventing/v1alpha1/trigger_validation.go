@@ -1,0 +1,88 @@
+/*
+Copyright 2019 The Knative Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package v1alpha1
+
+import (
+	"github.com/google/go-cmp/cmp"
+	"github.com/knative/pkg/apis"
+	"k8s.io/apimachinery/pkg/api/equality"
+)
+
+func (t *Trigger) Validate() *apis.FieldError {
+	return t.Spec.Validate().ViaField("spec")
+}
+
+func (ts *TriggerSpec) Validate() *apis.FieldError {
+	var errs *apis.FieldError
+	if ts.Broker == "" {
+		fe := apis.ErrMissingField("broker")
+		errs = errs.Also(fe)
+	}
+
+	if ts.Selector == nil {
+		fe := apis.ErrMissingField("selector")
+		errs = errs.Also(fe)
+	} else if fe := multipleSelectorsSet(ts.Selector); fe != nil {
+		errs = errs.Also(fe)
+	}
+
+	if isSubscriberSpecNilOrEmpty(ts.Subscriber) {
+		fe := apis.ErrMissingField("subscriber")
+		errs = errs.Also(fe)
+	} else if fe := isValidSubscriberSpec(*ts.Subscriber); fe != nil {
+		errs = errs.Also(fe.ViaField("subscriber"))
+	}
+
+	return errs
+}
+
+func multipleSelectorsSet(s *TriggerSelectorSpec) *apis.FieldError {
+	var fields []string
+	if !equality.Semantic.DeepEqual(s.Header, map[string]string{}) {
+		fields = append(fields, "header")
+	}
+	if len(s.HeaderExpression) > 0 {
+		fields = append(fields, "headerExpression")
+	}
+	if s.OPAPolicy != "" {
+		fields = append(fields, "opaPolicy")
+	}
+
+	if len(fields) != 1 {
+		return apis.ErrMultipleOneOf(fields...)
+	}
+	return nil
+}
+
+func (t *Trigger) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
+	original, ok := og.(*Trigger)
+	if !ok {
+		return &apis.FieldError{Message: "The provided original was not a Trigger"}
+	}
+	if original == nil {
+		return nil
+	}
+
+	if diff := cmp.Diff(original.Spec.Broker, t.Spec.Broker); diff != "" {
+		return &apis.FieldError{
+			Message: "Immutable fields changed (-old +new)",
+			Paths:   []string{"spec", "broker"},
+			Details: diff,
+		}
+	}
+	return nil
+}

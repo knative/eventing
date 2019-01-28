@@ -44,6 +44,10 @@ func (c *FakeEventingV1alpha1) Subscriptions(namespace string) v1alpha1.Subscrip
 	return &FakeSubscriptions{c, namespace}
 }
 
+func (c *FakeEventingV1alpha1) Triggers(namespace string) v1alpha1.TriggerInterface {
+	return &FakeTriggers{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeEventingV1alpha1) RESTClient() rest.Interface {

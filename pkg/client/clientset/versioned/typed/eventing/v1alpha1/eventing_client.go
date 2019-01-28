@@ -31,6 +31,7 @@ type EventingV1alpha1Interface interface {
 	ChannelsGetter
 	ClusterChannelProvisionersGetter
 	SubscriptionsGetter
+	TriggersGetter
 }
 
 // EventingV1alpha1Client is used to interact with features provided by the eventing.knative.dev group.
@@ -52,6 +53,10 @@ func (c *EventingV1alpha1Client) ClusterChannelProvisioners() ClusterChannelProv
 
 func (c *EventingV1alpha1Client) Subscriptions(namespace string) SubscriptionInterface {
 	return newSubscriptions(c, namespace)
+}
+
+func (c *EventingV1alpha1Client) Triggers(namespace string) TriggerInterface {
+	return newTriggers(c, namespace)
 }
 
 // NewForConfig creates a new EventingV1alpha1Client for the given config.

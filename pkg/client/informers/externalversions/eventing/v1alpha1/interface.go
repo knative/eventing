@@ -32,6 +32,8 @@ type Interface interface {
 	ClusterChannelProvisioners() ClusterChannelProvisionerInformer
 	// Subscriptions returns a SubscriptionInformer.
 	Subscriptions() SubscriptionInformer
+	// Triggers returns a TriggerInformer.
+	Triggers() TriggerInformer
 }
 
 type version struct {
@@ -63,4 +65,9 @@ func (v *version) ClusterChannelProvisioners() ClusterChannelProvisionerInformer
 // Subscriptions returns a SubscriptionInformer.
 func (v *version) Subscriptions() SubscriptionInformer {
 	return &subscriptionInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Triggers returns a TriggerInformer.
+func (v *version) Triggers() TriggerInformer {
+	return &triggerInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
