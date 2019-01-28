@@ -34,56 +34,27 @@ RELEASES=(
 )
 readonly RELEASES
 
-# Script entry point.
-
-initialize $@
-
-set -o errexit
-set -o pipefail
-
-run_validation_tests ./test/presubmit-tests.sh
-
-# Build the release
-
-banner "Building the release"
-
-# Build the components
-
-all_yamls=()
-
-for yaml in "${!COMPONENTS[@]}"; do
-  config="${COMPONENTS[${yaml}]}"
-  echo "Building Knative Eventing - ${config}"
-  ko resolve ${KO_FLAGS} -f ${config}/ > ${yaml}
-  tag_images_in_yaml ${yaml}
-  all_yamls+=(${yaml})
-done
-
-# Assemble the release
-for yaml in "${!RELEASES[@]}"; do
-  echo "Assembling Knative Eventing - ${yaml}"
-  echo "" > ${yaml}
-  for component in ${RELEASES[${yaml}]}; do
-    echo "---" >> ${yaml}
-    echo "# ${component}" >> ${yaml}
-    cat ${component} >> ${yaml}
+function build_release() {
+  # Build the components
+  local all_yamls=()
+  for yaml in "${!COMPONENTS[@]}"; do
+    local config="${COMPONENTS[${yaml}]}"
+    echo "Building Knative Eventing - ${config}"
+    ko resolve ${KO_FLAGS} -f ${config}/ > ${yaml}
+    all_yamls+=(${yaml})
   done
-  tag_images_in_yaml ${yaml}
-  all_yamls+=(${yaml})
-done
+  # Assemble the release
+  for yaml in "${!RELEASES[@]}"; do
+    echo "Assembling Knative Eventing - ${yaml}"
+    echo "" > ${yaml}
+    for component in ${RELEASES[${yaml}]}; do
+      echo "---" >> ${yaml}
+      echo "# ${component}" >> ${yaml}
+      cat ${component} >> ${yaml}
+    done
+    all_yamls+=(${yaml})
+  done
+  YAMLS_TO_PUBLISH="${all_yamls[@]}"
+}
 
-echo "New release built successfully"
-
-if (( ! PUBLISH_RELEASE )); then
- exit 0
-fi
-
-# Publish the release
-
-for yaml in ${all_yamls[@]}; do
-  publish_yaml ${yaml}
-done
-
-branch_release "Knative Eventing" "${all_yamls[*]}"
-
-echo "New release published successfully"
+main $@

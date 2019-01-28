@@ -60,10 +60,6 @@ initialize $@
 
 header "Setting up environment"
 
-# Handle test failures ourselves, so we can dump useful info.
-set +o errexit
-set +o pipefail
-
 # Install Knative Serving if not using an existing cluster
 if (( ! USING_EXISTING_CLUSTER )); then
   start_latest_knative_serving || fail_test "Serving did not come up"
