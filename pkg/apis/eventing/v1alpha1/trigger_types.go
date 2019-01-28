@@ -27,9 +27,6 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Trigger is an abstract resource that implements the Addressable contract.
-// The Provisioner provisions infrastructure to accepts events and
-// deliver to Subscriptions.
 type Trigger struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
@@ -51,8 +48,6 @@ var _ apis.Immutable = (*Trigger)(nil)
 var _ runtime.Object = (*Trigger)(nil)
 var _ webhook.GenericCRD = (*Trigger)(nil)
 
-// TriggerSpec specifies the Provisioner backing a channel and the configuration
-// arguments for a Trigger.
 type TriggerSpec struct {
 	Broker     string               `json:"broker,omitempty"`
 	Selector   *TriggerSelectorSpec `json:"selector,omitempty"`
@@ -77,7 +72,7 @@ type TriggerStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// Represents the latest available observations of a channel's current state.
+	// Represents the latest available observations of a trigger's current state.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
@@ -85,8 +80,6 @@ type TriggerStatus struct {
 }
 
 const (
-	// TriggerConditionReady has status True when the Trigger is ready to
-	// accept traffic.
 	TriggerConditionReady = duckv1alpha1.ConditionReady
 
 	TriggerConditionBrokerExists duckv1alpha1.ConditionType = "BrokerExists"
@@ -117,12 +110,10 @@ func (ts *TriggerStatus) MarkBrokerDoesNotExists() {
 	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionBrokerExists, "doesNotExist", "Broker does not exist")
 }
 
-// MarkProvisioned sets TriggerConditionProvisioned condition to True state.
 func (ts *TriggerStatus) MarkSubscriberFound() {
 	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionSubscriberFound)
 }
 
-// MarkNotProvisioned sets TriggerConditionProvisioned condition to False state.
 func (ts *TriggerStatus) MarkSubscriberNotFound(reason, messageFormat string, messageA ...interface{}) {
 	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionSubscriberFound, reason, messageFormat, messageA...)
 }

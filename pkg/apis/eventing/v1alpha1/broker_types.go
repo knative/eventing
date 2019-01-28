@@ -27,9 +27,6 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Broker is an abstract resource that implements the Addressable contract.
-// The Provisioner provisions infrastructure to accepts events and
-// deliver to Subscriptions.
 type Broker struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
@@ -51,8 +48,6 @@ var _ apis.Immutable = (*Broker)(nil)
 var _ runtime.Object = (*Broker)(nil)
 var _ webhook.GenericCRD = (*Broker)(nil)
 
-// BrokerSpec specifies the Provisioner backing a channel and the configuration
-// arguments for a Broker.
 type BrokerSpec struct {
 	Selector              *metav1.LabelSelector     `json:"selector,omitempty"`
 	ChannelTemplate       *ChannelTemplateSpec      `json:"channelTemplate,omitempty"`
@@ -76,7 +71,7 @@ type BrokerStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// Represents the latest available observations of a channel's current state.
+	// Represents the latest available observations of a broker's current state.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
@@ -84,8 +79,6 @@ type BrokerStatus struct {
 }
 
 const (
-	// BrokerConditionReady has status True when the Broker is ready to
-	// accept traffic.
 	BrokerConditionReady = duckv1alpha1.ConditionReady
 
 	BrokerConditionChannelTemplateSelector duckv1alpha1.ConditionType = "ChannelTemplateSelector"
@@ -116,12 +109,10 @@ func (bs *BrokerStatus) MarkChannelTemplateDoesNotMatchSelector() {
 	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionChannelTemplateSelector, "selectorDoesNotMatchTemplate", "`spec.selector` does not match `spec.channelTempalte.meta.labels`")
 }
 
-// MarkProvisioned sets BrokerConditionProvisioned condition to True state.
 func (bs *BrokerStatus) MarkSubscribableResourcesExist() {
 	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionSubscribableResourcesExist)
 }
 
-// MarkNotProvisioned sets BrokerConditionProvisioned condition to False state.
 func (bs *BrokerStatus) MarkSubscribableResourcesDoNotExist(reason, messageFormat string, messageA ...interface{}) {
 	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionSubscribableResourcesExist, reason, messageFormat, messageA...)
 }
