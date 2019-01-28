@@ -15,6 +15,14 @@
 apiVersion: eventing.knative.dev/v1alpha1
 kind: ClusterChannelProvisioner
 metadata:
+  name: in-memory
+spec: {}
+
+---
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: ClusterChannelProvisioner
+metadata:
   name: in-memory-channel
 spec: {}
 
@@ -128,7 +136,7 @@ spec:
   replicas: 1
   selector:
     matchLabels: &labels
-      clusterChannelProvisioner: in-memory-channel
+      clusterChannelProvisioner: in-memory
       role: controller
   template:
     metadata:
@@ -191,7 +199,7 @@ spec:
   replicas: 1
   selector:
     matchLabels: &labels
-      clusterChannelProvisioner: in-memory-channel
+      clusterChannelProvisioner: in-memory
       role: dispatcher
   template:
     metadata:

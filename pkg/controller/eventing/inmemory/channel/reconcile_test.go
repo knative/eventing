@@ -43,7 +43,8 @@ import (
 )
 
 const (
-	ccpName = "in-memory-channel"
+	ccpName      = "in-memory-channel"
+	asyncCCPName = "in-memory"
 
 	cNamespace = "test-namespace"
 	cName      = "test-channel"
@@ -680,8 +681,8 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 			Labels: map[string]string{
 				util.EventingChannelLabel:        cName,
 				util.OldEventingChannelLabel:     cName,
-				util.EventingProvisionerLabel:    ccpName,
-				util.OldEventingProvisionerLabel: ccpName,
+				util.EventingProvisionerLabel:    asyncCCPName,
+				util.OldEventingProvisionerLabel: asyncCCPName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -705,7 +706,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 				},
 				Route: []istiov1alpha3.DestinationWeight{{
 					Destination: istiov1alpha3.Destination{
-						Host: "in-memory-channel-dispatcher.knative-eventing.svc.cluster.local",
+						Host: "in-memory-dispatcher.knative-eventing.svc.cluster.local",
 						Port: istiov1alpha3.PortSelector{
 							Number: util.PortNumber,
 						},
