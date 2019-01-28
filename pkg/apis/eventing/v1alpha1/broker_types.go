@@ -59,7 +59,7 @@ type ChannelTemplateSpec struct {
 	Spec     *ChannelSpec      `json:"spec,omitempty"`
 }
 
-var brokerCondSet = duckv1alpha1.NewLivingConditionSet(BrokerConditionChannelTemplateSelector, BrokerConditionSubscribableResourcesExist)
+var brokerCondSet = duckv1alpha1.NewLivingConditionSet(BrokerConditionChannelTemplateSelector, BrokerConditionSubscribableResourcesExist, BrokerConditionSubscribableResourcesExist, BrokerConditionAddressable)
 
 // BrokerStatus represents the current state of a Broker.
 type BrokerStatus struct {
@@ -76,6 +76,13 @@ type BrokerStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+
+	// Broker is Addressable. It currently exposes the endpoint as a
+	// fully-qualified DNS name which will distribute traffic over the
+	// provided targets from inside the cluster.
+	//
+	// It generally has the form {broker}-router.{namespace}.svc.{cluster domain name}
+	Address duckv1alpha1.Addressable `json:"address,omitempty"`
 }
 
 const (
@@ -84,6 +91,10 @@ const (
 	BrokerConditionChannelTemplateSelector duckv1alpha1.ConditionType = "ChannelTemplateSelector"
 
 	BrokerConditionSubscribableResourcesExist duckv1alpha1.ConditionType = "SubscribableResourcesExist"
+
+	BrokerConditionRouterAndActivatorExist duckv1alpha1.ConditionType = "RouterAndActivatorCreated"
+
+	BrokerConditionAddressable duckv1alpha1.ConditionType = "Addressable"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
@@ -113,8 +124,23 @@ func (bs *BrokerStatus) MarkSubscribableResourcesExist() {
 	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionSubscribableResourcesExist)
 }
 
-func (bs *BrokerStatus) MarkSubscribableResourcesDoNotExist(reason, messageFormat string, messageA ...interface{}) {
-	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionSubscribableResourcesExist, reason, messageFormat, messageA...)
+func (bs *BrokerStatus) MarkSubscribableResourcesDoNotExist(dontExist []metav1.GroupVersionKind) {
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionSubscribableResourcesExist, "resourcesDontExist", "The following resources do not exist: %v", dontExist)
+}
+
+func (bs *BrokerStatus) MarkRouterAndActivatorExist() {
+	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionRouterAndActivatorExist)
+}
+
+// SetAddress makes this Channel addressable by setting the hostname. It also
+// sets the ChannelConditionAddressable to true.
+func (bs *BrokerStatus) SetAddress(hostname string) {
+	bs.Address.Hostname = hostname
+	if hostname != "" {
+		chanCondSet.Manage(bs).MarkTrue(BrokerConditionAddressable)
+	} else {
+		chanCondSet.Manage(bs).MarkFalse(BrokerConditionAddressable, "emptyHostname", "hostname is the empty string")
+	}
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

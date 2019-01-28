@@ -23,6 +23,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/knative/eventing/pkg/controller/eventing/broker"
+
 	"github.com/knative/eventing/pkg/controller/eventing/subscription"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -119,6 +121,7 @@ func main() {
 	// manager run it.
 	providers := []ProvideFunc{
 		subscription.ProvideController,
+		broker.ProvideController(logger.Desugar()),
 	}
 	for _, provider := range providers {
 		if _, err := provider(mgr); err != nil {
