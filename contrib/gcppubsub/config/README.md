@@ -21,8 +21,14 @@ They do not offer:
 
 #### Prerequisites
 
-1. Create a
+1. Create a (or use existing)
    [Google Cloud Project](https://cloud.google.com/resource-manager/docs/creating-managing-projects).
+
+   Then set an env variable that we'll use in other commands below.
+   ```shell
+   export PROJECT_ID='YOUR_PROJECT_ID_HERE'
+   ```
+
 1. Enable the 'Cloud Pub/Sub API' on that project.
 
    ```shell
@@ -33,42 +39,122 @@ They do not offer:
    [Service Account](https://console.cloud.google.com/iam-admin/serviceaccounts/project).
 
    1. Determine the Service Account to use, or create a new one.
+
+    If using existing service account, just set an env variable.
+    ```shell
+	export PUBSUB_SERVICE_ACCOUNT='YOUR_SERVICE_ACCOUNT_NAME'
+    ```
+
+    If creating a new service account:
+    ```shell
+	export PUBSUB_SERVICE_ACCOUNT='YOUR_NEW_SERVICE_ACCOUNT_NAME'
+    gcloud iam service-accounts create $PUBSUB_SERVICE_ACCOUNT
+    ```
+
    1. Give that Service Account the 'Pub/Sub Editor' role on your GCP project.
-   1. Download a new JSON private key for that Service Account.
+
+      ```shell
+      gcloud projects add-iam-policy-binding $PROJECT_ID \
+        --member=serviceAccount:$PUBSUB_SERVICE_ACCOUNT@$PROJECT_ID.iam.gserviceaccount.com \
+        --role roles/pubsub.editor
+      ```
+
+   1. Download a new JSON private key for that Service Account. **Be sure not to
+      check this key into source control!**
+      ```shell
+      gcloud iam service-accounts keys create knative-source.json \
+        --iam-account=$PUBSUB_SERVICE_ACCOUNT@$PROJECT_ID.iam.gserviceaccount.com
+      ```
+
    1. Create a secret for the downloaded key:
 
       ```shell
-      kubectl -n knative-eventing create secret generic gcppubsub-channel-key --from-file=key.json=PATH_TO_KEY_FILE.json
+      kubectl -n knative-eventing create secret generic gcppubsub-channel-key --from-file=key.json=knative-source.json
       ```
 
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md).
 
 #### Deployment
 
-1. Set the shell variable with the correct value:
-
-   ```shell
-   export GCP_PROJECT=REPLACE_ME
-   ```
-
 1. Apply `gcppubsub.yaml`.
 
    ```shell
-   sed "s/REPLACE_WITH_GCP_PROJECT/$GCP_PROJECT/" config/provisioners/gcppubsub/gcppubsub.yaml | ko apply -f -
+   sed "s/REPLACE_WITH_GCP_PROJECT/$PROJECT_ID/" contrib/gcppubsub/config/gcppubsub.yaml | ko apply -f -
    ```
 
-1. Create Channels that reference the `gcp-pubsub` Channel.
+1. Create Channels that reference the `gcp-pubsub` Channel. Create a file like so
+(save it for example in /tmp/channel.yaml):
 
-   ```yaml
-   apiVersion: eventing.knative.dev/v1alpha1
-   kind: Channel
-   metadata:
-     name: foo
-   spec:
-     provisioner:
-       apiVersion: eventing.knative.dev/v1alpha1
-       kind: ClusterChannelProvisioner
-       name: gcp-pubsub
+```yaml
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Channel
+metadata:
+  name: foo
+spec:
+  provisioner:
+    apiVersion: eventing.knative.dev/v1alpha1
+    kind: ClusterChannelProvisioner
+    name: gcp-pubsub
+   ```
+
+1. Then create the actual Channel resource:
+
+   ```shell
+   kubectl create -f /tmp/channel.yaml
+   ```
+
+1. Then inspect the created resource and make sure it is reported as Ready
+   ```shell
+   kubectl get channels foo -oyaml
+   ```
+
+   And you should see something like this:
+   ```shell
+vaikas@penguin:~/projects/go/src/github.com/knative/eventing$ kubectl get channels foo -oyaml
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Channel
+metadata:
+  creationTimestamp: 2019-01-29T22:58:52Z
+  finalizers:
+  - gcp-pubsub-channel-controller
+  - gcp-pubsub-channel-dispatcher
+  generation: 1
+  name: foo
+  namespace: default
+  resourceVersion: "4681440"
+  selfLink: /apis/eventing.knative.dev/v1alpha1/namespaces/default/channels/foo
+  uid: 7261543f-2419-11e9-bcc1-42010a8a0004
+spec:
+  generation: 1
+  provisioner:
+    apiVersion: eventing.knative.dev/v1alpha1
+    kind: ClusterChannelProvisioner
+    name: gcp-pubsub
+status:
+  address:
+    hostname: foo-channel-cshj8.default.svc.cluster.local
+  conditions:
+  - lastTransitionTime: 2019-01-29T22:58:54Z
+    severity: Error
+    status: "True"
+    type: Addressable
+  - lastTransitionTime: 2019-01-29T22:58:54Z
+    severity: Error
+    status: "True"
+    type: Provisioned
+  - lastTransitionTime: 2019-01-29T22:58:54Z
+    severity: Error
+    status: "True"
+    type: Ready
+  internal:
+    gcpProject: quantum-reducer-434
+    secret:
+      apiVersion: v1
+      kind: Secret
+      name: gcppubsub-channel-key
+      namespace: knative-eventing
+    secretKey: key.json
+    topic: knative-eventing-channel_foo_7261543f-2419-11e9-bcc1-42010a8a0004
    ```
 
 ### Components
