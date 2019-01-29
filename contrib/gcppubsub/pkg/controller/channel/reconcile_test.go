@@ -24,15 +24,15 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
-	pubsubutil "github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
+	pubsubutil "github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 
-	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/testcreds"
+	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/testcreds"
 
-	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/fakepubsub"
+	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/fakepubsub"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"

@@ -75,12 +75,12 @@ They do not offer:
 
 The major components are:
 
-- [Channel Controller](../../../pkg/provisioners/gcppubsub/controller)
-  - [ClusterChannelProvisioner Controller](../../../pkg/provisioners/gcppubsub/clusterchannelprovisioner)
-  - [Channel Controller](../../../pkg/provisioners/gcppubsub/channel)
-- [Channel Dispatcher](../../../pkg/provisioners/gcppubsub/dispatcher/cmd)
-  - [Dispatcher](../../../pkg/provisioners/gcppubsub/dispatcher/dispatcher)
-  - [Receiver](../../../pkg/provisioners/gcppubsub/dispatcher/receiver)
+- [Channel Controller](../../../contrib/gcppubsub/pkg/controller)
+  - [ClusterChannelProvisioner Controller](../../../contrib/gcppubsub/pkg/clusterchannelprovisioner)
+  - [Channel Controller](../../../contrib/gcppubsub/pkg/channel)
+- [Channel Dispatcher](../../../contrib/gcppubsub/pkg/dispatcher/cmd)
+  - [Dispatcher](../../../contrib/gcppubsub/pkg/dispatcher/dispatcher)
+  - [Receiver](../../../contrib/gcppubsub/pkg/dispatcher/receiver)
 
 The `Channel Controller` controls all the Kubernetes resources and creates
 `Topic`s and `Subscription`s in GCP PubSub. It runs in the Deployment:

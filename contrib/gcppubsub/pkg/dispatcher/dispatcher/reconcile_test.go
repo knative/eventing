@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
+	"github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -34,9 +34,9 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 
-	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/testcreds"
+	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/testcreds"
 
-	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/fakepubsub"
+	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/fakepubsub"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/controller/testing"
