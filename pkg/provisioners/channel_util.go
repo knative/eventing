@@ -315,11 +315,7 @@ func virtualOldServiceLabels(c *eventingv1alpha1.Channel) map[string]string {
 // appropriate OwnerReferences on the resource so handleObject can discover the Channel resource
 // that 'owns' it. As well as being garbage collected when the Channel is deleted.
 func newVirtualService(channel *eventingv1alpha1.Channel, svc *corev1.Service) *istiov1alpha3.VirtualService {
-<<<<<<< HEAD
-	destinationHost := names.ServiceHostName(channelDispatcherServiceName(channel.Spec.Provisioner.Name), system.Namespace)
-=======
-	destinationHost := controller.ServiceHostName(channelDispatcherServiceName(channel.Spec.Provisioner.Name), system.Namespace())
->>>>>>> User can specify the namespace in yaml for knative-eventing
+	destinationHost := names.ServiceHostName(channelDispatcherServiceName(channel.Spec.Provisioner.Name), system.Namespace())
 	return &istiov1alpha3.VirtualService{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: channelVirtualServiceName(channel.Name),
