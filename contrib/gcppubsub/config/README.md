@@ -62,14 +62,14 @@ They do not offer:
    1. Download a new JSON private key for that Service Account. **Be sure not to
       check this key into source control!**
       ```shell
-      gcloud iam service-accounts keys create knative-source.json \
+      gcloud iam service-accounts keys create knative-gcppubsub-channel.json \
         --iam-account=$PUBSUB_SERVICE_ACCOUNT@$PROJECT_ID.iam.gserviceaccount.com
       ```
 
    1. Create a secret for the downloaded key:
 
       ```shell
-      kubectl -n knative-eventing create secret generic gcppubsub-channel-key --from-file=key.json=knative-source.json
+      kubectl -n knative-eventing create secret generic gcppubsub-channel-key --from-file=key.json=knative-gcppubsub-channel.json
       ```
 
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md).
