@@ -95,7 +95,7 @@ spec:
     apiVersion: eventing.knative.dev/v1alpha1
     kind: ClusterChannelProvisioner
     name: gcp-pubsub
-   ```
+```
 
 1. Then create the actual Channel resource:
 
