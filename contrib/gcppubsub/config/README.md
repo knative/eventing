@@ -110,51 +110,51 @@ spec:
 
    And you should see something like this:
    ```shell
-vaikas@penguin:~/projects/go/src/github.com/knative/eventing$ kubectl get channels foo -oyaml
-apiVersion: eventing.knative.dev/v1alpha1
-kind: Channel
-metadata:
-  creationTimestamp: 2019-01-29T22:58:52Z
-  finalizers:
-  - gcp-pubsub-channel-controller
-  - gcp-pubsub-channel-dispatcher
-  generation: 1
-  name: foo
-  namespace: default
-  resourceVersion: "4681440"
-  selfLink: /apis/eventing.knative.dev/v1alpha1/namespaces/default/channels/foo
-  uid: 7261543f-2419-11e9-bcc1-42010a8a0004
-spec:
-  generation: 1
-  provisioner:
-    apiVersion: eventing.knative.dev/v1alpha1
-    kind: ClusterChannelProvisioner
-    name: gcp-pubsub
-status:
-  address:
-    hostname: foo-channel-cshj8.default.svc.cluster.local
-  conditions:
-  - lastTransitionTime: 2019-01-29T22:58:54Z
-    severity: Error
-    status: "True"
-    type: Addressable
-  - lastTransitionTime: 2019-01-29T22:58:54Z
-    severity: Error
-    status: "True"
-    type: Provisioned
-  - lastTransitionTime: 2019-01-29T22:58:54Z
-    severity: Error
-    status: "True"
-    type: Ready
-  internal:
-    gcpProject: quantum-reducer-434
-    secret:
-      apiVersion: v1
-      kind: Secret
-      name: gcppubsub-channel-key
-      namespace: knative-eventing
-    secretKey: key.json
-    topic: knative-eventing-channel_foo_7261543f-2419-11e9-bcc1-42010a8a0004
+   vaikas@penguin:~/projects/go/src/github.com/knative/eventing$ kubectl get channels foo -oyaml
+   apiVersion: eventing.knative.dev/v1alpha1
+   kind: Channel
+   metadata:
+     creationTimestamp: 2019-01-29T22:58:52Z
+     finalizers:
+     - gcp-pubsub-channel-controller
+     - gcp-pubsub-channel-dispatcher
+     generation: 1
+     name: foo
+     namespace: default
+     resourceVersion: "4681440"
+     selfLink: /apis/eventing.knative.dev/v1alpha1/namespaces/default/channels/foo
+     uid: 7261543f-2419-11e9-bcc1-42010a8a0004
+   spec:
+     generation: 1
+     provisioner:
+       apiVersion: eventing.knative.dev/v1alpha1
+       kind: ClusterChannelProvisioner
+       name: gcp-pubsub
+   status:
+     address:
+       hostname: foo-channel-cshj8.default.svc.cluster.local
+     conditions:
+     - lastTransitionTime: 2019-01-29T22:58:54Z
+       severity: Error
+       status: "True"
+       type: Addressable
+     - lastTransitionTime: 2019-01-29T22:58:54Z
+       severity: Error
+       status: "True"
+       type: Provisioned
+     - lastTransitionTime: 2019-01-29T22:58:54Z
+       severity: Error
+       status: "True"
+       type: Ready
+     internal:
+       gcpProject: quantum-reducer-434
+       secret:
+         apiVersion: v1
+         kind: Secret
+         name: gcppubsub-channel-key
+         namespace: knative-eventing
+       secretKey: key.json
+       topic: knative-eventing-channel_foo_7261543f-2419-11e9-bcc1-42010a8a0004
    ```
 
 ### Components
