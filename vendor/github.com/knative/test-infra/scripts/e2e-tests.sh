@@ -99,16 +99,15 @@ function download_k8s() {
   else
     echo "Using command-line supplied version ${E2E_CLUSTER_VERSION}"
   fi
+  readonly E2E_CLUSTER_VERSION
+  export KUBERNETES_PROVIDER=gke
+  export KUBERNETES_RELEASE=v${E2E_CLUSTER_VERSION}
   # Download k8s to staging dir
-  E2E_CLUSTER_VERSION=v${E2E_CLUSTER_VERSION}
   local staging_dir=${GOPATH}/src/k8s.io/kubernetes/_output/gcs-stage
   rm -fr ${staging_dir}
-  staging_dir=${staging_dir}/${E2E_CLUSTER_VERSION}
+  staging_dir=${staging_dir}/${KUBERNETES_RELEASE}
   mkdir -p ${staging_dir}
   pushd ${staging_dir}
-  export KUBERNETES_PROVIDER=gke
-  export KUBERNETES_RELEASE=${E2E_CLUSTER_VERSION}
-  readonly E2E_CLUSTER_VERSION
   curl -fsSL https://get.k8s.io | bash
   local result=$?
   if [[ ${result} -eq 0 ]]; then
@@ -146,14 +145,19 @@ function dump_cluster_state() {
 # On a Prow job, save some metadata about the test for Testgrid.
 function save_metadata() {
   (( ! IS_PROW )) && return
+  local geo_key="Region"
+  local geo_value="${E2E_CLUSTER_REGION}"
+  if [[ -n "${E2E_CLUSTER_ZONE}" ]]; then
+    geo_key="Zone"
+    geo_value="${E2E_CLUSTER_REGION}-${E2E_CLUSTER_ZONE}"
+  fi
   cat << EOF > ${ARTIFACTS}/metadata.json
 {
-  "Region": "${E2E_CLUSTER_REGION}",
-  "Zone": "${E2E_CLUSTER_ZONE}",
-  "Machine": "${E2E_CLUSTER_MACHINE}",
-  "Version": "${E2E_CLUSTER_VERSION}",
-  "MinNodes": "${E2E_MIN_CLUSTER_NODES}",
-  "MaxNodes": "${E2E_MAX_CLUSTER_NODES}"
+  "E2E:${geo_key}": "${geo_value}",
+  "E2E:Machine": "${E2E_CLUSTER_MACHINE}",
+  "E2E:Version": "${E2E_CLUSTER_VERSION}",
+  "E2E:MinNodes": "${E2E_MIN_CLUSTER_NODES}",
+  "E2E:MaxNodes": "${E2E_MAX_CLUSTER_NODES}"
 }
 EOF
 }
@@ -208,6 +212,12 @@ function create_test_cluster() {
   [[ -n "${GCP_PROJECT}" ]] && echo "GCP project for test cluster is ${GCP_PROJECT}"
   echo "Test script is ${E2E_SCRIPT}"
   download_k8s ${gcloud_project} || return 1
+  # Save some metadata about cluster creation for using in prow and testgrid
+  save_metadata
+  # Set arguments for this script again
+  local test_cmd_args="--run-tests --cluster-version ${E2E_CLUSTER_VERSION}"
+  (( EMIT_METRICS )) && test_cmd_args+=" --emit-metrics"
+  [[ -n "${GCP_PROJECT}" ]] && test_cmd_args+=" --gcp-project ${GCP_PROJECT}"
   # Don't fail test for kubetest, as it might incorrectly report test failure
   # if teardown fails (for details, see success() below)
   set +o errexit
@@ -290,9 +300,6 @@ function setup_test_cluster() {
   readonly K8S_CLUSTER_OVERRIDE
   readonly K8S_USER_OVERRIDE
   readonly DOCKER_REPO_OVERRIDE
-
-  # Save some metadata about cluster creation for using in prow and testgrid
-  save_metadata
 
   # Handle failures ourselves, so we can dump useful info.
   set +o errexit
