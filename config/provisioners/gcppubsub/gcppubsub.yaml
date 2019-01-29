@@ -39,6 +39,7 @@ rules:
       - channels
       - channels/status
       - clusterchannelprovisioners
+      - clusterchannelprovisioners/status
     verbs:
       - get
       - list

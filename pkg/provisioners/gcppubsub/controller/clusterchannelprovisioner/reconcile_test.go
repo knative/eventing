@@ -176,8 +176,8 @@ func TestReconcile(t *testing.T) {
 				makeClusterChannelProvisioner(),
 			},
 			Mocks: controllertesting.Mocks{
-				MockUpdates: []controllertesting.MockUpdate{
-					errorUpdating(),
+				MockStatusUpdates: []controllertesting.MockStatusUpdate{
+					errorUpdatingStatus(),
 				},
 			},
 			WantErrMsg: testErrorMessage,
@@ -253,7 +253,7 @@ func oneSuccessfulClusterChannelProvisionerGet() []controllertesting.MockGet {
 	}
 }
 
-func errorUpdating() controllertesting.MockUpdate {
+func errorUpdatingStatus() controllertesting.MockStatusUpdate {
 	return func(client.Client, context.Context, runtime.Object) (controllertesting.MockHandled, error) {
 		return controllertesting.Handled, errors.New(testErrorMessage)
 	}
