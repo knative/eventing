@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/client-go/util/workqueue"
+
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
 
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -410,7 +412,8 @@ func TestReceiveFunc(t *testing.T) {
 			defaults := provisioners.DispatchDefaults{
 				Namespace: cNamespace,
 			}
-			rf := receiveFunc(zap.NewNop().Sugar(), sub, defaults, &fakeDispatcher{err: tc.dispatcherErr})
+			rateLimiter := workqueue.NewItemExponentialFailureRateLimiter(0, 0)
+			rf := receiveFunc(zap.NewNop().Sugar(), sub, defaults, &fakeDispatcher{err: tc.dispatcherErr}, &rateLimiter)
 			msg := fakepubsub.Message{}
 			rf(context.TODO(), &msg)
 
