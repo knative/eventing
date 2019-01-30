@@ -14,30 +14,14 @@
  * limitations under the License.
  */
 
-package reconciler
+package names
 
 import (
-	"testing"
+	"fmt"
+
+	"github.com/knative/eventing/pkg/utils"
 )
 
-func TestNames(t *testing.T) {
-	testCases := []struct {
-		Name string
-		F    func() string
-		Want string
-	}{{
-		Name: "ServiceHostName",
-		F: func() string {
-			return ServiceHostName("foo", "namespace")
-		},
-		Want: "foo.namespace.svc.cluster.local",
-	}}
-
-	for _, tc := range testCases {
-		t.Run(tc.Name, func(t *testing.T) {
-			if got := tc.F(); got != tc.Want {
-				t.Errorf("want %v, got %v", tc.Want, got)
-			}
-		})
-	}
+func ServiceHostName(serviceName, namespace string) string {
+	return fmt.Sprintf("%s.%s.svc.%s", serviceName, namespace, utils.GetClusterDomainName())
 }

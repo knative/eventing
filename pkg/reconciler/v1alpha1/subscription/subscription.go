@@ -24,7 +24,7 @@ import (
 	"github.com/golang/glog"
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/names"
 	duckapis "github.com/knative/pkg/apis"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
@@ -233,7 +233,7 @@ func (r *reconciler) resolveSubscriberSpec(namespace string, s *v1alpha1.Subscri
 			glog.Warningf("Failed to fetch SubscriberSpec target as a K8s Service %+v: %s", s.Ref, err)
 			return "", err
 		}
-		return domainToURL(reconciler.ServiceHostName(svc.Name, svc.Namespace)), nil
+		return domainToURL(names.ServiceHostName(svc.Name, svc.Namespace)), nil
 	}
 
 	obj, err := r.fetchObjectReference(namespace, s.Ref)
