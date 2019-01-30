@@ -30,7 +30,7 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler"
-	ccpcontroller "github.com/knative/eventing/pkg/reconciler/eventing/inmemory/clusterchannelprovisioner"
+	ccpcontroller "github.com/knative/eventing/pkg/reconciler/v1alpha1/inmemory/clusterchannelprovisioner"
 	util "github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
