@@ -29,9 +29,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/reconciler"
-	ccpcontroller "github.com/knative/eventing/pkg/reconciler/v1alpha1/inmemory/clusterchannelprovisioner"
 	util "github.com/knative/eventing/pkg/provisioners"
+	ccpcontroller "github.com/knative/eventing/pkg/provisioners/inmemory/clusterchannelprovisioner"
+	"github.com/knative/eventing/pkg/reconciler/names"
 	"github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
@@ -155,7 +155,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		r.recorder.Eventf(c, corev1.EventTypeWarning, k8sServiceCreateFailed, "Failed to reconcile Channel's K8s Service: %v", err)
 		return err
 	}
-	c.Status.SetAddress(reconciler.ServiceHostName(svc.Name, svc.Namespace))
+	c.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
 
 	_, err = util.CreateVirtualService(ctx, r.client, c, svc)
 	if err != nil {
