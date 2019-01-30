@@ -111,12 +111,11 @@ metadata:
 spec:
   replicas: 1
   selector:
-    matchLabels:
+    matchLabels: &labels
       app: kafka-channel-controller
   template:
     metadata:
-      labels:
-        app: kafka-channel-controller
+      labels: *labels
     spec:
       serviceAccountName: kafka-channel-controller
       containers:
