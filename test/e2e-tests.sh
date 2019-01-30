@@ -89,18 +89,17 @@ go_test_e2e ./test/e2e
 exit_result=$?
 if [ ${exit_result} -ne 0 ]; then
 # Collecting logs from all knative's eventing pods
+  echo "============================================================"
   for namespace in "knative-eventing" "e2etestfn3"; do
     for pod in $(kubectl get pod -n $namespace | grep Running | awk '{print $1}' ); do
-      echo "========== Collecting logs for pod: "${pod}" in $namespace ================="
       for container in $(kubectl get pod "${pod}" -n $namespace -ojsonpath='{.spec.containers[*].name}'); do
-        echo "----------------------------------------------------------"
-        echo "Container: "${container}
+        echo "Namespace, Pod, Container: ${namespace}, ${pod}, ${container}"
         kubectl logs -n $namespace "${pod}" -c "${container}" || true
         echo "----------------------------------------------------------"
+        echo "Namespace, Pod, Container (Previous instance): ${namespace}, ${pod}, ${container}"
         kubectl logs -p -n $namespace "${pod}" -c "${container}" || true
-        echo "----------------------------------------------------------"
+        echo "============================================================"
       done
-      echo "============================================================"
     done
   done
   fail_test
