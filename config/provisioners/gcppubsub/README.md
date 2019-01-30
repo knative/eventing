@@ -38,7 +38,7 @@ They do not offer:
    1. Create a secret for the downloaded key:
 
       ```shell
-      kubectl -n knative-sources create secret generic gcppubsub-channel-key --from-file=key.json=PATH_TO_KEY_FILE.json
+      kubectl -n knative-eventing create secret generic gcppubsub-channel-key --from-file=key.json=PATH_TO_KEY_FILE.json
       ```
 
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md).
