@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package controller
+package reconciler
 
 import (
 	"fmt"

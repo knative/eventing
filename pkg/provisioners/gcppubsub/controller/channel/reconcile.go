@@ -21,7 +21,7 @@ import (
 	"fmt"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/controller"
+	"github.com/knative/eventing/pkg/reconciler"
 	util "github.com/knative/eventing/pkg/provisioners"
 	ccpcontroller "github.com/knative/eventing/pkg/provisioners/gcppubsub/controller/clusterchannelprovisioner"
 	pubsubutil "github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
@@ -333,7 +333,7 @@ func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.C
 		return nil, err
 	}
 
-	c.Status.SetAddress(controller.ServiceHostName(svc.Name, svc.Namespace))
+	c.Status.SetAddress(reconciler.ServiceHostName(svc.Name, svc.Namespace))
 	return svc, nil
 }
 
