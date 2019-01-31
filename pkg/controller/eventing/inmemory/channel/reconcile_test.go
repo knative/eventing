@@ -527,6 +527,7 @@ func TestReconcile(t *testing.T) {
 			Mocks: controllertesting.Mocks{},
 			WantPresent: []runtime.Object{
 				makeVirtualService(),
+				makeK8sService(),
 			},
 			WantEvent: []corev1.Event{
 				events[channelReconciled],
@@ -542,6 +543,7 @@ func TestReconcile(t *testing.T) {
 			Mocks: controllertesting.Mocks{},
 			WantPresent: []runtime.Object{
 				makeVirtualService(),
+				makeK8sService(),
 			},
 			WantEvent: []corev1.Event{
 				events[channelReconciled],
@@ -571,10 +573,6 @@ func TestReconcile(t *testing.T) {
 }
 
 func makeChannel(pn ...string) *eventingv1alpha1.Channel {
-	provisionerName := ccpName
-	if len(pn) != 0 {
-		provisionerName = pn[0]
-	}
 	c := &eventingv1alpha1.Channel{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
@@ -587,12 +585,22 @@ func makeChannel(pn ...string) *eventingv1alpha1.Channel {
 		},
 		Spec: eventingv1alpha1.ChannelSpec{
 			Provisioner: &corev1.ObjectReference{
-				Name: provisionerName,
+				Name: getProvisionerName(pn),
 			},
 		},
 	}
 	c.Status.InitializeConditions()
 	return c
+}
+
+// getProvisionerName returns either default provisioner name defined by ccpName variable
+// or, if specified, a custom provisioner name.
+func getProvisionerName(pn []string) string {
+	provisionerName := ccpName
+	if len(pn) != 0 {
+		provisionerName = pn[0]
+	}
+	return provisionerName
 }
 
 func makeChannelWithFinalizerAndAddress() *eventingv1alpha1.Channel {
@@ -664,11 +672,7 @@ func makeConfigMapWithVerifyConfigMapData() *corev1.ConfigMap {
 	return cm
 }
 
-func makeK8sService(pn ...string) *corev1.Service {
-	provisionerName := ccpName
-	if len(pn) != 0 {
-		provisionerName = pn[0]
-	}
+func makeK8sService() *corev1.Service {
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -680,8 +684,8 @@ func makeK8sService(pn ...string) *corev1.Service {
 			Labels: map[string]string{
 				util.EventingChannelLabel:        cName,
 				util.OldEventingChannelLabel:     cName,
-				util.EventingProvisionerLabel:    provisionerName,
-				util.OldEventingProvisionerLabel: provisionerName,
+				util.EventingProvisionerLabel:    asyncCCPName,
+				util.OldEventingProvisionerLabel: asyncCCPName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
