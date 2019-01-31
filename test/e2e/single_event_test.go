@@ -124,6 +124,9 @@ func SingleEvent(t *testing.T, encoding string) {
 	// create channel
 
 	logger.Infof("Creating Channel and Subscription")
+	if test.EventingFlags.Provisioner == "" {
+		t.Fatal("ClusterChannelProvisioner must be set to a non-empty string. Either do not specify --clusterChannelProvisioner or set to something other than the empty string")
+	}
 	channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(test.EventingFlags.Provisioner))
 	logger.Infof("channel: %#v", channel)
 	sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelName), test.SubscriberSpecForService(routeName), nil)
