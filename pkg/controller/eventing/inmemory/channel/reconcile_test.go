@@ -519,6 +519,34 @@ func TestReconcile(t *testing.T) {
 				events[channelReconciled],
 			},
 		},
+		{
+			Name: "Channel reconcile successful - Async channel",
+			InitialState: []runtime.Object{
+				makeChannel("in-memory"),
+			},
+			Mocks: controllertesting.Mocks{},
+			WantPresent: []runtime.Object{
+				makeVirtualService(),
+			},
+			WantEvent: []corev1.Event{
+				events[channelReconciled],
+			},
+		},
+		{
+			Name: "Channel reconcile successful - Non Async channel",
+			// VirtualService should have channel provisioner name
+			// overwritten to "in-memory"
+			InitialState: []runtime.Object{
+				makeChannel("in-memory-channel"),
+			},
+			Mocks: controllertesting.Mocks{},
+			WantPresent: []runtime.Object{
+				makeVirtualService(),
+			},
+			WantEvent: []corev1.Event{
+				events[channelReconciled],
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -542,7 +570,11 @@ func TestReconcile(t *testing.T) {
 	}
 }
 
-func makeChannel() *eventingv1alpha1.Channel {
+func makeChannel(pn ...string) *eventingv1alpha1.Channel {
+	provisionerName := ccpName
+	if len(pn) != 0 {
+		provisionerName = pn[0]
+	}
 	c := &eventingv1alpha1.Channel{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
@@ -555,7 +587,7 @@ func makeChannel() *eventingv1alpha1.Channel {
 		},
 		Spec: eventingv1alpha1.ChannelSpec{
 			Provisioner: &corev1.ObjectReference{
-				Name: ccpName,
+				Name: provisionerName,
 			},
 		},
 	}
@@ -632,7 +664,11 @@ func makeConfigMapWithVerifyConfigMapData() *corev1.ConfigMap {
 	return cm
 }
 
-func makeK8sService() *corev1.Service {
+func makeK8sService(pn ...string) *corev1.Service {
+	provisionerName := ccpName
+	if len(pn) != 0 {
+		provisionerName = pn[0]
+	}
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -644,8 +680,8 @@ func makeK8sService() *corev1.Service {
 			Labels: map[string]string{
 				util.EventingChannelLabel:        cName,
 				util.OldEventingChannelLabel:     cName,
-				util.EventingProvisionerLabel:    ccpName,
-				util.OldEventingProvisionerLabel: ccpName,
+				util.EventingProvisionerLabel:    provisionerName,
+				util.OldEventingProvisionerLabel: provisionerName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
