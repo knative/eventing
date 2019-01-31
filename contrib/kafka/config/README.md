@@ -14,11 +14,25 @@ Deployment steps:
 1. Now that Apache Kafka is installed, you need to configure the
    `bootstrap_servers` value in the `kafka-channel-controller-config` ConfigMap,
    located inside the `contrib/kafka/config/kafka.yaml` file:
-   `... apiVersion: v1 kind: ConfigMap metadata: name: kafka-channel-controller-config namespace: knative-eventing data: # Broker URL's for the provisioner bootstrap_servers: kafkabroker.kafka:9092 ...` >
-   Note: The `bootstrap_servers` needs to contain the address of at least one
+
+   ```yaml
+   ...
+   apiVersion: v1
+   kind: ConfigMap 
+   metadata:
+     name: kafka-channel-controller-config
+     namespace: knative-eventing
+   data:
+     # Broker URL's for the provisioner
+     bootstrap_servers: kafkabroker.kafka:9092
+     ...
+   ```
+
+   >Note: The `bootstrap_servers` needs to contain the address of at least one
    broker of your Apache Kafka cluster. If you are using Strimzi, you need to
    update the `bootstrap_servers` value to
    `my-cluster-kafka-bootstrap.mynamespace:9092`.
+
 1. Apply the 'Kafka' ClusterChannelProvisioner, Controller, and Dispatcher:
 
    ```
