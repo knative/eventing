@@ -42,7 +42,7 @@ const (
 
 	// exponential backoff constants used to limit the pace at which
 	// we nack messages in order to throttle the channel retries.
-	// the backoff is computed as follows: min(expBackoffBaseDelay, expBackoffMaxDelay* 2^#failures)
+	// the backoff is computed as follows: min(expBackoffMaxDelay, expBackoffBaseDelay* 2^#failures)
 	// expBackoffMaxDelay should be less than subscription.ReceiveSettings.MaxExtension,
 	// which is the maximum period for which the Subscription extends the ack deadline
 	// for each message. It is currently set to 10 minutes

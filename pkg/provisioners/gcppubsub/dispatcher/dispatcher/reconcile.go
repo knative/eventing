@@ -331,7 +331,7 @@ func receiveFunc(logger *zap.SugaredLogger, sub pubsubutil.GcpPubSubSubscription
 			// we use this as a mechanism to backoff retries
 			sleepDuration := (*rateLimiter).When(msg.ID())
 			// blocking, might need to run this on a separate go routine to improve throughput
-			logger.Error("Message dispatch failed, waiting to nack", zap.Error(err), zap.String("pubSubMessageId", msg.ID()), zap.Float64("backoffSec", sleepDuration.Seconds()))
+			logger.Desugar().Error("Message dispatch failed, waiting to nack", zap.Error(err), zap.String("pubSubMessageId", msg.ID()), zap.Float64("backoffSec", sleepDuration.Seconds()))
 			time.Sleep(sleepDuration)
 			msg.Nack()
 		} else {
@@ -340,7 +340,7 @@ func receiveFunc(logger *zap.SugaredLogger, sub pubsubutil.GcpPubSubSubscription
 				(*rateLimiter).Forget(msg.ID())
 			}
 			// acknowledge the dispatch
-			logger.Debug("Message dispatch succeeded", zap.String("pubSubMessageId", msg.ID()))
+			logger.Desugar().Debug("Message dispatch succeeded", zap.String("pubSubMessageId", msg.ID()))
 			msg.Ack()
 		}
 	}
