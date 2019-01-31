@@ -108,7 +108,7 @@ spec:
       serviceAccountName: gcp-pubsub-channel-controller
       containers:
         - name: controller
-          image: github.com/knative/eventing/pkg/provisioners/gcppubsub/controller/cmd
+          image: github.com/knative/eventing/contrib/gcppubsub/pkg/controller/cmd
           env:
           - name: DEFAULT_GCP_PROJECT
             value: REPLACE_WITH_GCP_PROJECT
@@ -192,7 +192,7 @@ spec:
       serviceAccountName: gcp-pubsub-channel-dispatcher
       containers:
         - name: dispatcher
-          image: github.com/knative/eventing/pkg/provisioners/gcppubsub/dispatcher/cmd
+          image: github.com/knative/eventing/contrib/gcppubsub/pkg/dispatcher/cmd
 
 ---
 

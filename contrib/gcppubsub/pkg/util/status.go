@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/logging"
+	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/logging"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
