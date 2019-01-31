@@ -78,7 +78,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		r.recorder.Event(broker, corev1.EventTypeNormal, brokerReconciled, "Broker reconciled")
 	}
 
-	if _, err := r.updateStatus(broker.DeepCopy()); err != nil {
+	if _, err = r.updateStatus(broker.DeepCopy()); err != nil {
 		logging.FromContext(ctx).Error("Failed to update Broker status", zap.Error(err))
 		r.recorder.Eventf(broker, corev1.EventTypeWarning, brokerUpdateStatusFailed, "Failed to update Broker's status: %v", err)
 		return reconcile.Result{}, err

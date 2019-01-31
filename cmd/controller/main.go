@@ -23,6 +23,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/knative/eventing/pkg/controller/eventing/trigger"
+
 	"github.com/knative/eventing/pkg/controller/eventing/broker"
 
 	"github.com/knative/eventing/pkg/controller/eventing/subscription"
@@ -112,7 +114,7 @@ func main() {
 		eventingv1alpha1.AddToScheme,
 	}
 	for _, schemeFunc := range schemeFuncs {
-		if err := schemeFunc(mgr.GetScheme()); err != nil {
+		if err = schemeFunc(mgr.GetScheme()); err != nil {
 			logger.Fatalf("Error adding type to manager's scheme: %v", err)
 		}
 	}
@@ -122,6 +124,7 @@ func main() {
 	providers := []ProvideFunc{
 		subscription.ProvideController,
 		broker.ProvideController(logger.Desugar()),
+		trigger.ProvideController(logger.Desugar()),
 	}
 	for _, provider := range providers {
 		if _, err := provider(mgr); err != nil {

@@ -52,6 +52,9 @@ type TriggerSpec struct {
 	Broker     string               `json:"broker,omitempty"`
 	Selector   *TriggerSelectorSpec `json:"selector,omitempty"`
 	Subscriber *SubscriberSpec      `json:"subscriber,omitempty"`
+
+	Type   string `json:"type,omitempty"`
+	Source string `json:"source,omitempty"`
 }
 
 type TriggerSelectorSpec struct {
@@ -60,7 +63,7 @@ type TriggerSelectorSpec struct {
 	OPAPolicy        string                            `json:"opaPolicy,omitEmpty"`
 }
 
-var triggerCondSet = duckv1alpha1.NewLivingConditionSet(TriggerConditionBrokerExists, TriggerConditionSubscriberFound)
+var triggerCondSet = duckv1alpha1.NewLivingConditionSet(TriggerConditionBrokerExists, TriggerConditionSubscribed)
 
 // TriggerStatus represents the current state of a Trigger.
 type TriggerStatus struct {
@@ -84,7 +87,7 @@ const (
 
 	TriggerConditionBrokerExists duckv1alpha1.ConditionType = "BrokerExists"
 
-	TriggerConditionSubscriberFound duckv1alpha1.ConditionType = "SubscriberFound"
+	TriggerConditionSubscribed duckv1alpha1.ConditionType = "Subscribed"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
@@ -110,12 +113,12 @@ func (ts *TriggerStatus) MarkBrokerDoesNotExists() {
 	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionBrokerExists, "doesNotExist", "Broker does not exist")
 }
 
-func (ts *TriggerStatus) MarkSubscriberFound() {
-	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionSubscriberFound)
+func (ts *TriggerStatus) MarkSubscribed() {
+	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionSubscribed)
 }
 
-func (ts *TriggerStatus) MarkSubscriberNotFound(reason, messageFormat string, messageA ...interface{}) {
-	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionSubscriberFound, reason, messageFormat, messageA...)
+func (ts *TriggerStatus) MarkNotSubscribed(reason, messageFormat string, messageA ...interface{}) {
+	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionSubscribed, reason, messageFormat, messageA...)
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

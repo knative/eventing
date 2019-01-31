@@ -46,21 +46,21 @@ const (
 	FinalizerAdded          AddFinalizerResult = true
 )
 
-// AddFinalizer adds finalizerName to the Channel.
-func AddFinalizer(c *eventingv1alpha1.Channel, finalizerName string) AddFinalizerResult {
-	finalizers := sets.NewString(c.Finalizers...)
+// AddFinalizer adds finalizerName to the Object.
+func AddFinalizer(o metav1.Object, finalizerName string) AddFinalizerResult {
+	finalizers := sets.NewString(o.GetFinalizers()...)
 	if finalizers.Has(finalizerName) {
 		return FinalizerAlreadyPresent
 	}
 	finalizers.Insert(finalizerName)
-	c.Finalizers = finalizers.List()
+	o.SetFinalizers(finalizers.List())
 	return FinalizerAdded
 }
 
-func RemoveFinalizer(c *eventingv1alpha1.Channel, finalizerName string) {
-	finalizers := sets.NewString(c.Finalizers...)
+func RemoveFinalizer(o metav1.Object, finalizerName string) {
+	finalizers := sets.NewString(o.GetFinalizers()...)
 	finalizers.Delete(finalizerName)
-	c.Finalizers = finalizers.List()
+	o.SetFinalizers(finalizers.List())
 }
 
 func CreateK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
