@@ -149,9 +149,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 	util.AddFinalizer(c, finalizerName)
 
-	cCopy := c.DeepCopy()
-	cCopy.Spec.Provisioner.Name = asyncProvisionerName
-	svc, err := util.CreateK8sService(ctx, r.client, cCopy)
+	svc, err := util.CreateK8sService(ctx, r.client, c)
 	if err != nil {
 		logger.Info("Error creating the Channel's K8s Service", zap.Error(err))
 		r.recorder.Eventf(c, corev1.EventTypeWarning, k8sServiceCreateFailed, "Failed to reconcile Channel's K8s Service: %v", err)
@@ -171,6 +169,8 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		// ClusterChannelProvisioners. So fake the channel, by saying that its provisioner is the
 		// one with the single dispatcher. The faked provisioner is used only to determine the
 		// dispatcher Service's name.
+		cCopy := c.DeepCopy()
+		cCopy.Spec.Provisioner.Name = asyncProvisionerName
 		_, err = util.CreateVirtualService(ctx, r.client, cCopy, svc)
 		if err != nil {
 			logger.Info("Error creating the Virtual Service for the Channel", zap.Error(err))

@@ -527,7 +527,7 @@ func TestReconcile(t *testing.T) {
 			Mocks: controllertesting.Mocks{},
 			WantPresent: []runtime.Object{
 				makeVirtualService(),
-				makeK8sService(),
+				makeK8sService("in-memory"),
 			},
 			WantEvent: []corev1.Event{
 				events[channelReconciled],
@@ -543,7 +543,7 @@ func TestReconcile(t *testing.T) {
 			Mocks: controllertesting.Mocks{},
 			WantPresent: []runtime.Object{
 				makeVirtualService(),
-				makeK8sService(),
+				makeK8sService("in-memory-channel"),
 			},
 			WantEvent: []corev1.Event{
 				events[channelReconciled],
@@ -672,7 +672,7 @@ func makeConfigMapWithVerifyConfigMapData() *corev1.ConfigMap {
 	return cm
 }
 
-func makeK8sService() *corev1.Service {
+func makeK8sService(pn ...string) *corev1.Service {
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -684,8 +684,8 @@ func makeK8sService() *corev1.Service {
 			Labels: map[string]string{
 				util.EventingChannelLabel:        cName,
 				util.OldEventingChannelLabel:     cName,
-				util.EventingProvisionerLabel:    asyncCCPName,
-				util.OldEventingProvisionerLabel: asyncCCPName,
+				util.EventingProvisionerLabel:    getProvisionerName(pn),
+				util.OldEventingProvisionerLabel: getProvisionerName(pn),
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
