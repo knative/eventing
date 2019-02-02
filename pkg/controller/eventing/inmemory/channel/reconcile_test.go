@@ -521,6 +521,8 @@ func TestReconcile(t *testing.T) {
 		},
 		{
 			Name: "Channel reconcile successful - Async channel",
+			// VirtualService should have channel provisioner name
+			// defaults to in-memory-channel but the service should match provisioner's service name
 			InitialState: []runtime.Object{
 				makeChannel("in-memory"),
 			},
@@ -536,14 +538,14 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "Channel reconcile successful - Non Async channel",
 			// VirtualService should have channel provisioner name
-			// overwritten to "in-memory"
+			// defaults to in-memory-channel
 			InitialState: []runtime.Object{
-				makeChannel("in-memory-channel"),
+				makeChannel(),
 			},
 			Mocks: controllertesting.Mocks{},
 			WantPresent: []runtime.Object{
 				makeVirtualService(),
-				makeK8sService("in-memory-channel"),
+				makeK8sService(),
 			},
 			WantEvent: []corev1.Event{
 				events[channelReconciled],
@@ -721,8 +723,8 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 			Labels: map[string]string{
 				util.EventingChannelLabel:        cName,
 				util.OldEventingChannelLabel:     cName,
-				util.EventingProvisionerLabel:    asyncCCPName,
-				util.OldEventingProvisionerLabel: asyncCCPName,
+				util.EventingProvisionerLabel:    ccpName,
+				util.OldEventingProvisionerLabel: ccpName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -746,7 +748,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 				},
 				Route: []istiov1alpha3.DestinationWeight{{
 					Destination: istiov1alpha3.Destination{
-						Host: "in-memory-dispatcher.knative-eventing.svc.cluster.local",
+						Host: "in-memory-channel-dispatcher.knative-eventing.svc.cluster.local",
 						Port: istiov1alpha3.PortSelector{
 							Number: util.PortNumber,
 						},

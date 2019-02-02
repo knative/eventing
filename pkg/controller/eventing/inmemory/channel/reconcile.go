@@ -46,7 +46,7 @@ const (
 	k8sServiceCreateFailed     = "K8sServiceCreateFailed"
 	virtualServiceCreateFailed = "VirtualServiceCreateFailed"
 	// TODO after in-memory-channel is retired, asyncProvisionerName should be removed
-	asyncProvisionerName = "in-memory"
+	defaultProvisionerName = "in-memory-channel"
 )
 
 type reconciler struct {
@@ -157,7 +157,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	}
 	c.Status.SetAddress(controller.ServiceHostName(svc.Name, svc.Namespace))
 
-	if c.Spec.Provisioner.Name == asyncProvisionerName {
+	if c.Spec.Provisioner.Name == defaultProvisionerName {
 		_, err = util.CreateVirtualService(ctx, r.client, c, svc)
 		if err != nil {
 			logger.Info("Error creating the Virtual Service for the Channel", zap.Error(err))
@@ -170,7 +170,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		// one with the single dispatcher. The faked provisioner is used only to determine the
 		// dispatcher Service's name.
 		cCopy := c.DeepCopy()
-		cCopy.Spec.Provisioner.Name = asyncProvisionerName
+		cCopy.Spec.Provisioner.Name = defaultProvisionerName
 		_, err = util.CreateVirtualService(ctx, r.client, cCopy, svc)
 		if err != nil {
 			logger.Info("Error creating the Virtual Service for the Channel", zap.Error(err))
@@ -242,7 +242,7 @@ func multiChannelFanoutConfig(channels []eventingv1alpha1.Channel) *multichannel
 		if c.Spec.Subscribable != nil {
 			// TODO After in-memory-channel is retired, this logic must be refactored.
 			asyncHandler := false
-			if c.Spec.Provisioner.Name == asyncProvisionerName {
+			if c.Spec.Provisioner.Name != defaultProvisionerName {
 				asyncHandler = true
 			}
 			channelConfig.FanoutConfig = fanout.Config{
