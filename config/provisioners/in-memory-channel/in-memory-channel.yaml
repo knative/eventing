@@ -136,7 +136,7 @@ spec:
   replicas: 1
   selector:
     matchLabels: &labels
-      clusterChannelProvisioner: in-memory
+      clusterChannelProvisioner: in-memory-channel
       role: controller
   template:
     metadata:
@@ -199,7 +199,7 @@ spec:
   replicas: 1
   selector:
     matchLabels: &labels
-      clusterChannelProvisioner: in-memory
+      clusterChannelProvisioner: in-memory-channel
       role: dispatcher
   template:
     metadata:
