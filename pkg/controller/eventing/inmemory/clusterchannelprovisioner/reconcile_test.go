@@ -42,6 +42,7 @@ const (
 	ccpUid           = "test-uid"
 	testErrorMessage = "test-induced-error"
 	testNS           = "test-ns"
+	Name             = "in-memory-channel"
 )
 
 var (

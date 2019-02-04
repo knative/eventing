@@ -35,9 +35,6 @@ import (
 )
 
 const (
-	// Name is the name of the in-memory channel ClusterChannelProvisioner.
-	Name = "in-memory-channel"
-
 	// Channel is the name of the Channel resource in eventing.knative.dev/v1alpha1.
 	Channel = "Channel"
 
@@ -46,6 +43,11 @@ const (
 	ccpUpdateStatusFailed  = "CcpUpdateStatusFailed"
 	k8sServiceCreateFailed = "K8sServiceCreateFailed"
 	k8sServiceDeleteFailed = "K8sServiceDeleteFailed"
+)
+
+var (
+	// provisionerNames contains the list of provisioners' names served by this controller
+	provisionerNames = []string{"in-memory-channel", "in-memory"}
 )
 
 type reconciler struct {
@@ -130,7 +132,12 @@ func IsControlled(ref *corev1.ObjectReference) bool {
 // shouldReconcile determines if this Controller should control (and therefore reconcile) a given
 // ClusterChannelProvisioner. This Controller only handles in-memory channels.
 func shouldReconcile(namespace, name string) bool {
-	return namespace == "" && name == Name
+	for _, p := range provisionerNames {
+		if namespace == "" && name == p {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *reconciler) reconcile(ctx context.Context, ccp *eventingv1alpha1.ClusterChannelProvisioner) error {
