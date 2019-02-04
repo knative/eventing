@@ -25,9 +25,9 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
+	pubsubutil "github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
-	pubsubutil "github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -40,12 +40,12 @@ const (
 	// events.
 	controllerAgentName = "gcp-pubsub-channel-dispatcher"
 
-	// exponential backoff constants used to limit the pace at which
+	// Exponential backoff constants used to limit the pace at which
 	// we nack messages in order to throttle the channel retries.
-	// the backoff is computed as follows: min(expBackoffMaxDelay, expBackoffBaseDelay* 2^#failures)
+	// The backoff is computed as follows: min(expBackoffMaxDelay, expBackoffBaseDelay* 2^#failures).
 	// expBackoffMaxDelay should be less than subscription.ReceiveSettings.MaxExtension,
 	// which is the maximum period for which the Subscription extends the ack deadline
-	// for each message. It is currently set to 10 minutes
+	// for each message. It is currently set to 10 minutes.
 	expBackoffBaseDelay = 1 * time.Second
 	expBackoffMaxDelay  = 5 * time.Minute
 )

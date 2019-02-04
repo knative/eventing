@@ -24,12 +24,12 @@ import (
 
 	"k8s.io/client-go/util/workqueue"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners"
-	util "github.com/knative/eventing/pkg/provisioners"
 	ccpcontroller "github.com/knative/eventing/contrib/gcppubsub/pkg/controller/clusterchannelprovisioner"
 	pubsubutil "github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/logging"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/provisioners"
+	util "github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -67,7 +67,7 @@ type reconciler struct {
 	// is a map from Channel name to Subscription name to CancelFunc.
 	subscriptions map[channelName]map[subscriptionName]context.CancelFunc
 
-	// to limit the pace at which we nack a message when it could not be dispatched
+	// rateLimiter is used to limit the pace at which we nack a message when it could not be dispatched.
 	rateLimiter workqueue.RateLimiter
 }
 
@@ -296,7 +296,7 @@ func (r *reconciler) receiveMessagesBlocking(ctxWithCancel context.Context, enqu
 	logging.FromContext(ctxWithCancel).Info("subscription.Receive start")
 	receiveErr := subscription.Receive(
 		ctxWithCancel,
-		receiveFunc(logging.FromContext(ctxWithCancel).Sugar(), sub, defaults, r.dispatcher, &r.rateLimiter))
+		receiveFunc(logging.FromContext(ctxWithCancel).Sugar(), sub, defaults, r.dispatcher, r.rateLimiter, time.Sleep))
 	// We want to minimize holding the lock. r.reconcileChan may block, so definitely do not do
 	// it under lock. But, to prevent a race condition, we must delete from r.subscriptions
 	// before using r.reconcileChan.
@@ -318,7 +318,7 @@ func (r *reconciler) receiveMessagesBlocking(ctxWithCancel context.Context, enqu
 	}
 }
 
-func receiveFunc(logger *zap.SugaredLogger, sub pubsubutil.GcpPubSubSubscriptionStatus, defaults provisioners.DispatchDefaults, dispatcher provisioners.Dispatcher, rateLimiter *workqueue.RateLimiter) func(context.Context, pubsubutil.PubSubMessage) {
+func receiveFunc(logger *zap.SugaredLogger, sub pubsubutil.GcpPubSubSubscriptionStatus, defaults provisioners.DispatchDefaults, dispatcher provisioners.Dispatcher, rateLimiter workqueue.RateLimiter, waitFunc func(duration time.Duration)) func(context.Context, pubsubutil.PubSubMessage) {
 	return func(ctx context.Context, msg pubsubutil.PubSubMessage) {
 		message := &provisioners.Message{
 			Headers: msg.Attributes(),
@@ -326,20 +326,18 @@ func receiveFunc(logger *zap.SugaredLogger, sub pubsubutil.GcpPubSubSubscription
 		}
 		err := dispatcher.DispatchMessage(message, sub.SubscriberURI, sub.ReplyURI, defaults)
 		if err != nil {
-			// compute the wait time to nack this message
-			// as soon as we nack a message, the GcpPubSub channel will attempt the retry
-			// we use this as a mechanism to backoff retries
-			sleepDuration := (*rateLimiter).When(msg.ID())
-			// blocking, might need to run this on a separate go routine to improve throughput
+			// Compute the wait time to nack this message.
+			// As soon as we nack a message, the GcpPubSub channel will attempt the retry.
+			// We use this as a mechanism to backoff retries.
+			sleepDuration := rateLimiter.When(msg.ID())
+			// Blocking, might need to run this on a separate go routine to improve throughput.
 			logger.Desugar().Error("Message dispatch failed, waiting to nack", zap.Error(err), zap.String("pubSubMessageId", msg.ID()), zap.Float64("backoffSec", sleepDuration.Seconds()))
-			time.Sleep(sleepDuration)
+			waitFunc(sleepDuration)
 			msg.Nack()
 		} else {
-			// if there were any failures for this message, remove it from the rateLimiter backed map
-			if (*rateLimiter).NumRequeues(msg.ID()) > 0 {
-				(*rateLimiter).Forget(msg.ID())
-			}
-			// acknowledge the dispatch
+			// If there were any failures for this message, remove it from the rateLimiter backed map.
+			rateLimiter.Forget(msg.ID())
+			// Acknowledge the dispatch.
 			logger.Desugar().Debug("Message dispatch succeeded", zap.String("pubSubMessageId", msg.ID()))
 			msg.Ack()
 		}
