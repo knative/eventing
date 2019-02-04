@@ -19,6 +19,8 @@ package broker
 import (
 	"context"
 	"fmt"
+	"github.com/knative/eventing/pkg/controller"
+	"k8s.io/api/apps/v1"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -91,57 +93,50 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	b.Status.InitializeConditions()
 
-	// 1. Create the router.
-	// 2. Create the activator.
-	// 3. Create the filter [do not do for the prototype].
-	// 4. Create the 'needs-activation' Channel.
-	// 5. Create Subscription from 'needs-activation' Channel to the activator.
+	// 1. Channel is created for all events.
+	// 2. Filter Deployment.
+	// 3. Ingress Deployment.
+	// 4. K8s Service that points at the Deployment.
 
 	if b.DeletionTimestamp != nil {
 		// Everything is cleaned up by the garbage collector.
 		return nil
 	}
 
-	// TODO Actually check this, for now the webhook ensures they are identical.
-	b.Status.MarkChannelTemplateMatchesSelector()
-
-	dontExist, err := r.verifyResourcesExist(ctx, b.Spec.SubscribableResources)
+	c, err := r.reconcileChannel(ctx, b)
 	if err != nil {
-		logging.FromContext(ctx).Error("Unable to determine if resources exist", zap.Error(err))
-		return err
-	} else if len(dontExist) > 0 {
-		b.Status.MarkSubscribableResourcesDoNotExist(dontExist)
-	} else {
-		b.Status.MarkSubscribableResourcesExist()
-	}
-
-	activator, err := r.reconcileActivator(ctx, b)
-	if err != nil {
-		logging.FromContext(ctx).Error("Problem reconciling activator", zap.Error(err))
+		logging.FromContext(ctx).Error("Problem reconciling the channel", zap.Error(err))
+		b.Status.MarkChannelFailed(err)
 		return err
 	}
+	b.Status.MarkChannelReady()
 
-	// TODO Add the filter reconciliation here.
-
-	c, err := r.reconcileNeedsActivationChannel(ctx, b)
+	_, err = r.reconcileFilterDeployment(ctx, b)
 	if err != nil {
-		logging.FromContext(ctx).Error("Problem reconciling the needs activation channel", zap.Error(err))
+		logging.FromContext(ctx).Error("Problem reconciling filter deployment", zap.Error(err))
+		return err
+	}
+	_, err = r.reconcileFilterService(ctx, b)
+	if err != nil {
+		logging.FromContext(ctx).Error("Problem reconciling filter service", zap.Error(err))
+		return err
+	}
+	b.Status.MarkFilterReady()
+
+	_, err = r.reconcileIngressDeployment(ctx, b, c)
+	if err != nil {
+		logging.FromContext(ctx).Error("Problem reconciling ingress deployment", zap.Error(err))
 		return err
 	}
 
-	_, err = r.reconcileNeedsActivationSubscription(ctx, b, activator, c)
-	if err != nil {
-		logging.FromContext(ctx).Error("Problem reconciling the needs activation subscription", zap.Error(err))
-		return err
-	}
-	b.Status.MarkRouterAndActivatorExist()
 
-	router, err := r.reconcileRouter(ctx, b, c)
+	svc, err := r.reconcileIngressService(ctx, b)
 	if err != nil {
-		logging.FromContext(ctx).Error("Problem reconciling router", zap.Error(err))
+		logging.FromContext(ctx).Error("Problem reconciling ingress Service", zap.Error(err))
 		return err
 	}
-	b.Status.SetAddress(router.Status.Address.Hostname)
+	b.Status.MarkIngressReady()
+	b.Status.SetAddress(controller.ServiceHostName(svc.Name, svc.Namespace))
 
 	return nil
 }
@@ -185,28 +180,27 @@ func (r *reconciler) updateStatus(broker *v1alpha1.Broker) (*v1alpha1.Broker, er
 	return latestBroker, nil
 }
 
-func (r *reconciler) verifyResourcesExist(ctx context.Context, resources []metav1.GroupVersionKind) ([]metav1.GroupVersionKind, error) {
-	dontExist := make([]metav1.GroupVersionKind, 0, len(resources))
-	// TODO Implement, for now the webhook asserts it is only Channel, which we assume exists.
-	return dontExist, nil
-}
-
-func (r *reconciler) reconcileActivator(ctx context.Context, b *v1alpha1.Broker) (*servingv1alpha1.Service, error) {
-	expected, err := resources.MakeActivator(&resources.ActivatorArgs{
+func (r *reconciler) reconcileFilterDeployment(ctx context.Context, b *v1alpha1.Broker) (*v1.Deployment, error) {
+	expected, err := resources.MakeFilterDeployment(&resources.FilterArgs{
 		Broker:             b,
-		Image:              r.activatorImage,
-		ServiceAccountName: r.activatorServiceAccountName,
+		Image:              r.filterImage,
+		ServiceAccountName: r.filterServiceAccountName,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return r.reconcileKSvc(ctx, expected)
+	return r.reconcileDeployment(ctx, expected)
 }
 
-func (r *reconciler) reconcileNeedsActivationChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
-	expected := newNeedsActivationChannel(b)
+func (r *reconciler) reconcileFilterService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
+	expected := resources.MakeFilterService(b)
+	return r.reconcileService(ctx, expected)
+}
 
-	c, err := r.getNeedsActivationChannel(ctx, b)
+func (r *reconciler) reconcileChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
+	expected := newChannel(b)
+
+	c, err := r.getChannel(ctx, b)
 	// If the resource doesn't exist, we'll create it
 	if k8serrors.IsNotFound(err) {
 		c = expected
@@ -232,11 +226,11 @@ func (r *reconciler) reconcileNeedsActivationChannel(ctx context.Context, b *v1a
 	return c, nil
 }
 
-func (r *reconciler) getNeedsActivationChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
+func (r *reconciler) getChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
 	list := &v1alpha1.ChannelList{}
 	opts := &runtimeclient.ListOptions{
 		Namespace:     b.Namespace,
-		LabelSelector: labels.SelectorFromSet(needsActivationLabels(b)),
+		LabelSelector: labels.SelectorFromSet(channelLabels(b)),
 		// TODO this is here because the fake client needs it. Remove this when it's no longer
 		// needed.
 		Raw: &metav1.ListOptions{
@@ -260,16 +254,16 @@ func (r *reconciler) getNeedsActivationChannel(ctx context.Context, b *v1alpha1.
 	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
 }
 
-func newNeedsActivationChannel(b *v1alpha1.Broker) *v1alpha1.Channel {
+func newChannel(b *v1alpha1.Broker) *v1alpha1.Channel {
 	var spec v1alpha1.ChannelSpec
-	if b.Spec.ChannelTemplate != nil && b.Spec.ChannelTemplate.Spec != nil {
-		spec = *b.Spec.ChannelTemplate.Spec
+	if b.Spec.ChannelTemplate != nil {
+		spec = *b.Spec.ChannelTemplate
 	}
 
 	return &v1alpha1.Channel{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    b.Namespace,
-			GenerateName: fmt.Sprintf("%s-broker-needs-activation-", b.Name),
+			GenerateName: fmt.Sprintf("%s-broker-", b.Name),
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(b, schema.GroupVersionKind{
 					Group:   b.GroupVersionKind().Group,
@@ -282,10 +276,10 @@ func newNeedsActivationChannel(b *v1alpha1.Broker) *v1alpha1.Channel {
 	}
 }
 
-func needsActivationLabels(b *v1alpha1.Broker) map[string]string {
+func channelLabels(b *v1alpha1.Broker) map[string]string {
 	return map[string]string{
 		"eventing.knative.dev/broker":                 b.Name,
-		"eventing.knative.dev/broker/needsActivation": "true",
+		"eventing.knative.dev/broker/everything": "true",
 	}
 }
 
@@ -320,7 +314,7 @@ func (r *reconciler) getNeedsActivationSubscription(ctx context.Context, b *v1al
 	list := &v1alpha1.SubscriptionList{}
 	opts := &runtimeclient.ListOptions{
 		Namespace:     b.Namespace,
-		LabelSelector: labels.SelectorFromSet(needsActivationLabels(b)),
+		LabelSelector: labels.SelectorFromSet(channelLabels(b)),
 		// TODO this is here because the fake client needs it. Remove this when it's no longer
 		// needed.
 		Raw: &metav1.ListOptions{
@@ -378,25 +372,25 @@ func newNeedsActivationSubscription(b *v1alpha1.Broker, c *v1alpha1.Channel, act
 	}
 }
 
-func (r *reconciler) reconcileKSvc(ctx context.Context, ksvc *servingv1alpha1.Service) (*servingv1alpha1.Service, error) {
+func (r *reconciler) reconcileDeployment(ctx context.Context, d *v1.Deployment) (*v1.Deployment, error) {
 	name := types.NamespacedName{
-		Namespace: ksvc.Namespace,
-		Name:      ksvc.Name,
+		Namespace: d.Namespace,
+		Name:      d.Name,
 	}
-	current := &servingv1alpha1.Service{}
+	current := &v1.Deployment{}
 	err := r.client.Get(ctx, name, current)
 	if k8serrors.IsNotFound(err) {
-		err = r.client.Create(ctx, ksvc)
+		err = r.client.Create(ctx, d)
 		if err != nil {
 			return nil, err
 		}
-		return ksvc, nil
+		return d, nil
 	} else if err != nil {
 		return nil, err
 	}
 
-	if !equality.Semantic.DeepDerivative(ksvc.Spec, current.Spec) {
-		current.Spec = ksvc.Spec
+	if !equality.Semantic.DeepDerivative(d.Spec, current.Spec) {
+		current.Spec = d.Spec
 		err = r.client.Update(ctx, current)
 		if err != nil {
 			return nil, err
@@ -405,15 +399,50 @@ func (r *reconciler) reconcileKSvc(ctx context.Context, ksvc *servingv1alpha1.Se
 	return current, nil
 }
 
-func (r *reconciler) reconcileRouter(ctx context.Context, b *v1alpha1.Broker, c *v1alpha1.Channel) (*servingv1alpha1.Service, error) {
-	expected, err := resources.MakeRouter(&resources.RouterArgs{
+func (r *reconciler) reconcileService(ctx context.Context, svc *corev1.Service) (*corev1.Service, error) {
+	name := types.NamespacedName{
+		Namespace: svc.Namespace,
+		Name:      svc.Name,
+	}
+	current := &corev1.Service{}
+	err := r.client.Get(ctx, name, current)
+	if k8serrors.IsNotFound(err) {
+		err = r.client.Create(ctx, svc)
+		if err != nil {
+			return nil, err
+		}
+		return svc, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	// spec.clusterIP is immutable and is set on existing services. If we don't set this to the same value, we will
+	// encounter an error while updating.
+	svc.Spec.ClusterIP = current.Spec.ClusterIP
+	if !equality.Semantic.DeepDerivative(svc.Spec, current.Spec) {
+		current.Spec = svc.Spec
+		err = r.client.Update(ctx, current)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return current, nil
+}
+
+func (r *reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1.Broker, c *v1alpha1.Channel) (*v1.Deployment, error) {
+	expected, err := resources.MakeIngress(&resources.IngressArgs{
 		Broker:              b,
 		Image:               r.routerImage,
 		ServiceAccountName:  r.routerServiceAccountName,
-		NeedsActivationHost: c.Status.Address.Hostname,
+		ChannelAddress: c.Status.Address.Hostname,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return r.reconcileKSvc(ctx, expected)
+	return r.reconcileDeployment(ctx, expected)
+}
+
+func (r *reconciler) reconcileIngressService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
+	expected := resources.MakeIngressService(b)
+	return r.reconcileService(ctx, expected)
 }

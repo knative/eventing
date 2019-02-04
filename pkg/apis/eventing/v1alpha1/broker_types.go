@@ -49,17 +49,10 @@ var _ runtime.Object = (*Broker)(nil)
 var _ webhook.GenericCRD = (*Broker)(nil)
 
 type BrokerSpec struct {
-	Selector              *metav1.LabelSelector     `json:"selector,omitempty"`
-	ChannelTemplate       *ChannelTemplateSpec      `json:"channelTemplate,omitempty"`
-	SubscribableResources []metav1.GroupVersionKind `json:"subscribableResources,omitempty"`
+	ChannelTemplate       *ChannelSpec      `json:"channelTemplate,omitempty"`
 }
 
-type ChannelTemplateSpec struct {
-	Metadata metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec     *ChannelSpec      `json:"spec,omitempty"`
-}
-
-var brokerCondSet = duckv1alpha1.NewLivingConditionSet(BrokerConditionChannelTemplateSelector, BrokerConditionSubscribableResourcesExist, BrokerConditionSubscribableResourcesExist, BrokerConditionAddressable)
+var brokerCondSet = duckv1alpha1.NewLivingConditionSet(BrokerConditionIngress, BrokerConditionChannel, BrokerConditionFilter, BrokerConditionAddressable)
 
 // BrokerStatus represents the current state of a Broker.
 type BrokerStatus struct {
@@ -88,11 +81,11 @@ type BrokerStatus struct {
 const (
 	BrokerConditionReady = duckv1alpha1.ConditionReady
 
-	BrokerConditionChannelTemplateSelector duckv1alpha1.ConditionType = "ChannelTemplateSelector"
+	BrokerConditionIngress duckv1alpha1.ConditionType = "Ingress"
 
-	BrokerConditionSubscribableResourcesExist duckv1alpha1.ConditionType = "SubscribableResourcesExist"
+	BrokerConditionChannel duckv1alpha1.ConditionType = "Channel"
 
-	BrokerConditionRouterAndActivatorExist duckv1alpha1.ConditionType = "RouterAndActivatorCreated"
+	BrokerConditionFilter duckv1alpha1.ConditionType = "Filter"
 
 	BrokerConditionAddressable duckv1alpha1.ConditionType = "Addressable"
 )
@@ -112,24 +105,24 @@ func (bs *BrokerStatus) InitializeConditions() {
 	brokerCondSet.Manage(bs).InitializeConditions()
 }
 
-func (bs *BrokerStatus) MarkChannelTemplateMatchesSelector() {
-	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionChannelTemplateSelector)
+func (bs *BrokerStatus) MarkIngressReady() {
+	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngress)
 }
 
-func (bs *BrokerStatus) MarkChannelTemplateDoesNotMatchSelector() {
-	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionChannelTemplateSelector, "selectorDoesNotMatchTemplate", "`spec.selector` does not match `spec.channelTempalte.meta.labels`")
+func (bs *BrokerStatus) MarkIngressFailed(err error) {
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngress, "failed", "%v", err)
 }
 
-func (bs *BrokerStatus) MarkSubscribableResourcesExist() {
-	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionSubscribableResourcesExist)
+func (bs *BrokerStatus) MarkChannelReady() {
+	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionChannel)
 }
 
-func (bs *BrokerStatus) MarkSubscribableResourcesDoNotExist(dontExist []metav1.GroupVersionKind) {
-	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionSubscribableResourcesExist, "resourcesDontExist", "The following resources do not exist: %v", dontExist)
+func (bs *BrokerStatus) MarkChannelFailed(err error) {
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionChannel, "failed", "%v", err)
 }
 
-func (bs *BrokerStatus) MarkRouterAndActivatorExist() {
-	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionRouterAndActivatorExist)
+func (bs *BrokerStatus) MarkFilterReady() {
+	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionFilter)
 }
 
 // SetAddress makes this Channel addressable by setting the hostname. It also

@@ -19,7 +19,6 @@ package v1alpha1
 import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/pkg/apis"
-	"k8s.io/apimachinery/pkg/api/equality"
 )
 
 func (t *Trigger) Validate() *apis.FieldError {
@@ -33,10 +32,8 @@ func (ts *TriggerSpec) Validate() *apis.FieldError {
 		errs = errs.Also(fe)
 	}
 
-	if ts.Selector == nil {
-		fe := apis.ErrMissingField("selector")
-		errs = errs.Also(fe)
-	} else if fe := multipleSelectorsSet(ts.Selector); fe != nil {
+	if ts.Type == "" {
+		fe := apis.ErrMissingField("type")
 		errs = errs.Also(fe)
 	}
 
@@ -48,24 +45,6 @@ func (ts *TriggerSpec) Validate() *apis.FieldError {
 	}
 
 	return errs
-}
-
-func multipleSelectorsSet(s *TriggerSelectorSpec) *apis.FieldError {
-	var fields []string
-	if !equality.Semantic.DeepEqual(s.Header, map[string]string{}) {
-		fields = append(fields, "header")
-	}
-	if len(s.HeaderExpression) > 0 {
-		fields = append(fields, "headerExpression")
-	}
-	if s.OPAPolicy != "" {
-		fields = append(fields, "opaPolicy")
-	}
-
-	if len(fields) != 1 {
-		return apis.ErrMultipleOneOf(fields...)
-	}
-	return nil
 }
 
 func (t *Trigger) CheckImmutableFields(og apis.Immutable) *apis.FieldError {

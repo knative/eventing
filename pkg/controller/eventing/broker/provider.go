@@ -44,10 +44,10 @@ type reconciler struct {
 
 	logger *zap.Logger
 
-	routerImage                 string
-	routerServiceAccountName    string
-	activatorImage              string
-	activatorServiceAccountName string
+	routerImage              string
+	routerServiceAccountName string
+	filterImage              string
+	filterServiceAccountName string
 }
 
 // Verify the struct implements reconcile.Reconciler

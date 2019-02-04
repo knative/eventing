@@ -50,20 +50,13 @@ var _ webhook.GenericCRD = (*Trigger)(nil)
 
 type TriggerSpec struct {
 	Broker     string               `json:"broker,omitempty"`
-	Selector   *TriggerSelectorSpec `json:"selector,omitempty"`
 	Subscriber *SubscriberSpec      `json:"subscriber,omitempty"`
 
 	Type   string `json:"type,omitempty"`
 	Source string `json:"source,omitempty"`
 }
 
-type TriggerSelectorSpec struct {
-	Header           map[string]string                 `json:"header,omitempty"`
-	HeaderExpression []metav1.LabelSelectorRequirement `json:"headerExpression,omitEmpty"`
-	OPAPolicy        string                            `json:"opaPolicy,omitEmpty"`
-}
-
-var triggerCondSet = duckv1alpha1.NewLivingConditionSet(TriggerConditionBrokerExists, TriggerConditionSubscribed)
+var triggerCondSet = duckv1alpha1.NewLivingConditionSet(TriggerConditionBrokerExists, TriggerConditionKubernetesService, TriggerConditionVirtualService, TriggerConditionSubscribed)
 
 // TriggerStatus represents the current state of a Trigger.
 type TriggerStatus struct {
@@ -86,6 +79,10 @@ const (
 	TriggerConditionReady = duckv1alpha1.ConditionReady
 
 	TriggerConditionBrokerExists duckv1alpha1.ConditionType = "BrokerExists"
+
+	TriggerConditionKubernetesService duckv1alpha1.ConditionType = "KubernetesService"
+
+	TriggerConditionVirtualService duckv1alpha1.ConditionType = "VirtualService"
 
 	TriggerConditionSubscribed duckv1alpha1.ConditionType = "Subscribed"
 )
@@ -111,6 +108,14 @@ func (ts *TriggerStatus) MarkBrokerExists() {
 
 func (ts *TriggerStatus) MarkBrokerDoesNotExists() {
 	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionBrokerExists, "doesNotExist", "Broker does not exist")
+}
+
+func (ts *TriggerSpec) MarkKubernetesServiceExists() {
+	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionKubernetesService)
+}
+
+func (ts *TriggerSpec) MarkVirtualServiceExists() {
+	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionVirtualService)
 }
 
 func (ts *TriggerStatus) MarkSubscribed() {

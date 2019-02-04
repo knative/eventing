@@ -16,8 +16,6 @@ limitations under the License.
 
 package v1alpha1
 
-import v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 const (
 	brokerLabel = "eventing.knative.dev/broker"
 )
@@ -27,45 +25,7 @@ func (b *Broker) SetDefaults() {
 }
 
 func (bs *BrokerSpec) SetDefaults(brokerName string) {
-	if bs.Selector == nil {
-		bs.Selector = defaultBrokerSpecSelector(brokerName)
-	}
-	if bs.ChannelTemplate == nil {
-		bs.ChannelTemplate = defaultBrokerSpecChannelTemplate(brokerName)
-	}
-	if len(bs.SubscribableResources) == 0 {
-		bs.SubscribableResources = defaultBrokerSpecSubscribableResources()
-	}
+	// None
 }
 
-func defaultBrokerLabels(brokerName string) map[string]string {
-	return map[string]string{
-		brokerLabel: brokerName,
-	}
-}
 
-func defaultBrokerSpecSelector(brokerName string) *v1.LabelSelector {
-	return &v1.LabelSelector{
-		MatchLabels: defaultBrokerLabels(brokerName),
-	}
-}
-
-func defaultBrokerSpecChannelTemplate(brokerName string) *ChannelTemplateSpec {
-	return &ChannelTemplateSpec{
-		Metadata: v1.ObjectMeta{
-			Labels: defaultBrokerLabels(brokerName),
-		},
-		// Spec is left blank so that the created Channel defaulter will default the provisioner
-		// and arguments when the Channel is created.
-	}
-}
-
-func defaultBrokerSpecSubscribableResources() []v1.GroupVersionKind {
-	return []v1.GroupVersionKind{
-		{
-			Group:   "eventing.knative.dev",
-			Version: "v1alpha1",
-			Kind:    "Channel",
-		},
-	}
-}
