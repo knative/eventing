@@ -39,13 +39,14 @@ import (
 
 const (
 	finalizerName = controllerAgentName
-
 	// Name of the corev1.Events emitted from the reconciliation process
 	channelReconciled          = "ChannelReconciled"
 	channelUpdateStatusFailed  = "ChannelUpdateStatusFailed"
 	channelConfigSyncFailed    = "ChannelConfigSyncFailed"
 	k8sServiceCreateFailed     = "K8sServiceCreateFailed"
 	virtualServiceCreateFailed = "VirtualServiceCreateFailed"
+	// TODO after in-memory-channel is retired, asyncProvisionerName should be removed
+	defaultProvisionerName = "in-memory-channel"
 )
 
 type reconciler struct {
@@ -110,7 +111,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		r.recorder.Eventf(c, corev1.EventTypeWarning, channelUpdateStatusFailed, "Failed to update Channel's status: %v", err)
 		return reconcile.Result{}, updateStatusErr
 	}
-
 	return reconcile.Result{}, err
 }
 
@@ -157,11 +157,26 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	}
 	c.Status.SetAddress(controller.ServiceHostName(svc.Name, svc.Namespace))
 
-	_, err = util.CreateVirtualService(ctx, r.client, c, svc)
-	if err != nil {
-		logger.Info("Error creating the Virtual Service for the Channel", zap.Error(err))
-		r.recorder.Eventf(c, corev1.EventTypeWarning, virtualServiceCreateFailed, "Failed to reconcile Virtual Service for the Channel: %v", err)
-		return err
+	if c.Spec.Provisioner.Name == defaultProvisionerName {
+		_, err = util.CreateVirtualService(ctx, r.client, c, svc)
+		if err != nil {
+			logger.Info("Error creating the Virtual Service for the Channel", zap.Error(err))
+			r.recorder.Eventf(c, corev1.EventTypeWarning, virtualServiceCreateFailed, "Failed to reconcile Virtual Service for the Channel: %v", err)
+			return err
+		}
+	} else {
+		// We need to have a single dispatcher that is pointed at by _both_
+		// ClusterChannelProvisioners. So fake the channel, by saying that its provisioner is the
+		// one with the single dispatcher. The faked provisioner is used only to determine the
+		// dispatcher Service's name.
+		cCopy := c.DeepCopy()
+		cCopy.Spec.Provisioner.Name = defaultProvisionerName
+		_, err = util.CreateVirtualService(ctx, r.client, cCopy, svc)
+		if err != nil {
+			logger.Info("Error creating the Virtual Service for the Channel", zap.Error(err))
+			r.recorder.Eventf(c, corev1.EventTypeWarning, virtualServiceCreateFailed, "Failed to reconcile Virtual Service for the Channel: %v", err)
+			return err
+		}
 	}
 
 	c.Status.MarkProvisioned()
@@ -225,8 +240,14 @@ func multiChannelFanoutConfig(channels []eventingv1alpha1.Channel) *multichannel
 			Name:      c.Name,
 		}
 		if c.Spec.Subscribable != nil {
+			// TODO After in-memory-channel is retired, this logic must be refactored.
+			asyncHandler := false
+			if c.Spec.Provisioner.Name != defaultProvisionerName {
+				asyncHandler = true
+			}
 			channelConfig.FanoutConfig = fanout.Config{
 				Subscriptions: c.Spec.Subscribable.Subscribers,
+				AsyncHandler:  asyncHandler,
 			}
 		}
 		cc = append(cc, channelConfig)

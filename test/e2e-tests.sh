@@ -81,6 +81,24 @@ $(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test image
 # Setup resources common to all eventing tests
 setup_events_test_resources|| fail_test "Error setting up test resources"
 
-go_test_e2e ./test/e2e || fail_test
+go_test_e2e ./test/e2e 
+exit_result=$?
+if [ ${exit_result} -ne 0 ]; then
+# Collecting logs from all knative's eventing pods
+  echo "============================================================"
+  for namespace in "knative-eventing" "e2etestfn3"; do
+    for pod in $(kubectl get pod -n $namespace | grep Running | awk '{print $1}' ); do
+      for container in $(kubectl get pod "${pod}" -n $namespace -ojsonpath='{.spec.containers[*].name}'); do
+        echo "Namespace, Pod, Container: ${namespace}, ${pod}, ${container}"
+        kubectl logs -n $namespace "${pod}" -c "${container}" || true
+        echo "----------------------------------------------------------"
+        echo "Namespace, Pod, Container (Previous instance): ${namespace}, ${pod}, ${container}"
+        kubectl logs -p -n $namespace "${pod}" -c "${container}" || true
+        echo "============================================================"
+      done
+    done
+  done
+  fail_test
+fi
 
 success
