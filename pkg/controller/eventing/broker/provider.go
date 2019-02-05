@@ -44,8 +44,8 @@ type reconciler struct {
 
 	logger *zap.Logger
 
-	routerImage              string
-	routerServiceAccountName string
+	ingressImage              string
+	ingressServiceAccountName string
 	filterImage              string
 	filterServiceAccountName string
 }
@@ -54,13 +54,18 @@ type reconciler struct {
 var _ reconcile.Reconciler = &reconciler{}
 
 // ProvideController returns a function that returns a Broker controller.
-func ProvideController(logger *zap.Logger) func(manager.Manager) (controller.Controller, error) {
+func ProvideController(logger *zap.Logger, ingressImage, ingressServiceAccount, filterImage, filterServiceAccount string) func(manager.Manager) (controller.Controller, error) {
 	return func(mgr manager.Manager) (controller.Controller, error) {
 		// Setup a new controller to Reconcile Brokers.
 		c, err := controller.New(controllerAgentName, mgr, controller.Options{
 			Reconciler: &reconciler{
 				recorder: mgr.GetRecorder(controllerAgentName),
 				logger:   logger,
+
+				ingressImage: ingressImage,
+				ingressServiceAccountName: ingressServiceAccount,
+				filterImage: filterImage,
+				filterServiceAccountName: filterServiceAccount,
 			},
 		})
 		if err != nil {

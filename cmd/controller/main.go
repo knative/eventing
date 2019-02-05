@@ -21,6 +21,7 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/knative/eventing/pkg/controller/eventing/trigger"
@@ -123,7 +124,7 @@ func main() {
 	// manager run it.
 	providers := []ProvideFunc{
 		subscription.ProvideController,
-		broker.ProvideController(logger.Desugar()),
+		broker.ProvideController(logger.Desugar(), getRequiredEnv("INGRESS_IMAGE"), getRequiredEnv("INGRESS_SERVICE_ACCOUNT"), getRequiredEnv("FILTER_IMAGE"), getRequiredEnv("FILTER_SERVICE_ACCOUNT")),
 		trigger.ProvideController(logger.Desugar()),
 	}
 	for _, provider := range providers {
@@ -193,4 +194,12 @@ func getLoggingConfigOrDie() map[string]string {
 		}
 		return cm
 	}
+}
+
+func getRequiredEnv(envKey string) string {
+	val, defined := os.LookupEnv(envKey)
+	if !defined {
+		log.Fatalf("required environment variable not defined '%s'", envKey)
+	}
+	return val
 }

@@ -17,8 +17,6 @@ limitations under the License.
 package trigger
 
 import (
-	"sync"
-
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"go.uber.org/zap"
 	"k8s.io/client-go/dynamic"
@@ -43,9 +41,6 @@ type reconciler struct {
 	restConfig    *rest.Config
 	dynamicClient dynamic.Interface
 	recorder      record.EventRecorder
-
-	triggersLock sync.RWMutex
-	triggers     map[string]map[reconcile.Request]bool
 
 	logger *zap.Logger
 }
@@ -73,11 +68,6 @@ func ProvideController(logger *zap.Logger) func(manager.Manager) (controller.Con
 			return nil, err
 		}
 
-		// TODO Make this much, much more efficient.
-		if err = c.Watch(&source.Kind{Type: &v1alpha1.Channel{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &mapAllTriggers{r}}); err != nil {
-			return nil, err
-		}
-
 		return c, nil
 	}
 }
@@ -92,22 +82,4 @@ func (r *reconciler) InjectConfig(c *rest.Config) error {
 	var err error
 	r.dynamicClient, err = dynamic.NewForConfig(c)
 	return err
-}
-
-type mapAllTriggers struct {
-	r *reconciler
-}
-
-func (m *mapAllTriggers) Map(o handler.MapObject) []reconcile.Request {
-	m.r.triggersLock.RLock()
-	defer m.r.triggersLock.RUnlock()
-	triggersInNamespace := m.r.triggers[o.Meta.GetNamespace()]
-	if triggersInNamespace == nil {
-		return []reconcile.Request{}
-	}
-	reqs := make([]reconcile.Request, 0, len(triggersInNamespace))
-	for name := range triggersInNamespace {
-		reqs = append(reqs, name)
-	}
-	return reqs
 }

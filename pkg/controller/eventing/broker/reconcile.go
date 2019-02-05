@@ -27,8 +27,6 @@ import (
 
 	"github.com/knative/eventing/pkg/controller/eventing/broker/resources"
 
-	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
-
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/logging"
 	"go.uber.org/zap"
 
@@ -230,7 +228,7 @@ func (r *reconciler) getChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alp
 	list := &v1alpha1.ChannelList{}
 	opts := &runtimeclient.ListOptions{
 		Namespace:     b.Namespace,
-		LabelSelector: labels.SelectorFromSet(channelLabels(b)),
+		LabelSelector: labels.SelectorFromSet(ChannelLabels(b)),
 		// TODO this is here because the fake client needs it. Remove this when it's no longer
 		// needed.
 		Raw: &metav1.ListOptions{
@@ -276,99 +274,10 @@ func newChannel(b *v1alpha1.Broker) *v1alpha1.Channel {
 	}
 }
 
-func channelLabels(b *v1alpha1.Broker) map[string]string {
+func ChannelLabels(b *v1alpha1.Broker) map[string]string {
 	return map[string]string{
 		"eventing.knative.dev/broker":                 b.Name,
 		"eventing.knative.dev/broker/everything": "true",
-	}
-}
-
-func (r *reconciler) reconcileNeedsActivationSubscription(ctx context.Context, b *v1alpha1.Broker, activator *servingv1alpha1.Service, c *v1alpha1.Channel) (*v1alpha1.Subscription, error) {
-	expected := newNeedsActivationSubscription(b, c, activator)
-
-	sub, err := r.getNeedsActivationSubscription(ctx, b)
-	// If the resource doesn't exist, we'll create it
-	if k8serrors.IsNotFound(err) {
-		sub = expected
-		err = r.client.Create(ctx, sub)
-		if err != nil {
-			return nil, err
-		}
-		return sub, nil
-	} else if err != nil {
-		return nil, err
-	}
-
-	// Update Subscription if it has changed.
-	if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
-		sub.Spec = expected.Spec
-		err = r.client.Update(ctx, sub)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return sub, nil
-}
-
-func (r *reconciler) getNeedsActivationSubscription(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Subscription, error) {
-	list := &v1alpha1.SubscriptionList{}
-	opts := &runtimeclient.ListOptions{
-		Namespace:     b.Namespace,
-		LabelSelector: labels.SelectorFromSet(channelLabels(b)),
-		// TODO this is here because the fake client needs it. Remove this when it's no longer
-		// needed.
-		Raw: &metav1.ListOptions{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: v1alpha1.SchemeGroupVersion.String(),
-				Kind:       "Subscription",
-			},
-		},
-	}
-
-	err := r.client.List(ctx, opts, list)
-	if err != nil {
-		return nil, err
-	}
-	for _, sub := range list.Items {
-		if metav1.IsControlledBy(&sub, b) {
-			return &sub, nil
-		}
-	}
-
-	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
-}
-
-func newNeedsActivationSubscription(b *v1alpha1.Broker, c *v1alpha1.Channel, activator *servingv1alpha1.Service) *v1alpha1.Subscription {
-	return &v1alpha1.Subscription{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    b.Namespace,
-			GenerateName: fmt.Sprintf("%s-broker-needs-activation-", b.Name),
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(b, schema.GroupVersionKind{
-					Group:   b.GroupVersionKind().Group,
-					Version: b.GroupVersionKind().Version,
-					Kind:    b.GroupVersionKind().Kind,
-				}),
-			},
-		},
-		Spec: v1alpha1.SubscriptionSpec{
-			Channel: corev1.ObjectReference{
-				APIVersion: c.APIVersion,
-				Kind:       c.Kind,
-				Namespace:  c.Namespace,
-				Name:       c.Name,
-				UID:        c.UID,
-			},
-			Subscriber: &v1alpha1.SubscriberSpec{
-				Ref: &corev1.ObjectReference{
-					APIVersion: activator.APIVersion,
-					Kind:       activator.Kind,
-					Namespace:  activator.Namespace,
-					Name:       activator.Name,
-					UID:        activator.UID,
-				},
-			},
-		},
 	}
 }
 
@@ -432,8 +341,8 @@ func (r *reconciler) reconcileService(ctx context.Context, svc *corev1.Service) 
 func (r *reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1.Broker, c *v1alpha1.Channel) (*v1.Deployment, error) {
 	expected, err := resources.MakeIngress(&resources.IngressArgs{
 		Broker:              b,
-		Image:               r.routerImage,
-		ServiceAccountName:  r.routerServiceAccountName,
+		Image:               r.ingressImage,
+		ServiceAccountName:  r.ingressServiceAccountName,
 		ChannelAddress: c.Status.Address.Hostname,
 	})
 	if err != nil {
