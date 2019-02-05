@@ -40,9 +40,9 @@ func MakeIngress(args *IngressArgs) (*appsv1.Deployment, error) {
 			Name:      fmt.Sprintf("%s-broker-ingress", args.Broker.Name),
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(args.Broker, schema.GroupVersionKind{
-					Group:   args.Broker.GroupVersionKind().Group,
-					Version: args.Broker.GroupVersionKind().Version,
-					Kind:    args.Broker.GroupVersionKind().Kind,
+					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
+					Version: eventingv1alpha1.SchemeGroupVersion.Version,
+					Kind: "Broker",
 				}),
 			},
 		},
@@ -86,9 +86,9 @@ func MakeIngressService(b *eventingv1alpha1.Broker) *corev1.Service {
 			Labels:       ingressLabels(b),
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(b, schema.GroupVersionKind{
-					Group:   b.GroupVersionKind().Group,
-					Version: b.GroupVersionKind().Version,
-					Kind:    b.GroupVersionKind().Kind,
+					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
+					Version: eventingv1alpha1.SchemeGroupVersion.Version,
+					Kind: "Broker",
 				}),
 			},
 		},

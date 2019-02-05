@@ -264,9 +264,9 @@ func newChannel(b *v1alpha1.Broker) *v1alpha1.Channel {
 			GenerateName: fmt.Sprintf("%s-broker-", b.Name),
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(b, schema.GroupVersionKind{
-					Group:   b.GroupVersionKind().Group,
-					Version: b.GroupVersionKind().Version,
-					Kind:    b.GroupVersionKind().Kind,
+					Group:   v1alpha1.SchemeGroupVersion.Group,
+					Version: v1alpha1.SchemeGroupVersion.Version,
+					Kind: "Broker",
 				}),
 			},
 		},

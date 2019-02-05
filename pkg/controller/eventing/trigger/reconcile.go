@@ -276,9 +276,9 @@ func newK8sService(t *v1alpha1.Trigger) *corev1.Service {
 			Labels:       k8sServiceLabels(t),
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(t, schema.GroupVersionKind{
-					Group:   t.GroupVersionKind().Group,
-					Version: t.GroupVersionKind().Version,
-					Kind:    t.GroupVersionKind().Kind,
+					Group:   v1alpha1.SchemeGroupVersion.Group,
+					Version: v1alpha1.SchemeGroupVersion.Version,
+					Kind:    "Trigger",
 				}),
 			},
 		},
@@ -363,9 +363,9 @@ func newVirtualService(t *v1alpha1.Trigger, svc *corev1.Service) *istiov1alpha3.
 			Labels:       virtualServiceLabels(t),
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(t, schema.GroupVersionKind{
-					Group:   t.GroupVersionKind().Group,
-					Version: t.GroupVersionKind().Version,
-					Kind:    t.GroupVersionKind().Kind,
+					Group:   v1alpha1.SchemeGroupVersion.Group,
+					Version: v1alpha1.SchemeGroupVersion.Version,
+					Kind:    "Trigger",
 				}),
 			},
 		},
@@ -459,9 +459,9 @@ func makeSubscription(t *v1alpha1.Trigger, c *v1alpha1.Channel, svc *corev1.Serv
 			GenerateName: fmt.Sprintf("%s-%s-", t.Spec.Broker, t.Name),
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(t, schema.GroupVersionKind{
-					Group:   t.GroupVersionKind().Group,
-					Version: t.GroupVersionKind().Version,
-					Kind:    t.GroupVersionKind().Kind,
+					Group:   v1alpha1.SchemeGroupVersion.Group,
+					Version: v1alpha1.SchemeGroupVersion.Version,
+					Kind:    "Trigger",
 				}),
 			},
 			Labels: subscriptionLabels(t),
