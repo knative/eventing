@@ -277,7 +277,7 @@ func newChannel(b *v1alpha1.Broker) *v1alpha1.Channel {
 func ChannelLabels(b *v1alpha1.Broker) map[string]string {
 	return map[string]string{
 		"eventing.knative.dev/broker":                 b.Name,
-		"eventing.knative.dev/broker/everything": "true",
+		"eventing.knative.dev/brokerEverything": "true",
 	}
 }
 

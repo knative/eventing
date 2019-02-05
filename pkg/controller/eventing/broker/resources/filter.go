@@ -52,6 +52,9 @@ func MakeFilterDeployment(args *FilterArgs) (*appsv1.Deployment, error) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: filterLabels(args.Broker),
+					Annotations: map[string]string{
+						"sidecar.istio.io/inject": "true",
+					},
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: args.ServiceAccountName,
@@ -102,6 +105,6 @@ func MakeFilterService(b *eventingv1alpha1.Broker) *corev1.Service {
 func filterLabels(b *eventingv1alpha1.Broker) map[string]string {
 	return map[string]string{
 		"eventing.knative.dev/broker": b.Name,
-		"eventing.knative.dev/broker/role": "filter",
+		"eventing.knative.dev/brokerRole": "filter",
 	}
 }

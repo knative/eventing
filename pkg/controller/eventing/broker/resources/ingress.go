@@ -53,6 +53,9 @@ func MakeIngress(args *IngressArgs) (*appsv1.Deployment, error) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: ingressLabels(args.Broker),
+					Annotations: map[string]string{
+						"sidecar.istio.io/inject": "true",
+					},
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: args.ServiceAccountName,
@@ -107,6 +110,6 @@ func MakeIngressService(b *eventingv1alpha1.Broker) *corev1.Service {
 func ingressLabels(b *eventingv1alpha1.Broker) map[string]string {
 	return map[string]string{
 		"eventing.knative.dev/broker": b.Name,
-		"eventing.knative.dev/broker/role": "ingress",
+		"eventing.knative.dev/brokerRole": "ingress",
 	}
 }
