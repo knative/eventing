@@ -61,7 +61,7 @@ func MakeFilterDeployment(args *FilterArgs) (*appsv1.Deployment, error) {
 					Containers: []corev1.Container{
 						{
 							Image: args.Image,
-							Name: "ingress",
+							Name: "filter",
 							Env: []corev1.EnvVar{
 								{
 									Name: "BROKER",

@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"golang.org/x/sync/errgroup"
 	"log"
 	"net/http"
@@ -113,7 +114,7 @@ func NewHandler(logger *zap.Logger, destination string) *Handler {
 	handler := &Handler{
 		logger:           logger,
 		dispatcher:       provisioners.NewMessageDispatcher(logger.Sugar()),
-		destination: destination,
+		destination: fmt.Sprintf("http://%s", destination),
 	}
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
@@ -136,7 +137,11 @@ func (f *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // dispatch takes the request, fans it out to each subscription in f.config. If all the fanned out
 // requests return successfully, then return nil. Else, return an error.
 func (f *Handler) dispatch(msg *provisioners.Message) error {
-	return f.dispatcher.DispatchMessage(msg, f.destination, "", provisioners.DispatchDefaults{})
+	err := f.dispatcher.DispatchMessage(msg, f.destination, "", provisioners.DispatchDefaults{})
+	if err != nil {
+		f.logger.Error("Error dispatching message", zap.String("destination", f.destination))
+	}
+	return err
 }
 
 

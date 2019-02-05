@@ -196,12 +196,10 @@ func (r *reconciler) reconcileFilterService(ctx context.Context, b *v1alpha1.Bro
 }
 
 func (r *reconciler) reconcileChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
-	expected := newChannel(b)
-
 	c, err := r.getChannel(ctx, b)
 	// If the resource doesn't exist, we'll create it
 	if k8serrors.IsNotFound(err) {
-		c = expected
+		c = newChannel(b)
 		err = r.client.Create(ctx, c)
 		if err != nil {
 			return nil, err
