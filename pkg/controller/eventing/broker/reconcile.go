@@ -106,6 +106,10 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		logging.FromContext(ctx).Error("Problem reconciling the channel", zap.Error(err))
 		b.Status.MarkChannelFailed(err)
 		return err
+	} else if c.Status.Address.Hostname == "" {
+		logging.FromContext(ctx).Info("Channel is not yet ready", zap.Any("c", c))
+		// TODO Just re-enqueue, don't return an error
+		return nil
 	}
 	b.Status.MarkChannelReady()
 

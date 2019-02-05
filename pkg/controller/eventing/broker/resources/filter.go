@@ -19,6 +19,7 @@ package resources
 import (
 	"fmt"
 	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -96,6 +97,7 @@ func MakeFilterService(b *eventingv1alpha1.Broker) *corev1.Service {
 				{
 					Name: "http",
 					Port: 80,
+					TargetPort: intstr.FromInt(8080),
 				},
 			},
 		},

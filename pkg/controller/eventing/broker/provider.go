@@ -77,6 +77,13 @@ func ProvideController(logger *zap.Logger, ingressImage, ingressServiceAccount, 
 			return nil, err
 		}
 
+		err = c.Watch(&source.Kind{
+			Type: &v1alpha1.Channel{},
+		}, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Broker{}, IsController: true})
+		if err != nil {
+			return nil, err
+		}
+
 		return c, nil
 	}
 }
