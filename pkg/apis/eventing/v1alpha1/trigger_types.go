@@ -73,6 +73,8 @@ type TriggerStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+
+	SubscriberURI string `json:"subscriberURI,omitempty"`
 }
 
 const (
