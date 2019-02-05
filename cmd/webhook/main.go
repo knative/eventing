@@ -107,5 +107,6 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to create the admission controller", zap.Error(err))
 	}
-	controller.Run(stopCh)
+	err = controller.Run(stopCh)
+	logger.Errorw("Webhook stopping", zap.Error(err))
 }
