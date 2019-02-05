@@ -25,6 +25,6 @@ func (ts *TriggerSpec) SetDefaults() {
 		ts.Broker = "default"
 	}
 	if ts.Type == "" {
-		ts.Type = "ANY"
+		ts.Type = "Any"
 	}
 }

@@ -4,7 +4,6 @@ metadata:
   name: t
 spec:
   type: Any
-  source: Any
   subscriber:
     ref:
      apiVersion: serving.knative.dev/v1alpha1
