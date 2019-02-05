@@ -121,11 +121,11 @@ func (ts *TriggerStatus) MarkBrokerDoesNotExists() {
 	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionBrokerExists, "doesNotExist", "Broker does not exist")
 }
 
-func (ts *TriggerSpec) MarkKubernetesServiceExists() {
+func (ts *TriggerStatus) MarkKubernetesServiceExists() {
 	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionKubernetesService)
 }
 
-func (ts *TriggerSpec) MarkVirtualServiceExists() {
+func (ts *TriggerStatus) MarkVirtualServiceExists() {
 	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionVirtualService)
 }
 

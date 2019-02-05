@@ -125,12 +125,14 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		logging.FromContext(ctx).Error("Unable to reconcile the K8s Service", zap.Error(err))
 		return err
 	}
+	t.Status.MarkKubernetesServiceExists()
 
 	_, err = r.reconcileVirtualService(ctx, t, svc)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to reconcile the VirtualService", zap.Error(err))
 		return err
 	}
+	t.Status.MarkVirtualServiceExists()
 
 	_, err = r.subscribeToBrokerChannel(ctx, t, c, svc)
 	if err != nil {
@@ -422,7 +424,8 @@ func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.T
 		return nil, err
 	}
 
-	// Update Subscription if it has changed.
+	// Update Subscription if it has changed. Ignore the generation.
+	expected.Spec.DeprecatedGeneration = sub.Spec.DeprecatedGeneration
 	if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
 		sub.Spec = expected.Spec
 		err = r.client.Update(ctx, sub)
@@ -477,24 +480,22 @@ func makeSubscription(t *v1alpha1.Trigger, c *v1alpha1.Channel, svc *corev1.Serv
 		},
 		Spec: v1alpha1.SubscriptionSpec{
 			Channel: corev1.ObjectReference{
-				APIVersion: c.APIVersion,
-				Kind:       c.Kind,
-				Namespace:  c.Namespace,
+				APIVersion: v1alpha1.SchemeGroupVersion.String(),
+				Kind:    "Channel",
 				Name:       c.Name,
 			},
 			Subscriber: &v1alpha1.SubscriberSpec{
 				Ref: &corev1.ObjectReference{
-					APIVersion: svc.APIVersion,
-					Kind:       svc.Kind,
-					Namespace:  svc.Namespace,
+					APIVersion: "v1",
+					Kind:    "Service",
 					Name:       svc.Name,
 				},
 			},
+			// TODO This pushes directly into the Channel, it should probably point at the Broker ingress instead.
 			Reply: &v1alpha1.ReplyStrategy{
 				Channel: &corev1.ObjectReference{
-					APIVersion: c.APIVersion,
-					Kind:       c.Kind,
-					Namespace:  c.Namespace,
+					APIVersion: v1alpha1.SchemeGroupVersion.String(),
+					Kind:    "Channel",
 					Name:       c.Name,
 				},
 			},

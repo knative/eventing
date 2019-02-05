@@ -211,16 +211,17 @@ func (r *reconciler) reconcileChannel(ctx context.Context, b *v1alpha1.Broker) (
 		return nil, err
 	}
 
+	// TODO Determine if we want to update spec (maybe just args?).
 	// Update Channel if it has changed. Note that we need to both ignore the real Channel's
 	// subscribable section and if we need to update the real Channel, retain it.
-	expected.Spec.Subscribable = c.Spec.Subscribable
-	if !equality.Semantic.DeepDerivative(expected.Spec, c.Spec) {
-		c.Spec = expected.Spec
-		err = r.client.Update(ctx, c)
-		if err != nil {
-			return nil, err
-		}
-	}
+	//expected.Spec.Subscribable = c.Spec.Subscribable
+	//if !equality.Semantic.DeepDerivative(expected.Spec, c.Spec) {
+	//	c.Spec = expected.Spec
+	//	err = r.client.Update(ctx, c)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//}
 	return c, nil
 }
 
@@ -262,6 +263,7 @@ func newChannel(b *v1alpha1.Broker) *v1alpha1.Channel {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    b.Namespace,
 			GenerateName: fmt.Sprintf("%s-broker-", b.Name),
+			Labels: ChannelLabels(b),
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(b, schema.GroupVersionKind{
 					Group:   v1alpha1.SchemeGroupVersion.Group,
