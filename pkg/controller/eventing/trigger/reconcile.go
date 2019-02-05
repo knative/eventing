@@ -22,6 +22,7 @@ import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/controller"
 	"github.com/knative/eventing/pkg/controller/eventing/broker"
+	"github.com/knative/eventing/pkg/controller/eventing/subscription"
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/logging"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
@@ -88,6 +89,7 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	t.Status.InitializeConditions()
 
 	// 1. Verify the Broker exists.
+	// 2. Find the Subscriber's URI.
 	// 2. Creates a K8s Service uniquely named for this Trigger.
 	// 3. Creates a VirtualService that routes the K8s Service to the Broker's filter service on an identifiable host name.
 	// 4. Creates a Subscription from the Broker's single Channel to this Trigger's K8s Service, with reply set to the Broker.
@@ -110,6 +112,13 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		logging.FromContext(ctx).Error("Unable to get the Broker's Channel", zap.Error(err))
 		return err
 	}
+
+	subscriberURI, err := subscription.ResolveSubscriberSpec(ctx, r.client, r.dynamicClient, t.Namespace, t.Spec.Subscriber)
+	if err != nil {
+		logging.FromContext(ctx).Error("Unable to get the Subscriber's URI", zap.Error(err))
+		return err
+	}
+	t.Status.SubscriberURI = subscriberURI
 
 	svc, err := r.reconcileK8sService(ctx, t)
 	if err != nil {
