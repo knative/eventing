@@ -85,7 +85,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	// Requeue if the resource is not ready:
-	return reconcile.Result{}, err
+	return reconcile.Result{}, reconcileErr
 }
 
 func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {

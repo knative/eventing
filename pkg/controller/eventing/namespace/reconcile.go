@@ -31,7 +31,7 @@ import (
 
 const (
 	defaultBroker = "default"
-	KnativeEventingAnnotation = "eventing.knative.dev/injection"
+	knativeEventingAnnotation = "eventing.knative.dev/injection"
 
 	// Name of the corev1.Events emitted from the reconciliation process
 	brokerCreated = "BrokerCreated"
@@ -57,7 +57,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
-	if ns.Annotations[KnativeEventingAnnotation] != "true" {
+	if ns.Annotations[knativeEventingAnnotation] != "true" {
 		logging.FromContext(ctx).Debug("Not reconciling Namespace")
 		return reconcile.Result{}, nil
 	}
@@ -72,7 +72,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	// Requeue if the resource is not ready:
-	return reconcile.Result{}, err
+	return reconcile.Result{}, reconcileErr
 }
 
 func (r *reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error {

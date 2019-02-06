@@ -17,8 +17,10 @@ limitations under the License.
 package namespace
 
 import (
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"go.uber.org/zap"
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
@@ -68,7 +70,25 @@ func ProvideController(logger *zap.Logger) func(manager.Manager) (controller.Con
 			return nil, err
 		}
 
+		if err = c.Watch(&source.Kind{Type: &v1alpha1.Broker{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &namespaceMapper{}}); err != nil {
+			return nil, err
+		}
+
 		return c, nil
+	}
+}
+
+type namespaceMapper struct {}
+var _ handler.Mapper = &namespaceMapper{}
+
+func (namespaceMapper) Map(o handler.MapObject) []reconcile.Request {
+	return []reconcile.Request{
+		{
+			NamespacedName: types.NamespacedName{
+				Namespace: "",
+				Name:      o.Meta.GetNamespace(),
+			},
+		},
 	}
 }
 
