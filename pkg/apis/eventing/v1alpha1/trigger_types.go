@@ -58,11 +58,10 @@ type TriggerSpec struct {
 	// +optional
 	DeprecatedGeneration int64 `json:"generation,omitempty"`
 
-	Broker     string               `json:"broker,omitempty"`
-	Subscriber *SubscriberSpec      `json:"subscriber,omitempty"`
+	Broker     string          `json:"broker,omitempty"`
+	Subscriber *SubscriberSpec `json:"subscriber,omitempty"`
 
-	Type   string `json:"type,omitempty"`
-	Source string `json:"source,omitempty"`
+	Filters *metav1.LabelSelector `json:"filters,omitempty"`
 }
 
 var triggerCondSet = duckv1alpha1.NewLivingConditionSet(TriggerConditionBrokerExists, TriggerConditionKubernetesService, TriggerConditionVirtualService, TriggerConditionSubscribed)

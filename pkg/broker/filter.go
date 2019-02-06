@@ -20,6 +20,10 @@ import (
 	"context"
 	"errors"
 
+	"k8s.io/apimachinery/pkg/labels"
+
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/logging"
@@ -45,8 +49,8 @@ type Receiver struct {
 // Start()ing the returned MessageReceiver.
 func New(logger *zap.Logger, client client.Client) (*Receiver, manager.Runnable) {
 	r := &Receiver{
-		logger: logger,
-		client: client,
+		logger:     logger,
+		client:     client,
 		dispatcher: provisioners.NewMessageDispatcher(logger.Sugar()),
 	}
 	return r, r.newMessageReceiver()
@@ -73,8 +77,8 @@ func (r *Receiver) sendEventToTopic(channel provisioners.ChannelReference, messa
 		return errors.New("unable to read subscriberURI")
 	}
 
-	if !shouldSendMessage(t.Spec, message) {
-		logging.FromContext(ctx).Debug("Message did not pass filter")
+	if !shouldSendMessage(ctx, t.Spec, message) {
+		logging.FromContext(ctx).Info("Message did not pass filter")
 		return nil
 	}
 
@@ -98,13 +102,13 @@ func (r *Receiver) getTrigger(ctx context.Context, ref provisioners.ChannelRefer
 	return t, err
 }
 
-func shouldSendMessage(t eventingv1alpha1.TriggerSpec, m *provisioners.Message) bool {
-	// TODO More filtering!
-	if t.Type != Any && t.Type != m.Headers["type"] {
+func shouldSendMessage(ctx context.Context, t eventingv1alpha1.TriggerSpec, m *provisioners.Message) bool {
+	// TODO, this conversion to selector should be done only once, possibly upon creation of the trigger
+	selector, err := v1.LabelSelectorAsSelector(t.Filters)
+	if err != nil {
+		logging.FromContext(ctx).Error("Invalid label selector for filter", zap.Error(err))
 		return false
 	}
-	if t.Source != "" && t.Source != m.Headers["source"] {
-		return false
-	}
-	return true
+	l := labels.Set(m.Headers)
+	return selector.Matches(l)
 }
