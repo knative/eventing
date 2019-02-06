@@ -19,12 +19,15 @@ package dispatcher
 import (
 	"context"
 	"sync"
+	"time"
+
+	"k8s.io/client-go/util/workqueue"
 
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
+	pubsubutil "github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
-	pubsubutil "github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -36,11 +39,20 @@ const (
 	// controllerAgentName is the string used by this controller to identify itself when creating
 	// events.
 	controllerAgentName = "gcp-pubsub-channel-dispatcher"
+
+	// Exponential backoff constants used to limit the pace at which
+	// we nack messages in order to throttle the channel retries.
+	// The backoff is computed as follows: min(expBackoffMaxDelay, expBackoffBaseDelay* 2^#failures).
+	// expBackoffMaxDelay should be less than subscription.ReceiveSettings.MaxExtension,
+	// which is the maximum period for which the Subscription extends the ack deadline
+	// for each message. It is currently set to 10 minutes.
+	expBackoffBaseDelay = 1 * time.Second
+	expBackoffMaxDelay  = 5 * time.Minute
 )
 
 // New returns a Controller that represents the dispatcher portion (messages from GCP PubSub are
 // sent into the cluster) of the GCP PubSub dispatcher. We use a reconcile loop to watch all
-// Channels and notice changes to them.
+// Channels and notice changes to them. It uses an exponential backoff to throttle the retries.
 func New(mgr manager.Manager, logger *zap.Logger, stopCh <-chan struct{}) (controller.Controller, error) {
 	// reconcileChan is used when the dispatcher itself needs to force reconciliation of a Channel.
 	reconcileChan := make(chan event.GenericEvent)
@@ -58,6 +70,8 @@ func New(mgr manager.Manager, logger *zap.Logger, stopCh <-chan struct{}) (contr
 
 		subscriptionsLock: sync.Mutex{},
 		subscriptions:     map[channelName]map[subscriptionName]context.CancelFunc{},
+
+		rateLimiter: workqueue.NewItemExponentialFailureRateLimiter(expBackoffBaseDelay, expBackoffMaxDelay),
 	}
 
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{

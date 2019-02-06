@@ -20,13 +20,16 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners"
-	util "github.com/knative/eventing/pkg/provisioners"
+	"k8s.io/client-go/util/workqueue"
+
 	ccpcontroller "github.com/knative/eventing/contrib/gcppubsub/pkg/controller/clusterchannelprovisioner"
 	pubsubutil "github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/logging"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/provisioners"
+	util "github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -63,6 +66,9 @@ type reconciler struct {
 	// function must be called when we no longer want that subscription to be active. Logically it
 	// is a map from Channel name to Subscription name to CancelFunc.
 	subscriptions map[channelName]map[subscriptionName]context.CancelFunc
+
+	// rateLimiter is used to limit the pace at which we nack a message when it could not be dispatched.
+	rateLimiter workqueue.RateLimiter
 }
 
 // Verify the struct implements reconcile.Reconciler
@@ -290,7 +296,7 @@ func (r *reconciler) receiveMessagesBlocking(ctxWithCancel context.Context, enqu
 	logging.FromContext(ctxWithCancel).Info("subscription.Receive start")
 	receiveErr := subscription.Receive(
 		ctxWithCancel,
-		receiveFunc(logging.FromContext(ctxWithCancel).Sugar(), sub, defaults, r.dispatcher))
+		receiveFunc(logging.FromContext(ctxWithCancel).Sugar(), sub, defaults, r.dispatcher, r.rateLimiter, time.Sleep))
 	// We want to minimize holding the lock. r.reconcileChan may block, so definitely do not do
 	// it under lock. But, to prevent a race condition, we must delete from r.subscriptions
 	// before using r.reconcileChan.
@@ -312,7 +318,7 @@ func (r *reconciler) receiveMessagesBlocking(ctxWithCancel context.Context, enqu
 	}
 }
 
-func receiveFunc(logger *zap.SugaredLogger, sub pubsubutil.GcpPubSubSubscriptionStatus, defaults provisioners.DispatchDefaults, dispatcher provisioners.Dispatcher) func(context.Context, pubsubutil.PubSubMessage) {
+func receiveFunc(logger *zap.SugaredLogger, sub pubsubutil.GcpPubSubSubscriptionStatus, defaults provisioners.DispatchDefaults, dispatcher provisioners.Dispatcher, rateLimiter workqueue.RateLimiter, waitFunc func(duration time.Duration)) func(context.Context, pubsubutil.PubSubMessage) {
 	return func(ctx context.Context, msg pubsubutil.PubSubMessage) {
 		message := &provisioners.Message{
 			Headers: msg.Attributes(),
@@ -320,10 +326,19 @@ func receiveFunc(logger *zap.SugaredLogger, sub pubsubutil.GcpPubSubSubscription
 		}
 		err := dispatcher.DispatchMessage(message, sub.SubscriberURI, sub.ReplyURI, defaults)
 		if err != nil {
-			logger.Error("Message dispatch failed", zap.Error(err), zap.String("pubSubMessageId", msg.ID()))
+			// Compute the wait time to nack this message.
+			// As soon as we nack a message, the GcpPubSub channel will attempt the retry.
+			// We use this as a mechanism to backoff retries.
+			sleepDuration := rateLimiter.When(msg.ID())
+			// Blocking, might need to run this on a separate go routine to improve throughput.
+			logger.Desugar().Error("Message dispatch failed, waiting to nack", zap.Error(err), zap.String("pubSubMessageId", msg.ID()), zap.Float64("backoffSec", sleepDuration.Seconds()))
+			waitFunc(sleepDuration)
 			msg.Nack()
 		} else {
-			logger.Debug("Message dispatch succeeded", zap.String("pubSubMessageId", msg.ID()))
+			// If there were any failures for this message, remove it from the rateLimiter backed map.
+			rateLimiter.Forget(msg.ID())
+			// Acknowledge the dispatch.
+			logger.Desugar().Debug("Message dispatch succeeded", zap.String("pubSubMessageId", msg.ID()))
 			msg.Ack()
 		}
 	}

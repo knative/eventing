@@ -20,9 +20,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
+
+	"k8s.io/client-go/util/workqueue"
 
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 
@@ -389,15 +393,28 @@ func TestReconcile(t *testing.T) {
 
 func TestReceiveFunc(t *testing.T) {
 	testCases := map[string]struct {
-		ack           bool
-		dispatcherErr error
+		ack              bool
+		dispatcherErr    error
+		dispatchAttempts int
 	}{
-		"dispatch error": {
-			ack:           false,
-			dispatcherErr: errors.New(testErrorMessage),
+		"dispatch error with few dispatch attempts": {
+			ack:              false,
+			dispatcherErr:    errors.New(testErrorMessage),
+			dispatchAttempts: 3,
 		},
-		"dispatch success": {
-			ack: true,
+		"dispatch error with capped backoff": {
+			ack:              false,
+			dispatcherErr:    errors.New(testErrorMessage),
+			dispatchAttempts: 20,
+		},
+		"dispatch success on first attempt": {
+			ack:              true,
+			dispatchAttempts: 1,
+		},
+		"dispatch success after many failed attempts": {
+			ack:              true,
+			dispatcherErr:    errors.New(testErrorMessage),
+			dispatchAttempts: 10,
 		},
 	}
 	for n, tc := range testCases {
@@ -410,21 +427,42 @@ func TestReceiveFunc(t *testing.T) {
 			defaults := provisioners.DispatchDefaults{
 				Namespace: cNamespace,
 			}
-			rf := receiveFunc(zap.NewNop().Sugar(), sub, defaults, &fakeDispatcher{err: tc.dispatcherErr})
-			msg := fakepubsub.Message{}
-			rf(context.TODO(), &msg)
+			dispatcher := &fakeDispatcher{ack: tc.ack, err: tc.dispatcherErr, errCounter: tc.dispatchAttempts}
+			rateLimiter := workqueue.NewItemExponentialFailureRateLimiter(expBackoffBaseDelay, expBackoffMaxDelay)
+			waiter := fakeWaiter{make([]time.Duration, 0)}
+			rf := receiveFunc(zap.NewNop().Sugar(), sub, defaults, dispatcher, rateLimiter, waiter.sleep)
 
-			if msg.MessageData.Ack && msg.MessageData.Nack {
-				t.Error("Message both Acked and Nacked")
+			// Starting from 1 instead of 0 in order to check when we should expect to ack a message.
+			for i := 1; i <= tc.dispatchAttempts; i++ {
+				msg := fakepubsub.Message{}
+				rf(context.TODO(), &msg)
+
+				if msg.MessageData.Ack && msg.MessageData.Nack {
+					t.Errorf("Message both Acked and Nacked on attempt %d", i)
+				}
+				if tc.ack && i == tc.dispatchAttempts {
+					if !msg.MessageData.Ack {
+						t.Errorf("Message should have been Acked on attempt %d. It wasn't.", i)
+					}
+					if rateLimiter.NumRequeues(msg.ID()) != 0 {
+						t.Errorf("Message should have removed from retry queue on attempt %d. It wasn't.", i)
+					}
+				} else {
+					if !msg.MessageData.Nack {
+						t.Errorf("Message should have been Nacked on attempt %d. It wasn't.", i)
+					}
+				}
 			}
+			var failures int
 			if tc.ack {
-				if !msg.MessageData.Ack {
-					t.Error("Message should have been Acked. It wasn't.")
-				}
+				failures = tc.dispatchAttempts - 1
 			} else {
-				if !msg.MessageData.Nack {
-					t.Error("Message should have been Nacked. It wasn't.")
-				}
+				failures = tc.dispatchAttempts
+			}
+			// We validate the backoff times
+			expectedWaitTimes := computeBackoffs(failures, expBackoffBaseDelay, expBackoffMaxDelay)
+			if !reflect.DeepEqual(expectedWaitTimes, waiter.WaitTimes) {
+				t.Errorf("Expected backoff times %d, got %d", getDurationsInSeconds(expectedWaitTimes), getDurationsInSeconds(waiter.WaitTimes))
 			}
 		})
 	}
@@ -618,9 +656,48 @@ func (cc *cancelChecker) verify(t *testing.T, _ *controllertesting.TestCase) {
 }
 
 type fakeDispatcher struct {
-	err error
+	ack        bool
+	err        error
+	errCounter int
 }
 
 func (d *fakeDispatcher) DispatchMessage(_ *provisioners.Message, _, _ string, _ provisioners.DispatchDefaults) error {
-	return d.err
+	if !d.ack {
+		return d.err
+	}
+	// Decrease the errCounter to simulate a final ack after many nacks.
+	d.errCounter--
+	if d.errCounter > 0 {
+		return d.err
+	}
+	return nil
+}
+
+type fakeWaiter struct {
+	WaitTimes []time.Duration
+}
+
+func (fw *fakeWaiter) sleep(duration time.Duration) {
+	fw.WaitTimes = append(fw.WaitTimes, duration)
+}
+
+func computeBackoffs(failures int, baseDelay, maxDelay time.Duration) []time.Duration {
+	durations := make([]time.Duration, 0, failures)
+	for i := 0; i < failures; i++ {
+		backoff := float64(baseDelay) * math.Pow(2, float64(i))
+		calculated := time.Duration(backoff)
+		if calculated > maxDelay {
+			calculated = maxDelay
+		}
+		durations = append(durations, calculated)
+	}
+	return durations
+}
+
+func getDurationsInSeconds(durations []time.Duration) []int {
+	durationsInSeconds := make([]int, 0, len(durations))
+	for _, duration := range durations {
+		durationsInSeconds = append(durationsInSeconds, int(duration.Seconds()))
+	}
+	return durationsInSeconds
 }
