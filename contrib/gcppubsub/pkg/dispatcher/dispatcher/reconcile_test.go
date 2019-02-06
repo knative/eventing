@@ -432,7 +432,7 @@ func TestReceiveFunc(t *testing.T) {
 			waiter := fakeWaiter{make([]time.Duration, 0)}
 			rf := receiveFunc(zap.NewNop().Sugar(), sub, defaults, dispatcher, rateLimiter, waiter.sleep)
 
-			for i := 1; i <= tc.dispatchAttempts; i++ {
+			for i := 0; i < tc.dispatchAttempts; i++ {
 				msg := fakepubsub.Message{}
 				rf(context.TODO(), &msg)
 
