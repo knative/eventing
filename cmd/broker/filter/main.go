@@ -23,12 +23,14 @@ import (
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 func main() {
 	logConfig := provisioners.NewLoggingConfig()
+	logConfig.LoggingLevel["provisioner"] = zapcore.DebugLevel
 	logger := provisioners.NewProvisionerLoggerFromConfig(logConfig).Desugar()
 	defer logger.Sync()
 

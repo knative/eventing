@@ -26,7 +26,6 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
-	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/logging"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,27 +66,27 @@ func (r *Receiver) sendEventToTopic(channel provisioners.ChannelReference, messa
 
 	t, err := r.getTrigger(ctx, channel)
 	if err != nil {
-		logging.FromContext(ctx).Info("Unable to get the Trigger", zap.Error(err), zap.Any("channelRef", channel))
+		r.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("channelRef", channel))
 		return err
 	}
 
 	subscriberURI := t.Status.SubscriberURI
 	if subscriberURI == "" {
-		logging.FromContext(ctx).Error("Unable to read subscriberURI")
+		r.logger.Error("Unable to read subscriberURI")
 		return errors.New("unable to read subscriberURI")
 	}
 
-	if !shouldSendMessage(ctx, t.Spec, message) {
-		logging.FromContext(ctx).Info("Message did not pass filter")
+	if !r.shouldSendMessage(&t.Spec, message) {
+		r.logger.Debug("Message did not pass filter")
 		return nil
 	}
 
 	err = r.dispatcher.DispatchMessage(message, subscriberURI, "", provisioners.DispatchDefaults{})
 	if err != nil {
-		logging.FromContext(ctx).Info("Failed to dispatch message", zap.Error(err))
+		r.logger.Info("Failed to dispatch message", zap.Error(err))
 		return err
 	}
-	logging.FromContext(ctx).Debug("Successfully sent message")
+	r.logger.Debug("Successfully sent message")
 	return nil
 }
 
@@ -102,11 +101,12 @@ func (r *Receiver) getTrigger(ctx context.Context, ref provisioners.ChannelRefer
 	return t, err
 }
 
-func shouldSendMessage(ctx context.Context, t eventingv1alpha1.TriggerSpec, m *provisioners.Message) bool {
+func (r *Receiver) shouldSendMessage(t *eventingv1alpha1.TriggerSpec, m *provisioners.Message) bool {
 	// TODO, this conversion to selector should be done only once, possibly upon creation of the trigger
+	// in case the filters are immutable
 	selector, err := v1.LabelSelectorAsSelector(t.Filters)
 	if err != nil {
-		logging.FromContext(ctx).Error("Invalid label selector for filter", zap.Error(err))
+		r.logger.Error("Invalid label selector for filter", zap.Error(err))
 		return false
 	}
 	l := labels.Set(m.Headers)
