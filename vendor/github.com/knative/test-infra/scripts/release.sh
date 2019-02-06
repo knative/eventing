@@ -391,6 +391,7 @@ function main() {
   echo "New release built successfully"
   if (( PUBLISH_RELEASE )); then
     tag_images_in_yamls ${YAMLS_TO_PUBLISH}
+    publish_yamls ${YAMLS_TO_PUBLISH}
     publish_to_github ${YAMLS_TO_PUBLISH}
     echo "New release published successfully"
   fi
@@ -400,7 +401,7 @@ function main() {
 # Parameters: $1..$n - YAML files to add to the release.
 function publish_to_github() {
   (( PUBLISH_TO_GITHUB )) || return 0
-  local title="Knative $(capitalize ${REPO_NAME//-/ /}) release ${TAG}"
+  local title="Knative $(capitalize ${REPO_NAME//-/ }) release ${TAG}"
   local attachments=()
   local description="$(mktemp)"
   local attachments_dir="$(mktemp -d)"
