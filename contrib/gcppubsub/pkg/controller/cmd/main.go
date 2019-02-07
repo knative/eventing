@@ -24,9 +24,9 @@ import (
 	"github.com/knative/eventing/pkg/provisioners"
 	v1 "k8s.io/api/core/v1"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/controller/channel"
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/controller/clusterchannelprovisioner"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
