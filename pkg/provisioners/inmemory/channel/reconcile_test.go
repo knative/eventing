@@ -43,7 +43,8 @@ import (
 )
 
 const (
-	ccpName = "in-memory-channel"
+	ccpName      = "in-memory-channel"
+	asyncCCPName = "in-memory"
 
 	cNamespace = "test-namespace"
 	cName      = "test-channel"
@@ -518,6 +519,38 @@ func TestReconcile(t *testing.T) {
 				events[channelReconciled],
 			},
 		},
+		{
+			Name: "Channel reconcile successful - Async channel",
+			// VirtualService should have channel provisioner name
+			// defaults to in-memory-channel but the service should match provisioner's service name
+			InitialState: []runtime.Object{
+				makeChannel("in-memory"),
+			},
+			Mocks: controllertesting.Mocks{},
+			WantPresent: []runtime.Object{
+				makeVirtualService(),
+				makeK8sService("in-memory"),
+			},
+			WantEvent: []corev1.Event{
+				events[channelReconciled],
+			},
+		},
+		{
+			Name: "Channel reconcile successful - Non Async channel",
+			// VirtualService should have channel provisioner name
+			// defaults to in-memory-channel
+			InitialState: []runtime.Object{
+				makeChannel(),
+			},
+			Mocks: controllertesting.Mocks{},
+			WantPresent: []runtime.Object{
+				makeVirtualService(),
+				makeK8sService(),
+			},
+			WantEvent: []corev1.Event{
+				events[channelReconciled],
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -541,7 +574,7 @@ func TestReconcile(t *testing.T) {
 	}
 }
 
-func makeChannel() *eventingv1alpha1.Channel {
+func makeChannel(pn ...string) *eventingv1alpha1.Channel {
 	c := &eventingv1alpha1.Channel{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
@@ -554,12 +587,22 @@ func makeChannel() *eventingv1alpha1.Channel {
 		},
 		Spec: eventingv1alpha1.ChannelSpec{
 			Provisioner: &corev1.ObjectReference{
-				Name: ccpName,
+				Name: getProvisionerName(pn),
 			},
 		},
 	}
 	c.Status.InitializeConditions()
 	return c
+}
+
+// getProvisionerName returns either default provisioner name defined by ccpName variable
+// or, if specified, a custom provisioner name.
+func getProvisionerName(pn []string) string {
+	provisionerName := ccpName
+	if len(pn) != 0 {
+		provisionerName = pn[0]
+	}
+	return provisionerName
 }
 
 func makeChannelWithFinalizerAndAddress() *eventingv1alpha1.Channel {
@@ -631,7 +674,7 @@ func makeConfigMapWithVerifyConfigMapData() *corev1.ConfigMap {
 	return cm
 }
 
-func makeK8sService() *corev1.Service {
+func makeK8sService(pn ...string) *corev1.Service {
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -643,8 +686,8 @@ func makeK8sService() *corev1.Service {
 			Labels: map[string]string{
 				util.EventingChannelLabel:        cName,
 				util.OldEventingChannelLabel:     cName,
-				util.EventingProvisionerLabel:    ccpName,
-				util.OldEventingProvisionerLabel: ccpName,
+				util.EventingProvisionerLabel:    getProvisionerName(pn),
+				util.OldEventingProvisionerLabel: getProvisionerName(pn),
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{

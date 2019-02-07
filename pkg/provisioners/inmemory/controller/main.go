@@ -35,7 +35,7 @@ func main() {
 	logger := provisioners.NewProvisionerLoggerFromConfig(logConfig)
 	defer logger.Sync()
 	logger = logger.With(
-		zap.String("eventing.knative.dev/clusterChannelProvisioner", clusterchannelprovisioner.Name),
+		zap.String("eventing.knative.dev/clusterChannelProvisioner", "in-memory"),
 		zap.String("eventing.knative.dev/clusterChannelProvisionerComponent", "Controller"),
 	)
 	flag.Parse()

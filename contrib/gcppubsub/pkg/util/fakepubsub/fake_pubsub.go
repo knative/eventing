@@ -21,7 +21,7 @@ import (
 
 	"golang.org/x/oauth2/google"
 
-	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
+	"github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 
 	"cloud.google.com/go/pubsub"
 )

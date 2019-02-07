@@ -399,14 +399,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1c736297f236da8d0639e3a7eacffb8403ae6bbc3f13ff83f0cfb5e534923ca2"
+  digest = "1:adce1d5f23880effb73db34201248efb0e997e2e0fbc24e3e32b8afc2612c5df"
   name = "github.com/knative/test-infra"
   packages = [
     "scripts",
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "33a3ccab34f3b19ca95b54d40a0a94fd8919f9e8"
+  revision = "3509acd2a6c72b9730a3bdfdb715dcbea19de319"
 
 [[projects]]
   digest = "1:56dbf15e091bf7926cb33a57cb6bdfc658fc6d3498d2f76f10a97ce7856f1fde"
@@ -1275,6 +1275,7 @@
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/record",
     "k8s.io/client-go/util/flowcontrol",
+    "k8s.io/client-go/util/workqueue",
     "k8s.io/code-generator/cmd/client-gen",
     "k8s.io/code-generator/cmd/deepcopy-gen",
     "k8s.io/code-generator/cmd/defaulter-gen",

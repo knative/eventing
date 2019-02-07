@@ -20,16 +20,14 @@ metadata:
 spec:
   replicas: 1
   selector:
-    matchLabels:
+    matchLabels: &labels
       app: webhook
       role: webhook
   template:
     metadata:
       annotations:
         sidecar.istio.io/inject: "false"
-      labels:
-        app: webhook
-        role: webhook
+      labels: *labels
     spec:
       serviceAccountName: eventing-controller
       containers:
