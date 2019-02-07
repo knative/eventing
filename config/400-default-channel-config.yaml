@@ -24,7 +24,7 @@ data:
     clusterdefault:
       apiversion: eventing.knative.dev/v1alpha1
       kind: ClusterChannelProvisioner
-      name: in-memory-channel
+      name: in-memory
     namespacedefaults:
       some-namespace:
         apiversion: eventing.knative.dev/v1alpha1
