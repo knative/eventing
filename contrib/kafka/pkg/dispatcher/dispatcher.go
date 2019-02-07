@@ -38,7 +38,7 @@ type KafkaDispatcher struct {
 	updateLock sync.Mutex
 
 	receiver   *provisioners.MessageReceiver
-	dispatcher *provisioners.MessageDispatcher
+	dispatcher provisioners.Dispatcher
 
 	kafkaAsyncProducer sarama.AsyncProducer
 	kafkaConsumers     map[provisioners.ChannelReference]map[subscription]KafkaConsumer

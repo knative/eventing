@@ -12,6 +12,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
@@ -250,16 +251,14 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
 			}
-			oldSubscribers := make(map[string]bool)
+			oldSubscribers := sets.NewString()
 			for _, subMap := range d.kafkaConsumers {
 				for sub := range subMap {
-					oldSubscribers[sub.Name] = true
+					oldSubscribers.Insert(sub.Name)
 				}
 			}
-			for _, sub := range tc.unsubscribes {
-				if ok := oldSubscribers[sub]; !ok {
-					t.Errorf("subscription %s was never subscribed", sub)
-				}
+			if diff := sets.NewString(tc.unsubscribes...).Difference(oldSubscribers); diff.Len() != 0 {
+				t.Errorf("subscriptions %+v were never subscribed", diff)
 			}
 
 			// Update with new config

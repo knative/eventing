@@ -38,7 +38,7 @@ type SubscriptionsSupervisor struct {
 	logger *zap.Logger
 
 	receiver   *provisioners.MessageReceiver
-	dispatcher *provisioners.MessageDispatcher
+	dispatcher provisioners.Dispatcher
 
 	natssConn *stan.Conn
 

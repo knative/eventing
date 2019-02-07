@@ -51,7 +51,7 @@ type Handler struct {
 
 	receivedMessages chan *forwardMessage
 	receiver         *provisioners.MessageReceiver
-	dispatcher       *provisioners.MessageDispatcher
+	dispatcher       provisioners.Dispatcher
 
 	// TODO: Plumb context through the receiver and dispatcher and use that to store the timeout,
 	// rather than a member variable.
