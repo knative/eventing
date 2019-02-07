@@ -32,7 +32,7 @@ const (
 	controllerAgentName = "in-memory-channel-controller"
 )
 
-// ProvideController returns a flow controller.
+// ProvideController returns an InMemoryChannelProvisioner controller.
 func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	logger = logger.With(zap.String("controller", controllerAgentName))
 
