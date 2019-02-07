@@ -44,8 +44,8 @@ type Receiver struct {
 // Start()ing the returned MessageReceiver.
 func New(logger *zap.Logger, client client.Client) (*Receiver, manager.Runnable) {
 	r := &Receiver{
-		logger: logger,
-		client: client,
+		logger:     logger,
+		client:     client,
 		dispatcher: provisioners.NewMessageDispatcher(logger.Sugar()),
 	}
 	return r, r.newMessageReceiver()

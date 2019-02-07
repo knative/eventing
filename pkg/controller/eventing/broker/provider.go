@@ -46,8 +46,8 @@ type reconciler struct {
 
 	ingressImage              string
 	ingressServiceAccountName string
-	filterImage              string
-	filterServiceAccountName string
+	filterImage               string
+	filterServiceAccountName  string
 }
 
 // Verify the struct implements reconcile.Reconciler
@@ -62,10 +62,10 @@ func ProvideController(logger *zap.Logger, ingressImage, ingressServiceAccount, 
 				recorder: mgr.GetRecorder(controllerAgentName),
 				logger:   logger,
 
-				ingressImage: ingressImage,
+				ingressImage:              ingressImage,
 				ingressServiceAccountName: ingressServiceAccount,
-				filterImage: filterImage,
-				filterServiceAccountName: filterServiceAccount,
+				filterImage:               filterImage,
+				filterServiceAccountName:  filterServiceAccount,
 			},
 		})
 		if err != nil {

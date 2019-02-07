@@ -20,11 +20,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"golang.org/x/sync/errgroup"
 	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
@@ -33,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
-
 
 var (
 	readTimeout  = 1 * time.Minute
@@ -58,7 +58,6 @@ func main() {
 	if err != nil {
 		logger.Fatal("Unable to add scheme", zap.Error(err))
 	}
-
 
 	c := getRequiredEnv("CHANNEL")
 
@@ -102,8 +101,8 @@ func getRequiredEnv(envKey string) string {
 
 // http.Handler that takes a single request in and fans it out to N other servers.
 type Handler struct {
-	receiver         *provisioners.MessageReceiver
-	dispatcher       *provisioners.MessageDispatcher
+	receiver    *provisioners.MessageReceiver
+	dispatcher  *provisioners.MessageDispatcher
 	destination string
 
 	logger *zap.Logger
@@ -112,8 +111,8 @@ type Handler struct {
 // NewHandler creates a new fanout.Handler.
 func NewHandler(logger *zap.Logger, destination string) *Handler {
 	handler := &Handler{
-		logger:           logger,
-		dispatcher:       provisioners.NewMessageDispatcher(logger.Sugar()),
+		logger:      logger,
+		dispatcher:  provisioners.NewMessageDispatcher(logger.Sugar()),
 		destination: fmt.Sprintf("http://%s", destination),
 	}
 	// The receiver function needs to point back at the handler itself, so set it up after
@@ -143,5 +142,3 @@ func (f *Handler) dispatch(msg *provisioners.Message) error {
 	}
 	return err
 }
-
-

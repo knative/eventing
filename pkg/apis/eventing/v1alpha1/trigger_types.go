@@ -58,8 +58,8 @@ type TriggerSpec struct {
 	// +optional
 	DeprecatedGeneration int64 `json:"generation,omitempty"`
 
-	Broker     string               `json:"broker,omitempty"`
-	Subscriber *SubscriberSpec      `json:"subscriber,omitempty"`
+	Broker     string          `json:"broker,omitempty"`
+	Subscriber *SubscriberSpec `json:"subscriber,omitempty"`
 
 	Type   string `json:"type,omitempty"`
 	Source string `json:"source,omitempty"`

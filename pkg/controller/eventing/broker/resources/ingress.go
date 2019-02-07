@@ -18,6 +18,7 @@ package resources
 
 import (
 	"fmt"
+
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -28,10 +29,10 @@ import (
 )
 
 type IngressArgs struct {
-	Broker              *eventingv1alpha1.Broker
-	Image               string
-	ServiceAccountName  string
-	ChannelAddress string
+	Broker             *eventingv1alpha1.Broker
+	Image              string
+	ServiceAccountName string
+	ChannelAddress     string
 }
 
 func MakeIngress(args *IngressArgs) (*appsv1.Deployment, error) {
@@ -43,7 +44,7 @@ func MakeIngress(args *IngressArgs) (*appsv1.Deployment, error) {
 				*metav1.NewControllerRef(args.Broker, schema.GroupVersionKind{
 					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
 					Version: eventingv1alpha1.SchemeGroupVersion.Version,
-					Kind: "Broker",
+					Kind:    "Broker",
 				}),
 			},
 		},
@@ -63,14 +64,14 @@ func MakeIngress(args *IngressArgs) (*appsv1.Deployment, error) {
 					Containers: []corev1.Container{
 						{
 							Image: args.Image,
-							Name: "ingress",
+							Name:  "ingress",
 							Env: []corev1.EnvVar{
 								{
-									Name: "FILTER",
+									Name:  "FILTER",
 									Value: "", // TODO Add one.
 								},
 								{
-									Name: "CHANNEL",
+									Name:  "CHANNEL",
 									Value: args.ChannelAddress,
 								},
 							},
@@ -85,14 +86,14 @@ func MakeIngress(args *IngressArgs) (*appsv1.Deployment, error) {
 func MakeIngressService(b *eventingv1alpha1.Broker) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    b.Namespace,
-			Name: fmt.Sprintf("%s-broker", b.Name),
-			Labels:       ingressLabels(b),
+			Namespace: b.Namespace,
+			Name:      fmt.Sprintf("%s-broker", b.Name),
+			Labels:    ingressLabels(b),
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(b, schema.GroupVersionKind{
 					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
 					Version: eventingv1alpha1.SchemeGroupVersion.Version,
-					Kind: "Broker",
+					Kind:    "Broker",
 				}),
 			},
 		},
@@ -100,8 +101,8 @@ func MakeIngressService(b *eventingv1alpha1.Broker) *corev1.Service {
 			Selector: ingressLabels(b),
 			Ports: []corev1.ServicePort{
 				{
-					Name: "http",
-					Port: 80,
+					Name:       "http",
+					Port:       80,
 					TargetPort: intstr.FromInt(8080),
 				},
 			},
@@ -111,7 +112,7 @@ func MakeIngressService(b *eventingv1alpha1.Broker) *corev1.Service {
 
 func ingressLabels(b *eventingv1alpha1.Broker) map[string]string {
 	return map[string]string{
-		"eventing.knative.dev/broker": b.Name,
+		"eventing.knative.dev/broker":     b.Name,
 		"eventing.knative.dev/brokerRole": "ingress",
 	}
 }

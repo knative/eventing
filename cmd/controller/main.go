@@ -19,11 +19,12 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/knative/eventing/pkg/controller/eventing/namespace"
 	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/knative/eventing/pkg/controller/eventing/namespace"
 
 	"github.com/knative/eventing/pkg/controller/eventing/trigger"
 

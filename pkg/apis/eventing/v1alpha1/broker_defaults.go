@@ -27,5 +27,3 @@ func (b *Broker) SetDefaults() {
 func (bs *BrokerSpec) SetDefaults(brokerName string) {
 	// None
 }
-
-

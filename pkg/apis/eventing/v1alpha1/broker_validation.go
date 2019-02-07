@@ -28,7 +28,6 @@ func (bs *BrokerSpec) Validate() *apis.FieldError {
 	return nil
 }
 
-
 func (b *Broker) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
 	return nil
 }

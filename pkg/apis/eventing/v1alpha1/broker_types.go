@@ -58,7 +58,7 @@ type BrokerSpec struct {
 	// +optional
 	DeprecatedGeneration int64 `json:"generation,omitempty"`
 
-	ChannelTemplate       *ChannelSpec      `json:"channelTemplate,omitempty"`
+	ChannelTemplate *ChannelSpec `json:"channelTemplate,omitempty"`
 }
 
 var brokerCondSet = duckv1alpha1.NewLivingConditionSet(BrokerConditionIngress, BrokerConditionChannel, BrokerConditionFilter, BrokerConditionAddressable)
