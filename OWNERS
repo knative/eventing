@@ -1,8 +1,6 @@
 approvers:
 - evankanderson
 - grantr
-- inlined
-- scothis
 - vaikas-google
 
 # Reviewers are suggested from the reviewers list first, then the approvers
@@ -11,8 +9,6 @@ approvers:
 reviewers:
 - evankanderson
 - grantr
-- inlined
-- scothis
 - vaikas-google
 # Add reviewers below
 - Harwayne
