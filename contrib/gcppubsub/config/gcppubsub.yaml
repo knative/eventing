@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     https://www.apache.org/licenses/LICENSE-2.0
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,21 +15,23 @@
 apiVersion: eventing.knative.dev/v1alpha1
 kind: ClusterChannelProvisioner
 metadata:
-  name: kafka
+  name: gcp-pubsub
 spec: {}
+
 ---
 
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: kafka-channel-controller
+  name: gcp-pubsub-channel-controller
   namespace: knative-eventing
+
 ---
 
-kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
 metadata:
-  name: kafka-channel-controller
+  name: gcp-pubsub-channel-controller
 rules:
   - apiGroups:
       - eventing.knative.dev
@@ -47,25 +49,17 @@ rules:
       - "" # Core API group.
     resources:
       - services
-      - configmaps
+      - secrets
     verbs:
       - get
       - list
       - watch
-      - create
   - apiGroups:
       - "" # Core API group.
     resources:
       - services
     verbs:
-      - update
-  - apiGroups:
-      - "" # Core API Group.
-    resources:
-      - configmaps
-    resourceNames:
-      - kafka-channel-dispatcher
-    verbs:
+      - create
       - update
   - apiGroups:
       - networking.istio.io
@@ -77,63 +71,60 @@ rules:
       - watch
       - create
       - update
+
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kafka-channel-controller-manage
+  name: gcp-pubsub-channel-controller
+  namespace: knative-eventing
 subjects:
   - kind: ServiceAccount
-    name: kafka-channel-controller
+    name: gcp-pubsub-channel-controller
     namespace: knative-eventing
 roleRef:
   kind: ClusterRole
-  name: kafka-channel-controller
+  name: gcp-pubsub-channel-controller
   apiGroup: rbac.authorization.k8s.io
----
 
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: kafka-channel-controller-config
-  namespace: knative-eventing
-data:
-  # Broker URL's for the provisioner. Replace this with the URL's for your kafka cluster.
-  bootstrap_servers: kafkabroker.kafka:9092
 ---
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kafka-channel-controller
+  name: gcp-pubsub-channel-controller
   namespace: knative-eventing
 spec:
   replicas: 1
   selector:
     matchLabels: &labels
-      app: kafka-channel-controller
+      clusterChannelProvisioner: gcp-pubsub
+      role: controller
   template:
     metadata:
       labels: *labels
     spec:
-      serviceAccountName: kafka-channel-controller
+      serviceAccountName: gcp-pubsub-channel-controller
       containers:
-      - name: kafka-channel-controller-controller
-        image: github.com/knative/eventing/contrib/kafka/cmd/controller
-        volumeMounts:
-          - name: kafka-channel-controller-config
-            mountPath: /etc/config-provisioner
-      volumes:
-        - name: kafka-channel-controller-config
-          configMap:
-            name: kafka-channel-controller-config
+        - name: controller
+          image: github.com/knative/eventing/contrib/gcppubsub/pkg/controller/cmd
+          env:
+          - name: DEFAULT_GCP_PROJECT
+            value: REPLACE_WITH_GCP_PROJECT
+          - name: DEFAULT_SECRET_NAMESPACE
+            value: knative-eventing
+          - name: DEFAULT_SECRET_NAME
+            value: gcppubsub-channel-key
+          - name: DEFAULT_SECRET_KEY
+            value: key.json
+
 ---
 
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: kafka-channel-dispatcher
+  name: gcp-pubsub-channel-dispatcher
   namespace: knative-eventing
 
 ---
@@ -141,13 +132,23 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kafka-channel-dispatcher
+  name: gcp-pubsub-channel-dispatcher
   namespace: knative-eventing
 rules:
   - apiGroups:
+      - eventing.knative.dev
+    resources:
+      - channels
+      - channels/status
+    verbs:
+      - get
+      - list
+      - watch
+      - update
+  - apiGroups:
       - "" # Core API group.
     resources:
-      - configmaps
+      - secrets
     verbs:
       - get
       - list
@@ -158,52 +159,74 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kafka-channel-dispatcher
+  name: gcp-pubsub-channel-dispatcher
   namespace: knative-eventing
 subjects:
   - kind: ServiceAccount
-    name: kafka-channel-dispatcher
+    name: gcp-pubsub-channel-dispatcher
     namespace: knative-eventing
 roleRef:
   kind: ClusterRole
-  name: kafka-channel-dispatcher
+  name: gcp-pubsub-channel-dispatcher
   apiGroup: rbac.authorization.k8s.io
 
 ---
 
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
-  name: kafka-channel-dispatcher
+  name: gcp-pubsub-channel-dispatcher
   namespace: knative-eventing
 spec:
   replicas: 1
   selector:
     matchLabels: &labels
-      clusterChannelProvisioner: kafka
+      clusterChannelProvisioner: gcp-pubsub
       role: dispatcher
-  serviceName: kafka-channel-dispatcher-service
   template:
     metadata:
       annotations:
         sidecar.istio.io/inject: "true"
       labels: *labels
     spec:
-      serviceAccountName: kafka-channel-dispatcher
+      serviceAccountName: gcp-pubsub-channel-dispatcher
       containers:
         - name: dispatcher
-          image: github.com/knative/eventing/contrib/kafka/cmd/dispatcher
-          env:
-            - name: DISPATCHER_CONFIGMAP_NAME
-              value: kafka-channel-dispatcher
-            - name: DISPATCHER_CONFIGMAP_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-          volumeMounts:
-            - name: kafka-channel-controller-config
-              mountPath: /etc/config-provisioner
-      volumes:
-        - name: kafka-channel-controller-config
-          configMap:
-            name: kafka-channel-controller-config
+          image: github.com/knative/eventing/contrib/gcppubsub/pkg/dispatcher/cmd
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: gcp-pubsub-dispatcher
+  namespace: knative-eventing
+spec:
+  type: ClusterIP
+  selector:
+    clusterChannelProvisioner: gcp-pubsub
+    role: dispatcher
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080
+
+---
+
+# Needed by the GCP PubSub Channel to communicate with GCP PubSub.
+
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: gcppubsub-bus-ext
+  namespace: knative-eventing
+spec:
+  hosts:
+  - "*.googleapis.com"
+  - "accounts.google.com"
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  location: MESH_EXTERNAL

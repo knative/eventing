@@ -42,7 +42,7 @@ func UpdateClusterChannelProvisionerStatus(ctx context.Context, client runtimeCl
 
 	if !equality.Semantic.DeepEqual(o.Status, u.Status) {
 		o.Status = u.Status
-		return client.Update(ctx, o)
+		return client.Status().Update(ctx, o)
 	}
 	return nil
 }

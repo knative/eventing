@@ -15,6 +15,14 @@
 apiVersion: eventing.knative.dev/v1alpha1
 kind: ClusterChannelProvisioner
 metadata:
+  name: in-memory
+spec: {}
+
+---
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: ClusterChannelProvisioner
+metadata:
   name: in-memory-channel
 spec: {}
 
@@ -39,6 +47,7 @@ rules:
       - channels
       - channels/status
       - clusterchannelprovisioners
+      - clusterchannelprovisioners/status
     verbs:
       - get
       - list

@@ -19,12 +19,11 @@ metadata:
 spec:
   replicas: 1
   selector:
-    matchLabels:
+    matchLabels: &labels
       app: eventing-controller
   template:
     metadata:
-      labels:
-        app: eventing-controller
+      labels: *labels
     spec:
       serviceAccountName: eventing-controller
       containers:
