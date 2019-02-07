@@ -19,9 +19,9 @@ package clusterchannelprovisioner
 import (
 	"context"
 
+	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/logging"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	util "github.com/knative/eventing/pkg/provisioners"
-	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/logging"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
