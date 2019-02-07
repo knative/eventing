@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/knative/eventing/pkg/controller/eventing/subscription"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/subscription"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"

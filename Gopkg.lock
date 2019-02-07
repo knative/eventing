@@ -351,30 +351,16 @@
   version = "v0.2.0"
 
 [[projects]]
-  digest = "1:156488613943416b3801ce597037d9b7df0745df43eebd3746df0843801d89be"
+  digest = "1:9e87cc32eebacc20127e352edabb39625a3f82473b6b1b1b3333627f3cf37f97"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
     "apis/duck",
     "apis/duck/v1alpha1",
     "apis/istio",
-    "apis/istio/authentication",
-    "apis/istio/authentication/v1alpha1",
     "apis/istio/common/v1alpha1",
     "apis/istio/v1alpha3",
     "changeset",
-    "client/clientset/versioned",
-    "client/clientset/versioned/scheme",
-    "client/clientset/versioned/typed/authentication/v1alpha1",
-    "client/clientset/versioned/typed/istio/v1alpha3",
-    "client/informers/externalversions",
-    "client/informers/externalversions/authentication",
-    "client/informers/externalversions/authentication/v1alpha1",
-    "client/informers/externalversions/internalinterfaces",
-    "client/informers/externalversions/istio",
-    "client/informers/externalversions/istio/v1alpha3",
-    "client/listers/authentication/v1alpha1",
-    "client/listers/istio/v1alpha3",
     "cloudevents",
     "configmap",
     "kmeta",
@@ -1233,8 +1219,6 @@
     "github.com/knative/pkg/apis/duck",
     "github.com/knative/pkg/apis/duck/v1alpha1",
     "github.com/knative/pkg/apis/istio/v1alpha3",
-    "github.com/knative/pkg/client/clientset/versioned",
-    "github.com/knative/pkg/client/informers/externalversions",
     "github.com/knative/pkg/cloudevents",
     "github.com/knative/pkg/configmap",
     "github.com/knative/pkg/logging",
@@ -1282,7 +1266,6 @@
     "k8s.io/client-go/discovery/fake",
     "k8s.io/client-go/dynamic",
     "k8s.io/client-go/dynamic/fake",
-    "k8s.io/client-go/informers",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
@@ -1298,6 +1281,7 @@
     "k8s.io/code-generator/cmd/defaulter-gen",
     "k8s.io/code-generator/cmd/informer-gen",
     "k8s.io/code-generator/cmd/lister-gen",
+    "sigs.k8s.io/controller-runtime/pkg/cache",
     "sigs.k8s.io/controller-runtime/pkg/client",
     "sigs.k8s.io/controller-runtime/pkg/client/config",
     "sigs.k8s.io/controller-runtime/pkg/client/fake",
@@ -1306,9 +1290,11 @@
     "sigs.k8s.io/controller-runtime/pkg/handler",
     "sigs.k8s.io/controller-runtime/pkg/manager",
     "sigs.k8s.io/controller-runtime/pkg/reconcile",
+    "sigs.k8s.io/controller-runtime/pkg/runtime/inject",
     "sigs.k8s.io/controller-runtime/pkg/runtime/log",
     "sigs.k8s.io/controller-runtime/pkg/runtime/signals",
     "sigs.k8s.io/controller-runtime/pkg/source",
+    "sigs.k8s.io/controller-runtime/pkg/webhook/admission/types",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

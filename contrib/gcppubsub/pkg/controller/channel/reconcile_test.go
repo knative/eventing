@@ -35,7 +35,7 @@ import (
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/fakepubsub"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	controllertesting "github.com/knative/eventing/pkg/controller/testing"
+	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	util "github.com/knative/eventing/pkg/provisioners"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"

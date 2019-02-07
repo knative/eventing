@@ -24,7 +24,7 @@ import (
 	pubsubutil "github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/logging"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/controller"
+	"github.com/knative/eventing/pkg/reconciler/names"
 	util "github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2/google"
@@ -333,7 +333,7 @@ func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.C
 		return nil, err
 	}
 
-	c.Status.SetAddress(controller.ServiceHostName(svc.Name, svc.Namespace))
+	c.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
 	return svc, nil
 }
 
