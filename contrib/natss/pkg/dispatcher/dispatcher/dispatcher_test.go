@@ -31,8 +31,8 @@ import (
 )
 
 const (
-	clusterId    = "knative-nats-streaming"
-	natssTestUrl = "nats://localhost:4222"
+	clusterID    = "knative-nats-streaming"
+	natssTestURL = "nats://localhost:4222"
 
 	ccpName = "natss"
 
@@ -68,15 +68,15 @@ func TestMain(m *testing.M) {
 	logger = provisioners.NewProvisionerLoggerFromConfig(provisioners.NewLoggingConfig())
 	defer logger.Sync()
 
-	// start NATSS
+	// Start NATSS.
 	stanServer, err := startNatss()
 	if err != nil {
 		logger.Fatalf("Cannot start NATSS: %v", err)
 	}
 	defer stopNatss(stanServer)
 
-	// start Dispatcher
-	s, err = NewDispatcher(natssTestUrl, logger.Desugar())
+	// Create and start Dispatcher.
+	s, err = NewDispatcher(natssTestURL, logger.Desugar())
 	if err != nil {
 		logger.Fatalf("Unable to create NATSS dispatcher: %v", err)
 	}
@@ -88,11 +88,7 @@ func TestMain(m *testing.M) {
 			logger.Fatalf("Failed to connect to NATSS!")
 		}
 	}()
-
-	// run the unit tests
-	retCode := m.Run()
-
-	os.Exit(retCode)
+	os.Exit(m.Run())
 }
 
 func TestSubscribeUnsubscribe(t *testing.T) {
@@ -121,7 +117,7 @@ func TestUpdateSubscriptions(t *testing.T) {
 	cRef := provisioners.ChannelReference{c.Namespace, c.Name}
 	chMap, ok := s.subscriptions[cRef]
 	if !ok {
-		t.Errorf("No channel map found")
+		t.Error("No channel map found")
 	}
 
 	// check the subscriptions
@@ -139,24 +135,23 @@ func TestUpdateSubscriptions(t *testing.T) {
 
 func startNatss() (*server.StanServer, error) {
 	logger.Infof("Start NATSS")
-	var err error
-	var stanServer *server.StanServer
+	var (
+		err        error
+		stanServer *server.StanServer
+	)
 	for i := 0; i < 10; i++ {
-		if stanServer, err = server.RunServer(clusterId); err != nil {
+		if stanServer, err = server.RunServer(clusterID); err != nil {
 			logger.Errorf("Start NATSS failed: %+v", err)
 			time.Sleep(1 * time.Second)
 		} else {
 			break
 		}
 	}
-	if err != nil {
-		return nil, err
-	}
-	return stanServer, nil
+	return stanServer, err
 }
 
 func stopNatss(server *server.StanServer) {
-	logger.Infof("Stop NATSS")
+	logger.Info("Stop NATSS")
 	server.Shutdown()
 }
 

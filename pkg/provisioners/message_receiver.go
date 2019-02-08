@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // MessageReceiver starts a server to receive new messages for the channel dispatcher. The new
@@ -31,9 +32,10 @@ const (
 	MessageReceiverPort = 8080
 )
 
+// Message receiver receives messages.
 type MessageReceiver struct {
 	receiverFunc    func(ChannelReference, *Message) error
-	forwardHeaders  map[string]bool
+	forwardHeaders  sets.String
 	forwardPrefixes []string
 
 	logger *zap.SugaredLogger
@@ -44,7 +46,7 @@ type MessageReceiver struct {
 func NewMessageReceiver(receiverFunc func(ChannelReference, *Message) error, logger *zap.SugaredLogger) *MessageReceiver {
 	receiver := &MessageReceiver{
 		receiverFunc:    receiverFunc,
-		forwardHeaders:  headerSet(forwardHeaders),
+		forwardHeaders:  sets.NewString(forwardHeaders...),
 		forwardPrefixes: forwardPrefixes,
 
 		logger: logger,
@@ -52,7 +54,7 @@ func NewMessageReceiver(receiverFunc func(ChannelReference, *Message) error, log
 	return receiver
 }
 
-// Run starts receiving messages for the receiver.
+// Start begings to receive messages for the receiver.
 //
 // Only HTTP POST requests to the root path (/) are accepted. If other paths or
 // methods are needed, use the HandleRequest method directly with another HTTP
@@ -104,7 +106,7 @@ func (r *MessageReceiver) handler() http.Handler {
 	})
 }
 
-// HandleRequest is an http Handler function. The request is converted to a
+// HandleRequest is an http.Handler function. The request is converted to a
 // Message and emitted to the receiver func.
 //
 // The response status codes:
@@ -166,7 +168,7 @@ func (r *MessageReceiver) fromHTTPHeaders(headers http.Header) map[string]string
 	for h, v := range headers {
 		// Headers are case-insensitive but test case are all lower-case
 		comparable := strings.ToLower(h)
-		if _, ok := r.forwardHeaders[comparable]; ok {
+		if r.forwardHeaders.Has(comparable) {
 			safe[h] = v[0]
 			continue
 		}
