@@ -19,11 +19,12 @@ package trigger
 import (
 	"context"
 	"fmt"
+
+	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/logging"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/controller"
 	"github.com/knative/eventing/pkg/controller/eventing/broker"
 	"github.com/knative/eventing/pkg/controller/eventing/subscription"
-	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/logging"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -481,13 +482,13 @@ func makeSubscription(t *v1alpha1.Trigger, c *v1alpha1.Channel, svc *corev1.Serv
 		Spec: v1alpha1.SubscriptionSpec{
 			Channel: corev1.ObjectReference{
 				APIVersion: v1alpha1.SchemeGroupVersion.String(),
-				Kind:    "Channel",
+				Kind:       "Channel",
 				Name:       c.Name,
 			},
 			Subscriber: &v1alpha1.SubscriberSpec{
 				Ref: &corev1.ObjectReference{
 					APIVersion: "v1",
-					Kind:    "Service",
+					Kind:       "Service",
 					Name:       svc.Name,
 				},
 			},
@@ -495,7 +496,7 @@ func makeSubscription(t *v1alpha1.Trigger, c *v1alpha1.Channel, svc *corev1.Serv
 			Reply: &v1alpha1.ReplyStrategy{
 				Channel: &corev1.ObjectReference{
 					APIVersion: v1alpha1.SchemeGroupVersion.String(),
-					Kind:    "Channel",
+					Kind:       "Channel",
 					Name:       c.Name,
 				},
 			},

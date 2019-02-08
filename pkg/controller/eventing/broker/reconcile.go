@@ -19,15 +19,16 @@ package broker
 import (
 	"context"
 	"fmt"
+
+	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/logging"
 	"github.com/knative/eventing/pkg/controller"
-	"k8s.io/api/apps/v1"
+	v1 "k8s.io/api/apps/v1"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/knative/eventing/pkg/controller/eventing/broker/resources"
 
-	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/logging"
 	"go.uber.org/zap"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -130,7 +131,6 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		logging.FromContext(ctx).Error("Problem reconciling ingress deployment", zap.Error(err))
 		return err
 	}
-
 
 	svc, err := r.reconcileIngressService(ctx, b)
 	if err != nil {
@@ -265,12 +265,12 @@ func newChannel(b *v1alpha1.Broker) *v1alpha1.Channel {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    b.Namespace,
 			GenerateName: fmt.Sprintf("%s-broker-", b.Name),
-			Labels: ChannelLabels(b),
+			Labels:       ChannelLabels(b),
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(b, schema.GroupVersionKind{
 					Group:   v1alpha1.SchemeGroupVersion.Group,
 					Version: v1alpha1.SchemeGroupVersion.Version,
-					Kind: "Broker",
+					Kind:    "Broker",
 				}),
 			},
 		},
@@ -280,7 +280,7 @@ func newChannel(b *v1alpha1.Broker) *v1alpha1.Channel {
 
 func ChannelLabels(b *v1alpha1.Broker) map[string]string {
 	return map[string]string{
-		"eventing.knative.dev/broker":                 b.Name,
+		"eventing.knative.dev/broker":           b.Name,
 		"eventing.knative.dev/brokerEverything": "true",
 	}
 }
@@ -344,10 +344,10 @@ func (r *reconciler) reconcileService(ctx context.Context, svc *corev1.Service) 
 
 func (r *reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1.Broker, c *v1alpha1.Channel) (*v1.Deployment, error) {
 	expected, err := resources.MakeIngress(&resources.IngressArgs{
-		Broker:              b,
-		Image:               r.ingressImage,
-		ServiceAccountName:  r.ingressServiceAccountName,
-		ChannelAddress: c.Status.Address.Hostname,
+		Broker:             b,
+		Image:              r.ingressImage,
+		ServiceAccountName: r.ingressServiceAccountName,
+		ChannelAddress:     c.Status.Address.Hostname,
 	})
 	if err != nil {
 		return nil, err

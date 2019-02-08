@@ -64,6 +64,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		subscriber     func(http.ResponseWriter, *http.Request)
 		channel        func(http.ResponseWriter, *http.Request)
 		expectedStatus int
+		asyncHandler   bool
 	}{
 		"rejected by receiver": {
 			receiverFunc: func(provisioners.ChannelReference, *provisioners.Message) error {
@@ -178,6 +179,28 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			},
 			expectedStatus: http.StatusAccepted,
 		},
+		"all subs succeed with async handler": {
+			subs: []eventingduck.ChannelSubscriberSpec{
+				{
+					SubscriberURI: replaceSubscriber,
+					ReplyURI:      replaceChannel,
+				},
+				{
+					SubscriberURI: replaceSubscriber,
+					ReplyURI:      replaceChannel,
+				},
+				{
+					SubscriberURI: replaceSubscriber,
+					ReplyURI:      replaceChannel,
+				},
+			},
+			subscriber: callableSucceed,
+			channel: func(writer http.ResponseWriter, _ *http.Request) {
+				writer.WriteHeader(http.StatusAccepted)
+			},
+			expectedStatus: http.StatusAccepted,
+			asyncHandler:   true,
+		},
 	}
 	for n, tc := range testCases {
 		if n != "fanout times out" {
@@ -206,6 +229,9 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			}
 
 			h := NewHandler(zap.NewNop(), Config{Subscriptions: subs})
+			if tc.asyncHandler {
+				h.config.AsyncHandler = true
+			}
 			if tc.receiverFunc != nil {
 				h.receiver = provisioners.NewMessageReceiver(tc.receiverFunc, zap.NewNop().Sugar())
 			}

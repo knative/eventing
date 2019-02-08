@@ -18,6 +18,7 @@ package resources
 
 import (
 	"fmt"
+
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -28,9 +29,9 @@ import (
 )
 
 type FilterArgs struct {
-	Broker              *eventingv1alpha1.Broker
-	Image               string
-	ServiceAccountName  string
+	Broker             *eventingv1alpha1.Broker
+	Image              string
+	ServiceAccountName string
 }
 
 func MakeFilterDeployment(args *FilterArgs) (*appsv1.Deployment, error) {
@@ -42,7 +43,7 @@ func MakeFilterDeployment(args *FilterArgs) (*appsv1.Deployment, error) {
 				*metav1.NewControllerRef(args.Broker, schema.GroupVersionKind{
 					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
 					Version: eventingv1alpha1.SchemeGroupVersion.Version,
-					Kind: "Broker",
+					Kind:    "Broker",
 				}),
 			},
 		},
@@ -62,10 +63,10 @@ func MakeFilterDeployment(args *FilterArgs) (*appsv1.Deployment, error) {
 					Containers: []corev1.Container{
 						{
 							Image: args.Image,
-							Name: "filter",
+							Name:  "filter",
 							Env: []corev1.EnvVar{
 								{
-									Name: "BROKER",
+									Name:  "BROKER",
 									Value: args.Broker.Name,
 								},
 							},
@@ -80,14 +81,14 @@ func MakeFilterDeployment(args *FilterArgs) (*appsv1.Deployment, error) {
 func MakeFilterService(b *eventingv1alpha1.Broker) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    b.Namespace,
-			Name: fmt.Sprintf("%s-broker-filter", b.Name),
-			Labels:       filterLabels(b),
+			Namespace: b.Namespace,
+			Name:      fmt.Sprintf("%s-broker-filter", b.Name),
+			Labels:    filterLabels(b),
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(b, schema.GroupVersionKind{
 					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
 					Version: eventingv1alpha1.SchemeGroupVersion.Version,
-					Kind: "Broker",
+					Kind:    "Broker",
 				}),
 			},
 		},
@@ -95,8 +96,8 @@ func MakeFilterService(b *eventingv1alpha1.Broker) *corev1.Service {
 			Selector: filterLabels(b),
 			Ports: []corev1.ServicePort{
 				{
-					Name: "http",
-					Port: 80,
+					Name:       "http",
+					Port:       80,
 					TargetPort: intstr.FromInt(8080),
 				},
 			},
@@ -106,7 +107,7 @@ func MakeFilterService(b *eventingv1alpha1.Broker) *corev1.Service {
 
 func filterLabels(b *eventingv1alpha1.Broker) map[string]string {
 	return map[string]string{
-		"eventing.knative.dev/broker": b.Name,
+		"eventing.knative.dev/broker":     b.Name,
 		"eventing.knative.dev/brokerRole": "filter",
 	}
 }
