@@ -35,8 +35,8 @@ import (
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/fakepubsub"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	util "github.com/knative/eventing/pkg/provisioners"
+	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -84,6 +84,22 @@ var (
 				},
 			},
 		},
+	}
+
+	// map of events to set test cases' expectations easier
+	events = map[string]corev1.Event{
+		channelReconciled:          {Reason: channelReconciled, Type: corev1.EventTypeNormal},
+		channelUpdateStatusFailed:  {Reason: channelUpdateStatusFailed, Type: corev1.EventTypeWarning},
+		channelReadStatusFailed:    {Reason: channelReadStatusFailed, Type: corev1.EventTypeWarning},
+		gcpCredentialsReadFailed:   {Reason: gcpCredentialsReadFailed, Type: corev1.EventTypeWarning},
+		gcpResourcesPlanFailed:     {Reason: gcpResourcesPlanFailed, Type: corev1.EventTypeWarning},
+		gcpResourcesPersistFailed:  {Reason: gcpResourcesPersistFailed, Type: corev1.EventTypeWarning},
+		virtualServiceCreateFailed: {Reason: virtualServiceCreateFailed, Type: corev1.EventTypeWarning},
+		k8sServiceCreateFailed:     {Reason: k8sServiceCreateFailed, Type: corev1.EventTypeWarning},
+		topicCreateFailed:          {Reason: topicCreateFailed, Type: corev1.EventTypeWarning},
+		topicDeleteFailed:          {Reason: topicDeleteFailed, Type: corev1.EventTypeWarning},
+		subscriptionSyncFailed:     {Reason: subscriptionSyncFailed, Type: corev1.EventTypeWarning},
+		subscriptionDeleteFailed:   {Reason: subscriptionDeleteFailed, Type: corev1.EventTypeWarning},
 	}
 )
 
@@ -161,6 +177,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeDeletingChannelWithSubscribers(),
 			},
+			WantEvent: []corev1.Event{
+				events[subscriptionSyncFailed],
+			},
 		},
 		{
 			Name: "Channel deleted - problem checking subscription existence",
@@ -181,6 +200,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeDeletingChannelWithSubscribers(),
 			},
+			WantEvent: []corev1.Event{
+				events[subscriptionSyncFailed],
+			},
 		},
 		{
 			Name: "Channel deleted - subscription does not exist",
@@ -199,6 +221,9 @@ func TestReconcile(t *testing.T) {
 			},
 			WantPresent: []runtime.Object{
 				makeDeletingChannelWithSubscribersWithoutFinalizer(),
+			},
+			WantEvent: []corev1.Event{
+				events[channelReconciled],
 			},
 		},
 		{
@@ -221,6 +246,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeDeletingChannelWithSubscribers(),
 			},
+			WantEvent: []corev1.Event{
+				events[subscriptionSyncFailed],
+			},
 		},
 		{
 			Name: "Channel deleted - subscription deletion succeeds",
@@ -239,6 +267,9 @@ func TestReconcile(t *testing.T) {
 			},
 			WantPresent: []runtime.Object{
 				makeDeletingChannelWithSubscribersWithoutFinalizer(),
+			},
+			WantEvent: []corev1.Event{
+				events[channelReconciled],
 			},
 		},
 		{
@@ -259,6 +290,9 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantPresent: []runtime.Object{
 				makeDeletingChannelWithSubscribers(),
+			},
+			WantEvent: []corev1.Event{
+				events[topicDeleteFailed],
 			},
 		},
 		{
@@ -284,6 +318,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeDeletingChannelWithoutFinalizerOrPCS(),
 			},
+			WantEvent: []corev1.Event{
+				events[channelReconciled],
+			},
 		},
 		{
 			Name: "Channel deleted - topic does not exist",
@@ -302,6 +339,9 @@ func TestReconcile(t *testing.T) {
 			},
 			WantPresent: []runtime.Object{
 				makeDeletingChannelWithSubscribersWithoutFinalizer(),
+			},
+			WantEvent: []corev1.Event{
+				events[channelReconciled],
 			},
 		},
 		{
@@ -324,6 +364,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeDeletingChannelWithSubscribers(),
 			},
+			WantEvent: []corev1.Event{
+				events[topicDeleteFailed],
+			},
 		},
 		{
 			Name: "Channel deleted - topic deletion succeeds",
@@ -343,6 +386,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeDeletingChannelWithSubscribersWithoutFinalizer(),
 			},
+			WantEvent: []corev1.Event{
+				events[channelReconciled],
+			},
 		},
 		{
 			Name: "Channel deleted - finalizer removed",
@@ -352,6 +398,9 @@ func TestReconcile(t *testing.T) {
 			},
 			WantPresent: []runtime.Object{
 				makeDeletingChannelWithoutFinalizer(),
+			},
+			WantEvent: []corev1.Event{
+				events[channelReconciled],
 			},
 		},
 		{
@@ -366,6 +415,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeChannelWithFinalizer(),
 			},
+			WantEvent: []corev1.Event{
+				events[channelReconciled],
+			},
 		},
 		{
 			Name: "GetCredential fails",
@@ -377,6 +429,9 @@ func TestReconcile(t *testing.T) {
 				makeChannelWithFinalizer(),
 			},
 			WantErrMsg: testcreds.InvalidCredsError,
+			WantEvent: []corev1.Event{
+				events[gcpCredentialsReadFailed],
+			},
 		},
 		{
 			Name: "Error reading status.internal",
@@ -384,6 +439,9 @@ func TestReconcile(t *testing.T) {
 				makeChannelWithBadInternalStatus(),
 			},
 			WantErrMsg: "json: cannot unmarshal number into Go struct field GcpPubSubChannelStatus.topic of type string",
+			WantEvent: []corev1.Event{
+				events[channelReadStatusFailed],
+			},
 		},
 		{
 			Name: "K8s service get fails",
@@ -398,6 +456,9 @@ func TestReconcile(t *testing.T) {
 				makeChannelWithFinalizerAndPCS(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[k8sServiceCreateFailed],
+			},
 		},
 		{
 			Name: "K8s service creation fails",
@@ -413,6 +474,9 @@ func TestReconcile(t *testing.T) {
 				makeChannelWithFinalizerAndPCS(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[k8sServiceCreateFailed],
+			},
 		},
 		{
 			Name: "Virtual service get fails",
@@ -431,6 +495,9 @@ func TestReconcile(t *testing.T) {
 				makeChannelWithFinalizerAndPCSAndAddress(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[virtualServiceCreateFailed],
+			},
 		},
 		{
 			Name: "Virtual service creation fails",
@@ -448,6 +515,9 @@ func TestReconcile(t *testing.T) {
 				makeChannelWithFinalizerAndPCSAndAddress(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[virtualServiceCreateFailed],
+			},
 		},
 		{
 			Name: "VirtualService already exists - not owned by Channel",
@@ -460,6 +530,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeReadyChannel(),
 			},
+			WantEvent: []corev1.Event{
+				events[channelReconciled],
+			},
 		},
 		{
 			Name: "Error planning - subscriber missing UID",
@@ -471,6 +544,9 @@ func TestReconcile(t *testing.T) {
 				makeChannelWithFinalizerAndSubscriberWithoutUID(),
 			},
 			WantErrMsg: "empty reference UID: {&ObjectReference{Kind:,Namespace:,Name:,UID:,APIVersion:,ResourceVersion:,FieldPath:,} http://foo/ }",
+			WantEvent: []corev1.Event{
+				events[gcpResourcesPlanFailed],
+			},
 		},
 		{
 			Name: "Persist plan",
@@ -483,6 +559,9 @@ func TestReconcile(t *testing.T) {
 			},
 			WantResult: reconcile.Result{
 				Requeue: true,
+			},
+			WantEvent: []corev1.Event{
+				events[channelReconciled],
 			},
 		},
 		{
@@ -501,6 +580,9 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantPresent: []runtime.Object{
 				makeChannelWithFinalizerAndPCSAndAddress(),
+			},
+			WantEvent: []corev1.Event{
+				events[topicCreateFailed],
 			},
 		},
 		{
@@ -524,6 +606,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeChannelWithFinalizerAndPCSAndAddress(),
 			},
+			WantEvent: []corev1.Event{
+				events[topicCreateFailed],
+			},
 		},
 		{
 			Name: "Create Topic - topic already exists",
@@ -545,6 +630,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeReadyChannel(),
 			},
+			WantEvent: []corev1.Event{
+				events[channelReconciled],
+			},
 		},
 		{
 			Name: "Create Topic - error creating topic",
@@ -565,6 +653,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeChannelWithFinalizerAndPCSAndAddress(),
 			},
+			WantEvent: []corev1.Event{
+				events[topicCreateFailed],
+			},
 		},
 		{
 			Name: "Create Topic - topic create succeeds",
@@ -576,6 +667,9 @@ func TestReconcile(t *testing.T) {
 			},
 			WantPresent: []runtime.Object{
 				makeReadyChannel(),
+			},
+			WantEvent: []corev1.Event{
+				events[channelReconciled],
 			},
 		},
 		{
@@ -599,6 +693,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeChannelWithSubscribersAndFinalizerAndPCSAndAddress(),
 			},
+			WantEvent: []corev1.Event{
+				events[subscriptionSyncFailed],
+			},
 		},
 		{
 			Name: "Create Subscriptions - already exists",
@@ -620,6 +717,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeReadyChannelWithSubscribers(),
 			},
+			WantEvent: []corev1.Event{
+				events[channelReconciled],
+			},
 		},
 		{
 			Name: "Create Subscriptions - create fails",
@@ -640,6 +740,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeChannelWithSubscribersAndFinalizerAndPCSAndAddress(),
 			},
+			WantEvent: []corev1.Event{
+				events[subscriptionSyncFailed],
+			},
 		},
 		{
 			Name: "Create Subscriptions - create succeeds",
@@ -651,6 +754,9 @@ func TestReconcile(t *testing.T) {
 			},
 			WantPresent: []runtime.Object{
 				makeReadyChannelWithSubscribers(),
+			},
+			WantEvent: []corev1.Event{
+				events[channelReconciled],
 			},
 		},
 		{
@@ -665,6 +771,9 @@ func TestReconcile(t *testing.T) {
 				MockGets: errorOnSecondChannelGet(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[channelReconciled], events[channelUpdateStatusFailed],
+			},
 		},
 		{
 			Name: "Channel update fails",
@@ -678,6 +787,9 @@ func TestReconcile(t *testing.T) {
 				MockUpdates: errorUpdatingChannel(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[channelReconciled], events[channelUpdateStatusFailed],
+			},
 		}, {
 			Name: "Channel status update fails",
 			InitialState: []runtime.Object{
@@ -690,6 +802,9 @@ func TestReconcile(t *testing.T) {
 				MockStatusUpdates: errorUpdatingChannelStatus(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[channelReconciled], events[channelUpdateStatusFailed],
+			},
 		},
 	}
 
