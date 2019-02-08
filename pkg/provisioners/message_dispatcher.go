@@ -62,7 +62,7 @@ type DispatchDefaults struct {
 
 // NewMessageDispatcher creates a new message dispatcher that can dispatch
 // messages to HTTP destinations.
-func NewMessageDispatcher(logger *zap.SugaredLogger) Dispatcher {
+func NewMessageDispatcher(logger *zap.SugaredLogger) *MessageDispatcher {
 	return &MessageDispatcher{
 		httpClient:       &http.Client{},
 		forwardHeaders:   sets.NewString(forwardHeaders...),
@@ -179,7 +179,7 @@ func (d *MessageDispatcher) fromHTTPHeaders(headers http.Header) map[string]stri
 	for h, v := range headers {
 		// Headers are case-insensitive but test case are all lower-case
 		comparable := strings.ToLower(h)
-		if d.forwardHeaders.Has(comparable){
+		if d.forwardHeaders.Has(comparable) {
 			safe[h] = v[0]
 			continue
 		}

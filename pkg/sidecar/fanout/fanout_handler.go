@@ -37,7 +37,7 @@ const (
 	messageBufferSize = 500
 )
 
-// Configuration for a fanout.Handler.
+// Config for a fanout.Handler.
 type Config struct {
 	Subscriptions []eventingduck.ChannelSubscriberSpec `json:"subscriptions"`
 	// AsyncHandler controls whether the Subscriptions are called synchronous or asynchronously.
@@ -45,13 +45,13 @@ type Config struct {
 	AsyncHandler bool `json:"asyncHandler,omitempty"`
 }
 
-// http.Handler that takes a single request in and fans it out to N other servers.
+// Handler is a http.Handler that takes a single request in and fans it out to N other servers.
 type Handler struct {
 	config Config
 
 	receivedMessages chan *forwardMessage
 	receiver         *provisioners.MessageReceiver
-	dispatcher       provisioners.Dispatcher
+	dispatcher       *provisioners.MessageDispatcher
 
 	// TODO: Plumb context through the receiver and dispatcher and use that to store the timeout,
 	// rather than a member variable.
