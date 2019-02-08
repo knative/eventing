@@ -24,6 +24,7 @@ import (
 	apis_duck_v1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	duck_v1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	v1 "k8s.io/api/core/v1"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -382,6 +383,13 @@ func (in *FilterSelector) DeepCopyInto(out *FilterSelector) {
 		*out = make(map[string]string, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
+		}
+	}
+	if in.HeaderExpressions != nil {
+		in, out := &in.HeaderExpressions, &out.HeaderExpressions
+		*out = make([]meta_v1.LabelSelectorRequirement, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 	return

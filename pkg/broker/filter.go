@@ -19,6 +19,12 @@ package broker
 import (
 	"context"
 	"errors"
+	"fmt"
+	"reflect"
+	"unsafe"
+
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/selection"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
@@ -27,10 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-)
-
-const (
-	Any = "Any"
 )
 
 // Receiver parses Cloud Events and sends them to GCP PubSub.
@@ -101,10 +103,53 @@ func (r *Receiver) getTrigger(ctx context.Context, ref provisioners.ChannelRefer
 func (r *Receiver) shouldSendMessage(t *eventingv1alpha1.TriggerSpec, m *provisioners.Message) bool {
 	// This conversion to selector should be done only once, possibly upon creation of the trigger
 	// in case the filters are immutable. All validations should be performed then.
-	selector := labels.SelectorFromValidatedSet(labels.Set(t.Filter.Headers))
+	selector, err := r.buildSelector(t)
+	if err != nil {
+		r.logger.Error("Invalid selector for trigger spec", zap.Any("triggerSpec", t))
+		return false
+	}
 	matched := selector.Matches(labels.Set(m.Headers))
 	if !matched {
 		r.logger.Debug("Selector did not match message headers", zap.String("selector", selector.String()), zap.Any("headers", m.Headers))
 	}
 	return matched
+}
+
+func (r *Receiver) buildSelector(ts *eventingv1alpha1.TriggerSpec) (labels.Selector, error) {
+	// Avoid validation of keys and values, otherwise we cannot use LabelSelectors.
+	// Eventually, we will need to create our own Selector implementation with our own Requirement struct.
+	selector := labels.SelectorFromValidatedSet(labels.Set(ts.Filter.Headers))
+	for _, expr := range ts.Filter.HeaderExpressions {
+		var op selection.Operator
+		switch expr.Operator {
+		case v1.LabelSelectorOpIn:
+			op = selection.In
+		case v1.LabelSelectorOpNotIn:
+			op = selection.NotIn
+		case v1.LabelSelectorOpExists:
+			op = selection.Exists
+		case v1.LabelSelectorOpDoesNotExist:
+			op = selection.DoesNotExist
+		default:
+			return nil, fmt.Errorf("%q is not a valid filter selector operator", expr.Operator)
+		}
+		// Hack to set Requirement's unexposed fields to easily support expressions using k8s LabelSelectors.
+		// We should change this once we agree on a filter API.
+		r := labels.Requirement{}
+		rr := reflect.ValueOf(&r).Elem()
+		// Setting key
+		rrKey := rr.FieldByName("key")
+		rrKey = reflect.NewAt(rrKey.Type(), unsafe.Pointer(rrKey.UnsafeAddr())).Elem()
+		rrKey.SetString(expr.Key)
+		// Setting operator
+		rrOperator := rr.FieldByName("operator")
+		rrOperator = reflect.NewAt(rrOperator.Type(), unsafe.Pointer(rrOperator.UnsafeAddr())).Elem()
+		rrOperator.Set(reflect.ValueOf(op))
+		// Setting strValues
+		rrStrValues := rr.FieldByName("strValues")
+		rrStrValues = reflect.NewAt(rrStrValues.Type(), unsafe.Pointer(rrStrValues.UnsafeAddr())).Elem()
+		rrStrValues.Set(reflect.ValueOf(expr.Values))
+		selector = selector.Add(r)
+	}
+	return selector, nil
 }
