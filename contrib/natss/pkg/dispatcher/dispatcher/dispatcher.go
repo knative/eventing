@@ -67,7 +67,15 @@ func createReceiverFunction(s *SubscriptionsSupervisor, logger *zap.SugaredLogge
 		logger.Infof("Received message from %q channel", channel.String())
 		// publish to Natss
 		ch := getSubject(channel)
-		if err := stanutil.Publish(s.natssConn, ch, &m.Payload, logger); err != nil {
+		var message []byte
+		for k, v := range m.Headers {
+			message = append(message, k...)
+			message = append(message, ": "...)
+			message = append(message, v...)
+			message = append(message, '\n')
+		}
+		message = append(message, m.Payload...)
+		if err := stanutil.Publish(s.natssConn, ch, &message, logger); err != nil {
 			logger.Errorf("Error during publish: %v", err)
 			return err
 		}
