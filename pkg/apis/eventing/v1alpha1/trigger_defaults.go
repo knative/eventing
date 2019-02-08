@@ -16,8 +16,6 @@ limitations under the License.
 
 package v1alpha1
 
-import v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 func (t *Trigger) SetDefaults() {
 	t.Spec.SetDefaults()
 }
@@ -26,11 +24,8 @@ func (ts *TriggerSpec) SetDefaults() {
 	if ts.Broker == "" {
 		ts.Broker = "default"
 	}
-	// Make an empty LabelSelector so that we allow everything.
-	if ts.Filters == nil {
-		ts.Filters = &v1.LabelSelector{
-			MatchLabels:      make(map[string]string, 0),
-			MatchExpressions: make([]v1.LabelSelectorRequirement, 0),
-		}
+	// Make empty filter selector so that we allow everything.
+	if ts.Filter == nil {
+		ts.Filter = &FilterSelector{map[string]string{}}
 	}
 }

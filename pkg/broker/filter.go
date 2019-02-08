@@ -20,13 +20,10 @@ import (
 	"context"
 	"errors"
 
-	"k8s.io/apimachinery/pkg/labels"
-
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -102,13 +99,12 @@ func (r *Receiver) getTrigger(ctx context.Context, ref provisioners.ChannelRefer
 }
 
 func (r *Receiver) shouldSendMessage(t *eventingv1alpha1.TriggerSpec, m *provisioners.Message) bool {
-	// TODO, this conversion to selector should be done only once, possibly upon creation of the trigger
-	// in case the filters are immutable
-	selector, err := v1.LabelSelectorAsSelector(t.Filters)
-	if err != nil {
-		r.logger.Error("Invalid label selector for filter", zap.Error(err))
-		return false
+	// This conversion to selector should be done only once, possibly upon creation of the trigger
+	// in case the filters are immutable. All validations should be performed then.
+	selector := labels.SelectorFromValidatedSet(labels.Set(t.Filter.Headers))
+	matched := selector.Matches(labels.Set(m.Headers))
+	if !matched {
+		r.logger.Debug("Selector did not match message headers", zap.String("selector", selector.String()), zap.Any("headers", m.Headers))
 	}
-	l := labels.Set(m.Headers)
-	return selector.Matches(l)
+	return matched
 }
