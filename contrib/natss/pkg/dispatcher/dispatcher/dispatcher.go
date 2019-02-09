@@ -75,6 +75,9 @@ func createReceiverFunction(s *SubscriptionsSupervisor, logger *zap.SugaredLogge
 		}
 		if err := stanutil.Publish(s.natssConn, ch, &message, logger); err != nil {
 			logger.Errorf("Error during publish: %v", err)
+			if err.Error() == stan.ErrConnectionClosed.Error() {
+				logger.Fatalf("Connection to NATS was lost, dispatcher is exiting.")
+			}
 			return err
 		}
 		logger.Infof("Published [%s] : '%s'", channel.String(), m.Headers)
