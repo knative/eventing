@@ -75,6 +75,9 @@ func createReceiverFunction(s *SubscriptionsSupervisor, logger *zap.SugaredLogge
 		}
 		if err := stanutil.Publish(s.natssConn, ch, &message, logger); err != nil {
 			logger.Errorf("Error during publish: %v", err)
+			// TODO, refactor the reaction on stan.ErrConnectionClosed, instead
+			// of restarting dispatcher it should stay in the reconnect loop.
+			// xRef issue: https://github.com/knative/eventing/issues/781
 			if err.Error() == stan.ErrConnectionClosed.Error() {
 				logger.Fatalf("Connection to NATS was lost, dispatcher is exiting.")
 			}
