@@ -28,9 +28,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/eventing/contrib/kafka/pkg/controller"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/provisioners"
 	util "github.com/knative/eventing/pkg/provisioners"
+	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
+	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
@@ -56,7 +57,7 @@ var (
 
 	// serviceAddress is the address of the K8s Service. It uses a GeneratedName and the fake client
 	// does not fill in Name, so the name is the empty string.
-	serviceAddress = fmt.Sprintf("%s.%s.svc.cluster.local", "", testNS)
+	serviceAddress = fmt.Sprintf("%s.%s.svc.%s", "", testNS, utils.GetClusterDomainName())
 )
 
 func init() {
@@ -529,15 +530,15 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 		Spec: istiov1alpha3.VirtualServiceSpec{
 			Hosts: []string{
 				serviceAddress,
-				fmt.Sprintf("%s.%s.channels.cluster.local", channelName, testNS),
+				fmt.Sprintf("%s.%s.channels.%s", channelName, testNS, utils.GetClusterDomainName()),
 			},
 			Http: []istiov1alpha3.HTTPRoute{{
 				Rewrite: &istiov1alpha3.HTTPRewrite{
-					Authority: fmt.Sprintf("%s.%s.channels.cluster.local", channelName, testNS),
+					Authority: fmt.Sprintf("%s.%s.channels.%s", channelName, testNS, utils.GetClusterDomainName()),
 				},
 				Route: []istiov1alpha3.DestinationWeight{{
 					Destination: istiov1alpha3.Destination{
-						Host: "kafka-provisioner.knative-eventing.svc.cluster.local",
+						Host: "kafka-provisioner.knative-eventing.svc." + utils.GetClusterDomainName(),
 						Port: istiov1alpha3.PortSelector{
 							Number: util.PortNumber,
 						},

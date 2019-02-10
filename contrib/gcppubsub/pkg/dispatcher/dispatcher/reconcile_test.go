@@ -36,9 +36,9 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
-	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/testcreds"
+	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	"github.com/knative/eventing/pkg/utils"
 
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/fakepubsub"
 
@@ -486,7 +486,7 @@ func makeChannel() *eventingv1alpha1.Channel {
 		},
 	}
 	c.Status.InitializeConditions()
-	c.Status.SetAddress(fmt.Sprintf("%s-channel.%s.svc.cluster.local", c.Name, c.Namespace))
+	c.Status.SetAddress(fmt.Sprintf("%s-channel.%s.svc.%s", c.Name, c.Namespace, utils.GetClusterDomainName()))
 	c.Status.MarkProvisioned()
 	pcs := &util.GcpPubSubChannelStatus{
 		GCPProject: gcpProject,
