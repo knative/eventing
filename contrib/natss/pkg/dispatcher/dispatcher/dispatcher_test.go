@@ -89,6 +89,13 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		logger.Fatalf("Unable to create NATSS dispatcher: %v", err)
 	}
+	// Starting Connect to establish connection with NATS
+	go s.Connect()
+	// forcing to establish connection to NATS before any tests
+	s.connect <- struct{}{}
+	if s.natssConn == nil {
+		logger.Fatalf("Failed to connect to NATSS!")
+	}
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 	go func() {

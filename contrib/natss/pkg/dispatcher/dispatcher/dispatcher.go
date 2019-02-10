@@ -118,7 +118,10 @@ func (s *SubscriptionsSupervisor) Connect() {
 	for {
 		select {
 		case <-s.connect:
-			s.connectWithRetry()
+			// Establishing connection only if there is no already connection to NATS
+			if s.natssConn == nil {
+				s.connectWithRetry()
+			}
 		}
 	}
 }
