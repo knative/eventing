@@ -18,6 +18,7 @@ package dispatcher
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -36,13 +37,13 @@ const clientID = "knative-natss-dispatcher"
 type SubscriptionsSupervisor struct {
 	logger *zap.Logger
 
-	receiver   *provisioners.MessageReceiver
-	dispatcher *provisioners.MessageDispatcher
-
-	natssConn *stan.Conn
-
+	receiver         *provisioners.MessageReceiver
+	dispatcher       *provisioners.MessageDispatcher
+	connect          chan struct{}
+	natssURL         string
 	subscriptionsMux sync.Mutex
 	subscriptions    map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription
+	natssConn        *stan.Conn
 }
 
 // NewDispatcher returns a new SubscriptionsSupervisor.
@@ -50,14 +51,10 @@ func NewDispatcher(natssUrl string, logger *zap.Logger) (*SubscriptionsSuperviso
 	d := &SubscriptionsSupervisor{
 		logger:        logger,
 		dispatcher:    provisioners.NewMessageDispatcher(logger.Sugar()),
+		connect:       make(chan struct{}),
+		natssURL:      natssUrl,
 		subscriptions: make(map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription),
 	}
-	nConn, err := stanutil.Connect(clusterchannelprovisioner.ClusterId, clientID, natssUrl, d.logger.Sugar())
-	if err != nil {
-		logger.Error("Connect() failed: ", zap.Error(err))
-		return nil, err
-	}
-	d.natssConn = nConn
 	d.receiver = provisioners.NewMessageReceiver(createReceiverFunction(d, logger.Sugar()), logger.Sugar())
 
 	return d, nil
@@ -73,13 +70,16 @@ func createReceiverFunction(s *SubscriptionsSupervisor, logger *zap.SugaredLogge
 			logger.Errorf("Error during marshaling of the message: %v", err)
 			return err
 		}
-		if err := stanutil.Publish(s.natssConn, ch, &message, logger); err != nil {
+		if s.natssConn == nil {
+			return fmt.Errorf("No Connection to NATS")
+		}
+		if err := stanutil.Publish(s.natssConn, ch, &m.Payload, logger); err != nil {
 			logger.Errorf("Error during publish: %v", err)
-			// TODO, refactor the reaction on stan.ErrConnectionClosed, instead
-			// of restarting dispatcher it should stay in the reconnect loop.
-			// xRef issue: https://github.com/knative/eventing/issues/781
 			if err.Error() == stan.ErrConnectionClosed.Error() {
-				logger.Fatalf("Connection to NATS was lost, dispatcher is exiting.")
+				logger.Error("Connection to NATS has been lost, attempting to reconnect.")
+				// Informing SubscriptionsSupervisor to re-establish connection to NATS
+				s.connect <- struct{}{}
+				return err
 			}
 			return err
 		}
@@ -89,8 +89,40 @@ func createReceiverFunction(s *SubscriptionsSupervisor, logger *zap.SugaredLogge
 }
 
 func (s *SubscriptionsSupervisor) Start(stopCh <-chan struct{}) error {
+	// Trigger Connect to establish connection with NATS
+	s.connect <- struct{}{}
 	s.receiver.Start(stopCh)
 	return nil
+}
+
+func (s *SubscriptionsSupervisor) connectWithRetry() {
+	// re-attempting evey 60 seconds until the connection is established.
+	ticker := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+	for {
+		nConn, err := stanutil.Connect(clusterchannelprovisioner.ClusterId, clientID, s.natssURL, s.logger.Sugar())
+		if err == nil {
+			s.subscriptionsMux.Lock()
+			s.natssConn = nConn
+			s.subscriptionsMux.Unlock()
+			return
+		}
+		s.logger.Sugar().Errorf("Connect() failed with error: %+v, retrying in 60 seconds", err)
+		select {
+		case <-ticker.C:
+			continue
+		}
+	}
+}
+
+// Connect is called for initial connection as well as after every disconnect
+func (s *SubscriptionsSupervisor) Connect() {
+	for {
+		select {
+		case <-s.connect:
+			s.connectWithRetry()
+		}
+	}
 }
 
 func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel *eventingv1alpha1.Channel, isFinalizer bool) error {
@@ -172,9 +204,17 @@ func (s *SubscriptionsSupervisor) subscribe(channel provisioners.ChannelReferenc
 	// subscribe to a NATSS subject
 	ch := getSubject(channel)
 	sub := subscription.String()
-	natssSub, err := (*s.natssConn).Subscribe(ch, mcb, stan.DurableName(sub), stan.SetManualAckMode(), stan.AckWait(1*time.Minute))
-	if err != nil {
+	if s.natssConn == nil {
+		return nil, fmt.Errorf("No Connection to NATS")
+	}
+	if natssSub, err := (*s.natssConn).Subscribe(ch, mcb, stan.DurableName(sub), stan.SetManualAckMode(), stan.AckWait(1*time.Minute)); err != nil {
 		s.logger.Error(" Create new NATSS Subscription failed: ", zap.Error(err))
+		if err.Error() == stan.ErrConnectionClosed.Error() {
+			s.logger.Error("Connection to NATS has been lost, attempting to reconnect.")
+			// Informing SubscriptionsSupervisor to re-establish connection to NATS
+			s.connect <- struct{}{}
+			return nil, err
+		}
 		return nil, err
 	}
 	s.logger.Sugar().Infof("NATSS Subscription created: %+v", natssSub)

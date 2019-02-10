@@ -68,6 +68,8 @@ func main() {
 	if err != nil {
 		logger.Fatal("Unable to create NATSS dispatcher.", zap.Error(err))
 	}
+	// Starting Connect to establish connection with NATS
+	go dispatcher.Connect()
 
 	g.Go(func() error {
 		return dispatcher.Start(stopCh)
