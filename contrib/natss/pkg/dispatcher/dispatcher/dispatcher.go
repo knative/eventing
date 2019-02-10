@@ -164,12 +164,12 @@ func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel *eventingv1alpha1.
 			continue
 		}
 		// subscribe
-		if natssSub, err := s.subscribe(cRef, subRef); err != nil {
+		natssSub, err := s.subscribe(cRef, subRef)
+		if err != nil {
 			return err
-		} else {
-			chMap[subRef] = natssSub
-			activeSubs[subRef] = true
 		}
+		chMap[subRef] = natssSub
+		activeSubs[subRef] = true
 	}
 	// Unsubscribe for deleted subscriptions
 	for sub := range chMap {
@@ -208,7 +208,8 @@ func (s *SubscriptionsSupervisor) subscribe(channel provisioners.ChannelReferenc
 	if s.natssConn == nil {
 		return nil, fmt.Errorf("No Connection to NATS")
 	}
-	if natssSub, err := (*s.natssConn).Subscribe(ch, mcb, stan.DurableName(sub), stan.SetManualAckMode(), stan.AckWait(1*time.Minute)); err != nil {
+	natssSub, err := (*s.natssConn).Subscribe(ch, mcb, stan.DurableName(sub), stan.SetManualAckMode(), stan.AckWait(1*time.Minute))
+	if err != nil {
 		s.logger.Error(" Create new NATSS Subscription failed: ", zap.Error(err))
 		if err.Error() == stan.ErrConnectionClosed.Error() {
 			s.logger.Error("Connection to NATS has been lost, attempting to reconnect.")

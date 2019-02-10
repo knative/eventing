@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/knative/eventing/contrib/natss/pkg/stanutil"
+	"github.com/knative/eventing/contrib/natss/pkg/controller/clusterchannelprovisioner"
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
@@ -35,7 +36,6 @@ import (
 )
 
 const (
-	clusterID    = "knative-nats-streaming"
 	natssTestURL = "nats://localhost:4222"
 
 	ccpName = "natss"
@@ -46,6 +46,7 @@ const (
 )
 
 var (
+	clusterID   = clusterchannelprovisioner.ClusterId
 	logger      *zap.SugaredLogger
 	core        zapcore.Core
 	observed    *observer.ObservedLogs
@@ -83,7 +84,6 @@ func TestMain(m *testing.M) {
 		logger.Fatalf("Cannot start NATSS: %v", err)
 	}
 	defer stopNatss(stanServer)
-
 	// Create and start Dispatcher.
 	s, err = NewDispatcher(natssTestURL, testLogger)
 	if err != nil {
@@ -93,8 +93,18 @@ func TestMain(m *testing.M) {
 	go s.Connect()
 	// forcing to establish connection to NATS before any tests
 	s.connect <- struct{}{}
-	if s.natssConn == nil {
-		logger.Fatalf("Failed to connect to NATSS!")
+	ready := false
+	ticker := time.NewTicker(time.Second * 5)
+	expire := time.NewTimer(time.Second * 120)
+	for !ready {
+		select {
+		case <-ticker.C:
+			if s.natssConn != nil {
+				ready = true
+			}
+		case <-expire.C:
+			logger.Fatalf("Failed to connect to NATSS!")
+		}
 	}
 	stopCh := make(chan struct{})
 	defer close(stopCh)

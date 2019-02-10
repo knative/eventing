@@ -30,6 +30,7 @@ func Connect(clusterId string, clientId string, natsUrl string, logger *zap.Suga
 	logger.Infof("Connect(): clusterId: %v; clientId: %v; natssUrl: %v", clusterId, clientId, natsUrl)
 	var sc stan.Conn
 	var err error
+
 	for i := 0; i < 60; i++ {
 		if sc, err = stan.Connect(clusterId, clientId, stan.NatsURL(natsUrl)); err != nil {
 			logger.Warnf("Connect(): create new connection failed: %v", err)
@@ -38,6 +39,7 @@ func Connect(clusterId string, clientId string, natsUrl string, logger *zap.Suga
 			break
 		}
 	}
+
 	if err != nil {
 		logger.Errorf("Connect(): create new connection failed: %v", err)
 		return nil, err
