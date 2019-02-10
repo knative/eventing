@@ -43,7 +43,6 @@ type SubscriptionsSupervisor struct {
 	natssURL         string
 	subscriptionsMux sync.Mutex
 	subscriptions    map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription
-	natssConnMux     sync.Mutex
 	natssConn        *stan.Conn
 }
 
@@ -103,9 +102,9 @@ func (s *SubscriptionsSupervisor) connectWithRetry() {
 	for {
 		nConn, err := stanutil.Connect(clusterchannelprovisioner.ClusterId, clientID, s.natssURL, s.logger.Sugar())
 		if err == nil {
-			s.natssConnMux.Lock()
+			s.subscriptionsMux.Lock()
 			s.natssConn = nConn
-			s.natssConnMux.Unlock()
+			s.subscriptionsMux.Unlock()
 			return
 		}
 		s.logger.Sugar().Errorf("Connect() failed with error: %+v, retrying in 60 seconds", err)
