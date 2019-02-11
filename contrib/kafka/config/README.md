@@ -18,7 +18,7 @@ Deployment steps:
    ```yaml
    ...
    apiVersion: v1
-   kind: ConfigMap 
+   kind: ConfigMap
    metadata:
      name: kafka-channel-controller-config
      namespace: knative-eventing
@@ -28,10 +28,10 @@ Deployment steps:
      ...
    ```
 
-   >Note: The `bootstrap_servers` needs to contain the address of at least one
-   broker of your Apache Kafka cluster. If you are using Strimzi, you need to
-   update the `bootstrap_servers` value to
-   `my-cluster-kafka-bootstrap.mynamespace:9092`.
+   > Note: The `bootstrap_servers` needs to contain the address of at least one
+   > broker of your Apache Kafka cluster. If you are using Strimzi, you need to
+   > update the `bootstrap_servers` value to
+   > `my-cluster-kafka-bootstrap.mynamespace:9092`.
 
 1. Apply the 'Kafka' ClusterChannelProvisioner, Controller, and Dispatcher:
 

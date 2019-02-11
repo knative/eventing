@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
+	"github.com/knative/eventing/pkg/utils"
 	"go.uber.org/zap"
 )
 
@@ -64,21 +65,21 @@ func TestConfigMapData(t *testing.T) {
 					name: c1
 					fanoutConfig:
 					  subscriptions:
-						- subscriberURI: event-changer.default.svc.cluster.local
-						  replyURI: message-dumper-bar.default.svc.cluster.local
-						- subscriberURI: message-dumper-foo.default.svc.cluster.local
-						- replyURI: message-dumper-bar.default.svc.cluster.local
+						- subscriberURI: event-changer.default.svc.` + utils.GetClusterDomainName() + `
+						  replyURI: message-dumper-bar.default.svc.` + utils.GetClusterDomainName() + `
+						- subscriberURI: message-dumper-foo.default.svc.` + utils.GetClusterDomainName() + `
+						- replyURI: message-dumper-bar.default.svc.` + utils.GetClusterDomainName() + `
 				  - namespace: default
 					name: c2
 					fanoutConfig:
 					  subscriptions:
-						- replyURI: message-dumper-foo.default.svc.cluster.local
+						- replyURI: message-dumper-foo.default.svc.` + utils.GetClusterDomainName() + `
 				  - namespace: other
 					name: c3
 					fanoutConfig:
 					  subscriptions:
-						- replyURI: message-dumper-foo.default.svc.cluster.local
-				`,
+						- replyURI: message-dumper-foo.default.svc.` + utils.GetClusterDomainName(),
+
 			expected: &Config{
 				ChannelConfigs: []ChannelConfig{
 					{
@@ -87,14 +88,14 @@ func TestConfigMapData(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									SubscriberURI: "event-changer.default.svc.cluster.local",
-									ReplyURI:      "message-dumper-bar.default.svc.cluster.local",
+									SubscriberURI: "event-changer.default.svc." + utils.GetClusterDomainName(),
+									ReplyURI:      "message-dumper-bar.default.svc." + utils.GetClusterDomainName(),
 								},
 								{
-									SubscriberURI: "message-dumper-foo.default.svc.cluster.local",
+									SubscriberURI: "message-dumper-foo.default.svc." + utils.GetClusterDomainName(),
 								},
 								{
-									ReplyURI: "message-dumper-bar.default.svc.cluster.local",
+									ReplyURI: "message-dumper-bar.default.svc." + utils.GetClusterDomainName(),
 								},
 							},
 						},
@@ -105,7 +106,7 @@ func TestConfigMapData(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									ReplyURI: "message-dumper-foo.default.svc.cluster.local",
+									ReplyURI: "message-dumper-foo.default.svc." + utils.GetClusterDomainName(),
 								},
 							},
 						},
@@ -116,7 +117,7 @@ func TestConfigMapData(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									ReplyURI: "message-dumper-foo.default.svc.cluster.local",
+									ReplyURI: "message-dumper-foo.default.svc." + utils.GetClusterDomainName(),
 								},
 							},
 						},

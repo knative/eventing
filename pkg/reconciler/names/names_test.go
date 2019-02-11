@@ -17,6 +17,7 @@
 package names
 
 import (
+	"github.com/knative/eventing/pkg/utils"
 	"testing"
 )
 
@@ -30,7 +31,7 @@ func TestNames(t *testing.T) {
 		F: func() string {
 			return ServiceHostName("foo", "namespace")
 		},
-		Want: "foo.namespace.svc.cluster.local",
+		Want: "foo.namespace.svc." + utils.GetClusterDomainName(),
 	}}
 
 	for _, tc := range testCases {

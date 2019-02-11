@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/utils"
 )
 
 const (
@@ -84,7 +85,7 @@ func TestChannelUtils(t *testing.T) {
 		name: "CreateVirtualService_ModifiedSpec",
 		f: func() (metav1.Object, error) {
 			existing := makeVirtualService()
-			destHost := fmt.Sprintf("%s-clusterbus.knative-eventing.svc.cluster.local", clusterChannelProvisionerName)
+			destHost := fmt.Sprintf("%s-clusterbus.knative-eventing.svc.%s", clusterChannelProvisionerName, utils.GetClusterDomainName())
 			existing.Spec.Http[0].Route[0].Destination.Host = destHost
 			client := fake.NewFakeClient(existing)
 			CreateVirtualService(context.TODO(), client, getNewChannel(), makeK8sService())
@@ -424,7 +425,7 @@ func TestChannelNames(t *testing.T) {
 		F: func() string {
 			return channelHostName("foo", "namespace")
 		},
-		Want: "foo.namespace.channels.cluster.local",
+		Want: "foo.namespace.channels." + utils.GetClusterDomainName(),
 	}}
 
 	for _, tc := range testCases {
@@ -637,16 +638,16 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 			Hosts: []string{
 				// The fake client doesn't fill in a Name when GeneratedName is used, so the
 				// Channel's Name will be the empty string.
-				fmt.Sprintf("%s.%s.svc.cluster.local", "", testNS),
-				fmt.Sprintf("%s.%s.channels.cluster.local", channelName, testNS),
+				fmt.Sprintf("%s.%s.svc.%s", "", testNS, utils.GetClusterDomainName()),
+				fmt.Sprintf("%s.%s.channels.%s", channelName, testNS, utils.GetClusterDomainName()),
 			},
 			Http: []istiov1alpha3.HTTPRoute{{
 				Rewrite: &istiov1alpha3.HTTPRewrite{
-					Authority: fmt.Sprintf("%s.%s.channels.cluster.local", channelName, testNS),
+					Authority: fmt.Sprintf("%s.%s.channels.%s", channelName, testNS, utils.GetClusterDomainName()),
 				},
 				Route: []istiov1alpha3.DestinationWeight{{
 					Destination: istiov1alpha3.Destination{
-						Host: fmt.Sprintf("%s-dispatcher.knative-eventing.svc.cluster.local", clusterChannelProvisionerName),
+						Host: fmt.Sprintf("%s-dispatcher.knative-eventing.svc.%s", clusterChannelProvisionerName, utils.GetClusterDomainName()),
 						Port: istiov1alpha3.PortSelector{
 							Number: PortNumber,
 						},
