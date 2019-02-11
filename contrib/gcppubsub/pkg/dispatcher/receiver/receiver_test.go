@@ -29,6 +29,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/fakepubsub"
+	"github.com/knative/eventing/pkg/utils"
 	"go.uber.org/zap"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -134,7 +135,7 @@ func TestReceiver(t *testing.T) {
 				fakepubsub.Creator(tc.pubSubData))
 			resp := httptest.NewRecorder()
 			req := httptest.NewRequest("POST", "/", strings.NewReader(validMessage))
-			req.Host = "test-channel.test-namespace.channels.cluster.local"
+			req.Host = "test-channel.test-namespace.channels." + utils.GetClusterDomainName()
 			mr.newMessageReceiver().HandleRequest(resp, req)
 			if tc.expectedErr {
 				if resp.Result().StatusCode >= 200 && resp.Result().StatusCode < 300 {

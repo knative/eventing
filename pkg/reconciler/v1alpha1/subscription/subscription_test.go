@@ -23,6 +23,7 @@ import (
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
+	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,22 +54,25 @@ var (
 )
 
 const (
-	fromChannelName     = "fromchannel"
-	resultChannelName   = "resultchannel"
-	sourceName          = "source"
-	routeName           = "subscriberroute"
-	channelKind         = "Channel"
-	routeKind           = "Route"
-	sourceKind          = "Source"
-	subscriptionKind    = "Subscription"
-	targetDNS           = "myfunction.mynamespace.svc.cluster.local"
-	sinkableDNS         = "myresultchannel.mynamespace.svc.cluster.local"
-	eventType           = "myeventtype"
-	subscriptionName    = "testsubscription"
-	testNS              = "testnamespace"
-	k8sServiceName      = "testk8sservice"
-	k8sServiceDNS       = "testk8sservice.testnamespace.svc.cluster.local"
-	otherAddressableDNS = "other-sinkable-channel.mynamespace.svc.cluster.local"
+	fromChannelName   = "fromchannel"
+	resultChannelName = "resultchannel"
+	sourceName        = "source"
+	routeName         = "subscriberroute"
+	channelKind       = "Channel"
+	routeKind         = "Route"
+	sourceKind        = "Source"
+	subscriptionKind  = "Subscription"
+	eventType         = "myeventtype"
+	subscriptionName  = "testsubscription"
+	testNS            = "testnamespace"
+	k8sServiceName    = "testk8sservice"
+)
+
+var (
+	targetDNS           = "myfunction.mynamespace.svc." + utils.GetClusterDomainName()
+	sinkableDNS         = "myresultchannel.mynamespace.svc." + utils.GetClusterDomainName()
+	k8sServiceDNS       = "testk8sservice.testnamespace.svc." + utils.GetClusterDomainName()
+	otherAddressableDNS = "other-sinkable-channel.mynamespace.svc." + utils.GetClusterDomainName()
 )
 
 func init() {

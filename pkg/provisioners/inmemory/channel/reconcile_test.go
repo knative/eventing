@@ -26,11 +26,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	util "github.com/knative/eventing/pkg/provisioners"
+	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
+	"github.com/knative/eventing/pkg/utils"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -67,7 +68,7 @@ var (
 
 	// serviceAddress is the address of the K8s Service. It uses a GeneratedName and the fake client
 	// does not fill in Name, so the name is the empty string.
-	serviceAddress = fmt.Sprintf("%s.%s.svc.cluster.local", "", cNamespace)
+	serviceAddress = fmt.Sprintf("%s.%s.svc.%s", "", cNamespace, utils.GetClusterDomainName())
 
 	// channelsConfig and channels are linked together. A change to one, will likely require a
 	// change to the other. channelsConfig is the serialized config of channels for everything
@@ -740,15 +741,15 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 		Spec: istiov1alpha3.VirtualServiceSpec{
 			Hosts: []string{
 				serviceAddress,
-				fmt.Sprintf("%s.%s.channels.cluster.local", cName, cNamespace),
+				fmt.Sprintf("%s.%s.channels.%s", cName, cNamespace, utils.GetClusterDomainName()),
 			},
 			Http: []istiov1alpha3.HTTPRoute{{
 				Rewrite: &istiov1alpha3.HTTPRewrite{
-					Authority: fmt.Sprintf("%s.%s.channels.cluster.local", cName, cNamespace),
+					Authority: fmt.Sprintf("%s.%s.channels.%s", cName, cNamespace, utils.GetClusterDomainName()),
 				},
 				Route: []istiov1alpha3.DestinationWeight{{
 					Destination: istiov1alpha3.Destination{
-						Host: "in-memory-channel-dispatcher.knative-eventing.svc.cluster.local",
+						Host: "in-memory-channel-dispatcher.knative-eventing.svc." + utils.GetClusterDomainName(),
 						Port: istiov1alpha3.PortSelector{
 							Number: util.PortNumber,
 						},
