@@ -37,13 +37,14 @@ const clientID = "knative-natss-dispatcher"
 type SubscriptionsSupervisor struct {
 	logger *zap.Logger
 
-	receiver         *provisioners.MessageReceiver
-	dispatcher       *provisioners.MessageDispatcher
-	connect          chan struct{}
-	natssURL         string
-	subscriptionsMux sync.Mutex
-	subscriptions    map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription
-	natssConn        *stan.Conn
+	receiver            *provisioners.MessageReceiver
+	dispatcher          *provisioners.MessageDispatcher
+	connect             chan struct{}
+	natssURL            string
+	subscriptionsMux    sync.Mutex
+	subscriptions       map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription
+	natssConn           *stan.Conn
+	natssConnInProgress bool
 }
 
 // NewDispatcher returns a new SubscriptionsSupervisor.
@@ -99,12 +100,13 @@ func (s *SubscriptionsSupervisor) connectWithRetry() {
 	// re-attempting evey 60 seconds until the connection is established.
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
+	s.subscriptionsMux.Lock()
+	defer s.subscriptionsMux.Unlock()
 	for {
 		nConn, err := stanutil.Connect(clusterchannelprovisioner.ClusterId, clientID, s.natssURL, s.logger.Sugar())
 		if err == nil {
-			s.subscriptionsMux.Lock()
 			s.natssConn = nConn
-			s.subscriptionsMux.Unlock()
+			s.natssConnInProgress = false
 			return
 		}
 		s.logger.Sugar().Errorf("Connect() failed with error: %+v, retrying in 60 seconds", err)
@@ -120,9 +122,23 @@ func (s *SubscriptionsSupervisor) Connect() {
 	for {
 		select {
 		case <-s.connect:
-			// Establishing connection only if there is no already connection to NATS
-			if s.natssConn == nil {
-				s.connectWithRetry()
+			// Case for initial connection to NATSS
+			if s.natssConn == nil && !s.natssConnInProgress {
+				// Setting up InProgress to true to prevent recursion
+				s.subscriptionsMux.Lock()
+				s.natssConnInProgress = true
+				s.subscriptionsMux.Unlock()
+				go s.connectWithRetry()
+				continue
+			}
+			// Case when the connection to NATSS was lost
+			if s.natssConn != nil && (*s.natssConn).NatsConn().IsClosed() && !s.natssConnInProgress {
+				// Setting up InProgress to true to prevent recursion
+				s.subscriptionsMux.Lock()
+				s.natssConn = nil
+				s.natssConnInProgress = true
+				s.subscriptionsMux.Unlock()
+				go s.connectWithRetry()
 			}
 		}
 	}
