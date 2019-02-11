@@ -43,6 +43,13 @@ var (
 	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
 	// truncates to seconds to match the loss of precision during serialization.
 	deletionTime = metav1.Now().Rfc3339Copy()
+
+	// map of events to set test cases' expectations easier
+	events = map[string]corev1.Event{
+		ccpReconciled:         {Reason: ccpReconciled, Type: corev1.EventTypeNormal},
+		ccpReconcileFailed:    {Reason: ccpReconcileFailed, Type: corev1.EventTypeWarning},
+		ccpUpdateStatusFailed: {Reason: ccpUpdateStatusFailed, Type: corev1.EventTypeWarning},
+	}
 )
 
 func init() {
@@ -148,6 +155,9 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeDeletingClusterChannelProvisioner(),
 			},
+			WantEvent: []corev1.Event{
+				events[ccpReconciled],
+			},
 		},
 		{
 			Name: "Mark Ready",
@@ -156,6 +166,9 @@ func TestReconcile(t *testing.T) {
 			},
 			WantPresent: []runtime.Object{
 				makeReadyClusterChannelProvisioner(),
+			},
+			WantEvent: []corev1.Event{
+				events[ccpReconciled],
 			},
 		},
 		{
@@ -168,6 +181,9 @@ func TestReconcile(t *testing.T) {
 				MockGets: oneSuccessfulClusterChannelProvisionerGet(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[ccpReconciled], events[ccpUpdateStatusFailed],
+			},
 		},
 		{
 			Name: "Error updating Status",
@@ -181,6 +197,9 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[ccpReconciled], events[ccpUpdateStatusFailed],
+			},
 		},
 	}
 

@@ -91,6 +91,13 @@ var (
 			},
 		},
 	}
+
+	// map of events to set test cases' expectations easier
+	events = map[string]corev1.Event{
+		dispatcherReconciled:         {Reason: dispatcherReconciled, Type: corev1.EventTypeNormal},
+		dispatcherReconcileFailed:    {Reason: dispatcherReconcileFailed, Type: corev1.EventTypeWarning},
+		dispatcherUpdateStatusFailed: {Reason: dispatcherUpdateStatusFailed, Type: corev1.EventTypeWarning},
+	}
 )
 
 func init() {
@@ -182,6 +189,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeDeletingChannelWithSubscribersWithoutFinalizer(),
 			},
+			WantEvent: []corev1.Event{
+				events[dispatcherReconciled],
+			},
 		},
 		{
 			Name: "Channel deleted - finalizer removed",
@@ -191,6 +201,9 @@ func TestReconcile(t *testing.T) {
 			},
 			WantPresent: []runtime.Object{
 				makeDeletingChannelWithoutFinalizer(),
+			},
+			WantEvent: []corev1.Event{
+				events[dispatcherReconciled],
 			},
 		},
 		{
@@ -204,6 +217,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeChannelWithSubscribersAndFinalizer(),
 			},
+			WantEvent: []corev1.Event{
+				events[dispatcherReconciled],
+			},
 		},
 		{
 			Name: "GetCredential fails",
@@ -215,6 +231,9 @@ func TestReconcile(t *testing.T) {
 				makeChannelWithSubscribersAndFinalizer(),
 			},
 			WantErrMsg: testcreds.InvalidCredsError,
+			WantEvent: []corev1.Event{
+				events[dispatcherReconcileFailed],
+			},
 		},
 		{
 			Name: "Channel update fails - cannot create PubSub client",
@@ -228,6 +247,9 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[dispatcherReconcileFailed],
+			},
 		},
 		{
 			Name: "Receive errors",
@@ -260,6 +282,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeChannelWithSubscribersAndFinalizer(),
 			},
+			WantEvent: []corev1.Event{
+				events[dispatcherReconciled],
+			},
 		},
 		{
 			Name: "PubSub Subscription.Receive already running",
@@ -281,6 +306,9 @@ func TestReconcile(t *testing.T) {
 			},
 			WantPresent: []runtime.Object{
 				makeChannelWithSubscribersAndFinalizer(),
+			},
+			WantEvent: []corev1.Event{
+				events[dispatcherReconciled],
 			},
 		},
 		{
@@ -304,6 +332,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeChannelWithSubscribersAndFinalizer(),
 			},
+			WantEvent: []corev1.Event{
+				events[dispatcherReconciled],
+			},
 		},
 		{
 			Name: "Delete all old Subscriptions",
@@ -326,6 +357,9 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeChannelWithFinalizer(),
 			},
+			WantEvent: []corev1.Event{
+				events[dispatcherReconciled],
+			},
 		},
 		{
 			Name: "Channel update fails",
@@ -337,6 +371,9 @@ func TestReconcile(t *testing.T) {
 				MockUpdates: errorUpdatingChannel(),
 			},
 			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[dispatcherReconciled], events[dispatcherUpdateStatusFailed],
+			},
 		},
 		// Note - we do not test update status since this dispatcher only adds
 		// finalizers to the channel
