@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/knative/eventing/pkg/utils"
 
 	"go.uber.org/zap"
 )
@@ -83,7 +84,7 @@ func TestMessageReceiver_HandleRequest(t *testing.T) {
 				"x-ot-pass":                 {"true"},
 			},
 			body: "message-body",
-			host: "test-name.test-namespace.svc.cluster.local",
+			host: "test-name.test-namespace.svc." + utils.GetClusterDomainName(),
 			receiverFunc: func(r ChannelReference, m *Message) error {
 				if r.Namespace != "test-namespace" || r.Name != "test-name" {
 					return fmt.Errorf("test receiver func -- bad reference: %v", r)
@@ -100,7 +101,7 @@ func TestMessageReceiver_HandleRequest(t *testing.T) {
 					"cE-pass-through":           "true",
 					"x-B3-pass":                 "true",
 					"x-ot-pass":                 "true",
-					"ce-knativehistory":         "test-name.test-namespace.svc.cluster.local",
+					"ce-knativehistory":         "test-name.test-namespace.svc." + utils.GetClusterDomainName(),
 				}
 				if diff := cmp.Diff(expectedHeaders, m.Headers); diff != "" {
 					return fmt.Errorf("test receiver func -- bad headers (-want, +got): %s", diff)
@@ -120,7 +121,7 @@ func TestMessageReceiver_HandleRequest(t *testing.T) {
 				tc.path = "/"
 			}
 			if tc.host == "" {
-				tc.host = "test-channel.test-namespace.svc.cluster.local"
+				tc.host = "test-channel.test-namespace.svc." + utils.GetClusterDomainName()
 			}
 
 			f := tc.receiverFunc

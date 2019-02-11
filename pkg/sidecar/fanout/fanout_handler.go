@@ -37,12 +37,15 @@ const (
 	messageBufferSize = 500
 )
 
-// Configuration for a fanout.Handler.
+// Config for a fanout.Handler.
 type Config struct {
 	Subscriptions []eventingduck.ChannelSubscriberSpec `json:"subscriptions"`
+	// AsyncHandler controls whether the Subscriptions are called synchronous or asynchronously.
+	// It is expected to be false when used as a sidecar.
+	AsyncHandler bool `json:"asyncHandler,omitempty"`
 }
 
-// http.Handler that takes a single request in and fans it out to N other servers.
+// Handler is a http.Handler that takes a single request in and fans it out to N other servers.
 type Handler struct {
 	config Config
 
@@ -83,6 +86,13 @@ func NewHandler(logger *zap.Logger, config Config) *Handler {
 
 func createReceiverFunction(f *Handler) func(provisioners.ChannelReference, *provisioners.Message) error {
 	return func(_ provisioners.ChannelReference, m *provisioners.Message) error {
+		if f.config.AsyncHandler {
+			go func() {
+				// Any returned error is already logged in f.dispatch().
+				_ = f.dispatch(m)
+			}()
+			return nil
+		}
 		return f.dispatch(m)
 	}
 }

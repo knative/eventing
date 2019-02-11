@@ -11,10 +11,28 @@ This is a helper script to run the presubmit tests. To use it:
 
 1. [optional] Define the function `build_tests()`. If you don't define this
    function, the default action for running the build tests is to:
-   - lint and link check markdown files
+
+   - check markdown files
    - run `go build` on the entire repo
    - run `/hack/verify-codegen.sh` (if it exists)
-   - check licenses in `/cmd` (if it exists)
+   - check licenses in all go packages
+
+   The markdown link checker tool doesn't check `localhost` links by default.
+   Its configuration file, `markdown-link-check-config.json`, lives in the
+   `test-infra/scripts` directory. To override it, create a file with the same
+   name, containing the custom config in the `/test` directory.
+
+   The markdown lint tool ignores long lines by default. Its configuration file,
+   `markdown-lint-config.rc`, lives in the `test-infra/scripts` directory. To
+   override it, create a file with the same name, containing the custom config
+   in the `/test` directory.
+
+1. [optional] Customize the default build test runner, if you're using it. Set
+   the following environment variables if the default values don't fit your needs:
+
+   - `DISABLE_MD_LINTING`: Disable linting markdown files, defaults to 0 (false).
+   - `DISABLE_MD_LINK_CHECK`: Disable checking links in markdown files, defaults
+     to 0 (false).
 
 1. [optional] Define the functions `pre_build_tests()` and/or
    `post_build_tests()`. These functions will be called before or after the
@@ -84,6 +102,18 @@ main $@
 
 This is a helper script for Knative E2E test scripts. To use it:
 
+1. [optional] Customize the test cluster. Set the following environment variables
+   if the default values don't fit your needs:
+
+   - `E2E_CLUSTER_REGION`: Cluster region, defaults to `us-central1`.
+   - `E2E_CLUSTER_ZONE`: Cluster zone (e.g., `a`), defaults to none (i.e. use a regional
+     cluster).
+   - `E2E_CLUSTER_MACHINE`: Cluster node machine type, defaults to `n1-standard-4}`.
+   - `E2E_MIN_CLUSTER_NODES`: Minimum number of nodes in the cluster when autoscaling,
+     defaults to 1.
+   - `E2E_MAX_CLUSTER_NODES`: Maximum number of nodes in the cluster when autoscaling,
+     defaults to 3.
+
 1. Source the script.
 
 1. [optional] Write the `teardown()` function, which will tear down your test
@@ -130,9 +160,14 @@ This is a helper script for Knative E2E test scripts. To use it:
 
 This script will test that the latest Knative Serving nightly release works. It
 defines a special flag (`--no-knative-wait`) that causes the script not to
-wait for Knative Serving to be up before running the tests.
+wait for Knative Serving to be up before running the tests. It also requires that
+the test cluster is created in a specific region, `us-west2`.
 
 ```bash
+
+# This test requires a cluster in LA
+E2E_CLUSTER_REGION=us-west2
+
 source vendor/github.com/knative/test-infra/scripts/e2e-tests.sh
 
 function teardown() {
@@ -169,16 +204,14 @@ This is a helper script for Knative release scripts. To use it:
 
 1. Source the script.
 
-1. Call the `initialize()` function passing `$@` (without quotes).
+1. [optional] By default, the release script will run `./test/presubmit-tests.sh`
+   as the release validation tests. If you need to run something else, set the
+   environment variable `VALIDATION_TESTS` to the executable to run.
 
-1. Call the `run_validation_tests()` function passing the script or executable that
-   runs the release validation tests. It will call the script to run the tests unless
-   `--skip_tests` was passed.
-
-1. Write logic for the release process. Call `publish_yaml()` to publish the manifest(s),
-   `tag_releases_in_yaml()` to tag the generated images, `branch_release()` to branch
-   named releases. Use the following boolean (0 is false, 1 is true) and string environment
-   variables for the logic:
+1. Write logic for building the release in a function named `build_release()`.
+   Set the environment variable `YAMLS_TO_PUBLISH` to the list of yaml files created,
+   space separated. Use the following boolean (0 is false, 1 is true) and string
+   environment variables for the logic:
 
    - `RELEASE_VERSION`: contains the release version if `--version` was passed. This
      also overrides the value of the `TAG` variable as `v<version>`.
@@ -192,36 +225,31 @@ This is a helper script for Knative release scripts. To use it:
    - `KO_DOCKER_REPO`: contains the GCR to store the images if `--release-gcr` was
      passed, otherwise the default value `gcr.io/knative-nightly` will be used. It
      is set to `ko.local` if `--publish` was not passed.
-   - `SKIP_TESTS`: true if `--skip-tests` was passed. This is handled automatically
-     by the `run_validation_tests()` function.
+   - `SKIP_TESTS`: true if `--skip-tests` was passed. This is handled automatically.
    - `TAG_RELEASE`: true if `--tag-release` was passed. In this case, the environment
      variable `TAG` will contain the release tag in the form `vYYYYMMDD-<commit_short_hash>`.
    - `PUBLISH_RELEASE`: true if `--publish` was passed. In this case, the environment
      variable `KO_FLAGS` will be updated with the `-L` option.
-   - `BRANCH_RELEASE`: true if both `--version` and `--publish-release` were passed.
+   - `PUBLISH_TO_GITHUB`: true if `--version`, `--branch` and `--publish-release`
+     were passed.
 
    All boolean environment variables default to false for safety.
 
    All environment variables above, except `KO_FLAGS`, are marked read-only once
-   `initialize()` is called.
+   `main()` is called (see below).
+
+1. Call the `main()` function passing `$@` (without quotes).
 
 ### Sample release script
 
 ```bash
 source vendor/github.com/knative/test-infra/scripts/release.sh
 
-initialize $@
+function build_release() {
+  # config/ contains the manifests
+  ko resolve ${KO_FLAGS} -f config/ > release.yaml
+  YAMLS_TO_PUBLISH="release.yaml"
+}
 
-run_validation_tests ./test/presubmit-tests.sh
-
-# config/ contains the manifests
-ko resolve ${KO_FLAGS} -f config/ > release.yaml
-
-tag_images_in_yaml release.yaml
-
-if (( PUBLISH_RELEASE )); then
-  publish_yaml release.yaml
-fi
-
-branch_release "Knative Foo" release.yaml
+main $@
 ```

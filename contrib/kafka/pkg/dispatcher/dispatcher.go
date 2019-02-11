@@ -74,7 +74,7 @@ type subscription struct {
 	ReplyURI      string
 }
 
-// ConfigDiffs diffs the new config with the existing config. If there are no differences, then the
+// ConfigDiff diffs the new config with the existing config. If there are no differences, then the
 // empty string is returned. If there are differences, then a non-empty string is returned
 // describing the differences.
 func (d *KafkaDispatcher) ConfigDiff(updated *multichannelfanout.Config) string {
@@ -133,7 +133,7 @@ func (d *KafkaDispatcher) UpdateConfig(config *multichannelfanout.Config) error 
 	return nil
 }
 
-// Run starts the kafka dispatcher's message processing.
+// Start starts the kafka dispatcher's message processing.
 func (d *KafkaDispatcher) Start(stopCh <-chan struct{}) error {
 	if d.receiver == nil {
 		return fmt.Errorf("message receiver is not set")
@@ -160,7 +160,6 @@ func (d *KafkaDispatcher) Start(stopCh <-chan struct{}) error {
 }
 
 func (d *KafkaDispatcher) subscribe(channelRef provisioners.ChannelReference, sub subscription) error {
-
 	d.logger.Info("Subscribing", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
 
 	topicName := topicUtils.TopicName(controller.KafkaChannelSeparator, channelRef.Namespace, channelRef.Name)

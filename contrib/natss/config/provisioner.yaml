@@ -39,6 +39,7 @@ rules:
       - channels
       - channels/status
       - clusterchannelprovisioners
+      - clusterchannelprovisioners/status
     verbs:
       - get
       - list
@@ -101,7 +102,7 @@ spec:
       serviceAccountName: natss-controller
       containers:
         - name: controller
-          image: github.com/knative/eventing/pkg/provisioners/natss/controller
+          image: github.com/knative/eventing/contrib/natss/pkg/controller
 
 ---
 
@@ -173,4 +174,4 @@ spec:
       serviceAccountName: natss-dispatcher
       containers:
         - name: dispatcher
-          image: github.com/knative/eventing/pkg/provisioners/natss/dispatcher
+          image: github.com/knative/eventing/contrib/natss/pkg/dispatcher

@@ -1,7 +1,7 @@
 package dispatcher
 
 import (
-	"fmt"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +12,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
@@ -46,7 +47,7 @@ type mockSaramaCluster struct {
 
 func (c *mockSaramaCluster) NewConsumer(groupID string, topics []string) (KafkaConsumer, error) {
 	if c.createErr {
-		return nil, fmt.Errorf("error creating consumer")
+		return nil, errors.New("error creating consumer")
 	}
 	consumer := &mockConsumer{
 		message: make(chan *sarama.ConsumerMessage),
@@ -248,18 +249,16 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 			// Initialize using oldConfig
 			err := d.UpdateConfig(tc.oldConfig)
 			if err != nil {
-				t.Errorf("unexpected error: %s", err)
+				t.Errorf("unexpected error: %v", err)
 			}
-			oldSubscribers := make(map[string]bool)
+			oldSubscribers := sets.NewString()
 			for _, subMap := range d.kafkaConsumers {
 				for sub := range subMap {
-					oldSubscribers[sub.Name] = true
+					oldSubscribers.Insert(sub.Name)
 				}
 			}
-			for _, sub := range tc.unsubscribes {
-				if ok := oldSubscribers[sub]; !ok {
-					t.Errorf("subscription %s was never subscribed", sub)
-				}
+			if diff := sets.NewString(tc.unsubscribes...).Difference(oldSubscribers); diff.Len() != 0 {
+				t.Errorf("subscriptions %+v were never subscribed", diff)
 			}
 
 			// Update with new config
@@ -309,7 +308,7 @@ func TestFromKafkaMessage(t *testing.T) {
 	}
 	got := fromKafkaMessage(kafkaMessage)
 	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("unexpected message (-want, +got) = %v", diff)
+		t.Errorf("unexpected message (-want, +got) = %s", diff)
 	}
 }
 
@@ -337,7 +336,7 @@ func TestToKafkaMessage(t *testing.T) {
 	}
 	got := toKafkaMessage(channelRef, msg)
 	if diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(sarama.ProducerMessage{})); diff != "" {
-		t.Errorf("unexpected message (-want, +got) = %v", diff)
+		t.Errorf("unexpected message (-want, +got) = %s", diff)
 	}
 }
 
@@ -355,7 +354,7 @@ func (h *dispatchTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		h.t.Error("Failed to read the request body")
 	}
 	if diff := cmp.Diff(h.payload, body); diff != "" {
-		h.t.Errorf("unexpected body (-want, +got) = %v", diff)
+		h.t.Errorf("unexpected body (-want, +got) = %s", diff)
 	}
 	h.done <- true
 }
@@ -427,7 +426,7 @@ func TestSubscribeError(t *testing.T) {
 	}
 	err := d.subscribe(channelRef, subRef)
 	if err == nil {
-		t.Errorf("expected error want %s, got %s", "error creating consumer", err)
+		t.Errorf("Expected error want %s, got %s", "error creating consumer", err)
 	}
 }
 
@@ -449,9 +448,8 @@ func TestUnsubscribeUnknownSub(t *testing.T) {
 		Name:      "test-sub",
 		Namespace: "test-ns",
 	}
-	err := d.unsubscribe(channelRef, subRef)
-	if err != nil {
-		t.Errorf("uexpected error %s", err)
+	if err := d.unsubscribe(channelRef, subRef); err != nil {
+		t.Errorf("Unsubscribe error: %v", err)
 	}
 }
 
@@ -459,7 +457,7 @@ func TestKafkaDispatcher_Start(t *testing.T) {
 	d := &KafkaDispatcher{}
 	err := d.Start(make(chan struct{}))
 	if err == nil {
-		t.Errorf("expected error want %s, got %s", "message receiver is not set", err)
+		t.Errorf("Expected error want %s, got %s", "message receiver is not set", err)
 	}
 
 	d.receiver = provisioners.NewMessageReceiver(func(channel provisioners.ChannelReference, message *provisioners.Message) error {
@@ -467,7 +465,7 @@ func TestKafkaDispatcher_Start(t *testing.T) {
 	}, zap.NewNop().Sugar())
 	err = d.Start(make(chan struct{}))
 	if err == nil {
-		t.Errorf("expected error want %s, got %s", "kafkaAsyncProducer is not set", err)
+		t.Errorf("Expected error want %s, got %s", "kafkaAsyncProducer is not set", err)
 	}
 }
 
