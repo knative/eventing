@@ -114,7 +114,7 @@ func main() {
 		eventingv1alpha1.AddToScheme,
 	}
 	for _, schemeFunc := range schemeFuncs {
-		if err := schemeFunc(mgr.GetScheme()); err != nil {
+		if err = schemeFunc(mgr.GetScheme()); err != nil {
 			logger.Fatalf("Error adding type to manager's scheme: %v", err)
 		}
 	}
