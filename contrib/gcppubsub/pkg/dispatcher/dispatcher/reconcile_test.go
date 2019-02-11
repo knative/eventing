@@ -94,9 +94,9 @@ var (
 
 	// map of events to set test cases' expectations easier
 	events = map[string]corev1.Event{
-		channelReconciled:         {Reason: channelReconciled, Type: corev1.EventTypeNormal},
-		channelReconcileFailed:    {Reason: channelReconcileFailed, Type: corev1.EventTypeWarning},
-		channelUpdateStatusFailed: {Reason: channelUpdateStatusFailed, Type: corev1.EventTypeWarning},
+		dispatcherReconciled:         {Reason: dispatcherReconciled, Type: corev1.EventTypeNormal},
+		dispatcherReconcileFailed:    {Reason: dispatcherReconcileFailed, Type: corev1.EventTypeWarning},
+		dispatcherUpdateStatusFailed: {Reason: dispatcherUpdateStatusFailed, Type: corev1.EventTypeWarning},
 	}
 )
 
@@ -190,7 +190,7 @@ func TestReconcile(t *testing.T) {
 				makeDeletingChannelWithSubscribersWithoutFinalizer(),
 			},
 			WantEvent: []corev1.Event{
-				events[channelReconciled],
+				events[dispatcherReconciled],
 			},
 		},
 		{
@@ -203,7 +203,7 @@ func TestReconcile(t *testing.T) {
 				makeDeletingChannelWithoutFinalizer(),
 			},
 			WantEvent: []corev1.Event{
-				events[channelReconciled],
+				events[dispatcherReconciled],
 			},
 		},
 		{
@@ -218,7 +218,7 @@ func TestReconcile(t *testing.T) {
 				makeChannelWithSubscribersAndFinalizer(),
 			},
 			WantEvent: []corev1.Event{
-				events[channelReconciled],
+				events[dispatcherReconciled],
 			},
 		},
 		{
@@ -232,7 +232,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testcreds.InvalidCredsError,
 			WantEvent: []corev1.Event{
-				events[channelReconcileFailed],
+				events[dispatcherReconcileFailed],
 			},
 		},
 		{
@@ -248,7 +248,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
-				events[channelReconcileFailed],
+				events[dispatcherReconcileFailed],
 			},
 		},
 		{
@@ -283,7 +283,7 @@ func TestReconcile(t *testing.T) {
 				makeChannelWithSubscribersAndFinalizer(),
 			},
 			WantEvent: []corev1.Event{
-				events[channelReconciled],
+				events[dispatcherReconciled],
 			},
 		},
 		{
@@ -308,7 +308,7 @@ func TestReconcile(t *testing.T) {
 				makeChannelWithSubscribersAndFinalizer(),
 			},
 			WantEvent: []corev1.Event{
-				events[channelReconciled],
+				events[dispatcherReconciled],
 			},
 		},
 		{
@@ -333,7 +333,7 @@ func TestReconcile(t *testing.T) {
 				makeChannelWithSubscribersAndFinalizer(),
 			},
 			WantEvent: []corev1.Event{
-				events[channelReconciled],
+				events[dispatcherReconciled],
 			},
 		},
 		{
@@ -358,7 +358,7 @@ func TestReconcile(t *testing.T) {
 				makeChannelWithFinalizer(),
 			},
 			WantEvent: []corev1.Event{
-				events[channelReconciled],
+				events[dispatcherReconciled],
 			},
 		},
 		{
@@ -372,7 +372,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
-				events[channelReconciled], events[channelUpdateStatusFailed],
+				events[dispatcherReconciled], events[dispatcherUpdateStatusFailed],
 			},
 		},
 		// Note - we do not test update status since this dispatcher only adds

@@ -45,9 +45,9 @@ const (
 	finalizerName = controllerAgentName
 
 	// Name of the corev1.Events emitted from the reconciliation process
-	channelReconciled         = "ChannelReconciled"
-	channelReconcileFailed    = "ChannelReconcileFailed"
-	channelUpdateStatusFailed = "ChannelUpdateStatusFailed"
+	dispatcherReconciled         = "DispatcherReconciled"
+	dispatcherReconcileFailed    = "DispatcherReconcileFailed"
+	dispatcherUpdateStatusFailed = "DispatcherUpdateStatusFailed"
 )
 
 type channelName = types.NamespacedName
@@ -126,17 +126,17 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	requeue, reconcileErr := r.reconcile(logging.With(ctx, zap.Any("channel", c)), c, pcs)
 	if reconcileErr != nil {
 		logging.FromContext(ctx).Info("Error reconciling Channel", zap.Error(reconcileErr))
-		r.recorder.Eventf(c, v1.EventTypeWarning, channelReconcileFailed, "Channel reconciliation failed: %v", err)
+		r.recorder.Eventf(c, v1.EventTypeWarning, dispatcherReconcileFailed, "Dispatcher reconciliation failed: %v", err)
 		// Note that we do not return the error here, because we want to update the finalizers
 		// regardless of the error.
 	} else {
 		logging.FromContext(ctx).Info("Channel reconciled")
-		r.recorder.Eventf(c, v1.EventTypeNormal, channelReconciled, "Channel reconciled: %q", c.Name)
+		r.recorder.Eventf(c, v1.EventTypeNormal, dispatcherReconciled, "Dispatcher reconciled: %q", c.Name)
 	}
 
 	if err = util.UpdateChannel(ctx, r.client, c); err != nil {
 		logging.FromContext(ctx).Info("Error updating Channel Status", zap.Error(err))
-		r.recorder.Eventf(c, v1.EventTypeWarning, channelUpdateStatusFailed, "Failed to update Channel's status: %v", err)
+		r.recorder.Eventf(c, v1.EventTypeWarning, dispatcherUpdateStatusFailed, "Failed to update Channel's dispatcher status: %v", err)
 		return reconcile.Result{}, err
 	}
 
