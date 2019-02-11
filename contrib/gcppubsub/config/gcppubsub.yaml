@@ -71,6 +71,14 @@ rules:
       - watch
       - create
       - update
+  - apiGroups:
+      - "" # Core API Group.
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+      - update
 
 ---
 

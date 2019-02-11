@@ -77,18 +77,18 @@ kubectl -n knative-eventing logs $(kubectl -n knative-eventing get pods -l app=e
 
 ## Installing a Channel Provisioner
 
-You'll need a `ClusterChannelProvisioner` installed before you can use
-any Channels. Eventing release artifacts include the
-[in-memory-channel](./config/provisioners/in-memory-channel/) out of
-the box. You can install it during development with:
+You'll need a `ClusterChannelProvisioner` installed before you can use any
+Channels. Eventing release artifacts include the
+[in-memory-channel](./config/provisioners/in-memory-channel/) out of the box.
+You can install it during development with:
 
 ```shell
 ko apply -f config/provisioners/in-memory-channel/
 ```
 
-There are other `ClusterChannelProvisioner` implementations available
-under the [contrib](./contrib/) subdirectory, but those likely aren't
-needed for development unless you're working on one of them directly.
+There are other `ClusterChannelProvisioner` implementations available under the
+[contrib](./contrib/) subdirectory, but those likely aren't needed for
+development unless you're working on one of them directly.
 
 ## Iterating
 

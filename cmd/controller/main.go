@@ -24,13 +24,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/knative/eventing/pkg/controller/eventing/namespace"
+	"github.com/knative/eventing/pkg/provisioners/namespace"
 
-	"github.com/knative/eventing/pkg/controller/eventing/trigger"
+	"github.com/knative/eventing/pkg/provisioners/trigger"
 
-	"github.com/knative/eventing/pkg/controller/eventing/broker"
+	"github.com/knative/eventing/pkg/provisioners/broker"
 
-	"github.com/knative/eventing/pkg/controller/eventing/subscription"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/subscription"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
