@@ -20,14 +20,15 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/knative/eventing/pkg/reconciler/names"
+
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/logging"
-	"github.com/knative/eventing/pkg/controller"
 	v1 "k8s.io/api/apps/v1"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/knative/eventing/pkg/controller/eventing/broker/resources"
+	"github.com/knative/eventing/pkg/provisioners/broker/resources"
 
 	"go.uber.org/zap"
 
@@ -138,7 +139,7 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		return err
 	}
 	b.Status.MarkIngressReady()
-	b.Status.SetAddress(controller.ServiceHostName(svc.Name, svc.Namespace))
+	b.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
 
 	return nil
 }

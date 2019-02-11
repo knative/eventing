@@ -20,11 +20,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/knative/eventing/pkg/reconciler/names"
+
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/logging"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/controller"
-	"github.com/knative/eventing/pkg/controller/eventing/broker"
-	"github.com/knative/eventing/pkg/controller/eventing/subscription"
+	"github.com/knative/eventing/pkg/provisioners/broker"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/subscription"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -383,7 +384,7 @@ func newVirtualService(t *v1alpha1.Trigger, svc *corev1.Service) *istiov1alpha3.
 		},
 		Spec: istiov1alpha3.VirtualServiceSpec{
 			Hosts: []string{
-				controller.ServiceHostName(svc.Name, svc.Namespace),
+				names.ServiceHostName(svc.Name, svc.Namespace),
 			},
 			Http: []istiov1alpha3.HTTPRoute{{
 				Rewrite: &istiov1alpha3.HTTPRewrite{
