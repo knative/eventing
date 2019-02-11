@@ -25,6 +25,7 @@ They do not offer:
    [Google Cloud Project](https://cloud.google.com/resource-manager/docs/creating-managing-projects).
 
    Then set an env variable that we'll use in other commands below.
+
    ```shell
    export PROJECT_ID='YOUR_PROJECT_ID_HERE'
    ```
@@ -40,16 +41,18 @@ They do not offer:
 
    1. Determine the Service Account to use, or create a new one.
 
-    If using existing service account, just set an env variable.
-    ```shell
-	export PUBSUB_SERVICE_ACCOUNT='YOUR_SERVICE_ACCOUNT_NAME'
-    ```
+   If using existing service account, just set an env variable.
 
-    If creating a new service account:
-    ```shell
-	export PUBSUB_SERVICE_ACCOUNT='YOUR_NEW_SERVICE_ACCOUNT_NAME'
-    gcloud iam service-accounts create $PUBSUB_SERVICE_ACCOUNT
-    ```
+   ```shell
+   export PUBSUB_SERVICE_ACCOUNT='YOUR_SERVICE_ACCOUNT_NAME'
+   ```
+
+   If creating a new service account:
+
+   ```shell
+   export PUBSUB_SERVICE_ACCOUNT='YOUR_NEW_SERVICE_ACCOUNT_NAME'
+   gcloud iam service-accounts create $PUBSUB_SERVICE_ACCOUNT
+   ```
 
    1. Give that Service Account the 'Pub/Sub Editor' role on your GCP project.
 
@@ -61,6 +64,7 @@ They do not offer:
 
    1. Download a new JSON private key for that Service Account. **Be sure not to
       check this key into source control!**
+
       ```shell
       gcloud iam service-accounts keys create knative-gcppubsub-channel.json \
         --iam-account=$PUBSUB_SERVICE_ACCOUNT@$PROJECT_ID.iam.gserviceaccount.com
@@ -82,8 +86,8 @@ They do not offer:
    sed "s/REPLACE_WITH_GCP_PROJECT/$PROJECT_ID/" contrib/gcppubsub/config/gcppubsub.yaml | ko apply -f -
    ```
 
-1. Create Channels that reference the `gcp-pubsub` Channel. Create a file like so
-(save it for example in /tmp/channel.yaml):
+1. Create Channels that reference the `gcp-pubsub` Channel. Create a file like
+   so (save it for example in /tmp/channel.yaml):
 
 ```yaml
 apiVersion: eventing.knative.dev/v1alpha1
@@ -104,11 +108,13 @@ spec:
    ```
 
 1. Then inspect the created resource and make sure it is reported as Ready
+
    ```shell
    kubectl get channels foo -oyaml
    ```
 
    And you should see something like this:
+
    ```shell
    vaikas@penguin:~/projects/go/src/github.com/knative/eventing$ kubectl get channels foo -oyaml
    apiVersion: eventing.knative.dev/v1alpha1

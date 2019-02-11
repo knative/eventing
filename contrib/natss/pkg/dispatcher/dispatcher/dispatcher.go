@@ -29,9 +29,7 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 )
 
-const (
-	clientId = "knative-natss-dispatcher"
-)
+const clientID = "knative-natss-dispatcher"
 
 // SubscriptionsSupervisor manages the state of NATS Streaming subscriptions
 type SubscriptionsSupervisor struct {
@@ -46,13 +44,14 @@ type SubscriptionsSupervisor struct {
 	subscriptions    map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription
 }
 
+// NewDispatcher returns a new SubscriptionsSupervisor.
 func NewDispatcher(natssUrl string, logger *zap.Logger) (*SubscriptionsSupervisor, error) {
 	d := &SubscriptionsSupervisor{
 		logger:        logger,
 		dispatcher:    provisioners.NewMessageDispatcher(logger.Sugar()),
 		subscriptions: make(map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription),
 	}
-	nConn, err := stanutil.Connect(clusterchannelprovisioner.ClusterId, clientId, natssUrl, d.logger.Sugar())
+	nConn, err := stanutil.Connect(clusterchannelprovisioner.ClusterId, clientID, natssUrl, d.logger.Sugar())
 	if err != nil {
 		logger.Error("Connect() failed: ", zap.Error(err))
 		return nil, err

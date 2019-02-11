@@ -33,6 +33,11 @@ import (
 const (
 	// Name is the name of the GCP PubSub ClusterChannelProvisioner.
 	Name = "gcp-pubsub"
+
+	// Name of the corev1.Events emitted from the reconciliation process
+	ccpReconciled         = "CcpReconciled"
+	ccpReconcileFailed    = "CcpReconcileFailed"
+	ccpUpdateStatusFailed = "CcpUpdateStatusFailed"
 )
 
 type reconciler struct {
@@ -82,12 +87,17 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	reconcileErr := r.reconcile(ctx, ccp)
 	if reconcileErr != nil {
 		logging.FromContext(ctx).Info("Error reconciling ClusterChannelProvisioner", zap.Error(reconcileErr))
+		r.recorder.Eventf(ccp, corev1.EventTypeWarning, ccpReconcileFailed, "ClusterChannelProvisioner reconciliation failed: %v", err)
 		// Note that we do not return the error here, because we want to update the Status
 		// regardless of the error.
+	} else {
+		logging.FromContext(ctx).Info("ClusterChannelProvisioner reconciled")
+		r.recorder.Eventf(ccp, corev1.EventTypeNormal, ccpReconciled, "ClusterChannelProvisioner reconciled: %q", ccp.Name)
 	}
 
 	if err = util.UpdateClusterChannelProvisionerStatus(ctx, r.client, ccp); err != nil {
 		logging.FromContext(ctx).Info("Error updating ClusterChannelProvisioner Status", zap.Error(err))
+		r.recorder.Eventf(ccp, corev1.EventTypeWarning, ccpUpdateStatusFailed, "Failed to update ClusterChannelProvisioner's status: %v", err)
 		return reconcile.Result{}, err
 	}
 
