@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-// Receiver parses Cloud Events and sends them to GCP PubSub.
+// Receiver parses Cloud Events and sends them to the channel.
 type Receiver struct {
 	logger *zap.Logger
 	client client.Client
@@ -55,11 +55,11 @@ func New(logger *zap.Logger, client client.Client) (*Receiver, manager.Runnable)
 }
 
 func (r *Receiver) newMessageReceiver() *provisioners.MessageReceiver {
-	return provisioners.NewMessageReceiver(r.sendEventToTopic, r.logger.Sugar())
+	return provisioners.NewMessageReceiver(r.sendEvent, r.logger.Sugar())
 }
 
-// sendEventToTopic sends a message to the Cloud Pub/Sub Topic backing the Channel.
-func (r *Receiver) sendEventToTopic(channel provisioners.ChannelReference, message *provisioners.Message) error {
+// sendEvent sends a message to the Channel.
+func (r *Receiver) sendEvent(channel provisioners.ChannelReference, message *provisioners.Message) error {
 	r.logger.Debug("received message")
 	ctx := context.Background()
 
@@ -118,8 +118,8 @@ func (r *Receiver) shouldSendMessage(t *eventingv1alpha1.TriggerSpec, m *provisi
 func (r *Receiver) buildSelector(ts *eventingv1alpha1.TriggerSpec) (labels.Selector, error) {
 	// Avoid validation of keys and values, otherwise we cannot use LabelSelectors.
 	// Eventually, we will need to create our own Selector implementation with our own Requirement struct.
-	selector := labels.SelectorFromValidatedSet(labels.Set(ts.Filter.Headers))
-	for _, expr := range ts.Filter.HeaderExpressions {
+	selector := labels.SelectorFromValidatedSet(labels.Set(ts.Filter.Attributes))
+	for _, expr := range ts.Filter.AttributeExpressions {
 		var op selection.Operator
 		switch expr.Operator {
 		case v1.LabelSelectorOpIn:
