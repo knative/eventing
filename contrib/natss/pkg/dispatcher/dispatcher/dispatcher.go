@@ -72,13 +72,16 @@ func createReceiverFunction(s *SubscriptionsSupervisor, logger *zap.SugaredLogge
 			return err
 		}
 		if s.natssConn == nil {
-			return fmt.Errorf("No Connection to NATS")
+			return fmt.Errorf("No Connection to NATSS")
+		}
+		if !(*s.natssConn).NatsConn().IsConnected() {
+			return fmt.Errorf("No Connection to NATSS")
 		}
 		if err := stanutil.Publish(s.natssConn, ch, &m.Payload, logger); err != nil {
 			logger.Errorf("Error during publish: %v", err)
 			if err.Error() == stan.ErrConnectionClosed.Error() {
-				logger.Error("Connection to NATS has been lost, attempting to reconnect.")
-				// Informing SubscriptionsSupervisor to re-establish connection to NATS
+				logger.Error("Connection to NATSS has been lost, attempting to reconnect.")
+				// Informing SubscriptionsSupervisor to re-establish connection to NATSS.
 				s.connect <- struct{}{}
 				return err
 			}
@@ -122,20 +125,17 @@ func (s *SubscriptionsSupervisor) Connect() {
 	for {
 		select {
 		case <-s.connect:
-			// Case for initial connection to NATSS
 			if s.natssConn == nil && !s.natssConnInProgress {
-				// Setting up InProgress to true to prevent recursion
+				// Case for Initial connect, setting up InProgress to true to prevent recursion
 				s.subscriptionsMux.Lock()
 				s.natssConnInProgress = true
 				s.subscriptionsMux.Unlock()
 				go s.connectWithRetry()
 				continue
 			}
-			// Case when the connection to NATSS was lost
-			if s.natssConn != nil && (*s.natssConn).NatsConn().IsClosed() && !s.natssConnInProgress {
-				// Setting up InProgress to true to prevent recursion
+			if !(*s.natssConn).NatsConn().IsConnected() && !(*s.natssConn).NatsConn().IsReconnecting() && !s.natssConnInProgress {
+				// Case for lost connectivity, setting InProgress to true to prevent recursion
 				s.subscriptionsMux.Lock()
-				s.natssConn = nil
 				s.natssConnInProgress = true
 				s.subscriptionsMux.Unlock()
 				go s.connectWithRetry()
@@ -224,13 +224,16 @@ func (s *SubscriptionsSupervisor) subscribe(channel provisioners.ChannelReferenc
 	ch := getSubject(channel)
 	sub := subscription.String()
 	if s.natssConn == nil {
-		return nil, fmt.Errorf("No Connection to NATS")
+		return nil, fmt.Errorf("No Connection to NATSS")
+	}
+	if !(*s.natssConn).NatsConn().IsConnected() {
+		return nil, fmt.Errorf("No Connection to NATSS")
 	}
 	natssSub, err := (*s.natssConn).Subscribe(ch, mcb, stan.DurableName(sub), stan.SetManualAckMode(), stan.AckWait(1*time.Minute))
 	if err != nil {
 		s.logger.Error(" Create new NATSS Subscription failed: ", zap.Error(err))
 		if err.Error() == stan.ErrConnectionClosed.Error() {
-			s.logger.Error("Connection to NATS has been lost, attempting to reconnect.")
+			s.logger.Error("Connection to NATSS has been lost, attempting to reconnect.")
 			// Informing SubscriptionsSupervisor to re-establish connection to NATS
 			s.connect <- struct{}{}
 			return nil, err
@@ -248,7 +251,7 @@ func (s *SubscriptionsSupervisor) unsubscribe(channel provisioners.ChannelRefere
 	if stanSub, ok := s.subscriptions[channel][subscription]; ok {
 		// delete from NATSS
 		if err := (*stanSub).Unsubscribe(); err != nil {
-			s.logger.Error("Unsubscribing NATS Streaming subscription failed: ", zap.Error(err))
+			s.logger.Error("Unsubscribing NATSS Streaming subscription failed: ", zap.Error(err))
 			return err
 		}
 		delete(s.subscriptions[channel], subscription)

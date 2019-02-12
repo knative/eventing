@@ -100,14 +100,18 @@ func TestMain(m *testing.M) {
 		select {
 		case <-ticker.C:
 			s.subscriptionsMux.Lock()
-			if s.natssConn != nil {
+			if s.natssConn != nil && (*s.natssConn).NatsConn().IsConnected() {
 				ready = true
 			}
 			s.subscriptionsMux.Unlock()
+			continue
 		case <-expire.C:
 			logger.Fatalf("Failed to connect to NATSS!")
 		}
 	}
+	logger.Infof("><SB> (*s.natssConn).NatsConn().IsConnected(): %t", (*s.natssConn).NatsConn().IsConnected())
+	logger.Infof("><SB> address of s.natssConn: %x", s.natssConn)
+	logger.Infof("><SB> address of s: %x", s)
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 	go func() {
