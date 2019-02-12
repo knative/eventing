@@ -24,7 +24,8 @@ func (ts *TriggerSpec) SetDefaults() {
 	if ts.Broker == "" {
 		ts.Broker = "default"
 	}
-	if ts.Type == "" {
-		ts.Type = "Any"
+	// Make empty filter selector so that we allow everything.
+	if ts.Filter == nil {
+		ts.Filter = &FilterSelector{map[string]string{}}
 	}
 }

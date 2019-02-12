@@ -58,11 +58,16 @@ type TriggerSpec struct {
 	// +optional
 	DeprecatedGeneration int64 `json:"generation,omitempty"`
 
-	Broker     string          `json:"broker,omitempty"`
-	Subscriber *SubscriberSpec `json:"subscriber,omitempty"`
+	Broker string `json:"broker,omitempty"`
 
-	Type   string `json:"type,omitempty"`
-	Source string `json:"source,omitempty"`
+	// +optional
+	Filter *FilterSelector `json:"filter,omitempty"`
+
+	Subscriber *SubscriberSpec `json:"subscriber,omitempty"`
+}
+
+type FilterSelector struct {
+	Headers map[string]string `json:"headers,omitempty" protobuf:"bytes,1,rep,name=headers"`
 }
 
 var triggerCondSet = duckv1alpha1.NewLivingConditionSet(TriggerConditionBrokerExists, TriggerConditionKubernetesService, TriggerConditionVirtualService, TriggerConditionSubscribed)
