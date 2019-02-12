@@ -100,7 +100,7 @@ function run_build_tests() {
     fi
   fi
   # Don't run post-build tests if pre/build tests failed
-  if function_exists post_build_tests; then
+  if (( ! failed )) && function_exists post_build_tests; then
     post_build_tests || failed=1
   fi
   results_banner "Build" ${failed}
@@ -113,7 +113,7 @@ function markdown_build_tests() {
   # Get changed markdown files (ignore /vendor and deleted files)
   local mdfiles=""
   for file in $(echo "${CHANGED_FILES}" | grep \.md$ | grep -v ^vendor/); do
-    [[ -f "{file}" ]] && mdfiles="${mdfiles} ${file}"
+    [[ -f "${file}" ]] && mdfiles="${mdfiles} ${file}"
   done
   [[ -z "${mdfiles}" ]] && return 0
   local failed=0
@@ -177,7 +177,7 @@ function run_unit_tests() {
     fi
   fi
   # Don't run post-unit tests if pre/unit tests failed
-  if function_exists post_unit_tests; then
+  if (( ! failed )) && function_exists post_unit_tests; then
     post_unit_tests || failed=1
   fi
   results_banner "Unit" ${failed}
