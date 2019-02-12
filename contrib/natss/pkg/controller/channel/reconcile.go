@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/knative/eventing/pkg/controller"
+	"github.com/knative/eventing/pkg/reconciler/names"
 	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -127,7 +127,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		r.logger.Info("Error creating the Channel's K8s Service", zap.Error(err))
 		return err
 	}
-	c.Status.SetAddress(controller.ServiceHostName(svc.Name, svc.Namespace))
+	c.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
 
 	_, err = provisioners.CreateVirtualService(ctx, r.client, c, svc)
 	if err != nil {

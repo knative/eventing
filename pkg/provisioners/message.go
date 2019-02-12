@@ -65,14 +65,6 @@ type Message struct {
 // channel that does not exist.
 var ErrUnknownChannel = errors.New("unknown channel")
 
-func headerSet(headers []string) map[string]bool {
-	set := make(map[string]bool)
-	for _, header := range headers {
-		set[header] = true
-	}
-	return set
-}
-
 // History returns the list of hosts where the message has been into
 func (m *Message) History() []string {
 	if m.Headers == nil {

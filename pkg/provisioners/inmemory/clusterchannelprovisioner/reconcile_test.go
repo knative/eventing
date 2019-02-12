@@ -22,21 +22,27 @@ import (
 	"fmt"
 	"testing"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
+	util "github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/eventing/pkg/system"
 )
 
 const (
 	ccpUid           = "test-uid"
 	testErrorMessage = "test-induced-error"
+	testNS           = "test-ns"
+	Name             = "in-memory-channel"
 )
 
 var (
@@ -44,11 +50,14 @@ var (
 	// truncates to seconds to match the loss of precision during serialization.
 	deletionTime = metav1.Now().Rfc3339Copy()
 
+	truePointer = true
+
 	// map of events to set test cases' expectations easier
 	events = map[string]corev1.Event{
-		ccpReconciled:         {Reason: ccpReconciled, Type: corev1.EventTypeNormal},
-		ccpReconcileFailed:    {Reason: ccpReconcileFailed, Type: corev1.EventTypeWarning},
-		ccpUpdateStatusFailed: {Reason: ccpUpdateStatusFailed, Type: corev1.EventTypeWarning},
+		ccpReconciled:          {Reason: ccpReconciled, Type: corev1.EventTypeNormal},
+		ccpUpdateStatusFailed:  {Reason: ccpUpdateStatusFailed, Type: corev1.EventTypeWarning},
+		k8sServiceCreateFailed: {Reason: k8sServiceCreateFailed, Type: corev1.EventTypeWarning},
+		k8sServiceDeleteFailed: {Reason: k8sServiceDeleteFailed, Type: corev1.EventTypeWarning},
 	}
 )
 
@@ -160,9 +169,25 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			Name: "Mark Ready",
+			Name: "Create dispatcher fails",
 			InitialState: []runtime.Object{
 				makeClusterChannelProvisioner(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockGets: []controllertesting.MockGet{
+					errorGettingK8sService(),
+				},
+			},
+			WantErrMsg: testErrorMessage,
+			WantEvent: []corev1.Event{
+				events[k8sServiceCreateFailed],
+			},
+		},
+		{
+			Name: "Create dispatcher - already exists",
+			InitialState: []runtime.Object{
+				makeClusterChannelProvisioner(),
+				makeK8sService(),
 			},
 			WantPresent: []runtime.Object{
 				makeReadyClusterChannelProvisioner(),
@@ -172,10 +197,68 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
+			Name: "Delete old dispatcher",
+			InitialState: []runtime.Object{
+				makeClusterChannelProvisioner(),
+				makeOldK8sService(),
+			},
+			WantPresent: []runtime.Object{
+				makeReadyClusterChannelProvisioner(),
+				makeK8sService(),
+			},
+			WantAbsent: []runtime.Object{
+				makeOldK8sService(),
+			},
+			WantEvent: []corev1.Event{
+				events[ccpReconciled],
+			},
+		},
+		{
+			Name: "Create dispatcher - not owned by CCP",
+			InitialState: []runtime.Object{
+				makeClusterChannelProvisioner(),
+				makeK8sServiceNotOwnedByClusterChannelProvisioner(),
+			},
+			WantPresent: []runtime.Object{
+				makeReadyClusterChannelProvisioner(),
+			},
+			WantEvent: []corev1.Event{
+				events[ccpReconciled],
+			},
+		},
+		{
+			Name: "Create dispatcher succeeds",
+			InitialState: []runtime.Object{
+				makeClusterChannelProvisioner(),
+			},
+			WantPresent: []runtime.Object{
+				makeReadyClusterChannelProvisioner(),
+				makeK8sService(),
+			},
+			WantEvent: []corev1.Event{
+				events[ccpReconciled],
+			},
+		},
+		{
+			Name: "Create dispatcher succeeds - request is namespace-scoped",
+			InitialState: []runtime.Object{
+				makeClusterChannelProvisioner(),
+			},
+			WantPresent: []runtime.Object{
+				makeReadyClusterChannelProvisioner(),
+				makeK8sService(),
+			},
+			ReconcileKey: fmt.Sprintf("%s/%s", testNS, Name),
+			WantEvent: []corev1.Event{
+				events[ccpReconciled],
+			},
+		},
+		{
 			Name: "Error getting CCP for updating Status",
 			// Nothing to create or update other than the status of CCP itself.
 			InitialState: []runtime.Object{
 				makeClusterChannelProvisioner(),
+				makeK8sService(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockGets: oneSuccessfulClusterChannelProvisionerGet(),
@@ -190,6 +273,7 @@ func TestReconcile(t *testing.T) {
 			// Nothing to create or update other than the status of CCP itself.
 			InitialState: []runtime.Object{
 				makeClusterChannelProvisioner(),
+				makeK8sService(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockStatusUpdates: []controllertesting.MockStatusUpdate{
@@ -249,9 +333,64 @@ func makeDeletingClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelPro
 	return ccp
 }
 
+func makeK8sService() *corev1.Service {
+	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: system.Namespace,
+			Name:      fmt.Sprintf("%s-dispatcher", Name),
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
+					Kind:               "ClusterChannelProvisioner",
+					Name:               Name,
+					UID:                ccpUid,
+					Controller:         &truePointer,
+					BlockOwnerDeletion: &truePointer,
+				},
+			},
+			Labels: util.DispatcherLabels(Name),
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: util.DispatcherLabels(Name),
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "http",
+					Port:       80,
+					TargetPort: intstr.FromInt(8080),
+				},
+			},
+		},
+	}
+}
+
+func makeOldK8sService() *corev1.Service {
+	svc := makeK8sService()
+	svc.ObjectMeta.Name = fmt.Sprintf("%s-clusterbus", Name)
+	return svc
+}
+
+func makeK8sServiceNotOwnedByClusterChannelProvisioner() *corev1.Service {
+	svc := makeK8sService()
+	svc.OwnerReferences = nil
+	return svc
+}
+
 func errorGettingClusterChannelProvisioner() controllertesting.MockGet {
 	return func(client.Client, context.Context, client.ObjectKey, runtime.Object) (controllertesting.MockHandled, error) {
 		return controllertesting.Handled, errors.New(testErrorMessage)
+	}
+}
+
+func errorGettingK8sService() controllertesting.MockGet {
+	return func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
+		if _, ok := obj.(*corev1.Service); ok {
+			return controllertesting.Handled, errors.New(testErrorMessage)
+		}
+		return controllertesting.Unhandled, nil
 	}
 }
 
