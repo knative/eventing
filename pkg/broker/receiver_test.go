@@ -23,12 +23,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util"
+	"github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"k8s.io/client-go/kubernetes/scheme"
 
-	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/fakepubsub"
+	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/fakepubsub"
 	"go.uber.org/zap"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,7 +36,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/knative/eventing/pkg/provisioners/gcppubsub/util/testcreds"
+	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/testcreds"
 )
 
 const (
@@ -130,8 +130,7 @@ func TestReceiver(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			mr, _ := New(
 				zap.NewNop(),
-				fake.NewFakeClient(tc.initialState...),
-				fakepubsub.Creator(tc.pubSubData))
+				fake.NewFakeClient(tc.initialState...))
 			resp := httptest.NewRecorder()
 			req := httptest.NewRequest("POST", "/", strings.NewReader(validMessage))
 			req.Host = "test-channel.test-namespace.channels.cluster.local"

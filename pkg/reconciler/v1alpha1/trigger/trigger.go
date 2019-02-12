@@ -20,11 +20,20 @@ import (
 	"context"
 	"fmt"
 
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"github.com/knative/eventing/pkg/reconciler/names"
+
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/logging"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/controller"
-	"github.com/knative/eventing/pkg/controller/eventing/broker"
-	"github.com/knative/eventing/pkg/controller/eventing/subscription"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/subscription"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -37,14 +46,67 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
+	// controllerAgentName is the string used by this controller to identify
+	// itself when creating events.
+	controllerAgentName = "trigger-controller"
+
 	// Name of the corev1.Events emitted from the reconciliation process
 	triggerReconciled         = "TriggerReconciled"
 	triggerUpdateStatusFailed = "TriggerUpdateStatusFailed"
 )
+
+type reconciler struct {
+	client        client.Client
+	restConfig    *rest.Config
+	dynamicClient dynamic.Interface
+	recorder      record.EventRecorder
+
+	logger *zap.Logger
+}
+
+// Verify the struct implements reconcile.Reconciler
+var _ reconcile.Reconciler = &reconciler{}
+
+// ProvideController returns a function that returns a Broker controller.
+func ProvideController(logger *zap.Logger) func(manager.Manager) (controller.Controller, error) {
+	return func(mgr manager.Manager) (controller.Controller, error) {
+		// Setup a new controller to Reconcile Brokers.
+		r := &reconciler{
+			recorder: mgr.GetRecorder(controllerAgentName),
+			logger:   logger,
+		}
+		c, err := controller.New(controllerAgentName, mgr, controller.Options{
+			Reconciler: r,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		// Watch Subscription events and enqueue Subscription object key.
+		if err = c.Watch(&source.Kind{Type: &v1alpha1.Trigger{}}, &handler.EnqueueRequestForObject{}); err != nil {
+			return nil, err
+		}
+
+		return c, nil
+	}
+}
+
+func (r *reconciler) InjectClient(c client.Client) error {
+	r.client = c
+	return nil
+}
+
+func (r *reconciler) InjectConfig(c *rest.Config) error {
+	r.restConfig = c
+	var err error
+	r.dynamicClient, err = dynamic.NewForConfig(c)
+	return err
+}
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Trigger resource
@@ -383,7 +445,7 @@ func newVirtualService(t *v1alpha1.Trigger, svc *corev1.Service) *istiov1alpha3.
 		},
 		Spec: istiov1alpha3.VirtualServiceSpec{
 			Hosts: []string{
-				controller.ServiceHostName(svc.Name, svc.Namespace),
+				names.ServiceHostName(svc.Name, svc.Namespace),
 			},
 			Http: []istiov1alpha3.HTTPRoute{{
 				Rewrite: &istiov1alpha3.HTTPRewrite{
