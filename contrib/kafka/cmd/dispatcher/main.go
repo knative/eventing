@@ -31,7 +31,7 @@ import (
 	provisionerController "github.com/knative/eventing/contrib/kafka/pkg/controller"
 	"github.com/knative/eventing/contrib/kafka/pkg/dispatcher"
 	"github.com/knative/eventing/pkg/sidecar/configmap/watcher"
-	"github.com/knative/eventing/pkg/system"
+	"github.com/knative/pkg/system"
 )
 
 func main() {

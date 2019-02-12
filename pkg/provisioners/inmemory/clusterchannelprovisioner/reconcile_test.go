@@ -35,8 +35,8 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	util "github.com/knative/eventing/pkg/provisioners"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
-	"github.com/knative/eventing/pkg/system"
-	_ "github.com/knative/eventing/pkg/system/testing"
+	"github.com/knative/pkg/system"
+	_ "github.com/knative/pkg/system/testing"
 )
 
 const (

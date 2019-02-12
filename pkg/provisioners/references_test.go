@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"testing"
 
-	_ "github.com/knative/eventing/pkg/system/testing"
+	_ "github.com/knative/pkg/system/testing"
 )
 
 const (

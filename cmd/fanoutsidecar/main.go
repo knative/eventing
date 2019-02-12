@@ -31,7 +31,7 @@ import (
 	"github.com/knative/eventing/pkg/sidecar/configmap/filesystem"
 	"github.com/knative/eventing/pkg/sidecar/configmap/watcher"
 	"github.com/knative/eventing/pkg/sidecar/swappable"
-	"github.com/knative/eventing/pkg/system"
+	"github.com/knative/pkg/system"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/client-go/kubernetes"

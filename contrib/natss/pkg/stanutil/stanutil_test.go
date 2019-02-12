@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/knative/eventing/pkg/provisioners"
-	_ "github.com/knative/eventing/pkg/system/testing"
+	_ "github.com/knative/pkg/system/testing"
 	"github.com/nats-io/nats-streaming-server/server"
 	"go.uber.org/zap"
 )
