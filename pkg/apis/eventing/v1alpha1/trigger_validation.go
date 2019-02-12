@@ -32,8 +32,8 @@ func (ts *TriggerSpec) Validate() *apis.FieldError {
 		errs = errs.Also(fe)
 	}
 
-	if ts.Filter == nil {
-		fe := apis.ErrMissingField("filters")
+	if ts.Type == "" {
+		fe := apis.ErrMissingField("type")
 		errs = errs.Also(fe)
 	}
 

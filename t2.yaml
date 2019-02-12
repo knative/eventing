@@ -5,12 +5,10 @@ metadata:
 spec:
   # Our Cloud Event parsing library seems to have a bug and forces to put type and source in double
   # quotes (as it thinks the actual value is `"foo"`, not `foo`).
-  filter:
-    headers:
-      Ce-Eventtype: '"com.example.someevent"'
-      Ce-Source: '"/mycontext/subcontext"'
+  type: '"com.example.someevent"'
   subscriber:
     ref:
      apiVersion: serving.knative.dev/v1alpha1
      kind: Service
      name: message-dumper
+

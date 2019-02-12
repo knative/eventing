@@ -23,7 +23,6 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -99,12 +98,14 @@ func (r *Receiver) getTrigger(ctx context.Context, ref provisioners.ChannelRefer
 }
 
 func (r *Receiver) shouldSendMessage(t *eventingv1alpha1.TriggerSpec, m *provisioners.Message) bool {
-	// This conversion to selector should be done only once, possibly upon creation of the trigger
-	// in case the filters are immutable. All validations should be performed then.
-	selector := labels.SelectorFromValidatedSet(labels.Set(t.Filter.Headers))
-	matched := selector.Matches(labels.Set(m.Headers))
-	if !matched {
-		r.logger.Debug("Selector did not match message headers", zap.String("selector", selector.String()), zap.Any("headers", m.Headers))
+	// TODO More filtering!
+	if t.Type != Any && t.Type != m.Headers["Ce-Eventtype"] {
+		r.logger.Debug("Wrong type", zap.String("trigger.spec.type", t.Type), zap.String("message.type", m.Headers["Ce-Eventtype"]), zap.Any("m", m))
+		return false
 	}
-	return matched
+	if t.Source != "" && t.Source != m.Headers["Ce-Source"] {
+		r.logger.Debug("Wrong source", zap.String("trigger.spec.source", t.Source), zap.String("message.source", m.Headers["Ce-Source"]))
+		return false
+	}
+	return true
 }
