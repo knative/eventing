@@ -37,10 +37,13 @@ const clientID = "knative-natss-dispatcher"
 type SubscriptionsSupervisor struct {
 	logger *zap.Logger
 
-	receiver            *provisioners.MessageReceiver
-	dispatcher          *provisioners.MessageDispatcher
-	connect             chan struct{}
-	natssURL            string
+	receiver   *provisioners.MessageReceiver
+	dispatcher *provisioners.MessageDispatcher
+	connect    chan struct{}
+	natssURL   string
+	// subscriptionsMux is used to protect updates of subscriptions, natssConn and natssConnInProgress
+	// Dispatcher now dynamically reconnects to NATSS and subscriptionsMux mutex is used
+	// to protect the transition from not connected to connected states.
 	subscriptionsMux    sync.Mutex
 	subscriptions       map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription
 	natssConn           *stan.Conn
@@ -103,13 +106,14 @@ func (s *SubscriptionsSupervisor) connectWithRetry() {
 	// re-attempting evey 60 seconds until the connection is established.
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
-	s.subscriptionsMux.Lock()
-	defer s.subscriptionsMux.Unlock()
 	for {
 		nConn, err := stanutil.Connect(clusterchannelprovisioner.ClusterId, clientID, s.natssURL, s.logger.Sugar())
 		if err == nil {
+			// Locking here in order to reduce time in locked state
+			s.subscriptionsMux.Lock()
 			s.natssConn = nConn
 			s.natssConnInProgress = false
+			s.subscriptionsMux.Unlock()
 			return
 		}
 		s.logger.Sugar().Errorf("Connect() failed with error: %+v, retrying in 60 seconds", err)
