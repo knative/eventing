@@ -36,11 +36,11 @@ spec:
         ]
         env:
           - name: INGRESS_IMAGE
-            value: github.com/knative/eventing/pkg/provisioners/broker/ingress
+            value: github.com/knative/eventing/cmd/broker/ingress
           - name: INGRESS_SERVICE_ACCOUNT
             value: default
           - name: FILTER_IMAGE
-            value: github.com/knative/eventing/pkg/provisioners/broker/filter
+            value: github.com/knative/eventing/cmd/broker/filter
           - name: FILTER_SERVICE_ACCOUNT
             value: broker-filter
         volumeMounts:
