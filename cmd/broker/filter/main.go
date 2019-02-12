@@ -20,8 +20,8 @@ import (
 	"flag"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/broker"
 	"github.com/knative/eventing/pkg/provisioners"
-	"github.com/knative/eventing/pkg/provisioners/broker"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
