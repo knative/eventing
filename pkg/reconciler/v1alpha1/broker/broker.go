@@ -36,7 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/knative/eventing/pkg/provisioners/broker/resources"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
 
 	"go.uber.org/zap"
 
