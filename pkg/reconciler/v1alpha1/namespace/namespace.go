@@ -84,10 +84,6 @@ func ProvideController(logger *zap.Logger) func(manager.Manager) (controller.Con
 		}
 
 		// Watch all the resources that this reconciler reconciles.
-		if err = c.Watch(&source.Kind{Type: &v1alpha1.Broker{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &namespaceMapper{}}); err != nil {
-			return nil, err
-		}
-
 		for _, t := range []runtime.Object{ &v1alpha1.Broker{} } {
 			err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &namespaceMapper{}});
 			if err != nil {
