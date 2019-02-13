@@ -45,7 +45,7 @@ const (
 	controllerAgentName = "knative-eventing-namespace-controller"
 
 	defaultBroker             = "default"
-	knativeEventingAnnotation = "eventing.knative.dev/injection"
+	knativeEventingAnnotation = "eventing.knative.dev/inject"
 
 	// Name of the corev1.Events emitted from the reconciliation process.
 	brokerCreated = "BrokerCreated"
