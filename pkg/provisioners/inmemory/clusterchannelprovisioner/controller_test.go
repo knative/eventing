@@ -18,6 +18,9 @@ package clusterchannelprovisioner
 
 import (
 	"fmt"
+	"strings"
+	"testing"
+
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -28,8 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/types"
-	"strings"
-	"testing"
 )
 
 type FakeManager struct {
