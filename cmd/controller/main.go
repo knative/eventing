@@ -24,7 +24,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/knative/eventing/pkg/provisioners/namespace"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/subscription"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger"
