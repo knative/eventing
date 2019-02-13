@@ -28,7 +28,7 @@ type Heartbeat struct {
 }
 
 func handler(ctx context.Context, data map[string]interface{}) {
-	metadata := cloudevents.FromContext(ctx)
+	metadata := cloudevents.FromContext(ctx).AsV01()
 	log.Printf("[%s] %s %s: %+v", metadata.EventTime.Format(time.RFC3339), metadata.ContentType, metadata.Source, data)
 }
 
