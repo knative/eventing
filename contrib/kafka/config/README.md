@@ -74,7 +74,7 @@ The Channel Controller Config Map is used to configure the `bootstrap_servers`
 of your Apache Kafka installation:
 
 ```shell
-kubectl get configmap -n knative-eventing kafka-channel-dispatcher-config-map
+kubectl get configmap -n knative-eventing kafka-channel-controller-config
 ```
 
 The Channel Dispatcher receives and distributes all events:
