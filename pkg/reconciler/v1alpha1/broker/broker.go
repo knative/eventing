@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"k8s.io/apimachinery/pkg/runtime"
+	"time"
 
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
@@ -106,7 +107,7 @@ func ProvideController(logger *zap.Logger, ingressImage, ingressServiceAccount, 
 		}
 
 		// Watch all the resources that the Broker reconciles.
-		for _, t := range []runtime.Object{ &v1alpha1.Channel{}, &corev1.Service{}, &v1.Deployment{} } {
+		for _, t := range []runtime.Object{&v1alpha1.Channel{}, &corev1.Service{}, &v1.Deployment{}} {
 			err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Broker{}, IsController: true})
 			if err != nil {
 				return nil, err
@@ -151,9 +152,11 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	// Reconcile this copy of the Broker and then write back any status updates regardless of
 	// whether the reconcile error out.
-	reconcileErr := r.reconcile(ctx, broker)
+	result, reconcileErr := r.reconcile(ctx, broker)
 	if reconcileErr != nil {
 		logging.FromContext(ctx).Error("Error reconciling Broker", zap.Error(reconcileErr))
+	} else if result.Requeue || result.RequeueAfter > 0  {
+		logging.FromContext(ctx).Debug("Broker reconcile requeuing")
 	} else {
 		logging.FromContext(ctx).Debug("Broker reconciled")
 		r.recorder.Event(broker, corev1.EventTypeNormal, brokerReconciled, "Broker reconciled")
@@ -166,10 +169,10 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	// Requeue if the resource is not ready:
-	return reconcile.Result{}, reconcileErr
+	return result, reconcileErr
 }
 
-func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
+func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) (reconcile.Result, error) {
 	b.Status.InitializeConditions()
 
 	// 1. Channel is created for all events.
@@ -179,48 +182,48 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 
 	if b.DeletionTimestamp != nil {
 		// Everything is cleaned up by the garbage collector.
-		return nil
+		return reconcile.Result{}, nil
 	}
 
 	c, err := r.reconcileChannel(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling the channel", zap.Error(err))
 		b.Status.MarkChannelFailed(err)
-		return err
+		return reconcile.Result{}, err
 	} else if c.Status.Address.Hostname == "" {
 		logging.FromContext(ctx).Info("Channel is not yet ready", zap.Any("c", c))
-		// TODO Just re-enqueue, don't return an error
-		return nil
+		// Give the Channel some time to get its address. One second was chosen arbitrarily.
+		return reconcile.Result{RequeueAfter: time.Second}, nil
 	}
 	b.Status.MarkChannelReady()
 
 	_, err = r.reconcileFilterDeployment(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling filter deployment", zap.Error(err))
-		return err
+		return reconcile.Result{}, err
 	}
 	_, err = r.reconcileFilterService(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling filter service", zap.Error(err))
-		return err
+		return reconcile.Result{}, err
 	}
 	b.Status.MarkFilterReady()
 
 	_, err = r.reconcileIngressDeployment(ctx, b, c)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling ingress deployment", zap.Error(err))
-		return err
+		return reconcile.Result{}, err
 	}
 
 	svc, err := r.reconcileIngressService(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling ingress Service", zap.Error(err))
-		return err
+		return reconcile.Result{}, err
 	}
 	b.Status.MarkIngressReady()
 	b.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
 
-	return nil
+	return reconcile.Result{}, nil
 }
 
 // updateStatus may in fact update the broker's finalizers in addition to the status
@@ -420,15 +423,12 @@ func (r *reconciler) reconcileService(ctx context.Context, svc *corev1.Service) 
 }
 
 func (r *reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1.Broker, c *v1alpha1.Channel) (*v1.Deployment, error) {
-	expected, err := resources.MakeIngress(&resources.IngressArgs{
+	expected := resources.MakeIngress(&resources.IngressArgs{
 		Broker:             b,
 		Image:              r.ingressImage,
 		ServiceAccountName: r.ingressServiceAccountName,
 		ChannelAddress:     c.Status.Address.Hostname,
 	})
-	if err != nil {
-		return nil, err
-	}
 	return r.reconcileDeployment(ctx, expected)
 }
 
