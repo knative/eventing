@@ -17,6 +17,7 @@ limitations under the License.
 package dispatcher
 
 import (
+	"encoding/json"
 	"sync"
 	"time"
 
@@ -67,7 +68,12 @@ func createReceiverFunction(s *SubscriptionsSupervisor, logger *zap.SugaredLogge
 		logger.Infof("Received message from %q channel", channel.String())
 		// publish to Natss
 		ch := getSubject(channel)
-		if err := stanutil.Publish(s.natssConn, ch, &m.Payload, logger); err != nil {
+		message, err := json.Marshal(m)
+		if err != nil {
+			logger.Errorf("Error during marshaling of the message: %v", err)
+			return err
+		}
+		if err := stanutil.Publish(s.natssConn, ch, &message, logger); err != nil {
 			logger.Errorf("Error during publish: %v", err)
 			return err
 		}
@@ -143,10 +149,11 @@ func (s *SubscriptionsSupervisor) subscribe(channel provisioners.ChannelReferenc
 	s.logger.Info("Subscribe to channel:", zap.Any("channel", channel), zap.Any("subscription", subscription))
 
 	mcb := func(msg *stan.Msg) {
-		s.logger.Sugar().Infof("NATSS message received from subject: %v; sequence: %v; timestamp: %v", msg.Subject, msg.Sequence, msg.Timestamp)
-		message := provisioners.Message{
-			Headers: map[string]string{},
-			Payload: []byte(msg.Data),
+		s.logger.Sugar().Infof("NATSS message received from subject: %v; sequence: %v; timestamp: %v, data: %s", msg.Subject, msg.Sequence, msg.Timestamp, string(msg.Data))
+		message := provisioners.Message{}
+		if err := json.Unmarshal(msg.Data, &message); err != nil {
+			s.logger.Error("Failed to unmarshal message: ", zap.Error(err))
+			return
 		}
 		if err := s.dispatcher.DispatchMessage(&message, subscription.SubscriberURI, subscription.ReplyURI, provisioners.DispatchDefaults{Namespace: subscription.Namespace}); err != nil {
 			s.logger.Error("Failed to dispatch message: ", zap.Error(err))
@@ -159,13 +166,13 @@ func (s *SubscriptionsSupervisor) subscribe(channel provisioners.ChannelReferenc
 	// subscribe to a NATSS subject
 	ch := getSubject(channel)
 	sub := subscription.String()
-	if natssSub, err := (*s.natssConn).Subscribe(ch, mcb, stan.DurableName(sub), stan.SetManualAckMode(), stan.AckWait(1*time.Minute)); err != nil {
+	natssSub, err := (*s.natssConn).Subscribe(ch, mcb, stan.DurableName(sub), stan.SetManualAckMode(), stan.AckWait(1*time.Minute))
+	if err != nil {
 		s.logger.Error(" Create new NATSS Subscription failed: ", zap.Error(err))
 		return nil, err
-	} else {
-		s.logger.Sugar().Infof("NATSS Subscription created: %+v", natssSub)
-		return &natssSub, nil
 	}
+	s.logger.Sugar().Infof("NATSS Subscription created: %+v", natssSub)
+	return &natssSub, nil
 }
 
 // should be called only while holding subscriptionsMux

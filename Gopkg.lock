@@ -651,7 +651,7 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:85674ac609b704fd4e9f463553b6ffc3a3527a993ae0ba550eb56beaabdfe094"
+  digest = "1:9368dabe955bb73491890133c1dd1ad212f16a7c47e26b331b5db0a5edbc38af"
   name = "go.uber.org/zap"
   packages = [
     ".",
@@ -660,6 +660,7 @@
     "internal/color",
     "internal/exit",
     "zapcore",
+    "zaptest/observer",
   ]
   pruneopts = "NUT"
   revision = "ff33455a0e382e8a81d14dd7c922020b6b5e7982"
@@ -1239,6 +1240,7 @@
     "go.uber.org/atomic",
     "go.uber.org/zap",
     "go.uber.org/zap/zapcore",
+    "go.uber.org/zap/zaptest/observer",
     "golang.org/x/oauth2/google",
     "golang.org/x/sync/errgroup",
     "google.golang.org/api/option",
