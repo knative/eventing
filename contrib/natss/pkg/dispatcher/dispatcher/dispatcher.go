@@ -149,7 +149,7 @@ func (s *SubscriptionsSupervisor) subscribe(channel provisioners.ChannelReferenc
 	s.logger.Info("Subscribe to channel:", zap.Any("channel", channel), zap.Any("subscription", subscription))
 
 	mcb := func(msg *stan.Msg) {
-		s.logger.Sugar().Infof("NATSS message received from subject: %v; sequence: %v; timestamp: %v", msg.Subject, msg.Sequence, msg.Timestamp)
+		s.logger.Sugar().Infof("NATSS message received from subject: %v; sequence: %v; timestamp: %v, data: %s", msg.Subject, msg.Sequence, msg.Timestamp, string(msg.Data))
 		message := provisioners.Message{}
 		if err := json.Unmarshal(msg.Data, &message); err != nil {
 			s.logger.Error("Failed to unmarshal message: ", zap.Error(err))
