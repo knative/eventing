@@ -19,6 +19,7 @@ package trigger
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
@@ -87,10 +88,22 @@ func ProvideController(logger *zap.Logger) func(manager.Manager) (controller.Con
 			return nil, err
 		}
 
-		// Watch Subscription events and enqueue Subscription object key.
+		// Watch Triggers.
 		if err = c.Watch(&source.Kind{Type: &v1alpha1.Trigger{}}, &handler.EnqueueRequestForObject{}); err != nil {
 			return nil, err
 		}
+
+		// Watch all the resources that the Trigger reconciles.
+		for _, t := range []runtime.Object{ &corev1.Service{}, &istiov1alpha3.VirtualService{}, &v1alpha1.Subscription{} } {
+			err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Broker{}, IsController: true})
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		// TODO reconcile after a Broker change. This might require keeping a map from Broker -> []Trigger.
+		// TODO reconcile after a change to the subscriber. I'm not sure how this is possible, but we should do it if we
+		// can find a way.
 
 		return c, nil
 	}

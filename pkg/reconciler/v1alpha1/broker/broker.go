@@ -19,6 +19,7 @@ package broker
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
@@ -99,16 +100,17 @@ func ProvideController(logger *zap.Logger, ingressImage, ingressServiceAccount, 
 			return nil, err
 		}
 
-		// Watch Subscription events and enqueue Subscription object key.
+		// Watch Brokers.
 		if err = c.Watch(&source.Kind{Type: &v1alpha1.Broker{}}, &handler.EnqueueRequestForObject{}); err != nil {
 			return nil, err
 		}
 
-		err = c.Watch(&source.Kind{
-			Type: &v1alpha1.Channel{},
-		}, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Broker{}, IsController: true})
-		if err != nil {
-			return nil, err
+		// Watch all the resources that the Broker reconciles.
+		for _, t := range []runtime.Object{ &v1alpha1.Channel{}, &corev1.Service{}, &v1.Deployment{} } {
+			err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Broker{}, IsController: true})
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		return c, nil
@@ -261,14 +263,11 @@ func (r *reconciler) updateStatus(broker *v1alpha1.Broker) (*v1alpha1.Broker, er
 }
 
 func (r *reconciler) reconcileFilterDeployment(ctx context.Context, b *v1alpha1.Broker) (*v1.Deployment, error) {
-	expected, err := resources.MakeFilterDeployment(&resources.FilterArgs{
+	expected := resources.MakeFilterDeployment(&resources.FilterArgs{
 		Broker:             b,
 		Image:              r.filterImage,
 		ServiceAccountName: r.filterServiceAccountName,
 	})
-	if err != nil {
-		return nil, err
-	}
 	return r.reconcileDeployment(ctx, expected)
 }
 
