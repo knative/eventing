@@ -26,6 +26,6 @@ func (ts *TriggerSpec) SetDefaults() {
 	}
 	// Make a default filter that allows anything.
 	if ts.Filter == nil {
-		ts.Filter = &TriggerFilter{TriggerFilterAttributes{Type: "", Source: ""}}
+		ts.Filter = &TriggerFilter{&TriggerFilterAttributes{Type: TriggerAnyFilter, Source: TriggerAnyFilter}}
 	}
 }

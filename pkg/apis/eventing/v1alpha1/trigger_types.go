@@ -67,7 +67,7 @@ type TriggerSpec struct {
 }
 
 type TriggerFilter struct {
-	ExactMatch TriggerFilterAttributes `json:"exactMatch,omitempty"`
+	ExactMatch *TriggerFilterAttributes `json:"exactMatch,omitempty"`
 }
 
 type TriggerFilterAttributes struct {
@@ -106,6 +106,9 @@ const (
 	TriggerConditionVirtualService duckv1alpha1.ConditionType = "VirtualService"
 
 	TriggerConditionSubscribed duckv1alpha1.ConditionType = "Subscribed"
+
+	// Constant to represent that we should allow anything.
+	TriggerAnyFilter = "Any"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.

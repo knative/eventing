@@ -37,6 +37,11 @@ func (ts *TriggerSpec) Validate() *apis.FieldError {
 		errs = errs.Also(fe)
 	}
 
+	if ts.Filter.ExactMatch == nil {
+		fe := apis.ErrMissingField("filter.exactMatch")
+		errs = errs.Also(fe)
+	}
+
 	if isSubscriberSpecNilOrEmpty(ts.Subscriber) {
 		fe := apis.ErrMissingField("subscriber")
 		errs = errs.Also(fe)

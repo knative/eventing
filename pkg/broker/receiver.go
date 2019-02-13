@@ -28,10 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-const (
-	Any = ""
-)
-
 // Receiver parses Cloud Events and sends them to the channel.
 type Receiver struct {
 	logger *zap.Logger
@@ -99,12 +95,12 @@ func (r *Receiver) getTrigger(ctx context.Context, ref provisioners.ChannelRefer
 
 func (r *Receiver) shouldSendMessage(ts *eventingv1alpha1.TriggerSpec, m *provisioners.Message) bool {
 	filterType := ts.Filter.ExactMatch.Type
-	if filterType != Any && filterType != m.Headers["Ce-Eventtype"] {
+	if filterType != eventingv1alpha1.TriggerAnyFilter && filterType != m.Headers["Ce-Eventtype"] {
 		r.logger.Debug("Wrong type", zap.String("trigger.spec.filter.exactMatch.type", filterType), zap.String("message.type", m.Headers["Ce-Eventtype"]))
 		return false
 	}
 	filterSource := ts.Filter.ExactMatch.Source
-	if filterSource != Any && filterSource != m.Headers["Ce-Source"] {
+	if filterSource != eventingv1alpha1.TriggerAnyFilter && filterSource != m.Headers["Ce-Source"] {
 		r.logger.Debug("Wrong source", zap.String("trigger.spec.filter.exactMatch.source", filterSource), zap.String("message.source", m.Headers["Ce-Source"]))
 		return false
 	}
