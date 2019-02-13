@@ -99,11 +99,12 @@ func TestMain(m *testing.M) {
 	for !ready {
 		select {
 		case <-ticker.C:
-			s.subscriptionsMux.Lock()
-			if s.natssConn != nil && (*s.natssConn).NatsConn().IsConnected() {
+			s.natssConnMux.Lock()
+			currentNatssConn := s.natssConn
+			s.natssConnMux.Unlock()
+			if currentNatssConn != nil && (*currentNatssConn).NatsConn().IsConnected() {
 				ready = true
 			}
-			s.subscriptionsMux.Unlock()
 			continue
 		case <-expire.C:
 			logger.Fatalf("Failed to connect to NATSS!")
