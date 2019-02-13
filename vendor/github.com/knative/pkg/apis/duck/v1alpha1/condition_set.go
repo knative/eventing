@@ -280,7 +280,7 @@ func (r conditionsImpl) MarkUnknown(t ConditionType, reason, messageFormat strin
 			// Double check that the happy condition is also false.
 			happy := r.GetCondition(r.happy)
 			if !happy.IsFalse() {
-				r.MarkFalse(r.happy, reason, messageFormat, messageA)
+				r.MarkFalse(r.happy, reason, messageFormat, messageA...)
 			}
 			return
 		}
@@ -324,9 +324,10 @@ func (r conditionsImpl) MarkFalse(t ConditionType, reason, messageFormat string,
 // InitializeConditions updates all Conditions in the ConditionSet to Unknown
 // if not set.
 func (r conditionsImpl) InitializeConditions() {
-	for _, t := range append(r.dependents, r.happy) {
+	for _, t := range r.dependents {
 		r.InitializeCondition(t)
 	}
+	r.InitializeCondition(r.happy)
 }
 
 // InitializeCondition updates a Condition to Unknown if not set.

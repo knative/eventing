@@ -91,11 +91,12 @@ required = [
   name = "golang.org/x/oauth2"
   revision = "cdc340f7c179dbbfa4afd43b7614e8fcadde4269"
 
-# TODO why is this overridden?
+# Deliberately upgrade knative/pkg -- this is not versioned per se, and
+# we don't want to constantly fetch the latest during other changes.
 [[override]]
   name = "github.com/knative/pkg"
-  # HEAD as of 2019-01-16
-  revision = "d3a9e54be7d4213b4018135d82b586de45f6a694"
+  # HEAD as of 2019-02-12
+  revision = "1982208dd91a4cc4fea9612e4e72fb109c77ab22"
 
 [[constraint]]
   name = "github.com/knative/serving"
