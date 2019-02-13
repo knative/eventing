@@ -35,7 +35,7 @@ type IngressArgs struct {
 	ChannelAddress     string
 }
 
-func MakeIngress(args *IngressArgs) (*appsv1.Deployment, error) {
+func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: args.Broker.Namespace,
@@ -47,6 +47,7 @@ func MakeIngress(args *IngressArgs) (*appsv1.Deployment, error) {
 					Kind:    "Broker",
 				}),
 			},
+			Labels: ingressLabels(args.Broker),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
@@ -80,7 +81,7 @@ func MakeIngress(args *IngressArgs) (*appsv1.Deployment, error) {
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 func MakeIngressService(b *eventingv1alpha1.Broker) *corev1.Service {

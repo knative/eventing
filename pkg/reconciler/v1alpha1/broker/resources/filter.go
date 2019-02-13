@@ -46,6 +46,7 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 					Kind:    "Broker",
 				}),
 			},
+			Labels: filterLabels(args.Broker),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{

@@ -150,7 +150,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Namespace not found",
 		},
 		{
-			Name:   "Namespace get fails",
+			Name:   "Namespace.Get fails",
 			Scheme: scheme.Scheme,
 			Mocks: controllertesting.Mocks{
 				MockGets: []controllertesting.MockGet{

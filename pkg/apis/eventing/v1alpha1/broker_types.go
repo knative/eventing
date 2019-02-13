@@ -139,9 +139,9 @@ func (bs *BrokerStatus) MarkFilterReady() {
 func (bs *BrokerStatus) SetAddress(hostname string) {
 	bs.Address.Hostname = hostname
 	if hostname != "" {
-		chanCondSet.Manage(bs).MarkTrue(BrokerConditionAddressable)
+		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionAddressable)
 	} else {
-		chanCondSet.Manage(bs).MarkFalse(BrokerConditionAddressable, "emptyHostname", "hostname is the empty string")
+		brokerCondSet.Manage(bs).MarkFalse(BrokerConditionAddressable, "emptyHostname", "hostname is the empty string")
 	}
 }
 
