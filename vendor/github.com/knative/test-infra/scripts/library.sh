@@ -27,7 +27,7 @@ readonly KNATIVE_BASE_YAML_SOURCE=https://storage.googleapis.com/knative-nightly
 readonly KNATIVE_ISTIO_CRD_YAML=${KNATIVE_BASE_YAML_SOURCE/@/serving}/istio-crds.yaml
 readonly KNATIVE_ISTIO_YAML=${KNATIVE_BASE_YAML_SOURCE/@/serving}/istio.yaml
 readonly KNATIVE_SERVING_RELEASE=${KNATIVE_BASE_YAML_SOURCE/@/serving}/serving.yaml
-readonly KNATIVE_BUILD_RELEASE=${KNATIVE_BASE_YAML_SOURCE/@/build}/release.yaml
+readonly KNATIVE_BUILD_RELEASE=${KNATIVE_BASE_YAML_SOURCE/@/build}/build.yaml
 readonly KNATIVE_EVENTING_RELEASE=${KNATIVE_BASE_YAML_SOURCE/@/eventing}/release.yaml
 
 # Conveniently set GOPATH if unset
@@ -357,10 +357,11 @@ function run_lint_tool() {
 # Check links in the given markdown files.
 # Parameters: $1...$n - files to inspect
 function check_links_in_markdown() {
-  # https://github.com/tcort/markdown-link-check
-  local config="${REPO_ROOT_DIR}/test/markdown-link-check-config.json"
-  [[ ! -e ${config} ]] && config="${_TEST_INFRA_SCRIPTS_DIR}/markdown-link-check-config.json"
-  run_lint_tool markdown-link-check "checking links in markdown files" "-c ${config} -q" $@
+  # https://github.com/raviqqe/liche
+  local config="${REPO_ROOT_DIR}/test/markdown-link-check-config.rc"
+  [[ ! -e ${config} ]] && config="${_TEST_INFRA_SCRIPTS_DIR}/markdown-link-check-config.rc"
+  local options="$(grep '^-' ${config} | tr \"\n\" ' ')"
+  run_lint_tool liche "checking links in markdown files" "-d ${REPO_ROOT_DIR} ${options}" $@
 }
 
 # Check format of the given markdown files.

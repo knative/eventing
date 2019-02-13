@@ -34,7 +34,7 @@ type FilterArgs struct {
 	ServiceAccountName string
 }
 
-func MakeFilterDeployment(args *FilterArgs) (*appsv1.Deployment, error) {
+func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: args.Broker.Namespace,
@@ -75,7 +75,7 @@ func MakeFilterDeployment(args *FilterArgs) (*appsv1.Deployment, error) {
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 func MakeFilterService(b *eventingv1alpha1.Broker) *corev1.Service {
