@@ -18,7 +18,6 @@ package broker
 
 import (
 	"context"
-	"errors"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -28,10 +27,9 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"k8s.io/client-go/kubernetes/scheme"
 
-	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/fakepubsub"
 	"go.uber.org/zap"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -63,7 +61,6 @@ func init() {
 func TestReceiver(t *testing.T) {
 	testCases := map[string]struct {
 		initialState []runtime.Object
-		pubSubData   fakepubsub.CreatorData
 		expectedErr  bool
 	}{
 		"can't get channel": {
@@ -98,9 +95,6 @@ func TestReceiver(t *testing.T) {
 				testcreds.MakeSecretWithCreds(),
 				makeChannel(),
 			},
-			pubSubData: fakepubsub.CreatorData{
-				ClientCreateErr: errors.New("testInducedError"),
-			},
 			expectedErr: true,
 		},
 		"Publish fails": {
@@ -108,22 +102,7 @@ func TestReceiver(t *testing.T) {
 				testcreds.MakeSecretWithCreds(),
 				makeChannel(),
 			},
-			pubSubData: fakepubsub.CreatorData{
-				ClientData: fakepubsub.ClientData{
-					TopicData: fakepubsub.TopicData{
-						Publish: fakepubsub.PublishResultData{
-							Err: errors.New("testInducedError"),
-						},
-					},
-				},
-			},
 			expectedErr: true,
-		},
-		"Publish succeeds": {
-			initialState: []runtime.Object{
-				testcreds.MakeSecretWithCreds(),
-				makeChannel(),
-			},
 		},
 	}
 	for n, tc := range testCases {
@@ -133,7 +112,7 @@ func TestReceiver(t *testing.T) {
 				fake.NewFakeClient(tc.initialState...))
 			resp := httptest.NewRecorder()
 			req := httptest.NewRequest("POST", "/", strings.NewReader(validMessage))
-			req.Host = "test-channel.test-namespace.channels.cluster.local"
+			req.Host = "test-trigger.test-namespace.triggers.cluster.local"
 			mr.newMessageReceiver().HandleRequest(resp, req)
 			if tc.expectedErr {
 				if resp.Result().StatusCode >= 200 && resp.Result().StatusCode < 300 {
