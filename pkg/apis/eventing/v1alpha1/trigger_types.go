@@ -61,15 +61,18 @@ type TriggerSpec struct {
 	Broker string `json:"broker,omitempty"`
 
 	// +optional
-	Filter *FilterSelector `json:"filter,omitempty"`
+	Filter *TriggerFilter `json:"filter,omitempty"`
 
 	Subscriber *SubscriberSpec `json:"subscriber,omitempty"`
 }
 
-type FilterSelector struct {
-	Attributes map[string]string `json:"attributes,omitempty" protobuf:"bytes,1,rep,name=attributes"`
-	// TODO create our own FilterSelectorRequirement
-	AttributeExpressions []metav1.LabelSelectorRequirement `json:"attributeExpressions,omitempty" protobuf:"bytes,2,rep,name=attributeExpressions"`
+type TriggerFilter struct {
+	ExactMatch TriggerFilterAttributes `json:"exactMatch,omitempty"`
+}
+
+type TriggerFilterAttributes struct {
+	Type   string `json:"type,omitempty"`
+	Source string `json:"source,omitempty"`
 }
 
 var triggerCondSet = duckv1alpha1.NewLivingConditionSet(TriggerConditionBrokerExists, TriggerConditionKubernetesService, TriggerConditionVirtualService, TriggerConditionSubscribed)
