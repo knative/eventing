@@ -104,7 +104,7 @@ func TestSubscribeUnsubscribe(t *testing.T) {
 	logger.Info("TestSubscribeUnsubscribe()")
 
 	cRef := provisioners.ChannelReference{Namespace: "test_namespace", Name: "test_channel"}
-	sRef := subscriptionReference{Name: "sub_name", Namespace: "sub_namespace", SubscriberURI: "", ReplyURI: ""}
+	sRef := subscriptionReference{Name: "sub_name_2", Namespace: "sub_namespace_2", SubscriberURI: "", ReplyURI: ""}
 
 	// subscribe to a channel
 	if _, err := s.subscribe(cRef, sRef); err != nil {
@@ -125,6 +125,12 @@ func TestMalformedMessage(t *testing.T) {
 	if _, err := s.subscribe(cRef, sRef); err != nil {
 		t.Errorf("Subscribe to NATSS failed: %v", err)
 	}
+	defer func() {
+		if err := s.unsubscribe(cRef, sRef); err != nil {
+			t.Errorf("Close subscription to NATSS failed: %v", err)
+		}
+	}()
+
 	m := &provisioners.Message{
 		Headers: map[string]string{"header1": "value1", "header2": "value2"},
 		Payload: []byte{'1', '2', '3', '4', '5'},
