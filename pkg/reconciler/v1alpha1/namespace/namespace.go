@@ -47,7 +47,7 @@ const (
 	defaultBroker             = "default"
 	knativeEventingAnnotation = "eventing.knative.dev/injection"
 
-	// Name of the corev1.Events emitted from the reconciliation process
+	// Name of the corev1.Events emitted from the reconciliation process.
 	brokerCreated = "BrokerCreated"
 )
 
