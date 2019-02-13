@@ -19,9 +19,10 @@ package subscription
 import (
 	"context"
 	"fmt"
+	"net/url"
+
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
-	"net/url"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -91,7 +92,6 @@ func ProvideController(mgr manager.Manager) (controller.Controller, error) {
 
 	return c, nil
 }
-
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Subscription resource
@@ -488,7 +488,6 @@ func removeFinalizer(sub *v1alpha1.Subscription) {
 	finalizers.Delete(finalizerName)
 	sub.Finalizers = finalizers.List()
 }
-
 
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
