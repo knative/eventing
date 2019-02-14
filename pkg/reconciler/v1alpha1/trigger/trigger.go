@@ -112,7 +112,7 @@ func ProvideController(logger *zap.Logger) func(manager.Manager) (controller.Con
 			}
 		}
 
-		if err = c.Watch(&source.Kind{Type: &v1alpha1.Channel{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &mapAllTriggers{r}}); err != nil {
+		if err = c.Watch(&source.Kind{Type: &v1alpha1.Broker{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &mapAllTriggers{r}}); err != nil {
 			return nil, err
 		}
 
@@ -595,9 +595,17 @@ func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.T
 	// Update Subscription if it has changed. Ignore the generation.
 	expected.Spec.DeprecatedGeneration = sub.Spec.DeprecatedGeneration
 	if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
-		sub.Spec = expected.Spec
-		err = r.client.Update(ctx, sub)
+		// Given that the backing channel spec is immutable, we cannot just update the subscription.
+		// We delete it instead, and re-create it.
+		err = r.client.Delete(ctx, sub)
 		if err != nil {
+			logging.FromContext(ctx).Info("Cannot delete subscription", zap.Error(err))
+			return nil, err
+		}
+		sub = expected
+		err = r.client.Create(ctx, sub)
+		if err != nil {
+			logging.FromContext(ctx).Info("Cannot create subscription", zap.Error(err))
 			return nil, err
 		}
 	}
