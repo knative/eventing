@@ -28,11 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-const (
-	Any = "Any"
-)
-
-// Receiver parses Cloud Events and sends them to GCP PubSub.
+// Receiver parses Cloud Events and sends them to the channel.
 type Receiver struct {
 	logger *zap.Logger
 	client client.Client
@@ -52,11 +48,11 @@ func New(logger *zap.Logger, client client.Client) (*Receiver, manager.Runnable)
 }
 
 func (r *Receiver) newMessageReceiver() *provisioners.MessageReceiver {
-	return provisioners.NewMessageReceiver(r.sendEventToTopic, r.logger.Sugar())
+	return provisioners.NewMessageReceiver(r.sendEvent, r.logger.Sugar())
 }
 
-// sendEventToTopic sends a message to the Cloud Pub/Sub Topic backing the Channel.
-func (r *Receiver) sendEventToTopic(channel provisioners.ChannelReference, message *provisioners.Message) error {
+// sendEvent sends a message to the Channel.
+func (r *Receiver) sendEvent(channel provisioners.ChannelReference, message *provisioners.Message) error {
 	r.logger.Debug("received message")
 	ctx := context.Background()
 
@@ -97,14 +93,15 @@ func (r *Receiver) getTrigger(ctx context.Context, ref provisioners.ChannelRefer
 	return t, err
 }
 
-func (r *Receiver) shouldSendMessage(t *eventingv1alpha1.TriggerSpec, m *provisioners.Message) bool {
-	// TODO More filtering!
-	if t.Type != Any && t.Type != m.Headers["Ce-Eventtype"] {
-		r.logger.Debug("Wrong type", zap.String("trigger.spec.type", t.Type), zap.String("message.type", m.Headers["Ce-Eventtype"]), zap.Any("m", m))
+func (r *Receiver) shouldSendMessage(ts *eventingv1alpha1.TriggerSpec, m *provisioners.Message) bool {
+	filterType := ts.Filter.ExactMatch.Type
+	if filterType != eventingv1alpha1.TriggerAnyFilter && filterType != m.Headers["Ce-Eventtype"] {
+		r.logger.Debug("Wrong type", zap.String("trigger.spec.filter.exactMatch.type", filterType), zap.String("message.type", m.Headers["Ce-Eventtype"]))
 		return false
 	}
-	if t.Source != "" && t.Source != m.Headers["Ce-Source"] {
-		r.logger.Debug("Wrong source", zap.String("trigger.spec.source", t.Source), zap.String("message.source", m.Headers["Ce-Source"]))
+	filterSource := ts.Filter.ExactMatch.Source
+	if filterSource != eventingv1alpha1.TriggerAnyFilter && filterSource != m.Headers["Ce-Source"] {
+		r.logger.Debug("Wrong source", zap.String("trigger.spec.filter.exactMatch.source", filterSource), zap.String("message.source", m.Headers["Ce-Source"]))
 		return false
 	}
 	return true
