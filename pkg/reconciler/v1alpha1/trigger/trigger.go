@@ -112,6 +112,7 @@ func ProvideController(logger *zap.Logger) func(manager.Manager) (controller.Con
 			}
 		}
 
+		// Watch for Broker changes.
 		if err = c.Watch(&source.Kind{Type: &v1alpha1.Broker{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &mapAllTriggers{r}}); err != nil {
 			return nil, err
 		}
