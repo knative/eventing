@@ -71,6 +71,14 @@ func NewDispatcher(natssUrl string, logger *zap.Logger) (*SubscriptionsSuperviso
 	return d, nil
 }
 
+func (s *SubscriptionsSupervisor) signalReconnect() {
+	select {
+	// Sending Connect request
+	case s.connect <- struct{}{}:
+	default:
+	}
+}
+
 func createReceiverFunction(s *SubscriptionsSupervisor, logger *zap.SugaredLogger) func(provisioners.ChannelReference, *provisioners.Message) error {
 	return func(channel provisioners.ChannelReference, m *provisioners.Message) error {
 		logger.Infof("Received message from %q channel", channel.String())
@@ -87,17 +95,12 @@ func createReceiverFunction(s *SubscriptionsSupervisor, logger *zap.SugaredLogge
 		if currentNatssConn == nil {
 			return fmt.Errorf("No Connection to NATSS")
 		}
-		if reflect.ValueOf(currentNatssConn).IsNil() {
-			// Informing SubscriptionsSupervisor to re-establish connection to NATSS.
-			s.connect <- struct{}{}
-			return fmt.Errorf("No Connection to NATSS")
-		}
 		if err := stanutil.Publish(currentNatssConn, ch, &message, logger); err != nil {
 			logger.Errorf("Error during publish: %v", err)
 			if err.Error() == stan.ErrConnectionClosed.Error() {
 				logger.Error("Connection to NATSS has been lost, attempting to reconnect.")
 				// Informing SubscriptionsSupervisor to re-establish connection to NATSS.
-				s.connect <- struct{}{}
+				s.signalReconnect()
 				return err
 			}
 			return err
@@ -111,7 +114,7 @@ func (s *SubscriptionsSupervisor) Start(stopCh <-chan struct{}) error {
 	// Starting Connect to establish connection with NATS
 	go s.Connect(stopCh)
 	// Trigger Connect to establish connection with NATS
-	s.connect <- struct{}{}
+	s.signalReconnect()
 	s.receiver.Start(stopCh)
 	return nil
 }
@@ -145,7 +148,11 @@ func (s *SubscriptionsSupervisor) Connect(stopCh <-chan struct{}) {
 	for {
 		select {
 		case <-s.connect:
-			if s.natssConn == nil && !s.natssConnInProgress {
+			s.natssConnMux.Lock()
+			currentNatssConn := s.natssConn
+			currentConnProgress := s.natssConnInProgress
+			s.natssConnMux.Unlock()
+			if currentNatssConn == nil && !currentConnProgress {
 				// Case for Initial connect, setting up InProgress to true to prevent recursion
 				s.natssConnMux.Lock()
 				s.natssConnInProgress = true
@@ -153,9 +160,12 @@ func (s *SubscriptionsSupervisor) Connect(stopCh <-chan struct{}) {
 				go s.connectWithRetry(stopCh)
 				continue
 			}
-			if !(*s.natssConn).NatsConn().IsConnected() &&
-				!(*s.natssConn).NatsConn().IsReconnecting() &&
-				!s.natssConnInProgress {
+			if reflect.ValueOf(currentNatssConn).IsNil() {
+				// Corner case when currentNatssConn is not nil but interfaces are still nil,
+				// it could happen during the transition of state handled within natss library.
+				continue
+			}
+			if !(*currentNatssConn).NatsConn().IsConnected() && !(*currentNatssConn).NatsConn().IsReconnecting() && !currentConnProgress {
 				// Case for lost connectivity, setting InProgress to true to prevent recursion
 				s.natssConnMux.Lock()
 				s.natssConnInProgress = true
@@ -253,18 +263,13 @@ func (s *SubscriptionsSupervisor) subscribe(channel provisioners.ChannelReferenc
 	if currentNatssConn == nil {
 		return nil, fmt.Errorf("No Connection to NATSS")
 	}
-	if reflect.ValueOf(currentNatssConn).IsNil() {
-		// Informing SubscriptionsSupervisor to re-establish connection to NATSS.
-		s.connect <- struct{}{}
-		return nil, fmt.Errorf("No Connection to NATSS")
-	}
 	natssSub, err := (*currentNatssConn).Subscribe(ch, mcb, stan.DurableName(sub), stan.SetManualAckMode(), stan.AckWait(1*time.Minute))
 	if err != nil {
 		s.logger.Error(" Create new NATSS Subscription failed: ", zap.Error(err))
 		if err.Error() == stan.ErrConnectionClosed.Error() {
 			s.logger.Error("Connection to NATSS has been lost, attempting to reconnect.")
 			// Informing SubscriptionsSupervisor to re-establish connection to NATS
-			s.connect <- struct{}{}
+			s.signalReconnect()
 			return nil, err
 		}
 		return nil, err
