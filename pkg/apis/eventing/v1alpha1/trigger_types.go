@@ -67,10 +67,10 @@ type TriggerSpec struct {
 }
 
 type TriggerFilter struct {
-	ExactMatch *TriggerFilterAttributes `json:"exactMatch,omitempty"`
+	SourceAndType *TriggerFilterSourceAndType `json:"sourceAndType,omitempty"`
 }
 
-type TriggerFilterAttributes struct {
+type TriggerFilterSourceAndType struct {
 	Type   string `json:"type,omitempty"`
 	Source string `json:"source,omitempty"`
 }

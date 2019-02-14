@@ -17,12 +17,13 @@
 package broker
 
 import (
-	"context"
+	"errors"
+	"fmt"
+	"github.com/knative/eventing/pkg/provisioners"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -33,24 +34,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/testcreds"
 )
 
 const (
-	validMessage = `{
-    "cloudEventsVersion" : "0.1",
-    "eventType" : "com.example.someevent",
-    "eventTypeVersion" : "1.0",
-    "source" : "/mycontext",
-    "eventID" : "A234-1234-1234",
-    "eventTime" : "2018-04-05T17:31:00Z",
-    "extensions" : {
-      "comExampleExtension" : "value"
-    },
-    "contentType" : "text/xml",
-    "data" : "<much wow=\"xml\"/>"
-}`
+	testNS      = "test-namespace"
+	triggerName = "test-trigger"
+	eventType   = `"com.example.someevent"`
+	eventSource = `"/mycontext"`
 )
 
 func init() {
@@ -60,49 +50,55 @@ func init() {
 
 func TestReceiver(t *testing.T) {
 	testCases := map[string]struct {
-		initialState []runtime.Object
-		expectedErr  bool
+		initialState     []runtime.Object
+		dispatchErr      error
+		expectedErr      bool
+		expectedDispatch bool
 	}{
-		"can't get channel": {
+		"Trigger.Get fails": {
+			// No trigger exists, so the Get will fail.
+			expectedErr: true,
+		},
+		"Trigger doesn't have SubscriberURI": {
 			initialState: []runtime.Object{
-				testcreds.MakeSecretWithInvalidCreds(),
+				makeTriggerWithoutSubscriberURI(),
 			},
 			expectedErr: true,
 		},
-		"can't read status": {
+		"Trigger without a Filter": {
 			initialState: []runtime.Object{
-				testcreds.MakeSecretWithInvalidCreds(),
-				makeChannelWithBadStatus(),
+				makeTriggerWithoutFilter(),
 			},
-			expectedErr: true,
 		},
-		"blank status": {
+		"Wrong type": {
 			initialState: []runtime.Object{
-				testcreds.MakeSecretWithInvalidCreds(),
-				makeChannelWithBlankStatus(),
+				makeTrigger("some-other-type", "Any"),
 			},
-			expectedErr: true,
 		},
-		"credential fails": {
+		"Wrong source": {
 			initialState: []runtime.Object{
-				testcreds.MakeSecretWithInvalidCreds(),
-				makeChannel(),
+				makeTrigger("Any", "some-other-source"),
 			},
-			expectedErr: true,
 		},
-		"PubSub client fails": {
+		"Dispatch failed": {
 			initialState: []runtime.Object{
-				testcreds.MakeSecretWithCreds(),
-				makeChannel(),
+				makeTrigger("Any", "Any"),
 			},
-			expectedErr: true,
+			dispatchErr:      errors.New("test error dispatching"),
+			expectedErr:      true,
+			expectedDispatch: true,
 		},
-		"Publish fails": {
+		"Dispatch succeeded - Any": {
 			initialState: []runtime.Object{
-				testcreds.MakeSecretWithCreds(),
-				makeChannel(),
+				makeTrigger("Any", "Any"),
 			},
-			expectedErr: true,
+			expectedDispatch: true,
+		},
+		"Dispatch succeeded - Specific": {
+			initialState: []runtime.Object{
+				makeTrigger(eventType, eventSource),
+			},
+			expectedDispatch: true,
 		},
 	}
 	for n, tc := range testCases {
@@ -110,10 +106,13 @@ func TestReceiver(t *testing.T) {
 			mr, _ := New(
 				zap.NewNop(),
 				fake.NewFakeClient(tc.initialState...))
+			fd := &fakeDispatcher{
+				err: tc.dispatchErr,
+			}
+			mr.dispatcher = fd
+
 			resp := httptest.NewRecorder()
-			req := httptest.NewRequest("POST", "/", strings.NewReader(validMessage))
-			req.Host = "test-trigger.test-namespace.triggers.cluster.local"
-			mr.newMessageReceiver().HandleRequest(resp, req)
+			mr.newMessageReceiver().HandleRequest(resp, makeRequest())
 			if tc.expectedErr {
 				if resp.Result().StatusCode >= 200 && resp.Result().StatusCode < 300 {
 					t.Errorf("Expected an error. Actual: %v", resp.Result())
@@ -123,43 +122,74 @@ func TestReceiver(t *testing.T) {
 					t.Errorf("Expected success. Actual: %v", resp.Result())
 				}
 			}
+			if tc.expectedDispatch != fd.requestReceived {
+				t.Errorf("Incorrect dispatch. Expected %v, Actual %v", tc.expectedDispatch, fd.requestReceived)
+			}
 		})
 	}
 }
 
-func makeChannel() *eventingv1alpha1.Channel {
-	c := &eventingv1alpha1.Channel{
+type fakeDispatcher struct {
+	err             error
+	requestReceived bool
+}
+
+func (d *fakeDispatcher) DispatchMessage(_ *provisioners.Message, _, _ string, _ provisioners.DispatchDefaults) error {
+	d.requestReceived = true
+	return d.err
+}
+
+func makeTrigger(t, s string) *eventingv1alpha1.Trigger {
+	return &eventingv1alpha1.Trigger{
 		TypeMeta: v1.TypeMeta{
 			APIVersion: "eventing.knative.dev/v1alpha1",
-			Kind:       "Channel",
+			Kind:       "Trigger",
 		},
 		ObjectMeta: v1.ObjectMeta{
-			Namespace: "test-namespace",
-			Name:      "test-channel",
+			Namespace: testNS,
+			Name:      triggerName,
+		},
+		Spec: eventingv1alpha1.TriggerSpec{
+			Filter: &eventingv1alpha1.TriggerFilter{
+				SourceAndType: &eventingv1alpha1.TriggerFilterSourceAndType{
+					Type:   t,
+					Source: s,
+				},
+			},
+		},
+		Status: eventingv1alpha1.TriggerStatus{
+			SubscriberURI: "subscriberURI",
 		},
 	}
-	pcs := &util.GcpPubSubChannelStatus{
-		GCPProject: "project",
-		Secret:     testcreds.Secret,
-		SecretKey:  testcreds.SecretKey,
-	}
-	if err := util.SetInternalStatus(context.Background(), c, pcs); err != nil {
-		panic(err)
-	}
-	return c
 }
 
-func makeChannelWithBlankStatus() *eventingv1alpha1.Channel {
-	c := makeChannel()
-	c.Status = eventingv1alpha1.ChannelStatus{}
-	return c
+func makeTriggerWithoutFilter() *eventingv1alpha1.Trigger {
+	t := makeTrigger("Any", "Any")
+	t.Spec.Filter = nil
+	return t
 }
 
-func makeChannelWithBadStatus() *eventingv1alpha1.Channel {
-	c := makeChannel()
-	c.Status.Internal = &runtime.RawExtension{
-		// SecretKey must be a string, not an integer, so this will fail during json.Unmarshal.
-		Raw: []byte(`{"secretKey": 123}`),
+func makeTriggerWithoutSubscriberURI() *eventingv1alpha1.Trigger {
+	t := makeTrigger("Any", "Any")
+	t.Status = eventingv1alpha1.TriggerStatus{}
+	return t
+}
+
+func makeRequest() *http.Request {
+	req := httptest.NewRequest("POST", "/", strings.NewReader(`<much wow="xml"/>`))
+	req.Host = fmt.Sprintf("%s.%s.triggers.cluster.local", triggerName, testNS)
+
+	eventAttributes := map[string]string{
+		"CE-CloudEventsVersion": `"0.1"`,
+		"CE-EventType":          eventType,
+		"CE-EventTypeVersion":   `"1.0"`,
+		"CE-Source":             eventSource,
+		"CE-EventID":            `"A234-1234-1234"`,
+		"CE-EventTime":          `"2018-04-05T17:31:00Z"`,
+		"contentType":           "text/xml",
 	}
-	return c
+	for k, v := range eventAttributes {
+		req.Header.Set(k, v)
+	}
+	return req
 }

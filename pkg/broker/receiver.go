@@ -94,12 +94,16 @@ func (r *Receiver) getTrigger(ctx context.Context, ref provisioners.ChannelRefer
 }
 
 func (r *Receiver) shouldSendMessage(ts *eventingv1alpha1.TriggerSpec, m *provisioners.Message) bool {
-	filterType := ts.Filter.ExactMatch.Type
+	if ts.Filter == nil || ts.Filter.SourceAndType == nil {
+		r.logger.Error("No filter specified")
+		return false
+	}
+	filterType := ts.Filter.SourceAndType.Type
 	if filterType != eventingv1alpha1.TriggerAnyFilter && filterType != m.Headers["Ce-Eventtype"] {
 		r.logger.Debug("Wrong type", zap.String("trigger.spec.filter.exactMatch.type", filterType), zap.String("message.type", m.Headers["Ce-Eventtype"]))
 		return false
 	}
-	filterSource := ts.Filter.ExactMatch.Source
+	filterSource := ts.Filter.SourceAndType.Source
 	if filterSource != eventingv1alpha1.TriggerAnyFilter && filterSource != m.Headers["Ce-Source"] {
 		r.logger.Debug("Wrong source", zap.String("trigger.spec.filter.exactMatch.source", filterSource), zap.String("message.source", m.Headers["Ce-Source"]))
 		return false
