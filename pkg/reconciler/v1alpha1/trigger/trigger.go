@@ -193,7 +193,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		r.recorder.Eventf(trigger, corev1.EventTypeWarning, triggerReconcileFailed, "Trigger reconciliation failed: %v", reconcileErr)
 	} else {
 		logging.FromContext(ctx).Debug("Trigger reconciled")
-		r.recorder.Eventf(trigger, corev1.EventTypeNormal, triggerReconciled, "Trigger reconciled: %q", trigger.Name)
+		r.recorder.Event(trigger, corev1.EventTypeNormal, triggerReconciled, "Trigger reconciled")
 	}
 
 	if _, err = r.updateStatus(trigger); err != nil {

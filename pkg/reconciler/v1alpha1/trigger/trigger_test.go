@@ -17,12 +17,66 @@ limitations under the License.
 package trigger
 
 import (
+	"context"
+	"errors"
+	"fmt"
+	"testing"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
 	"github.com/google/go-cmp/cmp"
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"testing"
 )
+
+const (
+	testNS      = "test-namespace"
+	triggerName = "test-trigger"
+	brokerName  = "test-broker"
+
+	subscriberAPIVersion = "v1"
+	subscriberKind       = "Service"
+	subscriberName       = "subscriberName"
+
+	channelHostname = "foo.bar.svc.cluster.local"
+
+	k8sServiceName = "k8sServiceName"
+)
+
+var (
+	trueVal = true
+	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
+	// truncates to seconds to match the loss of precision during serialization.
+	deletionTime = metav1.Now().Rfc3339Copy()
+
+	// Map of events to set test cases' expectations easier.
+	events = map[string]corev1.Event{
+		triggerReconciled:         {Reason: triggerReconciled, Type: corev1.EventTypeNormal},
+		triggerUpdateStatusFailed: {Reason: triggerUpdateStatusFailed, Type: corev1.EventTypeWarning},
+		triggerReconcileFailed:    {Reason: triggerReconcileFailed, Type: corev1.EventTypeWarning},
+	}
+)
+
+func init() {
+	// Add types to scheme
+	v1alpha1.AddToScheme(scheme.Scheme)
+}
 
 func TestProvideController(t *testing.T) {
 	//TODO(grantr) This needs a mock of manager.Manager. Creating a manager
@@ -87,5 +141,313 @@ func TestInjectConfig(t *testing.T) {
 		// ok
 	default:
 		t.Errorf("Unexpected dynamicClient type. Expected: %T, Got: %T", wantDynClient, r.dynamicClient)
+	}
+}
+
+func TestReconcile(t *testing.T) {
+	testCases := []controllertesting.TestCase{
+		{
+			Name: "Trigger not found",
+		},
+		{
+			Name:   "Get Trigger error",
+			Scheme: scheme.Scheme,
+			Mocks: controllertesting.Mocks{
+				MockGets: []controllertesting.MockGet{
+					func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := obj.(*v1alpha1.Trigger); ok {
+							return controllertesting.Handled, errors.New("test error getting the Trigger")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error getting the Trigger",
+		},
+		{
+			Name:   "Trigger being deleted",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeDeletingTrigger(),
+			},
+			WantEvent: []corev1.Event{events[triggerReconciled]},
+		},
+		{
+			Name:   "Get Broker error",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeTrigger(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockGets: []controllertesting.MockGet{
+					func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := obj.(*v1alpha1.Broker); ok {
+							return controllertesting.Handled, errors.New("test error getting broker")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error getting broker",
+			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+		},
+		{
+			Name:   "Get Broker channel error",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeTrigger(),
+				makeBroker(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockLists: []controllertesting.MockList{
+					func(_ client.Client, _ context.Context, _ *client.ListOptions, list runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := list.(*v1alpha1.ChannelList); ok {
+							return controllertesting.Handled, errors.New("test error getting broker's channel")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error getting broker's channel",
+			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+		},
+		{
+			Name:   "Resolve subscriberURI error",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeTrigger(),
+				makeBroker(),
+				makeChannel(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockGets: []controllertesting.MockGet{
+					func(_ client.Client, _ context.Context, key client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := obj.(*corev1.Service); ok {
+							return controllertesting.Handled, errors.New("test error resolving subscriber URI")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error resolving subscriber URI",
+			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+		},
+		{
+			Name:   "Create K8s Service error",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeTrigger(),
+				makeBroker(),
+				makeChannel(),
+				makeSubscriberService(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockCreates: []controllertesting.MockCreate{
+					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := obj.(*corev1.Service); ok {
+							return controllertesting.Handled, errors.New("test error creating k8s service")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error creating k8s service",
+			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+		},
+		{
+			Name:   "Update K8s Service error",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeTrigger(),
+				makeBroker(),
+				makeChannel(),
+				makeSubscriberService(),
+				makeK8sService(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockUpdates: []controllertesting.MockUpdate{
+					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := obj.(*corev1.Service); ok {
+							return controllertesting.Handled, errors.New("test error updating k8s service")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error updating k8s service",
+			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+		},
+	}
+	for _, tc := range testCases {
+		c := tc.GetClient()
+		dc := tc.GetDynamicClient()
+		recorder := tc.GetEventRecorder()
+
+		r := &reconciler{
+			client:        c,
+			dynamicClient: dc,
+			restConfig:    &rest.Config{},
+			recorder:      recorder,
+			logger:        zap.NewNop(),
+			triggers:      make(map[types.NamespacedName]map[reconcile.Request]struct{}),
+		}
+		tc.ReconcileKey = fmt.Sprintf("%s/%s", testNS, triggerName)
+		tc.IgnoreTimes = true
+		t.Run(tc.Name, tc.Runner(t, r, c, recorder))
+	}
+}
+
+func makeTrigger() *v1alpha1.Trigger {
+	return &v1alpha1.Trigger{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "eventing.knative.dev/v1alpha1",
+			Kind:       "Trigger",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNS,
+			Name:      triggerName,
+		},
+		Spec: v1alpha1.TriggerSpec{
+			Broker: brokerName,
+			Filter: &v1alpha1.TriggerFilter{
+				SourceAndType: &v1alpha1.TriggerFilterSourceAndType{
+					Source: "Any",
+					Type:   "Any",
+				},
+			},
+			Subscriber: &v1alpha1.SubscriberSpec{
+				Ref: &corev1.ObjectReference{
+					Name:       subscriberName,
+					Kind:       subscriberKind,
+					APIVersion: subscriberAPIVersion,
+				},
+			},
+		},
+	}
+}
+
+func makeReadyTrigger() *v1alpha1.Trigger {
+	t := makeTrigger()
+	t.Status.InitializeConditions()
+	t.Status.MarkBrokerExists()
+	t.Status.SubscriberURI = fmt.Sprintf("%s-trigger.%s.svc.cluster.local", triggerName, testNS)
+	t.Status.MarkKubernetesServiceExists()
+	t.Status.MarkVirtualServiceExists()
+	t.Status.MarkSubscribed()
+	return t
+}
+
+func makeDeletingTrigger() *v1alpha1.Trigger {
+	b := makeReadyTrigger()
+	b.DeletionTimestamp = &deletionTime
+	return b
+}
+
+func makeBroker() *v1alpha1.Broker {
+	return &v1alpha1.Broker{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "eventing.knative.dev/v1alpha1",
+			Kind:       "Broker",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNS,
+			Name:      brokerName,
+		},
+		Spec: v1alpha1.BrokerSpec{
+			ChannelTemplate: &v1alpha1.ChannelSpec{
+				Provisioner: makeChannelProvisioner(),
+			},
+		},
+	}
+}
+
+func makeChannelProvisioner() *corev1.ObjectReference {
+	return &corev1.ObjectReference{
+		APIVersion: "eventing.knative.dev/v1alpha1",
+		Kind:       "ClusterChannelProvisioner",
+		Name:       "my-provisioner",
+	}
+}
+
+func makeChannel() *v1alpha1.Channel {
+	return &v1alpha1.Channel{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:    testNS,
+			GenerateName: fmt.Sprintf("%s-broker-", brokerName),
+			Labels: map[string]string{
+				"eventing.knative.dev/broker":           brokerName,
+				"eventing.knative.dev/brokerEverything": "true",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				getOwnerReference(),
+			},
+		},
+		Spec: v1alpha1.ChannelSpec{
+			Provisioner: makeChannelProvisioner(),
+		},
+		Status: v1alpha1.ChannelStatus{
+			Address: duckv1alpha1.Addressable{
+				Hostname: channelHostname,
+			},
+		},
+	}
+}
+
+func makeSubscriberService() *corev1.Service {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNS,
+			Name:      subscriberName,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "http",
+					Port:       80,
+					TargetPort: intstr.FromInt(8080),
+				},
+			},
+		},
+	}
+}
+
+func makeK8sService() *corev1.Service {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNS,
+			Name:      k8sServiceName,
+			Labels: map[string]string{
+				"eventing.knative.dev/trigger": triggerName,
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(makeTrigger(), schema.GroupVersionKind{
+					Group:   v1alpha1.SchemeGroupVersion.Group,
+					Version: v1alpha1.SchemeGroupVersion.Version,
+					Kind:    "Trigger",
+				}),
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{
+				"eventing.knative.dev/trigger": triggerName,
+			},
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "http",
+					Port:       80,
+					TargetPort: intstr.FromInt(8080),
+				},
+			},
+		},
+	}
+}
+
+func getOwnerReference() metav1.OwnerReference {
+	return metav1.OwnerReference{
+		APIVersion:         v1alpha1.SchemeGroupVersion.String(),
+		Kind:               "Broker",
+		Name:               brokerName,
+		Controller:         &trueVal,
+		BlockOwnerDeletion: &trueVal,
 	}
 }
