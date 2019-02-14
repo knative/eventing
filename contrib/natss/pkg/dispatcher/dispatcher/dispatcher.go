@@ -19,6 +19,7 @@ package dispatcher
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"sync"
 	"time"
 
@@ -86,10 +87,12 @@ func createReceiverFunction(s *SubscriptionsSupervisor, logger *zap.SugaredLogge
 		if currentNatssConn == nil {
 			return fmt.Errorf("No Connection to NATSS")
 		}
-		if !(*currentNatssConn).NatsConn().IsConnected() {
+		if reflect.ValueOf(currentNatssConn).IsNil() {
+			// Informing SubscriptionsSupervisor to re-establish connection to NATSS.
+			s.connect <- struct{}{}
 			return fmt.Errorf("No Connection to NATSS")
 		}
-		if err := stanutil.Publish(currentNatssConn, ch, &m.Payload, logger); err != nil {
+		if err := stanutil.Publish(currentNatssConn, ch, &message, logger); err != nil {
 			logger.Errorf("Error during publish: %v", err)
 			if err.Error() == stan.ErrConnectionClosed.Error() {
 				logger.Error("Connection to NATSS has been lost, attempting to reconnect.")
@@ -150,7 +153,9 @@ func (s *SubscriptionsSupervisor) Connect(stopCh <-chan struct{}) {
 				go s.connectWithRetry(stopCh)
 				continue
 			}
-			if !(*s.natssConn).NatsConn().IsConnected() && !(*s.natssConn).NatsConn().IsReconnecting() && !s.natssConnInProgress {
+			if !(*s.natssConn).NatsConn().IsConnected() &&
+				!(*s.natssConn).NatsConn().IsReconnecting() &&
+				!s.natssConnInProgress {
 				// Case for lost connectivity, setting InProgress to true to prevent recursion
 				s.natssConnMux.Lock()
 				s.natssConnInProgress = true
@@ -248,7 +253,9 @@ func (s *SubscriptionsSupervisor) subscribe(channel provisioners.ChannelReferenc
 	if currentNatssConn == nil {
 		return nil, fmt.Errorf("No Connection to NATSS")
 	}
-	if !(*currentNatssConn).NatsConn().IsConnected() {
+	if reflect.ValueOf(currentNatssConn).IsNil() {
+		// Informing SubscriptionsSupervisor to re-establish connection to NATSS.
+		s.connect <- struct{}{}
 		return nil, fmt.Errorf("No Connection to NATSS")
 	}
 	natssSub, err := (*currentNatssConn).Subscribe(ch, mcb, stan.DurableName(sub), stan.SetManualAckMode(), stan.AckWait(1*time.Minute))
