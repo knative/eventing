@@ -70,6 +70,8 @@ const (
 	subscriptionCreateFailed  = "SubscriptionCreateFailed"
 )
 
+var dummyValue struct{}
+
 type reconciler struct {
 	client        client.Client
 	restConfig    *rest.Config
@@ -77,7 +79,10 @@ type reconciler struct {
 	recorder      record.EventRecorder
 
 	triggersLock sync.RWMutex
-	triggers     map[string]map[reconcile.Request]bool
+	// Contains the triggers that correspond to a particular broker.
+	// We use this to reconcile only the triggers that correspond to a certain broker.
+	// brokerNamespacedName -> triggerReconcileRequest -> dummy struct
+	triggers map[types.NamespacedName]map[reconcile.Request]struct{}
 
 	logger *zap.Logger
 }
@@ -92,7 +97,7 @@ func ProvideController(logger *zap.Logger) func(manager.Manager) (controller.Con
 		r := &reconciler{
 			recorder: mgr.GetRecorder(controllerAgentName),
 			logger:   logger,
-			triggers: make(map[string]map[reconcile.Request]bool),
+			triggers: make(map[types.NamespacedName]map[reconcile.Request]struct{}),
 		}
 		c, err := controller.New(controllerAgentName, mgr, controller.Options{
 			Reconciler: r,
@@ -133,12 +138,13 @@ type mapAllTriggers struct {
 func (m *mapAllTriggers) Map(o handler.MapObject) []reconcile.Request {
 	m.r.triggersLock.RLock()
 	defer m.r.triggersLock.RUnlock()
-	triggersInNamespace := m.r.triggers[o.Meta.GetNamespace()]
-	if triggersInNamespace == nil {
+	brokerNamespacedName := types.NamespacedName{Namespace: o.Meta.GetNamespace(), Name: o.Meta.GetName()}
+	triggersInBrokerNamespacedName := m.r.triggers[brokerNamespacedName]
+	if triggersInBrokerNamespacedName == nil {
 		return []reconcile.Request{}
 	}
-	reqs := make([]reconcile.Request, 0, len(triggersInNamespace))
-	for name := range triggersInNamespace {
+	reqs := make([]reconcile.Request, 0, len(triggersInBrokerNamespacedName))
+	for name := range triggersInBrokerNamespacedName {
 		reqs = append(reqs, name)
 	}
 	return reqs
@@ -273,13 +279,17 @@ func (r *reconciler) AddToTriggers(t *v1alpha1.Trigger) {
 		},
 	}
 
+	brokerNamespacedName := types.NamespacedName{
+		Namespace: t.Namespace,
+		Name:      t.Spec.Broker}
+
 	// We will be reconciling an already existing Trigger far more often than adding a new one, so
 	// check with a read lock before using the write lock.
 	r.triggersLock.RLock()
-	triggersInNamespace := r.triggers[t.Namespace]
+	triggersInBrokerNamespacedName := r.triggers[brokerNamespacedName]
 	var present bool
-	if triggersInNamespace != nil {
-		_, present = triggersInNamespace[name]
+	if triggersInBrokerNamespacedName != nil {
+		_, present = triggersInBrokerNamespacedName[name]
 	} else {
 		present = false
 	}
@@ -291,12 +301,12 @@ func (r *reconciler) AddToTriggers(t *v1alpha1.Trigger) {
 	}
 
 	r.triggersLock.Lock()
-	triggersInNamespace = r.triggers[t.Namespace]
-	if triggersInNamespace == nil {
-		r.triggers[t.Namespace] = make(map[reconcile.Request]bool)
-		triggersInNamespace = r.triggers[t.Namespace]
+	triggersInBrokerNamespacedName = r.triggers[brokerNamespacedName]
+	if triggersInBrokerNamespacedName == nil {
+		r.triggers[brokerNamespacedName] = make(map[reconcile.Request]struct{})
+		triggersInBrokerNamespacedName = r.triggers[brokerNamespacedName]
 	}
-	triggersInNamespace[name] = false
+	triggersInBrokerNamespacedName[name] = dummyValue
 	r.triggersLock.Unlock()
 }
 
@@ -308,10 +318,14 @@ func (r *reconciler) removeFromTriggers(t *v1alpha1.Trigger) {
 		},
 	}
 
+	brokerNamespacedName := types.NamespacedName{
+		Namespace: t.Namespace,
+		Name:      t.Spec.Broker}
+
 	r.triggersLock.Lock()
-	triggersInNamespace := r.triggers[t.Namespace]
-	if triggersInNamespace != nil {
-		delete(triggersInNamespace, name)
+	triggersInBrokerNamespacedName := r.triggers[brokerNamespacedName]
+	if triggersInBrokerNamespacedName != nil {
+		delete(triggersInBrokerNamespacedName, name)
 	}
 	r.triggersLock.Unlock()
 }
