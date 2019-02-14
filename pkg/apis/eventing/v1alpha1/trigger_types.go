@@ -58,9 +58,19 @@ type TriggerSpec struct {
 	// +optional
 	DeprecatedGeneration int64 `json:"generation,omitempty"`
 
-	Broker     string          `json:"broker,omitempty"`
-	Subscriber *SubscriberSpec `json:"subscriber,omitempty"`
+	Broker string `json:"broker,omitempty"`
 
+	// +optional
+	Filter *TriggerFilter `json:"filter,omitempty"`
+
+	Subscriber *SubscriberSpec `json:"subscriber,omitempty"`
+}
+
+type TriggerFilter struct {
+	ExactMatch *TriggerFilterAttributes `json:"exactMatch,omitempty"`
+}
+
+type TriggerFilterAttributes struct {
 	Type   string `json:"type,omitempty"`
 	Source string `json:"source,omitempty"`
 }
@@ -96,6 +106,9 @@ const (
 	TriggerConditionVirtualService duckv1alpha1.ConditionType = "VirtualService"
 
 	TriggerConditionSubscribed duckv1alpha1.ConditionType = "Subscribed"
+
+	// Constant to represent that we should allow anything.
+	TriggerAnyFilter = "Any"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
