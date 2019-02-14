@@ -66,6 +66,8 @@ const (
 	triggerReconciled         = "TriggerReconciled"
 	triggerReconcileFailed    = "TriggerReconcileFailed"
 	triggerUpdateStatusFailed = "TriggerUpdateStatusFailed"
+	subscriptionDeleteFailed  = "SubscriptionDeleteFailed"
+	subscriptionCreateFailed  = "SubscriptionCreateFailed"
 )
 
 type reconciler struct {
@@ -601,12 +603,14 @@ func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.T
 		err = r.client.Delete(ctx, sub)
 		if err != nil {
 			logging.FromContext(ctx).Info("Cannot delete subscription", zap.Error(err))
+			r.recorder.Eventf(t, corev1.EventTypeWarning, subscriptionDeleteFailed, "Delete Trigger's subscription failed: %v", err)
 			return nil, err
 		}
 		sub = expected
 		err = r.client.Create(ctx, sub)
 		if err != nil {
 			logging.FromContext(ctx).Info("Cannot create subscription", zap.Error(err))
+			r.recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
 			return nil, err
 		}
 	}
