@@ -19,6 +19,10 @@ package trigger
 import (
 	"context"
 	"fmt"
+	"sync"
+
+	"github.com/knative/eventing/pkg/provisioners"
+
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"k8s.io/client-go/dynamic"
@@ -56,10 +60,17 @@ const (
 	// itself when creating events.
 	controllerAgentName = "trigger-controller"
 
+	finalizerName = controllerAgentName
+
 	// Name of the corev1.Events emitted from the reconciliation process
 	triggerReconciled         = "TriggerReconciled"
+	triggerReconcileFailed    = "TriggerReconcileFailed"
 	triggerUpdateStatusFailed = "TriggerUpdateStatusFailed"
+	subscriptionDeleteFailed  = "SubscriptionDeleteFailed"
+	subscriptionCreateFailed  = "SubscriptionCreateFailed"
 )
+
+var dummyValue struct{}
 
 type reconciler struct {
 	client        client.Client
@@ -67,19 +78,26 @@ type reconciler struct {
 	dynamicClient dynamic.Interface
 	recorder      record.EventRecorder
 
+	triggersLock sync.RWMutex
+	// Contains the triggers that correspond to a particular broker.
+	// We use this to reconcile only the triggers that correspond to a certain broker.
+	// brokerNamespacedName -> triggerReconcileRequest -> dummy struct
+	triggers map[types.NamespacedName]map[reconcile.Request]struct{}
+
 	logger *zap.Logger
 }
 
 // Verify the struct implements reconcile.Reconciler
 var _ reconcile.Reconciler = &reconciler{}
 
-// ProvideController returns a function that returns a Broker controller.
+// ProvideController returns a function that returns a Trigger controller.
 func ProvideController(logger *zap.Logger) func(manager.Manager) (controller.Controller, error) {
 	return func(mgr manager.Manager) (controller.Controller, error) {
-		// Setup a new controller to Reconcile Brokers.
+		// Setup a new controller to Reconcile Triggers.
 		r := &reconciler{
 			recorder: mgr.GetRecorder(controllerAgentName),
 			logger:   logger,
+			triggers: make(map[types.NamespacedName]map[reconcile.Request]struct{}),
 		}
 		c, err := controller.New(controllerAgentName, mgr, controller.Options{
 			Reconciler: r,
@@ -94,19 +112,42 @@ func ProvideController(logger *zap.Logger) func(manager.Manager) (controller.Con
 		}
 
 		// Watch all the resources that the Trigger reconciles.
-		for _, t := range []runtime.Object{ &corev1.Service{}, &istiov1alpha3.VirtualService{}, &v1alpha1.Subscription{} } {
-			err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Broker{}, IsController: true})
+		for _, t := range []runtime.Object{&corev1.Service{}, &istiov1alpha3.VirtualService{}, &v1alpha1.Subscription{}} {
+			err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Trigger{}, IsController: true})
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		// TODO reconcile after a Broker change. This might require keeping a map from Broker -> []Trigger.
+		// Watch for Broker changes.
+		if err = c.Watch(&source.Kind{Type: &v1alpha1.Broker{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &mapAllTriggers{r}}); err != nil {
+			return nil, err
+		}
+
 		// TODO reconcile after a change to the subscriber. I'm not sure how this is possible, but we should do it if we
 		// can find a way.
 
 		return c, nil
 	}
+}
+
+type mapAllTriggers struct {
+	r *reconciler
+}
+
+func (m *mapAllTriggers) Map(o handler.MapObject) []reconcile.Request {
+	m.r.triggersLock.RLock()
+	defer m.r.triggersLock.RUnlock()
+	brokerNamespacedName := types.NamespacedName{Namespace: o.Meta.GetNamespace(), Name: o.Meta.GetName()}
+	triggersInBrokerNamespacedName := m.r.triggers[brokerNamespacedName]
+	if triggersInBrokerNamespacedName == nil {
+		return []reconcile.Request{}
+	}
+	reqs := make([]reconcile.Request, 0, len(triggersInBrokerNamespacedName))
+	for name := range triggersInBrokerNamespacedName {
+		reqs = append(reqs, name)
+	}
+	return reqs
 }
 
 func (r *reconciler) InjectClient(c client.Client) error {
@@ -137,27 +178,31 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	if err != nil {
-		logging.FromContext(ctx).Error("Could not Get Trigger", zap.Error(err))
+		logging.FromContext(ctx).Error("Could not get Trigger", zap.Error(err))
 		return reconcile.Result{}, err
 	}
+
+	// Modify a copy, not the original.
+	trigger = trigger.DeepCopy()
 
 	// Reconcile this copy of the Trigger and then write back any status updates regardless of
 	// whether the reconcile error out.
 	reconcileErr := r.reconcile(ctx, trigger)
 	if reconcileErr != nil {
 		logging.FromContext(ctx).Error("Error reconciling Trigger", zap.Error(reconcileErr))
+		r.recorder.Eventf(trigger, corev1.EventTypeWarning, triggerReconcileFailed, "Trigger reconciliation failed: %v", reconcileErr)
 	} else {
 		logging.FromContext(ctx).Debug("Trigger reconciled")
-		r.recorder.Event(trigger, corev1.EventTypeNormal, triggerReconciled, "Trigger reconciled")
+		r.recorder.Eventf(trigger, corev1.EventTypeNormal, triggerReconciled, "Trigger reconciled: %q", trigger.Name)
 	}
 
-	if _, err = r.updateStatus(trigger.DeepCopy()); err != nil {
+	if _, err = r.updateStatus(trigger); err != nil {
 		logging.FromContext(ctx).Error("Failed to update Trigger status", zap.Error(err))
 		r.recorder.Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", err)
 		return reconcile.Result{}, err
 	}
 
-	// Requeue if the resource is not ready:
+	// Requeue if the resource is not ready
 	return reconcile.Result{}, reconcileErr
 }
 
@@ -172,8 +217,13 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 
 	if t.DeletionTimestamp != nil {
 		// Everything is cleaned up by the garbage collector.
+		r.removeFromTriggers(t)
+		provisioners.RemoveFinalizer(t, finalizerName)
 		return nil
 	}
+
+	provisioners.AddFinalizer(t, finalizerName)
+	r.AddToTriggers(t)
 
 	b, err := r.getBroker(ctx, t)
 	if err != nil {
@@ -219,6 +269,65 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	t.Status.MarkSubscribed()
 
 	return nil
+}
+
+func (r *reconciler) AddToTriggers(t *v1alpha1.Trigger) {
+	name := reconcile.Request{
+		NamespacedName: types.NamespacedName{
+			Namespace: t.Namespace,
+			Name:      t.Name,
+		},
+	}
+
+	brokerNamespacedName := types.NamespacedName{
+		Namespace: t.Namespace,
+		Name:      t.Spec.Broker}
+
+	// We will be reconciling an already existing Trigger far more often than adding a new one, so
+	// check with a read lock before using the write lock.
+	r.triggersLock.RLock()
+	triggersInBrokerNamespacedName := r.triggers[brokerNamespacedName]
+	var present bool
+	if triggersInBrokerNamespacedName != nil {
+		_, present = triggersInBrokerNamespacedName[name]
+	} else {
+		present = false
+	}
+	r.triggersLock.RUnlock()
+
+	if present {
+		// Already present in the map.
+		return
+	}
+
+	r.triggersLock.Lock()
+	triggersInBrokerNamespacedName = r.triggers[brokerNamespacedName]
+	if triggersInBrokerNamespacedName == nil {
+		r.triggers[brokerNamespacedName] = make(map[reconcile.Request]struct{})
+		triggersInBrokerNamespacedName = r.triggers[brokerNamespacedName]
+	}
+	triggersInBrokerNamespacedName[name] = dummyValue
+	r.triggersLock.Unlock()
+}
+
+func (r *reconciler) removeFromTriggers(t *v1alpha1.Trigger) {
+	name := reconcile.Request{
+		NamespacedName: types.NamespacedName{
+			Namespace: t.Namespace,
+			Name:      t.Name,
+		},
+	}
+
+	brokerNamespacedName := types.NamespacedName{
+		Namespace: t.Namespace,
+		Name:      t.Spec.Broker}
+
+	r.triggersLock.Lock()
+	triggersInBrokerNamespacedName := r.triggers[brokerNamespacedName]
+	if triggersInBrokerNamespacedName != nil {
+		delete(triggersInBrokerNamespacedName, name)
+	}
+	r.triggersLock.Unlock()
 }
 
 // updateStatus may in fact update the trigger's finalizers in addition to the status
@@ -503,9 +612,19 @@ func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.T
 	// Update Subscription if it has changed. Ignore the generation.
 	expected.Spec.DeprecatedGeneration = sub.Spec.DeprecatedGeneration
 	if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
-		sub.Spec = expected.Spec
-		err = r.client.Update(ctx, sub)
+		// Given that the backing channel spec is immutable, we cannot just update the subscription.
+		// We delete it instead, and re-create it.
+		err = r.client.Delete(ctx, sub)
 		if err != nil {
+			logging.FromContext(ctx).Info("Cannot delete subscription", zap.Error(err))
+			r.recorder.Eventf(t, corev1.EventTypeWarning, subscriptionDeleteFailed, "Delete Trigger's subscription failed: %v", err)
+			return nil, err
+		}
+		sub = expected
+		err = r.client.Create(ctx, sub)
+		if err != nil {
+			logging.FromContext(ctx).Info("Cannot create subscription", zap.Error(err))
+			r.recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
 			return nil, err
 		}
 	}
