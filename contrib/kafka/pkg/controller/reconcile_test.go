@@ -25,6 +25,7 @@ import (
 	"github.com/knative/eventing/pkg/provisioners"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	_ "github.com/knative/pkg/system/testing"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

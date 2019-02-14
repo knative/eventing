@@ -31,6 +31,7 @@ import (
 	"github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
+	_ "github.com/knative/pkg/system/testing"
 	"github.com/knative/eventing/pkg/utils"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
@@ -749,7 +750,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 				},
 				Route: []istiov1alpha3.DestinationWeight{{
 					Destination: istiov1alpha3.Destination{
-						Host: "in-memory-channel-dispatcher.knative-eventing.svc." + utils.GetClusterDomainName(),
+						Host: "in-memory-channel-dispatcher.knative-testing.svc." + utils.GetClusterDomainName(),
 						Port: istiov1alpha3.PortSelector{
 							Number: util.PortNumber,
 						},

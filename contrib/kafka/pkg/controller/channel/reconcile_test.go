@@ -31,6 +31,7 @@ import (
 	"github.com/knative/eventing/pkg/provisioners"
 	util "github.com/knative/eventing/pkg/provisioners"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
+	_ "github.com/knative/pkg/system/testing"
 	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
@@ -538,7 +539,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 				},
 				Route: []istiov1alpha3.DestinationWeight{{
 					Destination: istiov1alpha3.Destination{
-						Host: "kafka-provisioner.knative-eventing.svc." + utils.GetClusterDomainName(),
+						Host: "kafka-provisioner.knative-testing.svc." + utils.GetClusterDomainName(),
 						Port: istiov1alpha3.PortSelector{
 							Number: util.PortNumber,
 						},

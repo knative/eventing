@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,8 +16,17 @@ limitations under the License.
 
 package system
 
-const (
-	// Namespace holds the K8s namespace where our eventing system
-	// components run.
-	Namespace = "knative-eventing"
+import (
+	"time"
 )
+
+// Mockable interface for time based testing
+type Clock interface {
+	Now() time.Time
+}
+
+type RealClock struct{}
+
+func (RealClock) Now() time.Time {
+	return time.Now()
+}

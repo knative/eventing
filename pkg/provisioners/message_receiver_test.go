@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	_ "github.com/knative/pkg/system/testing"
 	"github.com/knative/eventing/pkg/utils"
 
 	"go.uber.org/zap"

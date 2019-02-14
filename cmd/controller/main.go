@@ -33,7 +33,7 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logconfig"
-	"github.com/knative/eventing/pkg/system"
+	"github.com/knative/pkg/system"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/logging"
@@ -92,7 +92,7 @@ func main() {
 	}
 
 	// Watch the logging config map and dynamically update logging levels.
-	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace)
+	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
 	configMapWatcher.Watch(logconfig.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller, logconfig.Controller))
 	if err = configMapWatcher.Start(stopCh); err != nil {
 		logger.Fatalf("Failed to start controller config map watcher: %v", err)

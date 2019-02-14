@@ -17,7 +17,7 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler/names"
-	"github.com/knative/eventing/pkg/system"
+	"github.com/knative/pkg/system"
 	"github.com/knative/eventing/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/equality"
 )
@@ -315,7 +315,7 @@ func virtualOldServiceLabels(c *eventingv1alpha1.Channel) map[string]string {
 // appropriate OwnerReferences on the resource so handleObject can discover the Channel resource
 // that 'owns' it. As well as being garbage collected when the Channel is deleted.
 func newVirtualService(channel *eventingv1alpha1.Channel, svc *corev1.Service) *istiov1alpha3.VirtualService {
-	destinationHost := names.ServiceHostName(channelDispatcherServiceName(channel.Spec.Provisioner.Name), system.Namespace)
+	destinationHost := names.ServiceHostName(channelDispatcherServiceName(channel.Spec.Provisioner.Name), system.Namespace())
 	return &istiov1alpha3.VirtualService{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: channelVirtualServiceName(channel.Name),

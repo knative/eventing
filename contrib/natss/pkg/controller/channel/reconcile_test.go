@@ -24,6 +24,7 @@ import (
 	"github.com/knative/eventing/pkg/provisioners"
 	util "github.com/knative/eventing/pkg/provisioners"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
+	_ "github.com/knative/pkg/system/testing"
 	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"

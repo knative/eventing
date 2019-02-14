@@ -15,13 +15,13 @@ import (
 	"fmt"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/system"
+	"github.com/knative/pkg/system"
 	"github.com/knative/pkg/logging"
 )
 
 func CreateDispatcherService(ctx context.Context, client runtimeClient.Client, ccp *eventingv1alpha1.ClusterChannelProvisioner) (*corev1.Service, error) {
 	svcKey := types.NamespacedName{
-		Namespace: system.Namespace,
+		Namespace: system.Namespace(),
 		Name:      channelDispatcherServiceName(ccp.Name),
 	}
 	getSvc := func() (*corev1.Service, error) {
@@ -55,7 +55,7 @@ func newDispatcherService(ccp *eventingv1alpha1.ClusterChannelProvisioner) *core
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      channelDispatcherServiceName(ccp.Name),
-			Namespace: system.Namespace,
+			Namespace: system.Namespace(),
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(ccp, schema.GroupVersionKind{

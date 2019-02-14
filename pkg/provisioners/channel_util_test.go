@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	_ "github.com/knative/pkg/system/testing"
 	"github.com/knative/eventing/pkg/utils"
 )
 
@@ -647,7 +648,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 				},
 				Route: []istiov1alpha3.DestinationWeight{{
 					Destination: istiov1alpha3.Destination{
-						Host: fmt.Sprintf("%s-dispatcher.knative-eventing.svc.%s", clusterChannelProvisionerName, utils.GetClusterDomainName()),
+						Host: fmt.Sprintf("%s-dispatcher.knative-testing.svc.%s", clusterChannelProvisionerName, utils.GetClusterDomainName()),
 						Port: istiov1alpha3.PortSelector{
 							Number: PortNumber,
 						},

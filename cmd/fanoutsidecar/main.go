@@ -31,7 +31,7 @@ import (
 	"github.com/knative/eventing/pkg/sidecar/configmap/filesystem"
 	"github.com/knative/eventing/pkg/sidecar/configmap/watcher"
 	"github.com/knative/eventing/pkg/sidecar/swappable"
-	"github.com/knative/eventing/pkg/system"
+	"github.com/knative/pkg/system"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/client-go/kubernetes"
@@ -61,7 +61,7 @@ var (
 func init() {
 	flag.IntVar(&port, "sidecar_port", -1, "The port to run the sidecar on.")
 	flag.StringVar(&configMapNoticer, "config_map_noticer", "", fmt.Sprintf("The system to notice changes to the ConfigMap. Valid values are: %s", configMapNoticerValues()))
-	flag.StringVar(&configMapNamespace, "config_map_namespace", system.Namespace, "The namespace of the ConfigMap that is watched for configuration.")
+	flag.StringVar(&configMapNamespace, "config_map_namespace", system.Namespace(), "The namespace of the ConfigMap that is watched for configuration.")
 	flag.StringVar(&configMapName, "config_map_name", defaultConfigMapName, "The name of the ConfigMap that is watched for configuration.")
 }
 

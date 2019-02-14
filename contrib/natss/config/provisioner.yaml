@@ -103,6 +103,11 @@ spec:
       containers:
         - name: controller
           image: github.com/knative/eventing/contrib/natss/pkg/controller
+        env:
+        - name: SYSTEM_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
 
 ---
 
@@ -175,3 +180,8 @@ spec:
       containers:
         - name: dispatcher
           image: github.com/knative/eventing/contrib/natss/pkg/dispatcher
+        env:
+        - name: SYSTEM_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
