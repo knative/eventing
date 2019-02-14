@@ -15,8 +15,8 @@ import (
 	"fmt"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/pkg/system"
 	"github.com/knative/pkg/logging"
+	"github.com/knative/pkg/system"
 )
 
 func CreateDispatcherService(ctx context.Context, client runtimeClient.Client, ccp *eventingv1alpha1.ClusterChannelProvisioner) (*corev1.Service, error) {
