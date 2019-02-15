@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/knative/eventing/pkg/provisioners"
+
 	"github.com/knative/eventing/pkg/reconciler/names"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -375,6 +377,73 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: "test error deleting subscription",
 			WantEvent:  []corev1.Event{events[subscriptionDeleteFailed], events[triggerReconcileFailed]},
 		},
+		{
+			Name:   "Re-create Subscription error",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeTrigger(),
+				makeBroker(),
+				makeChannel(),
+				makeSubscriberService(),
+				makeK8sService(),
+				makeVirtualService(),
+				makeDifferentSubscription(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockCreates: []controllertesting.MockCreate{
+					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := obj.(*v1alpha1.Subscription); ok {
+							return controllertesting.Handled, errors.New("test error re-creating subscription")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error re-creating subscription",
+			WantEvent:  []corev1.Event{events[subscriptionCreateFailed], events[triggerReconcileFailed]},
+		},
+		{
+			Name:   "Update status error",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeTrigger(),
+				makeBroker(),
+				makeChannel(),
+				makeSubscriberService(),
+				makeK8sService(),
+				makeVirtualService(),
+				makeSameSubscription(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockStatusUpdates: []controllertesting.MockStatusUpdate{
+					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := obj.(*v1alpha1.Trigger); ok {
+							return controllertesting.Handled, errors.New("test error updating trigger status")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error updating trigger status",
+			WantEvent:  []corev1.Event{events[triggerReconciled], events[triggerUpdateStatusFailed]},
+		},
+		{
+			Name:   "Trigger reconciliation success",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeTrigger(),
+				makeBroker(),
+				makeChannel(),
+				makeSubscriberService(),
+				makeK8sService(),
+				makeVirtualService(),
+				makeSameSubscription(),
+			},
+			WantEvent: []corev1.Event{events[triggerReconciled]},
+			WantPresent: []runtime.Object{
+				makeReadyTrigger(),
+			},
+		},
 	}
 	for _, tc := range testCases {
 		c := tc.GetClient()
@@ -426,9 +495,10 @@ func makeTrigger() *v1alpha1.Trigger {
 
 func makeReadyTrigger() *v1alpha1.Trigger {
 	t := makeTrigger()
+	provisioners.AddFinalizer(t, finalizerName)
 	t.Status.InitializeConditions()
 	t.Status.MarkBrokerExists()
-	t.Status.SubscriberURI = fmt.Sprintf("%s-trigger.%s.svc.cluster.local", triggerName, testNS)
+	t.Status.SubscriberURI = fmt.Sprintf("http://%s.%s.svc.cluster.local/", subscriberName, testNS)
 	t.Status.MarkKubernetesServiceExists()
 	t.Status.MarkVirtualServiceExists()
 	t.Status.MarkSubscribed()
@@ -542,6 +612,10 @@ func makeDifferentVirtualService() *istiov1alpha3.VirtualService {
 		names.ServiceHostName("other_svc_name", "other_svc_namespace"),
 	}
 	return vsvc
+}
+
+func makeSameSubscription() *v1alpha1.Subscription {
+	return makeSubscription(makeTrigger(), makeChannel(), makeK8sService())
 }
 
 func makeDifferentSubscription() *v1alpha1.Subscription {
