@@ -310,7 +310,6 @@ func makeBroker() *v1alpha1.Broker {
 			Name:      brokerName,
 			Labels: map[string]string{
 				"eventing.knative.dev/namespaceInjected": "true",
-				"eventing.knative.dev/brokerForNamespace": "true",
 			},
 		},
 	}

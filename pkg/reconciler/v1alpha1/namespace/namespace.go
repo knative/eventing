@@ -328,13 +328,7 @@ func newBroker(ns *corev1.Namespace) *v1alpha1.Broker {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
 			Name:      defaultBroker,
-			Labels:    brokerLabels(),
+			Labels:    injectedLabels(),
 		},
 	}
-}
-
-func brokerLabels() map[string]string {
-	l := injectedLabels()
-	l["eventing.knative.dev/brokerForNamespace"] = "true"
-	return l
 }
