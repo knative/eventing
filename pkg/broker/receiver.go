@@ -83,6 +83,10 @@ func (r *Receiver) sendEvent(channel provisioners.ChannelReference, message *pro
 }
 
 func (r *Receiver) getTrigger(ctx context.Context, ref provisioners.ChannelReference) (*eventingv1alpha1.Trigger, error) {
+	// Sadly this doesn't work well because we do not yet have
+	// https://github.com/kubernetes-sigs/controller-runtime/pull/136, so controller runtime watches
+	// all Triggers, not just those in this namespace. And it doesn't have the RBAC (by default) for
+	// that to work.
 	t := &eventingv1alpha1.Trigger{}
 	err := r.client.Get(ctx,
 		types.NamespacedName{
