@@ -25,11 +25,10 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/names"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/google/go-cmp/cmp"
@@ -55,7 +54,8 @@ const (
 	subscriberKind       = "Service"
 	subscriberName       = "subscriberName"
 
-	channelHostname = "foo.bar.svc.cluster.local"
+	channelHostname    = "foo.bar.svc.cluster.local"
+	channelProvisioner = "my-channel-provisioner"
 )
 
 var (
@@ -69,6 +69,8 @@ var (
 		triggerReconciled:         {Reason: triggerReconciled, Type: corev1.EventTypeNormal},
 		triggerUpdateStatusFailed: {Reason: triggerUpdateStatusFailed, Type: corev1.EventTypeWarning},
 		triggerReconcileFailed:    {Reason: triggerReconcileFailed, Type: corev1.EventTypeWarning},
+		subscriptionDeleteFailed:  {Reason: subscriptionDeleteFailed, Type: corev1.EventTypeWarning},
+		subscriptionCreateFailed:  {Reason: subscriptionCreateFailed, Type: corev1.EventTypeWarning},
 	}
 )
 
@@ -324,6 +326,55 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: "test error updating virtual service",
 			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
 		},
+		{
+			Name:   "Create Subscription error",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeTrigger(),
+				makeBroker(),
+				makeChannel(),
+				makeSubscriberService(),
+				makeK8sService(),
+				makeVirtualService(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockCreates: []controllertesting.MockCreate{
+					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := obj.(*v1alpha1.Subscription); ok {
+							return controllertesting.Handled, errors.New("test error creating subscription")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error creating subscription",
+			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+		},
+		{
+			Name:   "Delete Subscription error",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeTrigger(),
+				makeBroker(),
+				makeChannel(),
+				makeSubscriberService(),
+				makeK8sService(),
+				makeVirtualService(),
+				makeDifferentSubscription(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockDeletes: []controllertesting.MockDelete{
+					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := obj.(*v1alpha1.Subscription); ok {
+							return controllertesting.Handled, errors.New("test error deleting subscription")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error deleting subscription",
+			WantEvent:  []corev1.Event{events[subscriptionDeleteFailed], events[triggerReconcileFailed]},
+		},
 	}
 	for _, tc := range testCases {
 		c := tc.GetClient()
@@ -416,11 +467,11 @@ func makeChannelProvisioner() *corev1.ObjectReference {
 	}
 }
 
-func makeChannel() *v1alpha1.Channel {
+func newChannel(name string) *v1alpha1.Channel {
 	return &v1alpha1.Channel{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    testNS,
-			GenerateName: fmt.Sprintf("%s-broker-", brokerName),
+			Namespace: testNS,
+			Name:      name,
 			Labels: map[string]string{
 				"eventing.knative.dev/broker":           brokerName,
 				"eventing.knative.dev/brokerEverything": "true",
@@ -438,6 +489,14 @@ func makeChannel() *v1alpha1.Channel {
 			},
 		},
 	}
+}
+
+func makeChannel() *v1alpha1.Channel {
+	return newChannel(fmt.Sprintf("%s-broker", brokerName))
+}
+
+func makeDifferentChannel() *v1alpha1.Channel {
+	return newChannel(fmt.Sprintf("%s-broker-different", brokerName))
 }
 
 func makeSubscriberService() *corev1.Service {
@@ -483,6 +542,10 @@ func makeDifferentVirtualService() *istiov1alpha3.VirtualService {
 		names.ServiceHostName("other_svc_name", "other_svc_namespace"),
 	}
 	return vsvc
+}
+
+func makeDifferentSubscription() *v1alpha1.Subscription {
+	return makeSubscription(makeTrigger(), makeDifferentChannel(), makeK8sService())
 }
 
 func getOwnerReference() metav1.OwnerReference {
