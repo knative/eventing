@@ -19,7 +19,7 @@ package dispatcher
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
+	// "reflect"
 	"sync"
 	"time"
 
@@ -72,11 +72,7 @@ func NewDispatcher(natssUrl string, logger *zap.Logger) (*SubscriptionsSuperviso
 }
 
 func (s *SubscriptionsSupervisor) signalReconnect() {
-	select {
-	// Sending Connect request
-	case s.connect <- struct{}{}:
-	default:
-	}
+	s.connect <- struct{}{}
 }
 
 func createReceiverFunction(s *SubscriptionsSupervisor, logger *zap.SugaredLogger) func(provisioners.ChannelReference, *provisioners.Message) error {
@@ -149,23 +145,10 @@ func (s *SubscriptionsSupervisor) Connect(stopCh <-chan struct{}) {
 		select {
 		case <-s.connect:
 			s.natssConnMux.Lock()
-			currentNatssConn := s.natssConn
+			// currentNatssConn := s.natssConn
 			currentConnProgress := s.natssConnInProgress
 			s.natssConnMux.Unlock()
-			if currentNatssConn == nil && !currentConnProgress {
-				// Case for Initial connect, setting up InProgress to true to prevent recursion
-				s.natssConnMux.Lock()
-				s.natssConnInProgress = true
-				s.natssConnMux.Unlock()
-				go s.connectWithRetry(stopCh)
-				continue
-			}
-			if reflect.ValueOf(currentNatssConn).IsNil() {
-				// Corner case when currentNatssConn is not nil but interfaces are still nil,
-				// it could happen during the transition of state handled within natss library.
-				continue
-			}
-			if !(*currentNatssConn).NatsConn().IsConnected() && !(*currentNatssConn).NatsConn().IsReconnecting() && !currentConnProgress {
+			if !currentConnProgress {
 				// Case for lost connectivity, setting InProgress to true to prevent recursion
 				s.natssConnMux.Lock()
 				s.natssConnInProgress = true
