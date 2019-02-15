@@ -22,13 +22,13 @@ import (
 	"fmt"
 	"testing"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"github.com/knative/eventing/pkg/reconciler/names"
 
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -36,6 +36,7 @@ import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,8 +56,6 @@ const (
 	subscriberName       = "subscriberName"
 
 	channelHostname = "foo.bar.svc.cluster.local"
-
-	k8sServiceName = "k8sServiceName"
 )
 
 var (
@@ -76,6 +75,7 @@ var (
 func init() {
 	// Add types to scheme
 	v1alpha1.AddToScheme(scheme.Scheme)
+	istiov1alpha3.AddToScheme(scheme.Scheme)
 }
 
 func TestProvideController(t *testing.T) {
@@ -262,7 +262,7 @@ func TestReconcile(t *testing.T) {
 				makeBroker(),
 				makeChannel(),
 				makeSubscriberService(),
-				makeK8sService(),
+				makeDifferentK8sService(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockUpdates: []controllertesting.MockUpdate{
@@ -275,6 +275,53 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error updating k8s service",
+			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+		},
+		{
+			Name:   "Create Virtual Service error",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeTrigger(),
+				makeBroker(),
+				makeChannel(),
+				makeSubscriberService(),
+				makeK8sService(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockCreates: []controllertesting.MockCreate{
+					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := obj.(*istiov1alpha3.VirtualService); ok {
+							return controllertesting.Handled, errors.New("test error creating virtual service")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error creating virtual service",
+			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+		},
+		{
+			Name:   "Update Virtual Service error",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeTrigger(),
+				makeBroker(),
+				makeChannel(),
+				makeSubscriberService(),
+				makeK8sService(),
+				makeDifferentVirtualService(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockUpdates: []controllertesting.MockUpdate{
+					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := obj.(*istiov1alpha3.VirtualService); ok {
+							return controllertesting.Handled, errors.New("test error updating virtual service")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error updating virtual service",
 			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
 		},
 	}
@@ -412,34 +459,30 @@ func makeSubscriberService() *corev1.Service {
 }
 
 func makeK8sService() *corev1.Service {
-	return &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testNS,
-			Name:      k8sServiceName,
-			Labels: map[string]string{
-				"eventing.knative.dev/trigger": triggerName,
-			},
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(makeTrigger(), schema.GroupVersionKind{
-					Group:   v1alpha1.SchemeGroupVersion.Group,
-					Version: v1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Trigger",
-				}),
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{
-				"eventing.knative.dev/trigger": triggerName,
-			},
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "http",
-					Port:       80,
-					TargetPort: intstr.FromInt(8080),
-				},
-			},
+	return newK8sService(makeTrigger())
+}
+
+func makeDifferentK8sService() *corev1.Service {
+	svc := makeK8sService()
+	svc.Spec.Ports = []corev1.ServicePort{
+		{
+			Name: "http",
+			Port: 9999,
 		},
 	}
+	return svc
+}
+
+func makeVirtualService() *istiov1alpha3.VirtualService {
+	return newVirtualService(makeTrigger(), makeK8sService())
+}
+
+func makeDifferentVirtualService() *istiov1alpha3.VirtualService {
+	vsvc := makeVirtualService()
+	vsvc.Spec.Hosts = []string{
+		names.ServiceHostName("other_svc_name", "other_svc_namespace"),
+	}
+	return vsvc
 }
 
 func getOwnerReference() metav1.OwnerReference {
