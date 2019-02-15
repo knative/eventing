@@ -18,6 +18,7 @@ package test
 // crd contains functions that construct boilerplate CRD definitions.
 
 import (
+	"fmt"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -162,6 +163,32 @@ func Subscription(name string, namespace string, channel *corev1.ObjectReference
 			Channel:    *channel,
 			Subscriber: subscriber,
 			Reply:      reply,
+		},
+	}
+}
+
+func Broker(name string, namespace string) *v1alpha1.Broker {
+	return &v1alpha1.Broker{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: v1alpha1.BrokerSpec{},
+	}
+}
+
+func Trigger(name string, namespace string, eventType string, subscriberRef *corev1.ObjectReference, brokerName string) *v1alpha1.Trigger {
+	return &v1alpha1.Trigger{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: v1alpha1.TriggerSpec{
+			Broker: brokerName,
+			Type: fmt.Sprintf("%q", eventType),
+			Subscriber: &v1alpha1.SubscriberSpec{
+				Ref: subscriberRef,
+			},
 		},
 	}
 }

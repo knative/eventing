@@ -91,3 +91,39 @@ func WaitForSubscriptionState(client eventingclient.SubscriptionInterface, name 
 		return inState(r)
 	})
 }
+
+// WaitForBrokerState polls the status of the Broker called name from client
+// every interval until inState returns `true` indicating it is done, returns an
+// error or timeout. desc will be used to name the metric that is emitted to
+// track how long it took for name to get into the state checked by inState.
+func WaitForBrokerState(client eventingclient.BrokerInterface, name string, inState func(r *eventingv1alpha1.Broker) (bool, error), desc string) error {
+	metricName := fmt.Sprintf("WaitForBrokerState/%s/%s", name, desc)
+	_, span := trace.StartSpan(context.Background(), metricName)
+	defer span.End()
+
+	return wait.PollImmediate(interval, timeout, func() (bool, error) {
+		r, err := client.Get(name, metav1.GetOptions{})
+		if err != nil {
+			return true, err
+		}
+		return inState(r)
+	})
+}
+
+// WaitForTriggerState polls the status of the Trigger called name from client
+// every interval until inState returns `true` indicating it is done, returns an
+// error or timeout. desc will be used to name the metric that is emitted to
+// track how long it took for name to get into the state checked by inState.
+func WaitForTriggerState(client eventingclient.TriggerInterface, name string, inState func(r *eventingv1alpha1.Trigger) (bool, error), desc string) error {
+	metricName := fmt.Sprintf("WaitForTriggerState/%s/%s", name, desc)
+	_, span := trace.StartSpan(context.Background(), metricName)
+	defer span.End()
+
+	return wait.PollImmediate(interval, timeout, func() (bool, error) {
+		r, err := client.Get(name, metav1.GetOptions{})
+		if err != nil {
+			return true, err
+		}
+		return inState(r)
+	})
+}
