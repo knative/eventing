@@ -53,12 +53,13 @@ func (ts *TriggerSpec) Validate() *apis.FieldError {
 }
 
 func (t *Trigger) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
+	if og == nil {
+		return nil
+	}
+
 	original, ok := og.(*Trigger)
 	if !ok {
 		return &apis.FieldError{Message: "The provided original was not a Trigger"}
-	}
-	if original == nil {
-		return nil
 	}
 
 	if diff := cmp.Diff(original.Spec.Broker, t.Spec.Broker); diff != "" {

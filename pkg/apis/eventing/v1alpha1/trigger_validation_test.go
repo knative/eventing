@@ -144,8 +144,8 @@ func TestTriggerSpecValidation(t *testing.T) {
 func TestTriggerImmutableFields(t *testing.T) {
 	tests := []struct {
 		name     string
-		current  *Trigger
-		original *Trigger
+		current  apis.Immutable
+		original apis.Immutable
 		want     *apis.FieldError
 	}{{
 		name: "good (no change)",
@@ -169,6 +169,17 @@ func TestTriggerImmutableFields(t *testing.T) {
 		},
 		original: nil,
 		want:     nil,
+	}, {
+		name: "invalid type",
+		current: &Trigger{
+			Spec: TriggerSpec{
+				Broker: "broker",
+			},
+		},
+		original: &Broker{},
+		want: &apis.FieldError{
+			Message: "The provided original was not a Trigger",
+		},
 	}, {
 		name: "good (filter change)",
 		current: &Trigger{
@@ -210,35 +221,6 @@ func TestTriggerImmutableFields(t *testing.T) {
 			got := test.current.CheckImmutableFields(test.original)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("CheckImmutableFields (-want, +got) = %v", diff)
-			}
-		})
-	}
-}
-
-func TestTriggerInvalidImmutableType(t *testing.T) {
-	tests := []struct {
-		name     string
-		current  apis.Immutable
-		original apis.Immutable
-		want     *apis.FieldError
-	}{{
-		name: "invalid type",
-		current: &Trigger{
-			Spec: TriggerSpec{
-				Broker: "broker",
-			},
-		},
-		original: nil,
-		want: &apis.FieldError{
-			Message: "The provided original was not a Trigger",
-		},
-	}}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := test.current.CheckImmutableFields(test.original)
-			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("CheckImmutableType (-want, +got) = %v", diff)
 			}
 		})
 	}
