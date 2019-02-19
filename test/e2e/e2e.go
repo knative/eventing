@@ -21,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/test"
 	pkgTest "github.com/knative/pkg/test"
@@ -304,4 +306,42 @@ func WaitForAllPodsRunning(clients *test.Clients, logger *logging.BaseLogger, na
 		return err
 	}
 	return nil
+}
+
+func NamespaceExists(t *testing.T, clients *test.Clients, logger *logging.BaseLogger) (string, func()) {
+	shutdown := func() {}
+	ns := pkgTest.Flags.Namespace
+	logger.Infof("Namespace: %s", ns)
+
+	nsSpec, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
+
+	if err != nil && errors.IsNotFound(err) {
+		nsSpec = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}
+		logger.Infof("Creating Namespace: %s", ns)
+		nsSpec, err = clients.Kube.Kube.CoreV1().Namespaces().Create(nsSpec)
+		if err != nil {
+			t.Fatalf("Failed to create Namespace: %s; %v", ns, err)
+		} else {
+			shutdown = func() {
+				clients.Kube.Kube.CoreV1().Namespaces().Delete(nsSpec.Name, nil)
+				// TODO: this is a bit hacky but in order for the tests to work
+				// correctly for a clean namespace to be created we need to also
+				// wait for it to be removed.
+				// To fix this we could generate namespace names.
+				// This only happens when the namespace provided does not exist.
+				//
+				// wait up to 120 seconds for the namespace to be removed.
+				logger.Infof("Deleting Namespace: %s", ns)
+				for i := 0; i < 120; i++ {
+					time.Sleep(1 * time.Second)
+					if _, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{}); err != nil && errors.IsNotFound(err) {
+						logger.Info("Namespace has been deleted")
+						// the namespace is gone.
+						break
+					}
+				}
+			}
+		}
+	}
+	return ns, shutdown
 }

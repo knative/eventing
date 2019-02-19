@@ -18,15 +18,14 @@ limitations under the License.
 package e2e
 
 import (
+	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/knative/eventing/test"
+	"github.com/knative/eventing/test/e2e/broker_trigger/builder"
 	pkgTest "github.com/knative/pkg/test"
 	"github.com/knative/pkg/test/logging"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
@@ -34,62 +33,24 @@ import (
 const (
 	defaultBrokerName = "default"
 	altBrokerName     = "alternate"
-	anyEvent          = "Any"
 	untypedEvent      = "test.untyped"
 	typedEvent        = "test.typed"
+	unsourcedEvent    = "test.unsourced"
+	sourcedEvent      = "test.sourced"
 )
 
 func triggerName(broker, eventType string) string {
 	fmt.Sprintf("%s-dump-%s", broker, eventType)
 }
 
-func namespaceExists(t *testing.T, clients *test.Clients) (string, func()) {
-	logger := logging.GetContextLogger("TestBrokerFilter")
-	shutdown := func() {}
-	ns := pkgTest.Flags.Namespace
-	logger.Infof("Namespace: %s", ns)
-
-	nsSpec, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
-
-	if err != nil && errors.IsNotFound(err) {
-		nsSpec = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}
-		logger.Infof("Creating Namespace: %s", ns)
-		nsSpec, err = clients.Kube.Kube.CoreV1().Namespaces().Create(nsSpec)
-		if err != nil {
-			t.Fatalf("Failed to create Namespace: %s; %v", ns, err)
-		} else {
-			shutdown = func() {
-				clients.Kube.Kube.CoreV1().Namespaces().Delete(nsSpec.Name, nil)
-				// TODO: this is a bit hacky but in order for the tests to work
-				// correctly for a clean namespace to be created we need to also
-				// wait for it to be removed.
-				// To fix this we could generate namespace names.
-				// This only happens when the namespace provided does not exist.
-				//
-				// wait up to 120 seconds for the namespace to be removed.
-				logger.Infof("Deleting Namespace: %s", ns)
-				for i := 0; i < 120; i++ {
-					time.Sleep(1 * time.Second)
-					if _, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{}); err != nil && errors.IsNotFound(err) {
-						logger.Info("Namespace has been deleted")
-						// the namespace is gone.
-						break
-					}
-				}
-			}
-		}
-	}
-	return ns, shutdown
-}
-
-func TestBrokerFilter(t *testing.T) {
-	logger := logging.GetContextLogger("TestBrokerFilter")
+func TestBrokerTrigger(t *testing.T) {
+	logger := logging.GetContextLogger("TestBrokerTrigger")
 
 	clients, cleaner := Setup(t, logger)
 	defer TearDown(clients, cleaner, logger)
 
 	// verify namespace
-	ns, cleanupNS := namespaceExists(t, clients)
+	ns, cleanupNS := NamespaceExists(t, clients, logger)
 	defer cleanupNS()
 
 	// Fixtures
@@ -99,15 +60,20 @@ func TestBrokerFilter(t *testing.T) {
 	fixtures := []Fixture{
 		// Default Any Trigger
 		&KnativeFixture{
-			Object: builder.Trigger("default-dump-any"), pkgTest.Flags.Namespace).
-				Type(anyEvent).
+			Object: builder.Trigger("default-dump-any", pkgTest.Flags.Namespace).
 				SubscriberSvc("default-any-dumper"),
 		},
 		// Default Typed Trigger
 		&KnativeFixture{
-			Object: builder.Trigger("default-dump-typed"), pkgTest.Flags.Namespace).
+			Object: builder.Trigger("default-dump-typed", pkgTest.Flags.Namespace).
 				Type(typedEvent).
 				SubscriberSvc("default-typed-dumper"),
+		},
+		// Default Sourced Trigger
+		&KnativeFixture{
+			Object: builder.Trigger("default-dump-sourced", pkgTest.Flags.Namespace).
+				Type(sourcedEvent).
+				SubscriberSvc("default-sourced-dumper"),
 		},
 
 		// Alternate Broker
@@ -116,17 +82,23 @@ func TestBrokerFilter(t *testing.T) {
 		},
 		// Alternate Any Trigger
 		&KnativeFixture{
-			Object: builder.Trigger("alt-dump-any"), pkgTest.Flags.Namespace).
+			Object: builder.Trigger("alt-dump-any", pkgTest.Flags.Namespace).
 				Broker(altBrokerName).
-				Type(anyEvent).
-				SubscriberSvc(fmt.Sprintf("alt-any-dumper"),
+				SubscriberSvc(fmt.Sprintf("alt-any-dumper")),
 		},
 		// Alternate Typed Trigger
 		&KnativeFixture{
-			Object: builder.Trigger("alt-dump-typed"), pkgTest.Flags.Namespace).
+			Object: builder.Trigger("alt-dump-typed", pkgTest.Flags.Namespace).
 				Broker(altBrokerName).
 				Type(typedEvent).
 				SubscriberSvc("alt-typed-dumper"),
+		},
+		// Alternate Sourced Trigger
+		&KnativeFixture{
+			Object: builder.Trigger("alt-dump-sourced", pkgTest.Flags.Namespace).
+				Broker(altBrokerName).
+				Type(sourcedEvent).
+				SubscriberSvc("alt-sourced-dumper"),
 		},
 	}
 
@@ -145,13 +117,13 @@ func TestBrokerFilter(t *testing.T) {
 	// Create message dumper services
 	// Create: pod
 	// Verify: pod status is ready
-	// 
+	//
 
-	pods := []Fixture{
-		&PodSuccess{
-
-		}
-	}
+	//pods := []Fixture{
+	//	&PodSuccess{
+	//
+	//	}
+	//}
 
 	// create alt Broker
 

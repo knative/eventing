@@ -54,7 +54,7 @@ func IsSubscriptionReady(s *eventingv1alpha1.Subscription) (bool, error) {
 	return s.Status.IsReady(), nil
 }
 
-/ IsBrokerReady will check the status conditions of the Broker and return true
+// IsBrokerReady will check the status conditions of the Broker and return true
 // if the Broker is ready.
 func IsBrokerReady(b *eventingv1alpha1.Broker) (bool, error) {
 	return b.Status.IsReady(), nil
@@ -65,8 +65,6 @@ func IsBrokerReady(b *eventingv1alpha1.Broker) (bool, error) {
 func IsTriggerReady(t *eventingv1alpha1.Trigger) (bool, error) {
 	return t.Status.IsReady(), nil
 }
-
-
 
 // PodsRunning will check the status conditions of the pod list and return true
 // if all pods are Running.

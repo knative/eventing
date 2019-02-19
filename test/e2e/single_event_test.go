@@ -20,13 +20,9 @@ package e2e
 import (
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/knative/eventing/test"
-	pkgTest "github.com/knative/pkg/test"
 	"github.com/knative/pkg/test/logging"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
@@ -38,45 +34,6 @@ const (
 	subscriptionName = "e2e-singleevent-subscription"
 	routeName        = "e2e-singleevent-route"
 )
-
-func namespaceExists(t *testing.T, clients *test.Clients) (string, func()) {
-	logger := logging.GetContextLogger("TestSingleEvent")
-	shutdown := func() {}
-	ns := pkgTest.Flags.Namespace
-	logger.Infof("Namespace: %s", ns)
-
-	nsSpec, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
-
-	if err != nil && errors.IsNotFound(err) {
-		nsSpec = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}
-		logger.Infof("Creating Namespace: %s", ns)
-		nsSpec, err = clients.Kube.Kube.CoreV1().Namespaces().Create(nsSpec)
-		if err != nil {
-			t.Fatalf("Failed to create Namespace: %s; %v", ns, err)
-		} else {
-			shutdown = func() {
-				clients.Kube.Kube.CoreV1().Namespaces().Delete(nsSpec.Name, nil)
-				// TODO: this is a bit hacky but in order for the tests to work
-				// correctly for a clean namespace to be created we need to also
-				// wait for it to be removed.
-				// To fix this we could generate namespace names.
-				// This only happens when the namespace provided does not exist.
-				//
-				// wait up to 120 seconds for the namespace to be removed.
-				logger.Infof("Deleting Namespace: %s", ns)
-				for i := 0; i < 120; i++ {
-					time.Sleep(1 * time.Second)
-					if _, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{}); err != nil && errors.IsNotFound(err) {
-						logger.Info("Namespace has been deleted")
-						// the namespace is gone.
-						break
-					}
-				}
-			}
-		}
-	}
-	return ns, shutdown
-}
 
 func TestSingleBinaryEvent(t *testing.T) {
 	SingleEvent(t, test.CloudEventEncodingBinary)
@@ -94,7 +51,7 @@ func SingleEvent(t *testing.T, encoding string) {
 
 	// verify namespace
 
-	ns, cleanupNS := namespaceExists(t, clients)
+	ns, cleanupNS := NamespaceExists(t, clients, logger)
 	defer cleanupNS()
 
 	// create logger pod

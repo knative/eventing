@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package builder
+package e2e
 
 import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -22,6 +22,34 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+// Broker builder.
+type BrokerBuilder struct {
+	*eventingv1alpha1.Broker
+}
+
+func Broker(name, namespace string) *BrokerBuilder {
+	broker := &eventingv1alpha1.Broker{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+			Kind:       "Broker",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: eventingv1alpha1.BrokerSpec{},
+	}
+
+	return &BrokerBuilder{
+		Broker: broker,
+	}
+}
+
+func (b *BrokerBuilder) Build() runtime.Object {
+	return b.Broker.DeepCopy()
+}
+
+// Trigger builder.
 type TriggerBuilder struct {
 	*eventingv1alpha1.Trigger
 }
@@ -36,7 +64,15 @@ func Trigger(name, namespace string) *TriggerBuilder {
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: eventingv1alpha1.TriggerSpec{},
+		Spec: eventingv1alpha1.TriggerSpec{
+			Filter: &eventingv1alpha1.TriggerFilter{
+				// Create a Any filter by default.
+				SourceAndType: &eventingv1alpha1.TriggerFilterSourceAndType{
+					Source: eventingv1alpha1.TriggerAnyFilter,
+					Type:   eventingv1alpha1.TriggerAnyFilter,
+				},
+			},
+		},
 	}
 
 	return &TriggerBuilder{
@@ -49,7 +85,12 @@ func (b *TriggerBuilder) Build() runtime.Object {
 }
 
 func (b *TriggerBuilder) Type(eventType string) *TriggerBuilder {
-	b.Trigger.Spec.Type = eventType
+	b.Trigger.Spec.Filter.SourceAndType.Type = eventType
+	return b
+}
+
+func (b *TriggerBuilder) Source(eventSource string) *TriggerBuilder {
+	b.Trigger.Spec.Filter.SourceAndType.Source = eventSource
 	return b
 }
 
@@ -66,9 +107,9 @@ func (b *TriggerBuilder) Subscriber(ref *corev1.ObjectReference) *TriggerBuilder
 func (b *TriggerBuilder) SubscriberSvc(svcName string) *TriggerBuilder {
 	b.Trigger.Spec.Subscriber.Ref = &corev1.ObjectReference{
 		APIVersion: corev1.SchemeGroupVersion.String(),
-		Kind: "Service",
-		Name: svcName,
-		Namespace: b.Trigger.GetNamespace(),
+		Kind:       "Service",
+		Name:       svcName,
+		Namespace:  b.Trigger.GetNamespace(),
 	}
 	return b
 }
