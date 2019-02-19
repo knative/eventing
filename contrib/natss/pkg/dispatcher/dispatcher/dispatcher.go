@@ -19,7 +19,6 @@ package dispatcher
 import (
 	"encoding/json"
 	"fmt"
-	// "reflect"
 	"sync"
 	"time"
 
@@ -116,8 +115,8 @@ func (s *SubscriptionsSupervisor) Start(stopCh <-chan struct{}) error {
 }
 
 func (s *SubscriptionsSupervisor) connectWithRetry(stopCh <-chan struct{}) {
-	// re-attempting evey 60 seconds until the connection is established.
-	ticker := time.NewTicker(60 * time.Second)
+	// re-attempting evey 1 second until the connection is established.
+	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 	for {
 		nConn, err := stanutil.Connect(clusterchannelprovisioner.ClusterId, clientID, s.natssURL, s.logger.Sugar())
@@ -145,7 +144,6 @@ func (s *SubscriptionsSupervisor) Connect(stopCh <-chan struct{}) {
 		select {
 		case <-s.connect:
 			s.natssConnMux.Lock()
-			// currentNatssConn := s.natssConn
 			currentConnProgress := s.natssConnInProgress
 			s.natssConnMux.Unlock()
 			if !currentConnProgress {
