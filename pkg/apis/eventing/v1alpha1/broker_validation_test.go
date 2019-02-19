@@ -17,19 +17,24 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/knative/pkg/apis"
+	"testing"
 )
 
-func (b *Broker) Validate() *apis.FieldError {
-	return b.Spec.Validate().ViaField("spec")
+// No-op test because method does nothing.
+func TestBrokerValidation(t *testing.T) {
+	b := Broker{}
+	_ = b.Validate()
 }
 
-func (bs *BrokerSpec) Validate() *apis.FieldError {
-	// TODO implement
-	return nil
+// No-op test because method does nothing.
+func TestBrokerSpecValidation(t *testing.T) {
+	bs := BrokerSpec{}
+	_ = bs.Validate()
 }
 
-func (b *Broker) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
-	// TODO implement
-	return nil
+// No-op test because method does nothing.
+func TestBrokerImmutableFields(t *testing.T) {
+	original := &Broker{}
+	current := &Broker{}
+	_ = current.CheckImmutableFields(original)
 }
