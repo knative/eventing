@@ -37,6 +37,11 @@ const (
 	maxElements = 10
 )
 
+var (
+	// retryInterval defines delay in seconds for the next attempt to reconnect to NATSS streaming server
+	retryInterval = 1 * time.Second
+)
+
 // SubscriptionsSupervisor manages the state of NATS Streaming subscriptions
 type SubscriptionsSupervisor struct {
 	logger *zap.Logger
@@ -116,7 +121,7 @@ func (s *SubscriptionsSupervisor) Start(stopCh <-chan struct{}) error {
 
 func (s *SubscriptionsSupervisor) connectWithRetry(stopCh <-chan struct{}) {
 	// re-attempting evey 1 second until the connection is established.
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(retryInterval)
 	defer ticker.Stop()
 	for {
 		nConn, err := stanutil.Connect(clusterchannelprovisioner.ClusterId, clientID, s.natssURL, s.logger.Sugar())
@@ -128,7 +133,7 @@ func (s *SubscriptionsSupervisor) connectWithRetry(stopCh <-chan struct{}) {
 			s.natssConnMux.Unlock()
 			return
 		}
-		s.logger.Sugar().Errorf("Connect() failed with error: %+v, retrying in 60 seconds", err)
+		s.logger.Sugar().Errorf("Connect() failed with error: %+v, retrying in %s", err, retryInterval.String())
 		select {
 		case <-ticker.C:
 			continue
