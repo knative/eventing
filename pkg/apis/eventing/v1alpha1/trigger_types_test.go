@@ -24,30 +24,32 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var triggerConditionReady = duckv1alpha1.Condition{
-	Type:   TriggerConditionReady,
-	Status: corev1.ConditionTrue,
-}
+var (
+	triggerConditionReady = duckv1alpha1.Condition{
+		Type:   TriggerConditionReady,
+		Status: corev1.ConditionTrue,
+	}
 
-var triggerConditionBrokerExists = duckv1alpha1.Condition{
-	Type:   TriggerConditionBrokerExists,
-	Status: corev1.ConditionTrue,
-}
+	triggerConditionBrokerExists = duckv1alpha1.Condition{
+		Type:   TriggerConditionBrokerExists,
+		Status: corev1.ConditionTrue,
+	}
 
-var triggerConditionKubernetesService = duckv1alpha1.Condition{
-	Type:   TriggerConditionKubernetesService,
-	Status: corev1.ConditionTrue,
-}
+	triggerConditionKubernetesService = duckv1alpha1.Condition{
+		Type:   TriggerConditionKubernetesService,
+		Status: corev1.ConditionTrue,
+	}
 
-var triggerConditionVirtualService = duckv1alpha1.Condition{
-	Type:   TriggerConditionVirtualService,
-	Status: corev1.ConditionTrue,
-}
+	triggerConditionVirtualService = duckv1alpha1.Condition{
+		Type:   TriggerConditionVirtualService,
+		Status: corev1.ConditionTrue,
+	}
 
-var triggerConditionSubscribed = duckv1alpha1.Condition{
-	Type:   TriggerConditionSubscribed,
-	Status: corev1.ConditionFalse,
-}
+	triggerConditionSubscribed = duckv1alpha1.Condition{
+		Type:   TriggerConditionSubscribed,
+		Status: corev1.ConditionFalse,
+	}
+)
 
 func TestTriggerGetCondition(t *testing.T) {
 	tests := []struct {

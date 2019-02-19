@@ -24,30 +24,32 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var brokerConditionReady = duckv1alpha1.Condition{
-	Type:   BrokerConditionReady,
-	Status: corev1.ConditionTrue,
-}
+var (
+	brokerConditionReady = duckv1alpha1.Condition{
+		Type:   BrokerConditionReady,
+		Status: corev1.ConditionTrue,
+	}
 
-var brokerConditionIngress = duckv1alpha1.Condition{
-	Type:   BrokerConditionIngress,
-	Status: corev1.ConditionTrue,
-}
+	brokerConditionIngress = duckv1alpha1.Condition{
+		Type:   BrokerConditionIngress,
+		Status: corev1.ConditionTrue,
+	}
 
-var brokerConditionChannel = duckv1alpha1.Condition{
-	Type:   BrokerConditionChannel,
-	Status: corev1.ConditionTrue,
-}
+	brokerConditionChannel = duckv1alpha1.Condition{
+		Type:   BrokerConditionChannel,
+		Status: corev1.ConditionTrue,
+	}
 
-var brokerConditionFilter = duckv1alpha1.Condition{
-	Type:   BrokerConditionFilter,
-	Status: corev1.ConditionTrue,
-}
+	brokerConditionFilter = duckv1alpha1.Condition{
+		Type:   BrokerConditionFilter,
+		Status: corev1.ConditionTrue,
+	}
 
-var brokerConditionAddressable = duckv1alpha1.Condition{
-	Type:   BrokerConditionAddressable,
-	Status: corev1.ConditionFalse,
-}
+	brokerConditionAddressable = duckv1alpha1.Condition{
+		Type:   BrokerConditionAddressable,
+		Status: corev1.ConditionFalse,
+	}
+)
 
 func TestBrokerGetCondition(t *testing.T) {
 	tests := []struct {
