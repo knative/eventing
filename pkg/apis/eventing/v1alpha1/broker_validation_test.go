@@ -15,3 +15,26 @@ limitations under the License.
 */
 
 package v1alpha1
+
+import (
+	"testing"
+)
+
+// No-op test because method does nothing.
+func TestBrokerValidation(t *testing.T) {
+	b := Broker{}
+	_ = b.Validate()
+}
+
+// No-op test because method does nothing.
+func TestBrokerSpecValidation(t *testing.T) {
+	bs := BrokerSpec{}
+	_ = bs.Validate()
+}
+
+// No-op test because method does nothing.
+func TestBrokerImmutableFields(t *testing.T) {
+	original := &Broker{}
+	current := &Broker{}
+	_ = current.CheckImmutableFields(original)
+}
