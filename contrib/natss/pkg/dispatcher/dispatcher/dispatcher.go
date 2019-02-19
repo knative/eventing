@@ -76,6 +76,7 @@ func NewDispatcher(natssUrl string, logger *zap.Logger) (*SubscriptionsSuperviso
 }
 
 func (s *SubscriptionsSupervisor) signalReconnect() {
+	// TODO refactor to make send over the channel non-blocking operation
 	s.connect <- struct{}{}
 }
 
@@ -126,7 +127,7 @@ func (s *SubscriptionsSupervisor) connectWithRetry(stopCh <-chan struct{}) {
 	for {
 		nConn, err := stanutil.Connect(clusterchannelprovisioner.ClusterId, clientID, s.natssURL, s.logger.Sugar())
 		if err == nil {
-			// Locking here in order to reduce time in locked state
+			// Locking here in order to reduce time in locked state.
 			s.natssConnMux.Lock()
 			s.natssConn = nConn
 			s.natssConnInProgress = false
