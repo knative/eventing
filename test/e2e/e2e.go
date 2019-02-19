@@ -159,6 +159,28 @@ func WithChannelAndSubscriptionReady(clients *test.Clients, channel *v1alpha1.Ch
 	return nil
 }
 
+// CreateBroker will create a Broker
+func CreateBroker(clients *test.Clients, broker *v1alpha1.Broker, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+	brokers := clients.Eventing.EventingV1alpha1().Brokers(pkgTest.Flags.Namespace)
+	res, err := brokers.Create(broker)
+	if err != nil {
+		return err
+	}
+	cleaner.Add(v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version, "brokers", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
+	return nil
+}
+
+// CreateTrigger will create a Trigger
+func CreateTrigger(clients *test.Clients, trigger *v1alpha1.Trigger, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+	triggers := clients.Eventing.EventingV1alpha1().Triggers(pkgTest.Flags.Namespace)
+	res, err := triggers.Create(trigger)
+	if err != nil {
+		return err
+	}
+	cleaner.Add(v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version, "triggers", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
+	return nil
+}
+
 // CreateServiceAccount will create a service account
 func CreateServiceAccount(clients *test.Clients, sa *corev1.ServiceAccount, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
 	sas := clients.Kube.Kube.CoreV1().ServiceAccounts(pkgTest.Flags.Namespace)
