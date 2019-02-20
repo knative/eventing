@@ -163,12 +163,12 @@ func WithChannelAndSubscriptionReady(clients *test.Clients, channel *v1alpha1.Ch
 
 // CreateBroker will create a Broker
 func CreateBroker(clients *test.Clients, broker *v1alpha1.Broker, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
-	brokers := clients.Eventing.EventingV1alpha1().Brokers(pkgTest.Flags.Namespace)
+	brokers := clients.Eventing.EventingV1alpha1().Brokers(broker.Namespace)
 	res, err := brokers.Create(broker)
 	if err != nil {
 		return err
 	}
-	cleaner.Add(v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version, "brokers", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
+	cleaner.Add(v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version, "brokers", broker.Namespace, res.ObjectMeta.Name)
 	return nil
 }
 
@@ -182,7 +182,7 @@ func WithBrokerReady(clients *test.Clients, broker *v1alpha1.Broker, logger *log
 
 // WaitForBrokerReady waits until the broker is Ready.
 func WaitForBrokerReady(clients *test.Clients, broker *v1alpha1.Broker) error {
-	brokers := clients.Eventing.EventingV1alpha1().Brokers(pkgTest.Flags.Namespace)
+	brokers := clients.Eventing.EventingV1alpha1().Brokers(broker.Namespace)
 	if err := test.WaitForBrokerState(brokers, broker.Name, test.IsBrokerReady, "BrokerIsReady"); err != nil {
 		return err
 	}
@@ -197,12 +197,12 @@ func WaitForBrokerReady(clients *test.Clients, broker *v1alpha1.Broker) error {
 
 // CreateTrigger will create a Trigger
 func CreateTrigger(clients *test.Clients, trigger *v1alpha1.Trigger, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
-	triggers := clients.Eventing.EventingV1alpha1().Triggers(pkgTest.Flags.Namespace)
+	triggers := clients.Eventing.EventingV1alpha1().Triggers(trigger.Namespace)
 	res, err := triggers.Create(trigger)
 	if err != nil {
 		return err
 	}
-	cleaner.Add(v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version, "triggers", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
+	cleaner.Add(v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version, "triggers", trigger.Namespace, res.ObjectMeta.Name)
 	return nil
 }
 
@@ -212,7 +212,7 @@ func WithTriggerReady(clients *test.Clients, trigger *v1alpha1.Trigger, logger *
 		return err
 	}
 
-	triggers := clients.Eventing.EventingV1alpha1().Triggers(pkgTest.Flags.Namespace)
+	triggers := clients.Eventing.EventingV1alpha1().Triggers(trigger.Namespace)
 	if err := test.WaitForTriggerState(triggers, trigger.Name, test.IsTriggerReady, "TriggerIsReady"); err != nil {
 		return err
 	}
