@@ -72,7 +72,7 @@ func TestBrokerTrigger(t *testing.T) {
 	// As we are not creating the default broker,
 	// we wait for a few seconds for the broker to get created.
 	// Otherwise, if we try to wait for its Ready status and the namespace controller
-	// didn't create it yet, it fails.
+	// didn't actually create it yet, the test will fail.
 	logger.Info("Waiting for default broker creation")
 	time.Sleep(waitForDefaultBrokerCreation)
 
@@ -113,6 +113,8 @@ func TestBrokerTrigger(t *testing.T) {
 		}
 		subscriberPods[subscriberPodName] = subscriberPod
 	}
+
+	logger.Info("Subscriber pods created")
 
 	// Wait for all of them to be running.
 	if err := WaitForAllPodsRunning(clients, logger, ns); err != nil {
@@ -179,14 +181,14 @@ func TestBrokerTrigger(t *testing.T) {
 		}
 	}
 
-	logger.Info("Created event sender pods")
+	logger.Info("Event sender pods created")
 
 	// Wait for all of them to be running.
 	if err := WaitForAllPodsRunning(clients, logger, ns); err != nil {
 		t.Fatalf("Error waiting for event sender pod to become running: %v", err)
 	}
 
-	logger.Info("Verifying events arrived to appropriate dumpers")
+	logger.Info("Verifying events delivered to appropriate dumpers")
 
 	for _, dumper := range dumpers {
 		subscriberPodName := name("dumper", dumper.Broker, dumper.EventType, dumper.EventSource)
