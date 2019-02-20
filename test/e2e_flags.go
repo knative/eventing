@@ -32,7 +32,7 @@ var EventingFlags = initializeEventingFlags()
 
 // EventingEnvironmentFlags holds the e2e flags needed only by the eventing repo
 type EventingEnvironmentFlags struct {
-	DockerRepo  string // Docker repo (defaults to $DOCKER_REPO_OVERRIDE)
+	DockerRepo  string // Docker repo (defaults to $KO_DOCKER_REPO)
 	Tag         string // Tag for test images
 	Provisioner string // The name of the Channel's ClusterChannelProvisioner
 }
@@ -40,14 +40,14 @@ type EventingEnvironmentFlags struct {
 func initializeEventingFlags() *EventingEnvironmentFlags {
 	var f EventingEnvironmentFlags
 
-	defaultRepo := os.Getenv("DOCKER_REPO_OVERRIDE")
+	defaultRepo := os.Getenv("KO_DOCKER_REPO")
 
 	if defaultRepo == "" {
 		defaultRepo = os.Getenv("KO_DOCKER_REPO")
 	}
 
 	flag.StringVar(&f.DockerRepo, "dockerrepo", defaultRepo,
-		"Provide the uri of the docker repo you have uploaded the test image to using `uploadtestimage.sh`. Defaults to $DOCKER_REPO_OVERRIDE")
+		"Provide the uri of the docker repo you have uploaded the test image to using `uploadtestimage.sh`. Defaults to $KO_DOCKER_REPO")
 
 	flag.StringVar(&f.Tag, "tag", "e2e", "Provide the version tag for the test images.")
 
