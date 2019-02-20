@@ -200,7 +200,7 @@ func shouldExpectEvent(dumper *DumperInfo, sender *SenderInfo) bool {
 	if dumper.EventType != any && dumper.EventType != sender.EventType {
 		return false
 	}
-	if dumper.EventSource != any && dumper != sender.EventSource {
+	if dumper.EventSource != any && dumper.EventType != sender.EventSource {
 		return false
 	}
 	return true
