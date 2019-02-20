@@ -183,6 +183,26 @@ func CreateTrigger(clients *test.Clients, trigger *v1alpha1.Trigger, logger *log
 	return nil
 }
 
+// WithTriggerReady creates a Trigger and waits until it is Ready.
+func WithTriggerReady(clients *test.Clients, trigger *v1alpha1.Trigger, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+	if err := CreateTrigger(clients, trigger, logger, cleaner); err != nil {
+		return err
+	}
+
+	triggers := clients.Eventing.EventingV1alpha1().Triggers(pkgTest.Flags.Namespace)
+	if err := test.WaitForTriggerState(triggers, trigger.Name, test.IsTriggerReady, "TriggerIsReady"); err != nil {
+		return err
+	}
+	// Update the given object so they'll reflect the ready state
+	updatedTrigger, err := triggers.Get(trigger.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	updatedTrigger.DeepCopyInto(trigger)
+
+	return nil
+}
+
 // CreateServiceAccount will create a service account
 func CreateServiceAccount(clients *test.Clients, sa *corev1.ServiceAccount, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
 	sas := clients.Kube.Kube.CoreV1().ServiceAccounts(pkgTest.Flags.Namespace)

@@ -19,6 +19,7 @@ package test
 
 import (
 	"fmt"
+
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -167,6 +168,7 @@ func Subscription(name string, namespace string, channel *corev1.ObjectReference
 	}
 }
 
+// Broker returns a Broker.
 func Broker(name string, namespace string) *v1alpha1.Broker {
 	return &v1alpha1.Broker{
 		ObjectMeta: metav1.ObjectMeta{
@@ -177,7 +179,8 @@ func Broker(name string, namespace string) *v1alpha1.Broker {
 	}
 }
 
-func Trigger(name string, namespace string, eventType string, subscriberRef *corev1.ObjectReference, brokerName string) *v1alpha1.Trigger {
+// Trigger returns a Trigger.
+func Trigger(name, namespace, eventType, eventSource, brokerName, svcName string) *v1alpha1.Trigger {
 	return &v1alpha1.Trigger{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -185,9 +188,19 @@ func Trigger(name string, namespace string, eventType string, subscriberRef *cor
 		},
 		Spec: v1alpha1.TriggerSpec{
 			Broker: brokerName,
-			Type: fmt.Sprintf("%q", eventType),
+			Filter: &v1alpha1.TriggerFilter{
+				SourceAndType: &v1alpha1.TriggerFilterSourceAndType{
+					Type:   fmt.Sprintf("%q", eventType),
+					Source: fmt.Sprintf("%q", eventSource),
+				},
+			},
 			Subscriber: &v1alpha1.SubscriberSpec{
-				Ref: subscriberRef,
+				Ref: &corev1.ObjectReference{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Service",
+					Name:       svcName,
+					Namespace:  namespace,
+				},
 			},
 		},
 	}

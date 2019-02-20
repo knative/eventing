@@ -19,7 +19,6 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // Broker builder.
@@ -27,7 +26,7 @@ type BrokerBuilder struct {
 	*eventingv1alpha1.Broker
 }
 
-func Broker(name, namespace string) *BrokerBuilder {
+func NewBrokerBuilder(name, namespace string) *BrokerBuilder {
 	broker := &eventingv1alpha1.Broker{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
@@ -45,7 +44,7 @@ func Broker(name, namespace string) *BrokerBuilder {
 	}
 }
 
-func (b *BrokerBuilder) Build() runtime.Object {
+func (b *BrokerBuilder) Build() *eventingv1alpha1.Broker {
 	return b.Broker.DeepCopy()
 }
 
@@ -54,7 +53,7 @@ type TriggerBuilder struct {
 	*eventingv1alpha1.Trigger
 }
 
-func Trigger(name, namespace string) *TriggerBuilder {
+func NewTriggerBuilder(name, namespace string) *TriggerBuilder {
 	trigger := &eventingv1alpha1.Trigger{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
@@ -65,6 +64,8 @@ func Trigger(name, namespace string) *TriggerBuilder {
 			Namespace: namespace,
 		},
 		Spec: eventingv1alpha1.TriggerSpec{
+			// Bind to 'default' Broker by default
+			Broker: "default",
 			Filter: &eventingv1alpha1.TriggerFilter{
 				// Create a Any filter by default.
 				SourceAndType: &eventingv1alpha1.TriggerFilterSourceAndType{
@@ -80,36 +81,36 @@ func Trigger(name, namespace string) *TriggerBuilder {
 	}
 }
 
-func (b *TriggerBuilder) Build() runtime.Object {
-	return b.Trigger.DeepCopy()
+func (t *TriggerBuilder) Build() *eventingv1alpha1.Trigger {
+	return t.Trigger.DeepCopy()
 }
 
-func (b *TriggerBuilder) Type(eventType string) *TriggerBuilder {
-	b.Trigger.Spec.Filter.SourceAndType.Type = eventType
-	return b
+func (t *TriggerBuilder) Type(eventType string) *TriggerBuilder {
+	t.Trigger.Spec.Filter.SourceAndType.Type = eventType
+	return t
 }
 
-func (b *TriggerBuilder) Source(eventSource string) *TriggerBuilder {
-	b.Trigger.Spec.Filter.SourceAndType.Source = eventSource
-	return b
+func (t *TriggerBuilder) Source(eventSource string) *TriggerBuilder {
+	t.Trigger.Spec.Filter.SourceAndType.Source = eventSource
+	return t
 }
 
-func (b *TriggerBuilder) Broker(brokerName string) *TriggerBuilder {
-	b.Trigger.Spec.Broker = brokerName
-	return b
+func (t *TriggerBuilder) Broker(brokerName string) *TriggerBuilder {
+	t.Trigger.Spec.Broker = brokerName
+	return t
 }
 
-func (b *TriggerBuilder) Subscriber(ref *corev1.ObjectReference) *TriggerBuilder {
-	b.Trigger.Spec.Subscriber.Ref = ref
-	return b
+func (t *TriggerBuilder) Subscriber(ref *corev1.ObjectReference) *TriggerBuilder {
+	t.Trigger.Spec.Subscriber.Ref = ref
+	return t
 }
 
-func (b *TriggerBuilder) SubscriberSvc(svcName string) *TriggerBuilder {
-	b.Trigger.Spec.Subscriber.Ref = &corev1.ObjectReference{
+func (t *TriggerBuilder) SubscriberSvc(svcName string) *TriggerBuilder {
+	t.Trigger.Spec.Subscriber.Ref = &corev1.ObjectReference{
 		APIVersion: corev1.SchemeGroupVersion.String(),
 		Kind:       "Service",
 		Name:       svcName,
-		Namespace:  b.Trigger.GetNamespace(),
+		Namespace:  t.Trigger.GetNamespace(),
 	}
-	return b
+	return t
 }
