@@ -132,6 +132,24 @@ func WaitForTriggerState(client eventingclient.TriggerInterface, name string, in
 	})
 }
 
+// WaitForTriggersListState polls the status of the TriggerList
+// from client every interval until inState returns `true` indicating it
+// is done, returns an error or timeout. desc will be used to name the metric
+// that is emitted to track how long it took to get into the state checked by inState.
+func WaitForTriggersListState(clients eventingclient.TriggerInterface, inState func(t *eventingv1alpha1.TriggerList) (bool, error), desc string) error {
+	metricName := fmt.Sprintf("WaitForTriggerListState/%s", desc)
+	_, span := trace.StartSpan(context.Background(), metricName)
+	defer span.End()
+
+	return wait.PollImmediate(interval, timeout, func() (bool, error) {
+		t, err := clients.List(metav1.ListOptions{})
+		if err != nil {
+			return true, err
+		}
+		return inState(t)
+	})
+}
+
 // WaitForServiceState polls the status of the Service called name from client
 // every interval until inState returns `true` indicating it is done, returns an
 // error or timeout. desc will be used to name the metric that is emitted to

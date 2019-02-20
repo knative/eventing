@@ -180,14 +180,14 @@ func Broker(name string, namespace string) *v1alpha1.Broker {
 }
 
 // Trigger returns a Trigger.
-func Trigger(name, namespace, eventType, eventSource, brokerName, svcName string) *v1alpha1.Trigger {
+func Trigger(name, namespace, eventType, eventSource, broker, svcName string) *v1alpha1.Trigger {
 	return &v1alpha1.Trigger{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
 		Spec: v1alpha1.TriggerSpec{
-			Broker: brokerName,
+			Broker: broker,
 			Filter: &v1alpha1.TriggerFilter{
 				SourceAndType: &v1alpha1.TriggerFilterSourceAndType{
 					Type:   fmt.Sprintf("%q", eventType),
@@ -196,7 +196,7 @@ func Trigger(name, namespace, eventType, eventSource, brokerName, svcName string
 			},
 			Subscriber: &v1alpha1.SubscriberSpec{
 				Ref: &corev1.ObjectReference{
-					APIVersion: corev1.SchemeGroupVersion.String(),
+					APIVersion: "v1",
 					Kind:       "Service",
 					Name:       svcName,
 				},

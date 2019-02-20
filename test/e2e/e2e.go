@@ -363,6 +363,15 @@ func WaitForAllPodsRunning(clients *test.Clients, logger *logging.BaseLogger, na
 	return nil
 }
 
+// WaitForAllTriggersReady will wait until all triggers in the given namespace are ready
+func WaitForAllTriggersReady(clients *test.Clients, logger *logging.BaseLogger, namespace string) error {
+	triggers := clients.Eventing.EventingV1alpha1().Triggers(namespace)
+	if err := test.WaitForTriggersListState(triggers, test.TriggersReady, "TriggerIsReady"); err != nil {
+		return err
+	}
+	return nil
+}
+
 // AnnotateNamespace annotates the test namespace with the annotations map
 func AnnotateNamespace(clients *test.Clients, logger *logging.BaseLogger, annotations map[string]string) error {
 	ns := pkgTest.Flags.Namespace

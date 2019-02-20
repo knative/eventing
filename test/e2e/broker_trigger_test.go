@@ -19,8 +19,11 @@ package e2e
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 
 	"github.com/knative/eventing/test"
 	"github.com/knative/pkg/test/logging"
@@ -33,7 +36,7 @@ const (
 	waitForDefaultBrokerCreation = 3 * time.Second
 	selectorKey                  = "end2end-test-broker-trigger"
 
-	any          = "any"
+	any          = v1alpha1.TriggerAnyFilter
 	eventType1   = "type1"
 	eventType2   = "type2"
 	eventSource1 = "source1"
@@ -42,7 +45,8 @@ const (
 
 // Helper function to create names for different objects (e.g., triggers, services, etc.)
 func name(obj, brokerName, eventType, eventSource string) string {
-	return fmt.Sprintf("%s-%s-%s-%s", obj, brokerName, eventType, eventSource)
+	// pod names need to be lowercase. We might have an eventType as Any, that is why we lowercase them.
+	return strings.ToLower(fmt.Sprintf("%s-%s-%s-%s", obj, brokerName, eventType, eventSource))
 }
 
 func TestBrokerTrigger(t *testing.T) {
@@ -105,7 +109,7 @@ func TestBrokerTrigger(t *testing.T) {
 		subscriberPodName := name("dumper", dumper.Broker, dumper.EventType, dumper.EventSource)
 		subscriberPod := test.EventLoggerPod(subscriberPodName, dumper.Namespace, dumper.Selector)
 		if err := CreatePod(clients, subscriberPod, logger, cleaner); err != nil {
-			t.Fatalf("Failed to create subscriber pod: %v", err)
+			t.Fatalf("Error creating subscriber pod: %v", err)
 		}
 		subscriberPods[subscriberPodName] = subscriberPod
 	}
@@ -133,11 +137,17 @@ func TestBrokerTrigger(t *testing.T) {
 		// subscriberName should be the same as the subscriberSvc from before.
 		subscriberName := name("svc", dumper.Broker, dumper.EventType, dumper.EventSource)
 		trigger := test.Trigger(triggerName, dumper.Namespace, dumper.EventType, dumper.EventSource, dumper.Broker, subscriberName)
-		// Wait for the triggers to be ready
-		err := WithTriggerReady(clients, trigger, logger, cleaner)
+		err := CreateTrigger(clients, trigger, logger, cleaner)
 		if err != nil {
-			t.Fatalf("Error waiting for trigger to become ready: %v", err)
+			t.Fatalf("Error creating trigger: %v", err)
 		}
+	}
+
+	logger.Info("Triggers created")
+
+	// Wait for all of them to be ready.
+	if err := WaitForAllTriggersReady(clients, logger, ns); err != nil {
+		t.Fatalf("Error waiting for triggers to become ready: %v", err)
 	}
 
 	logger.Info("Triggers ready")
@@ -154,11 +164,11 @@ func TestBrokerTrigger(t *testing.T) {
 			Encoding: test.CloudEventEncodingStructured,
 		}
 		// Create sender pod.
-		senderPodName := fmt.Sprintf("sender-%s-%s", sender.EventType, sender.EventSource)
+		senderPodName := name("sender", "", sender.EventType, sender.EventSource)
 		senderPod := test.EventSenderPod(senderPodName, sender.Namespace, sender.Url, cloudEvent)
 		logger.Infof("Sender pod: %#v", senderPod)
 		if err := CreatePod(clients, senderPod, logger, cleaner); err != nil {
-			t.Fatalf("Failed to create event sender pod: %v", err)
+			t.Fatalf("Error creating event sender pod: %v", err)
 		}
 
 		// Check on every dumper whether we should expect this event or not, and add its body if so.
@@ -186,7 +196,7 @@ func TestBrokerTrigger(t *testing.T) {
 		}
 	}
 
-	logger.Info("Successfully completed!")
+	logger.Info("Verification successful!")
 
 }
 
