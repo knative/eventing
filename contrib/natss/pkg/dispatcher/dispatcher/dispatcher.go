@@ -76,8 +76,12 @@ func NewDispatcher(natssUrl string, logger *zap.Logger) (*SubscriptionsSuperviso
 }
 
 func (s *SubscriptionsSupervisor) signalReconnect() {
-	// TODO refactor to make send over the channel non-blocking operation
-	s.connect <- struct{}{}
+	select {
+	case s.connect <- struct{}{}:
+		// Sent.
+	default:
+		// The Channel is already full, so a reconnection attempt will occur.
+	}
 }
 
 func createReceiverFunction(s *SubscriptionsSupervisor, logger *zap.SugaredLogger) func(provisioners.ChannelReference, *provisioners.Message) error {
