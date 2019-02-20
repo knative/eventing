@@ -199,7 +199,6 @@ func Trigger(name, namespace, eventType, eventSource, brokerName, svcName string
 					APIVersion: corev1.SchemeGroupVersion.String(),
 					Kind:       "Service",
 					Name:       svcName,
-					Namespace:  namespace,
 				},
 			},
 		},

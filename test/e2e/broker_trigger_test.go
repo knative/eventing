@@ -20,6 +20,7 @@ package e2e
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/knative/eventing/test"
 	"github.com/knative/pkg/test/logging"
@@ -28,8 +29,9 @@ import (
 )
 
 const (
-	defaultBrokerName = "default"
-	selectorKey       = "end2end-test-broker-trigger"
+	defaultBrokerName            = "default"
+	waitForDefaultBrokerCreation = 3 * time.Second
+	selectorKey                  = "end2end-test-broker-trigger"
 
 	any          = "any"
 	eventType1   = "type1"
@@ -62,6 +64,13 @@ func TestBrokerTrigger(t *testing.T) {
 	}
 
 	logger.Infof("Namespace %s annotated", ns)
+
+	// As we are not creating the default broker,
+	// we wait for a few seconds for the broker to get created.
+	// Otherwise, if we try to wait for its Ready status and the namespace controller
+	// didn't create it yet, it fails.
+	logger.Info("Waiting for default broker creation")
+	time.Sleep(waitForDefaultBrokerCreation)
 
 	// Wait for default broker ready.
 	defaultBroker := test.Broker(defaultBrokerName, ns)
