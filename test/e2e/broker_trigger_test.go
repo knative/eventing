@@ -77,11 +77,14 @@ func TestBrokerTrigger(t *testing.T) {
 	time.Sleep(waitForDefaultBrokerCreation)
 
 	// Wait for default broker ready.
+	logger.Info("Waiting for default broker to be ready")
 	defaultBroker := test.Broker(defaultBrokerName, ns)
 	err = WaitForBrokerReady(clients, defaultBroker)
 	if err != nil {
 		t.Fatalf("Error waiting for default broker to become ready: %v", err)
 	}
+
+	logger.Info("Default broker ready")
 
 	defaultBrokerUrl := fmt.Sprintf("http://%s", defaultBroker.Status.Address.Hostname)
 
@@ -116,6 +119,8 @@ func TestBrokerTrigger(t *testing.T) {
 
 	logger.Info("Subscriber pods created")
 
+	logger.Info("Waiting for subscriber pods to become running")
+
 	// Wait for all of them to be running.
 	if err := WaitForAllPodsRunning(clients, logger, ns); err != nil {
 		t.Fatalf("Error waiting for event logger pod to become running: %v", err)
@@ -127,7 +132,10 @@ func TestBrokerTrigger(t *testing.T) {
 
 	for _, dumper := range dumpers {
 		subscriberSvcName := name("svc", dumper.Broker, dumper.EventType, dumper.EventSource)
-		test.Service(subscriberSvcName, dumper.Namespace, dumper.Selector)
+		service := test.Service(subscriberSvcName, dumper.Namespace, dumper.Selector)
+		if err := CreateService(clients, service, logger, cleaner); err != nil {
+			t.Fatalf("Error creating subscriber service: %v", err)
+		}
 	}
 
 	logger.Info("Subscriber services created")
@@ -146,6 +154,8 @@ func TestBrokerTrigger(t *testing.T) {
 	}
 
 	logger.Info("Triggers created")
+
+	logger.Info("Waiting for triggers to become ready")
 
 	// Wait for all of them to be ready.
 	if err := WaitForAllTriggersReady(clients, logger, ns); err != nil {
@@ -168,7 +178,6 @@ func TestBrokerTrigger(t *testing.T) {
 		// Create sender pod.
 		senderPodName := name("sender", "", sender.EventType, sender.EventSource)
 		senderPod := test.EventSenderPod(senderPodName, sender.Namespace, sender.Url, cloudEvent)
-		logger.Infof("Sender pod: %#v", senderPod)
 		if err := CreatePod(clients, senderPod, logger, cleaner); err != nil {
 			t.Fatalf("Error creating event sender pod: %v", err)
 		}
@@ -183,10 +192,14 @@ func TestBrokerTrigger(t *testing.T) {
 
 	logger.Info("Event sender pods created")
 
+	logger.Info("Waiting for event sender pods to be running")
+
 	// Wait for all of them to be running.
 	if err := WaitForAllPodsRunning(clients, logger, ns); err != nil {
 		t.Fatalf("Error waiting for event sender pod to become running: %v", err)
 	}
+
+	logger.Info("Event sender pods running")
 
 	logger.Info("Verifying events delivered to appropriate dumpers")
 
