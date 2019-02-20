@@ -296,26 +296,6 @@ func CreateService(clients *test.Clients, svc *corev1.Service, logger *logging.B
 	return nil
 }
 
-// WithServiceReady creates a Service and waits until it is Ready.
-func WithServiceReady(clients *test.Clients, svc *corev1.Service, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
-	if err := CreateService(clients, svc, logger, cleaner); err != nil {
-		return err
-	}
-
-	svcs := clients.Kube.Kube.CoreV1().Services(pkgTest.Flags.Namespace)
-	if err := test.WaitForServiceState(svcs, svc.Name, test.IsServiceReady, "ServiceIsReady"); err != nil {
-		return err
-	}
-	// Update the given object so they'll reflect the ready state
-	updatedSvc, err := svcs.Get(svc.Name, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	updatedSvc.DeepCopyInto(svc)
-
-	return nil
-}
-
 // CreatePod will create a Pod
 func CreatePod(clients *test.Clients, pod *corev1.Pod, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
 	pods := clients.Kube.Kube.CoreV1().Pods(pod.GetNamespace())
@@ -351,16 +331,28 @@ func PodLogs(clients *test.Clients, podName string, containerName string, namesp
 	return nil, fmt.Errorf("Could not find logs for %s/%s", podName, containerName)
 }
 
-// WaitForLogContent waits until logs for given Pod/Container include the given content.
-// If the content is not present within timeout it returns error.
-func WaitForLogContent(clients *test.Clients, logger *logging.BaseLogger, podName string, containerName string, namespace string, content string) error {
+// WaitForLogContents waits until logs for given Pod/Container include the given contents.
+// If the contents are not present within timeout it returns error.
+func WaitForLogContents(clients *test.Clients, logger *logging.BaseLogger, podName string, containerName string, namespace string, contents []string) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
 		logs, err := PodLogs(clients, podName, containerName, namespace, logger)
 		if err != nil {
 			return true, err
 		}
-		return strings.Contains(string(logs), content), nil
+		for _, content := range contents {
+			if !strings.Contains(string(logs), content) {
+				logger.Infof("Could not find content %s for %s/%s", content, podName, containerName)
+				return false, nil
+			}
+		}
+		return true, nil
 	})
+}
+
+// WaitForLogContent waits until logs for given Pod/Container include the given content.
+// If the content is not present within timeout it returns error.
+func WaitForLogContent(clients *test.Clients, logger *logging.BaseLogger, podName string, containerName string, namespace string, content string) error {
+	return WaitForLogContents(clients, logger, podName, containerName, namespace, []string{content})
 }
 
 // WaitForAllPodsRunning will wait until all pods in the given namespace are running

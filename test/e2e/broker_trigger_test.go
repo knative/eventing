@@ -19,13 +19,13 @@ package e2e
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 
 	"github.com/knative/eventing/test"
 	"github.com/knative/pkg/test/logging"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
@@ -40,12 +40,29 @@ const (
 	eventSource2 = "source2"
 )
 
-type TypeAndSource struct {
-	Type, Source string
+// Helper function to create names for different objects (e.g., triggers, services, etc.)
+func name(obj, brokerName, eventType, eventSource string) string {
+	return fmt.Sprintf("%s-%s-%s-%s", obj, brokerName, eventType, eventSource)
 }
 
-func name(brokerName, eventType, eventSource string) string {
-	return fmt.Sprintf("%s-%s-%s", brokerName, eventType, eventSource)
+// Helper object to easily create subscriber pods, services and triggers.
+// We also use this to verify the expected events that should be received
+// by the particular subscriber pods.
+type DumperInfo struct {
+	Namespace      string
+	Broker         string
+	EventType      string
+	EventSource    string
+	Selector       map[string]string
+	ExpectedBodies []string
+}
+
+// Helper object to easily create event sender pods.
+type SenderInfo struct {
+	Namespace   string
+	Url         string
+	EventType   string
+	EventSource string
 }
 
 func TestBrokerTrigger(t *testing.T) {
@@ -54,33 +71,49 @@ func TestBrokerTrigger(t *testing.T) {
 	clients, cleaner := Setup(t, logger)
 	defer TearDown(clients, cleaner, logger)
 
-	// verify namespace and annotate to create default broker
+	// Verify namespace and annotate to create default broker.
 	ns, cleanupNS := NamespaceExists(t, clients, logger, true)
 	defer cleanupNS()
 
+	// Wait for default broker ready.
 	defaultBroker := test.Broker(defaultBrokerName, ns)
 	err := WaitForBrokerReady(clients, defaultBroker)
 	if err != nil {
 		t.Fatalf("Error waiting for default broker to become ready: %v", err)
 	}
 
-	// name -> selector
-	eventLoggers := []map[string]map[string]string{
-		{name(defaultBroker, any, any): {selectorKey: string(uuid.NewUUID())}},
-		{name(defaultBroker, eventType1, any): {selectorKey: string(uuid.NewUUID())}},
-		{name(defaultBroker, any, eventSource1): {selectorKey: string(uuid.NewUUID())}},
-		{name(defaultBroker, eventType1, eventSource1): {selectorKey: string(uuid.NewUUID())}},
+	defaultBrokerUrl := fmt.Sprintf("http://%s", defaultBroker.Status.Address.Hostname)
+
+	// Create sender helpers.
+	senders := []SenderInfo{
+		{ns, defaultBrokerUrl, eventType1, eventSource1},
+		{ns, defaultBrokerUrl, eventType1, eventSource2},
+		{ns, defaultBrokerUrl, eventType2, eventSource1},
+		{ns, defaultBrokerUrl, eventType2, eventSource2},
+	}
+
+	// Create DumperInfo helpers.
+	dumpers := []DumperInfo{
+		{ns, defaultBrokerName, any, any, {selectorKey: string(uuid.NewUUID())}, make([]string, 0)},
+		{ns, defaultBrokerName, eventType1, any, {selectorKey: string(uuid.NewUUID())}, make([]string, 0)},
+		{ns, defaultBrokerName, any, eventSource1, {selectorKey: string(uuid.NewUUID())}, make([]string, 0)},
+		{ns, defaultBrokerName, eventType1, eventSource1, {selectorKey: string(uuid.NewUUID())}, make([]string, 0)},
 	}
 
 	logger.Info("Creating Subscriber pods")
 
-	for name, selector := range eventLoggers {
-		subscriberPod := test.EventLoggerPod(name, ns, selector)
+	// Save the references in this map for later use.
+	subscriberPods := make(map[string]*corev1.Pod, 0)
+	for _, dumper := range dumpers {
+		subscriberPodName := name("dumper", dumper.Broker, dumper.EventType, dumper.EventSource)
+		subscriberPod := test.EventLoggerPod(subscriberPodName, dumper.Namespace, dumper.Selector)
 		if err := CreatePod(clients, subscriberPod, logger, cleaner); err != nil {
 			t.Fatalf("Failed to create subscriber pod: %v", err)
 		}
+		subscriberPods[subscriberPodName] = subscriberPod
 	}
 
+	// Wait for all of them to be running.
 	if err := WaitForAllPodsRunning(clients, logger, ns); err != nil {
 		t.Fatalf("Error waiting for event logger pod to become running: %v", err)
 	}
@@ -89,22 +122,22 @@ func TestBrokerTrigger(t *testing.T) {
 
 	logger.Info("Creating Subscriber services")
 
-	for name, selector := range eventLoggers {
-		subscriberSvc := test.Service(name, ns, selector)
-		if err := WithServiceReady(clients, subscriberSvc, logger, cleaner); err != nil {
-			t.Fatalf("Error waiting for subscriber service to become ready: %v", err)
-		}
+	for _, dumper := range dumpers {
+		subscriberSvcName := name("svc", dumper.Broker, dumper.EventType, dumper.EventSource)
+		subscriberSvc := test.Service(subscriberSvcName, dumper.Namespace, dumper.Selector)
 	}
 
-	logger.Info("Subscriber services ready")
+	logger.Info("Subscriber services created")
 
 	logger.Info("Creating Triggers")
 
-	for name, selector := range eventLoggers {
-		strs := strings.Split(name, "-")
-		_, brokerName, eventType, eventSource := strs[0], strs[1], strs[2], strs[3]
-		trigger := test.Trigger(name, ns, eventType, eventSource, name)
-		err := WithTriggerReady(clients, defaultTrigger, logger, cleaner)
+	for _, dumper := range dumpers {
+		triggerName := name("trigger", dumper.Broker, dumper.EventType, dumper.EventSource)
+		// subscriberName should be the same as the subscriberSvc from before.
+		subscriberName := name("svc", dumper.Broker, dumper.EventType, dumper.EventSource)
+		trigger := test.Trigger(triggerName, dumper.Namespace, dumper.EventType, dumper.EventSource, dumper.Broker, subscriberName)
+		// Wait for the triggers to be ready
+		err := WithTriggerReady(clients, trigger, logger, cleaner)
 		if err != nil {
 			t.Fatalf("Error waiting for trigger to become ready: %v", err)
 		}
@@ -112,34 +145,63 @@ func TestBrokerTrigger(t *testing.T) {
 
 	logger.Info("Triggers ready")
 
-	typesAndSources = []TypeAndSource{
-		{eventType1, eventSource1},
-		{eventType1, eventSource2},
-		{eventType2, eventSource1},
-		{eventType2, eventSource2},
-	}
+	logger.Info("Creating event sender pods")
 
-	logger.Infof("Creating event sender pods")
-	// TODO should create a single pod that can send multiple events
-	for event := range typesAndSources {
+	for _, sender := range senders {
+		// Create cloud event.
 		body := fmt.Sprintf("Testing Broker-Trigger %s", uuid.NewUUID())
 		cloudEvent := test.CloudEvent{
-			Source:   event.Source,
-			Type:     event.Type,
+			Source:   sender.EventSource,
+			Type:     sender.EventType,
 			Data:     fmt.Sprintf(`{"msg":%q}`, body),
-			Encoding: encoding,
+			Encoding: test.CloudEventEncodingStructured,
 		}
-		url := fmt.Sprintf("http://%s", defaultBroker.Status.Address.Hostname)
-		senderPod := test.EventSenderPod(event.Source, ns, url, cloudEvent)
+		// Create sender pod.
+		senderPodName := fmt.Sprintf("sender-%s-%s", sender.EventType, sender.EventSource)
+		senderPod := test.EventSenderPod(senderPodName, sender.Namespace, url, cloudEvent)
 		logger.Infof("Sender pod: %#v", senderPod)
 		if err := CreatePod(clients, senderPod, logger, cleaner); err != nil {
 			t.Fatalf("Failed to create event sender pod: %v", err)
 		}
+
+		// Check on every dumper whether we should expect this event or not, and add its body if so.
+		for _, dumper := range dumpers {
+			if shouldExpectEvent(dumper, sender) {
+				dumper.ExpectedBodies = append(dumper.ExpectedBodies, body)
+			}
+		}
 	}
 
-	// Verify that each event arrived to its own place.
-	if err := WaitForLogContent(clients, logger, routeName, subscriberPod.Spec.Containers[0].Name, ns, body); err != nil {
-		t.Fatalf("String %q not found in logs of subscriber pod %q: %v", body, routeName, err)
+	logger.Info("Created event sender pods")
+
+	// Wait for all of them to be running.
+	if err := WaitForAllPodsRunning(clients, logger, ns); err != nil {
+		t.Fatalf("Error waiting for event sender pod to become running: %v", err)
 	}
 
+	logger.Info("Verifying events arrived to appropriate dumpers")
+
+	for _, dumper := range dumpers {
+		subscriberPodName := name("dumper", dumper.Broker, dumper.EventType, dumper.EventSource)
+		subscriberPod := subscriberPods[subscriberPodName]
+		if err := WaitForLogContents(clients, logger, routeName, subscriberPod.Spec.Containers[0].Name, dumper.Namespace, dumper.ExpectedBodies); err != nil {
+			t.Fatalf("String(s) not found in logs of subscriber pod %q: %v", subscriberPodName, err)
+		}
+	}
+
+	logger.Info("Successfully completed!")
+
+}
+
+func shouldExpectEvent(dumper *DumperInfo, sender *SenderInfo) bool {
+	if dumper.Namespace != sender.Namespace {
+		return false
+	}
+	if dumper.EventType != any && dumper.EventType != sender.EventType {
+		return false
+	}
+	if dumper.EventSource != any && dumper != sender.EventSource {
+		return false
+	}
+	return true
 }
