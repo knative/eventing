@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-
 	"github.com/knative/eventing/test"
 	"github.com/knative/pkg/test/logging"
 	corev1 "k8s.io/api/core/v1"
@@ -33,7 +31,7 @@ const (
 	defaultBrokerName = "default"
 	selectorKey       = "end2end-test-broker-trigger"
 
-	any          = v1alpha1.TriggerAnyFilter
+	any          = "any"
 	eventType1   = "type1"
 	eventType2   = "type2"
 	eventSource1 = "source1"
@@ -55,11 +53,15 @@ func TestBrokerTrigger(t *testing.T) {
 	ns, cleanupNS := NamespaceExists(t, clients, logger)
 	defer cleanupNS()
 
+	logger.Infof("Annotating namespace %s", ns)
+
 	// Annotate namespace so that it creates the default broker.
 	err := AnnotateNamespace(clients, logger, map[string]string{"eventing.knative.dev/inject": "true"})
 	if err != nil {
 		t.Fatalf("Error annotating namespace: %v", err)
 	}
+
+	logger.Infof("Namespace %s annotated", ns)
 
 	// Wait for default broker ready.
 	defaultBroker := test.Broker(defaultBrokerName, ns)
