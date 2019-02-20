@@ -19,29 +19,17 @@ package main
 import (
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/knative/eventing/contrib/natss/pkg/dispatcher/channel"
 	"github.com/knative/eventing/contrib/natss/pkg/dispatcher/dispatcher"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/knative/eventing/contrib/natss/pkg/controller/clusterchannelprovisioner"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/utils"
-)
-
-var (
-	readTimeout  = 1 * time.Minute
-	writeTimeout = 1 * time.Minute
-
-	port               int
-	configMapNoticer   string
-	configMapNamespace string
-	configMapName      string
 )
 
 func main() {
@@ -57,29 +45,28 @@ func main() {
 	}
 
 	// Add custom types to this array to get them into the manager's scheme.
-	eventingv1alpha1.AddToScheme(mgr.GetScheme())
-
-	stopCh := signals.SetupSignalHandler()
-	var g errgroup.Group
+	if err = eventingv1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
+		logger.Fatal("Unable to add eventingv1alpha1 scheme", zap.Error(err))
+	}
 
 	logger.Info("Dispatcher starting...")
 	natssUrl := fmt.Sprintf(clusterchannelprovisioner.NatssUrlTmpl, utils.GetClusterDomainName())
-	dispatcher, err := dispatcher.NewDispatcher(natssUrl, logger)
+	d, err := dispatcher.NewDispatcher(natssUrl, logger)
 	if err != nil {
 		logger.Fatal("Unable to create NATSS dispatcher.", zap.Error(err))
 	}
 
-	g.Go(func() error {
-		return dispatcher.Start(stopCh)
-	})
+	if err = mgr.Add(d); err != nil {
+		logger.Fatal("Unable to add the dispatcher", zap.Error(err))
+	}
 
-	_, err = channel.ProvideController(dispatcher, mgr, logger)
+	_, err = channel.ProvideController(d, mgr, logger)
 	if err != nil {
 		logger.Fatal("Unable to create Channel controller", zap.Error(err))
 	}
 
 	logger.Info("Dispatcher controller starting...")
-
+	stopCh := signals.SetupSignalHandler()
 	err = mgr.Start(stopCh)
 	if err != nil {
 		logger.Fatal("Manager.Start() returned an error", zap.Error(err))

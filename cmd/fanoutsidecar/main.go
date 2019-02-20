@@ -28,12 +28,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/knative/eventing/pkg/utils"
+
 	"github.com/knative/eventing/pkg/sidecar/configmap/filesystem"
 	"github.com/knative/eventing/pkg/sidecar/configmap/watcher"
 	"github.com/knative/eventing/pkg/sidecar/swappable"
 	"github.com/knative/pkg/system"
 	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -99,31 +100,34 @@ func main() {
 		WriteTimeout: writeTimeout,
 	}
 
-	// Start both the manager (which notices ConfigMap changes) and the HTTP server.
-	var g errgroup.Group
-	g.Go(func() error {
-		// set up signals so we handle the first shutdown signal gracefully
-		stopCh := signals.SetupSignalHandler()
-		// Start blocks forever, so run it in a goroutine.
-		return mgr.Start(stopCh)
-	})
-	logger.Info("Fanout sidecar Listening...", zap.String("Address", s.Addr))
-	g.Go(s.ListenAndServe)
-	err = g.Wait()
+	logger.Info("Fanout sidecar listening", zap.String("address", s.Addr))
+	err = mgr.Add(&runnableServer{s: s})
 	if err != nil {
-		logger.Error("Either the HTTP server or the ConfigMap noticer failed.", zap.Error(err))
+		logger.Fatal("Unable to add ListenAndServe", zap.Error(err))
 	}
+
+	// set up signals so we handle the first shutdown signal gracefully
+	stopCh := signals.SetupSignalHandler()
+	// Start blocks forever.
+	err = mgr.Start(stopCh)
+	if err != nil {
+		logger.Error("manager.Start() returned an error", zap.Error(err))
+	}
+	logger.Info("Exiting...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), writeTimeout)
 	defer cancel()
-	s.Shutdown(ctx)
+	err = s.Shutdown(ctx)
+	if err != nil {
+		logger.Error("Shutdown returned an error", zap.Error(err))
+	}
 }
 
 func setupConfigMapNoticer(logger *zap.Logger, configUpdated swappable.UpdateConfig) (manager.Manager, error) {
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
 	if err != nil {
-		return nil, err
 		logger.Error("Error starting manager.", zap.Error(err))
+		return nil, err
 	}
 
 	switch configMapNoticer {
@@ -147,7 +151,11 @@ func setupConfigMapVolume(logger *zap.Logger, mgr manager.Manager, configUpdated
 		logger.Error("Unable to create filesystem.ConifgMapWatcher", zap.Error(err))
 		return err
 	}
-	mgr.Add(cmn)
+	err = mgr.Add(cmn)
+	if err != nil {
+		logger.Error("Unable to add the config map watcher", zap.Error(err))
+		return err
+	}
 	return nil
 }
 
@@ -162,6 +170,20 @@ func setupConfigMapWatcher(logger *zap.Logger, mgr manager.Manager, configUpdate
 		return err
 	}
 
-	mgr.Add(cmw)
+	err = mgr.Add(utils.NewBlockingStart(logger, cmw))
+	if err != nil {
+		logger.Error("Unable to add the config map watcher", zap.Error(err))
+		return err
+	}
 	return nil
+}
+
+// runnableServer is a small wrapper around http.Server so that it matches the manager.Runnable
+// interface.
+type runnableServer struct {
+	s *http.Server
+}
+
+func (r *runnableServer) Start(<-chan struct{}) error {
+	return r.s.ListenAndServe()
 }
