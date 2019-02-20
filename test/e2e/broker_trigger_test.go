@@ -86,18 +86,18 @@ func TestBrokerTrigger(t *testing.T) {
 
 	// Create sender helpers.
 	senders := []SenderInfo{
-		{ns, defaultBrokerUrl, eventType1, eventSource1},
-		{ns, defaultBrokerUrl, eventType1, eventSource2},
-		{ns, defaultBrokerUrl, eventType2, eventSource1},
-		{ns, defaultBrokerUrl, eventType2, eventSource2},
+		SenderInfo{ns, defaultBrokerUrl, eventType1, eventSource1},
+		SenderInfo{ns, defaultBrokerUrl, eventType1, eventSource2},
+		SenderInfo{ns, defaultBrokerUrl, eventType2, eventSource1},
+		SenderInfo{ns, defaultBrokerUrl, eventType2, eventSource2},
 	}
 
 	// Create DumperInfo helpers.
 	dumpers := []DumperInfo{
-		{ns, defaultBrokerName, any, any, {selectorKey: string(uuid.NewUUID())}, make([]string, 0)},
-		{ns, defaultBrokerName, eventType1, any, {selectorKey: string(uuid.NewUUID())}, make([]string, 0)},
-		{ns, defaultBrokerName, any, eventSource1, {selectorKey: string(uuid.NewUUID())}, make([]string, 0)},
-		{ns, defaultBrokerName, eventType1, eventSource1, {selectorKey: string(uuid.NewUUID())}, make([]string, 0)},
+		DumperInfo{ns, defaultBrokerName, any, any, {selectorKey: string(uuid.NewUUID())}, make([]string, 0)},
+		DumperInfo{ns, defaultBrokerName, eventType1, any, {selectorKey: string(uuid.NewUUID())}, make([]string, 0)},
+		DumperInfo{ns, defaultBrokerName, any, eventSource1, {selectorKey: string(uuid.NewUUID())}, make([]string, 0)},
+		DumperInfo{ns, defaultBrokerName, eventType1, eventSource1, {selectorKey: string(uuid.NewUUID())}, make([]string, 0)},
 	}
 
 	logger.Info("Creating Subscriber pods")
@@ -158,7 +158,7 @@ func TestBrokerTrigger(t *testing.T) {
 		}
 		// Create sender pod.
 		senderPodName := fmt.Sprintf("sender-%s-%s", sender.EventType, sender.EventSource)
-		senderPod := test.EventSenderPod(senderPodName, sender.Namespace, url, cloudEvent)
+		senderPod := test.EventSenderPod(senderPodName, sender.Namespace, sender.Url, cloudEvent)
 		logger.Infof("Sender pod: %#v", senderPod)
 		if err := CreatePod(clients, senderPod, logger, cleaner); err != nil {
 			t.Fatalf("Failed to create event sender pod: %v", err)
