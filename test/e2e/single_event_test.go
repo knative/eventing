@@ -51,7 +51,7 @@ func SingleEvent(t *testing.T, encoding string) {
 
 	// verify namespace
 
-	ns, cleanupNS := NamespaceExists(t, clients, logger, false)
+	ns, cleanupNS := NamespaceExists(t, clients, logger)
 	defer cleanupNS()
 
 	// create logger pod

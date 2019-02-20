@@ -363,7 +363,19 @@ func WaitForAllPodsRunning(clients *test.Clients, logger *logging.BaseLogger, na
 	return nil
 }
 
-func NamespaceExists(t *testing.T, clients *test.Clients, logger *logging.BaseLogger, annotate bool) (string, func()) {
+// AnnotateNamespace annotates the test namespace with the annotations map
+func AnnotateNamespace(clients *test.Clients, logger *logging.BaseLogger, annotations map[string]string) error {
+	ns := pkgTest.Flags.Namespace
+	nsSpec, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
+	if err != nil && errors.IsNotFound(err) {
+		return err
+	}
+	nsSpec.Annotations = annotations
+	_, err = clients.Kube.Kube.CoreV1().Namespaces().Update(nsSpec)
+	return err
+}
+
+func NamespaceExists(t *testing.T, clients *test.Clients, logger *logging.BaseLogger) (string, func()) {
 	shutdown := func() {}
 	ns := pkgTest.Flags.Namespace
 	logger.Infof("Namespace: %s", ns)
@@ -372,9 +384,6 @@ func NamespaceExists(t *testing.T, clients *test.Clients, logger *logging.BaseLo
 
 	if err != nil && errors.IsNotFound(err) {
 		nsSpec = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}
-		if annotate {
-			nsSpec.Annotations = map[string]string{"eventing.knative.dev/inject": "true"}
-		}
 		logger.Infof("Creating Namespace: %s", ns)
 		nsSpec, err = clients.Kube.Kube.CoreV1().Namespaces().Create(nsSpec)
 
