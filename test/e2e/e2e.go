@@ -172,6 +172,29 @@ func CreateBroker(clients *test.Clients, broker *v1alpha1.Broker, logger *loggin
 	return nil
 }
 
+// WithBrokerReady creates a Broker and waits until it is Ready.
+func WithBrokerReady(clients *test.Clients, broker *v1alpha1.Broker, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+	if err := CreateBroker(clients, broker, logger, cleaner); err != nil {
+		return err
+	}
+	return WaitForBrokerReady(clients, broker)
+}
+
+// WaitForBrokerReady waits until the broker is Ready.
+func WaitForBrokerReady(clients *test.Clients, broker *v1alpha1.Broker) error {
+	brokers := clients.Eventing.EventingV1alpha1().Brokers(pkgTest.Flags.Namespace)
+	if err := test.WaitForBrokerState(brokers, broker.Name, test.IsBrokerReady, "BrokerIsReady"); err != nil {
+		return err
+	}
+	// Update the given object so they'll reflect the ready state
+	updatedBroker, err := brokers.Get(broker.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	updatedBroker.DeepCopyInto(broker)
+	return nil
+}
+
 // CreateTrigger will create a Trigger
 func CreateTrigger(clients *test.Clients, trigger *v1alpha1.Trigger, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
 	triggers := clients.Eventing.EventingV1alpha1().Triggers(pkgTest.Flags.Namespace)
@@ -273,6 +296,26 @@ func CreateService(clients *test.Clients, svc *corev1.Service, logger *logging.B
 	return nil
 }
 
+// WithServiceReady creates a Service and waits until it is Ready.
+func WithServiceReady(clients *test.Clients, svc *corev1.Service, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+	if err := CreateService(clients, svc, logger, cleaner); err != nil {
+		return err
+	}
+
+	svcs := clients.Kube.Kube.CoreV1().Services(pkgTest.Flags.Namespace)
+	if err := test.WaitForServiceState(svcs, svc.Name, test.IsServiceReady, "ServiceIsReady"); err != nil {
+		return err
+	}
+	// Update the given object so they'll reflect the ready state
+	updatedSvc, err := svcs.Get(svc.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	updatedSvc.DeepCopyInto(svc)
+
+	return nil
+}
+
 // CreatePod will create a Pod
 func CreatePod(clients *test.Clients, pod *corev1.Pod, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
 	pods := clients.Kube.Kube.CoreV1().Pods(pod.GetNamespace())
@@ -328,7 +371,7 @@ func WaitForAllPodsRunning(clients *test.Clients, logger *logging.BaseLogger, na
 	return nil
 }
 
-func NamespaceExists(t *testing.T, clients *test.Clients, logger *logging.BaseLogger) (string, func()) {
+func NamespaceExists(t *testing.T, clients *test.Clients, logger *logging.BaseLogger, annotate bool) (string, func()) {
 	shutdown := func() {}
 	ns := pkgTest.Flags.Namespace
 	logger.Infof("Namespace: %s", ns)
@@ -337,8 +380,12 @@ func NamespaceExists(t *testing.T, clients *test.Clients, logger *logging.BaseLo
 
 	if err != nil && errors.IsNotFound(err) {
 		nsSpec = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}
+		if annotate {
+			nsSpec.Annotations = map[string]string{"eventing.knative.dev/inject": "true"}
+		}
 		logger.Infof("Creating Namespace: %s", ns)
 		nsSpec, err = clients.Kube.Kube.CoreV1().Namespaces().Create(nsSpec)
+
 		if err != nil {
 			t.Fatalf("Failed to create Namespace: %s; %v", ns, err)
 		} else {

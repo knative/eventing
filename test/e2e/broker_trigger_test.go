@@ -19,6 +19,7 @@ package e2e
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -30,25 +31,21 @@ import (
 
 const (
 	defaultBrokerName = "default"
+	selectorKey       = "end2end-test-broker-trigger"
 
-	eventAny     = v1alpha1.TriggerAnyFilter
-	eventType1   = "test.type1"
-	eventType2   = "test.type2"
-	eventSource1 = "test.source1"
-	eventSource2 = "test.source2"
-
-	defaultAnyDumper          = "default-any-dumper"
-	defaultType1Dumper        = "default-type1-dumper"
-	defaultSource1Dumper      = "default-source1-dumper"
-	defaultType1Source1Dumper = "default-type1-source1-dumper"
+	any          = v1alpha1.TriggerAnyFilter
+	eventType1   = "type1"
+	eventType2   = "type2"
+	eventSource1 = "source1"
+	eventSource2 = "source2"
 )
 
 type TypeAndSource struct {
 	Type, Source string
 }
 
-func triggerName(broker, eventType string) string {
-	fmt.Sprintf("%s-dump-%s", broker, eventType)
+func name(brokerName, eventType, eventSource string) string {
+	return fmt.Sprintf("%s-%s-%s", brokerName, eventType, eventSource)
 }
 
 func TestBrokerTrigger(t *testing.T) {
@@ -57,21 +54,30 @@ func TestBrokerTrigger(t *testing.T) {
 	clients, cleaner := Setup(t, logger)
 	defer TearDown(clients, cleaner, logger)
 
-	// verify namespace
-	ns, cleanupNS := NamespaceExists(t, clients, logger)
+	// verify namespace and annotate to create default broker
+	ns, cleanupNS := NamespaceExists(t, clients, logger, true)
 	defer cleanupNS()
 
-	// TODO label namespace to get default Broker
+	defaultBroker := test.Broker(defaultBrokerName, ns)
+	err := WaitForBrokerReady(clients, defaultBroker)
+	if err != nil {
+		t.Fatalf("Error waiting for default broker to become ready: %v", err)
+	}
+
+	// name -> selector
+	eventLoggers := []map[string]map[string]string{
+		{name(defaultBroker, any, any): {selectorKey: string(uuid.NewUUID())}},
+		{name(defaultBroker, eventType1, any): {selectorKey: string(uuid.NewUUID())}},
+		{name(defaultBroker, any, eventSource1): {selectorKey: string(uuid.NewUUID())}},
+		{name(defaultBroker, eventType1, eventSource1): {selectorKey: string(uuid.NewUUID())}},
+	}
 
 	logger.Info("Creating Subscriber pods")
 
-	eventLoggerSelectors := []map[string]string{{"svcName": defaultAnyDumper}, {"svcName": defaultType1Dumper}, {"svcName": defaultSource1Dumper}, {"svcName": defaultType1Source1Dumper}}
-
-	for eventLoggerSelector := range eventLoggerSelectors {
-		subscriberPod := test.EventLoggerPod(eventLoggerSelector["svcName"], ns, eventLoggerSelector)
-
+	for name, selector := range eventLoggers {
+		subscriberPod := test.EventLoggerPod(name, ns, selector)
 		if err := CreatePod(clients, subscriberPod, logger, cleaner); err != nil {
-			t.Fatalf("Failed to create event logger pod: %v", err)
+			t.Fatalf("Failed to create subscriber pod: %v", err)
 		}
 	}
 
@@ -81,40 +87,41 @@ func TestBrokerTrigger(t *testing.T) {
 
 	logger.Info("Subscriber pods running")
 
-	for eventLoggerSelector := range eventLoggerSelectors {
-		subscriberSvc := test.Service(eventLoggerSelector["svcName"], ns, eventLoggerSelector)
-		if err := CreateService(clients, subscriberSvc, logger, cleaner); err != nil {
-			t.Fatalf("Failed to create event logger service: %v", err)
+	logger.Info("Creating Subscriber services")
+
+	for name, selector := range eventLoggers {
+		subscriberSvc := test.Service(name, ns, selector)
+		if err := WithServiceReady(clients, subscriberSvc, logger, cleaner); err != nil {
+			t.Fatalf("Error waiting for subscriber service to become ready: %v", err)
 		}
 	}
 
+	logger.Info("Subscriber services ready")
+
 	logger.Info("Creating Triggers")
 
-	defaultTriggers := []*v1alpha1.Trigger{
-		test.Trigger("default-dump-any", ns, eventAny, eventAny, defaultBrokerName, defaultAnyDumper),
-		test.Trigger("default-dump-type1", ns, eventType1, eventAny, defaultBrokerName, defaultType1Dumper),
-		test.Trigger("default-dump-source1", ns, eventAny, eventSource1, defaultBrokerName, defaultSource1Dumper),
-		test.Trigger("default-dump-type1-source1", ns, eventType1, eventSource1, defaultBrokerName, defaultType1Source1Dumper),
-	}
-	for defaultTrigger := range defaultTriggers {
+	for name, selector := range eventLoggers {
+		strs := strings.Split(name, "-")
+		_, brokerName, eventType, eventSource := strs[0], strs[1], strs[2], strs[3]
+		trigger := test.Trigger(name, ns, eventType, eventSource, name)
 		err := WithTriggerReady(clients, defaultTrigger, logger, cleaner)
 		if err != nil {
-			t.Fatalf("Error waiting for default trigger to become ready: %v", err)
+			t.Fatalf("Error waiting for trigger to become ready: %v", err)
 		}
 	}
 
 	logger.Info("Triggers ready")
 
-	logger.Infof("Creating event sender pods")
-
-	events = []TypeAndSource{
+	typesAndSources = []TypeAndSource{
 		{eventType1, eventSource1},
 		{eventType1, eventSource2},
 		{eventType2, eventSource1},
 		{eventType2, eventSource2},
 	}
 
-	for event := range events {
+	logger.Infof("Creating event sender pods")
+	// TODO should create a single pod that can send multiple events
+	for event := range typesAndSources {
 		body := fmt.Sprintf("Testing Broker-Trigger %s", uuid.NewUUID())
 		cloudEvent := test.CloudEvent{
 			Source:   event.Source,
@@ -122,7 +129,7 @@ func TestBrokerTrigger(t *testing.T) {
 			Data:     fmt.Sprintf(`{"msg":%q}`, body),
 			Encoding: encoding,
 		}
-		url := fmt.Sprintf("http://%s", channel.Status.Address.Hostname)
+		url := fmt.Sprintf("http://%s", defaultBroker.Status.Address.Hostname)
 		senderPod := test.EventSenderPod(event.Source, ns, url, cloudEvent)
 		logger.Infof("Sender pod: %#v", senderPod)
 		if err := CreatePod(clients, senderPod, logger, cleaner); err != nil {
@@ -130,9 +137,9 @@ func TestBrokerTrigger(t *testing.T) {
 		}
 	}
 
-	// Verify that each arrived to its own place.
-	//if err := WaitForLogContent(clients, logger, routeName, subscriberPod.Spec.Containers[0].Name, ns, body); err != nil {
-	//	t.Fatalf("String %q not found in logs of subscriber pod %q: %v", body, routeName, err)
-	//}
+	// Verify that each event arrived to its own place.
+	if err := WaitForLogContent(clients, logger, routeName, subscriberPod.Spec.Containers[0].Name, ns, body); err != nil {
+		t.Fatalf("String %q not found in logs of subscriber pod %q: %v", body, routeName, err)
+	}
 
 }
