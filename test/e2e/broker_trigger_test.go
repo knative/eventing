@@ -51,8 +51,8 @@ func name(obj, eventType, eventSource string) string {
 	return strings.ToLower(fmt.Sprintf("%s-%s-%s", obj, eventType, eventSource))
 }
 
-func TestBrokerTrigger(t *testing.T) {
-	logger := logging.GetContextLogger("TestBrokerTrigger")
+func TestDefaultBrokerWithManyTriggers(t *testing.T) {
+	logger := logging.GetContextLogger("TestDefaultBrokerWithManyTriggers")
 
 	clients, cleaner := Setup(t, logger)
 	defer TearDown(clients, cleaner, logger)
@@ -91,6 +91,7 @@ func TestBrokerTrigger(t *testing.T) {
 
 	logger.Infof("Default broker ready: %q", defaultBrokerUrl)
 
+	// These are the event types and sources that triggers will listen to.
 	eventsToReceive := []test.TypeAndSource{
 		{any, any},
 		{eventType1, any},
@@ -160,6 +161,7 @@ func TestBrokerTrigger(t *testing.T) {
 
 	logger.Info("Triggers ready")
 
+	// These are the event types and sources that will be send.
 	eventsToSend := []test.TypeAndSource{
 		{eventType1, eventSource1},
 		{eventType1, eventSource2},

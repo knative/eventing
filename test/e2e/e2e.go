@@ -343,6 +343,9 @@ func WaitForLogContents(clients *test.Clients, logger *logging.BaseLogger, podNa
 			if !strings.Contains(string(logs), content) {
 				logger.Infof("Could not find content %q for %s/%s. Found %q instead", content, podName, containerName, string(logs))
 				return false, nil
+			} else {
+				logger.Infof("Found content %q for %s/%s in logs %q", content, podName, containerName, string(logs))
+				// do not return as we will keep on looking for the other contents in the slice
 			}
 		}
 		return true, nil
