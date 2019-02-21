@@ -19,12 +19,12 @@ package test
 // We also use this to verify the expected events that should be received
 // by the particular subscriber pods.
 type DumperInfo struct {
-	Namespace      string
-	Broker         string
-	EventType      string
-	EventSource    string
-	Selector       map[string]string
-	ExpectedBodies []string
+	Namespace   string
+	Broker      string
+	EventType   string
+	EventSource string
+	Selector    map[string]string
+	Expect      []string
 }
 
 // Helper struct to easily create event sender pods.

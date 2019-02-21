@@ -321,7 +321,7 @@ func PodLogs(clients *test.Clients, podName string, containerName string, namesp
 			}).Do()
 			raw, err := result.Raw()
 			if err == nil {
-				logger.Infof("%s logs request result: %#v", podName, string(raw))
+				logger.Debugf("%s logs request result: %#v", podName, string(raw))
 			} else {
 				logger.Infof("%s logs request result: %#v", podName, err)
 			}
@@ -341,7 +341,7 @@ func WaitForLogContents(clients *test.Clients, logger *logging.BaseLogger, podNa
 		}
 		for _, content := range contents {
 			if !strings.Contains(string(logs), content) {
-				logger.Infof("Could not find content %s for %s/%s", content, podName, containerName)
+				logger.Infof("Could not find content %q for %s/%s. Found %q instead", content, podName, containerName, string(logs))
 				return false, nil
 			}
 		}

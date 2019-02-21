@@ -1,5 +1,3 @@
-// +build e2e
-
 /*
 Copyright 2019 The Knative Authors
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -89,7 +87,7 @@ func TestBrokerTrigger(t *testing.T) {
 	defaultBrokerUrl := fmt.Sprintf("http://%s", defaultBroker.Status.Address.Hostname)
 
 	// Create sender helpers.
-	senders := []test.SenderInfo{
+	senders := []*test.SenderInfo{
 		{ns, defaultBrokerUrl, eventType1, eventSource1},
 		{ns, defaultBrokerUrl, eventType1, eventSource2},
 		{ns, defaultBrokerUrl, eventType2, eventSource1},
@@ -97,7 +95,7 @@ func TestBrokerTrigger(t *testing.T) {
 	}
 
 	// Create dumper helpers.
-	dumpers := []test.DumperInfo{
+	dumpers := []*test.DumperInfo{
 		{ns, defaultBrokerName, any, any, map[string]string{selectorKey: string(uuid.NewUUID())}, make([]string, 0)},
 		{ns, defaultBrokerName, eventType1, any, map[string]string{selectorKey: string(uuid.NewUUID())}, make([]string, 0)},
 		{ns, defaultBrokerName, any, eventSource1, map[string]string{selectorKey: string(uuid.NewUUID())}, make([]string, 0)},
@@ -168,7 +166,8 @@ func TestBrokerTrigger(t *testing.T) {
 
 	for _, sender := range senders {
 		// Create cloud event.
-		body := fmt.Sprintf("Testing Broker-Trigger %s", uuid.NewUUID())
+		// Using event type and source as part of the body for easier debugging.
+		body := fmt.Sprintf("Body-%s-%s", sender.EventSource, sender.EventType)
 		cloudEvent := test.CloudEvent{
 			Source:   sender.EventSource,
 			Type:     sender.EventType,
@@ -184,8 +183,8 @@ func TestBrokerTrigger(t *testing.T) {
 
 		// Check on every dumper whether we should expect this event or not, and add its body if so.
 		for _, dumper := range dumpers {
-			if shouldExpectEvent(&dumper, &sender) {
-				dumper.ExpectedBodies = append(dumper.ExpectedBodies, body)
+			if shouldExpectEvent(dumper, sender, logger) {
+				dumper.Expect = append(dumper.Expect, body)
 			}
 		}
 	}
@@ -206,7 +205,8 @@ func TestBrokerTrigger(t *testing.T) {
 	for _, dumper := range dumpers {
 		subscriberPodName := name("dumper", dumper.Broker, dumper.EventType, dumper.EventSource)
 		subscriberPod := subscriberPods[subscriberPodName]
-		if err := WaitForLogContents(clients, logger, subscriberPodName, subscriberPod.Spec.Containers[0].Name, dumper.Namespace, dumper.ExpectedBodies); err != nil {
+		logger.Infof("Dumper %q expecting %q", subscriberPodName, strings.Join(dumper.Expect, ","))
+		if err := WaitForLogContents(clients, logger, subscriberPodName, subscriberPod.Spec.Containers[0].Name, dumper.Namespace, dumper.Expect); err != nil {
 			t.Fatalf("String(s) not found in logs of subscriber pod %q: %v", subscriberPodName, err)
 		}
 	}
@@ -215,14 +215,17 @@ func TestBrokerTrigger(t *testing.T) {
 
 }
 
-func shouldExpectEvent(dumper *test.DumperInfo, sender *test.SenderInfo) bool {
+func shouldExpectEvent(dumper *test.DumperInfo, sender *test.SenderInfo, logger *logging.BaseLogger) bool {
 	if dumper.Namespace != sender.Namespace {
+		logger.Debugf("Namespaces mismatch, dumper %s, sender %s", dumper.Namespace, sender.Namespace)
 		return false
 	}
 	if dumper.EventType != any && dumper.EventType != sender.EventType {
+		logger.Debugf("Event types mismatch, dumper %s, sender %s", dumper.EventType, sender.EventType)
 		return false
 	}
-	if dumper.EventSource != any && dumper.EventType != sender.EventSource {
+	if dumper.EventSource != any && dumper.EventSource != sender.EventSource {
+		logger.Debugf("Event sources mismatch, dumper %s, sender %s", dumper.EventSource, sender.EventSource)
 		return false
 	}
 	return true
