@@ -82,9 +82,9 @@ func TestBrokerTrigger(t *testing.T) {
 		t.Fatalf("Error waiting for default broker to become ready: %v", err)
 	}
 
-	logger.Info("Default broker ready")
-
 	defaultBrokerUrl := fmt.Sprintf("http://%s", defaultBroker.Status.Address.Hostname)
+
+	logger.Infof("Default broker ready: %q", defaultBrokerUrl)
 
 	// Create sender helpers.
 	senders := []*test.SenderInfo{
