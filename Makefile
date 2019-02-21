@@ -24,3 +24,8 @@ generate-dockerfiles:
 	./openshift/ci-operator/generate-dockerfiles.sh openshift/ci-operator/knative-images in-memory-channel-controller
 	./openshift/ci-operator/generate-dockerfiles.sh openshift/ci-operator/knative-test-images $(TEST_IMAGES)
 .PHONY: generate-dockerfiles
+
+# Generates a release.yaml for a specific branch.
+generate-release:
+	./openshift/ci-operator/generate-release.sh $(BRANCH) > release.yaml
+.PHONY: generate-release
