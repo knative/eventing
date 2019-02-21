@@ -100,8 +100,10 @@ func main() {
 		WriteTimeout: writeTimeout,
 	}
 
-	logger.Info("Fanout sidecar listening", zap.String("address", s.Addr))
-	err = mgr.Add(&runnableServer{s: s})
+	err = mgr.Add(&runnableServer{
+		logger: logger,
+		s: s,
+	})
 	if err != nil {
 		logger.Fatal("Unable to add ListenAndServe", zap.Error(err))
 	}
@@ -181,9 +183,11 @@ func setupConfigMapWatcher(logger *zap.Logger, mgr manager.Manager, configUpdate
 // runnableServer is a small wrapper around http.Server so that it matches the manager.Runnable
 // interface.
 type runnableServer struct {
+	logger *zap.Logger
 	s *http.Server
 }
 
 func (r *runnableServer) Start(<-chan struct{}) error {
+	r.logger.Info("Fanout sidecar listening", zap.String("address", r.s.Addr))
 	return r.s.ListenAndServe()
 }

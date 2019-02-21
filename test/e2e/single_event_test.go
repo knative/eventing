@@ -154,6 +154,8 @@ func SingleEvent(t *testing.T, encoding string) {
 	}
 
 	if err := WaitForLogContent(clients, logger, routeName, subscriberPod.Spec.Containers[0].Name, ns, body); err != nil {
+		PodLogs(clients, senderName, "sendevent", ns, logger)
+		PodLogs(clients, senderName, "istio-proxy", ns, logger)
 		t.Fatalf("String %q not found in logs of subscriber pod %q: %v", body, routeName, err)
 	}
 }
