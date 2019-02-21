@@ -226,6 +226,13 @@ const (
 
 // EventSenderPod creates a Pod that sends a single event to the given address.
 func EventSenderPod(name string, namespace string, sink string, event CloudEvent) *corev1.Pod {
+	// By setting delay to an invalid integer (i.e., default),
+	// the event sender pod will end up using its default one.
+	return EventSenderPodWithDelay(name, namespace, sink, "default", event)
+}
+
+// EventSenderPod creates a Pod that sends a single event to the given address with a given delay.
+func EventSenderPodWithDelay(name string, namespace string, sink string, delay string, event CloudEvent) *corev1.Pod {
 	if event.Encoding == "" {
 		event.Encoding = CloudEventEncodingBinary
 	}
@@ -254,6 +261,8 @@ func EventSenderPod(name string, namespace string, sink string, event CloudEvent
 					event.Encoding,
 					"-sink",
 					sink,
+					"-delay",
+					delay,
 				},
 			}},
 			//TODO restart on failure?
