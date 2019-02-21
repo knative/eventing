@@ -1,3 +1,5 @@
+// +build e2e
+
 /*
 Copyright 2019 The Knative Authors
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -71,6 +73,7 @@ func TestBrokerTrigger(t *testing.T) {
 	// we wait for a few seconds for the broker to get created.
 	// Otherwise, if we try to wait for its Ready status and the namespace controller
 	// didn't actually create it yet, the test will fail.
+	// TODO improve
 	logger.Info("Waiting for default broker creation")
 	time.Sleep(waitForDefaultBrokerCreation)
 
