@@ -215,6 +215,12 @@ type CloudEvent struct {
 	Encoding string // binary or structured
 }
 
+// TypeAndSource specifies the type and source of an Event.
+type TypeAndSource struct {
+	Type   string
+	Source string
+}
+
 const (
 	CloudEventEncodingBinary     = "binary"
 	CloudEventEncodingStructured = "structured"
