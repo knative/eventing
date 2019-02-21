@@ -1,0 +1,16 @@
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Trigger
+metadata:
+  name: t
+spec:
+  # Our Cloud Event parsing library seems to have a bug and forces to put type and source in double
+  # quotes (as it thinks the actual value is `"foo"`, not `foo`).
+  filter:
+    sourceAndType:
+      type: '"com.example.someevent"'
+      source: '"/mycontext/subcontext"'
+  subscriber:
+    ref:
+     apiVersion: v1
+     kind: Service
+     name: svc
