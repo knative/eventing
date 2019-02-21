@@ -1,0 +1,11 @@
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Trigger
+metadata:
+  name: t
+spec:
+  subscriber:
+    ref:
+     apiVersion: v1
+     kind: Service
+     name: svc
+

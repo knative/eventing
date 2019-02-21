@@ -18,11 +18,13 @@ package namespace
 
 import (
 	"context"
+	"fmt"
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/logging"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"go.uber.org/zap"
 	"k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,10 +47,16 @@ const (
 	controllerAgentName = "knative-eventing-namespace-controller"
 
 	defaultBroker             = "default"
+	brokerFilterSA = "eventing-broker-filter"
+	brokerFilterRB = "eventing-broker-filter"
+	brokerFilterClusterRole = "eventing-broker-filter"
+
 	knativeEventingAnnotation = "eventing.knative.dev/inject"
 
 	// Name of the corev1.Events emitted from the reconciliation process.
 	brokerCreated = "BrokerCreated"
+	serviceAccountCreated = "BrokerFilterServiceAccountCreated"
+	serviceAccountRBACCreated = "BrokerFilterServiceAccountRBACCreated"
 )
 
 type reconciler struct {
@@ -84,7 +92,7 @@ func ProvideController(logger *zap.Logger) func(manager.Manager) (controller.Con
 		}
 
 		// Watch all the resources that this reconciler reconciles.
-		for _, t := range []runtime.Object{ &v1alpha1.Broker{} } {
+		for _, t := range []runtime.Object{ &corev1.ServiceAccount{}, &rbacv1.RoleBinding{}, &v1alpha1.Broker{} } {
 			err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &namespaceMapper{}});
 			if err != nil {
 				return nil, err
@@ -165,13 +173,125 @@ func (r *reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error 
 		return nil
 	}
 
-	_, err := r.reconcileBroker(ctx, ns)
+	sa, err := r.reconcileBrokerFilterServiceAccount(ctx, ns)
+	if err != nil {
+		logging.FromContext(ctx).Error("Unable to reconcile the Broker Filter Service Account for the namespace", zap.Error(err))
+		return err
+	}
+	_, err = r.reconcileBrokerFilterRBAC(ctx, ns, sa)
+	if err != nil {
+		logging.FromContext(ctx).Error("Unable to reconcile the Broker Filter Service Account RBAC for the namespace", zap.Error(err))
+		return err
+	}
+	_, err = r.reconcileBroker(ctx, ns)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to reconcile broker for the namespace", zap.Error(err))
 		return err
 	}
 
 	return nil
+}
+
+func (r *reconciler) reconcileBrokerFilterServiceAccount(ctx context.Context, ns *corev1.Namespace) (*corev1.ServiceAccount, error) {
+	current, err := r.getBrokerFilterServiceAccount(ctx, ns)
+
+	// If the resource doesn't exist, we'll create it.
+	if k8serrors.IsNotFound(err) {
+		sa := newBrokerFilterServiceAccount(ns)
+		err = r.client.Create(ctx, sa)
+		if err != nil {
+			return nil, err
+		}
+		r.recorder.Event(ns,
+			corev1.EventTypeNormal,
+			serviceAccountCreated,
+			fmt.Sprintf("Service account created for the Broker '%s'", sa.Name))
+		return sa, nil
+	} else if err != nil {
+		return nil, err
+	}
+	// Don't update anything that is already present.
+	return current, nil
+}
+
+func (r *reconciler) getBrokerFilterServiceAccount(ctx context.Context, ns *corev1.Namespace) (*corev1.ServiceAccount, error) {
+	sa := &corev1.ServiceAccount{}
+	name := types.NamespacedName{
+		Namespace: ns.Name,
+		Name:      brokerFilterSA,
+	}
+	err := r.client.Get(ctx, name, sa)
+	return sa, err
+}
+
+func newBrokerFilterServiceAccount(ns *corev1.Namespace) *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns.Name,
+			Name: brokerFilterSA,
+			Labels: injectedLabels(),
+		},
+	}
+}
+
+func injectedLabels() map[string]string {
+	return map[string]string{
+		"eventing.knative.dev/namespaceInjected": "true",
+	}
+}
+
+func (r *reconciler) reconcileBrokerFilterRBAC(ctx context.Context, ns *corev1.Namespace, sa *corev1.ServiceAccount) (*rbacv1.RoleBinding, error) {
+	current, err := r.getBrokerFilterRBAC(ctx, ns)
+
+	// If the resource doesn't exist, we'll create it.
+	if k8serrors.IsNotFound(err) {
+		rbac := newBrokerFilterRBAC(ns, sa)
+		err = r.client.Create(ctx, rbac)
+		if err != nil {
+			return nil, err
+		}
+		r.recorder.Event(ns,
+			corev1.EventTypeNormal,
+			serviceAccountRBACCreated,
+			fmt.Sprintf("Service account RBAC created for the Broker Filter '%s'", rbac.Name))
+		return rbac, nil
+	} else if err != nil {
+		return nil, err
+	}
+	// Don't update anything that is already present.
+	return current, nil
+}
+
+func (r *reconciler) getBrokerFilterRBAC(ctx context.Context, ns *corev1.Namespace) (*rbacv1.RoleBinding, error) {
+	rb := &rbacv1.RoleBinding{}
+	name := types.NamespacedName{
+		Namespace: ns.Name,
+		Name:      brokerFilterRB,
+	}
+	err := r.client.Get(ctx, name, rb)
+	return rb, err
+}
+
+func newBrokerFilterRBAC(ns *corev1.Namespace, sa *corev1.ServiceAccount) *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns.Name,
+			Name: brokerFilterRB,
+			Labels: injectedLabels(),
+		},
+		RoleRef:rbacv1.RoleRef{
+			APIGroup:"rbac.authorization.k8s.io",
+			Kind: "ClusterRole",
+			Name: brokerFilterClusterRole,
+		},
+		Subjects:[]rbacv1.Subject{
+			{
+				Kind: "ServiceAccount",
+				Namespace: ns.Name,
+				Name: sa.Name,
+			},
+		},
+	}
 }
 
 func (r *reconciler) getBroker(ctx context.Context, ns *corev1.Namespace) (*v1alpha1.Broker, error) {
@@ -208,13 +328,7 @@ func newBroker(ns *corev1.Namespace) *v1alpha1.Broker {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
 			Name:      defaultBroker,
-			Labels:    brokerLabels(),
+			Labels:    injectedLabels(),
 		},
-	}
-}
-
-func brokerLabels() map[string]string {
-	return map[string]string{
-		"eventing.knative.dev/brokerForNamespace": "true",
 	}
 }

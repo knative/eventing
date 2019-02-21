@@ -42,7 +42,7 @@ spec:
           - name: FILTER_IMAGE
             value: github.com/knative/eventing/cmd/broker/filter
           - name: FILTER_SERVICE_ACCOUNT
-            value: broker-filter
+            value: eventing-broker-filter
         volumeMounts:
           - name: config-logging
             mountPath: /etc/config-logging
