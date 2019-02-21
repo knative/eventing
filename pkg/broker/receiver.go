@@ -98,7 +98,6 @@ func (r *Receiver) getTrigger(ctx context.Context, ref provisioners.ChannelRefer
 }
 
 func (r *Receiver) shouldSendMessage(ts *eventingv1alpha1.TriggerSpec, m *provisioners.Message) bool {
-	r.logger.Debug("Message headers", zap.Any("headers", m.Headers))
 	if ts.Filter == nil || ts.Filter.SourceAndType == nil {
 		r.logger.Error("No filter specified")
 		return false

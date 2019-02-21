@@ -39,10 +39,8 @@ const (
 	any          = v1alpha1.TriggerAnyFilter
 	eventType1   = "type1"
 	eventType2   = "type2"
-	eventType3   = "type3"
 	eventSource1 = "source1"
 	eventSource2 = "source2"
-	eventSource3 = "source3"
 )
 
 // Helper function to create names for different objects (e.g., triggers, services, etc.)
@@ -165,13 +163,8 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	eventsToSend := []test.TypeAndSource{
 		{eventType1, eventSource1},
 		{eventType1, eventSource2},
-		{eventType1, eventSource3},
 		{eventType2, eventSource1},
 		{eventType2, eventSource2},
-		{eventType2, eventSource3},
-		{eventType3, eventSource1},
-		{eventType3, eventSource2},
-		{eventType3, eventSource3},
 	}
 
 	logger.Info("Creating event sender pods")
@@ -183,10 +176,9 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		// Using event type and source as part of the body for easier debugging.
 		body := fmt.Sprintf("Body-%s-%s", eventToSend.Type, eventToSend.Source)
 		cloudEvent := test.CloudEvent{
-			Source:   eventToSend.Source,
-			Type:     eventToSend.Type,
-			Data:     fmt.Sprintf(`{"msg":%q}`, body),
-			Encoding: test.CloudEventEncodingStructured,
+			Source: eventToSend.Source,
+			Type:   eventToSend.Type,
+			Data:   fmt.Sprintf(`{"msg":%q}`, body),
 		}
 		// Create sender pod.
 		senderPodName := name("sender", eventToSend.Type, eventToSend.Source)
