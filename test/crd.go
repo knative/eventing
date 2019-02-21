@@ -18,8 +18,6 @@ package test
 // crd contains functions that construct boilerplate CRD definitions.
 
 import (
-	"fmt"
-
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -190,8 +188,8 @@ func Trigger(name, namespace, eventType, eventSource, broker, svcName string) *v
 			Broker: broker,
 			Filter: &v1alpha1.TriggerFilter{
 				SourceAndType: &v1alpha1.TriggerFilterSourceAndType{
-					Type:   fmt.Sprintf("%q", eventType),
-					Source: fmt.Sprintf("%q", eventSource),
+					Type:   eventType,
+					Source: eventSource,
 				},
 			},
 			Subscriber: &v1alpha1.SubscriberSpec{
