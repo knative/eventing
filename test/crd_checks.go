@@ -23,10 +23,6 @@ import (
 	"fmt"
 	"time"
 
-	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
-
-	corev1 "k8s.io/api/core/v1"
-
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventingclient "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
@@ -147,23 +143,5 @@ func WaitForTriggersListState(clients eventingclient.TriggerInterface, inState f
 			return true, err
 		}
 		return inState(t)
-	})
-}
-
-// WaitForServiceState polls the status of the Service called name from client
-// every interval until inState returns `true` indicating it is done, returns an
-// error or timeout. desc will be used to name the metric that is emitted to
-// track how long it took for name to get into the state checked by inState.
-func WaitForServiceState(client v1.ServiceInterface, name string, inState func(r *corev1.Service) (bool, error), desc string) error {
-	metricName := fmt.Sprintf("WaitForServiceState/%s/%s", name, desc)
-	_, span := trace.StartSpan(context.Background(), metricName)
-	defer span.End()
-
-	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		r, err := client.Get(name, metav1.GetOptions{})
-		if err != nil {
-			return true, err
-		}
-		return inState(r)
 	})
 }
