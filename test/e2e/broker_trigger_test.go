@@ -33,8 +33,8 @@ import (
 
 const (
 	defaultBrokerName            = "default"
-	waitForDefaultBrokerCreation = 3 * time.Second
-	sendEventDelay               = "15"
+	waitForDefaultBrokerCreation = 5 * time.Second
+	senderPodDelay               = 15
 	selectorKey                  = "end2end-test-broker-trigger"
 
 	any          = v1alpha1.TriggerAnyFilter
@@ -178,7 +178,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		}
 		// Create sender pod.
 		senderPodName := name("sender", eventToSend.Type, eventToSend.Source)
-		senderPod := test.EventSenderPodWithDelay(senderPodName, ns, defaultBrokerUrl, sendEventDelay, cloudEvent)
+		senderPod := test.EventSenderPodWithDelay(senderPodName, ns, defaultBrokerUrl, string(senderPodDelay), cloudEvent)
 		if err := CreatePod(clients, senderPod, logger, cleaner); err != nil {
 			t.Fatalf("Error creating event sender pod: %v", err)
 		}
