@@ -21,21 +21,19 @@ import (
 	"log"
 	"os"
 
-	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
-	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
-
 	provisionerController "github.com/knative/eventing/contrib/kafka/pkg/controller"
 	"github.com/knative/eventing/contrib/kafka/pkg/dispatcher"
 	"github.com/knative/eventing/pkg/sidecar/configmap/watcher"
+	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/pkg/signals"
 	"github.com/knative/pkg/system"
+	"go.uber.org/zap"
+	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 func main() {
-
 	configMapName := os.Getenv("DISPATCHER_CONFIGMAP_NAME")
 	if configMapName == "" {
 		configMapName = provisionerController.DispatcherConfigMapName
@@ -64,6 +62,9 @@ func main() {
 	if err != nil {
 		logger.Fatal("unable to create kafka dispatcher.", zap.Error(err))
 	}
+	if err = mgr.Add(kafkaDispatcher); err != nil {
+		logger.Fatal("Unable to add kafkaDispatcher", zap.Error(err))
+	}
 
 	kc, err := kubernetes.NewForConfig(mgr.GetConfig())
 	if err != nil {
@@ -72,28 +73,17 @@ func main() {
 
 	cmw, err := watcher.NewWatcher(logger, kc, configMapNamespace, configMapName, kafkaDispatcher.UpdateConfig)
 	if err != nil {
-		logger.Fatal("unable to create configmap watcher", zap.String("configmap", fmt.Sprintf("%s/%s", configMapNamespace, configMapName)))
+		logger.Fatal("unable to create configMap watcher", zap.String("configMap", fmt.Sprintf("%s/%s", configMapNamespace, configMapName)))
 	}
-	mgr.Add(cmw)
+	if err = mgr.Add(utils.NewBlockingStart(logger, cmw)); err != nil {
+		logger.Fatal("Unable to add the configMap watcher to the manager", zap.Error(err))
+	}
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
-
-	// Start both the manager (which notices ConfigMap changes) and the HTTP server.
-	var g errgroup.Group
-	g.Go(func() error {
-		// Start blocks forever, so run it in a goroutine.
-		return mgr.Start(stopCh)
-	})
-
-	g.Go(func() error {
-		// Setups message receiver and blocks
-		return kafkaDispatcher.Start(stopCh)
-	})
-
-	err = g.Wait()
+	err = mgr.Start(stopCh)
 	if err != nil {
-		logger.Error("Either the kafka message receiver or the ConfigMap noticer failed.", zap.Error(err))
+		logger.Fatal("Manager.Start() returned an error", zap.Error(err))
 	}
-
+	logger.Info("Exiting...")
 }

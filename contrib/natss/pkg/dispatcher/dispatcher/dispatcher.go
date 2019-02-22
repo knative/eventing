@@ -120,8 +120,7 @@ func (s *SubscriptionsSupervisor) Start(stopCh <-chan struct{}) error {
 	go s.Connect(stopCh)
 	// Trigger Connect to establish connection with NATS
 	s.signalReconnect()
-	s.receiver.Start(stopCh)
-	return nil
+	return s.receiver.Start(stopCh)
 }
 
 func (s *SubscriptionsSupervisor) connectWithRetry(stopCh <-chan struct{}) {

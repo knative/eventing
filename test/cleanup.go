@@ -19,6 +19,7 @@ limitations under the License.
 package test
 
 import (
+	"encoding/json"
 	"os"
 	"os/signal"
 
@@ -89,7 +90,8 @@ func (c *Cleaner) Clean(awaitDeletion bool) error {
 		if err != nil {
 			c.logger.Errorf("Failed to get to-be cleaned resource %q : %s", deleter.Name, err)
 		} else {
-			c.logger.Infof("Cleaning resource: %q\n%+v", deleter.Name, r)
+			bytes, _ := json.MarshalIndent(r, "", "  ")
+			c.logger.Infof("Cleaning resource: %q\n%+v", deleter.Name, string(bytes))
 		}
 		if err := deleter.Resource.Delete(deleter.Name, nil); err != nil {
 			c.logger.Errorf("Error: %v", err)
