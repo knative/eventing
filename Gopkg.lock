@@ -1254,7 +1254,6 @@
     "go.uber.org/zap/zapcore",
     "go.uber.org/zap/zaptest/observer",
     "golang.org/x/oauth2/google",
-    "golang.org/x/sync/errgroup",
     "google.golang.org/api/option",
     "gopkg.in/yaml.v2",
     "k8s.io/api/core/v1",
