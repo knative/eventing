@@ -28,13 +28,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/knative/eventing/pkg/utils"
-
 	"github.com/knative/eventing/pkg/sidecar/configmap/filesystem"
 	"github.com/knative/eventing/pkg/sidecar/configmap/watcher"
 	"github.com/knative/eventing/pkg/sidecar/swappable"
+	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/system"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -73,7 +73,9 @@ func configMapNoticerValues() string {
 func main() {
 	flag.Parse()
 
-	logger, err := zap.NewProduction()
+	lc := zap.NewProductionConfig()
+	lc.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	logger, err := lc.Build()
 	if err != nil {
 		log.Fatalf("Unable to create logger: %v", err)
 	}
@@ -102,7 +104,7 @@ func main() {
 
 	err = mgr.Add(&runnableServer{
 		logger: logger,
-		s: s,
+		s:      s,
 	})
 	if err != nil {
 		logger.Fatal("Unable to add ListenAndServe", zap.Error(err))
@@ -184,7 +186,7 @@ func setupConfigMapWatcher(logger *zap.Logger, mgr manager.Manager, configUpdate
 // interface.
 type runnableServer struct {
 	logger *zap.Logger
-	s *http.Server
+	s      *http.Server
 }
 
 func (r *runnableServer) Start(<-chan struct{}) error {
