@@ -457,7 +457,7 @@ func (r *reconciler) patchPhysicalFrom(namespace string, physicalFrom corev1.Obj
 		glog.Warningf("failed to create dynamic client resource: %v", err)
 		return err
 	}
-	patched, err := resourceClient.Patch(original.Name, types.JSONPatchType, patchBytes)
+	patched, err := resourceClient.Patch(original.Name, types.JSONPatchType, patchBytes, metav1.UpdateOptions{})
 	if err != nil {
 		glog.Warningf("Failed to patch the object: %s", err)
 		glog.Warningf("Patch was: %+v", patch)
