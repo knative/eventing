@@ -44,12 +44,6 @@ const (
 	eventSource2 = "source2"
 )
 
-// Helper function to create names for different objects (e.g., triggers, services, etc.)
-func name(obj, eventType, eventSource string) string {
-	// pod names need to be lowercase. We might have an eventType as Any, that is why we lowercase them.
-	return strings.ToLower(fmt.Sprintf("%s-%s-%s", obj, eventType, eventSource))
-}
-
 func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	logger := logging.GetContextLogger("TestDefaultBrokerWithManyTriggers")
 
@@ -98,15 +92,16 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		{eventType1, eventSource1},
 	}
 
-	selector := map[string]string{selectorKey: string(uuid.NewUUID())}
+	// Create one selector for each subscriberPod and service
+	selectors := []map[string]string{newSelector(), newSelector(), newSelector(), newSelector()}
 
 	logger.Info("Creating Subscriber pods")
 
 	// Save the pods references in this map for later use.
 	subscriberPods := make(map[string]*corev1.Pod, 0)
-	for _, event := range eventsToReceive {
+	for i, event := range eventsToReceive {
 		subscriberPodName := name("dumper", event.Type, event.Source)
-		subscriberPod := test.EventLoggerPod(subscriberPodName, ns, selector)
+		subscriberPod := test.EventLoggerPod(subscriberPodName, ns, selectors[i])
 		if err := CreatePod(clients, subscriberPod, logger, cleaner); err != nil {
 			t.Fatalf("Error creating subscriber pod: %v", err)
 		}
@@ -126,9 +121,9 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 
 	logger.Info("Creating Subscriber services")
 
-	for _, event := range eventsToReceive {
+	for i, event := range eventsToReceive {
 		subscriberSvcName := name("svc", event.Type, event.Source)
-		service := test.Service(subscriberSvcName, ns, selector)
+		service := test.Service(subscriberSvcName, ns, selectors[i])
 		if err := CreateService(clients, service, logger, cleaner); err != nil {
 			t.Fatalf("Error creating subscriber service: %v", err)
 		}
@@ -224,6 +219,18 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 
 }
 
+// Helper function to create names for different objects (e.g., triggers, services, etc.)
+func name(obj, eventType, eventSource string) string {
+	// pod names need to be lowercase. We might have an eventType as Any, that is why we lowercase them.
+	return strings.ToLower(fmt.Sprintf("%s-%s-%s", obj, eventType, eventSource))
+}
+
+// Returns a new selector with a random uuid.
+func newSelector() map[string]string {
+	return map[string]string{selectorKey: string(uuid.NewUUID())}
+}
+
+// Checks whether we should expect to receive 'eventToSend' based on 'eventToReceive' filter pattern.
 func shouldExpectEvent(eventToSend *test.TypeAndSource, eventToReceive *test.TypeAndSource, logger *logging.BaseLogger) bool {
 	if eventToReceive.Type != any && eventToReceive.Type != eventToSend.Type {
 		logger.Debugf("Event types mismatch, receive %s, send %s", eventToReceive.Type, eventToSend.Type)

@@ -23,6 +23,7 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -48,6 +49,10 @@ func New(logger *zap.Logger, client client.Client) (*Receiver, manager.Runnable)
 }
 
 func (r *Receiver) newMessageReceiver() *provisioners.MessageReceiver {
+	err := r.initClient()
+	if err != nil {
+		r.logger.Warn("Failed to initialize client", zap.Error(err))
+	}
 	return provisioners.NewMessageReceiver(r.sendEvent, r.logger.Sugar())
 }
 
@@ -79,6 +84,33 @@ func (r *Receiver) sendEvent(channel provisioners.ChannelReference, message *pro
 		return err
 	}
 	r.logger.Debug("Successfully sent message")
+	return nil
+}
+
+// Initialize the client. Mainly intended to load stuff in its cache.
+func (r *Receiver) initClient() error {
+	// We list triggers so that we can load the client's cache.
+	// Otherwise, on receiving an event, it may not find the trigger
+	// and would return an error.
+	opts := &client.ListOptions{
+		Raw: &metav1.ListOptions{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "Trigger",
+			},
+		},
+	}
+	for {
+		tl := &eventingv1alpha1.TriggerList{}
+		if err := r.client.List(context.TODO(), opts, tl); err != nil {
+			return err
+		}
+		if tl.Continue != "" {
+			opts.Raw.Continue = tl.Continue
+		} else {
+			break
+		}
+	}
 	return nil
 }
 
