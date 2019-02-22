@@ -53,7 +53,9 @@ func main() {
 	}
 
 	// Add custom types to this array to get them into the manager's scheme.
-	eventingv1alpha1.AddToScheme(mgr.GetScheme())
+	if err = eventingv1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
+		logger.Fatal("Error adding the eventingv1alpha1 scheme", zap.Error(err))
+	}
 
 	// We are running both the receiver (takes messages in from the cluster and writes them to
 	// PubSub) and the dispatcher (takes messages in PubSub and sends them in cluster) in this
@@ -67,16 +69,12 @@ func main() {
 		}
 	}
 
-	// TODO Move this to just before mgr.Start(). We need to pass the stopCh to dispatcher.New
-	// because of https://github.com/kubernetes-sigs/controller-runtime/issues/103.
+	if _, err = dispatcher.New(mgr, logger.Desugar()); err != nil {
+		logger.Fatal("Unable to create the dispatcher", zap.Error(err))
+	}
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
-
-	_, err = dispatcher.New(mgr, logger.Desugar(), stopCh)
-	if err != nil {
-		logger.Fatal("Unable to create the dispatcher", zap.Error(err))
-	}
 
 	// Start blocks forever.
 	logger.Info("Manager starting...")
