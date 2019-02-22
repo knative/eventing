@@ -212,3 +212,16 @@ spec:
         - name: kafka-channel-controller-config
           configMap:
             name: kafka-channel-controller-config
+
+---
+
+# Create the ConfigMap, because the dispatcher will flap until this ConfigMap exists. And the
+# controller doesn't create the ConfigMap until the first kafka Channel is reconciled.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-channel-dispatcher
+  namespace: knative-eventing
+data:
+  multiChannelFanoutConfig: '{}'
