@@ -163,10 +163,10 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		{eventType2, eventSource2},
 	}
 
-	// We notice few crashLoopBacks in the filter pod creation.
-	// We then delay the creation of the sender pods to not miss events.
+	// We notice some crashLoopBacks in the filter and ingress pod creation.
+	// We then delay the creation of the sender pods in order not to miss events.
 	// TODO improve this
-	logger.Info("Waiting for filter pod up and running")
+	logger.Info("Waiting for filter and ingress pods to become running")
 	time.Sleep(waitForFilterPodRunning)
 
 	logger.Info("Creating event sender pods")
