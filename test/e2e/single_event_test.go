@@ -90,15 +90,16 @@ func SingleEvent(t *testing.T, encoding string) {
 	logger := logging.GetContextLogger("TestSingleEvent")
 
 	clients, cleaner := Setup(t, logger)
-	defer TearDown(clients, cleaner, logger)
 
 	// verify namespace
-
 	ns, cleanupNS := namespaceExists(t, clients)
 	defer cleanupNS()
 
-	// create logger pod
+	// TearDown() needs to be deferred after cleanupNS(). Otherwise the namespace is deleted and all
+	// resources in it. So when TearDown() runs, it spews a lot of not found errors.
+	defer TearDown(clients, cleaner, logger)
 
+	// create logger pod
 	logger.Infof("creating subscriber pod")
 	selector := map[string]string{"e2etest": string(uuid.NewUUID())}
 	subscriberPod := test.EventLoggerPod(routeName, ns, selector)

@@ -227,3 +227,16 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
+
+---
+
+# Create the ConfigMap, because if we don't the dispatcher will flap when it first comes online and
+# this can cause the integration tests to fail.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: in-memory-channel-dispatcher-config-map
+  namespace: knative-eventing
+data:
+  multiChannelFanoutConfig: '{}'
