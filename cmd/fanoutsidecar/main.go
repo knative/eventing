@@ -113,16 +113,14 @@ func main() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 	// Start blocks forever.
-	err = mgr.Start(stopCh)
-	if err != nil {
+	if err = mgr.Start(stopCh); err != nil {
 		logger.Error("manager.Start() returned an error", zap.Error(err))
 	}
 	logger.Info("Exiting...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), writeTimeout)
 	defer cancel()
-	err = s.Shutdown(ctx)
-	if err != nil {
+	if err = s.Shutdown(ctx); err != nil {
 		logger.Error("Shutdown returned an error", zap.Error(err))
 	}
 }
@@ -155,8 +153,7 @@ func setupConfigMapVolume(logger *zap.Logger, mgr manager.Manager, configUpdated
 		logger.Error("Unable to create filesystem.ConifgMapWatcher", zap.Error(err))
 		return err
 	}
-	err = mgr.Add(cmn)
-	if err != nil {
+	if err = mgr.Add(cmn); err != nil {
 		logger.Error("Unable to add the config map watcher", zap.Error(err))
 		return err
 	}
@@ -174,8 +171,7 @@ func setupConfigMapWatcher(logger *zap.Logger, mgr manager.Manager, configUpdate
 		return err
 	}
 
-	err = mgr.Add(utils.NewBlockingStart(logger, cmw))
-	if err != nil {
+	if err = mgr.Add(utils.NewBlockingStart(logger, cmw)); err != nil {
 		logger.Error("Unable to add the config map watcher", zap.Error(err))
 		return err
 	}
