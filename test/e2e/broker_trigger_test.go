@@ -34,7 +34,7 @@ import (
 const (
 	defaultBrokerName            = "default"
 	waitForDefaultBrokerCreation = 5 * time.Second
-	senderPodDelay               = 15
+	waitForFilterPodRunning      = 30 * time.Second
 	selectorKey                  = "end2end-test-broker-trigger"
 
 	any          = v1alpha1.TriggerAnyFilter
@@ -163,6 +163,12 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		{eventType2, eventSource2},
 	}
 
+	// We notice few crashLoopBacks in the filter pod creation.
+	// We then delay the creation of the sender pods to not miss events.
+	// TODO improve this
+	logger.Info("Waiting for filter pod up and running")
+	time.Sleep(waitForFilterPodRunning)
+
 	logger.Info("Creating event sender pods")
 
 	// Map to save the expected events per dumper so that we can verify the delivery.
@@ -178,7 +184,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		}
 		// Create sender pod.
 		senderPodName := name("sender", eventToSend.Type, eventToSend.Source)
-		senderPod := test.EventSenderPodWithDelay(senderPodName, ns, defaultBrokerUrl, string(senderPodDelay), cloudEvent)
+		senderPod := test.EventSenderPod(senderPodName, ns, defaultBrokerUrl, cloudEvent)
 		if err := CreatePod(clients, senderPod, logger, cleaner); err != nil {
 			t.Fatalf("Error creating event sender pod: %v", err)
 		}
