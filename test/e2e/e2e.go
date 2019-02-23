@@ -382,7 +382,7 @@ func WaitForAllPodsRunning(clients *test.Clients, logger *logging.BaseLogger, na
 	return nil
 }
 
-// WaitForAllTriggersReady will wait until all triggers in the given namespace are ready
+// WaitForAllTriggersReady will wait until all triggers in the given namespace are ready.
 func WaitForAllTriggersReady(clients *test.Clients, logger *logging.BaseLogger, namespace string) error {
 	triggers := clients.Eventing.EventingV1alpha1().Triggers(namespace)
 	if err := test.WaitForTriggersListState(triggers, test.TriggersReady, "TriggerIsReady"); err != nil {
@@ -391,7 +391,7 @@ func WaitForAllTriggersReady(clients *test.Clients, logger *logging.BaseLogger, 
 	return nil
 }
 
-// AnnotateNamespace annotates the test namespace with the annotations map
+// AnnotateNamespace annotates the test namespace with the annotations map.
 func AnnotateNamespace(clients *test.Clients, logger *logging.BaseLogger, annotations map[string]string) error {
 	ns := pkgTest.Flags.Namespace
 	nsSpec, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
