@@ -28,6 +28,7 @@ import (
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	servingclient "github.com/knative/serving/pkg/client/clientset/versioned/typed/serving/v1alpha1"
 	"go.opencensus.io/trace"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -103,7 +104,12 @@ func WaitForBrokerState(client eventingclient.BrokerInterface, name string, inSt
 
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
 		r, err := client.Get(name, metav1.GetOptions{})
-		if err != nil {
+		if k8serrors.IsNotFound(err) {
+			// Return false as we are not done yet.
+			// We swallow the error to keep on polling
+			return false, nil
+		} else if err != nil {
+			// Return true to stop and return the error.
 			return true, err
 		}
 		return inState(r)

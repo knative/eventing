@@ -161,7 +161,7 @@ func WithChannelAndSubscriptionReady(clients *test.Clients, channel *v1alpha1.Ch
 	return nil
 }
 
-// CreateBroker will create a Broker
+// CreateBroker will create a Broker.
 func CreateBroker(clients *test.Clients, broker *v1alpha1.Broker, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
 	brokers := clients.Eventing.EventingV1alpha1().Brokers(broker.Namespace)
 	res, err := brokers.Create(broker)
@@ -186,7 +186,7 @@ func WaitForBrokerReady(clients *test.Clients, broker *v1alpha1.Broker) error {
 	if err := test.WaitForBrokerState(brokers, broker.Name, test.IsBrokerReady, "BrokerIsReady"); err != nil {
 		return err
 	}
-	// Update the given object so they'll reflect the ready state
+	// Update the given object so they'll reflect the ready state.
 	updatedBroker, err := brokers.Get(broker.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -195,7 +195,7 @@ func WaitForBrokerReady(clients *test.Clients, broker *v1alpha1.Broker) error {
 	return nil
 }
 
-// CreateTrigger will create a Trigger
+// CreateTrigger will create a Trigger.
 func CreateTrigger(clients *test.Clients, trigger *v1alpha1.Trigger, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
 	triggers := clients.Eventing.EventingV1alpha1().Triggers(trigger.Namespace)
 	res, err := triggers.Create(trigger)
@@ -216,7 +216,7 @@ func WithTriggerReady(clients *test.Clients, trigger *v1alpha1.Trigger, logger *
 	if err := test.WaitForTriggerState(triggers, trigger.Name, test.IsTriggerReady, "TriggerIsReady"); err != nil {
 		return err
 	}
-	// Update the given object so they'll reflect the ready state
+	// Update the given object so they'll reflect the ready state.
 	updatedTrigger, err := triggers.Get(trigger.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -321,7 +321,7 @@ func PodLogs(clients *test.Clients, podName string, containerName string, namesp
 			}).Do()
 			raw, err := result.Raw()
 			if err == nil {
-				logger.Debugf("%s logs request result: %#v", podName, string(raw))
+				logger.Infof("%s logs request result: %#v", podName, string(raw))
 			} else {
 				logger.Infof("%s logs request result: %#v", podName, err)
 			}
@@ -350,6 +350,22 @@ func WaitForLogContents(clients *test.Clients, logger *logging.BaseLogger, podNa
 		}
 		return true, nil
 	})
+}
+
+// FindAnyLogContents attempts to find logs for given Pod/Container that has 'any' of the given contents.
+// It returns an error if it couldn't retrieve the logs. In case 'any' of the contents are there, it returns true.
+func FindAnyLogContents(clients *test.Clients, logger *logging.BaseLogger, podName string, containerName string, namespace string, contents []string) (bool, error) {
+	logs, err := PodLogs(clients, podName, containerName, namespace, logger)
+	if err != nil {
+		return false, err
+	}
+	for _, content := range contents {
+		if strings.Contains(string(logs), content) {
+			logger.Infof("Found content %q for %s/%s.", content, podName, containerName)
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // WaitForLogContent waits until logs for given Pod/Container include the given content.

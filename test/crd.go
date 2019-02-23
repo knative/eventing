@@ -177,32 +177,6 @@ func Broker(name string, namespace string) *v1alpha1.Broker {
 	}
 }
 
-// Trigger returns a Trigger.
-func Trigger(name, namespace, eventType, eventSource, broker, svcName string) *v1alpha1.Trigger {
-	return &v1alpha1.Trigger{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: v1alpha1.TriggerSpec{
-			Broker: broker,
-			Filter: &v1alpha1.TriggerFilter{
-				SourceAndType: &v1alpha1.TriggerFilterSourceAndType{
-					Type:   eventType,
-					Source: eventSource,
-				},
-			},
-			Subscriber: &v1alpha1.SubscriberSpec{
-				Ref: &corev1.ObjectReference{
-					APIVersion: "v1",
-					Kind:       "Service",
-					Name:       svcName,
-				},
-			},
-		},
-	}
-}
-
 // CloudEvent specifies the arguments for a CloudEvent sent by the sendevent
 // binary.
 type CloudEvent struct {
