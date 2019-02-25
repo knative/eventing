@@ -20,14 +20,10 @@ package cloudevents
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
-	"strings"
-	"time"
 )
 
 const (
@@ -56,7 +52,7 @@ const (
 	// HeaderSource is the header for the source which emitted this event.
 	HeaderSource = "CE-Source"
 
-	// HeaderExtensions is the OPTIONAL header prefix for CloudEvents extensions
+	// HeaderExtensionsPrefix is the OPTIONAL header prefix for CloudEvents extensions
 	HeaderExtensionsPrefix = "CE-X-"
 
 	// Binary implements Binary encoding/decoding
@@ -65,68 +61,57 @@ const (
 
 type binary int
 
+// BinarySender implements an interface for sending an EventContext as
+// (possibly one of several versions) as a binary encoding HTTP request.
+type BinarySender interface {
+	// AsHeaders converts this EventContext to a set of HTTP headers.
+	AsHeaders() (http.Header, error)
+}
+
+// BinaryLoader implements an interface for translating a binary encoding HTTP
+// request or response to a an EventContext (possibly one of several versions).
+type BinaryLoader interface {
+	// FromHeaders copies data from the supplied HTTP headers into the object.
+	// Values will be defaulted if necessary.
+	FromHeaders(in http.Header) error
+}
+
 // FromRequest parses event data and context from an HTTP request.
-func (binary) FromRequest(data interface{}, r *http.Request) (*EventContext, error) {
-	var ctx EventContext
-	err := anyError(
-		getRequiredHeader(r.Header, HeaderEventID, &ctx.EventID),
-		getRequiredHeader(r.Header, HeaderEventType, &ctx.EventType),
-		getRequiredHeader(r.Header, HeaderSource, &ctx.Source),
-		getRequiredHeader(r.Header, HeaderContentType, &ctx.ContentType))
-	if err != nil {
+func (binary) FromRequest(data interface{}, r *http.Request) (LoadContext, error) {
+	var ec LoadContext
+	switch {
+	case r.Header.Get("CE-SpecVersion") == V02CloudEventsVersion:
+		ec = &V02EventContext{}
+	case r.Header.Get("CE-CloudEventsVersion") == V01CloudEventsVersion:
+		ec = &V01EventContext{}
+	default:
+		return nil, fmt.Errorf("Could not determine Cloud Events version from header: %+v", r.Header)
+	}
+
+	if err := ec.FromHeaders(r.Header); err != nil {
 		return nil, err
 	}
 
-	ctx.CloudEventsVersion = r.Header.Get(HeaderCloudEventsVersion)
-	if timeStr := r.Header.Get(HeaderEventTime); timeStr != "" {
-		if ctx.EventTime, err = time.Parse(time.RFC3339Nano, timeStr); err != nil {
-			return nil, err
-		}
-	}
-	ctx.EventTypeVersion = r.Header.Get(HeaderEventTypeVersion)
-	ctx.SchemaURL = r.Header.Get(HeaderSchemaURL)
-	if ctx.CloudEventsVersion != CloudEventsVersion {
-		log.Printf("Received CloudEvent version %q; parsing as version %q",
-			ctx.CloudEventsVersion, CloudEventsVersion)
-	}
-
-	ctx.Extensions = make(map[string]interface{})
-	for k, v := range r.Header {
-		if strings.ToUpper(k)[:len(HeaderExtensionsPrefix)] != HeaderExtensionsPrefix {
-			continue
-		}
-		name := k[len(HeaderExtensionsPrefix):]
-		var val interface{}
-		if err := json.Unmarshal([]byte(v[0]), &val); err != nil {
-			// If this is not a JSON object, treat it as a string.
-			// It's not clear when we would treat this as Bytes.
-			ctx.Extensions[name] = v[0]
-		} else {
-			ctx.Extensions[name] = val
-		}
-	}
-
-	if err := unmarshalEventData(ctx.ContentType, r.Body, data); err != nil {
+	if err := unmarshalEventData(ec.DataContentType(), r.Body, data); err != nil {
 		return nil, err
 	}
 
-	return &ctx, nil
+	return ec, nil
 }
 
 // NewRequest creates an HTTP request for Binary content encoding.
-func (t binary) NewRequest(urlString string, data interface{}, context EventContext) (*http.Request, error) {
+func (t binary) NewRequest(urlString string, data interface{}, context SendContext) (*http.Request, error) {
 	url, err := url.Parse(urlString)
 	if err != nil {
 		return nil, err
 	}
 
-	h := http.Header{}
-	err = t.ToHeaders(&context, h)
+	h, err := context.AsHeaders()
 	if err != nil {
 		return nil, err
 	}
 
-	b, err := marshalEventData(context.ContentType, data)
+	b, err := marshalEventData(h.Get("Content-Type"), data)
 	if err != nil {
 		return nil, err
 	}
@@ -137,65 +122,4 @@ func (t binary) NewRequest(urlString string, data interface{}, context EventCont
 		Header: h,
 		Body:   ioutil.NopCloser(bytes.NewReader(b)),
 	}, nil
-}
-
-func (binary) ToHeaders(context *EventContext, h http.Header) error {
-	if context == nil || h == nil {
-		return nil
-	}
-	if err := ensureRequiredFields(*context); err != nil {
-		return err
-	}
-	// Defaultable values:
-	ceVersion := context.CloudEventsVersion
-	if ceVersion == "" {
-		ceVersion = CloudEventsVersion
-	}
-	contentType := context.ContentType
-	if contentType == "" {
-		contentType = contentTypeJSON
-	}
-
-	// non-string values:
-	eventTime := ""
-	if !context.EventTime.IsZero() {
-		eventTime = context.EventTime.Format(time.RFC3339Nano)
-	}
-
-	setHeader(h, HeaderCloudEventsVersion, ceVersion)
-	setHeader(h, HeaderEventID, context.EventID)
-	setHeader(h, HeaderEventTime, eventTime)
-	setHeader(h, HeaderEventType, context.EventType)
-	setHeader(h, HeaderEventTypeVersion, context.EventTypeVersion)
-	setHeader(h, HeaderSchemaURL, context.SchemaURL)
-	setHeader(h, HeaderContentType, contentType)
-	setHeader(h, HeaderSource, context.Source)
-	for name, value := range context.Extensions {
-		encoded, err := json.Marshal(value)
-		if err != nil {
-			return err
-		}
-		h[HeaderExtensionsPrefix+name] = []string{
-			string(encoded),
-		}
-	}
-
-	return nil
-}
-
-// TODO(inlined) URI encoding/decoding of headers
-func getHeader(h http.Header, name string) string {
-	return h.Get(name)
-}
-
-func setHeader(h http.Header, name string, value string) {
-	if value != "" {
-		h.Set(name, value)
-	}
-}
-func getRequiredHeader(h http.Header, name string, value *string) error {
-	if *value = getHeader(h, name); *value == "" {
-		return fmt.Errorf("missing required header %q", name)
-	}
-	return nil
 }

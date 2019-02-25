@@ -19,6 +19,8 @@ package provisioners
 import (
 	"fmt"
 	"testing"
+
+	_ "github.com/knative/pkg/system/testing"
 )
 
 const (

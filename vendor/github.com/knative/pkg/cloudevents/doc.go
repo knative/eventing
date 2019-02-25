@@ -19,5 +19,4 @@ limitations under the License.
 // https://github.com/cloudevents/spec/blob/v0.1/http-transport-binding.md
 // and
 // https://github.com/cloudevents/spec/blob/v0.1/spec.md
-
 package cloudevents

@@ -126,6 +126,10 @@ spec:
             value: gcppubsub-channel-key
           - name: DEFAULT_SECRET_KEY
             value: key.json
+          - name: SYSTEM_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
 
 ---
 
@@ -209,6 +213,19 @@ spec:
       containers:
         - name: dispatcher
           image: github.com/knative/eventing/contrib/gcppubsub/pkg/dispatcher/cmd
+          env:
+          - name: DEFAULT_GCP_PROJECT
+            value: REPLACE_WITH_GCP_PROJECT
+          - name: DEFAULT_SECRET_NAMESPACE
+            value: knative-eventing
+          - name: DEFAULT_SECRET_NAME
+            value: gcppubsub-channel-key
+          - name: DEFAULT_SECRET_KEY
+            value: key.json
+          - name: SYSTEM_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
 
 ---
 
