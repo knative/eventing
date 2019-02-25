@@ -18,10 +18,11 @@ package utils
 
 import (
 	"errors"
-	"go.uber.org/zap"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"testing"
 	"time"
+
+	"go.uber.org/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 var (
