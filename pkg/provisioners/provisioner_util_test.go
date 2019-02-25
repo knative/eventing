@@ -17,7 +17,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/system"
+	"github.com/knative/pkg/system"
+	_ "github.com/knative/pkg/system/testing"
 )
 
 const (
@@ -60,7 +61,7 @@ func TestProvisionerUtils(t *testing.T) {
 			CreateDispatcherService(context.TODO(), client, getNewClusterChannelProvisioner())
 
 			got := &corev1.Service{}
-			err := client.Get(context.TODO(), runtimeClient.ObjectKey{Namespace: system.Namespace, Name: fmt.Sprintf("%s-dispatcher", clusterChannelProvisionerName)}, got)
+			err := client.Get(context.TODO(), runtimeClient.ObjectKey{Namespace: system.Namespace(), Name: fmt.Sprintf("%s-dispatcher", clusterChannelProvisionerName)}, got)
 			return got, err
 		},
 		want: makeDispatcherService(),
@@ -73,7 +74,7 @@ func TestProvisionerUtils(t *testing.T) {
 			CreateDispatcherService(context.TODO(), client, getNewClusterChannelProvisioner())
 
 			got := &corev1.Service{}
-			err := client.Get(context.TODO(), runtimeClient.ObjectKey{Namespace: system.Namespace, Name: fmt.Sprintf("%s-dispatcher", clusterChannelProvisionerName)}, got)
+			err := client.Get(context.TODO(), runtimeClient.ObjectKey{Namespace: system.Namespace(), Name: fmt.Sprintf("%s-dispatcher", clusterChannelProvisionerName)}, got)
 			return got, err
 		},
 		want: func() metav1.Object {
@@ -161,7 +162,7 @@ func ClusterChannelProvisionerType() metav1.TypeMeta {
 func makeDispatcherService() *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: system.Namespace,
+			Namespace: system.Namespace(),
 			Name:      fmt.Sprintf("%s-dispatcher", clusterChannelProvisionerName),
 			OwnerReferences: []metav1.OwnerReference{
 				{

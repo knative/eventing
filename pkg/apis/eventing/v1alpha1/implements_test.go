@@ -21,21 +21,18 @@ import (
 )
 
 func TestTypesImplements(t *testing.T) {
-	var emptyGen duckv1alpha1.Generation
 	testCases := []struct {
 		instance interface{}
 		iface    duck.Implementable
 	}{
 		// Channel
 		{instance: &Channel{}, iface: &duckv1alpha1.Conditions{}},
-		{instance: &Channel{}, iface: &emptyGen},
 		{instance: &Channel{}, iface: &eventingduck.Subscribable{}},
 		{instance: &Channel{}, iface: &duckv1alpha1.Addressable{}},
 		// ClusterChannelProvisioner
 		{instance: &ClusterChannelProvisioner{}, iface: &duckv1alpha1.Conditions{}},
 		// Subscription
 		{instance: &Subscription{}, iface: &duckv1alpha1.Conditions{}},
-		{instance: &Subscription{}, iface: &emptyGen},
 	}
 	for _, tc := range testCases {
 		if err := duck.VerifyType(tc.instance, tc.iface); err != nil {

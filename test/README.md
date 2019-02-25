@@ -57,11 +57,13 @@ go test -v -tags=e2e -count=1 ./test/e2e -run ^TestKubernetesEvents$
 There's couple of things you need to install before running e2e tests locally.
 
 1. `kubetest` installed:
+
    ```bash
    go get -u k8s.io/test-infra/kubetest
    ```
-2. [A running `Knative Serving` cluster.]
-3. A docker repo containing [the test images](#test-images)
+
+1. [A running `Knative Serving` cluster.]
+1. A docker repo containing [the test images](#test-images)
 
 Simply run the `./test/e2e-tests.sh` script. It will create a GKE cluster,
 install Knative Serving stack with Istio, upload test images to your Docker repo
@@ -76,7 +78,7 @@ deployed from source.
 Otherwise, calling this script without arguments will create a new cluster in
 project `$PROJECT_ID`, start Knative Serving and the eventing system, upload
 test images, run the tests and delete the cluster. In this case, it's required
-that `$DOCKER_REPO_OVERRIDE` points to a valid writable docker repo.
+that `$KO_DOCKER_REPO` points to a valid writable docker repo.
 
 ## Test images
 
@@ -89,10 +91,10 @@ automatically.
 The [`upload-test-images.sh`](./upload-test-images.sh) script can be used to
 build and push the test images used by the e2e tests. It requires:
 
-- [`DOCKER_REPO_OVERRIDE`](https://github.com/knative/serving/blob/master/DEVELOPMENT.md#environment-setup)
+- [`KO_DOCKER_REPO`](https://github.com/knative/serving/blob/master/DEVELOPMENT.md#environment-setup)
   to be set
 - You to be
-  [authenticated with your `DOCKER_REPO_OVERRIDE`](https://github.com/knative/serving/blob/master/DEVELOPMENT.md#environment-setup)
+  [authenticated with your `KO_DOCKER_REPO`](https://github.com/knative/serving/blob/master/DEVELOPMENT.md#environment-setup)
 - [`docker`](https://docs.docker.com/install/) to be installed
 
 To run the script for all end to end test images:
