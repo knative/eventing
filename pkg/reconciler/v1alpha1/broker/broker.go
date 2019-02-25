@@ -200,25 +200,25 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) (reconci
 
 	_, err = r.reconcileFilterDeployment(ctx, b)
 	if err != nil {
-		logging.FromContext(ctx).Error("Problem reconciling filter deployment", zap.Error(err))
+		logging.FromContext(ctx).Error("Problem reconciling filter Deployment", zap.Error(err))
 		return reconcile.Result{}, err
 	}
 	_, err = r.reconcileFilterService(ctx, b)
 	if err != nil {
-		logging.FromContext(ctx).Error("Problem reconciling filter service", zap.Error(err))
+		logging.FromContext(ctx).Error("Problem reconciling filter Service", zap.Error(err))
 		return reconcile.Result{}, err
 	}
 	b.Status.MarkFilterReady()
 
 	_, err = r.reconcileIngressDeployment(ctx, b, c)
 	if err != nil {
-		logging.FromContext(ctx).Error("Problem reconciling ingress deployment", zap.Error(err))
+		logging.FromContext(ctx).Error("Problem reconciling ingress Deployment", zap.Error(err))
 		return reconcile.Result{}, err
 	}
 
 	svc, err := r.reconcileIngressService(ctx, b)
 	if err != nil {
-		logging.FromContext(ctx).Error("Problem reconciling ingress service", zap.Error(err))
+		logging.FromContext(ctx).Error("Problem reconciling ingress Service", zap.Error(err))
 		return reconcile.Result{}, err
 	}
 	b.Status.MarkIngressReady()

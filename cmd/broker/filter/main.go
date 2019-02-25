@@ -18,6 +18,8 @@ package main
 
 import (
 	"flag"
+	"log"
+	"os"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/broker"
@@ -27,6 +29,10 @@ import (
 	"go.uber.org/zap/zapcore"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+)
+
+const (
+	NAMESPACE = "NAMESPACE"
 )
 
 func main() {
@@ -39,13 +45,17 @@ func main() {
 
 	logger.Info("Starting...")
 
-	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
+	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
+		Namespace: getRequiredEnv(NAMESPACE),
+	})
 	if err != nil {
 		logger.Fatal("Error starting up.", zap.Error(err))
 	}
 
 	// Add custom types to this array to get them into the manager's scheme.
-	eventingv1alpha1.AddToScheme(mgr.GetScheme())
+	if err = eventingv1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
+		logger.Fatal("Unable to add eventingv1alpha1 scheme", zap.Error(err))
+	}
 
 	// We are running both the receiver (takes messages in from the cluster) and the dispatcher (send the messages
 	// to the triggers' subscribers) in this binary.
@@ -64,4 +74,12 @@ func main() {
 	if err != nil {
 		logger.Fatal("Manager.Start() returned an error", zap.Error(err))
 	}
+}
+
+func getRequiredEnv(envKey string) string {
+	val, defined := os.LookupEnv(envKey)
+	if !defined {
+		log.Fatalf("required environment variable not defined '%s'", envKey)
+	}
+	return val
 }

@@ -63,12 +63,16 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 					ServiceAccountName: args.ServiceAccountName,
 					Containers: []corev1.Container{
 						{
-							Image: args.Image,
 							Name:  "filter",
+							Image: args.Image,
 							Env: []corev1.EnvVar{
 								{
-									Name:  "BROKER",
-									Value: args.Broker.Name,
+									Name: "NAMESPACE",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "metadata.namespace",
+										},
+									},
 								},
 							},
 						},
