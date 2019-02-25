@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-// Receiver parses Cloud Events and sends them to the subscriber(s).
+// Receiver parses Cloud Events and sends them to a subscriber.
 type Receiver struct {
 	logger *zap.Logger
 	client client.Client
