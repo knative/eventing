@@ -19,8 +19,9 @@ package broker
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/runtime"
 	"time"
+
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
@@ -60,7 +61,7 @@ const (
 	// itself when creating events.
 	controllerAgentName = "broker-controller"
 
-	// Name of the corev1.Events emitted from the reconciliation process
+	// Name of the corev1.Events emitted from the reconciliation process.
 	brokerReconciled         = "BrokerReconciled"
 	brokerUpdateStatusFailed = "BrokerUpdateStatusFailed"
 )
@@ -79,7 +80,7 @@ type reconciler struct {
 	filterServiceAccountName  string
 }
 
-// Verify the struct implements reconcile.Reconciler
+// Verify the struct implements reconcile.Reconciler.
 var _ reconcile.Reconciler = &reconciler{}
 
 // ProvideController returns a function that returns a Broker controller.
@@ -155,7 +156,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	result, reconcileErr := r.reconcile(ctx, broker)
 	if reconcileErr != nil {
 		logging.FromContext(ctx).Error("Error reconciling Broker", zap.Error(reconcileErr))
-	} else if result.Requeue || result.RequeueAfter > 0  {
+	} else if result.Requeue || result.RequeueAfter > 0 {
 		logging.FromContext(ctx).Debug("Broker reconcile requeuing")
 	} else {
 		logging.FromContext(ctx).Debug("Broker reconciled")
@@ -178,7 +179,7 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) (reconci
 	// 1. Channel is created for all events.
 	// 2. Filter Deployment.
 	// 3. Ingress Deployment.
-	// 4. K8s Service that points at the Deployment.
+	// 4. K8s Services that point at the Deployments.
 
 	if b.DeletionTimestamp != nil {
 		// Everything is cleaned up by the garbage collector.
@@ -217,7 +218,7 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) (reconci
 
 	svc, err := r.reconcileIngressService(ctx, b)
 	if err != nil {
-		logging.FromContext(ctx).Error("Problem reconciling ingress Service", zap.Error(err))
+		logging.FromContext(ctx).Error("Problem reconciling ingress service", zap.Error(err))
 		return reconcile.Result{}, err
 	}
 	b.Status.MarkIngressReady()
@@ -226,7 +227,7 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) (reconci
 	return reconcile.Result{}, nil
 }
 
-// updateStatus may in fact update the broker's finalizers in addition to the status
+// updateStatus may in fact update the broker's finalizers in addition to the status.
 func (r *reconciler) updateStatus(broker *v1alpha1.Broker) (*v1alpha1.Broker, error) {
 	objectKey := client.ObjectKey{Namespace: broker.Namespace, Name: broker.Name}
 	latestBroker := &v1alpha1.Broker{}
@@ -250,7 +251,7 @@ func (r *reconciler) updateStatus(broker *v1alpha1.Broker) (*v1alpha1.Broker, er
 	}
 
 	if brokerChanged {
-		// Refetch
+		// Re-fetch.
 		latestBroker = &v1alpha1.Broker{}
 		if err := r.client.Get(context.TODO(), objectKey, latestBroker); err != nil {
 			return nil, err
@@ -265,6 +266,7 @@ func (r *reconciler) updateStatus(broker *v1alpha1.Broker) (*v1alpha1.Broker, er
 	return latestBroker, nil
 }
 
+// reconcileFilterDeployment reconciles Broker's 'b' filter deployment.
 func (r *reconciler) reconcileFilterDeployment(ctx context.Context, b *v1alpha1.Broker) (*v1.Deployment, error) {
 	expected := resources.MakeFilterDeployment(&resources.FilterArgs{
 		Broker:             b,
@@ -274,11 +276,13 @@ func (r *reconciler) reconcileFilterDeployment(ctx context.Context, b *v1alpha1.
 	return r.reconcileDeployment(ctx, expected)
 }
 
+// reconcileFilterService reconciles Broker's 'b' filter service.
 func (r *reconciler) reconcileFilterService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
 	expected := resources.MakeFilterService(b)
 	return r.reconcileService(ctx, expected)
 }
 
+// reconcileChannel reconciles Broker's 'b' underlying channel.
 func (r *reconciler) reconcileChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
 	c, err := r.getChannel(ctx, b)
 	// If the resource doesn't exist, we'll create it
@@ -307,6 +311,7 @@ func (r *reconciler) reconcileChannel(ctx context.Context, b *v1alpha1.Broker) (
 	return c, nil
 }
 
+// getChannel returns the Channel object for Broker 'b' if exists, otherwise it returns an error.
 func (r *reconciler) getChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
 	list := &v1alpha1.ChannelList{}
 	opts := &runtimeclient.ListOptions{
@@ -335,6 +340,7 @@ func (r *reconciler) getChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alp
 	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
 }
 
+// newChannel creates a new placeholder Channel object for Broker 'b'.
 func newChannel(b *v1alpha1.Broker) *v1alpha1.Channel {
 	var spec v1alpha1.ChannelSpec
 	if b.Spec.ChannelTemplate != nil {
@@ -365,6 +371,7 @@ func ChannelLabels(b *v1alpha1.Broker) map[string]string {
 	}
 }
 
+// reconcileDeployment reconciles the K8s Deployment 'd'.
 func (r *reconciler) reconcileDeployment(ctx context.Context, d *v1.Deployment) (*v1.Deployment, error) {
 	name := types.NamespacedName{
 		Namespace: d.Namespace,
@@ -392,6 +399,7 @@ func (r *reconciler) reconcileDeployment(ctx context.Context, d *v1.Deployment) 
 	return current, nil
 }
 
+// reconcileService reconciles the K8s Service 'svc'.
 func (r *reconciler) reconcileService(ctx context.Context, svc *corev1.Service) (*corev1.Service, error) {
 	name := types.NamespacedName{
 		Namespace: svc.Namespace,
@@ -422,6 +430,7 @@ func (r *reconciler) reconcileService(ctx context.Context, svc *corev1.Service) 
 	return current, nil
 }
 
+// reconcileIngressDeployment reconciles the Ingress Deployment.
 func (r *reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1.Broker, c *v1alpha1.Channel) (*v1.Deployment, error) {
 	expected := resources.MakeIngress(&resources.IngressArgs{
 		Broker:             b,
@@ -432,6 +441,7 @@ func (r *reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1
 	return r.reconcileDeployment(ctx, expected)
 }
 
+// reconcileIngressService reconciles the Ingress Service.
 func (r *reconciler) reconcileIngressService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
 	expected := resources.MakeIngressService(b)
 	return r.reconcileService(ctx, expected)

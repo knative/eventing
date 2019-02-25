@@ -62,7 +62,7 @@ const (
 
 	finalizerName = controllerAgentName
 
-	// Name of the corev1.Events emitted from the reconciliation process
+	// Name of the corev1.Events emitted from the reconciliation process.
 	triggerReconciled         = "TriggerReconciled"
 	triggerReconcileFailed    = "TriggerReconcileFailed"
 	triggerUpdateStatusFailed = "TriggerUpdateStatusFailed"
@@ -87,7 +87,7 @@ type reconciler struct {
 	logger *zap.Logger
 }
 
-// Verify the struct implements reconcile.Reconciler
+// Verify the struct implements reconcile.Reconciler.
 var _ reconcile.Reconciler = &reconciler{}
 
 // ProvideController returns a function that returns a Trigger controller.
@@ -369,6 +369,8 @@ func (r *reconciler) updateStatus(trigger *v1alpha1.Trigger) (*v1alpha1.Trigger,
 	return latestTrigger, nil
 }
 
+// getBroker returns the Broker for Trigger 't' if exists,
+// otherwise it returns an error.
 func (r *reconciler) getBroker(ctx context.Context, t *v1alpha1.Trigger) (*v1alpha1.Broker, error) {
 	b := &v1alpha1.Broker{}
 	name := types.NamespacedName{
@@ -379,6 +381,8 @@ func (r *reconciler) getBroker(ctx context.Context, t *v1alpha1.Trigger) (*v1alp
 	return b, err
 }
 
+// getBrokerChannel returns the Broker's channel if exists,
+// otherwise it returns an error.
 func (r *reconciler) getBrokerChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
 	list := &v1alpha1.ChannelList{}
 	opts := &runtimeclient.ListOptions{
@@ -407,6 +411,8 @@ func (r *reconciler) getBrokerChannel(ctx context.Context, b *v1alpha1.Broker) (
 	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
 }
 
+// getK8sService returns the K8s service for trigger 't' if exists,
+// otherwise it returns an error.
 func (r *reconciler) getK8sService(ctx context.Context, t *v1alpha1.Trigger) (*corev1.Service, error) {
 	list := &corev1.ServiceList{}
 	opts := &runtimeclient.ListOptions{
@@ -435,6 +441,7 @@ func (r *reconciler) getK8sService(ctx context.Context, t *v1alpha1.Trigger) (*c
 	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
 }
 
+// reconcileK8sService reconciles the K8s service for trigger 't'.
 func (r *reconciler) reconcileK8sService(ctx context.Context, t *v1alpha1.Trigger) (*corev1.Service, error) {
 	current, err := r.getK8sService(ctx, t)
 
@@ -464,6 +471,7 @@ func (r *reconciler) reconcileK8sService(ctx context.Context, t *v1alpha1.Trigge
 	return current, nil
 }
 
+// newK8sService returns a K8s placeholder service for trigger 't'.
 func newK8sService(t *v1alpha1.Trigger) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -495,6 +503,8 @@ func k8sServiceLabels(t *v1alpha1.Trigger) map[string]string {
 	}
 }
 
+// getVirtualService returns the virtual service for trigger 't' if exists,
+// otherwise it returns an error.
 func (r *reconciler) getVirtualService(ctx context.Context, t *v1alpha1.Trigger) (*istiov1alpha3.VirtualService, error) {
 	list := &istiov1alpha3.VirtualServiceList{}
 	opts := &runtimeclient.ListOptions{
@@ -523,6 +533,7 @@ func (r *reconciler) getVirtualService(ctx context.Context, t *v1alpha1.Trigger)
 	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
 }
 
+// reconcileVirtualService reconciles the virtual service for trigger 't' and service 'svc'.
 func (r *reconciler) reconcileVirtualService(ctx context.Context, t *v1alpha1.Trigger, svc *corev1.Service) (*istiov1alpha3.VirtualService, error) {
 	virtualService, err := r.getVirtualService(ctx, t)
 
@@ -549,6 +560,7 @@ func (r *reconciler) reconcileVirtualService(ctx context.Context, t *v1alpha1.Tr
 	return virtualService, nil
 }
 
+// newVirtualService returns a placeholder virtual service object for trigger 't' and service 'svc'.
 func newVirtualService(t *v1alpha1.Trigger, svc *corev1.Service) *istiov1alpha3.VirtualService {
 	// TODO Make this work with endings other than cluster.local
 	destinationHost := fmt.Sprintf("%s-broker-filter.%s.svc.cluster.local", t.Spec.Broker, t.Namespace)
@@ -593,10 +605,11 @@ func virtualServiceLabels(t *v1alpha1.Trigger) map[string]string {
 	}
 }
 
+// subscribeToBrokerChannel subscribes service 'svc' to Broker's channel 'c'.
 func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.Trigger, c *v1alpha1.Channel, svc *corev1.Service) (*v1alpha1.Subscription, error) {
 	expected := makeSubscription(t, c, svc)
 
-	sub, err := r.getSubscription(ctx, t, c)
+	sub, err := r.getSubscription(ctx, t)
 	// If the resource doesn't exist, we'll create it
 	if k8serrors.IsNotFound(err) {
 		sub = expected
@@ -631,7 +644,9 @@ func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.T
 	return sub, nil
 }
 
-func (r *reconciler) getSubscription(ctx context.Context, t *v1alpha1.Trigger, c *v1alpha1.Channel) (*v1alpha1.Subscription, error) {
+// getSubscription returns the subscription of trigger 't' if exists,
+// otherwise it returns an error.
+func (r *reconciler) getSubscription(ctx context.Context, t *v1alpha1.Trigger) (*v1alpha1.Subscription, error) {
 	list := &v1alpha1.SubscriptionList{}
 	opts := &runtimeclient.ListOptions{
 		Namespace:     t.Namespace,
@@ -659,6 +674,7 @@ func (r *reconciler) getSubscription(ctx context.Context, t *v1alpha1.Trigger, c
 	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
 }
 
+// makeSubscription returns a placeholder subscription for trigger 't', channel 'c', and service 'svc'.
 func makeSubscription(t *v1alpha1.Trigger, c *v1alpha1.Channel, svc *corev1.Service) *v1alpha1.Subscription {
 	return &v1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
