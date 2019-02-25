@@ -93,12 +93,9 @@ func (r *Receiver) initClient() error {
 	// Otherwise, on receiving an event, it may not find the trigger
 	// and would return an error.
 	opts := &client.ListOptions{
-		Raw: &metav1.ListOptions{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-				Kind:       "Trigger",
-			},
-		},
+		// Set Raw because if we need to get more than one page, then we will put the continue token
+		// into opts.Raw.Continue.
+		Raw: &metav1.ListOptions{},
 	}
 	for {
 		tl := &eventingv1alpha1.TriggerList{}

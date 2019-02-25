@@ -60,8 +60,8 @@ func (b *TriggerBuilder) EventType(eventType string) *TriggerBuilder {
 	return b
 }
 
-func (b *TriggerBuilder) EventSource(eventType string) *TriggerBuilder {
-	b.Trigger.Spec.Filter.SourceAndType.Type = eventType
+func (b *TriggerBuilder) EventSource(eventSource string) *TriggerBuilder {
+	b.Trigger.Spec.Filter.SourceAndType.Source = eventSource
 	return b
 }
 
