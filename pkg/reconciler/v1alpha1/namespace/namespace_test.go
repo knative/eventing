@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
@@ -35,7 +37,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"testing"
 )
 
 const (
@@ -50,6 +51,13 @@ var (
 	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
 	// truncates to seconds to match the loss of precision during serialization.
 	deletionTime = metav1.Now().Rfc3339Copy()
+
+	// map of events to set test cases' expectations easier
+	events = map[string]corev1.Event{
+		brokerCreated:             {Reason: brokerCreated, Type: corev1.EventTypeNormal},
+		serviceAccountCreated:     {Reason: serviceAccountCreated, Type: corev1.EventTypeNormal},
+		serviceAccountRBACCreated: {Reason: serviceAccountRBACCreated, Type: corev1.EventTypeNormal},
+	}
 )
 
 func init() {
@@ -214,6 +222,7 @@ func TestReconcile(t *testing.T) {
 			WantAbsent: []runtime.Object{
 				makeBroker(),
 			},
+			WantEvent: []corev1.Event{events[serviceAccountCreated], events[serviceAccountRBACCreated]},
 		},
 		{
 			Name:   "Broker Found",
@@ -222,6 +231,7 @@ func TestReconcile(t *testing.T) {
 				makeNamespace(&trueString),
 				makeBroker(),
 			},
+			WantEvent: []corev1.Event{events[serviceAccountCreated], events[serviceAccountRBACCreated]},
 		},
 		{
 			Name:   "Broker.Create fails",
@@ -240,6 +250,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error creating the Broker",
+			WantEvent:  []corev1.Event{events[serviceAccountCreated], events[serviceAccountRBACCreated]},
 		},
 		{
 			Name:   "Broker created",
@@ -251,10 +262,9 @@ func TestReconcile(t *testing.T) {
 				makeBroker(),
 			},
 			WantEvent: []corev1.Event{
-				{
-					Reason: brokerCreated, Type: corev1.EventTypeNormal,
-				},
-			},
+				events[serviceAccountCreated],
+				events[serviceAccountRBACCreated],
+				events[brokerCreated]},
 		},
 	}
 	for _, tc := range testCases {

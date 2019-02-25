@@ -19,11 +19,12 @@ package namespace
 import (
 	"context"
 	"fmt"
+
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/logging"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"go.uber.org/zap"
-	"k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -46,16 +47,16 @@ const (
 	// itself when creating events.
 	controllerAgentName = "knative-eventing-namespace-controller"
 
-	defaultBroker             = "default"
-	brokerFilterSA = "eventing-broker-filter"
-	brokerFilterRB = "eventing-broker-filter"
+	defaultBroker           = "default"
+	brokerFilterSA          = "eventing-broker-filter"
+	brokerFilterRB          = "eventing-broker-filter"
 	brokerFilterClusterRole = "eventing-broker-filter"
 
 	knativeEventingAnnotation = "eventing.knative.dev/inject"
 
 	// Name of the corev1.Events emitted from the reconciliation process.
-	brokerCreated = "BrokerCreated"
-	serviceAccountCreated = "BrokerFilterServiceAccountCreated"
+	brokerCreated             = "BrokerCreated"
+	serviceAccountCreated     = "BrokerFilterServiceAccountCreated"
 	serviceAccountRBACCreated = "BrokerFilterServiceAccountRBACCreated"
 )
 
@@ -92,8 +93,8 @@ func ProvideController(logger *zap.Logger) func(manager.Manager) (controller.Con
 		}
 
 		// Watch all the resources that this reconciler reconciles.
-		for _, t := range []runtime.Object{ &corev1.ServiceAccount{}, &rbacv1.RoleBinding{}, &v1alpha1.Broker{} } {
-			err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &namespaceMapper{}});
+		for _, t := range []runtime.Object{&corev1.ServiceAccount{}, &rbacv1.RoleBinding{}, &v1alpha1.Broker{}} {
+			err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &namespaceMapper{}})
 			if err != nil {
 				return nil, err
 			}
@@ -228,8 +229,8 @@ func newBrokerFilterServiceAccount(ns *corev1.Namespace) *corev1.ServiceAccount 
 	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
-			Name: brokerFilterSA,
-			Labels: injectedLabels(),
+			Name:      brokerFilterSA,
+			Labels:    injectedLabels(),
 		},
 	}
 }
@@ -276,19 +277,19 @@ func newBrokerFilterRBAC(ns *corev1.Namespace, sa *corev1.ServiceAccount) *rbacv
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
-			Name: brokerFilterRB,
-			Labels: injectedLabels(),
+			Name:      brokerFilterRB,
+			Labels:    injectedLabels(),
 		},
-		RoleRef:rbacv1.RoleRef{
-			APIGroup:"rbac.authorization.k8s.io",
-			Kind: "ClusterRole",
-			Name: brokerFilterClusterRole,
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     brokerFilterClusterRole,
 		},
-		Subjects:[]rbacv1.Subject{
+		Subjects: []rbacv1.Subject{
 			{
-				Kind: "ServiceAccount",
+				Kind:      "ServiceAccount",
 				Namespace: ns.Name,
-				Name: sa.Name,
+				Name:      sa.Name,
 			},
 		},
 	}
