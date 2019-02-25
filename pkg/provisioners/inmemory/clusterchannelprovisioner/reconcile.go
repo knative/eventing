@@ -31,7 +31,7 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	util "github.com/knative/eventing/pkg/provisioners"
-	"github.com/knative/eventing/pkg/system"
+	"github.com/knative/pkg/system"
 )
 
 const (
@@ -182,7 +182,7 @@ func (r *reconciler) reconcile(ctx context.Context, ccp *eventingv1alpha1.Cluste
 func (r *reconciler) deleteOldDispatcherService(ctx context.Context, ccp *eventingv1alpha1.ClusterChannelProvisioner) error {
 	svcName := fmt.Sprintf("%s-clusterbus", ccp.Name)
 	svcKey := types.NamespacedName{
-		Namespace: system.Namespace,
+		Namespace: system.Namespace(),
 		Name:      svcName,
 	}
 	svc := &corev1.Service{}

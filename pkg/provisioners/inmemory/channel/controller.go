@@ -18,8 +18,8 @@ package channel
 
 import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/system"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
+	"github.com/knative/pkg/system"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -42,7 +42,7 @@ const (
 
 var (
 	defaultConfigMapKey = types.NamespacedName{
-		Namespace: system.Namespace,
+		Namespace: system.Namespace(),
 		Name:      ConfigMapName,
 	}
 )
