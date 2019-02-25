@@ -51,27 +51,31 @@ required = [
 
 # Overridden to ensure compatibility with GKE
 # GKE version as of 2019-01-24 is 1.11
+# controller-runtime 0.1.9 requires at least 1.12
 [[override]]
   name = "k8s.io/api"
-  version = "kubernetes-1.11.3"
+  version = "kubernetes-1.12.5"
 
 # Overridden to ensure compatibility with GKE
 # GKE version as of 2019-01-24 is 1.11
+# controller-runtime 0.1.9 requires at least 1.12
 [[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.11.3"
+  version = "kubernetes-1.12.5"
 
 # Overridden to ensure compatibility with GKE
 # GKE version as of 2019-01-24 is 1.11
+# controller-runtime 0.1.9 requires at least 1.12
 [[override]]
   name = "k8s.io/code-generator"
-  version = "kubernetes-1.11.3"
+  version = "kubernetes-1.12.5"
 
 # Overridden to ensure compatibility with GKE
 # GKE version as of 2019-01-24 is 1.11
+# controller-runtime 0.1.9 requires at least 1.12
 [[override]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.11.3"
+  version = "kubernetes-1.12.5"
 
 # This is the commit at which k8s depends on this in 1.11
 # It seems to be broken at HEAD.
@@ -106,11 +110,10 @@ required = [
   name = "github.com/Shopify/sarama"
   version = "1.19.0"
 
-# TODO switch to a version constraint
+# 0.1.9 is most recent version that still uses K8s 1.12. 0.1.10 uses K8s 1.13.
 [[constraint]]
   name = "sigs.k8s.io/controller-runtime"
-  # HEAD as of 2018-09-19
-  revision = "5373e8e1f3188ff4266902a6fc86372bc14b3815"
+  version = "=0.1.9"
 
 # TODO why is this overridden?
 [[override]]
