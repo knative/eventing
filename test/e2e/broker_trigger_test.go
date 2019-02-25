@@ -232,7 +232,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			t.Fatalf("Event(s) not found in logs of subscriber pod %q: %v", subscriberPodName, err)
 		}
 		// At this point all the events should have been received in the pod.
-		// We check whether we find them unexpected events. If so, then we fail.
+		// We check whether we find unexpected events. If so, then we fail.
 		found, err := FindAnyLogContents(clients, logger, subscriberPodName, subscriberPod.Spec.Containers[0].Name, ns, unexpectedEvents[subscriberPodName])
 		if err != nil {
 			t.Fatalf("Failed querying to find log contents in pod %q: %v", subscriberPodName, err)
@@ -243,9 +243,9 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	}
 }
 
-// Helper function to create names for different objects (e.g., triggers, services, etc.)
+// Helper function to create names for different objects (e.g., triggers, services, etc.).
 func name(obj, eventType, eventSource string) string {
-	// pod names need to be lowercase. We might have an eventType as Any, that is why we lowercase them.
+	// Pod names need to be lowercase. We might have an eventType as Any, that is why we lowercase them.
 	return strings.ToLower(fmt.Sprintf("%s-%s-%s", obj, eventType, eventSource))
 }
 

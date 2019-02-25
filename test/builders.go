@@ -19,6 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Builder for trigger objects.
 type TriggerBuilder struct {
 	*eventingv1alpha1.Trigger
 }
