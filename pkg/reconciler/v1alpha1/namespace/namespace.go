@@ -241,7 +241,7 @@ func injectedLabels() map[string]string {
 	}
 }
 
-func (r *reconciler) reconcileBrokerFilterRBAC(ctx context.Context, ns *corev1.Namespace, sa *corev1.ServiceAccount) (*rbacv1.ClusterRoleBinding, error) {
+func (r *reconciler) reconcileBrokerFilterRBAC(ctx context.Context, ns *corev1.Namespace, sa *corev1.ServiceAccount) (*rbacv1.RoleBinding, error) {
 	current, err := r.getBrokerFilterRBAC(ctx, ns)
 
 	// If the resource doesn't exist, we'll create it.
@@ -263,20 +263,22 @@ func (r *reconciler) reconcileBrokerFilterRBAC(ctx context.Context, ns *corev1.N
 	return current, nil
 }
 
-func (r *reconciler) getBrokerFilterRBAC(ctx context.Context, ns *corev1.Namespace) (*rbacv1.ClusterRoleBinding, error) {
-	rb := &rbacv1.ClusterRoleBinding{}
+func (r *reconciler) getBrokerFilterRBAC(ctx context.Context, ns *corev1.Namespace) (*rbacv1.RoleBinding, error) {
+	rb := &rbacv1.RoleBinding{}
 	name := types.NamespacedName{
-		Name: brokerFilterRB,
+		Namespace: ns.Name,
+		Name:      brokerFilterRB,
 	}
 	err := r.client.Get(ctx, name, rb)
 	return rb, err
 }
 
-func newBrokerFilterRBAC(ns *corev1.Namespace, sa *corev1.ServiceAccount) *rbacv1.ClusterRoleBinding {
-	return &rbacv1.ClusterRoleBinding{
+func newBrokerFilterRBAC(ns *corev1.Namespace, sa *corev1.ServiceAccount) *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   brokerFilterRB,
-			Labels: injectedLabels(),
+			Namespace: ns.Name,
+			Name:      brokerFilterRB,
+			Labels:    injectedLabels(),
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",

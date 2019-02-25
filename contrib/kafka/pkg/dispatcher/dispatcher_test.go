@@ -18,6 +18,7 @@ import (
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
+	_ "github.com/knative/pkg/system/testing"
 )
 
 type mockConsumer struct {

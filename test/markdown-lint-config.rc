@@ -1,0 +1,8 @@
+# For help, see
+# https://github.com/markdownlint/markdownlint/blob/master/docs/configuration.md 
+
+# Ignoring some of the available rules. For more, see
+# https://github.com/markdownlint/markdownlint/blob/master/docs/RULES.md
+
+rules "~MD013", "~MD024"
+

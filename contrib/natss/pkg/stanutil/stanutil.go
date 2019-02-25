@@ -19,7 +19,6 @@ package stanutil
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	stan "github.com/nats-io/go-nats-streaming"
 	"go.uber.org/zap"
@@ -28,16 +27,7 @@ import (
 // Connect creates a new NATS-Streaming connection
 func Connect(clusterId string, clientId string, natsUrl string, logger *zap.SugaredLogger) (*stan.Conn, error) {
 	logger.Infof("Connect(): clusterId: %v; clientId: %v; natssUrl: %v", clusterId, clientId, natsUrl)
-	var sc stan.Conn
-	var err error
-	for i := 0; i < 60; i++ {
-		if sc, err = stan.Connect(clusterId, clientId, stan.NatsURL(natsUrl)); err != nil {
-			logger.Warnf("Connect(): create new connection failed: %v", err)
-			time.Sleep(1 * time.Second)
-		} else {
-			break
-		}
-	}
+	sc, err := stan.Connect(clusterId, clientId, stan.NatsURL(natsUrl))
 	if err != nil {
 		logger.Errorf("Connect(): create new connection failed: %v", err)
 		return nil, err

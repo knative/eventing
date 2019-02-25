@@ -19,6 +19,7 @@ package cloudevents
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -47,7 +48,7 @@ type errAndHandler interface {
 
 const (
 	inParamUsage  = "Expected a function taking either no parameters, a context.Context, or (context.Context, any)"
-	outParamUsage = "Expected a function returning either nothing, an error, (any, error), or (any, EventContext, error)"
+	outParamUsage = "Expected a function returning either nothing, an error, (any, error), or (any, SendContext, error)"
 )
 
 var (
@@ -59,9 +60,9 @@ var (
 	// it leaves this stack frame. The workaround is to pass a pointer to an interface and then
 	// get the type of its reference.
 	// For example, see: https://play.golang.org/p/_dxLvdkvqvg
-	contextType      = reflect.TypeOf((*context.Context)(nil)).Elem()
-	errorType        = reflect.TypeOf((*error)(nil)).Elem()
-	eventContextType = reflect.TypeOf((*EventContext)(nil)).Elem()
+	contextType     = reflect.TypeOf((*context.Context)(nil)).Elem()
+	errorType       = reflect.TypeOf((*error)(nil)).Elem()
+	sendContextType = reflect.TypeOf((*SendContext)(nil)).Elem()
 )
 
 // Verifies that the inputs to a function have a valid signature; panics otherwise.
@@ -90,8 +91,8 @@ func validateOutParamSignature(fnType reflect.Type) error {
 	switch fnType.NumOut() {
 	case 3:
 		contextType := fnType.Out(1)
-		if !contextType.ConvertibleTo(eventContextType) {
-			return fmt.Errorf("%s; cannot convert return type 1 from %s to EventContext", outParamUsage, contextType)
+		if !contextType.ConvertibleTo(sendContextType) {
+			return fmt.Errorf("%s; cannot convert return type 1 from %s to SendContext", outParamUsage, contextType)
 		}
 		fallthrough
 	case 2:
@@ -114,7 +115,7 @@ func validateOutParamSignature(fnType reflect.Type) error {
 // of allowed types. If successful, returns the expected in-param type, otherwise panics.
 func validateFunction(fnType reflect.Type) errAndHandler {
 	if fnType.Kind() != reflect.Func {
-		return &failedHandler{err: fmt.Errorf("Must pass a function to handle events")}
+		return &failedHandler{err: errors.New("must pass a function to handle events")}
 	}
 	err := anyError(
 		validateInParamSignature(fnType),
@@ -144,7 +145,7 @@ func allocate(t reflect.Type) (asPtr interface{}, asValue reflect.Value) {
 	return
 }
 
-func unwrapReturnValues(res []reflect.Value) (interface{}, *EventContext, error) {
+func unwrapReturnValues(res []reflect.Value) (interface{}, SendContext, error) {
 	switch len(res) {
 	case 0:
 		return nil, nil, nil
@@ -162,8 +163,8 @@ func unwrapReturnValues(res []reflect.Value) (interface{}, *EventContext, error)
 		return nil, nil, res[1].Interface().(error)
 	case 3:
 		if res[2].IsNil() {
-			ec := res[1].Interface().(EventContext)
-			return res[0].Interface(), &ec, nil
+			ec := res[1].Interface().(SendContext)
+			return res[0].Interface(), ec, nil
 		}
 		return nil, nil, res[2].Interface().(error)
 	default:
@@ -191,7 +192,7 @@ func respondHTTP(outparams []reflect.Value, fn reflect.Value, w http.ResponseWri
 		if eventType == "" {
 			eventType = "dev.knative.pkg.cloudevents.unknown"
 		}
-		ec = &EventContext{
+		ec = &V01EventContext{
 			EventID:   uuid.New().String(),
 			EventType: eventType,
 			Source:    "unknown", // TODO: anything useful here, maybe incoming Host header?
@@ -206,13 +207,17 @@ func respondHTTP(outparams []reflect.Value, fn reflect.Value, w http.ResponseWri
 			w.Write([]byte(`Internal server error`))
 			return
 		}
-		err = Binary.ToHeaders(ec, w.Header())
+		headers, err := ec.AsHeaders()
 		if err != nil {
-			log.Printf("Failed to marshal headers for response: %+v: %s", ec, err)
+			log.Printf("Failed to marshal event context %+v: %s", res, err)
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(`Internal server error`))
+			w.Write([]byte("Internal server error"))
 			return
 		}
+		for k, v := range headers {
+			w.Header()[k] = v
+		}
+
 		w.Write(json)
 		return
 	}
@@ -364,11 +369,13 @@ func (m Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h := m[eventContext.EventType]
+	c := eventContext.AsV01()
+
+	h := m[c.EventType]
 	if h == nil {
-		log.Print("Cloud not find handler for event type", eventContext.EventType)
+		log.Print("Cloud not find handler for event type", c.EventType)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(fmt.Sprintf("Event type %q is not supported", eventContext.EventType)))
+		w.Write([]byte(fmt.Sprintf("Event type %q is not supported", c.EventType)))
 		return
 	}
 
@@ -380,7 +387,7 @@ func (m Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if h.numIn == 2 {
 		dataPtr, dataArg := allocate(h.dataType)
-		if err := unmarshalEventData(eventContext.ContentType, rawData, dataPtr); err != nil {
+		if err := unmarshalEventData(c.ContentType, rawData, dataPtr); err != nil {
 			log.Print("Failed to parse event data", err)
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte(`Invalid request`))

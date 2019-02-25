@@ -17,11 +17,12 @@ limitations under the License.
 package subscription
 
 import (
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"testing"
 )
 
 func TestProvideController(t *testing.T) {

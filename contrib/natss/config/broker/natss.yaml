@@ -59,6 +59,7 @@ spec:
   replicas: 1
   selector:
     matchLabels: &labels
+      app: nats-streaming
   template:
     metadata:
       annotations:

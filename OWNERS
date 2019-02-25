@@ -1,6 +1,7 @@
 approvers:
 - evankanderson
 - grantr
+- Harwayne
 - inlined
 - scothis
 - vaikas-google
@@ -11,9 +12,9 @@ approvers:
 reviewers:
 - evankanderson
 - grantr
+- Harwayne
 - inlined
 - scothis
 - vaikas-google
 # Add reviewers below
-- Harwayne
 - n3wscott

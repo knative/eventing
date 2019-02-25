@@ -24,8 +24,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/subscription"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,12 +37,12 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logconfig"
-	"github.com/knative/eventing/pkg/system"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/logging/logkey"
 	"github.com/knative/pkg/signals"
+	"github.com/knative/pkg/system"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
@@ -96,7 +96,7 @@ func main() {
 	}
 
 	// Watch the logging config map and dynamically update logging levels.
-	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace)
+	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
 	configMapWatcher.Watch(logconfig.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller, logconfig.Controller))
 	if err = configMapWatcher.Start(stopCh); err != nil {
 		logger.Fatalf("Failed to start controller config map watcher: %v", err)

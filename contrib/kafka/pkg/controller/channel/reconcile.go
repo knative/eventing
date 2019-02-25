@@ -32,9 +32,9 @@ import (
 
 	"github.com/knative/eventing/contrib/kafka/pkg/controller"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	eventingNames "github.com/knative/eventing/pkg/reconciler/names"
 	util "github.com/knative/eventing/pkg/provisioners"
 	topicUtils "github.com/knative/eventing/pkg/provisioners/utils"
+	eventingNames "github.com/knative/eventing/pkg/reconciler/names"
 	"github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"

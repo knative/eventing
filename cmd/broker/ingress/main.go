@@ -25,8 +25,6 @@ import (
 	"os"
 	"time"
 
-	"golang.org/x/sync/errgroup"
-
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/pkg/signals"
@@ -71,24 +69,27 @@ func main() {
 		WriteTimeout: writeTimeout,
 	}
 
-	// Start both the manager (which notices ConfigMap changes) and the HTTP server.
-	var g errgroup.Group
-	g.Go(func() error {
-		// set up signals so we handle the first shutdown signal gracefully
-		stopCh := signals.SetupSignalHandler()
-		// Start blocks forever, so run it in a goroutine.
-		return mgr.Start(stopCh)
+	err = mgr.Add(&runnableServer{
+		logger: logger,
+		s:      s,
 	})
-	logger.Info("Ingress Listening...", zap.String("Address", s.Addr))
-	g.Go(s.ListenAndServe)
-	err = g.Wait()
 	if err != nil {
-		logger.Error("HTTP server failed.", zap.Error(err))
+		logger.Fatal("Unable to add ListenAndServe", zap.Error(err))
 	}
+
+	// Set up signals so we handle the first shutdown signal gracefully.
+	stopCh := signals.SetupSignalHandler()
+	// Start blocks forever.
+	if err = mgr.Start(stopCh); err != nil {
+		logger.Error("manager.Start() returned an error", zap.Error(err))
+	}
+	logger.Info("Exiting...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), writeTimeout)
 	defer cancel()
-	s.Shutdown(ctx)
+	if err = s.Shutdown(ctx); err != nil {
+		logger.Error("Shutdown returned an error", zap.Error(err))
+	}
 }
 
 func getRequiredEnv(envKey string) string {
@@ -141,4 +142,16 @@ func (f *Handler) dispatch(msg *provisioners.Message) error {
 		f.logger.Error("Error dispatching message", zap.String("destination", f.destination))
 	}
 	return err
+}
+
+// runnableServer is a small wrapper around http.Server so that it matches the manager.Runnable
+// interface.
+type runnableServer struct {
+	logger *zap.Logger
+	s      *http.Server
+}
+
+func (r *runnableServer) Start(<-chan struct{}) error {
+	r.logger.Info("Ingress Listening...", zap.String("Address", r.s.Addr))
+	return r.s.ListenAndServe()
 }
