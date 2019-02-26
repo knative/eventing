@@ -53,7 +53,7 @@ const (
 // New returns a Controller that represents the dispatcher portion (messages from GCP PubSub are
 // sent into the cluster) of the GCP PubSub dispatcher. We use a reconcile loop to watch all
 // Channels and notice changes to them. It uses an exponential backoff to throttle the retries.
-func New(mgr manager.Manager, logger *zap.Logger, stopCh <-chan struct{}) (controller.Controller, error) {
+func New(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	// reconcileChan is used when the dispatcher itself needs to force reconciliation of a Channel.
 	reconcileChan := make(chan event.GenericEvent)
 
@@ -93,20 +93,9 @@ func New(mgr manager.Manager, logger *zap.Logger, stopCh <-chan struct{}) (contr
 
 	// The PubSub library may fail when receiving messages. If it does so, then we need to reconcile
 	// that Channel again.
-	// TODO Once https://github.com/kubernetes-sigs/controller-runtime/issues/103 is fixed, switch
-	// to:
-	// err = c.Watch(&source.Channel{
-	// 	Source: reconcileChan,
-	// }, &handler.EnqueueRequestForOwner{})
-	src := &source.Channel{
+	err = c.Watch(&source.Channel{
 		Source: reconcileChan,
-	}
-	err = src.InjectStopChannel(stopCh)
-	if err != nil {
-		logger.Error("Unable to inject the stop channel", zap.Error(err))
-		return nil, err
-	}
-	err = c.Watch(src, &handler.EnqueueRequestForObject{})
+	}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		logger.Error("Unable to watch the reconcile Channel", zap.Error(err))
 		return nil, err
