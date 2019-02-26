@@ -65,10 +65,10 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	defer cleanupNS()
 	defer TearDown(clients, cleaner, logger)
 
-	logger.Infof("Annotating namespace %s", ns)
+	logger.Infof("Labeling namespace %s", ns)
 
-	// Annotate namespace so that it creates the default broker.
-	err := AnnotateNamespace(clients, logger, map[string]string{"eventing.knative.dev/inject": "true"})
+	// Label namespace so that it creates the default broker.
+	err := LabelNamespace(clients, logger, map[string]string{"knative-eventing-injection": "enabled"})
 	if err != nil {
 		t.Fatalf("Error annotating namespace: %v", err)
 	}

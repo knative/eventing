@@ -391,14 +391,19 @@ func WaitForAllTriggersReady(clients *test.Clients, logger *logging.BaseLogger, 
 	return nil
 }
 
-// AnnotateNamespace annotates the test namespace with the annotations map.
-func AnnotateNamespace(clients *test.Clients, logger *logging.BaseLogger, annotations map[string]string) error {
+// LabelNamespace labels the test namespace with the labels map.
+func LabelNamespace(clients *test.Clients, logger *logging.BaseLogger, labels map[string]string) error {
 	ns := pkgTest.Flags.Namespace
 	nsSpec, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
 	if err != nil && errors.IsNotFound(err) {
 		return err
 	}
-	nsSpec.Annotations = annotations
+	if nsSpec.Labels == nil {
+		nsSpec.Labels = map[string]string{}
+	}
+	for k, v := range labels {
+		nsSpec.Labels[k] = v
+	}
 	_, err = clients.Kube.Kube.CoreV1().Namespaces().Update(nsSpec)
 	return err
 }
