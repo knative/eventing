@@ -18,7 +18,7 @@ package logconfig
 
 const (
 	// ConfigName is the name of the config map used for knative-eventing logging config.
-	ConfigName = "config-logging"
+	ConfigName = "eventing-config-logging"
 
 	// Named Loggers are used to override the default log level. config-logging.yaml will use the follow:
 	//

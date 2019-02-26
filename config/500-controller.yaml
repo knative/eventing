@@ -45,4 +45,4 @@ spec:
       volumes:
         - name: config-logging
           configMap:
-            name: config-logging
+            name: eventing-config-logging
