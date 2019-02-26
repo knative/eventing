@@ -57,10 +57,8 @@ func main() {
 		logger.Fatal("Unable to add eventingv1alpha1 scheme", zap.Error(err))
 	}
 
-	// We are running both the receiver (takes messages in from the cluster and writes them to
-	// PubSub) and the dispatcher (takes messages in PubSub and sends them in cluster) in this
-	// binary.
-
+	// We are running both the receiver (takes messages in from the cluster) and the dispatcher (send the messages
+	// to the triggers' subscribers) in this binary.
 	_, runnable := broker.New(logger, mgr.GetClient())
 	err = mgr.Add(runnable)
 	if err != nil {

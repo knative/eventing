@@ -100,7 +100,7 @@ func getRequiredEnv(envKey string) string {
 	return val
 }
 
-// http.Handler that takes a single request in and fans it out to N other servers.
+// http.Handler that takes a single request in and sends it out to a single destination.
 type Handler struct {
 	receiver    *provisioners.MessageReceiver
 	dispatcher  *provisioners.MessageDispatcher
@@ -109,7 +109,7 @@ type Handler struct {
 	logger *zap.Logger
 }
 
-// NewHandler creates a new fanout.Handler.
+// NewHandler creates a new ingress.Handler.
 func NewHandler(logger *zap.Logger, destination string) *Handler {
 	handler := &Handler{
 		logger:      logger,
@@ -134,8 +134,8 @@ func (f *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.receiver.HandleRequest(w, r)
 }
 
-// dispatch takes the request, fans it out to each subscription in f.config. If all the fanned out
-// requests return successfully, then return nil. Else, return an error.
+// dispatch takes the request, and sends it out the f.destination. If the dispatched
+// request returns successfully, then return nil. Else, return an error.
 func (f *Handler) dispatch(msg *provisioners.Message) error {
 	err := f.dispatcher.DispatchMessage(msg, f.destination, "", provisioners.DispatchDefaults{})
 	if err != nil {

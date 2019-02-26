@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-// Receiver parses Cloud Events and sends them to the channel.
+// Receiver parses Cloud Events and sends them to a subscriber.
 type Receiver struct {
 	logger *zap.Logger
 	client client.Client
@@ -56,7 +56,7 @@ func (r *Receiver) newMessageReceiver() *provisioners.MessageReceiver {
 	return provisioners.NewMessageReceiver(r.sendEvent, r.logger.Sugar())
 }
 
-// sendEvent sends a message to the Channel.
+// sendEvent sends an event to a subscriber if the trigger filter passes.
 func (r *Receiver) sendEvent(channel provisioners.ChannelReference, message *provisioners.Message) error {
 	r.logger.Debug("received message")
 	ctx := context.Background()
@@ -122,6 +122,8 @@ func (r *Receiver) getTrigger(ctx context.Context, ref provisioners.ChannelRefer
 	return t, err
 }
 
+// shouldSendMessage determines whether message 'm' should be sent based on the triggerSpec 'ts'.
+// Currently it supports exact matching on type and/or source of events.
 func (r *Receiver) shouldSendMessage(ts *eventingv1alpha1.TriggerSpec, m *provisioners.Message) bool {
 	if ts.Filter == nil || ts.Filter.SourceAndType == nil {
 		r.logger.Error("No filter specified")
