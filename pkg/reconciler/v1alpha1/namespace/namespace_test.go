@@ -45,8 +45,8 @@ const (
 )
 
 var (
-	falseString = "false"
-	trueString  = "true"
+	disabled = "disabled"
+	enabled  = "enabled"
 
 	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
 	// truncates to seconds to match the loss of precision during serialization.
@@ -173,7 +173,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: "test error getting the NS",
 		},
 		{
-			Name:   "Namespace is not annotated",
+			Name:   "Namespace is not labeled",
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
 				makeNamespace(nil),
@@ -183,10 +183,10 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			Name:   "Namespace is annotated off",
+			Name:   "Namespace is labeled disabled",
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
-				makeNamespace(&falseString),
+				makeNamespace(&disabled),
 			},
 			WantAbsent: []runtime.Object{
 				makeBroker(),
@@ -206,7 +206,7 @@ func TestReconcile(t *testing.T) {
 			Name:   "Broker.Get fails",
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
-				makeNamespace(&trueString),
+				makeNamespace(&enabled),
 			},
 			Mocks: controllertesting.Mocks{
 				MockGets: []controllertesting.MockGet{
@@ -228,7 +228,7 @@ func TestReconcile(t *testing.T) {
 			Name:   "Broker Found",
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
-				makeNamespace(&trueString),
+				makeNamespace(&enabled),
 				makeBroker(),
 			},
 			WantEvent: []corev1.Event{events[serviceAccountCreated], events[serviceAccountRBACCreated]},
@@ -237,7 +237,7 @@ func TestReconcile(t *testing.T) {
 			Name:   "Broker.Create fails",
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
-				makeNamespace(&trueString),
+				makeNamespace(&enabled),
 			},
 			Mocks: controllertesting.Mocks{
 				MockCreates: []controllertesting.MockCreate{
@@ -256,7 +256,7 @@ func TestReconcile(t *testing.T) {
 			Name:   "Broker created",
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
-				makeNamespace(&trueString),
+				makeNamespace(&enabled),
 			},
 			WantPresent: []runtime.Object{
 				makeBroker(),
@@ -285,10 +285,10 @@ func TestReconcile(t *testing.T) {
 	}
 }
 
-func makeNamespace(annotationValue *string) *corev1.Namespace {
-	annotations := map[string]string{}
-	if annotationValue != nil {
-		annotations["eventing.knative.dev/inject"] = *annotationValue
+func makeNamespace(labelValue *string) *corev1.Namespace {
+	labels := map[string]string{}
+	if labelValue != nil {
+		labels["knative-eventing-injection"] = *labelValue
 	}
 
 	return &corev1.Namespace{
@@ -297,14 +297,14 @@ func makeNamespace(annotationValue *string) *corev1.Namespace {
 			Kind:       "Namespace",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        testNS,
-			Annotations: annotations,
+			Name:   testNS,
+			Labels: labels,
 		},
 	}
 }
 
 func makeDeletingNamespace() *corev1.Namespace {
-	ns := makeNamespace(&trueString)
+	ns := makeNamespace(&enabled)
 	ns.DeletionTimestamp = &deletionTime
 	return ns
 }

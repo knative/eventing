@@ -52,8 +52,9 @@ const (
 	brokerFilterRB          = "eventing-broker-filter"
 	brokerFilterClusterRole = "eventing-broker-filter"
 
-	// Annotation to enable knative-eventing in a namespace.
-	knativeEventingAnnotation = "eventing.knative.dev/inject"
+	// Label to enable knative-eventing in a namespace.
+	knativeEventingLabelKey   = "knative-eventing-injection"
+	knativeEventingLabelValue = "enabled"
 
 	// Name of the corev1.Events emitted from the reconciliation process.
 	brokerCreated             = "BrokerCreated"
@@ -152,7 +153,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
-	if ns.Annotations[knativeEventingAnnotation] != "true" {
+	if ns.Labels[knativeEventingLabelKey] != knativeEventingLabelValue {
 		logging.FromContext(ctx).Debug("Not reconciling Namespace")
 		return reconcile.Result{}, nil
 	}
