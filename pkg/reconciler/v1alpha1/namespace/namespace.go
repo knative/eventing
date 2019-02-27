@@ -50,15 +50,20 @@ const (
 	knativeEventingLabelKey   = "knative-eventing-injection"
 	knativeEventingLabelValue = "enabled"
 
-	defaultBroker           = "default"
-	brokerFilterSA          = "eventing-broker-filter"
-	brokerFilterRB          = "eventing-broker-filter"
-	brokerFilterClusterRole = "eventing-broker-filter"
+	defaultBroker            = "default"
+	brokerFilterSA           = "eventing-broker-filter"
+	brokerFilterRB           = "eventing-broker-filter"
+	brokerFilterClusterRole  = "eventing-broker-filter"
+	brokerIngressSA          = "eventing-broker-ingress"
+	brokerIngressRB          = "eventing-broker-ingress"
+	brokerIngressClusterRole = "eventing-broker-ingress"
 
 	// Name of the corev1.Events emitted from the reconciliation process.
-	brokerCreated             = "BrokerCreated"
-	serviceAccountCreated     = "BrokerFilterServiceAccountCreated"
-	serviceAccountRBACCreated = "BrokerFilterServiceAccountRBACCreated"
+	brokerCreated                    = "BrokerCreated"
+	filterServiceAccountCreated      = "BrokerFilterServiceAccountCreated"
+	filterServiceAccountRBACCreated  = "BrokerFilterServiceAccountRBACCreated"
+	ingressServiceAccountCreated     = "BrokerIngressServiceAccountCreated"
+	ingressServiceAccountRBACCreated = "BrokerIngressServiceAccountRBACCreated"
 )
 
 type reconciler struct {
@@ -180,6 +185,17 @@ func (r *reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error 
 		logging.FromContext(ctx).Error("Unable to reconcile the Broker Filter Service Account RBAC for the namespace", zap.Error(err))
 		return err
 	}
+
+	sa, err = r.reconcileBrokerIngressServiceAccount(ctx, ns)
+	if err != nil {
+		logging.FromContext(ctx).Error("Unable to reconcile the Broker Ingress Service Account for the namespace", zap.Error(err))
+		return err
+	}
+	_, err = r.reconcileBrokerIngressRBAC(ctx, ns, sa)
+	if err != nil {
+		logging.FromContext(ctx).Error("Unable to reconcile the Broker Ingress Service Account RBAC for the namespace", zap.Error(err))
+		return err
+	}
 	_, err = r.reconcileBroker(ctx, ns)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to reconcile Broker for the namespace", zap.Error(err))
@@ -191,19 +207,29 @@ func (r *reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error 
 
 // reconcileBrokerFilterServiceAccount reconciles the Broker's filter service account for Namespace 'ns'.
 func (r *reconciler) reconcileBrokerFilterServiceAccount(ctx context.Context, ns *corev1.Namespace) (*corev1.ServiceAccount, error) {
-	current, err := r.getBrokerFilterServiceAccount(ctx, ns)
+	return r.reconcileBrokerServiceAccount(ctx, ns, brokerFilterSA, filterServiceAccountCreated)
+}
+
+// reconcileBrokerIngressServiceAccount reconciles the Broker's ingress service account for Namespace 'ns'.
+func (r *reconciler) reconcileBrokerIngressServiceAccount(ctx context.Context, ns *corev1.Namespace) (*corev1.ServiceAccount, error) {
+	return r.reconcileBrokerServiceAccount(ctx, ns, brokerIngressSA, ingressServiceAccountCreated)
+}
+
+// reconcileBrokerServiceAccount reconciles the Broker's service account called 'serviceAccount' for Namespace 'ns'.
+func (r *reconciler) reconcileBrokerServiceAccount(ctx context.Context, ns *corev1.Namespace, serviceAccount string, eventName string) (*corev1.ServiceAccount, error) {
+	current, err := r.getBrokerServiceAccount(ctx, ns, serviceAccount)
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
-		sa := newBrokerFilterServiceAccount(ns)
+		sa := newBrokerServiceAccount(ns, serviceAccount)
 		err = r.client.Create(ctx, sa)
 		if err != nil {
 			return nil, err
 		}
 		r.recorder.Event(ns,
 			corev1.EventTypeNormal,
-			serviceAccountCreated,
-			fmt.Sprintf("Service account created for the Broker '%s'", sa.Name))
+			eventName,
+			fmt.Sprintf("Service account created for the Broker %q", sa.Name))
 		return sa, nil
 	} else if err != nil {
 		return nil, err
@@ -212,24 +238,24 @@ func (r *reconciler) reconcileBrokerFilterServiceAccount(ctx context.Context, ns
 	return current, nil
 }
 
-// getBrokerFilterServiceAccount returns the Broker's filter service account for Namespace 'ns' if exists,
+// getBrokerServiceAccount returns the Broker's service account for Namespace 'ns' called 'serviceAccount' if it exists,
 // otherwise it returns an error.
-func (r *reconciler) getBrokerFilterServiceAccount(ctx context.Context, ns *corev1.Namespace) (*corev1.ServiceAccount, error) {
+func (r *reconciler) getBrokerServiceAccount(ctx context.Context, ns *corev1.Namespace, serviceAccount string) (*corev1.ServiceAccount, error) {
 	sa := &corev1.ServiceAccount{}
 	name := types.NamespacedName{
 		Namespace: ns.Name,
-		Name:      brokerFilterSA,
+		Name:      serviceAccount,
 	}
 	err := r.client.Get(ctx, name, sa)
 	return sa, err
 }
 
-// newBrokerFilterServiceAccount creates a ServiceAccount object for the Namespace 'ns'.
-func newBrokerFilterServiceAccount(ns *corev1.Namespace) *corev1.ServiceAccount {
+// newBrokerServiceAccount creates a ServiceAccount object for the Namespace 'ns' called 'serviceAccount'.
+func newBrokerServiceAccount(ns *corev1.Namespace, serviceAccount string) *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
-			Name:      brokerFilterSA,
+			Name:      serviceAccount,
 			Labels:    injectedLabels(),
 		},
 	}
@@ -243,19 +269,30 @@ func injectedLabels() map[string]string {
 
 // reconcileBrokerFilterRBAC reconciles the Broker's filter service account RBAC for the Namespace 'ns'.
 func (r *reconciler) reconcileBrokerFilterRBAC(ctx context.Context, ns *corev1.Namespace, sa *corev1.ServiceAccount) (*rbacv1.RoleBinding, error) {
-	current, err := r.getBrokerFilterRBAC(ctx, ns)
+	return r.reconcileBrokerRBAC(ctx, ns, sa, brokerFilterRB, brokerFilterClusterRole, filterServiceAccountRBACCreated)
+}
+
+// reconcileBrokerIngressRBAC reconciles the Broker's ingress service account RBAC for the Namespace 'ns'.
+func (r *reconciler) reconcileBrokerIngressRBAC(ctx context.Context, ns *corev1.Namespace, sa *corev1.ServiceAccount) (*rbacv1.RoleBinding, error) {
+	return r.reconcileBrokerRBAC(ctx, ns, sa, brokerIngressRB, brokerIngressClusterRole, ingressServiceAccountRBACCreated)
+}
+
+// reconcileBrokerRBAC reconciles the Broker's service account RBAC for the RoleBinding 'roleBinding', ClusterRole
+// 'clusterRole', in Namespace 'ns'.
+func (r *reconciler) reconcileBrokerRBAC(ctx context.Context, ns *corev1.Namespace, sa *corev1.ServiceAccount, roleBinding, clusterRole, eventName string) (*rbacv1.RoleBinding, error) {
+	current, err := r.getBrokerRBAC(ctx, ns, roleBinding)
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
-		rbac := newBrokerFilterRBAC(ns, sa)
+		rbac := newBrokerRBAC(ns, sa, roleBinding, clusterRole)
 		err = r.client.Create(ctx, rbac)
 		if err != nil {
 			return nil, err
 		}
 		r.recorder.Event(ns,
 			corev1.EventTypeNormal,
-			serviceAccountRBACCreated,
-			fmt.Sprintf("Service account RBAC created for the Broker Filter '%s'", rbac.Name))
+			eventName,
+			fmt.Sprintf("Service account RBAC created for the Broker %q", rbac.Name))
 		return rbac, nil
 	} else if err != nil {
 		return nil, err
@@ -264,30 +301,31 @@ func (r *reconciler) reconcileBrokerFilterRBAC(ctx context.Context, ns *corev1.N
 	return current, nil
 }
 
-// getBrokerFilterRBAC returns the Broker's filter role binding for Namespace 'ns' if exists,
-// otherwise it returns an error.
-func (r *reconciler) getBrokerFilterRBAC(ctx context.Context, ns *corev1.Namespace) (*rbacv1.RoleBinding, error) {
+// getBrokerRBAC returns the Broker's role binding for Namespace 'ns' called 'roleBinding' if it exists, otherwise it
+// returns an error.
+func (r *reconciler) getBrokerRBAC(ctx context.Context, ns *corev1.Namespace, roleBinding string) (*rbacv1.RoleBinding, error) {
 	rb := &rbacv1.RoleBinding{}
 	name := types.NamespacedName{
 		Namespace: ns.Name,
-		Name:      brokerFilterRB,
+		Name:      roleBinding,
 	}
 	err := r.client.Get(ctx, name, rb)
 	return rb, err
 }
 
-// newBrokerFilterRBAC creates a RpleBinding object for the Broker's filter service account 'sa' in the Namespace 'ns'.
-func newBrokerFilterRBAC(ns *corev1.Namespace, sa *corev1.ServiceAccount) *rbacv1.RoleBinding {
+// newBrokerRBAC creates a RpleBinding object for the Broker's service account 'sa' in the Namespace 'ns' called
+// 'roleBinding', with ClusterRole 'clusterRole'.
+func newBrokerRBAC(ns *corev1.Namespace, sa *corev1.ServiceAccount, roleBinding string, clusterRole string) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
-			Name:      brokerFilterRB,
+			Name:      roleBinding,
 			Labels:    injectedLabels(),
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     brokerFilterClusterRole,
+			Name:     clusterRole,
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -299,8 +337,7 @@ func newBrokerFilterRBAC(ns *corev1.Namespace, sa *corev1.ServiceAccount) *rbacv
 	}
 }
 
-// getBroker returns the default broker for Namespace 'ns' if it exists, otherwise it returns an
-// error.
+// getBroker returns the default broker for Namespace 'ns' if it exists, otherwise it returns an error.
 func (r *reconciler) getBroker(ctx context.Context, ns *corev1.Namespace) (*v1alpha1.Broker, error) {
 	b := &v1alpha1.Broker{}
 	name := types.NamespacedName{
