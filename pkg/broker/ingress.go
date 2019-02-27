@@ -29,7 +29,7 @@ import (
 
 const (
 	allowAny             = "allow_any"
-	allowRegisteredTypes = "allow_registered_types"
+	allowRegisteredTypes = "allow_registered"
 )
 
 type IngressPolicy interface {
@@ -38,7 +38,7 @@ type IngressPolicy interface {
 
 type AllowAnyPolicy struct{}
 
-type AllowRegisteredTypesPolicy struct {
+type AllowRegisteredPolicy struct {
 	logger *zap.SugaredLogger
 	client client.Client
 }
@@ -50,7 +50,7 @@ func NewIngressPolicy(logger *zap.SugaredLogger, client client.Client, policy st
 func newIngressPolicy(logger *zap.SugaredLogger, client client.Client, policy string) IngressPolicy {
 	switch policy {
 	case allowRegisteredTypes:
-		return &AllowRegisteredTypesPolicy{
+		return &AllowRegisteredPolicy{
 			logger: logger,
 			client: client,
 		}
@@ -65,7 +65,7 @@ func (policy *AllowAnyPolicy) AllowMessage(namespace string, message *provisione
 	return true
 }
 
-func (policy *AllowRegisteredTypesPolicy) AllowMessage(namespace string, message *provisioners.Message) bool {
+func (policy *AllowRegisteredPolicy) AllowMessage(namespace string, message *provisioners.Message) bool {
 	eventType := &eventingv1alpha1.EventType{}
 	name := message.Headers["Ce-Eventtype"]
 
@@ -77,12 +77,9 @@ func (policy *AllowRegisteredTypesPolicy) AllowMessage(namespace string, message
 		eventType)
 
 	if k8serrors.IsNotFound(err) {
-		policy.logger.Error("EventType not found", zap.String("type", name))
-		return false
+		policy.logger.Warnf("EventType not found %s", name)
 	} else if err != nil {
-		policy.logger.Error("Error getting EventType", zap.String("type", name))
-		return false
-	} else {
-		return true
+		policy.logger.Errorf("Error getting EventType %s", name)
 	}
+	return err != nil
 }
