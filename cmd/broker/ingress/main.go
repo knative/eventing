@@ -25,7 +25,7 @@ import (
 	"os"
 	"time"
 
-	"k8s.io/apimachinery/pkg/types"
+	"github.com/knative/eventing/pkg/broker"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -62,8 +62,9 @@ func main() {
 	}
 
 	c := getRequiredEnv("CHANNEL")
+	policy := getRequiredEnv("INGRESS_POLICY")
 
-	h := NewHandler(logger, c, mgr.GetClient())
+	h := NewHandler(logger, c, policy, mgr.GetClient())
 
 	s := &http.Server{
 		Addr:         ":8080",
@@ -106,21 +107,23 @@ func getRequiredEnv(envKey string) string {
 
 // http.Handler that takes a single request in and sends it out to a single destination.
 type Handler struct {
-	receiver    *provisioners.MessageReceiver
-	dispatcher  *provisioners.MessageDispatcher
-	destination string
-	client      client.Client
+	receiver      *provisioners.MessageReceiver
+	dispatcher    *provisioners.MessageDispatcher
+	ingressPolicy broker.IngressPolicy
+	destination   string
+	client        client.Client
 
 	logger *zap.Logger
 }
 
 // NewHandler creates a new ingress.Handler.
-func NewHandler(logger *zap.Logger, destination string, client client.Client) *Handler {
+func NewHandler(logger *zap.Logger, destination, policy string, client client.Client) *Handler {
 	handler := &Handler{
-		logger:      logger,
-		dispatcher:  provisioners.NewMessageDispatcher(logger.Sugar()),
-		destination: fmt.Sprintf("http://%s", destination),
-		client:      client,
+		logger:        logger,
+		dispatcher:    provisioners.NewMessageDispatcher(logger.Sugar()),
+		ingressPolicy: broker.NewIngressPolicy(logger.Sugar(), client, policy),
+		destination:   fmt.Sprintf("http://%s", destination),
+		client:        client,
 	}
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
@@ -131,25 +134,11 @@ func NewHandler(logger *zap.Logger, destination string, client client.Client) *H
 
 func createReceiverFunction(f *Handler) func(provisioners.ChannelReference, *provisioners.Message) error {
 	return func(c provisioners.ChannelReference, m *provisioners.Message) error {
-		// Using the Ce-Eventtype header as the name
-		name := m.Headers["Ce-Eventtype"]
-		_, err := f.getEventType(c.Namespace, name)
-		if err != nil {
-			f.logger.Error("Error getting EventType", zap.String("name", name))
-			return err
+		if f.ingressPolicy.AllowMessage(c.Namespace, m) {
+			return f.dispatch(m)
 		}
-		return f.dispatch(m)
+		return nil
 	}
-}
-
-func (f *Handler) getEventType(namespace, name string) (*eventingv1alpha1.EventType, error) {
-	eventType := &eventingv1alpha1.EventType{}
-	namespacedName := types.NamespacedName{
-		Namespace: namespace,
-		Name:      name,
-	}
-	err := f.client.Get(context.TODO(), namespacedName, eventType)
-	return eventType, err
 }
 
 func (f *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

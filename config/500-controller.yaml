@@ -43,6 +43,8 @@ spec:
             value: github.com/knative/eventing/cmd/broker/ingress
           - name: INGRESS_SERVICE_ACCOUNT
             value: default
+          - name: INGRESS_POLICY
+            value: allow_any
           - name: FILTER_IMAGE
             value: github.com/knative/eventing/cmd/broker/filter
           - name: FILTER_SERVICE_ACCOUNT
