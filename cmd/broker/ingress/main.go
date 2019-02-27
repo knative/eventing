@@ -136,7 +136,7 @@ func createReceiverFunction(f *Handler) func(provisioners.ChannelReference, *pro
 		_, err := f.getEventType(c.Namespace, name)
 		if err != nil {
 			f.logger.Error("Error getting EventType", zap.String("name", name))
-			return nil
+			return err
 		}
 		return f.dispatch(m)
 	}
@@ -148,7 +148,7 @@ func (f *Handler) getEventType(namespace, name string) (*eventingv1alpha1.EventT
 		Namespace: namespace,
 		Name:      name,
 	}
-	err := f.client.Get(context.Background(), namespacedName, eventType)
+	err := f.client.Get(context.TODO(), namespacedName, eventType)
 	return eventType, err
 }
 
