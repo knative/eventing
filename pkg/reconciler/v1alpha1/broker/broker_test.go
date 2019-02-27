@@ -20,7 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/google/go-cmp/cmp"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/knative/eventing/pkg/utils"
+
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
@@ -30,21 +35,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"strings"
-	"testing"
-	"time"
 )
 
 const (
-	testNS          = "test-namespace"
-	brokerName      = "test-broker"
-	channelHostname = "foo.bar.svc.cluster.local"
+	testNS     = "test-namespace"
+	brokerName = "test-broker"
 
 	filterImage  = "filter-image"
 	filterSA     = "filter-SA"
@@ -60,6 +60,8 @@ var (
 		Kind:       "ClusterChannelProvisioner",
 		Name:       "my-provisioner",
 	}
+
+	channelHostname = fmt.Sprintf("foo.bar.svc.%s", utils.GetClusterDomainName())
 
 	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
 	// truncates to seconds to match the loss of precision during serialization.
@@ -104,36 +106,6 @@ func TestInjectClient(t *testing.T) {
 	}
 	if n != r.client {
 		t.Errorf("Unexpected client. Expected: '%v'. Actual: '%v'", n, r.client)
-	}
-}
-
-func TestInjectConfig(t *testing.T) {
-	r := &reconciler{}
-	wantCfg := &rest.Config{
-		Host: "http://foo",
-	}
-
-	err := r.InjectConfig(wantCfg)
-	if err != nil {
-		t.Fatalf("Unexpected error injecting the config: %v", err)
-	}
-
-	gotCfg := r.restConfig
-	if diff := cmp.Diff(wantCfg, gotCfg); diff != "" {
-		t.Errorf("Unexpected config (-want, +got): %v", diff)
-	}
-
-	wantDynClient, err := dynamic.NewForConfig(wantCfg)
-	if err != nil {
-		t.Fatalf("Unexpected error generating dynamic client: %v", err)
-	}
-
-	// Since dynamicClient doesn't export any fields, we can only test its type.
-	switch r.dynamicClient.(type) {
-	case dynamic.Interface:
-		// ok
-	default:
-		t.Errorf("Unexpected dynamicClient type. Expected: %T, Got: %T", wantDynClient, r.dynamicClient)
 	}
 }
 
@@ -578,15 +550,13 @@ func TestReconcile(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		c := tc.GetClient()
-		dc := tc.GetDynamicClient()
 		recorder := tc.GetEventRecorder()
 
 		r := &reconciler{
-			client:        c,
-			dynamicClient: dc,
-			restConfig:    &rest.Config{},
-			recorder:      recorder,
-			logger:        zap.NewNop(),
+			client:     c,
+			restConfig: &rest.Config{},
+			recorder:   recorder,
+			logger:     zap.NewNop(),
 
 			filterImage:               filterImage,
 			filterServiceAccountName:  filterSA,
@@ -621,7 +591,7 @@ func makeReadyBroker() *v1alpha1.Broker {
 	b := makeBroker()
 	b.Status.InitializeConditions()
 	b.Status.MarkChannelReady()
-	b.Status.SetAddress(fmt.Sprintf("%s-broker.%s.svc.cluster.local", brokerName, testNS))
+	b.Status.SetAddress(fmt.Sprintf("%s-broker.%s.svc.%s", brokerName, testNS, utils.GetClusterDomainName()))
 	b.Status.MarkFilterReady()
 	b.Status.MarkIngressReady()
 	return b
@@ -677,7 +647,7 @@ func makeFilterDeployment() *appsv1.Deployment {
 	})
 	d.TypeMeta = metav1.TypeMeta{
 		APIVersion: "apps/v1",
-		Kind: "Deployment",
+		Kind:       "Deployment",
 	}
 	return d
 }
@@ -692,7 +662,7 @@ func makeFilterService() *corev1.Service {
 	svc := resources.MakeFilterService(makeBroker())
 	svc.TypeMeta = metav1.TypeMeta{
 		APIVersion: "v1",
-		Kind: "Service",
+		Kind:       "Service",
 	}
 	return svc
 }
@@ -712,7 +682,7 @@ func makeIngressDeployment() *appsv1.Deployment {
 	})
 	d.TypeMeta = metav1.TypeMeta{
 		APIVersion: "apps/v1",
-		Kind: "Deployment",
+		Kind:       "Deployment",
 	}
 	return d
 }
@@ -727,7 +697,7 @@ func makeIngressService() *corev1.Service {
 	svc := resources.MakeIngressService(makeBroker())
 	svc.TypeMeta = metav1.TypeMeta{
 		APIVersion: "v1",
-		Kind: "Service",
+		Kind:       "Service",
 	}
 	return svc
 }

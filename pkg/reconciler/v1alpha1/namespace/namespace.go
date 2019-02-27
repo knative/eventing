@@ -31,7 +31,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,14 +46,14 @@ const (
 	// itself when creating events.
 	controllerAgentName = "knative-eventing-namespace-controller"
 
+	// Label to enable knative-eventing in a namespace.
+	knativeEventingLabelKey   = "knative-eventing-injection"
+	knativeEventingLabelValue = "enabled"
+
 	defaultBroker           = "default"
 	brokerFilterSA          = "eventing-broker-filter"
 	brokerFilterRB          = "eventing-broker-filter"
 	brokerFilterClusterRole = "eventing-broker-filter"
-
-	// Label to enable knative-eventing in a namespace.
-	knativeEventingLabelKey   = "knative-eventing-injection"
-	knativeEventingLabelValue = "enabled"
 
 	// Name of the corev1.Events emitted from the reconciliation process.
 	brokerCreated             = "BrokerCreated"
@@ -63,10 +62,9 @@ const (
 )
 
 type reconciler struct {
-	client        client.Client
-	restConfig    *rest.Config
-	dynamicClient dynamic.Interface
-	recorder      record.EventRecorder
+	client     client.Client
+	restConfig *rest.Config
+	recorder   record.EventRecorder
 
 	logger *zap.Logger
 }
@@ -126,13 +124,6 @@ func (r *reconciler) InjectClient(c client.Client) error {
 	return nil
 }
 
-func (r *reconciler) InjectConfig(c *rest.Config) error {
-	r.restConfig = c
-	var err error
-	r.dynamicClient, err = dynamic.NewForConfig(c)
-	return err
-}
-
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Namespace resource
 // with the current status of the resource.
@@ -141,7 +132,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	ctx = logging.WithLogger(ctx, r.logger.With(zap.Any("request", request)))
 
 	ns := &corev1.Namespace{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, ns)
+	err := r.client.Get(ctx, request.NamespacedName, ns)
 
 	if errors.IsNotFound(err) {
 		logging.FromContext(ctx).Info("Could not find Namespace")
@@ -172,6 +163,9 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 }
 
 func (r *reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error {
+	// No need for a finalizer, because everything reconciled is created inside the Namespace. If
+	// the Namespace is being deleted, then all the reconciled objects will be too.
+
 	if ns.DeletionTimestamp != nil {
 		return nil
 	}
@@ -305,8 +299,8 @@ func newBrokerFilterRBAC(ns *corev1.Namespace, sa *corev1.ServiceAccount) *rbacv
 	}
 }
 
-// getBroker returns the default broker for Namespace 'ns' if exists,
-// otherwise it returns an error.
+// getBroker returns the default broker for Namespace 'ns' if it exists, otherwise it returns an
+// error.
 func (r *reconciler) getBroker(ctx context.Context, ns *corev1.Namespace) (*v1alpha1.Broker, error) {
 	b := &v1alpha1.Broker{}
 	name := types.NamespacedName{

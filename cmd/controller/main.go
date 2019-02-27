@@ -123,7 +123,13 @@ func main() {
 	// manager run it.
 	providers := []ProvideFunc{
 		subscription.ProvideController,
-		broker.ProvideController(logger.Desugar(), getRequiredEnv("INGRESS_IMAGE"), getRequiredEnv("INGRESS_SERVICE_ACCOUNT"), getRequiredEnv("FILTER_IMAGE"), getRequiredEnv("FILTER_SERVICE_ACCOUNT")),
+		broker.ProvideController(logger.Desugar(),
+			broker.ReconcilerArgs{
+				IngressImage:              getRequiredEnv("BROKER_INGRESS_IMAGE"),
+				IngressServiceAccountName: getRequiredEnv("BROKER_INGRESS_SERVICE_ACCOUNT"),
+				FilterImage:               getRequiredEnv("BROKER_FILTER_IMAGE"),
+				FilterServiceAccountName:  getRequiredEnv("BROKER_FILTER_SERVICE_ACCOUNT"),
+			}),
 		trigger.ProvideController(logger.Desugar()),
 		namespace.ProvideController(logger.Desugar()),
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The Knative Authors
+ * Copyright 2019 The Knative Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-// Receiver parses Cloud Events and sends them to a subscriber.
+// Receiver parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
 type Receiver struct {
 	logger *zap.Logger
 	client client.Client
@@ -49,21 +49,20 @@ func New(logger *zap.Logger, client client.Client) (*Receiver, manager.Runnable)
 }
 
 func (r *Receiver) newMessageReceiver() *provisioners.MessageReceiver {
-	err := r.initClient()
-	if err != nil {
+	if err := r.initClient(); err != nil {
 		r.logger.Warn("Failed to initialize client", zap.Error(err))
 	}
 	return provisioners.NewMessageReceiver(r.sendEvent, r.logger.Sugar())
 }
 
 // sendEvent sends an event to a subscriber if the trigger filter passes.
-func (r *Receiver) sendEvent(channel provisioners.ChannelReference, message *provisioners.Message) error {
-	r.logger.Debug("received message")
+func (r *Receiver) sendEvent(trigger provisioners.ChannelReference, message *provisioners.Message) error {
+	r.logger.Debug("Received message", zap.Any("triggerRef", trigger))
 	ctx := context.Background()
 
-	t, err := r.getTrigger(ctx, channel)
+	t, err := r.getTrigger(ctx, trigger)
 	if err != nil {
-		r.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("channelRef", channel))
+		r.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("triggerRef", trigger))
 		return err
 	}
 
@@ -74,24 +73,23 @@ func (r *Receiver) sendEvent(channel provisioners.ChannelReference, message *pro
 	}
 
 	if !r.shouldSendMessage(&t.Spec, message) {
-		r.logger.Debug("Message did not pass filter")
+		r.logger.Debug("Message did not pass filter", zap.Any("triggerRef", trigger))
 		return nil
 	}
 
 	err = r.dispatcher.DispatchMessage(message, subscriberURI, "", provisioners.DispatchDefaults{})
 	if err != nil {
-		r.logger.Info("Failed to dispatch message", zap.Error(err))
+		r.logger.Info("Failed to dispatch message", zap.Error(err), zap.Any("triggerRef", trigger))
 		return err
 	}
-	r.logger.Debug("Successfully sent message")
+	r.logger.Debug("Successfully sent message", zap.Any("triggerRef", trigger))
 	return nil
 }
 
 // Initialize the client. Mainly intended to load stuff in its cache.
 func (r *Receiver) initClient() error {
-	// We list triggers so that we can load the client's cache.
-	// Otherwise, on receiving an event, it may not find the trigger
-	// and would return an error.
+	// We list triggers so that we can load the client's cache. Otherwise, on receiving an event, it
+	// may not find the trigger and would return an error.
 	opts := &client.ListOptions{
 		// Set Raw because if we need to get more than one page, then we will put the continue token
 		// into opts.Raw.Continue.

@@ -39,13 +39,13 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-          - name: INGRESS_IMAGE
+          - name: BROKER_INGRESS_IMAGE
             value: github.com/knative/eventing/cmd/broker/ingress
-          - name: INGRESS_SERVICE_ACCOUNT
+          - name: BROKER_INGRESS_SERVICE_ACCOUNT
             value: default
-          - name: FILTER_IMAGE
+          - name: BROKER_FILTER_IMAGE
             value: github.com/knative/eventing/cmd/broker/filter
-          - name: FILTER_SERVICE_ACCOUNT
+          - name: BROKER_FILTER_SERVICE_ACCOUNT
             value: eventing-broker-filter
         volumeMounts:
           - name: config-logging
