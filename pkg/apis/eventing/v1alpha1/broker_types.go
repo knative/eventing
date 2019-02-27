@@ -58,6 +58,11 @@ type BrokerSpec struct {
 	// +optional
 	DeprecatedGeneration int64 `json:"generation,omitempty"`
 
+	// ChannelTemplate, if specified will be used to create all the Channels used internally by the
+	// Broker. Only Provisioner and Arguments may be specified. If left unspecified, the default
+	// Channel for the namespace will be used.
+	//
+	// +optional
 	ChannelTemplate *ChannelSpec `json:"channelTemplate,omitempty"`
 }
 
@@ -90,11 +95,11 @@ type BrokerStatus struct {
 const (
 	BrokerConditionReady = duckv1alpha1.ConditionReady
 
-	BrokerConditionIngress duckv1alpha1.ConditionType = "Ingress"
+	BrokerConditionIngress duckv1alpha1.ConditionType = "IngressReady"
 
-	BrokerConditionChannel duckv1alpha1.ConditionType = "Channel"
+	BrokerConditionChannel duckv1alpha1.ConditionType = "ChannelReady"
 
-	BrokerConditionFilter duckv1alpha1.ConditionType = "Filter"
+	BrokerConditionFilter duckv1alpha1.ConditionType = "FilterReady"
 
 	BrokerConditionAddressable duckv1alpha1.ConditionType = "Addressable"
 )
@@ -134,8 +139,8 @@ func (bs *BrokerStatus) MarkFilterReady() {
 	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionFilter)
 }
 
-// SetAddress makes this Channel addressable by setting the hostname. It also
-// sets the ChannelConditionAddressable to true.
+// SetAddress makes this Broker addressable by setting the hostname. It also
+// sets the BrokerConditionAddressable to true.
 func (bs *BrokerStatus) SetAddress(hostname string) {
 	bs.Address.Hostname = hostname
 	if hostname != "" {

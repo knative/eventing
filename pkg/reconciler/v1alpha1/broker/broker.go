@@ -23,7 +23,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -67,10 +66,9 @@ const (
 )
 
 type reconciler struct {
-	client        client.Client
-	restConfig    *rest.Config
-	dynamicClient dynamic.Interface
-	recorder      record.EventRecorder
+	client     client.Client
+	restConfig *rest.Config
+	recorder   record.EventRecorder
 
 	logger *zap.Logger
 
@@ -83,8 +81,15 @@ type reconciler struct {
 // Verify the struct implements reconcile.Reconciler.
 var _ reconcile.Reconciler = &reconciler{}
 
+type ReconcilerArgs struct {
+	IngressImage              string
+	IngressServiceAccountName string
+	FilterImage               string
+	FilterServiceAccountName  string
+}
+
 // ProvideController returns a function that returns a Broker controller.
-func ProvideController(logger *zap.Logger, ingressImage, ingressServiceAccount, filterImage, filterServiceAccount string) func(manager.Manager) (controller.Controller, error) {
+func ProvideController(logger *zap.Logger, args ReconcilerArgs) func(manager.Manager) (controller.Controller, error) {
 	return func(mgr manager.Manager) (controller.Controller, error) {
 		// Setup a new controller to Reconcile Brokers.
 		c, err := controller.New(controllerAgentName, mgr, controller.Options{
@@ -92,10 +97,10 @@ func ProvideController(logger *zap.Logger, ingressImage, ingressServiceAccount, 
 				recorder: mgr.GetRecorder(controllerAgentName),
 				logger:   logger,
 
-				ingressImage:              ingressImage,
-				ingressServiceAccountName: ingressServiceAccount,
-				filterImage:               filterImage,
-				filterServiceAccountName:  filterServiceAccount,
+				ingressImage:              args.IngressImage,
+				ingressServiceAccountName: args.IngressServiceAccountName,
+				filterImage:               args.FilterImage,
+				filterServiceAccountName:  args.FilterServiceAccountName,
 			},
 		})
 		if err != nil {
@@ -124,13 +129,6 @@ func (r *reconciler) InjectClient(c client.Client) error {
 	return nil
 }
 
-func (r *reconciler) InjectConfig(c *rest.Config) error {
-	r.restConfig = c
-	var err error
-	r.dynamicClient, err = dynamic.NewForConfig(c)
-	return err
-}
-
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Broker resource
 // with the current status of the resource.
@@ -139,7 +137,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	ctx = logging.WithLogger(ctx, r.logger.With(zap.Any("request", request)))
 
 	broker := &v1alpha1.Broker{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, broker)
+	err := r.client.Get(ctx, request.NamespacedName, broker)
 
 	if errors.IsNotFound(err) {
 		logging.FromContext(ctx).Info("Could not find Broker")
@@ -229,10 +227,11 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) (reconci
 
 // updateStatus may in fact update the broker's finalizers in addition to the status.
 func (r *reconciler) updateStatus(broker *v1alpha1.Broker) (*v1alpha1.Broker, error) {
+	ctx := context.TODO()
 	objectKey := client.ObjectKey{Namespace: broker.Namespace, Name: broker.Name}
 	latestBroker := &v1alpha1.Broker{}
 
-	if err := r.client.Get(context.TODO(), objectKey, latestBroker); err != nil {
+	if err := r.client.Get(ctx, objectKey, latestBroker); err != nil {
 		return nil, err
 	}
 
@@ -240,7 +239,7 @@ func (r *reconciler) updateStatus(broker *v1alpha1.Broker) (*v1alpha1.Broker, er
 
 	if !equality.Semantic.DeepEqual(latestBroker.Finalizers, broker.Finalizers) {
 		latestBroker.SetFinalizers(broker.ObjectMeta.Finalizers)
-		if err := r.client.Update(context.TODO(), latestBroker); err != nil {
+		if err := r.client.Update(ctx, latestBroker); err != nil {
 			return nil, err
 		}
 		brokerChanged = true
@@ -253,13 +252,13 @@ func (r *reconciler) updateStatus(broker *v1alpha1.Broker) (*v1alpha1.Broker, er
 	if brokerChanged {
 		// Re-fetch.
 		latestBroker = &v1alpha1.Broker{}
-		if err := r.client.Get(context.TODO(), objectKey, latestBroker); err != nil {
+		if err := r.client.Get(ctx, objectKey, latestBroker); err != nil {
 			return nil, err
 		}
 	}
 
 	latestBroker.Status = broker.Status
-	if err := r.client.Status().Update(context.TODO(), latestBroker); err != nil {
+	if err := r.client.Status().Update(ctx, latestBroker); err != nil {
 		return nil, err
 	}
 
@@ -317,14 +316,9 @@ func (r *reconciler) getChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alp
 	opts := &runtimeclient.ListOptions{
 		Namespace:     b.Namespace,
 		LabelSelector: labels.SelectorFromSet(ChannelLabels(b)),
-		// TODO this is here because the fake client needs it. Remove this when it's no longer
-		// needed.
-		Raw: &metav1.ListOptions{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: v1alpha1.SchemeGroupVersion.String(),
-				Kind:       "Channel",
-			},
-		},
+		// Set Raw because if we need to get more than one page, then we will put the continue token
+		// into opts.Raw.Continue.
+		Raw: &metav1.ListOptions{},
 	}
 
 	err := r.client.List(ctx, opts, list)
@@ -340,7 +334,7 @@ func (r *reconciler) getChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alp
 	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
 }
 
-// newChannel creates a new placeholder Channel object for Broker 'b'.
+// newChannel creates a new Channel for Broker 'b'.
 func newChannel(b *v1alpha1.Broker) *v1alpha1.Channel {
 	var spec v1alpha1.ChannelSpec
 	if b.Spec.ChannelTemplate != nil {

@@ -58,11 +58,18 @@ type TriggerSpec struct {
 	// +optional
 	DeprecatedGeneration int64 `json:"generation,omitempty"`
 
+	// Broker is the broker that this trigger receives events from. If not specified, will default
+	// to 'default'.
 	Broker string `json:"broker,omitempty"`
 
+	// Filter is the filter to apply against all events from the Broker. Only events that pass this
+	// filter will be sent to the Subscriber. If not specified, will default to allowing all events.
+	//
 	// +optional
 	Filter *TriggerFilter `json:"filter,omitempty"`
 
+	// Subscriber is the addressable that receives events from the Broker that pass the Filter. It
+	// is required.
 	Subscriber *SubscriberSpec `json:"subscriber,omitempty"`
 }
 
@@ -70,6 +77,9 @@ type TriggerFilter struct {
 	SourceAndType *TriggerFilterSourceAndType `json:"sourceAndType,omitempty"`
 }
 
+// TriggerFilterSourceAndType filters events based on exact matches on the cloud event's type and
+// source attributes. Only exact matches will pass the filter. Either or both type and source can
+// use the value 'Any' to indicate all strings match.
 type TriggerFilterSourceAndType struct {
 	Type   string `json:"type,omitempty"`
 	Source string `json:"source,omitempty"`
@@ -101,9 +111,9 @@ const (
 
 	TriggerConditionBrokerExists duckv1alpha1.ConditionType = "BrokerExists"
 
-	TriggerConditionKubernetesService duckv1alpha1.ConditionType = "KubernetesService"
+	TriggerConditionKubernetesService duckv1alpha1.ConditionType = "KubernetesServiceReady"
 
-	TriggerConditionVirtualService duckv1alpha1.ConditionType = "VirtualService"
+	TriggerConditionVirtualService duckv1alpha1.ConditionType = "VirtualServiceReady"
 
 	TriggerConditionSubscribed duckv1alpha1.ConditionType = "Subscribed"
 
