@@ -261,14 +261,9 @@ func (r *reconciler) listAllChannels(ctx context.Context) ([]eventingv1alpha1.Ch
 	channels := make([]eventingv1alpha1.Channel, 0)
 
 	opts := &client.ListOptions{
-		// TODO this is here because the fake client needs it. Remove this when it's no longer
-		// needed.
-		Raw: &metav1.ListOptions{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-				Kind:       "Channel",
-			},
-		},
+		// Set Raw because if we need to get more than one page, then we will put the continue token
+		// into opts.Raw.Continue.
+		Raw: &metav1.ListOptions{},
 	}
 	for {
 		cl := &eventingv1alpha1.ChannelList{}
