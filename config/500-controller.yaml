@@ -44,7 +44,7 @@ spec:
           - name: INGRESS_SERVICE_ACCOUNT
             value: default
           - name: INGRESS_POLICY
-            value: allow_any
+            value: allow_registered_types
           - name: FILTER_IMAGE
             value: github.com/knative/eventing/cmd/broker/filter
           - name: FILTER_SERVICE_ACCOUNT
