@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/knative/eventing/pkg/utils"
+
 	"github.com/knative/eventing/pkg/provisioners"
 
 	"github.com/knative/eventing/pkg/reconciler/names"
@@ -55,9 +57,6 @@ const (
 	subscriberAPIVersion = "v1"
 	subscriberKind       = "Service"
 	subscriberName       = "subscriberName"
-
-	channelHostname    = "foo.bar.svc.cluster.local"
-	channelProvisioner = "my-channel-provisioner"
 )
 
 var (
@@ -498,7 +497,7 @@ func makeReadyTrigger() *v1alpha1.Trigger {
 	provisioners.AddFinalizer(t, finalizerName)
 	t.Status.InitializeConditions()
 	t.Status.MarkBrokerExists()
-	t.Status.SubscriberURI = fmt.Sprintf("http://%s.%s.svc.cluster.local/", subscriberName, testNS)
+	t.Status.SubscriberURI = fmt.Sprintf("http://%s.%s.svc.%s/", subscriberName, testNS, utils.GetClusterDomainName())
 	t.Status.MarkKubernetesServiceExists()
 	t.Status.MarkVirtualServiceExists()
 	t.Status.MarkSubscribed()
@@ -555,7 +554,7 @@ func newChannel(name string) *v1alpha1.Channel {
 		},
 		Status: v1alpha1.ChannelStatus{
 			Address: duckv1alpha1.Addressable{
-				Hostname: channelHostname,
+				Hostname: "any-non-empty-string",
 			},
 		},
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The Knative Authors
+ * Copyright 2019 The Knative Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,20 +52,19 @@ func main() {
 		logger.Fatal("Error starting up.", zap.Error(err))
 	}
 
-	// Add custom types to this array to get them into the manager's scheme.
 	if err = eventingv1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
 		logger.Fatal("Unable to add eventingv1alpha1 scheme", zap.Error(err))
 	}
 
-	// We are running both the receiver (takes messages in from the cluster) and the dispatcher (send the messages
-	// to the triggers' subscribers) in this binary.
+	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
+	// the messages to the triggers' subscribers) in this binary.
 	_, runnable := broker.New(logger, mgr.GetClient())
 	err = mgr.Add(runnable)
 	if err != nil {
 		logger.Fatal("Unable to start the receivers runnable", zap.Error(err), zap.Any("runnable", runnable))
 	}
 
-	// set up signals so we handle the first shutdown signal gracefully
+	// Set up signals so we handle the first shutdown signal gracefully.
 	stopCh := signals.SetupSignalHandler()
 
 	// Start blocks forever.
@@ -74,6 +73,7 @@ func main() {
 	if err != nil {
 		logger.Fatal("Manager.Start() returned an error", zap.Error(err))
 	}
+	logger.Info("Exiting...")
 }
 
 func getRequiredEnv(envKey string) string {

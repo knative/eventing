@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The Knative Authors
+ * Copyright 2019 The Knative Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,18 +19,21 @@ package broker
 import (
 	"errors"
 	"fmt"
-	"github.com/knative/eventing/pkg/provisioners"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/knative/eventing/pkg/utils"
+
+	"github.com/knative/eventing/pkg/provisioners"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	"go.uber.org/zap"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -177,7 +180,7 @@ func makeTriggerWithoutSubscriberURI() *eventingv1alpha1.Trigger {
 
 func makeRequest() *http.Request {
 	req := httptest.NewRequest("POST", "/", strings.NewReader(`<much wow="xml"/>`))
-	req.Host = fmt.Sprintf("%s.%s.triggers.cluster.local", triggerName, testNS)
+	req.Host = fmt.Sprintf("%s.%s.triggers.%s", triggerName, testNS, utils.GetClusterDomainName())
 
 	eventAttributes := map[string]string{
 		"CE-CloudEventsVersion": `"0.1"`,

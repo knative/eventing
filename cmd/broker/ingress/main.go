@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The Knative Authors
+ * Copyright 2019 The Knative Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,8 @@ const (
 )
 
 var (
+	port = 8080
+
 	readTimeout  = 1 * time.Minute
 	writeTimeout = 1 * time.Minute
 )
@@ -63,10 +65,8 @@ func main() {
 		logger.Fatal("Error starting up.", zap.Error(err))
 	}
 
-	// Add custom types to this array to get them into the manager's scheme.
-	err = eventingv1alpha1.AddToScheme(mgr.GetScheme())
-	if err != nil {
-		logger.Fatal("Unable to add scheme", zap.Error(err))
+	if err = eventingv1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
+		logger.Fatal("Unable to add eventingv1alpha1 scheme", zap.Error(err))
 	}
 
 	c := getRequiredEnv(CHANNEL)
@@ -75,7 +75,7 @@ func main() {
 	h := NewHandler(logger, c, policy, mgr.GetClient())
 
 	s := &http.Server{
-		Addr:         ":8080",
+		Addr:         fmt.Sprintf(":%d", port),
 		Handler:      h,
 		ErrorLog:     zap.NewStdLog(logger),
 		ReadTimeout:  readTimeout,
@@ -87,7 +87,7 @@ func main() {
 		s:      s,
 	})
 	if err != nil {
-		logger.Fatal("Unable to add ListenAndServe", zap.Error(err))
+		logger.Fatal("Unable to add runnableServer", zap.Error(err))
 	}
 
 	// Set up signals so we handle the first shutdown signal gracefully.
@@ -149,6 +149,7 @@ func createReceiverFunction(f *Handler) func(provisioners.ChannelReference, *pro
 	}
 }
 
+// http.Handler interface.
 func (f *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.receiver.HandleRequest(w, r)
 }

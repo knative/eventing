@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/knative/eventing/pkg/utils"
+
 	"github.com/knative/eventing/pkg/provisioners"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -131,6 +133,7 @@ func ProvideController(logger *zap.Logger) func(manager.Manager) (controller.Con
 	}
 }
 
+// mapAllTriggers maps Broker change notifications to Trigger reconcileRequests.
 type mapAllTriggers struct {
 	r *reconciler
 }
@@ -170,7 +173,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	ctx = logging.WithLogger(ctx, r.logger.With(zap.Any("request", request)))
 
 	trigger := &v1alpha1.Trigger{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, trigger)
+	err := r.client.Get(ctx, request.NamespacedName, trigger)
 
 	if errors.IsNotFound(err) {
 		logging.FromContext(ctx).Info("Could not find Trigger")
@@ -286,22 +289,15 @@ func (r *reconciler) AddToTriggers(t *v1alpha1.Trigger) {
 	// We will be reconciling an already existing Trigger far more often than adding a new one, so
 	// check with a read lock before using the write lock.
 	r.triggersLock.RLock()
-	triggersInBrokerNamespacedName := r.triggers[brokerNamespacedName]
-	var present bool
-	if triggersInBrokerNamespacedName != nil {
-		_, present = triggersInBrokerNamespacedName[name]
-	} else {
-		present = false
-	}
+	_, present := r.triggers[brokerNamespacedName][name]
 	r.triggersLock.RUnlock()
-
 	if present {
 		// Already present in the map.
 		return
 	}
 
 	r.triggersLock.Lock()
-	triggersInBrokerNamespacedName = r.triggers[brokerNamespacedName]
+	triggersInBrokerNamespacedName := r.triggers[brokerNamespacedName]
 	if triggersInBrokerNamespacedName == nil {
 		r.triggers[brokerNamespacedName] = make(map[reconcile.Request]struct{})
 		triggersInBrokerNamespacedName = r.triggers[brokerNamespacedName]
@@ -330,12 +326,13 @@ func (r *reconciler) removeFromTriggers(t *v1alpha1.Trigger) {
 	r.triggersLock.Unlock()
 }
 
-// updateStatus may in fact update the trigger's finalizers in addition to the status
+// updateStatus may in fact update the trigger's finalizers in addition to the status.
 func (r *reconciler) updateStatus(trigger *v1alpha1.Trigger) (*v1alpha1.Trigger, error) {
+	ctx := context.TODO()
 	objectKey := client.ObjectKey{Namespace: trigger.Namespace, Name: trigger.Name}
 	latestTrigger := &v1alpha1.Trigger{}
 
-	if err := r.client.Get(context.TODO(), objectKey, latestTrigger); err != nil {
+	if err := r.client.Get(ctx, objectKey, latestTrigger); err != nil {
 		return nil, err
 	}
 
@@ -343,7 +340,7 @@ func (r *reconciler) updateStatus(trigger *v1alpha1.Trigger) (*v1alpha1.Trigger,
 
 	if !equality.Semantic.DeepEqual(latestTrigger.Finalizers, trigger.Finalizers) {
 		latestTrigger.SetFinalizers(trigger.ObjectMeta.Finalizers)
-		if err := r.client.Update(context.TODO(), latestTrigger); err != nil {
+		if err := r.client.Update(ctx, latestTrigger); err != nil {
 			return nil, err
 		}
 		triggerChanged = true
@@ -356,21 +353,20 @@ func (r *reconciler) updateStatus(trigger *v1alpha1.Trigger) (*v1alpha1.Trigger,
 	if triggerChanged {
 		// Refetch
 		latestTrigger = &v1alpha1.Trigger{}
-		if err := r.client.Get(context.TODO(), objectKey, latestTrigger); err != nil {
+		if err := r.client.Get(ctx, objectKey, latestTrigger); err != nil {
 			return nil, err
 		}
 	}
 
 	latestTrigger.Status = trigger.Status
-	if err := r.client.Status().Update(context.TODO(), latestTrigger); err != nil {
+	if err := r.client.Status().Update(ctx, latestTrigger); err != nil {
 		return nil, err
 	}
 
 	return latestTrigger, nil
 }
 
-// getBroker returns the Broker for Trigger 't' if exists,
-// otherwise it returns an error.
+// getBroker returns the Broker for Trigger 't' if exists, otherwise it returns an error.
 func (r *reconciler) getBroker(ctx context.Context, t *v1alpha1.Trigger) (*v1alpha1.Broker, error) {
 	b := &v1alpha1.Broker{}
 	name := types.NamespacedName{
@@ -381,21 +377,15 @@ func (r *reconciler) getBroker(ctx context.Context, t *v1alpha1.Trigger) (*v1alp
 	return b, err
 }
 
-// getBrokerChannel returns the Broker's channel if exists,
-// otherwise it returns an error.
+// getBrokerChannel returns the Broker's channel if exists, otherwise it returns an error.
 func (r *reconciler) getBrokerChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
 	list := &v1alpha1.ChannelList{}
 	opts := &runtimeclient.ListOptions{
 		Namespace:     b.Namespace,
 		LabelSelector: labels.SelectorFromSet(broker.ChannelLabels(b)),
-		// TODO this is here because the fake client needs it. Remove this when it's no longer
-		// needed.
-		Raw: &metav1.ListOptions{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: v1alpha1.SchemeGroupVersion.String(),
-				Kind:       "Channel",
-			},
-		},
+		// Set Raw because if we need to get more than one page, then we will put the continue token
+		// into opts.Raw.Continue.
+		Raw: &metav1.ListOptions{},
 	}
 
 	err := r.client.List(ctx, opts, list)
@@ -418,14 +408,9 @@ func (r *reconciler) getK8sService(ctx context.Context, t *v1alpha1.Trigger) (*c
 	opts := &runtimeclient.ListOptions{
 		Namespace:     t.Namespace,
 		LabelSelector: labels.SelectorFromSet(k8sServiceLabels(t)),
-		// TODO this is here because the fake client needs it. Remove this when it's no longer
-		// needed.
-		Raw: &metav1.ListOptions{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: corev1.SchemeGroupVersion.String(),
-				Kind:       "Service",
-			},
-		},
+		// Set Raw because if we need to get more than one page, then we will put the continue token
+		// into opts.Raw.Continue.
+		Raw: &metav1.ListOptions{},
 	}
 
 	err := r.client.List(ctx, opts, list)
@@ -510,14 +495,9 @@ func (r *reconciler) getVirtualService(ctx context.Context, t *v1alpha1.Trigger)
 	opts := &runtimeclient.ListOptions{
 		Namespace:     t.Namespace,
 		LabelSelector: labels.SelectorFromSet(virtualServiceLabels(t)),
-		// TODO this is here because the fake client needs it. Remove this when it's no longer
-		// needed.
-		Raw: &metav1.ListOptions{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: istiov1alpha3.SchemeGroupVersion.String(),
-				Kind:       "VirtualService",
-			},
-		},
+		// Set Raw because if we need to get more than one page, then we will put the continue token
+		// into opts.Raw.Continue.
+		Raw: &metav1.ListOptions{},
 	}
 
 	err := r.client.List(ctx, opts, list)
@@ -562,8 +542,7 @@ func (r *reconciler) reconcileVirtualService(ctx context.Context, t *v1alpha1.Tr
 
 // newVirtualService returns a placeholder virtual service object for trigger 't' and service 'svc'.
 func newVirtualService(t *v1alpha1.Trigger, svc *corev1.Service) *istiov1alpha3.VirtualService {
-	// TODO Make this work with endings other than cluster.local
-	destinationHost := fmt.Sprintf("%s-broker-filter.%s.svc.cluster.local", t.Spec.Broker, t.Namespace)
+	destinationHost := fmt.Sprintf("%s-broker-filter.%s.svc.%s", t.Spec.Broker, t.Namespace, utils.GetClusterDomainName())
 	return &istiov1alpha3.VirtualService{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-", t.Name),
@@ -583,8 +562,7 @@ func newVirtualService(t *v1alpha1.Trigger, svc *corev1.Service) *istiov1alpha3.
 			},
 			Http: []istiov1alpha3.HTTPRoute{{
 				Rewrite: &istiov1alpha3.HTTPRewrite{
-					// Never really used, so cluster.local should be a good enough ending everywhere.
-					Authority: fmt.Sprintf("%s.%s.triggers.cluster.local", t.Name, t.Namespace),
+					Authority: fmt.Sprintf("%s.%s.triggers.%s", t.Name, t.Namespace, utils.GetClusterDomainName()),
 				},
 				Route: []istiov1alpha3.DestinationWeight{{
 					Destination: istiov1alpha3.Destination{
@@ -651,14 +629,9 @@ func (r *reconciler) getSubscription(ctx context.Context, t *v1alpha1.Trigger) (
 	opts := &runtimeclient.ListOptions{
 		Namespace:     t.Namespace,
 		LabelSelector: labels.SelectorFromSet(subscriptionLabels(t)),
-		// TODO this is here because the fake client needs it. Remove this when it's no longer
-		// needed.
-		Raw: &metav1.ListOptions{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: v1alpha1.SchemeGroupVersion.String(),
-				Kind:       "Subscription",
-			},
-		},
+		// Set Raw because if we need to get more than one page, then we will put the continue token
+		// into opts.Raw.Continue.
+		Raw: &metav1.ListOptions{},
 	}
 
 	err := r.client.List(ctx, opts, list)

@@ -30,7 +30,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -98,36 +97,6 @@ func TestInjectClient(t *testing.T) {
 	}
 	if n != r.client {
 		t.Errorf("Unexpected client. Expected: '%v'. Actual: '%v'", n, r.client)
-	}
-}
-
-func TestInjectConfig(t *testing.T) {
-	r := &reconciler{}
-	wantCfg := &rest.Config{
-		Host: "http://foo",
-	}
-
-	err := r.InjectConfig(wantCfg)
-	if err != nil {
-		t.Fatalf("Unexpected error injecting the config: %v", err)
-	}
-
-	gotCfg := r.restConfig
-	if diff := cmp.Diff(wantCfg, gotCfg); diff != "" {
-		t.Errorf("Unexpected config (-want, +got): %v", diff)
-	}
-
-	wantDynClient, err := dynamic.NewForConfig(wantCfg)
-	if err != nil {
-		t.Fatalf("Unexpected error generating dynamic client: %v", err)
-	}
-
-	// Since dynamicClient doesn't export any fields, we can only test its type.
-	switch r.dynamicClient.(type) {
-	case dynamic.Interface:
-		// ok
-	default:
-		t.Errorf("Unexpected dynamicClient type. Expected: %T, Got: %T", wantDynClient, r.dynamicClient)
 	}
 }
 
@@ -269,15 +238,13 @@ func TestReconcile(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		c := tc.GetClient()
-		dc := tc.GetDynamicClient()
 		recorder := tc.GetEventRecorder()
 
 		r := &reconciler{
-			client:        c,
-			dynamicClient: dc,
-			restConfig:    &rest.Config{},
-			recorder:      recorder,
-			logger:        zap.NewNop(),
+			client:     c,
+			restConfig: &rest.Config{},
+			recorder:   recorder,
+			logger:     zap.NewNop(),
 		}
 		tc.ReconcileKey = fmt.Sprintf("%s/%s", "", testNS)
 		tc.IgnoreTimes = true
