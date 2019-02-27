@@ -37,6 +37,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
+const (
+	NAMESPACE = "NAMESPACE"
+	CHANNEL   = "CHANNEL"
+	POLICY    = "POLICY"
+)
+
 var (
 	readTimeout  = 1 * time.Minute
 	writeTimeout = 1 * time.Minute
@@ -50,7 +56,9 @@ func main() {
 
 	logger.Info("Starting...")
 
-	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
+	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
+		Namespace: getRequiredEnv(NAMESPACE),
+	})
 	if err != nil {
 		logger.Fatal("Error starting up.", zap.Error(err))
 	}
@@ -61,8 +69,8 @@ func main() {
 		logger.Fatal("Unable to add scheme", zap.Error(err))
 	}
 
-	c := getRequiredEnv("CHANNEL")
-	policy := getRequiredEnv("POLICY")
+	c := getRequiredEnv(CHANNEL)
+	policy := getRequiredEnv(POLICY)
 
 	h := NewHandler(logger, c, policy, mgr.GetClient())
 

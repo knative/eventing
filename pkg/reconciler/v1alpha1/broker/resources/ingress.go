@@ -69,8 +69,12 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 							Name:  "ingress",
 							Env: []corev1.EnvVar{
 								{
-									Name:  "FILTER",
-									Value: "", // TODO Add one.
+									Name: "NAMESPACE",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "metadata.namespace",
+										},
+									},
 								},
 								{
 									Name:  "CHANNEL",
