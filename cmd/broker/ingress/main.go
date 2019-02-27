@@ -62,7 +62,7 @@ func main() {
 	}
 
 	c := getRequiredEnv("CHANNEL")
-	policy := getRequiredEnv("INGRESS_POLICY")
+	policy := getRequiredEnv("POLICY")
 
 	h := NewHandler(logger, c, policy, mgr.GetClient())
 

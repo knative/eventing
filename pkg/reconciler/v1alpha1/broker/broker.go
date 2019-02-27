@@ -74,28 +74,29 @@ type reconciler struct {
 
 	logger *zap.Logger
 
-	ingressImage              string
-	ingressServiceAccountName string
-	filterImage               string
-	filterServiceAccountName  string
+	envVariables EnvVariables
+}
+
+type EnvVariables struct {
+	IngressImage              string
+	IngressServiceAccountName string
+	IngressPolicy             string
+	FilterImage               string
+	FilterServiceAccountName  string
 }
 
 // Verify the struct implements reconcile.Reconciler.
 var _ reconcile.Reconciler = &reconciler{}
 
 // ProvideController returns a function that returns a Broker controller.
-func ProvideController(logger *zap.Logger, ingressImage, ingressServiceAccount, filterImage, filterServiceAccount string) func(manager.Manager) (controller.Controller, error) {
+func ProvideController(logger *zap.Logger, envVariables EnvVariables) func(manager.Manager) (controller.Controller, error) {
 	return func(mgr manager.Manager) (controller.Controller, error) {
 		// Setup a new controller to Reconcile Brokers.
 		c, err := controller.New(controllerAgentName, mgr, controller.Options{
 			Reconciler: &reconciler{
-				recorder: mgr.GetRecorder(controllerAgentName),
-				logger:   logger,
-
-				ingressImage:              ingressImage,
-				ingressServiceAccountName: ingressServiceAccount,
-				filterImage:               filterImage,
-				filterServiceAccountName:  filterServiceAccount,
+				recorder:     mgr.GetRecorder(controllerAgentName),
+				logger:       logger,
+				envVariables: envVariables,
 			},
 		})
 		if err != nil {
@@ -270,8 +271,8 @@ func (r *reconciler) updateStatus(broker *v1alpha1.Broker) (*v1alpha1.Broker, er
 func (r *reconciler) reconcileFilterDeployment(ctx context.Context, b *v1alpha1.Broker) (*v1.Deployment, error) {
 	expected := resources.MakeFilterDeployment(&resources.FilterArgs{
 		Broker:             b,
-		Image:              r.filterImage,
-		ServiceAccountName: r.filterServiceAccountName,
+		Image:              r.envVariables.FilterImage,
+		ServiceAccountName: r.envVariables.FilterServiceAccountName,
 	})
 	return r.reconcileDeployment(ctx, expected)
 }
@@ -434,8 +435,9 @@ func (r *reconciler) reconcileService(ctx context.Context, svc *corev1.Service) 
 func (r *reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1.Broker, c *v1alpha1.Channel) (*v1.Deployment, error) {
 	expected := resources.MakeIngress(&resources.IngressArgs{
 		Broker:             b,
-		Image:              r.ingressImage,
-		ServiceAccountName: r.ingressServiceAccountName,
+		Image:              r.envVariables.IngressImage,
+		ServiceAccountName: r.envVariables.IngressServiceAccountName,
+		Policy:             r.envVariables.IngressPolicy,
 		ChannelAddress:     c.Status.Address.Hostname,
 	})
 	return r.reconcileDeployment(ctx, expected)

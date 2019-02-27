@@ -119,11 +119,19 @@ func main() {
 		}
 	}
 
+	envVariables := broker.EnvVariables{
+		IngressImage:              getRequiredEnv("INGRESS_IMAGE"),
+		IngressServiceAccountName: getRequiredEnv("INGRESS_SERVICE_ACCOUNT"),
+		IngressPolicy:             getRequiredEnv("INGRESS_POLICY"),
+		FilterImage:               getRequiredEnv("FILTER_IMAGE"),
+		FilterServiceAccountName:  getRequiredEnv("FILTER_SERVICE_ACCOUNT"),
+	}
+
 	// Add each controller's ProvideController func to this list to have the
 	// manager run it.
 	providers := []ProvideFunc{
 		subscription.ProvideController,
-		broker.ProvideController(logger.Desugar(), getRequiredEnv("INGRESS_IMAGE"), getRequiredEnv("INGRESS_SERVICE_ACCOUNT"), getRequiredEnv("FILTER_IMAGE"), getRequiredEnv("FILTER_SERVICE_ACCOUNT")),
+		broker.ProvideController(logger.Desugar(), envVariables),
 		trigger.ProvideController(logger.Desugar()),
 		namespace.ProvideController(logger.Desugar()),
 	}
