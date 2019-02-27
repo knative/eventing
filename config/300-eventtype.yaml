@@ -19,7 +19,7 @@ spec:
   group: eventing.knative.dev
   version: v1alpha1
   names:
-    kind: Event-Type
+    kind: EventType
     plural: event-types
     singular: event-type
     categories:

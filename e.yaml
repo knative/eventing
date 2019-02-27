@@ -1,5 +1,5 @@
 apiVersion: eventing.knative.dev/v1alpha1
-kind: Event-Type
+kind: EventType
 metadata:
   name: com.github.pullrequest
 spec:
