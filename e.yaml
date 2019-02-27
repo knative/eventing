@@ -1,0 +1,8 @@
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Event-Type
+metadata:
+  name: com.github.pullrequest
+spec:
+  origin: github.com
+  schema: http://foo2.example/schema
+

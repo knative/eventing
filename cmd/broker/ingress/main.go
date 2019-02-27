@@ -25,6 +25,10 @@ import (
 	"os"
 	"time"
 
+	"k8s.io/apimachinery/pkg/types"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/pkg/signals"
@@ -59,7 +63,7 @@ func main() {
 
 	c := getRequiredEnv("CHANNEL")
 
-	h := NewHandler(logger, c)
+	h := NewHandler(logger, c, mgr.GetClient())
 
 	s := &http.Server{
 		Addr:         ":8080",
@@ -105,16 +109,18 @@ type Handler struct {
 	receiver    *provisioners.MessageReceiver
 	dispatcher  *provisioners.MessageDispatcher
 	destination string
+	client      client.Client
 
 	logger *zap.Logger
 }
 
 // NewHandler creates a new ingress.Handler.
-func NewHandler(logger *zap.Logger, destination string) *Handler {
+func NewHandler(logger *zap.Logger, destination string, client client.Client) *Handler {
 	handler := &Handler{
 		logger:      logger,
 		dispatcher:  provisioners.NewMessageDispatcher(logger.Sugar()),
 		destination: fmt.Sprintf("http://%s", destination),
+		client:      client,
 	}
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
@@ -124,10 +130,26 @@ func NewHandler(logger *zap.Logger, destination string) *Handler {
 }
 
 func createReceiverFunction(f *Handler) func(provisioners.ChannelReference, *provisioners.Message) error {
-	return func(_ provisioners.ChannelReference, m *provisioners.Message) error {
-		// TODO Filter.
+	return func(c provisioners.ChannelReference, m *provisioners.Message) error {
+		// Using the Ce-Eventtype header as the name
+		name := m.Headers["Ce-Eventtype"]
+		_, err := f.getEventType(c.Namespace, name)
+		if err != nil {
+			f.logger.Error("Error getting EventType", zap.String("name", name))
+			return nil
+		}
 		return f.dispatch(m)
 	}
+}
+
+func (f *Handler) getEventType(namespace, name string) (*eventingv1alpha1.EventType, error) {
+	eventType := &eventingv1alpha1.EventType{}
+	namespacedName := types.NamespacedName{
+		Namespace: namespace,
+		Name:      name,
+	}
+	err := f.client.Get(context.Background(), namespacedName, eventType)
+	return eventType, err
 }
 
 func (f *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
