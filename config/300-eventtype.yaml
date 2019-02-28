@@ -30,9 +30,9 @@ spec:
   subresources:
     status: {}
   additionalPrinterColumns:
-    - name: Origin
+    - name: Source
       type: string
-      JSONPath: ".spec.origin"
+      JSONPath: ".spec.source"
     - name: Schema
       type: string
       JSONPath: ".spec.schema"

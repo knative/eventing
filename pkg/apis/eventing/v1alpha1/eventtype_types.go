@@ -58,7 +58,8 @@ type EventTypeSpec struct {
 	// +optional
 	DeprecatedGeneration int64 `json:"generation,omitempty"`
 
-	Origin string `json:"origin,omitempty"`
+	// TODO this should probably need to be updated
+	Source string `json:"source,omitempty"`
 	// +optional
 	Schema string `json:"schema,omitempty"`
 }

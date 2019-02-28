@@ -3,6 +3,6 @@ kind: EventType
 metadata:
   name: com.github.pullrequest
 spec:
-  origin: github.com
+  source: github.com
   schema: http://foo2.example/schema
 

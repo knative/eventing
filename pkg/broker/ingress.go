@@ -77,9 +77,11 @@ func (policy *AllowRegisteredPolicy) AllowMessage(namespace string, message *pro
 		eventType)
 
 	if k8serrors.IsNotFound(err) {
-		policy.logger.Warnf("EventType not found %s", name)
+		policy.logger.Warnf("EventType not found: %q", name)
+		return false
 	} else if err != nil {
-		policy.logger.Errorf("Error getting EventType %s", name)
+		policy.logger.Errorf("Error getting EventType: %q, %v", name, err)
+		return false
 	}
-	return err != nil
+	return true
 }
