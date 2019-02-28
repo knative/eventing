@@ -30,6 +30,11 @@ import (
 const (
 	allowAny             = "allow_any"
 	allowRegisteredTypes = "allow_registered"
+
+	// This header is for cloudevents spec 0.1.
+	// In the 0.2 version the HTTP header is called 'ce-type'.
+	// TODO use cloudevents sdk for doing encoding/decoding of events.
+	eventType = "Ce-Eventtype"
 )
 
 type IngressPolicy interface {
@@ -66,15 +71,15 @@ func (policy *AllowAnyPolicy) AllowMessage(namespace string, message *provisione
 }
 
 func (policy *AllowRegisteredPolicy) AllowMessage(namespace string, message *provisioners.Message) bool {
-	eventType := &eventingv1alpha1.EventType{}
-	name := message.Headers["Ce-Eventtype"]
+	et := &eventingv1alpha1.EventType{}
+	name := message.Headers[eventType]
 
 	err := policy.client.Get(context.TODO(),
 		types.NamespacedName{
 			Namespace: namespace,
 			Name:      name,
 		},
-		eventType)
+		et)
 
 	if k8serrors.IsNotFound(err) {
 		policy.logger.Warnf("EventType not found: %q", name)
