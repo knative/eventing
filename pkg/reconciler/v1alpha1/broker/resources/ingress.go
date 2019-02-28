@@ -31,7 +31,6 @@ import (
 type IngressArgs struct {
 	Broker             *eventingv1alpha1.Broker
 	Image              string
-	Policy             string
 	ServiceAccountName string
 	ChannelAddress     string
 }
@@ -82,7 +81,7 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 								},
 								{
 									Name:  "POLICY",
-									Value: args.Policy,
+									Value: args.Broker.Spec.IngressPolicy,
 								},
 							},
 						},

@@ -1,0 +1,6 @@
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Broker
+metadata:
+  name: broker-test
+spec:
+  ingressPolicy: allow_registered

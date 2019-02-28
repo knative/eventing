@@ -74,7 +74,6 @@ type reconciler struct {
 
 	ingressImage              string
 	ingressServiceAccountName string
-	ingressPolicy             string
 	filterImage               string
 	filterServiceAccountName  string
 }
@@ -85,7 +84,6 @@ var _ reconcile.Reconciler = &reconciler{}
 type ReconcilerArgs struct {
 	IngressImage              string
 	IngressServiceAccountName string
-	IngressPolicy             string
 	FilterImage               string
 	FilterServiceAccountName  string
 }
@@ -101,7 +99,6 @@ func ProvideController(logger *zap.Logger, args ReconcilerArgs) func(manager.Man
 
 				ingressImage:              args.IngressImage,
 				ingressServiceAccountName: args.IngressServiceAccountName,
-				ingressPolicy:             args.IngressPolicy,
 				filterImage:               args.FilterImage,
 				filterServiceAccountName:  args.FilterServiceAccountName,
 			},
@@ -433,7 +430,6 @@ func (r *reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1
 		Broker:             b,
 		Image:              r.ingressImage,
 		ServiceAccountName: r.ingressServiceAccountName,
-		Policy:             r.ingressPolicy,
 		ChannelAddress:     c.Status.Address.Hostname,
 	})
 	return r.reconcileDeployment(ctx, expected)

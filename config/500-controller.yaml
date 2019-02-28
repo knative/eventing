@@ -43,8 +43,6 @@ spec:
             value: github.com/knative/eventing/cmd/broker/ingress
           - name: BROKER_INGRESS_SERVICE_ACCOUNT
             value: eventing-broker-ingress
-          - name: BROKER_INGRESS_POLICY
-            value: allow_registered
           - name: BROKER_FILTER_IMAGE
             value: github.com/knative/eventing/cmd/broker/filter
           - name: BROKER_FILTER_SERVICE_ACCOUNT

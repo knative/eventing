@@ -127,7 +127,6 @@ func main() {
 			broker.ReconcilerArgs{
 				IngressImage:              getRequiredEnv("BROKER_INGRESS_IMAGE"),
 				IngressServiceAccountName: getRequiredEnv("BROKER_INGRESS_SERVICE_ACCOUNT"),
-				IngressPolicy:             getRequiredEnv("BROKER_INGRESS_POLICY"),
 				FilterImage:               getRequiredEnv("BROKER_FILTER_IMAGE"),
 				FilterServiceAccountName:  getRequiredEnv("BROKER_FILTER_SERVICE_ACCOUNT"),
 			}),
