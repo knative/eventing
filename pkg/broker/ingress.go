@@ -19,8 +19,9 @@ package broker
 import (
 	"context"
 
+	"github.com/cloudevents/sdk-go/pkg/cloudevents"
+
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -30,15 +31,10 @@ import (
 const (
 	allowAny             = "allow_any"
 	allowRegisteredTypes = "allow_registered"
-
-	// This header is for cloudevents spec 0.1.
-	// In the 0.2 version the HTTP header is called 'ce-type'.
-	// TODO use cloudevents sdk for doing encoding/decoding of events.
-	eventType = "Ce-Eventtype"
 )
 
 type IngressPolicy interface {
-	AllowMessage(namespace string, message *provisioners.Message) bool
+	AllowEvent(namespace string, event *cloudevents.Event) bool
 }
 
 type AllowAnyPolicy struct{}
@@ -66,13 +62,13 @@ func newIngressPolicy(logger *zap.SugaredLogger, client client.Client, policy st
 	}
 }
 
-func (policy *AllowAnyPolicy) AllowMessage(namespace string, message *provisioners.Message) bool {
+func (policy *AllowAnyPolicy) AllowEvent(namespace string, event *cloudevents.Event) bool {
 	return true
 }
 
-func (policy *AllowRegisteredPolicy) AllowMessage(namespace string, message *provisioners.Message) bool {
+func (policy *AllowRegisteredPolicy) AllowEvent(namespace string, event *cloudevents.Event) bool {
 	et := &eventingv1alpha1.EventType{}
-	name := message.Headers[eventType]
+	name := event.Type()
 
 	err := policy.client.Get(context.TODO(),
 		types.NamespacedName{
