@@ -58,6 +58,19 @@
   version = "v2.1.15"
 
 [[projects]]
+  digest = "1:a12b641b81e00b8444bed01357098490ab769dbce31de3410b64c46a23a06287"
+  name = "github.com/cloudevents/sdk-go"
+  packages = [
+    "pkg/cloudevents",
+    "pkg/cloudevents/datacodec",
+    "pkg/cloudevents/datacodec/json",
+    "pkg/cloudevents/datacodec/xml",
+    "pkg/cloudevents/types",
+  ]
+  pruneopts = "NUT"
+  revision = "d50361a5655081514f406b4e672d72e9886c17ad"
+
+[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -1235,6 +1248,7 @@
     "cloud.google.com/go/pubsub",
     "github.com/Shopify/sarama",
     "github.com/bsm/sarama-cluster",
+    "github.com/cloudevents/sdk-go/pkg/cloudevents",
     "github.com/fsnotify/fsnotify",
     "github.com/golang/glog",
     "github.com/google/go-cmp/cmp",

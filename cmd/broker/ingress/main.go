@@ -35,12 +35,23 @@ import (
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/cloudevents/sdk-go/pkg/cloudevents"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 )
 
 const (
 	NAMESPACE = "NAMESPACE"
 	CHANNEL   = "CHANNEL"
 	POLICY    = "POLICY"
+
+	// TODO should remove this constants once we start using cloudevents-sdk properly.
+	v1EventId     = "Ce-Eventid"
+	v1EventType   = "Ce-Eventtype"
+	v1EventSource = "Ce-Source"
+	v2EventId     = "ce-id"
+	v2EventType   = "ce-type"
+	v2EventSource = "ce-source"
 )
 
 var (
@@ -140,9 +151,11 @@ func NewHandler(logger *zap.Logger, destination, policy string, client client.Cl
 	return handler
 }
 
+// TODO should receive a cloudevents.Event here instead of provisioners.Message
 func createReceiverFunction(f *Handler) func(provisioners.ChannelReference, *provisioners.Message) error {
 	return func(c provisioners.ChannelReference, m *provisioners.Message) error {
-		if f.ingressPolicy.AllowMessage(c.Namespace, m) {
+		event := cloudEventFrom(m)
+		if f.ingressPolicy.AllowEvent(c.Namespace, &event) {
 			return f.dispatch(m)
 		}
 		return nil
@@ -174,4 +187,24 @@ type runnableServer struct {
 func (r *runnableServer) Start(<-chan struct{}) error {
 	r.logger.Info("Ingress Listening...", zap.String("Address", r.s.Addr))
 	return r.s.ListenAndServe()
+}
+
+// TODO this should be removed once we update the interfaces and start using cloudevents.Event instead of Message.
+func cloudEventFrom(m *provisioners.Message) cloudevents.Event {
+	event := cloudevents.Event{}
+	if eventType, ok := m.Headers[v2EventType]; ok {
+		event.Context = cloudevents.EventContextV02{
+			ID:     m.Headers[v2EventId],
+			Type:   eventType,
+			Source: *types.ParseURLRef(v2EventSource),
+		}.AsV02()
+	} else {
+		event.Context = cloudevents.EventContextV01{
+			EventID:   m.Headers[v1EventId],
+			EventType: m.Headers[v1EventType],
+			Source:    *types.ParseURLRef(v1EventSource),
+		}.AsV01()
+	}
+	event.Data = m.Payload
+	return event
 }
