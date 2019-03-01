@@ -28,13 +28,19 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/pkg/signals"
+	"go.opencensus.io/exporter/prometheus"
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
+const (
+	componentName = "broker-ingress"
+)
+
 var (
-	port = 8080
+	port        = 8080
+	metricsPort = 9090
 
 	readTimeout  = 1 * time.Minute
 	writeTimeout = 1 * time.Minute
@@ -75,6 +81,30 @@ func main() {
 	})
 	if err != nil {
 		logger.Fatal("Unable to add runnableServer", zap.Error(err))
+	}
+
+	// Metrics
+	e, err := prometheus.NewExporter(prometheus.Options{Namespace: componentName})
+	if err != nil {
+		logger.Fatal("Unable to create Prometheus exporter", zap.Error(err))
+	}
+	sm := http.NewServeMux()
+	sm.Handle("/metrics", e)
+	metricsSrv := &http.Server{
+		Addr:         fmt.Sprintf(":%d", metricsPort),
+		Handler:      e,
+		ErrorLog:     zap.NewStdLog(logger),
+		ReadTimeout:  readTimeout,
+		WriteTimeout: writeTimeout,
+	}
+
+	err = mgr.Add(&runnableServer{
+		s:               metricsSrv,
+		logger:          logger,
+		ShutdownTimeout: writeTimeout,
+	})
+	if err != nil {
+		logger.Fatal("Unable to add metrics runnableServer", zap.Error(err))
 	}
 
 	// Set up signals so we handle the first shutdown signal gracefully.
