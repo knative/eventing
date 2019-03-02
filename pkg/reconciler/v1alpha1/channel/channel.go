@@ -70,7 +70,7 @@ func ProvideController(mgr manager.Manager) (controller.Controller, error) {
 		return nil, err
 	}
 
-	// Watch channel events and enqueue Subscription object key.
+	// Watch channel events
 	// This controller is no-op when Channels are deleted
 	if err := c.Watch(
 		&source.Kind{Type: &v1alpha1.Channel{}},
