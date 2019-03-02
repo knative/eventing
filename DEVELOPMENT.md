@@ -127,4 +127,8 @@ ko delete -f config/
 
 ## Telemetry
 
-See [telemetry documentation](./docs/telemetry.md).
+To access Telemetry see:
+
+- [Accessing Metrics](https://github.com/knative/docs/blob/master/serving/accessing-metrics.md)
+- [Accessing Logs](https://github.com/knative/docs/blob/master/serving/accessing-logs.md)
+- [Accessing Traces](https://github.com/knative/docs/blob/master/serving/accessing-traces.md)
