@@ -118,7 +118,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 }
 
 func (r *reconciler) reconcile(ch *v1alpha1.Channel) error {
-	// TODO: Test what happens on delete
 	ch.Status.InitializeConditions()
 
 	c := ch.Status.GetCondition(v1alpha1.ChannelConditionProvisionerInstalled)

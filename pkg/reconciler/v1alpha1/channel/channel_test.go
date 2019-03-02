@@ -197,22 +197,6 @@ func getTestChannelWithoutStatus(name string, namespace string) *eventingv1alpha
 	return ch
 }
 
-// func getTestChannelWithStatus(provInstalledStatus corev1.ConditionStatus) *eventingv1alpha1.Channel {
-// 	ch := getTestChannelWithoutStatus()
-// 	switch provInstalledStatus {
-// 	case corev1.ConditionTrue:
-// 		ch.Status = getChanStatusProvInstalled()
-// 		break
-// 	case corev1.ConditionFalse:
-// 		ch.Status = getChanStatusProvNotInstalled()
-// 		break
-// 	case corev1.ConditionUnknown:
-// 		ch.Status = getChanStatusProvUnknown()
-// 		break
-// 	}
-// 	return ch
-// }
-
 func getTestChannelSpec() eventingv1alpha1.ChannelSpec {
 	chSpec := eventingv1alpha1.ChannelSpec{
 		Provisioner: &corev1.ObjectReference{},
@@ -235,28 +219,3 @@ func getTestSubscriberSpec() eventingduck.ChannelSubscriberSpec {
 		ReplyURI:      "TestReplyURI",
 	}
 }
-
-// func getChanStatusProvInstalled() eventingv1alpha1.ChannelStatus {
-// 	noProvChStatus := eventingv1alpha1.ChannelStatus{}
-// 	noProvChStatus.InitializeConditions()
-// 	noProvChStatus.MarkProvisionerInstalled()
-// 	return noProvChStatus
-// }
-
-// func getChanStatusProvNotInstalled() eventingv1alpha1.ChannelStatus {
-// 	noProvChStatus := eventingv1alpha1.ChannelStatus{}
-// 	noProvChStatus.InitializeConditions()
-// 	noProvChStatus.MarkProvisionerNotInstalled(
-// 		"Provisioner not found.",
-// 		"Specified provisioner [Name:%v Kind:%v] is not installed or not controlling the channel.",
-// 		testCCPName,
-// 		testCCPKind,
-// 	)
-// 	return noProvChStatus
-// }
-
-// func getChanStatusProvUnknown() eventingv1alpha1.ChannelStatus {
-// 	noProvChStatus := eventingv1alpha1.ChannelStatus{}
-// 	noProvChStatus.InitializeConditions()
-// 	return noProvChStatus
-// }
