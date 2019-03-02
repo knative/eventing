@@ -102,6 +102,9 @@ func TestChannelInitializeConditions(t *testing.T) {
 				Type:   ChannelConditionProvisioned,
 				Status: corev1.ConditionUnknown,
 			}, {
+				Type:   ChannelConditionProvisionerInstalled,
+				Status: corev1.ConditionUnknown,
+			}, {
 				Type:   ChannelConditionReady,
 				Status: corev1.ConditionUnknown,
 			}},
@@ -121,6 +124,9 @@ func TestChannelInitializeConditions(t *testing.T) {
 			}, {
 				Type:   ChannelConditionProvisioned,
 				Status: corev1.ConditionFalse,
+			}, {
+				Type:   ChannelConditionProvisionerInstalled,
+				Status: corev1.ConditionUnknown,
 			}, {
 				Type:   ChannelConditionReady,
 				Status: corev1.ConditionUnknown,
@@ -142,11 +148,14 @@ func TestChannelInitializeConditions(t *testing.T) {
 				Type:   ChannelConditionProvisioned,
 				Status: corev1.ConditionTrue,
 			}, {
+				Type:   ChannelConditionProvisionerInstalled,
+				Status: corev1.ConditionUnknown,
+			}, {
 				Type:   ChannelConditionReady,
 				Status: corev1.ConditionUnknown,
-			}}},
-	},
-	}
+			}},
+		},
+	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
