@@ -137,7 +137,7 @@ func main() {
 	srv := &http.Server{Addr: metricsScrapeAddr}
 	http.Handle(metricsScrapePath, promhttp.Handler())
 	go func() {
-		logger.Info("Starting metrics listener at %s", metricsScrapeAddr)
+		logger.Infof("Starting metrics listener at %s", metricsScrapeAddr)
 		if err := srv.ListenAndServe(); err != nil {
 			logger.Infof("Httpserver: ListenAndServe() finished with error: %s", err)
 		}
