@@ -106,6 +106,10 @@ func MakeIngressService(b *eventingv1alpha1.Broker) *corev1.Service {
 					Port:       80,
 					TargetPort: intstr.FromInt(8080),
 				},
+				{
+					Name: "metrics",
+					Port: 9090,
+				},
 			},
 		},
 	}
