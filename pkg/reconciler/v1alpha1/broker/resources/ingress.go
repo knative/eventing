@@ -76,6 +76,16 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 									Value: args.ChannelAddress,
 								},
 							},
+							Ports: []corev1.ContainerPort{
+								{
+									ContainerPort: 8080,
+									Name:          "http",
+								},
+								{
+									ContainerPort: 9090,
+									Name:          "metrics",
+								},
+							},
 						},
 					},
 				},
