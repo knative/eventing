@@ -130,7 +130,7 @@ func getRequiredEnv(envKey string) string {
 	return val
 }
 
-// http.Handler that takes a single request in and sends it out to a single destination.
+// Handler that takes a single request in and sends it out to a single destination.
 type Handler struct {
 	receiver    *provisioners.MessageReceiver
 	dispatcher  *provisioners.MessageDispatcher
