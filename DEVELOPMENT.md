@@ -35,7 +35,7 @@ To check out this repository:
 
 1. Create your own
    [fork of this repo](https://help.github.com/articles/fork-a-repo/)
-2. Clone it to your machine:
+1. Clone it to your machine:
 
 ```shell
 mkdir -p ${GOPATH}/src/github.com/knative
@@ -127,4 +127,8 @@ ko delete -f config/
 
 ## Telemetry
 
-See [telemetry documentation](./docs/telemetry.md).
+To access Telemetry see:
+
+- [Accessing Metrics](https://github.com/knative/docs/blob/master/serving/accessing-metrics.md)
+- [Accessing Logs](https://github.com/knative/docs/blob/master/serving/accessing-logs.md)
+- [Accessing Traces](https://github.com/knative/docs/blob/master/serving/accessing-traces.md)
