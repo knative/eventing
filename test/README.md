@@ -85,7 +85,7 @@ that `$KO_DOCKER_REPO` points to a valid writable docker repo.
 ### Building the test images
 
 Note: this is only required when you run e2e tests locally with `go test`
-commands. Running tests throught e2e-tests.sh will publish the images
+commands. Running tests through e2e-tests.sh will publish the images
 automatically.
 
 The [`upload-test-images.sh`](./upload-test-images.sh) script can be used to
