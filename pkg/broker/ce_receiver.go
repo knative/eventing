@@ -50,9 +50,15 @@ type Receiver struct {
 
 	port int
 
-	httpClient *http.Client
+	httpClient HTTPDoer
 	codec      cehttp.Codec
 }
+
+type HTTPDoer interface {
+	Do(*http.Request) (*http.Response, error)
+}
+
+var _ HTTPDoer = &http.Client{}
 
 // New creates a new Receiver and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned MessageReceiver.
@@ -185,11 +191,14 @@ func (r *Receiver) decodeHTTP(headers http.Header, bodyReadCloser io.ReadCloser)
 	if err != nil {
 		return nil, err
 	}
+	if len(body) == 0 {
+		return nil, nil
+	}
+
 	msg := &cehttp.Message{
 		Header: headers,
 		Body:   body,
 	}
-
 	return r.codec.Decode(msg)
 }
 
@@ -211,7 +220,7 @@ func (r *Receiver) sendEvent(trigger provisioners.ChannelReference, event *cloud
 	}
 	subscriberURI, err := url.Parse(subscriberURIString)
 	if err != nil {
-		// sojemthing
+		r.logger.Error("Unable to parse subscriberURI", zap.Error(err), zap.String("subscriberURIString", subscriberURIString))
 		return nil, err
 	}
 

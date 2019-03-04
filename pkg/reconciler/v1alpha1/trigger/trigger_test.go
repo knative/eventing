@@ -614,11 +614,11 @@ func makeDifferentVirtualService() *istiov1alpha3.VirtualService {
 }
 
 func makeSameSubscription() *v1alpha1.Subscription {
-	return makeSubscription(makeTrigger(), makeChannel(), makeK8sService())
+	return makeSubscription(makeTrigger(), makeChannel(), makeChannel(), makeK8sService())
 }
 
 func makeDifferentSubscription() *v1alpha1.Subscription {
-	return makeSubscription(makeTrigger(), makeDifferentChannel(), makeK8sService())
+	return makeSubscription(makeTrigger(), makeChannel(), makeDifferentChannel(), makeK8sService())
 }
 
 func getOwnerReference() metav1.OwnerReference {

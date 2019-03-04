@@ -35,8 +35,8 @@ var (
 		Status: corev1.ConditionTrue,
 	}
 
-	brokerConditionChannel = duckv1alpha1.Condition{
-		Type:   BrokerConditionChannel,
+	brokerConditionTriggerChannel = duckv1alpha1.Condition{
+		Type:   BrokerConditionTriggerChannel,
 		Status: corev1.ConditionTrue,
 	}
 
@@ -71,7 +71,7 @@ func TestBrokerGetCondition(t *testing.T) {
 		bs: &BrokerStatus{
 			Conditions: []duckv1alpha1.Condition{
 				brokerConditionIngress,
-				brokerConditionChannel,
+				brokerConditionTriggerChannel,
 				brokerConditionFilter,
 			},
 		},
@@ -81,7 +81,7 @@ func TestBrokerGetCondition(t *testing.T) {
 		name: "multiple conditions, condition false",
 		bs: &BrokerStatus{
 			Conditions: []duckv1alpha1.Condition{
-				brokerConditionChannel,
+				brokerConditionTriggerChannel,
 				brokerConditionFilter,
 				brokerConditionAddressable,
 			},
@@ -123,16 +123,22 @@ func TestBrokerInitializeConditions(t *testing.T) {
 				Type:   BrokerConditionAddressable,
 				Status: corev1.ConditionUnknown,
 			}, {
-				Type:   BrokerConditionChannel,
+				Type:   BrokerConditionFilter,
 				Status: corev1.ConditionUnknown,
 			}, {
-				Type:   BrokerConditionFilter,
+				Type:   BrokerConditionIngressChannel,
 				Status: corev1.ConditionUnknown,
 			}, {
 				Type:   BrokerConditionIngress,
 				Status: corev1.ConditionUnknown,
 			}, {
+				Type:   BrokerConditionIngressSubscription,
+				Status: corev1.ConditionUnknown,
+			}, {
 				Type:   BrokerConditionReady,
+				Status: corev1.ConditionUnknown,
+			}, {
+				Type:   BrokerConditionTriggerChannel,
 				Status: corev1.ConditionUnknown,
 			}},
 		},
@@ -140,7 +146,7 @@ func TestBrokerInitializeConditions(t *testing.T) {
 		name: "one false",
 		bs: &BrokerStatus{
 			Conditions: []duckv1alpha1.Condition{{
-				Type:   BrokerConditionChannel,
+				Type:   BrokerConditionTriggerChannel,
 				Status: corev1.ConditionFalse,
 			}},
 		},
@@ -149,17 +155,23 @@ func TestBrokerInitializeConditions(t *testing.T) {
 				Type:   BrokerConditionAddressable,
 				Status: corev1.ConditionUnknown,
 			}, {
-				Type:   BrokerConditionChannel,
-				Status: corev1.ConditionFalse,
-			}, {
 				Type:   BrokerConditionFilter,
+				Status: corev1.ConditionUnknown,
+			}, {
+				Type:   BrokerConditionIngressChannel,
 				Status: corev1.ConditionUnknown,
 			}, {
 				Type:   BrokerConditionIngress,
 				Status: corev1.ConditionUnknown,
 			}, {
+				Type:   BrokerConditionIngressSubscription,
+				Status: corev1.ConditionUnknown,
+			}, {
 				Type:   BrokerConditionReady,
 				Status: corev1.ConditionUnknown,
+			}, {
+				Type:   BrokerConditionTriggerChannel,
+				Status: corev1.ConditionFalse,
 			}},
 		},
 	}, {
@@ -175,16 +187,22 @@ func TestBrokerInitializeConditions(t *testing.T) {
 				Type:   BrokerConditionAddressable,
 				Status: corev1.ConditionUnknown,
 			}, {
-				Type:   BrokerConditionChannel,
-				Status: corev1.ConditionUnknown,
-			}, {
 				Type:   BrokerConditionFilter,
 				Status: corev1.ConditionTrue,
+			}, {
+				Type:   BrokerConditionIngressChannel,
+				Status: corev1.ConditionUnknown,
 			}, {
 				Type:   BrokerConditionIngress,
 				Status: corev1.ConditionUnknown,
 			}, {
+				Type:   BrokerConditionIngressSubscription,
+				Status: corev1.ConditionUnknown,
+			}, {
 				Type:   BrokerConditionReady,
+				Status: corev1.ConditionUnknown,
+			}, {
+				Type:   BrokerConditionTriggerChannel,
 				Status: corev1.ConditionUnknown,
 			}},
 		},
@@ -202,68 +220,106 @@ func TestBrokerInitializeConditions(t *testing.T) {
 
 func TestBrokerIsReady(t *testing.T) {
 	tests := []struct {
-		name             string
-		markChannelReady bool
-		markFilterReady  bool
-		markIngressReady bool
-		address          string
-		wantReady        bool
+		name                         string
+		markIngressReady             bool
+		markTriggerChannelReady      bool
+		markIngressChannelReady      bool
+		markFilterReady              bool
+		address                      string
+		markIngressSubscriptionReady bool
+		wantReady                    bool
 	}{{
-		name:             "all happy",
-		markChannelReady: true,
-		markFilterReady:  true,
-		markIngressReady: true,
-		address:          "hostname",
-		wantReady:        true,
+		name:                         "all happy",
+		markIngressReady:             true,
+		markTriggerChannelReady:      true,
+		markIngressChannelReady:      true,
+		markFilterReady:              true,
+		address:                      "hostname",
+		markIngressSubscriptionReady: true,
+		wantReady:                    true,
 	}, {
-		name:             "channel sad",
-		markChannelReady: false,
-		markFilterReady:  true,
-		markIngressReady: true,
-		address:          "hostname",
-		wantReady:        false,
+		name:                         "ingress sad",
+		markIngressReady:             false,
+		markTriggerChannelReady:      true,
+		markIngressChannelReady:      true,
+		markFilterReady:              true,
+		address:                      "hostname",
+		markIngressSubscriptionReady: true,
+		wantReady:                    false,
 	}, {
-		name:             "filter sad",
-		markChannelReady: true,
-		markFilterReady:  false,
-		markIngressReady: true,
-		address:          "hostname",
-		wantReady:        false,
+		name:                         "trigger channel sad",
+		markIngressReady:             true,
+		markTriggerChannelReady:      false,
+		markIngressChannelReady:      true,
+		markFilterReady:              true,
+		address:                      "hostname",
+		markIngressSubscriptionReady: true,
+		wantReady:                    false,
 	}, {
-		name:             "ingress sad",
-		markChannelReady: true,
-		markFilterReady:  true,
-		markIngressReady: false,
-		address:          "hostname",
-		wantReady:        false,
+		name:                         "ingress channel sad",
+		markIngressReady:             true,
+		markTriggerChannelReady:      true,
+		markIngressChannelReady:      false,
+		markFilterReady:              true,
+		address:                      "hostname",
+		markIngressSubscriptionReady: true,
+		wantReady:                    false,
 	}, {
-		name:             "addressable sad",
-		markChannelReady: true,
-		markFilterReady:  true,
-		markIngressReady: true,
-		address:          "",
-		wantReady:        false,
+		name:                         "filter sad",
+		markIngressReady:             true,
+		markTriggerChannelReady:      true,
+		markIngressChannelReady:      true,
+		markFilterReady:              false,
+		address:                      "hostname",
+		markIngressSubscriptionReady: true,
+		wantReady:                    false,
 	}, {
-		name:             "all sad",
-		markChannelReady: false,
-		markFilterReady:  false,
-		markIngressReady: false,
-		address:          "",
-		wantReady:        false,
+		name:                         "addressable sad",
+		markIngressReady:             true,
+		markTriggerChannelReady:      true,
+		markIngressChannelReady:      true,
+		markFilterReady:              true,
+		address:                      "",
+		markIngressSubscriptionReady: true,
+		wantReady:                    false,
+	}, {
+		name:                         "ingress subscription sad",
+		markIngressReady:             true,
+		markTriggerChannelReady:      true,
+		markIngressChannelReady:      true,
+		markFilterReady:              true,
+		address:                      "hostname",
+		markIngressSubscriptionReady: false,
+		wantReady:                    false,
+	}, {
+		name:                         "all sad",
+		markIngressReady:             false,
+		markTriggerChannelReady:      false,
+		markIngressChannelReady:      true,
+		markFilterReady:              false,
+		address:                      "",
+		markIngressSubscriptionReady: true,
+		wantReady:                    false,
 	}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ts := &BrokerStatus{}
-			if test.markChannelReady {
-				ts.MarkChannelReady()
+			if test.markIngressReady {
+				ts.MarkIngressReady()
+			}
+			if test.markTriggerChannelReady {
+				ts.MarkTriggerChannelReady()
+			}
+			if test.markIngressChannelReady {
+				ts.MarkIngressChannelReady()
 			}
 			if test.markFilterReady {
 				ts.MarkFilterReady()
 			}
-			if test.markIngressReady {
-				ts.MarkIngressReady()
-			}
 			ts.SetAddress(test.address)
+			if test.markIngressSubscriptionReady {
+				ts.MarkIngressSubscriptionReady()
+			}
 			got := ts.IsReady()
 			if test.wantReady != got {
 				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)

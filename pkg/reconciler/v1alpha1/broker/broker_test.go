@@ -590,10 +590,12 @@ func makeBroker() *v1alpha1.Broker {
 func makeReadyBroker() *v1alpha1.Broker {
 	b := makeBroker()
 	b.Status.InitializeConditions()
-	b.Status.MarkChannelReady()
-	b.Status.SetAddress(fmt.Sprintf("%s-broker.%s.svc.%s", brokerName, testNS, utils.GetClusterDomainName()))
-	b.Status.MarkFilterReady()
 	b.Status.MarkIngressReady()
+	b.Status.MarkTriggerChannelReady()
+	b.Status.MarkIngressChannelReady()
+	b.Status.MarkFilterReady()
+	b.Status.SetAddress(fmt.Sprintf("%s-broker.%s.svc.%s", brokerName, testNS, utils.GetClusterDomainName()))
+	b.Status.MarkIngressSubscriptionReady()
 	return b
 }
 
