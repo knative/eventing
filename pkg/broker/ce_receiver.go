@@ -183,7 +183,10 @@ func (r *Receiver) decodeHTTPRequest(req *http.Request) (*cloudevents.Event, err
 }
 
 func (r *Receiver) decodeHTTPResponse(resp *http.Response) (*cloudevents.Event, error) {
-	return r.decodeHTTP(resp.Header, resp.Body)
+	// The HTTP Response could be anything, so just assume that if it does not parse as a
+	// CloudEvent, then it isn't a CloudEvent.
+	e, _ := r.decodeHTTP(resp.Header, resp.Body)
+	return e, nil
 }
 
 func (r *Receiver) decodeHTTP(headers http.Header, bodyReadCloser io.ReadCloser) (*cloudevents.Event, error) {
@@ -191,14 +194,11 @@ func (r *Receiver) decodeHTTP(headers http.Header, bodyReadCloser io.ReadCloser)
 	if err != nil {
 		return nil, err
 	}
-	if len(body) == 0 {
-		return nil, nil
-	}
-
 	msg := &cehttp.Message{
 		Header: headers,
 		Body:   body,
 	}
+
 	return r.codec.Decode(msg)
 }
 
