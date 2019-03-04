@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -41,8 +41,7 @@ import (
 const (
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName       = "channel-controller"
-	finalizerName             = controllerAgentName
+	controllerAgentName       = "channel-default-controller"
 	channelReconciled         = "ChannelReconciled"
 	channelUpdateStatusFailed = "ChannelUpdateStatusFailed"
 )
@@ -86,7 +85,7 @@ func ProvideController(mgr manager.Manager) (controller.Controller, error) {
 	return c, nil
 }
 
-// This detaul channel reconciler will check if the channel is being watched by provisioner's channel controller
+// This defaul channel reconciler will check if the channel is being watched by provisioner's channel controller
 // This will improve UX. See https://github.com/knative/eventing/issues/779
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	glog.Infof("Reconciling channel %v", request)
@@ -125,7 +124,7 @@ func (r *reconciler) reconcile(ch *v1alpha1.Channel) error {
 	if c.IsUnknown() {
 		ch.Status.MarkProvisionerNotInstalled(
 			"Provisioner not found.",
-			"Specified provisioner [Name:%v Kind:%v] is not installed or not controlling the channel.",
+			"Specified provisioner [Name:%s Kind:%s] is not installed or not controlling the channel.",
 			ch.Spec.Provisioner.Name,
 			ch.Spec.Provisioner.Kind,
 		)

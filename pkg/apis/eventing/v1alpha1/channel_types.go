@@ -144,7 +144,7 @@ func (cs *ChannelStatus) InitializeConditions() {
 func (cs *ChannelStatus) MarkProvisioned() {
 	chanCondSet.Manage(cs).MarkTrue(ChannelConditionProvisioned)
 
-	// MarkProvisionedNotInstalled will be set by default controller and needs to be unset by individual controllers
+	// Channel-default-controller sets ChannelConditionProvisionerInstalled=False, and it needs to be set to True by individual controllers
 	// This is done so that each individual channel controller gets it for free.
 	cs.MarkProvisionerInstalled()
 }
@@ -152,15 +152,17 @@ func (cs *ChannelStatus) MarkProvisioned() {
 // MarkNotProvisioned sets ChannelConditionProvisioned condition to False state.
 func (cs *ChannelStatus) MarkNotProvisioned(reason, messageFormat string, messageA ...interface{}) {
 	chanCondSet.Manage(cs).MarkFalse(ChannelConditionProvisioned, reason, messageFormat, messageA...)
-	// MarkProvisionedNotInstalled will be set by default controller and needs to be unset by individual controllers
+	// Channel-default-controller sets ChannelConditionProvisionerInstalled=False, and it needs to be set to True by individual controllers
 	// This is done so that each individual channel controller gets it for free.
 	cs.MarkProvisionerInstalled()
 }
 
+// MarkProvisionerInstalled sets ChannelConditionProvisionerInstalled condition to True state.
 func (cs *ChannelStatus) MarkProvisionerInstalled() {
 	chanCondSet.Manage(cs).MarkTrue(ChannelConditionProvisionerInstalled)
 }
 
+// MarkProvisionerNotInstalled sets ChannelConditionProvisionerInstalled condition to False state.
 func (cs *ChannelStatus) MarkProvisionerNotInstalled(reason, messageFormat string, messageA ...interface{}) {
 	chanCondSet.Manage(cs).MarkFalse(ChannelConditionProvisionerInstalled, reason, messageFormat, messageA...)
 }
