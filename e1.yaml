@@ -1,0 +1,8 @@
+apiVersion: eventing.knative.dev/v1alpha1
+kind: EventType
+metadata:
+  name: dev.knative.source.bitbucket.pullrequest:created
+spec:
+  source: https://api.bitbucket.org/api/2.0/pullrequests/pullrequest_id
+  schema: http://foo2.example/schema
+
