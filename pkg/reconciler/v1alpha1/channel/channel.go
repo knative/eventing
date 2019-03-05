@@ -85,7 +85,7 @@ func ProvideController(mgr manager.Manager) (controller.Controller, error) {
 	return c, nil
 }
 
-// This defaul channel reconciler will check if the channel is being watched by provisioner's channel controller
+// Reconcile will check if the channel is being watched by provisioner's channel controller
 // This will improve UX. See https://github.com/knative/eventing/issues/779
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	glog.Infof("Reconciling channel %v", request)
@@ -107,7 +107,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	err = r.reconcile(ch)
 
 	if err != nil {
-		glog.Warningf("Error reconciling channel: %v. Will retry.", err)
+		glog.Warningf("Error reconciling channel %s: %s. Will retry.", request, err)
 		r.recorder.Eventf(ch, corev1.EventTypeWarning, channelUpdateStatusFailed, "Failed to update channel status: %v", request.NamespacedName)
 		return reconcile.Result{Requeue: true}, err
 	}
@@ -117,8 +117,9 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 }
 
 func (r *reconciler) reconcile(ch *v1alpha1.Channel) error {
-	ch.Status.InitializeConditions()
-
+	// Do not Initialize() Status in channel-default-controller. It will set ChannelConditionProvisionerInstalled=True
+	// Directly call GetCondition(). If the Status was never initialized then GetCondition() will return nil and
+	// IsUnknown() will return true
 	c := ch.Status.GetCondition(v1alpha1.ChannelConditionProvisionerInstalled)
 
 	if c.IsUnknown() {

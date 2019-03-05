@@ -184,7 +184,6 @@ func Channel(name string, namespace string) *ChannelBuilder {
 
 func (cb *ChannelBuilder) WithProvInstalledStatus(provInstalledStatus corev1.ConditionStatus) *ChannelBuilder {
 	cb.Status = eventingv1alpha1.ChannelStatus{}
-	cb.Status.InitializeConditions()
 
 	switch provInstalledStatus {
 	case corev1.ConditionTrue:

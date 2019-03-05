@@ -138,23 +138,22 @@ func (cs *ChannelStatus) IsReady() bool {
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (cs *ChannelStatus) InitializeConditions() {
 	chanCondSet.Manage(cs).InitializeConditions()
+	// Channel-default-controller sets ChannelConditionProvisionerInstalled=False, and it needs to be set to True by individual controllers
+	// This is done so that each individual channel controller gets it for free.
+	// It is also implied here that the channel-default-controller never calls InitializeConditions(), while individual channel controllers
+	// call InitializeConditions() as one of the first things in its reconcile loop.
+	cs.MarkProvisionerInstalled()
 }
 
 // MarkProvisioned sets ChannelConditionProvisioned condition to True state.
 func (cs *ChannelStatus) MarkProvisioned() {
 	chanCondSet.Manage(cs).MarkTrue(ChannelConditionProvisioned)
 
-	// Channel-default-controller sets ChannelConditionProvisionerInstalled=False, and it needs to be set to True by individual controllers
-	// This is done so that each individual channel controller gets it for free.
-	cs.MarkProvisionerInstalled()
 }
 
 // MarkNotProvisioned sets ChannelConditionProvisioned condition to False state.
 func (cs *ChannelStatus) MarkNotProvisioned(reason, messageFormat string, messageA ...interface{}) {
 	chanCondSet.Manage(cs).MarkFalse(ChannelConditionProvisioned, reason, messageFormat, messageA...)
-	// Channel-default-controller sets ChannelConditionProvisionerInstalled=False, and it needs to be set to True by individual controllers
-	// This is done so that each individual channel controller gets it for free.
-	cs.MarkProvisionerInstalled()
 }
 
 // MarkProvisionerInstalled sets ChannelConditionProvisionerInstalled condition to True state.
