@@ -29,13 +29,12 @@ import (
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/pkg/signals"
 	"go.opencensus.io/exporter/prometheus"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
+	"go.opencensus.io/tag"
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-)
-
-const (
-	componentName = "broker-ingress"
 )
 
 var (
@@ -84,10 +83,11 @@ func main() {
 	}
 
 	// Metrics
-	e, err := prometheus.NewExporter(prometheus.Options{Namespace: componentName})
+	e, err := prometheus.NewExporter(prometheus.Options{Namespace: metricsNamespace})
 	if err != nil {
 		logger.Fatal("Unable to create Prometheus exporter", zap.Error(err))
 	}
+	view.RegisterExporter(e)
 	sm := http.NewServeMux()
 	sm.Handle("/metrics", e)
 	metricsSrv := &http.Server{
@@ -155,7 +155,15 @@ func NewHandler(logger *zap.Logger, destination string) *Handler {
 
 func createReceiverFunction(f *Handler) func(provisioners.ChannelReference, *provisioners.Message) error {
 	return func(_ provisioners.ChannelReference, m *provisioners.Message) error {
+		metricsCtx := context.Background()
+		defer func() {
+			stats.Record(metricsCtx, MeasureMessagesTotal.M(1))
+		}()
+
 		// TODO Filter.
+		// metricsCtx, _ = tag.New(metricsCtx, tag.Insert(TagResult, "filtered"))
+
+		metricsCtx, _ = tag.New(metricsCtx, tag.Insert(TagResult, "dispatched"))
 		return f.dispatch(m)
 	}
 }
@@ -168,9 +176,18 @@ func (f *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // dispatch takes the request, and sends it out the f.destination. If the dispatched
 // request returns successfully, then return nil. Else, return an error.
 func (f *Handler) dispatch(msg *provisioners.Message) error {
+	startTS := time.Now()
+	metricsCtx := context.Background()
+	defer func() {
+		dispatchTimeMS := int64(time.Now().Sub(startTS) / time.Millisecond)
+		stats.Record(metricsCtx, MeasureDispatchTime.M(dispatchTimeMS))
+	}()
 	err := f.dispatcher.DispatchMessage(msg, f.destination, "", provisioners.DispatchDefaults{})
 	if err != nil {
 		f.logger.Error("Error dispatching message", zap.String("destination", f.destination))
+		metricsCtx, _ = tag.New(metricsCtx, tag.Insert(TagResult, "error"))
+	} else {
+		metricsCtx, _ = tag.New(metricsCtx, tag.Insert(TagResult, "success"))
 	}
 	return err
 }
