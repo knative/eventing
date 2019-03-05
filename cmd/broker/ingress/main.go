@@ -208,22 +208,20 @@ func (r *runnableServer) Start(stopCh <-chan struct{}) error {
 	logger := r.logger.With(zap.String("address", r.s.Addr))
 	logger.Info("Listening...")
 	go func() {
-		select {
-		case <-stopCh:
-			var ctx context.Context
-			var cancel context.CancelFunc
-			if r.ShutdownTimeout > 0 {
-				ctx, cancel = context.WithTimeout(context.Background(), r.ShutdownTimeout)
-				defer cancel()
-			} else {
-				ctx = context.Background()
-			}
-			logger.Info("Shutting down...")
-			if err := r.s.Shutdown(ctx); err != nil {
-				logger.Error("Shutdown returned an error", zap.Error(err))
-			} else {
-				logger.Info("Shutdown done")
-			}
+		<-stopCh
+		var ctx context.Context
+		var cancel context.CancelFunc
+		if r.ShutdownTimeout > 0 {
+			ctx, cancel = context.WithTimeout(context.Background(), r.ShutdownTimeout)
+			defer cancel()
+		} else {
+			ctx = context.Background()
+		}
+		logger.Info("Shutting down...")
+		if err := r.s.Shutdown(ctx); err != nil {
+			logger.Error("Shutdown returned an error", zap.Error(err))
+		} else {
+			logger.Info("Shutdown done")
 		}
 	}()
 	return r.s.ListenAndServe()
