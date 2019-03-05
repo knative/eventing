@@ -87,5 +87,5 @@ The Channel Dispatcher Config Map is used to send information about Channels and
 Subscriptions from the Channel Controller to the Channel Dispatcher:
 
 ```shell
-kubectl get configmap -n knative-eventing kafka-channel-dispatcher-config-map
+kubectl get configmap -n knative-eventing kafka-channel-dispatcher
 ```
