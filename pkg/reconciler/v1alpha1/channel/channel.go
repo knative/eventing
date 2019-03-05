@@ -88,19 +88,19 @@ func ProvideController(mgr manager.Manager) (controller.Controller, error) {
 // Reconcile will check if the channel is being watched by provisioner's channel controller
 // This will improve UX. See https://github.com/knative/eventing/issues/779
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	glog.Infof("Reconciling channel %v", request)
+	glog.Infof("Reconciling channel %s", request)
 	ch := &v1alpha1.Channel{}
 
 	// Controller-runtime client Get() always deep copies the object. Hence no need to again deep copy it
 	err := r.client.Get(context.TODO(), request.NamespacedName, ch)
 
 	if errors.IsNotFound(err) {
-		glog.Errorf("could not find channel %v\n", request)
+		glog.Errorf("could not find channel %s\n", request)
 		return reconcile.Result{}, nil
 	}
 
 	if err != nil {
-		glog.Errorf("could not fetch channel %v for %+v\n", err, request)
+		glog.Errorf("could not fetch channel %s: %s\n", request, err)
 		return reconcile.Result{}, err
 	}
 
@@ -108,11 +108,11 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	if err != nil {
 		glog.Warningf("Error reconciling channel %s: %s. Will retry.", request, err)
-		r.recorder.Eventf(ch, corev1.EventTypeWarning, channelUpdateStatusFailed, "Failed to update channel status: %v", request.NamespacedName)
+		r.recorder.Eventf(ch, corev1.EventTypeWarning, channelUpdateStatusFailed, "Failed to update channel status: %s", request)
 		return reconcile.Result{Requeue: true}, err
 	}
-	glog.Infof("Successfully reconciled channel %v", request.NamespacedName)
-	r.recorder.Eventf(ch, corev1.EventTypeNormal, channelReconciled, "Channel reconciled: %v", request.NamespacedName)
+	glog.Infof("Successfully reconciled channel %s", request)
+	r.recorder.Eventf(ch, corev1.EventTypeNormal, channelReconciled, "Channel reconciled: %s", request)
 	return reconcile.Result{Requeue: false}, nil
 }
 
