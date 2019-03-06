@@ -148,7 +148,6 @@ func (cs *ChannelStatus) InitializeConditions() {
 // MarkProvisioned sets ChannelConditionProvisioned condition to True state.
 func (cs *ChannelStatus) MarkProvisioned() {
 	chanCondSet.Manage(cs).MarkTrue(ChannelConditionProvisioned)
-
 }
 
 // MarkNotProvisioned sets ChannelConditionProvisioned condition to False state.

@@ -62,8 +62,7 @@ func TestAllCases(t *testing.T) {
 			WantErr:      false,
 			WantResult:   reconcile.Result{},
 			ReconcileKey: fmt.Sprintf("%v/%v", "chan-1", testNamespace),
-		},
-		{
+		}, {
 			Name:         "Orphaned channel",
 			WantErr:      false,
 			WantResult:   reconcile.Result{},
@@ -81,8 +80,7 @@ func TestAllCases(t *testing.T) {
 			WantEvent: []corev1.Event{
 				events[channelReconciled],
 			},
-		},
-		{
+		}, {
 			Name:         "Non-oprphaned channel test 1",
 			WantErr:      false,
 			WantResult:   reconcile.Result{},
@@ -100,8 +98,7 @@ func TestAllCases(t *testing.T) {
 			WantEvent: []corev1.Event{
 				events[channelReconciled],
 			},
-		},
-		{
+		}, {
 			Name:         "Non-oprphaned channel test 2",
 			WantErr:      false,
 			WantResult:   reconcile.Result{},
@@ -119,8 +116,7 @@ func TestAllCases(t *testing.T) {
 			WantEvent: []corev1.Event{
 				events[channelReconciled],
 			},
-		},
-		{
+		}, {
 			Name:         "Fail orphaned channel status update",
 			WantErr:      true,
 			WantErrMsg:   "Update failed",
