@@ -25,7 +25,6 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -117,9 +116,10 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 // boolean indicates if this Channel should be immediately requeued for another reconcile loop. The
 // returned error indicates an error during reconciliation.
 func (r *reconciler) reconcile(ctx context.Context, channel *eventingv1alpha1.Channel) (bool, error) {
+	var err error
 
 	// We always need to sync the Channel config, so do it first.
-	if err := r.syncChannelConfig(ctx); err != nil {
+	if err = r.syncChannelConfig(ctx); err != nil {
 		r.logger.Info("error updating syncing the Channel config", zap.Error(err))
 		return false, err
 	}
@@ -130,7 +130,6 @@ func (r *reconciler) reconcile(ctx context.Context, channel *eventingv1alpha1.Ch
 	// used to pass a fake admin client in the tests.
 	kafkaClusterAdmin := r.kafkaClusterAdmin
 	if kafkaClusterAdmin == nil {
-		var err error
 		kafkaClusterAdmin, err = createKafkaAdminClient(r.config)
 		if err != nil {
 			r.logger.Fatal("unable to build kafka admin client", zap.Error(err))
@@ -139,14 +138,8 @@ func (r *reconciler) reconcile(ctx context.Context, channel *eventingv1alpha1.Ch
 	}
 
 	// See if the channel has been deleted
-	accessor, err := meta.Accessor(channel)
-	if err != nil {
-		r.logger.Info("failed to get metadata", zap.Error(err))
-		return false, err
-	}
-	deletionTimestamp := accessor.GetDeletionTimestamp()
-	if deletionTimestamp != nil {
-		r.logger.Info(fmt.Sprintf("DeletionTimestamp: %v", deletionTimestamp))
+	if channel.DeletionTimestamp != nil {
+		r.logger.Info(fmt.Sprintf("DeletionTimestamp: %v", channel.DeletionTimestamp))
 		if err = r.deprovisionChannel(channel, kafkaClusterAdmin); err != nil {
 			return false, err
 		}
