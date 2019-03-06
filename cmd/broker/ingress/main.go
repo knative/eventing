@@ -23,6 +23,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -43,6 +44,7 @@ var (
 
 	readTimeout  = 1 * time.Minute
 	writeTimeout = 1 * time.Minute
+	wg           sync.WaitGroup
 )
 
 func main() {
@@ -75,8 +77,10 @@ func main() {
 	}
 
 	err = mgr.Add(&runnableServer{
-		logger: logger,
-		s:      s,
+		logger:          logger,
+		s:               s,
+		ShutdownTimeout: writeTimeout,
+		wg:              &wg,
 	})
 	if err != nil {
 		logger.Fatal("Unable to add runnableServer", zap.Error(err))
@@ -102,6 +106,7 @@ func main() {
 		s:               metricsSrv,
 		logger:          logger,
 		ShutdownTimeout: writeTimeout,
+		wg:              &wg,
 	})
 	if err != nil {
 		logger.Fatal("Unable to add metrics runnableServer", zap.Error(err))
@@ -114,12 +119,8 @@ func main() {
 		logger.Error("manager.Start() returned an error", zap.Error(err))
 	}
 	logger.Info("Exiting...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), writeTimeout)
-	defer cancel()
-	if err = s.Shutdown(ctx); err != nil {
-		logger.Error("Shutdown returned an error", zap.Error(err))
-	}
+	wg.Wait()
+	logger.Info("Done.")
 }
 
 func getRequiredEnv(envKey string) string {
@@ -202,13 +203,31 @@ type runnableServer struct {
 	// shutdown will never time out.
 	// TODO alternative: zero shuts down immediately, negative means infinite
 	ShutdownTimeout time.Duration
+	// wg is a temporary workaround for Manager returning immediately without
+	// waiting for Runnables to stop. See
+	// https://github.com/kubernetes-sigs/controller-runtime/issues/350.
+	wg *sync.WaitGroup
 }
 
 func (r *runnableServer) Start(stopCh <-chan struct{}) error {
 	logger := r.logger.With(zap.String("address", r.s.Addr))
 	logger.Info("Listening...")
+
+	errCh := make(chan error)
+
 	go func() {
-		<-stopCh
+		r.wg.Add(1)
+		err := r.s.ListenAndServe()
+		if err != http.ErrServerClosed {
+			errCh <- err
+		}
+	}()
+
+	var err error
+	select {
+	case err = <-errCh:
+		logger.Error("Error running HTTP server", zap.Error(err))
+	case <-stopCh:
 		var ctx context.Context
 		var cancel context.CancelFunc
 		if r.ShutdownTimeout > 0 {
@@ -218,11 +237,12 @@ func (r *runnableServer) Start(stopCh <-chan struct{}) error {
 			ctx = context.Background()
 		}
 		logger.Info("Shutting down...")
-		if err := r.s.Shutdown(ctx); err != nil {
+		if err = r.s.Shutdown(ctx); err != nil {
 			logger.Error("Shutdown returned an error", zap.Error(err))
 		} else {
 			logger.Info("Shutdown done")
 		}
-	}()
-	return r.s.ListenAndServe()
+	}
+	r.wg.Done()
+	return err
 }
