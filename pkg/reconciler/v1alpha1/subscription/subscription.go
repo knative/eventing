@@ -150,10 +150,8 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 		return nil
 	}
 
-	var err error
-
 	// Verify that `channel` exists.
-	_, err = r.fetchObjectReference(subscription.Namespace, &subscription.Spec.Channel)
+	_, err := r.fetchObjectReference(subscription.Namespace, &subscription.Spec.Channel)
 	if err != nil {
 		glog.Warningf("Failed to validate `channel` exists: %+v, %v", subscription.Spec.Channel, err)
 		r.recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFetchFailed, "Failed to validate spec.channel exists: %v", err)
