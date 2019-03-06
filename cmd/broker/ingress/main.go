@@ -164,8 +164,8 @@ func createReceiverFunction(f *Handler) func(provisioners.ChannelReference, *pro
 			stats.Record(metricsCtx, MeasureMessagesTotal.M(1))
 		}()
 
-		// TODO Filter.
-		// metricsCtx, _ = tag.New(metricsCtx, tag.Insert(TagResult, "filtered"))
+		// TODO Filter. When a message is filtered, add the filtered tag to the
+		// metrics context.
 
 		metricsCtx, _ = tag.New(metricsCtx, tag.Insert(TagResult, "dispatched"))
 		return f.dispatch(m)
