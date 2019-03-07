@@ -77,7 +77,7 @@ type ChannelSpec struct {
 	Subscribable *eventingduck.Subscribable `json:"subscribable,omitempty"`
 }
 
-var chanCondSet = duckv1alpha1.NewLivingConditionSet(ChannelConditionProvisioned, ChannelConditionAddressable)
+var chanCondSet = duckv1alpha1.NewLivingConditionSet(ChannelConditionProvisioned, ChannelConditionAddressable, ChannelConditionProvisionerInstalled)
 
 // ChannelStatus represents the current state of a Channel.
 type ChannelStatus struct {
@@ -119,6 +119,10 @@ const (
 	// ChannelConditionAddressable has status true when this Channel meets
 	// the Addressable contract and has a non-empty hostname.
 	ChannelConditionAddressable duckv1alpha1.ConditionType = "Addressable"
+
+	// ChannelConditionProvisionerFound has status true when the channel is being watched
+	// by the provisioner's channel controller (in other words, the provisioner is installed)
+	ChannelConditionProvisionerInstalled duckv1alpha1.ConditionType = "ProvisionerInstalled"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
@@ -134,6 +138,11 @@ func (cs *ChannelStatus) IsReady() bool {
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (cs *ChannelStatus) InitializeConditions() {
 	chanCondSet.Manage(cs).InitializeConditions()
+	// Channel-default-controller sets ChannelConditionProvisionerInstalled=False, and it needs to be set to True by individual controllers
+	// This is done so that each individual channel controller gets it for free.
+	// It is also implied here that the channel-default-controller never calls InitializeConditions(), while individual channel controllers
+	// call InitializeConditions() as one of the first things in its reconcile loop.
+	cs.MarkProvisionerInstalled()
 }
 
 // MarkProvisioned sets ChannelConditionProvisioned condition to True state.
@@ -144,6 +153,16 @@ func (cs *ChannelStatus) MarkProvisioned() {
 // MarkNotProvisioned sets ChannelConditionProvisioned condition to False state.
 func (cs *ChannelStatus) MarkNotProvisioned(reason, messageFormat string, messageA ...interface{}) {
 	chanCondSet.Manage(cs).MarkFalse(ChannelConditionProvisioned, reason, messageFormat, messageA...)
+}
+
+// MarkProvisionerInstalled sets ChannelConditionProvisionerInstalled condition to True state.
+func (cs *ChannelStatus) MarkProvisionerInstalled() {
+	chanCondSet.Manage(cs).MarkTrue(ChannelConditionProvisionerInstalled)
+}
+
+// MarkProvisionerNotInstalled sets ChannelConditionProvisionerInstalled condition to False state.
+func (cs *ChannelStatus) MarkProvisionerNotInstalled(reason, messageFormat string, messageA ...interface{}) {
+	chanCondSet.Manage(cs).MarkFalse(ChannelConditionProvisionerInstalled, reason, messageFormat, messageA...)
 }
 
 // SetAddress makes this Channel addressable by setting the hostname. It also
