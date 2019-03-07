@@ -51,7 +51,13 @@ spec:
 
 ## Usage
 
-### Annotation
+### Broker
+
+There are two ways to create a Broker, via [namespace annotation](#annotation) or [manual setup](#manual-setup).
+
+Normally the [namespace annotation](#annotation) is used to do this setup.
+
+#### Annotation
 
 The easiest way to get started, is to annotate your namespace (replace `default`
 with the desired namespace):
@@ -64,6 +70,45 @@ This should automatically create the `default` `Broker` in that namespace.
 
 ```shell
 kubectl -n default get broker default
+```
+
+#### Manual Setup
+
+In order to setup a `Broker` manually, we must first create the required
+`ServiceAccount` and give it the proper RBAC permissions. This setup is required
+once per namespace. These instructions will use the `default` namespace, but you
+can replace it with any namespace you want to install a `Broker` into.
+
+Create the `ServiceAccount`.
+
+```shell
+kubectl -n default create serviceaccount eventing-broker-filter
+```
+
+Then give it the needed RBAC permissions:
+
+```shell
+kubectl -n default create rolebinding eventing-broker-filter \
+  --clusterrole=eventing-broker-filter \
+  --user=eventing-broker-filter
+```
+
+Note that the previous commands uses three different objects, all named
+`eventing-broker-filter`. The `ClusterRole` is installed with Knative Eventing
+[here](../../config/200-broker-clusterrole.yaml). The `ServiceAccount` was
+created two commands prior. The `RoleBinding` is created with this command.
+
+Now we can create the `Broker`. Note that this example uses the name `default`,
+but could be replaced by any other valid name.
+
+```shell
+cat << EOF | kubectl apply -f -
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Broker
+metadata:
+  namespace: default
+  name: default
+EOF
 ```
 
 ### Subscriber
