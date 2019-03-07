@@ -75,6 +75,10 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 									Name:  "CHANNEL",
 									Value: args.ChannelAddress,
 								},
+								{
+									Name:  "BROKER",
+									Value: args.Broker.Name,
+								},
 							},
 							Ports: []corev1.ContainerPort{
 								{

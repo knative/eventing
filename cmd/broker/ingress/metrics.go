@@ -50,6 +50,10 @@ var (
 
 	// TagResult is a tag key referring to the observed result of an operation.
 	TagResult = mustNewTagKey("result")
+
+	// TagBroker is a tag key referring to the Broker name serviced by this
+	// ingress process.
+	TagBroker = mustNewTagKey("broker")
 )
 
 func init() {
@@ -60,13 +64,13 @@ func init() {
 			Name:        "messages_total",
 			Measure:     MeasureMessagesTotal,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{TagResult},
+			TagKeys:     []tag.Key{TagResult, TagBroker},
 		},
 		&view.View{
 			Name:        "dispatch_time",
 			Measure:     MeasureDispatchTime,
 			Aggregation: view.Distribution(10, 100, 1000, 10000),
-			TagKeys:     []tag.Key{TagResult},
+			TagKeys:     []tag.Key{TagResult, TagBroker},
 		},
 	)
 	if err != nil {

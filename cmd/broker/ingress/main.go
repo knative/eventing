@@ -47,6 +47,8 @@ var (
 	readTimeout  = 1 * time.Minute
 	writeTimeout = 1 * time.Minute
 	wg           sync.WaitGroup
+	// brokerName is used to tag metrics.
+	brokerName string
 )
 
 func main() {
@@ -68,6 +70,8 @@ func main() {
 	}
 
 	c := getRequiredEnv("CHANNEL")
+
+	brokerName, _ = os.LookupEnv("BROKER")
 
 	h := NewHandler(logger, c)
 
@@ -160,11 +164,15 @@ func NewHandler(logger *zap.Logger, destination string) *Handler {
 func createReceiverFunction(f *Handler) func(provisioners.ChannelReference, *provisioners.Message) error {
 	return func(_ provisioners.ChannelReference, m *provisioners.Message) error {
 		metricsCtx := context.Background()
+		if brokerName != "" {
+			metricsCtx, _ = tag.New(metricsCtx, tag.Insert(TagBroker, brokerName))
+		}
+
 		defer func() {
 			stats.Record(metricsCtx, MeasureMessagesTotal.M(1))
 		}()
 
-		// TODO Filter. When a message is filtered, add the filtered tag to the
+		// TODO Filter. When a message is filtered, add the `filtered` tag to the
 		// metrics context.
 
 		metricsCtx, _ = tag.New(metricsCtx, tag.Insert(TagResult, "dispatched"))
@@ -182,6 +190,9 @@ func (f *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (f *Handler) dispatch(msg *provisioners.Message) error {
 	startTS := time.Now()
 	metricsCtx := context.Background()
+	if brokerName != "" {
+		metricsCtx, _ = tag.New(metricsCtx, tag.Insert(TagBroker, brokerName))
+	}
 	defer func() {
 		dispatchTimeMS := int64(time.Now().Sub(startTS) / time.Millisecond)
 		stats.Record(metricsCtx, MeasureDispatchTime.M(dispatchTimeMS))
