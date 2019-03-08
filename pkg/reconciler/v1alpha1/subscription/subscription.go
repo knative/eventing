@@ -21,13 +21,6 @@ import (
 	"fmt"
 	"net/url"
 
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-
 	"github.com/golang/glog"
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -42,8 +35,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
@@ -96,9 +95,10 @@ func ProvideController(mgr manager.Manager) (controller.Controller, error) {
 // converge the two. It then updates the Status block of the Subscription resource
 // with the current status of the resource.
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	ctx := context.TODO()
 	glog.Infof("Reconciling subscription %v", request)
 	subscription := &v1alpha1.Subscription{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, subscription)
+	err := r.client.Get(ctx, request.NamespacedName, subscription)
 
 	if errors.IsNotFound(err) {
 		glog.Errorf("could not find subscription %v\n", request)
@@ -112,7 +112,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	// Reconcile this copy of the Subscription and then write back any status
 	// updates regardless of whether the reconcile error out.
-	err = r.reconcile(subscription)
+	err = r.reconcile(ctx, subscription)
 	if err != nil {
 		glog.Warningf("Error reconciling Subscription: %v", err)
 	} else {
@@ -120,7 +120,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		r.recorder.Eventf(subscription, corev1.EventTypeNormal, subscriptionReconciled, "Subscription reconciled: %q", subscription.Name)
 	}
 
-	if _, updateStatusErr := r.updateStatus(subscription.DeepCopy()); updateStatusErr != nil {
+	if _, updateStatusErr := r.updateStatus(ctx, subscription.DeepCopy()); updateStatusErr != nil {
 		glog.Warningf("Failed to update subscription status: %v", updateStatusErr)
 		r.recorder.Eventf(subscription, corev1.EventTypeWarning, subscriptionUpdateStatusFailed, "Failed to update Subscription's status: %v", err)
 		return reconcile.Result{}, updateStatusErr
@@ -130,7 +130,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	return reconcile.Result{}, err
 }
 
-func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
+func (r *reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subscription) error {
 	subscription.Status.InitializeConditions()
 
 	// See if the subscription has been deleted
@@ -139,7 +139,7 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 		// If the subscription is Ready, then we have to remove it
 		// from the channel's subscriber list.
 		if subscription.Status.IsReady() {
-			err := r.syncPhysicalChannel(subscription, true)
+			err := r.syncPhysicalChannel(ctx, subscription, true)
 			if err != nil {
 				glog.Warningf("Failed to sync physical from Channel : %s", err)
 				r.recorder.Eventf(subscription, corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
@@ -158,7 +158,7 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 		return err
 	}
 
-	if subscriberURI, err := ResolveSubscriberSpec(context.TODO(), r.client, r.dynamicClient, subscription.Namespace, subscription.Spec.Subscriber); err != nil {
+	if subscriberURI, err := ResolveSubscriberSpec(ctx, r.client, r.dynamicClient, subscription.Namespace, subscription.Spec.Subscriber); err != nil {
 		glog.Warningf("Failed to resolve Subscriber %+v : %s", *subscription.Spec.Subscriber, err)
 		r.recorder.Eventf(subscription, corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
 		return err
@@ -181,7 +181,7 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 
 	// Ok, now that we have the Channel and at least one of the Call/Result, let's reconcile
 	// the Channel with this information.
-	err = r.syncPhysicalChannel(subscription, false)
+	err = r.syncPhysicalChannel(ctx, subscription, false)
 	if err != nil {
 		glog.Warningf("Failed to sync physical Channel : %s", err)
 		r.recorder.Eventf(subscription, corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
@@ -202,11 +202,11 @@ func isNilOrEmptyReply(reply *v1alpha1.ReplyStrategy) bool {
 }
 
 // updateStatus may in fact update the subscription's finalizers in addition to the status
-func (r *reconciler) updateStatus(subscription *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
+func (r *reconciler) updateStatus(ctx context.Context, subscription *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
 	objectKey := client.ObjectKey{Namespace: subscription.Namespace, Name: subscription.Name}
 	latestSubscription := &v1alpha1.Subscription{}
 
-	if err := r.client.Get(context.TODO(), objectKey, latestSubscription); err != nil {
+	if err := r.client.Get(ctx, objectKey, latestSubscription); err != nil {
 		return nil, err
 	}
 
@@ -214,7 +214,7 @@ func (r *reconciler) updateStatus(subscription *v1alpha1.Subscription) (*v1alpha
 
 	if !equality.Semantic.DeepEqual(latestSubscription.Finalizers, subscription.Finalizers) {
 		latestSubscription.SetFinalizers(subscription.ObjectMeta.Finalizers)
-		if err := r.client.Update(context.TODO(), latestSubscription); err != nil {
+		if err := r.client.Update(ctx, latestSubscription); err != nil {
 			return nil, err
 		}
 		subscriptionChanged = true
@@ -227,13 +227,13 @@ func (r *reconciler) updateStatus(subscription *v1alpha1.Subscription) (*v1alpha
 	if subscriptionChanged {
 		// Refetch
 		latestSubscription = &v1alpha1.Subscription{}
-		if err := r.client.Get(context.TODO(), objectKey, latestSubscription); err != nil {
+		if err := r.client.Get(ctx, objectKey, latestSubscription); err != nil {
 			return nil, err
 		}
 	}
 
 	latestSubscription.Status = subscription.Status
-	if err := r.client.Status().Update(context.TODO(), latestSubscription); err != nil {
+	if err := r.client.Status().Update(ctx, latestSubscription); err != nil {
 		return nil, err
 	}
 
@@ -333,10 +333,10 @@ func domainToURL(domain string) string {
 	return u.String()
 }
 
-func (r *reconciler) syncPhysicalChannel(sub *v1alpha1.Subscription, isDeleted bool) error {
+func (r *reconciler) syncPhysicalChannel(ctx context.Context, sub *v1alpha1.Subscription, isDeleted bool) error {
 	glog.Infof("Reconciling Physical From Channel: %+v", sub)
 
-	subs, err := r.listAllSubscriptionsWithPhysicalChannel(sub)
+	subs, err := r.listAllSubscriptionsWithPhysicalChannel(ctx, sub)
 	if err != nil {
 		glog.Infof("Unable to list all subscriptions with physical channel: %+v", err)
 		return err
@@ -360,7 +360,7 @@ func (r *reconciler) syncPhysicalChannel(sub *v1alpha1.Subscription, isDeleted b
 	return nil
 }
 
-func (r *reconciler) listAllSubscriptionsWithPhysicalChannel(sub *v1alpha1.Subscription) ([]v1alpha1.Subscription, error) {
+func (r *reconciler) listAllSubscriptionsWithPhysicalChannel(ctx context.Context, sub *v1alpha1.Subscription) ([]v1alpha1.Subscription, error) {
 	subs := make([]v1alpha1.Subscription, 0)
 
 	opts := &client.ListOptions{
@@ -369,7 +369,6 @@ func (r *reconciler) listAllSubscriptionsWithPhysicalChannel(sub *v1alpha1.Subsc
 		// into opts.Raw.Continue.
 		Raw: &metav1.ListOptions{},
 	}
-	ctx := context.TODO()
 	for {
 		sl := &v1alpha1.SubscriptionList{}
 		err := r.client.List(ctx, opts, sl)
