@@ -16,9 +16,14 @@ limitations under the License.
 
 package logconfig
 
+import (
+	"fmt"
+	"os"
+)
+
 const (
-	// ConfigName is the name of the config map used for knative-eventing logging config.
-	ConfigName = "config-logging"
+	// ConfigMapNameEnv is the environment value to get the name of the config map used for knative-eventing logging config.
+	ConfigMapNameEnv = "CONFIG_LOGGING_NAME"
 
 	// Named Loggers are used to override the default log level. config-logging.yaml will use the follow:
 	//
@@ -31,3 +36,19 @@ const (
 	// Webhook is the name of the override key used inside of the logging config for Webhook Controller.
 	Webhook = "webhook"
 )
+
+func ConfigMapName() string {
+	if cm := os.Getenv(ConfigMapNameEnv); cm != "" {
+		return cm
+	}
+
+	panic(fmt.Sprintf(`The environment variable %q is not set
+
+If this is a process running on Kubernetes, then it should be using the downward
+API to initialize this variable via:
+
+  env:
+  - name: CONFIG_LOGGING_NAME
+    value: config-logging
+`, ConfigMapNameEnv))
+}
