@@ -49,9 +49,9 @@ const (
 	v1EventId     = "Ce-Eventid"
 	v1EventType   = "Ce-Eventtype"
 	v1EventSource = "Ce-Source"
-	v2EventId     = "ce-id"
-	v2EventType   = "ce-type"
-	v2EventSource = "ce-source"
+	v2EventId     = "Ce-Id"
+	v2EventType   = "Ce-Type"
+	v2EventSource = "Ce-Source"
 )
 
 var (
