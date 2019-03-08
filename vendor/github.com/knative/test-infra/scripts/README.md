@@ -132,7 +132,7 @@ This is a helper script for Knative E2E test scripts. To use it:
 
 1. [optional] Write the `dump_extra_cluster_state()` function. It will be
    called when a test fails, and can dump extra information about the current state
-   of the cluster (tipically using `kubectl`).
+   of the cluster (typically using `kubectl`).
 
 1. [optional] Write the `parse_flags()` function. It will be called whenever an
    unrecognized flag is passed to the script, allowing you to define your own flags.
