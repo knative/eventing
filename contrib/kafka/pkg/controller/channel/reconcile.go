@@ -43,11 +43,16 @@ import (
 const (
 	finalizerName = controllerAgentName
 
+	// DefaultNumPartitions defines the default number of partitions
 	DefaultNumPartitions = 1
+
+	// DefaultReplicationFactor defines the default number of replications
+	DefaultReplicationFactor = 1
 )
 
 type channelArgs struct {
-	NumPartitions int32
+	NumPartitions     int32
+	ReplicationFactor int16
 }
 
 // Reconcile compares the actual state with the desired, and attempts to
@@ -206,8 +211,12 @@ func (r *reconciler) provisionChannel(channel *eventingv1alpha1.Channel, kafkaCl
 		arguments.NumPartitions = DefaultNumPartitions
 	}
 
+	if arguments.ReplicationFactor == 0 {
+		arguments.ReplicationFactor = DefaultReplicationFactor
+	}
+
 	err := kafkaClusterAdmin.CreateTopic(topicName, &sarama.TopicDetail{
-		ReplicationFactor: 1,
+		ReplicationFactor: arguments.ReplicationFactor,
 		NumPartitions:     arguments.NumPartitions,
 	}, false)
 	if err == sarama.ErrTopicAlreadyExists {
