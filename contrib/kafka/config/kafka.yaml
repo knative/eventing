@@ -77,6 +77,14 @@ rules:
       - watch
       - create
       - update
+  - apiGroups:
+      - "" # Core API Group.
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+      - update
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1
