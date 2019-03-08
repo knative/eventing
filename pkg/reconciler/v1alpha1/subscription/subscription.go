@@ -67,17 +67,19 @@ type reconciler struct {
 	restConfig    *rest.Config
 	dynamicClient dynamic.Interface
 	recorder      record.EventRecorder
+	logger        *zap.Logger
 }
 
 // Verify the struct implements reconcile.Reconciler
 var _ reconcile.Reconciler = &reconciler{}
 
 // ProvideController returns a Subscription controller.
-func ProvideController(mgr manager.Manager) (controller.Controller, error) {
+func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Subscriptions.
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: &reconciler{
 			recorder: mgr.GetRecorder(controllerAgentName),
+			logger:   logger,
 		},
 	})
 	if err != nil {
@@ -96,7 +98,7 @@ func ProvideController(mgr manager.Manager) (controller.Controller, error) {
 // converge the two. It then updates the Status block of the Subscription resource
 // with the current status of the resource.
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	ctx := logging.With(context.TODO(), zap.Any("request", request))
+	ctx := logging.WithLogger(context.TODO(), r.logger.With(zap.Any("request", request)))
 	logging.FromContext(ctx).Debug("Reconciling Subscription")
 	subscription := &v1alpha1.Subscription{}
 	err := r.client.Get(ctx, request.NamespacedName, subscription)
