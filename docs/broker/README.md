@@ -264,11 +264,11 @@ reconciles:
 1. The 'filter' `Deployment`. The `Deployment` runs
    [cmd/broker/filter](../../cmd/broker/filter). Its purpose is the data plane
    for all `Trigger`s related to this `Broker`.
-   -  This piece is very similar to the existing Channel dispatchers, in that
-      all `Trigger`s for a given `Broker` route to this single `Deployment`.
-      The code inspects the Host header to determine which `Trigger` the
-      request is related to and then carries it out.
-   -  Internally this binary uses the [pkg/broker](../../pkg/broker) library.
+   - This piece is very similar to the existing Channel dispatchers, in that
+     all `Trigger`s for a given `Broker` route to this single `Deployment`.
+     The code inspects the Host header to determine which `Trigger` the
+     request is related to and then carries it out.
+   - Internally this binary uses the [pkg/broker](../../pkg/broker) library.
 1. The 'filter' Kubernetes `Service`. This `Service` points to the 'filter'
    `Deployment`.
 1. The 'ingress' `Deployment`. The `Deployment` runs
@@ -285,13 +285,13 @@ reconciles:
 it reconciles:
 
 1. Determines the subscriber's URI.
-   -  Currently uses the same logic as the `Subscription` Reconciler, so
-      supports Addressables and Kubernetes `Service`s.
+   - Currently uses the same logic as the `Subscription` Reconciler, so
+     supports Addressables and Kubernetes `Service`s.
 1. Creates a Kubernetes `Service` and Istio `VirtualService` pair. This allows
    all Istio enabled `Pod`s to send to the `Trigger`'s address.
-   -  This is the same as the current `Channel` implementation. The `Service`
-      points nowhere. The `VirtualService` reroutes requests that originally
-      went to the `Service`, to instead go to the `Broker`'s 'filter'
-      `Service`.
+   - This is the same as the current `Channel` implementation. The `Service`
+     points nowhere. The `VirtualService` reroutes requests that originally
+     went to the `Service`, to instead go to the `Broker`'s 'filter'
+     `Service`.
 1. Creates `Subscription` from the `Broker`'s 'everything' `Channel` to the
    `Trigger`'s Kubernetes `Service`.
