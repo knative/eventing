@@ -21,5 +21,18 @@ subjects:
     namespace: knative-eventing
 roleRef:
   kind: ClusterRole
-  name: cluster-admin
+  name: knative-eventing-controller
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eventing-webhook-admin
+subjects:
+  - kind: ServiceAccount
+    name: eventing-webhook
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: knative-eventing-webhook
   apiGroup: rbac.authorization.k8s.io

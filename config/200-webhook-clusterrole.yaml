@@ -1,0 +1,28 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: knative-eventing-webhook
+rules:
+  # For watching logging configuration and getting certs
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+  # For manipulating certs into secrets
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "create"]
+  # For getting our Deployment so we can decorate with ownerref
+  - apiGroups: ["extensions"]
+    resources: ["deployments"]
+    verbs: ["get"]
+  # For actually registering our webhook
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["mutatingwebhookconfigurations"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+  # Our own resources and statuses we care about
+  - apiGroups: ["eventing.knative.dev"]
+    resources: ["channels", "clusterchannelprovisioners", "subscriptions"]
+    verbs: ["get", "list", "create", "watch"]
+  - apiGroups: ["eventing.knative.dev"]
+    resources: ["channels/status", "clusterchannelprovisioners/status", "subscriptions/status"]
+    verbs: ["get", "list", "create", "watch"]
