@@ -2,9 +2,13 @@ package dispatcher
 
 import (
 	"errors"
+	"fmt"
+	"github.com/bsm/sarama-cluster"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/Shopify/sarama"
@@ -22,11 +26,16 @@ import (
 )
 
 type mockConsumer struct {
-	message chan *sarama.ConsumerMessage
+	message    chan *sarama.ConsumerMessage
+	partitions chan cluster.PartitionConsumer
 }
 
 func (c *mockConsumer) Messages() <-chan *sarama.ConsumerMessage {
 	return c.message
+}
+
+func (c *mockConsumer) Partitions() <-chan cluster.PartitionConsumer {
+	return c.partitions
 }
 
 func (c *mockConsumer) Close() error {
@@ -37,27 +46,138 @@ func (c *mockConsumer) MarkOffset(msg *sarama.ConsumerMessage, metadata string) 
 	return
 }
 
+type mockPartitionConsumer struct {
+	highWaterMarkOffset int64
+	l                   sync.Mutex
+	topic               string
+	partition           int32
+	offset              int64
+	messages            chan *sarama.ConsumerMessage
+	errors              chan *sarama.ConsumerError
+	singleClose         sync.Once
+	consumed            bool
+}
+
+// AsyncClose implements the AsyncClose method from the sarama.PartitionConsumer interface.
+func (pc *mockPartitionConsumer) AsyncClose() {
+	pc.singleClose.Do(func() {
+		close(pc.messages)
+		close(pc.errors)
+	})
+}
+
+// Close implements the Close method from the sarama.PartitionConsumer interface. It will
+// verify whether the partition consumer was actually started.
+func (pc *mockPartitionConsumer) Close() error {
+	if !pc.consumed {
+		return fmt.Errorf("Expectations set on %s/%d, but no partition consumer was started.", pc.topic, pc.partition)
+	}
+	pc.AsyncClose()
+	var (
+		closeErr error
+		wg       sync.WaitGroup
+	)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		var errs = make(sarama.ConsumerErrors, 0)
+		for err := range pc.errors {
+			errs = append(errs, err)
+		}
+		if len(errs) > 0 {
+			closeErr = errs
+		}
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for range pc.messages {
+			// drain
+		}
+	}()
+	wg.Wait()
+	return closeErr
+}
+
+// Errors implements the Errors method from the sarama.PartitionConsumer interface.
+func (pc *mockPartitionConsumer) Errors() <-chan *sarama.ConsumerError {
+	return pc.errors
+}
+
+// Messages implements the Messages method from the sarama.PartitionConsumer interface.
+func (pc *mockPartitionConsumer) Messages() <-chan *sarama.ConsumerMessage {
+	return pc.messages
+}
+
+func (pc *mockPartitionConsumer) HighWaterMarkOffset() int64 {
+	return atomic.LoadInt64(&pc.highWaterMarkOffset) + 1
+}
+
+func (pc *mockPartitionConsumer) Topic() string {
+	return pc.topic
+}
+
+// Partition returns the consumed partition
+func (pc *mockPartitionConsumer) Partition() int32 {
+	return pc.partition
+}
+
+// InitialOffset returns the offset used for creating the PartitionConsumer instance.
+// The returned offset can be a literal offset, or OffsetNewest, or OffsetOldest
+func (pc *mockPartitionConsumer) InitialOffset() int64 {
+	return 0
+}
+
+// MarkOffset marks the offset of a message as preocessed.
+func (pc *mockPartitionConsumer) MarkOffset(offset int64, metadata string) {
+}
+
+// ResetOffset resets the offset to a previously processed message.
+func (pc *mockPartitionConsumer) ResetOffset(offset int64, metadata string) {
+	pc.offset = 0
+}
+
 type mockSaramaCluster struct {
 	// closed closes the message channel so that it doesn't block during the test
 	closed bool
 	// Handle to the latest created consumer, useful to access underlying message chan
 	consumerChannel chan *sarama.ConsumerMessage
+	// Handle to the latest created partition consumer, useful to access underlying message chan
+	partitionConsumerChannel chan cluster.PartitionConsumer
 	// createErr will return an error when creating a consumer
 	createErr bool
+	// consumer mode
+	consumerMode cluster.ConsumerMode
 }
 
 func (c *mockSaramaCluster) NewConsumer(groupID string, topics []string) (KafkaConsumer, error) {
 	if c.createErr {
 		return nil, errors.New("error creating consumer")
 	}
-	consumer := &mockConsumer{
-		message: make(chan *sarama.ConsumerMessage),
+
+	var consumer *mockConsumer
+	if c.consumerMode != cluster.ConsumerModePartitions {
+		consumer = &mockConsumer{
+			message: make(chan *sarama.ConsumerMessage),
+		}
+		if c.closed {
+			close(consumer.message)
+		}
+		c.consumerChannel = consumer.message
+	} else {
+		consumer = &mockConsumer{
+			partitions: make(chan cluster.PartitionConsumer),
+		}
+		if c.closed {
+			close(consumer.partitions)
+		}
+		c.partitionConsumerChannel = consumer.partitions
 	}
-	if c.closed {
-		close(consumer.message)
-	}
-	c.consumerChannel = consumer.message
 	return consumer, nil
+}
+
+func (c *mockSaramaCluster) GetConsumerMode() cluster.ConsumerMode {
+	return c.consumerMode
 }
 
 func TestDispatcher_UpdateConfig(t *testing.T) {
@@ -405,6 +525,55 @@ func TestSubscribe(t *testing.T) {
 
 	<-testHandler.done
 
+}
+
+func TestPartitionConsumer(t *testing.T) {
+	sc := &mockSaramaCluster{consumerMode: cluster.ConsumerModePartitions}
+	data := []byte("data")
+	d := &KafkaDispatcher{
+		kafkaCluster:   sc,
+		kafkaConsumers: make(map[provisioners.ChannelReference]map[subscription]KafkaConsumer),
+		dispatcher:     provisioners.NewMessageDispatcher(zap.NewNop().Sugar()),
+		logger:         zap.NewNop(),
+	}
+	testHandler := &dispatchTestHandler{
+		t:       t,
+		payload: data,
+		done:    make(chan bool)}
+	server := httptest.NewServer(testHandler)
+	defer server.Close()
+	channelRef := provisioners.ChannelReference{
+		Name:      "test-channel",
+		Namespace: "test-ns",
+	}
+	subRef := subscription{
+		Name:          "test-sub",
+		Namespace:     "test-ns",
+		SubscriberURI: server.URL[7:],
+	}
+	err := d.subscribe(channelRef, subRef)
+	if err != nil {
+		t.Errorf("unexpected error %s", err)
+	}
+	defer close(sc.partitionConsumerChannel)
+	pc := &mockPartitionConsumer{
+		topic:     channelRef.Name,
+		partition: 1,
+		messages:  make(chan *sarama.ConsumerMessage, 1),
+	}
+	pc.messages <- &sarama.ConsumerMessage{
+		Topic:     channelRef.Name,
+		Partition: 1,
+		Headers: []*sarama.RecordHeader{
+			{
+				Key:   []byte("k1"),
+				Value: []byte("v1"),
+			},
+		},
+		Value: data,
+	}
+	sc.partitionConsumerChannel <- pc
+	<-testHandler.done
 }
 
 func TestSubscribeError(t *testing.T) {
