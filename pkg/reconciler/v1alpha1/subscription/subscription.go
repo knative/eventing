@@ -21,13 +21,14 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/golang/glog"
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler/names"
+	"github.com/knative/eventing/pkg/utils/logging"
 	duckapis "github.com/knative/pkg/apis"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -95,18 +96,18 @@ func ProvideController(mgr manager.Manager) (controller.Controller, error) {
 // converge the two. It then updates the Status block of the Subscription resource
 // with the current status of the resource.
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	ctx := context.TODO()
-	glog.Infof("Reconciling subscription %v", request)
+	ctx := logging.With(context.TODO(), zap.Any("request", request))
+	logging.FromContext(ctx).Debug("Reconciling Subscription")
 	subscription := &v1alpha1.Subscription{}
 	err := r.client.Get(ctx, request.NamespacedName, subscription)
 
 	if errors.IsNotFound(err) {
-		glog.Errorf("could not find subscription %v\n", request)
+		logging.FromContext(ctx).Error("Could not find Subscription")
 		return reconcile.Result{}, nil
 	}
 
 	if err != nil {
-		glog.Errorf("could not fetch Subscription %v for %+v\n", err, request)
+		logging.FromContext(ctx).Error("Error getting Subscription", zap.Error(err))
 		return reconcile.Result{}, err
 	}
 
@@ -114,14 +115,14 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// updates regardless of whether the reconcile error out.
 	err = r.reconcile(ctx, subscription)
 	if err != nil {
-		glog.Warningf("Error reconciling Subscription: %v", err)
+		logging.FromContext(ctx).Warn("Error reconciling Subscription", zap.Error(err))
 	} else {
-		glog.Info("Subscription reconciled")
+		logging.FromContext(ctx).Debug("Subscription reconciled")
 		r.recorder.Eventf(subscription, corev1.EventTypeNormal, subscriptionReconciled, "Subscription reconciled: %q", subscription.Name)
 	}
 
 	if _, updateStatusErr := r.updateStatus(ctx, subscription.DeepCopy()); updateStatusErr != nil {
-		glog.Warningf("Failed to update subscription status: %v", updateStatusErr)
+		logging.FromContext(ctx).Warn("Failed to update the Subscription", zap.Error(err))
 		r.recorder.Eventf(subscription, corev1.EventTypeWarning, subscriptionUpdateStatusFailed, "Failed to update Subscription's status: %v", err)
 		return reconcile.Result{}, updateStatusErr
 	}
@@ -134,14 +135,13 @@ func (r *reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	subscription.Status.InitializeConditions()
 
 	// See if the subscription has been deleted
-	glog.Infof("DeletionTimestamp: %v", subscription.DeletionTimestamp)
 	if subscription.DeletionTimestamp != nil {
 		// If the subscription is Ready, then we have to remove it
 		// from the channel's subscriber list.
 		if subscription.Status.IsReady() {
 			err := r.syncPhysicalChannel(ctx, subscription, true)
 			if err != nil {
-				glog.Warningf("Failed to sync physical from Channel : %s", err)
+				logging.FromContext(ctx).Warn("Failed to sync physical from Channel", zap.Error(err))
 				r.recorder.Eventf(subscription, corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
 				return err
 			}
@@ -151,29 +151,35 @@ func (r *reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	}
 
 	// Verify that `channel` exists.
-	_, err := fetchObjectReference(r.dynamicClient, subscription.Namespace, &subscription.Spec.Channel)
+	_, err := fetchObjectReference(ctx, r.dynamicClient, subscription.Namespace, &subscription.Spec.Channel)
 	if err != nil {
-		glog.Warningf("Failed to validate `channel` exists: %+v, %v", subscription.Spec.Channel, err)
+		logging.FromContext(ctx).Warn("Failed to validate Channel exists",
+			zap.Error(err),
+			zap.Any("channel", subscription.Spec.Channel))
 		r.recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFetchFailed, "Failed to validate spec.channel exists: %v", err)
 		return err
 	}
 
 	if subscriberURI, err := ResolveSubscriberSpec(ctx, r.client, r.dynamicClient, subscription.Namespace, subscription.Spec.Subscriber); err != nil {
-		glog.Warningf("Failed to resolve Subscriber %+v : %s", *subscription.Spec.Subscriber, err)
+		logging.FromContext(ctx).Warn("Failed to resolve Subscriber",
+			zap.Error(err),
+			zap.Any("subscriber", subscription.Spec.Subscriber))
 		r.recorder.Eventf(subscription, corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
 		return err
 	} else {
 		subscription.Status.PhysicalSubscription.SubscriberURI = subscriberURI
-		glog.Infof("Resolved subscriber to: %q", subscriberURI)
+		logging.FromContext(ctx).Debug("Resolved Subscriber", zap.String("subscriberURI", subscriberURI))
 	}
 
-	if replyURI, err := r.resolveResult(subscription.Namespace, subscription.Spec.Reply); err != nil {
-		glog.Warningf("Failed to resolve Result %v : %v", subscription.Spec.Reply, err)
+	if replyURI, err := r.resolveResult(ctx, subscription.Namespace, subscription.Spec.Reply); err != nil {
+		logging.FromContext(ctx).Warn("Failed to resolve reply",
+			zap.Error(err),
+			zap.Any("reply", subscription.Spec.Reply))
 		r.recorder.Eventf(subscription, corev1.EventTypeWarning, resultResolveFailed, "Failed to resolve spec.reply: %v", err)
 		return err
 	} else {
 		subscription.Status.PhysicalSubscription.ReplyURI = replyURI
-		glog.Infof("Resolved reply to: %q", replyURI)
+		logging.FromContext(ctx).Debug("Resolved reply", zap.String("replyURI", replyURI))
 	}
 
 	// Everything that was supposed to be resolved was, so flip the status bit on that.
@@ -183,7 +189,7 @@ func (r *reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	// the Channel with this information.
 	err = r.syncPhysicalChannel(ctx, subscription, false)
 	if err != nil {
-		glog.Warningf("Failed to sync physical Channel : %s", err)
+		logging.FromContext(ctx).Warn("Failed to sync physical Channel", zap.Error(err))
 		r.recorder.Eventf(subscription, corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
 		return err
 	}
@@ -263,15 +269,19 @@ func ResolveSubscriberSpec(ctx context.Context, client client.Client, dynamicCli
 		}
 		err := client.Get(ctx, svcKey, svc)
 		if err != nil {
-			glog.Warningf("Failed to fetch SubscriberSpec target as a K8s Service %+v: %s", s.Ref, err)
+			logging.FromContext(ctx).Warn("Failed to fetch SubscriberSpec target as a K8s Service",
+				zap.Error(err),
+				zap.Any("subscriberSpec.Ref", s.Ref))
 			return "", err
 		}
 		return domainToURL(names.ServiceHostName(svc.Name, svc.Namespace)), nil
 	}
 
-	obj, err := fetchObjectReference(dynamicClient, namespace, s.Ref)
+	obj, err := fetchObjectReference(ctx, dynamicClient, namespace, s.Ref)
 	if err != nil {
-		glog.Warningf("Failed to fetch SubscriberSpec target %+v: %s", s.Ref, err)
+		logging.FromContext(ctx).Warn("Failed to fetch SubscriberSpec target",
+			zap.Error(err),
+			zap.Any("subscriberSpec.Ref", s.Ref))
 		return "", err
 	}
 	t := duckv1alpha1.AddressableType{}
@@ -292,19 +302,21 @@ func ResolveSubscriberSpec(ctx context.Context, client client.Client, dynamicCli
 }
 
 // resolveResult resolves the Spec.Result object.
-func (r *reconciler) resolveResult(namespace string, replyStrategy *v1alpha1.ReplyStrategy) (string, error) {
+func (r *reconciler) resolveResult(ctx context.Context, namespace string, replyStrategy *v1alpha1.ReplyStrategy) (string, error) {
 	if isNilOrEmptyReply(replyStrategy) {
 		return "", nil
 	}
-	obj, err := fetchObjectReference(r.dynamicClient, namespace, replyStrategy.Channel)
+	obj, err := fetchObjectReference(ctx, r.dynamicClient, namespace, replyStrategy.Channel)
 	if err != nil {
-		glog.Warningf("Failed to fetch ReplyStrategy channel %+v: %s", replyStrategy, err)
+		logging.FromContext(ctx).Warn("Failed to fetch ReplyStrategy Channel",
+			zap.Error(err),
+			zap.Any("replyStrategy", replyStrategy))
 		return "", err
 	}
 	s := duckv1alpha1.AddressableType{}
 	err = duck.FromUnstructured(obj, &s)
 	if err != nil {
-		glog.Warningf("Failed to deserialize Addressable target: %s", err)
+		logging.FromContext(ctx).Warn("Failed to deserialize Addressable target", zap.Error(err))
 		return "", err
 	}
 	if s.Status.Address != nil {
@@ -314,10 +326,10 @@ func (r *reconciler) resolveResult(namespace string, replyStrategy *v1alpha1.Rep
 }
 
 // fetchObjectReference fetches an object based on ObjectReference.
-func fetchObjectReference(dynamicClient dynamic.Interface, namespace string, ref *corev1.ObjectReference) (duck.Marshalable, error) {
+func fetchObjectReference(ctx context.Context, dynamicClient dynamic.Interface, namespace string, ref *corev1.ObjectReference) (duck.Marshalable, error) {
 	resourceClient, err := createResourceInterface(dynamicClient, namespace, ref)
 	if err != nil {
-		glog.Warningf("failed to create dynamic client resource: %v", err)
+		logging.FromContext(ctx).Warn("Failed to create dynamic resource client", zap.Error(err))
 		return nil, err
 	}
 
@@ -334,11 +346,11 @@ func domainToURL(domain string) string {
 }
 
 func (r *reconciler) syncPhysicalChannel(ctx context.Context, sub *v1alpha1.Subscription, isDeleted bool) error {
-	glog.Infof("Reconciling Physical From Channel: %+v", sub)
+	logging.FromContext(ctx).Debug("Reconciling physical from Channel", zap.Any("sub", sub))
 
 	subs, err := r.listAllSubscriptionsWithPhysicalChannel(ctx, sub)
 	if err != nil {
-		glog.Infof("Unable to list all subscriptions with physical channel: %+v", err)
+		logging.FromContext(ctx).Info("Unable to list all Subscriptions with physical Channel", zap.Error(err))
 		return err
 	}
 
@@ -350,9 +362,9 @@ func (r *reconciler) syncPhysicalChannel(ctx context.Context, sub *v1alpha1.Subs
 	}
 	subscribable := r.createSubscribable(subs)
 
-	if patchErr := r.patchPhysicalFrom(sub.Namespace, sub.Spec.Channel, subscribable); patchErr != nil {
+	if patchErr := r.patchPhysicalFrom(ctx, sub.Namespace, sub.Spec.Channel, subscribable); patchErr != nil {
 		if isDeleted && errors.IsNotFound(patchErr) {
-			glog.Infof("could not find channel %v\n", sub.Spec.Channel)
+			logging.FromContext(ctx).Warn("Could not find Channel", zap.Any("channel", sub.Spec.Channel))
 			return nil
 		}
 		return patchErr
@@ -412,9 +424,9 @@ func (r *reconciler) createSubscribable(subs []v1alpha1.Subscription) *eventingd
 	return rv
 }
 
-func (r *reconciler) patchPhysicalFrom(namespace string, physicalFrom corev1.ObjectReference, subs *eventingduck.Subscribable) error {
+func (r *reconciler) patchPhysicalFrom(ctx context.Context, namespace string, physicalFrom corev1.ObjectReference, subs *eventingduck.Subscribable) error {
 	// First get the original object and convert it to only the bits we care about
-	s, err := fetchObjectReference(r.dynamicClient, namespace, &physicalFrom)
+	s, err := fetchObjectReference(ctx, r.dynamicClient, namespace, &physicalFrom)
 	if err != nil {
 		return err
 	}
@@ -434,22 +446,21 @@ func (r *reconciler) patchPhysicalFrom(namespace string, physicalFrom corev1.Obj
 
 	patchBytes, err := patch.MarshalJSON()
 	if err != nil {
-		glog.Warningf("failed to marshal json patch: %s", err)
+		logging.FromContext(ctx).Warn("Failed to marshal JSON patch", zap.Error(err), zap.Any("patch", patch))
 		return err
 	}
 
 	resourceClient, err := createResourceInterface(r.dynamicClient, namespace, &physicalFrom)
 	if err != nil {
-		glog.Warningf("failed to create dynamic client resource: %v", err)
+		logging.FromContext(ctx).Warn("Failed to create dynamic resource client", zap.Error(err))
 		return err
 	}
 	patched, err := resourceClient.Patch(original.Name, types.JSONPatchType, patchBytes, metav1.UpdateOptions{})
 	if err != nil {
-		glog.Warningf("Failed to patch the object: %s", err)
-		glog.Warningf("Patch was: %+v", patch)
+		logging.FromContext(ctx).Warn("Failed to patch the Channel", zap.Error(err), zap.Any("patch", patch))
 		return err
 	}
-	glog.Warningf("Patched resource: %+v", patched)
+	logging.FromContext(ctx).Debug("Patched resource", zap.Any("patched", patched))
 	return nil
 }
 
