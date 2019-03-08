@@ -116,7 +116,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: in-memory-channel-controller
-  namespace: knative-eventing
 subjects:
   - kind: ServiceAccount
     name: in-memory-channel-controller
@@ -167,7 +166,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: in-memory-channel-dispatcher
-  namespace: knative-eventing
 rules:
   - apiGroups:
       - "" # Core API group.
@@ -184,7 +182,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: in-memory-channel-dispatcher
-  namespace: knative-eventing
 subjects:
   - kind: ServiceAccount
     name: in-memory-channel-dispatcher

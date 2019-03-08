@@ -33,8 +33,17 @@ readonly E2E_TEST_NAMESPACE=e2etest-knative-eventing
 
 # Helper functions.
 
-function teardown() {
-  teardown_events_test_resources
+function knative_setup() {
+  start_latest_knative_serving || return 1
+  ko apply -f config/ || return 1
+  wait_until_pods_running knative-eventing || fail_test "Eventing did not come up (1)"
+
+  subheader "Standing up In-Memory ClusterChannelProvisioner"
+  ko apply -f config/provisioners/in-memory-channel/in-memory-channel.yaml || return 1
+  wait_until_pods_running knative-eventing || fail_test "Eventing did not come up (2)"
+}
+
+function knative_teardown() {
   ko delete --ignore-not-found=true -f config/
 
   wait_until_object_does_not_exist namespaces knative-eventing
@@ -43,48 +52,22 @@ function teardown() {
   wait_until_object_does_not_exist customresourcedefinitions channels.eventing.knative.dev
 }
 
-function setup_events_test_resources() {
-  kubectl create namespace ${E2E_TEST_NAMESPACE}
+# Setup resources common to all eventing tests
+function test_setup() {
+  kubectl create namespace ${E2E_TEST_NAMESPACE} || return 1
+  # Publish test images
+  $(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test images"
 }
 
-function teardown_events_test_resources() {
+function test_teardown() {
   # Delete the test namespace
   echo "Deleting namespace $E2E_TEST_NAMESPACE"
   kubectl --ignore-not-found=true delete namespace ${E2E_TEST_NAMESPACE}
-  wait_until_object_does_not_exist namespaces ${E2E_TEST_NAMESPACE} || return 1
+  wait_until_object_does_not_exist namespaces ${E2E_TEST_NAMESPACE}
 }
 
-# Script entry point.
-
-initialize $@
-
-header "Setting up environment"
-
-# Install Knative Serving if not using an existing cluster
-if (( ! USING_EXISTING_CLUSTER )); then
-  start_latest_knative_serving || fail_test "Serving did not come up"
-fi
-
-# Clean up anything that might still be around
-teardown_events_test_resources || fail_test "Error cleaning up test resources"
-
-ko apply -f config/
-wait_until_pods_running knative-eventing || fail_test "Eventing did not come up (1)"
-
-subheader "Standing up In-Memory ClusterChannelProvisioner"
-ko apply -f config/provisioners/in-memory-channel/in-memory-channel.yaml
-wait_until_pods_running knative-eventing || fail_test "Eventing did not come up (2)"
-
-# Publish test images
-$(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test images"
-
-# Setup resources common to all eventing tests
-setup_events_test_resources|| fail_test "Error setting up test resources"
-
-go_test_e2e ./test/e2e 
-exit_result=$?
-if [ ${exit_result} -ne 0 ]; then
-# Collecting logs from all knative's eventing pods
+function dump_extra_cluster_state() {
+  # Collecting logs from all knative's eventing pods
   echo "============================================================"
   for namespace in "knative-eventing" "e2etestfn3"; do
     for pod in $(kubectl get pod -n $namespace | grep Running | awk '{print $1}' ); do
@@ -98,7 +81,12 @@ if [ ${exit_result} -ne 0 ]; then
       done
     done
   done
-  fail_test
-fi
+}
+
+# Script entry point.
+
+initialize $@
+
+go_test_e2e ./test/e2e || fail_test
 
 success

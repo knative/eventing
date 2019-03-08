@@ -76,14 +76,9 @@ func getK8sService(ctx context.Context, client runtimeClient.Client, c *eventing
 		Namespace: c.Namespace,
 		// TODO After the full release start selecting on new set of labels by using k8sServiceLabels(c)
 		LabelSelector: labels.SelectorFromSet(k8sOldServiceLabels(c)),
-		// TODO this is here because the fake client needs it. Remove this when it's no longer
-		// needed.
-		Raw: &metav1.ListOptions{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: corev1.SchemeGroupVersion.String(),
-				Kind:       "Service",
-			},
-		},
+		// Set Raw because if we need to get more than one page, then we will put the continue token
+		// into opts.Raw.Continue.
+		Raw: &metav1.ListOptions{},
 	}
 
 	err := client.List(ctx, opts, list)
@@ -134,14 +129,9 @@ func getVirtualService(ctx context.Context, client runtimeClient.Client, c *even
 		Namespace: c.Namespace,
 		// TODO After the full release start selecting on new set of labels by using virtualServiceLabels(c)
 		LabelSelector: labels.SelectorFromSet(virtualOldServiceLabels(c)),
-		// TODO this is here because the fake client needs it. Remove this when it's no longer
-		// needed.
-		Raw: &metav1.ListOptions{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: istiov1alpha3.SchemeGroupVersion.String(),
-				Kind:       "VirtualService",
-			},
-		},
+		// Set Raw because if we need to get more than one page, then we will put the continue token
+		// into opts.Raw.Continue.
+		Raw: &metav1.ListOptions{},
 	}
 
 	err := client.List(ctx, opts, list)

@@ -38,7 +38,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -135,14 +134,7 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 	subscription.Status.InitializeConditions()
 
 	// See if the subscription has been deleted
-	accessor, err := meta.Accessor(subscription)
-	if err != nil {
-		glog.Warningf("Failed to get metadata accessor: %s", err)
-		return err
-	}
-	deletionTimestamp := accessor.GetDeletionTimestamp()
-	glog.Infof("DeletionTimestamp: %v", deletionTimestamp)
-
+	glog.Infof("DeletionTimestamp: %v", subscription.DeletionTimestamp)
 	if subscription.DeletionTimestamp != nil {
 		// If the subscription is Ready, then we have to remove it
 		// from the channel's subscriber list.
@@ -159,7 +151,7 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 	}
 
 	// Verify that `channel` exists.
-	_, err = fetchObjectReference(r.dynamicClient, subscription.Namespace, &subscription.Spec.Channel)
+	_, err := fetchObjectReference(r.dynamicClient, subscription.Namespace, &subscription.Spec.Channel)
 	if err != nil {
 		glog.Warningf("Failed to validate `channel` exists: %+v, %v", subscription.Spec.Channel, err)
 		r.recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFetchFailed, "Failed to validate spec.channel exists: %v", err)
@@ -249,7 +241,7 @@ func (r *reconciler) updateStatus(subscription *v1alpha1.Subscription) (*v1alpha
 }
 
 // ResolveSubscriberSpec resolves the Spec.Call object. If it's an
-// ObjectReference will resolve the object and treat it as a Callable. If
+// ObjectReference will resolve the object and treat it as an Addressable. If
 // it's DNSName then it's used as is.
 // TODO: Once Service Routes, etc. support Callable, use that.
 //
@@ -372,15 +364,10 @@ func (r *reconciler) listAllSubscriptionsWithPhysicalChannel(sub *v1alpha1.Subsc
 	subs := make([]v1alpha1.Subscription, 0)
 
 	opts := &client.ListOptions{
-		// TODO this is here because the fake client needs it. Remove this when it's no longer
-		// needed.
-		Raw: &metav1.ListOptions{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: v1alpha1.SchemeGroupVersion.String(),
-				Kind:       "Subscription",
-			},
-		},
 		Namespace: sub.Namespace,
+		// Set Raw because if we need to get more than one page, then we will put the continue token
+		// into opts.Raw.Continue.
+		Raw: &metav1.ListOptions{},
 	}
 	ctx := context.TODO()
 	for {

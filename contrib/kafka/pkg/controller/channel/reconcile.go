@@ -25,7 +25,6 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -139,15 +138,9 @@ func (r *reconciler) reconcile(ctx context.Context, channel *eventingv1alpha1.Ch
 	}
 
 	// See if the channel has been deleted
-	accessor, err := meta.Accessor(channel)
-	if err != nil {
-		r.logger.Info("failed to get metadata", zap.Error(err))
-		return false, err
-	}
-	deletionTimestamp := accessor.GetDeletionTimestamp()
-	if deletionTimestamp != nil {
-		r.logger.Info(fmt.Sprintf("DeletionTimestamp: %v", deletionTimestamp))
-		if err = r.deprovisionChannel(channel, kafkaClusterAdmin); err != nil {
+	if channel.DeletionTimestamp != nil {
+		r.logger.Info(fmt.Sprintf("DeletionTimestamp: %v", channel.DeletionTimestamp))
+		if err := r.deprovisionChannel(channel, kafkaClusterAdmin); err != nil {
 			return false, err
 		}
 		util.RemoveFinalizer(channel, finalizerName)
@@ -161,7 +154,7 @@ func (r *reconciler) reconcile(ctx context.Context, channel *eventingv1alpha1.Ch
 		return true, nil
 	}
 
-	if err = r.provisionChannel(channel, kafkaClusterAdmin); err != nil {
+	if err := r.provisionChannel(channel, kafkaClusterAdmin); err != nil {
 		channel.Status.MarkNotProvisioned("NotProvisioned", "error while provisioning: %s", err)
 		return false, err
 	}
@@ -334,14 +327,9 @@ func (r *reconciler) listAllChannels(ctx context.Context) ([]eventingv1alpha1.Ch
 	channels := make([]eventingv1alpha1.Channel, 0)
 
 	opts := &client.ListOptions{
-		// TODO this is here because the fake client needs it. Remove this when it's no longer
-		// needed.
-		Raw: &metav1.ListOptions{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-				Kind:       "Channel",
-			},
-		},
+		// Set Raw because if we need to get more than one page, then we will put the continue token
+		// into opts.Raw.Continue.
+		Raw: &metav1.ListOptions{},
 	}
 	for {
 		cl := &eventingv1alpha1.ChannelList{}
