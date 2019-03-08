@@ -21,7 +21,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/knative/eventing/pkg/utils/logging"
+	"github.com/knative/eventing/pkg/logging"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
