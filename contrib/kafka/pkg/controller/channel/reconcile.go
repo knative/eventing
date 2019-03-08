@@ -25,7 +25,6 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -139,15 +138,9 @@ func (r *reconciler) reconcile(ctx context.Context, channel *eventingv1alpha1.Ch
 	}
 
 	// See if the channel has been deleted
-	accessor, err := meta.Accessor(channel)
-	if err != nil {
-		r.logger.Info("failed to get metadata", zap.Error(err))
-		return false, err
-	}
-	deletionTimestamp := accessor.GetDeletionTimestamp()
-	if deletionTimestamp != nil {
-		r.logger.Info(fmt.Sprintf("DeletionTimestamp: %v", deletionTimestamp))
-		if err = r.deprovisionChannel(channel, kafkaClusterAdmin); err != nil {
+	if channel.DeletionTimestamp != nil {
+		r.logger.Info(fmt.Sprintf("DeletionTimestamp: %v", channel.DeletionTimestamp))
+		if err := r.deprovisionChannel(channel, kafkaClusterAdmin); err != nil {
 			return false, err
 		}
 		util.RemoveFinalizer(channel, finalizerName)
@@ -161,7 +154,7 @@ func (r *reconciler) reconcile(ctx context.Context, channel *eventingv1alpha1.Ch
 		return true, nil
 	}
 
-	if err = r.provisionChannel(channel, kafkaClusterAdmin); err != nil {
+	if err := r.provisionChannel(channel, kafkaClusterAdmin); err != nil {
 		channel.Status.MarkNotProvisioned("NotProvisioned", "error while provisioning: %s", err)
 		return false, err
 	}

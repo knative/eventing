@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -43,6 +44,7 @@ func main() {
 		configMapNamespace = system.Namespace()
 	}
 
+	flag.Parse()
 	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Fatalf("unable to create logger: %v", err)

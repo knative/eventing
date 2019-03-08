@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/channel"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/subscription"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger"
@@ -97,7 +98,7 @@ func main() {
 
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
-	configMapWatcher.Watch(logconfig.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller, logconfig.Controller))
+	configMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller, logconfig.Controller))
 	if err = configMapWatcher.Start(stopCh); err != nil {
 		logger.Fatalf("Failed to start controller config map watcher: %v", err)
 	}
@@ -123,6 +124,7 @@ func main() {
 	// manager run it.
 	providers := []ProvideFunc{
 		subscription.ProvideController,
+		channel.ProvideController,
 		broker.ProvideController(logger.Desugar(),
 			broker.ReconcilerArgs{
 				IngressImage:              getRequiredEnv("BROKER_INGRESS_IMAGE"),
@@ -150,7 +152,7 @@ func main() {
 	srv := &http.Server{Addr: metricsScrapeAddr}
 	http.Handle(metricsScrapePath, promhttp.Handler())
 	go func() {
-		logger.Info("Starting metrics listener at %s", metricsScrapeAddr)
+		logger.Infof("Starting metrics listener at %s", metricsScrapeAddr)
 		if err := srv.ListenAndServe(); err != nil {
 			logger.Infof("Httpserver: ListenAndServe() finished with error: %s", err)
 		}

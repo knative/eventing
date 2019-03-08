@@ -22,7 +22,6 @@ import (
 
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -89,14 +88,8 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 func (r *reconciler) reconcile(ctx context.Context, provisioner *v1alpha1.ClusterChannelProvisioner) error {
 	// See if the provisioner has been deleted
-	accessor, err := meta.Accessor(provisioner)
-	if err != nil {
-		r.logger.Info("failed to get metadata", zap.Error(err))
-		return err
-	}
-	deletionTimestamp := accessor.GetDeletionTimestamp()
-	if deletionTimestamp != nil {
-		r.logger.Info(fmt.Sprintf("DeletionTimestamp: %v", deletionTimestamp))
+	if provisioner.DeletionTimestamp != nil {
+		r.logger.Info(fmt.Sprintf("DeletionTimestamp: %v", provisioner.DeletionTimestamp))
 		return nil
 	}
 
