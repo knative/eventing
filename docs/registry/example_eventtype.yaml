@@ -1,8 +1,11 @@
 apiVersion: eventing.knative.dev/v1alpha1
 kind: EventType
 metadata:
+  # advisory
   name: com.github.pullrequest
 spec:
+  # authoritative
+  type: dev.knative.source.github.pull_request
+  # cloud event source or knative source?
   source: github.com
   schema: http://foo2.example/schema
-

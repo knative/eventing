@@ -58,7 +58,8 @@ type EventTypeSpec struct {
 	// +optional
 	DeprecatedGeneration int64 `json:"generation,omitempty"`
 
-	// TODO this should probably need to be updated
+	// TODO these attributes should be updated once we clarify the UX.
+	Type   string `json:"type,omitempty"`
 	Source string `json:"source,omitempty"`
 	// +optional
 	Schema string `json:"schema,omitempty"`

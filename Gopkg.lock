@@ -1249,6 +1249,7 @@
     "github.com/Shopify/sarama",
     "github.com/bsm/sarama-cluster",
     "github.com/cloudevents/sdk-go/pkg/cloudevents",
+    "github.com/cloudevents/sdk-go/pkg/cloudevents/types",
     "github.com/fsnotify/fsnotify",
     "github.com/golang/glog",
     "github.com/google/go-cmp/cmp",

@@ -30,6 +30,9 @@ spec:
   subresources:
     status: {}
   additionalPrinterColumns:
+    - name: Type
+      type: string
+      JSONPath: ".spec.type"
     - name: Source
       type: string
       JSONPath: ".spec.source"

@@ -41,7 +41,7 @@ func (r *EventType) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
 	}
 
 	// TODO check other fields.
-	if diff := cmp.Diff(original.Spec.Source, r.Spec.Source); diff != "" {
+	if diff := cmp.Diff(original.Spec.Type, r.Spec.Type); diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",
 			Paths:   []string{"spec", "events"},
