@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
@@ -54,17 +56,38 @@ func init() {
 	duckv1alpha1.AddToScheme(scheme.Scheme)
 }
 
-func TestAllCases(t *testing.T) {
+func TestInjectClient(t *testing.T) {
+	r := &reconciler{}
+	orig := r.client
+	n := fake.NewFakeClient()
+	if orig == n {
+		t.Errorf("Original and new clients are identical: %v", orig)
+	}
+	err := r.InjectClient(n)
+	if err != nil {
+		t.Errorf("Unexpected error injecting the client: %v", err)
+	}
+	if n != r.client {
+		t.Errorf("Unexpected client. Expected: '%v'. Actual: '%v'", n, r.client)
+	}
+}
 
+func TestAllCases(t *testing.T) {
 	testCases := []controllertesting.TestCase{
 		{
 			Name:         "No channels exist",
-			WantErr:      false,
 			WantResult:   reconcile.Result{},
 			ReconcileKey: fmt.Sprintf("%v/%v", "chan-1", testNamespace),
 		}, {
+			Name:         "Cannot get Channel",
+			WantResult:   reconcile.Result{},
+			ReconcileKey: fmt.Sprintf("%v/%v", "chan-1", testNamespace),
+			Mocks: controllertesting.Mocks{
+				MockGets: []controllertesting.MockGet{accessDenied},
+			},
+			WantErrMsg: "access denied",
+		}, {
 			Name:         "Orphaned channel",
-			WantErr:      false,
 			WantResult:   reconcile.Result{},
 			ReconcileKey: fmt.Sprintf("%v/%v", testNamespace, "chan-1"),
 			InitialState: []runtime.Object{
@@ -81,8 +104,7 @@ func TestAllCases(t *testing.T) {
 				events[channelReconciled],
 			},
 		}, {
-			Name:         "Non-oprphaned channel test 1",
-			WantErr:      false,
+			Name:         "Non-orphaned channel test 1",
 			WantResult:   reconcile.Result{},
 			ReconcileKey: fmt.Sprintf("%v/%v", testNamespace, "chan-2"),
 			InitialState: []runtime.Object{
@@ -99,8 +121,7 @@ func TestAllCases(t *testing.T) {
 				events[channelReconciled],
 			},
 		}, {
-			Name:         "Non-oprphaned channel test 2",
-			WantErr:      false,
+			Name:         "Non-orphaned channel test 2",
 			WantResult:   reconcile.Result{},
 			ReconcileKey: fmt.Sprintf("%v/%v", testNamespace, "chan-3"),
 			InitialState: []runtime.Object{
@@ -118,8 +139,7 @@ func TestAllCases(t *testing.T) {
 			},
 		}, {
 			Name:         "Fail orphaned channel status update",
-			WantErr:      true,
-			WantErrMsg:   "Update failed",
+			WantErrMsg:   "update failed",
 			WantResult:   reconcile.Result{Requeue: true},
 			ReconcileKey: fmt.Sprintf("%v/%v", testNamespace, "chan-1"),
 			InitialState: []runtime.Object{
@@ -157,7 +177,11 @@ func TestAllCases(t *testing.T) {
 }
 
 func failUpdate(innerClient client.Client, ctx context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-	return controllertesting.Handled, errors.New("Update failed")
+	return controllertesting.Handled, errors.New("update failed")
+}
+
+func accessDenied(_ client.Client, _ context.Context, _ client.ObjectKey, _ runtime.Object) (controllertesting.MockHandled, error) {
+	return controllertesting.Handled, errors.New("access denied")
 }
 
 type ChannelBuilder struct {
