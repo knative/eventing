@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	"go.uber.org/zap"
+
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
@@ -150,13 +152,14 @@ func TestAllCases(t *testing.T) {
 			dynamicClient: dc,
 			restConfig:    &rest.Config{},
 			recorder:      recorder,
+			logger:        zap.NewNop(),
 		}
 		tc.IgnoreTimes = true
 		t.Run(tc.Name, tc.Runner(t, r, c, recorder))
 	}
 }
 
-func failUpdate(innerClient client.Client, ctx context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+func failUpdate(_ client.Client, _ context.Context, _ runtime.Object) (controllertesting.MockHandled, error) {
 	return controllertesting.Handled, errors.New("Update failed")
 }
 
