@@ -140,7 +140,7 @@ func NewHandler(logger *zap.Logger, destination, policy string, client client.Cl
 	handler := &Handler{
 		logger:        logger,
 		dispatcher:    provisioners.NewMessageDispatcher(logger.Sugar()),
-		ingressPolicy: broker.NewIngressPolicy(logger.Sugar(), client, policy),
+		ingressPolicy: broker.NewIngressPolicy(client, policy),
 		destination:   fmt.Sprintf("http://%s", destination),
 		client:        client,
 	}

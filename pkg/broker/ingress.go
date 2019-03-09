@@ -22,9 +22,7 @@ import (
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"go.uber.org/zap"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -40,19 +38,17 @@ type IngressPolicy interface {
 type AllowAnyPolicy struct{}
 
 type AllowRegisteredPolicy struct {
-	logger *zap.SugaredLogger
 	client client.Client
 }
 
-func NewIngressPolicy(logger *zap.SugaredLogger, client client.Client, policy string) IngressPolicy {
-	return newIngressPolicy(logger, client, policy)
+func NewIngressPolicy(client client.Client, policy string) IngressPolicy {
+	return newIngressPolicy(client, policy)
 }
 
-func newIngressPolicy(logger *zap.SugaredLogger, client client.Client, policy string) IngressPolicy {
+func newIngressPolicy(client client.Client, policy string) IngressPolicy {
 	switch policy {
 	case allowRegisteredTypes:
 		return &AllowRegisteredPolicy{
-			logger: logger,
 			client: client,
 		}
 	case allowAny:
@@ -62,27 +58,37 @@ func newIngressPolicy(logger *zap.SugaredLogger, client client.Client, policy st
 	}
 }
 
-func (policy *AllowAnyPolicy) AllowEvent(namespace string, event *cloudevents.Event) bool {
+func (p *AllowAnyPolicy) AllowEvent(namespace string, event *cloudevents.Event) bool {
 	return true
 }
 
-func (policy *AllowRegisteredPolicy) AllowEvent(namespace string, event *cloudevents.Event) bool {
-	et := &eventingv1alpha1.EventType{}
-	name := event.Type()
-
-	err := policy.client.Get(context.TODO(),
-		types.NamespacedName{
-			Namespace: namespace,
-			Name:      name,
-		},
-		et)
-
-	if k8serrors.IsNotFound(err) {
-		policy.logger.Warnf("EventType not found: %q", name)
-		return false
-	} else if err != nil {
-		policy.logger.Errorf("Error getting EventType: %q, %v", name, err)
-		return false
+func (p *AllowRegisteredPolicy) AllowEvent(namespace string, event *cloudevents.Event) bool {
+	opts := &client.ListOptions{
+		Namespace: namespace,
+		// Set Raw because if we need to get more than one page, then we will put the continue token
+		// into opts.Raw.Continue.
+		Raw: &metav1.ListOptions{},
 	}
-	return true
+
+	ctx := context.TODO()
+
+	// TODO this is very inefficient, we need to somehow select with a fieldSelector on spec.type,
+	// but it is not supported.
+	for {
+		el := &eventingv1alpha1.EventTypeList{}
+		err := p.client.List(ctx, opts, el)
+		if err != nil {
+			return false
+		}
+		for _, e := range el.Items {
+			if e.Spec.Type == event.Type() {
+				return true
+			}
+		}
+		if el.Continue != "" {
+			opts.Raw.Continue = el.Continue
+		} else {
+			return false
+		}
+	}
 }
