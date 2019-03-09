@@ -51,7 +51,6 @@ const (
 	DefaultReplicationFactor = 1
 
 	// Name of the corev1.Events emitted from the reconciliation process
-	dispatcherReconciled         = "DispatcherReconciled"
 	dispatcherReconcileFailed    = "DispatcherReconcileFailed"
 	dispatcherUpdateStatusFailed = "DispatcherUpdateStatusFailed"
 )
@@ -116,8 +115,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		r.logger.Error("Dispatcher reconciliation failed", zap.Error(err))
 		r.recorder.Eventf(newChannel, v1.EventTypeWarning, dispatcherReconcileFailed, "Dispatcher reconciliation failed: %v", err)
 	} else {
-		r.logger.Info("Channel reconciled")
-		r.recorder.Eventf(newChannel, v1.EventTypeNormal, dispatcherReconciled, "Dispatcher reconciled: %q", newChannel.Name)
+		r.logger.Debug("Channel reconciled")
 	}
 
 	if updateChannelErr := util.UpdateChannel(ctx, r.client, newChannel); updateChannelErr != nil {
