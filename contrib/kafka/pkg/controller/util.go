@@ -11,6 +11,7 @@ import (
 const (
 	BrokerConfigMapKey       = "bootstrap_servers"
 	ConsumerModeConfigMapKey = "consumer_mode"
+	ConsumerModePartitionConsumerValue = "partitions"
 	KafkaChannelSeparator    = "."
 )
 
@@ -40,7 +41,7 @@ func GetProvisionerConfig(path string) (*KafkaProvisionerConfig, error) {
 	}
 
 	if mode, ok := configMap[ConsumerModeConfigMapKey]; ok {
-		if strings.ToLower(mode) == "partitions" {
+		if strings.ToLower(mode) == ConsumerModePartitionConsumerValue {
 			config.ConsumerMode = cluster.ConsumerModePartitions
 		} else {
 			config.ConsumerMode = cluster.ConsumerModeMultiplex
