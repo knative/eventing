@@ -17,19 +17,17 @@ limitations under the License.
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/knative/eventing/contrib/natss/pkg/dispatcher/channel"
 	"github.com/knative/eventing/contrib/natss/pkg/dispatcher/dispatcher"
+	"github.com/knative/eventing/contrib/natss/pkg/util"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/knative/eventing/contrib/natss/pkg/controller/clusterchannelprovisioner"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/utils"
 )
 
 func main() {
@@ -50,8 +48,7 @@ func main() {
 	}
 
 	logger.Info("Dispatcher starting...")
-	natssUrl := fmt.Sprintf(clusterchannelprovisioner.NatssUrlTmpl, utils.GetClusterDomainName())
-	d, err := dispatcher.NewDispatcher(natssUrl, logger)
+	d, err := dispatcher.NewDispatcher(util.GetDefaultNatssURL(), util.GetDefaultClusterID(), logger)
 	if err != nil {
 		logger.Fatal("Unable to create NATSS dispatcher.", zap.Error(err))
 	}
