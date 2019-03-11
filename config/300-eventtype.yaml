@@ -36,6 +36,9 @@ spec:
     - name: Source
       type: string
       JSONPath: ".spec.source"
+    - name: Origin
+      type: string
+      JSONPath: ".spec.origin"
     - name: Schema
       type: string
       JSONPath: ".spec.schema"
