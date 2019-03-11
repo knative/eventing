@@ -59,8 +59,11 @@ type EventTypeSpec struct {
 	DeprecatedGeneration int64 `json:"generation,omitempty"`
 
 	// TODO these attributes should be updated once we clarify the UX.
+	// Type and Source refer to the cloud event type and source.
 	Type   string `json:"type,omitempty"`
 	Source string `json:"source,omitempty"`
+	// +optional
+	Origin string `json:"origin,omitempty"`
 	// +optional
 	Schema string `json:"schema,omitempty"`
 }
