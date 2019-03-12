@@ -252,7 +252,7 @@ func (r *reconciler) deprovisionChannel(channel *eventingv1alpha1.Channel, kafka
 	} else if err != nil {
 		r.logger.Error("error deleting topic", zap.String("topic", topicName), zap.Error(err))
 	} else {
-		r.logger.Info("successfully deleted topic %s", zap.String("topic", topicName))
+		r.logger.Info("successfully deleted topic", zap.String("topic", topicName))
 	}
 	return err
 }
