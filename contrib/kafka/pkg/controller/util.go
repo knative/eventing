@@ -9,10 +9,10 @@ import (
 )
 
 const (
-	BrokerConfigMapKey       = "bootstrap_servers"
-	ConsumerModeConfigMapKey = "consumer_mode"
+	BrokerConfigMapKey                 = "bootstrap_servers"
+	ConsumerModeConfigMapKey           = "consumer_mode"
 	ConsumerModePartitionConsumerValue = "partitions"
-	KafkaChannelSeparator    = "."
+	KafkaChannelSeparator              = "."
 )
 
 // GetProvisionerConfig returns the details of the associated ClusterChannelProvisioner object
@@ -40,14 +40,11 @@ func GetProvisionerConfig(path string) (*KafkaProvisionerConfig, error) {
 		return nil, fmt.Errorf("missing key %s in provisioner configuration", BrokerConfigMapKey)
 	}
 
+	config.ConsumerMode = cluster.ConsumerModeMultiplex
 	if mode, ok := configMap[ConsumerModeConfigMapKey]; ok {
 		if strings.ToLower(mode) == ConsumerModePartitionConsumerValue {
 			config.ConsumerMode = cluster.ConsumerModePartitions
-		} else {
-			config.ConsumerMode = cluster.ConsumerModeMultiplex
 		}
-	} else {
-		config.ConsumerMode = cluster.ConsumerModeMultiplex
 	}
 	return config, nil
 }

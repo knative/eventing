@@ -191,36 +191,40 @@ func (d *KafkaDispatcher) subscribe(channelRef provisioners.ChannelReference, su
 	channelMap[sub] = consumer
 
 	if cluster.ConsumerModePartitions == d.kafkaCluster.GetConsumerMode() {
-		go func() {
-			d.logger.Info("Partition Consumer for subscription started", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
-			for {
-				pc, more := <-consumer.Partitions()
-				if !more {
-					break
-				}
-				go func(pc cluster.PartitionConsumer) {
-					for msg := range pc.Messages() {
-						d.dispatch(channelRef, sub, consumer, msg)
-					}
-				}(pc)
-			}
-			d.logger.Info("Partition Consumer for subscription stopped", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
-		}()
+		go d.partitionConsumerLoop(consumer, channelRef, sub)
 	} else {
-		go func() {
-			d.logger.Info("Consumer for subscription started", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
-			for {
-				msg, more := <-consumer.Messages()
-				if more {
-					d.dispatch(channelRef, sub, consumer, msg)
-				} else {
-					break
-				}
-			}
-			d.logger.Info("Consumer for subscription stopped", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
-		}()
+		go d.multiplexConsumerLoop(consumer, channelRef, sub)
 	}
 	return nil
+}
+
+func (d *KafkaDispatcher) partitionConsumerLoop(consumer KafkaConsumer, channelRef provisioners.ChannelReference, sub subscription) {
+	d.logger.Info("Partition Consumer for subscription started", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
+	for {
+		pc, more := <-consumer.Partitions()
+		if !more {
+			break
+		}
+		go func(pc cluster.PartitionConsumer) {
+			for msg := range pc.Messages() {
+				d.dispatch(channelRef, sub, consumer, msg)
+			}
+		}(pc)
+	}
+	d.logger.Info("Partition Consumer for subscription stopped", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
+}
+
+func (d *KafkaDispatcher) multiplexConsumerLoop(consumer KafkaConsumer, channelRef provisioners.ChannelReference, sub subscription) {
+	d.logger.Info("Consumer for subscription started", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
+	for {
+		msg, more := <-consumer.Messages()
+		if more {
+			d.dispatch(channelRef, sub, consumer, msg)
+		} else {
+			break
+		}
+	}
+	d.logger.Info("Consumer for subscription stopped", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
 }
 
 func (d *KafkaDispatcher) dispatch(channelRef provisioners.ChannelReference, sub subscription, consumer KafkaConsumer,
