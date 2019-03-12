@@ -60,6 +60,11 @@ var (
 	// serviceAddress is the address of the K8s Service. It uses a GeneratedName and the fake client
 	// does not fill in Name, so the name is the empty string.
 	serviceAddress = fmt.Sprintf("%s.%s.svc.%s", "", testNS, utils.GetClusterDomainName())
+
+	// map of events to set test cases' expectations easier
+	events = map[string]corev1.Event{
+		dispatcherReconcileFailed: {Reason: dispatcherReconcileFailed, Type: corev1.EventTypeWarning},
+	}
 )
 
 func init() {
@@ -167,6 +172,9 @@ var testCases = []controllertesting.TestCase{
 		WantPresent: []runtime.Object{
 			getNewChannelNotProvisionedStatus(channelName, clusterChannelProvisionerName,
 				"ClusterChannelProvisioner "+clusterChannelProvisionerName+" is not ready"),
+		},
+		WantEvent: []corev1.Event{
+			events[dispatcherReconcileFailed],
 		},
 	},
 	{
