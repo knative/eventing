@@ -17,15 +17,15 @@ abstraction which can optimize the underlying routing layer dynamically.
 - **Event Producer**: a system which creates events based on occurrences. E.g.
   GitHub (the hosted service).
 - **Event Consumer**: a destination which receives events. E.g. the application
-  processing an event. Typically, this is the final "sink" in the processing
-  flow of an Event, but could be a data processing system like Spark.
+  processing an event. Typically, this is the "sink" in the processing flow of
+  an Event, but could be a data processing system like Spark.
 - **Sink**: a generic term to mean the destination for an event being sent from
   a component. Synonym for Event Consumer.
 - **Event Source**: a helper object that can be used to connect an Event
   Producer to the Knative eventing system by routing events to an Event
   Consumer. E.g. the
   [GitHub Knative Source](https://github.com/knative/eventing-sources/tree/master/pkg/reconciler/githubsource)
-- **Receieve Adapter**: a data plane entity (Knative Service, Deployment, etc)
+- **Receive Adapter**: a data plane entity (Knative Service, Deployment, etc)
   which performs the event routing from outside the Knative cluster to the
   Knative eventing system. Receive Adapters are created by Event Sources to
   perform the actual event routing.
@@ -158,7 +158,7 @@ Accepted decisions (2+ votes)
   - "filter" has exact type match
   - "filter" has exact source match
   - target is same-namespace
-- Registry requirements are not clear enough to include in MVP
+- Registry requirements are not clear enough to include in this decision.
   - Future user stories could change this and motivate a particular
     implementation.
 
