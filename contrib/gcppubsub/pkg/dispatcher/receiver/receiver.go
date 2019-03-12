@@ -25,6 +25,7 @@ import (
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/dispatcher/receiver/cache"
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/utils/logging"
 	"go.uber.org/zap"
