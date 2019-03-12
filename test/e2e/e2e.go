@@ -45,7 +45,7 @@ const (
 )
 
 // Setup creates the client objects needed in the e2e tests.
-func Setup(t *testing.T, logger *logging.BaseLogger) (*test.Clients, *test.Cleaner) {
+func Setup(t *testing.T, logf logging.FormatLogger) (*test.Clients, *test.Cleaner) {
 	if pkgTest.Flags.Namespace == "" {
 		pkgTest.Flags.Namespace = DefaultTestNamespace
 	}
@@ -57,21 +57,21 @@ func Setup(t *testing.T, logger *logging.BaseLogger) (*test.Clients, *test.Clean
 	if err != nil {
 		t.Fatalf("Couldn't initialize clients: %v", err)
 	}
-	cleaner := test.NewCleaner(logger, clients.Dynamic)
+	cleaner := test.NewCleaner(logf, clients.Dynamic)
 
 	return clients, cleaner
 }
 
 // TearDown will delete created names using clients.
-func TearDown(clients *test.Clients, cleaner *test.Cleaner, logger *logging.BaseLogger) {
+func TearDown(clients *test.Clients, cleaner *test.Cleaner, _ logging.FormatLogger) {
 	cleaner.Clean(true)
 }
 
 // CreateRouteAndConfig will create Route and Config objects using clients.
 // The Config object will serve requests to a container started from the image at imagePath.
-func CreateRouteAndConfig(clients *test.Clients, logger *logging.BaseLogger, cleaner *test.Cleaner, name string, imagePath string) error {
+func CreateRouteAndConfig(clients *test.Clients, logf logging.FormatLogger, cleaner *test.Cleaner, name string, imagePath string) error {
 	configurations := clients.Serving.ServingV1alpha1().Configurations(pkgTest.Flags.Namespace)
-	logger.Infof("configuration: %#v", test.Configuration(name, pkgTest.Flags.Namespace, imagePath))
+	logf("configuration: %#v", test.Configuration(name, pkgTest.Flags.Namespace, imagePath))
 	config, err := configurations.Create(
 		test.Configuration(name, pkgTest.Flags.Namespace, imagePath))
 	if err != nil {
@@ -80,7 +80,7 @@ func CreateRouteAndConfig(clients *test.Clients, logger *logging.BaseLogger, cle
 	cleaner.Add(servingV1alpha1.SchemeGroupVersion.Group, servingV1alpha1.SchemeGroupVersion.Version, "configurations", pkgTest.Flags.Namespace, config.ObjectMeta.Name)
 
 	routes := clients.Serving.ServingV1alpha1().Routes(pkgTest.Flags.Namespace)
-	logger.Infof("route: %#v", test.Route(name, pkgTest.Flags.Namespace, name))
+	logf("route: %#v", test.Route(name, pkgTest.Flags.Namespace, name))
 	route, err := routes.Create(
 		test.Route(name, pkgTest.Flags.Namespace, name))
 	if err != nil {
@@ -91,8 +91,8 @@ func CreateRouteAndConfig(clients *test.Clients, logger *logging.BaseLogger, cle
 }
 
 // WithRouteReady will create Route and Config objects and wait until they're ready.
-func WithRouteReady(clients *test.Clients, logger *logging.BaseLogger, cleaner *test.Cleaner, name string, imagePath string) error {
-	err := CreateRouteAndConfig(clients, logger, cleaner, name, imagePath)
+func WithRouteReady(clients *test.Clients, logf logging.FormatLogger, cleaner *test.Cleaner, name string, imagePath string) error {
+	err := CreateRouteAndConfig(clients, logf, cleaner, name, imagePath)
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func WithRouteReady(clients *test.Clients, logger *logging.BaseLogger, cleaner *
 }
 
 // CreateChannel will create a Channel
-func CreateChannel(clients *test.Clients, channel *v1alpha1.Channel, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+func CreateChannel(clients *test.Clients, channel *v1alpha1.Channel, _ logging.FormatLogger, cleaner *test.Cleaner) error {
 	channels := clients.Eventing.EventingV1alpha1().Channels(pkgTest.Flags.Namespace)
 	res, err := channels.Create(channel)
 	if err != nil {
@@ -115,7 +115,7 @@ func CreateChannel(clients *test.Clients, channel *v1alpha1.Channel, logger *log
 }
 
 // CreateSubscription will create a Subscription
-func CreateSubscription(clients *test.Clients, sub *v1alpha1.Subscription, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+func CreateSubscription(clients *test.Clients, sub *v1alpha1.Subscription, _ logging.FormatLogger, cleaner *test.Cleaner) error {
 	subscriptions := clients.Eventing.EventingV1alpha1().Subscriptions(pkgTest.Flags.Namespace)
 	res, err := subscriptions.Create(sub)
 	if err != nil {
@@ -126,11 +126,11 @@ func CreateSubscription(clients *test.Clients, sub *v1alpha1.Subscription, logge
 }
 
 // WithChannelAndSubscriptionReady creates a Channel and Subscription and waits until both are Ready.
-func WithChannelAndSubscriptionReady(clients *test.Clients, channel *v1alpha1.Channel, sub *v1alpha1.Subscription, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
-	if err := CreateChannel(clients, channel, logger, cleaner); err != nil {
+func WithChannelAndSubscriptionReady(clients *test.Clients, channel *v1alpha1.Channel, sub *v1alpha1.Subscription, logf logging.FormatLogger, cleaner *test.Cleaner) error {
+	if err := CreateChannel(clients, channel, logf, cleaner); err != nil {
 		return err
 	}
-	if err := CreateSubscription(clients, sub, logger, cleaner); err != nil {
+	if err := CreateSubscription(clients, sub, logf, cleaner); err != nil {
 		return err
 	}
 
@@ -160,7 +160,7 @@ func WithChannelAndSubscriptionReady(clients *test.Clients, channel *v1alpha1.Ch
 }
 
 // CreateServiceAccount will create a service account
-func CreateServiceAccount(clients *test.Clients, sa *corev1.ServiceAccount, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+func CreateServiceAccount(clients *test.Clients, sa *corev1.ServiceAccount, _ logging.FormatLogger, cleaner *test.Cleaner) error {
 	sas := clients.Kube.Kube.CoreV1().ServiceAccounts(pkgTest.Flags.Namespace)
 	res, err := sas.Create(sa)
 	if err != nil {
@@ -171,7 +171,7 @@ func CreateServiceAccount(clients *test.Clients, sa *corev1.ServiceAccount, logg
 }
 
 // CreateClusterRoleBinding will create a service account binding
-func CreateClusterRoleBinding(clients *test.Clients, crb *rbacv1.ClusterRoleBinding, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+func CreateClusterRoleBinding(clients *test.Clients, crb *rbacv1.ClusterRoleBinding, _ logging.FormatLogger, cleaner *test.Cleaner) error {
 	clusterRoleBindings := clients.Kube.Kube.RbacV1().ClusterRoleBindings()
 	res, err := clusterRoleBindings.Create(crb)
 	if err != nil {
@@ -183,14 +183,14 @@ func CreateClusterRoleBinding(clients *test.Clients, crb *rbacv1.ClusterRoleBind
 
 // CreateServiceAccountAndBinding creates both ServiceAccount and ClusterRoleBinding with default
 // cluster-admin role
-func CreateServiceAccountAndBinding(clients *test.Clients, name string, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+func CreateServiceAccountAndBinding(clients *test.Clients, name string, logf logging.FormatLogger, cleaner *test.Cleaner) error {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: pkgTest.Flags.Namespace,
 		},
 	}
-	err := CreateServiceAccount(clients, sa, logger, cleaner)
+	err := CreateServiceAccount(clients, sa, logf, cleaner)
 	if err != nil {
 		return err
 	}
@@ -211,7 +211,7 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, logger *
 			APIGroup: "rbac.authorization.k8s.io",
 		},
 	}
-	err = CreateClusterRoleBinding(clients, crb, logger, cleaner)
+	err = CreateClusterRoleBinding(clients, crb, logf, cleaner)
 	if err != nil {
 		return err
 	}
@@ -219,7 +219,7 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, logger *
 }
 
 // CreateService will create a Service
-func CreateService(clients *test.Clients, svc *corev1.Service, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+func CreateService(clients *test.Clients, svc *corev1.Service, _ logging.FormatLogger, cleaner *test.Cleaner) error {
 	svcs := clients.Kube.Kube.CoreV1().Services(svc.GetNamespace())
 	res, err := svcs.Create(svc)
 	if err != nil {
@@ -230,7 +230,7 @@ func CreateService(clients *test.Clients, svc *corev1.Service, logger *logging.B
 }
 
 // CreatePod will create a Pod
-func CreatePod(clients *test.Clients, pod *corev1.Pod, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+func CreatePod(clients *test.Clients, pod *corev1.Pod, _ logging.FormatLogger, cleaner *test.Cleaner) error {
 	pods := clients.Kube.Kube.CoreV1().Pods(pod.GetNamespace())
 	res, err := pods.Create(pod)
 	if err != nil {
@@ -241,7 +241,7 @@ func CreatePod(clients *test.Clients, pod *corev1.Pod, logger *logging.BaseLogge
 }
 
 // PodLogs returns Pod logs for given Pod and Container
-func PodLogs(clients *test.Clients, podName string, containerName string, namespace string, logger *logging.BaseLogger) ([]byte, error) {
+func PodLogs(clients *test.Clients, podName string, containerName string, namespace string, logf logging.FormatLogger) ([]byte, error) {
 	pods := clients.Kube.Kube.CoreV1().Pods(namespace)
 	podList, err := pods.List(metav1.ListOptions{})
 	if err != nil {
@@ -254,9 +254,9 @@ func PodLogs(clients *test.Clients, podName string, containerName string, namesp
 			}).Do()
 			raw, err := result.Raw()
 			if err == nil {
-				logger.Infof("%s logs request result: %#v", podName, string(raw))
+				logf("%s logs request result: %#v", podName, string(raw))
 			} else {
-				logger.Infof("%s logs request result: %#v", podName, err)
+				logf("%s logs request result: %#v", podName, err)
 			}
 			return result.Raw()
 		}
@@ -266,9 +266,9 @@ func PodLogs(clients *test.Clients, podName string, containerName string, namesp
 
 // WaitForLogContent waits until logs for given Pod/Container include the given content.
 // If the content is not present within timeout it returns error.
-func WaitForLogContent(clients *test.Clients, logger *logging.BaseLogger, podName string, containerName string, namespace string, content string) error {
+func WaitForLogContent(clients *test.Clients, logf logging.FormatLogger, podName string, containerName string, namespace string, content string) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		logs, err := PodLogs(clients, podName, containerName, namespace, logger)
+		logs, err := PodLogs(clients, podName, containerName, namespace, logf)
 		if err != nil {
 			return true, err
 		}
@@ -277,7 +277,7 @@ func WaitForLogContent(clients *test.Clients, logger *logging.BaseLogger, podNam
 }
 
 // WaitForAllPodsRunning will wait until all pods in the given namespace are running
-func WaitForAllPodsRunning(clients *test.Clients, logger *logging.BaseLogger, namespace string) error {
+func WaitForAllPodsRunning(clients *test.Clients, _ logging.FormatLogger, namespace string) error {
 	if err := pkgTest.WaitForPodListState(clients.Kube, test.PodsRunning, "PodsAreRunning", namespace); err != nil {
 		return err
 	}

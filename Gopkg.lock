@@ -351,7 +351,7 @@
   version = "v0.2.0"
 
 [[projects]]
-  digest = "1:3839066eab10a2efcefc10992a13e1a944bd3b1ca61b00dbdd75fc40c8468d88"
+  digest = "1:e8579fe7474515f5907ac34e1d405ca875ecd6c2917e9e6311d73d0b3c69d2b2"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -372,12 +372,13 @@
     "system/testing",
     "test",
     "test/logging",
+    "test/monitoring",
     "test/spoof",
     "test/zipkin",
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "0183bf9cdc7349e3c76c26e51f84689b411fccea"
+  revision = "684620ff81ae137be5cda634a03831b373adc4eb"
 
 [[projects]]
   digest = "1:9a3d5c1186e9299dc3c3b9f28c3521abdf6abf0834f8ddd169ab005762097378"
