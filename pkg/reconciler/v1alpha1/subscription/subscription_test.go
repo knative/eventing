@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"testing"
 
+	"go.uber.org/zap"
+
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
@@ -1100,6 +1102,7 @@ func TestAllCases(t *testing.T) {
 			dynamicClient: dc,
 			restConfig:    &rest.Config{},
 			recorder:      recorder,
+			logger:        zap.NewNop(),
 		}
 		tc.ReconcileKey = fmt.Sprintf("%s/%s", testNS, subscriptionName)
 		tc.IgnoreTimes = true
