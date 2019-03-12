@@ -87,6 +87,8 @@ function dump_extra_cluster_state() {
 
 initialize $@
 
-go_test_e2e ./test/e2e || fail_test
+k8s_cluster=$(kubectl config current-context)
+
+go_test_e2e ./test/e2e -cluster "$k8s_cluster" || fail_test
 
 success
