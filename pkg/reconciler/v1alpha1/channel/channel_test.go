@@ -22,17 +22,17 @@ import (
 	"fmt"
 	"testing"
 
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -170,13 +170,14 @@ func TestAllCases(t *testing.T) {
 			dynamicClient: dc,
 			restConfig:    &rest.Config{},
 			recorder:      recorder,
+			logger:        zap.NewNop(),
 		}
 		tc.IgnoreTimes = true
 		t.Run(tc.Name, tc.Runner(t, r, c, recorder))
 	}
 }
 
-func failUpdate(innerClient client.Client, ctx context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+func failUpdate(_ client.Client, _ context.Context, _ runtime.Object) (controllertesting.MockHandled, error) {
 	return controllertesting.Handled, errors.New("update failed")
 }
 
