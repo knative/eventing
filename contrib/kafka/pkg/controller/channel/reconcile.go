@@ -24,6 +24,7 @@ import (
 	"github.com/Shopify/sarama"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,6 +49,10 @@ const (
 
 	// DefaultReplicationFactor defines the default number of replications
 	DefaultReplicationFactor = 1
+
+	// Name of the corev1.Events emitted from the reconciliation process
+	dispatcherReconcileFailed    = "DispatcherReconcileFailed"
+	dispatcherUpdateStatusFailed = "DispatcherUpdateStatusFailed"
 )
 
 type channelArgs struct {
@@ -106,8 +111,16 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		err = fmt.Errorf("ClusterChannelProvisioner %s is not ready", clusterChannelProvisioner.Name)
 	}
 
+	if err != nil {
+		r.logger.Error("Dispatcher reconciliation failed", zap.Error(err))
+		r.recorder.Eventf(newChannel, v1.EventTypeWarning, dispatcherReconcileFailed, "Dispatcher reconciliation failed: %v", err)
+	} else {
+		r.logger.Debug("Channel reconciled")
+	}
+
 	if updateChannelErr := util.UpdateChannel(ctx, r.client, newChannel); updateChannelErr != nil {
 		r.logger.Info("failed to update channel status", zap.Error(updateChannelErr))
+		r.recorder.Eventf(newChannel, v1.EventTypeWarning, dispatcherUpdateStatusFailed, "Failed to update Channel's dispatcher status: %v", err)
 		return reconcile.Result{}, updateChannelErr
 	}
 
@@ -137,7 +150,7 @@ func (r *reconciler) reconcile(ctx context.Context, channel *eventingv1alpha1.Ch
 		var err error
 		kafkaClusterAdmin, err = createKafkaAdminClient(r.config)
 		if err != nil {
-			r.logger.Fatal("unable to build kafka admin client", zap.Error(err))
+			r.logger.Error(fmt.Sprintf("unable to build kafka admin client for %v", r.config), zap.Error(err))
 			return false, err
 		}
 	}
