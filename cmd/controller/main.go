@@ -64,7 +64,7 @@ var (
 type SchemeFunc func(*runtime.Scheme) error
 
 // ProvideFunc adds a controller to a Manager.
-type ProvideFunc func(manager.Manager) (controller.Controller, error)
+type ProvideFunc func(manager.Manager, *zap.Logger) (controller.Controller, error)
 
 func main() {
 	flag.Parse()
@@ -136,7 +136,7 @@ func main() {
 		namespace.ProvideController(logger.Desugar()),
 	}
 	for _, provider := range providers {
-		if _, err := provider(mgr); err != nil {
+		if _, err := provider(mgr, logger.Desugar()); err != nil {
 			logger.Fatalf("Error adding controller to manager: %v", err)
 		}
 	}
