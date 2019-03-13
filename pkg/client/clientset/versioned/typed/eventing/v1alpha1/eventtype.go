@@ -30,7 +30,7 @@ import (
 // EventTypesGetter has a method to return a EventTypeInterface.
 // A group's client should implement this interface.
 type EventTypesGetter interface {
-	EventTypes(namespace string) EventTypeInterface
+	EventTypes() EventTypeInterface
 }
 
 // EventTypeInterface has methods to work with EventType resources.
@@ -50,14 +50,12 @@ type EventTypeInterface interface {
 // eventTypes implements EventTypeInterface
 type eventTypes struct {
 	client rest.Interface
-	ns     string
 }
 
 // newEventTypes returns a EventTypes
-func newEventTypes(c *EventingV1alpha1Client, namespace string) *eventTypes {
+func newEventTypes(c *EventingV1alpha1Client) *eventTypes {
 	return &eventTypes{
 		client: c.RESTClient(),
-		ns:     namespace,
 	}
 }
 
@@ -65,7 +63,6 @@ func newEventTypes(c *EventingV1alpha1Client, namespace string) *eventTypes {
 func (c *eventTypes) Get(name string, options v1.GetOptions) (result *v1alpha1.EventType, err error) {
 	result = &v1alpha1.EventType{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("eventtypes").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -78,7 +75,6 @@ func (c *eventTypes) Get(name string, options v1.GetOptions) (result *v1alpha1.E
 func (c *eventTypes) List(opts v1.ListOptions) (result *v1alpha1.EventTypeList, err error) {
 	result = &v1alpha1.EventTypeList{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("eventtypes").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Do().
@@ -90,7 +86,6 @@ func (c *eventTypes) List(opts v1.ListOptions) (result *v1alpha1.EventTypeList, 
 func (c *eventTypes) Watch(opts v1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
 	return c.client.Get().
-		Namespace(c.ns).
 		Resource("eventtypes").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Watch()
@@ -100,7 +95,6 @@ func (c *eventTypes) Watch(opts v1.ListOptions) (watch.Interface, error) {
 func (c *eventTypes) Create(eventType *v1alpha1.EventType) (result *v1alpha1.EventType, err error) {
 	result = &v1alpha1.EventType{}
 	err = c.client.Post().
-		Namespace(c.ns).
 		Resource("eventtypes").
 		Body(eventType).
 		Do().
@@ -112,7 +106,6 @@ func (c *eventTypes) Create(eventType *v1alpha1.EventType) (result *v1alpha1.Eve
 func (c *eventTypes) Update(eventType *v1alpha1.EventType) (result *v1alpha1.EventType, err error) {
 	result = &v1alpha1.EventType{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("eventtypes").
 		Name(eventType.Name).
 		Body(eventType).
@@ -127,7 +120,6 @@ func (c *eventTypes) Update(eventType *v1alpha1.EventType) (result *v1alpha1.Eve
 func (c *eventTypes) UpdateStatus(eventType *v1alpha1.EventType) (result *v1alpha1.EventType, err error) {
 	result = &v1alpha1.EventType{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("eventtypes").
 		Name(eventType.Name).
 		SubResource("status").
@@ -140,7 +132,6 @@ func (c *eventTypes) UpdateStatus(eventType *v1alpha1.EventType) (result *v1alph
 // Delete takes name of the eventType and deletes it. Returns an error if one occurs.
 func (c *eventTypes) Delete(name string, options *v1.DeleteOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("eventtypes").
 		Name(name).
 		Body(options).
@@ -151,7 +142,6 @@ func (c *eventTypes) Delete(name string, options *v1.DeleteOptions) error {
 // DeleteCollection deletes a collection of objects.
 func (c *eventTypes) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("eventtypes").
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Body(options).
@@ -163,7 +153,6 @@ func (c *eventTypes) DeleteCollection(options *v1.DeleteOptions, listOptions v1.
 func (c *eventTypes) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.EventType, err error) {
 	result = &v1alpha1.EventType{}
 	err = c.client.Patch(pt).
-		Namespace(c.ns).
 		Resource("eventtypes").
 		SubResource(subresources...).
 		Name(name).
