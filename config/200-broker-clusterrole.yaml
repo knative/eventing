@@ -37,9 +37,10 @@ rules:
   - apiGroups:
       - eventing.knative.dev
     resources:
-      - event-types
-      - event-types/status
+      - eventtypes
+      - eventtypes/status
     verbs:
       - get
       - list
       - watch
+      - create
