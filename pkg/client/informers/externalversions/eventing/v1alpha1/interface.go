@@ -66,7 +66,7 @@ func (v *version) ClusterChannelProvisioners() ClusterChannelProvisionerInformer
 
 // EventTypes returns a EventTypeInformer.
 func (v *version) EventTypes() EventTypeInformer {
-	return &eventTypeInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+	return &eventTypeInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Subscriptions returns a SubscriptionInformer.

@@ -29,8 +29,8 @@ import (
 type EventTypeLister interface {
 	// List lists all EventTypes in the indexer.
 	List(selector labels.Selector) (ret []*v1alpha1.EventType, err error)
-	// Get retrieves the EventType from the index for a given name.
-	Get(name string) (*v1alpha1.EventType, error)
+	// EventTypes returns an object that can list and get EventTypes.
+	EventTypes(namespace string) EventTypeNamespaceLister
 	EventTypeListerExpansion
 }
 
@@ -52,9 +52,38 @@ func (s *eventTypeLister) List(selector labels.Selector) (ret []*v1alpha1.EventT
 	return ret, err
 }
 
-// Get retrieves the EventType from the index for a given name.
-func (s *eventTypeLister) Get(name string) (*v1alpha1.EventType, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+// EventTypes returns an object that can list and get EventTypes.
+func (s *eventTypeLister) EventTypes(namespace string) EventTypeNamespaceLister {
+	return eventTypeNamespaceLister{indexer: s.indexer, namespace: namespace}
+}
+
+// EventTypeNamespaceLister helps list and get EventTypes.
+type EventTypeNamespaceLister interface {
+	// List lists all EventTypes in the indexer for a given namespace.
+	List(selector labels.Selector) (ret []*v1alpha1.EventType, err error)
+	// Get retrieves the EventType from the indexer for a given namespace and name.
+	Get(name string) (*v1alpha1.EventType, error)
+	EventTypeNamespaceListerExpansion
+}
+
+// eventTypeNamespaceLister implements the EventTypeNamespaceLister
+// interface.
+type eventTypeNamespaceLister struct {
+	indexer   cache.Indexer
+	namespace string
+}
+
+// List lists all EventTypes in the indexer for a given namespace.
+func (s eventTypeNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.EventType, err error) {
+	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1alpha1.EventType))
+	})
+	return ret, err
+}
+
+// Get retrieves the EventType from the indexer for a given namespace and name.
+func (s eventTypeNamespaceLister) Get(name string) (*v1alpha1.EventType, error) {
+	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
 	if err != nil {
 		return nil, err
 	}

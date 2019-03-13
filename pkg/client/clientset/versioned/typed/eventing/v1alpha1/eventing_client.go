@@ -52,8 +52,8 @@ func (c *EventingV1alpha1Client) ClusterChannelProvisioners() ClusterChannelProv
 	return newClusterChannelProvisioners(c)
 }
 
-func (c *EventingV1alpha1Client) EventTypes() EventTypeInterface {
-	return newEventTypes(c)
+func (c *EventingV1alpha1Client) EventTypes(namespace string) EventTypeInterface {
+	return newEventTypes(c, namespace)
 }
 
 func (c *EventingV1alpha1Client) Subscriptions(namespace string) SubscriptionInterface {
