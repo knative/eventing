@@ -21,26 +21,13 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/knative/eventing/pkg/utils"
-
-	"github.com/knative/eventing/pkg/provisioners"
-
-	"k8s.io/apimachinery/pkg/runtime"
-
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	"github.com/knative/eventing/pkg/reconciler/names"
-
-	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/logging"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/logging"
+	"github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/eventing/pkg/reconciler/names"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/subscription"
+	"github.com/knative/eventing/pkg/utils"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -49,12 +36,19 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
-
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
@@ -93,44 +87,42 @@ type reconciler struct {
 var _ reconcile.Reconciler = &reconciler{}
 
 // ProvideController returns a function that returns a Trigger controller.
-func ProvideController(logger *zap.Logger) func(manager.Manager) (controller.Controller, error) {
-	return func(mgr manager.Manager) (controller.Controller, error) {
-		// Setup a new controller to Reconcile Triggers.
-		r := &reconciler{
-			recorder: mgr.GetRecorder(controllerAgentName),
-			logger:   logger,
-			triggers: make(map[types.NamespacedName]map[reconcile.Request]struct{}),
-		}
-		c, err := controller.New(controllerAgentName, mgr, controller.Options{
-			Reconciler: r,
-		})
+func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
+	// Setup a new controller to Reconcile Triggers.
+	r := &reconciler{
+		recorder: mgr.GetRecorder(controllerAgentName),
+		logger:   logger,
+		triggers: make(map[types.NamespacedName]map[reconcile.Request]struct{}),
+	}
+	c, err := controller.New(controllerAgentName, mgr, controller.Options{
+		Reconciler: r,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Watch Triggers.
+	if err = c.Watch(&source.Kind{Type: &v1alpha1.Trigger{}}, &handler.EnqueueRequestForObject{}); err != nil {
+		return nil, err
+	}
+
+	// Watch all the resources that the Trigger reconciles.
+	for _, t := range []runtime.Object{&corev1.Service{}, &istiov1alpha3.VirtualService{}, &v1alpha1.Subscription{}} {
+		err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Trigger{}, IsController: true})
 		if err != nil {
 			return nil, err
 		}
-
-		// Watch Triggers.
-		if err = c.Watch(&source.Kind{Type: &v1alpha1.Trigger{}}, &handler.EnqueueRequestForObject{}); err != nil {
-			return nil, err
-		}
-
-		// Watch all the resources that the Trigger reconciles.
-		for _, t := range []runtime.Object{&corev1.Service{}, &istiov1alpha3.VirtualService{}, &v1alpha1.Subscription{}} {
-			err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Trigger{}, IsController: true})
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		// Watch for Broker changes.
-		if err = c.Watch(&source.Kind{Type: &v1alpha1.Broker{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &mapAllTriggers{r}}); err != nil {
-			return nil, err
-		}
-
-		// TODO reconcile after a change to the subscriber. I'm not sure how this is possible, but we should do it if we
-		// can find a way.
-
-		return c, nil
 	}
+
+	// Watch for Broker changes.
+	if err = c.Watch(&source.Kind{Type: &v1alpha1.Broker{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &mapAllTriggers{r}}); err != nil {
+		return nil, err
+	}
+
+	// TODO reconcile after a change to the subscriber. I'm not sure how this is possible, but we should do it if we
+	// can find a way.
+
+	return c, nil
 }
 
 // mapAllTriggers maps Broker change notifications to Trigger reconcileRequests.

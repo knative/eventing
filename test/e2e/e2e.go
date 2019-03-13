@@ -47,7 +47,7 @@ const (
 )
 
 // Setup creates the client objects needed in the e2e tests.
-func Setup(t *testing.T, logger *logging.BaseLogger) (*test.Clients, *test.Cleaner) {
+func Setup(t *testing.T, logf logging.FormatLogger) (*test.Clients, *test.Cleaner) {
 	if pkgTest.Flags.Namespace == "" {
 		pkgTest.Flags.Namespace = DefaultTestNamespace
 	}
@@ -59,21 +59,21 @@ func Setup(t *testing.T, logger *logging.BaseLogger) (*test.Clients, *test.Clean
 	if err != nil {
 		t.Fatalf("Couldn't initialize clients: %v", err)
 	}
-	cleaner := test.NewCleaner(logger, clients.Dynamic)
+	cleaner := test.NewCleaner(logf, clients.Dynamic)
 
 	return clients, cleaner
 }
 
 // TearDown will delete created names using clients.
-func TearDown(clients *test.Clients, cleaner *test.Cleaner, logger *logging.BaseLogger) {
+func TearDown(clients *test.Clients, cleaner *test.Cleaner, _ logging.FormatLogger) {
 	cleaner.Clean(true)
 }
 
 // CreateRouteAndConfig will create Route and Config objects using clients.
 // The Config object will serve requests to a container started from the image at imagePath.
-func CreateRouteAndConfig(clients *test.Clients, logger *logging.BaseLogger, cleaner *test.Cleaner, name string, imagePath string) error {
+func CreateRouteAndConfig(clients *test.Clients, logf logging.FormatLogger, cleaner *test.Cleaner, name string, imagePath string) error {
 	configurations := clients.Serving.ServingV1alpha1().Configurations(pkgTest.Flags.Namespace)
-	logger.Infof("configuration: %#v", test.Configuration(name, pkgTest.Flags.Namespace, imagePath))
+	logf("configuration: %#v", test.Configuration(name, pkgTest.Flags.Namespace, imagePath))
 	config, err := configurations.Create(
 		test.Configuration(name, pkgTest.Flags.Namespace, imagePath))
 	if err != nil {
@@ -82,7 +82,7 @@ func CreateRouteAndConfig(clients *test.Clients, logger *logging.BaseLogger, cle
 	cleaner.Add(servingV1alpha1.SchemeGroupVersion.Group, servingV1alpha1.SchemeGroupVersion.Version, "configurations", pkgTest.Flags.Namespace, config.ObjectMeta.Name)
 
 	routes := clients.Serving.ServingV1alpha1().Routes(pkgTest.Flags.Namespace)
-	logger.Infof("route: %#v", test.Route(name, pkgTest.Flags.Namespace, name))
+	logf("route: %#v", test.Route(name, pkgTest.Flags.Namespace, name))
 	route, err := routes.Create(
 		test.Route(name, pkgTest.Flags.Namespace, name))
 	if err != nil {
@@ -93,8 +93,8 @@ func CreateRouteAndConfig(clients *test.Clients, logger *logging.BaseLogger, cle
 }
 
 // WithRouteReady will create Route and Config objects and wait until they're ready.
-func WithRouteReady(clients *test.Clients, logger *logging.BaseLogger, cleaner *test.Cleaner, name string, imagePath string) error {
-	err := CreateRouteAndConfig(clients, logger, cleaner, name, imagePath)
+func WithRouteReady(clients *test.Clients, logf logging.FormatLogger, cleaner *test.Cleaner, name string, imagePath string) error {
+	err := CreateRouteAndConfig(clients, logf, cleaner, name, imagePath)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func WithRouteReady(clients *test.Clients, logger *logging.BaseLogger, cleaner *
 }
 
 // CreateChannel will create a Channel
-func CreateChannel(clients *test.Clients, channel *v1alpha1.Channel, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+func CreateChannel(clients *test.Clients, channel *v1alpha1.Channel, _ logging.FormatLogger, cleaner *test.Cleaner) error {
 	channels := clients.Eventing.EventingV1alpha1().Channels(pkgTest.Flags.Namespace)
 	res, err := channels.Create(channel)
 	if err != nil {
@@ -117,7 +117,7 @@ func CreateChannel(clients *test.Clients, channel *v1alpha1.Channel, logger *log
 }
 
 // CreateSubscription will create a Subscription
-func CreateSubscription(clients *test.Clients, sub *v1alpha1.Subscription, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+func CreateSubscription(clients *test.Clients, sub *v1alpha1.Subscription, _ logging.FormatLogger, cleaner *test.Cleaner) error {
 	subscriptions := clients.Eventing.EventingV1alpha1().Subscriptions(pkgTest.Flags.Namespace)
 	res, err := subscriptions.Create(sub)
 	if err != nil {
@@ -128,11 +128,11 @@ func CreateSubscription(clients *test.Clients, sub *v1alpha1.Subscription, logge
 }
 
 // WithChannelAndSubscriptionReady creates a Channel and Subscription and waits until both are Ready.
-func WithChannelAndSubscriptionReady(clients *test.Clients, channel *v1alpha1.Channel, sub *v1alpha1.Subscription, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
-	if err := CreateChannel(clients, channel, logger, cleaner); err != nil {
+func WithChannelAndSubscriptionReady(clients *test.Clients, channel *v1alpha1.Channel, sub *v1alpha1.Subscription, logf logging.FormatLogger, cleaner *test.Cleaner) error {
+	if err := CreateChannel(clients, channel, logf, cleaner); err != nil {
 		return err
 	}
-	if err := CreateSubscription(clients, sub, logger, cleaner); err != nil {
+	if err := CreateSubscription(clients, sub, logf, cleaner); err != nil {
 		return err
 	}
 
@@ -162,7 +162,7 @@ func WithChannelAndSubscriptionReady(clients *test.Clients, channel *v1alpha1.Ch
 }
 
 // CreateBroker will create a Broker.
-func CreateBroker(clients *test.Clients, broker *v1alpha1.Broker, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+func CreateBroker(clients *test.Clients, broker *v1alpha1.Broker, logf logging.FormatLogger, cleaner *test.Cleaner) error {
 	brokers := clients.Eventing.EventingV1alpha1().Brokers(broker.Namespace)
 	res, err := brokers.Create(broker)
 	if err != nil {
@@ -173,8 +173,8 @@ func CreateBroker(clients *test.Clients, broker *v1alpha1.Broker, logger *loggin
 }
 
 // WithBrokerReady creates a Broker and waits until it is Ready.
-func WithBrokerReady(clients *test.Clients, broker *v1alpha1.Broker, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
-	if err := CreateBroker(clients, broker, logger, cleaner); err != nil {
+func WithBrokerReady(clients *test.Clients, broker *v1alpha1.Broker, logf logging.FormatLogger, cleaner *test.Cleaner) error {
+	if err := CreateBroker(clients, broker, logf, cleaner); err != nil {
 		return err
 	}
 	return WaitForBrokerReady(clients, broker)
@@ -196,7 +196,7 @@ func WaitForBrokerReady(clients *test.Clients, broker *v1alpha1.Broker) error {
 }
 
 // CreateTrigger will create a Trigger.
-func CreateTrigger(clients *test.Clients, trigger *v1alpha1.Trigger, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+func CreateTrigger(clients *test.Clients, trigger *v1alpha1.Trigger, logf logging.FormatLogger, cleaner *test.Cleaner) error {
 	triggers := clients.Eventing.EventingV1alpha1().Triggers(trigger.Namespace)
 	res, err := triggers.Create(trigger)
 	if err != nil {
@@ -207,8 +207,8 @@ func CreateTrigger(clients *test.Clients, trigger *v1alpha1.Trigger, logger *log
 }
 
 // WithTriggerReady creates a Trigger and waits until it is Ready.
-func WithTriggerReady(clients *test.Clients, trigger *v1alpha1.Trigger, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
-	if err := CreateTrigger(clients, trigger, logger, cleaner); err != nil {
+func WithTriggerReady(clients *test.Clients, trigger *v1alpha1.Trigger, logf logging.FormatLogger, cleaner *test.Cleaner) error {
+	if err := CreateTrigger(clients, trigger, logf, cleaner); err != nil {
 		return err
 	}
 
@@ -227,7 +227,7 @@ func WithTriggerReady(clients *test.Clients, trigger *v1alpha1.Trigger, logger *
 }
 
 // CreateServiceAccount will create a service account
-func CreateServiceAccount(clients *test.Clients, sa *corev1.ServiceAccount, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+func CreateServiceAccount(clients *test.Clients, sa *corev1.ServiceAccount, _ logging.FormatLogger, cleaner *test.Cleaner) error {
 	sas := clients.Kube.Kube.CoreV1().ServiceAccounts(pkgTest.Flags.Namespace)
 	res, err := sas.Create(sa)
 	if err != nil {
@@ -238,7 +238,7 @@ func CreateServiceAccount(clients *test.Clients, sa *corev1.ServiceAccount, logg
 }
 
 // CreateClusterRoleBinding will create a service account binding
-func CreateClusterRoleBinding(clients *test.Clients, crb *rbacv1.ClusterRoleBinding, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+func CreateClusterRoleBinding(clients *test.Clients, crb *rbacv1.ClusterRoleBinding, _ logging.FormatLogger, cleaner *test.Cleaner) error {
 	clusterRoleBindings := clients.Kube.Kube.RbacV1().ClusterRoleBindings()
 	res, err := clusterRoleBindings.Create(crb)
 	if err != nil {
@@ -250,14 +250,14 @@ func CreateClusterRoleBinding(clients *test.Clients, crb *rbacv1.ClusterRoleBind
 
 // CreateServiceAccountAndBinding creates both ServiceAccount and ClusterRoleBinding with default
 // cluster-admin role
-func CreateServiceAccountAndBinding(clients *test.Clients, name string, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+func CreateServiceAccountAndBinding(clients *test.Clients, name string, logf logging.FormatLogger, cleaner *test.Cleaner) error {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: pkgTest.Flags.Namespace,
 		},
 	}
-	err := CreateServiceAccount(clients, sa, logger, cleaner)
+	err := CreateServiceAccount(clients, sa, logf, cleaner)
 	if err != nil {
 		return err
 	}
@@ -278,7 +278,7 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, logger *
 			APIGroup: "rbac.authorization.k8s.io",
 		},
 	}
-	err = CreateClusterRoleBinding(clients, crb, logger, cleaner)
+	err = CreateClusterRoleBinding(clients, crb, logf, cleaner)
 	if err != nil {
 		return err
 	}
@@ -286,7 +286,7 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, logger *
 }
 
 // CreateService will create a Service
-func CreateService(clients *test.Clients, svc *corev1.Service, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+func CreateService(clients *test.Clients, svc *corev1.Service, _ logging.FormatLogger, cleaner *test.Cleaner) error {
 	svcs := clients.Kube.Kube.CoreV1().Services(svc.GetNamespace())
 	res, err := svcs.Create(svc)
 	if err != nil {
@@ -297,7 +297,7 @@ func CreateService(clients *test.Clients, svc *corev1.Service, logger *logging.B
 }
 
 // CreatePod will create a Pod
-func CreatePod(clients *test.Clients, pod *corev1.Pod, logger *logging.BaseLogger, cleaner *test.Cleaner) error {
+func CreatePod(clients *test.Clients, pod *corev1.Pod, _ logging.FormatLogger, cleaner *test.Cleaner) error {
 	pods := clients.Kube.Kube.CoreV1().Pods(pod.GetNamespace())
 	res, err := pods.Create(pod)
 	if err != nil {
@@ -308,7 +308,7 @@ func CreatePod(clients *test.Clients, pod *corev1.Pod, logger *logging.BaseLogge
 }
 
 // PodLogs returns Pod logs for given Pod and Container
-func PodLogs(clients *test.Clients, podName string, containerName string, namespace string, logger *logging.BaseLogger) ([]byte, error) {
+func PodLogs(clients *test.Clients, podName string, containerName string, namespace string, logf logging.FormatLogger) ([]byte, error) {
 	pods := clients.Kube.Kube.CoreV1().Pods(namespace)
 	podList, err := pods.List(metav1.ListOptions{})
 	if err != nil {
@@ -321,9 +321,9 @@ func PodLogs(clients *test.Clients, podName string, containerName string, namesp
 			}).Do()
 			raw, err := result.Raw()
 			if err == nil {
-				logger.Infof("%s logs request result: %#v", podName, string(raw))
+				logf("%s logs request result: %#v", podName, string(raw))
 			} else {
-				logger.Infof("%s logs request result: %#v", podName, err)
+				logf("%s logs request result: %#v", podName, err)
 			}
 			return result.Raw()
 		}
@@ -333,18 +333,18 @@ func PodLogs(clients *test.Clients, podName string, containerName string, namesp
 
 // WaitForLogContents waits until logs for given Pod/Container include the given contents.
 // If the contents are not present within timeout it returns error.
-func WaitForLogContents(clients *test.Clients, logger *logging.BaseLogger, podName string, containerName string, namespace string, contents []string) error {
+func WaitForLogContents(clients *test.Clients, logf logging.FormatLogger, podName string, containerName string, namespace string, contents []string) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		logs, err := PodLogs(clients, podName, containerName, namespace, logger)
+		logs, err := PodLogs(clients, podName, containerName, namespace, logf)
 		if err != nil {
 			return true, err
 		}
 		for _, content := range contents {
 			if !strings.Contains(string(logs), content) {
-				logger.Infof("Could not find content %q for %s/%s. Found %q instead", content, podName, containerName, string(logs))
+				logf("Could not find content %q for %s/%s. Found %q instead", content, podName, containerName, string(logs))
 				return false, nil
 			} else {
-				logger.Infof("Found content %q for %s/%s in logs %q", content, podName, containerName, string(logs))
+				logf("Found content %q for %s/%s in logs %q", content, podName, containerName, string(logs))
 				// do not return as we will keep on looking for the other contents in the slice
 			}
 		}
@@ -354,14 +354,14 @@ func WaitForLogContents(clients *test.Clients, logger *logging.BaseLogger, podNa
 
 // FindAnyLogContents attempts to find logs for given Pod/Container that has 'any' of the given contents.
 // It returns an error if it couldn't retrieve the logs. In case 'any' of the contents are there, it returns true.
-func FindAnyLogContents(clients *test.Clients, logger *logging.BaseLogger, podName string, containerName string, namespace string, contents []string) (bool, error) {
-	logs, err := PodLogs(clients, podName, containerName, namespace, logger)
+func FindAnyLogContents(clients *test.Clients, logf logging.FormatLogger, podName string, containerName string, namespace string, contents []string) (bool, error) {
+	logs, err := PodLogs(clients, podName, containerName, namespace, logf)
 	if err != nil {
 		return false, err
 	}
 	for _, content := range contents {
 		if strings.Contains(string(logs), content) {
-			logger.Infof("Found content %q for %s/%s.", content, podName, containerName)
+			logf("Found content %q for %s/%s.", content, podName, containerName)
 			return true, nil
 		}
 	}
@@ -370,12 +370,12 @@ func FindAnyLogContents(clients *test.Clients, logger *logging.BaseLogger, podNa
 
 // WaitForLogContent waits until logs for given Pod/Container include the given content.
 // If the content is not present within timeout it returns error.
-func WaitForLogContent(clients *test.Clients, logger *logging.BaseLogger, podName string, containerName string, namespace string, content string) error {
-	return WaitForLogContents(clients, logger, podName, containerName, namespace, []string{content})
+func WaitForLogContent(clients *test.Clients, logf logging.FormatLogger, podName string, containerName string, namespace string, content string) error {
+	return WaitForLogContents(clients, logf, podName, containerName, namespace, []string{content})
 }
 
 // WaitForAllPodsRunning will wait until all pods in the given namespace are running
-func WaitForAllPodsRunning(clients *test.Clients, logger *logging.BaseLogger, namespace string) error {
+func WaitForAllPodsRunning(clients *test.Clients, _ logging.FormatLogger, namespace string) error {
 	if err := pkgTest.WaitForPodListState(clients.Kube, test.PodsRunning, "PodsAreRunning", namespace); err != nil {
 		return err
 	}
@@ -383,7 +383,7 @@ func WaitForAllPodsRunning(clients *test.Clients, logger *logging.BaseLogger, na
 }
 
 // WaitForAllTriggersReady will wait until all triggers in the given namespace are ready.
-func WaitForAllTriggersReady(clients *test.Clients, logger *logging.BaseLogger, namespace string) error {
+func WaitForAllTriggersReady(clients *test.Clients, logf logging.FormatLogger, namespace string) error {
 	triggers := clients.Eventing.EventingV1alpha1().Triggers(namespace)
 	if err := test.WaitForTriggersListState(triggers, test.TriggersReady, "TriggerIsReady"); err != nil {
 		return err
@@ -392,7 +392,7 @@ func WaitForAllTriggersReady(clients *test.Clients, logger *logging.BaseLogger, 
 }
 
 // LabelNamespace labels the test namespace with the labels map.
-func LabelNamespace(clients *test.Clients, logger *logging.BaseLogger, labels map[string]string) error {
+func LabelNamespace(clients *test.Clients, logf logging.FormatLogger, labels map[string]string) error {
 	ns := pkgTest.Flags.Namespace
 	nsSpec, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
 	if err != nil && errors.IsNotFound(err) {
@@ -408,16 +408,16 @@ func LabelNamespace(clients *test.Clients, logger *logging.BaseLogger, labels ma
 	return err
 }
 
-func NamespaceExists(t *testing.T, clients *test.Clients, logger *logging.BaseLogger) (string, func()) {
+func NamespaceExists(t *testing.T, clients *test.Clients, logf logging.FormatLogger) (string, func()) {
 	shutdown := func() {}
 	ns := pkgTest.Flags.Namespace
-	logger.Infof("Namespace: %s", ns)
+	logf("Namespace: %s", ns)
 
 	nsSpec, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
 
 	if err != nil && errors.IsNotFound(err) {
 		nsSpec = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}
-		logger.Infof("Creating Namespace: %s", ns)
+		logf("Creating Namespace: %s", ns)
 		nsSpec, err = clients.Kube.Kube.CoreV1().Namespaces().Create(nsSpec)
 
 		if err != nil {
@@ -432,11 +432,11 @@ func NamespaceExists(t *testing.T, clients *test.Clients, logger *logging.BaseLo
 				// This only happens when the namespace provided does not exist.
 				//
 				// wait up to 120 seconds for the namespace to be removed.
-				logger.Infof("Deleting Namespace: %s", ns)
+				logf("Deleting Namespace: %s", ns)
 				for i := 0; i < 120; i++ {
 					time.Sleep(1 * time.Second)
 					if _, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{}); err != nil && errors.IsNotFound(err) {
-						logger.Info("Namespace has been deleted")
+						logf("Namespace has been deleted")
 						// the namespace is gone.
 						break
 					}

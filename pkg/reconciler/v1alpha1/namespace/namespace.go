@@ -20,8 +20,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/logging"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/logging"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -78,35 +78,33 @@ type reconciler struct {
 var _ reconcile.Reconciler = &reconciler{}
 
 // ProvideController returns a function that returns a Namespace controller.
-func ProvideController(logger *zap.Logger) func(manager.Manager) (controller.Controller, error) {
-	return func(mgr manager.Manager) (controller.Controller, error) {
-		// Setup a new controller to Reconcile Namespaces.
-		r := &reconciler{
-			recorder: mgr.GetRecorder(controllerAgentName),
-			logger:   logger,
-		}
-		c, err := controller.New(controllerAgentName, mgr, controller.Options{
-			Reconciler: r,
-		})
+func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
+	// Setup a new controller to Reconcile Namespaces.
+	r := &reconciler{
+		recorder: mgr.GetRecorder(controllerAgentName),
+		logger:   logger,
+	}
+	c, err := controller.New(controllerAgentName, mgr, controller.Options{
+		Reconciler: r,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Watch Namespaces.
+	if err = c.Watch(&source.Kind{Type: &v1.Namespace{}}, &handler.EnqueueRequestForObject{}); err != nil {
+		return nil, err
+	}
+
+	// Watch all the resources that this reconciler reconciles.
+	for _, t := range []runtime.Object{&corev1.ServiceAccount{}, &rbacv1.RoleBinding{}, &v1alpha1.Broker{}} {
+		err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &namespaceMapper{}})
 		if err != nil {
 			return nil, err
 		}
-
-		// Watch Namespaces.
-		if err = c.Watch(&source.Kind{Type: &v1.Namespace{}}, &handler.EnqueueRequestForObject{}); err != nil {
-			return nil, err
-		}
-
-		// Watch all the resources that this reconciler reconciles.
-		for _, t := range []runtime.Object{&corev1.ServiceAccount{}, &rbacv1.RoleBinding{}, &v1alpha1.Broker{}} {
-			err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &namespaceMapper{}})
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		return c, nil
 	}
+
+	return c, nil
 }
 
 type namespaceMapper struct{}

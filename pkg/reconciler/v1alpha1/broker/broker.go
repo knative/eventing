@@ -21,38 +21,30 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/apimachinery/pkg/runtime"
-
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	"github.com/knative/eventing/pkg/reconciler/names"
-
-	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/logging"
-	v1 "k8s.io/api/apps/v1"
-
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
-
-	"go.uber.org/zap"
-
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/logging"
+	"github.com/knative/eventing/pkg/reconciler/names"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
+	"go.uber.org/zap"
+	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
-
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
@@ -89,8 +81,8 @@ type ReconcilerArgs struct {
 }
 
 // ProvideController returns a function that returns a Broker controller.
-func ProvideController(logger *zap.Logger, args ReconcilerArgs) func(manager.Manager) (controller.Controller, error) {
-	return func(mgr manager.Manager) (controller.Controller, error) {
+func ProvideController(args ReconcilerArgs) func(manager.Manager, *zap.Logger) (controller.Controller, error) {
+	return func(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 		// Setup a new controller to Reconcile Brokers.
 		c, err := controller.New(controllerAgentName, mgr, controller.Options{
 			Reconciler: &reconciler{

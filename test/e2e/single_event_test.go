@@ -20,9 +20,12 @@ package e2e
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/knative/eventing/test"
-	"github.com/knative/pkg/test/logging"
+	pkgTest "github.com/knative/pkg/test"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
@@ -35,6 +38,44 @@ const (
 	routeName        = "e2e-singleevent-route"
 )
 
+func namespaceExists(t *testing.T, clients *test.Clients) (string, func()) {
+	shutdown := func() {}
+	ns := pkgTest.Flags.Namespace
+	t.Logf("Namespace: %s", ns)
+
+	nsSpec, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
+
+	if err != nil && errors.IsNotFound(err) {
+		nsSpec = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}
+		t.Logf("Creating Namespace: %s", ns)
+		nsSpec, err = clients.Kube.Kube.CoreV1().Namespaces().Create(nsSpec)
+		if err != nil {
+			t.Fatalf("Failed to create Namespace: %s; %v", ns, err)
+		} else {
+			shutdown = func() {
+				clients.Kube.Kube.CoreV1().Namespaces().Delete(nsSpec.Name, nil)
+				// TODO: this is a bit hacky but in order for the tests to work
+				// correctly for a clean namespace to be created we need to also
+				// wait for it to be removed.
+				// To fix this we could generate namespace names.
+				// This only happens when the namespace provided does not exist.
+				//
+				// wait up to 120 seconds for the namespace to be removed.
+				t.Logf("Deleting Namespace: %s", ns)
+				for i := 0; i < 120; i++ {
+					time.Sleep(1 * time.Second)
+					if _, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{}); err != nil && errors.IsNotFound(err) {
+						t.Logf("Namespace has been deleted")
+						// the namespace is gone.
+						break
+					}
+				}
+			}
+		}
+	}
+	return ns, shutdown
+}
+
 func TestSingleBinaryEvent(t *testing.T) {
 	SingleEvent(t, test.CloudEventEncodingBinary)
 }
@@ -44,32 +85,30 @@ func TestSingleStructuredEvent(t *testing.T) {
 }
 
 func SingleEvent(t *testing.T, encoding string) {
-	logger := logging.GetContextLogger("TestSingleEvent")
-
-	clients, cleaner := Setup(t, logger)
+	clients, cleaner := Setup(t, t.Logf)
 
 	// verify namespace
-	ns, cleanupNS := NamespaceExists(t, clients, logger)
+	ns, cleanupNS := NamespaceExists(t, clients, t.Logf)
 	defer cleanupNS()
 
 	// TearDown() needs to be deferred after cleanupNS(). Otherwise the namespace is deleted and all
 	// resources in it. So when TearDown() runs, it spews a lot of not found errors.
-	defer TearDown(clients, cleaner, logger)
+	defer TearDown(clients, cleaner, t.Logf)
 
 	// create logger pod
-	logger.Infof("creating subscriber pod")
+	t.Logf("creating subscriber pod")
 	selector := map[string]string{"e2etest": string(uuid.NewUUID())}
 	subscriberPod := test.EventLoggerPod(routeName, ns, selector)
-	if err := CreatePod(clients, subscriberPod, logger, cleaner); err != nil {
+	if err := CreatePod(clients, subscriberPod, t.Logf, cleaner); err != nil {
 		t.Fatalf("Failed to create event logger pod: %v", err)
 	}
-	if err := WaitForAllPodsRunning(clients, logger, ns); err != nil {
+	if err := WaitForAllPodsRunning(clients, t.Logf, ns); err != nil {
 		t.Fatalf("Error waiting for logger pod to become running: %v", err)
 	}
-	logger.Infof("subscriber pod running")
+	t.Logf("subscriber pod running")
 
 	subscriberSvc := test.Service(routeName, ns, selector)
-	if err := CreateService(clients, subscriberSvc, logger, cleaner); err != nil {
+	if err := CreateService(clients, subscriberSvc, t.Logf, cleaner); err != nil {
 		t.Fatalf("Failed to create event logger service: %v", err)
 	}
 
@@ -81,22 +120,22 @@ func SingleEvent(t *testing.T, encoding string) {
 
 	// create channel
 
-	logger.Infof("Creating Channel and Subscription")
+	t.Logf("Creating Channel and Subscription")
 	if test.EventingFlags.Provisioner == "" {
 		t.Fatal("ClusterChannelProvisioner must be set to a non-empty string. Either do not specify --clusterChannelProvisioner or set to something other than the empty string")
 	}
 	channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(test.EventingFlags.Provisioner))
-	logger.Infof("channel: %#v", channel)
+	t.Logf("channel: %#v", channel)
 	sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelName), test.SubscriberSpecForService(routeName), nil)
-	logger.Infof("sub: %#v", sub)
+	t.Logf("sub: %#v", sub)
 
-	if err := WithChannelAndSubscriptionReady(clients, channel, sub, logger, cleaner); err != nil {
+	if err := WithChannelAndSubscriptionReady(clients, channel, sub, t.Logf, cleaner); err != nil {
 		t.Fatalf("The Channel or Subscription were not marked as Ready: %v", err)
 	}
 
 	// create sender pod
 
-	logger.Infof("Creating event sender")
+	t.Logf("Creating event sender")
 	body := fmt.Sprintf("TestSingleEvent %s", uuid.NewUUID())
 	event := test.CloudEvent{
 		Source:   senderName,
@@ -106,14 +145,14 @@ func SingleEvent(t *testing.T, encoding string) {
 	}
 	url := fmt.Sprintf("http://%s", channel.Status.Address.Hostname)
 	pod := test.EventSenderPod(senderName, ns, url, event)
-	logger.Infof("sender pod: %#v", pod)
-	if err := CreatePod(clients, pod, logger, cleaner); err != nil {
+	t.Logf("sender pod: %#v", pod)
+	if err := CreatePod(clients, pod, t.Logf, cleaner); err != nil {
 		t.Fatalf("Failed to create event sender pod: %v", err)
 	}
 
-	if err := WaitForLogContent(clients, logger, routeName, subscriberPod.Spec.Containers[0].Name, ns, body); err != nil {
-		PodLogs(clients, senderName, "sendevent", ns, logger)
-		PodLogs(clients, senderName, "istio-proxy", ns, logger)
+	if err := WaitForLogContent(clients, t.Logf, routeName, subscriberPod.Spec.Containers[0].Name, ns, body); err != nil {
+		PodLogs(clients, senderName, "sendevent", ns, t.Logf)
+		PodLogs(clients, senderName, "istio-proxy", ns, t.Logf)
 		t.Fatalf("String %q not found in logs of subscriber pod %q: %v", body, routeName, err)
 	}
 }
