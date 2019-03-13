@@ -98,8 +98,8 @@ required = [
 # TODO why is this overridden?
 [[override]]
   name = "github.com/knative/pkg"
-  # HEAD as of 2019-02-14 💖
-  revision = "0183bf9cdc7349e3c76c26e51f84689b411fccea"
+  # HEAD as of 2019-03-12
+  revision = "684620ff81ae137be5cda634a03831b373adc4eb"
 
 [[constraint]]
   name = "github.com/knative/serving"

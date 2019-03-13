@@ -58,7 +58,7 @@ func initializeEventingFlags() *EventingEnvironmentFlags {
 	logging.InitializeLogger(pkgTest.Flags.LogVerbose)
 
 	if pkgTest.Flags.EmitMetrics {
-		logging.InitializeMetricExporter()
+		logging.InitializeMetricExporter("eventing")
 	}
 
 	return &f
