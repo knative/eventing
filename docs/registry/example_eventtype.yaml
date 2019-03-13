@@ -6,8 +6,5 @@ metadata:
 spec:
   # authoritative
   type: dev.knative.source.bitbucket.repo:push
-  # cloud event source
-  source: https://bitbucket.org/owner/repo/
-  # origin is needed?
   origin: bitbucket.org
   schema: https://api.bitbucket.org/2.0/schemas/repo/push
