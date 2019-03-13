@@ -48,7 +48,7 @@ var (
 )
 
 type IngressPolicy interface {
-	AllowEvent(event *cloudevents.Event) bool
+	AllowEvent(event *cloudevents.Event, namespace string) bool
 }
 
 type Any struct{}
@@ -86,24 +86,27 @@ func newIngressPolicy(logger *zap.SugaredLogger, client client.Client, policy st
 	}
 }
 
-func (p *Any) AllowEvent(event *cloudevents.Event) bool {
+func (p *Any) AllowEvent(event *cloudevents.Event, namespace string) bool {
 	return true
 }
 
-func (p *Registered) AllowEvent(event *cloudevents.Event) bool {
-	_, err := getEventType(p.client, event)
+func (p *Registered) AllowEvent(event *cloudevents.Event, namespace string) bool {
+	_, err := getEventType(p.client, event, namespace)
 	if k8serrors.IsNotFound(err) {
-		p.logger.Warnf("EventType not found, spec.type %q, %v", event.Type(), err)
+		p.logger.Warnf("EventType not found, rejecting spec.type %q, %v", event.Type(), err)
+		return false
 	} else if err != nil {
-		p.logger.Errorf("Error retrieving EventType, spec.type %q, %v", event.Type(), err)
+		p.logger.Errorf("Error retrieving EventType, rejecting spec.type %q, %v", event.Type(), err)
+		return false
 	}
-	return err != nil
+	return true
 }
 
-func (p *AutoCreate) AllowEvent(event *cloudevents.Event) bool {
-	_, err := getEventType(p.client, event)
+func (p *AutoCreate) AllowEvent(event *cloudevents.Event, namespace string) bool {
+	_, err := getEventType(p.client, event, namespace)
 	if k8serrors.IsNotFound(err) {
-		eventType := makeEventType(event)
+		p.logger.Infof("EventType not found, creating spec.type %q", event.Type())
+		eventType := makeEventType(event, namespace)
 		err := p.client.Create(context.TODO(), eventType)
 		if err != nil {
 			p.logger.Errorf("Error creating EventType, spec.type %q, %v", event.Type(), err)
@@ -114,8 +117,9 @@ func (p *AutoCreate) AllowEvent(event *cloudevents.Event) bool {
 	return true
 }
 
-func getEventType(c client.Client, event *cloudevents.Event) (*eventingv1alpha1.EventType, error) {
+func getEventType(c client.Client, event *cloudevents.Event, namespace string) (*eventingv1alpha1.EventType, error) {
 	opts := &client.ListOptions{
+		Namespace: namespace,
 		// Set Raw because if we need to get more than one page, then we will put the continue token
 		// into opts.Raw.Continue.
 		Raw: &metav1.ListOptions{},
@@ -147,11 +151,12 @@ func getEventType(c client.Client, event *cloudevents.Event) (*eventingv1alpha1.
 }
 
 // makeEventType generates, but does not create an EventType from the given cloudevents.Event.
-func makeEventType(event *cloudevents.Event) *eventingv1alpha1.EventType {
+func makeEventType(event *cloudevents.Event, namespace string) *eventingv1alpha1.EventType {
 	cloudEventType := event.Type()
 	return &eventingv1alpha1.EventType{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-", toValidIdentifier(cloudEventType)),
+			Namespace:    namespace,
 			// TODO maybe some label?
 		},
 		Spec: eventingv1alpha1.EventTypeSpec{

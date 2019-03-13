@@ -157,7 +157,7 @@ func NewHandler(logger *zap.Logger, destination, policy string, client client.Cl
 func createReceiverFunction(f *Handler) func(provisioners.ChannelReference, *provisioners.Message) error {
 	return func(c provisioners.ChannelReference, m *provisioners.Message) error {
 		event := cloudEventFrom(m)
-		if f.ingressPolicy.AllowEvent(&event) {
+		if f.ingressPolicy.AllowEvent(&event, c.Namespace) {
 			return f.dispatch(m)
 		}
 		return nil

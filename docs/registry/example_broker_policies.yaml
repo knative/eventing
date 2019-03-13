@@ -1,0 +1,24 @@
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Broker
+metadata:
+  name: broker-any
+spec:
+  ingressPolicy: allow_any
+
+---
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Broker
+metadata:
+  name: broker-registered
+spec:
+  ingressPolicy: allow_registered
+
+---
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Broker
+metadata:
+  name: broker-auto-create
+spec:
+  ingressPolicy: auto_create
