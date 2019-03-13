@@ -37,3 +37,9 @@ spec:
     - name: Reason
       type: string
       JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+    - name: AssociatedBroker
+      type: string
+      JSONPath: .spec.broker
+    - name: SubscriberURI
+      type: string
+      JSONPath: .status.subscriberURI
