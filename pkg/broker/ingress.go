@@ -18,10 +18,18 @@ package broker
 
 import (
 	"context"
+	"fmt"
+	"regexp"
+	"strings"
+
+	"go.uber.org/zap"
+
+	"k8s.io/apimachinery/pkg/util/validation"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -29,42 +37,85 @@ import (
 const (
 	allowAny             = "allow_any"
 	allowRegisteredTypes = "allow_registered"
+	autoCreate           = "auto_create"
+)
+
+var (
+	// Only allow alphanumeric, '-' or '.'.
+	validChars = regexp.MustCompile(`[^-\.a-z0-9]+`)
+	// EventType not found error.
+	notFound = k8serrors.NewNotFound(eventingv1alpha1.Resource("eventtype"), "")
 )
 
 type IngressPolicy interface {
-	AllowEvent(namespace string, event *cloudevents.Event) bool
+	AllowEvent(event *cloudevents.Event) bool
 }
 
-type AllowAnyPolicy struct{}
+type Any struct{}
 
-type AllowRegisteredPolicy struct {
+type Registered struct {
+	logger *zap.SugaredLogger
 	client client.Client
 }
 
-func NewIngressPolicy(client client.Client, policy string) IngressPolicy {
-	return newIngressPolicy(client, policy)
+type AutoCreate struct {
+	logger *zap.SugaredLogger
+	client client.Client
 }
 
-func newIngressPolicy(client client.Client, policy string) IngressPolicy {
+func NewIngressPolicy(logger *zap.SugaredLogger, client client.Client, policy string) IngressPolicy {
+	return newIngressPolicy(logger, client, policy)
+}
+
+func newIngressPolicy(logger *zap.SugaredLogger, client client.Client, policy string) IngressPolicy {
 	switch policy {
 	case allowRegisteredTypes:
-		return &AllowRegisteredPolicy{
+		return &Registered{
+			logger: logger,
+			client: client,
+		}
+	case autoCreate:
+		return &AutoCreate{
+			logger: logger,
 			client: client,
 		}
 	case allowAny:
-		return &AllowAnyPolicy{}
+		return &Any{}
 	default:
-		return &AllowAnyPolicy{}
+		return &Any{}
 	}
 }
 
-func (p *AllowAnyPolicy) AllowEvent(namespace string, event *cloudevents.Event) bool {
+func (p *Any) AllowEvent(event *cloudevents.Event) bool {
 	return true
 }
 
-func (p *AllowRegisteredPolicy) AllowEvent(namespace string, event *cloudevents.Event) bool {
+func (p *Registered) AllowEvent(event *cloudevents.Event) bool {
+	_, err := getEventType(p.client, event)
+	if k8serrors.IsNotFound(err) {
+		p.logger.Warnf("EventType not found, spec.type %q, %v", event.Type(), err)
+	} else if err != nil {
+		p.logger.Errorf("Error retrieving EventType, spec.type %q, %v", event.Type(), err)
+	}
+	return err != nil
+}
+
+func (p *AutoCreate) AllowEvent(event *cloudevents.Event) bool {
+	_, err := getEventType(p.client, event)
+	if k8serrors.IsNotFound(err) {
+		eventType := makeEventType(event)
+		err := p.client.Create(context.TODO(), eventType)
+		if err != nil {
+			p.logger.Errorf("Error creating EventType, spec.type %q, %v", event.Type(), err)
+		}
+	} else if err != nil {
+		p.logger.Errorf("Error retrieving EventType, spec.type %q, %v", event.Type(), err)
+	}
+	return true
+}
+
+func getEventType(c client.Client, event *cloudevents.Event) (*eventingv1alpha1.EventType, error) {
 	opts := &client.ListOptions{
-		Namespace: namespace,
 		// Set Raw because if we need to get more than one page, then we will put the continue token
 		// into opts.Raw.Continue.
 		Raw: &metav1.ListOptions{},
@@ -76,19 +127,47 @@ func (p *AllowRegisteredPolicy) AllowEvent(namespace string, event *cloudevents.
 	// but it is not supported.
 	for {
 		el := &eventingv1alpha1.EventTypeList{}
-		err := p.client.List(ctx, opts, el)
+		err := c.List(ctx, opts, el)
 		if err != nil {
-			return false
+			return nil, err
 		}
 		for _, e := range el.Items {
+			// TODO ask Scott for better queries to get extensions.
+			// e.Spec.Origin == event.Extensions("Origin") && e.Spec.Schema == event.Extensions("Schema")
 			if e.Spec.Type == event.Type() {
-				return true
+				return &e, nil
 			}
 		}
 		if el.Continue != "" {
 			opts.Raw.Continue = el.Continue
 		} else {
-			return false
+			return nil, notFound
 		}
 	}
+}
+
+// makeEventType generates, but does not create an EventType from the given cloudevents.Event.
+func makeEventType(event *cloudevents.Event) *eventingv1alpha1.EventType {
+	cloudEventType := event.Type()
+	return &eventingv1alpha1.EventType{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: fmt.Sprintf("%s-", toValidIdentifier(cloudEventType)),
+			// TODO maybe some label?
+		},
+		Spec: eventingv1alpha1.EventTypeSpec{
+			Type:   cloudEventType,
+			Origin: "", // event.Extensions("Origin")
+			Schema: "", // event.Extensions("Schema")
+		},
+	}
+}
+
+func toValidIdentifier(cloudEventType string) string {
+	if msgs := validation.IsDNS1123Subdomain(cloudEventType); len(msgs) != 0 {
+		// If it is not a valid DNS1123 name, make it a valid one.
+		// TODO take care of size < 63, and starting and end indexes should be alphanumeric.
+		cloudEventType = strings.ToLower(cloudEventType)
+		cloudEventType = validChars.ReplaceAllString(cloudEventType, "-")
+	}
+	return cloudEventType
 }

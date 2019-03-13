@@ -52,6 +52,8 @@ const (
 	v2EventId     = "Ce-Id"
 	v2EventType   = "Ce-Type"
 	v2EventSource = "Ce-Source"
+	// Extension attribute.
+	eventOrigin = "Ce-Origin"
 )
 
 var (
@@ -140,7 +142,7 @@ func NewHandler(logger *zap.Logger, destination, policy string, client client.Cl
 	handler := &Handler{
 		logger:        logger,
 		dispatcher:    provisioners.NewMessageDispatcher(logger.Sugar()),
-		ingressPolicy: broker.NewIngressPolicy(client, policy),
+		ingressPolicy: broker.NewIngressPolicy(logger.Sugar(), client, policy),
 		destination:   fmt.Sprintf("http://%s", destination),
 		client:        client,
 	}
@@ -155,7 +157,7 @@ func NewHandler(logger *zap.Logger, destination, policy string, client client.Cl
 func createReceiverFunction(f *Handler) func(provisioners.ChannelReference, *provisioners.Message) error {
 	return func(c provisioners.ChannelReference, m *provisioners.Message) error {
 		event := cloudEventFrom(m)
-		if f.ingressPolicy.AllowEvent(c.Namespace, &event) {
+		if f.ingressPolicy.AllowEvent(&event) {
 			return f.dispatch(m)
 		}
 		return nil
@@ -192,19 +194,25 @@ func (r *runnableServer) Start(<-chan struct{}) error {
 // TODO this should be removed once we update the interfaces and start using cloudevents.Event instead of Message.
 func cloudEventFrom(m *provisioners.Message) cloudevents.Event {
 	event := cloudevents.Event{}
+	// TODO better way to set extensions.
+	var extensions map[string]interface{}
+	if origin, ok := m.Headers[eventOrigin]; ok {
+		extensions[eventOrigin] = origin
+	}
 	if eventType, ok := m.Headers[v2EventType]; ok {
 		event.Context = cloudevents.EventContextV02{
-			ID:     m.Headers[v2EventId],
-			Type:   eventType,
-			Source: *types.ParseURLRef(v2EventSource),
+			ID:         m.Headers[v2EventId],
+			Type:       eventType,
+			Source:     *types.ParseURLRef(v2EventSource),
+			Extensions: extensions,
 		}.AsV02()
 	} else {
 		event.Context = cloudevents.EventContextV01{
-			EventID:   m.Headers[v1EventId],
-			EventType: m.Headers[v1EventType],
-			Source:    *types.ParseURLRef(v1EventSource),
+			EventID:    m.Headers[v1EventId],
+			EventType:  m.Headers[v1EventType],
+			Source:     *types.ParseURLRef(v1EventSource),
+			Extensions: extensions,
 		}.AsV01()
 	}
-	event.Data = m.Payload
 	return event
 }

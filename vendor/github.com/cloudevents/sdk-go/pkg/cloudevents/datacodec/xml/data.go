@@ -26,7 +26,7 @@ func Decode(in, out interface{}) error {
 	if len(b) > 1 && (b[0] == byte('"') || (b[0] == byte('\\') && b[1] == byte('"'))) {
 		s, err := strconv.Unquote(string(b))
 		if err != nil {
-			return err
+			return fmt.Errorf("[xml] failed to unquote quoted data: %s", err.Error())
 		}
 		if len(s) > 0 && s[0] == '<' {
 			// looks like xml, use it
@@ -35,7 +35,7 @@ func Decode(in, out interface{}) error {
 			// looks like base64, decode
 			bs, err := base64.StdEncoding.DecodeString(s)
 			if err != nil {
-				return err
+				return fmt.Errorf("[xml] failed to decode base64 encoded string: %s", err.Error())
 			}
 			b = bs
 		}
