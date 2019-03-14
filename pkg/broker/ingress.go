@@ -167,12 +167,13 @@ func makeEventType(event *cloudevents.Event, namespace string) *eventingv1alpha1
 	}
 }
 
+// TODO some utility to also be used from eventing-sources.
 func toValidIdentifier(cloudEventType string) string {
 	if msgs := validation.IsDNS1123Subdomain(cloudEventType); len(msgs) != 0 {
 		// If it is not a valid DNS1123 name, make it a valid one.
 		// TODO take care of size < 63, and starting and end indexes should be alphanumeric.
 		cloudEventType = strings.ToLower(cloudEventType)
-		cloudEventType = validChars.ReplaceAllString(cloudEventType, "-")
+		cloudEventType = validChars.ReplaceAllString(cloudEventType, "")
 	}
 	return cloudEventType
 }
