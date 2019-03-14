@@ -106,27 +106,31 @@ func TestReceiver(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			mr, _ := New(
-				zap.NewNop(),
-				fake.NewFakeClient(tc.initialState...))
-			fd := &fakeDispatcher{
-				err: tc.dispatchErr,
-			}
-			mr.dispatcher = fd
+			// Support cloud spec v0.1 and v0.2 requests.
+			requests := [2]*http.Request{makeV01Request(), makeV02Request()}
+			for _, request := range requests {
+				mr, _ := New(
+					zap.NewNop(),
+					fake.NewFakeClient(tc.initialState...))
+				fd := &fakeDispatcher{
+					err: tc.dispatchErr,
+				}
+				mr.dispatcher = fd
 
-			resp := httptest.NewRecorder()
-			mr.newMessageReceiver().HandleRequest(resp, makeRequest())
-			if tc.expectedErr {
-				if resp.Result().StatusCode >= 200 && resp.Result().StatusCode < 300 {
-					t.Errorf("Expected an error. Actual: %v", resp.Result())
+				resp := httptest.NewRecorder()
+				mr.newMessageReceiver().HandleRequest(resp, request)
+				if tc.expectedErr {
+					if resp.Result().StatusCode >= 200 && resp.Result().StatusCode < 300 {
+						t.Errorf("Expected an error. Actual: %v", resp.Result())
+					}
+				} else {
+					if resp.Result().StatusCode < 200 || resp.Result().StatusCode >= 300 {
+						t.Errorf("Expected success. Actual: %v", resp.Result())
+					}
 				}
-			} else {
-				if resp.Result().StatusCode < 200 || resp.Result().StatusCode >= 300 {
-					t.Errorf("Expected success. Actual: %v", resp.Result())
+				if tc.expectedDispatch != fd.requestReceived {
+					t.Errorf("Incorrect dispatch. Expected %v, Actual %v", tc.expectedDispatch, fd.requestReceived)
 				}
-			}
-			if tc.expectedDispatch != fd.requestReceived {
-				t.Errorf("Incorrect dispatch. Expected %v, Actual %v", tc.expectedDispatch, fd.requestReceived)
 			}
 		})
 	}
@@ -178,15 +182,15 @@ func makeTriggerWithoutSubscriberURI() *eventingv1alpha1.Trigger {
 	return t
 }
 
-func makeRequest() *http.Request {
+func makeRequest(cloudEventVersionValue, eventTypeVersionValue, eventTypeKey, eventSourceKey string) *http.Request {
 	req := httptest.NewRequest("POST", "/", strings.NewReader(`<much wow="xml"/>`))
 	req.Host = fmt.Sprintf("%s.%s.triggers.%s", triggerName, testNS, utils.GetClusterDomainName())
 
 	eventAttributes := map[string]string{
-		"CE-CloudEventsVersion": `"0.1"`,
-		"CE-EventType":          eventType,
-		"CE-EventTypeVersion":   `"1.0"`,
-		"CE-Source":             eventSource,
+		"CE-CloudEventsVersion": cloudEventVersionValue,
+		eventTypeKey:            eventType,
+		"CE-EventTypeVersion":   eventTypeVersionValue,
+		eventSourceKey:          eventSource,
 		"CE-EventID":            `"A234-1234-1234"`,
 		"CE-EventTime":          `"2018-04-05T17:31:00Z"`,
 		"contentType":           "text/xml",
@@ -195,4 +199,12 @@ func makeRequest() *http.Request {
 		req.Header.Set(k, v)
 	}
 	return req
+}
+
+func makeV01Request() *http.Request {
+	return makeRequest(`"0.1"`, `"1.0"`, "CE-EventType", "CE-Source")
+}
+
+func makeV02Request() *http.Request {
+	return makeRequest(`"0.2"`, `"2.0"`, "ce-type", "ce-source")
 }
