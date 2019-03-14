@@ -21,6 +21,11 @@
 # Use the flags --build-tests, --unit-tests and --integration-tests
 # to run a specific set of tests.
 
+# Markdown linting failures don't show up properly in Gubernator resulting
+# in a net-negative contributor experience. Also, sockpuppet will correct
+# markdown issues with less human involvement.
+export DISABLE_MD_LINTING=1
+
 source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/presubmit-tests.sh
 
 # We use the default build, unit and integration test runners.
