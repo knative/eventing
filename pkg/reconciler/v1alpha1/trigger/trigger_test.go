@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler/names"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
@@ -118,11 +117,6 @@ func TestInjectConfig(t *testing.T) {
 	err := r.InjectConfig(wantCfg)
 	if err != nil {
 		t.Fatalf("Unexpected error injecting the config: %v", err)
-	}
-
-	gotCfg := r.restConfig
-	if diff := cmp.Diff(wantCfg, gotCfg); diff != "" {
-		t.Errorf("Unexpected config (-want, +got): %v", diff)
 	}
 
 	wantDynClient, err := dynamic.NewForConfig(wantCfg)
@@ -463,7 +457,6 @@ func TestReconcile(t *testing.T) {
 		r := &reconciler{
 			client:        c,
 			dynamicClient: dc,
-			restConfig:    &rest.Config{},
 			recorder:      recorder,
 			logger:        zap.NewNop(),
 		}
