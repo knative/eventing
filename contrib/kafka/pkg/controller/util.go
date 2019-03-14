@@ -2,14 +2,17 @@ package controller
 
 import (
 	"fmt"
+	"github.com/bsm/sarama-cluster"
 	"strings"
 
 	"github.com/knative/pkg/configmap"
 )
 
 const (
-	BrokerConfigMapKey    = "bootstrap_servers"
-	KafkaChannelSeparator = "."
+	BrokerConfigMapKey                 = "bootstrap_servers"
+	ConsumerModeConfigMapKey           = "consumer_mode"
+	ConsumerModePartitionConsumerValue = "partitions"
+	KafkaChannelSeparator              = "."
 )
 
 // GetProvisionerConfig returns the details of the associated ClusterChannelProvisioner object
@@ -33,8 +36,15 @@ func GetProvisionerConfig(path string) (*KafkaProvisionerConfig, error) {
 			}
 		}
 		config.Brokers = bootstrapServers
-		return config, nil
+	} else {
+		return nil, fmt.Errorf("missing key %s in provisioner configuration", BrokerConfigMapKey)
 	}
 
-	return nil, fmt.Errorf("missing key %s in provisioner configuration", BrokerConfigMapKey)
+	config.ConsumerMode = cluster.ConsumerModeMultiplex
+	if mode, ok := configMap[ConsumerModeConfigMapKey]; ok {
+		if strings.ToLower(mode) == ConsumerModePartitionConsumerValue {
+			config.ConsumerMode = cluster.ConsumerModePartitions
+		}
+	}
+	return config, nil
 }

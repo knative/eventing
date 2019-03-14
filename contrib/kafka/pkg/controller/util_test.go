@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"github.com/bsm/sarama-cluster"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -51,6 +52,22 @@ func TestGetProvisionerConfigBrokers(t *testing.T) {
 			data: map[string]string{"bootstrap_servers": "kafkabroker1.kafka:9092,kafkabroker2.kafka:9092"},
 			expected: &KafkaProvisionerConfig{
 				Brokers: []string{"kafkabroker1.kafka:9092", "kafkabroker2.kafka:9092"},
+			},
+		},
+		{
+			name: "partition consumer",
+			data: map[string]string{"bootstrap_servers": "kafkabroker.kafka:9092", "consumer_mode": "partitions"},
+			expected: &KafkaProvisionerConfig{
+				Brokers:      []string{"kafkabroker.kafka:9092"},
+				ConsumerMode: cluster.ConsumerModePartitions,
+			},
+		},
+		{
+			name: "default multiplex",
+			data: map[string]string{"bootstrap_servers": "kafkabroker.kafka:9092", "consumer_mode": "multiplex"},
+			expected: &KafkaProvisionerConfig{
+				Brokers:      []string{"kafkabroker.kafka:9092"},
+				ConsumerMode: cluster.ConsumerModeMultiplex,
 			},
 		},
 	}
