@@ -37,3 +37,6 @@ spec:
     - name: Reason
       type: string
       JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+    - name: Hostname
+      type: string
+      JSONPath: .status.address.hostname

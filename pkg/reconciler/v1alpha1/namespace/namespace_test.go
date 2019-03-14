@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -61,11 +60,11 @@ var (
 
 func init() {
 	// Add types to scheme
-	v1alpha1.AddToScheme(scheme.Scheme)
+	_ = v1alpha1.AddToScheme(scheme.Scheme)
 }
 
 func TestProvideController(t *testing.T) {
-	//TODO(grantr) This needs a mock of manager.Manager. Creating a manager
+	// TODO(grantr) This needs a mock of manager.Manager. Creating a manager
 	// with a fake Config fails because the Manager tries to contact the
 	// apiserver.
 
@@ -101,7 +100,9 @@ func TestInjectClient(t *testing.T) {
 }
 
 func TestNamespaceMapper_Map(t *testing.T) {
-	m := &namespaceMapper{}
+	m := &namespaceMapper{
+		name: makeBroker().Name,
+	}
 
 	req := handler.MapObject{
 		Meta:   makeBroker().GetObjectMeta(),
@@ -241,10 +242,9 @@ func TestReconcile(t *testing.T) {
 		recorder := tc.GetEventRecorder()
 
 		r := &reconciler{
-			client:     c,
-			restConfig: &rest.Config{},
-			recorder:   recorder,
-			logger:     zap.NewNop(),
+			client:   c,
+			recorder: recorder,
+			logger:   zap.NewNop(),
 		}
 		tc.ReconcileKey = fmt.Sprintf("%s/%s", "", testNS)
 		tc.IgnoreTimes = true

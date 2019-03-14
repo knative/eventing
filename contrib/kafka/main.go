@@ -2,14 +2,11 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"os"
-	"strings"
-
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -20,7 +17,6 @@ import (
 	"github.com/knative/eventing/contrib/kafka/pkg/controller/channel"
 	eventingv1alpha "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
-	"github.com/knative/pkg/configmap"
 )
 
 const (
@@ -64,7 +60,7 @@ func main() {
 	}
 
 	// TODO the underlying config map needs to be watched and the config should be reloaded if there is a change.
-	provisionerConfig, err := getProvisionerConfig()
+	provisionerConfig, err := provisionerController.GetProvisionerConfig("/etc/config-provisioner")
 
 	if err != nil {
 		logger.Error(err, "unable to run controller manager")
@@ -79,28 +75,4 @@ func main() {
 	}
 
 	mgr.Start(signals.SetupSignalHandler())
-}
-
-// getProvisionerConfig returns the details of the associated Provisioner/ClusterChannelProvisioner object
-func getProvisionerConfig() (*provisionerController.KafkaProvisionerConfig, error) {
-	configMap, err := configmap.Load("/etc/config-provisioner")
-	if err != nil {
-		return nil, fmt.Errorf("error loading provisioner configuration: %s", err)
-	}
-
-	if len(configMap) == 0 {
-		return nil, fmt.Errorf("missing provisioner configuration")
-	}
-
-	config := &provisionerController.KafkaProvisionerConfig{}
-
-	if value, ok := configMap[BrokerConfigMapKey]; ok {
-		bootstrapServers := strings.Split(value, ",")
-		if len(bootstrapServers) != 0 {
-			config.Brokers = bootstrapServers
-			return config, nil
-		}
-	}
-
-	return nil, fmt.Errorf("missing key %s in provisioner configuration", BrokerConfigMapKey)
 }
