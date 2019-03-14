@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -241,10 +240,9 @@ func TestReconcile(t *testing.T) {
 		recorder := tc.GetEventRecorder()
 
 		r := &reconciler{
-			client:     c,
-			restConfig: &rest.Config{},
-			recorder:   recorder,
-			logger:     zap.NewNop(),
+			client:   c,
+			recorder: recorder,
+			logger:   zap.NewNop(),
 		}
 		tc.ReconcileKey = fmt.Sprintf("%s/%s", "", testNS)
 		tc.IgnoreTimes = true

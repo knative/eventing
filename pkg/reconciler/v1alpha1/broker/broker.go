@@ -36,7 +36,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -58,9 +57,8 @@ const (
 )
 
 type reconciler struct {
-	client     client.Client
-	restConfig *rest.Config
-	recorder   record.EventRecorder
+	client   client.Client
+	recorder record.EventRecorder
 
 	logger *zap.Logger
 
