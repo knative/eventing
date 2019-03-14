@@ -20,11 +20,8 @@ import (
 	"context"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/logging"
-	util "github.com/knative/eventing/pkg/provisioners"
-	"go.uber.org/zap"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -41,67 +38,25 @@ const (
 )
 
 type reconciler struct {
-	client   client.Client
-	recorder record.EventRecorder
-	logger   *zap.Logger
+	client client.Client
 }
 
-// Verify the struct implements reconcile.Reconciler
-var _ reconcile.Reconciler = &reconciler{}
+// Verify the struct implements eventingreconciler.EventingReconciler
+var _ eventingreconciler.EventingReconciler = &reconciler{}
 
-func (r *reconciler) InjectClient(c client.Client) error {
+func (r *reconciler) SetClient(c client.Client) error {
 	r.client = c
 	return nil
 }
 
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	ctx := context.TODO()
-	ctx = logging.WithLogger(ctx, r.logger.With(zap.Any("request", request)))
+func (r *reconciler) GetNewReconcileObject() eventingreconciler.ReconciledResource {
+	return &eventingv1alpha1.ClusterChannelProvisioner{}
+}
 
-	ccp := &eventingv1alpha1.ClusterChannelProvisioner{}
-	err := r.client.Get(ctx, request.NamespacedName, ccp)
-
-	// The ClusterChannelProvisioner may have been deleted since it was added to the workqueue. If
-	// so, there is nothing to be done.
-	if errors.IsNotFound(err) {
-		logging.FromContext(ctx).Info("Could not find ClusterChannelProvisioner", zap.Error(err))
-		return reconcile.Result{}, nil
-	}
-
-	// Any other error should be retried in another reconciliation.
-	if err != nil {
-		logging.FromContext(ctx).Error("Unable to Get ClusterChannelProvisioner", zap.Error(err))
-		return reconcile.Result{}, err
-	}
-
-	// Does this Controller control this ClusterChannelProvisioner?
-	if !shouldReconcile(ccp.Namespace, ccp.Name) {
-		logging.FromContext(ctx).Info("Not reconciling ClusterChannelProvisioner, it is not controlled by this Controller", zap.String("APIVersion", ccp.APIVersion), zap.String("Kind", ccp.Kind), zap.String("Namespace", ccp.Namespace), zap.String("name", ccp.Name))
-		return reconcile.Result{}, nil
-	}
-	logging.FromContext(ctx).Info("Reconciling ClusterChannelProvisioner.")
-
-	// Modify a copy of this object, rather than the original.
-	ccp = ccp.DeepCopy()
-
-	reconcileErr := r.reconcile(ctx, ccp)
-	if reconcileErr != nil {
-		logging.FromContext(ctx).Info("Error reconciling ClusterChannelProvisioner", zap.Error(reconcileErr))
-		r.recorder.Eventf(ccp, corev1.EventTypeWarning, ccpReconcileFailed, "ClusterChannelProvisioner reconciliation failed: %v", err)
-		// Note that we do not return the error here, because we want to update the Status
-		// regardless of the error.
-	} else {
-		logging.FromContext(ctx).Info("ClusterChannelProvisioner reconciled")
-		r.recorder.Eventf(ccp, corev1.EventTypeNormal, ccpReconciled, "ClusterChannelProvisioner reconciled: %q", ccp.Name)
-	}
-
-	if err = util.UpdateClusterChannelProvisionerStatus(ctx, r.client, ccp); err != nil {
-		logging.FromContext(ctx).Info("Error updating ClusterChannelProvisioner Status", zap.Error(err))
-		r.recorder.Eventf(ccp, corev1.EventTypeWarning, ccpUpdateStatusFailed, "Failed to update ClusterChannelProvisioner's status: %v", err)
-		return reconcile.Result{}, err
-	}
-
-	return reconcile.Result{}, reconcileErr
+func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) (bool, reconcile.Result, error) {
+	ccp := obj.(*eventingv1alpha1.ClusterChannelProvisioner)
+	ccp.Status.MarkReady()
+	return true, reconcile.Result{}, nil
 }
 
 // IsControlled determines if the gcp-pubsub Channel Controller should control (and therefore
@@ -117,15 +72,4 @@ func IsControlled(ref *corev1.ObjectReference) bool {
 // ClusterChannelProvisioner. This Controller only handles gcp-pubsub channels.
 func shouldReconcile(namespace, name string) bool {
 	return namespace == "" && name == Name
-}
-
-func (r *reconciler) reconcile(ctx context.Context, ccp *eventingv1alpha1.ClusterChannelProvisioner) error {
-	// We are syncing nothing! Just mark it ready.
-
-	if ccp.DeletionTimestamp != nil {
-		return nil
-	}
-
-	ccp.Status.MarkReady()
-	return nil
 }

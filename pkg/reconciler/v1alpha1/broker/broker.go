@@ -151,7 +151,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		r.recorder.Event(broker, corev1.EventTypeNormal, brokerReconciled, "Broker reconciled")
 	}
 
-	if _, err = r.updateStatus(broker.DeepCopy()); err != nil {
+	if err = r.client.Status().Update(ctx, broker); err != nil {
 		logging.FromContext(ctx).Error("Failed to update Broker status", zap.Error(err))
 		r.recorder.Eventf(broker, corev1.EventTypeWarning, brokerUpdateStatusFailed, "Failed to update Broker's status: %v", err)
 		return reconcile.Result{}, err
@@ -213,46 +213,6 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) (reconci
 	b.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
 
 	return reconcile.Result{}, nil
-}
-
-// updateStatus may in fact update the broker's finalizers in addition to the status.
-func (r *reconciler) updateStatus(broker *v1alpha1.Broker) (*v1alpha1.Broker, error) {
-	ctx := context.TODO()
-	objectKey := client.ObjectKey{Namespace: broker.Namespace, Name: broker.Name}
-	latestBroker := &v1alpha1.Broker{}
-
-	if err := r.client.Get(ctx, objectKey, latestBroker); err != nil {
-		return nil, err
-	}
-
-	brokerChanged := false
-
-	if !equality.Semantic.DeepEqual(latestBroker.Finalizers, broker.Finalizers) {
-		latestBroker.SetFinalizers(broker.ObjectMeta.Finalizers)
-		if err := r.client.Update(ctx, latestBroker); err != nil {
-			return nil, err
-		}
-		brokerChanged = true
-	}
-
-	if equality.Semantic.DeepEqual(latestBroker.Status, broker.Status) {
-		return latestBroker, nil
-	}
-
-	if brokerChanged {
-		// Re-fetch.
-		latestBroker = &v1alpha1.Broker{}
-		if err := r.client.Get(ctx, objectKey, latestBroker); err != nil {
-			return nil, err
-		}
-	}
-
-	latestBroker.Status = broker.Status
-	if err := r.client.Status().Update(ctx, latestBroker); err != nil {
-		return nil, err
-	}
-
-	return latestBroker, nil
 }
 
 // reconcileFilterDeployment reconciles Broker's 'b' filter deployment.

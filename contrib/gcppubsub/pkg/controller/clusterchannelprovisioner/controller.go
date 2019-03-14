@@ -17,8 +17,12 @@ limitations under the License.
 package clusterchannelprovisioner
 
 import (
+	"context"
+
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	"go.uber.org/zap"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -37,10 +41,14 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 	logger = logger.With(zap.String("controller", controllerAgentName))
 
 	// Setup a new controller to Reconcile ClusterChannelProvisioners that are gcp-pubsub channels.
-	r := &reconciler{
-		recorder: mgr.GetRecorder(controllerAgentName),
-		logger:   logger,
-	}
+	rec := &reconciler{}
+	builder := eventingreconciler.NewBuilder(rec).
+		WithFilter(filterFunc).
+		WithLogger(logger).
+		WithRecorder(mgr.GetRecorder(controllerAgentName))
+
+	r := builder.Build()
+
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: r,
 	})
@@ -59,4 +67,11 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 	}
 
 	return c, nil
+}
+
+// shouldReconcile determines if this Controller should control (and therefore reconcile) a given
+// Channel. This Controller only handles gcp-pubsub channels.
+func filterFunc(ctx context.Context, obj eventingreconciler.ReconciledResource, r record.EventRecorder) bool {
+	ccp := obj.(*eventingv1alpha1.ClusterChannelProvisioner)
+	return shouldReconcile(ccp.Namespace, ccp.Name)
 }
