@@ -53,7 +53,7 @@ const (
 	v2EventType   = "Ce-Type"
 	v2EventSource = "Ce-Source"
 	// Extension attribute.
-	eventOrigin = "Ce-Origin"
+	eventFrom = "Ce-From"
 )
 
 var (
@@ -196,8 +196,8 @@ func cloudEventFrom(m *provisioners.Message) cloudevents.Event {
 	event := cloudevents.Event{}
 	// TODO better way to set extensions.
 	var extensions map[string]interface{}
-	if origin, ok := m.Headers[eventOrigin]; ok {
-		extensions[eventOrigin] = origin
+	if origin, ok := m.Headers[eventFrom]; ok {
+		extensions[eventFrom] = origin
 	}
 	if eventType, ok := m.Headers[v2EventType]; ok {
 		event.Context = cloudevents.EventContextV02{

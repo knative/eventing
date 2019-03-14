@@ -161,8 +161,8 @@ func makeEventType(event *cloudevents.Event, namespace string) *eventingv1alpha1
 		},
 		Spec: eventingv1alpha1.EventTypeSpec{
 			Type:   cloudEventType,
-			Origin: "", // event.Extensions("Origin")
-			Schema: "", // event.Extensions("Schema")
+			From:   "", // event.Extensions("from")
+			Schema: "", // event.Extensions("schema")
 		},
 	}
 }

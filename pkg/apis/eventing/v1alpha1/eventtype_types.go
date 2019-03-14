@@ -62,7 +62,7 @@ type EventTypeSpec struct {
 	// Type refers to the cloud event type.
 	Type string `json:"type,omitempty"`
 	// +optional
-	Origin string `json:"origin,omitempty"`
+	From string `json:"from,omitempty"`
 	// +optional
 	Schema string `json:"schema,omitempty"`
 }
