@@ -22,30 +22,22 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/knative/eventing/pkg/utils"
-
-	"github.com/knative/eventing/pkg/provisioners"
-
-	"github.com/knative/eventing/pkg/reconciler/names"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/intstr"
-
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/reconciler/names"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
+	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -77,12 +69,12 @@ var (
 
 func init() {
 	// Add types to scheme
-	v1alpha1.AddToScheme(scheme.Scheme)
-	istiov1alpha3.AddToScheme(scheme.Scheme)
+	_ = v1alpha1.AddToScheme(scheme.Scheme)
+	_ = istiov1alpha3.AddToScheme(scheme.Scheme)
 }
 
 func TestProvideController(t *testing.T) {
-	//TODO(grantr) This needs a mock of manager.Manager. Creating a manager
+	// TODO(grantr) This needs a mock of manager.Manager. Creating a manager
 	// with a fake Config fails because the Manager tries to contact the
 	// apiserver.
 
@@ -222,13 +214,14 @@ func TestReconcile(t *testing.T) {
 				makeBroker(),
 				makeChannel(),
 			},
-			Mocks: controllertesting.Mocks{
-				MockGets: []controllertesting.MockGet{
-					func(_ client.Client, _ context.Context, key client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*corev1.Service); ok {
-							return controllertesting.Handled, errors.New("test error resolving subscriber URI")
+			DynamicMocks: controllertesting.DynamicMocks{
+				MockGets: []controllertesting.MockDynamicGet{
+					func(ctx *controllertesting.MockDynamicContext, name string, options metav1.GetOptions, subresources ...string) (handled controllertesting.MockHandled, i *unstructured.Unstructured, e error) {
+						if ctx.Resource.Group == "" && ctx.Resource.Version == "v1" && ctx.Resource.Resource == "services" {
+
+							return controllertesting.Handled, nil, errors.New("test error resolving subscriber URI")
 						}
-						return controllertesting.Unhandled, nil
+						return controllertesting.Unhandled, nil, nil
 					},
 				},
 			},
@@ -242,7 +235,9 @@ func TestReconcile(t *testing.T) {
 				makeTrigger(),
 				makeBroker(),
 				makeChannel(),
-				makeSubscriberService(),
+			},
+			Objects: []runtime.Object{
+				makeSubscriberServiceAsUnstructured(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockCreates: []controllertesting.MockCreate{
@@ -264,8 +259,10 @@ func TestReconcile(t *testing.T) {
 				makeTrigger(),
 				makeBroker(),
 				makeChannel(),
-				makeSubscriberService(),
 				makeDifferentK8sService(),
+			},
+			Objects: []runtime.Object{
+				makeSubscriberServiceAsUnstructured(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockUpdates: []controllertesting.MockUpdate{
@@ -287,8 +284,10 @@ func TestReconcile(t *testing.T) {
 				makeTrigger(),
 				makeBroker(),
 				makeChannel(),
-				makeSubscriberService(),
 				makeK8sService(),
+			},
+			Objects: []runtime.Object{
+				makeSubscriberServiceAsUnstructured(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockCreates: []controllertesting.MockCreate{
@@ -310,9 +309,11 @@ func TestReconcile(t *testing.T) {
 				makeTrigger(),
 				makeBroker(),
 				makeChannel(),
-				makeSubscriberService(),
 				makeK8sService(),
 				makeDifferentVirtualService(),
+			},
+			Objects: []runtime.Object{
+				makeSubscriberServiceAsUnstructured(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockUpdates: []controllertesting.MockUpdate{
@@ -334,9 +335,11 @@ func TestReconcile(t *testing.T) {
 				makeTrigger(),
 				makeBroker(),
 				makeChannel(),
-				makeSubscriberService(),
 				makeK8sService(),
 				makeVirtualService(),
+			},
+			Objects: []runtime.Object{
+				makeSubscriberServiceAsUnstructured(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockCreates: []controllertesting.MockCreate{
@@ -358,10 +361,12 @@ func TestReconcile(t *testing.T) {
 				makeTrigger(),
 				makeBroker(),
 				makeChannel(),
-				makeSubscriberService(),
 				makeK8sService(),
 				makeVirtualService(),
 				makeDifferentSubscription(),
+			},
+			Objects: []runtime.Object{
+				makeSubscriberServiceAsUnstructured(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockDeletes: []controllertesting.MockDelete{
@@ -383,10 +388,12 @@ func TestReconcile(t *testing.T) {
 				makeTrigger(),
 				makeBroker(),
 				makeChannel(),
-				makeSubscriberService(),
 				makeK8sService(),
 				makeVirtualService(),
 				makeDifferentSubscription(),
+			},
+			Objects: []runtime.Object{
+				makeSubscriberServiceAsUnstructured(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockCreates: []controllertesting.MockCreate{
@@ -408,10 +415,12 @@ func TestReconcile(t *testing.T) {
 				makeTrigger(),
 				makeBroker(),
 				makeChannel(),
-				makeSubscriberService(),
 				makeK8sService(),
 				makeVirtualService(),
 				makeSameSubscription(),
+			},
+			Objects: []runtime.Object{
+				makeSubscriberServiceAsUnstructured(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockStatusUpdates: []controllertesting.MockStatusUpdate{
@@ -433,10 +442,12 @@ func TestReconcile(t *testing.T) {
 				makeTrigger(),
 				makeBroker(),
 				makeChannel(),
-				makeSubscriberService(),
 				makeK8sService(),
 				makeVirtualService(),
 				makeSameSubscription(),
+			},
+			Objects: []runtime.Object{
+				makeSubscriberServiceAsUnstructured(),
 			},
 			WantEvent: []corev1.Event{events[triggerReconciled]},
 			WantPresent: []runtime.Object{
@@ -455,7 +466,6 @@ func TestReconcile(t *testing.T) {
 			restConfig:    &rest.Config{},
 			recorder:      recorder,
 			logger:        zap.NewNop(),
-			triggers:      make(map[types.NamespacedName]map[reconcile.Request]struct{}),
 		}
 		tc.ReconcileKey = fmt.Sprintf("%s/%s", testNS, triggerName)
 		tc.IgnoreTimes = true
@@ -494,7 +504,6 @@ func makeTrigger() *v1alpha1.Trigger {
 
 func makeReadyTrigger() *v1alpha1.Trigger {
 	t := makeTrigger()
-	provisioners.AddFinalizer(t, finalizerName)
 	t.Status.InitializeConditions()
 	t.Status.MarkBrokerExists()
 	t.Status.SubscriberURI = fmt.Sprintf("http://%s.%s.svc.%s/", subscriberName, testNS, utils.GetClusterDomainName())
@@ -568,19 +577,14 @@ func makeDifferentChannel() *v1alpha1.Channel {
 	return newChannel(fmt.Sprintf("%s-broker-different", brokerName))
 }
 
-func makeSubscriberService() *corev1.Service {
-	return &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testNS,
-			Name:      subscriberName,
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "http",
-					Port:       80,
-					TargetPort: intstr.FromInt(8080),
-				},
+func makeSubscriberServiceAsUnstructured() *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Service",
+			"metadata": map[string]interface{}{
+				"namespace": testNS,
+				"name":      subscriberName,
 			},
 		},
 	}

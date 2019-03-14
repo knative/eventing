@@ -49,22 +49,32 @@ type KafkaDispatcher struct {
 
 type KafkaConsumer interface {
 	Messages() <-chan *sarama.ConsumerMessage
+	Partitions() <-chan cluster.PartitionConsumer
 	MarkOffset(msg *sarama.ConsumerMessage, metadata string)
 	Close() (err error)
 }
 
 type KafkaCluster interface {
 	NewConsumer(groupID string, topics []string) (KafkaConsumer, error)
+
+	GetConsumerMode() cluster.ConsumerMode
 }
 
 type saramaCluster struct {
 	kafkaBrokers []string
+
+	consumerMode cluster.ConsumerMode
 }
 
 func (c *saramaCluster) NewConsumer(groupID string, topics []string) (KafkaConsumer, error) {
 	consumerConfig := cluster.NewConfig()
 	consumerConfig.Version = sarama.V1_1_0_0
+	consumerConfig.Group.Mode = c.consumerMode
 	return cluster.NewConsumer(c.kafkaBrokers, groupID, topics, consumerConfig)
+}
+
+func (c *saramaCluster) GetConsumerMode() cluster.ConsumerMode {
+	return c.consumerMode
 }
 
 type subscription struct {
@@ -102,18 +112,12 @@ func (d *KafkaDispatcher) UpdateConfig(config *multichannelfanout.Config) error 
 			}
 			for _, subSpec := range cc.FanoutConfig.Subscriptions {
 				sub := newSubscription(subSpec)
-				if _, ok := d.kafkaConsumers[channelRef][sub]; ok {
-					// subscribe can be called multiple times for the same subscription,
-					// unsubscribe before we resubscribe.
-					// TODO The behavior to unsubscribe and re-subscribe is retained from the older kafka bus
-					// implementation. It is not clear as to why this is needed instead of just re-using the same
-					// consumer.
-					err := d.unsubscribe(channelRef, sub)
-					if err != nil {
-						return err
-					}
+				if _, ok := d.kafkaConsumers[channelRef][sub]; !ok {
+					// only subscribe when not exists in channel-subscriptions map
+					// do not need to resubscribe every time channel fanout config is updated
+					d.subscribe(channelRef, sub)
 				}
-				d.subscribe(channelRef, sub)
+
 				newSubs[sub] = true
 			}
 		}
@@ -166,6 +170,7 @@ func (d *KafkaDispatcher) subscribe(channelRef provisioners.ChannelReference, su
 
 	group := fmt.Sprintf("%s.%s.%s", controller.Name, sub.Namespace, sub.Name)
 	consumer, err := d.kafkaCluster.NewConsumer(group, []string{topicName})
+
 	if err != nil {
 		// we can not create a consumer - logging that, with reason
 		d.logger.Info("Could not create proper consumer", zap.Error(err))
@@ -179,26 +184,55 @@ func (d *KafkaDispatcher) subscribe(channelRef provisioners.ChannelReference, su
 	}
 	channelMap[sub] = consumer
 
-	go func() {
-		for {
-			msg, more := <-consumer.Messages()
-			if more {
-				d.logger.Info("Dispatching a message for subscription", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
-				message := fromKafkaMessage(msg)
-				err := d.dispatchMessage(message, sub)
-				if err != nil {
-					d.logger.Warn("Got error trying to dispatch message", zap.Error(err))
-				}
-				// TODO: handle errors with pluggable strategy
-				consumer.MarkOffset(msg, "") // Mark message as processed
-			} else {
-				break
-			}
-		}
-		d.logger.Info("Consumer for subscription stopped", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
-	}()
-
+	if cluster.ConsumerModePartitions == d.kafkaCluster.GetConsumerMode() {
+		go d.partitionConsumerLoop(consumer, channelRef, sub)
+	} else {
+		go d.multiplexConsumerLoop(consumer, channelRef, sub)
+	}
 	return nil
+}
+
+func (d *KafkaDispatcher) partitionConsumerLoop(consumer KafkaConsumer, channelRef provisioners.ChannelReference, sub subscription) {
+	d.logger.Info("Partition Consumer for subscription started", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
+	for {
+		pc, more := <-consumer.Partitions()
+		if !more {
+			break
+		}
+		go func(pc cluster.PartitionConsumer) {
+			for msg := range pc.Messages() {
+				d.dispatch(channelRef, sub, consumer, msg)
+			}
+		}(pc)
+	}
+	d.logger.Info("Partition Consumer for subscription stopped", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
+}
+
+func (d *KafkaDispatcher) multiplexConsumerLoop(consumer KafkaConsumer, channelRef provisioners.ChannelReference, sub subscription) {
+	d.logger.Info("Consumer for subscription started", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
+	for {
+		msg, more := <-consumer.Messages()
+		if more {
+			d.dispatch(channelRef, sub, consumer, msg)
+		} else {
+			break
+		}
+	}
+	d.logger.Info("Consumer for subscription stopped", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
+}
+
+func (d *KafkaDispatcher) dispatch(channelRef provisioners.ChannelReference, sub subscription, consumer KafkaConsumer,
+	msg *sarama.ConsumerMessage) error {
+	d.logger.Info("Dispatching a message for subscription", zap.Any("channelRef", channelRef),
+		zap.Any("subscription", sub), zap.Any("partition", msg.Partition), zap.Any("offset", msg.Offset))
+	message := fromKafkaMessage(msg)
+	err := d.dispatchMessage(message, sub)
+	if err != nil {
+		d.logger.Warn("Got error trying to dispatch message", zap.Error(err))
+	}
+	// TODO: handle errors with pluggable strategy
+	consumer.MarkOffset(msg, "") // Mark message as processed
+	return err
 }
 
 func (d *KafkaDispatcher) unsubscribe(channel provisioners.ChannelReference, sub subscription) error {
@@ -224,7 +258,7 @@ func (d *KafkaDispatcher) setConfig(config *multichannelfanout.Config) {
 	d.config.Store(config)
 }
 
-func NewDispatcher(brokers []string, logger *zap.Logger) (*KafkaDispatcher, error) {
+func NewDispatcher(brokers []string, consumerMode cluster.ConsumerMode, logger *zap.Logger) (*KafkaDispatcher, error) {
 
 	conf := sarama.NewConfig()
 	conf.Version = sarama.V1_1_0_0
@@ -242,7 +276,7 @@ func NewDispatcher(brokers []string, logger *zap.Logger) (*KafkaDispatcher, erro
 	dispatcher := &KafkaDispatcher{
 		dispatcher: provisioners.NewMessageDispatcher(logger.Sugar()),
 
-		kafkaCluster:       &saramaCluster{kafkaBrokers: brokers},
+		kafkaCluster:       &saramaCluster{kafkaBrokers: brokers, consumerMode: consumerMode},
 		kafkaConsumers:     make(map[provisioners.ChannelReference]map[subscription]KafkaConsumer),
 		kafkaAsyncProducer: producer,
 

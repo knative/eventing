@@ -80,6 +80,9 @@ type TestCase struct {
 	// Mocks that tamper with the client's responses.
 	Mocks Mocks
 
+	// DynamicMocks that tamper with the dynamic client's responses.
+	DynamicMocks DynamicMocks
+
 	// Scheme for the dynamic client
 	Scheme *runtime.Scheme
 
@@ -135,10 +138,13 @@ func (tc *TestCase) Runner(t *testing.T, r reconcile.Reconciler, c *MockClient, 
 
 // GetDynamicClient returns the mockDynamicClient to use for this test case.
 func (tc *TestCase) GetDynamicClient() dynamic.Interface {
-	if tc.Scheme == nil {
-		return dynamicfake.NewSimpleDynamicClient(runtime.NewScheme(), tc.Objects...)
+	var realInterface dynamic.Interface
+	if tc.Scheme != nil {
+		realInterface = dynamicfake.NewSimpleDynamicClient(tc.Scheme, tc.Objects...)
+	} else {
+		realInterface = dynamicfake.NewSimpleDynamicClient(runtime.NewScheme(), tc.Objects...)
 	}
-	return dynamicfake.NewSimpleDynamicClient(tc.Scheme, tc.Objects...)
+	return NewMockDynamicInterface(realInterface, tc.DynamicMocks)
 }
 
 // GetClient returns the mockClient to use for this test case.
