@@ -22,30 +22,22 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/knative/eventing/pkg/utils"
-
-	"github.com/knative/eventing/pkg/provisioners"
-
-	"github.com/knative/eventing/pkg/reconciler/names"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/intstr"
-
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/reconciler/names"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
+	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -77,12 +69,12 @@ var (
 
 func init() {
 	// Add types to scheme
-	v1alpha1.AddToScheme(scheme.Scheme)
-	istiov1alpha3.AddToScheme(scheme.Scheme)
+	_ = v1alpha1.AddToScheme(scheme.Scheme)
+	_ = istiov1alpha3.AddToScheme(scheme.Scheme)
 }
 
 func TestProvideController(t *testing.T) {
-	//TODO(grantr) This needs a mock of manager.Manager. Creating a manager
+	// TODO(grantr) This needs a mock of manager.Manager. Creating a manager
 	// with a fake Config fails because the Manager tries to contact the
 	// apiserver.
 
@@ -455,7 +447,6 @@ func TestReconcile(t *testing.T) {
 			restConfig:    &rest.Config{},
 			recorder:      recorder,
 			logger:        zap.NewNop(),
-			triggers:      make(map[types.NamespacedName]map[reconcile.Request]struct{}),
 		}
 		tc.ReconcileKey = fmt.Sprintf("%s/%s", testNS, triggerName)
 		tc.IgnoreTimes = true
@@ -494,7 +485,6 @@ func makeTrigger() *v1alpha1.Trigger {
 
 func makeReadyTrigger() *v1alpha1.Trigger {
 	t := makeTrigger()
-	provisioners.AddFinalizer(t, finalizerName)
 	t.Status.InitializeConditions()
 	t.Status.MarkBrokerExists()
 	t.Status.SubscriberURI = fmt.Sprintf("http://%s.%s.svc.%s/", subscriberName, testNS, utils.GetClusterDomainName())
