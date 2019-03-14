@@ -206,5 +206,5 @@ func makeV01Request() *http.Request {
 }
 
 func makeV02Request() *http.Request {
-	return makeRequest(`"0.2"`, `"2.0"`, "CE-Type", "CE-Source")
+	return makeRequest(`"0.2"`, `"2.0"`, "ce-type", "ce-source")
 }
