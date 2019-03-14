@@ -83,9 +83,9 @@ type BrokerStatus struct {
 
 ### Trigger
 
-A Trigger represents a registration of interest (request for delivery to an
-Addressable object or URL) in a filtered selection of events delivered to a
-Broker. For the MVP, Triggers may only target Addressable objects in the same
+A Trigger represents a registration of interest in a filtered selection of
+events delivered to a Broker which should be forwarded to an Addressable Object
+or a URL. For the MVP, Triggers may only target Addressable objects in the same
 namespace.
 
 #### Buffering
