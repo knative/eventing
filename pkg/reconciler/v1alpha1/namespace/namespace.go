@@ -89,9 +89,19 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 		return nil, err
 	}
 
-	// Watch all the resources that this reconciler reconciles.
-	for _, t := range []runtime.Object{&corev1.ServiceAccount{}, &rbacv1.RoleBinding{}, &v1alpha1.Broker{}} {
-		err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &namespaceMapper{}})
+	// Watch all the resources that this reconciler reconciles. This is a map from resource type to
+	// the name of the resource of that type we care about (i.e. only if the resource of the given
+	// type and with the given name changes, do we reconcile the Namespace).
+	resources := map[runtime.Object]string{
+		&corev1.ServiceAccount{}: brokerFilterSA,
+		&rbacv1.RoleBinding{}:    brokerFilterRB,
+		&v1alpha1.Broker{}:       defaultBroker,
+	}
+	for t, n := range resources {
+		nm := &namespaceMapper{
+			name: n,
+		}
+		err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestsFromMapFunc{ToRequests: nm})
 		if err != nil {
 			return nil, err
 		}
@@ -100,19 +110,24 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 	return c, nil
 }
 
-type namespaceMapper struct{}
+type namespaceMapper struct {
+	name string
+}
 
 var _ handler.Mapper = &namespaceMapper{}
 
-func (namespaceMapper) Map(o handler.MapObject) []reconcile.Request {
-	return []reconcile.Request{
-		{
-			NamespacedName: types.NamespacedName{
-				Namespace: "",
-				Name:      o.Meta.GetNamespace(),
+func (m *namespaceMapper) Map(o handler.MapObject) []reconcile.Request {
+	if o.Meta.GetName() == m.name {
+		return []reconcile.Request{
+			{
+				NamespacedName: types.NamespacedName{
+					Namespace: "",
+					Name:      o.Meta.GetNamespace(),
+				},
 			},
-		},
+		}
 	}
+	return []reconcile.Request{}
 }
 
 func (r *reconciler) InjectClient(c client.Client) error {
