@@ -35,10 +35,10 @@ const (
 )
 
 // ProvideController returns a flow controller.
-func ProvideController(mgr manager.Manager, defaultNatssURL, defaultClusterID string, logger *zap.Logger) (controller.Controller, error) {
+func ProvideController(mgr manager.Manager, natssURL, clusterID string, logger *zap.Logger) (controller.Controller, error) {
 	// check the connection to NATSS
 	var err error
-	if _, err := stanutil.Connect(defaultClusterID, clientID, defaultNatssURL, logger.Sugar()); err != nil {
+	if _, err := stanutil.Connect(clusterID, clientID, natssURL, logger.Sugar()); err != nil {
 		logger.Error("Connect() failed: ", zap.Error(err))
 		return nil, err
 	}
