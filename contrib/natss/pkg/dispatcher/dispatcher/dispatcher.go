@@ -26,10 +26,24 @@ import (
 	"github.com/knative/eventing/pkg/provisioners"
 	stan "github.com/nats-io/go-nats-streaming"
 	"go.uber.org/zap"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 )
 
+// The SubscriptionSupervisor handles both publishing and subscribing to NATS subjects.
+//
+// Publishing - simply uses the core knative eventing MessageReceiver with `createReceiverFunction` to
+// receive events from the knative Channel and forward them to the appropriate NATS subject.
+//
+// Subscribing - SubscriptionSupervisor reconciles Channel resources with corresponding NATS subject
+// subscriptions, subscribing and unsubscribing from subjects as needed.
+//
+// NATS client disconnects must be carefully handled. Every call using the NATS client can potentially
+// error due to a disconnect. When this happens, we signal the connect chan to reconnect the client.
+// Once we reconnect we additionally signal the reconcileChan for each Channel in order
+// to resubscribe to each Channel through the normal reconciliation loop.
+// (This is triggered by the Watch setup in channel/controller.go)
 const (
 	clientID = "knative-natss-dispatcher"
 	// maxElements defines a maximum number of outstanding re-connect requests
@@ -49,7 +63,9 @@ type SubscriptionsSupervisor struct {
 	dispatcher *provisioners.MessageDispatcher
 
 	subscriptionsMux sync.Mutex
-	subscriptions    map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription
+	// subscriptions maintains the current active NATS subject subscription for a given channel.
+	// This map is cleared on NATS client reconnect in order to allow for resubscription.
+	subscriptions map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription
 
 	connect   chan struct{}
 	natssURL  string
@@ -59,6 +75,12 @@ type SubscriptionsSupervisor struct {
 	natssConnMux        sync.Mutex
 	natssConn           *stan.Conn
 	natssConnInProgress bool
+
+	reconcileChan chan event.GenericEvent
+	// reconcilers is a map from ChannelReference to a function that will send a GenericEvent into
+	// the reconcileChan on NATS client reconnect. This triggers the reconciliation loop so that
+	// we resubscribe to the NATS subject. The func accepts a `stopCh`.
+	reconcilers map[provisioners.ChannelReference]func(<-chan struct{})
 }
 
 // NewDispatcher returns a new SubscriptionsSupervisor.
@@ -70,10 +92,16 @@ func NewDispatcher(natssURL, clusterID string, logger *zap.Logger) (*Subscriptio
 		natssURL:      natssURL,
 		clusterID:     clusterID,
 		subscriptions: make(map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription),
+		reconcileChan: make(chan event.GenericEvent),
+		reconcilers:   make(map[provisioners.ChannelReference]func(<-chan struct{})),
 	}
 	d.receiver = provisioners.NewMessageReceiver(createReceiverFunction(d, logger.Sugar()), logger.Sugar())
 
 	return d, nil
+}
+
+func (s *SubscriptionsSupervisor) ReconcileChan() <-chan event.GenericEvent {
+	return s.reconcileChan
 }
 
 func (s *SubscriptionsSupervisor) signalReconnect() {
@@ -129,13 +157,18 @@ func (s *SubscriptionsSupervisor) connectWithRetry(stopCh <-chan struct{}) {
 	ticker := time.NewTicker(retryInterval)
 	defer ticker.Stop()
 	for {
-		nConn, err := stanutil.Connect(s.clusterID, clientID, s.natssURL, s.logger.Sugar())
+		nConn, err := stanutil.Connect(s.clusterID, clientID, s.natssURL, s.logger.Sugar(), func(reason error) {
+			s.logger.Sugar().Errorf("Lost connection: %+v, reconnecting.", reason)
+			s.signalReconnect()
+		})
 		if err == nil {
 			// Locking here in order to reduce time in locked state.
 			s.natssConnMux.Lock()
 			s.natssConn = nConn
 			s.natssConnInProgress = false
 			s.natssConnMux.Unlock()
+
+			s.signalReconcile(stopCh)
 			return
 		}
 		s.logger.Sugar().Errorf("Connect() failed with error: %+v, retrying in %s", err, retryInterval.String())
@@ -148,6 +181,25 @@ func (s *SubscriptionsSupervisor) connectWithRetry(stopCh <-chan struct{}) {
 	}
 }
 
+func (s *SubscriptionsSupervisor) signalReconcile(stopCh <-chan struct{}) {
+	s.subscriptionsMux.Lock()
+	defer s.subscriptionsMux.Unlock()
+
+	// Clear subscriptions to force resubscribe
+	s.subscriptions = make(map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription)
+
+	// Capture + clear reonciliation
+	reconcilers := s.reconcilers
+	s.reconcilers = make(map[provisioners.ChannelReference]func(<-chan struct{}))
+
+	// Run in a goroutine since signalling can block
+	go func() {
+		for _, reconciler := range reconcilers {
+			reconciler(stopCh)
+		}
+	}()
+}
+
 // Connect is called for initial connection as well as after every disconnect
 func (s *SubscriptionsSupervisor) Connect(stopCh <-chan struct{}) {
 	for {
@@ -155,10 +207,9 @@ func (s *SubscriptionsSupervisor) Connect(stopCh <-chan struct{}) {
 		case <-s.connect:
 			s.natssConnMux.Lock()
 			currentConnProgress := s.natssConnInProgress
-			s.natssConnMux.Unlock()
-			if !currentConnProgress {
-				// Case for lost connectivity, setting InProgress to true to prevent recursion
-				s.natssConnMux.Lock()
+			if currentConnProgress {
+				s.natssConnMux.Unlock()
+			} else {
 				s.natssConnInProgress = true
 				s.natssConnMux.Unlock()
 				go s.connectWithRetry(stopCh)
@@ -186,8 +237,18 @@ func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel *eventingv1alpha1.
 		for sub := range chMap {
 			s.unsubscribe(cRef, sub)
 		}
-		delete(s.subscriptions, cRef)
+		s.deleteChannel(cRef)
 		return nil
+	}
+
+	s.reconcilers[cRef] = func(stopCh <-chan struct{}) {
+		select {
+		case s.reconcileChan <- event.GenericEvent{
+			Meta:   channel.GetObjectMeta(),
+			Object: channel,
+		}:
+		case <-stopCh:
+		}
 	}
 
 	subscriptions := channel.Spec.Subscribable.Subscribers
@@ -222,9 +283,14 @@ func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel *eventingv1alpha1.
 	}
 	// delete the channel from s.subscriptions if chMap is empty
 	if len(s.subscriptions[cRef]) == 0 {
-		delete(s.subscriptions, cRef)
+		s.deleteChannel(cRef)
 	}
 	return nil
+}
+
+func (s *SubscriptionsSupervisor) deleteChannel(channel provisioners.ChannelReference) {
+	delete(s.subscriptions, channel)
+	delete(s.reconcilers, channel)
 }
 
 func (s *SubscriptionsSupervisor) subscribe(channel provisioners.ChannelReference, subscription subscriptionReference) (*stan.Subscription, error) {

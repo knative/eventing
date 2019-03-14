@@ -54,7 +54,7 @@ func TestMain(m *testing.M) {
 
 func TestConnectPublishClose(t *testing.T) {
 	// connect
-	natssConn, err := Connect(clusterId, clientId, natssUrl, logger)
+	natssConn, err := Connect(clusterId, clientId, natssUrl, logger, func(_ error) {})
 	if err != nil {
 		t.Fatalf("Connect failed: %v", err)
 	}

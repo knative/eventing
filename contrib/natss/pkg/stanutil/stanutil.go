@@ -25,9 +25,11 @@ import (
 )
 
 // Connect creates a new NATS-Streaming connection
-func Connect(clusterId string, clientId string, natsUrl string, logger *zap.SugaredLogger) (*stan.Conn, error) {
+func Connect(clusterId string, clientId string, natsUrl string, logger *zap.SugaredLogger, connectionLostHandler func(reason error)) (*stan.Conn, error) {
 	logger.Infof("Connect(): clusterId: %v; clientId: %v; natssUrl: %v", clusterId, clientId, natsUrl)
-	sc, err := stan.Connect(clusterId, clientId, stan.NatsURL(natsUrl))
+	sc, err := stan.Connect(clusterId, clientId, stan.NatsURL(natsUrl), stan.SetConnectionLostHandler(func(_ stan.Conn, reason error) {
+		connectionLostHandler(reason)
+	}))
 	if err != nil {
 		logger.Errorf("Connect(): create new connection failed: %v", err)
 		return nil, err

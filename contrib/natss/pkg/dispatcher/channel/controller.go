@@ -56,5 +56,16 @@ func ProvideController(ss *dispatcher.SubscriptionsSupervisor, mgr manager.Manag
 		return nil, err
 	}
 
+	// When the NATS client disconnects and we successfully reconnect we need to resubscribe to all
+	// channels. We use this watch on the ReconcileChan to trigger the reconciliation loop for all
+	// active channels on NATS client reconnect.
+	err = c.Watch(&source.Channel{
+		Source: ss.ReconcileChan(),
+	}, &handler.EnqueueRequestForObject{})
+	if err != nil {
+		logger.Error("Unable to watch the reconcile Channel", zap.Error(err))
+		return nil, err
+	}
+
 	return c, nil
 }
