@@ -23,7 +23,6 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -86,25 +85,14 @@ func (r *Receiver) sendEvent(trigger provisioners.ChannelReference, message *pro
 	return nil
 }
 
-// Initialize the client. Mainly intended to load stuff in its cache.
+// Initialize the client. Mainly intended to create the informer/indexer in order not to drop messages.
 func (r *Receiver) initClient() error {
-	// We list triggers so that we can load the client's cache. Otherwise, on receiving an event, it
+	// We list triggers so that we do not drop messages. Otherwise, on receiving an event, it
 	// may not find the trigger and would return an error.
-	opts := &client.ListOptions{
-		// Set Raw because if we need to get more than one page, then we will put the continue token
-		// into opts.Raw.Continue.
-		Raw: &metav1.ListOptions{},
-	}
-	for {
-		tl := &eventingv1alpha1.TriggerList{}
-		if err := r.client.List(context.TODO(), opts, tl); err != nil {
-			return err
-		}
-		if tl.Continue != "" {
-			opts.Raw.Continue = tl.Continue
-		} else {
-			break
-		}
+	opts := &client.ListOptions{}
+	tl := &eventingv1alpha1.TriggerList{}
+	if err := r.client.List(context.TODO(), opts, tl); err != nil {
+		return err
 	}
 	return nil
 }
@@ -128,13 +116,27 @@ func (r *Receiver) shouldSendMessage(ts *eventingv1alpha1.TriggerSpec, m *provis
 		return false
 	}
 	filterType := ts.Filter.SourceAndType.Type
-	if filterType != eventingv1alpha1.TriggerAnyFilter && filterType != m.Headers["Ce-Eventtype"] {
-		r.logger.Debug("Wrong type", zap.String("trigger.spec.filter.sourceAndType.type", filterType), zap.String("message.type", m.Headers["Ce-Eventtype"]))
+	// TODO the inspection of Headers should be removed once we start using the cloud events SDK.
+	cloudEventType := ""
+	if et, ok := m.Headers["Ce-Eventtype"]; ok {
+		// cloud event spec v0.1.
+		cloudEventType = et
+	} else if et, ok := m.Headers["Ce-Type"]; ok {
+		// cloud event spec v0.2.
+		cloudEventType = et
+	}
+	if filterType != eventingv1alpha1.TriggerAnyFilter && filterType != cloudEventType {
+		r.logger.Debug("Wrong type", zap.String("trigger.spec.filter.sourceAndType.type", filterType), zap.String("message.type", cloudEventType))
 		return false
 	}
 	filterSource := ts.Filter.SourceAndType.Source
-	if filterSource != eventingv1alpha1.TriggerAnyFilter && filterSource != m.Headers["Ce-Source"] {
-		r.logger.Debug("Wrong source", zap.String("trigger.spec.filter.sourceAndType.source", filterSource), zap.String("message.source", m.Headers["Ce-Source"]))
+	cloudEventSource := ""
+	// cloud event spec v0.1 and v0.2.
+	if es, ok := m.Headers["Ce-Source"]; ok {
+		cloudEventSource = es
+	}
+	if filterSource != eventingv1alpha1.TriggerAnyFilter && filterSource != cloudEventSource {
+		r.logger.Debug("Wrong source", zap.String("trigger.spec.filter.sourceAndType.source", filterSource), zap.String("message.source", cloudEventSource))
 		return false
 	}
 	return true
