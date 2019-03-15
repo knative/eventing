@@ -25,6 +25,10 @@ Deployment steps:
    data:
      # Broker URL's for the provisioner
      bootstrap_servers: kafkabroker.kafka:9092
+
+     # Consumer mode to dispatch events from different partitions in parallel.
+     # By default, partitions are multiplexed with a single go channel.
+     ## consumer_mode: partitions
      ...
    ```
 
