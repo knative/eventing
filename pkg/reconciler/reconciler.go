@@ -12,9 +12,11 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 const (
@@ -30,12 +32,12 @@ type ReconciledResource interface {
 
 type EventingReconciler interface {
 	ReconcileResource(context.Context, ReconciledResource, record.EventRecorder) (bool, reconcile.Result, error)
-	SetClient(c client.Client) error
 	GetNewReconcileObject() ReconciledResource
 }
 
-type FilterFunc func(context.Context, ReconciledResource, record.EventRecorder) bool
-type FinalizerFunc func(context.Context, ReconciledResource, record.EventRecorder) error
+type Finalizer interface {
+	Finalize(context.Context, ReconciledResource, record.EventRecorder) error
+}
 
 type ReconcilerBuilder interface {
 	Build() reconcile.Reconciler
@@ -43,6 +45,8 @@ type ReconcilerBuilder interface {
 	WithFilter(FilterFunc) ReconcilerBuilder
 	WithLogger(*zap.Logger) ReconcilerBuilder
 	WithRecorder(record.EventRecorder) ReconcilerBuilder
+	WithInjectConfigFunc(InjectConfigFunc) ReconcilerBuilder
+	WithInjectClientFunc(InjectClientFunc) ReconcilerBuilder
 }
 
 type ReconcilerBuilderImpl struct {
@@ -76,9 +80,25 @@ func (b *ReconcilerBuilderImpl) WithRecorder(recorder record.EventRecorder) Reco
 	return b
 }
 
+func (b *ReconcilerBuilderImpl) WithInjectConfigFunc(ic InjectConfigFunc) ReconcilerBuilder {
+	b.r.injectConfig = ic
+	return b
+}
+
+func (b *ReconcilerBuilderImpl) WithInjectClientFunc(ic InjectClientFunc) ReconcilerBuilder {
+	b.r.injectClient = ic
+	return b
+}
+
 func NewBuilder(er EventingReconciler) ReconcilerBuilder {
+	//	if i,ok := er.(client.Client)
 	return &ReconcilerBuilderImpl{r: &reconciler{EventingReconciler: er}}
 }
+
+type FilterFunc func(context.Context, ReconciledResource, record.EventRecorder) bool
+type FinalizerFunc func(context.Context, ReconciledResource, record.EventRecorder) error
+type InjectClientFunc func(client.Client) error
+type InjectConfigFunc func(*rest.Config) error
 
 type reconciler struct {
 	finalizerName string
@@ -86,18 +106,34 @@ type reconciler struct {
 	recorder      record.EventRecorder
 	logger        *zap.Logger
 	EventingReconciler
-	filter    FilterFunc
-	finalizer FinalizerFunc
+	filter       FilterFunc
+	finalizer    FinalizerFunc
+	injectConfig InjectConfigFunc
+	injectClient InjectClientFunc
 }
 
 var _ reconcile.Reconciler = &reconciler{}
+var _ inject.Client = &reconciler{}
+var _ inject.Config = &reconciler{}
 
+// inject.Client impl
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
-	r.SetClient(c)
+	if r.injectClient != nil {
+		return r.injectClient(c)
+	}
 	return nil
 }
 
+// inject.Config impl
+func (r *reconciler) InjectConfig(c *rest.Config) error {
+	if r.injectConfig != nil {
+		return r.injectConfig(c)
+	}
+	return nil
+}
+
+// reconcile.Reconciler impl
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	obj := r.GetNewReconcileObject()
 	recObjTypeName := reflect.TypeOf(obj).Name() //TODO: Investigate why .Name() returns "". Need Name and not namespace.name

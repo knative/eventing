@@ -45,7 +45,8 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 	builder := eventingreconciler.NewBuilder(rec).
 		WithFilter(filterFunc).
 		WithLogger(logger).
-		WithRecorder(mgr.GetRecorder(controllerAgentName))
+		WithRecorder(mgr.GetRecorder(controllerAgentName)).
+		WithInjectClientFunc(rec.InjectClient)
 
 	r := builder.Build()
 

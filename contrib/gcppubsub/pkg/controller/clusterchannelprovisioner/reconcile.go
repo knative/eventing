@@ -44,7 +44,7 @@ type reconciler struct {
 // Verify the struct implements eventingreconciler.EventingReconciler
 var _ eventingreconciler.EventingReconciler = &reconciler{}
 
-func (r *reconciler) SetClient(c client.Client) error {
+func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	return nil
 }

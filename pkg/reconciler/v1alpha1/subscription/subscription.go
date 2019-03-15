@@ -76,8 +76,11 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 	builder := eventingreconciler.NewBuilder(rec).
 		WithFinalizer(finalizerName, eventingreconciler.FinalizerFunc(rec.Finalize)).
 		WithLogger(logger).
-		WithRecorder(mgr.GetRecorder(controllerAgentName))
+		WithRecorder(mgr.GetRecorder(controllerAgentName)).
+		WithInjectClientFunc(rec.InjectClient).
+		WithInjectConfigFunc(rec.InjectConfig)
 	r := builder.Build()
+
 	// Setup a new controller to Reconcile Subscriptions.
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
@@ -93,7 +96,11 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 }
 
 func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) (bool, reconcile.Result, error) {
-	subscription := obj.(*v1alpha1.Subscription)
+	subscription, ok := obj.(*v1alpha1.Subscription)
+	if !ok {
+		// TODO
+
+	}
 	subscription.Status.InitializeConditions()
 
 	// Verify that `channel` exists.
@@ -140,11 +147,6 @@ func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconcil
 	// Everything went well, set the fact that subscriptions have been modified
 	subscription.Status.MarkChannelReady()
 	return true, reconcile.Result{}, nil
-}
-
-func (r *reconciler) SetClient(c client.Client) error {
-	r.client = c
-	return nil
 }
 
 func (r *reconciler) GetNewReconcileObject() eventingreconciler.ReconciledResource {
@@ -332,4 +334,8 @@ func (r *reconciler) InjectConfig(c *rest.Config) error {
 	var err error
 	r.dynamicClient, err = dynamic.NewForConfig(c)
 	return err
+}
+func (r *reconciler) InjectClient(c client.Client) error {
+	r.client = c
+	return nil
 }

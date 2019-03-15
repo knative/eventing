@@ -56,7 +56,8 @@ func ProvideController(defaultGcpProject string, defaultSecret *corev1.ObjectRef
 			WithFilter(shouldReconcile).
 			WithLogger(logger).
 			WithRecorder(mgr.GetRecorder(controllerAgentName)).
-			WithFinalizer(finalizerName, rec.Finalize)
+			WithFinalizer(finalizerName, rec.Finalize).
+			WithInjectClientFunc(rec.InjectClient)
 		r := builder.Build()
 
 		c, err := controller.New(controllerAgentName, mgr, controller.Options{
