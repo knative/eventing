@@ -28,6 +28,7 @@ Deployment steps:
 
      # Consumer mode to dispatch events from different partitions in parallel.
      # By default, partitions are multiplexed with a single go channel.
+     # `partitions` is the only valid value.
      ## consumer_mode: partitions
      ...
    ```
