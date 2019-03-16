@@ -1,6 +1,6 @@
-# KNative Eventing sprint planning
+# Knative Eventing sprint planning
 
-This document summarizes project planning mechanics for KNative Eventing releases.
+This document summarizes project planning mechanics for Knative Eventing releases. Knative Eventing release is planned every 6 weeks and will continue to be so. Current proposal is to align sprint with the release cycle of 6 weeks. Eventually this may change as we learn from the process.
 
 ## How to manage Bugs?
 - Submit new bugs by creating a new issue of type “Report Bug”.
@@ -11,7 +11,7 @@ This document summarizes project planning mechanics for KNative Eventing release
 - priority/p0 is reserved for critical bugs that needs to be addressed immediately in current release at the cost of currently planned items.
 - WG lead will drive this and his/her decision will be final
 
-## How to manage Story\Feature?
+## How to manage Story/Feature?
 - Story/Feature typically spans 1-2 weeks for one engineer.
 To propose a new feature,  create a new issue of type “Feature Request”
 - Please fill in as much detail as possible in the Feature template and propose a release cycle
@@ -20,7 +20,7 @@ To propose a new feature,  create a new issue of type “Feature Request”
 - By R-2w’s WG meeting all new proposals should be vetted and verified that they fit the [Planning criteria](#planning-criteria). Features that do not fit this criteria will not be considered in the current release planning cycle and hence early discussion is encouraged instead of waiting for R-2w.
 - All eligible proposals will then be snapshotted into the voting document and open for voting till R-1w WG meeting. In R-1w WG meeting top features based on votes will be planned for next release. 
 > We need some kind of estimates for each feature for release planning. Shall we adopt story points on fibonacci scale or t-shirt sizing? My vote goes to story points on fibonacci scale to avoid spending a lot of time on estimation, which is a common pitfall.
-- Selected features will be labeled “triage/accepted”. Rest will be labelled “triage/ice-boxed” and will be eligible for next planning cycle. Add these features to correct milestone and sprint specific project for tracking
+- Selected features will be labeled “triage/accepted”. Rest will be labelled “triage/ice-boxed” and will be eligible for next planning cycle. Accepted features will be added to the correct milestone and sprint specific project for tracking.
 
 ## How to manage Epic/Scenario?
 - Epic/Scenario typically spans 1-3 months or even more in some cases.
@@ -33,9 +33,13 @@ To propose a new feature,  create a new issue of type “Feature Request”
 - The engineering team should be confident that any engineer can implement the feature based on the content in the feature *(This is similar to refinement in a scrum, but doesn’t have to be as strict as a functional specification)*.
 
 ## Organizing with Github Projects 
-- New Project per milestone
+- New Project per sprint. Today, the sprint and milestone are both aligned. However in future we may decide to have multiple sprints in a release cycle.
 - New Project per any Story/Scenario
 - Any other projects that help organize and will be created when needed.
+
+## Organizing with Github Milestone 
+- A new milestone is created in Github for each 6 weeks release cycle.
+- All features and bugs that are planned for the release cycle are assigned to the release for tracking the progress of the milestone.
 
 ## Pending work and proposed changes:
 - Decide estimation technique (story points on fibonacci, t-shirt size etc)
@@ -56,7 +60,7 @@ To propose a new feature,  create a new issue of type “Feature Request”
     - severity/2
     - severity/3
     - severity/4
-- Need to define Priorities and Severities. Is there any norm followed in KNative?
+- Need to define Priorities and Severities. Is there any norm followed in Knative?
 
 ## Future work:
 - If the above process works for next couple of releases and team likes it then we move to a 2 week sprint model rather than 6 weeks.
