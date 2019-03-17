@@ -1,6 +1,6 @@
 package controller
 
-import "github.com/bsm/sarama-cluster"
+import cluster "github.com/bsm/sarama-cluster"
 
 type KafkaProvisionerConfig struct {
 	Brokers      []string
