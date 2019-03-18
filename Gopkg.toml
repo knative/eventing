@@ -95,11 +95,12 @@ required = [
   name = "golang.org/x/oauth2"
   revision = "cdc340f7c179dbbfa4afd43b7614e8fcadde4269"
 
-# TODO why is this overridden?
+# Select the version of knative/pkg we would like to import.
+# This controls when we upgrade apis.
 [[override]]
   name = "github.com/knative/pkg"
-  # HEAD as of 2019-03-12
-  revision = "684620ff81ae137be5cda634a03831b373adc4eb"
+  # HEAD as of 2019-03-17
+  revision = "374ae9eb1f97d495ec55b5f0178d6e6b05f3ae18"
 
 [[constraint]]
   name = "github.com/knative/serving"
