@@ -58,7 +58,10 @@ func main() {
 
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
-	receiver := broker.New(logger, mgr.GetClient())
+	receiver, err := broker.New(logger, mgr.GetClient())
+	if err != nil {
+		logger.Fatal("Error creating Receiver", zap.Error(err))
+	}
 	err = mgr.Add(receiver)
 	if err != nil {
 		logger.Fatal("Unable to start the receiver", zap.Error(err), zap.Any("receiver", receiver))
