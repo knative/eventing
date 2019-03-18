@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -43,6 +44,7 @@ func main() {
 		configMapNamespace = system.Namespace()
 	}
 
+	flag.Parse()
 	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Fatalf("unable to create logger: %v", err)
@@ -58,7 +60,7 @@ func main() {
 		logger.Fatal("unable to create manager.", zap.Error(err))
 	}
 
-	kafkaDispatcher, err := dispatcher.NewDispatcher(provisionerConfig.Brokers, logger)
+	kafkaDispatcher, err := dispatcher.NewDispatcher(provisionerConfig.Brokers, provisionerConfig.ConsumerMode, logger)
 	if err != nil {
 		logger.Fatal("unable to create kafka dispatcher.", zap.Error(err))
 	}

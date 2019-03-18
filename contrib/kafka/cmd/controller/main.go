@@ -27,6 +27,10 @@ type SchemeFunc func(*runtime.Scheme) error
 type ProvideFunc func(mgr manager.Manager, config *provisionerController.KafkaProvisionerConfig, logger *zap.Logger) (controller.Controller, error)
 
 func main() {
+	os.Exit(_main())
+}
+
+func _main() int {
 	flag.Parse()
 	logf.SetLogger(logf.ZapLogger(false))
 
@@ -37,7 +41,7 @@ func main() {
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
 	if err != nil {
 		logger.Error(err, "unable to run controller manager")
-		os.Exit(1)
+		return 1
 	}
 
 	// Add custom types to this array to get them into the manager's scheme.
@@ -61,13 +65,13 @@ func main() {
 
 	if err != nil {
 		logger.Error(err, "unable to run controller manager")
-		os.Exit(1)
+		return 1
 	}
 
 	for _, provider := range providers {
 		if _, err := provider(mgr, provisionerConfig, logger.Desugar()); err != nil {
 			logger.Error(err, "unable to run controller manager")
-			os.Exit(1)
+			return 1
 		}
 	}
 
@@ -76,4 +80,5 @@ func main() {
 	if err != nil {
 		logger.Fatal("Manager.Start() returned an error", zap.Error(err))
 	}
+	return 0
 }

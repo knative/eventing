@@ -49,6 +49,7 @@ const (
 	topicPrefix                   = "knative-eventing-channel"
 	testUID                       = "test-uid"
 	argumentNumPartitions         = "NumPartitions"
+	argumentReplicationFactor     = "ReplicationFactor"
 )
 
 var (
@@ -59,6 +60,11 @@ var (
 	// serviceAddress is the address of the K8s Service. It uses a GeneratedName and the fake client
 	// does not fill in Name, so the name is the empty string.
 	serviceAddress = fmt.Sprintf("%s.%s.svc.%s", "", testNS, utils.GetClusterDomainName())
+
+	// map of events to set test cases' expectations easier
+	events = map[string]corev1.Event{
+		dispatcherReconcileFailed: {Reason: dispatcherReconcileFailed, Type: corev1.EventTypeWarning},
+	}
 )
 
 func init() {
@@ -166,6 +172,9 @@ var testCases = []controllertesting.TestCase{
 		WantPresent: []runtime.Object{
 			getNewChannelNotProvisionedStatus(channelName, clusterChannelProvisionerName,
 				"ClusterChannelProvisioner "+clusterChannelProvisionerName+" is not ready"),
+		},
+		WantEvent: []corev1.Event{
+			events[dispatcherReconcileFailed],
 		},
 	},
 	{
@@ -277,9 +286,19 @@ func TestProvisionChannel(t *testing.T) {
 			wantError: fmt.Sprintf("error unmarshalling arguments: json: cannot unmarshal string into Go struct field channelArgs.%s of type int32", argumentNumPartitions),
 		},
 		{
+			name:      "provision with invalid channel arguments - errors",
+			c:         getNewChannelWithArgs(channelName, map[string]interface{}{argumentReplicationFactor: "invalid"}),
+			wantError: fmt.Sprintf("error unmarshalling arguments: json: cannot unmarshal string into Go struct field channelArgs.%s of type int16", argumentReplicationFactor),
+		},
+		{
 			name:      "provision with nil channel arguments - errors",
 			c:         getNewChannelWithArgs(channelName, map[string]interface{}{argumentNumPartitions: "nil"}),
 			wantError: fmt.Sprintf("error unmarshalling arguments: json: cannot unmarshal string into Go struct field channelArgs.%s of type int32", argumentNumPartitions),
+		},
+		{
+			name:      "provision with nil channel arguments - errors",
+			c:         getNewChannelWithArgs(channelName, map[string]interface{}{argumentReplicationFactor: "nil"}),
+			wantError: fmt.Sprintf("error unmarshalling arguments: json: cannot unmarshal string into Go struct field channelArgs.%s of type int16", argumentReplicationFactor),
 		},
 		{
 			name: "provision with unmarshallable channel arguments - errors",

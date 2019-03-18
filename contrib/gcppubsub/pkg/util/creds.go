@@ -21,15 +21,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/logging"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"cloud.google.com/go/pubsub"
+	"github.com/knative/eventing/pkg/logging"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2/google"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GetCredentials gets GCP credentials from a secretRef. The credentials must be stored in JSON format

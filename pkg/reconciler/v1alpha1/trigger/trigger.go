@@ -19,28 +19,13 @@ package trigger
 import (
 	"context"
 	"fmt"
-	"sync"
 
-	"github.com/knative/eventing/pkg/utils"
-
-	"github.com/knative/eventing/pkg/provisioners"
-
-	"k8s.io/apimachinery/pkg/runtime"
-
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	"github.com/knative/eventing/pkg/reconciler/names"
-
-	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/logging"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/logging"
+	"github.com/knative/eventing/pkg/reconciler/names"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/subscription"
+	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/eventing/pkg/utils/resolve"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -49,20 +34,25 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
-
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
 	controllerAgentName = "trigger-controller"
-
-	finalizerName = controllerAgentName
 
 	// Name of the corev1.Events emitted from the reconciliation process.
 	triggerReconciled         = "TriggerReconciled"
@@ -72,19 +62,10 @@ const (
 	subscriptionCreateFailed  = "SubscriptionCreateFailed"
 )
 
-var dummyValue struct{}
-
 type reconciler struct {
 	client        client.Client
-	restConfig    *rest.Config
 	dynamicClient dynamic.Interface
 	recorder      record.EventRecorder
-
-	triggersLock sync.RWMutex
-	// Contains the triggers that correspond to a particular broker.
-	// We use this to reconcile only the triggers that correspond to a certain broker.
-	// brokerNamespacedName -> triggerReconcileRequest -> dummy struct
-	triggers map[types.NamespacedName]map[reconcile.Request]struct{}
 
 	logger *zap.Logger
 }
@@ -93,64 +74,82 @@ type reconciler struct {
 var _ reconcile.Reconciler = &reconciler{}
 
 // ProvideController returns a function that returns a Trigger controller.
-func ProvideController(logger *zap.Logger) func(manager.Manager) (controller.Controller, error) {
-	return func(mgr manager.Manager) (controller.Controller, error) {
-		// Setup a new controller to Reconcile Triggers.
-		r := &reconciler{
-			recorder: mgr.GetRecorder(controllerAgentName),
-			logger:   logger,
-			triggers: make(map[types.NamespacedName]map[reconcile.Request]struct{}),
-		}
-		c, err := controller.New(controllerAgentName, mgr, controller.Options{
-			Reconciler: r,
-		})
+func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
+	// Setup a new controller to Reconcile Triggers.
+	r := &reconciler{
+		recorder: mgr.GetRecorder(controllerAgentName),
+		logger:   logger,
+	}
+	c, err := controller.New(controllerAgentName, mgr, controller.Options{
+		Reconciler: r,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Watch Triggers.
+	if err = c.Watch(&source.Kind{Type: &v1alpha1.Trigger{}}, &handler.EnqueueRequestForObject{}); err != nil {
+		return nil, err
+	}
+
+	// Watch all the resources that the Trigger reconciles.
+	for _, t := range []runtime.Object{&corev1.Service{}, &istiov1alpha3.VirtualService{}, &v1alpha1.Subscription{}} {
+		err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Trigger{}, IsController: true})
 		if err != nil {
 			return nil, err
 		}
-
-		// Watch Triggers.
-		if err = c.Watch(&source.Kind{Type: &v1alpha1.Trigger{}}, &handler.EnqueueRequestForObject{}); err != nil {
-			return nil, err
-		}
-
-		// Watch all the resources that the Trigger reconciles.
-		for _, t := range []runtime.Object{&corev1.Service{}, &istiov1alpha3.VirtualService{}, &v1alpha1.Subscription{}} {
-			err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Trigger{}, IsController: true})
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		// Watch for Broker changes.
-		if err = c.Watch(&source.Kind{Type: &v1alpha1.Broker{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &mapAllTriggers{r}}); err != nil {
-			return nil, err
-		}
-
-		// TODO reconcile after a change to the subscriber. I'm not sure how this is possible, but we should do it if we
-		// can find a way.
-
-		return c, nil
 	}
+
+	// Watch for Broker changes. E.g. if the Broker is deleted and recreated, we need to reconcile
+	// the Trigger again.
+	if err = c.Watch(&source.Kind{Type: &v1alpha1.Broker{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &mapBrokerToTriggers{r: r}}); err != nil {
+		return nil, err
+	}
+
+	// TODO reconcile after a change to the subscriber. I'm not sure how this is possible, but we should do it if we
+	// can find a way.
+
+	return c, nil
 }
 
-// mapAllTriggers maps Broker change notifications to Trigger reconcileRequests.
-type mapAllTriggers struct {
+// mapBrokerToTriggers maps Broker changes to all the Triggers that correspond to that Broker.
+type mapBrokerToTriggers struct {
 	r *reconciler
 }
 
-func (m *mapAllTriggers) Map(o handler.MapObject) []reconcile.Request {
-	m.r.triggersLock.RLock()
-	defer m.r.triggersLock.RUnlock()
-	brokerNamespacedName := types.NamespacedName{Namespace: o.Meta.GetNamespace(), Name: o.Meta.GetName()}
-	triggersInBrokerNamespacedName := m.r.triggers[brokerNamespacedName]
-	if triggersInBrokerNamespacedName == nil {
-		return []reconcile.Request{}
+func (b *mapBrokerToTriggers) Map(o handler.MapObject) []reconcile.Request {
+	ctx := context.Background()
+	triggers := make([]reconcile.Request, 0)
+
+	opts := &client.ListOptions{
+		Namespace: o.Meta.GetNamespace(),
+		// Set Raw because if we need to get more than one page, then we will put the continue token
+		// into opts.Raw.Continue.
+		Raw: &metav1.ListOptions{},
 	}
-	reqs := make([]reconcile.Request, 0, len(triggersInBrokerNamespacedName))
-	for name := range triggersInBrokerNamespacedName {
-		reqs = append(reqs, name)
+	for {
+		tl := &v1alpha1.TriggerList{}
+		if err := b.r.client.List(ctx, opts, tl); err != nil {
+			b.r.logger.Error("Error listing Triggers when Broker changed. Some Triggers may not be reconciled.", zap.Error(err), zap.Any("broker", o))
+			return triggers
+		}
+
+		for _, t := range tl.Items {
+			if t.Spec.Broker == o.Meta.GetName() {
+				triggers = append(triggers, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: t.Namespace,
+						Name:      t.Name,
+					},
+				})
+			}
+		}
+		if tl.Continue != "" {
+			opts.Raw.Continue = tl.Continue
+		} else {
+			return triggers
+		}
 	}
-	return reqs
 }
 
 func (r *reconciler) InjectClient(c client.Client) error {
@@ -159,7 +158,6 @@ func (r *reconciler) InjectClient(c client.Client) error {
 }
 
 func (r *reconciler) InjectConfig(c *rest.Config) error {
-	r.restConfig = c
 	var err error
 	r.dynamicClient, err = dynamic.NewForConfig(c)
 	return err
@@ -184,9 +182,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		logging.FromContext(ctx).Error("Could not get Trigger", zap.Error(err))
 		return reconcile.Result{}, err
 	}
-
-	// Modify a copy, not the original.
-	trigger = trigger.DeepCopy()
 
 	// Reconcile this copy of the Trigger and then write back any status updates regardless of
 	// whether the reconcile error out.
@@ -220,18 +215,13 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 
 	if t.DeletionTimestamp != nil {
 		// Everything is cleaned up by the garbage collector.
-		r.removeFromTriggers(t)
-		provisioners.RemoveFinalizer(t, finalizerName)
 		return nil
 	}
-
-	provisioners.AddFinalizer(t, finalizerName)
-	r.AddToTriggers(t)
 
 	b, err := r.getBroker(ctx, t)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Broker", zap.Error(err))
-		t.Status.MarkBrokerDoesNotExists()
+		t.Status.MarkBrokerDoesNotExist()
 		return err
 	}
 	t.Status.MarkBrokerExists()
@@ -247,7 +237,7 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return err
 	}
 
-	subscriberURI, err := subscription.ResolveSubscriberSpec(ctx, r.client, r.dynamicClient, t.Namespace, t.Spec.Subscriber)
+	subscriberURI, err := resolve.SubscriberSpec(ctx, r.dynamicClient, t.Namespace, t.Spec.Subscriber)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Subscriber's URI", zap.Error(err))
 		return err
@@ -277,58 +267,6 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	t.Status.MarkSubscribed()
 
 	return nil
-}
-
-func (r *reconciler) AddToTriggers(t *v1alpha1.Trigger) {
-	name := reconcile.Request{
-		NamespacedName: types.NamespacedName{
-			Namespace: t.Namespace,
-			Name:      t.Name,
-		},
-	}
-
-	brokerNamespacedName := types.NamespacedName{
-		Namespace: t.Namespace,
-		Name:      t.Spec.Broker}
-
-	// We will be reconciling an already existing Trigger far more often than adding a new one, so
-	// check with a read lock before using the write lock.
-	r.triggersLock.RLock()
-	_, present := r.triggers[brokerNamespacedName][name]
-	r.triggersLock.RUnlock()
-	if present {
-		// Already present in the map.
-		return
-	}
-
-	r.triggersLock.Lock()
-	triggersInBrokerNamespacedName := r.triggers[brokerNamespacedName]
-	if triggersInBrokerNamespacedName == nil {
-		r.triggers[brokerNamespacedName] = make(map[reconcile.Request]struct{})
-		triggersInBrokerNamespacedName = r.triggers[brokerNamespacedName]
-	}
-	triggersInBrokerNamespacedName[name] = dummyValue
-	r.triggersLock.Unlock()
-}
-
-func (r *reconciler) removeFromTriggers(t *v1alpha1.Trigger) {
-	name := reconcile.Request{
-		NamespacedName: types.NamespacedName{
-			Namespace: t.Namespace,
-			Name:      t.Name,
-		},
-	}
-
-	brokerNamespacedName := types.NamespacedName{
-		Namespace: t.Namespace,
-		Name:      t.Spec.Broker}
-
-	r.triggersLock.Lock()
-	triggersInBrokerNamespacedName := r.triggers[brokerNamespacedName]
-	if triggersInBrokerNamespacedName != nil {
-		delete(triggersInBrokerNamespacedName, name)
-	}
-	r.triggersLock.Unlock()
 }
 
 // updateStatus may in fact update the trigger's finalizers in addition to the status.
@@ -382,17 +320,19 @@ func (r *reconciler) getBroker(ctx context.Context, t *v1alpha1.Trigger) (*v1alp
 	return b, err
 }
 
-// getBrokerChannel returns the Broker's channel if exists, otherwise it returns an error.
+// getBrokerTriggerChannel return the Broker's Trigger Channel if it exists, otherwise it returns an
+// error.
 func (r *reconciler) getBrokerTriggerChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
 	return r.getChannel(ctx, b, labels.SelectorFromSet(broker.TriggerChannelLabels(b)))
 }
 
-// getBrokerChannel returns the Broker's channel if exists, otherwise it returns an error.
+// getBrokerIngressChannel return the Broker's Ingress Channel if it exists, otherwise it returns an
+// error.
 func (r *reconciler) getBrokerIngressChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
 	return r.getChannel(ctx, b, labels.SelectorFromSet(broker.IngressChannelLabels(b)))
 }
 
-// getBrokerChannel returns the Broker's channel if exists, otherwise it returns an error.
+// getChannel returns the Broker's channel if it exists, otherwise it returns an error.
 func (r *reconciler) getChannel(ctx context.Context, b *v1alpha1.Broker, ls labels.Selector) (*v1alpha1.Channel, error) {
 	list := &v1alpha1.ChannelList{}
 	opts := &runtimeclient.ListOptions{
@@ -463,7 +403,7 @@ func (r *reconciler) reconcileK8sService(ctx context.Context, t *v1alpha1.Trigge
 	expected.Spec.ClusterIP = current.Spec.ClusterIP
 	if !equality.Semantic.DeepDerivative(expected.Spec, current.Spec) {
 		current.Spec = expected.Spec
-		err := r.client.Update(ctx, current)
+		err = r.client.Update(ctx, current)
 		if err != nil {
 			return nil, err
 		}
@@ -547,7 +487,7 @@ func (r *reconciler) reconcileVirtualService(ctx context.Context, t *v1alpha1.Tr
 	expected := newVirtualService(t, svc)
 	if !equality.Semantic.DeepDerivative(expected.Spec, virtualService.Spec) {
 		virtualService.Spec = expected.Spec
-		err := r.client.Update(ctx, virtualService)
+		err = r.client.Update(ctx, virtualService)
 		if err != nil {
 			return nil, err
 		}
@@ -598,7 +538,7 @@ func virtualServiceLabels(t *v1alpha1.Trigger) map[string]string {
 	}
 }
 
-// subscribeToBrokerChannel subscribes service 'svc' to Broker's channel 'c'.
+// subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
 func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.Trigger, brokerTrigger, brokerIngress *v1alpha1.Channel, svc *corev1.Service) (*v1alpha1.Subscription, error) {
 	expected := makeSubscription(t, brokerTrigger, brokerIngress, svc)
 
@@ -618,8 +558,8 @@ func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.T
 	// Update Subscription if it has changed. Ignore the generation.
 	expected.Spec.DeprecatedGeneration = sub.Spec.DeprecatedGeneration
 	if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
-		// Given that spec.channel is immutable, we cannot just update the subscription. We delete
-		// it instead, and re-create it.
+		// Given that spec.channel is immutable, we cannot just update the Subscription. We delete
+		// it and re-create it instead.
 		err = r.client.Delete(ctx, sub)
 		if err != nil {
 			logging.FromContext(ctx).Info("Cannot delete subscription", zap.Error(err))
@@ -662,7 +602,8 @@ func (r *reconciler) getSubscription(ctx context.Context, t *v1alpha1.Trigger) (
 	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
 }
 
-// makeSubscription returns a placeholder subscription for trigger 't', channel 'c', and service 'svc'.
+// makeSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'svc'
+// replying to brokerIngress.
 func makeSubscription(t *v1alpha1.Trigger, brokerTrigger, brokerIngress *v1alpha1.Channel, svc *corev1.Service) *v1alpha1.Subscription {
 	return &v1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{

@@ -20,8 +20,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/logging"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/logging"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -31,7 +31,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -62,9 +61,8 @@ const (
 )
 
 type reconciler struct {
-	client     client.Client
-	restConfig *rest.Config
-	recorder   record.EventRecorder
+	client   client.Client
+	recorder record.EventRecorder
 
 	logger *zap.Logger
 }
@@ -73,50 +71,63 @@ type reconciler struct {
 var _ reconcile.Reconciler = &reconciler{}
 
 // ProvideController returns a function that returns a Namespace controller.
-func ProvideController(logger *zap.Logger) func(manager.Manager) (controller.Controller, error) {
-	return func(mgr manager.Manager) (controller.Controller, error) {
-		// Setup a new controller to Reconcile Namespaces.
-		r := &reconciler{
-			recorder: mgr.GetRecorder(controllerAgentName),
-			logger:   logger,
+func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
+	// Setup a new controller to Reconcile Namespaces.
+	r := &reconciler{
+		recorder: mgr.GetRecorder(controllerAgentName),
+		logger:   logger,
+	}
+	c, err := controller.New(controllerAgentName, mgr, controller.Options{
+		Reconciler: r,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Watch Namespaces.
+	if err = c.Watch(&source.Kind{Type: &v1.Namespace{}}, &handler.EnqueueRequestForObject{}); err != nil {
+		return nil, err
+	}
+
+	// Watch all the resources that this reconciler reconciles. This is a map from resource type to
+	// the name of the resource of that type we care about (i.e. only if the resource of the given
+	// type and with the given name changes, do we reconcile the Namespace).
+	resources := map[runtime.Object]string{
+		&corev1.ServiceAccount{}: brokerFilterSA,
+		&rbacv1.RoleBinding{}:    brokerFilterRB,
+		&v1alpha1.Broker{}:       defaultBroker,
+	}
+	for t, n := range resources {
+		nm := &namespaceMapper{
+			name: n,
 		}
-		c, err := controller.New(controllerAgentName, mgr, controller.Options{
-			Reconciler: r,
-		})
+		err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestsFromMapFunc{ToRequests: nm})
 		if err != nil {
 			return nil, err
 		}
-
-		// Watch Namespaces.
-		if err = c.Watch(&source.Kind{Type: &v1.Namespace{}}, &handler.EnqueueRequestForObject{}); err != nil {
-			return nil, err
-		}
-
-		// Watch all the resources that this reconciler reconciles.
-		for _, t := range []runtime.Object{&corev1.ServiceAccount{}, &rbacv1.RoleBinding{}, &v1alpha1.Broker{}} {
-			err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &namespaceMapper{}})
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		return c, nil
 	}
+
+	return c, nil
 }
 
-type namespaceMapper struct{}
+type namespaceMapper struct {
+	name string
+}
 
 var _ handler.Mapper = &namespaceMapper{}
 
-func (namespaceMapper) Map(o handler.MapObject) []reconcile.Request {
-	return []reconcile.Request{
-		{
-			NamespacedName: types.NamespacedName{
-				Namespace: "",
-				Name:      o.Meta.GetNamespace(),
+func (m *namespaceMapper) Map(o handler.MapObject) []reconcile.Request {
+	if o.Meta.GetName() == m.name {
+		return []reconcile.Request{
+			{
+				NamespacedName: types.NamespacedName{
+					Namespace: "",
+					Name:      o.Meta.GetNamespace(),
+				},
 			},
-		},
+		}
 	}
+	return []reconcile.Request{}
 }
 
 func (r *reconciler) InjectClient(c client.Client) error {

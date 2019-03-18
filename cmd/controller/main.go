@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/channel"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/subscription"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger"
@@ -63,7 +64,7 @@ var (
 type SchemeFunc func(*runtime.Scheme) error
 
 // ProvideFunc adds a controller to a Manager.
-type ProvideFunc func(manager.Manager) (controller.Controller, error)
+type ProvideFunc func(manager.Manager, *zap.Logger) (controller.Controller, error)
 
 func main() {
 	flag.Parse()
@@ -97,7 +98,7 @@ func main() {
 
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
-	configMapWatcher.Watch(logconfig.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller, logconfig.Controller))
+	configMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller, logconfig.Controller))
 	if err = configMapWatcher.Start(stopCh); err != nil {
 		logger.Fatalf("Failed to start controller config map watcher: %v", err)
 	}
@@ -123,26 +124,27 @@ func main() {
 	// manager run it.
 	providers := []ProvideFunc{
 		subscription.ProvideController,
-		broker.ProvideController(logger.Desugar(),
+		channel.ProvideController,
+		broker.ProvideController(
 			broker.ReconcilerArgs{
 				IngressImage:              getRequiredEnv("BROKER_INGRESS_IMAGE"),
 				IngressServiceAccountName: getRequiredEnv("BROKER_INGRESS_SERVICE_ACCOUNT"),
 				FilterImage:               getRequiredEnv("BROKER_FILTER_IMAGE"),
 				FilterServiceAccountName:  getRequiredEnv("BROKER_FILTER_SERVICE_ACCOUNT"),
 			}),
-		trigger.ProvideController(logger.Desugar()),
-		namespace.ProvideController(logger.Desugar()),
+		trigger.ProvideController,
+		namespace.ProvideController,
 	}
 	for _, provider := range providers {
-		if _, err := provider(mgr); err != nil {
+		if _, err = provider(mgr, logger.Desugar()); err != nil {
 			logger.Fatalf("Error adding controller to manager: %v", err)
 		}
 	}
 
 	// Start the Manager
 	go func() {
-		if err := mgr.Start(stopCh); err != nil {
-			logger.Fatalf("Error starting manager: %v", err)
+		if localErr := mgr.Start(stopCh); localErr != nil {
+			logger.Fatalf("Error starting manager: %v", localErr)
 		}
 	}()
 
@@ -150,9 +152,9 @@ func main() {
 	srv := &http.Server{Addr: metricsScrapeAddr}
 	http.Handle(metricsScrapePath, promhttp.Handler())
 	go func() {
-		logger.Info("Starting metrics listener at %s", metricsScrapeAddr)
-		if err := srv.ListenAndServe(); err != nil {
-			logger.Infof("Httpserver: ListenAndServe() finished with error: %s", err)
+		logger.Infof("Starting metrics listener at %s", metricsScrapeAddr)
+		if localErr := srv.ListenAndServe(); localErr != nil {
+			logger.Infof("Httpserver: ListenAndServe() finished with error: %s", localErr)
 		}
 	}()
 

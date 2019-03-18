@@ -140,7 +140,7 @@ func (ts *TriggerStatus) MarkBrokerExists() {
 	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionBrokerExists)
 }
 
-func (ts *TriggerStatus) MarkBrokerDoesNotExists() {
+func (ts *TriggerStatus) MarkBrokerDoesNotExist() {
 	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionBrokerExists, "doesNotExist", "Broker does not exist")
 }
 

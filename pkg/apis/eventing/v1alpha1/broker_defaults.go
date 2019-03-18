@@ -16,14 +16,10 @@ limitations under the License.
 
 package v1alpha1
 
-const (
-	brokerLabel = "eventing.knative.dev/broker"
-)
-
 func (b *Broker) SetDefaults() {
-	b.Spec.SetDefaults(b.Name)
+	b.Spec.SetDefaults()
 }
 
-func (bs *BrokerSpec) SetDefaults(brokerName string) {
+func (bs *BrokerSpec) SetDefaults() {
 	// None
 }

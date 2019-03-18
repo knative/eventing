@@ -20,10 +20,13 @@ import (
 	"fmt"
 	"testing"
 
+	"go.uber.org/zap"
+
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/eventing/pkg/utils/resolve"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -81,1002 +84,987 @@ func init() {
 	duckv1alpha1.AddToScheme(scheme.Scheme)
 }
 
-var testCases = []controllertesting.TestCase{
-	{
-		Name:    "subscription does not exist",
-		WantErr: false,
-	}, {
-		Name: "subscription but From channel does not exist",
-		InitialState: []runtime.Object{
-			Subscription(),
-		},
-		WantErrMsg: `channels.eventing.knative.dev "fromchannel" not found`,
-		WantEvent: []corev1.Event{
-			events[channelReferenceFetchFailed],
-		},
-	}, {
-		Name: "subscription, but From is not subscribable",
-		InitialState: []runtime.Object{
-			Subscription().FromSource(),
-		},
-		// TODO: JSON patch is not working on the fake, see
-		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
-		// failure for now, until upstream is fixed. It should actually fail saying that there is no
-		// Spec.Subscribers field.
-		WantErrMsg: "invalid JSON document",
-		WantEvent: []corev1.Event{
-			events[physicalChannelSyncFailed],
-		},
-		Scheme: scheme.Scheme,
-		Objects: []runtime.Object{
-			// Source channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       sourceKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      sourceName,
-					},
-					"spec": map[string]interface{}{},
-				},
+func TestAllCases(t *testing.T) {
+	testCases := []controllertesting.TestCase{
+		{
+			Name:    "subscription does not exist",
+			WantErr: false,
+		}, {
+			Name: "subscription but From channel does not exist",
+			InitialState: []runtime.Object{
+				Subscription(),
 			},
-			// Subscriber (using knative route)
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": "serving.knative.dev/v1alpha1",
-					"kind":       routeKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      routeName,
-					},
-					"status": map[string]interface{}{
-						"address": map[string]interface{}{
-							"hostname": targetDNS,
-						},
-					},
-				},
+			WantErrMsg: `channels.eventing.knative.dev "fromchannel" not found`,
+			WantEvent: []corev1.Event{
+				events[channelReferenceFetchFailed],
 			},
-			// Reply channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      resultChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-					"status": map[string]interface{}{
-						"address": map[string]interface{}{
-							"hostname": sinkableDNS,
-						},
-					},
-				},
+		}, {
+			Name: "subscription, but From is not subscribable",
+			InitialState: []runtime.Object{
+				Subscription().FromSource(),
 			},
-		},
-	}, {
-		Name: "Valid channel, subscriber does not exist",
-		InitialState: []runtime.Object{
-			Subscription(),
-		},
-		WantErrMsg: `routes.serving.knative.dev "subscriberroute" not found`,
-		WantPresent: []runtime.Object{
-			Subscription().UnknownConditions(),
-		},
-		WantEvent: []corev1.Event{
-			events[subscriberResolveFailed],
-		},
-		Scheme: scheme.Scheme,
-		Objects: []runtime.Object{
-			// Source channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      fromChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-				},
-			},
-		},
-	}, {
-		Name: "Valid channel, subscriber is not callable",
-		InitialState: []runtime.Object{
-			Subscription(),
-		},
-		WantPresent: []runtime.Object{
-			Subscription().UnknownConditions(),
-		},
-		WantErrMsg: "status does not contain address",
-		WantEvent: []corev1.Event{
-			events[subscriberResolveFailed],
-		},
-		Scheme: scheme.Scheme,
-		Objects: []runtime.Object{
-			// Source channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      fromChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-				},
-			},
-			// Subscriber (using knative route)
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": "serving.knative.dev/v1alpha1",
-					"kind":       routeKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      routeName,
-					},
-					"status": map[string]interface{}{
-						"someotherstuff": targetDNS,
-					},
-				},
-			},
-		},
-	}, {
-		Name: "Valid channel and subscriber, result does not exist",
-		InitialState: []runtime.Object{
-			Subscription(),
-		},
-		WantPresent: []runtime.Object{
-			Subscription().UnknownConditions().PhysicalSubscriber(targetDNS),
-		},
-		WantErrMsg: `channels.eventing.knative.dev "resultchannel" not found`,
-		WantEvent: []corev1.Event{
-			events[resultResolveFailed],
-		},
-		Scheme: scheme.Scheme,
-		Objects: []runtime.Object{
-			// Source channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      fromChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-				},
-			},
-			// Subscriber (using knative route)
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": "serving.knative.dev/v1alpha1",
-					"kind":       routeKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      routeName,
-					},
-					"status": map[string]interface{}{
-						"address": map[string]interface{}{
-							"hostname": targetDNS,
-						},
-					},
-				},
-			},
-		},
-	}, {
-		Name: "valid channel, subscriber, result is not addressable",
-		InitialState: []runtime.Object{
-			Subscription(),
-		},
-		WantErrMsg: "status does not contain address",
-		WantPresent: []runtime.Object{
-			// TODO: Again this works on gke cluster, but I need to set
-			// something else up here. later...
-			// Subscription().ReferencesResolved(),
-			Subscription().UnknownConditions().PhysicalSubscriber(targetDNS),
-		},
-		WantEvent: []corev1.Event{
-			events[resultResolveFailed],
-		},
-		Scheme: scheme.Scheme,
-		Objects: []runtime.Object{
-			// Source channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      fromChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-				},
-			},
-			// Subscriber (using knative route)
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": "serving.knative.dev/v1alpha1",
-					"kind":       routeKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      routeName,
-					},
-					"status": map[string]interface{}{
-						"address": map[string]interface{}{
-							"hostname": targetDNS,
-						},
-					},
-				},
-			},
-			// Reply channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      resultChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-				},
-			},
-		},
-	}, {
-		Name: "new subscription: adds status, all targets resolved, subscribers modified",
-		InitialState: []runtime.Object{
-			Subscription(),
-		},
-		// TODO: JSON patch is not working on the fake, see
-		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
-		// failure for now, until upstream is fixed.
-		WantResult: reconcile.Result{},
-		WantPresent: []runtime.Object{
-			Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
-		},
-		WantErrMsg: "invalid JSON document",
-		WantEvent: []corev1.Event{
-			events[physicalChannelSyncFailed],
-		},
-		Scheme: scheme.Scheme,
-		Objects: []runtime.Object{
-			// Source channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      fromChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-				},
-			},
-			// Subscriber (using knative route)
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": "serving.knative.dev/v1alpha1",
-					"kind":       routeKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      routeName,
-					},
-					"status": map[string]interface{}{
-						"address": map[string]interface{}{
-							"hostname": targetDNS,
-						},
-					},
-				},
-			},
-			// Reply channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      resultChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-					"status": map[string]interface{}{
-						"address": map[string]interface{}{
-							"hostname": sinkableDNS,
-						},
-					},
-				},
-			},
-		},
-	}, {
-		Name: "new subscription: adds status, all targets resolved, subscribers modified -- nil reply",
-		InitialState: []runtime.Object{
-			Subscription().NilReply(),
-		},
-		// TODO: JSON patch is not working on the fake, see
-		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
-		// failure for now, until upstream is fixed.
-		WantResult: reconcile.Result{},
-		WantPresent: []runtime.Object{
-			Subscription().NilReply().ReferencesResolved().PhysicalSubscriber(targetDNS),
-		},
-		WantErrMsg: "invalid JSON document",
-		WantEvent: []corev1.Event{
-			events[physicalChannelSyncFailed],
-		},
-		Scheme: scheme.Scheme,
-		Objects: []runtime.Object{
-			// Source channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      fromChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-				},
-			},
-			// Subscriber (using knative route)
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": "serving.knative.dev/v1alpha1",
-					"kind":       routeKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      routeName,
-					},
-					"status": map[string]interface{}{
-						"address": map[string]interface{}{
-							"hostname": targetDNS,
-						},
-					},
-				},
-			},
-		},
-	}, {
-		Name: "new subscription: adds status, all targets resolved, subscribers modified -- empty but non-nil reply",
-		InitialState: []runtime.Object{
-			Subscription().EmptyNonNilReply(),
-		},
-		// TODO: JSON patch is not working on the fake, see
-		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
-		// failure for now, until upstream is fixed.
-		WantResult: reconcile.Result{},
-		WantPresent: []runtime.Object{
-			Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).EmptyNonNilReply(),
-		},
-		WantErrMsg: "invalid JSON document",
-		WantEvent: []corev1.Event{
-			events[physicalChannelSyncFailed],
-		},
-		Scheme: scheme.Scheme,
-		Objects: []runtime.Object{
-			// Source channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      fromChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-				},
-			},
-			// Subscriber (using knative route)
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": "serving.knative.dev/v1alpha1",
-					"kind":       routeKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      routeName,
-					},
-					"status": map[string]interface{}{
-						"address": map[string]interface{}{
-							"hostname": targetDNS,
-						},
-					},
-				},
-			},
-		},
-	}, {
-		Name: "new subscription: adds status, target points to the legacy targetable interface",
-		InitialState: []runtime.Object{
-			Subscription().EmptyNonNilReply(),
-		},
-		// TODO: JSON patch is not working on the fake, see
-		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
-		// failure for now, until upstream is fixed.
-		WantResult: reconcile.Result{},
-		WantPresent: []runtime.Object{
-			Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).EmptyNonNilReply(),
-		},
-		WantErrMsg: "invalid JSON document",
-		WantEvent: []corev1.Event{
-			events[physicalChannelSyncFailed],
-		},
-		Scheme: scheme.Scheme,
-		Objects: []runtime.Object{
-			// Source channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      fromChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-				},
-			},
-			// Subscriber (using knative route)
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": "serving.knative.dev/v1alpha1",
-					"kind":       routeKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      routeName,
-					},
-					"status": map[string]interface{}{
-						"domainInternal": targetDNS,
-					},
-				},
-			},
-		},
-	}, {
-		Name: "old subscription: updates status, removing the no longer present Subscriber",
-		InitialState: []runtime.Object{
-			// This will have no Subscriber in the spec, but will have one in the status.
-			Subscription().NilSubscriber().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
-		},
-		// TODO: JSON patch is not working on the fake, see
-		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
-		// failure for now, until upstream is fixed.
-		WantResult: reconcile.Result{},
-		WantPresent: []runtime.Object{
-			Subscription().NilSubscriber().ReferencesResolved().Reply(),
-		},
-		WantErrMsg: "invalid JSON document",
-		WantEvent: []corev1.Event{
-			events[physicalChannelSyncFailed],
-		},
-		Scheme: scheme.Scheme,
-		Objects: []runtime.Object{
-			// Source channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      fromChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-				},
-			},
-			// Reply channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      resultChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-					"status": map[string]interface{}{
-						"address": map[string]interface{}{
-							"hostname": sinkableDNS,
-						},
-					},
-				},
-			},
-		},
-	}, {
-		Name: "old subscription: updates status, removing the no longer present reply",
-		InitialState: []runtime.Object{
-			// This will have no Reply in the spec, but will have one in the status.
-			Subscription().NilReply().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
-		},
-		// TODO: JSON patch is not working on the fake, see
-		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
-		// failure for now, until upstream is fixed.
-		WantResult: reconcile.Result{},
-		WantPresent: []runtime.Object{
-			Subscription().NilReply().ReferencesResolved().PhysicalSubscriber(targetDNS),
-		},
-		WantErrMsg: "invalid JSON document",
-		WantEvent: []corev1.Event{
-			events[physicalChannelSyncFailed],
-		},
-		Scheme: scheme.Scheme,
-		Objects: []runtime.Object{
-			// Source channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      fromChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-				},
-			},
-			// Subscriber (using knative route)
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": "serving.knative.dev/v1alpha1",
-					"kind":       routeKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      routeName,
-					},
-					"status": map[string]interface{}{
-						"domainInternal": targetDNS,
-					},
-				},
-			},
-		},
-	}, {
-		Name: "new subscription: adds status, all targets resolved, subscribers modified -- nil subscriber",
-		InitialState: []runtime.Object{
-			Subscription().NilSubscriber(),
-		},
-		// TODO: JSON patch is not working on the fake, see
-		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
-		// failure for now, until upstream is fixed.
-		WantResult: reconcile.Result{},
-		WantPresent: []runtime.Object{
-			Subscription().NilSubscriber().ReferencesResolved().Reply(),
-		},
-		WantErrMsg: "invalid JSON document",
-		WantEvent: []corev1.Event{
-			events[physicalChannelSyncFailed],
-		},
-		Scheme: scheme.Scheme,
-		Objects: []runtime.Object{
-			// Source channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      fromChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-				},
-			},
-			// Reply channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      resultChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-					"status": map[string]interface{}{
-						"address": map[string]interface{}{
-							"hostname": sinkableDNS,
-						},
-					},
-				},
-			},
-		},
-	}, {
-		Name: "new subscription: adds status, all targets resolved, subscribers modified -- empty but non-nil subscriber",
-		InitialState: []runtime.Object{
-			Subscription().EmptyNonNilSubscriber(),
-		},
-		// TODO: JSON patch is not working on the fake, see
-		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
-		// failure for now, until upstream is fixed.
-		WantResult: reconcile.Result{},
-		WantPresent: []runtime.Object{
-			Subscription().EmptyNonNilSubscriber().ReferencesResolved().Reply(),
-		},
-		WantErrMsg: "invalid JSON document",
-		WantEvent: []corev1.Event{
-			events[physicalChannelSyncFailed],
-		},
-		Scheme: scheme.Scheme,
-		Objects: []runtime.Object{
-			// Source channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      fromChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-				},
-			},
-			// Reply channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      resultChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-					"status": map[string]interface{}{
-						"address": map[string]interface{}{
-							"hostname": sinkableDNS,
-						},
-					},
-				},
-			},
-		},
-	}, {
-		Name: "new subscription to non-existent K8s Service: fails with no service found",
-		InitialState: []runtime.Object{
-			Subscription().ToK8sService(),
-		},
-		WantResult: reconcile.Result{},
-		WantPresent: []runtime.Object{
-			Subscription().ToK8sService().UnknownConditions(),
-		},
-		WantErrMsg: "services \"testk8sservice\" not found",
-		WantEvent: []corev1.Event{
-			events[subscriberResolveFailed],
-		},
-		Scheme: scheme.Scheme,
-		Objects: []runtime.Object{
-			// Source channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      fromChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-				},
-			},
-		},
-	}, {
-		Name: "new subscription to K8s Service: adds status, all targets resolved, subscribers modified",
-		InitialState: []runtime.Object{
-			Subscription().ToK8sService(),
-			getK8sService(),
-		},
-		// TODO: JSON patch is not working on the fake, see
-		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
-		// failure for now, until upstream is fixed.
-		WantResult: reconcile.Result{},
-		WantPresent: []runtime.Object{
-			Subscription().ToK8sService().ReferencesResolved().PhysicalSubscriber(k8sServiceDNS).Reply(),
-		},
-		WantErrMsg: "invalid JSON document",
-		WantEvent: []corev1.Event{
-			events[physicalChannelSyncFailed],
-		},
-		Scheme: scheme.Scheme,
-		Objects: []runtime.Object{
-			// Source channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      fromChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-				},
-			},
-			// Subscriber (using K8s Service)
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": "v1",
-					"kind":       "Service",
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      k8sServiceName,
-					},
-				},
-			},
-			// Reply channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      resultChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-					"status": map[string]interface{}{
-						"address": map[string]interface{}{
-							"hostname": sinkableDNS,
-						},
-					},
-				},
-			},
-		},
-	}, {
-		Name: "new subscription with from channel: adds status, all targets resolved, subscribers modified",
-		InitialState: []runtime.Object{
-			Subscription(),
-		},
-		// TODO: JSON patch is not working on the fake, see
-		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
-		// failure for now, until upstream is fixed.
-		WantResult: reconcile.Result{},
-		WantErrMsg: "invalid JSON document",
-		WantPresent: []runtime.Object{
-			Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
-		},
-		WantEvent: []corev1.Event{
-			events[physicalChannelSyncFailed],
-		},
-		Scheme: scheme.Scheme,
-		Objects: []runtime.Object{
-			// Source with a reference to the From Channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       sourceKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      sourceName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-				},
-			},
-			// Source channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      fromChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-				},
-			},
-			// Subscriber (using knative route)
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": "serving.knative.dev/v1alpha1",
-					"kind":       routeKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      routeName,
-					},
-					"status": map[string]interface{}{
-						"address": map[string]interface{}{
-							"hostname": targetDNS,
-						},
-					},
-				},
-			},
-			// Reply channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      resultChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
-					},
-					"status": map[string]interface{}{
-						"address": map[string]interface{}{
-							"hostname": sinkableDNS,
-						},
-					},
-				},
-			},
-		},
-	},
-	{
-		Name: "sync multiple Subscriptions to one channel",
-		InitialState: []runtime.Object{
-			// The first two Subscriptions both have the same physical From, so we should see that
-			// Channel updated with both Subscriptions.
-			Subscription(),
-			Subscription().Renamed().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
-			// This subscription has a different physical From, so we should not see it in the same
-			// Channel as the first two.
-			Subscription().DifferentChannel(),
-		},
-		// TODO: JSON patch is not working on the fake, see
-		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
-		// failure for now, until upstream is fixed.
-		WantResult: reconcile.Result{},
-		WantErrMsg: "invalid JSON document",
-		WantPresent: []runtime.Object{
 			// TODO: JSON patch is not working on the fake, see
-			// https://github.com/kubernetes/client-go/issues/478. The entire test is really to
-			// verify the following, but can't be done because the call to Patch fails (it assumes
-			// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
-			// out.
-			//getChannelWithMultipleSubscriptions(),
-			Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
-			// Unaltered because this Subscription was not reconciled.
-			Subscription().Renamed().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
-			Subscription().DifferentChannel(),
-		},
-		WantEvent: []corev1.Event{
-			events[physicalChannelSyncFailed],
-		},
-		Scheme: scheme.Scheme,
-		Objects: []runtime.Object{
-			// Source with a reference to the From Channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       sourceKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      sourceName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
+			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+			// failure for now, until upstream is fixed. It should actually fail saying that there is no
+			// Spec.Subscribers field.
+			WantErrMsg: "invalid JSON document",
+			WantEvent: []corev1.Event{
+				events[physicalChannelSyncFailed],
+			},
+			Objects: []runtime.Object{
+				// Source channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       sourceKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      sourceName,
+						},
+						"spec": map[string]interface{}{},
 					},
 				},
-			},
-			// Source channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      fromChannelName,
-					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
+				// Subscriber (using knative route)
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": "serving.knative.dev/v1alpha1",
+						"kind":       routeKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      routeName,
+						},
+						"status": map[string]interface{}{
+							"address": map[string]interface{}{
+								"hostname": targetDNS,
+							},
+						},
 					},
 				},
-			},
-			// Subscriber (using knative route)
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": "serving.knative.dev/v1alpha1",
-					"kind":       routeKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      routeName,
-					},
-					"status": map[string]interface{}{
-						"address": map[string]interface{}{
-							"hostname": targetDNS,
+				// Reply channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      resultChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+						"status": map[string]interface{}{
+							"address": map[string]interface{}{
+								"hostname": sinkableDNS,
+							},
 						},
 					},
 				},
 			},
-			// Reply channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      resultChannelName,
+		}, {
+			Name: "Valid channel, subscriber does not exist",
+			InitialState: []runtime.Object{
+				Subscription(),
+			},
+			WantErrMsg: `routes.serving.knative.dev "subscriberroute" not found`,
+			WantPresent: []runtime.Object{
+				Subscription().UnknownConditions(),
+			},
+			WantEvent: []corev1.Event{
+				events[subscriberResolveFailed],
+			},
+			Objects: []runtime.Object{
+				// Source channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      fromChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
 					},
-					"spec": map[string]interface{}{
-						"subscribable": map[string]interface{}{},
+				},
+			},
+		}, {
+			Name: "Valid channel, subscriber is not callable",
+			InitialState: []runtime.Object{
+				Subscription(),
+			},
+			WantPresent: []runtime.Object{
+				Subscription().UnknownConditions(),
+			},
+			WantErrMsg: "status does not contain address",
+			WantEvent: []corev1.Event{
+				events[subscriberResolveFailed],
+			},
+			Objects: []runtime.Object{
+				// Source channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      fromChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
 					},
-					"status": map[string]interface{}{
-						"address": map[string]interface{}{
-							"hostname": sinkableDNS,
+				},
+				// Subscriber (using knative route)
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": "serving.knative.dev/v1alpha1",
+						"kind":       routeKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      routeName,
+						},
+						"status": map[string]interface{}{
+							"someotherstuff": targetDNS,
+						},
+					},
+				},
+			},
+		}, {
+			Name: "Valid channel and subscriber, result does not exist",
+			InitialState: []runtime.Object{
+				Subscription(),
+			},
+			WantPresent: []runtime.Object{
+				Subscription().UnknownConditions().PhysicalSubscriber(targetDNS),
+			},
+			WantErrMsg: `channels.eventing.knative.dev "resultchannel" not found`,
+			WantEvent: []corev1.Event{
+				events[resultResolveFailed],
+			},
+			Objects: []runtime.Object{
+				// Source channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      fromChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+					},
+				},
+				// Subscriber (using knative route)
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": "serving.knative.dev/v1alpha1",
+						"kind":       routeKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      routeName,
+						},
+						"status": map[string]interface{}{
+							"address": map[string]interface{}{
+								"hostname": targetDNS,
+							},
+						},
+					},
+				},
+			},
+		}, {
+			Name: "valid channel, subscriber, result is not addressable",
+			InitialState: []runtime.Object{
+				Subscription(),
+			},
+			WantErrMsg: "status does not contain address",
+			WantPresent: []runtime.Object{
+				// TODO: Again this works on gke cluster, but I need to set
+				// something else up here. later...
+				// Subscription().ReferencesResolved(),
+				Subscription().UnknownConditions().PhysicalSubscriber(targetDNS),
+			},
+			WantEvent: []corev1.Event{
+				events[resultResolveFailed],
+			},
+			Objects: []runtime.Object{
+				// Source channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      fromChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+					},
+				},
+				// Subscriber (using knative route)
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": "serving.knative.dev/v1alpha1",
+						"kind":       routeKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      routeName,
+						},
+						"status": map[string]interface{}{
+							"address": map[string]interface{}{
+								"hostname": targetDNS,
+							},
+						},
+					},
+				},
+				// Reply channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      resultChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+					},
+				},
+			},
+		}, {
+			Name: "new subscription: adds status, all targets resolved, subscribers modified",
+			InitialState: []runtime.Object{
+				Subscription(),
+			},
+			// TODO: JSON patch is not working on the fake, see
+			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+			// failure for now, until upstream is fixed.
+			WantResult: reconcile.Result{},
+			WantPresent: []runtime.Object{
+				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
+			},
+			WantErrMsg: "invalid JSON document",
+			WantEvent: []corev1.Event{
+				events[physicalChannelSyncFailed],
+			},
+			Objects: []runtime.Object{
+				// Source channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      fromChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+					},
+				},
+				// Subscriber (using knative route)
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": "serving.knative.dev/v1alpha1",
+						"kind":       routeKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      routeName,
+						},
+						"status": map[string]interface{}{
+							"address": map[string]interface{}{
+								"hostname": targetDNS,
+							},
+						},
+					},
+				},
+				// Reply channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      resultChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+						"status": map[string]interface{}{
+							"address": map[string]interface{}{
+								"hostname": sinkableDNS,
+							},
+						},
+					},
+				},
+			},
+		}, {
+			Name: "new subscription: adds status, all targets resolved, subscribers modified -- nil reply",
+			InitialState: []runtime.Object{
+				Subscription().NilReply(),
+			},
+			// TODO: JSON patch is not working on the fake, see
+			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+			// failure for now, until upstream is fixed.
+			WantResult: reconcile.Result{},
+			WantPresent: []runtime.Object{
+				Subscription().NilReply().ReferencesResolved().PhysicalSubscriber(targetDNS),
+			},
+			WantErrMsg: "invalid JSON document",
+			WantEvent: []corev1.Event{
+				events[physicalChannelSyncFailed],
+			},
+			Objects: []runtime.Object{
+				// Source channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      fromChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+					},
+				},
+				// Subscriber (using knative route)
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": "serving.knative.dev/v1alpha1",
+						"kind":       routeKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      routeName,
+						},
+						"status": map[string]interface{}{
+							"address": map[string]interface{}{
+								"hostname": targetDNS,
+							},
+						},
+					},
+				},
+			},
+		}, {
+			Name: "new subscription: adds status, all targets resolved, subscribers modified -- empty but non-nil reply",
+			InitialState: []runtime.Object{
+				Subscription().EmptyNonNilReply(),
+			},
+			// TODO: JSON patch is not working on the fake, see
+			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+			// failure for now, until upstream is fixed.
+			WantResult: reconcile.Result{},
+			WantPresent: []runtime.Object{
+				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).EmptyNonNilReply(),
+			},
+			WantErrMsg: "invalid JSON document",
+			WantEvent: []corev1.Event{
+				events[physicalChannelSyncFailed],
+			},
+			Objects: []runtime.Object{
+				// Source channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      fromChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+					},
+				},
+				// Subscriber (using knative route)
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": "serving.knative.dev/v1alpha1",
+						"kind":       routeKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      routeName,
+						},
+						"status": map[string]interface{}{
+							"address": map[string]interface{}{
+								"hostname": targetDNS,
+							},
+						},
+					},
+				},
+			},
+		}, {
+			Name: "new subscription: adds status, target points to the legacy targetable interface",
+			InitialState: []runtime.Object{
+				Subscription().EmptyNonNilReply(),
+			},
+			// TODO: JSON patch is not working on the fake, see
+			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+			// failure for now, until upstream is fixed.
+			WantResult: reconcile.Result{},
+			WantPresent: []runtime.Object{
+				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).EmptyNonNilReply(),
+			},
+			WantErrMsg: "invalid JSON document",
+			WantEvent: []corev1.Event{
+				events[physicalChannelSyncFailed],
+			},
+			Objects: []runtime.Object{
+				// Source channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      fromChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+					},
+				},
+				// Subscriber (using knative route)
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": "serving.knative.dev/v1alpha1",
+						"kind":       routeKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      routeName,
+						},
+						"status": map[string]interface{}{
+							"domainInternal": targetDNS,
+						},
+					},
+				},
+			},
+		}, {
+			Name: "old subscription: updates status, removing the no longer present Subscriber",
+			InitialState: []runtime.Object{
+				// This will have no Subscriber in the spec, but will have one in the status.
+				Subscription().NilSubscriber().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
+			},
+			// TODO: JSON patch is not working on the fake, see
+			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+			// failure for now, until upstream is fixed.
+			WantResult: reconcile.Result{},
+			WantPresent: []runtime.Object{
+				Subscription().NilSubscriber().ReferencesResolved().Reply(),
+			},
+			WantErrMsg: "invalid JSON document",
+			WantEvent: []corev1.Event{
+				events[physicalChannelSyncFailed],
+			},
+			Objects: []runtime.Object{
+				// Source channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      fromChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+					},
+				},
+				// Reply channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      resultChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+						"status": map[string]interface{}{
+							"address": map[string]interface{}{
+								"hostname": sinkableDNS,
+							},
+						},
+					},
+				},
+			},
+		}, {
+			Name: "old subscription: updates status, removing the no longer present reply",
+			InitialState: []runtime.Object{
+				// This will have no Reply in the spec, but will have one in the status.
+				Subscription().NilReply().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
+			},
+			// TODO: JSON patch is not working on the fake, see
+			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+			// failure for now, until upstream is fixed.
+			WantResult: reconcile.Result{},
+			WantPresent: []runtime.Object{
+				Subscription().NilReply().ReferencesResolved().PhysicalSubscriber(targetDNS),
+			},
+			WantErrMsg: "invalid JSON document",
+			WantEvent: []corev1.Event{
+				events[physicalChannelSyncFailed],
+			},
+			Objects: []runtime.Object{
+				// Source channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      fromChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+					},
+				},
+				// Subscriber (using knative route)
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": "serving.knative.dev/v1alpha1",
+						"kind":       routeKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      routeName,
+						},
+						"status": map[string]interface{}{
+							"domainInternal": targetDNS,
+						},
+					},
+				},
+			},
+		}, {
+			Name: "new subscription: adds status, all targets resolved, subscribers modified -- nil subscriber",
+			InitialState: []runtime.Object{
+				Subscription().NilSubscriber(),
+			},
+			// TODO: JSON patch is not working on the fake, see
+			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+			// failure for now, until upstream is fixed.
+			WantResult: reconcile.Result{},
+			WantPresent: []runtime.Object{
+				Subscription().NilSubscriber().ReferencesResolved().Reply(),
+			},
+			WantErrMsg: "invalid JSON document",
+			WantEvent: []corev1.Event{
+				events[physicalChannelSyncFailed],
+			},
+			Objects: []runtime.Object{
+				// Source channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      fromChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+					},
+				},
+				// Reply channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      resultChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+						"status": map[string]interface{}{
+							"address": map[string]interface{}{
+								"hostname": sinkableDNS,
+							},
+						},
+					},
+				},
+			},
+		}, {
+			Name: "new subscription: adds status, all targets resolved, subscribers modified -- empty but non-nil subscriber",
+			InitialState: []runtime.Object{
+				Subscription().EmptyNonNilSubscriber(),
+			},
+			// TODO: JSON patch is not working on the fake, see
+			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+			// failure for now, until upstream is fixed.
+			WantResult: reconcile.Result{},
+			WantPresent: []runtime.Object{
+				Subscription().EmptyNonNilSubscriber().ReferencesResolved().Reply(),
+			},
+			WantErrMsg: "invalid JSON document",
+			WantEvent: []corev1.Event{
+				events[physicalChannelSyncFailed],
+			},
+			Objects: []runtime.Object{
+				// Source channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      fromChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+					},
+				},
+				// Reply channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      resultChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+						"status": map[string]interface{}{
+							"address": map[string]interface{}{
+								"hostname": sinkableDNS,
+							},
+						},
+					},
+				},
+			},
+		}, {
+			Name: "new subscription to non-existent K8s Service: fails with no service found",
+			InitialState: []runtime.Object{
+				Subscription().ToK8sService(),
+			},
+			WantResult: reconcile.Result{},
+			WantPresent: []runtime.Object{
+				Subscription().ToK8sService().UnknownConditions(),
+			},
+			WantErrMsg: "services \"testk8sservice\" not found",
+			WantEvent: []corev1.Event{
+				events[subscriberResolveFailed],
+			},
+			Objects: []runtime.Object{
+				// Source channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      fromChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+					},
+				},
+			},
+		}, {
+			Name: "new subscription to K8s Service: adds status, all targets resolved, subscribers modified",
+			InitialState: []runtime.Object{
+				Subscription().ToK8sService(),
+				getK8sService(),
+			},
+			// TODO: JSON patch is not working on the fake, see
+			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+			// failure for now, until upstream is fixed.
+			WantResult: reconcile.Result{},
+			WantPresent: []runtime.Object{
+				Subscription().ToK8sService().ReferencesResolved().PhysicalSubscriber(k8sServiceDNS).Reply(),
+			},
+			WantErrMsg: "invalid JSON document",
+			WantEvent: []corev1.Event{
+				events[physicalChannelSyncFailed],
+			},
+			Objects: []runtime.Object{
+				// Source channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      fromChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+					},
+				},
+				// Subscriber (using K8s Service)
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": "v1",
+						"kind":       "Service",
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      k8sServiceName,
+						},
+					},
+				},
+				// Reply channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      resultChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+						"status": map[string]interface{}{
+							"address": map[string]interface{}{
+								"hostname": sinkableDNS,
+							},
+						},
+					},
+				},
+			},
+		}, {
+			Name: "new subscription with from channel: adds status, all targets resolved, subscribers modified",
+			InitialState: []runtime.Object{
+				Subscription(),
+			},
+			// TODO: JSON patch is not working on the fake, see
+			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+			// failure for now, until upstream is fixed.
+			WantResult: reconcile.Result{},
+			WantErrMsg: "invalid JSON document",
+			WantPresent: []runtime.Object{
+				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
+			},
+			WantEvent: []corev1.Event{
+				events[physicalChannelSyncFailed],
+			},
+			Objects: []runtime.Object{
+				// Source with a reference to the From Channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       sourceKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      sourceName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+					},
+				},
+				// Source channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      fromChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+					},
+				},
+				// Subscriber (using knative route)
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": "serving.knative.dev/v1alpha1",
+						"kind":       routeKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      routeName,
+						},
+						"status": map[string]interface{}{
+							"address": map[string]interface{}{
+								"hostname": targetDNS,
+							},
+						},
+					},
+				},
+				// Reply channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      resultChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+						"status": map[string]interface{}{
+							"address": map[string]interface{}{
+								"hostname": sinkableDNS,
+							},
 						},
 					},
 				},
 			},
 		},
-	},
-	{
-		Name: "delete subscription with from channel: subscribers modified",
-		InitialState: []runtime.Object{
-			Subscription().Deleted().ChannelReady(),
-		},
-		// TODO: JSON patch is not working on the fake, see
-		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
-		// failure for now, until upstream is fixed.
-		WantResult: reconcile.Result{},
-		WantErrMsg: "invalid JSON document",
-		WantAbsent: []runtime.Object{
+		{
+			Name: "sync multiple Subscriptions to one channel",
+			InitialState: []runtime.Object{
+				// The first two Subscriptions both have the same physical From, so we should see that
+				// Channel updated with both Subscriptions.
+				Subscription(),
+				Subscription().Renamed().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
+				// This subscription has a different physical From, so we should not see it in the same
+				// Channel as the first two.
+				Subscription().DifferentChannel(),
+			},
 			// TODO: JSON patch is not working on the fake, see
-			// https://github.com/kubernetes/client-go/issues/478. The entire test is really to
-			// verify the following, but can't be done because the call to Patch fails (it assumes
-			// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
-			// out.
-			//getNewDeletedSubscriptionWithChannelReady(),
-		},
-		WantPresent: []runtime.Object{
-			// TODO: JSON patch is not working on the fake, see
-			// https://github.com/kubernetes/client-go/issues/478. The entire test is really to
-			// verify the following, but can't be done because the call to Patch fails (it assumes
-			// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
-			// out.
-			//getChannelWithOtherSubscription(),
-		},
-		WantEvent: []corev1.Event{
-			events[physicalChannelSyncFailed],
-		},
-		Objects: []runtime.Object{
-			// Source channel
-			&unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-					"kind":       channelKind,
-					"metadata": map[string]interface{}{
-						"namespace": testNS,
-						"name":      fromChannelName,
+			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+			// failure for now, until upstream is fixed.
+			WantResult: reconcile.Result{},
+			WantErrMsg: "invalid JSON document",
+			WantPresent: []runtime.Object{
+				// TODO: JSON patch is not working on the fake, see
+				// https://github.com/kubernetes/client-go/issues/478. The entire test is really to
+				// verify the following, but can't be done because the call to Patch fails (it assumes
+				// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
+				// out.
+				//getChannelWithMultipleSubscriptions(),
+				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
+				// Unaltered because this Subscription was not reconciled.
+				Subscription().Renamed().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
+				Subscription().DifferentChannel(),
+			},
+			WantEvent: []corev1.Event{
+				events[physicalChannelSyncFailed],
+			},
+			Objects: []runtime.Object{
+				// Source with a reference to the From Channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       sourceKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      sourceName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
 					},
-					"spec": map[string]interface{}{
-						"channelable": map[string]interface{}{
-							"subscribers": []interface{}{
-								map[string]interface{}{
-									"subscriberURI": targetDNS,
-									"replyURI":      sinkableDNS,
-								},
-								map[string]interface{}{
-									"replyURI": otherAddressableDNS,
+				},
+				// Source channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      fromChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+					},
+				},
+				// Subscriber (using knative route)
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": "serving.knative.dev/v1alpha1",
+						"kind":       routeKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      routeName,
+						},
+						"status": map[string]interface{}{
+							"address": map[string]interface{}{
+								"hostname": targetDNS,
+							},
+						},
+					},
+				},
+				// Reply channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      resultChannelName,
+						},
+						"spec": map[string]interface{}{
+							"subscribable": map[string]interface{}{},
+						},
+						"status": map[string]interface{}{
+							"address": map[string]interface{}{
+								"hostname": sinkableDNS,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			Name: "delete subscription with from channel: subscribers modified",
+			InitialState: []runtime.Object{
+				Subscription().Deleted().ChannelReady(),
+			},
+			// TODO: JSON patch is not working on the fake, see
+			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
+			// failure for now, until upstream is fixed.
+			WantResult: reconcile.Result{},
+			WantErrMsg: "invalid JSON document",
+			WantAbsent: []runtime.Object{
+				// TODO: JSON patch is not working on the fake, see
+				// https://github.com/kubernetes/client-go/issues/478. The entire test is really to
+				// verify the following, but can't be done because the call to Patch fails (it assumes
+				// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
+				// out.
+				//getNewDeletedSubscriptionWithChannelReady(),
+			},
+			WantPresent: []runtime.Object{
+				// TODO: JSON patch is not working on the fake, see
+				// https://github.com/kubernetes/client-go/issues/478. The entire test is really to
+				// verify the following, but can't be done because the call to Patch fails (it assumes
+				// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
+				// out.
+				//getChannelWithOtherSubscription(),
+			},
+			WantEvent: []corev1.Event{
+				events[physicalChannelSyncFailed],
+			},
+			Objects: []runtime.Object{
+				// Source channel
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
+						"kind":       channelKind,
+						"metadata": map[string]interface{}{
+							"namespace": testNS,
+							"name":      fromChannelName,
+						},
+						"spec": map[string]interface{}{
+							"channelable": map[string]interface{}{
+								"subscribers": []interface{}{
+									map[string]interface{}{
+										"subscriberURI": targetDNS,
+										"replyURI":      sinkableDNS,
+									},
+									map[string]interface{}{
+										"replyURI": otherAddressableDNS,
+									},
 								},
 							},
 						},
@@ -1084,13 +1072,10 @@ var testCases = []controllertesting.TestCase{
 				},
 			},
 		},
-		Scheme: scheme.Scheme,
-	},
-}
-
-func TestAllCases(t *testing.T) {
+	}
 
 	for _, tc := range testCases {
+		tc.Scheme = scheme.Scheme
 		c := tc.GetClient()
 		dc := tc.GetDynamicClient()
 		recorder := tc.GetEventRecorder()
@@ -1100,6 +1085,7 @@ func TestAllCases(t *testing.T) {
 			dynamicClient: dc,
 			restConfig:    &rest.Config{},
 			recorder:      recorder,
+			logger:        zap.NewNop(),
 		}
 		tc.ReconcileKey = fmt.Sprintf("%s/%s", testNS, subscriptionName)
 		tc.IgnoreTimes = true
@@ -1108,7 +1094,7 @@ func TestAllCases(t *testing.T) {
 }
 
 func TestFinalizers(t *testing.T) {
-	var testcases = []struct {
+	testCases := []struct {
 		name     string
 		original sets.String
 		add      bool
@@ -1147,7 +1133,7 @@ func TestFinalizers(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testcases {
+	for _, tc := range testCases {
 		original := &eventingv1alpha1.Subscription{}
 		original.Finalizers = tc.original.List()
 		if tc.add {
@@ -1277,7 +1263,7 @@ func (s *SubscriptionBuilder) UnknownConditions() *SubscriptionBuilder {
 }
 
 func (s *SubscriptionBuilder) PhysicalSubscriber(dns string) *SubscriptionBuilder {
-	s.Status.PhysicalSubscription.SubscriberURI = domainToURL(dns)
+	s.Status.PhysicalSubscription.SubscriberURI = resolve.DomainToURL(dns)
 	return s
 }
 
@@ -1288,7 +1274,7 @@ func (s *SubscriptionBuilder) ReferencesResolved() *SubscriptionBuilder {
 }
 
 func (s *SubscriptionBuilder) Reply() *SubscriptionBuilder {
-	s.Status.PhysicalSubscription.ReplyURI = domainToURL(sinkableDNS)
+	s.Status.PhysicalSubscription.ReplyURI = resolve.DomainToURL(sinkableDNS)
 	return s
 }
 

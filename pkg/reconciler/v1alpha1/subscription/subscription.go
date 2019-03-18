@@ -19,32 +19,29 @@ package subscription
 import (
 	"context"
 	"fmt"
-	"net/url"
 
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	"github.com/golang/glog"
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/reconciler/names"
-	duckapis "github.com/knative/pkg/apis"
+	"github.com/knative/eventing/pkg/logging"
+	"github.com/knative/eventing/pkg/utils/resolve"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
@@ -68,17 +65,19 @@ type reconciler struct {
 	restConfig    *rest.Config
 	dynamicClient dynamic.Interface
 	recorder      record.EventRecorder
+	logger        *zap.Logger
 }
 
 // Verify the struct implements reconcile.Reconciler
 var _ reconcile.Reconciler = &reconciler{}
 
 // ProvideController returns a Subscription controller.
-func ProvideController(mgr manager.Manager) (controller.Controller, error) {
+func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Subscriptions.
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: &reconciler{
 			recorder: mgr.GetRecorder(controllerAgentName),
+			logger:   logger,
 		},
 	})
 	if err != nil {
@@ -86,7 +85,7 @@ func ProvideController(mgr manager.Manager) (controller.Controller, error) {
 	}
 
 	// Watch Subscription events and enqueue Subscription object key.
-	if err := c.Watch(&source.Kind{Type: &v1alpha1.Subscription{}}, &handler.EnqueueRequestForObject{}); err != nil {
+	if err = c.Watch(&source.Kind{Type: &v1alpha1.Subscription{}}, &handler.EnqueueRequestForObject{}); err != nil {
 		return nil, err
 	}
 
@@ -97,32 +96,33 @@ func ProvideController(mgr manager.Manager) (controller.Controller, error) {
 // converge the two. It then updates the Status block of the Subscription resource
 // with the current status of the resource.
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	glog.Infof("Reconciling subscription %v", request)
+	ctx := logging.WithLogger(context.TODO(), r.logger.With(zap.Any("request", request)))
+	logging.FromContext(ctx).Debug("Reconciling Subscription")
 	subscription := &v1alpha1.Subscription{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, subscription)
+	err := r.client.Get(ctx, request.NamespacedName, subscription)
 
 	if errors.IsNotFound(err) {
-		glog.Errorf("could not find subscription %v\n", request)
+		logging.FromContext(ctx).Error("Could not find Subscription")
 		return reconcile.Result{}, nil
 	}
 
 	if err != nil {
-		glog.Errorf("could not fetch Subscription %v for %+v\n", err, request)
+		logging.FromContext(ctx).Error("Error getting Subscription", zap.Error(err))
 		return reconcile.Result{}, err
 	}
 
 	// Reconcile this copy of the Subscription and then write back any status
 	// updates regardless of whether the reconcile error out.
-	err = r.reconcile(subscription)
+	err = r.reconcile(ctx, subscription)
 	if err != nil {
-		glog.Warningf("Error reconciling Subscription: %v", err)
+		logging.FromContext(ctx).Warn("Error reconciling Subscription", zap.Error(err))
 	} else {
-		glog.Info("Subscription reconciled")
+		logging.FromContext(ctx).Debug("Subscription reconciled")
 		r.recorder.Eventf(subscription, corev1.EventTypeNormal, subscriptionReconciled, "Subscription reconciled: %q", subscription.Name)
 	}
 
-	if _, updateStatusErr := r.updateStatus(subscription.DeepCopy()); updateStatusErr != nil {
-		glog.Warningf("Failed to update subscription status: %v", updateStatusErr)
+	if _, updateStatusErr := r.updateStatus(ctx, subscription.DeepCopy()); updateStatusErr != nil {
+		logging.FromContext(ctx).Warn("Failed to update the Subscription", zap.Error(err))
 		r.recorder.Eventf(subscription, corev1.EventTypeWarning, subscriptionUpdateStatusFailed, "Failed to update Subscription's status: %v", err)
 		return reconcile.Result{}, updateStatusErr
 	}
@@ -131,25 +131,17 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	return reconcile.Result{}, err
 }
 
-func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
+func (r *reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subscription) error {
 	subscription.Status.InitializeConditions()
 
 	// See if the subscription has been deleted
-	accessor, err := meta.Accessor(subscription)
-	if err != nil {
-		glog.Warningf("Failed to get metadata accessor: %s", err)
-		return err
-	}
-	deletionTimestamp := accessor.GetDeletionTimestamp()
-	glog.Infof("DeletionTimestamp: %v", deletionTimestamp)
-
 	if subscription.DeletionTimestamp != nil {
 		// If the subscription is Ready, then we have to remove it
 		// from the channel's subscriber list.
 		if subscription.Status.IsReady() {
-			err := r.syncPhysicalChannel(subscription, true)
+			err := r.syncPhysicalChannel(ctx, subscription, true)
 			if err != nil {
-				glog.Warningf("Failed to sync physical from Channel : %s", err)
+				logging.FromContext(ctx).Warn("Failed to sync physical from Channel", zap.Error(err))
 				r.recorder.Eventf(subscription, corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
 				return err
 			}
@@ -159,29 +151,34 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 	}
 
 	// Verify that `channel` exists.
-	_, err = fetchObjectReference(r.dynamicClient, subscription.Namespace, &subscription.Spec.Channel)
-	if err != nil {
-		glog.Warningf("Failed to validate `channel` exists: %+v, %v", subscription.Spec.Channel, err)
+	if _, err := resolve.ObjectReference(ctx, r.dynamicClient, subscription.Namespace, &subscription.Spec.Channel); err != nil {
+		logging.FromContext(ctx).Warn("Failed to validate Channel exists",
+			zap.Error(err),
+			zap.Any("channel", subscription.Spec.Channel))
 		r.recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFetchFailed, "Failed to validate spec.channel exists: %v", err)
 		return err
 	}
 
-	if subscriberURI, err := ResolveSubscriberSpec(context.TODO(), r.client, r.dynamicClient, subscription.Namespace, subscription.Spec.Subscriber); err != nil {
-		glog.Warningf("Failed to resolve Subscriber %+v : %s", *subscription.Spec.Subscriber, err)
+	if subscriberURI, err := resolve.SubscriberSpec(ctx, r.dynamicClient, subscription.Namespace, subscription.Spec.Subscriber); err != nil {
+		logging.FromContext(ctx).Warn("Failed to resolve Subscriber",
+			zap.Error(err),
+			zap.Any("subscriber", subscription.Spec.Subscriber))
 		r.recorder.Eventf(subscription, corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
 		return err
 	} else {
 		subscription.Status.PhysicalSubscription.SubscriberURI = subscriberURI
-		glog.Infof("Resolved subscriber to: %q", subscriberURI)
+		logging.FromContext(ctx).Debug("Resolved Subscriber", zap.String("subscriberURI", subscriberURI))
 	}
 
-	if replyURI, err := r.resolveResult(subscription.Namespace, subscription.Spec.Reply); err != nil {
-		glog.Warningf("Failed to resolve Result %v : %v", subscription.Spec.Reply, err)
+	if replyURI, err := r.resolveResult(ctx, subscription.Namespace, subscription.Spec.Reply); err != nil {
+		logging.FromContext(ctx).Warn("Failed to resolve reply",
+			zap.Error(err),
+			zap.Any("reply", subscription.Spec.Reply))
 		r.recorder.Eventf(subscription, corev1.EventTypeWarning, resultResolveFailed, "Failed to resolve spec.reply: %v", err)
 		return err
 	} else {
 		subscription.Status.PhysicalSubscription.ReplyURI = replyURI
-		glog.Infof("Resolved reply to: %q", replyURI)
+		logging.FromContext(ctx).Debug("Resolved reply", zap.String("replyURI", replyURI))
 	}
 
 	// Everything that was supposed to be resolved was, so flip the status bit on that.
@@ -189,9 +186,8 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 
 	// Ok, now that we have the Channel and at least one of the Call/Result, let's reconcile
 	// the Channel with this information.
-	err = r.syncPhysicalChannel(subscription, false)
-	if err != nil {
-		glog.Warningf("Failed to sync physical Channel : %s", err)
+	if err := r.syncPhysicalChannel(ctx, subscription, false); err != nil {
+		logging.FromContext(ctx).Warn("Failed to sync physical Channel", zap.Error(err))
 		r.recorder.Eventf(subscription, corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
 		return err
 	}
@@ -201,20 +197,16 @@ func (r *reconciler) reconcile(subscription *v1alpha1.Subscription) error {
 	return nil
 }
 
-func isNilOrEmptySubscriber(sub *v1alpha1.SubscriberSpec) bool {
-	return sub == nil || equality.Semantic.DeepEqual(sub, &v1alpha1.SubscriberSpec{})
-}
-
 func isNilOrEmptyReply(reply *v1alpha1.ReplyStrategy) bool {
 	return reply == nil || equality.Semantic.DeepEqual(reply, &v1alpha1.ReplyStrategy{})
 }
 
 // updateStatus may in fact update the subscription's finalizers in addition to the status
-func (r *reconciler) updateStatus(subscription *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
+func (r *reconciler) updateStatus(ctx context.Context, subscription *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
 	objectKey := client.ObjectKey{Namespace: subscription.Namespace, Name: subscription.Name}
 	latestSubscription := &v1alpha1.Subscription{}
 
-	if err := r.client.Get(context.TODO(), objectKey, latestSubscription); err != nil {
+	if err := r.client.Get(ctx, objectKey, latestSubscription); err != nil {
 		return nil, err
 	}
 
@@ -222,7 +214,7 @@ func (r *reconciler) updateStatus(subscription *v1alpha1.Subscription) (*v1alpha
 
 	if !equality.Semantic.DeepEqual(latestSubscription.Finalizers, subscription.Finalizers) {
 		latestSubscription.SetFinalizers(subscription.ObjectMeta.Finalizers)
-		if err := r.client.Update(context.TODO(), latestSubscription); err != nil {
+		if err := r.client.Update(ctx, latestSubscription); err != nil {
 			return nil, err
 		}
 		subscriptionChanged = true
@@ -235,118 +227,49 @@ func (r *reconciler) updateStatus(subscription *v1alpha1.Subscription) (*v1alpha
 	if subscriptionChanged {
 		// Refetch
 		latestSubscription = &v1alpha1.Subscription{}
-		if err := r.client.Get(context.TODO(), objectKey, latestSubscription); err != nil {
+		if err := r.client.Get(ctx, objectKey, latestSubscription); err != nil {
 			return nil, err
 		}
 	}
 
 	latestSubscription.Status = subscription.Status
-	if err := r.client.Status().Update(context.TODO(), latestSubscription); err != nil {
+	if err := r.client.Status().Update(ctx, latestSubscription); err != nil {
 		return nil, err
 	}
 
 	return latestSubscription, nil
 }
 
-// ResolveSubscriberSpec resolves the Spec.Call object. If it's an
-// ObjectReference will resolve the object and treat it as a Callable. If
-// it's DNSName then it's used as is.
-// TODO: Once Service Routes, etc. support Callable, use that.
-//
-func ResolveSubscriberSpec(ctx context.Context, client client.Client, dynamicClient dynamic.Interface, namespace string, s *v1alpha1.SubscriberSpec) (string, error) {
-	if isNilOrEmptySubscriber(s) {
-		return "", nil
-	}
-	if s.DNSName != nil && *s.DNSName != "" {
-		return *s.DNSName, nil
-	}
-
-	// K8s services are special cased. They can be called, even though they do not satisfy the
-	// Callable interface.
-	if s.Ref != nil && s.Ref.APIVersion == "v1" && s.Ref.Kind == "Service" {
-		svc := &corev1.Service{}
-		svcKey := types.NamespacedName{
-			Namespace: namespace,
-			Name:      s.Ref.Name,
-		}
-		err := client.Get(ctx, svcKey, svc)
-		if err != nil {
-			glog.Warningf("Failed to fetch SubscriberSpec target as a K8s Service %+v: %s", s.Ref, err)
-			return "", err
-		}
-		return domainToURL(names.ServiceHostName(svc.Name, svc.Namespace)), nil
-	}
-
-	obj, err := fetchObjectReference(dynamicClient, namespace, s.Ref)
-	if err != nil {
-		glog.Warningf("Failed to fetch SubscriberSpec target %+v: %s", s.Ref, err)
-		return "", err
-	}
-	t := duckv1alpha1.AddressableType{}
-	if err := duck.FromUnstructured(obj, &t); err == nil {
-		if t.Status.Address != nil {
-			return domainToURL(t.Status.Address.Hostname), nil
-		}
-	}
-
-	legacy := duckv1alpha1.LegacyTarget{}
-	if err := duck.FromUnstructured(obj, &legacy); err == nil {
-		if legacy.Status.DomainInternal != "" {
-			return domainToURL(legacy.Status.DomainInternal), nil
-		}
-	}
-
-	return "", fmt.Errorf("status does not contain address")
-}
-
 // resolveResult resolves the Spec.Result object.
-func (r *reconciler) resolveResult(namespace string, replyStrategy *v1alpha1.ReplyStrategy) (string, error) {
+func (r *reconciler) resolveResult(ctx context.Context, namespace string, replyStrategy *v1alpha1.ReplyStrategy) (string, error) {
 	if isNilOrEmptyReply(replyStrategy) {
 		return "", nil
 	}
-	obj, err := fetchObjectReference(r.dynamicClient, namespace, replyStrategy.Channel)
+	obj, err := resolve.ObjectReference(ctx, r.dynamicClient, namespace, replyStrategy.Channel)
 	if err != nil {
-		glog.Warningf("Failed to fetch ReplyStrategy channel %+v: %s", replyStrategy, err)
+		logging.FromContext(ctx).Warn("Failed to fetch ReplyStrategy Channel",
+			zap.Error(err),
+			zap.Any("replyStrategy", replyStrategy))
 		return "", err
 	}
 	s := duckv1alpha1.AddressableType{}
 	err = duck.FromUnstructured(obj, &s)
 	if err != nil {
-		glog.Warningf("Failed to deserialize Addressable target: %s", err)
+		logging.FromContext(ctx).Warn("Failed to deserialize Addressable target", zap.Error(err))
 		return "", err
 	}
 	if s.Status.Address != nil {
-		return domainToURL(s.Status.Address.Hostname), nil
+		return resolve.DomainToURL(s.Status.Address.Hostname), nil
 	}
 	return "", fmt.Errorf("status does not contain address")
 }
 
-// fetchObjectReference fetches an object based on ObjectReference.
-func fetchObjectReference(dynamicClient dynamic.Interface, namespace string, ref *corev1.ObjectReference) (duck.Marshalable, error) {
-	resourceClient, err := createResourceInterface(dynamicClient, namespace, ref)
+func (r *reconciler) syncPhysicalChannel(ctx context.Context, sub *v1alpha1.Subscription, isDeleted bool) error {
+	logging.FromContext(ctx).Debug("Reconciling physical from Channel", zap.Any("sub", sub))
+
+	subs, err := r.listAllSubscriptionsWithPhysicalChannel(ctx, sub)
 	if err != nil {
-		glog.Warningf("failed to create dynamic client resource: %v", err)
-		return nil, err
-	}
-
-	return resourceClient.Get(ref.Name, metav1.GetOptions{})
-}
-
-func domainToURL(domain string) string {
-	u := url.URL{
-		Scheme: "http",
-		Host:   domain,
-		Path:   "/",
-	}
-	return u.String()
-}
-
-func (r *reconciler) syncPhysicalChannel(sub *v1alpha1.Subscription, isDeleted bool) error {
-	glog.Infof("Reconciling Physical From Channel: %+v", sub)
-
-	subs, err := r.listAllSubscriptionsWithPhysicalChannel(sub)
-	if err != nil {
-		glog.Infof("Unable to list all subscriptions with physical channel: %+v", err)
+		logging.FromContext(ctx).Info("Unable to list all Subscriptions with physical Channel", zap.Error(err))
 		return err
 	}
 
@@ -358,9 +281,9 @@ func (r *reconciler) syncPhysicalChannel(sub *v1alpha1.Subscription, isDeleted b
 	}
 	subscribable := r.createSubscribable(subs)
 
-	if patchErr := r.patchPhysicalFrom(sub.Namespace, sub.Spec.Channel, subscribable); patchErr != nil {
+	if patchErr := r.patchPhysicalFrom(ctx, sub.Namespace, sub.Spec.Channel, subscribable); patchErr != nil {
 		if isDeleted && errors.IsNotFound(patchErr) {
-			glog.Infof("could not find channel %v\n", sub.Spec.Channel)
+			logging.FromContext(ctx).Warn("Could not find Channel", zap.Any("channel", sub.Spec.Channel))
 			return nil
 		}
 		return patchErr
@@ -368,7 +291,7 @@ func (r *reconciler) syncPhysicalChannel(sub *v1alpha1.Subscription, isDeleted b
 	return nil
 }
 
-func (r *reconciler) listAllSubscriptionsWithPhysicalChannel(sub *v1alpha1.Subscription) ([]v1alpha1.Subscription, error) {
+func (r *reconciler) listAllSubscriptionsWithPhysicalChannel(ctx context.Context, sub *v1alpha1.Subscription) ([]v1alpha1.Subscription, error) {
 	subs := make([]v1alpha1.Subscription, 0)
 
 	opts := &client.ListOptions{
@@ -377,7 +300,6 @@ func (r *reconciler) listAllSubscriptionsWithPhysicalChannel(sub *v1alpha1.Subsc
 		// into opts.Raw.Continue.
 		Raw: &metav1.ListOptions{},
 	}
-	ctx := context.TODO()
 	for {
 		sl := &v1alpha1.SubscriptionList{}
 		err := r.client.List(ctx, opts, sl)
@@ -421,9 +343,9 @@ func (r *reconciler) createSubscribable(subs []v1alpha1.Subscription) *eventingd
 	return rv
 }
 
-func (r *reconciler) patchPhysicalFrom(namespace string, physicalFrom corev1.ObjectReference, subs *eventingduck.Subscribable) error {
+func (r *reconciler) patchPhysicalFrom(ctx context.Context, namespace string, physicalFrom corev1.ObjectReference, subs *eventingduck.Subscribable) error {
 	// First get the original object and convert it to only the bits we care about
-	s, err := fetchObjectReference(r.dynamicClient, namespace, &physicalFrom)
+	s, err := resolve.ObjectReference(ctx, r.dynamicClient, namespace, &physicalFrom)
 	if err != nil {
 		return err
 	}
@@ -443,33 +365,22 @@ func (r *reconciler) patchPhysicalFrom(namespace string, physicalFrom corev1.Obj
 
 	patchBytes, err := patch.MarshalJSON()
 	if err != nil {
-		glog.Warningf("failed to marshal json patch: %s", err)
+		logging.FromContext(ctx).Warn("Failed to marshal JSON patch", zap.Error(err), zap.Any("patch", patch))
 		return err
 	}
 
-	resourceClient, err := createResourceInterface(r.dynamicClient, namespace, &physicalFrom)
+	resourceClient, err := resolve.ResourceInterface(r.dynamicClient, namespace, &physicalFrom)
 	if err != nil {
-		glog.Warningf("failed to create dynamic client resource: %v", err)
+		logging.FromContext(ctx).Warn("Failed to create dynamic resource client", zap.Error(err))
 		return err
 	}
 	patched, err := resourceClient.Patch(original.Name, types.JSONPatchType, patchBytes, metav1.UpdateOptions{})
 	if err != nil {
-		glog.Warningf("Failed to patch the object: %s", err)
-		glog.Warningf("Patch was: %+v", patch)
+		logging.FromContext(ctx).Warn("Failed to patch the Channel", zap.Error(err), zap.Any("patch", patch))
 		return err
 	}
-	glog.Warningf("Patched resource: %+v", patched)
+	logging.FromContext(ctx).Debug("Patched resource", zap.Any("patched", patched))
 	return nil
-}
-
-func createResourceInterface(dynamicClient dynamic.Interface, namespace string, ref *corev1.ObjectReference) (dynamic.ResourceInterface, error) {
-	rc := dynamicClient.Resource(duckapis.KindToResource(ref.GroupVersionKind()))
-
-	if rc == nil {
-		return nil, fmt.Errorf("failed to create dynamic client resource")
-	}
-	return rc.Namespace(namespace), nil
-
 }
 
 func addFinalizer(sub *v1alpha1.Subscription) {

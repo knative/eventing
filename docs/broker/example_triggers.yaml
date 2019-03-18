@@ -1,0 +1,129 @@
+# Copyright 2019 The Knative Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This file is a list of example Triggers. Each could be used independently.
+
+---
+
+# By not specifying spec.broker, this Trigger will associate with the Broker
+# named 'default'. In addition, by not specifying spec.filter, this Trigger
+# will match all events sent through the Broker.
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Trigger
+metadata:
+  name: knative-service-default-broker
+spec:
+  subscriber:
+    ref:
+     apiVersion: serving.knative.dev/v1alpha1
+     kind: Service
+     name: message-dumper
+
+---
+
+# K8s Service is also a valid Subscriber.
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Trigger
+metadata:
+  name: k8s-service-default-broker
+spec:
+  subscriber:
+    ref:
+      apiVersion: v1
+      kind: Service
+      name: message-dumper
+
+---
+
+# By specifying spec.broker, this Trigger will match events sent through the
+# 'my-other-broker' Broker (instead of the 'default' Broker).
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Trigger
+metadata:
+  name: knative-service-my-other-broker
+spec:
+  broker: my-other-broker
+  subscriber:
+    ref:
+     apiVersion: serving.knative.dev/v1alpha1
+     kind: Service
+     name: message-dumper
+
+---
+
+# We can filter on either the event's type, source, or both. The special value
+# 'Any' matches everything. If either is not specified, it defaults to 'Any'.
+
+---
+
+# This Trigger matches all events of type 'dev.knative.foo', regardless of
+# source, that are sent to the 'default' Broker.
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Trigger
+metadata:
+  name: filtering-type
+spec:
+  filter:
+    sourceAndType:
+      type: dev.knative.foo
+  subscriber:
+    ref:
+      apiVersion: serving.knative.dev/v1alpha1
+      kind: Service
+      name: message-dumper
+
+---
+
+# This Trigger matches all events of source 'dev.knative.bar', regardless of
+# type, that are sent to the 'default' Broker.
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Trigger
+metadata:
+  name: filtering-source
+spec:
+  filter:
+    sourceAndType:
+      source: dev.knative.bar
+      # The Webhook will default this in, but it does not hurt to specify it.
+      type: Any
+  subscriber:
+    ref:
+      apiVersion: serving.knative.dev/v1alpha1
+      kind: Service
+      name: message-dumper
+
+---
+
+# This Trigger matches all events of type 'dev.knative.foo' and source
+# 'dev.knative.bar', that are sent to the 'default' Broker.
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Trigger
+metadata:
+  name: filtering-type-and-source
+spec:
+  filter:
+    sourceAndType:
+      type: dev.knative.foo
+      source: dev.knative.bar
+  subscriber:
+    ref:
+      apiVersion: serving.knative.dev/v1alpha1
+      kind: Service
+      name: message-dumper
