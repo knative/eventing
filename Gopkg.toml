@@ -103,7 +103,7 @@ required = [
 
 [[constraint]]
   name = "github.com/knative/serving"
-  version = "v0.3.0"
+  version = "v0.4.0"
 
 # TODO why is this overridden?
 [[override]]
