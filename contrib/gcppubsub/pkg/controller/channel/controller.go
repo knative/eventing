@@ -17,11 +17,16 @@ limitations under the License.
 package channel
 
 import (
+	"context"
+
+	ccpcontroller "github.com/knative/eventing/contrib/gcppubsub/pkg/controller/clusterchannelprovisioner"
 	pubsubutil "github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -38,17 +43,23 @@ const (
 // reconciles only Channels.
 func ProvideController(defaultGcpProject string, defaultSecret *corev1.ObjectReference, defaultSecretKey string) func(manager.Manager, *zap.Logger) (controller.Controller, error) {
 	return func(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
+		logger = logger.With(zap.String("controller", controllerAgentName))
 		// Setup a new controller to Reconcile Channels that belong to this Cluster Channel
 		// Provisioner (gcp-pubsub).
-		r := &reconciler{
-			recorder: mgr.GetRecorder(controllerAgentName),
-			logger:   logger,
-
+		rec := &reconciler{
 			defaultGcpProject:   defaultGcpProject,
 			defaultSecret:       defaultSecret,
 			defaultSecretKey:    defaultSecretKey,
 			pubSubClientCreator: pubsubutil.GcpPubSubClientCreator,
 		}
+		builder := eventingreconciler.NewBuilder(rec).
+			WithFilter(shouldReconcile).
+			WithLogger(logger).
+			WithRecorder(mgr.GetRecorder(controllerAgentName)).
+			WithFinalizer(finalizerName, rec.Finalize).
+			WithInjectClientFunc(rec.InjectClient)
+		r := builder.Build()
+
 		c, err := controller.New(controllerAgentName, mgr, controller.Options{
 			Reconciler: r,
 		})
@@ -56,28 +67,36 @@ func ProvideController(defaultGcpProject string, defaultSecret *corev1.ObjectRef
 			return nil, err
 		}
 
-		// Watch Channels.
-		err = c.Watch(&source.Kind{
-			Type: &eventingv1alpha1.Channel{},
-		}, &handler.EnqueueRequestForObject{})
+		// Watch Channels
+		err = c.Watch(
+			&source.Kind{
+				Type: &eventingv1alpha1.Channel{},
+			},
+			&handler.EnqueueRequestForObject{})
+
 		if err != nil {
 			logger.Error("Unable to watch Channels.", zap.Error(err), zap.Any("type", &eventingv1alpha1.Channel{}))
 			return nil, err
 		}
 
 		// Watch the K8s Services that are owned by Channels.
-		err = c.Watch(&source.Kind{
-			Type: &corev1.Service{},
-		}, &handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.Channel{}, IsController: true})
+		err = c.Watch(
+			&source.Kind{
+				Type: &corev1.Service{},
+			},
+			&handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.Channel{}, IsController: true})
 		if err != nil {
 			logger.Error("Unable to watch K8s Services.", zap.Error(err))
 			return nil, err
 		}
 
 		// Watch the VirtualServices that are owned by Channels.
-		err = c.Watch(&source.Kind{
-			Type: &istiov1alpha3.VirtualService{},
-		}, &handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.Channel{}, IsController: true})
+		err = c.Watch(
+			&source.Kind{
+				Type: &istiov1alpha3.VirtualService{},
+			},
+			&handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.Channel{}, IsController: true})
+
 		if err != nil {
 			logger.Error("Unable to watch VirtualServices.", zap.Error(err))
 			return nil, err
@@ -85,4 +104,14 @@ func ProvideController(defaultGcpProject string, defaultSecret *corev1.ObjectRef
 
 		return c, nil
 	}
+}
+
+// shouldReconcile determines if this Controller should control (and therefore reconcile) a given
+// Channel. This Controller only handles gcp-pubsub channels.
+func shouldReconcile(ctx context.Context, obj eventingreconciler.ReconciledResource, r record.EventRecorder) bool {
+	c := obj.(*eventingv1alpha1.Channel) // TODO: Is there a way to do this like try catch - to catch panicking?
+	if c.Spec.Provisioner != nil {
+		return ccpcontroller.IsControlled(c.Spec.Provisioner)
+	}
+	return false
 }

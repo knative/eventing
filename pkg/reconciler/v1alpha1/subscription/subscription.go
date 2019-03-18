@@ -23,6 +23,7 @@ import (
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/utils/resolve"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
@@ -52,34 +53,36 @@ const (
 	finalizerName = controllerAgentName
 
 	// Name of the corev1.Events emitted from the reconciliation process
-	subscriptionReconciled         = "SubscriptionReconciled"
-	subscriptionUpdateStatusFailed = "SubscriptionUpdateStatusFailed"
-	physicalChannelSyncFailed      = "PhysicalChannelSyncFailed"
-	channelReferenceFetchFailed    = "ChannelReferenceFetchFailed"
-	subscriberResolveFailed        = "SubscriberResolveFailed"
-	resultResolveFailed            = "ResultResolveFailed"
+	physicalChannelSyncFailed   = "PhysicalChannelSyncFailed"
+	channelReferenceFetchFailed = "ChannelReferenceFetchFailed"
+	subscriberResolveFailed     = "SubscriberResolveFailed"
+	resultResolveFailed         = "ResultResolveFailed"
 )
 
 type reconciler struct {
 	client        client.Client
 	restConfig    *rest.Config
 	dynamicClient dynamic.Interface
-	recorder      record.EventRecorder
-	logger        *zap.Logger
 }
 
-// Verify the struct implements reconcile.Reconciler
-var _ reconcile.Reconciler = &reconciler{}
+// Verify the struct implements eventingreconciler.EventingReconciler
+var _ eventingreconciler.EventingReconciler = &reconciler{}
 
 // ProvideController returns a Subscription controller.
 func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
+	logger = logger.With(zap.String("controller", controllerAgentName))
+
+	rec := &reconciler{}
+	builder := eventingreconciler.NewBuilder(rec).
+		WithFinalizer(finalizerName, eventingreconciler.FinalizerFunc(rec.Finalize)).
+		WithLogger(logger).
+		WithRecorder(mgr.GetRecorder(controllerAgentName)).
+		WithInjectClientFunc(rec.InjectClient).
+		WithInjectConfigFunc(rec.InjectConfig)
+	r := builder.Build()
+
 	// Setup a new controller to Reconcile Subscriptions.
-	c, err := controller.New(controllerAgentName, mgr, controller.Options{
-		Reconciler: &reconciler{
-			recorder: mgr.GetRecorder(controllerAgentName),
-			logger:   logger,
-		},
-	})
+	c, err := controller.New(controllerAgentName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return nil, err
 	}
@@ -92,79 +95,29 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 	return c, nil
 }
 
-// Reconcile compares the actual state with the desired, and attempts to
-// converge the two. It then updates the Status block of the Subscription resource
-// with the current status of the resource.
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	ctx := logging.WithLogger(context.TODO(), r.logger.With(zap.Any("request", request)))
-	logging.FromContext(ctx).Debug("Reconciling Subscription")
-	subscription := &v1alpha1.Subscription{}
-	err := r.client.Get(ctx, request.NamespacedName, subscription)
+func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) (bool, reconcile.Result, error) {
+	subscription, ok := obj.(*v1alpha1.Subscription)
+	if !ok {
+		// TODO
 
-	if errors.IsNotFound(err) {
-		logging.FromContext(ctx).Error("Could not find Subscription")
-		return reconcile.Result{}, nil
 	}
-
-	if err != nil {
-		logging.FromContext(ctx).Error("Error getting Subscription", zap.Error(err))
-		return reconcile.Result{}, err
-	}
-
-	// Reconcile this copy of the Subscription and then write back any status
-	// updates regardless of whether the reconcile error out.
-	err = r.reconcile(ctx, subscription)
-	if err != nil {
-		logging.FromContext(ctx).Warn("Error reconciling Subscription", zap.Error(err))
-	} else {
-		logging.FromContext(ctx).Debug("Subscription reconciled")
-		r.recorder.Eventf(subscription, corev1.EventTypeNormal, subscriptionReconciled, "Subscription reconciled: %q", subscription.Name)
-	}
-
-	if _, updateStatusErr := r.updateStatus(ctx, subscription.DeepCopy()); updateStatusErr != nil {
-		logging.FromContext(ctx).Warn("Failed to update the Subscription", zap.Error(err))
-		r.recorder.Eventf(subscription, corev1.EventTypeWarning, subscriptionUpdateStatusFailed, "Failed to update Subscription's status: %v", err)
-		return reconcile.Result{}, updateStatusErr
-	}
-
-	// Requeue if the resource is not ready:
-	return reconcile.Result{}, err
-}
-
-func (r *reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subscription) error {
 	subscription.Status.InitializeConditions()
-
-	// See if the subscription has been deleted
-	if subscription.DeletionTimestamp != nil {
-		// If the subscription is Ready, then we have to remove it
-		// from the channel's subscriber list.
-		if subscription.Status.IsReady() {
-			err := r.syncPhysicalChannel(ctx, subscription, true)
-			if err != nil {
-				logging.FromContext(ctx).Warn("Failed to sync physical from Channel", zap.Error(err))
-				r.recorder.Eventf(subscription, corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
-				return err
-			}
-		}
-		removeFinalizer(subscription)
-		return nil
-	}
 
 	// Verify that `channel` exists.
 	if _, err := resolve.ObjectReference(ctx, r.dynamicClient, subscription.Namespace, &subscription.Spec.Channel); err != nil {
 		logging.FromContext(ctx).Warn("Failed to validate Channel exists",
 			zap.Error(err),
 			zap.Any("channel", subscription.Spec.Channel))
-		r.recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFetchFailed, "Failed to validate spec.channel exists: %v", err)
-		return err
+		recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFetchFailed, "Failed to validate spec.channel exists: %v", err)
+		return true, reconcile.Result{}, err
 	}
 
 	if subscriberURI, err := resolve.SubscriberSpec(ctx, r.dynamicClient, subscription.Namespace, subscription.Spec.Subscriber); err != nil {
 		logging.FromContext(ctx).Warn("Failed to resolve Subscriber",
 			zap.Error(err),
 			zap.Any("subscriber", subscription.Spec.Subscriber))
-		r.recorder.Eventf(subscription, corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
-		return err
+		recorder.Eventf(subscription, corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
+		return true, reconcile.Result{}, err
 	} else {
 		subscription.Status.PhysicalSubscription.SubscriberURI = subscriberURI
 		logging.FromContext(ctx).Debug("Resolved Subscriber", zap.String("subscriberURI", subscriberURI))
@@ -174,8 +127,8 @@ func (r *reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		logging.FromContext(ctx).Warn("Failed to resolve reply",
 			zap.Error(err),
 			zap.Any("reply", subscription.Spec.Reply))
-		r.recorder.Eventf(subscription, corev1.EventTypeWarning, resultResolveFailed, "Failed to resolve spec.reply: %v", err)
-		return err
+		recorder.Eventf(subscription, corev1.EventTypeWarning, resultResolveFailed, "Failed to resolve spec.reply: %v", err)
+		return true, reconcile.Result{}, err
 	} else {
 		subscription.Status.PhysicalSubscription.ReplyURI = replyURI
 		logging.FromContext(ctx).Debug("Resolved reply", zap.String("replyURI", replyURI))
@@ -188,56 +141,37 @@ func (r *reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	// the Channel with this information.
 	if err := r.syncPhysicalChannel(ctx, subscription, false); err != nil {
 		logging.FromContext(ctx).Warn("Failed to sync physical Channel", zap.Error(err))
-		r.recorder.Eventf(subscription, corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
-		return err
+		recorder.Eventf(subscription, corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
+		return true, reconcile.Result{}, err
 	}
 	// Everything went well, set the fact that subscriptions have been modified
 	subscription.Status.MarkChannelReady()
-	addFinalizer(subscription)
+	return true, reconcile.Result{}, nil
+}
+
+func (r *reconciler) GetNewReconcileObject() eventingreconciler.ReconciledResource {
+	return &v1alpha1.Subscription{}
+}
+
+func (r *reconciler) Finalize(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) error {
+	subscription := obj.(*v1alpha1.Subscription)
+	if subscription.Status.IsReady() {
+		err := r.syncPhysicalChannel(ctx, subscription, true)
+		if err != nil {
+			logging.FromContext(ctx).Warn("Failed to sync physical from Channel", zap.Error(err))
+			recorder.Eventf(subscription, corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
+			return err
+		}
+	}
 	return nil
+}
+
+func isNilOrEmptySubscriber(sub *v1alpha1.SubscriberSpec) bool {
+	return sub == nil || equality.Semantic.DeepEqual(sub, &v1alpha1.SubscriberSpec{})
 }
 
 func isNilOrEmptyReply(reply *v1alpha1.ReplyStrategy) bool {
 	return reply == nil || equality.Semantic.DeepEqual(reply, &v1alpha1.ReplyStrategy{})
-}
-
-// updateStatus may in fact update the subscription's finalizers in addition to the status
-func (r *reconciler) updateStatus(ctx context.Context, subscription *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
-	objectKey := client.ObjectKey{Namespace: subscription.Namespace, Name: subscription.Name}
-	latestSubscription := &v1alpha1.Subscription{}
-
-	if err := r.client.Get(ctx, objectKey, latestSubscription); err != nil {
-		return nil, err
-	}
-
-	subscriptionChanged := false
-
-	if !equality.Semantic.DeepEqual(latestSubscription.Finalizers, subscription.Finalizers) {
-		latestSubscription.SetFinalizers(subscription.ObjectMeta.Finalizers)
-		if err := r.client.Update(ctx, latestSubscription); err != nil {
-			return nil, err
-		}
-		subscriptionChanged = true
-	}
-
-	if equality.Semantic.DeepEqual(latestSubscription.Status, subscription.Status) {
-		return latestSubscription, nil
-	}
-
-	if subscriptionChanged {
-		// Refetch
-		latestSubscription = &v1alpha1.Subscription{}
-		if err := r.client.Get(ctx, objectKey, latestSubscription); err != nil {
-			return nil, err
-		}
-	}
-
-	latestSubscription.Status = subscription.Status
-	if err := r.client.Status().Update(ctx, latestSubscription); err != nil {
-		return nil, err
-	}
-
-	return latestSubscription, nil
 }
 
 // resolveResult resolves the Spec.Result object.
@@ -395,14 +329,13 @@ func removeFinalizer(sub *v1alpha1.Subscription) {
 	sub.Finalizers = finalizers.List()
 }
 
-func (r *reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
-}
-
 func (r *reconciler) InjectConfig(c *rest.Config) error {
 	r.restConfig = c
 	var err error
 	r.dynamicClient, err = dynamic.NewForConfig(c)
 	return err
+}
+func (r *reconciler) InjectClient(c client.Client) error {
+	r.client = c
+	return nil
 }
