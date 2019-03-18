@@ -444,7 +444,7 @@ func (in *EventTypeStatus) DeepCopyInto(out *EventTypeStatus) {
 	*out = *in
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make(duck_v1alpha1.Conditions, len(*in))
+		*out = make(apis_duck_v1alpha1.Conditions, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
