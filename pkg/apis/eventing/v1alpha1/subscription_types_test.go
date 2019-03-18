@@ -49,9 +49,9 @@ func TestSubscriptionGetCondition(t *testing.T) {
 		name: "single condition",
 		ss: &SubscriptionStatus{
 			Status: duckv1alpha1.Status{
-			Conditions: []duckv1alpha1.Condition{
-				subscriptionConditionReady,
-			},
+				Conditions: []duckv1alpha1.Condition{
+					subscriptionConditionReady,
+				},
 			},
 		},
 		condQuery: duckv1alpha1.ConditionReady,

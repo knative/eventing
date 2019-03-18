@@ -228,18 +228,18 @@ func TestChannelStatus_SetAddressable(t *testing.T) {
 		"empty string": {
 			want: &ChannelStatus{
 				Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
-					{
-						Type:   ChannelConditionAddressable,
-						Status: corev1.ConditionFalse,
+					Conditions: []duckv1alpha1.Condition{
+						{
+							Type:   ChannelConditionAddressable,
+							Status: corev1.ConditionFalse,
+						},
+						// Note that Ready is here because when the condition is marked False, duck
+						// automatically sets Ready to false.
+						{
+							Type:   ChannelConditionReady,
+							Status: corev1.ConditionFalse,
+						},
 					},
-					// Note that Ready is here because when the condition is marked False, duck
-					// automatically sets Ready to false.
-					{
-						Type:   ChannelConditionReady,
-						Status: corev1.ConditionFalse,
-					},
-				},
 				},
 			},
 		},
