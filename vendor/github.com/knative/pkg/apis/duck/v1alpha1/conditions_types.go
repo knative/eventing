@@ -134,14 +134,18 @@ type KResource struct {
 
 // Status shows how we expect folks to embed Conditions in
 // their Status field.
+// WARNING: Adding fields to this struct will add them to all Knative resources.
 type Status struct {
 	// ObservedGeneration is the 'Generation' of the Service that
 	// was last processed by the controller.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
+	// Conditions the latest available observations of a resource's current state.
 	// +optional
-	Conditions Conditions `json:"conditions,omitempty"`
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	Conditions Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 // TODO: KResourceStatus is added for backwards compatibility for <= 0.4.0 releases. Remove later.

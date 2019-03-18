@@ -95,12 +95,12 @@ required = [
   name = "golang.org/x/oauth2"
   revision = "cdc340f7c179dbbfa4afd43b7614e8fcadde4269"
 
-# Select the version of knative/pkg we would like to import.
-# This controls when we upgrade apis.
+# Constrain the version of knative/pkg we would like to import.
+# This controls when we upgrade apis independently of Serving.
 [[constraint]]
   name = "github.com/knative/pkg"
   # HEAD as of 2019-03-18
-  revision = "587fb819f44ff27a38a8ceb172058c5214a47911"
+  revision = "915415e7be67bf8fb05249fe3f1bad25fcaf7f50"
 
 [[constraint]]
   name = "github.com/knative/serving"
