@@ -151,7 +151,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		r.recorder.Event(broker, corev1.EventTypeNormal, brokerReconciled, "Broker reconciled")
 	}
 
-	if _, err = r.updateStatus(broker.DeepCopy()); err != nil {
+	if _, err = r.updateStatus(broker); err != nil {
 		logging.FromContext(ctx).Error("Failed to update Broker status", zap.Error(err))
 		r.recorder.Eventf(broker, corev1.EventTypeWarning, brokerUpdateStatusFailed, "Failed to update Broker's status: %v", err)
 		return reconcile.Result{}, err
@@ -189,11 +189,13 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) (reconci
 	_, err = r.reconcileFilterDeployment(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling filter Deployment", zap.Error(err))
+		b.Status.MarkFilterFailed(err)
 		return reconcile.Result{}, err
 	}
 	_, err = r.reconcileFilterService(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling filter Service", zap.Error(err))
+		b.Status.MarkFilterFailed(err)
 		return reconcile.Result{}, err
 	}
 	b.Status.MarkFilterReady()
@@ -201,12 +203,14 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) (reconci
 	_, err = r.reconcileIngressDeployment(ctx, b, c)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling ingress Deployment", zap.Error(err))
+		b.Status.MarkIngressFailed(err)
 		return reconcile.Result{}, err
 	}
 
 	svc, err := r.reconcileIngressService(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling ingress Service", zap.Error(err))
+		b.Status.MarkIngressFailed(err)
 		return reconcile.Result{}, err
 	}
 	b.Status.MarkIngressReady()

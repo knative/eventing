@@ -143,6 +143,10 @@ func (bs *BrokerStatus) MarkFilterReady() {
 	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionFilter)
 }
 
+func (bs *BrokerStatus) MarkFilterFailed(err error) {
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionFilter, "failed", "%v", err)
+}
+
 // SetAddress makes this Broker addressable by setting the hostname. It also
 // sets the BrokerConditionAddressable to true.
 func (bs *BrokerStatus) SetAddress(hostname string) {

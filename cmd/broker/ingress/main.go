@@ -25,14 +25,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/knative/eventing/pkg/broker"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/broker"
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
