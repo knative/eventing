@@ -21,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/test"
 	pkgTest "github.com/knative/pkg/test"
@@ -159,6 +161,71 @@ func WithChannelAndSubscriptionReady(clients *test.Clients, channel *v1alpha1.Ch
 	return nil
 }
 
+// CreateBroker will create a Broker.
+func CreateBroker(clients *test.Clients, broker *v1alpha1.Broker, logf logging.FormatLogger, cleaner *test.Cleaner) error {
+	brokers := clients.Eventing.EventingV1alpha1().Brokers(broker.Namespace)
+	res, err := brokers.Create(broker)
+	if err != nil {
+		return err
+	}
+	cleaner.Add(v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version, "brokers", broker.Namespace, res.ObjectMeta.Name)
+	return nil
+}
+
+// WithBrokerReady creates a Broker and waits until it is Ready.
+func WithBrokerReady(clients *test.Clients, broker *v1alpha1.Broker, logf logging.FormatLogger, cleaner *test.Cleaner) error {
+	if err := CreateBroker(clients, broker, logf, cleaner); err != nil {
+		return err
+	}
+	return WaitForBrokerReady(clients, broker)
+}
+
+// WaitForBrokerReady waits until the broker is Ready.
+func WaitForBrokerReady(clients *test.Clients, broker *v1alpha1.Broker) error {
+	brokers := clients.Eventing.EventingV1alpha1().Brokers(broker.Namespace)
+	if err := test.WaitForBrokerState(brokers, broker.Name, test.IsBrokerReady, "BrokerIsReady"); err != nil {
+		return err
+	}
+	// Update the given object so they'll reflect the ready state.
+	updatedBroker, err := brokers.Get(broker.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	updatedBroker.DeepCopyInto(broker)
+	return nil
+}
+
+// CreateTrigger will create a Trigger.
+func CreateTrigger(clients *test.Clients, trigger *v1alpha1.Trigger, logf logging.FormatLogger, cleaner *test.Cleaner) error {
+	triggers := clients.Eventing.EventingV1alpha1().Triggers(trigger.Namespace)
+	res, err := triggers.Create(trigger)
+	if err != nil {
+		return err
+	}
+	cleaner.Add(v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version, "triggers", trigger.Namespace, res.ObjectMeta.Name)
+	return nil
+}
+
+// WithTriggerReady creates a Trigger and waits until it is Ready.
+func WithTriggerReady(clients *test.Clients, trigger *v1alpha1.Trigger, logf logging.FormatLogger, cleaner *test.Cleaner) error {
+	if err := CreateTrigger(clients, trigger, logf, cleaner); err != nil {
+		return err
+	}
+
+	triggers := clients.Eventing.EventingV1alpha1().Triggers(trigger.Namespace)
+	if err := test.WaitForTriggerState(triggers, trigger.Name, test.IsTriggerReady, "TriggerIsReady"); err != nil {
+		return err
+	}
+	// Update the given object so they'll reflect the ready state.
+	updatedTrigger, err := triggers.Get(trigger.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	updatedTrigger.DeepCopyInto(trigger)
+
+	return nil
+}
+
 // CreateServiceAccount will create a service account
 func CreateServiceAccount(clients *test.Clients, sa *corev1.ServiceAccount, _ logging.FormatLogger, cleaner *test.Cleaner) error {
 	sas := clients.Kube.Kube.CoreV1().ServiceAccounts(pkgTest.Flags.Namespace)
@@ -264,16 +331,47 @@ func PodLogs(clients *test.Clients, podName string, containerName string, namesp
 	return nil, fmt.Errorf("Could not find logs for %s/%s", podName, containerName)
 }
 
-// WaitForLogContent waits until logs for given Pod/Container include the given content.
-// If the content is not present within timeout it returns error.
-func WaitForLogContent(clients *test.Clients, logf logging.FormatLogger, podName string, containerName string, namespace string, content string) error {
+// WaitForLogContents waits until logs for given Pod/Container include the given contents.
+// If the contents are not present within timeout it returns error.
+func WaitForLogContents(clients *test.Clients, logf logging.FormatLogger, podName string, containerName string, namespace string, contents []string) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
 		logs, err := PodLogs(clients, podName, containerName, namespace, logf)
 		if err != nil {
 			return true, err
 		}
-		return strings.Contains(string(logs), content), nil
+		for _, content := range contents {
+			if !strings.Contains(string(logs), content) {
+				logf("Could not find content %q for %s/%s. Found %q instead", content, podName, containerName, string(logs))
+				return false, nil
+			} else {
+				logf("Found content %q for %s/%s in logs %q", content, podName, containerName, string(logs))
+				// do not return as we will keep on looking for the other contents in the slice
+			}
+		}
+		return true, nil
 	})
+}
+
+// FindAnyLogContents attempts to find logs for given Pod/Container that has 'any' of the given contents.
+// It returns an error if it couldn't retrieve the logs. In case 'any' of the contents are there, it returns true.
+func FindAnyLogContents(clients *test.Clients, logf logging.FormatLogger, podName string, containerName string, namespace string, contents []string) (bool, error) {
+	logs, err := PodLogs(clients, podName, containerName, namespace, logf)
+	if err != nil {
+		return false, err
+	}
+	for _, content := range contents {
+		if strings.Contains(string(logs), content) {
+			logf("Found content %q for %s/%s.", content, podName, containerName)
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// WaitForLogContent waits until logs for given Pod/Container include the given content.
+// If the content is not present within timeout it returns error.
+func WaitForLogContent(clients *test.Clients, logf logging.FormatLogger, podName string, containerName string, namespace string, content string) error {
+	return WaitForLogContents(clients, logf, podName, containerName, namespace, []string{content})
 }
 
 // WaitForAllPodsRunning will wait until all pods in the given namespace are running
@@ -282,4 +380,69 @@ func WaitForAllPodsRunning(clients *test.Clients, _ logging.FormatLogger, namesp
 		return err
 	}
 	return nil
+}
+
+// WaitForAllTriggersReady will wait until all triggers in the given namespace are ready.
+func WaitForAllTriggersReady(clients *test.Clients, logf logging.FormatLogger, namespace string) error {
+	triggers := clients.Eventing.EventingV1alpha1().Triggers(namespace)
+	if err := test.WaitForTriggersListState(triggers, test.TriggersReady, "TriggerIsReady"); err != nil {
+		return err
+	}
+	return nil
+}
+
+// LabelNamespace labels the test namespace with the labels map.
+func LabelNamespace(clients *test.Clients, logf logging.FormatLogger, labels map[string]string) error {
+	ns := pkgTest.Flags.Namespace
+	nsSpec, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
+	if err != nil && errors.IsNotFound(err) {
+		return err
+	}
+	if nsSpec.Labels == nil {
+		nsSpec.Labels = map[string]string{}
+	}
+	for k, v := range labels {
+		nsSpec.Labels[k] = v
+	}
+	_, err = clients.Kube.Kube.CoreV1().Namespaces().Update(nsSpec)
+	return err
+}
+
+func NamespaceExists(t *testing.T, clients *test.Clients, logf logging.FormatLogger) (string, func()) {
+	shutdown := func() {}
+	ns := pkgTest.Flags.Namespace
+	logf("Namespace: %s", ns)
+
+	nsSpec, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
+
+	if err != nil && errors.IsNotFound(err) {
+		nsSpec = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}
+		logf("Creating Namespace: %s", ns)
+		nsSpec, err = clients.Kube.Kube.CoreV1().Namespaces().Create(nsSpec)
+
+		if err != nil {
+			t.Fatalf("Failed to create Namespace: %s; %v", ns, err)
+		} else {
+			shutdown = func() {
+				clients.Kube.Kube.CoreV1().Namespaces().Delete(nsSpec.Name, nil)
+				// TODO: this is a bit hacky but in order for the tests to work
+				// correctly for a clean namespace to be created we need to also
+				// wait for it to be removed.
+				// To fix this we could generate namespace names.
+				// This only happens when the namespace provided does not exist.
+				//
+				// wait up to 120 seconds for the namespace to be removed.
+				logf("Deleting Namespace: %s", ns)
+				for i := 0; i < 120; i++ {
+					time.Sleep(1 * time.Second)
+					if _, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{}); err != nil && errors.IsNotFound(err) {
+						logf("Namespace has been deleted")
+						// the namespace is gone.
+						break
+					}
+				}
+			}
+		}
+	}
+	return ns, shutdown
 }

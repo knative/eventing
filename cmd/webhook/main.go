@@ -53,19 +53,19 @@ func main() {
 	defer logger.Sync()
 	logger = logger.With(zap.String(logkey.ControllerType, logconfig.Webhook))
 
-	logger.Info("Starting the Eventing Webhook")
+	logger.Infow("Starting the Eventing Webhook")
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
 	clusterConfig, err := rest.InClusterConfig()
 	if err != nil {
-		logger.Fatal("Failed to get in cluster config", zap.Error(err))
+		logger.Fatalw("Failed to get in cluster config", zap.Error(err))
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(clusterConfig)
 	if err != nil {
-		logger.Fatal("Failed to get the client set", zap.Error(err))
+		logger.Fatalw("Failed to get the client set", zap.Error(err))
 	}
 
 	// Watch the logging config map and dynamically update logging levels.
@@ -96,14 +96,19 @@ func main() {
 		Options: options,
 		Handlers: map[schema.GroupVersionKind]webhook.GenericCRD{
 			// For group eventing.knative.dev,
+			eventingv1alpha1.SchemeGroupVersion.WithKind("Broker"):                    &eventingv1alpha1.Broker{},
 			eventingv1alpha1.SchemeGroupVersion.WithKind("Channel"):                   &eventingv1alpha1.Channel{},
 			eventingv1alpha1.SchemeGroupVersion.WithKind("ClusterChannelProvisioner"): &eventingv1alpha1.ClusterChannelProvisioner{},
 			eventingv1alpha1.SchemeGroupVersion.WithKind("Subscription"):              &eventingv1alpha1.Subscription{},
+			eventingv1alpha1.SchemeGroupVersion.WithKind("Trigger"):                   &eventingv1alpha1.Trigger{},
 		},
 		Logger: logger,
 	}
 	if err != nil {
-		logger.Fatal("Failed to create the admission controller", zap.Error(err))
+		logger.Fatalw("Failed to create the admission controller", zap.Error(err))
 	}
-	controller.Run(stopCh)
+	if err = controller.Run(stopCh); err != nil {
+		logger.Errorw("controller.Run() failed", zap.Error(err))
+	}
+	logger.Infow("Webhook stopping")
 }

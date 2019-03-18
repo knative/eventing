@@ -24,12 +24,16 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// Brokers returns a BrokerInformer.
+	Brokers() BrokerInformer
 	// Channels returns a ChannelInformer.
 	Channels() ChannelInformer
 	// ClusterChannelProvisioners returns a ClusterChannelProvisionerInformer.
 	ClusterChannelProvisioners() ClusterChannelProvisionerInformer
 	// Subscriptions returns a SubscriptionInformer.
 	Subscriptions() SubscriptionInformer
+	// Triggers returns a TriggerInformer.
+	Triggers() TriggerInformer
 }
 
 type version struct {
@@ -41,6 +45,11 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// Brokers returns a BrokerInformer.
+func (v *version) Brokers() BrokerInformer {
+	return &brokerInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Channels returns a ChannelInformer.
@@ -56,4 +65,9 @@ func (v *version) ClusterChannelProvisioners() ClusterChannelProvisionerInformer
 // Subscriptions returns a SubscriptionInformer.
 func (v *version) Subscriptions() SubscriptionInformer {
 	return &subscriptionInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Triggers returns a TriggerInformer.
+func (v *version) Triggers() TriggerInformer {
+	return &triggerInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
