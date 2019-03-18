@@ -16,6 +16,7 @@ limitations under the License.
 package dispatcher
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"sync"
@@ -64,12 +65,19 @@ type saramaCluster struct {
 	kafkaBrokers []string
 
 	consumerMode cluster.ConsumerMode
+	TlsConfig    *tls.Config
 }
 
 func (c *saramaCluster) NewConsumer(groupID string, topics []string) (KafkaConsumer, error) {
 	consumerConfig := cluster.NewConfig()
 	consumerConfig.Version = sarama.V1_1_0_0
 	consumerConfig.Group.Mode = c.consumerMode
+
+	if c.TlsConfig != nil {
+		consumerConfig.Net.TLS.Enable = true
+		consumerConfig.Net.TLS.Config = c.TlsConfig
+	}
+
 	return cluster.NewConsumer(c.kafkaBrokers, groupID, topics, consumerConfig)
 }
 
@@ -258,12 +266,17 @@ func (d *KafkaDispatcher) setConfig(config *multichannelfanout.Config) {
 	d.config.Store(config)
 }
 
-func NewDispatcher(brokers []string, consumerMode cluster.ConsumerMode, logger *zap.Logger) (*KafkaDispatcher, error) {
-
+func NewDispatcher(provisionerConf *controller.KafkaProvisionerConfig, logger *zap.Logger) (*KafkaDispatcher, error) {
 	conf := sarama.NewConfig()
 	conf.Version = sarama.V1_1_0_0
 	conf.ClientID = controller.Name + "-dispatcher"
-	client, err := sarama.NewClient(brokers, conf)
+
+	if provisionerConf.TlsConfig != nil {
+		conf.Net.TLS.Enable = true
+		conf.Net.TLS.Config = provisionerConf.TlsConfig
+	}
+
+	client, err := sarama.NewClient(provisionerConf.Brokers, conf)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create kafka client: %v", err)
 	}
@@ -275,8 +288,11 @@ func NewDispatcher(brokers []string, consumerMode cluster.ConsumerMode, logger *
 
 	dispatcher := &KafkaDispatcher{
 		dispatcher: provisioners.NewMessageDispatcher(logger.Sugar()),
-
-		kafkaCluster:       &saramaCluster{kafkaBrokers: brokers, consumerMode: consumerMode},
+		kafkaCluster: &saramaCluster{
+			kafkaBrokers: provisionerConf.Brokers,
+			consumerMode: provisionerConf.ConsumerMode,
+			TlsConfig:    provisionerConf.TlsConfig,
+		},
 		kafkaConsumers:     make(map[provisioners.ChannelReference]map[subscription]KafkaConsumer),
 		kafkaAsyncProducer: producer,
 

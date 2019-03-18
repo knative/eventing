@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	provisionerController "github.com/knative/eventing/contrib/kafka/pkg/controller"
 	"github.com/knative/eventing/contrib/kafka/pkg/dispatcher"
@@ -34,6 +35,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
+const (
+	// These are Environment variable names.
+	kafkaTLSENnabled = "KAFKA_TLS_ENABLE"
+	kafkaCAEnv       = "KAFKA_CA_CERT"
+)
+
 func main() {
 	configMapName := os.Getenv("DISPATCHER_CONFIGMAP_NAME")
 	if configMapName == "" {
@@ -45,6 +52,7 @@ func main() {
 	}
 
 	flag.Parse()
+
 	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Fatalf("unable to create logger: %v", err)
@@ -60,7 +68,17 @@ func main() {
 		logger.Fatal("unable to create manager.", zap.Error(err))
 	}
 
-	kafkaDispatcher, err := dispatcher.NewDispatcher(provisionerConfig.Brokers, provisionerConfig.ConsumerMode, logger)
+	TlsEnabled := os.Getenv(kafkaTLSENnabled)
+	if strings.ToLower(TlsEnabled) == "true" {
+		ca := os.Getenv(kafkaCAEnv)
+		provisionerConfig.TlsConfig, err = provisionerController.NewTLSConfig(ca)
+		if err != nil {
+			logger.Fatal("unable to enable TLS.", zap.Error(err))
+		}
+		logger.Info("successfully enabled TLS", zap.String("secret", kafkaTLSENnabled))
+	}
+
+	kafkaDispatcher, err := dispatcher.NewDispatcher(provisionerConfig, logger)
 	if err != nil {
 		logger.Fatal("unable to create kafka dispatcher.", zap.Error(err))
 	}
@@ -72,7 +90,6 @@ func main() {
 	if err != nil {
 		logger.Fatal("unable to create kubernetes client.", zap.Error(err))
 	}
-
 	cmw, err := watcher.NewWatcher(logger, kc, configMapNamespace, configMapName, kafkaDispatcher.UpdateConfig)
 	if err != nil {
 		logger.Fatal("unable to create configMap watcher", zap.String("configMap", fmt.Sprintf("%s/%s", configMapNamespace, configMapName)))
