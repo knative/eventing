@@ -1,26 +1,32 @@
 # Knative Eventing sprint planning
 
-This document summarizes project planning mechanics for Knative Eventing releases. Knative Eventing release is planned every 6 weeks and will continue to be so. Current proposal is to align sprint with the release cycle of 6 weeks. Eventually this may change as we learn from the process.
+This document summarizes project planning mechanics for Knative Eventing releases. Knative Eventing release is planned every six weeks or 6th Tuesday, with 0.5 planned on 04/02 as reference. Current proposal is to align sprint with the release cycle of 6 weeks. Eventually this may change as we learn from the process.
 
 ## How to manage Bugs?
-- Submit new bugs by creating a new issue of type “Report Bug”.
-- Please fill in as much detail as possible in the bug template and propose priority and severity
-- All new bugs will be labelled “triage/needstriage” and kind/bug as part of the template
-- Bugs will be triaged weekly (this could be modified based on incoming bugs rate). And upon triage will be labeled triage/accepted, or triage/rejected (and closed) with appropriate priority (priority/*) and severity (severity/*)
-- priority/p1 and priority/p2 bugs will be planned for next release cycle to keep low engineering debt.
-- priority/p0 is reserved for critical bugs that needs to be addressed immediately in current release at the cost of currently planned items.
-- WG lead will drive this and his/her decision will be final
+- Submit new bugs by creating a new issue of type “Bug”.
+- Please fill in as much detail as possible in the bug template and propose priority.
+- All new bugs will be labelled “kind/bug” as part of the template
+- Bugs will be triaged weekly (this could be modified based on incoming bugs rate), and upon triage will be assigned a priority or closed.
+- All of priority/important-soon and some of priority/important-longterm bugs will be planned for next release cycle to minimize engineering debt.
+- priority/critical-urgent is reserved for critical bugs that needs to be addressed immediately in current release at the cost of currently planned items.
+- Bugs that need more information to decide priority will be labeled priority/awaiting-more-evidence
+- WG lead will drive this and their decision will be final
 
 ## How to manage Story/Feature?
 - Story/Feature typically spans 1-2 weeks for one engineer.
-To propose a new feature,  create a new issue of type “Feature Request”
+- To propose a new feature,  create a new issue of type “Feature request”
 - Please fill in as much detail as possible in the Feature template and propose a release cycle
-- All new features will be labelled “kind/feature”, and “triage/needstriage”
+- All new features will be labelled “kind/feature-request”
 - All new proposals are discussed either in WG meeting, or on slack, or dedicated meetings if needed at any point scheduled by the proposer. 
 - By R-2w’s WG meeting all new proposals should be vetted and verified that they fit the [Planning criteria](#planning-criteria). Features that do not fit this criteria will not be considered in the current release planning cycle and hence early discussion is encouraged instead of waiting for R-2w.
-- All eligible proposals will then be snapshotted into the voting document and open for voting till R-1w WG meeting. In R-1w WG meeting top features based on votes will be planned for next release. 
-> We need some kind of estimates for each feature for release planning. Shall we adopt story points on fibonacci scale or t-shirt sizing? My vote goes to story points on fibonacci scale to avoid spending a lot of time on estimation, which is a common pitfall.
-- Selected features will be labeled “triage/accepted”. Rest will be labelled “triage/ice-boxed” and will be eligible for next planning cycle. Accepted features will be added to the correct milestone and sprint specific project for tracking.
+- All eligible proposals will then be snapshotted into the voting document and open for voting till R-1w WG meeting. In R-1w WG meeting top features based on votes will be planned for next release.
+> Example for 0.6 release.
+  >- 04/02 (Tuesday): 0.5 release to market. Knative releases are planned every 6th Tuesday.
+  >- 03/20 (Wednesday): All features and issues that fit the planning criteria are fed into voting document.
+  >- 03/27 (Wednesday): Pick top voted features and add them to 0.6 release based on estimates.
+
+> In future, we will need some kind of estimates for each feature for release planning. Shall we adopt story points on fibonacci scale or t-shirt sizing? My vote goes to story points on fibonacci scale to avoid spending a lot of time on estimation, which is a common pitfall.
+- Accepted features will be added to the correct milestone and sprint specific project for tracking.
 
 ## How to manage Epic/Scenario?
 - Epic/Scenario typically spans 1-3 months or even more in some cases.
@@ -39,28 +45,23 @@ To propose a new feature,  create a new issue of type “Feature Request”
 
 ## Organizing with Github Milestone 
 - A new milestone is created in Github for each 6 weeks release cycle.
-- All features and bugs that are planned for the release cycle are assigned to the release for tracking the progress of the milestone.
+- All features and bugs that are planned for the release cycle are assigned to the milestone for tracking the progress of the release.
 
 ## Pending work and proposed changes:
-- Decide estimation technique (story points on fibonacci, t-shirt size etc)
+- Decide estimation technique (story points on fibonacci, t-shirt size etc) - Postponed
+- How to automate project boards with Prow and issue labels?
 - Create features and bugs for 0.6 release.
-- Create appropriate templates and verify if things will work with our current permission model and Prow - I have experimented all this in my private repo, but do not have right permissions in eventing repo. Will need some help here - @Grant?
-- Create following labels:
-    - triage/needstriage
-    - triage/accepted
-    - kind/rejected
-    - triage/ice-boxed
-    - kind/feature
-    - priority/0 - Critical issues that needs to be addressed right away in current release
-    - priority/1 - Highest priority
-    - priority/2
-    - priority/3
-    - priority/4 - lowest priority
-    - severity/1
-    - severity/2
-    - severity/3
-    - severity/4
-- Need to define Priorities and Severities. Is there any norm followed in Knative?
-
+- Create appropriate templates - (In progress)
+- Create following labels, if they do not exist (in-progress)
+    - kind/feature-request
+    - kind/bug
+    - priority/critical-urgent
+      - Bugs that need to be fixed in current release, irrespective of when they are created.
+    - priority/important-soon
+      - Bugs that need to be fixed in the next release.
+    - priority/important-longterm
+     - Bugs that need to be fixed in next 2-3 releases..
+    - priority/awaiting-more-evidence
+    
 ## Future work:
 - If the above process works for next couple of releases and team likes it then we move to a 2 week sprint model rather than 6 weeks.
