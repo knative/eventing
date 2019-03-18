@@ -44,6 +44,9 @@ func initializeEventingFlags() *EventingEnvironmentFlags {
 
 	logging.InitializeLogger(pkgTest.Flags.LogVerbose)
 
+	f.DockerRepo = pkgTest.Flags.DockerRepo
+	f.Tag = pkgTest.Flags.Tag
+
 	if pkgTest.Flags.EmitMetrics {
 		logging.InitializeMetricExporter("eventing")
 	}
