@@ -186,7 +186,7 @@ func (v CodecV02) fromHeaders(h http.Header) (cloudevents.EventContextV02, error
 
 	extensions := make(map[string]interface{})
 	for k, v := range h {
-		if strings.EqualFold(k[:len("ce-")], "ce-") {
+		if len(k) > len("ce-") && strings.EqualFold(k[:len("ce-")], "ce-") {
 			ak := strings.ToLower(k[len("ce-"):])
 			if i := strings.Index(ak, "-"); i > 0 {
 				// attrib-key
@@ -259,14 +259,8 @@ func (v CodecV02) inspectEncoding(msg transport.Message) Encoding {
 		return Unknown
 	}
 	contentType := m.Header.Get("Content-Type")
-	if contentType == cloudevents.ApplicationJSON {
-		return BinaryV02
-	}
-	if contentType == cloudevents.ApplicationXML {
-		return BinaryV02
-	}
 	if contentType == cloudevents.ApplicationCloudEventsJSON {
 		return StructuredV02
 	}
-	return Unknown
+	return BinaryV02
 }

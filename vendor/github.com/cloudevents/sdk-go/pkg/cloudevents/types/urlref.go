@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"net/url"
 )
@@ -32,7 +33,27 @@ func (u *URLRef) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &ref); err != nil {
 		return err
 	}
-	*u = *ParseURLRef(ref)
+	r := ParseURLRef(ref)
+	if r != nil {
+		*u = *r
+	}
+	return nil
+}
+
+func (u URLRef) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	v := fmt.Sprintf("%s", u.String())
+	return e.EncodeElement(v, start)
+}
+
+func (u *URLRef) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	var ref string
+	if err := d.DecodeElement(&ref, &start); err != nil {
+		return err
+	}
+	r := ParseURLRef(ref)
+	if r != nil {
+		*u = *r
+	}
 	return nil
 }
 

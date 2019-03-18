@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"time"
 )
@@ -26,7 +27,7 @@ func (t *Timestamp) MarshalJSON() ([]byte, error) {
 	if t == nil || t.IsZero() {
 		return []byte(`""`), nil
 	}
-	rfc3339 := fmt.Sprintf("%q", t.Format(time.RFC3339Nano))
+	rfc3339 := fmt.Sprintf("%q", t.UTC().Format(time.RFC3339Nano))
 	return []byte(rfc3339), nil
 }
 
@@ -35,8 +36,26 @@ func (t *Timestamp) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &timestamp); err != nil {
 		return err
 	}
-	pt := ParseTimestamp(timestamp)
-	if pt != nil {
+	if pt := ParseTimestamp(timestamp); pt != nil {
+		*t = *pt
+	}
+	return nil
+}
+
+func (t *Timestamp) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	if t == nil || t.IsZero() {
+		return e.EncodeElement(nil, start)
+	}
+	v := t.UTC().Format(time.RFC3339Nano)
+	return e.EncodeElement(v, start)
+}
+
+func (t *Timestamp) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	var timestamp string
+	if err := d.DecodeElement(&timestamp, &start); err != nil {
+		return err
+	}
+	if pt := ParseTimestamp(timestamp); pt != nil {
 		*t = *pt
 	}
 	return nil
@@ -44,8 +63,8 @@ func (t *Timestamp) UnmarshalJSON(b []byte) error {
 
 func (t *Timestamp) String() string {
 	if t == nil {
-		return time.Time{}.Format(time.RFC3339Nano)
+		return time.Time{}.UTC().Format(time.RFC3339Nano)
 	}
 
-	return t.Format(time.RFC3339Nano)
+	return t.UTC().Format(time.RFC3339Nano)
 }

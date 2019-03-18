@@ -6,3 +6,8 @@ type Message interface {
 
 	// TODO maybe get encoding
 }
+
+type Response struct {
+	ResponseCode int
+	Body         []byte
+}

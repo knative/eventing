@@ -2,7 +2,6 @@ package http
 
 import (
 	"encoding/json"
-	"reflect"
 	"fmt"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/codec"
@@ -166,7 +165,7 @@ func (v CodecV01) fromHeaders(h http.Header) (cloudevents.EventContextV01, error
 
 	extensions := make(map[string]interface{})
 	for k, v := range h {
-		if strings.EqualFold(k[:len("CE-X-")], "CE-X-") {
+		if len(k) > len("CE-X-") && strings.EqualFold(k[:len("CE-X-")], "CE-X-") {
 			key := k[len("CE-X-"):]
 			var tmp interface{}
 			if err := json.Unmarshal([]byte(v[0]), &tmp); err == nil {
@@ -192,28 +191,17 @@ func (v CodecV01) decodeStructured(msg transport.Message) (*cloudevents.Event, e
 }
 
 func (v CodecV01) inspectEncoding(msg transport.Message) Encoding {
-	log.Println("Inside v01.inspectEncoding")
 	version := msg.CloudEventsVersion()
-	log.Printf("v01.inspectEncoding version %v", version)
 	if version != cloudevents.CloudEventsVersionV01 {
-		log.Printf("v01.insepectEncoding wrong version")
 		return Unknown
 	}
 	m, ok := msg.(*Message)
 	if !ok {
-		log.Printf("v01.insepectEncoding wrong type: %v", reflect.TypeOf(msg))
 		return Unknown
 	}
 	contentType := m.Header.Get("Content-Type")
-	log.Printf("v01.inspectEncoding content-type %v", contentType)
-	if contentType == cloudevents.ApplicationJSON {
-		return BinaryV01
-	}
-	if contentType == cloudevents.ApplicationXML {
-		return BinaryV01
-	}
 	if contentType == cloudevents.ApplicationCloudEventsJSON {
 		return StructuredV01
 	}
-	return Unknown
+	return BinaryV01
 }

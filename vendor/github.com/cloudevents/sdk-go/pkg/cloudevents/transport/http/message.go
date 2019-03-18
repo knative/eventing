@@ -14,6 +14,12 @@ type Message struct {
 	Body   []byte
 }
 
+type Response struct {
+	StatusCode int
+	Header     http.Header
+	Body       []byte
+}
+
 func (m Message) CloudEventsVersion() string {
 
 	// TODO: the impl of this method needs to move into the codec.
