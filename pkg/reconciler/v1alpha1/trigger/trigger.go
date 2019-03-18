@@ -183,9 +183,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
-	// Modify a copy, not the original.
-	trigger = trigger.DeepCopy()
-
 	// Reconcile this copy of the Trigger and then write back any status updates regardless of
 	// whether the reconcile error out.
 	reconcileErr := r.reconcile(ctx, trigger)
