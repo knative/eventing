@@ -73,13 +73,13 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 	logger = logger.With(zap.String("controller", controllerAgentName))
 
 	rec := &reconciler{}
-	builder := eventingreconciler.NewBuilder(rec).
-		WithFinalizer(finalizerName, eventingreconciler.FinalizerFunc(rec.Finalize)).
-		WithLogger(logger).
-		WithRecorder(mgr.GetRecorder(controllerAgentName)).
-		WithInjectClientFunc(rec.InjectClient).
-		WithInjectConfigFunc(rec.InjectConfig)
-	r := builder.Build()
+	r, err := eventingreconciler.New(rec,
+		eventingreconciler.Finalizer(finalizerName, rec.Finalize),
+		eventingreconciler.Logger(logger),
+		eventingreconciler.Recorder(mgr.GetRecorder(controllerAgentName)),
+		eventingreconciler.ClientInjector(rec.InjectClient),
+		eventingreconciler.ConfigInjector(rec.InjectConfig),
+	)
 
 	// Setup a new controller to Reconcile Subscriptions.
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{Reconciler: r})

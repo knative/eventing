@@ -109,9 +109,9 @@ func ProvideController(defaultGcpProject string, defaultSecret *corev1.ObjectRef
 // shouldReconcile determines if this Controller should control (and therefore reconcile) a given
 // Channel. This Controller only handles gcp-pubsub channels.
 func shouldReconcile(ctx context.Context, obj eventingreconciler.ReconciledResource, r record.EventRecorder) bool {
-	c := obj.(*eventingv1alpha1.Channel) // TODO: Is there a way to do this like try catch - to catch panicking?
-	if c.Spec.Provisioner != nil {
-		return ccpcontroller.IsControlled(c.Spec.Provisioner)
+	c, ok := obj.(*eventingv1alpha1.Channel)
+	if !ok {
+		// TODO: Handle error and return
 	}
-	return false
+	ccpcontroller.IsControlled(c.Spec.Provisioner)
 }

@@ -35,64 +35,63 @@ type EventingReconciler interface {
 	GetNewReconcileObject() ReconciledResource
 }
 
-type Finalizer interface {
-	Finalize(context.Context, ReconciledResource, record.EventRecorder) error
+// type Finalizer interface {
+// 	Finalize(context.Context, ReconciledResource, record.EventRecorder) error
+// }
+
+type option func(*reconciler) error
+
+func Finalizer(finalizerName string, finalizer FinalizerFunc) option {
+	return func(r *reconciler) error {
+		r.finalizerName = finalizerName
+		r.finalizer = finalizer
+		return nil
+	}
 }
 
-type ReconcilerBuilder interface {
-	Build() reconcile.Reconciler
-	WithFinalizer(string, FinalizerFunc) ReconcilerBuilder
-	WithFilter(FilterFunc) ReconcilerBuilder
-	WithLogger(*zap.Logger) ReconcilerBuilder
-	WithRecorder(record.EventRecorder) ReconcilerBuilder
-	WithInjectConfigFunc(InjectConfigFunc) ReconcilerBuilder
-	WithInjectClientFunc(InjectClientFunc) ReconcilerBuilder
+func Filter(filter FilterFunc) option {
+	return func(r *reconciler) error {
+		r.filter = filter
+		return nil
+	}
 }
 
-type ReconcilerBuilderImpl struct {
-	r *reconciler
+func Logger(logger *zap.Logger) option {
+	return func(r *reconciler) error {
+		r.logger = logger
+		return nil
+	}
 }
 
-var _ ReconcilerBuilder = &ReconcilerBuilderImpl{}
-
-func (b *ReconcilerBuilderImpl) Build() reconcile.Reconciler {
-	return b.r
+func Recorder(recorder record.EventRecorder) option {
+	return func(r *reconciler) error {
+		r.recorder = recorder
+		return nil
+	}
 }
 
-func (b *ReconcilerBuilderImpl) WithFinalizer(finalizerName string, finalizer FinalizerFunc) ReconcilerBuilder {
-	b.r.finalizerName = finalizerName
-	b.r.finalizer = finalizer
-	return b
+func ConfigInjector(ic InjectConfigFunc) option {
+	return func(r *reconciler) error {
+		r.injectConfig = ic
+		return nil
+	}
 }
 
-func (b *ReconcilerBuilderImpl) WithFilter(filter FilterFunc) ReconcilerBuilder {
-	b.r.filter = filter
-	return b
+func ClientInjector(ic InjectClientFunc) option {
+	return func(r *reconciler) error {
+		r.injectClient = ic
+		return nil
+	}
 }
 
-func (b *ReconcilerBuilderImpl) WithLogger(logger *zap.Logger) ReconcilerBuilder {
-	b.r.logger = logger
-	return b
-}
-
-func (b *ReconcilerBuilderImpl) WithRecorder(recorder record.EventRecorder) ReconcilerBuilder {
-	b.r.recorder = recorder
-	return b
-}
-
-func (b *ReconcilerBuilderImpl) WithInjectConfigFunc(ic InjectConfigFunc) ReconcilerBuilder {
-	b.r.injectConfig = ic
-	return b
-}
-
-func (b *ReconcilerBuilderImpl) WithInjectClientFunc(ic InjectClientFunc) ReconcilerBuilder {
-	b.r.injectClient = ic
-	return b
-}
-
-func NewBuilder(er EventingReconciler) ReconcilerBuilder {
-	//	if i,ok := er.(client.Client)
-	return &ReconcilerBuilderImpl{r: &reconciler{EventingReconciler: er}}
+func New(er EventingReconciler, opts ...option) (reconcile.Reconciler, error) {
+	r := &reconciler{EventingReconciler: er}
+	for _, opt := range opts {
+		if err := opt(r); err != nil {
+			return r, err
+		}
+	}
+	return r, nil
 }
 
 type FilterFunc func(context.Context, ReconciledResource, record.EventRecorder) bool
