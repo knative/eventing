@@ -18,13 +18,19 @@ package broker
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/http/httptest"
-	"strings"
+	"net/url"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/api/equality"
+
+	"github.com/cloudevents/sdk-go/pkg/cloudevents"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
+
+	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/utils"
 	"go.uber.org/zap"
@@ -41,18 +47,41 @@ const (
 	eventSource = `/mycontext`
 )
 
+var (
+	host = fmt.Sprintf("%s.%s.triggers.%s", triggerName, testNS, utils.GetClusterDomainName())
+)
+
 func init() {
 	// Add types to scheme.
-	eventingv1alpha1.AddToScheme(scheme.Scheme)
+	_ = eventingv1alpha1.AddToScheme(scheme.Scheme)
 }
 
 func TestReceiver(t *testing.T) {
 	testCases := map[string]struct {
 		initialState     []runtime.Object
+		tctx             cehttp.TransportContext
 		requestFails     bool
+		returnedEvent    cloudevents.Event
 		expectedErr      bool
 		expectedDispatch bool
+		expectedStatus   int
 	}{
+		"Not POST": {
+			tctx: cehttp.TransportContext{
+				Method: "GET",
+				Host:   host,
+				URI:    "/",
+			},
+			expectedStatus: http.StatusMethodNotAllowed,
+		},
+		"Other path": {
+			tctx: cehttp.TransportContext{
+				Method: "POST",
+				Host:   host,
+				URI:    "/someotherEndpoint",
+			},
+			expectedStatus: http.StatusNotFound,
+		},
 		"Trigger.Get fails": {
 			// No trigger exists, so the Get will fail.
 			expectedErr: true,
@@ -98,28 +127,41 @@ func TestReceiver(t *testing.T) {
 			},
 			expectedDispatch: true,
 		},
+		"Returned Cloud Event": {
+			returnedEvent: makeDifferentEvent(),
+		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			mr := New(
+			r, err := New(
 				zap.NewNop(),
 				fake.NewFakeClient(tc.initialState...))
-			fh := &fakeHTTPDoer{
-				failRequest: tc.requestFails,
+			if err != nil {
+				t.Fatalf("Unable to create receiver: %v", err)
 			}
-			mr.httpClient = fh
 
-			resp := httptest.NewRecorder()
-			mr.ServeHTTP(resp, makeRequest())
-			if tc.expectedErr {
-				if resp.Result().StatusCode >= 200 && resp.Result().StatusCode < 300 {
-					t.Errorf("Expected an error. Actual: %v", resp.Result())
-				}
-			} else {
-				if resp.Result().StatusCode < 200 || resp.Result().StatusCode >= 300 {
-					t.Errorf("Expected success. Actual: %v", resp.Result())
-				}
+			// TODO either use a fake client here or make a fake HTTP server for the test. Either
+			// way, update the tc.expectedDispatch test to ensure the request was sent or not.
+
+			r.ceHttp.Client = fakeClient{}
+
+			ctx := context.Background()
+			resp := &cloudevents.EventResponse{}
+			err = r.serveHTTP(ctx, makeEvent(), resp)
+
+			if tc.expectedErr && err == nil {
+				t.Errorf("Expected an error, received nil")
+			} else if !tc.expectedErr && err != nil {
+				t.Errorf("Expected no error, received %v", err)
 			}
+
+			if tc.expectedStatus != 0 && tc.expectedStatus != resp.Status {
+				t.Errorf("Unexpected status. Expected %v. Actual %v.", tc.expectedStatus, resp.Status)
+			}
+			if !equality.Semantic.DeepEqual(tc.returnedEvent, resp.Event) {
+				t.Errorf("Unexpected response event. Expected '%v'. Actual '%v'", tc.returnedEvent, resp.Event)
+			}
+
 			if tc.expectedDispatch != fh.requestReceived {
 				t.Errorf("Incorrect dispatch. Expected %v, Actual %v", tc.expectedDispatch, fh.requestReceived)
 			}
@@ -180,21 +222,28 @@ func makeTriggerWithoutSubscriberURI() *eventingv1alpha1.Trigger {
 	return t
 }
 
-func makeRequest() *http.Request {
-	req := httptest.NewRequest("POST", "/", strings.NewReader(`<much wow="xml"/>`))
-	req.Host = fmt.Sprintf("%s.%s.triggers.%s", triggerName, testNS, utils.GetClusterDomainName())
+func makeEvent() cloudevents.Event {
+	return cloudevents.Event{
+		Context: cloudevents.EventContextV02{
+			Type: eventType,
+			Source: types.URLRef{
+				URL: url.URL{
+					Path: eventSource,
+				},
+			},
+		},
+	}
+}
 
-	eventAttributes := map[string]string{
-		"CE-CloudEventsVersion": `0.1`,
-		"CE-EventType":          eventType,
-		"CE-EventTypeVersion":   `1.0`,
-		"CE-Source":             eventSource,
-		"CE-EventID":            `A234-1234-1234`,
-		"CE-EventTime":          `2018-04-05T17:31:00Z`,
-		"Content-Type":          "application/xml",
+func makeDifferentEvent() cloudevents.Event {
+	return cloudevents.Event{
+		Context: cloudevents.EventContextV02{
+			Type: "some-other-type",
+			Source: types.URLRef{
+				URL: url.URL{
+					Path: eventSource,
+				},
+			},
+		},
 	}
-	for k, v := range eventAttributes {
-		req.Header.Set(k, v)
-	}
-	return req
 }
