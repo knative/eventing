@@ -213,11 +213,11 @@
   version = "v0.2.0"
 
 [[projects]]
-  digest = "1:5ae77b6deaf1be337861bb792537719511f7372cb3b05905b47a45730d85f122"
+  digest = "1:c280fbe00363f7c8db868a738b94df33586ce05c10d26578c3adf544d010eb64"
   name = "github.com/google/go-containerregistry"
   packages = ["pkg/name"]
   pruneopts = "NUT"
-  revision = "5f7b0e4895413d785ff15b84d218d73e8a47866a"
+  revision = "dbc4da98389f9d0c42eb314c2b346bf1d2a27310"
 
 [[projects]]
   branch = "master"
@@ -351,7 +351,7 @@
   version = "v0.2.0"
 
 [[projects]]
-  digest = "1:e8579fe7474515f5907ac34e1d405ca875ecd6c2917e9e6311d73d0b3c69d2b2"
+  digest = "1:a30bb5b218c35de71323fbc7efa2e0803f932b64ce878d92822a9dff18ba5a65"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -378,10 +378,10 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "684620ff81ae137be5cda634a03831b373adc4eb"
+  revision = "915415e7be67bf8fb05249fe3f1bad25fcaf7f50"
 
 [[projects]]
-  digest = "1:9a3d5c1186e9299dc3c3b9f28c3521abdf6abf0834f8ddd169ab005762097378"
+  digest = "1:7d2f7e373d3265017ff21f605e7ad4aa710adc2698eadcc317b30d4f9c2c4ab3"
   name = "github.com/knative/serving"
   packages = [
     "pkg/apis/autoscaling",
@@ -397,8 +397,8 @@
     "pkg/client/clientset/versioned/typed/serving/v1alpha1",
   ]
   pruneopts = "NUT"
-  revision = "4d198db8756db2f8a3c228302a97fb3a216a9475"
-  version = "v0.3.0"
+  revision = "4913b81a4305b174ed07c54298be6ddeb3dd874e"
+  version = "v0.4.1"
 
 [[projects]]
   branch = "master"
@@ -936,16 +936,18 @@
   version = "kubernetes-1.12.5"
 
 [[projects]]
-  digest = "1:ae4b3b3fa20170a3374bdb54aedb75a8f031df6bb718cf0b099c7c76641e958e"
+  digest = "1:71d28556d46329081174d64fc8d55dc8317294b7e610825d464730b16b4e78aa"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/equality",
     "pkg/api/errors",
     "pkg/api/meta",
     "pkg/api/resource",
+    "pkg/api/validation",
     "pkg/apis/meta/internalversion",
     "pkg/apis/meta/v1",
     "pkg/apis/meta/v1/unstructured",
+    "pkg/apis/meta/v1/validation",
     "pkg/apis/meta/v1beta1",
     "pkg/conversion",
     "pkg/conversion/queryparams",

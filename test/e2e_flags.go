@@ -21,8 +21,6 @@ package test
 import (
 	"flag"
 	"fmt"
-	"os"
-
 	pkgTest "github.com/knative/pkg/test"
 	"github.com/knative/pkg/test/logging"
 )
@@ -40,22 +38,14 @@ type EventingEnvironmentFlags struct {
 func initializeEventingFlags() *EventingEnvironmentFlags {
 	var f EventingEnvironmentFlags
 
-	defaultRepo := os.Getenv("KO_DOCKER_REPO")
-
-	if defaultRepo == "" {
-		defaultRepo = os.Getenv("KO_DOCKER_REPO")
-	}
-
-	flag.StringVar(&f.DockerRepo, "dockerrepo", defaultRepo,
-		"Provide the uri of the docker repo you have uploaded the test image to using `uploadtestimage.sh`. Defaults to $KO_DOCKER_REPO")
-
-	flag.StringVar(&f.Tag, "tag", "e2e", "Provide the version tag for the test images.")
-
 	flag.StringVar(&f.Provisioner, "clusterChannelProvisioner", "in-memory-channel", "The name of the Channel's clusterChannelProvisioner. Only the in-memory-channel is installed by the tests, anything else must be installed before the tests are run.")
 
 	flag.Parse()
 
 	logging.InitializeLogger(pkgTest.Flags.LogVerbose)
+
+	f.DockerRepo = pkgTest.Flags.DockerRepo
+	f.Tag = pkgTest.Flags.Tag
 
 	if pkgTest.Flags.EmitMetrics {
 		logging.InitializeMetricExporter("eventing")
