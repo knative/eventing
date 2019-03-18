@@ -166,6 +166,17 @@ func Subscription(name string, namespace string, channel *corev1.ObjectReference
 	}
 }
 
+// Broker returns a Broker.
+func Broker(name string, namespace string) *v1alpha1.Broker {
+	return &v1alpha1.Broker{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: v1alpha1.BrokerSpec{},
+	}
+}
+
 // CloudEvent specifies the arguments for a CloudEvent sent by the sendevent
 // binary.
 type CloudEvent struct {
@@ -174,6 +185,12 @@ type CloudEvent struct {
 	Source   string
 	Data     string
 	Encoding string // binary or structured
+}
+
+// TypeAndSource specifies the type and source of an Event.
+type TypeAndSource struct {
+	Type   string
+	Source string
 }
 
 const (
