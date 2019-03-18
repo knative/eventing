@@ -21,38 +21,29 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/apimachinery/pkg/runtime"
-
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	"github.com/knative/eventing/pkg/reconciler/names"
-
-	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/logging"
-	v1 "k8s.io/api/apps/v1"
-
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
-
-	"go.uber.org/zap"
-
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/logging"
+	"github.com/knative/eventing/pkg/reconciler/names"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
+	"go.uber.org/zap"
+	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
-
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
@@ -68,9 +59,8 @@ const (
 )
 
 type reconciler struct {
-	client     client.Client
-	restConfig *rest.Config
-	recorder   record.EventRecorder
+	client   client.Client
+	recorder record.EventRecorder
 
 	logger *zap.Logger
 
@@ -91,8 +81,8 @@ type ReconcilerArgs struct {
 }
 
 // ProvideController returns a function that returns a Broker controller.
-func ProvideController(logger *zap.Logger, args ReconcilerArgs) func(manager.Manager) (controller.Controller, error) {
-	return func(mgr manager.Manager) (controller.Controller, error) {
+func ProvideController(args ReconcilerArgs) func(manager.Manager, *zap.Logger) (controller.Controller, error) {
+	return func(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 		// Setup a new controller to Reconcile Brokers.
 		c, err := controller.New(controllerAgentName, mgr, controller.Options{
 			Reconciler: &reconciler{
@@ -163,7 +153,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		r.recorder.Event(broker, corev1.EventTypeNormal, brokerReconciled, "Broker reconciled")
 	}
 
-	if _, err = r.updateStatus(broker.DeepCopy()); err != nil {
+	if _, err = r.updateStatus(broker); err != nil {
 		logging.FromContext(ctx).Error("Failed to update Broker status", zap.Error(err))
 		r.recorder.Eventf(broker, corev1.EventTypeWarning, brokerUpdateStatusFailed, "Failed to update Broker's status: %v", err)
 		return reconcile.Result{}, err
@@ -204,11 +194,13 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) (reconci
 	_, err = r.reconcileFilterDeployment(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling filter Deployment", zap.Error(err))
+		b.Status.MarkFilterFailed(err)
 		return reconcile.Result{}, err
 	}
 	_, err = r.reconcileFilterService(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling filter Service", zap.Error(err))
+		b.Status.MarkFilterFailed(err)
 		return reconcile.Result{}, err
 	}
 	b.Status.MarkFilterReady()
@@ -216,12 +208,14 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) (reconci
 	_, err = r.reconcileIngressDeployment(ctx, b, triggerChan)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling ingress Deployment", zap.Error(err))
+		b.Status.MarkIngressFailed(err)
 		return reconcile.Result{}, err
 	}
 
 	svc, err := r.reconcileIngressService(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling ingress Service", zap.Error(err))
+		b.Status.MarkIngressFailed(err)
 		return reconcile.Result{}, err
 	}
 	b.Status.MarkIngressReady()

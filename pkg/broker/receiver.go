@@ -28,13 +28,10 @@ import (
 	"reflect"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
-
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
-
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -275,23 +272,12 @@ func isFailure(statusCode int) bool {
 
 // Initialize the client. Mainly intended to load stuff in its cache.
 func (r *Receiver) initClient() error {
-	// We list triggers so that we can load the client's cache. Otherwise, on receiving an event, it
-	// may not find the trigger and would return an error.
-	opts := &client.ListOptions{
-		// Set Raw because if we need to get more than one page, then we will put the continue token
-		// into opts.Raw.Continue.
-		Raw: &metav1.ListOptions{},
-	}
-	for {
-		tl := &eventingv1alpha1.TriggerList{}
-		if err := r.client.List(context.TODO(), opts, tl); err != nil {
-			return err
-		}
-		if tl.Continue != "" {
-			opts.Raw.Continue = tl.Continue
-		} else {
-			break
-		}
+	// We list triggers so that we do not drop messages. Otherwise, on receiving an event, it
+	// may not find the Trigger and would return an error.
+	opts := &client.ListOptions{}
+	tl := &eventingv1alpha1.TriggerList{}
+	if err := r.client.List(context.TODO(), opts, tl); err != nil {
+		return err
 	}
 	return nil
 }
