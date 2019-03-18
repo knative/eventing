@@ -42,6 +42,23 @@ const (
 	ConditionSucceeded ConditionType = "Succeeded"
 )
 
+// ConditionSeverity expresses the severity of a Condition Type failing.
+type ConditionSeverity string
+
+const (
+	// ConditionSeverityError specifies that a failure of a condition type
+	// should be viewed as an error.  As "Error" is the default for conditions
+	// we use the empty string (coupled with omitempty) to avoid confusion in
+	// the case where the condition is in state "True" (aka nothing is wrong).
+	ConditionSeverityError ConditionSeverity = ""
+	// ConditionSeverityWarning specifies that a failure of a condition type
+	// should be viewed as a warning, but that things could still work.
+	ConditionSeverityWarning ConditionSeverity = "Warning"
+	// ConditionSeverityInfo specifies that a failure of a condition type
+	// should be viewed as purely informational, and that things could still work.
+	ConditionSeverityInfo ConditionSeverity = "Info"
+)
+
 // Conditions defines a readiness condition for a Knative resource.
 // See: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#typical-status-properties
 // +k8s:deepcopy-gen=true
@@ -53,6 +70,11 @@ type Condition struct {
 	// Status of the condition, one of True, False, Unknown.
 	// +required
 	Status corev1.ConditionStatus `json:"status" description:"status of the condition, one of True, False, Unknown"`
+
+	// Severity with which to treat failures of this type of condition.
+	// When this is not specified, it defaults to Error.
+	// +optional
+	Severity ConditionSeverity `json:"severity,omitempty" description:"how to interpret failures of this condition, one of Error, Warning, Info"`
 
 	// LastTransitionTime is the last time the condition transitioned from one status to another.
 	// We use VolatileTime in place of metav1.Time to exclude this from creating equality.Semantic
@@ -93,9 +115,6 @@ func (c *Condition) IsUnknown() bool {
 	return c.Status == corev1.ConditionUnknown
 }
 
-// Implementations can verify that they implement Conditions via:
-var _ = duck.VerifyType(&KResource{}, &Conditions{})
-
 // Conditions is an Implementable "duck type".
 var _ duck.Implementable = (*Conditions)(nil)
 
@@ -118,6 +137,17 @@ type KResource struct {
 type KResourceStatus struct {
 	Conditions Conditions `json:"conditions,omitempty"`
 }
+
+func (krs *KResourceStatus) GetConditions() Conditions {
+	return krs.Conditions
+}
+
+func (krs *KResourceStatus) SetConditions(conditions Conditions) {
+	krs.Conditions = conditions
+}
+
+// Ensure KResourceStatus satisfies ConditionsAccessor
+var _ ConditionsAccessor = (*KResourceStatus)(nil)
 
 // In order for Conditions to be Implementable, KResource must be Populatable.
 var _ duck.Populatable = (*KResource)(nil)

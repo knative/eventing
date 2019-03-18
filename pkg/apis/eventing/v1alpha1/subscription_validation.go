@@ -28,92 +28,79 @@ func (s *Subscription) Validate() *apis.FieldError {
 	return s.Spec.Validate().ViaField("spec")
 }
 
-// We require always From
-// Also at least one of 'call' and 'result' must be defined (non-nill and non-empty)
+// We require always Channel
+// Also at least one of 'subscriber' and 'reply' must be defined (non-nill and non-empty)
 func (ss *SubscriptionSpec) Validate() *apis.FieldError {
 	var errs *apis.FieldError
-	if isFromEmpty(ss.From) {
-		fe := apis.ErrMissingField("from")
-		fe.Details = "the Subscription must reference a from channel"
+	if isChannelEmpty(ss.Channel) {
+		fe := apis.ErrMissingField("channel")
+		fe.Details = "the Subscription must reference a channel"
 		return fe
-	} else if fe := isValidFrom(ss.From); fe != nil {
-		errs = errs.Also(fe.ViaField("from"))
+	} else if fe := isValidChannel(ss.Channel); fe != nil {
+		errs = errs.Also(fe.ViaField("channel"))
 	}
 
-	missingCallable := isCallableNilOrEmpty(ss.Call)
-	missingResultStrategy := isResultStrategyNilOrEmpty(ss.Result)
-	if missingCallable && missingResultStrategy {
-		fe := apis.ErrMissingField("result", "call")
-		fe.Details = "the Subscription must reference at least one of (result channel or a call)"
+	missingSubscriber := isSubscriberSpecNilOrEmpty(ss.Subscriber)
+	missingReply := isReplyStrategyNilOrEmpty(ss.Reply)
+	if missingSubscriber && missingReply {
+		fe := apis.ErrMissingField("reply", "subscriber")
+		fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
 		errs = errs.Also(fe)
 	}
 
-	if !missingCallable {
-		if fe := isValidCallable(*ss.Call); fe != nil {
-			errs = errs.Also(fe.ViaField("call"))
+	if !missingSubscriber {
+		if fe := isValidSubscriberSpec(*ss.Subscriber); fe != nil {
+			errs = errs.Also(fe.ViaField("subscriber"))
 		}
 	}
 
-	if !missingResultStrategy {
-		if fe := isValidResultStrategy(*ss.Result); fe != nil {
-			errs = errs.Also(fe.ViaField("result"))
+	if !missingReply {
+		if fe := isValidReply(*ss.Reply); fe != nil {
+			errs = errs.Also(fe.ViaField("reply"))
 		}
 	}
 
 	return errs
 }
 
-func isCallableNilOrEmpty(c *Callable) bool {
-	return c == nil || equality.Semantic.DeepEqual(c, &Callable{}) ||
-		(equality.Semantic.DeepEqual(c.Target, &corev1.ObjectReference{}) && c.TargetURI == nil)
+func isSubscriberSpecNilOrEmpty(s *SubscriberSpec) bool {
+	return s == nil || equality.Semantic.DeepEqual(s, &SubscriberSpec{}) ||
+		(equality.Semantic.DeepEqual(s.Ref, &corev1.ObjectReference{}) && s.DNSName == nil)
 
 }
 
-func isValidCallable(c Callable) *apis.FieldError {
+func isValidSubscriberSpec(s SubscriberSpec) *apis.FieldError {
 	var errs *apis.FieldError
-	if c.TargetURI != nil && *c.TargetURI != "" && c.Target != nil && !equality.Semantic.DeepEqual(c.Target, &corev1.ObjectReference{}) {
-		errs = errs.Also(apis.ErrMultipleOneOf("target", "targetURI"))
+	if s.DNSName != nil && *s.DNSName != "" && s.Ref != nil && !equality.Semantic.DeepEqual(s.Ref, &corev1.ObjectReference{}) {
+		errs = errs.Also(apis.ErrMultipleOneOf("ref", "dnsName"))
 	}
 
-	// If Target given, check the fields.
-	if c.Target != nil && !equality.Semantic.DeepEqual(c.Target, &corev1.ObjectReference{}) {
-		fe := isValidObjectReference(*c.Target)
+	// If Ref given, check the fields.
+	if s.Ref != nil && !equality.Semantic.DeepEqual(s.Ref, &corev1.ObjectReference{}) {
+		fe := isValidObjectReference(*s.Ref)
 		if fe != nil {
-			errs = errs.Also(fe.ViaField("target"))
+			errs = errs.Also(fe.ViaField("ref"))
 		}
 	}
 	return errs
 }
 
-func isFromEmpty(f corev1.ObjectReference) bool {
-	return isSubscribableEmpty(f)
+func isReplyStrategyNilOrEmpty(r *ReplyStrategy) bool {
+	return r == nil || equality.Semantic.DeepEqual(r, &ReplyStrategy{}) || equality.Semantic.DeepEqual(r.Channel, &corev1.ObjectReference{})
 }
 
-// Valid from only contains the following fields:
-// - Kind       == 'Channel'
-// - APIVersion == 'eventing.knative.dev/v1alpha1'
-// - Name       == not empty
-func isValidFrom(f corev1.ObjectReference) *apis.FieldError {
-	return isValidSubscribable(f)
-}
-
-func isResultStrategyNilOrEmpty(r *ResultStrategy) bool {
-	return r == nil || equality.Semantic.DeepEqual(r, &ResultStrategy{}) || equality.Semantic.DeepEqual(r.Target, &corev1.ObjectReference{})
-}
-
-func isValidResultStrategy(r ResultStrategy) *apis.FieldError {
-	fe := isValidObjectReference(*r.Target)
-	if fe != nil {
-		return fe.ViaField("target")
+func isValidReply(r ReplyStrategy) *apis.FieldError {
+	if fe := isValidObjectReference(*r.Channel); fe != nil {
+		return fe.ViaField("channel")
 	}
-	if r.Target.Kind != "Channel" {
-		fe := apis.ErrInvalidValue(r.Target.Kind, "kind")
+	if r.Channel.Kind != "Channel" {
+		fe := apis.ErrInvalidValue(r.Channel.Kind, "kind")
 		fe.Paths = []string{"kind"}
 		fe.Details = "only 'Channel' kind is allowed"
 		return fe
 	}
-	if r.Target.APIVersion != "eventing.knative.dev/v1alpha1" {
-		fe := apis.ErrInvalidValue(r.Target.APIVersion, "apiVersion")
+	if r.Channel.APIVersion != "eventing.knative.dev/v1alpha1" {
+		fe := apis.ErrInvalidValue(r.Channel.APIVersion, "apiVersion")
 		fe.Details = "only eventing.knative.dev/v1alpha1 is allowed for apiVersion"
 		return fe
 	}
@@ -129,8 +116,8 @@ func (current *Subscription) CheckImmutableFields(og apis.Immutable) *apis.Field
 		return nil
 	}
 
-	// Only Call and Result are mutable.
-	ignoreArguments := cmpopts.IgnoreFields(SubscriptionSpec{}, "Call", "Result")
+	// Only Subscriber and Reply are mutable.
+	ignoreArguments := cmpopts.IgnoreFields(SubscriptionSpec{}, "Subscriber", "Reply")
 	if diff := cmp.Diff(original.Spec, current.Spec, ignoreArguments); diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",

@@ -16,11 +16,36 @@ limitations under the License.
 
 package v1alpha1
 
-//TODO replace this with openapi defaults when
-// https://github.com/kubernetes/features/issues/575 lands (scheduled for 1.13)
+import (
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+)
+
+// ChannelProvisionerDefaulter sets the default Provisioner and Arguments on Channels that do not
+// specify any Provisioner.
+type ChannelProvisionerDefaulter interface {
+	// GetDefault determines the default provisioner and arguments for the given channel. It does
+	// not modify the given channel. It may return nil for either or both.
+	GetDefault(c *Channel) (*corev1.ObjectReference, *runtime.RawExtension)
+}
+
+var (
+	// ChannelDefaulterSingleton is the global singleton used to default Channels that do not
+	// specify any provisioner.
+	ChannelDefaulterSingleton ChannelProvisionerDefaulter
+)
+
 func (c *Channel) SetDefaults() {
+	if c != nil && c.Spec.Provisioner == nil {
+		// The singleton may not have been set, if so ignore it and validation will reject the
+		// Channel.
+		if cd := ChannelDefaulterSingleton; cd != nil {
+			prov, args := cd.GetDefault(c.DeepCopy())
+			c.Spec.Provisioner = prov
+			c.Spec.Arguments = args
+		}
+	}
 	c.Spec.SetDefaults()
 }
 
-func (fs *ChannelSpec) SetDefaults() {
-}
+func (cs *ChannelSpec) SetDefaults() {}

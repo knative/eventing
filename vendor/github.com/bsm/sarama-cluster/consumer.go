@@ -140,18 +140,16 @@ func (c *Consumer) HighWaterMarks() map[string]map[int32]int64 { return c.consum
 // your application crashes. This means that you may end up processing the same
 // message twice, and your processing should ideally be idempotent.
 func (c *Consumer) MarkOffset(msg *sarama.ConsumerMessage, metadata string) {
-	sub := c.subs.Fetch(msg.Topic, msg.Partition)
-	if sub != nil {
-		sub.MarkOffset(msg.Offset+1, metadata)
+	if sub := c.subs.Fetch(msg.Topic, msg.Partition); sub != nil {
+		sub.MarkOffset(msg.Offset, metadata)
 	}
 }
 
 // MarkPartitionOffset marks an offset of the provided topic/partition as processed.
 // See MarkOffset for additional explanation.
 func (c *Consumer) MarkPartitionOffset(topic string, partition int32, offset int64, metadata string) {
-	sub := c.subs.Fetch(topic, partition)
-	if sub != nil {
-		sub.MarkOffset(offset+1, metadata)
+	if sub := c.subs.Fetch(topic, partition); sub != nil {
+		sub.MarkOffset(offset, metadata)
 	}
 }
 
@@ -162,9 +160,8 @@ func (c *Consumer) MarkOffsets(s *OffsetStash) {
 	defer s.mu.Unlock()
 
 	for tp, info := range s.offsets {
-		sub := c.subs.Fetch(tp.Topic, tp.Partition)
-		if sub != nil {
-			sub.MarkOffset(info.Offset+1, info.Metadata)
+		if sub := c.subs.Fetch(tp.Topic, tp.Partition); sub != nil {
+			sub.MarkOffset(info.Offset, info.Metadata)
 		}
 		delete(s.offsets, tp)
 	}
@@ -177,9 +174,8 @@ func (c *Consumer) MarkOffsets(s *OffsetStash) {
 //
 // Difference between ResetOffset and MarkOffset is that it allows to rewind to an earlier offset
 func (c *Consumer) ResetOffset(msg *sarama.ConsumerMessage, metadata string) {
-	sub := c.subs.Fetch(msg.Topic, msg.Partition)
-	if sub != nil {
-		sub.ResetOffset(msg.Offset+1, metadata)
+	if sub := c.subs.Fetch(msg.Topic, msg.Partition); sub != nil {
+		sub.ResetOffset(msg.Offset, metadata)
 	}
 }
 
@@ -188,7 +184,7 @@ func (c *Consumer) ResetOffset(msg *sarama.ConsumerMessage, metadata string) {
 func (c *Consumer) ResetPartitionOffset(topic string, partition int32, offset int64, metadata string) {
 	sub := c.subs.Fetch(topic, partition)
 	if sub != nil {
-		sub.ResetOffset(offset+1, metadata)
+		sub.ResetOffset(offset, metadata)
 	}
 }
 
@@ -199,9 +195,8 @@ func (c *Consumer) ResetOffsets(s *OffsetStash) {
 	defer s.mu.Unlock()
 
 	for tp, info := range s.offsets {
-		sub := c.subs.Fetch(tp.Topic, tp.Partition)
-		if sub != nil {
-			sub.ResetOffset(info.Offset+1, info.Metadata)
+		if sub := c.subs.Fetch(tp.Topic, tp.Partition); sub != nil {
+			sub.ResetOffset(info.Offset, info.Metadata)
 		}
 		delete(s.offsets, tp)
 	}
@@ -264,9 +259,8 @@ func (c *Consumer) CommitOffsets() error {
 			if kerr != sarama.ErrNoError {
 				err = kerr
 			} else if state, ok := snap[topicPartition{topic, partition}]; ok {
-				sub := c.subs.Fetch(topic, partition)
-				if sub != nil {
-					sub.MarkCommitted(state.Info.Offset)
+				if sub := c.subs.Fetch(topic, partition); sub != nil {
+					sub.markCommitted(state.Info.Offset)
 				}
 			}
 		}
@@ -706,12 +700,13 @@ func (c *Consumer) syncGroup(strategy *balancer) (map[string][]int32, error) {
 		GenerationId: generationID,
 	}
 
-	for memberID, topics := range strategy.Perform(c.client.config.Group.PartitionStrategy) {
-		if err := req.AddGroupAssignmentMember(memberID, &sarama.ConsumerGroupMemberAssignment{
-			Version: 1,
-			Topics:  topics,
-		}); err != nil {
-			return nil, err
+	if strategy != nil {
+		for memberID, topics := range strategy.Perform(c.client.config.Group.PartitionStrategy) {
+			if err := req.AddGroupAssignmentMember(memberID, &sarama.ConsumerGroupMemberAssignment{
+				Topics: topics,
+			}); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -829,9 +824,9 @@ func (c *Consumer) createConsumer(tomb *loopTomb, topic string, partition int32,
 	// Start partition consumer goroutine
 	tomb.Go(func(stopper <-chan none) {
 		if c.client.config.Group.Mode == ConsumerModePartitions {
-			pc.WaitFor(stopper, c.errors)
+			pc.waitFor(stopper, c.errors)
 		} else {
-			pc.Multiplex(stopper, c.messages, c.errors)
+			pc.multiplex(stopper, c.messages, c.errors)
 		}
 	})
 

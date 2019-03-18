@@ -1,5 +1,6 @@
 /*
-Copyright 2017 The Knative Authors
+Copyright 2018 The Knative Authors
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -24,5 +25,7 @@ func (ss *ServiceSpec) SetDefaults() {
 		ss.RunLatest.Configuration.SetDefaults()
 	} else if ss.Pinned != nil {
 		ss.Pinned.Configuration.SetDefaults()
+	} else if ss.Release != nil {
+		ss.Release.Configuration.SetDefaults()
 	}
 }

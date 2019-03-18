@@ -1,0 +1,78 @@
+/*
+Copyright 2018 The Knative Authors
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+// This file contains an object which encapsulates k8s clients which are useful for e2e tests.
+
+package test
+
+import (
+	eventing "github.com/knative/eventing/pkg/client/clientset/versioned"
+	"github.com/knative/pkg/test"
+	serving "github.com/knative/serving/pkg/client/clientset/versioned"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+)
+
+// Clients holds instances of interfaces for making requests to Knative.
+type Clients struct {
+	Kube     *test.KubeClient
+	Serving  *serving.Clientset
+	Eventing *eventing.Clientset
+	Dynamic  dynamic.Interface
+}
+
+// NewClients instantiates and returns several clientsets required for making request to the
+// cluster specified by the combination of clusterName and configPath. Clients can
+// make requests within namespace.
+func NewClients(configPath string, clusterName string, namespace string) (*Clients, error) {
+	clients := &Clients{}
+	cfg, err := buildClientConfig(configPath, clusterName)
+	if err != nil {
+		return nil, err
+	}
+	clients.Kube, err = test.NewKubeClient(configPath, clusterName)
+	if err != nil {
+		return nil, err
+	}
+
+	clients.Serving, err = serving.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	clients.Eventing, err = eventing.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	clients.Dynamic, err = dynamic.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return clients, nil
+}
+
+func buildClientConfig(kubeConfigPath string, clusterName string) (*rest.Config, error) {
+	overrides := clientcmd.ConfigOverrides{}
+	// Override the cluster name if provided.
+	if clusterName != "" {
+		overrides.Context.Cluster = clusterName
+	}
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeConfigPath},
+		&overrides).ClientConfig()
+}

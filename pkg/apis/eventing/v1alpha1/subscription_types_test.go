@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -35,8 +34,8 @@ var subscriptionConditionReferencesResolved = duckv1alpha1.Condition{
 	Status: corev1.ConditionFalse,
 }
 
-var subscriptionConditionFromReady = duckv1alpha1.Condition{
-	Type:   SubscriptionConditionFromReady,
+var subscriptionConditionChannelReady = duckv1alpha1.Condition{
+	Type:   SubscriptionConditionChannelReady,
 	Status: corev1.ConditionTrue,
 }
 
@@ -70,11 +69,11 @@ func TestSubscriptionGetCondition(t *testing.T) {
 		ss: &SubscriptionStatus{
 			Conditions: []duckv1alpha1.Condition{
 				subscriptionConditionReady,
-				subscriptionConditionFromReady,
+				subscriptionConditionChannelReady,
 			},
 		},
-		condQuery: SubscriptionConditionFromReady,
-		want:      &subscriptionConditionFromReady,
+		condQuery: SubscriptionConditionChannelReady,
+		want:      &subscriptionConditionChannelReady,
 	}, {
 		name: "unknown condition",
 		ss: &SubscriptionStatus{
@@ -107,7 +106,7 @@ func TestSubscriptionInitializeConditions(t *testing.T) {
 		ss:   &SubscriptionStatus{},
 		want: &SubscriptionStatus{
 			Conditions: []duckv1alpha1.Condition{{
-				Type:   SubscriptionConditionFromReady,
+				Type:   SubscriptionConditionChannelReady,
 				Status: corev1.ConditionUnknown,
 			}, {
 				Type:   SubscriptionConditionReady,
@@ -121,13 +120,13 @@ func TestSubscriptionInitializeConditions(t *testing.T) {
 		name: "one false",
 		ss: &SubscriptionStatus{
 			Conditions: []duckv1alpha1.Condition{{
-				Type:   SubscriptionConditionFromReady,
+				Type:   SubscriptionConditionChannelReady,
 				Status: corev1.ConditionFalse,
 			}},
 		},
 		want: &SubscriptionStatus{
 			Conditions: []duckv1alpha1.Condition{{
-				Type:   SubscriptionConditionFromReady,
+				Type:   SubscriptionConditionChannelReady,
 				Status: corev1.ConditionFalse,
 			}, {
 				Type:   SubscriptionConditionReady,
@@ -147,7 +146,7 @@ func TestSubscriptionInitializeConditions(t *testing.T) {
 		},
 		want: &SubscriptionStatus{
 			Conditions: []duckv1alpha1.Condition{{
-				Type:   SubscriptionConditionFromReady,
+				Type:   SubscriptionConditionChannelReady,
 				Status: corev1.ConditionUnknown,
 			}, {
 				Type:   SubscriptionConditionReady,
@@ -162,8 +161,7 @@ func TestSubscriptionInitializeConditions(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			test.ss.InitializeConditions()
-			ignore := cmpopts.IgnoreFields(duckv1alpha1.Condition{}, "LastTransitionTime")
-			if diff := cmp.Diff(test.want, test.ss, ignore); diff != "" {
+			if diff := cmp.Diff(test.want, test.ss, ignoreAllButTypeAndStatus); diff != "" {
 				t.Errorf("unexpected conditions (-want, +got) = %v", diff)
 			}
 		})
@@ -172,30 +170,30 @@ func TestSubscriptionInitializeConditions(t *testing.T) {
 
 func TestSubscriptionIsReady(t *testing.T) {
 	tests := []struct {
-		name          string
-		markResolved  bool
-		markFromReady bool
-		wantReady     bool
+		name             string
+		markResolved     bool
+		markChannelReady bool
+		wantReady        bool
 	}{{
-		name:          "all happy",
-		markResolved:  true,
-		markFromReady: true,
-		wantReady:     true,
+		name:             "all happy",
+		markResolved:     true,
+		markChannelReady: true,
+		wantReady:        true,
 	}, {
-		name:          "one sad",
-		markResolved:  false,
-		markFromReady: true,
-		wantReady:     false,
+		name:             "one sad",
+		markResolved:     false,
+		markChannelReady: true,
+		wantReady:        false,
 	}, {
-		name:          "other sad",
-		markResolved:  true,
-		markFromReady: false,
-		wantReady:     false,
+		name:             "other sad",
+		markResolved:     true,
+		markChannelReady: false,
+		wantReady:        false,
 	}, {
-		name:          "both sad",
-		markResolved:  false,
-		markFromReady: false,
-		wantReady:     false,
+		name:             "both sad",
+		markResolved:     false,
+		markChannelReady: false,
+		wantReady:        false,
 	}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -203,25 +201,13 @@ func TestSubscriptionIsReady(t *testing.T) {
 			if test.markResolved {
 				ss.MarkReferencesResolved()
 			}
-			if test.markFromReady {
-				ss.MarkFromReady()
+			if test.markChannelReady {
+				ss.MarkChannelReady()
 			}
 			got := ss.IsReady()
 			if test.wantReady != got {
 				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
 			}
 		})
-	}
-}
-
-func TestSubscriptionSetConditions(t *testing.T) {
-	c := &Subscription{
-		Status: SubscriptionStatus{},
-	}
-	want := duckv1alpha1.Conditions{subscriptionConditionReady}
-	c.Status.SetConditions(want)
-	got := c.Status.GetConditions()
-	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("unexpected conditions (-want, +got) = %v", diff)
 	}
 }

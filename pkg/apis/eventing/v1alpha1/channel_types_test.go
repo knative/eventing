@@ -20,9 +20,9 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 var condReady = duckv1alpha1.Condition{
@@ -34,6 +34,10 @@ var condUnprovisioned = duckv1alpha1.Condition{
 	Type:   ChannelConditionProvisioned,
 	Status: corev1.ConditionFalse,
 }
+
+var ignoreAllButTypeAndStatus = cmpopts.IgnoreFields(
+	duckv1alpha1.Condition{},
+	"LastTransitionTime", "Message", "Reason", "Severity")
 
 func TestChannelGetCondition(t *testing.T) {
 	tests := []struct {
@@ -82,39 +86,167 @@ func TestChannelGetCondition(t *testing.T) {
 	}
 }
 
-func TestChannelSetConditions(t *testing.T) {
-	c := &Channel{
-		Status: ChannelStatus{},
-	}
-	want := duckv1alpha1.Conditions{condReady}
-	c.Status.SetConditions(want)
-	got := c.Status.GetConditions()
-	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("unexpected conditions (-want, +got) = %v", diff)
+func TestChannelInitializeConditions(t *testing.T) {
+	tests := []struct {
+		name string
+		cs   *ChannelStatus
+		want *ChannelStatus
+	}{{
+		name: "empty",
+		cs:   &ChannelStatus{},
+		want: &ChannelStatus{
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   ChannelConditionAddressable,
+				Status: corev1.ConditionUnknown,
+			}, {
+				Type:   ChannelConditionProvisioned,
+				Status: corev1.ConditionUnknown,
+			}, {
+				Type:   ChannelConditionProvisionerInstalled,
+				Status: corev1.ConditionTrue,
+			}, {
+				Type:   ChannelConditionReady,
+				Status: corev1.ConditionUnknown,
+			}},
+		},
+	}, {
+		name: "one false",
+		cs: &ChannelStatus{
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   ChannelConditionProvisioned,
+				Status: corev1.ConditionFalse,
+			}},
+		},
+		want: &ChannelStatus{
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   ChannelConditionAddressable,
+				Status: corev1.ConditionUnknown,
+			}, {
+				Type:   ChannelConditionProvisioned,
+				Status: corev1.ConditionFalse,
+			}, {
+				Type:   ChannelConditionProvisionerInstalled,
+				Status: corev1.ConditionTrue,
+			}, {
+				Type:   ChannelConditionReady,
+				Status: corev1.ConditionUnknown,
+			}},
+		},
+	}, {
+		name: "one true",
+		cs: &ChannelStatus{
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   ChannelConditionProvisioned,
+				Status: corev1.ConditionTrue,
+			}},
+		},
+		want: &ChannelStatus{
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   ChannelConditionAddressable,
+				Status: corev1.ConditionUnknown,
+			}, {
+				Type:   ChannelConditionProvisioned,
+				Status: corev1.ConditionTrue,
+			}, {
+				Type:   ChannelConditionProvisionerInstalled,
+				Status: corev1.ConditionTrue,
+			}, {
+				Type:   ChannelConditionReady,
+				Status: corev1.ConditionUnknown,
+			}},
+		},
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			test.cs.InitializeConditions()
+			if diff := cmp.Diff(test.want, test.cs, ignoreAllButTypeAndStatus); diff != "" {
+				t.Errorf("unexpected conditions (-want, +got) = %v", diff)
+			}
+		})
 	}
 }
 
-func TestChannelGetSpecJSON(t *testing.T) {
-	c := &Channel{
-		Spec: ChannelSpec{
-			Provisioner: &ProvisionerReference{
-				Ref: &corev1.ObjectReference{
-					Name: "foo",
+func TestChannelIsReady(t *testing.T) {
+	tests := []struct {
+		name            string
+		markProvisioned bool
+		setAddress      bool
+		wantReady       bool
+	}{{
+		name:            "all happy",
+		markProvisioned: true,
+		setAddress:      true,
+		wantReady:       true,
+	}, {
+		name:            "one sad",
+		markProvisioned: false,
+		setAddress:      true,
+		wantReady:       false,
+	}}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cs := &ChannelStatus{}
+			cs.InitializeConditions()
+			if test.markProvisioned {
+				cs.MarkProvisioned()
+			} else {
+				cs.MarkNotProvisioned("NotProvisioned", "testing")
+			}
+			if test.setAddress {
+				cs.SetAddress("foo.bar")
+			}
+			got := cs.IsReady()
+			if test.wantReady != got {
+				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
+			}
+		})
+	}
+}
+
+func TestChannelStatus_SetAddressable(t *testing.T) {
+	testCases := map[string]struct {
+		domainInternal string
+		want           *ChannelStatus
+	}{
+		"empty string": {
+			want: &ChannelStatus{
+				Conditions: []duckv1alpha1.Condition{
+					{
+						Type:   ChannelConditionAddressable,
+						Status: corev1.ConditionFalse,
+					},
+					// Note that Ready is here because when the condition is marked False, duck
+					// automatically sets Ready to false.
+					{
+						Type:   ChannelConditionReady,
+						Status: corev1.ConditionFalse,
+					},
 				},
 			},
-			Arguments: &runtime.RawExtension{
-				Raw: []byte(`{"foo":"baz"}`),
+		},
+		"has domain": {
+			domainInternal: "test-domain",
+			want: &ChannelStatus{
+				Address: duckv1alpha1.Addressable{
+					Hostname: "test-domain",
+				},
+				Conditions: []duckv1alpha1.Condition{
+					{
+						Type:   ChannelConditionAddressable,
+						Status: corev1.ConditionTrue,
+					},
+				},
 			},
 		},
 	}
-
-	want := `{"provisioner":{"ref":{"name":"foo"}},"arguments":{"foo":"baz"}}`
-	got, err := c.GetSpecJSON()
-	if err != nil {
-		t.Fatalf("unexpected spec JSON error: %v", err)
-	}
-
-	if diff := cmp.Diff(want, string(got)); diff != "" {
-		t.Errorf("unexpected spec JSON (-want, +got) = %v", diff)
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			cs := &ChannelStatus{}
+			cs.SetAddress(tc.domainInternal)
+			if diff := cmp.Diff(tc.want, cs, ignoreAllButTypeAndStatus); diff != "" {
+				t.Errorf("unexpected conditions (-want, +got) = %v", diff)
+			}
+		})
 	}
 }

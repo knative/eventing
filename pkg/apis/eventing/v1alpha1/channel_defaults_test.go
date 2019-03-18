@@ -16,10 +16,99 @@ limitations under the License.
 
 package v1alpha1
 
-import "testing"
+import (
+	"testing"
 
-// No-op test because method does nothing.
+	"k8s.io/apimachinery/pkg/runtime"
+
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/google/go-cmp/cmp"
+)
+
+var (
+	defaultChannelProvisioner = &corev1.ObjectReference{
+		APIVersion: SchemeGroupVersion.String(),
+		Kind:       "ClusterChannelProvisioner",
+		Name:       "default-channel-provisioner",
+	}
+	defaultChannelArgs = &runtime.RawExtension{
+		Object: &corev1.ObjectReference{
+			Name: "default-args",
+		},
+	}
+)
+
 func TestChannelSetDefaults(t *testing.T) {
-	c := Channel{}
-	c.SetDefaults()
+	testCases := map[string]struct {
+		nilChannelDefaulter bool
+		prov                *corev1.ObjectReference
+		args                *runtime.RawExtension
+		initial             Channel
+		expected            Channel
+	}{
+		"nil ChannelDefaulter": {
+			nilChannelDefaulter: true,
+			expected:            Channel{},
+		},
+		"unset ChannelDefaulter": {
+			expected: Channel{},
+		},
+		"set ChannelDefaulter": {
+			prov: defaultChannelProvisioner,
+			args: defaultChannelArgs,
+			expected: Channel{
+				Spec: ChannelSpec{
+					Provisioner: defaultChannelProvisioner,
+					Arguments:   defaultChannelArgs,
+				},
+			},
+		},
+		"provisioner already specified": {
+			prov: defaultChannelProvisioner,
+			args: defaultChannelArgs,
+			initial: Channel{
+				Spec: ChannelSpec{
+					Provisioner: &corev1.ObjectReference{
+						APIVersion: SchemeGroupVersion.String(),
+						Kind:       "ClusterChannelProvisioner",
+						Name:       "already-specified",
+					},
+				},
+			},
+			expected: Channel{
+				Spec: ChannelSpec{
+					Provisioner: &corev1.ObjectReference{
+						APIVersion: SchemeGroupVersion.String(),
+						Kind:       "ClusterChannelProvisioner",
+						Name:       "already-specified",
+					},
+				},
+			},
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			if !tc.nilChannelDefaulter {
+				ChannelDefaulterSingleton = &channelDefaulter{
+					prov: tc.prov,
+					args: tc.args,
+				}
+				defer func() { ChannelDefaulterSingleton = nil }()
+			}
+			tc.initial.SetDefaults()
+			if diff := cmp.Diff(tc.expected, tc.initial); diff != "" {
+				t.Fatalf("Unexpected defaults (-want, +got): %s", diff)
+			}
+		})
+	}
+}
+
+type channelDefaulter struct {
+	prov *corev1.ObjectReference
+	args *runtime.RawExtension
+}
+
+func (cd *channelDefaulter) GetDefault(_ *Channel) (*corev1.ObjectReference, *runtime.RawExtension) {
+	return cd.prov, cd.args
 }

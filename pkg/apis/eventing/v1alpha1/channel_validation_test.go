@@ -20,23 +20,21 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/apis"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-var targetURI = "https://example.com"
+var dnsName = "example.com"
 
 func TestChannelValidation(t *testing.T) {
 	tests := []CRDTest{{
 		name: "valid",
 		cr: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 			},
 		},
@@ -51,15 +49,13 @@ func TestChannelValidation(t *testing.T) {
 		name: "subscribers array",
 		cr: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
-				Channelable: &duckv1alpha1.Channelable{
-					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{{
-						CallableDomain: "callableendpoint",
-						SinkableDomain: "resultendpoint",
+				Subscribable: &eventingduck.Subscribable{
+					Subscribers: []eventingduck.ChannelSubscriberSpec{{
+						SubscriberURI: "subscriberendpoint",
+						ReplyURI:      "resultendpoint",
 					}},
 				}},
 		},
@@ -68,20 +64,18 @@ func TestChannelValidation(t *testing.T) {
 		name: "empty subscriber at index 1",
 		cr: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
-				Channelable: &duckv1alpha1.Channelable{
-					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{{
-						CallableDomain: "callableendpoint",
-						SinkableDomain: "callableendpoint",
+				Subscribable: &eventingduck.Subscribable{
+					Subscribers: []eventingduck.ChannelSubscriberSpec{{
+						SubscriberURI: "subscriberendpoint",
+						ReplyURI:      "replyendpoint",
 					}, {}},
 				}},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("spec.channelable.subscriber[1].callableDomain", "spec.channelable.subscriber[1].sinkableDomain")
+			fe := apis.ErrMissingField("spec.subscribable.subscriber[1].replyURI", "spec.subscribable.subscriber[1].subscriberURI")
 			fe.Details = "expected at least one of, got none"
 			return fe
 		}(),
@@ -89,22 +83,20 @@ func TestChannelValidation(t *testing.T) {
 		name: "2 empty subscribers",
 		cr: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
-				Channelable: &duckv1alpha1.Channelable{
-					Subscribers: []duckv1alpha1.ChannelSubscriberSpec{{}, {}},
+				Subscribable: &eventingduck.Subscribable{
+					Subscribers: []eventingduck.ChannelSubscriberSpec{{}, {}},
 				},
 			},
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
-			fe := apis.ErrMissingField("spec.channelable.subscriber[0].callableDomain", "spec.channelable.subscriber[0].sinkableDomain")
+			fe := apis.ErrMissingField("spec.subscribable.subscriber[0].replyURI", "spec.subscribable.subscriber[0].subscriberURI")
 			fe.Details = "expected at least one of, got none"
 			errs = errs.Also(fe)
-			fe = apis.ErrMissingField("spec.channelable.subscriber[1].callableDomain", "spec.channelable.subscriber[1].sinkableDomain")
+			fe = apis.ErrMissingField("spec.subscribable.subscriber[1].replyURI", "spec.subscribable.subscriber[1].subscriberURI")
 			fe.Details = "expected at least one of, got none"
 			errs = errs.Also(fe)
 			return errs
@@ -124,10 +116,8 @@ func TestChannelImmutableFields(t *testing.T) {
 		name: "good (new)",
 		new: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 			},
 		},
@@ -137,19 +127,15 @@ func TestChannelImmutableFields(t *testing.T) {
 		name: "good (no change)",
 		new: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 			},
 		},
 		old: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 			},
 		},
@@ -158,10 +144,8 @@ func TestChannelImmutableFields(t *testing.T) {
 		name: "good (arguments change)",
 		new: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 				Arguments: &runtime.RawExtension{
 					Raw: []byte("\"foo\":\"bar\""),
@@ -170,10 +154,8 @@ func TestChannelImmutableFields(t *testing.T) {
 		},
 		old: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 				Arguments: &runtime.RawExtension{
 					Raw: []byte(`{"foo":"baz"}`),
@@ -185,10 +167,8 @@ func TestChannelImmutableFields(t *testing.T) {
 		name: "bad (not channel)",
 		new: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 			},
 		},
@@ -200,19 +180,15 @@ func TestChannelImmutableFields(t *testing.T) {
 		name: "bad (provisioner changes)",
 		new: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "foo",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "foo",
 				},
 			},
 		},
 		old: &Channel{
 			Spec: ChannelSpec{
-				Provisioner: &ProvisionerReference{
-					Ref: &corev1.ObjectReference{
-						Name: "bar",
-					},
+				Provisioner: &corev1.ObjectReference{
+					Name: "bar",
 				},
 			},
 		},

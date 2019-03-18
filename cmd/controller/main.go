@@ -21,53 +21,58 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
-	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/channel"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/subscription"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	"github.com/knative/eventing/pkg/controller"
-	"github.com/knative/eventing/pkg/controller/bus"
-	"github.com/knative/eventing/pkg/controller/channel"
-	"github.com/knative/eventing/pkg/controller/clusterbus"
-	sharedclientset "github.com/knative/pkg/client/clientset/versioned"
-	sharedinformers "github.com/knative/pkg/client/informers/externalversions"
-	"github.com/knative/pkg/signals"
-
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logconfig"
-	"github.com/knative/eventing/pkg/system"
+	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/logging/logkey"
+	"github.com/knative/pkg/signals"
+	"github.com/knative/pkg/system"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
+	"k8s.io/client-go/kubernetes"
+	controllerruntime "sigs.k8s.io/controller-runtime/pkg/client/config"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 const (
-	threadsPerController = 2
-	metricsScrapeAddr    = ":9090"
-	metricsScrapePath    = "/metrics"
+	metricsScrapeAddr = ":9090"
+	metricsScrapePath = "/metrics"
 )
 
 var (
-	masterURL  string
-	kubeconfig string
+	hardcodedLoggingConfig bool
 )
+
+// SchemeFunc adds types to a Scheme.
+type SchemeFunc func(*runtime.Scheme) error
+
+// ProvideFunc adds a controller to a Manager.
+type ProvideFunc func(manager.Manager, *zap.Logger) (controller.Controller, error)
 
 func main() {
 	flag.Parse()
+	logf.SetLogger(logf.ZapLogger(false))
 
 	// Read the logging config and setup a logger.
-	cm, err := configmap.Load("/etc/config-logging")
-	if err != nil {
-		log.Fatalf("Error loading logging configuration: %v", err)
-	}
+	cm := getLoggingConfigOrDie()
+
 	config, err := logging.NewConfigFromMap(cm, logconfig.Controller)
 	if err != nil {
 		log.Fatalf("Error parsing logging configuration: %v", err)
@@ -76,12 +81,12 @@ func main() {
 	defer logger.Sync()
 	logger = logger.With(zap.String(logkey.ControllerType, logconfig.Controller))
 
-	logger.Info("Starting the Controller")
+	logger.Info("Starting the controller")
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
+	cfg, err := controllerruntime.GetConfig()
 	if err != nil {
 		logger.Fatalf("Error building kubeconfig: %v", err)
 	}
@@ -91,71 +96,55 @@ func main() {
 		logger.Fatalf("Error building kubernetes clientset: %v", err)
 	}
 
-	client, err := clientset.NewForConfig(cfg)
-	if err != nil {
-		logger.Fatalf("Error building clientset: %v", err)
-	}
-
-	sharedClient, err := sharedclientset.NewForConfig(cfg)
-	if err != nil {
-		logger.Fatalf("Error building shared clientset: %v", err)
-	}
-
-	// TODO: Rip this out from all the controllers since we can get it
-	// from provider.
-	// Build a rest.Config from configuration injected into the Pod by
-	// Kubernetes. Clients will use the Pod's ServiceAccount principal.
-	restConfig, err := rest.InClusterConfig()
-	if err != nil {
-		logger.Fatalf("Error building rest config: %v", err)
-	}
-
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
-	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
-	sharedInformerFactory := sharedinformers.NewSharedInformerFactory(sharedClient, time.Second*30)
-
 	// Watch the logging config map and dynamically update logging levels.
-	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace)
-	configMapWatcher.Watch(logconfig.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller, logconfig.Controller))
+	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
+	configMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller, logconfig.Controller))
 	if err = configMapWatcher.Start(stopCh); err != nil {
-		logger.Fatalf("failed to start controller config map watcher: %v", err)
+		logger.Fatalf("Failed to start controller config map watcher: %v", err)
 	}
 
-	// Add new controllers here, except controllers that use controller-runtime.
-	// Those should be added to controller-runtime-main.go.
-	ctors := []controller.Constructor{
-		bus.NewController,
-		clusterbus.NewController,
-		channel.NewController,
+	// Setup a Manager
+	mgr, err := manager.New(cfg, manager.Options{})
+	if err != nil {
+		logger.Fatalf("Failed to create manager: %v", err)
 	}
 
-	// TODO(n3wscott): Send the logger to the controllers.
-	// Build all of our controllers, with the clients constructed above.
-	controllers := make([]controller.Interface, 0, len(ctors))
-	for _, ctor := range ctors {
-		controllers = append(controllers,
-			ctor(kubeClient, client, sharedClient, restConfig, kubeInformerFactory, informerFactory, sharedInformerFactory))
+	// Add custom types to this array to get them into the manager's scheme.
+	schemeFuncs := []SchemeFunc{
+		istiov1alpha3.AddToScheme,
+		eventingv1alpha1.AddToScheme,
+	}
+	for _, schemeFunc := range schemeFuncs {
+		if err = schemeFunc(mgr.GetScheme()); err != nil {
+			logger.Fatalf("Error adding type to manager's scheme: %v", err)
+		}
 	}
 
-	go kubeInformerFactory.Start(stopCh)
-	go informerFactory.Start(stopCh)
-	go sharedInformerFactory.Start(stopCh)
-
-	// Start all of the controllers.
-	for _, ctrlr := range controllers {
-		go func(ctrlr controller.Interface) {
-			// We don't expect this to return until stop is called,
-			// but if it does, propagate it back.
-			if err := ctrlr.Run(threadsPerController, stopCh); err != nil {
-				logger.Fatalf("Error running controller: %v", err)
-			}
-		}(ctrlr)
+	// Add each controller's ProvideController func to this list to have the
+	// manager run it.
+	providers := []ProvideFunc{
+		subscription.ProvideController,
+		channel.ProvideController,
+		broker.ProvideController(
+			broker.ReconcilerArgs{
+				IngressImage:              getRequiredEnv("BROKER_INGRESS_IMAGE"),
+				IngressServiceAccountName: getRequiredEnv("BROKER_INGRESS_SERVICE_ACCOUNT"),
+				FilterImage:               getRequiredEnv("BROKER_FILTER_IMAGE"),
+				FilterServiceAccountName:  getRequiredEnv("BROKER_FILTER_SERVICE_ACCOUNT"),
+			}),
+		trigger.ProvideController,
+		namespace.ProvideController,
+	}
+	for _, provider := range providers {
+		if _, err = provider(mgr, logger.Desugar()); err != nil {
+			logger.Fatalf("Error adding controller to manager: %v", err)
+		}
 	}
 
-	// Start the controller-runtime controllers.
+	// Start the Manager
 	go func() {
-		if err := controllerRuntimeStart(); err != nil {
-			logger.Fatalf("Error running controller-runtime controllers: %v", err)
+		if localErr := mgr.Start(stopCh); localErr != nil {
+			logger.Fatalf("Error starting manager: %v", localErr)
 		}
 	}()
 
@@ -163,9 +152,9 @@ func main() {
 	srv := &http.Server{Addr: metricsScrapeAddr}
 	http.Handle(metricsScrapePath, promhttp.Handler())
 	go func() {
-		logger.Info("Starting metrics listener at %s", metricsScrapeAddr)
-		if err := srv.ListenAndServe(); err != nil {
-			logger.Infof("Httpserver: ListenAndServe() finished with error: %s", err)
+		logger.Infof("Starting metrics listener at %s", metricsScrapeAddr)
+		if localErr := srv.ListenAndServe(); localErr != nil {
+			logger.Infof("Httpserver: ListenAndServe() finished with error: %s", localErr)
 		}
 	}()
 
@@ -178,7 +167,47 @@ func main() {
 }
 
 func init() {
-	// These are commented because they're also defined by controller-runtime.
-	// flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-	// flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	flag.BoolVar(&hardcodedLoggingConfig, "hardCodedLoggingConfig", false, "If true, use the hard coded logging config. It is intended to be used only when debugging outside a Kubernetes cluster.")
+}
+
+func getLoggingConfigOrDie() map[string]string {
+	if hardcodedLoggingConfig {
+		return map[string]string{
+			"loglevel.controller": "info",
+			"zap-logger-config": `
+				{
+					"level": "info",
+					"development": false,
+					"outputPaths": ["stdout"],
+					"errorOutputPaths": ["stderr"],
+					"encoding": "json",
+					"encoderConfig": {
+					"timeKey": "ts",
+					"levelKey": "level",
+					"nameKey": "logger",
+					"callerKey": "caller",
+					"messageKey": "msg",
+					"stacktraceKey": "stacktrace",
+					"lineEnding": "",
+					"levelEncoder": "",
+					"timeEncoder": "iso8601",
+					"durationEncoder": "",
+					"callerEncoder": ""
+				}`,
+		}
+	} else {
+		cm, err := configmap.Load("/etc/config-logging")
+		if err != nil {
+			log.Fatalf("Error loading logging configuration: %v", err)
+		}
+		return cm
+	}
+}
+
+func getRequiredEnv(envKey string) string {
+	val, defined := os.LookupEnv(envKey)
+	if !defined {
+		log.Fatalf("required environment variable not defined '%s'", envKey)
+	}
+	return val
 }

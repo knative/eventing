@@ -26,13 +26,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/knative/eventing/pkg/event"
+	"github.com/knative/pkg/cloudevents"
 
 	"github.com/google/uuid"
 )
 
 var (
-	context event.EventContext
+	context cloudevents.EventContext
 	webhook string
 	data    string
 )
@@ -61,7 +61,7 @@ func main() {
 	}
 
 	fillEventContext(&context)
-	req, err := event.NewRequest(webhook, untyped, context)
+	req, err := cloudevents.NewRequest(webhook, untyped, context)
 	if err != nil {
 		fmt.Printf("Failed to create request: %s", err)
 		os.Exit(1)
@@ -79,7 +79,7 @@ func main() {
 	}
 }
 
-func fillEventContext(ctx *event.EventContext) {
+func fillEventContext(ctx *cloudevents.EventContext) {
 	ctx.CloudEventsVersion = "0.1"
 	ctx.EventTime = time.Now().UTC()
 

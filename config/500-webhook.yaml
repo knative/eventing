@@ -12,20 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: webhook
   namespace: knative-eventing
 spec:
   replicas: 1
+  selector:
+    matchLabels: &labels
+      app: webhook
+      role: webhook
   template:
     metadata:
       annotations:
         sidecar.istio.io/inject: "false"
-      labels:
-        app: webhook
-        role: webhook
+      labels: *labels
     spec:
       serviceAccountName: eventing-controller
       containers:
@@ -37,6 +39,13 @@ spec:
         volumeMounts:
         - name: config-logging
           mountPath: /etc/config-logging
+        env:
+        - name: SYSTEM_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: CONFIG_LOGGING_NAME
+          value: config-logging
       volumes:
         - name: config-logging
           configMap:

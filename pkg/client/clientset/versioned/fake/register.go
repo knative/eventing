@@ -19,23 +19,19 @@ limitations under the License.
 package fake
 
 import (
-	channelsv1alpha1 "github.com/knative/eventing/pkg/apis/channels/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	feedsv1alpha1 "github.com/knative/eventing/pkg/apis/feeds/v1alpha1"
-	flowsv1alpha1 "github.com/knative/eventing/pkg/apis/flows/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
+	util_runtime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
 var scheme = runtime.NewScheme()
 var codecs = serializer.NewCodecFactory(scheme)
 var parameterCodec = runtime.NewParameterCodec(scheme)
-
-func init() {
-	v1.AddToGroupVersion(scheme, schema.GroupVersion{Version: "v1"})
-	AddToScheme(scheme)
+var localSchemeBuilder = runtime.SchemeBuilder{
+	eventingv1alpha1.AddToScheme,
 }
 
 // AddToScheme adds all types of this clientset into the given scheme. This allows composition
@@ -48,13 +44,13 @@ func init() {
 //   )
 //
 //   kclientset, _ := kubernetes.NewForConfig(c)
-//   aggregatorclientsetscheme.AddToScheme(clientsetscheme.Scheme)
+//   _ = aggregatorclientsetscheme.AddToScheme(clientsetscheme.Scheme)
 //
 // After this, RawExtensions in Kubernetes types will serialize kube-aggregator types
 // correctly.
-func AddToScheme(scheme *runtime.Scheme) {
-	channelsv1alpha1.AddToScheme(scheme)
-	eventingv1alpha1.AddToScheme(scheme)
-	feedsv1alpha1.AddToScheme(scheme)
-	flowsv1alpha1.AddToScheme(scheme)
+var AddToScheme = localSchemeBuilder.AddToScheme
+
+func init() {
+	v1.AddToGroupVersion(scheme, schema.GroupVersion{Version: "v1"})
+	util_runtime.Must(AddToScheme(scheme))
 }

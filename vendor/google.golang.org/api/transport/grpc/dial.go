@@ -1,4 +1,4 @@
-// Copyright 2015 Google Inc. All Rights Reserved.
+// Copyright 2015 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,9 +18,11 @@
 package grpc
 
 import (
+	"context"
 	"errors"
+	"log"
 
-	"golang.org/x/net/context"
+	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/api/internal"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
@@ -58,10 +60,15 @@ func dial(ctx context.Context, insecure bool, opts []option.ClientOption) (*grpc
 	if o.GRPCConn != nil {
 		return o.GRPCConn, nil
 	}
-	var grpcOpts []grpc.DialOption
+	grpcOpts := []grpc.DialOption{
+		grpc.WithWaitForHandshake(),
+	}
 	if insecure {
 		grpcOpts = []grpc.DialOption{grpc.WithInsecure()}
 	} else if !o.NoAuth {
+		if o.APIKey != "" {
+			log.Print("API keys are not supported for gRPC APIs. Remove the WithAPIKey option from your client-creating call.")
+		}
 		creds, err := internal.Creds(ctx, &o)
 		if err != nil {
 			return nil, err
@@ -84,4 +91,8 @@ func dial(ctx context.Context, insecure bool, opts []option.ClientOption) (*grpc
 		grpcOpts = append(grpcOpts, grpc.WithUserAgent(o.UserAgent))
 	}
 	return grpc.DialContext(ctx, o.Endpoint, grpcOpts...)
+}
+
+func addOCStatsHandler(opts []grpc.DialOption) []grpc.DialOption {
+	return append(opts, grpc.WithStatsHandler(&ocgrpc.ClientHandler{}))
 }

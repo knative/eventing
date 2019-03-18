@@ -1,4 +1,4 @@
-// Copyright 2015 Google Inc. All Rights Reserved.
+// Copyright 2015 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,14 +18,16 @@
 package http
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
-	"golang.org/x/net/context"
+	"go.opencensus.io/plugin/ochttp"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/googleapi/transport"
 	"google.golang.org/api/internal"
 	"google.golang.org/api/option"
+	"google.golang.org/api/transport/http/internal/propagation"
 )
 
 // NewClient returns an HTTP client for use communicating with a Google cloud
@@ -135,4 +137,11 @@ func defaultBaseTransport(ctx context.Context) http.RoundTripper {
 		return appengineUrlfetchHook(ctx)
 	}
 	return http.DefaultTransport
+}
+
+func addOCTransport(trans http.RoundTripper) http.RoundTripper {
+	return &ochttp.Transport{
+		Base:        trans,
+		Propagation: &propagation.HTTPFormat{},
+	}
 }

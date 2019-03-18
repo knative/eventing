@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"github.com/knative/pkg/apis"
-	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/webhook"
 	corev1 "k8s.io/api/core/v1"
@@ -47,52 +46,39 @@ var _ apis.Immutable = (*Subscription)(nil)
 var _ runtime.Object = (*Subscription)(nil)
 var _ webhook.GenericCRD = (*Subscription)(nil)
 
-// Check that ConfigurationStatus may have its conditions managed.
-var _ duckv1alpha1.ConditionsAccessor = (*SubscriptionStatus)(nil)
-
-// Check that Subscription implements the Conditions duck type.
-var _ = duck.VerifyType(&Subscription{}, &duckv1alpha1.Conditions{})
-
-// Check that the Subscription implements the Generation duck type.
-var emptyGen duckv1alpha1.Generation
-var _ = duck.VerifyType(&Subscription{}, &emptyGen)
-
-// And it's Subscribable
-var _ = duck.VerifyType(&Subscription{}, &duckv1alpha1.Subscribable{})
-
-// SubscriptionSpec specifies the Channel for incoming events, a Call target for
-// processing those events and where to put the result of the processing. Only
+// SubscriptionSpec specifies the Channel for incoming events, a Subscriber target
+// for processing those events and where to put the result of the processing. Only
 // From (where the events are coming from) is always required. You can optionally
 // only Process the events (results in no output events) by leaving out the Result.
 // You can also perform an identity transformation on the invoming events by leaving
-// out the Call and only specifying Result.
+// out the Subscriber and only specifying Result.
 //
 // The following are all valid specifications:
-// from --[call]--> result
+// channel --[subscriber]--> reply
 // Sink, no outgoing events:
-// from -- call
+// channel -- subscriber
 // no-op function (identity transformation):
-// from --> result
+// channel --> reply
 type SubscriptionSpec struct {
-	// TODO: Generation used to not work correctly with CRD. They were scrubbed
-	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
-	// So, we add Generation here. Once the above bug gets rolled out to production
-	// clusters, remove this and use ObjectMeta.Generation instead.
-	// +optional
-	Generation int64 `json:"generation,omitempty"`
-
-	// Reference to an object that will be used to create the subscription
-	// for receiving events. The object must have spec.subscriptions
-	// list which will then be modified accordingly.
+	// TODO By enabling the status subresource metadata.generation should increment
+	// thus making this property obsolete.
 	//
-	// This object must fulfill the Subscribable contract.
+	// We should be able to drop this property with a CRD conversion webhook
+	// in the future
+	//
+	// +optional
+	DeprecatedGeneration int64 `json:"generation,omitempty"`
+
+	// Reference to a channel that will be used to create the subscription
+	// for receiving events. The channel must have spec.subscriptions
+	// list which will then be modified accordingly.
 	//
 	// You can specify only the following fields of the ObjectReference:
 	//   - Kind
 	//   - APIVersion
 	//   - Name
-	// Currently Kind must be "Channel" and
-	// APIVersion must be "channels.knative.dev/v1alpha1"
+	// Kind must be "Channel" and APIVersion must be
+	// "eventing.knative.dev/v1alpha1"
 	//
 	// This field is immutable. We have no good answer on what happens to
 	// the events that are currently in the channel being consumed from
@@ -101,21 +87,21 @@ type SubscriptionSpec struct {
 	// channel, giving the user more control over what semantics should
 	// be used (drain the channel first, possibly have events dropped,
 	// etc.)
-	From corev1.ObjectReference `json:"from"`
+	Channel corev1.ObjectReference `json:"channel"`
 
-	// Call is reference to (optional) function for processing events.
-	// Events from the From channel will be delivered here and replies
-	// are sent to a channel as specified by the Result.
+	// Subscriber is reference to (optional) function for processing events.
+	// Events from the Channel will be delivered here and replies are
+	// sent to a channel as specified by the Reply.
 	// +optional
-	Call *Callable `json:"call,omitempty"`
+	Subscriber *SubscriberSpec `json:"subscriber,omitempty"`
 
-	// Result specifies (optionally) how to handle events returned from
-	// the Call target.
+	// Reply specifies (optionally) how to handle events returned from
+	// the Subscriber target.
 	// +optional
-	Result *ResultStrategy `json:"result,omitempty"`
+	Reply *ReplyStrategy `json:"reply,omitempty"`
 }
 
-// Callable specifies the reference to an object that's expected to
+// SubscriberSpec specifies the reference to an object that's expected to
 // provide the resolved target of the action.
 // Currently we inspect the objects Status and see if there's a predefined
 // Status field that we will then use to dispatch events to be processed by
@@ -130,17 +116,17 @@ type SubscriptionSpec struct {
 //
 // This ensures that we can support external targets and for ease of use
 // we also allow for an URI to be specified.
-// There of course is also a requirement for the resolved Callable to
+// There of course is also a requirement for the resolved SubscriberSpec to
 // behave properly at the data plane level.
 // TODO: Add a pointer to a real spec for this.
 // For now, this means: Receive an event payload, and respond with one of:
 // success and an optional response event, or failure.
-// Delivery failures may be retried by the from Channel
-type Callable struct {
+// Delivery failures may be retried by the channel
+type SubscriberSpec struct {
 	// Only one of these can be specified
 
 	// Reference to an object that will be used to find the target
-	// endpoint.
+	// endpoint, which should implement the Addressable duck type.
 	// For example, this could be a reference to a Route resource
 	// or a Knative Service resource.
 	// TODO: Specify the required fields the target object must
@@ -150,33 +136,33 @@ type Callable struct {
 	//   - APIVersion
 	//   - Name
 	// +optional
-	Target *corev1.ObjectReference `json:"target,omitempty"`
+	Ref *corev1.ObjectReference `json:"ref,omitempty"`
 
 	// Reference to a 'known' endpoint where no resolving is done.
 	// http://k8s-service for example
 	// http://myexternalhandler.example.com/foo/bar
 	// +optional
-	TargetURI *string `json:"targetURI,omitempty"`
+	DNSName *string `json:"dnsName,omitempty"`
 }
 
-// ResultStrategy specifies the handling of the Callable's returned result. If
-// no Callable is specified, the identity function is assumed.
-type ResultStrategy struct {
-	// This object must fulfill the Sinkable contract.
+// ReplyStrategy specifies the handling of the SubscriberSpec's returned replies.
+// If no SubscriberSpec is specified, the identity function is assumed.
+type ReplyStrategy struct {
+	// This object must be a Channel.
 	//
-	// TODO: Specify the required fields the target object must
-	// have in the status.
 	// You can specify only the following fields of the ObjectReference:
 	//   - Kind
 	//   - APIVersion
 	//   - Name
+	// Kind must be "Channel" and APIVersion must be
+	// "eventing.knative.dev/v1alpha1"
 	// +optional
-	Target *corev1.ObjectReference `json:"target,omitempty"`
+	Channel *corev1.ObjectReference `json:"channel,omitempty"`
 }
 
 // subCondSet is a condition set with Ready as the happy condition and
-// ReferencesResolved and FromReady as the dependent conditions.
-var subCondSet = duckv1alpha1.NewLivingConditionSet(SubscriptionConditionReferencesResolved, SubscriptionConditionFromReady)
+// ReferencesResolved and ChannelReady as the dependent conditions.
+var subCondSet = duckv1alpha1.NewLivingConditionSet(SubscriptionConditionReferencesResolved, SubscriptionConditionChannelReady)
 
 // SubscriptionStatus (computed) for a subscription
 type SubscriptionStatus struct {
@@ -185,9 +171,18 @@ type SubscriptionStatus struct {
 	// +patchStrategy=merge
 	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
-	// Subscription might be Subscribable. This depends if there's a Result channel
-	// In that case, this points to that resource.
-	Subscribable duckv1alpha1.Subscribable `json:"subscribable,omitempty"`
+	// PhysicalSubscription is the fully resolved values that this Subscription represents.
+	PhysicalSubscription SubscriptionStatusPhysicalSubscription `json:"physicalSubscription,omitempty"`
+}
+
+// SubscriptionStatusPhysicalSubscription represents the fully resolved values for this
+// Subscription.
+type SubscriptionStatusPhysicalSubscription struct {
+	// SubscriberURI is the fully resolved URI for spec.subscriber.
+	SubscriberURI string `json:"subscriberURI,omitempty"`
+
+	// ReplyURI is the fully resolved URI for the spec.reply.
+	ReplyURI string `json:"replyURI,omitempty"`
 }
 
 const (
@@ -198,20 +193,14 @@ const (
 	// resolved.
 	SubscriptionConditionReferencesResolved duckv1alpha1.ConditionType = "Resolved"
 
-	// SubscriptionConditionFromReady has status True when controller has successfully added a subscription to From
-	// resource.
-	SubscriptionConditionFromReady duckv1alpha1.ConditionType = "FromReady"
+	// SubscriptionConditionChannelReady has status True when controller has successfully added a
+	// subscription to the spec.channel resource.
+	SubscriptionConditionChannelReady duckv1alpha1.ConditionType = "ChannelReady"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
 func (ss *SubscriptionStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
 	return subCondSet.Manage(ss).GetCondition(t)
-}
-
-// GetConditions returns the Conditions array. This enables generic handling of
-// conditions by implementing the duckv1alpha1.Conditions interface.
-func (ss *SubscriptionStatus) GetConditions() duckv1alpha1.Conditions {
-	return ss.Conditions
 }
 
 // IsReady returns true if the resource is ready overall.
@@ -229,15 +218,9 @@ func (ss *SubscriptionStatus) MarkReferencesResolved() {
 	subCondSet.Manage(ss).MarkTrue(SubscriptionConditionReferencesResolved)
 }
 
-// MarkFromReady sets the FromReady condition to True state.
-func (ss *SubscriptionStatus) MarkFromReady() {
-	subCondSet.Manage(ss).MarkTrue(SubscriptionConditionFromReady)
-}
-
-// SetConditions sets the Conditions array. This enables generic handling of
-// conditions by implementing the duckv1alpha1.Conditions interface.
-func (ss *SubscriptionStatus) SetConditions(conditions duckv1alpha1.Conditions) {
-	ss.Conditions = conditions
+// MarkChannelReady sets the ChannelReady condition to True state.
+func (ss *SubscriptionStatus) MarkChannelReady() {
+	subCondSet.Manage(ss).MarkTrue(SubscriptionConditionChannelReady)
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -33,8 +33,7 @@ import (
 )
 
 const (
-	// TODO(vaikas): Add / change other parts of the cert we might care about
-	organization = "kube"
+	organization = "knative.dev"
 )
 
 // Create the common parts of the cert. These don't change between
@@ -47,7 +46,12 @@ func createCertTemplate(name, namespace string) (*x509.Certificate, error) {
 	}
 
 	serviceName := name + "." + namespace
-	serviceNames := []string{serviceName, serviceName + ".svc", serviceName + ".svc.cluster.local"}
+	serviceNames := []string{
+		name,
+		serviceName,
+		serviceName + ".svc",
+		serviceName + ".svc.cluster.local",
+	}
 
 	tmpl := x509.Certificate{
 		SerialNumber:          serialNumber,
@@ -106,19 +110,19 @@ func createCA(ctx context.Context, name, namespace string) (*rsa.PrivateKey, *x5
 	logger := logging.FromContext(ctx)
 	rootKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		logger.Error("error generating random key", zap.Error(err))
+		logger.Errorw("error generating random key", zap.Error(err))
 		return nil, nil, nil, err
 	}
 
 	rootCertTmpl, err := createCACertTemplate(name, namespace)
 	if err != nil {
-		logger.Error("error generating CA cert", zap.Error(err))
+		logger.Errorw("error generating CA cert", zap.Error(err))
 		return nil, nil, nil, err
 	}
 
 	rootCert, rootCertPEM, err := createCert(rootCertTmpl, rootCertTmpl, &rootKey.PublicKey, rootKey)
 	if err != nil {
-		logger.Error("error signing the CA cert", zap.Error(err))
+		logger.Errorw("error signing the CA cert", zap.Error(err))
 		return nil, nil, nil, err
 	}
 	return rootKey, rootCert, rootCertPEM, nil
@@ -139,19 +143,19 @@ func CreateCerts(ctx context.Context, name, namespace string) (serverKey, server
 	// Then create the private key for the serving cert
 	servKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		logger.Error("error generating random key", zap.Error(err))
+		logger.Errorw("error generating random key", zap.Error(err))
 		return nil, nil, nil, err
 	}
 	servCertTemplate, err := createServerCertTemplate(name, namespace)
 	if err != nil {
-		logger.Error("failed to create the server certificate template", zap.Error(err))
+		logger.Errorw("failed to create the server certificate template", zap.Error(err))
 		return nil, nil, nil, err
 	}
 
 	// create a certificate which wraps the server's public key, sign it with the CA private key
 	_, servCertPEM, err := createCert(servCertTemplate, caCertificate, &servKey.PublicKey, caKey)
 	if err != nil {
-		logger.Error("error signing server certificate template", zap.Error(err))
+		logger.Errorw("error signing server certificate template", zap.Error(err))
 		return nil, nil, nil, err
 	}
 	servKeyPEM := pem.EncodeToMemory(&pem.Block{

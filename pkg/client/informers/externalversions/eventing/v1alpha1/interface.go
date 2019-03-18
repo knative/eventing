@@ -24,14 +24,16 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// Brokers returns a BrokerInformer.
+	Brokers() BrokerInformer
 	// Channels returns a ChannelInformer.
 	Channels() ChannelInformer
-	// ClusterProvisioners returns a ClusterProvisionerInformer.
-	ClusterProvisioners() ClusterProvisionerInformer
-	// Sources returns a SourceInformer.
-	Sources() SourceInformer
+	// ClusterChannelProvisioners returns a ClusterChannelProvisionerInformer.
+	ClusterChannelProvisioners() ClusterChannelProvisionerInformer
 	// Subscriptions returns a SubscriptionInformer.
 	Subscriptions() SubscriptionInformer
+	// Triggers returns a TriggerInformer.
+	Triggers() TriggerInformer
 }
 
 type version struct {
@@ -45,22 +47,27 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
+// Brokers returns a BrokerInformer.
+func (v *version) Brokers() BrokerInformer {
+	return &brokerInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
 // Channels returns a ChannelInformer.
 func (v *version) Channels() ChannelInformer {
 	return &channelInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// ClusterProvisioners returns a ClusterProvisionerInformer.
-func (v *version) ClusterProvisioners() ClusterProvisionerInformer {
-	return &clusterProvisionerInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
-// Sources returns a SourceInformer.
-func (v *version) Sources() SourceInformer {
-	return &sourceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+// ClusterChannelProvisioners returns a ClusterChannelProvisionerInformer.
+func (v *version) ClusterChannelProvisioners() ClusterChannelProvisionerInformer {
+	return &clusterChannelProvisionerInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // Subscriptions returns a SubscriptionInformer.
 func (v *version) Subscriptions() SubscriptionInformer {
 	return &subscriptionInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Triggers returns a TriggerInformer.
+func (v *version) Triggers() TriggerInformer {
+	return &triggerInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

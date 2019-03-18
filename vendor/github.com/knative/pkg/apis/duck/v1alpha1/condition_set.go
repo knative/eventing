@@ -62,7 +62,7 @@ type ConditionManager interface {
 	SetCondition(new Condition)
 
 	// MarkTrue sets the status of t to true, and then marks the happy condition to
-	// true if all other dependents are also true.
+	// true if all dependents are true.
 	MarkTrue(t ConditionType)
 
 	// MarkUnknown sets the status of t to Unknown and also sets the happy condition
@@ -82,12 +82,14 @@ type ConditionManager interface {
 
 // NewLivingConditionSet returns a ConditionSet to hold the conditions for the
 // living resource. ConditionReady is used as the happy condition.
+// The set of condition types provided are those of the terminal subconditions.
 func NewLivingConditionSet(d ...ConditionType) ConditionSet {
 	return newConditionSet(ConditionReady, d...)
 }
 
 // NewBatchConditionSet returns a ConditionSet to hold the conditions for the
 // batch resource. ConditionSucceeded is used as the happy condition.
+// The set of condition types provided are those of the terminal subconditions.
 func NewBatchConditionSet(d ...ConditionType) ConditionSet {
 	return newConditionSet(ConditionSucceeded, d...)
 }
@@ -129,11 +131,32 @@ type conditionsImpl struct {
 	accessor ConditionsAccessor
 }
 
-// Manage creates a ConditionManager from an object that implements
-// ConditionsAccessopr using the original ConditionSet as a reference.
-func (r ConditionSet) Manage(accessor ConditionsAccessor) ConditionManager {
+// Manage creates a ConditionManager from a accessor object using the original
+// ConditionSet as a reference. Status must be or point to a struct.
+func (r ConditionSet) Manage(status interface{}) ConditionManager {
+
+	// First try to see if status implements ConditionsAccessor
+	ca, ok := status.(ConditionsAccessor)
+	if ok {
+		return conditionsImpl{
+			accessor:     ca,
+			ConditionSet: r,
+		}
+	}
+
+	// Next see if we can use reflection to gain access to Conditions
+	ca = NewReflectedConditionsAccessor(status)
+	if ca != nil {
+		return conditionsImpl{
+			accessor:     ca,
+			ConditionSet: r,
+		}
+	}
+
+	// We tried. This object is not understood by the the condition manager.
+	//panic(fmt.Sprintf("Error converting %T into a ConditionsAccessor", status))
+	// TODO: not sure which way. using panic above means passing nil status panics the system.
 	return conditionsImpl{
-		accessor:     accessor,
 		ConditionSet: r,
 	}
 }
@@ -153,6 +176,7 @@ func (r conditionsImpl) GetCondition(t ConditionType) *Condition {
 	if r.accessor == nil {
 		return nil
 	}
+
 	for _, c := range r.accessor.GetConditions() {
 		if c.Type == t {
 			return &c
@@ -182,9 +206,30 @@ func (r conditionsImpl) SetCondition(new Condition) {
 	}
 	new.LastTransitionTime = apis.VolatileTime{Inner: metav1.NewTime(time.Now())}
 	conditions = append(conditions, new)
-	// Sorted for convince of the consumer, i.e.: kubectl.
+	// Sorted for convenience of the consumer, i.e. kubectl.
 	sort.Slice(conditions, func(i, j int) bool { return conditions[i].Type < conditions[j].Type })
 	r.accessor.SetConditions(conditions)
+}
+
+func (r conditionsImpl) isTerminal(t ConditionType) bool {
+	for _, cond := range r.dependents {
+		if cond == t {
+			return true
+		}
+	}
+
+	if t == r.happy {
+		return true
+	}
+
+	return false
+}
+
+func (r conditionsImpl) severity(t ConditionType) ConditionSeverity {
+	if r.isTerminal(t) {
+		return ConditionSeverityError
+	}
+	return ConditionSeverityInfo
 }
 
 // MarkTrue sets the status of t to true, and then marks the happy condition to
@@ -192,8 +237,9 @@ func (r conditionsImpl) SetCondition(new Condition) {
 func (r conditionsImpl) MarkTrue(t ConditionType) {
 	// set the specified condition
 	r.SetCondition(Condition{
-		Type:   t,
-		Status: corev1.ConditionTrue,
+		Type:     t,
+		Status:   corev1.ConditionTrue,
+		Severity: r.severity(t),
 	})
 
 	// check the dependents.
@@ -207,8 +253,9 @@ func (r conditionsImpl) MarkTrue(t ConditionType) {
 
 	// set the happy condition
 	r.SetCondition(Condition{
-		Type:   r.happy,
-		Status: corev1.ConditionTrue,
+		Type:     r.happy,
+		Status:   corev1.ConditionTrue,
+		Severity: r.severity(r.happy),
 	})
 }
 
@@ -217,13 +264,15 @@ func (r conditionsImpl) MarkTrue(t ConditionType) {
 func (r conditionsImpl) MarkUnknown(t ConditionType, reason, messageFormat string, messageA ...interface{}) {
 	// set the specified condition
 	r.SetCondition(Condition{
-		Type:    t,
-		Status:  corev1.ConditionUnknown,
-		Reason:  reason,
-		Message: fmt.Sprintf(messageFormat, messageA...),
+		Type:     t,
+		Status:   corev1.ConditionUnknown,
+		Reason:   reason,
+		Message:  fmt.Sprintf(messageFormat, messageA...),
+		Severity: r.severity(t),
 	})
 
 	// check the dependents.
+	isDependent := false
 	for _, cond := range r.dependents {
 		c := r.GetCondition(cond)
 		// Failed conditions trump Unknown conditions
@@ -231,32 +280,43 @@ func (r conditionsImpl) MarkUnknown(t ConditionType, reason, messageFormat strin
 			// Double check that the happy condition is also false.
 			happy := r.GetCondition(r.happy)
 			if !happy.IsFalse() {
-				r.MarkFalse(r.happy, reason, messageFormat, messageA)
+				r.MarkFalse(r.happy, reason, messageFormat, messageA...)
 			}
 			return
 		}
+		if cond == t {
+			isDependent = true
+		}
 	}
 
-	// set the happy condition
-	r.SetCondition(Condition{
-		Type:    r.happy,
-		Status:  corev1.ConditionUnknown,
-		Reason:  reason,
-		Message: fmt.Sprintf(messageFormat, messageA...),
-	})
+	if isDependent {
+		// set the happy condition, if it is one of our dependent subconditions.
+		r.SetCondition(Condition{
+			Type:     r.happy,
+			Status:   corev1.ConditionUnknown,
+			Reason:   reason,
+			Message:  fmt.Sprintf(messageFormat, messageA...),
+			Severity: r.severity(r.happy),
+		})
+	}
 }
 
 // MarkFalse sets the status of t and the happy condition to False.
 func (r conditionsImpl) MarkFalse(t ConditionType, reason, messageFormat string, messageA ...interface{}) {
-	for _, t := range []ConditionType{
-		t,
-		r.happy,
-	} {
+	types := []ConditionType{t}
+	for _, cond := range r.dependents {
+		if cond == t {
+			types = append(types, r.happy)
+		}
+	}
+
+	for _, t := range types {
 		r.SetCondition(Condition{
-			Type:    t,
-			Status:  corev1.ConditionFalse,
-			Reason:  reason,
-			Message: fmt.Sprintf(messageFormat, messageA...),
+			Type:     t,
+			Status:   corev1.ConditionFalse,
+			Reason:   reason,
+			Message:  fmt.Sprintf(messageFormat, messageA...),
+			Severity: r.severity(t),
 		})
 	}
 }
@@ -264,17 +324,65 @@ func (r conditionsImpl) MarkFalse(t ConditionType, reason, messageFormat string,
 // InitializeConditions updates all Conditions in the ConditionSet to Unknown
 // if not set.
 func (r conditionsImpl) InitializeConditions() {
-	for _, t := range append(r.dependents, r.happy) {
+	for _, t := range r.dependents {
 		r.InitializeCondition(t)
 	}
+	r.InitializeCondition(r.happy)
 }
 
 // InitializeCondition updates a Condition to Unknown if not set.
 func (r conditionsImpl) InitializeCondition(t ConditionType) {
 	if c := r.GetCondition(t); c == nil {
 		r.SetCondition(Condition{
-			Type:   t,
-			Status: corev1.ConditionUnknown,
+			Type:     t,
+			Status:   corev1.ConditionUnknown,
+			Severity: r.severity(t),
 		})
+	}
+}
+
+// NewReflectedConditionsAccessor uses reflection to return a ConditionsAccessor
+// to access the field called "Conditions".
+func NewReflectedConditionsAccessor(status interface{}) ConditionsAccessor {
+	statusValue := reflect.Indirect(reflect.ValueOf(status))
+
+	// If status is not a struct, don't even try to use it.
+	if statusValue.Kind() != reflect.Struct {
+		return nil
+	}
+
+	conditionsField := statusValue.FieldByName("Conditions")
+
+	if conditionsField.IsValid() && conditionsField.CanInterface() && conditionsField.CanSet() {
+		if _, ok := conditionsField.Interface().(Conditions); ok {
+			return &reflectedConditionsAccessor{
+				conditions: conditionsField,
+			}
+		}
+	}
+	return nil
+}
+
+// reflectedConditionsAccessor is an internal wrapper object to act as the
+// ConditionsAccessor for status objects that do not implement ConditionsAccessor
+// directly, but do expose the field using the "Conditions" field name.
+type reflectedConditionsAccessor struct {
+	conditions reflect.Value
+}
+
+// GetConditions uses reflection to return Conditions from the held status object.
+func (r *reflectedConditionsAccessor) GetConditions() Conditions {
+	if r != nil && r.conditions.IsValid() && r.conditions.CanInterface() {
+		if conditions, ok := r.conditions.Interface().(Conditions); ok {
+			return conditions
+		}
+	}
+	return Conditions(nil)
+}
+
+// SetConditions uses reflection to set Conditions on the held status object.
+func (r *reflectedConditionsAccessor) SetConditions(conditions Conditions) {
+	if r != nil && r.conditions.IsValid() && r.conditions.CanSet() {
+		r.conditions.Set(reflect.ValueOf(conditions))
 	}
 }

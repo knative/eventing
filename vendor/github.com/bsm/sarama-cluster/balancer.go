@@ -157,10 +157,6 @@ func (r *balancer) Topic(name string, memberID string) error {
 }
 
 func (r *balancer) Perform(s Strategy) map[string]map[string][]int32 {
-	if r == nil {
-		return nil
-	}
-
 	res := make(map[string]map[string][]int32, 1)
 	for topic, info := range r.topics {
 		for memberID, partitions := range info.Perform(s) {

@@ -18,10 +18,12 @@ limitations under the License.
 
 package v1alpha1
 
+type BrokerExpansion interface{}
+
 type ChannelExpansion interface{}
 
-type ClusterProvisionerExpansion interface{}
-
-type SourceExpansion interface{}
+type ClusterChannelProvisionerExpansion interface{}
 
 type SubscriptionExpansion interface{}
+
+type TriggerExpansion interface{}

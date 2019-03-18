@@ -11,17 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: eventing-controller
   namespace: knative-eventing
 spec:
   replicas: 1
+  selector:
+    matchLabels: &labels
+      app: eventing-controller
   template:
     metadata:
-      labels:
-        app: eventing-controller
+      labels: *labels
     spec:
       serviceAccountName: eventing-controller
       containers:
@@ -30,8 +32,26 @@ spec:
         image: github.com/knative/eventing/cmd/controller
         args: [
           "-logtostderr",
-          "-stderrthreshold", "INFO",
+          "-stderrthreshold", "INFO"
         ]
+        env:
+          - name: SYSTEM_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: CONFIG_LOGGING_NAME
+            value: config-logging
+          - name: BROKER_INGRESS_IMAGE
+            value: github.com/knative/eventing/cmd/broker/ingress
+          - name: BROKER_INGRESS_SERVICE_ACCOUNT
+            value: default
+          - name: BROKER_FILTER_IMAGE
+            value: github.com/knative/eventing/cmd/broker/filter
+          - name: BROKER_FILTER_SERVICE_ACCOUNT
+            value: eventing-broker-filter
+        ports:
+          - containerPort: 9090
+            name: metrics
         volumeMounts:
           - name: config-logging
             mountPath: /etc/config-logging
