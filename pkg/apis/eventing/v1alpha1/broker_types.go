@@ -70,6 +70,9 @@ var brokerCondSet = duckv1alpha1.NewLivingConditionSet(BrokerConditionIngress, B
 
 // BrokerStatus represents the current state of a Broker.
 type BrokerStatus struct {
+	// inherits duck/v1alpha1 Status, which currently provides:
+	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
+	// * Conditions - the latest available observations of a resource's current state.
 	duckv1alpha1.Status `json:",inline"`
 
 	// Broker is Addressable. It currently exposes the endpoint as a

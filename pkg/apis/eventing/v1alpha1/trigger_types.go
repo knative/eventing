@@ -89,8 +89,12 @@ var triggerCondSet = duckv1alpha1.NewLivingConditionSet(TriggerConditionBrokerEx
 
 // TriggerStatus represents the current state of a Trigger.
 type TriggerStatus struct {
+	// inherits duck/v1alpha1 Status, which currently provides:
+	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
+	// * Conditions - the latest available observations of a resource's current state.
 	duckv1alpha1.Status `json:",inline"`
 
+	// SubscriberURI is the resolved URI of the receiver for this Trigger.
 	SubscriberURI string `json:"subscriberURI,omitempty"`
 }
 

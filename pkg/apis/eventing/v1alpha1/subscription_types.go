@@ -166,6 +166,9 @@ var subCondSet = duckv1alpha1.NewLivingConditionSet(SubscriptionConditionReferen
 
 // SubscriptionStatus (computed) for a subscription
 type SubscriptionStatus struct {
+	// inherits duck/v1alpha1 Status, which currently provides:
+	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
+	// * Conditions - the latest available observations of a resource's current state.
 	duckv1alpha1.Status `json:",inline"`
 
 	// PhysicalSubscription is the fully resolved values that this Subscription represents.

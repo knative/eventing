@@ -81,6 +81,9 @@ var chanCondSet = duckv1alpha1.NewLivingConditionSet(ChannelConditionProvisioned
 
 // ChannelStatus represents the current state of a Channel.
 type ChannelStatus struct {
+	// inherits duck/v1alpha1 Status, which currently provides:
+	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
+	// * Conditions - the latest available observations of a resource's current state.
 	duckv1alpha1.Status `json:",inline"`
 
 	// Channel is Addressable. It currently exposes the endpoint as a
