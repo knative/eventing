@@ -89,20 +89,12 @@ var triggerCondSet = duckv1alpha1.NewLivingConditionSet(TriggerConditionBrokerEx
 
 // TriggerStatus represents the current state of a Trigger.
 type TriggerStatus struct {
-	// ObservedGeneration is the most recent generation observed for this Trigger.
-	// It corresponds to the Trigger's generation, which is updated on mutation by
-	// the API Server.
-	// TODO: The above comment is only true once
-	// https://github.com/kubernetes/kubernetes/issues/58778 is fixed.
-	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// inherits duck/v1alpha1 Status, which currently provides:
+	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
+	// * Conditions - the latest available observations of a resource's current state.
+	duckv1alpha1.Status `json:",inline"`
 
-	// Represents the latest available observations of a trigger's current state.
-	// +optional
-	// +patchMergeKey=type
-	// +patchStrategy=merge
-	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
-
+	// SubscriberURI is the resolved URI of the receiver for this Trigger.
 	SubscriberURI string `json:"subscriberURI,omitempty"`
 }
 

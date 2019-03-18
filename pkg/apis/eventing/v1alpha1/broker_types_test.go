@@ -60,8 +60,10 @@ func TestBrokerGetCondition(t *testing.T) {
 	}{{
 		name: "single condition",
 		bs: &BrokerStatus{
-			Conditions: []duckv1alpha1.Condition{
-				brokerConditionReady,
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{
+					brokerConditionReady,
+				},
 			},
 		},
 		condQuery: duckv1alpha1.ConditionReady,
@@ -69,10 +71,12 @@ func TestBrokerGetCondition(t *testing.T) {
 	}, {
 		name: "multiple conditions",
 		bs: &BrokerStatus{
-			Conditions: []duckv1alpha1.Condition{
-				brokerConditionIngress,
-				brokerConditionChannel,
-				brokerConditionFilter,
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{
+					brokerConditionIngress,
+					brokerConditionChannel,
+					brokerConditionFilter,
+				},
 			},
 		},
 		condQuery: BrokerConditionFilter,
@@ -80,10 +84,12 @@ func TestBrokerGetCondition(t *testing.T) {
 	}, {
 		name: "multiple conditions, condition false",
 		bs: &BrokerStatus{
-			Conditions: []duckv1alpha1.Condition{
-				brokerConditionChannel,
-				brokerConditionFilter,
-				brokerConditionAddressable,
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{
+					brokerConditionChannel,
+					brokerConditionFilter,
+					brokerConditionAddressable,
+				},
 			},
 		},
 		condQuery: BrokerConditionAddressable,
@@ -91,9 +97,11 @@ func TestBrokerGetCondition(t *testing.T) {
 	}, {
 		name: "unknown condition",
 		bs: &BrokerStatus{
-			Conditions: []duckv1alpha1.Condition{
-				brokerConditionAddressable,
-				brokerConditionReady,
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{
+					brokerConditionAddressable,
+					brokerConditionReady,
+				},
 			},
 		},
 		condQuery: duckv1alpha1.ConditionType("foo"),
@@ -119,74 +127,84 @@ func TestBrokerInitializeConditions(t *testing.T) {
 		name: "empty",
 		bs:   &BrokerStatus{},
 		want: &BrokerStatus{
-			Conditions: []duckv1alpha1.Condition{{
-				Type:   BrokerConditionAddressable,
-				Status: corev1.ConditionUnknown,
-			}, {
-				Type:   BrokerConditionChannel,
-				Status: corev1.ConditionUnknown,
-			}, {
-				Type:   BrokerConditionFilter,
-				Status: corev1.ConditionUnknown,
-			}, {
-				Type:   BrokerConditionIngress,
-				Status: corev1.ConditionUnknown,
-			}, {
-				Type:   BrokerConditionReady,
-				Status: corev1.ConditionUnknown,
-			}},
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{{
+					Type:   BrokerConditionAddressable,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   BrokerConditionChannel,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   BrokerConditionFilter,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   BrokerConditionIngress,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   BrokerConditionReady,
+					Status: corev1.ConditionUnknown,
+				}},
+			},
 		},
 	}, {
 		name: "one false",
 		bs: &BrokerStatus{
-			Conditions: []duckv1alpha1.Condition{{
-				Type:   BrokerConditionChannel,
-				Status: corev1.ConditionFalse,
-			}},
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{{
+					Type:   BrokerConditionChannel,
+					Status: corev1.ConditionFalse,
+				}},
+			},
 		},
 		want: &BrokerStatus{
-			Conditions: []duckv1alpha1.Condition{{
-				Type:   BrokerConditionAddressable,
-				Status: corev1.ConditionUnknown,
-			}, {
-				Type:   BrokerConditionChannel,
-				Status: corev1.ConditionFalse,
-			}, {
-				Type:   BrokerConditionFilter,
-				Status: corev1.ConditionUnknown,
-			}, {
-				Type:   BrokerConditionIngress,
-				Status: corev1.ConditionUnknown,
-			}, {
-				Type:   BrokerConditionReady,
-				Status: corev1.ConditionUnknown,
-			}},
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{{
+					Type:   BrokerConditionAddressable,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   BrokerConditionChannel,
+					Status: corev1.ConditionFalse,
+				}, {
+					Type:   BrokerConditionFilter,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   BrokerConditionIngress,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   BrokerConditionReady,
+					Status: corev1.ConditionUnknown,
+				}},
+			},
 		},
 	}, {
 		name: "one true",
 		bs: &BrokerStatus{
-			Conditions: []duckv1alpha1.Condition{{
-				Type:   BrokerConditionFilter,
-				Status: corev1.ConditionTrue,
-			}},
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{{
+					Type:   BrokerConditionFilter,
+					Status: corev1.ConditionTrue,
+				}},
+			},
 		},
 		want: &BrokerStatus{
-			Conditions: []duckv1alpha1.Condition{{
-				Type:   BrokerConditionAddressable,
-				Status: corev1.ConditionUnknown,
-			}, {
-				Type:   BrokerConditionChannel,
-				Status: corev1.ConditionUnknown,
-			}, {
-				Type:   BrokerConditionFilter,
-				Status: corev1.ConditionTrue,
-			}, {
-				Type:   BrokerConditionIngress,
-				Status: corev1.ConditionUnknown,
-			}, {
-				Type:   BrokerConditionReady,
-				Status: corev1.ConditionUnknown,
-			}},
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{{
+					Type:   BrokerConditionAddressable,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   BrokerConditionChannel,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   BrokerConditionFilter,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionIngress,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   BrokerConditionReady,
+					Status: corev1.ConditionUnknown,
+				}},
+			},
 		},
 	}}
 
