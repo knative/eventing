@@ -111,8 +111,8 @@ data:
   bootstrap_servers: kafkabroker.kafka:9092
 
   # Consumer mode to dispatch events from different partitions in parallel.
-  # By default, partitions are multiplexed with a single go channel.
-  # `partitions` is the only valid value.
+  # By default(multiplex), partitions are multiplexed with a single go channel.
+  # `multiplex` and `partitions` are valid values.
   ## consumer_mode: partitions
 ---
 
