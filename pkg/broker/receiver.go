@@ -19,7 +19,6 @@ package broker
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 
@@ -115,18 +114,15 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 		return nil
 	}
 
-	uri, err := url.Parse(tctx.URI)
-	if err != nil {
-		return fmt.Errorf("unable to parse URI: %v", err)
-	}
-	if uri.Path != "/" {
+	// tctx.URI is actually the path...
+	if tctx.URI != "/" {
 		resp.Status = http.StatusNotFound
 		return nil
 	}
 
-	triggerRef, err := provisioners.ParseChannel(uri.Host)
+	triggerRef, err := provisioners.ParseChannel(tctx.Host)
 	if err != nil {
-		r.logger.Error("Unable to parse host as a trigger", zap.Error(err), zap.String("host", uri.Host))
+		r.logger.Error("Unable to parse host as a trigger", zap.Error(err), zap.String("host", tctx.Host))
 		return errors.New("unable to parse host as a Trigger")
 	}
 
