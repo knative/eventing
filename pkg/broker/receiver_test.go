@@ -17,33 +17,28 @@
 package broker
 
 import (
-	"errors"
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/knative/eventing/pkg/utils"
-
-	"github.com/knative/eventing/pkg/provisioners"
-
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"k8s.io/client-go/kubernetes/scheme"
-
+	"github.com/knative/eventing/pkg/utils"
 	"go.uber.org/zap"
-
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 const (
 	testNS      = "test-namespace"
 	triggerName = "test-trigger"
-	eventType   = `"com.example.someevent"`
-	eventSource = `"/mycontext"`
+	eventType   = `com.example.someevent`
+	eventSource = `/mycontext`
 )
 
 func init() {
@@ -54,7 +49,7 @@ func init() {
 func TestReceiver(t *testing.T) {
 	testCases := map[string]struct {
 		initialState     []runtime.Object
-		dispatchErr      error
+		requestFails     bool
 		expectedErr      bool
 		expectedDispatch bool
 	}{
@@ -87,7 +82,7 @@ func TestReceiver(t *testing.T) {
 			initialState: []runtime.Object{
 				makeTrigger("Any", "Any"),
 			},
-			dispatchErr:      errors.New("test error dispatching"),
+			requestFails:     true,
 			expectedErr:      true,
 			expectedDispatch: true,
 		},
@@ -106,44 +101,47 @@ func TestReceiver(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			// Support cloud spec v0.1 and v0.2 requests.
-			requests := [2]*http.Request{makeV01Request(), makeV02Request()}
-			for _, request := range requests {
-				mr, _ := New(
-					zap.NewNop(),
-					fake.NewFakeClient(tc.initialState...))
-				fd := &fakeDispatcher{
-					err: tc.dispatchErr,
-				}
-				mr.dispatcher = fd
+			mr := New(
+				zap.NewNop(),
+				fake.NewFakeClient(tc.initialState...))
+			fh := &fakeHTTPDoer{
+				failRequest: tc.requestFails,
+			}
+			mr.httpClient = fh
 
-				resp := httptest.NewRecorder()
-				mr.newMessageReceiver().HandleRequest(resp, request)
-				if tc.expectedErr {
-					if resp.Result().StatusCode >= 200 && resp.Result().StatusCode < 300 {
-						t.Errorf("Expected an error. Actual: %v", resp.Result())
-					}
-				} else {
-					if resp.Result().StatusCode < 200 || resp.Result().StatusCode >= 300 {
-						t.Errorf("Expected success. Actual: %v", resp.Result())
-					}
+			resp := httptest.NewRecorder()
+			mr.ServeHTTP(resp, makeRequest())
+			if tc.expectedErr {
+				if resp.Result().StatusCode >= 200 && resp.Result().StatusCode < 300 {
+					t.Errorf("Expected an error. Actual: %v", resp.Result())
 				}
-				if tc.expectedDispatch != fd.requestReceived {
-					t.Errorf("Incorrect dispatch. Expected %v, Actual %v", tc.expectedDispatch, fd.requestReceived)
+			} else {
+				if resp.Result().StatusCode < 200 || resp.Result().StatusCode >= 300 {
+					t.Errorf("Expected success. Actual: %v", resp.Result())
 				}
+			}
+			if tc.expectedDispatch != fh.requestReceived {
+				t.Errorf("Incorrect dispatch. Expected %v, Actual %v", tc.expectedDispatch, fh.requestReceived)
 			}
 		})
 	}
 }
 
-type fakeDispatcher struct {
-	err             error
+type fakeHTTPDoer struct {
+	failRequest     bool
 	requestReceived bool
 }
 
-func (d *fakeDispatcher) DispatchMessage(_ *provisioners.Message, _, _ string, _ provisioners.DispatchDefaults) error {
-	d.requestReceived = true
-	return d.err
+func (h *fakeHTTPDoer) Do(_ *http.Request) (*http.Response, error) {
+	h.requestReceived = true
+	sc := http.StatusOK
+	if h.failRequest {
+		sc = http.StatusBadRequest
+	}
+	return &http.Response{
+		StatusCode: sc,
+		Body:       ioutil.NopCloser(bytes.NewBufferString("")),
+	}, nil
 }
 
 func makeTrigger(t, s string) *eventingv1alpha1.Trigger {
@@ -182,29 +180,21 @@ func makeTriggerWithoutSubscriberURI() *eventingv1alpha1.Trigger {
 	return t
 }
 
-func makeRequest(cloudEventVersionValue, eventTypeVersionValue, eventTypeKey, eventSourceKey string) *http.Request {
+func makeRequest() *http.Request {
 	req := httptest.NewRequest("POST", "/", strings.NewReader(`<much wow="xml"/>`))
 	req.Host = fmt.Sprintf("%s.%s.triggers.%s", triggerName, testNS, utils.GetClusterDomainName())
 
 	eventAttributes := map[string]string{
-		"CE-CloudEventsVersion": cloudEventVersionValue,
-		eventTypeKey:            eventType,
-		"CE-EventTypeVersion":   eventTypeVersionValue,
-		eventSourceKey:          eventSource,
-		"CE-EventID":            `"A234-1234-1234"`,
-		"CE-EventTime":          `"2018-04-05T17:31:00Z"`,
-		"contentType":           "text/xml",
+		"CE-CloudEventsVersion": `0.1`,
+		"CE-EventType":          eventType,
+		"CE-EventTypeVersion":   `1.0`,
+		"CE-Source":             eventSource,
+		"CE-EventID":            `A234-1234-1234`,
+		"CE-EventTime":          `2018-04-05T17:31:00Z`,
+		"Content-Type":          "application/xml",
 	}
 	for k, v := range eventAttributes {
 		req.Header.Set(k, v)
 	}
 	return req
-}
-
-func makeV01Request() *http.Request {
-	return makeRequest(`"0.1"`, `"1.0"`, "CE-EventType", "CE-Source")
-}
-
-func makeV02Request() *http.Request {
-	return makeRequest(`"0.2"`, `"2.0"`, "ce-type", "ce-source")
 }
