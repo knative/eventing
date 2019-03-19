@@ -15,13 +15,27 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	"log"
 )
 
+type Example struct {
+	Sequence int    `json:"id"`
+	Message  string `json:"message"`
+}
+
 func handler(event cloudevents.Event) {
 	log.Printf("%s", event)
+	// TODO: in version 0.5.0 of cloudevents, below can be deleted.
+
+	ctx := event.Context.AsV02()
+	data := &Example{}
+	if err := event.DataAs(data); err != nil {
+		fmt.Printf("Got Data Error: %s\n", err.Error())
+	}
+	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), ctx.ContentType, ctx.Source.String(), data)
 }
 
 func main() {
