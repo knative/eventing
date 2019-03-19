@@ -17,11 +17,19 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+)
+
+var (
+	trueVal  = true
+	falseVal = false
+
+	err = errors.New("foobar")
 )
 
 var (
@@ -239,106 +247,127 @@ func TestBrokerInitializeConditions(t *testing.T) {
 func TestBrokerIsReady(t *testing.T) {
 	tests := []struct {
 		name                         string
-		markIngressReady             bool
-		markTriggerChannelReady      bool
-		markIngressChannelReady      bool
-		markFilterReady              bool
+		markIngressReady             *bool
+		markTriggerChannelReady      *bool
+		markIngressChannelReady      *bool
+		markFilterReady              *bool
 		address                      string
-		markIngressSubscriptionReady bool
+		markIngressSubscriptionReady *bool
 		wantReady                    bool
 	}{{
 		name:                         "all happy",
-		markIngressReady:             true,
-		markTriggerChannelReady:      true,
-		markIngressChannelReady:      true,
-		markFilterReady:              true,
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &trueVal,
+		markIngressChannelReady:      &trueVal,
+		markFilterReady:              &trueVal,
 		address:                      "hostname",
-		markIngressSubscriptionReady: true,
+		markIngressSubscriptionReady: &trueVal,
 		wantReady:                    true,
 	}, {
 		name:                         "ingress sad",
-		markIngressReady:             false,
-		markTriggerChannelReady:      true,
-		markIngressChannelReady:      true,
-		markFilterReady:              true,
+		markIngressReady:             &falseVal,
+		markTriggerChannelReady:      &trueVal,
+		markIngressChannelReady:      &trueVal,
+		markFilterReady:              &trueVal,
 		address:                      "hostname",
-		markIngressSubscriptionReady: true,
+		markIngressSubscriptionReady: &trueVal,
 		wantReady:                    false,
 	}, {
 		name:                         "trigger channel sad",
-		markIngressReady:             true,
-		markTriggerChannelReady:      false,
-		markIngressChannelReady:      true,
-		markFilterReady:              true,
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &falseVal,
+		markIngressChannelReady:      &trueVal,
+		markFilterReady:              &trueVal,
 		address:                      "hostname",
-		markIngressSubscriptionReady: true,
+		markIngressSubscriptionReady: &trueVal,
 		wantReady:                    false,
 	}, {
 		name:                         "ingress channel sad",
-		markIngressReady:             true,
-		markTriggerChannelReady:      true,
-		markIngressChannelReady:      false,
-		markFilterReady:              true,
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &trueVal,
+		markIngressChannelReady:      &falseVal,
+		markFilterReady:              &trueVal,
 		address:                      "hostname",
-		markIngressSubscriptionReady: true,
+		markIngressSubscriptionReady: &trueVal,
 		wantReady:                    false,
 	}, {
 		name:                         "filter sad",
-		markIngressReady:             true,
-		markTriggerChannelReady:      true,
-		markIngressChannelReady:      true,
-		markFilterReady:              false,
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &trueVal,
+		markIngressChannelReady:      &trueVal,
+		markFilterReady:              &falseVal,
 		address:                      "hostname",
-		markIngressSubscriptionReady: true,
+		markIngressSubscriptionReady: &trueVal,
 		wantReady:                    false,
 	}, {
 		name:                         "addressable sad",
-		markIngressReady:             true,
-		markTriggerChannelReady:      true,
-		markIngressChannelReady:      true,
-		markFilterReady:              true,
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &trueVal,
+		markIngressChannelReady:      &trueVal,
+		markFilterReady:              &trueVal,
 		address:                      "",
-		markIngressSubscriptionReady: true,
+		markIngressSubscriptionReady: &trueVal,
 		wantReady:                    false,
 	}, {
 		name:                         "ingress subscription sad",
-		markIngressReady:             true,
-		markTriggerChannelReady:      true,
-		markIngressChannelReady:      true,
-		markFilterReady:              true,
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &trueVal,
+		markIngressChannelReady:      &trueVal,
+		markFilterReady:              &trueVal,
 		address:                      "hostname",
-		markIngressSubscriptionReady: false,
+		markIngressSubscriptionReady: &falseVal,
 		wantReady:                    false,
 	}, {
 		name:                         "all sad",
-		markIngressReady:             false,
-		markTriggerChannelReady:      false,
-		markIngressChannelReady:      true,
-		markFilterReady:              false,
+		markIngressReady:             &falseVal,
+		markTriggerChannelReady:      &falseVal,
+		markIngressChannelReady:      &trueVal,
+		markFilterReady:              &falseVal,
 		address:                      "",
-		markIngressSubscriptionReady: true,
+		markIngressSubscriptionReady: &trueVal,
 		wantReady:                    false,
 	}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ts := &BrokerStatus{}
-			if test.markIngressReady {
-				ts.MarkIngressReady()
+			bs := &BrokerStatus{}
+			if test.markIngressReady != nil {
+				if *test.markIngressReady {
+					bs.MarkIngressReady()
+				} else {
+					bs.MarkIngressFailed(err)
+				}
 			}
-			if test.markTriggerChannelReady {
-				ts.MarkTriggerChannelReady()
+			if test.markTriggerChannelReady != nil {
+				if *test.markTriggerChannelReady {
+					bs.MarkTriggerChannelReady()
+				} else {
+					bs.MarkTriggerChannelFailed(err)
+				}
 			}
-			if test.markIngressChannelReady {
-				ts.MarkIngressChannelReady()
+			if test.markIngressChannelReady != nil {
+				if *test.markIngressChannelReady {
+					bs.MarkIngressChannelReady()
+				} else {
+					bs.MarkIngressChannelFailed(err)
+				}
 			}
-			if test.markFilterReady {
-				ts.MarkFilterReady()
+			if test.markIngressSubscriptionReady != nil {
+				if *test.markIngressSubscriptionReady {
+					bs.MarkIngressSubscriptionReady()
+				} else {
+					bs.MarkIngressSubscriptionFailed(err)
+				}
 			}
-			ts.SetAddress(test.address)
-			if test.markIngressSubscriptionReady {
-				ts.MarkIngressSubscriptionReady()
+			if test.markFilterReady != nil {
+				if *test.markFilterReady {
+					bs.MarkFilterReady()
+				} else {
+					bs.MarkFilterFailed(err)
+				}
 			}
-			got := ts.IsReady()
+			bs.SetAddress(test.address)
+
+			got := bs.IsReady()
 			if test.wantReady != got {
 				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
 			}
