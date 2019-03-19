@@ -135,4 +135,3 @@ required = [
 [[constraint]]
   name = "github.com/cloudevents/sdk-go"
   version = "=0.4.0"
-  
