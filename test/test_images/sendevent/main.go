@@ -110,6 +110,7 @@ func main() {
 	}
 	c, err := client.New(t,
 		client.WithTimeNow(),
+		client.WithUUIDs(),
 	)
 	if err != nil {
 		log.Fatalf("failed to create client, %v", err)
@@ -136,6 +137,7 @@ func main() {
 			}.AsV02(),
 			Data: untyped,
 		}
+
 		if resp, err := c.Send(context.Background(), event); err != nil {
 			fmt.Printf("send returned an error: %v\n", err)
 		} else if resp != nil {

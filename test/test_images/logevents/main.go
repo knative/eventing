@@ -21,21 +21,18 @@ import (
 	"log"
 )
 
-type Example struct {
-	Sequence int    `json:"id"`
-	Message  string `json:"message"`
-}
-
 func handler(event cloudevents.Event) {
 	log.Printf("%s", event)
 	// TODO: in version 0.5.0 of cloudevents, below can be deleted.
 
 	ctx := event.Context.AsV02()
-	data := &Example{}
-	if err := event.DataAs(data); err != nil {
-		fmt.Printf("Got Data Error: %s\n", err.Error())
+	var data []byte
+	var ok bool
+	if data, ok = event.Data.([]byte); !ok {
+		fmt.Printf("Got Data Error")
+		return
 	}
-	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), *ctx.ContentType, ctx.Source.String(), data)
+	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), *ctx.ContentType, ctx.Source.String(), string(data))
 }
 
 func main() {
