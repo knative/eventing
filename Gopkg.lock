@@ -370,7 +370,7 @@
   version = "v0.2.0"
 
 [[projects]]
-  digest = "1:a30bb5b218c35de71323fbc7efa2e0803f932b64ce878d92822a9dff18ba5a65"
+  digest = "1:c89991e8c688df2188caa7ef2a3c7ddbc78dd5e73ca4ac08477e0e2d3d7cdb10"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -380,7 +380,6 @@
     "apis/istio/common/v1alpha1",
     "apis/istio/v1alpha3",
     "changeset",
-    "cloudevents",
     "configmap",
     "kmeta",
     "kmp",
@@ -1265,12 +1264,10 @@
     "github.com/fsnotify/fsnotify",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
-    "github.com/google/uuid",
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
     "github.com/knative/pkg/apis/duck/v1alpha1",
     "github.com/knative/pkg/apis/istio/v1alpha3",
-    "github.com/knative/pkg/cloudevents",
     "github.com/knative/pkg/configmap",
     "github.com/knative/pkg/logging",
     "github.com/knative/pkg/logging/logkey",
