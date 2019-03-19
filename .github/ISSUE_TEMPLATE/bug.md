@@ -13,7 +13,7 @@ A clear and concise description of what the bug is.
 A clear and concise description of what you expected to happen.
 
  **To Reproduce**
-Steps to reproduce the behavior:
+Steps to reproduce the behavior.
 
  **Knative release version**
 
