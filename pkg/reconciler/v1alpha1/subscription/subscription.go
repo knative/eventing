@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
@@ -67,6 +69,8 @@ type reconciler struct {
 
 // Verify the struct implements eventingreconciler.EventingReconciler
 var _ eventingreconciler.EventingReconciler = &reconciler{}
+var _ eventingreconciler.Finalizer = &reconciler{}
+var _ inject.Config = &reconciler{}
 
 // ProvideController returns a Subscription controller.
 func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
@@ -74,12 +78,14 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 
 	rec := &reconciler{}
 	r, err := eventingreconciler.New(rec,
-		eventingreconciler.Finalizer(finalizerName, rec.Finalize),
-		eventingreconciler.Logger(logger),
-		eventingreconciler.Recorder(mgr.GetRecorder(controllerAgentName)),
-		eventingreconciler.ClientInjector(rec.InjectClient),
-		eventingreconciler.ConfigInjector(rec.InjectConfig),
+		logger,
+		mgr.GetRecorder(controllerAgentName),
+		eventingreconciler.EnableFinalizer(finalizerName),
+		eventingreconciler.EnableConfigInjection(),
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	// Setup a new controller to Reconcile Subscriptions.
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{Reconciler: r})
@@ -153,7 +159,7 @@ func (r *reconciler) GetNewReconcileObject() eventingreconciler.ReconciledResour
 	return &v1alpha1.Subscription{}
 }
 
-func (r *reconciler) Finalize(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) error {
+func (r *reconciler) OnDelete(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) error {
 	subscription := obj.(*v1alpha1.Subscription)
 	if subscription.Status.IsReady() {
 		err := r.syncPhysicalChannel(ctx, subscription, true)
