@@ -18,11 +18,16 @@ package broker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 
 	"github.com/google/go-cmp/cmp"
 
@@ -44,6 +49,8 @@ const (
 	triggerName = "test-trigger"
 	eventType   = `com.example.someevent`
 	eventSource = `/mycontext`
+
+	toBeReplaced = "toBeReplaced"
 )
 
 var (
@@ -58,13 +65,25 @@ func init() {
 func TestReceiver(t *testing.T) {
 	testCases := map[string]struct {
 		triggers         []*eventingv1alpha1.Trigger
+		mocks            controllertesting.Mocks
 		tctx             *cehttp.TransportContext
 		requestFails     bool
 		returnedEvent    *cloudevents.Event
+		expectNewToFail  bool
 		expectedErr      bool
 		expectedDispatch bool
 		expectedStatus   int
 	}{
+		"Cannot init": {
+			mocks: controllertesting.Mocks{
+				MockLists: []controllertesting.MockList{
+					func(_ client.Client, _ context.Context, _ *client.ListOptions, _ runtime.Object) (controllertesting.MockHandled, error) {
+						return controllertesting.Handled, errors.New("test induced error")
+					},
+				},
+			},
+			expectNewToFail: true,
+		},
 		"Not POST": {
 			tctx: &cehttp.TransportContext{
 				Method: "GET",
@@ -81,6 +100,14 @@ func TestReceiver(t *testing.T) {
 			},
 			expectedStatus: http.StatusNotFound,
 		},
+		"Bad host": {
+			tctx: &cehttp.TransportContext{
+				Method: "POST",
+				Host:   "badhost-cant-be-parsed-as-a-trigger-name-plus-namespace",
+				URI:    "/",
+			},
+			expectedErr: true,
+		},
 		"Trigger.Get fails": {
 			// No trigger exists, so the Get will fail.
 			expectedErr: true,
@@ -88,6 +115,12 @@ func TestReceiver(t *testing.T) {
 		"Trigger doesn't have SubscriberURI": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTriggerWithoutSubscriberURI(),
+			},
+			expectedErr: true,
+		},
+		"Trigger with bad SubscriberURI": {
+			triggers: []*eventingv1alpha1.Trigger{
+				makeTriggerWithBadSubscriberURI(),
 			},
 			expectedErr: true,
 		},
@@ -147,7 +180,7 @@ func TestReceiver(t *testing.T) {
 			// Replace the SubscriberURI to point at our fake server.
 			correctURI := make([]runtime.Object, 0, len(tc.triggers))
 			for _, trig := range tc.triggers {
-				if trig.Status.SubscriberURI != "" {
+				if trig.Status.SubscriberURI == toBeReplaced {
 					trig.Status.SubscriberURI = s.URL
 				}
 				correctURI = append(correctURI, trig)
@@ -155,8 +188,13 @@ func TestReceiver(t *testing.T) {
 
 			r, err := New(
 				zap.NewNop(),
-				fake.NewFakeClient(correctURI...))
-			if err != nil {
+				getClient(correctURI, tc.mocks))
+			if tc.expectNewToFail {
+				if err == nil {
+					t.Fatal("Expected New to fail, it didn't")
+				}
+				return
+			} else if err != nil {
 				t.Fatalf("Unable to create receiver: %v", err)
 			}
 
@@ -238,6 +276,11 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, _ *http.Request) {
 	}
 }
 
+func getClient(initial []runtime.Object, mocks controllertesting.Mocks) *controllertesting.MockClient {
+	innerClient := fake.NewFakeClient(initial...)
+	return controllertesting.NewMockClient(innerClient, mocks)
+}
+
 func makeTrigger(t, s string) *eventingv1alpha1.Trigger {
 	return &eventingv1alpha1.Trigger{
 		TypeMeta: v1.TypeMeta{
@@ -257,7 +300,7 @@ func makeTrigger(t, s string) *eventingv1alpha1.Trigger {
 			},
 		},
 		Status: eventingv1alpha1.TriggerStatus{
-			SubscriberURI: "subscriberURI",
+			SubscriberURI: "toBeReplaced",
 		},
 	}
 }
@@ -271,6 +314,14 @@ func makeTriggerWithoutFilter() *eventingv1alpha1.Trigger {
 func makeTriggerWithoutSubscriberURI() *eventingv1alpha1.Trigger {
 	t := makeTrigger("Any", "Any")
 	t.Status = eventingv1alpha1.TriggerStatus{}
+	return t
+}
+
+func makeTriggerWithBadSubscriberURI() *eventingv1alpha1.Trigger {
+	t := makeTrigger("Any", "Any")
+	// This should fail url.Parse(). It was taken from the unit tests for url.Parse(), it violates
+	// rfc3986 3.2.3, namely that the port must be digits.
+	t.Status.SubscriberURI = "http://[::1]:namedport"
 	return t
 }
 
