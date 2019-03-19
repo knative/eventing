@@ -3,15 +3,14 @@ name: Feature Request
 about: Suggest an idea for this project	about
 title: ''
 labels: kind/feature-request
-assignees: ''
 
 ---
 
 **Problem**
-A clear and concise description of what the problem or the user story this feature will solve. Ex. I'm always frustrated when [...]
+A clear and concise description of what the problem this feature will solve. Ex. I'm always frustrated when [...]
 
- **User Persona**
-What user persona does this feature address? These could be multiple. If possible, define "I can" statements for the user persona in 'Problem' and/or 'Exit criteria' section.
+**[Persona:](https://github.com/knative/eventing/blob/master/docs/personas.md)** 
+Which persona is this feature for?
 
  **Describe the solution you'd like**
 A clear and concise description of what you want to happen.
@@ -19,12 +18,12 @@ A clear and concise description of what you want to happen.
  **Describe alternatives you've considered**
 A clear and concise description of any alternative solutions or features you've considered.
 
- **Estimate**
-Estimate interms of in 1-engineer-day, that will take for this work to complete and meet exit criteria.
+ **Time Estimate (optional):** 
+How many developer-days do you think this may take to resolve?
 If this is more than 10 days then please break it down into multiple feature requests.
 
- **Exit criteria**
-Describe an exit criteria to mark this feature as complete such as user "I can statement", or measurable outcomes
+ **Exit Criteria**
+A measurable (binary) test that would indicate that the problem has been resolved.
 
  **Additional context**
 Add any other context or screenshots about the feature request here.	Add any other context or screenshots about the feature request here.
