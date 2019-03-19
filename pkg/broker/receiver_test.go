@@ -17,15 +17,14 @@
 package broker
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"testing"
 
-	"k8s.io/apimachinery/pkg/api/equality"
+	"github.com/google/go-cmp/cmp"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
@@ -58,16 +57,16 @@ func init() {
 
 func TestReceiver(t *testing.T) {
 	testCases := map[string]struct {
-		initialState     []runtime.Object
-		tctx             cehttp.TransportContext
+		triggers         []*eventingv1alpha1.Trigger
+		tctx             *cehttp.TransportContext
 		requestFails     bool
-		returnedEvent    cloudevents.Event
+		returnedEvent    *cloudevents.Event
 		expectedErr      bool
 		expectedDispatch bool
 		expectedStatus   int
 	}{
 		"Not POST": {
-			tctx: cehttp.TransportContext{
+			tctx: &cehttp.TransportContext{
 				Method: "GET",
 				Host:   host,
 				URI:    "/",
@@ -75,7 +74,7 @@ func TestReceiver(t *testing.T) {
 			expectedStatus: http.StatusMethodNotAllowed,
 		},
 		"Other path": {
-			tctx: cehttp.TransportContext{
+			tctx: &cehttp.TransportContext{
 				Method: "POST",
 				Host:   host,
 				URI:    "/someotherEndpoint",
@@ -87,28 +86,28 @@ func TestReceiver(t *testing.T) {
 			expectedErr: true,
 		},
 		"Trigger doesn't have SubscriberURI": {
-			initialState: []runtime.Object{
+			triggers: []*eventingv1alpha1.Trigger{
 				makeTriggerWithoutSubscriberURI(),
 			},
 			expectedErr: true,
 		},
 		"Trigger without a Filter": {
-			initialState: []runtime.Object{
+			triggers: []*eventingv1alpha1.Trigger{
 				makeTriggerWithoutFilter(),
 			},
 		},
 		"Wrong type": {
-			initialState: []runtime.Object{
+			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger("some-other-type", "Any"),
 			},
 		},
 		"Wrong source": {
-			initialState: []runtime.Object{
+			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger("Any", "some-other-source"),
 			},
 		},
 		"Dispatch failed": {
-			initialState: []runtime.Object{
+			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger("Any", "Any"),
 			},
 			requestFails:     true,
@@ -116,36 +115,60 @@ func TestReceiver(t *testing.T) {
 			expectedDispatch: true,
 		},
 		"Dispatch succeeded - Any": {
-			initialState: []runtime.Object{
+			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger("Any", "Any"),
 			},
 			expectedDispatch: true,
 		},
 		"Dispatch succeeded - Specific": {
-			initialState: []runtime.Object{
+			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(eventType, eventSource),
 			},
 			expectedDispatch: true,
 		},
 		"Returned Cloud Event": {
-			returnedEvent: makeDifferentEvent(),
+			triggers: []*eventingv1alpha1.Trigger{
+				makeTrigger("Any", "Any"),
+			},
+			expectedDispatch: true,
+			returnedEvent:    makeDifferentEvent(),
 		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
+
+			fh := fakeHandler{
+				failRequest:   tc.requestFails,
+				returnedEvent: tc.returnedEvent,
+			}
+			s := httptest.NewServer(&fh)
+			defer s.Client()
+
+			// Replace the SubscriberURI to point at our fake server.
+			correctURI := make([]runtime.Object, 0, len(tc.triggers))
+			for _, trig := range tc.triggers {
+				if trig.Status.SubscriberURI != "" {
+					trig.Status.SubscriberURI = s.URL
+				}
+				correctURI = append(correctURI, trig)
+			}
+
 			r, err := New(
 				zap.NewNop(),
-				fake.NewFakeClient(tc.initialState...))
+				fake.NewFakeClient(correctURI...))
 			if err != nil {
 				t.Fatalf("Unable to create receiver: %v", err)
 			}
 
-			// TODO either use a fake client here or make a fake HTTP server for the test. Either
-			// way, update the tc.expectedDispatch test to ensure the request was sent or not.
-
-			r.ceHttp.Client = fakeClient{}
-
-			ctx := context.Background()
+			tctx := tc.tctx
+			if tctx == nil {
+				tctx = &cehttp.TransportContext{
+					Method: http.MethodPost,
+					Host:   host,
+					URI:    "/",
+				}
+			}
+			ctx := cehttp.WithTransportContext(context.Background(), *tctx)
 			resp := &cloudevents.EventResponse{}
 			err = r.serveHTTP(ctx, makeEvent(), resp)
 
@@ -158,32 +181,61 @@ func TestReceiver(t *testing.T) {
 			if tc.expectedStatus != 0 && tc.expectedStatus != resp.Status {
 				t.Errorf("Unexpected status. Expected %v. Actual %v.", tc.expectedStatus, resp.Status)
 			}
-			if !equality.Semantic.DeepEqual(tc.returnedEvent, resp.Event) {
-				t.Errorf("Unexpected response event. Expected '%v'. Actual '%v'", tc.returnedEvent, resp.Event)
-			}
-
 			if tc.expectedDispatch != fh.requestReceived {
 				t.Errorf("Incorrect dispatch. Expected %v, Actual %v", tc.expectedDispatch, fh.requestReceived)
+			}
+
+			// Compare the returned event.
+			if tc.returnedEvent == nil {
+				if resp.Event != nil {
+					t.Errorf("Unexpected response event: %v", resp.Event)
+				}
+				return
+			}
+			if diff := cmp.Diff(tc.returnedEvent.Context.AsV02(), resp.Event.Context.AsV02()); diff != "" {
+				t.Errorf("Incorrect response event context (-want +got): %s", diff)
+			}
+			if diff := cmp.Diff(tc.returnedEvent.Data, resp.Event.Data); diff != "" {
+				t.Errorf("Incorrect response event data (-want +got): %s", diff)
 			}
 		})
 	}
 }
 
-type fakeHTTPDoer struct {
+type fakeHandler struct {
 	failRequest     bool
 	requestReceived bool
+	returnedEvent   *cloudevents.Event
+	t               testing.T
 }
 
-func (h *fakeHTTPDoer) Do(_ *http.Request) (*http.Response, error) {
+func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, _ *http.Request) {
 	h.requestReceived = true
-	sc := http.StatusOK
 	if h.failRequest {
-		sc = http.StatusBadRequest
+		resp.WriteHeader(http.StatusBadRequest)
+		return
 	}
-	return &http.Response{
-		StatusCode: sc,
-		Body:       ioutil.NopCloser(bytes.NewBufferString("")),
-	}, nil
+	if h.returnedEvent == nil {
+		resp.WriteHeader(http.StatusAccepted)
+		return
+	}
+
+	c := &cehttp.CodecV02{}
+	m, err := c.Encode(*h.returnedEvent)
+	if err != nil {
+		h.t.Fatalf("Could not encode message: %v", err)
+	}
+	msg := m.(*cehttp.Message)
+	for k, vs := range msg.Header {
+		resp.Header().Del(k)
+		for _, v := range vs {
+			resp.Header().Set(k, v)
+		}
+	}
+	_, err = resp.Write(msg.Body)
+	if err != nil {
+		h.t.Fatalf("Unable to write body: %v", err)
+	}
 }
 
 func makeTrigger(t, s string) *eventingv1alpha1.Trigger {
@@ -231,12 +283,13 @@ func makeEvent() cloudevents.Event {
 					Path: eventSource,
 				},
 			},
+			ContentType: cloudevents.StringOfApplicationJSON(),
 		},
 	}
 }
 
-func makeDifferentEvent() cloudevents.Event {
-	return cloudevents.Event{
+func makeDifferentEvent() *cloudevents.Event {
+	return &cloudevents.Event{
 		Context: cloudevents.EventContextV02{
 			Type: "some-other-type",
 			Source: types.URLRef{
@@ -244,6 +297,7 @@ func makeDifferentEvent() cloudevents.Event {
 					Path: eventSource,
 				},
 			},
+			ContentType: cloudevents.StringOfApplicationJSON(),
 		},
 	}
 }
