@@ -172,6 +172,9 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) (reconci
 	// 4. K8s Services that point at the Deployments.
 	// 5. Ingress Channel is created to get events from Triggers back into this Broker via the
 	//    Ingress Deployment.
+	//   - Ideally this wouldn't exist and we would point the Trigger's reply directly to the K8s
+	//     Service. However, Subscriptions only allow us to send replies to Channels, so we need
+	//     this as an intermediary.
 	// 6. Subscription from the Ingress Channel to the Ingress Service.
 
 	if b.DeletionTimestamp != nil {
