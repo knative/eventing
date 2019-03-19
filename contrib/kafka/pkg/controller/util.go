@@ -2,8 +2,9 @@ package controller
 
 import (
 	"fmt"
-	"github.com/bsm/sarama-cluster"
 	"strings"
+
+	cluster "github.com/bsm/sarama-cluster"
 
 	"github.com/knative/pkg/configmap"
 )

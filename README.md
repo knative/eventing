@@ -16,7 +16,7 @@ address a common need for cloud native development:
      producer.
 
 For complete Knative Eventing documentation, see
-[Knative eventing](https://github.com/knative/docs/tree/master/eventing) or
+[Knative eventing](https://github.com/knative/docs/tree/master/docs/eventing) or
 [Knative docs](https://github.com/knative/docs/) to learn about Knative.
 
 If you are interested in contributing, see [CONTRIBUTING.md](./CONTRIBUTING.md),

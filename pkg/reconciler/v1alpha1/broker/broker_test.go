@@ -462,6 +462,44 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: "test error updating ingress Service",
 		},
 		{
+<<<<<<< HEAD
+=======
+			Name:   "Broker.Get for status update fails",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeBroker(),
+				makeChannel(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockGets: []controllertesting.MockGet{
+					// The first Get works.
+					func(innerClient client.Client, ctx context.Context, key client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := obj.(*v1alpha1.Broker); ok {
+							return controllertesting.Handled, innerClient.Get(ctx, key, obj)
+						}
+						return controllertesting.Unhandled, nil
+					},
+					// The second Get fails.
+					func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := obj.(*v1alpha1.Broker); ok {
+							return controllertesting.Handled, errors.New("test error getting the Broker for status update")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error getting the Broker for status update",
+			WantEvent: []corev1.Event{
+				{
+					Reason: brokerReconciled, Type: corev1.EventTypeNormal,
+				},
+				{
+					Reason: brokerUpdateStatusFailed, Type: corev1.EventTypeWarning,
+				},
+			},
+		},
+		{
+>>>>>>> bab95e577d3f6c463c56e7cdb18d14d39e8ee2dd
 			Name:   "Broker.Status.Update error",
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{

@@ -46,6 +46,9 @@ spec:
               fieldPath: metadata.namespace
         - name: CONFIG_LOGGING_NAME
           value: config-logging
+        resources:
+          limits:
+            memory: 1000Mi   # An initial guess, but consistent with serving
       volumes:
         - name: config-logging
           configMap:

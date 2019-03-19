@@ -70,6 +70,7 @@ var brokerCondSet = duckv1alpha1.NewLivingConditionSet(BrokerConditionIngress, B
 
 // BrokerStatus represents the current state of a Broker.
 type BrokerStatus struct {
+<<<<<<< HEAD
 	// ObservedGeneration is the most recent generation observed for this Broker.
 	// It corresponds to the Broker's generation, which is updated on mutation by
 	// the API Server.
@@ -83,6 +84,12 @@ type BrokerStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+=======
+	// inherits duck/v1alpha1 Status, which currently provides:
+	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
+	// * Conditions - the latest available observations of a resource's current state.
+	duckv1alpha1.Status `json:",inline"`
+>>>>>>> bab95e577d3f6c463c56e7cdb18d14d39e8ee2dd
 
 	// Broker is Addressable. It currently exposes the endpoint as a
 	// fully-qualified DNS name which will distribute traffic over the

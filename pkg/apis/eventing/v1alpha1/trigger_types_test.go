@@ -60,8 +60,15 @@ func TestTriggerGetCondition(t *testing.T) {
 	}{{
 		name: "single condition",
 		ts: &TriggerStatus{
+<<<<<<< HEAD
 			Conditions: []duckv1alpha1.Condition{
 				triggerConditionReady,
+=======
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{
+					triggerConditionReady,
+				},
+>>>>>>> bab95e577d3f6c463c56e7cdb18d14d39e8ee2dd
 			},
 		},
 		condQuery: duckv1alpha1.ConditionReady,
@@ -69,9 +76,17 @@ func TestTriggerGetCondition(t *testing.T) {
 	}, {
 		name: "multiple conditions",
 		ts: &TriggerStatus{
+<<<<<<< HEAD
 			Conditions: []duckv1alpha1.Condition{
 				triggerConditionBrokerExists,
 				triggerConditionKubernetesService,
+=======
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{
+					triggerConditionBrokerExists,
+					triggerConditionKubernetesService,
+				},
+>>>>>>> bab95e577d3f6c463c56e7cdb18d14d39e8ee2dd
 			},
 		},
 		condQuery: TriggerConditionKubernetesService,
@@ -79,10 +94,19 @@ func TestTriggerGetCondition(t *testing.T) {
 	}, {
 		name: "multiple conditions, condition false",
 		ts: &TriggerStatus{
+<<<<<<< HEAD
 			Conditions: []duckv1alpha1.Condition{
 				triggerConditionBrokerExists,
 				triggerConditionKubernetesService,
 				triggerConditionSubscribed,
+=======
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{
+					triggerConditionBrokerExists,
+					triggerConditionKubernetesService,
+					triggerConditionSubscribed,
+				},
+>>>>>>> bab95e577d3f6c463c56e7cdb18d14d39e8ee2dd
 			},
 		},
 		condQuery: TriggerConditionSubscribed,
@@ -90,9 +114,17 @@ func TestTriggerGetCondition(t *testing.T) {
 	}, {
 		name: "unknown condition",
 		ts: &TriggerStatus{
+<<<<<<< HEAD
 			Conditions: []duckv1alpha1.Condition{
 				triggerConditionVirtualService,
 				triggerConditionSubscribed,
+=======
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{
+					triggerConditionVirtualService,
+					triggerConditionSubscribed,
+				},
+>>>>>>> bab95e577d3f6c463c56e7cdb18d14d39e8ee2dd
 			},
 		},
 		condQuery: duckv1alpha1.ConditionType("foo"),
@@ -118,6 +150,7 @@ func TestTriggerInitializeConditions(t *testing.T) {
 		name: "empty",
 		ts:   &TriggerStatus{},
 		want: &TriggerStatus{
+<<<<<<< HEAD
 			Conditions: []duckv1alpha1.Condition{{
 				Type:   TriggerConditionBrokerExists,
 				Status: corev1.ConditionUnknown,
@@ -134,10 +167,31 @@ func TestTriggerInitializeConditions(t *testing.T) {
 				Type:   TriggerConditionVirtualService,
 				Status: corev1.ConditionUnknown,
 			}},
+=======
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{{
+					Type:   TriggerConditionBrokerExists,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   TriggerConditionKubernetesService,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   TriggerConditionReady,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   TriggerConditionSubscribed,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   TriggerConditionVirtualService,
+					Status: corev1.ConditionUnknown,
+				}},
+			},
+>>>>>>> bab95e577d3f6c463c56e7cdb18d14d39e8ee2dd
 		},
 	}, {
 		name: "one false",
 		ts: &TriggerStatus{
+<<<<<<< HEAD
 			Conditions: []duckv1alpha1.Condition{{
 				Type:   TriggerConditionVirtualService,
 				Status: corev1.ConditionFalse,
@@ -160,10 +214,39 @@ func TestTriggerInitializeConditions(t *testing.T) {
 				Type:   TriggerConditionVirtualService,
 				Status: corev1.ConditionFalse,
 			}},
+=======
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{{
+					Type:   TriggerConditionVirtualService,
+					Status: corev1.ConditionFalse,
+				}},
+			},
+		},
+		want: &TriggerStatus{
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{{
+					Type:   TriggerConditionBrokerExists,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   TriggerConditionKubernetesService,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   TriggerConditionReady,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   TriggerConditionSubscribed,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   TriggerConditionVirtualService,
+					Status: corev1.ConditionFalse,
+				}},
+			},
+>>>>>>> bab95e577d3f6c463c56e7cdb18d14d39e8ee2dd
 		},
 	}, {
 		name: "one true",
 		ts: &TriggerStatus{
+<<<<<<< HEAD
 			Conditions: []duckv1alpha1.Condition{{
 				Type:   TriggerConditionSubscribed,
 				Status: corev1.ConditionTrue,
@@ -186,6 +269,34 @@ func TestTriggerInitializeConditions(t *testing.T) {
 				Type:   TriggerConditionVirtualService,
 				Status: corev1.ConditionUnknown,
 			}},
+=======
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{{
+					Type:   TriggerConditionSubscribed,
+					Status: corev1.ConditionTrue,
+				}},
+			},
+		},
+		want: &TriggerStatus{
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{{
+					Type:   TriggerConditionBrokerExists,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   TriggerConditionKubernetesService,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   TriggerConditionReady,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   TriggerConditionSubscribed,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   TriggerConditionVirtualService,
+					Status: corev1.ConditionUnknown,
+				}},
+			},
+>>>>>>> bab95e577d3f6c463c56e7cdb18d14d39e8ee2dd
 		},
 	}}
 
