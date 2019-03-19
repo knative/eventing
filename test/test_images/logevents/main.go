@@ -35,7 +35,7 @@ func handler(event cloudevents.Event) {
 	if err := event.DataAs(data); err != nil {
 		fmt.Printf("Got Data Error: %s\n", err.Error())
 	}
-	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), ctx.ContentType, ctx.Source.String(), data)
+	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), *ctx.ContentType, ctx.Source.String(), data)
 }
 
 func main() {
