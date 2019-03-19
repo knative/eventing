@@ -15,24 +15,21 @@ package main
 
 import (
 	"context"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	"log"
-	"net/http"
-	"time"
-
-	"github.com/knative/pkg/cloudevents"
 )
 
-type Heartbeat struct {
-	Sequence int    `json:"id"`
-	Data     string `json:"data"`
-}
-
-func handler(ctx context.Context, data map[string]interface{}) {
-	metadata := cloudevents.FromContext(ctx).AsV02()
-	log.Printf("[%s] %s %s: %+v", metadata.Time.Format(time.RFC3339), metadata.ContentType, metadata.Source, data)
+func handler(event cloudevents.Event) {
+	log.Printf("%s", event)
 }
 
 func main() {
-	log.Print("Ready and listening on port 8080")
-	log.Fatal(http.ListenAndServe(":8080", cloudevents.Handler(handler)))
+	c, err := client.NewDefault()
+	if err != nil {
+		log.Fatalf("failed to create client, %v", err)
+	}
+
+	log.Printf("will listen on :8080\n")
+	log.Fatalf("failed to start receiver: %s", c.StartReceiver(context.Background(), handler))
 }
