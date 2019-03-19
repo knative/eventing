@@ -58,6 +58,25 @@
   version = "v2.1.15"
 
 [[projects]]
+  digest = "1:70a8e5f09e19aba14064648751abc86f20484e25476866b03ce711007e96f339"
+  name = "github.com/cloudevents/sdk-go"
+  packages = [
+    "pkg/cloudevents",
+    "pkg/cloudevents/client",
+    "pkg/cloudevents/codec",
+    "pkg/cloudevents/context",
+    "pkg/cloudevents/datacodec",
+    "pkg/cloudevents/datacodec/json",
+    "pkg/cloudevents/datacodec/xml",
+    "pkg/cloudevents/transport",
+    "pkg/cloudevents/transport/http",
+    "pkg/cloudevents/types",
+  ]
+  pruneopts = "NUT"
+  revision = "c1a6fb0cc8226884014fb5063ab406ed9504a663"
+  version = "0.4.0"
+
+[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -351,7 +370,7 @@
   version = "v0.2.0"
 
 [[projects]]
-  digest = "1:a30bb5b218c35de71323fbc7efa2e0803f932b64ce878d92822a9dff18ba5a65"
+  digest = "1:c89991e8c688df2188caa7ef2a3c7ddbc78dd5e73ca4ac08477e0e2d3d7cdb10"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -361,7 +380,6 @@
     "apis/istio/common/v1alpha1",
     "apis/istio/v1alpha3",
     "changeset",
-    "cloudevents",
     "configmap",
     "kmeta",
     "kmp",
@@ -1238,15 +1256,17 @@
     "cloud.google.com/go/pubsub",
     "github.com/Shopify/sarama",
     "github.com/bsm/sarama-cluster",
+    "github.com/cloudevents/sdk-go/pkg/cloudevents",
+    "github.com/cloudevents/sdk-go/pkg/cloudevents/client",
+    "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http",
+    "github.com/cloudevents/sdk-go/pkg/cloudevents/types",
     "github.com/fsnotify/fsnotify",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
-    "github.com/google/uuid",
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
     "github.com/knative/pkg/apis/duck/v1alpha1",
     "github.com/knative/pkg/apis/istio/v1alpha3",
-    "github.com/knative/pkg/cloudevents",
     "github.com/knative/pkg/configmap",
     "github.com/knative/pkg/logging",
     "github.com/knative/pkg/logging/logkey",
