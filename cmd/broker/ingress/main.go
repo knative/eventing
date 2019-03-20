@@ -22,6 +22,7 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -60,7 +61,11 @@ func main() {
 		logger.Fatal("Unable to add eventingv1alpha1 scheme", zap.Error(err))
 	}
 
-	channelURI := getRequiredEnv("CHANNEL")
+	channelURI := &url.URL{
+		Scheme: "http",
+		Host:   getRequiredEnv("CHANNEL"),
+		Path:   "/",
+	}
 
 	h, err := New(logger, channelURI)
 	if err != nil {
@@ -91,7 +96,7 @@ func getRequiredEnv(envKey string) string {
 	return val
 }
 
-func New(logger *zap.Logger, channelURI string) (*handler, error) {
+func New(logger *zap.Logger, channelURI *url.URL) (*handler, error) {
 	ceHttp, err := cehttp.New(cehttp.WithBinaryEncoding(), cehttp.WithPort(defaultPort))
 	if err != nil {
 		return nil, err
@@ -112,7 +117,7 @@ type handler struct {
 	logger     *zap.Logger
 	ceClient   ceclient.Client
 	ceHttp     *cehttp.Transport
-	channelURI string
+	channelURI *url.URL
 }
 
 func (h *handler) Start(stopCh <-chan struct{}) error {
@@ -162,7 +167,7 @@ func (h *handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 }
 
 func (h *handler) sendEvent(ctx context.Context, event cloudevents.Event) error {
-	sendingCtx := cecontext.WithTarget(ctx, h.channelURI)
+	sendingCtx := cecontext.WithTarget(ctx, h.channelURI.String())
 	_, err := h.ceHttp.Send(sendingCtx, event)
 	return err
 }
