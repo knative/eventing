@@ -127,6 +127,14 @@ func main() {
 		logger.Error("manager.Start() returned an error", zap.Error(err))
 	}
 	logger.Info("Exiting...")
+
+	// Exit if shutdown takes too long
+	go func() {
+		<-time.After(shutdownTimeout)
+		log.Fatal("Shutdown took longer than %v", shutdownTimeout)
+	}()
+
+	// Wait for runnables to stop
 	wg.Wait()
 	logger.Info("Done.")
 }
