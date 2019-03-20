@@ -20,8 +20,6 @@ package test
 
 import (
 	"encoding/json"
-	"os"
-	"os/signal"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -108,17 +106,4 @@ func (c *Cleaner) Clean(awaitDeletion bool) error {
 		}
 	}
 	return nil
-}
-
-// CleanupOnInterrupt will execute the function cleanup if an interrupt signal is caught
-func CleanupOnInterrupt(cleanup func(), logf logging.FormatLogger) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		for range c {
-			logf("Test interrupted, cleaning up.")
-			cleanup()
-			os.Exit(1)
-		}
-	}()
 }
