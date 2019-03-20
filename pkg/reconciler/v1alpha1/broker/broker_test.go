@@ -143,6 +143,7 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeDeletingBroker(),
 			},
+			WantEvent: []corev1.Event{events[brokerReconciled]},
 		},
 		{
 			Name:   "Channel.List error",

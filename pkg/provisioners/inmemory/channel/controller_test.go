@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	eventingtesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -80,7 +81,7 @@ func (f *FakeManager) GetCache() cache.Cache {
 }
 
 func (f *FakeManager) GetRecorder(name string) record.EventRecorder {
-	return nil
+	return eventingtesting.NewEventRecorder()
 }
 
 func (f *FakeManager) GetRESTMapper() meta.RESTMapper {

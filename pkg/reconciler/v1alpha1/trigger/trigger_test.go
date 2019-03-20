@@ -163,6 +163,7 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeDeletingTrigger(),
 			},
+			WantEvent: []corev1.Event{events[triggerReconciled]},
 		},
 		{
 			Name:   "Get Broker error",

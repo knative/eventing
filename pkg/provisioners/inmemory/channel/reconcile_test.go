@@ -27,6 +27,7 @@ import (
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	util "github.com/knative/eventing/pkg/provisioners"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
@@ -58,6 +59,8 @@ const (
 	testErrorMessage = "test induced error"
 
 	insertedByVerifyConfigMapData = "data inserted by verifyConfigMapData so that it can be WantPresent"
+	channelReconcileFailed        = "Channel" + eventingreconciler.ReconcileFailed
+	channelAddFinalizerFailed     = "Channel" + eventingreconciler.AddFinalizerFailed
 )
 
 var (
@@ -185,6 +188,8 @@ var (
 	events = map[string]corev1.Event{
 		channelReconciled:          {Reason: channelReconciled, Type: corev1.EventTypeNormal},
 		channelUpdateStatusFailed:  {Reason: channelUpdateStatusFailed, Type: corev1.EventTypeWarning},
+		channelReconcileFailed:     {Reason: channelReconcileFailed, Type: corev1.EventTypeWarning},
+		channelAddFinalizerFailed:  {Reason: channelAddFinalizerFailed, Type: corev1.EventTypeWarning},
 		channelConfigSyncFailed:    {Reason: channelConfigSyncFailed, Type: corev1.EventTypeWarning},
 		k8sServiceCreateFailed:     {Reason: k8sServiceCreateFailed, Type: corev1.EventTypeWarning},
 		virtualServiceCreateFailed: {Reason: virtualServiceCreateFailed, Type: corev1.EventTypeWarning},
@@ -290,6 +295,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[channelConfigSyncFailed],
+				events[channelReconcileFailed],
 			},
 		},
 		{
@@ -303,6 +309,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[channelConfigSyncFailed],
+				events[channelReconcileFailed],
 			},
 		},
 		{
@@ -316,6 +323,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[channelConfigSyncFailed],
+				events[channelReconcileFailed],
 			},
 		},
 		{
@@ -330,6 +338,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[channelConfigSyncFailed],
+				events[channelReconcileFailed],
 			},
 		},
 		{
@@ -347,6 +356,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[k8sServiceCreateFailed],
+				events[channelReconcileFailed],
 			},
 		},
 		{
@@ -365,6 +375,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[k8sServiceCreateFailed],
+				events[channelReconcileFailed],
 			},
 		},
 		{
@@ -386,6 +397,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[virtualServiceCreateFailed],
+				events[channelReconcileFailed],
 			},
 		},
 		{
@@ -406,22 +418,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[virtualServiceCreateFailed],
-			},
-		},
-		{
-			Name: "Channel get for update fails",
-			InitialState: []runtime.Object{
-				makeChannel(),
-				makeConfigMap(),
-				makeK8sService(),
-				makeVirtualService(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockGets: errorOnSecondChannelGet(),
-			},
-			WantErrMsg: testErrorMessage,
-			WantEvent: []corev1.Event{
-				events[channelReconciled], events[channelUpdateStatusFailed],
+				events[channelReconcileFailed],
 			},
 		},
 		{
@@ -437,7 +434,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
-				events[channelReconciled], events[channelUpdateStatusFailed],
+				events[channelAddFinalizerFailed],
 			},
 		}, {
 			Name: "Channel status update fails",
@@ -562,12 +559,18 @@ func TestReconcile(t *testing.T) {
 		}
 		c := tc.GetClient()
 		recorder := tc.GetEventRecorder()
-		r := &reconciler{
-			client:       c,
-			recorder:     recorder,
-			logger:       zap.NewNop(),
-			configMapKey: configMapKey,
+
+		r, err := eventingreconciler.New(
+			&reconciler{configMapKey: configMapKey},
+			zap.NewNop(),
+			recorder,
+			eventingreconciler.EnableFinalizer(finalizerName),
+			eventingreconciler.EnableFilter(),
+		)
+		if err != nil {
+			t.FailNow()
 		}
+
 		if tc.ReconcileKey == "" {
 			tc.ReconcileKey = fmt.Sprintf("/%s", cName)
 		}

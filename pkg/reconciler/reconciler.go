@@ -21,10 +21,11 @@ import (
 )
 
 const (
-	AddFinalizerFailed = "AddFinalizerFailed"
-	Reconciled         = "Reconciled"
-	UpdateStatusFailed = "UpdateStatusFailed"
-	ReconcileFailed    = "ReconcileFailed"
+	AddFinalizerFailed    = "AddFinalizerFailed"
+	RemoveFinalizerFailed = "UpdateFinalizerFailed"
+	Reconciled            = "Reconciled"
+	UpdateStatusFailed    = "UpdateStatusFailed"
+	ReconcileFailed       = "ReconcileFailed"
 )
 
 type ReconciledResource interface {
@@ -157,23 +158,23 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	obj := r.GetNewReconcileObject()
 	recObjTypeName := reflect.TypeOf(obj).Elem().Name()
 
-	ctx := logging.WithLogger(context.TODO(), r.logger.With(zap.Any("request", request)))
-	ctxLogger := logging.FromContext(ctx)
+	ctx := logging.WithLogger(context.TODO(), r.logger.With(zap.Any("request", request), zap.Any("ResourceKind", recObjTypeName)))
+	logger := logging.FromContext(ctx)
 
-	ctxLogger.Debug(fmt.Sprintf("Reconciling %s", recObjTypeName))
+	logger.Debug("Reconciling.")
 
 	if err := r.client.Get(ctx, request.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
-			ctxLogger.Error(fmt.Sprintf("Could not find %s", recObjTypeName))
+			logger.Error("Could not find object.")
 			return reconcile.Result{}, nil
 		}
-		ctxLogger.Error(fmt.Sprintf("Error getting %s", recObjTypeName), zap.Error(err))
+		logger.Error("Error in client.Get()", zap.Error(err))
 		return reconcile.Result{}, err
 	}
 
 	// First check if the reconciler implement Filter.ShouldReconcile() and that the object should be reconciled or not
 	if r.filter != nil && !r.filter.ShouldReconcile(ctx, obj, r.recorder) {
-		ctxLogger.Debug(fmt.Sprintf("Not reconciling %s as ShouldReconcile() returned false", recObjTypeName))
+		logger.Debug("Skip reconciling as ShouldReconcile() returned false")
 		return reconcile.Result{}, nil
 	}
 
@@ -181,13 +182,19 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	if !obj.GetDeletionTimestamp().IsZero() {
 		if r.finalizer != nil {
 			if err := r.finalizer.OnDelete(ctx, obj, r.recorder); err != nil {
-				ctxLogger.Error("Finalizer func failed.", zap.Error(err))
+				logger.Error("Finalizer func failed.", zap.Error(err))
 				return reconcile.Result{}, err
 			}
 		}
 		provisioners.RemoveFinalizer(obj, r.finalizerName)
-
+		if err := r.client.Update(ctx, obj); err != nil {
+			logger.Error("Reconcile failed while removing finalizer", zap.Any("FinalizerName", r.finalizerName), zap.Error(err))
+			reason := recObjTypeName + RemoveFinalizerFailed
+			r.recorder.Eventf(obj, corev1.EventTypeWarning, reason, "%s(%s) reconciliation failed: %s", recObjTypeName, obj.GetName(), err)
+			return reconcile.Result{}, err
+		}
 		// Return as there is nothing else the the reconciler can do
+		r.reportObjectReconciled(obj, logger)
 		return reconcile.Result{}, nil
 	}
 
@@ -197,12 +204,9 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 			// If this update succeeds then proceed with rest of reconcilliation as obj will have the
 			// returned updated obj with new ResourceVersion
 			if err := r.client.Update(ctx, obj); err != nil {
-				ctxLogger.Error(
-					fmt.Sprintf("Error reconciling %s. Adding finalizer %s failed.", recObjTypeName, r.finalizerName),
-					zap.Error(err),
-				)
+				logger.Error("Reconcile failed while adding finalizer", zap.Any("FinalizerName", r.finalizerName), zap.Error(err))
 				eventFailedReason := recObjTypeName + AddFinalizerFailed
-				r.recorder.Eventf(obj, corev1.EventTypeWarning, eventFailedReason, "%s reconciliation failed: %v", recObjTypeName, err)
+				r.recorder.Eventf(obj, corev1.EventTypeWarning, eventFailedReason, "%s(%s) reconciliation failed: %s", recObjTypeName, obj.GetName(), err)
 				return reconcile.Result{}, err
 			}
 		}
@@ -211,22 +215,27 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	updateStatus, result, err := r.ReconcileResource(ctx, obj, r.recorder)
 
 	if err != nil {
-		ctxLogger.Warn(fmt.Sprintf("Error reconciling %s", recObjTypeName), zap.Error(err))
+		logger.Warn(fmt.Sprintf("Error reconciling %s", recObjTypeName), zap.Error(err))
 		reason := recObjTypeName + ReconcileFailed
 		r.recorder.Eventf(obj, corev1.EventTypeWarning, reason, "%s reconcile failed: %q", recObjTypeName, obj.GetName())
 	} else {
-		ctxLogger.Debug(fmt.Sprintf("%s reconciled", recObjTypeName))
-		reason := recObjTypeName + Reconciled
-		r.recorder.Eventf(obj, corev1.EventTypeNormal, reason, "%s reconciled: %q", recObjTypeName, obj.GetName())
+		r.reportObjectReconciled(obj, logger)
 	}
 	if updateStatus {
 		if updataStatusErr := r.client.Status().Update(ctx, obj); updataStatusErr != nil {
-			ctxLogger.Warn(fmt.Sprintf("Failed to update %s", recObjTypeName), zap.Error(updataStatusErr))
+			logger.Error("Failed to update status.", zap.Error(updataStatusErr))
 			reason := recObjTypeName + UpdateStatusFailed
-			r.recorder.Eventf(obj, corev1.EventTypeWarning, reason, "Failed to update %s status: %v", recObjTypeName, updataStatusErr)
+			r.recorder.Eventf(obj, corev1.EventTypeWarning, reason, "Failed to update %s(%s) status: %v", recObjTypeName, obj.GetName(), updataStatusErr)
 			return reconcile.Result{}, updataStatusErr
 		}
 	}
 
 	return result, err
+}
+
+func (r *reconciler) reportObjectReconciled(obj ReconciledResource, logger *zap.Logger) {
+	typeName := reflect.TypeOf(obj).Elem().Name()
+	logger.Debug("Reconciled.")
+	reason := typeName + Reconciled
+	r.recorder.Eventf(obj, corev1.EventTypeNormal, reason, "%s(%s) reconciled.", typeName, obj.GetName())
 }

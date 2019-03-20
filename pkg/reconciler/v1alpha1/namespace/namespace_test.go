@@ -176,6 +176,7 @@ func TestReconcile(t *testing.T) {
 			WantAbsent: []runtime.Object{
 				makeBroker(),
 			},
+			WantEvent: []corev1.Event{events[namespaceReconciled]},
 		},
 		{
 			Name:   "Broker.Get fails",
