@@ -134,4 +134,4 @@ required = [
 # The latest release as of March 12, 2019.
 [[constraint]]
   name = "github.com/cloudevents/sdk-go"
-  version = "=0.4.0"
+  version = "=0.4.1"

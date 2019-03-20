@@ -74,3 +74,34 @@ func (e Encoding) Version() string {
 		return "Unknown"
 	}
 }
+
+func (e Encoding) Codec() string {
+	switch e {
+	case Default:
+		return "default"
+
+	// Version 0.1
+	case BinaryV01:
+		return "binary/v0.1"
+	case StructuredV01:
+		return "structured/v0.1"
+
+	// Version 0.2
+	case BinaryV02:
+		return "binary/v0.3"
+	case StructuredV02:
+		return "structured/v0.2"
+
+	// Version 0.3
+	case BinaryV03:
+		return "binary/v0.3"
+	case StructuredV03:
+		return "structured/v0.3"
+	case BatchedV03:
+		return "batched/v0.3"
+
+	// Unknown
+	default:
+		return "unknown"
+	}
+}

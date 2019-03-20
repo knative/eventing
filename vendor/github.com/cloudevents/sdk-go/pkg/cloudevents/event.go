@@ -1,8 +1,11 @@
 package cloudevents
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/datacodec"
+	"sort"
 	"strings"
 )
 
@@ -43,31 +46,111 @@ func (e Event) Validate() error {
 }
 
 func (e Event) String() string {
-	sb := strings.Builder{}
+	b := strings.Builder{}
 
-	if s := e.SpecVersion(); s != "" {
-		if sb.Len() > 0 {
-			sb.WriteString("\n")
-		}
-		sb.WriteString("SpecVersion: ")
-		sb.WriteString(s)
+	b.WriteString("Validation: ")
+
+	valid := e.Validate()
+	if valid == nil {
+		b.WriteString("valid\n")
+	} else {
+		b.WriteString("invalid\n")
+	}
+	if valid != nil {
+		b.WriteString(fmt.Sprintf("Validation Error: \n%s\n", valid.Error()))
 	}
 
-	if s := e.Type(); s != "" {
-		if sb.Len() > 0 {
-			sb.WriteString("\n")
+	b.WriteString("Context Attributes,\n")
+
+	var extensions map[string]interface{}
+
+	switch e.SpecVersion() {
+	case CloudEventsVersionV01:
+		if ec, ok := e.Context.(EventContextV01); ok {
+			b.WriteString("  cloudEventsVersion: " + ec.CloudEventsVersion + "\n")
+			b.WriteString("  eventType: " + ec.EventType + "\n")
+			if ec.EventTypeVersion != nil {
+				b.WriteString("  eventTypeVersion: " + *ec.EventTypeVersion + "\n")
+			}
+			b.WriteString("  source: " + ec.Source.String() + "\n")
+			b.WriteString("  eventID: " + ec.EventID + "\n")
+			if ec.EventTime != nil {
+				b.WriteString("  eventTime: " + ec.EventTime.String() + "\n")
+			}
+			if ec.SchemaURL != nil {
+				b.WriteString("  schemaURL: " + ec.SchemaURL.String() + "\n")
+			}
+			if ec.ContentType != nil {
+				b.WriteString("  contentType: " + *ec.ContentType + "\n")
+			}
+			extensions = ec.Extensions
 		}
-		sb.WriteString("Type: ")
-		sb.WriteString(s)
+
+	case CloudEventsVersionV02:
+		if ec, ok := e.Context.(EventContextV02); ok {
+			b.WriteString("  specversion: " + ec.SpecVersion + "\n")
+			b.WriteString("  type: " + ec.Type + "\n")
+			b.WriteString("  source: " + ec.Source.String() + "\n")
+			b.WriteString("  id: " + ec.ID + "\n")
+			if ec.Time != nil {
+				b.WriteString("  time: " + ec.Time.String() + "\n")
+			}
+			if ec.SchemaURL != nil {
+				b.WriteString("  schemaurl: " + ec.SchemaURL.String() + "\n")
+			}
+			if ec.ContentType != nil {
+				b.WriteString("  contenttype: " + *ec.ContentType + "\n")
+			}
+			extensions = ec.Extensions
+		}
+
+	case CloudEventsVersionV03:
+		if ec, ok := e.Context.(EventContextV03); ok {
+			b.WriteString("  specversion: " + ec.SpecVersion + "\n")
+			b.WriteString("  type: " + ec.Type + "\n")
+			b.WriteString("  source: " + ec.Source.String() + "\n")
+			b.WriteString("  id: " + ec.ID + "\n")
+			if ec.Time != nil {
+				b.WriteString("  time: " + ec.Time.String() + "\n")
+			}
+			if ec.SchemaURL != nil {
+				b.WriteString("  schemaurl: " + ec.SchemaURL.String() + "\n")
+			}
+			if ec.DataContentType != nil {
+				b.WriteString("  datacontenttype: " + *ec.DataContentType + "\n")
+			}
+			extensions = ec.Extensions
+		}
+	default:
+		b.WriteString(e.String() + "\n")
 	}
 
-	if s := e.DataContentType(); s != "" {
-		if sb.Len() > 0 {
-			sb.WriteString("\n")
+	if extensions != nil && len(extensions) > 0 {
+		b.WriteString("Extensions,\n")
+		keys := make([]string, 0, len(extensions))
+		for k := range extensions {
+			keys = append(keys, k)
 		}
-		sb.WriteString("DataContentType: ")
-		sb.WriteString(s)
+		sort.Strings(keys)
+		for _, key := range keys {
+			b.WriteString(fmt.Sprintf("  %s: %v\n", key, extensions[key]))
+		}
 	}
 
-	return sb.String()
+	if e.Data != nil {
+		b.WriteString("Data,\n  ")
+		if strings.HasPrefix(e.DataContentType(), "application/json") {
+			var prettyJSON bytes.Buffer
+			err := json.Indent(&prettyJSON, e.Data.([]byte), "  ", "  ")
+			if err != nil {
+				b.Write(e.Data.([]byte))
+			} else {
+				b.Write(prettyJSON.Bytes())
+			}
+		} else {
+			b.Write(e.Data.([]byte))
+		}
+		b.WriteString("\n")
+	}
+	return b.String()
 }
