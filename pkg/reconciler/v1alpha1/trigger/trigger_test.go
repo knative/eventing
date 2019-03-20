@@ -25,6 +25,7 @@ import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler/names"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
 	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
@@ -32,6 +33,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -181,7 +183,7 @@ func TestReconcile(t *testing.T) {
 			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
 		},
 		{
-			Name:   "Get Broker channel error",
+			Name:   "Get Broker Trigger channel error",
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
 				makeTrigger(),
@@ -189,15 +191,44 @@ func TestReconcile(t *testing.T) {
 			},
 			Mocks: controllertesting.Mocks{
 				MockLists: []controllertesting.MockList{
-					func(_ client.Client, _ context.Context, _ *client.ListOptions, list runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := list.(*v1alpha1.ChannelList); ok {
-							return controllertesting.Handled, errors.New("test error getting broker's channel")
+					func(_ client.Client, _ context.Context, opts *client.ListOptions, list runtime.Object) (controllertesting.MockHandled, error) {
+						// Only match the Trigger Channel labels.
+						ls := labels.FormatLabels(broker.TriggerChannelLabels(makeBroker()))
+						l, _ := labels.ConvertSelectorToLabelsMap(ls)
+
+						if _, ok := list.(*v1alpha1.ChannelList); ok && opts.LabelSelector.Matches(l) {
+							return controllertesting.Handled, errors.New("test error getting broker's Trigger channel")
 						}
 						return controllertesting.Unhandled, nil
 					},
 				},
 			},
-			WantErrMsg: "test error getting broker's channel",
+			WantErrMsg: "test error getting broker's Trigger channel",
+			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+		},
+		{
+			Name:   "Get Broker Ingress channel error",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeTrigger(),
+				makeBroker(),
+				makeTriggerChannel(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockLists: []controllertesting.MockList{
+					func(_ client.Client, _ context.Context, opts *client.ListOptions, list runtime.Object) (handled controllertesting.MockHandled, e error) {
+						// Only match the Ingress Channel labels.
+						ls := labels.FormatLabels(broker.IngressChannelLabels(makeBroker()))
+						l, _ := labels.ConvertSelectorToLabelsMap(ls)
+
+						if _, ok := list.(*v1alpha1.ChannelList); ok && opts.LabelSelector.Matches(l) {
+							return controllertesting.Handled, errors.New("test error getting broker's Ingress channel")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error getting broker's Ingress channel",
 			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
 		},
 		{
@@ -206,7 +237,7 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeTrigger(),
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 			},
 			DynamicMocks: controllertesting.DynamicMocks{
 				MockGets: []controllertesting.MockDynamicGet{
@@ -228,7 +259,7 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeTrigger(),
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 			},
 			Objects: []runtime.Object{
 				makeSubscriberServiceAsUnstructured(),
@@ -252,7 +283,7 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeTrigger(),
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 				makeDifferentK8sService(),
 			},
 			Objects: []runtime.Object{
@@ -277,7 +308,7 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeTrigger(),
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 				makeK8sService(),
 			},
 			Objects: []runtime.Object{
@@ -302,7 +333,7 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeTrigger(),
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 				makeK8sService(),
 				makeDifferentVirtualService(),
 			},
@@ -328,7 +359,7 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeTrigger(),
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 				makeK8sService(),
 				makeVirtualService(),
 			},
@@ -354,7 +385,7 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeTrigger(),
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 				makeK8sService(),
 				makeVirtualService(),
 				makeDifferentSubscription(),
@@ -381,7 +412,7 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeTrigger(),
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 				makeK8sService(),
 				makeVirtualService(),
 				makeDifferentSubscription(),
@@ -408,7 +439,7 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeTrigger(),
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 				makeK8sService(),
 				makeVirtualService(),
 				makeSameSubscription(),
@@ -435,7 +466,7 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeTrigger(),
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 				makeK8sService(),
 				makeVirtualService(),
 				makeSameSubscription(),
@@ -562,7 +593,7 @@ func newChannel(name string) *v1alpha1.Channel {
 	}
 }
 
-func makeChannel() *v1alpha1.Channel {
+func makeTriggerChannel() *v1alpha1.Channel {
 	return newChannel(fmt.Sprintf("%s-broker", brokerName))
 }
 
@@ -611,11 +642,11 @@ func makeDifferentVirtualService() *istiov1alpha3.VirtualService {
 }
 
 func makeSameSubscription() *v1alpha1.Subscription {
-	return makeSubscription(makeTrigger(), makeChannel(), makeK8sService())
+	return makeSubscription(makeTrigger(), makeTriggerChannel(), makeTriggerChannel(), makeK8sService())
 }
 
 func makeDifferentSubscription() *v1alpha1.Subscription {
-	return makeSubscription(makeTrigger(), makeDifferentChannel(), makeK8sService())
+	return makeSubscription(makeTrigger(), makeTriggerChannel(), makeDifferentChannel(), makeK8sService())
 }
 
 func getOwnerReference() metav1.OwnerReference {

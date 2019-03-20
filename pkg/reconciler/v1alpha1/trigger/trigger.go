@@ -226,9 +226,14 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	}
 	t.Status.MarkBrokerExists()
 
-	c, err := r.getBrokerChannel(ctx, b)
+	brokerTrigger, err := r.getBrokerTriggerChannel(ctx, b)
 	if err != nil {
-		logging.FromContext(ctx).Error("Unable to get the Broker's Channel", zap.Error(err))
+		logging.FromContext(ctx).Error("Unable to get the Broker's Trigger Channel", zap.Error(err))
+		return err
+	}
+	brokerIngress, err := r.getBrokerIngressChannel(ctx, b)
+	if err != nil {
+		logging.FromContext(ctx).Error("Unable to get the Broker's Ingress Channel", zap.Error(err))
 		return err
 	}
 
@@ -253,7 +258,7 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	}
 	t.Status.MarkVirtualServiceExists()
 
-	_, err = r.subscribeToBrokerChannel(ctx, t, c, svc)
+	_, err = r.subscribeToBrokerChannel(ctx, t, brokerTrigger, brokerIngress, svc)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to Subscribe", zap.Error(err))
 		t.Status.MarkNotSubscribed("notSubscribed", "%v", err)
@@ -315,12 +320,24 @@ func (r *reconciler) getBroker(ctx context.Context, t *v1alpha1.Trigger) (*v1alp
 	return b, err
 }
 
-// getBrokerChannel returns the Broker's channel if exists, otherwise it returns an error.
-func (r *reconciler) getBrokerChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
+// getBrokerTriggerChannel return the Broker's Trigger Channel if it exists, otherwise it returns an
+// error.
+func (r *reconciler) getBrokerTriggerChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
+	return r.getChannel(ctx, b, labels.SelectorFromSet(broker.TriggerChannelLabels(b)))
+}
+
+// getBrokerIngressChannel return the Broker's Ingress Channel if it exists, otherwise it returns an
+// error.
+func (r *reconciler) getBrokerIngressChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
+	return r.getChannel(ctx, b, labels.SelectorFromSet(broker.IngressChannelLabels(b)))
+}
+
+// getChannel returns the Broker's channel if it exists, otherwise it returns an error.
+func (r *reconciler) getChannel(ctx context.Context, b *v1alpha1.Broker, ls labels.Selector) (*v1alpha1.Channel, error) {
 	list := &v1alpha1.ChannelList{}
 	opts := &runtimeclient.ListOptions{
 		Namespace:     b.Namespace,
-		LabelSelector: labels.SelectorFromSet(broker.ChannelLabels(b)),
+		LabelSelector: ls,
 		// Set Raw because if we need to get more than one page, then we will put the continue token
 		// into opts.Raw.Continue.
 		Raw: &metav1.ListOptions{},
@@ -521,9 +538,9 @@ func virtualServiceLabels(t *v1alpha1.Trigger) map[string]string {
 	}
 }
 
-// subscribeToBrokerChannel subscribes service 'svc' to Broker's channel 'c'.
-func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.Trigger, c *v1alpha1.Channel, svc *corev1.Service) (*v1alpha1.Subscription, error) {
-	expected := makeSubscription(t, c, svc)
+// subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
+func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.Trigger, brokerTrigger, brokerIngress *v1alpha1.Channel, svc *corev1.Service) (*v1alpha1.Subscription, error) {
+	expected := makeSubscription(t, brokerTrigger, brokerIngress, svc)
 
 	sub, err := r.getSubscription(ctx, t)
 	// If the resource doesn't exist, we'll create it
@@ -541,8 +558,8 @@ func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.T
 	// Update Subscription if it has changed. Ignore the generation.
 	expected.Spec.DeprecatedGeneration = sub.Spec.DeprecatedGeneration
 	if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
-		// Given that the backing channel spec is immutable, we cannot just update the subscription.
-		// We delete it instead, and re-create it.
+		// Given that spec.channel is immutable, we cannot just update the Subscription. We delete
+		// it and re-create it instead.
 		err = r.client.Delete(ctx, sub)
 		if err != nil {
 			logging.FromContext(ctx).Info("Cannot delete subscription", zap.Error(err))
@@ -585,8 +602,9 @@ func (r *reconciler) getSubscription(ctx context.Context, t *v1alpha1.Trigger) (
 	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
 }
 
-// makeSubscription returns a placeholder subscription for trigger 't', channel 'c', and service 'svc'.
-func makeSubscription(t *v1alpha1.Trigger, c *v1alpha1.Channel, svc *corev1.Service) *v1alpha1.Subscription {
+// makeSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'svc'
+// replying to brokerIngress.
+func makeSubscription(t *v1alpha1.Trigger, brokerTrigger, brokerIngress *v1alpha1.Channel, svc *corev1.Service) *v1alpha1.Subscription {
 	return &v1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    t.Namespace,
@@ -604,7 +622,7 @@ func makeSubscription(t *v1alpha1.Trigger, c *v1alpha1.Channel, svc *corev1.Serv
 			Channel: corev1.ObjectReference{
 				APIVersion: v1alpha1.SchemeGroupVersion.String(),
 				Kind:       "Channel",
-				Name:       c.Name,
+				Name:       brokerTrigger.Name,
 			},
 			Subscriber: &v1alpha1.SubscriberSpec{
 				Ref: &corev1.ObjectReference{
@@ -613,12 +631,11 @@ func makeSubscription(t *v1alpha1.Trigger, c *v1alpha1.Channel, svc *corev1.Serv
 					Name:       svc.Name,
 				},
 			},
-			// TODO This pushes directly into the Channel, it should probably point at the Broker ingress instead.
 			Reply: &v1alpha1.ReplyStrategy{
 				Channel: &corev1.ObjectReference{
 					APIVersion: v1alpha1.SchemeGroupVersion.String(),
 					Kind:       "Channel",
-					Name:       c.Name,
+					Name:       brokerIngress.Name,
 				},
 			},
 		},
