@@ -28,9 +28,9 @@ import (
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	ceclient "github.com/cloudevents/sdk-go/pkg/cloudevents/client"
-	cecontext "github.com/cloudevents/sdk-go/pkg/cloudevents/context"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/broker"
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
@@ -163,11 +163,11 @@ func (h *handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 
 	// TODO Filter.
 
-	return h.sendEvent(ctx, event)
+	return h.sendEvent(ctx, tctx, event)
 }
 
-func (h *handler) sendEvent(ctx context.Context, event cloudevents.Event) error {
-	sendingCtx := cecontext.WithTarget(ctx, h.channelURI.String())
-	_, err := h.ceHttp.Send(sendingCtx, event)
+func (h *handler) sendEvent(ctx context.Context, tctx cehttp.TransportContext, event cloudevents.Event) error {
+	sendingCTX := broker.SendingContext(ctx, tctx, h.channelURI)
+	_, err := h.ceHttp.Send(sendingCTX, event)
 	return err
 }
