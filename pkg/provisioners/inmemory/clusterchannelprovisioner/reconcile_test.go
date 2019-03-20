@@ -34,16 +34,20 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	util "github.com/knative/eventing/pkg/provisioners"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/pkg/system"
 	_ "github.com/knative/pkg/system/testing"
 )
 
 const (
-	ccpUid           = "test-uid"
-	testErrorMessage = "test-induced-error"
-	testNS           = "test-ns"
-	Name             = "in-memory-channel"
+	ccpUID                = "test-uid"
+	testErrorMessage      = "test-induced-error"
+	testNS                = "test-ns"
+	Name                  = "in-memory-channel"
+	ccpReconciled         = "ClusterChannelProvisioner" + eventingreconciler.Reconciled
+	ccpUpdateStatusFailed = "ClusterChannelProvisioner" + eventingreconciler.UpdateStatusFailed
+	ccpReconcileFailed    = "ClusterChannelProvisioner" + eventingreconciler.ReconcileFailed
 )
 
 var (
@@ -56,6 +60,7 @@ var (
 	// map of events to set test cases' expectations easier
 	events = map[string]corev1.Event{
 		ccpReconciled:          {Reason: ccpReconciled, Type: corev1.EventTypeNormal},
+		ccpReconcileFailed:     {Reason: ccpReconcileFailed, Type: corev1.EventTypeWarning},
 		ccpUpdateStatusFailed:  {Reason: ccpUpdateStatusFailed, Type: corev1.EventTypeWarning},
 		k8sServiceCreateFailed: {Reason: k8sServiceCreateFailed, Type: corev1.EventTypeWarning},
 		k8sServiceDeleteFailed: {Reason: k8sServiceDeleteFailed, Type: corev1.EventTypeWarning},
@@ -182,6 +187,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[k8sServiceCreateFailed],
+				events[ccpReconcileFailed],
 			},
 		},
 		{
@@ -255,21 +261,6 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			Name: "Error getting CCP for updating Status",
-			// Nothing to create or update other than the status of CCP itself.
-			InitialState: []runtime.Object{
-				makeClusterChannelProvisioner(),
-				makeK8sService(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockGets: oneSuccessfulClusterChannelProvisionerGet(),
-			},
-			WantErrMsg: testErrorMessage,
-			WantEvent: []corev1.Event{
-				events[ccpReconciled], events[ccpUpdateStatusFailed],
-			},
-		},
-		{
 			Name: "Error updating Status",
 			// Nothing to create or update other than the status of CCP itself.
 			InitialState: []runtime.Object{
@@ -291,11 +282,17 @@ func TestReconcile(t *testing.T) {
 	for _, tc := range testCases {
 		c := tc.GetClient()
 		recorder := tc.GetEventRecorder()
-		r := &reconciler{
-			client:   c,
-			recorder: recorder,
-			logger:   zap.NewNop(),
+		r, err := eventingreconciler.New(
+			&reconciler{},
+			zap.NewNop(),
+			recorder,
+			eventingreconciler.EnableFilter(),
+			eventingreconciler.ModifyRequest(eventingreconciler.RequestModifierFunc(removeNamespace)),
+		)
+		if err != nil {
+			t.FailNow()
 		}
+
 		if tc.ReconcileKey == "" {
 			tc.ReconcileKey = fmt.Sprintf("/%s", Name)
 		}
@@ -312,7 +309,7 @@ func makeClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvisioner
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: Name,
-			UID:  ccpUid,
+			UID:  ccpUID,
 		},
 		Spec: eventingv1alpha1.ClusterChannelProvisionerSpec{},
 	}
@@ -348,7 +345,7 @@ func makeK8sService() *corev1.Service {
 					APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
 					Kind:               "ClusterChannelProvisioner",
 					Name:               Name,
-					UID:                ccpUid,
+					UID:                ccpUID,
 					Controller:         &truePointer,
 					BlockOwnerDeletion: &truePointer,
 				},

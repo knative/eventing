@@ -47,6 +47,15 @@ type Filter interface {
 	ShouldReconcile(context.Context, ReconciledResource, record.EventRecorder) bool
 }
 
+type RequestModifier interface {
+	Modify(*reconcile.Request)
+}
+type RequestModifierFunc func(*reconcile.Request)
+
+func (f RequestModifierFunc) Modify(r *reconcile.Request) {
+	f(r)
+}
+
 type option func(*reconciler) error
 
 func EnableFinalizer(finalizerName string) option {
@@ -71,6 +80,13 @@ func EnableFilter() option {
 			return errors.New("EventingReconciler doesn't implement Filter")
 		}
 		r.filter = f
+		return nil
+	}
+}
+
+func ModifyRequest(rm RequestModifier) option {
+	return func(r *reconciler) error {
+		r.requestModifier = rm
 		return nil
 	}
 }
@@ -131,9 +147,10 @@ type reconciler struct {
 	recorder      record.EventRecorder
 	logger        *zap.Logger
 	EventingReconciler
-	injectConfig inject.Config
-	filter       Filter
-	finalizer    Finalizer
+	injectConfig    inject.Config
+	filter          Filter
+	finalizer       Finalizer
+	requestModifier RequestModifier
 }
 
 var _ reconcile.Reconciler = &reconciler{}
@@ -157,6 +174,12 @@ func (r *reconciler) InjectConfig(c *rest.Config) error {
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	obj := r.GetNewReconcileObject()
 	recObjTypeName := reflect.TypeOf(obj).Elem().Name()
+
+	// This is done to support reconcilers that reconcile cluster-scoped resources based on watch on a namespace-scoped resource
+	// TODO: Workaround until https://github.com/kubernetes-sigs/controller-runtime/issues/228 is fix and controller-runtime updated
+	if r.requestModifier != nil {
+		r.requestModifier.Modify(&request)
+	}
 
 	ctx := logging.WithLogger(context.TODO(), r.logger.With(zap.Any("request", request), zap.Any("ResourceKind", recObjTypeName)))
 	logger := logging.FromContext(ctx)
