@@ -71,7 +71,7 @@ func main() {
 
 	c := getRequiredEnv("CHANNEL")
 
-	brokerName, _ = os.LookupEnv("BROKER")
+	brokerName := getRequiredEnv("BROKER")
 
 	h := NewHandler(logger, c)
 
@@ -163,10 +163,7 @@ func NewHandler(logger *zap.Logger, destination string) *Handler {
 
 func createReceiverFunction(f *Handler) func(provisioners.ChannelReference, *provisioners.Message) error {
 	return func(_ provisioners.ChannelReference, m *provisioners.Message) error {
-		metricsCtx := context.Background()
-		if brokerName != "" {
-			metricsCtx, _ = tag.New(metricsCtx, tag.Insert(TagBroker, brokerName))
-		}
+		metricsCtx, _ := tag.New(context.Background(), tag.Insert(TagBroker, brokerName))
 
 		defer func() {
 			stats.Record(metricsCtx, MeasureMessagesTotal.M(1))
@@ -189,10 +186,8 @@ func (f *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // request returns successfully, then return nil. Else, return an error.
 func (f *Handler) dispatch(msg *provisioners.Message) error {
 	startTS := time.Now()
-	metricsCtx := context.Background()
-	if brokerName != "" {
-		metricsCtx, _ = tag.New(metricsCtx, tag.Insert(TagBroker, brokerName))
-	}
+	metricsCtx, _ := tag.New(context.Background(), tag.Insert(TagBroker, brokerName))
+
 	defer func() {
 		dispatchTimeMS := int64(time.Now().Sub(startTS) / time.Millisecond)
 		stats.Record(metricsCtx, MeasureDispatchTime.M(dispatchTimeMS))
