@@ -167,6 +167,10 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 	}
 	resp.Status = http.StatusAccepted
 	resp.Event = responseEvent
+
+	// TODO Add filtered headers (mostly tracing) to the response. We are waiting for CloudEvents
+	// SDK to allow this.
+
 	return nil
 }
 
