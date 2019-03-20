@@ -32,6 +32,7 @@ import (
 	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -43,10 +44,10 @@ const (
 
 var (
 	// These MUST be lowercase strings, as they will be compared against lowercase strings.
-	forwardHeaders = []string{
+	forwardHeaders = sets.NewString(
 		// tracing
 		"x-request-id",
-	}
+	)
 	// These MUST be lowercase strings, as they will be compared against lowercase strings.
 	forwardPrefixes = []string{
 		// knative
@@ -244,15 +245,14 @@ func addFilteredHeaders(ctx context.Context, tctx cehttp.TransportContext) conte
 
 	for n, v := range tctx.Header {
 		lower := strings.ToLower(n)
-		for _, header := range forwardHeaders {
-			if lower == header {
-				ctx = addHeader(ctx, n, v)
-				continue
-			}
+		if forwardHeaders.Has(lower) {
+			ctx = addHeader(ctx, n, v)
+			continue
 		}
 		for _, prefix := range forwardPrefixes {
 			if strings.HasPrefix(lower, prefix) {
 				ctx = addHeader(ctx, n, v)
+				break
 			}
 		}
 	}
