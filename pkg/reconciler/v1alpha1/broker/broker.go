@@ -151,11 +151,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		r.recorder.Event(broker, corev1.EventTypeNormal, brokerReconciled, "Broker reconciled")
 	}
 
-<<<<<<< HEAD
-	if err = r.client.Status().Update(ctx, broker); err != nil {
-=======
 	if _, err = r.updateStatus(broker); err != nil {
->>>>>>> bab95e577d3f6c463c56e7cdb18d14d39e8ee2dd
 		logging.FromContext(ctx).Error("Failed to update Broker status", zap.Error(err))
 		r.recorder.Eventf(broker, corev1.EventTypeWarning, brokerUpdateStatusFailed, "Failed to update Broker's status: %v", err)
 		return reconcile.Result{}, err
@@ -223,8 +219,6 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) (reconci
 	return reconcile.Result{}, nil
 }
 
-<<<<<<< HEAD
-=======
 // updateStatus may in fact update the broker's finalizers in addition to the status.
 func (r *reconciler) updateStatus(broker *v1alpha1.Broker) (*v1alpha1.Broker, error) {
 	ctx := context.TODO()
@@ -265,7 +259,6 @@ func (r *reconciler) updateStatus(broker *v1alpha1.Broker) (*v1alpha1.Broker, er
 	return latestBroker, nil
 }
 
->>>>>>> bab95e577d3f6c463c56e7cdb18d14d39e8ee2dd
 // reconcileFilterDeployment reconciles Broker's 'b' filter deployment.
 func (r *reconciler) reconcileFilterDeployment(ctx context.Context, b *v1alpha1.Broker) (*v1.Deployment, error) {
 	expected := resources.MakeFilterDeployment(&resources.FilterArgs{

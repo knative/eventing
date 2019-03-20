@@ -24,6 +24,8 @@ import (
 
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/provisioners"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/eventing/pkg/utils/resolve"
@@ -32,7 +34,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -57,18 +58,20 @@ var (
 )
 
 const (
-	fromChannelName   = "fromchannel"
-	resultChannelName = "resultchannel"
-	sourceName        = "source"
-	routeName         = "subscriberroute"
-	channelKind       = "Channel"
-	routeKind         = "Route"
-	sourceKind        = "Source"
-	subscriptionKind  = "Subscription"
-	eventType         = "myeventtype"
-	subscriptionName  = "testsubscription"
-	testNS            = "testnamespace"
-	k8sServiceName    = "testk8sservice"
+	fromChannelName                = "fromchannel"
+	resultChannelName              = "resultchannel"
+	sourceName                     = "source"
+	routeName                      = "subscriberroute"
+	channelKind                    = "Channel"
+	routeKind                      = "Route"
+	sourceKind                     = "Source"
+	subscriptionKind               = "Subscription"
+	eventType                      = "myeventtype"
+	subscriptionName               = "testsubscription"
+	testNS                         = "testnamespace"
+	k8sServiceName                 = "testk8sservice"
+	subscriptionReconciled         = "subscription" + eventingreconciler.Reconciled
+	subscriptionUpdateStatusFailed = "subscription" + eventingreconciler.UpdateStatusFailed
 )
 
 var (
@@ -167,7 +170,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantErrMsg: `routes.serving.knative.dev "subscriberroute" not found`,
 			WantPresent: []runtime.Object{
-				Subscription().UnknownConditions(),
+				Subscription().UnknownConditions().Finalizer(),
 			},
 			WantEvent: []corev1.Event{
 				events[subscriberResolveFailed],
@@ -194,7 +197,7 @@ func TestAllCases(t *testing.T) {
 				Subscription(),
 			},
 			WantPresent: []runtime.Object{
-				Subscription().UnknownConditions(),
+				Subscription().UnknownConditions().Finalizer(),
 			},
 			WantErrMsg: "status does not contain address",
 			WantEvent: []corev1.Event{
@@ -236,7 +239,7 @@ func TestAllCases(t *testing.T) {
 				Subscription(),
 			},
 			WantPresent: []runtime.Object{
-				Subscription().UnknownConditions().PhysicalSubscriber(targetDNS),
+				Subscription().UnknownConditions().PhysicalSubscriber(targetDNS).Finalizer(),
 			},
 			WantErrMsg: `channels.eventing.knative.dev "resultchannel" not found`,
 			WantEvent: []corev1.Event{
@@ -284,7 +287,7 @@ func TestAllCases(t *testing.T) {
 				// TODO: Again this works on gke cluster, but I need to set
 				// something else up here. later...
 				// Subscription().ReferencesResolved(),
-				Subscription().UnknownConditions().PhysicalSubscriber(targetDNS),
+				Subscription().UnknownConditions().PhysicalSubscriber(targetDNS).Finalizer(),
 			},
 			WantEvent: []corev1.Event{
 				events[resultResolveFailed],
@@ -345,7 +348,7 @@ func TestAllCases(t *testing.T) {
 			// failure for now, until upstream is fixed.
 			WantResult: reconcile.Result{},
 			WantPresent: []runtime.Object{
-				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
+				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply().Finalizer(),
 			},
 			WantErrMsg: "invalid JSON document",
 			WantEvent: []corev1.Event{
@@ -412,7 +415,7 @@ func TestAllCases(t *testing.T) {
 			// failure for now, until upstream is fixed.
 			WantResult: reconcile.Result{},
 			WantPresent: []runtime.Object{
-				Subscription().NilReply().ReferencesResolved().PhysicalSubscriber(targetDNS),
+				Subscription().NilReply().ReferencesResolved().PhysicalSubscriber(targetDNS).Finalizer(),
 			},
 			WantErrMsg: "invalid JSON document",
 			WantEvent: []corev1.Event{
@@ -460,7 +463,7 @@ func TestAllCases(t *testing.T) {
 			// failure for now, until upstream is fixed.
 			WantResult: reconcile.Result{},
 			WantPresent: []runtime.Object{
-				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).EmptyNonNilReply(),
+				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).EmptyNonNilReply().Finalizer(),
 			},
 			WantErrMsg: "invalid JSON document",
 			WantEvent: []corev1.Event{
@@ -508,7 +511,7 @@ func TestAllCases(t *testing.T) {
 			// failure for now, until upstream is fixed.
 			WantResult: reconcile.Result{},
 			WantPresent: []runtime.Object{
-				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).EmptyNonNilReply(),
+				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).EmptyNonNilReply().Finalizer(),
 			},
 			WantErrMsg: "invalid JSON document",
 			WantEvent: []corev1.Event{
@@ -544,7 +547,8 @@ func TestAllCases(t *testing.T) {
 					},
 				},
 			},
-		}, {
+		},
+		{
 			Name: "old subscription: updates status, removing the no longer present Subscriber",
 			InitialState: []runtime.Object{
 				// This will have no Subscriber in the spec, but will have one in the status.
@@ -555,7 +559,7 @@ func TestAllCases(t *testing.T) {
 			// failure for now, until upstream is fixed.
 			WantResult: reconcile.Result{},
 			WantPresent: []runtime.Object{
-				Subscription().NilSubscriber().ReferencesResolved().Reply(),
+				Subscription().NilSubscriber().ReferencesResolved().Reply().Finalizer(),
 			},
 			WantErrMsg: "invalid JSON document",
 			WantEvent: []corev1.Event{
@@ -607,7 +611,7 @@ func TestAllCases(t *testing.T) {
 			// failure for now, until upstream is fixed.
 			WantResult: reconcile.Result{},
 			WantPresent: []runtime.Object{
-				Subscription().NilReply().ReferencesResolved().PhysicalSubscriber(targetDNS),
+				Subscription().NilReply().ReferencesResolved().PhysicalSubscriber(targetDNS).Finalizer(),
 			},
 			WantErrMsg: "invalid JSON document",
 			WantEvent: []corev1.Event{
@@ -653,7 +657,7 @@ func TestAllCases(t *testing.T) {
 			// failure for now, until upstream is fixed.
 			WantResult: reconcile.Result{},
 			WantPresent: []runtime.Object{
-				Subscription().NilSubscriber().ReferencesResolved().Reply(),
+				Subscription().NilSubscriber().ReferencesResolved().Reply().Finalizer(),
 			},
 			WantErrMsg: "invalid JSON document",
 			WantEvent: []corev1.Event{
@@ -704,7 +708,7 @@ func TestAllCases(t *testing.T) {
 			// failure for now, until upstream is fixed.
 			WantResult: reconcile.Result{},
 			WantPresent: []runtime.Object{
-				Subscription().EmptyNonNilSubscriber().ReferencesResolved().Reply(),
+				Subscription().EmptyNonNilSubscriber().ReferencesResolved().Reply().Finalizer(),
 			},
 			WantErrMsg: "invalid JSON document",
 			WantEvent: []corev1.Event{
@@ -752,7 +756,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantResult: reconcile.Result{},
 			WantPresent: []runtime.Object{
-				Subscription().ToK8sService().UnknownConditions(),
+				Subscription().ToK8sService().UnknownConditions().Finalizer(),
 			},
 			WantErrMsg: "services \"testk8sservice\" not found",
 			WantEvent: []corev1.Event{
@@ -785,7 +789,7 @@ func TestAllCases(t *testing.T) {
 			// failure for now, until upstream is fixed.
 			WantResult: reconcile.Result{},
 			WantPresent: []runtime.Object{
-				Subscription().ToK8sService().ReferencesResolved().PhysicalSubscriber(k8sServiceDNS).Reply(),
+				Subscription().ToK8sService().ReferencesResolved().PhysicalSubscriber(k8sServiceDNS).Reply().Finalizer(),
 			},
 			WantErrMsg: "invalid JSON document",
 			WantEvent: []corev1.Event{
@@ -848,7 +852,7 @@ func TestAllCases(t *testing.T) {
 			WantResult: reconcile.Result{},
 			WantErrMsg: "invalid JSON document",
 			WantPresent: []runtime.Object{
-				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
+				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply().Finalizer(),
 			},
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
@@ -918,8 +922,7 @@ func TestAllCases(t *testing.T) {
 					},
 				},
 			},
-		},
-		{
+		}, {
 			Name: "sync multiple Subscriptions to one channel",
 			InitialState: []runtime.Object{
 				// The first two Subscriptions both have the same physical From, so we should see that
@@ -942,7 +945,7 @@ func TestAllCases(t *testing.T) {
 				// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
 				// out.
 				//getChannelWithMultipleSubscriptions(),
-				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
+				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply().Finalizer(),
 				// Unaltered because this Subscription was not reconciled.
 				Subscription().Renamed().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
 				Subscription().DifferentChannel(),
@@ -1080,72 +1083,25 @@ func TestAllCases(t *testing.T) {
 		dc := tc.GetDynamicClient()
 		recorder := tc.GetEventRecorder()
 
-		r := &reconciler{
-			client:        c,
-			dynamicClient: dc,
-			restConfig:    &rest.Config{},
-			recorder:      recorder,
-			logger:        zap.NewNop(),
+		r, err := eventingreconciler.New(
+			&reconciler{
+				client:        c,
+				dynamicClient: dc,
+				restConfig:    &rest.Config{},
+			},
+			zap.NewNop(),
+			recorder,
+			eventingreconciler.EnableFinalizer(finalizerName),
+			eventingreconciler.EnableConfigInjection(),
+		)
+
+		if err != nil {
+			t.FailNow()
 		}
+
 		tc.ReconcileKey = fmt.Sprintf("%s/%s", testNS, subscriptionName)
 		tc.IgnoreTimes = true
 		t.Run(tc.Name, tc.Runner(t, r, c, recorder))
-	}
-}
-
-func TestFinalizers(t *testing.T) {
-	testCases := []struct {
-		name     string
-		original sets.String
-		add      bool
-		want     sets.String
-	}{
-		{
-			name:     "empty, add",
-			original: sets.NewString(),
-			add:      true,
-			want:     sets.NewString(finalizerName),
-		}, {
-			name:     "empty, delete",
-			original: sets.NewString(),
-			add:      false,
-			want:     sets.NewString(),
-		}, {
-			name:     "existing, delete",
-			original: sets.NewString(finalizerName),
-			add:      false,
-			want:     sets.NewString(),
-		}, {
-			name:     "existing, add",
-			original: sets.NewString(finalizerName),
-			add:      true,
-			want:     sets.NewString(finalizerName),
-		}, {
-			name:     "existing two, delete",
-			original: sets.NewString(finalizerName, "someother"),
-			add:      false,
-			want:     sets.NewString("someother"),
-		}, {
-			name:     "existing two, no change",
-			original: sets.NewString(finalizerName, "someother"),
-			add:      true,
-			want:     sets.NewString(finalizerName, "someother"),
-		},
-	}
-
-	for _, tc := range testCases {
-		original := &eventingv1alpha1.Subscription{}
-		original.Finalizers = tc.original.List()
-		if tc.add {
-			addFinalizer(original)
-		} else {
-			removeFinalizer(original)
-		}
-		has := sets.NewString(original.Finalizers...)
-		diff := has.Difference(tc.want)
-		if diff.Len() > 0 {
-			t.Errorf("%q failed, diff: %+v", tc.name, diff)
-		}
 	}
 }
 
@@ -1259,6 +1215,12 @@ func (s *SubscriptionBuilder) ToK8sService() *SubscriptionBuilder {
 
 func (s *SubscriptionBuilder) UnknownConditions() *SubscriptionBuilder {
 	s.Status.InitializeConditions()
+	return s
+}
+
+func (s *SubscriptionBuilder) Finalizer() *SubscriptionBuilder {
+	provisioners.AddFinalizer(s, finalizerName)
+	fmt.Printf("%+v", s.GetFinalizers())
 	return s
 }
 

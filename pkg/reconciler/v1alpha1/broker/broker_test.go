@@ -462,8 +462,6 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: "test error updating ingress Service",
 		},
 		{
-<<<<<<< HEAD
-=======
 			Name:   "Broker.Get for status update fails",
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
@@ -499,7 +497,6 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
->>>>>>> bab95e577d3f6c463c56e7cdb18d14d39e8ee2dd
 			Name:   "Broker.Status.Update error",
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{

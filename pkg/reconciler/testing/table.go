@@ -40,6 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 // TestCase holds a single row of our table test.
@@ -105,6 +106,11 @@ type TestCase struct {
 // Runner returns a testing func that can be passed to t.Run.
 func (tc *TestCase) Runner(t *testing.T, r reconcile.Reconciler, c *MockClient, recorder *MockEventRecorder) func(t *testing.T) {
 	return func(t *testing.T) {
+
+		if ic, ok := r.(inject.Client); ok {
+			ic.InjectClient(c)
+		}
+
 		result, recErr := tc.Reconcile(r)
 
 		if err := tc.VerifyErr(recErr); err != nil {

@@ -110,7 +110,11 @@ func New(er EventingReconciler, logger *zap.Logger, recorder record.EventRecorde
 	if recorder == nil {
 		return nil, errors.New("recorder is nil")
 	}
-	r := &reconciler{EventingReconciler: er}
+	r := &reconciler{
+		EventingReconciler: er,
+		logger:             logger,
+		recorder:           recorder,
+	}
 	for _, opt := range opts {
 		if err := opt(r); err != nil {
 			return r, err
@@ -151,7 +155,7 @@ func (r *reconciler) InjectConfig(c *rest.Config) error {
 // reconcile.Reconciler impl
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	obj := r.GetNewReconcileObject()
-	recObjTypeName := reflect.TypeOf(obj).Name() //TODO: Investigate why .Name() returns "". Need Name and not namespace.name
+	recObjTypeName := reflect.TypeOf(obj).Elem().Name()
 
 	ctx := logging.WithLogger(context.TODO(), r.logger.With(zap.Any("request", request)))
 	ctxLogger := logging.FromContext(ctx)
@@ -217,7 +221,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		if updataStatusErr := r.client.Status().Update(ctx, obj); updataStatusErr != nil {
 			ctxLogger.Warn(fmt.Sprintf("Failed to update %s", recObjTypeName), zap.Error(updataStatusErr))
 			reason := recObjTypeName + UpdateStatusFailed
-			r.recorder.Eventf(obj, corev1.EventTypeWarning, reason, "Failed to update Subscription's status: %v", updataStatusErr)
+			r.recorder.Eventf(obj, corev1.EventTypeWarning, reason, "Failed to update %s status: %v", recObjTypeName, updataStatusErr)
 			return reconcile.Result{}, updataStatusErr
 		}
 	}

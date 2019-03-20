@@ -32,10 +32,9 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
@@ -67,7 +66,7 @@ type reconciler struct {
 	dynamicClient dynamic.Interface
 }
 
-// Verify the struct implements eventingreconciler.EventingReconciler
+// Verify the struct implements necessary interfaces
 var _ eventingreconciler.EventingReconciler = &reconciler{}
 var _ eventingreconciler.Finalizer = &reconciler{}
 var _ inject.Config = &reconciler{}
@@ -76,8 +75,8 @@ var _ inject.Config = &reconciler{}
 func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	logger = logger.With(zap.String("controller", controllerAgentName))
 
-	rec := &reconciler{}
-	r, err := eventingreconciler.New(rec,
+	r, err := eventingreconciler.New(
+		&reconciler{},
 		logger,
 		mgr.GetRecorder(controllerAgentName),
 		eventingreconciler.EnableFinalizer(finalizerName),
@@ -102,16 +101,14 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 }
 
 func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) (bool, reconcile.Result, error) {
-	subscription, ok := obj.(*v1alpha1.Subscription)
-	if !ok {
-		// TODO
-
-	}
+	// Do not want to handle this error. It is better to panic here because this points to erroneous GetNewReconcileObject() function
+	subscription := obj.(*v1alpha1.Subscription)
 	subscription.Status.InitializeConditions()
+	logger := logging.FromContext(ctx)
 
 	// Verify that `channel` exists.
 	if _, err := resolve.ObjectReference(ctx, r.dynamicClient, subscription.Namespace, &subscription.Spec.Channel); err != nil {
-		logging.FromContext(ctx).Warn("Failed to validate Channel exists",
+		logger.Warn("Failed to validate Channel exists",
 			zap.Error(err),
 			zap.Any("channel", subscription.Spec.Channel))
 		recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFetchFailed, "Failed to validate spec.channel exists: %v", err)
@@ -119,25 +116,25 @@ func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconcil
 	}
 
 	if subscriberURI, err := resolve.SubscriberSpec(ctx, r.dynamicClient, subscription.Namespace, subscription.Spec.Subscriber); err != nil {
-		logging.FromContext(ctx).Warn("Failed to resolve Subscriber",
+		logger.Warn("Failed to resolve Subscriber",
 			zap.Error(err),
 			zap.Any("subscriber", subscription.Spec.Subscriber))
 		recorder.Eventf(subscription, corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
 		return true, reconcile.Result{}, err
 	} else {
 		subscription.Status.PhysicalSubscription.SubscriberURI = subscriberURI
-		logging.FromContext(ctx).Debug("Resolved Subscriber", zap.String("subscriberURI", subscriberURI))
+		logger.Debug("Resolved Subscriber", zap.String("subscriberURI", subscriberURI))
 	}
 
 	if replyURI, err := r.resolveResult(ctx, subscription.Namespace, subscription.Spec.Reply); err != nil {
-		logging.FromContext(ctx).Warn("Failed to resolve reply",
+		logger.Warn("Failed to resolve reply",
 			zap.Error(err),
 			zap.Any("reply", subscription.Spec.Reply))
 		recorder.Eventf(subscription, corev1.EventTypeWarning, resultResolveFailed, "Failed to resolve spec.reply: %v", err)
 		return true, reconcile.Result{}, err
 	} else {
 		subscription.Status.PhysicalSubscription.ReplyURI = replyURI
-		logging.FromContext(ctx).Debug("Resolved reply", zap.String("replyURI", replyURI))
+		logger.Debug("Resolved reply", zap.String("replyURI", replyURI))
 	}
 
 	// Everything that was supposed to be resolved was, so flip the status bit on that.
@@ -146,7 +143,7 @@ func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconcil
 	// Ok, now that we have the Channel and at least one of the Call/Result, let's reconcile
 	// the Channel with this information.
 	if err := r.syncPhysicalChannel(ctx, subscription, false); err != nil {
-		logging.FromContext(ctx).Warn("Failed to sync physical Channel", zap.Error(err))
+		logger.Warn("Failed to sync physical Channel", zap.Error(err))
 		recorder.Eventf(subscription, corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
 		return true, reconcile.Result{}, err
 	}
@@ -160,6 +157,7 @@ func (r *reconciler) GetNewReconcileObject() eventingreconciler.ReconciledResour
 }
 
 func (r *reconciler) OnDelete(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) error {
+	// Do not want to handle this error. It is better to panic here because this points to erroneous GetNewReconcileObject() function
 	subscription := obj.(*v1alpha1.Subscription)
 	if subscription.Status.IsReady() {
 		err := r.syncPhysicalChannel(ctx, subscription, true)
@@ -222,7 +220,7 @@ func (r *reconciler) syncPhysicalChannel(ctx context.Context, sub *v1alpha1.Subs
 	subscribable := r.createSubscribable(subs)
 
 	if patchErr := r.patchPhysicalFrom(ctx, sub.Namespace, sub.Spec.Channel, subscribable); patchErr != nil {
-		if isDeleted && errors.IsNotFound(patchErr) {
+		if isDeleted && apierrors.IsNotFound(patchErr) {
 			logging.FromContext(ctx).Warn("Could not find Channel", zap.Any("channel", sub.Spec.Channel))
 			return nil
 		}
@@ -321,18 +319,6 @@ func (r *reconciler) patchPhysicalFrom(ctx context.Context, namespace string, ph
 	}
 	logging.FromContext(ctx).Debug("Patched resource", zap.Any("patched", patched))
 	return nil
-}
-
-func addFinalizer(sub *v1alpha1.Subscription) {
-	finalizers := sets.NewString(sub.Finalizers...)
-	finalizers.Insert(finalizerName)
-	sub.Finalizers = finalizers.List()
-}
-
-func removeFinalizer(sub *v1alpha1.Subscription) {
-	finalizers := sets.NewString(sub.Finalizers...)
-	finalizers.Delete(finalizerName)
-	sub.Finalizers = finalizers.List()
 }
 
 func (r *reconciler) InjectConfig(c *rest.Config) error {
