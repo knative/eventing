@@ -24,6 +24,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -38,8 +39,9 @@ import (
 )
 
 const (
-	testNS     = "test-namespace"
-	brokerName = "default"
+	testNS              = "test-namespace"
+	brokerName          = "default"
+	namespaceReconciled = "Namespace" + eventingreconciler.Reconciled
 )
 
 var (
@@ -55,6 +57,7 @@ var (
 		brokerCreated:             {Reason: brokerCreated, Type: corev1.EventTypeNormal},
 		serviceAccountCreated:     {Reason: serviceAccountCreated, Type: corev1.EventTypeNormal},
 		serviceAccountRBACCreated: {Reason: serviceAccountRBACCreated, Type: corev1.EventTypeNormal},
+		namespaceReconciled:       {Reason: namespaceReconciled, Type: corev1.EventTypeNormal},
 	}
 )
 
@@ -201,7 +204,7 @@ func TestReconcile(t *testing.T) {
 				makeNamespace(&enabled),
 				makeBroker(),
 			},
-			WantEvent: []corev1.Event{events[serviceAccountCreated], events[serviceAccountRBACCreated]},
+			WantEvent: []corev1.Event{events[serviceAccountCreated], events[serviceAccountRBACCreated], events[namespaceReconciled]},
 		},
 		{
 			Name:   "Broker.Create fails",
@@ -234,18 +237,24 @@ func TestReconcile(t *testing.T) {
 			WantEvent: []corev1.Event{
 				events[serviceAccountCreated],
 				events[serviceAccountRBACCreated],
-				events[brokerCreated]},
+				events[brokerCreated],
+				events[namespaceReconciled]},
 		},
 	}
 	for _, tc := range testCases {
 		c := tc.GetClient()
 		recorder := tc.GetEventRecorder()
+		r, err := eventingreconciler.New(
+			&reconciler{},
+			zap.NewNop(),
+			recorder,
+			eventingreconciler.EnableFilter(),
+		)
 
-		r := &reconciler{
-			client:   c,
-			recorder: recorder,
-			logger:   zap.NewNop(),
+		if err != nil {
+			t.FailNow()
 		}
+
 		tc.ReconcileKey = fmt.Sprintf("%s/%s", "", testNS)
 		tc.IgnoreTimes = true
 		t.Run(tc.Name, tc.Runner(t, r, c, recorder))

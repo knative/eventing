@@ -160,11 +160,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	ctx := logging.WithLogger(context.TODO(), r.logger.With(zap.Any("request", request)))
 	ctxLogger := logging.FromContext(ctx)
 
-	if r.filter != nil && !r.filter.ShouldReconcile(ctx, obj, r.recorder) {
-		ctxLogger.Debug(fmt.Sprintf("Not reconciling %s as ShouldReconcile() returned false", recObjTypeName))
-		return reconcile.Result{}, nil
-	}
-
 	ctxLogger.Debug(fmt.Sprintf("Reconciling %s", recObjTypeName))
 
 	if err := r.client.Get(ctx, request.NamespacedName, obj); err != nil {
@@ -174,6 +169,12 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		}
 		ctxLogger.Error(fmt.Sprintf("Error getting %s", recObjTypeName), zap.Error(err))
 		return reconcile.Result{}, err
+	}
+
+	// First check if the reconciler implement Filter.ShouldReconcile() and that the object should be reconciled or not
+	if r.filter != nil && !r.filter.ShouldReconcile(ctx, obj, r.recorder) {
+		ctxLogger.Debug(fmt.Sprintf("Not reconciling %s as ShouldReconcile() returned false", recObjTypeName))
+		return reconcile.Result{}, nil
 	}
 
 	// If the object is being deleted then run OnDelete functions and remove finalizers

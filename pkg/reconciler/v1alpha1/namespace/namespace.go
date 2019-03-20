@@ -22,11 +22,11 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,8 +34,10 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -61,21 +63,26 @@ const (
 )
 
 type reconciler struct {
-	client   client.Client
-	recorder record.EventRecorder
-
-	logger *zap.Logger
+	client client.Client
 }
 
-// Verify the struct implements reconcile.Reconciler
-var _ reconcile.Reconciler = &reconciler{}
+// Verify reconciler implements necessary interfaces
+var _ eventingreconciler.EventingReconciler = &reconciler{}
+var _ eventingreconciler.Filter = &reconciler{}
 
 // ProvideController returns a function that returns a Namespace controller.
 func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Namespaces.
-	r := &reconciler{
-		recorder: mgr.GetRecorder(controllerAgentName),
-		logger:   logger,
+	logger = logger.With(zap.String("controller", controllerAgentName))
+
+	r, err := eventingreconciler.New(
+		&reconciler{},
+		logger,
+		mgr.GetRecorder(controllerAgentName),
+		eventingreconciler.EnableFilter(),
+	)
+	if err != nil {
+		return nil, err
 	}
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: r,
@@ -85,7 +92,13 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 	}
 
 	// Watch Namespaces.
-	if err = c.Watch(&source.Kind{Type: &v1.Namespace{}}, &handler.EnqueueRequestForObject{}); err != nil {
+	if err = c.Watch(&source.Kind{Type: &v1.Namespace{}},
+		&handler.EnqueueRequestForObject{},
+		predicate.Funcs{
+			DeleteFunc: func(event.DeleteEvent) bool {
+				return false
+			},
+		}); err != nil {
 		return nil, err
 	}
 
@@ -130,78 +143,56 @@ func (m *namespaceMapper) Map(o handler.MapObject) []reconcile.Request {
 	return []reconcile.Request{}
 }
 
+// eventingreconciler.EventingReconciler
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	return nil
 }
 
+// eventingreconciler.EventingReconciler
+func (r *reconciler) GetNewReconcileObject() eventingreconciler.ReconciledResource {
+	return &v1.Namespace{}
+}
+
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Namespace resource
 // with the current status of the resource.
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	ctx := context.TODO()
-	ctx = logging.WithLogger(ctx, r.logger.With(zap.Any("request", request)))
+// eventingreconciler.EventingReconciler
+func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) (bool, reconcile.Result, error) {
+	// Do not handle this error. It is better to panic here because this points to erroneous GetNewReconcileObject() function which should be caught in UTs
+	ns := obj.(*corev1.Namespace)
 
-	ns := &corev1.Namespace{}
-	err := r.client.Get(ctx, request.NamespacedName, ns)
-
-	if errors.IsNotFound(err) {
-		logging.FromContext(ctx).Info("Could not find Namespace")
-		return reconcile.Result{}, nil
-	}
-
-	if err != nil {
-		logging.FromContext(ctx).Error("Could not Get Namespace", zap.Error(err))
-		return reconcile.Result{}, err
-	}
-
-	if ns.Labels[knativeEventingLabelKey] != knativeEventingLabelValue {
-		logging.FromContext(ctx).Debug("Not reconciling Namespace")
-		return reconcile.Result{}, nil
-	}
-
-	// Reconcile this copy of the Namespace and then write back any status updates regardless of
-	// whether the reconcile error out.
-	reconcileErr := r.reconcile(ctx, ns)
-	if reconcileErr != nil {
-		logging.FromContext(ctx).Error("Error reconciling Namespace", zap.Error(reconcileErr))
-	} else {
-		logging.FromContext(ctx).Debug("Namespace reconciled")
-	}
-
-	// Requeue if the resource is not ready:
-	return reconcile.Result{}, reconcileErr
-}
-
-func (r *reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error {
-	// No need for a finalizer, because everything reconciled is created inside the Namespace. If
-	// the Namespace is being deleted, then all the reconciled objects will be too.
-
-	if ns.DeletionTimestamp != nil {
-		return nil
-	}
-
-	sa, err := r.reconcileBrokerFilterServiceAccount(ctx, ns)
+	sa, err := r.reconcileBrokerFilterServiceAccount(ctx, ns, recorder)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to reconcile the Broker Filter Service Account for the namespace", zap.Error(err))
-		return err
+		return false, reconcile.Result{}, err
 	}
-	_, err = r.reconcileBrokerFilterRBAC(ctx, ns, sa)
+	_, err = r.reconcileBrokerFilterRBAC(ctx, ns, sa, recorder)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to reconcile the Broker Filter Service Account RBAC for the namespace", zap.Error(err))
-		return err
+		return false, reconcile.Result{}, err
 	}
-	_, err = r.reconcileBroker(ctx, ns)
+	_, err = r.reconcileBroker(ctx, ns, recorder)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to reconcile Broker for the namespace", zap.Error(err))
-		return err
+		return false, reconcile.Result{}, err
 	}
 
-	return nil
+	return false, reconcile.Result{}, nil
+}
+
+// eventinreconciler.Filter
+func (r *reconciler) ShouldReconcile(_ context.Context, obj eventingreconciler.ReconciledResource, _ record.EventRecorder) bool {
+	// Do not handle this error. It is better to panic here because this points to erroneous GetNewReconcileObject() function which should be caught in UTs
+	ns := obj.(*corev1.Namespace)
+	if ns.Labels[knativeEventingLabelKey] != knativeEventingLabelValue {
+		return false
+	}
+	return true
 }
 
 // reconcileBrokerFilterServiceAccount reconciles the Broker's filter service account for Namespace 'ns'.
-func (r *reconciler) reconcileBrokerFilterServiceAccount(ctx context.Context, ns *corev1.Namespace) (*corev1.ServiceAccount, error) {
+func (r *reconciler) reconcileBrokerFilterServiceAccount(ctx context.Context, ns *corev1.Namespace, recorder record.EventRecorder) (*corev1.ServiceAccount, error) {
 	current, err := r.getBrokerFilterServiceAccount(ctx, ns)
 
 	// If the resource doesn't exist, we'll create it.
@@ -211,7 +202,7 @@ func (r *reconciler) reconcileBrokerFilterServiceAccount(ctx context.Context, ns
 		if err != nil {
 			return nil, err
 		}
-		r.recorder.Event(ns,
+		recorder.Event(ns,
 			corev1.EventTypeNormal,
 			serviceAccountCreated,
 			fmt.Sprintf("Service account created for the Broker '%s'", sa.Name))
@@ -253,7 +244,7 @@ func injectedLabels() map[string]string {
 }
 
 // reconcileBrokerFilterRBAC reconciles the Broker's filter service account RBAC for the Namespace 'ns'.
-func (r *reconciler) reconcileBrokerFilterRBAC(ctx context.Context, ns *corev1.Namespace, sa *corev1.ServiceAccount) (*rbacv1.RoleBinding, error) {
+func (r *reconciler) reconcileBrokerFilterRBAC(ctx context.Context, ns *corev1.Namespace, sa *corev1.ServiceAccount, recorder record.EventRecorder) (*rbacv1.RoleBinding, error) {
 	current, err := r.getBrokerFilterRBAC(ctx, ns)
 
 	// If the resource doesn't exist, we'll create it.
@@ -263,7 +254,7 @@ func (r *reconciler) reconcileBrokerFilterRBAC(ctx context.Context, ns *corev1.N
 		if err != nil {
 			return nil, err
 		}
-		r.recorder.Event(ns,
+		recorder.Event(ns,
 			corev1.EventTypeNormal,
 			serviceAccountRBACCreated,
 			fmt.Sprintf("Service account RBAC created for the Broker Filter '%s'", rbac.Name))
@@ -323,7 +314,7 @@ func (r *reconciler) getBroker(ctx context.Context, ns *corev1.Namespace) (*v1al
 }
 
 // reconcileBroker reconciles the default Broker for the Namespace 'ns'.
-func (r *reconciler) reconcileBroker(ctx context.Context, ns *corev1.Namespace) (*v1alpha1.Broker, error) {
+func (r *reconciler) reconcileBroker(ctx context.Context, ns *corev1.Namespace, recorder record.EventRecorder) (*v1alpha1.Broker, error) {
 	current, err := r.getBroker(ctx, ns)
 
 	// If the resource doesn't exist, we'll create it.
@@ -333,7 +324,7 @@ func (r *reconciler) reconcileBroker(ctx context.Context, ns *corev1.Namespace) 
 		if err != nil {
 			return nil, err
 		}
-		r.recorder.Event(ns, corev1.EventTypeNormal, brokerCreated, "Default eventing.knative.dev Broker created.")
+		recorder.Event(ns, corev1.EventTypeNormal, brokerCreated, "Default eventing.knative.dev Broker created.")
 		return b, nil
 	} else if err != nil {
 		return nil, err
