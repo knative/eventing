@@ -23,14 +23,15 @@ import (
 
 	cecontext "github.com/cloudevents/sdk-go/pkg/cloudevents/context"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 var (
 	// These MUST be lowercase strings, as they will be compared against lowercase strings.
-	forwardHeaders = []string{
+	forwardHeaders = sets.NewString(
 		// tracing
 		"x-request-id",
-	}
+	)
 	// These MUST be lowercase strings, as they will be compared against lowercase strings.
 	forwardPrefixes = []string{
 		// knative
@@ -49,22 +50,21 @@ func SendingContext(ctx context.Context, tctx cehttp.TransportContext, targetURI
 	// Helper function that adds the header name and all its values.
 	addHeader := func(c context.Context, n string, v []string) context.Context {
 		for _, iv := range v {
-			c = cehttp.ContextWithHeader(ctx, n, iv)
+			c = cehttp.ContextWithHeader(c, n, iv)
 		}
 		return c
 	}
 
 	for n, v := range tctx.Header {
 		lower := strings.ToLower(n)
-		for _, header := range forwardHeaders {
-			if lower == header {
-				sendingCTX = addHeader(ctx, n, v)
-				continue
-			}
+		if forwardHeaders.Has(lower) {
+			sendingCTX = addHeader(sendingCTX, n, v)
+			continue
 		}
 		for _, prefix := range forwardPrefixes {
 			if strings.HasPrefix(lower, prefix) {
-				sendingCTX = addHeader(ctx, n, v)
+				sendingCTX = addHeader(sendingCTX, n, v)
+				break
 			}
 		}
 	}
