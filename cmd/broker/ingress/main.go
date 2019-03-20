@@ -19,12 +19,14 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"time"
 
+	"github.com/cloudevents/sdk-go/pkg/cloudevents"
+	ceclient "github.com/cloudevents/sdk-go/pkg/cloudevents/client"
+	cecontext "github.com/cloudevents/sdk-go/pkg/cloudevents/context"
+	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/pkg/signals"
@@ -34,10 +36,7 @@ import (
 )
 
 var (
-	port = 8080
-
-	readTimeout  = 1 * time.Minute
-	writeTimeout = 1 * time.Minute
+	defaultPort = 8080
 )
 
 func main() {
@@ -57,24 +56,16 @@ func main() {
 		logger.Fatal("Unable to add eventingv1alpha1 scheme", zap.Error(err))
 	}
 
-	c := getRequiredEnv("CHANNEL")
+	channelURI := getRequiredEnv("CHANNEL")
 
-	h := NewHandler(logger, c)
-
-	s := &http.Server{
-		Addr:         fmt.Sprintf(":%d", port),
-		Handler:      h,
-		ErrorLog:     zap.NewStdLog(logger),
-		ReadTimeout:  readTimeout,
-		WriteTimeout: writeTimeout,
+	h, err := New(logger, channelURI)
+	if err != nil {
+		logger.Fatal("Unable to create handler", zap.Error(err))
 	}
 
-	err = mgr.Add(&runnableServer{
-		logger: logger,
-		s:      s,
-	})
+	err = mgr.Add(h)
 	if err != nil {
-		logger.Fatal("Unable to add runnableServer", zap.Error(err))
+		logger.Fatal("Unable to add handler", zap.Error(err))
 	}
 
 	// Set up signals so we handle the first shutdown signal gracefully.
@@ -85,11 +76,7 @@ func main() {
 	}
 	logger.Info("Exiting...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), writeTimeout)
-	defer cancel()
-	if err = s.Shutdown(ctx); err != nil {
-		logger.Error("Shutdown returned an error", zap.Error(err))
-	}
+	// TODO Gracefully shutdown the server. CloudEvents SDK doesn't seem to let us do that today.
 }
 
 func getRequiredEnv(envKey string) string {
@@ -100,59 +87,67 @@ func getRequiredEnv(envKey string) string {
 	return val
 }
 
-// http.Handler that takes a single request in and sends it out to a single destination.
-type Handler struct {
-	receiver    *provisioners.MessageReceiver
-	dispatcher  *provisioners.MessageDispatcher
-	destination string
-
-	logger *zap.Logger
-}
-
-// NewHandler creates a new ingress.Handler.
-func NewHandler(logger *zap.Logger, destination string) *Handler {
-	handler := &Handler{
-		logger:      logger,
-		dispatcher:  provisioners.NewMessageDispatcher(logger.Sugar()),
-		destination: fmt.Sprintf("http://%s", destination),
-	}
-	// The receiver function needs to point back at the handler itself, so set it up after
-	// initialization.
-	handler.receiver = provisioners.NewMessageReceiver(createReceiverFunction(handler), logger.Sugar())
-
-	return handler
-}
-
-func createReceiverFunction(f *Handler) func(provisioners.ChannelReference, *provisioners.Message) error {
-	return func(_ provisioners.ChannelReference, m *provisioners.Message) error {
-		// TODO Filter.
-		return f.dispatch(m)
-	}
-}
-
-// http.Handler interface.
-func (f *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	f.receiver.HandleRequest(w, r)
-}
-
-// dispatch takes the request, and sends it out the f.destination. If the dispatched
-// request returns successfully, then return nil. Else, return an error.
-func (f *Handler) dispatch(msg *provisioners.Message) error {
-	err := f.dispatcher.DispatchMessage(msg, f.destination, "", provisioners.DispatchDefaults{})
+func New(logger *zap.Logger, channelURI string) (*handler, error) {
+	ceHttp, err := cehttp.New(cehttp.WithBinaryEncoding(), cehttp.WithPort(defaultPort))
 	if err != nil {
-		f.logger.Error("Error dispatching message", zap.String("destination", f.destination))
+		return nil, err
 	}
+	ceClient, err := ceclient.New(ceHttp)
+	if err != nil {
+		return nil, err
+	}
+	return &handler{
+		logger:     logger,
+		ceClient:   ceClient,
+		ceHttp:     ceHttp,
+		channelURI: channelURI,
+	}, nil
+}
+
+type handler struct {
+	logger     *zap.Logger
+	ceClient   ceclient.Client
+	ceHttp     *cehttp.Transport
+	channelURI string
+}
+
+func (h *handler) Start(stopCh <-chan struct{}) error {
+	ctx := context.Background()
+	defer ctx.Done()
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- h.ceClient.StartReceiver(ctx, h.serveHTTP)
+	}()
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-stopCh:
+		return nil
+	}
+}
+
+func (h *handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
+	tctx := cehttp.TransportContextFrom(ctx)
+	if tctx.Method != http.MethodPost {
+		resp.Status = http.StatusMethodNotAllowed
+		return nil
+	}
+
+	// tctx.URI is actually the path...
+	if tctx.URI != "/" {
+		resp.Status = http.StatusNotFound
+		return nil
+	}
+
+	// TODO Filter.
+
+	return h.sendEvent(ctx, event)
+}
+
+func (h *handler) sendEvent(ctx context.Context, event cloudevents.Event) error {
+	sendingCtx := cecontext.WithTarget(ctx, h.channelURI)
+	_, err := h.ceHttp.Send(sendingCtx, event)
 	return err
-}
-
-// runnableServer is a small wrapper around http.Server so that it matches the manager.Runnable
-// interface.
-type runnableServer struct {
-	logger *zap.Logger
-	s      *http.Server
-}
-
-func (r *runnableServer) Start(<-chan struct{}) error {
-	r.logger.Info("Ingress Listening...", zap.String("Address", r.s.Addr))
-	return r.s.ListenAndServe()
 }
