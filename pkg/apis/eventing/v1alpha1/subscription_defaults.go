@@ -16,10 +16,12 @@ limitations under the License.
 
 package v1alpha1
 
-func (s *Subscription) SetDefaults() {
-	s.Spec.SetDefaults()
+import "context"
+
+func (s *Subscription) SetDefaults(ctx context.Context) {
+	s.Spec.SetDefaults(ctx)
 }
 
-func (ss *SubscriptionSpec) SetDefaults() {
+func (ss *SubscriptionSpec) SetDefaults(ctx context.Context) {
 	// TODO anything?
 }

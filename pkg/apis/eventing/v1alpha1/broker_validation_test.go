@@ -17,24 +17,25 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"testing"
 )
 
 // No-op test because method does nothing.
 func TestBrokerValidation(t *testing.T) {
 	b := Broker{}
-	_ = b.Validate()
+	_ = b.Validate(context.TODO())
 }
 
 // No-op test because method does nothing.
 func TestBrokerSpecValidation(t *testing.T) {
 	bs := BrokerSpec{}
-	_ = bs.Validate()
+	_ = bs.Validate(context.TODO())
 }
 
 // No-op test because method does nothing.
 func TestBrokerImmutableFields(t *testing.T) {
 	original := &Broker{}
 	current := &Broker{}
-	_ = current.CheckImmutableFields(original)
+	_ = current.CheckImmutableFields(context.TODO(), original)
 }

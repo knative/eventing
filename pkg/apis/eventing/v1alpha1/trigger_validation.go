@@ -17,15 +17,16 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/pkg/apis"
 )
 
-func (t *Trigger) Validate() *apis.FieldError {
-	return t.Spec.Validate().ViaField("spec")
+func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {
+	return t.Spec.Validate(ctx).ViaField("spec")
 }
 
-func (ts *TriggerSpec) Validate() *apis.FieldError {
+func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 	if ts.Broker == "" {
 		fe := apis.ErrMissingField("broker")
@@ -52,7 +53,7 @@ func (ts *TriggerSpec) Validate() *apis.FieldError {
 	return errs
 }
 
-func (t *Trigger) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
+func (t *Trigger) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
 	if og == nil {
 		return nil
 	}

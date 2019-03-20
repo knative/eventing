@@ -17,19 +17,20 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"github.com/knative/pkg/apis"
 )
 
-func (b *Broker) Validate() *apis.FieldError {
-	return b.Spec.Validate().ViaField("spec")
+func (b *Broker) Validate(ctx context.Context) *apis.FieldError {
+	return b.Spec.Validate(ctx).ViaField("spec")
 }
 
-func (bs *BrokerSpec) Validate() *apis.FieldError {
+func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
 	// TODO validate that the channelTemplate only specifies the provisioner and arguments.
 	return nil
 }
 
-func (b *Broker) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
+func (b *Broker) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
 	// Currently there are no immutable fields. We could make spec.channelTemplate immutable, as
 	// changing it will normally not have the desired effect of changing the Channel inside the
 	// Broker. It would have an effect if the existing Channel was then deleted, the newly created
