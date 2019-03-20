@@ -21,6 +21,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	ceclient "github.com/cloudevents/sdk-go/pkg/cloudevents/client"
@@ -35,6 +36,8 @@ import (
 
 const (
 	defaultPort = 8080
+
+	writeTimeout = 1 * time.Minute
 )
 
 // Receiver parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
@@ -91,7 +94,7 @@ func (r *Receiver) initClient() error {
 //
 // This method will block until a message is received on the stop channel.
 func (r *Receiver) Start(stopCh <-chan struct{}) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	defer ctx.Done()
 
 	errCh := make(chan error, 1)
@@ -99,11 +102,22 @@ func (r *Receiver) Start(stopCh <-chan struct{}) error {
 		errCh <- r.ceClient.StartReceiver(ctx, r.serveHTTP)
 	}()
 
+	// Stop either if the receiver stops (sending to errCh) or if stopCh is closed.
 	select {
 	case err := <-errCh:
 		return err
 	case <-stopCh:
-		return nil
+		break
+	}
+
+	// stopCh has been closed, we need to gracefully shutdown h.ceClient. cancel() will start its
+	// shutdown, if it hasn't finished in a reasonable amount of time, just return an error.
+	cancel()
+	select {
+	case err := <-errCh:
+		return err
+	case <-time.After(writeTimeout):
+		return errors.New("timeout shutting down ceClient")
 	}
 }
 
