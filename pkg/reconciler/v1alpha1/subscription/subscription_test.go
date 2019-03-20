@@ -1085,7 +1085,6 @@ func TestAllCases(t *testing.T) {
 
 		r, err := eventingreconciler.New(
 			&reconciler{
-				client:        c,
 				dynamicClient: dc,
 				restConfig:    &rest.Config{},
 			},

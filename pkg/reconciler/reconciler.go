@@ -216,7 +216,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		reason := recObjTypeName + Reconciled
 		r.recorder.Eventf(obj, corev1.EventTypeNormal, reason, "%s reconciled: %q", recObjTypeName, obj.GetName())
 	}
-
 	if updateStatus {
 		if updataStatusErr := r.client.Status().Update(ctx, obj); updataStatusErr != nil {
 			ctxLogger.Warn(fmt.Sprintf("Failed to update %s", recObjTypeName), zap.Error(updataStatusErr))
@@ -225,5 +224,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 			return reconcile.Result{}, updataStatusErr
 		}
 	}
+
 	return result, err
 }

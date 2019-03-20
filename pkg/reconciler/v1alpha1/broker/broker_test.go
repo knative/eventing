@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/utils"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -45,10 +46,12 @@ const (
 	testNS     = "test-namespace"
 	brokerName = "test-broker"
 
-	filterImage  = "filter-image"
-	filterSA     = "filter-SA"
-	ingressImage = "ingress-image"
-	ingressSA    = "ingress-SA"
+	filterImage              = "filter-image"
+	filterSA                 = "filter-SA"
+	ingressImage             = "ingress-image"
+	ingressSA                = "ingress-SA"
+	brokerReconciled         = "Broker" + eventingreconciler.Reconciled
+	brokerUpdateStatusFailed = "Broker" + eventingreconciler.UpdateStatusFailed
 )
 
 var (
@@ -134,11 +137,6 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeDeletingBroker(),
 			},
-			WantEvent: []corev1.Event{
-				{
-					Reason: brokerReconciled, Type: corev1.EventTypeNormal,
-				},
-			},
 		},
 		{
 			Name:   "Channel.List error",
@@ -204,6 +202,11 @@ func TestReconcile(t *testing.T) {
 				makeNonAddressableChannel(),
 			},
 			WantResult: reconcile.Result{RequeueAfter: time.Second},
+			WantEvent: []corev1.Event{
+				{
+					Reason: brokerReconciled, Type: corev1.EventTypeNormal,
+				},
+			},
 		},
 		{
 			Name:   "Filter Deployment.Get error",
@@ -462,41 +465,6 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: "test error updating ingress Service",
 		},
 		{
-			Name:   "Broker.Get for status update fails",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeChannel(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockGets: []controllertesting.MockGet{
-					// The first Get works.
-					func(innerClient client.Client, ctx context.Context, key client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*v1alpha1.Broker); ok {
-							return controllertesting.Handled, innerClient.Get(ctx, key, obj)
-						}
-						return controllertesting.Unhandled, nil
-					},
-					// The second Get fails.
-					func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*v1alpha1.Broker); ok {
-							return controllertesting.Handled, errors.New("test error getting the Broker for status update")
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-			WantErrMsg: "test error getting the Broker for status update",
-			WantEvent: []corev1.Event{
-				{
-					Reason: brokerReconciled, Type: corev1.EventTypeNormal,
-				},
-				{
-					Reason: brokerUpdateStatusFailed, Type: corev1.EventTypeWarning,
-				},
-			},
-		},
-		{
 			Name:   "Broker.Status.Update error",
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
@@ -551,16 +519,21 @@ func TestReconcile(t *testing.T) {
 		c := tc.GetClient()
 		recorder := tc.GetEventRecorder()
 
-		r := &reconciler{
-			client:   c,
-			recorder: recorder,
-			logger:   zap.NewNop(),
+		r, err := eventingreconciler.New(
+			&reconciler{
+				filterImage:               filterImage,
+				filterServiceAccountName:  filterSA,
+				ingressImage:              ingressImage,
+				ingressServiceAccountName: ingressSA,
+			},
+			zap.NewNop(),
+			recorder,
+		)
 
-			filterImage:               filterImage,
-			filterServiceAccountName:  filterSA,
-			ingressImage:              ingressImage,
-			ingressServiceAccountName: ingressSA,
+		if err != nil {
+			t.FailNow()
 		}
+
 		tc.ReconcileKey = fmt.Sprintf("%s/%s", testNS, brokerName)
 		tc.IgnoreTimes = true
 		t.Run(tc.Name, tc.Runner(t, r, c, recorder))

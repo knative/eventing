@@ -23,13 +23,13 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/names"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -40,8 +40,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -50,17 +52,10 @@ const (
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
 	controllerAgentName = "broker-controller"
-
-	// Name of the corev1.Events emitted from the reconciliation process.
-	brokerReconciled         = "BrokerReconciled"
-	brokerUpdateStatusFailed = "BrokerUpdateStatusFailed"
 )
 
 type reconciler struct {
-	client   client.Client
-	recorder record.EventRecorder
-
-	logger *zap.Logger
+	client client.Client
 
 	ingressImage              string
 	ingressServiceAccountName string
@@ -68,8 +63,8 @@ type reconciler struct {
 	filterServiceAccountName  string
 }
 
-// Verify the struct implements reconcile.Reconciler.
-var _ reconcile.Reconciler = &reconciler{}
+// Verify reconciler implements necessary interfaces
+var _ eventingreconciler.EventingReconciler = &reconciler{}
 
 type ReconcilerArgs struct {
 	IngressImage              string
@@ -81,24 +76,37 @@ type ReconcilerArgs struct {
 // ProvideController returns a function that returns a Broker controller.
 func ProvideController(args ReconcilerArgs) func(manager.Manager, *zap.Logger) (controller.Controller, error) {
 	return func(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
-		// Setup a new controller to Reconcile Brokers.
-		c, err := controller.New(controllerAgentName, mgr, controller.Options{
-			Reconciler: &reconciler{
-				recorder: mgr.GetRecorder(controllerAgentName),
-				logger:   logger,
+		logger = logger.With(zap.String("controller", controllerAgentName))
 
+		r, err := eventingreconciler.New(
+			&reconciler{
 				ingressImage:              args.IngressImage,
 				ingressServiceAccountName: args.IngressServiceAccountName,
 				filterImage:               args.FilterImage,
 				filterServiceAccountName:  args.FilterServiceAccountName,
 			},
+			logger,
+			mgr.GetRecorder(controllerAgentName),
+		)
+		if err != nil {
+			return nil, err
+		}
+		// Setup a new controller to Reconcile Brokers.
+		c, err := controller.New(controllerAgentName, mgr, controller.Options{
+			Reconciler: r,
 		})
 		if err != nil {
 			return nil, err
 		}
 
 		// Watch Brokers.
-		if err = c.Watch(&source.Kind{Type: &v1alpha1.Broker{}}, &handler.EnqueueRequestForObject{}); err != nil {
+		if err = c.Watch(&source.Kind{Type: &v1alpha1.Broker{}},
+			&handler.EnqueueRequestForObject{},
+			predicate.Funcs{
+				DeleteFunc: func(event.DeleteEvent) bool {
+					return false
+				},
+			}); err != nil {
 			return nil, err
 		}
 
@@ -114,54 +122,24 @@ func ProvideController(args ReconcilerArgs) func(manager.Manager, *zap.Logger) (
 	}
 }
 
+// eventingreconciler.EventingReconciler impl
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	return nil
 }
 
-// Reconcile compares the actual state with the desired, and attempts to
-// converge the two. It then updates the Status block of the Broker resource
-// with the current status of the resource.
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	ctx := context.TODO()
-	ctx = logging.WithLogger(ctx, r.logger.With(zap.Any("request", request)))
-
-	broker := &v1alpha1.Broker{}
-	err := r.client.Get(ctx, request.NamespacedName, broker)
-
-	if errors.IsNotFound(err) {
-		logging.FromContext(ctx).Info("Could not find Broker")
-		return reconcile.Result{}, nil
-	}
-
-	if err != nil {
-		logging.FromContext(ctx).Error("Could not Get Broker", zap.Error(err))
-		return reconcile.Result{}, err
-	}
-
-	// Reconcile this copy of the Broker and then write back any status updates regardless of
-	// whether the reconcile error out.
-	result, reconcileErr := r.reconcile(ctx, broker)
-	if reconcileErr != nil {
-		logging.FromContext(ctx).Error("Error reconciling Broker", zap.Error(reconcileErr))
-	} else if result.Requeue || result.RequeueAfter > 0 {
-		logging.FromContext(ctx).Debug("Broker reconcile requeuing")
-	} else {
-		logging.FromContext(ctx).Debug("Broker reconciled")
-		r.recorder.Event(broker, corev1.EventTypeNormal, brokerReconciled, "Broker reconciled")
-	}
-
-	if _, err = r.updateStatus(broker); err != nil {
-		logging.FromContext(ctx).Error("Failed to update Broker status", zap.Error(err))
-		r.recorder.Eventf(broker, corev1.EventTypeWarning, brokerUpdateStatusFailed, "Failed to update Broker's status: %v", err)
-		return reconcile.Result{}, err
-	}
-
-	// Requeue if the resource is not ready:
-	return result, reconcileErr
+// eventingreconciler.EventingReconciler impl
+func (r *reconciler) GetNewReconcileObject() eventingreconciler.ReconciledResource {
+	return &v1alpha1.Broker{}
 }
 
-func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) (reconcile.Result, error) {
+// Reconcile this copy of the Broker and then write back any status updates regardless of
+// whether the reconcile error out.
+// eventingreconciler.EventingReconciler impl
+func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) (bool, reconcile.Result, error) {
+	// Do not handle this error. It is better to panic here because this points to erroneous GetNewReconcileObject() function which should be caught in UTs
+	b := obj.(*v1alpha1.Broker)
+
 	b.Status.InitializeConditions()
 
 	// 1. Channel is created for all events.
@@ -169,20 +147,15 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) (reconci
 	// 3. Ingress Deployment.
 	// 4. K8s Services that point at the Deployments.
 
-	if b.DeletionTimestamp != nil {
-		// Everything is cleaned up by the garbage collector.
-		return reconcile.Result{}, nil
-	}
-
 	c, err := r.reconcileChannel(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling the channel", zap.Error(err))
 		b.Status.MarkChannelFailed(err)
-		return reconcile.Result{}, err
+		return true, reconcile.Result{}, err
 	} else if c.Status.Address.Hostname == "" {
 		logging.FromContext(ctx).Info("Channel is not yet ready", zap.Any("c", c))
 		// Give the Channel some time to get its address. One second was chosen arbitrarily.
-		return reconcile.Result{RequeueAfter: time.Second}, nil
+		return true, reconcile.Result{RequeueAfter: time.Second}, nil
 	}
 	b.Status.MarkChannelReady()
 
@@ -190,13 +163,13 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) (reconci
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling filter Deployment", zap.Error(err))
 		b.Status.MarkFilterFailed(err)
-		return reconcile.Result{}, err
+		return true, reconcile.Result{}, err
 	}
 	_, err = r.reconcileFilterService(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling filter Service", zap.Error(err))
 		b.Status.MarkFilterFailed(err)
-		return reconcile.Result{}, err
+		return true, reconcile.Result{}, err
 	}
 	b.Status.MarkFilterReady()
 
@@ -204,59 +177,19 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) (reconci
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling ingress Deployment", zap.Error(err))
 		b.Status.MarkIngressFailed(err)
-		return reconcile.Result{}, err
+		return true, reconcile.Result{}, err
 	}
 
 	svc, err := r.reconcileIngressService(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling ingress Service", zap.Error(err))
 		b.Status.MarkIngressFailed(err)
-		return reconcile.Result{}, err
+		return true, reconcile.Result{}, err
 	}
 	b.Status.MarkIngressReady()
 	b.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
 
-	return reconcile.Result{}, nil
-}
-
-// updateStatus may in fact update the broker's finalizers in addition to the status.
-func (r *reconciler) updateStatus(broker *v1alpha1.Broker) (*v1alpha1.Broker, error) {
-	ctx := context.TODO()
-	objectKey := client.ObjectKey{Namespace: broker.Namespace, Name: broker.Name}
-	latestBroker := &v1alpha1.Broker{}
-
-	if err := r.client.Get(ctx, objectKey, latestBroker); err != nil {
-		return nil, err
-	}
-
-	brokerChanged := false
-
-	if !equality.Semantic.DeepEqual(latestBroker.Finalizers, broker.Finalizers) {
-		latestBroker.SetFinalizers(broker.ObjectMeta.Finalizers)
-		if err := r.client.Update(ctx, latestBroker); err != nil {
-			return nil, err
-		}
-		brokerChanged = true
-	}
-
-	if equality.Semantic.DeepEqual(latestBroker.Status, broker.Status) {
-		return latestBroker, nil
-	}
-
-	if brokerChanged {
-		// Re-fetch.
-		latestBroker = &v1alpha1.Broker{}
-		if err := r.client.Get(ctx, objectKey, latestBroker); err != nil {
-			return nil, err
-		}
-	}
-
-	latestBroker.Status = broker.Status
-	if err := r.client.Status().Update(ctx, latestBroker); err != nil {
-		return nil, err
-	}
-
-	return latestBroker, nil
+	return true, reconcile.Result{}, nil
 }
 
 // reconcileFilterDeployment reconciles Broker's 'b' filter deployment.

@@ -24,23 +24,25 @@ import (
 
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
-	testNamespace  = "testnamespace"
-	testAPIVersion = "eventing.knative.dev/v1alpha1"
-	testCCPName    = "TestProvisioner"
-	testCCPKind    = "ClusterChannelProvisioner"
+	testNamespace             = "testnamespace"
+	testAPIVersion            = "eventing.knative.dev/v1alpha1"
+	testCCPName               = "TestProvisioner"
+	testCCPKind               = "ClusterChannelProvisioner"
+	channelReconciled         = "Channel" + eventingreconciler.Reconciled
+	channelUpdateStatusFailed = "Channel" + eventingreconciler.UpdateStatusFailed
 )
 
 var (
@@ -137,10 +139,11 @@ func TestAllCases(t *testing.T) {
 			WantEvent: []corev1.Event{
 				events[channelReconciled],
 			},
-		}, {
+		},
+		{
 			Name:         "Fail orphaned channel status update",
 			WantErrMsg:   "update failed",
-			WantResult:   reconcile.Result{Requeue: true},
+			WantResult:   reconcile.Result{},
 			ReconcileKey: fmt.Sprintf("%v/%v", testNamespace, "chan-1"),
 			InitialState: []runtime.Object{
 				Channel("chan-1", testNamespace),
@@ -153,6 +156,7 @@ func TestAllCases(t *testing.T) {
 				Channel("chan-3", testNamespace).WithProvInstalledStatus(corev1.ConditionFalse),
 			},
 			WantEvent: []corev1.Event{
+				events[channelReconciled],
 				events[channelUpdateStatusFailed],
 			},
 			Mocks: controllertesting.Mocks{
@@ -162,16 +166,17 @@ func TestAllCases(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		c := tc.GetClient()
-		dc := tc.GetDynamicClient()
 		recorder := tc.GetEventRecorder()
+		r, err := eventingreconciler.New(
+			&reconciler{},
+			zap.NewNop(),
+			recorder,
+		)
 
-		r := &reconciler{
-			client:        c,
-			dynamicClient: dc,
-			restConfig:    &rest.Config{},
-			recorder:      recorder,
-			logger:        zap.NewNop(),
+		if err != nil {
+			t.FailNow()
 		}
+
 		tc.IgnoreTimes = true
 		t.Run(tc.Name, tc.Runner(t, r, c, recorder))
 	}

@@ -20,8 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
-
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
@@ -43,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -66,7 +65,7 @@ type reconciler struct {
 	dynamicClient dynamic.Interface
 }
 
-// Verify the struct implements necessary interfaces
+// Verify reconciler implements necessary interfaces
 var _ eventingreconciler.EventingReconciler = &reconciler{}
 var _ eventingreconciler.Finalizer = &reconciler{}
 var _ inject.Config = &reconciler{}
@@ -100,8 +99,9 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 	return c, nil
 }
 
+// eventingreconciler.EventingReconciler
 func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) (bool, reconcile.Result, error) {
-	// Do not want to handle this error. It is better to panic here because this points to erroneous GetNewReconcileObject() function
+	// Do not handle this error. It is better to panic here because this points to erroneous GetNewReconcileObject() function which should be caught in UTs
 	subscription := obj.(*v1alpha1.Subscription)
 	subscription.Status.InitializeConditions()
 	logger := logging.FromContext(ctx)
@@ -152,10 +152,12 @@ func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconcil
 	return true, reconcile.Result{}, nil
 }
 
+// eventingreconciler.EventingReconciler
 func (r *reconciler) GetNewReconcileObject() eventingreconciler.ReconciledResource {
 	return &v1alpha1.Subscription{}
 }
 
+// eventingreconciler.Finalizer
 func (r *reconciler) OnDelete(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) error {
 	// Do not want to handle this error. It is better to panic here because this points to erroneous GetNewReconcileObject() function
 	subscription := obj.(*v1alpha1.Subscription)
@@ -321,12 +323,15 @@ func (r *reconciler) patchPhysicalFrom(ctx context.Context, namespace string, ph
 	return nil
 }
 
+// inject.Config
 func (r *reconciler) InjectConfig(c *rest.Config) error {
 	r.restConfig = c
 	var err error
 	r.dynamicClient, err = dynamic.NewForConfig(c)
 	return err
 }
+
+// eventingreconciler.EventingReconciler
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	return nil

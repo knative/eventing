@@ -20,12 +20,8 @@ import (
 	"context"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/logging"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	"go.uber.org/zap"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -40,32 +36,32 @@ import (
 const (
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName       = "channel-default-controller"
-	channelReconciled         = "ChannelReconciled"
-	channelUpdateStatusFailed = "ChannelUpdateStatusFailed"
+	controllerAgentName = "channel-default-controller"
 )
 
 type reconciler struct {
-	client        client.Client
-	restConfig    *rest.Config
-	dynamicClient dynamic.Interface
-	recorder      record.EventRecorder
-	logger        *zap.Logger
+	client client.Client
 }
 
-// Verify the struct implements reconcile.Reconciler
-var _ reconcile.Reconciler = &reconciler{}
+// Verify reconciler implements necessary interfaces
+var _ eventingreconciler.EventingReconciler = &reconciler{}
 
 // ProvideController returns a Channel controller.
 // This Channel controller is a default controller for channels of all provisioner kinds
 func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
+	logger = logger.With(zap.String("controller", controllerAgentName))
+
+	r, err := eventingreconciler.New(
+		&reconciler{},
+		logger,
+		mgr.GetRecorder(controllerAgentName),
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	// Setup a new controller to Reconcile channel
-	c, err := controller.New(controllerAgentName, mgr, controller.Options{
-		Reconciler: &reconciler{
-			recorder: mgr.GetRecorder(controllerAgentName),
-			logger:   logger,
-		},
-	})
+	c, err := controller.New(controllerAgentName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return nil, err
 	}
@@ -88,37 +84,10 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 
 // Reconcile will check if the channel is being watched by provisioner's channel controller
 // This will improve UX. See https://github.com/knative/eventing/issues/779
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	ctx := logging.WithLogger(context.TODO(), r.logger.With(zap.Any("request", request)))
-	logging.FromContext(ctx).Debug("Reconciling Channel")
-	ch := &v1alpha1.Channel{}
+// eventingreconciler.EventingReconciler
+func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) (bool, reconcile.Result, error) {
+	ch := obj.(*v1alpha1.Channel)
 
-	// Controller-runtime client Get() always deep copies the object. Hence no need to again deep copy it
-	err := r.client.Get(ctx, request.NamespacedName, ch)
-
-	if errors.IsNotFound(err) {
-		logging.FromContext(ctx).Info("Channel not found")
-		return reconcile.Result{}, nil
-	}
-
-	if err != nil {
-		logging.FromContext(ctx).Error("Error getting Channel", zap.Error(err))
-		return reconcile.Result{}, err
-	}
-
-	err = r.reconcile(ctx, ch)
-
-	if err != nil {
-		logging.FromContext(ctx).Warn("Error reconciling Channel", zap.Error(err))
-		r.recorder.Eventf(ch, corev1.EventTypeWarning, channelUpdateStatusFailed, "Failed to update channel status: %s", request)
-		return reconcile.Result{Requeue: true}, err
-	}
-	logging.FromContext(ctx).Debug("Successfully reconciled Channel")
-	r.recorder.Eventf(ch, corev1.EventTypeNormal, channelReconciled, "Channel reconciled: %s", request)
-	return reconcile.Result{Requeue: false}, nil
-}
-
-func (r *reconciler) reconcile(ctx context.Context, ch *v1alpha1.Channel) error {
 	// Do not Initialize() Status in channel-default-controller. It will set ChannelConditionProvisionerInstalled=True
 	// Directly call GetCondition(). If the Status was never initialized then GetCondition() will return nil and
 	// IsUnknown() will return true
@@ -131,12 +100,18 @@ func (r *reconciler) reconcile(ctx context.Context, ch *v1alpha1.Channel) error 
 			ch.Spec.Provisioner.Name,
 			ch.Spec.Provisioner.Kind,
 		)
-		err := r.client.Status().Update(ctx, ch)
-		return err
+		return true, reconcile.Result{}, nil
 	}
-	return nil
+
+	return false, reconcile.Result{}, nil
 }
 
+// eventingreconciler.EventingReconciler
+func (r *reconciler) GetNewReconcileObject() eventingreconciler.ReconciledResource {
+	return &v1alpha1.Channel{}
+}
+
+// eventingreconciler.EventingReconciler
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	return nil
