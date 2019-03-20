@@ -44,9 +44,10 @@ var (
 	port        = 8080
 	metricsPort = 9090
 
-	readTimeout  = 1 * time.Minute
-	writeTimeout = 1 * time.Minute
-	wg           sync.WaitGroup
+	readTimeout     = 1 * time.Minute
+	writeTimeout    = 1 * time.Minute
+	shutdownTimeout = 1 * time.Minute
+	wg              sync.WaitGroup
 	// brokerName is used to tag metrics.
 	brokerName string
 )
@@ -86,7 +87,7 @@ func main() {
 	err = mgr.Add(&runnableServer{
 		logger:          logger,
 		s:               s,
-		ShutdownTimeout: writeTimeout,
+		ShutdownTimeout: shutdownTimeout,
 		wg:              &wg,
 	})
 	if err != nil {
@@ -112,7 +113,7 @@ func main() {
 	err = mgr.Add(&runnableServer{
 		s:               metricsSrv,
 		logger:          logger,
-		ShutdownTimeout: writeTimeout,
+		ShutdownTimeout: shutdownTimeout,
 		wg:              &wg,
 	})
 	if err != nil {
