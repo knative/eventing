@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/names"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
@@ -45,9 +46,12 @@ const (
 	triggerName = "test-trigger"
 	brokerName  = "test-broker"
 
-	subscriberAPIVersion = "v1"
-	subscriberKind       = "Service"
-	subscriberName       = "subscriberName"
+	subscriberAPIVersion      = "v1"
+	subscriberKind            = "Service"
+	subscriberName            = "subscriberName"
+	triggerReconcileFailed    = "Trigger" + eventingreconciler.ReconcileFailed
+	triggerReconciled         = "Trigger" + eventingreconciler.Reconciled
+	triggerUpdateStatusFailed = "Trigger" + eventingreconciler.UpdateStatusFailed
 )
 
 var (
@@ -159,7 +163,6 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeDeletingTrigger(),
 			},
-			WantEvent: []corev1.Event{events[triggerReconciled]},
 		},
 		{
 			Name:   "Get Broker error",
@@ -454,12 +457,19 @@ func TestReconcile(t *testing.T) {
 		dc := tc.GetDynamicClient()
 		recorder := tc.GetEventRecorder()
 
-		r := &reconciler{
-			client:        c,
-			dynamicClient: dc,
-			recorder:      recorder,
-			logger:        zap.NewNop(),
+		r, err := eventingreconciler.New(
+			&reconciler{
+				dynamicClient: dc,
+				logger:        zap.NewNop(),
+			},
+			zap.NewNop(),
+			recorder,
+			eventingreconciler.EnableConfigInjection(),
+		)
+		if err != nil {
+			t.FailNow()
 		}
+
 		tc.ReconcileKey = fmt.Sprintf("%s/%s", testNS, triggerName)
 		tc.IgnoreTimes = true
 		t.Run(tc.Name, tc.Runner(t, r, c, recorder))

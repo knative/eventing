@@ -49,6 +49,7 @@ var (
 	// map of events to set test cases' expectations easier
 	events = map[string]corev1.Event{
 		subscriptionReconciled:         {Reason: subscriptionReconciled, Type: corev1.EventTypeNormal},
+		subscriptionReconcileFailed:    {Reason: subscriptionReconcileFailed, Type: corev1.EventTypeWarning},
 		subscriptionUpdateStatusFailed: {Reason: subscriptionUpdateStatusFailed, Type: corev1.EventTypeWarning},
 		physicalChannelSyncFailed:      {Reason: physicalChannelSyncFailed, Type: corev1.EventTypeWarning},
 		channelReferenceFetchFailed:    {Reason: channelReferenceFetchFailed, Type: corev1.EventTypeWarning},
@@ -70,8 +71,9 @@ const (
 	subscriptionName               = "testsubscription"
 	testNS                         = "testnamespace"
 	k8sServiceName                 = "testk8sservice"
-	subscriptionReconciled         = "subscription" + eventingreconciler.Reconciled
-	subscriptionUpdateStatusFailed = "subscription" + eventingreconciler.UpdateStatusFailed
+	subscriptionReconciled         = "Subscription" + eventingreconciler.Reconciled
+	subscriptionUpdateStatusFailed = "Subscription" + eventingreconciler.UpdateStatusFailed
+	subscriptionReconcileFailed    = "Subscription" + eventingreconciler.ReconcileFailed
 )
 
 var (
@@ -100,6 +102,7 @@ func TestAllCases(t *testing.T) {
 			WantErrMsg: `channels.eventing.knative.dev "fromchannel" not found`,
 			WantEvent: []corev1.Event{
 				events[channelReferenceFetchFailed],
+				events[subscriptionReconcileFailed],
 			},
 		}, {
 			Name: "subscription, but From is not subscribable",
@@ -113,6 +116,7 @@ func TestAllCases(t *testing.T) {
 			WantErrMsg: "invalid JSON document",
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
+				events[subscriptionReconcileFailed],
 			},
 			Objects: []runtime.Object{
 				// Source channel
@@ -174,6 +178,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantEvent: []corev1.Event{
 				events[subscriberResolveFailed],
+				events[subscriptionReconcileFailed],
 			},
 			Objects: []runtime.Object{
 				// Source channel
@@ -202,6 +207,7 @@ func TestAllCases(t *testing.T) {
 			WantErrMsg: "status does not contain address",
 			WantEvent: []corev1.Event{
 				events[subscriberResolveFailed],
+				events[subscriptionReconcileFailed],
 			},
 			Objects: []runtime.Object{
 				// Source channel
@@ -244,6 +250,7 @@ func TestAllCases(t *testing.T) {
 			WantErrMsg: `channels.eventing.knative.dev "resultchannel" not found`,
 			WantEvent: []corev1.Event{
 				events[resultResolveFailed],
+				events[subscriptionReconcileFailed],
 			},
 			Objects: []runtime.Object{
 				// Source channel
@@ -291,6 +298,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantEvent: []corev1.Event{
 				events[resultResolveFailed],
+				events[subscriptionReconcileFailed],
 			},
 			Objects: []runtime.Object{
 				// Source channel
@@ -353,6 +361,7 @@ func TestAllCases(t *testing.T) {
 			WantErrMsg: "invalid JSON document",
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
+				events[subscriptionReconcileFailed],
 			},
 			Objects: []runtime.Object{
 				// Source channel
@@ -420,6 +429,7 @@ func TestAllCases(t *testing.T) {
 			WantErrMsg: "invalid JSON document",
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
+				events[subscriptionReconcileFailed],
 			},
 			Objects: []runtime.Object{
 				// Source channel
@@ -468,6 +478,7 @@ func TestAllCases(t *testing.T) {
 			WantErrMsg: "invalid JSON document",
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
+				events[subscriptionReconcileFailed],
 			},
 			Objects: []runtime.Object{
 				// Source channel
@@ -516,6 +527,7 @@ func TestAllCases(t *testing.T) {
 			WantErrMsg: "invalid JSON document",
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
+				events[subscriptionReconcileFailed],
 			},
 			Objects: []runtime.Object{
 				// Source channel
@@ -564,6 +576,7 @@ func TestAllCases(t *testing.T) {
 			WantErrMsg: "invalid JSON document",
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
+				events[subscriptionReconcileFailed],
 			},
 			Objects: []runtime.Object{
 				// Source channel
@@ -616,6 +629,7 @@ func TestAllCases(t *testing.T) {
 			WantErrMsg: "invalid JSON document",
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
+				events[subscriptionReconcileFailed],
 			},
 			Objects: []runtime.Object{
 				// Source channel
@@ -662,6 +676,7 @@ func TestAllCases(t *testing.T) {
 			WantErrMsg: "invalid JSON document",
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
+				events[subscriptionReconcileFailed],
 			},
 			Objects: []runtime.Object{
 				// Source channel
@@ -713,6 +728,7 @@ func TestAllCases(t *testing.T) {
 			WantErrMsg: "invalid JSON document",
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
+				events[subscriptionReconcileFailed],
 			},
 			Objects: []runtime.Object{
 				// Source channel
@@ -761,6 +777,7 @@ func TestAllCases(t *testing.T) {
 			WantErrMsg: "services \"testk8sservice\" not found",
 			WantEvent: []corev1.Event{
 				events[subscriberResolveFailed],
+				events[subscriptionReconcileFailed],
 			},
 			Objects: []runtime.Object{
 				// Source channel
@@ -794,6 +811,7 @@ func TestAllCases(t *testing.T) {
 			WantErrMsg: "invalid JSON document",
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
+				events[subscriptionReconcileFailed],
 			},
 			Objects: []runtime.Object{
 				// Source channel
@@ -856,6 +874,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
+				events[subscriptionReconcileFailed],
 			},
 			Objects: []runtime.Object{
 				// Source with a reference to the From Channel
@@ -952,6 +971,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
+				events[subscriptionReconcileFailed],
 			},
 			Objects: []runtime.Object{
 				// Source with a reference to the From Channel

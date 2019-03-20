@@ -22,6 +22,7 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/names"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
 	"github.com/knative/eventing/pkg/utils"
@@ -30,7 +31,6 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -43,9 +43,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -55,31 +58,35 @@ const (
 	controllerAgentName = "trigger-controller"
 
 	// Name of the corev1.Events emitted from the reconciliation process.
-	triggerReconciled         = "TriggerReconciled"
-	triggerReconcileFailed    = "TriggerReconcileFailed"
-	triggerUpdateStatusFailed = "TriggerUpdateStatusFailed"
-	subscriptionDeleteFailed  = "SubscriptionDeleteFailed"
-	subscriptionCreateFailed  = "SubscriptionCreateFailed"
+	subscriptionDeleteFailed = "SubscriptionDeleteFailed"
+	subscriptionCreateFailed = "SubscriptionCreateFailed"
 )
 
 type reconciler struct {
 	client        client.Client
 	dynamicClient dynamic.Interface
-	recorder      record.EventRecorder
-
-	logger *zap.Logger
+	logger        *zap.Logger
 }
 
-// Verify the struct implements reconcile.Reconciler.
-var _ reconcile.Reconciler = &reconciler{}
+// Verify reconciler implements necessary interfaces
+var _ eventingreconciler.EventingReconciler = &reconciler{}
+var _ inject.Config = &reconciler{}
 
 // ProvideController returns a function that returns a Trigger controller.
 func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
-	// Setup a new controller to Reconcile Triggers.
-	r := &reconciler{
-		recorder: mgr.GetRecorder(controllerAgentName),
-		logger:   logger,
+	logger = logger.With(zap.String("controller", controllerAgentName))
+	innerReconciler := &reconciler{logger: logger}
+	r, err := eventingreconciler.New(
+		innerReconciler,
+		logger,
+		mgr.GetRecorder(controllerAgentName),
+		eventingreconciler.EnableConfigInjection(),
+	)
+	if err != nil {
+		return nil, err
 	}
+
+	// Setup a new controller to Reconcile Triggers.
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: r,
 	})
@@ -88,7 +95,13 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 	}
 
 	// Watch Triggers.
-	if err = c.Watch(&source.Kind{Type: &v1alpha1.Trigger{}}, &handler.EnqueueRequestForObject{}); err != nil {
+	if err = c.Watch(&source.Kind{Type: &v1alpha1.Trigger{}},
+		&handler.EnqueueRequestForObject{},
+		predicate.Funcs{
+			DeleteFunc: func(event.DeleteEvent) bool {
+				return false
+			},
+		}); err != nil {
 		return nil, err
 	}
 
@@ -102,7 +115,7 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 
 	// Watch for Broker changes. E.g. if the Broker is deleted and recreated, we need to reconcile
 	// the Trigger again.
-	if err = c.Watch(&source.Kind{Type: &v1alpha1.Broker{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &mapBrokerToTriggers{r: r}}); err != nil {
+	if err = c.Watch(&source.Kind{Type: &v1alpha1.Broker{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &mapBrokerToTriggers{r: innerReconciler}}); err != nil {
 		return nil, err
 	}
 
@@ -152,59 +165,33 @@ func (b *mapBrokerToTriggers) Map(o handler.MapObject) []reconcile.Request {
 	}
 }
 
-func (r *reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
-}
-
+// inject.Config
 func (r *reconciler) InjectConfig(c *rest.Config) error {
 	var err error
 	r.dynamicClient, err = dynamic.NewForConfig(c)
 	return err
 }
 
+// eventingreconciler.EventingReconciler
+func (r *reconciler) InjectClient(c client.Client) error {
+	r.client = c
+	return nil
+}
+
+// eventingreconciler.EventingReconciler
+func (r *reconciler) GetNewReconcileObject() eventingreconciler.ReconciledResource {
+	return &v1alpha1.Trigger{}
+}
+
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Trigger resource
 // with the current status of the resource.
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	ctx := context.TODO()
-	ctx = logging.WithLogger(ctx, r.logger.With(zap.Any("request", request)))
-
-	trigger := &v1alpha1.Trigger{}
-	err := r.client.Get(ctx, request.NamespacedName, trigger)
-
-	if errors.IsNotFound(err) {
-		logging.FromContext(ctx).Info("Could not find Trigger")
-		return reconcile.Result{}, nil
-	}
-
-	if err != nil {
-		logging.FromContext(ctx).Error("Could not get Trigger", zap.Error(err))
-		return reconcile.Result{}, err
-	}
+func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) (bool, reconcile.Result, error) {
+	t := obj.(*v1alpha1.Trigger)
 
 	// Reconcile this copy of the Trigger and then write back any status updates regardless of
 	// whether the reconcile error out.
-	reconcileErr := r.reconcile(ctx, trigger)
-	if reconcileErr != nil {
-		logging.FromContext(ctx).Error("Error reconciling Trigger", zap.Error(reconcileErr))
-		r.recorder.Eventf(trigger, corev1.EventTypeWarning, triggerReconcileFailed, "Trigger reconciliation failed: %v", reconcileErr)
-	} else {
-		logging.FromContext(ctx).Debug("Trigger reconciled")
-		r.recorder.Event(trigger, corev1.EventTypeNormal, triggerReconciled, "Trigger reconciled")
-	}
 
-	if _, err = r.updateStatus(trigger); err != nil {
-		logging.FromContext(ctx).Error("Failed to update Trigger status", zap.Error(err))
-		r.recorder.Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", err)
-		return reconcile.Result{}, err
-	}
-
-	// Requeue if the resource is not ready
-	return reconcile.Result{}, reconcileErr
-}
-
-func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	t.Status.InitializeConditions()
 
 	// 1. Verify the Broker exists.
@@ -213,95 +200,50 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	// 3. Creates a VirtualService that routes the K8s Service to the Broker's filter service on an identifiable host name.
 	// 4. Creates a Subscription from the Broker's single Channel to this Trigger's K8s Service, with reply set to the Broker.
 
-	if t.DeletionTimestamp != nil {
-		// Everything is cleaned up by the garbage collector.
-		return nil
-	}
-
 	b, err := r.getBroker(ctx, t)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Broker", zap.Error(err))
 		t.Status.MarkBrokerDoesNotExist()
-		return err
+		return true, reconcile.Result{}, err
 	}
 	t.Status.MarkBrokerExists()
 
 	c, err := r.getBrokerChannel(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Broker's Channel", zap.Error(err))
-		return err
+		return true, reconcile.Result{}, err
 	}
 
 	subscriberURI, err := resolve.SubscriberSpec(ctx, r.dynamicClient, t.Namespace, t.Spec.Subscriber)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Subscriber's URI", zap.Error(err))
-		return err
+		return true, reconcile.Result{}, err
 	}
 	t.Status.SubscriberURI = subscriberURI
 
 	svc, err := r.reconcileK8sService(ctx, t)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to reconcile the K8s Service", zap.Error(err))
-		return err
+		return true, reconcile.Result{}, err
 	}
 	t.Status.MarkKubernetesServiceExists()
 
 	_, err = r.reconcileVirtualService(ctx, t, svc)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to reconcile the VirtualService", zap.Error(err))
-		return err
+		return true, reconcile.Result{}, err
 	}
 	t.Status.MarkVirtualServiceExists()
 
-	_, err = r.subscribeToBrokerChannel(ctx, t, c, svc)
+	_, err = r.subscribeToBrokerChannel(ctx, t, c, svc, recorder)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to Subscribe", zap.Error(err))
 		t.Status.MarkNotSubscribed("notSubscribed", "%v", err)
-		return err
+		return true, reconcile.Result{}, err
 	}
 	t.Status.MarkSubscribed()
 
-	return nil
-}
-
-// updateStatus may in fact update the trigger's finalizers in addition to the status.
-func (r *reconciler) updateStatus(trigger *v1alpha1.Trigger) (*v1alpha1.Trigger, error) {
-	ctx := context.TODO()
-	objectKey := client.ObjectKey{Namespace: trigger.Namespace, Name: trigger.Name}
-	latestTrigger := &v1alpha1.Trigger{}
-
-	if err := r.client.Get(ctx, objectKey, latestTrigger); err != nil {
-		return nil, err
-	}
-
-	triggerChanged := false
-
-	if !equality.Semantic.DeepEqual(latestTrigger.Finalizers, trigger.Finalizers) {
-		latestTrigger.SetFinalizers(trigger.ObjectMeta.Finalizers)
-		if err := r.client.Update(ctx, latestTrigger); err != nil {
-			return nil, err
-		}
-		triggerChanged = true
-	}
-
-	if equality.Semantic.DeepEqual(latestTrigger.Status, trigger.Status) {
-		return latestTrigger, nil
-	}
-
-	if triggerChanged {
-		// Refetch
-		latestTrigger = &v1alpha1.Trigger{}
-		if err := r.client.Get(ctx, objectKey, latestTrigger); err != nil {
-			return nil, err
-		}
-	}
-
-	latestTrigger.Status = trigger.Status
-	if err := r.client.Status().Update(ctx, latestTrigger); err != nil {
-		return nil, err
-	}
-
-	return latestTrigger, nil
+	return true, reconcile.Result{}, nil
 }
 
 // getBroker returns the Broker for Trigger 't' if exists, otherwise it returns an error.
@@ -522,7 +464,7 @@ func virtualServiceLabels(t *v1alpha1.Trigger) map[string]string {
 }
 
 // subscribeToBrokerChannel subscribes service 'svc' to Broker's channel 'c'.
-func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.Trigger, c *v1alpha1.Channel, svc *corev1.Service) (*v1alpha1.Subscription, error) {
+func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.Trigger, c *v1alpha1.Channel, svc *corev1.Service, recorder record.EventRecorder) (*v1alpha1.Subscription, error) {
 	expected := makeSubscription(t, c, svc)
 
 	sub, err := r.getSubscription(ctx, t)
@@ -546,14 +488,14 @@ func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.T
 		err = r.client.Delete(ctx, sub)
 		if err != nil {
 			logging.FromContext(ctx).Info("Cannot delete subscription", zap.Error(err))
-			r.recorder.Eventf(t, corev1.EventTypeWarning, subscriptionDeleteFailed, "Delete Trigger's subscription failed: %v", err)
+			recorder.Eventf(t, corev1.EventTypeWarning, subscriptionDeleteFailed, "Delete Trigger's subscription failed: %v", err)
 			return nil, err
 		}
 		sub = expected
 		err = r.client.Create(ctx, sub)
 		if err != nil {
 			logging.FromContext(ctx).Info("Cannot create subscription", zap.Error(err))
-			r.recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
+			recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
 			return nil, err
 		}
 	}

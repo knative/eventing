@@ -24,6 +24,7 @@ const (
 	AddFinalizerFailed = "AddFinalizerFailed"
 	Reconciled         = "Reconciled"
 	UpdateStatusFailed = "UpdateStatusFailed"
+	ReconcileFailed    = "ReconcileFailed"
 )
 
 type ReconciledResource interface {
@@ -152,7 +153,6 @@ func (r *reconciler) InjectConfig(c *rest.Config) error {
 	return nil
 }
 
-// reconcile.Reconciler impl
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	obj := r.GetNewReconcileObject()
 	recObjTypeName := reflect.TypeOf(obj).Elem().Name()
@@ -212,6 +212,8 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	if err != nil {
 		ctxLogger.Warn(fmt.Sprintf("Error reconciling %s", recObjTypeName), zap.Error(err))
+		reason := recObjTypeName + ReconcileFailed
+		r.recorder.Eventf(obj, corev1.EventTypeWarning, reason, "%s reconcile failed: %q", recObjTypeName, obj.GetName())
 	} else {
 		ctxLogger.Debug(fmt.Sprintf("%s reconciled", recObjTypeName))
 		reason := recObjTypeName + Reconciled
