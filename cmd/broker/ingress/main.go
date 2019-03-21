@@ -236,7 +236,7 @@ func (h *handler) sendEvent(ctx context.Context, tctx cehttp.TransportContext, e
 	if err != nil {
 		sendingCTX, _ = tag.New(sendingCTX, tag.Insert(TagResult, "error"))
 	} else {
-		sendingCTX, _ = tag.New(sendingCTX, tag.Insert(TagResult, "success"))
+		sendingCTX, _ = tag.New(sendingCTX, tag.Insert(TagResult, "ok"))
 	}
 	return err
 }
