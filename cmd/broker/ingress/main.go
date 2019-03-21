@@ -163,6 +163,6 @@ func (h *handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 
 func (h *handler) sendEvent(ctx context.Context, tctx cehttp.TransportContext, event cloudevents.Event) error {
 	sendingCTX := broker.SendingContext(ctx, tctx, h.channelURI)
-	_, err := h.ceHttp.Send(sendingCTX, event)
+	_, err := h.ceHTTP.Send(sendingCTX, event)
 	return err
 }
