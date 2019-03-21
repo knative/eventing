@@ -23,9 +23,9 @@ spec:
     plural: eventtypes
     singular: eventtype
     categories:
-    - all
-    - knative
-    - eventing
+      - all
+      - knative
+      - eventing
   scope: Namespaced
   subresources:
     status: {}
@@ -33,9 +33,12 @@ spec:
     - name: Type
       type: string
       JSONPath: ".spec.type"
-    - name: From
+    - name: Source
       type: string
-      JSONPath: ".spec.from"
+      JSONPath: ".spec.source"
+    - name: Broker
+      type: string
+      JSONPath: ".spec.broker"
     - name: Schema
       type: string
       JSONPath: ".spec.schema"
