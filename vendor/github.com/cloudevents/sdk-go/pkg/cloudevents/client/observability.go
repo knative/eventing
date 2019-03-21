@@ -7,14 +7,16 @@ import (
 )
 
 var (
-	latencyMs = stats.Float64("client/latency", "The latency in milliseconds for the CloudEvents client methods.", "ms")
+	// LatencyMs measures the latency in milliseconds for the CloudEvents
+	// client methods.
+	LatencyMs = stats.Float64("cloudevents.io/sdk-go/client/latency", "The latency in milliseconds for the CloudEvents client methods.", "ms")
 )
 
 var (
 	// LatencyView is an OpenCensus view that shows client method latency.
 	LatencyView = &view.View{
 		Name:        "client/latency",
-		Measure:     latencyMs,
+		Measure:     LatencyMs,
 		Description: "The distribution of latency inside of client for CloudEvents.",
 		Aggregation: view.Distribution(0, .01, .1, 1, 10, 100, 1000, 10000),
 		TagKeys:     observability.LatencyTags(),
@@ -62,5 +64,5 @@ func (o observed) MethodName() string {
 
 // LatencyMs implements Observable.LatencyMs
 func (o observed) LatencyMs() *stats.Float64Measure {
-	return latencyMs
+	return LatencyMs
 }

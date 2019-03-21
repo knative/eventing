@@ -2,14 +2,17 @@ package http
 
 import (
 	"fmt"
+
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/observability"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 )
 
 var (
-	latencyMs = stats.Float64(
-		"transport/http/latency",
+	// LatencyMs measures the latency in milliseconds for the http transport
+	// methods for CloudEvents.
+	LatencyMs = stats.Float64(
+		"cloudevents.io/sdk-go/transport/http/latency",
 		"The latency in milliseconds for the http transport methods for CloudEvents.",
 		"ms")
 )
@@ -18,7 +21,7 @@ var (
 	// LatencyView is an OpenCensus view that shows http transport method latency.
 	LatencyView = &view.View{
 		Name:        "transport/http/latency",
-		Measure:     latencyMs,
+		Measure:     LatencyMs,
 		Description: "The distribution of latency inside of http transport for CloudEvents.",
 		Aggregation: view.Distribution(0, .01, .1, 1, 10, 100, 1000, 10000),
 		TagKeys:     observability.LatencyTags(),
@@ -76,7 +79,7 @@ func (o observed) MethodName() string {
 
 // LatencyMs implements Observable.LatencyMs
 func (o observed) LatencyMs() *stats.Float64Measure {
-	return latencyMs
+	return LatencyMs
 }
 
 // CodecObserved is a wrapper to append version to observed.

@@ -7,14 +7,16 @@ import (
 )
 
 var (
-	latencyMs = stats.Float64("datacodec/latency", "The latency in milliseconds for the CloudEvents generic data codec methods.", "ms")
+	// LatencyMs measures the latency in milliseconds for the CloudEvents generic
+	// codec data methods.
+	LatencyMs = stats.Float64("cloudevents.io/sdk-go/datacodec/latency", "The latency in milliseconds for the CloudEvents generic data codec methods.", "ms")
 )
 
 var (
 	// LatencyView is an OpenCensus view that shows data codec method latency.
 	LatencyView = &view.View{
 		Name:        "datacodec/latency",
-		Measure:     latencyMs,
+		Measure:     LatencyMs,
 		Description: "The distribution of latency inside of the generic data codec for CloudEvents.",
 		Aggregation: view.Distribution(0, .01, .1, 1, 10, 100, 1000, 10000),
 		TagKeys:     observability.LatencyTags(),
@@ -57,5 +59,5 @@ func (o observed) MethodName() string {
 
 // LatencyMs implements Observable.LatencyMs
 func (o observed) LatencyMs() *stats.Float64Measure {
-	return latencyMs
+	return LatencyMs
 }
