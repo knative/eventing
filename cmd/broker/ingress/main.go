@@ -55,8 +55,6 @@ var (
 	shutdownTimeout = 1 * time.Minute
 
 	wg sync.WaitGroup
-	// brokerName is used to tag metrics.
-	brokerName string
 )
 
 func main() {
@@ -76,6 +74,8 @@ func main() {
 	if err = eventingv1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
 		logger.Fatal("Unable to add eventingv1alpha1 scheme", zap.Error(err))
 	}
+
+	brokerName := getRequiredEnv("BROKER")
 
 	channelURI := &url.URL{
 		Scheme: "http",
@@ -159,6 +159,7 @@ func New(logger *zap.Logger, channelURI *url.URL) (*handler, error) {
 		ceClient:   ceClient,
 		ceHttp:     ceHttp,
 		channelURI: channelURI,
+		brokerName: brokerName,
 	}, nil
 }
 
@@ -167,6 +168,7 @@ type handler struct {
 	ceClient   ceclient.Client
 	ceHttp     *cehttp.Transport
 	channelURI *url.URL
+	brokerName string
 }
 
 func (h *handler) Start(stopCh <-chan struct{}) error {
@@ -210,7 +212,7 @@ func (h *handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 		return nil
 	}
 
-	ctx, _ = tag.New(ctx, tag.Insert(TagBroker, brokerName))
+	ctx, _ = tag.New(ctx, tag.Insert(TagBroker, h.brokerName))
 	defer func() {
 		stats.Record(ctx, MeasureMessagesTotal.M(1))
 	}()
