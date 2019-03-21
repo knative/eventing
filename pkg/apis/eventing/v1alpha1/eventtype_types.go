@@ -104,7 +104,7 @@ func (et *EventTypeStatus) MarkBrokerExists() {
 }
 
 func (et *EventTypeStatus) MarkBrokerDoesNotExist() {
-	eventTypeCondSet.Manage(et).MarkFalse(EventTypeConditionBrokerExists, "doesNotExist", "Broker does not exist")
+	eventTypeCondSet.Manage(et).MarkFalse(EventTypeConditionBrokerExists, "BrokerDoesNotExist", "Broker does not exist")
 }
 
 func (et *EventTypeStatus) MarkBrokerReady() {
@@ -112,7 +112,7 @@ func (et *EventTypeStatus) MarkBrokerReady() {
 }
 
 func (et *EventTypeStatus) MarkBrokerNotReady() {
-	eventTypeCondSet.Manage(et).MarkFalse(EventTypeConditionBrokerReady, "notReady", "Broker is not ready")
+	eventTypeCondSet.Manage(et).MarkFalse(EventTypeConditionBrokerReady, "BrokerNotReady", "Broker is not ready")
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
