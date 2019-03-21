@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
@@ -39,6 +40,8 @@ import (
 )
 
 var (
+	defaultTTL = 10
+
 	defaultPort = 8080
 
 	writeTimeout = 1 * time.Minute
@@ -161,6 +164,11 @@ func (h *handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 		return nil
 	}
 
+	send := h.decrementTTL(&event)
+	if !send {
+		return nil
+	}
+
 	// TODO Filter.
 
 	return h.sendEvent(ctx, tctx, event)
@@ -170,4 +178,36 @@ func (h *handler) sendEvent(ctx context.Context, tctx cehttp.TransportContext, e
 	sendingCTX := broker.SendingContext(ctx, tctx, h.channelURI)
 	_, err := h.ceHttp.Send(sendingCTX, event)
 	return err
+}
+
+func (h *handler) decrementTTL(event *cloudevents.Event) bool {
+	ttl := h.getTTLToSet(event)
+	if ttl <= 0 {
+		// TODO send to some form of dead letter queue rather than dropping.
+		h.logger.Error("Dropping message due to TTL", zap.Any("event", event))
+		return false
+	}
+
+	event.Context = broker.SetTTL(event.Context, ttl)
+	return true
+}
+
+func (h *handler) getTTLToSet(event *cloudevents.Event) int {
+	ttlInterface, present := event.Context.AsV02().Extensions[broker.V02TTLAttribute]
+	if !present {
+		h.logger.Debug("No TTL found, defaulting")
+		return defaultTTL
+	}
+	ttlString, ok := ttlInterface.(string)
+	if !ok {
+		h.logger.Debug("TTL attribute wasn't a string, defaulting", zap.Any("ttlInterface", ttlInterface))
+		return defaultTTL
+	}
+	ttl, err := strconv.Atoi(ttlString)
+	if err != nil {
+		// Treat a parsing failure as if it isn't present.
+		h.logger.Debug("TTL parse failure", zap.String("ttlString", ttlString), zap.Error(err))
+		return defaultTTL
+	}
+	return ttl - 1
 }
