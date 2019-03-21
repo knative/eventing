@@ -23,10 +23,12 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/system"
 	_ "github.com/knative/pkg/system/testing"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,6 +42,7 @@ const (
 	clusterChannelProvisionerName = "natss"
 	testNS                        = ""
 	otherTestNS                   = "testing"
+	ccpReconciled                 = "ClusterChannelProvisioner" + eventingreconciler.Reconciled
 )
 
 func init() {
@@ -49,6 +52,9 @@ func init() {
 
 var (
 	truePointer = true
+	events      = map[string]corev1.Event{
+		ccpReconciled: {Reason: ccpReconciled, Type: corev1.EventTypeNormal},
+	}
 )
 
 var mockFetchError = controllertesting.Mocks{
@@ -75,6 +81,9 @@ var testCases = []controllertesting.TestCase{
 			makeReadyClusterChannelProvisioner(),
 		},
 		IgnoreTimes: true,
+		WantEvent: []corev1.Event{
+			events[ccpReconciled],
+		},
 	},
 	{
 		Name: "reconciles only associated provisioner",
@@ -98,6 +107,9 @@ var testCases = []controllertesting.TestCase{
 			makeReadyClusterChannelProvisioner(),
 		},
 		IgnoreTimes: true,
+		WantEvent: []corev1.Event{
+			events[ccpReconciled],
+		},
 	},
 	{
 		Name:         "clusterChannelProvisioner not found",
@@ -128,6 +140,9 @@ var testCases = []controllertesting.TestCase{
 		WantPresent: []runtime.Object{
 			makeDeletedClusterChannelProvisioner(),
 		},
+		WantEvent: []corev1.Event{
+			events[ccpReconciled],
+		},
 	},
 	{
 		Name: "Create dispatcher - not owned by CCP",
@@ -138,6 +153,9 @@ var testCases = []controllertesting.TestCase{
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, clusterChannelProvisionerName),
 		WantPresent: []runtime.Object{
 			makeReadyClusterChannelProvisioner(),
+		},
+		WantEvent: []corev1.Event{
+			events[ccpReconciled],
 		},
 	},
 	{
@@ -150,6 +168,9 @@ var testCases = []controllertesting.TestCase{
 			makeReadyClusterChannelProvisioner(),
 			makeK8sService(),
 		},
+		WantEvent: []corev1.Event{
+			events[ccpReconciled],
+		},
 	},
 }
 
@@ -158,14 +179,19 @@ func TestAllCases(t *testing.T) {
 	for _, tc := range testCases {
 		c := tc.GetClient()
 		recorder := tc.GetEventRecorder()
-		logger := provisioners.NewProvisionerLoggerFromConfig(provisioners.NewLoggingConfig())
-		r := &reconciler{
-			client:   c,
-			recorder: recorder,
-			logger:   logger.Desugar(),
+		logger := zap.NewNop()
+		r, err := eventingreconciler.New(
+			&reconciler{},
+			logger,
+			recorder,
+			eventingreconciler.EnableFilter(),
+			eventingreconciler.ModifyRequest(eventingreconciler.RequestModifierFunc(removeNamespace)),
+		)
+		if err != nil {
+			t.FailNow()
 		}
 		tc.IgnoreTimes = true
-		t.Logf("Running test %s", tc.Name)
+		//t.Logf("Running test %s", tc.Name)
 		t.Run(tc.Name, tc.Runner(t, r, c, recorder))
 	}
 }

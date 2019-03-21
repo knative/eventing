@@ -22,11 +22,15 @@ import (
 	"github.com/knative/eventing/contrib/natss/pkg/stanutil"
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -40,6 +44,13 @@ const (
 	controllerAgentName = "natss-provisioner-controller"
 )
 
+func removeNamespace(r *reconcile.Request) {
+	// This is done to support reconcilers that reconcile cluster-scoped resources based on watch on a namespace-scoped resource
+	// Workaround until https://github.com/kubernetes-sigs/controller-runtime/issues/228 is fix and controller-runtime updated
+	// TODO: remove after updating controller-runtime
+	r.NamespacedName.Namespace = ""
+}
+
 // ProvideController returns a flow controller.
 func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	// check the connection to NATSS
@@ -51,9 +62,18 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 	}
 
 	// Setup a new controller to Reconcile ClusterChannelProvisioners that are natss channels.
-	r := &reconciler{
-		recorder: mgr.GetRecorder(controllerAgentName),
-		logger:   logger,
+	logger = logger.With(zap.String("controller", controllerAgentName))
+	// Setup a new controller to Reconcile Channels that belong to this Cluster Channel
+	// Provisioner (gcp-pubsub).
+	r, err := eventingreconciler.New(
+		&reconciler{},
+		logger,
+		mgr.GetRecorder(controllerAgentName),
+		eventingreconciler.EnableFilter(),
+		eventingreconciler.ModifyRequest(eventingreconciler.RequestModifierFunc(removeNamespace)),
+	)
+	if err != nil {
+		return nil, err
 	}
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: r,
@@ -64,9 +84,16 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 	}
 
 	// Watch ClusterChannelProvisioners.
-	err = c.Watch(&source.Kind{
-		Type: &eventingv1alpha1.ClusterChannelProvisioner{},
-	}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(
+		&source.Kind{
+			Type: &eventingv1alpha1.ClusterChannelProvisioner{},
+		},
+		&handler.EnqueueRequestForObject{},
+		predicate.Funcs{
+			DeleteFunc: func(event.DeleteEvent) bool {
+				return false
+			}},
+	)
 	if err != nil {
 		logger.Error("Unable to watch ClusterChannelProvisioners.", zap.Error(err), zap.Any("type", &eventingv1alpha1.ClusterChannelProvisioner{}))
 		return nil, err
