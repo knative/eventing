@@ -131,7 +131,7 @@ func main() {
 	// Exit if shutdown takes too long
 	go func() {
 		<-time.After(shutdownTimeout)
-		log.Fatal("Shutdown took longer than %v", shutdownTimeout)
+		log.Fatalf("Shutdown took longer than %v", shutdownTimeout)
 	}()
 
 	// Wait for runnables to stop
