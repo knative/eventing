@@ -49,9 +49,8 @@ func (et *EventType) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
 		return &apis.FieldError{Message: "The provided original was not an EventType"}
 	}
 
-	// TODO should schema be mutable?
-	// Only Schema is mutable.
-	ignoreArguments := cmpopts.IgnoreFields(EventTypeSpec{}, "Schema")
+	// TODO should schema and broker be mutable?
+	ignoreArguments := cmpopts.IgnoreFields(EventTypeSpec{}, "Schema", "Broker")
 	if diff := cmp.Diff(original.Spec, et.Spec, ignoreArguments); diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",
