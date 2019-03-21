@@ -21,18 +21,15 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	ceclient "github.com/cloudevents/sdk-go/pkg/cloudevents/client"
-	cecontext "github.com/cloudevents/sdk-go/pkg/cloudevents/context"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -40,22 +37,6 @@ const (
 	defaultPort = 8080
 
 	writeTimeout = 1 * time.Minute
-)
-
-var (
-	// These MUST be lowercase strings, as they will be compared against lowercase strings.
-	forwardHeaders = sets.NewString(
-		// tracing
-		"x-request-id",
-	)
-	// These MUST be lowercase strings, as they will be compared against lowercase strings.
-	forwardPrefixes = []string{
-		// knative
-		"knative-",
-		// tracing
-		"x-b3-",
-		"x-ot-",
-	}
 )
 
 // Receiver parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
@@ -200,9 +181,8 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cehttp.TransportContext, 
 		return nil, nil
 	}
 
-	sendingCtx := cecontext.WithTarget(ctx, subscriberURI.String())
-	sendingCtx = addFilteredHeaders(sendingCtx, tctx)
-	return r.ceHttp.Send(sendingCtx, *event)
+	sendingCTX := SendingContext(ctx, tctx, subscriberURI)
+	return r.ceHttp.Send(sendingCTX, *event)
 }
 
 func (r *Receiver) getTrigger(ctx context.Context, ref provisioners.ChannelReference) (*eventingv1alpha1.Trigger, error) {
@@ -236,29 +216,4 @@ func (r *Receiver) shouldSendMessage(ts *eventingv1alpha1.TriggerSpec, event *cl
 		return false
 	}
 	return true
-}
-
-func addFilteredHeaders(ctx context.Context, tctx cehttp.TransportContext) context.Context {
-	// Helper function that adds the header name and all its values.
-	addHeader := func(ctx context.Context, n string, v []string) context.Context {
-		for _, iv := range v {
-			ctx = cehttp.ContextWithHeader(ctx, n, iv)
-		}
-		return ctx
-	}
-
-	for n, v := range tctx.Header {
-		lower := strings.ToLower(n)
-		if forwardHeaders.Has(lower) {
-			ctx = addHeader(ctx, n, v)
-			continue
-		}
-		for _, prefix := range forwardPrefixes {
-			if strings.HasPrefix(lower, prefix) {
-				ctx = addHeader(ctx, n, v)
-				break
-			}
-		}
-	}
-	return ctx
 }
