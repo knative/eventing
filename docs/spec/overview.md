@@ -1,6 +1,7 @@
 # Resource Types
 
-The API defines and provides a complete implementation for
+The API defines and provides a complete implementation for [Broker](spec.md#kind-broker), 
+[Trigger](spec.md#kind-trigger)
 [Subscription](spec.md#kind-subscription) and abstract resource definitions for
 [Channels](spec.md#kind-channel) and
 [ClusterChannelProvisioners](spec.md#kind-clusterchannelprovisioner) which may
@@ -14,6 +15,10 @@ Kubernetes objects and then composed in the same way as the concrete objects.
 The interfaces are ([Addressable](interfaces.md#addressable),
 [Subscribable](interfaces.md#Subscribable), [Callable](interfaces.md#callable)).
 For more details, see [Interface Contracts](interfaces.md).
+
+- A **Broker** provides the eventing mesh.
+
+- A **Trigger** describes the filtering and subscription of events from a Broker.
 
 - A **Subscription** describes the transformation of an event and optional
   forwarding of a returned event.
@@ -36,6 +41,19 @@ For more details, see [Interface Contracts](interfaces.md).
 Sources are defined by independent CRDs that can be installed into a cluster.
 For more information see
 [Knative Eventing Sources](https://github.com/knative/eventing-sources).
+
+## Broker
+
+**Broker** provides an eventing mesh. This allows producers to deliver events to a single
+endpoint and not need to worry about the routing details for individual consumers.
+
+For more details, see [Kind: Broker](spec.md#kind-broker).
+
+## Trigger
+
+**Trigger** describes a filter and a subscriber of those events.  
+
+For more details, see [Kind: Trigger](spec.md#kind-trigger).
 
 ## Subscription
 
