@@ -120,7 +120,10 @@ func New(logger *zap.Logger, channelURI *url.URL, client client.Client, namespac
 	if err != nil {
 		return nil, err
 	}
-	ingressPolicy := broker.NewIngressPolicy(logger, client, namespace, policy)
+	// TODO pass broker.
+	// Waiting on https://github.com/knative/eventing/pull/937
+	// which passes the broker name as an env variable.
+	ingressPolicy := broker.NewIngressPolicy(logger, client, namespace, "", policy)
 
 	return &handler{
 		logger:        logger,

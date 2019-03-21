@@ -22,6 +22,8 @@ import (
 	"regexp"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/labels"
+
 	"go.uber.org/zap"
 
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -38,6 +40,9 @@ const (
 	allowAny             = "allow_any"
 	allowRegisteredTypes = "allow_registered"
 	autoCreate           = "auto_create"
+
+	// Label to get the event types for a particular Broker.
+	eventingEventTypeBrokerLabelKey = "eventing.knative.dev/eventtype-broker"
 )
 
 var (
@@ -57,31 +62,35 @@ type Registered struct {
 	logger    *zap.SugaredLogger
 	client    client.Client
 	namespace string
+	broker    string
 }
 
 type AutoCreate struct {
 	logger    *zap.SugaredLogger
 	client    client.Client
 	namespace string
+	broker    string
 }
 
-func NewIngressPolicy(logger *zap.Logger, client client.Client, namespace, policy string) IngressPolicy {
-	return newIngressPolicy(logger.Sugar(), client, namespace, policy)
+func NewIngressPolicy(logger *zap.Logger, client client.Client, namespace, broker, policy string) IngressPolicy {
+	return newIngressPolicy(logger.Sugar(), client, namespace, broker, policy)
 }
 
-func newIngressPolicy(logger *zap.SugaredLogger, client client.Client, namespace, policy string) IngressPolicy {
+func newIngressPolicy(logger *zap.SugaredLogger, client client.Client, namespace, broker, policy string) IngressPolicy {
 	switch policy {
 	case allowRegisteredTypes:
 		return &Registered{
 			logger:    logger,
 			client:    client,
 			namespace: namespace,
+			broker:    broker,
 		}
 	case autoCreate:
 		return &AutoCreate{
 			logger:    logger,
 			client:    client,
 			namespace: namespace,
+			broker:    broker,
 		}
 	case allowAny:
 		return &Any{}
@@ -95,7 +104,7 @@ func (p *Any) AllowEvent(event *cloudevents.Event) bool {
 }
 
 func (p *Registered) AllowEvent(event *cloudevents.Event) bool {
-	_, err := getEventType(p.client, event, p.namespace)
+	_, err := getEventType(p.client, event, p.namespace, p.broker)
 	if k8serrors.IsNotFound(err) {
 		p.logger.Warnf("EventType not found, rejecting spec.type %q, %v", event.Type(), err)
 		return false
@@ -107,10 +116,10 @@ func (p *Registered) AllowEvent(event *cloudevents.Event) bool {
 }
 
 func (p *AutoCreate) AllowEvent(event *cloudevents.Event) bool {
-	_, err := getEventType(p.client, event, p.namespace)
+	_, err := getEventType(p.client, event, p.namespace, p.broker)
 	if k8serrors.IsNotFound(err) {
 		p.logger.Infof("EventType not found, creating spec.type %q", event.Type())
-		eventType := makeEventType(event, p.namespace)
+		eventType := makeEventType(event, p.namespace, p.broker)
 		err := p.client.Create(context.TODO(), eventType)
 		if err != nil {
 			p.logger.Errorf("Error creating EventType, spec.type %q, %v", event.Type(), err)
@@ -121,10 +130,10 @@ func (p *AutoCreate) AllowEvent(event *cloudevents.Event) bool {
 	return true
 }
 
-func getEventType(c client.Client, event *cloudevents.Event, namespace string) (*eventingv1alpha1.EventType, error) {
+func getEventType(c client.Client, event *cloudevents.Event, namespace, broker string) (*eventingv1alpha1.EventType, error) {
 	opts := &client.ListOptions{
-		Namespace: namespace,
-		// TODO add label selector on broker name.
+		Namespace:     namespace,
+		LabelSelector: labels.SelectorFromSet(eventTypeLabels(broker)),
 		// Set Raw because if we need to get more than one page, then we will put the continue token
 		// into opts.Raw.Continue.
 		Raw: &metav1.ListOptions{},
@@ -154,22 +163,19 @@ func getEventType(c client.Client, event *cloudevents.Event, namespace string) (
 }
 
 // makeEventType generates, but does not create an EventType from the given cloudevents.Event.
-func makeEventType(event *cloudevents.Event, namespace string) *eventingv1alpha1.EventType {
+func makeEventType(event *cloudevents.Event, namespace, broker string) *eventingv1alpha1.EventType {
 	cloudEventType := event.Type()
 	return &eventingv1alpha1.EventType{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-", toValidIdentifier(cloudEventType)),
 			Namespace:    namespace,
-			// TODO add broker label
-			// Waiting on https://github.com/knative/eventing/pull/937
-			// which passes the broker name as an env variable.
+			Labels:       eventTypeLabels(broker),
 		},
 		Spec: eventingv1alpha1.EventTypeSpec{
 			Type:   cloudEventType,
 			Source: event.Source(),
 			Schema: event.SchemaURL(),
-			// Waiting on https://github.com/knative/eventing/pull/937
-			Broker: "",
+			Broker: broker,
 		},
 	}
 }
@@ -183,4 +189,10 @@ func toValidIdentifier(cloudEventType string) string {
 		cloudEventType = validChars.ReplaceAllString(cloudEventType, "")
 	}
 	return cloudEventType
+}
+
+func eventTypeLabels(broker string) map[string]string {
+	return map[string]string{
+		eventingEventTypeBrokerLabelKey: broker,
+	}
 }
