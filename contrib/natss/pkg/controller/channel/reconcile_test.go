@@ -21,13 +21,14 @@ import (
 	"testing"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners"
 	util "github.com/knative/eventing/pkg/provisioners"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	_ "github.com/knative/pkg/system/testing"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -41,8 +42,10 @@ const (
 	channelNamespace              = "test-namespace"
 	clusterChannelProvisionerName = "natss"
 
-	testNS  = "test-namespace"
-	testUID = "test-uid"
+	testNS                 = "test-namespace"
+	testUID                = "test-uid"
+	channelReconciled      = "Channel" + eventingreconciler.Reconciled
+	channelReconcileFailed = "Channel" + eventingreconciler.ReconcileFailed
 )
 
 var (
@@ -51,6 +54,10 @@ var (
 	// serviceAddress is the address of the K8s Service. It uses a GeneratedName and the fake client
 	// does not fill in Name, so the name is the empty string.
 	serviceAddress = fmt.Sprintf("%s.%s.svc.%s", "", testNS, utils.GetClusterDomainName())
+	events         = map[string]corev1.Event{
+		channelReconciled:      {Reason: channelReconciled, Type: corev1.EventTypeNormal},
+		channelReconcileFailed: {Reason: channelReconcileFailed, Type: corev1.EventTypeWarning},
+	}
 )
 
 func init() {
@@ -73,6 +80,9 @@ var testCases = []controllertesting.TestCase{
 			makeNewChannelProvisionedStatus(channelName, clusterChannelProvisionerName),
 		},
 		IgnoreTimes: true,
+		WantEvent: []corev1.Event{
+			events[channelReconciled],
+		},
 	},
 	{
 		Name: "new channel with missing provisioner",
@@ -83,6 +93,9 @@ var testCases = []controllertesting.TestCase{
 		WantResult:   reconcile.Result{},
 		WantErrMsg:   "clusterchannelprovisioners.eventing.knative.dev " + "\"" + clusterChannelProvisionerName + "\"" + " not found",
 		IgnoreTimes:  true,
+		WantEvent: []corev1.Event{
+			events[channelReconcileFailed],
+		},
 	},
 	{
 		Name: "new channel with provisioner not managed by this controller",
@@ -112,6 +125,9 @@ var testCases = []controllertesting.TestCase{
 				"ClusterChannelProvisioner "+clusterChannelProvisionerName+" is not ready"),
 		},
 		IgnoreTimes: true,
+		WantEvent: []corev1.Event{
+			events[channelReconcileFailed],
+		},
 	},
 }
 
@@ -120,11 +136,15 @@ func TestAllCases(t *testing.T) {
 	for _, tc := range testCases {
 		c := tc.GetClient()
 		recorder := tc.GetEventRecorder()
-		logger := provisioners.NewProvisionerLoggerFromConfig(provisioners.NewLoggingConfig())
-		r := &reconciler{
-			client:   c,
-			recorder: recorder,
-			logger:   logger.Desugar(),
+		logger := zap.NewNop()
+		r, err := eventingreconciler.New(
+			&reconciler{},
+			logger,
+			recorder,
+			eventingreconciler.EnableFilter(),
+		)
+		if err != nil {
+			t.FailNow()
 		}
 		t.Logf("Running test %s", tc.Name)
 		t.Run(tc.Name, tc.Runner(t, r, c, recorder))

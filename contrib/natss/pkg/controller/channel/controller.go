@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -36,9 +37,17 @@ const (
 // ProvideController returns a Controller that represents the NATSS Provisioner.
 func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Channels that belong to this Cluster Provisioner
-	r := &reconciler{
-		recorder: mgr.GetRecorder(controllerAgentName),
-		logger:   logger,
+	logger = logger.With(zap.String("controller", controllerAgentName))
+	// Setup a new controller to Reconcile Channels that belong to this Cluster Channel
+	// Provisioner (gcp-pubsub).
+	r, err := eventingreconciler.New(
+		&reconciler{},
+		logger,
+		mgr.GetRecorder(controllerAgentName),
+		eventingreconciler.EnableFilter(),
+	)
+	if err != nil {
+		return nil, err
 	}
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: r,

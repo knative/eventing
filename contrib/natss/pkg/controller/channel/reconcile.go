@@ -20,118 +20,87 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/reconciler/names"
 	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	ccpcontroller "github.com/knative/eventing/contrib/natss/pkg/controller/clusterchannelprovisioner"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 )
 
 type reconciler struct {
-	client   client.Client
-	recorder record.EventRecorder
-	logger   *zap.Logger
+	client client.Client
 }
 
-// Verify the struct implements reconcile.Reconciler
-var _ reconcile.Reconciler = &reconciler{}
+// Verify the struct implements eventingreconciler.EventingReconciler
+var _ eventingreconciler.EventingReconciler = &reconciler{}
+var _ eventingreconciler.Filter = &reconciler{}
 
+// eventingreconciler.EventingReconciler impl
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	return nil
 }
 
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	r.logger.Info("Reconcile: ", zap.Any("request", request))
-
-	ctx := context.TODO()
-	c := &eventingv1alpha1.Channel{}
-	err := r.client.Get(ctx, request.NamespacedName, c)
-
-	// The Channel may have been deleted since it was added to the workqueue. If so, there is
-	// nothing to be done.
-	if errors.IsNotFound(err) {
-		r.logger.Info("Could not find Channel", zap.Error(err))
-		return reconcile.Result{}, nil
-	}
-
-	// Any other error should be retrieved in another reconciliation.
-	if err != nil {
-		r.logger.Error("Unable to Get Channel", zap.Error(err))
-		return reconcile.Result{}, err
-	}
-
-	// Does this Controller control this Channel?
-	if !r.shouldReconcile(c) {
-		r.logger.Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("ref", c.Spec))
-		return reconcile.Result{}, nil
-	}
-
-	// Modify a copy, not the original.
-	c = c.DeepCopy()
-	c.Status.InitializeConditions()
-
-	ccp, err := r.getClusterChannelProvisioner()
-	if err != nil {
-		r.logger.Error("Unable to Get Cluster Channel Provisioner", zap.Error(err))
-		return reconcile.Result{}, err
-	}
-
-	var reconcileErr error
-	if ccp.Status.IsReady() {
-		// Reconcile this copy of the Channel and then write back any status
-		// updates regardless of whether the reconcile error out.
-		reconcileErr = r.reconcile(ctx, c)
-		if reconcileErr != nil {
-			r.logger.Info("Error reconciling Channel", zap.Error(reconcileErr))
-		}
-	} else {
-		c.Status.MarkNotProvisioned("NotProvisioned", "ClusterChannelProvisioner %s is not ready", ccpcontroller.Name)
-		reconcileErr = fmt.Errorf("ClusterChannelProvisioner %s is not ready", ccpcontroller.Name)
-	}
-
-	if updateStatusErr := provisioners.UpdateChannel(ctx, r.client, c); updateStatusErr != nil {
-		r.logger.Info("Error updating Channel Status", zap.Error(updateStatusErr))
-		return reconcile.Result{}, updateStatusErr
-	}
-
-	return reconcile.Result{}, reconcileErr
+// eventingreconciler.EventingReconciler impl
+func (r *reconciler) GetNewReconcileObject() eventingreconciler.ReconciledResource {
+	return &eventingv1alpha1.Channel{}
 }
 
-func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
+// eventingreconciler.Filter  impl
+func (r *reconciler) ShouldReconcile(_ context.Context, obj eventingreconciler.ReconciledResource, _ record.EventRecorder) bool {
+	c := obj.(*eventingv1alpha1.Channel)
 	if c.Spec.Provisioner != nil {
 		return ccpcontroller.IsControlled(c.Spec.Provisioner)
 	}
 	return false
 }
 
-func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) error {
+func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) (bool, reconcile.Result, error) {
+	c := obj.(*eventingv1alpha1.Channel)
+	logger := logging.FromContext(ctx)
+	ccp, err := r.getClusterChannelProvisioner()
+	if err != nil {
+		logger.Error("Unable to Get Cluster Channel Provisioner", zap.Error(err))
+		return false, reconcile.Result{}, err
+	}
 	c.Status.InitializeConditions()
+	var reconcileErr error
+	if ccp.Status.IsReady() {
+		// Reconcile this copy of the Channel and then write back any status
+		// updates regardless of whether the reconcile error out.
+		reconcileErr = r.reconcile(ctx, c)
+		if reconcileErr != nil {
+			logger.Info("Error reconciling Channel", zap.Error(reconcileErr))
+		}
+	} else {
+		c.Status.MarkNotProvisioned("NotProvisioned", "ClusterChannelProvisioner %s is not ready", ccpcontroller.Name)
+		reconcileErr = fmt.Errorf("ClusterChannelProvisioner %s is not ready", ccpcontroller.Name)
+	}
 
+	return true, reconcile.Result{}, reconcileErr
+}
+
+func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) error {
 	// We are syncing two things:
 	// 1. The K8s Service to talk to this Channel.
 	// 2. The Istio VirtualService to talk to this Channel.
-
-	if c.DeletionTimestamp != nil {
-		// K8s garbage collection will delete the K8s service and VirtualService for this channel.
-		return nil
-	}
-
+	logger := logging.FromContext(ctx)
 	svc, err := provisioners.CreateK8sService(ctx, r.client, c)
 	if err != nil {
-		r.logger.Info("Error creating the Channel's K8s Service", zap.Error(err))
+		logger.Info("Error creating the Channel's K8s Service", zap.Error(err))
 		return err
 	}
 	c.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
 
 	_, err = provisioners.CreateVirtualService(ctx, r.client, c, svc)
 	if err != nil {
-		r.logger.Info("Error creating the Virtual Service for the Channel", zap.Error(err))
+		logger.Info("Error creating the Virtual Service for the Channel", zap.Error(err))
 		return err
 	}
 
