@@ -1,14 +1,29 @@
 package codec
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/datacodec"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/observability"
 	"log"
 	"strconv"
 )
 
+// JsonEncodeV01 takes in a cloudevent.Event and outputs the byte representation of that event using CloudEvents
+// version 0.1 structured json formatting rules.
 func JsonEncodeV01(e cloudevents.Event) ([]byte, error) {
+	_, r := observability.NewReporter(context.Background(), CodecObserved{o: ReportEncode, v: "v0.1"})
+	b, err := obsJsonEncodeV01(e)
+	if err != nil {
+		r.Error()
+	} else {
+		r.OK()
+	}
+	return b, err
+}
+
+func obsJsonEncodeV01(e cloudevents.Event) ([]byte, error) {
 	ctx := e.Context.AsV01()
 	if ctx.ContentType == nil {
 		ctx.ContentType = cloudevents.StringOfApplicationJSON()
@@ -16,7 +31,20 @@ func JsonEncodeV01(e cloudevents.Event) ([]byte, error) {
 	return jsonEncode(ctx, e.Data)
 }
 
+// JsonEncodeV02 takes in a cloudevent.Event and outputs the byte representation of that event using CloudEvents
+// version 0.2 structured json formatting rules.
 func JsonEncodeV02(e cloudevents.Event) ([]byte, error) {
+	_, r := observability.NewReporter(context.Background(), CodecObserved{o: ReportEncode, v: "v0.2"})
+	b, err := obsJsonEncodeV02(e)
+	if err != nil {
+		r.Error()
+	} else {
+		r.OK()
+	}
+	return b, err
+}
+
+func obsJsonEncodeV02(e cloudevents.Event) ([]byte, error) {
 	ctx := e.Context.AsV02()
 	if ctx.ContentType == nil {
 		ctx.ContentType = cloudevents.StringOfApplicationJSON()
@@ -24,7 +52,20 @@ func JsonEncodeV02(e cloudevents.Event) ([]byte, error) {
 	return jsonEncode(ctx, e.Data)
 }
 
+// JsonEncodeV03 takes in a cloudevent.Event and outputs the byte representation of that event using CloudEvents
+// version 0.3 structured json formatting rules.
 func JsonEncodeV03(e cloudevents.Event) ([]byte, error) {
+	_, r := observability.NewReporter(context.Background(), CodecObserved{o: ReportEncode, v: "v0.3"})
+	b, err := obsJsonEncodeV03(e)
+	if err != nil {
+		r.Error()
+	} else {
+		r.OK()
+	}
+	return b, err
+}
+
+func obsJsonEncodeV03(e cloudevents.Event) ([]byte, error) {
 	ctx := e.Context.AsV03()
 	if ctx.DataContentType == nil {
 		ctx.DataContentType = cloudevents.StringOfApplicationJSON()
@@ -69,7 +110,20 @@ func jsonEncode(ctx cloudevents.EventContext, data interface{}) ([]byte, error) 
 	return body, nil
 }
 
+// JsonDecodeV01 takes in the byte representation of a version 0.1 structured json CloudEvent and returns a
+// cloudevent.Event or an error if there are parsing errors.
 func JsonDecodeV01(body []byte) (*cloudevents.Event, error) {
+	_, r := observability.NewReporter(context.Background(), CodecObserved{o: ReportDecode, v: "v0.1"})
+	e, err := obsJsonDecodeV01(body)
+	if err != nil {
+		r.Error()
+	} else {
+		r.OK()
+	}
+	return e, err
+}
+
+func obsJsonDecodeV01(body []byte) (*cloudevents.Event, error) {
 	ec := cloudevents.EventContextV01{}
 	if err := json.Unmarshal(body, &ec); err != nil {
 		return nil, err
@@ -91,7 +145,20 @@ func JsonDecodeV01(body []byte) (*cloudevents.Event, error) {
 	}, nil
 }
 
+// JsonDecodeV02 takes in the byte representation of a version 0.2 structured json CloudEvent and returns a
+// cloudevent.Event or an error if there are parsing errors.
 func JsonDecodeV02(body []byte) (*cloudevents.Event, error) {
+	_, r := observability.NewReporter(context.Background(), CodecObserved{o: ReportDecode, v: "v0.2"})
+	e, err := obsJsonDecodeV02(body)
+	if err != nil {
+		r.Error()
+	} else {
+		r.OK()
+	}
+	return e, err
+}
+
+func obsJsonDecodeV02(body []byte) (*cloudevents.Event, error) {
 	ec := cloudevents.EventContextV02{}
 	if err := json.Unmarshal(body, &ec); err != nil {
 		return nil, err
@@ -113,7 +180,20 @@ func JsonDecodeV02(body []byte) (*cloudevents.Event, error) {
 	}, nil
 }
 
+// JsonDecodeV03 takes in the byte representation of a version 0.3 structured json CloudEvent and returns a
+// cloudevent.Event or an error if there are parsing errors.
 func JsonDecodeV03(body []byte) (*cloudevents.Event, error) {
+	_, r := observability.NewReporter(context.Background(), CodecObserved{o: ReportDecode, v: "v0.3"})
+	e, err := obsJsonDecodeV03(body)
+	if err != nil {
+		r.Error()
+	} else {
+		r.OK()
+	}
+	return e, err
+}
+
+func obsJsonDecodeV03(body []byte) (*cloudevents.Event, error) {
 	ec := cloudevents.EventContextV03{}
 	if err := json.Unmarshal(body, &ec); err != nil {
 		return nil, err

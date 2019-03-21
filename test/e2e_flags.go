@@ -20,7 +20,7 @@ package test
 
 import (
 	"flag"
-	"fmt"
+
 	pkgTest "github.com/knative/pkg/test"
 	"github.com/knative/pkg/test/logging"
 )
@@ -30,8 +30,6 @@ var EventingFlags = initializeEventingFlags()
 
 // EventingEnvironmentFlags holds the e2e flags needed only by the eventing repo
 type EventingEnvironmentFlags struct {
-	DockerRepo  string // Docker repo (defaults to $KO_DOCKER_REPO)
-	Tag         string // Tag for test images
 	Provisioner string // The name of the Channel's ClusterChannelProvisioner
 }
 
@@ -43,18 +41,9 @@ func initializeEventingFlags() *EventingEnvironmentFlags {
 	flag.Parse()
 
 	logging.InitializeLogger(pkgTest.Flags.LogVerbose)
-
-	f.DockerRepo = pkgTest.Flags.DockerRepo
-	f.Tag = pkgTest.Flags.Tag
-
 	if pkgTest.Flags.EmitMetrics {
 		logging.InitializeMetricExporter("eventing")
 	}
 
 	return &f
-}
-
-// ImagePath returns an image path using the configured image repo and tag.
-func ImagePath(name string) string {
-	return fmt.Sprintf("%s/%s:%s", EventingFlags.DockerRepo, name, EventingFlags.Tag)
 }

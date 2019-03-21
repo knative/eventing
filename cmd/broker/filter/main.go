@@ -58,10 +58,13 @@ func main() {
 
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
-	_, runnable := broker.New(logger, mgr.GetClient())
-	err = mgr.Add(runnable)
+	receiver, err := broker.New(logger, mgr.GetClient())
 	if err != nil {
-		logger.Fatal("Unable to start the receivers runnable", zap.Error(err), zap.Any("runnable", runnable))
+		logger.Fatal("Error creating Receiver", zap.Error(err))
+	}
+	err = mgr.Add(receiver)
+	if err != nil {
+		logger.Fatal("Unable to start the receiver", zap.Error(err), zap.Any("receiver", receiver))
 	}
 
 	// Set up signals so we handle the first shutdown signal gracefully.

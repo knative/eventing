@@ -7,10 +7,15 @@ import (
 	"time"
 )
 
+// Timestamp wraps time.Time to normalize the time layout to RFC3339. It is
+// intended to enforce compliance with the CloudEvents spec for their
+// definition of Timestamp. Custom marshal methods are implemented to ensure
+// the outbound Timestamp is a string in the RFC3339 layout.
 type Timestamp struct {
 	time.Time
 }
 
+// ParseTimestamp attempts to parse the given time assuming RFC3339 layout
 func ParseTimestamp(t string) *Timestamp {
 	if t == "" {
 		return nil
@@ -22,7 +27,8 @@ func ParseTimestamp(t string) *Timestamp {
 	return &Timestamp{Time: timestamp}
 }
 
-// This allows json marshaling to always be in RFC3339Nano format.
+// MarshalJSON implements a custom json marshal method used when this type is
+// marshaled using json.Marshal.
 func (t *Timestamp) MarshalJSON() ([]byte, error) {
 	if t == nil || t.IsZero() {
 		return []byte(`""`), nil
@@ -31,6 +37,8 @@ func (t *Timestamp) MarshalJSON() ([]byte, error) {
 	return []byte(rfc3339), nil
 }
 
+// UnmarshalJSON implements the json unmarshal method used when this type is
+// unmarshed using json.Unmarshal.
 func (t *Timestamp) UnmarshalJSON(b []byte) error {
 	var timestamp string
 	if err := json.Unmarshal(b, &timestamp); err != nil {
@@ -42,6 +50,8 @@ func (t *Timestamp) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// MarshalXML implements a custom xml marshal method used when this type is
+// marshaled using xml.Marshal.
 func (t *Timestamp) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	if t == nil || t.IsZero() {
 		return e.EncodeElement(nil, start)
@@ -50,6 +60,8 @@ func (t *Timestamp) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	return e.EncodeElement(v, start)
 }
 
+// UnmarshalXML implements the xml unmarshal method used when this type is
+// unmarshed using xml.Unmarshal.
 func (t *Timestamp) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	var timestamp string
 	if err := d.DecodeElement(&timestamp, &start); err != nil {
@@ -61,6 +73,7 @@ func (t *Timestamp) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	return nil
 }
 
+// String outputs the time using layout RFC3339.
 func (t *Timestamp) String() string {
 	if t == nil {
 		return time.Time{}.UTC().Format(time.RFC3339Nano)
