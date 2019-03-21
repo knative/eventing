@@ -66,7 +66,13 @@ type BrokerSpec struct {
 	ChannelTemplate *ChannelSpec `json:"channelTemplate,omitempty"`
 }
 
-var brokerCondSet = duckv1alpha1.NewLivingConditionSet(BrokerConditionIngress, BrokerConditionChannel, BrokerConditionFilter, BrokerConditionAddressable)
+var brokerCondSet = duckv1alpha1.NewLivingConditionSet(
+	BrokerConditionIngress,
+	BrokerConditionTriggerChannel,
+	BrokerConditionIngressChannel,
+	BrokerConditionFilter,
+	BrokerConditionAddressable,
+	BrokerConditionIngressSubscription)
 
 // BrokerStatus represents the current state of a Broker.
 type BrokerStatus struct {
@@ -88,7 +94,11 @@ const (
 
 	BrokerConditionIngress duckv1alpha1.ConditionType = "IngressReady"
 
-	BrokerConditionChannel duckv1alpha1.ConditionType = "ChannelReady"
+	BrokerConditionTriggerChannel duckv1alpha1.ConditionType = "TriggerChannelReady"
+
+	BrokerConditionIngressChannel duckv1alpha1.ConditionType = "IngressChannelReady"
+
+	BrokerConditionIngressSubscription duckv1alpha1.ConditionType = "IngressSubscriptionReady"
 
 	BrokerConditionFilter duckv1alpha1.ConditionType = "FilterReady"
 
@@ -118,12 +128,28 @@ func (bs *BrokerStatus) MarkIngressFailed(err error) {
 	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngress, "failed", "%v", err)
 }
 
-func (bs *BrokerStatus) MarkChannelReady() {
-	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionChannel)
+func (bs *BrokerStatus) MarkTriggerChannelReady() {
+	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionTriggerChannel)
 }
 
-func (bs *BrokerStatus) MarkChannelFailed(err error) {
-	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionChannel, "failed", "%v", err)
+func (bs *BrokerStatus) MarkTriggerChannelFailed(err error) {
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionTriggerChannel, "failed", "%v", err)
+}
+
+func (bs *BrokerStatus) MarkIngressChannelReady() {
+	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngressChannel)
+}
+
+func (bs *BrokerStatus) MarkIngressChannelFailed(err error) {
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngressChannel, "failed", "%v", err)
+}
+
+func (bs *BrokerStatus) MarkIngressSubscriptionReady() {
+	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngressSubscription)
+}
+
+func (bs *BrokerStatus) MarkIngressSubscriptionFailed(err error) {
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngressSubscription, "failed", "%v", err)
 }
 
 func (bs *BrokerStatus) MarkFilterReady() {

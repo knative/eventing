@@ -19,11 +19,16 @@ package test
 
 import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	pkgTest "github.com/knative/pkg/test"
 	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+)
+
+const (
+	eventsApiVersion  = "eventing.knative.dev/v1alpha1"
+	servingApiVersion = "serving.knative.dev/v1alpha1"
 )
 
 // Route returns a Route object in namespace
@@ -67,53 +72,14 @@ func Configuration(name string, namespace string, imagePath string) *servingv1al
 	}
 }
 
-// ServiceAccount returns ServiceAccount object in given namespace
-func ServiceAccount(name string, namespace string) *corev1.ServiceAccount {
-	return &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-	}
-}
-
-// ClusterRoleBinding returns ClusterRoleBinding for given subject and role
-func ClusterRoleBinding(name string, namespace string, serviceAccount string, role string) *rbacv1.ClusterRoleBinding {
-	return &rbacv1.ClusterRoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      serviceAccount,
-				Namespace: namespace,
-			},
-		},
-		RoleRef: rbacv1.RoleRef{
-			Kind:     "ClusterRole",
-			Name:     role,
-			APIGroup: "rbac.authorization.k8s.io",
-		},
-	}
-}
-
 // ClusterChannelProvisioner returns a ClusterChannelProvisioner for a given name
 func ClusterChannelProvisioner(name string) *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		Kind:       "ClusterChannelProvisioner",
-		APIVersion: "eventing.knative.dev/v1alpha1",
-		Name:       name,
-	}
+	return pkgTest.CoreV1ObjectReference("ClusterChannelProvisioner", eventsApiVersion, name)
 }
 
 // ChannelRef returns an ObjectReference for a given Channel Name
 func ChannelRef(name string) *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		Kind:       "Channel",
-		APIVersion: "eventing.knative.dev/v1alpha1",
-		Name:       name,
-	}
+	return pkgTest.CoreV1ObjectReference("Channel", eventsApiVersion, name)
 }
 
 // Channel returns a Channel with the specified provisioner
@@ -132,22 +98,14 @@ func Channel(name string, namespace string, provisioner *corev1.ObjectReference)
 // SubscriberSpecForRoute returns a SubscriberSpec for a given Knative Service.
 func SubscriberSpecForRoute(name string) *v1alpha1.SubscriberSpec {
 	return &v1alpha1.SubscriberSpec{
-		Ref: &corev1.ObjectReference{
-			Kind:       "Route",
-			APIVersion: "serving.knative.dev/v1alpha1",
-			Name:       name,
-		},
+		Ref: pkgTest.CoreV1ObjectReference("Route", servingApiVersion, name),
 	}
 }
 
 // SubscriberSpecForService returns a SubscriberSpec for a given Knative Service.
 func SubscriberSpecForService(name string) *v1alpha1.SubscriberSpec {
 	return &v1alpha1.SubscriberSpec{
-		Ref: &corev1.ObjectReference{
-			Kind:       "Service",
-			APIVersion: "v1",
-			Name:       name,
-		},
+		Ref: pkgTest.CoreV1ObjectReference("Service", "v1", name),
 	}
 }
 
@@ -213,7 +171,7 @@ func EventSenderPod(name string, namespace string, sink string, event CloudEvent
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
 				Name:            "sendevent",
-				Image:           ImagePath("sendevent"),
+				Image:           pkgTest.ImagePath("sendevent"),
 				ImagePullPolicy: corev1.PullAlways, // TODO: this might not be wanted for local.
 				Args: []string{
 					"-event-id",
@@ -248,7 +206,7 @@ func EventLoggerPod(name string, namespace string, selector map[string]string) *
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
 				Name:            "logevents",
-				Image:           ImagePath("logevents"),
+				Image:           pkgTest.ImagePath("logevents"),
 				ImagePullPolicy: corev1.PullAlways, // TODO: this might not be wanted for local.
 			}},
 			RestartPolicy: corev1.RestartPolicyAlways,
