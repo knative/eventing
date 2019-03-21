@@ -120,6 +120,7 @@ func (p *AutoCreate) AllowEvent(event *cloudevents.Event, namespace string) bool
 func getEventType(c client.Client, event *cloudevents.Event, namespace string) (*eventingv1alpha1.EventType, error) {
 	opts := &client.ListOptions{
 		Namespace: namespace,
+		// TODO add label selector on broker name.
 		// Set Raw because if we need to get more than one page, then we will put the continue token
 		// into opts.Raw.Continue.
 		Raw: &metav1.ListOptions{},
@@ -127,8 +128,6 @@ func getEventType(c client.Client, event *cloudevents.Event, namespace string) (
 
 	ctx := context.TODO()
 
-	// TODO this is very inefficient, we need to somehow select with a fieldSelector on spec.type,
-	// but it is not supported.
 	for {
 		el := &eventingv1alpha1.EventTypeList{}
 		err := c.List(ctx, opts, el)
@@ -136,7 +135,7 @@ func getEventType(c client.Client, event *cloudevents.Event, namespace string) (
 			return nil, err
 		}
 		for _, e := range el.Items {
-			// TODO ask Scott for better queries to get extensions.
+			// TODO update cloud events version once it is merged
 			// e.Spec.Origin == event.Extensions("Origin") && e.Spec.Schema == event.Extensions("Schema")
 			if e.Spec.Type == event.Type() {
 				return &e, nil
