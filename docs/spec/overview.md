@@ -23,7 +23,7 @@ For more details, see [Interface Contracts](interfaces.md).
 
 <!-- https://drive.google.com/open?id=1CXRvT2g6sxk6-ZrwYcSf2BahCNVlLTLNZkm-laQitMg -->
 
-![Broker Trigger Overview](images/broker-trigger-overview.png)
+![Broker Trigger Overview](images/broker-trigger-overview.svg)
 
 - A **Subscription** describes the transformation of an event and optional
   forwarding of a returned event.
