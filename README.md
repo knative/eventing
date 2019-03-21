@@ -21,7 +21,7 @@ For complete Knative Eventing documentation, see
 
 If you are interested in contributing, see [CONTRIBUTING.md](./CONTRIBUTING.md),
 [DEVELOPMENT.md](./DEVELOPMENT.md) and
-[Knative WORKING-GROUPS.md](https://github.com/knative/docs/blob/master/contributing/WORKING-GROUPS.md#events).
+[Knative WORKING-GROUPS.md](https://github.com/knative/docs/blob/master/contributing/WORKING-GROUPS.md#eventing).
 
 Please join
 [knative-users](https://groups.google.com/forum/#!forum/knative-users) to view
