@@ -58,13 +58,14 @@ type EventTypeSpec struct {
 	// +optional
 	DeprecatedGeneration int64 `json:"generation,omitempty"`
 
-	// TODO these attributes should be updated once we clarify the UX.
-	// Type refers to the cloud event type.
+	// TODO these attributes may need to be updated once we agree on the object model.
 	Type string `json:"type,omitempty"`
 	// +optional
-	From string `json:"from,omitempty"`
+	Source string `json:"source,omitempty"`
 	// +optional
 	Schema string `json:"schema,omitempty"`
+	// TODO sink or broker?
+	Broker string `json:"broker,omitempty"`
 }
 
 var eventTypeCondSet = duckv1alpha1.NewLivingConditionSet(EventTypeConditionReady)

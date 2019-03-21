@@ -157,12 +157,14 @@ func makeEventType(event *cloudevents.Event, namespace string) *eventingv1alpha1
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-", toValidIdentifier(cloudEventType)),
 			Namespace:    namespace,
-			// TODO maybe some label?
+			// TODO add broker label
 		},
 		Spec: eventingv1alpha1.EventTypeSpec{
 			Type:   cloudEventType,
-			From:   "", // event.Extensions("from")
-			Schema: "", // event.Extensions("schema")
+			Source: "", // event.Source()
+			Schema: "", // event.Schema()
+			// TODO set it as env variable in the ingress.
+			Broker: "",
 		},
 	}
 }

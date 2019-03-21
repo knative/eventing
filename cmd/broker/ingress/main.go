@@ -50,8 +50,6 @@ const (
 	v2EventId     = "Ce-Id"
 	v2EventType   = "Ce-Type"
 	v2EventSource = "Ce-Source"
-	// Extension attribute.
-	eventFrom = "Ce-From"
 )
 
 var (
@@ -192,24 +190,17 @@ func (r *runnableServer) Start(<-chan struct{}) error {
 // TODO this should be removed once we update the interfaces and start using cloudevents.Event instead of Message.
 func cloudEventFrom(m *provisioners.Message) cloudevents.Event {
 	event := cloudevents.Event{}
-	// TODO better way to set extensions.
-	var extensions map[string]interface{}
-	if origin, ok := m.Headers[eventFrom]; ok {
-		extensions[eventFrom] = origin
-	}
 	if eventType, ok := m.Headers[v2EventType]; ok {
 		event.Context = cloudevents.EventContextV02{
-			ID:         m.Headers[v2EventId],
-			Type:       eventType,
-			Source:     *types.ParseURLRef(v2EventSource),
-			Extensions: extensions,
+			ID:     m.Headers[v2EventId],
+			Type:   eventType,
+			Source: *types.ParseURLRef(v2EventSource),
 		}.AsV02()
 	} else {
 		event.Context = cloudevents.EventContextV01{
-			EventID:    m.Headers[v1EventId],
-			EventType:  m.Headers[v1EventType],
-			Source:     *types.ParseURLRef(v1EventSource),
-			Extensions: extensions,
+			EventID:   m.Headers[v1EventId],
+			EventType: m.Headers[v1EventType],
+			Source:    *types.ParseURLRef(v1EventSource),
 		}.AsV01()
 	}
 	return event
