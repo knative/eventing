@@ -22,16 +22,15 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	common "github.com/knative/eventing/contrib/kafka/pkg/controller"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/system"
 )
 
@@ -50,8 +49,6 @@ var (
 
 type reconciler struct {
 	client       client.Client
-	recorder     record.EventRecorder
-	logger       *zap.Logger
 	config       *common.KafkaProvisionerConfig
 	configMapKey client.ObjectKey
 	// Using a shared kafkaClusterAdmin does not work currently because of an issue with
@@ -59,20 +56,32 @@ type reconciler struct {
 	kafkaClusterAdmin sarama.ClusterAdmin
 }
 
-// Verify the struct implements reconcile.Reconciler
-var _ reconcile.Reconciler = &reconciler{}
+// Verify the struct implements eventingreconciler.EventingReconciler
+var _ eventingreconciler.EventingReconciler = &reconciler{}
+var _ eventingreconciler.Finalizer = &reconciler{}
+var _ eventingreconciler.Filter = &reconciler{}
 
 // ProvideController returns a Channel controller.
 func ProvideController(mgr manager.Manager, config *common.KafkaProvisionerConfig, logger *zap.Logger) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Channel.
-	c, err := controller.New(controllerAgentName, mgr, controller.Options{
-		Reconciler: &reconciler{
-			recorder:     mgr.GetRecorder(controllerAgentName),
-			logger:       logger,
+	logger = logger.With(zap.String("controller", controllerAgentName))
+	// Setup a new controller to Reconcile Channels that belong to this Cluster Channel
+	// Provisioner (gcp-pubsub).
+	r, err := eventingreconciler.New(
+		&reconciler{
 			config:       config,
 			configMapKey: defaultConfigMapKey,
 		},
-	})
+		logger,
+		mgr.GetRecorder(controllerAgentName),
+		eventingreconciler.EnableFinalizer(finalizerName),
+		eventingreconciler.EnableFilter(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	c, err := controller.New(controllerAgentName, mgr, controller.Options{Reconciler: r})
+
 	if err != nil {
 		return nil, err
 	}
@@ -97,9 +106,4 @@ func ProvideController(mgr manager.Manager, config *common.KafkaProvisionerConfi
 	}
 
 	return c, nil
-}
-
-func (r *reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
 }

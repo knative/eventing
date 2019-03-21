@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"testing"
 
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"go.uber.org/zap"
 
 	"github.com/Shopify/sarama"
 	"github.com/google/go-cmp/cmp"
@@ -30,6 +30,7 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	util "github.com/knative/eventing/pkg/provisioners"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
@@ -50,6 +51,8 @@ const (
 	testUID                       = "test-uid"
 	argumentNumPartitions         = "NumPartitions"
 	argumentReplicationFactor     = "ReplicationFactor"
+	channelReconciled             = "Channel" + eventingreconciler.Reconciled
+	channelReconcileFailed        = "Channel" + eventingreconciler.ReconcileFailed
 )
 
 var (
@@ -63,7 +66,8 @@ var (
 
 	// map of events to set test cases' expectations easier
 	events = map[string]corev1.Event{
-		dispatcherReconcileFailed: {Reason: dispatcherReconcileFailed, Type: corev1.EventTypeWarning},
+		channelReconcileFailed: {Reason: channelReconcileFailed, Type: corev1.EventTypeWarning},
+		channelReconciled:      {Reason: channelReconciled, Type: corev1.EventTypeNormal},
 	}
 )
 
@@ -144,11 +148,11 @@ var testCases = []controllertesting.TestCase{
 			getNewChannel(channelName, clusterChannelProvisionerName),
 			makeVirtualService(),
 		},
-		WantResult: reconcile.Result{
-			Requeue: true,
-		},
 		WantPresent: []runtime.Object{
-			getNewChannelWithStatusAndFinalizer(channelName, clusterChannelProvisionerName),
+			getNewChannelProvisionedStatus(channelName, clusterChannelProvisionerName),
+		},
+		WantEvent: []corev1.Event{
+			events[channelReconciled],
 		},
 	},
 	{
@@ -161,6 +165,9 @@ var testCases = []controllertesting.TestCase{
 		WantPresent: []runtime.Object{
 			getNewChannelProvisionedStatus(channelName, clusterChannelProvisionerName),
 		},
+		WantEvent: []corev1.Event{
+			events[channelReconciled],
+		},
 	},
 	{
 		Name: "new channel with provisioner not ready: error",
@@ -170,11 +177,11 @@ var testCases = []controllertesting.TestCase{
 		},
 		WantErrMsg: "ClusterChannelProvisioner " + clusterChannelProvisionerName + " is not ready",
 		WantPresent: []runtime.Object{
-			getNewChannelNotProvisionedStatus(channelName, clusterChannelProvisionerName,
+			getNewChannelWithFinalizerAndNotProvisionedStaus(channelName, clusterChannelProvisionerName,
 				"ClusterChannelProvisioner "+clusterChannelProvisionerName+" is not ready"),
 		},
 		WantEvent: []corev1.Event{
-			events[dispatcherReconcileFailed],
+			events[channelReconcileFailed],
 		},
 	},
 	{
@@ -183,6 +190,9 @@ var testCases = []controllertesting.TestCase{
 			getNewChannel(channelName, clusterChannelProvisionerName),
 		},
 		WantErrMsg: "clusterchannelprovisioners.eventing.knative.dev \"" + clusterChannelProvisionerName + "\" not found",
+		WantEvent: []corev1.Event{
+			events[channelReconcileFailed],
+		},
 	},
 	{
 		Name: "new channel with provisioner not managed by this controller: skips channel",
@@ -229,6 +239,9 @@ var testCases = []controllertesting.TestCase{
 			getNewChannelDeleted(channelName, clusterChannelProvisionerName),
 		},
 		WantPresent: []runtime.Object{},
+		WantEvent: []corev1.Event{
+			events[channelReconciled],
+		},
 	},
 }
 
@@ -240,15 +253,22 @@ func TestAllCases(t *testing.T) {
 
 		c := tc.GetClient()
 		recorder := tc.GetEventRecorder()
-		logger := provisioners.NewProvisionerLoggerFromConfig(provisioners.NewLoggingConfig())
-		r := &reconciler{
-			client:            c,
-			recorder:          recorder,
-			logger:            logger.Desugar(),
-			config:            getControllerConfig(),
-			kafkaClusterAdmin: &mockClusterAdmin{},
+		logger := zap.NewNop()
+		r, err := eventingreconciler.New(
+			&reconciler{
+				config:            getControllerConfig(),
+				kafkaClusterAdmin: &mockClusterAdmin{},
+			},
+			logger,
+			recorder,
+			eventingreconciler.EnableFinalizer(finalizerName),
+			eventingreconciler.EnableFilter(),
+		)
+
+		if err != nil {
+			t.FailNow()
 		}
-		t.Logf("Running test %s", tc.Name)
+		//t.Logf("Running test %s", tc.Name)
 		t.Run(tc.Name, tc.Runner(t, r, c, recorder))
 	}
 }
@@ -346,7 +366,7 @@ func TestProvisionChannel(t *testing.T) {
 		t.Logf("running test %s", tc.name)
 		logger := provisioners.NewProvisionerLoggerFromConfig(provisioners.NewLoggingConfig())
 		r := &reconciler{
-			logger: logger.Desugar(),
+			//logger: logger.Desugar(),
 		}
 		kafkaClusterAdmin := &mockClusterAdmin{
 			mockCreateTopicFunc: func(topic string, detail *sarama.TopicDetail, validateOnly bool) error {
@@ -355,7 +375,7 @@ func TestProvisionChannel(t *testing.T) {
 				}
 				return tc.mockError
 			}}
-		err := r.provisionChannel(tc.c, kafkaClusterAdmin)
+		err := r.provisionChannel(tc.c, kafkaClusterAdmin, logger.Desugar())
 		var got string
 		if err != nil {
 			got = err.Error()
@@ -396,8 +416,8 @@ func TestDeprovisionChannel(t *testing.T) {
 	for _, tc := range deprovisionTestCases {
 		t.Logf("running test %s", tc.name)
 		logger := provisioners.NewProvisionerLoggerFromConfig(provisioners.NewLoggingConfig())
-		r := &reconciler{
-			logger: logger.Desugar()}
+		r := &reconciler{}
+		//logger: logger.Desugar()}
 		kafkaClusterAdmin := &mockClusterAdmin{
 			mockDeleteTopicFunc: func(topic string) error {
 				if topic != tc.wantTopicName {
@@ -406,7 +426,7 @@ func TestDeprovisionChannel(t *testing.T) {
 				return tc.mockError
 			}}
 
-		err := r.deprovisionChannel(tc.c, kafkaClusterAdmin)
+		err := r.deprovisionChannel(tc.c, kafkaClusterAdmin, logger.Desugar())
 		var got string
 		if err != nil {
 			got = err.Error()
@@ -481,8 +501,8 @@ func getNewChannelDeleted(name, provisioner string) *eventingv1alpha1.Channel {
 	return c
 }
 
-func getNewChannelNotProvisionedStatus(name, provisioner, msg string) *eventingv1alpha1.Channel {
-	c := getNewChannel(name, provisioner)
+func getNewChannelWithFinalizerAndNotProvisionedStaus(name, provisioner, msg string) *eventingv1alpha1.Channel {
+	c := getNewChannelWithFinalizer(name, provisioner)
 	c.Status.InitializeConditions()
 	c.Status.MarkNotProvisioned("NotProvisioned", msg)
 	return c
