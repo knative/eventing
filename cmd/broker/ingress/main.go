@@ -233,8 +233,10 @@ func (r *runnableServer) Start(stopCh <-chan struct{}) error {
 
 	errCh := make(chan error)
 
+	r.wg.Add(1)
+	defer r.wg.Done()
+
 	go func() {
-		r.wg.Add(1)
 		err := r.s.ListenAndServe()
 		if err != http.ErrServerClosed {
 			errCh <- err
@@ -261,6 +263,5 @@ func (r *runnableServer) Start(stopCh <-chan struct{}) error {
 			logger.Info("Shutdown done")
 		}
 	}
-	r.wg.Done()
 	return err
 }
