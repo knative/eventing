@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -198,15 +199,18 @@ func (h *handler) getTTLToSet(event *cloudevents.Event) int {
 		h.logger.Debug("No TTL found, defaulting")
 		return defaultTTL
 	}
+	if ttl, ok := ttlInterface.(float64); ok {
+		return int(ttl) - 1
+	}
 	ttlString, ok := ttlInterface.(string)
 	if !ok {
-		h.logger.Debug("TTL attribute wasn't a string, defaulting", zap.Any("ttlInterface", ttlInterface))
+		h.logger.Info("TTL attribute wasn't a string, defaulting", zap.Any("ttlInterface", ttlInterface), zap.Any("typeOfTtlInterface", reflect.TypeOf(ttlInterface)))
 		return defaultTTL
 	}
 	ttl, err := strconv.Atoi(ttlString)
 	if err != nil {
 		// Treat a parsing failure as if it isn't present.
-		h.logger.Debug("TTL parse failure", zap.String("ttlString", ttlString), zap.Error(err))
+		h.logger.Info("TTL parse failure", zap.String("ttlString", ttlString), zap.Error(err))
 		return defaultTTL
 	}
 	return ttl - 1

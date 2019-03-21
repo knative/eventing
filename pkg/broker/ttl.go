@@ -23,7 +23,7 @@ import (
 const (
 	// V02TTLAttribute is the name of the CloudEvents 0.2 extension attribute used to store the
 	// Broker's TTL (number of times a single event can reply through a Broker continuously).
-	V02TTLAttribute = "Knativebrokerttl"
+	V02TTLAttribute = "knativebrokerttl"
 )
 
 // SetTTL sets the TTL into the EventContext. ttl should be a positive integer.
