@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/knative/pkg/apis"
 )
 
@@ -25,12 +26,20 @@ func (et *EventType) Validate() *apis.FieldError {
 	return et.Spec.Validate().ViaField("spec")
 }
 
-func (et *EventTypeSpec) Validate() *apis.FieldError {
+func (ets *EventTypeSpec) Validate() *apis.FieldError {
 	var errs *apis.FieldError
+	if ets.Type == "" {
+		fe := apis.ErrMissingField("type")
+		errs = errs.Also(fe)
+	}
+	if ets.Broker == "" {
+		fe := apis.ErrMissingField("broker")
+		errs = errs.Also(fe)
+	}
 	return errs
 }
 
-func (r *EventType) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
+func (et *EventType) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
 	if og == nil {
 		return nil
 	}
@@ -40,13 +49,16 @@ func (r *EventType) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
 		return &apis.FieldError{Message: "The provided original was not an EventType"}
 	}
 
-	// TODO check other fields.
-	if diff := cmp.Diff(original.Spec.Type, r.Spec.Type); diff != "" {
+	// TODO should schema be mutable?
+	// Only Schema is mutable.
+	ignoreArguments := cmpopts.IgnoreFields(EventTypeSpec{}, "Schema")
+	if diff := cmp.Diff(original.Spec, et.Spec, ignoreArguments); diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",
-			Paths:   []string{"spec", "events"},
+			Paths:   []string{"spec"},
 			Details: diff,
 		}
 	}
+
 	return nil
 }
