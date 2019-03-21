@@ -30,11 +30,6 @@ import (
 const (
 	// Name is the name of the GCP PubSub ClusterChannelProvisioner.
 	Name = "gcp-pubsub"
-
-	// Name of the corev1.Events emitted from the reconciliation process
-	ccpReconciled         = "CcpReconciled"
-	ccpReconcileFailed    = "CcpReconcileFailed"
-	ccpUpdateStatusFailed = "CcpUpdateStatusFailed"
 )
 
 type reconciler struct {
@@ -44,15 +39,18 @@ type reconciler struct {
 // Verify the struct implements eventingreconciler.EventingReconciler
 var _ eventingreconciler.EventingReconciler = &reconciler{}
 
+// eventingreconciler.EventingReconciler
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	return nil
 }
 
+// eventingreconciler.EventingReconciler
 func (r *reconciler) GetNewReconcileObject() eventingreconciler.ReconciledResource {
 	return &eventingv1alpha1.ClusterChannelProvisioner{}
 }
 
+// eventingreconciler.EventingReconciler
 func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) (bool, reconcile.Result, error) {
 	ccp := obj.(*eventingv1alpha1.ClusterChannelProvisioner)
 	ccp.Status.MarkReady()
@@ -72,4 +70,9 @@ func IsControlled(ref *corev1.ObjectReference) bool {
 // ClusterChannelProvisioner. This Controller only handles gcp-pubsub channels.
 func shouldReconcile(namespace, name string) bool {
 	return namespace == "" && name == Name
+}
+
+// eventingreconciler.EventingReconciler
+func (r *reconciler) ShouldReconcile(_ context.Context, obj eventingreconciler.ReconciledResource, _ record.EventRecorder) bool {
+	return shouldReconcile(obj.GetNamespace(), obj.GetName())
 }

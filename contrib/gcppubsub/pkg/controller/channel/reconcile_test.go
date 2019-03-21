@@ -36,6 +36,7 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	util "github.com/knative/eventing/pkg/provisioners"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
@@ -61,7 +62,10 @@ const (
 
 	gcpProject = "gcp-project"
 
-	pscData = "pscData"
+	pscData                   = "pscData"
+	channelReconciled         = "Channel" + eventingreconciler.Reconciled
+	channelReconcileFailed    = "Channel" + eventingreconciler.ReconcileFailed
+	channelUpdateStatusFailed = "Channel" + eventingreconciler.UpdateStatusFailed
 )
 
 var (
@@ -91,6 +95,7 @@ var (
 	// map of events to set test cases' expectations easier
 	events = map[string]corev1.Event{
 		channelReconciled:          {Reason: channelReconciled, Type: corev1.EventTypeNormal},
+		channelReconcileFailed:     {Reason: channelReconcileFailed, Type: corev1.EventTypeWarning},
 		channelUpdateStatusFailed:  {Reason: channelUpdateStatusFailed, Type: corev1.EventTypeWarning},
 		channelReadStatusFailed:    {Reason: channelReadStatusFailed, Type: corev1.EventTypeWarning},
 		gcpCredentialsReadFailed:   {Reason: gcpCredentialsReadFailed, Type: corev1.EventTypeWarning},
@@ -406,22 +411,6 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			Name: "Finalizer added",
-			InitialState: []runtime.Object{
-				makeChannel(),
-				testcreds.MakeSecretWithCreds(),
-			},
-			WantResult: reconcile.Result{
-				Requeue: true,
-			},
-			WantPresent: []runtime.Object{
-				makeChannelWithFinalizer(),
-			},
-			WantEvent: []corev1.Event{
-				events[channelReconciled],
-			},
-		},
-		{
 			Name: "GetCredential fails",
 			InitialState: []runtime.Object{
 				makeChannelWithFinalizer(),
@@ -433,6 +422,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testcreds.InvalidCredsError,
 			WantEvent: []corev1.Event{
 				events[gcpCredentialsReadFailed],
+				events[channelReconcileFailed],
 			},
 		},
 		{
@@ -443,6 +433,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: "json: cannot unmarshal number into Go struct field GcpPubSubChannelStatus.topic of type string",
 			WantEvent: []corev1.Event{
 				events[channelReadStatusFailed],
+				events[channelReconcileFailed],
 			},
 		},
 		{
@@ -460,6 +451,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[k8sServiceCreateFailed],
+				events[channelReconcileFailed],
 			},
 		},
 		{
@@ -478,6 +470,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[k8sServiceCreateFailed],
+				events[channelReconcileFailed],
 			},
 		},
 		{
@@ -499,6 +492,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[virtualServiceCreateFailed],
+				events[channelReconcileFailed],
 			},
 		},
 		{
@@ -519,6 +513,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[virtualServiceCreateFailed],
+				events[channelReconcileFailed],
 			},
 		},
 		{
@@ -548,6 +543,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: "empty reference UID: {&ObjectReference{Kind:,Namespace:,Name:,UID:,APIVersion:,ResourceVersion:,FieldPath:,} http://foo/ }",
 			WantEvent: []corev1.Event{
 				events[gcpResourcesPlanFailed],
+				events[channelReconcileFailed],
 			},
 		},
 		{
@@ -585,6 +581,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantEvent: []corev1.Event{
 				events[topicCreateFailed],
+				events[channelReconcileFailed],
 			},
 		},
 		{
@@ -610,6 +607,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantEvent: []corev1.Event{
 				events[topicCreateFailed],
+				events[channelReconcileFailed],
 			},
 		},
 		{
@@ -657,6 +655,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantEvent: []corev1.Event{
 				events[topicCreateFailed],
+				events[channelReconcileFailed],
 			},
 		},
 		{
@@ -697,6 +696,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantEvent: []corev1.Event{
 				events[subscriptionSyncFailed],
+				events[channelReconcileFailed],
 			},
 		},
 		{
@@ -744,6 +744,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantEvent: []corev1.Event{
 				events[subscriptionSyncFailed],
+				events[channelReconcileFailed],
 			},
 		},
 		{
@@ -762,37 +763,6 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			Name: "Channel get for update fails",
-			InitialState: []runtime.Object{
-				makeChannelWithFinalizerAndPCS(),
-				makeK8sService(),
-				makeVirtualService(),
-				testcreds.MakeSecretWithCreds(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockGets: errorOnSecondChannelGet(),
-			},
-			WantErrMsg: testErrorMessage,
-			WantEvent: []corev1.Event{
-				events[channelReconciled], events[channelUpdateStatusFailed],
-			},
-		},
-		{
-			Name: "Channel update fails",
-			InitialState: []runtime.Object{
-				makeChannel(),
-				makeK8sService(),
-				makeVirtualService(),
-				testcreds.MakeSecretWithCreds(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockUpdates: errorUpdatingChannel(),
-			},
-			WantErrMsg: testErrorMessage,
-			WantEvent: []corev1.Event{
-				events[channelReconciled], events[channelUpdateStatusFailed],
-			},
-		}, {
 			Name: "Channel status update fails",
 			InitialState: []runtime.Object{
 				makeChannelWithFinalizerAndPCS(),
@@ -813,15 +783,21 @@ func TestReconcile(t *testing.T) {
 	for _, tc := range testCases {
 		c := tc.GetClient()
 		recorder := tc.GetEventRecorder()
-		r := &reconciler{
-			client:   c,
-			recorder: recorder,
-			logger:   zap.NewNop(),
+		r, err := eventingreconciler.New(
+			&reconciler{
+				pubSubClientCreator: fakepubsub.Creator(tc.OtherTestData[pscData]),
+				defaultGcpProject:   gcpProject,
+				defaultSecret:       testcreds.Secret,
+				defaultSecretKey:    testcreds.SecretKey,
+			},
+			zap.NewNop(),
+			recorder,
+			eventingreconciler.EnableFinalizer(finalizerName),
+			eventingreconciler.EnableFilter(),
+		)
 
-			pubSubClientCreator: fakepubsub.Creator(tc.OtherTestData[pscData]),
-			defaultGcpProject:   gcpProject,
-			defaultSecret:       testcreds.Secret,
-			defaultSecretKey:    testcreds.SecretKey,
+		if err != nil {
+			t.FailNow()
 		}
 		if tc.ReconcileKey == "" {
 			tc.ReconcileKey = fmt.Sprintf("/%s", cName)

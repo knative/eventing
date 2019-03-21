@@ -28,6 +28,7 @@ import (
 	pubsubutil "github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -56,22 +57,26 @@ const (
 func New(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	// reconcileChan is used when the dispatcher itself needs to force reconciliation of a Channel.
 	reconcileChan := make(chan event.GenericEvent)
+	logger = logger.With(zap.String("controller", controllerAgentName))
 
 	// Setup a new controller to pull messages from GCP PubSub for Channels that belong to this
 	// Cluster Provisioner (gcp-pubsub).
-	r := &reconciler{
-		recorder: mgr.GetRecorder(controllerAgentName),
-		logger:   logger,
-
-		dispatcher:    provisioners.NewMessageDispatcher(logger.Sugar()),
-		reconcileChan: reconcileChan,
-
-		pubSubClientCreator: pubsubutil.GcpPubSubClientCreator,
-
-		subscriptionsLock: sync.Mutex{},
-		subscriptions:     map[channelName]map[subscriptionName]context.CancelFunc{},
-
-		rateLimiter: workqueue.NewItemExponentialFailureRateLimiter(expBackoffBaseDelay, expBackoffMaxDelay),
+	r, err := eventingreconciler.New(
+		&reconciler{
+			dispatcher:          provisioners.NewMessageDispatcher(logger.Sugar()),
+			reconcileChan:       reconcileChan,
+			pubSubClientCreator: pubsubutil.GcpPubSubClientCreator,
+			subscriptionsLock:   sync.Mutex{},
+			subscriptions:       map[channelName]map[subscriptionName]context.CancelFunc{},
+			rateLimiter:         workqueue.NewItemExponentialFailureRateLimiter(expBackoffBaseDelay, expBackoffMaxDelay),
+		},
+		logger,
+		mgr.GetRecorder(controllerAgentName),
+		eventingreconciler.EnableFinalizer(finalizerName),
+		eventingreconciler.EnableFilter(),
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{

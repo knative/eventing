@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	_ "github.com/knative/pkg/system/testing"
@@ -36,8 +37,11 @@ import (
 )
 
 const (
-	ccpUid           = "test-uid"
-	testErrorMessage = "test-induced-error"
+	ccpUid                = "test-uid"
+	testErrorMessage      = "test-induced-error"
+	ccpReconciled         = "ClusterChannelProvisioner" + eventingreconciler.Reconciled
+	ccpUpdateStatusFailed = "ClusterChannelProvisioner" + eventingreconciler.UpdateStatusFailed
+	ccpReconcileFailed    = "ClusterChannelProvisioner" + eventingreconciler.ReconcileFailed
 )
 
 var (
@@ -173,20 +177,6 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			Name: "Error getting CCP for updating Status",
-			// Nothing to create or update other than the status of CCP itself.
-			InitialState: []runtime.Object{
-				makeClusterChannelProvisioner(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockGets: oneSuccessfulClusterChannelProvisionerGet(),
-			},
-			WantErrMsg: testErrorMessage,
-			WantEvent: []corev1.Event{
-				events[ccpReconciled], events[ccpUpdateStatusFailed],
-			},
-		},
-		{
 			Name: "Error updating Status",
 			// Nothing to create or update other than the status of CCP itself.
 			InitialState: []runtime.Object{
@@ -207,10 +197,14 @@ func TestReconcile(t *testing.T) {
 	for _, tc := range testCases {
 		c := tc.GetClient()
 		recorder := tc.GetEventRecorder()
-		r := &reconciler{
-			client:   c,
-			recorder: recorder,
-			logger:   zap.NewNop(),
+		r, err := eventingreconciler.New(
+			&reconciler{},
+			zap.NewNop(),
+			recorder,
+			eventingreconciler.EnableFilter(),
+		)
+		if err != nil {
+			t.FailNow()
 		}
 		if tc.ReconcileKey == "" {
 			tc.ReconcileKey = fmt.Sprintf("/%s", Name)

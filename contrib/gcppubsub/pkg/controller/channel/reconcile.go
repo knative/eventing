@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	ccpcontroller "github.com/knative/eventing/contrib/gcppubsub/pkg/controller/clusterchannelprovisioner"
 	pubsubutil "github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -83,17 +84,31 @@ type reconciler struct {
 
 // Verify the struct implements eventingreconciler.EventingReconciler
 var _ eventingreconciler.EventingReconciler = &reconciler{}
+var _ eventingreconciler.Finalizer = &reconciler{}
+var _ eventingreconciler.Filter = &reconciler{}
 
+// eventingreconciler.EventingReconciler impl
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	return nil
 }
 
+// eventingreconciler.EventingReconciler impl
 func (r *reconciler) GetNewReconcileObject() eventingreconciler.ReconciledResource {
 	return &eventingv1alpha1.Channel{}
 }
 
-func (r *reconciler) Finalize(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) error {
+// eventingreconciler.Filter  impl
+func (r *reconciler) ShouldReconcile(_ context.Context, obj eventingreconciler.ReconciledResource, _ record.EventRecorder) bool {
+	c := obj.(*v1alpha1.Channel)
+	if c.Spec.Provisioner != nil {
+		return ccpcontroller.IsControlled(c.Spec.Provisioner)
+	}
+	return false
+}
+
+// eventingreconciler.Finalizer  impl
+func (r *reconciler) OnDelete(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) error {
 	c := obj.(*v1alpha1.Channel)
 
 	originalPCS, err := pubsubutil.GetInternalStatus(c)
@@ -132,6 +147,7 @@ func (r *reconciler) Finalize(ctx context.Context, obj eventingreconciler.Reconc
 // reconcile reconciles this Channel so that the real world matches the intended state. The returned
 // boolean indicates if this Channel should be immediately requeued for another reconcile loop. The
 // returned error indicates an error during reconciliation.
+// eventingreconciler.EventingReconciler impl
 func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) (bool, reconcile.Result, error) {
 	c := obj.(*v1alpha1.Channel)
 	c.Status.InitializeConditions()
@@ -148,7 +164,7 @@ func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconcil
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to read the status.internal", zap.Error(err))
 		recorder.Eventf(c, v1.EventTypeWarning, channelReadStatusFailed, "Failed to read Channel's status.internal: %v", err)
-		return false, reconcile.Result{}, err
+		return true, reconcile.Result{}, err
 	}
 
 	// Regardless of what we are going to do, we need GCP credentials to do it.
@@ -156,7 +172,7 @@ func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconcil
 	if err != nil {
 		logging.FromContext(ctx).Info("Unable to generate GCP creds", zap.Error(err))
 		recorder.Eventf(c, v1.EventTypeWarning, gcpCredentialsReadFailed, "Failed to generate GCP credentials: %v", err)
-		return false, reconcile.Result{}, err
+		return true, reconcile.Result{}, err
 	}
 	// We don't want to leak any external resources, so we will generate all the names we will use
 	// and persist them to our status before creating anything. That way during delete we know
@@ -165,49 +181,49 @@ func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconcil
 	persist, plannedPCS, subsToSync, err := r.planGcpResources(ctx, c, originalPCS)
 	if err != nil {
 		recorder.Eventf(c, v1.EventTypeWarning, gcpResourcesPlanFailed, "Failed to plan Channel's resources: %v", err)
-		return false, reconcile.Result{}, err
+		return true, reconcile.Result{}, err
 	}
 	if persist == persistStatus {
 		if err = pubsubutil.SetInternalStatus(ctx, c, plannedPCS); err != nil {
 			recorder.Eventf(c, v1.EventTypeWarning, gcpResourcesPersistFailed, "Failed to persist Channel's resources: %v", err)
-			return false, reconcile.Result{}, err
+			return true, reconcile.Result{}, err
 		}
 		// Persist this and run another reconcile loop to enact it.
-		return false, reconcile.Result{}, err
+		return true, reconcile.Result{Requeue: true}, err
 	}
 
 	svc, err := r.createK8sService(ctx, c)
 	if err != nil {
 		recorder.Eventf(c, v1.EventTypeWarning, k8sServiceCreateFailed, "Failed to reconcile Channel's K8s Service: %v", err)
-		return false, reconcile.Result{}, err
+		return true, reconcile.Result{}, err
 	}
 
 	err = r.createVirtualService(ctx, c, svc)
 	if err != nil {
 		recorder.Eventf(c, v1.EventTypeWarning, virtualServiceCreateFailed, "Failed to reconcile Virtual Service for the Channel: %v", err)
-		return false, reconcile.Result{}, err
+		return true, reconcile.Result{}, err
 	}
 
 	topic, err := r.createTopic(ctx, plannedPCS, gcpCreds)
 	if err != nil {
 		recorder.Eventf(c, v1.EventTypeWarning, topicCreateFailed, "Failed to reconcile Topic for the Channel: %v", err)
-		return false, reconcile.Result{}, err
+		return true, reconcile.Result{}, err
 	}
 
 	err = r.syncSubscriptions(ctx, plannedPCS, gcpCreds, topic, subsToSync)
 	if err != nil {
 		recorder.Eventf(c, v1.EventTypeWarning, subscriptionSyncFailed, "Failed to reconcile Subscription for the Channel: %v", err)
-		return false, reconcile.Result{}, err
+		return true, reconcile.Result{}, err
 	}
 	// Now that the subs have synced successfully, remove the old ones from the status.
 	plannedPCS.Subscriptions = subsToSync.subsToCreate
 	if err = pubsubutil.SetInternalStatus(ctx, c, plannedPCS); err != nil {
 		recorder.Eventf(c, v1.EventTypeWarning, subscriptionDeleteFailed, "Failed to delete old Subscriptions from the Channel's status: %v", err)
-		return false, reconcile.Result{}, err
+		return true, reconcile.Result{}, err
 	}
 
 	c.Status.MarkProvisioned()
-	return false, reconcile.Result{}, nil
+	return true, reconcile.Result{}, nil
 }
 
 // planGcpResources creates the plan for every resource that needs to be created outside of the

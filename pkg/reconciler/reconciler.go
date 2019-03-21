@@ -213,7 +213,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		if err := r.client.Update(ctx, obj); err != nil {
 			logger.Error("Reconcile failed while removing finalizer", zap.Any("FinalizerName", r.finalizerName), zap.Error(err))
 			reason := recObjTypeName + RemoveFinalizerFailed
-			r.recorder.Eventf(obj, corev1.EventTypeWarning, reason, "%s(%s) reconciliation failed: %s", recObjTypeName, obj.GetName(), err)
+			r.recorder.Eventf(obj, corev1.EventTypeWarning, reason, "%s reconciliation failed: %s", recObjTypeName, err)
 			return reconcile.Result{}, err
 		}
 		// Return as there is nothing else the the reconciler can do
@@ -229,7 +229,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 			if err := r.client.Update(ctx, obj); err != nil {
 				logger.Error("Reconcile failed while adding finalizer", zap.Any("FinalizerName", r.finalizerName), zap.Error(err))
 				eventFailedReason := recObjTypeName + AddFinalizerFailed
-				r.recorder.Eventf(obj, corev1.EventTypeWarning, eventFailedReason, "%s(%s) reconciliation failed: %s", recObjTypeName, obj.GetName(), err)
+				r.recorder.Eventf(obj, corev1.EventTypeWarning, eventFailedReason, "%s reconciliation failed: %s", recObjTypeName, err)
 				return reconcile.Result{}, err
 			}
 		}
@@ -240,7 +240,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	if err != nil {
 		logger.Warn(fmt.Sprintf("Error reconciling %s", recObjTypeName), zap.Error(err))
 		reason := recObjTypeName + ReconcileFailed
-		r.recorder.Eventf(obj, corev1.EventTypeWarning, reason, "%s reconcile failed: %q", recObjTypeName, obj.GetName())
+		r.recorder.Eventf(obj, corev1.EventTypeWarning, reason, "%s reconcile failed: %s", recObjTypeName, err)
 	} else {
 		r.reportObjectReconciled(obj, logger)
 	}
@@ -248,7 +248,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		if updataStatusErr := r.client.Status().Update(ctx, obj); updataStatusErr != nil {
 			logger.Error("Failed to update status.", zap.Error(updataStatusErr))
 			reason := recObjTypeName + UpdateStatusFailed
-			r.recorder.Eventf(obj, corev1.EventTypeWarning, reason, "Failed to update %s(%s) status: %v", recObjTypeName, obj.GetName(), updataStatusErr)
+			r.recorder.Eventf(obj, corev1.EventTypeWarning, reason, "Failed to update %s status: %s", recObjTypeName, updataStatusErr)
 			return reconcile.Result{}, updataStatusErr
 		}
 	}
@@ -260,5 +260,5 @@ func (r *reconciler) reportObjectReconciled(obj ReconciledResource, logger *zap.
 	typeName := reflect.TypeOf(obj).Elem().Name()
 	logger.Debug("Reconciled.")
 	reason := typeName + Reconciled
-	r.recorder.Eventf(obj, corev1.EventTypeNormal, reason, "%s(%s) reconciled.", typeName, obj.GetName())
+	r.recorder.Eventf(obj, corev1.EventTypeNormal, reason, "%s reconciled.", typeName)
 }

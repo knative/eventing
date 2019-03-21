@@ -22,8 +22,6 @@ import (
 	"sync"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
-
 	"k8s.io/client-go/util/workqueue"
 
 	ccpcontroller "github.com/knative/eventing/contrib/gcppubsub/pkg/controller/clusterchannelprovisioner"
@@ -31,9 +29,8 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/provisioners"
-	util "github.com/knative/eventing/pkg/provisioners"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	"go.uber.org/zap"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,11 +40,6 @@ import (
 
 const (
 	finalizerName = controllerAgentName
-
-	// Name of the corev1.Events emitted from the reconciliation process
-	dispatcherReconciled         = "DispatcherReconciled"
-	dispatcherReconcileFailed    = "DispatcherReconcileFailed"
-	dispatcherUpdateStatusFailed = "DispatcherUpdateStatusFailed"
 )
 
 type channelName = types.NamespacedName
@@ -78,103 +70,38 @@ type reconciler struct {
 	rateLimiter workqueue.RateLimiter
 }
 
-// Verify the struct implements reconcile.Reconciler
-var _ reconcile.Reconciler = &reconciler{}
+// Verify the struct implements eventingreconciler.EventingReconciler
+var _ eventingreconciler.EventingReconciler = &reconciler{}
+var _ eventingreconciler.Filter = &reconciler{}
+var _ eventingreconciler.Finalizer = &reconciler{}
 
+// eventingreconciler.EventingReconciler
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	return nil
 }
 
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	ctx := logging.WithLogger(context.TODO(), r.logger.With(zap.Any("request", request)))
+// eventingreconciler.EventingReconciler
+func (r *reconciler) GetNewReconcileObject() eventingreconciler.ReconciledResource {
+	return &eventingv1alpha1.Channel{}
+}
 
-	c := &eventingv1alpha1.Channel{}
-	err := r.client.Get(ctx, request.NamespacedName, c)
+// eventingreconciler.EventingReconciler
+func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) (bool, reconcile.Result, error) {
+	c := obj.(*eventingv1alpha1.Channel)
 
-	// The Channel may have been deleted since it was added to the workqueue. If so, there is
-	// nothing to be done.
-	if k8serrors.IsNotFound(err) {
-		logging.FromContext(ctx).Info("Could not find Channel", zap.Error(err))
-		return reconcile.Result{}, nil
-	}
-
-	// Any other error should be retried in another reconciliation.
-	if err != nil {
-		logging.FromContext(ctx).Error("Unable to Get Channel", zap.Error(err))
-		return reconcile.Result{}, err
-	}
-
-	// Does this Controller control this Channel?
-	if !r.shouldReconcile(c) {
-		logging.FromContext(ctx).Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("ref", c.Spec))
-		return reconcile.Result{}, nil
-	}
 	pcs, err := pubsubutil.GetInternalStatus(c)
 	if err != nil {
 		logging.FromContext(ctx).Info("Unable to read the status.internal", zap.Error(err))
-		return reconcile.Result{}, err
+		return false, reconcile.Result{}, err
 	} else if pcs.IsEmpty() {
-		return reconcile.Result{}, errors.New("status.internal is blank")
+		return false, reconcile.Result{}, errors.New("status.internal is blank")
 	}
 
-	logging.FromContext(ctx).Info("Reconciling Channel")
-
-	// Modify a copy, not the original.
-	c = c.DeepCopy()
-
-	requeue, reconcileErr := r.reconcile(logging.With(ctx, zap.Any("channel", c)), c, pcs)
-	if reconcileErr != nil {
-		logging.FromContext(ctx).Info("Error reconciling Channel", zap.Error(reconcileErr))
-		r.recorder.Eventf(c, v1.EventTypeWarning, dispatcherReconcileFailed, "Dispatcher reconciliation failed: %v", err)
-		// Note that we do not return the error here, because we want to update the finalizers
-		// regardless of the error.
-	} else {
-		logging.FromContext(ctx).Info("Channel reconciled")
-		r.recorder.Eventf(c, v1.EventTypeNormal, dispatcherReconciled, "Dispatcher reconciled: %q", c.Name)
-	}
-
-	if err = util.UpdateChannel(ctx, r.client, c); err != nil {
-		logging.FromContext(ctx).Info("Error updating Channel Status", zap.Error(err))
-		r.recorder.Eventf(c, v1.EventTypeWarning, dispatcherUpdateStatusFailed, "Failed to update Channel's dispatcher status: %v", err)
-		return reconcile.Result{}, err
-	}
-
-	return reconcile.Result{
-		Requeue: requeue,
-	}, reconcileErr
-}
-
-// shouldReconcile determines if this Controller should control (and therefore reconcile) a given
-// ClusterChannelProvisioner. This Controller only handles gcp-pubsub Channels.
-func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
-	if c.Spec.Provisioner != nil {
-		return ccpcontroller.IsControlled(c.Spec.Provisioner)
-	}
-	return false
-}
-
-// reconcile reconciles this Channel so that the real world matches the intended state. The returned
-// boolean indicates if this Channel should be immediately requeued for another reconcile loop. The
-// returned error indicates an error during reconciliation.
-func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel, pcs *pubsubutil.GcpPubSubChannelStatus) (bool, error) {
 	// We are syncing all the subscribers on this Channel. Every subscriber will have a goroutine
 	// running in the background polling the GCP PubSub Subscription.
 
 	channelKey := key(c)
-
-	if c.DeletionTimestamp != nil {
-		// We use a finalizer to ensure we stop listening on the GCP PubSub Subscriptions.
-		r.stopAllSubscriptions(ctx, channelKey)
-		util.RemoveFinalizer(c, finalizerName)
-		return false, nil
-	}
-
-	// If we are adding the finalizer for the first time, then ensure that finalizer is persisted
-	// before interacting with GCP PubSub.
-	if addFinalizerResult := util.AddFinalizer(c, finalizerName); addFinalizerResult == util.FinalizerAdded {
-		return true, nil
-	}
 
 	// enqueueChannelForReconciliation is a function that when run will force this Channel to be
 	// reconciled again.
@@ -184,8 +111,27 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel,
 			Object: c,
 		}
 	}
-	err := r.syncSubscriptions(ctx, enqueueChannelForReconciliation, channelKey, pcs)
-	return false, err
+	err = r.syncSubscriptions(ctx, enqueueChannelForReconciliation, channelKey, pcs)
+	return false, reconcile.Result{}, err
+}
+
+// shouldReconcile determines if this Controller should control (and therefore reconcile) a given
+// ClusterChannelProvisioner. This Controller only handles gcp-pubsub Channels.
+func (r *reconciler) ShouldReconcile(_ context.Context, obj eventingreconciler.ReconciledResource, _ record.EventRecorder) bool {
+	c := obj.(*eventingv1alpha1.Channel)
+	if c.Spec.Provisioner != nil {
+		return ccpcontroller.IsControlled(c.Spec.Provisioner)
+	}
+	return false
+}
+
+// eventingreconciler.Finalizer
+func (r *reconciler) OnDelete(ctx context.Context, obj eventingreconciler.ReconciledResource, _ record.EventRecorder) error {
+	// We use a finalizer to ensure we stop listening on the GCP PubSub Subscriptions.
+	c := obj.(*eventingv1alpha1.Channel)
+	r.stopAllSubscriptions(ctx, key(c))
+	return nil
+
 }
 
 // key creates the first index into reconciler.subscriptions, based on the Channel's name.
