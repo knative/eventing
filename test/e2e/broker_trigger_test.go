@@ -26,6 +26,7 @@ import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 
 	"github.com/knative/eventing/test"
+	pkgTest "github.com/knative/pkg/test"
 	"github.com/knative/pkg/test/logging"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -112,7 +113,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	t.Logf("Waiting for subscriber pods to become running")
 
 	// Wait for all of the pods in the namespace to become running.
-	if err := WaitForAllPodsRunning(clients, t.Logf, ns); err != nil {
+	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, ns); err != nil {
 		t.Fatalf("Error waiting for event logger pod to become running: %v", err)
 	}
 
@@ -209,18 +210,14 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		}
 	}
 
-	t.Logf("Event sender pods created")
-
-	t.Logf("Waiting for event sender pods to be running")
+	t.Logf("Event sender pods created. Waiting for them to be running")
 
 	// Wait for all of them to be running.
-	if err := WaitForAllPodsRunning(clients, t.Logf, ns); err != nil {
+	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, ns); err != nil {
 		t.Fatalf("Error waiting for event sender pod to become running: %v", err)
 	}
 
-	t.Logf("Event sender pods running")
-
-	t.Logf("Verifying events delivered to appropriate dumpers")
+	t.Logf("Event sender pods running. Verifying events delivered to appropriate dumpers")
 
 	for _, event := range eventsToReceive {
 		subscriberPodName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
