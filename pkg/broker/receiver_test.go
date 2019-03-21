@@ -25,22 +25,18 @@ import (
 	"net/url"
 	"testing"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
-
-	"github.com/google/go-cmp/cmp"
-
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
-
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
+	"github.com/google/go-cmp/cmp"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
 	"go.uber.org/zap"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -73,6 +69,7 @@ func TestReceiver(t *testing.T) {
 		expectedErr      bool
 		expectedDispatch bool
 		expectedStatus   int
+		expectedHeaders  http.Header
 	}{
 		"Cannot init": {
 			mocks: controllertesting.Mocks{
@@ -166,6 +163,36 @@ func TestReceiver(t *testing.T) {
 			expectedDispatch: true,
 			returnedEvent:    makeDifferentEvent(),
 		},
+		"Returned Cloud Event with custom headers": {
+			triggers: []*eventingv1alpha1.Trigger{
+				makeTrigger("Any", "Any"),
+			},
+			tctx: &cehttp.TransportContext{
+				Method: "POST",
+				Host:   host,
+				URI:    "/",
+				Header: http.Header{
+					// foo won't pass filtering.
+					"foo": []string{"bar"},
+					// X-Request-Id will pass as an exact header match.
+					"X-Request-Id": []string{"123"},
+					// X-B3-Traceid will pass as a prefix match.
+					"X-B3-Traceid": []string{"abc"},
+					// Knative-Foo will pass as a prefix match.
+					"Knative-Foo": []string{"baz", "qux"},
+				},
+			},
+			expectedHeaders: http.Header{
+				// X-Request-Id will pass as an exact header match.
+				"X-Request-Id": []string{"123"},
+				// X-B3-Traceid will pass as a prefix match.
+				"X-B3-Traceid": []string{"abc"},
+				// Knative-Foo will pass as a prefix match.
+				"Knative-Foo": []string{"baz", "qux"},
+			},
+			expectedDispatch: true,
+			returnedEvent:    makeDifferentEvent(),
+		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
@@ -173,6 +200,8 @@ func TestReceiver(t *testing.T) {
 			fh := fakeHandler{
 				failRequest:   tc.requestFails,
 				returnedEvent: tc.returnedEvent,
+				headers:       tc.expectedHeaders,
+				t:             t,
 			}
 			s := httptest.NewServer(&fh)
 			defer s.Client()
@@ -243,12 +272,20 @@ func TestReceiver(t *testing.T) {
 type fakeHandler struct {
 	failRequest     bool
 	requestReceived bool
+	headers         http.Header
 	returnedEvent   *cloudevents.Event
-	t               testing.T
+	t               *testing.T
 }
 
-func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, _ *http.Request) {
+func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	h.requestReceived = true
+
+	for n, v := range h.headers {
+		if diff := cmp.Diff(v, req.Header[n]); diff != "" {
+			h.t.Errorf("Incorrect request header '%s' (-want +got): %s", n, diff)
+		}
+	}
+
 	if h.failRequest {
 		resp.WriteHeader(http.StatusBadRequest)
 		return
