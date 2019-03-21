@@ -157,12 +157,14 @@ func makeEventType(event *cloudevents.Event, namespace string) *eventingv1alpha1
 			GenerateName: fmt.Sprintf("%s-", toValidIdentifier(cloudEventType)),
 			Namespace:    namespace,
 			// TODO add broker label
+			// Waiting on https://github.com/knative/eventing/pull/937
+			// which passes the broker name as an env variable.
 		},
 		Spec: eventingv1alpha1.EventTypeSpec{
 			Type:   cloudEventType,
 			Source: "", // event.Source()
-			Schema: "", // event.Schema()
-			// TODO set it as env variable in the ingress.
+			Schema: "", // event.SchemaURL()
+			// Waiting on https://github.com/knative/eventing/pull/937
 			Broker: "",
 		},
 	}

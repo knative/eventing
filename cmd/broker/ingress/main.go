@@ -44,6 +44,7 @@ const (
 	POLICY    = "POLICY"
 
 	// TODO should remove this constants once we start using cloudevents-sdk properly.
+	// Waiting for https://github.com/knative/eventing/pull/933
 	v1EventId     = "Ce-Eventid"
 	v1EventType   = "Ce-Eventtype"
 	v1EventSource = "Ce-Source"
@@ -188,6 +189,7 @@ func (r *runnableServer) Start(<-chan struct{}) error {
 }
 
 // TODO this should be removed once we update the interfaces and start using cloudevents.Event instead of Message.
+// Waiting for https://github.com/knative/eventing/pull/933
 func cloudEventFrom(m *provisioners.Message) cloudevents.Event {
 	event := cloudevents.Event{}
 	if eventType, ok := m.Headers[v2EventType]; ok {

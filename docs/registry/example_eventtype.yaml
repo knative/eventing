@@ -2,9 +2,10 @@ apiVersion: eventing.knative.dev/v1alpha1
 kind: EventType
 metadata:
   # advisory
-  name: dev.knative.source.bitbucket.repo-push
+  name: repopush
 spec:
   # authoritative
-  type: dev.knative.source.bitbucket.repo:push
-  origin: bitbucket.org
-  schema: https://api.bitbucket.org/2.0/schemas/repo/push
+  type: repo:push
+  source: user/repo
+  schema: http://schemas/repo/push
+  broker: broker-any

@@ -64,7 +64,7 @@ type EventTypeSpec struct {
 	Source string `json:"source,omitempty"`
 	// +optional
 	Schema string `json:"schema,omitempty"`
-	// TODO sink or broker?
+	// TODO sink or broker? string or ref?
 	Broker string `json:"broker,omitempty"`
 }
 
