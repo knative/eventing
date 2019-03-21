@@ -72,7 +72,7 @@ func main() {
 
 	c := getRequiredEnv("CHANNEL")
 
-	brokerName := getRequiredEnv("BROKER")
+	brokerName = getRequiredEnv("BROKER")
 
 	h := NewHandler(logger, c)
 
