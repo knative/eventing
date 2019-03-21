@@ -122,7 +122,7 @@ type handler struct {
 
 func (h *handler) Start(stopCh <-chan struct{}) error {
 	ctx, cancel := context.WithCancel(context.Background())
-	defer ctx.Done()
+	defer cancel()
 
 	errCh := make(chan error, 1)
 	go func() {

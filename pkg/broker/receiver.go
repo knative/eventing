@@ -94,7 +94,7 @@ func (r *Receiver) initClient() error {
 // This method will block until a message is received on the stop channel.
 func (r *Receiver) Start(stopCh <-chan struct{}) error {
 	ctx, cancel := context.WithCancel(context.Background())
-	defer ctx.Done()
+	defer cancel()
 
 	errCh := make(chan error, 1)
 	go func() {
