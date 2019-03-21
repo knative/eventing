@@ -18,16 +18,23 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/cloudevents/sdk-go/pkg/cloudevents"
+	ceclient "github.com/cloudevents/sdk-go/pkg/cloudevents/client"
+	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/broker"
 	"github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/signals"
 	"go.opencensus.io/exporter/prometheus"
 	"go.opencensus.io/stats"
@@ -41,13 +48,13 @@ import (
 )
 
 var (
-	port        = 8080
+	defaultPort = 8080
 	metricsPort = 9090
 
-	readTimeout     = 1 * time.Minute
 	writeTimeout    = 1 * time.Minute
 	shutdownTimeout = 1 * time.Minute
-	wg              sync.WaitGroup
+
+	wg sync.WaitGroup
 	// brokerName is used to tag metrics.
 	brokerName string
 )
@@ -70,28 +77,20 @@ func main() {
 		logger.Fatal("Unable to add eventingv1alpha1 scheme", zap.Error(err))
 	}
 
-	c := getRequiredEnv("CHANNEL")
-
-	brokerName = getRequiredEnv("BROKER")
-
-	h := NewHandler(logger, c)
-
-	s := &http.Server{
-		Addr:         fmt.Sprintf(":%d", port),
-		Handler:      h,
-		ErrorLog:     zap.NewStdLog(logger),
-		ReadTimeout:  readTimeout,
-		WriteTimeout: writeTimeout,
+	channelURI := &url.URL{
+		Scheme: "http",
+		Host:   getRequiredEnv("CHANNEL"),
+		Path:   "/",
 	}
 
-	err = mgr.Add(&runnableServer{
-		logger:          logger,
-		s:               s,
-		ShutdownTimeout: shutdownTimeout,
-		wg:              &wg,
-	})
+	h, err := New(logger, channelURI)
 	if err != nil {
-		logger.Fatal("Unable to add runnableServer", zap.Error(err))
+		logger.Fatal("Unable to create handler", zap.Error(err))
+	}
+
+	err = mgr.Add(h)
+	if err != nil {
+		logger.Fatal("Unable to add handler", zap.Error(err))
 	}
 
 	// Metrics
@@ -106,15 +105,14 @@ func main() {
 		Addr:         fmt.Sprintf(":%d", metricsPort),
 		Handler:      e,
 		ErrorLog:     zap.NewStdLog(logger),
-		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 	}
 
-	err = mgr.Add(&runnableServer{
-		s:               metricsSrv,
-		logger:          logger,
+	err = mgr.Add(&utils.RunnableServer{
+		Server:          metricsSrv,
+		Logger:          logger,
 		ShutdownTimeout: shutdownTimeout,
-		wg:              &wg,
+		WaitGroup:       &wg,
 	})
 	if err != nil {
 		logger.Fatal("Unable to add metrics runnableServer", zap.Error(err))
@@ -128,7 +126,7 @@ func main() {
 	}
 	logger.Info("Exiting...")
 
-	// Exit if shutdown takes too long
+	// TODO Gracefully shutdown the ingress server. CloudEvents SDK doesn't seem to let us do that today.
 	go func() {
 		<-time.After(shutdownTimeout)
 		log.Fatalf("Shutdown took longer than %v", shutdownTimeout)
@@ -147,121 +145,96 @@ func getRequiredEnv(envKey string) string {
 	return val
 }
 
-// Handler that takes a single request in and sends it out to a single destination.
-type Handler struct {
-	receiver    *provisioners.MessageReceiver
-	dispatcher  *provisioners.MessageDispatcher
-	destination string
-
-	logger *zap.Logger
-}
-
-// NewHandler creates a new ingress.Handler.
-func NewHandler(logger *zap.Logger, destination string) *Handler {
-	handler := &Handler{
-		logger:      logger,
-		dispatcher:  provisioners.NewMessageDispatcher(logger.Sugar()),
-		destination: fmt.Sprintf("http://%s", destination),
+func New(logger *zap.Logger, channelURI *url.URL) (*handler, error) {
+	ceHttp, err := cehttp.New(cehttp.WithBinaryEncoding(), cehttp.WithPort(defaultPort))
+	if err != nil {
+		return nil, err
 	}
-	// The receiver function needs to point back at the handler itself, so set it up after
-	// initialization.
-	handler.receiver = provisioners.NewMessageReceiver(createReceiverFunction(handler), logger.Sugar())
-
-	return handler
+	ceClient, err := ceclient.New(ceHttp)
+	if err != nil {
+		return nil, err
+	}
+	return &handler{
+		logger:     logger,
+		ceClient:   ceClient,
+		ceHttp:     ceHttp,
+		channelURI: channelURI,
+	}, nil
 }
 
-func createReceiverFunction(f *Handler) func(provisioners.ChannelReference, *provisioners.Message) error {
-	return func(_ provisioners.ChannelReference, m *provisioners.Message) error {
-		metricsCtx, _ := tag.New(context.Background(), tag.Insert(TagBroker, brokerName))
+type handler struct {
+	logger     *zap.Logger
+	ceClient   ceclient.Client
+	ceHttp     *cehttp.Transport
+	channelURI *url.URL
+}
 
-		defer func() {
-			stats.Record(metricsCtx, MeasureMessagesTotal.M(1))
-		}()
+func (h *handler) Start(stopCh <-chan struct{}) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer ctx.Done()
 
-		// TODO Filter. When a message is filtered, add the `filtered` tag to the
-		// metrics context.
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- h.ceClient.StartReceiver(ctx, h.serveHTTP)
+	}()
 
-		metricsCtx, _ = tag.New(metricsCtx, tag.Insert(TagResult, "dispatched"))
-		return f.dispatch(m)
+	// Stop either if the receiver stops (sending to errCh) or if stopCh is closed.
+	select {
+	case err := <-errCh:
+		return err
+	case <-stopCh:
+		break
+	}
+
+	// stopCh has been closed, we need to gracefully shutdown h.ceClient. cancel() will start its
+	// shutdown, if it hasn't finished in a reasonable amount of time, just return an error.
+	cancel()
+	select {
+	case err := <-errCh:
+		return err
+	case <-time.After(shutdownTimeout):
+		return errors.New("timeout shutting down ceClient")
 	}
 }
 
-// http.Handler interface.
-func (f *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	f.receiver.HandleRequest(w, r)
+func (h *handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
+	tctx := cehttp.TransportContextFrom(ctx)
+	if tctx.Method != http.MethodPost {
+		resp.Status = http.StatusMethodNotAllowed
+		return nil
+	}
+
+	// tctx.URI is actually the path...
+	if tctx.URI != "/" {
+		resp.Status = http.StatusNotFound
+		return nil
+	}
+
+	ctx, _ = tag.New(ctx, tag.Insert(TagBroker, brokerName))
+	defer func() {
+		stats.Record(ctx, MeasureMessagesTotal.M(1))
+	}()
+
+	// TODO Filter.
+
+	ctx, _ = tag.New(ctx, tag.Insert(TagResult, "dispatched"))
+	return h.sendEvent(ctx, tctx, event)
 }
 
-// dispatch takes the request, and sends it out the f.destination. If the dispatched
-// request returns successfully, then return nil. Else, return an error.
-func (f *Handler) dispatch(msg *provisioners.Message) error {
+func (h *handler) sendEvent(ctx context.Context, tctx cehttp.TransportContext, event cloudevents.Event) error {
+	sendingCTX := broker.SendingContext(ctx, tctx, h.channelURI)
+
 	startTS := time.Now()
-	metricsCtx, _ := tag.New(context.Background(), tag.Insert(TagBroker, brokerName))
-
 	defer func() {
 		dispatchTimeMS := int64(time.Now().Sub(startTS) / time.Millisecond)
-		stats.Record(metricsCtx, MeasureDispatchTime.M(dispatchTimeMS))
+		stats.Record(sendingCTX, MeasureDispatchTime.M(dispatchTimeMS))
 	}()
-	err := f.dispatcher.DispatchMessage(msg, f.destination, "", provisioners.DispatchDefaults{})
+
+	_, err := h.ceHttp.Send(sendingCTX, event)
 	if err != nil {
-		f.logger.Error("Error dispatching message", zap.String("destination", f.destination))
-		metricsCtx, _ = tag.New(metricsCtx, tag.Insert(TagResult, "error"))
+		sendingCTX, _ = tag.New(sendingCTX, tag.Insert(TagResult, "error"))
 	} else {
-		metricsCtx, _ = tag.New(metricsCtx, tag.Insert(TagResult, "success"))
-	}
-	return err
-}
-
-// runnableServer is a small wrapper around http.Server so that it matches the manager.Runnable
-// interface.
-type runnableServer struct {
-	logger *zap.Logger
-	s      *http.Server
-	// ShutdownTimeout is the duration to wait for the http.Server to gracefully
-	// shut down when the stop channel is closed. If this is zero or negative,
-	// shutdown will never time out.
-	// TODO alternative: zero shuts down immediately, negative means infinite
-	ShutdownTimeout time.Duration
-	// wg is a temporary workaround for Manager returning immediately without
-	// waiting for Runnables to stop. See
-	// https://github.com/kubernetes-sigs/controller-runtime/issues/350.
-	wg *sync.WaitGroup
-}
-
-func (r *runnableServer) Start(stopCh <-chan struct{}) error {
-	logger := r.logger.With(zap.String("address", r.s.Addr))
-	logger.Info("Listening...")
-
-	errCh := make(chan error)
-
-	r.wg.Add(1)
-	defer r.wg.Done()
-
-	go func() {
-		err := r.s.ListenAndServe()
-		if err != http.ErrServerClosed {
-			errCh <- err
-		}
-	}()
-
-	var err error
-	select {
-	case err = <-errCh:
-		logger.Error("Error running HTTP server", zap.Error(err))
-	case <-stopCh:
-		var ctx context.Context
-		var cancel context.CancelFunc
-		if r.ShutdownTimeout > 0 {
-			ctx, cancel = context.WithTimeout(context.Background(), r.ShutdownTimeout)
-			defer cancel()
-		} else {
-			ctx = context.Background()
-		}
-		logger.Info("Shutting down...")
-		if err = r.s.Shutdown(ctx); err != nil {
-			logger.Error("Shutdown returned an error", zap.Error(err))
-		} else {
-			logger.Info("Shutdown done")
-		}
+		sendingCTX, _ = tag.New(sendingCTX, tag.Insert(TagResult, "success"))
 	}
 	return err
 }
