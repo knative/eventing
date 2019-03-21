@@ -18,16 +18,18 @@ package controller
 
 import (
 	"context"
-	"fmt"
 
 	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/record"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/logging"
 	util "github.com/knative/eventing/pkg/provisioners"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 )
 
 const (
@@ -35,79 +37,44 @@ const (
 	Name = "kafka"
 )
 
-// Reconcile compares the actual state with the desired, and attempts to
-// converge the two. It then updates the Status block of the Provisioner resource
-// with the current status of the resource.
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	ctx := context.TODO()
-	r.logger.Info("reconciling ClusterChannelProvisioner", zap.Any("request", request))
-
-	// Workaround until https://github.com/kubernetes-sigs/controller-runtime/issues/214 is fixed.
-	// The reconcile requests triggered because of objects owned by this ClusterChannelProvisioner (e.g k8s service)
-	// will contain the namespace of that object. Since ClusterChannelProvisioner is cluster-scoped we need to unset the
-	// namespace or otherwise the provisioner object cannot be found.
-	request.NamespacedName.Namespace = ""
-
-	provisioner := &v1alpha1.ClusterChannelProvisioner{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, provisioner)
-
-	if errors.IsNotFound(err) {
-		r.logger.Info("could not find ClusterChannelProvisioner", zap.Any("request", request))
-		return reconcile.Result{}, nil
-	}
-
-	if err != nil {
-		r.logger.Error("could not fetch ClusterChannelProvisioner", zap.Error(err))
-		return reconcile.Result{}, err
-	}
-
-	// Skip channel provisioners that we don't manage
-	if provisioner.Name != Name {
-		r.logger.Info("not reconciling ClusterChannelProvisioner, it is not controlled by this Controller", zap.Any("request", request))
-		return reconcile.Result{}, nil
-	}
-
-	newProvisioner := provisioner.DeepCopy()
-
-	// Reconcile this copy of the Provisioner and then write back any status
-	// updates regardless of whether the reconcile error out.
-	err = r.reconcile(ctx, newProvisioner)
-	if err != nil {
-		r.logger.Info("error reconciling ClusterProvisioner", zap.Error(err))
-		// Note that we do not return the error here, because we want to update the Status
-		// regardless of the error.
-	}
-	if updateStatusErr := util.UpdateClusterChannelProvisionerStatus(ctx, r.client, newProvisioner); updateStatusErr != nil {
-		r.logger.Info("error updating ClusterChannelProvisioner Status", zap.Error(updateStatusErr))
-		return reconcile.Result{}, updateStatusErr
-	}
-
-	// Requeue if the resource is not ready:
-	return reconcile.Result{}, err
+// eventingreconciler.EventingReconciler impl
+func (r *reconciler) InjectClient(c client.Client) error {
+	r.client = c
+	return nil
 }
 
-func (r *reconciler) reconcile(ctx context.Context, provisioner *v1alpha1.ClusterChannelProvisioner) error {
-	// See if the provisioner has been deleted
-	if provisioner.DeletionTimestamp != nil {
-		r.logger.Info(fmt.Sprintf("DeletionTimestamp: %v", provisioner.DeletionTimestamp))
-		return nil
+// eventingreconciler.EventingReconciler impl
+func (r *reconciler) GetNewReconcileObject() eventingreconciler.ReconciledResource {
+	return &v1alpha1.ClusterChannelProvisioner{}
+}
+
+// eventingreconciler.Filter impl
+func (r *reconciler) ShouldReconcile(ctx context.Context, obj eventingreconciler.ReconciledResource, _ record.EventRecorder) bool {
+	if obj.GetName() == Name {
+		return true
 	}
+	logging.FromContext(ctx).Info("not reconciling ClusterChannelProvisioner, it is not controlled by this Controller")
+	return false
+}
 
+// eventingreconciler.EventingReconciler impl
+func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconciler.ReconciledResource, recorder record.EventRecorder) (bool, reconcile.Result, error) {
+	provisioner := obj.(*v1alpha1.ClusterChannelProvisioner)
 	provisioner.Status.InitializeConditions()
-
 	svc, err := util.CreateDispatcherService(ctx, r.client, provisioner)
+	logger := logging.FromContext(ctx)
 	if err != nil {
-		r.logger.Info("error creating the ClusterProvisioner's K8s Service", zap.Error(err))
-		return err
+		logger.Info("error creating the ClusterProvisioner's K8s Service", zap.Error(err))
+		return true, reconcile.Result{}, err
 	}
 
 	// Check if this ClusterChannelProvisioner is the owner of the K8s service.
 	if !metav1.IsControlledBy(svc, provisioner) {
-		r.logger.Warn("ClusterChannelProvisioner's K8s Service is not owned by the ClusterChannelProvisioner", zap.Any("clusterChannelProvisioner", provisioner), zap.Any("service", svc))
+		logger.Warn("ClusterChannelProvisioner's K8s Service is not owned by the ClusterChannelProvisioner", zap.Any("clusterChannelProvisioner", provisioner), zap.Any("service", svc))
 	}
 
 	// Update Status as Ready
 	provisioner.Status.MarkReady()
 
-	return nil
+	return true, reconcile.Result{}, nil
 }

@@ -22,10 +22,11 @@ import (
 	"testing"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	_ "github.com/knative/pkg/system/testing"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,6 +39,7 @@ const (
 	clusterChannelProvisionerName = "kafka"
 	testNS                        = ""
 	otherTestNS                   = "testing"
+	ccpReconciled                 = "ClusterChannelProvisioner" + eventingreconciler.Reconciled
 )
 
 func init() {
@@ -45,11 +47,17 @@ func init() {
 	eventingv1alpha1.AddToScheme(scheme.Scheme)
 }
 
-var ClusterChannelProvisionerConditionReady = duckv1alpha1.Condition{
-	Type:     eventingv1alpha1.ClusterChannelProvisionerConditionReady,
-	Status:   corev1.ConditionTrue,
-	Severity: duckv1alpha1.ConditionSeverityError,
-}
+var (
+	ClusterChannelProvisionerConditionReady = duckv1alpha1.Condition{
+		Type:     eventingv1alpha1.ClusterChannelProvisionerConditionReady,
+		Status:   corev1.ConditionTrue,
+		Severity: duckv1alpha1.ConditionSeverityError,
+	}
+	// map of events to set test cases' expectations easier
+	events = map[string]corev1.Event{
+		ccpReconciled: {Reason: ccpReconciled, Type: corev1.EventTypeNormal},
+	}
+)
 
 var mockFetchError = controllertesting.Mocks{
 	MockGets: []controllertesting.MockGet{
@@ -75,6 +83,9 @@ var testCases = []controllertesting.TestCase{
 			GetNewChannelClusterChannelProvisionerReady(clusterChannelProvisionerName),
 		},
 		IgnoreTimes: true,
+		WantEvent: []corev1.Event{
+			events[ccpReconciled],
+		},
 	},
 	{
 		Name: "reconciles only associated provisioner",
@@ -98,6 +109,9 @@ var testCases = []controllertesting.TestCase{
 			GetNewChannelClusterChannelProvisionerReady(clusterChannelProvisionerName),
 		},
 		IgnoreTimes: true,
+		WantEvent: []corev1.Event{
+			events[ccpReconciled],
+		},
 	},
 	{
 		Name:         "clusterChannelProvisioner not found",
@@ -128,6 +142,9 @@ var testCases = []controllertesting.TestCase{
 		WantPresent: []runtime.Object{
 			GetNewChannelClusterChannelProvisionerDeleted(clusterChannelProvisionerName),
 		},
+		WantEvent: []corev1.Event{
+			events[ccpReconciled],
+		},
 	},
 }
 
@@ -136,14 +153,18 @@ func TestAllCases(t *testing.T) {
 	for _, tc := range testCases {
 		c := tc.GetClient()
 		recorder := tc.GetEventRecorder()
-		logger := provisioners.NewProvisionerLoggerFromConfig(provisioners.NewLoggingConfig())
-		r := &reconciler{
-			client:   c,
-			recorder: recorder,
-			logger:   logger.Desugar(),
-			config:   getControllerConfig(),
+		logger := zap.NewNop()
+		r, err := eventingreconciler.New(
+			&reconciler{config: getControllerConfig()},
+			logger,
+			recorder,
+			eventingreconciler.EnableFilter(),
+			eventingreconciler.ModifyRequest(eventingreconciler.RequestModifierFunc(removeNamespace)),
+		)
+		if err != nil {
+			t.FailNow()
 		}
-		t.Logf("Running test %s", tc.Name)
+		//t.Logf("Running test %s", tc.Name)
 		t.Run(tc.Name, tc.Runner(t, r, c, recorder))
 	}
 }

@@ -19,7 +19,6 @@ package controller
 import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -29,6 +28,7 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 )
 
 const (
@@ -42,25 +42,39 @@ const (
 )
 
 type reconciler struct {
-	client   client.Client
-	recorder record.EventRecorder
-	logger   *zap.Logger
-	config   *KafkaProvisionerConfig
+	client client.Client
+	config *KafkaProvisionerConfig
 }
 
-// Verify the struct implements reconcile.Reconciler
-var _ reconcile.Reconciler = &reconciler{}
+// Verify the struct implements eventingreconciler.EventingReconciler
+var _ eventingreconciler.EventingReconciler = &reconciler{}
+var _ eventingreconciler.Filter = &reconciler{}
+
+func removeNamespace(r *reconcile.Request) {
+	// This is done to support reconcilers that reconcile cluster-scoped resources based on watch on a namespace-scoped resource
+	// Workaround until https://github.com/kubernetes-sigs/controller-runtime/issues/228 is fix and controller-runtime updated
+	// TODO: remove after updating controller-runtime
+	r.NamespacedName.Namespace = ""
+}
 
 // ProvideController returns a Provisioner controller.
 func ProvideController(mgr manager.Manager, config *KafkaProvisionerConfig, logger *zap.Logger) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Provisioners.
-	c, err := controller.New(controllerAgentName, mgr, controller.Options{
-		Reconciler: &reconciler{
-			recorder: mgr.GetRecorder(controllerAgentName),
-			logger:   logger,
-			config:   config,
-		},
-	})
+	logger = logger.With(zap.String("controller", controllerAgentName))
+	// Setup a new controller to Reconcile Channels that belong to this Cluster Channel
+	// Provisioner (gcp-pubsub).
+	r, err := eventingreconciler.New(
+		&reconciler{config: config},
+		logger,
+		mgr.GetRecorder(controllerAgentName),
+		eventingreconciler.EnableFilter(),
+		eventingreconciler.ModifyRequest(eventingreconciler.RequestModifierFunc(removeNamespace)),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := controller.New(controllerAgentName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return nil, err
 	}
@@ -78,9 +92,4 @@ func ProvideController(mgr manager.Manager, config *KafkaProvisionerConfig, logg
 	}
 
 	return c, nil
-}
-
-func (r *reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
 }
