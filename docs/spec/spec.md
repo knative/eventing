@@ -48,8 +48,6 @@ Trigger._
 
 - BrokerReconciled
 - BrokerUpdateStatusFailed
-- IngressSubscriptionDeleteFailed
-- IngressSubscriptionCreateFailed
 
 ---
 
@@ -57,17 +55,18 @@ Trigger._
 
 ### group: eventing.knative.dev/v1alpha1
 
-_A Trigger represents subscriber of events with a filter for a specific broker._
+_A Trigger represents a subscriber of events with a filter for a specific
+broker._
 
 ### Object Schema
 
 #### Spec
 
-| Field        | Type           | Description                                                                                                                                                                 | Constraints |
-| ------------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| broker       | String         | Broker is the broker that this trigger receives events from. Defaults to 'default'.                                                                                         |             |
-| filter       | TriggerFilter  | Filter is the filter to apply against all events from the Broker. Only events that pass this filter will be sent to the Subscriber. Defaults to subscripting to all events. |             |
-| subscriber\* | SubscriberSpec | Subscriber is the addressable that receives events from the Broker that pass the Filter.                                                                                    |             |
+| Field        | Type           | Description                                                                                                                                                                | Constraints |
+| ------------ | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| broker       | String         | Broker is the broker that this trigger receives events from. Defaults to 'default'.                                                                                        |             |
+| filter       | TriggerFilter  | Filter is the filter to apply against all events from the Broker. Only events that pass this filter will be sent to the Subscriber. Defaults to subscribing to all events. |             |
+| subscriber\* | SubscriberSpec | Subscriber is the addressable that receives events from the Broker that pass the Filter.                                                                                   |             |
 
 \*: Required
 
@@ -91,8 +90,6 @@ _A Trigger represents subscriber of events with a filter for a specific broker._
 - TriggerReconciled
 - TriggerReconcileFailed
 - TriggerUpdateStatusFailed
-- SubscriptionDeleteFailed
-- SubscriptionCreateFailed
 
 ---
 
