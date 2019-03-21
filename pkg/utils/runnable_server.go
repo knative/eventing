@@ -31,6 +31,10 @@ type RunnableServer struct {
 	// Server is the http.Server to wrap.
 	*http.Server
 
+	// ServeFunc is the function used to start the http.Server. If nil,
+	// ListenAndServe() will be used.
+	ServeFunc func() error
+
 	// ShutdownTimeout is the duration to wait for the http.Server to gracefully
 	// shut down when the stop channel is closed. If this is zero or negative,
 	// the http.Server will be immediately closed instead.
@@ -48,7 +52,6 @@ type RunnableServer struct {
 // Start the server. The server will be shut down when StopCh is closed.
 func (r *RunnableServer) Start(stopCh <-chan struct{}) error {
 	logger := r.Logger.With(zap.String("address", r.Addr))
-	logger.Info("Listening...")
 
 	errCh := make(chan error)
 
@@ -57,8 +60,13 @@ func (r *RunnableServer) Start(stopCh <-chan struct{}) error {
 		defer r.WaitGroup.Done()
 	}
 
+	if r.ServeFunc == nil {
+		r.ServeFunc = r.Server.ListenAndServe
+	}
+
 	go func() {
-		err := r.ListenAndServe()
+		logger.Info("Listening...")
+		err := r.ServeFunc()
 		if err != http.ErrServerClosed {
 			errCh <- err
 		}
