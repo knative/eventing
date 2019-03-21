@@ -167,9 +167,9 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 	}
 	resp.Status = http.StatusAccepted
 	resp.Event = responseEvent
-
-	// TODO Add filtered headers (mostly tracing) to the response. We are waiting for CloudEvents
-	// SDK to allow this.
+	resp.Context = &cehttp.TransportResponseContext{
+		Header: extractPassThroughHeaders(tctx),
+	}
 
 	return nil
 }
@@ -239,26 +239,39 @@ func (r *Receiver) shouldSendMessage(ts *eventingv1alpha1.TriggerSpec, event *cl
 }
 
 func addFilteredHeaders(ctx context.Context, tctx cehttp.TransportContext) context.Context {
-	// Helper function that adds the header name and all its values.
-	addHeader := func(ctx context.Context, n string, v []string) context.Context {
+	h := extractPassThroughHeaders(tctx)
+
+	for n, v := range h {
 		for _, iv := range v {
 			ctx = cehttp.ContextWithHeader(ctx, n, iv)
 		}
-		return ctx
+	}
+
+	return ctx
+}
+
+func extractPassThroughHeaders(tctx cehttp.TransportContext) http.Header {
+	h := http.Header{}
+
+	// Helper function that adds the header name and all its values.
+	addHeader := func(n string, v []string) {
+		for _, iv := range v {
+			h.Add(n, iv)
+		}
 	}
 
 	for n, v := range tctx.Header {
 		lower := strings.ToLower(n)
 		if forwardHeaders.Has(lower) {
-			ctx = addHeader(ctx, n, v)
+			addHeader(n, v)
 			continue
 		}
 		for _, prefix := range forwardPrefixes {
 			if strings.HasPrefix(lower, prefix) {
-				ctx = addHeader(ctx, n, v)
+				addHeader(n, v)
 				break
 			}
 		}
 	}
-	return ctx
+	return h
 }
