@@ -21,6 +21,10 @@ For more details, see [Interface Contracts](interfaces.md).
 - A **Trigger** describes the filtering and subscription of events from a
   Broker.
 
+<!-- https://drive.google.com/open?id=1CXRvT2g6sxk6-ZrwYcSf2BahCNVlLTLNZkm-laQitMg -->
+
+![Broker Trigger Overview](images/broker-trigger-overview.png)
+
 - A **Subscription** describes the transformation of an event and optional
   forwarding of a returned event.
 
