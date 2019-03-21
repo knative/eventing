@@ -3,6 +3,7 @@ approvers:
 - grantr
 - Harwayne
 - vaikas-google
+- n3wscott
 
 # Reviewers are suggested from the reviewers list first, then the approvers
 # list. To add reviewers while spreading the load among existing approvers,
@@ -12,6 +13,6 @@ reviewers:
 - grantr
 - Harwayne
 - vaikas-google
-# Add reviewers below
 - n3wscott
+# Add reviewers below
 - matzew

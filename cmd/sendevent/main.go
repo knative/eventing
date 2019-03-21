@@ -18,29 +18,30 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"net/http"
+	"log"
 	"os"
-	"time"
 
-	"github.com/knative/pkg/cloudevents"
-
-	"github.com/google/uuid"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 )
 
 var (
-	context cloudevents.EventContext
-	webhook string
-	data    string
+	eventID   string
+	eventType string
+	source    string
+	data      string
 )
 
 func init() {
-	flag.StringVar(&context.EventID, "event-id", "", "Event ID to use. Defaults to a generated UUID")
-	flag.StringVar(&context.EventType, "event-type", "google.events.action.demo", "The Event Type to use.")
-	flag.StringVar(&context.Source, "source", "", "Source URI to use. Defaults to the current machine's hostname")
+	flag.StringVar(&eventID, "event-id", "", "Event ID to use. Defaults to a generated UUID")
+	flag.StringVar(&eventType, "event-type", "google.events.action.demo", "The Event Type to use.")
+	flag.StringVar(&source, "source", "", "Source URI to use. Defaults to the current machine's hostname")
 	flag.StringVar(&data, "data", `{"hello": "world!"}`, "Event data")
 }
 
@@ -52,7 +53,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	webhook := flag.Arg(0)
+	target := flag.Arg(0)
 
 	var untyped map[string]interface{}
 	if err := json.Unmarshal([]byte(data), &untyped); err != nil {
@@ -60,38 +61,34 @@ func main() {
 		os.Exit(1)
 	}
 
-	fillEventContext(&context)
-	req, err := cloudevents.NewRequest(webhook, untyped, context)
+	t, err := http.New(
+		http.WithTarget(target),
+		http.WithBinaryEncoding(),
+	)
 	if err != nil {
-		fmt.Printf("Failed to create request: %s", err)
+		log.Printf("failed to create transport, %v", err)
+		os.Exit(1)
+	}
+	c, err := client.New(t,
+		client.WithTimeNow(),
+	)
+	if err != nil {
+		log.Printf("failed to create client, %v", err)
 		os.Exit(1)
 	}
 
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		fmt.Printf("Failed to send event to %s: %s\n", webhook, err)
+	event := cloudevents.Event{
+		Context: cloudevents.EventContextV02{
+			ID:     eventID,
+			Type:   eventType,
+			Source: *types.ParseURLRef(source),
+		}.AsV02(),
+		Data: untyped,
+	}
+	if resp, err := c.Send(context.Background(), event); err != nil {
+		fmt.Printf("Failed to send event to %s: %s\n", target, err)
 		os.Exit(1)
-	}
-	fmt.Printf("Got response from %s\n%s\n", webhook, res.Status)
-	if res.Header.Get("Content-Length") != "" {
-		bytes, _ := ioutil.ReadAll(res.Body)
-		fmt.Println(string(bytes))
-	}
-}
-
-func fillEventContext(ctx *cloudevents.EventContext) {
-	ctx.CloudEventsVersion = "0.1"
-	ctx.EventTime = time.Now().UTC()
-
-	if ctx.EventID == "" {
-		ctx.EventID = uuid.New().String()
-	}
-
-	if ctx.Source == "" {
-		var err error
-		ctx.Source, err = os.Hostname()
-		if err != nil {
-			ctx.Source = "localhost"
-		}
+	} else if resp != nil {
+		fmt.Printf("Got response from %s\n%s\n", target, resp)
 	}
 }
