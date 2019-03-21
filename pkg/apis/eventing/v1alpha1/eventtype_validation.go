@@ -17,16 +17,18 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/knative/pkg/apis"
 )
 
-func (et *EventType) Validate() *apis.FieldError {
-	return et.Spec.Validate().ViaField("spec")
+func (et *EventType) Validate(ctx context.Context) *apis.FieldError {
+	return et.Spec.Validate(ctx).ViaField("spec")
 }
 
-func (ets *EventTypeSpec) Validate() *apis.FieldError {
+func (ets *EventTypeSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 	if ets.Type == "" {
 		fe := apis.ErrMissingField("type")
@@ -39,7 +41,7 @@ func (ets *EventTypeSpec) Validate() *apis.FieldError {
 	return errs
 }
 
-func (et *EventType) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
+func (et *EventType) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
 	if og == nil {
 		return nil
 	}

@@ -48,36 +48,40 @@ var (
 )
 
 type IngressPolicy interface {
-	AllowEvent(event *cloudevents.Event, namespace string) bool
+	AllowEvent(event *cloudevents.Event) bool
 }
 
 type Any struct{}
 
 type Registered struct {
-	logger *zap.SugaredLogger
-	client client.Client
+	logger    *zap.SugaredLogger
+	client    client.Client
+	namespace string
 }
 
 type AutoCreate struct {
-	logger *zap.SugaredLogger
-	client client.Client
+	logger    *zap.SugaredLogger
+	client    client.Client
+	namespace string
 }
 
-func NewIngressPolicy(logger *zap.SugaredLogger, client client.Client, policy string) IngressPolicy {
-	return newIngressPolicy(logger, client, policy)
+func NewIngressPolicy(logger *zap.Logger, client client.Client, namespace, policy string) IngressPolicy {
+	return newIngressPolicy(logger.Sugar(), client, namespace, policy)
 }
 
-func newIngressPolicy(logger *zap.SugaredLogger, client client.Client, policy string) IngressPolicy {
+func newIngressPolicy(logger *zap.SugaredLogger, client client.Client, namespace, policy string) IngressPolicy {
 	switch policy {
 	case allowRegisteredTypes:
 		return &Registered{
-			logger: logger,
-			client: client,
+			logger:    logger,
+			client:    client,
+			namespace: namespace,
 		}
 	case autoCreate:
 		return &AutoCreate{
-			logger: logger,
-			client: client,
+			logger:    logger,
+			client:    client,
+			namespace: namespace,
 		}
 	case allowAny:
 		return &Any{}
@@ -86,12 +90,12 @@ func newIngressPolicy(logger *zap.SugaredLogger, client client.Client, policy st
 	}
 }
 
-func (p *Any) AllowEvent(event *cloudevents.Event, namespace string) bool {
+func (p *Any) AllowEvent(event *cloudevents.Event) bool {
 	return true
 }
 
-func (p *Registered) AllowEvent(event *cloudevents.Event, namespace string) bool {
-	_, err := getEventType(p.client, event, namespace)
+func (p *Registered) AllowEvent(event *cloudevents.Event) bool {
+	_, err := getEventType(p.client, event, p.namespace)
 	if k8serrors.IsNotFound(err) {
 		p.logger.Warnf("EventType not found, rejecting spec.type %q, %v", event.Type(), err)
 		return false
@@ -102,11 +106,11 @@ func (p *Registered) AllowEvent(event *cloudevents.Event, namespace string) bool
 	return true
 }
 
-func (p *AutoCreate) AllowEvent(event *cloudevents.Event, namespace string) bool {
-	_, err := getEventType(p.client, event, namespace)
+func (p *AutoCreate) AllowEvent(event *cloudevents.Event) bool {
+	_, err := getEventType(p.client, event, p.namespace)
 	if k8serrors.IsNotFound(err) {
 		p.logger.Infof("EventType not found, creating spec.type %q", event.Type())
-		eventType := makeEventType(event, namespace)
+		eventType := makeEventType(event, p.namespace)
 		err := p.client.Create(context.TODO(), eventType)
 		if err != nil {
 			p.logger.Errorf("Error creating EventType, spec.type %q, %v", event.Type(), err)

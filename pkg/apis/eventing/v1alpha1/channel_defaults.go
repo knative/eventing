@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -35,7 +36,7 @@ var (
 	ChannelDefaulterSingleton ChannelProvisionerDefaulter
 )
 
-func (c *Channel) SetDefaults() {
+func (c *Channel) SetDefaults(ctx context.Context) {
 	if c != nil && c.Spec.Provisioner == nil {
 		// The singleton may not have been set, if so ignore it and validation will reject the
 		// Channel.
@@ -45,7 +46,7 @@ func (c *Channel) SetDefaults() {
 			c.Spec.Arguments = args
 		}
 	}
-	c.Spec.SetDefaults()
+	c.Spec.SetDefaults(ctx)
 }
 
-func (cs *ChannelSpec) SetDefaults() {}
+func (cs *ChannelSpec) SetDefaults(ctx context.Context) {}

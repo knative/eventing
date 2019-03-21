@@ -16,10 +16,13 @@ limitations under the License.
 
 package v1alpha1
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
 // No-op test because method does nothing.
 func TestBrokerDefaults(t *testing.T) {
 	b := Broker{}
-	b.SetDefaults()
+	b.SetDefaults(context.TODO())
 }
