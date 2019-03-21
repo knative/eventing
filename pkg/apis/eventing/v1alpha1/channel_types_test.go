@@ -48,8 +48,10 @@ func TestChannelGetCondition(t *testing.T) {
 	}{{
 		name: "single condition",
 		cs: &ChannelStatus{
-			Conditions: []duckv1alpha1.Condition{
-				condReady,
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{
+					condReady,
+				},
 			},
 		},
 		condQuery: duckv1alpha1.ConditionReady,
@@ -57,9 +59,11 @@ func TestChannelGetCondition(t *testing.T) {
 	}, {
 		name: "multiple conditions",
 		cs: &ChannelStatus{
-			Conditions: []duckv1alpha1.Condition{
-				condReady,
-				condUnprovisioned,
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{
+					condReady,
+					condUnprovisioned,
+				},
 			},
 		},
 		condQuery: ChannelConditionProvisioned,
@@ -67,9 +71,11 @@ func TestChannelGetCondition(t *testing.T) {
 	}, {
 		name: "unknown condition",
 		cs: &ChannelStatus{
-			Conditions: []duckv1alpha1.Condition{
-				condReady,
-				condUnprovisioned,
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{
+					condReady,
+					condUnprovisioned,
+				},
 			},
 		},
 		condQuery: duckv1alpha1.ConditionType("foo"),
@@ -95,65 +101,75 @@ func TestChannelInitializeConditions(t *testing.T) {
 		name: "empty",
 		cs:   &ChannelStatus{},
 		want: &ChannelStatus{
-			Conditions: []duckv1alpha1.Condition{{
-				Type:   ChannelConditionAddressable,
-				Status: corev1.ConditionUnknown,
-			}, {
-				Type:   ChannelConditionProvisioned,
-				Status: corev1.ConditionUnknown,
-			}, {
-				Type:   ChannelConditionProvisionerInstalled,
-				Status: corev1.ConditionTrue,
-			}, {
-				Type:   ChannelConditionReady,
-				Status: corev1.ConditionUnknown,
-			}},
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{{
+					Type:   ChannelConditionAddressable,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   ChannelConditionProvisioned,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   ChannelConditionProvisionerInstalled,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   ChannelConditionReady,
+					Status: corev1.ConditionUnknown,
+				}},
+			},
 		},
 	}, {
 		name: "one false",
 		cs: &ChannelStatus{
-			Conditions: []duckv1alpha1.Condition{{
-				Type:   ChannelConditionProvisioned,
-				Status: corev1.ConditionFalse,
-			}},
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{{
+					Type:   ChannelConditionProvisioned,
+					Status: corev1.ConditionFalse,
+				}},
+			},
 		},
 		want: &ChannelStatus{
-			Conditions: []duckv1alpha1.Condition{{
-				Type:   ChannelConditionAddressable,
-				Status: corev1.ConditionUnknown,
-			}, {
-				Type:   ChannelConditionProvisioned,
-				Status: corev1.ConditionFalse,
-			}, {
-				Type:   ChannelConditionProvisionerInstalled,
-				Status: corev1.ConditionTrue,
-			}, {
-				Type:   ChannelConditionReady,
-				Status: corev1.ConditionUnknown,
-			}},
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{{
+					Type:   ChannelConditionAddressable,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   ChannelConditionProvisioned,
+					Status: corev1.ConditionFalse,
+				}, {
+					Type:   ChannelConditionProvisionerInstalled,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   ChannelConditionReady,
+					Status: corev1.ConditionUnknown,
+				}},
+			},
 		},
 	}, {
 		name: "one true",
 		cs: &ChannelStatus{
-			Conditions: []duckv1alpha1.Condition{{
-				Type:   ChannelConditionProvisioned,
-				Status: corev1.ConditionTrue,
-			}},
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{{
+					Type:   ChannelConditionProvisioned,
+					Status: corev1.ConditionTrue,
+				}},
+			},
 		},
 		want: &ChannelStatus{
-			Conditions: []duckv1alpha1.Condition{{
-				Type:   ChannelConditionAddressable,
-				Status: corev1.ConditionUnknown,
-			}, {
-				Type:   ChannelConditionProvisioned,
-				Status: corev1.ConditionTrue,
-			}, {
-				Type:   ChannelConditionProvisionerInstalled,
-				Status: corev1.ConditionTrue,
-			}, {
-				Type:   ChannelConditionReady,
-				Status: corev1.ConditionUnknown,
-			}},
+			Status: duckv1alpha1.Status{
+				Conditions: []duckv1alpha1.Condition{{
+					Type:   ChannelConditionAddressable,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   ChannelConditionProvisioned,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   ChannelConditionProvisionerInstalled,
+					Status: corev1.ConditionTrue,
+				}, {
+					Type:   ChannelConditionReady,
+					Status: corev1.ConditionUnknown,
+				}},
+			},
 		},
 	}}
 
@@ -211,16 +227,18 @@ func TestChannelStatus_SetAddressable(t *testing.T) {
 	}{
 		"empty string": {
 			want: &ChannelStatus{
-				Conditions: []duckv1alpha1.Condition{
-					{
-						Type:   ChannelConditionAddressable,
-						Status: corev1.ConditionFalse,
-					},
-					// Note that Ready is here because when the condition is marked False, duck
-					// automatically sets Ready to false.
-					{
-						Type:   ChannelConditionReady,
-						Status: corev1.ConditionFalse,
+				Status: duckv1alpha1.Status{
+					Conditions: []duckv1alpha1.Condition{
+						{
+							Type:   ChannelConditionAddressable,
+							Status: corev1.ConditionFalse,
+						},
+						// Note that Ready is here because when the condition is marked False, duck
+						// automatically sets Ready to false.
+						{
+							Type:   ChannelConditionReady,
+							Status: corev1.ConditionFalse,
+						},
 					},
 				},
 			},
@@ -231,10 +249,12 @@ func TestChannelStatus_SetAddressable(t *testing.T) {
 				Address: duckv1alpha1.Addressable{
 					Hostname: "test-domain",
 				},
-				Conditions: []duckv1alpha1.Condition{
-					{
-						Type:   ChannelConditionAddressable,
-						Status: corev1.ConditionTrue,
+				Status: duckv1alpha1.Status{
+					Conditions: []duckv1alpha1.Condition{
+						{
+							Type:   ChannelConditionAddressable,
+							Status: corev1.ConditionTrue,
+						},
 					},
 				},
 			},

@@ -3,13 +3,14 @@ package dispatcher
 import (
 	"errors"
 	"fmt"
-	"github.com/bsm/sarama-cluster"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"sync/atomic"
 	"testing"
+
+	cluster "github.com/bsm/sarama-cluster"
 
 	"github.com/Shopify/sarama"
 	"github.com/google/go-cmp/cmp"

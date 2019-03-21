@@ -66,23 +66,20 @@ type BrokerSpec struct {
 	ChannelTemplate *ChannelSpec `json:"channelTemplate,omitempty"`
 }
 
-var brokerCondSet = duckv1alpha1.NewLivingConditionSet(BrokerConditionIngress, BrokerConditionChannel, BrokerConditionFilter, BrokerConditionAddressable)
+var brokerCondSet = duckv1alpha1.NewLivingConditionSet(
+	BrokerConditionIngress,
+	BrokerConditionTriggerChannel,
+	BrokerConditionIngressChannel,
+	BrokerConditionFilter,
+	BrokerConditionAddressable,
+	BrokerConditionIngressSubscription)
 
 // BrokerStatus represents the current state of a Broker.
 type BrokerStatus struct {
-	// ObservedGeneration is the most recent generation observed for this Broker.
-	// It corresponds to the Broker's generation, which is updated on mutation by
-	// the API Server.
-	// TODO: The above comment is only true once
-	// https://github.com/kubernetes/kubernetes/issues/58778 is fixed.
-	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-
-	// Represents the latest available observations of a broker's current state.
-	// +optional
-	// +patchMergeKey=type
-	// +patchStrategy=merge
-	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	// inherits duck/v1alpha1 Status, which currently provides:
+	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
+	// * Conditions - the latest available observations of a resource's current state.
+	duckv1alpha1.Status `json:",inline"`
 
 	// Broker is Addressable. It currently exposes the endpoint as a
 	// fully-qualified DNS name which will distribute traffic over the
@@ -97,7 +94,11 @@ const (
 
 	BrokerConditionIngress duckv1alpha1.ConditionType = "IngressReady"
 
-	BrokerConditionChannel duckv1alpha1.ConditionType = "ChannelReady"
+	BrokerConditionTriggerChannel duckv1alpha1.ConditionType = "TriggerChannelReady"
+
+	BrokerConditionIngressChannel duckv1alpha1.ConditionType = "IngressChannelReady"
+
+	BrokerConditionIngressSubscription duckv1alpha1.ConditionType = "IngressSubscriptionReady"
 
 	BrokerConditionFilter duckv1alpha1.ConditionType = "FilterReady"
 
@@ -127,16 +128,36 @@ func (bs *BrokerStatus) MarkIngressFailed(err error) {
 	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngress, "failed", "%v", err)
 }
 
-func (bs *BrokerStatus) MarkChannelReady() {
-	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionChannel)
+func (bs *BrokerStatus) MarkTriggerChannelReady() {
+	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionTriggerChannel)
 }
 
-func (bs *BrokerStatus) MarkChannelFailed(err error) {
-	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionChannel, "failed", "%v", err)
+func (bs *BrokerStatus) MarkTriggerChannelFailed(err error) {
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionTriggerChannel, "failed", "%v", err)
+}
+
+func (bs *BrokerStatus) MarkIngressChannelReady() {
+	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngressChannel)
+}
+
+func (bs *BrokerStatus) MarkIngressChannelFailed(err error) {
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngressChannel, "failed", "%v", err)
+}
+
+func (bs *BrokerStatus) MarkIngressSubscriptionReady() {
+	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngressSubscription)
+}
+
+func (bs *BrokerStatus) MarkIngressSubscriptionFailed(err error) {
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngressSubscription, "failed", "%v", err)
 }
 
 func (bs *BrokerStatus) MarkFilterReady() {
 	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionFilter)
+}
+
+func (bs *BrokerStatus) MarkFilterFailed(err error) {
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionFilter, "failed", "%v", err)
 }
 
 // SetAddress makes this Broker addressable by setting the hostname. It also
