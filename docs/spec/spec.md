@@ -82,7 +82,7 @@ broker._
 
 - **Ready.** True when the Trigger is provisioned and configuration is ready to
   deliver events to the subscriber.
-- **BrokerExists.** True when the Broker can be retrieved.
+- **BrokerExists.** True when the Broker exists and is ready.
 - **Subscribed.** True when the subscriber is subscribed to the Broker.
 
 #### Events
