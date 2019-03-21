@@ -21,6 +21,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
@@ -31,6 +32,7 @@ import (
 	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -38,6 +40,22 @@ const (
 	defaultPort = 8080
 
 	writeTimeout = 1 * time.Minute
+)
+
+var (
+	// These MUST be lowercase strings, as they will be compared against lowercase strings.
+	forwardHeaders = sets.NewString(
+		// tracing
+		"x-request-id",
+	)
+	// These MUST be lowercase strings, as they will be compared against lowercase strings.
+	forwardPrefixes = []string{
+		// knative
+		"knative-",
+		// tracing
+		"x-b3-",
+		"x-ot-",
+	}
 )
 
 // Receiver parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
@@ -142,18 +160,22 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 
 	r.logger.Debug("Received message", zap.Any("triggerRef", triggerRef))
 
-	responseEvent, err := r.sendEvent(ctx, triggerRef, &event)
+	responseEvent, err := r.sendEvent(ctx, tctx, triggerRef, &event)
 	if err != nil {
 		r.logger.Error("Error sending the event", zap.Error(err))
 		return err
 	}
 	resp.Status = http.StatusAccepted
 	resp.Event = responseEvent
+
+	// TODO Add filtered headers (mostly tracing) to the response. We are waiting for CloudEvents
+	// SDK to allow this.
+
 	return nil
 }
 
 // sendEvent sends an event to a subscriber if the trigger filter passes.
-func (r *Receiver) sendEvent(ctx context.Context, trigger provisioners.ChannelReference, event *cloudevents.Event) (*cloudevents.Event, error) {
+func (r *Receiver) sendEvent(ctx context.Context, tctx cehttp.TransportContext, trigger provisioners.ChannelReference, event *cloudevents.Event) (*cloudevents.Event, error) {
 	t, err := r.getTrigger(ctx, trigger)
 	if err != nil {
 		r.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("triggerRef", trigger))
@@ -179,6 +201,7 @@ func (r *Receiver) sendEvent(ctx context.Context, trigger provisioners.ChannelRe
 	}
 
 	sendingCtx := cecontext.WithTarget(ctx, subscriberURI.String())
+	sendingCtx = addFilteredHeaders(sendingCtx, tctx)
 	return r.ceHttp.Send(sendingCtx, *event)
 }
 
@@ -213,4 +236,29 @@ func (r *Receiver) shouldSendMessage(ts *eventingv1alpha1.TriggerSpec, event *cl
 		return false
 	}
 	return true
+}
+
+func addFilteredHeaders(ctx context.Context, tctx cehttp.TransportContext) context.Context {
+	// Helper function that adds the header name and all its values.
+	addHeader := func(ctx context.Context, n string, v []string) context.Context {
+		for _, iv := range v {
+			ctx = cehttp.ContextWithHeader(ctx, n, iv)
+		}
+		return ctx
+	}
+
+	for n, v := range tctx.Header {
+		lower := strings.ToLower(n)
+		if forwardHeaders.Has(lower) {
+			ctx = addHeader(ctx, n, v)
+			continue
+		}
+		for _, prefix := range forwardPrefixes {
+			if strings.HasPrefix(lower, prefix) {
+				ctx = addHeader(ctx, n, v)
+				break
+			}
+		}
+	}
+	return ctx
 }

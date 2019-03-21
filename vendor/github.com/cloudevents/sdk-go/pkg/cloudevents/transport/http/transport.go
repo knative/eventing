@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/observability"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	cecontext "github.com/cloudevents/sdk-go/pkg/cloudevents/context"
@@ -21,10 +23,19 @@ type EncodingSelector func(e cloudevents.Event) Encoding
 // type check that this transport message impl matches the contract
 var _ transport.Transport = (*Transport)(nil)
 
+const (
+	// DefaultShutdownTimeout defines the default timeout given to the http.Server when calling Shutdown.
+	DefaultShutdownTimeout = time.Minute * 1
+)
+
 // Transport acts as both a http client and a http handler.
 type Transport struct {
 	Encoding                   Encoding
 	DefaultEncodingSelectionFn EncodingSelector
+
+	// ShutdownTimeout defines the timeout given to the http.Server when calling Shutdown.
+	// If nil, DefaultShutdownTimeout is used.
+	ShutdownTimeout *time.Duration
 
 	// Sending
 	Client *http.Client
@@ -82,17 +93,42 @@ func (t *Transport) loadCodec() bool {
 	return true
 }
 
+func copyHeaders(from, to http.Header) {
+	if from == nil || to == nil {
+		return
+	}
+	for header, values := range from {
+		for _, value := range values {
+			to.Add(header, value)
+		}
+	}
+}
+
 func (t *Transport) Send(ctx context.Context, event cloudevents.Event) (*cloudevents.Event, error) {
+	ctx, r := observability.NewReporter(ctx, ReportSend)
+	resp, err := t.obsSend(ctx, event)
+	if err != nil {
+		r.Error()
+	} else {
+		r.OK()
+	}
+	return resp, err
+}
+
+func (t *Transport) obsSend(ctx context.Context, event cloudevents.Event) (*cloudevents.Event, error) {
 	if t.Client == nil {
 		t.crMu.Lock()
 		t.Client = &http.Client{}
 		t.crMu.Unlock()
 	}
 
-	var req http.Request
+	req := http.Request{
+		Header: HeaderFrom(ctx),
+	}
 	if t.Req != nil {
 		req.Method = t.Req.Method
 		req.URL = t.Req.URL
+		copyHeaders(t.Req.Header, req.Header)
 	}
 
 	// Override the default request with target from context.
@@ -109,11 +145,11 @@ func (t *Transport) Send(ctx context.Context, event cloudevents.Event) (*cloudev
 		return nil, err
 	}
 
-	// TODO: merge the incoming request with msg, for now just replace.
 	if m, ok := msg.(*Message); ok {
-		req.Header = m.Header
+		copyHeaders(m.Header, req.Header)
 		req.Body = ioutil.NopCloser(bytes.NewBuffer(m.Body))
 		req.ContentLength = int64(len(m.Body))
+		req.Close = true
 		return httpDo(ctx, &req, func(resp *http.Response, err error) (*cloudevents.Event, error) {
 			if err != nil {
 				return nil, err
@@ -191,7 +227,13 @@ func (t *Transport) StartReceiver(ctx context.Context) error {
 	select {
 	case <-ctx.Done():
 		// Try a gracefully shutdown.
-		return t.server.Shutdown(context.Background())
+		timeout := DefaultShutdownTimeout
+		if t.ShutdownTimeout != nil {
+			timeout = *t.ShutdownTimeout
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		return t.server.Shutdown(ctx)
 	case err := <-errChan:
 		return err
 	}
@@ -238,6 +280,17 @@ func status(resp *http.Response) string {
 }
 
 func (t *Transport) invokeReceiver(ctx context.Context, event cloudevents.Event) (*Response, error) {
+	ctx, r := observability.NewReporter(ctx, ReportReceive)
+	resp, err := t.obsInvokeReceiver(ctx, event)
+	if err != nil {
+		r.Error()
+	} else {
+		r.OK()
+	}
+	return resp, err
+}
+
+func (t *Transport) obsInvokeReceiver(ctx context.Context, event cloudevents.Event) (*Response, error) {
 	if t.Receiver != nil {
 		// Note: http does not use eventResp.Reason
 		eventResp := cloudevents.EventResponse{}
@@ -277,11 +330,14 @@ func (t *Transport) invokeReceiver(ctx context.Context, event cloudevents.Event)
 
 // ServeHTTP implements http.Handler
 func (t *Transport) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	ctx, r := observability.NewReporter(req.Context(), ReportServeHTTP)
+
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		log.Printf("failed to handle request: %s %v", err, req)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(`{"error":"Invalid request"}`))
+		r.Error()
 		return
 	}
 	msg := &Message{
@@ -294,6 +350,7 @@ func (t *Transport) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		log.Printf("failed to load codec: %s", err)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(fmt.Sprintf(`{"error":%q}`, err.Error())))
+		r.Error()
 		return
 	}
 	event, err := t.codec.Decode(msg)
@@ -301,23 +358,19 @@ func (t *Transport) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		log.Printf("failed to decode message: %s %v", err, req)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(fmt.Sprintf(`{"error":%q}`, err.Error())))
+		r.Error()
 		return
 	}
 
-	ctx := req.Context()
-
 	if req != nil {
-		ctx = WithTransportContext(ctx, TransportContext{
-			URI:    req.RequestURI,
-			Host:   req.Host,
-			Method: req.Method,
-		})
+		ctx = WithTransportContext(ctx, NewTransportContext(req))
 	}
 
 	resp, err := t.invokeReceiver(ctx, *event)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(fmt.Sprintf(`{"error":%q}`, err.Error())))
+		r.Error()
 		return
 	}
 	if resp != nil {
@@ -328,16 +381,24 @@ func (t *Transport) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				}
 			}
 		}
+		status := http.StatusAccepted
 		if resp.StatusCode >= 200 && resp.StatusCode < 600 {
-			w.WriteHeader(resp.StatusCode)
+			status = resp.StatusCode
 		}
+		w.WriteHeader(status)
 		if len(resp.Body) > 0 {
-			w.Write(resp.Body)
+			if _, err := w.Write(resp.Body); err != nil {
+				r.Error()
+				return
+			}
 		}
+
+		r.OK()
 		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+	r.OK()
 }
 
 func (t *Transport) GetPort() int {

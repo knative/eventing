@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/observability"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"sync"
@@ -69,6 +70,17 @@ type ceClient struct {
 }
 
 func (c *ceClient) Send(ctx context.Context, event cloudevents.Event) (*cloudevents.Event, error) {
+	ctx, r := observability.NewReporter(ctx, ReportSend)
+	resp, err := c.obsSend(ctx, event)
+	if err != nil {
+		r.Error()
+	} else {
+		r.OK()
+	}
+	return resp, err
+}
+
+func (c *ceClient) obsSend(ctx context.Context, event cloudevents.Event) (*cloudevents.Event, error) {
 	// Confirm we have a transport set.
 	if c.transport == nil {
 		return nil, fmt.Errorf("client not ready, transport not initialized")
@@ -89,8 +101,26 @@ func (c *ceClient) Send(ctx context.Context, event cloudevents.Event) (*cloudeve
 
 // Receive is called from from the transport on event delivery.
 func (c *ceClient) Receive(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
+	ctx, r := observability.NewReporter(ctx, ReportReceive)
+	err := c.obsReceive(ctx, event, resp)
+	if err != nil {
+		r.Error()
+	} else {
+		r.OK()
+	}
+	return err
+}
+
+func (c *ceClient) obsReceive(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
 	if c.fn != nil {
+		ctx, rFn := observability.NewReporter(ctx, ReportReceiveFn)
 		err := c.fn.invoke(ctx, event, resp)
+		if err != nil {
+			rFn.Error()
+		} else {
+			rFn.OK()
+		}
+
 		// Apply the defaulter chain to the outgoing event.
 		if err == nil && resp != nil && resp.Event != nil && len(c.eventDefaulterFns) > 0 {
 			for _, fn := range c.eventDefaulterFns {
