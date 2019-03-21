@@ -13,5 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-// This package has the automatically generated typed clients.
+
 package v1alpha1
+
+import "context"
+
+// SetDefaults sets default values on the ServerlessServiceSpec.
+func (c *ServerlessService) SetDefaults(ctx context.Context) {
+	c.Spec.SetDefaults(ctx)
+}
+
+// SetDefaults sets default values on the ServerlessServiceSpec.
+func (c *ServerlessServiceSpec) SetDefaults(ctx context.Context) {
+	// Nothing is defaultable so far.
+}

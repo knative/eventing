@@ -13,5 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-// This package has the automatically generated typed clients.
+
 package v1alpha1
+
+import "context"
+
+// SetDefaults sets the default values for Certificate.
+// Currently it is required that all of the fields of Certificate are
+// provisioned by the client. Therefore, SetDefaults does nothing right now.
+func (c *Certificate) SetDefaults(context.Context) {}
