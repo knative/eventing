@@ -253,22 +253,15 @@ func addFilteredHeaders(ctx context.Context, tctx cehttp.TransportContext) conte
 func extractPassThroughHeaders(tctx cehttp.TransportContext) http.Header {
 	h := http.Header{}
 
-	// Helper function that adds the header name and all its values.
-	addHeader := func(n string, v []string) {
-		for _, iv := range v {
-			h.Add(n, iv)
-		}
-	}
-
 	for n, v := range tctx.Header {
 		lower := strings.ToLower(n)
 		if forwardHeaders.Has(lower) {
-			addHeader(n, v)
+			h[n] = v
 			continue
 		}
 		for _, prefix := range forwardPrefixes {
 			if strings.HasPrefix(lower, prefix) {
-				addHeader(n, v)
+				h[n] = v
 				break
 			}
 		}
