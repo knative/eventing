@@ -17,9 +17,11 @@ limitations under the License.
 package v1alpha1
 
 func (et *EventType) SetDefaults() {
-	et.Spec.SetDefaults(et.Name)
+	et.Spec.SetDefaults()
 }
 
-func (ets *EventTypeSpec) SetDefaults(eventTypeName string) {
-	// TODO anything?
+func (ets *EventTypeSpec) SetDefaults() {
+	if ets.Broker == "" {
+		ets.Broker = "default"
+	}
 }
