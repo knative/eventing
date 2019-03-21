@@ -45,13 +45,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading logging configuration: %v", err)
 	}
-	config, err := logging.NewConfigFromMap(cm, logconfig.Webhook)
+	config, err := logging.NewConfigFromMap(cm, logconfig.WebhookName())
 	if err != nil {
 		log.Fatalf("Error parsing logging configuration: %v", err)
 	}
-	logger, atomicLevel := logging.NewLoggerFromConfig(config, logconfig.Webhook)
+	logger, atomicLevel := logging.NewLoggerFromConfig(config, logconfig.WebhookName())
 	defer logger.Sync()
-	logger = logger.With(zap.String(logkey.ControllerType, logconfig.Webhook))
+	logger = logger.With(zap.String(logkey.ControllerType, logconfig.WebhookName()))
 
 	logger.Infow("Starting the Eventing Webhook")
 
@@ -71,7 +71,7 @@ func main() {
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
 
-	configMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Webhook, logconfig.Webhook))
+	configMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.WebhookName(), logconfig.WebhookName()))
 
 	// Watch the default-channel-webhook ConfigMap and dynamically update the default
 	// ClusterChannelProvisioner.
@@ -84,8 +84,8 @@ func main() {
 	}
 
 	options := webhook.ControllerOptions{
-		ServiceName:    "webhook",
-		DeploymentName: "webhook",
+		ServiceName:    logconfig.WebhookName(),
+		DeploymentName: logconfig.WebhookName(),
 		Namespace:      system.Namespace(),
 		Port:           443,
 		SecretName:     "webhook-certs",
