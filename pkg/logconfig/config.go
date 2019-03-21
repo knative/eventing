@@ -34,7 +34,7 @@ const (
 	Controller = "controller"
 
 	// Webhook is the name of the override key used inside of the logging config for Webhook Controller.
-	Webhook = "webhook"
+	WebhookNameEnv = "WEBHOOK_NAME"
 )
 
 func ConfigMapName() string {
@@ -51,4 +51,20 @@ API to initialize this variable via:
   - name: CONFIG_LOGGING_NAME
     value: config-logging
 `, ConfigMapNameEnv))
+}
+
+func WebhookName() string {
+	if webhook := os.Getenv(WebhookNameEnv); webhook != "" {
+		return webhook
+	}
+
+	panic(fmt.Sprintf(`The environment variable %q is not set
+
+If this is a process running on Kubernetes, then it should be using the downward
+API to initialize this variable via:
+
+  env:
+  - name: WEBHOOK_NAME
+    value: webhook
+`, WebhookNameEnv))
 }

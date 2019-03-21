@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"testing"
 
 	"github.com/knative/pkg/apis"
@@ -56,7 +57,7 @@ func TestTriggerValidation(t *testing.T) {
 	}
 
 	t.Run(name, func(t *testing.T) {
-		got := trigger.Validate()
+		got := trigger.Validate(context.TODO())
 		if diff := cmp.Diff(want.Error(), got.Error()); diff != "" {
 			t.Errorf("Trigger.Validate (-want, +got) = %v", diff)
 		}
@@ -133,7 +134,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.ts.Validate()
+			got := test.ts.Validate(context.TODO())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("%s: Validate TriggerSpec (-want, +got) = %v", test.name, diff)
 			}
@@ -218,7 +219,7 @@ func TestTriggerImmutableFields(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.current.CheckImmutableFields(test.original)
+			got := test.current.CheckImmutableFields(context.TODO(), test.original)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("CheckImmutableFields (-want, +got) = %v", diff)
 			}
