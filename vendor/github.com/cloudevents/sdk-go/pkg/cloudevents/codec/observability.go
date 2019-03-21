@@ -8,68 +8,81 @@ import (
 )
 
 var (
-	LatencyMs = stats.Float64("codec/json/latency", "The latency in milliseconds for the CloudEvents json codec methods.", "ms")
+	latencyMs = stats.Float64("codec/json/latency", "The latency in milliseconds for the CloudEvents json codec methods.", "ms")
 )
 
 var (
+	// LatencyView is an OpenCensus view that shows codec/json method latency.
 	LatencyView = &view.View{
 		Name:        "codec/json/latency",
-		Measure:     LatencyMs,
+		Measure:     latencyMs,
 		Description: "The distribution of latency inside of the json codec for CloudEvents.",
 		Aggregation: view.Distribution(0, .01, .1, 1, 10, 100, 1000, 10000),
 		TagKeys:     observability.LatencyTags(),
 	}
 )
 
-type Observed int32
+type observed int32
+
+// Adheres to Observable
+var _ observability.Observable = observed(0)
 
 const (
-	ReportEncode Observed = iota
-	ReportDecode
+	reportEncode observed = iota
+	reportDecode
 )
 
-func (o Observed) TraceName() string {
+// TraceName implements Observable.TraceName
+func (o observed) TraceName() string {
 	switch o {
-	case ReportEncode:
+	case reportEncode:
 		return "codec/json/encode"
-	case ReportDecode:
+	case reportDecode:
 		return "codec/json/decode"
 	default:
 		return "codec/unknown"
 	}
 }
 
-func (o Observed) MethodName() string {
+// MethodName implements Observable.MethodName
+func (o observed) MethodName() string {
 	switch o {
-	case ReportEncode:
+	case reportEncode:
 		return "encode"
-	case ReportDecode:
+	case reportDecode:
 		return "decode"
 	default:
 		return "unknown"
 	}
 }
 
-func (o Observed) LatencyMs() *stats.Float64Measure {
-	return LatencyMs
+// LatencyMs implements Observable.LatencyMs
+func (o observed) LatencyMs() *stats.Float64Measure {
+	return latencyMs
 }
 
-// CodecObserved is a wrapper to append version to Observed.
-type CodecObserved struct {
+// codecObserved is a wrapper to append version to observed.
+type codecObserved struct {
 	// Method
-	o Observed
+	o observed
 	// Version
 	v string
 }
 
-func (c CodecObserved) TraceName() string {
+// Adheres to Observable
+var _ observability.Observable = (*codecObserved)(nil)
+
+// TraceName implements Observable.TraceName
+func (c codecObserved) TraceName() string {
 	return fmt.Sprintf("%s/%s", c.o.TraceName(), c.v)
 }
 
-func (c CodecObserved) MethodName() string {
+// MethodName implements Observable.MethodName
+func (c codecObserved) MethodName() string {
 	return fmt.Sprintf("%s/%s", c.o.MethodName(), c.v)
 }
 
-func (c CodecObserved) LatencyMs() *stats.Float64Measure {
+// LatencyMs implements Observable.LatencyMs
+func (c codecObserved) LatencyMs() *stats.Float64Measure {
 	return c.o.LatencyMs()
 }

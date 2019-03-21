@@ -50,7 +50,7 @@ func AddEncoder(contentType string, fn Encoder) {
 // content type.
 func Decode(contentType string, in, out interface{}) error {
 	// TODO: wire in context.
-	_, r := observability.NewReporter(context.Background(), ReportDecode)
+	_, r := observability.NewReporter(context.Background(), reportDecode)
 	err := obsDecode(contentType, in, out)
 	if err != nil {
 		r.Error()
@@ -72,7 +72,7 @@ func obsDecode(contentType string, in, out interface{}) error {
 // content type.
 func Encode(contentType string, in interface{}) ([]byte, error) {
 	// TODO: wire in context.
-	_, r := observability.NewReporter(context.Background(), ReportEncode)
+	_, r := observability.NewReporter(context.Background(), reportEncode)
 	b, err := obsEncode(contentType, in)
 	if err != nil {
 		r.Error()

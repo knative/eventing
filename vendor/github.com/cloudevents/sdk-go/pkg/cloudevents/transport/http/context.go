@@ -19,6 +19,7 @@ type TransportContext struct {
 	IgnoreHeaderPrefixes []string
 }
 
+// NewTransportContext creates a new TransportContext from a http.Request.
 func NewTransportContext(req *http.Request) TransportContext {
 	var tx *TransportContext
 	if req != nil {
@@ -33,6 +34,12 @@ func NewTransportContext(req *http.Request) TransportContext {
 	}
 	tx.AddIgnoreHeaderPrefix("accept-encoding", "user-agent", "connection", "content-type")
 	return *tx
+}
+
+// TransportResponseContext allows a Receiver response with http transport specific fields.
+type TransportResponseContext struct {
+	// Header will be merged with the response headers.
+	Header http.Header
 }
 
 // AttendToHeaders returns the list of headers that exist in the TransportContext that are not currently in
@@ -110,6 +117,8 @@ func WithTransportContext(ctx context.Context, tcxt TransportContext) context.Co
 	return context.WithValue(ctx, transportContextKey, tcxt)
 }
 
+// TransportContextFrom pulls a TransportContext out of a context. Always
+// returns a non-nil object.
 func TransportContextFrom(ctx context.Context) TransportContext {
 	tctx := ctx.Value(transportContextKey)
 	if tctx != nil {
