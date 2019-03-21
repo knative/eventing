@@ -65,6 +65,7 @@ type EventTypeSpec struct {
 	// +optional
 	Schema string `json:"schema,omitempty"`
 	// TODO sink or broker? string or ref?
+	// TODO validate that the broker exists
 	Broker string `json:"broker,omitempty"`
 }
 

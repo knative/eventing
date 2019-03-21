@@ -38,8 +38,10 @@ type EventContextV01 struct {
 	Extensions map[string]interface{} `json:"extensions,omitempty"`
 }
 
+// Adhere to EventContext
 var _ EventContext = (*EventContextV01)(nil)
 
+// GetSpecVersion implements EventContext.GetSpecVersion
 func (ec EventContextV01) GetSpecVersion() string {
 	if ec.CloudEventsVersion != "" {
 		return ec.CloudEventsVersion
@@ -47,6 +49,7 @@ func (ec EventContextV01) GetSpecVersion() string {
 	return CloudEventsVersionV01
 }
 
+// GetDataContentType implements EventContext.GetDataContentType
 func (ec EventContextV01) GetDataContentType() string {
 	if ec.ContentType != nil {
 		return *ec.ContentType
@@ -54,6 +57,7 @@ func (ec EventContextV01) GetDataContentType() string {
 	return ""
 }
 
+// GetDataMediaType implements EventContext.GetDataMediaType
 func (ec EventContextV01) GetDataMediaType() string {
 	if ec.ContentType != nil {
 		mediaType, _, err := mime.ParseMediaType(*ec.ContentType)
@@ -66,15 +70,59 @@ func (ec EventContextV01) GetDataMediaType() string {
 	return ""
 }
 
+// GetType implements EventContext.GetType
 func (ec EventContextV01) GetType() string {
 	return ec.EventType
 }
 
+// GetSource implements EventContext.GetSource
+func (ec EventContextV01) GetSource() string {
+	return ec.Source.String()
+}
+
+// GetSchemaURL implements EventContext.GetSchemaURL
+func (ec EventContextV01) GetSchemaURL() string {
+	if ec.SchemaURL != nil {
+		return ec.SchemaURL.String()
+	}
+	return ""
+}
+
+// ExtensionAs implements EventContext.ExtensionAs
+func (ec EventContextV01) ExtensionAs(name string, obj interface{}) error {
+	value, ok := ec.Extensions[name]
+	if !ok {
+		return fmt.Errorf("extension %q does not exist", name)
+	}
+	// Only support *string for now.
+	switch v := obj.(type) {
+	case *string:
+		if valueAsString, ok := value.(string); ok {
+			*v = valueAsString
+			return nil
+		} else {
+			return fmt.Errorf("invalid type for extension %q", name)
+		}
+	default:
+		return fmt.Errorf("unkown extension type %T", obj)
+	}
+}
+
+// SetExtension adds the extension 'name' with value 'value' to the CloudEvents context.
+func (ec *EventContextV01) SetExtension(name string, value interface{}) {
+	if ec.Extensions == nil {
+		ec.Extensions = make(map[string]interface{})
+	}
+	ec.Extensions[name] = value
+}
+
+// AsV01 implements EventContext.AsV01
 func (ec EventContextV01) AsV01() EventContextV01 {
 	ec.CloudEventsVersion = CloudEventsVersionV01
 	return ec
 }
 
+// AsV02 implements EventContext.AsV02
 func (ec EventContextV01) AsV02() EventContextV02 {
 	ret := EventContextV02{
 		SpecVersion: CloudEventsVersionV02,
@@ -102,6 +150,7 @@ func (ec EventContextV01) AsV02() EventContextV02 {
 	return ret
 }
 
+// AsV03 implements EventContext.AsV03
 func (ec EventContextV01) AsV03() EventContextV03 {
 	ecv2 := ec.AsV02()
 	return ecv2.AsV03()

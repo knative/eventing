@@ -135,11 +135,11 @@ func getEventType(c client.Client, event *cloudevents.Event, namespace string) (
 			return nil, err
 		}
 		for _, e := range el.Items {
-			// TODO update cloud events version once it is merged
-			// e.Spec.Origin == event.Extensions("Origin") && e.Spec.Schema == event.Extensions("Schema")
-			if e.Spec.Type == event.Type() {
+			// TODO what about source?
+			if e.Spec.Type == event.Type() && e.Spec.Schema == event.SchemaURL() {
 				return &e, nil
 			}
+
 		}
 		if el.Continue != "" {
 			opts.Raw.Continue = el.Continue
@@ -162,8 +162,8 @@ func makeEventType(event *cloudevents.Event, namespace string) *eventingv1alpha1
 		},
 		Spec: eventingv1alpha1.EventTypeSpec{
 			Type:   cloudEventType,
-			Source: "", // event.Source()
-			Schema: "", // event.SchemaURL()
+			Source: event.Source(),
+			Schema: event.SchemaURL(),
 			// Waiting on https://github.com/knative/eventing/pull/937
 			Broker: "",
 		},

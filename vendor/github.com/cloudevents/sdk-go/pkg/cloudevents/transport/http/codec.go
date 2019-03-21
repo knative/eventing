@@ -7,9 +7,14 @@ import (
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport"
 )
 
+// Codec is the wrapper for all versions of codecs supported by the http
+// transport.
 type Codec struct {
+	// Encoding is the setting to inform the DefaultEncodingSelectionFn for
+	// selecting a codec.
 	Encoding Encoding
 
+	// DefaultEncodingSelectionFn allows for encoding selection strategies to be injected.
 	DefaultEncodingSelectionFn EncodingSelector
 
 	v01 *CodecV01
@@ -17,8 +22,11 @@ type Codec struct {
 	v03 *CodecV03
 }
 
+// Adheres to Codec
 var _ transport.Codec = (*Codec)(nil)
 
+// DefaultBinaryEncodingSelectionStrategy implements a selection process for
+// which binary encoding to use based on spec version of the event.
 func DefaultBinaryEncodingSelectionStrategy(e cloudevents.Event) Encoding {
 	switch e.SpecVersion() {
 	case cloudevents.CloudEventsVersionV01:
@@ -32,6 +40,8 @@ func DefaultBinaryEncodingSelectionStrategy(e cloudevents.Event) Encoding {
 	return Default
 }
 
+// DefaultStructuredEncodingSelectionStrategy implements a selection process
+// for which structured encoding to use based on spec version of the event.
 func DefaultStructuredEncodingSelectionStrategy(e cloudevents.Event) Encoding {
 	switch e.SpecVersion() {
 	case cloudevents.CloudEventsVersionV01:
@@ -45,6 +55,7 @@ func DefaultStructuredEncodingSelectionStrategy(e cloudevents.Event) Encoding {
 	return Default
 }
 
+// Encode encodes the provided event into a transport message.
 func (c *Codec) Encode(e cloudevents.Event) (transport.Message, error) {
 	encoding := c.Encoding
 
@@ -81,6 +92,7 @@ func (c *Codec) Encode(e cloudevents.Event) (transport.Message, error) {
 	}
 }
 
+// Decode converts a provided transport message into an Event, or error.
 func (c *Codec) Decode(msg transport.Message) (*cloudevents.Event, error) {
 	switch c.inspectEncoding(msg) {
 	case BinaryV01:
