@@ -1,10 +1,12 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/codec"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/observability"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 	"log"
@@ -20,6 +22,18 @@ type CodecV02 struct {
 var _ transport.Codec = (*CodecV02)(nil)
 
 func (v CodecV02) Encode(e cloudevents.Event) (transport.Message, error) {
+	// TODO: wire context
+	_, r := observability.NewReporter(context.Background(), CodecObserved{o: ReportEncode, c: v.Encoding.Codec()})
+	m, err := v.obsEncode(e)
+	if err != nil {
+		r.Error()
+	} else {
+		r.OK()
+	}
+	return m, err
+}
+
+func (v CodecV02) obsEncode(e cloudevents.Event) (transport.Message, error) {
 	switch v.Encoding {
 	case Default:
 		fallthrough
@@ -33,6 +47,18 @@ func (v CodecV02) Encode(e cloudevents.Event) (transport.Message, error) {
 }
 
 func (v CodecV02) Decode(msg transport.Message) (*cloudevents.Event, error) {
+	// TODO: wire context
+	_, r := observability.NewReporter(context.Background(), CodecObserved{o: ReportDecode, c: v.inspectEncoding(msg).Codec()}) // TODO: inspectEncoding is not free.
+	e, err := v.obsDecode(msg)
+	if err != nil {
+		r.Error()
+	} else {
+		r.OK()
+	}
+	return e, err
+}
+
+func (v CodecV02) obsDecode(msg transport.Message) (*cloudevents.Event, error) {
 	switch v.inspectEncoding(msg) {
 	case BinaryV02:
 		return v.decodeBinary(msg)
