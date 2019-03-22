@@ -14,7 +14,7 @@ import (
 // to convert those bytes to `out`. Returns and error if this process fails.
 func Decode(in, out interface{}) error {
 	// TODO: wire in context.
-	_, r := observability.NewReporter(context.Background(), ReportDecode)
+	_, r := observability.NewReporter(context.Background(), reportDecode)
 	err := obsDecode(in, out)
 	if err != nil {
 		r.Error()
@@ -69,7 +69,7 @@ func obsDecode(in, out interface{}) error {
 // Or xml.Marshal errors.
 func Encode(in interface{}) ([]byte, error) {
 	// TODO: wire in context.
-	_, r := observability.NewReporter(context.Background(), ReportEncode)
+	_, r := observability.NewReporter(context.Background(), reportEncode)
 	b, err := obsEncode(in)
 	if err != nil {
 		r.Error()

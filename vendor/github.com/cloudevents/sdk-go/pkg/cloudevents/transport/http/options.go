@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// Option is the function signature required to be considered an http.Option.
 type Option func(*Transport) error
 
 // WithTarget sets the outbound recipient of cloudevents when using an HTTP
