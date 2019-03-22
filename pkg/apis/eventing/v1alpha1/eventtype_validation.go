@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/knative/pkg/apis"
 )
 
@@ -51,9 +50,8 @@ func (et *EventType) CheckImmutableFields(ctx context.Context, og apis.Immutable
 		return &apis.FieldError{Message: "The provided original was not an EventType"}
 	}
 
-	// Schema and Broker mutable.
-	ignoreArguments := cmpopts.IgnoreFields(EventTypeSpec{}, "Schema", "Broker")
-	if diff := cmp.Diff(original.Spec, et.Spec, ignoreArguments); diff != "" {
+	// All fields immutable, otherwise it creates a problem when reconciling from sources.
+	if diff := cmp.Diff(original.Spec, et.Spec); diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",
 			Paths:   []string{"spec"},
