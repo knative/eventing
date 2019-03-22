@@ -29,9 +29,8 @@ import (
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-
 	// Uncomment this line when testing locally against GKE cluster
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 func main() {

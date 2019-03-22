@@ -37,18 +37,16 @@ import (
 )
 
 const (
-	testNamespace             = "testnamespace"
-	testAPIVersion            = "eventing.knative.dev/v1alpha1"
-	testCCPName               = "TestProvisioner"
-	testCCPKind               = "ClusterChannelProvisioner"
-	channelReconciled         = "Channel" + eventingreconciler.Reconciled
-	channelUpdateStatusFailed = "Channel" + eventingreconciler.UpdateStatusFailed
+	testNamespace  = "testnamespace"
+	testAPIVersion = "eventing.knative.dev/v1alpha1"
+	testCCPName    = "TestProvisioner"
+	testCCPKind    = "ClusterChannelProvisioner"
 )
 
 var (
 	events = map[string]corev1.Event{
-		channelReconciled:         {Reason: channelReconciled, Type: corev1.EventTypeNormal},
-		channelUpdateStatusFailed: {Reason: channelUpdateStatusFailed, Type: corev1.EventTypeWarning},
+		eventingreconciler.Reconciled:         {Reason: eventingreconciler.Reconciled, Type: corev1.EventTypeNormal},
+		eventingreconciler.UpdateStatusFailed: {Reason: eventingreconciler.UpdateStatusFailed, Type: corev1.EventTypeWarning},
 	}
 )
 
@@ -103,7 +101,7 @@ func TestAllCases(t *testing.T) {
 				Channel("chan-3", testNamespace).WithProvInstalledStatus(corev1.ConditionFalse),
 			},
 			WantEvent: []corev1.Event{
-				events[channelReconciled],
+				events[eventingreconciler.Reconciled],
 			},
 		}, {
 			Name:         "Non-orphaned channel test 1",
@@ -120,7 +118,7 @@ func TestAllCases(t *testing.T) {
 				Channel("chan-3", testNamespace).WithProvInstalledStatus(corev1.ConditionFalse),
 			},
 			WantEvent: []corev1.Event{
-				events[channelReconciled],
+				events[eventingreconciler.Reconciled],
 			},
 		}, {
 			Name:         "Non-orphaned channel test 2",
@@ -137,7 +135,7 @@ func TestAllCases(t *testing.T) {
 				Channel("chan-3", testNamespace).WithProvInstalledStatus(corev1.ConditionFalse),
 			},
 			WantEvent: []corev1.Event{
-				events[channelReconciled],
+				events[eventingreconciler.Reconciled],
 			},
 		},
 		{
@@ -156,8 +154,8 @@ func TestAllCases(t *testing.T) {
 				Channel("chan-3", testNamespace).WithProvInstalledStatus(corev1.ConditionFalse),
 			},
 			WantEvent: []corev1.Event{
-				events[channelReconciled],
-				events[channelUpdateStatusFailed],
+				events[eventingreconciler.Reconciled],
+				events[eventingreconciler.UpdateStatusFailed],
 			},
 			Mocks: controllertesting.Mocks{
 				MockStatusUpdates: []controllertesting.MockStatusUpdate{failUpdate},

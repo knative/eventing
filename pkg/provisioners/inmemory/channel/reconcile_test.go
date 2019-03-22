@@ -59,8 +59,6 @@ const (
 	testErrorMessage = "test induced error"
 
 	insertedByVerifyConfigMapData = "data inserted by verifyConfigMapData so that it can be WantPresent"
-	channelReconcileFailed        = "Channel" + eventingreconciler.ReconcileFailed
-	channelAddFinalizerFailed     = "Channel" + eventingreconciler.AddFinalizerFailed
 )
 
 var (
@@ -186,13 +184,14 @@ var (
 
 	// map of events to set test cases' expectations easier
 	events = map[string]corev1.Event{
-		channelReconciled:          {Reason: channelReconciled, Type: corev1.EventTypeNormal},
-		channelUpdateStatusFailed:  {Reason: channelUpdateStatusFailed, Type: corev1.EventTypeWarning},
-		channelReconcileFailed:     {Reason: channelReconcileFailed, Type: corev1.EventTypeWarning},
-		channelAddFinalizerFailed:  {Reason: channelAddFinalizerFailed, Type: corev1.EventTypeWarning},
-		channelConfigSyncFailed:    {Reason: channelConfigSyncFailed, Type: corev1.EventTypeWarning},
-		k8sServiceCreateFailed:     {Reason: k8sServiceCreateFailed, Type: corev1.EventTypeWarning},
-		virtualServiceCreateFailed: {Reason: virtualServiceCreateFailed, Type: corev1.EventTypeWarning},
+		eventingreconciler.Reconciled:            {Reason: eventingreconciler.Reconciled, Type: corev1.EventTypeNormal},
+		eventingreconciler.UpdateStatusFailed:    {Reason: eventingreconciler.UpdateStatusFailed, Type: corev1.EventTypeWarning},
+		eventingreconciler.ReconcileFailed:       {Reason: eventingreconciler.ReconcileFailed, Type: corev1.EventTypeWarning},
+		eventingreconciler.AddFinalizerFailed:    {Reason: eventingreconciler.AddFinalizerFailed, Type: corev1.EventTypeWarning},
+		eventingreconciler.RemoveFinalizerFailed: {Reason: eventingreconciler.RemoveFinalizerFailed, Type: corev1.EventTypeWarning},
+		channelConfigSyncFailed:                  {Reason: channelConfigSyncFailed, Type: corev1.EventTypeWarning},
+		k8sServiceCreateFailed:                   {Reason: k8sServiceCreateFailed, Type: corev1.EventTypeWarning},
+		virtualServiceCreateFailed:               {Reason: virtualServiceCreateFailed, Type: corev1.EventTypeWarning},
 	}
 )
 
@@ -270,6 +269,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[channelConfigSyncFailed],
+				events[eventingreconciler.RemoveFinalizerFailed],
 			},
 		},
 		{
@@ -281,7 +281,7 @@ func TestReconcile(t *testing.T) {
 				makeDeletingChannelWithoutFinalizer(),
 			},
 			WantEvent: []corev1.Event{
-				events[channelReconciled],
+				events[eventingreconciler.Reconciled],
 			},
 		},
 		{
@@ -295,7 +295,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[channelConfigSyncFailed],
-				events[channelReconcileFailed],
+				events[eventingreconciler.ReconcileFailed],
 			},
 		},
 		{
@@ -309,7 +309,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[channelConfigSyncFailed],
-				events[channelReconcileFailed],
+				events[eventingreconciler.ReconcileFailed],
 			},
 		},
 		{
@@ -323,7 +323,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[channelConfigSyncFailed],
-				events[channelReconcileFailed],
+				events[eventingreconciler.ReconcileFailed],
 			},
 		},
 		{
@@ -338,7 +338,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[channelConfigSyncFailed],
-				events[channelReconcileFailed],
+				events[eventingreconciler.ReconcileFailed],
 			},
 		},
 		{
@@ -356,7 +356,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[k8sServiceCreateFailed],
-				events[channelReconcileFailed],
+				events[eventingreconciler.ReconcileFailed],
 			},
 		},
 		{
@@ -375,7 +375,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[k8sServiceCreateFailed],
-				events[channelReconcileFailed],
+				events[eventingreconciler.ReconcileFailed],
 			},
 		},
 		{
@@ -397,7 +397,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[virtualServiceCreateFailed],
-				events[channelReconcileFailed],
+				events[eventingreconciler.ReconcileFailed],
 			},
 		},
 		{
@@ -418,7 +418,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[virtualServiceCreateFailed],
-				events[channelReconcileFailed],
+				events[eventingreconciler.ReconcileFailed],
 			},
 		},
 		{
@@ -434,7 +434,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
-				events[channelAddFinalizerFailed],
+				events[eventingreconciler.AddFinalizerFailed],
 			},
 		}, {
 			Name: "Channel status update fails",
@@ -449,7 +449,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
-				events[channelReconciled], events[channelUpdateStatusFailed],
+				events[eventingreconciler.Reconciled], events[eventingreconciler.UpdateStatusFailed],
 			},
 		}, {
 			Name: "Channel reconcile successful - Channel list follows pagination",
@@ -472,7 +472,7 @@ func TestReconcile(t *testing.T) {
 				makeConfigMapWithVerifyConfigMapData(),
 			},
 			WantEvent: []corev1.Event{
-				events[channelReconciled],
+				events[eventingreconciler.Reconciled],
 			},
 		},
 		{
@@ -515,7 +515,7 @@ func TestReconcile(t *testing.T) {
 				makeConfigMapWithVerifyConfigMapData(),
 			},
 			WantEvent: []corev1.Event{
-				events[channelReconciled],
+				events[eventingreconciler.Reconciled],
 			},
 		},
 		{
@@ -531,7 +531,7 @@ func TestReconcile(t *testing.T) {
 				makeK8sService("in-memory"),
 			},
 			WantEvent: []corev1.Event{
-				events[channelReconciled],
+				events[eventingreconciler.Reconciled],
 			},
 		},
 		{
@@ -547,7 +547,7 @@ func TestReconcile(t *testing.T) {
 				makeK8sService(),
 			},
 			WantEvent: []corev1.Event{
-				events[channelReconciled],
+				events[eventingreconciler.Reconciled],
 			},
 		},
 	}

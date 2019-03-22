@@ -39,10 +39,8 @@ import (
 )
 
 const (
-	testNS                   = "test-namespace"
-	brokerName               = "default"
-	namespaceReconciled      = "Namespace" + eventingreconciler.Reconciled
-	namespaceReconcileFailed = "Namespace" + eventingreconciler.ReconcileFailed
+	testNS     = "test-namespace"
+	brokerName = "default"
 )
 
 var (
@@ -55,11 +53,11 @@ var (
 
 	// map of events to set test cases' expectations easier
 	events = map[string]corev1.Event{
-		brokerCreated:             {Reason: brokerCreated, Type: corev1.EventTypeNormal},
-		serviceAccountCreated:     {Reason: serviceAccountCreated, Type: corev1.EventTypeNormal},
-		serviceAccountRBACCreated: {Reason: serviceAccountRBACCreated, Type: corev1.EventTypeNormal},
-		namespaceReconciled:       {Reason: namespaceReconciled, Type: corev1.EventTypeNormal},
-		namespaceReconcileFailed:  {Reason: namespaceReconcileFailed, Type: corev1.EventTypeWarning},
+		brokerCreated:                      {Reason: brokerCreated, Type: corev1.EventTypeNormal},
+		serviceAccountCreated:              {Reason: serviceAccountCreated, Type: corev1.EventTypeNormal},
+		serviceAccountRBACCreated:          {Reason: serviceAccountRBACCreated, Type: corev1.EventTypeNormal},
+		eventingreconciler.Reconciled:      {Reason: eventingreconciler.Reconciled, Type: corev1.EventTypeNormal},
+		eventingreconciler.ReconcileFailed: {Reason: eventingreconciler.ReconcileFailed, Type: corev1.EventTypeWarning},
 	}
 )
 
@@ -176,7 +174,7 @@ func TestReconcile(t *testing.T) {
 			WantAbsent: []runtime.Object{
 				makeBroker(),
 			},
-			WantEvent: []corev1.Event{events[namespaceReconciled]},
+			WantEvent: []corev1.Event{events[eventingreconciler.Reconciled]},
 		},
 		{
 			Name:   "Broker.Get fails",
@@ -198,7 +196,7 @@ func TestReconcile(t *testing.T) {
 			WantAbsent: []runtime.Object{
 				makeBroker(),
 			},
-			WantEvent: []corev1.Event{events[serviceAccountCreated], events[serviceAccountRBACCreated], events[namespaceReconcileFailed]},
+			WantEvent: []corev1.Event{events[serviceAccountCreated], events[serviceAccountRBACCreated], events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Broker Found",
@@ -207,7 +205,7 @@ func TestReconcile(t *testing.T) {
 				makeNamespace(&enabled),
 				makeBroker(),
 			},
-			WantEvent: []corev1.Event{events[serviceAccountCreated], events[serviceAccountRBACCreated], events[namespaceReconciled]},
+			WantEvent: []corev1.Event{events[serviceAccountCreated], events[serviceAccountRBACCreated], events[eventingreconciler.Reconciled]},
 		},
 		{
 			Name:   "Broker.Create fails",
@@ -226,7 +224,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error creating the Broker",
-			WantEvent:  []corev1.Event{events[serviceAccountCreated], events[serviceAccountRBACCreated], events[namespaceReconcileFailed]},
+			WantEvent:  []corev1.Event{events[serviceAccountCreated], events[serviceAccountRBACCreated], events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Broker created",
@@ -241,7 +239,7 @@ func TestReconcile(t *testing.T) {
 				events[serviceAccountCreated],
 				events[serviceAccountRBACCreated],
 				events[brokerCreated],
-				events[namespaceReconciled]},
+				events[eventingreconciler.Reconciled]},
 		},
 	}
 	for _, tc := range testCases {

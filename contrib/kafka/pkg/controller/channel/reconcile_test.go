@@ -51,8 +51,6 @@ const (
 	testUID                       = "test-uid"
 	argumentNumPartitions         = "NumPartitions"
 	argumentReplicationFactor     = "ReplicationFactor"
-	channelReconciled             = "Channel" + eventingreconciler.Reconciled
-	channelReconcileFailed        = "Channel" + eventingreconciler.ReconcileFailed
 )
 
 var (
@@ -66,8 +64,8 @@ var (
 
 	// map of events to set test cases' expectations easier
 	events = map[string]corev1.Event{
-		channelReconcileFailed: {Reason: channelReconcileFailed, Type: corev1.EventTypeWarning},
-		channelReconciled:      {Reason: channelReconciled, Type: corev1.EventTypeNormal},
+		eventingreconciler.ReconcileFailed: {Reason: eventingreconciler.ReconcileFailed, Type: corev1.EventTypeWarning},
+		eventingreconciler.Reconciled:      {Reason: eventingreconciler.Reconciled, Type: corev1.EventTypeNormal},
 	}
 )
 
@@ -152,7 +150,7 @@ var testCases = []controllertesting.TestCase{
 			getNewChannelProvisionedStatus(channelName, clusterChannelProvisionerName),
 		},
 		WantEvent: []corev1.Event{
-			events[channelReconciled],
+			events[eventingreconciler.Reconciled],
 		},
 	},
 	{
@@ -166,7 +164,7 @@ var testCases = []controllertesting.TestCase{
 			getNewChannelProvisionedStatus(channelName, clusterChannelProvisionerName),
 		},
 		WantEvent: []corev1.Event{
-			events[channelReconciled],
+			events[eventingreconciler.Reconciled],
 		},
 	},
 	{
@@ -181,7 +179,7 @@ var testCases = []controllertesting.TestCase{
 				"ClusterChannelProvisioner "+clusterChannelProvisionerName+" is not ready"),
 		},
 		WantEvent: []corev1.Event{
-			events[channelReconcileFailed],
+			events[eventingreconciler.ReconcileFailed],
 		},
 	},
 	{
@@ -191,7 +189,7 @@ var testCases = []controllertesting.TestCase{
 		},
 		WantErrMsg: "clusterchannelprovisioners.eventing.knative.dev \"" + clusterChannelProvisionerName + "\" not found",
 		WantEvent: []corev1.Event{
-			events[channelReconcileFailed],
+			events[eventingreconciler.ReconcileFailed],
 		},
 	},
 	{
@@ -240,7 +238,7 @@ var testCases = []controllertesting.TestCase{
 		},
 		WantPresent: []runtime.Object{},
 		WantEvent: []corev1.Event{
-			events[channelReconciled],
+			events[eventingreconciler.Reconciled],
 		},
 	},
 }

@@ -42,10 +42,8 @@ const (
 	channelNamespace              = "test-namespace"
 	clusterChannelProvisionerName = "natss"
 
-	testNS                 = "test-namespace"
-	testUID                = "test-uid"
-	channelReconciled      = "Channel" + eventingreconciler.Reconciled
-	channelReconcileFailed = "Channel" + eventingreconciler.ReconcileFailed
+	testNS  = "test-namespace"
+	testUID = "test-uid"
 )
 
 var (
@@ -55,8 +53,8 @@ var (
 	// does not fill in Name, so the name is the empty string.
 	serviceAddress = fmt.Sprintf("%s.%s.svc.%s", "", testNS, utils.GetClusterDomainName())
 	events         = map[string]corev1.Event{
-		channelReconciled:      {Reason: channelReconciled, Type: corev1.EventTypeNormal},
-		channelReconcileFailed: {Reason: channelReconcileFailed, Type: corev1.EventTypeWarning},
+		eventingreconciler.Reconciled:      {Reason: eventingreconciler.Reconciled, Type: corev1.EventTypeNormal},
+		eventingreconciler.ReconcileFailed: {Reason: eventingreconciler.ReconcileFailed, Type: corev1.EventTypeWarning},
 	}
 )
 
@@ -81,7 +79,7 @@ var testCases = []controllertesting.TestCase{
 		},
 		IgnoreTimes: true,
 		WantEvent: []corev1.Event{
-			events[channelReconciled],
+			events[eventingreconciler.Reconciled],
 		},
 	},
 	{
@@ -94,7 +92,7 @@ var testCases = []controllertesting.TestCase{
 		WantErrMsg:   "clusterchannelprovisioners.eventing.knative.dev " + "\"" + clusterChannelProvisionerName + "\"" + " not found",
 		IgnoreTimes:  true,
 		WantEvent: []corev1.Event{
-			events[channelReconcileFailed],
+			events[eventingreconciler.ReconcileFailed],
 		},
 	},
 	{
@@ -126,7 +124,7 @@ var testCases = []controllertesting.TestCase{
 		},
 		IgnoreTimes: true,
 		WantEvent: []corev1.Event{
-			events[channelReconcileFailed],
+			events[eventingreconciler.ReconcileFailed],
 		},
 	},
 }

@@ -46,12 +46,9 @@ const (
 	triggerName = "test-trigger"
 	brokerName  = "test-broker"
 
-	subscriberAPIVersion      = "v1"
-	subscriberKind            = "Service"
-	subscriberName            = "subscriberName"
-	triggerReconcileFailed    = "Trigger" + eventingreconciler.ReconcileFailed
-	triggerReconciled         = "Trigger" + eventingreconciler.Reconciled
-	triggerUpdateStatusFailed = "Trigger" + eventingreconciler.UpdateStatusFailed
+	subscriberAPIVersion = "v1"
+	subscriberKind       = "Service"
+	subscriberName       = "subscriberName"
 )
 
 var (
@@ -62,11 +59,11 @@ var (
 
 	// Map of events to set test cases' expectations easier.
 	events = map[string]corev1.Event{
-		triggerReconciled:         {Reason: triggerReconciled, Type: corev1.EventTypeNormal},
-		triggerUpdateStatusFailed: {Reason: triggerUpdateStatusFailed, Type: corev1.EventTypeWarning},
-		triggerReconcileFailed:    {Reason: triggerReconcileFailed, Type: corev1.EventTypeWarning},
-		subscriptionDeleteFailed:  {Reason: subscriptionDeleteFailed, Type: corev1.EventTypeWarning},
-		subscriptionCreateFailed:  {Reason: subscriptionCreateFailed, Type: corev1.EventTypeWarning},
+		eventingreconciler.Reconciled:         {Reason: eventingreconciler.Reconciled, Type: corev1.EventTypeNormal},
+		eventingreconciler.UpdateStatusFailed: {Reason: eventingreconciler.UpdateStatusFailed, Type: corev1.EventTypeWarning},
+		eventingreconciler.ReconcileFailed:    {Reason: eventingreconciler.ReconcileFailed, Type: corev1.EventTypeWarning},
+		subscriptionDeleteFailed:              {Reason: subscriptionDeleteFailed, Type: corev1.EventTypeWarning},
+		subscriptionCreateFailed:              {Reason: subscriptionCreateFailed, Type: corev1.EventTypeWarning},
 	}
 )
 
@@ -163,7 +160,7 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeDeletingTrigger(),
 			},
-			WantEvent: []corev1.Event{events[triggerReconciled]},
+			WantEvent: []corev1.Event{events[eventingreconciler.Reconciled]},
 		},
 		{
 			Name:   "Get Broker error",
@@ -182,7 +179,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error getting broker",
-			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Get Broker channel error",
@@ -202,7 +199,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error getting broker's channel",
-			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Resolve subscriberURI error",
@@ -224,7 +221,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error resolving subscriber URI",
-			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Create K8s Service error",
@@ -248,7 +245,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error creating k8s service",
-			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Update K8s Service error",
@@ -273,7 +270,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error updating k8s service",
-			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Create Virtual Service error",
@@ -298,7 +295,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error creating virtual service",
-			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Update Virtual Service error",
@@ -324,7 +321,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error updating virtual service",
-			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Create Subscription error",
@@ -350,7 +347,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error creating subscription",
-			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Delete Subscription error",
@@ -377,7 +374,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error deleting subscription",
-			WantEvent:  []corev1.Event{events[subscriptionDeleteFailed], events[triggerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[subscriptionDeleteFailed], events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Re-create Subscription error",
@@ -404,7 +401,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error re-creating subscription",
-			WantEvent:  []corev1.Event{events[subscriptionCreateFailed], events[triggerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[subscriptionCreateFailed], events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Update status error",
@@ -431,7 +428,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error updating trigger status",
-			WantEvent:  []corev1.Event{events[triggerReconciled], events[triggerUpdateStatusFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.Reconciled], events[eventingreconciler.UpdateStatusFailed]},
 		},
 		{
 			Name:   "Trigger reconciliation success",
@@ -447,7 +444,7 @@ func TestReconcile(t *testing.T) {
 			Objects: []runtime.Object{
 				makeSubscriberServiceAsUnstructured(),
 			},
-			WantEvent: []corev1.Event{events[triggerReconciled]},
+			WantEvent: []corev1.Event{events[eventingreconciler.Reconciled]},
 			WantPresent: []runtime.Object{
 				makeReadyTrigger(),
 			},

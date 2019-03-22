@@ -22,7 +22,7 @@ import (
 
 const (
 	AddFinalizerFailed    = "AddFinalizerFailed"
-	RemoveFinalizerFailed = "UpdateFinalizerFailed"
+	RemoveFinalizerFailed = "RemoveFinalizerFailed"
 	Reconciled            = "Reconciled"
 	UpdateStatusFailed    = "UpdateStatusFailed"
 	ReconcileFailed       = "ReconcileFailed"
@@ -65,7 +65,7 @@ func EnableFinalizer(finalizerName string) option {
 		}
 		f, ok := r.EventingReconciler.(Finalizer)
 		if !ok {
-			return errors.New("EventingReconciler doesn't implement Finalizer")
+			return errors.New("EventingReconciler doesn't implement Finalizer interface")
 		}
 		r.finalizerName = finalizerName
 		r.finalizer = f
@@ -77,7 +77,7 @@ func EnableFilter() option {
 	return func(r *reconciler) error {
 		f, ok := r.EventingReconciler.(Filter)
 		if !ok {
-			return errors.New("EventingReconciler doesn't implement Filter")
+			return errors.New("EventingReconciler doesn't implement Filter interface")
 		}
 		r.filter = f
 		return nil
@@ -87,20 +87,6 @@ func EnableFilter() option {
 func ModifyRequest(rm RequestModifier) option {
 	return func(r *reconciler) error {
 		r.requestModifier = rm
-		return nil
-	}
-}
-
-func Logger(logger *zap.Logger) option {
-	return func(r *reconciler) error {
-		r.logger = logger
-		return nil
-	}
-}
-
-func Recorder(recorder record.EventRecorder) option {
-	return func(r *reconciler) error {
-		r.recorder = recorder
 		return nil
 	}
 }
@@ -205,19 +191,17 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	if !obj.GetDeletionTimestamp().IsZero() {
 		if r.finalizer != nil {
 			if err := r.finalizer.OnDelete(ctx, obj, r.recorder); err != nil {
-				logger.Error("Finalizer func failed.", zap.Error(err))
+				r.reportRemoveFinalizerFailed(ctx, obj, err)
 				return reconcile.Result{}, err
 			}
 		}
 		provisioners.RemoveFinalizer(obj, r.finalizerName)
 		if err := r.client.Update(ctx, obj); err != nil {
-			logger.Error("Reconcile failed while removing finalizer", zap.Any("FinalizerName", r.finalizerName), zap.Error(err))
-			reason := recObjTypeName + RemoveFinalizerFailed
-			r.recorder.Eventf(obj, corev1.EventTypeWarning, reason, "%s reconciliation failed: %s", recObjTypeName, err)
+			r.reportRemoveFinalizerFailed(ctx, obj, err)
 			return reconcile.Result{}, err
 		}
 		// Return as there is nothing else the the reconciler can do
-		r.reportObjectReconciled(obj, logger)
+		r.reportObjectReconciled(ctx, obj)
 		return reconcile.Result{}, nil
 	}
 
@@ -228,8 +212,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 			// returned updated obj with new ResourceVersion
 			if err := r.client.Update(ctx, obj); err != nil {
 				logger.Error("Reconcile failed while adding finalizer", zap.Any("FinalizerName", r.finalizerName), zap.Error(err))
-				eventFailedReason := recObjTypeName + AddFinalizerFailed
-				r.recorder.Eventf(obj, corev1.EventTypeWarning, eventFailedReason, "%s reconciliation failed: %s", recObjTypeName, err)
+				r.recorder.Eventf(obj, corev1.EventTypeWarning, AddFinalizerFailed, "Reconcile failed: %s", err)
 				return reconcile.Result{}, err
 			}
 		}
@@ -238,17 +221,15 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	updateStatus, result, err := r.ReconcileResource(ctx, obj, r.recorder)
 
 	if err != nil {
-		logger.Warn(fmt.Sprintf("Error reconciling %s", recObjTypeName), zap.Error(err))
-		reason := recObjTypeName + ReconcileFailed
-		r.recorder.Eventf(obj, corev1.EventTypeWarning, reason, "%s reconcile failed: %s", recObjTypeName, err)
+		logger.Warn(fmt.Sprintf("Error reconciling"), zap.Error(err))
+		r.recorder.Eventf(obj, corev1.EventTypeWarning, ReconcileFailed, "Reconcile failed: %s", err)
 	} else {
-		r.reportObjectReconciled(obj, logger)
+		r.reportObjectReconciled(ctx, obj)
 	}
 	if updateStatus {
 		if updataStatusErr := r.client.Status().Update(ctx, obj); updataStatusErr != nil {
 			logger.Error("Failed to update status.", zap.Error(updataStatusErr))
-			reason := recObjTypeName + UpdateStatusFailed
-			r.recorder.Eventf(obj, corev1.EventTypeWarning, reason, "Failed to update %s status: %s", recObjTypeName, updataStatusErr)
+			r.recorder.Eventf(obj, corev1.EventTypeWarning, UpdateStatusFailed, "Failed to update status: %s", updataStatusErr)
 			return reconcile.Result{}, updataStatusErr
 		}
 	}
@@ -256,9 +237,12 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	return result, err
 }
 
-func (r *reconciler) reportObjectReconciled(obj ReconciledResource, logger *zap.Logger) {
-	typeName := reflect.TypeOf(obj).Elem().Name()
-	logger.Debug("Reconciled.")
-	reason := typeName + Reconciled
-	r.recorder.Eventf(obj, corev1.EventTypeNormal, reason, "%s reconciled.", typeName)
+func (r *reconciler) reportObjectReconciled(ctx context.Context, obj ReconciledResource) {
+	logging.FromContext(ctx).Debug("Reconciled.")
+	r.recorder.Eventf(obj, corev1.EventTypeNormal, Reconciled, "Reconciled.")
+}
+
+func (r *reconciler) reportRemoveFinalizerFailed(ctx context.Context, obj ReconciledResource, err error) {
+	logging.FromContext(ctx).Error("Reconcile failed while removing finalizer", zap.Any("FinalizerName", r.finalizerName), zap.Error(err))
+	r.recorder.Eventf(obj, corev1.EventTypeWarning, RemoveFinalizerFailed, "Reconcile failed: %s", err)
 }

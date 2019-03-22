@@ -46,13 +46,10 @@ const (
 	testNS     = "test-namespace"
 	brokerName = "test-broker"
 
-	filterImage              = "filter-image"
-	filterSA                 = "filter-SA"
-	ingressImage             = "ingress-image"
-	ingressSA                = "ingress-SA"
-	brokerReconciled         = "Broker" + eventingreconciler.Reconciled
-	brokerUpdateStatusFailed = "Broker" + eventingreconciler.UpdateStatusFailed
-	brokerReconcileFailed    = "Broker" + eventingreconciler.ReconcileFailed
+	filterImage  = "filter-image"
+	filterSA     = "filter-SA"
+	ingressImage = "ingress-image"
+	ingressSA    = "ingress-SA"
 )
 
 var (
@@ -70,9 +67,9 @@ var (
 	// truncates to seconds to match the loss of precision during serialization.
 	deletionTime = metav1.Now().Rfc3339Copy()
 	events       = map[string]corev1.Event{
-		brokerReconciled:         {Reason: brokerReconciled, Type: corev1.EventTypeNormal},
-		brokerReconcileFailed:    {Reason: brokerReconcileFailed, Type: corev1.EventTypeWarning},
-		brokerUpdateStatusFailed: {Reason: brokerUpdateStatusFailed, Type: corev1.EventTypeWarning},
+		eventingreconciler.Reconciled:         {Reason: eventingreconciler.Reconciled, Type: corev1.EventTypeNormal},
+		eventingreconciler.ReconcileFailed:    {Reason: eventingreconciler.ReconcileFailed, Type: corev1.EventTypeWarning},
+		eventingreconciler.UpdateStatusFailed: {Reason: eventingreconciler.UpdateStatusFailed, Type: corev1.EventTypeWarning},
 	}
 )
 
@@ -143,7 +140,7 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeDeletingBroker(),
 			},
-			WantEvent: []corev1.Event{events[brokerReconciled]},
+			WantEvent: []corev1.Event{events[eventingreconciler.Reconciled]},
 		},
 		{
 			Name:   "Channel.List error",
@@ -162,7 +159,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error listing channels",
-			WantEvent:  []corev1.Event{events[brokerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Channel.Create error",
@@ -181,7 +178,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error creating Channel",
-			WantEvent:  []corev1.Event{events[brokerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Channel is different than expected",
@@ -197,7 +194,7 @@ func TestReconcile(t *testing.T) {
 				// GenerateName.
 				// makeDifferentChannel(),
 			},
-			WantEvent: []corev1.Event{events[brokerReconciled]},
+			WantEvent: []corev1.Event{events[eventingreconciler.Reconciled]},
 		},
 		{
 			Name:   "Channel is not yet Addressable",
@@ -207,7 +204,7 @@ func TestReconcile(t *testing.T) {
 				makeNonAddressableChannel(),
 			},
 			WantResult: reconcile.Result{RequeueAfter: time.Second},
-			WantEvent:  []corev1.Event{events[brokerReconciled]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.Reconciled]},
 		},
 		{
 			Name:   "Filter Deployment.Get error",
@@ -229,7 +226,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error getting filter Deployment",
-			WantEvent:  []corev1.Event{events[brokerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Filter Deployment.Create error",
@@ -251,7 +248,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error creating filter Deployment",
-			WantEvent:  []corev1.Event{events[brokerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Filter Deployment.Update error",
@@ -274,7 +271,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error updating filter Deployment",
-			WantEvent:  []corev1.Event{events[brokerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Filter Service.Get error",
@@ -296,7 +293,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error getting filter Service",
-			WantEvent:  []corev1.Event{events[brokerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Filter Service.Create error",
@@ -318,7 +315,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error creating filter Service",
-			WantEvent:  []corev1.Event{events[brokerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Filter Service.Update error",
@@ -341,7 +338,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error updating filter Service",
-			WantEvent:  []corev1.Event{events[brokerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Ingress Deployment.Get error",
@@ -363,7 +360,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error getting ingress Deployment",
-			WantEvent:  []corev1.Event{events[brokerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Ingress Deployment.Create error",
@@ -385,7 +382,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error creating ingress Deployment",
-			WantEvent:  []corev1.Event{events[brokerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Ingress Deployment.Update error",
@@ -408,7 +405,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error updating ingress Deployment",
-			WantEvent:  []corev1.Event{events[brokerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Ingress Service.Get error",
@@ -430,7 +427,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error getting ingress Service",
-			WantEvent:  []corev1.Event{events[brokerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Ingress Service.Create error",
@@ -452,7 +449,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error creating ingress Service",
-			WantEvent:  []corev1.Event{events[brokerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Ingress Service.Update error",
@@ -475,7 +472,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error updating ingress Service",
-			WantEvent:  []corev1.Event{events[brokerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Broker.Status.Update error",
@@ -495,7 +492,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error updating the Broker status",
-			WantEvent:  []corev1.Event{events[brokerReconciled], events[brokerUpdateStatusFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.Reconciled], events[eventingreconciler.UpdateStatusFailed]},
 		},
 		{
 			Name:   "Successful reconcile",
@@ -516,7 +513,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantEvent: []corev1.Event{
 				{
-					Reason: brokerReconciled, Type: corev1.EventTypeNormal,
+					Reason: eventingreconciler.Reconciled, Type: corev1.EventTypeNormal,
 				},
 			},
 		},

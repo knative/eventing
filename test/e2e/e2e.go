@@ -32,11 +32,11 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-
 	// Mysteriously required to support GCP auth (required by k8s libs).
 	// Apparently just importing it is enough. @_@ side effects @_@.
 	// https://github.com/kubernetes/client-go/issues/242
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 const (

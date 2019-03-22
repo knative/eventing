@@ -39,7 +39,6 @@ const (
 	clusterChannelProvisionerName = "kafka"
 	testNS                        = ""
 	otherTestNS                   = "testing"
-	ccpReconciled                 = "ClusterChannelProvisioner" + eventingreconciler.Reconciled
 )
 
 func init() {
@@ -55,7 +54,7 @@ var (
 	}
 	// map of events to set test cases' expectations easier
 	events = map[string]corev1.Event{
-		ccpReconciled: {Reason: ccpReconciled, Type: corev1.EventTypeNormal},
+		eventingreconciler.Reconciled: {Reason: eventingreconciler.Reconciled, Type: corev1.EventTypeNormal},
 	}
 )
 
@@ -84,7 +83,7 @@ var testCases = []controllertesting.TestCase{
 		},
 		IgnoreTimes: true,
 		WantEvent: []corev1.Event{
-			events[ccpReconciled],
+			events[eventingreconciler.Reconciled],
 		},
 	},
 	{
@@ -110,7 +109,7 @@ var testCases = []controllertesting.TestCase{
 		},
 		IgnoreTimes: true,
 		WantEvent: []corev1.Event{
-			events[ccpReconciled],
+			events[eventingreconciler.Reconciled],
 		},
 	},
 	{
@@ -143,7 +142,7 @@ var testCases = []controllertesting.TestCase{
 			GetNewChannelClusterChannelProvisionerDeleted(clusterChannelProvisionerName),
 		},
 		WantEvent: []corev1.Event{
-			events[ccpReconciled],
+			events[eventingreconciler.Reconciled],
 		},
 	},
 }

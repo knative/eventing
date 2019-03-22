@@ -42,7 +42,6 @@ const (
 	clusterChannelProvisionerName = "natss"
 	testNS                        = ""
 	otherTestNS                   = "testing"
-	ccpReconciled                 = "ClusterChannelProvisioner" + eventingreconciler.Reconciled
 )
 
 func init() {
@@ -53,7 +52,7 @@ func init() {
 var (
 	truePointer = true
 	events      = map[string]corev1.Event{
-		ccpReconciled: {Reason: ccpReconciled, Type: corev1.EventTypeNormal},
+		eventingreconciler.Reconciled: {Reason: eventingreconciler.Reconciled, Type: corev1.EventTypeNormal},
 	}
 )
 
@@ -82,7 +81,7 @@ var testCases = []controllertesting.TestCase{
 		},
 		IgnoreTimes: true,
 		WantEvent: []corev1.Event{
-			events[ccpReconciled],
+			events[eventingreconciler.Reconciled],
 		},
 	},
 	{
@@ -108,7 +107,7 @@ var testCases = []controllertesting.TestCase{
 		},
 		IgnoreTimes: true,
 		WantEvent: []corev1.Event{
-			events[ccpReconciled],
+			events[eventingreconciler.Reconciled],
 		},
 	},
 	{
@@ -141,7 +140,7 @@ var testCases = []controllertesting.TestCase{
 			makeDeletedClusterChannelProvisioner(),
 		},
 		WantEvent: []corev1.Event{
-			events[ccpReconciled],
+			events[eventingreconciler.Reconciled],
 		},
 	},
 	{
@@ -155,7 +154,7 @@ var testCases = []controllertesting.TestCase{
 			makeReadyClusterChannelProvisioner(),
 		},
 		WantEvent: []corev1.Event{
-			events[ccpReconciled],
+			events[eventingreconciler.Reconciled],
 		},
 	},
 	{
@@ -169,7 +168,7 @@ var testCases = []controllertesting.TestCase{
 			makeK8sService(),
 		},
 		WantEvent: []corev1.Event{
-			events[ccpReconciled],
+			events[eventingreconciler.Reconciled],
 		},
 	},
 }

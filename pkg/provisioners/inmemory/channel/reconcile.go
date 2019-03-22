@@ -43,8 +43,6 @@ import (
 const (
 	finalizerName = controllerAgentName
 	// Name of the corev1.Events emitted from the reconciliation process
-	channelReconciled          = "ChannelReconciled"
-	channelUpdateStatusFailed  = "ChannelUpdateStatusFailed"
 	channelConfigSyncFailed    = "ChannelConfigSyncFailed"
 	k8sServiceCreateFailed     = "K8sServiceCreateFailed"
 	virtualServiceCreateFailed = "VirtualServiceCreateFailed"

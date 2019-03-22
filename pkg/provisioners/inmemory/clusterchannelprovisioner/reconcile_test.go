@@ -41,13 +41,10 @@ import (
 )
 
 const (
-	ccpUID                = "test-uid"
-	testErrorMessage      = "test-induced-error"
-	testNS                = "test-ns"
-	Name                  = "in-memory-channel"
-	ccpReconciled         = "ClusterChannelProvisioner" + eventingreconciler.Reconciled
-	ccpUpdateStatusFailed = "ClusterChannelProvisioner" + eventingreconciler.UpdateStatusFailed
-	ccpReconcileFailed    = "ClusterChannelProvisioner" + eventingreconciler.ReconcileFailed
+	ccpUID           = "test-uid"
+	testErrorMessage = "test-induced-error"
+	testNS           = "test-ns"
+	Name             = "in-memory-channel"
 )
 
 var (
@@ -59,11 +56,11 @@ var (
 
 	// map of events to set test cases' expectations easier
 	events = map[string]corev1.Event{
-		ccpReconciled:          {Reason: ccpReconciled, Type: corev1.EventTypeNormal},
-		ccpReconcileFailed:     {Reason: ccpReconcileFailed, Type: corev1.EventTypeWarning},
-		ccpUpdateStatusFailed:  {Reason: ccpUpdateStatusFailed, Type: corev1.EventTypeWarning},
-		k8sServiceCreateFailed: {Reason: k8sServiceCreateFailed, Type: corev1.EventTypeWarning},
-		k8sServiceDeleteFailed: {Reason: k8sServiceDeleteFailed, Type: corev1.EventTypeWarning},
+		eventingreconciler.Reconciled:         {Reason: eventingreconciler.Reconciled, Type: corev1.EventTypeNormal},
+		eventingreconciler.ReconcileFailed:    {Reason: eventingreconciler.ReconcileFailed, Type: corev1.EventTypeWarning},
+		eventingreconciler.UpdateStatusFailed: {Reason: eventingreconciler.UpdateStatusFailed, Type: corev1.EventTypeWarning},
+		k8sServiceCreateFailed:                {Reason: k8sServiceCreateFailed, Type: corev1.EventTypeWarning},
+		k8sServiceDeleteFailed:                {Reason: k8sServiceDeleteFailed, Type: corev1.EventTypeWarning},
 	}
 )
 
@@ -171,7 +168,7 @@ func TestReconcile(t *testing.T) {
 				makeDeletingClusterChannelProvisioner(),
 			},
 			WantEvent: []corev1.Event{
-				events[ccpReconciled],
+				events[eventingreconciler.Reconciled],
 			},
 		},
 		{
@@ -187,7 +184,7 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[k8sServiceCreateFailed],
-				events[ccpReconcileFailed],
+				events[eventingreconciler.ReconcileFailed],
 			},
 		},
 		{
@@ -200,7 +197,7 @@ func TestReconcile(t *testing.T) {
 				makeReadyClusterChannelProvisioner(),
 			},
 			WantEvent: []corev1.Event{
-				events[ccpReconciled],
+				events[eventingreconciler.Reconciled],
 			},
 		},
 		{
@@ -217,7 +214,7 @@ func TestReconcile(t *testing.T) {
 				makeOldK8sService(),
 			},
 			WantEvent: []corev1.Event{
-				events[ccpReconciled],
+				events[eventingreconciler.Reconciled],
 			},
 		},
 		{
@@ -230,7 +227,7 @@ func TestReconcile(t *testing.T) {
 				makeReadyClusterChannelProvisioner(),
 			},
 			WantEvent: []corev1.Event{
-				events[ccpReconciled],
+				events[eventingreconciler.Reconciled],
 			},
 		},
 		{
@@ -243,7 +240,7 @@ func TestReconcile(t *testing.T) {
 				makeK8sService(),
 			},
 			WantEvent: []corev1.Event{
-				events[ccpReconciled],
+				events[eventingreconciler.Reconciled],
 			},
 		},
 		{
@@ -257,7 +254,7 @@ func TestReconcile(t *testing.T) {
 			},
 			ReconcileKey: fmt.Sprintf("%s/%s", testNS, Name),
 			WantEvent: []corev1.Event{
-				events[ccpReconciled],
+				events[eventingreconciler.Reconciled],
 			},
 		},
 		{
@@ -274,7 +271,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
-				events[ccpReconciled], events[ccpUpdateStatusFailed],
+				events[eventingreconciler.Reconciled], events[eventingreconciler.UpdateStatusFailed],
 			},
 		},
 	}
