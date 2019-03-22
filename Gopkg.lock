@@ -360,18 +360,17 @@
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
 [[projects]]
-  digest = "1:345bbba667abadd6263391c915251ede8d9fa6f6852839c60bb6738b6122b89c"
+  digest = "1:0836bde83bdc49aae7710e22d04e2555d9bd25cd133fbb78508c492307081aea"
   name = "github.com/knative/build"
   packages = [
     "pkg/apis/build",
     "pkg/apis/build/v1alpha1",
   ]
   pruneopts = "NUT"
-  revision = "94859753e2c6724df2be86f6a254f810895fa3eb"
-  version = "v0.2.0"
+  revision = "dd3ceb3323922b899a0a913f885fcf59943e7b59"
 
 [[projects]]
-  digest = "1:c89991e8c688df2188caa7ef2a3c7ddbc78dd5e73ca4ac08477e0e2d3d7cdb10"
+  digest = "1:a5df88e05f523f7b7a16b4a9c44508c91605be6fa647dab8a9674022ad5fca1c"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -397,10 +396,10 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "915415e7be67bf8fb05249fe3f1bad25fcaf7f50"
+  revision = "60fdcbcabd2faeb34328d8b2725dc76c59189453"
 
 [[projects]]
-  digest = "1:7d2f7e373d3265017ff21f605e7ad4aa710adc2698eadcc317b30d4f9c2c4ab3"
+  digest = "1:edcf99e561b63d758646ca9d9dee0f6c81c3eed617af1120645c9d5c0d80d8c7"
   name = "github.com/knative/serving"
   packages = [
     "pkg/apis/autoscaling",
@@ -416,8 +415,7 @@
     "pkg/client/clientset/versioned/typed/serving/v1alpha1",
   ]
   pruneopts = "NUT"
-  revision = "4913b81a4305b174ed07c54298be6ddeb3dd874e"
-  version = "v0.4.1"
+  revision = "9a44df0e64edcb943c7edfe2d3eac2be41aa2316"
 
 [[projects]]
   branch = "master"
@@ -1265,6 +1263,7 @@
     "github.com/fsnotify/fsnotify",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
+    "github.com/knative/build/pkg/apis/build/v1alpha1",
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
     "github.com/knative/pkg/apis/duck/v1alpha1",

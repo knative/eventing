@@ -16,11 +16,13 @@ limitations under the License.
 
 package v1alpha1
 
-func (t *Trigger) SetDefaults() {
-	t.Spec.SetDefaults()
+import "context"
+
+func (t *Trigger) SetDefaults(ctx context.Context) {
+	t.Spec.SetDefaults(ctx)
 }
 
-func (ts *TriggerSpec) SetDefaults() {
+func (ts *TriggerSpec) SetDefaults(ctx context.Context) {
 	if ts.Broker == "" {
 		ts.Broker = "default"
 	}

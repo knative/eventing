@@ -44,17 +44,17 @@ type Receiver struct {
 	logger   *zap.Logger
 	client   client.Client
 	ceClient ceclient.Client
-	ceHttp   *cehttp.Transport
+	ceHTTP   *cehttp.Transport
 }
 
 // New creates a new Receiver and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned MessageReceiver.
 func New(logger *zap.Logger, client client.Client) (*Receiver, error) {
-	ceHttp, err := cehttp.New(cehttp.WithBinaryEncoding(), cehttp.WithPort(defaultPort))
+	ceHTTP, err := cehttp.New(cehttp.WithBinaryEncoding(), cehttp.WithPort(defaultPort))
 	if err != nil {
 		return nil, err
 	}
-	ceClient, err := ceclient.New(ceHttp)
+	ceClient, err := ceclient.New(ceHTTP)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func New(logger *zap.Logger, client client.Client) (*Receiver, error) {
 		logger:   logger,
 		client:   client,
 		ceClient: ceClient,
-		ceHttp:   ceHttp,
+		ceHTTP:   ceHTTP,
 	}
 	err = r.initClient()
 	if err != nil {
@@ -94,7 +94,7 @@ func (r *Receiver) initClient() error {
 // This method will block until a message is received on the stop channel.
 func (r *Receiver) Start(stopCh <-chan struct{}) error {
 	ctx, cancel := context.WithCancel(context.Background())
-	defer ctx.Done()
+	defer cancel()
 
 	errCh := make(chan error, 1)
 	go func() {
@@ -182,7 +182,7 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cehttp.TransportContext, 
 	}
 
 	sendingCTX := SendingContext(ctx, tctx, subscriberURI)
-	return r.ceHttp.Send(sendingCTX, *event)
+	return r.ceHTTP.Send(sendingCTX, *event)
 }
 
 func (r *Receiver) getTrigger(ctx context.Context, ref provisioners.ChannelReference) (*eventingv1alpha1.Trigger, error) {
