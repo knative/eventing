@@ -25,6 +25,9 @@ For more details, see [Interface Contracts](interfaces.md).
 
 ![Broker Trigger Overview](images/broker-trigger-overview.svg)
 
+The above diagram shows a _Broker_ ingesting events and delivering to a
+_Service_ only when the _Trigger_ filter matches.
+
 - A **Subscription** describes the transformation of an event and optional
   forwarding of a returned event.
 
