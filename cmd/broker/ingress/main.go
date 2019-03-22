@@ -25,7 +25,6 @@ import (
 	"net/url"
 	"os"
 	"reflect"
-	"strconv"
 	"time"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
@@ -199,19 +198,10 @@ func (h *handler) getTTLToSet(event *cloudevents.Event) int {
 		h.logger.Debug("No TTL found, defaulting")
 		return defaultTTL
 	}
-	if ttl, ok := ttlInterface.(float64); ok {
-		return int(ttl) - 1
-	}
-	ttlString, ok := ttlInterface.(string)
+	// This should be a JSON number, which json.Unmarshalls as a float64.
+	ttl, ok := ttlInterface.(float64)
 	if !ok {
-		h.logger.Info("TTL attribute wasn't a string, defaulting", zap.Any("ttlInterface", ttlInterface), zap.Any("typeOfTtlInterface", reflect.TypeOf(ttlInterface)))
-		return defaultTTL
+		h.logger.Info("TTL attribute wasn't a float64, defaulting", zap.Any("ttlInterface", ttlInterface), zap.Any("typeOf(ttlInterface)", reflect.TypeOf(ttlInterface)))
 	}
-	ttl, err := strconv.Atoi(ttlString)
-	if err != nil {
-		// Treat a parsing failure as if it isn't present.
-		h.logger.Info("TTL parse failure", zap.String("ttlString", ttlString), zap.Error(err))
-		return defaultTTL
-	}
-	return ttl - 1
+	return int(ttl) - 1
 }
