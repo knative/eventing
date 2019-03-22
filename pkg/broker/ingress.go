@@ -38,9 +38,6 @@ const (
 	allowAny             = "allow_any"
 	allowRegisteredTypes = "allow_registered"
 	autoCreate           = "auto_create"
-
-	// Label to get the event types for a particular Broker.
-	eventingEventTypeBrokerLabelKey = "eventing.knative.dev/eventtype-broker"
 )
 
 var (
@@ -165,7 +162,7 @@ func makeEventType(event *cloudevents.Event, namespace, broker string) *eventing
 	cloudEventType := event.Type()
 	return &eventingv1alpha1.EventType{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-", toValidIdentifier(cloudEventType)),
+			GenerateName: fmt.Sprintf("%s-", toDNS1123Subdomain(cloudEventType)),
 			Namespace:    namespace,
 		},
 		Spec: eventingv1alpha1.EventTypeSpec{
@@ -177,12 +174,17 @@ func makeEventType(event *cloudevents.Event, namespace, broker string) *eventing
 	}
 }
 
-func toValidIdentifier(cloudEventType string) string {
-	// If it is not a valid DNS1123 name, make it a valid one.
+func toDNS1123Subdomain(cloudEventType string) string {
+	// If it is not a valid DNS1123 subdomain, make it a valid one.
 	if msgs := validation.IsDNS1123Subdomain(cloudEventType); len(msgs) != 0 {
-		// TODO take care of size < 63, and starting and end indexes should be alphanumeric.
+		// If the length exceeds the max, cut it and leave some room for the generated UUID.
+		if len(cloudEventType) > validation.DNS1123SubdomainMaxLength {
+			cloudEventType = cloudEventType[:validation.DNS1123SubdomainMaxLength-10]
+		}
 		cloudEventType = strings.ToLower(cloudEventType)
 		cloudEventType = validChars.ReplaceAllString(cloudEventType, "")
+		// Only start/end with alphanumeric.
+		cloudEventType = strings.Trim(cloudEventType, "-.")
 	}
 	return cloudEventType
 }
