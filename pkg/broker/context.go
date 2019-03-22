@@ -18,6 +18,7 @@ package broker
 
 import (
 	"context"
+	"net/http"
 	"net/url"
 	"strings"
 
@@ -47,26 +48,31 @@ var (
 func SendingContext(ctx context.Context, tctx cehttp.TransportContext, targetURI *url.URL) context.Context {
 	sendingCTX := cecontext.WithTarget(ctx, targetURI.String())
 
-	// Helper function that adds the header name and all its values.
-	addHeader := func(c context.Context, n string, v []string) context.Context {
+	h := extractPassThroughHeaders(tctx)
+	for n, v := range h {
 		for _, iv := range v {
-			c = cehttp.ContextWithHeader(c, n, iv)
+			sendingCTX = cehttp.ContextWithHeader(sendingCTX, n, iv)
 		}
-		return c
 	}
+
+	return sendingCTX
+}
+
+func extractPassThroughHeaders(tctx cehttp.TransportContext) http.Header {
+	h := http.Header{}
 
 	for n, v := range tctx.Header {
 		lower := strings.ToLower(n)
 		if forwardHeaders.Has(lower) {
-			sendingCTX = addHeader(sendingCTX, n, v)
+			h[n] = v
 			continue
 		}
 		for _, prefix := range forwardPrefixes {
 			if strings.HasPrefix(lower, prefix) {
-				sendingCTX = addHeader(sendingCTX, n, v)
+				h[n] = v
 				break
 			}
 		}
 	}
-	return sendingCTX
+	return h
 }

@@ -7,10 +7,13 @@ import (
 )
 
 var (
-	LatencyMs = stats.Float64("client/latency", "The latency in milliseconds for the CloudEvents client methods.", "ms")
+	// LatencyMs measures the latency in milliseconds for the CloudEvents
+	// client methods.
+	LatencyMs = stats.Float64("cloudevents.io/sdk-go/client/latency", "The latency in milliseconds for the CloudEvents client methods.", "ms")
 )
 
 var (
+	// LatencyView is an OpenCensus view that shows client method latency.
 	LatencyView = &view.View{
 		Name:        "client/latency",
 		Measure:     LatencyMs,
@@ -20,40 +23,46 @@ var (
 	}
 )
 
-type Observed int32
+type observed int32
+
+// Adheres to Observable
+var _ observability.Observable = observed(0)
 
 const (
-	ReportSend Observed = iota
-	ReportReceive
-	ReportReceiveFn
+	reportSend observed = iota
+	reportReceive
+	reportReceiveFn
 )
 
-func (o Observed) TraceName() string {
+// TraceName implements Observable.TraceName
+func (o observed) TraceName() string {
 	switch o {
-	case ReportSend:
+	case reportSend:
 		return "client/send"
-	case ReportReceive:
+	case reportReceive:
 		return "client/receive"
-	case ReportReceiveFn:
+	case reportReceiveFn:
 		return "client/receive/fn"
 	default:
 		return "client/unknown"
 	}
 }
 
-func (o Observed) MethodName() string {
+// MethodName implements Observable.MethodName
+func (o observed) MethodName() string {
 	switch o {
-	case ReportSend:
+	case reportSend:
 		return "send"
-	case ReportReceive:
+	case reportReceive:
 		return "receive"
-	case ReportReceiveFn:
+	case reportReceiveFn:
 		return "receive/fn"
 	default:
 		return "unknown"
 	}
 }
 
-func (o Observed) LatencyMs() *stats.Float64Measure {
+// LatencyMs implements Observable.LatencyMs
+func (o observed) LatencyMs() *stats.Float64Measure {
 	return LatencyMs
 }

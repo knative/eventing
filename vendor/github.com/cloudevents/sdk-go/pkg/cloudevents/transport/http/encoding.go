@@ -1,19 +1,30 @@
 package http
 
+// Encoding to use for HTTP transport.
 type Encoding int32
 
 const (
+	// Default
 	Default Encoding = iota
+	// BinaryV01 is Binary CloudEvents spec v0.1.
 	BinaryV01
+	// StructuredV01 is Structured CloudEvents spec v0.1.
 	StructuredV01
+	// BinaryV02 is Binary CloudEvents spec v0.2.
 	BinaryV02
+	// StructuredV02 is Structured CloudEvents spec v0.2.
 	StructuredV02
+	// BinaryV03 is Binary CloudEvents spec v0.3.
 	BinaryV03
+	// StructuredV03 is Structured CloudEvents spec v0.3.
 	StructuredV03
+	// BatchedV03 is Batched CloudEvents spec v0.3.
 	BatchedV03
+	// Unknown is unknown.
 	Unknown
 )
 
+// String pretty-prints the encoding as a string.
 func (e Encoding) String() string {
 	switch e {
 	case Default:
@@ -44,6 +55,7 @@ func (e Encoding) String() string {
 	}
 }
 
+// Version pretty-prints the encoding version as a string.
 func (e Encoding) Version() string {
 	switch e {
 	case Default:
@@ -75,6 +87,7 @@ func (e Encoding) Version() string {
 	}
 }
 
+// Codec creates a structured string to represent the the codec version.
 func (e Encoding) Codec() string {
 	switch e {
 	case Default:

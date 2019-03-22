@@ -20,7 +20,7 @@ import (
 
 type EncodingSelector func(e cloudevents.Event) Encoding
 
-// type check that this transport message impl matches the contract
+// Transport adheres to transport.Transport.
 var _ transport.Transport = (*Transport)(nil)
 
 const (
@@ -30,7 +30,9 @@ const (
 
 // Transport acts as both a http client and a http handler.
 type Transport struct {
-	Encoding                   Encoding
+	// The encoding used to select the codec for outbound events.
+	Encoding Encoding
+	// DefaultEncodingSelectionFn allows for other encoding selection strategies to be injected.
 	DefaultEncodingSelectionFn EncodingSelector
 
 	// ShutdownTimeout defines the timeout given to the http.Server when calling Shutdown.
@@ -38,14 +40,27 @@ type Transport struct {
 	ShutdownTimeout *time.Duration
 
 	// Sending
+
+	// Client is the http client that will be used to send requests.
+	// If nil, the Transport will create a one.
 	Client *http.Client
-	Req    *http.Request
+	// Req is the base http request that is used for http.Do.
+	// Only .Method, .URL, and .Header is considered.
+	// If not set, Req.Method defaults to POST.
+	// Req.URL or context.WithTarget(url) are required for sending.
+	Req *http.Request
 
 	// Receiving
+
+	// Receiver is invoked target for incoming events.
 	Receiver transport.Receiver
-	Port     *int   // if nil, default 8080
-	Path     string // if "", default "/"
-	Handler  *http.ServeMux
+	// Port is the port to bind the receiver to. Defaults to 8080.
+	Port *int
+	// Path is the path to bind the receiver to. Defaults to "/".
+	Path string
+	// Handler is the handler the http Server will use. Use this to reuse the
+	// http server. If nil, the Transport will create a one.
+	Handler *http.ServeMux
 
 	realPort          int
 	server            *http.Server
@@ -104,8 +119,9 @@ func copyHeaders(from, to http.Header) {
 	}
 }
 
+// Send implements Transport.Send
 func (t *Transport) Send(ctx context.Context, event cloudevents.Event) (*cloudevents.Event, error) {
-	ctx, r := observability.NewReporter(ctx, ReportSend)
+	ctx, r := observability.NewReporter(ctx, reportSend)
 	resp, err := t.obsSend(ctx, event)
 	if err != nil {
 		r.Error()
@@ -150,7 +166,7 @@ func (t *Transport) obsSend(ctx context.Context, event cloudevents.Event) (*clou
 		req.Body = ioutil.NopCloser(bytes.NewBuffer(m.Body))
 		req.ContentLength = int64(len(m.Body))
 		req.Close = true
-		return httpDo(ctx, &req, func(resp *http.Response, err error) (*cloudevents.Event, error) {
+		return httpDo(ctx, t.Client, &req, func(resp *http.Response, err error) (*cloudevents.Event, error) {
 			if err != nil {
 				return nil, err
 			}
@@ -182,10 +198,13 @@ func (t *Transport) obsSend(ctx context.Context, event cloudevents.Event) (*clou
 	return nil, fmt.Errorf("failed to encode Event into a Message")
 }
 
+// SetReceiver implements Transport.SetReceiver
 func (t *Transport) SetReceiver(r transport.Receiver) {
 	t.Receiver = r
 }
 
+// StartReceiver implements Transport.StartReceiver
+// NOTE: This is a blocking call.
 func (t *Transport) StartReceiver(ctx context.Context) error {
 	t.reMu.Lock()
 	defer t.reMu.Unlock()
@@ -244,12 +263,12 @@ type eventError struct {
 	err   error
 }
 
-func httpDo(ctx context.Context, req *http.Request, fn func(*http.Response, error) (*cloudevents.Event, error)) (*cloudevents.Event, error) {
+func httpDo(ctx context.Context, client *http.Client, req *http.Request, fn func(*http.Response, error) (*cloudevents.Event, error)) (*cloudevents.Event, error) {
 	// Run the HTTP request in a goroutine and pass the response to fn.
 	c := make(chan eventError, 1)
 	req = req.WithContext(ctx)
 	go func() {
-		event, err := fn(http.DefaultClient.Do(req))
+		event, err := fn(client.Do(req))
 		c <- eventError{event: event, err: err}
 	}()
 	select {
@@ -280,7 +299,7 @@ func status(resp *http.Response) string {
 }
 
 func (t *Transport) invokeReceiver(ctx context.Context, event cloudevents.Event) (*Response, error) {
-	ctx, r := observability.NewReporter(ctx, ReportReceive)
+	ctx, r := observability.NewReporter(ctx, reportReceive)
 	resp, err := t.obsInvokeReceiver(ctx, event)
 	if err != nil {
 		r.Error()
@@ -316,6 +335,19 @@ func (t *Transport) obsInvokeReceiver(ctx context.Context, event cloudevents.Eve
 				resp.StatusCode = http.StatusInternalServerError
 				return &resp, err
 			}
+			// Look for a transport response context
+			var trx *TransportResponseContext
+			if ptrTrx, ok := eventResp.Context.(*TransportResponseContext); ok {
+				// found a *TransportResponseContext, use it.
+				trx = ptrTrx
+			} else if realTrx, ok := eventResp.Context.(TransportResponseContext); ok {
+				// found a TransportResponseContext, make it a pointer.
+				trx = &realTrx
+			}
+			// If we found a TransportResponseContext, use it.
+			if trx != nil && trx.Header != nil && len(trx.Header) > 0 {
+				copyHeaders(trx.Header, resp.Header)
+			}
 		}
 
 		if eventResp.Status != 0 {
@@ -330,7 +362,7 @@ func (t *Transport) obsInvokeReceiver(ctx context.Context, event cloudevents.Eve
 
 // ServeHTTP implements http.Handler
 func (t *Transport) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	ctx, r := observability.NewReporter(req.Context(), ReportServeHTTP)
+	ctx, r := observability.NewReporter(req.Context(), reportServeHTTP)
 
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
@@ -374,12 +406,11 @@ func (t *Transport) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if resp != nil {
+		if t.Req != nil {
+			copyHeaders(t.Req.Header, w.Header())
+		}
 		if len(resp.Header) > 0 {
-			for k, vs := range resp.Header {
-				for _, v := range vs {
-					w.Header().Set(k, v)
-				}
-			}
+			copyHeaders(resp.Header, w.Header())
 		}
 		status := http.StatusAccepted
 		if resp.StatusCode >= 200 && resp.StatusCode < 600 {
@@ -401,6 +432,9 @@ func (t *Transport) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	r.OK()
 }
 
+// GetPort returns the port the transport is active on.
+// .Port can be set to 0, which means the transport selects a port, GetPort
+// allows the transport to report back the selected port.
 func (t *Transport) GetPort() int {
 	if t.Port != nil && *t.Port == 0 && t.realPort != 0 {
 		return t.realPort
@@ -412,6 +446,10 @@ func (t *Transport) GetPort() int {
 	return 8080 // default
 }
 
+// GetPath returns the path the transport is hosted on. If the path is '/',
+// the transport will handle requests on any URI. To discover the true path
+// a request was received on, inspect the context from Receive(cxt, ...) with
+// TransportContextFrom(ctx).
 func (t *Transport) GetPath() string {
 	path := strings.TrimSpace(t.Path)
 	if len(path) > 0 {
