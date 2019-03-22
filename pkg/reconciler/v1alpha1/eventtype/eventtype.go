@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
@@ -78,8 +79,52 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 		return nil, err
 	}
 
-	// TODO watch for broker changes
+	// Watch for Broker changes. E.g. if the Broker is deleted, we need to reconcile its EventTypes again.
+	if err = c.Watch(&source.Kind{Type: &v1alpha1.Broker{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: &mapBrokerToEventTypes{r: r}}); err != nil {
+		return nil, err
+	}
+
 	return c, nil
+}
+
+// mapBrokerToEventTypes maps Broker changes to all the EventTypes that correspond to that Broker.
+type mapBrokerToEventTypes struct {
+	r *reconciler
+}
+
+func (b *mapBrokerToEventTypes) Map(o handler.MapObject) []reconcile.Request {
+	ctx := context.Background()
+	eventTypes := make([]reconcile.Request, 0)
+
+	opts := &client.ListOptions{
+		Namespace: o.Meta.GetNamespace(),
+		// Set Raw because if we need to get more than one page, then we will put the continue token
+		// into opts.Raw.Continue.
+		Raw: &metav1.ListOptions{},
+	}
+	for {
+		etl := &v1alpha1.EventTypeList{}
+		if err := b.r.client.List(ctx, opts, etl); err != nil {
+			b.r.logger.Error("Error listing EventTypes when Broker changed. Some EventTypes may not be reconciled.", zap.Error(err), zap.Any("broker", o))
+			return eventTypes
+		}
+
+		for _, et := range etl.Items {
+			if et.Spec.Broker == o.Meta.GetName() {
+				eventTypes = append(eventTypes, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: et.Namespace,
+						Name:      et.Name,
+					},
+				})
+			}
+		}
+		if etl.Continue != "" {
+			opts.Raw.Continue = etl.Continue
+		} else {
+			return eventTypes
+		}
+	}
 }
 
 func (r *reconciler) InjectClient(c client.Client) error {
