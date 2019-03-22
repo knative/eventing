@@ -2,7 +2,7 @@ package types
 
 import "reflect"
 
-// Allocates allocates a new instance of type t and returns:
+// Allocate allocates a new instance of type t and returns:
 // asPtr is of type t if t is a pointer type and of type &t otherwise
 // asValue is a Value of type t pointing to the same data as asPtr
 func Allocate(obj interface{}) (asPtr interface{}, asValue reflect.Value) {

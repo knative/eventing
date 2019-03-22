@@ -170,9 +170,9 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
 	responseEvent.Context = SetTTL(responseEvent.Context, ttl)
 	resp.Event = responseEvent
-
-	// TODO Add filtered headers (mostly tracing) to the response. We are waiting for CloudEvents
-	// SDK to allow this.
+	resp.Context = &cehttp.TransportResponseContext{
+		Header: extractPassThroughHeaders(tctx),
+	}
 
 	return nil
 }

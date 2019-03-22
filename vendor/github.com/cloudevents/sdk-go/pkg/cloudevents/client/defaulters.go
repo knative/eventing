@@ -7,8 +7,12 @@ import (
 	"time"
 )
 
+// EventDefaulter is the function signature for extensions that are able
+// to perform event defaulting.
 type EventDefaulter func(event cloudevents.Event) cloudevents.Event
 
+// DefaultIDToUUIDIfNotSet will inspect the provided event and assign a UUID to
+// context.ID if it is found to be empty.
 func DefaultIDToUUIDIfNotSet(event cloudevents.Event) cloudevents.Event {
 	if event.Context != nil {
 		switch event.Context.GetSpecVersion() {
@@ -35,6 +39,8 @@ func DefaultIDToUUIDIfNotSet(event cloudevents.Event) cloudevents.Event {
 	return event
 }
 
+// DefaultTimeToNowIfNotSet will inspect the provided event and assign a new
+// Timestamp to context.Time if it is found to be nil or zero.
 func DefaultTimeToNowIfNotSet(event cloudevents.Event) cloudevents.Event {
 	if event.Context != nil {
 		switch event.Context.GetSpecVersion() {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 )
 
+// Option is the function signature required to be considered an client.Option.
 type Option func(*ceClient) error
 
 // WithEventDefaulter adds an event defaulter to the end of the defaulter chain.

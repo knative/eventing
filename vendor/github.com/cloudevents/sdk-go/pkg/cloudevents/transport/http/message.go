@@ -9,17 +9,21 @@ import (
 // type check that this transport message impl matches the contract
 var _ transport.Message = (*Message)(nil)
 
+// Message is an http transport message.
 type Message struct {
 	Header http.Header
 	Body   []byte
 }
 
+// Response is an http transport response.
 type Response struct {
 	StatusCode int
 	Header     http.Header
 	Body       []byte
 }
 
+// CloudEventsVersion inspects a message and tries to discover and return the
+// CloudEvents spec version.
 func (m Message) CloudEventsVersion() string {
 
 	// TODO: the impl of this method needs to move into the codec.
