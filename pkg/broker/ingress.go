@@ -22,8 +22,6 @@ import (
 	"regexp"
 	"strings"
 
-	"k8s.io/apimachinery/pkg/labels"
-
 	"go.uber.org/zap"
 
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -132,8 +130,7 @@ func (p *AutoCreate) AllowEvent(event *cloudevents.Event) bool {
 
 func getEventType(c client.Client, event *cloudevents.Event, namespace, broker string) (*eventingv1alpha1.EventType, error) {
 	opts := &client.ListOptions{
-		Namespace:     namespace,
-		LabelSelector: labels.SelectorFromSet(eventTypeLabels(broker)),
+		Namespace: namespace,
 		// Set Raw because if we need to get more than one page, then we will put the continue token
 		// into opts.Raw.Continue.
 		Raw: &metav1.ListOptions{},
@@ -142,20 +139,21 @@ func getEventType(c client.Client, event *cloudevents.Event, namespace, broker s
 	ctx := context.TODO()
 
 	for {
-		el := &eventingv1alpha1.EventTypeList{}
-		err := c.List(ctx, opts, el)
+		etl := &eventingv1alpha1.EventTypeList{}
+		err := c.List(ctx, opts, etl)
 		if err != nil {
 			return nil, err
 		}
-		for _, e := range el.Items {
-			// TODO what about source?
-			if e.Spec.Type == event.Type() && e.Spec.Schema == event.SchemaURL() {
-				return &e, nil
+		for _, et := range etl.Items {
+			if et.Spec.Broker == broker {
+				// TODO what about source.
+				if et.Spec.Type == event.Type() && et.Spec.Schema == event.SchemaURL() {
+					return &et, nil
+				}
 			}
-
 		}
-		if el.Continue != "" {
-			opts.Raw.Continue = el.Continue
+		if etl.Continue != "" {
+			opts.Raw.Continue = etl.Continue
 		} else {
 			return nil, notFound
 		}
@@ -169,7 +167,6 @@ func makeEventType(event *cloudevents.Event, namespace, broker string) *eventing
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-", toValidIdentifier(cloudEventType)),
 			Namespace:    namespace,
-			Labels:       eventTypeLabels(broker),
 		},
 		Spec: eventingv1alpha1.EventTypeSpec{
 			Type:   cloudEventType,
@@ -180,19 +177,12 @@ func makeEventType(event *cloudevents.Event, namespace, broker string) *eventing
 	}
 }
 
-// TODO some utility to also be used from eventing-sources.
 func toValidIdentifier(cloudEventType string) string {
+	// If it is not a valid DNS1123 name, make it a valid one.
 	if msgs := validation.IsDNS1123Subdomain(cloudEventType); len(msgs) != 0 {
-		// If it is not a valid DNS1123 name, make it a valid one.
 		// TODO take care of size < 63, and starting and end indexes should be alphanumeric.
 		cloudEventType = strings.ToLower(cloudEventType)
 		cloudEventType = validChars.ReplaceAllString(cloudEventType, "")
 	}
 	return cloudEventType
-}
-
-func eventTypeLabels(broker string) map[string]string {
-	return map[string]string{
-		eventingEventTypeBrokerLabelKey: broker,
-	}
 }
