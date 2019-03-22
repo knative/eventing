@@ -139,13 +139,15 @@ func main() {
 	}
 	logger.Info("Exiting...")
 
-	// TODO Gracefully shutdown the ingress server. CloudEvents SDK doesn't seem to let us do that today.
+	// TODO Gracefully shutdown the ingress server. CloudEvents SDK doesn't seem
+	// to let us do that today.
 	go func() {
 		<-time.After(shutdownTimeout)
 		log.Fatalf("Shutdown took longer than %v", shutdownTimeout)
 	}()
 
-	// Wait for runnables to stop
+	// Wait for runnables to stop. This blocks indefinitely, but the above
+	// goroutine will exit the process if it takes longer than shutdownTimeout.
 	wg.Wait()
 	logger.Info("Done.")
 }
