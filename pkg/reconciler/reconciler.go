@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
+// Reason text for event recorder. making it public so that reconcilers in other packages can consume it esp while tesing
 const (
 	AddFinalizerFailed    = "AddFinalizerFailed"
 	RemoveFinalizerFailed = "RemoveFinalizerFailed"
@@ -28,36 +29,53 @@ const (
 	ReconcileFailed       = "ReconcileFailed"
 )
 
+// ReconciledResource must be implemented by the type that is being reconciled
 type ReconciledResource interface {
 	metav1.Object
 	runtime.Object
 }
 
+// EventingReconciler must be implemented by any reconciler that wants to inherit this common reonciler pattern
 type EventingReconciler interface {
 	ReconcileResource(context.Context, ReconciledResource, record.EventRecorder) (bool, reconcile.Result, error)
 	GetNewReconcileObject() ReconciledResource
 	inject.Client
 }
 
+// Finalizer must be implemented by reconcilers that need to clean external resources when the resource being watched is deleted
 type Finalizer interface {
 	OnDelete(context.Context, ReconciledResource, record.EventRecorder) error
 }
 
+// Filter must be implemented by reconcilers that want to skip reconciling objects based on some conditions
+// Please prefer using a predicate when creating the watch. However watch predicates get called on the object that is being watched
+// and not on the object that is being reconciled. In such a case implement filter.
+// Example: 1. Watch K8s Service but reconcile a Trigger that owns it -> Use Filter
+// 2. Watch Trigger and reconcile Trigger --> Use predicate while registering watch
 type Filter interface {
 	ShouldReconcile(context.Context, ReconciledResource, record.EventRecorder) bool
 }
 
+// RequestModifier must be implemented if the incoming request needs to be modified before reconciling starts.
+// This should be used sparingly and usually identifies issues with controller runtime that needs to be followed up with controller-runtime team.
+// This is done to support reconcilers that reconcile cluster-scoped resources based on watch on a namespace-scoped resource
+// Workaround until https://github.com/kubernetes-sigs/controller-runtime/issues/228 is fix and controller-runtime updated
+// TODO: remove after updating controller-runtime
 type RequestModifier interface {
 	Modify(*reconcile.Request)
 }
+
+// RequestModifierFunc simplifies writing Modify functions by implementing RequestModifier
 type RequestModifierFunc func(*reconcile.Request)
 
+// Modify simplifies injecting Modify functions using RequestModifierFunc
 func (f RequestModifierFunc) Modify(r *reconcile.Request) {
 	f(r)
 }
 
 type option func(*reconciler) error
 
+// EnableFinalizer option indicates explicitly that the reconciler implements Finalizer interface
 func EnableFinalizer(finalizerName string) option {
 	return func(r *reconciler) error {
 		if finalizerName == "" {
@@ -73,6 +91,7 @@ func EnableFinalizer(finalizerName string) option {
 	}
 }
 
+// EnableFilter option indicates explicitly that the reconciler implements Filter interface
 func EnableFilter() option {
 	return func(r *reconciler) error {
 		f, ok := r.EventingReconciler.(Filter)
@@ -84,6 +103,7 @@ func EnableFilter() option {
 	}
 }
 
+// ModifyRequest option indicates explicitly that the reconciler needs to modify requests before reconciling
 func ModifyRequest(rm RequestModifier) option {
 	return func(r *reconciler) error {
 		r.requestModifier = rm
@@ -91,7 +111,7 @@ func ModifyRequest(rm RequestModifier) option {
 	}
 }
 
-// For this option to work the provided EventingReconciler must implement inject.Config interface
+// EnableConfigInjection option indicates explicitly that the reconciler implements inject.Config interface
 // as defined in sigs.k8s.io/controller-runtime/pkg/runtime
 func EnableConfigInjection() option {
 	return func(r *reconciler) error {
@@ -104,6 +124,7 @@ func EnableConfigInjection() option {
 	}
 }
 
+// New creates a new generic reconciler that encapsulates the provided EventingReconciler and enables functionalities based on provided options
 func New(er EventingReconciler, logger *zap.Logger, recorder record.EventRecorder, opts ...option) (reconcile.Reconciler, error) {
 	if er == nil {
 		return nil, errors.New("EventingReconciler is nil")
@@ -157,6 +178,17 @@ func (r *reconciler) InjectConfig(c *rest.Config) error {
 	return nil
 }
 
+// reconcile.Reconciler impl
+// Reconcile enforces the following pattern
+// 1. Modify the request if applicable
+// 2. Get the object using client and hangle edge cases
+// 3. Check if the object should be reconciled
+// 4. Check if it is deletion call and handle finalezers accordingly
+// 5. Check if finalizers need to be added and add them correctly
+// 6. Let the EventingReconciler reconcile the object in-memory
+// 7. Update the status of the object using client apis, if applicable.
+// 8. Standardizes logging and event recording
+// 9. Abstracts updates and finalizer handling to avoid unnecessary bugs and corner cases.
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	obj := r.GetNewReconcileObject()
 	recObjTypeName := reflect.TypeOf(obj).Elem().Name()
