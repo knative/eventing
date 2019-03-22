@@ -48,8 +48,6 @@ func NewRunnableServer() (*RunnableServer, error) {
 }
 
 func TestRunnableServerWithShutdownTimeout(t *testing.T) {
-	// Start the thing
-	// call it
 	rs, err := NewRunnableServer()
 	if err != nil {
 		t.Fatalf("error creating runnableServer: %v", err)
@@ -82,8 +80,6 @@ func TestRunnableServerWithShutdownTimeout(t *testing.T) {
 }
 
 func TestRunnableServerWithoutShutdownTimeout(t *testing.T) {
-	// Start the thing
-	// call it
 	rs, err := NewRunnableServer()
 	if err != nil {
 		t.Fatalf("error creating runnableServer: %v", err)
