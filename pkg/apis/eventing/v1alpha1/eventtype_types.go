@@ -58,13 +58,12 @@ type EventTypeSpec struct {
 	// +optional
 	DeprecatedGeneration int64 `json:"generation,omitempty"`
 
-	// TODO these attributes may need to be updated once we agree on the object model.
 	Type string `json:"type,omitempty"`
 	// +optional
 	Source string `json:"source,omitempty"`
 	// +optional
 	Schema string `json:"schema,omitempty"`
-	// TODO sink or broker? string or obj ref?
+
 	Broker string `json:"broker,omitempty"`
 }
 

@@ -24,24 +24,20 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
+
+	"github.com/knative/eventing/pkg/broker"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	ceclient "github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/broker"
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-)
-
-const (
-	NAMESPACE = "NAMESPACE"
-	CHANNEL   = "CHANNEL"
-	POLICY    = "POLICY"
 )
 
 var (
@@ -58,7 +54,7 @@ func main() {
 
 	logger.Info("Starting...")
 
-	namespace := getRequiredEnv(NAMESPACE)
+	namespace := getRequiredEnv("NAMESPACE")
 
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
 		Namespace: namespace,
@@ -73,17 +69,19 @@ func main() {
 
 	channelURI := &url.URL{
 		Scheme: "http",
-		Host:   getRequiredEnv(CHANNEL),
+		Host:   getRequiredEnv("CHANNEL"),
 		Path:   "/",
 	}
 
 	client := mgr.GetClient()
-	p := getRequiredEnv(POLICY)
 
-	// TODO pass broker.
-	// Waiting on https://github.com/knative/eventing/pull/937
-	// which passes the broker name as an env variable.
-	ingressPolicy := broker.NewIngressPolicy(logger, client, namespace, "", p)
+	policySpec := &eventingv1alpha1.IngressPolicySpec{
+		AllowAny: asBool(getRequiredEnv("POLICY_ALLOW_ANY")),
+		AutoAdd:  asBool(getRequiredEnv("POLICY_AUTO_ADD")),
+	}
+	brokerName := getRequiredEnv("BROKER")
+
+	ingressPolicy := broker.NewPolicy(logger, client, policySpec, namespace, brokerName)
 
 	// Create an event handler.
 	ceHTTP, err := cehttp.New(cehttp.WithBinaryEncoding(), cehttp.WithPort(defaultPort))
@@ -127,12 +125,20 @@ func getRequiredEnv(envKey string) string {
 	return val
 }
 
+func asBool(envVal string) bool {
+	b, err := strconv.ParseBool(envVal)
+	if err != nil {
+		log.Fatalf("required environment variable not bool %q", envVal)
+	}
+	return b
+}
+
 type handler struct {
 	logger        *zap.Logger
 	ceClient      ceclient.Client
 	ceHTTP        *cehttp.Transport
 	channelURI    *url.URL
-	ingressPolicy broker.IngressPolicy
+	ingressPolicy *broker.IngressPolicy
 }
 
 func (h *handler) Start(stopCh <-chan struct{}) error {
@@ -176,10 +182,14 @@ func (h *handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 		return nil
 	}
 
-	if h.ingressPolicy.AllowEvent(&event) {
+	if h.allowEvent(ctx, event) {
 		return h.sendEvent(ctx, tctx, event)
 	}
 	return nil
+}
+
+func (h *handler) allowEvent(ctx context.Context, event cloudevents.Event) bool {
+	return h.ingressPolicy.AllowEvent(ctx, &event)
 }
 
 func (h *handler) sendEvent(ctx context.Context, tctx cehttp.TransportContext, event cloudevents.Event) error {

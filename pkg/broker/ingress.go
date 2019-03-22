@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The Knative Authors
+ * Copyright 2019 The Knative Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,12 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	allowAny             = "allow_any"
-	allowRegisteredTypes = "allow_registered"
-	autoCreate           = "auto_create"
-)
-
 var (
 	// Only allow alphanumeric, '-' or '.'.
 	validChars = regexp.MustCompile(`[^-\.a-z0-9]+`)
@@ -47,103 +41,85 @@ var (
 	notFound = k8serrors.NewNotFound(eventingv1alpha1.Resource("eventtype"), "")
 )
 
-type IngressPolicy interface {
-	AllowEvent(event *cloudevents.Event) bool
-}
-
-type Any struct{}
-
-type Registered struct {
+type IngressPolicy struct {
 	logger    *zap.SugaredLogger
 	client    client.Client
 	namespace string
 	broker    string
+	spec      *eventingv1alpha1.IngressPolicySpec
 }
 
-type AutoCreate struct {
-	logger    *zap.SugaredLogger
-	client    client.Client
-	namespace string
-	broker    string
-}
-
-func NewIngressPolicy(logger *zap.Logger, client client.Client, namespace, broker, policy string) IngressPolicy {
-	return newIngressPolicy(logger.Sugar(), client, namespace, broker, policy)
-}
-
-func newIngressPolicy(logger *zap.SugaredLogger, client client.Client, namespace, broker, policy string) IngressPolicy {
-	switch policy {
-	case allowRegisteredTypes:
-		return &Registered{
-			logger:    logger,
-			client:    client,
-			namespace: namespace,
-			broker:    broker,
-		}
-	case autoCreate:
-		return &AutoCreate{
-			logger:    logger,
-			client:    client,
-			namespace: namespace,
-			broker:    broker,
-		}
-	case allowAny:
-		return &Any{}
-	default:
-		return &Any{}
+func NewPolicy(logger *zap.Logger, client client.Client, spec *eventingv1alpha1.IngressPolicySpec, namespace, broker string) *IngressPolicy {
+	return &IngressPolicy{
+		logger:    logger.Sugar(),
+		client:    client,
+		namespace: namespace,
+		broker:    broker,
+		spec:      spec,
 	}
 }
 
-func (p *Any) AllowEvent(event *cloudevents.Event) bool {
+func (p *IngressPolicy) AllowEvent(ctx context.Context, event *cloudevents.Event) bool {
+	if p.spec.AutoAdd {
+		return p.autoAdd(event)
+	}
+	if !p.spec.AllowAny {
+		return p.isRegistered(ctx, event)
+	}
 	return true
 }
 
-func (p *Registered) AllowEvent(event *cloudevents.Event) bool {
-	_, err := getEventType(p.client, event, p.namespace, p.broker)
+func (p *IngressPolicy) autoAdd(event *cloudevents.Event) bool {
+	// TODO do this in a working queue
+	go func() {
+		// Do not use the previous context as it seems that it can be canceled before
+		// this routine executes.
+		ctx := context.TODO()
+		_, err := p.getEventType(ctx, event)
+		if k8serrors.IsNotFound(err) {
+			p.logger.Infof("EventType %q not found: Adding", event.Type())
+			eventType := p.makeEventType(event)
+			err := p.client.Create(ctx, eventType)
+			if err != nil {
+				p.logger.Errorf("Error creating EventType %q: Accept but Not Add, %v", event.Type(), err)
+			}
+		} else if err != nil {
+			p.logger.Errorf("Error retrieving EventType %q: Accept but Not Add, %v", event.Type(), err)
+		}
+	}()
+	return true
+}
+
+func (p *IngressPolicy) isRegistered(ctx context.Context, event *cloudevents.Event) bool {
+	_, err := p.getEventType(ctx, event)
 	if k8serrors.IsNotFound(err) {
-		p.logger.Warnf("EventType not found, rejecting spec.type %q, %v", event.Type(), err)
+		p.logger.Warnf("EventType %q not found: Reject", event.Type())
 		return false
 	} else if err != nil {
-		p.logger.Errorf("Error retrieving EventType, rejecting spec.type %q, %v", event.Type(), err)
+		p.logger.Errorf("Error retrieving EventType %q: Reject, %v", event.Type(), err)
 		return false
 	}
 	return true
 }
 
-func (p *AutoCreate) AllowEvent(event *cloudevents.Event) bool {
-	_, err := getEventType(p.client, event, p.namespace, p.broker)
-	if k8serrors.IsNotFound(err) {
-		p.logger.Infof("EventType not found, creating spec.type %q", event.Type())
-		eventType := makeEventType(event, p.namespace, p.broker)
-		err := p.client.Create(context.TODO(), eventType)
-		if err != nil {
-			p.logger.Errorf("Error creating EventType, spec.type %q, %v", event.Type(), err)
-		}
-	} else if err != nil {
-		p.logger.Errorf("Error retrieving EventType, spec.type %q, %v", event.Type(), err)
-	}
-	return true
-}
-
-func getEventType(c client.Client, event *cloudevents.Event, namespace, broker string) (*eventingv1alpha1.EventType, error) {
+func (p *IngressPolicy) getEventType(ctx context.Context, event *cloudevents.Event) (*eventingv1alpha1.EventType, error) {
 	opts := &client.ListOptions{
-		Namespace: namespace,
+		Namespace: p.namespace,
 		// Set Raw because if we need to get more than one page, then we will put the continue token
 		// into opts.Raw.Continue.
 		Raw: &metav1.ListOptions{},
 	}
 
-	ctx := context.TODO()
-
 	for {
 		etl := &eventingv1alpha1.EventTypeList{}
-		err := c.List(ctx, opts, etl)
+		err := p.client.List(ctx, opts, etl)
 		if err != nil {
 			return nil, err
 		}
 		for _, et := range etl.Items {
-			if et.Spec.Broker == broker {
-				// TODO what about source.
+			if et.Spec.Broker == p.broker {
+				// Matching on type and schemaURL, although this does not uniquely identify the EventType.
+				// If we match on source, then we will never find the EventType.
 				if et.Spec.Type == event.Type() && et.Spec.Schema == event.SchemaURL() {
 					return &et, nil
 				}
@@ -158,18 +134,18 @@ func getEventType(c client.Client, event *cloudevents.Event, namespace, broker s
 }
 
 // makeEventType generates, but does not create an EventType from the given cloudevents.Event.
-func makeEventType(event *cloudevents.Event, namespace, broker string) *eventingv1alpha1.EventType {
+func (p *IngressPolicy) makeEventType(event *cloudevents.Event) *eventingv1alpha1.EventType {
 	cloudEventType := event.Type()
 	return &eventingv1alpha1.EventType{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-", toDNS1123Subdomain(cloudEventType)),
-			Namespace:    namespace,
+			Namespace:    p.namespace,
 		},
 		Spec: eventingv1alpha1.EventTypeSpec{
 			Type:   cloudEventType,
 			Source: event.Source(),
 			Schema: event.SchemaURL(),
-			Broker: broker,
+			Broker: p.broker,
 		},
 	}
 }

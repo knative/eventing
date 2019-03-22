@@ -65,9 +65,13 @@ type BrokerSpec struct {
 	// +optional
 	ChannelTemplate *ChannelSpec `json:"channelTemplate,omitempty"`
 
-	// TODO probably make it an object.
 	// +optional
-	IngressPolicy string `json:"ingressPolicy,omitempty"`
+	IngressPolicy *IngressPolicySpec `json:"ingressPolicy,omitempty"`
+}
+
+type IngressPolicySpec struct {
+	AllowAny bool `json:"allowAny,omitempty"`
+	AutoAdd  bool `json:"autoAdd,omitempty"`
 }
 
 var brokerCondSet = duckv1alpha1.NewLivingConditionSet(

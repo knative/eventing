@@ -8,4 +8,4 @@ spec:
   type: repo:push
   source: user/repo
   schema: http://schemas/repo/push
-  broker: broker-any
+  broker: broker-allow-any

@@ -18,6 +18,7 @@ package resources
 
 import (
 	"fmt"
+	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -76,8 +77,16 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 									Value: args.ChannelAddress,
 								},
 								{
-									Name:  "POLICY",
-									Value: args.Broker.Spec.IngressPolicy,
+									Name:  "BROKER",
+									Value: args.Broker.Name,
+								},
+								{
+									Name:  "POLICY_AUTO_ADD",
+									Value: strconv.FormatBool(args.Broker.Spec.IngressPolicy.AutoAdd),
+								},
+								{
+									Name:  "POLICY_ALLOW_ANY",
+									Value: strconv.FormatBool(args.Broker.Spec.IngressPolicy.AllowAny),
 								},
 								{
 									Name: "NAMESPACE",
