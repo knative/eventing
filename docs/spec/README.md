@@ -19,7 +19,7 @@ Docs in this directory:
 <!-- TODO(n3wscott): * [Sample API usage](normative_examples.md) -->
 
 See the
-[Knative Eventing Docs Architecture](https://github.com/knative/docs/blob/master/docs/eventing/README.md#architecture)
+[Knative Eventing Docs Architecture](https://www.knative.dev/docs/eventing/#architecture)
 for more high level details.
 
 <!-- TODO(#498): Update the docs/Architecture page. -->
