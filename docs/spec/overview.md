@@ -1,6 +1,7 @@
 # Resource Types
 
 The API defines and provides a complete implementation for
+[Trigger](spec.md#kind-trigger), [Broker](spec.md#kind-broker),
 [Subscription](spec.md#kind-subscription) and abstract resource definitions for
 [Channels](spec.md#kind-channel) and
 [ClusterChannelProvisioners](spec.md#kind-clusterchannelprovisioner) which may
@@ -14,6 +15,18 @@ Kubernetes objects and then composed in the same way as the concrete objects.
 The interfaces are ([Addressable](interfaces.md#addressable),
 [Subscribable](interfaces.md#Subscribable), [Callable](interfaces.md#callable)).
 For more details, see [Interface Contracts](interfaces.md).
+
+- A **Trigger** describes a filter on event attributes which should be delivered
+  to an _Addressable_.
+
+- A **Broker** provides a bucket of events which can be selected by attribute.
+
+<!-- https://drive.google.com/open?id=1CXRvT2g6sxk6-ZrwYcSf2BahCNVlLTLNZkm-laQitMg -->
+
+![Broker Trigger Overview](images/broker-trigger-overview.svg)
+
+The above diagram shows a _Broker_ ingesting events and delivering to a
+_Service_ only when the _Trigger_ filter matches.
 
 - A **Subscription** describes the transformation of an event and optional
   forwarding of a returned event.
@@ -36,6 +49,23 @@ For more details, see [Interface Contracts](interfaces.md).
 Sources are defined by independent CRDs that can be installed into a cluster.
 For more information see
 [Knative Eventing Sources](https://github.com/knative/eventing-sources).
+
+## Trigger
+
+**Trigger** describes a registration of interest on a filter set of events
+delivered to a _Broker_ which should be delivered to an _Addressable_. Events
+selected by a _Trigger_ are buffered independently from other _Triggers_, even
+if they deliver to the same _Addressable_.
+
+For more details, see [Kind: Trigger](spec.md#kind-trigger).
+
+## Broker
+
+**Broker** provides an eventing mesh. This allows producers to deliver events to
+a single endpoint and not need to worry about the routing details for individual
+consumers.
+
+For more details, see [Kind: Broker](spec.md#kind-broker).
 
 ## Subscription
 
