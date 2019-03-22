@@ -21,8 +21,6 @@ import (
 	"net/http"
 	"testing"
 	"time"
-
-	"go.uber.org/zap"
 )
 
 func NewRunnableServer() (*RunnableServer, error) {
@@ -41,7 +39,6 @@ func NewRunnableServer() (*RunnableServer, error) {
 	rs := &RunnableServer{
 		Server:    s,
 		ServeFunc: func() error { return s.Serve(l) },
-		Logger:    zap.NewNop(),
 	}
 
 	return rs, nil
@@ -60,7 +57,12 @@ func TestRunnableServerCallsShutdown(t *testing.T) {
 	})
 
 	stopCh := make(chan struct{})
-	go rs.Start(stopCh)
+	go func() {
+		if err := rs.Start(stopCh); err != nil {
+			t.Errorf("Error returned from Start: %v", err)
+		}
+	}()
+
 	rsp, err := http.Get("http://" + rs.Addr)
 	if err != nil {
 		t.Errorf("error making request: %v", err)
@@ -95,7 +97,9 @@ func TestRunnableServerShutdownContext(t *testing.T) {
 	stoppedCh := make(chan struct{})
 	go func() {
 		t.Logf("Starting RS")
-		rs.Start(stopCh)
+		if err := rs.Start(stopCh); err == nil {
+			t.Errorf("Expected context deadline exceeded error from Start but got nil")
+		}
 		close(stoppedCh)
 		t.Logf("stoppedCh closed")
 	}()
@@ -128,7 +132,12 @@ func TestRunnableServerCallsClose(t *testing.T) {
 	}
 
 	stopCh := make(chan struct{})
-	go rs.Start(stopCh)
+	go func() {
+		if err := rs.Start(stopCh); err != nil {
+			t.Errorf("Error returned from Start: %v", err)
+		}
+	}()
+
 	rsp, err := http.Get("http://" + rs.Addr)
 	if err != nil {
 		t.Errorf("error making request: %v", err)

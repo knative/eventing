@@ -21,8 +21,6 @@ import (
 	"net/http"
 	"sync"
 	"time"
-
-	"go.uber.org/zap"
 )
 
 // RunnableServer is a small wrapper around http.Server so that it matches the
@@ -40,9 +38,6 @@ type RunnableServer struct {
 	// the http.Server will be immediately closed instead.
 	ShutdownTimeout time.Duration
 
-	// Logger is used by RunnableServer to log lifecycle and error messages.
-	Logger *zap.Logger
-
 	// WaitGroup is a temporary workaround for Manager returning immediately
 	// without waiting for Runnables to stop. See
 	// https://github.com/kubernetes-sigs/controller-runtime/issues/350.
@@ -51,7 +46,6 @@ type RunnableServer struct {
 
 // Start the server. The server will be shut down when StopCh is closed.
 func (r *RunnableServer) Start(stopCh <-chan struct{}) error {
-	logger := r.Logger.With(zap.String("address", r.Addr))
 
 	errCh := make(chan error)
 
@@ -65,7 +59,6 @@ func (r *RunnableServer) Start(stopCh <-chan struct{}) error {
 	}
 
 	go func() {
-		logger.Info("Listening...")
 		err := r.ServeFunc()
 		if err != http.ErrServerClosed {
 			errCh <- err
@@ -74,24 +67,15 @@ func (r *RunnableServer) Start(stopCh <-chan struct{}) error {
 
 	var err error
 	select {
-	case err = <-errCh:
-		logger.Error("Error running HTTP server", zap.Error(err))
 	case <-stopCh:
 		if r.ShutdownTimeout > 0 {
-			logger.Info("Shutting down...")
 			ctx, cancel := context.WithTimeout(context.Background(), r.ShutdownTimeout)
 			defer cancel()
-			if err := r.Server.Shutdown(ctx); err != nil {
-				logger.Error("Shutdown returned an error", zap.Error(err))
-			} else {
-				logger.Debug("Shutdown done")
-			}
+			err = r.Server.Shutdown(ctx)
 		} else {
-			if err := r.Server.Close(); err != nil {
-				logger.Error("Close returned an error", zap.Error(err))
-			}
+			err = r.Server.Close()
 		}
-
+	case err = <-errCh:
 	}
 	return err
 }
