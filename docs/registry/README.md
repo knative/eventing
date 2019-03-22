@@ -2,7 +2,7 @@
 
 ## Objective
 
-Design an initial version of the Registry that can support discoverability of 
+Design an **initial** version of the Registry that can support discoverability of 
 the different event types that can be consumed from the eventing mesh.
 
 ## Requirements
@@ -10,10 +10,10 @@ the different event types that can be consumed from the eventing mesh.
 Our design revolves around the following core requirements:
 
 1. We should have a Registry per namespace to enforce isolation.
-2. The Registry should contain only the event types that can be consumed from
-the eventing mesh.
+2. The Registry should contain the event types that can be consumed from
+the eventing mesh. If an event type is not ready for consumption, we should explicitly indicate so.
 3. The event types stored in the Registry should contain all the required information 
-for a consumer to create a trigger without resorting to some other OOB mechanism.
+for a consumer to create a Trigger without resorting to some other OOB mechanism.
 
 ## Design Ideas
 
@@ -28,8 +28,8 @@ metadata:
   name: repopush
 spec:
   type: repo:push
-  source: user/repo
-  schema: http://schemas/repo/push
+  source: my-user/my-repo
+  schema: http://schemas/bitbucket/repo/push
   broker: default
 ```
 
@@ -62,11 +62,12 @@ apiVersion: sources.eventing.knative.dev/v1alpha1
 kind: GitHubSource
 metadata:
   name: github-source-sample
+  namespace: default
 spec:
   eventTypes:
     - push
     - pull_request
-  ownerAndRepository: linda/eventing
+  ownerAndRepository: my-other-user/my-other-repo
   accessToken:
     secretKeyRef:
       name: github-secret
@@ -83,7 +84,7 @@ spec:
 ```
  
 By applying this file, two EventTypes will be registered, with types `push` and `pull_request`, 
-source `linda/eventing`, for the `default` Broker in the `default` namespace.
+source `my-other-user/my-other-repo`, for the `default` Broker in the `default` namespace.
 
 **2. Manual User Registration**
 
@@ -96,14 +97,15 @@ apiVersion: eventing.knative.dev/v1alpha1
 kind: EventType
 metadata:
   name: repofork
+  namespace: default
 spec:
   type: repo:fork
-  source: user/repo
+  source: my-other-user/my-other-repo
   broker: dev
 ``` 
 
-This would register the EventType named `repofork` with type `repo:fork`, source `user/repo` in the `dev` 
-Broker of the `default` namespace.
+This would register the EventType named `repofork` with type `repo:fork`, source `my-other-user/my-other-repo` 
+in the `dev` Broker of the `default` namespace.
 
 
 **3. Broker Auto Registration Policy**
@@ -148,13 +150,15 @@ curl -v "http://auto-add-demo-broker.default.svc.cluster.local/" \
  
 The Broker `auto-add-demo` will then create the EventType with type `dev.knative.foo.bar` in the Registry.
 
-## Use Case: Discoverability
+## Discoverability Use Case
 
-*As an Event Consumer I want to discover the different event types that I can consume from a 
-particular broker without resorting to any OOB mechanism.*
+By adding the spec.* fields of EventType as custom columns in the CRD we can fulfill the discoverability 
+use case: 
 
-By adding the spec.* fields of EventType as custom columns in the CRD we can fulfill this use case.
+*As an Event Consumer I want to be able to discover the different event types that I can consume 
+from the different Brokers, without resorting to any OOB mechanism.*
 
+First, Event Consumers will list the EventTypes registered in the system
 
 `$ kubectl get eventtypes -n default`
 
@@ -162,8 +166,28 @@ By adding the spec.* fields of EventType as custom columns in the CRD we can ful
 NAME | TYPE | SOURCE | SCHEMA | BROKER | READY | REASON
 --- | --- | --- | --- | --- | --- | ---
 dev.knative.foo.bar-55wcn | dev.knative.foo.bar | dev.knative.example | | auto-add-demo |   True | |
-repofork | repo:fork | user/repo | |  dev | False | BrokerIsNotReady |
-repopush | repo:push | user/repo | http://schemas/repo/push |  default | True | | 
-dev.knative.source.github.push-34cnb | dev.knative.source.github.push | linda/eventing | | default | True | |
-dev.knative.source.github.pullrequest-86jhv | dev.knative.source.github.pull_request | linda/eventing | | default | True | | 
+repofork | repo:fork | my-other-user/my-other-repo | |  dev | False | BrokerIsNotReady |
+repopush | repo:push | my-other-user/my-other-repo | http://schemas/bitbucket/repo/push |  default | True | | 
+dev.knative.source.github.push-34cnb | dev.knative.source.github.push | my-user/my-repo | | default | True | |
+dev.knative.source.github.pullrequest-86jhv | dev.knative.source.github.pull_request | my-user/my-repo | | default | True | | 
 
+
+Then, they will be able to *easily* create the appropriate Trigger(s)
+
+
+```yaml
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Trigger
+metadata:
+  name: my-service-trigger
+  namespace: default
+spec:
+  filter:
+    sourceAndType:
+      type: dev.knative.source.github.push
+  subscriber:
+    ref:
+     apiVersion: serving.knative.dev/v1alpha1
+     kind: Service
+     name: my-service
+```
