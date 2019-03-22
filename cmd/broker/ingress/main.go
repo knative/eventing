@@ -26,8 +26,6 @@ import (
 	"os"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	ceclient "github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
@@ -79,14 +77,32 @@ func main() {
 		Path:   "/",
 	}
 
-	p := getRequiredEnv(POLICY)
 	client := mgr.GetClient()
+	p := getRequiredEnv(POLICY)
 
-	h, err := New(logger, channelURI, client, namespace, p)
+	// TODO pass broker.
+	// Waiting on https://github.com/knative/eventing/pull/937
+	// which passes the broker name as an env variable.
+	ingressPolicy := broker.NewIngressPolicy(logger, client, namespace, "", p)
+
+	// Create an event handler.
+	ceHTTP, err := cehttp.New(cehttp.WithBinaryEncoding(), cehttp.WithPort(defaultPort))
 	if err != nil {
-		logger.Fatal("Unable to create handler", zap.Error(err))
+		logger.Fatal("Unable to create CE transport", zap.Error(err))
+	}
+	ceClient, err := ceclient.New(ceHTTP)
+	if err != nil {
+		logger.Fatal("Unable to create CE client", zap.Error(err))
+	}
+	h := &handler{
+		logger:        logger,
+		ceClient:      ceClient,
+		ceHTTP:        ceHTTP,
+		channelURI:    channelURI,
+		ingressPolicy: ingressPolicy,
 	}
 
+	// Run the event handler with the manager.
 	err = mgr.Add(h)
 	if err != nil {
 		logger.Fatal("Unable to add handler", zap.Error(err))
@@ -111,40 +127,17 @@ func getRequiredEnv(envKey string) string {
 	return val
 }
 
-func New(logger *zap.Logger, channelURI *url.URL, client client.Client, namespace, policy string) (*handler, error) {
-	ceHttp, err := cehttp.New(cehttp.WithBinaryEncoding(), cehttp.WithPort(defaultPort))
-	if err != nil {
-		return nil, err
-	}
-	ceClient, err := ceclient.New(ceHttp)
-	if err != nil {
-		return nil, err
-	}
-	// TODO pass broker.
-	// Waiting on https://github.com/knative/eventing/pull/937
-	// which passes the broker name as an env variable.
-	ingressPolicy := broker.NewIngressPolicy(logger, client, namespace, "", policy)
-
-	return &handler{
-		logger:        logger,
-		ceClient:      ceClient,
-		ceHttp:        ceHttp,
-		channelURI:    channelURI,
-		ingressPolicy: ingressPolicy,
-	}, nil
-}
-
 type handler struct {
 	logger        *zap.Logger
 	ceClient      ceclient.Client
-	ceHttp        *cehttp.Transport
+	ceHTTP        *cehttp.Transport
 	channelURI    *url.URL
 	ingressPolicy broker.IngressPolicy
 }
 
 func (h *handler) Start(stopCh <-chan struct{}) error {
 	ctx, cancel := context.WithCancel(context.Background())
-	defer ctx.Done()
+	defer cancel()
 
 	errCh := make(chan error, 1)
 	go func() {
@@ -191,6 +184,6 @@ func (h *handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 
 func (h *handler) sendEvent(ctx context.Context, tctx cehttp.TransportContext, event cloudevents.Event) error {
 	sendingCTX := broker.SendingContext(ctx, tctx, h.channelURI)
-	_, err := h.ceHttp.Send(sendingCTX, event)
+	_, err := h.ceHTTP.Send(sendingCTX, event)
 	return err
 }
