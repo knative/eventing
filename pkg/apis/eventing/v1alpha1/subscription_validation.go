@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/knative/pkg/apis"
@@ -24,13 +25,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 )
 
-func (s *Subscription) Validate() *apis.FieldError {
-	return s.Spec.Validate().ViaField("spec")
+func (s *Subscription) Validate(ctx context.Context) *apis.FieldError {
+	return s.Spec.Validate(ctx).ViaField("spec")
 }
 
 // We require always Channel
 // Also at least one of 'subscriber' and 'reply' must be defined (non-nill and non-empty)
-func (ss *SubscriptionSpec) Validate() *apis.FieldError {
+func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 	if isChannelEmpty(ss.Channel) {
 		fe := apis.ErrMissingField("channel")
@@ -107,7 +108,7 @@ func isValidReply(r ReplyStrategy) *apis.FieldError {
 	return nil
 }
 
-func (current *Subscription) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
+func (current *Subscription) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
 	original, ok := og.(*Subscription)
 	if !ok {
 		return &apis.FieldError{Message: "The provided original was not a Subscription"}

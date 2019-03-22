@@ -21,9 +21,7 @@ Before submitting a PR, see also [CONTRIBUTING.md](./CONTRIBUTING.md).
 You must have the core of [Knative](http://github.com/knative/serving) running
 on your cluster.
 
-You must have
-[ko](https://github.com/google/go-containerregistry/blob/master/cmd/ko/README.md)
-installed.
+You must have [`ko`](https://github.com/google/ko) installed.
 
 ### Checkout your fork
 
