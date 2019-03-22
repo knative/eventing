@@ -184,7 +184,8 @@ metadata:
 spec:
   filter:
     sourceAndType:
-      type: dev.knative.source.github.push
+      type: dev.knative.foo.bar
+      source: dev.knative.example
   subscriber:
     ref:
      apiVersion: serving.knative.dev/v1alpha1
