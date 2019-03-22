@@ -83,11 +83,23 @@ func main() {
 		Path:   "/",
 	}
 
-	h, err := New(logger, channelURI)
+	// Create an event handler.
+	ceHTTP, err := cehttp.New(cehttp.WithBinaryEncoding(), cehttp.WithPort(defaultPort))
 	if err != nil {
-		logger.Fatal("Unable to create handler", zap.Error(err))
+		logger.Fatal("Unable to create CE transport", zap.Error(err))
+	}
+	ceClient, err := ceclient.New(ceHTTP)
+	if err != nil {
+		logger.Fatal("Unable to create CE client", zap.Error(err))
+	}
+	h := &handler{
+		logger:     logger,
+		ceClient:   ceClient,
+		ceHTTP:     ceHTTP,
+		channelURI: channelURI,
 	}
 
+	// Run the event handler with the manager.
 	err = mgr.Add(h)
 	if err != nil {
 		logger.Fatal("Unable to add handler", zap.Error(err))
@@ -145,35 +157,17 @@ func getRequiredEnv(envKey string) string {
 	return val
 }
 
-func New(logger *zap.Logger, channelURI *url.URL) (*handler, error) {
-	ceHttp, err := cehttp.New(cehttp.WithBinaryEncoding(), cehttp.WithPort(defaultPort))
-	if err != nil {
-		return nil, err
-	}
-	ceClient, err := ceclient.New(ceHttp)
-	if err != nil {
-		return nil, err
-	}
-	return &handler{
-		logger:     logger,
-		ceClient:   ceClient,
-		ceHttp:     ceHttp,
-		channelURI: channelURI,
-		brokerName: brokerName,
-	}, nil
-}
-
 type handler struct {
 	logger     *zap.Logger
 	ceClient   ceclient.Client
-	ceHttp     *cehttp.Transport
+	ceHTTP     *cehttp.Transport
 	channelURI *url.URL
 	brokerName string
 }
 
 func (h *handler) Start(stopCh <-chan struct{}) error {
 	ctx, cancel := context.WithCancel(context.Background())
-	defer ctx.Done()
+	defer cancel()
 
 	errCh := make(chan error, 1)
 	go func() {
@@ -232,7 +226,7 @@ func (h *handler) sendEvent(ctx context.Context, tctx cehttp.TransportContext, e
 		stats.Record(sendingCTX, MeasureDispatchTime.M(dispatchTimeMS))
 	}()
 
-	_, err := h.ceHttp.Send(sendingCTX, event)
+	_, err := h.ceHTTP.Send(sendingCTX, event)
 	if err != nil {
 		sendingCTX, _ = tag.New(sendingCTX, tag.Insert(TagResult, "error"))
 	} else {

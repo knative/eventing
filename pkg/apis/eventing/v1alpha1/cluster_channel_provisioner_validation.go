@@ -17,16 +17,17 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"github.com/knative/pkg/apis"
 )
 
 // Validate validates the ClusterChannelProvisioner resource.
-func (p *ClusterChannelProvisioner) Validate() *apis.FieldError {
-	return p.Spec.Validate().ViaField("spec")
+func (p *ClusterChannelProvisioner) Validate(ctx context.Context) *apis.FieldError {
+	return p.Spec.Validate(ctx).ViaField("spec")
 }
 
 // Validate validates the ClusterChannelProvisioner spec
-func (ps *ClusterChannelProvisionerSpec) Validate() *apis.FieldError {
+func (ps *ClusterChannelProvisionerSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 
 	return errs
