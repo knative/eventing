@@ -97,6 +97,7 @@ func main() {
 		ceClient:   ceClient,
 		ceHTTP:     ceHTTP,
 		channelURI: channelURI,
+		brokerName: brokerName,
 	}
 
 	// Run the event handler with the manager.
