@@ -78,9 +78,9 @@ func (r *RunnableServer) Start(stopCh <-chan struct{}) error {
 		logger.Error("Error running HTTP server", zap.Error(err))
 	case <-stopCh:
 		if r.ShutdownTimeout > 0 {
+			logger.Info("Shutting down...")
 			ctx, cancel := context.WithTimeout(context.Background(), r.ShutdownTimeout)
 			defer cancel()
-			logger.Info("Shutting down...")
 			if err := r.Server.Shutdown(ctx); err != nil {
 				logger.Error("Shutdown returned an error", zap.Error(err))
 			} else {

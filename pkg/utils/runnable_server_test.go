@@ -47,7 +47,7 @@ func NewRunnableServer() (*RunnableServer, error) {
 	return rs, nil
 }
 
-func TestRunnableServerWithShutdownTimeout(t *testing.T) {
+func TestRunnableServerCallsShutdown(t *testing.T) {
 	rs, err := NewRunnableServer()
 	if err != nil {
 		t.Fatalf("error creating runnableServer: %v", err)
@@ -72,14 +72,56 @@ func TestRunnableServerWithShutdownTimeout(t *testing.T) {
 	close(stopCh)
 
 	select {
-	case <-shutdownCh:
-		t.Logf("Shutdown correctly")
 	case <-time.After(time.Second):
 		t.Errorf("Expected server to have shut down by now")
+	case <-shutdownCh:
 	}
 }
 
-func TestRunnableServerWithoutShutdownTimeout(t *testing.T) {
+func TestRunnableServerShutdownContext(t *testing.T) {
+	rs, err := NewRunnableServer()
+	if err != nil {
+		t.Fatalf("error creating runnableServer: %v", err)
+	}
+
+	rs.ShutdownTimeout = time.Millisecond * 10
+	rs.Server.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		t.Logf("Handling request")
+		time.Sleep(time.Second * 10)
+		w.WriteHeader(http.StatusForbidden)
+	})
+
+	stopCh := make(chan struct{})
+	stoppedCh := make(chan struct{})
+	go func() {
+		t.Logf("Starting RS")
+		rs.Start(stopCh)
+		close(stoppedCh)
+		t.Logf("stoppedCh closed")
+	}()
+
+	go func() {
+		_, err := http.Get("http://" + rs.Addr)
+		if err == nil {
+			t.Errorf("Expected request to time out")
+		}
+	}()
+
+	// Give the request time to start
+	time.Sleep(time.Millisecond * 1)
+	shutdownCh := time.After(time.Millisecond * 20)
+
+	close(stopCh)
+	t.Logf("stopCh closed")
+
+	select {
+	case <-shutdownCh:
+		t.Errorf("Expected shutdown to complete before the timeout")
+	case <-stoppedCh:
+	}
+}
+
+func TestRunnableServerCallsClose(t *testing.T) {
 	rs, err := NewRunnableServer()
 	if err != nil {
 		t.Fatalf("error creating runnableServer: %v", err)
