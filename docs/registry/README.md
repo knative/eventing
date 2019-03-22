@@ -57,7 +57,7 @@ Upon installation of an Event Source CR, the source will register its EventTypes
 
 Example:
 
-```
+```yaml
 apiVersion: sources.eventing.knative.dev/v1alpha1
 kind: GitHubSource
 metadata:
@@ -115,7 +115,7 @@ Example:
 
 Set up a Broker with `autoAdd` enabled.
 
-```
+```yaml
 apiVersion: eventing.knative.dev/v1alpha1
 kind: Broker
 metadata:
