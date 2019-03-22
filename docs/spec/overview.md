@@ -1,7 +1,7 @@
 # Resource Types
 
 The API defines and provides a complete implementation for
-[Broker](spec.md#kind-broker), [Trigger](spec.md#kind-trigger)
+[Trigger](spec.md#kind-trigger), [Broker](spec.md#kind-broker),
 [Subscription](spec.md#kind-subscription) and abstract resource definitions for
 [Channels](spec.md#kind-channel) and
 [ClusterChannelProvisioners](spec.md#kind-clusterchannelprovisioner) which may
@@ -16,10 +16,10 @@ The interfaces are ([Addressable](interfaces.md#addressable),
 [Subscribable](interfaces.md#Subscribable), [Callable](interfaces.md#callable)).
 For more details, see [Interface Contracts](interfaces.md).
 
-- A **Broker** provides the eventing mesh.
+- A **Trigger** describes a filter on event attributes which should be delivered
+  to an _Addressable_.
 
-- A **Trigger** describes the filtering and subscription of events from a
-  Broker.
+- A **Broker** provides a bucket of events which can be selected by attribute.
 
 <!-- https://drive.google.com/open?id=1CXRvT2g6sxk6-ZrwYcSf2BahCNVlLTLNZkm-laQitMg -->
 
@@ -47,6 +47,15 @@ Sources are defined by independent CRDs that can be installed into a cluster.
 For more information see
 [Knative Eventing Sources](https://github.com/knative/eventing-sources).
 
+## Trigger
+
+**Trigger** describes a registration of interest on a filter set of events
+delivered to a _Broker_ which should be delivered to an _Addressable_. Events
+selected by a _Trigger_ are buffered independently from other _Triggers_, even
+if they deliver to the same _Addressable_.
+
+For more details, see [Kind: Trigger](spec.md#kind-trigger).
+
 ## Broker
 
 **Broker** provides an eventing mesh. This allows producers to deliver events to
@@ -54,12 +63,6 @@ a single endpoint and not need to worry about the routing details for individual
 consumers.
 
 For more details, see [Kind: Broker](spec.md#kind-broker).
-
-## Trigger
-
-**Trigger** describes a filter and a subscriber of those events.
-
-For more details, see [Kind: Trigger](spec.md#kind-trigger).
 
 ## Subscription
 

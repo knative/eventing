@@ -9,47 +9,11 @@ These are Kubernetes resources that been introduced using Custom Resource
 Definitions. They will have the expected _ObjectMeta_, _Spec_, _Status_ fields.
 This document details our _Spec_ and _Status_ customizations.
 
-- [Broker](#kind-broker)
 - [Trigger](#kind-trigger)
+- [Broker](#kind-broker)
 - [Channel](#kind-channel)
 - [Subscription](#kind-subscription)
 - [ClusterChannelProvisioner](#kind-clusterchannelprovisioner)
-
-## kind: Broker
-
-### group: eventing.knative.dev/v1alpha1
-
-_A Broker represents an event mesh. It logically receives events on its input
-domain and forwards them to subscribers defined by one or more matching
-Trigger._
-
-### Object Schema
-
-#### Spec
-
-| Field           | Type        | Description                                                                                                        | Constraints                                      |
-| --------------- | ----------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
-| channelTemplate | ChannelSpec | The template used to create Channels internal to the Broker. Defaults to to the default Channel for the namespace. | Only Provisioner and Arguments may be specified. |
-
-#### Status
-
-| Field              | Type        | Description                                                                                  | Constraints |
-| ------------------ | ----------- | -------------------------------------------------------------------------------------------- | ----------- |
-| observedGeneration | int64       | The 'Generation' of the Broker that was last processed by the controller.                    |             |
-| address            | Addressable | Address of the endpoint which meets the [_Addressable_ contract](interfaces.md#addressable). |             |
-| conditions         | Conditions  | Broker conditions.                                                                           |             |
-
-##### Conditions
-
-- **Ready.** True when the Broker is provisioned and ready to accept events.
-- **Addressable.** True when the Broker has an resolved address in it's status.
-
-#### Events
-
-- BrokerReconciled
-- BrokerUpdateStatusFailed
-
----
 
 ## kind: Trigger
 
@@ -90,6 +54,42 @@ broker._
 - TriggerReconciled
 - TriggerReconcileFailed
 - TriggerUpdateStatusFailed
+
+---
+
+## kind: Broker
+
+### group: eventing.knative.dev/v1alpha1
+
+_A Broker represents an event mesh. It logically receives events on its input
+domain and forwards them to subscribers defined by one or more matching
+Trigger._
+
+### Object Schema
+
+#### Spec
+
+| Field           | Type        | Description                                                                                                        | Constraints                                      |
+| --------------- | ----------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
+| channelTemplate | ChannelSpec | The template used to create Channels internal to the Broker. Defaults to to the default Channel for the namespace. | Only Provisioner and Arguments may be specified. |
+
+#### Status
+
+| Field              | Type        | Description                                                                                  | Constraints |
+| ------------------ | ----------- | -------------------------------------------------------------------------------------------- | ----------- |
+| observedGeneration | int64       | The 'Generation' of the Broker that was last processed by the controller.                    |             |
+| address            | Addressable | Address of the endpoint which meets the [_Addressable_ contract](interfaces.md#addressable). |             |
+| conditions         | Conditions  | Broker conditions.                                                                           |             |
+
+##### Conditions
+
+- **Ready.** True when the Broker is provisioned and ready to accept events.
+- **Addressable.** True when the Broker has an resolved address in it's status.
+
+#### Events
+
+- BrokerReconciled
+- BrokerUpdateStatusFailed
 
 ---
 
