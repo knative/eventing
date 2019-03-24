@@ -16,9 +16,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
+
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
-	"log"
 )
 
 func handler(event cloudevents.Event) {
