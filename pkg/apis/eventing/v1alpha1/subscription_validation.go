@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"context"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/knative/pkg/apis"
