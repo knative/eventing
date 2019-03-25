@@ -35,12 +35,13 @@ import (
 	"go.uber.org/zap"
 )
 
-// The configuration of this handler.
+// Config for a multichannelfanout.Handler.
 type Config struct {
 	// The configuration of each channel in this handler.
 	ChannelConfigs []ChannelConfig `json:"channelConfigs"`
 }
 
+// ChannelConfig is the configuration for a single Channel.
 type ChannelConfig struct {
 	Namespace    string        `json:"namespace"`
 	Name         string        `json:"name"`

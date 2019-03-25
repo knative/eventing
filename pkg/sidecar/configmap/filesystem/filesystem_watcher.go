@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	// The mount path of the configMap volume.
+	// ConfigDir is the mount path of the configMap volume.
 	ConfigDir = "/etc/config/fanout_sidecar"
 )
 
@@ -93,6 +93,7 @@ func (cmw *configMapWatcher) updateConfig() {
 	}
 }
 
+// Start implements controller runtime's manager.Runnable.
 func (cmw *configMapWatcher) Start(stopCh <-chan struct{}) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -112,12 +113,12 @@ func (cmw *configMapWatcher) Start(stopCh <-chan struct{}) error {
 				return errors.New("watcher.Events channel closed")
 			}
 			cmw.updateConfig()
-		case err, ok := <-watcher.Errors:
+		case e, ok := <-watcher.Errors:
 			if !ok {
 				// Channel closed.
 				return errors.New("watcher.Errors channel closed")
 			}
-			cmw.logger.Error("watcher.Errors", zap.Error(err))
+			cmw.logger.Error("watcher.Errors", zap.Error(e))
 		case <-stopCh:
 			return watcher.Close()
 		}
