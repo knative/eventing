@@ -88,7 +88,6 @@ func TestRunnableServerShutdownContext(t *testing.T) {
 
 	rs.ShutdownTimeout = time.Millisecond * 10
 	rs.Server.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		t.Logf("Handling request")
 		time.Sleep(time.Second * 10)
 		w.WriteHeader(http.StatusForbidden)
 	})
@@ -96,27 +95,21 @@ func TestRunnableServerShutdownContext(t *testing.T) {
 	stopCh := make(chan struct{})
 	stoppedCh := make(chan struct{})
 	go func() {
-		t.Logf("Starting RS")
 		if err := rs.Start(stopCh); err == nil {
 			t.Errorf("Expected context deadline exceeded error from Start but got nil")
 		}
 		close(stoppedCh)
-		t.Logf("stoppedCh closed")
 	}()
 
 	go func() {
-		_, err := http.Get("http://" + rs.Addr)
-		if err == nil {
-			t.Errorf("Expected request to time out")
-		}
+		http.Get("http://" + rs.Addr)
 	}()
 
 	// Give the request time to start
-	time.Sleep(time.Millisecond * 1)
+	time.Sleep(time.Millisecond * 50)
 	shutdownCh := time.After(time.Millisecond * 20)
 
 	close(stopCh)
-	t.Logf("stopCh closed")
 
 	select {
 	case <-shutdownCh:
