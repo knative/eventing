@@ -334,17 +334,8 @@ func (r *reconciler) reconcileChannel(ctx context.Context, get func() (*v1alpha1
 		return nil, err
 	}
 
-	// TODO Determine if we want to update spec (maybe just args?).
-	// Update Channel if it has changed. Note that we need to both ignore the real Channel's
-	// subscribable section and if we need to update the real Channel, retain it.
-	// expected.Spec.Subscribable = c.Spec.Subscribable
-	// if !equality.Semantic.DeepDerivative(expected.Spec, c.Spec) {
-	//	c.Spec = expected.Spec
-	//	err = r.client.Update(ctx, c)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	// }
+	// TODO Determine if we want to update spec (maybe just args?). For now, do not update it.
+
 	return c, nil
 }
 
