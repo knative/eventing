@@ -75,6 +75,20 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 									Name:  "CHANNEL",
 									Value: args.ChannelAddress,
 								},
+								{
+									Name:  "BROKER",
+									Value: args.Broker.Name,
+								},
+							},
+							Ports: []corev1.ContainerPort{
+								{
+									ContainerPort: 8080,
+									Name:          "http",
+								},
+								{
+									ContainerPort: 9090,
+									Name:          "metrics",
+								},
 							},
 						},
 					},
@@ -105,6 +119,10 @@ func MakeIngressService(b *eventingv1alpha1.Broker) *corev1.Service {
 					Name:       "http",
 					Port:       80,
 					TargetPort: intstr.FromInt(8080),
+				},
+				{
+					Name: "metrics",
+					Port: 9090,
 				},
 			},
 		},
