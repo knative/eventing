@@ -50,7 +50,7 @@ func (et *EventType) CheckImmutableFields(ctx context.Context, og apis.Immutable
 		return &apis.FieldError{Message: "The provided original was not an EventType"}
 	}
 
-	// All fields immutable, otherwise it creates a problem when reconciling from sources.
+	// All fields immutable.
 	if diff := cmp.Diff(original.Spec, et.Spec); diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",

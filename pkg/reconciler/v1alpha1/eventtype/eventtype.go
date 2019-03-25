@@ -18,6 +18,7 @@ package eventtype
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
@@ -199,9 +200,9 @@ func (r *reconciler) reconcile(ctx context.Context, et *v1alpha1.EventType) erro
 	et.Status.MarkBrokerExists()
 
 	if !b.Status.IsReady() {
-		logging.FromContext(ctx).Error("Broker is not ready", zap.Error(err))
+		logging.FromContext(ctx).Error("Broker is not ready", zap.String("broker", b.Name))
 		et.Status.MarkBrokerNotReady()
-		return err
+		return fmt.Errorf("broker %q not ready", b.Name)
 	}
 	et.Status.MarkBrokerReady()
 

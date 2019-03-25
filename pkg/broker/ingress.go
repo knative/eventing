@@ -47,21 +47,23 @@ type IngressPolicy struct {
 	namespace string
 	broker    string
 	spec      *eventingv1alpha1.IngressPolicySpec
+	async     bool
 }
 
-func NewPolicy(logger *zap.Logger, client client.Client, spec *eventingv1alpha1.IngressPolicySpec, namespace, broker string) *IngressPolicy {
+func NewPolicy(logger *zap.Logger, client client.Client, spec *eventingv1alpha1.IngressPolicySpec, namespace, broker string, async bool) *IngressPolicy {
 	return &IngressPolicy{
 		logger:    logger.Sugar(),
 		client:    client,
 		namespace: namespace,
 		broker:    broker,
 		spec:      spec,
+		async:     async,
 	}
 }
 
-func (p *IngressPolicy) AllowEvent(ctx context.Context, event *cloudevents.Event) bool {
+func (p *IngressPolicy) AllowEvent(ctx context.Context, event cloudevents.Event) bool {
 	if p.spec.AutoAdd {
-		return p.autoAdd(event)
+		return p.autoAdd(ctx, event)
 	}
 	if !p.spec.AllowAny {
 		return p.isRegistered(ctx, event)
@@ -69,12 +71,8 @@ func (p *IngressPolicy) AllowEvent(ctx context.Context, event *cloudevents.Event
 	return true
 }
 
-func (p *IngressPolicy) autoAdd(event *cloudevents.Event) bool {
-	// TODO do this in a working queue
-	go func() {
-		// Do not use the previous context as it seems that it can be canceled before
-		// this routine executes.
-		ctx := context.TODO()
+func (p *IngressPolicy) autoAdd(ctx context.Context, event cloudevents.Event) bool {
+	addFunc := func(ctx context.Context) {
 		_, err := p.getEventType(ctx, event)
 		if k8serrors.IsNotFound(err) {
 			p.logger.Infof("EventType %q not found: Adding", event.Type())
@@ -86,11 +84,19 @@ func (p *IngressPolicy) autoAdd(event *cloudevents.Event) bool {
 		} else if err != nil {
 			p.logger.Errorf("Error retrieving EventType %q: Accept but Not Add, %v", event.Type(), err)
 		}
-	}()
+	}
+	if p.async {
+		// TODO do this in a working queue
+		// Do not use the previous context as it seems that it can be canceled before
+		// this routine executes.
+		go addFunc(context.TODO())
+	} else {
+		addFunc(ctx)
+	}
 	return true
 }
 
-func (p *IngressPolicy) isRegistered(ctx context.Context, event *cloudevents.Event) bool {
+func (p *IngressPolicy) isRegistered(ctx context.Context, event cloudevents.Event) bool {
 	_, err := p.getEventType(ctx, event)
 	if k8serrors.IsNotFound(err) {
 		p.logger.Warnf("EventType %q not found: Reject", event.Type())
@@ -102,7 +108,7 @@ func (p *IngressPolicy) isRegistered(ctx context.Context, event *cloudevents.Eve
 	return true
 }
 
-func (p *IngressPolicy) getEventType(ctx context.Context, event *cloudevents.Event) (*eventingv1alpha1.EventType, error) {
+func (p *IngressPolicy) getEventType(ctx context.Context, event cloudevents.Event) (*eventingv1alpha1.EventType, error) {
 	opts := &client.ListOptions{
 		Namespace: p.namespace,
 		// Set Raw because if we need to get more than one page, then we will put the continue token
@@ -134,7 +140,7 @@ func (p *IngressPolicy) getEventType(ctx context.Context, event *cloudevents.Eve
 }
 
 // makeEventType generates, but does not create an EventType from the given cloudevents.Event.
-func (p *IngressPolicy) makeEventType(event *cloudevents.Event) *eventingv1alpha1.EventType {
+func (p *IngressPolicy) makeEventType(event cloudevents.Event) *eventingv1alpha1.EventType {
 	cloudEventType := event.Type()
 	return &eventingv1alpha1.EventType{
 		ObjectMeta: metav1.ObjectMeta{

@@ -81,7 +81,7 @@ func main() {
 	}
 	brokerName := getRequiredEnv("BROKER")
 
-	ingressPolicy := broker.NewPolicy(logger, client, policySpec, namespace, brokerName)
+	ingressPolicy := broker.NewPolicy(logger, client, policySpec, namespace, brokerName, true)
 
 	// Create an event handler.
 	ceHTTP, err := cehttp.New(cehttp.WithBinaryEncoding(), cehttp.WithPort(defaultPort))
@@ -189,7 +189,7 @@ func (h *handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 }
 
 func (h *handler) allowEvent(ctx context.Context, event cloudevents.Event) bool {
-	return h.ingressPolicy.AllowEvent(ctx, &event)
+	return h.ingressPolicy.AllowEvent(ctx, event)
 }
 
 func (h *handler) sendEvent(ctx context.Context, tctx cehttp.TransportContext, event cloudevents.Event) error {
