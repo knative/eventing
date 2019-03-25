@@ -41,7 +41,7 @@ modify those names to make them K8s-compliant, whenever we need to generate them
 - `type` is authoritative. This refers to the Cloud Event type as it enters into the eventing mesh. 
 
 - `source`: an identifier of where we receive the event from. This might not necessarily be the Cloud Event source 
-attribute.
+attribute. If we receive the event from our receive adaptors, the info might come in a Cloud Event custom extension (e.g., from).
 
 - `schema` is a URI with the EventType schema. It may be a JSON schema, a protobuf schema, etc. It is optional.
 
