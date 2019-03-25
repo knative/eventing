@@ -211,7 +211,7 @@ func (r *reconciler) ReconcileResource(ctx context.Context, obj eventingreconcil
 	}
 	b.Status.MarkIngressChannelReady()
 
-	_, err = r.reconcileIngressSubscription(ctx, b, ingressChan, svc)
+	_, err = r.reconcileIngressSubscription(ctx, b, ingressChan, svc, recorder)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling the ingress subscription", zap.Error(err))
 		b.Status.MarkIngressSubscriptionFailed(err)
@@ -467,7 +467,7 @@ func (r *reconciler) reconcileIngressService(ctx context.Context, b *v1alpha1.Br
 	return r.reconcileService(ctx, expected)
 }
 
-func (r *reconciler) reconcileIngressSubscription(ctx context.Context, b *v1alpha1.Broker, c *v1alpha1.Channel, svc *corev1.Service) (*v1alpha1.Subscription, error) {
+func (r *reconciler) reconcileIngressSubscription(ctx context.Context, b *v1alpha1.Broker, c *v1alpha1.Channel, svc *corev1.Service, recorder record.EventRecorder) (*v1alpha1.Subscription, error) {
 	expected := makeSubscription(b, c, svc)
 
 	sub, err := r.getIngressSubscription(ctx, b)
@@ -491,14 +491,14 @@ func (r *reconciler) reconcileIngressSubscription(ctx context.Context, b *v1alph
 		err = r.client.Delete(ctx, sub)
 		if err != nil {
 			logging.FromContext(ctx).Info("Cannot delete subscription", zap.Error(err))
-			r.recorder.Eventf(b, corev1.EventTypeWarning, ingressSubscriptionDeleteFailed, "Delete Broker Ingress' subscription failed: %v", err)
+			recorder.Eventf(b, corev1.EventTypeWarning, ingressSubscriptionDeleteFailed, "Delete Broker Ingress' subscription failed: %v", err)
 			return nil, err
 		}
 		sub = expected
 		err = r.client.Create(ctx, sub)
 		if err != nil {
 			logging.FromContext(ctx).Info("Cannot create subscription", zap.Error(err))
-			r.recorder.Eventf(b, corev1.EventTypeWarning, ingressSubscriptionCreateFailed, "Create Broker Ingress' subscription failed: %v", err)
+			recorder.Eventf(b, corev1.EventTypeWarning, ingressSubscriptionCreateFailed, "Create Broker Ingress' subscription failed: %v", err)
 			return nil, err
 		}
 	}

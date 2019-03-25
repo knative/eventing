@@ -200,22 +200,22 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	ctx := logging.WithLogger(context.TODO(), r.logger.With(zap.Any("request", request), zap.Any("ResourceKind", recObjTypeName)))
-	logger := logging.FromContext(ctx)
+	logging.FromContext(ctx)
 
-	logger.Debug("Reconciling.")
+	logging.FromContext(ctx).Debug("Reconciling.")
 
 	if err := r.client.Get(ctx, request.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Error("Could not find object.")
+			logging.FromContext(ctx).Error("Could not find object.")
 			return reconcile.Result{}, nil
 		}
-		logger.Error("Error in client.Get()", zap.Error(err))
+		logging.FromContext(ctx).Error("Error in client.Get()", zap.Error(err))
 		return reconcile.Result{}, err
 	}
 
 	// First check if the reconciler implement Filter.ShouldReconcile() and that the object should be reconciled or not
 	if r.filter != nil && !r.filter.ShouldReconcile(ctx, obj, r.recorder) {
-		logger.Debug("Skip reconciling as ShouldReconcile() returned false")
+		logging.FromContext(ctx).Debug("Skip reconciling as ShouldReconcile() returned false")
 		return reconcile.Result{}, nil
 	}
 
@@ -243,7 +243,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 			// If this update succeeds then proceed with rest of reconcilliation as obj will have the
 			// returned updated obj with new ResourceVersion
 			if err := r.client.Update(ctx, obj); err != nil {
-				logger.Error("Reconcile failed while adding finalizer", zap.Any("FinalizerName", r.finalizerName), zap.Error(err))
+				logging.FromContext(ctx).Error("Reconcile failed while adding finalizer", zap.Any("FinalizerName", r.finalizerName), zap.Error(err))
 				r.recorder.Eventf(obj, corev1.EventTypeWarning, AddFinalizerFailed, "Reconcile failed: %s", err)
 				return reconcile.Result{}, err
 			}
@@ -253,14 +253,16 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	updateStatus, result, err := r.ReconcileResource(ctx, obj, r.recorder)
 
 	if err != nil {
-		logger.Warn(fmt.Sprintf("Error reconciling"), zap.Error(err))
+		logging.FromContext(ctx).Warn(fmt.Sprintf("Error reconciling"), zap.Error(err))
 		r.recorder.Eventf(obj, corev1.EventTypeWarning, ReconcileFailed, "Reconcile failed: %s", err)
+	} else if result.Requeue || result.RequeueAfter > 0 {
+		logging.FromContext(ctx).Debug("Broker reconcile requeuing")
 	} else {
 		r.reportObjectReconciled(ctx, obj)
 	}
 	if updateStatus {
 		if updataStatusErr := r.client.Status().Update(ctx, obj); updataStatusErr != nil {
-			logger.Error("Failed to update status.", zap.Error(updataStatusErr))
+			logging.FromContext(ctx).Error("Failed to update status.", zap.Error(updataStatusErr))
 			r.recorder.Eventf(obj, corev1.EventTypeWarning, UpdateStatusFailed, "Failed to update status: %s", updataStatusErr)
 			return reconcile.Result{}, updataStatusErr
 		}

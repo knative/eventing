@@ -205,7 +205,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error getting broker's Trigger channel",
-			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Get Broker Ingress channel error",
@@ -230,7 +230,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error getting broker's Ingress channel",
-			WantEvent:  []corev1.Event{events[eventingreconciler.triggerReconcileFailed]},
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Resolve subscriberURI error",

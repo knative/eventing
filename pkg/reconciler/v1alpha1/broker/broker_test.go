@@ -25,7 +25,6 @@ import (
 	"time"
 
 	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/eventing/pkg/utils"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -220,7 +219,6 @@ func TestReconcile(t *testing.T) {
 				makeNonAddressableTriggerChannel(),
 			},
 			WantResult: reconcile.Result{RequeueAfter: time.Second},
-			WantEvent:  []corev1.Event{events[eventingreconciler.Reconciled]},
 		},
 		{
 			Name:   "Filter Deployment.Get error",
@@ -512,6 +510,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error getting Ingress Channel",
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Ingress Channel.Create error",
@@ -549,6 +548,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error creating Ingress Channel",
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Ingress Channel is different than expected",
@@ -586,7 +586,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantEvent: []corev1.Event{
 				{
-					Reason: brokerReconciled, Type: corev1.EventTypeNormal,
+					Reason: eventingreconciler.Reconciled, Type: corev1.EventTypeNormal,
 				},
 			},
 		},
@@ -638,6 +638,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error getting Subscription",
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Subscription.Create error",
@@ -658,6 +659,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error creating Subscription",
+			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
 			Name:   "Subscription is different than expected",
@@ -676,7 +678,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantEvent: []corev1.Event{
 				{
-					Reason: brokerReconciled, Type: corev1.EventTypeNormal,
+					Reason: eventingreconciler.Reconciled, Type: corev1.EventTypeNormal,
 				},
 			},
 		},
@@ -699,7 +701,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
-			WantEvent:  []corev1.Event{events[ingressSubscriptionDeleteFailed]},
+			WantEvent:  []corev1.Event{events[ingressSubscriptionDeleteFailed], events[eventingreconciler.ReconcileFailed]},
 			WantErrMsg: "test error deleting Subscription",
 		},
 		{
@@ -721,44 +723,8 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
-			WantEvent:  []corev1.Event{events[ingressSubscriptionCreateFailed]},
+			WantEvent:  []corev1.Event{events[ingressSubscriptionCreateFailed], events[eventingreconciler.ReconcileFailed]},
 			WantErrMsg: "test error creating Subscription",
-		},
-		{
-			Name:   "Broker.Get for status update fails",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
-				makeIngressChannel(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockGets: []controllertesting.MockGet{
-					// The first Get works.
-					func(innerClient client.Client, ctx context.Context, key client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*v1alpha1.Broker); ok {
-							return controllertesting.Handled, innerClient.Get(ctx, key, obj)
-						}
-						return controllertesting.Unhandled, nil
-					},
-					// The second Get fails.
-					func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*v1alpha1.Broker); ok {
-							return controllertesting.Handled, errors.New("test error getting the Broker for status update")
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-			WantErrMsg: "test error getting the Broker for status update",
-			WantEvent: []corev1.Event{
-				{
-					Reason: brokerReconciled, Type: corev1.EventTypeNormal,
-				},
-				{
-					Reason: brokerUpdateStatusFailed, Type: corev1.EventTypeWarning,
-				},
-			},
 		},
 		{
 			Name:   "Broker.Status.Update error",

@@ -561,9 +561,6 @@ func TestReconcile(t *testing.T) {
 			WantResult: reconcile.Result{
 				Requeue: true,
 			},
-			WantEvent: []corev1.Event{
-				events[eventingreconciler.Reconciled],
-			},
 		},
 		{
 			Name: "Create Topic - problem creating client",
