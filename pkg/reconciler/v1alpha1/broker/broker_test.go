@@ -813,7 +813,6 @@ func TestReconcile(t *testing.T) {
 		if err != nil {
 			t.FailNow()
 		}
-
 		tc.ReconcileKey = fmt.Sprintf("%s/%s", testNS, brokerName)
 		tc.IgnoreTimes = true
 		t.Run(tc.Name, tc.Runner(t, r, c, recorder))

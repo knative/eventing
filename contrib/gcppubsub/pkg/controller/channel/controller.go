@@ -64,7 +64,7 @@ func ProvideController(defaultGcpProject string, defaultSecret *corev1.ObjectRef
 			return nil, err
 		}
 
-		// Watch Channels
+		// Watch Channels.
 		err = c.Watch(&source.Kind{
 			Type: &eventingv1alpha1.Channel{},
 		}, &handler.EnqueueRequestForObject{})
