@@ -298,8 +298,7 @@ func CreateService(clients *test.Clients, svc *corev1.Service, _ logging.FormatL
 
 // CreatePod will create a Pod
 func CreatePod(clients *test.Clients, pod *corev1.Pod, _ logging.FormatLogger, cleaner *test.Cleaner) error {
-	pods := clients.Kube.Kube.CoreV1().Pods(pod.GetNamespace())
-	res, err := pods.Create(pod)
+	res, err := clients.Kube.CreatePod(pod)
 	if err != nil {
 		return err
 	}
@@ -307,35 +306,11 @@ func CreatePod(clients *test.Clients, pod *corev1.Pod, _ logging.FormatLogger, c
 	return nil
 }
 
-// PodLogs returns Pod logs for given Pod and Container
-func PodLogs(clients *test.Clients, podName string, containerName string, namespace string, logf logging.FormatLogger) ([]byte, error) {
-	pods := clients.Kube.Kube.CoreV1().Pods(namespace)
-	podList, err := pods.List(metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	for _, pod := range podList.Items {
-		if strings.Contains(pod.Name, podName) {
-			result := pods.GetLogs(pod.Name, &corev1.PodLogOptions{
-				Container: containerName,
-			}).Do()
-			raw, err := result.Raw()
-			if err == nil {
-				logf("%s logs request result: %#v", podName, string(raw))
-			} else {
-				logf("%s logs request result: %#v", podName, err)
-			}
-			return result.Raw()
-		}
-	}
-	return nil, fmt.Errorf("Could not find logs for %s/%s", podName, containerName)
-}
-
 // WaitForLogContents waits until logs for given Pod/Container include the given contents.
 // If the contents are not present within timeout it returns error.
 func WaitForLogContents(clients *test.Clients, logf logging.FormatLogger, podName string, containerName string, namespace string, contents []string) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		logs, err := PodLogs(clients, podName, containerName, namespace, logf)
+		logs, err := clients.Kube.PodLogs(podName, containerName)
 		if err != nil {
 			return true, err
 		}
@@ -343,10 +318,9 @@ func WaitForLogContents(clients *test.Clients, logf logging.FormatLogger, podNam
 			if !strings.Contains(string(logs), content) {
 				logf("Could not find content %q for %s/%s. Found %q instead", content, podName, containerName, string(logs))
 				return false, nil
-			} else {
-				logf("Found content %q for %s/%s in logs %q", content, podName, containerName, string(logs))
-				// do not return as we will keep on looking for the other contents in the slice
 			}
+			// do not return as we will keep on looking for the other contents in the slice
+			logf("Found content %q for %s/%s in logs %q", content, podName, containerName, string(logs))
 		}
 		return true, nil
 	})
@@ -355,7 +329,7 @@ func WaitForLogContents(clients *test.Clients, logf logging.FormatLogger, podNam
 // FindAnyLogContents attempts to find logs for given Pod/Container that has 'any' of the given contents.
 // It returns an error if it couldn't retrieve the logs. In case 'any' of the contents are there, it returns true.
 func FindAnyLogContents(clients *test.Clients, logf logging.FormatLogger, podName string, containerName string, namespace string, contents []string) (bool, error) {
-	logs, err := PodLogs(clients, podName, containerName, namespace, logf)
+	logs, err := clients.Kube.PodLogs(podName, containerName)
 	if err != nil {
 		return false, err
 	}
@@ -366,20 +340,6 @@ func FindAnyLogContents(clients *test.Clients, logf logging.FormatLogger, podNam
 		}
 	}
 	return false, nil
-}
-
-// WaitForLogContent waits until logs for given Pod/Container include the given content.
-// If the content is not present within timeout it returns error.
-func WaitForLogContent(clients *test.Clients, logf logging.FormatLogger, podName string, containerName string, namespace string, content string) error {
-	return WaitForLogContents(clients, logf, podName, containerName, namespace, []string{content})
-}
-
-// WaitForAllPodsRunning will wait until all pods in the given namespace are running
-func WaitForAllPodsRunning(clients *test.Clients, _ logging.FormatLogger, namespace string) error {
-	if err := pkgTest.WaitForPodListState(clients.Kube, test.PodsRunning, "PodsAreRunning", namespace); err != nil {
-		return err
-	}
-	return nil
 }
 
 // WaitForAllTriggersReady will wait until all triggers in the given namespace are ready.

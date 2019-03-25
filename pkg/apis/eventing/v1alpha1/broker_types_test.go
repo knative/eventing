@@ -17,11 +17,19 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+)
+
+var (
+	trueVal  = true
+	falseVal = false
+
+	err = errors.New("foobar")
 )
 
 var (
@@ -35,8 +43,8 @@ var (
 		Status: corev1.ConditionTrue,
 	}
 
-	brokerConditionChannel = duckv1alpha1.Condition{
-		Type:   BrokerConditionChannel,
+	brokerConditionTriggerChannel = duckv1alpha1.Condition{
+		Type:   BrokerConditionTriggerChannel,
 		Status: corev1.ConditionTrue,
 	}
 
@@ -74,7 +82,7 @@ func TestBrokerGetCondition(t *testing.T) {
 			Status: duckv1alpha1.Status{
 				Conditions: []duckv1alpha1.Condition{
 					brokerConditionIngress,
-					brokerConditionChannel,
+					brokerConditionTriggerChannel,
 					brokerConditionFilter,
 				},
 			},
@@ -86,7 +94,7 @@ func TestBrokerGetCondition(t *testing.T) {
 		bs: &BrokerStatus{
 			Status: duckv1alpha1.Status{
 				Conditions: []duckv1alpha1.Condition{
-					brokerConditionChannel,
+					brokerConditionTriggerChannel,
 					brokerConditionFilter,
 					brokerConditionAddressable,
 				},
@@ -132,16 +140,22 @@ func TestBrokerInitializeConditions(t *testing.T) {
 					Type:   BrokerConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   BrokerConditionChannel,
+					Type:   BrokerConditionFilter,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   BrokerConditionFilter,
+					Type:   BrokerConditionIngressChannel,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   BrokerConditionIngress,
 					Status: corev1.ConditionUnknown,
 				}, {
+					Type:   BrokerConditionIngressSubscription,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   BrokerConditionReady,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   BrokerConditionTriggerChannel,
 					Status: corev1.ConditionUnknown,
 				}},
 			},
@@ -151,7 +165,7 @@ func TestBrokerInitializeConditions(t *testing.T) {
 		bs: &BrokerStatus{
 			Status: duckv1alpha1.Status{
 				Conditions: []duckv1alpha1.Condition{{
-					Type:   BrokerConditionChannel,
+					Type:   BrokerConditionTriggerChannel,
 					Status: corev1.ConditionFalse,
 				}},
 			},
@@ -162,17 +176,23 @@ func TestBrokerInitializeConditions(t *testing.T) {
 					Type:   BrokerConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   BrokerConditionChannel,
-					Status: corev1.ConditionFalse,
-				}, {
 					Type:   BrokerConditionFilter,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   BrokerConditionIngressChannel,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   BrokerConditionIngress,
 					Status: corev1.ConditionUnknown,
 				}, {
+					Type:   BrokerConditionIngressSubscription,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   BrokerConditionReady,
 					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   BrokerConditionTriggerChannel,
+					Status: corev1.ConditionFalse,
 				}},
 			},
 		},
@@ -192,21 +212,27 @@ func TestBrokerInitializeConditions(t *testing.T) {
 					Type:   BrokerConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   BrokerConditionChannel,
-					Status: corev1.ConditionUnknown,
-				}, {
 					Type:   BrokerConditionFilter,
 					Status: corev1.ConditionTrue,
+				}, {
+					Type:   BrokerConditionIngressChannel,
+					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   BrokerConditionIngress,
 					Status: corev1.ConditionUnknown,
 				}, {
+					Type:   BrokerConditionIngressSubscription,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   BrokerConditionReady,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   BrokerConditionTriggerChannel,
 					Status: corev1.ConditionUnknown,
 				}},
 			},
-		},
-	}}
+		}},
+	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -220,69 +246,128 @@ func TestBrokerInitializeConditions(t *testing.T) {
 
 func TestBrokerIsReady(t *testing.T) {
 	tests := []struct {
-		name             string
-		markChannelReady bool
-		markFilterReady  bool
-		markIngressReady bool
-		address          string
-		wantReady        bool
+		name                         string
+		markIngressReady             *bool
+		markTriggerChannelReady      *bool
+		markIngressChannelReady      *bool
+		markFilterReady              *bool
+		address                      string
+		markIngressSubscriptionReady *bool
+		wantReady                    bool
 	}{{
-		name:             "all happy",
-		markChannelReady: true,
-		markFilterReady:  true,
-		markIngressReady: true,
-		address:          "hostname",
-		wantReady:        true,
+		name:                         "all happy",
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &trueVal,
+		markIngressChannelReady:      &trueVal,
+		markFilterReady:              &trueVal,
+		address:                      "hostname",
+		markIngressSubscriptionReady: &trueVal,
+		wantReady:                    true,
 	}, {
-		name:             "channel sad",
-		markChannelReady: false,
-		markFilterReady:  true,
-		markIngressReady: true,
-		address:          "hostname",
-		wantReady:        false,
+		name:                         "ingress sad",
+		markIngressReady:             &falseVal,
+		markTriggerChannelReady:      &trueVal,
+		markIngressChannelReady:      &trueVal,
+		markFilterReady:              &trueVal,
+		address:                      "hostname",
+		markIngressSubscriptionReady: &trueVal,
+		wantReady:                    false,
 	}, {
-		name:             "filter sad",
-		markChannelReady: true,
-		markFilterReady:  false,
-		markIngressReady: true,
-		address:          "hostname",
-		wantReady:        false,
+		name:                         "trigger channel sad",
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &falseVal,
+		markIngressChannelReady:      &trueVal,
+		markFilterReady:              &trueVal,
+		address:                      "hostname",
+		markIngressSubscriptionReady: &trueVal,
+		wantReady:                    false,
 	}, {
-		name:             "ingress sad",
-		markChannelReady: true,
-		markFilterReady:  true,
-		markIngressReady: false,
-		address:          "hostname",
-		wantReady:        false,
+		name:                         "ingress channel sad",
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &trueVal,
+		markIngressChannelReady:      &falseVal,
+		markFilterReady:              &trueVal,
+		address:                      "hostname",
+		markIngressSubscriptionReady: &trueVal,
+		wantReady:                    false,
 	}, {
-		name:             "addressable sad",
-		markChannelReady: true,
-		markFilterReady:  true,
-		markIngressReady: true,
-		address:          "",
-		wantReady:        false,
+		name:                         "filter sad",
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &trueVal,
+		markIngressChannelReady:      &trueVal,
+		markFilterReady:              &falseVal,
+		address:                      "hostname",
+		markIngressSubscriptionReady: &trueVal,
+		wantReady:                    false,
 	}, {
-		name:             "all sad",
-		markChannelReady: false,
-		markFilterReady:  false,
-		markIngressReady: false,
-		address:          "",
-		wantReady:        false,
+		name:                         "addressable sad",
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &trueVal,
+		markIngressChannelReady:      &trueVal,
+		markFilterReady:              &trueVal,
+		address:                      "",
+		markIngressSubscriptionReady: &trueVal,
+		wantReady:                    false,
+	}, {
+		name:                         "ingress subscription sad",
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &trueVal,
+		markIngressChannelReady:      &trueVal,
+		markFilterReady:              &trueVal,
+		address:                      "hostname",
+		markIngressSubscriptionReady: &falseVal,
+		wantReady:                    false,
+	}, {
+		name:                         "all sad",
+		markIngressReady:             &falseVal,
+		markTriggerChannelReady:      &falseVal,
+		markIngressChannelReady:      &trueVal,
+		markFilterReady:              &falseVal,
+		address:                      "",
+		markIngressSubscriptionReady: &trueVal,
+		wantReady:                    false,
 	}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ts := &BrokerStatus{}
-			if test.markChannelReady {
-				ts.MarkChannelReady()
+			bs := &BrokerStatus{}
+			if test.markIngressReady != nil {
+				if *test.markIngressReady {
+					bs.MarkIngressReady()
+				} else {
+					bs.MarkIngressFailed(err)
+				}
 			}
-			if test.markFilterReady {
-				ts.MarkFilterReady()
+			if test.markTriggerChannelReady != nil {
+				if *test.markTriggerChannelReady {
+					bs.MarkTriggerChannelReady()
+				} else {
+					bs.MarkTriggerChannelFailed(err)
+				}
 			}
-			if test.markIngressReady {
-				ts.MarkIngressReady()
+			if test.markIngressChannelReady != nil {
+				if *test.markIngressChannelReady {
+					bs.MarkIngressChannelReady()
+				} else {
+					bs.MarkIngressChannelFailed(err)
+				}
 			}
-			ts.SetAddress(test.address)
-			got := ts.IsReady()
+			if test.markIngressSubscriptionReady != nil {
+				if *test.markIngressSubscriptionReady {
+					bs.MarkIngressSubscriptionReady()
+				} else {
+					bs.MarkIngressSubscriptionFailed(err)
+				}
+			}
+			if test.markFilterReady != nil {
+				if *test.markFilterReady {
+					bs.MarkFilterReady()
+				} else {
+					bs.MarkFilterFailed(err)
+				}
+			}
+			bs.SetAddress(test.address)
+
+			got := bs.IsReady()
 			if test.wantReady != got {
 				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
 			}

@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,9 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package cloudevents implements utilities for handling CloudEvents.
-// For information on the spec, see
-// https://github.com/cloudevents/spec/blob/v0.1/http-transport-binding.md
-// and
-// https://github.com/cloudevents/spec/blob/v0.1/spec.md
-package cloudevents
+package v1alpha1
+
+import "context"
+
+// SetDefaults sets default values on the ServerlessServiceSpec.
+func (c *ServerlessService) SetDefaults(ctx context.Context) {
+	c.Spec.SetDefaults(ctx)
+}
+
+// SetDefaults sets default values on the ServerlessServiceSpec.
+func (c *ServerlessServiceSpec) SetDefaults(ctx context.Context) {
+	// Nothing is defaultable so far.
+}

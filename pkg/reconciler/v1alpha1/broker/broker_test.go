@@ -27,14 +27,17 @@ import (
 	eventingreconciler "github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/utils"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
+	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,15 +64,22 @@ var (
 		Name:       "my-provisioner",
 	}
 
-	channelHostname = fmt.Sprintf("foo.bar.svc.%s", utils.GetClusterDomainName())
+	triggerChannelHostname = fmt.Sprintf("foo.bar.svc.%s", utils.GetClusterDomainName())
+	ingressChannelHostname = fmt.Sprintf("baz.qux.svc.%s", utils.GetClusterDomainName())
+
+	ingressChannelName = "ingress-channel"
 
 	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
 	// truncates to seconds to match the loss of precision during serialization.
 	deletionTime = metav1.Now().Rfc3339Copy()
-	events       = map[string]corev1.Event{
+
+	// Map of events to set test cases' expectations easier.
+	events = map[string]corev1.Event{
 		eventingreconciler.Reconciled:         {Reason: eventingreconciler.Reconciled, Type: corev1.EventTypeNormal},
 		eventingreconciler.ReconcileFailed:    {Reason: eventingreconciler.ReconcileFailed, Type: corev1.EventTypeWarning},
 		eventingreconciler.UpdateStatusFailed: {Reason: eventingreconciler.UpdateStatusFailed, Type: corev1.EventTypeWarning},
+		ingressSubscriptionDeleteFailed:       {Reason: ingressSubscriptionDeleteFailed, Type: corev1.EventTypeWarning},
+		ingressSubscriptionCreateFailed:       {Reason: ingressSubscriptionCreateFailed, Type: corev1.EventTypeWarning},
 	}
 )
 
@@ -143,26 +153,30 @@ func TestReconcile(t *testing.T) {
 			WantEvent: []corev1.Event{events[eventingreconciler.Reconciled]},
 		},
 		{
-			Name:   "Channel.List error",
+			Name:   "Trigger Channel.List error",
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
 				makeBroker(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockLists: []controllertesting.MockList{
-					func(_ client.Client, _ context.Context, _ *client.ListOptions, list runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := list.(*v1alpha1.ChannelList); ok {
-							return controllertesting.Handled, errors.New("test error listing channels")
+					func(_ client.Client, _ context.Context, opts *client.ListOptions, list runtime.Object) (controllertesting.MockHandled, error) {
+						// Only match the Trigger Channel labels.
+						ls := labels.FormatLabels(TriggerChannelLabels(makeBroker()))
+						l, _ := labels.ConvertSelectorToLabelsMap(ls)
+
+						if _, ok := list.(*v1alpha1.ChannelList); ok && opts.LabelSelector.Matches(l) {
+							return controllertesting.Handled, errors.New("test error getting Trigger Channel")
 						}
 						return controllertesting.Unhandled, nil
 					},
 				},
 			},
-			WantErrMsg: "test error listing channels",
+			WantErrMsg: "test error getting Trigger Channel",
 			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
-			Name:   "Channel.Create error",
+			Name:   "Trigger Channel.Create error",
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
 				makeBroker(),
@@ -170,38 +184,40 @@ func TestReconcile(t *testing.T) {
 			Mocks: controllertesting.Mocks{
 				MockCreates: []controllertesting.MockCreate{
 					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*v1alpha1.Channel); ok {
-							return controllertesting.Handled, errors.New("test error creating Channel")
+						if c, ok := obj.(*v1alpha1.Channel); ok {
+							if cmp.Equal(c.Labels, TriggerChannelLabels(makeBroker())) {
+								return controllertesting.Handled, errors.New("test error creating Trigger Channel")
+							}
 						}
 						return controllertesting.Unhandled, nil
 					},
 				},
 			},
-			WantErrMsg: "test error creating Channel",
+			WantErrMsg: "test error creating Trigger Channel",
 			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
-			Name:   "Channel is different than expected",
+			Name:   "Trigger Channel is different than expected",
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
 				makeBroker(),
-				makeDifferentChannel(),
+				makeDifferentTriggerChannel(),
 			},
 			WantPresent: []runtime.Object{
 				// This is special because the Channel is not updated, unlike most things that
 				// differ from expected.
 				// TODO uncomment the following line once our test framework supports searching for
 				// GenerateName.
-				// makeDifferentChannel(),
+				// makeDifferentTriggerChannel(),
 			},
 			WantEvent: []corev1.Event{events[eventingreconciler.Reconciled]},
 		},
 		{
-			Name:   "Channel is not yet Addressable",
+			Name:   "Trigger Channel is not yet Addressable",
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
 				makeBroker(),
-				makeNonAddressableChannel(),
+				makeNonAddressableTriggerChannel(),
 			},
 			WantResult: reconcile.Result{RequeueAfter: time.Second},
 			WantEvent:  []corev1.Event{events[eventingreconciler.Reconciled]},
@@ -211,7 +227,7 @@ func TestReconcile(t *testing.T) {
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockGets: []controllertesting.MockGet{
@@ -233,7 +249,7 @@ func TestReconcile(t *testing.T) {
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockCreates: []controllertesting.MockCreate{
@@ -255,7 +271,7 @@ func TestReconcile(t *testing.T) {
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 				makeDifferentFilterDeployment(),
 			},
 			Mocks: controllertesting.Mocks{
@@ -278,7 +294,7 @@ func TestReconcile(t *testing.T) {
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockGets: []controllertesting.MockGet{
@@ -300,7 +316,7 @@ func TestReconcile(t *testing.T) {
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockCreates: []controllertesting.MockCreate{
@@ -322,7 +338,7 @@ func TestReconcile(t *testing.T) {
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 				makeDifferentFilterService(),
 			},
 			Mocks: controllertesting.Mocks{
@@ -345,7 +361,7 @@ func TestReconcile(t *testing.T) {
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockGets: []controllertesting.MockGet{
@@ -367,7 +383,7 @@ func TestReconcile(t *testing.T) {
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockCreates: []controllertesting.MockCreate{
@@ -389,7 +405,7 @@ func TestReconcile(t *testing.T) {
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 				makeDifferentIngressDeployment(),
 			},
 			Mocks: controllertesting.Mocks{
@@ -412,7 +428,7 @@ func TestReconcile(t *testing.T) {
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockGets: []controllertesting.MockGet{
@@ -434,7 +450,7 @@ func TestReconcile(t *testing.T) {
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockCreates: []controllertesting.MockCreate{
@@ -456,7 +472,7 @@ func TestReconcile(t *testing.T) {
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
 				makeDifferentIngressService(),
 			},
 			Mocks: controllertesting.Mocks{
@@ -475,11 +491,282 @@ func TestReconcile(t *testing.T) {
 			WantEvent:  []corev1.Event{events[eventingreconciler.ReconcileFailed]},
 		},
 		{
+			Name:   "Ingress Channel.List error",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeBroker(),
+				makeTriggerChannel(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockLists: []controllertesting.MockList{
+					func(_ client.Client, _ context.Context, opts *client.ListOptions, list runtime.Object) (controllertesting.MockHandled, error) {
+						// Only match the Ingress Channel labels.
+						ls := labels.FormatLabels(IngressChannelLabels(makeBroker()))
+						l, _ := labels.ConvertSelectorToLabelsMap(ls)
+
+						if _, ok := list.(*v1alpha1.ChannelList); ok && opts.LabelSelector.Matches(l) {
+							return controllertesting.Handled, errors.New("test error getting Ingress Channel")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error getting Ingress Channel",
+		},
+		{
+			Name:   "Ingress Channel.Create error",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeBroker(),
+				makeTriggerChannel(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockLists: []controllertesting.MockList{
+					// Controller Runtime's fake client totally ignores the opts.LabelSelector, so
+					// picks up the Trigger Channel while listing the Ingress Channel. Use a mock to
+					// force the correct behavior.
+					func(innerClient client.Client, ctx context.Context, opts *client.ListOptions, list runtime.Object) (handled controllertesting.MockHandled, e error) {
+						if _, ok := list.(*v1alpha1.ChannelList); ok {
+							// Only match the Ingress Channel labels.
+							ls := labels.FormatLabels(IngressChannelLabels(makeBroker()))
+							l, _ := labels.ConvertSelectorToLabelsMap(ls)
+							if opts.LabelSelector.Matches(l) {
+								return controllertesting.Handled, nil
+							}
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+				MockCreates: []controllertesting.MockCreate{
+					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+						if c, ok := obj.(*v1alpha1.Channel); ok {
+							if cmp.Equal(c.Labels, IngressChannelLabels(makeBroker())) {
+								return controllertesting.Handled, errors.New("test error creating Ingress Channel")
+							}
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error creating Ingress Channel",
+		},
+		{
+			Name:   "Ingress Channel is different than expected",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeBroker(),
+				makeTriggerChannel(),
+				makeDifferentIngressChannel(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockLists: []controllertesting.MockList{
+					// Controller Runtime's fake client totally ignores the opts.LabelSelector, so
+					// picks up the Trigger Channel while listing the Ingress Channel. Use a mock to
+					// force the correct behavior.
+					func(innerClient client.Client, ctx context.Context, opts *client.ListOptions, list runtime.Object) (handled controllertesting.MockHandled, e error) {
+						if cl, ok := list.(*v1alpha1.ChannelList); ok {
+							// Only match the Ingress Channel labels.
+							ls := labels.FormatLabels(IngressChannelLabels(makeBroker()))
+							l, _ := labels.ConvertSelectorToLabelsMap(ls)
+							if opts.LabelSelector.Matches(l) {
+								cl.Items = append(cl.Items, *makeDifferentIngressChannel())
+								return controllertesting.Handled, nil
+							}
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantPresent: []runtime.Object{
+				// This is special because the Channel is not updated, unlike most things that
+				// differ from expected.
+				// TODO uncomment the following line once our test framework supports searching for
+				// GenerateName.
+				// makeDifferentIngressChannel(),
+			},
+			WantEvent: []corev1.Event{
+				{
+					Reason: brokerReconciled, Type: corev1.EventTypeNormal,
+				},
+			},
+		},
+		{
+			Name:   "Ingress Channel is not yet Addressable",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeBroker(),
+				makeTriggerChannel(),
+				makeNonAddressableIngressChannel(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockLists: []controllertesting.MockList{
+					// Controller Runtime's fake client totally ignores the opts.LabelSelector, so
+					// picks up the Trigger Channel while listing the Ingress Channel. Use a mock to
+					// force the correct behavior.
+					func(innerClient client.Client, ctx context.Context, opts *client.ListOptions, list runtime.Object) (handled controllertesting.MockHandled, e error) {
+						if cl, ok := list.(*v1alpha1.ChannelList); ok {
+							// Only match the Ingress Channel labels.
+							ls := labels.FormatLabels(IngressChannelLabels(makeBroker()))
+							l, _ := labels.ConvertSelectorToLabelsMap(ls)
+							if opts.LabelSelector.Matches(l) {
+								cl.Items = append(cl.Items, *makeNonAddressableIngressChannel())
+								return controllertesting.Handled, nil
+							}
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantResult: reconcile.Result{RequeueAfter: time.Second},
+		},
+		{
+			Name:   "Subscription.List error",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeBroker(),
+				makeTriggerChannel(),
+				makeIngressChannel(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockLists: []controllertesting.MockList{
+					func(_ client.Client, _ context.Context, opts *client.ListOptions, list runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := list.(*v1alpha1.SubscriptionList); ok {
+							return controllertesting.Handled, errors.New("test error getting Subscription")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error getting Subscription",
+		},
+		{
+			Name:   "Subscription.Create error",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeBroker(),
+				makeTriggerChannel(),
+				makeIngressChannel(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockCreates: []controllertesting.MockCreate{
+					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := obj.(*v1alpha1.Subscription); ok {
+							return controllertesting.Handled, errors.New("test error creating Subscription")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error creating Subscription",
+		},
+		{
+			Name:   "Subscription is different than expected",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeBroker(),
+				makeTriggerChannel(),
+				makeIngressChannel(),
+			},
+			WantPresent: []runtime.Object{
+				// This is special because the Channel is not updated, unlike most things that
+				// differ from expected.
+				// TODO uncomment the following line once our test framework supports searching for
+				// GenerateName.
+				// makeDifferentSubscription(),
+			},
+			WantEvent: []corev1.Event{
+				{
+					Reason: brokerReconciled, Type: corev1.EventTypeNormal,
+				},
+			},
+		},
+		{
+			Name:   "Subscription.Delete error",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeBroker(),
+				makeTriggerChannel(),
+				makeIngressChannel(),
+				makeDifferentSubscription(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockDeletes: []controllertesting.MockDelete{
+					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := obj.(*v1alpha1.Subscription); ok {
+							return controllertesting.Handled, errors.New("test error deleting Subscription")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantEvent:  []corev1.Event{events[ingressSubscriptionDeleteFailed]},
+			WantErrMsg: "test error deleting Subscription",
+		},
+		{
+			Name:   "Subscription.Create error when recreating",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeBroker(),
+				makeTriggerChannel(),
+				makeIngressChannel(),
+				makeDifferentSubscription(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockCreates: []controllertesting.MockCreate{
+					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := obj.(*v1alpha1.Subscription); ok {
+							return controllertesting.Handled, errors.New("test error creating Subscription")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantEvent:  []corev1.Event{events[ingressSubscriptionCreateFailed]},
+			WantErrMsg: "test error creating Subscription",
+		},
+		{
+			Name:   "Broker.Get for status update fails",
+			Scheme: scheme.Scheme,
+			InitialState: []runtime.Object{
+				makeBroker(),
+				makeTriggerChannel(),
+				makeIngressChannel(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockGets: []controllertesting.MockGet{
+					// The first Get works.
+					func(innerClient client.Client, ctx context.Context, key client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := obj.(*v1alpha1.Broker); ok {
+							return controllertesting.Handled, innerClient.Get(ctx, key, obj)
+						}
+						return controllertesting.Unhandled, nil
+					},
+					// The second Get fails.
+					func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := obj.(*v1alpha1.Broker); ok {
+							return controllertesting.Handled, errors.New("test error getting the Broker for status update")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error getting the Broker for status update",
+			WantEvent: []corev1.Event{
+				{
+					Reason: brokerReconciled, Type: corev1.EventTypeNormal,
+				},
+				{
+					Reason: brokerUpdateStatusFailed, Type: corev1.EventTypeWarning,
+				},
+			},
+		},
+		{
 			Name:   "Broker.Status.Update error",
 			Scheme: scheme.Scheme,
 			InitialState: []runtime.Object{
 				makeBroker(),
-				makeChannel(),
+				makeTriggerChannel(),
+				makeIngressChannel(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockStatusUpdates: []controllertesting.MockStatusUpdate{
@@ -500,16 +787,40 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeBroker(),
 				// The Channel needs to be addressable for the reconcile to succeed.
-				makeChannel(),
+				makeTriggerChannel(),
+				makeIngressChannel(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockLists: []controllertesting.MockList{
+					// Controller Runtime's fake client totally ignores the opts.LabelSelector, so
+					// picks up the Trigger Channel while listing the Ingress Channel. Use a mock to
+					// force the correct behavior.
+					func(innerClient client.Client, ctx context.Context, opts *client.ListOptions, list runtime.Object) (handled controllertesting.MockHandled, e error) {
+						if cl, ok := list.(*v1alpha1.ChannelList); ok {
+							// Only match the Ingress Channel labels.
+							ls := labels.FormatLabels(IngressChannelLabels(makeBroker()))
+							l, _ := labels.ConvertSelectorToLabelsMap(ls)
+							if opts.LabelSelector.Matches(l) {
+								cl.Items = append(cl.Items, *makeIngressChannel())
+								return controllertesting.Handled, nil
+							}
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
 			},
 			WantPresent: []runtime.Object{
 				makeReadyBroker(),
-				// TODO Uncomment makeChannel() when our test framework handles generateName.
-				// makeChannel(),
+				// TODO Uncomment makeTriggerChannel() when our test framework handles generateName.
+				// makeTriggerChannel(),
 				makeFilterDeployment(),
 				makeFilterService(),
 				makeIngressDeployment(),
 				makeIngressService(),
+				// TODO Uncomment makeIngressChannel() when our test framework handles generateName.
+				// makeIngressChannel(),
+				// Because the
+				makeTestSubscription(),
 			},
 			WantEvent: []corev1.Event{
 				{
@@ -564,10 +875,12 @@ func makeBroker() *v1alpha1.Broker {
 func makeReadyBroker() *v1alpha1.Broker {
 	b := makeBroker()
 	b.Status.InitializeConditions()
-	b.Status.MarkChannelReady()
-	b.Status.SetAddress(fmt.Sprintf("%s-broker.%s.svc.%s", brokerName, testNS, utils.GetClusterDomainName()))
-	b.Status.MarkFilterReady()
 	b.Status.MarkIngressReady()
+	b.Status.MarkTriggerChannelReady()
+	b.Status.MarkIngressChannelReady()
+	b.Status.MarkFilterReady()
+	b.Status.SetAddress(fmt.Sprintf("%s-broker.%s.svc.%s", brokerName, testNS, utils.GetClusterDomainName()))
+	b.Status.MarkIngressSubscriptionReady()
 	return b
 }
 
@@ -577,7 +890,7 @@ func makeDeletingBroker() *v1alpha1.Broker {
 	return b
 }
 
-func makeChannel() *v1alpha1.Channel {
+func makeTriggerChannel() *v1alpha1.Channel {
 	return &v1alpha1.Channel{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    testNS,
@@ -595,20 +908,59 @@ func makeChannel() *v1alpha1.Channel {
 		},
 		Status: v1alpha1.ChannelStatus{
 			Address: duckv1alpha1.Addressable{
-				Hostname: channelHostname,
+				Hostname: triggerChannelHostname,
 			},
 		},
 	}
 }
 
-func makeNonAddressableChannel() *v1alpha1.Channel {
-	c := makeChannel()
+func makeNonAddressableTriggerChannel() *v1alpha1.Channel {
+	c := makeTriggerChannel()
 	c.Status.Address = duckv1alpha1.Addressable{}
 	return c
 }
 
-func makeDifferentChannel() *v1alpha1.Channel {
-	c := makeChannel()
+func makeDifferentTriggerChannel() *v1alpha1.Channel {
+	c := makeTriggerChannel()
+	c.Spec.Provisioner.Name = "some-other-provisioner"
+	return c
+}
+
+func makeIngressChannel() *v1alpha1.Channel {
+	return &v1alpha1.Channel{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:    testNS,
+			GenerateName: fmt.Sprintf("%s-broker-ingress-", brokerName),
+			// The Fake library doesn't understand GenerateName, so give this a name so it doesn't
+			// collide with the Trigger Channel.
+			Name: ingressChannelName,
+			Labels: map[string]string{
+				"eventing.knative.dev/broker":        brokerName,
+				"eventing.knative.dev/brokerIngress": "true",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				getOwnerReference(),
+			},
+		},
+		Spec: v1alpha1.ChannelSpec{
+			Provisioner: channelProvisioner,
+		},
+		Status: v1alpha1.ChannelStatus{
+			Address: duckv1alpha1.Addressable{
+				Hostname: ingressChannelHostname,
+			},
+		},
+	}
+}
+
+func makeNonAddressableIngressChannel() *v1alpha1.Channel {
+	c := makeIngressChannel()
+	c.Status.Address = duckv1alpha1.Addressable{}
+	return c
+}
+
+func makeDifferentIngressChannel() *v1alpha1.Channel {
+	c := makeIngressChannel()
 	c.Spec.Provisioner.Name = "some-other-provisioner"
 	return c
 }
@@ -652,7 +1004,7 @@ func makeIngressDeployment() *appsv1.Deployment {
 		Broker:             makeBroker(),
 		Image:              ingressImage,
 		ServiceAccountName: ingressSA,
-		ChannelAddress:     channelHostname,
+		ChannelAddress:     triggerChannelHostname,
 	})
 	d.TypeMeta = metav1.TypeMeta{
 		APIVersion: "apps/v1",
@@ -679,6 +1031,48 @@ func makeIngressService() *corev1.Service {
 func makeDifferentIngressService() *corev1.Service {
 	s := makeIngressService()
 	s.Spec.Selector["eventing.knative.dev/broker"] = "some-other-value"
+	return s
+}
+
+func makeTestSubscription() *v1alpha1.Subscription {
+	return &v1alpha1.Subscription{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "eventing.knative.dev/v1alpha1",
+			Kind:       "Subscription",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:    testNS,
+			GenerateName: fmt.Sprintf("internal-ingress-%s-", brokerName),
+			Labels: map[string]string{
+				"eventing.knative.dev/broker":        brokerName,
+				"eventing.knative.dev/brokerIngress": "true",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				getOwnerReference(),
+			},
+		},
+		Spec: v1alpha1.SubscriptionSpec{
+			Channel: corev1.ObjectReference{
+				APIVersion: v1alpha1.SchemeGroupVersion.String(),
+				Kind:       "Channel",
+				Name:       ingressChannelName,
+			},
+			Subscriber: &v1alpha1.SubscriberSpec{
+				Ref: &corev1.ObjectReference{
+					APIVersion: "v1",
+					Kind:       "Service",
+					Name:       makeIngressService().Name,
+				},
+			},
+		},
+	}
+}
+
+func makeDifferentSubscription() *v1alpha1.Subscription {
+	s := makeTestSubscription()
+	s.Spec.Subscriber.Ref = nil
+	url := "http://example.com/"
+	s.Spec.Subscriber.DNSName = &url
 	return s
 }
 

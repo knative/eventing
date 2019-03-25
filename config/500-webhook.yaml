@@ -46,6 +46,8 @@ spec:
               fieldPath: metadata.namespace
         - name: CONFIG_LOGGING_NAME
           value: config-logging
+        - name: WEBHOOK_NAME
+          value: webhook
         resources:
           limits:
             memory: 1000Mi   # An initial guess, but consistent with serving
