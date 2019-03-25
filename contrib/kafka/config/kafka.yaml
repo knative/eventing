@@ -185,7 +185,7 @@ roleRef:
 ---
 
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: kafka-channel-dispatcher
   namespace: knative-eventing
@@ -195,7 +195,6 @@ spec:
     matchLabels: &labels
       clusterChannelProvisioner: kafka
       role: dispatcher
-  serviceName: kafka-channel-dispatcher-service
   template:
     metadata:
       annotations:
