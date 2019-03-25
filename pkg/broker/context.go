@@ -32,6 +32,9 @@ var (
 	forwardHeaders = sets.NewString(
 		// tracing
 		"x-request-id",
+		// Single header for b3 tracing. See
+		// https://github.com/openzipkin/b3-propagation#single-header.
+		"b3",
 	)
 	// These MUST be lowercase strings, as they will be compared against lowercase strings.
 	forwardPrefixes = []string{
