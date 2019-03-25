@@ -123,7 +123,6 @@ func main() {
 
 	err = mgr.Add(&utils.RunnableServer{
 		Server:          metricsSrv,
-		Logger:          logger,
 		ShutdownTimeout: shutdownTimeout,
 		WaitGroup:       &wg,
 	})
