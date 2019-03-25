@@ -20,8 +20,11 @@ import (
 	"bufio"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
+
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 const (
@@ -32,6 +35,9 @@ const (
 var (
 	domainName string
 	once       sync.Once
+
+	// Only allow alphanumeric, '-' or '.'.
+	validChars = regexp.MustCompile(`[^-\.a-z0-9]+`)
 )
 
 // GetClusterDomainName returns cluster's domain name or an error
@@ -66,4 +72,19 @@ func getClusterDomainName(r io.Reader) string {
 	}
 	// For all abnormal cases return default domain name
 	return defaultDomainName
+}
+
+func ToDNS1123Subdomain(name string) string {
+	// If it is not a valid DNS1123 subdomain, make it a valid one.
+	if msgs := validation.IsDNS1123Subdomain(name); len(msgs) != 0 {
+		// If the length exceeds the max, cut it and leave some room for the generated UUID.
+		if len(name) > validation.DNS1123SubdomainMaxLength {
+			name = name[:validation.DNS1123SubdomainMaxLength-10]
+		}
+		name = strings.ToLower(name)
+		name = validChars.ReplaceAllString(name, "")
+		// Only start/end with alphanumeric.
+		name = strings.Trim(name, "-.")
+	}
+	return name
 }

@@ -19,12 +19,10 @@ package broker
 import (
 	"context"
 	"fmt"
-	"regexp"
-	"strings"
+
+	"github.com/knative/eventing/pkg/utils"
 
 	"go.uber.org/zap"
-
-	"k8s.io/apimachinery/pkg/util/validation"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 
@@ -35,8 +33,6 @@ import (
 )
 
 var (
-	// Only allow alphanumeric, '-' or '.'.
-	validChars = regexp.MustCompile(`[^-\.a-z0-9]+`)
 	// EventType not found error.
 	notFound = k8serrors.NewNotFound(eventingv1alpha1.Resource("eventtype"), "")
 )
@@ -144,7 +140,7 @@ func (p *IngressPolicy) makeEventType(event cloudevents.Event) *eventingv1alpha1
 	cloudEventType := event.Type()
 	return &eventingv1alpha1.EventType{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-", toDNS1123Subdomain(cloudEventType)),
+			GenerateName: fmt.Sprintf("%s-", utils.ToDNS1123Subdomain(cloudEventType)),
 			Namespace:    p.namespace,
 		},
 		Spec: eventingv1alpha1.EventTypeSpec{
@@ -154,19 +150,4 @@ func (p *IngressPolicy) makeEventType(event cloudevents.Event) *eventingv1alpha1
 			Broker: p.broker,
 		},
 	}
-}
-
-func toDNS1123Subdomain(cloudEventType string) string {
-	// If it is not a valid DNS1123 subdomain, make it a valid one.
-	if msgs := validation.IsDNS1123Subdomain(cloudEventType); len(msgs) != 0 {
-		// If the length exceeds the max, cut it and leave some room for the generated UUID.
-		if len(cloudEventType) > validation.DNS1123SubdomainMaxLength {
-			cloudEventType = cloudEventType[:validation.DNS1123SubdomainMaxLength-10]
-		}
-		cloudEventType = strings.ToLower(cloudEventType)
-		cloudEventType = validChars.ReplaceAllString(cloudEventType, "")
-		// Only start/end with alphanumeric.
-		cloudEventType = strings.Trim(cloudEventType, "-.")
-	}
-	return cloudEventType
 }
