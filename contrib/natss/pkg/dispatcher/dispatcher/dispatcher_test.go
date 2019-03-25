@@ -186,7 +186,10 @@ func TestUpdateSubscriptions(t *testing.T) {
 		t.Errorf("UpdateSubscriptions failed: %v", err)
 	}
 
-	cRef := provisioners.ChannelReference{c.Namespace, c.Name}
+	cRef := provisioners.ChannelReference{
+		Namespace: c.Namespace,
+		Name:      c.Name,
+	}
 	chMap, ok := s.subscriptions[cRef]
 	if !ok {
 		t.Error("No channel map found")

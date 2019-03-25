@@ -73,6 +73,7 @@ type reconciler struct {
 // Verify the struct implements reconcile.Reconciler.
 var _ reconcile.Reconciler = &reconciler{}
 
+// ReconcilerArgs are the arguments needed to create a broker.Reconciler.
 type ReconcilerArgs struct {
 	IngressImage              string
 	IngressServiceAccountName string
@@ -116,6 +117,7 @@ func ProvideController(args ReconcilerArgs) func(manager.Manager, *zap.Logger) (
 	}
 }
 
+// InjectClient implements controller runtime's inject.Client.
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	return nil
@@ -332,17 +334,8 @@ func (r *reconciler) reconcileChannel(ctx context.Context, get func() (*v1alpha1
 		return nil, err
 	}
 
-	// TODO Determine if we want to update spec (maybe just args?).
-	// Update Channel if it has changed. Note that we need to both ignore the real Channel's
-	// subscribable section and if we need to update the real Channel, retain it.
-	//expected.Spec.Subscribable = c.Spec.Subscribable
-	//if !equality.Semantic.DeepDerivative(expected.Spec, c.Spec) {
-	//	c.Spec = expected.Spec
-	//	err = r.client.Update(ctx, c)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//}
+	// TODO Determine if we want to update spec (maybe just args?). For now, do not update it.
+
 	return c, nil
 }
 
@@ -402,6 +395,8 @@ func newChannel(b *v1alpha1.Broker, l map[string]string) *v1alpha1.Channel {
 	}
 }
 
+// TriggerChannelLabels are all the labels placed on the Trigger Channel for the given Broker. This
+// should only be used by Broker and Trigger code.
 func TriggerChannelLabels(b *v1alpha1.Broker) map[string]string {
 	return map[string]string{
 		"eventing.knative.dev/broker":           b.Name,
@@ -409,6 +404,8 @@ func TriggerChannelLabels(b *v1alpha1.Broker) map[string]string {
 	}
 }
 
+// IngressChannelLabels are all the labels placed on the Ingress Channel for the given Broker. This
+// should only be used by Broker and Trigger code.
 func IngressChannelLabels(b *v1alpha1.Broker) map[string]string {
 	return map[string]string{
 		"eventing.knative.dev/broker":        b.Name,

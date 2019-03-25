@@ -116,6 +116,7 @@ type namespaceMapper struct {
 
 var _ handler.Mapper = &namespaceMapper{}
 
+// Map implements handler.Mapper.Map.
 func (m *namespaceMapper) Map(o handler.MapObject) []reconcile.Request {
 	if o.Meta.GetName() == m.name {
 		return []reconcile.Request{
@@ -130,6 +131,7 @@ func (m *namespaceMapper) Map(o handler.MapObject) []reconcile.Request {
 	return []reconcile.Request{}
 }
 
+// InjectClient implements controller runtime's inject.Client.
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	return nil
