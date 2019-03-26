@@ -24,14 +24,13 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
-	"strconv"
 	"sync"
 	"time"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	ceclient "github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	"github.com/kelseyhightower/envconfig"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/broker"
 	"github.com/knative/eventing/pkg/provisioners"
@@ -58,6 +57,23 @@ var (
 	wg sync.WaitGroup
 )
 
+type envConfig struct {
+	// Channel where to send the cloudevents.
+	Channel string `envconfig:"CHANNEL"`
+
+	// Broker name for this ingress.
+	Broker string `envconfig:"BROKER" required:"true"`
+
+	// Namespace of this ingress.
+	Namespace string `envconfig:"NAMESPACE" required:"true"`
+
+	// To indicate whether the ingress should allow any event.
+	AllowAny bool `envconfig:"ALLOW_ANY" required:"true"`
+
+	// To indicate whether the ingress should auto-register unknown events.
+	AutoAdd bool `envconfig:"AUTO_ADD" required:"true"`
+}
+
 func main() {
 	logConfig := provisioners.NewLoggingConfig()
 	logger := provisioners.NewProvisionerLoggerFromConfig(logConfig).Desugar()
@@ -65,9 +81,14 @@ func main() {
 	flag.Parse()
 	crlog.SetLogger(crlog.ZapLogger(false))
 
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		log.Fatal("Failed to process env var", zap.Error(err))
+	}
+
 	logger.Info("Starting...")
 
-	namespace := getRequiredEnv("NAMESPACE")
+	namespace := env.Namespace
 
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
 		Namespace: namespace,
@@ -80,19 +101,19 @@ func main() {
 		logger.Fatal("Unable to add eventingv1alpha1 scheme", zap.Error(err))
 	}
 
-	brokerName := getRequiredEnv("BROKER")
+	brokerName := env.Broker
 
 	channelURI := &url.URL{
 		Scheme: "http",
-		Host:   getRequiredEnv("CHANNEL"),
+		Host:   env.Channel,
 		Path:   "/",
 	}
 
 	client := mgr.GetClient()
 
 	policySpec := &eventingv1alpha1.IngressPolicySpec{
-		AllowAny: asBool(getRequiredEnv("POLICY_ALLOW_ANY")),
-		AutoAdd:  asBool(getRequiredEnv("POLICY_AUTO_ADD")),
+		AllowAny: env.AllowAny,
+		AutoAdd:  env.AutoAdd,
 	}
 
 	ingressPolicy := broker.NewPolicy(logger, client, policySpec, namespace, brokerName, true)
@@ -164,22 +185,6 @@ func main() {
 	// goroutine will exit the process if it takes longer than shutdownTimeout.
 	wg.Wait()
 	logger.Info("Done.")
-}
-
-func getRequiredEnv(envKey string) string {
-	val, defined := os.LookupEnv(envKey)
-	if !defined {
-		log.Fatalf("required environment variable not defined '%s'", envKey)
-	}
-	return val
-}
-
-func asBool(envVal string) bool {
-	b, err := strconv.ParseBool(envVal)
-	if err != nil {
-		log.Fatalf("required environment variable not bool %q", envVal)
-	}
-	return b
 }
 
 type handler struct {
