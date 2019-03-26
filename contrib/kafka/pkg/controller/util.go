@@ -1,9 +1,11 @@
 package controller
 
 import (
+	"crypto/tls"
 	"fmt"
 	"strings"
 
+	"github.com/Shopify/sarama"
 	cluster "github.com/bsm/sarama-cluster"
 
 	"github.com/knative/pkg/configmap"
@@ -48,4 +50,17 @@ func GetProvisionerConfig(path string) (*KafkaProvisionerConfig, error) {
 		}
 	}
 	return config, nil
+}
+
+// InitSaramaConfig initializes sarama config by common settings.
+func InitSaramaConfig(agentName string, tlsConfig *tls.Config) *sarama.Config {
+	saramaConf := sarama.NewConfig()
+	saramaConf.Version = sarama.V1_1_0_0
+	saramaConf.ClientID = controllerAgentName
+
+	if tlsConfig != nil {
+		saramaConf.Net.TLS.Enable = true
+		saramaConf.Net.TLS.Config = tlsConfig
+	}
+	return saramaConf
 }

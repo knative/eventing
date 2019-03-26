@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"os"
-	"strings"
 
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
@@ -19,12 +18,6 @@ import (
 	"github.com/knative/eventing/contrib/kafka/pkg/controller/channel"
 	eventingv1alpha "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
-)
-
-const (
-	// These are Environment variable names.
-	kafkaTLSENnabled = "KAFKA_TLS_ENABLE"
-	kafkaCAEnv       = "KAFKA_CA_CERT"
 )
 
 // SchemeFunc adds types to a Scheme.
@@ -75,15 +68,14 @@ func _main() int {
 		return 1
 	}
 
-	TlsEnabled := os.Getenv(kafkaTLSENnabled)
-	if strings.ToLower(TlsEnabled) == "true" {
-		ca := os.Getenv(kafkaCAEnv)
+	ca, define := os.LookupEnv(provisionerController.KafkaCAEnv)
+	if define {
 		provisionerConfig.TlsConfig, err = provisionerController.NewTLSConfig(ca)
 		if err != nil {
 			logger.Error(err, "unable to enable TLS")
 			return 1
 		}
-		logger.Info("successfully enabled TLS", zap.String("secret", kafkaTLSENnabled))
+		logger.Info("successfully enabled TLS")
 	}
 
 	for _, provider := range providers {

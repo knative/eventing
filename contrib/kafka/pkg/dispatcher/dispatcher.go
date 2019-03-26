@@ -267,14 +267,7 @@ func (d *KafkaDispatcher) setConfig(config *multichannelfanout.Config) {
 }
 
 func NewDispatcher(provisionerConf *controller.KafkaProvisionerConfig, logger *zap.Logger) (*KafkaDispatcher, error) {
-	conf := sarama.NewConfig()
-	conf.Version = sarama.V1_1_0_0
-	conf.ClientID = controller.Name + "-dispatcher"
-
-	if provisionerConf.TlsConfig != nil {
-		conf.Net.TLS.Enable = true
-		conf.Net.TLS.Config = provisionerConf.TlsConfig
-	}
+	conf := controller.InitSaramaConfig(controller.Name+"-dispatcher", provisionerConf.TlsConfig)
 
 	client, err := sarama.NewClient(provisionerConf.Brokers, conf)
 	if err != nil {

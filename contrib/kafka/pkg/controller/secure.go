@@ -6,6 +6,8 @@ import (
 	"fmt"
 )
 
+const KafkaCAEnv = "KAFKA_CA_CERT"
+
 // NewTLSConfig configures TLS Config by adding ca cert.
 // If ca is passed by empty string, it returns &tls.Config object instead of nil.
 func NewTLSConfig(caCert string) (*tls.Config, error) {

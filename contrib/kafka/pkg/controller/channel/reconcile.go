@@ -373,15 +373,7 @@ func (r *reconciler) listAllChannels(ctx context.Context) ([]eventingv1alpha1.Ch
 }
 
 func createKafkaAdminClient(config *controller.KafkaProvisionerConfig) (sarama.ClusterAdmin, error) {
-	saramaConf := sarama.NewConfig()
-	saramaConf.Version = sarama.V1_1_0_0
-	saramaConf.ClientID = controllerAgentName
-
-	if config.TlsConfig != nil {
-		saramaConf.Net.TLS.Enable = true
-		saramaConf.Net.TLS.Config = config.TlsConfig
-	}
-
+	saramaConf := controller.InitSaramaConfig(controllerAgentName, config.TlsConfig)
 	return sarama.NewClusterAdmin(config.Brokers, saramaConf)
 }
 
