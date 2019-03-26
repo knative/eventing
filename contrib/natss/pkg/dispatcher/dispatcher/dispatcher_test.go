@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/knative/eventing/contrib/natss/pkg/controller/clusterchannelprovisioner"
 	"github.com/knative/eventing/contrib/natss/pkg/stanutil"
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -47,7 +46,7 @@ const (
 )
 
 var (
-	clusterID   = clusterchannelprovisioner.ClusterId
+	clusterID   = "knative-nats-streaming"
 	logger      *zap.SugaredLogger
 	core        zapcore.Core
 	observed    *observer.ObservedLogs
@@ -86,7 +85,7 @@ func TestMain(m *testing.M) {
 	}
 	defer stopNatss(stanServer)
 	// Create and start Dispatcher.
-	s, err = NewDispatcher(natssTestURL, testLogger)
+	s, err = NewDispatcher(natssTestURL, clusterID, testLogger)
 	if err != nil {
 		logger.Fatalf("Unable to create NATSS dispatcher: %v", err)
 	}
