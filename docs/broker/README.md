@@ -259,7 +259,7 @@ Namespaces are reconciled by the
 [Broker Reconciler](../../pkg/reconciler/v1alpha1/broker). For each `Broker`, it
 reconciles:
 
-1. The 'everything' `Channel`. This is a `Channel` that all events in the
+1. The 'trigger' `Channel`. This is a `Channel` that all events in the
    `Broker` are sent to. Anything that passes the `Broker`'s Ingress is sent to
    this `Channel`. All `Trigger`s subscribe to this `Channel`.
 1. The 'filter' `Deployment`. The `Deployment` runs
@@ -277,6 +277,10 @@ reconciles:
    events that are entering the `Broker`.
 1. The 'ingress' Kubernetes `Service`. This `Service` points to the 'ingress'
    `Deployment`. This `Service`'s address is the address given for the `Broker`.
+1. The 'ingress' `Channel`. This is a `Channel` for replies from `Trigger`s.
+   It should not be used by anything else.
+1. The 'ingress' `Subscription` which subscribes from the 'ingress' `Channel` to
+   the 'ingress' `Service`.
 
 ### Trigger
 
@@ -292,5 +296,6 @@ it reconciles:
    - This is the same as the current `Channel` implementation. The `Service`
      points nowhere. The `VirtualService` reroutes requests that originally went
      to the `Service`, to instead go to the `Broker`'s 'filter' `Service`.
-1. Creates `Subscription` from the `Broker`'s 'everything' `Channel` to the
-   `Trigger`'s Kubernetes `Service`.
+1. Creates `Subscription` from the `Broker`'s 'trigger' `Channel` to the
+   `Trigger`'s Kubernetes `Service`. Replies are sent to the `Broker`'s
+   'ingress' `Channel`.

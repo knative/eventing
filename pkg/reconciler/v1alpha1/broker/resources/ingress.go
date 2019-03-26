@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+// IngressArgs are the arguments to create a Broker's ingress Deployment.
 type IngressArgs struct {
 	Broker             *eventingv1alpha1.Broker
 	Image              string
@@ -36,6 +37,7 @@ type IngressArgs struct {
 	ChannelAddress     string
 }
 
+// MakeIngress creates the in-memory representation of the Broker's ingress Deployment.
 func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -97,6 +99,16 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 									},
 								},
 							},
+							Ports: []corev1.ContainerPort{
+								{
+									ContainerPort: 8080,
+									Name:          "http",
+								},
+								{
+									ContainerPort: 9090,
+									Name:          "metrics",
+								},
+							},
 						},
 					},
 				},
@@ -105,6 +117,7 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 	}
 }
 
+// MakeIngressService creates the in-memory representation of the Broker's ingress Service.
 func MakeIngressService(b *eventingv1alpha1.Broker) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -126,6 +139,10 @@ func MakeIngressService(b *eventingv1alpha1.Broker) *corev1.Service {
 					Name:       "http",
 					Port:       80,
 					TargetPort: intstr.FromInt(8080),
+				},
+				{
+					Name: "metrics",
+					Port: 9090,
 				},
 			},
 		},
