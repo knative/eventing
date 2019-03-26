@@ -49,13 +49,13 @@ var _ runtime.Object = (*EventType)(nil)
 var _ webhook.GenericCRD = (*EventType)(nil)
 
 type EventTypeSpec struct {
-	Type string `json:"type,omitempty"`
+	Type string `json:"type"`
 	// +optional
 	Source string `json:"source,omitempty"`
 	// +optional
 	Schema string `json:"schema,omitempty"`
 
-	Broker string `json:"broker,omitempty"`
+	Broker string `json:"broker"`
 }
 
 // EventTypeStatus represents the current state of a EventType.
