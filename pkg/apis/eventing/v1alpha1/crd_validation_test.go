@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -33,7 +34,7 @@ type CRDTest struct {
 func doValidateTest(t *testing.T, tests []CRDTest) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.cr.Validate()
+			got := test.cr.Validate(context.TODO())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("%s: validate (-want, +got) = %v", test.name, diff)
 			}

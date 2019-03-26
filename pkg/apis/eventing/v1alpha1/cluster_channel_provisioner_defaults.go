@@ -16,12 +16,14 @@ limitations under the License.
 
 package v1alpha1
 
+import "context"
+
 // SetDefaults defaults
-func (p *ClusterChannelProvisioner) SetDefaults() {
-	p.Spec.SetDefaults()
+func (p *ClusterChannelProvisioner) SetDefaults(ctx context.Context) {
+	p.Spec.SetDefaults(ctx)
 }
 
 // SetDefaults defaults the ClusterChannelProvisioner spec.
-func (ps *ClusterChannelProvisionerSpec) SetDefaults() {
+func (ps *ClusterChannelProvisionerSpec) SetDefaults(ctx context.Context) {
 	// no defaults
 }

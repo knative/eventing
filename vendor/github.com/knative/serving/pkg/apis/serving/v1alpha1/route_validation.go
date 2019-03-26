@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -26,12 +27,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
-func (r *Route) Validate() *apis.FieldError {
+func (r *Route) Validate(ctx context.Context) *apis.FieldError {
 	return ValidateObjectMetadata(r.GetObjectMeta()).ViaField("metadata").
-		Also(r.Spec.Validate().ViaField("spec"))
+		Also(r.Spec.Validate(ctx).ViaField("spec"))
 }
 
-func (rs *RouteSpec) Validate() *apis.FieldError {
+func (rs *RouteSpec) Validate(ctx context.Context) *apis.FieldError {
 	if equality.Semantic.DeepEqual(rs, &RouteSpec{}) {
 		return apis.ErrMissingField(apis.CurrentField)
 	}
@@ -49,7 +50,7 @@ func (rs *RouteSpec) Validate() *apis.FieldError {
 	var errs *apis.FieldError
 	percentSum := 0
 	for i, tt := range rs.Traffic {
-		errs = errs.Also(tt.Validate().ViaFieldIndex("traffic", i))
+		errs = errs.Also(tt.Validate(ctx).ViaFieldIndex("traffic", i))
 
 		percentSum += tt.Percent
 
@@ -65,7 +66,9 @@ func (rs *RouteSpec) Validate() *apis.FieldError {
 		if ent, ok := trafficMap[tt.Name]; !ok {
 			// No entry exists, so add ours
 			trafficMap[tt.Name] = nt
-		} else if ent.r != nt.r || ent.c != nt.c {
+		} else {
+			// We want only single definition of the route, even if it points
+			// to the same config or revision.
 			errs = errs.Also(&apis.FieldError{
 				Message: fmt.Sprintf("Multiple definitions for %q", tt.Name),
 				Paths: []string{
@@ -86,7 +89,7 @@ func (rs *RouteSpec) Validate() *apis.FieldError {
 }
 
 // Validate verifies that TrafficTarget is properly configured.
-func (tt *TrafficTarget) Validate() *apis.FieldError {
+func (tt *TrafficTarget) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 	switch {
 	case tt.RevisionName != "" && tt.ConfigurationName != "":

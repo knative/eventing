@@ -16,10 +16,13 @@ limitations under the License.
 
 package v1alpha1
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
 // No-op test because method does nothing.
 func TestSubscriptionDefaults(t *testing.T) {
 	s := Subscription{}
-	s.SetDefaults()
+	s.SetDefaults(context.TODO())
 }

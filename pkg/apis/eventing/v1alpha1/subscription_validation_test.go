@@ -16,6 +16,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -63,7 +64,7 @@ func getValidSubscriberSpec() *SubscriberSpec {
 
 type DummyImmutableType struct{}
 
-func (d *DummyImmutableType) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
+func (d *DummyImmutableType) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
 	return nil
 }
 
@@ -81,7 +82,7 @@ func TestSubscriptionValidation(t *testing.T) {
 	}
 
 	t.Run(name, func(t *testing.T) {
-		got := c.Validate()
+		got := c.Validate(context.TODO())
 		if diff := cmp.Diff(want.Error(), got.Error()); diff != "" {
 			t.Errorf("Subscription.Validate (-want, +got) = %v", diff)
 		}
@@ -231,7 +232,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.c.Validate()
+			got := test.c.Validate(context.TODO())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("%s: validateChannel (-want, +got) = %v", test.name, diff)
 			}
@@ -361,7 +362,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.c.CheckImmutableFields(test.og)
+			got := test.c.CheckImmutableFields(context.TODO(), test.og)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("CheckImmutableFields (-want, +got) = %v", diff)
 			}
@@ -382,7 +383,7 @@ func TestInvalidImmutableType(t *testing.T) {
 		Message: "The provided original was not a Subscription",
 	}
 	t.Run(name, func(t *testing.T) {
-		got := c.CheckImmutableFields(og)
+		got := c.CheckImmutableFields(context.TODO(), og)
 		if diff := cmp.Diff(want.Error(), got.Error()); diff != "" {
 			t.Errorf("CheckImmutableFields (-want, +got) = %v", diff)
 		}

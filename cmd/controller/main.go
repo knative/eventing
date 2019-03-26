@@ -21,10 +21,14 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/channel"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/subscription"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -111,7 +115,7 @@ func main() {
 		eventingv1alpha1.AddToScheme,
 	}
 	for _, schemeFunc := range schemeFuncs {
-		if err := schemeFunc(mgr.GetScheme()); err != nil {
+		if err = schemeFunc(mgr.GetScheme()); err != nil {
 			logger.Fatalf("Error adding type to manager's scheme: %v", err)
 		}
 	}
@@ -121,17 +125,26 @@ func main() {
 	providers := []ProvideFunc{
 		subscription.ProvideController,
 		channel.ProvideController,
+		broker.ProvideController(
+			broker.ReconcilerArgs{
+				IngressImage:              getRequiredEnv("BROKER_INGRESS_IMAGE"),
+				IngressServiceAccountName: getRequiredEnv("BROKER_INGRESS_SERVICE_ACCOUNT"),
+				FilterImage:               getRequiredEnv("BROKER_FILTER_IMAGE"),
+				FilterServiceAccountName:  getRequiredEnv("BROKER_FILTER_SERVICE_ACCOUNT"),
+			}),
+		trigger.ProvideController,
+		namespace.ProvideController,
 	}
 	for _, provider := range providers {
-		if _, err := provider(mgr, logger.Desugar()); err != nil {
+		if _, err = provider(mgr, logger.Desugar()); err != nil {
 			logger.Fatalf("Error adding controller to manager: %v", err)
 		}
 	}
 
 	// Start the Manager
 	go func() {
-		if err := mgr.Start(stopCh); err != nil {
-			logger.Fatalf("Error starting manager: %v", err)
+		if localErr := mgr.Start(stopCh); localErr != nil {
+			logger.Fatalf("Error starting manager: %v", localErr)
 		}
 	}()
 
@@ -140,8 +153,8 @@ func main() {
 	http.Handle(metricsScrapePath, promhttp.Handler())
 	go func() {
 		logger.Infof("Starting metrics listener at %s", metricsScrapeAddr)
-		if err := srv.ListenAndServe(); err != nil {
-			logger.Infof("Httpserver: ListenAndServe() finished with error: %s", err)
+		if localErr := srv.ListenAndServe(); localErr != nil {
+			logger.Infof("Httpserver: ListenAndServe() finished with error: %s", localErr)
 		}
 	}()
 
@@ -189,4 +202,12 @@ func getLoggingConfigOrDie() map[string]string {
 		}
 		return cm
 	}
+}
+
+func getRequiredEnv(envKey string) string {
+	val, defined := os.LookupEnv(envKey)
+	if !defined {
+		log.Fatalf("required environment variable not defined '%s'", envKey)
+	}
+	return val
 }

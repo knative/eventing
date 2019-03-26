@@ -395,11 +395,13 @@ func removeFinalizer(sub *v1alpha1.Subscription) {
 	sub.Finalizers = finalizers.List()
 }
 
+// InjectClient implements controller runtime's inject.Client.
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	return nil
 }
 
+// InjectConfig implements controller runtime's inject.Config.
 func (r *reconciler) InjectConfig(c *rest.Config) error {
 	r.restConfig = c
 	var err error

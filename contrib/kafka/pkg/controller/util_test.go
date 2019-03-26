@@ -1,11 +1,12 @@
 package controller
 
 import (
-	"github.com/bsm/sarama-cluster"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+
+	cluster "github.com/bsm/sarama-cluster"
 
 	"github.com/google/go-cmp/cmp"
 	_ "github.com/knative/pkg/system/testing"

@@ -28,6 +28,10 @@ type FakeEventingV1alpha1 struct {
 	*testing.Fake
 }
 
+func (c *FakeEventingV1alpha1) Brokers(namespace string) v1alpha1.BrokerInterface {
+	return &FakeBrokers{c, namespace}
+}
+
 func (c *FakeEventingV1alpha1) Channels(namespace string) v1alpha1.ChannelInterface {
 	return &FakeChannels{c, namespace}
 }
@@ -38,6 +42,10 @@ func (c *FakeEventingV1alpha1) ClusterChannelProvisioners() v1alpha1.ClusterChan
 
 func (c *FakeEventingV1alpha1) Subscriptions(namespace string) v1alpha1.SubscriptionInterface {
 	return &FakeSubscriptions{c, namespace}
+}
+
+func (c *FakeEventingV1alpha1) Triggers(namespace string) v1alpha1.TriggerInterface {
+	return &FakeTriggers{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

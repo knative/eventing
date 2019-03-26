@@ -54,6 +54,34 @@ func IsSubscriptionReady(s *eventingv1alpha1.Subscription) (bool, error) {
 	return s.Status.IsReady(), nil
 }
 
+// IsBrokerReady will check the status conditions of the Broker and return true
+// if the Broker is ready.
+func IsBrokerReady(b *eventingv1alpha1.Broker) (bool, error) {
+	return b.Status.IsReady(), nil
+}
+
+// IsTriggerReady will check the status conditions of the Trigger and
+// return true if the Trigger is ready.
+func IsTriggerReady(t *eventingv1alpha1.Trigger) (bool, error) {
+	return t.Status.IsReady(), nil
+}
+
+// TriggersReady will check the status conditions of the trigger list and return true
+// if all triggers are Ready.
+func TriggersReady(triggerList *eventingv1alpha1.TriggerList) (bool, error) {
+	var names []string
+	for _, t := range triggerList.Items {
+		names = append(names, t.Name)
+	}
+	log.Printf("Checking triggers: %v", names)
+	for _, trigger := range triggerList.Items {
+		if !trigger.Status.IsReady() {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 // PodsRunning will check the status conditions of the pod list and return true
 // if all pods are Running.
 func PodsRunning(podList *corev1.PodList) (bool, error) {

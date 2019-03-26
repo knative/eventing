@@ -18,6 +18,14 @@ limitations under the License.
 
 package v1alpha1
 
+// BrokerListerExpansion allows custom methods to be added to
+// BrokerLister.
+type BrokerListerExpansion interface{}
+
+// BrokerNamespaceListerExpansion allows custom methods to be added to
+// BrokerNamespaceLister.
+type BrokerNamespaceListerExpansion interface{}
+
 // ChannelListerExpansion allows custom methods to be added to
 // ChannelLister.
 type ChannelListerExpansion interface{}
@@ -37,3 +45,11 @@ type SubscriptionListerExpansion interface{}
 // SubscriptionNamespaceListerExpansion allows custom methods to be added to
 // SubscriptionNamespaceLister.
 type SubscriptionNamespaceListerExpansion interface{}
+
+// TriggerListerExpansion allows custom methods to be added to
+// TriggerLister.
+type TriggerListerExpansion interface{}
+
+// TriggerNamespaceListerExpansion allows custom methods to be added to
+// TriggerNamespaceLister.
+type TriggerNamespaceListerExpansion interface{}
