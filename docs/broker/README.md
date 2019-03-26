@@ -259,9 +259,9 @@ Namespaces are reconciled by the
 [Broker Reconciler](../../pkg/reconciler/v1alpha1/broker). For each `Broker`, it
 reconciles:
 
-1. The 'trigger' `Channel`. This is a `Channel` that all events in the
-   `Broker` are sent to. Anything that passes the `Broker`'s Ingress is sent to
-   this `Channel`. All `Trigger`s subscribe to this `Channel`.
+1. The 'trigger' `Channel`. This is a `Channel` that all events in the `Broker`
+   are sent to. Anything that passes the `Broker`'s Ingress is sent to this
+   `Channel`. All `Trigger`s subscribe to this `Channel`.
 1. The 'filter' `Deployment`. The `Deployment` runs
    [cmd/broker/filter](../../cmd/broker/filter). Its purpose is the data plane
    for all `Trigger`s related to this `Broker`.
@@ -277,8 +277,8 @@ reconciles:
    events that are entering the `Broker`.
 1. The 'ingress' Kubernetes `Service`. This `Service` points to the 'ingress'
    `Deployment`. This `Service`'s address is the address given for the `Broker`.
-1. The 'ingress' `Channel`. This is a `Channel` for replies from `Trigger`s.
-   It should not be used by anything else.
+1. The 'ingress' `Channel`. This is a `Channel` for replies from `Trigger`s. It
+   should not be used by anything else.
 1. The 'ingress' `Subscription` which subscribes from the 'ingress' `Channel` to
    the 'ingress' `Service`.
 
