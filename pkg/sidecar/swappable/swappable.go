@@ -32,7 +32,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// http.Handler that atomically swaps between underlying handlers.
+// Handler is an http.Handler that atomically swaps between underlying handlers.
 type Handler struct {
 	// The current multichannelfanout.Handler to delegate HTTP requests to. Never use this directly,
 	// instead use {get,set}MultiChannelFanoutHandler, which enforces the type we expect.
@@ -41,6 +41,7 @@ type Handler struct {
 	logger     *zap.Logger
 }
 
+// UpdateConfig updates the configuration to use the new config, returning an error if it can't.
 type UpdateConfig func(config *multichannelfanout.Config) error
 
 var _ UpdateConfig = (&Handler{}).UpdateConfig
@@ -54,6 +55,7 @@ func NewHandler(handler *multichannelfanout.Handler, logger *zap.Logger) *Handle
 	return h
 }
 
+// NewEmptyHandler creates a new swappable.Handler with an empty configuration.
 func NewEmptyHandler(logger *zap.Logger) (*Handler, error) {
 	h, err := multichannelfanout.NewHandler(logger, multichannelfanout.Config{})
 	if err != nil {
