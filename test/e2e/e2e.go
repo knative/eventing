@@ -17,6 +17,7 @@ package e2e
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 	"testing"
 	"time"
@@ -44,6 +45,10 @@ const (
 
 	interval = 1 * time.Second
 	timeout  = 1 * time.Minute
+
+	// the minimum and maxmium number of subscriptions we generate in the e2e tests
+	minSubCount = 1
+	maxSubCount = 5
 )
 
 // Setup creates the client objects needed in the e2e tests.
@@ -67,6 +72,18 @@ func Setup(t *testing.T, logf logging.FormatLogger) (*test.Clients, *test.Cleane
 // TearDown will delete created names using clients.
 func TearDown(clients *test.Clients, cleaner *test.Cleaner, _ logging.FormatLogger) {
 	cleaner.Clean(true)
+}
+
+// CreateRandomSubscriptionNames will create random number of subscription names
+func CreateRandomSubscriptionNames(randSubNamePrefix string) []string {
+	rand.Seed(time.Now().UnixNano())
+	count := rand.Intn(maxSubCount-minSubCount) + minSubCount
+	var subscriptionNames []string
+	for i := 0; i < count; i++ {
+		subscriptionNames = append(subscriptionNames, fmt.Sprintf("%s-%d", randSubNamePrefix, i))
+	}
+
+	return subscriptionNames
 }
 
 // CreateRouteAndConfig will create Route and Config objects using clients.
@@ -127,36 +144,47 @@ func CreateSubscription(clients *test.Clients, sub *v1alpha1.Subscription, _ log
 	return nil
 }
 
-// WithChannelAndSubscriptionReady creates a Channel and Subscription and waits until both are Ready.
-func WithChannelAndSubscriptionReady(clients *test.Clients, channel *v1alpha1.Channel, sub *v1alpha1.Subscription, logf logging.FormatLogger, cleaner *test.Cleaner) error {
-	if err := CreateChannel(clients, channel, logf, cleaner); err != nil {
-		return err
-	}
-	if err := CreateSubscription(clients, sub, logf, cleaner); err != nil {
-		return err
+// WithChannelsAndSubscriptionsReady creates Channels and Subscriptions and waits until both are Ready.
+func WithChannelsAndSubscriptionsReady(clients *test.Clients, chans *[]*v1alpha1.Channel, subs *[]*v1alpha1.Subscription, logf logging.FormatLogger, cleaner *test.Cleaner) error {
+	for _, channel := range *chans {
+		if err := CreateChannel(clients, channel, logf, cleaner); err != nil {
+			return err
+		}
 	}
 
 	channels := clients.Eventing.EventingV1alpha1().Channels(pkgTest.Flags.Namespace)
-	if err := test.WaitForChannelState(channels, channel.Name, test.IsChannelReady, "ChannelIsReady"); err != nil {
-		return err
+	for i, channel := range *chans {
+		if err := test.WaitForChannelState(channels, channel.Name, test.IsChannelReady, "ChannelIsReady"); err != nil {
+			return err
+		}
+		// Update the given object so they'll reflect the ready state
+		updatedchannel, err := channels.Get(channel.Name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		updatedchannel.DeepCopyInto(channel)
+		(*chans)[i] = channel
 	}
-	// Update the given object so they'll reflect the ready state
-	updatedchannel, err := channels.Get(channel.Name, metav1.GetOptions{})
-	if err != nil {
-		return err
+
+	for _, sub := range *subs {
+		if err := CreateSubscription(clients, sub, logf, cleaner); err != nil {
+			return err
+		}
 	}
-	updatedchannel.DeepCopyInto(channel)
 
 	subscriptions := clients.Eventing.EventingV1alpha1().Subscriptions(pkgTest.Flags.Namespace)
-	if err = test.WaitForSubscriptionState(subscriptions, sub.Name, test.IsSubscriptionReady, "SubscriptionIsReady"); err != nil {
-		return err
+	for i, sub := range *subs {
+		if err := test.WaitForSubscriptionState(subscriptions, sub.Name, test.IsSubscriptionReady, "SubscriptionIsReady"); err != nil {
+			return err
+		}
+		// Update the given object so they'll reflect the ready state
+		updatedsub, err := subscriptions.Get(sub.Name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		updatedsub.DeepCopyInto(sub)
+		(*subs)[i] = sub
 	}
-	// Update the given object so they'll reflect the ready state
-	updatedsub, err := subscriptions.Get(sub.Name, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	updatedsub.DeepCopyInto(sub)
 
 	return nil
 }
@@ -326,6 +354,19 @@ func WaitForLogContents(clients *test.Clients, logf logging.FormatLogger, podNam
 	})
 }
 
+// WaitForLogContentCount checks if the number of substr occur times equals the given number.
+// If the content does not appear the given times it returns error.
+func WaitForLogContentCount(client *test.Clients, podName, containerName, content string, appearTimes int) error {
+	return wait.PollImmediate(interval, timeout, func() (bool, error) {
+		logs, err := client.Kube.PodLogs(podName, containerName)
+		if err != nil {
+			return true, err
+		}
+
+		return strings.Count(string(logs), content) == appearTimes, nil
+	})
+}
+
 // FindAnyLogContents attempts to find logs for given Pod/Container that has 'any' of the given contents.
 // It returns an error if it couldn't retrieve the logs. In case 'any' of the contents are there, it returns true.
 func FindAnyLogContents(clients *test.Clients, logf logging.FormatLogger, podName string, containerName string, namespace string, contents []string) (bool, error) {
@@ -368,6 +409,7 @@ func LabelNamespace(clients *test.Clients, logf logging.FormatLogger, labels map
 	return err
 }
 
+// NamespaceExists creates a new namespace if it does not exist
 func NamespaceExists(t *testing.T, clients *test.Clients, logf logging.FormatLogger) (string, func()) {
 	shutdown := func() {}
 	ns := pkgTest.Flags.Namespace

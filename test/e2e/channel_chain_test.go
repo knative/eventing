@@ -1,5 +1,3 @@
-// +build e2e
-
 /*
 Copyright 2019 The Knative Authors
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,22 +26,14 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
-func TestSingleBinaryEvent(t *testing.T) {
-	SingleEvent(t, test.CloudEventEncodingBinary)
-}
-
-func TestSingleStructuredEvent(t *testing.T) {
-	SingleEvent(t, test.CloudEventEncodingStructured)
-}
-
-func SingleEvent(t *testing.T, encoding string) {
+func TestChannelChain(t *testing.T) {
 	const (
-		channelName      = "e2e-singleevent"
-		subscriberName   = "e2e-singleevent-subscriber"
-		senderName       = "e2e-singleevent-sender"
-		subscriptionName = "e2e-singleevent-subscription"
-		routeName        = "e2e-singleevent-route"
+		senderName = "e2e-channelchain-sender"
+		routeName  = "e2e-channelchain-route"
 	)
+	var channelNames = [2]string{"e2e-channelchain1", "e2e-channelchain2"}
+	var subscriptionNames1 = CreateRandomSubscriptionNames("e2e-complexscen-subs1")
+	var subscriptionNames2 = CreateRandomSubscriptionNames("e2e-complexscen-subs2")
 
 	clients, cleaner := Setup(t, t.Logf)
 
@@ -55,7 +45,7 @@ func SingleEvent(t *testing.T, encoding string) {
 	// resources in it. So when TearDown() runs, it spews a lot of not found errors.
 	defer TearDown(clients, cleaner, t.Logf)
 
-	// create logger pod
+	// create subscriberPod and expose it as a service
 	t.Logf("creating subscriber pod")
 	selector := map[string]string{"e2etest": string(uuid.NewUUID())}
 	subscriberPod := test.EventLoggerPod(routeName, ns, selector)
@@ -78,41 +68,56 @@ func SingleEvent(t *testing.T, encoding string) {
 		t.Fatalf("Failed to get subscriber pod: %v", err)
 	}
 
-	// create channel
-
+	// create channels
 	t.Logf("Creating Channel and Subscription")
 	if test.EventingFlags.Provisioner == "" {
 		t.Fatal("ClusterChannelProvisioner must be set to a non-empty string. Either do not specify --clusterChannelProvisioner or set to something other than the empty string")
 	}
-	channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(test.EventingFlags.Provisioner))
-	t.Logf("channel: %#v", channel)
-	sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelName), test.SubscriberSpecForService(routeName), nil)
-	t.Logf("sub: %#v", sub)
+	channels := make([]*v1alpha1.Channel, 0)
+	for _, channelName := range channelNames {
+		channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(test.EventingFlags.Provisioner))
+		t.Logf("channel: %#v", channel)
+		channels = append(channels, channel)
+	}
 
-	if err := WithChannelsAndSubscriptionsReady(clients, &[]*v1alpha1.Channel{channel}, &[]*v1alpha1.Subscription{sub}, t.Logf, cleaner); err != nil {
+	// create subscriptions
+	subs := make([]*v1alpha1.Subscription, 0)
+	// create subscriptions that subscribe the first channel, and reply events directly to the second channel
+	for _, subscriptionName := range subscriptionNames1 {
+		sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelNames[0]), nil, test.ReplyStrategyForChannel(channelNames[1]))
+		t.Logf("sub: %#v", sub)
+		subs = append(subs, sub)
+	}
+	// create subscriptions that subscribe the second channel, and call the logging service
+	for _, subscriptionName := range subscriptionNames2 {
+		sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelNames[1]), test.SubscriberSpecForService(routeName), nil)
+		t.Logf("sub: %#v", sub)
+		subs = append(subs, sub)
+	}
+
+	// wait for all channels and subscriptions to become ready
+	if err := WithChannelsAndSubscriptionsReady(clients, &channels, &subs, t.Logf, cleaner); err != nil {
 		t.Fatalf("The Channel or Subscription were not marked as Ready: %v", err)
 	}
 
 	// create sender pod
-
 	t.Logf("Creating event sender")
-	body := fmt.Sprintf("TestSingleEvent %s", uuid.NewUUID())
+	body := fmt.Sprintf("TestChannelChainEvent %s", uuid.NewUUID())
 	event := test.CloudEvent{
 		Source:   senderName,
 		Type:     "test.eventing.knative.dev",
 		Data:     fmt.Sprintf(`{"msg":%q}`, body),
-		Encoding: encoding,
+		Encoding: test.CloudEventEncodingBinary,
 	}
-	url := fmt.Sprintf("http://%s", channel.Status.Address.Hostname)
+	url := fmt.Sprintf("http://%s", channels[0].Status.Address.Hostname)
 	pod := test.EventSenderPod(senderName, ns, url, event)
 	t.Logf("sender pod: %#v", pod)
 	if err := CreatePod(clients, pod, t.Logf, cleaner); err != nil {
 		t.Fatalf("Failed to create event sender pod: %v", err)
 	}
 
-	if err := pkgTest.WaitForLogContent(clients.Kube, routeName, subscriberPod.Spec.Containers[0].Name, body); err != nil {
-		clients.Kube.PodLogs(senderName, "sendevent")
-		clients.Kube.PodLogs(senderName, "istio-proxy")
+	// check if the logging service receives the correct number of event messages
+	if err := WaitForLogContentCount(clients, routeName, subscriberPod.Spec.Containers[0].Name, body, len(subscriptionNames1)*len(subscriptionNames2)); err != nil {
 		t.Fatalf("String %q not found in logs of subscriber pod %q: %v", body, routeName, err)
 	}
 }

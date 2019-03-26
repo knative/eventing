@@ -16,13 +16,15 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
+
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
-	"log"
 )
 
 func handler(event cloudevents.Event) {
-	log.Printf("%s", event)
+	// MEMO(Chi): Comment out since we want to count the number of event messages in the log, and the following code also prints it out
+	// log.Printf("%s", event)
 	// TODO: in version 0.5.0 of cloudevents, below can be deleted.
 
 	ctx := event.Context.AsV02()
