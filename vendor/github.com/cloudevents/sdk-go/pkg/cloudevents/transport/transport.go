@@ -14,6 +14,8 @@ type Transport interface {
 	StartReceiver(context.Context) error
 }
 
+// Receiver is an interface to define how a transport will invoke a listener
+// of incoming events.
 type Receiver interface {
 	Receive(context.Context, cloudevents.Event, *cloudevents.EventResponse) error
 }

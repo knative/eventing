@@ -9,9 +9,89 @@ These are Kubernetes resources that been introduced using Custom Resource
 Definitions. They will have the expected _ObjectMeta_, _Spec_, _Status_ fields.
 This document details our _Spec_ and _Status_ customizations.
 
+- [Trigger](#kind-trigger)
+- [Broker](#kind-broker)
 - [Channel](#kind-channel)
 - [Subscription](#kind-subscription)
 - [ClusterChannelProvisioner](#kind-clusterchannelprovisioner)
+
+## kind: Trigger
+
+### group: eventing.knative.dev/v1alpha1
+
+_A Trigger represents a subscriber of events with a filter for a specific
+broker._
+
+### Object Schema
+
+#### Spec
+
+| Field        | Type           | Description                                                                                                                                                                | Constraints |
+| ------------ | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| broker       | String         | Broker is the broker that this trigger receives events from. Defaults to 'default'.                                                                                        |             |
+| filter       | TriggerFilter  | Filter is the filter to apply against all events from the Broker. Only events that pass this filter will be sent to the Subscriber. Defaults to subscribing to all events. |             |
+| subscriber\* | SubscriberSpec | Subscriber is the addressable that receives events from the Broker that pass the Filter.                                                                                   |             |
+
+\*: Required
+
+#### Status
+
+| Field              | Type        | Description                                                                                              | Constraints |
+| ------------------ | ----------- | -------------------------------------------------------------------------------------------------------- | ----------- |
+| observedGeneration | int64       | The 'Generation' of the Broker that was last processed by the controller.                                |             |
+| subscriberURI      | Addressable | Address of the subscribing endpoint which meets the [_Addressable_ contract](interfaces.md#addressable). |             |
+| conditions         | Conditions  | Trigger conditions.                                                                                      |             |
+
+##### Conditions
+
+- **Ready.** True when the Trigger is provisioned and configuration is ready to
+  deliver events to the subscriber.
+- **BrokerExists.** True when the Broker exists and is ready.
+- **Subscribed.** True when the subscriber is subscribed to the Broker.
+
+#### Events
+
+- TriggerReconciled
+- TriggerReconcileFailed
+- TriggerUpdateStatusFailed
+
+---
+
+## kind: Broker
+
+### group: eventing.knative.dev/v1alpha1
+
+_A Broker represents an event mesh. It logically receives events on its input
+domain and forwards them to subscribers defined by one or more matching
+Trigger._
+
+### Object Schema
+
+#### Spec
+
+| Field           | Type        | Description                                                                                                        | Constraints                                      |
+| --------------- | ----------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
+| channelTemplate | ChannelSpec | The template used to create Channels internal to the Broker. Defaults to to the default Channel for the namespace. | Only Provisioner and Arguments may be specified. |
+
+#### Status
+
+| Field              | Type        | Description                                                                                  | Constraints |
+| ------------------ | ----------- | -------------------------------------------------------------------------------------------- | ----------- |
+| observedGeneration | int64       | The 'Generation' of the Broker that was last processed by the controller.                    |             |
+| address            | Addressable | Address of the endpoint which meets the [_Addressable_ contract](interfaces.md#addressable). |             |
+| conditions         | Conditions  | Broker conditions.                                                                           |             |
+
+##### Conditions
+
+- **Ready.** True when the Broker is provisioned and ready to accept events.
+- **Addressable.** True when the Broker has an resolved address in it's status.
+
+#### Events
+
+- BrokerReconciled
+- BrokerUpdateStatusFailed
+
+---
 
 ## kind: Channel
 
@@ -176,3 +256,16 @@ a Channel system that receives and delivers events._
 | channel\* | ObjectRef | The continuation Channel for the link. | Must be a Channel. |
 
 \*: Required
+
+### TriggerFilter
+
+| Field         | Type                      | Description                                        | Constraints |
+| ------------- | ------------------------- | -------------------------------------------------- | ----------- |
+| sourceAndType | TriggerFilterSourceAndTpe | A filter that can specific both a source and type. |             |
+
+### TriggerFilterSourceAndTpe
+
+| Field  | Type   | Description                             | Constraints                          |
+| ------ | ------ | --------------------------------------- | ------------------------------------ |
+| source | String | Event source as defined by CloudEvents. | Also allowed to be the string 'Any'. |
+| type   | String | Event type as defined by CloudEvents.   | Also allowed to be the string 'Any'. |

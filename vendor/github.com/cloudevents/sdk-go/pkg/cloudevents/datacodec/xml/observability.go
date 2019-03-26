@@ -7,10 +7,13 @@ import (
 )
 
 var (
-	LatencyMs = stats.Float64("datacodec/xml/latency", "The latency in milliseconds for the CloudEvents xml data codec methods.", "ms")
+	// LatencyMs measures the latency in milliseconds for the CloudEvents xml data
+	// codec methods.
+	LatencyMs = stats.Float64("cloudevents.io/sdk-go/datacodec/xml/latency", "The latency in milliseconds for the CloudEvents xml data codec methods.", "ms")
 )
 
 var (
+	// LatencyView is an OpenCensus view that shows data codec xml method latency.
 	LatencyView = &view.View{
 		Name:        "datacodec/xml/latency",
 		Measure:     LatencyMs,
@@ -20,35 +23,41 @@ var (
 	}
 )
 
-type Observed int32
+type observed int32
+
+// Adheres to Observable
+var _ observability.Observable = observed(0)
 
 const (
-	ReportEncode Observed = iota
-	ReportDecode
+	reportEncode observed = iota
+	reportDecode
 )
 
-func (o Observed) TraceName() string {
+// TraceName implements Observable.TraceName
+func (o observed) TraceName() string {
 	switch o {
-	case ReportEncode:
+	case reportEncode:
 		return "datacodec/xml/encode"
-	case ReportDecode:
+	case reportDecode:
 		return "datacodec/xml/decode"
 	default:
 		return "datacodec/xml/unknown"
 	}
 }
 
-func (o Observed) MethodName() string {
+// MethodName implements Observable.MethodName
+func (o observed) MethodName() string {
 	switch o {
-	case ReportEncode:
+	case reportEncode:
 		return "encode"
-	case ReportDecode:
+	case reportDecode:
 		return "decode"
 	default:
 		return "unknown"
 	}
 }
 
-func (o Observed) LatencyMs() *stats.Float64Measure {
+// LatencyMs implements Observable.LatencyMs
+func (o observed) LatencyMs() *stats.Float64Measure {
 	return LatencyMs
 }

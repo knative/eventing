@@ -40,6 +40,8 @@ func LatencyTags() []tag.Key {
 	return []tag.Key{KeyMethod, KeyResult}
 }
 
+// NewReporter creates and returns a reporter wrapping the provided Observable,
+// and injects a trace span into the context.
 func NewReporter(ctx context.Context, on Observable) (context.Context, Reporter) {
 	ctx, span := trace.StartSpan(ctx, on.TraceName())
 	r := &reporter{
@@ -66,12 +68,14 @@ func (r *reporter) record() {
 	r.span.End()
 }
 
+// Error records the result as an error.
 func (r *reporter) Error() {
 	r.once.Do(func() {
 		r.result(ResultError)
 	})
 }
 
+// OK records the result as a success.
 func (r *reporter) OK() {
 	r.once.Do(func() {
 		r.result(ResultOK)
