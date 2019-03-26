@@ -193,7 +193,7 @@ type successHandler struct{}
 
 func (*successHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	r.Body.Close()
+	_ = r.Body.Close()
 }
 
 func makeRequest(namespace, name string) *http.Request {

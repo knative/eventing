@@ -9,9 +9,9 @@ They offer:
   - If the Channel's Pod goes down, all events already ACKed by the Channel will
     persist and be retransmitted when the Pod restarts.
 - Redelivery attempts
-  - If downstream rejects an event, that request is attempted again. NOTE: downstream must
-    successfully process the event within one minute or the delivery is assumed to have failed 
-    and will be reattempted.
+  - If downstream rejects an event, that request is attempted again. NOTE:
+    downstream must successfully process the event within one minute or the
+    delivery is assumed to have failed and will be reattempted.
 
 They do not offer:
 
@@ -66,17 +66,20 @@ Dispatcher for all natss Channels.
 kubectl get deployment -n knative-eventing natss-dispatcher
 ```
 
-By default the components are configured to connect to NATS at `nats://nats-streaming.natss.svc:4222` with NATS Streaming cluster ID `knative-nats-streaming`. This may be overridden by configuring both the `natss-channel-controller` and `natss-dispatcher` deployments with
-environment variables:
+By default the components are configured to connect to NATS at
+`nats://nats-streaming.natss.svc:4222` with NATS Streaming cluster ID
+`knative-nats-streaming`. This may be overridden by configuring both the
+`natss-channel-controller` and `natss-dispatcher` deployments with environment
+variables:
 
-  ```yaml
-          env:
-          - name: DEFAULT_NATSS_URL
-            value: nats://natss.custom-namespace.svc.cluster.local:4222
-          - name: DEFAULT_CLUSTER_ID
-            value: custom-cluster-id
-          - name: SYSTEM_NAMESPACE
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.namespace  
-  ```
+```yaml
+env:
+  - name: DEFAULT_NATSS_URL
+    value: nats://natss.custom-namespace.svc.cluster.local:4222
+  - name: DEFAULT_CLUSTER_ID
+    value: custom-cluster-id
+  - name: SYSTEM_NAMESPACE
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.namespace
+```

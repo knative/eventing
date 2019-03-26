@@ -49,15 +49,6 @@ var _ runtime.Object = (*Broker)(nil)
 var _ webhook.GenericCRD = (*Broker)(nil)
 
 type BrokerSpec struct {
-	// TODO By enabling the status subresource metadata.generation should increment
-	// thus making this property obsolete.
-	//
-	// We should be able to drop this property with a CRD conversion webhook
-	// in the future
-	//
-	// +optional
-	DeprecatedGeneration int64 `json:"generation,omitempty"`
-
 	// ChannelTemplate, if specified will be used to create all the Channels used internally by the
 	// Broker. Only Provisioner and Arguments may be specified. If left unspecified, the default
 	// Channel for the namespace will be used.

@@ -148,8 +148,9 @@ func TestReadConfigMap(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var dir string
 			if tc.createDir {
-				dir = createTempDir(t)
-				defer os.RemoveAll(dir)
+				var cleanup func()
+				dir, cleanup = createTempDir(t)
+				defer cleanup()
 			} else {
 				dir = "/tmp/doesNotExist"
 			}
@@ -249,8 +250,8 @@ func TestWatch(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			dir := createTempDir(t)
-			defer os.RemoveAll(dir)
+			dir, cleanup := createTempDir(t)
+			defer cleanup()
 			writeConfig(t, dir, tc.initialConfig)
 
 			cuc := &configUpdatedChecker{
@@ -269,7 +270,9 @@ func TestWatch(t *testing.T) {
 			}
 
 			stopCh := make(chan struct{})
-			go cmw.Start(stopCh)
+			go func() {
+				_ = cmw.Start(stopCh)
+			}()
 			defer func() {
 				close(stopCh)
 			}()
@@ -328,12 +331,14 @@ func (cuc *configUpdatedChecker) getConfig() *multichannelfanout.Config {
 	return cuc.config
 }
 
-func createTempDir(t *testing.T) string {
+func createTempDir(t *testing.T) (string, func()) {
 	dir, err := ioutil.TempDir("", "configMapHandlerTest")
 	if err != nil {
 		t.Errorf("Unable to make temp directory: %v", err)
 	}
-	return dir
+	return dir, func() {
+		_ = os.RemoveAll(dir)
+	}
 }
 
 func writeConfig(t *testing.T, dir string, config *multichannelfanout.Config) {
@@ -362,8 +367,8 @@ func atomicWriteFile(t *testing.T, file string, bytes []byte, perm os.FileMode) 
 	// In order to more closely replicate how K8s writes ConfigMaps to the file system, we will
 	// atomically swap out the file by writing it to a temp directory, then renaming it into the
 	// directory we are watching.
-	tempDir := createTempDir(t)
-	defer os.RemoveAll(tempDir)
+	tempDir, cleanup := createTempDir(t)
+	defer cleanup()
 
 	tempFile := fmt.Sprintf("%s/%s", tempDir, "temp")
 	err := ioutil.WriteFile(tempFile, bytes, perm)

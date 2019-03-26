@@ -65,9 +65,8 @@ func ObjectReference(ctx context.Context, dynamicClient dynamic.Interface, names
 	return resourceClient.Get(ref.Name, metav1.GetOptions{})
 }
 
-// ResolveSubscriberSpec resolves the Spec.Call object. If it's an
-// ObjectReference will resolve the object and treat it as an Addressable. If
-// it's DNSName then it's used as is.
+// SubscriberSpec resolves the Spec.Call object. If it's an ObjectReference, it will resolve the
+// object and treat it as an Addressable. If it's a DNSName, then it's used as is.
 // TODO: Once Service Routes, etc. support Callable, use that.
 func SubscriberSpec(ctx context.Context, dynamicClient dynamic.Interface, namespace string, s *v1alpha1.SubscriberSpec) (string, error) {
 	if isNilOrEmptySubscriber(s) {

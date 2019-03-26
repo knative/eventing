@@ -24,6 +24,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"reflect"
 	"sync"
 	"time"
 
@@ -48,6 +49,8 @@ import (
 )
 
 var (
+	defaultTTL = 10
+
 	defaultPort = 8080
 	metricsPort = 9090
 
@@ -242,6 +245,12 @@ func (h *handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 		stats.Record(ctx, MeasureMessagesTotal.M(1))
 	}()
 
+	send := h.decrementTTL(&event)
+	if !send {
+		ctx, _ = tag.New(ctx, tag.Insert(TagResult, "droppedDueToTTL"))
+		return nil
+	}
+
 	if h.allowEvent(ctx, event) {
 		ctx, _ = tag.New(ctx, tag.Insert(TagResult, "dispatched"))
 		return h.sendEvent(ctx, tctx, event)
@@ -269,4 +278,30 @@ func (h *handler) sendEvent(ctx context.Context, tctx cehttp.TransportContext, e
 		sendingCTX, _ = tag.New(sendingCTX, tag.Insert(TagResult, "ok"))
 	}
 	return err
+}
+
+func (h *handler) decrementTTL(event *cloudevents.Event) bool {
+	ttl := h.getTTLToSet(event)
+	if ttl <= 0 {
+		// TODO send to some form of dead letter queue rather than dropping.
+		h.logger.Error("Dropping message due to TTL", zap.Any("event", event))
+		return false
+	}
+
+	event.Context = broker.SetTTL(event.Context, ttl)
+	return true
+}
+
+func (h *handler) getTTLToSet(event *cloudevents.Event) int {
+	ttlInterface, present := event.Context.AsV02().Extensions[broker.V02TTLAttribute]
+	if !present {
+		h.logger.Debug("No TTL found, defaulting")
+		return defaultTTL
+	}
+	// This should be a JSON number, which json.Unmarshalls as a float64.
+	ttl, ok := ttlInterface.(float64)
+	if !ok {
+		h.logger.Info("TTL attribute wasn't a float64, defaulting", zap.Any("ttlInterface", ttlInterface), zap.Any("typeOf(ttlInterface)", reflect.TypeOf(ttlInterface)))
+	}
+	return int(ttl) - 1
 }
