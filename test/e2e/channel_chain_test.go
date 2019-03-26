@@ -33,6 +33,8 @@ EventSource ---> Channel ---> Subscriptions ---> Channel ---> Subscriptions --->
 
 */
 func TestChannelChain(t *testing.T) {
+	clients, cleaner := Setup(t, t.Logf)
+
 	const (
 		senderName = "e2e-channelchain-sender"
 		routeName  = "e2e-channelchain-route"
@@ -40,8 +42,6 @@ func TestChannelChain(t *testing.T) {
 	var channelNames = [2]string{"e2e-channelchain1", "e2e-channelchain2"}
 	var subscriptionNames1 = CreateRandomSubscriptionNames("e2e-complexscen-subs1")
 	var subscriptionNames2 = CreateRandomSubscriptionNames("e2e-complexscen-subs2")
-
-	clients, cleaner := Setup(t, t.Logf)
 
 	// verify namespace
 	ns, cleanupNS := NamespaceExists(t, clients, t.Logf)

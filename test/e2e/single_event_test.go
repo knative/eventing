@@ -43,6 +43,8 @@ EventSource ---> Channel ---> Subscriptions ---> Service(Logger)
 
 */
 func SingleEvent(t *testing.T, encoding string) {
+	clients, cleaner := Setup(t, t.Logf)
+
 	const (
 		channelName      = "e2e-singleevent"
 		subscriberName   = "e2e-singleevent-subscriber"
@@ -50,8 +52,6 @@ func SingleEvent(t *testing.T, encoding string) {
 		subscriptionName = "e2e-singleevent-subscription"
 		routeName        = "e2e-singleevent-route"
 	)
-
-	clients, cleaner := Setup(t, t.Logf)
 
 	// verify namespace
 	ns, cleanupNS := NamespaceExists(t, clients, t.Logf)

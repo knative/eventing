@@ -37,6 +37,8 @@ EventSource ---> Channel ---> Subscriptions ---> Channel ---> Subscriptions ----
                                    |-----------> Service(Transformation)
 */
 func TestEventTransformation(t *testing.T) {
+	clients, cleaner := Setup(t, t.Logf)
+
 	const (
 		senderName = "e2e-complexscen-sender"
 		msgPostfix = "######"
@@ -46,8 +48,6 @@ func TestEventTransformation(t *testing.T) {
 	var routeNames = [2]string{"e2e-complexscen-route1", "e2e-complexscen-route2"}
 	var subscriptionNames1 = CreateRandomSubscriptionNames("e2e-complexscen-subs1")
 	var subscriptionNames2 = CreateRandomSubscriptionNames("e2e-complexscen-subs2")
-
-	clients, cleaner := Setup(t, t.Logf)
 
 	// verify namespace
 	ns, cleanupNS := NamespaceExists(t, clients, t.Logf)
