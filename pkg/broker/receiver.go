@@ -139,6 +139,21 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 		return errors.New("unable to parse host as a Trigger")
 	}
 
+	// Remove the TTL attribute that is used by the Broker.
+	originalV2 := event.Context.AsV02()
+	ttl, present := originalV2.Extensions[V02TTLAttribute]
+	if !present {
+		// Only messages sent by the Broker should be here. If the attribute isn't here, then the
+		// event wasn't sent by the Broker, so we can drop it.
+		r.logger.Warn("No TTL seen, dropping", zap.Any("triggerRef", triggerRef), zap.Any("event", event))
+		// This doesn't return an error because normally this function is called by a Channel, which
+		// will retry all non-2XX responses. If we return an error from this function, then the
+		// framework returns a 500 to the caller, so the Channel would send this repeatedly.
+		return nil
+	}
+	delete(originalV2.Extensions, V02TTLAttribute)
+	event.Context = originalV2
+
 	r.logger.Debug("Received message", zap.Any("triggerRef", triggerRef))
 
 	responseEvent, err := r.sendEvent(ctx, tctx, triggerRef, &event)
@@ -146,7 +161,14 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 		r.logger.Error("Error sending the event", zap.Error(err))
 		return err
 	}
+
 	resp.Status = http.StatusAccepted
+	if responseEvent == nil {
+		return nil
+	}
+
+	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
+	responseEvent.Context = SetTTL(responseEvent.Context, ttl)
 	resp.Event = responseEvent
 	resp.Context = &cehttp.TransportResponseContext{
 		Header: extractPassThroughHeaders(tctx),
