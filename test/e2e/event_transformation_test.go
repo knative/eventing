@@ -28,7 +28,7 @@ import (
 )
 
 /*
-TestComplexScenario tests the following scenario:
+TestEventTransformation tests the following scenario:
 
 EventSource ---> Channel ---> Subscriptions ---> Channel ---> Subscriptions ----> Service(Logger)
                                    ^
@@ -36,7 +36,7 @@ EventSource ---> Channel ---> Subscriptions ---> Channel ---> Subscriptions ----
                                    |
                                    |-----------> Service(Transformation)
 */
-func TestComplexScenario(t *testing.T) {
+func TestEventTransformation(t *testing.T) {
 	const (
 		senderName = "e2e-complexscen-sender"
 		msgPostfix = "######"
