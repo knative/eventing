@@ -26,7 +26,7 @@ import (
 )
 
 func TestProvideController(t *testing.T) {
-	//TODO(grantr) This needs a mock of manager.Manager. Creating a manager
+	// TODO(grantr) This needs a mock of manager.Manager. Creating a manager
 	// with a fake Config fails because the Manager tries to contact the
 	// apiserver.
 

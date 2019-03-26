@@ -28,12 +28,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+// FilterArgs are the arguments to create a Broker's filter Deployment.
 type FilterArgs struct {
 	Broker             *eventingv1alpha1.Broker
 	Image              string
 	ServiceAccountName string
 }
 
+// MakeFilterDeployment creates the in-memory representation of the Broker's filter Deployment.
 func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -83,6 +85,7 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 	}
 }
 
+// MakeFilterService creates the in-memory representation of the Broker's filter Service.
 func MakeFilterService(b *eventingv1alpha1.Broker) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
