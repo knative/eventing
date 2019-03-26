@@ -32,8 +32,8 @@ TestComplexScenario tests the following scenario:
 
 EventSource ---> Channel ---> Subscriptions ---> Channel ---> Subscriptions ----> Service(Logger)
                                    ^
-							       |
-							       |
+                                   |
+                                   |
                                    |-----------> Service(Transformation)
 */
 func TestComplexScenario(t *testing.T) {
