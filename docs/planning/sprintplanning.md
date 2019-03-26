@@ -1,10 +1,10 @@
 # Knative Eventing sprint planning
 
-This document summarizes project planning mechanics for Knative Eventing releases. Knative Eventing release is planned every six weeks or 6th Tuesday, with 0.5 planned on 04/02 as reference. Current proposal is to align sprint with the release cycle of 6 weeks. Eventually this may change as we learn from the process.
+This document summarizes project planning mechanics for Knative Eventing releases. Knative Eventing release is planned every six weeks or 6th Tuesday, with 0.5 planned on April 2, 2019 as reference. Current proposal is to align sprint with the release cycle of 6 weeks. Eventually this may change as we learn from the process.
 
 ## How to manage Bugs?
 - Submit new bugs by creating a new issue of type “Bug”.
-- Please fill in as much detail as possible in the bug template and propose priority.
+- Please fill the bug template and propose priority.
 - All new bugs will be labelled “kind/bug” as part of the template
 - Bugs will be triaged weekly (this could be modified based on incoming bugs rate), and upon triage will be assigned a priority or closed.
 - All of priority/important-soon and some of priority/important-longterm bugs will be planned for next release cycle to minimize engineering debt.
@@ -20,13 +20,17 @@ This document summarizes project planning mechanics for Knative Eventing release
 - All new proposals are discussed either in WG meeting, or on slack, or dedicated meetings if needed at any point scheduled by the proposer. 
 - By R-2w’s WG meeting all new proposals should be vetted and verified that they fit the [Planning criteria](#planning-criteria). Features that do not fit this criteria will not be considered in the current release planning cycle and hence early discussion is encouraged instead of waiting for R-2w.
 - All eligible proposals will then be snapshotted into the voting document and open for voting till R-1w WG meeting. In R-1w WG meeting top features based on votes will be planned for next release.
-> Example for 0.6 release.
-  >- 04/02 (Tuesday): 0.5 release to market. Knative releases are planned every 6th Tuesday.
-  >- 03/20 (Wednesday): All features and issues that fit the planning criteria are fed into voting document.
-  >- 03/27 (Wednesday): Pick top voted features and add them to 0.6 release based on estimates.
-
-> In future, we will need some kind of estimates for each feature for release planning. Shall we adopt story points on fibonacci scale or t-shirt sizing? My vote goes to story points on fibonacci scale to avoid spending a lot of time on estimation, which is a common pitfall.
 - Accepted features will be added to the correct milestone and sprint specific project for tracking.
+
+> Example for 0.6 release.
+  >- March 20, 2019 (Wednesday): All features and issues that fit the planning criteria are fed into voting document.
+  >- March 27, 2019 (Wednesday): Pick top voted features and add them to 0.6 release based on estimates.
+  >- April 2, 2019 (Tuesday): 0.5 release to market. Knative releases are planned every 6th Tuesday.
+
+
+
+> In future, we will need some kind of estimates for each feature for release planning. Based on team feedback, we will get to this if needed in future.
+
 
 ## How to manage Epic/Scenario?
 - Epic/Scenario typically spans 1-3 months or even more in some cases.
@@ -47,21 +51,10 @@ This document summarizes project planning mechanics for Knative Eventing release
 - A new milestone is created in Github for each 6 weeks release cycle.
 - All features and bugs that are planned for the release cycle are assigned to the milestone for tracking the progress of the release.
 
-## Pending work and proposed changes:
-- Decide estimation technique (story points on fibonacci, t-shirt size etc) - Postponed
+> - Based on team feedback we will use GitHub milestone to track release progress. We will explore project boards and see if it can be automated with no overhead for engineers and then decide whether to use them or not.
+> - However projects will be used for Epics
+
+## To explore for improvements in future:
+- Decide estimation technique (story points on fibonacci, t-shirt size etc) - We will get to this later if the team feels it is needed.
 - How to automate project boards with Prow and issue labels?
-- Create features and bugs for 0.6 release.
-- Create appropriate templates - (In progress)
-- Create following labels, if they do not exist (in-progress)
-    - kind/feature-request
-    - kind/bug
-    - priority/critical-urgent
-      - Bugs that need to be fixed in current release, irrespective of when they are created.
-    - priority/important-soon
-      - Bugs that need to be fixed in the next release.
-    - priority/important-longterm
-     - Bugs that need to be fixed in next 2-3 releases..
-    - priority/awaiting-more-evidence
-    
-## Future work:
 - If the above process works for next couple of releases and team likes it then we move to a 2 week sprint model rather than 6 weeks.
