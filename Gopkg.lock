@@ -58,7 +58,7 @@
   version = "v2.1.15"
 
 [[projects]]
-  digest = "1:c2c20421e99f030dcaac6f1dcab53748dd962c3d506ca9b0270309a240bfcad3"
+  digest = "1:fd1744b6351c378ab9c77159c50626d626069e878ef616b31a59f2e40131b222"
   name = "github.com/cloudevents/sdk-go"
   packages = [
     "pkg/cloudevents",
@@ -74,8 +74,7 @@
     "pkg/cloudevents/types",
   ]
   pruneopts = "NUT"
-  revision = "c60ffccfa25c10921825458ce13edcae0ddf62d1"
-  version = "0.4.3"
+  revision = "b88e53efaaadf77c676a5b53f64c2dc8814e1c6a"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -358,6 +357,14 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
+
+[[projects]]
+  digest = "1:b8870bf2606dca65dc382f4cb8b7a434f17ff36a915451bda12788e9620be368"
+  name = "github.com/kelseyhightower/envconfig"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "f611eb38b3875cc3bd991ca91c51d06446afa14c"
+  version = "v1.3.0"
 
 [[projects]]
   digest = "1:0836bde83bdc49aae7710e22d04e2555d9bd25cd133fbb78508c492307081aea"
@@ -1264,6 +1271,7 @@
     "github.com/fsnotify/fsnotify",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
+    "github.com/kelseyhightower/envconfig",
     "github.com/knative/build/pkg/apis/build/v1alpha1",
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
@@ -1316,6 +1324,7 @@
     "k8s.io/apimachinery/pkg/util/sets",
     "k8s.io/apimachinery/pkg/util/sets/types",
     "k8s.io/apimachinery/pkg/util/uuid",
+    "k8s.io/apimachinery/pkg/util/validation",
     "k8s.io/apimachinery/pkg/util/wait",
     "k8s.io/apimachinery/pkg/util/yaml",
     "k8s.io/apimachinery/pkg/watch",

@@ -24,6 +24,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/eventtype"
+
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/channel"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
@@ -134,6 +136,7 @@ func main() {
 			}),
 		trigger.ProvideController,
 		namespace.ProvideController,
+		eventtype.ProvideController,
 	}
 	for _, provider := range providers {
 		if _, err = provider(mgr, logger.Desugar()); err != nil {

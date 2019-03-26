@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,15 +18,12 @@ package v1alpha1
 
 import "context"
 
-func (b *Broker) SetDefaults(ctx context.Context) {
-	b.Spec.SetDefaults(ctx)
+func (et *EventType) SetDefaults(ctx context.Context) {
+	et.Spec.SetDefaults(ctx)
 }
 
-func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
-	if bs.IngressPolicy == nil {
-		bs.IngressPolicy = &IngressPolicySpec{
-			AllowAny: true,
-			AutoAdd:  false,
-		}
+func (ets *EventTypeSpec) SetDefaults(ctx context.Context) {
+	if ets.Broker == "" {
+		ets.Broker = "default"
 	}
 }

@@ -38,6 +38,14 @@ type ChannelNamespaceListerExpansion interface{}
 // ClusterChannelProvisionerLister.
 type ClusterChannelProvisionerListerExpansion interface{}
 
+// EventTypeListerExpansion allows custom methods to be added to
+// EventTypeLister.
+type EventTypeListerExpansion interface{}
+
+// EventTypeNamespaceListerExpansion allows custom methods to be added to
+// EventTypeNamespaceLister.
+type EventTypeNamespaceListerExpansion interface{}
+
 // SubscriptionListerExpansion allows custom methods to be added to
 // SubscriptionLister.
 type SubscriptionListerExpansion interface{}

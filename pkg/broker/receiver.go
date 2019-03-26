@@ -231,8 +231,18 @@ func (r *Receiver) shouldSendMessage(ts *eventingv1alpha1.TriggerSpec, event *cl
 		return false
 	}
 	filterSource := ts.Filter.SourceAndType.Source
-	s := event.Context.AsV01().Source
-	actualSource := s.String()
+	actualSource := event.Source()
+	// We look if there is a From extension, which means that it is a known type that came from our sources.
+	// If it is there, then we update the actualSource variable and compare against this one.
+	// This is a hack not to change how we define trigger filters, and to make the source field usable, without needing
+	// more advanced filtering.
+	// TODO should be updated once we decide on filtering languages.
+	var from string
+	err := event.ExtensionAs(extensionFrom, &from)
+	if err == nil {
+		actualSource = from
+	}
+
 	if filterSource != eventingv1alpha1.TriggerAnyFilter && filterSource != actualSource {
 		r.logger.Debug("Wrong source", zap.String("trigger.spec.filter.sourceAndType.source", filterSource), zap.String("message.source", actualSource))
 		return false

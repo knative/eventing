@@ -859,6 +859,10 @@ func makeBroker() *v1alpha1.Broker {
 			ChannelTemplate: &v1alpha1.ChannelSpec{
 				Provisioner: channelProvisioner,
 			},
+			IngressPolicy: &v1alpha1.IngressPolicySpec{
+				AllowAny: true,
+				AutoAdd:  false,
+			},
 		},
 	}
 }

@@ -26,6 +26,8 @@ import (
 	"strings"
 	"testing"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
@@ -37,16 +39,15 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 const (
-	testNS      = "test-namespace"
-	triggerName = "test-trigger"
-	eventType   = `com.example.someevent`
-	eventSource = `/mycontext`
-
+	testNS       = "test-namespace"
+	triggerName  = "test-trigger"
+	eventType    = `com.example.someevent`
+	eventSource  = `/mycontext`
+	eventFrom    = `myfrom`
 	toBeReplaced = "toBeReplaced"
 )
 
@@ -163,6 +164,19 @@ func TestReceiver(t *testing.T) {
 				makeTrigger(eventType, eventSource),
 			},
 			expectedDispatch: true,
+		},
+		"Wrong source - From": {
+			triggers: []*eventingv1alpha1.Trigger{
+				makeTrigger(eventType, eventSource),
+			},
+			event: makeEventWithFromAndTTL(),
+		},
+		"Dispatch succeeded - From Specific": {
+			triggers: []*eventingv1alpha1.Trigger{
+				makeTrigger(eventType, eventFrom),
+			},
+			expectedDispatch: true,
+			event:            makeEventWithFromAndTTL(),
 		},
 		"Returned Cloud Event": {
 			triggers: []*eventingv1alpha1.Trigger{
@@ -410,11 +424,6 @@ func makeEvent() *cloudevents.Event {
 	return &e
 }
 
-func addTTLToEvent(e cloudevents.Event) cloudevents.Event {
-	e.Context = SetTTL(e.Context, 1)
-	return e
-}
-
 func makeDifferentEvent() *cloudevents.Event {
 	return &cloudevents.Event{
 		Context: cloudevents.EventContextV02{
@@ -425,6 +434,30 @@ func makeDifferentEvent() *cloudevents.Event {
 				},
 			},
 			ContentType: cloudevents.StringOfApplicationJSON(),
+		},
+	}
+}
+
+func addTTLToEvent(e cloudevents.Event) cloudevents.Event {
+	e.Context = SetTTL(e.Context, 1)
+	return e
+}
+
+func makeEventWithFromAndTTL() *cloudevents.Event {
+	extensions := map[string]interface{}{
+		extensionFrom:   eventFrom,
+		V02TTLAttribute: 1,
+	}
+	return &cloudevents.Event{
+		Context: cloudevents.EventContextV02{
+			Type: eventType,
+			Source: types.URLRef{
+				URL: url.URL{
+					Path: eventSource,
+				},
+			},
+			ContentType: cloudevents.StringOfApplicationJSON(),
+			Extensions:  extensions,
 		},
 	}
 }

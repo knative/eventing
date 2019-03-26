@@ -23,53 +23,51 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestBrokerDefaults(t *testing.T) {
+func TestEventTypeDefaults(t *testing.T) {
 	testCases := map[string]struct {
-		initial  Broker
-		expected Broker
+		initial  EventType
+		expected EventType
 	}{
-		"nil ingress": {
-			initial: Broker{},
-			expected: Broker{
-				Spec: BrokerSpec{
-					IngressPolicy: &IngressPolicySpec{
-						AllowAny: true,
-						AutoAdd:  false,
-					},
+		"nil spec": {
+			initial: EventType{},
+			expected: EventType{
+				Spec: EventTypeSpec{
+					Broker: "default",
 				},
 			},
 		},
-		"auto add not set": {
-			initial: Broker{
-				Spec: BrokerSpec{
-					IngressPolicy: &IngressPolicySpec{
-						AllowAny: true,
-					},
+		"broker empty": {
+			initial: EventType{
+				Spec: EventTypeSpec{
+					Type:   "test-type",
+					Source: "test-source",
+					Broker: "",
+					Schema: "test-schema",
 				},
 			},
-			expected: Broker{
-				Spec: BrokerSpec{
-					IngressPolicy: &IngressPolicySpec{
-						AllowAny: true,
-						AutoAdd:  false,
-					},
+			expected: EventType{
+				Spec: EventTypeSpec{
+					Type:   "test-type",
+					Source: "test-source",
+					Broker: "default",
+					Schema: "test-schema",
 				},
 			},
 		},
-		"allow any not set": {
-			initial: Broker{
-				Spec: BrokerSpec{
-					IngressPolicy: &IngressPolicySpec{
-						AutoAdd: true,
-					},
+		"broker not set": {
+			initial: EventType{
+				Spec: EventTypeSpec{
+					Type:   "test-type",
+					Source: "test-source",
+					Schema: "test-schema",
 				},
 			},
-			expected: Broker{
-				Spec: BrokerSpec{
-					IngressPolicy: &IngressPolicySpec{
-						AllowAny: false,
-						AutoAdd:  true,
-					},
+			expected: EventType{
+				Spec: EventTypeSpec{
+					Type:   "test-type",
+					Source: "test-source",
+					Broker: "default",
+					Schema: "test-schema",
 				},
 			},
 		},

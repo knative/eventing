@@ -52,9 +52,11 @@ var (
 
 	// map of events to set test cases' expectations easier
 	events = map[string]corev1.Event{
-		brokerCreated:             {Reason: brokerCreated, Type: corev1.EventTypeNormal},
-		serviceAccountCreated:     {Reason: serviceAccountCreated, Type: corev1.EventTypeNormal},
-		serviceAccountRBACCreated: {Reason: serviceAccountRBACCreated, Type: corev1.EventTypeNormal},
+		brokerCreated:                    {Reason: brokerCreated, Type: corev1.EventTypeNormal},
+		filterServiceAccountCreated:      {Reason: filterServiceAccountCreated, Type: corev1.EventTypeNormal},
+		filterServiceAccountRBACCreated:  {Reason: filterServiceAccountRBACCreated, Type: corev1.EventTypeNormal},
+		ingressServiceAccountCreated:     {Reason: ingressServiceAccountCreated, Type: corev1.EventTypeNormal},
+		ingressServiceAccountRBACCreated: {Reason: ingressServiceAccountRBACCreated, Type: corev1.EventTypeNormal},
 	}
 )
 
@@ -192,7 +194,11 @@ func TestReconcile(t *testing.T) {
 			WantAbsent: []runtime.Object{
 				makeBroker(),
 			},
-			WantEvent: []corev1.Event{events[serviceAccountCreated], events[serviceAccountRBACCreated]},
+			WantEvent: []corev1.Event{
+				events[filterServiceAccountCreated],
+				events[filterServiceAccountRBACCreated],
+				events[ingressServiceAccountCreated],
+				events[ingressServiceAccountRBACCreated]},
 		},
 		{
 			Name:   "Broker Found",
@@ -201,7 +207,11 @@ func TestReconcile(t *testing.T) {
 				makeNamespace(&enabled),
 				makeBroker(),
 			},
-			WantEvent: []corev1.Event{events[serviceAccountCreated], events[serviceAccountRBACCreated]},
+			WantEvent: []corev1.Event{
+				events[filterServiceAccountCreated],
+				events[filterServiceAccountRBACCreated],
+				events[ingressServiceAccountCreated],
+				events[ingressServiceAccountRBACCreated]},
 		},
 		{
 			Name:   "Broker.Create fails",
@@ -220,7 +230,11 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error creating the Broker",
-			WantEvent:  []corev1.Event{events[serviceAccountCreated], events[serviceAccountRBACCreated]},
+			WantEvent: []corev1.Event{
+				events[filterServiceAccountCreated],
+				events[filterServiceAccountRBACCreated],
+				events[ingressServiceAccountCreated],
+				events[ingressServiceAccountRBACCreated]},
 		},
 		{
 			Name:   "Broker created",
@@ -232,8 +246,10 @@ func TestReconcile(t *testing.T) {
 				makeBroker(),
 			},
 			WantEvent: []corev1.Event{
-				events[serviceAccountCreated],
-				events[serviceAccountRBACCreated],
+				events[filterServiceAccountCreated],
+				events[filterServiceAccountRBACCreated],
+				events[ingressServiceAccountCreated],
+				events[ingressServiceAccountRBACCreated],
 				events[brokerCreated]},
 		},
 	}
