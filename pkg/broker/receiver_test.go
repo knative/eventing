@@ -25,6 +25,8 @@ import (
 	"net/url"
 	"testing"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
@@ -36,16 +38,15 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 const (
-	testNS      = "test-namespace"
-	triggerName = "test-trigger"
-	eventType   = `com.example.someevent`
-	eventSource = `/mycontext`
-
+	testNS       = "test-namespace"
+	triggerName  = "test-trigger"
+	eventType    = `com.example.someevent`
+	eventSource  = `/mycontext`
+	eventFrom    = `myfrom`
 	toBeReplaced = "toBeReplaced"
 )
 
@@ -64,6 +65,7 @@ func TestReceiver(t *testing.T) {
 		mocks            controllertesting.Mocks
 		tctx             *cehttp.TransportContext
 		requestFails     bool
+		sendEvent        cloudevents.Event
 		returnedEvent    *cloudevents.Event
 		expectNewToFail  bool
 		expectedErr      bool
@@ -80,6 +82,7 @@ func TestReceiver(t *testing.T) {
 				},
 			},
 			expectNewToFail: true,
+			sendEvent:       makeEvent(),
 		},
 		"Not POST": {
 			tctx: &cehttp.TransportContext{
@@ -88,6 +91,7 @@ func TestReceiver(t *testing.T) {
 				URI:    "/",
 			},
 			expectedStatus: http.StatusMethodNotAllowed,
+			sendEvent:      makeEvent(),
 		},
 		"Other path": {
 			tctx: &cehttp.TransportContext{
@@ -96,6 +100,7 @@ func TestReceiver(t *testing.T) {
 				URI:    "/someotherEndpoint",
 			},
 			expectedStatus: http.StatusNotFound,
+			sendEvent:      makeEvent(),
 		},
 		"Bad host": {
 			tctx: &cehttp.TransportContext{
@@ -104,37 +109,44 @@ func TestReceiver(t *testing.T) {
 				URI:    "/",
 			},
 			expectedErr: true,
+			sendEvent:   makeEvent(),
 		},
 		"Trigger.Get fails": {
 			// No trigger exists, so the Get will fail.
 			expectedErr: true,
+			sendEvent:   makeEvent(),
 		},
 		"Trigger doesn't have SubscriberURI": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTriggerWithoutSubscriberURI(),
 			},
 			expectedErr: true,
+			sendEvent:   makeEvent(),
 		},
 		"Trigger with bad SubscriberURI": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTriggerWithBadSubscriberURI(),
 			},
 			expectedErr: true,
+			sendEvent:   makeEvent(),
 		},
 		"Trigger without a Filter": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTriggerWithoutFilter(),
 			},
+			sendEvent: makeEvent(),
 		},
 		"Wrong type": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger("some-other-type", "Any"),
 			},
+			sendEvent: makeEvent(),
 		},
 		"Wrong source": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger("Any", "some-other-source"),
 			},
+			sendEvent: makeEvent(),
 		},
 		"Dispatch failed": {
 			triggers: []*eventingv1alpha1.Trigger{
@@ -143,24 +155,41 @@ func TestReceiver(t *testing.T) {
 			requestFails:     true,
 			expectedErr:      true,
 			expectedDispatch: true,
+			sendEvent:        makeEvent(),
 		},
 		"Dispatch succeeded - Any": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger("Any", "Any"),
 			},
 			expectedDispatch: true,
+			sendEvent:        makeEvent(),
 		},
 		"Dispatch succeeded - Specific": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(eventType, eventSource),
 			},
 			expectedDispatch: true,
+			sendEvent:        makeEvent(),
+		},
+		"Wrong source - From": {
+			triggers: []*eventingv1alpha1.Trigger{
+				makeTrigger(eventType, eventSource),
+			},
+			sendEvent: makeEventWithFrom(),
+		},
+		"Dispatch succeeded - From Specific": {
+			triggers: []*eventingv1alpha1.Trigger{
+				makeTrigger(eventType, eventFrom),
+			},
+			expectedDispatch: true,
+			sendEvent:        makeEventWithFrom(),
 		},
 		"Returned Cloud Event": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger("Any", "Any"),
 			},
 			expectedDispatch: true,
+			sendEvent:        makeEvent(),
 			returnedEvent:    makeDifferentEvent(),
 		},
 		"Returned Cloud Event with custom headers": {
@@ -199,6 +228,7 @@ func TestReceiver(t *testing.T) {
 				"X-Ot-Foo": []string{"haden"},
 			},
 			expectedDispatch: true,
+			sendEvent:        makeEvent(),
 			returnedEvent:    makeDifferentEvent(),
 		},
 	}
@@ -245,7 +275,7 @@ func TestReceiver(t *testing.T) {
 			}
 			ctx := cehttp.WithTransportContext(context.Background(), *tctx)
 			resp := &cloudevents.EventResponse{}
-			err = r.serveHTTP(ctx, makeEvent(), resp)
+			err = r.serveHTTP(ctx, tc.sendEvent, resp)
 
 			if tc.expectedErr && err == nil {
 				t.Errorf("Expected an error, received nil")
@@ -394,6 +424,24 @@ func makeDifferentEvent() *cloudevents.Event {
 				},
 			},
 			ContentType: cloudevents.StringOfApplicationJSON(),
+		},
+	}
+}
+
+func makeEventWithFrom() cloudevents.Event {
+	extensions := map[string]interface{}{
+		extensionFrom: eventFrom,
+	}
+	return cloudevents.Event{
+		Context: cloudevents.EventContextV02{
+			Type: eventType,
+			Source: types.URLRef{
+				URL: url.URL{
+					Path: eventSource,
+				},
+			},
+			ContentType: cloudevents.StringOfApplicationJSON(),
+			Extensions:  extensions,
 		},
 	}
 }
