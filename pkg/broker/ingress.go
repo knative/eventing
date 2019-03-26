@@ -105,6 +105,8 @@ func (p *IngressPolicy) isRegistered(ctx context.Context, event cloudevents.Even
 }
 
 func (p *IngressPolicy) getEventType(ctx context.Context, event cloudevents.Event) (*eventingv1alpha1.EventType, error) {
+	source := sourceOrFrom(event)
+
 	opts := &client.ListOptions{
 		Namespace: p.namespace,
 		// Set Raw because if we need to get more than one page, then we will put the continue token
@@ -120,9 +122,9 @@ func (p *IngressPolicy) getEventType(ctx context.Context, event cloudevents.Even
 		}
 		for _, et := range etl.Items {
 			if et.Spec.Broker == p.broker {
-				// Matching on type and schemaURL, although this does not uniquely identify the EventType.
-				// If we match on source, then we will never find the EventType.
-				if et.Spec.Type == event.Type() && et.Spec.Schema == event.SchemaURL() {
+				// Matching on type, schemaURL, and "source" (either the CloudEvent source or our custom extension).
+				// Note that if we end up using the CloudEvent source, most probably the EventType won't be there.
+				if et.Spec.Type == event.Type() && et.Spec.Source == source && et.Spec.Schema == event.SchemaURL() {
 					return &et, nil
 				}
 			}
@@ -137,6 +139,7 @@ func (p *IngressPolicy) getEventType(ctx context.Context, event cloudevents.Even
 
 // makeEventType generates, but does not create an EventType from the given cloudevents.Event.
 func (p *IngressPolicy) makeEventType(event cloudevents.Event) *eventingv1alpha1.EventType {
+	source := sourceOrFrom(event)
 	cloudEventType := event.Type()
 	return &eventingv1alpha1.EventType{
 		ObjectMeta: metav1.ObjectMeta{
@@ -145,9 +148,22 @@ func (p *IngressPolicy) makeEventType(event cloudevents.Event) *eventingv1alpha1
 		},
 		Spec: eventingv1alpha1.EventTypeSpec{
 			Type:   cloudEventType,
-			Source: event.Source(),
+			Source: source,
 			Schema: event.SchemaURL(),
 			Broker: p.broker,
 		},
 	}
+}
+
+func sourceOrFrom(event cloudevents.Event) string {
+	source := event.Source()
+	// Use the custom extension 'from' as opposed to CloudEvent source, if available.
+	// If the extension is populated, it means the event came from one of our sources.
+	// Note that some of our sources might not populate this, e.g., container source, etc.
+	var from string
+	err := event.ExtensionAs(extensionFrom, &from)
+	if err == nil {
+		source = from
+	}
+	return source
 }

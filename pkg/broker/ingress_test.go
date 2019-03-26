@@ -45,6 +45,7 @@ const (
 	testType   = "test-type"
 	otherType  = "other-test-type"
 	testSource = "/test-source"
+	testFrom   = "/test-from"
 )
 
 func init() {
@@ -53,13 +54,18 @@ func init() {
 }
 
 func TestIngress(t *testing.T) {
+
+	extensions := map[string]interface{}{
+		extensionFrom: testFrom,
+	}
+
 	testCases := map[string]struct {
 		eventTypes []*eventingv1alpha1.EventType
 		mocks      controllertesting.Mocks
 		event      cloudevents.Event
 		policySpec *eventingv1alpha1.IngressPolicySpec
 		want       bool
-		// TODO add wantPresent to check creation of an EventType
+		// TODO add wantPresent to check creation of an EventType.
 	}{
 		"allow any, accept": {
 			policySpec: &eventingv1alpha1.IngressPolicySpec{
@@ -71,7 +77,7 @@ func TestIngress(t *testing.T) {
 			policySpec: &eventingv1alpha1.IngressPolicySpec{
 				AllowAny: false,
 			},
-			event: makeCloudEvent(),
+			event: makeCloudEvent(nil),
 			mocks: controllertesting.Mocks{
 				MockLists: []controllertesting.MockList{
 					func(_ client.Client, _ context.Context, _ *client.ListOptions, _ runtime.Object) (controllertesting.MockHandled, error) {
@@ -85,9 +91,19 @@ func TestIngress(t *testing.T) {
 			policySpec: &eventingv1alpha1.IngressPolicySpec{
 				AllowAny: false,
 			},
-			event: makeCloudEvent(),
+			event: makeCloudEvent(nil),
 			eventTypes: []*eventingv1alpha1.EventType{
-				makeDifferentEventType(),
+				makeEventType(otherType, testSource),
+			},
+			want: false,
+		},
+		"allow registered, event not found with from, reject": {
+			policySpec: &eventingv1alpha1.IngressPolicySpec{
+				AllowAny: false,
+			},
+			event: makeCloudEvent(extensions),
+			eventTypes: []*eventingv1alpha1.EventType{
+				makeEventType(testType, testSource),
 			},
 			want: false,
 		},
@@ -95,9 +111,19 @@ func TestIngress(t *testing.T) {
 			policySpec: &eventingv1alpha1.IngressPolicySpec{
 				AllowAny: false,
 			},
-			event: makeCloudEvent(),
+			event: makeCloudEvent(nil),
 			eventTypes: []*eventingv1alpha1.EventType{
-				makeEventType(),
+				makeEventType(testType, testSource),
+			},
+			want: true,
+		},
+		"allow registered, event registered with from, accept": {
+			policySpec: &eventingv1alpha1.IngressPolicySpec{
+				AllowAny: false,
+			},
+			event: makeCloudEvent(extensions),
+			eventTypes: []*eventingv1alpha1.EventType{
+				makeEventType(testType, testFrom),
 			},
 			want: true,
 		},
@@ -105,7 +131,7 @@ func TestIngress(t *testing.T) {
 			policySpec: &eventingv1alpha1.IngressPolicySpec{
 				AutoAdd: true,
 			},
-			event: makeCloudEvent(),
+			event: makeCloudEvent(nil),
 			mocks: controllertesting.Mocks{
 				MockLists: []controllertesting.MockList{
 					func(_ client.Client, _ context.Context, _ *client.ListOptions, _ runtime.Object) (controllertesting.MockHandled, error) {
@@ -119,7 +145,7 @@ func TestIngress(t *testing.T) {
 			policySpec: &eventingv1alpha1.IngressPolicySpec{
 				AutoAdd: true,
 			},
-			event: makeCloudEvent(),
+			event: makeCloudEvent(nil),
 			mocks: controllertesting.Mocks{
 				MockCreates: []controllertesting.MockCreate{
 					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
@@ -133,12 +159,12 @@ func TestIngress(t *testing.T) {
 			policySpec: &eventingv1alpha1.IngressPolicySpec{
 				AutoAdd: true,
 			},
-			event: makeCloudEvent(),
+			event: makeCloudEvent(nil),
 			mocks: controllertesting.Mocks{
 				MockCreates: []controllertesting.MockCreate{
 					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
 						et := obj.(*eventingv1alpha1.EventType)
-						expected := makeEventType().Spec
+						expected := makeEventType(testType, testSource).Spec
 						if !equality.Semantic.DeepDerivative(et.Spec, expected) {
 							return controllertesting.Handled, errors.New("error creating type")
 						}
@@ -176,7 +202,7 @@ func newClient(initial []runtime.Object, mocks controllertesting.Mocks) *control
 	return controllertesting.NewMockClient(innerClient, mocks)
 }
 
-func makeCloudEvent() cloudevents.Event {
+func makeCloudEvent(extensions map[string]interface{}) cloudevents.Event {
 	return cloudevents.Event{
 		Context: cloudevents.EventContextV02{
 			Type: testType,
@@ -186,11 +212,12 @@ func makeCloudEvent() cloudevents.Event {
 				},
 			},
 			ContentType: cloudevents.StringOfApplicationJSON(),
+			Extensions:  extensions,
 		},
 	}
 }
 
-func makeEventTypeFor(eventType string) *eventingv1alpha1.EventType {
+func makeEventType(eventType, eventSource string) *eventingv1alpha1.EventType {
 	return &eventingv1alpha1.EventType{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-", eventType),
@@ -199,15 +226,7 @@ func makeEventTypeFor(eventType string) *eventingv1alpha1.EventType {
 		Spec: eventingv1alpha1.EventTypeSpec{
 			Type:   eventType,
 			Broker: broker,
-			Source: testSource,
+			Source: eventSource,
 		},
 	}
-}
-
-func makeEventType() *eventingv1alpha1.EventType {
-	return makeEventTypeFor(testType)
-}
-
-func makeDifferentEventType() *eventingv1alpha1.EventType {
-	return makeEventTypeFor(otherType)
 }

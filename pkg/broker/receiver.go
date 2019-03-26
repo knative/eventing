@@ -37,8 +37,6 @@ const (
 	defaultPort = 8080
 
 	writeTimeout = 1 * time.Minute
-
-	extensionFrom = "From"
 )
 
 // Receiver parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
