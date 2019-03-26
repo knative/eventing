@@ -21,6 +21,7 @@ import (
 
 	"github.com/knative/eventing/contrib/natss/pkg/controller/channel"
 	"github.com/knative/eventing/contrib/natss/pkg/controller/clusterchannelprovisioner"
+	"github.com/knative/eventing/contrib/natss/pkg/util"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
@@ -49,7 +50,7 @@ func main() {
 	eventingv1alpha1.AddToScheme(mgr.GetScheme())
 	istiov1alpha3.AddToScheme(mgr.GetScheme())
 
-	_, err = clusterchannelprovisioner.ProvideController(mgr, logger.Desugar())
+	_, err = clusterchannelprovisioner.ProvideController(mgr, util.GetDefaultNatssURL(), util.GetDefaultClusterID(), logger.Desugar())
 	if err != nil {
 		logger.Fatal("Unable to create Provisioner controller", zap.Error(err))
 	}

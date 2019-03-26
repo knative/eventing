@@ -117,6 +117,7 @@ type mapBrokerToTriggers struct {
 	r *reconciler
 }
 
+// Map implements handler.Mapper.Map.
 func (b *mapBrokerToTriggers) Map(o handler.MapObject) []reconcile.Request {
 	ctx := context.Background()
 	triggers := make([]reconcile.Request, 0)
@@ -152,11 +153,13 @@ func (b *mapBrokerToTriggers) Map(o handler.MapObject) []reconcile.Request {
 	}
 }
 
+// InjectClient implements controller runtime's inject.Client.
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	return nil
 }
 
+// InjectConfig implements controller runtime's inject.Config.
 func (r *reconciler) InjectConfig(c *rest.Config) error {
 	var err error
 	r.dynamicClient, err = dynamic.NewForConfig(c)
