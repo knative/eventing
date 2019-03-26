@@ -80,8 +80,8 @@ var (
 
 func init() {
 	// Add types to scheme
-	eventingv1alpha1.AddToScheme(scheme.Scheme)
-	duckv1alpha1.AddToScheme(scheme.Scheme)
+	_ = eventingv1alpha1.AddToScheme(scheme.Scheme)
+	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
 }
 
 func TestAllCases(t *testing.T) {
@@ -941,7 +941,7 @@ func TestAllCases(t *testing.T) {
 				// verify the following, but can't be done because the call to Patch fails (it assumes
 				// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
 				// out.
-				//getChannelWithMultipleSubscriptions(),
+				// getChannelWithMultipleSubscriptions(),
 				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
 				// Unaltered because this Subscription was not reconciled.
 				Subscription().Renamed().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
@@ -1032,7 +1032,7 @@ func TestAllCases(t *testing.T) {
 				// verify the following, but can't be done because the call to Patch fails (it assumes
 				// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
 				// out.
-				//getNewDeletedSubscriptionWithChannelReady(),
+				// getNewDeletedSubscriptionWithChannelReady(),
 			},
 			WantPresent: []runtime.Object{
 				// TODO: JSON patch is not working on the fake, see
@@ -1040,7 +1040,7 @@ func TestAllCases(t *testing.T) {
 				// verify the following, but can't be done because the call to Patch fails (it assumes
 				// a Strategic Merge Patch, whereas we are doing a JSON Patch). so for now, comment it
 				// out.
-				//getChannelWithOtherSubscription(),
+				// getChannelWithOtherSubscription(),
 			},
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
@@ -1268,7 +1268,7 @@ func (s *SubscriptionBuilder) PhysicalSubscriber(dns string) *SubscriptionBuilde
 }
 
 func (s *SubscriptionBuilder) ReferencesResolved() *SubscriptionBuilder {
-	s = s.UnknownConditions()
+	s.UnknownConditions()
 	s.Status.MarkReferencesResolved()
 	return s
 }
@@ -1286,7 +1286,7 @@ func (s *SubscriptionBuilder) DifferentChannel() *SubscriptionBuilder {
 }
 
 func (s *SubscriptionBuilder) ChannelReady() *SubscriptionBuilder {
-	s = s.ReferencesResolved()
+	s.ReferencesResolved()
 	s.Status.MarkChannelReady()
 	return s
 }

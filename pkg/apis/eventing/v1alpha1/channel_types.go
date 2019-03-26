@@ -81,13 +81,10 @@ var chanCondSet = duckv1alpha1.NewLivingConditionSet(ChannelConditionProvisioned
 
 // ChannelStatus represents the current state of a Channel.
 type ChannelStatus struct {
-	// ObservedGeneration is the most recent generation observed for this Channel.
-	// It corresponds to the Channel's generation, which is updated on mutation by
-	// the API Server.
-	// TODO: The above comment is only true once
-	// https://github.com/kubernetes/kubernetes/issues/58778 is fixed.
-	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// inherits duck/v1alpha1 Status, which currently provides:
+	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
+	// * Conditions - the latest available observations of a resource's current state.
+	duckv1alpha1.Status `json:",inline"`
 
 	// Channel is Addressable. It currently exposes the endpoint as a
 	// fully-qualified DNS name which will distribute traffic over the
@@ -95,12 +92,6 @@ type ChannelStatus struct {
 	//
 	// It generally has the form {channel}.{namespace}.svc.{cluster domain name}
 	Address duckv1alpha1.Addressable `json:"address,omitempty"`
-
-	// Represents the latest available observations of a channel's current state.
-	// +optional
-	// +patchMergeKey=type
-	// +patchStrategy=merge
-	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
 	// Internal is status unique to each ClusterChannelProvisioner.
 	// +optional

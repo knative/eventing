@@ -17,9 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
@@ -51,27 +49,31 @@ type Service struct {
 	Status ServiceStatus `json:"status,omitempty"`
 }
 
-// Check that Service may be validated and defaulted.
-var _ apis.Validatable = (*Service)(nil)
-var _ apis.Defaultable = (*Service)(nil)
+// Verify that Service adheres to the appropriate interfaces.
+var (
+	// Check that Service may be validated and defaulted.
+	_ apis.Validatable = (*Service)(nil)
+	_ apis.Defaultable = (*Service)(nil)
 
-// Check that we can create OwnerReferences to a Service.
-var _ kmeta.OwnerRefable = (*Service)(nil)
-
-// Check that ServiceStatus may have its conditions managed.
-var _ duckv1alpha1.ConditionsAccessor = (*ServiceStatus)(nil)
+	// Check that we can create OwnerReferences to a Service.
+	_ kmeta.OwnerRefable = (*Service)(nil)
+)
 
 // ServiceSpec represents the configuration for the Service object. Exactly one
 // of its members (other than Generation) must be specified. Services can either
 // track the latest ready revision of a configuration or be pinned to a specific
 // revision.
 type ServiceSpec struct {
-	// TODO: Generation does not work correctly with CRD. They are scrubbed
-	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
-	// So, we add Generation here. Once that gets fixed, remove this and use
-	// ObjectMeta.Generation instead.
+	// DeprecatedGeneration was used prior in Kubernetes versions <1.11
+	// when metadata.generation was not being incremented by the api server
+	//
+	// This property will be dropped in future Knative releases and should
+	// not be used - use metadata.generation
+	//
+	// Tracking issue: https://github.com/knative/serving/issues/643
+	//
 	// +optional
-	Generation int64 `json:"generation,omitempty"`
+	DeprecatedGeneration int64 `json:"generation,omitempty"`
 
 	// RunLatest defines a simple Service. It will automatically
 	// configure a route that keeps the latest ready revision
@@ -79,11 +81,9 @@ type ServiceSpec struct {
 	// +optional
 	RunLatest *RunLatestType `json:"runLatest,omitempty"`
 
-	// Pins this service to a specific revision name. The revision must
-	// be owned by the configuration provided.
-	// PinnedType is DEPRECATED in favor of ReleaseType
+	// DeprecatedPinned is DEPRECATED in favor of ReleaseType
 	// +optional
-	Pinned *PinnedType `json:"pinned,omitempty"`
+	DeprecatedPinned *PinnedType `json:"pinned,omitempty"`
 
 	// Manual mode enables users to start managing the underlying Route and Configuration
 	// resources directly.  This advanced usage is intended as a path for users to graduate
@@ -124,6 +124,11 @@ type ReleaseType struct {
 	Configuration ConfigurationSpec `json:"configuration,omitempty"`
 }
 
+// ReleaseLatestRevisionKeyword is a shortcut for usage in the `release` mode
+// to refer to the latest created revision.
+// See #2819 for details.
+const ReleaseLatestRevisionKeyword = "@latest"
+
 // RunLatestType contains the options for always having a route to the latest configuration. See
 // ServiceSpec for more details.
 type RunLatestType struct {
@@ -158,11 +163,9 @@ const (
 	ServiceConditionConfigurationsReady duckv1alpha1.ConditionType = "ConfigurationsReady"
 )
 
-var serviceCondSet = duckv1alpha1.NewLivingConditionSet(ServiceConditionConfigurationsReady, ServiceConditionRoutesReady)
-
+// ServiceStatus represents the Status stanza of the Service resource.
 type ServiceStatus struct {
-	// +optional
-	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty"`
+	duckv1alpha1.Status `json:",inline"`
 
 	// From RouteStatus.
 	// Domain holds the top-level domain that will distribute traffic over the provided targets.
@@ -171,12 +174,12 @@ type ServiceStatus struct {
 	Domain string `json:"domain,omitempty"`
 
 	// From RouteStatus.
-	// DomainInternal holds the top-level domain that will distribute traffic over the provided
+	// DeprecatedDomainInternal holds the top-level domain that will distribute traffic over the provided
 	// targets from inside the cluster. It generally has the form
-	// {route-name}.{route-namespace}.svc.cluster.local
+	// {route-name}.{route-namespace}.svc.{cluster-domain-name}
 	// DEPRECATED: Use Address instead.
 	// +optional
-	DomainInternal string `json:"domainInternal,omitempty"`
+	DeprecatedDomainInternal string `json:"domainInternal,omitempty"`
 
 	// Address holds the information needed for a Route to be the target of an event.
 	// +optional
@@ -201,11 +204,6 @@ type ServiceStatus struct {
 	// Configuration. It might not be ready yet, for that use LatestReadyRevisionName.
 	// +optional
 	LatestCreatedRevisionName string `json:"latestCreatedRevisionName,omitempty"`
-
-	// ObservedGeneration is the 'Generation' of the Service that
-	// was last processed by the controller.
-	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -216,91 +214,4 @@ type ServiceList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []Service `json:"items"`
-}
-
-func (s *Service) GetGroupVersionKind() schema.GroupVersionKind {
-	return SchemeGroupVersion.WithKind("Service")
-}
-
-func (ss *ServiceStatus) IsReady() bool {
-	return serviceCondSet.Manage(ss).IsHappy()
-}
-
-func (ss *ServiceStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
-	return serviceCondSet.Manage(ss).GetCondition(t)
-}
-
-func (ss *ServiceStatus) InitializeConditions() {
-	serviceCondSet.Manage(ss).InitializeConditions()
-}
-
-func (ss *ServiceStatus) PropagateConfigurationStatus(cs ConfigurationStatus) {
-	ss.LatestReadyRevisionName = cs.LatestReadyRevisionName
-	ss.LatestCreatedRevisionName = cs.LatestCreatedRevisionName
-
-	cc := cs.GetCondition(ConfigurationConditionReady)
-	if cc == nil {
-		return
-	}
-	switch {
-	case cc.Status == corev1.ConditionUnknown:
-		serviceCondSet.Manage(ss).MarkUnknown(ServiceConditionConfigurationsReady, cc.Reason, cc.Message)
-	case cc.Status == corev1.ConditionTrue:
-		serviceCondSet.Manage(ss).MarkTrue(ServiceConditionConfigurationsReady)
-	case cc.Status == corev1.ConditionFalse:
-		serviceCondSet.Manage(ss).MarkFalse(ServiceConditionConfigurationsReady, cc.Reason, cc.Message)
-	}
-}
-
-func (ss *ServiceStatus) PropagateRouteStatus(rs RouteStatus) {
-	ss.Domain = rs.Domain
-	ss.DomainInternal = rs.DomainInternal
-	ss.Address = rs.Address
-	ss.Traffic = rs.Traffic
-
-	rc := rs.GetCondition(RouteConditionReady)
-	if rc == nil {
-		return
-	}
-	switch {
-	case rc.Status == corev1.ConditionUnknown:
-		serviceCondSet.Manage(ss).MarkUnknown(ServiceConditionRoutesReady, rc.Reason, rc.Message)
-	case rc.Status == corev1.ConditionTrue:
-		serviceCondSet.Manage(ss).MarkTrue(ServiceConditionRoutesReady)
-	case rc.Status == corev1.ConditionFalse:
-		serviceCondSet.Manage(ss).MarkFalse(ServiceConditionRoutesReady, rc.Reason, rc.Message)
-	}
-}
-
-// SetManualStatus updates the service conditions to unknown as the underlying Route
-// can have TrafficTargets to Configurations not owned by the service. We do not want to falsely
-// report Ready.
-func (ss *ServiceStatus) SetManualStatus() {
-	reason := "Manual"
-	message := "Service is set to Manual, and is not managing underlying resources."
-
-	// Clear our fields by creating a new status and copying over only the fields and conditions we want
-	newStatus := &ServiceStatus{}
-	newStatus.InitializeConditions()
-	serviceCondSet.Manage(newStatus).MarkUnknown(ServiceConditionConfigurationsReady, reason, message)
-	serviceCondSet.Manage(newStatus).MarkUnknown(ServiceConditionRoutesReady, reason, message)
-
-	newStatus.Address = ss.Address
-	newStatus.Domain = ss.Domain
-	newStatus.DomainInternal = ss.DomainInternal
-
-	*ss = *newStatus
-
-}
-
-// GetConditions returns the Conditions array. This enables generic handling of
-// conditions by implementing the duckv1alpha1.Conditions interface.
-func (ss *ServiceStatus) GetConditions() duckv1alpha1.Conditions {
-	return ss.Conditions
-}
-
-// SetConditions sets the Conditions array. This enables generic handling of
-// conditions by implementing the duckv1alpha1.Conditions interface.
-func (ss *ServiceStatus) SetConditions(conditions duckv1alpha1.Conditions) {
-	ss.Conditions = conditions
 }

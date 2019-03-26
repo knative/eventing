@@ -22,7 +22,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/knative/eventing/contrib/natss/pkg/controller/clusterchannelprovisioner"
 	"github.com/knative/eventing/contrib/natss/pkg/stanutil"
 	"github.com/knative/eventing/pkg/provisioners"
 	stan "github.com/nats-io/go-nats-streaming"
@@ -52,8 +51,9 @@ type SubscriptionsSupervisor struct {
 	subscriptionsMux sync.Mutex
 	subscriptions    map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription
 
-	connect  chan struct{}
-	natssURL string
+	connect   chan struct{}
+	natssURL  string
+	clusterID string
 	// natConnMux is used to protect natssConn and natssConnInProgress during
 	// the transition from not connected to connected states.
 	natssConnMux        sync.Mutex
@@ -62,12 +62,13 @@ type SubscriptionsSupervisor struct {
 }
 
 // NewDispatcher returns a new SubscriptionsSupervisor.
-func NewDispatcher(natssUrl string, logger *zap.Logger) (*SubscriptionsSupervisor, error) {
+func NewDispatcher(natssURL, clusterID string, logger *zap.Logger) (*SubscriptionsSupervisor, error) {
 	d := &SubscriptionsSupervisor{
 		logger:        logger,
 		dispatcher:    provisioners.NewMessageDispatcher(logger.Sugar()),
 		connect:       make(chan struct{}, maxElements),
-		natssURL:      natssUrl,
+		natssURL:      natssURL,
+		clusterID:     clusterID,
 		subscriptions: make(map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription),
 	}
 	d.receiver = provisioners.NewMessageReceiver(createReceiverFunction(d, logger.Sugar()), logger.Sugar())
@@ -128,7 +129,7 @@ func (s *SubscriptionsSupervisor) connectWithRetry(stopCh <-chan struct{}) {
 	ticker := time.NewTicker(retryInterval)
 	defer ticker.Stop()
 	for {
-		nConn, err := stanutil.Connect(clusterchannelprovisioner.ClusterId, clientID, s.natssURL, s.logger.Sugar())
+		nConn, err := stanutil.Connect(s.clusterID, clientID, s.natssURL, s.logger.Sugar())
 		if err == nil {
 			// Locking here in order to reduce time in locked state.
 			s.natssConnMux.Lock()

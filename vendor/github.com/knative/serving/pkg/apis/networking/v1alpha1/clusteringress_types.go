@@ -19,8 +19,8 @@ package v1alpha1
 import (
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/kmeta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -29,8 +29,8 @@ import (
 // +genclient:nonNamespaced
 
 // ClusterIngress is a collection of rules that allow inbound connections to reach the
-// endpoints defined by a backend. An ClusterIngress can be configured to give services
-// externally-reachable urls, load balance traffic offer name based virtual hosting etc.
+// endpoints defined by a backend. A ClusterIngress can be configured to give services
+// externally-reachable URLs, load balance traffic, offer name based virtual hosting, etc.
 //
 // This is heavily based on K8s Ingress https://godoc.org/k8s.io/api/extensions/v1beta1#Ingress
 // which some highlighted modifications.
@@ -52,37 +52,52 @@ type ClusterIngress struct {
 	Status IngressStatus `json:"status,omitempty"`
 }
 
+// Verify that ClusterIngress adheres to the appropriate interfaces.
+var (
+	// Check that ClusterIngress may be validated and defaulted.
+	_ apis.Validatable = (*ClusterIngress)(nil)
+	_ apis.Defaultable = (*ClusterIngress)(nil)
+
+	// Check that we can create OwnerReferences to a ClusterIngress.
+	_ kmeta.OwnerRefable = (*ClusterIngress)(nil)
+)
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ClusterIngressList is a collection of ClusterIngress.
+// ClusterIngressList is a collection of ClusterIngress objects.
 type ClusterIngressList struct {
 	metav1.TypeMeta `json:",inline"`
-	// Standard object's metadata.
+	// Standard object metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 
-	// Items is the list of ClusterIngress.
+	// Items is the list of ClusterIngress objects.
 	Items []ClusterIngress `json:"items"`
 }
 
 // IngressSpec describes the ClusterIngress the user wishes to exist.
 //
-// In general this follow the same shape as K8s Ingress.  Some notable differences:
+// In general this follows the same shape as K8s Ingress.
+// Some notable differences:
 // - Backends now can have namespace:
 // - Traffic can be split across multiple backends.
 // - Timeout & Retry can be configured.
 // - Headers can be appended.
 type IngressSpec struct {
-	// TODO: Generation does not work correctly with CRD. They are scrubbed
-	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
-	// So, we add Generation here. Once that gets fixed, remove this and use
-	// ObjectMeta.Generation instead.
+	// DeprecatedGeneration was used prior in Kubernetes versions <1.11
+	// when metadata.generation was not being incremented by the api server
+	//
+	// This property will be dropped in future Knative releases and should
+	// not be used - use metadata.generation
+	//
+	// Tracking issue: https://github.com/knative/serving/issues/643
+	//
 	// +optional
-	Generation int64 `json:"generation,omitempty"`
+	DeprecatedGeneration int64 `json:"generation,omitempty"`
 
-	// TLS configuration. Currently the ClusterIngress only supports a single TLS
-	// port, 443. If multiple members of this list specify different hosts, they
+	// TLS configuration. Currently ClusterIngress only supports a single TLS
+	// port: 443. If multiple members of this list specify different hosts, they
 	// will be multiplexed on the same port according to the hostname specified
 	// through the SNI TLS extension, if the ingress controller fulfilling the
 	// ingress supports SNI.
@@ -103,7 +118,7 @@ type IngressVisibility string
 
 const (
 	// IngressVisibilityExternalIP is used to denote that the Ingress
-	// should be exposed to an external IP, for example a LoadBalancer
+	// should be exposed via an external IP, for example a LoadBalancer
 	// Service.  This is the default value for IngressVisibility.
 	IngressVisibilityExternalIP IngressVisibility = "ExternalIP"
 	// IngressVisibilityClusterLocal is used to denote that the Ingress
@@ -113,7 +128,7 @@ const (
 
 // ClusterIngressTLS describes the transport layer security associated with an ClusterIngress.
 type ClusterIngressTLS struct {
-	// Hosts are a list of hosts included in the TLS certificate. The values in
+	// Hosts is a list of hosts included in the TLS certificate. The values in
 	// this list must match the name/s used in the tlsSecret. Defaults to the
 	// wildcard host setting for the loadbalancer controller fulfilling this
 	// ClusterIngress, if left unspecified.
@@ -176,7 +191,7 @@ type HTTPClusterIngressRuleValue struct {
 	// options usable by a loadbalancer, like http keep-alive.
 }
 
-// HTTPClusterIngressPath associates a path regex with a backend. Incoming urls matching
+// HTTPClusterIngressPath associates a path regex with a backend. Incoming URLs matching
 // the path are forwarded to the backend.
 type HTTPClusterIngressPath struct {
 	// Path is an extended POSIX regex as defined by IEEE Std 1003.1,
@@ -213,7 +228,7 @@ type HTTPClusterIngressPath struct {
 	Retries *HTTPRetry `json:"retries,omitempty"`
 }
 
-// ClusterIngressBackend describes all endpoints for a given service and port.
+// ClusterIngressBackendSplit describes all endpoints for a given service and port.
 type ClusterIngressBackendSplit struct {
 	// Specifies the backend receiving the traffic split.
 	ClusterIngressBackend `json:",inline"`
@@ -250,8 +265,8 @@ type HTTPRetry struct {
 
 // IngressStatus describe the current state of the ClusterIngress.
 type IngressStatus struct {
-	// +optional
-	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty"`
+	duckv1alpha1.Status `json:",inline"`
+
 	// LoadBalancer contains the current status of the load-balancer.
 	// +optional
 	LoadBalancer *LoadBalancerStatus `json:"loadBalancer,omitempty"`
@@ -307,61 +322,3 @@ const (
 	// a ready LoadBalancer.
 	ClusterIngressConditionLoadBalancerReady duckv1alpha1.ConditionType = "LoadBalancerReady"
 )
-
-var clusterIngressCondSet = duckv1alpha1.NewLivingConditionSet(
-	ClusterIngressConditionNetworkConfigured,
-	ClusterIngressConditionLoadBalancerReady)
-
-var _ apis.Validatable = (*ClusterIngress)(nil)
-var _ apis.Defaultable = (*ClusterIngress)(nil)
-
-func (ci *ClusterIngress) GetGroupVersionKind() schema.GroupVersionKind {
-	return SchemeGroupVersion.WithKind("ClusterIngress")
-}
-
-// IsPublic returns whether the ClusterIngress should be exposed publicly.
-func (ci *ClusterIngress) IsPublic() bool {
-	return ci.Spec.Visibility == "" || ci.Spec.Visibility == IngressVisibilityExternalIP
-}
-
-// GetConditions returns the Conditions array. This enables generic handling of
-// conditions by implementing the duckv1alpha1.Conditions interface.
-func (cis *IngressStatus) GetConditions() duckv1alpha1.Conditions {
-	return cis.Conditions
-}
-
-// SetConditions sets the Conditions array. This enables generic handling of
-// conditions by implementing the duckv1alpha1.Conditions interface.
-func (cis *IngressStatus) SetConditions(conditions duckv1alpha1.Conditions) {
-	cis.Conditions = conditions
-}
-
-func (cis *IngressStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
-	return clusterIngressCondSet.Manage(cis).GetCondition(t)
-}
-
-func (cis *IngressStatus) InitializeConditions() {
-	clusterIngressCondSet.Manage(cis).InitializeConditions()
-}
-
-func (cis *IngressStatus) MarkNetworkConfigured() {
-	clusterIngressCondSet.Manage(cis).MarkTrue(ClusterIngressConditionNetworkConfigured)
-}
-
-// MarkLoadBalancerReady marks the Ingress with ClusterIngressConditionLoadBalancerReady,
-// and also populate the address of the load balancer.
-func (cis *IngressStatus) MarkLoadBalancerReady(lbs []LoadBalancerIngressStatus) {
-	cis.LoadBalancer = &LoadBalancerStatus{
-		Ingress: []LoadBalancerIngressStatus{},
-	}
-	for _, lb := range lbs {
-		cis.LoadBalancer.Ingress = append(cis.LoadBalancer.Ingress, lb)
-	}
-	clusterIngressCondSet.Manage(cis).MarkTrue(ClusterIngressConditionLoadBalancerReady)
-}
-
-// IsReady looks at the conditions and if the Status has a condition
-// ClusterIngressConditionReady returns true if ConditionStatus is True
-func (cis *IngressStatus) IsReady() bool {
-	return clusterIngressCondSet.Manage(cis).IsHappy()
-}

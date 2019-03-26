@@ -52,8 +52,8 @@ var (
 
 func init() {
 	// Add types to scheme
-	eventingv1alpha1.AddToScheme(scheme.Scheme)
-	duckv1alpha1.AddToScheme(scheme.Scheme)
+	_ = eventingv1alpha1.AddToScheme(scheme.Scheme)
+	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
 }
 
 func TestInjectClient(t *testing.T) {
@@ -192,8 +192,8 @@ type ChannelBuilder struct {
 // Verify the Builder implements Buildable
 var _ controllertesting.Buildable = &ChannelBuilder{}
 
-func (s *ChannelBuilder) Build() runtime.Object {
-	return s.Channel
+func (cb *ChannelBuilder) Build() runtime.Object {
+	return cb.Channel
 }
 
 func Channel(name string, namespace string) *ChannelBuilder {
