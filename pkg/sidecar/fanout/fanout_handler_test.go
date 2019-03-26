@@ -203,9 +203,6 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		},
 	}
 	for n, tc := range testCases {
-		if n != "fanout times out" {
-			//continue
-		}
 		t.Run(n, func(t *testing.T) {
 			callableServer := httptest.NewServer(&fakeHandler{
 				handler: tc.subscriber,
@@ -256,7 +253,7 @@ type fakeHandler struct {
 }
 
 func (h *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	r.Body.Close()
+	_ = r.Body.Close()
 	h.handler(w, r)
 }
 
@@ -277,5 +274,5 @@ func body(body string) io.ReadCloser {
 }
 func callableSucceed(writer http.ResponseWriter, _ *http.Request) {
 	writer.WriteHeader(http.StatusOK)
-	writer.Write([]byte(cloudEvent))
+	_, _ = writer.Write([]byte(cloudEvent))
 }

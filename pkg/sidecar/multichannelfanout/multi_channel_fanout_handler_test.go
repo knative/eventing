@@ -340,6 +340,6 @@ type fakeHandler struct {
 }
 
 func (h *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
 	w.WriteHeader(h.statusCode)
+	_ = r.Body.Close()
 }

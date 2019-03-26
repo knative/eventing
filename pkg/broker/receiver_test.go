@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
@@ -63,6 +64,7 @@ func TestReceiver(t *testing.T) {
 		triggers         []*eventingv1alpha1.Trigger
 		mocks            controllertesting.Mocks
 		tctx             *cehttp.TransportContext
+		event            *cloudevents.Event
 		requestFails     bool
 		returnedEvent    *cloudevents.Event
 		expectNewToFail  bool
@@ -125,6 +127,12 @@ func TestReceiver(t *testing.T) {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTriggerWithoutFilter(),
 			},
+		},
+		"No TTL": {
+			triggers: []*eventingv1alpha1.Trigger{
+				makeTrigger("Any", "Any"),
+			},
+			event: makeEventWithoutTTL(),
 		},
 		"Wrong type": {
 			triggers: []*eventingv1alpha1.Trigger{
@@ -245,7 +253,11 @@ func TestReceiver(t *testing.T) {
 			}
 			ctx := cehttp.WithTransportContext(context.Background(), *tctx)
 			resp := &cloudevents.EventResponse{}
-			err = r.serveHTTP(ctx, makeEvent(), resp)
+			event := tc.event
+			if event == nil {
+				event = makeEvent()
+			}
+			err = r.serveHTTP(ctx, *event, resp)
 
 			if tc.expectedErr && err == nil {
 				t.Errorf("Expected an error, received nil")
@@ -263,14 +275,19 @@ func TestReceiver(t *testing.T) {
 			// Compare the returned event.
 			if tc.returnedEvent == nil {
 				if resp.Event != nil {
-					t.Errorf("Unexpected response event: %v", resp.Event)
+					t.Fatalf("Unexpected response event: %v", resp.Event)
 				}
 				return
+			} else if resp.Event == nil {
+				t.Fatalf("Expected response event, actually nil")
 			}
-			if diff := cmp.Diff(tc.returnedEvent.Context.AsV02(), resp.Event.Context.AsV02()); diff != "" {
+
+			// The TTL will be added again.
+			expectedResponseEvent := addTTLToEvent(*tc.returnedEvent)
+			if diff := cmp.Diff(expectedResponseEvent.Context.AsV02(), resp.Event.Context.AsV02()); diff != "" {
 				t.Errorf("Incorrect response event context (-want +got): %s", diff)
 			}
-			if diff := cmp.Diff(tc.returnedEvent.Data, resp.Event.Data); diff != "" {
+			if diff := cmp.Diff(expectedResponseEvent.Data, resp.Event.Data); diff != "" {
 				t.Errorf("Incorrect response event data (-want +got): %s", diff)
 			}
 		})
@@ -289,6 +306,9 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	h.requestReceived = true
 
 	for n, v := range h.headers {
+		if strings.Contains(strings.ToLower(n), strings.ToLower(V02TTLAttribute)) {
+			h.t.Errorf("Broker TTL should not be seen by the subscriber: %s", n)
+		}
 		if diff := cmp.Diff(v, req.Header[n]); diff != "" {
 			h.t.Errorf("Incorrect request header '%s' (-want +got): %s", n, diff)
 		}
@@ -370,8 +390,8 @@ func makeTriggerWithBadSubscriberURI() *eventingv1alpha1.Trigger {
 	return t
 }
 
-func makeEvent() cloudevents.Event {
-	return cloudevents.Event{
+func makeEventWithoutTTL() *cloudevents.Event {
+	return &cloudevents.Event{
 		Context: cloudevents.EventContextV02{
 			Type: eventType,
 			Source: types.URLRef{
@@ -382,6 +402,17 @@ func makeEvent() cloudevents.Event {
 			ContentType: cloudevents.StringOfApplicationJSON(),
 		},
 	}
+}
+
+func makeEvent() *cloudevents.Event {
+	noTTL := makeEventWithoutTTL()
+	e := addTTLToEvent(*noTTL)
+	return &e
+}
+
+func addTTLToEvent(e cloudevents.Event) cloudevents.Event {
+	e.Context = SetTTL(e.Context, 1)
+	return e
 }
 
 func makeDifferentEvent() *cloudevents.Event {

@@ -22,6 +22,7 @@ import (
 	"github.com/knative/eventing/pkg/utils"
 )
 
+// ServiceHostName creates the hostname for a Kubernetes Service.
 func ServiceHostName(serviceName, namespace string) string {
 	return fmt.Sprintf("%s.%s.svc.%s", serviceName, namespace, utils.GetClusterDomainName())
 }
