@@ -74,10 +74,11 @@ func getClusterDomainName(r io.Reader) string {
 	return defaultDomainName
 }
 
+// Converts 'name' to a valid DNS1123 subdomain, required for object names in K8s.
 func ToDNS1123Subdomain(name string) string {
 	// If it is not a valid DNS1123 subdomain, make it a valid one.
 	if msgs := validation.IsDNS1123Subdomain(name); len(msgs) != 0 {
-		// If the length exceeds the max, cut it and leave some room for the generated UUID.
+		// If the length exceeds the max, cut it and leave some room for a potential generated UUID.
 		if len(name) > validation.DNS1123SubdomainMaxLength {
 			name = name[:validation.DNS1123SubdomainMaxLength-10]
 		}

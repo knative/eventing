@@ -209,7 +209,7 @@ func (r *reconciler) reconcile(ctx context.Context, et *v1alpha1.EventType) erro
 	return nil
 }
 
-// updateStatus updates the event type's status.
+// updateStatus updates the EventType's status.
 func (r *reconciler) updateStatus(eventType *v1alpha1.EventType) (*v1alpha1.EventType, error) {
 	ctx := context.TODO()
 	objectKey := client.ObjectKey{Namespace: eventType.Namespace, Name: eventType.Name}
@@ -231,7 +231,7 @@ func (r *reconciler) updateStatus(eventType *v1alpha1.EventType) (*v1alpha1.Even
 	return latestEventType, nil
 }
 
-// getBroker returns the Broker for EventType 'et' if exists, otherwise it returns an error.
+// getBroker returns the Broker for EventType 'et' if it exists, otherwise it returns an error.
 func (r *reconciler) getBroker(ctx context.Context, et *v1alpha1.EventType) (*v1alpha1.Broker, error) {
 	b := &v1alpha1.Broker{}
 	name := types.NamespacedName{

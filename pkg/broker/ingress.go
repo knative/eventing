@@ -37,16 +37,20 @@ var (
 	notFound = k8serrors.NewNotFound(eventingv1alpha1.Resource("eventtype"), "")
 )
 
+// IngressPolicy parses Cloud Events, determines if they pass the Broker's policy, and sends them downstream.
 type IngressPolicy struct {
 	logger    *zap.SugaredLogger
 	client    client.Client
 	namespace string
 	broker    string
 	spec      *eventingv1alpha1.IngressPolicySpec
-	async     bool
+	// This bool flag is for UT purposes only.
+	async bool
 }
 
+// NewPolicy creates an IngressPolicy for a particular Broker.
 func NewPolicy(logger *zap.Logger, client client.Client, spec *eventingv1alpha1.IngressPolicySpec, namespace, broker string, async bool) *IngressPolicy {
+	// TODO too many args, maybe use a builder or just remove this function.
 	return &IngressPolicy{
 		logger:    logger.Sugar(),
 		client:    client,
@@ -57,7 +61,11 @@ func NewPolicy(logger *zap.Logger, client client.Client, spec *eventingv1alpha1.
 	}
 }
 
+// AllowEvent filters events based on the configured policy.
 func (p *IngressPolicy) AllowEvent(ctx context.Context, event cloudevents.Event) bool {
+	// 1. If autoAdd is set to true, then the event is accepted. In case it wasn't seen before, it is added to the Broker's registry.
+	// 2. If allowAny is set to false, then the event is only accepted if it's already in the Broker's registry.
+	// 3. If allowAny is set to true, then all events are allowed to enter the mesh.
 	if p.spec.AutoAdd {
 		return p.autoAdd(ctx, event)
 	}
@@ -67,11 +75,13 @@ func (p *IngressPolicy) AllowEvent(ctx context.Context, event cloudevents.Event)
 	return true
 }
 
+// autoAdd attempts to add the EventType corresponding to the CloudEvent if it's not available in the Registry.
+// It always returns true.
 func (p *IngressPolicy) autoAdd(ctx context.Context, event cloudevents.Event) bool {
 	addFunc := func(ctx context.Context) {
 		_, err := p.getEventType(ctx, event)
 		if k8serrors.IsNotFound(err) {
-			p.logger.Infof("EventType %q not found: Adding", event.Type())
+			p.logger.Debugf("EventType %q not found: Adding", event.Type())
 			eventType := p.makeEventType(event)
 			err := p.client.Create(ctx, eventType)
 			if err != nil {
@@ -92,10 +102,11 @@ func (p *IngressPolicy) autoAdd(ctx context.Context, event cloudevents.Event) bo
 	return true
 }
 
+// isRegistered returns whether the EventType corresponding to the CloudEvent is available in the Registry.
 func (p *IngressPolicy) isRegistered(ctx context.Context, event cloudevents.Event) bool {
 	_, err := p.getEventType(ctx, event)
 	if k8serrors.IsNotFound(err) {
-		p.logger.Warnf("EventType %q not found: Reject", event.Type())
+		p.logger.Debugf("EventType %q not found: Reject", event.Type())
 		return false
 	} else if err != nil {
 		p.logger.Errorf("Error retrieving EventType %q: Reject, %v", event.Type(), err)
@@ -104,6 +115,8 @@ func (p *IngressPolicy) isRegistered(ctx context.Context, event cloudevents.Even
 	return true
 }
 
+// getEventType retrieves the EventType from the Registry for the given cloudevents.Event.
+// If it is not found, it returns an error.
 func (p *IngressPolicy) getEventType(ctx context.Context, event cloudevents.Event) (*eventingv1alpha1.EventType, error) {
 	source := sourceOrFrom(event)
 
@@ -155,11 +168,12 @@ func (p *IngressPolicy) makeEventType(event cloudevents.Event) *eventingv1alpha1
 	}
 }
 
+// Retrieve the custom extension 'from' as opposed to CloudEvent source, if available.
+// If the extension is populated, it means the event came from one of our sources.
+// Note that some of our sources might not populate this, e.g., container source, etc., so we just retrieve the CloudEvent
+// source.
 func sourceOrFrom(event cloudevents.Event) string {
 	source := event.Source()
-	// Use the custom extension 'from' as opposed to CloudEvent source, if available.
-	// If the extension is populated, it means the event came from one of our sources.
-	// Note that some of our sources might not populate this, e.g., container source, etc.
 	var from string
 	err := event.ExtensionAs(extensionFrom, &from)
 	if err == nil {

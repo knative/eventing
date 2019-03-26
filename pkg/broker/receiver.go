@@ -212,7 +212,8 @@ func (r *Receiver) shouldSendMessage(ts *eventingv1alpha1.TriggerSpec, event *cl
 	actualSource := event.Source()
 	// We look if there is a From extension, which means that it is a known type that came from our sources.
 	// If it is there, then we update the actualSource variable and compare against this one.
-	// This is a hack not to change how we define trigger filters.
+	// This is a hack not to change how we define trigger filters, and to make the source field usable, without needing
+	// more advanced filtering.
 	// TODO should be updated once we decide on filtering languages.
 	var from string
 	err := event.ExtensionAs(extensionFrom, &from)

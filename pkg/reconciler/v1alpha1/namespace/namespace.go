@@ -225,7 +225,6 @@ func (r *reconciler) reconcileBrokerFilterServiceAccount(ctx context.Context, ns
 
 // reconcileBrokerIngressServiceAccount reconciles the Broker's ingress service account for Namespace 'ns'.
 func (r *reconciler) reconcileBrokerIngressServiceAccount(ctx context.Context, ns *corev1.Namespace) (*corev1.ServiceAccount, error) {
-	// TODO in order to get cluster-scoped EventTypes, we need a ClusterRoleBinding.
 	return r.reconcileBrokerServiceAccount(ctx, ns, brokerIngressSA, ingressServiceAccountCreated)
 }
 
