@@ -18,9 +18,11 @@ This document summarizes project planning mechanics for Knative Eventing release
 - Please fill in as much detail as possible in the Feature template and propose a release cycle
 - All new features will be labelled “kind/feature-request”
 - All new proposals are discussed either in WG meeting, or on slack, or dedicated meetings if needed at any point scheduled by the proposer. 
-- By R-2w’s WG meeting all new proposals should be vetted and verified that they fit the [Planning criteria](#planning-criteria). Features that do not fit this criteria will not be considered in the current release planning cycle and hence early discussion is encouraged instead of waiting for R-2w.
-- All eligible proposals will then be snapshotted into the voting document and open for voting till R-1w WG meeting. In R-1w WG meeting top features based on votes will be planned for next release.
+- By **R-2w’s** WG meeting all new proposals should be vetted and verified that they fit the [Planning criteria](#planning-criteria). Features that do not fit this criteria will not be considered in the current release planning cycle and hence early discussion is encouraged instead of waiting for **R-2w**.
+- All eligible proposals will then be snapshotted into the voting document and open for voting till **R-1w** WG meeting. In **R-1w** WG meeting top features based on votes will be planned for next release.
 - Accepted features will be added to the correct milestone and sprint specific project for tracking.
+
+![planning overview](images/featureplanning.png)
 
 > Example for 0.6 release.
   >- March 20, 2019 (Wednesday): All features and issues that fit the planning criteria are fed into voting document.
