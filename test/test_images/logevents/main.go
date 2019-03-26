@@ -23,7 +23,7 @@ import (
 )
 
 func handler(event cloudevents.Event) {
-	// MEMO(Chi): Comment out since we want to count the number of event messages in the log, and the following code also prints it out
+	// NOTE(Chi): Comment out since we want to count the number of event messages in the log, and the following code also prints it out
 	// log.Printf("%s", event)
 	// TODO: in version 0.5.0 of cloudevents, below can be deleted.
 
