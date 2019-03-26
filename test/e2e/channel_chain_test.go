@@ -26,6 +26,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
+/*
+TestChannelChain tests the following scenario:
+
+EventSource ---> Channel ---> Subscriptions ---> Channel ---> Subscriptions ---> Service(Logger)
+
+*/
 func TestChannelChain(t *testing.T) {
 	const (
 		senderName = "e2e-channelchain-sender"
@@ -107,7 +113,7 @@ func TestChannelChain(t *testing.T) {
 		Source:   senderName,
 		Type:     "test.eventing.knative.dev",
 		Data:     fmt.Sprintf(`{"msg":%q}`, body),
-		Encoding: test.CloudEventEncodingBinary,
+		Encoding: test.CloudEventDefaultEncoding,
 	}
 	url := fmt.Sprintf("http://%s", channels[0].Status.Address.Hostname)
 	pod := test.EventSenderPod(senderName, ns, url, event)

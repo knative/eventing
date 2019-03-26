@@ -161,6 +161,7 @@ type TypeAndSource struct {
 const (
 	CloudEventEncodingBinary     = "binary"
 	CloudEventEncodingStructured = "structured"
+	CloudEventDefaultEncoding    = CloudEventEncodingBinary
 )
 
 // EventSenderPod creates a Pod that sends a single event to the given address.

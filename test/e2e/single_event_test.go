@@ -36,6 +36,12 @@ func TestSingleStructuredEvent(t *testing.T) {
 	SingleEvent(t, test.CloudEventEncodingStructured)
 }
 
+/*
+SingleEvent tests the following scenario:
+
+EventSource ---> Channel ---> Subscriptions ---> Service(Logger)
+
+*/
 func SingleEvent(t *testing.T, encoding string) {
 	const (
 		channelName      = "e2e-singleevent"
