@@ -146,6 +146,6 @@ func TestEventTransformation(t *testing.T) {
 
 	// check if the logging service receives the correct number of event messages
 	if err := WaitForLogContentCount(clients, subscriberPods[1].Name, subscriberPods[1].Spec.Containers[0].Name, body+msgPostfix, len(subscriptionNames1)*len(subscriptionNames2)); err != nil {
-		t.Fatalf("String %q not found in logs of subscriber pod %q: %v", body, subscriberPods[1].Name, err)
+		t.Fatalf("String %q not found in logs of subscriber pod %q: %v", body+msgPostfix, subscriberPods[1].Name, err)
 	}
 }

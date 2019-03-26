@@ -44,7 +44,7 @@ const (
 	DefaultTestNamespace = "e2etest-knative-eventing"
 
 	interval = 1 * time.Second
-	timeout  = 1 * time.Minute
+	timeout  = 2 * time.Minute
 
 	// the minimum and maxmium number of subscriptions we generate in the e2e tests
 	minSubCount = 1
