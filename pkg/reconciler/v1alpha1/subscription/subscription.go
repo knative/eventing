@@ -358,14 +358,8 @@ func (r *reconciler) patchPhysicalFrom(ctx context.Context, namespace string, ph
 	after := original.DeepCopy()
 	after.Spec.Subscribable = subs
 
-	patch, err := duck.CreatePatch(original, after)
+	patch, err := duck.CreateMergePatch(original, after)
 	if err != nil {
-		return err
-	}
-
-	patchBytes, err := patch.MarshalJSON()
-	if err != nil {
-		logging.FromContext(ctx).Warn("Failed to marshal JSON patch", zap.Error(err), zap.Any("patch", patch))
 		return err
 	}
 
@@ -374,7 +368,7 @@ func (r *reconciler) patchPhysicalFrom(ctx context.Context, namespace string, ph
 		logging.FromContext(ctx).Warn("Failed to create dynamic resource client", zap.Error(err))
 		return err
 	}
-	patched, err := resourceClient.Patch(original.Name, types.JSONPatchType, patchBytes, metav1.UpdateOptions{})
+	patched, err := resourceClient.Patch(original.Name, types.MergePatchType, patch, metav1.UpdateOptions{})
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to patch the Channel", zap.Error(err), zap.Any("patch", patch))
 		return err
