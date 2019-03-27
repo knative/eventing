@@ -26,7 +26,7 @@ rules:
     resources: ["secrets"]
     verbs: ["get", "create"]
   # For getting our Deployment so we can decorate with ownerref
-  - apiGroups: ["extensions"]
+  - apiGroups: ["apps"]
     resources: ["deployments"]
     verbs: ["get"]
   # For actually registering our webhook
