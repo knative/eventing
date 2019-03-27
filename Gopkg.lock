@@ -370,7 +370,7 @@
   revision = "dd3ceb3323922b899a0a913f885fcf59943e7b59"
 
 [[projects]]
-  digest = "1:a5df88e05f523f7b7a16b4a9c44508c91605be6fa647dab8a9674022ad5fca1c"
+  digest = "1:dc35c3341a255e7c944c45c996ebadea2a0c2eef86537d8d2e2a2ccf00e096a1"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -389,6 +389,7 @@
     "system",
     "system/testing",
     "test",
+    "test/ingress",
     "test/logging",
     "test/monitoring",
     "test/spoof",
@@ -396,7 +397,7 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "60fdcbcabd2faeb34328d8b2725dc76c59189453"
+  revision = "b032768e6dee2ccec842e338b8590c0838a73639"
 
 [[projects]]
   digest = "1:edcf99e561b63d758646ca9d9dee0f6c81c3eed617af1120645c9d5c0d80d8c7"
