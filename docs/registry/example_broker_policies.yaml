@@ -25,7 +25,7 @@ metadata:
 
 ---
 
-# By setting the IngressPolicy to allowAny, the broker will accept only events in the Registry.
+# By setting the IngressPolicy to not allowAny, the broker will accept only events in the Registry.
 
 apiVersion: eventing.knative.dev/v1alpha1
 kind: Broker
