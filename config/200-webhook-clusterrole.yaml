@@ -26,7 +26,7 @@ rules:
     resources: ["secrets"]
     verbs: ["get", "create"]
   # For getting our Deployment so we can decorate with ownerref
-  - apiGroups: ["extensions"]
+  - apiGroups: ["apps"]
     resources: ["deployments"]
     verbs: ["get"]
   # For actually registering our webhook
@@ -36,4 +36,4 @@ rules:
   # Our own resources and statuses we care about
   - apiGroups: ["eventing.knative.dev"]
     resources: ["brokers", "brokers/status", "channels", "channels/status", "clusterchannelprovisioners", "clusterchannelprovisioners/status", "subscriptions", "subscriptions/status", "triggers", "triggers/status",]
-    verbs: ["get", "list", "create", "watch"]
+    verbs: ["get", "list", "watch"]
