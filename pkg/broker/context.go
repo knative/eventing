@@ -31,7 +31,7 @@ const (
 	// Custom extension to match the EventType, if present.
 	// Otherwise we use the CloudEvent source attribute.
 	// This should be hopefully populated by the sources that we have control over.
-	extensionFrom = "From"
+	extensionFrom = "from"
 )
 
 var (

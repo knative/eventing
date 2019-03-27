@@ -50,7 +50,6 @@ type IngressPolicy struct {
 
 // NewPolicy creates an IngressPolicy for a particular Broker.
 func NewPolicy(logger *zap.Logger, client client.Client, spec *eventingv1alpha1.IngressPolicySpec, namespace, broker string, async bool) *IngressPolicy {
-	// TODO too many args, maybe use a builder or just remove this function.
 	return &IngressPolicy{
 		logger:    logger.Sugar(),
 		client:    client,
@@ -72,6 +71,7 @@ func (p *IngressPolicy) AllowEvent(ctx context.Context, event cloudevents.Event)
 	if !p.spec.AllowAny {
 		return p.isRegistered(ctx, event)
 	}
+	p.logger.Debugf("EventType %q received, Accept", event.Type())
 	return true
 }
 
@@ -81,24 +81,28 @@ func (p *IngressPolicy) autoAdd(ctx context.Context, event cloudevents.Event) bo
 	addFunc := func(ctx context.Context) {
 		_, err := p.getEventType(ctx, event)
 		if k8serrors.IsNotFound(err) {
-			p.logger.Debugf("EventType %q not found: Adding", event.Type())
+			p.logger.Debugf("EventType %q not found: Registering", event.Type())
 			eventType := p.makeEventType(event)
 			err := p.client.Create(ctx, eventType)
 			if err != nil {
-				p.logger.Errorf("Error creating EventType %q: Accept but Not Add, %v", event.Type(), err)
+				p.logger.Errorf("Error registering EventType %q: %v", event.Type(), err)
+			} else {
+				p.logger.Debugf("EventType %q Registered", event.Type())
 			}
 		} else if err != nil {
-			p.logger.Errorf("Error retrieving EventType %q: Accept but Not Add, %v", event.Type(), err)
+			p.logger.Errorf("Error retrieving EventType %q: %v", event.Type(), err)
 		}
 	}
 	if p.async {
 		// TODO do this in a working queue
+		// TODO should run some background task to dedupe EventTypes within Brokers.
 		// Do not use the previous context as it seems that it can be canceled before
 		// this routine executes.
 		go addFunc(context.TODO())
 	} else {
 		addFunc(ctx)
 	}
+	p.logger.Debugf("EventType %q received, Accept", event.Type())
 	return true
 }
 
@@ -106,19 +110,20 @@ func (p *IngressPolicy) autoAdd(ctx context.Context, event cloudevents.Event) bo
 func (p *IngressPolicy) isRegistered(ctx context.Context, event cloudevents.Event) bool {
 	_, err := p.getEventType(ctx, event)
 	if k8serrors.IsNotFound(err) {
-		p.logger.Debugf("EventType %q not found: Reject", event.Type())
+		p.logger.Infof("EventType %q not found, Reject", event.Type())
 		return false
 	} else if err != nil {
-		p.logger.Errorf("Error retrieving EventType %q: Reject, %v", event.Type(), err)
+		p.logger.Errorf("Error retrieving EventType %q, Reject: %v", event.Type(), err)
 		return false
 	}
+	p.logger.Debugf("EventType %q is registered, Accept", event.Type())
 	return true
 }
 
 // getEventType retrieves the EventType from the Registry for the given cloudevents.Event.
 // If it is not found, it returns an error.
 func (p *IngressPolicy) getEventType(ctx context.Context, event cloudevents.Event) (*eventingv1alpha1.EventType, error) {
-	source := sourceOrFrom(event)
+	source := fromOrSource(event)
 
 	opts := &client.ListOptions{
 		Namespace: p.namespace,
@@ -135,7 +140,7 @@ func (p *IngressPolicy) getEventType(ctx context.Context, event cloudevents.Even
 		}
 		for _, et := range etl.Items {
 			if et.Spec.Broker == p.broker {
-				// Matching on type, schemaURL, and "source" (either the CloudEvent source or our custom extension).
+				// Matching on type, schemaURL, and "source" (either our custom extension 'from' or the CloudEvent source).
 				// Note that if we end up using the CloudEvent source, most probably the EventType won't be there.
 				if et.Spec.Type == event.Type() && et.Spec.Source == source && et.Spec.Schema == event.SchemaURL() {
 					return &et, nil
@@ -152,7 +157,7 @@ func (p *IngressPolicy) getEventType(ctx context.Context, event cloudevents.Even
 
 // makeEventType generates, but does not create an EventType from the given cloudevents.Event.
 func (p *IngressPolicy) makeEventType(event cloudevents.Event) *eventingv1alpha1.EventType {
-	source := sourceOrFrom(event)
+	source := fromOrSource(event)
 	cloudEventType := event.Type()
 	return &eventingv1alpha1.EventType{
 		ObjectMeta: metav1.ObjectMeta{
@@ -168,11 +173,11 @@ func (p *IngressPolicy) makeEventType(event cloudevents.Event) *eventingv1alpha1
 	}
 }
 
-// Retrieve the custom extension 'from' as opposed to CloudEvent source, if available.
+// Retrieve the custom extension 'From' as opposed to CloudEvent source, if available.
 // If the extension is populated, it means the event came from one of our sources.
 // Note that some of our sources might not populate this, e.g., container source, etc., so we just retrieve the CloudEvent
 // source.
-func sourceOrFrom(event cloudevents.Event) string {
+func fromOrSource(event cloudevents.Event) string {
 	source := event.Source()
 	var from string
 	err := event.ExtensionAs(extensionFrom, &from)

@@ -71,7 +71,8 @@ func TestIngress(t *testing.T) {
 			policySpec: &eventingv1alpha1.IngressPolicySpec{
 				AllowAny: true,
 			},
-			want: true,
+			event: makeCloudEvent(nil),
+			want:  true,
 		},
 		"allow registered, error listing types, reject": {
 			policySpec: &eventingv1alpha1.IngressPolicySpec{
