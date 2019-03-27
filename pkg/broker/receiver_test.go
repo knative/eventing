@@ -130,23 +130,23 @@ func TestReceiver(t *testing.T) {
 		},
 		"No TTL": {
 			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("Any", "Any"),
+				makeTrigger("", ""),
 			},
 			event: makeEventWithoutTTL(),
 		},
 		"Wrong type": {
 			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("some-other-type", "Any"),
+				makeTrigger("some-other-type", ""),
 			},
 		},
 		"Wrong source": {
 			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("Any", "some-other-source"),
+				makeTrigger("", "some-other-source"),
 			},
 		},
 		"Dispatch failed": {
 			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("Any", "Any"),
+				makeTrigger("", ""),
 			},
 			requestFails:     true,
 			expectedErr:      true,
@@ -154,7 +154,7 @@ func TestReceiver(t *testing.T) {
 		},
 		"Dispatch succeeded - Any": {
 			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("Any", "Any"),
+				makeTrigger("", ""),
 			},
 			expectedDispatch: true,
 		},
@@ -166,14 +166,14 @@ func TestReceiver(t *testing.T) {
 		},
 		"Returned Cloud Event": {
 			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("Any", "Any"),
+				makeTrigger("", ""),
 			},
 			expectedDispatch: true,
 			returnedEvent:    makeDifferentEvent(),
 		},
 		"Returned Cloud Event with custom headers": {
 			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("Any", "Any"),
+				makeTrigger("", ""),
 			},
 			tctx: &cehttp.TransportContext{
 				Method: "POST",
@@ -371,19 +371,19 @@ func makeTrigger(t, s string) *eventingv1alpha1.Trigger {
 }
 
 func makeTriggerWithoutFilter() *eventingv1alpha1.Trigger {
-	t := makeTrigger("Any", "Any")
+	t := makeTrigger("", "")
 	t.Spec.Filter = nil
 	return t
 }
 
 func makeTriggerWithoutSubscriberURI() *eventingv1alpha1.Trigger {
-	t := makeTrigger("Any", "Any")
+	t := makeTrigger("", "")
 	t.Status = eventingv1alpha1.TriggerStatus{}
 	return t
 }
 
 func makeTriggerWithBadSubscriberURI() *eventingv1alpha1.Trigger {
-	t := makeTrigger("Any", "Any")
+	t := makeTrigger("", "")
 	// This should fail url.Parse(). It was taken from the unit tests for url.Parse(), it violates
 	// rfc3986 3.2.3, namely that the port must be digits.
 	t.Status.SubscriberURI = "http://[::1]:namedport"

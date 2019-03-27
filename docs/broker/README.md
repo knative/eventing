@@ -160,7 +160,7 @@ spec:
 The Webhook will default certain unspecified fields. For example if
 `spec.broker` is unspecified, it will default to `default`. If
 `spec.filter.sourceAndType.type` or `spec.filter.sourceAndType.Source` are
-unspecified, then they will default to the special value `Any`, which matches
+unspecified, then they will default to the special value empty string, which matches
 everything.
 
 The Webhook will default the YAML above to:
@@ -176,7 +176,7 @@ spec:
   filter:
     sourceAndType:
       type: dev.knative.foo.bar
-      source: Any # Defaulted by the Webhook.
+      source: "" # Defaulted by the Webhook.
   subscriber:
     ref:
       apiVersion: serving.knative.dev/v1alpha1
