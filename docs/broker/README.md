@@ -61,7 +61,7 @@ Have a `ClusterChannelProvisioner` installed and set as the [default provisioner
 
 #### Changing
 
-**Note** changing the `ClusterChannelProvisioner` of a running `Broker` will lost all in-flight events.
+**Note** changing the `ClusterChannelProvisioner` of a running `Broker` will lose all in-flight events.
 
 If you want to change which `ClusterChannelProvisioner` is used by a given `Broker`, then determine if the `spec.channelTemplate` is specified or not.
 
