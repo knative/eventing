@@ -74,17 +74,21 @@ spec:
                       ref:
                         type: object
                         required:
-                          - apiVersion
-                          - kind
+                          - namespace
                           - name
+                          - uid
                         properties:
                           apiVersion:
                             type: string
-                            minLength: 1
                           kind:
                             type: string
-                            minLength: 1
                           name:
+                            type: string
+                            minLength: 1
+                          namespace:
+                            type: string
+                            minLength: 1
+                          uid:
                             type: string
                             minLength: 1
                       subscriberURI:
