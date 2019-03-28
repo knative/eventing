@@ -159,27 +159,29 @@ func (r *reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		return err
 	}
 
-	if subscriberURI, err := resolve.SubscriberSpec(ctx, r.dynamicClient, subscription.Namespace, subscription.Spec.Subscriber); err != nil {
+	subscriberURI, err := resolve.SubscriberSpec(ctx, r.dynamicClient, subscription.Namespace, subscription.Spec.Subscriber)
+	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to resolve Subscriber",
 			zap.Error(err),
 			zap.Any("subscriber", subscription.Spec.Subscriber))
 		r.recorder.Eventf(subscription, corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
 		return err
-	} else {
-		subscription.Status.PhysicalSubscription.SubscriberURI = subscriberURI
-		logging.FromContext(ctx).Debug("Resolved Subscriber", zap.String("subscriberURI", subscriberURI))
 	}
 
-	if replyURI, err := r.resolveResult(ctx, subscription.Namespace, subscription.Spec.Reply); err != nil {
+	subscription.Status.PhysicalSubscription.SubscriberURI = subscriberURI
+	logging.FromContext(ctx).Debug("Resolved Subscriber", zap.String("subscriberURI", subscriberURI))
+
+	replyURI, err := r.resolveResult(ctx, subscription.Namespace, subscription.Spec.Reply)
+	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to resolve reply",
 			zap.Error(err),
 			zap.Any("reply", subscription.Spec.Reply))
 		r.recorder.Eventf(subscription, corev1.EventTypeWarning, resultResolveFailed, "Failed to resolve spec.reply: %v", err)
 		return err
-	} else {
-		subscription.Status.PhysicalSubscription.ReplyURI = replyURI
-		logging.FromContext(ctx).Debug("Resolved reply", zap.String("replyURI", replyURI))
 	}
+
+	subscription.Status.PhysicalSubscription.ReplyURI = replyURI
+	logging.FromContext(ctx).Debug("Resolved reply", zap.String("replyURI", replyURI))
 
 	// Everything that was supposed to be resolved was, so flip the status bit on that.
 	subscription.Status.MarkReferencesResolved()
