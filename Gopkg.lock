@@ -1273,6 +1273,7 @@
     "github.com/fsnotify/fsnotify",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
+    "github.com/google/uuid",
     "github.com/knative/build/pkg/apis/build/v1alpha1",
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
