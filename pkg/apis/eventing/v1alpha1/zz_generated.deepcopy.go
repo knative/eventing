@@ -399,8 +399,17 @@ func (in *SubscriberSpec) DeepCopyInto(out *SubscriberSpec) {
 			**out = **in
 		}
 	}
-	if in.DNSName != nil {
-		in, out := &in.DNSName, &out.DNSName
+	if in.DeprecatedDNSName != nil {
+		in, out := &in.DeprecatedDNSName, &out.DeprecatedDNSName
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(string)
+			**out = **in
+		}
+	}
+	if in.URI != nil {
+		in, out := &in.URI, &out.URI
 		if *in == nil {
 			*out = nil
 		} else {
