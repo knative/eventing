@@ -40,7 +40,7 @@ const (
 )
 
 var (
-	dnsName = "dns-name"
+	uri = "http://example.com"
 
 	channelAddress = "test-channel.hostname"
 	channelURL     = fmt.Sprintf("http://%s/", channelAddress)
@@ -108,9 +108,15 @@ func TestSubscriberSpec(t *testing.T) {
 		},
 		"DNS Name": {
 			Sub: &v1alpha1.SubscriberSpec{
-				DNSName: &dnsName,
+				DeprecatedDNSName: &uri,
 			},
-			Expected: dnsName,
+			Expected: uri,
+		},
+		"URI": {
+			Sub: &v1alpha1.SubscriberSpec{
+				URI: &uri,
+			},
+			Expected: uri,
 		},
 		"Doesn't exist": {
 			Sub: &v1alpha1.SubscriberSpec{

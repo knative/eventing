@@ -72,8 +72,11 @@ func SubscriberSpec(ctx context.Context, dynamicClient dynamic.Interface, namesp
 	if isNilOrEmptySubscriber(s) {
 		return "", nil
 	}
-	if s.DNSName != nil && *s.DNSName != "" {
-		return *s.DNSName, nil
+	if s.URI != nil && *s.URI != "" {
+		return *s.URI, nil
+	}
+	if s.DeprecatedDNSName != nil && *s.DeprecatedDNSName != "" {
+		return *s.DeprecatedDNSName, nil
 	}
 
 	obj, err := ObjectReference(ctx, dynamicClient, namespace, s.Ref)
