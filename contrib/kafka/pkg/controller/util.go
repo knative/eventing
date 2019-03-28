@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	cluster "github.com/bsm/sarama-cluster"
@@ -13,6 +14,7 @@ const (
 	BrokerConfigMapKey                 = "bootstrap_servers"
 	ConsumerModeConfigMapKey           = "consumer_mode"
 	ConsumerModePartitionConsumerValue = "partitions"
+	ConsumerModeMultiplexConsumerValue = "multiplex"
 	KafkaChannelSeparator              = "."
 )
 
@@ -43,8 +45,14 @@ func GetProvisionerConfig(path string) (*KafkaProvisionerConfig, error) {
 
 	config.ConsumerMode = cluster.ConsumerModeMultiplex
 	if mode, ok := configMap[ConsumerModeConfigMapKey]; ok {
-		if strings.ToLower(mode) == ConsumerModePartitionConsumerValue {
+		switch strings.ToLower(mode) {
+		case ConsumerModeMultiplexConsumerValue:
+			config.ConsumerMode = cluster.ConsumerModeMultiplex
+		case ConsumerModePartitionConsumerValue:
 			config.ConsumerMode = cluster.ConsumerModePartitions
+		default:
+			log.Printf("consumer_mode: %q is invalid. Using default mode %q", mode, ConsumerModeMultiplexConsumerValue)
+			config.ConsumerMode = cluster.ConsumerModeMultiplex
 		}
 	}
 	return config, nil

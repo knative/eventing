@@ -71,6 +71,14 @@ func TestGetProvisionerConfigBrokers(t *testing.T) {
 				ConsumerMode: cluster.ConsumerModeMultiplex,
 			},
 		},
+		{
+			name: "default multiplex from invalid consumer_mode",
+			data: map[string]string{"bootstrap_servers": "kafkabroker.kafka:9092", "consumer_mode": "foo"},
+			expected: &KafkaProvisionerConfig{
+				Brokers:      []string{"kafkabroker.kafka:9092"},
+				ConsumerMode: cluster.ConsumerModeMultiplex,
+			},
+		},
 	}
 
 	for _, tc := range testCases {

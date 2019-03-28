@@ -101,7 +101,7 @@ const (
 	TriggerConditionSubscribed duckv1alpha1.ConditionType = "Subscribed"
 
 	// Constant to represent that we should allow anything.
-	TriggerAnyFilter = "Any"
+	TriggerAnyFilter = ""
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
