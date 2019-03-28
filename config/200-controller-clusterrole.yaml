@@ -17,22 +17,98 @@ kind: ClusterRole
 metadata:
   name: knative-eventing-controller
 rules:
-  - apiGroups: [""]
-    resources: ["namespaces", "secrets", "configmaps", "services", "events", "serviceaccounts"]
-    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
-  - apiGroups: ["serving.knative.dev"]
-    resources: ["routes", "routes/status", "services", "services/status"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["networking.istio.io"]
-    resources: ["virtualservices"]
-    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
-  - apiGroups: ["apps"]
-    resources: ["deployments"]
-    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
-  - apiGroups: ["rbac.authorization.k8s.io"]
-    resources: ["rolebindings"]
-    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
-  # Our own resources and statuses we care about
-  - apiGroups: ["eventing.knative.dev"]
-    resources: ["brokers", "brokers/status", "channels", "channels/status", "clusterchannelprovisioners", "clusterchannelprovisioners/status", "subscriptions", "subscriptions/status", "triggers", "triggers/status",]
-    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+  - apiGroups:
+      - ""
+    resources:
+      - "namespaces"
+      - "secrets"
+      - "configmaps"
+      - "services"
+      - "events"
+      - "serviceaccounts"
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+
+  # Knative Services are Addressables that Subscriptions and Triggers often point towards.
+  - apiGroups:
+      - "serving.knative.dev"
+    resources:
+      - "routes"
+      - "routes/status"
+      - "services"
+      - "services/status"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
+
+  # Channels and Triggers both manipulate VirtualServices.
+  - apiGroups:
+      - "networking.istio.io"
+    resources:
+      - "virtualservices"
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+
+  # Brokers and the namespace annotation controllers manipulate Deployments.
+  - apiGroups:
+      - "apps"
+    resources:
+      - "deployments"
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+
+  # The namespace annotation controller needs to manipulate RoleBindings.
+  - apiGroups:
+      - "rbac.authorization.k8s.io"
+    resources:
+      - "rolebindings"
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+
+  # Our own resources and statuses we care about.
+  - apiGroups:
+      - "eventing.knative.dev"
+    resources:
+      - "brokers"
+      - "brokers/status"
+      - "channels"
+      - "channels/status"
+      - "clusterchannelprovisioners"
+      - "clusterchannelprovisioners/status"
+      - "subscriptions"
+      - "subscriptions/status"
+      - "triggers"
+      - "triggers/status"
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"

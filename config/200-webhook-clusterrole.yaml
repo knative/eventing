@@ -17,23 +17,62 @@ kind: ClusterRole
 metadata:
   name: knative-eventing-webhook
 rules:
-  # For watching logging configuration and getting certs
-  - apiGroups: [""]
-    resources: ["configmaps"]
-    verbs: ["get", "list", "watch"]
-  # For manipulating certs into secrets
-  - apiGroups: [""]
-    resources: ["secrets"]
-    verbs: ["get", "create"]
-  # For getting our Deployment so we can decorate with ownerref
-  - apiGroups: ["apps"]
-    resources: ["deployments"]
-    verbs: ["get"]
-  # For actually registering our webhook
-  - apiGroups: ["admissionregistration.k8s.io"]
-    resources: ["mutatingwebhookconfigurations"]
-    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
-  # Our own resources and statuses we care about
-  - apiGroups: ["eventing.knative.dev"]
-    resources: ["brokers", "brokers/status", "channels", "channels/status", "clusterchannelprovisioners", "clusterchannelprovisioners/status", "subscriptions", "subscriptions/status", "triggers", "triggers/status",]
-    verbs: ["get", "list", "watch"]
+  # For watching logging configuration and getting certs.
+  - apiGroups:
+      - ""
+    resources:
+      - "configmaps"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
+
+  # For manipulating certs into secrets.
+  - apiGroups:
+      - ""
+    resources:
+      - "secrets"
+    verbs:
+      - "get"
+      - "create"
+
+  # For getting our Deployment so we can decorate with ownerref.
+  - apiGroups:
+      - "apps"
+    resources:
+      - "deployments"
+    verbs:
+      - "get"
+
+  # For actually registering our webhook.
+  - apiGroups:
+      - "admissionregistration.k8s.io"
+    resources:
+      - "mutatingwebhookconfigurations"
+    verbs:
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
+
+  # Our own resources and statuses we care about.
+  - apiGroups:
+      - "eventing.knative.dev"
+    resources:
+      - "brokers"
+      - "brokers/status"
+      - "channels"
+      - "channels/status"
+      - "clusterchannelprovisioners"
+      - "clusterchannelprovisioners/status"
+      - "subscriptions"
+      - "subscriptions/status"
+      - "triggers"
+      - "triggers/status"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
