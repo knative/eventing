@@ -29,9 +29,6 @@ const (
 // SetTTL sets the TTL into the EventContext. ttl should be a positive integer.
 func SetTTL(ctx cloudevents.EventContext, ttl interface{}) cloudevents.EventContext {
 	v2 := ctx.AsV02()
-	if v2.Extensions == nil {
-		v2.Extensions = make(map[string]interface{})
-	}
-	v2.Extensions[V02TTLAttribute] = ttl
+	v2.SetExtension(V02TTLAttribute, ttl)
 	return v2
 }
