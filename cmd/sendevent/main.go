@@ -41,7 +41,7 @@ var (
 func init() {
 	flag.StringVar(&eventID, "event-id", "", "Event ID to use. Defaults to a generated UUID")
 	flag.StringVar(&eventType, "event-type", "google.events.action.demo", "The Event Type to use.")
-	flag.StringVar(&source, "source", "", "Source URI to use. Defaults to the current machine's hostname")
+	flag.StringVar(&source, "source", "sendevent", "Source URI to use. Defaults to the current machine's hostname")
 	flag.StringVar(&data, "data", `{"hello": "world!"}`, "Event data")
 }
 
@@ -71,6 +71,7 @@ func main() {
 	}
 	c, err := client.New(t,
 		client.WithTimeNow(),
+		client.WithUUIDs(),
 	)
 	if err != nil {
 		log.Printf("failed to create client, %v", err)
