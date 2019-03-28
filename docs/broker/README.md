@@ -160,8 +160,8 @@ spec:
 The Webhook will default certain unspecified fields. For example if
 `spec.broker` is unspecified, it will default to `default`. If
 `spec.filter.sourceAndType.type` or `spec.filter.sourceAndType.Source` are
-unspecified, then they will default to the special value empty string, which matches
-everything.
+unspecified, then they will default to the special value empty string, which
+matches everything.
 
 The Webhook will default the YAML above to:
 
