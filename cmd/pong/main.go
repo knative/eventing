@@ -35,8 +35,8 @@ var (
 )
 
 func init() {
-	flag.StringVar(&pingType, "ping", "dev.knative.ping", "Response to this CloudEvent Type.")
-	flag.StringVar(&pongType, "pong", "dev.knative.pong", "Response with this CloudEvent Type")
+	flag.StringVar(&pingType, "ping", "dev.knative.ping", "Watches for this CloudEvent Type.")
+	flag.StringVar(&pongType, "pong", "dev.knative.pong", "Responds with this CloudEvent Type.")
 }
 
 func receive(event cloudevents.Event, resp *cloudevents.EventResponse) {
