@@ -62,41 +62,28 @@ spec:
                   type: string
                   minLength: 1
             subscriber:
-              oneOf:
-                - type: object
-                  required:
-                    - dnsName
-                  properties:
-                    dnsName:
-                      type: string
-                      minLength: 1
-                - type: object
-                  required:
-                    - uri
-                  properties:
-                    uri:
-                      type: string
-                      minLength: 1
-                - type: object
-                  required:
-                    - ref
-                  properties:
-                    ref:
-                      type: object
-                      required:
-                        - apiVersion
-                        - kind
-                        - name
-                      properties:
-                        apiVersion:
-                          type: string
-                          minLength: 1
-                        kind:
-                          type: string
-                          minLength: 1
-                        name:
-                          type: string
-                          minLength: 1
+              dnsName:
+                type: string
+                minLength: 1
+              uri:
+                type: string
+                minLength: 1
+              ref:
+                type: object
+                required:
+                  - apiVersion
+                  - kind
+                  - name
+                properties:
+                  apiVersion:
+                    type: string
+                    minLength: 1
+                  kind:
+                    type: string
+                    minLength: 1
+                  name:
+                    type: string
+                    minLength: 1
             reply:
               type: object
               properties:
