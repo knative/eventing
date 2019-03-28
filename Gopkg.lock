@@ -1190,7 +1190,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:75bc1fa71433a3ccb40c20f960ee2dbea05f9f10dbb0d91d3cb53a4ec6a709b7"
+  digest = "1:39912eb5f8eaf46486faae0839586c27c93423e552f76875defa048f52c15c15"
   name = "k8s.io/gengo"
   packages = [
     "args",
@@ -1203,7 +1203,15 @@
     "types",
   ]
   pruneopts = "NUT"
-  revision = "2e1a79edcaecf0bfbde129a1fd55624b66adb699"
+  revision = "e17681d19d3ac4837a019ece36c2a0ec31ffe985"
+
+[[projects]]
+  digest = "1:c263611800c3a97991dbcf9d3bc4de390f6224aaa8ca0a7226a9d734f65a416a"
+  name = "k8s.io/klog"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "71442cd4037d612096940ceb0f3fec3f7fff66e0"
+  version = "v0.2.0"
 
 [[projects]]
   branch = "master"
