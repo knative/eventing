@@ -110,7 +110,7 @@ func (p *IngressPolicy) autoAdd(ctx context.Context, event cloudevents.Event) bo
 func (p *IngressPolicy) isRegistered(ctx context.Context, event cloudevents.Event) bool {
 	_, err := p.getEventType(ctx, event)
 	if k8serrors.IsNotFound(err) {
-		p.logger.Infof("EventType %q not found, Reject", event.Type())
+		p.logger.Debugf("EventType %q not found, Reject", event.Type())
 		return false
 	} else if err != nil {
 		p.logger.Errorf("Error retrieving EventType %q, Reject: %v", event.Type(), err)

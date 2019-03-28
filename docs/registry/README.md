@@ -162,15 +162,14 @@ First, Event Consumers will list the EventTypes registered in the system
 
 `$ kubectl get eventtypes -n default`
 
-
-NAME | TYPE | SOURCE | SCHEMA | BROKER | READY | REASON
---- | --- | --- | --- | --- | --- | ---
-dev.knative.foo.bar-55wcn | dev.knative.foo.bar | dev.knative.example | | auto-add-demo |   True | |
-repofork | repo:fork | my-other-user/my-other-repo | |  dev | False | BrokerIsNotReady |
-repopush | repo:push | my-other-user/my-other-repo | my-schema |  default | True | | 
-dev.knative.source.github.push-34cnb | dev.knative.source.github.push | my-user/my-repo | | default | True | |
-dev.knative.source.github.pullrequest-86jhv | dev.knative.source.github.pull_request | my-user/my-repo | | default | True | | 
-
+```
+NAME                                         TYPE                                    SOURCE                       SCHEMA     BROKER          READY  REASON
+dev.knative.foo.bar-55wcn                    dev.knative.foo.bar                     dev.knative.example                     auto-add-demo   True 
+repofork                                     repo:fork                               my-other-user/my-other-repo             dev             False  BrokerIsNotReady
+repopush                                     repo:push                               my-other-user/my-other-repo  my-schema  default         True 
+dev.knative.source.github.push-34cnb         dev.knative.source.github.push          my-user/my-repo                         default         True 
+dev.knative.source.github.pullrequest-86jhv  dev.knative.source.github.pull_request  my-user/my-repo                         default         True  
+```
 
 Then, they will be able to *easily* create the appropriate Trigger(s)
 
