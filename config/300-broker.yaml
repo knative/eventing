@@ -40,3 +40,32 @@ spec:
     - name: Hostname
       type: string
       JSONPath: .status.address.hostname
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          properties:
+            channelTemplate:
+              type: object
+              required:
+                - provisioner
+              properties:
+                provisioner:
+                  type: object
+                  required:
+                    - apiVersion
+                    - kind
+                    - name
+                  properties:
+                    apiVersion:
+                      type: string
+                      minLength: 1
+                    kind:
+                      type: string
+                      minLength: 1
+                    name:
+                      type: string
+                      minLength: 1
+            arguments:
+              type: object
+              additionalProperties: true

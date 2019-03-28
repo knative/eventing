@@ -241,6 +241,12 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 // Helper function to create names for different objects (e.g., triggers, services, etc.).
 func name(obj, eventType, eventSource string) string {
 	// Pod names need to be lowercase. We might have an eventType as Any, that is why we lowercase them.
+	if eventType == "" {
+		eventType = "testany"
+	}
+	if eventSource == "" {
+		eventSource = "testany"
+	}
 	return strings.ToLower(fmt.Sprintf("%s-%s-%s", obj, eventType, eventSource))
 }
 

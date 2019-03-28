@@ -1,0 +1,38 @@
+# Copyright 2019 The Knative Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: knative-eventing-controller
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces", "secrets", "configmaps", "services", "events", "serviceaccounts"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+  - apiGroups: ["serving.knative.dev"]
+    resources: ["routes", "routes/status", "services", "services/status"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["networking.istio.io"]
+    resources: ["virtualservices"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["rolebindings"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+  # Our own resources and statuses we care about
+  - apiGroups: ["eventing.knative.dev"]
+    resources: ["brokers", "brokers/status", "channels", "channels/status", "clusterchannelprovisioners", "clusterchannelprovisioners/status", "subscriptions", "subscriptions/status", "triggers", "triggers/status",]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
