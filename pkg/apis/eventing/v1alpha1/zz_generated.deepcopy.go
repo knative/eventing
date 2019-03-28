@@ -21,8 +21,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	duck_v1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	apis_duck_v1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	apisduckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -93,12 +93,8 @@ func (in *BrokerSpec) DeepCopyInto(out *BrokerSpec) {
 	*out = *in
 	if in.ChannelTemplate != nil {
 		in, out := &in.ChannelTemplate, &out.ChannelTemplate
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(ChannelSpec)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(ChannelSpec)
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }
@@ -197,30 +193,18 @@ func (in *ChannelSpec) DeepCopyInto(out *ChannelSpec) {
 	*out = *in
 	if in.Provisioner != nil {
 		in, out := &in.Provisioner, &out.Provisioner
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.ObjectReference)
-			**out = **in
-		}
+		*out = new(v1.ObjectReference)
+		**out = **in
 	}
 	if in.Arguments != nil {
 		in, out := &in.Arguments, &out.Arguments
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(runtime.RawExtension)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(runtime.RawExtension)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.Subscribable != nil {
 		in, out := &in.Subscribable, &out.Subscribable
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(duck_v1alpha1.Subscribable)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(duckv1alpha1.Subscribable)
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }
@@ -242,12 +226,8 @@ func (in *ChannelStatus) DeepCopyInto(out *ChannelStatus) {
 	out.Address = in.Address
 	if in.Internal != nil {
 		in, out := &in.Internal, &out.Internal
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(runtime.RawExtension)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(runtime.RawExtension)
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }
@@ -344,7 +324,7 @@ func (in *ClusterChannelProvisionerStatus) DeepCopyInto(out *ClusterChannelProvi
 	*out = *in
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make(apis_duck_v1alpha1.Conditions, len(*in))
+		*out = make(apisduckv1alpha1.Conditions, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -367,12 +347,8 @@ func (in *ReplyStrategy) DeepCopyInto(out *ReplyStrategy) {
 	*out = *in
 	if in.Channel != nil {
 		in, out := &in.Channel, &out.Channel
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.ObjectReference)
-			**out = **in
-		}
+		*out = new(v1.ObjectReference)
+		**out = **in
 	}
 	return
 }
@@ -392,30 +368,18 @@ func (in *SubscriberSpec) DeepCopyInto(out *SubscriberSpec) {
 	*out = *in
 	if in.Ref != nil {
 		in, out := &in.Ref, &out.Ref
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.ObjectReference)
-			**out = **in
-		}
+		*out = new(v1.ObjectReference)
+		**out = **in
 	}
 	if in.DeprecatedDNSName != nil {
 		in, out := &in.DeprecatedDNSName, &out.DeprecatedDNSName
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(string)
-			**out = **in
-		}
+		*out = new(string)
+		**out = **in
 	}
 	if in.URI != nil {
 		in, out := &in.URI, &out.URI
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(string)
-			**out = **in
-		}
+		*out = new(string)
+		**out = **in
 	}
 	return
 }
@@ -497,21 +461,13 @@ func (in *SubscriptionSpec) DeepCopyInto(out *SubscriptionSpec) {
 	out.Channel = in.Channel
 	if in.Subscriber != nil {
 		in, out := &in.Subscriber, &out.Subscriber
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(SubscriberSpec)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(SubscriberSpec)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.Reply != nil {
 		in, out := &in.Reply, &out.Reply
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(ReplyStrategy)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(ReplyStrategy)
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }
@@ -593,12 +549,8 @@ func (in *TriggerFilter) DeepCopyInto(out *TriggerFilter) {
 	*out = *in
 	if in.SourceAndType != nil {
 		in, out := &in.SourceAndType, &out.SourceAndType
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(TriggerFilterSourceAndType)
-			**out = **in
-		}
+		*out = new(TriggerFilterSourceAndType)
+		**out = **in
 	}
 	return
 }
@@ -667,21 +619,13 @@ func (in *TriggerSpec) DeepCopyInto(out *TriggerSpec) {
 	*out = *in
 	if in.Filter != nil {
 		in, out := &in.Filter, &out.Filter
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(TriggerFilter)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(TriggerFilter)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.Subscriber != nil {
 		in, out := &in.Subscriber, &out.Subscriber
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(SubscriberSpec)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(SubscriberSpec)
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }
