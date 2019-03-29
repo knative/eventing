@@ -154,7 +154,7 @@ func main() {
 	go func() {
 		logger.Infof("Starting metrics listener at %s", metricsScrapeAddr)
 		if localErr := srv.ListenAndServe(); localErr != nil {
-			logger.Infof("Httpserver: ListenAndServe() finished with error: %s", localErr)
+			logger.Infof("HTTPserver: ListenAndServe() finished with error: %s", localErr)
 		}
 	}()
 
