@@ -6,9 +6,12 @@ Deployment steps:
 1. If not done already, install an Apache Kafka cluster!
 
    - For Kubernetes a simple installation is done using the
-     [Strimzi Kafka Operator](http://strimzi.io). It's installation
-     [guides](http://strimzi.io/quickstarts/) provide content for kubernetes and
+     [Strimzi Kafka Operator](http://strimzi.io). Its installation
+     [guides](http://strimzi.io/quickstarts/) provide content for Kubernetes and
      Openshift.
+
+   > Note: This _Channel_ is not limited to Apache Kafka installations on Kubernetes.
+   > It is also possible to use an off-cluster Apache Kafka installation.
 
 1. Now that Apache Kafka is installed, you need to configure the
    `bootstrap_servers` value in the `kafka-channel-controller-config` ConfigMap,
@@ -23,7 +26,7 @@ Deployment steps:
      namespace: knative-eventing
    data:
      # Broker URL's for the provisioner
-     bootstrap_servers: my-cluster-kafka-bootstrap.mynamespace:9092
+     bootstrap_servers: my-cluster-kafka-bootstrap.my-kafka-namespace:9092
 
      # Consumer mode to dispatch events from different partitions in parallel.
      # By default(multiplex), partitions are multiplexed with a single go channel.
