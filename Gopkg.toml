@@ -100,8 +100,8 @@ required = [
 # This controls when we upgrade apis independently of Serving.
 [[constraint]]
   name = "github.com/knative/pkg"
-  # HEAD as of 2019-03-27
-  revision = "b032768e6dee2ccec842e338b8590c0838a73639"
+  # HEAD as of 2019-03-29
+  revision = "1d9d8f8871250649adab16e3369e1a09e5595b04"
 
 [[constraint]]
   name = "github.com/knative/serving"

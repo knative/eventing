@@ -1124,7 +1124,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 				fmt.Sprintf("%s-channel.%s.svc.%s", cName, cNamespace, utils.GetClusterDomainName()),
 				fmt.Sprintf("%s.%s.channels.%s", cName, cNamespace, utils.GetClusterDomainName()),
 			},
-			Http: []istiov1alpha3.HTTPRoute{{
+			HTTP: []istiov1alpha3.HTTPRoute{{
 				Rewrite: &istiov1alpha3.HTTPRewrite{
 					Authority: fmt.Sprintf("%s.%s.channels.%s", cName, cNamespace, utils.GetClusterDomainName()),
 				},
