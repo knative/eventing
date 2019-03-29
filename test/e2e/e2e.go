@@ -29,6 +29,7 @@ import (
 	"github.com/knative/pkg/test/logging"
 	servingV1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -296,6 +297,30 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, logf log
 	return nil
 }
 
+// CreatePodAndServiceReady will create a Pod and Service, and wait for them to become ready
+func CreatePodAndServiceReady(clients *test.Clients, pod *corev1.Pod, routeName string, ns string, selector map[string]string, logf logging.FormatLogger, cleaner *test.Cleaner) (*v1.Pod, error) {
+	if err := CreatePod(clients, pod, logf, cleaner); err != nil {
+		return nil, fmt.Errorf("Failed to create pod: %v", err)
+	}
+	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, ns); err != nil {
+		return nil, fmt.Errorf("Error waiting for pod to become running: %v", err)
+	}
+	logf("pod running")
+
+	svc := test.Service(routeName, ns, selector)
+	if err := CreateService(clients, svc, logf, cleaner); err != nil {
+		return nil, fmt.Errorf("Failed to create service: %v", err)
+	}
+
+	// Reload pod to get IP
+	pod, err := clients.Kube.Kube.CoreV1().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get pod: %v", err)
+	}
+
+	return pod, nil
+}
+
 // CreateService will create a Service
 func CreateService(clients *test.Clients, svc *corev1.Service, _ logging.FormatLogger, cleaner *test.Cleaner) error {
 	svcs := clients.Kube.Kube.CoreV1().Services(svc.GetNamespace())
@@ -314,6 +339,29 @@ func CreatePod(clients *test.Clients, pod *corev1.Pod, _ logging.FormatLogger, c
 		return err
 	}
 	cleaner.Add(corev1.SchemeGroupVersion.Group, corev1.SchemeGroupVersion.Version, "pods", res.ObjectMeta.Namespace, res.ObjectMeta.Name)
+	return nil
+}
+
+// SendFakeEventToChannel will create fake CloudEvent and send it to the given channel
+func SendFakeEventToChannel(clients *test.Clients, senderName string, body string, eventType string, encoding string, channel *v1alpha1.Channel, ns string, logf logging.FormatLogger, cleaner *test.Cleaner) error {
+	logf("Sending fake CloudEvent")
+	logf("Creating event sender pod")
+	event := test.CloudEvent{
+		Source:   senderName,
+		Type:     eventType,
+		Data:     fmt.Sprintf(`{"msg":%q}`, body),
+		Encoding: test.CloudEventDefaultEncoding,
+	}
+	url := fmt.Sprintf("http://%s", channel.Status.Address.Hostname)
+	pod := test.EventSenderPod(senderName, ns, url, event)
+	logf("sender pod: %#v", pod)
+	if err := CreatePod(clients, pod, logf, cleaner); err != nil {
+		return err
+	}
+	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, ns); err != nil {
+		return err
+	}
+	logf("sender pod running")
 	return nil
 }
 

@@ -23,8 +23,6 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/test"
-	pkgTest "github.com/knative/pkg/test"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
@@ -57,23 +55,9 @@ func TestChannelChain(t *testing.T) {
 	t.Logf("creating subscriber pod")
 	selector := map[string]string{"e2etest": string(uuid.NewUUID())}
 	subscriberPod := test.EventLoggerPod(routeName, ns, selector)
-	if err := CreatePod(clients, subscriberPod, t.Logf, cleaner); err != nil {
-		t.Fatalf("Failed to create event logger pod: %v", err)
-	}
-	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, ns); err != nil {
-		t.Fatalf("Error waiting for logger pod to become running: %v", err)
-	}
-	t.Logf("subscriber pod running")
-
-	subscriberSvc := test.Service(routeName, ns, selector)
-	if err := CreateService(clients, subscriberSvc, t.Logf, cleaner); err != nil {
-		t.Fatalf("Failed to create event logger service: %v", err)
-	}
-
-	// Reload subscriberPod to get IP
-	subscriberPod, err := clients.Kube.Kube.CoreV1().Pods(subscriberPod.Namespace).Get(subscriberPod.Name, metav1.GetOptions{})
+	subscriberPod, err := CreatePodAndServiceReady(clients, subscriberPod, routeName, ns, selector, t.Logf, cleaner)
 	if err != nil {
-		t.Fatalf("Failed to get subscriber pod: %v", err)
+		t.Fatalf("Failed to create subscriber pod and service, and get them ready: %v", err)
 	}
 
 	// create channels
@@ -108,25 +92,9 @@ func TestChannelChain(t *testing.T) {
 		t.Fatalf("The Channel or Subscription were not marked as Ready: %v", err)
 	}
 
-	// create sender pod
-	t.Logf("Creating event sender")
+	// send fake CloudEvent to the first channel
 	body := fmt.Sprintf("TestChannelChainEvent %s", uuid.NewUUID())
-	event := test.CloudEvent{
-		Source:   senderName,
-		Type:     "test.eventing.knative.dev",
-		Data:     fmt.Sprintf(`{"msg":%q}`, body),
-		Encoding: test.CloudEventDefaultEncoding,
-	}
-	url := fmt.Sprintf("http://%s", channels[0].Status.Address.Hostname)
-	pod := test.EventSenderPod(senderName, ns, url, event)
-	t.Logf("sender pod: %#v", pod)
-	if err := CreatePod(clients, pod, t.Logf, cleaner); err != nil {
-		t.Fatalf("Failed to create event sender pod: %v", err)
-	}
-	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, ns); err != nil {
-		t.Fatalf("Error waiting for sender pod to become running: %v", err)
-	}
-	t.Logf("sender pod running")
+	SendFakeEventToChannel(clients, senderName, body, test.CloudEventDefaultType, test.CloudEventDefaultEncoding, channels[0], ns, t.Logf, cleaner)
 
 	// check if the logging service receives the correct number of event messages
 	if err := WaitForLogContentCount(clients, routeName, subscriberPod.Spec.Containers[0].Name, body, len(subscriptionNames1)*len(subscriptionNames2)); err != nil {

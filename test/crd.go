@@ -162,6 +162,7 @@ const (
 	CloudEventEncodingBinary     = "binary"
 	CloudEventEncodingStructured = "structured"
 	CloudEventDefaultEncoding    = CloudEventEncodingBinary
+	CloudEventDefaultType        = "test.eventing.knative.dev"
 )
 
 // EventSenderPod creates a Pod that sends a single event to the given address.
