@@ -107,7 +107,7 @@ func TestAllCases(t *testing.T) {
 			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
 			// failure for now, until upstream is fixed. It should actually fail saying that there is no
 			// Spec.Subscribers field.
-			WantErrMsg: "invalid JSON document",
+			WantErrMsg: `unable to find api field in struct Unstructured for the json field "spec"`,
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
 			},
@@ -347,7 +347,7 @@ func TestAllCases(t *testing.T) {
 			WantPresent: []runtime.Object{
 				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
 			},
-			WantErrMsg: "invalid JSON document",
+			WantErrMsg: `unable to find api field in struct Unstructured for the json field "spec"`,
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
 			},
@@ -414,7 +414,7 @@ func TestAllCases(t *testing.T) {
 			WantPresent: []runtime.Object{
 				Subscription().NilReply().ReferencesResolved().PhysicalSubscriber(targetDNS),
 			},
-			WantErrMsg: "invalid JSON document",
+			WantErrMsg: `unable to find api field in struct Unstructured for the json field "spec"`,
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
 			},
@@ -462,7 +462,7 @@ func TestAllCases(t *testing.T) {
 			WantPresent: []runtime.Object{
 				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).EmptyNonNilReply(),
 			},
-			WantErrMsg: "invalid JSON document",
+			WantErrMsg: `unable to find api field in struct Unstructured for the json field "spec"`,
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
 			},
@@ -510,7 +510,7 @@ func TestAllCases(t *testing.T) {
 			WantPresent: []runtime.Object{
 				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).EmptyNonNilReply(),
 			},
-			WantErrMsg: "invalid JSON document",
+			WantErrMsg: `unable to find api field in struct Unstructured for the json field "spec"`,
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
 			},
@@ -557,7 +557,7 @@ func TestAllCases(t *testing.T) {
 			WantPresent: []runtime.Object{
 				Subscription().NilSubscriber().ReferencesResolved().Reply(),
 			},
-			WantErrMsg: "invalid JSON document",
+			WantErrMsg: `unable to find api field in struct Unstructured for the json field "spec"`,
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
 			},
@@ -609,7 +609,7 @@ func TestAllCases(t *testing.T) {
 			WantPresent: []runtime.Object{
 				Subscription().NilReply().ReferencesResolved().PhysicalSubscriber(targetDNS),
 			},
-			WantErrMsg: "invalid JSON document",
+			WantErrMsg: `unable to find api field in struct Unstructured for the json field "spec"`,
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
 			},
@@ -655,7 +655,7 @@ func TestAllCases(t *testing.T) {
 			WantPresent: []runtime.Object{
 				Subscription().NilSubscriber().ReferencesResolved().Reply(),
 			},
-			WantErrMsg: "invalid JSON document",
+			WantErrMsg: `unable to find api field in struct Unstructured for the json field "spec"`,
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
 			},
@@ -706,7 +706,7 @@ func TestAllCases(t *testing.T) {
 			WantPresent: []runtime.Object{
 				Subscription().EmptyNonNilSubscriber().ReferencesResolved().Reply(),
 			},
-			WantErrMsg: "invalid JSON document",
+			WantErrMsg: `unable to find api field in struct Unstructured for the json field "spec"`,
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
 			},
@@ -787,7 +787,7 @@ func TestAllCases(t *testing.T) {
 			WantPresent: []runtime.Object{
 				Subscription().ToK8sService().ReferencesResolved().PhysicalSubscriber(k8sServiceDNS).Reply(),
 			},
-			WantErrMsg: "invalid JSON document",
+			WantErrMsg: `unable to find api field in struct Unstructured for the json field "spec"`,
 			WantEvent: []corev1.Event{
 				events[physicalChannelSyncFailed],
 			},
@@ -846,7 +846,7 @@ func TestAllCases(t *testing.T) {
 			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
 			// failure for now, until upstream is fixed.
 			WantResult: reconcile.Result{},
-			WantErrMsg: "invalid JSON document",
+			WantErrMsg: `unable to find api field in struct Unstructured for the json field "spec"`,
 			WantPresent: []runtime.Object{
 				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
 			},
@@ -934,7 +934,7 @@ func TestAllCases(t *testing.T) {
 			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
 			// failure for now, until upstream is fixed.
 			WantResult: reconcile.Result{},
-			WantErrMsg: "invalid JSON document",
+			WantErrMsg: `unable to find api field in struct Unstructured for the json field "spec"`,
 			WantPresent: []runtime.Object{
 				// TODO: JSON patch is not working on the fake, see
 				// https://github.com/kubernetes/client-go/issues/478. The entire test is really to
@@ -1025,7 +1025,7 @@ func TestAllCases(t *testing.T) {
 			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
 			// failure for now, until upstream is fixed.
 			WantResult: reconcile.Result{},
-			WantErrMsg: "invalid JSON document",
+			WantErrMsg: `unable to find api field in struct Unstructured for the json field "spec"`,
 			WantAbsent: []runtime.Object{
 				// TODO: JSON patch is not working on the fake, see
 				// https://github.com/kubernetes/client-go/issues/478. The entire test is really to
