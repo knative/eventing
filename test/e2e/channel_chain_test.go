@@ -42,11 +42,11 @@ func TestChannelChain(t *testing.T) {
 		routeName  = "e2e-channelchain-route"
 	)
 	var channelNames = [2]string{"e2e-channelchain1", "e2e-channelchain2"}
-	var subscriptionNames1 = CreateRandomSubscriptionNames("e2e-complexscen-subs1")
-	var subscriptionNames2 = CreateRandomSubscriptionNames("e2e-complexscen-subs2")
+	var subscriptionNames1 = [2]string{"e2e-complexscen-subs11", "e2e-complexscen-subs12"}
+	var subscriptionNames2 = [1]string{"e2e-complexscen-subs21"}
 
 	// verify namespace
-	ns, cleanupNS := NamespaceExists(t, clients, t.Logf)
+	ns, cleanupNS := CreateNamespaceIfNeeded(t, clients, t.Logf)
 	defer cleanupNS()
 
 	// TearDown() needs to be deferred after cleanupNS(). Otherwise the namespace is deleted and all
@@ -123,6 +123,10 @@ func TestChannelChain(t *testing.T) {
 	if err := CreatePod(clients, pod, t.Logf, cleaner); err != nil {
 		t.Fatalf("Failed to create event sender pod: %v", err)
 	}
+	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, ns); err != nil {
+		t.Fatalf("Error waiting for sender pod to become running: %v", err)
+	}
+	t.Logf("sender pod running")
 
 	// check if the logging service receives the correct number of event messages
 	if err := WaitForLogContentCount(clients, routeName, subscriberPod.Spec.Containers[0].Name, body, len(subscriptionNames1)*len(subscriptionNames2)); err != nil {

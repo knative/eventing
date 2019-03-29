@@ -32,11 +32,13 @@ import (
 /*
 TestEventTransformation tests the following scenario:
 
+                          e1                 e2
 EventSource ---> Channel ---> Subscriptions ---> Channel ---> Subscriptions ----> Service(Logger)
                                    ^
+                                   | e2
                                    |
-                                   |
-                                   |-----------> Service(Transformation)
+								   |-----------> Service(Transformation)
+								         e1
 */
 func TestEventTransformation(t *testing.T) {
 	clients, cleaner := Setup(t, t.Logf)
@@ -48,11 +50,11 @@ func TestEventTransformation(t *testing.T) {
 
 	var channelNames = [2]string{"e2e-complexscen1", "e2e-complexscen2"}
 	var routeNames = [2]string{"e2e-complexscen-route1", "e2e-complexscen-route2"}
-	var subscriptionNames1 = CreateRandomSubscriptionNames("e2e-complexscen-subs1")
-	var subscriptionNames2 = CreateRandomSubscriptionNames("e2e-complexscen-subs2")
+	var subscriptionNames1 = []string{"e2e-complexscen-subs11"}
+	var subscriptionNames2 = []string{"e2e-complexscen-subs21", "e2e-complexscen-subs22"}
 
 	// verify namespace
-	ns, cleanupNS := NamespaceExists(t, clients, t.Logf)
+	ns, cleanupNS := CreateNamespaceIfNeeded(t, clients, t.Logf)
 	defer cleanupNS()
 
 	// TearDown() needs to be deferred after cleanupNS(). Otherwise the namespace is deleted and all
@@ -110,7 +112,7 @@ func TestEventTransformation(t *testing.T) {
 
 	// create subscriptions
 	subs := make([]*v1alpha1.Subscription, 0)
-	// create subscriptions that subscribe the first channel, use the transformation service to transform the events and then forward to the second channel
+	// create subscriptions that subscribe the first channel, use the transformation service to transform the events and then forward the transformed events to the second channel
 	for _, subscriptionName := range subscriptionNames1 {
 		sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelNames[0]), test.SubscriberSpecForService(routeNames[0]), test.ReplyStrategyForChannel(channelNames[1]))
 		t.Logf("sub: %#v", sub)
@@ -143,6 +145,10 @@ func TestEventTransformation(t *testing.T) {
 	if err := CreatePod(clients, pod, t.Logf, cleaner); err != nil {
 		t.Fatalf("Failed to create event sender pod: %v", err)
 	}
+	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, ns); err != nil {
+		t.Fatalf("Error waiting for sender pod to become running: %v", err)
+	}
+	t.Logf("sender pod running")
 
 	// check if the logging service receives the correct number of event messages
 	if err := WaitForLogContentCount(clients, subscriberPods[1].Name, subscriberPods[1].Spec.Containers[0].Name, body+msgPostfix, len(subscriptionNames1)*len(subscriptionNames2)); err != nil {

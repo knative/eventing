@@ -54,7 +54,7 @@ func SingleEvent(t *testing.T, encoding string) {
 	)
 
 	// verify namespace
-	ns, cleanupNS := NamespaceExists(t, clients, t.Logf)
+	ns, cleanupNS := CreateNamespaceIfNeeded(t, clients, t.Logf)
 	defer cleanupNS()
 
 	// TearDown() needs to be deferred after cleanupNS(). Otherwise the namespace is deleted and all

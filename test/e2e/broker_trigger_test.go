@@ -59,7 +59,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	clients, cleaner := Setup(t, t.Logf)
 
 	// Verify namespace exists.
-	ns, cleanupNS := NamespaceExists(t, clients, t.Logf)
+	ns, cleanupNS := CreateNamespaceIfNeeded(t, clients, t.Logf)
 
 	defer cleanupNS()
 	defer TearDown(clients, cleaner, t.Logf)

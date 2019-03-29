@@ -17,7 +17,6 @@ package e2e
 
 import (
 	"fmt"
-	"math/rand"
 	"strings"
 	"testing"
 	"time"
@@ -44,11 +43,7 @@ const (
 	DefaultTestNamespace = "e2etest-knative-eventing"
 
 	interval = 1 * time.Second
-	timeout  = 2 * time.Minute
-
-	// the minimum and maxmium number of subscriptions we generate in the e2e tests
-	minSubCount = 1
-	maxSubCount = 5
+	timeout  = 1 * time.Minute
 )
 
 // Setup creates the client objects needed in the e2e tests.
@@ -72,18 +67,6 @@ func Setup(t *testing.T, logf logging.FormatLogger) (*test.Clients, *test.Cleane
 // TearDown will delete created names using clients.
 func TearDown(clients *test.Clients, cleaner *test.Cleaner, _ logging.FormatLogger) {
 	cleaner.Clean(true)
-}
-
-// CreateRandomSubscriptionNames will create random number of subscription names
-func CreateRandomSubscriptionNames(randSubNamePrefix string) []string {
-	rand.Seed(time.Now().UnixNano())
-	count := rand.Intn(maxSubCount-minSubCount) + minSubCount
-	var subscriptionNames []string
-	for i := 0; i < count; i++ {
-		subscriptionNames = append(subscriptionNames, fmt.Sprintf("%s-%d", randSubNamePrefix, i))
-	}
-
-	return subscriptionNames
 }
 
 // CreateRouteAndConfig will create Route and Config objects using clients.
@@ -409,8 +392,8 @@ func LabelNamespace(clients *test.Clients, logf logging.FormatLogger, labels map
 	return err
 }
 
-// NamespaceExists creates a new namespace if it does not exist
-func NamespaceExists(t *testing.T, clients *test.Clients, logf logging.FormatLogger) (string, func()) {
+// CreateNamespaceIfNeeded creates a new namespace if it does not exist
+func CreateNamespaceIfNeeded(t *testing.T, clients *test.Clients, logf logging.FormatLogger) (string, func()) {
 	shutdown := func() {}
 	ns := pkgTest.Flags.Namespace
 	logf("Namespace: %s", ns)
