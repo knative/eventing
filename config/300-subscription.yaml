@@ -38,3 +38,70 @@ spec:
     - name: Reason
       type: string
       JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          required:
+            - channel
+          properties:
+            channel:
+              type: object
+              required:
+                - apiVersion
+                - kind
+                - name
+              properties:
+                apiVersion:
+                  type: string
+                  minLength: 1
+                kind:
+                  type: string
+                  pattern: "^Channel$"
+                name:
+                  type: string
+                  minLength: 1
+            subscriber:
+              type: object
+              properties:
+                dnsName:
+                  type: string
+                  minLength: 1
+                uri:
+                  type: string
+                  minLength: 1
+                ref:
+                  type: object
+                  required:
+                    - apiVersion
+                    - kind
+                    - name
+                  properties:
+                    apiVersion:
+                      type: string
+                      minLength: 1
+                    kind:
+                      type: string
+                      minLength: 1
+                    name:
+                      type: string
+                      minLength: 1
+            reply:
+              type: object
+              properties:
+                channel:
+                  type: object
+                  required:
+                    - apiVersion
+                    - kind
+                    - name
+                  properties:
+                    apiVersion:
+                      type: string
+                      minLength: 1
+                    kind:
+                      type: string
+                      pattern: "^Channel$"
+                    name:
+                      type: string
+                      minLength: 1

@@ -38,3 +38,62 @@ spec:
     - name: Reason
       type: string
       JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          properties:
+            provisioner:
+              type: object
+              required:
+                - apiVersion
+                - kind
+                - name
+              properties:
+                apiVersion:
+                  type: string
+                  minLength: 1
+                kind:
+                  type: string
+                  minLength: 1
+                name:
+                  type: string
+                  minLength: 1
+            arguments:
+              type: object
+              additionalProperties: true
+            subscribable:
+              type: object
+              properties:
+                subscribers:
+                  type: array
+                  items:
+                    required:
+                      - ref
+                    properties:
+                      ref:
+                        type: object
+                        required:
+                          - namespace
+                          - name
+                          - uid
+                        properties:
+                          apiVersion:
+                            type: string
+                          kind:
+                            type: string
+                          name:
+                            type: string
+                            minLength: 1
+                          namespace:
+                            type: string
+                            minLength: 1
+                          uid:
+                            type: string
+                            minLength: 1
+                      subscriberURI:
+                        type: string
+                        minLength: 1
+                      replyURI:
+                        type: string
+                        minLength: 1

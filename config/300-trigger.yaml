@@ -68,6 +68,9 @@ spec:
                 dnsName:
                   type: string
                   minLength: 1
+                uri:
+                  type: string
+                  minLength: 1
                 ref:
                   type: object
                   required:
