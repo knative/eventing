@@ -87,7 +87,7 @@ func TestChannelUtils(t *testing.T) {
 		f: func() (metav1.Object, error) {
 			existing := makeVirtualService()
 			destHost := fmt.Sprintf("%s-clusterbus.knative-eventing.svc.%s", clusterChannelProvisionerName, utils.GetClusterDomainName())
-			existing.Spec.Http[0].Route[0].Destination.Host = destHost
+			existing.Spec.HTTP[0].Route[0].Destination.Host = destHost
 			client := fake.NewFakeClient(existing)
 			CreateVirtualService(context.TODO(), client, getNewChannel(), makeK8sService())
 
@@ -642,7 +642,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 				fmt.Sprintf("%s.%s.svc.%s", "", testNS, utils.GetClusterDomainName()),
 				fmt.Sprintf("%s.%s.channels.%s", channelName, testNS, utils.GetClusterDomainName()),
 			},
-			Http: []istiov1alpha3.HTTPRoute{{
+			HTTP: []istiov1alpha3.HTTPRoute{{
 				Rewrite: &istiov1alpha3.HTTPRewrite{
 					Authority: fmt.Sprintf("%s.%s.channels.%s", channelName, testNS, utils.GetClusterDomainName()),
 				},

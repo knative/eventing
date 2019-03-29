@@ -518,7 +518,7 @@ func newVirtualService(t *v1alpha1.Trigger, svc *corev1.Service) *istiov1alpha3.
 			Hosts: []string{
 				names.ServiceHostName(svc.Name, svc.Namespace),
 			},
-			Http: []istiov1alpha3.HTTPRoute{{
+			HTTP: []istiov1alpha3.HTTPRoute{{
 				Rewrite: &istiov1alpha3.HTTPRewrite{
 					Authority: fmt.Sprintf("%s.%s.triggers.%s", t.Name, t.Namespace, utils.GetClusterDomainName()),
 				},
