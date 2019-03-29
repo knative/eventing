@@ -51,7 +51,6 @@ import (
 var (
 	defaultTTL = 10
 
-	defaultPort = 8080
 	metricsPort = 9090
 
 	writeTimeout    = 1 * time.Minute
@@ -121,19 +120,13 @@ func main() {
 
 	ingressPolicy := broker.NewPolicy(logger, client, policySpec, namespace, brokerName, true)
 
-	// Create an event handler.
-	ceHTTP, err := cehttp.New(cehttp.WithBinaryEncoding(), cehttp.WithPort(defaultPort))
-	if err != nil {
-		logger.Fatal("Unable to create CE transport", zap.Error(err))
-	}
-	ceClient, err := ceclient.New(ceHTTP)
+	ceClient, err := ceclient.NewDefault()
 	if err != nil {
 		logger.Fatal("Unable to create CE client", zap.Error(err))
 	}
 	h := &handler{
 		logger:        logger,
 		ceClient:      ceClient,
-		ceHTTP:        ceHTTP,
 		channelURI:    channelURI,
 		brokerName:    brokerName,
 		ingressPolicy: ingressPolicy,
@@ -193,7 +186,6 @@ func main() {
 type handler struct {
 	logger        *zap.Logger
 	ceClient      ceclient.Client
-	ceHTTP        *cehttp.Transport
 	channelURI    *url.URL
 	brokerName    string
 	ingressPolicy *broker.IngressPolicy
@@ -271,7 +263,7 @@ func (h *handler) sendEvent(ctx context.Context, tctx cehttp.TransportContext, e
 		stats.Record(sendingCTX, MeasureDispatchTime.M(dispatchTimeMS))
 	}()
 
-	_, err := h.ceHTTP.Send(sendingCTX, event)
+	_, err := h.ceClient.Send(sendingCTX, event)
 	if err != nil {
 		sendingCTX, _ = tag.New(sendingCTX, tag.Insert(TagResult, "error"))
 	} else {
