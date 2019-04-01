@@ -21,7 +21,7 @@ package v1alpha1
 import (
 	time "time"
 
-	eventing_v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	versioned "github.com/knative/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/knative/eventing/pkg/client/informers/externalversions/internalinterfaces"
 	v1alpha1 "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -70,7 +70,7 @@ func NewFilteredSubscriptionInformer(client versioned.Interface, namespace strin
 				return client.EventingV1alpha1().Subscriptions(namespace).Watch(options)
 			},
 		},
-		&eventing_v1alpha1.Subscription{},
+		&eventingv1alpha1.Subscription{},
 		resyncPeriod,
 		indexers,
 	)
@@ -81,7 +81,7 @@ func (f *subscriptionInformer) defaultInformer(client versioned.Interface, resyn
 }
 
 func (f *subscriptionInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&eventing_v1alpha1.Subscription{}, f.defaultInformer)
+	return f.factory.InformerFor(&eventingv1alpha1.Subscription{}, f.defaultInformer)
 }
 
 func (f *subscriptionInformer) Lister() v1alpha1.SubscriptionLister {

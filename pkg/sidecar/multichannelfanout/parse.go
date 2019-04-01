@@ -32,13 +32,13 @@ func Parse(logger *zap.Logger, str string) (*Config, error) {
 		return nil, err
 	}
 	var conf Config
-	err = unmarshalJsonDisallowUnknownFields(jb, &conf)
+	err = unmarshalJSONDisallowUnknownFields(jb, &conf)
 	return &conf, err
 }
 
-// unmarshalJsonDisallowUnknownFields unmarshalls JSON, but unlike json.Unmarshal, will fail if
+// unmarshalJSONDisallowUnknownFields unmarshalls JSON, but unlike json.Unmarshal, will fail if
 // given an unknown field (rather than json.Unmarshall's ignoring the unknown field).
-func unmarshalJsonDisallowUnknownFields(jb []byte, v interface{}) error {
+func unmarshalJSONDisallowUnknownFields(jb []byte, v interface{}) error {
 	d := json.NewDecoder(bytes.NewReader(jb))
 	d.DisallowUnknownFields()
 	return d.Decode(v)

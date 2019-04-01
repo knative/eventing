@@ -27,8 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-var dnsName = "example.com"
-
 func TestChannelValidation(t *testing.T) {
 	tests := []CRDTest{{
 		name: "valid",
