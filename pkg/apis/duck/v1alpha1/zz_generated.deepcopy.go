@@ -82,12 +82,8 @@ func (in *ChannelSpec) DeepCopyInto(out *ChannelSpec) {
 	*out = *in
 	if in.Subscribable != nil {
 		in, out := &in.Subscribable, &out.Subscribable
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(Subscribable)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(Subscribable)
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }
@@ -107,12 +103,8 @@ func (in *ChannelSubscriberSpec) DeepCopyInto(out *ChannelSubscriberSpec) {
 	*out = *in
 	if in.Ref != nil {
 		in, out := &in.Ref, &out.Ref
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.ObjectReference)
-			**out = **in
-		}
+		*out = new(v1.ObjectReference)
+		**out = **in
 	}
 	return
 }

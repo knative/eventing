@@ -324,7 +324,7 @@ func newVirtualService(channel *eventingv1alpha1.Channel, svc *corev1.Service) *
 				names.ServiceHostName(svc.Name, channel.Namespace),
 				channelHostName(channel.Name, channel.Namespace),
 			},
-			Http: []istiov1alpha3.HTTPRoute{{
+			HTTP: []istiov1alpha3.HTTPRoute{{
 				Rewrite: &istiov1alpha3.HTTPRewrite{
 					Authority: channelHostName(channel.Name, channel.Namespace),
 				},

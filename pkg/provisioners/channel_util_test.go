@@ -37,8 +37,8 @@ const (
 var (
 	truePointer = true
 
-	notFound         = k8serrors.NewNotFound(corev1.Resource("any"), "any")
-	testInducedError = errors.New("test-induced-error")
+	notFound       = k8serrors.NewNotFound(corev1.Resource("any"), "any")
+	errTestInduced = errors.New("test-induced-error")
 )
 
 func init() {
@@ -87,7 +87,7 @@ func TestChannelUtils(t *testing.T) {
 		f: func() (metav1.Object, error) {
 			existing := makeVirtualService()
 			destHost := fmt.Sprintf("%s-clusterbus.knative-eventing.svc.%s", clusterChannelProvisionerName, utils.GetClusterDomainName())
-			existing.Spec.Http[0].Route[0].Destination.Host = destHost
+			existing.Spec.HTTP[0].Route[0].Destination.Host = destHost
 			client := fake.NewFakeClient(existing)
 			CreateVirtualService(context.TODO(), client, getNewChannel(), makeK8sService())
 
@@ -143,15 +143,15 @@ func TestCreateK8sService(t *testing.T) {
 	}{
 		"error getting svc": {
 			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, _ runtime.Object) (controllertesting.MockHandled, error) {
-				return controllertesting.Handled, testInducedError
+				return controllertesting.Handled, errTestInduced
 			},
-			err: testInducedError,
+			err: errTestInduced,
 		},
 		"not found - create error": {
 			create: func(_ runtimeClient.Client, _ context.Context, _ runtime.Object) (controllertesting.MockHandled, error) {
-				return controllertesting.Handled, testInducedError
+				return controllertesting.Handled, errTestInduced
 			},
-			err: testInducedError,
+			err: errTestInduced,
 		},
 		"not found - create succeeds": {
 			create: func(_ runtimeClient.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
@@ -182,9 +182,9 @@ func TestCreateK8sService(t *testing.T) {
 				return controllertesting.Handled, nil
 			},
 			update: func(_ runtimeClient.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-				return controllertesting.Handled, testInducedError
+				return controllertesting.Handled, errTestInduced
 			},
-			err: testInducedError,
+			err: errTestInduced,
 		},
 		"different spec - update succeeds": {
 			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
@@ -265,15 +265,15 @@ func TestCreateVirtualService(t *testing.T) {
 	}{
 		"error getting svc": {
 			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, _ runtime.Object) (controllertesting.MockHandled, error) {
-				return controllertesting.Handled, testInducedError
+				return controllertesting.Handled, errTestInduced
 			},
-			err: testInducedError,
+			err: errTestInduced,
 		},
 		"not found - create error": {
 			create: func(_ runtimeClient.Client, _ context.Context, _ runtime.Object) (controllertesting.MockHandled, error) {
-				return controllertesting.Handled, testInducedError
+				return controllertesting.Handled, errTestInduced
 			},
-			err: testInducedError,
+			err: errTestInduced,
 		},
 		"not found - create succeeds": {
 			create: func(_ runtimeClient.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
@@ -304,9 +304,9 @@ func TestCreateVirtualService(t *testing.T) {
 				return controllertesting.Handled, nil
 			},
 			update: func(_ runtimeClient.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-				return controllertesting.Handled, testInducedError
+				return controllertesting.Handled, errTestInduced
 			},
-			err: testInducedError,
+			err: errTestInduced,
 		},
 		"different spec - update succeeds": {
 			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
@@ -642,7 +642,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 				fmt.Sprintf("%s.%s.svc.%s", "", testNS, utils.GetClusterDomainName()),
 				fmt.Sprintf("%s.%s.channels.%s", channelName, testNS, utils.GetClusterDomainName()),
 			},
-			Http: []istiov1alpha3.HTTPRoute{{
+			HTTP: []istiov1alpha3.HTTPRoute{{
 				Rewrite: &istiov1alpha3.HTTPRewrite{
 					Authority: fmt.Sprintf("%s.%s.channels.%s", channelName, testNS, utils.GetClusterDomainName()),
 				},

@@ -40,7 +40,7 @@ import (
 )
 
 const (
-	ccpUid           = "test-uid"
+	ccpUID           = "test-uid"
 	testErrorMessage = "test-induced-error"
 	testNS           = "test-ns"
 	Name             = "in-memory-channel"
@@ -312,7 +312,7 @@ func makeClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvisioner
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: Name,
-			UID:  ccpUid,
+			UID:  ccpUID,
 		},
 		Spec: eventingv1alpha1.ClusterChannelProvisionerSpec{},
 	}
@@ -348,7 +348,7 @@ func makeK8sService() *corev1.Service {
 					APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
 					Kind:               "ClusterChannelProvisioner",
 					Name:               Name,
-					UID:                ccpUid,
+					UID:                ccpUID,
 					Controller:         &truePointer,
 					BlockOwnerDeletion: &truePointer,
 				},

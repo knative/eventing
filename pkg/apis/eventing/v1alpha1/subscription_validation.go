@@ -129,7 +129,7 @@ func isValidReply(r ReplyStrategy) *apis.FieldError {
 	return nil
 }
 
-func (current *Subscription) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
+func (s *Subscription) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
 	original, ok := og.(*Subscription)
 	if !ok {
 		return &apis.FieldError{Message: "The provided original was not a Subscription"}
@@ -140,7 +140,7 @@ func (current *Subscription) CheckImmutableFields(ctx context.Context, og apis.I
 
 	// Only Subscriber and Reply are mutable.
 	ignoreArguments := cmpopts.IgnoreFields(SubscriptionSpec{}, "Subscriber", "Reply")
-	if diff := cmp.Diff(original.Spec, current.Spec, ignoreArguments); diff != "" {
+	if diff := cmp.Diff(original.Spec, s.Spec, ignoreArguments); diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",
 			Paths:   []string{"spec"},

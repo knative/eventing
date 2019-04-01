@@ -28,7 +28,9 @@ import (
 type Subscribable struct {
 	// TODO: What is actually required here for Channel spec.
 	// This is the list of subscriptions for this channel.
-	Subscribers []ChannelSubscriberSpec `json:"subscribers,omitempty"`
+	// +patchMergeKey=ref
+	// +patchStrategy=merge
+	Subscribers []ChannelSubscriberSpec `json:"subscribers,omitempty" patchStrategy:"merge" patchMergeKey:"ref"`
 }
 
 // ChannelSubscriberSpec defines a single subscriber to a Channel.

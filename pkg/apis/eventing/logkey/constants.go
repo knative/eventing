@@ -17,8 +17,8 @@ limitations under the License.
 package logkey
 
 const (
-	kNative = "knative.dev/"
+	knative = "knative.dev/"
 
 	// ClusterChannelProvisioner is the key used for cluster provisioner names in structured logs
-	ClusterChannelProvisioner = kNative + "clusterchannelprovisioner"
+	ClusterChannelProvisioner = knative + "clusterchannelprovisioner"
 )
