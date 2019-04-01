@@ -58,7 +58,7 @@
   version = "v2.1.15"
 
 [[projects]]
-  digest = "1:c2c20421e99f030dcaac6f1dcab53748dd962c3d506ca9b0270309a240bfcad3"
+  digest = "1:f616892b62757b2dcd70957602981d4f05c4d75017138cea02b3845d07c18785"
   name = "github.com/cloudevents/sdk-go"
   packages = [
     "pkg/cloudevents",
@@ -74,8 +74,8 @@
     "pkg/cloudevents/types",
   ]
   pruneopts = "NUT"
-  revision = "c60ffccfa25c10921825458ce13edcae0ddf62d1"
-  version = "0.4.3"
+  revision = "e00e75c8a1befe895cc00def1f88adb611195159"
+  version = "0.4.4"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -1273,6 +1273,7 @@
     "github.com/fsnotify/fsnotify",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
+    "github.com/google/uuid",
     "github.com/knative/build/pkg/apis/build/v1alpha1",
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
