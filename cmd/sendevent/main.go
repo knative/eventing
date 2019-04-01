@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/knative/eventing/pkg/utils"
 	"log"
 	"os"
 
@@ -41,7 +42,7 @@ var (
 func init() {
 	flag.StringVar(&eventID, "event-id", "", "Event ID to use. Defaults to a generated UUID")
 	flag.StringVar(&eventType, "event-type", "google.events.action.demo", "The Event Type to use.")
-	flag.StringVar(&source, "source", "sendevent", "Source URI to use. Defaults to the current machine's hostname")
+	flag.StringVar(&source, "source", "", "Source URI to use. Defaults to the current machine's hostname")
 	flag.StringVar(&data, "data", `{"hello": "world!"}`, "Event data")
 }
 
@@ -59,6 +60,10 @@ func main() {
 	if err := json.Unmarshal([]byte(data), &untyped); err != nil {
 		fmt.Println("Currently sendevent only supports JSON event data")
 		os.Exit(1)
+	}
+
+	if source == "" {
+		source = fmt.Sprintf("http://%s", utils.GetClusterDomainName())
 	}
 
 	t, err := http.New(
