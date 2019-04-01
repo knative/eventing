@@ -509,7 +509,7 @@ func (r *reconciler) getSubscription(ctx context.Context, t *v1alpha1.Trigger) (
 	list := &v1alpha1.SubscriptionList{}
 	opts := &runtimeclient.ListOptions{
 		Namespace:     t.Namespace,
-		LabelSelector: labels.SelectorFromSet(resources.ServiceLabels(t)),
+		LabelSelector: labels.SelectorFromSet(resources.SubscriptionLabels(t)),
 		// Set Raw because if we need to get more than one page, then we will put the continue token
 		// into opts.Raw.Continue.
 		Raw: &metav1.ListOptions{},
