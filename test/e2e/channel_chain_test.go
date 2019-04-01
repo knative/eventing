@@ -32,7 +32,7 @@ TestChannelChain tests the following scenario:
 EventSource ---> Channel ---> Subscriptions ---> Channel ---> Subscriptions ---> Service(Logger)
 
 */
-func TestChannelChain(t *testing.T) {\
+func TestChannelChain(t *testing.T) {
 	const (
 		senderName = "e2e-channelchain-sender"
 		routeName  = "e2e-channelchain-route"
