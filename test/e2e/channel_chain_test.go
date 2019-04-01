@@ -32,9 +32,7 @@ TestChannelChain tests the following scenario:
 EventSource ---> Channel ---> Subscriptions ---> Channel ---> Subscriptions ---> Service(Logger)
 
 */
-func TestChannelChain(t *testing.T) {
-	clients, cleaner := Setup(t, t.Logf)
-
+func TestChannelChain(t *testing.T) {\
 	const (
 		senderName = "e2e-channelchain-sender"
 		routeName  = "e2e-channelchain-route"
@@ -43,6 +41,7 @@ func TestChannelChain(t *testing.T) {
 	var subscriptionNames1 = [2]string{"e2e-complexscen-subs11", "e2e-complexscen-subs12"}
 	var subscriptionNames2 = [1]string{"e2e-complexscen-subs21"}
 
+	clients, cleaner := Setup(t, t.Logf)
 	// verify namespace
 	ns, cleanupNS := CreateNamespaceIfNeeded(t, clients, t.Logf)
 	defer cleanupNS()
