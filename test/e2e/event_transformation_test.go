@@ -30,7 +30,7 @@ import (
 /*
 TestEventTransformation tests the following scenario:
 
-             1              2                5                   6             7
+             1            2                 5            6                  7
 EventSource ---> Channel ---> Subscription ---> Channel ---> Subscription ----> Service(Logger)
                                    |  ^
                                  3 |  | 4
