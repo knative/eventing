@@ -128,7 +128,7 @@ func CreateSubscription(clients *test.Clients, sub *v1alpha1.Subscription, _ log
 	return nil
 }
 
-// WithChannelsAndSubscriptionsReady creates Channels and Subscriptions and waits until both are Ready.
+// WithChannelsAndSubscriptionsReady creates Channels and Subscriptions and waits until all are Ready.
 func WithChannelsAndSubscriptionsReady(clients *test.Clients, chans *[]*v1alpha1.Channel, subs *[]*v1alpha1.Subscription, logf logging.FormatLogger, cleaner *test.Cleaner) error {
 	for _, channel := range *chans {
 		if err := CreateChannel(clients, channel, logf, cleaner); err != nil {
@@ -305,7 +305,7 @@ func CreatePodAndServiceReady(clients *test.Clients, pod *corev1.Pod, routeName 
 	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, ns); err != nil {
 		return nil, fmt.Errorf("Error waiting for pod to become running: %v", err)
 	}
-	logf("pod running")
+	logf("Pod %q starts running", pod.Name)
 
 	svc := test.Service(routeName, ns, selector)
 	if err := CreateService(clients, svc, logf, cleaner); err != nil {
@@ -354,14 +354,14 @@ func SendFakeEventToChannel(clients *test.Clients, senderName string, body strin
 	}
 	url := fmt.Sprintf("http://%s", channel.Status.Address.Hostname)
 	pod := test.EventSenderPod(senderName, ns, url, event)
-	logf("sender pod: %#v", pod)
+	logf("Sender pod: %#v", pod)
 	if err := CreatePod(clients, pod, logf, cleaner); err != nil {
 		return err
 	}
 	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, ns); err != nil {
 		return err
 	}
-	logf("sender pod running")
+	logf("Sender pod starts running")
 	return nil
 }
 

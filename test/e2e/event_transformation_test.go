@@ -114,10 +114,14 @@ func TestEventTransformation(t *testing.T) {
 
 	// send fake CloudEvent to the first channel
 	body := fmt.Sprintf("TestEventTransformation %s", uuid.NewUUID())
-	SendFakeEventToChannel(clients, senderName, body, test.CloudEventDefaultType, test.CloudEventDefaultEncoding, channels[0], ns, t.Logf, cleaner)
+	if err := SendFakeEventToChannel(clients, senderName, body, test.CloudEventDefaultType, test.CloudEventDefaultEncoding, channels[0], ns, t.Logf, cleaner); err != nil {
+		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channels[0].Name)
+	}
 
 	// check if the logging service receives the correct number of event messages
-	if err := WaitForLogContentCount(clients, subscriberPods[1].Name, subscriberPods[1].Spec.Containers[0].Name, body+msgPostfix, len(subscriptionNames1)*len(subscriptionNames2)); err != nil {
-		t.Fatalf("String %q not found in logs of subscriber pod %q: %v", body+msgPostfix, subscriberPods[1].Name, err)
+	expectedContent := body + msgPostfix
+	expectedContentCount := len(subscriptionNames1) * len(subscriptionNames2)
+	if err := WaitForLogContentCount(clients, subscriberPods[1].Name, subscriberPods[1].Spec.Containers[0].Name, expectedContent, expectedContentCount); err != nil {
+		t.Fatalf("String %q does not appear %d times in logs of subscriber pod %q: %v", expectedContent, expectedContentCount, subscriberPods[1].Name, err)
 	}
 }

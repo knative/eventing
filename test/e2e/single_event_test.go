@@ -38,7 +38,7 @@ func TestSingleStructuredEvent(t *testing.T) {
 /*
 SingleEvent tests the following scenario:
 
-EventSource ---> Channel ---> Subscriptions ---> Service(Logger)
+EventSource ---> Channel ---> Subscription ---> Service(Logger)
 
 */
 func SingleEvent(t *testing.T, encoding string) {
@@ -85,7 +85,9 @@ func SingleEvent(t *testing.T, encoding string) {
 
 	// send fake CloudEvent to the first channel
 	body := fmt.Sprintf("TestSingleEvent %s", uuid.NewUUID())
-	SendFakeEventToChannel(clients, senderName, body, test.CloudEventDefaultType, test.CloudEventDefaultEncoding, channel, ns, t.Logf, cleaner)
+	if err := SendFakeEventToChannel(clients, senderName, body, test.CloudEventDefaultType, test.CloudEventDefaultEncoding, channel, ns, t.Logf, cleaner); err != nil {
+		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channel.Name)
+	}
 
 	if err := pkgTest.WaitForLogContent(clients.Kube, routeName, subscriberPod.Spec.Containers[0].Name, body); err != nil {
 		clients.Kube.PodLogs(senderName, "sendevent")
