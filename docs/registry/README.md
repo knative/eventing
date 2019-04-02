@@ -223,12 +223,12 @@ First, Event Consumers will list the EventTypes registered in the system
 `$ kubectl get eventtypes -n default`
 
 ```
-NAME                                         TYPE                                    SOURCE                       SCHEMA     BROKER          READY  REASON
-dev.knative.foo.bar-55wcn                    dev.knative.foo.bar                     dev.knative.example                     auto-add-demo   True 
-repofork                                     repo:fork                               my-other-user/my-other-repo             dev             False  BrokerIsNotReady
+NAME                                         TYPE                                    SOURCE                       SCHEMA      BROKER          READY  REASON
+dev.knative.foo.bar-55wcn                    dev.knative.foo.bar                     dev.knative.example                      auto-add-demo   True 
+repofork                                     repo:fork                               my-other-user/my-other-repo              dev             False  BrokerIsNotReady
 repopush                                     repo:push                               my-other-user/my-other-repo  /my-schema  default         True 
-dev.knative.source.github.push-34cnb         dev.knative.source.github.push          my-user/my-repo                         default         True 
-dev.knative.source.github.pullrequest-86jhv  dev.knative.source.github.pull_request  my-user/my-repo                         default         True  
+dev.knative.source.github.push-34cnb         dev.knative.source.github.push          my-user/my-repo                          default         True 
+dev.knative.source.github.pullrequest-86jhv  dev.knative.source.github.pull_request  my-user/my-repo                          default         True  
 ```
 
 Then, they will be able to *easily* create the appropriate Trigger(s)
@@ -250,4 +250,50 @@ spec:
      apiVersion: serving.knative.dev/v1alpha1
      kind: Service
      name: my-service
+```
+
+## Broker Ingress Policies
+
+We propose adding an `ingressPolicy` field to the Broker's spec CRD. 
+Here are three CR examples with different policies. Note that we are omitting 
+Broker's fields irrelevant for this discussion.
+
+**1. Allow Any**
+
+By not specifying an ingress policy, the default will be to accept any event.
+
+```yaml
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Broker
+metadata:
+  name: broker-allow-any
+```  
+
+**2. Allow Registered**
+
+By setting the ingress policy to not allow any, the broker will accept only events with EventTypes in the Registry.
+
+```yaml
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Broker
+metadata:
+  name: broker-allow-registered
+spec:
+  ingressPolicy:
+    allowAny: false
+```    
+
+**3. Auto Add**
+
+By setting the ingress policy to auto add, the broker will accept any event and will add its EventType 
+to the Registry (in case is not present).
+
+```yaml
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Broker
+metadata:
+  name: broker-auto-add
+spec:
+  ingressPolicy:
+    autoAdd: true 
 ```
