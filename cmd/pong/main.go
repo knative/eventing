@@ -20,11 +20,12 @@ package main
 import (
 	"context"
 	"flag"
+	"log"
+
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 	"github.com/google/uuid"
-	"log"
 )
 
 var id = uuid.New().String()

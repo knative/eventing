@@ -18,6 +18,7 @@ package trigger
 
 import (
 	"context"
+
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/resources"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"

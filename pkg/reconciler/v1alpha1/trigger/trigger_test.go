@@ -20,8 +20,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/resources"
 	"testing"
+
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/resources"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler/names"
