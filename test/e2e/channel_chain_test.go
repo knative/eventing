@@ -33,6 +33,10 @@ EventSource ---> Channel ---> Subscriptions ---> Channel ---> Subscriptions --->
 
 */
 func TestChannelChain(t *testing.T) {
+	if test.EventingFlags.Provisioner == "" {
+		t.Fatal("ClusterChannelProvisioner must be set to a non-empty string. Either do not specify --clusterChannelProvisioner or set to something other than the empty string")
+	}
+
 	const (
 		senderName = "e2e-channelchain-sender"
 		routeName  = "e2e-channelchain-route"
@@ -61,9 +65,6 @@ func TestChannelChain(t *testing.T) {
 
 	// create channels
 	t.Logf("Creating Channel and Subscription")
-	if test.EventingFlags.Provisioner == "" {
-		t.Fatal("ClusterChannelProvisioner must be set to a non-empty string. Either do not specify --clusterChannelProvisioner or set to something other than the empty string")
-	}
 	channels := make([]*v1alpha1.Channel, 0)
 	for _, channelName := range channelNames {
 		channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(test.EventingFlags.Provisioner))

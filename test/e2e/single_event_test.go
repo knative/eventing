@@ -42,6 +42,10 @@ EventSource ---> Channel ---> Subscription ---> Service(Logger)
 
 */
 func SingleEvent(t *testing.T, encoding string) {
+	if test.EventingFlags.Provisioner == "" {
+		t.Fatal("ClusterChannelProvisioner must be set to a non-empty string. Either do not specify --clusterChannelProvisioner or set to something other than the empty string")
+	}
+
 	const (
 		channelName      = "e2e-singleevent"
 		subscriberName   = "e2e-singleevent-subscriber"
@@ -71,9 +75,6 @@ func SingleEvent(t *testing.T, encoding string) {
 	// create channel
 
 	t.Logf("Creating Channel and Subscription")
-	if test.EventingFlags.Provisioner == "" {
-		t.Fatal("ClusterChannelProvisioner must be set to a non-empty string. Either do not specify --clusterChannelProvisioner or set to something other than the empty string")
-	}
 	channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(test.EventingFlags.Provisioner))
 	t.Logf("channel: %#v", channel)
 	sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelName), test.SubscriberSpecForService(routeName), nil)
