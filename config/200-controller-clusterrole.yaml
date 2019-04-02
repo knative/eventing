@@ -35,19 +35,6 @@ rules:
       - "patch"
       - "watch"
 
-  # Knative Services are Addressables that Subscriptions and Triggers often point towards.
-  - apiGroups:
-      - "serving.knative.dev"
-    resources:
-      - "routes"
-      - "routes/status"
-      - "services"
-      - "services/status"
-    verbs:
-      - "get"
-      - "list"
-      - "watch"
-
   # Channels and Triggers both manipulate VirtualServices.
   - apiGroups:
       - "networking.istio.io"
