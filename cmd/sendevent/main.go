@@ -22,9 +22,10 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/knative/eventing/pkg/utils"
 	"log"
 	"os"
+
+	"github.com/knative/eventing/pkg/utils"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
