@@ -29,7 +29,6 @@ import (
 	"github.com/knative/pkg/test/logging"
 	servingV1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -298,7 +297,7 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, logf log
 }
 
 // CreatePodAndServiceReady will create a Pod and Service, and wait for them to become ready
-func CreatePodAndServiceReady(clients *test.Clients, pod *corev1.Pod, routeName string, ns string, selector map[string]string, logf logging.FormatLogger, cleaner *test.Cleaner) (*v1.Pod, error) {
+func CreatePodAndServiceReady(clients *test.Clients, pod *corev1.Pod, routeName string, ns string, selector map[string]string, logf logging.FormatLogger, cleaner *test.Cleaner) (*corev1.Pod, error) {
 	if err := CreatePod(clients, pod, logf, cleaner); err != nil {
 		return nil, fmt.Errorf("Failed to create pod: %v", err)
 	}
