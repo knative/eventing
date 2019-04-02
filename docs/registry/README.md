@@ -26,10 +26,11 @@ apiVersion: eventing.knative.dev/v1alpha1
 kind: EventType
 metadata:
   name: repopush
+  namespace: default
 spec:
   type: repo:push
   source: my-user/my-repo
-  schema: my-schema
+  schema: /my-schema
   broker: default
 ```
 
@@ -41,7 +42,16 @@ modify those names to make them K8s-compliant, whenever we need to generate them
 - `type` is authoritative. This refers to the Cloud Event type as it enters into the eventing mesh. 
 
 - `source`: an identifier of where we receive the event from. This might not necessarily be the Cloud Event source 
-attribute. If we receive the event from our receive adaptors, the info might come in a Cloud Event custom extension (e.g., from).
+attribute. 
+
+If we have control over the entity emitting the Cloud Event, as is the case of many of our receive adaptors, 
+then we propose to add a Cloud Event custom extension (e.g., from) with this information, to ease the creation of filters 
+on Triggers later on.
+As the Cloud Event source attribute is somewhat useless (e.g., github pull requests are populated with `https://github.com/<owner>/<repo>/pull/<pull_id>`), 
+there is no way of doing exact matching of Cloud Event sources on Triggers. Thus, we propose adding this custom extension 
+to Cloud Events whenever we can. If the extension is not present, then we fallback to the Cloud Event source. 
+Note that when we start supporting more advanced filtering mechanisms on Triggers, we might not need this.
+
 
 - `schema` is a URI with the EventType schema. It may be a JSON schema, a protobuf schema, etc. It is optional.
 
@@ -83,8 +93,40 @@ spec:
 
 ```
  
-By applying this file, two EventTypes will be registered, with types `push` and `pull_request`, 
-source `my-other-user/my-other-repo`, for the `default` Broker in the `default` namespace.
+By applying the above file, two EventTypes will be registered, with types `dev.knative.source.github.push` and 
+`dev.knative.source.github.pull_request`, source `my-other-user/my-other-repo`, for the `default` Broker in the `default`
+ namespace, and with owner `github-source-sample`.
+ 
+In YAML, the EventTypes would look something like these:
+
+```yaml
+apiVersion: eventing.knative.dev/v1alpha1
+kind: EventType
+metadata:
+  generateName: dev.knative.source.github.push-
+  namespace: default
+  owner: # Owned by github-source-sample
+spec:
+  type: dev.knative.source.github.push
+  source: my-other-user/my-other-repo
+  broker: default
+---
+apiVersion: eventing.knative.dev/v1alpha1
+kind: EventType
+metadata:
+  generateName: dev.knative.source.github.pullrequest-
+  namespace: default
+  owner: # Owned by github-source-sample
+spec:
+  type: dev.knative.source.github.pull_request
+  source: my-other-user/my-other-repo
+  broker: default
+```
+
+Two things to notice: 
+- We generate the names by stripping invalid characters from the original type (e.g., `_`)
+- The `spec.type` adds the prefix `dev.knative.source.github.` This is a separate discussion on whether we should 
+change the (GitHub) types or not.
 
 **2. Manual User Registration**
 
@@ -112,6 +154,10 @@ in the `dev` Broker of the `default` namespace.
 
 Upon arrival of a non-registered EventType to a Broker ingress, and in case the Broker 
 ingress policy allows auto-registration of EventTypes, the Broker will create the EventType.
+Note that the creation of the EventType is done asynchronously, i.e., the Cloud Event is accepted and sent 
+to the appropriate Trigger(s) in parallel of the EventType creation. If the creation fails, on a subsequent arrival 
+there will be a new creation attempt.  
+
 
 Example: 
 
@@ -149,6 +195,20 @@ curl -v "http://auto-add-demo-broker.default.svc.cluster.local/" \
 ```
  
 The Broker `auto-add-demo` will then create the EventType with type `dev.knative.foo.bar` in the Registry.
+In YAML, the EventType would look something like these:
+
+```yaml
+apiVersion: eventing.knative.dev/v1alpha1
+kind: EventType
+metadata:
+  generateName: dev.knative.foo.bar-
+  namespace: default
+  owner: # Owned by auto-add-demo?
+spec:
+  type: dev.knative.foo.bar
+  source: dev.knative.example
+  broker: auto-add-demo
+```
 
 ## Discoverability Use Case
 
@@ -166,7 +226,7 @@ First, Event Consumers will list the EventTypes registered in the system
 NAME                                         TYPE                                    SOURCE                       SCHEMA     BROKER          READY  REASON
 dev.knative.foo.bar-55wcn                    dev.knative.foo.bar                     dev.knative.example                     auto-add-demo   True 
 repofork                                     repo:fork                               my-other-user/my-other-repo             dev             False  BrokerIsNotReady
-repopush                                     repo:push                               my-other-user/my-other-repo  my-schema  default         True 
+repopush                                     repo:push                               my-other-user/my-other-repo  /my-schema  default         True 
 dev.knative.source.github.push-34cnb         dev.knative.source.github.push          my-user/my-repo                         default         True 
 dev.knative.source.github.pullrequest-86jhv  dev.knative.source.github.pull_request  my-user/my-repo                         default         True  
 ```
