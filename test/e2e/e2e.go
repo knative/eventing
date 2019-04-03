@@ -128,6 +128,7 @@ func CreateSubscription(clients *test.Clients, sub *v1alpha1.Subscription, _ log
 }
 
 // WithChannelsAndSubscriptionsReady creates Channels and Subscriptions and waits until all are Ready.
+// When they are ready, chans and subs are altered to get the real Channels and Subscriptions.
 func WithChannelsAndSubscriptionsReady(clients *test.Clients, chans *[]*v1alpha1.Channel, subs *[]*v1alpha1.Subscription, logf logging.FormatLogger, cleaner *test.Cleaner) error {
 	for _, channel := range *chans {
 		if err := CreateChannel(clients, channel, logf, cleaner); err != nil {
@@ -140,7 +141,7 @@ func WithChannelsAndSubscriptionsReady(clients *test.Clients, chans *[]*v1alpha1
 		if err := test.WaitForChannelState(channels, channel.Name, test.IsChannelReady, "ChannelIsReady"); err != nil {
 			return err
 		}
-		// Update the given object so they'll reflect the ready state
+		// Update the given object so they'll reflect the ready state.
 		updatedchannel, err := channels.Get(channel.Name, metav1.GetOptions{})
 		if err != nil {
 			return err
@@ -160,7 +161,7 @@ func WithChannelsAndSubscriptionsReady(clients *test.Clients, chans *[]*v1alpha1
 		if err := test.WaitForSubscriptionState(subscriptions, sub.Name, test.IsSubscriptionReady, "SubscriptionIsReady"); err != nil {
 			return err
 		}
-		// Update the given object so they'll reflect the ready state
+		// Update the given object so they'll reflect the ready state.
 		updatedsub, err := subscriptions.Get(sub.Name, metav1.GetOptions{})
 		if err != nil {
 			return err
@@ -297,7 +298,7 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, logf log
 }
 
 // CreatePodAndServiceReady will create a Pod and Service, and wait for them to become ready
-func CreatePodAndServiceReady(clients *test.Clients, pod *corev1.Pod, routeName string, ns string, selector map[string]string, logf logging.FormatLogger, cleaner *test.Cleaner) (*corev1.Pod, error) {
+func CreatePodAndServiceReady(clients *test.Clients, pod *corev1.Pod, svc *corev1.Service, ns string, logf logging.FormatLogger, cleaner *test.Cleaner) (*corev1.Pod, error) {
 	if err := CreatePod(clients, pod, logf, cleaner); err != nil {
 		return nil, fmt.Errorf("Failed to create pod: %v", err)
 	}
@@ -306,7 +307,6 @@ func CreatePodAndServiceReady(clients *test.Clients, pod *corev1.Pod, routeName 
 	}
 	logf("Pod %q starts running", pod.Name)
 
-	svc := test.Service(routeName, ns, selector)
 	if err := CreateService(clients, svc, logf, cleaner); err != nil {
 		return nil, fmt.Errorf("Failed to create service: %v", err)
 	}
@@ -341,18 +341,12 @@ func CreatePod(clients *test.Clients, pod *corev1.Pod, _ logging.FormatLogger, c
 	return nil
 }
 
-// SendFakeEventToChannel will create fake CloudEvent and send it to the given channel
-func SendFakeEventToChannel(clients *test.Clients, senderName string, body string, eventType string, encoding string, channel *v1alpha1.Channel, ns string, logf logging.FormatLogger, cleaner *test.Cleaner) error {
+// SendFakeEventToChannel will create fake CloudEvent and send it to the given channel.
+func SendFakeEventToChannel(clients *test.Clients, event *test.CloudEvent, channel *v1alpha1.Channel, ns string, logf logging.FormatLogger, cleaner *test.Cleaner) error {
 	logf("Sending fake CloudEvent")
 	logf("Creating event sender pod")
-	event := test.CloudEvent{
-		Source:   senderName,
-		Type:     eventType,
-		Data:     fmt.Sprintf(`{"msg":%q}`, body),
-		Encoding: test.CloudEventDefaultEncoding,
-	}
 	url := fmt.Sprintf("http://%s", channel.Status.Address.Hostname)
-	pod := test.EventSenderPod(senderName, ns, url, event)
+	pod := test.EventSenderPod(event.Source, ns, url, event)
 	logf("Sender pod: %#v", pod)
 	if err := CreatePod(clients, pod, logf, cleaner); err != nil {
 		return err

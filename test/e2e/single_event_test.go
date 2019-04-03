@@ -48,10 +48,9 @@ func SingleEvent(t *testing.T, encoding string) {
 
 	const (
 		channelName      = "e2e-singleevent"
-		subscriberName   = "e2e-singleevent-subscriber"
 		senderName       = "e2e-singleevent-sender"
 		subscriptionName = "e2e-singleevent-subscription"
-		routeName        = "e2e-singleevent-route"
+		loggerPodName    = "e2e-singleevent-logger-pod"
 	)
 
 	clients, cleaner := Setup(t, t.Logf)
@@ -64,12 +63,13 @@ func SingleEvent(t *testing.T, encoding string) {
 	defer TearDown(clients, cleaner, t.Logf)
 
 	// create logger pod
-	t.Logf("creating subscriber pod")
+	t.Logf("creating logger pod")
 	selector := map[string]string{"e2etest": string(uuid.NewUUID())}
-	subscriberPod := test.EventLoggerPod(routeName, ns, selector)
-	subscriberPod, err := CreatePodAndServiceReady(clients, subscriberPod, routeName, ns, selector, t.Logf, cleaner)
+	loggerPod := test.EventLoggerPod(loggerPodName, ns, selector)
+	loggerSvc := test.Service(loggerPodName, ns, selector)
+	loggerPod, err := CreatePodAndServiceReady(clients, loggerPod, loggerSvc, ns, t.Logf, cleaner)
 	if err != nil {
-		t.Fatalf("Failed to create subscriber pod and service, and get them ready: %v", err)
+		t.Fatalf("Failed to create logger pod and service, and get them ready: %v", err)
 	}
 
 	// create channel
@@ -77,7 +77,7 @@ func SingleEvent(t *testing.T, encoding string) {
 	t.Logf("Creating Channel and Subscription")
 	channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(test.EventingFlags.Provisioner))
 	t.Logf("channel: %#v", channel)
-	sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelName), test.SubscriberSpecForService(routeName), nil)
+	sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelName), test.SubscriberSpecForService(loggerPodName), nil)
 	t.Logf("sub: %#v", sub)
 
 	if err := WithChannelsAndSubscriptionsReady(clients, &[]*v1alpha1.Channel{channel}, &[]*v1alpha1.Subscription{sub}, t.Logf, cleaner); err != nil {
@@ -86,13 +86,19 @@ func SingleEvent(t *testing.T, encoding string) {
 
 	// send fake CloudEvent to the first channel
 	body := fmt.Sprintf("TestSingleEvent %s", uuid.NewUUID())
-	if err := SendFakeEventToChannel(clients, senderName, body, test.CloudEventDefaultType, test.CloudEventDefaultEncoding, channel, ns, t.Logf, cleaner); err != nil {
+	event := &test.CloudEvent{
+		Source:   senderName,
+		Type:     test.CloudEventDefaultType,
+		Data:     fmt.Sprintf(`{"msg":%q}`, body),
+		Encoding: encoding,
+	}
+	if err := SendFakeEventToChannel(clients, event, channel, ns, t.Logf, cleaner); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channel.Name)
 	}
 
-	if err := pkgTest.WaitForLogContent(clients.Kube, routeName, subscriberPod.Spec.Containers[0].Name, body); err != nil {
+	if err := pkgTest.WaitForLogContent(clients.Kube, loggerPodName, loggerPod.Spec.Containers[0].Name, body); err != nil {
 		clients.Kube.PodLogs(senderName, "sendevent")
 		clients.Kube.PodLogs(senderName, "istio-proxy")
-		t.Fatalf("String %q not found in logs of subscriber pod %q: %v", body, routeName, err)
+		t.Fatalf("String %q not found in logs of logger pod %q: %v", body, loggerPodName, err)
 	}
 }

@@ -31,7 +31,7 @@ const (
 	servingApiVersion = "serving.knative.dev/v1alpha1"
 )
 
-// Route returns a Route object in namespace
+// Route returns a Route object in namespace.
 func Route(name string, namespace string, configName string) *servingv1alpha1.Route {
 	return &servingv1alpha1.Route{
 		ObjectMeta: metav1.ObjectMeta{
@@ -72,17 +72,17 @@ func Configuration(name string, namespace string, imagePath string) *servingv1al
 	}
 }
 
-// ClusterChannelProvisioner returns a ClusterChannelProvisioner for a given name
+// ClusterChannelProvisioner returns a ClusterChannelProvisioner for a given name.
 func ClusterChannelProvisioner(name string) *corev1.ObjectReference {
 	return pkgTest.CoreV1ObjectReference("ClusterChannelProvisioner", eventsApiVersion, name)
 }
 
-// ChannelRef returns an ObjectReference for a given Channel Name
+// ChannelRef returns an ObjectReference for a given Channel Name.
 func ChannelRef(name string) *corev1.ObjectReference {
 	return pkgTest.CoreV1ObjectReference("Channel", eventsApiVersion, name)
 }
 
-// Channel returns a Channel with the specified provisioner
+// Channel returns a Channel with the specified provisioner.
 func Channel(name string, namespace string, provisioner *corev1.ObjectReference) *v1alpha1.Channel {
 	return &v1alpha1.Channel{
 		ObjectMeta: metav1.ObjectMeta{
@@ -109,14 +109,14 @@ func SubscriberSpecForService(name string) *v1alpha1.SubscriberSpec {
 	}
 }
 
-// ReplyStrategyForChannel returns a ReplyStrategy for a given Channel
+// ReplyStrategyForChannel returns a ReplyStrategy for a given Channel.
 func ReplyStrategyForChannel(name string) *v1alpha1.ReplyStrategy {
 	return &v1alpha1.ReplyStrategy{
 		Channel: pkgTest.CoreV1ObjectReference("Channel", eventsApiVersion, name),
 	}
 }
 
-// Subscription returns a Subscription
+// Subscription returns a Subscription.
 func Subscription(name string, namespace string, channel *corev1.ObjectReference, subscriber *v1alpha1.SubscriberSpec, reply *v1alpha1.ReplyStrategy) *v1alpha1.Subscription {
 	return &v1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
@@ -162,11 +162,11 @@ const (
 	CloudEventEncodingBinary     = "binary"
 	CloudEventEncodingStructured = "structured"
 	CloudEventDefaultEncoding    = CloudEventEncodingBinary
-	CloudEventDefaultType        = "test.eventing.knative.dev"
+	CloudEventDefaultType        = "dev.knative.test.event"
 )
 
 // EventSenderPod creates a Pod that sends a single event to the given address.
-func EventSenderPod(name string, namespace string, sink string, event CloudEvent) *corev1.Pod {
+func EventSenderPod(name string, namespace string, sink string, event *CloudEvent) *corev1.Pod {
 	if event.Encoding == "" {
 		event.Encoding = CloudEventEncodingBinary
 	}

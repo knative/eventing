@@ -38,12 +38,14 @@ func TestChannelChain(t *testing.T) {
 	}
 
 	const (
-		senderName = "e2e-channelchain-sender"
-		routeName  = "e2e-channelchain-route"
+		senderName    = "e2e-channelchain-sender"
+		loggerPodName = "e2e-channelchain-logger-pod"
 	)
-	var channelNames = [2]string{"e2e-channelchain1", "e2e-channelchain2"}
-	var subscriptionNames1 = [2]string{"e2e-complexscen-subs11", "e2e-complexscen-subs12"}
-	var subscriptionNames2 = [1]string{"e2e-complexscen-subs21"}
+	channelNames := [2]string{"e2e-channelchain1", "e2e-channelchain2"}
+	// subscriptionNames1 corresponds to Subscriptions on channelNames[0]
+	subscriptionNames1 := [2]string{"e2e-complexscen-subs11", "e2e-complexscen-subs12"}
+	// subscriptionNames2 corresponds to Subscriptions on channelNames[1]
+	subscriptionNames2 := [1]string{"e2e-complexscen-subs21"}
 
 	clients, cleaner := Setup(t, t.Logf)
 	// verify namespace
@@ -54,13 +56,14 @@ func TestChannelChain(t *testing.T) {
 	// resources in it. So when TearDown() runs, it spews a lot of not found errors.
 	defer TearDown(clients, cleaner, t.Logf)
 
-	// create subscriberPod and expose it as a service
-	t.Logf("creating subscriber pod")
+	// create loggerPod and expose it as a service
+	t.Logf("creating logger pod")
 	selector := map[string]string{"e2etest": string(uuid.NewUUID())}
-	subscriberPod := test.EventLoggerPod(routeName, ns, selector)
-	subscriberPod, err := CreatePodAndServiceReady(clients, subscriberPod, routeName, ns, selector, t.Logf, cleaner)
+	loggerPod := test.EventLoggerPod(loggerPodName, ns, selector)
+	loggerSvc := test.Service(loggerPodName, ns, selector)
+	loggerPod, err := CreatePodAndServiceReady(clients, loggerPod, loggerSvc, ns, t.Logf, cleaner)
 	if err != nil {
-		t.Fatalf("Failed to create subscriber pod and service, and get them ready: %v", err)
+		t.Fatalf("Failed to create logger pod and service, and get them ready: %v", err)
 	}
 
 	// create channels
@@ -82,7 +85,7 @@ func TestChannelChain(t *testing.T) {
 	}
 	// create subscriptions that subscribe the second channel, and call the logging service
 	for _, subscriptionName := range subscriptionNames2 {
-		sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelNames[1]), test.SubscriberSpecForService(routeName), nil)
+		sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelNames[1]), test.SubscriberSpecForService(loggerPodName), nil)
 		t.Logf("sub: %#v", sub)
 		subs = append(subs, sub)
 	}
@@ -94,13 +97,19 @@ func TestChannelChain(t *testing.T) {
 
 	// send fake CloudEvent to the first channel
 	body := fmt.Sprintf("TestChannelChainEvent %s", uuid.NewUUID())
-	if err := SendFakeEventToChannel(clients, senderName, body, test.CloudEventDefaultType, test.CloudEventDefaultEncoding, channels[0], ns, t.Logf, cleaner); err != nil {
+	event := &test.CloudEvent{
+		Source:   senderName,
+		Type:     test.CloudEventDefaultType,
+		Data:     fmt.Sprintf(`{"msg":%q}`, body),
+		Encoding: test.CloudEventDefaultEncoding,
+	}
+	if err := SendFakeEventToChannel(clients, event, channels[0], ns, t.Logf, cleaner); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channels[0].Name)
 	}
 
 	// check if the logging service receives the correct number of event messages
 	expectedContentCount := len(subscriptionNames1) * len(subscriptionNames2)
-	if err := WaitForLogContentCount(clients, routeName, subscriberPod.Spec.Containers[0].Name, body, expectedContentCount); err != nil {
-		t.Fatalf("String %q does not appear %d times in logs of subscriber pod %q: %v", body, expectedContentCount, subscriberPod.Name, err)
+	if err := WaitForLogContentCount(clients, loggerPodName, loggerPod.Spec.Containers[0].Name, body, expectedContentCount); err != nil {
+		t.Fatalf("String %q does not appear %d times in logs of logger pod %q: %v", body, expectedContentCount, loggerPodName, err)
 	}
 }

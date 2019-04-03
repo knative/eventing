@@ -43,14 +43,15 @@ func TestEventTransformation(t *testing.T) {
 		t.Fatal("ClusterChannelProvisioner must be set to a non-empty string. Either do not specify --clusterChannelProvisioner or set to something other than the empty string")
 	}
 
-	const (
-		senderName = "e2e-complexscen-sender"
-		msgPostfix = "######"
-	)
-	var channelNames = [2]string{"e2e-complexscen1", "e2e-complexscen2"}
-	var routeNames = [2]string{"e2e-complexscen-route1", "e2e-complexscen-route2"}
-	var subscriptionNames1 = []string{"e2e-complexscen-subs11"}
-	var subscriptionNames2 = []string{"e2e-complexscen-subs21", "e2e-complexscen-subs22"}
+	senderName := "e2e-eventtransformation-sender"
+	msgPostfix := string(uuid.NewUUID())
+	channelNames := [2]string{"e2e-eventtransformation1", "e2e-eventtransformation2"}
+	// subscriptionNames1 corresponds to Subscriptions on channelNames[0]
+	subscriptionNames1 := []string{"e2e-eventtransformation-subs11"}
+	// subscriptionNames2 corresponds to Subscriptions on channelNames[1]
+	subscriptionNames2 := []string{"e2e-eventtransformation-subs21", "e2e-eventtransformation-subs22"}
+	transformationPodName := "e2e-eventtransformation-transformation-pod"
+	loggerPodName := "e2e-eventtransformation-logger-pod"
 
 	clients, cleaner := Setup(t, t.Logf)
 	// verify namespace
@@ -63,25 +64,26 @@ func TestEventTransformation(t *testing.T) {
 
 	// create subscriberPods and expose them as services
 	t.Logf("creating subscriber pods")
-
 	subscriberPods := make([]*corev1.Pod, 0)
-	for i, routeName := range routeNames {
-		selector := map[string]string{"e2etest": string(uuid.NewUUID())}
-		var subscriberPod *corev1.Pod
-		// create the first subscriber for the event transformation, and the second for the logging
-		if i == 0 {
-			subscriberPod = test.EventTransformationPod(routeName, ns, selector, msgPostfix)
-		} else if i == 1 {
-			subscriberPod = test.EventLoggerPod(routeName, ns, selector)
-		}
 
-		subscriberPod, err := CreatePodAndServiceReady(clients, subscriberPod, routeName, ns, selector, t.Logf, cleaner)
-		if err != nil {
-			t.Fatalf("Failed to create subscriber pod and service, and get them ready: %v", err)
-		}
-
-		subscriberPods = append(subscriberPods, subscriberPod)
+	// create transformation pod and service
+	transformationPodSelector := map[string]string{"e2etest": string(uuid.NewUUID())}
+	transformationPod := test.EventTransformationPod(transformationPodName, ns, transformationPodSelector, msgPostfix)
+	transformationSvc := test.Service(transformationPodName, ns, transformationPodSelector)
+	transformationPod, err := CreatePodAndServiceReady(clients, transformationPod, transformationSvc, ns, t.Logf, cleaner)
+	if err != nil {
+		t.Fatalf("Failed to create transformation pod and service, and get them ready: %v", err)
 	}
+	subscriberPods = append(subscriberPods, transformationPod)
+	// create logger pod and service
+	loggerPodSelector := map[string]string{"e2etest": string(uuid.NewUUID())}
+	loggerPod := test.EventLoggerPod(loggerPodName, ns, loggerPodSelector)
+	loggerSvc := test.Service(loggerPodName, ns, loggerPodSelector)
+	loggerPod, err = CreatePodAndServiceReady(clients, loggerPod, loggerSvc, ns, t.Logf, cleaner)
+	if err != nil {
+		t.Fatalf("Failed to create logger pod and service, and get them ready: %v", err)
+	}
+	subscriberPods = append(subscriberPods, loggerPod)
 
 	// create channels
 	t.Logf("Creating Channel and Subscription")
@@ -97,13 +99,13 @@ func TestEventTransformation(t *testing.T) {
 	subs := make([]*v1alpha1.Subscription, 0)
 	// create subscriptions that subscribe the first channel, use the transformation service to transform the events and then forward the transformed events to the second channel
 	for _, subscriptionName := range subscriptionNames1 {
-		sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelNames[0]), test.SubscriberSpecForService(routeNames[0]), test.ReplyStrategyForChannel(channelNames[1]))
+		sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelNames[0]), test.SubscriberSpecForService(transformationPodName), test.ReplyStrategyForChannel(channelNames[1]))
 		t.Logf("sub: %#v", sub)
 		subs = append(subs, sub)
 	}
 	// create subscriptions that subscribe the second channel, and call the logging service
 	for _, subscriptionName := range subscriptionNames2 {
-		sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelNames[1]), test.SubscriberSpecForService(routeNames[1]), nil)
+		sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelNames[1]), test.SubscriberSpecForService(loggerPodName), nil)
 		t.Logf("sub: %#v", sub)
 		subs = append(subs, sub)
 	}
@@ -115,14 +117,20 @@ func TestEventTransformation(t *testing.T) {
 
 	// send fake CloudEvent to the first channel
 	body := fmt.Sprintf("TestEventTransformation %s", uuid.NewUUID())
-	if err := SendFakeEventToChannel(clients, senderName, body, test.CloudEventDefaultType, test.CloudEventDefaultEncoding, channels[0], ns, t.Logf, cleaner); err != nil {
+	event := &test.CloudEvent{
+		Source:   senderName,
+		Type:     test.CloudEventDefaultType,
+		Data:     fmt.Sprintf(`{"msg":%q}`, body),
+		Encoding: test.CloudEventDefaultEncoding,
+	}
+	if err := SendFakeEventToChannel(clients, event, channels[0], ns, t.Logf, cleaner); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channels[0].Name)
 	}
 
 	// check if the logging service receives the correct number of event messages
 	expectedContent := body + msgPostfix
 	expectedContentCount := len(subscriptionNames1) * len(subscriptionNames2)
-	if err := WaitForLogContentCount(clients, subscriberPods[1].Name, subscriberPods[1].Spec.Containers[0].Name, expectedContent, expectedContentCount); err != nil {
-		t.Fatalf("String %q does not appear %d times in logs of subscriber pod %q: %v", expectedContent, expectedContentCount, subscriberPods[1].Name, err)
+	if err := WaitForLogContentCount(clients, loggerPod.Name, loggerPod.Spec.Containers[0].Name, expectedContent, expectedContentCount); err != nil {
+		t.Fatalf("String %q does not appear %d times in logs of logger pod %q: %v", expectedContent, expectedContentCount, loggerPod.Name, err)
 	}
 }
