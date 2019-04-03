@@ -14,15 +14,15 @@ Versioned releases are automatically created by Prow.
 
 ### Creating a major version release
 
-1. Create and push a `release-X.Y` branch from `master`. You can use the git
-   cli or the GitHub UI to create the branch. _You must have write
-   permissions to the repo to create a branch._
-   
-Prow will detect the new release branch and run the `release.sh` script. If
-the build succeeds, a new tag `vX.Y.0` will be created and a GitHub release
+1. Create and push a `release-X.Y` branch from `master`. You can use the git cli
+   or the GitHub UI to create the branch. _You must have write permissions to
+   the repo to create a branch._
+
+Prow will detect the new release branch and run the `release.sh` script. If the
+build succeeds, a new tag `vX.Y.0` will be created and a GitHub release
 published.
 
-The major version release job currently runs 
+The major version release job currently runs
 [5 minutes after the hour, every 2 hours](https://github.com/knative/test-infra/blob/957032b0badbf4409384995f3c34350f24f5f5ae/ci/prow/config.yaml#L2251).
 
 ### Creating a minor version release
