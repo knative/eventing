@@ -162,7 +162,7 @@ func TestReconcile(t *testing.T) {
 				MockLists: []controllertesting.MockList{
 					func(_ client.Client, _ context.Context, opts *client.ListOptions, list runtime.Object) (controllertesting.MockHandled, error) {
 						// Only match the Trigger Channel labels.
-						ls := labels.FormatLabels(TriggerChannelLabels(makeBroker()))
+						ls := labels.FormatLabels(resources.TriggerChannelLabels(makeBroker()))
 						l, _ := labels.ConvertSelectorToLabelsMap(ls)
 
 						if _, ok := list.(*v1alpha1.ChannelList); ok && opts.LabelSelector.Matches(l) {
@@ -184,7 +184,7 @@ func TestReconcile(t *testing.T) {
 				MockCreates: []controllertesting.MockCreate{
 					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
 						if c, ok := obj.(*v1alpha1.Channel); ok {
-							if cmp.Equal(c.Labels, TriggerChannelLabels(makeBroker())) {
+							if cmp.Equal(c.Labels, resources.TriggerChannelLabels(makeBroker())) {
 								return controllertesting.Handled, errors.New("test error creating Trigger Channel")
 							}
 						}
@@ -490,7 +490,7 @@ func TestReconcile(t *testing.T) {
 				MockLists: []controllertesting.MockList{
 					func(_ client.Client, _ context.Context, opts *client.ListOptions, list runtime.Object) (controllertesting.MockHandled, error) {
 						// Only match the Ingress Channel labels.
-						ls := labels.FormatLabels(IngressChannelLabels(makeBroker()))
+						ls := labels.FormatLabels(resources.IngressChannelLabels(makeBroker()))
 						l, _ := labels.ConvertSelectorToLabelsMap(ls)
 
 						if _, ok := list.(*v1alpha1.ChannelList); ok && opts.LabelSelector.Matches(l) {
@@ -517,7 +517,7 @@ func TestReconcile(t *testing.T) {
 					func(innerClient client.Client, ctx context.Context, opts *client.ListOptions, list runtime.Object) (handled controllertesting.MockHandled, e error) {
 						if _, ok := list.(*v1alpha1.ChannelList); ok {
 							// Only match the Ingress Channel labels.
-							ls := labels.FormatLabels(IngressChannelLabels(makeBroker()))
+							ls := labels.FormatLabels(resources.IngressChannelLabels(makeBroker()))
 							l, _ := labels.ConvertSelectorToLabelsMap(ls)
 							if opts.LabelSelector.Matches(l) {
 								return controllertesting.Handled, nil
@@ -529,7 +529,7 @@ func TestReconcile(t *testing.T) {
 				MockCreates: []controllertesting.MockCreate{
 					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
 						if c, ok := obj.(*v1alpha1.Channel); ok {
-							if cmp.Equal(c.Labels, IngressChannelLabels(makeBroker())) {
+							if cmp.Equal(c.Labels, resources.IngressChannelLabels(makeBroker())) {
 								return controllertesting.Handled, errors.New("test error creating Ingress Channel")
 							}
 						}
@@ -555,7 +555,7 @@ func TestReconcile(t *testing.T) {
 					func(innerClient client.Client, ctx context.Context, opts *client.ListOptions, list runtime.Object) (handled controllertesting.MockHandled, e error) {
 						if cl, ok := list.(*v1alpha1.ChannelList); ok {
 							// Only match the Ingress Channel labels.
-							ls := labels.FormatLabels(IngressChannelLabels(makeBroker()))
+							ls := labels.FormatLabels(resources.IngressChannelLabels(makeBroker()))
 							l, _ := labels.ConvertSelectorToLabelsMap(ls)
 							if opts.LabelSelector.Matches(l) {
 								cl.Items = append(cl.Items, *makeDifferentIngressChannel())
@@ -595,7 +595,7 @@ func TestReconcile(t *testing.T) {
 					func(innerClient client.Client, ctx context.Context, opts *client.ListOptions, list runtime.Object) (handled controllertesting.MockHandled, e error) {
 						if cl, ok := list.(*v1alpha1.ChannelList); ok {
 							// Only match the Ingress Channel labels.
-							ls := labels.FormatLabels(IngressChannelLabels(makeBroker()))
+							ls := labels.FormatLabels(resources.IngressChannelLabels(makeBroker()))
 							l, _ := labels.ConvertSelectorToLabelsMap(ls)
 							if opts.LabelSelector.Matches(l) {
 								cl.Items = append(cl.Items, *makeNonAddressableIngressChannel())
@@ -794,7 +794,7 @@ func TestReconcile(t *testing.T) {
 					func(innerClient client.Client, ctx context.Context, opts *client.ListOptions, list runtime.Object) (handled controllertesting.MockHandled, e error) {
 						if cl, ok := list.(*v1alpha1.ChannelList); ok {
 							// Only match the Ingress Channel labels.
-							ls := labels.FormatLabels(IngressChannelLabels(makeBroker()))
+							ls := labels.FormatLabels(resources.IngressChannelLabels(makeBroker()))
 							l, _ := labels.ConvertSelectorToLabelsMap(ls)
 							if opts.LabelSelector.Matches(l) {
 								cl.Items = append(cl.Items, *makeIngressChannel())

@@ -18,7 +18,6 @@ package broker
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -26,7 +25,7 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/names"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
 	"go.uber.org/zap"
-	v1 "k8s.io/api/apps/v1"
+	"k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -307,16 +306,16 @@ func (r *reconciler) reconcileFilterService(ctx context.Context, b *v1alpha1.Bro
 
 func (r *reconciler) reconcileTriggerChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
 	get := func() (*v1alpha1.Channel, error) {
-		return r.getChannel(ctx, b, labels.SelectorFromSet(TriggerChannelLabels(b)))
+		return r.getChannel(ctx, b, labels.SelectorFromSet(resources.TriggerChannelLabels(b)))
 	}
-	return r.reconcileChannel(ctx, get, newTriggerChannel(b))
+	return r.reconcileChannel(ctx, get, resources.NewTriggerChannel(b))
 }
 
 func (r *reconciler) reconcileIngressChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
 	get := func() (*v1alpha1.Channel, error) {
-		return r.getChannel(ctx, b, labels.SelectorFromSet(IngressChannelLabels(b)))
+		return r.getChannel(ctx, b, labels.SelectorFromSet(resources.IngressChannelLabels(b)))
 	}
-	return r.reconcileChannel(ctx, get, newIngressChannel(b))
+	return r.reconcileChannel(ctx, get, resources.NewIngressChannel(b))
 }
 
 // reconcileChannel reconciles Broker's 'b' underlying channel.
@@ -361,56 +360,6 @@ func (r *reconciler) getChannel(ctx context.Context, b *v1alpha1.Broker, ls labe
 	}
 
 	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
-}
-
-func newTriggerChannel(b *v1alpha1.Broker) *v1alpha1.Channel {
-	return newChannel(b, TriggerChannelLabels(b))
-}
-
-func newIngressChannel(b *v1alpha1.Broker) *v1alpha1.Channel {
-	return newChannel(b, IngressChannelLabels(b))
-}
-
-// newChannel creates a new Channel for Broker 'b'.
-func newChannel(b *v1alpha1.Broker, l map[string]string) *v1alpha1.Channel {
-	var spec v1alpha1.ChannelSpec
-	if b.Spec.ChannelTemplate != nil {
-		spec = *b.Spec.ChannelTemplate
-	}
-
-	return &v1alpha1.Channel{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    b.Namespace,
-			GenerateName: fmt.Sprintf("%s-broker-", b.Name),
-			Labels:       l,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(b, schema.GroupVersionKind{
-					Group:   v1alpha1.SchemeGroupVersion.Group,
-					Version: v1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Broker",
-				}),
-			},
-		},
-		Spec: spec,
-	}
-}
-
-// TriggerChannelLabels are all the labels placed on the Trigger Channel for the given Broker. This
-// should only be used by Broker and Trigger code.
-func TriggerChannelLabels(b *v1alpha1.Broker) map[string]string {
-	return map[string]string{
-		"eventing.knative.dev/broker":           b.Name,
-		"eventing.knative.dev/brokerEverything": "true",
-	}
-}
-
-// IngressChannelLabels are all the labels placed on the Ingress Channel for the given Broker. This
-// should only be used by Broker and Trigger code.
-func IngressChannelLabels(b *v1alpha1.Broker) map[string]string {
-	return map[string]string{
-		"eventing.knative.dev/broker":        b.Name,
-		"eventing.knative.dev/brokerIngress": "true",
-	}
 }
 
 // reconcileDeployment reconciles the K8s Deployment 'd'.
@@ -490,7 +439,7 @@ func (r *reconciler) reconcileIngressService(ctx context.Context, b *v1alpha1.Br
 }
 
 func (r *reconciler) reconcileIngressSubscription(ctx context.Context, b *v1alpha1.Broker, c *v1alpha1.Channel, svc *corev1.Service) (*v1alpha1.Subscription, error) {
-	expected := makeSubscription(b, c, svc)
+	expected := resources.NewSubscription(b, c, svc)
 
 	sub, err := r.getIngressSubscription(ctx, b)
 	// If the resource doesn't exist, we'll create it
@@ -533,7 +482,7 @@ func (r *reconciler) getIngressSubscription(ctx context.Context, b *v1alpha1.Bro
 	list := &v1alpha1.SubscriptionList{}
 	opts := &runtimeclient.ListOptions{
 		Namespace:     b.Namespace,
-		LabelSelector: labels.SelectorFromSet(ingressSubscriptionLabels(b)),
+		LabelSelector: labels.SelectorFromSet(resources.IngressSubscriptionLabels(b)),
 		// Set Raw because if we need to get more than one page, then we will put the continue token
 		// into opts.Raw.Continue.
 		Raw: &metav1.ListOptions{},
@@ -550,43 +499,4 @@ func (r *reconciler) getIngressSubscription(ctx context.Context, b *v1alpha1.Bro
 	}
 
 	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
-}
-
-// makeSubscription returns a placeholder subscription for trigger 't', channel 'c', and service 'svc'.
-func makeSubscription(b *v1alpha1.Broker, c *v1alpha1.Channel, svc *corev1.Service) *v1alpha1.Subscription {
-	return &v1alpha1.Subscription{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    b.Namespace,
-			GenerateName: fmt.Sprintf("internal-ingress-%s-", b.Name),
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(b, schema.GroupVersionKind{
-					Group:   v1alpha1.SchemeGroupVersion.Group,
-					Version: v1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Broker",
-				}),
-			},
-			Labels: ingressSubscriptionLabels(b),
-		},
-		Spec: v1alpha1.SubscriptionSpec{
-			Channel: corev1.ObjectReference{
-				APIVersion: v1alpha1.SchemeGroupVersion.String(),
-				Kind:       "Channel",
-				Name:       c.Name,
-			},
-			Subscriber: &v1alpha1.SubscriberSpec{
-				Ref: &corev1.ObjectReference{
-					APIVersion: "v1",
-					Kind:       "Service",
-					Name:       svc.Name,
-				},
-			},
-		},
-	}
-}
-
-func ingressSubscriptionLabels(b *v1alpha1.Broker) map[string]string {
-	return map[string]string{
-		"eventing.knative.dev/broker":        b.Name,
-		"eventing.knative.dev/brokerIngress": "true",
-	}
 }
