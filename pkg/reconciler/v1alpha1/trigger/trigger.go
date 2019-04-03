@@ -23,7 +23,7 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
+	brokerresources "github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
 	"github.com/knative/eventing/pkg/utils/resolve"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
@@ -325,13 +325,13 @@ func (r *reconciler) getBroker(ctx context.Context, t *v1alpha1.Trigger) (*v1alp
 // getBrokerTriggerChannel return the Broker's Trigger Channel if it exists, otherwise it returns an
 // error.
 func (r *reconciler) getBrokerTriggerChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
-	return r.getChannel(ctx, b, labels.SelectorFromSet(broker.TriggerChannelLabels(b)))
+	return r.getChannel(ctx, b, labels.SelectorFromSet(brokerresources.TriggerChannelLabels(b)))
 }
 
 // getBrokerIngressChannel return the Broker's Ingress Channel if it exists, otherwise it returns an
 // error.
 func (r *reconciler) getBrokerIngressChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
-	return r.getChannel(ctx, b, labels.SelectorFromSet(broker.IngressChannelLabels(b)))
+	return r.getChannel(ctx, b, labels.SelectorFromSet(brokerresources.IngressChannelLabels(b)))
 }
 
 // getChannel returns the Broker's channel if it exists, otherwise it returns an error.

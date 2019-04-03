@@ -27,7 +27,7 @@ import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler/names"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
+	brokerresources "github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
 	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
@@ -195,7 +195,7 @@ func TestReconcile(t *testing.T) {
 				MockLists: []controllertesting.MockList{
 					func(_ client.Client, _ context.Context, opts *client.ListOptions, list runtime.Object) (controllertesting.MockHandled, error) {
 						// Only match the Trigger Channel labels.
-						ls := labels.FormatLabels(broker.TriggerChannelLabels(makeBroker()))
+						ls := labels.FormatLabels(brokerresources.TriggerChannelLabels(makeBroker()))
 						l, _ := labels.ConvertSelectorToLabelsMap(ls)
 
 						if _, ok := list.(*v1alpha1.ChannelList); ok && opts.LabelSelector.Matches(l) {
@@ -220,7 +220,7 @@ func TestReconcile(t *testing.T) {
 				MockLists: []controllertesting.MockList{
 					func(_ client.Client, _ context.Context, opts *client.ListOptions, list runtime.Object) (handled controllertesting.MockHandled, e error) {
 						// Only match the Ingress Channel labels.
-						ls := labels.FormatLabels(broker.IngressChannelLabels(makeBroker()))
+						ls := labels.FormatLabels(brokerresources.IngressChannelLabels(makeBroker()))
 						l, _ := labels.ConvertSelectorToLabelsMap(ls)
 
 						if _, ok := list.(*v1alpha1.ChannelList); ok && opts.LabelSelector.Matches(l) {
