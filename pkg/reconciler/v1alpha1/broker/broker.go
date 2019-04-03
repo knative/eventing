@@ -25,7 +25,7 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/names"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
 	"go.uber.org/zap"
-	"k8s.io/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -105,7 +105,7 @@ func ProvideController(args ReconcilerArgs) func(manager.Manager, *zap.Logger) (
 		}
 
 		// Watch all the resources that the Broker reconciles.
-		for _, t := range []runtime.Object{&v1alpha1.Channel{}, &corev1.Service{}, &v1.Deployment{}} {
+		for _, t := range []runtime.Object{&v1alpha1.Channel{}, &corev1.Service{}, &appsv1.Deployment{}} {
 			err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Broker{}, IsController: true})
 			if err != nil {
 				return nil, err
@@ -289,7 +289,7 @@ func (r *reconciler) updateStatus(broker *v1alpha1.Broker) (*v1alpha1.Broker, er
 }
 
 // reconcileFilterDeployment reconciles Broker's 'b' filter deployment.
-func (r *reconciler) reconcileFilterDeployment(ctx context.Context, b *v1alpha1.Broker) (*v1.Deployment, error) {
+func (r *reconciler) reconcileFilterDeployment(ctx context.Context, b *v1alpha1.Broker) (*appsv1.Deployment, error) {
 	expected := resources.MakeFilterDeployment(&resources.FilterArgs{
 		Broker:             b,
 		Image:              r.filterImage,
@@ -363,12 +363,12 @@ func (r *reconciler) getChannel(ctx context.Context, b *v1alpha1.Broker, ls labe
 }
 
 // reconcileDeployment reconciles the K8s Deployment 'd'.
-func (r *reconciler) reconcileDeployment(ctx context.Context, d *v1.Deployment) (*v1.Deployment, error) {
+func (r *reconciler) reconcileDeployment(ctx context.Context, d *appsv1.Deployment) (*appsv1.Deployment, error) {
 	name := types.NamespacedName{
 		Namespace: d.Namespace,
 		Name:      d.Name,
 	}
-	current := &v1.Deployment{}
+	current := &appsv1.Deployment{}
 	err := r.client.Get(ctx, name, current)
 	if k8serrors.IsNotFound(err) {
 		err = r.client.Create(ctx, d)
@@ -422,7 +422,7 @@ func (r *reconciler) reconcileService(ctx context.Context, svc *corev1.Service) 
 }
 
 // reconcileIngressDeployment reconciles the Ingress Deployment.
-func (r *reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1.Broker, c *v1alpha1.Channel) (*v1.Deployment, error) {
+func (r *reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1.Broker, c *v1alpha1.Channel) (*appsv1.Deployment, error) {
 	expected := resources.MakeIngress(&resources.IngressArgs{
 		Broker:             b,
 		Image:              r.ingressImage,
