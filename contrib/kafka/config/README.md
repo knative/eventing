@@ -10,8 +10,9 @@ Deployment steps:
      [guides](http://strimzi.io/quickstarts/) provide content for Kubernetes and
      Openshift.
 
-   > Note: This _Channel_ is not limited to Apache Kafka installations on Kubernetes.
-   > It is also possible to use an off-cluster Apache Kafka installation.
+   > Note: This _Channel_ is not limited to Apache Kafka installations on
+   > Kubernetes. It is also possible to use an off-cluster Apache Kafka
+   > installation.
 
 1. Now that Apache Kafka is installed, you need to configure the
    `bootstrap_servers` value in the `kafka-channel-controller-config` ConfigMap,
