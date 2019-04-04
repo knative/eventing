@@ -116,6 +116,8 @@ func TestMain(m *testing.M) {
 
 func TestSubscribeUnsubscribe(t *testing.T) {
 	logger.Info("TestSubscribeUnsubscribe()")
+	s.subscriptionsMux.Lock()
+	defer s.subscriptionsMux.Unlock()
 
 	cRef := provisioners.ChannelReference{Namespace: "test_namespace", Name: "test_channel"}
 	sRef := subscriptionReference{Name: "sub_name_2", Namespace: "sub_namespace_2", SubscriberURI: "", ReplyURI: ""}
