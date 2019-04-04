@@ -106,12 +106,6 @@ func TestSubscriberSpec(t *testing.T) {
 			Sub:      &v1alpha1.SubscriberSpec{},
 			Expected: "",
 		},
-		"DNS Name": {
-			Sub: &v1alpha1.SubscriberSpec{
-				DeprecatedDNSName: &uri,
-			},
-			Expected: uri,
-		},
 		"URI": {
 			Sub: &v1alpha1.SubscriberSpec{
 				URI: &uri,

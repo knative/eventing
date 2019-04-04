@@ -71,7 +71,6 @@ func isSubscriberSpecNilOrEmpty(s *SubscriberSpec) bool {
 		return true
 	}
 	if equality.Semantic.DeepEqual(s.Ref, &corev1.ObjectReference{}) &&
-		s.DeprecatedDNSName == nil &&
 		s.URI == nil {
 		return true
 	}
@@ -85,14 +84,11 @@ func isValidSubscriberSpec(s SubscriberSpec) *apis.FieldError {
 	if s.Ref != nil && !equality.Semantic.DeepEqual(s.Ref, &corev1.ObjectReference{}) {
 		fieldsSet = append(fieldsSet, "ref")
 	}
-	if s.DeprecatedDNSName != nil && *s.DeprecatedDNSName != "" {
-		fieldsSet = append(fieldsSet, "dnsName")
-	}
 	if s.URI != nil && *s.URI != "" {
 		fieldsSet = append(fieldsSet, "uri")
 	}
 	if len(fieldsSet) == 0 {
-		errs = errs.Also(apis.ErrMissingOneOf("ref", "dnsName", "uri"))
+		errs = errs.Also(apis.ErrMissingOneOf("ref", "uri"))
 	} else if len(fieldsSet) > 1 {
 		errs = errs.Also(apis.ErrMultipleOneOf(fieldsSet...))
 	}

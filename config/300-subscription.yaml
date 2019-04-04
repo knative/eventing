@@ -69,9 +69,6 @@ spec:
             subscriber:
               type: object
               properties:
-                dnsName:
-                  type: string
-                  minLength: 1
                 uri:
                   type: string
                   minLength: 1

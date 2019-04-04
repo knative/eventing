@@ -138,13 +138,6 @@ type SubscriberSpec struct {
 	// +optional
 	Ref *corev1.ObjectReference `json:"ref,omitempty"`
 
-	// Deprecated: Use URI instead.
-	// Reference to a 'known' endpoint where no resolving is done.
-	// http://k8s-service for example
-	// http://myexternalhandler.example.com/foo/bar
-	// +optional
-	DeprecatedDNSName *string `json:"dnsName,omitempty"`
-
 	// Reference to a 'known' endpoint where no resolving is done.
 	// http://k8s-service for example
 	// http://myexternalhandler.example.com/foo/bar

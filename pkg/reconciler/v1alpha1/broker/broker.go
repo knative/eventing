@@ -420,21 +420,19 @@ func (r *reconciler) reconcileDeployment(ctx context.Context, d *v1.Deployment) 
 		Name:      d.Name,
 	}
 	current := &v1.Deployment{}
-	err := r.client.Get(ctx, name, current)
-	if k8serrors.IsNotFound(err) {
-		err = r.client.Create(ctx, d)
-		if err != nil {
-			return nil, err
+	if err := r.client.Get(ctx, name, current); err != nil {
+		if k8serrors.IsNotFound(err) {
+			if err = r.client.Create(ctx, d); err != nil {
+				return nil, err
+			}
+			return d, nil
 		}
-		return d, nil
-	} else if err != nil {
 		return nil, err
 	}
 
 	if !equality.Semantic.DeepDerivative(d.Spec, current.Spec) {
 		current.Spec = d.Spec
-		err = r.client.Update(ctx, current)
-		if err != nil {
+		if err := r.client.Update(ctx, current); err != nil {
 			return nil, err
 		}
 	}

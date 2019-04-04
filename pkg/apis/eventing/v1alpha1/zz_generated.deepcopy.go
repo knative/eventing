@@ -371,11 +371,6 @@ func (in *SubscriberSpec) DeepCopyInto(out *SubscriberSpec) {
 		*out = new(v1.ObjectReference)
 		**out = **in
 	}
-	if in.DeprecatedDNSName != nil {
-		in, out := &in.DeprecatedDNSName, &out.DeprecatedDNSName
-		*out = new(string)
-		**out = **in
-	}
 	if in.URI != nil {
 		in, out := &in.URI, &out.URI
 		*out = new(string)

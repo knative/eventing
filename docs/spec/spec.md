@@ -237,9 +237,9 @@ a Channel system that receives and delivers events._
 | Field               | Type            | Description | Constraints              |
 | ------------------- | --------------- | ----------- | ------------------------ |
 | ref<sup>1</sup>     | ObjectReference |             | Must adhere to Callable. |
-| dnsName<sup>1</sup> | String          |             |                          |
+| uri<sup>1</sup> | String          |             |                          |
 
-1: One of (ref, dnsName), Required.
+1: One of (ref, uri), Required.
 
 ### ChannelSubscriberSpec
 

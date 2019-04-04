@@ -520,26 +520,6 @@ func TestValidgetValidSubscriber(t *testing.T) {
 		s:    *getValidSubscriberSpec(),
 		want: nil,
 	}, {
-		name: "valid dnsName",
-		s: SubscriberSpec{
-			DeprecatedDNSName: &uri,
-		},
-		want: nil,
-	}, {
-		name: "both ref and dnsName given",
-		s: SubscriberSpec{
-			Ref: &corev1.ObjectReference{
-				Name:       channelName,
-				APIVersion: channelAPIVersion,
-				Kind:       channelKind,
-			},
-			DeprecatedDNSName: &uri,
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMultipleOneOf("ref", "dnsName")
-			return fe
-		}(),
-	}, {
 		name: "valid uri",
 		s: SubscriberSpec{
 			URI: &uri,
@@ -560,39 +540,27 @@ func TestValidgetValidSubscriber(t *testing.T) {
 			return fe
 		}(),
 	}, {
-		name: "both dnsName and uri given",
-		s: SubscriberSpec{
-			DeprecatedDNSName: &uri,
-			URI:               &uri,
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMultipleOneOf("dnsName", "uri")
-			return fe
-		}(),
-	}, {
-		name: "ref, dnsName, and uri given",
+		name: "ref and uri given",
 		s: SubscriberSpec{
 			Ref: &corev1.ObjectReference{
 				Name:       channelName,
 				APIVersion: channelAPIVersion,
 				Kind:       channelKind,
 			},
-			DeprecatedDNSName: &uri,
-			URI:               &uri,
+			URI: &uri,
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMultipleOneOf("ref", "dnsName", "uri")
+			fe := apis.ErrMultipleOneOf("ref", "uri")
 			return fe
 		}(),
 	}, {
-		name: "empty ref, dnsName, and uri given",
+		name: "empty ref, and uri given",
 		s: SubscriberSpec{
-			Ref:               &corev1.ObjectReference{},
-			DeprecatedDNSName: &empty,
-			URI:               &empty,
+			Ref: &corev1.ObjectReference{},
+			URI: &empty,
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingOneOf("ref", "dnsName", "uri")
+			fe := apis.ErrMissingOneOf("ref", "uri")
 			return fe
 		}(),
 	}, {
