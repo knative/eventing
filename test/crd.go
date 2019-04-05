@@ -31,7 +31,7 @@ const (
 	servingApiVersion = "serving.knative.dev/v1alpha1"
 )
 
-// Route returns a Route object in namespace
+// Route returns a Route object in namespace.
 func Route(name string, namespace string, configName string) *servingv1alpha1.Route {
 	return &servingv1alpha1.Route{
 		ObjectMeta: metav1.ObjectMeta{
@@ -72,17 +72,17 @@ func Configuration(name string, namespace string, imagePath string) *servingv1al
 	}
 }
 
-// ClusterChannelProvisioner returns a ClusterChannelProvisioner for a given name
+// ClusterChannelProvisioner returns a ClusterChannelProvisioner for a given name.
 func ClusterChannelProvisioner(name string) *corev1.ObjectReference {
 	return pkgTest.CoreV1ObjectReference("ClusterChannelProvisioner", eventsApiVersion, name)
 }
 
-// ChannelRef returns an ObjectReference for a given Channel Name
+// ChannelRef returns an ObjectReference for a given Channel Name.
 func ChannelRef(name string) *corev1.ObjectReference {
 	return pkgTest.CoreV1ObjectReference("Channel", eventsApiVersion, name)
 }
 
-// Channel returns a Channel with the specified provisioner
+// Channel returns a Channel with the specified provisioner.
 func Channel(name string, namespace string, provisioner *corev1.ObjectReference) *v1alpha1.Channel {
 	return &v1alpha1.Channel{
 		ObjectMeta: metav1.ObjectMeta{
@@ -95,7 +95,7 @@ func Channel(name string, namespace string, provisioner *corev1.ObjectReference)
 	}
 }
 
-// SubscriberSpecForRoute returns a SubscriberSpec for a given Knative Service.
+// SubscriberSpecForRoute returns a SubscriberSpec for a given Knative Route.
 func SubscriberSpecForRoute(name string) *v1alpha1.SubscriberSpec {
 	return &v1alpha1.SubscriberSpec{
 		Ref: pkgTest.CoreV1ObjectReference("Route", servingApiVersion, name),
@@ -109,7 +109,14 @@ func SubscriberSpecForService(name string) *v1alpha1.SubscriberSpec {
 	}
 }
 
-// Subscription returns a Subscription
+// ReplyStrategyForChannel returns a ReplyStrategy for a given Channel.
+func ReplyStrategyForChannel(name string) *v1alpha1.ReplyStrategy {
+	return &v1alpha1.ReplyStrategy{
+		Channel: pkgTest.CoreV1ObjectReference("Channel", eventsApiVersion, name),
+	}
+}
+
+// Subscription returns a Subscription.
 func Subscription(name string, namespace string, channel *corev1.ObjectReference, subscriber *v1alpha1.SubscriberSpec, reply *v1alpha1.ReplyStrategy) *v1alpha1.Subscription {
 	return &v1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
@@ -154,10 +161,12 @@ type TypeAndSource struct {
 const (
 	CloudEventEncodingBinary     = "binary"
 	CloudEventEncodingStructured = "structured"
+	CloudEventDefaultEncoding    = CloudEventEncodingBinary
+	CloudEventDefaultType        = "dev.knative.test.event"
 )
 
 // EventSenderPod creates a Pod that sends a single event to the given address.
-func EventSenderPod(name string, namespace string, sink string, event CloudEvent) *corev1.Pod {
+func EventSenderPod(name string, namespace string, sink string, event *CloudEvent) *corev1.Pod {
 	if event.Encoding == "" {
 		event.Encoding = CloudEventEncodingBinary
 	}
@@ -208,6 +217,30 @@ func EventLoggerPod(name string, namespace string, selector map[string]string) *
 				Name:            "logevents",
 				Image:           pkgTest.ImagePath("logevents"),
 				ImagePullPolicy: corev1.PullAlways, // TODO: this might not be wanted for local.
+			}},
+			RestartPolicy: corev1.RestartPolicyAlways,
+		},
+	}
+}
+
+// EventTransformationPod creates a Pod that transforms events received.
+func EventTransformationPod(name string, namespace string, selector map[string]string, msgPostfix string) *corev1.Pod {
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        name,
+			Namespace:   namespace,
+			Labels:      selector,
+			Annotations: map[string]string{"sidecar.istio.io/inject": "true"},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name:            "transformevents",
+				Image:           pkgTest.ImagePath("transformevents"),
+				ImagePullPolicy: corev1.PullAlways, // TODO: this might not be wanted for local.
+				Args: []string{
+					"-msg-postfix",
+					msgPostfix,
+				},
 			}},
 			RestartPolicy: corev1.RestartPolicyAlways,
 		},
