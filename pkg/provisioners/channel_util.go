@@ -73,9 +73,8 @@ func CreateK8sService(ctx context.Context, client runtimeClient.Client, c *event
 func getK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
 	list := &corev1.ServiceList{}
 	opts := &runtimeClient.ListOptions{
-		Namespace: c.Namespace,
-		// TODO After the full release start selecting on new set of labels by using k8sServiceLabels(c)
-		LabelSelector: labels.SelectorFromSet(k8sOldServiceLabels(c)),
+		Namespace:     c.Namespace,
+		LabelSelector: labels.SelectorFromSet(k8sServiceLabels(c)),
 		// Set Raw because if we need to get more than one page, then we will put the continue token
 		// into opts.Raw.Continue.
 		Raw: &metav1.ListOptions{},
