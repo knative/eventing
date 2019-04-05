@@ -48,7 +48,7 @@ func (cs *ChannelSpec) Validate(ctx context.Context) *apis.FieldError {
 	return errs
 }
 
-func (current *Channel) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
+func (c *Channel) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
 	if og == nil {
 		return nil
 	}
@@ -57,7 +57,7 @@ func (current *Channel) CheckImmutableFields(ctx context.Context, og apis.Immuta
 		return &apis.FieldError{Message: "The provided resource was not a Channel"}
 	}
 	ignoreArguments := cmpopts.IgnoreFields(ChannelSpec{}, "Arguments", "Subscribable")
-	if diff := cmp.Diff(original.Spec, current.Spec, ignoreArguments); diff != "" {
+	if diff := cmp.Diff(original.Spec, c.Spec, ignoreArguments); diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed",
 			Paths:   []string{"spec.provisioner"},

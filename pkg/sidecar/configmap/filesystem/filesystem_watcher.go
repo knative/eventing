@@ -34,7 +34,7 @@ const (
 
 // Monitors an attached ConfigMap volume for updated configuration and calls `configUpdated` when
 // the value changes.
-type configMapWatcher struct {
+type ConfigMapWatcher struct {
 	logger *zap.Logger
 	// The directory to read the configMap from.
 	dir string
@@ -45,9 +45,9 @@ type configMapWatcher struct {
 	configUpdated swappable.UpdateConfig
 }
 
-// NewConfigMapWatcher creates a new filesystem.configMapWatcher. The caller is responsible for
+// NewConfigMapWatcher creates a new filesystem.ConfigMapWatcher. The caller is responsible for
 // calling Start(<-chan), likely via a controller-runtime Manager.
-func NewConfigMapWatcher(logger *zap.Logger, dir string, updateConfig swappable.UpdateConfig) (*configMapWatcher, error) {
+func NewConfigMapWatcher(logger *zap.Logger, dir string, updateConfig swappable.UpdateConfig) (*ConfigMapWatcher, error) {
 	conf, err := readConfigMap(logger, dir)
 	if err != nil {
 		logger.Error("Unable to read configMap", zap.Error(err))
@@ -62,7 +62,7 @@ func NewConfigMapWatcher(logger *zap.Logger, dir string, updateConfig swappable.
 		return nil, err
 	}
 
-	cmw := &configMapWatcher{
+	cmw := &ConfigMapWatcher{
 		logger:        logger,
 		dir:           dir,
 		configUpdated: updateConfig,
@@ -80,7 +80,7 @@ func readConfigMap(logger *zap.Logger, dir string) (*multichannelfanout.Config, 
 }
 
 // updateConfig reads the configMap data and calls `configUpdated` with the updated value.
-func (cmw *configMapWatcher) updateConfig() {
+func (cmw *ConfigMapWatcher) updateConfig() {
 	conf, err := readConfigMap(cmw.logger, cmw.dir)
 	if err != nil {
 		cmw.logger.Error("Unable to read the configMap", zap.Error(err))
@@ -94,7 +94,7 @@ func (cmw *configMapWatcher) updateConfig() {
 }
 
 // Start implements controller runtime's manager.Runnable.
-func (cmw *configMapWatcher) Start(stopCh <-chan struct{}) error {
+func (cmw *ConfigMapWatcher) Start(stopCh <-chan struct{}) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return err
