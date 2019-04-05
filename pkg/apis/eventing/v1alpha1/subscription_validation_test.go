@@ -509,7 +509,8 @@ func TestValidChannel(t *testing.T) {
 }
 
 func TestValidgetValidSubscriber(t *testing.T) {
-	dnsName := "example.com"
+	uri := "http://example.com"
+	empty := ""
 	tests := []struct {
 		name string
 		s    SubscriberSpec
@@ -521,7 +522,7 @@ func TestValidgetValidSubscriber(t *testing.T) {
 	}, {
 		name: "valid dnsName",
 		s: SubscriberSpec{
-			DNSName: &dnsName,
+			DeprecatedDNSName: &uri,
 		},
 		want: nil,
 	}, {
@@ -532,10 +533,66 @@ func TestValidgetValidSubscriber(t *testing.T) {
 				APIVersion: channelAPIVersion,
 				Kind:       channelKind,
 			},
-			DNSName: &dnsName,
+			DeprecatedDNSName: &uri,
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMultipleOneOf("ref", "dnsName")
+			return fe
+		}(),
+	}, {
+		name: "valid uri",
+		s: SubscriberSpec{
+			URI: &uri,
+		},
+		want: nil,
+	}, {
+		name: "both ref and uri given",
+		s: SubscriberSpec{
+			Ref: &corev1.ObjectReference{
+				Name:       channelName,
+				APIVersion: channelAPIVersion,
+				Kind:       channelKind,
+			},
+			URI: &uri,
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMultipleOneOf("ref", "uri")
+			return fe
+		}(),
+	}, {
+		name: "both dnsName and uri given",
+		s: SubscriberSpec{
+			DeprecatedDNSName: &uri,
+			URI:               &uri,
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMultipleOneOf("dnsName", "uri")
+			return fe
+		}(),
+	}, {
+		name: "ref, dnsName, and uri given",
+		s: SubscriberSpec{
+			Ref: &corev1.ObjectReference{
+				Name:       channelName,
+				APIVersion: channelAPIVersion,
+				Kind:       channelKind,
+			},
+			DeprecatedDNSName: &uri,
+			URI:               &uri,
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMultipleOneOf("ref", "dnsName", "uri")
+			return fe
+		}(),
+	}, {
+		name: "empty ref, dnsName, and uri given",
+		s: SubscriberSpec{
+			Ref:               &corev1.ObjectReference{},
+			DeprecatedDNSName: &empty,
+			URI:               &empty,
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingOneOf("ref", "dnsName", "uri")
 			return fe
 		}(),
 	}, {

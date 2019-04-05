@@ -37,6 +37,7 @@ func NewBlockingStart(logger *zap.Logger, runnable manager.Runnable) manager.Run
 	}
 }
 
+// Start implements manager.Runnable.
 func (b *blockingStart) Start(stopCh <-chan struct{}) error {
 	err := b.r.Start(stopCh)
 	b.logger.Debug("blockingStart finished", zap.Error(err))

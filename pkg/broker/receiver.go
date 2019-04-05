@@ -34,8 +34,6 @@ import (
 )
 
 const (
-	defaultPort = 8080
-
 	writeTimeout = 1 * time.Minute
 )
 
@@ -44,17 +42,12 @@ type Receiver struct {
 	logger   *zap.Logger
 	client   client.Client
 	ceClient ceclient.Client
-	ceHTTP   *cehttp.Transport
 }
 
 // New creates a new Receiver and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned MessageReceiver.
 func New(logger *zap.Logger, client client.Client) (*Receiver, error) {
-	ceHTTP, err := cehttp.New(cehttp.WithBinaryEncoding(), cehttp.WithPort(defaultPort))
-	if err != nil {
-		return nil, err
-	}
-	ceClient, err := ceclient.New(ceHTTP)
+	ceClient, err := ceclient.NewDefault()
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +56,6 @@ func New(logger *zap.Logger, client client.Client) (*Receiver, error) {
 		logger:   logger,
 		client:   client,
 		ceClient: ceClient,
-		ceHTTP:   ceHTTP,
 	}
 	err = r.initClient()
 	if err != nil {
@@ -139,6 +131,21 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 		return errors.New("unable to parse host as a Trigger")
 	}
 
+	// Remove the TTL attribute that is used by the Broker.
+	originalV2 := event.Context.AsV02()
+	ttl, present := originalV2.Extensions[V02TTLAttribute]
+	if !present {
+		// Only messages sent by the Broker should be here. If the attribute isn't here, then the
+		// event wasn't sent by the Broker, so we can drop it.
+		r.logger.Warn("No TTL seen, dropping", zap.Any("triggerRef", triggerRef), zap.Any("event", event))
+		// This doesn't return an error because normally this function is called by a Channel, which
+		// will retry all non-2XX responses. If we return an error from this function, then the
+		// framework returns a 500 to the caller, so the Channel would send this repeatedly.
+		return nil
+	}
+	delete(originalV2.Extensions, V02TTLAttribute)
+	event.Context = originalV2
+
 	r.logger.Debug("Received message", zap.Any("triggerRef", triggerRef))
 
 	responseEvent, err := r.sendEvent(ctx, tctx, triggerRef, &event)
@@ -146,7 +153,14 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 		r.logger.Error("Error sending the event", zap.Error(err))
 		return err
 	}
+
 	resp.Status = http.StatusAccepted
+	if responseEvent == nil {
+		return nil
+	}
+
+	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
+	responseEvent.Context = SetTTL(responseEvent.Context, ttl)
 	resp.Event = responseEvent
 	resp.Context = &cehttp.TransportResponseContext{
 		Header: extractPassThroughHeaders(tctx),
@@ -182,7 +196,7 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cehttp.TransportContext, 
 	}
 
 	sendingCTX := SendingContext(ctx, tctx, subscriberURI)
-	return r.ceHTTP.Send(sendingCTX, *event)
+	return r.ceClient.Send(sendingCTX, *event)
 }
 
 func (r *Receiver) getTrigger(ctx context.Context, ref provisioners.ChannelReference) (*eventingv1alpha1.Trigger, error) {

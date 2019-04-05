@@ -58,7 +58,7 @@
   version = "v2.1.15"
 
 [[projects]]
-  digest = "1:c2c20421e99f030dcaac6f1dcab53748dd962c3d506ca9b0270309a240bfcad3"
+  digest = "1:f616892b62757b2dcd70957602981d4f05c4d75017138cea02b3845d07c18785"
   name = "github.com/cloudevents/sdk-go"
   packages = [
     "pkg/cloudevents",
@@ -74,8 +74,8 @@
     "pkg/cloudevents/types",
   ]
   pruneopts = "NUT"
-  revision = "c60ffccfa25c10921825458ce13edcae0ddf62d1"
-  version = "0.4.3"
+  revision = "e00e75c8a1befe895cc00def1f88adb611195159"
+  version = "0.4.4"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -370,7 +370,7 @@
   revision = "dd3ceb3323922b899a0a913f885fcf59943e7b59"
 
 [[projects]]
-  digest = "1:a5df88e05f523f7b7a16b4a9c44508c91605be6fa647dab8a9674022ad5fca1c"
+  digest = "1:ab1dff3201645efb588a924b42a280aaec55c4776d1cd766ffef107d5731eaa0"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -389,6 +389,7 @@
     "system",
     "system/testing",
     "test",
+    "test/ingress",
     "test/logging",
     "test/monitoring",
     "test/spoof",
@@ -396,7 +397,7 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "60fdcbcabd2faeb34328d8b2725dc76c59189453"
+  revision = "1d9d8f8871250649adab16e3369e1a09e5595b04"
 
 [[projects]]
   digest = "1:edcf99e561b63d758646ca9d9dee0f6c81c3eed617af1120645c9d5c0d80d8c7"
@@ -419,14 +420,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:a42211df7de241a39375cdd305887fc4415599bc684377eb2f35504d9bd093ee"
+  digest = "1:921c8888ac7bf7240bc5473d029201b3eb19f9592c7647c4c29f96b6c901b1bb"
   name = "github.com/knative/test-infra"
   packages = [
     "scripts",
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "c98ed95c2f812eb932a434752c715bdff6e0da1f"
+  revision = "4ce16d390c55c71290f3b285bdfe37a1c5490304"
 
 [[projects]]
   digest = "1:56dbf15e091bf7926cb33a57cb6bdfc658fc6d3498d2f76f10a97ce7856f1fde"
@@ -1189,7 +1190,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:75bc1fa71433a3ccb40c20f960ee2dbea05f9f10dbb0d91d3cb53a4ec6a709b7"
+  digest = "1:39912eb5f8eaf46486faae0839586c27c93423e552f76875defa048f52c15c15"
   name = "k8s.io/gengo"
   packages = [
     "args",
@@ -1202,7 +1203,15 @@
     "types",
   ]
   pruneopts = "NUT"
-  revision = "2e1a79edcaecf0bfbde129a1fd55624b66adb699"
+  revision = "e17681d19d3ac4837a019ece36c2a0ec31ffe985"
+
+[[projects]]
+  digest = "1:c263611800c3a97991dbcf9d3bc4de390f6224aaa8ca0a7226a9d734f65a416a"
+  name = "k8s.io/klog"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "71442cd4037d612096940ceb0f3fec3f7fff66e0"
+  version = "v0.2.0"
 
 [[projects]]
   branch = "master"
@@ -1264,6 +1273,7 @@
     "github.com/fsnotify/fsnotify",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
+    "github.com/google/uuid",
     "github.com/knative/build/pkg/apis/build/v1alpha1",
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",

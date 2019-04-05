@@ -77,7 +77,7 @@ func (r *MessageReceiver) start() *http.Server {
 	}
 	go func() {
 		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-			r.logger.Errorf("HttpServer: ListenAndServe() error: %v", err)
+			r.logger.Errorf("HTTPServer: ListenAndServe() error: %v", err)
 		}
 	}()
 	return srv

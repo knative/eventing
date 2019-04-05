@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/resources"
+
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler/names"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
@@ -309,7 +311,7 @@ func TestReconcile(t *testing.T) {
 				makeTrigger(),
 				makeBroker(),
 				makeTriggerChannel(),
-				makeK8sService(),
+				makeService(),
 			},
 			Objects: []runtime.Object{
 				makeSubscriberServiceAsUnstructured(),
@@ -334,7 +336,7 @@ func TestReconcile(t *testing.T) {
 				makeTrigger(),
 				makeBroker(),
 				makeTriggerChannel(),
-				makeK8sService(),
+				makeService(),
 				makeDifferentVirtualService(),
 			},
 			Objects: []runtime.Object{
@@ -360,7 +362,7 @@ func TestReconcile(t *testing.T) {
 				makeTrigger(),
 				makeBroker(),
 				makeTriggerChannel(),
-				makeK8sService(),
+				makeService(),
 				makeVirtualService(),
 			},
 			Objects: []runtime.Object{
@@ -386,7 +388,7 @@ func TestReconcile(t *testing.T) {
 				makeTrigger(),
 				makeBroker(),
 				makeTriggerChannel(),
-				makeK8sService(),
+				makeService(),
 				makeVirtualService(),
 				makeDifferentSubscription(),
 			},
@@ -413,7 +415,7 @@ func TestReconcile(t *testing.T) {
 				makeTrigger(),
 				makeBroker(),
 				makeTriggerChannel(),
-				makeK8sService(),
+				makeService(),
 				makeVirtualService(),
 				makeDifferentSubscription(),
 			},
@@ -440,7 +442,7 @@ func TestReconcile(t *testing.T) {
 				makeTrigger(),
 				makeBroker(),
 				makeTriggerChannel(),
-				makeK8sService(),
+				makeService(),
 				makeVirtualService(),
 				makeSameSubscription(),
 			},
@@ -467,7 +469,7 @@ func TestReconcile(t *testing.T) {
 				makeTrigger(),
 				makeBroker(),
 				makeTriggerChannel(),
-				makeK8sService(),
+				makeService(),
 				makeVirtualService(),
 				makeSameSubscription(),
 			},
@@ -614,23 +616,21 @@ func makeSubscriberServiceAsUnstructured() *unstructured.Unstructured {
 	}
 }
 
-func makeK8sService() *corev1.Service {
-	return newK8sService(makeTrigger())
+func makeService() *corev1.Service {
+	return resources.NewService(makeTrigger())
 }
 
 func makeDifferentK8sService() *corev1.Service {
-	svc := makeK8sService()
-	svc.Spec.Ports = []corev1.ServicePort{
-		{
-			Name: "http",
-			Port: 9999,
-		},
-	}
+	svc := makeService()
+	svc.Spec.Ports = []corev1.ServicePort{{
+		Name: "http",
+		Port: 9999,
+	}}
 	return svc
 }
 
 func makeVirtualService() *istiov1alpha3.VirtualService {
-	return newVirtualService(makeTrigger(), makeK8sService())
+	return resources.NewVirtualService(makeTrigger(), makeService())
 }
 
 func makeDifferentVirtualService() *istiov1alpha3.VirtualService {
@@ -642,11 +642,11 @@ func makeDifferentVirtualService() *istiov1alpha3.VirtualService {
 }
 
 func makeSameSubscription() *v1alpha1.Subscription {
-	return makeSubscription(makeTrigger(), makeTriggerChannel(), makeTriggerChannel(), makeK8sService())
+	return resources.NewSubscription(makeTrigger(), makeTriggerChannel(), makeTriggerChannel(), makeService())
 }
 
 func makeDifferentSubscription() *v1alpha1.Subscription {
-	return makeSubscription(makeTrigger(), makeTriggerChannel(), makeDifferentChannel(), makeK8sService())
+	return resources.NewSubscription(makeTrigger(), makeTriggerChannel(), makeDifferentChannel(), makeService())
 }
 
 func getOwnerReference() metav1.OwnerReference {

@@ -28,13 +28,13 @@ import (
 )
 
 const (
-	// The mount path of the configMap volume.
+	// ConfigDir is the mount path of the configMap volume.
 	ConfigDir = "/etc/config/fanout_sidecar"
 )
 
 // Monitors an attached ConfigMap volume for updated configuration and calls `configUpdated` when
 // the value changes.
-type configMapWatcher struct {
+type ConfigMapWatcher struct {
 	logger *zap.Logger
 	// The directory to read the configMap from.
 	dir string
@@ -45,9 +45,9 @@ type configMapWatcher struct {
 	configUpdated swappable.UpdateConfig
 }
 
-// NewConfigMapWatcher creates a new filesystem.configMapWatcher. The caller is responsible for
+// NewConfigMapWatcher creates a new filesystem.ConfigMapWatcher. The caller is responsible for
 // calling Start(<-chan), likely via a controller-runtime Manager.
-func NewConfigMapWatcher(logger *zap.Logger, dir string, updateConfig swappable.UpdateConfig) (*configMapWatcher, error) {
+func NewConfigMapWatcher(logger *zap.Logger, dir string, updateConfig swappable.UpdateConfig) (*ConfigMapWatcher, error) {
 	conf, err := readConfigMap(logger, dir)
 	if err != nil {
 		logger.Error("Unable to read configMap", zap.Error(err))
@@ -62,7 +62,7 @@ func NewConfigMapWatcher(logger *zap.Logger, dir string, updateConfig swappable.
 		return nil, err
 	}
 
-	cmw := &configMapWatcher{
+	cmw := &ConfigMapWatcher{
 		logger:        logger,
 		dir:           dir,
 		configUpdated: updateConfig,
@@ -80,7 +80,7 @@ func readConfigMap(logger *zap.Logger, dir string) (*multichannelfanout.Config, 
 }
 
 // updateConfig reads the configMap data and calls `configUpdated` with the updated value.
-func (cmw *configMapWatcher) updateConfig() {
+func (cmw *ConfigMapWatcher) updateConfig() {
 	conf, err := readConfigMap(cmw.logger, cmw.dir)
 	if err != nil {
 		cmw.logger.Error("Unable to read the configMap", zap.Error(err))
@@ -93,7 +93,8 @@ func (cmw *configMapWatcher) updateConfig() {
 	}
 }
 
-func (cmw *configMapWatcher) Start(stopCh <-chan struct{}) error {
+// Start implements controller runtime's manager.Runnable.
+func (cmw *ConfigMapWatcher) Start(stopCh <-chan struct{}) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return err
@@ -112,12 +113,12 @@ func (cmw *configMapWatcher) Start(stopCh <-chan struct{}) error {
 				return errors.New("watcher.Events channel closed")
 			}
 			cmw.updateConfig()
-		case err, ok := <-watcher.Errors:
+		case e, ok := <-watcher.Errors:
 			if !ok {
 				// Channel closed.
 				return errors.New("watcher.Errors channel closed")
 			}
-			cmw.logger.Error("watcher.Errors", zap.Error(err))
+			cmw.logger.Error("watcher.Errors", zap.Error(e))
 		case <-stopCh:
 			return watcher.Close()
 		}

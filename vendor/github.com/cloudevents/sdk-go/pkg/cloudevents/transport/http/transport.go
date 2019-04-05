@@ -163,9 +163,11 @@ func (t *Transport) obsSend(ctx context.Context, event cloudevents.Event) (*clou
 
 	if m, ok := msg.(*Message); ok {
 		copyHeaders(m.Header, req.Header)
+
 		req.Body = ioutil.NopCloser(bytes.NewBuffer(m.Body))
 		req.ContentLength = int64(len(m.Body))
 		req.Close = true
+
 		return httpDo(ctx, t.Client, &req, func(resp *http.Response, err error) (*cloudevents.Event, error) {
 			if err != nil {
 				return nil, err

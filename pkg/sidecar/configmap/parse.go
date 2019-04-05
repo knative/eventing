@@ -30,7 +30,7 @@ const (
 	MultiChannelFanoutConfigKey = "multiChannelFanoutConfig"
 )
 
-// ConfigMapData attempts to parse the config map's data into a multichannelfanout.Config.
+// NewFanoutConfig attempts to parse the config map's data into a multichannelfanout.Config.
 // orig == NewFanoutConfig(SerializeConfig(orig))
 func NewFanoutConfig(logger *zap.Logger, data map[string]string) (*multichannelfanout.Config, error) {
 	str, present := data[MultiChannelFanoutConfigKey]

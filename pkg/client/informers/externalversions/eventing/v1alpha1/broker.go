@@ -21,7 +21,7 @@ package v1alpha1
 import (
 	time "time"
 
-	eventing_v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	versioned "github.com/knative/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/knative/eventing/pkg/client/informers/externalversions/internalinterfaces"
 	v1alpha1 "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -70,7 +70,7 @@ func NewFilteredBrokerInformer(client versioned.Interface, namespace string, res
 				return client.EventingV1alpha1().Brokers(namespace).Watch(options)
 			},
 		},
-		&eventing_v1alpha1.Broker{},
+		&eventingv1alpha1.Broker{},
 		resyncPeriod,
 		indexers,
 	)
@@ -81,7 +81,7 @@ func (f *brokerInformer) defaultInformer(client versioned.Interface, resyncPerio
 }
 
 func (f *brokerInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&eventing_v1alpha1.Broker{}, f.defaultInformer)
+	return f.factory.InformerFor(&eventingv1alpha1.Broker{}, f.defaultInformer)
 }
 
 func (f *brokerInformer) Lister() v1alpha1.BrokerLister {

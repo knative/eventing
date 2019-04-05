@@ -29,7 +29,7 @@ spec:
         sidecar.istio.io/inject: "false"
       labels: *labels
     spec:
-      serviceAccountName: eventing-controller
+      serviceAccountName: eventing-webhook
       containers:
       - name: webhook
         terminationMessagePolicy: FallbackToLogsOnError

@@ -1063,7 +1063,7 @@ func makeDifferentSubscription() *v1alpha1.Subscription {
 	s := makeTestSubscription()
 	s.Spec.Subscriber.Ref = nil
 	url := "http://example.com/"
-	s.Spec.Subscriber.DNSName = &url
+	s.Spec.Subscriber.URI = &url
 	return s
 }
 

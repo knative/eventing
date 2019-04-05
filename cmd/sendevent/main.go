@@ -25,6 +25,8 @@ import (
 	"log"
 	"os"
 
+	"github.com/knative/eventing/pkg/utils"
+
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
@@ -61,6 +63,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	if source == "" {
+		source = fmt.Sprintf("http://%s", utils.GetClusterDomainName())
+	}
+
 	t, err := http.New(
 		http.WithTarget(target),
 		http.WithBinaryEncoding(),
@@ -71,6 +77,7 @@ func main() {
 	}
 	c, err := client.New(t,
 		client.WithTimeNow(),
+		client.WithUUIDs(),
 	)
 	if err != nil {
 		log.Printf("failed to create client, %v", err)
