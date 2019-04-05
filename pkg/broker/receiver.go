@@ -19,8 +19,10 @@ package broker
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
@@ -120,15 +122,10 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 	}
 
 	// tctx.URI is actually the path...
-	if tctx.URI != "/" {
-		resp.Status = http.StatusNotFound
-		return nil
-	}
-
-	triggerRef, err := provisioners.ParseChannel(tctx.Host)
+	triggerRef, err := parsePath(tctx.URI)
 	if err != nil {
-		r.logger.Error("Unable to parse host as a trigger", zap.Error(err), zap.String("host", tctx.Host))
-		return errors.New("unable to parse host as a Trigger")
+		r.logger.Info("Unable to parse path as a trigger", zap.Error(err), zap.String("path", tctx.URI))
+		return errors.New("unable to parse path as a Trigger")
 	}
 
 	// Remove the TTL attribute that is used by the Broker.
@@ -167,6 +164,24 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 	}
 
 	return nil
+}
+
+func parsePath(path string) (provisioners.ChannelReference, error) {
+	prefix := "triggers"
+	parts := strings.Split(path, "/")
+	if len(parts) != 4 {
+		return provisioners.ChannelReference{}, fmt.Errorf("incorrect number of parts in the path, expected 4, actual '%s'", path)
+	}
+	if parts[0] != "" {
+		return provisioners.ChannelReference{}, fmt.Errorf("text before the first slash, actual '%s'", path)
+	}
+	if parts[1] != prefix {
+		return provisioners.ChannelReference{}, fmt.Errorf("incorrect prefix, expected '%s', actual '%s'", prefix, path)
+	}
+	return provisioners.ChannelReference{
+		Namespace: parts[2],
+		Name:      parts[3],
+	}, nil
 }
 
 // sendEvent sends an event to a subscriber if the trigger filter passes.

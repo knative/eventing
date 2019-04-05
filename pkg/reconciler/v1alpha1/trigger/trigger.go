@@ -18,6 +18,12 @@ package trigger
 
 import (
 	"context"
+	"fmt"
+	"net/url"
+
+	brokerresources "github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
+
+	"github.com/knative/eventing/pkg/reconciler/names"
 
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/resources"
 
@@ -211,9 +217,7 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 
 	// 1. Verify the Broker exists.
 	// 2. Find the Subscriber's URI.
-	// 2. Creates a K8s Service uniquely named for this Trigger.
-	// 3. Creates a VirtualService that routes the K8s Service to the Broker's filter service on an identifiable host name.
-	// 4. Creates a Subscription from the Broker's single Channel to this Trigger's K8s Service, with reply set to the Broker.
+	// 3. Creates a Subscription from the Broker's single Channel to this Trigger's K8s Service, with reply set to the Broker.
 
 	if t.DeletionTimestamp != nil {
 		// Everything is cleaned up by the garbage collector.
@@ -238,6 +242,12 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		logging.FromContext(ctx).Error("Unable to get the Broker's Ingress Channel", zap.Error(err))
 		return err
 	}
+	// Get Broker filter service.
+	filterSvc, err := r.getBrokerFilterService(ctx, b)
+	if err != nil {
+		logging.FromContext(ctx).Error("Unable to get the Broker's filter Service", zap.Error(err))
+		return err
+	}
 
 	subscriberURI, err := resolve.SubscriberSpec(ctx, r.dynamicClient, t.Namespace, t.Spec.Subscriber)
 	if err != nil {
@@ -246,21 +256,7 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	}
 	t.Status.SubscriberURI = subscriberURI
 
-	svc, err := r.reconcileK8sService(ctx, t)
-	if err != nil {
-		logging.FromContext(ctx).Error("Unable to reconcile the K8s Service", zap.Error(err))
-		return err
-	}
-	t.Status.MarkKubernetesServiceExists()
-
-	_, err = r.reconcileVirtualService(ctx, t, svc)
-	if err != nil {
-		logging.FromContext(ctx).Error("Unable to reconcile the VirtualService", zap.Error(err))
-		return err
-	}
-	t.Status.MarkVirtualServiceExists()
-
-	_, err = r.subscribeToBrokerChannel(ctx, t, brokerTrigger, brokerIngress, svc)
+	_, err = r.subscribeToBrokerChannel(ctx, t, brokerTrigger, brokerIngress, filterSvc)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to Subscribe", zap.Error(err))
 		t.Status.MarkNotSubscribed("notSubscribed", "%v", err)
@@ -360,11 +356,11 @@ func (r *reconciler) getChannel(ctx context.Context, b *v1alpha1.Broker, ls labe
 
 // getService returns the K8s service for trigger 't' if exists,
 // otherwise it returns an error.
-func (r *reconciler) getService(ctx context.Context, t *v1alpha1.Trigger) (*corev1.Service, error) {
+func (r *reconciler) getBrokerFilterService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
 	list := &corev1.ServiceList{}
 	opts := &runtimeclient.ListOptions{
-		Namespace:     t.Namespace,
-		LabelSelector: labels.SelectorFromSet(resources.ServiceLabels(t)),
+		Namespace:     b.Namespace,
+		LabelSelector: labels.SelectorFromSet(brokerresources.FilterLabels(b)),
 		// Set Raw because if we need to get more than one page, then we will put the continue token
 		// into opts.Raw.Continue.
 		Raw: &metav1.ListOptions{},
@@ -375,7 +371,7 @@ func (r *reconciler) getService(ctx context.Context, t *v1alpha1.Trigger) (*core
 		return nil, err
 	}
 	for _, svc := range list.Items {
-		if metav1.IsControlledBy(&svc, t) {
+		if metav1.IsControlledBy(&svc, b) {
 			return &svc, nil
 		}
 	}
@@ -383,91 +379,14 @@ func (r *reconciler) getService(ctx context.Context, t *v1alpha1.Trigger) (*core
 	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
 }
 
-// reconcileK8sService reconciles the K8s service for trigger 't'.
-func (r *reconciler) reconcileK8sService(ctx context.Context, t *v1alpha1.Trigger) (*corev1.Service, error) {
-	current, err := r.getService(ctx, t)
-
-	// If the resource doesn't exist, we'll create it
-	if k8serrors.IsNotFound(err) {
-		svc := resources.NewService(t)
-		err = r.client.Create(ctx, svc)
-		if err != nil {
-			return nil, err
-		}
-		return svc, nil
-	} else if err != nil {
-		return nil, err
-	}
-
-	expected := resources.NewService(t)
-	// spec.clusterIP is immutable and is set on existing services. If we don't set this to the same value, we will
-	// encounter an error while updating.
-	expected.Spec.ClusterIP = current.Spec.ClusterIP
-	if !equality.Semantic.DeepDerivative(expected.Spec, current.Spec) {
-		current.Spec = expected.Spec
-		err = r.client.Update(ctx, current)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return current, nil
-}
-
-// getVirtualService returns the virtual service for trigger 't' if exists,
-// otherwise it returns an error.
-func (r *reconciler) getVirtualService(ctx context.Context, t *v1alpha1.Trigger) (*istiov1alpha3.VirtualService, error) {
-	list := &istiov1alpha3.VirtualServiceList{}
-	opts := &runtimeclient.ListOptions{
-		Namespace:     t.Namespace,
-		LabelSelector: labels.SelectorFromSet(resources.VirtualServiceLabels(t)),
-		// Set Raw because if we need to get more than one page, then we will put the continue token
-		// into opts.Raw.Continue.
-		Raw: &metav1.ListOptions{},
-	}
-
-	err := r.client.List(ctx, opts, list)
-	if err != nil {
-		return nil, err
-	}
-	for _, vs := range list.Items {
-		if metav1.IsControlledBy(&vs, t) {
-			return &vs, nil
-		}
-	}
-
-	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
-}
-
-// reconcileVirtualService reconciles the virtual service for trigger 't' and service 'svc'.
-func (r *reconciler) reconcileVirtualService(ctx context.Context, t *v1alpha1.Trigger, svc *corev1.Service) (*istiov1alpha3.VirtualService, error) {
-	virtualService, err := r.getVirtualService(ctx, t)
-
-	// If the resource doesn't exist, we'll create it
-	if k8serrors.IsNotFound(err) {
-		virtualService = resources.NewVirtualService(t, svc)
-		err = r.client.Create(ctx, virtualService)
-		if err != nil {
-			return nil, err
-		}
-		return virtualService, nil
-	} else if err != nil {
-		return nil, err
-	}
-
-	expected := resources.NewVirtualService(t, svc)
-	if !equality.Semantic.DeepDerivative(expected.Spec, virtualService.Spec) {
-		virtualService.Spec = expected.Spec
-		err = r.client.Update(ctx, virtualService)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return virtualService, nil
-}
-
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
 func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.Trigger, brokerTrigger, brokerIngress *v1alpha1.Channel, svc *corev1.Service) (*v1alpha1.Subscription, error) {
-	expected := resources.NewSubscription(t, brokerTrigger, brokerIngress, svc)
+	uri := &url.URL{
+		Scheme: "http",
+		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
+		Path:   GeneratePath(t),
+	}
+	expected := resources.NewSubscription(t, brokerTrigger, brokerIngress, uri)
 
 	sub, err := r.getSubscription(ctx, t)
 	// If the resource doesn't exist, we'll create it
@@ -502,6 +421,10 @@ func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.T
 		}
 	}
 	return sub, nil
+}
+
+func GeneratePath(t *v1alpha1.Trigger) string {
+	return fmt.Sprintf("/triggers/%s/%s", t.Namespace, t.Name)
 }
 
 // getSubscription returns the subscription of trigger 't' if exists,
