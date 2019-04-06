@@ -24,6 +24,7 @@ package swappable
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -102,6 +103,9 @@ func (h *Handler) UpdateConfig(config *multichannelfanout.Config) error {
 
 // ServeHTTP delegates all HTTP requests to the current multichannelfanout.Handler.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// TODO: delete this debugging code
+	fmt.Sprintf("Request: %+v", r)
+
 	// Hand work off to the current multi channel fanout handler.
 	h.logger.Debug("ServeHTTP request received")
 	h.getMultiChannelFanoutHandler().ServeHTTP(w, r)

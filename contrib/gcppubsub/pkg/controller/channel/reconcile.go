@@ -121,9 +121,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 	logging.FromContext(ctx).Info("Reconciling Channel")
 
-	// Modify a copy, not the original.
-	c = c.DeepCopy()
-
 	ctx = logging.WithLogger(ctx, logging.FromContext(ctx).With(zap.Any("channel", c)))
 	requeue, reconcileErr := r.reconcile(ctx, c)
 	if reconcileErr != nil {
@@ -163,9 +160,8 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 	// We are syncing four things:
 	// 1. The K8s Service to talk to this Channel.
-	// 2. The Istio VirtualService to talk to this Channel.
-	// 3. The GCP PubSub Topic (one for the Channel).
-	// 4. The GCP PubSub Subscriptions (one for each Subscriber of the Channel).
+	// 2. The GCP PubSub Topic (one for the Channel).
+	// 3. The GCP PubSub Subscriptions (one for each Subscriber of the Channel).
 
 	// First we will plan all the names out for steps 3 and 4 persist them to status.internal. Then, on a
 	// subsequent reconcile, we manipulate all the GCP resources in steps 3 and 4.
@@ -234,12 +230,6 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	svc, err := r.createK8sService(ctx, c)
 	if err != nil {
 		r.recorder.Eventf(c, v1.EventTypeWarning, k8sServiceCreateFailed, "Failed to reconcile Channel's K8s Service: %v", err)
-		return false, err
-	}
-
-	err = r.createVirtualService(ctx, c, svc)
-	if err != nil {
-		r.recorder.Eventf(c, v1.EventTypeWarning, virtualServiceCreateFailed, "Failed to reconcile Virtual Service for the Channel: %v", err)
 		return false, err
 	}
 

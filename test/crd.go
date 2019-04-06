@@ -164,9 +164,8 @@ func EventSenderPod(name string, namespace string, sink string, event CloudEvent
 
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Namespace:   namespace,
-			Annotations: map[string]string{"sidecar.istio.io/inject": "true"},
+			Name:      name,
+			Namespace: namespace,
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{

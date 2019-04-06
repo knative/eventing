@@ -248,6 +248,8 @@ func UpdateChannel(ctx context.Context, client runtimeClient.Client, u *eventing
 // OwnerReferences on the resource so handleObject can discover the Channel resource that 'owns' it.
 // As well as being garbage collected when the Channel is deleted.
 func newK8sService(c *eventingv1alpha1.Channel) *corev1.Service {
+	// TODO: Need to check if generated name truncates the channel name in case channel name is tool long
+	// Add annotations
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: channelServiceName(c.ObjectMeta.Name),
@@ -262,12 +264,8 @@ func newK8sService(c *eventingv1alpha1.Channel) *corev1.Service {
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name: PortName,
-					Port: PortNumber,
-				},
-			},
+			Type:         "ExternalName",
+			ExternalName: names.ServiceHostName(channelDispatcherServiceName(c.Spec.Provisioner.Name), system.Namespace()),
 		},
 	}
 }

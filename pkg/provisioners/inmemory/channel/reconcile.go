@@ -21,7 +21,6 @@ import (
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
@@ -32,7 +31,6 @@ import (
 	util "github.com/knative/eventing/pkg/provisioners"
 	ccpcontroller "github.com/knative/eventing/pkg/provisioners/inmemory/clusterchannelprovisioner"
 	"github.com/knative/eventing/pkg/reconciler/names"
-	"github.com/knative/eventing/pkg/sidecar/configmap"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 )
@@ -53,8 +51,6 @@ type reconciler struct {
 	client   client.Client
 	recorder record.EventRecorder
 	logger   *zap.Logger
-
-	configMapKey client.ObjectKey
 }
 
 // Verify the struct implements reconcile.Reconciler
@@ -93,9 +89,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 	logger.Info("Reconciling Channel")
 
-	// Modify a copy, not the original.
-	c = c.DeepCopy()
-
 	err = r.reconcile(ctx, c)
 	if err != nil {
 		logger.Info("Error reconciling Channel", zap.Error(err))
@@ -130,15 +123,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 	// We are syncing three things:
 	// 1. The K8s Service to talk to this Channel.
-	// 2. The Istio VirtualService to talk to this Channel.
 	// 3. The configuration of all Channel subscriptions.
-
-	// We always need to sync the Channel config, so do it first.
-	if err := r.syncChannelConfig(ctx); err != nil {
-		logger.Info("Error syncing the Channel config", zap.Error(err))
-		r.recorder.Eventf(c, corev1.EventTypeWarning, channelConfigSyncFailed, "Failed to sync Channel config: %v", err)
-		return err
-	}
 
 	if c.DeletionTimestamp != nil {
 		// K8s garbage collection will delete the K8s service and VirtualService for this channel.
@@ -149,87 +134,22 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 	util.AddFinalizer(c, finalizerName)
 
+	// We use a single dispatcher for both in-memory and in-memory-channel provisioners.
+	//
+	originalProvisionerName := c.Spec.Provisioner.Name
+	c.Spec.Provisioner.Name = defaultProvisionerName
 	svc, err := util.CreateK8sService(ctx, r.client, c)
 	if err != nil {
 		logger.Info("Error creating the Channel's K8s Service", zap.Error(err))
 		r.recorder.Eventf(c, corev1.EventTypeWarning, k8sServiceCreateFailed, "Failed to reconcile Channel's K8s Service: %v", err)
 		return err
 	}
-	c.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
+	c.Spec.Provisioner.Name = originalProvisionerName
 
-	if c.Spec.Provisioner.Name == defaultProvisionerName {
-		_, err = util.CreateVirtualService(ctx, r.client, c, svc)
-		if err != nil {
-			logger.Info("Error creating the Virtual Service for the Channel", zap.Error(err))
-			r.recorder.Eventf(c, corev1.EventTypeWarning, virtualServiceCreateFailed, "Failed to reconcile Virtual Service for the Channel: %v", err)
-			return err
-		}
-	} else {
-		// We need to have a single dispatcher that is pointed at by _both_
-		// ClusterChannelProvisioners. So fake the channel, by saying that its provisioner is the
-		// one with the single dispatcher. The faked provisioner is used only to determine the
-		// dispatcher Service's name.
-		cCopy := c.DeepCopy()
-		cCopy.Spec.Provisioner.Name = defaultProvisionerName
-		_, err = util.CreateVirtualService(ctx, r.client, cCopy, svc)
-		if err != nil {
-			logger.Info("Error creating the Virtual Service for the Channel", zap.Error(err))
-			r.recorder.Eventf(c, corev1.EventTypeWarning, virtualServiceCreateFailed, "Failed to reconcile Virtual Service for the Channel: %v", err)
-			return err
-		}
-	}
+	c.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
 
 	c.Status.MarkProvisioned()
 	return nil
-}
-
-func (r *reconciler) syncChannelConfig(ctx context.Context) error {
-	channels, err := r.listAllChannels(ctx)
-	if err != nil {
-		r.logger.Info("Unable to list channels", zap.Error(err))
-		return err
-	}
-	config := multiChannelFanoutConfig(channels)
-	return r.writeConfigMap(ctx, config)
-}
-
-func (r *reconciler) writeConfigMap(ctx context.Context, config *multichannelfanout.Config) error {
-	logger := r.logger.With(zap.Any("configMap", r.configMapKey))
-
-	updated, err := configmap.SerializeConfig(*config)
-	if err != nil {
-		r.logger.Error("Unable to serialize config", zap.Error(err), zap.Any("config", config))
-		return err
-	}
-
-	cm := &corev1.ConfigMap{}
-	err = r.client.Get(ctx, r.configMapKey, cm)
-	if errors.IsNotFound(err) {
-		cm = r.createNewConfigMap(updated)
-		err = r.client.Create(ctx, cm)
-	}
-	if err != nil {
-		logger.Info("Unable to get/create ConfigMap", zap.Error(err))
-		return err
-	}
-
-	if equality.Semantic.DeepEqual(cm.Data, updated) {
-		// Nothing to update.
-		return nil
-	}
-
-	cm.Data = updated
-	return r.client.Update(ctx, cm)
-}
-
-func (r *reconciler) createNewConfigMap(data map[string]string) *corev1.ConfigMap {
-	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.configMapKey.Namespace,
-			Name:      r.configMapKey.Name,
-		},
-		Data: data,
-	}
 }
 
 func multiChannelFanoutConfig(channels []eventingv1alpha1.Channel) *multichannelfanout.Config {

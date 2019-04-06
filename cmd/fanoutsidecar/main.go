@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/channelwatcher"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
@@ -64,7 +65,7 @@ func (l *listFlags) Set(value string) error {
 
 func init() {
 	flag.IntVar(&port, "sidecar_port", -1, "The port to run the sidecar on.")
-	flag.Var(&channelProvisioners, "channel_provisioners", "The provisioner of the channels that will be watched.")
+	flag.Var(&channelProvisioners, "channel_provisioner", "The provisioner of the channels that will be watched.")
 }
 
 func main() {
@@ -127,18 +128,18 @@ func main() {
 }
 
 func setupChannelWatcher(logger *zap.Logger, configUpdated swappable.UpdateConfig) (manager.Manager, error) {
-	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{}) // TODO: Add scheme
+	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
 	if err != nil {
 		logger.Error("Error creating new maanger.", zap.Error(err))
 		return nil, err
 	}
 	v1alpha1.AddToScheme(mgr.GetScheme())
-	New(mgr, logger, updateChannelConfig(configUpdated))
+	channelwatcher.New(mgr, logger, updateChannelConfig(configUpdated))
 
 	return mgr, nil
 }
 
-func updateChannelConfig(updateConfig swappable.UpdateConfig) WatchHandlerFunc {
+func updateChannelConfig(updateConfig swappable.UpdateConfig) channelwatcher.WatchHandlerFunc {
 	return func(ctx context.Context, c client.Client, chanNamespacedName types.NamespacedName) error {
 		channels, err := listAllChannels(ctx, c)
 		if err != nil {
