@@ -32,18 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
-const (
-	defaultBrokerName       = "default"
-	waitForFilterPodRunning = 30 * time.Second
-	selectorKey             = "end2end-test-broker-trigger"
-
-	any          = v1alpha1.TriggerAnyFilter
-	eventType1   = "type1"
-	eventType2   = "type2"
-	eventSource1 = "source1"
-	eventSource2 = "source2"
-)
-
 // Helper struct to tie the type and sources of the events we expect to receive
 // in subscribers with the selectors we use when creating their pods.
 type eventReceiver struct {
@@ -56,27 +44,26 @@ type eventReceiver struct {
 // and sends different events to the broker's address. Finally, it verifies that only
 // the appropriate events are routed to the subscribers.
 func TestDefaultBrokerWithManyTriggers(t *testing.T) {
-	clients, cleaner := Setup(t, t.Logf)
+	t.Parallel()
 
-	// Verify namespace exists.
-	ns, cleanupNS := CreateNamespaceIfNeeded(t, clients, t.Logf)
+	const (
+		brokerName              = DefaultBrokerName
+		waitForFilterPodRunning = 30 * time.Second
+		selectorKey             = "end2end-test-broker-trigger"
 
-	defer cleanupNS()
+		any          = v1alpha1.TriggerAnyFilter
+		eventType1   = "type1"
+		eventType2   = "type2"
+		eventSource1 = "source1"
+		eventSource2 = "source2"
+	)
+
+	ns, _, clients, cleaner := Setup(t, t.Logf)
 	defer TearDown(clients, cleaner, t.Logf)
-
-	t.Logf("Labeling namespace %s", ns)
-
-	// Label namespace so that it creates the default broker.
-	err := LabelNamespace(clients, t.Logf, map[string]string{"knative-eventing-injection": "enabled"})
-	if err != nil {
-		t.Fatalf("Error annotating namespace: %v", err)
-	}
-
-	t.Logf("Namespace %s annotated", ns)
 
 	// Wait for default broker ready.
 	t.Logf("Waiting for default broker to be ready")
-	defaultBroker := test.Broker(defaultBrokerName, ns)
+	defaultBroker := test.Broker(brokerName, ns)
 	err = WaitForBrokerReady(clients, defaultBroker)
 	if err != nil {
 		t.Fatalf("Error waiting for default broker to become ready: %v", err)
@@ -142,7 +129,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			EventSource(event.typeAndSource.Source).
 			// Don't need to set the broker as we use the default one
 			// but wanted to be more explicit.
-			Broker(defaultBrokerName).
+			Broker(brokerName).
 			SubscriberSvc(subscriberName).
 			Build()
 		err := CreateTrigger(clients, trigger, t.Logf, cleaner)

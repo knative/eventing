@@ -40,16 +40,23 @@ import (
 )
 
 const (
+	// DefaultTestNamespace is the Namespace used for running all e2e tests.
+	// Currently it must be the same as the namespace specified in test/e2e/e2e.go.
 	DefaultTestNamespace = "e2etest-knative-eventing"
+	// DefaultBrokerName is the name of the Broker that is automatically created after the current namespace is labeled.
+	DefaultBrokerName = "default"
 
 	interval = 1 * time.Second
 	timeout  = 1 * time.Minute
 )
 
 // Setup creates the client objects needed in the e2e tests.
-func Setup(t *testing.T, logf logging.FormatLogger) (*test.Clients, *test.Cleaner) {
+func Setup(t *testing.T, logf logging.FormatLogger) (string, string, *test.Clients, *test.Cleaner) {
 	if pkgTest.Flags.Namespace == "" {
 		pkgTest.Flags.Namespace = DefaultTestNamespace
+	}
+	if test.EventingFlags.Provisioner == "" {
+		t.Fatal("ClusterChannelProvisioner must be set to a non-empty string. Either do not specify --clusterChannelProvisioner or set to something other than the empty string")
 	}
 
 	clients, err := test.NewClients(
@@ -61,7 +68,7 @@ func Setup(t *testing.T, logf logging.FormatLogger) (*test.Clients, *test.Cleane
 	}
 	cleaner := test.NewCleaner(logf, clients.Dynamic)
 
-	return clients, cleaner
+	return pkgTest.Flags.Namespace, test.EventingFlags.Provisioner, clients, cleaner
 }
 
 // TearDown will delete created names using clients.

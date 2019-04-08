@@ -42,24 +42,16 @@ EventSource ---> Channel ---> Subscription ---> Service(Logger)
 
 */
 func SingleEvent(t *testing.T, encoding string) {
-	if test.EventingFlags.Provisioner == "" {
-		t.Fatal("ClusterChannelProvisioner must be set to a non-empty string. Either do not specify --clusterChannelProvisioner or set to something other than the empty string")
-	}
+	t.Parallel()
 
 	const (
-		channelName      = "e2e-singleevent"
-		senderName       = "e2e-singleevent-sender"
-		subscriptionName = "e2e-singleevent-subscription"
-		loggerPodName    = "e2e-singleevent-logger-pod"
+		channelName      = "e2e-singleevent-" + encoding
+		senderName       = "e2e-singleevent-sender-" + encoding
+		subscriptionName = "e2e-singleevent-subscription-" + encoding
+		loggerPodName    = "e2e-singleevent-logger-pod-" + encoding
 	)
 
-	clients, cleaner := Setup(t, t.Logf)
-	// verify namespace
-	ns, cleanupNS := CreateNamespaceIfNeeded(t, clients, t.Logf)
-	defer cleanupNS()
-
-	// TearDown() needs to be deferred after cleanupNS(). Otherwise the namespace is deleted and all
-	// resources in it. So when TearDown() runs, it spews a lot of not found errors.
+	ns, provisioner, clients, cleaner := Setup(t, t.Logf)
 	defer TearDown(clients, cleaner, t.Logf)
 
 	// create logger pod
@@ -72,10 +64,9 @@ func SingleEvent(t *testing.T, encoding string) {
 		t.Fatalf("Failed to create logger pod and service, and get them ready: %v", err)
 	}
 
-	// create channel
-
+	// create channel and subscription
 	t.Logf("Creating Channel and Subscription")
-	channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(test.EventingFlags.Provisioner))
+	channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(provisioner))
 	t.Logf("channel: %#v", channel)
 	sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelName), test.SubscriberSpecForService(loggerPodName), nil)
 	t.Logf("sub: %#v", sub)
@@ -84,7 +75,7 @@ func SingleEvent(t *testing.T, encoding string) {
 		t.Fatalf("The Channel or Subscription were not marked as Ready: %v", err)
 	}
 
-	// send fake CloudEvent to the first channel
+	// send fake CloudEvent to the channel
 	body := fmt.Sprintf("TestSingleEvent %s", uuid.NewUUID())
 	event := &test.CloudEvent{
 		Source:   senderName,

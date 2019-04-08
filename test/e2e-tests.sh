@@ -47,6 +47,9 @@ function knative_setup() {
   echo "Installing In-Memory ClusterChannelProvisioner"
   ko apply -f config/provisioners/in-memory-channel/in-memory-channel.yaml || return 1
   wait_until_pods_running knative-eventing || fail_test "Eventing did not come up (2)"
+
+  echo "Label the namespace $E2E_TEST_NAMESPACE to create the default Broker"
+  kubectl label namespace ${E2E_TEST_NAMESPACE} knative-eventing-injection=enabled
 }
 
 function knative_teardown() {

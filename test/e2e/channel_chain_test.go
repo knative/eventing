@@ -33,9 +33,7 @@ EventSource ---> Channel ---> Subscriptions ---> Channel ---> Subscriptions --->
 
 */
 func TestChannelChain(t *testing.T) {
-	if test.EventingFlags.Provisioner == "" {
-		t.Fatal("ClusterChannelProvisioner must be set to a non-empty string. Either do not specify --clusterChannelProvisioner or set to something other than the empty string")
-	}
+	t.Parallel()
 
 	const (
 		senderName    = "e2e-channelchain-sender"
@@ -43,17 +41,11 @@ func TestChannelChain(t *testing.T) {
 	)
 	channelNames := [2]string{"e2e-channelchain1", "e2e-channelchain2"}
 	// subscriptionNames1 corresponds to Subscriptions on channelNames[0]
-	subscriptionNames1 := [2]string{"e2e-complexscen-subs11", "e2e-complexscen-subs12"}
+	subscriptionNames1 := [2]string{"e2e-channelchain-subs11", "e2e-channelchain-subs12"}
 	// subscriptionNames2 corresponds to Subscriptions on channelNames[1]
-	subscriptionNames2 := [1]string{"e2e-complexscen-subs21"}
+	subscriptionNames2 := [1]string{"e2e-channelchain-subs21"}
 
-	clients, cleaner := Setup(t, t.Logf)
-	// verify namespace
-	ns, cleanupNS := CreateNamespaceIfNeeded(t, clients, t.Logf)
-	defer cleanupNS()
-
-	// TearDown() needs to be deferred after cleanupNS(). Otherwise the namespace is deleted and all
-	// resources in it. So when TearDown() runs, it spews a lot of not found errors.
+	ns, provisioner, clients, cleaner := Setup(t, t.Logf)
 	defer TearDown(clients, cleaner, t.Logf)
 
 	// create loggerPod and expose it as a service
@@ -70,7 +62,7 @@ func TestChannelChain(t *testing.T) {
 	t.Logf("Creating Channel and Subscription")
 	channels := make([]*v1alpha1.Channel, 0)
 	for _, channelName := range channelNames {
-		channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(test.EventingFlags.Provisioner))
+		channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(provisioner))
 		t.Logf("channel: %#v", channel)
 		channels = append(channels, channel)
 	}
