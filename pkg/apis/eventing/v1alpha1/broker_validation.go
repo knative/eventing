@@ -31,7 +31,7 @@ func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
 	return nil
 }
 
-func (b *Broker) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
+func (b *Broker) CheckImmutableFields(ctx context.Context, og apis.DeprecatedImmutable) *apis.FieldError {
 	// Currently there are no immutable fields. We could make spec.channelTemplate immutable, as
 	// changing it will normally not have the desired effect of changing the Channel inside the
 	// Broker. It would have an effect if the existing Channel was then deleted, the newly created

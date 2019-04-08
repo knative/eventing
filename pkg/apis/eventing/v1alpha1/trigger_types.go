@@ -44,7 +44,7 @@ type Trigger struct {
 // Check that Trigger can be validated, can be defaulted, and has immutable fields.
 var _ apis.Validatable = (*Trigger)(nil)
 var _ apis.Defaultable = (*Trigger)(nil)
-var _ apis.Immutable = (*Trigger)(nil)
+var _ apis.DeprecatedImmutable = (*Trigger)(nil)
 var _ runtime.Object = (*Trigger)(nil)
 var _ webhook.GenericCRD = (*Trigger)(nil)
 

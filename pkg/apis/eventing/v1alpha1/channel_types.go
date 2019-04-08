@@ -49,7 +49,7 @@ type Channel struct {
 // Check that Channel can be validated, can be defaulted, and has immutable fields.
 var _ apis.Validatable = (*Channel)(nil)
 var _ apis.Defaultable = (*Channel)(nil)
-var _ apis.Immutable = (*Channel)(nil)
+var _ apis.DeprecatedImmutable = (*Channel)(nil)
 var _ runtime.Object = (*Channel)(nil)
 var _ webhook.GenericCRD = (*Channel)(nil)
 

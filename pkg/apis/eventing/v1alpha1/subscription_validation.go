@@ -129,7 +129,7 @@ func isValidReply(r ReplyStrategy) *apis.FieldError {
 	return nil
 }
 
-func (s *Subscription) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
+func (s *Subscription) CheckImmutableFields(ctx context.Context, og apis.DeprecatedImmutable) *apis.FieldError {
 	original, ok := og.(*Subscription)
 	if !ok {
 		return &apis.FieldError{Message: "The provided original was not a Subscription"}

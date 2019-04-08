@@ -48,7 +48,7 @@ func (cs *ChannelSpec) Validate(ctx context.Context) *apis.FieldError {
 	return errs
 }
 
-func (c *Channel) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
+func (c *Channel) CheckImmutableFields(ctx context.Context, og apis.DeprecatedImmutable) *apis.FieldError {
 	if og == nil {
 		return nil
 	}

@@ -37,10 +37,11 @@ type Validatable interface {
 
 // Immutable indicates that a particular type has fields that should
 // not change after creation.
-type Immutable interface {
+// DEPRECATED: Use WithinUpdate / GetBaseline from within Validatable instead.
+type DeprecatedImmutable interface {
 	// CheckImmutableFields checks that the current instance's immutable
 	// fields haven't changed from the provided original.
-	CheckImmutableFields(ctx context.Context, original Immutable) *FieldError
+	CheckImmutableFields(ctx context.Context, original DeprecatedImmutable) *FieldError
 }
 
 // Listable indicates that a particular type can be returned via the returned
@@ -52,6 +53,7 @@ type Listable interface {
 }
 
 // Annotatable indicates that a particular type applies various annotations.
-type Annotatable interface {
-	AnnotateUserInfo(ctx context.Context, previous Annotatable, ui *authenticationv1.UserInfo)
+// DEPRECATED: Use WithUserInfo / GetUserInfo within SetDefaults instead.
+type DeprecatedAnnotatable interface {
+	AnnotateUserInfo(ctx context.Context, previous DeprecatedAnnotatable, ui *authenticationv1.UserInfo)
 }

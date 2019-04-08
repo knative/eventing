@@ -64,7 +64,7 @@ func getValidSubscriberSpec() *SubscriberSpec {
 
 type DummyImmutableType struct{}
 
-func (d *DummyImmutableType) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
+func (d *DummyImmutableType) CheckImmutableFields(ctx context.Context, og apis.DeprecatedImmutable) *apis.FieldError {
 	return nil
 }
 

@@ -42,7 +42,7 @@ type Subscription struct {
 // Check that Subscription can be validated, can be defaulted, and has immutable fields.
 var _ apis.Validatable = (*Subscription)(nil)
 var _ apis.Defaultable = (*Subscription)(nil)
-var _ apis.Immutable = (*Subscription)(nil)
+var _ apis.DeprecatedImmutable = (*Subscription)(nil)
 var _ runtime.Object = (*Subscription)(nil)
 var _ webhook.GenericCRD = (*Subscription)(nil)
 

@@ -145,8 +145,8 @@ func TestTriggerSpecValidation(t *testing.T) {
 func TestTriggerImmutableFields(t *testing.T) {
 	tests := []struct {
 		name     string
-		current  apis.Immutable
-		original apis.Immutable
+		current  apis.DeprecatedImmutable
+		original apis.DeprecatedImmutable
 		want     *apis.FieldError
 	}{{
 		name: "good (no change)",

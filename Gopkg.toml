@@ -101,7 +101,9 @@ required = [
 [[constraint]]
   name = "github.com/knative/pkg"
   # HEAD as of 2019-03-29
-  revision = "1d9d8f8871250649adab16e3369e1a09e5595b04"
+  # TODO: DO NOT CHECK IN, re-point to https://github.com/knative/pkg/pull/368
+  source = "github.com/mattmoor/pkg-1"
+  revision = "a41f014e5438f257feb1843b2a3aebe1d85a559a"
 
 [[constraint]]
   name = "github.com/knative/serving"
