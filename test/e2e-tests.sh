@@ -33,9 +33,12 @@ readonly E2E_TEST_NAMESPACE=e2etest-knative-eventing
 
 # Helper functions.
 
+# Setup the Knative environment for running tests
 function knative_setup() {
+  # Install the latest stable Knative/serving in the current cluster
   start_latest_knative_serving || return 1
 
+  # Install the latest Knative/eventing in the current cluster
   echo ">> Starting Knative Eventing"
   echo "Installing Knative Eventing"
   ko apply -f config/ || return 1
