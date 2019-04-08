@@ -47,7 +47,7 @@ import (
 // Server defaults.
 const (
 	// VERSION is the current version for the NATS Streaming server.
-	VERSION = "0.11.2"
+	VERSION = "0.12.2"
 
 	DefaultClusterID      = "test-cluster"
 	DefaultDiscoverPrefix = "_STAN.discover"
@@ -118,7 +118,7 @@ const (
 	// To prevent that, when checking if a client exists, in this particular
 	// mode we will possibly wait to be notified when the client has been
 	// registered. This is the default duration for this wait.
-	defaultClientCheckTimeout = 4 * time.Second
+	defaultClientCheckTimeout = time.Second
 
 	// Interval at which server goes through list of subscriptions with
 	// pending sent/ack operations that needs to be replicated.
@@ -178,6 +178,11 @@ var (
 	clientCheckTimeout         = defaultClientCheckTimeout
 	lazyReplicationInterval    = defaultLazyReplicationInterval
 	testDeleteChannel          bool
+)
+
+var (
+	// gitCommit injected at build
+	gitCommit string
 )
 
 func computeAckWait(wait int32) time.Duration {
@@ -259,7 +264,6 @@ func (state State) String() string {
 
 type channelStore struct {
 	sync.RWMutex
-	delMu    sync.Mutex
 	channels map[string]*channel
 	store    stores.Store
 	stan     *StanServer
@@ -281,15 +285,34 @@ func (cs *channelStore) get(name string) *channel {
 	return c
 }
 
+func (cs *channelStore) getIfNotAboutToBeDeleted(name string) *channel {
+	cs.RLock()
+	c := cs.channels[name]
+	if c != nil && c.activity != nil && c.activity.deleteInProgress {
+		cs.RUnlock()
+		return nil
+	}
+	cs.RUnlock()
+	return c
+}
+
 func (cs *channelStore) createChannel(s *StanServer, name string) (*channel, error) {
 	cs.Lock()
-	defer cs.Unlock()
+	c, err := cs.createChannelLocked(s, name)
+	cs.Unlock()
+	return c, err
+}
+
+func (cs *channelStore) createChannelLocked(s *StanServer, name string) (*channel, error) {
 	// It is possible that there were 2 concurrent calls to lookupOrCreateChannel
 	// which first uses `channelStore.get()` and if not found, calls this function.
 	// So we need to check now that we have the write lock that the channel has
 	// not already been created.
 	c := cs.channels[name]
 	if c != nil {
+		if c.activity != nil && c.activity.deleteInProgress {
+			return nil, ErrChanDelInProgress
+		}
 		return c, nil
 	}
 	sc, err := cs.store.CreateChannel(name)
@@ -301,15 +324,8 @@ func (cs *channelStore) createChannel(s *StanServer, name string) (*channel, err
 		return nil, err
 	}
 	isStandaloneOrLeader := true
-	if s.isClustered {
-		if s.isLeader() {
-			if err := c.subToSnapshotRestoreRequests(); err != nil {
-				delete(cs.channels, name)
-				return nil, err
-			}
-		} else {
-			isStandaloneOrLeader = false
-		}
+	if s.isClustered && !s.isLeader() {
+		isStandaloneOrLeader = false
 	}
 	if isStandaloneOrLeader && c.activity != nil {
 		c.startDeleteTimer()
@@ -377,25 +393,32 @@ func (cs *channelStore) count() int {
 	return count
 }
 
-func (cs *channelStore) lockDelete() {
-	cs.delMu.Lock()
-}
-
-func (cs *channelStore) unlockDelete() {
-	cs.delMu.Unlock()
-}
-
 func (cs *channelStore) maybeStartChannelDeleteTimer(name string, c *channel) {
-	cs.delMu.Lock()
-	cs.RLock()
+	cs.Lock()
 	if c == nil {
 		c = cs.channels[name]
 	}
 	if c != nil && c.activity != nil && !c.activity.deleteInProgress && !c.ss.hasActiveSubs() {
 		c.startDeleteTimer()
 	}
-	cs.RUnlock()
-	cs.delMu.Unlock()
+	cs.Unlock()
+}
+
+func (cs *channelStore) stopDeleteTimer(c *channel) {
+	cs.Lock()
+	c.stopDeleteTimer()
+	if c.activity != nil {
+		c.activity.deleteInProgress = false
+	}
+	cs.Unlock()
+}
+
+func (cs *channelStore) turnOffPreventDelete(c *channel) {
+	cs.Lock()
+	if c != nil && c.activity != nil {
+		c.activity.preventDelete = false
+	}
+	cs.Unlock()
 }
 
 type channel struct {
@@ -404,7 +427,6 @@ type channel struct {
 	store        *stores.Channel
 	ss           *subStore
 	lTimestamp   int64
-	snapshotSub  *nats.Subscription
 	stan         *StanServer
 	activity     *channelActivity
 }
@@ -414,19 +436,20 @@ type channelActivity struct {
 	maxInactivity    time.Duration
 	timer            *time.Timer
 	deleteInProgress bool
+	preventDelete    bool
 	timerSet         bool
 }
 
 // Starts the delete timer that when firing will post
 // a channel delete request to the ioLoop.
-// The channelStore's delMu mutex must be held on entry.
+// The channelStore's mutex must be held on entry.
 func (c *channel) startDeleteTimer() {
 	c.activity.last = time.Now()
 	c.resetDeleteTimer(c.activity.maxInactivity)
 }
 
 // Stops the delete timer.
-// The channelStore's delMu mutex must be held on entry.
+// The channelStore's mutex must be held on entry.
 func (c *channel) stopDeleteTimer() {
 	if c.activity.timer != nil {
 		c.activity.timer.Stop()
@@ -439,7 +462,7 @@ func (c *channel) stopDeleteTimer() {
 
 // Resets the delete timer to the given duration.
 // If the timer was not created, this call will create it.
-// The channelStore's delMu mutex must be held on entry.
+// The channelStore's mutex must be held on entry.
 func (c *channel) resetDeleteTimer(newDuration time.Duration) {
 	a := c.activity
 	if a.timer == nil {
@@ -473,15 +496,22 @@ func (c *channel) pubMsgToMsgProto(pm *pb.PubMsg, seq uint64) *pb.MsgProto {
 }
 
 // Sets a subscription that will handle snapshot restore requests from followers.
-func (c *channel) subToSnapshotRestoreRequests() error {
+func (s *StanServer) subToSnapshotRestoreRequests() error {
 	var (
-		msgBuf              []byte
-		buf                 []byte
-		snapshotRestoreSubj = fmt.Sprintf("%s.%s.%s", defaultSnapshotPrefix, c.stan.info.ClusterID, c.name)
+		msgBuf                []byte
+		buf                   []byte
+		snapshotRestorePrefix = fmt.Sprintf("%s.%s.", defaultSnapshotPrefix, s.info.ClusterID)
+		prefixLen             = len(snapshotRestorePrefix)
 	)
-	sub, err := c.stan.ncsr.Subscribe(snapshotRestoreSubj, func(m *nats.Msg) {
+	sub, err := s.ncsr.Subscribe(snapshotRestorePrefix+">", func(m *nats.Msg) {
 		if len(m.Data) != 16 {
-			c.stan.log.Errorf("Invalid snapshot request, data len=%v", len(m.Data))
+			s.log.Errorf("Invalid snapshot request, data len=%v", len(m.Data))
+			return
+		}
+		cname := m.Subject[prefixLen:]
+		c := s.channels.getIfNotAboutToBeDeleted(cname)
+		if c == nil {
+			s.ncsr.Publish(m.Reply, nil)
 			return
 		}
 		start := util.ByteOrder.Uint64(m.Data[:8])
@@ -490,7 +520,7 @@ func (c *channel) subToSnapshotRestoreRequests() error {
 		for seq := start; seq <= end; seq++ {
 			msg, err := c.store.Msgs.Lookup(seq)
 			if err != nil {
-				c.stan.log.Errorf("Snapshot restore request error for channel %q, error looking up message %v: %v", c.name, seq, err)
+				s.log.Errorf("Snapshot restore request error for channel %q, error looking up message %v: %v", c.name, seq, err)
 				return
 			}
 			if msg == nil {
@@ -505,14 +535,14 @@ func (c *channel) subToSnapshotRestoreRequests() error {
 				}
 				buf = msgBuf[:n]
 			}
-			if err := c.stan.ncsr.Publish(m.Reply, buf); err != nil {
-				c.stan.log.Errorf("Snapshot restore request error for channel %q, unable to send response for seq %v: %v", c.name, seq, err)
+			if err := s.ncsr.Publish(m.Reply, buf); err != nil {
+				s.log.Errorf("Snapshot restore request error for channel %q, unable to send response for seq %v: %v", c.name, seq, err)
 			}
 			if buf == nil {
 				return
 			}
 			select {
-			case <-c.stan.shutdownCh:
+			case <-s.shutdownCh:
 				return
 			default:
 			}
@@ -521,8 +551,8 @@ func (c *channel) subToSnapshotRestoreRequests() error {
 	if err != nil {
 		return err
 	}
-	c.snapshotSub = sub
-	c.snapshotSub.SetPendingLimits(-1, -1)
+	sub.SetPendingLimits(-1, -1)
+	s.snapReqSub = sub
 	return nil
 }
 
@@ -618,6 +648,7 @@ type StanServer struct {
 	raftLogging bool
 	isClustered bool
 	lazyRepl    *lazyReplication
+	snapReqSub  *nats.Subscription
 
 	// Our internal subscriptions
 	connectSub  *nats.Subscription
@@ -709,14 +740,44 @@ func (sa *subSentAndAck) reset() {
 
 // Looks up, or create a new channel if it does not exist
 func (s *StanServer) lookupOrCreateChannel(name string) (*channel, error) {
-	c := s.channels.get(name)
+	cs := s.channels
+	cs.RLock()
+	c := cs.channels[name]
 	if c != nil {
 		if c.activity != nil && c.activity.deleteInProgress {
+			cs.RUnlock()
 			return nil, ErrChanDelInProgress
 		}
+		cs.RUnlock()
 		return c, nil
 	}
-	return s.channels.createChannel(s, name)
+	cs.RUnlock()
+	return cs.createChannel(s, name)
+}
+
+func (s *StanServer) lookupOrCreateChannelPreventDelete(name string) (*channel, bool, error) {
+	cs := s.channels
+	cs.Lock()
+	c := cs.channels[name]
+	if c != nil {
+		if c.activity != nil && c.activity.deleteInProgress {
+			cs.Unlock()
+			return nil, false, ErrChanDelInProgress
+		}
+	} else {
+		var err error
+		c, err = cs.createChannelLocked(s, name)
+		if err != nil {
+			cs.Unlock()
+			return nil, false, err
+		}
+	}
+	if c.activity != nil {
+		c.activity.preventDelete = true
+		c.stopDeleteTimer()
+	}
+	cs.Unlock()
+	return c, true, nil
 }
 
 // createSubStore creates a new instance of `subStore`.
@@ -956,7 +1017,8 @@ func (ss *subStore) Remove(c *channel, sub *subState, unsubscribe bool) {
 			if sub.stalled && qs.stalledSubCount > 0 {
 				qs.stalledSubCount--
 			}
-			now := time.Now().UnixNano()
+			// Set expiration in the past to force redelivery
+			expirationTime := time.Now().UnixNano() - int64(time.Second)
 			// If there are pending messages in this sub, they need to be
 			// transferred to remaining queue subscribers.
 			numQSubs := len(qs.subs)
@@ -985,14 +1047,6 @@ func (ss *subStore) Remove(c *channel, sub *subState, unsubscribe bool) {
 				// Update LastSent if applicable
 				if pm.seq > qsub.LastSent {
 					qsub.LastSent = pm.seq
-				}
-				// As of now, members can have different AckWait values.
-				expirationTime := pm.expire
-				// If the member the message is transferred to has a higher AckWait,
-				// keep original expiration time, otherwise check that it is smaller
-				// than the new AckWait.
-				if sub.ackWait > qsub.ackWait && expirationTime-now > 0 {
-					expirationTime = now + int64(qsub.ackWait)
 				}
 				// Store in ackPending.
 				qsub.acksPending[pm.seq] = expirationTime
@@ -1118,6 +1172,9 @@ type Options struct {
 	FTGroupName        string        // Name of the FT Group. A group can be 2 or more servers with a single active server and all sharing the same datastore.
 	Partitioning       bool          // Specify if server only accepts messages/subscriptions on channels defined in StoreLimits.
 	SyslogName         string        // Optional name for the syslog (usueful on Windows when running several servers as a service)
+	Encrypt            bool          // Specify if server should encrypt messages payload when storing them
+	EncryptionCipher   string        // Cipher used for encryption. Supported are "AES" and "CHACHA". If none is specified, defaults to AES on platforms with Intel processors, CHACHA otherwise.
+	EncryptionKey      []byte        // Encryption key. The environment NATS_STREAMING_ENCRYPTION_KEY takes precedence and is the preferred way to provide the key.
 	Clustering         ClusteringOptions
 }
 
@@ -1172,9 +1229,24 @@ func (s *StanServer) stanDisconnectedHandler(nc *nats.Conn) {
 	}
 }
 
+func obfuscatePasswordInURL(url string) string {
+	atPos := strings.Index(url, "@")
+	if atPos == -1 {
+		return url
+	}
+	start := strings.Index(url, "://")
+	if start == -1 {
+		return "invalid url"
+	}
+	newurl := url[:start+3]
+	newurl += "[REDACTED]"
+	newurl += url[atPos:]
+	return newurl
+}
+
 func (s *StanServer) stanReconnectedHandler(nc *nats.Conn) {
 	s.log.Noticef("connection %q reconnected to NATS Server at %q",
-		nc.Opts.Name, nc.ConnectedUrl())
+		nc.Opts.Name, obfuscatePasswordInURL(nc.ConnectedUrl()))
 }
 
 func (s *StanServer) stanClosedHandler(nc *nats.Conn) {
@@ -1182,8 +1254,13 @@ func (s *StanServer) stanClosedHandler(nc *nats.Conn) {
 }
 
 func (s *StanServer) stanErrorHandler(nc *nats.Conn, sub *nats.Subscription, err error) {
-	s.log.Errorf("Asynchronous error on connection %s, subject %s: %s",
-		nc.Opts.Name, sub.Subject, err)
+	if sub != nil {
+		s.log.Errorf("Asynchronous error on connection %s, subject %s: %v",
+			nc.Opts.Name, sub.Subject, err)
+	} else {
+		s.log.Errorf("Asynchronous error on connection %s: %v",
+			nc.Opts.Name, err)
+	}
 }
 
 func (s *StanServer) buildServerURLs() ([]string, error) {
@@ -1201,8 +1278,6 @@ func (s *StanServer) buildServerURLs() ([]string, error) {
 			}
 			return urls, nil
 		}
-		// Otherwise, prepare the host and port and continue to see
-		// if user/pass needs to be added.
 
 		// First trim the protocol.
 		parts := strings.Split(natsURL, "://")
@@ -1229,15 +1304,6 @@ func (s *StanServer) buildServerURLs() ([]string, error) {
 			hostport = net.JoinHostPort(opts.Host, sport)
 		}
 	}
-	var userpart string
-	if opts.Authorization != "" {
-		userpart = opts.Authorization
-	} else if opts.Username != "" {
-		userpart = fmt.Sprintf("%s:%s", opts.Username, opts.Password)
-	}
-	if userpart != "" {
-		return []string{fmt.Sprintf("nats://%s@%s", userpart, hostport)}, nil
-	}
 	return []string{fmt.Sprintf("nats://%s", hostport)}, nil
 }
 
@@ -1252,6 +1318,10 @@ func (s *StanServer) createNatsClientConn(name string) (*nats.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
+	ncOpts.User = s.natsOpts.Username
+	ncOpts.Password = s.natsOpts.Password
+	ncOpts.Token = s.natsOpts.Authorization
+
 	ncOpts.Name = fmt.Sprintf("_NSS-%s-%s", s.opts.ID, name)
 
 	if err = nats.ErrorHandler(s.stanErrorHandler)(&ncOpts); err != nil {
@@ -1290,8 +1360,6 @@ func (s *StanServer) createNatsClientConn(name string) (*nats.Conn, error) {
 	// buffer to -1 to avoid any buffering in the nats library and flush
 	// on reconnect.
 	ncOpts.ReconnectBufSize = -1
-
-	s.log.Tracef(" NATS conn opts: %v", ncOpts)
 
 	var nc *nats.Conn
 	if nc, err = ncOpts.Connect(); err != nil {
@@ -1414,6 +1482,11 @@ func RunServerWithOpts(stanOpts *Options, natsOpts *server.Options) (newServer *
 	// regarding other instance's ID, so print it on startup.
 	s.log.Noticef("ServerID: %v", s.serverID)
 	s.log.Noticef("Go version: %v", runtime.Version())
+	gc := gitCommit
+	if gc == "" {
+		gc = "not set"
+	}
+	s.log.Noticef("Git commit: [%s]", gc)
 
 	// Ensure that we shutdown the server if there is a panic/error during startup.
 	// This will ensure that stores are closed (which otherwise would cause
@@ -1474,6 +1547,20 @@ func RunServerWithOpts(stanOpts *Options, natsOpts *server.Options) (newServer *
 		// data that we don't need because they are handled by the actual
 		// raft logs.
 		store = stores.NewRaftStore(store)
+	}
+	if sOpts.Encrypt || len(sOpts.EncryptionKey) > 0 {
+		// In clustering mode, RAFT is using its own logs (not the one above),
+		// so we need to keep the key intact until we call newRaftLog().
+		var key []byte
+		if s.isClustered && len(sOpts.EncryptionKey) > 0 {
+			key = append(key, sOpts.EncryptionKey...)
+		} else {
+			key = sOpts.EncryptionKey
+		}
+		store, err = stores.NewCryptoStore(store, sOpts.EncryptionCipher, key)
+		if err != nil {
+			return nil, err
+		}
 	}
 	s.store = store
 
@@ -1861,6 +1948,11 @@ func (s *StanServer) leadershipAcquired() error {
 	// Then, we will notify it back to unlock it when were are done here.
 	defer close(sdc)
 
+	// Start listening to snapshot restore requests here...
+	if err := s.subToSnapshotRestoreRequests(); err != nil {
+		return err
+	}
+
 	// Use a barrier to ensure all preceding operations are applied to the FSM
 	if err := s.raft.Barrier(0).Error(); err != nil {
 		return err
@@ -1899,10 +1991,6 @@ func (s *StanServer) leadershipAcquired() error {
 
 	var allSubs []*subState
 	for _, c := range channels {
-		// Subscribe to channel snapshot restore subject
-		if err := c.subToSnapshotRestoreRequests(); err != nil {
-			return err
-		}
 		subs := c.ss.getAllSubs()
 		if len(subs) > 0 {
 			allSubs = append(allSubs, subs...)
@@ -1954,14 +2042,8 @@ func (s *StanServer) leadershipLost() {
 	// Unsubscribe to the snapshot request per channel since we are no longer
 	// leader.
 	for _, c := range s.channels.getAll() {
-		if c.snapshotSub != nil {
-			c.snapshotSub.Unsubscribe()
-			c.snapshotSub = nil
-		}
 		if c.activity != nil {
-			s.channels.lockDelete()
-			c.stopDeleteTimer()
-			s.channels.unlockDelete()
+			s.channels.stopDeleteTimer(c)
 		}
 	}
 
@@ -2232,7 +2314,7 @@ func (s *StanServer) recoverOneSub(c *channel, recSub *spb.SubState, pendingAcks
 		// Do not recover a queue durable subscriber that still
 		// has ClientID but for which connection was closed (=>!added)
 		if !added && sub.isQueueDurableSubscriber() && !sub.isShadowQueueDurable() {
-			s.log.Noticef("WARN: Not recovering ghost durable queue subscriber: [%s]:[%s] subject=%s inbox=%s", sub.ClientID, sub.QGroup, sub.subject, sub.Inbox)
+			s.log.Warnf("Not recovering ghost durable queue subscriber: [%s]:[%s] subject=%s inbox=%s", sub.ClientID, sub.QGroup, sub.subject, sub.Inbox)
 			c.store.Subs.DeleteSub(sub.ID)
 			return nil
 		}
@@ -2438,6 +2520,10 @@ func (s *StanServer) unsubscribeInternalSubs() {
 		s.cliPingSub.Unsubscribe()
 		s.cliPingSub = nil
 	}
+	if s.snapReqSub != nil {
+		s.snapReqSub.Unsubscribe()
+		s.snapReqSub = nil
+	}
 }
 
 func (s *StanServer) createSub(subj string, f nats.MsgHandler, errTxt string) (*nats.Subscription, error) {
@@ -2573,7 +2659,16 @@ func (s *StanServer) replicateDeleteChannel(channel string) {
 		panic(err)
 	}
 	// Wait on result of replication.
-	s.raft.Apply(data, 0).Error()
+	if err = s.raft.Apply(data, 0).Error(); err != nil {
+		// If we have lost leadership, clear the deleteInProgress flag.
+		cs := s.channels
+		cs.Lock()
+		c := cs.channels[channel]
+		if c != nil && c.activity != nil {
+			c.activity.deleteInProgress = false
+		}
+		cs.Unlock()
+	}
 }
 
 // Check if the channel can be deleted. If so, do it in place.
@@ -2581,13 +2676,12 @@ func (s *StanServer) replicateDeleteChannel(channel string) {
 func (s *StanServer) handleChannelDelete(c *channel) {
 	delete := false
 	cs := s.channels
-	cs.lockDelete()
 	cs.Lock()
 	a := c.activity
-	if a.deleteInProgress || c.ss.hasActiveSubs() {
+	if a.preventDelete || a.deleteInProgress || c.ss.hasActiveSubs() {
 		if s.debug {
-			s.log.Debugf("Channel %q cannot be deleted: inProgress=%v hasActiveSubs=%v",
-				c.name, a.deleteInProgress, c.ss.hasActiveSubs())
+			s.log.Debugf("Channel %q cannot be deleted: preventDelete=%v inProgress=%v hasActiveSubs=%v",
+				c.name, a.preventDelete, a.deleteInProgress, c.ss.hasActiveSubs())
 		}
 		c.stopDeleteTimer()
 	} else {
@@ -2618,7 +2712,6 @@ func (s *StanServer) handleChannelDelete(c *channel) {
 		}
 	}
 	cs.Unlock()
-	cs.unlockDelete()
 	if delete {
 		if testDeleteChannel {
 			time.Sleep(time.Second)
@@ -2634,21 +2727,26 @@ func (s *StanServer) handleChannelDelete(c *channel) {
 // Actual deletetion of the channel.
 func (s *StanServer) processDeleteChannel(channel string) {
 	cs := s.channels
-	cs.lockDelete()
-	defer cs.unlockDelete()
 	cs.Lock()
 	defer cs.Unlock()
+	c := cs.channels[channel]
+	if c == nil {
+		s.log.Errorf("Error deleting channel %q: not found", channel)
+		return
+	}
+	if c.activity != nil && c.activity.preventDelete {
+		s.log.Errorf("The channel %q cannot be deleted at this time since a subscription has been created", channel)
+		return
+	}
 	// Delete from store
 	if err := cs.store.DeleteChannel(channel); err != nil {
 		s.log.Errorf("Error deleting channel %q: %v", channel, err)
-		c := cs.channels[channel]
-		if c != nil && c.activity != nil {
+		if c.activity != nil {
 			c.activity.deleteInProgress = false
 			c.startDeleteTimer()
 		}
 		return
 	}
-	// If no error, remove channel
 	delete(s.channels.channels, channel)
 	s.log.Noticef("Channel %q has been deleted", channel)
 }
@@ -2916,11 +3014,15 @@ func (s *StanServer) processClientPublish(m *nats.Msg) {
 		return
 	}
 
+	if s.debug {
+		s.log.Tracef("[Client:%s] Received message from publisher subj=%s guid=%s", pm.ClientID, pm.Subject, pm.Guid)
+	}
+
 	// Check if the client is valid. We do this after the clustered check so
 	// that only the leader performs this check.
 	valid := false
-	if s.partitions != nil || s.isClustered {
-		// In partitioning or clustering it is possible that we get there
+	if s.partitions != nil {
+		// In partitioning mode it is possible that we get there
 		// before the connect request is processed. If so, make sure we wait
 		// for conn request	to be processed first. Check clientCheckTimeout
 		// doc for details.
@@ -3100,13 +3202,11 @@ type byExpire []*pendingMsg
 func (a byExpire) Len() int      { return (len(a)) }
 func (a byExpire) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a byExpire) Less(i, j int) bool {
-	// If expire is 0, it means the server was restarted
-	// and we don't have the expiration time, which will
-	// be set later. Order by sequence instead.
-	if a[i].expire == 0 || a[j].expire == 0 {
-		return a[i].seq < a[j].seq
-	}
-	return a[i].expire < a[j].expire
+	// Always order by sequence since expire could be 0 (in
+	// case of a server restart) but even if it is not, if
+	// expire time happens to be the same, we still want
+	// messages to be ordered by sequence.
+	return a[i].seq < a[j].seq
 }
 
 // Returns an array of pendingMsg ordered by expiration date, unless
@@ -3630,7 +3730,7 @@ func (s *StanServer) ioLoop(ready *sync.WaitGroup) {
 					if err := f.Error(); err != nil {
 						lastSeq, lerr := c.store.Msgs.LastSequence()
 						if lerr != nil {
-							panic(fmt.Errorf("Error during message replication (%v), unable to get store last sequence: %v", err, lerr))
+							panic(fmt.Errorf("error during message replication (%v), unable to get store last sequence: %v", err, lerr))
 						}
 						c.nextSequence = lastSeq + 1
 					} else {
@@ -3751,13 +3851,13 @@ func (s *StanServer) ioLoop(ready *sync.WaitGroup) {
 			for c := range storesToFlush {
 				if err := c.store.Msgs.Flush(); err != nil {
 					// TODO: Attempt recovery, notify publishers of error.
-					panic(fmt.Errorf("Unable to flush msg store: %v", err))
+					panic(fmt.Errorf("unable to flush msg store: %v", err))
 				}
 				// Call this here, so messages are sent to subscribers,
 				// which means that msg seq is added to subscription file
 				s.processMsg(c)
 				if err := c.store.Subs.Flush(); err != nil {
-					panic(fmt.Errorf("Unable to flush sub store: %v", err))
+					panic(fmt.Errorf("unable to flush sub store: %v", err))
 				}
 				// Remove entry from map (this is safe in Go)
 				delete(storesToFlush, c)
@@ -3892,7 +3992,10 @@ func (s *StanServer) removeAllNonDurableSubscribers(client *client) {
 	subs := client.subs
 	clientID := client.info.ID
 	client.RUnlock()
-	var storesToFlush map[string]stores.SubStore
+	var (
+		storesToFlush = map[string]stores.SubStore{}
+		channels      = map[string]struct{}{}
+	)
 	for _, sub := range subs {
 		sub.RLock()
 		subject := sub.subject
@@ -3910,11 +4013,9 @@ func (s *StanServer) removeAllNonDurableSubscribers(client *client) {
 		// so we will want to flush the store. In clustering, during replay,
 		// subStore may be nil.
 		if isDurable && subStore != nil {
-			if storesToFlush == nil {
-				storesToFlush = make(map[string]stores.SubStore, 16)
-			}
 			storesToFlush[subject] = subStore
 		}
+		channels[subject] = struct{}{}
 	}
 	if len(storesToFlush) > 0 {
 		for subject, subStore := range storesToFlush {
@@ -3922,6 +4023,9 @@ func (s *StanServer) removeAllNonDurableSubscribers(client *client) {
 				s.log.Errorf("[Client:%s] Error flushing store while removing subscriptions: subject=%s, err=%v", clientID, subject, err)
 			}
 		}
+	}
+	for channel := range channels {
+		s.channels.maybeStartChannelDeleteTimer(channel, nil)
 	}
 }
 
@@ -4501,13 +4605,16 @@ func (s *StanServer) processSubscriptionRequest(m *nats.Msg) {
 		ackInbox = nats.NewInbox()
 	)
 
-	c, err := s.lookupOrCreateChannel(sr.Subject)
+	// Lookup/create the channel and prevent this channel to be deleted
+	// until we are done with this subscription. This will also stop
+	// the delete timer if one was set.
+	c, preventDelete, err := s.lookupOrCreateChannelPreventDelete(sr.Subject)
+	// Immediately register a defer action to turn off preventing the
+	// deletion of the channel if it was turned on
+	if preventDelete {
+		defer s.channels.turnOffPreventDelete(c)
+	}
 	if err == nil {
-		// Keep the channel delete mutex to ensure that channel cannot be
-		// deleted while we are about to add a subscription.
-		s.channels.lockDelete()
-		defer s.channels.unlockDelete()
-
 		// If clustered, thread operations through Raft.
 		if s.isClustered {
 			// For start requests other than SequenceStart, we MUST convert the request
@@ -4539,14 +4646,9 @@ func (s *StanServer) processSubscriptionRequest(m *nats.Msg) {
 		}
 	}
 	if err != nil {
+		s.channels.maybeStartChannelDeleteTimer(sr.Subject, c)
 		s.sendSubscriptionResponseErr(m.Reply, err)
 		return
-	}
-	// If the channel has a MaxInactivity limit, stop the timer since we know that there
-	// is at least one active subscription.
-	if c.activity != nil {
-		// We are under the channelStore delete mutex
-		c.stopDeleteTimer()
 	}
 
 	// In case this is a durable, sub already exists so we need to protect access

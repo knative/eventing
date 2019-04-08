@@ -1,4 +1,4 @@
-// Copyright 2016-2018 The NATS Authors
+// Copyright 2016-2019 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -27,7 +27,7 @@ import (
 )
 
 // Version is the NATS Streaming Go Client version
-const Version = "0.4.0"
+const Version = "0.4.2"
 
 const (
 	// DefaultNatsURL is the default URL the client connects to
@@ -132,6 +132,8 @@ var DefaultOptions = Options{
 type Option func(*Options) error
 
 // NatsURL is an Option to set the URL the client should connect to.
+// The url can contain username/password semantics. e.g. nats://derek:pass@localhost:4222
+// Comma separated arrays are also supported, e.g. urlA, urlB.
 func NatsURL(u string) Option {
 	return func(o *Options) error {
 		o.NatsURL = u
@@ -188,7 +190,7 @@ func Pings(interval, maxOut int) Option {
 		// do not check values.
 		if !testAllowMillisecInPings {
 			if interval < 1 || maxOut <= 2 {
-				return fmt.Errorf("Invalid ping values: interval=%v (min>0) maxOut=%v (min=2)", interval, maxOut)
+				return fmt.Errorf("invalid ping values: interval=%v (min>0) maxOut=%v (min=2)", interval, maxOut)
 			}
 		}
 		o.PingIterval = interval
@@ -292,8 +294,7 @@ func Connect(stanClusterID, clientID string, options ...Option) (Conn, error) {
 	// Prepare a subscription on ping responses, even if we are not
 	// going to need it, so that if that fails, it fails before initiating
 	// a connection.
-	pingSub, err := c.nc.Subscribe(nats.NewInbox(), c.processPingResponse)
-	if err != nil {
+	if c.pingSub, err = c.nc.Subscribe(nats.NewInbox(), c.processPingResponse); err != nil {
 		c.Close()
 		return nil, err
 	}
@@ -367,7 +368,7 @@ func Connect(stanClusterID, clientID string, options ...Option) (Conn, error) {
 
 			// These will be immutable.
 			c.pingRequests = cr.PingRequests
-			c.pingInbox = pingSub.Subject
+			c.pingInbox = c.pingSub.Subject
 			// In test, it is possible that we get a negative value
 			// to represent milliseconds.
 			if testAllowMillisecInPings && cr.PingInterval < 0 {
@@ -378,7 +379,6 @@ func Connect(stanClusterID, clientID string, options ...Option) (Conn, error) {
 			}
 			c.pingMaxOut = int(cr.PingMaxOut)
 			c.pingBytes, _ = (&pb.Ping{ConnID: c.connID}).Marshal()
-			c.pingSub = pingSub
 			// Set the timer now that we are set. Use lock to create
 			// synchronization point.
 			c.pingMu.Lock()
@@ -387,7 +387,8 @@ func Connect(stanClusterID, clientID string, options ...Option) (Conn, error) {
 		}
 	}
 	if unsubPingSub {
-		pingSub.Unsubscribe()
+		c.pingSub.Unsubscribe()
+		c.pingSub = nil
 	}
 
 	// Attach a finalizer
@@ -488,13 +489,18 @@ func (sc *conn) cleanupOnClose(err error) {
 	}
 	sc.pingMu.Unlock()
 
-	// Unsubscribe only if the NATS connection is not already closed...
-	if !sc.nc.IsClosed() {
-		if sc.ackSubscription != nil {
-			sc.ackSubscription.Unsubscribe()
+	// Unsubscribe only if the NATS connection is not already closed
+	// and we don't own it (otherwise connection is going to be closed
+	// so no need for explicit unsubscribe).
+	if !sc.ncOwned && !sc.nc.IsClosed() {
+		if sc.hbSubscription != nil {
+			sc.hbSubscription.Unsubscribe()
 		}
 		if sc.pingSub != nil {
 			sc.pingSub.Unsubscribe()
+		}
+		if sc.ackSubscription != nil {
+			sc.ackSubscription.Unsubscribe()
 		}
 	}
 	// Fail all pending pubs
@@ -586,7 +592,7 @@ func (sc *conn) processAck(m *nats.Msg) {
 	pa := &pb.PubAck{}
 	err := pa.Unmarshal(m.Data)
 	if err != nil {
-		panic(fmt.Errorf("Error during ack unmarshal: %v", err))
+		panic(fmt.Errorf("error during ack unmarshal: %v", err))
 	}
 
 	// Remove
@@ -722,7 +728,7 @@ func (sc *conn) processMsg(raw *nats.Msg) {
 	msg := &Msg{}
 	err := msg.Unmarshal(raw.Data)
 	if err != nil {
-		panic(fmt.Errorf("Error processing unmarshal for msg: %v", err))
+		panic(fmt.Errorf("error processing unmarshal for msg: %v", err))
 	}
 	// Lookup the subscription
 	sc.RLock()

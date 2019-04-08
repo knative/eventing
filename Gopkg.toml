@@ -130,17 +130,19 @@ required = [
 # TODO why is this overridden?
 [[override]]
   name = "github.com/nats-io/go-nats"
-  version = "1.6.0"
+  version = "1.7.2"
 
-# TODO why is this overridden?
 [[override]]
+  name = "github.com/nats-io/gnatsd"
+  version = "1.4.1"
+ 
+[[constraint]]
   name = "github.com/nats-io/go-nats-streaming"
-  version = "0.4.0"
+  version = "0.4.2"
 
-# TODO why is this overridden?
-[[override]]
+[[constraint]]
   name = "github.com/nats-io/nats-streaming-server"
-  version = "0.11.0"
+  version = "0.12.2"
 
 [[constraint]]
   name = "github.com/cloudevents/sdk-go"

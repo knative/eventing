@@ -1099,7 +1099,12 @@ func (s *SQLStore) DeleteChannel(channel string) error {
 		return ErrNotFound
 	}
 	// Get the channel ID from Msgs store
-	cid := c.Msgs.(*SQLMsgStore).channelID
+	var cid int64
+	if cms, ok := c.Msgs.(*CryptoMsgStore); ok {
+		cid = cms.MsgStore.(*SQLMsgStore).channelID
+	} else {
+		cid = c.Msgs.(*SQLMsgStore).channelID
+	}
 	// Fast delete just marks the channel row as deleted
 	if _, err := s.preparedStmts[sqlDeleteChannelFast].Exec(cid); err != nil {
 		return err
@@ -1411,7 +1416,7 @@ func (ms *SQLMsgStore) Store(m *pb.MsgProto) (uint64, error) {
 			}
 			if !ms.hitLimit {
 				ms.hitLimit = true
-				ms.log.Noticef(droppingMsgsFmt, ms.subject, ms.totalCount, ms.limits.MaxMsgs,
+				ms.log.Warnf(droppingMsgsFmt, ms.subject, ms.totalCount, ms.limits.MaxMsgs,
 					util.FriendlyBytes(int64(ms.totalBytes)), util.FriendlyBytes(ms.limits.MaxBytes))
 			}
 		}

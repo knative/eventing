@@ -18,7 +18,6 @@ package nats
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 )
 
@@ -46,9 +45,7 @@ func (nc *Conn) RequestWithContext(ctx context.Context, subj string, data []byte
 
 	// Do setup for the new style.
 	if nc.respMap == nil {
-		// _INBOX wildcard
-		nc.respSub = fmt.Sprintf("%s.*", NewInbox())
-		nc.respMap = make(map[string]chan *Msg)
+		nc.initNewResp()
 	}
 	// Create literal Inbox and map to a chan msg.
 	mch := make(chan *Msg, RequestChanLen)
@@ -132,19 +129,33 @@ func (s *Subscription) NextMsgWithContext(ctx context.Context) (*Msg, error) {
 		return nil, err
 	}
 
+	// snapshot
 	mch := s.mch
 	s.mu.Unlock()
 
 	var ok bool
 	var msg *Msg
 
+	// If something is available right away, let's optimize that case.
 	select {
 	case msg, ok = <-mch:
 		if !ok {
 			return nil, ErrConnectionClosed
 		}
-		err := s.processNextMsgDelivered(msg)
-		if err != nil {
+		if err := s.processNextMsgDelivered(msg); err != nil {
+			return nil, err
+		} else {
+			return msg, nil
+		}
+	default:
+	}
+
+	select {
+	case msg, ok = <-mch:
+		if !ok {
+			return nil, ErrConnectionClosed
+		}
+		if err := s.processNextMsgDelivered(msg); err != nil {
 			return nil, err
 		}
 	case <-ctx.Done():
@@ -152,6 +163,52 @@ func (s *Subscription) NextMsgWithContext(ctx context.Context) (*Msg, error) {
 	}
 
 	return msg, nil
+}
+
+// FlushWithContext will allow a context to control the duration
+// of a Flush() call. This context should be non-nil and should
+// have a deadline set. We will return an error if none is present.
+func (nc *Conn) FlushWithContext(ctx context.Context) error {
+	if nc == nil {
+		return ErrInvalidConnection
+	}
+	if ctx == nil {
+		return ErrInvalidContext
+	}
+	_, ok := ctx.Deadline()
+	if !ok {
+		return ErrNoDeadlineContext
+	}
+
+	nc.mu.Lock()
+	if nc.isClosed() {
+		nc.mu.Unlock()
+		return ErrConnectionClosed
+	}
+	// Create a buffered channel to prevent chan send to block
+	// in processPong()
+	ch := make(chan struct{}, 1)
+	nc.sendPing(ch)
+	nc.mu.Unlock()
+
+	var err error
+
+	select {
+	case _, ok := <-ch:
+		if !ok {
+			err = ErrConnectionClosed
+		} else {
+			close(ch)
+		}
+	case <-ctx.Done():
+		err = ctx.Err()
+	}
+
+	if err != nil {
+		nc.removeFlushEntry(ch)
+	}
+
+	return err
 }
 
 // RequestWithContext will create an Inbox and perform a Request

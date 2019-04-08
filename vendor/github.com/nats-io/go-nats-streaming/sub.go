@@ -253,7 +253,7 @@ func (sc *conn) subscribe(subject, qgroup string, cb MsgHandler, options ...Subs
 	}
 
 	b, _ := sr.Marshal()
-	reply, err := sc.nc.Request(sc.subRequests, b, sc.opts.ConnectTimeout)
+	reply, err := nc.Request(sc.subRequests, b, sc.opts.ConnectTimeout)
 	if err != nil {
 		sub.inboxSub.Unsubscribe()
 		if err == nats.ErrTimeout {

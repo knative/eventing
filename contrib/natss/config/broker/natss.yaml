@@ -68,7 +68,7 @@ spec:
     spec:
       containers:
         - name: nats-streaming
-          image: nats-streaming:0.11.0
+          image: nats-streaming:0.12.2
           imagePullPolicy: IfNotPresent
           args:
           - -D

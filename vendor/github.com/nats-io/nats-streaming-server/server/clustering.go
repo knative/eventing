@@ -246,7 +246,7 @@ func (rl *raftLogger) Write(b []byte) (int, error) {
 		case 'I': // [INFO]
 			rl.log.Noticef("%s", b[levelStart+7:])
 		case 'W': // [WARN]
-			rl.log.Noticef("%s", b[levelStart+7:])
+			rl.log.Warnf("%s", b[levelStart+7:])
 		case 'E': // [ERR]
 			rl.log.Errorf("%s", b[levelStart+6:])
 		default:
@@ -273,7 +273,8 @@ func (s *StanServer) createRaftNode(name string) (bool, error) {
 	s.raft = &raftNode{}
 
 	raftLogFileName := filepath.Join(path, raftLogFile)
-	store, err := newRaftLog(s.log, raftLogFileName, s.opts.Clustering.Sync, int(s.opts.Clustering.TrailingLogs))
+	store, err := newRaftLog(s.log, raftLogFileName, s.opts.Clustering.Sync, int(s.opts.Clustering.TrailingLogs),
+		s.opts.Encrypt, s.opts.EncryptionCipher, s.opts.EncryptionKey)
 	if err != nil {
 		return false, err
 	}
@@ -471,6 +472,11 @@ func (r *raftFSM) Apply(l *raft.Log) interface{} {
 			// This is a batch for a given channel, so lookup channel once.
 			if c == nil {
 				c, err = s.lookupOrCreateChannel(msg.Subject)
+				// That should not be the case, but if it happens,
+				// just bail out.
+				if err == ErrChanDelInProgress {
+					return nil
+				}
 			}
 			if err == nil {
 				_, err = c.store.Msgs.Store(msg)

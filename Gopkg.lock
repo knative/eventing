@@ -42,14 +42,6 @@
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
-  digest = "1:a12d94258c5298ead75e142e8001224bf029f302fed9e96cd39c0eaf90f3954d"
-  name = "github.com/boltdb/bolt"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8"
-  version = "v1.3.1"
-
-[[projects]]
   digest = "1:be1e32779b5150a3e4341f584f14282db95feff53f60d49b17134a5710ac8ff9"
   name = "github.com/bsm/sarama-cluster"
   packages = ["."]
@@ -470,21 +462,20 @@
   version = "1.0.1"
 
 [[projects]]
-  digest = "1:66011d8367095e2e5a5f0542369e7613597f4ddf80bb725ea273d4ab38bb8cf4"
+  digest = "1:3a007c2952878394de42747f04bf7fead5c9df9ecb4d16735c734b269f275612"
   name = "github.com/nats-io/gnatsd"
   packages = [
     "conf",
     "logger",
     "server",
     "server/pse",
-    "util",
   ]
   pruneopts = "NUT"
-  revision = "eed4fbc1458ce110ad1aa1adf904229bc8fda2a7"
-  version = "v1.3.0"
+  revision = "3e64f0bfd1fe4c2cf6599f064ff72fa7af439663"
+  version = "v1.4.1"
 
 [[projects]]
-  digest = "1:7b5fe86d83990fd594ee51261e836a7d5f230b9ec4e3d6f7bb6aaff97b72fa75"
+  digest = "1:c525e25319b805711985485b95285fcfda9a97563919c7b9f709f6ef1e553efe"
   name = "github.com/nats-io/go-nats"
   packages = [
     ".",
@@ -492,22 +483,22 @@
     "util",
   ]
   pruneopts = "NUT"
-  revision = "fb0396ee0bdb8018b0fef30d6d1de798ce99cd05"
-  version = "v1.6.0"
+  revision = "70fe06cee50d4b6f98248d9675fb55f2a3aa7228"
+  version = "v1.7.2"
 
 [[projects]]
-  digest = "1:2b28a7a408f27fd163e2c661cece969efa3ee8f5331343586fce3d11d2d27d77"
+  digest = "1:a32aeb1f97690ae4aab1fcaeef4d61eddd12e7a81d83d808f277537d90db9ba3"
   name = "github.com/nats-io/go-nats-streaming"
   packages = [
     ".",
     "pb",
   ]
   pruneopts = "NUT"
-  revision = "e15a53f85e4932540600a16b56f6c4f65f58176f"
-  version = "v0.4.0"
+  revision = "4366d43a0648b4997ed32080f937e8702ab86c48"
+  version = "v0.4.2"
 
 [[projects]]
-  digest = "1:b0c3861bfbcb2d2f8e7a9aa29afc302e33b6b80f1f7a91cc96dde3bd9b802c89"
+  digest = "1:aedc905c916b320fc9123ffc478480d691ae8777a30b80b90b1c468372766096"
   name = "github.com/nats-io/nats-streaming-server"
   packages = [
     "logger",
@@ -517,8 +508,16 @@
     "util",
   ]
   pruneopts = "NUT"
-  revision = "7b758bb93407505bc1d0cf26d091fc281d99ca0c"
-  version = "v0.11.2"
+  revision = "4489c46ab3c1380d2ac44fc4412abcfdd012d6bb"
+  version = "v0.12.2"
+
+[[projects]]
+  digest = "1:bf3b29bcf1276cfa19bc22910eac8d8582fe0d4d2a43e8f01f2242d8dfba7965"
+  name = "github.com/nats-io/nkeys"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "1546a3320a8f195a5b5c84aef8309377c2e411d5"
+  version = "v0.0.2"
 
 [[projects]]
   digest = "1:552100985450eaa4a8fa8d18fe8b6b1a04997c4d2ac24f154cc9471430cc4e1c"
@@ -640,6 +639,14 @@
   revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
 
 [[projects]]
+  digest = "1:ae8eea1a24ae43a46c2e96631b6303fcc4210ca0ac9d643e4da965029d1b511d"
+  name = "go.etcd.io/bbolt"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "63597a96ec0ad9e6d43c3fc81e809909e0237461"
+  version = "v1.3.2"
+
+[[projects]]
   digest = "1:bce7c290509e40fd1c73d700305c1961004d08c9a1812e47533416a8742893a7"
   name = "go.opencensus.io"
   packages = [
@@ -698,11 +705,16 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:001a4e7a40e50ff2ef32e2556bca50c4f77daa457db3ac6afc8bea9bb2122cfb"
+  digest = "1:8c73795016b6b6148c823702084fb07c20380bbcc0510532fded9c60d82a581a"
   name = "golang.org/x/crypto"
   packages = [
     "bcrypt",
     "blowfish",
+    "chacha20poly1305",
+    "ed25519",
+    "ed25519/internal/edwards25519",
+    "internal/chacha20",
+    "poly1305",
     "ssh/terminal",
   ]
   pruneopts = "NUT"
@@ -751,9 +763,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:26c5ecbdee89fa83eba4106d7e7e32dbfb16f4fba40437de26a1d0e31a3a1abb"
+  digest = "1:157a062a8c418d509fa02ece2be716cf48a8fbbe74711b38256ef24bfb641fbb"
   name = "golang.org/x/sys"
   packages = [
+    "cpu",
     "unix",
     "windows",
     "windows/registry",

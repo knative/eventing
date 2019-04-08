@@ -1825,7 +1825,7 @@ func (fs *FileStore) handleUnexpectedEOF(recoveryErr error, f *file, offset int6
 		fs.log.Errorf("Corrupted record in file %q: %v", f.name, recoveryErr)
 	}
 	if _, err := f.handle.Seek(offset, io.SeekStart); err != nil {
-		panic(fmt.Errorf("Unable to set position of file %q to %v: %v", f.name, offset, err))
+		panic(fmt.Errorf("unable to set position of file %q to %v: %v", f.name, offset, err))
 	}
 	var (
 		expectedSize int
@@ -2262,7 +2262,7 @@ func (ms *FileMsgStore) recoverOneMsgFile(fslice *fileSlice, fseq int, useIdxFil
 				if err != nil {
 					ms.fstore.log.Errorf(err.Error())
 					if _, serr := fslice.file.handle.Seek(4, io.SeekStart); serr != nil {
-						panic(fmt.Errorf("File %q: unable to set position to beginning of file: %v", fslice.file.name, serr))
+						panic(fmt.Errorf("file %q: unable to set position to beginning of file: %v", fslice.file.name, serr))
 					}
 				}
 			} else {
@@ -2278,7 +2278,7 @@ func (ms *FileMsgStore) recoverOneMsgFile(fslice *fileSlice, fseq int, useIdxFil
 		if err != nil {
 			ms.fstore.log.Errorf("Error with index file %q: %v. Truncating and recovering from data file", fslice.idxFile.name, err)
 			if terr := ms.fm.truncateFile(fslice.idxFile, 4); terr != nil {
-				panic(fmt.Errorf("Error during recovery of file %q: %v, you need "+
+				panic(fmt.Errorf("error during recovery of file %q: %v, you need "+
 					"to manually remove index file %q (truncate failed with err: %v)",
 					fslice.file.name, err, fslice.idxFile.name, terr))
 			}
@@ -2361,7 +2361,7 @@ func (ms *FileMsgStore) recoverOneMsgFile(fslice *fileSlice, fseq int, useIdxFil
 			ms.fm.remove(fslice.idxFile)
 			// Remove it, and panic if we can't
 			if rmErr := os.Remove(fslice.idxFile.name); rmErr != nil {
-				panic(fmt.Errorf("Error during recovery of file %q: %v, you need "+
+				panic(fmt.Errorf("error during recovery of file %q: %v, you need "+
 					"to manually remove index file %q (remove failed with err: %v)",
 					fslice.file.name, err, fslice.idxFile.name, rmErr))
 			}
@@ -2870,7 +2870,7 @@ func (ms *FileMsgStore) enforceLimits(reportHitLimit, lockFile bool) error {
 		ms.removeFirstMsg(nil, lockFile)
 		if reportHitLimit && !ms.hitLimit {
 			ms.hitLimit = true
-			ms.log.Noticef(droppingMsgsFmt, ms.subject, ms.totalCount, ms.limits.MaxMsgs,
+			ms.log.Warnf(droppingMsgsFmt, ms.subject, ms.totalCount, ms.limits.MaxMsgs,
 				util.FriendlyBytes(int64(ms.totalBytes)), util.FriendlyBytes(ms.limits.MaxBytes))
 		}
 	}
@@ -3232,43 +3232,59 @@ func (ms *FileMsgStore) GetSequenceFromTimestamp(timestamp int64) (uint64, error
 		return ms.last + 1, nil
 	}
 	// If we have some state, try to quickly get the sequence
-	if ms.firstMsg != nil && ms.firstMsg.Timestamp >= timestamp {
+	if ms.firstMsg != nil && timestamp <= ms.firstMsg.Timestamp {
 		return ms.first, nil
 	}
-	if ms.lastMsg != nil && timestamp >= ms.lastMsg.Timestamp {
-		return ms.last + 1, nil
+	if ms.lastMsg != nil {
+		if timestamp == ms.lastMsg.Timestamp {
+			return ms.last, nil
+		}
+		if timestamp > ms.lastMsg.Timestamp {
+			return ms.last + 1, nil
+		}
 	}
-
-	smallest := int64(-1)
 	// This will require disk access.
-	for _, slice := range ms.files {
+	for i := ms.firstFSlSeq; i <= ms.lastFSlSeq; i++ {
+		// support possible missing slices
+		slice := ms.files[i]
+		if slice == nil {
+			continue
+		}
 		if err := ms.lockIndexFile(slice); err != nil {
 			return 0, err
 		}
-		mindex := ms.getMsgIndex(slice, slice.firstSeq)
-		if timestamp >= mindex.timestamp {
-			mindex = ms.getMsgIndex(slice, slice.lastSeq)
-			if timestamp <= mindex.timestamp {
+		seq := slice.firstSeq
+		firstMsgInSlice := ms.getMsgIndex(slice, seq)
+		if timestamp > firstMsgInSlice.timestamp {
+			seq = slice.lastSeq
+			lastMsgInSlice := ms.getMsgIndex(slice, seq)
+			if timestamp > lastMsgInSlice.timestamp {
+				// Not there, move to the next slice.
+				ms.unlockIndexFile(slice)
+				continue
+			}
+			// It may be equal, so search only if strictly lower
+			if timestamp < lastMsgInSlice.timestamp {
+				// We know that the timestamp is somewhere in this slice.
+
 				// Could do binary search, but will be probably more efficient
 				// to do sequential disk reads. The index records are small,
 				// so read of a record will probably bring many consecutive ones
 				// in the system's disk cache, resulting in memory-only access
 				// for the following indexes...
-				for seq := slice.firstSeq + 1; seq < slice.lastSeq; seq++ {
-					mindex = ms.getMsgIndex(slice, seq)
+				for seq = slice.firstSeq + 1; seq <= slice.lastSeq-1; seq++ {
+					mindex := ms.getMsgIndex(slice, seq)
 					if mindex.timestamp >= timestamp {
-						ms.unlockIndexFile(slice)
-						return seq, nil
+						break
 					}
 				}
 			}
-		} else if smallest == -1 || mindex.timestamp < smallest {
-			smallest = mindex.timestamp
 		}
 		ms.unlockIndexFile(slice)
-	}
-	if timestamp < smallest {
-		return ms.first, nil
+		// We are here if the timestamp is smaller than the first
+		// message in the first slice, or we have found the first
+		// sequence that is >= timestamp.
+		return seq, nil
 	}
 	return ms.last + 1, nil
 }
@@ -4001,7 +4017,7 @@ func (ss *FileSubStore) writeRecord(w io.Writer, recType recordType, rec record)
 	case subRecDel:
 		ss.delRecs++
 	default:
-		panic(fmt.Errorf("Record type %v unknown", recType))
+		panic(fmt.Errorf("record type %v unknown", recType))
 	}
 	ss.fileSize += int64(totalSize)
 	if needsUnlock {

@@ -120,7 +120,7 @@ func (ms *MemoryMsgStore) Store(m *pb.MsgProto) (uint64, error) {
 			ms.removeFirstMsg()
 			if !ms.hitLimit {
 				ms.hitLimit = true
-				ms.log.Noticef(droppingMsgsFmt, ms.subject, ms.totalCount, ms.limits.MaxMsgs,
+				ms.log.Warnf(droppingMsgsFmt, ms.subject, ms.totalCount, ms.limits.MaxMsgs,
 					util.FriendlyBytes(int64(ms.totalBytes)), util.FriendlyBytes(ms.limits.MaxBytes))
 			}
 		}
@@ -167,10 +167,13 @@ func (ms *MemoryMsgStore) GetSequenceFromTimestamp(timestamp int64) (uint64, err
 	if ms.first > ms.last {
 		return ms.last + 1, nil
 	}
-	if ms.msgs[ms.first].Timestamp >= timestamp {
+	if timestamp <= ms.msgs[ms.first].Timestamp {
 		return ms.first, nil
 	}
-	if timestamp >= ms.msgs[ms.last].Timestamp {
+	if timestamp == ms.msgs[ms.last].Timestamp {
+		return ms.last, nil
+	}
+	if timestamp > ms.msgs[ms.last].Timestamp {
 		return ms.last + 1, nil
 	}
 

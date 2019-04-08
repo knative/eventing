@@ -17,14 +17,14 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"os"
 	"sync"
 	"time"
 
-	"github.com/boltdb/bolt"
 	"github.com/hashicorp/go-msgpack/codec"
 	"github.com/hashicorp/raft"
 	"github.com/nats-io/nats-streaming-server/logger"
+	"github.com/nats-io/nats-streaming-server/stores"
+	bolt "go.etcd.io/bbolt"
 )
 
 // Bucket names
@@ -40,37 +40,54 @@ var errKeyNotFound = errors.New("not found")
 // by raft to store logs and configuration changes.
 type raftLog struct {
 	sync.RWMutex
-	log                    logger.Logger
-	conn                   *bolt.DB
-	fileName               string
-	noSync                 bool
-	trailingLogs           int
-	ratioThreshold         int
-	simpleDelThresholdHigh int
-	simpleDelThresholdLow  int
-	codec                  *codec.MsgpackHandle
-	closed                 bool
+	log      logger.Logger
+	conn     *bolt.DB
+	fileName string
+	codec    *codec.MsgpackHandle
+	closed   bool
+
+	// If the store is using encryption
+	encryption    bool
+	eds           *stores.EDStore
+	encryptBuf    []byte
+	encryptOffset int
 }
 
-func newRaftLog(log logger.Logger, fileName string, sync bool, trailingLogs int) (*raftLog, error) {
+func newRaftLog(log logger.Logger, fileName string, sync bool, _ int, encrypt bool, encryptionCipher string, encryptionKey []byte) (*raftLog, error) {
 	r := &raftLog{
-		log:                    log,
-		fileName:               fileName,
-		noSync:                 !sync,
-		trailingLogs:           trailingLogs,
-		ratioThreshold:         50,
-		simpleDelThresholdLow:  1000,
-		simpleDelThresholdHigh: 100000,
-		codec:                  &codec.MsgpackHandle{},
+		log:      log,
+		fileName: fileName,
+		codec:    &codec.MsgpackHandle{},
 	}
-	conn, err := r.openAndSetOptions(fileName)
+	db, err := bolt.Open(fileName, 0600, nil)
 	if err != nil {
 		return nil, err
 	}
-	r.conn = conn
+	db.NoSync = !sync
+	// Don't use this for now.
+	// See https://github.com/etcd-io/bbolt/issues/152
+	// db.NoFreelistSync = true
+	db.FreelistType = bolt.FreelistMapType
+	r.conn = db
 	if err := r.init(); err != nil {
 		r.conn.Close()
 		return nil, err
+	}
+	if encrypt {
+		lastIndex, err := r.getIndex(false)
+		if err != nil {
+			r.conn.Close()
+			return nil, err
+		}
+		eds, err := stores.NewEDStore(encryptionCipher, encryptionKey, lastIndex)
+		if err != nil {
+			r.conn.Close()
+			return nil, err
+		}
+		r.eds = eds
+		r.encryption = true
+		r.encryptBuf = make([]byte, 100)
+		r.encryptOffset = eds.EncryptionOffset()
 	}
 	return r, nil
 }
@@ -92,25 +109,50 @@ func (r *raftLog) init() error {
 	return tx.Commit()
 }
 
-func (r *raftLog) openAndSetOptions(fileName string) (*bolt.DB, error) {
-	db, err := bolt.Open(fileName, 0600, nil)
-	if err != nil {
-		return nil, err
-	}
-	db.NoSync = r.noSync
-	return db, nil
+func (r *raftLog) encrypt(data []byte) ([]byte, error) {
+	// Here we can reuse a buffer to encrypt because we know
+	// that the underlying is going to make a copy of the
+	// slice.
+	return r.eds.Encrypt(&r.encryptBuf, data)
 }
 
 func (r *raftLog) encodeRaftLog(in *raft.Log) ([]byte, error) {
+	var orgData []byte
+	if r.encryption && len(in.Data) > 0 && in.Type == raft.LogCommand {
+		orgData = in.Data
+		ed, err := r.encrypt(in.Data)
+		if err != nil {
+			return nil, err
+		}
+		in.Data = ed
+	}
 	var buf []byte
 	enc := codec.NewEncoderBytes(&buf, r.codec)
 	err := enc.Encode(in)
+	if orgData != nil {
+		in.Data = orgData
+	}
 	return buf, err
 }
 
 func (r *raftLog) decodeRaftLog(buf []byte, log *raft.Log) error {
 	dec := codec.NewDecoderBytes(buf, r.codec)
-	return dec.Decode(log)
+	err := dec.Decode(log)
+	if r.encryption && err == nil && len(log.Data) > 0 && log.Type == raft.LogCommand {
+		// My understanding is that log.Data is empty at beginning of this
+		// function and dec.Decode(log) will make a copy from buffer that
+		// comes from boltdb. So we can decrypt in place since we "own" log.Data.
+		var dst []byte
+		if len(log.Data) > r.encryptOffset {
+			dst = log.Data[r.encryptOffset:]
+		}
+		dd, err := r.eds.Decrypt(dst[:0], log.Data)
+		if err != nil {
+			return err
+		}
+		log.Data = dd
+	}
+	return err
 }
 
 // Close implements the LogStore interface
@@ -195,12 +237,13 @@ func (r *raftLog) StoreLog(log *raft.Log) error {
 
 // StoreLogs implements the LogStore interface
 func (r *raftLog) StoreLogs(logs []*raft.Log) error {
-	r.RLock()
+	r.Lock()
 	tx, err := r.conn.Begin(true)
 	if err != nil {
-		r.RUnlock()
+		r.Unlock()
 		return err
 	}
+	bucket := tx.Bucket(logsBucket)
 	for _, log := range logs {
 		var (
 			key [8]byte
@@ -211,7 +254,6 @@ func (r *raftLog) StoreLogs(logs []*raft.Log) error {
 		if err != nil {
 			break
 		}
-		bucket := tx.Bucket(logsBucket)
 		err = bucket.Put(key[:], val)
 		if err != nil {
 			break
@@ -222,7 +264,7 @@ func (r *raftLog) StoreLogs(logs []*raft.Log) error {
 	} else {
 		err = tx.Commit()
 	}
-	r.RUnlock()
+	r.Unlock()
 	return err
 }
 
@@ -233,91 +275,21 @@ func (r *raftLog) DeleteRange(min, max uint64) (retErr error) {
 
 	start := time.Now()
 	r.log.Noticef("Deleting raft logs from %v to %v", min, max)
-	defer func() {
-		dur := time.Since(start)
-		durTxt := fmt.Sprintf("Deletion took %v", dur)
-		if dur > 2*time.Second {
-			r.log.Errorf(fmt.Sprintf("%s. This is too long, consider lowering TrailingLogs value currently set to %v",
-				durTxt, r.trailingLogs))
-		} else {
-			r.log.Noticef(durTxt)
-		}
-	}()
-
-	// We know that RAFT is calling DeleteRange leaving at least
-	// trailingLogs number of logs at the end.
-
-	// If the selected number of trailingLogs (value set when RAFT is created)
-	// is too big, perform a simple delete range that removes logs from the DB.
-	if r.trailingLogs > r.simpleDelThresholdHigh {
-		return r.simpleDeleteRange(min, max)
+	err := r.deleteRange(min, max)
+	dur := time.Since(start)
+	durTxt := fmt.Sprintf("Deletion took %v", dur)
+	if dur > 2*time.Second {
+		r.log.Errorf(durTxt)
+	} else {
+		r.log.Noticef(durTxt)
 	}
-	// If the number of logs to delete is small, remove in place.
-	toRemove := int(max-min) + 1
-	if toRemove <= r.simpleDelThresholdLow {
-		return r.simpleDeleteRange(min, max)
-	}
-	r.log.Noticef("Compaction in progress...")
-
-	newfileName := r.fileName + ".new"
-	newdb, err := r.openAndSetOptions(newfileName)
-	if err != nil {
-		return err
-	}
-	removeNewFile := true
-	defer func() {
-		if removeNewFile {
-			newdb.Close()
-			os.Remove(newfileName)
-		}
-	}()
-
-	curDBConn := r.conn
-	newDBConn := newdb
-
-	// First, transfer all confLogs, there should not be that many
-	if err := r.transferLogs(curDBConn, newDBConn, confBucket, 1); err != nil {
-		return err
-	}
-
-	if err := r.transferLogs(curDBConn, newDBConn, logsBucket, max+1); err != nil {
-		return err
-	}
-
-	// Close new db
-	if err := newdb.Close(); err != nil {
-		return err
-	}
-	// Close current db
-	if err := curDBConn.Close(); err != nil {
-		// We got an error, try to reopen
-		db, cerr := r.openAndSetOptions(r.fileName)
-		if cerr != nil {
-			// At this point, panic...
-			panic(fmt.Errorf("error closing bolt db after compaction: %v - error re-opening: %v", err, cerr))
-		}
-		r.conn = db
-		return err
-	}
-	// Rename new db file to the name of old one
-	os.Rename(newfileName, r.fileName)
-	// Reopen the compacted db file
-	db, err := r.openAndSetOptions(r.fileName)
-	if err != nil {
-		// At this point, panic...
-		panic(fmt.Errorf("error compacting bolt db: %v", err))
-	}
-	// We now point to the compact db file
-	r.conn = db
-	// Success, skip cleanup code
-	removeNewFile = false
-	return nil
+	return err
 }
 
 // Delete logs from the "logs" bucket starting at the min index
 // and up to max index (included).
 // Lock is held on entry
-func (r *raftLog) simpleDeleteRange(min, max uint64) error {
+func (r *raftLog) deleteRange(min, max uint64) error {
 	var key [8]byte
 	binary.BigEndian.PutUint64(key[:], min)
 	tx, err := r.conn.Begin(true)
@@ -338,66 +310,12 @@ func (r *raftLog) simpleDeleteRange(min, max uint64) error {
 	return tx.Commit()
 }
 
-func (r *raftLog) transferLogs(curDB, newDB *bolt.DB, bucketName []byte, startKey uint64) error {
-	readTX, err := curDB.Begin(false)
-	if err != nil {
-		return err
-	}
-	// Read transactions must be rollback (not committed)
-	defer readTX.Rollback()
-
-	var (
-		key         [8]byte
-		count       int
-		limit       = 1000
-		writeTX     *bolt.Tx
-		writeBucket *bolt.Bucket
-	)
-	binary.BigEndian.PutUint64(key[:], startKey)
-
-	curs := readTX.Bucket(bucketName).Cursor()
-
-	for k, v := curs.Seek(key[:]); k != nil; k, v = curs.Next() {
-		if count == 0 {
-			writeTX, err = newDB.Begin(true)
-			if err != nil {
-				return err
-			}
-			writeBucket = writeTX.Bucket(bucketName)
-			if writeBucket == nil {
-				b, err := writeTX.CreateBucket(bucketName)
-				if err != nil {
-					writeTX.Rollback()
-					return err
-				}
-				writeBucket = b
-			}
-		}
-		if err := writeBucket.Put(k, v); err != nil {
-			writeTX.Rollback()
-			return err
-		}
-		count++
-		if count == limit {
-			count = 0
-			if err := writeTX.Commit(); err != nil {
-				return err
-			}
-			writeTX = nil
-		}
-	}
-	if writeTX != nil {
-		return writeTX.Commit()
-	}
-	return nil
-}
-
 // Set implements the Stable interface
 func (r *raftLog) Set(k, v []byte) error {
-	r.RLock()
+	r.Lock()
 	tx, err := r.conn.Begin(true)
 	if err != nil {
-		r.RUnlock()
+		r.Unlock()
 		return err
 	}
 	bucket := tx.Bucket(confBucket)
@@ -407,7 +325,7 @@ func (r *raftLog) Set(k, v []byte) error {
 	} else {
 		err = tx.Commit()
 	}
-	r.RUnlock()
+	r.Unlock()
 	return err
 }
 
