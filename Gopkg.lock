@@ -233,13 +233,6 @@
   version = "v0.2.0"
 
 [[projects]]
-  digest = "1:c280fbe00363f7c8db868a738b94df33586ce05c10d26578c3adf544d010eb64"
-  name = "github.com/google/go-containerregistry"
-  packages = ["pkg/name"]
-  pruneopts = "NUT"
-  revision = "dbc4da98389f9d0c42eb314c2b346bf1d2a27310"
-
-[[projects]]
   branch = "master"
   digest = "1:52c5834e2bebac9030c97cc0798ac11c3aa8a39f098aeb419f142533da6cd3cc"
   name = "github.com/google/gofuzz"
@@ -370,7 +363,7 @@
   revision = "dd3ceb3323922b899a0a913f885fcf59943e7b59"
 
 [[projects]]
-  digest = "1:ab1dff3201645efb588a924b42a280aaec55c4776d1cd766ffef107d5731eaa0"
+  digest = "1:24c03867a9e3a7c469c927a50c9bcb07d3bceb7e2bcb706ddceb9f57c5297dde"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -397,26 +390,7 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "1d9d8f8871250649adab16e3369e1a09e5595b04"
-
-[[projects]]
-  digest = "1:edcf99e561b63d758646ca9d9dee0f6c81c3eed617af1120645c9d5c0d80d8c7"
-  name = "github.com/knative/serving"
-  packages = [
-    "pkg/apis/autoscaling",
-    "pkg/apis/autoscaling/v1alpha1",
-    "pkg/apis/networking",
-    "pkg/apis/networking/v1alpha1",
-    "pkg/apis/serving",
-    "pkg/apis/serving/v1alpha1",
-    "pkg/client/clientset/versioned",
-    "pkg/client/clientset/versioned/scheme",
-    "pkg/client/clientset/versioned/typed/autoscaling/v1alpha1",
-    "pkg/client/clientset/versioned/typed/networking/v1alpha1",
-    "pkg/client/clientset/versioned/typed/serving/v1alpha1",
-  ]
-  pruneopts = "NUT"
-  revision = "9a44df0e64edcb943c7edfe2d3eac2be41aa2316"
+  revision = "2b574edcd712e848556c69cc95a2622145284882"
 
 [[projects]]
   branch = "master"
@@ -1288,9 +1262,6 @@
     "github.com/knative/pkg/test",
     "github.com/knative/pkg/test/logging",
     "github.com/knative/pkg/webhook",
-    "github.com/knative/serving/pkg/apis/serving/v1alpha1",
-    "github.com/knative/serving/pkg/client/clientset/versioned",
-    "github.com/knative/serving/pkg/client/clientset/versioned/typed/serving/v1alpha1",
     "github.com/knative/test-infra/scripts",
     "github.com/knative/test-infra/tools/dep-collector",
     "github.com/nats-io/go-nats-streaming",

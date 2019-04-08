@@ -20,57 +20,14 @@ package test
 import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	pkgTest "github.com/knative/pkg/test"
-	servingv1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
-	eventsApiVersion  = "eventing.knative.dev/v1alpha1"
-	servingApiVersion = "serving.knative.dev/v1alpha1"
+	eventsApiVersion = "eventing.knative.dev/v1alpha1"
 )
-
-// Route returns a Route object in namespace.
-func Route(name string, namespace string, configName string) *servingv1alpha1.Route {
-	return &servingv1alpha1.Route{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-		},
-		Spec: servingv1alpha1.RouteSpec{
-			Traffic: []servingv1alpha1.TrafficTarget{
-				{
-					ConfigurationName: configName,
-					Percent:           100,
-				},
-			},
-		},
-	}
-}
-
-// Configuration returns a Configuration object in namespace with the name names.Config
-// that uses the image specified by imagePath.
-func Configuration(name string, namespace string, imagePath string) *servingv1alpha1.Configuration {
-	return &servingv1alpha1.Configuration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: servingv1alpha1.ConfigurationSpec{
-			RevisionTemplate: servingv1alpha1.RevisionTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{"knative.dev/type": "container"},
-				},
-				Spec: servingv1alpha1.RevisionSpec{
-					Container: corev1.Container{
-						Image: imagePath,
-					},
-				},
-			},
-		},
-	}
-}
 
 // ClusterChannelProvisioner returns a ClusterChannelProvisioner for a given name.
 func ClusterChannelProvisioner(name string) *corev1.ObjectReference {
@@ -92,13 +49,6 @@ func Channel(name string, namespace string, provisioner *corev1.ObjectReference)
 		Spec: v1alpha1.ChannelSpec{
 			Provisioner: provisioner,
 		},
-	}
-}
-
-// SubscriberSpecForRoute returns a SubscriberSpec for a given Knative Route.
-func SubscriberSpecForRoute(name string) *v1alpha1.SubscriberSpec {
-	return &v1alpha1.SubscriberSpec{
-		Ref: pkgTest.CoreV1ObjectReference("Route", servingApiVersion, name),
 	}
 }
 
