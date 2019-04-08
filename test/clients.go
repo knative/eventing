@@ -20,14 +20,12 @@ package test
 import (
 	eventing "github.com/knative/eventing/pkg/client/clientset/versioned"
 	"github.com/knative/pkg/test"
-	serving "github.com/knative/serving/pkg/client/clientset/versioned"
 	"k8s.io/client-go/dynamic"
 )
 
 // Clients holds instances of interfaces for making requests to Knative.
 type Clients struct {
 	Kube     *test.KubeClient
-	Serving  *serving.Clientset
 	Eventing *eventing.Clientset
 	Dynamic  dynamic.Interface
 }
@@ -42,11 +40,6 @@ func NewClients(configPath string, clusterName string, namespace string) (*Clien
 		return nil, err
 	}
 	clients.Kube, err = test.NewKubeClient(configPath, clusterName)
-	if err != nil {
-		return nil, err
-	}
-
-	clients.Serving, err = serving.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
