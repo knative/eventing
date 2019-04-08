@@ -35,15 +35,20 @@ readonly E2E_TEST_NAMESPACE=e2etest-knative-eventing
 
 function knative_setup() {
   start_latest_knative_serving || return 1
+
+  echo ">> Starting Knative Eventing"
+  echo "Installing Knative Eventing"
   ko apply -f config/ || return 1
   wait_until_pods_running knative-eventing || fail_test "Eventing did not come up (1)"
 
-  subheader "Standing up In-Memory ClusterChannelProvisioner"
+  echo "Installing In-Memory ClusterChannelProvisioner"
   ko apply -f config/provisioners/in-memory-channel/in-memory-channel.yaml || return 1
   wait_until_pods_running knative-eventing || fail_test "Eventing did not come up (2)"
 }
 
 function knative_teardown() {
+  echo ">> Stopping Knative Eventing"
+  echo "Uninstalling Knative Eventing"
   ko delete --ignore-not-found=true -f config/
 
   wait_until_object_does_not_exist namespaces knative-eventing
@@ -54,6 +59,8 @@ function knative_teardown() {
 
 # Setup resources common to all eventing tests
 function test_setup() {
+  # Create the test namespace
+  echo ">> Creating namespace $E2E_TEST_NAMESPACE"
   kubectl create namespace ${E2E_TEST_NAMESPACE} || return 1
   # Publish test images
   $(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test images"
@@ -61,7 +68,7 @@ function test_setup() {
 
 function test_teardown() {
   # Delete the test namespace
-  echo "Deleting namespace $E2E_TEST_NAMESPACE"
+  echo ">> Deleting namespace $E2E_TEST_NAMESPACE"
   kubectl --ignore-not-found=true delete namespace ${E2E_TEST_NAMESPACE}
   wait_until_object_does_not_exist namespaces ${E2E_TEST_NAMESPACE}
 }
