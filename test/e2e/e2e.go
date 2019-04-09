@@ -38,7 +38,7 @@ import (
 
 const (
 	interval = 1 * time.Second
-	timeout  = 1 * time.Minute
+	timeout  = 2 * time.Minute
 )
 
 // Setup validates namespace and provisioner, creates the client objects needed in the e2e tests.
@@ -46,7 +46,6 @@ func Setup(t *testing.T, logf logging.FormatLogger) (*test.Clients, *test.Cleane
 	if test.EventingFlags.Provisioner == "" {
 		t.Fatal("ClusterChannelProvisioner must be set to a non-empty string. Either do not specify --clusterChannelProvisioner or set to something other than the empty string")
 	}
-	pkgTest.Flags.Namespace = test.EventingNamespace
 
 	clients, err := test.NewClients(
 		pkgTest.Flags.Kubeconfig,
@@ -65,7 +64,7 @@ func TearDown(clients *test.Clients, cleaner *test.Cleaner, _ logging.FormatLogg
 	cleaner.Clean(true)
 }
 
-// CreateChannel will create a Channel
+// CreateChannel will create a Channel.
 func CreateChannel(clients *test.Clients, channel *v1alpha1.Channel, _ logging.FormatLogger, cleaner *test.Cleaner) error {
 	channels := clients.Eventing.EventingV1alpha1().Channels(test.EventingNamespace)
 	res, err := channels.Create(channel)
@@ -76,7 +75,7 @@ func CreateChannel(clients *test.Clients, channel *v1alpha1.Channel, _ logging.F
 	return nil
 }
 
-// CreateSubscription will create a Subscription
+// CreateSubscription will create a Subscription.
 func CreateSubscription(clients *test.Clients, sub *v1alpha1.Subscription, _ logging.FormatLogger, cleaner *test.Cleaner) error {
 	subscriptions := clients.Eventing.EventingV1alpha1().Subscriptions(test.EventingNamespace)
 	res, err := subscriptions.Create(sub)
@@ -198,7 +197,7 @@ func WithTriggerReady(clients *test.Clients, trigger *v1alpha1.Trigger, logf log
 	return nil
 }
 
-// CreateServiceAccount will create a service account
+// CreateServiceAccount will create a service account.
 func CreateServiceAccount(clients *test.Clients, sa *corev1.ServiceAccount, _ logging.FormatLogger, cleaner *test.Cleaner) error {
 	sas := clients.Kube.Kube.CoreV1().ServiceAccounts(test.EventingNamespace)
 	res, err := sas.Create(sa)
@@ -209,7 +208,7 @@ func CreateServiceAccount(clients *test.Clients, sa *corev1.ServiceAccount, _ lo
 	return nil
 }
 
-// CreateClusterRoleBinding will create a service account binding
+// CreateClusterRoleBinding will create a service account binding.
 func CreateClusterRoleBinding(clients *test.Clients, crb *rbacv1.ClusterRoleBinding, _ logging.FormatLogger, cleaner *test.Cleaner) error {
 	clusterRoleBindings := clients.Kube.Kube.RbacV1().ClusterRoleBindings()
 	res, err := clusterRoleBindings.Create(crb)
@@ -221,7 +220,7 @@ func CreateClusterRoleBinding(clients *test.Clients, crb *rbacv1.ClusterRoleBind
 }
 
 // CreateServiceAccountAndBinding creates both ServiceAccount and ClusterRoleBinding with default
-// cluster-admin role
+// cluster-admin role.
 func CreateServiceAccountAndBinding(clients *test.Clients, name string, logf logging.FormatLogger, cleaner *test.Cleaner) error {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -257,11 +256,12 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, logf log
 	return nil
 }
 
-// CreatePodAndServiceReady will create a Pod and Service, and wait for them to become ready
+// CreatePodAndServiceReady will create a Pod and Service, and wait for them to become ready.
 func CreatePodAndServiceReady(clients *test.Clients, pod *corev1.Pod, svc *corev1.Service, logf logging.FormatLogger, cleaner *test.Cleaner) (*corev1.Pod, error) {
 	if err := CreatePod(clients, pod, logf, cleaner); err != nil {
 		return nil, fmt.Errorf("Failed to create pod: %v", err)
 	}
+	// TODO(chizhg): Change to only waiting for the current pod running rather than all.
 	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, test.EventingNamespace); err != nil {
 		return nil, fmt.Errorf("Error waiting for pod to become running: %v", err)
 	}
@@ -271,7 +271,7 @@ func CreatePodAndServiceReady(clients *test.Clients, pod *corev1.Pod, svc *corev
 		return nil, fmt.Errorf("Failed to create service: %v", err)
 	}
 
-	// Reload pod to get IP
+	// Reload pod to get IP.
 	pod, err := clients.Kube.Kube.CoreV1().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get pod: %v", err)
@@ -280,7 +280,7 @@ func CreatePodAndServiceReady(clients *test.Clients, pod *corev1.Pod, svc *corev
 	return pod, nil
 }
 
-// CreateService will create a Service
+// CreateService will create a Service.
 func CreateService(clients *test.Clients, svc *corev1.Service, _ logging.FormatLogger, cleaner *test.Cleaner) error {
 	svcs := clients.Kube.Kube.CoreV1().Services(svc.GetNamespace())
 	res, err := svcs.Create(svc)
@@ -291,7 +291,7 @@ func CreateService(clients *test.Clients, svc *corev1.Service, _ logging.FormatL
 	return nil
 }
 
-// CreatePod will create a Pod
+// CreatePod will create a Pod.
 func CreatePod(clients *test.Clients, pod *corev1.Pod, _ logging.FormatLogger, cleaner *test.Cleaner) error {
 	res, err := clients.Kube.CreatePod(pod)
 	if err != nil {
@@ -331,7 +331,7 @@ func WaitForLogContents(clients *test.Clients, logf logging.FormatLogger, podNam
 				logf("Could not find content %q for %s/%s. Found %q instead", content, podName, containerName, string(logs))
 				return false, nil
 			}
-			// do not return as we will keep on looking for the other contents in the slice
+			// Do not return as we will keep on looking for the other contents in the slice.
 			logf("Found content %q for %s/%s in logs %q", content, podName, containerName, string(logs))
 		}
 		return true, nil

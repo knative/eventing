@@ -86,8 +86,6 @@ func SingleEvent(t *testing.T, encoding string) {
 	}
 
 	if err := pkgTest.WaitForLogContent(clients.Kube, loggerPodName, loggerPod.Spec.Containers[0].Name, body); err != nil {
-		clients.Kube.PodLogs(senderName, "sendevent")
-		clients.Kube.PodLogs(senderName, "istio-proxy")
 		t.Fatalf("String %q not found in logs of logger pod %q: %v", body, loggerPodName, err)
 	}
 }

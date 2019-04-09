@@ -42,6 +42,9 @@ type EventingEnvironmentFlags struct {
 }
 
 func initializeEventingFlags() *EventingEnvironmentFlags {
+	// TODO(chizhg): pkgTest.WaitForLogContent is using Flags.Namespace internally, so we'll have to set it here.
+	//               Will find a better way to handle it.
+	pkgTest.Flags.Namespace = EventingNamespace
 	var f EventingEnvironmentFlags
 
 	flag.StringVar(&f.Provisioner, "clusterChannelProvisioner", "in-memory-channel", "The name of the Channel's clusterChannelProvisioner. Only the in-memory-channel is installed by the tests, anything else must be installed before the tests are run.")

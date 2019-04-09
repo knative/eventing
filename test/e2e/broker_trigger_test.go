@@ -144,6 +144,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 
 	t.Logf("Waiting for triggers to become ready")
 
+	// TODO(chizhg): Change to only waiting for the specified triggers to be ready rather than all.
 	// Wait for all of the triggers in the namespace to be ready.
 	if err := WaitForAllTriggersReady(clients, t.Logf); err != nil {
 		t.Fatalf("Error waiting for triggers to become ready: %v", err)
