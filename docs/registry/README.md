@@ -10,7 +10,7 @@ This is also known as the `discoverability` use case, and is the main focus of t
 
 Design an **initial** version of the **Registry** for the **MVP** that can support discoverability of 
 the different event types that can be consumed from the eventing mesh. For details on the different user stories 
-that this proposal enables, please refer to the 
+that this proposal touches, please refer to the 
 [User stories and personas for Knative eventing](https://docs.google.com/document/d/15uhyqQvaomxRX2u8s0i6CNhA86BQTNztkdsLUnPmvv4/edit?usp=sharing) document.
 
 #### Out of scope
@@ -21,7 +21,8 @@ takes care of setting up Secrets for connecting to a GitHub repo, and so on.
 - Registry synchronization with `Event Producers`. We assume that if new GitHub events are created by 
 GitHub after our cluster has been configured (i.e., our GitHub CRD Source installed) and the appropriate webhooks 
 have been created, we will need to create new webhooks (and update the GitHub CRD Source) if we want to listen for 
-those new events. Such task will again be in charge of the `Cluster Configurator`.
+those new events. Until doing so, those new events shouldn't be listed in the Registry. 
+Such task will again be in charge of the `Cluster Configurator`.
 
 ## Requirements
 
@@ -118,7 +119,7 @@ By applying the above file, two EventTypes will be registered, with types `dev.k
 `dev.knative.source.github.pull_request`, source `my-other-user/my-other-repo`, for the `default` Broker in the `default`
  namespace, and with owner `github-source-sample`.
  
-Note that the `Cluster Configurator` is the person in charge of taken care of authentication-related matters. E.g., if a new `Event Consumer` 
+Note that the `Cluster Configurator` is the person in charge of taking care of authentication-related matters. E.g., if a new `Event Consumer` 
 wants to listen for events from a different GitHub repo, the `Cluster Configurator` will take care of the necessary secrets generation, 
 and new Source instantiation.
  
@@ -315,7 +316,7 @@ spec:
 - Auto Add
 
 By setting the ingress policy to auto add, the Broker will accept any event and will add its EventType 
-to the Registry (in case is not present).
+to the Registry (in case it is not present).
 
 ```yaml
 apiVersion: eventing.knative.dev/v1alpha1
@@ -330,3 +331,62 @@ spec:
 Note that more policies should probably need to be configured, e.g., allow auto-registration of EventTypes received 
 from within the cluster (e.g., from a response of a Service running in the cluster) as opposed to external services, and so on. 
 We just enumerate three simple cases here.
+
+## FAQ
+
+Here is a list of frequently asked questions that may help clarify the scope of the Registry.
+
+- Is the Registry meant to be used just for creating Triggers or for also setting up Event Sources?
+
+    It's mainly intended for helping the `Event Consumer` with the `discoverability` use case. Therefore, 
+    it is meant for helping out creating Triggers.
+
+- If I have a simple use case where I'm just setting up an Event Source and my KnService is its Sink (i.e., no Triggers involved), 
+is there a need/use for the Registry?
+
+    In this case, we believe there is no need for the Registry. As you can see in the EventType CRD, there is a mandatory 
+    `broker` field. If you are not sending events to a Broker, then there is no need to use a Registry. 
+    Implementation-wise, we can check whether the Source's sink kind is `Broker`, and if so, then register its EventTypes.   
+
+- Is the Registry meant to be used in a single-user environment where the same person is setting up both the Event Source and 
+the destination Sink?
+
+    We believe is mainly intended for multi-user environment. A `Cluster Configurator` persona is in charge of setting up 
+    the Sources, and `Event Consumers` are the ones that create the Triggers. Having said that, it can also be used in 
+    a single-user environment, but the Registry might not add much value compared to what we have right now in terms of 
+    `discoverability`, but it surely does in terms of, for example, `admission control`. 
+    
+- Does a user need to know which type of environment they're in before they should know if they should look at the Registry? 
+In other words, is a Registry always going to be there and if not under what conditions will it be?
+
+    If there are Sources pointing to Brokers, then there should be a Registry. `Event Consumers` will always be able to 
+    `kubectl get eventtypes -n <namespace>`.
+    
+- Once an Event Source is created, how is a new one created with different auth in an env where the user is really just meant 
+to deal with Triggers? This may not be a Registry specific question but if one of the goals of the Registry is to make it 
+so that the user only deals with Triggers using the info in the Registry, I think this aspect comes into play.
+
+    We believe the Event Source instantiation with different credentials should be handled by the `Cluster Configurer`. If the 
+    `Cluster Configurer` persona happens to be the same person as the `Event Consumer` persona, then it will have to take care 
+    of creating the Source. This is related to the question of a single-user, multi-user environment above.
+    
+- I've heard conflicting messages around whether the Registry is just a list of Event Types or it will also be a list of 
+Event Sources so that the user doesn't need to query the CRDs to get the list. We need to be clear about this.
+
+    The Registry is a list of EventTypes. Having said that, the `Event Consumer` could also (if it has the proper RBAC permissions) 
+    list Event Sources (e.g., `kubectl get crds -l eventing.knative.dev/source=true`), but that list is not part of what we call 
+    Registry here. The idea behind the fields in the EventType CRD is to have all the necessary information there in 
+    order to create a Triggers, thus, in most cases, the `Event Consumer` shouldn't have to list Sources. 
+
+-  I wonder if the Event Source populating the Registry should happen when the Event Source is loaded into the system, 
+meaning when the Event Source's CRD is installed (not when an instance of the CRD is created). 
+
+The problem with that is that you don't have a namespace (nor Broker, user/repo, etc.) at that point. 
+Which namespace the EventType should be created on? Pointing to which Broker? 
+Implementation-wise, one potential solution is to have a controller for source CRDs, whenever one is installed, search for all the namespaces with 
+eventing enabled (`kubectl get namespaces -l knative-eventing-injection=enabled`), and adding all the possible EventTypes from that CRD to each of 
+the Brokers in those namespaces. A downside of this is that the Registry information is not "accurate", in the sense that it only has info about EventTypes 
+that may eventually flow in the system. But actually, they will only be able to flow when a CR is created.
+
+- ...
+
