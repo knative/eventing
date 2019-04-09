@@ -55,7 +55,7 @@ func SingleEvent(t *testing.T, encoding string) {
 	defer TearDown(clients, cleaner, t.Logf)
 
 	ns := test.DefaultTestNamespace
-	t.Logf(">>>>>>>>>namespace: %s", ns)
+
 	nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}
 	nsSpec, _ = clients.Kube.Kube.CoreV1().Namespaces().Create(nsSpec)
 	// create logger pod
