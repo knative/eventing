@@ -54,26 +54,24 @@ func TestEventTransformation(t *testing.T) {
 	clients, cleaner := Setup(t, t.Logf)
 	defer TearDown(clients, cleaner, t.Logf)
 
-	ns := test.DefaultTestNamespace
-
 	// create subscriberPods and expose them as services
 	t.Logf("creating subscriber pods")
 	subscriberPods := make([]*corev1.Pod, 0)
 
 	// create transformation pod and service
 	transformationPodSelector := map[string]string{"e2etest": string(uuid.NewUUID())}
-	transformationPod := test.EventTransformationPod(transformationPodName, ns, transformationPodSelector, msgPostfix)
-	transformationSvc := test.Service(transformationPodName, ns, transformationPodSelector)
-	transformationPod, err := CreatePodAndServiceReady(clients, transformationPod, transformationSvc, ns, t.Logf, cleaner)
+	transformationPod := test.EventTransformationPod(transformationPodName, transformationPodSelector, msgPostfix)
+	transformationSvc := test.Service(transformationPodName, transformationPodSelector)
+	transformationPod, err := CreatePodAndServiceReady(clients, transformationPod, transformationSvc, t.Logf, cleaner)
 	if err != nil {
 		t.Fatalf("Failed to create transformation pod and service, and get them ready: %v", err)
 	}
 	subscriberPods = append(subscriberPods, transformationPod)
 	// create logger pod and service
 	loggerPodSelector := map[string]string{"e2etest": string(uuid.NewUUID())}
-	loggerPod := test.EventLoggerPod(loggerPodName, ns, loggerPodSelector)
-	loggerSvc := test.Service(loggerPodName, ns, loggerPodSelector)
-	loggerPod, err = CreatePodAndServiceReady(clients, loggerPod, loggerSvc, ns, t.Logf, cleaner)
+	loggerPod := test.EventLoggerPod(loggerPodName, loggerPodSelector)
+	loggerSvc := test.Service(loggerPodName, loggerPodSelector)
+	loggerPod, err = CreatePodAndServiceReady(clients, loggerPod, loggerSvc, t.Logf, cleaner)
 	if err != nil {
 		t.Fatalf("Failed to create logger pod and service, and get them ready: %v", err)
 	}
@@ -83,7 +81,7 @@ func TestEventTransformation(t *testing.T) {
 	t.Logf("Creating Channel and Subscription")
 	channels := make([]*v1alpha1.Channel, 0)
 	for _, channelName := range channelNames {
-		channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(test.EventingFlags.Provisioner))
+		channel := test.Channel(channelName, test.ClusterChannelProvisioner(test.EventingFlags.Provisioner))
 		t.Logf("channel: %#v", channel)
 
 		channels = append(channels, channel)
@@ -93,13 +91,13 @@ func TestEventTransformation(t *testing.T) {
 	subs := make([]*v1alpha1.Subscription, 0)
 	// create subscriptions that subscribe the first channel, use the transformation service to transform the events and then forward the transformed events to the second channel
 	for _, subscriptionName := range subscriptionNames1 {
-		sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelNames[0]), test.SubscriberSpecForService(transformationPodName), test.ReplyStrategyForChannel(channelNames[1]))
+		sub := test.Subscription(subscriptionName, test.ChannelRef(channelNames[0]), test.SubscriberSpecForService(transformationPodName), test.ReplyStrategyForChannel(channelNames[1]))
 		t.Logf("sub: %#v", sub)
 		subs = append(subs, sub)
 	}
 	// create subscriptions that subscribe the second channel, and call the logging service
 	for _, subscriptionName := range subscriptionNames2 {
-		sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelNames[1]), test.SubscriberSpecForService(loggerPodName), nil)
+		sub := test.Subscription(subscriptionName, test.ChannelRef(channelNames[1]), test.SubscriberSpecForService(loggerPodName), nil)
 		t.Logf("sub: %#v", sub)
 		subs = append(subs, sub)
 	}
@@ -117,7 +115,7 @@ func TestEventTransformation(t *testing.T) {
 		Data:     fmt.Sprintf(`{"msg":%q}`, body),
 		Encoding: test.CloudEventDefaultEncoding,
 	}
-	if err := SendFakeEventToChannel(clients, event, channels[0], ns, t.Logf, cleaner); err != nil {
+	if err := SendFakeEventToChannel(clients, event, channels[0], t.Logf, cleaner); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channels[0].Name)
 	}
 

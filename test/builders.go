@@ -24,7 +24,7 @@ type TriggerBuilder struct {
 	*eventingv1alpha1.Trigger
 }
 
-func NewTriggerBuilder(name, namespace string) *TriggerBuilder {
+func NewTriggerBuilder(name string) *TriggerBuilder {
 	trigger := &eventingv1alpha1.Trigger{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
@@ -32,7 +32,7 @@ func NewTriggerBuilder(name, namespace string) *TriggerBuilder {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: namespace,
+			Namespace: EventingNamespace,
 		},
 		Spec: eventingv1alpha1.TriggerSpec{
 			Broker: "default",

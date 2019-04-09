@@ -21,8 +21,6 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/apimachinery/pkg/api/errors"
-
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/test"
 	pkgTest "github.com/knative/pkg/test"
@@ -49,11 +47,12 @@ func Setup(t *testing.T, logf logging.FormatLogger) (*test.Clients, *test.Cleane
 	if test.EventingFlags.Provisioner == "" {
 		t.Fatal("ClusterChannelProvisioner must be set to a non-empty string. Either do not specify --clusterChannelProvisioner or set to something other than the empty string")
 	}
+	pkgTest.Flags.Namespace = test.EventingNamespace
 
 	clients, err := test.NewClients(
 		pkgTest.Flags.Kubeconfig,
 		pkgTest.Flags.Cluster,
-		test.DefaultTestNamespace)
+		test.EventingNamespace)
 	if err != nil {
 		t.Fatalf("Couldn't initialize clients: %v", err)
 	}
@@ -70,23 +69,23 @@ func TearDown(clients *test.Clients, cleaner *test.Cleaner, _ logging.FormatLogg
 // CreateRouteAndConfig will create Route and Config objects using clients.
 // The Config object will serve requests to a container started from the image at imagePath.
 func CreateRouteAndConfig(clients *test.Clients, logf logging.FormatLogger, cleaner *test.Cleaner, name string, imagePath string) error {
-	configurations := clients.Serving.ServingV1alpha1().Configurations(pkgTest.Flags.Namespace)
-	logf("configuration: %#v", test.Configuration(name, pkgTest.Flags.Namespace, imagePath))
+	configurations := clients.Serving.ServingV1alpha1().Configurations(test.EventingNamespace)
+	logf("configuration: %#v", test.Configuration(name, imagePath))
 	config, err := configurations.Create(
-		test.Configuration(name, pkgTest.Flags.Namespace, imagePath))
+		test.Configuration(name, imagePath))
 	if err != nil {
 		return err
 	}
-	cleaner.Add(servingV1alpha1.SchemeGroupVersion.Group, servingV1alpha1.SchemeGroupVersion.Version, "configurations", pkgTest.Flags.Namespace, config.ObjectMeta.Name)
+	cleaner.Add(servingV1alpha1.SchemeGroupVersion.Group, servingV1alpha1.SchemeGroupVersion.Version, "configurations", test.EventingNamespace, config.ObjectMeta.Name)
 
-	routes := clients.Serving.ServingV1alpha1().Routes(pkgTest.Flags.Namespace)
-	logf("route: %#v", test.Route(name, pkgTest.Flags.Namespace, name))
+	routes := clients.Serving.ServingV1alpha1().Routes(test.EventingNamespace)
+	logf("route: %#v", test.Route(name, name))
 	route, err := routes.Create(
-		test.Route(name, pkgTest.Flags.Namespace, name))
+		test.Route(name, name))
 	if err != nil {
 		return err
 	}
-	cleaner.Add(servingV1alpha1.SchemeGroupVersion.Group, servingV1alpha1.SchemeGroupVersion.Version, "routes", pkgTest.Flags.Namespace, route.ObjectMeta.Name)
+	cleaner.Add(servingV1alpha1.SchemeGroupVersion.Group, servingV1alpha1.SchemeGroupVersion.Version, "routes", test.EventingNamespace, route.ObjectMeta.Name)
 	return nil
 }
 
@@ -96,7 +95,7 @@ func WithRouteReady(clients *test.Clients, logf logging.FormatLogger, cleaner *t
 	if err != nil {
 		return err
 	}
-	routes := clients.Serving.ServingV1alpha1().Routes(pkgTest.Flags.Namespace)
+	routes := clients.Serving.ServingV1alpha1().Routes(test.EventingNamespace)
 	if err := test.WaitForRouteState(routes, name, test.IsRouteReady, "RouteIsReady"); err != nil {
 		return err
 	}
@@ -105,23 +104,23 @@ func WithRouteReady(clients *test.Clients, logf logging.FormatLogger, cleaner *t
 
 // CreateChannel will create a Channel
 func CreateChannel(clients *test.Clients, channel *v1alpha1.Channel, _ logging.FormatLogger, cleaner *test.Cleaner) error {
-	channels := clients.Eventing.EventingV1alpha1().Channels(pkgTest.Flags.Namespace)
+	channels := clients.Eventing.EventingV1alpha1().Channels(test.EventingNamespace)
 	res, err := channels.Create(channel)
 	if err != nil {
 		return err
 	}
-	cleaner.Add(v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version, "channels", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
+	cleaner.Add(v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version, "channels", test.EventingNamespace, res.ObjectMeta.Name)
 	return nil
 }
 
 // CreateSubscription will create a Subscription
 func CreateSubscription(clients *test.Clients, sub *v1alpha1.Subscription, _ logging.FormatLogger, cleaner *test.Cleaner) error {
-	subscriptions := clients.Eventing.EventingV1alpha1().Subscriptions(pkgTest.Flags.Namespace)
+	subscriptions := clients.Eventing.EventingV1alpha1().Subscriptions(test.EventingNamespace)
 	res, err := subscriptions.Create(sub)
 	if err != nil {
 		return err
 	}
-	cleaner.Add(v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version, "subscriptions", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
+	cleaner.Add(v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version, "subscriptions", test.EventingNamespace, res.ObjectMeta.Name)
 	return nil
 }
 
@@ -134,7 +133,7 @@ func WithChannelsAndSubscriptionsReady(clients *test.Clients, chans *[]*v1alpha1
 		}
 	}
 
-	channels := clients.Eventing.EventingV1alpha1().Channels(pkgTest.Flags.Namespace)
+	channels := clients.Eventing.EventingV1alpha1().Channels(test.EventingNamespace)
 	for i, channel := range *chans {
 		if err := test.WaitForChannelState(channels, channel.Name, test.IsChannelReady, "ChannelIsReady"); err != nil {
 			return err
@@ -154,7 +153,7 @@ func WithChannelsAndSubscriptionsReady(clients *test.Clients, chans *[]*v1alpha1
 		}
 	}
 
-	subscriptions := clients.Eventing.EventingV1alpha1().Subscriptions(pkgTest.Flags.Namespace)
+	subscriptions := clients.Eventing.EventingV1alpha1().Subscriptions(test.EventingNamespace)
 	for i, sub := range *subs {
 		if err := test.WaitForSubscriptionState(subscriptions, sub.Name, test.IsSubscriptionReady, "SubscriptionIsReady"); err != nil {
 			return err
@@ -238,12 +237,12 @@ func WithTriggerReady(clients *test.Clients, trigger *v1alpha1.Trigger, logf log
 
 // CreateServiceAccount will create a service account
 func CreateServiceAccount(clients *test.Clients, sa *corev1.ServiceAccount, _ logging.FormatLogger, cleaner *test.Cleaner) error {
-	sas := clients.Kube.Kube.CoreV1().ServiceAccounts(pkgTest.Flags.Namespace)
+	sas := clients.Kube.Kube.CoreV1().ServiceAccounts(test.EventingNamespace)
 	res, err := sas.Create(sa)
 	if err != nil {
 		return err
 	}
-	cleaner.Add(corev1.SchemeGroupVersion.Group, corev1.SchemeGroupVersion.Version, "serviceaccounts", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
+	cleaner.Add(corev1.SchemeGroupVersion.Group, corev1.SchemeGroupVersion.Version, "serviceaccounts", test.EventingNamespace, res.ObjectMeta.Name)
 	return nil
 }
 
@@ -264,7 +263,7 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, logf log
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: pkgTest.Flags.Namespace,
+			Namespace: test.EventingNamespace,
 		},
 	}
 	err := CreateServiceAccount(clients, sa, logf, cleaner)
@@ -296,11 +295,11 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, logf log
 }
 
 // CreatePodAndServiceReady will create a Pod and Service, and wait for them to become ready
-func CreatePodAndServiceReady(clients *test.Clients, pod *corev1.Pod, svc *corev1.Service, ns string, logf logging.FormatLogger, cleaner *test.Cleaner) (*corev1.Pod, error) {
+func CreatePodAndServiceReady(clients *test.Clients, pod *corev1.Pod, svc *corev1.Service, logf logging.FormatLogger, cleaner *test.Cleaner) (*corev1.Pod, error) {
 	if err := CreatePod(clients, pod, logf, cleaner); err != nil {
 		return nil, fmt.Errorf("Failed to create pod: %v", err)
 	}
-	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, ns); err != nil {
+	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, test.EventingNamespace); err != nil {
 		return nil, fmt.Errorf("Error waiting for pod to become running: %v", err)
 	}
 	logf("Pod %q starts running", pod.Name)
@@ -340,16 +339,16 @@ func CreatePod(clients *test.Clients, pod *corev1.Pod, _ logging.FormatLogger, c
 }
 
 // SendFakeEventToChannel will create fake CloudEvent and send it to the given channel.
-func SendFakeEventToChannel(clients *test.Clients, event *test.CloudEvent, channel *v1alpha1.Channel, ns string, logf logging.FormatLogger, cleaner *test.Cleaner) error {
+func SendFakeEventToChannel(clients *test.Clients, event *test.CloudEvent, channel *v1alpha1.Channel, logf logging.FormatLogger, cleaner *test.Cleaner) error {
 	logf("Sending fake CloudEvent")
 	logf("Creating event sender pod")
 	url := fmt.Sprintf("http://%s", channel.Status.Address.Hostname)
-	pod := test.EventSenderPod(event.Source, ns, url, event)
+	pod := test.EventSenderPod(event.Source, url, event)
 	logf("Sender pod: %#v", pod)
 	if err := CreatePod(clients, pod, logf, cleaner); err != nil {
 		return err
 	}
-	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, ns); err != nil {
+	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, test.EventingNamespace); err != nil {
 		return err
 	}
 	logf("Sender pod starts running")
@@ -358,7 +357,7 @@ func SendFakeEventToChannel(clients *test.Clients, event *test.CloudEvent, chann
 
 // WaitForLogContents waits until logs for given Pod/Container include the given contents.
 // If the contents are not present within timeout it returns error.
-func WaitForLogContents(clients *test.Clients, logf logging.FormatLogger, podName string, containerName string, namespace string, contents []string) error {
+func WaitForLogContents(clients *test.Clients, logf logging.FormatLogger, podName string, containerName string, contents []string) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
 		logs, err := clients.Kube.PodLogs(podName, containerName)
 		if err != nil {
@@ -391,7 +390,7 @@ func WaitForLogContentCount(client *test.Clients, podName, containerName, conten
 
 // FindAnyLogContents attempts to find logs for given Pod/Container that has 'any' of the given contents.
 // It returns an error if it couldn't retrieve the logs. In case 'any' of the contents are there, it returns true.
-func FindAnyLogContents(clients *test.Clients, logf logging.FormatLogger, podName string, containerName string, namespace string, contents []string) (bool, error) {
+func FindAnyLogContents(clients *test.Clients, logf logging.FormatLogger, podName string, containerName string, contents []string) (bool, error) {
 	logs, err := clients.Kube.PodLogs(podName, containerName)
 	if err != nil {
 		return false, err
@@ -406,67 +405,10 @@ func FindAnyLogContents(clients *test.Clients, logf logging.FormatLogger, podNam
 }
 
 // WaitForAllTriggersReady will wait until all triggers in the given namespace are ready.
-func WaitForAllTriggersReady(clients *test.Clients, logf logging.FormatLogger, namespace string) error {
-	triggers := clients.Eventing.EventingV1alpha1().Triggers(namespace)
+func WaitForAllTriggersReady(clients *test.Clients, logf logging.FormatLogger) error {
+	triggers := clients.Eventing.EventingV1alpha1().Triggers(test.EventingNamespace)
 	if err := test.WaitForTriggersListState(triggers, test.TriggersReady, "TriggerIsReady"); err != nil {
 		return err
 	}
 	return nil
-}
-
-// LabelNamespace labels the test namespace with the labels map.
-func LabelNamespace(clients *test.Clients, logf logging.FormatLogger, labels map[string]string) error {
-	ns := pkgTest.Flags.Namespace
-	nsSpec, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
-	if err != nil && errors.IsNotFound(err) {
-		return err
-	}
-	if nsSpec.Labels == nil {
-		nsSpec.Labels = map[string]string{}
-	}
-	for k, v := range labels {
-		nsSpec.Labels[k] = v
-	}
-	_, err = clients.Kube.Kube.CoreV1().Namespaces().Update(nsSpec)
-	return err
-}
-
-// CreateNamespaceIfNeeded creates a new namespace if it does not exist
-func CreateNamespaceIfNeeded(t *testing.T, clients *test.Clients, logf logging.FormatLogger) (string, func()) {
-	shutdown := func() {}
-	ns := pkgTest.Flags.Namespace
-	logf("Namespace: %s", ns)
-
-	nsSpec, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
-
-	if err != nil && errors.IsNotFound(err) {
-		nsSpec = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}
-		logf("Creating Namespace: %s", ns)
-		nsSpec, err = clients.Kube.Kube.CoreV1().Namespaces().Create(nsSpec)
-
-		if err != nil {
-			t.Fatalf("Failed to create Namespace: %s; %v", ns, err)
-		} else {
-			shutdown = func() {
-				clients.Kube.Kube.CoreV1().Namespaces().Delete(nsSpec.Name, nil)
-				// TODO: this is a bit hacky but in order for the tests to work
-				// correctly for a clean namespace to be created we need to also
-				// wait for it to be removed.
-				// To fix this we could generate namespace names.
-				// This only happens when the namespace provided does not exist.
-				//
-				// wait up to 120 seconds for the namespace to be removed.
-				logf("Deleting Namespace: %s", ns)
-				for i := 0; i < 120; i++ {
-					time.Sleep(1 * time.Second)
-					if _, err := clients.Kube.Kube.CoreV1().Namespaces().Get(ns, metav1.GetOptions{}); err != nil && errors.IsNotFound(err) {
-						logf("Namespace has been deleted")
-						// the namespace is gone.
-						break
-					}
-				}
-			}
-		}
-	}
-	return ns, shutdown
 }

@@ -32,10 +32,10 @@ const (
 )
 
 // Route returns a Route object in namespace.
-func Route(name string, namespace string, configName string) *servingv1alpha1.Route {
+func Route(name string, configName string) *servingv1alpha1.Route {
 	return &servingv1alpha1.Route{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
+			Namespace: EventingNamespace,
 			Name:      name,
 		},
 		Spec: servingv1alpha1.RouteSpec{
@@ -51,11 +51,11 @@ func Route(name string, namespace string, configName string) *servingv1alpha1.Ro
 
 // Configuration returns a Configuration object in namespace with the name names.Config
 // that uses the image specified by imagePath.
-func Configuration(name string, namespace string, imagePath string) *servingv1alpha1.Configuration {
+func Configuration(name string, imagePath string) *servingv1alpha1.Configuration {
 	return &servingv1alpha1.Configuration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: namespace,
+			Namespace: EventingNamespace,
 		},
 		Spec: servingv1alpha1.ConfigurationSpec{
 			RevisionTemplate: servingv1alpha1.RevisionTemplateSpec{
@@ -83,11 +83,11 @@ func ChannelRef(name string) *corev1.ObjectReference {
 }
 
 // Channel returns a Channel with the specified provisioner.
-func Channel(name string, namespace string, provisioner *corev1.ObjectReference) *v1alpha1.Channel {
+func Channel(name string, provisioner *corev1.ObjectReference) *v1alpha1.Channel {
 	return &v1alpha1.Channel{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: namespace,
+			Namespace: EventingNamespace,
 		},
 		Spec: v1alpha1.ChannelSpec{
 			Provisioner: provisioner,
@@ -117,11 +117,11 @@ func ReplyStrategyForChannel(name string) *v1alpha1.ReplyStrategy {
 }
 
 // Subscription returns a Subscription.
-func Subscription(name string, namespace string, channel *corev1.ObjectReference, subscriber *v1alpha1.SubscriberSpec, reply *v1alpha1.ReplyStrategy) *v1alpha1.Subscription {
+func Subscription(name string, channel *corev1.ObjectReference, subscriber *v1alpha1.SubscriberSpec, reply *v1alpha1.ReplyStrategy) *v1alpha1.Subscription {
 	return &v1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: namespace,
+			Namespace: EventingNamespace,
 		},
 		Spec: v1alpha1.SubscriptionSpec{
 			Channel:    *channel,
@@ -166,7 +166,7 @@ const (
 )
 
 // EventSenderPod creates a Pod that sends a single event to the given address.
-func EventSenderPod(name string, namespace string, sink string, event *CloudEvent) *corev1.Pod {
+func EventSenderPod(name string, sink string, event *CloudEvent) *corev1.Pod {
 	if event.Encoding == "" {
 		event.Encoding = CloudEventEncodingBinary
 	}
@@ -174,7 +174,7 @@ func EventSenderPod(name string, namespace string, sink string, event *CloudEven
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
-			Namespace:   namespace,
+			Namespace:   EventingNamespace,
 			Annotations: map[string]string{"sidecar.istio.io/inject": "true"},
 		},
 		Spec: corev1.PodSpec{
@@ -204,11 +204,11 @@ func EventSenderPod(name string, namespace string, sink string, event *CloudEven
 }
 
 // EventLoggerPod creates a Pod that logs events received.
-func EventLoggerPod(name string, namespace string, selector map[string]string) *corev1.Pod {
+func EventLoggerPod(name string, selector map[string]string) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
-			Namespace:   namespace,
+			Namespace:   EventingNamespace,
 			Labels:      selector,
 			Annotations: map[string]string{"sidecar.istio.io/inject": "true"},
 		},
@@ -224,11 +224,11 @@ func EventLoggerPod(name string, namespace string, selector map[string]string) *
 }
 
 // EventTransformationPod creates a Pod that transforms events received.
-func EventTransformationPod(name string, namespace string, selector map[string]string, msgPostfix string) *corev1.Pod {
+func EventTransformationPod(name string, selector map[string]string, msgPostfix string) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
-			Namespace:   namespace,
+			Namespace:   EventingNamespace,
 			Labels:      selector,
 			Annotations: map[string]string{"sidecar.istio.io/inject": "true"},
 		},
@@ -249,11 +249,11 @@ func EventTransformationPod(name string, namespace string, selector map[string]s
 
 // Service creates a Kubernetes Service with the given name, namespace, and
 // selector. Port 8080 is assumed the target port.
-func Service(name string, namespace string, selector map[string]string) *corev1.Service {
+func Service(name string, selector map[string]string) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: namespace,
+			Namespace: EventingNamespace,
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: selector,

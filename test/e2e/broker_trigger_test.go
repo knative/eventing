@@ -61,7 +61,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	clients, cleaner := Setup(t, t.Logf)
 	defer TearDown(clients, cleaner, t.Logf)
 
-	ns := test.DefaultTestNamespace
+	ns := test.EventingNamespace
 
 	// Wait for default broker ready.
 	t.Logf("Waiting for default broker to be ready")
@@ -90,7 +90,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	subscriberPods := make(map[string]*corev1.Pod, len(eventsToReceive))
 	for _, event := range eventsToReceive {
 		subscriberPodName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
-		subscriberPod := test.EventLoggerPod(subscriberPodName, ns, event.selector)
+		subscriberPod := test.EventLoggerPod(subscriberPodName, event.selector)
 		if err := CreatePod(clients, subscriberPod, t.Logf, cleaner); err != nil {
 			t.Fatalf("Error creating subscriber pod: %v", err)
 		}
@@ -112,7 +112,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 
 	for _, event := range eventsToReceive {
 		subscriberSvcName := name("svc", event.typeAndSource.Type, event.typeAndSource.Source)
-		service := test.Service(subscriberSvcName, ns, event.selector)
+		service := test.Service(subscriberSvcName, event.selector)
 		if err := CreateService(clients, service, t.Logf, cleaner); err != nil {
 			t.Fatalf("Error creating subscriber service: %v", err)
 		}
@@ -126,7 +126,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		triggerName := name("trigger", event.typeAndSource.Type, event.typeAndSource.Source)
 		// subscriberName should be the same as the subscriberSvc from before.
 		subscriberName := name("svc", event.typeAndSource.Type, event.typeAndSource.Source)
-		trigger := test.NewTriggerBuilder(triggerName, ns).
+		trigger := test.NewTriggerBuilder(triggerName).
 			EventType(event.typeAndSource.Type).
 			EventSource(event.typeAndSource.Source).
 			// Don't need to set the broker as we use the default one
@@ -145,7 +145,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	t.Logf("Waiting for triggers to become ready")
 
 	// Wait for all of the triggers in the namespace to be ready.
-	if err := WaitForAllTriggersReady(clients, t.Logf, ns); err != nil {
+	if err := WaitForAllTriggersReady(clients, t.Logf); err != nil {
 		t.Fatalf("Error waiting for triggers to become ready: %v", err)
 	}
 
@@ -182,7 +182,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		}
 		// Create sender pod.
 		senderPodName := name("sender", eventToSend.Type, eventToSend.Source)
-		senderPod := test.EventSenderPod(senderPodName, ns, defaultBrokerUrl, cloudEvent)
+		senderPod := test.EventSenderPod(senderPodName, defaultBrokerUrl, cloudEvent)
 		if err := CreatePod(clients, senderPod, t.Logf, cleaner); err != nil {
 			t.Fatalf("Error creating event sender pod: %v", err)
 		}
@@ -212,12 +212,12 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		subscriberPodName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
 		subscriberPod := subscriberPods[subscriberPodName]
 		t.Logf("Dumper %q expecting %q", subscriberPodName, strings.Join(expectedEvents[subscriberPodName], ","))
-		if err := WaitForLogContents(clients, t.Logf, subscriberPodName, subscriberPod.Spec.Containers[0].Name, ns, expectedEvents[subscriberPodName]); err != nil {
+		if err := WaitForLogContents(clients, t.Logf, subscriberPodName, subscriberPod.Spec.Containers[0].Name, expectedEvents[subscriberPodName]); err != nil {
 			t.Fatalf("Event(s) not found in logs of subscriber pod %q: %v", subscriberPodName, err)
 		}
 		// At this point all the events should have been received in the pod.
 		// We check whether we find unexpected events. If so, then we fail.
-		found, err := FindAnyLogContents(clients, t.Logf, subscriberPodName, subscriberPod.Spec.Containers[0].Name, ns, unexpectedEvents[subscriberPodName])
+		found, err := FindAnyLogContents(clients, t.Logf, subscriberPodName, subscriberPod.Spec.Containers[0].Name, unexpectedEvents[subscriberPodName])
 		if err != nil {
 			t.Fatalf("Failed querying to find log contents in pod %q: %v", subscriberPodName, err)
 		}

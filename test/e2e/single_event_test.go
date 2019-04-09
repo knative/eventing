@@ -52,23 +52,21 @@ func SingleEvent(t *testing.T, encoding string) {
 	clients, cleaner := Setup(t, t.Logf)
 	defer TearDown(clients, cleaner, t.Logf)
 
-	ns := test.DefaultTestNamespace
-
 	// create logger pod
 	t.Logf("creating logger pod")
 	selector := map[string]string{"e2etest": string(uuid.NewUUID())}
-	loggerPod := test.EventLoggerPod(loggerPodName, ns, selector)
-	loggerSvc := test.Service(loggerPodName, ns, selector)
-	loggerPod, err := CreatePodAndServiceReady(clients, loggerPod, loggerSvc, ns, t.Logf, cleaner)
+	loggerPod := test.EventLoggerPod(loggerPodName, selector)
+	loggerSvc := test.Service(loggerPodName, selector)
+	loggerPod, err := CreatePodAndServiceReady(clients, loggerPod, loggerSvc, t.Logf, cleaner)
 	if err != nil {
 		t.Fatalf("Failed to create logger pod and service, and get them ready: %v", err)
 	}
 
 	// create channel and subscription
 	t.Logf("Creating Channel and Subscription")
-	channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(test.EventingFlags.Provisioner))
+	channel := test.Channel(channelName, test.ClusterChannelProvisioner(test.EventingFlags.Provisioner))
 	t.Logf("channel: %#v", channel)
-	sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelName), test.SubscriberSpecForService(loggerPodName), nil)
+	sub := test.Subscription(subscriptionName, test.ChannelRef(channelName), test.SubscriberSpecForService(loggerPodName), nil)
 	t.Logf("sub: %#v", sub)
 
 	if err := WithChannelsAndSubscriptionsReady(clients, &[]*v1alpha1.Channel{channel}, &[]*v1alpha1.Subscription{sub}, t.Logf, cleaner); err != nil {
@@ -83,7 +81,7 @@ func SingleEvent(t *testing.T, encoding string) {
 		Data:     fmt.Sprintf(`{"msg":%q}`, body),
 		Encoding: encoding,
 	}
-	if err := SendFakeEventToChannel(clients, event, channel, ns, t.Logf, cleaner); err != nil {
+	if err := SendFakeEventToChannel(clients, event, channel, t.Logf, cleaner); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channel.Name)
 	}
 
