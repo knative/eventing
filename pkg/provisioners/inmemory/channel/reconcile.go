@@ -31,18 +31,14 @@ import (
 	util "github.com/knative/eventing/pkg/provisioners"
 	ccpcontroller "github.com/knative/eventing/pkg/provisioners/inmemory/clusterchannelprovisioner"
 	"github.com/knative/eventing/pkg/reconciler/names"
-	"github.com/knative/eventing/pkg/sidecar/fanout"
-	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 )
 
 const (
 	finalizerName = controllerAgentName
 	// Name of the corev1.Events emitted from the reconciliation process
-	channelReconciled          = "ChannelReconciled"
-	channelUpdateStatusFailed  = "ChannelUpdateStatusFailed"
-	channelConfigSyncFailed    = "ChannelConfigSyncFailed"
-	k8sServiceCreateFailed     = "K8sServiceCreateFailed"
-	virtualServiceCreateFailed = "VirtualServiceCreateFailed"
+	channelReconciled         = "ChannelReconciled"
+	channelUpdateStatusFailed = "ChannelUpdateStatusFailed"
+	k8sServiceCreateFailed    = "K8sServiceCreateFailed"
 	// TODO after in-memory-channel is retired, asyncProvisionerName should be removed
 	defaultProvisionerName = "in-memory-channel"
 )
@@ -126,7 +122,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	// 3. The configuration of all Channel subscriptions.
 
 	if c.DeletionTimestamp != nil {
-		// K8s garbage collection will delete the K8s service and VirtualService for this channel.
+		// K8s garbage collection will delete the K8s service for this channel.
 		// We use a finalizer to ensure the channel config has been synced.
 		util.RemoveFinalizer(c, finalizerName)
 		return nil
@@ -134,47 +130,17 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 	util.AddFinalizer(c, finalizerName)
 
-	// We use a single dispatcher for both in-memory and in-memory-channel provisioners.
-	//
-	originalProvisionerName := c.Spec.Provisioner.Name
-	c.Spec.Provisioner.Name = defaultProvisionerName
-	svc, err := util.CreateK8sService(ctx, r.client, c)
+	svc, err := util.CreateK8sService(ctx, r.client, c, util.ExternalService(c))
 	if err != nil {
 		logger.Info("Error creating the Channel's K8s Service", zap.Error(err))
 		r.recorder.Eventf(c, corev1.EventTypeWarning, k8sServiceCreateFailed, "Failed to reconcile Channel's K8s Service: %v", err)
 		return err
 	}
-	c.Spec.Provisioner.Name = originalProvisionerName
 
 	c.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
 
 	c.Status.MarkProvisioned()
 	return nil
-}
-
-func multiChannelFanoutConfig(channels []eventingv1alpha1.Channel) *multichannelfanout.Config {
-	cc := make([]multichannelfanout.ChannelConfig, 0)
-	for _, c := range channels {
-		channelConfig := multichannelfanout.ChannelConfig{
-			Namespace: c.Namespace,
-			Name:      c.Name,
-		}
-		if c.Spec.Subscribable != nil {
-			// TODO After in-memory-channel is retired, this logic must be refactored.
-			asyncHandler := false
-			if c.Spec.Provisioner.Name != defaultProvisionerName {
-				asyncHandler = true
-			}
-			channelConfig.FanoutConfig = fanout.Config{
-				Subscriptions: c.Spec.Subscribable.Subscribers,
-				AsyncHandler:  asyncHandler,
-			}
-		}
-		cc = append(cc, channelConfig)
-	}
-	return &multichannelfanout.Config{
-		ChannelConfigs: cc,
-	}
 }
 
 func (r *reconciler) listAllChannels(ctx context.Context) ([]eventingv1alpha1.Channel, error) {

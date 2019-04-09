@@ -62,7 +62,6 @@ rules:
   - apiGroups:
       - "" # Core API group.
     resources:
-      - configmaps
       - services
     verbs:
       - get
@@ -82,22 +81,6 @@ rules:
     resources:
       - services
     verbs:
-      - update
-  - apiGroups:
-      - "" # Core API Group.
-    resources:
-      - configmaps
-    verbs:
-      - update
-  - apiGroups:
-      - networking.istio.io
-    resources:
-      - virtualservices
-    verbs:
-      - get
-      - list
-      - watch
-      - create
       - update
   - apiGroups:
       - "" # Core API Group.
@@ -205,6 +188,8 @@ spec:
       role: dispatcher
   template:
     metadata:
+      annotations:	
+        sidecar.istio.io/inject: "true"
       labels: *labels
     spec:
       serviceAccountName: in-memory-channel-dispatcher

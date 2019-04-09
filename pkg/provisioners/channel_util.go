@@ -63,11 +63,28 @@ func RemoveFinalizer(o metav1.Object, finalizerName string) {
 	o.SetFinalizers(finalizers.List())
 }
 
-func CreateK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
+type k8sServiceOption func(*corev1.Service) error
+
+// ExternalService is a functional option for CreateK8sService to create a K8s service of type ExternalName
+func ExternalService(c *eventingv1alpha1.Channel) k8sServiceOption {
+	return func(svc *corev1.Service) error {
+		svc.Spec = corev1.ServiceSpec{
+			Type:         "ExternalName",
+			ExternalName: names.ServiceHostName(channelDispatcherServiceName(c.Spec.Provisioner.Name), system.Namespace()),
+		}
+		return nil
+	}
+}
+
+func CreateK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel, opts ...k8sServiceOption) (*corev1.Service, error) {
 	getSvc := func() (*corev1.Service, error) {
 		return getK8sService(ctx, client, c)
 	}
-	return createK8sService(ctx, client, getSvc, newK8sService(c))
+	svc, err := newK8sService(c, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return createK8sService(ctx, client, getSvc, svc)
 }
 
 func getK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
@@ -247,10 +264,10 @@ func UpdateChannel(ctx context.Context, client runtimeClient.Client, u *eventing
 // newK8sService creates a new Service for a Channel resource. It also sets the appropriate
 // OwnerReferences on the resource so handleObject can discover the Channel resource that 'owns' it.
 // As well as being garbage collected when the Channel is deleted.
-func newK8sService(c *eventingv1alpha1.Channel) *corev1.Service {
+func newK8sService(c *eventingv1alpha1.Channel, opts ...k8sServiceOption) (*corev1.Service, error) {
 	// TODO: Need to check if generated name truncates the channel name in case channel name is tool long
 	// Add annotations
-	return &corev1.Service{
+	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: channelServiceName(c.ObjectMeta.Name),
 			Namespace:    c.Namespace,
@@ -264,10 +281,20 @@ func newK8sService(c *eventingv1alpha1.Channel) *corev1.Service {
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Type:         "ExternalName",
-			ExternalName: names.ServiceHostName(channelDispatcherServiceName(c.Spec.Provisioner.Name), system.Namespace()),
+			Ports: []corev1.ServicePort{
+				{
+					Name: PortName,
+					Port: PortNumber,
+				},
+			},
 		},
 	}
+	for _, opt := range opts {
+		if err := opt(svc); err != nil {
+			return nil, err
+		}
+	}
+	return svc, nil
 }
 
 // k8sOldServiceLabels returns a map with only old eventing channel and provisioner labels
