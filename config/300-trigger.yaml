@@ -45,6 +45,9 @@ spec:
     - name: Subscriber_URI
       type: string
       JSONPath: .status.subscriberURI
+    - name: Age
+      type: date
+      JSONPath: .metadata.creationTimestamp
   validation:
     openAPIV3Schema:
       properties:

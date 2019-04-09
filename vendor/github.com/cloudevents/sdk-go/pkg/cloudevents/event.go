@@ -31,6 +31,16 @@ func (e Event) Type() string {
 	return e.Context.GetType()
 }
 
+// Source returns Context.GetSource()
+func (e Event) Source() string {
+	return e.Context.GetSource()
+}
+
+// SchemaURL returns Context.GetSchemaURL()
+func (e Event) SchemaURL() string {
+	return e.Context.GetSchemaURL()
+}
+
 // ExtensionAs returns Context.ExtensionAs(name, obj)
 func (e Event) ExtensionAs(name string, obj interface{}) error {
 	return e.Context.ExtensionAs(name, obj)

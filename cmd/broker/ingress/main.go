@@ -49,7 +49,7 @@ import (
 )
 
 var (
-	defaultTTL = 10
+	defaultTTL = 255
 
 	metricsPort = 9090
 

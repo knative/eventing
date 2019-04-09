@@ -147,11 +147,12 @@ func ContextWithHeader(ctx context.Context, key, value string) context.Context {
 
 // HeaderFrom extracts the header oject in the given context. Always returns a non-nil Header.
 func HeaderFrom(ctx context.Context) http.Header {
+	ch := http.Header{}
 	header := ctx.Value(headerKey)
 	if header != nil {
 		if h, ok := header.(http.Header); ok {
-			return h
+			copyHeaders(h, ch)
 		}
 	}
-	return http.Header{}
+	return ch
 }

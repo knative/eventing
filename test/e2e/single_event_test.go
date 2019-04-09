@@ -21,18 +21,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/test"
 	pkgTest "github.com/knative/pkg/test"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-)
-
-const (
-	channelName      = "e2e-singleevent"
-	subscriberName   = "e2e-singleevent-subscriber"
-	senderName       = "e2e-singleevent-sender"
-	subscriptionName = "e2e-singleevent-subscription"
-	routeName        = "e2e-singleevent-route"
 )
 
 func TestSingleBinaryEvent(t *testing.T) {
@@ -43,11 +35,27 @@ func TestSingleStructuredEvent(t *testing.T) {
 	SingleEvent(t, test.CloudEventEncodingStructured)
 }
 
-func SingleEvent(t *testing.T, encoding string) {
-	clients, cleaner := Setup(t, t.Logf)
+/*
+SingleEvent tests the following scenario:
 
+EventSource ---> Channel ---> Subscription ---> Service(Logger)
+
+*/
+func SingleEvent(t *testing.T, encoding string) {
+	if test.EventingFlags.Provisioner == "" {
+		t.Fatal("ClusterChannelProvisioner must be set to a non-empty string. Either do not specify --clusterChannelProvisioner or set to something other than the empty string")
+	}
+
+	const (
+		channelName      = "e2e-singleevent"
+		senderName       = "e2e-singleevent-sender"
+		subscriptionName = "e2e-singleevent-subscription"
+		loggerPodName    = "e2e-singleevent-logger-pod"
+	)
+
+	clients, cleaner := Setup(t, t.Logf)
 	// verify namespace
-	ns, cleanupNS := NamespaceExists(t, clients, t.Logf)
+	ns, cleanupNS := CreateNamespaceIfNeeded(t, clients, t.Logf)
 	defer cleanupNS()
 
 	// TearDown() needs to be deferred after cleanupNS(). Otherwise the namespace is deleted and all
@@ -55,63 +63,42 @@ func SingleEvent(t *testing.T, encoding string) {
 	defer TearDown(clients, cleaner, t.Logf)
 
 	// create logger pod
-	t.Logf("creating subscriber pod")
+	t.Logf("creating logger pod")
 	selector := map[string]string{"e2etest": string(uuid.NewUUID())}
-	subscriberPod := test.EventLoggerPod(routeName, ns, selector)
-	if err := CreatePod(clients, subscriberPod, t.Logf, cleaner); err != nil {
-		t.Fatalf("Failed to create event logger pod: %v", err)
-	}
-	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, ns); err != nil {
-		t.Fatalf("Error waiting for logger pod to become running: %v", err)
-	}
-	t.Logf("subscriber pod running")
-
-	subscriberSvc := test.Service(routeName, ns, selector)
-	if err := CreateService(clients, subscriberSvc, t.Logf, cleaner); err != nil {
-		t.Fatalf("Failed to create event logger service: %v", err)
-	}
-
-	// Reload subscriberPod to get IP
-	subscriberPod, err := clients.Kube.Kube.CoreV1().Pods(subscriberPod.Namespace).Get(subscriberPod.Name, metav1.GetOptions{})
+	loggerPod := test.EventLoggerPod(loggerPodName, ns, selector)
+	loggerSvc := test.Service(loggerPodName, ns, selector)
+	loggerPod, err := CreatePodAndServiceReady(clients, loggerPod, loggerSvc, ns, t.Logf, cleaner)
 	if err != nil {
-		t.Fatalf("Failed to get subscriber pod: %v", err)
+		t.Fatalf("Failed to create logger pod and service, and get them ready: %v", err)
 	}
 
 	// create channel
 
 	t.Logf("Creating Channel and Subscription")
-	if test.EventingFlags.Provisioner == "" {
-		t.Fatal("ClusterChannelProvisioner must be set to a non-empty string. Either do not specify --clusterChannelProvisioner or set to something other than the empty string")
-	}
 	channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(test.EventingFlags.Provisioner))
 	t.Logf("channel: %#v", channel)
-	sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelName), test.SubscriberSpecForService(routeName), nil)
+	sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelName), test.SubscriberSpecForService(loggerPodName), nil)
 	t.Logf("sub: %#v", sub)
 
-	if err := WithChannelAndSubscriptionReady(clients, channel, sub, t.Logf, cleaner); err != nil {
+	if err := WithChannelsAndSubscriptionsReady(clients, &[]*v1alpha1.Channel{channel}, &[]*v1alpha1.Subscription{sub}, t.Logf, cleaner); err != nil {
 		t.Fatalf("The Channel or Subscription were not marked as Ready: %v", err)
 	}
 
-	// create sender pod
-
-	t.Logf("Creating event sender")
+	// send fake CloudEvent to the first channel
 	body := fmt.Sprintf("TestSingleEvent %s", uuid.NewUUID())
-	event := test.CloudEvent{
+	event := &test.CloudEvent{
 		Source:   senderName,
-		Type:     "test.eventing.knative.dev",
+		Type:     test.CloudEventDefaultType,
 		Data:     fmt.Sprintf(`{"msg":%q}`, body),
 		Encoding: encoding,
 	}
-	url := fmt.Sprintf("http://%s", channel.Status.Address.Hostname)
-	pod := test.EventSenderPod(senderName, ns, url, event)
-	t.Logf("sender pod: %#v", pod)
-	if err := CreatePod(clients, pod, t.Logf, cleaner); err != nil {
-		t.Fatalf("Failed to create event sender pod: %v", err)
+	if err := SendFakeEventToChannel(clients, event, channel, ns, t.Logf, cleaner); err != nil {
+		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channel.Name)
 	}
 
-	if err := pkgTest.WaitForLogContent(clients.Kube, routeName, subscriberPod.Spec.Containers[0].Name, body); err != nil {
+	if err := pkgTest.WaitForLogContent(clients.Kube, loggerPodName, loggerPod.Spec.Containers[0].Name, body); err != nil {
 		clients.Kube.PodLogs(senderName, "sendevent")
 		clients.Kube.PodLogs(senderName, "istio-proxy")
-		t.Fatalf("String %q not found in logs of subscriber pod %q: %v", body, routeName, err)
+		t.Fatalf("String %q not found in logs of logger pod %q: %v", body, loggerPodName, err)
 	}
 }
