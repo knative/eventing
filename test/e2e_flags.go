@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	// DefaultTestNamespace is the Namespace used for running all e2e tests.
+	// EventingNamespace is the Namespace used for running all e2e tests.
 	// Currently it must be the same as the namespace specified in test/e2e/e2e.go.
 	EventingNamespace = "e2etest-knative-eventing"
 	// DefaultBrokerName is the name of the Broker that is automatically created after the current namespace is labeled.
@@ -42,9 +42,6 @@ type EventingEnvironmentFlags struct {
 }
 
 func initializeEventingFlags() *EventingEnvironmentFlags {
-	// TODO(chizhg): pkgTest.WaitForLogContent is using Flags.Namespace internally, so we'll have to set it here.
-	//               Will find a better way to handle it.
-	pkgTest.Flags.Namespace = EventingNamespace
 	var f EventingEnvironmentFlags
 
 	flag.StringVar(&f.Provisioner, "clusterChannelProvisioner", "in-memory-channel", "The name of the Channel's clusterChannelProvisioner. Only the in-memory-channel is installed by the tests, anything else must be installed before the tests are run.")
