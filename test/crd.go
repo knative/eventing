@@ -82,11 +82,11 @@ func Subscription(name string, channel *corev1.ObjectReference, subscriber *v1al
 }
 
 // Broker returns a Broker.
-func Broker(name string, namespace string) *v1alpha1.Broker {
+func Broker(name string) *v1alpha1.Broker {
 	return &v1alpha1.Broker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: namespace,
+			Namespace: EventingNamespace,
 		},
 		Spec: v1alpha1.BrokerSpec{},
 	}

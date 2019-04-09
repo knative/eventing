@@ -27,7 +27,7 @@ import (
 
 const (
 	// EventingNamespace is the Namespace used for running all e2e tests.
-	// Currently it must be the same as the namespace specified in test/e2e/e2e.go.
+	// Currently it must be the same as the namespace specified in test/e2e_tests.sh.
 	EventingNamespace = "e2etest-knative-eventing"
 	// DefaultBrokerName is the name of the Broker that is automatically created after the current namespace is labeled.
 	DefaultBrokerName = "default"

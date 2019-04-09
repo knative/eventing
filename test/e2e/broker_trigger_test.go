@@ -65,7 +65,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 
 	// Wait for default broker ready.
 	t.Logf("Waiting for default broker to be ready")
-	defaultBroker := test.Broker(brokerName, ns)
+	defaultBroker := test.Broker(brokerName)
 	err := WaitForBrokerReady(clients, defaultBroker)
 	if err != nil {
 		t.Fatalf("Error waiting for default broker to become ready: %v", err)
