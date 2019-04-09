@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	brokerName              = DefaultBrokerName
+	brokerName              = test.DefaultBrokerName
 	waitForFilterPodRunning = 30 * time.Second
 	selectorKey             = "end2end-test-broker-trigger"
 
@@ -61,7 +61,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	clients, cleaner := Setup(t, t.Logf)
 	defer TearDown(clients, cleaner, t.Logf)
 
-	ns := DefaultTestNamespace
+	ns := test.DefaultTestNamespace
 
 	// Wait for default broker ready.
 	t.Logf("Waiting for default broker to be ready")

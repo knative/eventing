@@ -48,7 +48,7 @@ func TestChannelChain(t *testing.T) {
 	clients, cleaner := Setup(t, t.Logf)
 	defer TearDown(clients, cleaner, t.Logf)
 
-	ns := DefaultTestNamespace
+	ns := test.DefaultTestNamespace
 
 	// create loggerPod and expose it as a service
 	t.Logf("creating logger pod")

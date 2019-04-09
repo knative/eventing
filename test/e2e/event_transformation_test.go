@@ -54,7 +54,7 @@ func TestEventTransformation(t *testing.T) {
 	clients, cleaner := Setup(t, t.Logf)
 	defer TearDown(clients, cleaner, t.Logf)
 
-	ns := DefaultTestNamespace
+	ns := test.DefaultTestNamespace
 
 	// create subscriberPods and expose them as services
 	t.Logf("creating subscriber pods")

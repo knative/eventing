@@ -40,12 +40,6 @@ import (
 )
 
 const (
-	// DefaultTestNamespace is the Namespace used for running all e2e tests.
-	// Currently it must be the same as the namespace specified in test/e2e/e2e.go.
-	DefaultTestNamespace = "e2etest-knative-eventing"
-	// DefaultBrokerName is the name of the Broker that is automatically created after the current namespace is labeled.
-	DefaultBrokerName = "default"
-
 	interval = 1 * time.Second
 	timeout  = 1 * time.Minute
 )
@@ -59,7 +53,7 @@ func Setup(t *testing.T, logf logging.FormatLogger) (*test.Clients, *test.Cleane
 	clients, err := test.NewClients(
 		pkgTest.Flags.Kubeconfig,
 		pkgTest.Flags.Cluster,
-		pkgTest.Flags.Namespace)
+		test.DefaultTestNamespace)
 	if err != nil {
 		t.Fatalf("Couldn't initialize clients: %v", err)
 	}
