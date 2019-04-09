@@ -44,9 +44,6 @@ function knative_setup() {
   ko apply -f config/ || return 1
   wait_until_pods_running knative-eventing || fail_test "Eventing did not come up (1)"
 
-  echo "Label the namespace to create the default Broker"
-  kubectl label namespace knative-eventing knative-eventing-injection=enabled
-
   echo "Installing In-Memory ClusterChannelProvisioner"
   ko apply -f config/provisioners/in-memory-channel/in-memory-channel.yaml || return 1
   wait_until_pods_running knative-eventing || fail_test "Eventing did not come up (2)"
@@ -68,6 +65,9 @@ function test_setup() {
   # Create the test namespace
   echo ">> Creating namespace $E2E_TEST_NAMESPACE"
   kubectl create namespace ${E2E_TEST_NAMESPACE} || return 1
+
+  echo "Label the namespace to create the default Broker"
+  kubectl label namespace ${E2E_TEST_NAMESPACE} knative-eventing-injection=enabled
 
   # Publish test images
   $(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test images"
