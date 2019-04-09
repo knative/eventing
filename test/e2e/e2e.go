@@ -25,7 +25,6 @@ import (
 	"github.com/knative/eventing/test"
 	pkgTest "github.com/knative/pkg/test"
 	"github.com/knative/pkg/test/logging"
-	servingV1alpha1 "github.com/knative/serving/pkg/apis/serving/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,42 +63,6 @@ func Setup(t *testing.T, logf logging.FormatLogger) (*test.Clients, *test.Cleane
 // TearDown will delete created names using clients.
 func TearDown(clients *test.Clients, cleaner *test.Cleaner, _ logging.FormatLogger) {
 	cleaner.Clean(true)
-}
-
-// CreateRouteAndConfig will create Route and Config objects using clients.
-// The Config object will serve requests to a container started from the image at imagePath.
-func CreateRouteAndConfig(clients *test.Clients, logf logging.FormatLogger, cleaner *test.Cleaner, name string, imagePath string) error {
-	configurations := clients.Serving.ServingV1alpha1().Configurations(test.EventingNamespace)
-	logf("configuration: %#v", test.Configuration(name, imagePath))
-	config, err := configurations.Create(
-		test.Configuration(name, imagePath))
-	if err != nil {
-		return err
-	}
-	cleaner.Add(servingV1alpha1.SchemeGroupVersion.Group, servingV1alpha1.SchemeGroupVersion.Version, "configurations", test.EventingNamespace, config.ObjectMeta.Name)
-
-	routes := clients.Serving.ServingV1alpha1().Routes(test.EventingNamespace)
-	logf("route: %#v", test.Route(name, name))
-	route, err := routes.Create(
-		test.Route(name, name))
-	if err != nil {
-		return err
-	}
-	cleaner.Add(servingV1alpha1.SchemeGroupVersion.Group, servingV1alpha1.SchemeGroupVersion.Version, "routes", test.EventingNamespace, route.ObjectMeta.Name)
-	return nil
-}
-
-// WithRouteReady will create Route and Config objects and wait until they're ready.
-func WithRouteReady(clients *test.Clients, logf logging.FormatLogger, cleaner *test.Cleaner, name string, imagePath string) error {
-	err := CreateRouteAndConfig(clients, logf, cleaner, name, imagePath)
-	if err != nil {
-		return err
-	}
-	routes := clients.Serving.ServingV1alpha1().Routes(test.EventingNamespace)
-	if err := test.WaitForRouteState(routes, name, test.IsRouteReady, "RouteIsReady"); err != nil {
-		return err
-	}
-	return nil
 }
 
 // CreateChannel will create a Channel
