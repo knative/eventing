@@ -12,6 +12,7 @@ Design an **initial** version of the **Registry** for the **MVP** that can suppo
 the different event types that can be consumed from the eventing mesh. For details on the different user stories 
 that this proposal touches, please refer to the 
 [User stories and personas for Knative eventing](https://docs.google.com/document/d/15uhyqQvaomxRX2u8s0i6CNhA86BQTNztkdsLUnPmvv4/edit?usp=sharing) document.
+Note that this proposal targets the cases were the Broker/Trigger model is used.
 
 #### Out of scope
 
@@ -56,22 +57,24 @@ spec:
   broker: default
 ```
 
-- The `name` of the EventType is advisory, non-authoritative. Given that Cloud Event types can 
+- The `name` of the EventType is advisory, non-authoritative. Given that CloudEvents types can 
 contain characters that may not comply with Kubernetes naming conventions, we will (slightly) 
 modify those names to make them K8s-compliant, whenever we need to generate them. 
 
-- `type` is authoritative. This refers to the Cloud Event type as it enters into the eventing mesh. 
+- `type` is authoritative. This refers to the CloudEvent type as it enters into the eventing mesh. 
 
-- `source`: an identifier of where we receive the event from. This might not necessarily be the Cloud Event source 
+- `source`: an identifier of where we receive the event from. This might not necessarily be the CloudEvent source 
 attribute. 
 
-If we have control over the entity emitting the Cloud Event, as is the case of many of our receive adaptors, 
-then we propose to add a Cloud Event custom extension (e.g., from) with this information, to ease the creation of filters 
+If we have control over the entity emitting the CloudEvent, as is the case of many of our receive adaptors, 
+then we propose to add a CloudEvent custom extension (e.g., from) with this information, to ease the creation of filters 
 on Triggers later on.
-As the Cloud Event source attribute is somewhat useless (e.g., github pull requests are populated with `https://github.com/<owner>/<repo>/pull/<pull_id>`), 
-there is no way of doing exact matching of Cloud Event sources on Triggers. Thus, we propose adding this custom extension 
-to Cloud Events whenever we can. If the extension is not present, then we fallback to the Cloud Event source. 
-Note that when we start supporting more advanced filtering mechanisms on Triggers, we might not need this.
+As the CloudEvent source attribute is somewhat useless (e.g., github pull requests are populated with `https://github.com/<owner>/<repo>/pull/<pull_id>`), 
+there is no way of doing exact matching of CloudEvent sources on Triggers. Thus, we propose adding this custom extension 
+to CloudEvents whenever we can. If the extension is not present, then we fallback to the CloudEvent source. 
+Note that when we start supporting more advanced filtering mechanisms on Triggers, we might not need this. Further, with the 
+addition of `subject`, the meaning of the CloudEvent source might change, and we might be better off then. This needs further 
+discussion.
 
 
 - `schema` is a URI with the EventType schema. It may be a JSON schema, a protobuf schema, etc. It is optional.
@@ -117,7 +120,8 @@ spec:
  
 By applying the above file, two EventTypes will be registered, with types `dev.knative.source.github.push` and 
 `dev.knative.source.github.pull_request`, source `my-other-user/my-other-repo`, for the `default` Broker in the `default`
- namespace, and with owner `github-source-sample`.
+ namespace, and with owner `github-source-sample`. This should be done by the Event Source controller, in this case, 
+ the GitHubSource controller.
  
 Note that the `Cluster Configurator` is the person in charge of taking care of authentication-related matters. E.g., if a new `Event Consumer` 
 wants to listen for events from a different GitHub repo, the `Cluster Configurator` will take care of the necessary secrets generation, 
@@ -184,7 +188,7 @@ their EventTypes.
 
 The `Cluster Configurator` configures the Broker ingress policy to allow auto-registration of EventTypes. 
 Upon arrival of a non-registered EventType to the Broker ingress, the Broker will then create that type.
-Note that the creation of the EventType is done asynchronously, i.e., the Cloud Event is accepted and sent 
+Note that the creation of the EventType is done asynchronously, i.e., the CloudEvent is accepted and sent 
 to the appropriate Trigger(s) in parallel of the EventType creation. If the creation fails, on a subsequent arrival 
 there will be a new creation attempt.
 
@@ -337,10 +341,12 @@ Here is a list of frequently asked questions that may help clarify the scope of 
 - If I have a simple use case where I'm just setting up an Event Source and my KnService is its Sink (i.e., no Triggers involved), 
 is there a need/use for the Registry?
 
-    In this case, we believe there is no need for the Registry. As you can see in the EventType CRD, there is a mandatory 
-    `broker` field. If you are not sending events to a Broker, then there is no need to use a Registry. 
-    Implementation-wise, we can check whether the Source's sink kind is `Broker`, and if so, then register its EventTypes.   
-
+    As stated before, this Registry proposal for the MVP helps creating Triggers, i.e., when you use the Broker/Trigger 
+    model. As you can see in the EventType CRD, there is a mandatory `broker` field. If you are not sending events to a Broker, 
+    then EventTypes won't be added to the Registry (at least in this proposal). 
+    Implementation-wise, we can check whether the Source's sink kind is `Broker`, and if so, then register its EventTypes.
+    
+         
 - Is the Registry meant to be used in a single-user environment where the same person is setting up both the Event Source and 
 the destination Sink?
 
