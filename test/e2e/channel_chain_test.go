@@ -23,7 +23,6 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/test"
-	pkgTest "github.com/knative/pkg/test"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
@@ -49,7 +48,7 @@ func TestChannelChain(t *testing.T) {
 	clients, cleaner := Setup(t, t.Logf)
 	defer TearDown(clients, cleaner, t.Logf)
 
-	ns := pkgTest.Flags.Namespace
+	ns := DefaultTestNamespace
 
 	// create loggerPod and expose it as a service
 	t.Logf("creating logger pod")

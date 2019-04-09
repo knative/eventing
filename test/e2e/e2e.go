@@ -52,9 +52,6 @@ const (
 
 // Setup validates namespace and provisioner, creates the client objects needed in the e2e tests.
 func Setup(t *testing.T, logf logging.FormatLogger) (*test.Clients, *test.Cleaner) {
-	if pkgTest.Flags.Namespace == "" {
-		pkgTest.Flags.Namespace = DefaultTestNamespace
-	}
 	if test.EventingFlags.Provisioner == "" {
 		t.Fatal("ClusterChannelProvisioner must be set to a non-empty string. Either do not specify --clusterChannelProvisioner or set to something other than the empty string")
 	}

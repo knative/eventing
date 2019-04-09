@@ -52,7 +52,7 @@ func SingleEvent(t *testing.T, encoding string) {
 	clients, cleaner := Setup(t, t.Logf)
 	defer TearDown(clients, cleaner, t.Logf)
 
-	ns := pkgTest.Flags.Namespace
+	ns := DefaultTestNamespace
 	// create logger pod
 	t.Logf("creating logger pod")
 	selector := map[string]string{"e2etest": string(uuid.NewUUID())}
