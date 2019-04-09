@@ -192,8 +192,8 @@ Note that the creation of the EventType is done asynchronously, i.e., the CloudE
 to the appropriate Trigger(s) in parallel of the EventType creation. If the creation fails, on a subsequent arrival 
 there will be a new creation attempt.
 
-Although sub-optimal (as `Event Consumers` find out about EventTypes upon first arrival), we believe this mechanism is needed 
-for Sources where the `Cluster Configurator` does not know in advance the EventTypes they can produced (e.g., a ContainerSource). 
+Although sub-optimal (as `Event Consumers` find out about EventTypes upon first arrival), we believe this mechanism (or something similar) 
+is needed for Sources where the `Cluster Configurator` does not know in advance the EventTypes they can produce (e.g., a ContainerSource).
 
 Example: 
 
@@ -375,7 +375,7 @@ Event Sources so that the user doesn't need to query the CRDs to get the list. W
     The Registry is a list of EventTypes. Having said that, the `Event Consumer` could also (if it has the proper RBAC permissions) 
     list Event Sources (e.g., `kubectl get crds -l eventing.knative.dev/source=true`), but that list is not part of what we call 
     Registry here. The idea behind the fields in the EventType CRD is to have all the necessary information there in 
-    order to create a Triggers, thus, in most cases, the `Event Consumer` shouldn't have to list Sources. 
+    order to create Triggers, thus, in most cases, the `Event Consumer` shouldn't have to list Sources. 
 
 -  I wonder if the Event Source populating the Registry should happen when the Event Source is loaded into the system, 
 meaning when the Event Source's CRD is installed (not when an instance of the CRD is created). 
@@ -385,7 +385,7 @@ Which namespace the EventType should be created on? Pointing to which Broker?
 Implementation-wise, one potential solution is to have a controller for source CRDs, whenever one is installed, search for all the namespaces with 
 eventing enabled (`kubectl get namespaces -l knative-eventing-injection=enabled`), and adding all the possible EventTypes from that CRD to each of 
 the Brokers in those namespaces. A downside of this is that the Registry information is not "accurate", in the sense that it only has info about EventTypes 
-that may eventually flow in the system. But actually, they will only be able to flow when a CR is created.
+that may potentially flow in the system. But actually, they will only be able to flow when a CR is created.
 
 - ...
 
