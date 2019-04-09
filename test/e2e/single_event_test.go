@@ -24,8 +24,6 @@ import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/test"
 	pkgTest "github.com/knative/pkg/test"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
@@ -56,8 +54,6 @@ func SingleEvent(t *testing.T, encoding string) {
 
 	ns := test.DefaultTestNamespace
 
-	nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}
-	nsSpec, _ = clients.Kube.Kube.CoreV1().Namespaces().Create(nsSpec)
 	// create logger pod
 	t.Logf("creating logger pod")
 	selector := map[string]string{"e2etest": string(uuid.NewUUID())}
