@@ -76,8 +76,6 @@ type TriggerFilterSourceAndType struct {
 	Source string `json:"source,omitempty"`
 }
 
-var triggerCondSet = duckv1alpha1.NewLivingConditionSet(TriggerConditionBrokerExists, TriggerConditionKubernetesService, TriggerConditionVirtualService, TriggerConditionSubscribed)
-
 // TriggerStatus represents the current state of a Trigger.
 type TriggerStatus struct {
 	// inherits duck/v1alpha1 Status, which currently provides:
@@ -87,60 +85,6 @@ type TriggerStatus struct {
 
 	// SubscriberURI is the resolved URI of the receiver for this Trigger.
 	SubscriberURI string `json:"subscriberURI,omitempty"`
-}
-
-const (
-	TriggerConditionReady = duckv1alpha1.ConditionReady
-
-	TriggerConditionBrokerExists duckv1alpha1.ConditionType = "BrokerExists"
-
-	TriggerConditionKubernetesService duckv1alpha1.ConditionType = "KubernetesServiceReady"
-
-	TriggerConditionVirtualService duckv1alpha1.ConditionType = "VirtualServiceReady"
-
-	TriggerConditionSubscribed duckv1alpha1.ConditionType = "Subscribed"
-
-	// Constant to represent that we should allow anything.
-	TriggerAnyFilter = ""
-)
-
-// GetCondition returns the condition currently associated with the given type, or nil.
-func (ts *TriggerStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
-	return triggerCondSet.Manage(ts).GetCondition(t)
-}
-
-// IsReady returns true if the resource is ready overall.
-func (ts *TriggerStatus) IsReady() bool {
-	return triggerCondSet.Manage(ts).IsHappy()
-}
-
-// InitializeConditions sets relevant unset conditions to Unknown state.
-func (ts *TriggerStatus) InitializeConditions() {
-	triggerCondSet.Manage(ts).InitializeConditions()
-}
-
-func (ts *TriggerStatus) MarkBrokerExists() {
-	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionBrokerExists)
-}
-
-func (ts *TriggerStatus) MarkBrokerDoesNotExist() {
-	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionBrokerExists, "doesNotExist", "Broker does not exist")
-}
-
-func (ts *TriggerStatus) MarkKubernetesServiceExists() {
-	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionKubernetesService)
-}
-
-func (ts *TriggerStatus) MarkVirtualServiceExists() {
-	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionVirtualService)
-}
-
-func (ts *TriggerStatus) MarkSubscribed() {
-	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionSubscribed)
-}
-
-func (ts *TriggerStatus) MarkNotSubscribed(reason, messageFormat string, messageA ...interface{}) {
-	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionSubscribed, reason, messageFormat, messageA...)
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
