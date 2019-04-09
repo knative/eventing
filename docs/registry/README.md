@@ -282,22 +282,12 @@ spec:
 ### Broker Ingress Policies
 
 We briefly mentioned configuring an ingress policy in the Broker so that it can auto-register EventTypes. 
-In order to support that, we propose adding an `ingressPolicy` field to the Broker's spec CRD.
+In order to support that, we propose adding an `ingressPolicy` field to the Broker's spec CRD. 
  
-Below are three CR examples with Brokers configured using different policies. 
+Below are two CR examples with Brokers configured using different policies. Note that the fields of 
+`ingressPolicy` might change (e.g., `ingressPolicy` might just end up being a string).
 We are omitting Broker's fields irrelevant to this discussion. 
-Note that such configuration is done by the `Cluster Configurator`.
-
-- Allow Any
-
-By not specifying an ingress policy, the default will be to accept any event.
-
-```yaml
-apiVersion: eventing.knative.dev/v1alpha1
-kind: Broker
-metadata:
-  name: broker-allow-any
-```  
+Also note that such configuration is done by the `Cluster Configurator`.
 
 - Allow Registered
 
@@ -328,9 +318,12 @@ spec:
     autoAdd: true 
 ```
 
-Note that more policies should probably need to be configured, e.g., allow auto-registration of EventTypes received 
+By not specifying an ingress policy, we thought that the default behavior would be to accept any event, which is similar to `Auto Add` 
+but without registration of events. This needs further discussion.
+
+Note that more policies should probably need to be configured in the future, e.g., allow auto-registration of EventTypes received 
 from within the cluster (e.g., from a response of a Service running in the cluster) as opposed to external services, and so on. 
-We just enumerate three simple cases here.
+We just enumerate two simple cases here.
 
 ## FAQ
 
@@ -359,8 +352,8 @@ the destination Sink?
 - Does a user need to know which type of environment they're in before they should know if they should look at the Registry? 
 In other words, is a Registry always going to be there and if not under what conditions will it be?
 
-    If there are Sources pointing to Brokers, then there should be a Registry. `Event Consumers` will always be able to 
-    `kubectl get eventtypes -n <namespace>`.
+    A Registry will always be there, i.e., `Event Consumers` will always be able to `kubectl get eventtypes -n <namespace>`. 
+    In case no CR Sources are pointing to Brokers, then the Registry will be empty. 
     
 - Once an Event Source is created, how is a new one created with different auth in an env where the user is really just meant 
 to deal with Triggers? This may not be a Registry specific question but if one of the goals of the Registry is to make it 
