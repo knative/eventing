@@ -44,16 +44,15 @@ EventSource ---> Channel ---> Subscription ---> Service(Logger)
 func SingleEvent(t *testing.T, encoding string) {
 	t.Parallel()
 
-	const (
-		channelName      = "e2e-singleevent-" + encoding
-		senderName       = "e2e-singleevent-sender-" + encoding
-		subscriptionName = "e2e-singleevent-subscription-" + encoding
-		loggerPodName    = "e2e-singleevent-logger-pod-" + encoding
-	)
+	channelName := "e2e-singleevent-" + encoding
+	senderName := "e2e-singleevent-sender-" + encoding
+	subscriptionName := "e2e-singleevent-subscription-" + encoding
+	loggerPodName := "e2e-singleevent-logger-pod-" + encoding
 
-	ns, provisioner, clients, cleaner := Setup(t, t.Logf)
+	clients, cleaner := Setup(t, t.Logf)
 	defer TearDown(clients, cleaner, t.Logf)
 
+	ns := pkgTest.Flags.Namespace
 	// create logger pod
 	t.Logf("creating logger pod")
 	selector := map[string]string{"e2etest": string(uuid.NewUUID())}
@@ -66,7 +65,7 @@ func SingleEvent(t *testing.T, encoding string) {
 
 	// create channel and subscription
 	t.Logf("Creating Channel and Subscription")
-	channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(provisioner))
+	channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(test.EventingFlags.Provisioner))
 	t.Logf("channel: %#v", channel)
 	sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelName), test.SubscriberSpecForService(loggerPodName), nil)
 	t.Logf("sub: %#v", sub)

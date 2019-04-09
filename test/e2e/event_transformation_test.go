@@ -23,6 +23,7 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/test"
+	pkgTest "github.com/knative/pkg/test"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
@@ -51,8 +52,10 @@ func TestEventTransformation(t *testing.T) {
 	transformationPodName := "e2e-eventtransformation-transformation-pod"
 	loggerPodName := "e2e-eventtransformation-logger-pod"
 
-	ns, provisioner, clients, cleaner := Setup(t, t.Logf)
+	clients, cleaner := Setup(t, t.Logf)
 	defer TearDown(clients, cleaner, t.Logf)
+
+	ns := pkgTest.Flags.Namespace
 
 	// create subscriberPods and expose them as services
 	t.Logf("creating subscriber pods")
@@ -81,7 +84,7 @@ func TestEventTransformation(t *testing.T) {
 	t.Logf("Creating Channel and Subscription")
 	channels := make([]*v1alpha1.Channel, 0)
 	for _, channelName := range channelNames {
-		channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(provisioner))
+		channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(test.EventingFlags.Provisioner))
 		t.Logf("channel: %#v", channel)
 
 		channels = append(channels, channel)

@@ -50,8 +50,8 @@ const (
 	timeout  = 1 * time.Minute
 )
 
-// Setup creates the client objects needed in the e2e tests.
-func Setup(t *testing.T, logf logging.FormatLogger) (string, string, *test.Clients, *test.Cleaner) {
+// Setup validates namespace and provisioner, creates the client objects needed in the e2e tests.
+func Setup(t *testing.T, logf logging.FormatLogger) (*test.Clients, *test.Cleaner) {
 	if pkgTest.Flags.Namespace == "" {
 		pkgTest.Flags.Namespace = DefaultTestNamespace
 	}
@@ -68,7 +68,7 @@ func Setup(t *testing.T, logf logging.FormatLogger) (string, string, *test.Clien
 	}
 	cleaner := test.NewCleaner(logf, clients.Dynamic)
 
-	return pkgTest.Flags.Namespace, test.EventingFlags.Provisioner, clients, cleaner
+	return clients, cleaner
 }
 
 // TearDown will delete created names using clients.

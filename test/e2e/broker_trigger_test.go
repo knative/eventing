@@ -32,6 +32,18 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
+const (
+	brokerName              = DefaultBrokerName
+	waitForFilterPodRunning = 30 * time.Second
+	selectorKey             = "end2end-test-broker-trigger"
+
+	any          = v1alpha1.TriggerAnyFilter
+	eventType1   = "type1"
+	eventType2   = "type2"
+	eventSource1 = "source1"
+	eventSource2 = "source2"
+)
+
 // Helper struct to tie the type and sources of the events we expect to receive
 // in subscribers with the selectors we use when creating their pods.
 type eventReceiver struct {
@@ -46,25 +58,15 @@ type eventReceiver struct {
 func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	t.Parallel()
 
-	const (
-		brokerName              = DefaultBrokerName
-		waitForFilterPodRunning = 30 * time.Second
-		selectorKey             = "end2end-test-broker-trigger"
-
-		any          = v1alpha1.TriggerAnyFilter
-		eventType1   = "type1"
-		eventType2   = "type2"
-		eventSource1 = "source1"
-		eventSource2 = "source2"
-	)
-
-	ns, _, clients, cleaner := Setup(t, t.Logf)
+	clients, cleaner := Setup(t, t.Logf)
 	defer TearDown(clients, cleaner, t.Logf)
+
+	ns := pkgTest.Flags.Namespace
 
 	// Wait for default broker ready.
 	t.Logf("Waiting for default broker to be ready")
 	defaultBroker := test.Broker(brokerName, ns)
-	err = WaitForBrokerReady(clients, defaultBroker)
+	err := WaitForBrokerReady(clients, defaultBroker)
 	if err != nil {
 		t.Fatalf("Error waiting for default broker to become ready: %v", err)
 	}
