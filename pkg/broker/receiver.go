@@ -19,10 +19,8 @@ package broker
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
@@ -30,6 +28,7 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/path"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -122,7 +121,7 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 	}
 
 	// tctx.URI is actually the path...
-	triggerRef, err := parsePath(tctx.URI)
+	triggerRef, err := path.Parse(tctx.URI)
 	if err != nil {
 		r.logger.Info("Unable to parse path as a trigger", zap.Error(err), zap.String("path", tctx.URI))
 		return errors.New("unable to parse path as a Trigger")
@@ -164,24 +163,6 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 	}
 
 	return nil
-}
-
-func parsePath(path string) (provisioners.ChannelReference, error) {
-	prefix := "triggers"
-	parts := strings.Split(path, "/")
-	if len(parts) != 4 {
-		return provisioners.ChannelReference{}, fmt.Errorf("incorrect number of parts in the path, expected 4, actual '%s'", path)
-	}
-	if parts[0] != "" {
-		return provisioners.ChannelReference{}, fmt.Errorf("text before the first slash, actual '%s'", path)
-	}
-	if parts[1] != prefix {
-		return provisioners.ChannelReference{}, fmt.Errorf("incorrect prefix, expected '%s', actual '%s'", prefix, path)
-	}
-	return provisioners.ChannelReference{
-		Namespace: parts[2],
-		Name:      parts[3],
-	}, nil
 }
 
 // sendEvent sends an event to a subscriber if the trigger filter passes.

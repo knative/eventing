@@ -18,18 +18,15 @@ package trigger
 
 import (
 	"context"
-	"fmt"
 	"net/url"
-
-	brokerresources "github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
-
-	"github.com/knative/eventing/pkg/reconciler/names"
-
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/resources"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
+	"github.com/knative/eventing/pkg/reconciler/names"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
+	brokerresources "github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/path"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/resources"
 	"github.com/knative/eventing/pkg/utils/resolve"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
@@ -384,7 +381,7 @@ func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.T
 	uri := &url.URL{
 		Scheme: "http",
 		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
-		Path:   GeneratePath(t),
+		Path:   path.Generate(t),
 	}
 	expected := resources.NewSubscription(t, brokerTrigger, brokerIngress, uri)
 
@@ -421,10 +418,6 @@ func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.T
 		}
 	}
 	return sub, nil
-}
-
-func GeneratePath(t *v1alpha1.Trigger) string {
-	return fmt.Sprintf("/triggers/%s/%s", t.Namespace, t.Name)
 }
 
 // getSubscription returns the subscription of trigger 't' if exists,
