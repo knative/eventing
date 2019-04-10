@@ -213,8 +213,13 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	t.Status.InitializeConditions()
 
 	// 1. Verify the Broker exists.
-	// 2. Find the Subscriber's URI.
-	// 3. Creates a Subscription from the Broker's single Channel to this Trigger's K8s Service, with reply set to the Broker.
+	// 2. Get the Broker's:
+	//   - Filter Channel
+	//   - Ingress Channel
+	//   - Filter Service
+	// 3. Find the Subscriber's URI.
+	// 4. Creates a Subscription from the Broker's Filter Channel to this Trigger via the Broker's
+	//    Filter Service with a specific path, and reply set to the Broker's Ingress Channel.
 
 	if t.DeletionTimestamp != nil {
 		// Everything is cleaned up by the garbage collector.
