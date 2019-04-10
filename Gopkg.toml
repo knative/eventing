@@ -100,22 +100,8 @@ required = [
 # This controls when we upgrade apis independently of Serving.
 [[constraint]]
   name = "github.com/knative/pkg"
-  # HEAD as of 2019-03-29
-  revision = "1d9d8f8871250649adab16e3369e1a09e5595b04"
-
-[[constraint]]
-  name = "github.com/knative/serving"
-  # HEAD as of 2019-03-21
-  revision = "9a44df0e64edcb943c7edfe2d3eac2be41aa2316"
-# revert revision when on v0.5.0, this is done to support a pkg update on webhooks context.
-# See: https://github.com/knative/pkg/commit/60fdcbcabd2faeb34328d8b2725dc76c59189453
-# version = "v0.5.0"
-
-# Bring build along for serving.
-[[override]]
-  name = "github.com/knative/build"
-  # HEAD as of 2019-03-21
-  revision = "dd3ceb3323922b899a0a913f885fcf59943e7b59"
+  # HEAD as of 2019-04-08
+  revision = "2b574edcd712e848556c69cc95a2622145284882"
 
 # TODO why is this overridden?
 [[override]]
