@@ -61,7 +61,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	clients, cleaner := Setup(t, t.Logf)
 	defer TearDown(clients, cleaner, t.Logf)
 
-	ns := test.EventingNamespace
+	ns := pkgTest.Flags.Namespace
 
 	// Wait for default broker ready.
 	t.Logf("Waiting for default broker to be ready")

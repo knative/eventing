@@ -52,6 +52,9 @@ func initializeEventingFlags() *EventingEnvironmentFlags {
 	if pkgTest.Flags.EmitMetrics {
 		logging.InitializeMetricExporter("eventing")
 	}
+	if pkgTest.Flags.Namespace == "" {
+		pkgTest.Flags.Namespace = EventingNamespace
+	}
 
 	return &f
 }

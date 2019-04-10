@@ -44,7 +44,7 @@ func Channel(name string, provisioner *corev1.ObjectReference) *v1alpha1.Channel
 	return &v1alpha1.Channel{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: EventingNamespace,
+			Namespace: pkgTest.Flags.Namespace,
 		},
 		Spec: v1alpha1.ChannelSpec{
 			Provisioner: provisioner,
@@ -71,7 +71,7 @@ func Subscription(name string, channel *corev1.ObjectReference, subscriber *v1al
 	return &v1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: EventingNamespace,
+			Namespace: pkgTest.Flags.Namespace,
 		},
 		Spec: v1alpha1.SubscriptionSpec{
 			Channel:    *channel,
@@ -86,7 +86,7 @@ func Broker(name string) *v1alpha1.Broker {
 	return &v1alpha1.Broker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: EventingNamespace,
+			Namespace: pkgTest.Flags.Namespace,
 		},
 		Spec: v1alpha1.BrokerSpec{},
 	}
@@ -124,7 +124,7 @@ func EventSenderPod(name string, sink string, event *CloudEvent) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
-			Namespace:   EventingNamespace,
+			Namespace:   pkgTest.Flags.Namespace,
 			Annotations: map[string]string{"sidecar.istio.io/inject": "true"},
 		},
 		Spec: corev1.PodSpec{
@@ -158,7 +158,7 @@ func EventLoggerPod(name string, selector map[string]string) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
-			Namespace:   EventingNamespace,
+			Namespace:   pkgTest.Flags.Namespace,
 			Labels:      selector,
 			Annotations: map[string]string{"sidecar.istio.io/inject": "true"},
 		},
@@ -178,7 +178,7 @@ func EventTransformationPod(name string, selector map[string]string, msgPostfix 
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
-			Namespace:   EventingNamespace,
+			Namespace:   pkgTest.Flags.Namespace,
 			Labels:      selector,
 			Annotations: map[string]string{"sidecar.istio.io/inject": "true"},
 		},
@@ -203,7 +203,7 @@ func Service(name string, selector map[string]string) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: EventingNamespace,
+			Namespace: pkgTest.Flags.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: selector,
