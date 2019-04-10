@@ -78,3 +78,91 @@ func (b *TriggerBuilder) SubscriberSvc(svcName string) *TriggerBuilder {
 	}
 	return b
 }
+
+// Builder for broker objects.
+type BrokerBuilder struct {
+	*eventingv1alpha1.Broker
+}
+
+func NewBrokerBuilder(name, namespace string) *BrokerBuilder {
+	broker := &eventingv1alpha1.Broker{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+			Kind:       "Broker",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: eventingv1alpha1.BrokerSpec{
+			IngressPolicy: &eventingv1alpha1.IngressPolicySpec{
+				AllowAny: true,
+			},
+		},
+	}
+
+	return &BrokerBuilder{
+		Broker: broker,
+	}
+}
+
+func (b *BrokerBuilder) Build() *eventingv1alpha1.Broker {
+	return b.Broker.DeepCopy()
+}
+
+func (b *BrokerBuilder) IngressPolicy(policy *eventingv1alpha1.IngressPolicySpec) *BrokerBuilder {
+	b.Broker.Spec.IngressPolicy = policy
+	return b
+}
+
+// Builder for EventType objects.
+type EventTypeBuilder struct {
+	*eventingv1alpha1.EventType
+}
+
+func NewEventTypeBuilder(name, namespace string) *EventTypeBuilder {
+	eventType := &eventingv1alpha1.EventType{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+			Kind:       "EventType",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: eventingv1alpha1.EventTypeSpec{
+			Broker: "default",
+			Type:   CloudEventDefaultType,
+			Source: CloudEventDefaultSource,
+			Schema: "",
+		},
+	}
+
+	return &EventTypeBuilder{
+		EventType: eventType,
+	}
+}
+
+func (b *EventTypeBuilder) Build() *eventingv1alpha1.EventType {
+	return b.EventType.DeepCopy()
+}
+
+func (b *EventTypeBuilder) Type(eventType string) *EventTypeBuilder {
+	b.Spec.Type = eventType
+	return b
+}
+
+func (b *EventTypeBuilder) Source(eventSource string) *EventTypeBuilder {
+	b.Spec.Source = eventSource
+	return b
+}
+
+func (b *EventTypeBuilder) Broker(brokerName string) *EventTypeBuilder {
+	b.Spec.Broker = brokerName
+	return b
+}
+
+func (b *EventTypeBuilder) Schema(schema string) *EventTypeBuilder {
+	b.Spec.Schema = schema
+	return b
+}
