@@ -37,7 +37,7 @@ type testFixture struct {
 	wantEventRegistered bool
 }
 
-func TestRegistryBrokerAllowAny(t *testing.T) {
+func TestRegistryBrokerAllowAnyAccept(t *testing.T) {
 	fixture := &testFixture{
 		ingressPolicy: &v1alpha1.IngressPolicySpec{
 			AllowAny: true,
@@ -47,7 +47,7 @@ func TestRegistryBrokerAllowAny(t *testing.T) {
 	Registry(t, fixture)
 }
 
-func TestRegistryBrokerAllowRegisteredAndEventPreRegistered(t *testing.T) {
+func TestRegistryBrokerAllowRegisteredAccept(t *testing.T) {
 	fixture := &testFixture{
 		ingressPolicy: &v1alpha1.IngressPolicySpec{
 			AllowAny: false,
@@ -59,7 +59,7 @@ func TestRegistryBrokerAllowRegisteredAndEventPreRegistered(t *testing.T) {
 	Registry(t, fixture)
 }
 
-func TestRegistryBrokerAllowRegisteredAndEventNotPreRegistered(t *testing.T) {
+func TestRegistryBrokerAllowRegisteredNotAccept(t *testing.T) {
 	fixture := &testFixture{
 		ingressPolicy: &v1alpha1.IngressPolicySpec{
 			AllowAny: false,
@@ -68,7 +68,7 @@ func TestRegistryBrokerAllowRegisteredAndEventNotPreRegistered(t *testing.T) {
 	Registry(t, fixture)
 }
 
-func TestRegistryBrokerAutoAdd(t *testing.T) {
+func TestRegistryBrokerAutoAddAccept(t *testing.T) {
 	fixture := &testFixture{
 		ingressPolicy: &v1alpha1.IngressPolicySpec{
 			AutoAdd: true,
