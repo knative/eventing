@@ -98,12 +98,8 @@ func (in *BrokerSpec) DeepCopyInto(out *BrokerSpec) {
 	}
 	if in.IngressPolicy != nil {
 		in, out := &in.IngressPolicy, &out.IngressPolicy
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(IngressPolicySpec)
-			**out = **in
-		}
+		*out = new(IngressPolicySpec)
+		**out = **in
 	}
 	return
 }

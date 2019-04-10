@@ -21,7 +21,7 @@ package v1alpha1
 import (
 	time "time"
 
-	eventing_v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	versioned "github.com/knative/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/knative/eventing/pkg/client/informers/externalversions/internalinterfaces"
 	v1alpha1 "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -70,7 +70,7 @@ func NewFilteredEventTypeInformer(client versioned.Interface, namespace string, 
 				return client.EventingV1alpha1().EventTypes(namespace).Watch(options)
 			},
 		},
-		&eventing_v1alpha1.EventType{},
+		&eventingv1alpha1.EventType{},
 		resyncPeriod,
 		indexers,
 	)
@@ -81,7 +81,7 @@ func (f *eventTypeInformer) defaultInformer(client versioned.Interface, resyncPe
 }
 
 func (f *eventTypeInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&eventing_v1alpha1.EventType{}, f.defaultInformer)
+	return f.factory.InformerFor(&eventingv1alpha1.EventType{}, f.defaultInformer)
 }
 
 func (f *eventTypeInformer) Lister() v1alpha1.EventTypeLister {
