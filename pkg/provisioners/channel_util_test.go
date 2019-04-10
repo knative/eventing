@@ -597,8 +597,9 @@ func makeK8sService() *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
-					Name: PortName,
-					Port: PortNumber,
+					Name:     PortName,
+					Port:     PortNumber,
+					Protocol: corev1.ProtocolTCP,
 				},
 			},
 		},
