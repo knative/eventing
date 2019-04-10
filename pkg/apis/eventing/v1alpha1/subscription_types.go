@@ -192,44 +192,6 @@ type SubscriptionStatusPhysicalSubscription struct {
 	ReplyURI string `json:"replyURI,omitempty"`
 }
 
-const (
-	// SubscriptionConditionReady has status True when all subconditions below have been set to True.
-	SubscriptionConditionReady = duckv1alpha1.ConditionReady
-
-	// SubscriptionConditionReferencesResolved has status True when all the specified references have been successfully
-	// resolved.
-	SubscriptionConditionReferencesResolved duckv1alpha1.ConditionType = "Resolved"
-
-	// SubscriptionConditionChannelReady has status True when controller has successfully added a
-	// subscription to the spec.channel resource.
-	SubscriptionConditionChannelReady duckv1alpha1.ConditionType = "ChannelReady"
-)
-
-// GetCondition returns the condition currently associated with the given type, or nil.
-func (ss *SubscriptionStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
-	return subCondSet.Manage(ss).GetCondition(t)
-}
-
-// IsReady returns true if the resource is ready overall.
-func (ss *SubscriptionStatus) IsReady() bool {
-	return subCondSet.Manage(ss).IsHappy()
-}
-
-// InitializeConditions sets relevant unset conditions to Unknown state.
-func (ss *SubscriptionStatus) InitializeConditions() {
-	subCondSet.Manage(ss).InitializeConditions()
-}
-
-// MarkReferencesResolved sets the ReferencesResolved condition to True state.
-func (ss *SubscriptionStatus) MarkReferencesResolved() {
-	subCondSet.Manage(ss).MarkTrue(SubscriptionConditionReferencesResolved)
-}
-
-// MarkChannelReady sets the ChannelReady condition to True state.
-func (ss *SubscriptionStatus) MarkChannelReady() {
-	subCondSet.Manage(ss).MarkTrue(SubscriptionConditionChannelReady)
-}
-
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // SubscriptionList returned in list operations

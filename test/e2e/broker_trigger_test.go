@@ -59,7 +59,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	clients, cleaner := Setup(t, t.Logf)
 
 	// Verify namespace exists.
-	ns, cleanupNS := NamespaceExists(t, clients, t.Logf)
+	ns, cleanupNS := CreateNamespaceIfNeeded(t, clients, t.Logf)
 
 	defer cleanupNS()
 	defer TearDown(clients, cleaner, t.Logf)
@@ -186,7 +186,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		// Create cloud event.
 		// Using event type and source as part of the body for easier debugging.
 		body := fmt.Sprintf("Body-%s-%s", eventToSend.Type, eventToSend.Source)
-		cloudEvent := test.CloudEvent{
+		cloudEvent := &test.CloudEvent{
 			Source: eventToSend.Source,
 			Type:   eventToSend.Type,
 			Data:   fmt.Sprintf(`{"msg":%q}`, body),
