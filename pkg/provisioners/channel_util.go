@@ -123,12 +123,14 @@ func createK8sService(ctx context.Context, client runtimeClient.Client, getSvc g
 	} else if err != nil {
 		return nil, err
 	}
-
 	// spec.clusterIP is immutable and is set on existing services. If we don't set this
 	// to the same value, we will encounter an error while updating.
 	svc.Spec.ClusterIP = current.Spec.ClusterIP
 	if !equality.Semantic.DeepDerivative(svc.Spec, current.Spec) ||
-		!expectedLabelsPresent(current.ObjectMeta.Labels, svc.ObjectMeta.Labels) {
+		!expectedLabelsPresent(current.ObjectMeta.Labels, svc.ObjectMeta.Labels) ||
+		// This DeepEqual is necessary to force update dispatcher services when upgrading from 0.5 to 0.6.
+		// Above DeepDerivative will not work because we have removed an optional field (name) from ports
+		!equality.Semantic.DeepEqual(svc.Spec.Ports, current.Spec.Ports) {
 		current.Spec = svc.Spec
 		current.ObjectMeta.Labels = addExpectedLabels(current.ObjectMeta.Labels, svc.ObjectMeta.Labels)
 		err = client.Update(ctx, current)
@@ -265,7 +267,6 @@ func UpdateChannel(ctx context.Context, client runtimeClient.Client, u *eventing
 // OwnerReferences on the resource so handleObject can discover the Channel resource that 'owns' it.
 // As well as being garbage collected when the Channel is deleted.
 func newK8sService(c *eventingv1alpha1.Channel, opts ...k8sServiceOption) (*corev1.Service, error) {
-	// TODO: Need to check if generated name truncates the channel name in case channel name is tool long
 	// Add annotations
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -283,8 +284,9 @@ func newK8sService(c *eventingv1alpha1.Channel, opts ...k8sServiceOption) (*core
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
-					Name: PortName,
-					Port: PortNumber,
+					Name:     PortName,
+					Protocol: corev1.ProtocolTCP,
+					Port:     PortNumber,
 				},
 			},
 		},

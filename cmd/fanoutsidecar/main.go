@@ -40,9 +40,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
-
 	// uncomment this line to debug in GKE from local machine
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	//_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 var (

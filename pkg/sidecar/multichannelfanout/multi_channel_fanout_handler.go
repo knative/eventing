@@ -42,9 +42,9 @@ type Config struct {
 
 // ChannelConfig is the configuration for a single Channel.
 type ChannelConfig struct {
-	Namespace    string `json:"namespace"`
-	Name         string `json:"name"`
-	HostName     string
+	Namespace    string        `json:"namespace"`
+	Name         string        `json:"name"`
+	HostName     string        `json:"hostname"`
 	FanoutConfig fanout.Config `json:"fanoutConfig"`
 }
 

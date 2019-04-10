@@ -180,7 +180,7 @@ func (r *reconciler) reconcile(ctx context.Context, ccp *eventingv1alpha1.Cluste
 	return nil
 }
 
-// Since there are two provisioners "in-memry" and "in-memory-channel" but one single dispatcher service deployment,
+// Since there are two provisioners "in-memory" and "in-memory-channel" but one single dispatcher service deployment,
 // update the label of the K8s service to always point at the same dispatcher service deployment
 func setDispatcherServiceSelector() util.ServiceOption {
 	return func(svc *v1.Service) error {

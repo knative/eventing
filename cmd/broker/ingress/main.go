@@ -17,12 +17,10 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -223,20 +221,6 @@ func (h *handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 }
 
 func (h *handler) sendEvent(ctx context.Context, tctx cehttp.TransportContext, event cloudevents.Event) error {
-
-	//url := "http://external-service.knative-eventing.svc.cluster.local"
-	resp, err1 := http.Post(h.channelURI.String(), "application/json", bytes.NewBuffer([]byte{}))
-	if err1 != nil {
-		log.Println("Error:", err1)
-	}
-	body, err1 := ioutil.ReadAll(resp.Body)
-	if err1 != nil {
-		log.Fatalln(err1)
-	}
-	log.Println(fmt.Sprintf("Reponse: %+v", resp))
-	log.Println(fmt.Sprintf("ReponseBody from server: %v", string(body)))
-
-	fmt.Println("ChannelURI: ", h.channelURI)
 	sendingCTX := broker.SendingContext(ctx, tctx, h.channelURI)
 
 	startTS := time.Now()
@@ -248,7 +232,6 @@ func (h *handler) sendEvent(ctx context.Context, tctx cehttp.TransportContext, e
 	_, err := h.ceClient.Send(sendingCTX, event)
 	if err != nil {
 		sendingCTX, _ = tag.New(sendingCTX, tag.Insert(TagResult, "error"))
-		fmt.Println("Error: ", err)
 	} else {
 		sendingCTX, _ = tag.New(sendingCTX, tag.Insert(TagResult, "ok"))
 	}

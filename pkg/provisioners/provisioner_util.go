@@ -78,8 +78,11 @@ func newDispatcherService(ccp *eventingv1alpha1.ClusterChannelProvisioner, opts 
 			Selector: labels,
 			Ports: []corev1.ServicePort{
 				{
-					Name:       "http",
+					// There is a bug in Istio where named port doesn't work when connecting using an ExternalName service
+					// Refer to https://github.com/istio/istio/issues/13193 for more details.
+					// TODO: Revert this when ISTIO fixes the issue
 					Port:       80,
+					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(8080),
 				},
 			},
