@@ -62,3 +62,12 @@ func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerIngress *
 		},
 	}
 }
+
+// SubscriptionLabels generates the labels present on the Subscription linking this Trigger to the
+// Broker's Channels.
+func SubscriptionLabels(t *eventingv1alpha1.Trigger) map[string]string {
+	return map[string]string{
+		"eventing.knative.dev/broker":  t.Spec.Broker,
+		"eventing.knative.dev/trigger": t.Name,
+	}
+}

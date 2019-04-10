@@ -113,6 +113,8 @@ func MakeFilterService(b *eventingv1alpha1.Broker) *corev1.Service {
 	}
 }
 
+// FilterLabels generates the labels present on all resources representing the filter of the given
+// Broker.
 func FilterLabels(b *eventingv1alpha1.Broker) map[string]string {
 	return map[string]string{
 		"eventing.knative.dev/broker":     b.Name,

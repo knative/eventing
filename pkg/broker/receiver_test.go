@@ -51,7 +51,8 @@ const (
 )
 
 var (
-	host = fmt.Sprintf("%s.%s.triggers.%s", triggerName, testNS, utils.GetClusterDomainName())
+	host      = fmt.Sprintf("%s.%s.triggers.%s", triggerName, testNS, utils.GetClusterDomainName())
+	validPath = fmt.Sprintf("/triggers/%s/%s", testNS, triggerName)
 )
 
 func init() {
@@ -87,23 +88,39 @@ func TestReceiver(t *testing.T) {
 			tctx: &cehttp.TransportContext{
 				Method: "GET",
 				Host:   host,
-				URI:    "/",
+				URI:    validPath,
 			},
 			expectedStatus: http.StatusMethodNotAllowed,
 		},
-		"Other path": {
+		"Path too short": {
 			tctx: &cehttp.TransportContext{
 				Method: "POST",
 				Host:   host,
-				URI:    "/someotherEndpoint",
+				URI:    "/test-namespace/test-trigger",
 			},
-			expectedStatus: http.StatusNotFound,
+			expectedErr: true,
+		},
+		"Path too long": {
+			tctx: &cehttp.TransportContext{
+				Method: "POST",
+				Host:   host,
+				URI:    "/triggers/test-namespace/test-trigger/extra",
+			},
+			expectedErr: true,
+		},
+		"Path without prefix": {
+			tctx: &cehttp.TransportContext{
+				Method: "POST",
+				Host:   host,
+				URI:    "/something/test-namespace/test-trigger",
+			},
+			expectedErr: true,
 		},
 		"Bad host": {
 			tctx: &cehttp.TransportContext{
 				Method: "POST",
 				Host:   "badhost-cant-be-parsed-as-a-trigger-name-plus-namespace",
-				URI:    "/",
+				URI:    validPath,
 			},
 			expectedErr: true,
 		},
@@ -178,7 +195,7 @@ func TestReceiver(t *testing.T) {
 			tctx: &cehttp.TransportContext{
 				Method: "POST",
 				Host:   host,
-				URI:    "/",
+				URI:    validPath,
 				Header: http.Header{
 					// foo won't pass filtering.
 					"foo": []string{"bar"},
@@ -248,7 +265,7 @@ func TestReceiver(t *testing.T) {
 				tctx = &cehttp.TransportContext{
 					Method: http.MethodPost,
 					Host:   host,
-					URI:    "/",
+					URI:    validPath,
 				}
 			}
 			ctx := cehttp.WithTransportContext(context.Background(), *tctx)
