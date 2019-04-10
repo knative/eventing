@@ -50,7 +50,7 @@ func Setup(t *testing.T, logf logging.FormatLogger) (*test.Clients, *test.Cleane
 	clients, err := test.NewClients(
 		pkgTest.Flags.Kubeconfig,
 		pkgTest.Flags.Cluster,
-		test.EventingNamespace)
+		pkgTest.Flags.Namespace)
 	if err != nil {
 		t.Fatalf("Couldn't initialize clients: %v", err)
 	}
@@ -66,23 +66,23 @@ func TearDown(clients *test.Clients, cleaner *test.Cleaner, _ logging.FormatLogg
 
 // CreateChannel will create a Channel.
 func CreateChannel(clients *test.Clients, channel *v1alpha1.Channel, _ logging.FormatLogger, cleaner *test.Cleaner) error {
-	channels := clients.Eventing.EventingV1alpha1().Channels(test.EventingNamespace)
+	channels := clients.Eventing.EventingV1alpha1().Channels(pkgTest.Flags.Namespace)
 	res, err := channels.Create(channel)
 	if err != nil {
 		return err
 	}
-	cleaner.Add(v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version, "channels", test.EventingNamespace, res.ObjectMeta.Name)
+	cleaner.Add(v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version, "channels", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
 	return nil
 }
 
 // CreateSubscription will create a Subscription.
 func CreateSubscription(clients *test.Clients, sub *v1alpha1.Subscription, _ logging.FormatLogger, cleaner *test.Cleaner) error {
-	subscriptions := clients.Eventing.EventingV1alpha1().Subscriptions(test.EventingNamespace)
+	subscriptions := clients.Eventing.EventingV1alpha1().Subscriptions(pkgTest.Flags.Namespace)
 	res, err := subscriptions.Create(sub)
 	if err != nil {
 		return err
 	}
-	cleaner.Add(v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version, "subscriptions", test.EventingNamespace, res.ObjectMeta.Name)
+	cleaner.Add(v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version, "subscriptions", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
 	return nil
 }
 
@@ -95,7 +95,7 @@ func WithChannelsAndSubscriptionsReady(clients *test.Clients, chans *[]*v1alpha1
 		}
 	}
 
-	channels := clients.Eventing.EventingV1alpha1().Channels(test.EventingNamespace)
+	channels := clients.Eventing.EventingV1alpha1().Channels(pkgTest.Flags.Namespace)
 	for i, channel := range *chans {
 		if err := test.WaitForChannelState(channels, channel.Name, test.IsChannelReady, "ChannelIsReady"); err != nil {
 			return err
@@ -115,7 +115,7 @@ func WithChannelsAndSubscriptionsReady(clients *test.Clients, chans *[]*v1alpha1
 		}
 	}
 
-	subscriptions := clients.Eventing.EventingV1alpha1().Subscriptions(test.EventingNamespace)
+	subscriptions := clients.Eventing.EventingV1alpha1().Subscriptions(pkgTest.Flags.Namespace)
 	for i, sub := range *subs {
 		if err := test.WaitForSubscriptionState(subscriptions, sub.Name, test.IsSubscriptionReady, "SubscriptionIsReady"); err != nil {
 			return err
@@ -199,12 +199,12 @@ func WithTriggerReady(clients *test.Clients, trigger *v1alpha1.Trigger, logf log
 
 // CreateServiceAccount will create a service account.
 func CreateServiceAccount(clients *test.Clients, sa *corev1.ServiceAccount, _ logging.FormatLogger, cleaner *test.Cleaner) error {
-	sas := clients.Kube.Kube.CoreV1().ServiceAccounts(test.EventingNamespace)
+	sas := clients.Kube.Kube.CoreV1().ServiceAccounts(pkgTest.Flags.Namespace)
 	res, err := sas.Create(sa)
 	if err != nil {
 		return err
 	}
-	cleaner.Add(corev1.SchemeGroupVersion.Group, corev1.SchemeGroupVersion.Version, "serviceaccounts", test.EventingNamespace, res.ObjectMeta.Name)
+	cleaner.Add(corev1.SchemeGroupVersion.Group, corev1.SchemeGroupVersion.Version, "serviceaccounts", pkgTest.Flags.Namespace, res.ObjectMeta.Name)
 	return nil
 }
 
@@ -225,7 +225,7 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, logf log
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: test.EventingNamespace,
+			Namespace: pkgTest.Flags.Namespace,
 		},
 	}
 	err := CreateServiceAccount(clients, sa, logf, cleaner)
@@ -262,7 +262,7 @@ func CreatePodAndServiceReady(clients *test.Clients, pod *corev1.Pod, svc *corev
 		return nil, fmt.Errorf("Failed to create pod: %v", err)
 	}
 	// TODO(chizhg): Change to only waiting for the current pod running rather than all.
-	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, test.EventingNamespace); err != nil {
+	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, pkgTest.Flags.Namespace); err != nil {
 		return nil, fmt.Errorf("Error waiting for pod to become running: %v", err)
 	}
 	logf("Pod %q starts running", pod.Name)
@@ -311,7 +311,7 @@ func SendFakeEventToChannel(clients *test.Clients, event *test.CloudEvent, chann
 	if err := CreatePod(clients, pod, logf, cleaner); err != nil {
 		return err
 	}
-	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, test.EventingNamespace); err != nil {
+	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, pkgTest.Flags.Namespace); err != nil {
 		return err
 	}
 	logf("Sender pod starts running")
@@ -369,7 +369,7 @@ func FindAnyLogContents(clients *test.Clients, logf logging.FormatLogger, podNam
 
 // WaitForAllTriggersReady will wait until all triggers in the given namespace are ready.
 func WaitForAllTriggersReady(clients *test.Clients, logf logging.FormatLogger) error {
-	triggers := clients.Eventing.EventingV1alpha1().Triggers(test.EventingNamespace)
+	triggers := clients.Eventing.EventingV1alpha1().Triggers(pkgTest.Flags.Namespace)
 	if err := test.WaitForTriggersListState(triggers, test.TriggersReady, "TriggerIsReady"); err != nil {
 		return err
 	}

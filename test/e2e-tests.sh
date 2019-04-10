@@ -42,11 +42,11 @@ function knative_setup() {
   echo ">> Starting Knative Eventing"
   echo "Installing Knative Eventing"
   ko apply -f config/ || return 1
-  wait_until_pods_running knative-eventing || fail_test "Eventing did not come up (1)"
+  wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
 
   echo "Installing In-Memory ClusterChannelProvisioner"
   ko apply -f config/provisioners/in-memory-channel/in-memory-channel.yaml || return 1
-  wait_until_pods_running knative-eventing || fail_test "Eventing did not come up (2)"
+  wait_until_pods_running knative-eventing || fail_test "Failed to install the In-Memory ClusterChannelProvisioner"
 }
 
 function knative_teardown() {
