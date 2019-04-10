@@ -229,6 +229,16 @@ func TestReconcile(t *testing.T) {
 			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
 		},
 		{
+			Name: "Broker Filter Service not found",
+			InitialState: []runtime.Object{
+				makeTrigger(),
+				makeBroker(),
+				makeTriggerChannel(),
+			},
+			WantErrMsg: ` "" not found`,
+			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+		},
+		{
 			Name: "Get Broker Filter Service error",
 			InitialState: []runtime.Object{
 				makeTrigger(),
