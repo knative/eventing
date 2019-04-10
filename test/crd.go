@@ -31,6 +31,9 @@ const (
 
 // ClusterChannelProvisioner returns a ClusterChannelProvisioner for a given name.
 func ClusterChannelProvisioner(name string) *corev1.ObjectReference {
+	if name == "" {
+		return nil
+	}
 	return pkgTest.CoreV1ObjectReference("ClusterChannelProvisioner", eventsApiVersion, name)
 }
 
@@ -123,8 +126,9 @@ func EventSenderPod(name string, namespace string, sink string, event *CloudEven
 
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+			Name:        name,
+			Namespace:   namespace,
+			Annotations: map[string]string{"sidecar.istio.io/inject": "true"},
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
