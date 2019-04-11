@@ -106,8 +106,14 @@ making it safe and secure to embed in a multi-tenant dispatcher process.
 
 ### Single field exact match
 
-Specified with the SourceAndType field: `yaml spec: filter: sourceAndType: type:
-com.github.pull.create`
+Specified with the SourceAndType field:
+
+```yaml
+spec:
+  filter:
+    sourceAndType:
+      type: com.github.pull.create
+```
 
 Specified with a CEL expression:
 
