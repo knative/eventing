@@ -58,10 +58,6 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: ingressLabels(args.Broker),
-					// TODO: Remove this annotation once all channels stop using istio virtual service
-					Annotations: map[string]string{
-						"sidecar.istio.io/inject": "true",
-					},
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: args.ServiceAccountName,

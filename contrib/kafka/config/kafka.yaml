@@ -108,7 +108,7 @@ metadata:
   namespace: knative-eventing
 data:
   # Broker URL's for the provisioner. Replace this with the URL's for your kafka cluster.
-  bootstrap_servers: kafkabroker.kafka:9092
+  bootstrap_servers: my-cluster-kafka-bootstrap.kafka:9092
 
   # Consumer mode to dispatch events from different partitions in parallel.
   # By default(multiplex), partitions are multiplexed with a single go channel.
@@ -211,13 +211,6 @@ spec:
       containers:
         - name: dispatcher
           image: github.com/knative/eventing/contrib/kafka/cmd/dispatcher
-          env:
-            - name: DISPATCHER_CONFIGMAP_NAME
-              value: kafka-channel-dispatcher
-            - name: DISPATCHER_CONFIGMAP_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
           volumeMounts:
             - name: kafka-channel-controller-config
               mountPath: /etc/config-provisioner

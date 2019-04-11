@@ -18,7 +18,6 @@ package channel
 
 import (
 	"github.com/Shopify/sarama"
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -49,11 +48,10 @@ var (
 )
 
 type reconciler struct {
-	client       client.Client
-	recorder     record.EventRecorder
-	logger       *zap.Logger
-	config       *common.KafkaProvisionerConfig
-	configMapKey client.ObjectKey
+	client   client.Client
+	recorder record.EventRecorder
+	logger   *zap.Logger
+	config   *common.KafkaProvisionerConfig
 	// Using a shared kafkaClusterAdmin does not work currently because of an issue with
 	// Shopify/sarama, see https://github.com/Shopify/sarama/issues/1162.
 	kafkaClusterAdmin sarama.ClusterAdmin
@@ -67,10 +65,9 @@ func ProvideController(mgr manager.Manager, config *common.KafkaProvisionerConfi
 	// Setup a new controller to Reconcile Channel.
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: &reconciler{
-			recorder:     mgr.GetRecorder(controllerAgentName),
-			logger:       logger,
-			config:       config,
-			configMapKey: defaultConfigMapKey,
+			recorder: mgr.GetRecorder(controllerAgentName),
+			logger:   logger,
+			config:   config,
 		},
 	})
 	if err != nil {
@@ -86,13 +83,6 @@ func ProvideController(mgr manager.Manager, config *common.KafkaProvisionerConfi
 	err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.Channel{}, IsController: true})
 	if err != nil {
 		logger.Error("unable to watch K8s Services.", zap.Error(err))
-		return nil, err
-	}
-
-	// Watch the VirtualServices that are owned by Channels.
-	err = c.Watch(&source.Kind{Type: &istiov1alpha3.VirtualService{}}, &handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.Channel{}, IsController: true})
-	if err != nil {
-		logger.Error("unable to watch VirtualServices.", zap.Error(err))
 		return nil, err
 	}
 

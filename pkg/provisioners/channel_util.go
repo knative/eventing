@@ -69,6 +69,7 @@ type k8sServiceOption func(*corev1.Service) error
 func ExternalService(c *eventingv1alpha1.Channel) k8sServiceOption {
 	return func(svc *corev1.Service) error {
 		svc.Spec = corev1.ServiceSpec{
+			ClusterIP:    "",
 			Type:         "ExternalName",
 			ExternalName: names.ServiceHostName(channelDispatcherServiceName(c.Spec.Provisioner.Name), system.Namespace()),
 		}
@@ -125,7 +126,7 @@ func createK8sService(ctx context.Context, client runtimeClient.Client, getSvc g
 	}
 	// spec.clusterIP is immutable and is set on existing services. If we don't set this
 	// to the same value, we will encounter an error while updating.
-	svc.Spec.ClusterIP = current.Spec.ClusterIP
+	// svc.Spec.ClusterIP = current.Spec.ClusterIP
 	if !equality.Semantic.DeepDerivative(svc.Spec, current.Spec) ||
 		!expectedLabelsPresent(current.ObjectMeta.Labels, svc.ObjectMeta.Labels) ||
 		// This DeepEqual is necessary to force update dispatcher services when upgrading from 0.5 to 0.6.

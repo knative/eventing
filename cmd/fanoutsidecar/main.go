@@ -30,7 +30,6 @@ import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/channelwatcher"
 	"github.com/knative/eventing/pkg/logging"
-	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	"github.com/knative/eventing/pkg/sidecar/swappable"
 	"go.uber.org/zap"
@@ -145,7 +144,7 @@ func updateChannelConfig(updateConfig swappable.UpdateConfig) channelwatcher.Wat
 			logging.FromContext(ctx).Info("Unable to list channels", zap.Error(err))
 			return err
 		}
-		config := multiChannelFanoutConfig(channels)
+		config := multichannelfanout.NewConfigFromChannels(channels)
 		return updateConfig(config)
 	}
 }
@@ -173,26 +172,6 @@ func shouldWatch(ch *v1alpha1.Channel) bool {
 		}
 	}
 	return false
-}
-
-func multiChannelFanoutConfig(channels []v1alpha1.Channel) *multichannelfanout.Config {
-	cc := make([]multichannelfanout.ChannelConfig, 0)
-	for _, c := range channels {
-		channelConfig := multichannelfanout.ChannelConfig{
-			Namespace: c.Namespace,
-			Name:      c.Name,
-			HostName:  c.Status.Address.Hostname,
-		}
-		if c.Spec.Subscribable != nil {
-			channelConfig.FanoutConfig = fanout.Config{
-				Subscriptions: c.Spec.Subscribable.Subscribers,
-			}
-		}
-		cc = append(cc, channelConfig)
-	}
-	return &multichannelfanout.Config{
-		ChannelConfigs: cc,
-	}
 }
 
 // runnableServer is a small wrapper around http.Server so that it matches the manager.Runnable
