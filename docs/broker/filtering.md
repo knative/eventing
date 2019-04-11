@@ -44,7 +44,7 @@ Trigger's subscriber.
 
 The evaluation environment of the expression may include:
 
-*   Standard CloudEvent fields like type and source
+*   Standard CloudEvents fields like type and source
 *   Custom extensions dynamically parsed from the event
 *   Data fields parsed from the event, if the data content type is known to be
     parseable
@@ -178,7 +178,7 @@ spec:
 
 Cannot be specified with the SourceAndType field.
 
-_This example assumes the repository name is available as a CloudEvent extension
+_This example assumes the repository name is available as a CloudEvents extension
 with name `repository`._
 
 _The `>` syntax is a standard yaml multiline string._
