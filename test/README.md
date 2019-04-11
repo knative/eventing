@@ -19,8 +19,8 @@ You can run it simply with:
 test/presubmit-tests.sh
 ```
 
-By default, this script will run `build tests`, `unit tests` and
-`integration tests`. If you only want to run one type of tests, you can run this
+_By default, this script will run `build tests`, `unit tests` and
+`integration tests`._ If you only want to run one type of tests, you can run this
 script with corresponding flags like below:
 
 ```shell
@@ -29,7 +29,7 @@ test/presubmit-tests.sh --unit-tests
 test/presubmit-tests.sh --integration-tests
 ```
 
-_Note that if the tests you are running includes `integration tests`, it will
+_Note that if the tests you are running include `integration tests`, it will
 create a new GKE cluster in project `$PROJECT_ID`, start Knative Serving and
 Eventing system, upload test images to `$KO_DOCKER_REPO`, and run all
 `e2e-*tests.sh` scripts under [`test`](.). After the tests finish, it will
@@ -45,21 +45,21 @@ You can run it simply with:
 test/e2e-tests.sh
 ```
 
-By default, it will create a new GKE cluster in project `$PROJECT_ID`, install
+_By default, it will create a new GKE cluster in project `$PROJECT_ID`, install
 Knative Serving stack with Istio, upload test images to your Docker repo and run
 the end-to-end tests against the Knative Eventing built from source. After the
-tests finishes, it will delete the cluster.
+tests finishes, it will delete the cluster._
 
 If you have already created your own Kubernetes cluster but haven't installed
 Knative, you can run with `test/e2e-tests.sh --run-tests`.
 
 If you have set up a running environment that meets
 [the e2e test environment requirements](#environment-requirements), you can run
-with `./test/e2e-tests.sh --run-tests --skip-knative-setup`.
+with `test/e2e-tests.sh --run-tests --skip-knative-setup`.
 
 ## Running tests with `go test` command (recommended)
 
-## Running unit tests
+### Running unit tests
 
 You can also use `go test` command to run unit tests:
 
@@ -70,7 +70,7 @@ go test -v ./pkg/...
 _By default `go test` will not run [the e2e tests](#running-end-to-end-tests),
 which needs [`-tags=e2e`](#running-end-to-end-tests) to be enabled._
 
-## Running end-to-end tests
+### Running end-to-end tests
 
 To run [the e2e tests](./e2e) with `go test` command, you need to have a running
 environment that meets
@@ -81,7 +81,7 @@ to specify the build tag `e2e`.
 go test -v -tags=e2e -count=1 ./test/e2e
 ```
 
-### One test case
+#### One test case
 
 To run one e2e test case, e.g. TestSingleBinaryEvent, use the
 [-run](https://golang.org/cmd/go/#hdr-Testing_flags) flag with `go test`:
@@ -107,9 +107,9 @@ There's couple of things you need to install before running e2e tests locally.
 
 ### Building the test images
 
-Note: this is only required when you run e2e tests locally with `go test`
+_Note: this is only required when you run e2e tests locally with `go test`
 commands. Running tests through e2e-tests.sh will publish the images
-automatically.
+automatically._
 
 The [`upload-test-images.sh`](./upload-test-images.sh) script can be used to
 build and push the test images used by the e2e tests. It requires:
@@ -134,7 +134,7 @@ deployed in GCR.
 New test images should be placed in `./test/test_images`. For each image create
 a new sub-folder and include a Go file that will be an entry point to the
 application. This Go file should use the package `main` and include the function
-`main()`. It is a good practice to include a readme file as well. When uploading
+`main()`. It is a good practice to include a `readme` file as well. When uploading
 test images, `ko` will build an image from this folder.
 
 ## Flags
