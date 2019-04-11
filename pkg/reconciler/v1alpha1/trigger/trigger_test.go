@@ -24,9 +24,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
@@ -41,11 +38,14 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -56,6 +56,8 @@ const (
 	subscriberAPIVersion = "v1"
 	subscriberKind       = "Service"
 	subscriberName       = "subscriberName"
+
+	continueToken = "continueToken"
 )
 
 var (
@@ -478,6 +480,70 @@ func TestMapBrokerToTriggers(t *testing.T) {
 			},
 			expected: []reconcile.Request{},
 		},
+		"One Trigger": {
+			initialState: []runtime.Object{
+				makeTrigger(),
+			},
+			expected: []reconcile.Request{
+				{
+					NamespacedName: types.NamespacedName{
+						Namespace: testNS,
+						Name:      triggerName,
+					},
+				},
+			},
+		},
+		"Only from this namespace": {
+			initialState: []runtime.Object{
+				makeTriggerWithNamespaceAndName(testNS, "one"),
+				makeTriggerWithNamespaceAndName("some-other-namespace", "will-be-ignored"),
+				makeTriggerWithNamespaceAndName(testNS, "two"),
+			},
+			expected: []reconcile.Request{
+				{
+					NamespacedName: types.NamespacedName{
+						Namespace: testNS,
+						Name:      "one",
+					},
+				},
+				{
+					NamespacedName: types.NamespacedName{
+						Namespace: testNS,
+						Name:      "two",
+					},
+				},
+			},
+		},
+		"Follows pagination": {
+			initialState: []runtime.Object{
+				makeTrigger(),
+			},
+			mocks: controllertesting.Mocks{
+				MockLists: []controllertesting.MockList{
+					func(innerClient client.Client, ctx context.Context, opts *client.ListOptions, list runtime.Object) (handled controllertesting.MockHandled, e error) {
+						// The first request won't have a continue token. Add it and immediately
+						// return. The subsequent request will have the token, remove it and send
+						// the request to the inner client.
+						tl := list.(*v1alpha1.TriggerList)
+						if opts.Raw.Continue != continueToken {
+							tl.Continue = continueToken
+							return controllertesting.Handled, nil
+						} else {
+							tl.Continue = ""
+							return controllertesting.Handled, innerClient.List(ctx, opts, list)
+						}
+					},
+				},
+			},
+			expected: []reconcile.Request{
+				{
+					NamespacedName: types.NamespacedName{
+						Namespace: testNS,
+						Name:      triggerName,
+					},
+				},
+			},
+		},
 	}
 
 	for n, tc := range testCases {
@@ -498,6 +564,7 @@ func TestMapBrokerToTriggers(t *testing.T) {
 			o := handler.MapObject{
 				Meta: &metav1.ObjectMeta{
 					Namespace: testNS,
+					Name:      brokerName,
 				},
 			}
 			actual := b.Map(o)
@@ -550,6 +617,13 @@ func makeDeletingTrigger() *v1alpha1.Trigger {
 	b := makeReadyTrigger()
 	b.DeletionTimestamp = &deletionTime
 	return b
+}
+
+func makeTriggerWithNamespaceAndName(namespace, name string) *v1alpha1.Trigger {
+	t := makeTrigger()
+	t.Namespace = namespace
+	t.Name = name
+	return t
 }
 
 func makeBroker() *v1alpha1.Broker {
