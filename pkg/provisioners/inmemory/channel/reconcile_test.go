@@ -482,7 +482,7 @@ func makeK8sService(pn ...string) *corev1.Service {
 		},
 		Spec: corev1.ServiceSpec{
 			ExternalName: names.ServiceHostName(fmt.Sprintf("%s-dispatcher", getProvisionerName(pn)), system.Namespace()),
-			Type:         "ExternalName",
+			Type:         corev1.ServiceTypeExternalName,
 		},
 	}
 }
