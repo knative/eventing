@@ -51,6 +51,28 @@ spec:
 
 ## Usage
 
+### ClusterChannelProvisioner
+
+`Broker`'s use their `spec.channelTemplate` to create their internal `Channel`s, which dictate the durability guarantees of events sent to that `Broker`. If `spec.channelTemplate` is not specified, then the [default provisioner](https://www.knative.dev/docs/eventing/channels/default-channels/) for their namespace is used.
+
+#### Setup
+
+Have a `ClusterChannelProvisioner` installed and set as the [default provisioner](https://www.knative.dev/docs/eventing/channels/default-channels/) for the namespace you are interested in. For development, the [`in-memory` `ClusterChannelProvisioner`](https://github.com/knative/eventing/tree/master/config/provisioners/in-memory-channel#deployment-steps) is normally used.
+
+#### Changing
+
+**Note** changing the `ClusterChannelProvisioner` of a running `Broker` will lose all in-flight events.
+
+If you want to change which `ClusterChannelProvisioner` is used by a given `Broker`, then determine if the `spec.channelTemplate` is specified or not.
+
+If `spec.channelTemplate` is specified:
+1. Delete the `Broker`.
+1. Create the `Broker` with the updated `spec.channelTemplate`.
+
+If `spec.channelTemplate` is not specified:
+1. Change the [default provisioner](https://github.com/knative/docs/blob/master/docs/eventing/channels/default-channels.md#setting-the-default-channel-configuration) for the namespace that `Broker` is in.
+1. Delete and recreate the `Broker`.
+
 ### Broker
 
 There are two ways to create a Broker, via [namespace annotation](#annotation)
