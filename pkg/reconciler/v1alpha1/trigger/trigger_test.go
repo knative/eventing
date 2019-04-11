@@ -23,6 +23,10 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
@@ -205,6 +209,15 @@ func TestReconcile(t *testing.T) {
 			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
 		},
 		{
+			Name: "Broker Trigger channel not found",
+			InitialState: []runtime.Object{
+				makeTrigger(),
+				makeBroker(),
+			},
+			WantErrMsg: ` "" not found`,
+			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+		},
+		{
 			Name: "Get Broker Ingress channel error",
 			InitialState: []runtime.Object{
 				makeTrigger(),
@@ -226,6 +239,16 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error getting broker's Ingress channel",
+			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+		},
+		{
+			Name: "Broker Ingress channel not found",
+			InitialState: []runtime.Object{
+				makeTrigger(),
+				makeBroker(),
+				makeTriggerChannel(),
+			},
+			WantErrMsg: ` "" not found`,
 			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
 		},
 		{
@@ -278,6 +301,30 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error resolving subscriber URI",
+			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+		},
+		{
+			Name: "Get Subscription error",
+			InitialState: []runtime.Object{
+				makeTrigger(),
+				makeBroker(),
+				makeTriggerChannel(),
+				makeBrokerFilterService(),
+			},
+			Objects: []runtime.Object{
+				makeSubscriberServiceAsUnstructured(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockLists: []controllertesting.MockList{
+					func(_ client.Client, _ context.Context, _ *client.ListOptions, list runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := list.(*v1alpha1.SubscriptionList); ok {
+							return controllertesting.Handled, errors.New("test error listing subscription")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error listing subscription",
 			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
 		},
 		{
@@ -412,6 +459,52 @@ func TestReconcile(t *testing.T) {
 		tc.IgnoreTimes = true
 		tc.Scheme = scheme.Scheme
 		t.Run(tc.Name, tc.Runner(t, r, c, recorder))
+	}
+}
+
+func TestMapBrokerToTriggers(t *testing.T) {
+	testCases := map[string]struct {
+		initialState []runtime.Object
+		mocks        controllertesting.Mocks
+		expected     []reconcile.Request
+	}{
+		"List error": {
+			mocks: controllertesting.Mocks{
+				MockLists: []controllertesting.MockList{
+					func(_ client.Client, _ context.Context, _ *client.ListOptions, list runtime.Object) (controllertesting.MockHandled, error) {
+						return controllertesting.Handled, errors.New("test induced error")
+					},
+				},
+			},
+			expected: []reconcile.Request{},
+		},
+	}
+
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			c := (&controllertesting.TestCase{
+				Scheme:       scheme.Scheme,
+				InitialState: tc.initialState,
+				Mocks:        tc.mocks,
+			}).GetClient()
+
+			b := &mapBrokerToTriggers{
+				// client and logger are the only fields that are used by the Map function.
+				r: &reconciler{
+					client: c,
+					logger: zap.NewNop(),
+				},
+			}
+			o := handler.MapObject{
+				Meta: &metav1.ObjectMeta{
+					Namespace: testNS,
+				},
+			}
+			actual := b.Map(o)
+			if diff := cmp.Diff(tc.expected, actual); diff != "" {
+				t.Errorf("Unexpected results (-want +got): %s", diff)
+			}
+		})
 	}
 }
 
