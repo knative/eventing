@@ -216,6 +216,24 @@ spec:
 
 ## Caveats
 
+### Variable prefixes
+
+Due to limitations in the CloudEvents SDK, dynamic fields like extensions and
+data must have a separate prefix from non-dynamic types. The examples here use
+these prefixes:
+
+|--------|-------------------------------------------------|
+| `ce`   | Official CloudEvents fields defined in the spec.|
+| `ext`  | Extensions parsed dynamically from the event.   |
+| `data` | Fields parsed dynamically from the event data.  |
+|--------|-------------------------------------------------|
+
+This limitation may be lifted in the future, allowing official CloudEvents
+fields to use the same prefix as extensions. Extensions can then be elevated to
+official fields without changing filter expressions.
+
+### CEL
+
 The main caveat is the choice of CEL as expression language.
 
 CEL is new and the language is not officially supported by Google. Participation
