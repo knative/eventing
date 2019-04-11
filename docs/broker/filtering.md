@@ -175,8 +175,7 @@ spec:
     cel:
       expression: >
         ce.type == "com.github.pull.create" ||
-         (ce.type == "com.github.issue.create" &&
-          ce.source.matches("proposals")
+        (ce.type == "com.github.issue.create" && ce.source.matches("proposals")
 
 ```
 
