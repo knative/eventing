@@ -3,11 +3,11 @@
 ## Problem
 
 As an `Event Consumer` I want to filter events in triggers with a variety of
-strategies beyond exact match on predefined fields. Filtering strategies that
-have been requested include:
+strategies beyond exact match on predefined attributes. Filtering strategies
+that have been requested include:
 
 *   Filtering by source or type prefix or regular expression
-*   Filtering by a custom extension field
+*   Filtering by a custom extension attribute
 *   Filtering by data fields
 
 The existing filter capability of exact match on source and type is simple to
@@ -44,14 +44,14 @@ Trigger's subscriber.
 
 The evaluation environment of the expression may include:
 
-*   Standard CloudEvents fields like type and source
+*   Standard CloudEvents attributes like type and source
 *   Custom extensions dynamically parsed from the event
 *   Data fields parsed from the event, if the data content type is known to be
     parseable
 
-Since parsing dynamic extension and data fields may be costly, the Trigger must
-explicitly enable it by setting boolean fields adjacent to the expression. See
-[examples](#examples) for syntax.
+Since parsing dynamic extension attributes and data fields may be costly, the
+Trigger must explicitly enable it by setting boolean fields adjacent to the
+expression. See [examples](#examples) for syntax.
 
 The expression language chosen is
 [CEL](https://github.com/google/cel-spec/blob/9cdb3682ba04109d2e03d9b048986bae113bf36f/doc/intro.md)
@@ -104,7 +104,7 @@ making it safe and secure to embed in a multi-tenant dispatcher process.
 
 ## Examples
 
-### Single field exact match
+### Single attribute exact match
 
 Specified with the SourceAndType field:
 
@@ -124,7 +124,7 @@ spec:
       expression: ce.type == "com.github.pull.create"
 ```
 
-### Multiple fields exact match
+### Multiple attributes exact match
 
 Specified with the SourceAndType field:
 
@@ -223,19 +223,19 @@ spec:
 
 ### Variable prefixes
 
-Due to limitations in the CloudEvents SDK, dynamic fields like extensions and
-data must have a separate prefix from non-dynamic types. The examples here use
+Due to limitations in the CloudEvents SDK, dynamic attributes and data fields
+must have a separate prefix from non-dynamic types. The examples here use
 these prefixes:
 
-|--------|-------------------------------------------------|
-| `ce`   | Official CloudEvents fields defined in the spec.|
-| `ext`  | Extensions parsed dynamically from the event.   |
-| `data` | Fields parsed dynamically from the event data.  |
-|--------|-------------------------------------------------|
+|--------|-----------------------------------------------------|
+| `ce`   | Official CloudEvents attributes defined in the spec.|
+| `ext`  | Extensions parsed dynamically from the event.       |
+| `data` | Fields parsed dynamically from the event data.      |
+|--------|-----------------------------------------------------|
 
 This limitation may be lifted in the future, allowing official CloudEvents
-fields to use the same prefix as extensions. Extensions can then be elevated to
-official fields without changing filter expressions.
+attributes to use the same prefix as extensions. Extensions can then be elevated
+to official attributes without changing filter expressions.
 
 ### CEL
 
