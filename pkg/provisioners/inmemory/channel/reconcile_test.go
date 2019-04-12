@@ -265,7 +265,7 @@ func TestReconcile(t *testing.T) {
 				MockLists: errorListingK8sService(),
 			},
 			WantPresent: []runtime.Object{
-				makeChannelWithFinalizer(),
+				makeChannel(),
 			},
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
@@ -282,7 +282,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantPresent: []runtime.Object{
 				// TODO: This should have a useful error message saying that the K8s Service failed.
-				makeChannelWithFinalizer(),
+				makeChannel(),
 			},
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
@@ -290,33 +290,6 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			Name: "Channel get for update fails",
-			InitialState: []runtime.Object{
-				makeChannel(),
-				makeK8sService(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockGets: errorOnSecondChannelGet(),
-			},
-			WantErrMsg: testErrorMessage,
-			WantEvent: []corev1.Event{
-				events[channelReconciled], events[channelUpdateStatusFailed],
-			},
-		},
-		{
-			Name: "Channel update fails",
-			InitialState: []runtime.Object{
-				makeChannel(),
-				makeK8sService(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockUpdates: errorUpdatingChannel(),
-			},
-			WantErrMsg: testErrorMessage,
-			WantEvent: []corev1.Event{
-				events[channelReconciled], events[channelUpdateStatusFailed],
-			},
-		}, {
 			Name: "Channel status update fails",
 			InitialState: []runtime.Object{
 				makeChannel(),
@@ -403,19 +376,6 @@ func getProvisionerName(pn []string) string {
 		provisionerName = pn[0]
 	}
 	return provisionerName
-}
-
-func makeChannelWithFinalizerAndAddress() *eventingv1alpha1.Channel {
-	c := makeChannelWithFinalizer()
-	c.Status.SetAddress(serviceAddress)
-	return c
-}
-
-func makeReadyChannel() *eventingv1alpha1.Channel {
-	// Ready channels have the finalizer and are Addressable.
-	c := makeChannelWithFinalizerAndAddress()
-	c.Status.MarkProvisioned()
-	return c
 }
 
 func makeChannelNilProvisioner() *eventingv1alpha1.Channel {

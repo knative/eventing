@@ -81,7 +81,7 @@ func main() {
 	}
 
 	if len(channelProvisioners) < 1 {
-		logger.Fatal("--channel_provisioners must be specified")
+		logger.Fatal("--channel_provisioner must be specified")
 	}
 
 	sh, err := swappable.NewEmptyHandler(logger)
@@ -131,8 +131,14 @@ func setupChannelWatcher(logger *zap.Logger, configUpdated swappable.UpdateConfi
 		logger.Error("Error creating new maanger.", zap.Error(err))
 		return nil, err
 	}
+<<<<<<< HEAD
 	if err := v1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
 		logger.Error("Error adding eventinging scheme to manager.", zap.Error(err))
+=======
+	if err = v1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
+		logger.Error("Error while adding eventing scheme to manager.", zap.Error(err))
+		return nil, err
+>>>>>>> feb5e64feb4e7a837eb7a553a14d91b6d47517d7
 	}
 	channelwatcher.New(mgr, logger, updateChannelConfig(configUpdated))
 
