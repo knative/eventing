@@ -85,6 +85,19 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 	logger.Info("Reconciling Channel")
 
+	// Finalizer needs to be removed (even though no finalizers are added) main back compat
+	// with v0.5 in which a finalzier was added. Or else channels will not get deleted after upgrading to 0.6
+	// TODO: Remove this entire if block in v0.7+
+	if c.DeletionTimestamp != nil {
+		// K8s garbage collection will delete the K8s service and VirtualService for this channel.
+		// We use a finalizer to ensure the channel config has been synced.
+		util.RemoveFinalizer(c, finalizerName)
+		r.client.Update(ctx, c)
+		logger.Info("Channel reconciled")
+		r.recorder.Eventf(c, corev1.EventTypeNormal, channelReconciled, "Channel reconciled: %q", c.Name)
+		return reconcile.Result{}, nil
+	}
+
 	err = r.reconcile(ctx, c)
 	if err != nil {
 		logger.Info("Error reconciling Channel", zap.Error(err))
@@ -95,7 +108,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		r.recorder.Eventf(c, corev1.EventTypeNormal, channelReconciled, "Channel reconciled: %q", c.Name)
 	}
 
-	if updateStatusErr := util.UpdateChannel(ctx, r.client, c); updateStatusErr != nil {
+	if updateStatusErr := r.client.Status().Update(ctx, c); updateStatusErr != nil {
 		logger.Info("Error updating Channel Status", zap.Error(updateStatusErr))
 		r.recorder.Eventf(c, corev1.EventTypeWarning, channelUpdateStatusFailed, "Failed to update Channel's status: %v", err)
 		return reconcile.Result{}, updateStatusErr
@@ -117,19 +130,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 	c.Status.InitializeConditions()
 
-	// We are syncing three things:
-	// 1. The K8s Service to talk to this Channel.
-	// 3. The configuration of all Channel subscriptions.
-
-	if c.DeletionTimestamp != nil {
-		// K8s garbage collection will delete the K8s service for this channel.
-		// We use a finalizer to ensure the channel config has been synced.
-		util.RemoveFinalizer(c, finalizerName)
-		return nil
-	}
-
-	util.AddFinalizer(c, finalizerName)
-
+	// We are syncing K8s Service to talk to this Channel.
 	svc, err := util.CreateK8sService(ctx, r.client, c, util.ExternalService(c))
 	if err != nil {
 		logger.Info("Error creating the Channel's K8s Service", zap.Error(err))

@@ -26,9 +26,9 @@ type reconciler struct {
 
 func (r *reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) {
 	ctx := logging.WithLogger(context.TODO(), r.logger.With(zap.Any("request", req)))
-	r.logger.Info("New update for channel.")
+	logging.FromContext(ctx).Info("New update for channel.")
 	if err := r.handler(ctx, r.client, req.NamespacedName); err != nil {
-		r.logger.Error("WatchHandlerFunc returned error", zap.Error(err))
+		logging.FromContext(ctx).Error("WatchHandlerFunc returned error", zap.Error(err))
 		return reconcile.Result{}, err
 	}
 	return reconcile.Result{}, nil

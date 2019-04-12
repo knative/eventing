@@ -65,7 +65,7 @@ func RemoveFinalizer(o metav1.Object, finalizerName string) {
 
 type k8sServiceOption func(*corev1.Service) error
 
-// ExternalService is a functional option for CreateK8sService to create a K8s service of type ExternalName
+// ExternalService is a functional option for CreateK8sService to create a K8s service of type ExternalName.
 func ExternalService(c *eventingv1alpha1.Channel) k8sServiceOption {
 	return func(svc *corev1.Service) error {
 		svc.Spec = corev1.ServiceSpec{
@@ -132,6 +132,7 @@ func createK8sService(ctx context.Context, client runtimeClient.Client, getSvc g
 		!expectedLabelsPresent(current.ObjectMeta.Labels, svc.ObjectMeta.Labels) ||
 		// This DeepEqual is necessary to force update dispatcher services when upgrading from 0.5 to 0.6.
 		// Above DeepDerivative will not work because we have removed an optional field (name) from ports
+		// TODO: Remove this check in 0.7+
 		!equality.Semantic.DeepEqual(svc.Spec.Ports, current.Spec.Ports) {
 		current.Spec = svc.Spec
 		current.ObjectMeta.Labels = addExpectedLabels(current.ObjectMeta.Labels, svc.ObjectMeta.Labels)
