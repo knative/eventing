@@ -183,23 +183,29 @@ func (c *mockSaramaCluster) GetConsumerMode() cluster.ConsumerMode {
 
 func TestDispatcher_UpdateConfig(t *testing.T) {
 	testCases := []struct {
-		name         string
-		oldConfig    *multichannelfanout.Config
-		newConfig    *multichannelfanout.Config
-		subscribes   []string
-		unsubscribes []string
-		createErr    string
+		name             string
+		oldConfig        *multichannelfanout.Config
+		newConfig        *multichannelfanout.Config
+		subscribes       []string
+		unsubscribes     []string
+		createErr        string
+		oldHostToChanMap map[string]provisioners.ChannelReference
+		newHostToChanMap map[string]provisioners.ChannelReference
 	}{
 		{
-			name:      "nil config",
-			oldConfig: &multichannelfanout.Config{},
-			newConfig: nil,
-			createErr: "nil config",
+			name:             "nil config",
+			oldConfig:        &multichannelfanout.Config{},
+			newConfig:        nil,
+			createErr:        "nil config",
+			oldHostToChanMap: map[string]provisioners.ChannelReference{},
+			newHostToChanMap: map[string]provisioners.ChannelReference{},
 		},
 		{
-			name:      "same config",
-			oldConfig: &multichannelfanout.Config{},
-			newConfig: &multichannelfanout.Config{},
+			name:             "same config",
+			oldConfig:        &multichannelfanout.Config{},
+			newConfig:        &multichannelfanout.Config{},
+			oldHostToChanMap: map[string]provisioners.ChannelReference{},
+			newHostToChanMap: map[string]provisioners.ChannelReference{},
 		},
 		{
 			name:      "config with no subscription",
@@ -209,8 +215,13 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 					{
 						Namespace: "default",
 						Name:      "test-channel",
+						HostName:  "a.b.c.d",
 					},
 				},
+			},
+			oldHostToChanMap: map[string]provisioners.ChannelReference{},
+			newHostToChanMap: map[string]provisioners.ChannelReference{
+				"a.b.c.d": provisioners.ChannelReference{Name: "test-channel", Namespace: "default"},
 			},
 		},
 		{
@@ -221,6 +232,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 					{
 						Namespace: "default",
 						Name:      "test-channel",
+						HostName:  "a.b.c.d",
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
@@ -240,7 +252,11 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 					},
 				},
 			},
-			subscribes: []string{"subscription-1", "subscription-2"},
+			subscribes:       []string{"subscription-1", "subscription-2"},
+			oldHostToChanMap: map[string]provisioners.ChannelReference{},
+			newHostToChanMap: map[string]provisioners.ChannelReference{
+				"a.b.c.d": provisioners.ChannelReference{Name: "test-channel", Namespace: "default"},
+			},
 		},
 		{
 			name: "single channel w/ existing subscriptions",
@@ -249,6 +265,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 					{
 						Namespace: "default",
 						Name:      "test-channel",
+						HostName:  "a.b.c.d",
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
@@ -269,6 +286,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 					{
 						Namespace: "default",
 						Name:      "test-channel",
+						HostName:  "a.b.c.d",
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
@@ -290,6 +308,12 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 			},
 			subscribes:   []string{"subscription-2", "subscription-3"},
 			unsubscribes: []string{"subscription-1"},
+			oldHostToChanMap: map[string]provisioners.ChannelReference{
+				"a.b.c.d": provisioners.ChannelReference{Name: "test-channel", Namespace: "default"},
+			},
+			newHostToChanMap: map[string]provisioners.ChannelReference{
+				"a.b.c.d": provisioners.ChannelReference{Name: "test-channel", Namespace: "default"},
+			},
 		},
 		{
 			name: "multi channel w/old and new subscriptions",
@@ -298,6 +322,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 					{
 						Namespace: "default",
 						Name:      "test-channel-1",
+						HostName:  "a.b.c.d",
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
@@ -319,6 +344,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 					{
 						Namespace: "default",
 						Name:      "test-channel-1",
+						HostName:  "a.b.c.d",
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
@@ -333,6 +359,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 					{
 						Namespace: "default",
 						Name:      "test-channel-2",
+						HostName:  "e.f.g.h",
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
@@ -354,6 +381,33 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 			},
 			subscribes:   []string{"subscription-1", "subscription-3", "subscription-4"},
 			unsubscribes: []string{"subscription-2"},
+			oldHostToChanMap: map[string]provisioners.ChannelReference{
+				"a.b.c.d": provisioners.ChannelReference{Name: "test-channel-1", Namespace: "default"},
+			},
+			newHostToChanMap: map[string]provisioners.ChannelReference{
+				"a.b.c.d": provisioners.ChannelReference{Name: "test-channel-1", Namespace: "default"},
+				"e.f.g.h": provisioners.ChannelReference{Name: "test-channel-2", Namespace: "default"},
+			},
+		},
+		{
+			name:      "Duplicate hostnames",
+			oldConfig: &multichannelfanout.Config{},
+			newConfig: &multichannelfanout.Config{
+				ChannelConfigs: []multichannelfanout.ChannelConfig{
+					{
+						Namespace: "default",
+						Name:      "test-channel-1",
+						HostName:  "a.b.c.d",
+					},
+					{
+						Namespace: "default",
+						Name:      "test-channel-2",
+						HostName:  "a.b.c.d",
+					},
+				},
+			},
+			createErr:        "Duplicate hostName found. HostName:a.b.c.d, channel:default.test-channel-2, channel:default.test-channel-1",
+			oldHostToChanMap: map[string]provisioners.ChannelReference{},
 		},
 	}
 
@@ -367,10 +421,12 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 				logger: zap.NewNop(),
 			}
 			d.setConfig(&multichannelfanout.Config{})
+			d.setHostToChannelMap(map[string]provisioners.ChannelReference{})
 
 			// Initialize using oldConfig
 			err := d.UpdateConfig(tc.oldConfig)
 			if err != nil {
+
 				t.Errorf("unexpected error: %v", err)
 			}
 			oldSubscribers := sets.NewString()
@@ -381,6 +437,12 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 			}
 			if diff := sets.NewString(tc.unsubscribes...).Difference(oldSubscribers); diff.Len() != 0 {
 				t.Errorf("subscriptions %+v were never subscribed", diff)
+			}
+			if diff := cmp.Diff(tc.oldConfig, d.getConfig()); diff != "" {
+				t.Errorf("unexpected config (-want, +got) = %v", diff)
+			}
+			if diff := cmp.Diff(tc.oldHostToChanMap, d.getHostToChannelMap()); diff != "" {
+				t.Errorf("unexpected hostToChannelMap (-want, +got) = %v", diff)
 			}
 
 			// Update with new config
@@ -405,6 +467,12 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 
 			if diff := cmp.Diff(tc.subscribes, newSubscribers, sortStrings); diff != "" {
 				t.Errorf("unexpected subscribers (-want, +got) = %v", diff)
+			}
+			if diff := cmp.Diff(tc.newHostToChanMap, d.getHostToChannelMap()); diff != "" {
+				t.Errorf("unexpected hostToChannelMap (-want, +got) = %v", diff)
+			}
+			if diff := cmp.Diff(tc.newConfig, d.getConfig()); diff != "" {
+				t.Errorf("unexpected config (-want, +got) = %v", diff)
 			}
 
 		})
@@ -631,9 +699,13 @@ func TestKafkaDispatcher_Start(t *testing.T) {
 		t.Errorf("Expected error want %s, got %s", "message receiver is not set", err)
 	}
 
-	d.receiver = provisioners.NewMessageReceiver(func(channel provisioners.ChannelReference, message *provisioners.Message) error {
+	receiver, err := provisioners.NewMessageReceiver(func(channel provisioners.ChannelReference, message *provisioners.Message) error {
 		return nil
 	}, zap.NewNop().Sugar())
+	if err != nil {
+		t.Fatalf("Error creating new message receiver. Error:%s", err)
+	}
+	d.receiver = receiver
 	err = d.Start(make(chan struct{}))
 	if err == nil {
 		t.Errorf("Expected error want %s, got %s", "kafkaAsyncProducer is not set", err)

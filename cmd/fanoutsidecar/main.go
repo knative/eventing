@@ -131,7 +131,9 @@ func setupChannelWatcher(logger *zap.Logger, configUpdated swappable.UpdateConfi
 		logger.Error("Error creating new maanger.", zap.Error(err))
 		return nil, err
 	}
-	v1alpha1.AddToScheme(mgr.GetScheme())
+	if err := v1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
+		logger.Error("Error adding eventinging scheme to manager.", zap.Error(err))
+	}
 	channelwatcher.New(mgr, logger, updateChannelConfig(configUpdated))
 
 	return mgr, nil

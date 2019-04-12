@@ -43,7 +43,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("unable to create logger: %v", err)
 	}
-
 	provisionerConfig, err := provisionerController.GetProvisionerConfig("/etc/config-provisioner")
 	if err != nil {
 		logger.Fatal("unable to load provisioner config", zap.Error(err))

@@ -34,8 +34,9 @@ import (
 )
 
 type KafkaDispatcher struct {
-	config     atomic.Value
-	updateLock sync.Mutex
+	config           atomic.Value
+	hostToChannelMap atomic.Value
+	updateLock       sync.Mutex
 
 	receiver   *provisioners.MessageReceiver
 	dispatcher *provisioners.MessageDispatcher
@@ -131,10 +132,34 @@ func (d *KafkaDispatcher) UpdateConfig(config *multichannelfanout.Config) error 
 			}
 		}
 
+		hcMap, err := createHostToChannelMap(config)
+		if err != nil {
+			return err
+		}
+		d.setHostToChannelMap(hcMap)
+
 		// Update the config so that it can be used for comparison during next sync
 		d.setConfig(config)
+
 	}
 	return nil
+}
+
+func createHostToChannelMap(config *multichannelfanout.Config) (map[string]provisioners.ChannelReference, error) {
+	hcMap := make(map[string]provisioners.ChannelReference)
+	for _, cConfig := range config.ChannelConfigs {
+		if cr, ok := hcMap[cConfig.HostName]; ok {
+			return nil, fmt.Errorf(
+				"Duplicate hostName found. HostName:%s, channel:%s.%s, channel:%s.%s",
+				cConfig.HostName,
+				cConfig.Namespace,
+				cConfig.Name,
+				cr.Namespace,
+				cr.Name)
+		}
+		hcMap[cConfig.HostName] = provisioners.ChannelReference{Name: cConfig.Name, Namespace: cConfig.Namespace}
+	}
+	return hcMap, nil
 }
 
 // Start starts the kafka dispatcher's message processing.
@@ -258,8 +283,15 @@ func (d *KafkaDispatcher) setConfig(config *multichannelfanout.Config) {
 	d.config.Store(config)
 }
 
-func NewDispatcher(brokers []string, consumerMode cluster.ConsumerMode, logger *zap.Logger) (*KafkaDispatcher, error) {
+func (d *KafkaDispatcher) getHostToChannelMap() map[string]provisioners.ChannelReference {
+	return d.hostToChannelMap.Load().(map[string]provisioners.ChannelReference)
+}
 
+func (d *KafkaDispatcher) setHostToChannelMap(hcMap map[string]provisioners.ChannelReference) {
+	d.hostToChannelMap.Store(hcMap)
+}
+
+func NewDispatcher(brokers []string, consumerMode cluster.ConsumerMode, logger *zap.Logger) (*KafkaDispatcher, error) {
 	conf := sarama.NewConfig()
 	conf.Version = sarama.V1_1_0_0
 	conf.ClientID = controller.Name + "-dispatcher"
@@ -282,14 +314,29 @@ func NewDispatcher(brokers []string, consumerMode cluster.ConsumerMode, logger *
 
 		logger: logger,
 	}
-	receiverFunc := provisioners.NewMessageReceiver(
+	receiverFunc, err := provisioners.NewMessageReceiver(
 		func(channel provisioners.ChannelReference, message *provisioners.Message) error {
 			dispatcher.kafkaAsyncProducer.Input() <- toKafkaMessage(channel, message)
 			return nil
-		}, logger.Sugar())
+		},
+		logger.Sugar(),
+		provisioners.ResolveChannelFromHostHeader(provisioners.ResolveChannelFromHostFunc(dispatcher.getChannelReferenceFromHost)))
+	if err != nil {
+		return nil, err
+	}
 	dispatcher.receiver = receiverFunc
 	dispatcher.setConfig(&multichannelfanout.Config{})
+	dispatcher.setHostToChannelMap(map[string]provisioners.ChannelReference{})
 	return dispatcher, nil
+}
+
+func (d *KafkaDispatcher) getChannelReferenceFromHost(host string) (provisioners.ChannelReference, error) {
+	chMap := d.getHostToChannelMap()
+	cr, ok := chMap[host]
+	if !ok {
+		return cr, fmt.Errorf("Invalid HostName:%s. HostName not found in ConfigMap for any Channel", host)
+	}
+	return cr, nil
 }
 
 func fromKafkaMessage(kafkaMessage *sarama.ConsumerMessage) *provisioners.Message {

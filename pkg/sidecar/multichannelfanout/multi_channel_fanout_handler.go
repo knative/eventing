@@ -60,7 +60,11 @@ func NewHandler(logger *zap.Logger, conf Config) (*Handler, error) {
 
 	for _, cc := range conf.ChannelConfigs {
 		key := makeChannelKeyFromConfig(cc)
-		handler := fanout.NewHandler(logger, cc.FanoutConfig)
+		handler, err := fanout.NewHandler(logger, cc.FanoutConfig)
+		if err != nil {
+			logger.Error("Failed creating new fanout handler.", zap.Error(err))
+			return nil, err
+		}
 		if _, present := handlers[key]; present {
 			logger.Error("Duplicate channel key", zap.String("channelKey", key))
 			return nil, fmt.Errorf("duplicate channel key: %v", key)

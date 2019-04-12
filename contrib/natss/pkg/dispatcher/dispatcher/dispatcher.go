@@ -71,7 +71,11 @@ func NewDispatcher(natssURL, clusterID string, logger *zap.Logger) (*Subscriptio
 		clusterID:     clusterID,
 		subscriptions: make(map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription),
 	}
-	d.receiver = provisioners.NewMessageReceiver(createReceiverFunction(d, logger.Sugar()), logger.Sugar())
+	receiver, err := provisioners.NewMessageReceiver(createReceiverFunction(d, logger.Sugar()), logger.Sugar())
+	if err != nil {
+		return nil, err
+	}
+	d.receiver = receiver
 
 	return d, nil
 }

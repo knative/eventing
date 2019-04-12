@@ -34,16 +34,30 @@ const (
 
 // Message receiver receives messages.
 type MessageReceiver struct {
-	receiverFunc    func(ChannelReference, *Message) error
-	forwardHeaders  sets.String
-	forwardPrefixes []string
+	receiverFunc      func(ChannelReference, *Message) error
+	forwardHeaders    sets.String
+	forwardPrefixes   []string
+	logger            *zap.SugaredLogger
+	hostToChannelFunc ResolveChannelFromHostFunc
+}
 
-	logger *zap.SugaredLogger
+type receiverOptions func(*MessageReceiver) error
+
+type ResolveChannelFromHostFunc func(string) (ChannelReference, error)
+
+// ResolveChannelFromHostHeader is a receiverOption that enables the consumer of the MessageReceiver
+// to pass a map[<hostname>]ChannelReference. This map will then be used to to get the ChannelReference
+// from httpRequest.Host before calling receiverFunc
+func ResolveChannelFromHostHeader(hostToChannelFunc ResolveChannelFromHostFunc) receiverOptions {
+	return func(r *MessageReceiver) error {
+		r.hostToChannelFunc = hostToChannelFunc
+		return nil
+	}
 }
 
 // NewMessageReceiver creates a message receiver passing new messages to the
 // receiverFunc.
-func NewMessageReceiver(receiverFunc func(ChannelReference, *Message) error, logger *zap.SugaredLogger) *MessageReceiver {
+func NewMessageReceiver(receiverFunc func(ChannelReference, *Message) error, logger *zap.SugaredLogger, opts ...receiverOptions) (*MessageReceiver, error) {
 	receiver := &MessageReceiver{
 		receiverFunc:    receiverFunc,
 		forwardHeaders:  sets.NewString(forwardHeaders...),
@@ -51,7 +65,16 @@ func NewMessageReceiver(receiverFunc func(ChannelReference, *Message) error, log
 
 		logger: logger,
 	}
-	return receiver
+	for _, opt := range opts {
+		if err := opt(receiver); err != nil {
+			return nil, err
+		}
+	}
+	// Default to old behaviour of host = channelName.channelNamespace
+	if receiver.hostToChannelFunc == nil {
+		receiver.hostToChannelFunc = ResolveChannelFromHostFunc(ParseChannel)
+	}
+	return receiver, nil
 }
 
 // Start begings to receive messages for the receiver.
@@ -116,13 +139,13 @@ func (r *MessageReceiver) handler() http.Handler {
 func (r *MessageReceiver) HandleRequest(res http.ResponseWriter, req *http.Request) {
 	host := req.Host
 	r.logger.Infof("Received request for %s", host)
-	channel, err := ParseChannel(host)
+	channel, err := r.hostToChannelFunc(host)
 	if err != nil {
 		r.logger.Info("Could not extract channel", zap.Error(err))
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
+	r.logger.Infof("Request mapped to channel: %s", channel.String())
 	message, err := r.fromRequest(req)
 	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)

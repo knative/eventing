@@ -150,7 +150,6 @@ var testCases = []controllertesting.TestCase{
 		},
 		WantPresent: []runtime.Object{
 			getNewChannelWithStatusAndFinalizer(channelName, clusterChannelProvisionerName),
-			makeK8sService(),
 		},
 	},
 	{
@@ -161,6 +160,7 @@ var testCases = []controllertesting.TestCase{
 		},
 		WantPresent: []runtime.Object{
 			getNewChannelProvisionedStatus(channelName, clusterChannelProvisionerName),
+			makeK8sService(),
 		},
 	},
 	{
@@ -529,6 +529,7 @@ func om(namespace, name string) metav1.ObjectMeta {
 		Namespace: namespace,
 		Name:      name,
 		SelfLink:  fmt.Sprintf("/apis/eventing/v1alpha1/namespaces/%s/object/%s", namespace, name),
+		UID:       testUID,
 	}
 }
 
@@ -548,8 +549,10 @@ func makeK8sService() *corev1.Service {
 			GenerateName: fmt.Sprintf("%s-channel-", channelName),
 			Namespace:    testNS,
 			Labels: map[string]string{
-				util.EventingChannelLabel:    channelName,
-				util.OldEventingChannelLabel: channelName,
+				util.EventingChannelLabel:        channelName,
+				util.OldEventingChannelLabel:     channelName,
+				util.EventingProvisionerLabel:    clusterChannelProvisionerName,
+				util.OldEventingProvisionerLabel: clusterChannelProvisionerName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
