@@ -100,8 +100,10 @@ required = [
 # This controls when we upgrade apis independently of Serving.
 [[constraint]]
   name = "github.com/knative/pkg"
-  # HEAD as of 2019-04-08
-  revision = "2b574edcd712e848556c69cc95a2622145284882"
+  # HEAD as of 2019-04-12
+  revision = "0cd794873d12608cba8f6fef5cc0cd0f035ab1e5"
+  # REMOVE BEFORE MERGING
+  source = "github.com/dgerd/pkg"
 
 # TODO why is this overridden?
 [[override]]

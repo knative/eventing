@@ -19,9 +19,9 @@ package v1alpha1
 import (
 	"context"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/kmp"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 )
@@ -140,7 +140,13 @@ func (s *Subscription) CheckImmutableFields(ctx context.Context, og apis.Immutab
 
 	// Only Subscriber and Reply are mutable.
 	ignoreArguments := cmpopts.IgnoreFields(SubscriptionSpec{}, "Subscriber", "Reply")
-	if diff := cmp.Diff(original.Spec, s.Spec, ignoreArguments); diff != "" {
+	if diff, err := kmp.ShortDiff(original.Spec, s.Spec, ignoreArguments); err != nil {
+		return &apis.FieldError{
+			Message: "Failed to diff Subscription",
+			Paths:   []string{"spec"},
+			Details: err.Error(),
+		}
+	} else if diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",
 			Paths:   []string{"spec"},
