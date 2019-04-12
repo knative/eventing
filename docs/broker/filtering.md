@@ -227,11 +227,11 @@ Due to limitations in the CloudEvents SDK, dynamic attributes and data fields
 must have a separate prefix from non-dynamic types. The examples here use
 these prefixes:
 
+| Attribute|Description                                        |
 |--------|-----------------------------------------------------|
 | `ce`   | Official CloudEvents attributes defined in the spec.|
 | `ext`  | Extensions parsed dynamically from the event.       |
 | `data` | Fields parsed dynamically from the event data.      |
-|--------|-----------------------------------------------------|
 
 This limitation may be lifted in the future, allowing official CloudEvents
 attributes to use the same prefix as extensions. Extensions can then be elevated
