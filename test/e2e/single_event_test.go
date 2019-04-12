@@ -96,9 +96,9 @@ func SingleEvent(t *testing.T, encoding string) {
 		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channel.Name)
 	}
 
-	if err := pkgTest.WaitForLogContent(clients.Kube, loggerPodName, loggerPod.Spec.Containers[0].Name, body); err != nil {
-		clients.Kube.PodLogs(senderName, "sendevent")
-		clients.Kube.PodLogs(senderName, "istio-proxy")
+	if err := pkgTest.WaitForLogContent(clients.Kube, loggerPodName, loggerPod.Spec.Containers[0].Name, ns, body); err != nil {
+		clients.Kube.PodLogs(senderName, "sendevent", ns)
+		clients.Kube.PodLogs(senderName, "istio-proxy", ns)
 		t.Fatalf("String %q not found in logs of logger pod %q: %v", body, loggerPodName, err)
 	}
 }
