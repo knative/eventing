@@ -23,7 +23,6 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/test"
-	pkgTest "github.com/knative/pkg/test"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
@@ -42,21 +41,19 @@ EventSource ---> Channel ---> Subscription ---> Service(Logger)
 
 */
 func singleEvent(t *testing.T, encoding string) {
-	t.Parallel()
-
 	channelName := "e2e-singleevent-" + encoding
 	senderName := "e2e-singleevent-sender-" + encoding
 	subscriptionName := "e2e-singleevent-subscription-" + encoding
 	loggerPodName := "e2e-singleevent-logger-pod-" + encoding
 
-	clients, cleaner := Setup(t, t.Logf)
-	defer TearDown(clients, cleaner, t.Logf)
+	clients, ns, provisioner, cleaner := Setup(t, true, t.Logf)
+	defer TearDown(clients, ns, cleaner, t.Logf)
 
 	// create logger pod
 	t.Logf("creating logger pod")
 	selector := map[string]string{"e2etest": string(uuid.NewUUID())}
-	loggerPod := test.EventLoggerPod(loggerPodName, selector)
-	loggerSvc := test.Service(loggerPodName, selector)
+	loggerPod := test.EventLoggerPod(loggerPodName, ns, selector)
+	loggerSvc := test.Service(loggerPodName, ns, selector)
 	loggerPod, err := CreatePodAndServiceReady(clients, loggerPod, loggerSvc, t.Logf, cleaner)
 	if err != nil {
 		t.Fatalf("Failed to create logger pod and service, and get them ready: %v", err)
@@ -64,12 +61,12 @@ func singleEvent(t *testing.T, encoding string) {
 
 	// create channel and subscription
 	t.Logf("Creating Channel and Subscription")
-	channel := test.Channel(channelName, test.ClusterChannelProvisioner(test.EventingFlags.Provisioner))
+	channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(provisioner))
 	t.Logf("channel: %#v", channel)
-	sub := test.Subscription(subscriptionName, test.ChannelRef(channelName), test.SubscriberSpecForService(loggerPodName), nil)
+	sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelName), test.SubscriberSpecForService(loggerPodName), nil)
 	t.Logf("sub: %#v", sub)
 
-	if err := WithChannelsAndSubscriptionsReady(clients, &[]*v1alpha1.Channel{channel}, &[]*v1alpha1.Subscription{sub}, t.Logf, cleaner); err != nil {
+	if err := WithChannelsAndSubscriptionsReady(clients, ns, &[]*v1alpha1.Channel{channel}, &[]*v1alpha1.Subscription{sub}, t.Logf, cleaner); err != nil {
 		t.Fatalf("The Channel or Subscription were not marked as Ready: %v", err)
 	}
 
@@ -85,7 +82,7 @@ func singleEvent(t *testing.T, encoding string) {
 		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channel.Name)
 	}
 
-	if err := pkgTest.WaitForLogContent(clients.Kube, loggerPodName, loggerPod.Spec.Containers[0].Name, body); err != nil {
+	if err := WaitForLogContent(clients, loggerPodName, loggerPod.Spec.Containers[0].Name, ns, body); err != nil {
 		t.Fatalf("String %q not found in logs of logger pod %q: %v", body, loggerPodName, err)
 	}
 }

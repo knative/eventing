@@ -31,9 +31,8 @@ type Clients struct {
 }
 
 // NewClients instantiates and returns several clientsets required for making request to the
-// cluster specified by the combination of clusterName and configPath. Clients can
-// make requests within namespace.
-func NewClients(configPath string, clusterName string, namespace string) (*Clients, error) {
+// cluster specified by the combination of clusterName and configPath.
+func NewClients(configPath string, clusterName string) (*Clients, error) {
 	clients := &Clients{}
 	cfg, err := test.BuildClientConfig(configPath, clusterName)
 	if err != nil {

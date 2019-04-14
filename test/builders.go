@@ -15,17 +15,16 @@ package test
 
 import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	pkgTest "github.com/knative/pkg/test"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Builder for trigger objects.
+// TriggerBuilder is the builder for trigger objects.
 type TriggerBuilder struct {
 	*eventingv1alpha1.Trigger
 }
 
-func NewTriggerBuilder(name string) *TriggerBuilder {
+func NewTriggerBuilder(name string, ns string) *TriggerBuilder {
 	trigger := &eventingv1alpha1.Trigger{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
@@ -33,7 +32,7 @@ func NewTriggerBuilder(name string) *TriggerBuilder {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: pkgTest.Flags.Namespace,
+			Namespace: ns,
 		},
 		Spec: eventingv1alpha1.TriggerSpec{
 			Broker: "default",

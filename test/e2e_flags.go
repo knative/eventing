@@ -20,40 +20,60 @@ package test
 
 import (
 	"flag"
+	"fmt"
+	"strings"
 
 	pkgTest "github.com/knative/pkg/test"
 	"github.com/knative/pkg/test/logging"
 )
 
 const (
-	// EventingNamespace is the Namespace used for running all e2e tests.
-	// Currently it must be the same as the namespace specified in test/e2e_tests.sh.
-	EventingNamespace = "e2etest-knative-eventing"
+	// E2ETestNamespacePrefix is the namespace prefix used for running all e2e tests.
+	E2ETestNamespacePrefix = "e2e-ns"
+	// DefaultClusterChannelProvisioner is the default ClusterChannelProvisioner we will run tests against.
+	DefaultClusterChannelProvisioner = "in-memory-channel"
 	// DefaultBrokerName is the name of the Broker that is automatically created after the current namespace is labeled.
 	DefaultBrokerName = "default"
 )
 
-// EventingFlags holds the command line flags specific to knative/eventing
+// EventingFlags holds the command line flags specific to knative/eventing.
 var EventingFlags = initializeEventingFlags()
 
-// EventingEnvironmentFlags holds the e2e flags needed only by the eventing repo
+// Provisioners holds the ClusterChannelProvisioners we want to run test against.
+type Provisioners []string
+
+func (ps *Provisioners) String() string {
+	return fmt.Sprint(*ps)
+}
+
+// Set converts the input string to Provisioners.
+// The default CCP we will test against is in-memory-channel.
+func (ps *Provisioners) Set(value string) error {
+	for _, provisioner := range strings.Split(value, ",") {
+		provisioner := strings.TrimSpace(provisioner)
+		*ps = append(*ps, provisioner)
+	}
+	return nil
+}
+
+// EventingEnvironmentFlags holds the e2e flags needed only by the eventing repo.
 type EventingEnvironmentFlags struct {
-	Provisioner string // The name of the Channel's ClusterChannelProvisioner
+	Provisioners
+	RunFromMain bool
 }
 
 func initializeEventingFlags() *EventingEnvironmentFlags {
-	var f EventingEnvironmentFlags
+	// Initialize as the DefaultClusterChannelProvisioner.
+	f := EventingEnvironmentFlags{Provisioners: []string{DefaultClusterChannelProvisioner}}
 
-	flag.StringVar(&f.Provisioner, "clusterChannelProvisioner", "in-memory-channel", "The name of the Channel's clusterChannelProvisioner. Only the in-memory-channel is installed by the tests, anything else must be installed before the tests are run.")
+	flag.Var(&f.Provisioners, "clusterChannelProvisioners", "The names of the Channel's clusterChannelProvisioners, which are separated by comma.")
+	flag.BoolVar(&f.RunFromMain, "runFromMain", false, "If runFromMain is set to false, the TestMain will be skipped when we run tests.")
 
 	flag.Parse()
 
 	logging.InitializeLogger(pkgTest.Flags.LogVerbose)
 	if pkgTest.Flags.EmitMetrics {
 		logging.InitializeMetricExporter("eventing")
-	}
-	if pkgTest.Flags.Namespace == "" {
-		pkgTest.Flags.Namespace = EventingNamespace
 	}
 
 	return &f
