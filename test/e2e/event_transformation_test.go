@@ -80,8 +80,6 @@ func TestEventTransformation(t *testing.T) {
 	channels := make([]*v1alpha1.Channel, 0)
 	for _, channelName := range channelNames {
 		channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(provisioner))
-		t.Logf("channel: %#v", channel)
-
 		channels = append(channels, channel)
 	}
 
@@ -90,13 +88,11 @@ func TestEventTransformation(t *testing.T) {
 	// create subscriptions that subscribe the first channel, use the transformation service to transform the events and then forward the transformed events to the second channel
 	for _, subscriptionName := range subscriptionNames1 {
 		sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelNames[0]), test.SubscriberSpecForService(transformationPodName), test.ReplyStrategyForChannel(channelNames[1]))
-		t.Logf("sub: %#v", sub)
 		subs = append(subs, sub)
 	}
 	// create subscriptions that subscribe the second channel, and call the logging service
 	for _, subscriptionName := range subscriptionNames2 {
 		sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelNames[1]), test.SubscriberSpecForService(loggerPodName), nil)
-		t.Logf("sub: %#v", sub)
 		subs = append(subs, sub)
 	}
 

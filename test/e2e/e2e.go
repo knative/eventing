@@ -93,6 +93,15 @@ func Setup(t *testing.T, runInParallel bool, logf logging.FormatLogger) (*test.C
 	return clients, ns, ccpToTest, cleaner
 }
 
+// GetBaseFuncName returns the baseFuncName parsed from the fullFuncName.
+// eg. test/e2e.TestMain will return TestMain.
+// TODO(chizhg): many functions in this file can be moved to knative/pkg/test to make it cleaner.
+func GetBaseFuncName(fullFuncName string) string {
+	baseFuncName := fullFuncName[strings.LastIndex(fullFuncName, "/")+1:]
+	baseFuncName = baseFuncName[strings.LastIndex(baseFuncName, ".")+1:]
+	return baseFuncName
+}
+
 // TearDown will delete created names using clients.
 func TearDown(clients *test.Clients, namespace string, cleaner *test.Cleaner, _ logging.FormatLogger) {
 	cleaner.Clean(true)
@@ -350,7 +359,6 @@ func SendFakeEventToChannel(clients *test.Clients, event *test.CloudEvent, chann
 	namespace := channel.Namespace
 	url := fmt.Sprintf("http://%s", channel.Status.Address.Hostname)
 	pod := test.EventSenderPod(event.Source, namespace, url, event)
-	logf("Sender pod: %#v", pod)
 	if err := CreatePod(clients, pod, logf, cleaner); err != nil {
 		return err
 	}

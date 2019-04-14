@@ -62,9 +62,7 @@ func singleEvent(t *testing.T, encoding string) {
 	// create channel and subscription
 	t.Logf("Creating Channel and Subscription")
 	channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(provisioner))
-	t.Logf("channel: %#v", channel)
 	sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelName), test.SubscriberSpecForService(loggerPodName), nil)
-	t.Logf("sub: %#v", sub)
 
 	if err := WithChannelsAndSubscriptionsReady(clients, ns, &[]*v1alpha1.Channel{channel}, &[]*v1alpha1.Subscription{sub}, t.Logf, cleaner); err != nil {
 		t.Fatalf("The Channel or Subscription were not marked as Ready: %v", err)

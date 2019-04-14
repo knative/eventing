@@ -20,7 +20,6 @@ package e2e
 import (
 	"reflect"
 	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/knative/eventing/test"
@@ -55,14 +54,8 @@ func TestMain(t *testing.T) {
 		for _, testFunc := range channelTestMap[provisioner] {
 			funcName := runtime.FuncForPC(reflect.ValueOf(testFunc).Pointer()).Name()
 			baseFuncName := GetBaseFuncName(funcName)
-			t.Logf("Running %v with %v ClusterChannelProvisioner", baseFuncName, provisioner)
+			t.Logf("Running %q with %q ClusterChannelProvisioner", baseFuncName, provisioner)
 			t.Run(baseFuncName, testFunc)
 		}
 	}
-}
-
-func GetBaseFuncName(fullFuncName string) string {
-	baseFuncName := fullFuncName[strings.LastIndex(fullFuncName, "/")+1:]
-	baseFuncName = baseFuncName[strings.LastIndex(baseFuncName, ".")+1:]
-	return baseFuncName
 }
