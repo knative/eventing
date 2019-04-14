@@ -61,7 +61,7 @@ function knative_teardown() {
 # Setup resources common to all eventing tests
 function test_setup() {
   # Publish test images
-  echo "Publishing test images"
+  echo ">> Publishing test images"
   echo "Call:  $(dirname $0)/upload-test-images.sh e2e"
   $(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test images"
 }
