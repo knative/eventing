@@ -95,7 +95,7 @@ go test -v -tags=e2e -count=1 ./test/e2e -run ^TestSingleBinaryEvent$
 There's couple of things you need to install before running e2e tests locally.
 
 1. A running [Knative](https://www.knative.dev/docs/install/) cluster
-2. A docker repo containing [the test images](#test-images)
+1. A docker repo containing [the test images](#test-images)
 
 ## Test images
 
