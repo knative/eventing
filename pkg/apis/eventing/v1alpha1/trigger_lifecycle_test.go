@@ -35,16 +35,6 @@ var (
 		Status: corev1.ConditionTrue,
 	}
 
-	triggerConditionKubernetesService = duckv1alpha1.Condition{
-		Type:   TriggerConditionKubernetesService,
-		Status: corev1.ConditionTrue,
-	}
-
-	triggerConditionVirtualService = duckv1alpha1.Condition{
-		Type:   TriggerConditionVirtualService,
-		Status: corev1.ConditionTrue,
-	}
-
 	triggerConditionSubscribed = duckv1alpha1.Condition{
 		Type:   TriggerConditionSubscribed,
 		Status: corev1.ConditionFalse,
@@ -74,19 +64,18 @@ func TestTriggerGetCondition(t *testing.T) {
 			Status: duckv1alpha1.Status{
 				Conditions: []duckv1alpha1.Condition{
 					triggerConditionBrokerExists,
-					triggerConditionKubernetesService,
+					triggerConditionSubscribed,
 				},
 			},
 		},
-		condQuery: TriggerConditionKubernetesService,
-		want:      &triggerConditionKubernetesService,
+		condQuery: TriggerConditionSubscribed,
+		want:      &triggerConditionSubscribed,
 	}, {
 		name: "multiple conditions, condition false",
 		ts: &TriggerStatus{
 			Status: duckv1alpha1.Status{
 				Conditions: []duckv1alpha1.Condition{
 					triggerConditionBrokerExists,
-					triggerConditionKubernetesService,
 					triggerConditionSubscribed,
 				},
 			},
@@ -98,7 +87,6 @@ func TestTriggerGetCondition(t *testing.T) {
 		ts: &TriggerStatus{
 			Status: duckv1alpha1.Status{
 				Conditions: []duckv1alpha1.Condition{
-					triggerConditionVirtualService,
 					triggerConditionSubscribed,
 				},
 			},
@@ -131,16 +119,10 @@ func TestTriggerInitializeConditions(t *testing.T) {
 					Type:   TriggerConditionBrokerExists,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   TriggerConditionKubernetesService,
-					Status: corev1.ConditionUnknown,
-				}, {
 					Type:   TriggerConditionReady,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   TriggerConditionSubscribed,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   TriggerConditionVirtualService,
 					Status: corev1.ConditionUnknown,
 				}},
 			},
@@ -150,7 +132,7 @@ func TestTriggerInitializeConditions(t *testing.T) {
 		ts: &TriggerStatus{
 			Status: duckv1alpha1.Status{
 				Conditions: []duckv1alpha1.Condition{{
-					Type:   TriggerConditionVirtualService,
+					Type:   TriggerConditionBrokerExists,
 					Status: corev1.ConditionFalse,
 				}},
 			},
@@ -159,19 +141,13 @@ func TestTriggerInitializeConditions(t *testing.T) {
 			Status: duckv1alpha1.Status{
 				Conditions: []duckv1alpha1.Condition{{
 					Type:   TriggerConditionBrokerExists,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   TriggerConditionKubernetesService,
-					Status: corev1.ConditionUnknown,
+					Status: corev1.ConditionFalse,
 				}, {
 					Type:   TriggerConditionReady,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   TriggerConditionSubscribed,
 					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   TriggerConditionVirtualService,
-					Status: corev1.ConditionFalse,
 				}},
 			},
 		},
@@ -191,17 +167,11 @@ func TestTriggerInitializeConditions(t *testing.T) {
 					Type:   TriggerConditionBrokerExists,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   TriggerConditionKubernetesService,
-					Status: corev1.ConditionUnknown,
-				}, {
 					Type:   TriggerConditionReady,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   TriggerConditionSubscribed,
 					Status: corev1.ConditionTrue,
-				}, {
-					Type:   TriggerConditionVirtualService,
-					Status: corev1.ConditionUnknown,
 				}},
 			},
 		},
@@ -240,20 +210,6 @@ func TestTriggerIsReady(t *testing.T) {
 		markSubscribed:              true,
 		wantReady:                   false,
 	}, {
-		name:                        "k8s service sad",
-		markBrokerExists:            true,
-		markKubernetesServiceExists: false,
-		markVirtualServiceExists:    true,
-		markSubscribed:              true,
-		wantReady:                   false,
-	}, {
-		name:                        "virtual service sad",
-		markBrokerExists:            true,
-		markKubernetesServiceExists: true,
-		markVirtualServiceExists:    false,
-		markSubscribed:              true,
-		wantReady:                   false,
-	}, {
 		name:                        "subscribed sad",
 		markBrokerExists:            true,
 		markKubernetesServiceExists: true,
@@ -273,12 +229,6 @@ func TestTriggerIsReady(t *testing.T) {
 			ts := &TriggerStatus{}
 			if test.markBrokerExists {
 				ts.MarkBrokerExists()
-			}
-			if test.markKubernetesServiceExists {
-				ts.MarkKubernetesServiceExists()
-			}
-			if test.markVirtualServiceExists {
-				ts.MarkVirtualServiceExists()
 			}
 			if test.markSubscribed {
 				ts.MarkSubscribed()

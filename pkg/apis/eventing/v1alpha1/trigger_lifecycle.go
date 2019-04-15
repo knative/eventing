@@ -18,16 +18,12 @@ package v1alpha1
 
 import duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 
-var triggerCondSet = duckv1alpha1.NewLivingConditionSet(TriggerConditionBrokerExists, TriggerConditionKubernetesService, TriggerConditionVirtualService, TriggerConditionSubscribed)
+var triggerCondSet = duckv1alpha1.NewLivingConditionSet(TriggerConditionBrokerExists, TriggerConditionSubscribed)
 
 const (
 	// TriggerConditionReady has status True when all subconditions below have been set to True.
 	TriggerConditionReady                                   = duckv1alpha1.ConditionReady
 	TriggerConditionBrokerExists duckv1alpha1.ConditionType = "BrokerExists"
-
-	TriggerConditionKubernetesService duckv1alpha1.ConditionType = "KubernetesServiceReady"
-
-	TriggerConditionVirtualService duckv1alpha1.ConditionType = "VirtualServiceReady"
 
 	TriggerConditionSubscribed duckv1alpha1.ConditionType = "Subscribed"
 
@@ -56,14 +52,6 @@ func (ts *TriggerStatus) MarkBrokerExists() {
 
 func (ts *TriggerStatus) MarkBrokerDoesNotExist() {
 	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionBrokerExists, "doesNotExist", "Broker does not exist")
-}
-
-func (ts *TriggerStatus) MarkKubernetesServiceExists() {
-	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionKubernetesService)
-}
-
-func (ts *TriggerStatus) MarkVirtualServiceExists() {
-	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionVirtualService)
 }
 
 func (ts *TriggerStatus) MarkSubscribed() {
