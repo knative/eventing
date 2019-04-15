@@ -6,7 +6,7 @@ This directory contains tests and testing docs for `Knative Eventing`.
   they test
 - [End-to-end tests](#running-end-to-end-tests) reside in [`/test/e2e`](./e2e)
 
-## Running tests with scripts (not recommended)
+## Running tests with scripts
 
 ### Presubmit tests
 
@@ -20,8 +20,8 @@ test/presubmit-tests.sh
 ```
 
 _By default, this script will run `build tests`, `unit tests` and
-`integration tests`._ If you only want to run one type of tests, you can run this
-script with corresponding flags like below:
+`integration tests`._ If you only want to run one type of tests, you can run
+this script with corresponding flags like below:
 
 ```shell
 test/presubmit-tests.sh --build-tests
@@ -45,10 +45,10 @@ You can run it simply with:
 test/e2e-tests.sh
 ```
 
-_By default, it will create a new GKE cluster in project `$PROJECT_ID`, install
-Knative Serving stack with Istio, upload test images to your Docker repo and run
-the end-to-end tests against the Knative Eventing built from source. After the
-tests finishes, it will delete the cluster._
+_By default, it will create a new GKE cluster in project `$PROJECT_ID`, start
+Knative Serving and Eventing system, upload test images to `$KO_DOCKER_REPO`,
+and run the end-to-end tests. After the tests finishes, it will delete the
+cluster._
 
 If you have already created your own Kubernetes cluster but haven't installed
 Knative, you can run with `test/e2e-tests.sh --run-tests`.
@@ -57,7 +57,7 @@ If you have set up a running environment that meets
 [the e2e test environment requirements](#environment-requirements), you can run
 with `test/e2e-tests.sh --run-tests --skip-knative-setup`.
 
-## Running tests with `go test` command (recommended)
+## Running tests with `go test` command
 
 ### Running unit tests
 
@@ -94,14 +94,8 @@ go test -v -tags=e2e -count=1 ./test/e2e -run ^TestSingleBinaryEvent$
 
 There's couple of things you need to install before running e2e tests locally.
 
-1. `kubetest` installed:
-
-   ```bash
-   go get -u k8s.io/test-infra/kubetest
-   ```
-
-2. A running [Knative](https://www.knative.dev/docs/install/) cluster
-3. A docker repo containing [the test images](#test-images)
+1. A running [Knative](https://www.knative.dev/docs/install/) cluster
+2. A docker repo containing [the test images](#test-images)
 
 ## Test images
 
@@ -134,8 +128,8 @@ deployed in GCR.
 New test images should be placed in `./test/test_images`. For each image create
 a new sub-folder and include a Go file that will be an entry point to the
 application. This Go file should use the package `main` and include the function
-`main()`. It is a good practice to include a `readme` file as well. When uploading
-test images, `ko` will build an image from this folder.
+`main()`. It is a good practice to include a `readme` file as well. When
+uploading test images, `ko` will build an image from this folder.
 
 ## Flags
 
