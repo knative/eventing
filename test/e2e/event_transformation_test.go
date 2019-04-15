@@ -130,7 +130,7 @@ func TestEventTransformation(t *testing.T) {
 	// check if the logging service receives the correct number of event messages
 	expectedContent := body + msgPostfix
 	expectedContentCount := len(subscriptionNames1) * len(subscriptionNames2)
-	if err := WaitForLogContentCount(clients, loggerPod.Name, loggerPod.Spec.Containers[0].Name, expectedContent, expectedContentCount); err != nil {
+	if err := WaitForLogContentCount(clients, loggerPod.Name, loggerPod.Spec.Containers[0].Name, ns, expectedContent, expectedContentCount); err != nil {
 		t.Fatalf("String %q does not appear %d times in logs of logger pod %q: %v", expectedContent, expectedContentCount, loggerPod.Name, err)
 	}
 }
