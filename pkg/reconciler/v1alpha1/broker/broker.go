@@ -19,7 +19,6 @@ package broker
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
@@ -29,7 +28,6 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -133,7 +131,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	broker := &v1alpha1.Broker{}
 	err := r.client.Get(ctx, request.NamespacedName, broker)
 
-	if errors.IsNotFound(err) {
+	if k8serrors.IsNotFound(err) {
 		logging.FromContext(ctx).Info("Could not find Broker")
 		return reconcile.Result{}, nil
 	}
@@ -187,64 +185,62 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) (reconci
 	triggerChan, err := r.reconcileTriggerChannel(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling the trigger channel", zap.Error(err))
-		b.Status.MarkTriggerChannelFailed(err)
+		b.Status.MarkTriggerChannelFailed("ChannelFailure", "%v", err)
 		return reconcile.Result{}, err
 	} else if triggerChan.Status.Address.Hostname == "" {
-		logging.FromContext(ctx).Info("Trigger Channel is not yet ready", zap.Any("triggerChan", triggerChan))
-		// Give the Channel some time to get its address. One second was chosen arbitrarily.
-		return reconcile.Result{RequeueAfter: time.Second}, nil
+		// We check the trigger Channel's address here because it is needed to create the Ingress
+		// Deployment.
+		logging.FromContext(ctx).Debug("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
+		b.Status.MarkTriggerChannelFailed("NoAddress", "Channel does not have an address.")
+		return reconcile.Result{}, nil
 	}
-	b.Status.MarkTriggerChannelReady()
+	b.Status.PropagateTriggerChannelReadiness(&triggerChan.Status)
 
-	_, err = r.reconcileFilterDeployment(ctx, b)
+	filterDeployment, err := r.reconcileFilterDeployment(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling filter Deployment", zap.Error(err))
-		b.Status.MarkFilterFailed(err)
+		b.Status.MarkFilterFailed("DeploymentFailure", "%v", err)
 		return reconcile.Result{}, err
 	}
 	_, err = r.reconcileFilterService(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling filter Service", zap.Error(err))
-		b.Status.MarkFilterFailed(err)
+		b.Status.MarkFilterFailed("ServiceFailure", "%v", err)
 		return reconcile.Result{}, err
 	}
-	b.Status.MarkFilterReady()
+	b.Status.PropagateFilterDeploymentAvailability(filterDeployment)
 
-	_, err = r.reconcileIngressDeployment(ctx, b, triggerChan)
+	ingressDeployment, err := r.reconcileIngressDeployment(ctx, b, triggerChan)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling ingress Deployment", zap.Error(err))
-		b.Status.MarkIngressFailed(err)
+		b.Status.MarkIngressFailed("DeploymentFailure", "%v", err)
 		return reconcile.Result{}, err
 	}
 
 	svc, err := r.reconcileIngressService(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling ingress Service", zap.Error(err))
-		b.Status.MarkIngressFailed(err)
+		b.Status.MarkIngressFailed("ServiceFailure", "%v", err)
 		return reconcile.Result{}, err
 	}
-	b.Status.MarkIngressReady()
+	b.Status.PropagateIngressDeploymentAvailability(ingressDeployment)
 	b.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
 
 	ingressChan, err := r.reconcileIngressChannel(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling the ingress channel", zap.Error(err))
-		b.Status.MarkIngressChannelFailed(err)
+		b.Status.MarkIngressChannelFailed("ChannelFailure", "%v", err)
 		return reconcile.Result{}, err
-	} else if ingressChan.Status.Address.Hostname == "" {
-		logging.FromContext(ctx).Info("Ingress Channel is not yet ready", zap.Any("ingressChan", ingressChan))
-		// Give the Channel some time to get its address. One second was chosen arbitrarily.
-		return reconcile.Result{RequeueAfter: time.Second}, nil
 	}
-	b.Status.MarkIngressChannelReady()
+	b.Status.PropagateIngressChannelReadiness(&ingressChan.Status)
 
-	_, err = r.reconcileIngressSubscription(ctx, b, ingressChan, svc)
+	ingressSub, err := r.reconcileIngressSubscription(ctx, b, ingressChan, svc)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling the ingress subscription", zap.Error(err))
-		b.Status.MarkIngressSubscriptionFailed(err)
+		b.Status.MarkIngressSubscriptionFailed("SubscriptionFailure", "%v", err)
 		return reconcile.Result{}, err
 	}
-	b.Status.MarkIngressSubscriptionReady()
+	b.Status.PropagateIngressSubscriptionReadiness(&ingressSub.Status)
 
 	return reconcile.Result{}, nil
 }
