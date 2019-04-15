@@ -427,7 +427,7 @@ func makeEvent() *cloudevents.Event {
 }
 
 func addTTLToEvent(e cloudevents.Event) cloudevents.Event {
-	e.Context = SetTTL(e.Context, 1)
+	e.Context, _ = SetTTL(e.Context, 1)
 	return e
 }
 

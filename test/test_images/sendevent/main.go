@@ -21,13 +21,13 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"log"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/cloudevents/sdk-go"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 )
 
 type Heartbeat struct {

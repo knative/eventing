@@ -27,7 +27,7 @@ const (
 )
 
 // SetTTL sets the TTL into the EventContext. ttl should be a positive integer.
-func SetTTL(ctx cloudevents.EventContext, ttl interface{}) cloudevents.EventContext {
-	_ = ctx.SetExtension(V02TTLAttribute, ttl)
-	return ctx
+func SetTTL(ctx cloudevents.EventContext, ttl interface{}) (cloudevents.EventContext, error) {
+	err := ctx.SetExtension(V02TTLAttribute, ttl)
+	return ctx, err
 }

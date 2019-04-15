@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/cloudevents/sdk-go"
-
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/path"
 	"go.uber.org/zap"
@@ -154,7 +153,10 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 	}
 
 	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
-	responseEvent.Context = SetTTL(responseEvent.Context, ttl)
+	responseEvent.Context, err = SetTTL(responseEvent.Context, ttl)
+	if err != nil {
+		return err
+	}
 	resp.Event = responseEvent
 	resp.Context = &cloudevents.HTTPTransportResponseContext{
 		Header: extractPassThroughHeaders(tctx),
