@@ -40,10 +40,11 @@ import (
 )
 
 const (
-	ccpUID           = "test-uid"
-	testErrorMessage = "test-induced-error"
-	testNS           = "test-ns"
-	Name             = "in-memory-channel"
+	ccpUID              = "test-uid"
+	testErrorMessage    = "test-induced-error"
+	testNS              = "test-ns"
+	inMemoryChannelName = "in-memory-channel"
+	inMemoryName        = "in-memory"
 )
 
 var (
@@ -96,7 +97,7 @@ func TestIsControlled(t *testing.T) {
 		"wrong namespace": {
 			ref: &corev1.ObjectReference{
 				Namespace: "other",
-				Name:      Name,
+				Name:      inMemoryName,
 			},
 			isControlled: false,
 		},
@@ -108,7 +109,7 @@ func TestIsControlled(t *testing.T) {
 		},
 		"is controlled": {
 			ref: &corev1.ObjectReference{
-				Name: Name,
+				Name: inMemoryName,
 			},
 			isControlled: true,
 		},
@@ -143,7 +144,7 @@ func TestReconcile(t *testing.T) {
 				&eventingv1alpha1.ClusterChannelProvisioner{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "not empty string",
-						Name:      Name,
+						Name:      inMemoryName,
 					},
 				},
 			},
@@ -241,6 +242,20 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
+			Name:         "Create dispatcher succeeds - in-memory-Channel",
+			ReconcileKey: inMemoryChannelName,
+			InitialState: []runtime.Object{
+				makeClusterChannelProvisionerOld(),
+			},
+			WantPresent: []runtime.Object{
+				makeReadyClusterChannelProvisionerOld(),
+				makeK8sServiceOld(),
+			},
+			WantEvent: []corev1.Event{
+				events[ccpReconciled],
+			},
+		},
+		{
 			Name: "Create dispatcher succeeds - request is namespace-scoped",
 			InitialState: []runtime.Object{
 				makeClusterChannelProvisioner(),
@@ -249,7 +264,7 @@ func TestReconcile(t *testing.T) {
 				makeReadyClusterChannelProvisioner(),
 				makeK8sService(),
 			},
-			ReconcileKey: fmt.Sprintf("%s/%s", testNS, Name),
+			ReconcileKey: fmt.Sprintf("%s/%s", testNS, inMemoryName),
 			WantEvent: []corev1.Event{
 				events[ccpReconciled],
 			},
@@ -297,11 +312,17 @@ func TestReconcile(t *testing.T) {
 			logger:   zap.NewNop(),
 		}
 		if tc.ReconcileKey == "" {
-			tc.ReconcileKey = fmt.Sprintf("/%s", Name)
+			tc.ReconcileKey = fmt.Sprintf("/%s", inMemoryName)
 		}
 		tc.IgnoreTimes = true
 		t.Run(tc.Name, tc.Runner(t, r, c, recorder))
 	}
+}
+
+func makeClusterChannelProvisionerOld() *eventingv1alpha1.ClusterChannelProvisioner {
+	ccp := makeClusterChannelProvisioner()
+	ccp.SetName(inMemoryChannelName)
+	return ccp
 }
 
 func makeClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvisioner {
@@ -311,7 +332,7 @@ func makeClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvisioner
 			Kind:       "ClusterChannelProvisioner",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: Name,
+			Name: inMemoryName,
 			UID:  ccpUID,
 		},
 		Spec: eventingv1alpha1.ClusterChannelProvisionerSpec{},
@@ -325,6 +346,12 @@ func makeReadyClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvis
 		Status:   corev1.ConditionTrue,
 		Severity: duckv1alpha1.ConditionSeverityError,
 	}}
+	return ccp
+}
+
+func makeReadyClusterChannelProvisionerOld() *eventingv1alpha1.ClusterChannelProvisioner {
+	ccp := makeReadyClusterChannelProvisioner()
+	ccp.Name = inMemoryChannelName
 	return ccp
 }
 
@@ -342,35 +369,43 @@ func makeK8sService() *corev1.Service {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: system.Namespace(),
-			Name:      fmt.Sprintf("%s-dispatcher", Name),
+			Name:      fmt.Sprintf("%s-dispatcher", inMemoryName),
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
 					Kind:               "ClusterChannelProvisioner",
-					Name:               Name,
+					Name:               inMemoryName,
 					UID:                ccpUID,
 					Controller:         &truePointer,
 					BlockOwnerDeletion: &truePointer,
 				},
 			},
-			Labels: util.DispatcherLabels(Name),
+			Labels: util.DispatcherLabels(inMemoryName),
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: util.DispatcherLabels(Name),
+			Selector: util.DispatcherLabels(inMemoryChannelName),
 			Ports: []corev1.ServicePort{
 				{
-					Name:       "http",
 					Port:       80,
 					TargetPort: intstr.FromInt(8080),
+					Protocol:   corev1.ProtocolTCP,
 				},
 			},
 		},
 	}
 }
 
+func makeK8sServiceOld() *corev1.Service {
+	svc := makeK8sService()
+	svc.SetName(fmt.Sprintf("%s-dispatcher", inMemoryChannelName))
+	svc.GetOwnerReferences()[0].Name = inMemoryChannelName
+	svc.SetLabels(util.DispatcherLabels(inMemoryChannelName))
+	return svc
+}
+
 func makeOldK8sService() *corev1.Service {
 	svc := makeK8sService()
-	svc.ObjectMeta.Name = fmt.Sprintf("%s-clusterbus", Name)
+	svc.ObjectMeta.Name = fmt.Sprintf("%s-clusterbus", inMemoryName)
 	return svc
 }
 

@@ -25,49 +25,47 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
-	"github.com/knative/eventing/pkg/sidecar/configmap/filesystem"
-	"github.com/knative/eventing/pkg/sidecar/configmap/watcher"
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/channelwatcher"
+	"github.com/knative/eventing/pkg/logging"
+	"github.com/knative/eventing/pkg/sidecar/fanout"
+	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	"github.com/knative/eventing/pkg/sidecar/swappable"
-	"github.com/knative/eventing/pkg/utils"
-	"github.com/knative/pkg/system"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"k8s.io/client-go/kubernetes"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
-)
-
-const (
-	defaultConfigMapName = "in-memory-channel-dispatcher-config-map"
-
-	// The following are the only valid values of the config_map_noticer flag.
-	cmnfVolume  = "volume"
-	cmnfWatcher = "watcher"
+	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 var (
 	readTimeout  = 1 * time.Minute
 	writeTimeout = 1 * time.Minute
 
-	port               int
-	configMapNoticer   string
-	configMapNamespace string
-	configMapName      string
+	port                int
+	channelProvisioners listFlags
 )
+
+type listFlags []string
+
+func (l *listFlags) String() string {
+	return ""
+}
+func (l *listFlags) Set(value string) error {
+	*l = append(*l, value)
+	return nil
+}
 
 func init() {
 	flag.IntVar(&port, "sidecar_port", -1, "The port to run the sidecar on.")
-	flag.StringVar(&configMapNoticer, "config_map_noticer", "", fmt.Sprintf("The system to notice changes to the ConfigMap. Valid values are: %s", configMapNoticerValues()))
-	flag.StringVar(&configMapNamespace, "config_map_namespace", system.Namespace(), "The namespace of the ConfigMap that is watched for configuration.")
-	flag.StringVar(&configMapName, "config_map_name", defaultConfigMapName, "The name of the ConfigMap that is watched for configuration.")
-}
-
-func configMapNoticerValues() string {
-	return strings.Join([]string{cmnfVolume, cmnfWatcher}, ", ")
+	flag.Var(&channelProvisioners, "channel_provisioner", "The provisioner of the channels that will be watched.")
 }
 
 func main() {
@@ -84,14 +82,18 @@ func main() {
 		logger.Fatal("--sidecar_port flag must be set")
 	}
 
+	if len(channelProvisioners) < 1 {
+		logger.Fatal("--channel_provisioner must be specified")
+	}
+
 	sh, err := swappable.NewEmptyHandler(logger)
 	if err != nil {
 		logger.Fatal("Unable to create swappable.Handler", zap.Error(err))
 	}
 
-	mgr, err := setupConfigMapNoticer(logger, sh.UpdateConfig)
+	mgr, err := setupChannelWatcher(logger, sh.UpdateConfig)
 	if err != nil {
-		logger.Fatal("Unable to create configMap noticer.", zap.Error(err))
+		logger.Fatal("Unable to create channel watcher.", zap.Error(err))
 	}
 
 	s := &http.Server{
@@ -125,57 +127,87 @@ func main() {
 	}
 }
 
-func setupConfigMapNoticer(logger *zap.Logger, configUpdated swappable.UpdateConfig) (manager.Manager, error) {
+func setupChannelWatcher(logger *zap.Logger, configUpdated swappable.UpdateConfig) (manager.Manager, error) {
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
 	if err != nil {
-		logger.Error("Error starting manager.", zap.Error(err))
+		logger.Error("Error creating new maanger.", zap.Error(err))
 		return nil, err
 	}
-
-	switch configMapNoticer {
-	case cmnfVolume:
-		err = setupConfigMapVolume(logger, mgr, configUpdated)
-	case cmnfWatcher:
-		err = setupConfigMapWatcher(logger, mgr, configUpdated)
-	default:
-		err = fmt.Errorf("need to provide the --config_map_noticer flag (valid values are %s)", configMapNoticerValues())
-	}
-	if err != nil {
+	if err = v1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
+		logger.Error("Error while adding eventing scheme to manager.", zap.Error(err))
 		return nil, err
 	}
+	channelwatcher.New(mgr, logger, updateChannelConfig(configUpdated))
 
 	return mgr, nil
 }
 
-func setupConfigMapVolume(logger *zap.Logger, mgr manager.Manager, configUpdated swappable.UpdateConfig) error {
-	cmn, err := filesystem.NewConfigMapWatcher(logger, filesystem.ConfigDir, configUpdated)
-	if err != nil {
-		logger.Error("Unable to create filesystem.ConifgMapWatcher", zap.Error(err))
-		return err
+func updateChannelConfig(updateConfig swappable.UpdateConfig) channelwatcher.WatchHandlerFunc {
+	return func(ctx context.Context, c client.Client, chanNamespacedName types.NamespacedName) error {
+		channels, err := listAllChannels(ctx, c)
+		if err != nil {
+			logging.FromContext(ctx).Info("Unable to list channels", zap.Error(err))
+			return err
+		}
+		config := multiChannelFanoutConfig(channels)
+		return updateConfig(config)
 	}
-	if err = mgr.Add(cmn); err != nil {
-		logger.Error("Unable to add the config map watcher", zap.Error(err))
-		return err
-	}
-	return nil
 }
 
-func setupConfigMapWatcher(logger *zap.Logger, mgr manager.Manager, configUpdated swappable.UpdateConfig) error {
-	kc, err := kubernetes.NewForConfig(mgr.GetConfig())
-	if err != nil {
-		return err
+func listAllChannels(ctx context.Context, c client.Client) ([]v1alpha1.Channel, error) {
+	channels := make([]v1alpha1.Channel, 0)
+	for {
+		cl := &v1alpha1.ChannelList{}
+		opts := &client.ListOptions{
+			// Set Raw because if we need to get more than one page, then we will put the continue token
+			// into opts.Raw.Continue.
+			Raw: &metav1.ListOptions{},
+		}
+		if err := c.List(ctx, opts, cl); err != nil {
+			return nil, err
+		}
+		for _, c := range cl.Items {
+			if c.Status.IsReady() && shouldWatch(&c) {
+				channels = append(channels, c)
+			}
+		}
+		if cl.Continue != "" {
+			opts.Raw.Continue = cl.Continue
+		} else {
+			return channels, nil
+		}
 	}
+}
 
-	cmw, err := watcher.NewWatcher(logger, kc, configMapNamespace, configMapName, configUpdated)
-	if err != nil {
-		return err
+func shouldWatch(ch *v1alpha1.Channel) bool {
+	if ch.Spec.Provisioner != nil && ch.Spec.Provisioner.Namespace == "" {
+		for _, v := range channelProvisioners {
+			if v == ch.Spec.Provisioner.Name {
+				return true
+			}
+		}
 	}
+	return false
+}
 
-	if err = mgr.Add(utils.NewBlockingStart(logger, cmw)); err != nil {
-		logger.Error("Unable to add the config map watcher", zap.Error(err))
-		return err
+func multiChannelFanoutConfig(channels []v1alpha1.Channel) *multichannelfanout.Config {
+	cc := make([]multichannelfanout.ChannelConfig, 0)
+	for _, c := range channels {
+		channelConfig := multichannelfanout.ChannelConfig{
+			Namespace: c.Namespace,
+			Name:      c.Name,
+			HostName:  c.Status.Address.Hostname,
+		}
+		if c.Spec.Subscribable != nil {
+			channelConfig.FanoutConfig = fanout.Config{
+				Subscriptions: c.Spec.Subscribable.Subscribers,
+			}
+		}
+		cc = append(cc, channelConfig)
 	}
-	return nil
+	return &multichannelfanout.Config{
+		ChannelConfigs: cc,
+	}
 }
 
 // runnableServer is a small wrapper around http.Server so that it matches the manager.Runnable

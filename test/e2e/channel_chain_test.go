@@ -109,7 +109,7 @@ func TestChannelChain(t *testing.T) {
 
 	// check if the logging service receives the correct number of event messages
 	expectedContentCount := len(subscriptionNames1) * len(subscriptionNames2)
-	if err := WaitForLogContentCount(clients, loggerPodName, loggerPod.Spec.Containers[0].Name, body, expectedContentCount); err != nil {
+	if err := WaitForLogContentCount(clients, loggerPodName, loggerPod.Spec.Containers[0].Name, ns, body, expectedContentCount); err != nil {
 		t.Fatalf("String %q does not appear %d times in logs of logger pod %q: %v", body, expectedContentCount, loggerPodName, err)
 	}
 }
