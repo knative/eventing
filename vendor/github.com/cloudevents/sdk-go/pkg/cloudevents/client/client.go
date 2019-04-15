@@ -102,6 +102,7 @@ func (c *ceClient) obsSend(ctx context.Context, event cloudevents.Event) (*cloud
 			event = fn(event)
 		}
 	}
+
 	// Validate the event conforms to the CloudEvents Spec.
 	if err := event.Validate(); err != nil {
 		return nil, err
