@@ -85,17 +85,13 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 	logger.Info("Reconciling Channel")
 
-	// Finalizer needs to be removed (even though no finalizers are added) main back compat
-	// with v0.5 in which a finalzier was added. Or else channels will not get deleted after upgrading to 0.6
-	// TODO: Remove this entire if block in v0.7+
-	if c.DeletionTimestamp != nil {
-		// K8s garbage collection will delete the K8s service and VirtualService for this channel.
-		// We use a finalizer to ensure the channel config has been synced.
-		util.RemoveFinalizer(c, finalizerName)
+	// Finalizer needs to be removed (even though no finalizers are added) to maintain backwards compatibility
+	// with v0.5 in which a finalzier was added. Or else channels will not get deleted after upgrading to 0.6+
+	if result := util.RemoveFinalizer(c, finalizerName); result == util.FinalizerRemoved {
 		r.client.Update(ctx, c)
-		logger.Info("Channel reconciled")
-		r.recorder.Eventf(c, corev1.EventTypeNormal, channelReconciled, "Channel reconciled: %q", c.Name)
-		return reconcile.Result{}, nil
+		logger.Info("Channel reconciled. Finalizer Removed")
+		r.recorder.Eventf(c, corev1.EventTypeNormal, channelReconciled, "Channel reconciled: %q. Finalizer removed.", c.Name)
+		return reconcile.Result{Requeue: true}, nil
 	}
 
 	err = r.reconcile(ctx, c)
