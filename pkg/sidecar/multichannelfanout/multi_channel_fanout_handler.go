@@ -30,7 +30,6 @@ import (
 	"net/http"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
 	"go.uber.org/zap"
 )
@@ -45,27 +44,19 @@ type Config struct {
 type ChannelConfig struct {
 	Namespace    string        `json:"namespace"`
 	Name         string        `json:"name"`
+	HostName     string        `json:"hostname"`
 	FanoutConfig fanout.Config `json:"fanoutConfig"`
-}
-
-// MakeChannelKey creates the key used for this Channel in the Handler's handlers map.
-func makeChannelKey(namespace, name string) string {
-	return fmt.Sprintf("%s/%s", namespace, name)
 }
 
 // makeChannelKeyFromConfig creates the channel key for a given channelConfig. It is a helper around
 // MakeChannelKey.
 func makeChannelKeyFromConfig(config ChannelConfig) string {
-	return makeChannelKey(config.Namespace, config.Name)
+	return config.HostName
 }
 
 // getChannelKey extracts the channel key from the given HTTP request.
-func getChannelKey(r *http.Request) (string, error) {
-	cr, err := provisioners.ParseChannel(r.Host)
-	if err != nil {
-		return "", err
-	}
-	return makeChannelKey(cr.Namespace, cr.Name), nil
+func getChannelKey(r *http.Request) string {
+	return r.Host
 }
 
 // Handler is an http.Handler that introspects the incoming request to determine what Channel it is
@@ -114,12 +105,7 @@ func (h *Handler) CopyWithNewConfig(conf Config) (*Handler, error) {
 // ServeHTTP delegates the actual handling of the request to a fanout.Handler, based on the
 // request's channel key.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	channelKey, err := getChannelKey(r)
-	if err != nil {
-		h.logger.Error("Unable to extract channelKey", zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	channelKey := getChannelKey(r)
 	fh, ok := h.handlers[channelKey]
 	if !ok {
 		h.logger.Error("Unable to find a handler for request", zap.String("channelKey", channelKey))

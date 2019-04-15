@@ -31,6 +31,9 @@ const (
 
 // ClusterChannelProvisioner returns a ClusterChannelProvisioner for a given name.
 func ClusterChannelProvisioner(name string) *corev1.ObjectReference {
+	if name == "" {
+		return nil
+	}
 	return pkgTest.CoreV1ObjectReference("ClusterChannelProvisioner", eventsApiVersion, name)
 }
 

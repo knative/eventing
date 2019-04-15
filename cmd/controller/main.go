@@ -24,20 +24,13 @@ import (
 	"os"
 	"time"
 
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/channel"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/subscription"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/logconfig"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/logging"
@@ -46,9 +39,14 @@ import (
 	"github.com/knative/pkg/system"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	controllerruntime "sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 const (

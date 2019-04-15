@@ -41,9 +41,14 @@ const (
 // AddFinalizerResult is used indicate whether a finalizer was added or already present.
 type AddFinalizerResult bool
 
+// RemoveFinalizerResult is used to indicate whether a finalizer was found and removed (FinalizerRemoved), or finalizer not found (FinalizerNotFound).
+type RemoveFinalizerResult bool
+
 const (
-	FinalizerAlreadyPresent AddFinalizerResult = false
-	FinalizerAdded          AddFinalizerResult = true
+	FinalizerAlreadyPresent AddFinalizerResult    = false
+	FinalizerAdded          AddFinalizerResult    = true
+	FinalizerRemoved        RemoveFinalizerResult = true
+	FinalizerNotFound       RemoveFinalizerResult = false
 )
 
 // AddFinalizer adds finalizerName to the Object.
@@ -57,25 +62,47 @@ func AddFinalizer(o metav1.Object, finalizerName string) AddFinalizerResult {
 	return FinalizerAdded
 }
 
-func RemoveFinalizer(o metav1.Object, finalizerName string) {
+func RemoveFinalizer(o metav1.Object, finalizerName string) RemoveFinalizerResult {
+	result := FinalizerNotFound
 	finalizers := sets.NewString(o.GetFinalizers()...)
-	finalizers.Delete(finalizerName)
-	o.SetFinalizers(finalizers.List())
+	if finalizers.Has(finalizerName) {
+		result = FinalizerRemoved
+		finalizers.Delete(finalizerName)
+		o.SetFinalizers(finalizers.List())
+	}
+	return result
 }
 
-func CreateK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
+// K8sServiceOption is a functional option that can modify the K8s Service in CreateK8sService
+type K8sServiceOption func(*corev1.Service) error
+
+// ExternalService is a functional option for CreateK8sService to create a K8s service of type ExternalName.
+func ExternalService(c *eventingv1alpha1.Channel) K8sServiceOption {
+	return func(svc *corev1.Service) error {
+		svc.Spec = corev1.ServiceSpec{
+			Type:         corev1.ServiceTypeExternalName,
+			ExternalName: names.ServiceHostName(channelDispatcherServiceName(c.Spec.Provisioner.Name), system.Namespace()),
+		}
+		return nil
+	}
+}
+
+func CreateK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel, opts ...K8sServiceOption) (*corev1.Service, error) {
 	getSvc := func() (*corev1.Service, error) {
 		return getK8sService(ctx, client, c)
 	}
-	return createK8sService(ctx, client, getSvc, newK8sService(c))
+	svc, err := newK8sService(c, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return createK8sService(ctx, client, getSvc, svc)
 }
 
 func getK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
 	list := &corev1.ServiceList{}
 	opts := &runtimeClient.ListOptions{
-		Namespace: c.Namespace,
-		// TODO After the full release start selecting on new set of labels by using k8sServiceLabels(c)
-		LabelSelector: labels.SelectorFromSet(k8sOldServiceLabels(c)),
+		Namespace:     c.Namespace,
+		LabelSelector: labels.SelectorFromSet(k8sServiceLabels(c)),
 		// Set Raw because if we need to get more than one page, then we will put the continue token
 		// into opts.Raw.Continue.
 		Raw: &metav1.ListOptions{},
@@ -107,12 +134,17 @@ func createK8sService(ctx context.Context, client runtimeClient.Client, getSvc g
 	} else if err != nil {
 		return nil, err
 	}
-
 	// spec.clusterIP is immutable and is set on existing services. If we don't set this
 	// to the same value, we will encounter an error while updating.
-	svc.Spec.ClusterIP = current.Spec.ClusterIP
+	if svc.Spec.Type != corev1.ServiceTypeExternalName {
+		svc.Spec.ClusterIP = current.Spec.ClusterIP
+	}
 	if !equality.Semantic.DeepDerivative(svc.Spec, current.Spec) ||
-		!expectedLabelsPresent(current.ObjectMeta.Labels, svc.ObjectMeta.Labels) {
+		!expectedLabelsPresent(current.ObjectMeta.Labels, svc.ObjectMeta.Labels) ||
+		// This DeepEqual is necessary to force update dispatcher services when upgrading from 0.5 to 0.6.
+		// Above DeepDerivative will not work because we have removed an optional field (name) from ports
+		// TODO: Remove this check in 0.7+
+		!equality.Semantic.DeepEqual(svc.Spec.Ports, current.Spec.Ports) {
 		current.Spec = svc.Spec
 		current.ObjectMeta.Labels = addExpectedLabels(current.ObjectMeta.Labels, svc.ObjectMeta.Labels)
 		err = client.Update(ctx, current)
@@ -248,8 +280,9 @@ func UpdateChannel(ctx context.Context, client runtimeClient.Client, u *eventing
 // newK8sService creates a new Service for a Channel resource. It also sets the appropriate
 // OwnerReferences on the resource so handleObject can discover the Channel resource that 'owns' it.
 // As well as being garbage collected when the Channel is deleted.
-func newK8sService(c *eventingv1alpha1.Channel) *corev1.Service {
-	return &corev1.Service{
+func newK8sService(c *eventingv1alpha1.Channel, opts ...K8sServiceOption) (*corev1.Service, error) {
+	// Add annotations
+	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: channelServiceName(c.ObjectMeta.Name),
 			Namespace:    c.Namespace,
@@ -265,12 +298,19 @@ func newK8sService(c *eventingv1alpha1.Channel) *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
-					Name: PortName,
-					Port: PortNumber,
+					Name:     PortName,
+					Protocol: corev1.ProtocolTCP,
+					Port:     PortNumber,
 				},
 			},
 		},
 	}
+	for _, opt := range opts {
+		if err := opt(svc); err != nil {
+			return nil, err
+		}
+	}
+	return svc, nil
 }
 
 // k8sOldServiceLabels returns a map with only old eventing channel and provisioner labels

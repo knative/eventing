@@ -404,6 +404,35 @@ func TestAddFinalizer(t *testing.T) {
 	}
 }
 
+func TestRemoveFinalizer(t *testing.T) {
+	testCases := map[string]struct {
+		expected RemoveFinalizerResult
+	}{
+		"Finalizer not found": {
+			expected: false,
+		},
+		"Finalizer removed successfully": {
+			expected: true,
+		},
+	}
+	finalizer := "test-finalizer"
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			c := getNewChannel()
+			if tc.expected {
+				c.Finalizers = []string{finalizer}
+			} else {
+				c.Finalizers = []string{}
+			}
+			actual := RemoveFinalizer(c, finalizer)
+
+			if diff := cmp.Diff(actual, tc.expected); diff != "" {
+				t.Errorf("unexpected error (-want, +got) = %v", diff)
+			}
+		})
+	}
+}
+
 func TestChannelNames(t *testing.T) {
 	testCases := []struct {
 		Name string
@@ -597,8 +626,9 @@ func makeK8sService() *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
-					Name: PortName,
-					Port: PortNumber,
+					Name:     PortName,
+					Port:     PortNumber,
+					Protocol: corev1.ProtocolTCP,
 				},
 			},
 		},
