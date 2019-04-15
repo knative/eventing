@@ -3,7 +3,6 @@ package channelwatcher
 import (
 	"context"
 
-<<<<<<< HEAD
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
@@ -19,23 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-=======
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/logging"
-	"go.uber.org/zap"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-)
-
-type WatchHandlerFunc func(context.Context, client.Client, types.NamespacedName) error
-
->>>>>>> f8317dd0ead16253fcea1a61a749bb228708f117
 type reconciler struct {
 	client  client.Client
 	logger  *zap.Logger
@@ -52,10 +34,7 @@ func (r *reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 	return reconcile.Result{}, nil
 }
 
-<<<<<<< HEAD
 // New creates a new instance of Channel Watcher that watches channels and calls the watchHandler on add, update, delete and generic event
-=======
->>>>>>> f8317dd0ead16253fcea1a61a749bb228708f117
 func New(mgr manager.Manager, logger *zap.Logger, watchHandler WatchHandlerFunc) error {
 	c, err := controller.New("ChannelWatcher", mgr, controller.Options{
 		Reconciler: &reconciler{
@@ -79,7 +58,6 @@ func New(mgr manager.Manager, logger *zap.Logger, watchHandler WatchHandlerFunc)
 	}
 	return nil
 }
-<<<<<<< HEAD
 
 // WatchHandlerFunc is called whenever an add, update, delete or generic event is triggers on a channel watch
 type WatchHandlerFunc func(context.Context, client.Client, types.NamespacedName) error
@@ -105,7 +83,7 @@ func UpdateChannelConfigWatchHandler(updateConfig swappable.UpdateConfig, should
 	}
 }
 
-// ListAllChannels queries client and gets list of all channels for which shouldWatch returns true.
+// listAllChannels queries client and gets list of all channels for which shouldWatch returns true.
 func listAllChannels(ctx context.Context, c client.Client, shouldWatch ShouldWatchFunc) ([]v1alpha1.Channel, error) {
 	channels := make([]v1alpha1.Channel, 0)
 	for {
@@ -130,5 +108,3 @@ func listAllChannels(ctx context.Context, c client.Client, shouldWatch ShouldWat
 		}
 	}
 }
-=======
->>>>>>> f8317dd0ead16253fcea1a61a749bb228708f117
