@@ -373,7 +373,7 @@ func SendFakeEventToChannel(clients *test.Clients, event *test.CloudEvent, chann
 // If the contents are not present within timeout it returns error.
 func WaitForLogContents(clients *test.Clients, logf logging.FormatLogger, podName string, containerName string, namespace string, contents []string) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		logs, err := PodLogs(clients, podName, containerName, namespace)
+		logs, err := clients.Kube.PodLogs(podName, containerName, namespace)
 		if err != nil {
 			return true, err
 		}
@@ -391,9 +391,9 @@ func WaitForLogContents(clients *test.Clients, logf logging.FormatLogger, podNam
 
 // WaitForLogContentCount checks if the number of substr occur times equals the given number.
 // If the content does not appear the given times it returns error.
-func WaitForLogContentCount(clients *test.Clients, podName, containerName, namespace string, content string, appearTimes int) error {
+func WaitForLogContentCount(client *test.Clients, podName, containerName, namespace, content string, appearTimes int) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		logs, err := PodLogs(clients, podName, containerName, namespace)
+		logs, err := client.Kube.PodLogs(podName, containerName, namespace)
 		if err != nil {
 			return true, err
 		}
@@ -404,8 +404,8 @@ func WaitForLogContentCount(clients *test.Clients, podName, containerName, names
 
 // FindAnyLogContents attempts to find logs for given Pod/Container that has 'any' of the given contents.
 // It returns an error if it couldn't retrieve the logs. In case 'any' of the contents are there, it returns true.
-func FindAnyLogContents(clients *test.Clients, logf logging.FormatLogger, podName, containerName, namespace string, contents []string) (bool, error) {
-	logs, err := PodLogs(clients, podName, containerName, namespace)
+func FindAnyLogContents(clients *test.Clients, logf logging.FormatLogger, podName string, containerName string, namespace string, contents []string) (bool, error) {
+	logs, err := clients.Kube.PodLogs(podName, containerName, namespace)
 	if err != nil {
 		return false, err
 	}
@@ -464,36 +464,4 @@ func DeleteNameSpace(clients *test.Clients, namespace string) {
 	if err == nil || !errors.IsNotFound(err) {
 		clients.Kube.Kube.CoreV1().Namespaces().Delete(nsSpec.Name, nil)
 	}
-}
-
-// WaitForLogContent waits until logs for given Pod/Container include the given content.
-// If the content is not present within timeout it returns error.
-// TODO(chizhg): replace this function with the one in knative/pkg after update.
-func WaitForLogContent(clients *test.Clients, podName, containerName, namespace string, content string) error {
-	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		logs, err := PodLogs(clients, podName, containerName, namespace)
-		if err != nil {
-			return true, err
-		}
-		return strings.Contains(string(logs), content), nil
-	})
-}
-
-// PodLogs returns Pod logs for given Pod and Container.
-// TODO(chizhg): replace this function with the one in knative/pkg after update.
-func PodLogs(clients *test.Clients, podName, containerName, namespace string) ([]byte, error) {
-	pods := clients.Kube.Kube.CoreV1().Pods(namespace)
-	podList, err := pods.List(metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	for _, pod := range podList.Items {
-		if strings.Contains(pod.Name, podName) {
-			result := pods.GetLogs(pod.Name, &corev1.PodLogOptions{
-				Container: containerName,
-			}).Do()
-			return result.Raw()
-		}
-	}
-	return nil, fmt.Errorf("Could not find logs for %s/%s", podName, containerName)
 }

@@ -3,8 +3,7 @@ package cloudevents
 import (
 	"fmt"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
-	"log"
-	"mime"
+	"sort"
 	"strings"
 )
 
@@ -24,6 +23,9 @@ type EventContextV03 struct {
 	Type string `json:"type"`
 	// Source - A URI describing the event producer.
 	Source types.URLRef `json:"source"`
+	// Subject - The subject of the event in the context of the event producer
+	// (identified by `source`).
+	Subject *string `json:"subject,omitempty"`
 	// ID of the event; must be non-empty and unique within the scope of the producer.
 	ID string `json:"id"`
 	// Time - A Timestamp when the event happened.
@@ -33,59 +35,14 @@ type EventContextV03 struct {
 	// GetDataMediaType - A MIME (RFC2046) string describing the media type of `data`.
 	// TODO: Should an empty string assume `application/json`, `application/octet-stream`, or auto-detect the content?
 	DataContentType *string `json:"datacontenttype,omitempty"`
+	// DataContentEncoding describes the content encoding for the `data` attribute. Valid: nil, `Base64`.
+	DataContentEncoding *string `json:"datacontentencoding,omitempty"`
 	// Extensions - Additional extension metadata beyond the base spec.
 	Extensions map[string]interface{} `json:"-,omitempty"` // TODO: decide how we want extensions to be inserted
 }
 
 // Adhere to EventContext
 var _ EventContext = (*EventContextV03)(nil)
-
-// GetSpecVersion implements EventContext.GetSpecVersion
-func (ec EventContextV03) GetSpecVersion() string {
-	if ec.SpecVersion != "" {
-		return ec.SpecVersion
-	}
-	return CloudEventsVersionV03
-}
-
-// GetDataContentType implements EventContext.GetDataContentType
-func (ec EventContextV03) GetDataContentType() string {
-	if ec.DataContentType != nil {
-		return *ec.DataContentType
-	}
-	return ""
-}
-
-// GetDataMediaType implements EventContext.GetDataMediaType
-func (ec EventContextV03) GetDataMediaType() string {
-	if ec.DataContentType != nil {
-		mediaType, _, err := mime.ParseMediaType(*ec.DataContentType)
-		if err != nil {
-			log.Printf("failed to parse media type from DataContentType: %s", err)
-			return ""
-		}
-		return mediaType
-	}
-	return ""
-}
-
-// GetType implements EventContext.GetType
-func (ec EventContextV03) GetType() string {
-	return ec.Type
-}
-
-// GetSource implements EventContext.GetSource
-func (ec EventContextV03) GetSource() string {
-	return ec.Source.String()
-}
-
-// GetSchemaURL implements EventContext.GetSchemaURL
-func (ec EventContextV03) GetSchemaURL() string {
-	if ec.SchemaURL != nil {
-		return ec.SchemaURL.String()
-	}
-	return ""
-}
 
 // ExtensionAs implements EventContext.ExtensionAs
 func (ec EventContextV03) ExtensionAs(name string, obj interface{}) error {
@@ -108,21 +65,31 @@ func (ec EventContextV03) ExtensionAs(name string, obj interface{}) error {
 }
 
 // SetExtension adds the extension 'name' with value 'value' to the CloudEvents context.
-func (ec *EventContextV03) SetExtension(name string, value interface{}) {
+func (ec *EventContextV03) SetExtension(name string, value interface{}) error {
 	if ec.Extensions == nil {
 		ec.Extensions = make(map[string]interface{})
 	}
-	ec.Extensions[name] = value
+	if value == nil {
+		delete(ec.Extensions, name)
+	} else {
+		ec.Extensions[name] = value
+	}
+	return nil
 }
 
-// AsV01 implements EventContext.AsV01
-func (ec EventContextV03) AsV01() EventContextV01 {
+// Clone implements EventContextConverter.Clone
+func (ec EventContextV03) Clone() EventContext {
+	return ec.AsV03()
+}
+
+// AsV01 implements EventContextConverter.AsV01
+func (ec EventContextV03) AsV01() *EventContextV01 {
 	ecv2 := ec.AsV02()
 	return ecv2.AsV01()
 }
 
-// AsV02 implements EventContext.AsV02
-func (ec EventContextV03) AsV02() EventContextV02 {
+// AsV02 implements EventContextConverter.AsV02
+func (ec EventContextV03) AsV02() *EventContextV02 {
 	ret := EventContextV02{
 		SpecVersion: CloudEventsVersionV02,
 		ID:          ec.ID,
@@ -131,20 +98,38 @@ func (ec EventContextV03) AsV02() EventContextV02 {
 		SchemaURL:   ec.SchemaURL,
 		ContentType: ec.DataContentType,
 		Source:      ec.Source,
-		Extensions:  ec.Extensions,
+		Extensions:  make(map[string]interface{}),
 	}
-	return ret
+	// Subject was introduced in 0.3, so put it in an extension for 0.2.
+	if ec.Subject != nil {
+		ret.SetExtension(SubjectKey, *ec.Subject)
+	}
+	// DataContentEncoding was introduced in 0.3, so put it in an extension for 0.2.
+	if ec.DataContentEncoding != nil {
+		ret.SetExtension(DataContentEncodingKey, *ec.DataContentEncoding)
+	}
+	if ec.Extensions != nil {
+		for k, v := range ec.Extensions {
+			ret.Extensions[k] = v
+		}
+	}
+	if len(ret.Extensions) == 0 {
+		ret.Extensions = nil
+	}
+	return &ret
 }
 
-// AsV03 implements EventContext.AsV03
-func (ec EventContextV03) AsV03() EventContextV03 {
+// AsV03 implements EventContextConverter.AsV03
+func (ec EventContextV03) AsV03() *EventContextV03 {
 	ec.SpecVersion = CloudEventsVersionV03
-	return ec
+	return &ec
 }
 
 // Validate returns errors based on requirements from the CloudEvents spec.
 // For more details, see https://github.com/cloudevents/spec/blob/master/spec.md
 // As of Feb 26, 2019, commit 17c32ea26baf7714ad027d9917d03d2fff79fc7e
+// + https://github.com/cloudevents/spec/pull/387 -> datacontentencoding
+// + https://github.com/cloudevents/spec/pull/406 -> subject
 func (ec EventContextV03) Validate() error {
 	errors := []string(nil)
 
@@ -176,6 +161,18 @@ func (ec EventContextV03) Validate() error {
 	source := strings.TrimSpace(ec.Source.String())
 	if source == "" {
 		errors = append(errors, "source: REQUIRED")
+	}
+
+	// subject
+	// Type: String
+	// Constraints:
+	//  OPTIONAL
+	//  MUST be a non-empty string
+	if ec.Subject != nil {
+		subject := strings.TrimSpace(*ec.Subject)
+		if subject == "" {
+			errors = append(errors, "subject: if present, MUST be a non-empty string")
+		}
 	}
 
 	// id
@@ -224,8 +221,63 @@ func (ec EventContextV03) Validate() error {
 		}
 	}
 
+	// datacontentencoding
+	// Type: String per RFC 2045 Section 6.1
+	// Constraints:
+	//  The attribute MUST be set if the data attribute contains string-encoded binary data.
+	//    Otherwise the attribute MUST NOT be set.
+	//  If present, MUST adhere to RFC 2045 Section 6.1
+	if ec.DataContentEncoding != nil {
+		dataContentEncoding := strings.ToLower(strings.TrimSpace(*ec.DataContentEncoding))
+		if dataContentEncoding != Base64 {
+			// TODO: need to test for RFC 2046
+			errors = append(errors, "datacontentencoding: if present, MUST adhere to RFC 2045 Section 6.1")
+		}
+	}
+
 	if len(errors) > 0 {
 		return fmt.Errorf(strings.Join(errors, "\n"))
 	}
 	return nil
+}
+
+// String returns a pretty-printed representation of the EventContext.
+func (ec EventContextV03) String() string {
+	b := strings.Builder{}
+
+	b.WriteString("Context Attributes,\n")
+
+	b.WriteString("  specversion: " + ec.SpecVersion + "\n")
+	b.WriteString("  type: " + ec.Type + "\n")
+	b.WriteString("  source: " + ec.Source.String() + "\n")
+	if ec.Subject != nil {
+		b.WriteString("  subject: " + *ec.Subject + "\n")
+	}
+	b.WriteString("  id: " + ec.ID + "\n")
+	if ec.Time != nil {
+		b.WriteString("  time: " + ec.Time.String() + "\n")
+	}
+	if ec.SchemaURL != nil {
+		b.WriteString("  schemaurl: " + ec.SchemaURL.String() + "\n")
+	}
+	if ec.DataContentType != nil {
+		b.WriteString("  datacontenttype: " + *ec.DataContentType + "\n")
+	}
+	if ec.DataContentEncoding != nil {
+		b.WriteString("  datacontentencoding: " + *ec.DataContentEncoding + "\n")
+	}
+
+	if ec.Extensions != nil && len(ec.Extensions) > 0 {
+		b.WriteString("Extensions,\n")
+		keys := make([]string, 0, len(ec.Extensions))
+		for k := range ec.Extensions {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			b.WriteString(fmt.Sprintf("  %s: %v\n", key, ec.Extensions[key]))
+		}
+	}
+
+	return b.String()
 }

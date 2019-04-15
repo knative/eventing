@@ -23,6 +23,7 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/test"
+	pkgTest "github.com/knative/pkg/test"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
@@ -80,7 +81,7 @@ func singleEvent(t *testing.T, encoding string) {
 		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channel.Name)
 	}
 
-	if err := WaitForLogContent(clients, loggerPodName, loggerPod.Spec.Containers[0].Name, ns, body); err != nil {
+	if err := pkgTest.WaitForLogContent(clients.Kube, loggerPodName, loggerPod.Spec.Containers[0].Name, ns, body); err != nil {
 		t.Fatalf("String %q not found in logs of logger pod %q: %v", body, loggerPodName, err)
 	}
 }

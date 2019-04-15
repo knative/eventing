@@ -66,8 +66,8 @@ By default, it will run the test against the default
 `ClusterChannelProvisioner`.
 
 If you want to run it against another `ClusterChannelProvisioner`, you can
-specify it through `-clusterChannelProvisioners`. Note that if you specify
-multiple CCPs, it will only run test against the first one.
+specify it through `-clusterChannelProvisioners`. Note that you can only specify
+one `ClusterChannelProvisioner` if you are not running from `TestMain`.
 
 ```bash
 go test -v -tags=e2e -count=1 ./test/e2e -run ^TestSingleBinaryEvent$ -clusterChannelProvisioners in-memory-channel

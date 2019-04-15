@@ -21,6 +21,7 @@ package test
 import (
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 
 	pkgTest "github.com/knative/pkg/test"
@@ -63,13 +64,23 @@ type EventingEnvironmentFlags struct {
 }
 
 func initializeEventingFlags() *EventingEnvironmentFlags {
-	// Initialize as the DefaultClusterChannelProvisioner.
-	f := EventingEnvironmentFlags{Provisioners: []string{DefaultClusterChannelProvisioner}}
+	f := EventingEnvironmentFlags{}
 
 	flag.Var(&f.Provisioners, "clusterChannelProvisioners", "The names of the Channel's clusterChannelProvisioners, which are separated by comma.")
 	flag.BoolVar(&f.RunFromMain, "runFromMain", false, "If runFromMain is set to false, the TestMain will be skipped when we run tests.")
 
 	flag.Parse()
+
+	// If no provisioner is passed through the flag, initialize it as the DefaultClusterChannelProvisioner.
+	if f.Provisioners == nil || len(f.Provisioners) == 0 {
+		f.Provisioners = []string{DefaultClusterChannelProvisioner}
+	}
+
+	// If we are not running from TestMain, only one single provisioner can be specified.
+	if !f.RunFromMain && len(f.Provisioners) != 1 {
+		fmt.Println("Only one single provisioner can be specified if you are not running from TestMain.")
+		os.Exit(1)
+	}
 
 	logging.InitializeLogger(pkgTest.Flags.LogVerbose)
 	if pkgTest.Flags.EmitMetrics {
