@@ -311,8 +311,7 @@ func CreatePodAndServiceReady(clients *test.Clients, pod *corev1.Pod, svc *corev
 	if err := CreatePod(clients, pod, logf, cleaner); err != nil {
 		return nil, fmt.Errorf("Failed to create pod: %v", err)
 	}
-	// TODO(chizhg): Change to only waiting for the current pod running rather than all.
-	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, namespace); err != nil {
+	if err := pkgTest.WaitForPodRunning(clients.Kube, pod.Name, namespace); err != nil {
 		return nil, fmt.Errorf("Error waiting for pod to become running: %v", err)
 	}
 	logf("Pod %q starts running", pod.Name)
@@ -362,7 +361,7 @@ func SendFakeEventToChannel(clients *test.Clients, event *test.CloudEvent, chann
 	if err := CreatePod(clients, pod, logf, cleaner); err != nil {
 		return err
 	}
-	if err := pkgTest.WaitForAllPodsRunning(clients.Kube, namespace); err != nil {
+	if err := pkgTest.WaitForPodRunning(clients.Kube, pod.Name, namespace); err != nil {
 		return err
 	}
 	logf("Sender pod starts running")
