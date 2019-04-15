@@ -77,7 +77,6 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	}
 
 	bytes, _ := json.MarshalIndent(defaultBroker, "", "  ")
-	fmt.Printf("##############: n%+v", string(bytes))
 	defaultBrokerUrl := fmt.Sprintf("http://%s", defaultBroker.Status.Address.Hostname)
 
 	t.Logf("Default broker ready: %q", defaultBrokerUrl)
