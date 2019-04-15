@@ -41,8 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	//_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-)
+	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 var (
