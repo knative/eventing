@@ -18,6 +18,7 @@ package subscription
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"k8s.io/apimachinery/pkg/labels"
 	"reflect"
@@ -152,7 +153,8 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 			}
 		}
 		removeFinalizer(subscription)
-		return nil
+		_, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(subscription.Namespace).Update(subscription)
+		return err
 	}
 
 	// Verify that `channel` exists.
@@ -191,6 +193,10 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	// Everything that was supposed to be resolved was, so flip the status bit on that.
 	subscription.Status.MarkReferencesResolved()
 
+	if err := r.ensureFinalizer(subscription); err != nil {
+		return err
+	}
+
 	// Ok, now that we have the Channel and at least one of the Call/Result, let's reconcile
 	// the Channel with this information.
 	if err := r.syncPhysicalChannel(ctx, subscription, false); err != nil {
@@ -200,7 +206,6 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	}
 	// Everything went well, set the fact that subscriptions have been modified
 	subscription.Status.MarkChannelReady()
-	addFinalizer(subscription)
 	return nil
 }
 
@@ -230,52 +235,32 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Subscri
 	if err == nil && becomesReady {
 		duration := time.Since(svc.ObjectMeta.CreationTimestamp.Time)
 		r.Logger.Infof("Subscription %q became ready after %v", subscription.Name, duration)
-		//r.StatsReporter.ReportServiceReady(subscription.Namespace, subscription.Name, duration)
+		//r.StatsReporter.ReportServiceReady(subscription.Namespace, subscription.Name, duration) // TODO: stats
 	}
 
 	return svc, err
-	// TODO: set finalizers in a correct method.
-	//
-	////	subscriptionChanged := false
-	//
-	//if !equality.Semantic.DeepEqual(subscription.Finalizers, desired.Finalizers) {
-	//
-	//	existing := subscription.DeepCopy()
-	//	existing.Status = desired.Status
-	//
-	//	svc, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(desired.Namespace).UpdateStatus(existing)
-	//	if err == nil && becomesReady {
-	//		duration := time.Since(svc.ObjectMeta.CreationTimestamp.Time)
-	//		c.Logger.Infof("Service %q became ready after %v", service.Name, duration)
-	//		c.StatsReporter.ReportServiceReady(service.Namespace, service.Name, duration)
-	//	}
-	//
-	//	latestSubscription.SetFinalizers(subscription.ObjectMeta.Finalizers)
-	//
-	//	if err := r.client.Update(ctx, latestSubscription); err != nil {
-	//		return nil, err
-	//	}
-	//	subscriptionChanged = true
-	//}
-	//
-	//if equality.Semantic.DeepEqual(latestSubscription.Status, subscription.Status) {
-	//	return latestSubscription, nil
-	//}
-	//
-	//if subscriptionChanged {
-	//	// Refetch
-	//	latestSubscription = &v1alpha1.Subscription{}
-	//	if err := r.client.Get(ctx, objectKey, latestSubscription); err != nil {
-	//		return nil, err
-	//	}
-	//}
-	//
-	//latestSubscription.Status = subscription.Status
-	//if err := r.client.Status().Update(ctx, latestSubscription); err != nil {
-	//	return nil, err
-	//}
-	//
-	//return latestSubscription, nil
+}
+
+func (c *Reconciler) ensureFinalizer(sub *v1alpha1.Subscription) error {
+	finalizers := sets.NewString(sub.Finalizers...)
+	if finalizers.Has(finalizerName) {
+		return nil
+	}
+
+	mergePatch := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"finalizers":      append(sub.Finalizers, finalizerName),
+			"resourceVersion": sub.ResourceVersion,
+		},
+	}
+
+	patch, err := json.Marshal(mergePatch)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.EventingClientSet.EventingV1alpha1().Subscriptions(sub.Namespace).Patch(sub.Name, types.MergePatchType, patch)
+	return err
 }
 
 // resolveResult resolves the Spec.Result object.
@@ -400,12 +385,6 @@ func (r *Reconciler) patchPhysicalFrom(ctx context.Context, namespace string, ph
 	}
 	logging.FromContext(ctx).Debug("Patched resource", zap.Any("patched", patched))
 	return nil
-}
-
-func addFinalizer(sub *v1alpha1.Subscription) {
-	finalizers := sets.NewString(sub.Finalizers...)
-	finalizers.Insert(finalizerName)
-	sub.Finalizers = finalizers.List()
 }
 
 func removeFinalizer(sub *v1alpha1.Subscription) {

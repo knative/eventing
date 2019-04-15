@@ -1178,6 +1178,12 @@ func TestFinalizers(t *testing.T) {
 	}
 }
 
+func addFinalizer(sub *eventingv1alpha1.Subscription) {
+	finalizers := sets.NewString(sub.Finalizers...)
+	finalizers.Insert(finalizerName)
+	sub.Finalizers = finalizers.List()
+}
+
 func getNewFromChannel() *eventingv1alpha1.Channel {
 	return getNewChannel(fromChannelName)
 }
