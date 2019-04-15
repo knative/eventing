@@ -21,8 +21,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/cloudevents/sdk-go/pkg/cloudevents"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
+	"github.com/cloudevents/sdk-go"
 )
 
 type example struct {
@@ -61,7 +60,7 @@ func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
 func main() {
 	// parse the command line flags
 	flag.Parse()
-	c, err := client.NewDefault()
+	c, err := cloudevents.NewDefaultClient()
 	if err != nil {
 		log.Fatalf("failed to create client, %v", err)
 	}

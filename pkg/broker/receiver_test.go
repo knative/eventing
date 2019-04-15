@@ -26,9 +26,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cloudevents/sdk-go/pkg/cloudevents"
+	"github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 	"github.com/google/go-cmp/cmp"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
@@ -63,7 +62,7 @@ func TestReceiver(t *testing.T) {
 	testCases := map[string]struct {
 		triggers         []*eventingv1alpha1.Trigger
 		mocks            controllertesting.Mocks
-		tctx             *cehttp.TransportContext
+		tctx             *cloudevents.HTTPTransportContext
 		event            *cloudevents.Event
 		requestFails     bool
 		returnedEvent    *cloudevents.Event
@@ -84,7 +83,7 @@ func TestReceiver(t *testing.T) {
 			expectNewToFail: true,
 		},
 		"Not POST": {
-			tctx: &cehttp.TransportContext{
+			tctx: &cloudevents.HTTPTransportContext{
 				Method: "GET",
 				Host:   host,
 				URI:    "/",
@@ -92,7 +91,7 @@ func TestReceiver(t *testing.T) {
 			expectedStatus: http.StatusMethodNotAllowed,
 		},
 		"Other path": {
-			tctx: &cehttp.TransportContext{
+			tctx: &cloudevents.HTTPTransportContext{
 				Method: "POST",
 				Host:   host,
 				URI:    "/someotherEndpoint",
@@ -100,7 +99,7 @@ func TestReceiver(t *testing.T) {
 			expectedStatus: http.StatusNotFound,
 		},
 		"Bad host": {
-			tctx: &cehttp.TransportContext{
+			tctx: &cloudevents.HTTPTransportContext{
 				Method: "POST",
 				Host:   "badhost-cant-be-parsed-as-a-trigger-name-plus-namespace",
 				URI:    "/",
@@ -175,7 +174,7 @@ func TestReceiver(t *testing.T) {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger("", ""),
 			},
-			tctx: &cehttp.TransportContext{
+			tctx: &cloudevents.HTTPTransportContext{
 				Method: "POST",
 				Host:   host,
 				URI:    "/",
@@ -245,7 +244,7 @@ func TestReceiver(t *testing.T) {
 
 			tctx := tc.tctx
 			if tctx == nil {
-				tctx = &cehttp.TransportContext{
+				tctx = &cloudevents.HTTPTransportContext{
 					Method: http.MethodPost,
 					Host:   host,
 					URI:    "/",
@@ -394,7 +393,7 @@ func makeEventWithoutTTL() *cloudevents.Event {
 	return &cloudevents.Event{
 		Context: cloudevents.EventContextV02{
 			Type: eventType,
-			Source: types.URLRef{
+			Source: cloudevents.URLRef{
 				URL: url.URL{
 					Path: eventSource,
 				},
@@ -419,7 +418,7 @@ func makeDifferentEvent() *cloudevents.Event {
 	return &cloudevents.Event{
 		Context: cloudevents.EventContextV02{
 			Type: "some-other-type",
-			Source: types.URLRef{
+			Source: cloudevents.URLRef{
 				URL: url.URL{
 					Path: eventSource,
 				},

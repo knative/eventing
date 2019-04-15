@@ -20,8 +20,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/cloudevents/sdk-go/pkg/cloudevents"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
+	"github.com/cloudevents/sdk-go"
 )
 
 func handler(event cloudevents.Event) {
@@ -38,7 +37,7 @@ func handler(event cloudevents.Event) {
 }
 
 func main() {
-	c, err := client.NewDefault()
+	c, err := cloudevents.NewDefaultClient()
 	if err != nil {
 		log.Fatalf("failed to create client, %v", err)
 	}

@@ -58,9 +58,10 @@
   version = "v2.1.15"
 
 [[projects]]
-  digest = "1:fa1c3e6de410f74eb102fd927c838a66feb5b825fdf63d0e82cbbfd1a16db8a1"
+  digest = "1:13e0fa926561dc81e7229d65f5c0aa2cc74b4020d2d3da416fff4ee0946545da"
   name = "github.com/cloudevents/sdk-go"
   packages = [
+    ".",
     "pkg/cloudevents",
     "pkg/cloudevents/client",
     "pkg/cloudevents/codec",
@@ -1239,11 +1240,8 @@
     "cloud.google.com/go/pubsub",
     "github.com/Shopify/sarama",
     "github.com/bsm/sarama-cluster",
-    "github.com/cloudevents/sdk-go/pkg/cloudevents",
-    "github.com/cloudevents/sdk-go/pkg/cloudevents/client",
-    "github.com/cloudevents/sdk-go/pkg/cloudevents/context",
+    "github.com/cloudevents/sdk-go",
     "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http",
-    "github.com/cloudevents/sdk-go/pkg/cloudevents/types",
     "github.com/fsnotify/fsnotify",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",

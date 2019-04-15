@@ -29,9 +29,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cloudevents/sdk-go/pkg/cloudevents"
-	ceclient "github.com/cloudevents/sdk-go/pkg/cloudevents/client"
-	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	"github.com/cloudevents/sdk-go"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/broker"
 	"github.com/knative/eventing/pkg/provisioners"
@@ -85,7 +83,7 @@ func main() {
 		Path:   "/",
 	}
 
-	ceClient, err := ceclient.NewDefault()
+	ceClient, err := cloudevents.NewDefaultClient()
 	if err != nil {
 		logger.Fatal("Unable to create CE client", zap.Error(err))
 	}
@@ -157,7 +155,7 @@ func getRequiredEnv(envKey string) string {
 
 type handler struct {
 	logger     *zap.Logger
-	ceClient   ceclient.Client
+	ceClient   cloudevents.Client
 	channelURI *url.URL
 	brokerName string
 }
@@ -191,7 +189,7 @@ func (h *handler) Start(stopCh <-chan struct{}) error {
 }
 
 func (h *handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
-	tctx := cehttp.TransportContextFrom(ctx)
+	tctx := cloudevents.HTTPTransportContextFrom(ctx)
 	if tctx.Method != http.MethodPost {
 		resp.Status = http.StatusMethodNotAllowed
 		return nil
@@ -220,7 +218,7 @@ func (h *handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 	return h.sendEvent(ctx, tctx, event)
 }
 
-func (h *handler) sendEvent(ctx context.Context, tctx cehttp.TransportContext, event cloudevents.Event) error {
+func (h *handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportContext, event cloudevents.Event) error {
 	sendingCTX := broker.SendingContext(ctx, tctx, h.channelURI)
 
 	startTS := time.Now()

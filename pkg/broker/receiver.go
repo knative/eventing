@@ -23,9 +23,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/cloudevents/sdk-go/pkg/cloudevents"
-	ceclient "github.com/cloudevents/sdk-go/pkg/cloudevents/client"
-	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	"github.com/cloudevents/sdk-go"
+
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
@@ -41,13 +40,13 @@ const (
 type Receiver struct {
 	logger   *zap.Logger
 	client   client.Client
-	ceClient ceclient.Client
+	ceClient cloudevents.Client
 }
 
 // New creates a new Receiver and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned MessageReceiver.
 func New(logger *zap.Logger, client client.Client) (*Receiver, error) {
-	ceClient, err := ceclient.NewDefault()
+	ceClient, err := cloudevents.NewDefaultClient()
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +112,7 @@ func (r *Receiver) Start(stopCh <-chan struct{}) error {
 }
 
 func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
-	tctx := cehttp.TransportContextFrom(ctx)
+	tctx := cloudevents.HTTPTransportContextFrom(ctx)
 	if tctx.Method != http.MethodPost {
 		resp.Status = http.StatusMethodNotAllowed
 		return nil
@@ -162,7 +161,7 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
 	responseEvent.Context = SetTTL(responseEvent.Context, ttl)
 	resp.Event = responseEvent
-	resp.Context = &cehttp.TransportResponseContext{
+	resp.Context = &cloudevents.HTTPTransportResponseContext{
 		Header: extractPassThroughHeaders(tctx),
 	}
 
@@ -170,7 +169,7 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 }
 
 // sendEvent sends an event to a subscriber if the trigger filter passes.
-func (r *Receiver) sendEvent(ctx context.Context, tctx cehttp.TransportContext, trigger provisioners.ChannelReference, event *cloudevents.Event) (*cloudevents.Event, error) {
+func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportContext, trigger provisioners.ChannelReference, event *cloudevents.Event) (*cloudevents.Event, error) {
 	t, err := r.getTrigger(ctx, trigger)
 	if err != nil {
 		r.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("triggerRef", trigger))
