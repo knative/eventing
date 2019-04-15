@@ -27,7 +27,6 @@ import (
 	ceclient "github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/path"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
@@ -166,7 +165,7 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 }
 
 // sendEvent sends an event to a subscriber if the trigger filter passes.
-func (r *Receiver) sendEvent(ctx context.Context, tctx cehttp.TransportContext, trigger provisioners.ChannelReference, event *cloudevents.Event) (*cloudevents.Event, error) {
+func (r *Receiver) sendEvent(ctx context.Context, tctx cehttp.TransportContext, trigger types.NamespacedName, event *cloudevents.Event) (*cloudevents.Event, error) {
 	t, err := r.getTrigger(ctx, trigger)
 	if err != nil {
 		r.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("triggerRef", trigger))
@@ -195,14 +194,9 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cehttp.TransportContext, 
 	return r.ceClient.Send(sendingCTX, *event)
 }
 
-func (r *Receiver) getTrigger(ctx context.Context, ref provisioners.ChannelReference) (*eventingv1alpha1.Trigger, error) {
+func (r *Receiver) getTrigger(ctx context.Context, ref types.NamespacedName) (*eventingv1alpha1.Trigger, error) {
 	t := &eventingv1alpha1.Trigger{}
-	err := r.client.Get(ctx,
-		types.NamespacedName{
-			Namespace: ref.Namespace,
-			Name:      ref.Name,
-		},
-		t)
+	err := r.client.Get(ctx, ref, t)
 	return t, err
 }
 

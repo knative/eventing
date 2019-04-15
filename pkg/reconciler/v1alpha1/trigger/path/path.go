@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 const (
@@ -35,18 +35,18 @@ func Generate(t *v1alpha1.Trigger) string {
 
 // Parse parses the Path portion of a URI to determine which Trigger the request corresponds to. It
 // is expected to be in the form "/triggers/namespace/name".
-func Parse(path string) (provisioners.ChannelReference, error) {
+func Parse(path string) (types.NamespacedName, error) {
 	parts := strings.Split(path, "/")
 	if len(parts) != 4 {
-		return provisioners.ChannelReference{}, fmt.Errorf("incorrect number of parts in the path, expected 4, actual %d, '%s'", len(parts), path)
+		return types.NamespacedName{}, fmt.Errorf("incorrect number of parts in the path, expected 4, actual %d, '%s'", len(parts), path)
 	}
 	if parts[0] != "" {
-		return provisioners.ChannelReference{}, fmt.Errorf("text before the first slash, actual '%s'", path)
+		return types.NamespacedName{}, fmt.Errorf("text before the first slash, actual '%s'", path)
 	}
 	if parts[1] != prefix {
-		return provisioners.ChannelReference{}, fmt.Errorf("incorrect prefix, expected '%s', actual '%s'", prefix, path)
+		return types.NamespacedName{}, fmt.Errorf("incorrect prefix, expected '%s', actual '%s'", prefix, path)
 	}
-	return provisioners.ChannelReference{
+	return types.NamespacedName{
 		Namespace: parts[2],
 		Name:      parts[3],
 	}, nil
