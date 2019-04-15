@@ -400,7 +400,7 @@ func makeEventWithoutTTL() *cloudevents.Event {
 				},
 			},
 			ContentType: cloudevents.StringOfApplicationJSON(),
-		},
+		}.AsV02(),
 	}
 }
 
@@ -425,6 +425,6 @@ func makeDifferentEvent() *cloudevents.Event {
 				},
 			},
 			ContentType: cloudevents.StringOfApplicationJSON(),
-		},
+		}.AsV02(),
 	}
 }

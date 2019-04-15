@@ -131,7 +131,7 @@ func (c *Codec) Decode(msg transport.Message) (*cloudevents.Event, error) {
 			return c.convertEvent(event), nil
 		}
 	default:
-		return nil, fmt.Errorf("unknown encoding for message %v", msg)
+		return nil, fmt.Errorf("unknown encoding")
 	}
 }
 
