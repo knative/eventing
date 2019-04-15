@@ -37,7 +37,7 @@ var validationTests = []struct {
 			Kind:       "Strait",
 		},
 		want: &apis.FieldError{
-			Message: "invalid value \"Strait\"",
+			Message: "invalid value: Strait",
 			Paths:   []string{"kind"},
 			Details: "only 'Channel' kind is allowed",
 		},
@@ -50,7 +50,7 @@ var validationTests = []struct {
 			Kind:       "Channel",
 		},
 		want: &apis.FieldError{
-			Message: `invalid value "eventing.knative.dev/v1alpha2"`,
+			Message: `invalid value: eventing.knative.dev/v1alpha2`,
 			Paths:   []string{"apiVersion"},
 			Details: "only eventing.knative.dev/v1alpha1 " +
 				"is allowed for apiVersion",

@@ -20,9 +20,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/kmp"
 )
 
 func (c *Channel) Validate(ctx context.Context) *apis.FieldError {
@@ -57,7 +57,13 @@ func (c *Channel) CheckImmutableFields(ctx context.Context, og apis.Immutable) *
 		return &apis.FieldError{Message: "The provided resource was not a Channel"}
 	}
 	ignoreArguments := cmpopts.IgnoreFields(ChannelSpec{}, "Arguments", "Subscribable")
-	if diff := cmp.Diff(original.Spec, c.Spec, ignoreArguments); diff != "" {
+	if diff, err := kmp.ShortDiff(original.Spec, c.Spec, ignoreArguments); err != nil {
+		return &apis.FieldError{
+			Message: "Failed to diff Channel",
+			Paths:   []string{"spec"},
+			Details: err.Error(),
+		}
+	} else if diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed",
 			Paths:   []string{"spec.provisioner"},

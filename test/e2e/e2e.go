@@ -325,7 +325,7 @@ func SendFakeEventToChannel(clients *test.Clients, event *test.CloudEvent, chann
 // If the contents are not present within timeout it returns error.
 func WaitForLogContents(clients *test.Clients, logf logging.FormatLogger, podName string, containerName string, namespace string, contents []string) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		logs, err := clients.Kube.PodLogs(podName, containerName)
+		logs, err := clients.Kube.PodLogs(podName, containerName, namespace)
 		if err != nil {
 			return true, err
 		}
@@ -343,9 +343,9 @@ func WaitForLogContents(clients *test.Clients, logf logging.FormatLogger, podNam
 
 // WaitForLogContentCount checks if the number of substr occur times equals the given number.
 // If the content does not appear the given times it returns error.
-func WaitForLogContentCount(client *test.Clients, podName, containerName, content string, appearTimes int) error {
+func WaitForLogContentCount(client *test.Clients, podName, containerName, namespace, content string, appearTimes int) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		logs, err := client.Kube.PodLogs(podName, containerName)
+		logs, err := client.Kube.PodLogs(podName, containerName, namespace)
 		if err != nil {
 			return true, err
 		}
@@ -357,7 +357,7 @@ func WaitForLogContentCount(client *test.Clients, podName, containerName, conten
 // FindAnyLogContents attempts to find logs for given Pod/Container that has 'any' of the given contents.
 // It returns an error if it couldn't retrieve the logs. In case 'any' of the contents are there, it returns true.
 func FindAnyLogContents(clients *test.Clients, logf logging.FormatLogger, podName string, containerName string, namespace string, contents []string) (bool, error) {
-	logs, err := clients.Kube.PodLogs(podName, containerName)
+	logs, err := clients.Kube.PodLogs(podName, containerName, namespace)
 	if err != nil {
 		return false, err
 	}
