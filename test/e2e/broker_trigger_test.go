@@ -18,6 +18,7 @@ limitations under the License.
 package e2e
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -75,6 +76,8 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		t.Fatalf("Error waiting for default broker to become ready: %v", err)
 	}
 
+	bytes, _ := json.MarshalIndent(defaultBroker, "", "  ")
+	fmt.Printf("##############: n%+v", string(bytes))
 	defaultBrokerUrl := fmt.Sprintf("http://%s", defaultBroker.Status.Address.Hostname)
 
 	t.Logf("Default broker ready: %q", defaultBrokerUrl)

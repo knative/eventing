@@ -50,7 +50,7 @@ function knative_teardown() {
   echo ">> Stopping Knative Eventing"
   echo "Uninstalling Knative Eventing"
   echo "Call:  ko delete --ignore-not-found=true -f config/"
-  ko delete --ignore-not-found=true -f config/
+  ko delete --ignore-not-found=true --now --timeout 60s -f config/
 
   wait_until_object_does_not_exist namespaces knative-eventing
 
