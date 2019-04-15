@@ -40,16 +40,36 @@ To run [the e2e tests](./e2e), you need to have a running environment that meets
 to specify the build tag `e2e`.
 
 ```bash
-go test -v -tags=e2e -count=1 ./test/e2e
+go test -v -tags=e2e -count=1 ./test/e2e -run ^TestMain$ -runFromMain true
+```
+
+By default, it will run all tests configured for the default
+`ClusterChannelProvisioner` in `main_test.go`.
+
+If you want to run tests against other `ClusterChannelProvisioners`, you can
+specify them through `-clusterChannelProvisioners`.
+
+```bash
+go test -v -tags=e2e -count=1 ./test/e2e -run ^TestMain$ -runFromMain true -clusterChannelProvisioners in-memory-channel,gcp-pubsub
 ```
 
 ### One test case
 
-To run one e2e test case, e.g. TestKubernetesEvents, use
+To run one e2e test case, e.g. `TestSingleBinaryEvents`, use
 [the `-run` flag with `go test`](https://golang.org/cmd/go/#hdr-Testing_flags):
 
 ```bash
-go test -v -tags=e2e -count=1 ./test/e2e -run ^TestKubernetesEvents$
+go test -v -tags=e2e -count=1 ./test/e2e -run ^TestSingleBinaryEvent$
+```
+
+By default, it will run the test against the default
+`ClusterChannelProvisioner`.
+
+If you want to run it against other `ClusterChannelProvisioners`, you can
+specify them through `-clusterChannelProvisioners`.
+
+```bash
+go test -v -tags=e2e -count=1 ./test/e2e -run ^TestSingleBinaryEvent$ -clusterChannelProvisioners in-memory-channel,gcp-pubsub
 ```
 
 ### Environment requirements
