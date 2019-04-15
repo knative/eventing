@@ -27,7 +27,6 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/channel"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/subscription"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -123,7 +122,6 @@ func main() {
 	// Add each controller's ProvideController func to this list to have the
 	// manager run it.
 	providers := []ProvideFunc{
-		subscription.ProvideController,
 		channel.ProvideController,
 		broker.ProvideController(
 			broker.ReconcilerArgs{

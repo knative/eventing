@@ -2,20 +2,33 @@
 
 
 [[projects]]
-  digest = "1:b1831dd9e209127129e5e967b26fe69f92ce95b32776b6a6d91612be6b2a45fe"
+  digest = "1:04a6834455a0a97cdd9bccc7394576ddc7a8a75f69fdc1431303c543df03bcac"
   name = "cloud.google.com/go"
   packages = [
     "compute/metadata",
     "iam",
     "internal/optional",
     "internal/version",
+    "monitoring/apiv3",
     "pubsub",
     "pubsub/apiv1",
     "pubsub/internal/distribution",
+    "trace/apiv2",
   ]
   pruneopts = "NUT"
   revision = "0ebda48a7f143b1cce9eb37a8c1106ac762a3430"
   version = "v0.34.0"
+
+[[projects]]
+  digest = "1:c7ec3a8daf56c9d7c4bb36f498f6db3f8c339b1142300dcd4328950574f91c6f"
+  name = "contrib.go.opencensus.io/exporter/stackdriver"
+  packages = [
+    ".",
+    "monitoredresource",
+  ]
+  pruneopts = "NUT"
+  revision = "0e2df90c35d1575910dc0a44da7d7b08ae76290f"
+  version = "v0.9.1"
 
 [[projects]]
   digest = "1:a074ae0f4788ea4c4c7045ab37f21943920bc20cf6ff8afcb2d971154cfa87ab"
@@ -32,6 +45,44 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "f0300d1749da6fa982027e449ec0c7a145510c3c"
+
+[[projects]]
+  digest = "1:bb3d285967352e57fa2d0bf8792712700a63b7eb41d500d742c2d2e67b52cf8e"
+  name = "github.com/aws/aws-sdk-go"
+  packages = [
+    "aws",
+    "aws/awserr",
+    "aws/awsutil",
+    "aws/client",
+    "aws/client/metadata",
+    "aws/corehandlers",
+    "aws/credentials",
+    "aws/credentials/ec2rolecreds",
+    "aws/credentials/endpointcreds",
+    "aws/credentials/processcreds",
+    "aws/credentials/stscreds",
+    "aws/csm",
+    "aws/defaults",
+    "aws/ec2metadata",
+    "aws/endpoints",
+    "aws/request",
+    "aws/session",
+    "aws/signer/v4",
+    "internal/ini",
+    "internal/sdkio",
+    "internal/sdkrand",
+    "internal/sdkuri",
+    "internal/shareddefaults",
+    "private/protocol",
+    "private/protocol/query",
+    "private/protocol/query/queryutil",
+    "private/protocol/rest",
+    "private/protocol/xml/xmlutil",
+    "service/sts",
+  ]
+  pruneopts = "NUT"
+  revision = "56c1def75689cceec1fa6f14c2eedb4b798827f9"
+  version = "v1.19.11"
 
 [[projects]]
   branch = "master"
@@ -56,6 +107,18 @@
   pruneopts = "NUT"
   revision = "c618e605e15c0d7535f6c96ff8efbb0dba4fd66c"
   version = "v2.1.15"
+
+[[projects]]
+  digest = "1:06bd9f98d7cf2097c16f820f980709eb4d04e1c7369132c351fbf1ffb54d3117"
+  name = "github.com/census-instrumentation/opencensus-proto"
+  packages = [
+    "gen-go/agent/common/v1",
+    "gen-go/metrics/v1",
+    "gen-go/resource/v1",
+  ]
+  pruneopts = "NUT"
+  revision = "a105b96453fe85139acc07b68de48f2cbdd71249"
+  version = "v0.2.0"
 
 [[projects]]
   digest = "1:fa1c3e6de410f74eb102fd927c838a66feb5b825fdf63d0e82cbbfd1a16db8a1"
@@ -187,7 +250,7 @@
   revision = "24b0969c4cb722950103eed87108c8d291a8df00"
 
 [[projects]]
-  digest = "1:0f7f0d9512487860d967bd31b4a9668316e53630fd71cb57a84ccf97c852df84"
+  digest = "1:2f01b7e14109d05096661dcb8bab93736d7ba97b4b6a54e1f415282ca3162297"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
@@ -196,7 +259,9 @@
     "ptypes/any",
     "ptypes/duration",
     "ptypes/empty",
+    "ptypes/struct",
     "ptypes/timestamp",
+    "ptypes/wrappers",
   ]
   pruneopts = "NUT"
   revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
@@ -338,6 +403,13 @@
   version = "v0.3.6"
 
 [[projects]]
+  digest = "1:1f2aebae7e7c856562355ec0198d8ca2fa222fb05e5b1b66632a1fce39631885"
+  name = "github.com/jmespath/go-jmespath"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "c2b33e84"
+
+[[projects]]
   digest = "1:da62aa6632d04e080b8a8b85a59ed9ed1550842a0099a55f3ae3a20d02a3745a"
   name = "github.com/joho/godotenv"
   packages = ["."]
@@ -363,7 +435,7 @@
   revision = "dd3ceb3323922b899a0a913f885fcf59943e7b59"
 
 [[projects]]
-  digest = "1:24c03867a9e3a7c469c927a50c9bcb07d3bceb7e2bcb706ddceb9f57c5297dde"
+  digest = "1:381261c786327980e9c75475b9a504db8b1ed1d3d79078b0475c09dfa92d1c31"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -374,10 +446,14 @@
     "apis/istio/v1alpha3",
     "changeset",
     "configmap",
+    "controller",
     "kmeta",
     "kmp",
     "logging",
     "logging/logkey",
+    "logging/testing",
+    "metrics",
+    "metrics/metricskey",
     "signals",
     "system",
     "system/testing",
@@ -655,7 +731,7 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:9368dabe955bb73491890133c1dd1ad212f16a7c47e26b331b5db0a5edbc38af"
+  digest = "1:a739f2c8e7f5ea57038c4d0a60d209d828b0ef756a9e49c7e6849fe73ec97014"
   name = "go.uber.org/zap"
   packages = [
     ".",
@@ -663,7 +739,9 @@
     "internal/bufferpool",
     "internal/color",
     "internal/exit",
+    "internal/ztest",
     "zapcore",
+    "zaptest",
     "zaptest/observer",
   ]
   pruneopts = "NUT"
@@ -823,11 +901,17 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5bc750ea612e0650b4095b019e70fc7530c0a30a33445fbd0b79c5a54a729908"
+  digest = "1:dba8c4bdaeca16a46cf1a667fe54260501055ab54ebe020baef12ac6477b9e73"
   name = "google.golang.org/genproto"
   packages = [
     "googleapis/api/annotations",
+    "googleapis/api/distribution",
+    "googleapis/api/label",
+    "googleapis/api/metric",
+    "googleapis/api/monitoredres",
+    "googleapis/devtools/cloudtrace/v2",
     "googleapis/iam/v1",
+    "googleapis/monitoring/v3",
     "googleapis/pubsub/v1",
     "googleapis/rpc/status",
     "protobuf/field_mask",
@@ -985,7 +1069,7 @@
   version = "kubernetes-1.12.5"
 
 [[projects]]
-  digest = "1:9de26569b5a8cc8c8c96051c305e980af8644064a64da29dfd0601245d22a438"
+  digest = "1:f15a0d552b80277323d01ee8acc6750bb57bdae997bc63bf192d84fb1f0b9136"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -1037,38 +1121,70 @@
     "informers/storage/v1alpha1",
     "informers/storage/v1beta1",
     "kubernetes",
+    "kubernetes/fake",
     "kubernetes/scheme",
     "kubernetes/typed/admissionregistration/v1alpha1",
+    "kubernetes/typed/admissionregistration/v1alpha1/fake",
     "kubernetes/typed/admissionregistration/v1beta1",
+    "kubernetes/typed/admissionregistration/v1beta1/fake",
     "kubernetes/typed/apps/v1",
+    "kubernetes/typed/apps/v1/fake",
     "kubernetes/typed/apps/v1beta1",
+    "kubernetes/typed/apps/v1beta1/fake",
     "kubernetes/typed/apps/v1beta2",
+    "kubernetes/typed/apps/v1beta2/fake",
     "kubernetes/typed/authentication/v1",
+    "kubernetes/typed/authentication/v1/fake",
     "kubernetes/typed/authentication/v1beta1",
+    "kubernetes/typed/authentication/v1beta1/fake",
     "kubernetes/typed/authorization/v1",
+    "kubernetes/typed/authorization/v1/fake",
     "kubernetes/typed/authorization/v1beta1",
+    "kubernetes/typed/authorization/v1beta1/fake",
     "kubernetes/typed/autoscaling/v1",
+    "kubernetes/typed/autoscaling/v1/fake",
     "kubernetes/typed/autoscaling/v2beta1",
+    "kubernetes/typed/autoscaling/v2beta1/fake",
     "kubernetes/typed/autoscaling/v2beta2",
+    "kubernetes/typed/autoscaling/v2beta2/fake",
     "kubernetes/typed/batch/v1",
+    "kubernetes/typed/batch/v1/fake",
     "kubernetes/typed/batch/v1beta1",
+    "kubernetes/typed/batch/v1beta1/fake",
     "kubernetes/typed/batch/v2alpha1",
+    "kubernetes/typed/batch/v2alpha1/fake",
     "kubernetes/typed/certificates/v1beta1",
+    "kubernetes/typed/certificates/v1beta1/fake",
     "kubernetes/typed/coordination/v1beta1",
+    "kubernetes/typed/coordination/v1beta1/fake",
     "kubernetes/typed/core/v1",
+    "kubernetes/typed/core/v1/fake",
     "kubernetes/typed/events/v1beta1",
+    "kubernetes/typed/events/v1beta1/fake",
     "kubernetes/typed/extensions/v1beta1",
+    "kubernetes/typed/extensions/v1beta1/fake",
     "kubernetes/typed/networking/v1",
+    "kubernetes/typed/networking/v1/fake",
     "kubernetes/typed/policy/v1beta1",
+    "kubernetes/typed/policy/v1beta1/fake",
     "kubernetes/typed/rbac/v1",
+    "kubernetes/typed/rbac/v1/fake",
     "kubernetes/typed/rbac/v1alpha1",
+    "kubernetes/typed/rbac/v1alpha1/fake",
     "kubernetes/typed/rbac/v1beta1",
+    "kubernetes/typed/rbac/v1beta1/fake",
     "kubernetes/typed/scheduling/v1alpha1",
+    "kubernetes/typed/scheduling/v1alpha1/fake",
     "kubernetes/typed/scheduling/v1beta1",
+    "kubernetes/typed/scheduling/v1beta1/fake",
     "kubernetes/typed/settings/v1alpha1",
+    "kubernetes/typed/settings/v1alpha1/fake",
     "kubernetes/typed/storage/v1",
+    "kubernetes/typed/storage/v1/fake",
     "kubernetes/typed/storage/v1alpha1",
+    "kubernetes/typed/storage/v1alpha1/fake",
     "kubernetes/typed/storage/v1beta1",
+    "kubernetes/typed/storage/v1beta1/fake",
     "listers/admissionregistration/v1alpha1",
     "listers/admissionregistration/v1beta1",
     "listers/apps/v1",
@@ -1254,8 +1370,10 @@
     "github.com/knative/pkg/apis/duck/v1alpha1",
     "github.com/knative/pkg/apis/istio/v1alpha3",
     "github.com/knative/pkg/configmap",
+    "github.com/knative/pkg/controller",
     "github.com/knative/pkg/logging",
     "github.com/knative/pkg/logging/logkey",
+    "github.com/knative/pkg/logging/testing",
     "github.com/knative/pkg/signals",
     "github.com/knative/pkg/system",
     "github.com/knative/pkg/system/testing",
@@ -1304,12 +1422,16 @@
     "k8s.io/client-go/discovery/fake",
     "k8s.io/client-go/dynamic",
     "k8s.io/client-go/dynamic/fake",
+    "k8s.io/client-go/informers",
     "k8s.io/client-go/kubernetes",
+    "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/kubernetes/scheme",
+    "k8s.io/client-go/kubernetes/typed/core/v1",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/testing",
     "k8s.io/client-go/tools/cache",
+    "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/record",
     "k8s.io/client-go/util/flowcontrol",
     "k8s.io/client-go/util/workqueue",

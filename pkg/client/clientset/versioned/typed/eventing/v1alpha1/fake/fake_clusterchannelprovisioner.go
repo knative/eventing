@@ -94,6 +94,17 @@ func (c *FakeClusterChannelProvisioners) Update(clusterChannelProvisioner *v1alp
 	return obj.(*v1alpha1.ClusterChannelProvisioner), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeClusterChannelProvisioners) UpdateStatus(clusterChannelProvisioner *v1alpha1.ClusterChannelProvisioner) (*v1alpha1.ClusterChannelProvisioner, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewRootUpdateSubresourceAction(clusterchannelprovisionersResource, "status", clusterChannelProvisioner), &v1alpha1.ClusterChannelProvisioner{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ClusterChannelProvisioner), err
+}
+
 // Delete takes name of the clusterChannelProvisioner and deletes it. Returns an error if one occurs.
 func (c *FakeClusterChannelProvisioners) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
