@@ -29,14 +29,9 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/channelwatcher"
-	"github.com/knative/eventing/pkg/logging"
-	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	"github.com/knative/eventing/pkg/sidecar/swappable"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
@@ -136,46 +131,9 @@ func setupChannelWatcher(logger *zap.Logger, configUpdated swappable.UpdateConfi
 		logger.Error("Error while adding eventing scheme to manager.", zap.Error(err))
 		return nil, err
 	}
-	channelwatcher.New(mgr, logger, updateChannelConfig(configUpdated))
+	channelwatcher.New(mgr, logger, channelwatcher.UpdateChannelConfigWatchHandler(configUpdated, shouldWatch))
 
 	return mgr, nil
-}
-
-func updateChannelConfig(updateConfig swappable.UpdateConfig) channelwatcher.WatchHandlerFunc {
-	return func(ctx context.Context, c client.Client, chanNamespacedName types.NamespacedName) error {
-		channels, err := listAllChannels(ctx, c)
-		if err != nil {
-			logging.FromContext(ctx).Info("Unable to list channels", zap.Error(err))
-			return err
-		}
-		config := multichannelfanout.NewConfigFromChannels(channels)
-		return updateConfig(config)
-	}
-}
-
-func listAllChannels(ctx context.Context, c client.Client) ([]v1alpha1.Channel, error) {
-	channels := make([]v1alpha1.Channel, 0)
-	for {
-		cl := &v1alpha1.ChannelList{}
-		opts := &client.ListOptions{
-			// Set Raw because if we need to get more than one page, then we will put the continue token
-			// into opts.Raw.Continue.
-			Raw: &metav1.ListOptions{},
-		}
-		if err := c.List(ctx, opts, cl); err != nil {
-			return nil, err
-		}
-		for _, c := range cl.Items {
-			if c.Status.IsReady() && shouldWatch(&c) {
-				channels = append(channels, c)
-			}
-		}
-		if cl.Continue != "" {
-			opts.Raw.Continue = cl.Continue
-		} else {
-			return channels, nil
-		}
-	}
 }
 
 func shouldWatch(ch *v1alpha1.Channel) bool {

@@ -109,7 +109,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		r.recorder.Eventf(c, corev1.EventTypeWarning, channelUpdateStatusFailed, "Failed to update Channel's status: %v", err)
 		return reconcile.Result{}, updateStatusErr
 	}
-
 	return reconcile.Result{}, err
 }
 
