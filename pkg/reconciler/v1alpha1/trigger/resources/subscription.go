@@ -18,6 +18,7 @@ package resources
 
 import (
 	"fmt"
+	"net/url"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -25,9 +26,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// NewSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'svc'
+// NewSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'uri'
 // replying to brokerIngress.
-func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerIngress *eventingv1alpha1.Channel, svc *corev1.Service) *eventingv1alpha1.Subscription {
+func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerIngress *eventingv1alpha1.Channel, uri *url.URL) *eventingv1alpha1.Subscription {
+	uriString := uri.String()
 	return &eventingv1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    t.Namespace,
@@ -48,11 +50,7 @@ func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerIngress *
 				Name:       brokerTrigger.Name,
 			},
 			Subscriber: &eventingv1alpha1.SubscriberSpec{
-				Ref: &corev1.ObjectReference{
-					APIVersion: "v1",
-					Kind:       "Service",
-					Name:       svc.Name,
-				},
+				URI: &uriString,
 			},
 			Reply: &eventingv1alpha1.ReplyStrategy{
 				Channel: &corev1.ObjectReference{
@@ -62,5 +60,14 @@ func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerIngress *
 				},
 			},
 		},
+	}
+}
+
+// SubscriptionLabels generates the labels present on the Subscription linking this Trigger to the
+// Broker's Channels.
+func SubscriptionLabels(t *eventingv1alpha1.Trigger) map[string]string {
+	return map[string]string{
+		"eventing.knative.dev/broker":  t.Spec.Broker,
+		"eventing.knative.dev/trigger": t.Name,
 	}
 }

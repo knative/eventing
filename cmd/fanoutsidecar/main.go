@@ -34,13 +34,14 @@ import (
 	"github.com/knative/eventing/pkg/sidecar/swappable"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
-	// uncomment this line to debug in GKE from local machine
-	//_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 var (
@@ -154,16 +155,27 @@ func updateChannelConfig(updateConfig swappable.UpdateConfig) channelwatcher.Wat
 
 func listAllChannels(ctx context.Context, c client.Client) ([]v1alpha1.Channel, error) {
 	channels := make([]v1alpha1.Channel, 0)
-	cl := &v1alpha1.ChannelList{}
-	if err := c.List(ctx, &client.ListOptions{}, cl); err != nil {
-		return nil, err
-	}
-	for _, c := range cl.Items {
-		if c.Status.IsReady() && shouldWatch(&c) {
-			channels = append(channels, c)
+	for {
+		cl := &v1alpha1.ChannelList{}
+		opts := &client.ListOptions{
+			// Set Raw because if we need to get more than one page, then we will put the continue token
+			// into opts.Raw.Continue.
+			Raw: &metav1.ListOptions{},
+		}
+		if err := c.List(ctx, opts, cl); err != nil {
+			return nil, err
+		}
+		for _, c := range cl.Items {
+			if c.Status.IsReady() && shouldWatch(&c) {
+				channels = append(channels, c)
+			}
+		}
+		if cl.Continue != "" {
+			opts.Raw.Continue = cl.Continue
+		} else {
+			return channels, nil
 		}
 	}
-	return channels, nil
 }
 
 func shouldWatch(ch *v1alpha1.Channel) bool {

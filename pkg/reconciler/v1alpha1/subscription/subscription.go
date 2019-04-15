@@ -102,7 +102,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	err := r.client.Get(ctx, request.NamespacedName, subscription)
 
 	if errors.IsNotFound(err) {
-		logging.FromContext(ctx).Error("Could not find Subscription")
+		logging.FromContext(ctx).Info("Could not find Subscription")
 		return reconcile.Result{}, nil
 	}
 

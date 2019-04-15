@@ -41,9 +41,14 @@ const (
 // AddFinalizerResult is used indicate whether a finalizer was added or already present.
 type AddFinalizerResult bool
 
+// RemoveFinalizerResult is used to indicate whether a finalizer was found and removed (FinalizerRemoved), or finalizer not found (FinalizerNotFound).
+type RemoveFinalizerResult bool
+
 const (
-	FinalizerAlreadyPresent AddFinalizerResult = false
-	FinalizerAdded          AddFinalizerResult = true
+	FinalizerAlreadyPresent AddFinalizerResult    = false
+	FinalizerAdded          AddFinalizerResult    = true
+	FinalizerRemoved        RemoveFinalizerResult = true
+	FinalizerNotFound       RemoveFinalizerResult = false
 )
 
 // AddFinalizer adds finalizerName to the Object.
@@ -57,16 +62,22 @@ func AddFinalizer(o metav1.Object, finalizerName string) AddFinalizerResult {
 	return FinalizerAdded
 }
 
-func RemoveFinalizer(o metav1.Object, finalizerName string) {
+func RemoveFinalizer(o metav1.Object, finalizerName string) RemoveFinalizerResult {
+	result := FinalizerNotFound
 	finalizers := sets.NewString(o.GetFinalizers()...)
-	finalizers.Delete(finalizerName)
-	o.SetFinalizers(finalizers.List())
+	if finalizers.Has(finalizerName) {
+		result = FinalizerRemoved
+		finalizers.Delete(finalizerName)
+		o.SetFinalizers(finalizers.List())
+	}
+	return result
 }
 
-type k8sServiceOption func(*corev1.Service) error
+// K8sServiceOption is a functional option that can modify the K8s Service in CreateK8sService
+type K8sServiceOption func(*corev1.Service) error
 
 // ExternalService is a functional option for CreateK8sService to create a K8s service of type ExternalName.
-func ExternalService(c *eventingv1alpha1.Channel) k8sServiceOption {
+func ExternalService(c *eventingv1alpha1.Channel) K8sServiceOption {
 	return func(svc *corev1.Service) error {
 		svc.Spec = corev1.ServiceSpec{
 			Type:         corev1.ServiceTypeExternalName,
@@ -76,7 +87,7 @@ func ExternalService(c *eventingv1alpha1.Channel) k8sServiceOption {
 	}
 }
 
-func CreateK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel, opts ...k8sServiceOption) (*corev1.Service, error) {
+func CreateK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel, opts ...K8sServiceOption) (*corev1.Service, error) {
 	getSvc := func() (*corev1.Service, error) {
 		return getK8sService(ctx, client, c)
 	}
@@ -269,7 +280,7 @@ func UpdateChannel(ctx context.Context, client runtimeClient.Client, u *eventing
 // newK8sService creates a new Service for a Channel resource. It also sets the appropriate
 // OwnerReferences on the resource so handleObject can discover the Channel resource that 'owns' it.
 // As well as being garbage collected when the Channel is deleted.
-func newK8sService(c *eventingv1alpha1.Channel, opts ...k8sServiceOption) (*corev1.Service, error) {
+func newK8sService(c *eventingv1alpha1.Channel, opts ...K8sServiceOption) (*corev1.Service, error) {
 	// Add annotations
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{

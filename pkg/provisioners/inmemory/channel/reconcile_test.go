@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	util "github.com/knative/eventing/pkg/provisioners"
@@ -245,16 +247,17 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			Name: "Channel deleted - finalizer removed",
+			Name: "Channel has finalizer (to test back compat with version <= 0.5, when finalizers were added",
 			InitialState: []runtime.Object{
-				makeDeletingChannel(),
+				makeChannelWithFinalizer(),
 			},
 			WantPresent: []runtime.Object{
-				makeDeletingChannelWithoutFinalizer(),
+				makeChannel(),
 			},
 			WantEvent: []corev1.Event{
 				events[channelReconciled],
 			},
+			WantResult: reconcile.Result{Requeue: true},
 		},
 		{
 			Name: "K8s service get fails",
@@ -399,18 +402,6 @@ func makeChannelWithWrongProvisionerName() *eventingv1alpha1.Channel {
 func makeChannelWithFinalizer() *eventingv1alpha1.Channel {
 	c := makeChannel()
 	c.Finalizers = []string{finalizerName}
-	return c
-}
-
-func makeDeletingChannel() *eventingv1alpha1.Channel {
-	c := makeChannelWithFinalizer()
-	c.DeletionTimestamp = &deletionTime
-	return c
-}
-
-func makeDeletingChannelWithoutFinalizer() *eventingv1alpha1.Channel {
-	c := makeDeletingChannel()
-	c.Finalizers = nil
 	return c
 }
 
