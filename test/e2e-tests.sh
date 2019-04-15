@@ -36,12 +36,10 @@ function knative_setup() {
   # Install the latest Knative/eventing in the current cluster
   echo ">> Starting Knative Eventing"
   echo "Installing Knative Eventing"
-  echo "Call:  ko apply -f config/"
   ko apply -f config/ || return 1
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
 
   echo "Installing In-Memory ClusterChannelProvisioner"
-  echo "Call:  ko apply -f config/provisioners/in-memory-channel/in-memory-channel.yaml"
   ko apply -f config/provisioners/in-memory-channel/in-memory-channel.yaml || return 1
   wait_until_pods_running knative-eventing || fail_test "Failed to install the In-Memory ClusterChannelProvisioner"
 }
@@ -49,7 +47,6 @@ function knative_setup() {
 function knative_teardown() {
   echo ">> Stopping Knative Eventing"
   echo "Uninstalling Knative Eventing"
-  echo "Call:  ko delete --ignore-not-found=true -f config/"
   ko delete --ignore-not-found=true --now --timeout 60s -f config/
 
   wait_until_object_does_not_exist namespaces knative-eventing
@@ -62,7 +59,6 @@ function knative_teardown() {
 function test_setup() {
   # Publish test images
   echo ">> Publishing test images"
-  echo "Call:  $(dirname $0)/upload-test-images.sh e2e"
   $(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test images"
 }
 
