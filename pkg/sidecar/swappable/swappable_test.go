@@ -30,9 +30,8 @@ import (
 )
 
 const (
-	namespace     = "default"
-	name          = "channel1"
 	replaceDomain = "replaceDomain"
+	hostName      = "a.b.c.d"
 )
 
 func TestHandler(t *testing.T) {
@@ -44,8 +43,7 @@ func TestHandler(t *testing.T) {
 				{
 					ChannelConfigs: []multichannelfanout.ChannelConfig{
 						{
-							Namespace: namespace,
-							Name:      name,
+							HostName: hostName,
 							FanoutConfig: fanout.Config{
 								Subscriptions: []eventingduck.ChannelSubscriberSpec{
 									{
@@ -59,8 +57,7 @@ func TestHandler(t *testing.T) {
 				{
 					ChannelConfigs: []multichannelfanout.ChannelConfig{
 						{
-							Namespace: namespace,
-							Name:      name,
+							HostName: hostName,
 							FanoutConfig: fanout.Config{
 								Subscriptions: []eventingduck.ChannelSubscriberSpec{
 									{
@@ -96,8 +93,7 @@ func TestHandler_InvalidConfigChange(t *testing.T) {
 			initialConfig: multichannelfanout.Config{
 				ChannelConfigs: []multichannelfanout.ChannelConfig{
 					{
-						Namespace: namespace,
-						Name:      name,
+						HostName: hostName,
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
@@ -112,12 +108,10 @@ func TestHandler_InvalidConfigChange(t *testing.T) {
 				// Duplicate (namespace, name).
 				ChannelConfigs: []multichannelfanout.ChannelConfig{
 					{
-						Namespace: namespace,
-						Name:      name,
+						HostName: hostName,
 					},
 					{
-						Namespace: namespace,
-						Name:      name,
+						HostName: hostName,
 					},
 				},
 			},
@@ -183,7 +177,7 @@ func updateConfigAndTest(t *testing.T, h *Handler, config multichannelfanout.Con
 
 func assertRequestAccepted(t *testing.T, h *Handler) {
 	w := httptest.NewRecorder()
-	h.ServeHTTP(w, makeRequest(namespace, name))
+	h.ServeHTTP(w, makeRequest(hostName))
 	if w.Code != http.StatusAccepted {
 		t.Errorf("Unexpected response code. Expected 202. Actual %v", w.Code)
 	}
@@ -196,8 +190,8 @@ func (*successHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_ = r.Body.Close()
 }
 
-func makeRequest(namespace, name string) *http.Request {
-	r := httptest.NewRequest("POST", fmt.Sprintf("http://%s.%s/", name, namespace), strings.NewReader(""))
+func makeRequest(hostName string) *http.Request {
+	r := httptest.NewRequest("POST", fmt.Sprintf("http://%s/", hostName), strings.NewReader(""))
 	return r
 }
 
