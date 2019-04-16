@@ -79,6 +79,15 @@ func main() {
 		maxMsg = m
 	}
 
+	defer func() {
+		var err error
+		r := recover()
+		if r != nil {
+			err = r.(error)
+			fmt.Printf("recovered from panic: %v", err)
+		}
+	}()
+
 	if delay > 0 {
 		log.Printf("will sleep for %s", delay)
 		time.Sleep(delay)
@@ -129,7 +138,9 @@ func main() {
 		untyped["sequence"] = fmt.Sprintf("%d", sequence)
 
 		event := cloudevents.NewEvent()
-		event.SetID(eventID)
+		if eventID != "" {
+			event.SetID(eventID)
+		}
 		event.SetType(eventType)
 		event.SetSource(source)
 		if err := event.SetData(untyped); err != nil {

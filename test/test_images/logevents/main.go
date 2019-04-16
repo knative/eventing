@@ -17,23 +17,13 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/cloudevents/sdk-go"
 )
 
 func handler(event cloudevents.Event) {
-	// TODO: in version 0.5.0 of cloudevents, below can be deleted.
-
-	ctx := event.Context.AsV02()
-	var data []byte
-	var ok bool
-	if data, ok = event.Data.([]byte); !ok {
-		fmt.Printf("Got Data Error")
-		return
-	}
-	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), *ctx.ContentType, ctx.Source.String(), string(data))
+	log.Printf("%s", event.String())
 }
 
 func main() {
