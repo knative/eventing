@@ -20,15 +20,14 @@
   version = "v0.34.0"
 
 [[projects]]
-  digest = "1:c7ec3a8daf56c9d7c4bb36f498f6db3f8c339b1142300dcd4328950574f91c6f"
+  digest = "1:b6eb7c2538ec2999a072c0e372a18d7b7e3aedac249f26e159586fa5f892909f"
   name = "contrib.go.opencensus.io/exporter/stackdriver"
   packages = [
     ".",
     "monitoredresource",
   ]
   pruneopts = "NUT"
-  revision = "0e2df90c35d1575910dc0a44da7d7b08ae76290f"
-  version = "v0.9.1"
+  revision = "c06c82c832edca4eaf7b0241bd655560a1be0346"
 
 [[projects]]
   digest = "1:a074ae0f4788ea4c4c7045ab37f21943920bc20cf6ff8afcb2d971154cfa87ab"
@@ -109,7 +108,7 @@
   version = "v2.1.15"
 
 [[projects]]
-  digest = "1:06bd9f98d7cf2097c16f820f980709eb4d04e1c7369132c351fbf1ffb54d3117"
+  digest = "1:fa965c1fd0f17153f608037e109e62104058bc1d08d44849867795fd306fa8b8"
   name = "github.com/census-instrumentation/opencensus-proto"
   packages = [
     "gen-go/agent/common/v1",
@@ -117,8 +116,8 @@
     "gen-go/resource/v1",
   ]
   pruneopts = "NUT"
-  revision = "a105b96453fe85139acc07b68de48f2cbdd71249"
-  version = "v0.2.0"
+  revision = "7f2434bc10da710debe5c4315ed6d4df454b4024"
+  version = "v0.1.0"
 
 [[projects]]
   digest = "1:fa1c3e6de410f74eb102fd927c838a66feb5b825fdf63d0e82cbbfd1a16db8a1"
@@ -298,6 +297,13 @@
   revision = "6f77996f0c42f7b84e5a2b252227263f93432e9b"
 
 [[projects]]
+  digest = "1:d7494e14f3dc2296fb1106fd59a3190f93017891d63c5025600f5794ced8b900"
+  name = "github.com/google/go-containerregistry"
+  packages = ["pkg/name"]
+  pruneopts = "NUT"
+  revision = "ec69c4a8a1bff25fcbe096fcb32c9a6543fbdccf"
+
+[[projects]]
   branch = "master"
   digest = "1:52c5834e2bebac9030c97cc0798ac11c3aa8a39f098aeb419f142533da6cd3cc"
   name = "github.com/google/gofuzz"
@@ -435,20 +441,44 @@
   revision = "dd3ceb3323922b899a0a913f885fcf59943e7b59"
 
 [[projects]]
-<<<<<<< HEAD
-  digest = "1:381261c786327980e9c75475b9a504db8b1ed1d3d79078b0475c09dfa92d1c31"
-=======
-  digest = "1:244b7861fc13a97a1c937ce845f36311dfa00284cd25599831559843cba86ded"
->>>>>>> master
+  branch = "master"
+  digest = "1:438dda5f41b0553ab3ea78f18d94ea2141e60d8e413edb4ec13b411b200f667b"
+  name = "github.com/knative/caching"
+  packages = [
+    "pkg/apis/caching",
+    "pkg/apis/caching/v1alpha1",
+    "pkg/client/clientset/versioned",
+    "pkg/client/clientset/versioned/fake",
+    "pkg/client/clientset/versioned/scheme",
+    "pkg/client/clientset/versioned/typed/caching/v1alpha1",
+    "pkg/client/clientset/versioned/typed/caching/v1alpha1/fake",
+    "pkg/client/listers/caching/v1alpha1",
+  ]
+  pruneopts = "NUT"
+  revision = "afa9ee174c6f2072b12dbb4b3bf64be8ec7bc30b"
+
+[[projects]]
+  digest = "1:85a2b257dfd2bda33f6af818a5691d337ff3e38995330884be02c8382ce594ba"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
     "apis/duck",
     "apis/duck/v1alpha1",
+    "apis/duck/v1beta1",
     "apis/istio",
+    "apis/istio/authentication",
+    "apis/istio/authentication/v1alpha1",
     "apis/istio/common/v1alpha1",
     "apis/istio/v1alpha3",
     "changeset",
+    "client/clientset/versioned",
+    "client/clientset/versioned/fake",
+    "client/clientset/versioned/scheme",
+    "client/clientset/versioned/typed/authentication/v1alpha1",
+    "client/clientset/versioned/typed/authentication/v1alpha1/fake",
+    "client/clientset/versioned/typed/istio/v1alpha3",
+    "client/clientset/versioned/typed/istio/v1alpha3/fake",
+    "client/listers/istio/v1alpha3",
     "configmap",
     "controller",
     "kmeta",
@@ -467,10 +497,40 @@
     "test/monitoring",
     "test/spoof",
     "test/zipkin",
+    "tracker",
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "1095a4eab01cb7f5bbfa4dd5d048d730a00980e3"
+  revision = "1c580f616b5c738ab261cdad8d4339a6528decdb"
+
+[[projects]]
+  branch = "master"
+  digest = "1:44c285ace76b668aa7d056f44ac3dea4693af9ca9e28be27e643d638140acf33"
+  name = "github.com/knative/serving"
+  packages = [
+    "pkg/apis/autoscaling",
+    "pkg/apis/autoscaling/v1alpha1",
+    "pkg/apis/config",
+    "pkg/apis/networking",
+    "pkg/apis/networking/v1alpha1",
+    "pkg/apis/serving",
+    "pkg/apis/serving/v1alpha1",
+    "pkg/client/clientset/versioned",
+    "pkg/client/clientset/versioned/fake",
+    "pkg/client/clientset/versioned/scheme",
+    "pkg/client/clientset/versioned/typed/autoscaling/v1alpha1",
+    "pkg/client/clientset/versioned/typed/autoscaling/v1alpha1/fake",
+    "pkg/client/clientset/versioned/typed/networking/v1alpha1",
+    "pkg/client/clientset/versioned/typed/networking/v1alpha1/fake",
+    "pkg/client/clientset/versioned/typed/serving/v1alpha1",
+    "pkg/client/clientset/versioned/typed/serving/v1alpha1/fake",
+    "pkg/client/listers/autoscaling/v1alpha1",
+    "pkg/client/listers/networking/v1alpha1",
+    "pkg/client/listers/serving/v1alpha1",
+    "pkg/reconciler/testing",
+  ]
+  pruneopts = "NUT"
+  revision = "635279a2d18128852358ab17c61fc9967284edf1"
 
 [[projects]]
   branch = "master"
@@ -735,7 +795,7 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:a739f2c8e7f5ea57038c4d0a60d209d828b0ef756a9e49c7e6849fe73ec97014"
+  digest = "1:6463628b4e2c5680bf069a15bf109ee6dd8ffc54e20447a23639167128c2c4ed"
   name = "go.uber.org/zap"
   packages = [
     ".",
@@ -749,8 +809,7 @@
     "zaptest/observer",
   ]
   pruneopts = "NUT"
-  revision = "ff33455a0e382e8a81d14dd7c922020b6b5e7982"
-  version = "v1.9.1"
+  revision = "67bc79d13d155c02fd008f721863ff8cc5f30659"
 
 [[projects]]
   branch = "master"
@@ -1369,10 +1428,15 @@
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/uuid",
     "github.com/knative/build/pkg/apis/build/v1alpha1",
+    "github.com/knative/caching/pkg/apis/caching/v1alpha1",
+    "github.com/knative/caching/pkg/client/clientset/versioned/fake",
+    "github.com/knative/caching/pkg/client/listers/caching/v1alpha1",
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
     "github.com/knative/pkg/apis/duck/v1alpha1",
     "github.com/knative/pkg/apis/istio/v1alpha3",
+    "github.com/knative/pkg/client/clientset/versioned/fake",
+    "github.com/knative/pkg/client/listers/istio/v1alpha3",
     "github.com/knative/pkg/configmap",
     "github.com/knative/pkg/controller",
     "github.com/knative/pkg/kmp",
@@ -1385,6 +1449,14 @@
     "github.com/knative/pkg/test",
     "github.com/knative/pkg/test/logging",
     "github.com/knative/pkg/webhook",
+    "github.com/knative/serving/pkg/apis/autoscaling/v1alpha1",
+    "github.com/knative/serving/pkg/apis/networking/v1alpha1",
+    "github.com/knative/serving/pkg/apis/serving/v1alpha1",
+    "github.com/knative/serving/pkg/client/clientset/versioned/fake",
+    "github.com/knative/serving/pkg/client/listers/autoscaling/v1alpha1",
+    "github.com/knative/serving/pkg/client/listers/networking/v1alpha1",
+    "github.com/knative/serving/pkg/client/listers/serving/v1alpha1",
+    "github.com/knative/serving/pkg/reconciler/testing",
     "github.com/knative/test-infra/scripts",
     "github.com/knative/test-infra/tools/dep-collector",
     "github.com/nats-io/go-nats-streaming",
@@ -1403,6 +1475,7 @@
     "google.golang.org/api/option",
     "gopkg.in/yaml.v2",
     "k8s.io/api/apps/v1",
+    "k8s.io/api/autoscaling/v1",
     "k8s.io/api/core/v1",
     "k8s.io/api/rbac/v1",
     "k8s.io/apimachinery/pkg/api/equality",
@@ -1432,6 +1505,9 @@
     "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/kubernetes/typed/core/v1",
+    "k8s.io/client-go/listers/apps/v1",
+    "k8s.io/client-go/listers/autoscaling/v1",
+    "k8s.io/client-go/listers/core/v1",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/testing",
