@@ -55,9 +55,11 @@ func main() {
 		logger.Fatal("Unable to add kafkaDispatcher", zap.Error(err))
 	}
 
-	v1alpha1.AddToScheme(mgr.GetScheme())
-	channelwatcher.New(mgr, logger, channelwatcher.UpdateConfigWatchHandler(kafkaDispatcher.UpdateConfig, shouldWatch))
-	if err != nil {
+	if err := v1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
+		logger.Fatal("Unable to add scheme for eventing apis.", zap.Error(err))
+	}
+
+	if err := channelwatcher.New(mgr, logger, channelwatcher.UpdateConfigWatchHandler(kafkaDispatcher.UpdateConfig, shouldWatch)); err != nil {
 		logger.Fatal("Unable to create channel watcher.", zap.Error(err))
 	}
 
