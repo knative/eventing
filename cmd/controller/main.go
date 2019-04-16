@@ -24,29 +24,51 @@ import (
 	"os"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime"
+	kubeinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+
+	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/logconfig"
+	"github.com/knative/eventing/pkg/logging"
+	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/channel"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/subscription"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/configmap"
-	"github.com/knative/pkg/logging"
+	kncontroller "github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging/logkey"
 	"github.com/knative/pkg/signals"
 	"github.com/knative/pkg/system"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes"
 	controllerruntime "sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
+
+// For pkg/controller
+
+const (
+	component = "controller"
+)
+
+var (
+	masterURL  = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+)
+
+// ^ pkg/controller
 
 const (
 	metricsScrapeAddr = ":9090"
@@ -67,21 +89,78 @@ func main() {
 	flag.Parse()
 	logf.SetLogger(logf.ZapLogger(false))
 
-	// Read the logging config and setup a logger.
-	cm := getLoggingConfigOrDie()
-
-	config, err := logging.NewConfigFromMap(cm, logconfig.Controller)
-	if err != nil {
-		log.Fatalf("Error parsing logging configuration: %v", err)
-	}
-	logger, atomicLevel := logging.NewLoggerFromConfig(config, logconfig.Controller)
+	logger, atomicLevel := setupLogger()
 	defer logger.Sync()
 	logger = logger.With(zap.String(logkey.ControllerType, logconfig.Controller))
 
-	logger.Info("Starting the controller")
-
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
+
+	go startControllerRuntime(stopCh, logger, atomicLevel)
+}
+
+func startPkgController(stopCh <-chan struct{}, logger *zap.SugaredLogger, atomicLevel zap.AtomicLevel) {
+	logger = logger.With(zap.String("controller/impl", "pkg"))
+	logger.Info("Starting the controller")
+
+	cfg, err := clientcmd.BuildConfigFromFlags(*masterURL, *kubeconfig)
+	if err != nil {
+		logger.Fatalw("Error building kubeconfig", zap.Error(err))
+	}
+
+	const numControllers = 1
+	cfg.QPS = numControllers * rest.DefaultQPS
+	cfg.Burst = numControllers * rest.DefaultBurst
+	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
+
+	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(opt.KubeClientSet, opt.ResyncPeriod)
+	eventingInformerFactory := informers.NewSharedInformerFactory(opt.EventingClientSet, opt.ResyncPeriod)
+
+	subscriptionInformer := eventingInformerFactory.Eventing().V1alpha1().Subscriptions()
+	//deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
+	//coreServiceInformer := kubeInformerFactory.Core().V1().Services()
+	configMapInformer := kubeInformerFactory.Core().V1().ConfigMaps()
+
+	// Build all of our controllers, with the clients constructed above.
+	// Add new controllers to this array.
+	controllers := []*kncontroller.Impl{
+		subscription.NewController(
+			opt,
+			subscriptionInformer,
+		),
+	}
+	if len(controllers) != numControllers {
+		logger.Fatalf("Number of controllers and QPS settings mismatch: %d != %d", len(controllers), numControllers)
+	}
+
+	// Watch the logging config map and dynamically update logging levels.
+	opt.ConfigMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, component))
+	// Watch the observability config map and dynamically update metrics exporter.
+	//opt.ConfigMapWatcher.Watch(metrics.ObservabilityConfigName, metrics.UpdateExporterFromConfigMap(component, logger)) // TODO
+	if err := opt.ConfigMapWatcher.Start(stopCh); err != nil {
+		logger.Fatalw("failed to start configuration manager", zap.Error(err))
+	}
+
+	// Start all of the informers and wait for them to sync.
+	logger.Info("Starting informers.")
+	if err := kncontroller.StartInformers(
+		stopCh,
+		subscriptionInformer.Informer(),
+		configMapInformer.Informer(),
+	); err != nil {
+		logger.Fatalf("Failed to start informers: %v", err)
+	}
+
+	// Start all of the controllers.
+	logger.Info("Starting controllers.")
+	go kncontroller.StartAll(stopCh, controllers...)
+	<-stopCh
+
+}
+
+func startControllerRuntime(stopCh <-chan struct{}, logger *zap.SugaredLogger, atomicLevel zap.AtomicLevel) {
+	logger = logger.With(zap.String("controller/impl", "cr"))
+	logger.Info("Starting the controller")
 
 	cfg, err := controllerruntime.GetConfig()
 	if err != nil {
@@ -95,7 +174,7 @@ func main() {
 
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
-	configMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller, logconfig.Controller))
+	configMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller))
 	if err = configMapWatcher.Start(stopCh); err != nil {
 		logger.Fatalf("Failed to start controller config map watcher: %v", err)
 	}
@@ -164,6 +243,16 @@ func main() {
 
 func init() {
 	flag.BoolVar(&hardcodedLoggingConfig, "hardCodedLoggingConfig", false, "If true, use the hard coded logging config. It is intended to be used only when debugging outside a Kubernetes cluster.")
+}
+
+func setupLogger() (*zap.SugaredLogger, zap.AtomicLevel) {
+	// Set up our logger.
+	loggingConfigMap := getLoggingConfigOrDie()
+	loggingConfig, err := logging.NewConfigFromMap(loggingConfigMap)
+	if err != nil {
+		log.Fatalf("Error parsing logging configuration: %v", err)
+	}
+	return logging.NewLoggerFromConfig(loggingConfig, component)
 }
 
 func getLoggingConfigOrDie() map[string]string {
