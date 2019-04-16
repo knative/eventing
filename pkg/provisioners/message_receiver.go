@@ -32,7 +32,7 @@ const (
 	MessageReceiverPort = 8080
 )
 
-// Message receiver receives messages.
+// MessageReceiver receives messages.
 type MessageReceiver struct {
 	receiverFunc      func(ChannelReference, *Message) error
 	forwardHeaders    sets.String
@@ -41,14 +41,16 @@ type MessageReceiver struct {
 	hostToChannelFunc ResolveChannelFromHostFunc
 }
 
-type receiverOptions func(*MessageReceiver) error
+// ReceiverOptions provides functional options to MessageReceiver function
+type ReceiverOptions func(*MessageReceiver) error
 
+// ResolveChannelFromHostFunc function enables MessageReceiver to get the Channel Reference from incoming request HostHeader
+// before calling receiverFunc
 type ResolveChannelFromHostFunc func(string) (ChannelReference, error)
 
-// ResolveChannelFromHostHeader is a receiverOption that enables the consumer of the MessageReceiver
-// to pass a map[<hostname>]ChannelReference. This map will then be used to to get the ChannelReference
-// from httpRequest.Host before calling receiverFunc
-func ResolveChannelFromHostHeader(hostToChannelFunc ResolveChannelFromHostFunc) receiverOptions {
+// ResolveChannelFromHostHeader is a ReceiverOption for NewMessageReceiver which enables the caller to overwrite the
+// default behaviour defined by ParseChannel function
+func ResolveChannelFromHostHeader(hostToChannelFunc ResolveChannelFromHostFunc) ReceiverOptions {
 	return func(r *MessageReceiver) error {
 		r.hostToChannelFunc = hostToChannelFunc
 		return nil
@@ -57,22 +59,18 @@ func ResolveChannelFromHostHeader(hostToChannelFunc ResolveChannelFromHostFunc) 
 
 // NewMessageReceiver creates a message receiver passing new messages to the
 // receiverFunc.
-func NewMessageReceiver(receiverFunc func(ChannelReference, *Message) error, logger *zap.SugaredLogger, opts ...receiverOptions) (*MessageReceiver, error) {
+func NewMessageReceiver(receiverFunc func(ChannelReference, *Message) error, logger *zap.SugaredLogger, opts ...ReceiverOptions) (*MessageReceiver, error) {
 	receiver := &MessageReceiver{
-		receiverFunc:    receiverFunc,
-		forwardHeaders:  sets.NewString(forwardHeaders...),
-		forwardPrefixes: forwardPrefixes,
-
-		logger: logger,
+		receiverFunc:      receiverFunc,
+		forwardHeaders:    sets.NewString(forwardHeaders...),
+		forwardPrefixes:   forwardPrefixes,
+		hostToChannelFunc: ResolveChannelFromHostFunc(ParseChannel),
+		logger:            logger,
 	}
 	for _, opt := range opts {
 		if err := opt(receiver); err != nil {
 			return nil, err
 		}
-	}
-	// Default to old behaviour of host = channelName.channelNamespace
-	if receiver.hostToChannelFunc == nil {
-		receiver.hostToChannelFunc = ResolveChannelFromHostFunc(ParseChannel)
 	}
 	return receiver, nil
 }

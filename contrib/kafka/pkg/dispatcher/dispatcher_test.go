@@ -406,7 +406,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 					},
 				},
 			},
-			createErr:        "Duplicate hostName found. HostName:a.b.c.d, channel:default.test-channel-2, channel:default.test-channel-1",
+			createErr:        "Duplicate hostName found. Each channel must have a unique host header. HostName:a.b.c.d, channel:default.test-channel-2, channel:default.test-channel-1",
 			oldHostToChanMap: map[string]provisioners.ChannelReference{},
 		},
 	}

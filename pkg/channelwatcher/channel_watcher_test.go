@@ -26,7 +26,7 @@ func init() {
 	_ = v1alpha1.AddToScheme(scheme.Scheme)
 }
 
-func TestUpdateChannelConfigWatchHandler(t *testing.T) {
+func TestUpdateConfigWatchHandler(t *testing.T) {
 	tests := []struct {
 		name              string
 		channels          []runtime.Object
@@ -82,7 +82,7 @@ func TestUpdateChannelConfigWatchHandler(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			actualConfig := ConfigHolder{}
-			watchHandler := UpdateChannelConfigWatchHandler(updateConfigWrapper(&actualConfig, test.updateConfigError), shouldWatch)
+			watchHandler := UpdateConfigWatchHandler(updateConfigWrapper(&actualConfig, test.updateConfigError), shouldWatch)
 			mockClient := getClient(test.channels, getClientMocks(test.clientListError))
 
 			actualError := watchHandler(context.TODO(), mockClient, types.NamespacedName{})

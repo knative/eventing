@@ -59,19 +59,19 @@ func New(mgr manager.Manager, logger *zap.Logger, watchHandler WatchHandlerFunc)
 	return nil
 }
 
-// WatchHandlerFunc is called whenever an add, update, delete or generic event is triggers on a channel watch
+// WatchHandlerFunc is called whenever an add, update, delete or generic event is triggered on a channel
 type WatchHandlerFunc func(context.Context, client.Client, types.NamespacedName) error
 
 // ShouldWatchFunc is called while returning list of channels.
 // Channels are included in the list if the return value is true.
 type ShouldWatchFunc func(ch *v1alpha1.Channel) bool
 
-// UpdateChannelConfigWatchHandler is a special handler that
+// UpdateConfigWatchHandler is a special handler that
 // 1. Lists the channels for which shouldWatch returns true
 // 2. Creates a multi-channel-fanout-config
 // 3. Calls the updateConfig func with the new multi-channel-fanout-config
 // This is used by dispatchers or receivers to update their configs by watching channels
-func UpdateChannelConfigWatchHandler(updateConfig swappable.UpdateConfig, shouldWatch ShouldWatchFunc) WatchHandlerFunc {
+func UpdateConfigWatchHandler(updateConfig swappable.UpdateConfig, shouldWatch ShouldWatchFunc) WatchHandlerFunc {
 	return func(ctx context.Context, c client.Client, chanNamespacedName types.NamespacedName) error {
 		channels, err := listAllChannels(ctx, c, shouldWatch)
 		if err != nil {

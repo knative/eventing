@@ -131,7 +131,7 @@ func setupChannelWatcher(logger *zap.Logger, configUpdated swappable.UpdateConfi
 		logger.Error("Error while adding eventing scheme to manager.", zap.Error(err))
 		return nil, err
 	}
-	channelwatcher.New(mgr, logger, channelwatcher.UpdateChannelConfigWatchHandler(configUpdated, shouldWatch))
+	channelwatcher.New(mgr, logger, channelwatcher.UpdateConfigWatchHandler(configUpdated, shouldWatch))
 
 	return mgr, nil
 }

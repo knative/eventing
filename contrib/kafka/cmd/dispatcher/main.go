@@ -56,7 +56,7 @@ func main() {
 	}
 
 	v1alpha1.AddToScheme(mgr.GetScheme())
-	channelwatcher.New(mgr, logger, channelwatcher.UpdateChannelConfigWatchHandler(kafkaDispatcher.UpdateConfig, shouldWatch))
+	channelwatcher.New(mgr, logger, channelwatcher.UpdateConfigWatchHandler(kafkaDispatcher.UpdateConfig, shouldWatch))
 	if err != nil {
 		logger.Fatal("Unable to create channel watcher.", zap.Error(err))
 	}

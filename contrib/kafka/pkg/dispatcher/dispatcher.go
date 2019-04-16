@@ -34,6 +34,7 @@ import (
 )
 
 type KafkaDispatcher struct {
+	// TODO: config doesn't have to be atomic as it is read an updated using updateLock.
 	config           atomic.Value
 	hostToChannelMap atomic.Value
 	updateLock       sync.Mutex
@@ -42,8 +43,10 @@ type KafkaDispatcher struct {
 	dispatcher *provisioners.MessageDispatcher
 
 	kafkaAsyncProducer sarama.AsyncProducer
-	kafkaConsumers     map[provisioners.ChannelReference]map[subscription]KafkaConsumer
-	kafkaCluster       KafkaCluster
+	// TODO: kafkaConsumer map should probably be atomic as it is updated and read on separate go routines with no syncchronization.
+	// Verify if this is an issue and fix accordignly
+	kafkaConsumers map[provisioners.ChannelReference]map[subscription]KafkaConsumer
+	kafkaCluster   KafkaCluster
 
 	logger *zap.Logger
 }
@@ -140,7 +143,6 @@ func (d *KafkaDispatcher) UpdateConfig(config *multichannelfanout.Config) error 
 
 		// Update the config so that it can be used for comparison during next sync
 		d.setConfig(config)
-
 	}
 	return nil
 }
@@ -150,7 +152,7 @@ func createHostToChannelMap(config *multichannelfanout.Config) (map[string]provi
 	for _, cConfig := range config.ChannelConfigs {
 		if cr, ok := hcMap[cConfig.HostName]; ok {
 			return nil, fmt.Errorf(
-				"Duplicate hostName found. HostName:%s, channel:%s.%s, channel:%s.%s",
+				"Duplicate hostName found. Each channel must have a unique host header. HostName:%s, channel:%s.%s, channel:%s.%s",
 				cConfig.HostName,
 				cConfig.Namespace,
 				cConfig.Name,

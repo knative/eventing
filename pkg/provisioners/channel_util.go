@@ -64,7 +64,7 @@ func AddFinalizer(o metav1.Object, finalizerName string) AddFinalizerResult {
 
 // RemoveFinalizer removes the finalizer(finalizerName) from the object(o) if the finalizer is present.
 // Returns: - FinalizerRemoved, if the finalizer was found and removed.
-//			- FinalizerNotFound, if the finalizer was not found.
+//          - FinalizerNotFound, if the finalizer was not found.
 func RemoveFinalizer(o metav1.Object, finalizerName string) RemoveFinalizerResult {
 	finalizers := sets.NewString(o.GetFinalizers()...)
 	if finalizers.Has(finalizerName) {
