@@ -122,18 +122,12 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		return nil
 	}
 
-	svc, err := provisioners.CreateK8sService(ctx, r.client, c)
+	svc, err := provisioners.CreateK8sService(ctx, r.client, c, provisioners.ExternalService(c))
 	if err != nil {
 		r.logger.Info("Error creating the Channel's K8s Service", zap.Error(err))
 		return err
 	}
 	c.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
-
-	_, err = provisioners.CreateVirtualService(ctx, r.client, c, svc)
-	if err != nil {
-		r.logger.Info("Error creating the Virtual Service for the Channel", zap.Error(err))
-		return err
-	}
 
 	c.Status.MarkProvisioned()
 	return nil
