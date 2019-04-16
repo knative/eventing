@@ -95,7 +95,7 @@ func Setup(t *testing.T, runInParallel bool, logf logging.FormatLogger) (*test.C
 
 // GetBaseFuncName returns the baseFuncName parsed from the fullFuncName.
 // eg. test/e2e.TestMain will return TestMain.
-// TODO(chizhg): many functions in this file can be moved to knative/pkg/test to make it cleaner.
+// TODO(Fredy-Z): many functions in this file can be moved to knative/pkg/test to make it cleaner.
 func GetBaseFuncName(fullFuncName string) string {
 	baseFuncName := fullFuncName[strings.LastIndex(fullFuncName, "/")+1:]
 	baseFuncName = baseFuncName[strings.LastIndex(baseFuncName, ".")+1:]

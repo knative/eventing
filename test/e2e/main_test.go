@@ -34,11 +34,6 @@ var channelTestMap = map[string][]func(t *testing.T){
 		TestChannelChain,
 		TestDefaultBrokerWithManyTriggers,
 	},
-
-	// "gcp-pubsub": []func(t *testing.T){
-	// 	TestEventTransformation,
-	// 	TestDefaultBrokerWithManyTriggers,
-	// },
 }
 
 func TestMain(t *testing.T) {

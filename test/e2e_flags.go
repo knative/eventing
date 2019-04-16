@@ -37,6 +37,18 @@ const (
 	DefaultBrokerName = "default"
 )
 
+// validProvisioners is a list of provisioners that Eventing currently support.
+var validProvisioners = []string{DefaultClusterChannelProvisioner}
+
+func isValid(provisioner string) bool {
+	for i := range validProvisioners {
+		if provisioner == validProvisioners[i] {
+			return true
+		}
+	}
+	return false
+}
+
 // EventingFlags holds the command line flags specific to knative/eventing.
 var EventingFlags = initializeEventingFlags()
 
@@ -52,6 +64,11 @@ func (ps *Provisioners) String() string {
 func (ps *Provisioners) Set(value string) error {
 	for _, provisioner := range strings.Split(value, ",") {
 		provisioner := strings.TrimSpace(provisioner)
+		if !isValid(provisioner) {
+			fmt.Printf("The given provisioner %q is not supported, tests cannot be run.\n", provisioner)
+			os.Exit(1)
+		}
+
 		*ps = append(*ps, provisioner)
 	}
 	return nil
