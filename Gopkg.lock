@@ -458,7 +458,7 @@
   revision = "afa9ee174c6f2072b12dbb4b3bf64be8ec7bc30b"
 
 [[projects]]
-  digest = "1:85a2b257dfd2bda33f6af818a5691d337ff3e38995330884be02c8382ce594ba"
+  digest = "1:4db4149db0c0ad1cba0764e7885bb138e619617ec6c131de0954cdb730942873"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -488,6 +488,7 @@
     "logging/testing",
     "metrics",
     "metrics/metricskey",
+    "reconciler/testing",
     "signals",
     "system",
     "system/testing",
@@ -501,7 +502,8 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "1c580f616b5c738ab261cdad8d4339a6528decdb"
+  revision = "b4e9ee3fa093176a369b59440a34cf2af89d041e"
+  source = "github.com/n3wscott/pkg"
 
 [[projects]]
   branch = "master"
@@ -1443,6 +1445,7 @@
     "github.com/knative/pkg/logging",
     "github.com/knative/pkg/logging/logkey",
     "github.com/knative/pkg/logging/testing",
+    "github.com/knative/pkg/reconciler/testing",
     "github.com/knative/pkg/signals",
     "github.com/knative/pkg/system",
     "github.com/knative/pkg/system/testing",

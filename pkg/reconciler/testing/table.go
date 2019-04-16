@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors.
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,395 +18,299 @@ package testing
 
 import (
 	"context"
-	"path"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/kmeta"
-	_ "github.com/knative/pkg/system/testing" // Setup system.Namespace()
-	"k8s.io/apimachinery/pkg/api/resource"
+	"github.com/knative/pkg/apis"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	clientgotesting "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// TableRow holds a single row of our table test.
-type TableRow struct {
+// TestCase holds a single row of our table test.
+type TestCase struct {
 	// Name is a descriptive name for this test suitable as a first argument to t.Run()
 	Name string
 
-	// Objects holds the state of the world at the onset of reconciliation.
-	Objects []runtime.Object
+	// InitialState is the list of objects that already exists when reconciliation
+	// starts.
+	InitialState []runtime.Object
 
-	// Key is the parameter to reconciliation.
-	// This has the form "namespace/name".
-	Key string
+	// ReconcileKey is the key of the object to reconcile in namespace/name form.
+	ReconcileKey string
 
-	// WantErr holds whether we should expect the reconciliation to result in an error.
+	// WantErr is true when we expect the Reconcile function to return an error.
 	WantErr bool
 
-	// WantCreates holds the ordered list of Create calls we expect during reconciliation.
-	WantCreates []metav1.Object
+	// WantErrMsg contains the pattern to match the returned error message.
+	// Implies WantErr = true.
+	WantErrMsg string
 
-	// WantGets holds the ordered list of Get calls we expect during reconciliation.
-	WantGets []clientgotesting.GetActionImpl
+	// WantResult is the reconcile result we expect to be returned from the
+	// Reconcile function.
+	WantResult reconcile.Result
 
-	// WantUpdates holds the ordered list of Update calls we expect during reconciliation.
-	WantUpdates []clientgotesting.UpdateActionImpl
+	// WantPresent holds the non-exclusive set of objects we expect to exist
+	// after reconciliation completes.
+	WantPresent []runtime.Object
 
-	// WantStatusUpdates holds the ordered list of Update calls, with `status` subresource set,
-	// that we expect during reconciliation.
-	WantStatusUpdates []clientgotesting.UpdateActionImpl
+	// WantAbsent holds the list of objects expected to not exist
+	// after reconciliation completes.
+	WantAbsent []runtime.Object
 
-	// WantDeletes holds the ordered list of Delete calls we expect during reconciliation.
-	WantDeletes []clientgotesting.DeleteActionImpl
+	// WantEvent holds the list of events expected to exist after
+	// reconciliation completes.
+	WantEvent []corev1.Event
 
-	// WantDeleteCollections holds the ordered list of DeleteCollection calls we expect during reconciliation.
-	WantDeleteCollections []clientgotesting.DeleteCollectionActionImpl
+	// Mocks that tamper with the client's responses.
+	Mocks Mocks
 
-	// WantPatches holds the ordered list of Patch calls we expect during reconciliation.
-	WantPatches []clientgotesting.PatchActionImpl
+	// DynamicMocks that tamper with the dynamic client's responses.
+	DynamicMocks DynamicMocks
 
-	// WantEvents holds the ordered list of events we expect during reconciliation.
-	WantEvents []string
+	// Scheme for the dynamic client
+	Scheme *runtime.Scheme
 
-	// WantServiceReadyStats holds the ServiceReady stats we exepect during reconciliation.
-	WantServiceReadyStats map[string]int
+	// Fake dynamic objects
+	Objects []runtime.Object
 
-	// WithReactors is a set of functions that are installed as Reactors for the execution
-	// of this row of the table-driven-test.
-	WithReactors []clientgotesting.ReactionFunc
+	// OtherTestData is arbitrary data needed for the test. It is not used directly by the table
+	// testing framework. Instead it is used in the test method. E.g. setting up the responses for a
+	// fake GCP PubSub client can go in here, as no other field makes sense for it.
+	OtherTestData map[string]interface{}
 
-	// For cluster-scoped resources like ClusterIngress, it does not have to be
-	// in the same namespace with its child resources.
-	SkipNamespaceValidation bool
+	// AdditionalVerification is for any verification that needs to be done on top of the normal
+	// result/error verification and WantPresent/WantAbsent.
+	AdditionalVerification []func(t *testing.T, tc *TestCase)
+
+	// IgnoreTimes causes comparisons to ignore fields of type apis.VolatileTime.
+	IgnoreTimes bool
 }
 
-func objKey(o runtime.Object) string {
-	on := o.(kmeta.Accessor)
-	// namespace + name is not unique, and the tests don't populate k8s kind
-	// information, so use GoLang's type name as part of the key.
-	return path.Join(reflect.TypeOf(o).String(), on.GetNamespace(), on.GetName())
-}
+// Runner returns a testing func that can be passed to t.Run.
+func (tc *TestCase) Runner(t *testing.T, r reconcile.Reconciler, c *MockClient, recorder *MockEventRecorder) func(t *testing.T) {
+	return func(t *testing.T) {
+		result, recErr := tc.Reconcile(r)
 
-// Factory returns a Reconciler.Interface to perform reconciliation in table test,
-// ActionRecorderList/EventList to capture k8s actions/events produced during reconciliation
-// and FakeStatsReporter to capture stats.
-type Factory func(*testing.T, *TableRow) (controller.Reconciler, ActionRecorderList, EventList, *FakeStatsReporter)
+		if err := tc.VerifyErr(recErr); err != nil {
+			t.Error(err)
+		}
 
-// Test executes the single table test.
-func (r *TableRow) Test(t *testing.T, factory Factory) {
-	t.Helper()
-	c, recorderList, eventList, statsReporter := factory(t, r)
+		if err := tc.VerifyResult(result); err != nil {
+			t.Error(err)
+		}
 
-	// Run the Reconcile we're testing.
-	if err := c.Reconcile(context.Background(), r.Key); (err != nil) != r.WantErr {
-		t.Errorf("Reconcile() error = %v, WantErr %v", err, r.WantErr)
+		// Verifying should be done against the innerClient, never against mocks.
+		c.stopMocking()
+
+		if err := tc.VerifyWantPresent(c); err != nil {
+			t.Error(err)
+		}
+
+		if err := tc.VerifyWantAbsent(c); err != nil {
+			t.Error(err)
+		}
+
+		if err := tc.VerifyWantEvent(recorder); err != nil {
+			t.Error(err)
+		}
+
+		for _, av := range tc.AdditionalVerification {
+			av(t, tc)
+		}
 	}
+}
 
-	expectedNamespace, _, _ := cache.SplitMetaNamespaceKey(r.Key)
+// GetDynamicClient returns the mockDynamicClient to use for this test case.
+func (tc *TestCase) GetDynamicClient() dynamic.Interface {
+	var realInterface dynamic.Interface
+	if tc.Scheme != nil {
+		realInterface = dynamicfake.NewSimpleDynamicClient(tc.Scheme, tc.Objects...)
+	} else {
+		realInterface = dynamicfake.NewSimpleDynamicClient(runtime.NewScheme(), tc.Objects...)
+	}
+	return NewMockDynamicInterface(realInterface, tc.DynamicMocks)
+}
 
-	actions, err := recorderList.ActionsByVerb()
+// GetClient returns the mockClient to use for this test case.
+func (tc *TestCase) GetClient() *MockClient {
+	builtObjects := buildAllObjects(tc.InitialState)
+	innerClient := fake.NewFakeClient(builtObjects...)
+	return NewMockClient(innerClient, tc.Mocks)
+}
+
+// GetEventRecorder returns the mockEventRecorder to use for this test case.
+func (tc *TestCase) GetEventRecorder() *MockEventRecorder {
+	return NewEventRecorder()
+}
+
+// Reconcile calls the given reconciler's Reconcile() function with the test
+// case's reconcile request.
+func (tc *TestCase) Reconcile(r reconcile.Reconciler) (reconcile.Result, error) {
+	if tc.ReconcileKey == "" {
+		return reconcile.Result{}, fmt.Errorf("test did not set ReconcileKey")
+	}
+	ns, n, err := cache.SplitMetaNamespaceKey(tc.ReconcileKey)
 	if err != nil {
-		t.Errorf("Error capturing actions by verb: %q", err)
+		return reconcile.Result{}, err
+	}
+	return r.Reconcile(reconcile.Request{
+		NamespacedName: types.NamespacedName{
+			Namespace: ns,
+			Name:      n,
+		},
+	})
+}
+
+// VerifyErr verifies that the given error returned from Reconcile is the error
+// expected by the test case.
+func (tc *TestCase) VerifyErr(err error) error {
+	// A non-empty WantErrMsg implies that an error is wanted.
+	wantErr := tc.WantErr || tc.WantErrMsg != ""
+
+	if wantErr && err == nil {
+		return fmt.Errorf("want error, got nil")
 	}
 
-	// Previous state is used to diff resource expected state for update requests that were missed.
-	objPrevState := map[string]runtime.Object{}
-	for _, o := range r.Objects {
-		objPrevState[objKey(o)] = o
+	if !wantErr && err != nil {
+		return fmt.Errorf("want no error, got %v", err)
 	}
 
-	for i, want := range r.WantCreates {
-		if i >= len(actions.Creates) {
-			t.Errorf("Missing create: %#v", want)
-			continue
-		}
-		got := actions.Creates[i]
-		obj := got.GetObject()
-		objPrevState[objKey(obj)] = obj
-
-		if !r.SkipNamespaceValidation && got.GetNamespace() != expectedNamespace {
-			t.Errorf("Unexpected action[%d]: %#v", i, got)
-		}
-
-		if diff := cmp.Diff(want, obj, ignoreLastTransitionTime, safeDeployDiff, cmpopts.EquateEmpty()); diff != "" {
-			t.Errorf("Unexpected create (-want, +got): %s", diff)
+	if err != nil {
+		if diff := cmp.Diff(tc.WantErrMsg, err.Error()); diff != "" {
+			return fmt.Errorf("incorrect error (-want, +got): %v", diff)
 		}
 	}
-	if got, want := len(actions.Creates), len(r.WantCreates); got > want {
-		for _, extra := range actions.Creates[want:] {
-			t.Errorf("Extra create: %#v", extra)
-		}
+	return nil
+}
+
+// VerifyResult verifies that the given result returned from Reconcile is the
+// result expected by the test case.
+func (tc *TestCase) VerifyResult(result reconcile.Result) error {
+	if diff := cmp.Diff(tc.WantResult, result); diff != "" {
+		return fmt.Errorf("unexpected reconcile Result (-want +got) %v", diff)
 	}
+	return nil
+}
 
-	gets := filterGetsWithSubresource("", actions.Gets)
-	//for i, want := range r.WantGets {
-	//	if i >= len(gets) {
-	//
-	//		want.Resource
-	//
-	//		TODO omg what
-	//
-	//
-	//		wo := want.()
-	//		key := objKey(wo)
-	//		oldObj, ok := objPrevState[key]
-	//		if !ok {
-	//			t.Errorf("Object %s was never created: want: %#v", key, wo)
-	//			continue
-	//		}
-	//		t.Errorf("Missing get for %s (-want, +prevState): %s", key,
-	//			cmp.Diff(wo, oldObj, ignoreLastTransitionTime, safeDeployDiff, cmpopts.EquateEmpty()))
-	//		continue
-	//	}
-	//
-	//	if want.GetSubresource() != "" {
-	//		t.Errorf("Expectation was invalid - it should not include a subresource: %#v", want)
-	//	}
-	//
-	//	got := updates[i].GetObject()
-	//
-	//	// Update the object state.
-	//	objPrevState[objKey(got)] = got
-	//
-	//	if diff := cmp.Diff(want.GetObject(), got, ignoreLastTransitionTime, safeDeployDiff, cmpopts.EquateEmpty()); diff != "" {
-	//		t.Errorf("Unexpected get (-want, +got): %s", diff)
-	//	}
-	//}
-	if got, want := len(gets), len(r.WantGets); got > want {
-		for _, extra := range gets[want:] {
-			t.Errorf("Extra get: %#v", extra)
-		}
+type stateErrors struct {
+	errors []error
+}
+
+func (se stateErrors) Error() string {
+	msgs := make([]string, 0)
+	for _, err := range se.errors {
+		msgs = append(msgs, err.Error())
 	}
+	return strings.Join(msgs, "\n")
+}
 
-	updates := filterUpdatesWithSubresource("", actions.Updates)
-	for i, want := range r.WantUpdates {
-		if i >= len(updates) {
-			wo := want.GetObject()
-			key := objKey(wo)
-			oldObj, ok := objPrevState[key]
-			if !ok {
-				t.Errorf("Object %s was never created: want: %#v", key, wo)
-				continue
-			}
-			t.Errorf("Missing update for %s (-want, +prevState): %s", key,
-				cmp.Diff(wo, oldObj, ignoreLastTransitionTime, safeDeployDiff, cmpopts.EquateEmpty()))
-			continue
+// VerifyWantPresent verifies that the client contains all the objects expected
+// to be present after reconciliation.
+func (tc *TestCase) VerifyWantPresent(c client.Client) error {
+	var errs stateErrors
+	builtObjects := buildAllObjects(tc.WantPresent)
+	for _, wp := range builtObjects {
+		o, err := scheme.Scheme.New(wp.GetObjectKind().GroupVersionKind())
+		if err != nil {
+			errs.errors = append(errs.errors, fmt.Errorf("error creating a copy of %T: %v", wp, err))
 		}
-
-		if want.GetSubresource() != "" {
-			t.Errorf("Expectation was invalid - it should not include a subresource: %#v", want)
+		acc, err := meta.Accessor(wp)
+		if err != nil {
+			errs.errors = append(errs.errors, fmt.Errorf("error getting accessor for %#v %v", wp, err))
 		}
-
-		got := updates[i].GetObject()
-
-		// Update the object state.
-		objPrevState[objKey(got)] = got
-
-		if diff := cmp.Diff(want.GetObject(), got, ignoreLastTransitionTime, safeDeployDiff, cmpopts.EquateEmpty()); diff != "" {
-			t.Errorf("Unexpected update (-want, +got): %s", diff)
-		}
-	}
-	if got, want := len(updates), len(r.WantUpdates); got > want {
-		for _, extra := range updates[want:] {
-			t.Errorf("Extra update: %#v", extra)
-		}
-	}
-
-	// TODO(#2843): refactor.
-	statusUpdates := filterUpdatesWithSubresource("status", actions.Updates)
-	for i, want := range r.WantStatusUpdates {
-		if i >= len(statusUpdates) {
-			wo := want.GetObject()
-			key := objKey(wo)
-			oldObj, ok := objPrevState[key]
-			if !ok {
-				t.Errorf("Object %s was never created: want: %#v", key, wo)
-				continue
-			}
-			t.Errorf("Missing status update for %s (-want, +prevState): %s", key,
-				cmp.Diff(wo, oldObj, ignoreLastTransitionTime, safeDeployDiff, cmpopts.EquateEmpty()))
-			continue
-		}
-
-		got := statusUpdates[i].GetObject()
-
-		// Update the object state.
-		objPrevState[objKey(got)] = got
-
-		if diff := cmp.Diff(want.GetObject(), got, ignoreLastTransitionTime, safeDeployDiff, cmpopts.EquateEmpty()); diff != "" {
-			t.Errorf("Unexpected status update (-want, +got): %s\nFull: %v", diff, got)
-		}
-	}
-	if got, want := len(statusUpdates), len(r.WantStatusUpdates); got > want {
-		for _, extra := range statusUpdates[want:] {
-			wo := extra.GetObject()
-			key := objKey(wo)
-			oldObj, ok := objPrevState[key]
-			if !ok {
-				t.Errorf("Object %s was never created: want: %#v", key, wo)
-				continue
-			}
-			t.Errorf("Extra status update for %s (-extra, +prevState): %s", key,
-				cmp.Diff(wo, oldObj, ignoreLastTransitionTime, safeDeployDiff, cmpopts.EquateEmpty()))
-		}
-	}
-
-	if len(statusUpdates)+len(updates) != len(actions.Updates) {
-		var unexpected []clientgotesting.UpdateAction
-
-		for _, update := range actions.Updates {
-			if update.GetSubresource() != "status" && update.GetSubresource() != "" {
-				unexpected = append(unexpected, update)
+		err = c.Get(context.TODO(), client.ObjectKey{Namespace: acc.GetNamespace(), Name: acc.GetName()}, o)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				errs.errors = append(errs.errors, fmt.Errorf("want present %T %s/%s, got absent", wp, acc.GetNamespace(), acc.GetName()))
+			} else {
+				errs.errors = append(errs.errors, fmt.Errorf("error getting %T %s/%s: %v", wp, acc.GetNamespace(), acc.GetName(), err))
 			}
 		}
 
-		t.Errorf("Unexpected subresource updates occurred %#v", unexpected)
-	}
-
-	for i, want := range r.WantDeletes {
-		if i >= len(actions.Deletes) {
-			t.Errorf("Missing delete: %#v", want)
-			continue
-		}
-		got := actions.Deletes[i]
-		if got.GetName() != want.GetName() {
-			t.Errorf("Unexpected delete[%d]: %#v", i, got)
-		}
-		if !r.SkipNamespaceValidation && got.GetNamespace() != expectedNamespace {
-			t.Errorf("Unexpected delete[%d]: %#v", i, got)
-		}
-	}
-	if got, want := len(actions.Deletes), len(r.WantDeletes); got > want {
-		for _, extra := range actions.Deletes[want:] {
-			t.Errorf("Extra delete: %#v", extra)
-		}
-	}
-
-	for i, want := range r.WantDeleteCollections {
-		if i >= len(actions.DeleteCollections) {
-			t.Errorf("Missing delete-collection: %#v", want)
-			continue
-		}
-		got := actions.DeleteCollections[i]
-		if got, want := got.GetListRestrictions().Labels, want.GetListRestrictions().Labels; (got != nil) != (want != nil) || got.String() != want.String() {
-			t.Errorf("Unexpected delete-collection[%d].Labels = %v, wanted %v", i, got, want)
-		}
-		// TODO(mattmoor): Add this if/when we need support.
-		if got := got.GetListRestrictions().Fields; got.String() != "" {
-			t.Errorf("Unexpected delete-collection[%d].Fields = %v, wanted ''", i, got)
-		}
-		if !r.SkipNamespaceValidation && got.GetNamespace() != expectedNamespace {
-			t.Errorf("Unexpected delete-collection[%d]: %#v, wanted %s", i, got, expectedNamespace)
-		}
-	}
-	if got, want := len(actions.DeleteCollections), len(r.WantDeleteCollections); got > want {
-		for _, extra := range actions.DeleteCollections[want:] {
-			t.Errorf("Extra delete-collection: %#v", extra)
-		}
-	}
-
-	for i, want := range r.WantPatches {
-		if i >= len(actions.Patches) {
-			t.Errorf("Missing patch: %#v; raw: %s", want, string(want.GetPatch()))
-			continue
+		diffOpts := cmp.Options{
+			// Ignore TypeMeta, since the objects created by the controller won't have
+			// it
+			cmpopts.IgnoreTypes(metav1.TypeMeta{}),
 		}
 
-		got := actions.Patches[i]
-		if got.GetName() != want.GetName() {
-			t.Errorf("Unexpected patch[%d]: %#v", i, got)
-		}
-		if !r.SkipNamespaceValidation && got.GetNamespace() != expectedNamespace {
-			t.Errorf("Unexpected patch[%d]: %#v", i, got)
-		}
-		if diff := cmp.Diff(string(want.GetPatch()), string(got.GetPatch())); diff != "" {
-			t.Errorf("Unexpected patch(-want, +got): %s", diff)
-		}
-	}
-	if got, want := len(actions.Patches), len(r.WantPatches); got > want {
-		for _, extra := range actions.Patches[want:] {
-			t.Errorf("Extra patch: %#v; raw: %s", extra, string(extra.GetPatch()))
-		}
-	}
-
-	gotEvents := eventList.Events()
-	for i, want := range r.WantEvents {
-		if i >= len(gotEvents) {
-			t.Errorf("Missing event: %s", want)
-			continue
+		if tc.IgnoreTimes {
+			// Ignore VolatileTime fields, since they rarely compare correctly.
+			diffOpts = append(diffOpts, cmpopts.IgnoreTypes(apis.VolatileTime{}))
 		}
 
-		if diff := cmp.Diff(want, gotEvents[i]); diff != "" {
-			t.Errorf("unexpected event(-want, +got): %s", diff)
+		if diff := cmp.Diff(wp, o, diffOpts...); diff != "" {
+			errs.errors = append(errs.errors, fmt.Errorf("Unexpected present %T %s/%s (-want +got):\n%v", wp, acc.GetNamespace(), acc.GetName(), diff))
 		}
 	}
-	if got, want := len(gotEvents), len(r.WantEvents); got > want {
-		for _, extra := range gotEvents[want:] {
-			t.Errorf("Extra event: %s", extra)
-		}
+	if len(errs.errors) > 0 {
+		return errs
 	}
-
-	gotStats := statsReporter.GetServiceReadyStats()
-	if diff := cmp.Diff(r.WantServiceReadyStats, gotStats); diff != "" {
-		t.Errorf("Unexpected service ready stats (-want, +got): %s", diff)
-	}
+	return nil
 }
 
-func filterGetsWithSubresource(
-	subresource string,
-	actions []clientgotesting.GetAction) (result []clientgotesting.GetAction) {
-	for _, action := range actions {
-		if action.GetSubresource() == subresource {
-			result = append(result, action)
+// VerifyWantAbsent verifies that the client does not contain any of the objects
+// expected to be absent after reconciliation.
+func (tc *TestCase) VerifyWantAbsent(c client.Client) error {
+	var errs stateErrors
+	for _, wa := range tc.WantAbsent {
+		acc, err := meta.Accessor(wa)
+		if err != nil {
+			errs.errors = append(errs.errors, fmt.Errorf("error getting accessor for %#v %v", wa, err))
+		}
+		err = c.Get(context.TODO(), client.ObjectKey{Namespace: acc.GetNamespace(), Name: acc.GetName()}, wa)
+		if err == nil {
+			errs.errors = append(errs.errors, fmt.Errorf("want absent, got present %T %s/%s", wa, acc.GetNamespace(), acc.GetName()))
+		}
+		if !apierrors.IsNotFound(err) {
+			errs.errors = append(errs.errors, fmt.Errorf("error getting %T %s/%s: %v", wa, acc.GetNamespace(), acc.GetName(), err))
 		}
 	}
-	return
-}
-
-func filterUpdatesWithSubresource(
-	subresource string,
-	actions []clientgotesting.UpdateAction) (result []clientgotesting.UpdateAction) {
-	for _, action := range actions {
-		if action.GetSubresource() == subresource {
-			result = append(result, action)
-		}
+	if len(errs.errors) > 0 {
+		return errs
 	}
-	return
+	return nil
 }
 
-// TableTest represents a list of TableRow tests instances.
-type TableTest []TableRow
-
-// Test executes the whole suite of the table tests.
-func (tt TableTest) Test(t *testing.T, factory Factory) {
-	t.Helper()
-	for _, test := range tt {
-		// Record the original objects in table.
-		originObjects := []runtime.Object{}
-		for _, obj := range test.Objects {
-			originObjects = append(originObjects, obj.DeepCopyObject())
-		}
-		t.Run(test.Name, func(t *testing.T) {
-			t.Helper()
-			test.Test(t, factory)
-		})
-		// Validate cached objects do not get soiled after controller loops
-		if diff := cmp.Diff(originObjects, test.Objects, safeDeployDiff, cmpopts.EquateEmpty()); diff != "" {
-			t.Errorf("Unexpected objects in test %s (-want, +got): %v", test.Name, diff)
-		}
+// VerifyWantEvent verifies that the eventRecorder does contain the events
+// expected in the same order as they were emitted after reconciliation.
+func (tc *TestCase) VerifyWantEvent(eventRecorder *MockEventRecorder) error {
+	if !reflect.DeepEqual(tc.WantEvent, eventRecorder.events) {
+		return fmt.Errorf("expected %s, got %s", getEventsAsString(tc.WantEvent), getEventsAsString(eventRecorder.events))
 	}
+	return nil
 }
 
-var (
-	ignoreLastTransitionTime = cmp.FilterPath(func(p cmp.Path) bool {
-		return strings.HasSuffix(p.String(), "LastTransitionTime.Inner.Time")
-	}, cmp.Ignore())
+func getEventsAsString(events []corev1.Event) []string {
+	eventsAsString := make([]string, 0, len(events))
+	for _, event := range events {
+		eventsAsString = append(eventsAsString, fmt.Sprintf("(%s,%s)", event.Reason, event.Type))
+	}
+	return eventsAsString
+}
 
-	safeDeployDiff = cmpopts.IgnoreUnexported(resource.Quantity{})
-)
+func buildAllObjects(objs []runtime.Object) []runtime.Object {
+	builtObjs := []runtime.Object{}
+	for _, obj := range objs {
+		if builder, ok := obj.(Buildable); ok {
+			obj = builder.Build()
+		}
+		builtObjs = append(builtObjs, obj)
+	}
+	return builtObjs
+}

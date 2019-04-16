@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,18 +17,13 @@ limitations under the License.
 package testing
 
 import (
-	corev1 "k8s.io/api/core/v1"
-
-	"github.com/knative/pkg/tracker"
+	"time"
 )
 
-// NullTracker implements Tracker.
-type NullTracker struct{}
+type FakeClock struct {
+	Time time.Time
+}
 
-var _ tracker.Interface = (*NullTracker)(nil)
-
-// OnChanged implements OnChanged.
-func (*NullTracker) OnChanged(interface{}) {}
-
-// Track implements Track.
-func (*NullTracker) Track(corev1.ObjectReference, interface{}) error { return nil }
+func (c FakeClock) Now() time.Time {
+	return c.Time
+}

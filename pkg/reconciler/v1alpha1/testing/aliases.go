@@ -17,8 +17,8 @@ limitations under the License.
 package testing
 
 import (
-	"github.com/knative/eventing/pkg/reconciler/testing"
 	logtesting "github.com/knative/pkg/logging/testing"
+	"github.com/knative/pkg/reconciler/testing"
 )
 
 type (
@@ -39,7 +39,6 @@ var (
 	ExpectNormalEventDelivery = testing.ExpectNormalEventDelivery
 	ValidateCreates           = testing.ValidateCreates
 	ValidateUpdates           = testing.ValidateUpdates
-	ValidateGets              = testing.ValidateGets
 	ConfigMapFromTestFile     = testing.ConfigMapFromTestFile
 	Eventf                    = testing.Eventf
 

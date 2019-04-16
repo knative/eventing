@@ -98,10 +98,11 @@ required = [
 
 # Constrain the version of knative/pkg we would like to import.
 # This controls when we upgrade apis independently of Serving.
-[[constraint]]
+[[override]]
   name = "github.com/knative/pkg"
   # HEAD as of 2019-04-16
-  revision = "1c580f616b5c738ab261cdad8d4339a6528decdb"
+  revision = "b4e9ee3fa093176a369b59440a34cf2af89d041e"
+  source = "github.com/n3wscott/pkg" # DO NOT CHECK IN
 
 # TODO why is this overridden?
 [[override]]
