@@ -7,7 +7,7 @@ sprint with the release cycle of 6 weeks. Eventually this may change as we learn
 from the process.
 
 ##How to manage Bugs
-- Refer to [How to manage bugs](bug_triage.md)
+- Refer to [How to manage bugs](bug_triage.md).
 
 ## How to manage Story/Feature?
 
