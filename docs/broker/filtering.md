@@ -44,14 +44,10 @@ Trigger's subscriber.
 
 The evaluation environment of the expression may include:
 
-*   Standard CloudEvents attributes like type and source
-*   Custom extensions dynamically parsed from the event
+*   Official CloudEvents attributes like type and source.
+*   Custom extension attributes dynamically parsed from the event.
 *   Data fields parsed from the event, if the data content type is known to be
     parseable
-
-Since parsing dynamic extension attributes and data fields may be costly, the
-Trigger must explicitly enable it by setting boolean fields adjacent to the
-expression. See [examples](#examples) for syntax.
 
 The expression language chosen is
 [CEL](https://github.com/google/cel-spec/blob/9cdb3682ba04109d2e03d9b048986bae113bf36f/doc/intro.md)
@@ -65,8 +61,29 @@ spec:
     cel:
       expression: >
         ce.type == "com.github.pull.create" &&
-        source == "https://github.com/knative/eventing/pulls/123"
+        ce.source == "https://github.com/knative/eventing/pulls/123"
 ```
+
+### Variable prefixes
+
+| Prefix |Description |
+|--------|------------|
+| `ce`   | Official CloudEvents attributes defined in the spec, plus extension attributes if requested. |
+| `data` | Fields parsed from the event data, if requested. |
+
+Official attributes and extension attributes are both available to the
+expression under the prefix `ce`. This co-mingling is intended to ease the
+promotion of extension attributes to official attributes. The prefix `ce` was
+chosen for succintness and its suggestion that CloudEvents is the operative
+specification.
+
+Data fields are available to the expression under the prefix `data`.
+
+Parsing dynamic extension attributes and data fields may be costly. In this
+initial proposal, the Trigger must explicitly enable dynamic parsing by setting
+boolean fields `parseExtensions` and/or `parseData`. Future work may
+eliminate the need for these fields by detecting the use of extension attributes
+and/or data fields in the expression.
 
 ### Why CEL?
 
@@ -183,8 +200,8 @@ spec:
 
 Cannot be specified with the SourceAndType field.
 
-_This example assumes the repository name is available as a CloudEvents extension
-with name `repository`._
+_This example assumes the repository name is available as a CloudEvents
+extension with name `repository`._
 
 _The `>` syntax is a standard yaml multiline string._
 
@@ -196,7 +213,7 @@ spec:
       expression: >
         ce.type == "com.github.pull.create" ||
          (ce.type == "com.github.issue.create" &&
-          ext.repository == "proposals")
+          ce.repository == "proposals")
 
 ```
 
@@ -220,22 +237,6 @@ spec:
 ```
 
 ## Caveats
-
-### Variable prefixes
-
-Due to limitations in the CloudEvents SDK, dynamic attributes and data fields
-must have a separate prefix from non-dynamic types. The examples here use
-these prefixes:
-
-| Attribute|Description                                        |
-|--------|-----------------------------------------------------|
-| `ce`   | Official CloudEvents attributes defined in the spec.|
-| `ext`  | Extensions parsed dynamically from the event.       |
-| `data` | Fields parsed dynamically from the event data.      |
-
-This limitation may be lifted in the future, allowing official CloudEvents
-attributes to use the same prefix as extensions. Extensions can then be elevated
-to official attributes without changing filter expressions.
 
 ### CEL
 
