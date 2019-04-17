@@ -33,7 +33,7 @@ update_licenses third_party/VENDOR-LICENSE \
 
 
 # HACK HACK HACK
-# TODO: remove when we can update top 1.13.0 k8s clients.
+# TODO(https://github.com/knative/eventing/issues/1065): remove when we can update top 1.13.0 k8s clients.
 # k8s.io/client-go/dynamic/fake/simple.go has a bug until > v1.13.0, they did not set the scheme in the fake dynamic client.
 # Because this is only for testing code to work, adding patch to update deps.
 # produced with git diff origin/master HEAD -- vendor/k8s.io/client-go/dynamic/fake/simple.go > ./hack/k8s-dynamic-fake-simple.patch

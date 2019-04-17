@@ -104,6 +104,7 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	eventingInformerFactory := informers.NewSharedInformerFactory(opt.EventingClientSet, opt.ResyncPeriod)
 
 	subscriptionInformer := eventingInformerFactory.Eventing().V1alpha1().Subscriptions()
+	// TODO: remove unused after done integrating all controllers.
 	//deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
 	//coreServiceInformer := kubeInformerFactory.Core().V1().Services()
 	configMapInformer := kubeInformerFactory.Core().V1().ConfigMaps()
@@ -122,8 +123,8 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 
 	// Watch the logging config map and dynamically update logging levels.
 	opt.ConfigMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller))
-	// Watch the observability config map and dynamically update metrics exporter.
-	//opt.ConfigMapWatcher.Watch(metrics.ObservabilityConfigName, metrics.UpdateExporterFromConfigMap(component, logger)) // TODO
+	// TODO: Watch the observability config map and dynamically update metrics exporter.
+	//opt.ConfigMapWatcher.Watch(metrics.ObservabilityConfigName, metrics.UpdateExporterFromConfigMap(component, logger))
 	if err := opt.ConfigMapWatcher.Start(stopCh); err != nil {
 		logger.Fatalw("failed to start configuration manager", zap.Error(err))
 	}
@@ -143,6 +144,7 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	go kncontroller.StartAll(stopCh, controllers...)
 }
 
+// TODO: remove after done integrating all controllers.
 func startControllerRuntime(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.SugaredLogger, atomicLevel zap.AtomicLevel) {
 	logger = logger.With(zap.String("controller/impl", "cr"))
 	logger.Info("Starting the controller")
