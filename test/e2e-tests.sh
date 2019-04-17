@@ -45,7 +45,7 @@ function knative_setup() {
 
   echo "Installing GCPPubSub ClusterChannelProvisioner"
   kubectl -n knative-eventing create secret generic gcppubsub-channel-key --from-file=key.json=${GOOGLE_APPLICATION_CREDENTIALS}
-  gcloud_project="$(gcloud config get-value project)"
+  local gcloud_project="$(gcloud config get-value project)"
   sed "s/REPLACE_WITH_GCP_PROJECT/${gcloud_project}/" contrib/gcppubsub/config/gcppubsub.yaml | ko apply -f -
   wait_until_pods_running knative-eventing || fail_test "Failed to install the GCPPubSub ClusterChannelProvisioner"
 }
