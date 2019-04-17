@@ -18,6 +18,8 @@ package testing
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/types"
+	"time"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -27,13 +29,13 @@ import (
 // SubscriptionOption enables further configuration of a Subscription.
 type SubscriptionOption func(*v1alpha1.Subscription)
 
-// Subscription creates a Subscription with SubscriptionOptions
+// NewSubscription creates a Subscription with SubscriptionOptions
 func NewSubscription(name, namespace string, so ...SubscriptionOption) *v1alpha1.Subscription {
 	s := &v1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			UID:       "subscriptionUID-abc-123",
+			UID:       types.UID(name + "-abc-123"),
 		},
 	}
 	for _, opt := range so {
@@ -43,7 +45,7 @@ func NewSubscription(name, namespace string, so ...SubscriptionOption) *v1alpha1
 	return s
 }
 
-// SubscriptionWithoutNamespace creates a Subscription with SubscriptionOptions but without a specific namespace
+// NewSubscriptionWithoutNamespace creates a Subscription with SubscriptionOptions but without a specific namespace
 func NewSubscriptionWithoutNamespace(name string, so ...SubscriptionOption) *v1alpha1.Subscription {
 	s := &v1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
@@ -60,6 +62,12 @@ func NewSubscriptionWithoutNamespace(name string, so ...SubscriptionOption) *v1a
 // WithInitSubscriptionConditions initializes the Subscriptions's conditions.
 func WithInitSubscriptionConditions(s *v1alpha1.Subscription) {
 	s.Status.InitializeConditions()
+}
+
+// TODO: this can be a runtime object
+func WithSubscriptionDeleted(s *v1alpha1.Subscription) {
+	t := metav1.NewTime(time.Unix(1e9, 0))
+	s.ObjectMeta.SetDeletionTimestamp(&t)
 }
 
 func WithSubscriptionChannel(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
@@ -93,6 +101,12 @@ func WithSubscriptionPhysicalSubscriptionSubscriber(uri string) SubscriptionOpti
 func WithSubscriptionPhysicalSubscriptionReply(uri string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
 		s.Status.PhysicalSubscription.ReplyURI = uri
+	}
+}
+
+func WithSubscriptionFinalizers(finalizers ...string) SubscriptionOption {
+	return func(s *v1alpha1.Subscription) {
+		s.Finalizers = finalizers
 	}
 }
 
