@@ -17,19 +17,17 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
 var (
 	trueVal  = true
 	falseVal = false
-
-	err = errors.New("foobar")
 )
 
 var (
@@ -332,37 +330,37 @@ func TestBrokerIsReady(t *testing.T) {
 			bs := &BrokerStatus{}
 			if test.markIngressReady != nil {
 				if *test.markIngressReady {
-					bs.MarkIngressReady()
+					bs.PropagateIngressDeploymentAvailability(availableDeployment())
 				} else {
-					bs.MarkIngressFailed(err)
+					bs.MarkIngressFailed("failed", "err")
 				}
 			}
 			if test.markTriggerChannelReady != nil {
 				if *test.markTriggerChannelReady {
-					bs.MarkTriggerChannelReady()
+					bs.PropagateTriggerChannelReadiness(readyChannelStatus())
 				} else {
-					bs.MarkTriggerChannelFailed(err)
+					bs.MarkTriggerChannelFailed("failed", "err")
 				}
 			}
 			if test.markIngressChannelReady != nil {
 				if *test.markIngressChannelReady {
-					bs.MarkIngressChannelReady()
+					bs.PropagateIngressChannelReadiness(readyChannelStatus())
 				} else {
-					bs.MarkIngressChannelFailed(err)
+					bs.MarkIngressChannelFailed("failed", "err")
 				}
 			}
 			if test.markIngressSubscriptionReady != nil {
 				if *test.markIngressSubscriptionReady {
-					bs.MarkIngressSubscriptionReady()
+					bs.PropagateIngressSubscriptionReadiness(readySubscriptionStatus())
 				} else {
-					bs.MarkIngressSubscriptionFailed(err)
+					bs.MarkIngressSubscriptionFailed("failed", "err")
 				}
 			}
 			if test.markFilterReady != nil {
 				if *test.markFilterReady {
-					bs.MarkFilterReady()
+					bs.PropagateFilterDeploymentAvailability(availableDeployment())
 				} else {
-					bs.MarkFilterFailed(err)
+					bs.MarkFilterFailed("failed", "err")
 				}
 			}
 			bs.SetAddress(test.address)
@@ -373,4 +371,31 @@ func TestBrokerIsReady(t *testing.T) {
 			}
 		})
 	}
+}
+
+func availableDeployment() *v1.Deployment {
+	d := &v1.Deployment{}
+	d.Name = "deployment-name"
+	d.Status.Conditions = []v1.DeploymentCondition{
+		{
+			Type:   v1.DeploymentAvailable,
+			Status: "True",
+		},
+	}
+	return d
+}
+
+func readyChannelStatus() *ChannelStatus {
+	cs := &ChannelStatus{}
+	cs.MarkProvisionerInstalled()
+	cs.MarkProvisioned()
+	cs.SetAddress("foo")
+	return cs
+}
+
+func readySubscriptionStatus() *SubscriptionStatus {
+	ss := &SubscriptionStatus{}
+	ss.MarkChannelReady()
+	ss.MarkReferencesResolved()
+	return ss
 }
