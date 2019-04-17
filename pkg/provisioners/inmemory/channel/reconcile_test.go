@@ -189,9 +189,9 @@ var (
 
 func init() {
 	// Add types to scheme.
-	eventingv1alpha1.AddToScheme(scheme.Scheme)
-	corev1.AddToScheme(scheme.Scheme)
-	istiov1alpha3.AddToScheme(scheme.Scheme)
+	_ = eventingv1alpha1.AddToScheme(scheme.Scheme)
+	_ = corev1.AddToScheme(scheme.Scheme)
+	_ = istiov1alpha3.AddToScheme(scheme.Scheme)
 }
 
 func TestInjectClient(t *testing.T) {
@@ -267,9 +267,6 @@ func TestReconcile(t *testing.T) {
 			Mocks: controllertesting.Mocks{
 				MockLists: errorListingK8sService(),
 			},
-			WantPresent: []runtime.Object{
-				makeChannel(),
-			},
 			WantErrMsg: testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[k8sServiceCreateFailed],
@@ -283,11 +280,9 @@ func TestReconcile(t *testing.T) {
 			Mocks: controllertesting.Mocks{
 				MockCreates: errorCreatingK8sService(),
 			},
-			WantPresent: []runtime.Object{
-				// TODO: This should have a useful error message saying that the K8s Service failed.
-				makeChannel(),
-			},
-			WantErrMsg: testErrorMessage,
+			// TODO: This should have a useful error message saying that the K8s Service failed.
+			WantPresent: []runtime.Object{},
+			WantErrMsg:  testErrorMessage,
 			WantEvent: []corev1.Event{
 				events[k8sServiceCreateFailed],
 			},

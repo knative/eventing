@@ -26,25 +26,28 @@
 
 source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/e2e-tests.sh
 
-# Names of the Resources used in the tests.
-# Currently this namespace must be the same as the namespace specified in
-# test/e2e/e2e.go.
-readonly E2E_TEST_NAMESPACE=e2etest-knative-eventing
-
 # Helper functions.
 
+# Setup the Knative environment for running tests
 function knative_setup() {
+  # Install the latest stable Knative/serving in the current cluster
   start_latest_knative_serving || return 1
-  ko apply -f config/ || return 1
-  wait_until_pods_running knative-eventing || fail_test "Eventing did not come up (1)"
 
-  subheader "Standing up In-Memory ClusterChannelProvisioner"
+  # Install the latest Knative/eventing in the current cluster
+  echo ">> Starting Knative Eventing"
+  echo "Installing Knative Eventing"
+  ko apply -f config/ || return 1
+  wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
+
+  echo "Installing In-Memory ClusterChannelProvisioner"
   ko apply -f config/provisioners/in-memory-channel/in-memory-channel.yaml || return 1
-  wait_until_pods_running knative-eventing || fail_test "Eventing did not come up (2)"
+  wait_until_pods_running knative-eventing || fail_test "Failed to install the In-Memory ClusterChannelProvisioner"
 }
 
 function knative_teardown() {
-  ko delete --ignore-not-found=true -f config/
+  echo ">> Stopping Knative Eventing"
+  echo "Uninstalling Knative Eventing"
+  ko delete --ignore-not-found=true --now --timeout 60s -f config/
 
   wait_until_object_does_not_exist namespaces knative-eventing
 
@@ -54,16 +57,9 @@ function knative_teardown() {
 
 # Setup resources common to all eventing tests
 function test_setup() {
-  kubectl create namespace ${E2E_TEST_NAMESPACE} || return 1
   # Publish test images
+  echo ">> Publishing test images"
   $(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test images"
-}
-
-function test_teardown() {
-  # Delete the test namespace
-  echo "Deleting namespace $E2E_TEST_NAMESPACE"
-  kubectl --ignore-not-found=true delete namespace ${E2E_TEST_NAMESPACE}
-  wait_until_object_does_not_exist namespaces ${E2E_TEST_NAMESPACE}
 }
 
 function dump_extra_cluster_state() {
@@ -87,6 +83,6 @@ function dump_extra_cluster_state() {
 
 initialize $@
 
-go_test_e2e -timeout=20m ./test/e2e || fail_test
+go_test_e2e -timeout=20m ./test/e2e -run ^TestMain$ -runFromMain=true -clusterChannelProvisioners=in-memory-channel || fail_test
 
 success
