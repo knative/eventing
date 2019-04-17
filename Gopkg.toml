@@ -10,7 +10,6 @@ required = [
   "k8s.io/code-generator/cmd/informer-gen",
   "github.com/knative/test-infra/scripts",
   "github.com/knative/test-infra/tools/dep-collector",
-  "github.com/knative/build/pkg/apis/build/v1alpha1",
 ]
 
 [prune]
