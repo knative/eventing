@@ -45,11 +45,6 @@ func NewUnstructured(gvk metav1.GroupVersionKind, name, namespace string, uo ...
 	return u
 }
 
-// WithInitSubscriptionConditions initializes the Unstructured's conditions.
-//func WithUnstructuredSpec(u *unstructured.Unstructured, spec map[string]interface{}) {
-//	u.Object["spec"] = spec
-//}
-
 func WithUnstructuredAddressable(hostname string) UnstructuredOption {
 	return func(u *unstructured.Unstructured) {
 		status, ok := u.Object["status"].(map[string]interface{})

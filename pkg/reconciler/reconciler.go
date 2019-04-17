@@ -33,7 +33,6 @@ import (
 
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	eventingScheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
-	//"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/logging/logkey"
 )
 

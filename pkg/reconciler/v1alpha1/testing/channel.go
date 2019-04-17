@@ -27,7 +27,7 @@ import (
 // ChannelOption enables further configuration of a Channel.
 type ChannelOption func(*v1alpha1.Channel)
 
-// Subscription creates a Subscription with SubscriptionOptions
+// NewChannel creates a Channel with ChannelOptions
 func NewChannel(name, namespace string, o ...ChannelOption) *v1alpha1.Channel {
 	c := &v1alpha1.Channel{
 		ObjectMeta: metav1.ObjectMeta{
