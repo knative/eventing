@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -58,4 +59,55 @@ func NewSubscriptionWithoutNamespace(name string, so ...SubscriptionOption) *v1a
 // WithInitSubscriptionConditions initializes the Subscriptions's conditions.
 func WithInitSubscriptionConditions(s *v1alpha1.Subscription) {
 	s.Status.InitializeConditions()
+}
+
+func WithSubscriptionChannel(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
+	return func(s *v1alpha1.Subscription) {
+		s.Spec.Channel = corev1.ObjectReference{
+			APIVersion: apiVersion(gvk),
+			Kind:       gvk.Kind,
+			Name:       name,
+		}
+	}
+}
+
+func WithSubscriptionSubscriberRef(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
+	return func(s *v1alpha1.Subscription) {
+		s.Spec.Subscriber = &v1alpha1.SubscriberSpec{
+			Ref: &corev1.ObjectReference{
+				APIVersion: apiVersion(gvk),
+				Kind:       gvk.Kind,
+				Name:       name,
+			},
+		}
+	}
+}
+
+func WithSubscriptionPhysicalSubscriptionSubscriber(uri string) SubscriptionOption {
+	return func(s *v1alpha1.Subscription) {
+		s.Status.PhysicalSubscription.SubscriberURI = uri
+	}
+}
+
+func WithSubscriptionPhysicalSubscriptionReply(uri string) SubscriptionOption {
+	return func(s *v1alpha1.Subscription) {
+		s.Status.PhysicalSubscription.ReplyURI = uri
+	}
+}
+
+func MarkSubscriptionReady(s *v1alpha1.Subscription) {
+	s.Status.MarkChannelReady()
+	s.Status.MarkReferencesResolved()
+}
+
+func WithSubscriptionReply(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
+	return func(s *v1alpha1.Subscription) {
+		s.Spec.Reply = &v1alpha1.ReplyStrategy{
+			Channel: &corev1.ObjectReference{
+				APIVersion: apiVersion(gvk),
+				Kind:       gvk.Kind,
+				Name:       name,
+			},
+		}
+	}
 }

@@ -17,9 +17,9 @@ limitations under the License.
 package testing
 
 import (
+	"k8s.io/apimachinery/pkg/runtime"
 	"testing"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	fakedynamicclientset "k8s.io/client-go/dynamic/fake"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	//ktesting "k8s.io/client-go/testing"
@@ -45,9 +45,14 @@ func MakeFactory(ctor Ctor) Factory {
 		ls := NewListers(r.Objects)
 
 		kubeClient := fakekubeclientset.NewSimpleClientset(ls.GetKubeObjects()...)
-		client := fakeclientset.NewSimpleClientset(ls.GetServingObjects()...)
+		client := fakeclientset.NewSimpleClientset(ls.GetEventingObjects()...)
 
-		dynamicClient := fakedynamicclientset.NewSimpleDynamicClient(runtime.NewScheme(), ls.GetBuildObjects()...)
+		dynamicScheme := runtime.NewScheme()
+		for _, addTo := range clientSetSchemes {
+			addTo(dynamicScheme)
+		}
+
+		dynamicClient := fakedynamicclientset.NewSimpleDynamicClient(dynamicScheme, ls.GetAllObjects()...)
 		eventRecorder := record.NewFakeRecorder(maxEventBufferSize)
 		statsReporter := &FakeStatsReporter{}
 
@@ -71,7 +76,6 @@ func MakeFactory(ctor Ctor) Factory {
 		}
 
 		// Validate all Create operations through the eventing client.
-		client.PrependReactor("get", "*", ValidateGets)
 		client.PrependReactor("create", "*", ValidateCreates)
 		client.PrependReactor("update", "*", ValidateUpdates)
 

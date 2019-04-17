@@ -34,7 +34,6 @@ import (
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
-	kncontroller "github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -72,7 +71,7 @@ type Reconciler struct {
 }
 
 // Check that our Reconciler implements controller.Reconciler
-var _ kncontroller.Reconciler = (*Reconciler)(nil)
+var _ controller.Reconciler = (*Reconciler)(nil)
 
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events

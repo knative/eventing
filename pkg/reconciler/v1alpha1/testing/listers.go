@@ -26,6 +26,7 @@ import (
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	fakesharedclientset "github.com/knative/pkg/client/clientset/versioned/fake"
 	istiolisters "github.com/knative/pkg/client/listers/istio/v1alpha3"
+	"github.com/knative/pkg/reconciler/testing"
 	kpa "github.com/knative/serving/pkg/apis/autoscaling/v1alpha1"
 	networking "github.com/knative/serving/pkg/apis/networking/v1alpha1"
 	"github.com/knative/serving/pkg/apis/serving/v1alpha1"
@@ -33,7 +34,6 @@ import (
 	kpalisters "github.com/knative/serving/pkg/client/listers/autoscaling/v1alpha1"
 	networkinglisters "github.com/knative/serving/pkg/client/listers/networking/v1alpha1"
 	servinglisters "github.com/knative/serving/pkg/client/listers/serving/v1alpha1"
-	"github.com/knative/serving/pkg/reconciler/testing"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -52,6 +52,11 @@ var buildAddToScheme = func(scheme *runtime.Scheme) error {
 	return nil
 }
 
+var subscriberAddToScheme = func(scheme *runtime.Scheme) error {
+	scheme.AddKnownTypeWithName(schema.GroupVersionKind{Group: "testing.eventing.knative.dev", Version: "v1alpha1", Kind: "Subscriber"}, &unstructured.Unstructured{})
+	return nil
+}
+
 var clientSetSchemes = []func(*runtime.Scheme) error{
 	fakekubeclientset.AddToScheme,
 	fakesharedclientset.AddToScheme,
@@ -59,6 +64,7 @@ var clientSetSchemes = []func(*runtime.Scheme) error{
 	fakeeventingclientset.AddToScheme,
 	fakecachingclientset.AddToScheme,
 	buildAddToScheme,
+	subscriberAddToScheme,
 }
 
 type Listers struct {
@@ -93,12 +99,27 @@ func (l *Listers) GetCachingObjects() []runtime.Object {
 	return l.sorter.ObjectsForSchemeFunc(fakecachingclientset.AddToScheme)
 }
 
+func (l *Listers) GetEventingObjects() []runtime.Object {
+	return l.sorter.ObjectsForSchemeFunc(fakeeventingclientset.AddToScheme)
+}
+
 func (l *Listers) GetServingObjects() []runtime.Object {
 	return l.sorter.ObjectsForSchemeFunc(fakeservingclientset.AddToScheme)
 }
 
 func (l *Listers) GetBuildObjects() []runtime.Object {
 	return l.sorter.ObjectsForSchemeFunc(buildAddToScheme)
+}
+
+func (l *Listers) GetSubscriberObjects() []runtime.Object {
+	return l.sorter.ObjectsForSchemeFunc(subscriberAddToScheme)
+}
+
+func (l *Listers) GetAllObjects() []runtime.Object {
+	all := l.GetSubscriberObjects()
+	all = append(all, l.GetEventingObjects()...)
+	all = append(all, l.GetKubeObjects()...)
+	return all
 }
 
 func (l *Listers) GetSharedObjects() []runtime.Object {

@@ -17,12 +17,15 @@ limitations under the License.
 package subscription
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/controller"
 
-	//"github.com/knative/pkg/controller"
 	clientgotesting "k8s.io/client-go/testing"
+	//"github.com/knative/pkg/controller"
+	//clientgotesting "k8s.io/client-go/testing"
 
 	. "github.com/knative/eventing/pkg/reconciler/v1alpha1/testing"
 
@@ -32,13 +35,10 @@ import (
 
 	//"go.uber.org/zap"
 
-	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
-	"github.com/knative/eventing/pkg/utils/resolve"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	logtesting "github.com/knative/pkg/logging/testing"
 	corev1 "k8s.io/api/core/v1"
@@ -71,25 +71,43 @@ var (
 )
 
 const (
-	fromChannelName   = "fromchannel"
-	resultChannelName = "resultchannel"
-	sourceName        = "source"
-	routeName         = "subscriberroute"
-	channelKind       = "Channel"
-	routeKind         = "Route"
-	sourceKind        = "Source"
-	subscriptionKind  = "Subscription"
-	eventType         = "myeventtype"
-	subscriptionName  = "testsubscription"
-	testNS            = "testnamespace"
-	k8sServiceName    = "testk8sservice"
+	subscriberName = "subscriber"
+	replyName      = "reply"
+	channelName    = "origin"
+
+	subscriptionName = "testsubscription"
+	testNS           = "testnamespace"
+
+//	k8sServiceName    = "testk8sservice"
 )
 
+// subscriptions have: channel -> SUB -> subscriber -viaSub-> reply
+
 var (
-	targetDNS           = "myfunction.mynamespace.svc." + utils.GetClusterDomainName()
-	sinkableDNS         = "myresultchannel.mynamespace.svc." + utils.GetClusterDomainName()
-	k8sServiceDNS       = "testk8sservice.testnamespace.svc." + utils.GetClusterDomainName()
-	otherAddressableDNS = "other-sinkable-channel.mynamespace.svc." + utils.GetClusterDomainName()
+	channelDNS = "channel.mynamespace.svc." + utils.GetClusterDomainName()
+	channelURI = "http://" + channelDNS + "/"
+
+	subscriberDNS = "subscriber.mynamespace.svc." + utils.GetClusterDomainName()
+	subscriberURI = "http://" + subscriberDNS + "/"
+
+	replyDNS = "reply.mynamespace.svc." + utils.GetClusterDomainName()
+	replyURI = "http://" + replyDNS + "/"
+
+	//sinkableDNS         = "myresultchannel.mynamespace.svc." + utils.GetClusterDomainName()
+	//k8sServiceDNS       = "testk8sservice.testnamespace.svc." + utils.GetClusterDomainName()
+	//otherAddressableDNS = "other-sinkable-channel.mynamespace.svc." + utils.GetClusterDomainName()
+
+	subscriberGVK = metav1.GroupVersionKind{
+		Group:   "testing.eventing.knative.dev",
+		Version: "v1alpha1",
+		Kind:    "Subscriber",
+	}
+
+	channelGVK = metav1.GroupVersionKind{
+		Group:   "eventing.knative.dev",
+		Version: "v1alpha1",
+		Kind:    "Channel",
+	}
 )
 
 func init() {
@@ -99,279 +117,184 @@ func init() {
 }
 
 func TestAllCases(t *testing.T) {
-	table := TableTest{{
-		Name: "bad workqueue key",
-		// Make sure Reconcile handles bad keys.
-		Key: "too/many/parts",
-	}, {
-		Name: "key not found",
-		// Make sure Reconcile handles good keys that don't exist.
-		Key: "foo/not-found",
-	}, {
-		Name: "incomplete subscription",
-		Objects: []runtime.Object{
-			NewSubscription("incomplete", "foo", WithInitSubscriptionConditions),
-		},
-		Key:     "foo/incomplete",
-		WantErr: true,
-		WantEvents: []string{
-			Eventf(corev1.EventTypeWarning, "ChannelReferenceFetchFailed", "Failed to validate spec.channel exists: s \"\" not found"),
-		},
-		WantGets: []clientgotesting.GetActionImpl{{
-			Name: "foo/",
-		}},
-	}}
+	table := TableTest{
+		{
+			Name: "bad workqueue key",
+			// Make sure Reconcile handles bad keys.
+			Key: "too/many/parts",
+		}, {
+			Name: "key not found",
+			// Make sure Reconcile handles good keys that don't exist.
+			Key: "foo/not-found",
+			//}, { // TODO: there is a bug in the controller, it will query for ""
+			//	Name: "incomplete subscription",
+			//	Objects: []runtime.Object{
+			//		NewSubscription(subscriptionName, testNS),
+			//	},
+			//	Key:     "foo/incomplete",
+			//	WantErr: true,
+			//	WantEvents: []string{
+			//		Eventf(corev1.EventTypeWarning, "ChannelReferenceFetchFailed", "Failed to validate spec.channel exists: s \"\" not found"),
+			//	},
+		}, {
+			Name: "subscription, but subscriber is not addressable",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(channelDNS),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "SubscriberResolveFailed", "Failed to resolve spec.subscriber: status does not contain address"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+				),
+			}},
+		}, {
+			Name: "subscription, but subscriber does not exist",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+				),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(channelDNS),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "SubscriberResolveFailed", "Failed to resolve spec.subscriber: subscribers.testing.eventing.knative.dev %q not found", subscriberName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+				),
+			}},
+		}, {
+			Name: "subscription, reply does not exist",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+					WithSubscriptionReply(channelGVK, replyName),
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS)),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(channelDNS),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "ResultResolveFailed", "Failed to resolve spec.reply: channels.eventing.knative.dev %q not found", replyName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+					WithSubscriptionReply(channelGVK, replyName),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+				),
+			}},
+		}, {
+			Name: "subscription, reply is not addressable",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+					WithSubscriptionReply(subscriberGVK, replyName), // reply will be a subscriberGVK for this test
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
+				),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(channelDNS),
+				),
+				NewUnstructured(subscriberGVK, replyName, testNS),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "ResultResolveFailed", "Failed to resolve spec.reply: status does not contain address"),
+				Eventf(corev1.EventTypeWarning, "SubscriptionUpdateStatusFailed", "Failed to update Subscription's status: status does not contain address"), // TODO: BUGBUG THIS IS WEIRD
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+					WithSubscriptionReply(subscriberGVK, replyName),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+				),
+			}},
+		}, {
+			Name: "subscription, valid",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+					WithSubscriptionReply(channelGVK, replyName),
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
+				),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(channelDNS),
+				),
+				NewChannel(replyName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(replyDNS),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "SubscriptionReconciled", "Subscription reconciled: %q", subscriptionName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+					WithSubscriptionReply(channelGVK, replyName),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					MarkSubscriptionReady,
+					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(channelName, testNS, []v1alpha1.ChannelSubscriberSpec{
+					{Ref: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS}, SubscriberURI: subscriberURI, ReplyURI: replyURI},
+				}),
+				patchFinalizers(subscriptionName, testNS),
+			},
+		}}
 
-	//testCases := []controllertesting.TestCase{
-	//	{
-	//		Name:    "subscription does not exist",
-	//		WantErr: false,
-	//	}, {
-	//		Name: "subscription but From channel does not exist",
-	//		InitialState: []runtime.Object{
-	//			Subscription(),
-	//		},
-	//		WantErrMsg: `channels.eventing.knative.dev "fromchannel" not found`,
-	//		WantEvent: []corev1.Event{
-	//			events[channelReferenceFetchFailed],
-	//		},
-	//	}, {
-	//		Name: "subscription, but From is not subscribable",
-	//		InitialState: []runtime.Object{
-	//			Subscription().FromSource(),
-	//		},
-	//		// TODO: JSON patch is not working on the fake, see
-	//		// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
-	//		// failure for now, until upstream is fixed. It should actually fail saying that there is no
-	//		// Spec.Subscribers field.
-	//		WantErrMsg: `unable to find api field in struct Unstructured for the json field "spec"`,
-	//		WantEvent: []corev1.Event{
-	//			events[physicalChannelSyncFailed],
-	//		},
-	//		Objects: []runtime.Object{
-	//			// Source channel
-	//			&unstructured.Unstructured{
-	//				Object: map[string]interface{}{
-	//					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-	//					"kind":       sourceKind,
-	//					"metadata": map[string]interface{}{
-	//						"namespace": testNS,
-	//						"name":      sourceName,
-	//					},
-	//					"spec": map[string]interface{}{},
-	//				},
-	//			},
-	//			// Subscriber (using knative route)
-	//			&unstructured.Unstructured{
-	//				Object: map[string]interface{}{
-	//					"apiVersion": "serving.knative.dev/v1alpha1",
-	//					"kind":       routeKind,
-	//					"metadata": map[string]interface{}{
-	//						"namespace": testNS,
-	//						"name":      routeName,
-	//					},
-	//					"status": map[string]interface{}{
-	//						"address": map[string]interface{}{
-	//							"hostname": targetDNS,
-	//						},
-	//					},
-	//				},
-	//			},
-	//			// Reply channel
-	//			&unstructured.Unstructured{
-	//				Object: map[string]interface{}{
-	//					"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-	//					"kind":       channelKind,
-	//					"metadata": map[string]interface{}{
-	//						"namespace": testNS,
-	//						"name":      resultChannelName,
-	//					},
-	//					"spec": map[string]interface{}{
-	//						"subscribable": map[string]interface{}{},
-	//					},
-	//					"status": map[string]interface{}{
-	//						"address": map[string]interface{}{
-	//							"hostname": sinkableDNS,
-	//						},
-	//					},
-	//				},
-	//			},
-	//		},
-	//	}//, {
-	//			Name: "Valid channel, subscriber does not exist",
-	//			InitialState: []runtime.Object{
-	//				Subscription(),
-	//			},
-	//			WantErrMsg: `routes.serving.knative.dev "subscriberroute" not found`,
-	//			WantPresent: []runtime.Object{
-	//				Subscription().UnknownConditions(),
-	//			},
-	//			WantEvent: []corev1.Event{
-	//				events[subscriberResolveFailed],
-	//			},
-	//			Objects: []runtime.Object{
-	//				// Source channel
-	//				&unstructured.Unstructured{
-	//					Object: map[string]interface{}{
-	//						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-	//						"kind":       channelKind,
-	//						"metadata": map[string]interface{}{
-	//							"namespace": testNS,
-	//							"name":      fromChannelName,
-	//						},
-	//						"spec": map[string]interface{}{
-	//							"subscribable": map[string]interface{}{},
-	//						},
-	//					},
-	//				},
-	//			},
-	//		}, {
-	//			Name: "Valid channel, subscriber is not callable",
-	//			InitialState: []runtime.Object{
-	//				Subscription(),
-	//			},
-	//			WantPresent: []runtime.Object{
-	//				Subscription().UnknownConditions(),
-	//			},
-	//			WantErrMsg: "status does not contain address",
-	//			WantEvent: []corev1.Event{
-	//				events[subscriberResolveFailed],
-	//			},
-	//			Objects: []runtime.Object{
-	//				// Source channel
-	//				&unstructured.Unstructured{
-	//					Object: map[string]interface{}{
-	//						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-	//						"kind":       channelKind,
-	//						"metadata": map[string]interface{}{
-	//							"namespace": testNS,
-	//							"name":      fromChannelName,
-	//						},
-	//						"spec": map[string]interface{}{
-	//							"subscribable": map[string]interface{}{},
-	//						},
-	//					},
-	//				},
-	//				// Subscriber (using knative route)
-	//				&unstructured.Unstructured{
-	//					Object: map[string]interface{}{
-	//						"apiVersion": "serving.knative.dev/v1alpha1",
-	//						"kind":       routeKind,
-	//						"metadata": map[string]interface{}{
-	//							"namespace": testNS,
-	//							"name":      routeName,
-	//						},
-	//						"status": map[string]interface{}{
-	//							"someotherstuff": targetDNS,
-	//						},
-	//					},
-	//				},
-	//			},
-	//		}, {
-	//			Name: "Valid channel and subscriber, result does not exist",
-	//			InitialState: []runtime.Object{
-	//				Subscription(),
-	//			},
-	//			WantPresent: []runtime.Object{
-	//				Subscription().UnknownConditions().PhysicalSubscriber(targetDNS),
-	//			},
-	//			WantErrMsg: `channels.eventing.knative.dev "resultchannel" not found`,
-	//			WantEvent: []corev1.Event{
-	//				events[resultResolveFailed],
-	//			},
-	//			Objects: []runtime.Object{
-	//				// Source channel
-	//				&unstructured.Unstructured{
-	//					Object: map[string]interface{}{
-	//						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-	//						"kind":       channelKind,
-	//						"metadata": map[string]interface{}{
-	//							"namespace": testNS,
-	//							"name":      fromChannelName,
-	//						},
-	//						"spec": map[string]interface{}{
-	//							"subscribable": map[string]interface{}{},
-	//						},
-	//					},
-	//				},
-	//				// Subscriber (using knative route)
-	//				&unstructured.Unstructured{
-	//					Object: map[string]interface{}{
-	//						"apiVersion": "serving.knative.dev/v1alpha1",
-	//						"kind":       routeKind,
-	//						"metadata": map[string]interface{}{
-	//							"namespace": testNS,
-	//							"name":      routeName,
-	//						},
-	//						"status": map[string]interface{}{
-	//							"address": map[string]interface{}{
-	//								"hostname": targetDNS,
-	//							},
-	//						},
-	//					},
-	//				},
-	//			},
-	//		}, {
-	//			Name: "valid channel, subscriber, result is not addressable",
-	//			InitialState: []runtime.Object{
-	//				Subscription(),
-	//			},
-	//			WantErrMsg: "status does not contain address",
-	//			WantPresent: []runtime.Object{
-	//				// TODO: Again this works on gke cluster, but I need to set
-	//				// something else up here. later...
-	//				// Subscription().ReferencesResolved(),
-	//				Subscription().UnknownConditions().PhysicalSubscriber(targetDNS),
-	//			},
-	//			WantEvent: []corev1.Event{
-	//				events[resultResolveFailed],
-	//			},
-	//			Objects: []runtime.Object{
-	//				// Source channel
-	//				&unstructured.Unstructured{
-	//					Object: map[string]interface{}{
-	//						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-	//						"kind":       channelKind,
-	//						"metadata": map[string]interface{}{
-	//							"namespace": testNS,
-	//							"name":      fromChannelName,
-	//						},
-	//						"spec": map[string]interface{}{
-	//							"subscribable": map[string]interface{}{},
-	//						},
-	//					},
-	//				},
-	//				// Subscriber (using knative route)
-	//				&unstructured.Unstructured{
-	//					Object: map[string]interface{}{
-	//						"apiVersion": "serving.knative.dev/v1alpha1",
-	//						"kind":       routeKind,
-	//						"metadata": map[string]interface{}{
-	//							"namespace": testNS,
-	//							"name":      routeName,
-	//						},
-	//						"status": map[string]interface{}{
-	//							"address": map[string]interface{}{
-	//								"hostname": targetDNS,
-	//							},
-	//						},
-	//					},
-	//				},
-	//				// Reply channel
-	//				&unstructured.Unstructured{
-	//					Object: map[string]interface{}{
-	//						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-	//						"kind":       channelKind,
-	//						"metadata": map[string]interface{}{
-	//							"namespace": testNS,
-	//							"name":      resultChannelName,
-	//						},
-	//						"spec": map[string]interface{}{
-	//							"subscribable": map[string]interface{}{},
-	//						},
-	//					},
-	//				},
-	//			},
 	//		}, {
 	//			Name: "new subscription: adds status, all targets resolved, subscribers modified",
 	//			InitialState: []runtime.Object{
@@ -396,7 +319,7 @@ func TestAllCases(t *testing.T) {
 	//						"kind":       channelKind,
 	//						"metadata": map[string]interface{}{
 	//							"namespace": testNS,
-	//							"name":      fromChannelName,
+	//							"name":      channelName,
 	//						},
 	//						"spec": map[string]interface{}{
 	//							"subscribable": map[string]interface{}{},
@@ -463,7 +386,7 @@ func TestAllCases(t *testing.T) {
 	//						"kind":       channelKind,
 	//						"metadata": map[string]interface{}{
 	//							"namespace": testNS,
-	//							"name":      fromChannelName,
+	//							"name":      channelName,
 	//						},
 	//						"spec": map[string]interface{}{
 	//							"subscribable": map[string]interface{}{},
@@ -511,7 +434,7 @@ func TestAllCases(t *testing.T) {
 	//						"kind":       channelKind,
 	//						"metadata": map[string]interface{}{
 	//							"namespace": testNS,
-	//							"name":      fromChannelName,
+	//							"name":      channelName,
 	//						},
 	//						"spec": map[string]interface{}{
 	//							"subscribable": map[string]interface{}{},
@@ -559,7 +482,7 @@ func TestAllCases(t *testing.T) {
 	//						"kind":       channelKind,
 	//						"metadata": map[string]interface{}{
 	//							"namespace": testNS,
-	//							"name":      fromChannelName,
+	//							"name":      channelName,
 	//						},
 	//						"spec": map[string]interface{}{
 	//							"subscribable": map[string]interface{}{},
@@ -606,7 +529,7 @@ func TestAllCases(t *testing.T) {
 	//						"kind":       channelKind,
 	//						"metadata": map[string]interface{}{
 	//							"namespace": testNS,
-	//							"name":      fromChannelName,
+	//							"name":      channelName,
 	//						},
 	//						"spec": map[string]interface{}{
 	//							"subscribable": map[string]interface{}{},
@@ -658,7 +581,7 @@ func TestAllCases(t *testing.T) {
 	//						"kind":       channelKind,
 	//						"metadata": map[string]interface{}{
 	//							"namespace": testNS,
-	//							"name":      fromChannelName,
+	//							"name":      channelName,
 	//						},
 	//						"spec": map[string]interface{}{
 	//							"subscribable": map[string]interface{}{},
@@ -704,7 +627,7 @@ func TestAllCases(t *testing.T) {
 	//						"kind":       channelKind,
 	//						"metadata": map[string]interface{}{
 	//							"namespace": testNS,
-	//							"name":      fromChannelName,
+	//							"name":      channelName,
 	//						},
 	//						"spec": map[string]interface{}{
 	//							"subscribable": map[string]interface{}{},
@@ -755,7 +678,7 @@ func TestAllCases(t *testing.T) {
 	//						"kind":       channelKind,
 	//						"metadata": map[string]interface{}{
 	//							"namespace": testNS,
-	//							"name":      fromChannelName,
+	//							"name":      channelName,
 	//						},
 	//						"spec": map[string]interface{}{
 	//							"subscribable": map[string]interface{}{},
@@ -803,7 +726,7 @@ func TestAllCases(t *testing.T) {
 	//						"kind":       channelKind,
 	//						"metadata": map[string]interface{}{
 	//							"namespace": testNS,
-	//							"name":      fromChannelName,
+	//							"name":      channelName,
 	//						},
 	//						"spec": map[string]interface{}{
 	//							"subscribable": map[string]interface{}{},
@@ -836,7 +759,7 @@ func TestAllCases(t *testing.T) {
 	//						"kind":       channelKind,
 	//						"metadata": map[string]interface{}{
 	//							"namespace": testNS,
-	//							"name":      fromChannelName,
+	//							"name":      channelName,
 	//						},
 	//						"spec": map[string]interface{}{
 	//							"subscribable": map[string]interface{}{},
@@ -898,7 +821,7 @@ func TestAllCases(t *testing.T) {
 	//						"kind":       sourceKind,
 	//						"metadata": map[string]interface{}{
 	//							"namespace": testNS,
-	//							"name":      sourceName,
+	//							"name":      subscriberName,
 	//						},
 	//						"spec": map[string]interface{}{
 	//							"subscribable": map[string]interface{}{},
@@ -912,7 +835,7 @@ func TestAllCases(t *testing.T) {
 	//						"kind":       channelKind,
 	//						"metadata": map[string]interface{}{
 	//							"namespace": testNS,
-	//							"name":      fromChannelName,
+	//							"name":      channelName,
 	//						},
 	//						"spec": map[string]interface{}{
 	//							"subscribable": map[string]interface{}{},
@@ -995,7 +918,7 @@ func TestAllCases(t *testing.T) {
 	//						"kind":       sourceKind,
 	//						"metadata": map[string]interface{}{
 	//							"namespace": testNS,
-	//							"name":      sourceName,
+	//							"name":      subscriberName,
 	//						},
 	//						"spec": map[string]interface{}{
 	//							"subscribable": map[string]interface{}{},
@@ -1009,7 +932,7 @@ func TestAllCases(t *testing.T) {
 	//						"kind":       channelKind,
 	//						"metadata": map[string]interface{}{
 	//							"namespace": testNS,
-	//							"name":      fromChannelName,
+	//							"name":      channelName,
 	//						},
 	//						"spec": map[string]interface{}{
 	//							"subscribable": map[string]interface{}{},
@@ -1090,7 +1013,7 @@ func TestAllCases(t *testing.T) {
 	//						"kind":       channelKind,
 	//						"metadata": map[string]interface{}{
 	//							"namespace": testNS,
-	//							"name":      fromChannelName,
+	//							"name":      channelName,
 	//						},
 	//						"spec": map[string]interface{}{
 	//							"channelable": map[string]interface{}{
@@ -1200,269 +1123,302 @@ func addFinalizer(sub *eventingv1alpha1.Subscription) {
 	sub.Finalizers = finalizers.List()
 }
 
-func getNewFromChannel() *eventingv1alpha1.Channel {
-	return getNewChannel(fromChannelName)
-}
+//func getNewFromChannel() *eventingv1alpha1.Channel {
+//	return getNewChannel(channelName)
+//}
+//
+//func getNewReplyChannel() *eventingv1alpha1.Channel {
+//	return getNewChannel(resultChannelName)
+//}
+//
+//func getNewChannel(name string) *eventingv1alpha1.Channel {
+//	channel := &eventingv1alpha1.Channel{
+//		TypeMeta:   channelType(),
+//		ObjectMeta: om("test", name),
+//		Spec:       eventingv1alpha1.ChannelSpec{},
+//	}
+//	channel.ObjectMeta.OwnerReferences = append(channel.ObjectMeta.OwnerReferences, getOwnerReference(false))
+//
+//	// selflink is not filled in when we create the object, so clear it
+//	channel.ObjectMeta.SelfLink = ""
+//	return channel
+//}
+//
+//type SubscriptionBuilder struct {
+//	*eventingv1alpha1.Subscription
+//}
+//
+//// Verify the Builder implements Buildable
+//var _ controllertesting.Buildable = &SubscriptionBuilder{}
+//
+//func Subscription() *SubscriptionBuilder {
+//	subscription := &eventingv1alpha1.Subscription{
+//		TypeMeta:   subscriptionType(),
+//		ObjectMeta: om(testNS, subscriptionName),
+//		Spec: eventingv1alpha1.SubscriptionSpec{
+//			Channel: corev1.ObjectReference{
+//				Name:       channelName,
+//				Kind:       channelKind,
+//				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+//			},
+//			Subscriber: &eventingv1alpha1.SubscriberSpec{
+//				Ref: &corev1.ObjectReference{
+//					Name:       routeName,
+//					Kind:       routeKind,
+//					APIVersion: "serving.knative.dev/v1alpha1",
+//				},
+//			},
+//			Reply: &eventingv1alpha1.ReplyStrategy{
+//				Channel: &corev1.ObjectReference{
+//					Name:       resultChannelName,
+//					Kind:       channelKind,
+//					APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+//				},
+//			},
+//		},
+//	}
+//	subscription.ObjectMeta.OwnerReferences = append(subscription.ObjectMeta.OwnerReferences, getOwnerReference(false))
+//
+//	// selflink is not filled in when we create the object, so clear it
+//	subscription.ObjectMeta.SelfLink = ""
+//
+//	return &SubscriptionBuilder{
+//		Subscription: subscription,
+//	}
+//}
+//
+//func (s *SubscriptionBuilder) Build() runtime.Object {
+//	return s.Subscription
+//}
+//
+//func (s *SubscriptionBuilder) EmptyNonNilReply() *SubscriptionBuilder {
+//	s.Spec.Reply = &eventingv1alpha1.ReplyStrategy{}
+//	return s
+//}
+//
+//func (s *SubscriptionBuilder) NilReply() *SubscriptionBuilder {
+//	s.Spec.Reply = nil
+//	return s
+//}
+//
+//func (s *SubscriptionBuilder) EmptyNonNilSubscriber() *SubscriptionBuilder {
+//	s.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{}
+//	return s
+//}
+//
+//func (s *SubscriptionBuilder) NilSubscriber() *SubscriptionBuilder {
+//	s.Spec.Subscriber = nil
+//	return s
+//}
+//
+//func (s *SubscriptionBuilder) FromSource() *SubscriptionBuilder {
+//	s.Spec.Channel = corev1.ObjectReference{
+//		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+//		Kind:       sourceKind,
+//		Name:       subscriberName,
+//	}
+//	return s
+//}
+//
+//func (s *SubscriptionBuilder) ToK8sService() *SubscriptionBuilder {
+//	s.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{
+//		Ref: &corev1.ObjectReference{
+//			Name:       k8sServiceName,
+//			Kind:       "Service",
+//			APIVersion: "v1",
+//		},
+//	}
+//	return s
+//}
+//
+//func (s *SubscriptionBuilder) UnknownConditions() *SubscriptionBuilder {
+//	s.Status.InitializeConditions()
+//	return s
+//}
+//
+//func (s *SubscriptionBuilder) PhysicalSubscriber(dns string) *SubscriptionBuilder {
+//	s.Status.PhysicalSubscription.SubscriberURI = resolve.DomainToURL(dns)
+//	return s
+//}
+//
+//func (s *SubscriptionBuilder) ReferencesResolved() *SubscriptionBuilder {
+//	s.UnknownConditions()
+//	s.Status.MarkReferencesResolved()
+//	return s
+//}
+//
+//func (s *SubscriptionBuilder) Reply() *SubscriptionBuilder {
+//	s.Status.PhysicalSubscription.ReplyURI = resolve.DomainToURL(sinkableDNS)
+//	return s
+//}
+//
+//func (s *SubscriptionBuilder) DifferentChannel() *SubscriptionBuilder {
+//	s.Name = "different-channel"
+//	s.UID = "different-channel-UID"
+//	s.Status.PhysicalSubscription.SubscriberURI = "some-other-domain"
+//	return s
+//}
+//
+//func (s *SubscriptionBuilder) ChannelReady() *SubscriptionBuilder {
+//	s.ReferencesResolved()
+//	s.Status.MarkChannelReady()
+//	return s
+//}
+//
+//func (s *SubscriptionBuilder) Deleted() *SubscriptionBuilder {
+//	s.ObjectMeta.DeletionTimestamp = &deletionTime
+//	return s
+//}
+//
+//// Renamed renames the subscription. It is intended to be used in tests that create multiple
+//// Subscriptions, so that there are no naming conflicts.
+//func (s *SubscriptionBuilder) Renamed() *SubscriptionBuilder {
+//	s.Name = "renamed"
+//	s.UID = "renamed-UID"
+//	s.Status.PhysicalSubscription.SubscriberURI = ""
+//	s.Status.PhysicalSubscription.ReplyURI = otherAddressableDNS
+//	return s
+//}
+//
+//func channelType() metav1.TypeMeta {
+//	return metav1.TypeMeta{
+//		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+//		Kind:       "Channel",
+//	}
+//}
+//
+//func subscriptionType() metav1.TypeMeta {
+//	return metav1.TypeMeta{
+//		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+//		Kind:       "Subscription",
+//	}
+//}
+//
+//func getK8sService() *corev1.Service {
+//	return &corev1.Service{
+//		TypeMeta: metav1.TypeMeta{
+//			APIVersion: "v1",
+//			Kind:       "Service",
+//		},
+//		ObjectMeta: metav1.ObjectMeta{
+//			Namespace: testNS,
+//			Name:      k8sServiceName,
+//		},
+//	}
+//}
+//
+//func getChannelWithMultipleSubscriptions() *eventingv1alpha1.Channel {
+//	return &eventingv1alpha1.Channel{
+//		TypeMeta: metav1.TypeMeta{
+//			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+//			Kind:       channelKind,
+//		},
+//		ObjectMeta: om(testNS, channelName),
+//		Spec: eventingv1alpha1.ChannelSpec{
+//			Subscribable: &eventingduck.Subscribable{
+//				Subscribers: []eventingduck.ChannelSubscriberSpec{
+//					{
+//						Ref: &corev1.ObjectReference{
+//							APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+//							Kind:       subscriptionKind,
+//							Namespace:  testNS,
+//							Name:       subscriptionName,
+//							UID:        "",
+//						},
+//						SubscriberURI: targetDNS,
+//						ReplyURI:      sinkableDNS,
+//					},
+//					{
+//						Ref: &corev1.ObjectReference{
+//							APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+//							Kind:       subscriptionKind,
+//							Namespace:  testNS,
+//							Name:       "renamed",
+//							UID:        "renamed-UID",
+//						},
+//						ReplyURI: otherAddressableDNS,
+//					},
+//				},
+//			},
+//		},
+//	}
+//}
+//
+//func getChannelWithOtherSubscription() *eventingv1alpha1.Channel {
+//	return &eventingv1alpha1.Channel{
+//		TypeMeta: metav1.TypeMeta{
+//			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
+//			Kind:       channelKind,
+//		},
+//		ObjectMeta: om(testNS, channelName),
+//		Spec: eventingv1alpha1.ChannelSpec{
+//			Subscribable: &eventingduck.Subscribable{
+//				Subscribers: []eventingduck.ChannelSubscriberSpec{
+//					{
+//						ReplyURI: otherAddressableDNS,
+//					},
+//				},
+//			},
+//		},
+//	}
+//}
+//
+//func om(namespace, name string) metav1.ObjectMeta {
+//	return metav1.ObjectMeta{
+//		Namespace: namespace,
+//		Name:      name,
+//		SelfLink:  fmt.Sprintf("/apis/eventing/v1alpha1/namespaces/%s/object/%s", namespace, name),
+//	}
+//}
+//func feedObjectMeta(namespace, generateName string) metav1.ObjectMeta {
+//	return metav1.ObjectMeta{
+//		Namespace:    namespace,
+//		GenerateName: generateName,
+//		OwnerReferences: []metav1.OwnerReference{
+//			getOwnerReference(true),
+//		},
+//	}
+//}
+//
+//func getOwnerReference(blockOwnerDeletion bool) metav1.OwnerReference {
+//	return metav1.OwnerReference{
+//		APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
+//		Kind:               "Subscription",
+//		Name:               subscriptionName,
+//		Controller:         &trueVal,
+//		BlockOwnerDeletion: &blockOwnerDeletion,
+//	}
+//}
 
-func getNewReplyChannel() *eventingv1alpha1.Channel {
-	return getNewChannel(resultChannelName)
-}
+func patchSubscribers(namespace, name string, subscribers []v1alpha1.ChannelSubscriberSpec) clientgotesting.PatchActionImpl {
+	action := clientgotesting.PatchActionImpl{}
+	action.Name = name
+	action.Namespace = namespace
 
-func getNewChannel(name string) *eventingv1alpha1.Channel {
-	channel := &eventingv1alpha1.Channel{
-		TypeMeta:   channelType(),
-		ObjectMeta: om("test", name),
-		Spec:       eventingv1alpha1.ChannelSpec{},
+	b, err := json.Marshal(subscribers)
+
+	ss := make([]map[string]interface{}, 0)
+
+	err = json.Unmarshal(b, &ss)
+
+	subs, err := json.Marshal(ss)
+
+	if err != nil {
+		return action
 	}
-	channel.ObjectMeta.OwnerReferences = append(channel.ObjectMeta.OwnerReferences, getOwnerReference(false))
 
-	// selflink is not filled in when we create the object, so clear it
-	channel.ObjectMeta.SelfLink = ""
-	return channel
+	spec := fmt.Sprintf(`{"subscribable":{"subscribers":%s}}`, subs)
+
+	patch := `{"spec":` + spec + `"}`
+	action.Patch = []byte(patch)
+	return action
 }
 
-type SubscriptionBuilder struct {
-	*eventingv1alpha1.Subscription
-}
-
-// Verify the Builder implements Buildable
-var _ controllertesting.Buildable = &SubscriptionBuilder{}
-
-func Subscription() *SubscriptionBuilder {
-	subscription := &eventingv1alpha1.Subscription{
-		TypeMeta:   subscriptionType(),
-		ObjectMeta: om(testNS, subscriptionName),
-		Spec: eventingv1alpha1.SubscriptionSpec{
-			Channel: corev1.ObjectReference{
-				Name:       fromChannelName,
-				Kind:       channelKind,
-				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-			},
-			Subscriber: &eventingv1alpha1.SubscriberSpec{
-				Ref: &corev1.ObjectReference{
-					Name:       routeName,
-					Kind:       routeKind,
-					APIVersion: "serving.knative.dev/v1alpha1",
-				},
-			},
-			Reply: &eventingv1alpha1.ReplyStrategy{
-				Channel: &corev1.ObjectReference{
-					Name:       resultChannelName,
-					Kind:       channelKind,
-					APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-				},
-			},
-		},
-	}
-	subscription.ObjectMeta.OwnerReferences = append(subscription.ObjectMeta.OwnerReferences, getOwnerReference(false))
-
-	// selflink is not filled in when we create the object, so clear it
-	subscription.ObjectMeta.SelfLink = ""
-
-	return &SubscriptionBuilder{
-		Subscription: subscription,
-	}
-}
-
-func (s *SubscriptionBuilder) Build() runtime.Object {
-	return s.Subscription
-}
-
-func (s *SubscriptionBuilder) EmptyNonNilReply() *SubscriptionBuilder {
-	s.Spec.Reply = &eventingv1alpha1.ReplyStrategy{}
-	return s
-}
-
-func (s *SubscriptionBuilder) NilReply() *SubscriptionBuilder {
-	s.Spec.Reply = nil
-	return s
-}
-
-func (s *SubscriptionBuilder) EmptyNonNilSubscriber() *SubscriptionBuilder {
-	s.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{}
-	return s
-}
-
-func (s *SubscriptionBuilder) NilSubscriber() *SubscriptionBuilder {
-	s.Spec.Subscriber = nil
-	return s
-}
-
-func (s *SubscriptionBuilder) FromSource() *SubscriptionBuilder {
-	s.Spec.Channel = corev1.ObjectReference{
-		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-		Kind:       sourceKind,
-		Name:       sourceName,
-	}
-	return s
-}
-
-func (s *SubscriptionBuilder) ToK8sService() *SubscriptionBuilder {
-	s.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{
-		Ref: &corev1.ObjectReference{
-			Name:       k8sServiceName,
-			Kind:       "Service",
-			APIVersion: "v1",
-		},
-	}
-	return s
-}
-
-func (s *SubscriptionBuilder) UnknownConditions() *SubscriptionBuilder {
-	s.Status.InitializeConditions()
-	return s
-}
-
-func (s *SubscriptionBuilder) PhysicalSubscriber(dns string) *SubscriptionBuilder {
-	s.Status.PhysicalSubscription.SubscriberURI = resolve.DomainToURL(dns)
-	return s
-}
-
-func (s *SubscriptionBuilder) ReferencesResolved() *SubscriptionBuilder {
-	s.UnknownConditions()
-	s.Status.MarkReferencesResolved()
-	return s
-}
-
-func (s *SubscriptionBuilder) Reply() *SubscriptionBuilder {
-	s.Status.PhysicalSubscription.ReplyURI = resolve.DomainToURL(sinkableDNS)
-	return s
-}
-
-func (s *SubscriptionBuilder) DifferentChannel() *SubscriptionBuilder {
-	s.Name = "different-channel"
-	s.UID = "different-channel-UID"
-	s.Status.PhysicalSubscription.SubscriberURI = "some-other-domain"
-	return s
-}
-
-func (s *SubscriptionBuilder) ChannelReady() *SubscriptionBuilder {
-	s.ReferencesResolved()
-	s.Status.MarkChannelReady()
-	return s
-}
-
-func (s *SubscriptionBuilder) Deleted() *SubscriptionBuilder {
-	s.ObjectMeta.DeletionTimestamp = &deletionTime
-	return s
-}
-
-// Renamed renames the subscription. It is intended to be used in tests that create multiple
-// Subscriptions, so that there are no naming conflicts.
-func (s *SubscriptionBuilder) Renamed() *SubscriptionBuilder {
-	s.Name = "renamed"
-	s.UID = "renamed-UID"
-	s.Status.PhysicalSubscription.SubscriberURI = ""
-	s.Status.PhysicalSubscription.ReplyURI = otherAddressableDNS
-	return s
-}
-
-func channelType() metav1.TypeMeta {
-	return metav1.TypeMeta{
-		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-		Kind:       "Channel",
-	}
-}
-
-func subscriptionType() metav1.TypeMeta {
-	return metav1.TypeMeta{
-		APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-		Kind:       "Subscription",
-	}
-}
-
-func getK8sService() *corev1.Service {
-	return &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testNS,
-			Name:      k8sServiceName,
-		},
-	}
-}
-
-func getChannelWithMultipleSubscriptions() *eventingv1alpha1.Channel {
-	return &eventingv1alpha1.Channel{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-			Kind:       channelKind,
-		},
-		ObjectMeta: om(testNS, fromChannelName),
-		Spec: eventingv1alpha1.ChannelSpec{
-			Subscribable: &eventingduck.Subscribable{
-				Subscribers: []eventingduck.ChannelSubscriberSpec{
-					{
-						Ref: &corev1.ObjectReference{
-							APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-							Kind:       subscriptionKind,
-							Namespace:  testNS,
-							Name:       subscriptionName,
-							UID:        "",
-						},
-						SubscriberURI: targetDNS,
-						ReplyURI:      sinkableDNS,
-					},
-					{
-						Ref: &corev1.ObjectReference{
-							APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-							Kind:       subscriptionKind,
-							Namespace:  testNS,
-							Name:       "renamed",
-							UID:        "renamed-UID",
-						},
-						ReplyURI: otherAddressableDNS,
-					},
-				},
-			},
-		},
-	}
-}
-
-func getChannelWithOtherSubscription() *eventingv1alpha1.Channel {
-	return &eventingv1alpha1.Channel{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-			Kind:       channelKind,
-		},
-		ObjectMeta: om(testNS, fromChannelName),
-		Spec: eventingv1alpha1.ChannelSpec{
-			Subscribable: &eventingduck.Subscribable{
-				Subscribers: []eventingduck.ChannelSubscriberSpec{
-					{
-						ReplyURI: otherAddressableDNS,
-					},
-				},
-			},
-		},
-	}
-}
-
-func om(namespace, name string) metav1.ObjectMeta {
-	return metav1.ObjectMeta{
-		Namespace: namespace,
-		Name:      name,
-		SelfLink:  fmt.Sprintf("/apis/eventing/v1alpha1/namespaces/%s/object/%s", namespace, name),
-	}
-}
-func feedObjectMeta(namespace, generateName string) metav1.ObjectMeta {
-	return metav1.ObjectMeta{
-		Namespace:    namespace,
-		GenerateName: generateName,
-		OwnerReferences: []metav1.OwnerReference{
-			getOwnerReference(true),
-		},
-	}
-}
-
-func getOwnerReference(blockOwnerDeletion bool) metav1.OwnerReference {
-	return metav1.OwnerReference{
-		APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
-		Kind:               "Subscription",
-		Name:               subscriptionName,
-		Controller:         &trueVal,
-		BlockOwnerDeletion: &blockOwnerDeletion,
-	}
+func patchFinalizers(namespace, name string) clientgotesting.PatchActionImpl {
+	action := clientgotesting.PatchActionImpl{}
+	action.Name = name
+	action.Namespace = namespace
+	patch := `{"metadata":{"finalizers":["` + finalizerName + `"],"resourceVersion":""}}`
+	action.Patch = []byte(patch)
+	return action
 }
