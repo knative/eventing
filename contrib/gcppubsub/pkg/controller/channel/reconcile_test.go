@@ -539,7 +539,7 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeChannelWithFinalizerAndSubscriberWithoutUID(),
 			},
-			WantErrMsg: "empty reference UID: {&ObjectReference{Kind:,Namespace:,Name:,UID:,APIVersion:,ResourceVersion:,FieldPath:,} http://foo/ }",
+			WantErrMsg: "empty reference UID: { http://foo/ }",
 			WantEvent: []corev1.Event{
 				events[gcpResourcesPlanFailed],
 			},
@@ -994,9 +994,8 @@ func makeChannelWithFinalizerAndPossiblyOutdatedPlan(outdated bool) *eventingv1a
 	}
 	for _, plannedSubUID := range plannedSubUIDs {
 		sub := pubsubutil.GcpPubSubSubscriptionStatus{
-			Ref: &corev1.ObjectReference{
-				Name: string(plannedSubUID),
-				UID:  plannedSubUID,
+			ChannelSubscriberSpec: v1alpha1.ChannelSubscriberSpec{
+				UID: plannedSubUID,
 			},
 			Subscription: "will-be-retained-in-the-plan-without-recalculation",
 		}
@@ -1116,7 +1115,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 				Rewrite: &istiov1alpha3.HTTPRewrite{
 					Authority: fmt.Sprintf("%s.%s.channels.%s", cName, cNamespace, utils.GetClusterDomainName()),
 				},
-				Route: []istiov1alpha3.DestinationWeight{{
+				Route: []istiov1alpha3.HTTPRouteDestination{{
 					Destination: istiov1alpha3.Destination{
 						Host: "in-memory-channel-clusterbus.knative-eventing.svc." + utils.GetClusterDomainName(),
 						Port: istiov1alpha3.PortSelector{

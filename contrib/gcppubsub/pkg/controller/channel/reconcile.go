@@ -19,6 +19,7 @@ package channel
 import (
 	"context"
 	"fmt"
+	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 
 	ccpcontroller "github.com/knative/eventing/contrib/gcppubsub/pkg/controller/clusterchannelprovisioner"
 	pubsubutil "github.com/knative/eventing/contrib/gcppubsub/pkg/util"
@@ -308,13 +309,13 @@ func (r *reconciler) planGcpResources(ctx context.Context, c *eventingv1alpha1.C
 	existingSubs := make(map[types.UID]pubsubutil.GcpPubSubSubscriptionStatus, len(originalPCS.Subscriptions))
 	for _, existingSub := range originalPCS.Subscriptions {
 		// I don't think this can ever happen, but let's just be sure.
-		if existingSub.Ref != nil && existingSub.Ref.UID != "" {
-			existingSubs[existingSub.Ref.UID] = existingSub
+		if existingSub.UID != "" {
+			existingSubs[existingSub.UID] = existingSub
 		}
 	}
 	if c.Spec.Subscribable != nil {
 		for _, subscriber := range c.Spec.Subscribable.Subscribers {
-			if subscriber.Ref == nil || subscriber.Ref.UID == "" {
+			if subscriber.UID == "" {
 				return noNeedToPersist, nil, nil, fmt.Errorf("empty reference UID: %v", subscriber)
 			}
 			// Have we already synced this Subscription before? If so, reuse its existing
@@ -322,18 +323,20 @@ func (r *reconciler) planGcpResources(ctx context.Context, c *eventingv1alpha1.C
 			// to be persisted before processing (as it only affects the dispatcher, not anything in
 			// GCP).
 			var subscription string
-			if existingSub, present := existingSubs[subscriber.Ref.UID]; present {
-				delete(existingSubs, subscriber.Ref.UID)
+			if existingSub, present := existingSubs[subscriber.UID]; present {
+				delete(existingSubs, subscriber.UID)
 				subscription = existingSub.Subscription
 			} else {
 				persist = persistStatus
 				subscription = generateSubName(&subscriber)
 			}
 			subsToSync.subsToCreate = append(subsToSync.subsToCreate, pubsubutil.GcpPubSubSubscriptionStatus{
-				Ref:           subscriber.Ref,
-				SubscriberURI: subscriber.SubscriberURI,
-				ReplyURI:      subscriber.ReplyURI,
-				Subscription:  subscription,
+				ChannelSubscriberSpec: v1alpha1.ChannelSubscriberSpec{
+					UID:           subscriber.UID,
+					SubscriberURI: subscriber.SubscriberURI,
+					ReplyURI:      subscriber.ReplyURI,
+				},
+				Subscription: subscription,
 			})
 		}
 	}

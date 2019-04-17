@@ -175,10 +175,7 @@ func TestReconcile(t *testing.T) {
 			},
 			OtherTestData: map[string]interface{}{
 				shouldBeCanceled: map[channelName]subscriptionName{
-					key(makeChannel()): {
-						Namespace: cNamespace,
-						Name:      "sub-name",
-					},
+					key(makeChannel()): "sub-name",
 				},
 			},
 			WantPresent: []runtime.Object{
@@ -296,7 +293,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 				shouldNotBeCanceled: map[channelName]subscriptionName{
-					key(makeChannel()): {Namespace: subscribers.Subscribers[0].Ref.Namespace, Name: subscribers.Subscribers[0].Ref.Name},
+					key(makeChannel()): subscribers.Subscribers[0].UID,
 				},
 			},
 			WantPresent: []runtime.Object{
@@ -321,7 +318,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 				shouldBeCanceled: map[channelName]subscriptionName{
-					key(makeChannel()): {Namespace: cNamespace, Name: "old-sub"},
+					key(makeChannel()): "old-sub",
 				},
 			},
 			WantPresent: []runtime.Object{
@@ -346,7 +343,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 				shouldBeCanceled: map[channelName]subscriptionName{
-					key(makeChannel()): {Namespace: cNamespace, Name: "old-sub"},
+					key(makeChannel()): "old-sub",
 				},
 			},
 			WantPresent: []runtime.Object{
