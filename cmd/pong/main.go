@@ -22,9 +22,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/cloudevents/sdk-go/pkg/cloudevents"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
+	"github.com/cloudevents/sdk-go"
 	"github.com/google/uuid"
 )
 
@@ -43,20 +41,22 @@ func init() {
 func receive(event cloudevents.Event, resp *cloudevents.EventResponse) {
 	log.Printf("Received CloudEvent,\n%s", event)
 	if event.Type() == pingType {
-		resp.RespondWith(200, &cloudevents.Event{
-			Context: cloudevents.EventContextV02{
-				Type:   pongType,
-				Source: *types.ParseURLRef("github.com/knative/eventing/cmd/pong/" + id),
-			}.AsV02(),
-			Data: event.Data,
-		})
+		pong := cloudevents.NewEvent()
+		pong.SetType(pongType)
+		pong.SetSource("github.com/knative/eventing/cmd/pong/" + id)
+		if err := pong.SetData(event.Data); err != nil {
+			log.Printf("failed to set data on pong: %s", err)
+			resp.Error(400, "bad data")
+			return
+		}
+		resp.RespondWith(200, &pong)
 	}
 }
 
 func main() {
 	flag.Parse()
 
-	ce, err := client.NewDefault()
+	ce, err := cloudevents.NewDefaultClient()
 	if err != nil {
 		log.Fatalf("failed to create CloudEvent client, %s", err)
 	}
