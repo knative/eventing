@@ -22,7 +22,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/knative/pkg/logging"
@@ -37,9 +36,9 @@ const (
 	DefaultClusterChannelProvisioner = "in-memory-channel"
 	// DefaultBrokerName is the name of the Broker that is automatically created after the current namespace is labeled.
 	DefaultBrokerName = "default"
-
-	appName = "eventing-e2e-testing"
 )
+
+var logger = logging.FromContext(context.Background()).Named("eventing-e2e-testing")
 
 // validProvisioners is a list of provisioners that Eventing currently support.
 var validProvisioners = []string{DefaultClusterChannelProvisioner}
@@ -69,9 +68,7 @@ func (ps *Provisioners) Set(value string) error {
 	for _, provisioner := range strings.Split(value, ",") {
 		provisioner := strings.TrimSpace(provisioner)
 		if !isValid(provisioner) {
-			logger := logging.FromContext(context.Background()).Named(appName)
 			logger.Fatalf("The given provisioner %q is not supported, tests cannot be run.\n", provisioner)
-			os.Exit(1)
 		}
 
 		*ps = append(*ps, provisioner)
@@ -100,7 +97,6 @@ func initializeEventingFlags() *EventingEnvironmentFlags {
 
 	// If we are not running from TestMain, only one single provisioner can be specified.
 	if !f.RunFromMain && len(f.Provisioners) != 1 {
-		logger := logging.FromContext(context.Background()).Named(appName)
 		logger.Fatal("Only one single provisioner can be specified if you are not running from TestMain.")
 	}
 
