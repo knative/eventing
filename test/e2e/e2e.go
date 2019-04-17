@@ -103,9 +103,11 @@ func GetBaseFuncName(fullFuncName string) string {
 }
 
 // TearDown will delete created names using clients.
-func TearDown(clients *test.Clients, namespace string, cleaner *test.Cleaner, _ logging.FormatLogger) {
+func TearDown(clients *test.Clients, namespace string, cleaner *test.Cleaner, logf logging.FormatLogger) {
 	cleaner.Clean(true)
-	DeleteNameSpace(clients, namespace)
+	if err := DeleteNameSpace(clients, namespace); err != nil {
+		logf("Could not delete the namespace %q: %v", namespace, err)
+	}
 }
 
 // CreateChannel will create a Channel.
@@ -458,9 +460,10 @@ func LabelNamespace(clients *test.Clients, namespace string, labels map[string]s
 }
 
 // DeleteNameSpace deletes the namespace that has the given name.
-func DeleteNameSpace(clients *test.Clients, namespace string) {
-	nsSpec, err := clients.Kube.Kube.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
+func DeleteNameSpace(clients *test.Clients, namespace string) error {
+	_, err := clients.Kube.Kube.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
 	if err == nil || !errors.IsNotFound(err) {
-		clients.Kube.Kube.CoreV1().Namespaces().Delete(nsSpec.Name, nil)
+		return clients.Kube.Kube.CoreV1().Namespaces().Delete(namespace, nil)
 	}
+	return err
 }
