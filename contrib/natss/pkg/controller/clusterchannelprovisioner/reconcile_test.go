@@ -254,7 +254,7 @@ func makeK8sService() *corev1.Service {
 			Selector: provisioners.DispatcherLabels(Name),
 			Ports: []corev1.ServicePort{
 				{
-					Name:       "http",
+					Protocol:   corev1.ProtocolTCP,
 					Port:       80,
 					TargetPort: intstr.FromInt(8080),
 				},

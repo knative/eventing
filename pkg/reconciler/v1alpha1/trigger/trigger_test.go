@@ -20,14 +20,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"testing"
 
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/resources"
-
+	"github.com/google/go-cmp/cmp"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/reconciler/names"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
+	brokerresources "github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/resources"
 	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
@@ -37,11 +38,14 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -52,6 +56,8 @@ const (
 	subscriberAPIVersion = "v1"
 	subscriberKind       = "Service"
 	subscriberName       = "subscriberName"
+
+	continueToken = "continueToken"
 )
 
 var (
@@ -143,8 +149,7 @@ func TestReconcile(t *testing.T) {
 			Name: "Trigger not found",
 		},
 		{
-			Name:   "Get Trigger error",
-			Scheme: scheme.Scheme,
+			Name: "Get Trigger error",
 			Mocks: controllertesting.Mocks{
 				MockGets: []controllertesting.MockGet{
 					func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
@@ -158,16 +163,14 @@ func TestReconcile(t *testing.T) {
 			WantErrMsg: "test error getting the Trigger",
 		},
 		{
-			Name:   "Trigger being deleted",
-			Scheme: scheme.Scheme,
+			Name: "Trigger being deleted",
 			InitialState: []runtime.Object{
 				makeDeletingTrigger(),
 			},
 			WantEvent: []corev1.Event{events[triggerReconciled]},
 		},
 		{
-			Name:   "Get Broker error",
-			Scheme: scheme.Scheme,
+			Name: "Get Broker error",
 			InitialState: []runtime.Object{
 				makeTrigger(),
 			},
@@ -185,8 +188,7 @@ func TestReconcile(t *testing.T) {
 			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
 		},
 		{
-			Name:   "Get Broker Trigger channel error",
-			Scheme: scheme.Scheme,
+			Name: "Get Broker Trigger channel error",
 			InitialState: []runtime.Object{
 				makeTrigger(),
 				makeBroker(),
@@ -209,8 +211,16 @@ func TestReconcile(t *testing.T) {
 			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
 		},
 		{
-			Name:   "Get Broker Ingress channel error",
-			Scheme: scheme.Scheme,
+			Name: "Broker Trigger channel not found",
+			InitialState: []runtime.Object{
+				makeTrigger(),
+				makeBroker(),
+			},
+			WantErrMsg: ` "" not found`,
+			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+		},
+		{
+			Name: "Get Broker Ingress channel error",
 			InitialState: []runtime.Object{
 				makeTrigger(),
 				makeBroker(),
@@ -234,12 +244,52 @@ func TestReconcile(t *testing.T) {
 			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
 		},
 		{
-			Name:   "Resolve subscriberURI error",
-			Scheme: scheme.Scheme,
+			Name: "Broker Ingress channel not found",
 			InitialState: []runtime.Object{
 				makeTrigger(),
 				makeBroker(),
 				makeTriggerChannel(),
+			},
+			WantErrMsg: ` "" not found`,
+			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+		},
+		{
+			Name: "Broker Filter Service not found",
+			InitialState: []runtime.Object{
+				makeTrigger(),
+				makeBroker(),
+				makeTriggerChannel(),
+			},
+			WantErrMsg: ` "" not found`,
+			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+		},
+		{
+			Name: "Get Broker Filter Service error",
+			InitialState: []runtime.Object{
+				makeTrigger(),
+				makeBroker(),
+				makeTriggerChannel(),
+			},
+			Mocks: controllertesting.Mocks{
+				MockLists: []controllertesting.MockList{
+					func(_ client.Client, _ context.Context, opts *client.ListOptions, list runtime.Object) (handled controllertesting.MockHandled, e error) {
+						if _, ok := list.(*corev1.ServiceList); ok {
+							return controllertesting.Handled, errors.New("test error getting Broker's filter Service")
+						}
+						return controllertesting.Unhandled, nil
+					},
+				},
+			},
+			WantErrMsg: "test error getting Broker's filter Service",
+			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
+		},
+		{
+			Name: "Resolve subscriberURI error",
+			InitialState: []runtime.Object{
+				makeTrigger(),
+				makeBroker(),
+				makeTriggerChannel(),
+				makeBrokerFilterService(),
 			},
 			DynamicMocks: controllertesting.DynamicMocks{
 				MockGets: []controllertesting.MockDynamicGet{
@@ -256,114 +306,36 @@ func TestReconcile(t *testing.T) {
 			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
 		},
 		{
-			Name:   "Create K8s Service error",
-			Scheme: scheme.Scheme,
+			Name: "Get Subscription error",
 			InitialState: []runtime.Object{
 				makeTrigger(),
 				makeBroker(),
 				makeTriggerChannel(),
+				makeBrokerFilterService(),
 			},
 			Objects: []runtime.Object{
 				makeSubscriberServiceAsUnstructured(),
 			},
 			Mocks: controllertesting.Mocks{
-				MockCreates: []controllertesting.MockCreate{
-					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*corev1.Service); ok {
-							return controllertesting.Handled, errors.New("test error creating k8s service")
+				MockLists: []controllertesting.MockList{
+					func(_ client.Client, _ context.Context, _ *client.ListOptions, list runtime.Object) (controllertesting.MockHandled, error) {
+						if _, ok := list.(*v1alpha1.SubscriptionList); ok {
+							return controllertesting.Handled, errors.New("test error listing subscription")
 						}
 						return controllertesting.Unhandled, nil
 					},
 				},
 			},
-			WantErrMsg: "test error creating k8s service",
+			WantErrMsg: "test error listing subscription",
 			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
 		},
 		{
-			Name:   "Update K8s Service error",
-			Scheme: scheme.Scheme,
+			Name: "Create Subscription error",
 			InitialState: []runtime.Object{
 				makeTrigger(),
 				makeBroker(),
 				makeTriggerChannel(),
-				makeDifferentK8sService(),
-			},
-			Objects: []runtime.Object{
-				makeSubscriberServiceAsUnstructured(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockUpdates: []controllertesting.MockUpdate{
-					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*corev1.Service); ok {
-							return controllertesting.Handled, errors.New("test error updating k8s service")
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-			WantErrMsg: "test error updating k8s service",
-			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
-		},
-		{
-			Name:   "Create Virtual Service error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeTrigger(),
-				makeBroker(),
-				makeTriggerChannel(),
-				makeService(),
-			},
-			Objects: []runtime.Object{
-				makeSubscriberServiceAsUnstructured(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockCreates: []controllertesting.MockCreate{
-					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*istiov1alpha3.VirtualService); ok {
-							return controllertesting.Handled, errors.New("test error creating virtual service")
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-			WantErrMsg: "test error creating virtual service",
-			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
-		},
-		{
-			Name:   "Update Virtual Service error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeTrigger(),
-				makeBroker(),
-				makeTriggerChannel(),
-				makeService(),
-				makeDifferentVirtualService(),
-			},
-			Objects: []runtime.Object{
-				makeSubscriberServiceAsUnstructured(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockUpdates: []controllertesting.MockUpdate{
-					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*istiov1alpha3.VirtualService); ok {
-							return controllertesting.Handled, errors.New("test error updating virtual service")
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-			WantErrMsg: "test error updating virtual service",
-			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
-		},
-		{
-			Name:   "Create Subscription error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeTrigger(),
-				makeBroker(),
-				makeTriggerChannel(),
-				makeService(),
-				makeVirtualService(),
+				makeBrokerFilterService(),
 			},
 			Objects: []runtime.Object{
 				makeSubscriberServiceAsUnstructured(),
@@ -382,14 +354,12 @@ func TestReconcile(t *testing.T) {
 			WantEvent:  []corev1.Event{events[triggerReconcileFailed]},
 		},
 		{
-			Name:   "Delete Subscription error",
-			Scheme: scheme.Scheme,
+			Name: "Delete Subscription error",
 			InitialState: []runtime.Object{
 				makeTrigger(),
 				makeBroker(),
 				makeTriggerChannel(),
-				makeService(),
-				makeVirtualService(),
+				makeBrokerFilterService(),
 				makeDifferentSubscription(),
 			},
 			Objects: []runtime.Object{
@@ -409,14 +379,12 @@ func TestReconcile(t *testing.T) {
 			WantEvent:  []corev1.Event{events[subscriptionDeleteFailed], events[triggerReconcileFailed]},
 		},
 		{
-			Name:   "Re-create Subscription error",
-			Scheme: scheme.Scheme,
+			Name: "Re-create Subscription error",
 			InitialState: []runtime.Object{
 				makeTrigger(),
 				makeBroker(),
 				makeTriggerChannel(),
-				makeService(),
-				makeVirtualService(),
+				makeBrokerFilterService(),
 				makeDifferentSubscription(),
 			},
 			Objects: []runtime.Object{
@@ -436,14 +404,12 @@ func TestReconcile(t *testing.T) {
 			WantEvent:  []corev1.Event{events[subscriptionCreateFailed], events[triggerReconcileFailed]},
 		},
 		{
-			Name:   "Update status error",
-			Scheme: scheme.Scheme,
+			Name: "Update status error",
 			InitialState: []runtime.Object{
 				makeTrigger(),
 				makeBroker(),
 				makeTriggerChannel(),
-				makeService(),
-				makeVirtualService(),
+				makeBrokerFilterService(),
 				makeSameSubscription(),
 			},
 			Objects: []runtime.Object{
@@ -463,14 +429,12 @@ func TestReconcile(t *testing.T) {
 			WantEvent:  []corev1.Event{events[triggerReconciled], events[triggerUpdateStatusFailed]},
 		},
 		{
-			Name:   "Trigger reconciliation success",
-			Scheme: scheme.Scheme,
+			Name: "Trigger reconciliation success",
 			InitialState: []runtime.Object{
 				makeTrigger(),
 				makeBroker(),
 				makeTriggerChannel(),
-				makeService(),
-				makeVirtualService(),
+				makeBrokerFilterService(),
 				makeSameSubscription(),
 			},
 			Objects: []runtime.Object{
@@ -495,7 +459,119 @@ func TestReconcile(t *testing.T) {
 		}
 		tc.ReconcileKey = fmt.Sprintf("%s/%s", testNS, triggerName)
 		tc.IgnoreTimes = true
+		tc.Scheme = scheme.Scheme
 		t.Run(tc.Name, tc.Runner(t, r, c, recorder))
+	}
+}
+
+func TestMapBrokerToTriggers(t *testing.T) {
+	testCases := map[string]struct {
+		initialState []runtime.Object
+		mocks        controllertesting.Mocks
+		expected     []reconcile.Request
+	}{
+		"List error": {
+			mocks: controllertesting.Mocks{
+				MockLists: []controllertesting.MockList{
+					func(_ client.Client, _ context.Context, _ *client.ListOptions, list runtime.Object) (controllertesting.MockHandled, error) {
+						return controllertesting.Handled, errors.New("test induced error")
+					},
+				},
+			},
+			expected: []reconcile.Request{},
+		},
+		"One Trigger": {
+			initialState: []runtime.Object{
+				makeTrigger(),
+			},
+			expected: []reconcile.Request{
+				{
+					NamespacedName: types.NamespacedName{
+						Namespace: testNS,
+						Name:      triggerName,
+					},
+				},
+			},
+		},
+		"Only from this namespace": {
+			initialState: []runtime.Object{
+				makeTriggerWithNamespaceAndName(testNS, "one"),
+				makeTriggerWithNamespaceAndName("some-other-namespace", "will-be-ignored"),
+				makeTriggerWithNamespaceAndName(testNS, "two"),
+			},
+			expected: []reconcile.Request{
+				{
+					NamespacedName: types.NamespacedName{
+						Namespace: testNS,
+						Name:      "one",
+					},
+				},
+				{
+					NamespacedName: types.NamespacedName{
+						Namespace: testNS,
+						Name:      "two",
+					},
+				},
+			},
+		},
+		"Follows pagination": {
+			initialState: []runtime.Object{
+				makeTrigger(),
+			},
+			mocks: controllertesting.Mocks{
+				MockLists: []controllertesting.MockList{
+					func(innerClient client.Client, ctx context.Context, opts *client.ListOptions, list runtime.Object) (handled controllertesting.MockHandled, e error) {
+						// The first request won't have a continue token. Add it and immediately
+						// return. The subsequent request will have the token, remove it and send
+						// the request to the inner client.
+						tl := list.(*v1alpha1.TriggerList)
+						if opts.Raw.Continue != continueToken {
+							tl.Continue = continueToken
+							return controllertesting.Handled, nil
+						} else {
+							tl.Continue = ""
+							return controllertesting.Handled, innerClient.List(ctx, opts, list)
+						}
+					},
+				},
+			},
+			expected: []reconcile.Request{
+				{
+					NamespacedName: types.NamespacedName{
+						Namespace: testNS,
+						Name:      triggerName,
+					},
+				},
+			},
+		},
+	}
+
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			c := (&controllertesting.TestCase{
+				Scheme:       scheme.Scheme,
+				InitialState: tc.initialState,
+				Mocks:        tc.mocks,
+			}).GetClient()
+
+			b := &mapBrokerToTriggers{
+				// client and logger are the only fields that are used by the Map function.
+				r: &reconciler{
+					client: c,
+					logger: zap.NewNop(),
+				},
+			}
+			o := handler.MapObject{
+				Meta: &metav1.ObjectMeta{
+					Namespace: testNS,
+					Name:      brokerName,
+				},
+			}
+			actual := b.Map(o)
+			if diff := cmp.Diff(tc.expected, actual); diff != "" {
+				t.Errorf("Unexpected results (-want +got): %s", diff)
+			}
+		})
 	}
 }
 
@@ -533,8 +609,6 @@ func makeReadyTrigger() *v1alpha1.Trigger {
 	t.Status.InitializeConditions()
 	t.Status.MarkBrokerExists()
 	t.Status.SubscriberURI = fmt.Sprintf("http://%s.%s.svc.%s/", subscriberName, testNS, utils.GetClusterDomainName())
-	t.Status.MarkKubernetesServiceExists()
-	t.Status.MarkVirtualServiceExists()
 	t.Status.MarkSubscribed()
 	return t
 }
@@ -543,6 +617,13 @@ func makeDeletingTrigger() *v1alpha1.Trigger {
 	b := makeReadyTrigger()
 	b.DeletionTimestamp = &deletionTime
 	return b
+}
+
+func makeTriggerWithNamespaceAndName(namespace, name string) *v1alpha1.Trigger {
+	t := makeTrigger()
+	t.Namespace = namespace
+	t.Name = name
+	return t
 }
 
 func makeBroker() *v1alpha1.Broker {
@@ -616,37 +697,24 @@ func makeSubscriberServiceAsUnstructured() *unstructured.Unstructured {
 	}
 }
 
-func makeService() *corev1.Service {
-	return resources.NewService(makeTrigger())
+func makeBrokerFilterService() *corev1.Service {
+	return brokerresources.MakeFilterService(makeBroker())
 }
 
-func makeDifferentK8sService() *corev1.Service {
-	svc := makeService()
-	svc.Spec.Ports = []corev1.ServicePort{{
-		Name: "http",
-		Port: 9999,
-	}}
-	return svc
-}
-
-func makeVirtualService() *istiov1alpha3.VirtualService {
-	return resources.NewVirtualService(makeTrigger(), makeService())
-}
-
-func makeDifferentVirtualService() *istiov1alpha3.VirtualService {
-	vsvc := makeVirtualService()
-	vsvc.Spec.Hosts = []string{
-		names.ServiceHostName("other_svc_name", "other_svc_namespace"),
+func makeServiceURI() *url.URL {
+	return &url.URL{
+		Scheme: "http",
+		Host:   "service-uri",
+		Path:   "/path",
 	}
-	return vsvc
 }
 
 func makeSameSubscription() *v1alpha1.Subscription {
-	return resources.NewSubscription(makeTrigger(), makeTriggerChannel(), makeTriggerChannel(), makeService())
+	return resources.NewSubscription(makeTrigger(), makeTriggerChannel(), makeTriggerChannel(), makeServiceURI())
 }
 
 func makeDifferentSubscription() *v1alpha1.Subscription {
-	return resources.NewSubscription(makeTrigger(), makeTriggerChannel(), makeDifferentChannel(), makeService())
+	return resources.NewSubscription(makeTrigger(), makeTriggerChannel(), makeDifferentChannel(), makeServiceURI())
 }
 
 func getOwnerReference() metav1.OwnerReference {

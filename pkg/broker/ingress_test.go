@@ -214,7 +214,7 @@ func makeCloudEvent(extensions map[string]interface{}) cloudevents.Event {
 			},
 			ContentType: cloudevents.StringOfApplicationJSON(),
 			Extensions:  extensions,
-		},
+		}.AsV02(),
 	}
 }
 

@@ -26,11 +26,15 @@ func init() {
 
 	AddDecoder("", json.Decode)
 	AddDecoder("application/json", json.Decode)
+	AddDecoder("text/json", json.Decode)
 	AddDecoder("application/xml", xml.Decode)
+	AddDecoder("text/xml", xml.Decode)
 
 	AddEncoder("", json.Encode)
 	AddEncoder("application/json", json.Encode)
+	AddEncoder("text/json", json.Encode)
 	AddEncoder("application/xml", xml.Encode)
+	AddEncoder("text/xml", xml.Encode)
 }
 
 // AddDecoder registers a decoder for a given content type. The codecs will use
