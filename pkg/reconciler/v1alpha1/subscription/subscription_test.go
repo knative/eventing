@@ -19,37 +19,27 @@ package subscription
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/pkg/controller"
-
-	clientgotesting "k8s.io/client-go/testing"
-	//"github.com/knative/pkg/controller"
-	//clientgotesting "k8s.io/client-go/testing"
-
-	. "github.com/knative/eventing/pkg/reconciler/v1alpha1/testing"
-
-	//"github.com/knative/pkg/controller"
-
 	"testing"
 
-	//"go.uber.org/zap"
-
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	"github.com/knative/eventing/pkg/utils"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	logtesting "github.com/knative/pkg/logging/testing"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	//"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
-	//"k8s.io/client-go/rest"
-	//"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	clientgotesting "k8s.io/client-go/testing"
+
+	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
+	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/utils"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/controller"
+	logtesting "github.com/knative/pkg/logging/testing"
+
+	. "github.com/knative/eventing/pkg/reconciler/v1alpha1/testing"
 )
 
 var (
@@ -75,6 +65,7 @@ const (
 	replyName      = "reply"
 	channelName    = "origin"
 
+	subscriptionUID  = "subscriptionUID-abc-123"
 	subscriptionName = "testsubscription"
 	testNS           = "testnamespace"
 
@@ -92,10 +83,6 @@ var (
 
 	replyDNS = "reply.mynamespace.svc." + utils.GetClusterDomainName()
 	replyURI = "http://" + replyDNS + "/"
-
-	//sinkableDNS         = "myresultchannel.mynamespace.svc." + utils.GetClusterDomainName()
-	//k8sServiceDNS       = "testk8sservice.testnamespace.svc." + utils.GetClusterDomainName()
-	//otherAddressableDNS = "other-sinkable-channel.mynamespace.svc." + utils.GetClusterDomainName()
 
 	subscriberGVK = metav1.GroupVersionKind{
 		Group:   "testing.eventing.knative.dev",
@@ -282,7 +269,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
-					{Ref: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS}, SubscriberURI: subscriberURI},
+					{UID: subscriptionUID, SubscriberURI: subscriberURI},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
@@ -319,7 +306,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
-					{Ref: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS}, ReplyURI: replyURI},
+					{UID: subscriptionUID, ReplyURI: replyURI},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
@@ -362,60 +349,58 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
-					{Ref: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS}, SubscriberURI: subscriberURI, ReplyURI: replyURI},
+					{UID: subscriptionUID, SubscriberURI: subscriberURI, ReplyURI: replyURI},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
 		},
-		// TODO: This test is causes a panic
-		//{
-		//	Name: "subscription, valid remove subscriber",
-		//	Objects: []runtime.Object{
-		//		NewSubscription(subscriptionName, testNS,
-		//			WithSubscriptionChannel(channelGVK, channelName),
-		//			WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
-		//			WithInitSubscriptionConditions,
-		//			MarkSubscriptionReady,
-		//			WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-		//			WithSubscriptionPhysicalSubscriptionReply(replyURI), // as if we deleted the repl
-		//		),
-		//		NewUnstructured(subscriberGVK, subscriberName, testNS,
-		//			WithUnstructuredAddressable(subscriberDNS),
-		//		),
-		//		NewChannel(channelName, testNS,
-		//			WithInitChannelConditions,
-		//			WithChannelAddress(channelDNS),
-		//			WithChannelSubscribers([]v1alpha1.ChannelSubscriberSpec{
-		//				{Ref: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS}, SubscriberURI: subscriberURI, ReplyURI: replyURI},
-		//			}),
-		//		),
-		//		NewChannel(replyName, testNS,
-		//			WithInitChannelConditions,
-		//			WithChannelAddress(replyDNS),
-		//		),
-		//	},
-		//	Key:     testNS + "/" + subscriptionName,
-		//	WantErr: false,
-		//	WantEvents: []string{
-		//		Eventf(corev1.EventTypeNormal, "SubscriptionReconciled", "Subscription reconciled: %q", subscriptionName),
-		//	},
-		//	WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-		//		Object: NewSubscription(subscriptionName, testNS,
-		//			WithSubscriptionChannel(channelGVK, channelName),
-		//			WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
-		//			WithSubscriptionReply(channelGVK, replyName),
-		//			WithInitSubscriptionConditions,
-		//			MarkSubscriptionReady,
-		//			WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-		//		),
-		//	}},
-		//	WantPatches: []clientgotesting.PatchActionImpl{
-		//		patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
-		//			{Ref: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS}, SubscriberURI: subscriberURI, ReplyURI: replyURI},
-		//		}),
-		//		patchFinalizers(testNS, subscriptionName),
-		//	},
-		//},
+		{
+			Name: "subscription, valid remove reply",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+					WithInitSubscriptionConditions,
+					MarkSubscriptionReady,
+					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithSubscriptionPhysicalSubscriptionReply(replyURI), // as if we deleted the repl
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
+				),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(channelDNS),
+					WithChannelSubscribers([]v1alpha1.ChannelSubscriberSpec{
+						{UID: subscriptionUID, SubscriberURI: subscriberURI, ReplyURI: replyURI},
+					}),
+				),
+				NewChannel(replyName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(replyDNS),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "SubscriptionReconciled", "Subscription reconciled: %q", subscriptionName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+					WithInitSubscriptionConditions,
+					MarkSubscriptionReady,
+					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
+					{UID: subscriptionUID, SubscriberURI: subscriberURI},
+				}),
+				patchFinalizers(testNS, subscriptionName),
+			},
+		},
 	}
 
 	//			Name: "old subscription: updates status, removing the no longer present Subscriber",

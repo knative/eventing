@@ -55,18 +55,10 @@ var (
 	subscribers = &v1alpha1.Subscribable{
 		Subscribers: []v1alpha1.ChannelSubscriberSpec{
 			{
-				Ref: &corev1.ObjectReference{
-					Name:      "sub-name1",
-					Namespace: "sub-namespace1",
-					UID:       "sub-uid1",
-				},
+				UID: "sub-uid1",
 			},
 			{
-				Ref: &corev1.ObjectReference{
-					Name:      "sub-name2",
-					Namespace: "sub-namespace2",
-					UID:       "sub-uid2",
-				},
+				UID: "sub-uid2",
 			},
 		},
 	}

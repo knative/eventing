@@ -33,6 +33,7 @@ func NewSubscription(name, namespace string, so ...SubscriptionOption) *v1alpha1
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			UID:       "subscriptionUID-abc-123",
 		},
 	}
 	for _, opt := range so {

@@ -74,16 +74,10 @@ var (
 	subscribers = &v1alpha1.Subscribable{
 		Subscribers: []v1alpha1.ChannelSubscriberSpec{
 			{
-				Ref: &corev1.ObjectReference{
-					Name: "sub-name",
-					UID:  "sub-uid",
-				},
+				UID: "sub-uid",
 			},
 			{
-				Ref: &corev1.ObjectReference{
-					Name: "sub-2-name",
-					UID:  "sub-2-uid",
-				},
+				UID: "sub-2-uid",
 			},
 		},
 	}
@@ -971,9 +965,7 @@ func makeChannelWithFinalizerAndSubscriberWithoutUID() *eventingv1alpha1.Channel
 	c.Spec.Subscribable = &v1alpha1.Subscribable{
 		Subscribers: []v1alpha1.ChannelSubscriberSpec{
 			{
-				Ref: &corev1.ObjectReference{
-					UID: "",
-				},
+				UID:           "",
 				SubscriberURI: "http://foo/",
 			},
 		},
@@ -1023,16 +1015,10 @@ func makeChannelWithFinalizerAndPossiblyOutdatedPlan(outdated bool) *eventingv1a
 	c.Spec.Subscribable = &v1alpha1.Subscribable{
 		Subscribers: []v1alpha1.ChannelSubscriberSpec{
 			{
-				Ref: &corev1.ObjectReference{
-					Name: "keep-sub",
-					UID:  "keep-sub",
-				},
+				UID: "keep-sub",
 			},
 			{
-				Ref: &corev1.ObjectReference{
-					Name: "add-sub",
-					UID:  "add-sub",
-				},
+				UID: "add-sub",
 			},
 		},
 	}
@@ -1048,10 +1034,12 @@ func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscrib
 	}
 	for _, sub := range subscribable.Subscribers {
 		pcs.Subscriptions = append(pcs.Subscriptions, pubsubutil.GcpPubSubSubscriptionStatus{
-			Ref:           sub.Ref,
-			ReplyURI:      sub.ReplyURI,
-			SubscriberURI: sub.SubscriberURI,
-			Subscription:  "test-subscription-id",
+			ChannelSubscriberSpec: v1alpha1.ChannelSubscriberSpec{
+				UID:           sub.UID,
+				ReplyURI:      sub.ReplyURI,
+				SubscriberURI: sub.SubscriberURI,
+			},
+			Subscription: "test-subscription-id",
 		})
 	}
 	err = pubsubutil.SetInternalStatus(context.Background(), c, pcs)
