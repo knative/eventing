@@ -19,6 +19,8 @@ limitations under the License.
 package test
 
 import (
+	"encoding/json"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -86,9 +88,8 @@ func (c *Cleaner) Clean(awaitDeletion bool) error {
 		if err != nil {
 			c.logf("Failed to get to-be cleaned resource %q : %s", deleter.Name, err)
 		} else {
-			// bytes, _ := json.MarshalIndent(r, "", "  ")
-			// c.logf("Cleaning resource: %q\n%+v", deleter.Name, string(bytes))
-			c.logf(r.GetName())
+			bytes, _ := json.MarshalIndent(r, "", "  ")
+			c.logf("Cleaning resource: %q\n%+v", deleter.Name, string(bytes))
 		}
 		if err := deleter.Resource.Delete(deleter.Name, nil); err != nil {
 			c.logf("Error: %v", err)

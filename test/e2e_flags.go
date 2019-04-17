@@ -19,13 +19,15 @@ limitations under the License.
 package test
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/knative/pkg/logging"
 	pkgTest "github.com/knative/pkg/test"
-	"github.com/knative/pkg/test/logging"
+	testLogging "github.com/knative/pkg/test/logging"
 )
 
 const (
@@ -35,6 +37,8 @@ const (
 	DefaultClusterChannelProvisioner = "in-memory-channel"
 	// DefaultBrokerName is the name of the Broker that is automatically created after the current namespace is labeled.
 	DefaultBrokerName = "default"
+
+	appName = "eventing-e2e-testing"
 )
 
 // validProvisioners is a list of provisioners that Eventing currently support.
@@ -65,7 +69,8 @@ func (ps *Provisioners) Set(value string) error {
 	for _, provisioner := range strings.Split(value, ",") {
 		provisioner := strings.TrimSpace(provisioner)
 		if !isValid(provisioner) {
-			fmt.Printf("The given provisioner %q is not supported, tests cannot be run.\n", provisioner)
+			logger := logging.FromContext(context.Background()).Named(appName)
+			logger.Fatalf("The given provisioner %q is not supported, tests cannot be run.\n", provisioner)
 			os.Exit(1)
 		}
 
@@ -95,13 +100,13 @@ func initializeEventingFlags() *EventingEnvironmentFlags {
 
 	// If we are not running from TestMain, only one single provisioner can be specified.
 	if !f.RunFromMain && len(f.Provisioners) != 1 {
-		fmt.Println("Only one single provisioner can be specified if you are not running from TestMain.")
-		os.Exit(1)
+		logger := logging.FromContext(context.Background()).Named(appName)
+		logger.Fatal("Only one single provisioner can be specified if you are not running from TestMain.")
 	}
 
-	logging.InitializeLogger(pkgTest.Flags.LogVerbose)
+	testLogging.InitializeLogger(pkgTest.Flags.LogVerbose)
 	if pkgTest.Flags.EmitMetrics {
-		logging.InitializeMetricExporter("eventing")
+		testLogging.InitializeMetricExporter("eventing")
 	}
 
 	return &f
