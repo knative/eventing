@@ -34,6 +34,12 @@ var channelTestMap = map[string][]func(t *testing.T){
 		TestChannelChain,
 		TestDefaultBrokerWithManyTriggers,
 	},
+	"gcp-pubsub": []func(t *testing.T){
+		TestSingleBinaryEvent,
+		TestSingleStructuredEvent,
+		TestEventTransformation,
+		TestChannelChain,
+	},
 }
 
 func TestMain(t *testing.T) {
@@ -50,7 +56,7 @@ func TestMain(t *testing.T) {
 			funcName := runtime.FuncForPC(reflect.ValueOf(testFunc).Pointer()).Name()
 			baseFuncName := GetBaseFuncName(funcName)
 			t.Logf("Running %q with %q ClusterChannelProvisioner", baseFuncName, provisioner)
-			t.Run(baseFuncName, testFunc)
+			t.Run(baseFuncName+"-"+provisioner, testFunc)
 		}
 	}
 }

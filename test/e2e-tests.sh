@@ -42,6 +42,12 @@ function knative_setup() {
   echo "Installing In-Memory ClusterChannelProvisioner"
   ko apply -f config/provisioners/in-memory-channel/in-memory-channel.yaml || return 1
   wait_until_pods_running knative-eventing || fail_test "Failed to install the In-Memory ClusterChannelProvisioner"
+
+  echo "Installing GCPPubSub ClusterChannelProvisioner"
+  kubectl -n knative-eventing create secret generic gcppubsub-channel-key --from-file=key.json=${GOOGLE_APPLICATION_CREDENTIALS}
+  gcloud_project="$(gcloud config get-value project)"
+  sed "s/REPLACE_WITH_GCP_PROJECT/${gcloud_project}/" contrib/gcppubsub/config/gcppubsub.yaml | ko apply -f -
+  wait_until_pods_running knative-eventing || fail_test "Failed to install the GCPPubSub ClusterChannelProvisioner"
 }
 
 function knative_teardown() {
@@ -83,6 +89,6 @@ function dump_extra_cluster_state() {
 
 initialize $@
 
-go_test_e2e -timeout=20m ./test/e2e -run ^TestMain$ -runFromMain=true -clusterChannelProvisioners=in-memory-channel || fail_test
+go_test_e2e -timeout=20m ./test/e2e -run ^TestMain$ -runFromMain=true -clusterChannelProvisioners=in-memory-channel,gcp-pubsub || fail_test
 
 success

@@ -30,18 +30,19 @@ import (
 )
 
 const (
-	// E2ETestNamespacePrefix is the namespace prefix used for running all e2e tests.
-	E2ETestNamespacePrefix = "e2e-ns"
 	// DefaultClusterChannelProvisioner is the default ClusterChannelProvisioner we will run tests against.
-	DefaultClusterChannelProvisioner = "in-memory-channel"
-	// DefaultBrokerName is the name of the Broker that is automatically created after the current namespace is labeled.
-	DefaultBrokerName = "default"
+	DefaultClusterChannelProvisioner = InMemoryChannelProvisioner
 )
 
 var logger = logging.FromContext(context.Background()).Named("eventing-e2e-testing")
 
 // validProvisioners is a list of provisioners that Eventing currently support.
-var validProvisioners = []string{DefaultClusterChannelProvisioner}
+var validProvisioners = []string{
+	InMemoryChannelProvisioner,
+	GCPPubSubChannelProvisioner,
+	KafkaChannelProvisioner,
+	NatssChannelProvisioner,
+}
 
 func isValid(provisioner string) bool {
 	for i := range validProvisioners {
