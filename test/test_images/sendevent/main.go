@@ -26,10 +26,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cloudevents/sdk-go/pkg/cloudevents"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
+	"github.com/cloudevents/sdk-go"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 )
 
 type Heartbeat struct {
@@ -81,6 +79,15 @@ func main() {
 		maxMsg = m
 	}
 
+	defer func() {
+		var err error
+		r := recover()
+		if r != nil {
+			err = r.(error)
+			fmt.Printf("recovered from panic: %v", err)
+		}
+	}()
+
 	if delay > 0 {
 		log.Printf("will sleep for %s", delay)
 		time.Sleep(delay)
@@ -94,24 +101,24 @@ func main() {
 	var encodingOption http.Option
 	switch encoding {
 	case "binary":
-		encodingOption = http.WithBinaryEncoding()
+		encodingOption = cloudevents.WithBinaryEncoding()
 	case "structured":
-		encodingOption = http.WithStructuredEncoding()
+		encodingOption = cloudevents.WithStructuredEncoding()
 	default:
 		fmt.Printf("unsupported encoding option: %q\n", encoding)
 		os.Exit(1)
 	}
 
-	t, err := http.New(
-		http.WithTarget(sink),
+	t, err := cloudevents.NewHTTPTransport(
+		cloudevents.WithTarget(sink),
 		encodingOption,
 	)
 	if err != nil {
 		log.Fatalf("failed to create transport, %v", err)
 	}
-	c, err := client.New(t,
-		client.WithTimeNow(),
-		client.WithUUIDs(),
+	c, err := cloudevents.NewClient(t,
+		cloudevents.WithTimeNow(),
+		cloudevents.WithUUIDs(),
 	)
 	if err != nil {
 		log.Fatalf("failed to create client, %v", err)
@@ -130,13 +137,14 @@ func main() {
 		sequence++
 		untyped["sequence"] = fmt.Sprintf("%d", sequence)
 
-		event := cloudevents.Event{
-			Context: cloudevents.EventContextV02{
-				ID:     eventID,
-				Type:   eventType,
-				Source: *types.ParseURLRef(source),
-			}.AsV02(),
-			Data: untyped,
+		event := cloudevents.NewEvent()
+		if eventID != "" {
+			event.SetID(eventID)
+		}
+		event.SetType(eventType)
+		event.SetSource(source)
+		if err := event.SetData(untyped); err != nil {
+			log.Fatalf("failed to set data, %v", err)
 		}
 
 		if resp, err := c.Send(context.Background(), event); err != nil {
