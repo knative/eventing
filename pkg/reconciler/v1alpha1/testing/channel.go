@@ -19,6 +19,7 @@ package testing
 import (
 	"context"
 
+	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -63,5 +64,13 @@ func WithInitChannelConditions(s *v1alpha1.Channel) {
 func WithChannelAddress(hostname string) ChannelOption {
 	return func(c *v1alpha1.Channel) {
 		c.Status.Address.Hostname = hostname
+	}
+}
+
+func WithChannelSubscribers(subscribers []duckv1alpha1.ChannelSubscriberSpec) ChannelOption {
+	return func(c *v1alpha1.Channel) {
+		c.Spec.Subscribable = &duckv1alpha1.Subscribable{
+			Subscribers: subscribers,
+		}
 	}
 }

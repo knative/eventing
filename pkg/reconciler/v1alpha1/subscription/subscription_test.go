@@ -251,7 +251,80 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
-			Name: "subscription, valid",
+			Name: "subscription, valid channel+subscriber",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
+				),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(channelDNS),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "SubscriptionReconciled", "Subscription reconciled: %q", subscriptionName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					MarkSubscriptionReady,
+					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
+					{Ref: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS}, SubscriberURI: subscriberURI},
+				}),
+				patchFinalizers(testNS, subscriptionName),
+			},
+		}, {
+			Name: "subscription, valid channel+reply",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionReply(channelGVK, replyName),
+				),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(channelDNS),
+				),
+				NewChannel(replyName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(replyDNS),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "SubscriptionReconciled", "Subscription reconciled: %q", subscriptionName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionReply(channelGVK, replyName),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					MarkSubscriptionReady,
+					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
+					{Ref: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS}, ReplyURI: replyURI},
+				}),
+				patchFinalizers(testNS, subscriptionName),
+			},
+		}, {
+			Name: "subscription, valid channel+subscriber+reply",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionChannel(channelGVK, channelName),
@@ -288,223 +361,63 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(channelName, testNS, []v1alpha1.ChannelSubscriberSpec{
+				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
 					{Ref: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS}, SubscriberURI: subscriberURI, ReplyURI: replyURI},
 				}),
-				patchFinalizers(subscriptionName, testNS),
+				patchFinalizers(testNS, subscriptionName),
 			},
-		}}
+		},
+		// TODO: This test is causes a panic
+		//{
+		//	Name: "subscription, valid remove subscriber",
+		//	Objects: []runtime.Object{
+		//		NewSubscription(subscriptionName, testNS,
+		//			WithSubscriptionChannel(channelGVK, channelName),
+		//			WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+		//			WithInitSubscriptionConditions,
+		//			MarkSubscriptionReady,
+		//			WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+		//			WithSubscriptionPhysicalSubscriptionReply(replyURI), // as if we deleted the repl
+		//		),
+		//		NewUnstructured(subscriberGVK, subscriberName, testNS,
+		//			WithUnstructuredAddressable(subscriberDNS),
+		//		),
+		//		NewChannel(channelName, testNS,
+		//			WithInitChannelConditions,
+		//			WithChannelAddress(channelDNS),
+		//			WithChannelSubscribers([]v1alpha1.ChannelSubscriberSpec{
+		//				{Ref: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS}, SubscriberURI: subscriberURI, ReplyURI: replyURI},
+		//			}),
+		//		),
+		//		NewChannel(replyName, testNS,
+		//			WithInitChannelConditions,
+		//			WithChannelAddress(replyDNS),
+		//		),
+		//	},
+		//	Key:     testNS + "/" + subscriptionName,
+		//	WantErr: false,
+		//	WantEvents: []string{
+		//		Eventf(corev1.EventTypeNormal, "SubscriptionReconciled", "Subscription reconciled: %q", subscriptionName),
+		//	},
+		//	WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+		//		Object: NewSubscription(subscriptionName, testNS,
+		//			WithSubscriptionChannel(channelGVK, channelName),
+		//			WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+		//			WithSubscriptionReply(channelGVK, replyName),
+		//			WithInitSubscriptionConditions,
+		//			MarkSubscriptionReady,
+		//			WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+		//		),
+		//	}},
+		//	WantPatches: []clientgotesting.PatchActionImpl{
+		//		patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
+		//			{Ref: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS}, SubscriberURI: subscriberURI, ReplyURI: replyURI},
+		//		}),
+		//		patchFinalizers(testNS, subscriptionName),
+		//	},
+		//},
+	}
 
-	//		}, {
-	//			Name: "new subscription: adds status, all targets resolved, subscribers modified",
-	//			InitialState: []runtime.Object{
-	//				Subscription(),
-	//			},
-	//			// TODO: JSON patch is not working on the fake, see
-	//			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
-	//			// failure for now, until upstream is fixed.
-	//			WantResult: reconcile.Result{},
-	//			WantPresent: []runtime.Object{
-	//				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).Reply(),
-	//			},
-	//			WantErrMsg: `unable to find api field in struct Unstructured for the json field "spec"`,
-	//			WantEvent: []corev1.Event{
-	//				events[physicalChannelSyncFailed],
-	//			},
-	//			Objects: []runtime.Object{
-	//				// Source channel
-	//				&unstructured.Unstructured{
-	//					Object: map[string]interface{}{
-	//						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-	//						"kind":       channelKind,
-	//						"metadata": map[string]interface{}{
-	//							"namespace": testNS,
-	//							"name":      channelName,
-	//						},
-	//						"spec": map[string]interface{}{
-	//							"subscribable": map[string]interface{}{},
-	//						},
-	//					},
-	//				},
-	//				// Subscriber (using knative route)
-	//				&unstructured.Unstructured{
-	//					Object: map[string]interface{}{
-	//						"apiVersion": "serving.knative.dev/v1alpha1",
-	//						"kind":       routeKind,
-	//						"metadata": map[string]interface{}{
-	//							"namespace": testNS,
-	//							"name":      routeName,
-	//						},
-	//						"status": map[string]interface{}{
-	//							"address": map[string]interface{}{
-	//								"hostname": targetDNS,
-	//							},
-	//						},
-	//					},
-	//				},
-	//				// Reply channel
-	//				&unstructured.Unstructured{
-	//					Object: map[string]interface{}{
-	//						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-	//						"kind":       channelKind,
-	//						"metadata": map[string]interface{}{
-	//							"namespace": testNS,
-	//							"name":      resultChannelName,
-	//						},
-	//						"spec": map[string]interface{}{
-	//							"subscribable": map[string]interface{}{},
-	//						},
-	//						"status": map[string]interface{}{
-	//							"address": map[string]interface{}{
-	//								"hostname": sinkableDNS,
-	//							},
-	//						},
-	//					},
-	//				},
-	//			},
-	//		}, {
-	//			Name: "new subscription: adds status, all targets resolved, subscribers modified -- nil reply",
-	//			InitialState: []runtime.Object{
-	//				Subscription().NilReply(),
-	//			},
-	//			// TODO: JSON patch is not working on the fake, see
-	//			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
-	//			// failure for now, until upstream is fixed.
-	//			WantResult: reconcile.Result{},
-	//			WantPresent: []runtime.Object{
-	//				Subscription().NilReply().ReferencesResolved().PhysicalSubscriber(targetDNS),
-	//			},
-	//			WantErrMsg: `unable to find api field in struct Unstructured for the json field "spec"`,
-	//			WantEvent: []corev1.Event{
-	//				events[physicalChannelSyncFailed],
-	//			},
-	//			Objects: []runtime.Object{
-	//				// Source channel
-	//				&unstructured.Unstructured{
-	//					Object: map[string]interface{}{
-	//						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-	//						"kind":       channelKind,
-	//						"metadata": map[string]interface{}{
-	//							"namespace": testNS,
-	//							"name":      channelName,
-	//						},
-	//						"spec": map[string]interface{}{
-	//							"subscribable": map[string]interface{}{},
-	//						},
-	//					},
-	//				},
-	//				// Subscriber (using knative route)
-	//				&unstructured.Unstructured{
-	//					Object: map[string]interface{}{
-	//						"apiVersion": "serving.knative.dev/v1alpha1",
-	//						"kind":       routeKind,
-	//						"metadata": map[string]interface{}{
-	//							"namespace": testNS,
-	//							"name":      routeName,
-	//						},
-	//						"status": map[string]interface{}{
-	//							"address": map[string]interface{}{
-	//								"hostname": targetDNS,
-	//							},
-	//						},
-	//					},
-	//				},
-	//			},
-	//		}, {
-	//			Name: "new subscription: adds status, all targets resolved, subscribers modified -- empty but non-nil reply",
-	//			InitialState: []runtime.Object{
-	//				Subscription().EmptyNonNilReply(),
-	//			},
-	//			// TODO: JSON patch is not working on the fake, see
-	//			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
-	//			// failure for now, until upstream is fixed.
-	//			WantResult: reconcile.Result{},
-	//			WantPresent: []runtime.Object{
-	//				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).EmptyNonNilReply(),
-	//			},
-	//			WantErrMsg: `unable to find api field in struct Unstructured for the json field "spec"`,
-	//			WantEvent: []corev1.Event{
-	//				events[physicalChannelSyncFailed],
-	//			},
-	//			Objects: []runtime.Object{
-	//				// Source channel
-	//				&unstructured.Unstructured{
-	//					Object: map[string]interface{}{
-	//						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-	//						"kind":       channelKind,
-	//						"metadata": map[string]interface{}{
-	//							"namespace": testNS,
-	//							"name":      channelName,
-	//						},
-	//						"spec": map[string]interface{}{
-	//							"subscribable": map[string]interface{}{},
-	//						},
-	//					},
-	//				},
-	//				// Subscriber (using knative route)
-	//				&unstructured.Unstructured{
-	//					Object: map[string]interface{}{
-	//						"apiVersion": "serving.knative.dev/v1alpha1",
-	//						"kind":       routeKind,
-	//						"metadata": map[string]interface{}{
-	//							"namespace": testNS,
-	//							"name":      routeName,
-	//						},
-	//						"status": map[string]interface{}{
-	//							"address": map[string]interface{}{
-	//								"hostname": targetDNS,
-	//							},
-	//						},
-	//					},
-	//				},
-	//			},
-	//		}, {
-	//			Name: "new subscription: adds status, target points to the legacy targetable interface",
-	//			InitialState: []runtime.Object{
-	//				Subscription().EmptyNonNilReply(),
-	//			},
-	//			// TODO: JSON patch is not working on the fake, see
-	//			// https://github.com/kubernetes/client-go/issues/478. Marking this as expecting a specific
-	//			// failure for now, until upstream is fixed.
-	//			WantResult: reconcile.Result{},
-	//			WantPresent: []runtime.Object{
-	//				Subscription().ReferencesResolved().PhysicalSubscriber(targetDNS).EmptyNonNilReply(),
-	//			},
-	//			WantErrMsg: `unable to find api field in struct Unstructured for the json field "spec"`,
-	//			WantEvent: []corev1.Event{
-	//				events[physicalChannelSyncFailed],
-	//			},
-	//			Objects: []runtime.Object{
-	//				// Source channel
-	//				&unstructured.Unstructured{
-	//					Object: map[string]interface{}{
-	//						"apiVersion": eventingv1alpha1.SchemeGroupVersion.String(),
-	//						"kind":       channelKind,
-	//						"metadata": map[string]interface{}{
-	//							"namespace": testNS,
-	//							"name":      channelName,
-	//						},
-	//						"spec": map[string]interface{}{
-	//							"subscribable": map[string]interface{}{},
-	//						},
-	//					},
-	//				},
-	//				// Subscriber (using knative route)
-	//				&unstructured.Unstructured{
-	//					Object: map[string]interface{}{
-	//						"apiVersion": "serving.knative.dev/v1alpha1",
-	//						"kind":       routeKind,
-	//						"metadata": map[string]interface{}{
-	//							"namespace": testNS,
-	//							"name":      routeName,
-	//						},
-	//						"status": map[string]interface{}{
-	//							"domainInternal": targetDNS,
-	//						},
-	//					},
-	//				},
-	//			},
-	//		}, {
 	//			Name: "old subscription: updates status, removing the no longer present Subscriber",
 	//			InitialState: []runtime.Object{
 	//				// This will have no Subscriber in the spec, but will have one in the status.
@@ -1409,7 +1322,7 @@ func patchSubscribers(namespace, name string, subscribers []v1alpha1.ChannelSubs
 
 	spec := fmt.Sprintf(`{"subscribable":{"subscribers":%s}}`, subs)
 
-	patch := `{"spec":` + spec + `"}`
+	patch := `{"spec":` + spec + `}`
 	action.Patch = []byte(patch)
 	return action
 }

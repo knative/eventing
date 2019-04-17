@@ -297,13 +297,6 @@
   revision = "6f77996f0c42f7b84e5a2b252227263f93432e9b"
 
 [[projects]]
-  digest = "1:d7494e14f3dc2296fb1106fd59a3190f93017891d63c5025600f5794ced8b900"
-  name = "github.com/google/go-containerregistry"
-  packages = ["pkg/name"]
-  pruneopts = "NUT"
-  revision = "ec69c4a8a1bff25fcbe096fcb32c9a6543fbdccf"
-
-[[projects]]
   branch = "master"
   digest = "1:52c5834e2bebac9030c97cc0798ac11c3aa8a39f098aeb419f142533da6cd3cc"
   name = "github.com/google/gofuzz"
@@ -441,30 +434,12 @@
   revision = "dd3ceb3323922b899a0a913f885fcf59943e7b59"
 
 [[projects]]
-  branch = "master"
-  digest = "1:438dda5f41b0553ab3ea78f18d94ea2141e60d8e413edb4ec13b411b200f667b"
-  name = "github.com/knative/caching"
-  packages = [
-    "pkg/apis/caching",
-    "pkg/apis/caching/v1alpha1",
-    "pkg/client/clientset/versioned",
-    "pkg/client/clientset/versioned/fake",
-    "pkg/client/clientset/versioned/scheme",
-    "pkg/client/clientset/versioned/typed/caching/v1alpha1",
-    "pkg/client/clientset/versioned/typed/caching/v1alpha1/fake",
-    "pkg/client/listers/caching/v1alpha1",
-  ]
-  pruneopts = "NUT"
-  revision = "afa9ee174c6f2072b12dbb4b3bf64be8ec7bc30b"
-
-[[projects]]
-  digest = "1:4db4149db0c0ad1cba0764e7885bb138e619617ec6c131de0954cdb730942873"
+  digest = "1:b657ec75371e8baf47023f7eb4f20d78e2a744f51ec824b40dd6cf74ad6fdaf4"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
     "apis/duck",
     "apis/duck/v1alpha1",
-    "apis/duck/v1beta1",
     "apis/istio",
     "apis/istio/authentication",
     "apis/istio/authentication/v1alpha1",
@@ -502,37 +477,7 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "b4e9ee3fa093176a369b59440a34cf2af89d041e"
-  source = "github.com/n3wscott/pkg"
-
-[[projects]]
-  branch = "master"
-  digest = "1:44c285ace76b668aa7d056f44ac3dea4693af9ca9e28be27e643d638140acf33"
-  name = "github.com/knative/serving"
-  packages = [
-    "pkg/apis/autoscaling",
-    "pkg/apis/autoscaling/v1alpha1",
-    "pkg/apis/config",
-    "pkg/apis/networking",
-    "pkg/apis/networking/v1alpha1",
-    "pkg/apis/serving",
-    "pkg/apis/serving/v1alpha1",
-    "pkg/client/clientset/versioned",
-    "pkg/client/clientset/versioned/fake",
-    "pkg/client/clientset/versioned/scheme",
-    "pkg/client/clientset/versioned/typed/autoscaling/v1alpha1",
-    "pkg/client/clientset/versioned/typed/autoscaling/v1alpha1/fake",
-    "pkg/client/clientset/versioned/typed/networking/v1alpha1",
-    "pkg/client/clientset/versioned/typed/networking/v1alpha1/fake",
-    "pkg/client/clientset/versioned/typed/serving/v1alpha1",
-    "pkg/client/clientset/versioned/typed/serving/v1alpha1/fake",
-    "pkg/client/listers/autoscaling/v1alpha1",
-    "pkg/client/listers/networking/v1alpha1",
-    "pkg/client/listers/serving/v1alpha1",
-    "pkg/reconciler/testing",
-  ]
-  pruneopts = "NUT"
-  revision = "635279a2d18128852358ab17c61fc9967284edf1"
+  revision = "418e675f88c29db0217475a74e61ebfa239f0f50"
 
 [[projects]]
   branch = "master"
@@ -1074,11 +1019,11 @@
     "storage/v1beta1",
   ]
   pruneopts = "NUT"
-  revision = "6db15a15d2d3874a6c3ddb2140ac9f3bc7058428"
-  version = "kubernetes-1.12.5"
+  revision = "145d52631d00cbfe68490d19ae4f0f501fd31a95"
+  version = "kubernetes-1.12.6"
 
 [[projects]]
-  digest = "1:71d28556d46329081174d64fc8d55dc8317294b7e610825d464730b16b4e78aa"
+  digest = "1:58293c3a67fbca0336cd3cc2140dfe630545694452cf73980d2e4b6e6ce2660c"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/equality",
@@ -1130,8 +1075,8 @@
     "third_party/forked/golang/reflect",
   ]
   pruneopts = "NUT"
-  revision = "49ce2735e5074ffc3f8190c8406cf51a96302dad"
-  version = "kubernetes-1.12.5"
+  revision = "01f179d85dbce0f2e0e4351a92394b38694b7cae"
+  version = "kubernetes-1.12.6"
 
 [[projects]]
   digest = "1:f15a0d552b80277323d01ee8acc6750bb57bdae997bc63bf192d84fb1f0b9136"
@@ -1312,8 +1257,8 @@
     "util/workqueue",
   ]
   pruneopts = "NUT"
-  revision = "701b913670036511e3d752318272c97f1a2a2edd"
-  version = "kubernetes-1.12.5"
+  revision = "78295b709ec6fa5be12e35892477a326dea2b5d3"
+  version = "kubernetes-1.12.6"
 
 [[projects]]
   digest = "1:26b81b5e76e3f84ea5140da4f74649576e470f79091d2ef8e0d1b5000bc636ca"
@@ -1341,7 +1286,7 @@
   ]
   pruneopts = "T"
   revision = "b1289fc74931d4b6b04bd1a259acfc88a2cb0a66"
-  version = "kubernetes-1.12.5"
+  version = "kubernetes-1.12.6"
 
 [[projects]]
   branch = "master"
@@ -1430,9 +1375,6 @@
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/uuid",
     "github.com/knative/build/pkg/apis/build/v1alpha1",
-    "github.com/knative/caching/pkg/apis/caching/v1alpha1",
-    "github.com/knative/caching/pkg/client/clientset/versioned/fake",
-    "github.com/knative/caching/pkg/client/listers/caching/v1alpha1",
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
     "github.com/knative/pkg/apis/duck/v1alpha1",
@@ -1452,14 +1394,6 @@
     "github.com/knative/pkg/test",
     "github.com/knative/pkg/test/logging",
     "github.com/knative/pkg/webhook",
-    "github.com/knative/serving/pkg/apis/autoscaling/v1alpha1",
-    "github.com/knative/serving/pkg/apis/networking/v1alpha1",
-    "github.com/knative/serving/pkg/apis/serving/v1alpha1",
-    "github.com/knative/serving/pkg/client/clientset/versioned/fake",
-    "github.com/knative/serving/pkg/client/listers/autoscaling/v1alpha1",
-    "github.com/knative/serving/pkg/client/listers/networking/v1alpha1",
-    "github.com/knative/serving/pkg/client/listers/serving/v1alpha1",
-    "github.com/knative/serving/pkg/reconciler/testing",
     "github.com/knative/test-infra/scripts",
     "github.com/knative/test-infra/tools/dep-collector",
     "github.com/nats-io/go-nats-streaming",
@@ -1478,7 +1412,6 @@
     "google.golang.org/api/option",
     "gopkg.in/yaml.v2",
     "k8s.io/api/apps/v1",
-    "k8s.io/api/autoscaling/v1",
     "k8s.io/api/core/v1",
     "k8s.io/api/rbac/v1",
     "k8s.io/apimachinery/pkg/api/equality",
@@ -1509,7 +1442,6 @@
     "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/kubernetes/typed/core/v1",
     "k8s.io/client-go/listers/apps/v1",
-    "k8s.io/client-go/listers/autoscaling/v1",
     "k8s.io/client-go/listers/core/v1",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
     "k8s.io/client-go/rest",
