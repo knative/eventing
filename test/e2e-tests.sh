@@ -91,6 +91,6 @@ function dump_extra_cluster_state() {
 
 initialize $@
 
-go_test_e2e -timeout=20m ./test/e2e -run ^TestSingleBinaryEvent$ -clusterChannelProvisioners=gcp-pubsub || fail_test
+go_test_e2e -timeout=20m ./test/e2e -clusterChannelProvisioners=gcp-pubsub || fail_test
 
 success
