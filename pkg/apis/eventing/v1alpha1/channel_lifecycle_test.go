@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 var condReady = duckv1alpha1.Condition{
@@ -38,6 +39,8 @@ var condUnprovisioned = duckv1alpha1.Condition{
 var ignoreAllButTypeAndStatus = cmpopts.IgnoreFields(
 	duckv1alpha1.Condition{},
 	"LastTransitionTime", "Message", "Reason", "Severity")
+
+var ignoreLastTransitionTime = cmpopts.IgnoreFields(duckv1alpha1.Condition{}, "LastTransitionTime")
 
 func TestChannelGetCondition(t *testing.T) {
 	tests := []struct {
@@ -188,11 +191,18 @@ func TestChannelIsReady(t *testing.T) {
 		name            string
 		markProvisioned bool
 		setAddress      bool
+		markDeprecated  bool
 		wantReady       bool
 	}{{
 		name:            "all happy",
 		markProvisioned: true,
 		setAddress:      true,
+		wantReady:       true,
+	}, {
+		name:            "deprecated does not affect happy",
+		markProvisioned: true,
+		setAddress:      true,
+		markDeprecated:  true,
 		wantReady:       true,
 	}, {
 		name:            "one sad",
@@ -211,6 +221,9 @@ func TestChannelIsReady(t *testing.T) {
 			}
 			if test.setAddress {
 				cs.SetAddress("foo.bar")
+			}
+			if test.markDeprecated {
+				cs.MarkDeprecated("TestReason", "Test Message")
 			}
 			got := cs.IsReady()
 			if test.wantReady != got {
@@ -266,6 +279,42 @@ func TestChannelStatus_SetAddressable(t *testing.T) {
 			cs.SetAddress(tc.domainInternal)
 			if diff := cmp.Diff(tc.want, cs, ignoreAllButTypeAndStatus); diff != "" {
 				t.Errorf("unexpected conditions (-want, +got) = %v", diff)
+			}
+		})
+	}
+}
+
+func TestChannelStatus_MarkDeprecated(t *testing.T) {
+	testCases := map[string]struct {
+		alreadyPresent bool
+	}{
+		"not present": {
+			alreadyPresent: false,
+		},
+		"already present": {
+			alreadyPresent: true,
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			cs := &ChannelStatus{}
+			if tc.alreadyPresent {
+				cs.MarkDeprecated("AlreadyPresent", "Already present.")
+			}
+			cs.MarkDeprecated("Test", "Test Message")
+			if len(cs.Conditions) != 1 {
+				t.Fatalf("Incorrect number of conditions. Expected 1, actually %v", cs)
+			}
+
+			expected := duckv1alpha1.Condition{
+				Type:     "Deprecated",
+				Reason:   "Test",
+				Status:   v1.ConditionTrue,
+				Severity: duckv1alpha1.ConditionSeverityWarning,
+				Message:  "Test Message",
+			}
+			if diff := cmp.Diff(expected, cs.Conditions[0], ignoreLastTransitionTime); diff != "" {
+				t.Errorf("Condition incorrect (-want +got): %s", diff)
 			}
 		})
 	}
