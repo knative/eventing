@@ -17,12 +17,13 @@ limitations under the License.
 package testing
 
 import (
+	"context"
 	"k8s.io/apimachinery/pkg/runtime"
 	"testing"
 
 	fakedynamicclientset "k8s.io/client-go/dynamic/fake"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
-	//ktesting "k8s.io/client-go/testing"
+	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/record"
 
 	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
@@ -76,8 +77,12 @@ func MakeFactory(ctor Ctor) Factory {
 		}
 
 		// Validate all Create operations through the eventing client.
-		client.PrependReactor("create", "*", ValidateCreates)
-		client.PrependReactor("update", "*", ValidateUpdates)
+		client.PrependReactor("create", "*", func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+			return ValidateCreates(context.Background(), action)
+		})
+		client.PrependReactor("update", "*", func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+			return ValidateUpdates(context.Background(), action)
+		})
 
 		actionRecorderList := ActionRecorderList{dynamicClient, client, kubeClient}
 		eventList := EventList{Recorder: eventRecorder}

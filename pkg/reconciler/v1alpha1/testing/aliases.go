@@ -17,6 +17,7 @@ limitations under the License.
 package testing
 
 import (
+	configmaptesting "github.com/knative/pkg/configmap/testing"
 	logtesting "github.com/knative/pkg/logging/testing"
 	"github.com/knative/pkg/reconciler/testing"
 )
@@ -39,7 +40,7 @@ var (
 	ExpectNormalEventDelivery = testing.ExpectNormalEventDelivery
 	ValidateCreates           = testing.ValidateCreates
 	ValidateUpdates           = testing.ValidateUpdates
-	ConfigMapFromTestFile     = testing.ConfigMapFromTestFile
+	ConfigMapFromTestFile     = configmaptesting.ConfigMapFromTestFile
 	Eventf                    = testing.Eventf
 
 	PrependGenerateNameReactor = testing.PrependGenerateNameReactor
