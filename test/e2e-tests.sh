@@ -44,7 +44,9 @@ function knative_setup() {
   wait_until_pods_running knative-eventing || fail_test "Failed to install the In-Memory ClusterChannelProvisioner"
 
   echo "Installing GCPPubSub ClusterChannelProvisioner"
+  echo "Env: Key=${GOOGLE_APPLICATION_CREDENTIALS}"
   kubectl -n knative-eventing create secret generic gcppubsub-channel-key --from-file=key.json=${GOOGLE_APPLICATION_CREDENTIALS}
+  echo "Env: PROJECT_ID=${PROJECT_ID}"
   sed "s/REPLACE_WITH_GCP_PROJECT/${PROJECT_ID}/" contrib/gcppubsub/config/gcppubsub.yaml | ko apply -f -
   wait_until_pods_running knative-eventing || fail_test "Failed to install the GCPPubSub ClusterChannelProvisioner"
 }
