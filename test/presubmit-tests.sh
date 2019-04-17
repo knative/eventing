@@ -30,4 +30,4 @@ source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/presubmit-t
 
 # We use the default build, unit and integration test runners.
 
-main $@
+main $@ --integration-tests
