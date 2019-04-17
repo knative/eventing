@@ -329,39 +329,49 @@ func TestBrokerIsReady(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			bs := &BrokerStatus{}
 			if test.markIngressReady != nil {
+				var d *v1.Deployment
 				if *test.markIngressReady {
-					bs.PropagateIngressDeploymentAvailability(availableDeployment())
+					d = availableDeployment()
 				} else {
-					bs.MarkIngressFailed("failed", "err")
+					d = unavailableDeployment()
 				}
+				bs.PropagateIngressDeploymentAvailability(d)
 			}
 			if test.markTriggerChannelReady != nil {
+				var c *ChannelStatus
 				if *test.markTriggerChannelReady {
-					bs.PropagateTriggerChannelReadiness(readyChannelStatus())
+					c = readyChannelStatus()
 				} else {
-					bs.MarkTriggerChannelFailed("failed", "err")
+					c = notReadyChannelStatus()
 				}
+				bs.PropagateTriggerChannelReadiness(c)
 			}
 			if test.markIngressChannelReady != nil {
+				var c *ChannelStatus
 				if *test.markIngressChannelReady {
-					bs.PropagateIngressChannelReadiness(readyChannelStatus())
+					c = readyChannelStatus()
 				} else {
-					bs.MarkIngressChannelFailed("failed", "err")
+					c = notReadyChannelStatus()
 				}
+				bs.PropagateIngressChannelReadiness(c)
 			}
 			if test.markIngressSubscriptionReady != nil {
+				var sub *SubscriptionStatus
 				if *test.markIngressSubscriptionReady {
-					bs.PropagateIngressSubscriptionReadiness(readySubscriptionStatus())
+					sub = readySubscriptionStatus()
 				} else {
-					bs.MarkIngressSubscriptionFailed("failed", "err")
+					sub = notReadySubscriptionStatus()
 				}
+				bs.PropagateIngressSubscriptionReadiness(sub)
 			}
 			if test.markFilterReady != nil {
+				var d *v1.Deployment
 				if *test.markFilterReady {
-					bs.PropagateFilterDeploymentAvailability(availableDeployment())
+					d = availableDeployment()
 				} else {
-					bs.MarkFilterFailed("failed", "err")
+					d = unavailableDeployment()
 				}
+				bs.PropagateFilterDeploymentAvailability(d)
 			}
 			bs.SetAddress(test.address)
 
@@ -373,9 +383,21 @@ func TestBrokerIsReady(t *testing.T) {
 	}
 }
 
-func availableDeployment() *v1.Deployment {
+func unavailableDeployment() *v1.Deployment {
 	d := &v1.Deployment{}
-	d.Name = "deployment-name"
+	d.Name = "unavailable"
+	d.Status.Conditions = []v1.DeploymentCondition{
+		{
+			Type:   v1.DeploymentAvailable,
+			Status: "False",
+		},
+	}
+	return d
+}
+
+func availableDeployment() *v1.Deployment {
+	d := unavailableDeployment()
+	d.Name = "available"
 	d.Status.Conditions = []v1.DeploymentCondition{
 		{
 			Type:   v1.DeploymentAvailable,
@@ -393,9 +415,21 @@ func readyChannelStatus() *ChannelStatus {
 	return cs
 }
 
+func notReadyChannelStatus() *ChannelStatus {
+	cs := readyChannelStatus()
+	cs.MarkNotProvisioned("foo", "bar")
+	return cs
+}
+
 func readySubscriptionStatus() *SubscriptionStatus {
 	ss := &SubscriptionStatus{}
 	ss.MarkChannelReady()
+	ss.MarkReferencesResolved()
+	return ss
+}
+
+func notReadySubscriptionStatus() *SubscriptionStatus {
+	ss := &SubscriptionStatus{}
 	ss.MarkReferencesResolved()
 	return ss
 }
