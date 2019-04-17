@@ -26,19 +26,18 @@ import (
 
 	pubsubutil "github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/testcreds"
 
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/fakepubsub"
-
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	util "github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/eventing/pkg/reconciler/names"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
+	"github.com/knative/pkg/system"
 	_ "github.com/knative/pkg/system/testing"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -47,6 +46,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -90,18 +90,17 @@ var (
 
 	// map of events to set test cases' expectations easier
 	events = map[string]corev1.Event{
-		channelReconciled:          {Reason: channelReconciled, Type: corev1.EventTypeNormal},
-		channelUpdateStatusFailed:  {Reason: channelUpdateStatusFailed, Type: corev1.EventTypeWarning},
-		channelReadStatusFailed:    {Reason: channelReadStatusFailed, Type: corev1.EventTypeWarning},
-		gcpCredentialsReadFailed:   {Reason: gcpCredentialsReadFailed, Type: corev1.EventTypeWarning},
-		gcpResourcesPlanFailed:     {Reason: gcpResourcesPlanFailed, Type: corev1.EventTypeWarning},
-		gcpResourcesPersistFailed:  {Reason: gcpResourcesPersistFailed, Type: corev1.EventTypeWarning},
-		virtualServiceCreateFailed: {Reason: virtualServiceCreateFailed, Type: corev1.EventTypeWarning},
-		k8sServiceCreateFailed:     {Reason: k8sServiceCreateFailed, Type: corev1.EventTypeWarning},
-		topicCreateFailed:          {Reason: topicCreateFailed, Type: corev1.EventTypeWarning},
-		topicDeleteFailed:          {Reason: topicDeleteFailed, Type: corev1.EventTypeWarning},
-		subscriptionSyncFailed:     {Reason: subscriptionSyncFailed, Type: corev1.EventTypeWarning},
-		subscriptionDeleteFailed:   {Reason: subscriptionDeleteFailed, Type: corev1.EventTypeWarning},
+		channelReconciled:         {Reason: channelReconciled, Type: corev1.EventTypeNormal},
+		channelUpdateStatusFailed: {Reason: channelUpdateStatusFailed, Type: corev1.EventTypeWarning},
+		channelReadStatusFailed:   {Reason: channelReadStatusFailed, Type: corev1.EventTypeWarning},
+		gcpCredentialsReadFailed:  {Reason: gcpCredentialsReadFailed, Type: corev1.EventTypeWarning},
+		gcpResourcesPlanFailed:    {Reason: gcpResourcesPlanFailed, Type: corev1.EventTypeWarning},
+		gcpResourcesPersistFailed: {Reason: gcpResourcesPersistFailed, Type: corev1.EventTypeWarning},
+		k8sServiceCreateFailed:    {Reason: k8sServiceCreateFailed, Type: corev1.EventTypeWarning},
+		topicCreateFailed:         {Reason: topicCreateFailed, Type: corev1.EventTypeWarning},
+		topicDeleteFailed:         {Reason: topicDeleteFailed, Type: corev1.EventTypeWarning},
+		subscriptionSyncFailed:    {Reason: subscriptionSyncFailed, Type: corev1.EventTypeWarning},
+		subscriptionDeleteFailed:  {Reason: subscriptionDeleteFailed, Type: corev1.EventTypeWarning},
 	}
 )
 
@@ -481,62 +480,6 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			Name: "Virtual service get fails",
-			InitialState: []runtime.Object{
-				makeChannelWithFinalizerAndPCS(),
-				makeK8sService(),
-				makeVirtualService(),
-				testcreds.MakeSecretWithCreds(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockLists: errorListingVirtualService(),
-			},
-			WantPresent: []runtime.Object{
-				// TODO: This should have a useful error message saying that the VirtualService
-				// failed.
-				makeChannelWithFinalizerAndPCSAndAddress(),
-			},
-			WantErrMsg: testErrorMessage,
-			WantEvent: []corev1.Event{
-				events[virtualServiceCreateFailed],
-			},
-		},
-		{
-			Name: "Virtual service creation fails",
-			InitialState: []runtime.Object{
-				makeChannelWithFinalizerAndPCS(),
-				makeK8sService(),
-				testcreds.MakeSecretWithCreds(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockCreates: errorCreatingVirtualService(),
-			},
-			WantPresent: []runtime.Object{
-				// TODO: This should have a useful error message saying that the VirtualService
-				// failed.
-				makeChannelWithFinalizerAndPCSAndAddress(),
-			},
-			WantErrMsg: testErrorMessage,
-			WantEvent: []corev1.Event{
-				events[virtualServiceCreateFailed],
-			},
-		},
-		{
-			Name: "VirtualService already exists - not owned by Channel",
-			InitialState: []runtime.Object{
-				makeChannelWithFinalizerAndPCS(),
-				makeK8sService(),
-				makeVirtualServiceNotOwnedByChannel(),
-				testcreds.MakeSecretWithCreds(),
-			},
-			WantPresent: []runtime.Object{
-				makeReadyChannel(),
-			},
-			WantEvent: []corev1.Event{
-				events[channelReconciled],
-			},
-		},
-		{
 			Name: "Error planning - subscriber missing UID",
 			InitialState: []runtime.Object{
 				makeChannelWithFinalizerAndSubscriberWithoutUID(),
@@ -571,7 +514,6 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeChannelWithFinalizerAndPCS(),
 				makeK8sService(),
-				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			OtherTestData: map[string]interface{}{
@@ -592,7 +534,6 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeChannelWithFinalizerAndPCS(),
 				makeK8sService(),
-				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			OtherTestData: map[string]interface{}{
@@ -616,8 +557,6 @@ func TestReconcile(t *testing.T) {
 			Name: "Create Topic - topic already exists",
 			InitialState: []runtime.Object{
 				makeChannelWithFinalizerAndPCS(),
-				makeK8sService(),
-				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			OtherTestData: map[string]interface{}{
@@ -630,6 +569,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantPresent: []runtime.Object{
+				makeK8sService(),
 				makeReadyChannel(),
 			},
 			WantEvent: []corev1.Event{
@@ -641,7 +581,6 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeChannelWithFinalizerAndPCS(),
 				makeK8sService(),
-				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			OtherTestData: map[string]interface{}{
@@ -663,12 +602,11 @@ func TestReconcile(t *testing.T) {
 			Name: "Create Topic - topic create succeeds",
 			InitialState: []runtime.Object{
 				makeChannelWithFinalizerAndPCS(),
-				makeK8sService(),
-				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			WantPresent: []runtime.Object{
 				makeReadyChannel(),
+				makeK8sService(),
 			},
 			WantEvent: []corev1.Event{
 				events[channelReconciled],
@@ -679,7 +617,6 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeChannelWithSubscribersAndFinalizerAndPCS(),
 				makeK8sService(),
-				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			OtherTestData: map[string]interface{}{
@@ -704,7 +641,6 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeChannelWithSubscribersAndFinalizerAndPCS(),
 				makeK8sService(),
-				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			OtherTestData: map[string]interface{}{
@@ -728,7 +664,6 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeChannelWithSubscribersAndFinalizerAndPCS(),
 				makeK8sService(),
-				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			OtherTestData: map[string]interface{}{
@@ -751,7 +686,6 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeChannelWithSubscribersAndFinalizerAndPCS(),
 				makeK8sService(),
-				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			WantPresent: []runtime.Object{
@@ -766,7 +700,6 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeChannelWithFinalizerAndPCS(),
 				makeK8sService(),
-				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			Mocks: controllertesting.Mocks{
@@ -782,7 +715,6 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeChannel(),
 				makeK8sService(),
-				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			Mocks: controllertesting.Mocks{
@@ -797,7 +729,6 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeChannelWithFinalizerAndPCS(),
 				makeK8sService(),
-				makeVirtualService(),
 				testcreds.MakeSecretWithCreds(),
 			},
 			Mocks: controllertesting.Mocks{
@@ -854,7 +785,9 @@ func makeChannel() *eventingv1alpha1.Channel {
 
 func makeChannelWithFinalizerAndPCSAndAddress() *eventingv1alpha1.Channel {
 	c := makeChannelWithFinalizerAndPCS()
-	c.Status.SetAddress(fmt.Sprintf("%s-channel.%s.svc.%s", c.Name, c.Namespace, utils.GetClusterDomainName()))
+	// serviceAddress is the address of the K8s Service. It uses a GeneratedName and the fake client
+	// does not fill in Name, so the name is the empty string.
+	c.Status.SetAddress(fmt.Sprintf(".%s.svc.%s", c.Namespace, utils.GetClusterDomainName()))
 	return c
 }
 
@@ -1067,11 +1000,13 @@ func makeK8sService() *corev1.Service {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-channel", cName),
-			Namespace: cNamespace,
+			GenerateName: fmt.Sprintf("%s-channel-", cName),
+			Namespace:    cNamespace,
 			Labels: map[string]string{
-				"channel":     cName,
-				"provisioner": ccpName,
+				util.EventingChannelLabel:        cName,
+				util.OldEventingChannelLabel:     cName,
+				util.EventingProvisionerLabel:    ccpName,
+				util.OldEventingProvisionerLabel: ccpName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -1085,66 +1020,10 @@ func makeK8sService() *corev1.Service {
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name: util.PortName,
-					Port: util.PortNumber,
-				},
-			},
+			ExternalName: names.ServiceHostName(fmt.Sprintf("%s-dispatcher", ccpName), system.Namespace()),
+			Type:         corev1.ServiceTypeExternalName,
 		},
 	}
-}
-
-func makeVirtualService() *istiov1alpha3.VirtualService {
-	return &istiov1alpha3.VirtualService{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: istiov1alpha3.SchemeGroupVersion.String(),
-			Kind:       "VirtualService",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-channel", cName),
-			Namespace: cNamespace,
-			Labels: map[string]string{
-				"channel":     cName,
-				"provisioner": ccpName,
-			},
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
-					Kind:               "Channel",
-					Name:               cName,
-					UID:                cUID,
-					Controller:         &truePointer,
-					BlockOwnerDeletion: &truePointer,
-				},
-			},
-		},
-		Spec: istiov1alpha3.VirtualServiceSpec{
-			Hosts: []string{
-				fmt.Sprintf("%s-channel.%s.svc.%s", cName, cNamespace, utils.GetClusterDomainName()),
-				fmt.Sprintf("%s.%s.channels.%s", cName, cNamespace, utils.GetClusterDomainName()),
-			},
-			HTTP: []istiov1alpha3.HTTPRoute{{
-				Rewrite: &istiov1alpha3.HTTPRewrite{
-					Authority: fmt.Sprintf("%s.%s.channels.%s", cName, cNamespace, utils.GetClusterDomainName()),
-				},
-				Route: []istiov1alpha3.DestinationWeight{{
-					Destination: istiov1alpha3.Destination{
-						Host: "in-memory-channel-clusterbus.knative-eventing.svc." + utils.GetClusterDomainName(),
-						Port: istiov1alpha3.PortSelector{
-							Number: util.PortNumber,
-						},
-					}},
-				}},
-			},
-		},
-	}
-}
-
-func makeVirtualServiceNotOwnedByChannel() *istiov1alpha3.VirtualService {
-	vs := makeVirtualService()
-	vs.OwnerReferences = nil
-	return vs
 }
 
 func errorOnSecondChannelGet() []controllertesting.MockGet {
@@ -1177,33 +1056,10 @@ func errorListingK8sService() []controllertesting.MockList {
 		},
 	}
 }
-
-func errorListingVirtualService() []controllertesting.MockList {
-	return []controllertesting.MockList{
-		func(_ client.Client, _ context.Context, _ *client.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
-			if _, ok := obj.(*istiov1alpha3.VirtualServiceList); ok {
-				return controllertesting.Handled, errors.New(testErrorMessage)
-			}
-			return controllertesting.Unhandled, nil
-		},
-	}
-}
-
 func errorCreatingK8sService() []controllertesting.MockCreate {
 	return []controllertesting.MockCreate{
 		func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
 			if _, ok := obj.(*corev1.Service); ok {
-				return controllertesting.Handled, errors.New(testErrorMessage)
-			}
-			return controllertesting.Unhandled, nil
-		},
-	}
-}
-
-func errorCreatingVirtualService() []controllertesting.MockCreate {
-	return []controllertesting.MockCreate{
-		func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-			if _, ok := obj.(*istiov1alpha3.VirtualService); ok {
 				return controllertesting.Handled, errors.New(testErrorMessage)
 			}
 			return controllertesting.Unhandled, nil

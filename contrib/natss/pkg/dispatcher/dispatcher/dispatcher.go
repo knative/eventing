@@ -311,7 +311,7 @@ func (s *SubscriptionsSupervisor) setHostToChannelMap(hcMap map[string]provision
 }
 
 // UpdateHostToChannelMap will be called from the controller that watches natss channels.
-// It will update internal hostToChannelMap which is used to resolve the hostHeader of the 
+// It will update internal hostToChannelMap which is used to resolve the hostHeader of the
 // incoming request to the correct ChannelReference in the receiver function.
 func (s *SubscriptionsSupervisor) UpdateHostToChannelMap(ctx context.Context, chanList []eventingv1alpha1.Channel) error {
 	logging.FromContext(ctx).Info("UpdateHostToChannelMap: Acquiring mutex lock")
@@ -319,21 +319,11 @@ func (s *SubscriptionsSupervisor) UpdateHostToChannelMap(ctx context.Context, ch
 	defer s.hostToChannelMapMutex.Unlock()
 	logging.FromContext(ctx).Info("UpdateHostToChannelMap: Acquired mutex lock. Updating internal map")
 
-	hostToChanMap := make(map[string]provisioners.ChannelReference, len(chanList))
-	for _, c := range chanList {
-		hostName := c.Status.Address.Hostname
-		if cr, ok := hostToChanMap[hostName]; ok {
-			return fmt.Errorf(
-				"Duplicate hostName found. Each channel must have a unique host header. HostName:%s, channel:%s.%s, channel:%s.%s",
-				hostName,
-				c.Namespace,
-				c.Name,
-				cr.Namespace,
-				cr.Name)
-		}
-		hostToChanMap[hostName] = provisioners.ChannelReference{Name: c.Name, Namespace: c.Namespace}
+	hostToChanMap, err := provisioners.NewHostNameToChannelRefMap(chanList)
+	if err != nil {
+		logging.FromContext(ctx).Info("UpdateHostToChannelMap: Error occured when creating the hostheader to channelref map.", zap.Error(err))
+		return err
 	}
-
 	s.setHostToChannelMap(hostToChanMap)
 	logging.FromContext(ctx).Info("UpdateHostToChannelMap: Update successful. Releasing mutex lock")
 	return nil

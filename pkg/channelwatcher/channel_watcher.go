@@ -8,7 +8,6 @@ import (
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	"github.com/knative/eventing/pkg/sidecar/swappable"
 	"go.uber.org/zap"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -25,7 +24,7 @@ type reconciler struct {
 }
 
 func (r *reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) {
-	ctx := logging.WithLogger(context.TODO(), r.logger.With(zap.Any("request", req)))
+	ctx := logging.WithLogger(context.Background(), r.logger.With(zap.Any("request", req)))
 	logging.FromContext(ctx).Info("New update for channel.")
 	if err := r.handler(ctx, r.client, req.NamespacedName); err != nil {
 		logging.FromContext(ctx).Error("WatchHandlerFunc returned error", zap.Error(err))
@@ -86,25 +85,14 @@ func UpdateConfigWatchHandler(updateConfig swappable.UpdateConfig, shouldWatch S
 // ListAllChannels queries client and gets list of all channels for which shouldWatch returns true.
 func ListAllChannels(ctx context.Context, c client.Client, shouldWatch ShouldWatchFunc) ([]v1alpha1.Channel, error) {
 	channels := make([]v1alpha1.Channel, 0)
-	for {
-		cl := &v1alpha1.ChannelList{}
-		opts := &client.ListOptions{
-			// Set Raw because if we need to get more than one page, then we will put the continue token
-			// into opts.Raw.Continue.
-			Raw: &metav1.ListOptions{},
-		}
-		if err := c.List(ctx, opts, cl); err != nil {
-			return nil, err
-		}
-		for _, c := range cl.Items {
-			if c.Status.IsReady() && shouldWatch(&c) {
-				channels = append(channels, c)
-			}
-		}
-		if cl.Continue != "" {
-			opts.Raw.Continue = cl.Continue
-		} else {
-			return channels, nil
+	cl := &v1alpha1.ChannelList{}
+	if err := c.List(ctx, &client.ListOptions{}, cl); err != nil {
+		return nil, err
+	}
+	for _, c := range cl.Items {
+		if c.Status.IsReady() && shouldWatch(&c) {
+			channels = append(channels, c)
 		}
 	}
+	return channels, nil
 }
