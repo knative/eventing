@@ -39,28 +39,18 @@ EventSource ---> Channel ---> Subscription ---> Channel ---> Subscription ----> 
                                    -----------> Service(Transformation)
 */
 func TestEventTransformation(t *testing.T) {
-	if test.EventingFlags.Provisioner == "" {
-		t.Fatal("ClusterChannelProvisioner must be set to a non-empty string. Either do not specify --clusterChannelProvisioner or set to something other than the empty string")
-	}
-
 	senderName := "e2e-eventtransformation-sender"
 	msgPostfix := string(uuid.NewUUID())
 	channelNames := [2]string{"e2e-eventtransformation1", "e2e-eventtransformation2"}
 	// subscriptionNames1 corresponds to Subscriptions on channelNames[0]
-	subscriptionNames1 := []string{"e2e-eventtransformation-subs11"}
+	subscriptionNames1 := []string{"e2e-eventtransformation-subs11", "e2e-eventtransformation-subs12"}
 	// subscriptionNames2 corresponds to Subscriptions on channelNames[1]
 	subscriptionNames2 := []string{"e2e-eventtransformation-subs21", "e2e-eventtransformation-subs22"}
 	transformationPodName := "e2e-eventtransformation-transformation-pod"
 	loggerPodName := "e2e-eventtransformation-logger-pod"
 
-	clients, cleaner := Setup(t, t.Logf)
-	// verify namespace
-	ns, cleanupNS := CreateNamespaceIfNeeded(t, clients, t.Logf)
-	defer cleanupNS()
-
-	// TearDown() needs to be deferred after cleanupNS(). Otherwise the namespace is deleted and all
-	// resources in it. So when TearDown() runs, it spews a lot of not found errors.
-	defer TearDown(clients, cleaner, t.Logf)
+	clients, ns, provisioner, cleaner := Setup(t, true, t.Logf)
+	defer TearDown(clients, ns, cleaner, t.Logf)
 
 	// create subscriberPods and expose them as services
 	t.Logf("creating subscriber pods")
@@ -70,7 +60,7 @@ func TestEventTransformation(t *testing.T) {
 	transformationPodSelector := map[string]string{"e2etest": string(uuid.NewUUID())}
 	transformationPod := test.EventTransformationPod(transformationPodName, ns, transformationPodSelector, msgPostfix)
 	transformationSvc := test.Service(transformationPodName, ns, transformationPodSelector)
-	transformationPod, err := CreatePodAndServiceReady(clients, transformationPod, transformationSvc, ns, t.Logf, cleaner)
+	transformationPod, err := CreatePodAndServiceReady(clients, transformationPod, transformationSvc, t.Logf, cleaner)
 	if err != nil {
 		t.Fatalf("Failed to create transformation pod and service, and get them ready: %v", err)
 	}
@@ -79,7 +69,7 @@ func TestEventTransformation(t *testing.T) {
 	loggerPodSelector := map[string]string{"e2etest": string(uuid.NewUUID())}
 	loggerPod := test.EventLoggerPod(loggerPodName, ns, loggerPodSelector)
 	loggerSvc := test.Service(loggerPodName, ns, loggerPodSelector)
-	loggerPod, err = CreatePodAndServiceReady(clients, loggerPod, loggerSvc, ns, t.Logf, cleaner)
+	loggerPod, err = CreatePodAndServiceReady(clients, loggerPod, loggerSvc, t.Logf, cleaner)
 	if err != nil {
 		t.Fatalf("Failed to create logger pod and service, and get them ready: %v", err)
 	}
@@ -89,9 +79,7 @@ func TestEventTransformation(t *testing.T) {
 	t.Logf("Creating Channel and Subscription")
 	channels := make([]*v1alpha1.Channel, 0)
 	for _, channelName := range channelNames {
-		channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(test.EventingFlags.Provisioner))
-		t.Logf("channel: %#v", channel)
-
+		channel := test.Channel(channelName, ns, test.ClusterChannelProvisioner(provisioner))
 		channels = append(channels, channel)
 	}
 
@@ -100,18 +88,16 @@ func TestEventTransformation(t *testing.T) {
 	// create subscriptions that subscribe the first channel, use the transformation service to transform the events and then forward the transformed events to the second channel
 	for _, subscriptionName := range subscriptionNames1 {
 		sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelNames[0]), test.SubscriberSpecForService(transformationPodName), test.ReplyStrategyForChannel(channelNames[1]))
-		t.Logf("sub: %#v", sub)
 		subs = append(subs, sub)
 	}
 	// create subscriptions that subscribe the second channel, and call the logging service
 	for _, subscriptionName := range subscriptionNames2 {
 		sub := test.Subscription(subscriptionName, ns, test.ChannelRef(channelNames[1]), test.SubscriberSpecForService(loggerPodName), nil)
-		t.Logf("sub: %#v", sub)
 		subs = append(subs, sub)
 	}
 
 	// wait for all channels and subscriptions to become ready
-	if err := WithChannelsAndSubscriptionsReady(clients, &channels, &subs, t.Logf, cleaner); err != nil {
+	if err := WithChannelsAndSubscriptionsReady(clients, ns, &channels, &subs, t.Logf, cleaner); err != nil {
 		t.Fatalf("The Channels or Subscription were not marked as Ready: %v", err)
 	}
 
@@ -123,7 +109,7 @@ func TestEventTransformation(t *testing.T) {
 		Data:     fmt.Sprintf(`{"msg":%q}`, body),
 		Encoding: test.CloudEventDefaultEncoding,
 	}
-	if err := SendFakeEventToChannel(clients, event, channels[0], ns, t.Logf, cleaner); err != nil {
+	if err := SendFakeEventToChannel(clients, event, channels[0], t.Logf, cleaner); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channels[0].Name)
 	}
 
