@@ -58,7 +58,6 @@ import (
 )
 
 // For pkg/controller
-
 const (
 	component = "controller"
 )
@@ -96,6 +95,7 @@ func main() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
+	go startPkgController(stopCh, logger, atomicLevel)
 	go startControllerRuntime(stopCh, logger, atomicLevel)
 }
 
