@@ -28,8 +28,6 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
@@ -57,18 +55,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
-// For pkg/controller
-const (
-	component = "controller"
-)
-
-var (
-	masterURL  = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
-	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-)
-
-// ^ pkg/controller
-
 const (
 	metricsScrapeAddr = ":9090"
 	metricsScrapePath = "/metrics"
@@ -95,18 +81,19 @@ func main() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	go startPkgController(stopCh, logger, atomicLevel)
-	go startControllerRuntime(stopCh, logger, atomicLevel)
+	cfg, err := controllerruntime.GetConfig()
+	if err != nil {
+		logger.Fatalf("Error building kubeconfig: %v", err)
+	}
+
+	go startPkgController(stopCh, cfg, logger, atomicLevel)
+	go startControllerRuntime(stopCh, cfg, logger, atomicLevel)
+	<-stopCh
 }
 
-func startPkgController(stopCh <-chan struct{}, logger *zap.SugaredLogger, atomicLevel zap.AtomicLevel) {
+func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.SugaredLogger, atomicLevel zap.AtomicLevel) {
 	logger = logger.With(zap.String("controller/impl", "pkg"))
 	logger.Info("Starting the controller")
-
-	cfg, err := clientcmd.BuildConfigFromFlags(*masterURL, *kubeconfig)
-	if err != nil {
-		logger.Fatalw("Error building kubeconfig", zap.Error(err))
-	}
 
 	const numControllers = 1
 	cfg.QPS = numControllers * rest.DefaultQPS
@@ -134,7 +121,7 @@ func startPkgController(stopCh <-chan struct{}, logger *zap.SugaredLogger, atomi
 	}
 
 	// Watch the logging config map and dynamically update logging levels.
-	opt.ConfigMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, component))
+	opt.ConfigMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller))
 	// Watch the observability config map and dynamically update metrics exporter.
 	//opt.ConfigMapWatcher.Watch(metrics.ObservabilityConfigName, metrics.UpdateExporterFromConfigMap(component, logger)) // TODO
 	if err := opt.ConfigMapWatcher.Start(stopCh); err != nil {
@@ -154,18 +141,11 @@ func startPkgController(stopCh <-chan struct{}, logger *zap.SugaredLogger, atomi
 	// Start all of the controllers.
 	logger.Info("Starting controllers.")
 	go kncontroller.StartAll(stopCh, controllers...)
-	<-stopCh
-
 }
 
-func startControllerRuntime(stopCh <-chan struct{}, logger *zap.SugaredLogger, atomicLevel zap.AtomicLevel) {
+func startControllerRuntime(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.SugaredLogger, atomicLevel zap.AtomicLevel) {
 	logger = logger.With(zap.String("controller/impl", "cr"))
 	logger.Info("Starting the controller")
-
-	cfg, err := controllerruntime.GetConfig()
-	if err != nil {
-		logger.Fatalf("Error building kubeconfig: %v", err)
-	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
@@ -252,7 +232,7 @@ func setupLogger() (*zap.SugaredLogger, zap.AtomicLevel) {
 	if err != nil {
 		log.Fatalf("Error parsing logging configuration: %v", err)
 	}
-	return logging.NewLoggerFromConfig(loggingConfig, component)
+	return logging.NewLoggerFromConfig(loggingConfig, logconfig.Controller)
 }
 
 func getLoggingConfigOrDie() map[string]string {
