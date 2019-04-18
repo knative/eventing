@@ -48,9 +48,9 @@ func TestUpdateConfigWatchHandler(t *testing.T) {
 		{
 			name: "Successfully update config",
 			channels: []runtime.Object{
-				makechannel("chan-1", "ns-1", "e.f.g.h", makeSubscribable(makeSubscriber("sub1"), makeSubscriber("sub2"))),
-				makechannel("chan-2", "ns-2", "i.j.k.l", makeSubscribable(makeSubscriber("sub3"), makeSubscriber("sub4"))),
-				makechannel("chan-3", "donotwatch", "i.j.k.l", makeSubscribable(makeSubscriber("sub3"), makeSubscriber("sub4"))),
+				makeChannel("chan-1", "ns-1", "e.f.g.h", makeSubscribable(makeSubscriber("sub1"), makeSubscriber("sub2"))),
+				makeChannel("chan-2", "ns-2", "i.j.k.l", makeSubscribable(makeSubscriber("sub3"), makeSubscriber("sub4"))),
+				makeChannel("chan-3", "donotwatch", "i.j.k.l", makeSubscribable(makeSubscriber("sub3"), makeSubscriber("sub4"))),
 			},
 			expectedConfig: &multichannelfanout.Config{
 				ChannelConfigs: []multichannelfanout.ChannelConfig{
@@ -147,7 +147,7 @@ func getClientMocks(listError error) controllertesting.Mocks {
 	return controllertesting.Mocks{}
 }
 
-func makechannel(name string, namespace string, hostname string, subscribable *eventingduck.Subscribable) *v1alpha1.Channel {
+func makeChannel(name string, namespace string, hostname string, subscribable *eventingduck.Subscribable) *v1alpha1.Channel {
 	c := v1alpha1.Channel{
 		Spec: v1alpha1.ChannelSpec{
 			Subscribable: subscribable,

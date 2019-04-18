@@ -134,14 +134,14 @@ func TestReceiver(t *testing.T) {
 				fake.NewFakeClient(tc.initialState...),
 				fakepubsub.Creator(tc.pubSubData))
 			if err != nil {
-				t.Errorf("Error when creating a New receiver. Error:%s", err)
+				t.Fatalf("Error when creating a New receiver. Error:%s", err)
 			}
 			resp := httptest.NewRecorder()
 			req := httptest.NewRequest("POST", "/", strings.NewReader(validMessage))
 			req.Host = "test-channel.test-namespace.channels." + utils.GetClusterDomainName()
 			receiver, err := mr.newMessageReceiver()
 			if err != nil {
-				t.Errorf("Error when creating a new message receiver. Error:%s", err)
+				t.Fatalf("Error when creating a new message receiver. Error:%s", err)
 			}
 			receiver.HandleRequest(resp, req)
 			if tc.expectedErr {

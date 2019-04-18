@@ -8,7 +8,6 @@ import (
 	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
 	"github.com/knative/eventing/pkg/sidecar/swappable"
 	"go.uber.org/zap"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -67,10 +66,10 @@ type WatchHandlerFunc func(context.Context, client.Client, types.NamespacedName)
 type ShouldWatchFunc func(ch *v1alpha1.Channel) bool
 
 // UpdateConfigWatchHandler is a special handler that
-// 1. Lists the channels for which shouldWatch returns true
-// 2. Creates a multi-channel-fanout-config
-// 3. Calls the updateConfig func with the new multi-channel-fanout-config
-// This is used by dispatchers or receivers to update their configs by watching channels
+// 1. Lists the channels for which shouldWatch returns true.
+// 2. Creates a multi-channel-fanout-config.
+// 3. Calls the updateConfig func with the new multi-channel-fanout-config.
+// This is used by dispatchers or receivers to update their configs by watching channels.
 func UpdateConfigWatchHandler(updateConfig swappable.UpdateConfig, shouldWatch ShouldWatchFunc) WatchHandlerFunc {
 	return func(ctx context.Context, c client.Client, _ types.NamespacedName) error {
 		channels, err := listAllChannels(ctx, c, shouldWatch)
@@ -86,25 +85,14 @@ func UpdateConfigWatchHandler(updateConfig swappable.UpdateConfig, shouldWatch S
 // listAllChannels queries client and gets list of all channels for which shouldWatch returns true.
 func listAllChannels(ctx context.Context, c client.Client, shouldWatch ShouldWatchFunc) ([]v1alpha1.Channel, error) {
 	channels := make([]v1alpha1.Channel, 0)
-	for {
-		cl := &v1alpha1.ChannelList{}
-		opts := &client.ListOptions{
-			// Set Raw because if we need to get more than one page, then we will put the continue token
-			// into opts.Raw.Continue.
-			Raw: &metav1.ListOptions{},
-		}
-		if err := c.List(ctx, opts, cl); err != nil {
-			return nil, err
-		}
-		for _, c := range cl.Items {
-			if c.Status.IsReady() && shouldWatch(&c) {
-				channels = append(channels, c)
-			}
-		}
-		if cl.Continue != "" {
-			opts.Raw.Continue = cl.Continue
-		} else {
-			return channels, nil
+	cl := &v1alpha1.ChannelList{}
+	if err := c.List(ctx, &client.ListOptions{}, cl); err != nil {
+		return nil, err
+	}
+	for _, c := range cl.Items {
+		if c.Status.IsReady() && shouldWatch(&c) {
+			channels = append(channels, c)
 		}
 	}
+	return channels, nil
 }
