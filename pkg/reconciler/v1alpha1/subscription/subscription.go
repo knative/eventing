@@ -212,7 +212,6 @@ func isNilOrEmptyReply(reply *v1alpha1.ReplyStrategy) bool {
 	return reply == nil || equality.Semantic.DeepEqual(reply, &v1alpha1.ReplyStrategy{})
 }
 
-// updateStatus may in fact update the subscription's finalizers in addition to the status
 func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
 	subscription, err := r.subscriptionLister.Subscriptions(desired.Namespace).Get(desired.Name)
 	if err != nil {
