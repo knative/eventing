@@ -25,7 +25,6 @@ import (
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
 )
 
 func TestNewConfigFromChannels(t *testing.T) {
@@ -121,10 +120,6 @@ func makeSubscribable(subsriberSpec ...eventingduck.ChannelSubscriberSpec) *even
 
 func makeSubscriber(name string) eventingduck.ChannelSubscriberSpec {
 	return eventingduck.ChannelSubscriberSpec{
-		Ref: &corev1.ObjectReference{
-			Name:      name,
-			Namespace: name + "-ns",
-		},
 		SubscriberURI: name + "-suburi",
 		ReplyURI:      name + "-replyuri",
 	}

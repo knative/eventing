@@ -55,18 +55,10 @@ var (
 	subscribers = &v1alpha1.Subscribable{
 		Subscribers: []v1alpha1.ChannelSubscriberSpec{
 			{
-				Ref: &corev1.ObjectReference{
-					Name:      "sub-name1",
-					Namespace: "sub-namespace1",
-					UID:       "sub-uid1",
-				},
+				UID: "sub-uid1",
 			},
 			{
-				Ref: &corev1.ObjectReference{
-					Name:      "sub-name2",
-					Namespace: "sub-namespace2",
-					UID:       "sub-uid2",
-				},
+				UID: "sub-uid2",
 			},
 		},
 	}
@@ -118,7 +110,7 @@ func TestSubscribeUnsubscribe(t *testing.T) {
 	logger.Info("TestSubscribeUnsubscribe()")
 
 	cRef := provisioners.ChannelReference{Namespace: "test_namespace", Name: "test_channel"}
-	sRef := subscriptionReference{Name: "sub_name_2", Namespace: "sub_namespace_2", SubscriberURI: "", ReplyURI: ""}
+	sRef := subscriptionReference{UID: "sub_name_2", SubscriberURI: "", ReplyURI: ""}
 
 	// subscribe to a channel
 	if _, err := s.subscribe(cRef, sRef); err != nil {
@@ -133,7 +125,7 @@ func TestMalformedMessage(t *testing.T) {
 	logger.Info("TestMalformedMessage()")
 
 	cRef := provisioners.ChannelReference{Namespace: "test_namespace", Name: "test_channel"}
-	sRef := subscriptionReference{Name: "sub_name", Namespace: "sub_namespace", SubscriberURI: "", ReplyURI: ""}
+	sRef := subscriptionReference{UID: "sub_name", SubscriberURI: "", ReplyURI: ""}
 
 	// subscribe to a channel
 	if _, err := s.subscribe(cRef, sRef); err != nil {

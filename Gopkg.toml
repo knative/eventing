@@ -10,7 +10,6 @@ required = [
   "k8s.io/code-generator/cmd/informer-gen",
   "github.com/knative/test-infra/scripts",
   "github.com/knative/test-infra/tools/dep-collector",
-  "github.com/knative/build/pkg/apis/build/v1alpha1",
 ]
 
 [prune]
@@ -50,33 +49,36 @@ required = [
   name = "gopkg.in/yaml.v2"
   version = "v2.2.1"
 
+# TODO(https://github.com/knative/eventing/issues/1065): if we get to update k8s.io to > 1.13, we can remove
+# k8s-dynamic-fake-simple.patch in ./hack/update-deps.sh
+#
 # Overridden to ensure compatibility with GKE
 # GKE version as of 2019-01-24 is 1.11
 # controller-runtime 0.1.9 requires at least 1.12
 [[override]]
   name = "k8s.io/api"
-  version = "kubernetes-1.12.5"
+  version = "kubernetes-1.12.6"
 
 # Overridden to ensure compatibility with GKE
 # GKE version as of 2019-01-24 is 1.11
 # controller-runtime 0.1.9 requires at least 1.12
 [[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.12.5"
+  version = "kubernetes-1.12.6"
 
 # Overridden to ensure compatibility with GKE
 # GKE version as of 2019-01-24 is 1.11
 # controller-runtime 0.1.9 requires at least 1.12
 [[override]]
   name = "k8s.io/code-generator"
-  version = "kubernetes-1.12.5"
+  version = "kubernetes-1.12.6"
 
 # Overridden to ensure compatibility with GKE
 # GKE version as of 2019-01-24 is 1.11
 # controller-runtime 0.1.9 requires at least 1.12
 [[override]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.12.5"
+  version = "kubernetes-1.12.6"
 
 # This is the commit at which k8s depends on this in 1.11
 # It seems to be broken at HEAD.
@@ -98,10 +100,10 @@ required = [
 
 # Constrain the version of knative/pkg we would like to import.
 # This controls when we upgrade apis independently of Serving.
-[[constraint]]
+[[override]]
   name = "github.com/knative/pkg"
-  # HEAD as of 2019-04-15
-  revision = "1095a4eab01cb7f5bbfa4dd5d048d730a00980e3"
+  # HEAD as of 2019-04-17
+  revision = "418e675f88c29db0217475a74e61ebfa239f0f50"
 
 # TODO why is this overridden?
 [[override]]
@@ -131,3 +133,14 @@ required = [
 [[constraint]]
   name = "github.com/cloudevents/sdk-go"
   version = "=0.6.0"
+
+[[override]]
+  name = "contrib.go.opencensus.io/exporter/stackdriver"
+  # HEAD as of 2019-02-11
+  # Needed because this includes a fix to support Stackdriver built-in metrics
+  revision = "c06c82c832edca4eaf7b0241bd655560a1be0346"
+
+# needed because pkg upgraded
+[[override]]
+  name = "go.uber.org/zap"
+  revision = "67bc79d13d155c02fd008f721863ff8cc5f30659"

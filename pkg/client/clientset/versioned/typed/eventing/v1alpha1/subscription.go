@@ -37,6 +37,7 @@ type SubscriptionsGetter interface {
 type SubscriptionInterface interface {
 	Create(*v1alpha1.Subscription) (*v1alpha1.Subscription, error)
 	Update(*v1alpha1.Subscription) (*v1alpha1.Subscription, error)
+	UpdateStatus(*v1alpha1.Subscription) (*v1alpha1.Subscription, error)
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
 	Get(name string, options v1.GetOptions) (*v1alpha1.Subscription, error)
@@ -114,6 +115,22 @@ func (c *subscriptions) Update(subscription *v1alpha1.Subscription) (result *v1a
 		Namespace(c.ns).
 		Resource("subscriptions").
 		Name(subscription.Name).
+		Body(subscription).
+		Do().
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+
+func (c *subscriptions) UpdateStatus(subscription *v1alpha1.Subscription) (result *v1alpha1.Subscription, err error) {
+	result = &v1alpha1.Subscription{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("subscriptions").
+		Name(subscription.Name).
+		SubResource("status").
 		Body(subscription).
 		Do().
 		Into(result)

@@ -245,7 +245,7 @@ a Channel system that receives and delivers events._
 
 | Field         | Type            | Description                                                    | Constraints    |
 | ------------- | --------------- | -------------------------------------------------------------- | -------------- |
-| ref           | ObjectReference | The Subscription this ChannelSubscriberSpec was resolved from. |                |
+| uid           | String | The Subscription UID this ChannelSubscriberSpec was resolved from. |                |
 | subscriberURI | String          | The URI name of the endpoint for the subscriber.               | Must be a URL. |
 | replyURI      | String          | The URI name of the endpoint for the reply.                    | Must be a URL. |
 

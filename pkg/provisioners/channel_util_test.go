@@ -676,7 +676,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 				Rewrite: &istiov1alpha3.HTTPRewrite{
 					Authority: fmt.Sprintf("%s.%s.channels.%s", channelName, testNS, utils.GetClusterDomainName()),
 				},
-				Route: []istiov1alpha3.DestinationWeight{{
+				Route: []istiov1alpha3.HTTPRouteDestination{{
 					Destination: istiov1alpha3.Destination{
 						Host: fmt.Sprintf("%s-dispatcher.knative-testing.svc.%s", clusterChannelProvisionerName, utils.GetClusterDomainName()),
 						Port: istiov1alpha3.PortSelector{
