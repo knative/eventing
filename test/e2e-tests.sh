@@ -32,7 +32,7 @@ readonly EVENTING_CONFIG=config/
 readonly IN_MEMORY_CHANNEL_CONFIG=config/provisioners/in-memory-channel/in-memory-channel.yaml
 readonly GCP_PUBSUB_CHANNEL_CONFIG=contrib/gcppubsub/config/gcppubsub.yaml
 
-E2E_CLUSTER_PROJECT = ""
+E2E_CLUSTER_PROJECT=""
 
 # Setup the Knative environment for running tests
 function knative_setup() {
