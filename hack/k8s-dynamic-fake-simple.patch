@@ -1,0 +1,13 @@
+diff --git a/vendor/k8s.io/client-go/dynamic/fake/simple.go b/vendor/k8s.io/client-go/dynamic/fake/simple.go
+index 13e2d805..dde45892 100644
+--- a/vendor/k8s.io/client-go/dynamic/fake/simple.go
++++ b/vendor/k8s.io/client-go/dynamic/fake/simple.go
+@@ -45,7 +45,7 @@ func NewSimpleDynamicClient(scheme *runtime.Scheme, objects ...runtime.Object) *
+ 		}
+ 	}
+ 
+-	cs := &FakeDynamicClient{}
++	cs := &FakeDynamicClient{scheme: scheme}
+ 	cs.AddReactor("*", "*", testing.ObjectReaction(o))
+ 	cs.AddWatchReactor("*", func(action testing.Action) (handled bool, ret watch.Interface, err error) {
+ 		gvr := action.GetResource()

@@ -78,8 +78,7 @@ func (c *saramaCluster) GetConsumerMode() cluster.ConsumerMode {
 }
 
 type subscription struct {
-	Namespace     string
-	Name          string
+	UID           string
 	SubscriberURI string
 	ReplyURI      string
 }
@@ -168,7 +167,7 @@ func (d *KafkaDispatcher) subscribe(channelRef provisioners.ChannelReference, su
 
 	topicName := topicUtils.TopicName(controller.KafkaChannelSeparator, channelRef.Namespace, channelRef.Name)
 
-	group := fmt.Sprintf("%s.%s.%s", controller.Name, sub.Namespace, sub.Name)
+	group := fmt.Sprintf("%s.%s", controller.Name, sub.UID)
 	consumer, err := d.kafkaCluster.NewConsumer(group, []string{topicName})
 
 	if err != nil {
@@ -320,8 +319,7 @@ func toKafkaMessage(channel provisioners.ChannelReference, message *provisioners
 
 func newSubscription(spec eventingduck.ChannelSubscriberSpec) subscription {
 	return subscription{
-		Name:          spec.Ref.Name,
-		Namespace:     spec.Ref.Namespace,
+		UID:           string(spec.UID),
 		SubscriberURI: spec.SubscriberURI,
 		ReplyURI:      spec.ReplyURI,
 	}

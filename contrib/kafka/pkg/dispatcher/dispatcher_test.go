@@ -16,7 +16,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.uber.org/zap"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
@@ -224,15 +223,11 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									Ref: &v1.ObjectReference{
-										Name: "subscription-1",
-									},
+									UID:           "subscription-1",
 									SubscriberURI: "http://test/subscriber",
 								},
 								{
-									Ref: &v1.ObjectReference{
-										Name: "subscription-2",
-									},
+									UID:           "subscription-2",
 									SubscriberURI: "http://test/subscriber",
 								},
 							},
@@ -252,15 +247,11 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									Ref: &v1.ObjectReference{
-										Name: "subscription-1",
-									},
+									UID:           "subscription-1",
 									SubscriberURI: "http://test/subscriber",
 								},
 								{
-									Ref: &v1.ObjectReference{
-										Name: "subscription-2",
-									},
+									UID:           "subscription-2",
 									SubscriberURI: "http://test/subscriber",
 								}}}}},
 			},
@@ -272,15 +263,11 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									Ref: &v1.ObjectReference{
-										Name: "subscription-2",
-									},
+									UID:           "subscription-2",
 									SubscriberURI: "http://test/subscriber",
 								},
 								{
-									Ref: &v1.ObjectReference{
-										Name: "subscription-3",
-									},
+									UID:           "subscription-3",
 									SubscriberURI: "http://test/subscriber",
 								},
 							},
@@ -301,15 +288,11 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									Ref: &v1.ObjectReference{
-										Name: "subscription-1",
-									},
+									UID:           "subscription-1",
 									SubscriberURI: "http://test/subscriber",
 								},
 								{
-									Ref: &v1.ObjectReference{
-										Name: "subscription-2",
-									},
+									UID:           "subscription-2",
 									SubscriberURI: "http://test/subscriber",
 								},
 							},
@@ -322,9 +305,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									Ref: &v1.ObjectReference{
-										Name: "subscription-1",
-									},
+									UID:           "subscription-1",
 									SubscriberURI: "http://test/subscriber",
 								},
 							},
@@ -336,15 +317,11 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
-									Ref: &v1.ObjectReference{
-										Name: "subscription-3",
-									},
+									UID:           "subscription-3",
 									SubscriberURI: "http://test/subscriber",
 								},
 								{
-									Ref: &v1.ObjectReference{
-										Name: "subscription-4",
-									},
+									UID:           "subscription-4",
 									SubscriberURI: "http://test/subscriber",
 								},
 							},
@@ -376,7 +353,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 			oldSubscribers := sets.NewString()
 			for _, subMap := range d.kafkaConsumers {
 				for sub := range subMap {
-					oldSubscribers.Insert(sub.Name)
+					oldSubscribers.Insert(sub.UID)
 				}
 			}
 			if diff := sets.NewString(tc.unsubscribes...).Difference(oldSubscribers); diff.Len() != 0 {
@@ -399,7 +376,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 			var newSubscribers []string
 			for _, subMap := range d.kafkaConsumers {
 				for sub := range subMap {
-					newSubscribers = append(newSubscribers, sub.Name)
+					newSubscribers = append(newSubscribers, sub.UID)
 				}
 			}
 
@@ -505,8 +482,7 @@ func TestSubscribe(t *testing.T) {
 	}
 
 	subRef := subscription{
-		Name:          "test-sub",
-		Namespace:     "test-ns",
+		UID:           "test-sub",
 		SubscriberURI: server.URL[7:],
 	}
 	err := d.subscribe(channelRef, subRef)
@@ -548,8 +524,7 @@ func TestPartitionConsumer(t *testing.T) {
 		Namespace: "test-ns",
 	}
 	subRef := subscription{
-		Name:          "test-sub",
-		Namespace:     "test-ns",
+		UID:           "test-sub",
 		SubscriberURI: server.URL[7:],
 	}
 	err := d.subscribe(channelRef, subRef)
@@ -592,8 +567,7 @@ func TestSubscribeError(t *testing.T) {
 	}
 
 	subRef := subscription{
-		Name:      "test-sub",
-		Namespace: "test-ns",
+		UID: "test-sub",
 	}
 	err := d.subscribe(channelRef, subRef)
 	if err == nil {
@@ -616,8 +590,7 @@ func TestUnsubscribeUnknownSub(t *testing.T) {
 	}
 
 	subRef := subscription{
-		Name:      "test-sub",
-		Namespace: "test-ns",
+		UID: "test-sub",
 	}
 	if err := d.unsubscribe(channelRef, subRef); err != nil {
 		t.Errorf("Unsubscribe error: %v", err)
