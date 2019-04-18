@@ -28,58 +28,62 @@ source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/e2e-tests.s
 
 # Helper functions.
 
-readonly EVENTING_CONFIG=config/
-readonly IN_MEMORY_CHANNEL_CONFIG=config/provisioners/in-memory-channel/in-memory-channel.yaml
-readonly GCP_PUBSUB_CHANNEL_CONFIG=contrib/gcppubsub/config/gcppubsub.yaml
+readonly EVENTING_CONFIG="config/"
 
-E2E_CLUSTER_PROJECT=""
+readonly IN_MEMORY_CHANNEL_PROVISIONER_CONFIG="config/provisioners/in-memory-channel/in-memory-channel.yaml"
 
-# Setup the Knative environment for running tests
+readonly GCP_PUBSUB_PROVISIONER_CONFIG="contrib/gcppubsub/config/gcppubsub.yaml"
+readonly GCP_PUBSUB_TEMP_CONFIG="$(mktemp)"
+
+# Setup the Knative environment for running tests.
 function knative_setup() {
-  # Install the latest stable Knative/serving in the current cluster
+  # Install the latest stable Knative/serving in the current cluster.
   start_latest_knative_serving || return 1
 
-  # Install the latest Knative/eventing in the current cluster
+  # Install the latest Knative/eventing in the current cluster.
   echo ">> Starting Knative Eventing"
   echo "Installing Knative Eventing"
   ko apply -f ${EVENTING_CONFIG} || return 1
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
 
   echo "Installing In-Memory ClusterChannelProvisioner"
-  ko apply -f ${IN_MEMORY_CHANNEL_CONFIG} || return 1
+  ko apply -f ${IN_MEMORY_CHANNEL_PROVISIONER_CONFIG} || return 1
   wait_until_pods_running knative-eventing || fail_test "Failed to install the In-Memory ClusterChannelProvisioner"
 
   echo "Installing GCPPubSub ClusterChannelProvisioner"
   kubectl -n knative-eventing create secret generic gcppubsub-channel-key --from-file=key.json=${GOOGLE_APPLICATION_CREDENTIALS}
+  # TODO(Fredy-Z): delete this flag after https://github.com/knative/test-infra/pull/692 is merged and updated
   E2E_CLUSTER_PROJECT="$(gcloud config get-value project)"
-  readonly E2E_CLUSTER_PROJECT
-  sed "s/REPLACE_WITH_GCP_PROJECT/${E2E_CLUSTER_PROJECT}/" ${GCP_PUBSUB_CHANNEL_CONFIG} | ko apply -f -
+  sed "s/REPLACE_WITH_GCP_PROJECT/${E2E_CLUSTER_PROJECT}/" ${GCP_PUBSUB_PROVISIONER_CONFIG} > ${GCP_PUBSUB_TEMP_CONFIG}
+  ko apply -f ${GCP_PUBSUB_TEMP_CONFIG}
   wait_until_pods_running knative-eventing || fail_test "Failed to install the GCPPubSub ClusterChannelProvisioner"
 }
 
+# Teardown the Knative environment after tests finish.
 function knative_teardown() {
   echo ">> Stopping Knative Eventing"
   echo "Uninstalling Knative Eventing"
   ko delete --ignore-not-found=true --now --timeout 60s -f ${EVENTING_CONFIG}
 
   echo "Uninstalling In-Memory ClusterChannelProvisioner"
-  ko delete --ignore-not-found=true --now --timeout 60s -f ${IN_MEMORY_CHANNEL_CONFIG}
+  ko delete --ignore-not-found=true --now --timeout 60s -f ${IN_MEMORY_CHANNEL_PROVISIONER_CONFIG}
 
   echo "Uninstalling GCPPubSub ClusterChannelProvisioner"
-  sed "s/REPLACE_WITH_GCP_PROJECT/${E2E_CLUSTER_PROJECT}/" ${GCP_PUBSUB_CHANNEL_CONFIG} | ko delete --ignore-not-found=true --now --timeout 60s -f -
+  ko delete --ignore-not-found=true --now --timeout 60s -f ${GCP_PUBSUB_TEMP_CONFIG}
+  kubectl -n knative-eventing delete secret gcppubsub-channel-key
 
   wait_until_object_does_not_exist namespaces knative-eventing
 }
 
-# Setup resources common to all eventing tests
+# Setup resources common to all eventing tests.
 function test_setup() {
-  # Publish test images
+  # Publish test images.
   echo ">> Publishing test images"
   $(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test images"
 }
 
 function dump_extra_cluster_state() {
-  # Collecting logs from all knative's eventing pods
+  # Collecting logs from all knative's eventing pods.
   echo "============================================================"
   for namespace in "knative-eventing" "e2etestfn3"; do
     for pod in $(kubectl get pod -n $namespace | grep Running | awk '{print $1}' ); do
@@ -99,6 +103,6 @@ function dump_extra_cluster_state() {
 
 initialize $@
 
-go_test_e2e -timeout=20m ./test/e2e -run ^TestMain$ -runFromMain=true -clusterChannelProvisioners=in-memory-channel,gcp-pubsub || fail_test
+go_test_e2e -timeout=20m ./test/e2e -run ^TestMain$ -runFromMain=true -clusterChannelProvisioners=in-memory-channel,in-memory,gcp-pubsub || fail_test
 
 success

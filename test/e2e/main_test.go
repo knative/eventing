@@ -35,7 +35,14 @@ var channelTestMap = map[string][]func(t *testing.T){
 		TestChannelChain,
 		TestDefaultBrokerWithManyTriggers,
 	},
-	test.GCPPubSubChannelProvisioner: []func(t *testing.T){
+	test.InMemoryProvisioner: []func(t *testing.T){
+		TestSingleBinaryEvent,
+		TestSingleStructuredEvent,
+		TestEventTransformation,
+		TestChannelChain,
+		TestDefaultBrokerWithManyTriggers,
+	},
+	test.GCPPubSubProvisioner: []func(t *testing.T){
 		TestSingleBinaryEvent,
 		TestSingleStructuredEvent,
 		TestEventTransformation,

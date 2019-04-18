@@ -19,13 +19,28 @@ package test
 const (
 	// DefaultBrokerName is the name of the Broker that is automatically created after the current namespace is labeled.
 	DefaultBrokerName = "default"
+	// DefaultClusterChannelProvisioner is the default ClusterChannelProvisioner we will run tests against.
+	DefaultClusterChannelProvisioner = InMemoryProvisioner
 
 	// InMemoryChannelProvisioner is the in-memory-channel provisioner.
+	// It will be delete in 0.7, see https://github.com/knative/eventing/pull/1062 for more info.
 	InMemoryChannelProvisioner = "in-memory-channel"
-	// GCPPubSubChannelProvisioner is the gcp-pubsub provisioner, which is under contrib/gcppubsub.
-	GCPPubSubChannelProvisioner = "gcp-pubsub"
-	// KafkaChannelProvisioner is the kafka provisioner, which is under contrib/kafka.
-	KafkaChannelProvisioner = "kafka"
-	// NatssChannelProvisioner is the natss provisioner, which is under contrib/natss
-	NatssChannelProvisioner = "natss"
+
+	// InMemoryProvisioner is the in-memory provisioner, which is also the default one.
+	InMemoryProvisioner = "in-memory"
+	// GCPPubSubProvisioner is the gcp-pubsub provisioner, which is under contrib/gcppubsub.
+	GCPPubSubProvisioner = "gcp-pubsub"
+	// KafkaProvisioner is the kafka provisioner, which is under contrib/kafka.
+	KafkaProvisioner = "kafka"
+	// NatssProvisioner is the natss provisioner, which is under contrib/natss
+	NatssProvisioner = "natss"
 )
+
+// validProvisioners is a list of provisioners that Eventing currently support.
+var validProvisioners = []string{
+	InMemoryChannelProvisioner,
+	InMemoryProvisioner,
+	GCPPubSubProvisioner,
+	KafkaProvisioner,
+	NatssProvisioner,
+}
