@@ -26,9 +26,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cloudevents/sdk-go/pkg/cloudevents"
+	"github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 	"github.com/google/go-cmp/cmp"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
@@ -51,7 +50,8 @@ const (
 )
 
 var (
-	host = fmt.Sprintf("%s.%s.triggers.%s", triggerName, testNS, utils.GetClusterDomainName())
+	host      = fmt.Sprintf("%s.%s.triggers.%s", triggerName, testNS, utils.GetClusterDomainName())
+	validPath = fmt.Sprintf("/triggers/%s/%s", testNS, triggerName)
 )
 
 func init() {
@@ -63,7 +63,7 @@ func TestReceiver(t *testing.T) {
 	testCases := map[string]struct {
 		triggers         []*eventingv1alpha1.Trigger
 		mocks            controllertesting.Mocks
-		tctx             *cehttp.TransportContext
+		tctx             *cloudevents.HTTPTransportContext
 		event            *cloudevents.Event
 		requestFails     bool
 		returnedEvent    *cloudevents.Event
@@ -84,26 +84,42 @@ func TestReceiver(t *testing.T) {
 			expectNewToFail: true,
 		},
 		"Not POST": {
-			tctx: &cehttp.TransportContext{
+			tctx: &cloudevents.HTTPTransportContext{
 				Method: "GET",
 				Host:   host,
-				URI:    "/",
+				URI:    validPath,
 			},
 			expectedStatus: http.StatusMethodNotAllowed,
 		},
-		"Other path": {
-			tctx: &cehttp.TransportContext{
+		"Path too short": {
+			tctx: &cloudevents.HTTPTransportContext{
 				Method: "POST",
 				Host:   host,
-				URI:    "/someotherEndpoint",
+				URI:    "/test-namespace/test-trigger",
 			},
-			expectedStatus: http.StatusNotFound,
+			expectedErr: true,
+		},
+		"Path too long": {
+			tctx: &cloudevents.HTTPTransportContext{
+				Method: "POST",
+				Host:   host,
+				URI:    "/triggers/test-namespace/test-trigger/extra",
+			},
+			expectedErr: true,
+		},
+		"Path without prefix": {
+			tctx: &cloudevents.HTTPTransportContext{
+				Method: "POST",
+				Host:   host,
+				URI:    "/something/test-namespace/test-trigger",
+			},
+			expectedErr: true,
 		},
 		"Bad host": {
-			tctx: &cehttp.TransportContext{
+			tctx: &cloudevents.HTTPTransportContext{
 				Method: "POST",
 				Host:   "badhost-cant-be-parsed-as-a-trigger-name-plus-namespace",
-				URI:    "/",
+				URI:    validPath,
 			},
 			expectedErr: true,
 		},
@@ -175,10 +191,10 @@ func TestReceiver(t *testing.T) {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger("", ""),
 			},
-			tctx: &cehttp.TransportContext{
+			tctx: &cloudevents.HTTPTransportContext{
 				Method: "POST",
 				Host:   host,
-				URI:    "/",
+				URI:    validPath,
 				Header: http.Header{
 					// foo won't pass filtering.
 					"foo": []string{"bar"},
@@ -245,10 +261,10 @@ func TestReceiver(t *testing.T) {
 
 			tctx := tc.tctx
 			if tctx == nil {
-				tctx = &cehttp.TransportContext{
+				tctx = &cloudevents.HTTPTransportContext{
 					Method: http.MethodPost,
 					Host:   host,
-					URI:    "/",
+					URI:    validPath,
 				}
 			}
 			ctx := cehttp.WithTransportContext(context.Background(), *tctx)
@@ -394,13 +410,13 @@ func makeEventWithoutTTL() *cloudevents.Event {
 	return &cloudevents.Event{
 		Context: cloudevents.EventContextV02{
 			Type: eventType,
-			Source: types.URLRef{
+			Source: cloudevents.URLRef{
 				URL: url.URL{
 					Path: eventSource,
 				},
 			},
 			ContentType: cloudevents.StringOfApplicationJSON(),
-		},
+		}.AsV02(),
 	}
 }
 
@@ -411,7 +427,7 @@ func makeEvent() *cloudevents.Event {
 }
 
 func addTTLToEvent(e cloudevents.Event) cloudevents.Event {
-	e.Context = SetTTL(e.Context, 1)
+	e.Context, _ = SetTTL(e.Context, 1)
 	return e
 }
 
@@ -419,12 +435,12 @@ func makeDifferentEvent() *cloudevents.Event {
 	return &cloudevents.Event{
 		Context: cloudevents.EventContextV02{
 			Type: "some-other-type",
-			Source: types.URLRef{
+			Source: cloudevents.URLRef{
 				URL: url.URL{
 					Path: eventSource,
 				},
 			},
 			ContentType: cloudevents.StringOfApplicationJSON(),
-		},
+		}.AsV02(),
 	}
 }

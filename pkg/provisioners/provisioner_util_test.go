@@ -180,9 +180,9 @@ func makeDispatcherService() *corev1.Service {
 			Selector: DispatcherLabels(clusterChannelProvisionerName),
 			Ports: []corev1.ServicePort{
 				{
-					Name:       "http",
 					Port:       80,
 					TargetPort: intstr.FromInt(8080),
+					Protocol:   corev1.ProtocolTCP,
 				},
 			},
 		},

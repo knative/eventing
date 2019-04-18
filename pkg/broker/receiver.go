@@ -23,11 +23,9 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/cloudevents/sdk-go/pkg/cloudevents"
-	ceclient "github.com/cloudevents/sdk-go/pkg/cloudevents/client"
-	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	"github.com/cloudevents/sdk-go"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/path"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,13 +39,13 @@ const (
 type Receiver struct {
 	logger   *zap.Logger
 	client   client.Client
-	ceClient ceclient.Client
+	ceClient cloudevents.Client
 }
 
 // New creates a new Receiver and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned MessageReceiver.
 func New(logger *zap.Logger, client client.Client) (*Receiver, error) {
-	ceClient, err := ceclient.NewDefault()
+	ceClient, err := cloudevents.NewDefaultClient()
 	if err != nil {
 		return nil, err
 	}
@@ -113,22 +111,17 @@ func (r *Receiver) Start(stopCh <-chan struct{}) error {
 }
 
 func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
-	tctx := cehttp.TransportContextFrom(ctx)
+	tctx := cloudevents.HTTPTransportContextFrom(ctx)
 	if tctx.Method != http.MethodPost {
 		resp.Status = http.StatusMethodNotAllowed
 		return nil
 	}
 
 	// tctx.URI is actually the path...
-	if tctx.URI != "/" {
-		resp.Status = http.StatusNotFound
-		return nil
-	}
-
-	triggerRef, err := provisioners.ParseChannel(tctx.Host)
+	triggerRef, err := path.Parse(tctx.URI)
 	if err != nil {
-		r.logger.Error("Unable to parse host as a trigger", zap.Error(err), zap.String("host", tctx.Host))
-		return errors.New("unable to parse host as a Trigger")
+		r.logger.Info("Unable to parse path as a trigger", zap.Error(err), zap.String("path", tctx.URI))
+		return errors.New("unable to parse path as a Trigger")
 	}
 
 	// Remove the TTL attribute that is used by the Broker.
@@ -160,9 +153,12 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 	}
 
 	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
-	responseEvent.Context = SetTTL(responseEvent.Context, ttl)
+	responseEvent.Context, err = SetTTL(responseEvent.Context, ttl)
+	if err != nil {
+		return err
+	}
 	resp.Event = responseEvent
-	resp.Context = &cehttp.TransportResponseContext{
+	resp.Context = &cloudevents.HTTPTransportResponseContext{
 		Header: extractPassThroughHeaders(tctx),
 	}
 
@@ -170,7 +166,7 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 }
 
 // sendEvent sends an event to a subscriber if the trigger filter passes.
-func (r *Receiver) sendEvent(ctx context.Context, tctx cehttp.TransportContext, trigger provisioners.ChannelReference, event *cloudevents.Event) (*cloudevents.Event, error) {
+func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportContext, trigger types.NamespacedName, event *cloudevents.Event) (*cloudevents.Event, error) {
 	t, err := r.getTrigger(ctx, trigger)
 	if err != nil {
 		r.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("triggerRef", trigger))
@@ -199,14 +195,9 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cehttp.TransportContext, 
 	return r.ceClient.Send(sendingCTX, *event)
 }
 
-func (r *Receiver) getTrigger(ctx context.Context, ref provisioners.ChannelReference) (*eventingv1alpha1.Trigger, error) {
+func (r *Receiver) getTrigger(ctx context.Context, ref types.NamespacedName) (*eventingv1alpha1.Trigger, error) {
 	t := &eventingv1alpha1.Trigger{}
-	err := r.client.Get(ctx,
-		types.NamespacedName{
-			Namespace: ref.Namespace,
-			Name:      ref.Name,
-		},
-		t)
+	err := r.client.Get(ctx, ref, t)
 	return t, err
 }
 

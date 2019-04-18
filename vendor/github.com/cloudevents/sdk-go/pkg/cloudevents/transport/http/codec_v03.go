@@ -4,15 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/textproto"
+	"strings"
+
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/codec"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/observability"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
-	"log"
-	"net/http"
-	"net/textproto"
-	"strings"
 )
 
 // CodecV03 represents a http transport codec that uses CloudEvents spec v0.3
@@ -73,7 +73,7 @@ func (v CodecV03) obsDecode(msg transport.Message) (*cloudevents.Event, error) {
 	case BatchedV03:
 		return nil, fmt.Errorf("not implemented")
 	default:
-		return nil, fmt.Errorf("unknown encoding for message %v", msg)
+		return nil, fmt.Errorf("unknown encoding")
 	}
 }
 
@@ -83,7 +83,7 @@ func (v CodecV03) encodeBinary(e cloudevents.Event) (transport.Message, error) {
 		return nil, err
 	}
 
-	body, err := marshalEventData(e.Context.GetDataMediaType(), e.Data)
+	body, err := e.DataBytes()
 	if err != nil {
 		return nil, err
 	}
@@ -96,11 +96,14 @@ func (v CodecV03) encodeBinary(e cloudevents.Event) (transport.Message, error) {
 	return msg, nil
 }
 
-func (v CodecV03) toHeaders(ec cloudevents.EventContextV03) (http.Header, error) {
+func (v CodecV03) toHeaders(ec *cloudevents.EventContextV03) (http.Header, error) {
 	h := http.Header{}
 	h.Set("ce-specversion", ec.SpecVersion)
 	h.Set("ce-type", ec.Type)
 	h.Set("ce-source", ec.Source.String())
+	if ec.Subject != nil {
+		h.Set("ce-subject", *ec.Subject)
+	}
 	h.Set("ce-id", ec.ID)
 	if ec.Time != nil && !ec.Time.IsZero() {
 		h.Set("ce-time", ec.Time.String())
@@ -108,7 +111,6 @@ func (v CodecV03) toHeaders(ec cloudevents.EventContextV03) (http.Header, error)
 	if ec.SchemaURL != nil {
 		h.Set("ce-schemaurl", ec.SchemaURL.String())
 	}
-
 	if ec.DataContentType != nil {
 		h.Set("Content-Type", *ec.DataContentType)
 	} else if v.Encoding == Default || v.Encoding == BinaryV03 {
@@ -117,6 +119,10 @@ func (v CodecV03) toHeaders(ec cloudevents.EventContextV03) (http.Header, error)
 		// TODO: not sure what the default should be?
 		h.Set("Content-Type", cloudevents.ApplicationJSON)
 	}
+	if ec.DataContentEncoding != nil {
+		h.Set("ce-datacontentencoding", *ec.DataContentEncoding)
+	}
+
 	for k, v := range ec.Extensions {
 		// Per spec, map-valued extensions are converted to a list of headers as:
 		// CE-attrib-key
@@ -171,8 +177,9 @@ func (v CodecV03) decodeBinary(msg transport.Message) (*cloudevents.Event, error
 		body = m.Body
 	}
 	return &cloudevents.Event{
-		Context: ctx,
-		Data:    body,
+		Context:     &ctx,
+		Data:        body,
+		DataEncoded: true,
 	}, nil
 }
 
@@ -181,7 +188,6 @@ func (v CodecV03) fromHeaders(h http.Header) (cloudevents.EventContextV03, error
 	for k, v := range h {
 		ck := textproto.CanonicalMIMEHeaderKey(k)
 		if k != ck {
-			log.Printf("[warn] received header with non-canonical form; canonical: %q, got %q", ck, k)
 			delete(h, k)
 			h[ck] = v
 		}
@@ -204,6 +210,12 @@ func (v CodecV03) fromHeaders(h http.Header) (cloudevents.EventContextV03, error
 	}
 	h.Del("ce-source")
 
+	subject := h.Get("ce-subject")
+	if subject != "" {
+		ec.Subject = &subject
+	}
+	h.Del("ce-subject")
+
 	ec.Time = types.ParseTimestamp(h.Get("ce-time"))
 	h.Del("ce-time")
 
@@ -215,6 +227,12 @@ func (v CodecV03) fromHeaders(h http.Header) (cloudevents.EventContextV03, error
 		ec.DataContentType = &contentType
 	}
 	h.Del("Content-Type")
+
+	dataContentEncoding := h.Get("ce-datacontentencoding")
+	if dataContentEncoding != "" {
+		ec.DataContentEncoding = &dataContentEncoding
+	}
+	h.Del("ce-datacontentencoding")
 
 	// At this point, we have deleted all the known headers.
 	// Everything left is assumed to be an extension.
@@ -279,8 +297,9 @@ func (v CodecV03) decodeStructured(msg transport.Message) (*cloudevents.Event, e
 	}
 
 	return &cloudevents.Event{
-		Context: ec,
-		Data:    data,
+		Context:     &ec,
+		Data:        data,
+		DataEncoded: true,
 	}, nil
 }
 

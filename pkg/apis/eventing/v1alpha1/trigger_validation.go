@@ -19,8 +19,8 @@ package v1alpha1
 import (
 	"context"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/kmp"
 )
 
 func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {
@@ -64,7 +64,13 @@ func (t *Trigger) CheckImmutableFields(ctx context.Context, og apis.Immutable) *
 		return &apis.FieldError{Message: "The provided original was not a Trigger"}
 	}
 
-	if diff := cmp.Diff(original.Spec.Broker, t.Spec.Broker); diff != "" {
+	if diff, err := kmp.ShortDiff(original.Spec.Broker, t.Spec.Broker); err != nil {
+		return &apis.FieldError{
+			Message: "Failed to diff Trigger",
+			Paths:   []string{"spec"},
+			Details: err.Error(),
+		}
+	} else if diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",
 			Paths:   []string{"spec", "broker"},

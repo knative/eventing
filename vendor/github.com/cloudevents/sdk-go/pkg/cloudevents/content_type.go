@@ -1,6 +1,7 @@
 package cloudevents
 
 const (
+	TextJSON                        = "text/json"
 	ApplicationJSON                 = "application/json"
 	ApplicationXML                  = "application/xml"
 	ApplicationCloudEventsJSON      = "application/cloudevents+json"
