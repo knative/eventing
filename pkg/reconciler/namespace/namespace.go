@@ -149,7 +149,7 @@ func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error 
 
 // reconcileBrokerFilterServiceAccount reconciles the Broker's filter service account for Namespace 'ns'.
 func (r *Reconciler) reconcileBrokerFilterServiceAccount(ctx context.Context, ns *corev1.Namespace) (*corev1.ServiceAccount, error) {
-	current, err := r.getBrokerFilterServiceAccount(ctx, ns)
+	current, err := r.KubeClientSet.CoreV1().ServiceAccounts(ns.Name).Get(resources.ServiceAccountName, metav1.GetOptions{})
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
@@ -168,15 +168,9 @@ func (r *Reconciler) reconcileBrokerFilterServiceAccount(ctx context.Context, ns
 	return current, nil
 }
 
-// getBrokerFilterServiceAccount returns the Broker's filter service account for Namespace 'ns' if exists,
-// otherwise it returns an error.
-func (r *Reconciler) getBrokerFilterServiceAccount(ctx context.Context, ns *corev1.Namespace) (*corev1.ServiceAccount, error) {
-	return r.KubeClientSet.CoreV1().ServiceAccounts(ns.Name).Get(resources.ServiceAccountName, metav1.GetOptions{})
-}
-
 // reconcileBrokerFilterRBAC reconciles the Broker's filter service account RBAC for the Namespace 'ns'.
 func (r *Reconciler) reconcileBrokerFilterRBAC(ctx context.Context, ns *corev1.Namespace, sa *corev1.ServiceAccount) (*rbacv1.RoleBinding, error) {
-	current, err := r.getBrokerFilterRBAC(ctx, ns)
+	current, err := r.KubeClientSet.RbacV1().RoleBindings(ns.Name).Get(resources.RoleBindingName, metav1.GetOptions{})
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
@@ -195,21 +189,9 @@ func (r *Reconciler) reconcileBrokerFilterRBAC(ctx context.Context, ns *corev1.N
 	return current, nil
 }
 
-// getBrokerFilterRBAC returns the Broker's filter role binding for Namespace 'ns' if exists,
-// otherwise it returns an error.
-func (r *Reconciler) getBrokerFilterRBAC(ctx context.Context, ns *corev1.Namespace) (*rbacv1.RoleBinding, error) {
-	return r.KubeClientSet.RbacV1().RoleBindings(ns.Name).Get(resources.RoleBindingName, metav1.GetOptions{})
-}
-
-// getBroker returns the default broker for Namespace 'ns' if it exists, otherwise it returns an
-// error.
-func (r *Reconciler) getBroker(ctx context.Context, ns *corev1.Namespace) (*v1alpha1.Broker, error) {
-	return r.EventingClientSet.EventingV1alpha1().Brokers(ns.Name).Get(resources.DefaultBrokerName, metav1.GetOptions{})
-}
-
 // reconcileBroker reconciles the default Broker for the Namespace 'ns'.
 func (r *Reconciler) reconcileBroker(ctx context.Context, ns *corev1.Namespace) (*v1alpha1.Broker, error) {
-	current, err := r.getBroker(ctx, ns)
+	current, err := r.EventingClientSet.EventingV1alpha1().Brokers(ns.Name).Get(resources.DefaultBrokerName, metav1.GetOptions{})
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
