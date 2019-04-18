@@ -165,6 +165,6 @@ func NewBase(opt Options, controllerAgentName string) *Base {
 
 func init() {
 	// Add eventing types to the default Kubernetes Scheme so Events can be
-	// logged for serving types.
+	// logged for eventing types.
 	eventingScheme.AddToScheme(scheme.Scheme)
 }

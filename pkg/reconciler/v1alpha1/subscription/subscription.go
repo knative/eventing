@@ -103,7 +103,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		return nil
 	}
 
-	// Get the Service resource with this namespace/name
+	// Get the Subscription resource with this namespace/name
 	original, err := r.subscriptionLister.Subscriptions(namespace).Get(name)
 	if apierrs.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
