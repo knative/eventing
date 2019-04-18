@@ -52,7 +52,7 @@ metadata:
   namespace: default
 spec:
   type: repo:push
-  source: my-user/my-repo
+  source: /my-user/my-repo
   schema: /my-schema
   broker: default
 ```
@@ -63,19 +63,12 @@ modify those names to make them K8s-compliant, whenever we need to generate them
 
 - `type` is authoritative. This refers to the CloudEvent type as it enters into the eventing mesh. 
 
-- `source`: an identifier of where we receive the event from. This might not necessarily be the CloudEvent source 
-attribute. 
+- `source`: is a valid URI. Refers to the CloudEvent source as it enters into the eventing mesh.
 
-If we have control over the entity emitting the CloudEvent, as is the case of many of our receive adaptors, 
-then we propose to add a CloudEvent custom extension (e.g., from) with this information, to ease the creation of filters 
-on Triggers later on.
-As the CloudEvent source attribute is somewhat useless (e.g., github pull requests are populated with `https://github.com/<owner>/<repo>/pull/<pull_id>`), 
-there is no way of doing exact matching of CloudEvent sources on Triggers. Thus, we propose adding this custom extension 
-to CloudEvents whenever we can. If the extension is not present, then we fallback to the CloudEvent source. 
-Note that when we start supporting more advanced filtering mechanisms on Triggers, we might not need this. Further, with the 
-addition of `subject`, the meaning of the CloudEvent source might change, and we might be better off then. This needs further 
-discussion.
-
+Given that `subject` was approved in the new CloudEvents spec, the CloudEvents `source` became more suitable for 
+our purposes. Before, it contained dynamically generated information (e.g., `https://github.com/<owner>/<repo>/pull/<pull_id>`) 
+that we didn't know beforehand. Now, with the introduction of `subject`, `source` was 're-purposed'. In the previous example 
+`source` would be `https://github.com/<owner>/<repo>/pull` and `subject` just contain the `<pull_id>`.
 
 - `schema` is a URI with the EventType schema. It may be a JSON schema, a protobuf schema, etc. It is optional.
 
@@ -119,7 +112,7 @@ spec:
 ```
  
 By applying the above file, two EventTypes will be registered, with types `dev.knative.source.github.push` and 
-`dev.knative.source.github.pull_request`, source `my-other-user/my-other-repo`, for the `default` Broker in the `default`
+`dev.knative.source.github.pull_request`, source `/my-other-user/my-other-repo`, for the `default` Broker in the `default`
  namespace, and with owner `github-source-sample`. This should be done by the Event Source controller, in this case, 
  the GitHubSource controller.
  
@@ -138,7 +131,7 @@ metadata:
   owner: # Owned by github-source-sample
 spec:
   type: dev.knative.source.github.push
-  source: my-other-user/my-other-repo
+  source: /my-other-user/my-other-repo
   broker: default
 ---
 apiVersion: eventing.knative.dev/v1alpha1
@@ -149,14 +142,15 @@ metadata:
   owner: # Owned by github-source-sample
 spec:
   type: dev.knative.source.github.pull_request
-  source: my-other-user/my-other-repo
+  source: /my-other-user/my-other-repo
   broker: default
 ```
 
-Two things to notice: 
+Three things to notice: 
 - We generate the names by stripping invalid characters from the original type (e.g., `_`)
-- The `spec.type` adds the prefix `dev.knative.source.github.` This is a **separate discussion** on whether we should 
+- We add the prefix `dev.knative.source.github.` to `spec.type`. This is a **separate discussion** on whether we should 
 change the (GitHub) types or not.
+- We add the prefix `/` to `spec.source` to make it a valid URI.
 
 `1.2.` Manual Registration
 
@@ -172,11 +166,11 @@ metadata:
   namespace: default
 spec:
   type: repo:fork
-  source: my-other-user/my-other-repo
+  source: /my-other-user/my-other-repo
   broker: dev
 ``` 
 
-This would register the EventType named `repofork` with type `repo:fork`, source `my-other-user/my-other-repo` 
+This would register the EventType named `repofork` with type `repo:fork`, source `/my-other-user/my-other-repo` 
 in the `dev` Broker of the `default` namespace.
 
 As under the hood, `kubeclt apply` just makes a REST call to the API server with the appropriate RBAC permissions, 
@@ -211,9 +205,6 @@ spec:
 
 Now if someone emits a non-registered event (e.g., `dev.knative.foo.bar`)
 into the Broker `auto-add-demo`, an EventType will be created upon the event arrival. 
-Note that the Broker's address is well-known, it will always be
-`<name>-broker.<namespace>.svc.<ending>`. In this case case, it is
-`auto-add-demo-broker.default.svc.cluster.local`.
 
 We can send the event manually. While SSHed into a `Pod` with the Istio sidecar, run:
 
@@ -253,12 +244,12 @@ Example:
 `$ kubectl get eventtypes -n default`
 
 ```
-NAME                                         TYPE                                    SOURCE                       SCHEMA      BROKER          READY  REASON
-dev.knative.foo.bar-55wcn                    dev.knative.foo.bar                     dev.knative.example                      auto-add-demo   True 
-repofork                                     repo:fork                               my-other-user/my-other-repo              dev             False  BrokerIsNotReady
-repopush                                     repo:push                               my-other-user/my-other-repo  /my-schema  default         True 
-dev.knative.source.github.push-34cnb         dev.knative.source.github.push          my-user/my-repo                          default         True 
-dev.knative.source.github.pullrequest-86jhv  dev.knative.source.github.pull_request  my-user/my-repo                          default         True  
+NAME                                         TYPE                                    SOURCE                        SCHEMA      BROKER          READY  REASON
+dev.knative.foo.bar-55wcn                    dev.knative.foo.bar                     dev.knative.example                       auto-add-demo   True 
+repofork                                     repo:fork                               /my-other-user/my-other-repo              dev             False  BrokerIsNotReady
+repopush                                     repo:push                               /my-user/my-repo              /my-schema  default         True 
+dev.knative.source.github.push-34cnb         dev.knative.source.github.push          /my-other-user/my-other-repo              default         True 
+dev.knative.source.github.pullrequest-86jhv  dev.knative.source.github.pull_request  /my-other-user/my-other-repo              default         True  
 ```
 
 `3.` The `Event Consumer` creates a Trigger to listen to an EventType in the Registry. 
