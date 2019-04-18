@@ -1,0 +1,9 @@
+$PROJECT_ID is set to 'akashv-public', using it to run the tests
+=================================
+==== SETTING UP TEST CLUSTER ====
+=================================
+- Cluster is gke_akashv-public_us-west1-b_kn-dev-2
+- User is verenkar@google.com
+- Docker is us.gcr.io/akashv-public
+>> Publishing test images
+>> Publishing test images

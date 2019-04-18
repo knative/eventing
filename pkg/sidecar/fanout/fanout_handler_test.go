@@ -225,12 +225,21 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 				subs = append(subs, sub)
 			}
 
-			h := NewHandler(zap.NewNop(), Config{Subscriptions: subs})
+			h, err := NewHandler(zap.NewNop(), Config{Subscriptions: subs})
+			if err != nil {
+				t.Errorf("NewHandler failed. Error:%s", err)
+				t.FailNow()
+			}
 			if tc.asyncHandler {
 				h.config.AsyncHandler = true
 			}
 			if tc.receiverFunc != nil {
-				h.receiver = provisioners.NewMessageReceiver(tc.receiverFunc, zap.NewNop().Sugar())
+				receiver, err := provisioners.NewMessageReceiver(tc.receiverFunc, zap.NewNop().Sugar())
+				if err != nil {
+					t.Errorf("NewMessageReceiver failed. Error:%s", err)
+					t.FailNow()
+				}
+				h.receiver = receiver
 			}
 			if tc.timeout != 0 {
 				h.timeout = tc.timeout

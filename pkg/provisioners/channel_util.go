@@ -62,15 +62,17 @@ func AddFinalizer(o metav1.Object, finalizerName string) AddFinalizerResult {
 	return FinalizerAdded
 }
 
+// RemoveFinalizer removes the finalizer(finalizerName) from the object(o) if the finalizer is present.
+// Returns: - FinalizerRemoved, if the finalizer was found and removed.
+//          - FinalizerNotFound, if the finalizer was not found.
 func RemoveFinalizer(o metav1.Object, finalizerName string) RemoveFinalizerResult {
-	result := FinalizerNotFound
 	finalizers := sets.NewString(o.GetFinalizers()...)
 	if finalizers.Has(finalizerName) {
-		result = FinalizerRemoved
 		finalizers.Delete(finalizerName)
 		o.SetFinalizers(finalizers.List())
+		return FinalizerRemoved
 	}
-	return result
+	return FinalizerNotFound
 }
 
 // K8sServiceOption is a functional option that can modify the K8s Service in CreateK8sService
@@ -391,4 +393,23 @@ func channelServiceName(channelName string) string {
 
 func channelHostName(channelName, namespace string) string {
 	return fmt.Sprintf("%s.%s.channels.%s", channelName, namespace, utils.GetClusterDomainName())
+}
+
+// NewHostNameToChannelRefMap parses each channel from cList and creates a map[string(Status.Address.HostName)]ChannelReference
+func NewHostNameToChannelRefMap(cList []eventingv1alpha1.Channel) (map[string]ChannelReference, error) {
+	hostToChanMap := make(map[string]ChannelReference, len(cList))
+	for _, c := range cList {
+		hostName := c.Status.Address.Hostname
+		if cr, ok := hostToChanMap[hostName]; ok {
+			return nil, fmt.Errorf(
+				"Duplicate hostName found. Each channel must have a unique host header. HostName:%s, channel:%s.%s, channel:%s.%s",
+				hostName,
+				c.Namespace,
+				c.Name,
+				cr.Namespace,
+				cr.Name)
+		}
+		hostToChanMap[hostName] = ChannelReference{Name: c.Name, Namespace: c.Namespace}
+	}
+	return hostToChanMap, nil
 }

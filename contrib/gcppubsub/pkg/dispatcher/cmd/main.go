@@ -17,7 +17,10 @@
 package main
 
 import (
+	"context"
 	"flag"
+
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/controller/clusterchannelprovisioner"
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/dispatcher/dispatcher"
@@ -61,7 +64,10 @@ func main() {
 	// PubSub) and the dispatcher (takes messages in PubSub and sends them in cluster) in this
 	// binary.
 
-	_, runnables := receiver.New(logger.Desugar(), mgr.GetClient(), util.GcpPubSubClientCreator)
+	receiver, runnables, err := receiver.New(logger.Desugar(), mgr.GetClient(), util.GcpPubSubClientCreator)
+	if err != nil {
+		logger.Fatal("Unable to create new receiver and runnable", zap.Error(err))
+	}
 	for _, runnable := range runnables {
 		err = mgr.Add(runnable)
 		if err != nil {
@@ -69,7 +75,14 @@ func main() {
 		}
 	}
 
-	if _, err = dispatcher.New(mgr, logger.Desugar()); err != nil {
+	if _, err = dispatcher.New(
+		mgr,
+		logger.Desugar(),
+		[]dispatcher.ReconcileHandlers{
+			func(ctx context.Context, _ reconcile.Request) error {
+				return receiver.UpdateHostToChannelMap(ctx)
+			},
+		}); err != nil {
 		logger.Fatal("Unable to create the dispatcher", zap.Error(err))
 	}
 
