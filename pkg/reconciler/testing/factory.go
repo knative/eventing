@@ -29,6 +29,9 @@ import (
 	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/controller"
+	logtesting "github.com/knative/pkg/logging/testing"
+
+	. "github.com/knative/pkg/reconciler/testing"
 )
 
 const (
@@ -67,7 +70,7 @@ func MakeFactory(ctor Ctor) Factory {
 			EventingClientSet: client,
 			Recorder:          eventRecorder,
 			//StatsReporter:    statsReporter,
-			Logger: TestLogger(t),
+			Logger: logtesting.TestLogger(t),
 		})
 
 		for _, reactor := range r.WithReactors {
