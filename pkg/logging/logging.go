@@ -19,8 +19,6 @@ package logging
 
 import (
 	"context"
-	"os"
-
 	"github.com/knative/pkg/logging"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -72,12 +70,4 @@ func NewConfigFromConfigMap(configMap *corev1.ConfigMap) (*logging.Config, error
 // when a config map is updated
 func UpdateLevelFromConfigMap(logger *zap.SugaredLogger, atomicLevel zap.AtomicLevel, levelKey string) func(configMap *corev1.ConfigMap) {
 	return logging.UpdateLevelFromConfigMap(logger, atomicLevel, levelKey, components...)
-}
-
-func ConfigMapName() string {
-	cm := os.Getenv(ConfigMapNameEnv)
-	if cm == "" {
-		return "config-logging"
-	}
-	return cm
 }
