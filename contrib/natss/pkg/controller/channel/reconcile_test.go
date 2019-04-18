@@ -22,11 +22,12 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
-	util "github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/eventing/pkg/reconciler/names"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
+	"github.com/knative/pkg/system"
 	_ "github.com/knative/pkg/system/testing"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -65,12 +66,15 @@ var testCases = []controllertesting.TestCase{
 		InitialState: []runtime.Object{
 			makeNewClusterChannelProvisioner(clusterChannelProvisionerName, true),
 			makeNewChannel(channelName, clusterChannelProvisionerName),
-			makeVirtualService(),
 		},
 		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
 		WantResult:   reconcile.Result{},
 		WantPresent: []runtime.Object{
 			makeNewChannelProvisionedStatus(channelName, clusterChannelProvisionerName),
+			makeK8sService(channelName, clusterChannelProvisionerName),
+		},
+		WantAbsent: []runtime.Object{
+			makeVirtualService(),
 		},
 		IgnoreTimes: true,
 	},
@@ -213,7 +217,6 @@ func makeNewClusterChannelProvisioner(name string, isReady bool) *eventingv1alph
 	clusterChannelProvisioner.ObjectMeta.SelfLink = ""
 	return clusterChannelProvisioner
 }
-
 func makeVirtualService() *istiov1alpha3.VirtualService {
 	return &istiov1alpha3.VirtualService{
 		TypeMeta: metav1.TypeMeta{
@@ -251,7 +254,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 					Destination: istiov1alpha3.Destination{
 						Host: "kafka-provisioner.knative-eventing.svc." + utils.GetClusterDomainName(),
 						Port: istiov1alpha3.PortSelector{
-							Number: util.PortNumber,
+							Number: provisioners.PortNumber,
 						},
 					}},
 				}},
@@ -265,5 +268,39 @@ func om(namespace, name string) metav1.ObjectMeta {
 		Namespace: namespace,
 		Name:      name,
 		SelfLink:  fmt.Sprintf("/apis/eventing/v1alpha1/namespaces/%s/object/%s", namespace, name),
+		UID:       testUID,
+	}
+}
+
+func makeK8sService(channelName string, clusterChannelProvisionerName string) *corev1.Service {
+	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: fmt.Sprintf("%s-channel-", channelName),
+			Namespace:    testNS,
+			Labels: map[string]string{
+				provisioners.EventingChannelLabel:        channelName,
+				provisioners.OldEventingChannelLabel:     channelName,
+				provisioners.EventingProvisionerLabel:    clusterChannelProvisionerName,
+				provisioners.OldEventingProvisionerLabel: clusterChannelProvisionerName,
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
+					Kind:               "Channel",
+					Name:               channelName,
+					UID:                testUID,
+					Controller:         &truePointer,
+					BlockOwnerDeletion: &truePointer,
+				},
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			ExternalName: names.ServiceHostName(fmt.Sprintf("%s-dispatcher", clusterChannelProvisionerName), system.Namespace()),
+			Type:         "ExternalName",
+		},
 	}
 }

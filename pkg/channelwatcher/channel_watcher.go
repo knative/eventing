@@ -86,8 +86,8 @@ type ShouldWatchFunc func(ch *v1alpha1.Channel) bool
 // 3. Calls the updateConfig func with the new multi-channel-fanout-config.
 // This is used by dispatchers or receivers to update their configs by watching channels.
 func UpdateConfigWatchHandler(updateConfig swappable.UpdateConfig, shouldWatch ShouldWatchFunc) WatchHandlerFunc {
-	return func(ctx context.Context, c client.Client, _ types.NamespacedName) error {
-		channels, err := listAllChannels(ctx, c, shouldWatch)
+	return func(ctx context.Context, c client.Client, chanNamespacedName types.NamespacedName) error {
+		channels, err := ListAllChannels(ctx, c, shouldWatch)
 		if err != nil {
 			logging.FromContext(ctx).Info("Unable to list channels", zap.Error(err))
 			return err
@@ -97,8 +97,8 @@ func UpdateConfigWatchHandler(updateConfig swappable.UpdateConfig, shouldWatch S
 	}
 }
 
-// listAllChannels queries client and gets list of all channels for which shouldWatch returns true.
-func listAllChannels(ctx context.Context, c client.Client, shouldWatch ShouldWatchFunc) ([]v1alpha1.Channel, error) {
+// ListAllChannels queries client and gets list of all channels for which shouldWatch returns true.
+func ListAllChannels(ctx context.Context, c client.Client, shouldWatch ShouldWatchFunc) ([]v1alpha1.Channel, error) {
 	channels := make([]v1alpha1.Channel, 0)
 	cl := &v1alpha1.ChannelList{}
 	if err := c.List(ctx, &client.ListOptions{}, cl); err != nil {
