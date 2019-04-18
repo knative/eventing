@@ -68,7 +68,7 @@ modify those names to make them K8s-compliant, whenever we need to generate them
 Given that `subject` was approved in the new CloudEvents spec, the CloudEvents `source` became more suitable for 
 our purposes. Before, it contained dynamically generated information (e.g., `https://github.com/<owner>/<repo>/pull/<pull_id>`) 
 that we didn't know beforehand. Now, with the introduction of `subject`, `source` was 're-purposed'. In the previous example 
-`source` would be `https://github.com/<owner>/<repo>/pull` and `subject` just contain the `<pull_id>`.
+`source` would be `https://github.com/<owner>/<repo>/pull` and `subject` would just contain the `<pull_id>`.
 
 - `schema` is a URI with the EventType schema. It may be a JSON schema, a protobuf schema, etc. It is optional.
 
