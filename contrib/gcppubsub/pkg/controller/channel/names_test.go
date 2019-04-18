@@ -17,6 +17,7 @@ limitations under the License.
 package channel
 
 import (
+	v1 "k8s.io/api/core/v1"
 	"testing"
 
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
@@ -41,8 +42,12 @@ func TestGenerateTopicName(t *testing.T) {
 }
 
 func TestGenerateSubName(t *testing.T) {
-	expected := "knative-eventing-channel_sub-uid_sub-uid"
+	expected := "knative-eventing-channel_sub-name_sub-uid"
 	actual := generateSubName(&v1alpha1.ChannelSubscriberSpec{
+		DeprecatedRef: &v1.ObjectReference{
+			Name: "sub-name",
+			UID:  "sub-uid",
+		},
 		UID: "sub-uid",
 	})
 	if expected != actual {

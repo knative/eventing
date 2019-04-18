@@ -258,7 +258,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: subscriberURI},
+					{UID: subscriptionUID, SubscriberURI: subscriberURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
@@ -295,7 +295,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
-					{UID: subscriptionUID, ReplyURI: replyURI},
+					{UID: subscriptionUID, ReplyURI: replyURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
@@ -338,7 +338,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: subscriberURI, ReplyURI: replyURI},
+					{UID: subscriptionUID, SubscriberURI: subscriberURI, ReplyURI: replyURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
@@ -360,7 +360,7 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(channelDNS),
 					WithChannelSubscribers([]v1alpha1.ChannelSubscriberSpec{
-						{UID: subscriptionUID, SubscriberURI: subscriberURI, ReplyURI: replyURI},
+						{UID: subscriptionUID, SubscriberURI: subscriberURI, ReplyURI: replyURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 					}),
 				),
 			},
@@ -380,7 +380,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: subscriberURI},
+					{UID: subscriptionUID, SubscriberURI: subscriberURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
@@ -399,7 +399,7 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(channelDNS),
 					WithChannelSubscribers([]v1alpha1.ChannelSubscriberSpec{
-						{UID: subscriptionUID, SubscriberURI: subscriberURI, ReplyURI: replyURI},
+						{UID: subscriptionUID, SubscriberURI: subscriberURI, ReplyURI: replyURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 					}),
 				),
 				NewChannel(replyName, testNS,
@@ -423,7 +423,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
-					{UID: subscriptionUID, ReplyURI: replyURI},
+					{UID: subscriptionUID, ReplyURI: replyURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
@@ -482,7 +482,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: serviceURI},
+					{UID: subscriptionUID, SubscriberURI: serviceURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
@@ -524,8 +524,8 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
-					{UID: "b_" + subscriptionUID, SubscriberURI: serviceURI},
-					{UID: "a_" + subscriptionUID, SubscriberURI: serviceURI},
+					{UID: "b_" + subscriptionUID, SubscriberURI: serviceURI, DeprecatedRef: &corev1.ObjectReference{Name: "b_" + subscriptionName, Namespace: testNS, UID: "b_" + subscriptionUID}},
+					{UID: "a_" + subscriptionUID, SubscriberURI: serviceURI, DeprecatedRef: &corev1.ObjectReference{Name: "a_" + subscriptionName, Namespace: testNS, UID: "a_" + subscriptionUID}},
 				}),
 				patchFinalizers(testNS, "a_"+subscriptionName),
 			},

@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"github.com/knative/pkg/apis/duck"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -39,6 +40,10 @@ type Subscribable struct {
 // ReplyURI is the endpoint for the reply
 // At least one of SubscriberURI and ReplyURI must be present
 type ChannelSubscriberSpec struct {
+	// Deprecated: use UID.
+	// +optional
+	DeprecatedRef *corev1.ObjectReference `json:"ref,omitempty" yaml:"ref,omitempty"`
+	// UID is used to understand the origin of the subscriber.
 	// +optional
 	UID types.UID `json:"uid,omitempty"`
 	// +optional

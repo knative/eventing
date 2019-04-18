@@ -74,9 +74,17 @@ var (
 	subscribers = &v1alpha1.Subscribable{
 		Subscribers: []v1alpha1.ChannelSubscriberSpec{
 			{
+				DeprecatedRef: &corev1.ObjectReference{
+					Name: "sub-name",
+					UID:  "sub-uid",
+				},
 				UID: "sub-uid",
 			},
 			{
+				DeprecatedRef: &corev1.ObjectReference{
+					Name: "sub-2-name",
+					UID:  "sub-2-uid",
+				},
 				UID: "sub-2-uid",
 			},
 		},
@@ -539,7 +547,7 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeChannelWithFinalizerAndSubscriberWithoutUID(),
 			},
-			WantErrMsg: "empty reference UID: { http://foo/ }",
+			WantErrMsg: "empty reference UID: {nil  http://foo/ }",
 			WantEvent: []corev1.Event{
 				events[gcpResourcesPlanFailed],
 			},
@@ -995,6 +1003,10 @@ func makeChannelWithFinalizerAndPossiblyOutdatedPlan(outdated bool) *eventingv1a
 	for _, plannedSubUID := range plannedSubUIDs {
 		sub := pubsubutil.GcpPubSubSubscriptionStatus{
 			ChannelSubscriberSpec: v1alpha1.ChannelSubscriberSpec{
+				DeprecatedRef: &corev1.ObjectReference{
+					Name: string(plannedSubUID),
+					UID:  plannedSubUID,
+				},
 				UID: plannedSubUID,
 			},
 			Subscription: "will-be-retained-in-the-plan-without-recalculation",
@@ -1014,9 +1026,17 @@ func makeChannelWithFinalizerAndPossiblyOutdatedPlan(outdated bool) *eventingv1a
 	c.Spec.Subscribable = &v1alpha1.Subscribable{
 		Subscribers: []v1alpha1.ChannelSubscriberSpec{
 			{
+				DeprecatedRef: &corev1.ObjectReference{
+					Name: "keep-sub",
+					UID:  "keep-sub",
+				},
 				UID: "keep-sub",
 			},
 			{
+				DeprecatedRef: &corev1.ObjectReference{
+					Name: "add-sub",
+					UID:  "add-sub",
+				},
 				UID: "add-sub",
 			},
 		},
@@ -1034,6 +1054,7 @@ func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscrib
 	for _, sub := range subscribable.Subscribers {
 		pcs.Subscriptions = append(pcs.Subscriptions, pubsubutil.GcpPubSubSubscriptionStatus{
 			ChannelSubscriberSpec: v1alpha1.ChannelSubscriberSpec{
+				DeprecatedRef: sub.DeprecatedRef,
 				UID:           sub.UID,
 				ReplyURI:      sub.ReplyURI,
 				SubscriberURI: sub.SubscriberURI,
