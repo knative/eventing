@@ -142,7 +142,7 @@ func TestReceiver(t *testing.T) {
 				fake.NewFakeClient(tc.initialState...),
 				fakepubsub.Creator(tc.pubSubData))
 			if err != nil {
-				t.Errorf("Error when creating a New receiver. Error:%s", err)
+				t.Fatalf("Error when creating a New receiver. Error:%s", err)
 			}
 			mr.setHostToChannelMap(map[string]provisioners.ChannelReference{})
 			resp := httptest.NewRecorder()
@@ -150,7 +150,7 @@ func TestReceiver(t *testing.T) {
 			req.Host = hostname
 			receiver, err := mr.newMessageReceiver()
 			if err != nil {
-				t.Errorf("Error when creating a new message receiver. Error:%s", err)
+				t.Fatalf("Error when creating a new message receiver. Error:%s", err)
 			}
 			mr.UpdateHostToChannelMap(context.TODO())
 			receiver.HandleRequest(resp, req)

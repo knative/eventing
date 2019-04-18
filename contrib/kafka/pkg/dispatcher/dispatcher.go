@@ -34,7 +34,7 @@ import (
 )
 
 type KafkaDispatcher struct {
-	// TODO: config doesn't have to be atomic as it is read an updated using updateLock.
+	// TODO: config doesn't have to be atomic as it is read and updated using updateLock.
 	config           atomic.Value
 	hostToChannelMap atomic.Value
 	updateLock       sync.Mutex
@@ -43,10 +43,8 @@ type KafkaDispatcher struct {
 	dispatcher *provisioners.MessageDispatcher
 
 	kafkaAsyncProducer sarama.AsyncProducer
-	// TODO: kafkaConsumer map should probably be atomic as it is updated and read on separate go routines with no syncchronization.
-	// Verify if this is an issue and fix accordignly
-	kafkaConsumers map[provisioners.ChannelReference]map[subscription]KafkaConsumer
-	kafkaCluster   KafkaCluster
+	kafkaConsumers     map[provisioners.ChannelReference]map[subscription]KafkaConsumer
+	kafkaCluster       KafkaCluster
 
 	logger *zap.Logger
 }
@@ -90,7 +88,7 @@ type subscription struct {
 // ConfigDiff diffs the new config with the existing config. If there are no differences, then the
 // empty string is returned. If there are differences, then a non-empty string is returned
 // describing the differences.
-func (d *KafkaDispatcher) ConfigDiff(updated *multichannelfanout.Config) string {
+func (d *KafkaDispatcher) configDiff(updated *multichannelfanout.Config) string {
 	return cmp.Diff(d.getConfig(), updated)
 }
 
@@ -102,7 +100,7 @@ func (d *KafkaDispatcher) UpdateConfig(config *multichannelfanout.Config) error 
 	d.updateLock.Lock()
 	defer d.updateLock.Unlock()
 
-	if diff := d.ConfigDiff(config); diff != "" {
+	if diff := d.configDiff(config); diff != "" {
 		d.logger.Info("Updating config (-old +new)", zap.String("diff", diff))
 
 		newSubs := make(map[subscription]bool)
@@ -147,11 +145,11 @@ func (d *KafkaDispatcher) UpdateConfig(config *multichannelfanout.Config) error 
 }
 
 func createHostToChannelMap(config *multichannelfanout.Config) (map[string]provisioners.ChannelReference, error) {
-	hcMap := make(map[string]provisioners.ChannelReference)
+	hcMap := make(map[string]provisioners.ChannelReference, len(config.ChannelConfigs))
 	for _, cConfig := range config.ChannelConfigs {
 		if cr, ok := hcMap[cConfig.HostName]; ok {
 			return nil, fmt.Errorf(
-				"Duplicate hostName found. Each channel must have a unique host header. HostName:%s, channel:%s.%s, channel:%s.%s",
+				"duplicate hostName found. Each channel must have a unique host header. HostName:%s, channel:%s.%s, channel:%s.%s",
 				cConfig.HostName,
 				cConfig.Namespace,
 				cConfig.Name,
@@ -189,6 +187,8 @@ func (d *KafkaDispatcher) Start(stopCh <-chan struct{}) error {
 	return d.receiver.Start(stopCh)
 }
 
+// subscribe reads kafkaConsumers which gets updated in UpdateConfig in a separate go-routine.
+// subscribe must be called under updateLock.
 func (d *KafkaDispatcher) subscribe(channelRef provisioners.ChannelReference, sub subscription) error {
 	d.logger.Info("Subscribing", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
 
@@ -261,6 +261,8 @@ func (d *KafkaDispatcher) dispatch(channelRef provisioners.ChannelReference, sub
 	return err
 }
 
+// unsubscribe reads kafkaConsumers which gets updated in UpdateConfig in a separate go-routine.
+// unsubscribe must be called under updateLock.
 func (d *KafkaDispatcher) unsubscribe(channel provisioners.ChannelReference, sub subscription) error {
 	d.logger.Info("Unsubscribing from channel", zap.Any("channel", channel), zap.Any("subscription", sub))
 	if consumer, ok := d.kafkaConsumers[channel][sub]; ok {
@@ -335,7 +337,7 @@ func (d *KafkaDispatcher) getChannelReferenceFromHost(host string) (provisioners
 	chMap := d.getHostToChannelMap()
 	cr, ok := chMap[host]
 	if !ok {
-		return cr, fmt.Errorf("Invalid HostName:%s. HostName not found in ConfigMap for any Channel", host)
+		return cr, fmt.Errorf("invalid Hostname:%s. Hostname not found in ConfigMap for any Channel", host)
 	}
 	return cr, nil
 }

@@ -35,7 +35,7 @@ type ChannelConfig struct {
 	FanoutConfig fanout.Config `json:"fanoutConfig"`
 }
 
-// NewConfigFromChannels creates a new Config from the list of channels
+// NewConfigFromChannels creates a new Config from the list of channels.
 func NewConfigFromChannels(channels []v1alpha1.Channel) *Config {
 	cc := make([]ChannelConfig, 0)
 	for _, c := range channels {

@@ -1,3 +1,18 @@
+/*
+Copyright 2019 The Knative Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 package channelwatcher
 
 import (
@@ -47,9 +62,9 @@ func TestUpdateConfigWatchHandler(t *testing.T) {
 		{
 			name: "Successfully update config",
 			channels: []runtime.Object{
-				makechannel("chan-1", "ns-1", "e.f.g.h", makeSubscribable(makeSubscriber("sub1"), makeSubscriber("sub2"))),
-				makechannel("chan-2", "ns-2", "i.j.k.l", makeSubscribable(makeSubscriber("sub3"), makeSubscriber("sub4"))),
-				makechannel("chan-3", "donotwatch", "i.j.k.l", makeSubscribable(makeSubscriber("sub3"), makeSubscriber("sub4"))),
+				makeChannel("chan-1", "ns-1", "e.f.g.h", makeSubscribable(makeSubscriber("sub1"), makeSubscriber("sub2"))),
+				makeChannel("chan-2", "ns-2", "i.j.k.l", makeSubscribable(makeSubscriber("sub3"), makeSubscriber("sub4"))),
+				makeChannel("chan-3", "donotwatch", "i.j.k.l", makeSubscribable(makeSubscriber("sub3"), makeSubscriber("sub4"))),
 			},
 			expectedConfig: &multichannelfanout.Config{
 				ChannelConfigs: []multichannelfanout.ChannelConfig{
@@ -146,7 +161,7 @@ func getClientMocks(listError error) controllertesting.Mocks {
 	return controllertesting.Mocks{}
 }
 
-func makechannel(name string, namespace string, hostname string, subscribable *eventingduck.Subscribable) *v1alpha1.Channel {
+func makeChannel(name string, namespace string, hostname string, subscribable *eventingduck.Subscribable) *v1alpha1.Channel {
 	c := v1alpha1.Channel{
 		Spec: v1alpha1.ChannelSpec{
 			Subscribable: subscribable,

@@ -68,12 +68,12 @@ rules:
     verbs:
       - update
   - apiGroups:
-      - "" # Core API Group.
+      - "" # Core API Group.	
     resources:
-      - events
+      - events	
     verbs:
-      - create
-      - patch
+      - create	
+      - patch	
       - update
 ---
 

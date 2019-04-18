@@ -14,16 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package multichannelfanout provides an http.Handler that takes in one request to a Knative
-// Channel and fans it out to N other requests. Logically, it represents multiple Knative Channels.
-// It is made up of a map, map[channel]fanout.Handler and each incoming request is inspected to
-// determine which Channel it is on. This Handler delegates the HTTP handling to the fanout.Handler
-// corresponding to the incoming request's Channel.
-// It is often used in conjunction with a swappable.Handler. The swappable.Handler delegates all its
-// requests to the multichannelfanout.Handler. When a new configuration is available, a new
-// multichannelfanout.Handler is created and swapped in for all subsequent requests. The old
-// multichannelfanout.Handler is discarded.
-
 package multichannelfanout
 
 import (
@@ -52,7 +42,7 @@ func TestNewConfigFromChannels(t *testing.T) {
 		}, {
 			name: "one channel with no subscribers",
 			channels: []v1alpha1.Channel{
-				makechannel("chan-1", "ns-1", "a.b.c.d", nil),
+				makeChannel("chan-1", "ns-1", "a.b.c.d", nil),
 			},
 			expected: &Config{
 				ChannelConfigs: []ChannelConfig{
@@ -66,8 +56,8 @@ func TestNewConfigFromChannels(t *testing.T) {
 		}, {
 			name: "multiple channels with subscribers",
 			channels: []v1alpha1.Channel{
-				makechannel("chan-1", "ns-1", "e.f.g.h", makeSubscribable(makeSubscriber("sub1"), makeSubscriber("sub2"))),
-				makechannel("chan-2", "ns-2", "i.j.k.l", makeSubscribable(makeSubscriber("sub3"), makeSubscriber("sub4"))),
+				makeChannel("chan-1", "ns-1", "e.f.g.h", makeSubscribable(makeSubscriber("sub1"), makeSubscriber("sub2"))),
+				makeChannel("chan-2", "ns-2", "i.j.k.l", makeSubscribable(makeSubscriber("sub3"), makeSubscriber("sub4"))),
 			},
 			expected: &Config{
 				ChannelConfigs: []ChannelConfig{
@@ -107,7 +97,7 @@ func TestNewConfigFromChannels(t *testing.T) {
 	}
 }
 
-func makechannel(name string, namespace string, hostname string, subscribable *eventingduck.Subscribable) v1alpha1.Channel {
+func makeChannel(name string, namespace string, hostname string, subscribable *eventingduck.Subscribable) v1alpha1.Channel {
 	c := v1alpha1.Channel{
 		Spec: v1alpha1.ChannelSpec{
 			Subscribable: subscribable,

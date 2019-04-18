@@ -41,15 +41,15 @@ type MessageReceiver struct {
 	hostToChannelFunc ResolveChannelFromHostFunc
 }
 
-// ReceiverOptions provides functional options to MessageReceiver function
+// ReceiverOptions provides functional options to MessageReceiver function.
 type ReceiverOptions func(*MessageReceiver) error
 
 // ResolveChannelFromHostFunc function enables MessageReceiver to get the Channel Reference from incoming request HostHeader
-// before calling receiverFunc
+// before calling receiverFunc.
 type ResolveChannelFromHostFunc func(string) (ChannelReference, error)
 
 // ResolveChannelFromHostHeader is a ReceiverOption for NewMessageReceiver which enables the caller to overwrite the
-// default behaviour defined by ParseChannel function
+// default behaviour defined by ParseChannel function.
 func ResolveChannelFromHostHeader(hostToChannelFunc ResolveChannelFromHostFunc) ReceiverOptions {
 	return func(r *MessageReceiver) error {
 		r.hostToChannelFunc = hostToChannelFunc
