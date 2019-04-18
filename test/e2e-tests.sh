@@ -28,6 +28,12 @@ source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/e2e-tests.s
 
 # Helper functions.
 
+readonly EVENTING_CONFIG=config/
+readonly IN_MEMORY_CHANNEL_CONFIG=config/provisioners/in-memory-channel/in-memory-channel.yaml
+readonly GCP_PUBSUB_CHANNEL_CONFIG=contrib/gcppubsub/config/gcppubsub.yaml
+
+E2E_CLUSTER_PROJECT = ""
+
 # Setup the Knative environment for running tests
 function knative_setup() {
   # Install the latest stable Knative/serving in the current cluster
@@ -36,29 +42,33 @@ function knative_setup() {
   # Install the latest Knative/eventing in the current cluster
   echo ">> Starting Knative Eventing"
   echo "Installing Knative Eventing"
-  ko apply -f config/ || return 1
+  ko apply -f ${EVENTING_CONFIG} || return 1
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
 
   echo "Installing In-Memory ClusterChannelProvisioner"
-  ko apply -f config/provisioners/in-memory-channel/in-memory-channel.yaml || return 1
+  ko apply -f ${IN_MEMORY_CHANNEL_CONFIG} || return 1
   wait_until_pods_running knative-eventing || fail_test "Failed to install the In-Memory ClusterChannelProvisioner"
 
   echo "Installing GCPPubSub ClusterChannelProvisioner"
   kubectl -n knative-eventing create secret generic gcppubsub-channel-key --from-file=key.json=${GOOGLE_APPLICATION_CREDENTIALS}
-  local gcloud_project="$(gcloud config get-value project)"
-  sed "s/REPLACE_WITH_GCP_PROJECT/${gcloud_project}/" contrib/gcppubsub/config/gcppubsub.yaml | ko apply -f -
+  E2E_CLUSTER_PROJECT="$(gcloud config get-value project)"
+  readonly E2E_CLUSTER_PROJECT
+  sed "s/REPLACE_WITH_GCP_PROJECT/${E2E_CLUSTER_PROJECT}/" ${GCP_PUBSUB_CHANNEL_CONFIG} | ko apply -f -
   wait_until_pods_running knative-eventing || fail_test "Failed to install the GCPPubSub ClusterChannelProvisioner"
 }
 
 function knative_teardown() {
   echo ">> Stopping Knative Eventing"
   echo "Uninstalling Knative Eventing"
-  ko delete --ignore-not-found=true --now --timeout 60s -f config/
+  ko delete --ignore-not-found=true --now --timeout 60s -f ${EVENTING_CONFIG}
+
+  echo "Uninstalling In-Memory ClusterChannelProvisioner"
+  ko delete --ignore-not-found=true --now --timeout 60s -f ${IN_MEMORY_CHANNEL_CONFIG}
+
+  echo "Uninstalling GCPPubSub ClusterChannelProvisioner"
+  sed "s/REPLACE_WITH_GCP_PROJECT/${E2E_CLUSTER_PROJECT}/" ${GCP_PUBSUB_CHANNEL_CONFIG} | ko delete --ignore-not-found=true --now --timeout 60s -f -
 
   wait_until_object_does_not_exist namespaces knative-eventing
-
-  wait_until_object_does_not_exist customresourcedefinitions subscriptions.eventing.knative.dev
-  wait_until_object_does_not_exist customresourcedefinitions channels.eventing.knative.dev
 }
 
 # Setup resources common to all eventing tests
