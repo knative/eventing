@@ -425,7 +425,7 @@
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
 [[projects]]
-  digest = "1:49a9a5c0229da00abe80d4a9e58cd03a655f9c56d07203bea464fe0366a3f2ac"
+  digest = "1:b657ec75371e8baf47023f7eb4f20d78e2a744f51ec824b40dd6cf74ad6fdaf4"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -446,7 +446,6 @@
     "client/clientset/versioned/typed/istio/v1alpha3/fake",
     "client/listers/istio/v1alpha3",
     "configmap",
-    "configmap/testing",
     "controller",
     "kmeta",
     "kmp",
@@ -1370,7 +1369,6 @@
     "github.com/knative/pkg/client/clientset/versioned/fake",
     "github.com/knative/pkg/client/listers/istio/v1alpha3",
     "github.com/knative/pkg/configmap",
-    "github.com/knative/pkg/configmap/testing",
     "github.com/knative/pkg/controller",
     "github.com/knative/pkg/kmp",
     "github.com/knative/pkg/logging",
