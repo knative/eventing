@@ -36,7 +36,6 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/names"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/system"
 	_ "github.com/knative/pkg/system/testing"
 	"go.uber.org/zap"
@@ -110,7 +109,6 @@ func init() {
 	// Add types to scheme.
 	eventingv1alpha1.AddToScheme(scheme.Scheme)
 	corev1.AddToScheme(scheme.Scheme)
-	istiov1alpha3.AddToScheme(scheme.Scheme)
 }
 
 func TestInjectClient(t *testing.T) {
