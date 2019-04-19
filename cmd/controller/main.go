@@ -19,16 +19,18 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/knative/eventing/pkg/reconciler/subscription"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/knative/eventing/pkg/reconciler/subscription"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
@@ -41,7 +43,6 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/channel"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger"
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging/logkey"
@@ -169,7 +170,6 @@ func startControllerRuntime(stopCh <-chan struct{}, cfg *rest.Config, logger *za
 
 	// Add custom types to this array to get them into the manager's scheme.
 	schemeFuncs := []SchemeFunc{
-		istiov1alpha3.AddToScheme,
 		eventingv1alpha1.AddToScheme,
 	}
 	for _, schemeFunc := range schemeFuncs {

@@ -225,22 +225,3 @@ spec:
       protocol: TCP
       port: 80
       targetPort: 8080
-
----
-
-# Needed by the GCP PubSub Channel to communicate with GCP PubSub.
-
-apiVersion: networking.istio.io/v1alpha3
-kind: ServiceEntry
-metadata:
-  name: gcppubsub-bus-ext
-  namespace: knative-eventing
-spec:
-  hosts:
-  - "*.googleapis.com"
-  - "accounts.google.com"
-  ports:
-  - number: 443
-    name: https
-    protocol: HTTPS
-  location: MESH_EXTERNAL

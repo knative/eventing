@@ -31,7 +31,6 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/resources"
 	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -79,7 +78,6 @@ var (
 func init() {
 	// Add types to scheme
 	_ = v1alpha1.AddToScheme(scheme.Scheme)
-	_ = istiov1alpha3.AddToScheme(scheme.Scheme)
 }
 
 func TestProvideController(t *testing.T) {

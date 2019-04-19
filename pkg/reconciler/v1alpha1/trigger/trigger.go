@@ -28,7 +28,6 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/path"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/resources"
 	"github.com/knative/eventing/pkg/utils/resolve"
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -95,7 +94,7 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 	}
 
 	// Watch all the resources that the Trigger reconciles.
-	for _, t := range []runtime.Object{&corev1.Service{}, &istiov1alpha3.VirtualService{}, &v1alpha1.Subscription{}} {
+	for _, t := range []runtime.Object{&corev1.Service{}, &v1alpha1.Subscription{}} {
 		err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Trigger{}, IsController: true})
 		if err != nil {
 			return nil, err
