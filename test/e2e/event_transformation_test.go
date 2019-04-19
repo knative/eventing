@@ -2,6 +2,7 @@
 
 /*
 Copyright 2019 The Knative Authors
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -116,7 +117,12 @@ func TestEventTransformation(t *testing.T) {
 	// check if the logging service receives the correct number of event messages
 	expectedContent := body + msgPostfix
 	expectedContentCount := len(subscriptionNames1) * len(subscriptionNames2)
-	if err := WaitForLogContentCount(clients, loggerPod.Name, loggerPod.Spec.Containers[0].Name, ns, expectedContent, expectedContentCount); err != nil {
+	podName := loggerPod.Name
+	containerName := loggerPod.Spec.Containers[0].Name
+	if err := WaitForLogContentCount(clients, podName, containerName, ns, expectedContent, expectedContentCount); err != nil {
+		if logs, err := clients.Kube.PodLogs(podName, containerName, ns); err != nil {
+			t.Logf("Log content: %s\n", string(logs))
+		}
 		t.Fatalf("String %q does not appear %d times in logs of logger pod %q: %v", expectedContent, expectedContentCount, loggerPod.Name, err)
 	}
 }

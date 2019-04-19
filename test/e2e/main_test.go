@@ -2,6 +2,7 @@
 
 /*
 Copyright 2019 The Knative Authors
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -27,12 +28,24 @@ import (
 
 // channelTestMap indicates which test cases we want to run for a given CCP.
 var channelTestMap = map[string][]func(t *testing.T){
-	"in-memory-channel": []func(t *testing.T){
+	test.InMemoryProvisioner: []func(t *testing.T){
 		TestSingleBinaryEvent,
 		TestSingleStructuredEvent,
 		TestEventTransformation,
 		TestChannelChain,
 		TestDefaultBrokerWithManyTriggers,
+	},
+	test.InMemoryChannelProvisioner: []func(t *testing.T){
+		TestSingleBinaryEvent,
+		TestSingleStructuredEvent,
+		TestEventTransformation,
+		TestChannelChain,
+	},
+	test.GCPPubSubProvisioner: []func(t *testing.T){
+		TestSingleBinaryEvent,
+		TestSingleStructuredEvent,
+		TestEventTransformation,
+		TestChannelChain,
 	},
 }
 
@@ -50,7 +63,7 @@ func TestMain(t *testing.T) {
 			funcName := runtime.FuncForPC(reflect.ValueOf(testFunc).Pointer()).Name()
 			baseFuncName := GetBaseFuncName(funcName)
 			t.Logf("Running %q with %q ClusterChannelProvisioner", baseFuncName, provisioner)
-			t.Run(baseFuncName, testFunc)
+			t.Run(baseFuncName+"-"+provisioner, testFunc)
 		}
 	}
 }

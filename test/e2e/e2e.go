@@ -1,5 +1,6 @@
 /*
 Copyright 2019 The Knative Authors
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -21,6 +22,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"unicode"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/test"
@@ -82,7 +84,7 @@ func Setup(t *testing.T, runInParallel bool, logf logging.FormatLogger) (*test.C
 	// Create a new namespace to run this test case.
 	// Combine the test name and CCP to avoid duplication.
 	baseFuncName := GetBaseFuncName(t.Name())
-	ns := strings.ToLower(baseFuncName) + "-" + ccpToTest
+	ns := makeK8sNamePrefix(baseFuncName)
 	CreateNamespaceIfNeeded(t, clients, ns, t.Logf)
 
 	// Run the test case in parallel if needed.
@@ -91,6 +93,26 @@ func Setup(t *testing.T, runInParallel bool, logf logging.FormatLogger) (*test.C
 	}
 
 	return clients, ns, ccpToTest, cleaner
+}
+
+// TODO(Fredy-Z): Borrowed this function from Knative/Serving, will delete it after we move it to Knative/pkg/test.
+// makeK8sNamePrefix converts each chunk of non-alphanumeric character into a single dash
+// and also convert camelcase tokens into dash-delimited lowercase tokens.
+func makeK8sNamePrefix(s string) string {
+	var sb strings.Builder
+	newToken := false
+	for _, c := range s {
+		if !(unicode.IsLetter(c) || unicode.IsNumber(c)) {
+			newToken = true
+			continue
+		}
+		if sb.Len() > 0 && (newToken || unicode.IsUpper(c)) {
+			sb.WriteRune('-')
+		}
+		sb.WriteRune(unicode.ToLower(c))
+		newToken = false
+	}
+	return sb.String()
 }
 
 // GetBaseFuncName returns the baseFuncName parsed from the fullFuncName.
