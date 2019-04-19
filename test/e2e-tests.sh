@@ -100,7 +100,6 @@ function gcppubsub_setup() {
       --iam-account=${PUBSUB_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com
     service_account_key="${PUBSUB_SERVICE_ACCOUNT_KEY}"
   fi
-
   kubectl -n knative-eventing create secret generic gcppubsub-channel-key --from-file=key.json=${service_account_key}
 }
 
