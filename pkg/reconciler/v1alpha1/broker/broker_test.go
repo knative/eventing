@@ -31,7 +31,6 @@ import (
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -845,13 +844,8 @@ func makeBroker() *v1alpha1.Broker {
 
 func makeReadyBroker() *v1alpha1.Broker {
 	b := makeBroker()
-	b.Status.InitializeConditions()
-	b.Status.PropagateIngressDeploymentAvailability(makeAvailableDeployment())
-	b.Status.PropagateTriggerChannelReadiness(makeReadyChannelStatus())
-	b.Status.PropagateIngressChannelReadiness(makeReadyChannelStatus())
-	b.Status.PropagateFilterDeploymentAvailability(makeAvailableDeployment())
+	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
 	b.Status.SetAddress(fmt.Sprintf("%s-broker.%s.svc.%s", brokerName, testNS, utils.GetClusterDomainName()))
-	b.Status.PropagateIngressSubscriptionReadiness(makeReadySubscriptionStatus())
 	return b
 }
 
@@ -1056,31 +1050,4 @@ func getOwnerReference() metav1.OwnerReference {
 		Controller:         &trueVal,
 		BlockOwnerDeletion: &trueVal,
 	}
-}
-
-func makeAvailableDeployment() *v1.Deployment {
-	d := &v1.Deployment{}
-	d.Name = "deployment-name"
-	d.Status.Conditions = []v1.DeploymentCondition{
-		{
-			Type:   v1.DeploymentAvailable,
-			Status: "True",
-		},
-	}
-	return d
-}
-
-func makeReadyChannelStatus() *v1alpha1.ChannelStatus {
-	cs := &v1alpha1.ChannelStatus{}
-	cs.MarkProvisionerInstalled()
-	cs.MarkProvisioned()
-	cs.SetAddress("foo")
-	return cs
-}
-
-func makeReadySubscriptionStatus() *v1alpha1.SubscriptionStatus {
-	ss := &v1alpha1.SubscriptionStatus{}
-	ss.MarkChannelReady()
-	ss.MarkReferencesResolved()
-	return ss
 }

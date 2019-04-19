@@ -229,10 +229,10 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	b, err := r.getBroker(ctx, t)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Broker", zap.Error(err))
-		t.Status.MarkBrokerDoesNotExist()
+		t.Status.MarkBrokerFailed("DoesNotExist", "Broker does not exist")
 		return err
 	}
-	t.Status.MarkBrokerExists()
+	t.Status.PropagateBrokerStatus(&b.Status)
 
 	brokerTrigger, err := r.getBrokerTriggerChannel(ctx, b)
 	if err != nil {
@@ -258,13 +258,13 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	}
 	t.Status.SubscriberURI = subscriberURI
 
-	_, err = r.subscribeToBrokerChannel(ctx, t, brokerTrigger, brokerIngress, filterSvc)
+	sub, err := r.subscribeToBrokerChannel(ctx, t, brokerTrigger, brokerIngress, filterSvc)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to Subscribe", zap.Error(err))
-		t.Status.MarkNotSubscribed("notSubscribed", "%v", err)
+		t.Status.MarkNotSubscribed("NotSubscribed", "%v", err)
 		return err
 	}
-	t.Status.MarkSubscribed()
+	t.Status.PropagateSubscriptionStatus(&sub.Status)
 
 	return nil
 }
