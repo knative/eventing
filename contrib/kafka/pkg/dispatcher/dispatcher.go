@@ -103,9 +103,18 @@ func (d *KafkaDispatcher) UpdateConfig(config *multichannelfanout.Config) error 
 	if diff := d.configDiff(config); diff != "" {
 		d.logger.Info("Updating config (-old +new)", zap.String("diff", diff))
 
+		// Create hostToChannelMap before updating kafkaConsumers.
+		// But update the map only after updating kafkaConsumers.
+		hcMap, err := createHostToChannelMap(config)
+		if err != nil {
+			return err
+		}
+
 		newSubs := make(map[subscription]bool)
 
-		// Subscribe to new subscriptions
+		// Subscribe to new subscriptions.
+		// TODO: Error returned by subscribe/unsubscribe must be handled.
+		// https://github.com/knative/eventing/issues/1072.
 		for _, cc := range config.ChannelConfigs {
 			channelRef := provisioners.ChannelReference{
 				Name:      cc.Name,
@@ -131,11 +140,8 @@ func (d *KafkaDispatcher) UpdateConfig(config *multichannelfanout.Config) error 
 				}
 			}
 		}
-
-		hcMap, err := createHostToChannelMap(config)
-		if err != nil {
-			return err
-		}
+		// At this point all updates are done and hostToChannelMap is created successfully.
+		// Update the atomic value.
 		d.setHostToChannelMap(hcMap)
 
 		// Update the config so that it can be used for comparison during next sync
