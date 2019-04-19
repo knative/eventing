@@ -110,7 +110,6 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	channelInformer := eventingInformerFactory.Eventing().V1alpha1().Channels()
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
-
 	// TODO: remove unused after done integrating all controllers.
 	//deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
 	//coreServiceInformer := kubeInformerFactory.Core().V1().Services()
@@ -155,6 +154,10 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	if err := kncontroller.StartInformers(
 		stopCh,
 		subscriptionInformer.Informer(),
+		brokerInformer.Informer(),
+		channelInformer.Informer(),
+		serviceInformer.Informer(),
+		deploymentInformer.Informer(),
 		configMapInformer.Informer(),
 	); err != nil {
 		logger.Fatalf("Failed to start informers: %v", err)
