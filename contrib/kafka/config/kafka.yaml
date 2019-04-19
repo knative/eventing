@@ -98,7 +98,7 @@ metadata:
   namespace: knative-eventing
 data:
   # Broker URL's for the provisioner. Replace this with the URL's for your kafka cluster.
-  bootstrap_servers: my-cluster-kafka-bootstrap.kafka:9092
+  bootstrap_servers: kafkabroker.kafka:9092
 
   # Consumer mode to dispatch events from different partitions in parallel.
   # By default(multiplex), partitions are multiplexed with a single go channel.
