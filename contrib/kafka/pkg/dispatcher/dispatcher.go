@@ -144,12 +144,6 @@ func (d *KafkaDispatcher) UpdateConfig(config *multichannelfanout.Config) error 
 		// Update the atomic value.
 		d.setHostToChannelMap(hcMap)
 
-		hcMap, err := createHostToChannelMap(config)
-		if err != nil {
-			return err
-		}
-		d.setHostToChannelMap(hcMap)
-
 		// Update the config so that it can be used for comparison during next sync
 		d.setConfig(config)
 	}
