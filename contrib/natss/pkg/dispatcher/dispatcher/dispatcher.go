@@ -311,7 +311,7 @@ func (s *SubscriptionsSupervisor) setHostToChannelMap(hcMap map[string]provision
 }
 
 // UpdateHostToChannelMap will be called from the controller that watches natss channels.
-// It will update internal hostToChannelMap which is used to resolve the hostHeader of the 
+// It will update internal hostToChannelMap which is used to resolve the hostHeader of the
 // incoming request to the correct ChannelReference in the receiver function.
 func (s *SubscriptionsSupervisor) UpdateHostToChannelMap(ctx context.Context, chanList []eventingv1alpha1.Channel) error {
 	logging.FromContext(ctx).Info("UpdateHostToChannelMap: Acquiring mutex lock")

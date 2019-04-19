@@ -85,7 +85,7 @@ type subscription struct {
 	ReplyURI      string
 }
 
-// ConfigDiff diffs the new config with the existing config. If there are no differences, then the
+// configDiff diffs the new config with the existing config. If there are no differences, then the
 // empty string is returned. If there are differences, then a non-empty string is returned
 // describing the differences.
 func (d *KafkaDispatcher) configDiff(updated *multichannelfanout.Config) string {
@@ -103,9 +103,18 @@ func (d *KafkaDispatcher) UpdateConfig(config *multichannelfanout.Config) error 
 	if diff := d.configDiff(config); diff != "" {
 		d.logger.Info("Updating config (-old +new)", zap.String("diff", diff))
 
+		// Create hostToChannelMap before updating kafkaConsumers.
+		// But update the map only after updating kafkaConsumers.
+		hcMap, err := createHostToChannelMap(config)
+		if err != nil {
+			return err
+		}
+
 		newSubs := make(map[subscription]bool)
 
-		// Subscribe to new subscriptions
+		// Subscribe to new subscriptions.
+		// TODO: Error returned by subscribe/unsubscribe must be handled.
+		// https://github.com/knative/eventing/issues/1072.
 		for _, cc := range config.ChannelConfigs {
 			channelRef := provisioners.ChannelReference{
 				Name:      cc.Name,
@@ -131,6 +140,9 @@ func (d *KafkaDispatcher) UpdateConfig(config *multichannelfanout.Config) error 
 				}
 			}
 		}
+		// At this point all updates are done and hostToChannelMap is created successfully.
+		// Update the atomic value.
+		d.setHostToChannelMap(hcMap)
 
 		hcMap, err := createHostToChannelMap(config)
 		if err != nil {
