@@ -332,7 +332,6 @@ func TestBrokerIsReady(t *testing.T) {
 				var d *v1.Deployment
 				if *test.markIngressReady {
 					d = TestHelper.AvailableDeployment()
-
 				} else {
 					d = TestHelper.UnavailableDeployment()
 				}
