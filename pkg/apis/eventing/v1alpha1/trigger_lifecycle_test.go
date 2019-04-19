@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1/testhelper"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -30,8 +31,8 @@ var (
 		Status: corev1.ConditionTrue,
 	}
 
-	triggerConditionBrokerExists = duckv1alpha1.Condition{
-		Type:   TriggerConditionBrokerExists,
+	triggerConditionBroker = duckv1alpha1.Condition{
+		Type:   TriggerConditionBroker,
 		Status: corev1.ConditionTrue,
 	}
 
@@ -63,7 +64,7 @@ func TestTriggerGetCondition(t *testing.T) {
 		ts: &TriggerStatus{
 			Status: duckv1alpha1.Status{
 				Conditions: []duckv1alpha1.Condition{
-					triggerConditionBrokerExists,
+					triggerConditionBroker,
 					triggerConditionSubscribed,
 				},
 			},
@@ -75,7 +76,7 @@ func TestTriggerGetCondition(t *testing.T) {
 		ts: &TriggerStatus{
 			Status: duckv1alpha1.Status{
 				Conditions: []duckv1alpha1.Condition{
-					triggerConditionBrokerExists,
+					triggerConditionBroker,
 					triggerConditionSubscribed,
 				},
 			},
@@ -116,7 +117,7 @@ func TestTriggerInitializeConditions(t *testing.T) {
 		want: &TriggerStatus{
 			Status: duckv1alpha1.Status{
 				Conditions: []duckv1alpha1.Condition{{
-					Type:   TriggerConditionBrokerExists,
+					Type:   TriggerConditionBroker,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   TriggerConditionReady,
@@ -132,7 +133,7 @@ func TestTriggerInitializeConditions(t *testing.T) {
 		ts: &TriggerStatus{
 			Status: duckv1alpha1.Status{
 				Conditions: []duckv1alpha1.Condition{{
-					Type:   TriggerConditionBrokerExists,
+					Type:   TriggerConditionBroker,
 					Status: corev1.ConditionFalse,
 				}},
 			},
@@ -140,7 +141,7 @@ func TestTriggerInitializeConditions(t *testing.T) {
 		want: &TriggerStatus{
 			Status: duckv1alpha1.Status{
 				Conditions: []duckv1alpha1.Condition{{
-					Type:   TriggerConditionBrokerExists,
+					Type:   TriggerConditionBroker,
 					Status: corev1.ConditionFalse,
 				}, {
 					Type:   TriggerConditionReady,
@@ -164,7 +165,7 @@ func TestTriggerInitializeConditions(t *testing.T) {
 		want: &TriggerStatus{
 			Status: duckv1alpha1.Status{
 				Conditions: []duckv1alpha1.Condition{{
-					Type:   TriggerConditionBrokerExists,
+					Type:   TriggerConditionBroker,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   TriggerConditionReady,
@@ -228,10 +229,10 @@ func TestTriggerIsReady(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			ts := &TriggerStatus{}
 			if test.markBrokerExists {
-				ts.MarkBrokerExists()
+				ts.PropagateBrokerStatus(testhelper.ReadyBrokerStatus())
 			}
 			if test.markSubscribed {
-				ts.MarkSubscribed()
+				ts.PropagateSubscriptionStatus(testhelper.ReadySubscriptionStatus())
 			}
 			got := ts.IsReady()
 			if test.wantReady != got {

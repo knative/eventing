@@ -25,6 +25,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1/testhelper"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
 	brokerresources "github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
@@ -432,10 +433,10 @@ func TestReconcile(t *testing.T) {
 			Name: "Trigger reconciliation success",
 			InitialState: []runtime.Object{
 				makeTrigger(),
-				makeBroker(),
+				makeReadyBroker(),
 				makeTriggerChannel(),
 				makeBrokerFilterService(),
-				makeSameSubscription(),
+				makeReadySubscription(),
 			},
 			Objects: []runtime.Object{
 				makeSubscriberServiceAsUnstructured(),
@@ -606,10 +607,8 @@ func makeTrigger() *v1alpha1.Trigger {
 
 func makeReadyTrigger() *v1alpha1.Trigger {
 	t := makeTrigger()
-	t.Status.InitializeConditions()
-	t.Status.MarkBrokerExists()
+	t.Status = *testhelper.ReadyTriggerStatus()
 	t.Status.SubscriberURI = fmt.Sprintf("http://%s.%s.svc.%s/", subscriberName, testNS, utils.GetClusterDomainName())
-	t.Status.MarkSubscribed()
 	return t
 }
 
@@ -642,6 +641,12 @@ func makeBroker() *v1alpha1.Broker {
 			},
 		},
 	}
+}
+
+func makeReadyBroker() *v1alpha1.Broker {
+	b := makeBroker()
+	b.Status = *testhelper.ReadyBrokerStatus()
+	return b
 }
 
 func makeChannelProvisioner() *corev1.ObjectReference {
@@ -715,6 +720,12 @@ func makeSameSubscription() *v1alpha1.Subscription {
 
 func makeDifferentSubscription() *v1alpha1.Subscription {
 	return resources.NewSubscription(makeTrigger(), makeTriggerChannel(), makeDifferentChannel(), makeServiceURI())
+}
+
+func makeReadySubscription() *v1alpha1.Subscription {
+	s := makeSameSubscription()
+	s.Status = *testhelper.ReadySubscriptionStatus()
+	return s
 }
 
 func getOwnerReference() metav1.OwnerReference {
