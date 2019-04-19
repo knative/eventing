@@ -8,7 +8,6 @@ import (
 	"github.com/knative/eventing/contrib/kafka/pkg/controller/channel"
 	eventingv1alpha "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -47,7 +46,6 @@ func main() {
 	// Add custom types to this array to get them into the manager's scheme.
 	schemeFuncs := []SchemeFunc{
 		eventingv1alpha.AddToScheme,
-		istiov1alpha3.AddToScheme,
 	}
 	for _, schemeFunc := range schemeFuncs {
 		schemeFunc(mgr.GetScheme())

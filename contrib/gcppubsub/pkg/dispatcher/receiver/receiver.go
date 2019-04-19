@@ -44,7 +44,7 @@ type Receiver struct {
 
 // New creates a new Receiver and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned MessageReceiver.
-func New(logger *zap.Logger, client client.Client, pubSubClientCreator util.PubSubClientCreator) (*Receiver, []manager.Runnable) {
+func New(logger *zap.Logger, client client.Client, pubSubClientCreator util.PubSubClientCreator) (*Receiver, []manager.Runnable, error) {
 	r := &Receiver{
 		logger: logger,
 		client: client,
@@ -52,10 +52,14 @@ func New(logger *zap.Logger, client client.Client, pubSubClientCreator util.PubS
 		pubSubClientCreator: pubSubClientCreator,
 		cache:               cache.NewTTL(),
 	}
-	return r, []manager.Runnable{r.newMessageReceiver(), r.cache}
+	receiver, err := r.newMessageReceiver()
+	if err != nil {
+		return nil, nil, err
+	}
+	return r, []manager.Runnable{receiver, r.cache}, nil
 }
 
-func (r *Receiver) newMessageReceiver() *provisioners.MessageReceiver {
+func (r *Receiver) newMessageReceiver() (*provisioners.MessageReceiver, error) {
 	return provisioners.NewMessageReceiver(r.sendEventToTopic, r.logger.Sugar())
 }
 
