@@ -63,8 +63,7 @@ type SubscriptionsSupervisor struct {
 	natssConn           *stan.Conn
 	natssConnInProgress bool
 
-	hostToChannelMapMutex sync.Mutex
-	hostToChannelMap      atomic.Value
+	hostToChannelMap atomic.Value
 }
 
 // NewDispatcher returns a new SubscriptionsSupervisor.
@@ -314,11 +313,6 @@ func (s *SubscriptionsSupervisor) setHostToChannelMap(hcMap map[string]provision
 // It will update internal hostToChannelMap which is used to resolve the hostHeader of the
 // incoming request to the correct ChannelReference in the receiver function.
 func (s *SubscriptionsSupervisor) UpdateHostToChannelMap(ctx context.Context, chanList []eventingv1alpha1.Channel) error {
-	logging.FromContext(ctx).Info("UpdateHostToChannelMap: Acquiring mutex lock")
-	s.hostToChannelMapMutex.Lock()
-	defer s.hostToChannelMapMutex.Unlock()
-	logging.FromContext(ctx).Info("UpdateHostToChannelMap: Acquired mutex lock. Updating internal map")
-
 	hostToChanMap := make(map[string]provisioners.ChannelReference, len(chanList))
 	for _, c := range chanList {
 		hostName := c.Status.Address.Hostname
@@ -335,7 +329,7 @@ func (s *SubscriptionsSupervisor) UpdateHostToChannelMap(ctx context.Context, ch
 	}
 
 	s.setHostToChannelMap(hostToChanMap)
-	logging.FromContext(ctx).Info("UpdateHostToChannelMap: Update successful. Releasing mutex lock")
+	logging.FromContext(ctx).Info("hostToChannelMap updated successfully.")
 	return nil
 }
 
