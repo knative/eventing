@@ -37,6 +37,9 @@ readonly GCP_PUBSUB_CONFIG_TEMPLATE="contrib/gcppubsub/config/gcppubsub.yaml"
 # Real GCP PubSub config, generated from the template.
 readonly GCP_PUBSUB_CONFIG="$(mktemp)"
 
+# TODO(Fredy-Z): delete this flag after https://github.com/knative/test-infra/pull/692 is merged and updated
+E2E_PROJECT_ID=""
+
 # Constants used for creating ServiceAccount for GCP PubSub provisioner setup if it's not running on Prow.
 readonly PUBSUB_SERVICE_ACCOUNT="eventing_pubsub_test"
 readonly PUBSUB_SERVICE_ACCOUNT_KEY="$(mktemp)"
@@ -57,7 +60,6 @@ function knative_setup() {
   ko apply -f ${IN_MEMORY_CHANNEL_CONFIG} || return 1
   wait_until_pods_running knative-eventing || fail_test "Failed to install the In-Memory ClusterChannelProvisioner"
 
-  # TODO(Fredy-Z): delete this flag after https://github.com/knative/test-infra/pull/692 is merged and updated
   E2E_PROJECT_ID="$(gcloud config get-value project)"
   echo "Installing GCPPubSub ClusterChannelProvisioner"
   gcppubsub_setup
