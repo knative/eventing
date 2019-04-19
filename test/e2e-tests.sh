@@ -35,6 +35,12 @@ readonly IN_MEMORY_CHANNEL_PROVISIONER_CONFIG="config/provisioners/in-memory-cha
 readonly GCP_PUBSUB_PROVISIONER_CONFIG="contrib/gcppubsub/config/gcppubsub.yaml"
 readonly GCP_PUBSUB_TEMP_CONFIG="$(mktemp)"
 
+# Constants used for creating ServiceAccount for GCP PubSub provisioner setup if it's not running on Prow.
+readonly PUBSUB_SERVICE_ACCOUNT="eventing_pubsub_test"
+readonly PROJECT_ID="${GCP_PROJECT}"
+readonly PUBSUB_SERVICE_ACCOUNT_KEY="$(mktemp)"
+readonly PUBSUB_SECRET_NAME="gcppubsub-channel-key"
+
 # Setup the Knative environment for running tests.
 function knative_setup() {
   # Install the latest stable Knative/serving in the current cluster.
@@ -82,13 +88,10 @@ function test_setup() {
   $(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test images"
 }
 
-readonly PUBSUB_SERVICE_ACCOUNT="eventing_pubsub_test"
-readonly PROJECT_ID="${GCP_PROJECT}"
-readonly PUBSUB_SERVICE_ACCOUNT_KEY="knative-gcppubsub-channel.json"
-
 # Create resources required for GCP PubSub provisioner setup
 function gcppubsub_setup() {
   local service_account_key="${GOOGLE_APPLICATION_CREDENTIALS}"
+  # When not running on Prow we need to set up a service account for PubSub
   if (( ! IS_PROW )); then
     echo "Set up ServiceAccount for GCP PubSub provisioner"
     gcloud services enable pubsub.googleapis.com
@@ -100,11 +103,12 @@ function gcppubsub_setup() {
       --iam-account=${PUBSUB_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com
     service_account_key="${PUBSUB_SERVICE_ACCOUNT_KEY}"
   fi
-  kubectl -n knative-eventing create secret generic gcppubsub-channel-key --from-file=key.json=${service_account_key}
+  kubectl -n knative-eventing create secret generic ${PUBSUB_SECRET_NAME} --from-file=key.json=${service_account_key}
 }
 
-# Delete resources that was used for GCP PubSub provisioner setup
+# Delete resources that were used for GCP PubSub provisioner setup
 function gcppubsub_teardown() {
+  # When not running on Prow we need to delete the service account created for PubSub
   if (( ! IS_PROW )); then
     echo "Tear down ServiceAccount for GCP PubSub provisioner"
     gcloud iam service-accounts keys delete -q ${PUBSUB_SERVICE_ACCOUNT_KEY} \
@@ -114,7 +118,7 @@ function gcppubsub_teardown() {
       --role roles/pubsub.editor
     gcloud iam service-accounts delete -q ${PUBSUB_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com
   fi
-  kubectl -n knative-eventing delete secret gcppubsub-channel-key
+  kubectl -n knative-eventing delete secret ${PUBSUB_SECRET_NAME}
 }
 
 function dump_extra_cluster_state() {
