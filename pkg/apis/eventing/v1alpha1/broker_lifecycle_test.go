@@ -17,19 +17,17 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
 var (
 	trueVal  = true
 	falseVal = false
-
-	err = errors.New("foobar")
 )
 
 var (
@@ -331,39 +329,49 @@ func TestBrokerIsReady(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			bs := &BrokerStatus{}
 			if test.markIngressReady != nil {
+				var d *v1.Deployment
 				if *test.markIngressReady {
-					bs.MarkIngressReady()
+					d = availableDeployment()
 				} else {
-					bs.MarkIngressFailed(err)
+					d = unavailableDeployment()
 				}
+				bs.PropagateIngressDeploymentAvailability(d)
 			}
 			if test.markTriggerChannelReady != nil {
+				var c *ChannelStatus
 				if *test.markTriggerChannelReady {
-					bs.MarkTriggerChannelReady()
+					c = readyChannelStatus()
 				} else {
-					bs.MarkTriggerChannelFailed(err)
+					c = notReadyChannelStatus()
 				}
+				bs.PropagateTriggerChannelReadiness(c)
 			}
 			if test.markIngressChannelReady != nil {
+				var c *ChannelStatus
 				if *test.markIngressChannelReady {
-					bs.MarkIngressChannelReady()
+					c = readyChannelStatus()
 				} else {
-					bs.MarkIngressChannelFailed(err)
+					c = notReadyChannelStatus()
 				}
+				bs.PropagateIngressChannelReadiness(c)
 			}
 			if test.markIngressSubscriptionReady != nil {
+				var sub *SubscriptionStatus
 				if *test.markIngressSubscriptionReady {
-					bs.MarkIngressSubscriptionReady()
+					sub = readySubscriptionStatus()
 				} else {
-					bs.MarkIngressSubscriptionFailed(err)
+					sub = notReadySubscriptionStatus()
 				}
+				bs.PropagateIngressSubscriptionReadiness(sub)
 			}
 			if test.markFilterReady != nil {
+				var d *v1.Deployment
 				if *test.markFilterReady {
-					bs.MarkFilterReady()
+					d = availableDeployment()
 				} else {
-					bs.MarkFilterFailed(err)
+					d = unavailableDeployment()
 				}
+				bs.PropagateFilterDeploymentAvailability(d)
 			}
 			bs.SetAddress(test.address)
 
@@ -373,4 +381,55 @@ func TestBrokerIsReady(t *testing.T) {
 			}
 		})
 	}
+}
+
+func unavailableDeployment() *v1.Deployment {
+	d := &v1.Deployment{}
+	d.Name = "unavailable"
+	d.Status.Conditions = []v1.DeploymentCondition{
+		{
+			Type:   v1.DeploymentAvailable,
+			Status: "False",
+		},
+	}
+	return d
+}
+
+func availableDeployment() *v1.Deployment {
+	d := unavailableDeployment()
+	d.Name = "available"
+	d.Status.Conditions = []v1.DeploymentCondition{
+		{
+			Type:   v1.DeploymentAvailable,
+			Status: "True",
+		},
+	}
+	return d
+}
+
+func readyChannelStatus() *ChannelStatus {
+	cs := &ChannelStatus{}
+	cs.MarkProvisionerInstalled()
+	cs.MarkProvisioned()
+	cs.SetAddress("foo")
+	return cs
+}
+
+func notReadyChannelStatus() *ChannelStatus {
+	cs := readyChannelStatus()
+	cs.MarkNotProvisioned("foo", "bar")
+	return cs
+}
+
+func readySubscriptionStatus() *SubscriptionStatus {
+	ss := &SubscriptionStatus{}
+	ss.MarkChannelReady()
+	ss.MarkReferencesResolved()
+	return ss
+}
+
+func notReadySubscriptionStatus() *SubscriptionStatus {
+	ss := &SubscriptionStatus{}
+	ss.MarkReferencesResolved()
+	return ss
 }

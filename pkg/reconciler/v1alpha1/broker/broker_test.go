@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -32,6 +31,7 @@ import (
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -39,7 +39,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -72,7 +71,8 @@ var (
 
 	// Map of events to set test cases' expectations easier.
 	events = map[string]corev1.Event{
-		brokerReconciled:                {Reason: brokerReconciled, Type: corev1.EventTypeNormal},
+		brokerReadinessChanged:          {Reason: brokerReadinessChanged, Type: corev1.EventTypeNormal},
+		brokerReconcileError:            {Reason: brokerReconcileError, Type: corev1.EventTypeWarning},
 		brokerUpdateStatusFailed:        {Reason: brokerUpdateStatusFailed, Type: corev1.EventTypeWarning},
 		ingressSubscriptionDeleteFailed: {Reason: ingressSubscriptionDeleteFailed, Type: corev1.EventTypeWarning},
 		ingressSubscriptionCreateFailed: {Reason: ingressSubscriptionCreateFailed, Type: corev1.EventTypeWarning},
@@ -146,11 +146,6 @@ func TestReconcile(t *testing.T) {
 			InitialState: []runtime.Object{
 				makeDeletingBroker(),
 			},
-			WantEvent: []corev1.Event{
-				{
-					Reason: brokerReconciled, Type: corev1.EventTypeNormal,
-				},
-			},
 		},
 		{
 			Name:   "Trigger Channel.List error",
@@ -172,6 +167,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
+			WantEvent:  []corev1.Event{events[brokerReconcileError]},
 			WantErrMsg: "test error getting Trigger Channel",
 		},
 		{
@@ -192,6 +188,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
+			WantEvent:  []corev1.Event{events[brokerReconcileError]},
 			WantErrMsg: "test error creating Trigger Channel",
 		},
 		{
@@ -208,11 +205,6 @@ func TestReconcile(t *testing.T) {
 				// GenerateName.
 				// makeDifferentTriggerChannel(),
 			},
-			WantEvent: []corev1.Event{
-				{
-					Reason: brokerReconciled, Type: corev1.EventTypeNormal,
-				},
-			},
 		},
 		{
 			Name:   "Trigger Channel is not yet Addressable",
@@ -221,7 +213,6 @@ func TestReconcile(t *testing.T) {
 				makeBroker(),
 				makeNonAddressableTriggerChannel(),
 			},
-			WantResult: reconcile.Result{RequeueAfter: time.Second},
 		},
 		{
 			Name:   "Filter Deployment.Get error",
@@ -242,6 +233,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
+			WantEvent:  []corev1.Event{events[brokerReconcileError]},
 			WantErrMsg: "test error getting filter Deployment",
 		},
 		{
@@ -263,6 +255,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
+			WantEvent:  []corev1.Event{events[brokerReconcileError]},
 			WantErrMsg: "test error creating filter Deployment",
 		},
 		{
@@ -285,6 +278,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
+			WantEvent:  []corev1.Event{events[brokerReconcileError]},
 			WantErrMsg: "test error updating filter Deployment",
 		},
 		{
@@ -306,6 +300,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
+			WantEvent:  []corev1.Event{events[brokerReconcileError]},
 			WantErrMsg: "test error getting filter Service",
 		},
 		{
@@ -327,6 +322,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
+			WantEvent:  []corev1.Event{events[brokerReconcileError]},
 			WantErrMsg: "test error creating filter Service",
 		},
 		{
@@ -349,6 +345,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
+			WantEvent:  []corev1.Event{events[brokerReconcileError]},
 			WantErrMsg: "test error updating filter Service",
 		},
 		{
@@ -370,6 +367,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
+			WantEvent:  []corev1.Event{events[brokerReconcileError]},
 			WantErrMsg: "test error getting ingress Deployment",
 		},
 		{
@@ -391,6 +389,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
+			WantEvent:  []corev1.Event{events[brokerReconcileError]},
 			WantErrMsg: "test error creating ingress Deployment",
 		},
 		{
@@ -413,6 +412,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
+			WantEvent:  []corev1.Event{events[brokerReconcileError]},
 			WantErrMsg: "test error updating ingress Deployment",
 		},
 		{
@@ -434,6 +434,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
+			WantEvent:  []corev1.Event{events[brokerReconcileError]},
 			WantErrMsg: "test error getting ingress Service",
 		},
 		{
@@ -455,6 +456,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
+			WantEvent:  []corev1.Event{events[brokerReconcileError]},
 			WantErrMsg: "test error creating ingress Service",
 		},
 		{
@@ -477,6 +479,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
+			WantEvent:  []corev1.Event{events[brokerReconcileError]},
 			WantErrMsg: "test error updating ingress Service",
 		},
 		{
@@ -500,6 +503,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
+			WantEvent:  []corev1.Event{events[brokerReconcileError]},
 			WantErrMsg: "test error getting Ingress Channel",
 		},
 		{
@@ -537,6 +541,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
+			WantEvent:  []corev1.Event{events[brokerReconcileError]},
 			WantErrMsg: "test error creating Ingress Channel",
 		},
 		{
@@ -573,11 +578,6 @@ func TestReconcile(t *testing.T) {
 				// GenerateName.
 				// makeDifferentIngressChannel(),
 			},
-			WantEvent: []corev1.Event{
-				{
-					Reason: brokerReconciled, Type: corev1.EventTypeNormal,
-				},
-			},
 		},
 		{
 			Name:   "Ingress Channel is not yet Addressable",
@@ -606,7 +606,6 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
-			WantResult: reconcile.Result{RequeueAfter: time.Second},
 		},
 		{
 			Name:   "Subscription.List error",
@@ -626,6 +625,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
+			WantEvent:  []corev1.Event{events[brokerReconcileError]},
 			WantErrMsg: "test error getting Subscription",
 		},
 		{
@@ -646,6 +646,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
+			WantEvent:  []corev1.Event{events[brokerReconcileError]},
 			WantErrMsg: "test error creating Subscription",
 		},
 		{
@@ -662,11 +663,6 @@ func TestReconcile(t *testing.T) {
 				// TODO uncomment the following line once our test framework supports searching for
 				// GenerateName.
 				// makeDifferentSubscription(),
-			},
-			WantEvent: []corev1.Event{
-				{
-					Reason: brokerReconciled, Type: corev1.EventTypeNormal,
-				},
 			},
 		},
 		{
@@ -688,7 +684,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
-			WantEvent:  []corev1.Event{events[ingressSubscriptionDeleteFailed]},
+			WantEvent:  []corev1.Event{events[ingressSubscriptionDeleteFailed], events[brokerReconcileError]},
 			WantErrMsg: "test error deleting Subscription",
 		},
 		{
@@ -710,7 +706,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
-			WantEvent:  []corev1.Event{events[ingressSubscriptionCreateFailed]},
+			WantEvent:  []corev1.Event{events[ingressSubscriptionCreateFailed], events[brokerReconcileError]},
 			WantErrMsg: "test error creating Subscription",
 		},
 		{
@@ -740,14 +736,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error getting the Broker for status update",
-			WantEvent: []corev1.Event{
-				{
-					Reason: brokerReconciled, Type: corev1.EventTypeNormal,
-				},
-				{
-					Reason: brokerUpdateStatusFailed, Type: corev1.EventTypeWarning,
-				},
-			},
+			WantEvent:  []corev1.Event{events[brokerUpdateStatusFailed]},
 		},
 		{
 			Name:   "Broker.Status.Update error",
@@ -768,14 +757,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			WantErrMsg: "test error updating the Broker status",
-			WantEvent: []corev1.Event{
-				{
-					Reason: brokerReconciled, Type: corev1.EventTypeNormal,
-				},
-				{
-					Reason: brokerUpdateStatusFailed, Type: corev1.EventTypeWarning,
-				},
-			},
+			WantEvent:  []corev1.Event{events[brokerUpdateStatusFailed]},
 		},
 		{
 			Name:   "Successful reconcile",
@@ -785,6 +767,7 @@ func TestReconcile(t *testing.T) {
 				// The Channel needs to be addressable for the reconcile to succeed.
 				makeTriggerChannel(),
 				makeIngressChannel(),
+				makeTestSubscription(),
 			},
 			Mocks: controllertesting.Mocks{
 				MockLists: []controllertesting.MockList{
@@ -815,13 +798,10 @@ func TestReconcile(t *testing.T) {
 				makeIngressService(),
 				// TODO Uncomment makeIngressChannel() when our test framework handles generateName.
 				// makeIngressChannel(),
-				// Because the
 				makeTestSubscription(),
 			},
 			WantEvent: []corev1.Event{
-				{
-					Reason: brokerReconciled, Type: corev1.EventTypeNormal,
-				},
+				events[brokerReadinessChanged],
 			},
 		},
 	}
@@ -866,12 +846,12 @@ func makeBroker() *v1alpha1.Broker {
 func makeReadyBroker() *v1alpha1.Broker {
 	b := makeBroker()
 	b.Status.InitializeConditions()
-	b.Status.MarkIngressReady()
-	b.Status.MarkTriggerChannelReady()
-	b.Status.MarkIngressChannelReady()
-	b.Status.MarkFilterReady()
+	b.Status.PropagateIngressDeploymentAvailability(makeAvailableDeployment())
+	b.Status.PropagateTriggerChannelReadiness(makeReadyChannelStatus())
+	b.Status.PropagateIngressChannelReadiness(makeReadyChannelStatus())
+	b.Status.PropagateFilterDeploymentAvailability(makeAvailableDeployment())
 	b.Status.SetAddress(fmt.Sprintf("%s-broker.%s.svc.%s", brokerName, testNS, utils.GetClusterDomainName()))
-	b.Status.MarkIngressSubscriptionReady()
+	b.Status.PropagateIngressSubscriptionReadiness(makeReadySubscriptionStatus())
 	return b
 }
 
@@ -882,7 +862,7 @@ func makeDeletingBroker() *v1alpha1.Broker {
 }
 
 func makeTriggerChannel() *v1alpha1.Channel {
-	return &v1alpha1.Channel{
+	c := &v1alpha1.Channel{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    testNS,
 			GenerateName: fmt.Sprintf("%s-broker-", brokerName),
@@ -897,12 +877,11 @@ func makeTriggerChannel() *v1alpha1.Channel {
 		Spec: v1alpha1.ChannelSpec{
 			Provisioner: channelProvisioner,
 		},
-		Status: v1alpha1.ChannelStatus{
-			Address: duckv1alpha1.Addressable{
-				Hostname: triggerChannelHostname,
-			},
-		},
 	}
+	c.Status.MarkProvisionerInstalled()
+	c.Status.MarkProvisioned()
+	c.Status.SetAddress(triggerChannelHostname)
+	return c
 }
 
 func makeNonAddressableTriggerChannel() *v1alpha1.Channel {
@@ -918,7 +897,7 @@ func makeDifferentTriggerChannel() *v1alpha1.Channel {
 }
 
 func makeIngressChannel() *v1alpha1.Channel {
-	return &v1alpha1.Channel{
+	c := &v1alpha1.Channel{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    testNS,
 			GenerateName: fmt.Sprintf("%s-broker-ingress-", brokerName),
@@ -936,12 +915,11 @@ func makeIngressChannel() *v1alpha1.Channel {
 		Spec: v1alpha1.ChannelSpec{
 			Provisioner: channelProvisioner,
 		},
-		Status: v1alpha1.ChannelStatus{
-			Address: duckv1alpha1.Addressable{
-				Hostname: ingressChannelHostname,
-			},
-		},
 	}
+	c.Status.MarkProvisionerInstalled()
+	c.Status.MarkProvisioned()
+	c.Status.SetAddress(ingressChannelHostname)
+	return c
 }
 
 func makeNonAddressableIngressChannel() *v1alpha1.Channel {
@@ -1026,7 +1004,7 @@ func makeDifferentIngressService() *corev1.Service {
 }
 
 func makeTestSubscription() *v1alpha1.Subscription {
-	return &v1alpha1.Subscription{
+	s := &v1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "eventing.knative.dev/v1alpha1",
 			Kind:       "Subscription",
@@ -1057,6 +1035,9 @@ func makeTestSubscription() *v1alpha1.Subscription {
 			},
 		},
 	}
+	s.Status.MarkChannelReady()
+	s.Status.MarkReferencesResolved()
+	return s
 }
 
 func makeDifferentSubscription() *v1alpha1.Subscription {
@@ -1075,4 +1056,31 @@ func getOwnerReference() metav1.OwnerReference {
 		Controller:         &trueVal,
 		BlockOwnerDeletion: &trueVal,
 	}
+}
+
+func makeAvailableDeployment() *v1.Deployment {
+	d := &v1.Deployment{}
+	d.Name = "deployment-name"
+	d.Status.Conditions = []v1.DeploymentCondition{
+		{
+			Type:   v1.DeploymentAvailable,
+			Status: "True",
+		},
+	}
+	return d
+}
+
+func makeReadyChannelStatus() *v1alpha1.ChannelStatus {
+	cs := &v1alpha1.ChannelStatus{}
+	cs.MarkProvisionerInstalled()
+	cs.MarkProvisioned()
+	cs.SetAddress("foo")
+	return cs
+}
+
+func makeReadySubscriptionStatus() *v1alpha1.SubscriptionStatus {
+	ss := &v1alpha1.SubscriptionStatus{}
+	ss.MarkChannelReady()
+	ss.MarkReferencesResolved()
+	return ss
 }
