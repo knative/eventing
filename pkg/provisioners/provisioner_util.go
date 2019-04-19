@@ -5,6 +5,7 @@ import (
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -19,7 +20,10 @@ import (
 	"github.com/knative/pkg/system"
 )
 
-func CreateDispatcherService(ctx context.Context, client runtimeClient.Client, ccp *eventingv1alpha1.ClusterChannelProvisioner) (*corev1.Service, error) {
+// ServiceOption can be used to optionally modify the K8s default that gets created for the Dispatcher in CreateDispatcherService
+type ServiceOption func(*v1.Service) error
+
+func CreateDispatcherService(ctx context.Context, client runtimeClient.Client, ccp *eventingv1alpha1.ClusterChannelProvisioner, opts ...ServiceOption) (*corev1.Service, error) {
 	svcKey := types.NamespacedName{
 		Namespace: system.Namespace(),
 		Name:      channelDispatcherServiceName(ccp.Name),
@@ -29,7 +33,12 @@ func CreateDispatcherService(ctx context.Context, client runtimeClient.Client, c
 		err := client.Get(ctx, svcKey, svc)
 		return svc, err
 	}
-	return createK8sService(ctx, client, getSvc, newDispatcherService(ccp))
+	svc, err := newDispatcherService(ccp, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return createK8sService(ctx, client, getSvc, svc)
 }
 
 func UpdateClusterChannelProvisionerStatus(ctx context.Context, client runtimeClient.Client, u *eventingv1alpha1.ClusterChannelProvisioner) error {
@@ -50,9 +59,9 @@ func UpdateClusterChannelProvisionerStatus(ctx context.Context, client runtimeCl
 // newDispatcherService creates a new Service for a ClusterChannelProvisioner resource. It also sets
 // the appropriate OwnerReferences on the resource so handleObject can discover
 // the ClusterChannelProvisioner resource that 'owns' it.
-func newDispatcherService(ccp *eventingv1alpha1.ClusterChannelProvisioner) *corev1.Service {
+func newDispatcherService(ccp *eventingv1alpha1.ClusterChannelProvisioner, opts ...ServiceOption) (*corev1.Service, error) {
 	labels := DispatcherLabels(ccp.Name)
-	return &corev1.Service{
+	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      channelDispatcherServiceName(ccp.Name),
 			Namespace: system.Namespace(),
@@ -69,13 +78,24 @@ func newDispatcherService(ccp *eventingv1alpha1.ClusterChannelProvisioner) *core
 			Selector: labels,
 			Ports: []corev1.ServicePort{
 				{
-					Name:       "http",
+					// There is a bug in Istio where named port doesn't work when connecting using an ExternalName service
+					// Refer to https://github.com/istio/istio/issues/13193 for more details.
+					// TODO: Uncomment Name:"http" when ISTIO fixes the issue
+					// Name:       "http",
 					Port:       80,
+					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(8080),
 				},
 			},
 		},
 	}
+
+	for _, opt := range opts {
+		if err := opt(svc); err != nil {
+			return nil, err
+		}
+	}
+	return svc, nil
 }
 
 func DispatcherLabels(ccpName string) map[string]string {

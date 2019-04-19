@@ -22,8 +22,7 @@ import (
 	"net/url"
 	"strings"
 
-	cecontext "github.com/cloudevents/sdk-go/pkg/cloudevents/context"
-	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	"github.com/cloudevents/sdk-go"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
@@ -48,20 +47,20 @@ var (
 
 // SendingContext creates the context to use when sending a Cloud Event with ceclient.Client. It
 // sets the target and attaches a filtered set of headers from the initial request.
-func SendingContext(ctx context.Context, tctx cehttp.TransportContext, targetURI *url.URL) context.Context {
-	sendingCTX := cecontext.WithTarget(ctx, targetURI.String())
+func SendingContext(ctx context.Context, tctx cloudevents.HTTPTransportContext, targetURI *url.URL) context.Context {
+	sendingCTX := cloudevents.ContextWithTarget(ctx, targetURI.String())
 
 	h := extractPassThroughHeaders(tctx)
 	for n, v := range h {
 		for _, iv := range v {
-			sendingCTX = cehttp.ContextWithHeader(sendingCTX, n, iv)
+			sendingCTX = cloudevents.ContextWithHeader(sendingCTX, n, iv)
 		}
 	}
 
 	return sendingCTX
 }
 
-func extractPassThroughHeaders(tctx cehttp.TransportContext) http.Header {
+func extractPassThroughHeaders(tctx cloudevents.HTTPTransportContext) http.Header {
 	h := http.Header{}
 
 	for n, v := range tctx.Header {

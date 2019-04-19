@@ -25,12 +25,8 @@ import (
 	"log"
 	"os"
 
+	"github.com/cloudevents/sdk-go"
 	"github.com/knative/eventing/pkg/utils"
-
-	"github.com/cloudevents/sdk-go/pkg/cloudevents"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 )
 
 var (
@@ -67,31 +63,34 @@ func main() {
 		source = fmt.Sprintf("http://%s", utils.GetClusterDomainName())
 	}
 
-	t, err := http.New(
-		http.WithTarget(target),
-		http.WithBinaryEncoding(),
+	t, err := cloudevents.NewHTTPTransport(
+		cloudevents.WithTarget(target),
+		cloudevents.WithBinaryEncoding(),
 	)
 	if err != nil {
 		log.Printf("failed to create transport, %v", err)
 		os.Exit(1)
 	}
-	c, err := client.New(t,
-		client.WithTimeNow(),
-		client.WithUUIDs(),
+	c, err := cloudevents.NewClient(t,
+		cloudevents.WithTimeNow(),
+		cloudevents.WithUUIDs(),
 	)
 	if err != nil {
 		log.Printf("failed to create client, %v", err)
 		os.Exit(1)
 	}
 
-	event := cloudevents.Event{
-		Context: cloudevents.EventContextV02{
-			ID:     eventID,
-			Type:   eventType,
-			Source: *types.ParseURLRef(source),
-		}.AsV02(),
-		Data: untyped,
+	event := cloudevents.NewEvent()
+	if eventID != "" {
+		event.SetID(eventID)
 	}
+	event.SetType(eventType)
+	event.SetSource(source)
+	if err := event.SetData(untyped); err != nil {
+		log.Printf("failed to set data, %v", err)
+		os.Exit(1)
+	}
+
 	if resp, err := c.Send(context.Background(), event); err != nil {
 		fmt.Printf("Failed to send event to %s: %s\n", target, err)
 		os.Exit(1)

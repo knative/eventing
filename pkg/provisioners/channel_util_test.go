@@ -404,6 +404,35 @@ func TestAddFinalizer(t *testing.T) {
 	}
 }
 
+func TestRemoveFinalizer(t *testing.T) {
+	testCases := map[string]struct {
+		expected RemoveFinalizerResult
+	}{
+		"Finalizer not found": {
+			expected: false,
+		},
+		"Finalizer removed successfully": {
+			expected: true,
+		},
+	}
+	finalizer := "test-finalizer"
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			c := getNewChannel()
+			if tc.expected {
+				c.Finalizers = []string{finalizer}
+			} else {
+				c.Finalizers = []string{}
+			}
+			actual := RemoveFinalizer(c, finalizer)
+
+			if diff := cmp.Diff(actual, tc.expected); diff != "" {
+				t.Errorf("unexpected error (-want, +got) = %v", diff)
+			}
+		})
+	}
+}
+
 func TestChannelNames(t *testing.T) {
 	testCases := []struct {
 		Name string
@@ -597,8 +626,9 @@ func makeK8sService() *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
-					Name: PortName,
-					Port: PortNumber,
+					Name:     PortName,
+					Port:     PortNumber,
+					Protocol: corev1.ProtocolTCP,
 				},
 			},
 		},
@@ -646,7 +676,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 				Rewrite: &istiov1alpha3.HTTPRewrite{
 					Authority: fmt.Sprintf("%s.%s.channels.%s", channelName, testNS, utils.GetClusterDomainName()),
 				},
-				Route: []istiov1alpha3.DestinationWeight{{
+				Route: []istiov1alpha3.HTTPRouteDestination{{
 					Destination: istiov1alpha3.Destination{
 						Host: fmt.Sprintf("%s-dispatcher.knative-testing.svc.%s", clusterChannelProvisionerName, utils.GetClusterDomainName()),
 						Port: istiov1alpha3.PortSelector{

@@ -26,9 +26,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cloudevents/sdk-go/pkg/cloudevents"
+	"github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 	"github.com/google/go-cmp/cmp"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
@@ -64,7 +63,7 @@ func TestReceiver(t *testing.T) {
 	testCases := map[string]struct {
 		triggers         []*eventingv1alpha1.Trigger
 		mocks            controllertesting.Mocks
-		tctx             *cehttp.TransportContext
+		tctx             *cloudevents.HTTPTransportContext
 		event            *cloudevents.Event
 		requestFails     bool
 		returnedEvent    *cloudevents.Event
@@ -85,7 +84,7 @@ func TestReceiver(t *testing.T) {
 			expectNewToFail: true,
 		},
 		"Not POST": {
-			tctx: &cehttp.TransportContext{
+			tctx: &cloudevents.HTTPTransportContext{
 				Method: "GET",
 				Host:   host,
 				URI:    validPath,
@@ -93,7 +92,7 @@ func TestReceiver(t *testing.T) {
 			expectedStatus: http.StatusMethodNotAllowed,
 		},
 		"Path too short": {
-			tctx: &cehttp.TransportContext{
+			tctx: &cloudevents.HTTPTransportContext{
 				Method: "POST",
 				Host:   host,
 				URI:    "/test-namespace/test-trigger",
@@ -101,7 +100,7 @@ func TestReceiver(t *testing.T) {
 			expectedErr: true,
 		},
 		"Path too long": {
-			tctx: &cehttp.TransportContext{
+			tctx: &cloudevents.HTTPTransportContext{
 				Method: "POST",
 				Host:   host,
 				URI:    "/triggers/test-namespace/test-trigger/extra",
@@ -109,7 +108,7 @@ func TestReceiver(t *testing.T) {
 			expectedErr: true,
 		},
 		"Path without prefix": {
-			tctx: &cehttp.TransportContext{
+			tctx: &cloudevents.HTTPTransportContext{
 				Method: "POST",
 				Host:   host,
 				URI:    "/something/test-namespace/test-trigger",
@@ -117,7 +116,7 @@ func TestReceiver(t *testing.T) {
 			expectedErr: true,
 		},
 		"Bad host": {
-			tctx: &cehttp.TransportContext{
+			tctx: &cloudevents.HTTPTransportContext{
 				Method: "POST",
 				Host:   "badhost-cant-be-parsed-as-a-trigger-name-plus-namespace",
 				URI:    validPath,
@@ -192,7 +191,7 @@ func TestReceiver(t *testing.T) {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger("", ""),
 			},
-			tctx: &cehttp.TransportContext{
+			tctx: &cloudevents.HTTPTransportContext{
 				Method: "POST",
 				Host:   host,
 				URI:    validPath,
@@ -262,7 +261,7 @@ func TestReceiver(t *testing.T) {
 
 			tctx := tc.tctx
 			if tctx == nil {
-				tctx = &cehttp.TransportContext{
+				tctx = &cloudevents.HTTPTransportContext{
 					Method: http.MethodPost,
 					Host:   host,
 					URI:    validPath,
@@ -411,7 +410,7 @@ func makeEventWithoutTTL() *cloudevents.Event {
 	return &cloudevents.Event{
 		Context: cloudevents.EventContextV02{
 			Type: eventType,
-			Source: types.URLRef{
+			Source: cloudevents.URLRef{
 				URL: url.URL{
 					Path: eventSource,
 				},
@@ -428,7 +427,7 @@ func makeEvent() *cloudevents.Event {
 }
 
 func addTTLToEvent(e cloudevents.Event) cloudevents.Event {
-	e.Context = SetTTL(e.Context, 1)
+	e.Context, _ = SetTTL(e.Context, 1)
 	return e
 }
 
@@ -436,7 +435,7 @@ func makeDifferentEvent() *cloudevents.Event {
 	return &cloudevents.Event{
 		Context: cloudevents.EventContextV02{
 			Type: "some-other-type",
-			Source: types.URLRef{
+			Source: cloudevents.URLRef{
 				URL: url.URL{
 					Path: eventSource,
 				},

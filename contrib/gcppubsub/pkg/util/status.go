@@ -19,6 +19,7 @@ package util
 import (
 	"context"
 	"encoding/json"
+	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
@@ -41,20 +42,14 @@ type GcpPubSubChannelStatus struct {
 	Topic string `json:"topic,omitempty"`
 	// Subscriptions is the list of Knative Eventing Subscriptions to this Channel, each paired with
 	// the PubSub Subscription in GCP that represents it.
-	Subscriptions []GcpPubSubSubscriptionStatus `json:"subscriptions,omitempty"`
+	// +patchMergeKey=uid
+	// +patchStrategy=merge
+	Subscriptions []GcpPubSubSubscriptionStatus `json:"subscriptions,omitempty"  patchStrategy:"merge" patchMergeKey:"uid"`
 }
 
 // GcpPubSubSubscriptionStatus represents the saved status of a gcp-pubsub Channel.
 type GcpPubSubSubscriptionStatus struct {
-	// Ref is a reference to the Knative Eventing Subscription that this status represents.
-	// +optional
-	Ref *corev1.ObjectReference `json:"ref,omitempty"`
-	// SubscriberURI is a copy of the SubscriberURI of this Subscription.
-	// +optional
-	SubscriberURI string `json:"subscriberURI,omitempty"`
-	// ReplyURI is a copy of the ReplyURI of this Subscription.
-	// +optional
-	ReplyURI string `json:"replyURI,omitempty"`
+	v1alpha1.ChannelSubscriberSpec
 
 	// Subscription is the name of the PubSub Subscription resource in GCP that represents this
 	// Knative Eventing Subscription.

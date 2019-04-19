@@ -74,7 +74,7 @@ spec:
                   type: array
                   items:
                     required:
-                      - ref
+                      - uid
                     properties:
                       ref:
                         type: object
@@ -96,6 +96,9 @@ spec:
                           uid:
                             type: string
                             minLength: 1
+                      uid:
+                        type: string
+                        minLength: 1
                       subscriberURI:
                         type: string
                         minLength: 1

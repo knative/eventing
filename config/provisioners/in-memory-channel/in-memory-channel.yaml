@@ -62,7 +62,6 @@ rules:
   - apiGroups:
       - "" # Core API group.
     resources:
-      - configmaps
       - services
     verbs:
       - get
@@ -82,24 +81,6 @@ rules:
     resources:
       - services
     verbs:
-      - update
-  - apiGroups:
-      - "" # Core API Group.
-    resources:
-      - configmaps
-    resourceNames:
-      - in-memory-channel-dispatcher-config-map
-    verbs:
-      - update
-  - apiGroups:
-      - networking.istio.io
-    resources:
-      - virtualservices
-    verbs:
-      - get
-      - list
-      - watch
-      - create
       - update
   - apiGroups:
       - "" # Core API Group.
@@ -168,9 +149,10 @@ metadata:
   name: in-memory-channel-dispatcher
 rules:
   - apiGroups:
-      - "" # Core API group.
+      - "eventing.knative.dev"
     resources:
-      - configmaps
+      - "channels"
+      - "channels/status"
     verbs:
       - get
       - list
@@ -216,24 +198,10 @@ spec:
           image: github.com/knative/eventing/cmd/fanoutsidecar
           args:
             - --sidecar_port=8080
-            - --config_map_noticer=watcher
-            - --config_map_namespace=knative-eventing
-            - --config_map_name=in-memory-channel-dispatcher-config-map
+            - --channel_provisioner=in-memory
+            - --channel_provisioner=in-memory-channel
           env:
           - name: SYSTEM_NAMESPACE
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-
----
-
-# Create the ConfigMap, because if we don't the dispatcher will flap when it first comes online and
-# this can cause the integration tests to fail.
-
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: in-memory-channel-dispatcher-config-map
-  namespace: knative-eventing
-data:
-  multiChannelFanoutConfig: '{}'

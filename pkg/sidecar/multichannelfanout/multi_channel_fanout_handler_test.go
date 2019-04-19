@@ -34,33 +34,6 @@ const (
 	replaceDomain = "replaceDomain"
 )
 
-func TestMakeChannelKey(t *testing.T) {
-	testCases := []struct {
-		namespace string
-		name      string
-		key       string
-	}{
-		{
-			namespace: "default",
-			name:      "channel",
-			key:       "default/channel",
-		},
-		{
-			namespace: "foo",
-			name:      "bar",
-			key:       "foo/bar",
-		},
-	}
-	for _, tc := range testCases {
-		name := fmt.Sprintf("%s, %s -> %s", tc.namespace, tc.name, tc.key)
-		t.Run(name, func(t *testing.T) {
-			if key := makeChannelKey(tc.namespace, tc.name); key != tc.key {
-				t.Errorf("Unexpected ChannelKey. Expected '%v'. Actual '%v'", tc.key, key)
-			}
-		})
-	}
-}
-
 func TestNewHandler(t *testing.T) {
 	testCases := []struct {
 		name      string
@@ -72,16 +45,14 @@ func TestNewHandler(t *testing.T) {
 			config: Config{
 				ChannelConfigs: []ChannelConfig{
 					{
-						Namespace: "default",
-						Name:      "duplicate",
+						HostName: "duplicatekey",
 					},
 					{
-						Namespace: "default",
-						Name:      "duplicate",
+						HostName: "duplicatekey",
 					},
 				},
 			},
-			createErr: "duplicate channel key: default/duplicate",
+			createErr: "duplicate channel key: duplicatekey",
 		},
 	}
 
@@ -241,8 +212,9 @@ func TestServeHTTP(t *testing.T) {
 			config: Config{
 				ChannelConfigs: []ChannelConfig{
 					{
-						Namespace: "default",
-						Name:      "first-channel",
+						Namespace: "ns",
+						Name:      "name",
+						HostName:  "first-channel.default",
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
@@ -261,8 +233,10 @@ func TestServeHTTP(t *testing.T) {
 			config: Config{
 				ChannelConfigs: []ChannelConfig{
 					{
-						Namespace: "default",
-						Name:      "first-channel",
+
+						Namespace: "ns",
+						Name:      "name",
+						HostName:  "first-channel.default",
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
@@ -274,6 +248,7 @@ func TestServeHTTP(t *testing.T) {
 					{
 						Namespace: "default",
 						Name:      "second-channel",
+						HostName:  "second-channel.default",
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								{
@@ -303,7 +278,7 @@ func TestServeHTTP(t *testing.T) {
 
 			h, err := NewHandler(zap.NewNop(), tc.config)
 			if err != nil {
-				t.Errorf("Unexpected NewHandler error: '%v'", err)
+				t.Fatalf("Unexpected NewHandler error: '%v'", err)
 			}
 
 			r := requestWithChannelKey(tc.key)

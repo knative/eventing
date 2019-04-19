@@ -37,6 +37,7 @@ type ClusterChannelProvisionersGetter interface {
 type ClusterChannelProvisionerInterface interface {
 	Create(*v1alpha1.ClusterChannelProvisioner) (*v1alpha1.ClusterChannelProvisioner, error)
 	Update(*v1alpha1.ClusterChannelProvisioner) (*v1alpha1.ClusterChannelProvisioner, error)
+	UpdateStatus(*v1alpha1.ClusterChannelProvisioner) (*v1alpha1.ClusterChannelProvisioner, error)
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
 	Get(name string, options v1.GetOptions) (*v1alpha1.ClusterChannelProvisioner, error)
@@ -107,6 +108,21 @@ func (c *clusterChannelProvisioners) Update(clusterChannelProvisioner *v1alpha1.
 	err = c.client.Put().
 		Resource("clusterchannelprovisioners").
 		Name(clusterChannelProvisioner.Name).
+		Body(clusterChannelProvisioner).
+		Do().
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+
+func (c *clusterChannelProvisioners) UpdateStatus(clusterChannelProvisioner *v1alpha1.ClusterChannelProvisioner) (result *v1alpha1.ClusterChannelProvisioner, err error) {
+	result = &v1alpha1.ClusterChannelProvisioner{}
+	err = c.client.Put().
+		Resource("clusterchannelprovisioners").
+		Name(clusterChannelProvisioner.Name).
+		SubResource("status").
 		Body(clusterChannelProvisioner).
 		Do().
 		Into(result)
