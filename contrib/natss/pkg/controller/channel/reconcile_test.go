@@ -71,9 +71,6 @@ var testCases = []controllertesting.TestCase{
 			makeNewChannelProvisionedStatus(channelName, clusterChannelProvisionerName),
 			makeK8sService(channelName, clusterChannelProvisionerName),
 		},
-		WantAbsent: []runtime.Object{
-			makeVirtualService(),
-		},
 		IgnoreTimes: true,
 	},
 	{

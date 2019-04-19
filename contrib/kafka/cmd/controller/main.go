@@ -46,7 +46,6 @@ func _main() int {
 	// Add custom types to this array to get them into the manager's scheme.
 	schemeFuncs := []SchemeFunc{
 		eventingv1alpha.AddToScheme,
-		v1alpha3.AddToScheme,
 	}
 	for _, schemeFunc := range schemeFuncs {
 		schemeFunc(mgr.GetScheme())

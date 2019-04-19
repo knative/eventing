@@ -117,7 +117,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	// 1. The K8s Service to talk to this Channel.
 
 	if c.DeletionTimestamp != nil {
-		// K8s garbage collection will delete the K8s service and VirtualService for this channel.
+		// K8s garbage collection will delete the K8s service for this channel.
 		return nil
 	}
 
