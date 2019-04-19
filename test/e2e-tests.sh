@@ -88,7 +88,7 @@ readonly PUBSUB_SERVICE_ACCOUNT_KEY="knative-gcppubsub-channel.json"
 
 # Create resources required for GCP PubSub provisioner setup
 function gcppubsub_setup() {
-  local service_account_key=${GOOGLE_APPLICATION_CREDENTIALS}
+  local service_account_key="${GOOGLE_APPLICATION_CREDENTIALS}"
   if (( ! IS_PROW )); then
     echo "Set up ServiceAccount for GCP PubSub provisioner"
     gcloud services enable pubsub.googleapis.com
