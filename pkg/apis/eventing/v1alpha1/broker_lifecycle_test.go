@@ -17,19 +17,17 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
 var (
 	trueVal  = true
 	falseVal = false
-
-	err = errors.New("foobar")
 )
 
 var (
@@ -331,39 +329,49 @@ func TestBrokerIsReady(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			bs := &BrokerStatus{}
 			if test.markIngressReady != nil {
+				var d *v1.Deployment
 				if *test.markIngressReady {
-					bs.MarkIngressReady()
+					d = TestHelper.AvailableDeployment()
 				} else {
-					bs.MarkIngressFailed(err)
+					d = TestHelper.UnavailableDeployment()
 				}
+				bs.PropagateIngressDeploymentAvailability(d)
 			}
 			if test.markTriggerChannelReady != nil {
+				var c *ChannelStatus
 				if *test.markTriggerChannelReady {
-					bs.MarkTriggerChannelReady()
+					c = TestHelper.ReadyChannelStatus()
 				} else {
-					bs.MarkTriggerChannelFailed(err)
+					c = TestHelper.NotReadyChannelStatus()
 				}
+				bs.PropagateTriggerChannelReadiness(c)
 			}
 			if test.markIngressChannelReady != nil {
+				var c *ChannelStatus
 				if *test.markIngressChannelReady {
-					bs.MarkIngressChannelReady()
+					c = TestHelper.ReadyChannelStatus()
 				} else {
-					bs.MarkIngressChannelFailed(err)
+					c = TestHelper.NotReadyChannelStatus()
 				}
+				bs.PropagateIngressChannelReadiness(c)
 			}
 			if test.markIngressSubscriptionReady != nil {
+				var sub *SubscriptionStatus
 				if *test.markIngressSubscriptionReady {
-					bs.MarkIngressSubscriptionReady()
+					sub = TestHelper.ReadySubscriptionStatus()
 				} else {
-					bs.MarkIngressSubscriptionFailed(err)
+					sub = TestHelper.NotReadySubscriptionStatus()
 				}
+				bs.PropagateIngressSubscriptionReadiness(sub)
 			}
 			if test.markFilterReady != nil {
+				var d *v1.Deployment
 				if *test.markFilterReady {
-					bs.MarkFilterReady()
+					d = TestHelper.AvailableDeployment()
 				} else {
-					bs.MarkFilterFailed(err)
+					d = TestHelper.UnavailableDeployment()
 				}
+				bs.PropagateFilterDeploymentAvailability(d)
 			}
 			bs.SetAddress(test.address)
 

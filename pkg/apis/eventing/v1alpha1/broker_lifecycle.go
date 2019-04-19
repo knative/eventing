@@ -16,7 +16,11 @@ limitations under the License.
 
 package v1alpha1
 
-import duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+import (
+	v1 "k8s.io/api/apps/v1"
+
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+)
 
 var brokerCondSet = duckv1alpha1.NewLivingConditionSet(
 	BrokerConditionIngress,
@@ -57,44 +61,91 @@ func (bs *BrokerStatus) InitializeConditions() {
 	brokerCondSet.Manage(bs).InitializeConditions()
 }
 
-func (bs *BrokerStatus) MarkIngressReady() {
-	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngress)
+func (bs *BrokerStatus) MarkIngressFailed(reason, format string, args ...interface{}) {
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngress, reason, format, args...)
 }
 
-func (bs *BrokerStatus) MarkIngressFailed(err error) {
-	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngress, "failed", "%v", err)
+func (bs *BrokerStatus) PropagateIngressDeploymentAvailability(d *v1.Deployment) {
+	if deploymentIsAvailable(&d.Status) {
+		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngress)
+	} else {
+		// I don't know how to propagate the status well, so just give the name of the Deployment
+		// for now.
+		bs.MarkIngressFailed("DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
+	}
 }
 
-func (bs *BrokerStatus) MarkTriggerChannelReady() {
-	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionTriggerChannel)
+func (bs *BrokerStatus) MarkTriggerChannelFailed(reason, format string, args ...interface{}) {
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionTriggerChannel, reason, format, args...)
 }
 
-func (bs *BrokerStatus) MarkTriggerChannelFailed(err error) {
-	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionTriggerChannel, "failed", "%v", err)
+func (bs *BrokerStatus) PropagateTriggerChannelReadiness(cs *ChannelStatus) {
+	if cs.IsReady() {
+		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionTriggerChannel)
+	} else {
+		msg := "nil"
+		if cc := chanCondSet.Manage(cs).GetCondition(ChannelConditionReady); cc != nil {
+			msg = cc.Message
+		}
+		bs.MarkTriggerChannelFailed("ChannelNotReady", "trigger Channel is not ready: %s", msg)
+	}
 }
 
-func (bs *BrokerStatus) MarkIngressChannelReady() {
-	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngressChannel)
+func (bs *BrokerStatus) MarkIngressChannelFailed(reason, format string, args ...interface{}) {
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngressChannel, reason, format, args...)
 }
 
-func (bs *BrokerStatus) MarkIngressChannelFailed(err error) {
-	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngressChannel, "failed", "%v", err)
+func (bs *BrokerStatus) PropagateIngressChannelReadiness(cs *ChannelStatus) {
+	if cs.IsReady() {
+		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngressChannel)
+	} else {
+		msg := "nil"
+		if cc := chanCondSet.Manage(cs).GetCondition(ChannelConditionReady); cc != nil {
+			msg = cc.Message
+		}
+		bs.MarkIngressChannelFailed("ChannelNotReady", "ingress Channel is not ready: %s", msg)
+	}
 }
 
-func (bs *BrokerStatus) MarkIngressSubscriptionReady() {
-	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngressSubscription)
+func (bs *BrokerStatus) MarkIngressSubscriptionFailed(reason, format string, args ...interface{}) {
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngressSubscription, reason, format, args...)
 }
 
-func (bs *BrokerStatus) MarkIngressSubscriptionFailed(err error) {
-	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngressSubscription, "failed", "%v", err)
+func (bs *BrokerStatus) PropagateIngressSubscriptionReadiness(ss *SubscriptionStatus) {
+	if ss.IsReady() {
+		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngressSubscription)
+	} else {
+		msg := "nil"
+		if sc := subCondSet.Manage(ss).GetCondition(SubscriptionConditionReady); sc != nil {
+			msg = sc.Message
+		}
+		bs.MarkIngressSubscriptionFailed("SubscriptionNotReady", "ingress Subscription is not ready: %s", msg)
+	}
 }
 
-func (bs *BrokerStatus) MarkFilterReady() {
-	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionFilter)
+func (bs *BrokerStatus) MarkFilterFailed(reason, format string, args ...interface{}) {
+	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionFilter, reason, format, args...)
 }
 
-func (bs *BrokerStatus) MarkFilterFailed(err error) {
-	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionFilter, "failed", "%v", err)
+func (bs *BrokerStatus) PropagateFilterDeploymentAvailability(d *v1.Deployment) {
+	if deploymentIsAvailable(&d.Status) {
+		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionFilter)
+	} else {
+		// I don't know how to propagate the status well, so just give the name of the Deployment
+		// for now.
+		bs.MarkFilterFailed("DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
+	}
+}
+
+func deploymentIsAvailable(d *v1.DeploymentStatus) bool {
+	// Check if the Deployment is available.
+	for _, cond := range d.Conditions {
+		if cond.Type == v1.DeploymentAvailable {
+			return cond.Status == "True"
+		}
+	}
+	// Unable to find the Available condition, fail open.
+	return true
 }
 
 // SetAddress makes this Broker addressable by setting the hostname. It also

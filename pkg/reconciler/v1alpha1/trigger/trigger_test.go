@@ -430,10 +430,10 @@ func TestReconcile(t *testing.T) {
 			Name: "Trigger reconciliation success",
 			InitialState: []runtime.Object{
 				makeTrigger(),
-				makeBroker(),
+				makeReadyBroker(),
 				makeTriggerChannel(),
 				makeBrokerFilterService(),
-				makeSameSubscription(),
+				makeReadySubscription(),
 			},
 			Objects: []runtime.Object{
 				makeSubscriberServiceAsUnstructured(),
@@ -604,10 +604,8 @@ func makeTrigger() *v1alpha1.Trigger {
 
 func makeReadyTrigger() *v1alpha1.Trigger {
 	t := makeTrigger()
-	t.Status.InitializeConditions()
-	t.Status.MarkBrokerExists()
+	t.Status = *v1alpha1.TestHelper.ReadyTriggerStatus()
 	t.Status.SubscriberURI = fmt.Sprintf("http://%s.%s.svc.%s/", subscriberName, testNS, utils.GetClusterDomainName())
-	t.Status.MarkSubscribed()
 	return t
 }
 
@@ -640,6 +638,12 @@ func makeBroker() *v1alpha1.Broker {
 			},
 		},
 	}
+}
+
+func makeReadyBroker() *v1alpha1.Broker {
+	b := makeBroker()
+	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
+	return b
 }
 
 func makeChannelProvisioner() *corev1.ObjectReference {
@@ -702,8 +706,8 @@ func makeBrokerFilterService() *corev1.Service {
 func makeServiceURI() *url.URL {
 	return &url.URL{
 		Scheme: "http",
-		Host:   "service-uri",
-		Path:   "/path",
+		Host:   fmt.Sprintf("%s.%s.svc.%s", makeBrokerFilterService().Name, testNS, utils.GetClusterDomainName()),
+		Path:   fmt.Sprintf("/triggers/%s/%s", testNS, triggerName),
 	}
 }
 
@@ -713,6 +717,12 @@ func makeSameSubscription() *v1alpha1.Subscription {
 
 func makeDifferentSubscription() *v1alpha1.Subscription {
 	return resources.NewSubscription(makeTrigger(), makeTriggerChannel(), makeDifferentChannel(), makeServiceURI())
+}
+
+func makeReadySubscription() *v1alpha1.Subscription {
+	s := makeSameSubscription()
+	s.Status = *v1alpha1.TestHelper.ReadySubscriptionStatus()
+	return s
 }
 
 func getOwnerReference() metav1.OwnerReference {

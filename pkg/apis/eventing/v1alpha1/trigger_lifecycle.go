@@ -18,12 +18,13 @@ package v1alpha1
 
 import duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 
-var triggerCondSet = duckv1alpha1.NewLivingConditionSet(TriggerConditionBrokerExists, TriggerConditionSubscribed)
+var triggerCondSet = duckv1alpha1.NewLivingConditionSet(TriggerConditionBroker, TriggerConditionSubscribed)
 
 const (
 	// TriggerConditionReady has status True when all subconditions below have been set to True.
-	TriggerConditionReady                                   = duckv1alpha1.ConditionReady
-	TriggerConditionBrokerExists duckv1alpha1.ConditionType = "BrokerExists"
+	TriggerConditionReady = duckv1alpha1.ConditionReady
+
+	TriggerConditionBroker duckv1alpha1.ConditionType = "Broker"
 
 	TriggerConditionSubscribed duckv1alpha1.ConditionType = "Subscribed"
 
@@ -46,16 +47,32 @@ func (ts *TriggerStatus) InitializeConditions() {
 	triggerCondSet.Manage(ts).InitializeConditions()
 }
 
-func (ts *TriggerStatus) MarkBrokerExists() {
-	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionBrokerExists)
+func (ts *TriggerStatus) PropagateBrokerStatus(bs *BrokerStatus) {
+	if bs.IsReady() {
+		triggerCondSet.Manage(ts).MarkTrue(TriggerConditionBroker)
+	} else {
+		msg := "nil"
+		if bc := brokerCondSet.Manage(bs).GetCondition(BrokerConditionReady); bc != nil {
+			msg = bc.Message
+		}
+		ts.MarkBrokerFailed("BrokerNotReady", "Broker is not ready: %s", msg)
+	}
 }
 
-func (ts *TriggerStatus) MarkBrokerDoesNotExist() {
-	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionBrokerExists, "doesNotExist", "Broker does not exist")
+func (ts *TriggerStatus) MarkBrokerFailed(reason, messageFormat string, messageA ...interface{}) {
+	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionBroker, reason, messageFormat, messageA...)
 }
 
-func (ts *TriggerStatus) MarkSubscribed() {
-	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionSubscribed)
+func (ts *TriggerStatus) PropagateSubscriptionStatus(ss *SubscriptionStatus) {
+	if ss.IsReady() {
+		triggerCondSet.Manage(ts).MarkTrue(TriggerConditionSubscribed)
+	} else {
+		msg := "nil"
+		if sc := subCondSet.Manage(ss).GetCondition(SubscriptionConditionReady); sc != nil {
+			msg = sc.Message
+		}
+		ts.MarkNotSubscribed("SubscriptionNotReady", "Subscription is not ready: %s", msg)
+	}
 }
 
 func (ts *TriggerStatus) MarkNotSubscribed(reason, messageFormat string, messageA ...interface{}) {
