@@ -325,7 +325,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, get func() (*v1alpha1
 	c, err := get()
 	// If the resource doesn't exist, we'll create it
 	if apierrs.IsNotFound(err) {
-		c, err = r.EventingClientSet.EventingV1alpha1().Channels(c.Namespace).Create(newChan)
+		c, err = r.EventingClientSet.EventingV1alpha1().Channels(newChan.Namespace).Create(newChan)
 		if err != nil {
 			return nil, err
 		}
