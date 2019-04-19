@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/knative/eventing/pkg/reconciler/subscription"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
