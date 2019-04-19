@@ -51,10 +51,10 @@ function knative_setup() {
   wait_until_pods_running knative-eventing || fail_test "Failed to install the In-Memory ClusterChannelProvisioner"
 
   echo "Installing GCPPubSub ClusterChannelProvisioner"
-  kubectl -n knative-eventing create secret generic gcppubsub-channel-key --from-file=key.json=${GOOGLE_APPLICATION_CREDENTIALS}
+  gcppubsub_setup
   # TODO(Fredy-Z): delete this flag after https://github.com/knative/test-infra/pull/692 is merged and updated
-  E2E_CLUSTER_PROJECT="$(gcloud config get-value project)"
-  sed "s/REPLACE_WITH_GCP_PROJECT/${E2E_CLUSTER_PROJECT}/" ${GCP_PUBSUB_PROVISIONER_CONFIG} > ${GCP_PUBSUB_TEMP_CONFIG}
+  E2E_PROJECT_ID="$(gcloud config get-value project)"
+  sed "s/REPLACE_WITH_GCP_PROJECT/${E2E_PROJECT_ID}/" ${GCP_PUBSUB_PROVISIONER_CONFIG} > ${GCP_PUBSUB_TEMP_CONFIG}
   ko apply -f ${GCP_PUBSUB_TEMP_CONFIG}
   wait_until_pods_running knative-eventing || fail_test "Failed to install the GCPPubSub ClusterChannelProvisioner"
 }
@@ -69,8 +69,8 @@ function knative_teardown() {
   ko delete --ignore-not-found=true --now --timeout 60s -f ${IN_MEMORY_CHANNEL_PROVISIONER_CONFIG}
 
   echo "Uninstalling GCPPubSub ClusterChannelProvisioner"
+  gcppubsub_teardown
   ko delete --ignore-not-found=true --now --timeout 60s -f ${GCP_PUBSUB_TEMP_CONFIG}
-  kubectl -n knative-eventing delete secret gcppubsub-channel-key
 
   wait_until_object_does_not_exist namespaces knative-eventing
 }
@@ -80,6 +80,43 @@ function test_setup() {
   # Publish test images.
   echo ">> Publishing test images"
   $(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test images"
+}
+
+readonly PUBSUB_SERVICE_ACCOUNT="eventing_pubsub_test"
+readonly PROJECT_ID="${GCP_PROJECT}"
+readonly PUBSUB_SERVICE_ACCOUNT_KEY="knative-gcppubsub-channel.json"
+
+# Create resources required for GCP PubSub provisioner setup
+function gcppubsub_setup() {
+  local service_account_key=${GOOGLE_APPLICATION_CREDENTIALS}
+  if (( ! IS_PROW )); then
+    echo "Set up ServiceAccount for GCP PubSub provisioner"
+    gcloud services enable pubsub.googleapis.com
+    gcloud iam service-accounts create ${PUBSUB_SERVICE_ACCOUNT}
+    gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+    --member=serviceAccount:${PUBSUB_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com \
+    --role roles/pubsub.editor
+    gcloud iam service-accounts keys create ${PUBSUB_SERVICE_ACCOUNT_KEY} \
+    --iam-account=${PUBSUB_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com
+    service_account_key="${PUBSUB_SERVICE_ACCOUNT_KEY}"
+  fi
+
+  kubectl -n knative-eventing create secret generic gcppubsub-channel-key --from-file=key.json=${service_account_key}
+}
+
+# Delete resources that was used for GCP PubSub provisioner setup
+function gcppubsub_teardown() {
+  if (( ! IS_PROW )); then
+    echo "Tear down ServiceAccount for GCP PubSub provisioner"
+    gcloud iam service-accounts keys delete -q ${PUBSUB_SERVICE_ACCOUNT_KEY} \
+    --iam-account=${PUBSUB_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com
+    gcloud projects remove-iam-policy-binding ${PROJECT_ID} \
+    --member=serviceAccount:${PUBSUB_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com \
+    --role roles/pubsub.editor
+    gcloud iam service-accounts delete -q ${PUBSUB_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com
+  fi
+
+  kubectl -n knative-eventing delete secret gcppubsub-channel-key
 }
 
 function dump_extra_cluster_state() {
