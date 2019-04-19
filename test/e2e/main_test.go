@@ -28,19 +28,18 @@ import (
 
 // channelTestMap indicates which test cases we want to run for a given CCP.
 var channelTestMap = map[string][]func(t *testing.T){
-	test.InMemoryChannelProvisioner: []func(t *testing.T){
-		TestSingleBinaryEvent,
-		TestSingleStructuredEvent,
-		TestEventTransformation,
-		TestChannelChain,
-		TestDefaultBrokerWithManyTriggers,
-	},
 	test.InMemoryProvisioner: []func(t *testing.T){
 		TestSingleBinaryEvent,
 		TestSingleStructuredEvent,
 		TestEventTransformation,
 		TestChannelChain,
 		TestDefaultBrokerWithManyTriggers,
+	},
+	test.InMemoryChannelProvisioner: []func(t *testing.T){
+		TestSingleBinaryEvent,
+		TestSingleStructuredEvent,
+		TestEventTransformation,
+		TestChannelChain,
 	},
 	test.GCPPubSubProvisioner: []func(t *testing.T){
 		TestSingleBinaryEvent,
