@@ -25,7 +25,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1/testhelper"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
 	brokerresources "github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
@@ -607,7 +606,7 @@ func makeTrigger() *v1alpha1.Trigger {
 
 func makeReadyTrigger() *v1alpha1.Trigger {
 	t := makeTrigger()
-	t.Status = *testhelper.ReadyTriggerStatus()
+	t.Status = *v1alpha1.TestHelper.ReadyTriggerStatus()
 	t.Status.SubscriberURI = fmt.Sprintf("http://%s.%s.svc.%s/", subscriberName, testNS, utils.GetClusterDomainName())
 	return t
 }
@@ -645,7 +644,7 @@ func makeBroker() *v1alpha1.Broker {
 
 func makeReadyBroker() *v1alpha1.Broker {
 	b := makeBroker()
-	b.Status = *testhelper.ReadyBrokerStatus()
+	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
 	return b
 }
 
@@ -709,8 +708,8 @@ func makeBrokerFilterService() *corev1.Service {
 func makeServiceURI() *url.URL {
 	return &url.URL{
 		Scheme: "http",
-		Host:   "service-uri",
-		Path:   "/path",
+		Host:   fmt.Sprintf("%s.%s.svc.%s", makeBrokerFilterService().Name, testNS, utils.GetClusterDomainName()),
+		Path:   fmt.Sprintf("/triggers/%s/%s", testNS, triggerName),
 	}
 }
 
@@ -724,7 +723,7 @@ func makeDifferentSubscription() *v1alpha1.Subscription {
 
 func makeReadySubscription() *v1alpha1.Subscription {
 	s := makeSameSubscription()
-	s.Status = *testhelper.ReadySubscriptionStatus()
+	s.Status = *v1alpha1.TestHelper.ReadySubscriptionStatus()
 	return s
 }
 

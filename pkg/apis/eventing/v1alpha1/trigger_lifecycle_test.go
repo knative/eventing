@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1/testhelper"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -229,10 +228,10 @@ func TestTriggerIsReady(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			ts := &TriggerStatus{}
 			if test.markBrokerExists {
-				ts.PropagateBrokerStatus(testhelper.ReadyBrokerStatus())
+				ts.PropagateBrokerStatus(TestHelper.ReadyBrokerStatus())
 			}
 			if test.markSubscribed {
-				ts.PropagateSubscriptionStatus(testhelper.ReadySubscriptionStatus())
+				ts.PropagateSubscriptionStatus(TestHelper.ReadySubscriptionStatus())
 			}
 			got := ts.IsReady()
 			if test.wantReady != got {

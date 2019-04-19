@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1/testhelper"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -332,46 +331,46 @@ func TestBrokerIsReady(t *testing.T) {
 			if test.markIngressReady != nil {
 				var d *v1.Deployment
 				if *test.markIngressReady {
-					d = testhelper.AvailableDeployment()
+					d = TestHelper.AvailableDeployment()
 
 				} else {
-					d = testhelper.UnavailableDeployment()
+					d = TestHelper.UnavailableDeployment()
 				}
 				bs.PropagateIngressDeploymentAvailability(d)
 			}
 			if test.markTriggerChannelReady != nil {
 				var c *ChannelStatus
 				if *test.markTriggerChannelReady {
-					c = testhelper.ReadyChannelStatus()
+					c = TestHelper.ReadyChannelStatus()
 				} else {
-					c = testhelper.NotReadyChannelStatus()
+					c = TestHelper.NotReadyChannelStatus()
 				}
 				bs.PropagateTriggerChannelReadiness(c)
 			}
 			if test.markIngressChannelReady != nil {
 				var c *ChannelStatus
 				if *test.markIngressChannelReady {
-					c = testhelper.ReadyChannelStatus()
+					c = TestHelper.ReadyChannelStatus()
 				} else {
-					c = testhelper.NotReadyChannelStatus()
+					c = TestHelper.NotReadyChannelStatus()
 				}
 				bs.PropagateIngressChannelReadiness(c)
 			}
 			if test.markIngressSubscriptionReady != nil {
 				var sub *SubscriptionStatus
 				if *test.markIngressSubscriptionReady {
-					sub = testhelper.ReadySubscriptionStatus()
+					sub = TestHelper.ReadySubscriptionStatus()
 				} else {
-					sub = testhelper.NotReadySubscriptionStatus()
+					sub = TestHelper.NotReadySubscriptionStatus()
 				}
 				bs.PropagateIngressSubscriptionReadiness(sub)
 			}
 			if test.markFilterReady != nil {
 				var d *v1.Deployment
 				if *test.markFilterReady {
-					d = testhelper.AvailableDeployment()
+					d = TestHelper.AvailableDeployment()
 				} else {
-					d = testhelper.UnavailableDeployment()
+					d = TestHelper.UnavailableDeployment()
 				}
 				bs.PropagateFilterDeploymentAvailability(d)
 			}

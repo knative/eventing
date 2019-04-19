@@ -14,62 +14,65 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// testhelper contains helpers for unit tests.
-package testhelper
+package v1alpha1
 
 import (
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	v1 "k8s.io/api/apps/v1"
 )
 
-func ReadyChannelStatus() *v1alpha1.ChannelStatus {
-	cs := &v1alpha1.ChannelStatus{}
+type testHelper struct{}
+
+// TestHelper contains helpers for unit tests.
+var TestHelper = testHelper{}
+
+func (testHelper) ReadyChannelStatus() *ChannelStatus {
+	cs := &ChannelStatus{}
 	cs.MarkProvisionerInstalled()
 	cs.MarkProvisioned()
 	cs.SetAddress("foo")
 	return cs
 }
 
-func NotReadyChannelStatus() *v1alpha1.ChannelStatus {
-	cs := ReadyChannelStatus()
+func (t testHelper) NotReadyChannelStatus() *ChannelStatus {
+	cs := t.ReadyChannelStatus()
 	cs.MarkNotProvisioned("foo", "bar")
 	return cs
 }
 
-func ReadySubscriptionStatus() *v1alpha1.SubscriptionStatus {
-	ss := &v1alpha1.SubscriptionStatus{}
+func (testHelper) ReadySubscriptionStatus() *SubscriptionStatus {
+	ss := &SubscriptionStatus{}
 	ss.MarkChannelReady()
 	ss.MarkReferencesResolved()
 	return ss
 }
 
-func NotReadySubscriptionStatus() *v1alpha1.SubscriptionStatus {
-	ss := &v1alpha1.SubscriptionStatus{}
+func (testHelper) NotReadySubscriptionStatus() *SubscriptionStatus {
+	ss := &SubscriptionStatus{}
 	ss.MarkReferencesResolved()
 	return ss
 }
 
-func ReadyBrokerStatus() *v1alpha1.BrokerStatus {
-	bs := &v1alpha1.BrokerStatus{}
-	bs.PropagateIngressDeploymentAvailability(AvailableDeployment())
-	bs.PropagateIngressChannelReadiness(ReadyChannelStatus())
-	bs.PropagateTriggerChannelReadiness(ReadyChannelStatus())
-	bs.PropagateIngressSubscriptionReadiness(ReadySubscriptionStatus())
-	bs.PropagateFilterDeploymentAvailability(AvailableDeployment())
+func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
+	bs := &BrokerStatus{}
+	bs.PropagateIngressDeploymentAvailability(t.AvailableDeployment())
+	bs.PropagateIngressChannelReadiness(t.ReadyChannelStatus())
+	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
+	bs.PropagateIngressSubscriptionReadiness(t.ReadySubscriptionStatus())
+	bs.PropagateFilterDeploymentAvailability(t.AvailableDeployment())
 	bs.SetAddress("foo")
 	return bs
 }
 
-func ReadyTriggerStatus() *v1alpha1.TriggerStatus {
-	ts := &v1alpha1.TriggerStatus{}
+func (t testHelper) ReadyTriggerStatus() *TriggerStatus {
+	ts := &TriggerStatus{}
 	ts.InitializeConditions()
 	ts.SubscriberURI = "http://foo/"
-	ts.PropagateBrokerStatus(ReadyBrokerStatus())
-	ts.PropagateSubscriptionStatus(ReadySubscriptionStatus())
+	ts.PropagateBrokerStatus(t.ReadyBrokerStatus())
+	ts.PropagateSubscriptionStatus(t.ReadySubscriptionStatus())
 	return ts
 }
 
-func UnavailableDeployment() *v1.Deployment {
+func (testHelper) UnavailableDeployment() *v1.Deployment {
 	d := &v1.Deployment{}
 	d.Name = "unavailable"
 	d.Status.Conditions = []v1.DeploymentCondition{
@@ -81,8 +84,8 @@ func UnavailableDeployment() *v1.Deployment {
 	return d
 }
 
-func AvailableDeployment() *v1.Deployment {
-	d := UnavailableDeployment()
+func (t testHelper) AvailableDeployment() *v1.Deployment {
+	d := t.UnavailableDeployment()
 	d.Name = "available"
 	d.Status.Conditions = []v1.DeploymentCondition{
 		{

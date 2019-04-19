@@ -25,7 +25,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1/testhelper"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
 	"github.com/knative/eventing/pkg/utils"
@@ -845,7 +844,7 @@ func makeBroker() *v1alpha1.Broker {
 
 func makeReadyBroker() *v1alpha1.Broker {
 	b := makeBroker()
-	b.Status = *testhelper.ReadyBrokerStatus()
+	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
 	b.Status.SetAddress(fmt.Sprintf("%s-broker.%s.svc.%s", brokerName, testNS, utils.GetClusterDomainName()))
 	return b
 }
