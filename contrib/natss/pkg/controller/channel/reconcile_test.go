@@ -26,7 +26,6 @@ import (
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/system"
 	_ "github.com/knative/pkg/system/testing"
 	corev1 "k8s.io/api/core/v1"
@@ -57,7 +56,6 @@ var (
 func init() {
 	// Add types to scheme
 	eventingv1alpha1.AddToScheme(scheme.Scheme)
-	istiov1alpha3.AddToScheme(scheme.Scheme)
 }
 
 var testCases = []controllertesting.TestCase{
@@ -72,9 +70,6 @@ var testCases = []controllertesting.TestCase{
 		WantPresent: []runtime.Object{
 			makeNewChannelProvisionedStatus(channelName, clusterChannelProvisionerName),
 			makeK8sService(channelName, clusterChannelProvisionerName),
-		},
-		WantAbsent: []runtime.Object{
-			makeVirtualService(),
 		},
 		IgnoreTimes: true,
 	},
@@ -216,51 +211,6 @@ func makeNewClusterChannelProvisioner(name string, isReady bool) *eventingv1alph
 	// selflink is not filled in when we create the object, so clear it
 	clusterChannelProvisioner.ObjectMeta.SelfLink = ""
 	return clusterChannelProvisioner
-}
-func makeVirtualService() *istiov1alpha3.VirtualService {
-	return &istiov1alpha3.VirtualService{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: istiov1alpha3.SchemeGroupVersion.String(),
-			Kind:       "VirtualService",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-channel", testNS),
-			Namespace: testNS,
-			Labels: map[string]string{
-				"channel":     channelName,
-				"provisioner": clusterChannelProvisionerName,
-			},
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion:         eventingv1alpha1.SchemeGroupVersion.String(),
-					Kind:               "Channel",
-					Name:               channelName,
-					UID:                testUID,
-					Controller:         &truePointer,
-					BlockOwnerDeletion: &truePointer,
-				},
-			},
-		},
-		Spec: istiov1alpha3.VirtualServiceSpec{
-			Hosts: []string{
-				serviceAddress,
-				fmt.Sprintf("%s.%s.channels.%s", channelName, testNS, utils.GetClusterDomainName()),
-			},
-			HTTP: []istiov1alpha3.HTTPRoute{{
-				Rewrite: &istiov1alpha3.HTTPRewrite{
-					Authority: fmt.Sprintf("%s.%s.channels.%s", channelName, testNS, utils.GetClusterDomainName()),
-				},
-				Route: []istiov1alpha3.HTTPRouteDestination{{
-					Destination: istiov1alpha3.Destination{
-						Host: "kafka-provisioner.knative-eventing.svc." + utils.GetClusterDomainName(),
-						Port: istiov1alpha3.PortSelector{
-							Number: provisioners.PortNumber,
-						},
-					}},
-				}},
-			},
-		},
-	}
 }
 
 func om(namespace, name string) metav1.ObjectMeta {
