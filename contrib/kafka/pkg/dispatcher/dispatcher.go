@@ -85,7 +85,7 @@ type subscription struct {
 	ReplyURI      string
 }
 
-// ConfigDiff diffs the new config with the existing config. If there are no differences, then the
+// configDiff diffs the new config with the existing config. If there are no differences, then the
 // empty string is returned. If there are differences, then a non-empty string is returned
 // describing the differences.
 func (d *KafkaDispatcher) configDiff(updated *multichannelfanout.Config) string {
