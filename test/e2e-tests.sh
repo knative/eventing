@@ -94,7 +94,7 @@ function gcppubsub_setup() {
     gcloud services enable pubsub.googleapis.com
     gcloud iam service-accounts create ${PUBSUB_SERVICE_ACCOUNT}
     gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-    --member=serviceAccount:${PUBSUB_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com \
+      --member=serviceAccount:${PUBSUB_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com \
     --role roles/pubsub.editor
     gcloud iam service-accounts keys create ${PUBSUB_SERVICE_ACCOUNT_KEY} \
     --iam-account=${PUBSUB_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com
