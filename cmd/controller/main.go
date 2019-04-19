@@ -19,16 +19,18 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/knative/eventing/pkg/reconciler/subscription"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/knative/eventing/pkg/reconciler/subscription"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
@@ -95,7 +97,7 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	logger = logger.With(zap.String("controller/impl", "pkg"))
 	logger.Info("Starting the controller")
 
-	const numControllers = 1
+	const numControllers = 2
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
@@ -104,6 +106,11 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	eventingInformerFactory := informers.NewSharedInformerFactory(opt.EventingClientSet, opt.ResyncPeriod)
 
 	subscriptionInformer := eventingInformerFactory.Eventing().V1alpha1().Subscriptions()
+	brokerInformer := eventingInformerFactory.Eventing().V1alpha1().Brokers()
+	channelInformer := eventingInformerFactory.Eventing().V1alpha1().Channels()
+	serviceInformer := kubeInformerFactory.Core().V1().Services()
+	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
+
 	// TODO: remove unused after done integrating all controllers.
 	//deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
 	//coreServiceInformer := kubeInformerFactory.Core().V1().Services()
@@ -115,6 +122,20 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 		subscription.NewController(
 			opt,
 			subscriptionInformer,
+		),
+		broker.NewController(
+			opt,
+			brokerInformer,
+			subscriptionInformer,
+			channelInformer,
+			serviceInformer,
+			deploymentInformer,
+			broker.ReconcilerArgs{
+				IngressImage:              getRequiredEnv("BROKER_INGRESS_IMAGE"),
+				IngressServiceAccountName: getRequiredEnv("BROKER_INGRESS_SERVICE_ACCOUNT"),
+				FilterImage:               getRequiredEnv("BROKER_FILTER_IMAGE"),
+				FilterServiceAccountName:  getRequiredEnv("BROKER_FILTER_SERVICE_ACCOUNT"),
+			},
 		),
 	}
 	if len(controllers) != numControllers {
@@ -182,13 +203,6 @@ func startControllerRuntime(stopCh <-chan struct{}, cfg *rest.Config, logger *za
 	// manager run it.
 	providers := []ProvideFunc{
 		channel.ProvideController,
-		broker.ProvideController(
-			broker.ReconcilerArgs{
-				IngressImage:              getRequiredEnv("BROKER_INGRESS_IMAGE"),
-				IngressServiceAccountName: getRequiredEnv("BROKER_INGRESS_SERVICE_ACCOUNT"),
-				FilterImage:               getRequiredEnv("BROKER_FILTER_IMAGE"),
-				FilterServiceAccountName:  getRequiredEnv("BROKER_FILTER_SERVICE_ACCOUNT"),
-			}),
 		trigger.ProvideController,
 		namespace.ProvideController,
 	}
