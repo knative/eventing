@@ -114,7 +114,6 @@ function gcppubsub_teardown() {
       --role roles/pubsub.editor
     gcloud iam service-accounts delete -q ${PUBSUB_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com
   fi
-
   kubectl -n knative-eventing delete secret gcppubsub-channel-key
 }
 
