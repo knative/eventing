@@ -489,3 +489,13 @@ func DeleteNameSpace(clients *test.Clients, namespace string) error {
 	}
 	return err
 }
+
+// logPodLogsForDebugging add the pod logs in the testing log for further debugging.
+func logPodLogsForDebugging(clients *test.Clients, podName, containerName, namespace string, logf logging.FormatLogger) {
+	logs, err := clients.Kube.PodLogs(podName, containerName, namespace)
+	if err != nil {
+		logf("Failed to get the logs for container %q of the pod %q in namespace %q: %v", containerName, podName, namespace, err)
+	} else {
+		logf("Logs for the container %q of the pod % in namespace %q:\n%s", containerName, podName, namespace, string(logs))
+	}
+}

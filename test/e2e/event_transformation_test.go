@@ -120,9 +120,7 @@ func TestEventTransformation(t *testing.T) {
 	podName := loggerPod.Name
 	containerName := loggerPod.Spec.Containers[0].Name
 	if err := WaitForLogContentCount(clients, podName, containerName, ns, expectedContent, expectedContentCount); err != nil {
-		if logs, err := clients.Kube.PodLogs(podName, containerName, ns); err != nil {
-			t.Logf("Log content: %s\n", string(logs))
-		}
+		logPodLogsForDebugging(clients, podName, containerName, ns, t.Logf)
 		t.Fatalf("String %q does not appear %d times in logs of logger pod %q: %v", expectedContent, expectedContentCount, loggerPod.Name, err)
 	}
 }
