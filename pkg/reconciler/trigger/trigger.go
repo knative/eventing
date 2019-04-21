@@ -116,49 +116,6 @@ func NewController(
 	return impl
 }
 
-/*
-// mapBrokerToTriggers maps Broker changes to all the Triggers that correspond to that Broker.
-type mapBrokerToTriggers struct {
-	r *Reconciler
-}
-
-// Map implements handler.Mapper.Map.
-func (b *mapBrokerToTriggers) Map(o handler.MapObject) []reconcile.Request {
-	ctx := context.Background()
-	triggers := make([]reconcile.Request, 0)
-
-	opts := &client.ListOptions{
-		Namespace: o.Meta.GetNamespace(),
-		// Set Raw because if we need to get more than one page, then we will put the continue token
-		// into opts.Raw.Continue.
-		Raw: &metav1.ListOptions{},
-	}
-	for {
-		tl := &v1alpha1.TriggerList{}
-		if err := b.r.client.List(ctx, opts, tl); err != nil {
-			b.r.logger.Error("Error listing Triggers when Broker changed. Some Triggers may not be reconciled.", zap.Error(err), zap.Any("broker", o))
-			return triggers
-		}
-
-		for _, t := range tl.Items {
-			if t.Spec.Broker == o.Meta.GetName() {
-				triggers = append(triggers, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: t.Namespace,
-						Name:      t.Name,
-					},
-				})
-			}
-		}
-		if tl.Continue != "" {
-			opts.Raw.Continue = tl.Continue
-		} else {
-			return triggers
-		}
-	}
-}
-*/
-
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Trigger resource
 // with the current status of the resource.
