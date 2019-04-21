@@ -44,6 +44,7 @@ type Options struct {
 	DynamicClientSet dynamic.Interface
 
 	EventingClientSet clientset.Interface
+	ServingClientSet  clientset.Interface
 	//CachingClientSet cachingclientset.Interface
 
 	Recorder record.EventRecorder
