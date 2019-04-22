@@ -122,7 +122,7 @@ func TestAllCases(t *testing.T) {
 			Key:     testNS + "/" + channeName,
 			WantErr: false,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %s/%s", testNS, channeName), // TODO: I am not sure this should cause an event.
+				Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %s/%s", testNS, channeName),
 			},
 		}, {
 			Name: "valid claimed channel",
@@ -135,7 +135,7 @@ func TestAllCases(t *testing.T) {
 			Key:     testNS + "/" + channeName,
 			WantErr: false,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %s/%s", testNS, channeName), // TODO: I am not sure this should cause an event.
+				Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %s/%s", testNS, channeName),
 			},
 		}, {
 			Name: "channel deleted is no-op",
