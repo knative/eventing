@@ -98,22 +98,22 @@ func TestAllCases(t *testing.T) {
 			Name: "key not found",
 			// Make sure Reconcile handles good keys that don't exist.
 			Key: "foo/not-found",
-			//}, { // TODO: there is a bug in the controller, it will query for ""
-			//	Name: "trigger key not found ",
-			//	Objects: []runtime.Object{
-			//		NewTrigger(triggerName, testNS),
-			//	},
-			//	Key:     "foo/incomplete",
-			//	WantErr: true,
-			//	WantEvents: []string{
-			//		Eventf(corev1.EventTypeWarning, "ChannelReferenceFetchFailed", "Failed to validate spec.channel exists: s \"\" not found"),
-			//	},
+		}, { // TODO: there is a bug in the controller, it will query for ""
+			//			Name: "trigger key not found ",
+			//			Objects: []runtime.Object{
+			//				reconciletesting.NewTrigger(triggerName, testNS),
+			//			},
+			//			Key:     "foo/incomplete",
+			//			WantErr: true,
+			//			WantEvents: []string{
+			//				Eventf(corev1.EventTypeWarning, "ChannelReferenceFetchFailed", "Failed to validate spec.channel exists: s \"\" not found"),
+			//			},
 		}, {
 			Name: "Broker not found",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				reconciletesting.NewTrigger(triggerName, testNS,
-					reconciletesting.WithSubscriberURI(subscriberURI)),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI)),
 			},
 			WantErr: true,
 			WantEvents: []string{
@@ -121,12 +121,42 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS,
-					reconciletesting.WithSubscriberURI(subscriberURI),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
-					reconciletesting.WithBrokerFailed("DoesNotExist", "Broker does not exist"),
+					reconciletesting.WithTriggerBrokerFailed("DoesNotExist", "Broker does not exist"),
 				),
 			}},
+		}, {
+			// Name: "Trigger being deleted",
+		}, {
+			// Name: "Get Broker error",
+		}, {
+			// Name: "Get Broker Trigger channel error",
+		}, {
+			// Name: "Broker Trigger channel not found",
+		}, {
+			// Name: "Get Broker Ingress channel error",
+		}, {
+			// Name: "Broker Ingress channel not found",
+		}, {
+			// Name: "Get Broker Filter Service error",
+		}, {
+			// Name: "Resolve subscriberURI error",
+		}, {
+			// Name: "Get subscription error",
+		}, {
+			// Name: "Create subscription error",
+		}, {
+			// Name: "Create subscription error",
+		}, {
+			// Name: "Delete subscription error",
+		}, {
+			// Name: "Re-create subscription error",
+		}, {
+			// Name: "Update status error",
+		}, {
+			// Name: "Trigger reconciliation success",
 		},
 	}
 

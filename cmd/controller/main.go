@@ -149,6 +149,10 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 		stopCh,
 		subscriptionInformer.Informer(),
 		configMapInformer.Informer(),
+		triggerInformer.Informer(),
+		channelInformer.Informer(),
+		brokerInformer.Informer(),
+		coreServiceInformer.Informer(),
 	); err != nil {
 		logger.Fatalf("Failed to start informers: %v", err)
 	}

@@ -43,13 +43,13 @@ func NewTrigger(name, namespace string, so ...TriggerOption) *v1alpha1.Trigger {
 	return s
 }
 
-func WithSubscriberURI(uri string) TriggerOption {
+func WithTriggerSubscriberURI(uri string) TriggerOption {
 	return func(s *v1alpha1.Trigger) {
 		s.Spec.Subscriber = &v1alpha1.SubscriberSpec{URI: &uri}
 	}
 }
 
-func WithSubscriberRef(gvk metav1.GroupVersionKind, name string) TriggerOption {
+func WithTriggerSubscriberRef(gvk metav1.GroupVersionKind, name string) TriggerOption {
 	return func(s *v1alpha1.Trigger) {
 		s.Spec.Subscriber = &v1alpha1.SubscriberSpec{
 			Ref: &corev1.ObjectReference{
@@ -67,7 +67,7 @@ func WithInitTriggerConditions(s *v1alpha1.Trigger) {
 }
 
 // WithBrokerNotReady initializes the Triggers's conditions.
-func WithBrokerFailed(reason, message string) TriggerOption {
+func WithTriggerBrokerFailed(reason, message string) TriggerOption {
 	return func(s *v1alpha1.Trigger) {
 		s.Status.MarkBrokerFailed(reason, message)
 	}
