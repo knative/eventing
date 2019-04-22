@@ -323,13 +323,13 @@ func (r *reconciler) getBroker(ctx context.Context, t *v1alpha1.Trigger) (*v1alp
 // getBrokerTriggerChannel return the Broker's Trigger Channel if it exists, otherwise it returns an
 // error.
 func (r *reconciler) getBrokerTriggerChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
-	return r.getChannel(ctx, b, labels.SelectorFromSet(broker.TriggerChannelLabels(b)))
+	return r.getChannel(ctx, b, labels.SelectorFromSet(broker.TriggerChannelLabels(b.Name)))
 }
 
 // getBrokerIngressChannel return the Broker's Ingress Channel if it exists, otherwise it returns an
 // error.
 func (r *reconciler) getBrokerIngressChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
-	return r.getChannel(ctx, b, labels.SelectorFromSet(broker.IngressChannelLabels(b)))
+	return r.getChannel(ctx, b, labels.SelectorFromSet(broker.IngressChannelLabels(b.Name)))
 }
 
 // getChannel returns the Broker's channel if it exists, otherwise it returns an error.

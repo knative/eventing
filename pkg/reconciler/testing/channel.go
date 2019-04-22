@@ -19,6 +19,8 @@ package testing
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
+
 	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -72,5 +74,29 @@ func WithChannelSubscribers(subscribers []duckv1alpha1.ChannelSubscriberSpec) Ch
 		c.Spec.Subscribable = &duckv1alpha1.Subscribable{
 			Subscribers: subscribers,
 		}
+	}
+}
+
+func WithChannelGenerateName(generateName string) ChannelOption {
+	return func(c *v1alpha1.Channel) {
+		c.ObjectMeta.GenerateName = generateName
+	}
+}
+
+func WithChannelLabels(labels map[string]string) ChannelOption {
+	return func(c *v1alpha1.Channel) {
+		c.ObjectMeta.Labels = labels
+	}
+}
+
+func WithChannelOwnerReferences(ownerReferences []metav1.OwnerReference) ChannelOption {
+	return func(c *v1alpha1.Channel) {
+		c.ObjectMeta.OwnerReferences = ownerReferences
+	}
+}
+
+func WithChannelProvisioner(provisioner *corev1.ObjectReference) ChannelOption {
+	return func(c *v1alpha1.Channel) {
+		c.Spec.Provisioner = provisioner
 	}
 }
