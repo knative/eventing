@@ -64,6 +64,11 @@ spec:
         ce.source == "https://github.com/knative/eventing/pulls/123"
 ```
 
+Add a check to the Trigger webhook that validates the expression's syntax and
+rejects the request if an error is encountered. This will not catch errors
+arising from dynamic extension attributes or data fields - these can only be
+caught at evaluation time.
+
 ### Variable prefixes
 
 | Prefix |Description |
