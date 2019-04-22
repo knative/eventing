@@ -221,7 +221,6 @@ spec:
     clusterChannelProvisioner: gcp-pubsub
     role: dispatcher
   ports:
-    - name: http
-      protocol: TCP
+    - protocol: TCP
       port: 80
       targetPort: 8080
