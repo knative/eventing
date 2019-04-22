@@ -69,6 +69,12 @@ rejects the request if an error is encountered. This will not catch errors
 arising from dynamic extension attributes or data fields - these can only be
 caught at evaluation time.
 
+Reimplement the SourceAndType filter (and any future structured filtering
+interfaces) as a mechanical transformation to an equivalent CEL expression.
+This makes CEL the only code path that does filtering, both simplifying
+maintenance and making the implementation of filtering easier in other
+components (such as upstream event sources).
+
 ### Variable prefixes
 
 | Prefix |Description |
@@ -398,6 +404,7 @@ The inflexibility and implementation complexity of structured filters make this
 solution less suitable for Trigger filtering than CEL. However, structured
 filters can be a useful and important user interface on top of an expression
 language: for example, the existing SourceAndType syntax for expressing a filter
-could be implemented by generating an equivalent CEL expression. This provides
-users a structured filter interface when their needs are simple, and allows them
-to transition to a more complex interface when their needs require it.
+should be implemented by transformation to an equivalent CEL expression. This
+provides users a structured filter interface when their needs are simple, and
+allows them to transition to a more complex interface when their needs require
+it.
