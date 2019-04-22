@@ -19,8 +19,6 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/knative/eventing/pkg/reconciler/channel"
-	"github.com/knative/eventing/pkg/reconciler/subscription"
 	"log"
 	"net/http"
 	"os"
@@ -30,6 +28,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
@@ -38,6 +37,8 @@ import (
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/channel"
+	"github.com/knative/eventing/pkg/reconciler/subscription"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger"

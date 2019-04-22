@@ -18,10 +18,11 @@ package channel
 
 import (
 	"context"
+	"reflect"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
-	"reflect"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
