@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/knative/eventing/pkg/reconciler/channel"
 	"github.com/knative/eventing/pkg/reconciler/subscription"
 	"log"
 	"net/http"
@@ -94,7 +95,7 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	logger = logger.With(zap.String("controller/impl", "pkg"))
 	logger.Info("Starting the controller")
 
-	const numControllers = 1
+	const numControllers = 2
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
@@ -103,6 +104,7 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	eventingInformerFactory := informers.NewSharedInformerFactory(opt.EventingClientSet, opt.ResyncPeriod)
 
 	subscriptionInformer := eventingInformerFactory.Eventing().V1alpha1().Subscriptions()
+	channelInformer := eventingInformerFactory.Eventing().V1alpha1().Channels()
 	// TODO: remove unused after done integrating all controllers.
 	//deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
 	//coreServiceInformer := kubeInformerFactory.Core().V1().Services()
@@ -114,6 +116,10 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 		subscription.NewController(
 			opt,
 			subscriptionInformer,
+		),
+		channel.NewController(
+			opt,
+			channelInformer,
 		),
 	}
 	if len(controllers) != numControllers {
@@ -133,6 +139,7 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	if err := kncontroller.StartInformers(
 		stopCh,
 		subscriptionInformer.Informer(),
+		channelInformer.Informer(),
 		configMapInformer.Informer(),
 	); err != nil {
 		logger.Fatalf("Failed to start informers: %v", err)
@@ -180,7 +187,6 @@ func startControllerRuntime(stopCh <-chan struct{}, cfg *rest.Config, logger *za
 	// Add each controller's ProvideController func to this list to have the
 	// manager run it.
 	providers := []ProvideFunc{
-		reconciler.ProvideController,
 		broker.ProvideController(
 			broker.ReconcilerArgs{
 				IngressImage:              getRequiredEnv("BROKER_INGRESS_IMAGE"),
