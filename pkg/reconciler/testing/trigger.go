@@ -28,30 +28,30 @@ import (
 // TriggerOption enables further configuration of a Trigger.
 type TriggerOption func(*v1alpha1.Trigger)
 
-// NewTrigger creates a Trigger with TriggerOptions
+// NewTrigger creates a Trigger with TriggerOptions.
 func NewTrigger(name, namespace string, so ...TriggerOption) *v1alpha1.Trigger {
-	s := &v1alpha1.Trigger{
+	t := &v1alpha1.Trigger{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
 	}
 	for _, opt := range so {
-		opt(s)
+		opt(t)
 	}
-	s.SetDefaults(context.Background())
-	return s
+	t.SetDefaults(context.Background())
+	return t
 }
 
 func WithTriggerSubscriberURI(uri string) TriggerOption {
-	return func(s *v1alpha1.Trigger) {
-		s.Spec.Subscriber = &v1alpha1.SubscriberSpec{URI: &uri}
+	return func(t *v1alpha1.Trigger) {
+		t.Spec.Subscriber = &v1alpha1.SubscriberSpec{URI: &uri}
 	}
 }
 
 func WithTriggerSubscriberRef(gvk metav1.GroupVersionKind, name string) TriggerOption {
-	return func(s *v1alpha1.Trigger) {
-		s.Spec.Subscriber = &v1alpha1.SubscriberSpec{
+	return func(t *v1alpha1.Trigger) {
+		t.Spec.Subscriber = &v1alpha1.SubscriberSpec{
 			Ref: &corev1.ObjectReference{
 				APIVersion: apiVersion(gvk),
 				Kind:       gvk.Kind,
@@ -62,19 +62,19 @@ func WithTriggerSubscriberRef(gvk metav1.GroupVersionKind, name string) TriggerO
 }
 
 // WithInitTriggerConditions initializes the Triggers's conditions.
-func WithInitTriggerConditions(s *v1alpha1.Trigger) {
-	s.Status.InitializeConditions()
+func WithInitTriggerConditions(t *v1alpha1.Trigger) {
+	t.Status.InitializeConditions()
 }
 
 // WithBrokerNotReady initializes the Triggers's conditions.
 func WithTriggerBrokerFailed(reason, message string) TriggerOption {
-	return func(s *v1alpha1.Trigger) {
-		s.Status.MarkBrokerFailed(reason, message)
+	return func(t *v1alpha1.Trigger) {
+		t.Status.MarkBrokerFailed(reason, message)
 	}
 }
 
 // TODO: this can be a runtime object
-func WithTriggerDeleted(s *v1alpha1.Trigger) {
-	t := metav1.NewTime(time.Unix(1e9, 0))
-	s.ObjectMeta.SetDeletionTimestamp(&t)
+func WithTriggerDeleted(t *v1alpha1.Trigger) {
+	deleteTime := metav1.NewTime(time.Unix(1e9, 0))
+	t.ObjectMeta.SetDeletionTimestamp(&deleteTime)
 }

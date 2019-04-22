@@ -325,7 +325,7 @@ reconciles:
 it reconciles:
 
 1. Verify the Broker Exists
-1. Get the Brokers:
+1. Get the Broker's:
    - Trigger Channel
    - Ingress Channel
    - Filter Service

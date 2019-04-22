@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package trigger
 
 import (
 	"context"
-	"encoding/json"
 	"net/url"
 	"reflect"
 	"time"
@@ -35,6 +34,7 @@ import (
 	brokerresources "github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
 	"github.com/knative/eventing/pkg/utils/resolve"
 	"github.com/knative/pkg/controller"
+	"github.com/knative/pkg/tracker"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -42,8 +42,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
 	corev1informers "k8s.io/client-go/informers/core/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -51,7 +49,7 @@ import (
 
 const (
 	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Subscriptions"
+	ReconcilerName = "Triggers"
 
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
@@ -75,6 +73,7 @@ type Reconciler struct {
 	subscriptionLister listers.SubscriptionLister
 	brokerLister       listers.BrokerLister
 	serviceLister      corev1listers.ServiceLister
+	tracker            tracker.Interface
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -104,10 +103,16 @@ func NewController(
 	r.Logger.Info("Setting up event handlers")
 	triggerInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
 
-	channelInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Trigger")),
-		Handler:    reconciler.Handler(impl.EnqueueControllerOf),
-	})
+	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
+	brokerInformer.Informer().AddEventHandler(reconciler.Handler(
+		// Call the tracker's OnChanged method, but we've seen the objects
+		// coming through this path missing TypeMeta, so ensure it is properly
+		// populated.
+		controller.EnsureTypeMeta(
+			r.tracker.OnChanged,
+			v1alpha1.SchemeGroupVersion.WithKind("Broker"),
+		),
+	))
 
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Trigger")),
@@ -120,6 +125,8 @@ func NewController(
 // converge the two. It then updates the Status block of the Trigger resource
 // with the current status of the resource.
 func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
+	ctx = logging.WithLogger(ctx, r.Logger.Desugar().With(zap.String("key", key)))
+
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
@@ -127,7 +134,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		return nil
 	}
 
-	// Get the Trigger resource with this namespace/name
+	// Get the Trigger resource with this namespace/name.
 	original, err := r.triggerLister.Triggers(namespace).Get(name)
 	if apierrs.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
@@ -181,10 +188,21 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	b, err := r.brokerLister.Brokers(t.Namespace).Get(t.Spec.Broker)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Broker", zap.Error(err))
-		t.Status.MarkBrokerFailed("DoesNotExist", "Broker does not exist")
+		if apierrs.IsNotFound(err) {
+			t.Status.MarkBrokerFailed("DoesNotExist", "Broker does not exist")
+		} else {
+			t.Status.MarkBrokerFailed("BrokerGetFailed", "Failed to get broker")
+		}
 		return err
 	}
 	t.Status.PropagateBrokerStatus(&b.Status)
+
+	// Tell tracker to reconcile Trigger whenever the Broker changes.
+	gvk := v1alpha1.SchemeGroupVersion.WithKind("Configuration")
+	if err = r.tracker.Track(objectRef(b, gvk), r); err != nil {
+		logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
+		return err
+	}
 
 	brokerTrigger, err := r.getBrokerTriggerChannel(ctx, b)
 	if err != nil {
@@ -248,28 +266,6 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Trigger
 	return new, err
 }
 
-func (c *Reconciler) ensureFinalizer(trigger *v1alpha1.Trigger) error {
-	finalizers := sets.NewString(trigger.Finalizers...)
-	if finalizers.Has(finalizerName) {
-		return nil
-	}
-
-	mergePatch := map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"finalizers":      append(trigger.Finalizers, finalizerName),
-			"resourceVersion": trigger.ResourceVersion,
-		},
-	}
-
-	patch, err := json.Marshal(mergePatch)
-	if err != nil {
-		return err
-	}
-
-	_, err = c.EventingClientSet.EventingV1alpha1().Triggers(trigger.Namespace).Patch(trigger.Name, types.MergePatchType, patch)
-	return err
-}
-
 // getBrokerTriggerChannel return the Broker's Trigger Channel if it exists, otherwise it returns an
 // error.
 func (r *Reconciler) getBrokerTriggerChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
@@ -300,7 +296,7 @@ func (r *Reconciler) getChannel(ctx context.Context, b *v1alpha1.Broker, ls labe
 	return nil, apierrs.NewNotFound(schema.GroupResource{}, "")
 }
 
-// getService returns the K8s service for trigger 't' if exists,
+// getBrokerFilterService returns the K8s service for trigger 't' if exists,
 // otherwise it returns an error.
 func (r *Reconciler) getBrokerFilterService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
 	services, err := r.serviceLister.Services(b.Namespace).List(labels.SelectorFromSet(brokerresources.FilterLabels(b)))
@@ -375,4 +371,24 @@ func (r *Reconciler) getSubscription(ctx context.Context, t *v1alpha1.Trigger) (
 	}
 
 	return nil, apierrs.NewNotFound(schema.GroupResource{}, "")
+}
+
+type accessor interface {
+	GroupVersionKind() schema.GroupVersionKind
+	GetNamespace() string
+	GetName() string
+}
+
+func objectRef(a accessor, gvk schema.GroupVersionKind) corev1.ObjectReference {
+	// We can't always rely on the TypeMeta being populated.
+	// See: https://github.com/knative/serving/issues/2372
+	// Also: https://github.com/kubernetes/apiextensions-apiserver/issues/29
+	// gvk := a.GroupVersionKind()
+	apiVersion, kind := gvk.ToAPIVersionAndKind()
+	return corev1.ObjectReference{
+		APIVersion: apiVersion,
+		Kind:       kind,
+		Namespace:  a.GetNamespace(),
+		Name:       a.GetName(),
+	}
 }

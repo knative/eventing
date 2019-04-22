@@ -128,7 +128,26 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
-			// Name: "Trigger being deleted",
+			Name: "Trigger being deleted",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				reconciletesting.NewTrigger(triggerName, testNS,
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerDeleted),
+			},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS,
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerDeleted,
+				),
+			}},
 		}, {
 			// Name: "Get Broker error",
 		}, {
