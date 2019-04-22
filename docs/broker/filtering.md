@@ -170,14 +170,33 @@ spec:
 
 Cannot be specified with the SourceAndType field.
 
-CEL doesn't support prefix match directly, but prefix match can be accomplished
-with a regular expression:
+CEL supports multiple options for prefix match. The simplest is `startsWith`:
 
 ```yaml
 spec:
   filter:
     cel:
-      expression: ce.source.matches("^https://github.com")
+      expression: ce.source.startsWith("https://github.com")
+```
+
+CEL also implements shell-style wildcards with `match`:
+
+```yaml
+spec:
+  filter:
+    cel:
+      expression: ce.source.match("https://github.com*")
+```
+
+For the most complex matching needs, CEL implements
+[RE2-style](https://github.com/google/re2/wiki/Syntax) regular expressions with
+`matches`:
+
+```yaml
+spec:
+  filter:
+    cel:
+      expression: ce.source.matches("https://github.com.*")
 ```
 
 ### Complex boolean expression
@@ -196,7 +215,7 @@ spec:
 
 ```
 
-### Parsed extensions
+### Exact match on Extension
 
 Cannot be specified with the SourceAndType field.
 
@@ -217,7 +236,7 @@ spec:
 
 ```
 
-### Parsed data
+### Exact match on Data
 
 Cannot be specified with the SourceAndType field.
 
