@@ -41,7 +41,7 @@ readonly GCP_PUBSUB_CONFIG="$(mktemp)"
 E2E_PROJECT_ID=""
 
 # Constants used for creating ServiceAccount for GCP PubSub provisioner setup if it's not running on Prow.
-readonly PUBSUB_SERVICE_ACCOUNT="eventing_pubsub_test"
+readonly PUBSUB_SERVICE_ACCOUNT="eventing-pubsub-test"
 readonly PUBSUB_SERVICE_ACCOUNT_KEY="$(mktemp)"
 readonly PUBSUB_SECRET_NAME="gcppubsub-channel-key"
 

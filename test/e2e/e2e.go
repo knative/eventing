@@ -377,10 +377,22 @@ func CreatePod(clients *test.Clients, pod *corev1.Pod, _ logging.FormatLogger, c
 
 // SendFakeEventToChannel will create fake CloudEvent and send it to the given channel.
 func SendFakeEventToChannel(clients *test.Clients, event *test.CloudEvent, channel *v1alpha1.Channel, logf logging.FormatLogger, cleaner *test.Cleaner) error {
-	logf("Sending fake CloudEvent")
-	logf("Creating event sender pod")
 	namespace := channel.Namespace
 	url := fmt.Sprintf("http://%s", channel.Status.Address.Hostname)
+	return sendFakeEventToAddress(clients, event, url, namespace, logf, cleaner)
+}
+
+// SendFakeEventToBroker will create fake CloudEvent and send it to the given broker.
+func SendFakeEventToBroker(clients *test.Clients, event *test.CloudEvent, broker *v1alpha1.Broker, logf logging.FormatLogger, cleaner *test.Cleaner) error {
+	namespace := broker.Namespace
+	url := fmt.Sprintf("http://%s", broker.Status.Address.Hostname)
+	return sendFakeEventToAddress(clients, event, url, namespace, logf, cleaner)
+}
+
+func sendFakeEventToAddress(clients *test.Clients, event *test.CloudEvent, url, namespace string, logf logging.FormatLogger, cleaner *test.Cleaner) error {
+	logf("Sending fake CloudEvent")
+	logf("Creating event sender pod %q", event.Source)
+
 	pod := test.EventSenderPod(event.Source, namespace, url, event)
 	if err := CreatePod(clients, pod, logf, cleaner); err != nil {
 		return err

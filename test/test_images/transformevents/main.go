@@ -31,11 +31,15 @@ type example struct {
 }
 
 var (
-	msgPostfix string
+	eventType   string
+	eventSource string
+	eventData   string
 )
 
 func init() {
-	flag.StringVar(&msgPostfix, "msg-postfix", "", "The postfix we want to add for the message.")
+	flag.StringVar(&eventType, "event-type", "knative.eventing.test.e2e", "The Event Type to use.")
+	flag.StringVar(&eventSource, "event-source", "", "Source URI to use. Defaults to the current machine's hostname")
+	flag.StringVar(&eventData, "event-data", `{"hello": "world!"}`, "Cloudevent data body.")
 }
 
 func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
@@ -47,13 +51,19 @@ func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
 		return err
 	}
 
-	data.Message += msgPostfix
-	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), *ctx.ContentType, ctx.Source.String(), data)
+	log.Println("Received a new event: ")
+	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), data)
 
+	ctx.SetSource(eventSource)
+	ctx.SetType(eventType)
 	r := cloudevents.Event{
-		Context: event.Context,
-		Data:    data,
+		Context: ctx,
+		Data:    eventData,
 	}
+
+	log.Println("Transform the event to: ")
+	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), eventData)
+
 	resp.RespondWith(200, &r)
 	return nil
 }
@@ -67,6 +77,5 @@ func main() {
 	}
 
 	log.Printf("listening on 8080")
-	log.Printf("msgPostfix: %s", msgPostfix)
 	log.Fatalf("failed to start receiver: %s", c.StartReceiver(context.Background(), gotEvent))
 }
