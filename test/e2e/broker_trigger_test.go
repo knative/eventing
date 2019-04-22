@@ -218,6 +218,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		subscriberContainerName := subscriberPod.Spec.Containers[0].Name
 		t.Logf("Dumper %q expecting %q", subscriberPodName, strings.Join(expectedEvents[subscriberPodName], ","))
 		if err := WaitForLogContents(clients, t.Logf, subscriberPodName, subscriberContainerName, ns, expectedEvents[subscriberPodName]); err != nil {
+			logPodLogsForDebugging(clients, subscriberPodName, subscriberContainerName, ns, t.Logf)
 			t.Fatalf("Event(s) not found in logs of subscriber pod %q: %v", subscriberPodName, err)
 		}
 		// At this point all the events should have been received in the pod.
