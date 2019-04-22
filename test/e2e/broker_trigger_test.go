@@ -2,6 +2,7 @@
 
 /*
 Copyright 2019 The Knative Authors
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -217,6 +218,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		subscriberContainerName := subscriberPod.Spec.Containers[0].Name
 		t.Logf("Dumper %q expecting %q", subscriberPodName, strings.Join(expectedEvents[subscriberPodName], ","))
 		if err := WaitForLogContents(clients, t.Logf, subscriberPodName, subscriberContainerName, ns, expectedEvents[subscriberPodName]); err != nil {
+			logPodLogsForDebugging(clients, subscriberPodName, subscriberContainerName, ns, t.Logf)
 			t.Fatalf("Event(s) not found in logs of subscriber pod %q: %v", subscriberPodName, err)
 		}
 		// At this point all the events should have been received in the pod.

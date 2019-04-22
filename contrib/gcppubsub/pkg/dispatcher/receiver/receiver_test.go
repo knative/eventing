@@ -129,14 +129,21 @@ func TestReceiver(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			mr, _ := New(
+			mr, _, err := New(
 				zap.NewNop(),
 				fake.NewFakeClient(tc.initialState...),
 				fakepubsub.Creator(tc.pubSubData))
+			if err != nil {
+				t.Fatalf("Error when creating a New receiver. Error:%s", err)
+			}
 			resp := httptest.NewRecorder()
 			req := httptest.NewRequest("POST", "/", strings.NewReader(validMessage))
 			req.Host = "test-channel.test-namespace.channels." + utils.GetClusterDomainName()
-			mr.newMessageReceiver().HandleRequest(resp, req)
+			receiver, err := mr.newMessageReceiver()
+			if err != nil {
+				t.Fatalf("Error when creating a new message receiver. Error:%s", err)
+			}
+			receiver.HandleRequest(resp, req)
 			if tc.expectedErr {
 				if resp.Result().StatusCode >= 200 && resp.Result().StatusCode < 300 {
 					t.Errorf("Expected an error. Actual: %v", resp.Result())

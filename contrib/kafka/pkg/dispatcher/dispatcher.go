@@ -34,8 +34,10 @@ import (
 )
 
 type KafkaDispatcher struct {
-	config     atomic.Value
-	updateLock sync.Mutex
+	// TODO: config doesn't have to be atomic as it is read and updated using updateLock.
+	config           atomic.Value
+	hostToChannelMap atomic.Value
+	updateLock       sync.Mutex
 
 	receiver   *provisioners.MessageReceiver
 	dispatcher *provisioners.MessageDispatcher
@@ -83,10 +85,10 @@ type subscription struct {
 	ReplyURI      string
 }
 
-// ConfigDiff diffs the new config with the existing config. If there are no differences, then the
+// configDiff diffs the new config with the existing config. If there are no differences, then the
 // empty string is returned. If there are differences, then a non-empty string is returned
 // describing the differences.
-func (d *KafkaDispatcher) ConfigDiff(updated *multichannelfanout.Config) string {
+func (d *KafkaDispatcher) configDiff(updated *multichannelfanout.Config) string {
 	return cmp.Diff(d.getConfig(), updated)
 }
 
@@ -98,12 +100,21 @@ func (d *KafkaDispatcher) UpdateConfig(config *multichannelfanout.Config) error 
 	d.updateLock.Lock()
 	defer d.updateLock.Unlock()
 
-	if diff := d.ConfigDiff(config); diff != "" {
+	if diff := d.configDiff(config); diff != "" {
 		d.logger.Info("Updating config (-old +new)", zap.String("diff", diff))
+
+		// Create hostToChannelMap before updating kafkaConsumers.
+		// But update the map only after updating kafkaConsumers.
+		hcMap, err := createHostToChannelMap(config)
+		if err != nil {
+			return err
+		}
 
 		newSubs := make(map[subscription]bool)
 
-		// Subscribe to new subscriptions
+		// Subscribe to new subscriptions.
+		// TODO: Error returned by subscribe/unsubscribe must be handled.
+		// https://github.com/knative/eventing/issues/1072.
 		for _, cc := range config.ChannelConfigs {
 			channelRef := provisioners.ChannelReference{
 				Name:      cc.Name,
@@ -129,11 +140,31 @@ func (d *KafkaDispatcher) UpdateConfig(config *multichannelfanout.Config) error 
 				}
 			}
 		}
+		// At this point all updates are done and hostToChannelMap is created successfully.
+		// Update the atomic value.
+		d.setHostToChannelMap(hcMap)
 
 		// Update the config so that it can be used for comparison during next sync
 		d.setConfig(config)
 	}
 	return nil
+}
+
+func createHostToChannelMap(config *multichannelfanout.Config) (map[string]provisioners.ChannelReference, error) {
+	hcMap := make(map[string]provisioners.ChannelReference, len(config.ChannelConfigs))
+	for _, cConfig := range config.ChannelConfigs {
+		if cr, ok := hcMap[cConfig.HostName]; ok {
+			return nil, fmt.Errorf(
+				"duplicate hostName found. Each channel must have a unique host header. HostName:%s, channel:%s.%s, channel:%s.%s",
+				cConfig.HostName,
+				cConfig.Namespace,
+				cConfig.Name,
+				cr.Namespace,
+				cr.Name)
+		}
+		hcMap[cConfig.HostName] = provisioners.ChannelReference{Name: cConfig.Name, Namespace: cConfig.Namespace}
+	}
+	return hcMap, nil
 }
 
 // Start starts the kafka dispatcher's message processing.
@@ -162,6 +193,8 @@ func (d *KafkaDispatcher) Start(stopCh <-chan struct{}) error {
 	return d.receiver.Start(stopCh)
 }
 
+// subscribe reads kafkaConsumers which gets updated in UpdateConfig in a separate go-routine.
+// subscribe must be called under updateLock.
 func (d *KafkaDispatcher) subscribe(channelRef provisioners.ChannelReference, sub subscription) error {
 	d.logger.Info("Subscribing", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
 
@@ -234,6 +267,8 @@ func (d *KafkaDispatcher) dispatch(channelRef provisioners.ChannelReference, sub
 	return err
 }
 
+// unsubscribe reads kafkaConsumers which gets updated in UpdateConfig in a separate go-routine.
+// unsubscribe must be called under updateLock.
 func (d *KafkaDispatcher) unsubscribe(channel provisioners.ChannelReference, sub subscription) error {
 	d.logger.Info("Unsubscribing from channel", zap.Any("channel", channel), zap.Any("subscription", sub))
 	if consumer, ok := d.kafkaConsumers[channel][sub]; ok {
@@ -257,8 +292,15 @@ func (d *KafkaDispatcher) setConfig(config *multichannelfanout.Config) {
 	d.config.Store(config)
 }
 
-func NewDispatcher(brokers []string, consumerMode cluster.ConsumerMode, logger *zap.Logger) (*KafkaDispatcher, error) {
+func (d *KafkaDispatcher) getHostToChannelMap() map[string]provisioners.ChannelReference {
+	return d.hostToChannelMap.Load().(map[string]provisioners.ChannelReference)
+}
 
+func (d *KafkaDispatcher) setHostToChannelMap(hcMap map[string]provisioners.ChannelReference) {
+	d.hostToChannelMap.Store(hcMap)
+}
+
+func NewDispatcher(brokers []string, consumerMode cluster.ConsumerMode, logger *zap.Logger) (*KafkaDispatcher, error) {
 	conf := sarama.NewConfig()
 	conf.Version = sarama.V1_1_0_0
 	conf.ClientID = controller.Name + "-dispatcher"
@@ -281,14 +323,29 @@ func NewDispatcher(brokers []string, consumerMode cluster.ConsumerMode, logger *
 
 		logger: logger,
 	}
-	receiverFunc := provisioners.NewMessageReceiver(
+	receiverFunc, err := provisioners.NewMessageReceiver(
 		func(channel provisioners.ChannelReference, message *provisioners.Message) error {
 			dispatcher.kafkaAsyncProducer.Input() <- toKafkaMessage(channel, message)
 			return nil
-		}, logger.Sugar())
+		},
+		logger.Sugar(),
+		provisioners.ResolveChannelFromHostHeader(provisioners.ResolveChannelFromHostFunc(dispatcher.getChannelReferenceFromHost)))
+	if err != nil {
+		return nil, err
+	}
 	dispatcher.receiver = receiverFunc
 	dispatcher.setConfig(&multichannelfanout.Config{})
+	dispatcher.setHostToChannelMap(map[string]provisioners.ChannelReference{})
 	return dispatcher, nil
+}
+
+func (d *KafkaDispatcher) getChannelReferenceFromHost(host string) (provisioners.ChannelReference, error) {
+	chMap := d.getHostToChannelMap()
+	cr, ok := chMap[host]
+	if !ok {
+		return cr, fmt.Errorf("invalid Hostname:%s. Hostname not found in ConfigMap for any Channel", host)
+	}
+	return cr, nil
 }
 
 func fromKafkaMessage(kafkaMessage *sarama.ConsumerMessage) *provisioners.Message {

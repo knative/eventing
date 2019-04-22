@@ -2,6 +2,7 @@
 
 /*
 Copyright 2019 The Knative Authors
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -82,12 +83,9 @@ func singleEvent(t *testing.T, encoding string) {
 	}
 
 	if err := pkgTest.WaitForLogContent(clients.Kube, loggerPodName, loggerPod.Spec.Containers[0].Name, ns, body); err != nil {
-		if logs, err := clients.Kube.PodLogs(senderName, "sendevent", ns); err != nil {
-			t.Logf("Logs for sendevent container of the sender pod:\n %s", string(logs))
-		}
-		if logs, err := clients.Kube.PodLogs(senderName, "istio-proxy", ns); err != nil {
-			t.Logf("Logs for istio-proxy container of the sender pod:\n %s", string(logs))
-		}
+		logPodLogsForDebugging(clients, loggerPodName, loggerPod.Spec.Containers[0].Name, ns, t.Logf)
+		logPodLogsForDebugging(clients, senderName, "sendevent", ns, t.Logf)
+		logPodLogsForDebugging(clients, senderName, "istio-proxy", ns, t.Logf)
 		t.Fatalf("String %q not found in logs of logger pod %q: %v", body, loggerPodName, err)
 	}
 }
