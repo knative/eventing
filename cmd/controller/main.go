@@ -38,7 +38,6 @@ import (
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/channel"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
@@ -181,7 +180,7 @@ func startControllerRuntime(stopCh <-chan struct{}, cfg *rest.Config, logger *za
 	// Add each controller's ProvideController func to this list to have the
 	// manager run it.
 	providers := []ProvideFunc{
-		channel.ProvideController,
+		reconciler.ProvideController,
 		broker.ProvideController(
 			broker.ReconcilerArgs{
 				IngressImage:              getRequiredEnv("BROKER_INGRESS_IMAGE"),

@@ -39,6 +39,7 @@ import (
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
+
 	. "github.com/knative/pkg/reconciler/testing"
 )
 
