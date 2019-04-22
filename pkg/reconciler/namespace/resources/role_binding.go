@@ -24,12 +24,12 @@ import (
 
 // MakeRoleBinding creates a RoleBinding object for the Broker's filter
 // service account 'sa' in the Namespace 'ns'.
-func MakeRoleBinding(ns *corev1.Namespace, sa *corev1.ServiceAccount) *rbacv1.RoleBinding {
+func MakeRoleBinding(sa *corev1.ServiceAccount) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
+			Namespace: sa.Namespace,
 			Name:      RoleBindingName,
-			Labels:    InjectedLabels(),
+			Labels:    OwnedLabels(),
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
@@ -39,7 +39,7 @@ func MakeRoleBinding(ns *corev1.Namespace, sa *corev1.ServiceAccount) *rbacv1.Ro
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
-				Namespace: ns.Name,
+				Namespace: sa.Namespace,
 				Name:      sa.Name,
 			},
 		},

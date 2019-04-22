@@ -18,12 +18,13 @@ package resources
 
 const (
 	// Label to enable knative-eventing in a namespace.
-	InjectionLabelKey          = "knative-eventing-injection"
-	InjectionEnabledLabelValue = "enabled"
+	InjectionLabelKey           = "knative-eventing-injection"
+	InjectionEnabledLabelValue  = "enabled"
+	InjectionDisabledLabelValue = "disabled"
 )
 
-// InjectedLabels generates the labels present on injected broker resources.
-func InjectedLabels() map[string]string {
+// OwnedLabels generates the labels present on injected broker resources.
+func OwnedLabels() map[string]string {
 	return map[string]string{
 		"eventing.knative.dev/namespaceInjected": "true",
 	}
@@ -32,5 +33,11 @@ func InjectedLabels() map[string]string {
 func InjectionEnabledLabels() map[string]string {
 	return map[string]string{
 		InjectionLabelKey: InjectionEnabledLabelValue,
+	}
+}
+
+func InjectionDisabledLabels() map[string]string {
+	return map[string]string{
+		InjectionLabelKey: InjectionDisabledLabelValue,
 	}
 }

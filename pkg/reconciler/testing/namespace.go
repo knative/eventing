@@ -14,20 +14,37 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resources
+package testing
 
 import (
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 )
 
-// MakeBroker creates a default Broker object for Namespace 'ns'.
-func MakeBroker(namespace string) *v1alpha1.Broker {
-	return &v1alpha1.Broker{
+// NamespaceOption enables further configuration of a Namespace.
+type NamespaceOption func(*corev1.Namespace)
+
+// NewNamespace creates a Namespace with NamespaceOptions
+func NewNamespace(name string, o ...NamespaceOption) *corev1.Namespace {
+	s := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      DefaultBrokerName,
-			Labels:    OwnedLabels(),
+			Name: name,
 		},
+	}
+	for _, opt := range o {
+		opt(s)
+	}
+	return s
+}
+
+func WithNamespaceDeleted(n *corev1.Namespace) {
+	t := metav1.NewTime(time.Unix(1e9, 0))
+	n.ObjectMeta.SetDeletionTimestamp(&t)
+}
+
+func WithNamespaceLabeled(labels map[string]string) NamespaceOption {
+	return func(n *corev1.Namespace) {
+		n.Labels = labels
 	}
 }

@@ -153,7 +153,7 @@ func (r *Reconciler) reconcileBrokerFilterServiceAccount(ctx context.Context, ns
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
-		sa := resources.MakeServiceAccount(ns)
+		sa := resources.MakeServiceAccount(ns.Name)
 		sa, err := r.KubeClientSet.CoreV1().ServiceAccounts(ns.Name).Create(sa)
 		if err != nil {
 			return nil, err
@@ -174,7 +174,7 @@ func (r *Reconciler) reconcileBrokerFilterRBAC(ctx context.Context, ns *corev1.N
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
-		rb := resources.MakeRoleBinding(ns, sa)
+		rb := resources.MakeRoleBinding(sa)
 		rb, err := r.KubeClientSet.RbacV1().RoleBindings(ns.Name).Create(rb)
 		if err != nil {
 			return nil, err
@@ -195,7 +195,7 @@ func (r *Reconciler) reconcileBroker(ctx context.Context, ns *corev1.Namespace) 
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
-		b := resources.MakeBroker(ns)
+		b := resources.MakeBroker(ns.Name)
 		b, err = r.EventingClientSet.EventingV1alpha1().Brokers(ns.Name).Create(b)
 		if err != nil {
 			return nil, err
