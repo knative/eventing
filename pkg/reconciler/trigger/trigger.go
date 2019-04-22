@@ -200,7 +200,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	t.Status.PropagateBrokerStatus(&b.Status)
 
 	// Tell tracker to reconcile this Trigger whenever the Broker changes.
-	gvk := v1alpha1.SchemeGroupVersion.WithKind("Configuration")
+	gvk := v1alpha1.SchemeGroupVersion.WithKind("Broker")
 	if err = r.tracker.Track(objectRef(b, gvk), t); err != nil {
 		logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
 		return err
