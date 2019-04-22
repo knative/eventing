@@ -103,6 +103,8 @@ func NewController(
 	r.Logger.Info("Setting up event handlers")
 	triggerInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
 
+	// Tracker is used to notify us that a Trigger's Broker has changed so that
+	// we can reconcile.
 	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
 	brokerInformer.Informer().AddEventHandler(reconciler.Handler(
 		// Call the tracker's OnChanged method, but we've seen the objects
@@ -197,9 +199,9 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	}
 	t.Status.PropagateBrokerStatus(&b.Status)
 
-	// Tell tracker to reconcile Trigger whenever the Broker changes.
+	// Tell tracker to reconcile this Trigger whenever the Broker changes.
 	gvk := v1alpha1.SchemeGroupVersion.WithKind("Configuration")
-	if err = r.tracker.Track(objectRef(b, gvk), r); err != nil {
+	if err = r.tracker.Track(objectRef(b, gvk), t); err != nil {
 		logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
 		return err
 	}
