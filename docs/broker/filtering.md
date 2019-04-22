@@ -262,7 +262,7 @@ spec:
 
 ## Caveats
 
-### CEL
+### Choice of CEL
 
 The main caveat is the choice of CEL as expression language.
 
@@ -291,6 +291,25 @@ spec:
     javascript:
       expression: ce.type == "com.github.pull.create"
 ```
+
+### Versioning
+
+Embedding an expression language into the Trigger specification means that we
+effectively have two versions exposed to the user: the Trigger CRD APIVersion and
+the expression language version. As the CEL spec evolves, backward incompatible
+changes may be made that would require a version change in the Trigger.
+
+I propose that we rely on the Trigger CRD APIVersion to encode both the Trigger
+version and the CEL version. This ensures that Triggers with the same APIVersion
+always have the same behavior, and the upgrade semantics are the same as those
+for other Kubernetes objects.
+
+There is a concern that tying the CEL version to the Trigger APIVersion could
+block users from upgrading, because they need to upgrade all of their
+expressions at the same time as a Knative upgrade. If no automatic upgrade is
+possible, we should support both CEL versions for one or more Knative releases.
+It might be necessary to add a Trigger field specifying the version of CEL that
+should evaluate the expression.
 
 ## Alternatives Considered
 
