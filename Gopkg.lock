@@ -425,6 +425,21 @@
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
 [[projects]]
+  digest = "1:94171d9b3c7cfea54e726005e58044a2325ccf796ecf4bf025a3d20a1e145fba"
+  name = "github.com/knative/eventing-sources"
+  packages = [
+    "pkg/apis/sources/v1alpha1",
+    "pkg/controller/sdk",
+    "pkg/controller/sinks",
+    "pkg/controller/testing",
+    "pkg/kncloudevents",
+    "pkg/reconciler/containersource/resources",
+  ]
+  pruneopts = "NUT"
+  revision = "32ce3778fa1bc46ed0b0ade16d5c57f343cafa4d"
+  version = "v0.5.0"
+
+[[projects]]
   digest = "1:b657ec75371e8baf47023f7eb4f20d78e2a744f51ec824b40dd6cf74ad6fdaf4"
   name = "github.com/knative/pkg"
   packages = [
@@ -675,6 +690,14 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "3113b8401b8a98917cde58f8bbd42a1b1c03b1fd"
+
+[[projects]]
+  digest = "1:53c3320ee307f01fd24a88e396a8d2239cd8346d1a085320209319f2d33f59cc"
+  name = "github.com/robfig/cron"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "b41be1df696709bb6395fe435af20370037c0b4c"
+  version = "v1.1"
 
 [[projects]]
   digest = "1:d917313f309bda80d27274d53985bc65651f81a5b66b820749ac7f8ef061fd04"
@@ -1313,7 +1336,7 @@
   revision = "8a9b82f00b3a86eac24681da3f9fe6c34c01cea2"
 
 [[projects]]
-  digest = "1:a8495647d9f03401c36b801a0644207a434f76ed9d4fc4ea80c46700f0ccc575"
+  digest = "1:399953e7c3ac9253dcf1fe909b0a74f6d1c4e974decefd6f5d361cab06249ccc"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/cache",
@@ -1323,6 +1346,7 @@
     "pkg/client/config",
     "pkg/client/fake",
     "pkg/controller",
+    "pkg/controller/controllerutil",
     "pkg/event",
     "pkg/handler",
     "pkg/internal/controller",
@@ -1337,6 +1361,7 @@
     "pkg/recorder",
     "pkg/runtime/inject",
     "pkg/runtime/log",
+    "pkg/runtime/scheme",
     "pkg/runtime/signals",
     "pkg/source",
     "pkg/source/internal",
@@ -1357,11 +1382,20 @@
     "github.com/Shopify/sarama",
     "github.com/bsm/sarama-cluster",
     "github.com/cloudevents/sdk-go",
+    "github.com/cloudevents/sdk-go/pkg/cloudevents",
+    "github.com/cloudevents/sdk-go/pkg/cloudevents/client",
     "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http",
+    "github.com/cloudevents/sdk-go/pkg/cloudevents/types",
     "github.com/fsnotify/fsnotify",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/uuid",
+    "github.com/knative/eventing-sources/pkg/apis/sources/v1alpha1",
+    "github.com/knative/eventing-sources/pkg/controller/sdk",
+    "github.com/knative/eventing-sources/pkg/controller/sinks",
+    "github.com/knative/eventing-sources/pkg/controller/testing",
+    "github.com/knative/eventing-sources/pkg/kncloudevents",
+    "github.com/knative/eventing-sources/pkg/reconciler/containersource/resources",
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
     "github.com/knative/pkg/apis/duck/v1alpha1",
@@ -1386,6 +1420,7 @@
     "github.com/nats-io/go-nats-streaming",
     "github.com/nats-io/nats-streaming-server/server",
     "github.com/prometheus/client_golang/prometheus/promhttp",
+    "github.com/robfig/cron",
     "go.opencensus.io/exporter/prometheus",
     "go.opencensus.io/stats",
     "go.opencensus.io/stats/view",
@@ -1447,6 +1482,7 @@
     "sigs.k8s.io/controller-runtime/pkg/client/config",
     "sigs.k8s.io/controller-runtime/pkg/client/fake",
     "sigs.k8s.io/controller-runtime/pkg/controller",
+    "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil",
     "sigs.k8s.io/controller-runtime/pkg/event",
     "sigs.k8s.io/controller-runtime/pkg/handler",
     "sigs.k8s.io/controller-runtime/pkg/manager",
