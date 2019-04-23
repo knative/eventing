@@ -28,6 +28,7 @@ import (
 // BrokerOption enables further configuration of a Broker.
 type BrokerOption func(*v1alpha1.Broker)
 
+// NewBroker creates a Broker with BrokerOptions.
 func NewBroker(name, namespace string, o ...BrokerOption) *v1alpha1.Broker {
 	b := &v1alpha1.Broker{
 		TypeMeta: metav1.TypeMeta{

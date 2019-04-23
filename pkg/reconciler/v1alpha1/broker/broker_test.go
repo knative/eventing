@@ -47,6 +47,8 @@ const (
 	filterSA     = "filter-SA"
 	ingressImage = "ingress-image"
 	ingressSA    = "ingress-SA"
+
+	filterContainerName = "filter"
 )
 
 var (
@@ -58,7 +60,7 @@ var (
 	triggerChannelHostname = fmt.Sprintf("foo.bar.svc.%s", utils.GetClusterDomainName())
 	ingressChannelHostname = fmt.Sprintf("baz.qux.svc.%s", utils.GetClusterDomainName())
 
-	ingressChannelName = "ingress-channel"
+	filterDeploymentName = fmt.Sprintf("%s-broker-filter", brokerName)
 )
 
 func init() {
@@ -160,10 +162,12 @@ func TestReconcile(t *testing.T) {
 				InduceFailure("create", "deployments"),
 			},
 			WantCreates: []metav1.Object{
-				// Using the helper from resources to avoid duplicating code.
-				makeFilterDeployment(testing2.NewBroker(brokerName, testNS,
-					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
-					testing2.WithInitBrokerConditions)),
+				testing2.NewDeployment(filterDeploymentName, testNS,
+					testing2.WithDeploymentOwnerReferences(ownerReferences()),
+					testing2.WithDeploymentLabels(resources.FilterLabels(brokerName)),
+					testing2.WithDeploymentAnnotations(annotations()),
+					testing2.WithDeploymentServiceAccount(filterSA),
+					testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars())),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: testing2.NewBroker(brokerName, testNS,
@@ -177,29 +181,35 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErr: true,
 		},
-		//	{
-		//		Name:   "Filter Deployment.Update error",
-		//		Scheme: scheme.Scheme,
-		//		InitialState: []runtime.Object{
-		//			makeBroker(),
-		//			makeTriggerChannel(),
-		//			makeDifferentFilterDeployment(),
-		//		},
-		//		Mocks: controllertesting.Mocks{
-		//			MockUpdates: []controllertesting.MockUpdate{
-		//				func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-		//					if d, ok := obj.(*appsv1.Deployment); ok {
-		//						if d.Labels["eventing.knative.dev/brokerRole"] == "filter" {
-		//							return controllertesting.Handled, errors.New("test error updating filter Deployment")
-		//						}
+		//{
+		//	Name: "Filter Deployment.Update error",
+		//	Key:  testKey,
+		//	Objects: []runtime.Object{
+		//		testing2.NewBroker(brokerName, testNS,
+		//			testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+		//			testing2.WithInitBrokerConditions),
+		//		testing2.NewChannel("", testNS,
+		//			testing2.WithChannelGenerateName(channelGenerateName),
+		//			testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
+		//			testing2.WithChannelOwnerReferences(ownerReferences()),
+		//			testing2.WithChannelProvisioner(channelProvisioner("my-provisioner")),
+		//			testing2.WithChannelAddress(triggerChannelHostname)),
+		//	},
+		//	Mocks: controllertesting.Mocks{
+		//		MockUpdates: []controllertesting.MockUpdate{
+		//			func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
+		//				if d, ok := obj.(*appsv1.Deployment); ok {
+		//					if d.Labels["eventing.knative.dev/brokerRole"] == "filter" {
+		//						return controllertesting.Handled, errors.New("test error updating filter Deployment")
 		//					}
-		//					return controllertesting.Unhandled, nil
-		//				},
+		//				}
+		//				return controllertesting.Unhandled, nil
 		//			},
 		//		},
-		//		WantEvent:  []corev1.Event{events[brokerReconcileError]},
-		//		WantErrMsg: "test error updating filter Deployment",
 		//	},
+		//	WantEvent:  []corev1.Event{events[brokerReconcileError]},
+		//	WantErrMsg: "test error updating filter Deployment",
+		//},
 		//	{
 		//		Name:   "Filter Service.Get error",
 		//		Scheme: scheme.Scheme,
@@ -975,6 +985,26 @@ func channelProvisioner(name string) *corev1.ObjectReference {
 
 func channelStatus() *v1alpha1.ChannelStatus {
 	return &v1alpha1.ChannelStatus{}
+}
+
+// TODO remove this once we get rid of istio.
+func annotations() map[string]string {
+	return map[string]string{
+		"sidecar.istio.io/inject": "true",
+	}
+}
+
+func envVars() []corev1.EnvVar {
+	return []corev1.EnvVar{
+		{
+			Name: "NAMESPACE",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.namespace",
+				},
+			},
+		},
+	}
 }
 
 func makeFilterDeployment(broker *v1alpha1.Broker) *appsv1.Deployment {
