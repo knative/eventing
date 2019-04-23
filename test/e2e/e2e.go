@@ -462,7 +462,25 @@ func CreateNamespaceIfNeeded(t *testing.T, clients *test.Clients, namespace stri
 		if err != nil {
 			t.Fatalf("Failed to create Namespace: %s; %v", namespace, err)
 		}
+
+		// https://github.com/kubernetes/kubernetes/issues/66689
+		// We can only start creating pods after the default ServiceAccount is created by the kube-controller-manager.
+		err = WaitForServiceAccountExists(t, clients, "default", namespace, logf)
+		if err != nil {
+			t.Fatalf("The default ServiceAccount was not created for the Namespace: %s", namespace)
+		}
 	}
+}
+
+// WaitForServiceAccountExists waits until the ServiceAccount exists.
+func WaitForServiceAccountExists(t *testing.T, clients *test.Clients, name, namespace string, logf logging.FormatLogger) error {
+	return wait.PollImmediate(interval, timeout, func() (bool, error) {
+		sas := clients.Kube.Kube.CoreV1().ServiceAccounts(namespace)
+		if _, err := sas.Get(name, metav1.GetOptions{}); err == nil {
+			return true, nil
+		}
+		return false, nil
+	})
 }
 
 // LabelNamespace labels the given namespace with the labels map.
@@ -496,6 +514,6 @@ func logPodLogsForDebugging(clients *test.Clients, podName, containerName, names
 	if err != nil {
 		logf("Failed to get the logs for container %q of the pod %q in namespace %q: %v", containerName, podName, namespace, err)
 	} else {
-		logf("Logs for the container %q of the pod % in namespace %q:\n%s", containerName, podName, namespace, string(logs))
+		logf("Logs for the container %q of the pod %q in namespace %q:\n%s", containerName, podName, namespace, string(logs))
 	}
 }
