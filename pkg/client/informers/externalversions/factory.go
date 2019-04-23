@@ -24,8 +24,8 @@ import (
 	time "time"
 
 	versioned "github.com/knative/eventing/pkg/client/clientset/versioned"
-	eventing "github.com/knative/eventing/pkg/client/informers/externalversions/eventing"
 	internalinterfaces "github.com/knative/eventing/pkg/client/informers/externalversions/internalinterfaces"
+	sources "github.com/knative/eventing/pkg/client/informers/externalversions/sources"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -172,9 +172,9 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
-	Eventing() eventing.Interface
+	Sources() sources.Interface
 }
 
-func (f *sharedInformerFactory) Eventing() eventing.Interface {
-	return eventing.New(f, f.namespace, f.tweakListOptions)
+func (f *sharedInformerFactory) Sources() sources.Interface {
+	return sources.New(f, f.namespace, f.tweakListOptions)
 }
