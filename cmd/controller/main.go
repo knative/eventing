@@ -28,6 +28,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
@@ -36,10 +37,10 @@ import (
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/channel"
 	"github.com/knative/eventing/pkg/reconciler/subscription"
 	"github.com/knative/eventing/pkg/reconciler/trigger"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/channel"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/configmap"
@@ -95,7 +96,7 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	logger = logger.With(zap.String("controller/impl", "pkg"))
 	logger.Info("Starting the controller")
 
-	const numControllers = 2
+	const numControllers = 3
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
@@ -121,6 +122,10 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 		subscription.NewController(
 			opt,
 			subscriptionInformer,
+		),
+		channel.NewController(
+			opt,
+			channelInformer,
 		),
 		trigger.NewController(
 			opt,
@@ -148,6 +153,7 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	if err := kncontroller.StartInformers(
 		stopCh,
 		subscriptionInformer.Informer(),
+		channelInformer.Informer(),
 		configMapInformer.Informer(),
 		triggerInformer.Informer(),
 		channelInformer.Informer(),
@@ -199,7 +205,6 @@ func startControllerRuntime(stopCh <-chan struct{}, cfg *rest.Config, logger *za
 	// Add each controller's ProvideController func to this list to have the
 	// manager run it.
 	providers := []ProvideFunc{
-		channel.ProvideController,
 		broker.ProvideController(
 			broker.ReconcilerArgs{
 				IngressImage:              getRequiredEnv("BROKER_INGRESS_IMAGE"),
