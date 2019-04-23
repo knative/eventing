@@ -19,9 +19,11 @@ package v1alpha1
 import (
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/kmeta"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // +genclient
@@ -38,6 +40,9 @@ type CronJobSource struct {
 
 // Check that CronJobSource can be validated and can be defaulted.
 var _ runtime.Object = (*CronJobSource)(nil)
+
+// Check that we can create OwnerReferences to a Configuration.
+var _ kmeta.OwnerRefable = (*CronJobSource)(nil)
 
 // Check that CronJobSource implements the Conditions duck type.
 var _ = duck.VerifyType(&CronJobSource{}, &duckv1alpha1.Conditions{})
@@ -59,6 +64,11 @@ type CronJobSourceSpec struct {
 	// ServiceAccoutName is the name of the ServiceAccount that will be used to run the Receive
 	// Adapter Deployment.
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+}
+
+// GetGroupVersionKind returns the GroupVersionKind.
+func (s *CronJobSource) GetGroupVersionKind() schema.GroupVersionKind {
+	return SchemeGroupVersion.WithKind("CronJobSource")
 }
 
 // CronJobSourceStatus defines the observed state of CronJobSource.

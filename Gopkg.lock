@@ -425,15 +425,13 @@
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
 [[projects]]
-  digest = "1:94171d9b3c7cfea54e726005e58044a2325ccf796ecf4bf025a3d20a1e145fba"
+  digest = "1:5923fb20c8ac5e5dcc2e7a9f8dfa702c72491f3905372454add6cbb59b0e39fb"
   name = "github.com/knative/eventing-sources"
   packages = [
     "pkg/apis/sources/v1alpha1",
     "pkg/controller/sdk",
-    "pkg/controller/sinks",
     "pkg/controller/testing",
     "pkg/kncloudevents",
-    "pkg/reconciler/containersource/resources",
   ]
   pruneopts = "NUT"
   revision = "32ce3778fa1bc46ed0b0ade16d5c57f343cafa4d"
@@ -1336,7 +1334,7 @@
   revision = "8a9b82f00b3a86eac24681da3f9fe6c34c01cea2"
 
 [[projects]]
-  digest = "1:399953e7c3ac9253dcf1fe909b0a74f6d1c4e974decefd6f5d361cab06249ccc"
+  digest = "1:b96e8e4a7931b07c33fdb206bfc4d27273bd599e48061500138ed69303388140"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/cache",
@@ -1346,7 +1344,6 @@
     "pkg/client/config",
     "pkg/client/fake",
     "pkg/controller",
-    "pkg/controller/controllerutil",
     "pkg/event",
     "pkg/handler",
     "pkg/internal/controller",
@@ -1391,11 +1388,8 @@
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/uuid",
     "github.com/knative/eventing-sources/pkg/apis/sources/v1alpha1",
-    "github.com/knative/eventing-sources/pkg/controller/sdk",
-    "github.com/knative/eventing-sources/pkg/controller/sinks",
     "github.com/knative/eventing-sources/pkg/controller/testing",
     "github.com/knative/eventing-sources/pkg/kncloudevents",
-    "github.com/knative/eventing-sources/pkg/reconciler/containersource/resources",
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
     "github.com/knative/pkg/apis/duck/v1alpha1",
@@ -1404,6 +1398,7 @@
     "github.com/knative/pkg/client/listers/istio/v1alpha3",
     "github.com/knative/pkg/configmap",
     "github.com/knative/pkg/controller",
+    "github.com/knative/pkg/kmeta",
     "github.com/knative/pkg/kmp",
     "github.com/knative/pkg/logging",
     "github.com/knative/pkg/logging/logkey",
@@ -1430,6 +1425,7 @@
     "go.uber.org/zap",
     "go.uber.org/zap/zapcore",
     "go.uber.org/zap/zaptest/observer",
+    "golang.org/x/net/context",
     "golang.org/x/oauth2/google",
     "google.golang.org/api/option",
     "gopkg.in/yaml.v2",
@@ -1459,6 +1455,7 @@
     "k8s.io/client-go/dynamic",
     "k8s.io/client-go/dynamic/fake",
     "k8s.io/client-go/informers",
+    "k8s.io/client-go/informers/apps/v1",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/kubernetes/scheme",
@@ -1482,7 +1479,6 @@
     "sigs.k8s.io/controller-runtime/pkg/client/config",
     "sigs.k8s.io/controller-runtime/pkg/client/fake",
     "sigs.k8s.io/controller-runtime/pkg/controller",
-    "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil",
     "sigs.k8s.io/controller-runtime/pkg/event",
     "sigs.k8s.io/controller-runtime/pkg/handler",
     "sigs.k8s.io/controller-runtime/pkg/manager",

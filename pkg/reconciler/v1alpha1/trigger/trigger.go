@@ -18,6 +18,7 @@ package trigger
 
 import (
 	"context"
+	"github.com/knative/eventing/pkg/duck"
 	"net/url"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -27,7 +28,6 @@ import (
 	brokerresources "github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/path"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/resources"
-	"github.com/knative/eventing/pkg/utils/resolve"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -251,7 +251,7 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return err
 	}
 
-	subscriberURI, err := resolve.SubscriberSpec(ctx, r.dynamicClient, t.Namespace, t.Spec.Subscriber)
+	subscriberURI, err := duck.SubscriberSpec(ctx, r.dynamicClient, t.Namespace, t.Spec.Subscriber)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Subscriber's URI", zap.Error(err))
 		return err

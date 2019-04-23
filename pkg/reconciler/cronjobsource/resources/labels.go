@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,19 +16,15 @@ limitations under the License.
 
 package resources
 
-import (
-	corev1 "k8s.io/api/core/v1"
+const (
+	// controllerAgentName is the string used by this controller to identify
+	// itself when creating events.
+	controllerAgentName = "cronjob-source-controller"
 )
 
-type ContainerArguments struct {
-	Name               string
-	Namespace          string
-	Image              string
-	Args               []string
-	Env                []corev1.EnvVar
-	ServiceAccountName string
-	SinkInArgs         bool
-	Sink               string
-	Annotations        map[string]string
-	Labels             map[string]string
+func Labels(name string) map[string]string {
+	return map[string]string{
+		"knative-eventing-source":      controllerAgentName,
+		"knative-eventing-source-name": name,
+	}
 }

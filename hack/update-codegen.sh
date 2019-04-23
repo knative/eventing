@@ -31,11 +31,6 @@ ${CODEGEN_PKG}/generate-groups.sh "deepcopy,client,informer,lister" \
   "eventing:v1alpha1 sources:v1alpha1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
-${CODEGEN_PKG}/generate-groups.sh "deepcopy,client,informer,lister" \
-  github.com/knative/eventing/pkg/client github.com/knative/eventing/pkg/apis \
-  "sources:v1alpha1" \
-  --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
-
 # Only deepcopy the Duck types, as they are not real resources.
 ${CODEGEN_PKG}/generate-groups.sh "deepcopy" \
   github.com/knative/eventing/pkg/client github.com/knative/eventing/pkg/apis \

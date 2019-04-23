@@ -14,29 +14,34 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package sinks
+package duck
 
 import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/dynamic"
+
+	duckapis "github.com/knative/pkg/apis"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GetSinkURI retrieves the sink URI from the object referenced by the given
 // ObjectReference.
-func GetSinkURI(ctx context.Context, c client.Client, sink *corev1.ObjectReference, namespace string) (string, error) {
+func GetSinkURI(ctx context.Context, dynamicClient dynamic.Interface, sink *corev1.ObjectReference, namespace string) (string, error) {
 	if sink == nil {
 		return "", fmt.Errorf("sink ref is nil")
 	}
 
-	u := &unstructured.Unstructured{}
-	u.SetGroupVersionKind(sink.GroupVersionKind())
-	err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: sink.Name}, u)
+	rc := dynamicClient.Resource(duckapis.KindToResource(sink.GroupVersionKind()))
+	if rc == nil {
+		return "", fmt.Errorf("failed to create dynamic client resource")
+	}
+
+	u, err := rc.Namespace(namespace).Get(sink.Name, metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}
