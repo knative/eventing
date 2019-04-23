@@ -48,15 +48,8 @@ rules:
       - "apps"
     resources:
       - "deployments/finalizers"
-    verbs: &everything
-      - get
-      - list
-      - watch
-      - create
+    verbs:
       - update
-      - patch
-      - delete
-
 
   # For actually registering our webhook.
   - apiGroups:
