@@ -362,7 +362,7 @@ func (r *reconciler) getBrokerFilterService(ctx context.Context, b *v1alpha1.Bro
 	list := &corev1.ServiceList{}
 	opts := &runtimeclient.ListOptions{
 		Namespace:     b.Namespace,
-		LabelSelector: labels.SelectorFromSet(brokerresources.FilterLabels(b)),
+		LabelSelector: labels.SelectorFromSet(brokerresources.FilterLabels(b.Name)),
 		// Set Raw because if we need to get more than one page, then we will put the continue token
 		// into opts.Raw.Continue.
 		Raw: &metav1.ListOptions{},
