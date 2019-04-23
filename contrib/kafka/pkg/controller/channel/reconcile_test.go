@@ -30,10 +30,11 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	util "github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/eventing/pkg/reconciler/names"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
+	"github.com/knative/pkg/system"
 	_ "github.com/knative/pkg/system/testing"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -70,7 +71,6 @@ var (
 func init() {
 	// Add types to scheme
 	eventingv1alpha1.AddToScheme(scheme.Scheme)
-	istiov1alpha3.AddToScheme(scheme.Scheme)
 }
 
 var mockFetchError = controllertesting.Mocks{
@@ -142,7 +142,6 @@ var testCases = []controllertesting.TestCase{
 		InitialState: []runtime.Object{
 			getNewClusterChannelProvisioner(clusterChannelProvisionerName, true),
 			getNewChannel(channelName, clusterChannelProvisionerName),
-			makeVirtualService(),
 		},
 		WantResult: reconcile.Result{
 			Requeue: true,
@@ -156,10 +155,10 @@ var testCases = []controllertesting.TestCase{
 		InitialState: []runtime.Object{
 			getNewClusterChannelProvisioner(clusterChannelProvisionerName, true),
 			getNewChannelWithStatusAndFinalizer(channelName, clusterChannelProvisionerName),
-			makeVirtualService(),
 		},
 		WantPresent: []runtime.Object{
 			getNewChannelProvisionedStatus(channelName, clusterChannelProvisionerName),
+			makeK8sService(),
 		},
 	},
 	{
@@ -523,18 +522,35 @@ func getNewClusterChannelProvisioner(name string, isReady bool) *eventingv1alpha
 	return clusterChannelProvisioner
 }
 
-func makeVirtualService() *istiov1alpha3.VirtualService {
-	return &istiov1alpha3.VirtualService{
+func om(namespace, name string) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Namespace: namespace,
+		Name:      name,
+		SelfLink:  fmt.Sprintf("/apis/eventing/v1alpha1/namespaces/%s/object/%s", namespace, name),
+		UID:       testUID,
+	}
+}
+
+func getControllerConfig() *controller.KafkaProvisionerConfig {
+	return &controller.KafkaProvisionerConfig{
+		Brokers: []string{"test-broker"},
+	}
+}
+
+func makeK8sService() *corev1.Service {
+	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: istiov1alpha3.SchemeGroupVersion.String(),
-			Kind:       "VirtualService",
+			APIVersion: "v1",
+			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-channel", testNS),
-			Namespace: testNS,
+			GenerateName: fmt.Sprintf("%s-channel-", channelName),
+			Namespace:    testNS,
 			Labels: map[string]string{
-				"channel":     channelName,
-				"provisioner": clusterChannelProvisionerName,
+				util.EventingChannelLabel:        channelName,
+				util.OldEventingChannelLabel:     channelName,
+				util.EventingProvisionerLabel:    clusterChannelProvisionerName,
+				util.OldEventingProvisionerLabel: clusterChannelProvisionerName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -547,38 +563,9 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 				},
 			},
 		},
-		Spec: istiov1alpha3.VirtualServiceSpec{
-			Hosts: []string{
-				serviceAddress,
-				fmt.Sprintf("%s.%s.channels.%s", channelName, testNS, utils.GetClusterDomainName()),
-			},
-			HTTP: []istiov1alpha3.HTTPRoute{{
-				Rewrite: &istiov1alpha3.HTTPRewrite{
-					Authority: fmt.Sprintf("%s.%s.channels.%s", channelName, testNS, utils.GetClusterDomainName()),
-				},
-				Route: []istiov1alpha3.HTTPRouteDestination{{
-					Destination: istiov1alpha3.Destination{
-						Host: "kafka-provisioner.knative-testing.svc." + utils.GetClusterDomainName(),
-						Port: istiov1alpha3.PortSelector{
-							Number: util.PortNumber,
-						},
-					}},
-				}},
-			},
+		Spec: corev1.ServiceSpec{
+			ExternalName: names.ServiceHostName(fmt.Sprintf("%s-dispatcher", clusterChannelProvisionerName), system.Namespace()),
+			Type:         "ExternalName",
 		},
-	}
-}
-
-func om(namespace, name string) metav1.ObjectMeta {
-	return metav1.ObjectMeta{
-		Namespace: namespace,
-		Name:      name,
-		SelfLink:  fmt.Sprintf("/apis/eventing/v1alpha1/namespaces/%s/object/%s", namespace, name),
-	}
-}
-
-func getControllerConfig() *controller.KafkaProvisionerConfig {
-	return &controller.KafkaProvisionerConfig{
-		Brokers: []string{"test-broker"},
 	}
 }

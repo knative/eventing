@@ -34,20 +34,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// Config for a multichannelfanout.Handler.
-type Config struct {
-	// The configuration of each channel in this handler.
-	ChannelConfigs []ChannelConfig `json:"channelConfigs"`
-}
-
-// ChannelConfig is the configuration for a single Channel.
-type ChannelConfig struct {
-	Namespace    string        `json:"namespace"`
-	Name         string        `json:"name"`
-	HostName     string        `json:"hostname"`
-	FanoutConfig fanout.Config `json:"fanoutConfig"`
-}
-
 // makeChannelKeyFromConfig creates the channel key for a given channelConfig. It is a helper around
 // MakeChannelKey.
 func makeChannelKeyFromConfig(config ChannelConfig) string {
@@ -74,7 +60,11 @@ func NewHandler(logger *zap.Logger, conf Config) (*Handler, error) {
 
 	for _, cc := range conf.ChannelConfigs {
 		key := makeChannelKeyFromConfig(cc)
-		handler := fanout.NewHandler(logger, cc.FanoutConfig)
+		handler, err := fanout.NewHandler(logger, cc.FanoutConfig)
+		if err != nil {
+			logger.Error("Failed creating new fanout handler.", zap.Error(err))
+			return nil, err
+		}
 		if _, present := handlers[key]; present {
 			logger.Error("Duplicate channel key", zap.String("channelKey", key))
 			return nil, fmt.Errorf("duplicate channel key: %v", key)
