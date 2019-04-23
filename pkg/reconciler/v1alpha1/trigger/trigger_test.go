@@ -197,7 +197,7 @@ func TestReconcile(t *testing.T) {
 				MockLists: []controllertesting.MockList{
 					func(_ client.Client, _ context.Context, opts *client.ListOptions, list runtime.Object) (controllertesting.MockHandled, error) {
 						// Only match the Trigger Channel labels.
-						ls := labels.FormatLabels(broker.TriggerChannelLabels(makeBroker()))
+						ls := labels.FormatLabels(broker.TriggerChannelLabels(makeBroker().Name))
 						l, _ := labels.ConvertSelectorToLabelsMap(ls)
 
 						if _, ok := list.(*v1alpha1.ChannelList); ok && opts.LabelSelector.Matches(l) {
@@ -230,7 +230,7 @@ func TestReconcile(t *testing.T) {
 				MockLists: []controllertesting.MockList{
 					func(_ client.Client, _ context.Context, opts *client.ListOptions, list runtime.Object) (handled controllertesting.MockHandled, e error) {
 						// Only match the Ingress Channel labels.
-						ls := labels.FormatLabels(broker.IngressChannelLabels(makeBroker()))
+						ls := labels.FormatLabels(broker.IngressChannelLabels(makeBroker().Name))
 						l, _ := labels.ConvertSelectorToLabelsMap(ls)
 
 						if _, ok := list.(*v1alpha1.ChannelList); ok && opts.LabelSelector.Matches(l) {

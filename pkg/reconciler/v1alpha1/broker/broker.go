@@ -170,10 +170,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		logging.FromContext(ctx).Debug("Broker reconciled")
 	}
 
-	if _, updateStatusErr := r.updateStatus(ctx, broker.DeepCopy()); updateStatusErr != nil {
-		logging.FromContext(ctx).Warn("Failed to update the Broker status", zap.Error(updateStatusErr))
-		r.Recorder.Eventf(broker, corev1.EventTypeWarning, brokerUpdateStatusFailed, "Failed to update Broker's status: %v", updateStatusErr)
-		return updateStatusErr
+	if _, err := r.updateStatus(ctx, broker.DeepCopy()); err != nil {
+		logging.FromContext(ctx).Warn("Failed to update the Broker status", zap.Error(err))
+		r.Recorder.Eventf(broker, corev1.EventTypeWarning, brokerUpdateStatusFailed, "Failed to update Broker's status: %v", err)
+		return err
 	}
 
 	// Requeue if the resource is not ready:
@@ -308,14 +308,14 @@ func (r *Reconciler) reconcileFilterService(ctx context.Context, b *v1alpha1.Bro
 
 func (r *Reconciler) reconcileTriggerChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
 	get := func() (*v1alpha1.Channel, error) {
-		return r.getChannel(ctx, b, labels.SelectorFromSet(TriggerChannelLabels(b)))
+		return r.getChannel(ctx, b, labels.SelectorFromSet(TriggerChannelLabels(b.Name)))
 	}
 	return r.reconcileChannel(ctx, get, newTriggerChannel(b))
 }
 
 func (r *Reconciler) reconcileIngressChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
 	get := func() (*v1alpha1.Channel, error) {
-		return r.getChannel(ctx, b, labels.SelectorFromSet(IngressChannelLabels(b)))
+		return r.getChannel(ctx, b, labels.SelectorFromSet(IngressChannelLabels(b.Name)))
 	}
 	return r.reconcileChannel(ctx, get, newIngressChannel(b))
 }
@@ -355,11 +355,11 @@ func (r *Reconciler) getChannel(ctx context.Context, b *v1alpha1.Broker, ls labe
 }
 
 func newTriggerChannel(b *v1alpha1.Broker) *v1alpha1.Channel {
-	return newChannel(b, TriggerChannelLabels(b))
+	return newChannel(b, TriggerChannelLabels(b.Name))
 }
 
 func newIngressChannel(b *v1alpha1.Broker) *v1alpha1.Channel {
-	return newChannel(b, IngressChannelLabels(b))
+	return newChannel(b, IngressChannelLabels(b.Name))
 }
 
 // newChannel creates a new Channel for Broker 'b'.
@@ -386,20 +386,20 @@ func newChannel(b *v1alpha1.Broker, l map[string]string) *v1alpha1.Channel {
 	}
 }
 
-// TriggerChannelLabels are all the labels placed on the Trigger Channel for the given Broker. This
+// TriggerChannelLabels are all the labels placed on the Trigger Channel for the given brokerName. This
 // should only be used by Broker and Trigger code.
-func TriggerChannelLabels(b *v1alpha1.Broker) map[string]string {
+func TriggerChannelLabels(brokerName string) map[string]string {
 	return map[string]string{
-		"eventing.knative.dev/broker":           b.Name,
+		"eventing.knative.dev/broker":           brokerName,
 		"eventing.knative.dev/brokerEverything": "true",
 	}
 }
 
-// IngressChannelLabels are all the labels placed on the Ingress Channel for the given Broker. This
+// IngressChannelLabels are all the labels placed on the Ingress Channel for the given brokerName. This
 // should only be used by Broker and Trigger code.
-func IngressChannelLabels(b *v1alpha1.Broker) map[string]string {
+func IngressChannelLabels(brokerName string) map[string]string {
 	return map[string]string{
-		"eventing.knative.dev/broker":        b.Name,
+		"eventing.knative.dev/broker":        brokerName,
 		"eventing.knative.dev/brokerIngress": "true",
 	}
 }
@@ -418,8 +418,10 @@ func (r *Reconciler) reconcileDeployment(ctx context.Context, d *v1.Deployment) 
 	}
 
 	if !equality.Semantic.DeepDerivative(d.Spec, current.Spec) {
-		current.Spec = d.Spec
-		current, err = r.KubeClientSet.AppsV1().Deployments(current.Namespace).Update(current)
+		// Don't modify the informers copy.
+		desired := current.DeepCopy()
+		desired.Spec = d.Spec
+		current, err = r.KubeClientSet.AppsV1().Deployments(current.Namespace).Update(desired)
 		if err != nil {
 			return nil, err
 		}
@@ -444,8 +446,10 @@ func (r *Reconciler) reconcileService(ctx context.Context, svc *corev1.Service) 
 	// encounter an error while updating.
 	svc.Spec.ClusterIP = current.Spec.ClusterIP
 	if !equality.Semantic.DeepDerivative(svc.Spec, current.Spec) {
-		current.Spec = svc.Spec
-		current, err = r.KubeClientSet.CoreV1().Services(svc.Namespace).Update(current)
+		// Don't modify the informers copy.
+		desired := current.DeepCopy()
+		desired.Spec = svc.Spec
+		current, err = r.KubeClientSet.CoreV1().Services(current.Namespace).Update(desired)
 		if err != nil {
 			return nil, err
 		}
