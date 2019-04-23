@@ -69,6 +69,13 @@ func WithBrokerChannelProvisioner(provisioner *corev1.ObjectReference) BrokerOpt
 	}
 }
 
+// WithBrokerAddress sets the Broker's address.
+func WithBrokerAddress(address string) BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		b.Status.SetAddress(address)
+	}
+}
+
 // MarkTriggerChannelFailed calls .Status.MarkTriggerChannelFailed on the Broker.
 func MarkTriggerChannelFailed(reason, format, arg string) BrokerOption {
 	return func(b *v1alpha1.Broker) {
@@ -90,6 +97,13 @@ func MarkIngressFailed(reason, format, arg string) BrokerOption {
 	}
 }
 
+// MarkIngressChannelFailed calls .Status.MarkIngressChannelFailed on the Broker.
+func MarkIngressChannelFailed(reason, format, arg string) BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		b.Status.MarkIngressChannelFailed(reason, format, arg)
+	}
+}
+
 // PropagateTriggerChannelReadiness calls .Status.PropagateTriggerChannelReadiness on the Broker.
 func PropagateTriggerChannelReadiness(cs *v1alpha1.ChannelStatus) BrokerOption {
 	return func(b *v1alpha1.Broker) {
@@ -101,5 +115,12 @@ func PropagateTriggerChannelReadiness(cs *v1alpha1.ChannelStatus) BrokerOption {
 func PropagateFilterDeploymentAvailability(d *v1.Deployment) BrokerOption {
 	return func(b *v1alpha1.Broker) {
 		b.Status.PropagateFilterDeploymentAvailability(d)
+	}
+}
+
+// PropagateIngressDeploymentAvailability calls .Status.PropagateIngressDeploymentAvailability on the Broker.
+func PropagateIngressDeploymentAvailability(d *v1.Deployment) BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		b.Status.PropagateIngressDeploymentAvailability(d)
 	}
 }
