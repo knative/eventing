@@ -41,22 +41,23 @@ rules:
       - "apps"
     resources:
       - "deployments"
-    verbs:
-      - "get"
+      - "deployments/finalizers"
+    verbs: &everything
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+
 
   # For actually registering our webhook.
   - apiGroups:
       - "admissionregistration.k8s.io"
     resources:
       - "mutatingwebhookconfigurations"
-    verbs:
-      - "get"
-      - "list"
-      - "create"
-      - "update"
-      - "delete"
-      - "patch"
-      - "watch"
+    verbs: *everything
 
   # Our own resources and statuses we care about.
   - apiGroups:
