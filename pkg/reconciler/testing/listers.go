@@ -98,6 +98,14 @@ func (l *Listers) GetSubscriptionLister() eventinglisters.SubscriptionLister {
 	return eventinglisters.NewSubscriptionLister(l.indexerFor(&eventingv1alpha1.Subscription{}))
 }
 
+func (l *Listers) GetTriggerLister() eventinglisters.TriggerLister {
+	return eventinglisters.NewTriggerLister(l.indexerFor(&eventingv1alpha1.Trigger{}))
+}
+
+func (l *Listers) GetBrokerLister() eventinglisters.BrokerLister {
+	return eventinglisters.NewBrokerLister(l.indexerFor(&eventingv1alpha1.Broker{}))
+}
+
 func (l *Listers) GetChannelLister() eventinglisters.ChannelLister {
 	return eventinglisters.NewChannelLister(l.indexerFor(&eventingv1alpha1.Channel{}))
 }
