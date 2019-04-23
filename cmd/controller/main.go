@@ -38,6 +38,7 @@ import (
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/channel"
+	"github.com/knative/eventing/pkg/reconciler/subscription"
 	"github.com/knative/eventing/pkg/reconciler/trigger"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
@@ -106,7 +107,6 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	triggerInformer := eventingInformerFactory.Eventing().V1alpha1().Triggers()
 	channelInformer := eventingInformerFactory.Eventing().V1alpha1().Channels()
 	subscriptionInformer := eventingInformerFactory.Eventing().V1alpha1().Subscriptions()
-	channelInformer := eventingInformerFactory.Eventing().V1alpha1().Channels()
 	brokerInformer := eventingInformerFactory.Eventing().V1alpha1().Brokers()
 	coreServiceInformer := kubeInformerFactory.Core().V1().Services()
 
