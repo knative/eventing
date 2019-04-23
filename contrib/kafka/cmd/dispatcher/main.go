@@ -18,38 +18,25 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
-	"os"
 
+	"github.com/knative/eventing/contrib/kafka/pkg/controller"
 	provisionerController "github.com/knative/eventing/contrib/kafka/pkg/controller"
 	"github.com/knative/eventing/contrib/kafka/pkg/dispatcher"
-	"github.com/knative/eventing/pkg/sidecar/configmap/watcher"
-	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/channelwatcher"
 	"github.com/knative/pkg/signals"
-	"github.com/knative/pkg/system"
 	"go.uber.org/zap"
-	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 func main() {
-	configMapName := os.Getenv("DISPATCHER_CONFIGMAP_NAME")
-	if configMapName == "" {
-		configMapName = provisionerController.DispatcherConfigMapName
-	}
-	configMapNamespace := os.Getenv("DISPATCHER_CONFIGMAP_NAMESPACE")
-	if configMapNamespace == "" {
-		configMapNamespace = system.Namespace()
-	}
-
 	flag.Parse()
 	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Fatalf("unable to create logger: %v", err)
 	}
-
 	provisionerConfig, err := provisionerController.GetProvisionerConfig("/etc/config-provisioner")
 	if err != nil {
 		logger.Fatal("unable to load provisioner config", zap.Error(err))
@@ -68,17 +55,12 @@ func main() {
 		logger.Fatal("Unable to add kafkaDispatcher", zap.Error(err))
 	}
 
-	kc, err := kubernetes.NewForConfig(mgr.GetConfig())
-	if err != nil {
-		logger.Fatal("unable to create kubernetes client.", zap.Error(err))
+	if err := v1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
+		logger.Fatal("Unable to add scheme for eventing apis.", zap.Error(err))
 	}
 
-	cmw, err := watcher.NewWatcher(logger, kc, configMapNamespace, configMapName, kafkaDispatcher.UpdateConfig)
-	if err != nil {
-		logger.Fatal("unable to create configMap watcher", zap.String("configMap", fmt.Sprintf("%s/%s", configMapNamespace, configMapName)))
-	}
-	if err = mgr.Add(utils.NewBlockingStart(logger, cmw)); err != nil {
-		logger.Fatal("Unable to add the configMap watcher to the manager", zap.Error(err))
+	if err := channelwatcher.New(mgr, logger, channelwatcher.UpdateConfigWatchHandler(kafkaDispatcher.UpdateConfig, shouldWatch)); err != nil {
+		logger.Fatal("Unable to create channel watcher.", zap.Error(err))
 	}
 
 	// set up signals so we handle the first shutdown signal gracefully
@@ -88,4 +70,10 @@ func main() {
 		logger.Fatal("Manager.Start() returned an error", zap.Error(err))
 	}
 	logger.Info("Exiting...")
+}
+
+func shouldWatch(ch *v1alpha1.Channel) bool {
+	return ch.Spec.Provisioner != nil &&
+		ch.Spec.Provisioner.Namespace == "" &&
+		ch.Spec.Provisioner.Name == controller.Name
 }

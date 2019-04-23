@@ -49,15 +49,6 @@ var _ runtime.Object = (*Broker)(nil)
 var _ webhook.GenericCRD = (*Broker)(nil)
 
 type BrokerSpec struct {
-	// TODO By enabling the status subresource metadata.generation should increment
-	// thus making this property obsolete.
-	//
-	// We should be able to drop this property with a CRD conversion webhook
-	// in the future
-	//
-	// +optional
-	DeprecatedGeneration int64 `json:"generation,omitempty"`
-
 	// ChannelTemplate, if specified will be used to create all the Channels used internally by the
 	// Broker. Only Provisioner and Arguments may be specified. If left unspecified, the default
 	// Channel for the namespace will be used.
@@ -65,8 +56,6 @@ type BrokerSpec struct {
 	// +optional
 	ChannelTemplate *ChannelSpec `json:"channelTemplate,omitempty"`
 }
-
-var brokerCondSet = duckv1alpha1.NewLivingConditionSet(BrokerConditionIngress, BrokerConditionChannel, BrokerConditionFilter, BrokerConditionAddressable)
 
 // BrokerStatus represents the current state of a Broker.
 type BrokerStatus struct {
@@ -81,68 +70,6 @@ type BrokerStatus struct {
 	//
 	// It generally has the form {broker}-router.{namespace}.svc.{cluster domain name}
 	Address duckv1alpha1.Addressable `json:"address,omitempty"`
-}
-
-const (
-	BrokerConditionReady = duckv1alpha1.ConditionReady
-
-	BrokerConditionIngress duckv1alpha1.ConditionType = "IngressReady"
-
-	BrokerConditionChannel duckv1alpha1.ConditionType = "ChannelReady"
-
-	BrokerConditionFilter duckv1alpha1.ConditionType = "FilterReady"
-
-	BrokerConditionAddressable duckv1alpha1.ConditionType = "Addressable"
-)
-
-// GetCondition returns the condition currently associated with the given type, or nil.
-func (bs *BrokerStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
-	return brokerCondSet.Manage(bs).GetCondition(t)
-}
-
-// IsReady returns true if the resource is ready overall.
-func (bs *BrokerStatus) IsReady() bool {
-	return brokerCondSet.Manage(bs).IsHappy()
-}
-
-// InitializeConditions sets relevant unset conditions to Unknown state.
-func (bs *BrokerStatus) InitializeConditions() {
-	brokerCondSet.Manage(bs).InitializeConditions()
-}
-
-func (bs *BrokerStatus) MarkIngressReady() {
-	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngress)
-}
-
-func (bs *BrokerStatus) MarkIngressFailed(err error) {
-	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngress, "failed", "%v", err)
-}
-
-func (bs *BrokerStatus) MarkChannelReady() {
-	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionChannel)
-}
-
-func (bs *BrokerStatus) MarkChannelFailed(err error) {
-	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionChannel, "failed", "%v", err)
-}
-
-func (bs *BrokerStatus) MarkFilterReady() {
-	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionFilter)
-}
-
-func (bs *BrokerStatus) MarkFilterFailed(err error) {
-	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionFilter, "failed", "%v", err)
-}
-
-// SetAddress makes this Broker addressable by setting the hostname. It also
-// sets the BrokerConditionAddressable to true.
-func (bs *BrokerStatus) SetAddress(hostname string) {
-	bs.Address.Hostname = hostname
-	if hostname != "" {
-		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionAddressable)
-	} else {
-		brokerCondSet.Manage(bs).MarkFalse(BrokerConditionAddressable, "emptyHostname", "hostname is the empty string")
-	}
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

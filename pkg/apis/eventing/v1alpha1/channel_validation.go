@@ -17,18 +17,19 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/kmp"
 )
 
-func (c *Channel) Validate() *apis.FieldError {
-	return c.Spec.Validate().ViaField("spec")
+func (c *Channel) Validate(ctx context.Context) *apis.FieldError {
+	return c.Spec.Validate(ctx).ViaField("spec")
 }
 
-func (cs *ChannelSpec) Validate() *apis.FieldError {
+func (cs *ChannelSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 	if cs.Provisioner == nil {
 		errs = errs.Also(apis.ErrMissingField("provisioner"))
@@ -47,7 +48,7 @@ func (cs *ChannelSpec) Validate() *apis.FieldError {
 	return errs
 }
 
-func (current *Channel) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
+func (c *Channel) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
 	if og == nil {
 		return nil
 	}
@@ -56,7 +57,13 @@ func (current *Channel) CheckImmutableFields(og apis.Immutable) *apis.FieldError
 		return &apis.FieldError{Message: "The provided resource was not a Channel"}
 	}
 	ignoreArguments := cmpopts.IgnoreFields(ChannelSpec{}, "Arguments", "Subscribable")
-	if diff := cmp.Diff(original.Spec, current.Spec, ignoreArguments); diff != "" {
+	if diff, err := kmp.ShortDiff(original.Spec, c.Spec, ignoreArguments); err != nil {
+		return &apis.FieldError{
+			Message: "Failed to diff Channel",
+			Paths:   []string{"spec"},
+			Details: err.Error(),
+		}
+	} else if diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed",
 			Paths:   []string{"spec.provisioner"},

@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -96,7 +97,7 @@ func TestChannelSetDefaults(t *testing.T) {
 				}
 				defer func() { ChannelDefaulterSingleton = nil }()
 			}
-			tc.initial.SetDefaults()
+			tc.initial.SetDefaults(context.TODO())
 			if diff := cmp.Diff(tc.expected, tc.initial); diff != "" {
 				t.Fatalf("Unexpected defaults (-want, +got): %s", diff)
 			}

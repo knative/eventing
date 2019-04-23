@@ -18,11 +18,8 @@ package channel
 
 import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
-	"github.com/knative/pkg/system"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -33,18 +30,6 @@ const (
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
 	controllerAgentName = "in-memory-channel-controller"
-
-	// ConfigMapName is the name of the ConfigMap in the knative-eventing namespace that contains
-	// the subscription information for all in-memory Channels. The Provisioner writes to it and the
-	// Dispatcher reads from it.
-	ConfigMapName = "in-memory-channel-dispatcher-config-map"
-)
-
-var (
-	defaultConfigMapKey = types.NamespacedName{
-		Namespace: system.Namespace(),
-		Name:      ConfigMapName,
-	}
 )
 
 // ProvideController returns a Controller that represents the in-memory-channel Provisioner.
@@ -52,9 +37,8 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 	// Setup a new controller to Reconcile Channels that belong to this Cluster Provisioner
 	// (in-memory channels).
 	r := &reconciler{
-		configMapKey: defaultConfigMapKey,
-		recorder:     mgr.GetRecorder(controllerAgentName),
-		logger:       logger,
+		recorder: mgr.GetRecorder(controllerAgentName),
+		logger:   logger,
 	}
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: r,
@@ -79,15 +63,6 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 	}, &handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.Channel{}, IsController: true})
 	if err != nil {
 		logger.Error("Unable to watch K8s Services.", zap.Error(err))
-		return nil, err
-	}
-
-	// Watch the VirtualServices that are owned by Channels.
-	err = c.Watch(&source.Kind{
-		Type: &istiov1alpha3.VirtualService{},
-	}, &handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.Channel{}, IsController: true})
-	if err != nil {
-		logger.Error("Unable to watch VirtualServices.", zap.Error(err))
 		return nil, err
 	}
 

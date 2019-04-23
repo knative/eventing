@@ -22,7 +22,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/knative/eventing/contrib/natss/pkg/controller/clusterchannelprovisioner"
 	"github.com/knative/eventing/contrib/natss/pkg/stanutil"
 	"github.com/knative/eventing/pkg/provisioners"
 	stan "github.com/nats-io/go-nats-streaming"
@@ -52,8 +51,9 @@ type SubscriptionsSupervisor struct {
 	subscriptionsMux sync.Mutex
 	subscriptions    map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription
 
-	connect  chan struct{}
-	natssURL string
+	connect   chan struct{}
+	natssURL  string
+	clusterID string
 	// natConnMux is used to protect natssConn and natssConnInProgress during
 	// the transition from not connected to connected states.
 	natssConnMux        sync.Mutex
@@ -62,15 +62,20 @@ type SubscriptionsSupervisor struct {
 }
 
 // NewDispatcher returns a new SubscriptionsSupervisor.
-func NewDispatcher(natssUrl string, logger *zap.Logger) (*SubscriptionsSupervisor, error) {
+func NewDispatcher(natssURL, clusterID string, logger *zap.Logger) (*SubscriptionsSupervisor, error) {
 	d := &SubscriptionsSupervisor{
 		logger:        logger,
 		dispatcher:    provisioners.NewMessageDispatcher(logger.Sugar()),
 		connect:       make(chan struct{}, maxElements),
-		natssURL:      natssUrl,
+		natssURL:      natssURL,
+		clusterID:     clusterID,
 		subscriptions: make(map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription),
 	}
-	d.receiver = provisioners.NewMessageReceiver(createReceiverFunction(d, logger.Sugar()), logger.Sugar())
+	receiver, err := provisioners.NewMessageReceiver(createReceiverFunction(d, logger.Sugar()), logger.Sugar())
+	if err != nil {
+		return nil, err
+	}
+	d.receiver = receiver
 
 	return d, nil
 }
@@ -128,7 +133,7 @@ func (s *SubscriptionsSupervisor) connectWithRetry(stopCh <-chan struct{}) {
 	ticker := time.NewTicker(retryInterval)
 	defer ticker.Stop()
 	for {
-		nConn, err := stanutil.Connect(clusterchannelprovisioner.ClusterId, clientID, s.natssURL, s.logger.Sugar())
+		nConn, err := stanutil.Connect(s.clusterID, clientID, s.natssURL, s.logger.Sugar())
 		if err == nil {
 			// Locking here in order to reduce time in locked state.
 			s.natssConnMux.Lock()
@@ -230,13 +235,13 @@ func (s *SubscriptionsSupervisor) subscribe(channel provisioners.ChannelReferenc
 	s.logger.Info("Subscribe to channel:", zap.Any("channel", channel), zap.Any("subscription", subscription))
 
 	mcb := func(msg *stan.Msg) {
-		s.logger.Sugar().Infof("NATSS message received from subject: %v; sequence: %v; timestamp: %v, data: %s", msg.Subject, msg.Sequence, msg.Timestamp, string(msg.Data))
 		message := provisioners.Message{}
 		if err := json.Unmarshal(msg.Data, &message); err != nil {
 			s.logger.Error("Failed to unmarshal message: ", zap.Error(err))
 			return
 		}
-		if err := s.dispatcher.DispatchMessage(&message, subscription.SubscriberURI, subscription.ReplyURI, provisioners.DispatchDefaults{Namespace: subscription.Namespace}); err != nil {
+		s.logger.Sugar().Infof("NATSS message received from subject: %v; sequence: %v; timestamp: %v, headers: '%s'", msg.Subject, msg.Sequence, msg.Timestamp, message.Headers)
+		if err := s.dispatcher.DispatchMessage(&message, subscription.SubscriberURI, subscription.ReplyURI, provisioners.DispatchDefaults{Namespace: channel.Namespace}); err != nil {
 			s.logger.Error("Failed to dispatch message: ", zap.Error(err))
 			return
 		}

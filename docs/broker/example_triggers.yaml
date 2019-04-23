@@ -65,8 +65,8 @@ spec:
 
 ---
 
-# We can filter on either the event's type, source, or both. The special value
-# 'Any' matches everything. If either is not specified, it defaults to 'Any'.
+# We can filter on either the event's type, source, or both. The special value,
+# empty string matches everything. If either is not specified, it defaults to ''.
 
 ---
 
@@ -101,7 +101,7 @@ spec:
     sourceAndType:
       source: dev.knative.bar
       # The Webhook will default this in, but it does not hurt to specify it.
-      type: Any
+      type: ""
   subscriber:
     ref:
       apiVersion: serving.knative.dev/v1alpha1

@@ -159,8 +159,18 @@ var _ duck.Populatable = (*KResource)(nil)
 var _ apis.Listable = (*KResource)(nil)
 
 // GetFullType implements duck.Implementable
-func (_ *Conditions) GetFullType() duck.Populatable {
+func (*Conditions) GetFullType() duck.Populatable {
 	return &KResource{}
+}
+
+// GetCondition fetches the condition of the specified type.
+func (s *Status) GetCondition(t ConditionType) *Condition {
+	for _, cond := range s.Conditions {
+		if cond.Type == t {
+			return &cond
+		}
+	}
+	return nil
 }
 
 // Populate implements duck.Populatable
@@ -177,7 +187,7 @@ func (t *KResource) Populate() {
 }
 
 // GetListType implements apis.Listable
-func (r *KResource) GetListType() runtime.Object {
+func (*KResource) GetListType() runtime.Object {
 	return &KResourceList{}
 }
 

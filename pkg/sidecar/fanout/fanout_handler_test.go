@@ -203,9 +203,6 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		},
 	}
 	for n, tc := range testCases {
-		if n != "fanout times out" {
-			//continue
-		}
 		t.Run(n, func(t *testing.T) {
 			callableServer := httptest.NewServer(&fakeHandler{
 				handler: tc.subscriber,
@@ -228,12 +225,19 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 				subs = append(subs, sub)
 			}
 
-			h := NewHandler(zap.NewNop(), Config{Subscriptions: subs})
+			h, err := NewHandler(zap.NewNop(), Config{Subscriptions: subs})
+			if err != nil {
+				t.Fatalf("NewHandler failed. Error:%s", err)
+			}
 			if tc.asyncHandler {
 				h.config.AsyncHandler = true
 			}
 			if tc.receiverFunc != nil {
-				h.receiver = provisioners.NewMessageReceiver(tc.receiverFunc, zap.NewNop().Sugar())
+				receiver, err := provisioners.NewMessageReceiver(tc.receiverFunc, zap.NewNop().Sugar())
+				if err != nil {
+					t.Fatalf("NewMessageReceiver failed. Error:%s", err)
+				}
+				h.receiver = receiver
 			}
 			if tc.timeout != 0 {
 				h.timeout = tc.timeout
@@ -256,7 +260,7 @@ type fakeHandler struct {
 }
 
 func (h *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	r.Body.Close()
+	_ = r.Body.Close()
 	h.handler(w, r)
 }
 
@@ -277,5 +281,5 @@ func body(body string) io.ReadCloser {
 }
 func callableSucceed(writer http.ResponseWriter, _ *http.Request) {
 	writer.WriteHeader(http.StatusOK)
-	writer.Write([]byte(cloudEvent))
+	_, _ = writer.Write([]byte(cloudEvent))
 }

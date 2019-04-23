@@ -33,6 +33,8 @@ This is a helper script to run the presubmit tests. To use it:
    - `DISABLE_MD_LINTING`: Disable linting markdown files, defaults to 0 (false).
    - `DISABLE_MD_LINK_CHECK`: Disable checking links in markdown files, defaults
      to 0 (false).
+   - `PRESUBMIT_TEST_FAIL_FAST`: Fail the presubmit test immediately if a test fails,
+     defaults to 0 (false).
 
 1. [optional] Define the functions `pre_build_tests()` and/or
    `post_build_tests()`. These functions will be called before or after the
@@ -106,8 +108,10 @@ This is a helper script for Knative E2E test scripts. To use it:
    if the default values don't fit your needs:
 
    - `E2E_CLUSTER_REGION`: Cluster region, defaults to `us-central1`.
+   - `E2E_CLUSTER_BACKUP_REGIONS`: Space-separated list of regions to retry test cluster creation in case of stockout. Defaults to `us-west1 us-east1`.
    - `E2E_CLUSTER_ZONE`: Cluster zone (e.g., `a`), defaults to none (i.e. use a regional
      cluster).
+   - `E2E_CLUSTER_BACKUP_ZONES`: Space-separated list of zones to retry test cluster creation in case of stockout. If defined, `E2E_CLUSTER_BACKUP_REGIONS` will be ignored thus it defaults to none.
    - `E2E_CLUSTER_MACHINE`: Cluster node machine type, defaults to `n1-standard-4}`.
    - `E2E_MIN_CLUSTER_NODES`: Minimum number of nodes in the cluster when autoscaling,
      defaults to 1.
@@ -129,6 +133,12 @@ This is a helper script for Knative E2E test scripts. To use it:
 
 1. [optional] Write the `test_teardown()` function, which will tear down the test
    resources.
+
+1. [optional] Write the `cluster_setup()` function, which will set up any resources
+   before the test cluster is created.
+
+1. [optional] Write the `cluster_teardown()` function, which will tear down any
+   resources after the test cluster is destroyed.
 
 1. [optional] Write the `dump_extra_cluster_state()` function. It will be
    called when a test fails, and can dump extra information about the current state

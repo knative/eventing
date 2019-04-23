@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/knative/eventing/contrib/natss/pkg/controller/clusterchannelprovisioner"
 	"github.com/knative/eventing/contrib/natss/pkg/stanutil"
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -47,7 +46,7 @@ const (
 )
 
 var (
-	clusterID   = clusterchannelprovisioner.ClusterId
+	clusterID   = "knative-nats-streaming"
 	logger      *zap.SugaredLogger
 	core        zapcore.Core
 	observed    *observer.ObservedLogs
@@ -56,18 +55,10 @@ var (
 	subscribers = &v1alpha1.Subscribable{
 		Subscribers: []v1alpha1.ChannelSubscriberSpec{
 			{
-				Ref: &corev1.ObjectReference{
-					Name:      "sub-name1",
-					Namespace: "sub-namespace1",
-					UID:       "sub-uid1",
-				},
+				UID: "sub-uid1",
 			},
 			{
-				Ref: &corev1.ObjectReference{
-					Name:      "sub-name2",
-					Namespace: "sub-namespace2",
-					UID:       "sub-uid2",
-				},
+				UID: "sub-uid2",
 			},
 		},
 	}
@@ -86,7 +77,7 @@ func TestMain(m *testing.M) {
 	}
 	defer stopNatss(stanServer)
 	// Create and start Dispatcher.
-	s, err = NewDispatcher(natssTestURL, testLogger)
+	s, err = NewDispatcher(natssTestURL, clusterID, testLogger)
 	if err != nil {
 		logger.Fatalf("Unable to create NATSS dispatcher: %v", err)
 	}
@@ -119,7 +110,7 @@ func TestSubscribeUnsubscribe(t *testing.T) {
 	logger.Info("TestSubscribeUnsubscribe()")
 
 	cRef := provisioners.ChannelReference{Namespace: "test_namespace", Name: "test_channel"}
-	sRef := subscriptionReference{Name: "sub_name_2", Namespace: "sub_namespace_2", SubscriberURI: "", ReplyURI: ""}
+	sRef := subscriptionReference{UID: "sub_name_2", SubscriberURI: "", ReplyURI: ""}
 
 	// subscribe to a channel
 	if _, err := s.subscribe(cRef, sRef); err != nil {
@@ -134,7 +125,7 @@ func TestMalformedMessage(t *testing.T) {
 	logger.Info("TestMalformedMessage()")
 
 	cRef := provisioners.ChannelReference{Namespace: "test_namespace", Name: "test_channel"}
-	sRef := subscriptionReference{Name: "sub_name", Namespace: "sub_namespace", SubscriberURI: "", ReplyURI: ""}
+	sRef := subscriptionReference{UID: "sub_name", SubscriberURI: "", ReplyURI: ""}
 
 	// subscribe to a channel
 	if _, err := s.subscribe(cRef, sRef); err != nil {
@@ -186,7 +177,10 @@ func TestUpdateSubscriptions(t *testing.T) {
 		t.Errorf("UpdateSubscriptions failed: %v", err)
 	}
 
-	cRef := provisioners.ChannelReference{c.Namespace, c.Name}
+	cRef := provisioners.ChannelReference{
+		Namespace: c.Namespace,
+		Name:      c.Name,
+	}
 	chMap, ok := s.subscriptions[cRef]
 	if !ok {
 		t.Error("No channel map found")

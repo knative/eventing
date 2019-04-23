@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -25,8 +26,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
-
-var dnsName = "example.com"
 
 func TestChannelValidation(t *testing.T) {
 	tests := []CRDTest{{
@@ -200,7 +199,7 @@ func TestChannelImmutableFields(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.new.CheckImmutableFields(test.old)
+			got := test.new.CheckImmutableFields(context.TODO(), test.old)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("Validate (-want, +got) = %v", diff)
 			}

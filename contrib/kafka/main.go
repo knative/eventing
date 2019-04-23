@@ -4,20 +4,19 @@ import (
 	"flag"
 	"os"
 
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
+	provisionerController "github.com/knative/eventing/contrib/kafka/pkg/controller"
+	"github.com/knative/eventing/contrib/kafka/pkg/controller/channel"
+	eventingv1alpha "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
-
-	provisionerController "github.com/knative/eventing/contrib/kafka/pkg/controller"
-	"github.com/knative/eventing/contrib/kafka/pkg/controller/channel"
-	eventingv1alpha "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners"
+	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 const (
@@ -47,7 +46,6 @@ func main() {
 	// Add custom types to this array to get them into the manager's scheme.
 	schemeFuncs := []SchemeFunc{
 		eventingv1alpha.AddToScheme,
-		istiov1alpha3.AddToScheme,
 	}
 	for _, schemeFunc := range schemeFuncs {
 		schemeFunc(mgr.GetScheme())

@@ -17,8 +17,6 @@ limitations under the License.
 package clusterchannelprovisioner
 
 import (
-	"fmt"
-
 	"github.com/knative/eventing/contrib/natss/pkg/stanutil"
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -27,25 +25,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 )
 
 const (
-	// NATSS
-	ClusterId    = "knative-nats-streaming"
-	NatssUrlTmpl = "nats://nats-streaming.natss.svc.%s:4222"
-	clientId     = "knative-natss-controller"
+	clientID = "knative-natss-controller"
 	// controllerAgentName is the string used by this controller to identify itself when creating events.
 	controllerAgentName = "natss-provisioner-controller"
 )
 
 // ProvideController returns a flow controller.
-func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
+func ProvideController(mgr manager.Manager, natssURL, clusterID string, logger *zap.Logger) (controller.Controller, error) {
 	// check the connection to NATSS
 	var err error
-	natssUrl := fmt.Sprintf(NatssUrlTmpl, utils.GetClusterDomainName())
-	if _, err := stanutil.Connect(ClusterId, clientId, natssUrl, logger.Sugar()); err != nil {
+	if _, err := stanutil.Connect(clusterID, clientID, natssURL, logger.Sugar()); err != nil {
 		logger.Error("Connect() failed: ", zap.Error(err))
 		return nil, err
 	}

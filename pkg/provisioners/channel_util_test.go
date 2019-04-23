@@ -37,8 +37,8 @@ const (
 var (
 	truePointer = true
 
-	notFound         = k8serrors.NewNotFound(corev1.Resource("any"), "any")
-	testInducedError = errors.New("test-induced-error")
+	notFound       = k8serrors.NewNotFound(corev1.Resource("any"), "any")
+	errTestInduced = errors.New("test-induced-error")
 )
 
 func init() {
@@ -87,7 +87,7 @@ func TestChannelUtils(t *testing.T) {
 		f: func() (metav1.Object, error) {
 			existing := makeVirtualService()
 			destHost := fmt.Sprintf("%s-clusterbus.knative-eventing.svc.%s", clusterChannelProvisionerName, utils.GetClusterDomainName())
-			existing.Spec.Http[0].Route[0].Destination.Host = destHost
+			existing.Spec.HTTP[0].Route[0].Destination.Host = destHost
 			client := fake.NewFakeClient(existing)
 			CreateVirtualService(context.TODO(), client, getNewChannel(), makeK8sService())
 
@@ -143,15 +143,15 @@ func TestCreateK8sService(t *testing.T) {
 	}{
 		"error getting svc": {
 			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, _ runtime.Object) (controllertesting.MockHandled, error) {
-				return controllertesting.Handled, testInducedError
+				return controllertesting.Handled, errTestInduced
 			},
-			err: testInducedError,
+			err: errTestInduced,
 		},
 		"not found - create error": {
 			create: func(_ runtimeClient.Client, _ context.Context, _ runtime.Object) (controllertesting.MockHandled, error) {
-				return controllertesting.Handled, testInducedError
+				return controllertesting.Handled, errTestInduced
 			},
-			err: testInducedError,
+			err: errTestInduced,
 		},
 		"not found - create succeeds": {
 			create: func(_ runtimeClient.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
@@ -182,9 +182,9 @@ func TestCreateK8sService(t *testing.T) {
 				return controllertesting.Handled, nil
 			},
 			update: func(_ runtimeClient.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-				return controllertesting.Handled, testInducedError
+				return controllertesting.Handled, errTestInduced
 			},
-			err: testInducedError,
+			err: errTestInduced,
 		},
 		"different spec - update succeeds": {
 			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
@@ -265,15 +265,15 @@ func TestCreateVirtualService(t *testing.T) {
 	}{
 		"error getting svc": {
 			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, _ runtime.Object) (controllertesting.MockHandled, error) {
-				return controllertesting.Handled, testInducedError
+				return controllertesting.Handled, errTestInduced
 			},
-			err: testInducedError,
+			err: errTestInduced,
 		},
 		"not found - create error": {
 			create: func(_ runtimeClient.Client, _ context.Context, _ runtime.Object) (controllertesting.MockHandled, error) {
-				return controllertesting.Handled, testInducedError
+				return controllertesting.Handled, errTestInduced
 			},
-			err: testInducedError,
+			err: errTestInduced,
 		},
 		"not found - create succeeds": {
 			create: func(_ runtimeClient.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
@@ -304,9 +304,9 @@ func TestCreateVirtualService(t *testing.T) {
 				return controllertesting.Handled, nil
 			},
 			update: func(_ runtimeClient.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-				return controllertesting.Handled, testInducedError
+				return controllertesting.Handled, errTestInduced
 			},
-			err: testInducedError,
+			err: errTestInduced,
 		},
 		"different spec - update succeeds": {
 			list: func(_ runtimeClient.Client, _ context.Context, _ *runtimeClient.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
@@ -399,6 +399,35 @@ func TestAddFinalizer(t *testing.T) {
 				t.Errorf("Finalizer already present, expected FinalizerAlreadyPresent. Actual %v", addFinalizerResult)
 			} else if !tc.alreadyPresent && addFinalizerResult != FinalizerAdded {
 				t.Errorf("Finalizer not already present, expected FinalizerAdded. Actual %v", addFinalizerResult)
+			}
+		})
+	}
+}
+
+func TestRemoveFinalizer(t *testing.T) {
+	testCases := map[string]struct {
+		expected RemoveFinalizerResult
+	}{
+		"Finalizer not found": {
+			expected: false,
+		},
+		"Finalizer removed successfully": {
+			expected: true,
+		},
+	}
+	finalizer := "test-finalizer"
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			c := getNewChannel()
+			if tc.expected {
+				c.Finalizers = []string{finalizer}
+			} else {
+				c.Finalizers = []string{}
+			}
+			actual := RemoveFinalizer(c, finalizer)
+
+			if diff := cmp.Diff(actual, tc.expected); diff != "" {
+				t.Errorf("unexpected error (-want, +got) = %v", diff)
 			}
 		})
 	}
@@ -597,8 +626,9 @@ func makeK8sService() *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
-					Name: PortName,
-					Port: PortNumber,
+					Name:     PortName,
+					Port:     PortNumber,
+					Protocol: corev1.ProtocolTCP,
 				},
 			},
 		},
@@ -642,11 +672,11 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 				fmt.Sprintf("%s.%s.svc.%s", "", testNS, utils.GetClusterDomainName()),
 				fmt.Sprintf("%s.%s.channels.%s", channelName, testNS, utils.GetClusterDomainName()),
 			},
-			Http: []istiov1alpha3.HTTPRoute{{
+			HTTP: []istiov1alpha3.HTTPRoute{{
 				Rewrite: &istiov1alpha3.HTTPRewrite{
 					Authority: fmt.Sprintf("%s.%s.channels.%s", channelName, testNS, utils.GetClusterDomainName()),
 				},
-				Route: []istiov1alpha3.DestinationWeight{{
+				Route: []istiov1alpha3.HTTPRouteDestination{{
 					Destination: istiov1alpha3.Destination{
 						Host: fmt.Sprintf("%s-dispatcher.knative-testing.svc.%s", clusterChannelProvisionerName, utils.GetClusterDomainName()),
 						Port: istiov1alpha3.PortSelector{

@@ -72,7 +72,7 @@ func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Cont
 
 	// Watch channel events
 	// This controller is no-op when Channels are deleted
-	if err := c.Watch(
+	if err = c.Watch(
 		&source.Kind{Type: &v1alpha1.Channel{}},
 		&handler.EnqueueRequestForObject{},
 		predicate.Funcs{
@@ -137,6 +137,7 @@ func (r *reconciler) reconcile(ctx context.Context, ch *v1alpha1.Channel) error 
 	return nil
 }
 
+// InjectClient implements controller runtime's inject.Client.
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	return nil

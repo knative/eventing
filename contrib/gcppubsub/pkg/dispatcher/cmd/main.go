@@ -61,7 +61,10 @@ func main() {
 	// PubSub) and the dispatcher (takes messages in PubSub and sends them in cluster) in this
 	// binary.
 
-	_, runnables := receiver.New(logger.Desugar(), mgr.GetClient(), util.GcpPubSubClientCreator)
+	_, runnables, err := receiver.New(logger.Desugar(), mgr.GetClient(), util.GcpPubSubClientCreator)
+	if err != nil {
+		logger.Fatal("Unable to create new receiver and runnable", zap.Error(err))
+	}
 	for _, runnable := range runnables {
 		err = mgr.Add(runnable)
 		if err != nil {

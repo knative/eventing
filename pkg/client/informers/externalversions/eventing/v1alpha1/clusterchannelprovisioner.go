@@ -21,7 +21,7 @@ package v1alpha1
 import (
 	time "time"
 
-	eventing_v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	versioned "github.com/knative/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/knative/eventing/pkg/client/informers/externalversions/internalinterfaces"
 	v1alpha1 "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -69,7 +69,7 @@ func NewFilteredClusterChannelProvisionerInformer(client versioned.Interface, re
 				return client.EventingV1alpha1().ClusterChannelProvisioners().Watch(options)
 			},
 		},
-		&eventing_v1alpha1.ClusterChannelProvisioner{},
+		&eventingv1alpha1.ClusterChannelProvisioner{},
 		resyncPeriod,
 		indexers,
 	)
@@ -80,7 +80,7 @@ func (f *clusterChannelProvisionerInformer) defaultInformer(client versioned.Int
 }
 
 func (f *clusterChannelProvisionerInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&eventing_v1alpha1.ClusterChannelProvisioner{}, f.defaultInformer)
+	return f.factory.InformerFor(&eventingv1alpha1.ClusterChannelProvisioner{}, f.defaultInformer)
 }
 
 func (f *clusterChannelProvisionerInformer) Lister() v1alpha1.ClusterChannelProvisionerLister {

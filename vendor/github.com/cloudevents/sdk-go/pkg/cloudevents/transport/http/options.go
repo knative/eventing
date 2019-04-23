@@ -5,8 +5,10 @@ import (
 	nethttp "net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
+// Option is the function signature required to be considered an http.Option.
 type Option func(*Transport) error
 
 // WithTarget sets the outbound recipient of cloudevents when using an HTTP
@@ -53,6 +55,39 @@ func WithMethod(method string) Option {
 			return nil
 		}
 		return fmt.Errorf("http method option was empty string")
+	}
+}
+
+// WithHeader sets an additional default outbound header for all cloudevents
+// when using an HTTP request.
+func WithHeader(key, value string) Option {
+	return func(t *Transport) error {
+		if t == nil {
+			return fmt.Errorf("http header option can not set nil transport")
+		}
+		key = strings.TrimSpace(key)
+		if key != "" {
+			if t.Req == nil {
+				t.Req = &nethttp.Request{}
+			}
+			if t.Req.Header == nil {
+				t.Req.Header = nethttp.Header{}
+			}
+			t.Req.Header.Add(key, value)
+			return nil
+		}
+		return fmt.Errorf("http header option was empty string")
+	}
+}
+
+// WithShutdownTimeout sets the shutdown timeout when the http server is being shutdown.
+func WithShutdownTimeout(timeout time.Duration) Option {
+	return func(t *Transport) error {
+		if t == nil {
+			return fmt.Errorf("http shutdown timeout option can not set nil transport")
+		}
+		t.ShutdownTimeout = &timeout
+		return nil
 	}
 }
 

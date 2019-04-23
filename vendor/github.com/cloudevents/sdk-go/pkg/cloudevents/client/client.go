@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/observability"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"sync"
 )
 
+// Client interface defines the runtime contract the CloudEvents client supports.
 type Client interface {
 	// Send will transmit the given event over the client's configured transport.
 	Send(ctx context.Context, event cloudevents.Event) (*cloudevents.Event, error)
@@ -35,6 +37,8 @@ type Client interface {
 	StartReceiver(ctx context.Context, fn interface{}) error
 }
 
+// New produces a new client with the provided transport object and applied
+// client options.
 func New(t transport.Transport, opts ...Option) (Client, error) {
 	c := &ceClient{
 		transport: t,
@@ -47,7 +51,11 @@ func New(t transport.Transport, opts ...Option) (Client, error) {
 }
 
 // NewDefault provides the good defaults for the common case using an HTTP
-// Transport client.
+// Transport client. The http transport has had WithBinaryEncoding http
+// transport option applied to it. The client will always send Binary
+// encoding but will inspect the outbound event context and match the version.
+// The WithtimeNow and WithUUIDs client options are also applied to the client,
+// all outbound events will have a time and id set if not already present.
 func NewDefault() (Client, error) {
 	t, err := http.New(http.WithBinaryEncoding())
 	if err != nil {
@@ -68,7 +76,22 @@ type ceClient struct {
 	eventDefaulterFns []EventDefaulter
 }
 
+// Send transmits the provided event on a preconfigured Transport.
+// Send returns a response event if there is a response or an error if there
+// was an an issue validating the outbound event or the transport returns an
+// error.
 func (c *ceClient) Send(ctx context.Context, event cloudevents.Event) (*cloudevents.Event, error) {
+	ctx, r := observability.NewReporter(ctx, reportSend)
+	resp, err := c.obsSend(ctx, event)
+	if err != nil {
+		r.Error()
+	} else {
+		r.OK()
+	}
+	return resp, err
+}
+
+func (c *ceClient) obsSend(ctx context.Context, event cloudevents.Event) (*cloudevents.Event, error) {
 	// Confirm we have a transport set.
 	if c.transport == nil {
 		return nil, fmt.Errorf("client not ready, transport not initialized")
@@ -79,6 +102,7 @@ func (c *ceClient) Send(ctx context.Context, event cloudevents.Event) (*cloudeve
 			event = fn(event)
 		}
 	}
+
 	// Validate the event conforms to the CloudEvents Spec.
 	if err := event.Validate(); err != nil {
 		return nil, err
@@ -89,8 +113,26 @@ func (c *ceClient) Send(ctx context.Context, event cloudevents.Event) (*cloudeve
 
 // Receive is called from from the transport on event delivery.
 func (c *ceClient) Receive(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
+	ctx, r := observability.NewReporter(ctx, reportReceive)
+	err := c.obsReceive(ctx, event, resp)
+	if err != nil {
+		r.Error()
+	} else {
+		r.OK()
+	}
+	return err
+}
+
+func (c *ceClient) obsReceive(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
 	if c.fn != nil {
+		ctx, rFn := observability.NewReporter(ctx, reportReceiveFn)
 		err := c.fn.invoke(ctx, event, resp)
+		if err != nil {
+			rFn.Error()
+		} else {
+			rFn.OK()
+		}
+
 		// Apply the defaulter chain to the outgoing event.
 		if err == nil && resp != nil && resp.Event != nil && len(c.eventDefaulterFns) > 0 {
 			for _, fn := range c.eventDefaulterFns {
@@ -106,7 +148,8 @@ func (c *ceClient) Receive(ctx context.Context, event cloudevents.Event, resp *c
 	return nil
 }
 
-// Blocking Call
+// StartReceiver sets up the given fn to handle Receive.
+// See Client.StartReceiver for details. This is a blocking call.
 func (c *ceClient) StartReceiver(ctx context.Context, fn interface{}) error {
 	c.receiverMu.Lock()
 	defer c.receiverMu.Unlock()

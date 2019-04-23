@@ -79,16 +79,10 @@ var (
 	subscribers = &v1alpha1.Subscribable{
 		Subscribers: []v1alpha1.ChannelSubscriberSpec{
 			{
-				Ref: &corev1.ObjectReference{
-					Name: "sub-name",
-					UID:  "sub-uid",
-				},
+				UID: "sub-uid",
 			},
 			{
-				Ref: &corev1.ObjectReference{
-					Name: "sub-2-name",
-					UID:  "sub-2-uid",
-				},
+				UID: "sub-2-uid",
 			},
 		},
 	}
@@ -181,10 +175,7 @@ func TestReconcile(t *testing.T) {
 			},
 			OtherTestData: map[string]interface{}{
 				shouldBeCanceled: map[channelName]subscriptionName{
-					key(makeChannel()): {
-						Namespace: cNamespace,
-						Name:      "sub-name",
-					},
+					key(makeChannel()): "sub-name",
 				},
 			},
 			WantPresent: []runtime.Object{
@@ -302,7 +293,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 				shouldNotBeCanceled: map[channelName]subscriptionName{
-					key(makeChannel()): {Namespace: subscribers.Subscribers[0].Ref.Namespace, Name: subscribers.Subscribers[0].Ref.Name},
+					key(makeChannel()): subscribers.Subscribers[0].UID,
 				},
 			},
 			WantPresent: []runtime.Object{
@@ -327,7 +318,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 				shouldBeCanceled: map[channelName]subscriptionName{
-					key(makeChannel()): {Namespace: cNamespace, Name: "old-sub"},
+					key(makeChannel()): "old-sub",
 				},
 			},
 			WantPresent: []runtime.Object{
@@ -352,7 +343,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 				shouldBeCanceled: map[channelName]subscriptionName{
-					key(makeChannel()): {Namespace: cNamespace, Name: "old-sub"},
+					key(makeChannel()): "old-sub",
 				},
 			},
 			WantPresent: []runtime.Object{
@@ -458,10 +449,13 @@ func TestReceiveFunc(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			sub := util.GcpPubSubSubscriptionStatus{
-				SubscriberURI: "subscriber-uri",
-				ReplyURI:      "reply-uri",
-				Subscription:  "foo",
+				ChannelSubscriberSpec: v1alpha1.ChannelSubscriberSpec{
+					SubscriberURI: "subscriber-uri",
+					ReplyURI:      "reply-uri",
+				},
+				Subscription: "foo",
 			}
+
 			defaults := provisioners.DispatchDefaults{
 				Namespace: cNamespace,
 			}
@@ -620,9 +614,11 @@ func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscrib
 	}
 	for _, sub := range subscribable.Subscribers {
 		pcs.Subscriptions = append(pcs.Subscriptions, util.GcpPubSubSubscriptionStatus{
-			Ref:           sub.Ref,
-			ReplyURI:      sub.ReplyURI,
-			SubscriberURI: sub.SubscriberURI,
+			ChannelSubscriberSpec: v1alpha1.ChannelSubscriberSpec{
+				UID:           sub.UID,
+				ReplyURI:      sub.ReplyURI,
+				SubscriberURI: sub.SubscriberURI,
+			},
 		})
 	}
 	err = util.SetInternalStatus(context.Background(), c, pcs)

@@ -1,9 +1,12 @@
 /*
 Copyright 2019 The Knative Authors
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-    https://www.apache.org/licenses/LICENSE-2.0
+
+	https://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,28 +18,17 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	"log"
+
+	cloudevents "github.com/cloudevents/sdk-go"
 )
 
 func handler(event cloudevents.Event) {
-	log.Printf("%s", event)
-	// TODO: in version 0.5.0 of cloudevents, below can be deleted.
-
-	ctx := event.Context.AsV02()
-	var data []byte
-	var ok bool
-	if data, ok = event.Data.([]byte); !ok {
-		fmt.Printf("Got Data Error")
-		return
-	}
-	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), *ctx.ContentType, ctx.Source.String(), string(data))
+	log.Printf("%s", event.String())
 }
 
 func main() {
-	c, err := client.NewDefault()
+	c, err := cloudevents.NewDefaultClient()
 	if err != nil {
 		log.Fatalf("failed to create client, %v", err)
 	}

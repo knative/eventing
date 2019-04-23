@@ -44,16 +44,53 @@ spec:
       type: dev.knative.foo.bar
   subscriber:
     ref:
-     apiVersion: serving.knative.dev/v1alpha1
-     kind: Service
-     name: my-service
+      apiVersion: serving.knative.dev/v1alpha1
+      kind: Service
+      name: my-service
 ```
 
 ## Usage
 
+### ClusterChannelProvisioner
+
+`Broker`'s use their `spec.channelTemplate` to create their internal `Channel`s,
+which dictate the durability guarantees of events sent to that `Broker`. If
+`spec.channelTemplate` is not specified, then the
+[default provisioner](https://www.knative.dev/docs/eventing/channels/default-channels/)
+for their namespace is used.
+
+#### Setup
+
+Have a `ClusterChannelProvisioner` installed and set as the
+[default provisioner](https://www.knative.dev/docs/eventing/channels/default-channels/)
+for the namespace you are interested in. For development, the
+[`in-memory` `ClusterChannelProvisioner`](https://github.com/knative/eventing/tree/master/config/provisioners/in-memory-channel#deployment-steps)
+is normally used.
+
+#### Changing
+
+**Note** changing the `ClusterChannelProvisioner` of a running `Broker` will
+lose all in-flight events.
+
+If you want to change which `ClusterChannelProvisioner` is used by a given
+`Broker`, then determine if the `spec.channelTemplate` is specified or not.
+
+If `spec.channelTemplate` is specified:
+
+1. Delete the `Broker`.
+1. Create the `Broker` with the updated `spec.channelTemplate`.
+
+If `spec.channelTemplate` is not specified:
+
+1. Change the
+   [default provisioner](https://github.com/knative/docs/blob/master/docs/eventing/channels/default-channels.md#setting-the-default-channel-configuration)
+   for the namespace that `Broker` is in.
+1. Delete and recreate the `Broker`.
+
 ### Broker
 
-There are two ways to create a Broker, via [namespace annotation](#annotation) or [manual setup](#manual-setup).
+There are two ways to create a Broker, via [namespace annotation](#annotation)
+or [manual setup](#manual-setup).
 
 Normally the [namespace annotation](#annotation) is used to do this setup.
 
@@ -149,9 +186,9 @@ spec:
       type: dev.knative.foo.bar
   subscriber:
     ref:
-     apiVersion: serving.knative.dev/v1alpha1
-     kind: Service
-     name: my-service
+      apiVersion: serving.knative.dev/v1alpha1
+      kind: Service
+      name: my-service
 ```
 
 #### Defaulting
@@ -159,8 +196,8 @@ spec:
 The Webhook will default certain unspecified fields. For example if
 `spec.broker` is unspecified, it will default to `default`. If
 `spec.filter.sourceAndType.type` or `spec.filter.sourceAndType.Source` are
-unspecified, then they will default to the special value `Any`, which matches
-everything.
+unspecified, then they will default to the special value empty string, which
+matches everything.
 
 The Webhook will default the YAML above to:
 
@@ -175,12 +212,12 @@ spec:
   filter:
     sourceAndType:
       type: dev.knative.foo.bar
-      source: Any # Defaulted by the Webhook.
+      source: "" # Defaulted by the Webhook.
   subscriber:
     ref:
-     apiVersion: serving.knative.dev/v1alpha1
-     kind: Service
-     name: my-service
+      apiVersion: serving.knative.dev/v1alpha1
+      kind: Service
+      name: my-service
 ```
 
 You can make multiple `Trigger`s on the same `Broker` corresponding to different
@@ -241,14 +278,14 @@ implmentation**.
 ### Namespace
 
 Namespaces are reconciled by the
-[Namespace Reconciler](../../pkg/reconciler/v1alpha1/namespace). The `Namespace
-Reconciler` looks for all `namespace`s that have the label
+[Namespace Reconciler](../../pkg/reconciler/v1alpha1/namespace). The
+`Namespace Reconciler` looks for all `namespace`s that have the label
 `knative-eventing-injection: enabled`. If that label is present, then the
 `Namespace Reconciler` reconciles:
 
 1. Creates the Broker Filter's `ServiceAccount`, `eventing-broker-filter`.
-1. Ensures that `ServiceAccount` has the requisite RBAC permissions by giving
-   it the [`eventing-broker-filter`](../../config/200-broker-clusterrole.yaml)
+1. Ensures that `ServiceAccount` has the requisite RBAC permissions by giving it
+   the [`eventing-broker-filter`](../../config/200-broker-clusterrole.yaml)
    `Role`.
 1. Creates a `Broker` named `default`.
 
@@ -258,25 +295,28 @@ Reconciler` looks for all `namespace`s that have the label
 [Broker Reconciler](../../pkg/reconciler/v1alpha1/broker). For each `Broker`, it
 reconciles:
 
-1. The 'everything' `Channel`. This is a `Channel` that all events in the
-   `Broker` are sent to. Anything that passes the `Broker`'s Ingress is sent to
-   this `Channel`. All `Trigger`s subscribe to this `Channel`.
+1. The 'trigger' `Channel`. This is a `Channel` that all events in the `Broker`
+   are sent to. Anything that passes the `Broker`'s Ingress is sent to this
+   `Channel`. All `Trigger`s subscribe to this `Channel`.
 1. The 'filter' `Deployment`. The `Deployment` runs
    [cmd/broker/filter](../../cmd/broker/filter). Its purpose is the data plane
    for all `Trigger`s related to this `Broker`.
-   - This piece is very similar to the existing Channel dispatchers, in that
-     all `Trigger`s for a given `Broker` route to this single `Deployment`.
-     The code inspects the Host header to determine which `Trigger` the
-     request is related to and then carries it out.
+   - This piece is very similar to the existing Channel dispatchers, in that all
+     `Trigger`s for a given `Broker` route to this single `Deployment`. The code
+     inspects the Host header to determine which `Trigger` the request is
+     related to and then carries it out.
    - Internally this binary uses the [pkg/broker](../../pkg/broker) library.
 1. The 'filter' Kubernetes `Service`. This `Service` points to the 'filter'
    `Deployment`.
 1. The 'ingress' `Deployment`. The `Deployment` runs
-   [cmd/broker/ingress](../../cmd/broker/ingress). Its purpose is to inspect
-   all events that are entering the `Broker`.
+   [cmd/broker/ingress](../../cmd/broker/ingress). Its purpose is to inspect all
+   events that are entering the `Broker`.
 1. The 'ingress' Kubernetes `Service`. This `Service` points to the 'ingress'
-   `Deployment`. This `Service`'s address is the address given for the
-   `Broker`.
+   `Deployment`. This `Service`'s address is the address given for the `Broker`.
+1. The 'ingress' `Channel`. This is a `Channel` for replies from `Trigger`s. It
+   should not be used by anything else.
+1. The 'ingress' `Subscription` which subscribes from the 'ingress' `Channel` to
+   the 'ingress' `Service`.
 
 ### Trigger
 
@@ -285,13 +325,8 @@ reconciles:
 it reconciles:
 
 1. Determines the subscriber's URI.
-   - Currently uses the same logic as the `Subscription` Reconciler, so
-     supports Addressables and Kubernetes `Service`s.
-1. Creates a Kubernetes `Service` and Istio `VirtualService` pair. This allows
-   all Istio enabled `Pod`s to send to the `Trigger`'s address.
-   - This is the same as the current `Channel` implementation. The `Service`
-     points nowhere. The `VirtualService` reroutes requests that originally
-     went to the `Service`, to instead go to the `Broker`'s 'filter'
-     `Service`.
-1. Creates `Subscription` from the `Broker`'s 'everything' `Channel` to the
-   `Trigger`'s Kubernetes `Service`.
+   - Currently uses the same logic as the `Subscription` Reconciler, so supports
+     Addressables and Kubernetes `Service`s.
+1. Creates a `Subscription` from the `Broker`'s 'trigger' `Channel` to the
+   `Trigger`'s Kubernetes `Service` using the HTTP path `/triggers/{namespace}/{name}`. Replies are sent to the `Broker`'s
+   'ingress' `Channel`.

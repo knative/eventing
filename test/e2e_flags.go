@@ -1,5 +1,6 @@
 /*
 Copyright 2018 The Knative Authors
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -19,30 +20,79 @@ limitations under the License.
 package test
 
 import (
+	"context"
 	"flag"
+	"fmt"
+	"strings"
 
+	"github.com/knative/pkg/logging"
 	pkgTest "github.com/knative/pkg/test"
-	"github.com/knative/pkg/test/logging"
+	testLogging "github.com/knative/pkg/test/logging"
 )
 
-// EventingFlags holds the command line flags specific to knative/eventing
+var logger = logging.FromContext(context.Background()).Named("eventing-e2e-testing")
+
+// EventingFlags holds the command line flags specific to knative/eventing.
 var EventingFlags = initializeEventingFlags()
 
-// EventingEnvironmentFlags holds the e2e flags needed only by the eventing repo
+// Provisioners holds the ClusterChannelProvisioners we want to run test against.
+type Provisioners []string
+
+func (ps *Provisioners) String() string {
+	return fmt.Sprint(*ps)
+}
+
+// Set converts the input string to Provisioners.
+// The default CCP we will test against is in-memory-channel.
+func (ps *Provisioners) Set(value string) error {
+	for _, provisioner := range strings.Split(value, ",") {
+		provisioner := strings.TrimSpace(provisioner)
+		if !isValid(provisioner) {
+			logger.Fatalf("The given provisioner %q is not supported, tests cannot be run.\n", provisioner)
+		}
+
+		*ps = append(*ps, provisioner)
+	}
+	return nil
+}
+
+// Check if the provisioner is a valid one.
+func isValid(provisioner string) bool {
+	for i := range validProvisioners {
+		if provisioner == validProvisioners[i] {
+			return true
+		}
+	}
+	return false
+}
+
+// EventingEnvironmentFlags holds the e2e flags needed only by the eventing repo.
 type EventingEnvironmentFlags struct {
-	Provisioner string // The name of the Channel's ClusterChannelProvisioner
+	Provisioners
+	RunFromMain bool
 }
 
 func initializeEventingFlags() *EventingEnvironmentFlags {
-	var f EventingEnvironmentFlags
+	f := EventingEnvironmentFlags{}
 
-	flag.StringVar(&f.Provisioner, "clusterChannelProvisioner", "in-memory-channel", "The name of the Channel's clusterChannelProvisioner. Only the in-memory-channel is installed by the tests, anything else must be installed before the tests are run.")
+	flag.Var(&f.Provisioners, "clusterChannelProvisioners", "The names of the Channel's clusterChannelProvisioners, which are separated by comma.")
+	flag.BoolVar(&f.RunFromMain, "runFromMain", false, "If runFromMain is set to false, the TestMain will be skipped when we run tests.")
 
 	flag.Parse()
 
-	logging.InitializeLogger(pkgTest.Flags.LogVerbose)
+	// If no provisioner is passed through the flag, initialize it as the DefaultClusterChannelProvisioner.
+	if f.Provisioners == nil || len(f.Provisioners) == 0 {
+		f.Provisioners = []string{DefaultClusterChannelProvisioner}
+	}
+
+	// If we are not running from TestMain, only one single provisioner can be specified.
+	if !f.RunFromMain && len(f.Provisioners) != 1 {
+		logger.Fatal("Only one single provisioner can be specified if you are not running from TestMain.")
+	}
+
+	testLogging.InitializeLogger(pkgTest.Flags.LogVerbose)
 	if pkgTest.Flags.EmitMetrics {
-		logging.InitializeMetricExporter("eventing")
+		testLogging.InitializeMetricExporter("eventing")
 	}
 
 	return &f

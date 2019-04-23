@@ -18,13 +18,15 @@ package trigger
 
 import (
 	"context"
-	"fmt"
+	"net/url"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler/names"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
-	"github.com/knative/eventing/pkg/utils"
+	brokerresources "github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/path"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger/resources"
 	"github.com/knative/eventing/pkg/utils/resolve"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
@@ -117,6 +119,7 @@ type mapBrokerToTriggers struct {
 	r *reconciler
 }
 
+// Map implements handler.Mapper.Map.
 func (b *mapBrokerToTriggers) Map(o handler.MapObject) []reconcile.Request {
 	ctx := context.Background()
 	triggers := make([]reconcile.Request, 0)
@@ -152,11 +155,13 @@ func (b *mapBrokerToTriggers) Map(o handler.MapObject) []reconcile.Request {
 	}
 }
 
+// InjectClient implements controller runtime's inject.Client.
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	return nil
 }
 
+// InjectConfig implements controller runtime's inject.Config.
 func (r *reconciler) InjectConfig(c *rest.Config) error {
 	var err error
 	r.dynamicClient, err = dynamic.NewForConfig(c)
@@ -208,10 +213,13 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	t.Status.InitializeConditions()
 
 	// 1. Verify the Broker exists.
-	// 2. Find the Subscriber's URI.
-	// 2. Creates a K8s Service uniquely named for this Trigger.
-	// 3. Creates a VirtualService that routes the K8s Service to the Broker's filter service on an identifiable host name.
-	// 4. Creates a Subscription from the Broker's single Channel to this Trigger's K8s Service, with reply set to the Broker.
+	// 2. Get the Broker's:
+	//   - Filter Channel
+	//   - Ingress Channel
+	//   - Filter Service
+	// 3. Find the Subscriber's URI.
+	// 4. Creates a Subscription from the Broker's Filter Channel to this Trigger via the Broker's
+	//    Filter Service with a specific path, and reply set to the Broker's Ingress Channel.
 
 	if t.DeletionTimestamp != nil {
 		// Everything is cleaned up by the garbage collector.
@@ -221,14 +229,25 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	b, err := r.getBroker(ctx, t)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Broker", zap.Error(err))
-		t.Status.MarkBrokerDoesNotExist()
+		t.Status.MarkBrokerFailed("DoesNotExist", "Broker does not exist")
 		return err
 	}
-	t.Status.MarkBrokerExists()
+	t.Status.PropagateBrokerStatus(&b.Status)
 
-	c, err := r.getBrokerChannel(ctx, b)
+	brokerTrigger, err := r.getBrokerTriggerChannel(ctx, b)
 	if err != nil {
-		logging.FromContext(ctx).Error("Unable to get the Broker's Channel", zap.Error(err))
+		logging.FromContext(ctx).Error("Unable to get the Broker's Trigger Channel", zap.Error(err))
+		return err
+	}
+	brokerIngress, err := r.getBrokerIngressChannel(ctx, b)
+	if err != nil {
+		logging.FromContext(ctx).Error("Unable to get the Broker's Ingress Channel", zap.Error(err))
+		return err
+	}
+	// Get Broker filter service.
+	filterSvc, err := r.getBrokerFilterService(ctx, b)
+	if err != nil {
+		logging.FromContext(ctx).Error("Unable to get the Broker's filter Service", zap.Error(err))
 		return err
 	}
 
@@ -239,27 +258,13 @@ func (r *reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	}
 	t.Status.SubscriberURI = subscriberURI
 
-	svc, err := r.reconcileK8sService(ctx, t)
-	if err != nil {
-		logging.FromContext(ctx).Error("Unable to reconcile the K8s Service", zap.Error(err))
-		return err
-	}
-	t.Status.MarkKubernetesServiceExists()
-
-	_, err = r.reconcileVirtualService(ctx, t, svc)
-	if err != nil {
-		logging.FromContext(ctx).Error("Unable to reconcile the VirtualService", zap.Error(err))
-		return err
-	}
-	t.Status.MarkVirtualServiceExists()
-
-	_, err = r.subscribeToBrokerChannel(ctx, t, c, svc)
+	sub, err := r.subscribeToBrokerChannel(ctx, t, brokerTrigger, brokerIngress, filterSvc)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to Subscribe", zap.Error(err))
-		t.Status.MarkNotSubscribed("notSubscribed", "%v", err)
+		t.Status.MarkNotSubscribed("NotSubscribed", "%v", err)
 		return err
 	}
-	t.Status.MarkSubscribed()
+	t.Status.PropagateSubscriptionStatus(&sub.Status)
 
 	return nil
 }
@@ -315,12 +320,24 @@ func (r *reconciler) getBroker(ctx context.Context, t *v1alpha1.Trigger) (*v1alp
 	return b, err
 }
 
-// getBrokerChannel returns the Broker's channel if exists, otherwise it returns an error.
-func (r *reconciler) getBrokerChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
+// getBrokerTriggerChannel return the Broker's Trigger Channel if it exists, otherwise it returns an
+// error.
+func (r *reconciler) getBrokerTriggerChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
+	return r.getChannel(ctx, b, labels.SelectorFromSet(broker.TriggerChannelLabels(b)))
+}
+
+// getBrokerIngressChannel return the Broker's Ingress Channel if it exists, otherwise it returns an
+// error.
+func (r *reconciler) getBrokerIngressChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
+	return r.getChannel(ctx, b, labels.SelectorFromSet(broker.IngressChannelLabels(b)))
+}
+
+// getChannel returns the Broker's channel if it exists, otherwise it returns an error.
+func (r *reconciler) getChannel(ctx context.Context, b *v1alpha1.Broker, ls labels.Selector) (*v1alpha1.Channel, error) {
 	list := &v1alpha1.ChannelList{}
 	opts := &runtimeclient.ListOptions{
 		Namespace:     b.Namespace,
-		LabelSelector: labels.SelectorFromSet(broker.ChannelLabels(b)),
+		LabelSelector: ls,
 		// Set Raw because if we need to get more than one page, then we will put the continue token
 		// into opts.Raw.Continue.
 		Raw: &metav1.ListOptions{},
@@ -339,13 +356,13 @@ func (r *reconciler) getBrokerChannel(ctx context.Context, b *v1alpha1.Broker) (
 	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
 }
 
-// getK8sService returns the K8s service for trigger 't' if exists,
+// getService returns the K8s service for trigger 't' if exists,
 // otherwise it returns an error.
-func (r *reconciler) getK8sService(ctx context.Context, t *v1alpha1.Trigger) (*corev1.Service, error) {
+func (r *reconciler) getBrokerFilterService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
 	list := &corev1.ServiceList{}
 	opts := &runtimeclient.ListOptions{
-		Namespace:     t.Namespace,
-		LabelSelector: labels.SelectorFromSet(k8sServiceLabels(t)),
+		Namespace:     b.Namespace,
+		LabelSelector: labels.SelectorFromSet(brokerresources.FilterLabels(b)),
 		// Set Raw because if we need to get more than one page, then we will put the continue token
 		// into opts.Raw.Continue.
 		Raw: &metav1.ListOptions{},
@@ -356,7 +373,7 @@ func (r *reconciler) getK8sService(ctx context.Context, t *v1alpha1.Trigger) (*c
 		return nil, err
 	}
 	for _, svc := range list.Items {
-		if metav1.IsControlledBy(&svc, t) {
+		if metav1.IsControlledBy(&svc, b) {
 			return &svc, nil
 		}
 	}
@@ -364,166 +381,14 @@ func (r *reconciler) getK8sService(ctx context.Context, t *v1alpha1.Trigger) (*c
 	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
 }
 
-// reconcileK8sService reconciles the K8s service for trigger 't'.
-func (r *reconciler) reconcileK8sService(ctx context.Context, t *v1alpha1.Trigger) (*corev1.Service, error) {
-	current, err := r.getK8sService(ctx, t)
-
-	// If the resource doesn't exist, we'll create it
-	if k8serrors.IsNotFound(err) {
-		svc := newK8sService(t)
-		err = r.client.Create(ctx, svc)
-		if err != nil {
-			return nil, err
-		}
-		return svc, nil
-	} else if err != nil {
-		return nil, err
+// subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
+func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.Trigger, brokerTrigger, brokerIngress *v1alpha1.Channel, svc *corev1.Service) (*v1alpha1.Subscription, error) {
+	uri := &url.URL{
+		Scheme: "http",
+		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
+		Path:   path.Generate(t),
 	}
-
-	expected := newK8sService(t)
-	// spec.clusterIP is immutable and is set on existing services. If we don't set this to the same value, we will
-	// encounter an error while updating.
-	expected.Spec.ClusterIP = current.Spec.ClusterIP
-	if !equality.Semantic.DeepDerivative(expected.Spec, current.Spec) {
-		current.Spec = expected.Spec
-		err = r.client.Update(ctx, current)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return current, nil
-}
-
-// newK8sService returns a K8s placeholder service for trigger 't'.
-func newK8sService(t *v1alpha1.Trigger) *corev1.Service {
-	return &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    t.Namespace,
-			GenerateName: fmt.Sprintf("trigger-%s-", t.Name),
-			Labels:       k8sServiceLabels(t),
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(t, schema.GroupVersionKind{
-					Group:   v1alpha1.SchemeGroupVersion.Group,
-					Version: v1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Trigger",
-				}),
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name: "http",
-					Port: 80,
-				},
-			},
-		},
-	}
-}
-
-func k8sServiceLabels(t *v1alpha1.Trigger) map[string]string {
-	return map[string]string{
-		"eventing.knative.dev/trigger": t.Name,
-	}
-}
-
-// getVirtualService returns the virtual service for trigger 't' if exists,
-// otherwise it returns an error.
-func (r *reconciler) getVirtualService(ctx context.Context, t *v1alpha1.Trigger) (*istiov1alpha3.VirtualService, error) {
-	list := &istiov1alpha3.VirtualServiceList{}
-	opts := &runtimeclient.ListOptions{
-		Namespace:     t.Namespace,
-		LabelSelector: labels.SelectorFromSet(virtualServiceLabels(t)),
-		// Set Raw because if we need to get more than one page, then we will put the continue token
-		// into opts.Raw.Continue.
-		Raw: &metav1.ListOptions{},
-	}
-
-	err := r.client.List(ctx, opts, list)
-	if err != nil {
-		return nil, err
-	}
-	for _, vs := range list.Items {
-		if metav1.IsControlledBy(&vs, t) {
-			return &vs, nil
-		}
-	}
-
-	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
-}
-
-// reconcileVirtualService reconciles the virtual service for trigger 't' and service 'svc'.
-func (r *reconciler) reconcileVirtualService(ctx context.Context, t *v1alpha1.Trigger, svc *corev1.Service) (*istiov1alpha3.VirtualService, error) {
-	virtualService, err := r.getVirtualService(ctx, t)
-
-	// If the resource doesn't exist, we'll create it
-	if k8serrors.IsNotFound(err) {
-		virtualService = newVirtualService(t, svc)
-		err = r.client.Create(ctx, virtualService)
-		if err != nil {
-			return nil, err
-		}
-		return virtualService, nil
-	} else if err != nil {
-		return nil, err
-	}
-
-	expected := newVirtualService(t, svc)
-	if !equality.Semantic.DeepDerivative(expected.Spec, virtualService.Spec) {
-		virtualService.Spec = expected.Spec
-		err = r.client.Update(ctx, virtualService)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return virtualService, nil
-}
-
-// newVirtualService returns a placeholder virtual service object for trigger 't' and service 'svc'.
-func newVirtualService(t *v1alpha1.Trigger, svc *corev1.Service) *istiov1alpha3.VirtualService {
-	destinationHost := fmt.Sprintf("%s-broker-filter.%s.svc.%s", t.Spec.Broker, t.Namespace, utils.GetClusterDomainName())
-	return &istiov1alpha3.VirtualService{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-", t.Name),
-			Namespace:    t.Namespace,
-			Labels:       virtualServiceLabels(t),
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(t, schema.GroupVersionKind{
-					Group:   v1alpha1.SchemeGroupVersion.Group,
-					Version: v1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Trigger",
-				}),
-			},
-		},
-		Spec: istiov1alpha3.VirtualServiceSpec{
-			Hosts: []string{
-				names.ServiceHostName(svc.Name, svc.Namespace),
-			},
-			Http: []istiov1alpha3.HTTPRoute{{
-				Rewrite: &istiov1alpha3.HTTPRewrite{
-					Authority: fmt.Sprintf("%s.%s.triggers.%s", t.Name, t.Namespace, utils.GetClusterDomainName()),
-				},
-				Route: []istiov1alpha3.DestinationWeight{{
-					Destination: istiov1alpha3.Destination{
-						Host: destinationHost,
-						Port: istiov1alpha3.PortSelector{
-							Number: 80,
-						},
-					}},
-				}},
-			},
-		},
-	}
-}
-
-func virtualServiceLabels(t *v1alpha1.Trigger) map[string]string {
-	return map[string]string{
-		"eventing.knative.dev/trigger": t.Name,
-	}
-}
-
-// subscribeToBrokerChannel subscribes service 'svc' to Broker's channel 'c'.
-func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.Trigger, c *v1alpha1.Channel, svc *corev1.Service) (*v1alpha1.Subscription, error) {
-	expected := makeSubscription(t, c, svc)
+	expected := resources.NewSubscription(t, brokerTrigger, brokerIngress, uri)
 
 	sub, err := r.getSubscription(ctx, t)
 	// If the resource doesn't exist, we'll create it
@@ -541,8 +406,8 @@ func (r *reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.T
 	// Update Subscription if it has changed. Ignore the generation.
 	expected.Spec.DeprecatedGeneration = sub.Spec.DeprecatedGeneration
 	if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
-		// Given that the backing channel spec is immutable, we cannot just update the subscription.
-		// We delete it instead, and re-create it.
+		// Given that spec.channel is immutable, we cannot just update the Subscription. We delete
+		// it and re-create it instead.
 		err = r.client.Delete(ctx, sub)
 		if err != nil {
 			logging.FromContext(ctx).Info("Cannot delete subscription", zap.Error(err))
@@ -566,7 +431,7 @@ func (r *reconciler) getSubscription(ctx context.Context, t *v1alpha1.Trigger) (
 	list := &v1alpha1.SubscriptionList{}
 	opts := &runtimeclient.ListOptions{
 		Namespace:     t.Namespace,
-		LabelSelector: labels.SelectorFromSet(subscriptionLabels(t)),
+		LabelSelector: labels.SelectorFromSet(resources.SubscriptionLabels(t)),
 		// Set Raw because if we need to get more than one page, then we will put the continue token
 		// into opts.Raw.Continue.
 		Raw: &metav1.ListOptions{},
@@ -583,51 +448,4 @@ func (r *reconciler) getSubscription(ctx context.Context, t *v1alpha1.Trigger) (
 	}
 
 	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
-}
-
-// makeSubscription returns a placeholder subscription for trigger 't', channel 'c', and service 'svc'.
-func makeSubscription(t *v1alpha1.Trigger, c *v1alpha1.Channel, svc *corev1.Service) *v1alpha1.Subscription {
-	return &v1alpha1.Subscription{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    t.Namespace,
-			GenerateName: fmt.Sprintf("%s-%s-", t.Spec.Broker, t.Name),
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(t, schema.GroupVersionKind{
-					Group:   v1alpha1.SchemeGroupVersion.Group,
-					Version: v1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Trigger",
-				}),
-			},
-			Labels: subscriptionLabels(t),
-		},
-		Spec: v1alpha1.SubscriptionSpec{
-			Channel: corev1.ObjectReference{
-				APIVersion: v1alpha1.SchemeGroupVersion.String(),
-				Kind:       "Channel",
-				Name:       c.Name,
-			},
-			Subscriber: &v1alpha1.SubscriberSpec{
-				Ref: &corev1.ObjectReference{
-					APIVersion: "v1",
-					Kind:       "Service",
-					Name:       svc.Name,
-				},
-			},
-			// TODO This pushes directly into the Channel, it should probably point at the Broker ingress instead.
-			Reply: &v1alpha1.ReplyStrategy{
-				Channel: &corev1.ObjectReference{
-					APIVersion: v1alpha1.SchemeGroupVersion.String(),
-					Kind:       "Channel",
-					Name:       c.Name,
-				},
-			},
-		},
-	}
-}
-
-func subscriptionLabels(t *v1alpha1.Trigger) map[string]string {
-	return map[string]string{
-		"eventing.knative.dev/broker":  t.Spec.Broker,
-		"eventing.knative.dev/trigger": t.Name,
-	}
 }

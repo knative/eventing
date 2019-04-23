@@ -17,20 +17,23 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/google/go-cmp/cmp"
+	"context"
+
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/kmp"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 )
 
-func (s *Subscription) Validate() *apis.FieldError {
-	return s.Spec.Validate().ViaField("spec")
+func (s *Subscription) Validate(ctx context.Context) *apis.FieldError {
+	return s.Spec.Validate(ctx).ViaField("spec")
 }
 
-// We require always Channel
-// Also at least one of 'subscriber' and 'reply' must be defined (non-nill and non-empty)
-func (ss *SubscriptionSpec) Validate() *apis.FieldError {
+func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
+	// We require always Channel.
+	// Also at least one of 'subscriber' and 'reply' must be defined (non-nil and non-empty).
+
 	var errs *apis.FieldError
 	if isChannelEmpty(ss.Channel) {
 		fe := apis.ErrMissingField("channel")
@@ -64,15 +67,34 @@ func (ss *SubscriptionSpec) Validate() *apis.FieldError {
 }
 
 func isSubscriberSpecNilOrEmpty(s *SubscriberSpec) bool {
-	return s == nil || equality.Semantic.DeepEqual(s, &SubscriberSpec{}) ||
-		(equality.Semantic.DeepEqual(s.Ref, &corev1.ObjectReference{}) && s.DNSName == nil)
-
+	if s == nil || equality.Semantic.DeepEqual(s, &SubscriberSpec{}) {
+		return true
+	}
+	if equality.Semantic.DeepEqual(s.Ref, &corev1.ObjectReference{}) &&
+		s.DeprecatedDNSName == nil &&
+		s.URI == nil {
+		return true
+	}
+	return false
 }
 
 func isValidSubscriberSpec(s SubscriberSpec) *apis.FieldError {
 	var errs *apis.FieldError
-	if s.DNSName != nil && *s.DNSName != "" && s.Ref != nil && !equality.Semantic.DeepEqual(s.Ref, &corev1.ObjectReference{}) {
-		errs = errs.Also(apis.ErrMultipleOneOf("ref", "dnsName"))
+
+	fieldsSet := make([]string, 0, 0)
+	if s.Ref != nil && !equality.Semantic.DeepEqual(s.Ref, &corev1.ObjectReference{}) {
+		fieldsSet = append(fieldsSet, "ref")
+	}
+	if s.DeprecatedDNSName != nil && *s.DeprecatedDNSName != "" {
+		fieldsSet = append(fieldsSet, "dnsName")
+	}
+	if s.URI != nil && *s.URI != "" {
+		fieldsSet = append(fieldsSet, "uri")
+	}
+	if len(fieldsSet) == 0 {
+		errs = errs.Also(apis.ErrMissingOneOf("ref", "dnsName", "uri"))
+	} else if len(fieldsSet) > 1 {
+		errs = errs.Also(apis.ErrMultipleOneOf(fieldsSet...))
 	}
 
 	// If Ref given, check the fields.
@@ -107,7 +129,7 @@ func isValidReply(r ReplyStrategy) *apis.FieldError {
 	return nil
 }
 
-func (current *Subscription) CheckImmutableFields(og apis.Immutable) *apis.FieldError {
+func (s *Subscription) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
 	original, ok := og.(*Subscription)
 	if !ok {
 		return &apis.FieldError{Message: "The provided original was not a Subscription"}
@@ -118,7 +140,13 @@ func (current *Subscription) CheckImmutableFields(og apis.Immutable) *apis.Field
 
 	// Only Subscriber and Reply are mutable.
 	ignoreArguments := cmpopts.IgnoreFields(SubscriptionSpec{}, "Subscriber", "Reply")
-	if diff := cmp.Diff(original.Spec, current.Spec, ignoreArguments); diff != "" {
+	if diff, err := kmp.ShortDiff(original.Spec, s.Spec, ignoreArguments); err != nil {
+		return &apis.FieldError{
+			Message: "Failed to diff Subscription",
+			Paths:   []string{"spec"},
+			Details: err.Error(),
+		}
+	} else if diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",
 			Paths:   []string{"spec"},

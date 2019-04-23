@@ -49,6 +49,7 @@ func init() {
 
 var (
 	truePointer = true
+	deletedTime = metav1.Now().Rfc3339Copy()
 )
 
 var mockFetchError = controllertesting.Mocks{
@@ -187,7 +188,6 @@ func getNewClusterChannelProvisioner(name string, reconcileKind string) *eventin
 
 func makeDeletedClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvisioner {
 	c := makeClusterChannelProvisioner()
-	deletedTime := metav1.Now().Rfc3339Copy()
 	c.DeletionTimestamp = &deletedTime
 	return c
 }
@@ -254,7 +254,7 @@ func makeK8sService() *corev1.Service {
 			Selector: provisioners.DispatcherLabels(Name),
 			Ports: []corev1.ServicePort{
 				{
-					Name:       "http",
+					Protocol:   corev1.ProtocolTCP,
 					Port:       80,
 					TargetPort: intstr.FromInt(8080),
 				},
