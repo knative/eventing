@@ -69,16 +69,6 @@ required = [
   name = "github.com/json-iterator/go"
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
-# TODO why is this overridden?
-[[override]]
-  name = "github.com/golang/protobuf"
-  version = "v1.1.0"
-
-# TODO why is this overridden?
-[[override]]
-  name = "golang.org/x/oauth2"
-  revision = "cdc340f7c179dbbfa4afd43b7614e8fcadde4269"
-
 # Constrain the version of knative/pkg we would like to import.
 # This controls when we upgrade apis independently of Serving.
 [[override]]
