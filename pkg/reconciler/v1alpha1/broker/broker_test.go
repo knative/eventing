@@ -48,7 +48,8 @@ const (
 	ingressImage = "ingress-image"
 	ingressSA    = "ingress-SA"
 
-	filterContainerName = "filter"
+	filterContainerName  = "filter"
+	ingressContainerName = "ingress"
 )
 
 var (
@@ -60,8 +61,10 @@ var (
 	triggerChannelHostname = fmt.Sprintf("foo.bar.svc.%s", utils.GetClusterDomainName())
 	ingressChannelHostname = fmt.Sprintf("baz.qux.svc.%s", utils.GetClusterDomainName())
 
-	filterDeploymentName = fmt.Sprintf("%s-broker-filter", brokerName)
-	filterServiceName    = fmt.Sprintf("%s-broker-filter", brokerName)
+	filterDeploymentName  = fmt.Sprintf("%s-broker-filter", brokerName)
+	filterServiceName     = fmt.Sprintf("%s-broker-filter", brokerName)
+	ingressDeploymentName = fmt.Sprintf("%s-broker-ingress", brokerName)
+	ingressServiceName    = fmt.Sprintf("%s-broker-ingress", brokerName)
 )
 
 func init() {
@@ -168,7 +171,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithDeploymentLabels(resources.FilterLabels(brokerName)),
 					testing2.WithDeploymentAnnotations(annotations()),
 					testing2.WithDeploymentServiceAccount(filterSA),
-					testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars())),
+					testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: testing2.NewBroker(brokerName, testNS,
@@ -200,7 +203,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithDeploymentLabels(resources.FilterLabels(brokerName)),
 					testing2.WithDeploymentAnnotations(annotations()),
 					testing2.WithDeploymentServiceAccount(filterSA),
-					testing2.WithDeploymentContainer(filterContainerName, "some-other-image", envVars())),
+					testing2.WithDeploymentContainer(filterContainerName, "some-other-image", envVars(filterContainerName), nil)),
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("update", "deployments"),
@@ -218,7 +221,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithDeploymentLabels(resources.FilterLabels(brokerName)),
 					testing2.WithDeploymentAnnotations(annotations()),
 					testing2.WithDeploymentServiceAccount(filterSA),
-					testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars())),
+					testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for update deployments"),
@@ -243,7 +246,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithDeploymentLabels(resources.FilterLabels(brokerName)),
 					testing2.WithDeploymentAnnotations(annotations()),
 					testing2.WithDeploymentServiceAccount(filterSA),
-					testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars())),
+					testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("create", "services"),
@@ -252,7 +255,7 @@ func TestReconcile(t *testing.T) {
 				testing2.NewService(filterServiceName, testNS,
 					testing2.WithServiceOwnerReferences(ownerReferences()),
 					testing2.WithServiceLabels(resources.FilterLabels(brokerName)),
-					testing2.WithServicePorts(ports(8080))),
+					testing2.WithServicePorts(servicePorts(8080))),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: testing2.NewBroker(brokerName, testNS,
@@ -284,11 +287,11 @@ func TestReconcile(t *testing.T) {
 					testing2.WithDeploymentLabels(resources.FilterLabels(brokerName)),
 					testing2.WithDeploymentAnnotations(annotations()),
 					testing2.WithDeploymentServiceAccount(filterSA),
-					testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars())),
+					testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
 				testing2.NewService(filterServiceName, testNS,
 					testing2.WithServiceOwnerReferences(ownerReferences()),
 					testing2.WithServiceLabels(resources.FilterLabels(brokerName)),
-					testing2.WithServicePorts(ports(9090))),
+					testing2.WithServicePorts(servicePorts(9090))),
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("update", "services"),
@@ -297,7 +300,7 @@ func TestReconcile(t *testing.T) {
 				Object: testing2.NewService(filterServiceName, testNS,
 					testing2.WithServiceOwnerReferences(ownerReferences()),
 					testing2.WithServiceLabels(resources.FilterLabels(brokerName)),
-					testing2.WithServicePorts(ports(8080))),
+					testing2.WithServicePorts(servicePorts(8080))),
 			}},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: testing2.NewBroker(brokerName, testNS,
@@ -311,28 +314,61 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErr: true,
 		},
-		//	{
-		//		Name:   "Ingress Deployment.Get error",
-		//		Scheme: scheme.Scheme,
-		//		InitialState: []runtime.Object{
-		//			makeBroker(),
-		//			makeTriggerChannel(),
-		//		},
-		//		Mocks: controllertesting.Mocks{
-		//			MockGets: []controllertesting.MockGet{
-		//				func(_ client.Client, _ context.Context, key client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-		//					if _, ok := obj.(*appsv1.Deployment); ok {
-		//						if strings.Contains(key.Name, "ingress") {
-		//							return controllertesting.Handled, errors.New("test error getting ingress Deployment")
-		//						}
-		//					}
-		//					return controllertesting.Unhandled, nil
-		//				},
-		//			},
-		//		},
-		//		WantEvent:  []corev1.Event{events[brokerReconcileError]},
-		//		WantErrMsg: "test error getting ingress Deployment",
-		//	},
+		{
+			Name: "Ingress Deployment.Create error",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				testing2.NewBroker(brokerName, testNS,
+					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithInitBrokerConditions),
+				testing2.NewChannel("", testNS,
+					testing2.WithChannelGenerateName(channelGenerateName),
+					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
+					testing2.WithChannelOwnerReferences(ownerReferences()),
+					testing2.WithChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithChannelAddress(triggerChannelHostname)),
+				testing2.NewDeployment(filterDeploymentName, testNS,
+					testing2.WithDeploymentOwnerReferences(ownerReferences()),
+					testing2.WithDeploymentLabels(resources.FilterLabels(brokerName)),
+					testing2.WithDeploymentAnnotations(annotations()),
+					testing2.WithDeploymentServiceAccount(filterSA),
+					testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+				testing2.NewService(filterServiceName, testNS,
+					testing2.WithServiceOwnerReferences(ownerReferences()),
+					testing2.WithServiceLabels(resources.FilterLabels(brokerName)),
+					testing2.WithServicePorts(servicePorts(8080))),
+			},
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("create", "deployments"),
+			},
+			WantCreates: []metav1.Object{
+				testing2.NewDeployment(ingressDeploymentName, testNS,
+					testing2.WithDeploymentOwnerReferences(ownerReferences()),
+					testing2.WithDeploymentLabels(resources.IngressLabels(brokerName)),
+					testing2.WithDeploymentAnnotations(annotations()),
+					testing2.WithDeploymentServiceAccount(ingressSA),
+					testing2.WithDeploymentContainer(ingressContainerName, ingressImage, envVars(ingressContainerName), containerPorts(8080)),
+				),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: testing2.NewBroker(brokerName, testNS,
+					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithInitBrokerConditions,
+					testing2.PropagateTriggerChannelReadiness(channelStatus()),
+					testing2.PropagateFilterDeploymentAvailability(testing2.NewDeployment(filterDeploymentName, testNS,
+						testing2.WithDeploymentOwnerReferences(ownerReferences()),
+						testing2.WithDeploymentLabels(resources.FilterLabels(brokerName)),
+						testing2.WithDeploymentAnnotations(annotations()),
+						testing2.WithDeploymentServiceAccount(filterSA),
+						testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil),
+						testing2.WithDeploymentAvailable)),
+					testing2.MarkIngressFailed("DeploymentFailure", "%v", "inducing failure for create deployments")),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create deployments"),
+			},
+			WantErr: true,
+		},
 		//	{
 		//		Name:   "Ingress Deployment.Create error",
 		//		Scheme: scheme.Scheme,
@@ -1008,25 +1044,57 @@ func annotations() map[string]string {
 	}
 }
 
-func envVars() []corev1.EnvVar {
-	return []corev1.EnvVar{
-		{
-			Name: "NAMESPACE",
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{
-					FieldPath: "metadata.namespace",
+func envVars(containerName string) []corev1.EnvVar {
+	switch containerName {
+	case filterContainerName:
+		return []corev1.EnvVar{
+			{
+				Name: "NAMESPACE",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.namespace",
+					},
 				},
 			},
+		}
+	case ingressContainerName:
+		return []corev1.EnvVar{
+			{
+				Name:  "FILTER",
+				Value: "",
+			},
+			{
+				Name:  "CHANNEL",
+				Value: triggerChannelHostname,
+			},
+			{
+				Name:  "BROKER",
+				Value: brokerName,
+			},
+		}
+	}
+	return []corev1.EnvVar{}
+}
+
+func containerPorts(httpInternal int32) []corev1.ContainerPort {
+	return []corev1.ContainerPort{
+		{
+			Name:          "http",
+			ContainerPort: httpInternal,
+		},
+		{
+			Name:          "metrics",
+			ContainerPort: 9090,
 		},
 	}
 }
 
-func ports(internal int) []corev1.ServicePort {
+func servicePorts(httpInternal int) []corev1.ServicePort {
 	return []corev1.ServicePort{
 		{
 			Name:       "http",
 			Port:       80,
-			TargetPort: intstr.FromInt(internal),
+			TargetPort: intstr.FromInt(httpInternal),
 		},
 	}
 }

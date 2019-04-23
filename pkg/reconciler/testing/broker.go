@@ -20,6 +20,8 @@ import (
 	"context"
 	"time"
 
+	v1 "k8s.io/api/apps/v1"
+
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -81,9 +83,23 @@ func MarkFilterFailed(reason, format, arg string) BrokerOption {
 	}
 }
 
+// MarkIngressFailed calls .Status.MarkIngressFailed on the Broker.
+func MarkIngressFailed(reason, format, arg string) BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		b.Status.MarkIngressFailed(reason, format, arg)
+	}
+}
+
 // PropagateTriggerChannelReadiness calls .Status.PropagateTriggerChannelReadiness on the Broker.
 func PropagateTriggerChannelReadiness(cs *v1alpha1.ChannelStatus) BrokerOption {
 	return func(b *v1alpha1.Broker) {
 		b.Status.PropagateTriggerChannelReadiness(cs)
+	}
+}
+
+// PropagateFilterDeploymentAvailability calls .Status.PropagateFilterDeploymentAvailability on the Broker.
+func PropagateFilterDeploymentAvailability(d *v1.Deployment) BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		b.Status.PropagateFilterDeploymentAvailability(d)
 	}
 }

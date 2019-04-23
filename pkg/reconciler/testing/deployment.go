@@ -50,6 +50,15 @@ func NewDeployment(name, namespace string, do ...DeploymentOption) *appsv1.Deplo
 	return d
 }
 
+// WithDeploymentAvailable sets the Available Condition to True.
+func WithDeploymentAvailable(d *appsv1.Deployment) {
+	for _, cond := range d.Status.Conditions {
+		if cond.Type == appsv1.DeploymentAvailable {
+			cond.Status = corev1.ConditionTrue
+		}
+	}
+}
+
 func WithDeploymentLabels(labels map[string]string) DeploymentOption {
 	return func(d *appsv1.Deployment) {
 		d.ObjectMeta.Labels = labels
@@ -79,10 +88,11 @@ func WithDeploymentServiceAccount(serviceAccountName string) DeploymentOption {
 	}
 }
 
-func WithDeploymentContainer(name, image string, envVars []corev1.EnvVar) DeploymentOption {
+func WithDeploymentContainer(name, image string, envVars []corev1.EnvVar, containerPorts []corev1.ContainerPort) DeploymentOption {
 	return func(d *appsv1.Deployment) {
 		d.Spec.Template.Spec.Containers[0].Name = name
 		d.Spec.Template.Spec.Containers[0].Image = image
 		d.Spec.Template.Spec.Containers[0].Env = envVars
+		d.Spec.Template.Spec.Containers[0].Ports = containerPorts
 	}
 }

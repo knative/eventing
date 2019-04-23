@@ -39,6 +39,10 @@ type IngressArgs struct {
 // MakeIngress creates the in-memory representation of the Broker's ingress Deployment.
 func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 	return &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Deployment",
+			APIVersion: appsv1.SchemeGroupVersion.String(),
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: args.Broker.Namespace,
 			Name:      fmt.Sprintf("%s-broker-ingress", args.Broker.Name),
@@ -49,15 +53,15 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 					Kind:    "Broker",
 				}),
 			},
-			Labels: ingressLabels(args.Broker),
+			Labels: IngressLabels(args.Broker.Name),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: ingressLabels(args.Broker),
+				MatchLabels: IngressLabels(args.Broker.Name),
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: ingressLabels(args.Broker),
+					Labels: IngressLabels(args.Broker.Name),
 					// TODO: Remove this annotation once all channels stop using istio virtual service
 					// https://github.com/knative/eventing/issues/294
 					Annotations: map[string]string{
@@ -108,7 +112,7 @@ func MakeIngressService(b *eventingv1alpha1.Broker) *corev1.Service {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: b.Namespace,
 			Name:      fmt.Sprintf("%s-broker", b.Name),
-			Labels:    ingressLabels(b),
+			Labels:    IngressLabels(b.Name),
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(b, schema.GroupVersionKind{
 					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
@@ -118,7 +122,7 @@ func MakeIngressService(b *eventingv1alpha1.Broker) *corev1.Service {
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: ingressLabels(b),
+			Selector: IngressLabels(b.Name),
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "http",
@@ -134,9 +138,11 @@ func MakeIngressService(b *eventingv1alpha1.Broker) *corev1.Service {
 	}
 }
 
-func ingressLabels(b *eventingv1alpha1.Broker) map[string]string {
+// IngressLables generates the labels present on all resources representing the ingress of the given
+// Broker.
+func IngressLabels(brokerName string) map[string]string {
 	return map[string]string{
-		"eventing.knative.dev/broker":     b.Name,
+		"eventing.knative.dev/broker":     brokerName,
 		"eventing.knative.dev/brokerRole": "ingress",
 	}
 }
