@@ -258,34 +258,6 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerStatusSubscriberURI(makeServiceURI().String()),
 				),
 			}},
-		}, {
-			// Name: "Get Broker error",
-		}, {
-			// Name: "Get Broker Trigger channel error",
-		}, {
-			// Name: "Broker Trigger channel not found",
-		}, {
-			// Name: "Get Broker Ingress channel error",
-		}, {
-			// Name: "Broker Ingress channel not found",
-		}, {
-			// Name: "Get Broker Filter Service error",
-		}, {
-			// Name: "Resolve subscriberURI error",
-		}, {
-			// Name: "Get subscription error",
-		}, {
-			// Name: "Create subscription error",
-		}, {
-			// Name: "Create subscription error",
-		}, {
-			// Name: "Delete subscription error",
-		}, {
-			// Name: "Re-create subscription error",
-		}, {
-			// Name: "Update status error",
-		}, {
-			// Name: "Trigger reconciliation success",
 		},
 	}
 
@@ -423,12 +395,6 @@ func makeIngressChannel() *v1alpha1.Channel {
 	return newChannel(fmt.Sprintf("%s-broker-ingress", brokerName), labels)
 }
 
-/*
-func makeDifferentChannel() *v1alpha1.Channel {
-	return newChannel(fmt.Sprintf("%s-broker-different", brokerName))
-}
-*/
-
 func makeSubscriberServiceAsUnstructured() *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -454,16 +420,11 @@ func makeServiceURI() *url.URL {
 	}
 }
 
-func makeSameSubscription() *v1alpha1.Subscription {
-	return resources.NewSubscription(makeTrigger(), makeTriggerChannel(), makeTriggerChannel(), makeServiceURI())
-}
-
 func makeIngressSubscription() *v1alpha1.Subscription {
 	return resources.NewSubscription(makeTrigger(), makeTriggerChannel(), makeIngressChannel(), makeServiceURI())
 }
 
 func makeReadySubscription() *v1alpha1.Subscription {
-	//	s := makeSameSubscription()
 	s := makeIngressSubscription()
 	s.Status = *v1alpha1.TestHelper.ReadySubscriptionStatus()
 	return s

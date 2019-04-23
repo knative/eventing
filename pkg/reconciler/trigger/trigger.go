@@ -80,11 +80,11 @@ type Reconciler struct {
 	tracker            tracker.Interface
 }
 
-// Check that our Reconciler implements controller.Reconciler
+// Check that our Reconciler implements controller.Reconciler.
 var _ controller.Reconciler = (*Reconciler)(nil)
 
-// NewController initializes the controller and is called by the generated code
-// Registers event handlers to enqueue events
+// NewController initializes the controller and is called by the generated code.
+// Registers event handlers to enqueue events.
 func NewController(
 	opt reconciler.Options,
 	triggerInformer eventinginformers.TriggerInformer,
@@ -133,7 +133,7 @@ func NewController(
 func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	ctx = logging.WithLogger(ctx, r.Logger.Desugar().With(zap.String("key", key)))
 
-	// Convert the namespace/name string into a distinct namespace and name
+	// Convert the namespace/name string into a distinct namespace and name.
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		r.Logger.Errorf("invalid resource key: %s", key)
@@ -150,7 +150,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		return err
 	}
 
-	// Don't modify the informers copy
+	// Don't modify the informers copy.
 	trigger := original.DeepCopy()
 
 	// Reconcile this copy of the Trigger and then write back any status updates regardless of
@@ -349,7 +349,8 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.T
 	expected := resources.NewSubscription(t, brokerTrigger, brokerIngress, uri)
 
 	sub, err := r.getSubscription(ctx, t)
-	// If the resource doesn't exist, we'll create it
+
+	// If the resource doesn't exist, we'll create it.
 	if apierrs.IsNotFound(err) {
 		sub = expected
 		newSub, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(sub.Namespace).Create(sub)
