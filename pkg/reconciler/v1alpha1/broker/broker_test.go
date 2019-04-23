@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
+
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -29,6 +31,7 @@ import (
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
 	. "github.com/knative/pkg/reconciler/testing"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,19 +59,6 @@ var (
 	ingressChannelHostname = fmt.Sprintf("baz.qux.svc.%s", utils.GetClusterDomainName())
 
 	ingressChannelName = "ingress-channel"
-
-	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
-	// truncates to seconds to match the loss of precision during serialization.
-	deletionTime = metav1.Now().Rfc3339Copy()
-
-	// Map of events to set test cases' expectations easier.
-	events = map[string]corev1.Event{
-		brokerReadinessChanged:          {Reason: brokerReadinessChanged, Type: corev1.EventTypeNormal},
-		brokerReconcileError:            {Reason: brokerReconcileError, Type: corev1.EventTypeWarning},
-		brokerUpdateStatusFailed:        {Reason: brokerUpdateStatusFailed, Type: corev1.EventTypeWarning},
-		ingressSubscriptionDeleteFailed: {Reason: ingressSubscriptionDeleteFailed, Type: corev1.EventTypeWarning},
-		ingressSubscriptionCreateFailed: {Reason: ingressSubscriptionCreateFailed, Type: corev1.EventTypeWarning},
-	}
 )
 
 func init() {
@@ -96,7 +86,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				testing2.NewBroker(brokerName, testNS,
-					testing2.WithBrokerChannelProvisioner(channelProvisioner()),
+					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
 					testing2.WithInitBrokerConditions,
 					testing2.WithBrokerDeletionTimestamp),
 			},
@@ -106,7 +96,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				testing2.NewBroker(brokerName, testNS,
-					testing2.WithBrokerChannelProvisioner(channelProvisioner()),
+					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
 					testing2.WithInitBrokerConditions),
 			},
 			WantCreates: []metav1.Object{
@@ -114,12 +104,12 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelGenerateName(channelGenerateName),
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
-					testing2.WithChannelProvisioner(channelProvisioner())),
+					testing2.WithChannelProvisioner(channelProvisioner("my-provisioner"))),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: testing2.NewBroker(brokerName, testNS,
 					testing2.WithInitBrokerConditions,
-					testing2.WithBrokerChannelProvisioner(channelProvisioner()),
+					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
 					testing2.MarkTriggerChannelFailed("ChannelFailure", "%v", "inducing failure for create channels")),
 			}},
 			WithReactors: []clientgotesting.ReactionFunc{
@@ -130,73 +120,63 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErr: true,
 		},
-		//	{
-		//		Name:   "Trigger Channel is different than expected",
-		//		Scheme: scheme.Scheme,
-		//		InitialState: []runtime.Object{
-		//			makeBroker(),
-		//			makeDifferentTriggerChannel(),
-		//		},
-		//		WantPresent: []runtime.Object{
-		//			// This is special because the Channel is not updated, unlike most things that
-		//			// differ from expected.
-		//			// TODO uncomment the following line once our test framework supports searching for
-		//			// GenerateName.
-		//			// makeDifferentTriggerChannel(),
-		//		},
-		//	},
-		//	{
-		//		Name:   "Trigger Channel is not yet Addressable",
-		//		Scheme: scheme.Scheme,
-		//		InitialState: []runtime.Object{
-		//			makeBroker(),
-		//			makeNonAddressableTriggerChannel(),
-		//		},
-		//	},
-		//	{
-		//		Name:   "Filter Deployment.Get error",
-		//		Scheme: scheme.Scheme,
-		//		InitialState: []runtime.Object{
-		//			makeBroker(),
-		//			makeTriggerChannel(),
-		//		},
-		//		Mocks: controllertesting.Mocks{
-		//			MockGets: []controllertesting.MockGet{
-		//				func(_ client.Client, _ context.Context, key client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-		//					if _, ok := obj.(*appsv1.Deployment); ok {
-		//						if strings.Contains(key.Name, "filter") {
-		//							return controllertesting.Handled, errors.New("test error getting filter Deployment")
-		//						}
-		//					}
-		//					return controllertesting.Unhandled, nil
-		//				},
-		//			},
-		//		},
-		//		WantEvent:  []corev1.Event{events[brokerReconcileError]},
-		//		WantErrMsg: "test error getting filter Deployment",
-		//	},
-		//	{
-		//		Name:   "Filter Deployment.Create error",
-		//		Scheme: scheme.Scheme,
-		//		InitialState: []runtime.Object{
-		//			makeBroker(),
-		//			makeTriggerChannel(),
-		//		},
-		//		Mocks: controllertesting.Mocks{
-		//			MockCreates: []controllertesting.MockCreate{
-		//				func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-		//					if d, ok := obj.(*appsv1.Deployment); ok {
-		//						if d.Labels["eventing.knative.dev/brokerRole"] == "filter" {
-		//							return controllertesting.Handled, errors.New("test error creating filter Deployment")
-		//						}
-		//					}
-		//					return controllertesting.Unhandled, nil
-		//				},
-		//			},
-		//		},
-		//		WantEvent:  []corev1.Event{events[brokerReconcileError]},
-		//		WantErrMsg: "test error creating filter Deployment",
-		//	},
+		{
+			Name: "Trigger Channel is not yet Addressable",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				testing2.NewBroker(brokerName, testNS,
+					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithInitBrokerConditions),
+				testing2.NewChannel("", testNS,
+					testing2.WithInitChannelConditions,
+					testing2.WithChannelGenerateName(channelGenerateName),
+					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
+					testing2.WithChannelOwnerReferences(ownerReferences()),
+					testing2.WithChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithChannelAddress("")),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: testing2.NewBroker(brokerName, testNS,
+					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithInitBrokerConditions,
+					testing2.MarkTriggerChannelFailed("NoAddress", "%v", "Channel does not have an address.")),
+			}},
+		},
+		{
+			Name: "Filter Deployment.Create error",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				testing2.NewBroker(brokerName, testNS,
+					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithInitBrokerConditions),
+				testing2.NewChannel("", testNS,
+					testing2.WithChannelGenerateName(channelGenerateName),
+					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
+					testing2.WithChannelOwnerReferences(ownerReferences()),
+					testing2.WithChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithChannelAddress(triggerChannelHostname)),
+			},
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("create", "deployments"),
+			},
+			WantCreates: []metav1.Object{
+				// Using the helper from resources to avoid duplicating code.
+				makeFilterDeployment(testing2.NewBroker(brokerName, testNS,
+					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithInitBrokerConditions)),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: testing2.NewBroker(brokerName, testNS,
+					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithInitBrokerConditions,
+					testing2.PropagateTriggerChannelReadiness(channelStatus()),
+					testing2.MarkFilterFailed("DeploymentFailure", "%v", "inducing failure for create deployments")),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create deployments"),
+			},
+			WantErr: true,
+		},
 		//	{
 		//		Name:   "Filter Deployment.Update error",
 		//		Scheme: scheme.Scheme,
@@ -768,12 +748,16 @@ func TestReconcile(t *testing.T) {
 	defer logtesting.ClearAll()
 	table.Test(t, testing2.MakeFactory(func(listers *testing2.Listers, opt reconciler.Options) controller.Reconciler {
 		return &Reconciler{
-			Base:               reconciler.NewBase(opt, controllerAgentName),
-			subscriptionLister: listers.GetSubscriptionLister(),
-			brokerLister:       listers.GetBrokerLister(),
-			channelLister:      listers.GetChannelLister(),
-			serviceLister:      listers.GetK8sServiceLister(),
-			deploymentLister:   listers.GetDeploymentLister(),
+			Base:                      reconciler.NewBase(opt, controllerAgentName),
+			subscriptionLister:        listers.GetSubscriptionLister(),
+			brokerLister:              listers.GetBrokerLister(),
+			channelLister:             listers.GetChannelLister(),
+			serviceLister:             listers.GetK8sServiceLister(),
+			deploymentLister:          listers.GetDeploymentLister(),
+			filterImage:               filterImage,
+			filterServiceAccountName:  filterSA,
+			ingressImage:              ingressImage,
+			ingressServiceAccountName: ingressSA,
 		}
 	}))
 }
@@ -868,19 +852,6 @@ func TestReconcile(t *testing.T) {
 //	c := makeIngressChannel()
 //	c.Spec.Provisioner.Name = "some-other-provisioner"
 //	return c
-//}
-
-//func makeFilterDeployment() *appsv1.Deployment {
-//	d := resources.MakeFilterDeployment(&resources.FilterArgs{
-//		Broker:             makeBroker(),
-//		Image:              filterImage,
-//		ServiceAccountName: filterSA,
-//	})
-//	d.TypeMeta = metav1.TypeMeta{
-//		APIVersion: "apps/v1",
-//		Kind:       "Deployment",
-//	}
-//	return d
 //}
 
 //func makeDifferentFilterDeployment() *appsv1.Deployment {
@@ -994,12 +965,29 @@ func ownerReferences() []metav1.OwnerReference {
 	}}
 }
 
-func channelProvisioner() *corev1.ObjectReference {
+func channelProvisioner(name string) *corev1.ObjectReference {
 	return &corev1.ObjectReference{
 		APIVersion: "eventing.knative.dev/v1alpha1",
 		Kind:       "ClusterChannelProvisioner",
-		Name:       "my-provisioner",
+		Name:       name,
 	}
+}
+
+func channelStatus() *v1alpha1.ChannelStatus {
+	return &v1alpha1.ChannelStatus{}
+}
+
+func makeFilterDeployment(broker *v1alpha1.Broker) *appsv1.Deployment {
+	d := resources.MakeFilterDeployment(&resources.FilterArgs{
+		Broker:             broker,
+		Image:              filterImage,
+		ServiceAccountName: filterSA,
+	})
+	d.TypeMeta = metav1.TypeMeta{
+		APIVersion: "apps/v1",
+		Kind:       "Deployment",
+	}
+	return d
 }
 
 func makeAvailableDeployment() *v1.Deployment {

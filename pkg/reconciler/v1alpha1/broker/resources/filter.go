@@ -38,6 +38,10 @@ type FilterArgs struct {
 // MakeFilterDeployment creates the in-memory representation of the Broker's filter Deployment.
 func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 	return &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Deployment",
+			APIVersion: appsv1.SchemeGroupVersion.String(),
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: args.Broker.Namespace,
 			Name:      fmt.Sprintf("%s-broker-filter", args.Broker.Name),

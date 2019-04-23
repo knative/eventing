@@ -72,3 +72,17 @@ func MarkTriggerChannelFailed(reason, format, arg string) BrokerOption {
 		b.Status.MarkTriggerChannelFailed(reason, format, arg)
 	}
 }
+
+// MarkFilterFailed calls .Status.MarkFilterFailed on the Broker.
+func MarkFilterFailed(reason, format, arg string) BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		b.Status.MarkFilterFailed(reason, format, arg)
+	}
+}
+
+// PropagateTriggerChannelReadiness calls .Status.PropagateTriggerChannelReadiness on the Broker.
+func PropagateTriggerChannelReadiness(cs *v1alpha1.ChannelStatus) BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		b.Status.PropagateTriggerChannelReadiness(cs)
+	}
+}
