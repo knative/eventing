@@ -17,21 +17,32 @@ limitations under the License.
 package cronjobsource
 
 import (
-	"context"
-	"errors"
+	//"context"
+	//"errors"
 	"fmt"
+	"github.com/knative/eventing/pkg/reconciler/cronjobsource/resources"
+	"os"
 	"testing"
 
-	sourcesv1alpha1 "github.com/knative/eventing-sources/pkg/apis/sources/v1alpha1"
-	controllertesting "github.com/knative/eventing-sources/pkg/controller/testing"
+	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
+	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	"github.com/knative/eventing/pkg/reconciler"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	v1 "k8s.io/api/apps/v1"
+	"github.com/knative/pkg/controller"
+	logtesting "github.com/knative/pkg/logging/testing"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
+	//"k8s.io/apimachinery/pkg/runtime"
+	kubeinformers "k8s.io/client-go/informers"
+	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	. "github.com/knative/eventing/pkg/reconciler/testing"
+	. "github.com/knative/pkg/reconciler/testing"
+
+	sourcesv1alpha1 "github.com/knative/eventing-sources/pkg/apis/sources/v1alpha1"
+	v1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 var (
@@ -61,118 +72,81 @@ const (
 
 func init() {
 	// Add types to scheme
-	v1.AddToScheme(scheme.Scheme)
-	corev1.AddToScheme(scheme.Scheme)
-	sourcesv1alpha1.SchemeBuilder.AddToScheme(scheme.Scheme)
-	duckv1alpha1.AddToScheme(scheme.Scheme)
+	_ = v1.AddToScheme(scheme.Scheme)
+	_ = corev1.AddToScheme(scheme.Scheme)
+	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
+
+	_ = os.Setenv("CRONJOB_RA_IMAGE", "no-op")
 }
 
-func TestReconcile(t *testing.T) {
-	testCases := []controllertesting.TestCase{
+func TestAllCases(t *testing.T) {
+	table := TableTest{
 		{
-			Name: "not a Cron Job source",
-			// This is not a CronJobSource.
-			Reconciles: getNonCronJobSource(),
-			InitialState: []runtime.Object{
-				getNonCronJobSource(),
-			},
+			Name: "bad workqueue key",
+			// Make sure Reconcile handles bad keys.
+			Key: "too/many/parts",
 		}, {
-			Name: "invalid schedule",
-			InitialState: []runtime.Object{
-				getSourceWithInvalidSchedule(),
-			},
-			Reconciles: getSourceWithInvalidSchedule(),
-			WantErrMsg: "Expected exactly 5 fields, found 2: invalid schedule",
-		}, {
-			Name: "cannot get sinkURI",
-			InitialState: []runtime.Object{
-				getSource(),
-			},
-			WantPresent: []runtime.Object{
-				getSourceWithoutSink(),
-			},
-			WantErrMsg: "sinks.duck.knative.dev \"testsink\" not found",
-		}, {
-			Name: "cannot create receive adapter",
-			InitialState: []runtime.Object{
-				getSource(),
-				getAddressable(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockCreates: []controllertesting.MockCreate{
-					func(_ client.Client, _ context.Context, _ runtime.Object) (controllertesting.MockHandled, error) {
-						return controllertesting.Handled, errors.New("test-induced-error")
-					},
-				},
-			},
-			WantPresent: []runtime.Object{
-				getSourceWithSink(),
-			},
-			WantErrMsg: "test-induced-error",
-		}, {
-			Name: "cannot list deployments",
-			InitialState: []runtime.Object{
-				getSource(),
-				getAddressable(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockLists: []controllertesting.MockList{
-					func(_ client.Client, _ context.Context, _ *client.ListOptions, _ runtime.Object) (controllertesting.MockHandled, error) {
-						return controllertesting.Handled, errors.New("test-induced-error")
-					},
-				},
-			},
-			WantPresent: []runtime.Object{
-				getSourceWithSink(),
-			},
-			WantErrMsg: "test-induced-error",
-		}, {
-			Name: "successful create",
-			InitialState: []runtime.Object{
-				getSource(),
-				getAddressable(),
-			},
-			WantPresent: []runtime.Object{
-				getReadySource(),
-			},
-		}, {
-			Name: "successful create - reuse existing receive adapter",
-			InitialState: []runtime.Object{
-				getSource(),
-				getAddressable(),
-				getReceiveAdapter(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockCreates: []controllertesting.MockCreate{
-					func(_ client.Client, _ context.Context, _ runtime.Object) (controllertesting.MockHandled, error) {
-						return controllertesting.Handled, errors.New("an error that won't be seen because create is not called")
-					},
-				},
-			},
-			WantPresent: []runtime.Object{
-				getReadySource(),
-			},
+			Name: "key not found",
+			// Make sure Reconcile handles good keys that don't exist.
+			Key: "foo/not-found",
+			//}, { // TODO: there is a bug in the controller, it will query for ""
+			//	Name: "incomplete subscription",
+			//	Objects: []runtime.Object{
+			//		NewSubscription(subscriptionName, testNS),
+			//	},
+			//	Key:     "foo/incomplete",
+			//	WantErr: true,
+			//	WantEvents: []string{
+			//		Eventf(corev1.EventTypeWarning, "ChannelReferenceFetchFailed", "Failed to validate spec.channel exists: s \"\" not found"),
+			//	},
 		},
 	}
-	for _, tc := range testCases {
-		tc.IgnoreTimes = true
-		tc.ReconcileKey = fmt.Sprintf("%s/%s", testNS, sourceName)
-		if tc.Reconciles == nil {
-			tc.Reconciles = getSource()
-		}
-		tc.Scheme = scheme.Scheme
 
-		c := tc.GetClient()
-		r := &reconciler{
-			client: c,
-			scheme: tc.Scheme,
-
-			receiveAdapterImage: raImage,
+	defer logtesting.ClearAll()
+	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
+		return &Reconciler{
+			Base:             reconciler.NewBase(opt, controllerAgentName),
+			cronjobLister:    listers.GetCronJobSourceLister(),
+			deploymentLister: listers.GetDeploymentLister(),
 		}
-		r.InjectClient(c)
-		t.Run(tc.Name, tc.Runner(t, r, c))
+	}))
+
+}
+
+func TestNew(t *testing.T) {
+	defer logtesting.ClearAll()
+	kubeClient := fakekubeclientset.NewSimpleClientset()
+	eventingClient := fakeclientset.NewSimpleClientset()
+	eventingInformer := informers.NewSharedInformerFactory(eventingClient, 0)
+	kubeInformer := kubeinformers.NewSharedInformerFactory(kubeClient, 0)
+
+	cronjobInformer := eventingInformer.Sources().V1alpha1().CronJobSources()
+	deploymentInformer := kubeInformer.Apps().V1().Deployments()
+
+	c := NewController(reconciler.Options{
+		KubeClientSet:     kubeClient,
+		EventingClientSet: eventingClient,
+		Logger:            logtesting.TestLogger(t),
+	},
+		cronjobInformer,
+		deploymentInformer,
+	)
+
+	if c == nil {
+		t.Fatal("Expected NewController to return a non-nil value")
 	}
 }
+
+//
+//Name: "not a Cron Job source",
+//			Name: "invalid schedule",
+//			Name: "cannot get sinkURI",
+//
+//			Name: "cannot create receive adapter",
+//			Name: "cannot list deployments",
+//			Name: "successful create",
+//			Name: "successful create - reuse existing receive adapter",
+//
 
 func getNonCronJobSource() *sourcesv1alpha1.ContainerSource {
 	obj := &sourcesv1alpha1.ContainerSource{
@@ -288,7 +262,7 @@ func getReceiveAdapter() *v1.Deployment {
 					UID:        sourceUID,
 				},
 			},
-			Labels:    getLabels(getSource()),
+			Labels:    resources.Labels(getSource().Name),
 			Namespace: testNS,
 		},
 		TypeMeta: metav1.TypeMeta{
