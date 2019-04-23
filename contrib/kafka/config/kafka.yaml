@@ -68,22 +68,12 @@ rules:
     verbs:
       - update
   - apiGroups:
-      - networking.istio.io
+      - "" # Core API Group.	
     resources:
-      - virtualservices
+      - events	
     verbs:
-      - get
-      - list
-      - watch
-      - create
-      - update
-  - apiGroups:
-      - "" # Core API Group.
-    resources:
-      - events
-    verbs:
-      - create
-      - patch
+      - create	
+      - patch	
       - update
 ---
 
@@ -170,6 +160,13 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+      - eventing.knative.dev
+    resources:
+      - channels
+    verbs:
+      - list
+      - watch
 
 ---
 
@@ -211,13 +208,6 @@ spec:
       containers:
         - name: dispatcher
           image: github.com/knative/eventing/contrib/kafka/cmd/dispatcher
-          env:
-            - name: DISPATCHER_CONFIGMAP_NAME
-              value: kafka-channel-dispatcher
-            - name: DISPATCHER_CONFIGMAP_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
           volumeMounts:
             - name: kafka-channel-controller-config
               mountPath: /etc/config-provisioner

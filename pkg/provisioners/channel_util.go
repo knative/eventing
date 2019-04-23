@@ -62,15 +62,17 @@ func AddFinalizer(o metav1.Object, finalizerName string) AddFinalizerResult {
 	return FinalizerAdded
 }
 
+// RemoveFinalizer removes the finalizer(finalizerName) from the object(o) if the finalizer is present.
+// Returns: - FinalizerRemoved, if the finalizer was found and removed.
+//          - FinalizerNotFound, if the finalizer was not found.
 func RemoveFinalizer(o metav1.Object, finalizerName string) RemoveFinalizerResult {
-	result := FinalizerNotFound
 	finalizers := sets.NewString(o.GetFinalizers()...)
 	if finalizers.Has(finalizerName) {
-		result = FinalizerRemoved
 		finalizers.Delete(finalizerName)
 		o.SetFinalizers(finalizers.List())
+		return FinalizerRemoved
 	}
-	return result
+	return FinalizerNotFound
 }
 
 // K8sServiceOption is a functional option that can modify the K8s Service in CreateK8sService
@@ -368,7 +370,7 @@ func newVirtualService(channel *eventingv1alpha1.Channel, svc *corev1.Service) *
 				Rewrite: &istiov1alpha3.HTTPRewrite{
 					Authority: channelHostName(channel.Name, channel.Namespace),
 				},
-				Route: []istiov1alpha3.DestinationWeight{{
+				Route: []istiov1alpha3.HTTPRouteDestination{{
 					Destination: istiov1alpha3.Destination{
 						Host: destinationHost,
 						Port: istiov1alpha3.PortSelector{

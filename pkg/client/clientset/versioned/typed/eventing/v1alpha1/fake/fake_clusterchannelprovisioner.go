@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -88,6 +88,17 @@ func (c *FakeClusterChannelProvisioners) Create(clusterChannelProvisioner *v1alp
 func (c *FakeClusterChannelProvisioners) Update(clusterChannelProvisioner *v1alpha1.ClusterChannelProvisioner) (result *v1alpha1.ClusterChannelProvisioner, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateAction(clusterchannelprovisionersResource, clusterChannelProvisioner), &v1alpha1.ClusterChannelProvisioner{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ClusterChannelProvisioner), err
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeClusterChannelProvisioners) UpdateStatus(clusterChannelProvisioner *v1alpha1.ClusterChannelProvisioner) (*v1alpha1.ClusterChannelProvisioner, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewRootUpdateSubresourceAction(clusterchannelprovisionersResource, "status", clusterChannelProvisioner), &v1alpha1.ClusterChannelProvisioner{})
 	if obj == nil {
 		return nil, err
 	}

@@ -126,7 +126,10 @@ func TestMessageReceiver_HandleRequest(t *testing.T) {
 			}
 
 			f := tc.receiverFunc
-			r := NewMessageReceiver(f, zap.NewNop().Sugar())
+			r, err := NewMessageReceiver(f, zap.NewNop().Sugar())
+			if err != nil {
+				t.Fatalf("Error creating new message receiver. Error:%s", err)
+			}
 			h := r.handler()
 
 			body := tc.bodyReader

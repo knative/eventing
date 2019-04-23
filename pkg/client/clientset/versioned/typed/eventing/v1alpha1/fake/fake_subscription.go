@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -93,6 +93,18 @@ func (c *FakeSubscriptions) Create(subscription *v1alpha1.Subscription) (result 
 func (c *FakeSubscriptions) Update(subscription *v1alpha1.Subscription) (result *v1alpha1.Subscription, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(subscriptionsResource, c.ns, subscription), &v1alpha1.Subscription{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.Subscription), err
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeSubscriptions) UpdateStatus(subscription *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(subscriptionsResource, "status", c.ns, subscription), &v1alpha1.Subscription{})
 
 	if obj == nil {
 		return nil, err
