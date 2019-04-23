@@ -321,10 +321,15 @@ reconciles:
 ### Trigger
 
 `Trigger`s are reconciled by the
-[Trigger Reconciler](../../pkg/reconciler/v1alpha1/trigger). For each `Trigger`,
+[Trigger Reconciler](../../pkg/reconciler/trigger). For each `Trigger`,
 it reconciles:
 
-1. Determines the subscriber's URI.
+1. Verify the Broker Exists
+1. Get the Broker's:
+   - Trigger Channel
+   - Ingress Channel
+   - Filter Service
+1. Determine the Subscriber's URI
    - Currently uses the same logic as the `Subscription` Reconciler, so supports
      Addressables and Kubernetes `Service`s.
 1. Creates a `Subscription` from the `Broker`'s 'trigger' `Channel` to the
