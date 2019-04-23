@@ -41,6 +41,12 @@ rules:
       - "apps"
     resources:
       - "deployments"
+    verbs:
+      - "get"
+
+  - apiGroups:
+      - "apps"
+    resources:
       - "deployments/finalizers"
     verbs: &everything
       - get
