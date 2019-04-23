@@ -29,7 +29,7 @@ import (
 type TriggerOption func(*v1alpha1.Trigger)
 
 // NewTrigger creates a Trigger with TriggerOptions.
-func NewTrigger(name, namespace, broker string, so ...TriggerOption) *v1alpha1.Trigger {
+func NewTrigger(name, namespace, broker string, to ...TriggerOption) *v1alpha1.Trigger {
 	t := &v1alpha1.Trigger{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -39,7 +39,7 @@ func NewTrigger(name, namespace, broker string, so ...TriggerOption) *v1alpha1.T
 			Broker: broker,
 		},
 	}
-	for _, opt := range so {
+	for _, opt := range to {
 		opt(t)
 	}
 	t.SetDefaults(context.Background())

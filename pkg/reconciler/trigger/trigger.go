@@ -80,6 +80,8 @@ type Reconciler struct {
 	tracker            tracker.Interface
 }
 
+var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
+
 // Check that our Reconciler implements controller.Reconciler.
 var _ controller.Reconciler = (*Reconciler)(nil)
 
@@ -144,7 +146,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	original, err := r.triggerLister.Triggers(namespace).Get(name)
 	if apierrs.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("trigger key in work queue no longer exists", zap.Any("key", key))
+		logging.FromContext(ctx).Error("trigger key in work queue no longer exists")
 		return nil
 	} else if err != nil {
 		return err
@@ -202,11 +204,9 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return err
 	}
 	t.Status.PropagateBrokerStatus(&b.Status)
-	logging.FromContext(ctx).Error("Setting status to", zap.Any("status:", t.Status))
 
 	// Tell tracker to reconcile this Trigger whenever the Broker changes.
-	gvk := v1alpha1.SchemeGroupVersion.WithKind("Broker")
-	if err = r.tracker.Track(objectRef(b, gvk), t); err != nil {
+	if err = r.tracker.Track(objectRef(b, brokerGVK), t); err != nil {
 		logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
 		return err
 	}
@@ -244,7 +244,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 			r.Recorder.Eventf(t, corev1.EventTypeWarning, triggerServiceFailed, "Broker's Filter service not found")
 			return errors.New("failed to find Broker's Filter service")
 		} else {
-			logging.FromContext(ctx).Error("failed to get Broker's Ingress Channel", zap.Error(err))
+			logging.FromContext(ctx).Error("failed to get Broker's Filter service", zap.Error(err))
 			r.Recorder.Eventf(t, corev1.EventTypeWarning, triggerServiceFailed, "Failed to get Broker's Filter service")
 			return err
 		}
