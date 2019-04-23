@@ -18,6 +18,7 @@ package trigger
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"reflect"
 	"time"
@@ -63,6 +64,9 @@ const (
 	triggerUpdateStatusFailed = "TriggerUpdateStatusFailed"
 	subscriptionDeleteFailed  = "SubscriptionDeleteFailed"
 	subscriptionCreateFailed  = "SubscriptionCreateFailed"
+	triggerChannelFailed      = "TriggerChannelFailed"
+	ingressChannelFailed      = "IngressChannelFailed"
+	triggerServiceFailed      = "TriggerServiceFailed"
 )
 
 type Reconciler struct {
@@ -198,6 +202,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return err
 	}
 	t.Status.PropagateBrokerStatus(&b.Status)
+	logging.FromContext(ctx).Error("Setting status to", zap.Any("status:", t.Status))
 
 	// Tell tracker to reconcile this Trigger whenever the Broker changes.
 	gvk := v1alpha1.SchemeGroupVersion.WithKind("Broker")
@@ -208,20 +213,41 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 
 	brokerTrigger, err := r.getBrokerTriggerChannel(ctx, b)
 	if err != nil {
-		logging.FromContext(ctx).Error("Unable to get the Broker's Trigger Channel", zap.Error(err))
-		return err
+		if apierrs.IsNotFound(err) {
+			logging.FromContext(ctx).Error("can not find Broker's Trigger Channel", zap.Error(err))
+			r.Recorder.Eventf(t, corev1.EventTypeWarning, triggerChannelFailed, "Broker's Trigger channel not found")
+			return errors.New("failed to find Broker's Trigger channel")
+		} else {
+			logging.FromContext(ctx).Error("failed to get Broker's Trigger Channel", zap.Error(err))
+			r.Recorder.Eventf(t, corev1.EventTypeWarning, triggerChannelFailed, "Failed to get Broker's Trigger channel")
+			return err
+		}
 	}
 	brokerIngress, err := r.getBrokerIngressChannel(ctx, b)
 	if err != nil {
-		logging.FromContext(ctx).Error("Unable to get the Broker's Ingress Channel", zap.Error(err))
-		return err
+		if apierrs.IsNotFound(err) {
+			logging.FromContext(ctx).Error("can not find Broker's Ingress Channel", zap.Error(err))
+			r.Recorder.Eventf(t, corev1.EventTypeWarning, ingressChannelFailed, "Broker's Ingress channel not found")
+			return errors.New("failed to find Broker's Ingress channel")
+		} else {
+			logging.FromContext(ctx).Error("failed to get Broker's Ingress Channel", zap.Error(err))
+			r.Recorder.Eventf(t, corev1.EventTypeWarning, ingressChannelFailed, "Failed to get Broker's Ingress channel")
+			return err
+		}
 	}
 
 	// Get Broker filter service.
 	filterSvc, err := r.getBrokerFilterService(ctx, b)
 	if err != nil {
-		logging.FromContext(ctx).Error("Unable to get the Broker's filter Service", zap.Error(err))
-		return err
+		if apierrs.IsNotFound(err) {
+			logging.FromContext(ctx).Error("can not find Broker's Filter service", zap.Error(err))
+			r.Recorder.Eventf(t, corev1.EventTypeWarning, triggerServiceFailed, "Broker's Filter service not found")
+			return errors.New("failed to find Broker's Filter service")
+		} else {
+			logging.FromContext(ctx).Error("failed to get Broker's Ingress Channel", zap.Error(err))
+			r.Recorder.Eventf(t, corev1.EventTypeWarning, triggerServiceFailed, "Failed to get Broker's Filter service")
+			return err
+		}
 	}
 
 	subscriberURI, err := resolve.SubscriberSpec(ctx, r.DynamicClientSet, t.Namespace, t.Spec.Subscriber)
@@ -294,7 +320,6 @@ func (r *Reconciler) getChannel(ctx context.Context, b *v1alpha1.Broker, ls labe
 			return c, nil
 		}
 	}
-
 	return nil, apierrs.NewNotFound(schema.GroupResource{}, "")
 }
 
@@ -329,10 +354,12 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.T
 		sub = expected
 		newSub, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(sub.Namespace).Create(sub)
 		if err != nil {
+			r.Recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
 			return nil, err
 		}
 		return newSub, nil
 	} else if err != nil {
+		r.Recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
 		return nil, err
 	}
 

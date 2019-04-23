@@ -29,11 +29,14 @@ import (
 type TriggerOption func(*v1alpha1.Trigger)
 
 // NewTrigger creates a Trigger with TriggerOptions.
-func NewTrigger(name, namespace string, so ...TriggerOption) *v1alpha1.Trigger {
+func NewTrigger(name, namespace, broker string, so ...TriggerOption) *v1alpha1.Trigger {
 	t := &v1alpha1.Trigger{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+		},
+		Spec: v1alpha1.TriggerSpec{
+			Broker: broker,
 		},
 	}
 	for _, opt := range so {
@@ -66,10 +69,35 @@ func WithInitTriggerConditions(t *v1alpha1.Trigger) {
 	t.Status.InitializeConditions()
 }
 
-// WithBrokerNotReady initializes the Triggers's conditions.
+// WithTriggerBrokerReady initializes the Triggers's conditions.
+func WithTriggerBrokerReady() TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		t.Status.PropagateBrokerStatus(v1alpha1.TestHelper.ReadyBrokerStatus())
+	}
+}
+
+// WithTriggerBrokerFailed marks the Broker as failed
 func WithTriggerBrokerFailed(reason, message string) TriggerOption {
 	return func(t *v1alpha1.Trigger) {
 		t.Status.MarkBrokerFailed(reason, message)
+	}
+}
+
+func WithTriggerNotSubscribed(reason, message string) TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		t.Status.MarkNotSubscribed(reason, message)
+	}
+}
+
+func WithTriggerSubscribed() TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		t.Status.PropagateSubscriptionStatus(v1alpha1.TestHelper.ReadySubscriptionStatus())
+	}
+}
+
+func WithTriggerStatusSubscriberURI(uri string) TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		t.Status.SubscriberURI = uri
 	}
 }
 
