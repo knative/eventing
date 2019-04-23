@@ -93,11 +93,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		return nil
 	}
 
-	// Get the Subscription resource with this namespace/name
+	// Get the namespace resource with this namespace/name
 	original, err := r.namespaceLister.Get(name)
 	if apierrs.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("subscription key in work queue no longer exists", zap.Any("key", key))
+		logging.FromContext(ctx).Error("namespace key in work queue no longer exists", zap.Any("key", key))
 		return nil
 	} else if err != nil {
 		return err
