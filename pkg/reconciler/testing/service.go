@@ -31,9 +31,29 @@ func NewService(name, namespace string, so ...ServiceOption) *corev1.Service {
 			Name:      name,
 			Namespace: namespace,
 		},
+		Spec: corev1.ServiceSpec{},
 	}
 	for _, opt := range so {
 		opt(s)
 	}
 	return s
+}
+
+func WithServiceOwnerReferences(ownerReferences []metav1.OwnerReference) ServiceOption {
+	return func(s *corev1.Service) {
+		s.OwnerReferences = ownerReferences
+	}
+}
+
+func WithServiceLabels(labels map[string]string) ServiceOption {
+	return func(s *corev1.Service) {
+		s.ObjectMeta.Labels = labels
+		s.Spec.Selector = labels
+	}
+}
+
+func WithServicePorts(ports []corev1.ServicePort) ServiceOption {
+	return func(s *corev1.Service) {
+		s.Spec.Ports = ports
+	}
 }

@@ -418,8 +418,10 @@ func (r *Reconciler) reconcileDeployment(ctx context.Context, d *v1.Deployment) 
 	}
 
 	if !equality.Semantic.DeepDerivative(d.Spec, current.Spec) {
-		current.Spec = d.Spec
-		current, err = r.KubeClientSet.AppsV1().Deployments(current.Namespace).Update(current)
+		// Don't modify the informers copy.
+		desired := current.DeepCopy()
+		desired.Spec = d.Spec
+		current, err = r.KubeClientSet.AppsV1().Deployments(current.Namespace).Update(desired)
 		if err != nil {
 			return nil, err
 		}
@@ -444,8 +446,10 @@ func (r *Reconciler) reconcileService(ctx context.Context, svc *corev1.Service) 
 	// encounter an error while updating.
 	svc.Spec.ClusterIP = current.Spec.ClusterIP
 	if !equality.Semantic.DeepDerivative(svc.Spec, current.Spec) {
-		current.Spec = svc.Spec
-		current, err = r.KubeClientSet.CoreV1().Services(svc.Namespace).Update(current)
+		// Don't modify the informers copy.
+		desired := current.DeepCopy()
+		desired.Spec = svc.Spec
+		current, err = r.KubeClientSet.CoreV1().Services(current.Namespace).Update(desired)
 		if err != nil {
 			return nil, err
 		}
