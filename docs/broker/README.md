@@ -327,11 +327,6 @@ it reconciles:
 1. Determines the subscriber's URI.
    - Currently uses the same logic as the `Subscription` Reconciler, so supports
      Addressables and Kubernetes `Service`s.
-1. Creates a Kubernetes `Service` and Istio `VirtualService` pair. This allows
-   all Istio enabled `Pod`s to send to the `Trigger`'s address.
-   - This is the same as the current `Channel` implementation. The `Service`
-     points nowhere. The `VirtualService` reroutes requests that originally went
-     to the `Service`, to instead go to the `Broker`'s 'filter' `Service`.
-1. Creates `Subscription` from the `Broker`'s 'trigger' `Channel` to the
-   `Trigger`'s Kubernetes `Service`. Replies are sent to the `Broker`'s
+1. Creates a `Subscription` from the `Broker`'s 'trigger' `Channel` to the
+   `Trigger`'s Kubernetes `Service` using the HTTP path `/triggers/{namespace}/{name}`. Replies are sent to the `Broker`'s
    'ingress' `Channel`.
