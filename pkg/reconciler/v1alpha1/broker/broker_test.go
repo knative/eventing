@@ -65,6 +65,20 @@ var (
 	filterServiceName     = fmt.Sprintf("%s-broker-filter", brokerName)
 	ingressDeploymentName = fmt.Sprintf("%s-broker-ingress", brokerName)
 	ingressServiceName    = fmt.Sprintf("%s-broker", brokerName)
+
+	ingressSubscriptionGenerateName = fmt.Sprintf("internal-ingress-%s-", brokerName)
+
+	channelGVK = metav1.GroupVersionKind{
+		Group:   "eventing.knative.dev",
+		Version: "v1alpha1",
+		Kind:    "Channel",
+	}
+
+	subscriberGVK = metav1.GroupVersionKind{
+		Group:   "testing.eventing.knative.dev",
+		Version: "v1alpha1",
+		Kind:    "Subscriber",
+	}
 )
 
 func init() {
@@ -621,69 +635,78 @@ func TestReconcile(t *testing.T) {
 			},
 			WantErr: true,
 		},
-		//	{
-		//		Name:   "Ingress Channel is different than expected",
-		//		Scheme: scheme.Scheme,
-		//		InitialState: []runtime.Object{
-		//			makeBroker(),
-		//			makeTriggerChannel(),
-		//			makeDifferentIngressChannel(),
-		//		},
-		//		Mocks: controllertesting.Mocks{
-		//			MockLists: []controllertesting.MockList{
-		//				// Controller Runtime's fake client totally ignores the opts.LabelSelector, so
-		//				// picks up the Trigger Channel while listing the Ingress Channel. Use a mock to
-		//				// force the correct behavior.
-		//				func(innerClient client.Client, ctx context.Context, opts *client.ListOptions, list runtime.Object) (handled controllertesting.MockHandled, e error) {
-		//					if cl, ok := list.(*v1alpha1.ChannelList); ok {
-		//						// Only match the Ingress Channel labels.
-		//						ls := labels.FormatLabels(IngressChannelLabels(makeBroker()))
-		//						l, _ := labels.ConvertSelectorToLabelsMap(ls)
-		//						if opts.LabelSelector.Matches(l) {
-		//							cl.Items = append(cl.Items, *makeDifferentIngressChannel())
-		//							return controllertesting.Handled, nil
-		//						}
-		//					}
-		//					return controllertesting.Unhandled, nil
-		//				},
-		//			},
-		//		},
-		//		WantPresent: []runtime.Object{
-		//			// This is special because the Channel is not updated, unlike most things that
-		//			// differ from expected.
-		//			// TODO uncomment the following line once our test framework supports searching for
-		//			// GenerateName.
-		//			// makeDifferentIngressChannel(),
-		//		},
+		//{
+		//	Name: "Ingress Channel is not yet Addressable",
+		//	Key:  testKey,
+		//	Objects: []runtime.Object{
+		//		testing2.NewBroker(brokerName, testNS,
+		//			testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+		//			testing2.WithInitBrokerConditions),
+		//		testing2.NewChannel("", testNS,
+		//			testing2.WithChannelGenerateName(channelGenerateName),
+		//			testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
+		//			testing2.WithChannelOwnerReferences(ownerReferences()),
+		//			testing2.WithChannelProvisioner(channelProvisioner("my-provisioner")),
+		//			testing2.WithChannelAddress(triggerChannelHostname)),
+		//		testing2.NewDeployment(filterDeploymentName, testNS,
+		//			testing2.WithDeploymentOwnerReferences(ownerReferences()),
+		//			testing2.WithDeploymentLabels(resources.FilterLabels(brokerName)),
+		//			testing2.WithDeploymentAnnotations(annotations()),
+		//			testing2.WithDeploymentServiceAccount(filterSA),
+		//			testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+		//		testing2.NewService(filterServiceName, testNS,
+		//			testing2.WithServiceOwnerReferences(ownerReferences()),
+		//			testing2.WithServiceLabels(resources.FilterLabels(brokerName)),
+		//			testing2.WithServicePorts(servicePorts(filterContainerName, 8080))),
+		//		testing2.NewDeployment(ingressDeploymentName, testNS,
+		//			testing2.WithDeploymentOwnerReferences(ownerReferences()),
+		//			testing2.WithDeploymentLabels(resources.IngressLabels(brokerName)),
+		//			testing2.WithDeploymentAnnotations(annotations()),
+		//			testing2.WithDeploymentServiceAccount(ingressSA),
+		//			testing2.WithDeploymentContainer(ingressContainerName, ingressImage, envVars(ingressContainerName), containerPorts(8080))),
+		//		testing2.NewService(ingressServiceName, testNS,
+		//			testing2.WithServiceOwnerReferences(ownerReferences()),
+		//			testing2.WithServiceLabels(resources.IngressLabels(brokerName)),
+		//			testing2.WithServicePorts(servicePorts(ingressContainerName, 8080))),
+		//		testing2.NewChannel("", testNS,
+		//			testing2.WithChannelGenerateName(channelGenerateName),
+		//			testing2.WithChannelLabels(IngressChannelLabels(brokerName)),
+		//			testing2.WithChannelOwnerReferences(ownerReferences()),
+		//			testing2.WithChannelProvisioner(channelProvisioner("my-provisioner"))),
+		//		testing2.NewSubscription("", testNS,
+		//			testing2.WithInitSubscriptionConditions,
+		//			testing2.WithSubscriptionGenerateName(ingressSubscriptionGenerateName),
+		//			testing2.WithSubscriptionOwnerReferences(ownerReferences()),
+		//			testing2.WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
+		//			testing2.WithSubscriptionChannel(channelGVK, channelGenerateName),
+		//			testing2.WithSubscriptionSubscriberRef(subscriberGVK, ingressServiceName),
+		//		),
 		//	},
-		//	{
-		//		Name:   "Ingress Channel is not yet Addressable",
-		//		Scheme: scheme.Scheme,
-		//		InitialState: []runtime.Object{
-		//			makeBroker(),
-		//			makeTriggerChannel(),
-		//			makeNonAddressableIngressChannel(),
-		//		},
-		//		Mocks: controllertesting.Mocks{
-		//			MockLists: []controllertesting.MockList{
-		//				// Controller Runtime's fake client totally ignores the opts.LabelSelector, so
-		//				// picks up the Trigger Channel while listing the Ingress Channel. Use a mock to
-		//				// force the correct behavior.
-		//				func(innerClient client.Client, ctx context.Context, opts *client.ListOptions, list runtime.Object) (handled controllertesting.MockHandled, e error) {
-		//					if cl, ok := list.(*v1alpha1.ChannelList); ok {
-		//						// Only match the Ingress Channel labels.
-		//						ls := labels.FormatLabels(IngressChannelLabels(makeBroker()))
-		//						l, _ := labels.ConvertSelectorToLabelsMap(ls)
-		//						if opts.LabelSelector.Matches(l) {
-		//							cl.Items = append(cl.Items, *makeNonAddressableIngressChannel())
-		//							return controllertesting.Handled, nil
-		//						}
-		//					}
-		//					return controllertesting.Unhandled, nil
-		//				},
-		//			},
-		//		},
-		//	},
+		//	WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+		//		Object: testing2.NewBroker(brokerName, testNS,
+		//			testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+		//			testing2.WithInitBrokerConditions,
+		//			testing2.PropagateTriggerChannelReadiness(channelStatus()),
+		//			testing2.PropagateFilterDeploymentAvailability(testing2.NewDeployment(filterDeploymentName, testNS,
+		//				testing2.WithDeploymentOwnerReferences(ownerReferences()),
+		//				testing2.WithDeploymentLabels(resources.FilterLabels(brokerName)),
+		//				testing2.WithDeploymentAnnotations(annotations()),
+		//				testing2.WithDeploymentServiceAccount(filterSA),
+		//				testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil),
+		//				testing2.WithDeploymentAvailable)),
+		//			testing2.PropagateIngressDeploymentAvailability(testing2.NewDeployment(ingressDeploymentName, testNS,
+		//				testing2.WithDeploymentOwnerReferences(ownerReferences()),
+		//				testing2.WithDeploymentLabels(resources.IngressLabels(brokerName)),
+		//				testing2.WithDeploymentAnnotations(annotations()),
+		//				testing2.WithDeploymentServiceAccount(ingressSA),
+		//				testing2.WithDeploymentContainer(ingressContainerName, ingressImage, envVars(ingressContainerName), containerPorts(8080)),
+		//				testing2.WithDeploymentAvailable,
+		//			)),
+		//			testing2.WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),
+		//			testing2.PropagateIngressChannelReadiness(channelStatus()),
+		//			//testing2.PropagateIngressSubscriptionReadiness()
+		//	}},
+		// },
 		//	{
 		//		Name:   "Subscription.List error",
 		//		Scheme: scheme.Scheme,
@@ -1113,6 +1136,10 @@ func channelProvisioner(name string) *corev1.ObjectReference {
 
 func channelStatus() *v1alpha1.ChannelStatus {
 	return &v1alpha1.ChannelStatus{}
+}
+
+func subscriptionStatus() *v1alpha1.SubscriptionStatus {
+	return &v1alpha1.SubscriptionStatus{}
 }
 
 // TODO remove this once we get rid of istio.

@@ -494,8 +494,7 @@ func (r *Reconciler) reconcileIngressSubscription(ctx context.Context, b *v1alph
 	if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
 		// Given that spec.channel is immutable, we cannot just update the subscription. We delete
 		// it instead, and re-create it.
-		// TODO check if setting DeleteOptions to nil is correct
-		err = r.EventingClientSet.EventingV1alpha1().Subscriptions(sub.Namespace).Delete(sub.Name, nil)
+		err = r.EventingClientSet.EventingV1alpha1().Subscriptions(sub.Namespace).Delete(sub.Name, &metav1.DeleteOptions{})
 		if err != nil {
 			logging.FromContext(ctx).Info("Cannot delete subscription", zap.Error(err))
 			r.Recorder.Eventf(b, corev1.EventTypeWarning, ingressSubscriptionDeleteFailed, "Delete Broker Ingress' subscription failed: %v", err)
@@ -514,7 +513,7 @@ func (r *Reconciler) reconcileIngressSubscription(ctx context.Context, b *v1alph
 // getSubscription returns the subscription of trigger 't' if exists,
 // otherwise it returns an error.
 func (r *Reconciler) getIngressSubscription(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Subscription, error) {
-	subscriptions, err := r.subscriptionLister.Subscriptions(b.Namespace).List(labels.SelectorFromSet(ingressSubscriptionLabels(b)))
+	subscriptions, err := r.subscriptionLister.Subscriptions(b.Namespace).List(labels.SelectorFromSet(ingressSubscriptionLabels(b.Name)))
 	if err != nil {
 		return nil, err
 	}
@@ -540,7 +539,7 @@ func makeSubscription(b *v1alpha1.Broker, c *v1alpha1.Channel, svc *corev1.Servi
 					Kind:    "Broker",
 				}),
 			},
-			Labels: ingressSubscriptionLabels(b),
+			Labels: ingressSubscriptionLabels(b.Name),
 		},
 		Spec: v1alpha1.SubscriptionSpec{
 			Channel: corev1.ObjectReference{
@@ -559,9 +558,9 @@ func makeSubscription(b *v1alpha1.Broker, c *v1alpha1.Channel, svc *corev1.Servi
 	}
 }
 
-func ingressSubscriptionLabels(b *v1alpha1.Broker) map[string]string {
+func ingressSubscriptionLabels(brokerName string) map[string]string {
 	return map[string]string{
-		"eventing.knative.dev/broker":        b.Name,
+		"eventing.knative.dev/broker":        brokerName,
 		"eventing.knative.dev/brokerIngress": "true",
 	}
 }
