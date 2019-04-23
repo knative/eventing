@@ -111,8 +111,9 @@ func MakeIngressService(b *eventingv1alpha1.Broker) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: b.Namespace,
-			Name:      fmt.Sprintf("%s-broker", b.Name),
-			Labels:    IngressLabels(b.Name),
+			// TODO add -ingress to the name to be consistent with the filter service naming.
+			Name:   fmt.Sprintf("%s-broker", b.Name),
+			Labels: IngressLabels(b.Name),
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(b, schema.GroupVersionKind{
 					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
