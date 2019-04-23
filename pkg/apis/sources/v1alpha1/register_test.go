@@ -1,5 +1,9 @@
 /*
+<<<<<<< HEAD
 Copyright 2018 The Knative Authors
+=======
+Copyright 2019 The Knative Authors
+>>>>>>> cronjobsource
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -15,9 +19,10 @@ package v1alpha1
 import (
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 // Resource takes an unqualified resource and returns a Group qualified GroupResource

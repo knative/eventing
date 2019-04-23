@@ -1,5 +1,9 @@
 /*
+<<<<<<< HEAD
 Copyright 2018 The Knative Authors
+=======
+Copyright 2019 The Knative Authors
+>>>>>>> cronjobsource
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,13 +21,14 @@ limitations under the License.
 package v1alpha1_test
 
 import (
-	"github.com/knative/eventing-sources/pkg/apis/sources/v1alpha1"
 	"testing"
+
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/knative/eventing-sources/pkg/apis/sources/v1alpha1"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
 )
 
 func TestCronJobSourceStatusIsReady(t *testing.T) {
