@@ -333,12 +333,34 @@ Event Sources so that the user doesn't need to query the CRDs to get the list. W
 -  I wonder if the Event Source populating the Registry should happen when the Event Source is loaded into the system, 
 meaning when the Event Source's CRD is installed (not when an instance of the CRD is created). 
 
-The problem with that is that you don't have a namespace (nor Broker, user/repo, etc.) at that point. 
-Which namespace the EventType should be created on? Pointing to which Broker? 
-Implementation-wise, one potential solution is to have a controller for source CRDs, whenever one is installed, search for all the namespaces with 
-eventing enabled (`kubectl get namespaces -l knative-eventing-injection=enabled`), and adding all the possible EventTypes from that CRD to each of 
-the Brokers in those namespaces. A downside of this is that the Registry information is not "accurate", in the sense that it only has info about EventTypes 
-that may potentially flow in the system. But actually, they will only be able to flow when a CR is created.
+    The problem with that is that you don't have a namespace (nor Broker, user/repo, etc.) at that point. 
+    Which namespace the EventType should be created on? Pointing to which Broker? 
+    Implementation-wise, one potential solution is to have a controller for source CRDs, whenever one is installed, search for all the namespaces with 
+    eventing enabled (`kubectl get namespaces -l knative-eventing-injection=enabled`), and adding all the possible EventTypes from that CRD to each of 
+    the Brokers in those namespaces. A downside of this is that the Registry information is not "accurate", in the sense that it only has info about EventTypes 
+    that may potentially flow in the system. But actually, they will only be able to flow when a CR is created.
 
-- ...
+- How can I filter events by the CloudEvents `subject` field?
+
+  The EventType CRD will not include a `subject` field because we expect the cardinality of `subject` to be quite high. 
+  However, a user that would like to filter by a known subject value can do this in the Trigger with the 
+  Advanced Filtering proposed in [#1047](https://github.com/knative/eventing/pull/1047).
+  
+  Example:
+
+  ```yaml
+  apiVersion: eventing.knative.dev/v1alpha1
+  kind: Trigger
+  metadata:
+    name: only-knative
+  spec:
+    filter:
+     cel:
+        expression: ce.subject.match("/knative/*")
+    subscriber:
+     ref:
+       apiVersion: serving.knative.dev/v1alpha1
+       kind: Service
+       name: knative-events-processor
+```
 
