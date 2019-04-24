@@ -16,9 +16,9 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: source-controller
+    app: sources-controller
     serving.knative.dev/release: devel
-  name: source-controller
+  name: sources-controller
   namespace: knative-eventing
 spec:
   ports:
@@ -27,4 +27,4 @@ spec:
       protocol: TCP
       targetPort: 9090
   selector:
-    app: source-controller
+    app: sources-controller

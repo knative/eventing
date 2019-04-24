@@ -50,7 +50,7 @@ func main() {
 
 	logger, atomicLevel := setupLogger()
 	defer logger.Sync()
-	logger = logger.With(zap.String(logkey.ControllerType, logconfig.SourceController))
+	logger = logger.With(zap.String(logkey.ControllerType, logconfig.SourcesController))
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
@@ -92,7 +92,7 @@ func main() {
 	}
 
 	// Watch the logging config map and dynamically update logging levels.
-	opt.ConfigMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.SourceController))
+	opt.ConfigMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.SourcesController))
 	// TODO: Watch the observability config map and dynamically update metrics exporter.
 	//opt.ConfigMapWatcher.Watch(metrics.ObservabilityConfigName, metrics.UpdateExporterFromConfigMap(component, logger))
 	if err := opt.ConfigMapWatcher.Start(stopCh); err != nil {
