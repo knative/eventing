@@ -56,7 +56,14 @@ rules:
       - "admissionregistration.k8s.io"
     resources:
       - "mutatingwebhookconfigurations"
-    verbs: *everything
+    verbs: 
+      - "get"
+      - "list"
+      - "create"
+      - "update"
+      - "delete"
+      - "patch"
+      - "watch"
 
   # Our own resources and statuses we care about.
   - apiGroups:
