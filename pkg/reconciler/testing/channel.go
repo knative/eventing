@@ -18,12 +18,13 @@ package testing
 
 import (
 	"context"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ChannelOption enables further configuration of a Channel.
@@ -63,6 +64,32 @@ func WithInitChannelConditions(s *v1alpha1.Channel) {
 	s.Status.InitializeConditions()
 }
 
+func WithChannelDeleted(c *v1alpha1.Channel) {
+	t := metav1.NewTime(time.Unix(1e9, 0))
+	c.ObjectMeta.SetDeletionTimestamp(&t)
+}
+
+func WithChannelProvisionerNotFound(name, kind string) ChannelOption {
+	return func(c *v1alpha1.Channel) {
+		c.Status.MarkProvisionerNotInstalled(
+			"Provisioner not found.",
+			"Specified provisioner [Name:%s Kind:%s] is not installed or not controlling the channel.",
+			name,
+			kind,
+		)
+	}
+}
+
+func WithChannelProvisioner(gvk metav1.GroupVersionKind, name string) ChannelOption {
+	return func(c *v1alpha1.Channel) {
+		c.Spec.Provisioner = &corev1.ObjectReference{
+			APIVersion: apiVersion(gvk),
+			Kind:       gvk.Kind,
+			Name:       name,
+		}
+	}
+}
+
 func WithChannelAddress(hostname string) ChannelOption {
 	return func(c *v1alpha1.Channel) {
 		c.Status.Address.Hostname = hostname
@@ -92,11 +119,5 @@ func WithChannelLabels(labels map[string]string) ChannelOption {
 func WithChannelOwnerReferences(ownerReferences []metav1.OwnerReference) ChannelOption {
 	return func(c *v1alpha1.Channel) {
 		c.ObjectMeta.OwnerReferences = ownerReferences
-	}
-}
-
-func WithChannelProvisioner(provisioner *corev1.ObjectReference) ChannelOption {
-	return func(c *v1alpha1.Channel) {
-		c.Spec.Provisioner = provisioner
 	}
 }

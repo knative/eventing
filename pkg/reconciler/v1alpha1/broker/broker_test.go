@@ -79,6 +79,12 @@ var (
 		Version: "v1alpha1",
 		Kind:    "Subscriber",
 	}
+
+	provisionerGVK = metav1.GroupVersionKind{
+		Group:   "eventing.knative.dev",
+		Version: "v1alpha1",
+		Kind:    "ClusterChannelProvisioner",
+	}
 )
 
 func init() {
@@ -124,7 +130,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelGenerateName(channelGenerateName),
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
-					testing2.WithChannelProvisioner(channelProvisioner("my-provisioner"))),
+					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner")),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: testing2.NewBroker(brokerName, testNS,
@@ -152,7 +158,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelGenerateName(channelGenerateName),
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
-					testing2.WithChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
 					testing2.WithChannelAddress("")),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -173,7 +179,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelGenerateName(channelGenerateName),
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
-					testing2.WithChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
 					testing2.WithChannelAddress(triggerChannelHostname)),
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
@@ -210,7 +216,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelGenerateName(channelGenerateName),
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
-					testing2.WithChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
 					testing2.WithChannelAddress(triggerChannelHostname)),
 				testing2.NewDeployment(filterDeploymentName, testNS,
 					testing2.WithDeploymentOwnerReferences(ownerReferences()),
@@ -253,7 +259,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelGenerateName(channelGenerateName),
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
-					testing2.WithChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
 					testing2.WithChannelAddress(triggerChannelHostname)),
 				testing2.NewDeployment(filterDeploymentName, testNS,
 					testing2.WithDeploymentOwnerReferences(ownerReferences()),
@@ -294,7 +300,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelGenerateName(channelGenerateName),
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
-					testing2.WithChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
 					testing2.WithChannelAddress(triggerChannelHostname)),
 				testing2.NewDeployment(filterDeploymentName, testNS,
 					testing2.WithDeploymentOwnerReferences(ownerReferences()),
@@ -339,7 +345,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelGenerateName(channelGenerateName),
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
-					testing2.WithChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
 					testing2.WithChannelAddress(triggerChannelHostname)),
 				testing2.NewDeployment(filterDeploymentName, testNS,
 					testing2.WithDeploymentOwnerReferences(ownerReferences()),
@@ -394,7 +400,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelGenerateName(channelGenerateName),
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
-					testing2.WithChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
 					testing2.WithChannelAddress(triggerChannelHostname)),
 				testing2.NewDeployment(filterDeploymentName, testNS,
 					testing2.WithDeploymentOwnerReferences(ownerReferences()),
@@ -454,7 +460,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelGenerateName(channelGenerateName),
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
-					testing2.WithChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
 					testing2.WithChannelAddress(triggerChannelHostname)),
 				testing2.NewDeployment(filterDeploymentName, testNS,
 					testing2.WithDeploymentOwnerReferences(ownerReferences()),
@@ -512,7 +518,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelGenerateName(channelGenerateName),
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
-					testing2.WithChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
 					testing2.WithChannelAddress(triggerChannelHostname)),
 				testing2.NewDeployment(filterDeploymentName, testNS,
 					testing2.WithDeploymentOwnerReferences(ownerReferences()),
@@ -574,7 +580,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelGenerateName(channelGenerateName),
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
-					testing2.WithChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
 					testing2.WithChannelAddress(triggerChannelHostname)),
 				testing2.NewDeployment(filterDeploymentName, testNS,
 					testing2.WithDeploymentOwnerReferences(ownerReferences()),
@@ -605,7 +611,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelGenerateName(channelGenerateName),
 					testing2.WithChannelLabels(IngressChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
-					testing2.WithChannelProvisioner(channelProvisioner("my-provisioner"))),
+					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner")),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: testing2.NewBroker(brokerName, testNS,
