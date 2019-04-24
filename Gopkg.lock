@@ -780,7 +780,8 @@
   revision = "1e491301e022f8f977054da4c2d852decd59571f"
 
 [[projects]]
-  digest = "1:46bd4e66bfce5e77f08fc2e8dcacc3676e679241ce83d9c150ff0397d686dd44"
+  branch = "master"
+  digest = "1:3121d742fbe48670a16d98b6da4693501fc33cd76d69ed6f35850c564f255c65"
   name = "golang.org/x/oauth2"
   packages = [
     ".",
@@ -790,7 +791,7 @@
     "jwt",
   ]
   pruneopts = "NUT"
-  revision = "cdc340f7c179dbbfa4afd43b7614e8fcadde4269"
+  revision = "9f3314589c9a9136388751d9adae6b0ed400978a"
 
 [[projects]]
   branch = "master"
@@ -1426,6 +1427,7 @@
     "k8s.io/client-go/dynamic",
     "k8s.io/client-go/dynamic/fake",
     "k8s.io/client-go/informers",
+    "k8s.io/client-go/informers/apps/v1",
     "k8s.io/client-go/informers/core/v1",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/fake",

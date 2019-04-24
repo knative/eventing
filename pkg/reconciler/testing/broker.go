@@ -125,12 +125,14 @@ func PropagateIngressDeploymentAvailability(d *v1.Deployment) BrokerOption {
 	}
 }
 
+// PropagateIngressDeploymentAvailability calls .Status.PropagateIngressChannelReadiness on the Broker.
 func PropagateIngressChannelReadiness(cs *v1alpha1.ChannelStatus) BrokerOption {
 	return func(b *v1alpha1.Broker) {
 		b.Status.PropagateIngressChannelReadiness(cs)
 	}
 }
 
+// PropagateIngressSubscriptionReadiness calls .Status.PropagateIngressSubscriptionReadiness on the Broker.
 func PropagateIngressSubscriptionReadiness(ss *v1alpha1.SubscriptionStatus) BrokerOption {
 	return func(b *v1alpha1.Broker) {
 		b.Status.PropagateIngressSubscriptionReadiness(ss)
