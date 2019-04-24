@@ -425,6 +425,7 @@
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
 [[projects]]
+<<<<<<< HEAD
   digest = "1:5923fb20c8ac5e5dcc2e7a9f8dfa702c72491f3905372454add6cbb59b0e39fb"
   name = "github.com/knative/eventing-sources"
   packages = [
@@ -438,7 +439,7 @@
   version = "v0.5.0"
 
 [[projects]]
-  digest = "1:b657ec75371e8baf47023f7eb4f20d78e2a744f51ec824b40dd6cf74ad6fdaf4"
+  digest = "1:57d04562d05dd4500ff1e7e47f2e62b9be0531388377a3b691a012ce70b210d5"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -481,7 +482,7 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "418e675f88c29db0217475a74e61ebfa239f0f50"
+  revision = "6916051a96ae4d87d0e0e557a3c3b887ee4a3cea"
 
 [[projects]]
   branch = "master"
@@ -1409,6 +1410,7 @@
     "github.com/knative/pkg/system/testing",
     "github.com/knative/pkg/test",
     "github.com/knative/pkg/test/logging",
+    "github.com/knative/pkg/tracker",
     "github.com/knative/pkg/webhook",
     "github.com/knative/test-infra/scripts",
     "github.com/knative/test-infra/tools/dep-collector",
@@ -1456,6 +1458,7 @@
     "k8s.io/client-go/dynamic/fake",
     "k8s.io/client-go/informers",
     "k8s.io/client-go/informers/apps/v1",
+    "k8s.io/client-go/informers/core/v1",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/kubernetes/scheme",
@@ -1482,7 +1485,6 @@
     "sigs.k8s.io/controller-runtime/pkg/event",
     "sigs.k8s.io/controller-runtime/pkg/handler",
     "sigs.k8s.io/controller-runtime/pkg/manager",
-    "sigs.k8s.io/controller-runtime/pkg/predicate",
     "sigs.k8s.io/controller-runtime/pkg/reconcile",
     "sigs.k8s.io/controller-runtime/pkg/runtime/inject",
     "sigs.k8s.io/controller-runtime/pkg/runtime/log",
