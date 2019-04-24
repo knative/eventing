@@ -17,8 +17,6 @@ limitations under the License.
 package trigger
 
 import (
-	//	"context"
-	//	"errors"
 	"fmt"
 	"net/url"
 	"testing"
@@ -55,18 +53,6 @@ const (
 
 var (
 	trueVal = true
-	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
-	// truncates to seconds to match the loss of precision during serialization.
-	deletionTime = metav1.Now().Rfc3339Copy()
-
-	// Map of events to set test cases' expectations easier.
-	events = map[string]corev1.Event{
-		triggerReconciled:         {Reason: triggerReconciled, Type: corev1.EventTypeNormal},
-		triggerUpdateStatusFailed: {Reason: triggerUpdateStatusFailed, Type: corev1.EventTypeWarning},
-		triggerReconcileFailed:    {Reason: triggerReconcileFailed, Type: corev1.EventTypeWarning},
-		subscriptionDeleteFailed:  {Reason: subscriptionDeleteFailed, Type: corev1.EventTypeWarning},
-		subscriptionCreateFailed:  {Reason: subscriptionCreateFailed, Type: corev1.EventTypeWarning},
-	}
 )
 
 func init() {
@@ -304,26 +290,6 @@ func makeTrigger() *v1alpha1.Trigger {
 			},
 		},
 	}
-}
-
-func makeReadyTrigger() *v1alpha1.Trigger {
-	t := makeTrigger()
-	t.Status = *v1alpha1.TestHelper.ReadyTriggerStatus()
-	t.Status.SubscriberURI = fmt.Sprintf("http://%s.%s.svc.%s/", subscriberName, testNS, utils.GetClusterDomainName())
-	return t
-}
-
-func makeDeletingTrigger() *v1alpha1.Trigger {
-	b := makeReadyTrigger()
-	b.DeletionTimestamp = &deletionTime
-	return b
-}
-
-func makeTriggerWithNamespaceAndName(namespace, name string) *v1alpha1.Trigger {
-	t := makeTrigger()
-	t.Namespace = namespace
-	t.Name = name
-	return t
 }
 
 func makeBroker() *v1alpha1.Broker {

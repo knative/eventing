@@ -50,15 +50,6 @@ func NewDeployment(name, namespace string, do ...DeploymentOption) *appsv1.Deplo
 	return d
 }
 
-// WithDeploymentAvailable sets the Available Condition to True.
-func WithDeploymentAvailable(d *appsv1.Deployment) {
-	for _, cond := range d.Status.Conditions {
-		if cond.Type == appsv1.DeploymentAvailable {
-			cond.Status = corev1.ConditionTrue
-		}
-	}
-}
-
 func WithDeploymentLabels(labels map[string]string) DeploymentOption {
 	return func(d *appsv1.Deployment) {
 		d.ObjectMeta.Labels = labels

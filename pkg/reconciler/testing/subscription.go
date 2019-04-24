@@ -76,6 +76,10 @@ func WithInitSubscriptionConditions(s *v1alpha1.Subscription) {
 	s.Status.InitializeConditions()
 }
 
+func WithSubscriptionReady(s *v1alpha1.Subscription) {
+	s.Status = *v1alpha1.TestHelper.ReadySubscriptionStatus()
+}
+
 // TODO: this can be a runtime object
 func WithSubscriptionDeleted(s *v1alpha1.Subscription) {
 	t := metav1.NewTime(time.Unix(1e9, 0))

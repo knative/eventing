@@ -74,6 +74,11 @@ func WithBrokerAddress(address string) BrokerOption {
 	}
 }
 
+// WithBrokerReady sets .Status to ready.
+func WithBrokerReady(b *v1alpha1.Broker) {
+	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
+}
+
 // WithTriggerChannelFailed calls .Status.MarkTriggerChannelFailed on the Broker.
 func WithTriggerChannelFailed(reason, msg string) BrokerOption {
 	return func(b *v1alpha1.Broker) {
@@ -130,23 +135,5 @@ func WithBrokerIngressChannelReady() BrokerOption {
 func WithBrokerIngressSubscriptionFailed(reason, msg string) BrokerOption {
 	return func(b *v1alpha1.Broker) {
 		b.Status.MarkIngressSubscriptionFailed(reason, msg)
-	}
-}
-
-func WithBrokerIngressChannelNotReady() BrokerOption {
-	return func(b *v1alpha1.Broker) {
-		b.Status.PropagateIngressChannelReadiness(v1alpha1.TestHelper.NotReadyChannelStatus())
-	}
-}
-
-func WithBrokerSubscriptionReady() BrokerOption {
-	return func(b *v1alpha1.Broker) {
-		b.Status.PropagateIngressSubscriptionReadiness(v1alpha1.TestHelper.ReadySubscriptionStatus())
-	}
-}
-
-func WithBrokerSubscriptionNotReady() BrokerOption {
-	return func(b *v1alpha1.Broker) {
-		b.Status.PropagateIngressSubscriptionReadiness(v1alpha1.TestHelper.NotReadySubscriptionStatus())
 	}
 }
