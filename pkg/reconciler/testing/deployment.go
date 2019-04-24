@@ -28,10 +28,6 @@ type DeploymentOption func(*appsv1.Deployment)
 // NewDeployment creates a Deployment with DeploymentOptions.
 func NewDeployment(name, namespace string, do ...DeploymentOption) *appsv1.Deployment {
 	d := &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Deployment",
-			APIVersion: appsv1.SchemeGroupVersion.String(),
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      name,

@@ -39,10 +39,6 @@ type IngressArgs struct {
 // MakeIngress creates the in-memory representation of the Broker's ingress Deployment.
 func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 	return &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Deployment",
-			APIVersion: appsv1.SchemeGroupVersion.String(),
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: args.Broker.Namespace,
 			Name:      fmt.Sprintf("%s-broker-ingress", args.Broker.Name),
