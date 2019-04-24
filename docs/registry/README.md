@@ -3,7 +3,7 @@
 ## Problem 
 
 As an `Event Consumer` I want to be able to discover the different event types that I can consume 
-from the different Brokers, without resorting to any OOB mechanism. 
+from the different Brokers. 
 This is also known as the `discoverability` use case, and is the main focus of this proposal. 
 
 ## Objective
@@ -12,7 +12,7 @@ Design an **initial** version of the **Registry** for the **MVP** that can suppo
 the different event types that can be consumed from the eventing mesh. For details on the different user stories 
 that this proposal touches, please refer to the 
 [User stories and personas for Knative eventing](https://docs.google.com/document/d/15uhyqQvaomxRX2u8s0i6CNhA86BQTNztkdsLUnPmvv4/edit?usp=sharing) document.
-Note that this proposal targets the cases were the Broker/Trigger model is used.
+Note that this proposal targets the cases where the Broker/Trigger model is used.
 
 #### Out of scope
 
@@ -24,6 +24,8 @@ GitHub after our cluster has been configured (i.e., our GitHub CRD Source instal
 have been created, we will need to create new webhooks (and update the GitHub CRD Source) if we want to listen for 
 those new events. Until doing so, those new events shouldn't be listed in the Registry. 
 Such task will again be in charge of the `Cluster Configurator`.
+- Auto-Registration of events at the Broker-level. This doesn't seem needed for an MVP, but we include a brief description 
+in this document as well.
 
 ## Requirements
 
@@ -34,7 +36,7 @@ Our design revolves around the following core requirements:
 the eventing mesh in order to support the `discoverability` use case.
 If an event type is not ready for consumption, we should explicitly indicate so (e.g., if the Broker 
 is not ready).
-3. The event types stored in the Registry should contain all the required information 
+3. The event types stored in the Registry should contain (all) the required information 
 for a consumer to create a Trigger without resorting to some other OOB mechanism.
 
 
@@ -48,12 +50,13 @@ We propose introducing a namespaced-EventType CRD. Here is an example of how a C
 apiVersion: eventing.knative.dev/v1alpha1
 kind: EventType
 metadata:
-  name: repopush
+  name: pullrequest
   namespace: default
 spec:
-  type: repo:push
-  source: /my-user/my-repo
-  schema: /my-schema
+  type: pull_request
+  source: github.com
+  schema: //github.com/schemas/pull_request
+  description: "GitHub pull request"
   broker: default
 ```
 
@@ -61,228 +64,182 @@ spec:
 contain characters that may not comply with Kubernetes naming conventions, we will (slightly) 
 modify those names to make them K8s-compliant, whenever we need to generate them. 
 
-- `type` is authoritative. This refers to the CloudEvent type as it enters into the eventing mesh. 
+- `type`: is authoritative. This refers to the CloudEvent type as it enters into the eventing mesh. 
 
 - `source`: is a valid URI. Refers to the CloudEvent source as it enters into the eventing mesh.
 
-Given that `subject` was approved in the new CloudEvents spec, the CloudEvents `source` became more suitable for 
-our purposes. Before, it contained dynamically generated information (e.g., `https://github.com/<owner>/<repo>/pull/<pull_id>`) 
-that we didn't know beforehand. Now, with the introduction of `subject`, `source` was 're-purposed'. In the previous example 
-`source` would be `https://github.com/<owner>/<repo>/pull` and `subject` would just contain the `<pull_id>`.
-
 - `schema` is a URI with the EventType schema. It may be a JSON schema, a protobuf schema, etc. It is optional.
+
+- `description` is a string describing what the EventType is about. It is optional.
 
 - `broker` refers to the Broker that can provide the EventType. 
 
 ### Typical Flow
 
-`1.` A `Cluster Configurator` configures the cluster in a way that allows the population of EventTypes in the Registry. 
-We foresee the following three ways of populating the Registry so far:
+1. A `Cluster Configurator` configures the cluster in a way that allows the population of EventTypes in the Registry. 
+We foresee the following two ways of populating the Registry for the MVP. A third one (Broker Auto-Registration) will be 
+ explained in the following section but is most likely out of the scope of the Registry MVP.
 
-`1.1` Event Source CR installation
+    1.1. Event Source CR installation
 
-Upon installation of an Event Source CR by a `Cluster Configurator`, the Source will register its EventTypes.
+    Upon installation of an Event Source CR by a `Cluster Configurator`, the Source will register its EventTypes.
 
-Example:
-
-```yaml
-apiVersion: sources.eventing.knative.dev/v1alpha1
-kind: GitHubSource
-metadata:
-  name: github-source-sample
-  namespace: default
-spec:
-  eventTypes:
-    - push
-    - pull_request
-  ownerAndRepository: my-other-user/my-other-repo
-  accessToken:
-    secretKeyRef:
-      name: github-secret
-      key: accessToken
-  secretToken:
-    secretKeyRef:
-      name: github-secret
-      key: secretToken
-  sink:
+    Example:
+    
+    ```yaml
+    apiVersion: sources.eventing.knative.dev/v1alpha1
+    kind: GitHubSource
+    metadata:
+      name: github-source-sample
+      namespace: default
+    spec:
+      eventTypes:
+        - push
+        - pull_request
+      ownerAndRepository: my-other-user/my-other-repo
+      accessToken:
+        secretKeyRef:
+          name: github-secret
+          key: accessToken
+      secretToken:
+        secretKeyRef:
+          name: github-secret
+          key: secretToken
+      sink:
+        apiVersion: eventing.knative.dev/v1alpha1
+        kind: Broker
+        name: default
+    ```
+ 
+    By applying the above file, two EventTypes will be registered, with types `dev.knative.source.github.push` and 
+    `dev.knative.source.github.pull_request`, source `github.com`, for the `default` Broker in the `default`
+     namespace, and with owner `github-source-sample`. This should be done by the Event Source controller, in this case, 
+     the GitHubSource controller. Although not shown here, the controller could add some `description` to the EventTypes, e.g., 
+     from which owner and repo the events are, etc.
+     
+    Note that the `Cluster Configurator` is the person in charge of taking care of authentication-related matters. E.g., if a new `Event Consumer` 
+    wants to listen for events from a different GitHub repo, the `Cluster Configurator` will take care of the necessary secrets generation, 
+    and new Source instantiation.
+     
+    In YAML, the above EventTypes would look something like these:
+    
+    ```yaml
     apiVersion: eventing.knative.dev/v1alpha1
-    kind: Broker
-    name: default
-
-```
+    kind: EventType
+    metadata:
+      generateName: dev.knative.source.github.push-
+      namespace: default
+      owner: # Owned by github-source-sample
+    spec:
+      type: dev.knative.source.github.push
+      source: github.com
+      broker: default
+     ---
+    apiVersion: eventing.knative.dev/v1alpha1
+    kind: EventType
+    metadata:
+      generateName: dev.knative.source.github.pullrequest-
+      namespace: default
+      owner: # Owned by github-source-sample
+    spec:
+      type: dev.knative.source.github.pull_request
+      source: github.com
+      broker: default
+    ```
+    
+    Two things to notice: 
+    - We generate the names by stripping invalid characters from the original type (e.g., `_`)
+    - We add the prefix `dev.knative.source.github.` to `spec.type`. This is a **separate discussion** on whether we should 
+    change the (GitHub) web hook types or not.
  
-By applying the above file, two EventTypes will be registered, with types `dev.knative.source.github.push` and 
-`dev.knative.source.github.pull_request`, source `/my-other-user/my-other-repo`, for the `default` Broker in the `default`
- namespace, and with owner `github-source-sample`. This should be done by the Event Source controller, in this case, 
- the GitHubSource controller.
+    1.2. Manual Registration
+
+    The `Cluster Configurator` manually `kubectl applies` an EventType CR.
+    
+    Example: 
+    
+    ```yaml
+    apiVersion: eventing.knative.dev/v1alpha1
+    kind: EventType
+    metadata:
+      name: repofork
+      namespace: default
+    spec:
+      type: repo:fork
+      source: bitbucket.org
+      broker: dev
+      description: "BitBucket fork"
+    ``` 
+
+    This would register the EventType named `repofork` with type `repo:fork`, source `bitbucket.org` in the `dev` 
+    Broker of the `default` namespace.
+    
+    As under the hood, `kubeclt apply` just makes a REST call to the API server with the appropriate RBAC permissions, 
+    the `Cluster Configurator` can give EventType `create` permissions to trusted parties, so that they can register 
+    their EventTypes.  
+
+1. An `Event Consumer` checks the Registry to see what EventTypes it can consume from the mesh.
+
+    Example:
+    
+    `$ kubectl get eventtypes -n default`
+    
+    ```
+    NAME                                         TYPE                                    SOURCE          SCHEMA                             BROKER     DESCRIPTION           READY   REASON
+    repofork                                     repo:fork                               bitbucket.org                                      dev        BitBucket fork        False   BrokerIsNotReady
+    pullrequest                                  pull_request                            github.com      //github.com/schemas/pull_request  default    GitHub pull request   True 
+    dev.knative.source.github.push-34cnb         dev.knative.source.github.push          github.com                                         default                          True 
+    dev.knative.source.github.pullrequest-86jhv  dev.knative.source.github.pull_request  github.com                                         default                          True  
+    ```
+
+1. The `Event Consumer` creates a Trigger to listen to an EventType in the Registry. 
+
+    Example:
+    
+    ```yaml
+    apiVersion: eventing.knative.dev/v1alpha1
+    kind: Trigger
+    metadata:
+      name: my-service-trigger
+      namespace: default
+    spec:
+      filter:
+        sourceAndType:
+          type: dev.knative.source.github.push
+          source: github.com
+      subscriber:
+        ref:
+         apiVersion: serving.knative.dev/v1alpha1
+         kind: Service
+         name: my-service
+    ```
+
+
+### Broker Ingress Policies
+
+Although this section is more related to the Broker rather than the Registry itself, we include it here to 
+showcase the interplay between the two. 
+
+Herein, we propose configuring a policy in the Broker so that it can decide what EventTypes to accept into the mesh. 
+In order to support that, we propose adding an `ingressPolicy` field to the Broker's spec CRD. 
  
-Note that the `Cluster Configurator` is the person in charge of taking care of authentication-related matters. E.g., if a new `Event Consumer` 
-wants to listen for events from a different GitHub repo, the `Cluster Configurator` will take care of the necessary secrets generation, 
-and new Source instantiation.
- 
-In YAML, the above EventTypes would look something like these:
+Below are two CR examples with Brokers configured using different policies. Note that the fields of 
+`ingressPolicy` might change (e.g., `ingressPolicy` might just end up being a string). 
+Also note that such configuration is done by the `Cluster Configurator`.
 
-```yaml
-apiVersion: eventing.knative.dev/v1alpha1
-kind: EventType
-metadata:
-  generateName: dev.knative.source.github.push-
-  namespace: default
-  owner: # Owned by github-source-sample
-spec:
-  type: dev.knative.source.github.push
-  source: /my-other-user/my-other-repo
-  broker: default
----
-apiVersion: eventing.knative.dev/v1alpha1
-kind: EventType
-metadata:
-  generateName: dev.knative.source.github.pullrequest-
-  namespace: default
-  owner: # Owned by github-source-sample
-spec:
-  type: dev.knative.source.github.pull_request
-  source: /my-other-user/my-other-repo
-  broker: default
-```
+- Allow Any
 
-Three things to notice: 
-- We generate the names by stripping invalid characters from the original type (e.g., `_`)
-- We add the prefix `dev.knative.source.github.` to `spec.type`. This is a **separate discussion** on whether we should 
-change the (GitHub) types or not.
-- We add the prefix `/` to `spec.source` to make it a valid URI.
-
-`1.2.` Manual Registration
-
-The `Cluster Configurator` manually `kubectl applies` an EventType CR.
-
-Example: 
-
-```yaml
-apiVersion: eventing.knative.dev/v1alpha1
-kind: EventType
-metadata:
-  name: repofork
-  namespace: default
-spec:
-  type: repo:fork
-  source: /my-other-user/my-other-repo
-  broker: dev
-``` 
-
-This would register the EventType named `repofork` with type `repo:fork`, source `/my-other-user/my-other-repo` 
-in the `dev` Broker of the `default` namespace.
-
-As under the hood, `kubeclt apply` just makes a REST call to the API server with the appropriate RBAC permissions, 
-the `Cluster Configurator` can give EventType `create` permissions to trusted parties, so that they can register 
-their EventTypes.  
-
-
-`1.3` Broker Auto Registration Policy
-
-The `Cluster Configurator` configures the Broker ingress policy to allow auto-registration of EventTypes. 
-Upon arrival of a non-registered EventType to the Broker ingress, the Broker will then create that type.
-Note that the creation of the EventType is done asynchronously, i.e., the CloudEvent is accepted and sent 
-to the appropriate Trigger(s) in parallel of the EventType creation. If the creation fails, on a subsequent arrival 
-there will be a new creation attempt.
-
-Although sub-optimal (as `Event Consumers` find out about EventTypes upon first arrival), we believe this mechanism (or something similar) 
-is needed for Sources where the `Cluster Configurator` does not know in advance the EventTypes they can produce (e.g., a ContainerSource).
-
-Example: 
-
-Set up a Broker with `autoAdd` enabled.
+By setting the ingress policy to allow any, the Broker will accept every event into the mesh. 
 
 ```yaml
 apiVersion: eventing.knative.dev/v1alpha1
 kind: Broker
 metadata:
-  name: auto-add-demo
+  name: broker-allow-any
 spec:
   ingressPolicy:
-    autoAdd: true
+    allowAny: true  
 ```
-
-Now if someone emits a non-registered event (e.g., `dev.knative.foo.bar`)
-into the Broker `auto-add-demo`, an EventType will be created upon the event arrival. 
-
-We can send the event manually. While SSHed into a `Pod` with the Istio sidecar, run:
-
-```shell
-curl -v "http://auto-add-demo-broker.default.svc.cluster.local/" \
-  -X POST \
-  -H "X-B3-Flags: 1" \
-  -H "CE-CloudEventsVersion: 0.1" \
-  -H "CE-EventType: dev.knative.foo.bar" \
-  -H "CE-EventTime: 2018-04-05T03:56:24Z" \
-  -H "CE-EventID: 45a8b444-3213-4758-be3f-540bf93f85ff" \
-  -H "CE-Source: dev.knative.example" \
-  -H 'Content-Type: application/json' \
-  -d '{ "much": "wow" }'
-```
- 
-The Broker `auto-add-demo` will then create the EventType with type `dev.knative.foo.bar` in the Registry.
-In YAML, the EventType would look something like these:
-
-```yaml
-apiVersion: eventing.knative.dev/v1alpha1
-kind: EventType
-metadata:
-  generateName: dev.knative.foo.bar-
-  namespace: default
-  owner: # Owned by auto-add-demo?
-spec:
-  type: dev.knative.foo.bar
-  source: dev.knative.example
-  broker: auto-add-demo
-```
-
-`2.` An `Event Consumer` checks the Registry to see what EventTypes it can consume from the mesh.
-
-Example:
-
-`$ kubectl get eventtypes -n default`
-
-```
-NAME                                         TYPE                                    SOURCE                        SCHEMA      BROKER          READY  REASON
-dev.knative.foo.bar-55wcn                    dev.knative.foo.bar                     dev.knative.example                       auto-add-demo   True 
-repofork                                     repo:fork                               /my-other-user/my-other-repo              dev             False  BrokerIsNotReady
-repopush                                     repo:push                               /my-user/my-repo              /my-schema  default         True 
-dev.knative.source.github.push-34cnb         dev.knative.source.github.push          /my-other-user/my-other-repo              default         True 
-dev.knative.source.github.pullrequest-86jhv  dev.knative.source.github.pull_request  /my-other-user/my-other-repo              default         True  
-```
-
-`3.` The `Event Consumer` creates a Trigger to listen to an EventType in the Registry. 
-
-Example:
-
-```yaml
-apiVersion: eventing.knative.dev/v1alpha1
-kind: Trigger
-metadata:
-  name: my-service-trigger
-  namespace: default
-spec:
-  filter:
-    sourceAndType:
-      type: dev.knative.foo.bar
-      source: dev.knative.example
-  subscriber:
-    ref:
-     apiVersion: serving.knative.dev/v1alpha1
-     kind: Service
-     name: my-service
-```
-
-### Broker Ingress Policies
-
-We briefly mentioned configuring an ingress policy in the Broker so that it can auto-register EventTypes. 
-In order to support that, we propose adding an `ingressPolicy` field to the Broker's spec CRD. 
- 
-Below are two CR examples with Brokers configured using different policies. Note that the fields of 
-`ingressPolicy` might change (e.g., `ingressPolicy` might just end up being a string).
-We are omitting Broker's fields irrelevant to this discussion. 
-Also note that such configuration is done by the `Cluster Configurator`.
 
 - Allow Registered
 
@@ -297,6 +254,11 @@ spec:
   ingressPolicy:
     allowAny: false
 ```    
+
+By not specifying an ingress policy, we thought that the default behavior would be to allow any event, but this needs further discussion.
+
+Finally, we envision another policy that would allow to auto-register EventTypes. This is currently not being considered 
+for the MVP.
 
 - Auto Add
 
@@ -313,12 +275,12 @@ spec:
     autoAdd: true 
 ```
 
-By not specifying an ingress policy, we thought that the default behavior would be to accept any event, which is similar to `Auto Add` 
-but without registration of events. This needs further discussion.
+Note that the creation of the EventType can done asynchronously, i.e., the CloudEvent is accepted and sent 
+to the appropriate Trigger(s) in parallel of the EventType creation. If the creation fails, on a subsequent arrival 
+there might be a new creation attempt.
 
-Note that more policies should probably need to be configured in the future, e.g., allow auto-registration of EventTypes received 
-from within the cluster (e.g., from a response of a Service running in the cluster) as opposed to external services, and so on. 
-We just enumerate two simple cases here.
+Although sub-optimal (as `Event Consumers` find out about EventTypes upon first arrival), we believe this mechanism (or something similar) 
+might be needed for Sources where the `Cluster Configurator` does not know in advance the EventTypes they can produce (e.g., a ContainerSource).
 
 ## FAQ
 
