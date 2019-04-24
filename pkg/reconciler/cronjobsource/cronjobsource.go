@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sync"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -67,6 +68,7 @@ type Reconciler struct {
 	*reconciler.Base
 
 	receiveAdapterImage string
+	once                sync.Once
 
 	// listers index properties about resources
 	cronjobLister    listers.CronJobSourceLister
@@ -83,16 +85,10 @@ func NewController(
 	cronjobsourceInformer sourceinformers.CronJobSourceInformer,
 	deploymentInformer appsv1informers.DeploymentInformer,
 ) *controller.Impl {
-	raImage, defined := os.LookupEnv(raImageEnvVar)
-	if !defined {
-		panic(fmt.Errorf("required environment variable %q not defined", raImageEnvVar))
-	}
-
 	r := &Reconciler{
-		Base:                reconciler.NewBase(opt, controllerAgentName),
-		receiveAdapterImage: raImage,
-		cronjobLister:       cronjobsourceInformer.Lister(),
-		deploymentLister:    deploymentInformer.Lister(),
+		Base:             reconciler.NewBase(opt, controllerAgentName),
+		cronjobLister:    cronjobsourceInformer.Lister(),
+		deploymentLister: deploymentInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
 
@@ -138,7 +134,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		logging.FromContext(ctx).Warn("Error reconciling CronJobSource", zap.Error(err))
 	} else {
 		logging.FromContext(ctx).Debug("CronJobSource reconciled")
-		r.Recorder.Eventf(cronjob, corev1.EventTypeNormal, cronjobReconciled, "CronJobSource reconciled: %q", cronjob.Name)
+		r.Recorder.Eventf(cronjob, corev1.EventTypeNormal, cronjobReconciled, `CronJobSource reconciled: "%s/%s"`, cronjob.Namespace, cronjob.Name)
 	}
 
 	if _, updateStatusErr := r.updateStatus(ctx, cronjob.DeepCopy()); updateStatusErr != nil {
@@ -182,6 +178,19 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 	return nil
 }
 
+func (r *Reconciler) getReceiveAdapterImage() string {
+	if r.receiveAdapterImage == "" {
+		r.once.Do(func() {
+			raImage, defined := os.LookupEnv(raImageEnvVar)
+			if !defined {
+				panic(fmt.Errorf("required environment variable %q not defined", raImageEnvVar))
+			}
+			r.receiveAdapterImage = raImage
+		})
+	}
+	return r.receiveAdapterImage
+}
+
 func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.CronJobSource, sinkURI string) (*appsv1.Deployment, error) {
 	ra, err := r.getReceiveAdapter(ctx, src)
 	if err != nil && !apierrors.IsNotFound(err) {
@@ -189,7 +198,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Cro
 		return nil, err
 	}
 	adapterArgs := resources.ReceiveAdapterArgs{
-		Image:   r.receiveAdapterImage,
+		Image:   r.getReceiveAdapterImage(),
 		Source:  src,
 		Labels:  resources.Labels(src.Name),
 		SinkURI: sinkURI,

@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/knative/eventing/pkg/reconciler/cronjobsource"
 	"log"
 	"net/http"
 	"os"
@@ -96,7 +97,7 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	logger = logger.With(zap.String("controller/impl", "pkg"))
 	logger.Info("Starting the controller")
 
-	const numControllers = 3
+	const numControllers = 4
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
@@ -104,15 +105,16 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(opt.KubeClientSet, opt.ResyncPeriod)
 	eventingInformerFactory := informers.NewSharedInformerFactory(opt.EventingClientSet, opt.ResyncPeriod)
 
+	// Eventing
 	triggerInformer := eventingInformerFactory.Eventing().V1alpha1().Triggers()
 	channelInformer := eventingInformerFactory.Eventing().V1alpha1().Channels()
 	subscriptionInformer := eventingInformerFactory.Eventing().V1alpha1().Subscriptions()
 	brokerInformer := eventingInformerFactory.Eventing().V1alpha1().Brokers()
-	coreServiceInformer := kubeInformerFactory.Core().V1().Services()
+	cronjobsourceInformer := eventingInformerFactory.Sources().V1alpha1().CronJobSources()
 
-	// TODO: remove unused after done integrating all controllers.
-	//deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
-	//coreServiceInformer := kubeInformerFactory.Core().V1().Services()
+	// Kube
+	coreServiceInformer := kubeInformerFactory.Core().V1().Services()
+	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
 	configMapInformer := kubeInformerFactory.Core().V1().ConfigMaps()
 
 	// Build all of our controllers, with the clients constructed above.
@@ -135,6 +137,11 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 			brokerInformer,
 			coreServiceInformer,
 		),
+		cronjobsource.NewController(
+			opt,
+			cronjobsourceInformer,
+			deploymentInformer,
+		),
 	}
 	if len(controllers) != numControllers {
 		logger.Fatalf("Number of controllers and QPS settings mismatch: %d != %d", len(controllers), numControllers)
@@ -152,13 +159,16 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	logger.Info("Starting informers.")
 	if err := kncontroller.StartInformers(
 		stopCh,
-		subscriptionInformer.Informer(),
-		channelInformer.Informer(),
-		configMapInformer.Informer(),
-		triggerInformer.Informer(),
-		channelInformer.Informer(),
+		// Eventing
 		brokerInformer.Informer(),
+		channelInformer.Informer(),
+		cronjobsourceInformer.Informer(),
+		subscriptionInformer.Informer(),
+		triggerInformer.Informer(),
+		// Kube
+		configMapInformer.Informer(),
 		coreServiceInformer.Informer(),
+		deploymentInformer.Informer(),
 	); err != nil {
 		logger.Fatalf("Failed to start informers: %v", err)
 	}

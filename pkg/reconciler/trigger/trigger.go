@@ -26,6 +26,7 @@ import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/names"
@@ -33,7 +34,6 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/trigger/resources"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
 	brokerresources "github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
-	"github.com/knative/eventing/pkg/utils/resolve"
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/tracker"
 	"go.uber.org/zap"
@@ -250,7 +250,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		}
 	}
 
-	subscriberURI, err := resolve.SubscriberSpec(ctx, r.DynamicClientSet, t.Namespace, t.Spec.Subscriber)
+	subscriberURI, err := duck.SubscriberSpec(ctx, r.DynamicClientSet, t.Namespace, t.Spec.Subscriber)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Subscriber's URI", zap.Error(err))
 		return err

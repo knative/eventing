@@ -54,6 +54,7 @@ func (s *CronJobSourceStatus) InitializeConditions() {
 	cronJobSourceCondSet.Manage(s).InitializeConditions()
 }
 
+// TODO: this is a bad method name, change it.
 // MarkSchedule sets the condition that the source has a valid schedule configured.
 func (s *CronJobSourceStatus) MarkSchedule() {
 	cronJobSourceCondSet.Manage(s).MarkTrue(CronJobConditionValidSchedule)

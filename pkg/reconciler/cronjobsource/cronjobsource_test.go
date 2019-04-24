@@ -17,12 +17,13 @@ limitations under the License.
 package cronjobsource
 
 import (
-	//"context"
-	//"errors"
-	"fmt"
 	"github.com/knative/eventing/pkg/reconciler/cronjobsource/resources"
+	"github.com/knative/eventing/pkg/utils"
+	"k8s.io/apimachinery/pkg/runtime"
 	"os"
 	"testing"
+
+	clientgotesting "k8s.io/client-go/testing"
 
 	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
@@ -40,9 +41,8 @@ import (
 	. "github.com/knative/eventing/pkg/reconciler/testing"
 	. "github.com/knative/pkg/reconciler/testing"
 
-	sourcesv1alpha1 "github.com/knative/eventing-sources/pkg/apis/sources/v1alpha1"
+	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	v1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 var (
@@ -51,11 +51,22 @@ var (
 	deletionTime = metav1.Now().Rfc3339Copy()
 
 	trueVal = true
+
+	sinkGVK = metav1.GroupVersionKind{
+		Group:   "eventing.knative.dev",
+		Version: "v1alpha1",
+		Kind:    "Channel",
+	}
+	sinkRef = corev1.ObjectReference{
+		Name:       sinkName,
+		Kind:       "Channel",
+		APIVersion: "eventing.knative.dev/v1alpha1",
+	}
+	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
+	sinkURI = "http://" + sinkDNS + "/"
 )
 
 const (
-	raImage = "test-ra-image"
-
 	image        = "github.com/knative/test/image"
 	sourceName   = "test-cronjob-source"
 	sourceUID    = "1234-5678-90"
@@ -63,11 +74,7 @@ const (
 	testSchedule = "*/2 * * * *"
 	testData     = "data"
 
-	addressableName       = "testsink"
-	addressableKind       = "Sink"
-	addressableAPIVersion = "duck.knative.dev/v1alpha1"
-	addressableDNS        = "sinkable.sink.svc.cluster.local"
-	addressableURI        = "http://sinkable.sink.svc.cluster.local/"
+	sinkName = "testsink"
 )
 
 func init() {
@@ -76,7 +83,7 @@ func init() {
 	_ = corev1.AddToScheme(scheme.Scheme)
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
 
-	_ = os.Setenv("CRONJOB_RA_IMAGE", "no-op")
+	_ = os.Setenv("CRONJOB_RA_IMAGE", image)
 }
 
 func TestAllCases(t *testing.T) {
@@ -89,16 +96,154 @@ func TestAllCases(t *testing.T) {
 			Name: "key not found",
 			// Make sure Reconcile handles good keys that don't exist.
 			Key: "foo/not-found",
-			//}, { // TODO: there is a bug in the controller, it will query for ""
-			//	Name: "incomplete subscription",
-			//	Objects: []runtime.Object{
-			//		NewSubscription(subscriptionName, testNS),
-			//	},
-			//	Key:     "foo/incomplete",
-			//	WantErr: true,
-			//	WantEvents: []string{
-			//		Eventf(corev1.EventTypeWarning, "ChannelReferenceFetchFailed", "Failed to validate spec.channel exists: s \"\" not found"),
-			//	},
+		}, {
+			Name: "invalid schedule",
+			Objects: []runtime.Object{
+				NewCronSourceJob(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: "invalid schedule",
+						Data:     testData,
+						Sink:     &sinkRef,
+					}),
+				),
+			},
+			Key:     testNS + "/" + sourceName,
+			WantErr: true,
+			//WantEvents: []string{
+			//	Eventf(corev1.EventTypeWarning, "Fail", ""), // TODO: BUGBUGBUG This should make an event.
+			//},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewCronSourceJob(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: "invalid schedule",
+						Data:     testData,
+						Sink:     &sinkRef,
+					}),
+					// Status Update:
+					WithInitCronJobSourceConditions,
+					WithInvalidCronJobSourceSchedule,
+				),
+			}},
+		}, {
+			Name: "missing sink",
+			Objects: []runtime.Object{
+				NewCronSourceJob(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkRef,
+					}),
+				),
+			},
+			Key:     testNS + "/" + sourceName,
+			WantErr: true,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewCronSourceJob(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkRef,
+					}),
+					// Status Update:
+					WithInitCronJobSourceConditions,
+					WithValidCronJobSourceSchedule,
+					WithCronJobSourceSinkNotFound,
+				),
+			}},
+		}, {
+			Name: "valid",
+			Objects: []runtime.Object{
+				NewCronSourceJob(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkRef,
+					}),
+				),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
+				),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "CronJobSourceReconciled", `CronJobSource reconciled: "%s/%s"`, testNS, sourceName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewCronSourceJob(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkRef,
+					}),
+					// Status Update:
+					WithInitCronJobSourceConditions,
+					WithValidCronJobSourceSchedule,
+					WithCronJobSourceDeployed,
+					WithCronJobSourceSink(sinkURI),
+				),
+			}},
+			WantCreates: []metav1.Object{
+				makeReceiveAdapter(),
+			},
+		}, {
+			Name: "valid, existing ra",
+			Objects: []runtime.Object{
+				NewCronSourceJob(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkRef,
+					}),
+				),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
+				),
+				makeReceiveAdapter(),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "CronJobSourceReconciled", `CronJobSource reconciled: "%s/%s"`, testNS, sourceName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewCronSourceJob(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkRef,
+					}),
+					// Status Update:
+					WithInitCronJobSourceConditions,
+					WithValidCronJobSourceSchedule,
+					WithCronJobSourceDeployed,
+					WithCronJobSourceSink(sinkURI),
+				),
+			}},
+		}, {
+			Name: "valid, no change",
+			Objects: []runtime.Object{
+				NewCronSourceJob(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkRef,
+					}),
+					WithInitCronJobSourceConditions,
+					WithValidCronJobSourceSchedule,
+					WithCronJobSourceDeployed,
+					WithCronJobSourceSink(sinkURI),
+				),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
+				),
+				makeReceiveAdapter(),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "CronJobSourceReconciled", `CronJobSource reconciled: "%s/%s"`, testNS, sourceName),
+			},
 		},
 	}
 
@@ -137,163 +282,26 @@ func TestNew(t *testing.T) {
 	}
 }
 
-//
-//Name: "not a Cron Job source",
-//			Name: "invalid schedule",
-//			Name: "cannot get sinkURI",
-//
-//			Name: "cannot create receive adapter",
-//			Name: "cannot list deployments",
-//			Name: "successful create",
-//			Name: "successful create - reuse existing receive adapter",
-//
-
-func getNonCronJobSource() *sourcesv1alpha1.ContainerSource {
-	obj := &sourcesv1alpha1.ContainerSource{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: sourcesv1alpha1.SchemeGroupVersion.String(),
-			Kind:       "ContainerSource",
-		},
-		ObjectMeta: om(testNS, sourceName),
-		Spec: sourcesv1alpha1.ContainerSourceSpec{
-			Image: image,
-			Args:  []string(nil),
-			Sink: &corev1.ObjectReference{
-				Name:       addressableName,
-				Kind:       addressableKind,
-				APIVersion: addressableAPIVersion,
-			},
-		},
-	}
-	// selflink is not filled in when we create the object, so clear it
-	obj.ObjectMeta.SelfLink = ""
-	return obj
-}
-
-func getSource() *sourcesv1alpha1.CronJobSource {
-	obj := &sourcesv1alpha1.CronJobSource{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: sourcesv1alpha1.SchemeGroupVersion.String(),
-			Kind:       "CronJobSource",
-		},
-		ObjectMeta: om(testNS, sourceName),
-		Spec: sourcesv1alpha1.CronJobSourceSpec{
+func makeReceiveAdapter() *v1.Deployment {
+	source := NewCronSourceJob(sourceName, testNS,
+		WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 			Schedule: testSchedule,
 			Data:     testData,
-			Sink: &corev1.ObjectReference{
-				Name:       addressableName,
-				Kind:       addressableKind,
-				APIVersion: addressableAPIVersion,
-			},
+			Sink:     &sinkRef,
 		},
+		),
+		// Status Update:
+		WithInitCronJobSourceConditions,
+		WithValidCronJobSourceSchedule,
+		WithCronJobSourceDeployed,
+		WithCronJobSourceSink(sinkURI),
+	)
+
+	args := resources.ReceiveAdapterArgs{
+		Image:   image,
+		Source:  source,
+		Labels:  resources.Labels(sourceName),
+		SinkURI: sinkURI,
 	}
-	// selflink is not filled in when we create the object, so clear it
-	obj.ObjectMeta.SelfLink = ""
-	return obj
-}
-
-func getDeletingSource() *sourcesv1alpha1.CronJobSource {
-	src := getSource()
-	src.DeletionTimestamp = &deletionTime
-	return src
-}
-
-func getSourceWithInvalidSchedule() *sourcesv1alpha1.CronJobSource {
-	src := getSource()
-	src.Spec.Schedule = "invalid schedule"
-	return src
-}
-
-func getSourceWithoutSink() *sourcesv1alpha1.CronJobSource {
-	src := getSource()
-	src.Status.InitializeConditions()
-	src.Status.MarkSchedule()
-	src.Status.MarkNoSink("NotFound", "")
-	return src
-}
-
-func getSourceWithSink() *sourcesv1alpha1.CronJobSource {
-	src := getSource()
-	src.Status.InitializeConditions()
-	src.Status.MarkSchedule()
-	src.Status.MarkSink(addressableURI)
-	return src
-}
-
-func getReadySource() *sourcesv1alpha1.CronJobSource {
-	src := getSourceWithSink()
-	src.Status.MarkDeployed()
-	return src
-}
-
-func om(namespace, name string) metav1.ObjectMeta {
-	return metav1.ObjectMeta{
-		Namespace: namespace,
-		Name:      name,
-		SelfLink:  fmt.Sprintf("/apis/eventing/sources/v1alpha1/namespaces/%s/object/%s", namespace, name),
-		UID:       sourceUID,
-	}
-}
-
-func getAddressable() *unstructured.Unstructured {
-	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": addressableAPIVersion,
-			"kind":       addressableKind,
-			"metadata": map[string]interface{}{
-				"namespace": testNS,
-				"name":      addressableName,
-			},
-			"status": map[string]interface{}{
-				"address": map[string]interface{}{
-					"hostname": addressableDNS,
-				},
-			},
-		},
-	}
-}
-
-func getReceiveAdapter() *v1.Deployment {
-	return &v1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					Controller: &trueVal,
-					UID:        sourceUID,
-				},
-			},
-			Labels:    resources.Labels(getSource().Name),
-			Namespace: testNS,
-		},
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "Deployment",
-		},
-		Spec: v1.DeploymentSpec{
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  "receive-adapter",
-							Image: raImage,
-							Env: []corev1.EnvVar{
-								{
-									Name:  "SCHEDULE",
-									Value: testSchedule,
-								},
-								{
-									Name:  "DATA",
-									Value: testData,
-								},
-								{
-									Name:  "SINK_URI",
-									Value: addressableURI,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+	return resources.MakeReceiveAdapter(&args)
 }

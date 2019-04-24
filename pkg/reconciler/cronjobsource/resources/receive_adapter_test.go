@@ -51,6 +51,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 	})
 
 	one := int32(1)
+	yes := true
 	want := &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    "source-namespace",
@@ -59,6 +60,13 @@ func TestMakeReceiveAdapter(t *testing.T) {
 				"test-key1": "test-value1",
 				"test-key2": "test-value2",
 			},
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion:         "sources.eventing.knative.dev/v1alpha1",
+				Kind:               "CronJobSource",
+				Name:               "source-name",
+				Controller:         &yes,
+				BlockOwnerDeletion: &yes,
+			}},
 		},
 		Spec: v1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
