@@ -59,7 +59,7 @@ func NewSubscriptionWithoutNamespace(name string, so ...SubscriptionOption) *v1a
 	return s
 }
 
-func WithUID(uid types.UID) SubscriptionOption {
+func WithSubscriptionUID(uid types.UID) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
 		s.UID = uid
 	}

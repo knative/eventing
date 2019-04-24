@@ -117,7 +117,7 @@ func TestAllCases(t *testing.T) {
 			Name: "subscription, but subscriber is not addressable",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 				),
@@ -134,7 +134,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					// The first reconciliation will initialize the status conditions.
@@ -145,7 +145,7 @@ func TestAllCases(t *testing.T) {
 			Name: "subscription, but subscriber does not exist",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 				),
@@ -161,7 +161,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					// The first reconciliation will initialize the status conditions.
@@ -172,7 +172,7 @@ func TestAllCases(t *testing.T) {
 			Name: "subscription, reply does not exist",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					WithSubscriptionReply(channelGVK, replyName),
@@ -191,7 +191,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					WithSubscriptionReply(channelGVK, replyName),
@@ -204,7 +204,7 @@ func TestAllCases(t *testing.T) {
 			Name: "subscription, reply is not addressable",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					WithSubscriptionReply(subscriberGVK, replyName), // reply will be a subscriberGVK for this test
@@ -226,7 +226,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					WithSubscriptionReply(subscriberGVK, replyName),
@@ -239,7 +239,7 @@ func TestAllCases(t *testing.T) {
 			Name: "subscription, valid channel+subscriber",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 				),
@@ -258,7 +258,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					// The first reconciliation will initialize the status conditions.
@@ -277,7 +277,7 @@ func TestAllCases(t *testing.T) {
 			Name: "subscription, valid channel+reply",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionReply(channelGVK, replyName),
 				),
@@ -297,7 +297,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionReply(channelGVK, replyName),
 					// The first reconciliation will initialize the status conditions.
@@ -316,7 +316,7 @@ func TestAllCases(t *testing.T) {
 			Name: "subscription, valid channel+subscriber+reply",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					WithSubscriptionReply(channelGVK, replyName),
@@ -340,7 +340,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					WithSubscriptionReply(channelGVK, replyName),
@@ -361,7 +361,7 @@ func TestAllCases(t *testing.T) {
 			Name: "subscription, valid remove reply",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					WithInitSubscriptionConditions,
@@ -387,7 +387,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					WithInitSubscriptionConditions,
@@ -405,7 +405,7 @@ func TestAllCases(t *testing.T) {
 			Name: "subscription, valid remove subscriber",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithInitSubscriptionConditions,
 					WithSubscriptionReply(channelGVK, replyName),
@@ -432,7 +432,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionReply(channelGVK, replyName),
 					WithInitSubscriptionConditions,
@@ -450,7 +450,7 @@ func TestAllCases(t *testing.T) {
 			Name: "subscription, channel+subscriber as service, does not exist",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName),
 				),
@@ -466,7 +466,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName),
 					// The first reconciliation will initialize the status conditions.
@@ -477,7 +477,7 @@ func TestAllCases(t *testing.T) {
 			Name: "subscription, valid channel+subscriber as service",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName),
 				),
@@ -494,7 +494,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName),
 					// The first reconciliation will initialize the status conditions.
@@ -513,13 +513,13 @@ func TestAllCases(t *testing.T) {
 			Name: "subscription, two subscribers for a channel",
 			Objects: []runtime.Object{
 				NewSubscription("a_"+subscriptionName, testNS,
-					WithUID("a_"+subscriptionUID),
+					WithSubscriptionUID("a_"+subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName),
 				),
 				// an already rec'ed subscription
 				NewSubscription("b_"+subscriptionName, testNS,
-					WithUID("b_"+subscriptionUID),
+					WithSubscriptionUID("b_"+subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName),
 					WithInitSubscriptionConditions,
@@ -539,7 +539,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription("a_"+subscriptionName, testNS,
-					WithUID("a_"+subscriptionUID),
+					WithSubscriptionUID("a_"+subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName),
 					// The first reconciliation will initialize the status conditions.
@@ -559,7 +559,7 @@ func TestAllCases(t *testing.T) {
 			Name: "subscription deleted",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					WithSubscriptionReply(channelGVK, replyName),
@@ -588,7 +588,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
-					WithUID(subscriptionUID),
+					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					WithSubscriptionReply(channelGVK, replyName),
