@@ -17,59 +17,37 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"flag"
 	"log"
-	"net/http"
 	"os"
-	"time"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/channel"
+	"github.com/knative/eventing/pkg/reconciler/namespace"
 	"github.com/knative/eventing/pkg/reconciler/subscription"
 	"github.com/knative/eventing/pkg/reconciler/trigger"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging/logkey"
 	"github.com/knative/pkg/signals"
-	"github.com/knative/pkg/system"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	controllerruntime "sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-)
-
-const (
-	metricsScrapeAddr = ":9090"
-	metricsScrapePath = "/metrics"
 )
 
 var (
 	hardcodedLoggingConfig bool
 )
-
-// SchemeFunc adds types to a Scheme.
-type SchemeFunc func(*runtime.Scheme) error
-
-// ProvideFunc adds a controller to a Manager.
-type ProvideFunc func(manager.Manager, *zap.Logger) (controller.Controller, error)
 
 func main() {
 	flag.Parse()
@@ -88,7 +66,6 @@ func main() {
 	}
 
 	go startPkgController(stopCh, cfg, logger, atomicLevel)
-	go startControllerRuntime(stopCh, cfg, logger, atomicLevel)
 	<-stopCh
 }
 
@@ -96,7 +73,7 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	logger = logger.With(zap.String("controller/impl", "pkg"))
 	logger.Info("Starting the controller")
 
-	const numControllers = 4
+	const numControllers = 5
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
@@ -109,12 +86,9 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	subscriptionInformer := eventingInformerFactory.Eventing().V1alpha1().Subscriptions()
 	brokerInformer := eventingInformerFactory.Eventing().V1alpha1().Brokers()
 	coreServiceInformer := kubeInformerFactory.Core().V1().Services()
+	coreNamespaceInformer := kubeInformerFactory.Core().V1().Namespaces()
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
-
-	// TODO: remove unused after done integrating all controllers.
-	//deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
-	//coreServiceInformer := kubeInformerFactory.Core().V1().Services()
 	configMapInformer := kubeInformerFactory.Core().V1().ConfigMaps()
 
 	// Build all of our controllers, with the clients constructed above.
@@ -124,6 +98,10 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 		subscription.NewController(
 			opt,
 			subscriptionInformer,
+		),
+		namespace.NewController(
+			opt,
+			coreNamespaceInformer,
 		),
 		channel.NewController(
 			opt,
@@ -169,8 +147,8 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	if err := kncontroller.StartInformers(
 		stopCh,
 		subscriptionInformer.Informer(),
-		channelInformer.Informer(),
 		configMapInformer.Informer(),
+		coreNamespaceInformer.Informer(),
 		triggerInformer.Informer(),
 		channelInformer.Informer(),
 		brokerInformer.Informer(),
@@ -184,76 +162,6 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	// Start all of the controllers.
 	logger.Info("Starting controllers.")
 	go kncontroller.StartAll(stopCh, controllers...)
-}
-
-// TODO: remove after done integrating all controllers.
-func startControllerRuntime(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.SugaredLogger, atomicLevel zap.AtomicLevel) {
-	logger = logger.With(zap.String("controller/impl", "cr"))
-	logger.Info("Starting the controller")
-
-	kubeClient, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		logger.Fatalf("Error building kubernetes clientset: %v", err)
-	}
-
-	// Watch the logging config map and dynamically update logging levels.
-	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
-	configMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller))
-	if err = configMapWatcher.Start(stopCh); err != nil {
-		logger.Fatalf("Failed to start controller config map watcher: %v", err)
-	}
-
-	// Setup a Manager
-	mgr, err := manager.New(cfg, manager.Options{})
-	if err != nil {
-		logger.Fatalf("Failed to create manager: %v", err)
-	}
-
-	// Add custom types to this array to get them into the manager's scheme.
-	schemeFuncs := []SchemeFunc{
-		istiov1alpha3.AddToScheme,
-		eventingv1alpha1.AddToScheme,
-	}
-	for _, schemeFunc := range schemeFuncs {
-		if err = schemeFunc(mgr.GetScheme()); err != nil {
-			logger.Fatalf("Error adding type to manager's scheme: %v", err)
-		}
-	}
-
-	// Add each controller's ProvideController func to this list to have the
-	// manager run it.
-	providers := []ProvideFunc{
-		namespace.ProvideController,
-	}
-	for _, provider := range providers {
-		if _, err = provider(mgr, logger.Desugar()); err != nil {
-			logger.Fatalf("Error adding controller to manager: %v", err)
-		}
-	}
-
-	// Start the Manager
-	go func() {
-		if localErr := mgr.Start(stopCh); localErr != nil {
-			logger.Fatalf("Error starting manager: %v", localErr)
-		}
-	}()
-
-	// Start the endpoint that Prometheus scraper talks to
-	srv := &http.Server{Addr: metricsScrapeAddr}
-	http.Handle(metricsScrapePath, promhttp.Handler())
-	go func() {
-		logger.Infof("Starting metrics listener at %s", metricsScrapeAddr)
-		if localErr := srv.ListenAndServe(); localErr != nil {
-			logger.Infof("HTTPserver: ListenAndServe() finished with error: %s", localErr)
-		}
-	}()
-
-	<-stopCh
-
-	// Close the http server gracefully
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	srv.Shutdown(ctx)
 }
 
 func init() {
