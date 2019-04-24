@@ -75,7 +75,6 @@ var (
 	}
 
 	serviceGVK = metav1.GroupVersionKind{
-		Group:   "apps",
 		Version: "v1",
 		Kind:    "Service",
 	}
