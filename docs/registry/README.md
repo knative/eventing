@@ -74,6 +74,9 @@ modify those names to make them K8s-compliant, whenever we need to generate them
 
 - `broker` refers to the Broker that can provide the EventType. 
 
+In order to *uniquely* identify an EventType, we would need to look at the tuple `(type, source, schema, broker)`, 
+as there might be EventTypes with the same `type` but different `sources`, or pointing to different `brokers`, and so on. 
+
 ### Typical Flow
 
 1. A `Cluster Configurator` configures the cluster in a way that allows the population of EventTypes in the Registry. 
@@ -215,7 +218,7 @@ We foresee the following two ways of populating the Registry for the MVP. A thir
     ```
 
 
-### Broker Ingress Policies
+## Broker Ingress Policies
 
 Although this section is more related to the Broker rather than the Registry itself, we include it here to 
 showcase the interplay between the two. 
@@ -362,5 +365,4 @@ meaning when the Event Source's CRD is installed (not when an instance of the CR
        apiVersion: serving.knative.dev/v1alpha1
        kind: Service
        name: knative-events-processor
-```
-
+  ```
