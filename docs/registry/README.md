@@ -50,10 +50,10 @@ We propose introducing a namespaced-EventType CRD. Here is an example of how a C
 apiVersion: eventing.knative.dev/v1alpha1
 kind: EventType
 metadata:
-  name: pullrequest
+  name: com.github.pullrequest
   namespace: default
 spec:
-  type: pull_request
+  type: com.github.pull_request
   source: github.com
   schema: //github.com/schemas/pull_request
   description: "GitHub pull request"
@@ -68,9 +68,9 @@ modify those names to make them K8s-compliant, whenever we need to generate them
 
 - `source`: is a valid URI. Refers to the CloudEvent source as it enters into the eventing mesh.
 
-- `schema` is a URI with the EventType schema. It may be a JSON schema, a protobuf schema, etc. It is optional.
+- `schema`: is a URI with the EventType schema. It may be a JSON schema, a protobuf schema, etc. It is optional.
 
-- `description` is a string describing what the EventType is about. It is optional.
+- `description`: is a string describing what the EventType is about. It is optional.
 
 - `broker` refers to the Broker that can provide the EventType. 
 
@@ -165,17 +165,17 @@ We foresee the following two ways of populating the Registry for the MVP. A thir
     apiVersion: eventing.knative.dev/v1alpha1
     kind: EventType
     metadata:
-      name: repofork
+      name: org.bitbucket.repofork
       namespace: default
     spec:
-      type: repo:fork
+      type: org.bitbucket.repo:fork
       source: bitbucket.org
       broker: dev
       description: "BitBucket fork"
     ``` 
 
-    This would register the EventType named `repofork` with type `repo:fork`, source `bitbucket.org` in the `dev` 
-    Broker of the `default` namespace.
+    This would register the EventType named `org.bitbucket.repofork` with type `org.bitbucket.repo:fork`, 
+    source `bitbucket.org` in the `dev` Broker of the `default` namespace.
     
     As under the hood, `kubeclt apply` just makes a REST call to the API server with the appropriate RBAC permissions, 
     the `Cluster Configurator` can give EventType `create` permissions to trusted parties, so that they can register 
@@ -188,11 +188,11 @@ We foresee the following two ways of populating the Registry for the MVP. A thir
     `$ kubectl get eventtypes -n default`
     
     ```
-    NAME                                         TYPE                                    SOURCE          SCHEMA                             BROKER     DESCRIPTION           READY   REASON
-    repofork                                     repo:fork                               bitbucket.org                                      dev        BitBucket fork        False   BrokerIsNotReady
-    pullrequest                                  pull_request                            github.com      //github.com/schemas/pull_request  default    GitHub pull request   True 
-    dev.knative.source.github.push-34cnb         dev.knative.source.github.push          github.com                                         default                          True 
-    dev.knative.source.github.pullrequest-86jhv  dev.knative.source.github.pull_request  github.com                                         default                          True  
+    NAME                                         TYPE                                    SOURCE          SCHEMA                              BROKER     DESCRIPTION           READY   REASON
+    org.bitbucket.repofork                       org.bitbucket.repo:fork                 bitbucket.org                                       dev        BitBucket fork        False   BrokerIsNotReady
+    com.github.pullrequest                       com.github.pull_request                 github.com      //github.com/schemas/pull_request   default    GitHub pull request   True 
+    dev.knative.source.github.push-34cnb         dev.knative.source.github.push          github.com                                          default                          True 
+    dev.knative.source.github.pullrequest-86jhv  dev.knative.source.github.pull_request  github.com                                          default                          True  
     ```
 
 1. The `Event Consumer` creates a Trigger to listen to an EventType in the Registry. 
