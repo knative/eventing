@@ -425,6 +425,19 @@
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
 [[projects]]
+  digest = "1:8d9ca74d3216fa4e3acf76a5530159cd3e5abe9cbf30519b97497da9c03af266"
+  name = "github.com/knative/eventing-sources"
+  packages = [
+    "pkg/apis/sources/v1alpha1",
+    "pkg/controller/sdk",
+    "pkg/controller/testing",
+    "pkg/reconciler/containersource/resources",
+  ]
+  pruneopts = "NUT"
+  revision = "32ce3778fa1bc46ed0b0ade16d5c57f343cafa4d"
+  version = "v0.5.0"
+
+[[projects]]
   digest = "1:57d04562d05dd4500ff1e7e47f2e62b9be0531388377a3b691a012ce70b210d5"
   name = "github.com/knative/pkg"
   packages = [
@@ -1323,7 +1336,7 @@
   revision = "8a9b82f00b3a86eac24681da3f9fe6c34c01cea2"
 
 [[projects]]
-  digest = "1:a8495647d9f03401c36b801a0644207a434f76ed9d4fc4ea80c46700f0ccc575"
+  digest = "1:b96e8e4a7931b07c33fdb206bfc4d27273bd599e48061500138ed69303388140"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/cache",
@@ -1347,6 +1360,7 @@
     "pkg/recorder",
     "pkg/runtime/inject",
     "pkg/runtime/log",
+    "pkg/runtime/scheme",
     "pkg/runtime/signals",
     "pkg/source",
     "pkg/source/internal",
@@ -1375,6 +1389,9 @@
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/uuid",
+    "github.com/knative/eventing-sources/pkg/apis/sources/v1alpha1",
+    "github.com/knative/eventing-sources/pkg/controller/testing",
+    "github.com/knative/eventing-sources/pkg/reconciler/containersource/resources",
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
     "github.com/knative/pkg/apis/duck/v1alpha1",
