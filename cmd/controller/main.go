@@ -38,11 +38,11 @@ import (
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/channel"
+	"github.com/knative/eventing/pkg/reconciler/namespace"
 	"github.com/knative/eventing/pkg/reconciler/subscription"
 	"github.com/knative/eventing/pkg/reconciler/trigger"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/eventtype"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
@@ -97,7 +97,7 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	logger = logger.With(zap.String("controller/impl", "pkg"))
 	logger.Info("Starting the controller")
 
-	const numControllers = 3
+	const numControllers = 4
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
@@ -110,10 +110,7 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	subscriptionInformer := eventingInformerFactory.Eventing().V1alpha1().Subscriptions()
 	brokerInformer := eventingInformerFactory.Eventing().V1alpha1().Brokers()
 	coreServiceInformer := kubeInformerFactory.Core().V1().Services()
-
-	// TODO: remove unused after done integrating all controllers.
-	//deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
-	//coreServiceInformer := kubeInformerFactory.Core().V1().Services()
+	coreNamespaceInformer := kubeInformerFactory.Core().V1().Namespaces()
 	configMapInformer := kubeInformerFactory.Core().V1().ConfigMaps()
 
 	// Build all of our controllers, with the clients constructed above.
@@ -123,6 +120,10 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 		subscription.NewController(
 			opt,
 			subscriptionInformer,
+		),
+		namespace.NewController(
+			opt,
+			coreNamespaceInformer,
 		),
 		channel.NewController(
 			opt,
@@ -154,8 +155,8 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	if err := kncontroller.StartInformers(
 		stopCh,
 		subscriptionInformer.Informer(),
-		channelInformer.Informer(),
 		configMapInformer.Informer(),
+		coreNamespaceInformer.Informer(),
 		triggerInformer.Informer(),
 		channelInformer.Informer(),
 		brokerInformer.Informer(),
@@ -213,7 +214,6 @@ func startControllerRuntime(stopCh <-chan struct{}, cfg *rest.Config, logger *za
 				FilterImage:               getRequiredEnv("BROKER_FILTER_IMAGE"),
 				FilterServiceAccountName:  getRequiredEnv("BROKER_FILTER_SERVICE_ACCOUNT"),
 			}),
-		namespace.ProvideController,
 		eventtype.ProvideController,
 	}
 	for _, provider := range providers {

@@ -127,6 +127,10 @@ func (l *Listers) GetK8sServiceLister() corev1listers.ServiceLister {
 	return corev1listers.NewServiceLister(l.indexerFor(&corev1.Service{}))
 }
 
+func (l *Listers) GetNamespaceLister() corev1listers.NamespaceLister {
+	return corev1listers.NewNamespaceLister(l.indexerFor(&corev1.Namespace{}))
+}
+
 func (l *Listers) GetEndpointsLister() corev1listers.EndpointsLister {
 	return corev1listers.NewEndpointsLister(l.indexerFor(&corev1.Endpoints{}))
 }
