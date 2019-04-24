@@ -137,7 +137,7 @@ We foresee the following two ways of populating the Registry for the MVP. A thir
       type: dev.knative.source.github.push
       source: github.com
       broker: default
-     ---
+   ---
     apiVersion: eventing.knative.dev/v1alpha1
     kind: EventType
     metadata:
