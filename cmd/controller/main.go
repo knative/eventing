@@ -79,8 +79,7 @@ func main() {
 	channelInformer := eventingInformerFactory.Eventing().V1alpha1().Channels()
 	subscriptionInformer := eventingInformerFactory.Eventing().V1alpha1().Subscriptions()
 	brokerInformer := eventingInformerFactory.Eventing().V1alpha1().Brokers()
-	coreServiceInformer := kubeInformerFactory.Core().V1().Services()
-	coreNamespaceInformer := kubeInformerFactory.Core().V1().Namespaces()
+	namespaceInformer := kubeInformerFactory.Core().V1().Namespaces()
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
 	configMapInformer := kubeInformerFactory.Core().V1().ConfigMaps()
@@ -95,7 +94,7 @@ func main() {
 		),
 		namespace.NewController(
 			opt,
-			coreNamespaceInformer,
+			namespaceInformer,
 		),
 		channel.NewController(
 			opt,
@@ -107,7 +106,7 @@ func main() {
 			channelInformer,
 			subscriptionInformer,
 			brokerInformer,
-			coreServiceInformer,
+			serviceInformer,
 		),
 		broker.NewController(
 			opt,
@@ -142,11 +141,10 @@ func main() {
 		stopCh,
 		subscriptionInformer.Informer(),
 		configMapInformer.Informer(),
-		coreNamespaceInformer.Informer(),
+		namespaceInformer.Informer(),
 		triggerInformer.Informer(),
 		channelInformer.Informer(),
 		brokerInformer.Informer(),
-		coreServiceInformer.Informer(),
 		serviceInformer.Informer(),
 		deploymentInformer.Informer(),
 	); err != nil {
