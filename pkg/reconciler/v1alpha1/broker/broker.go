@@ -549,7 +549,7 @@ func makeSubscription(b *v1alpha1.Broker, c *v1alpha1.Channel, svc *corev1.Servi
 			},
 			Subscriber: &v1alpha1.SubscriberSpec{
 				Ref: &corev1.ObjectReference{
-					APIVersion: "v1",
+					APIVersion: v1.SchemeGroupVersion.String(),
 					Kind:       "Service",
 					Name:       svc.Name,
 				},

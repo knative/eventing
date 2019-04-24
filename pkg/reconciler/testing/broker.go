@@ -20,8 +20,6 @@ import (
 	"context"
 	"time"
 
-	v1 "k8s.io/api/apps/v1"
-
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -76,65 +74,79 @@ func WithBrokerAddress(address string) BrokerOption {
 	}
 }
 
-// MarkTriggerChannelFailed calls .Status.MarkTriggerChannelFailed on the Broker.
-func MarkTriggerChannelFailed(reason, format, arg string) BrokerOption {
+// WithTriggerChannelFailed calls .Status.MarkTriggerChannelFailed on the Broker.
+func WithTriggerChannelFailed(reason, msg string) BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Status.MarkTriggerChannelFailed(reason, format, arg)
+		b.Status.MarkTriggerChannelFailed(reason, msg)
 	}
 }
 
-// MarkFilterFailed calls .Status.MarkFilterFailed on the Broker.
-func MarkFilterFailed(reason, format, arg string) BrokerOption {
+// WithFilterFailed calls .Status.MarkFilterFailed on the Broker.
+func WithFilterFailed(reason, msg string) BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Status.MarkFilterFailed(reason, format, arg)
+		b.Status.MarkFilterFailed(reason, msg)
 	}
 }
 
-// MarkIngressFailed calls .Status.MarkIngressFailed on the Broker.
-func MarkIngressFailed(reason, format, arg string) BrokerOption {
+// WithIngressFailed calls .Status.MarkIngressFailed on the Broker.
+func WithIngressFailed(reason, msg string) BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Status.MarkIngressFailed(reason, format, arg)
+		b.Status.MarkIngressFailed(reason, msg)
 	}
 }
 
-// MarkIngressChannelFailed calls .Status.MarkIngressChannelFailed on the Broker.
-func MarkIngressChannelFailed(reason, format, arg string) BrokerOption {
+// WithIngressChannelFailed calls .Status.MarkIngressChannelFailed on the Broker.
+func WithIngressChannelFailed(reason, msg string) BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Status.MarkIngressChannelFailed(reason, format, arg)
+		b.Status.MarkIngressChannelFailed(reason, msg)
 	}
 }
 
-// PropagateTriggerChannelReadiness calls .Status.PropagateTriggerChannelReadiness on the Broker.
-func PropagateTriggerChannelReadiness(cs *v1alpha1.ChannelStatus) BrokerOption {
+// WithTriggerChannelReady calls .Status.PropagateTriggerChannelReadiness on the Broker.
+func WithTriggerChannelReady() BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Status.PropagateTriggerChannelReadiness(cs)
+		b.Status.PropagateTriggerChannelReadiness(v1alpha1.TestHelper.ReadyChannelStatus())
 	}
 }
 
-// PropagateFilterDeploymentAvailability calls .Status.PropagateFilterDeploymentAvailability on the Broker.
-func PropagateFilterDeploymentAvailability(d *v1.Deployment) BrokerOption {
+func WithFilterDeploymentAvailable() BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Status.PropagateFilterDeploymentAvailability(d)
+		b.Status.PropagateFilterDeploymentAvailability(v1alpha1.TestHelper.AvailableDeployment())
 	}
 }
 
-// PropagateIngressDeploymentAvailability calls .Status.PropagateIngressDeploymentAvailability on the Broker.
-func PropagateIngressDeploymentAvailability(d *v1.Deployment) BrokerOption {
+func WithIngressDeploymentAvailable() BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Status.PropagateIngressDeploymentAvailability(d)
+		b.Status.PropagateIngressDeploymentAvailability(v1alpha1.TestHelper.AvailableDeployment())
 	}
 }
 
-// PropagateIngressDeploymentAvailability calls .Status.PropagateIngressChannelReadiness on the Broker.
-func PropagateIngressChannelReadiness(cs *v1alpha1.ChannelStatus) BrokerOption {
+func WithBrokerIngressChannelReady() BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Status.PropagateIngressChannelReadiness(cs)
+		b.Status.PropagateIngressChannelReadiness(v1alpha1.TestHelper.ReadyChannelStatus())
 	}
 }
 
-// PropagateIngressSubscriptionReadiness calls .Status.PropagateIngressSubscriptionReadiness on the Broker.
-func PropagateIngressSubscriptionReadiness(ss *v1alpha1.SubscriptionStatus) BrokerOption {
+func WithBrokerIngressSubscriptionFailed(reason, msg string) BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Status.PropagateIngressSubscriptionReadiness(ss)
+		b.Status.MarkIngressSubscriptionFailed(reason, msg)
+	}
+}
+
+func WithBrokerIngressChannelNotReady() BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		b.Status.PropagateIngressChannelReadiness(v1alpha1.TestHelper.NotReadyChannelStatus())
+	}
+}
+
+func WithBrokerSubscriptionReady() BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		b.Status.PropagateIngressSubscriptionReadiness(v1alpha1.TestHelper.ReadySubscriptionStatus())
+	}
+}
+
+func WithBrokerSubscriptionNotReady() BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		b.Status.PropagateIngressSubscriptionReadiness(v1alpha1.TestHelper.NotReadySubscriptionStatus())
 	}
 }

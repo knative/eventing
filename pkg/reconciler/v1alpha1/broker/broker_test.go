@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/runtime"
+
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -34,7 +36,6 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 )
@@ -55,8 +56,9 @@ const (
 var (
 	trueVal = true
 
-	testKey             = fmt.Sprintf("%s/%s", testNS, brokerName)
-	channelGenerateName = fmt.Sprintf("%s-broker-", brokerName)
+	testKey                 = fmt.Sprintf("%s/%s", testNS, brokerName)
+	channelGenerateName     = fmt.Sprintf("%s-broker-", brokerName)
+	subscriptionChannelName = fmt.Sprintf("%s-broker", brokerName)
 
 	triggerChannelHostname = fmt.Sprintf("foo.bar.svc.%s", utils.GetClusterDomainName())
 	ingressChannelHostname = fmt.Sprintf("baz.qux.svc.%s", utils.GetClusterDomainName())
@@ -74,10 +76,10 @@ var (
 		Kind:    "Channel",
 	}
 
-	subscriberGVK = metav1.GroupVersionKind{
-		Group:   "testing.eventing.knative.dev",
-		Version: "v1alpha1",
-		Kind:    "Subscriber",
+	serviceGVK = metav1.GroupVersionKind{
+		Group:   "apps",
+		Version: "v1",
+		Kind:    "Service",
 	}
 
 	provisionerGVK = metav1.GroupVersionKind{
@@ -136,7 +138,7 @@ func TestReconcile(t *testing.T) {
 				Object: testing2.NewBroker(brokerName, testNS,
 					testing2.WithInitBrokerConditions,
 					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
-					testing2.MarkTriggerChannelFailed("ChannelFailure", "%v", "inducing failure for create channels")),
+					testing2.WithTriggerChannelFailed("ChannelFailure", "inducing failure for create channels")),
 			}},
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("create", "channels"),
@@ -165,7 +167,7 @@ func TestReconcile(t *testing.T) {
 				Object: testing2.NewBroker(brokerName, testNS,
 					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
 					testing2.WithInitBrokerConditions,
-					testing2.MarkTriggerChannelFailed("NoAddress", "%v", "Channel does not have an address.")),
+					testing2.WithTriggerChannelFailed("NoAddress", "Channel does not have an address.")),
 			}},
 		},
 		{
@@ -180,6 +182,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
 					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					testing2.WithChannelReady,
 					testing2.WithChannelAddress(triggerChannelHostname)),
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
@@ -197,8 +200,8 @@ func TestReconcile(t *testing.T) {
 				Object: testing2.NewBroker(brokerName, testNS,
 					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
 					testing2.WithInitBrokerConditions,
-					testing2.PropagateTriggerChannelReadiness(channelStatus()),
-					testing2.MarkFilterFailed("DeploymentFailure", "%v", "inducing failure for create deployments")),
+					testing2.WithTriggerChannelReady(),
+					testing2.WithFilterFailed("DeploymentFailure", "inducing failure for create deployments")),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create deployments"),
@@ -217,6 +220,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
 					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					testing2.WithChannelReady,
 					testing2.WithChannelAddress(triggerChannelHostname)),
 				testing2.NewDeployment(filterDeploymentName, testNS,
 					testing2.WithDeploymentOwnerReferences(ownerReferences()),
@@ -232,8 +236,8 @@ func TestReconcile(t *testing.T) {
 				Object: testing2.NewBroker(brokerName, testNS,
 					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
 					testing2.WithInitBrokerConditions,
-					testing2.PropagateTriggerChannelReadiness(channelStatus()),
-					testing2.MarkFilterFailed("DeploymentFailure", "%v", "inducing failure for update deployments")),
+					testing2.WithTriggerChannelReady(),
+					testing2.WithFilterFailed("DeploymentFailure", "inducing failure for update deployments")),
 			}},
 			WantUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: testing2.NewDeployment(filterDeploymentName, testNS,
@@ -260,6 +264,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
 					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					testing2.WithChannelReady,
 					testing2.WithChannelAddress(triggerChannelHostname)),
 				testing2.NewDeployment(filterDeploymentName, testNS,
 					testing2.WithDeploymentOwnerReferences(ownerReferences()),
@@ -281,8 +286,8 @@ func TestReconcile(t *testing.T) {
 				Object: testing2.NewBroker(brokerName, testNS,
 					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
 					testing2.WithInitBrokerConditions,
-					testing2.PropagateTriggerChannelReadiness(channelStatus()),
-					testing2.MarkFilterFailed("ServiceFailure", "%v", "inducing failure for create services")),
+					testing2.WithTriggerChannelReady(),
+					testing2.WithFilterFailed("ServiceFailure", "inducing failure for create services")),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create services"),
@@ -301,6 +306,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
 					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					testing2.WithChannelReady,
 					testing2.WithChannelAddress(triggerChannelHostname)),
 				testing2.NewDeployment(filterDeploymentName, testNS,
 					testing2.WithDeploymentOwnerReferences(ownerReferences()),
@@ -326,8 +332,8 @@ func TestReconcile(t *testing.T) {
 				Object: testing2.NewBroker(brokerName, testNS,
 					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
 					testing2.WithInitBrokerConditions,
-					testing2.PropagateTriggerChannelReadiness(channelStatus()),
-					testing2.MarkFilterFailed("ServiceFailure", "%v", "inducing failure for update services")),
+					testing2.WithTriggerChannelReady(),
+					testing2.WithFilterFailed("ServiceFailure", "inducing failure for update services")),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for update services"),
@@ -346,6 +352,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
 					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					testing2.WithChannelReady,
 					testing2.WithChannelAddress(triggerChannelHostname)),
 				testing2.NewDeployment(filterDeploymentName, testNS,
 					testing2.WithDeploymentOwnerReferences(ownerReferences()),
@@ -374,15 +381,9 @@ func TestReconcile(t *testing.T) {
 				Object: testing2.NewBroker(brokerName, testNS,
 					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
 					testing2.WithInitBrokerConditions,
-					testing2.PropagateTriggerChannelReadiness(channelStatus()),
-					testing2.PropagateFilterDeploymentAvailability(testing2.NewDeployment(filterDeploymentName, testNS,
-						testing2.WithDeploymentOwnerReferences(ownerReferences()),
-						testing2.WithDeploymentLabels(resources.FilterLabels(brokerName)),
-						testing2.WithDeploymentAnnotations(annotations()),
-						testing2.WithDeploymentServiceAccount(filterSA),
-						testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil),
-						testing2.WithDeploymentAvailable)),
-					testing2.MarkIngressFailed("DeploymentFailure", "%v", "inducing failure for create deployments")),
+					testing2.WithTriggerChannelReady(),
+					testing2.WithFilterDeploymentAvailable(),
+					testing2.WithIngressFailed("DeploymentFailure", "inducing failure for create deployments")),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create deployments"),
@@ -401,6 +402,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
 					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					testing2.WithChannelReady,
 					testing2.WithChannelAddress(triggerChannelHostname)),
 				testing2.NewDeployment(filterDeploymentName, testNS,
 					testing2.WithDeploymentOwnerReferences(ownerReferences()),
@@ -434,15 +436,9 @@ func TestReconcile(t *testing.T) {
 				Object: testing2.NewBroker(brokerName, testNS,
 					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
 					testing2.WithInitBrokerConditions,
-					testing2.PropagateTriggerChannelReadiness(channelStatus()),
-					testing2.PropagateFilterDeploymentAvailability(testing2.NewDeployment(filterDeploymentName, testNS,
-						testing2.WithDeploymentOwnerReferences(ownerReferences()),
-						testing2.WithDeploymentLabels(resources.FilterLabels(brokerName)),
-						testing2.WithDeploymentAnnotations(annotations()),
-						testing2.WithDeploymentServiceAccount(filterSA),
-						testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil),
-						testing2.WithDeploymentAvailable)),
-					testing2.MarkIngressFailed("DeploymentFailure", "%v", "inducing failure for update deployments")),
+					testing2.WithTriggerChannelReady(),
+					testing2.WithFilterDeploymentAvailable(),
+					testing2.WithIngressFailed("DeploymentFailure", "inducing failure for update deployments")),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for update deployments"),
@@ -461,6 +457,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
 					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					testing2.WithChannelReady,
 					testing2.WithChannelAddress(triggerChannelHostname)),
 				testing2.NewDeployment(filterDeploymentName, testNS,
 					testing2.WithDeploymentOwnerReferences(ownerReferences()),
@@ -492,15 +489,9 @@ func TestReconcile(t *testing.T) {
 				Object: testing2.NewBroker(brokerName, testNS,
 					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
 					testing2.WithInitBrokerConditions,
-					testing2.PropagateTriggerChannelReadiness(channelStatus()),
-					testing2.PropagateFilterDeploymentAvailability(testing2.NewDeployment(filterDeploymentName, testNS,
-						testing2.WithDeploymentOwnerReferences(ownerReferences()),
-						testing2.WithDeploymentLabels(resources.FilterLabels(brokerName)),
-						testing2.WithDeploymentAnnotations(annotations()),
-						testing2.WithDeploymentServiceAccount(filterSA),
-						testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil),
-						testing2.WithDeploymentAvailable)),
-					testing2.MarkIngressFailed("ServiceFailure", "%v", "inducing failure for create services")),
+					testing2.WithTriggerChannelReady(),
+					testing2.WithFilterDeploymentAvailable(),
+					testing2.WithIngressFailed("ServiceFailure", "inducing failure for create services")),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create services"),
@@ -519,6 +510,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
 					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					testing2.WithChannelReady,
 					testing2.WithChannelAddress(triggerChannelHostname)),
 				testing2.NewDeployment(filterDeploymentName, testNS,
 					testing2.WithDeploymentOwnerReferences(ownerReferences()),
@@ -554,15 +546,9 @@ func TestReconcile(t *testing.T) {
 				Object: testing2.NewBroker(brokerName, testNS,
 					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
 					testing2.WithInitBrokerConditions,
-					testing2.PropagateTriggerChannelReadiness(channelStatus()),
-					testing2.PropagateFilterDeploymentAvailability(testing2.NewDeployment(filterDeploymentName, testNS,
-						testing2.WithDeploymentOwnerReferences(ownerReferences()),
-						testing2.WithDeploymentLabels(resources.FilterLabels(brokerName)),
-						testing2.WithDeploymentAnnotations(annotations()),
-						testing2.WithDeploymentServiceAccount(filterSA),
-						testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil),
-						testing2.WithDeploymentAvailable)),
-					testing2.MarkIngressFailed("ServiceFailure", "%v", "inducing failure for update services")),
+					testing2.WithTriggerChannelReady(),
+					testing2.WithFilterDeploymentAvailable(),
+					testing2.WithIngressFailed("ServiceFailure", "inducing failure for update services")),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for update services"),
@@ -581,6 +567,7 @@ func TestReconcile(t *testing.T) {
 					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
 					testing2.WithChannelOwnerReferences(ownerReferences()),
 					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					testing2.WithChannelReady,
 					testing2.WithChannelAddress(triggerChannelHostname)),
 				testing2.NewDeployment(filterDeploymentName, testNS,
 					testing2.WithDeploymentOwnerReferences(ownerReferences()),
@@ -617,160 +604,89 @@ func TestReconcile(t *testing.T) {
 				Object: testing2.NewBroker(brokerName, testNS,
 					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
 					testing2.WithInitBrokerConditions,
-					testing2.PropagateTriggerChannelReadiness(channelStatus()),
-					testing2.PropagateFilterDeploymentAvailability(testing2.NewDeployment(filterDeploymentName, testNS,
-						testing2.WithDeploymentOwnerReferences(ownerReferences()),
-						testing2.WithDeploymentLabels(resources.FilterLabels(brokerName)),
-						testing2.WithDeploymentAnnotations(annotations()),
-						testing2.WithDeploymentServiceAccount(filterSA),
-						testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil),
-						testing2.WithDeploymentAvailable)),
-					testing2.PropagateIngressDeploymentAvailability(testing2.NewDeployment(ingressDeploymentName, testNS,
-						testing2.WithDeploymentOwnerReferences(ownerReferences()),
-						testing2.WithDeploymentLabels(resources.IngressLabels(brokerName)),
-						testing2.WithDeploymentAnnotations(annotations()),
-						testing2.WithDeploymentServiceAccount(ingressSA),
-						testing2.WithDeploymentContainer(ingressContainerName, ingressImage, envVars(ingressContainerName), containerPorts(8080)),
-						testing2.WithDeploymentAvailable,
-					)),
+					testing2.WithTriggerChannelReady(),
+					testing2.WithFilterDeploymentAvailable(),
+					testing2.WithIngressDeploymentAvailable(),
 					testing2.WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),
-					testing2.MarkIngressChannelFailed("ChannelFailure", "%v", "inducing failure for create channels")),
+					testing2.WithIngressChannelFailed("ChannelFailure", "inducing failure for create channels")),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create channels"),
 			},
 			WantErr: true,
 		},
-		//{
-		//	Name: "Ingress Channel is not yet Addressable",
-		//	Key:  testKey,
-		//	Objects: []runtime.Object{
-		//		testing2.NewBroker(brokerName, testNS,
-		//			testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
-		//			testing2.WithInitBrokerConditions),
-		//		testing2.NewChannel("", testNS,
-		//			testing2.WithChannelGenerateName(channelGenerateName),
-		//			testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
-		//			testing2.WithChannelOwnerReferences(ownerReferences()),
-		//			testing2.WithChannelProvisioner(channelProvisioner("my-provisioner")),
-		//			testing2.WithChannelAddress(triggerChannelHostname)),
-		//		testing2.NewDeployment(filterDeploymentName, testNS,
-		//			testing2.WithDeploymentOwnerReferences(ownerReferences()),
-		//			testing2.WithDeploymentLabels(resources.FilterLabels(brokerName)),
-		//			testing2.WithDeploymentAnnotations(annotations()),
-		//			testing2.WithDeploymentServiceAccount(filterSA),
-		//			testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
-		//		testing2.NewService(filterServiceName, testNS,
-		//			testing2.WithServiceOwnerReferences(ownerReferences()),
-		//			testing2.WithServiceLabels(resources.FilterLabels(brokerName)),
-		//			testing2.WithServicePorts(servicePorts(filterContainerName, 8080))),
-		//		testing2.NewDeployment(ingressDeploymentName, testNS,
-		//			testing2.WithDeploymentOwnerReferences(ownerReferences()),
-		//			testing2.WithDeploymentLabels(resources.IngressLabels(brokerName)),
-		//			testing2.WithDeploymentAnnotations(annotations()),
-		//			testing2.WithDeploymentServiceAccount(ingressSA),
-		//			testing2.WithDeploymentContainer(ingressContainerName, ingressImage, envVars(ingressContainerName), containerPorts(8080))),
-		//		testing2.NewService(ingressServiceName, testNS,
-		//			testing2.WithServiceOwnerReferences(ownerReferences()),
-		//			testing2.WithServiceLabels(resources.IngressLabels(brokerName)),
-		//			testing2.WithServicePorts(servicePorts(ingressContainerName, 8080))),
-		//		testing2.NewChannel("", testNS,
-		//			testing2.WithChannelGenerateName(channelGenerateName),
-		//			testing2.WithChannelLabels(IngressChannelLabels(brokerName)),
-		//			testing2.WithChannelOwnerReferences(ownerReferences()),
-		//			testing2.WithChannelProvisioner(channelProvisioner("my-provisioner"))),
-		//		testing2.NewSubscription("", testNS,
-		//			testing2.WithInitSubscriptionConditions,
-		//			testing2.WithSubscriptionGenerateName(ingressSubscriptionGenerateName),
-		//			testing2.WithSubscriptionOwnerReferences(ownerReferences()),
-		//			testing2.WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
-		//			testing2.WithSubscriptionChannel(channelGVK, channelGenerateName),
-		//			testing2.WithSubscriptionSubscriberRef(subscriberGVK, ingressServiceName),
-		//		),
-		//	},
-		//	WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-		//		Object: testing2.NewBroker(brokerName, testNS,
-		//			testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
-		//			testing2.WithInitBrokerConditions,
-		//			testing2.PropagateTriggerChannelReadiness(channelStatus()),
-		//			testing2.PropagateFilterDeploymentAvailability(testing2.NewDeployment(filterDeploymentName, testNS,
-		//				testing2.WithDeploymentOwnerReferences(ownerReferences()),
-		//				testing2.WithDeploymentLabels(resources.FilterLabels(brokerName)),
-		//				testing2.WithDeploymentAnnotations(annotations()),
-		//				testing2.WithDeploymentServiceAccount(filterSA),
-		//				testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil),
-		//				testing2.WithDeploymentAvailable)),
-		//			testing2.PropagateIngressDeploymentAvailability(testing2.NewDeployment(ingressDeploymentName, testNS,
-		//				testing2.WithDeploymentOwnerReferences(ownerReferences()),
-		//				testing2.WithDeploymentLabels(resources.IngressLabels(brokerName)),
-		//				testing2.WithDeploymentAnnotations(annotations()),
-		//				testing2.WithDeploymentServiceAccount(ingressSA),
-		//				testing2.WithDeploymentContainer(ingressContainerName, ingressImage, envVars(ingressContainerName), containerPorts(8080)),
-		//				testing2.WithDeploymentAvailable,
-		//			)),
-		//			testing2.WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),
-		//			testing2.PropagateIngressChannelReadiness(channelStatus()),
-		//			//testing2.PropagateIngressSubscriptionReadiness()
-		//	}},
-		// },
-		//	{
-		//		Name:   "Subscription.List error",
-		//		Scheme: scheme.Scheme,
-		//		InitialState: []runtime.Object{
-		//			makeBroker(),
-		//			makeTriggerChannel(),
-		//			makeIngressChannel(),
-		//		},
-		//		Mocks: controllertesting.Mocks{
-		//			MockLists: []controllertesting.MockList{
-		//				func(_ client.Client, _ context.Context, opts *client.ListOptions, list runtime.Object) (controllertesting.MockHandled, error) {
-		//					if _, ok := list.(*v1alpha1.SubscriptionList); ok {
-		//						return controllertesting.Handled, errors.New("test error getting Subscription")
-		//					}
-		//					return controllertesting.Unhandled, nil
-		//				},
-		//			},
-		//		},
-		//		WantEvent:  []corev1.Event{events[brokerReconcileError]},
-		//		WantErrMsg: "test error getting Subscription",
-		//	},
-		//	{
-		//		Name:   "Subscription.Create error",
-		//		Scheme: scheme.Scheme,
-		//		InitialState: []runtime.Object{
-		//			makeBroker(),
-		//			makeTriggerChannel(),
-		//			makeIngressChannel(),
-		//		},
-		//		Mocks: controllertesting.Mocks{
-		//			MockCreates: []controllertesting.MockCreate{
-		//				func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-		//					if _, ok := obj.(*v1alpha1.Subscription); ok {
-		//						return controllertesting.Handled, errors.New("test error creating Subscription")
-		//					}
-		//					return controllertesting.Unhandled, nil
-		//				},
-		//			},
-		//		},
-		//		WantEvent:  []corev1.Event{events[brokerReconcileError]},
-		//		WantErrMsg: "test error creating Subscription",
-		//	},
-		//	{
-		//		Name:   "Subscription is different than expected",
-		//		Scheme: scheme.Scheme,
-		//		InitialState: []runtime.Object{
-		//			makeBroker(),
-		//			makeTriggerChannel(),
-		//			makeIngressChannel(),
-		//		},
-		//		WantPresent: []runtime.Object{
-		//			// This is special because the Channel is not updated, unlike most things that
-		//			// differ from expected.
-		//			// TODO uncomment the following line once our test framework supports searching for
-		//			// GenerateName.
-		//			// makeDifferentSubscription(),
-		//		},
-		//	},
+		{
+			Name: "Subscription.Create error",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				testing2.NewBroker(brokerName, testNS,
+					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithInitBrokerConditions),
+				// Use the channel name to avoid conflicting with the ingress one.
+				testing2.NewChannel("filter-channel", testNS,
+					testing2.WithChannelGenerateName(channelGenerateName),
+					testing2.WithChannelLabels(TriggerChannelLabels(brokerName)),
+					testing2.WithChannelOwnerReferences(ownerReferences()),
+					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					testing2.WithChannelReady,
+					testing2.WithChannelAddress(triggerChannelHostname)),
+				testing2.NewDeployment(filterDeploymentName, testNS,
+					testing2.WithDeploymentOwnerReferences(ownerReferences()),
+					testing2.WithDeploymentLabels(resources.FilterLabels(brokerName)),
+					testing2.WithDeploymentAnnotations(annotations()),
+					testing2.WithDeploymentServiceAccount(filterSA),
+					testing2.WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+				testing2.NewService(filterServiceName, testNS,
+					testing2.WithServiceOwnerReferences(ownerReferences()),
+					testing2.WithServiceLabels(resources.FilterLabels(brokerName)),
+					testing2.WithServicePorts(servicePorts(filterContainerName, 8080))),
+				testing2.NewDeployment(ingressDeploymentName, testNS,
+					testing2.WithDeploymentOwnerReferences(ownerReferences()),
+					testing2.WithDeploymentLabels(resources.IngressLabels(brokerName)),
+					testing2.WithDeploymentAnnotations(annotations()),
+					testing2.WithDeploymentServiceAccount(ingressSA),
+					testing2.WithDeploymentContainer(ingressContainerName, ingressImage, envVars(ingressContainerName), containerPorts(8080))),
+				testing2.NewService(ingressServiceName, testNS,
+					testing2.WithServiceOwnerReferences(ownerReferences()),
+					testing2.WithServiceLabels(resources.IngressLabels(brokerName)),
+					testing2.WithServicePorts(servicePorts(ingressContainerName, 8080))),
+				// Use the channel name to avoid conflicting with the filter one.
+				testing2.NewChannel("ingress-channel", testNS,
+					testing2.WithChannelGenerateName(channelGenerateName),
+					testing2.WithChannelLabels(IngressChannelLabels(brokerName)),
+					testing2.WithChannelOwnerReferences(ownerReferences()),
+					testing2.WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					testing2.WithChannelReady,
+					testing2.WithChannelAddress(ingressChannelHostname)),
+			},
+			WantCreates: []metav1.Object{
+				testing2.NewSubscription("", testNS,
+					testing2.WithSubscriptionGenerateName(ingressSubscriptionGenerateName),
+					testing2.WithSubscriptionOwnerReferences(ownerReferences()),
+					testing2.WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
+					testing2.WithSubscriptionChannel(channelGVK, "ingress-channel"),
+					testing2.WithSubscriptionSubscriberRef(serviceGVK, ingressServiceName)),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: testing2.NewBroker(brokerName, testNS,
+					testing2.WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					testing2.WithInitBrokerConditions,
+					testing2.WithTriggerChannelReady(),
+					testing2.WithFilterDeploymentAvailable(),
+					testing2.WithIngressDeploymentAvailable(),
+					testing2.WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),
+					testing2.WithBrokerIngressChannelReady(),
+					testing2.WithBrokerIngressSubscriptionFailed("SubscriptionFailure", "inducing failure for create subscriptions"),
+				),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create subscriptions"),
+			},
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("create", "subscriptions"),
+			},
+			WantErr: true,
+		},
 		//	{
 		//		Name:   "Subscription.Delete error",
 		//		Scheme: scheme.Scheme,
@@ -942,12 +858,11 @@ func TestReconcile(t *testing.T) {
 //}
 
 //func makeDeletingBroker() *v1alpha1.Broker {
-//	return nil
-//	//b := makeReadyBroker()
-//	//b.DeletionTimestamp = &deletionTime
-//	//return b
+//	b := makeReadyBroker()
+//	b.DeletionTimestamp = &deletionTime
+//	return b
 //}
-//
+
 //func makeTriggerChannel() *v1alpha1.Channel {
 //	c := &v1alpha1.Channel{
 //		ObjectMeta: metav1.ObjectMeta{
@@ -957,9 +872,7 @@ func TestReconcile(t *testing.T) {
 //				"eventing.knative.dev/broker":           brokerName,
 //				"eventing.knative.dev/brokerEverything": "true",
 //			},
-//			OwnerReferences: []metav1.OwnerReference{
-//				getOwnerReference(),
-//			},
+//			OwnerReferences: ownerReferences(),
 //		},
 //		Spec: v1alpha1.ChannelSpec{
 //			Provisioner: channelProvisioner,
@@ -970,19 +883,19 @@ func TestReconcile(t *testing.T) {
 //	c.Status.SetAddress(triggerChannelHostname)
 //	return c
 //}
-//
+
 //func makeNonAddressableTriggerChannel() *v1alpha1.Channel {
 //	c := makeTriggerChannel()
 //	c.Status.Address = duckv1alpha1.Addressable{}
 //	return c
 //}
-//
+
 //func makeDifferentTriggerChannel() *v1alpha1.Channel {
 //	c := makeTriggerChannel()
 //	c.Spec.Provisioner.Name = "some-other-provisioner"
 //	return c
 //}
-//
+
 //func makeIngressChannel() *v1alpha1.Channel {
 //	c := &v1alpha1.Channel{
 //		ObjectMeta: metav1.ObjectMeta{
@@ -996,11 +909,11 @@ func TestReconcile(t *testing.T) {
 //				"eventing.knative.dev/brokerIngress": "true",
 //			},
 //			OwnerReferences: []metav1.OwnerReference{
-//				getOwnerReference(),
+//				ownerReferences(),
 //			},
 //		},
 //		Spec: v1alpha1.ChannelSpec{
-//			Provisioner: channelProvisioner,
+//			Provisioner: channelProvisioner(),
 //		},
 //	}
 //	c.Status.MarkProvisionerInstalled()
@@ -1008,13 +921,13 @@ func TestReconcile(t *testing.T) {
 //	c.Status.SetAddress(ingressChannelHostname)
 //	return c
 //}
-//
+
 //func makeNonAddressableIngressChannel() *v1alpha1.Channel {
 //	c := makeIngressChannel()
 //	c.Status.Address = duckv1alpha1.Addressable{}
 //	return c
 //}
-//
+
 //func makeDifferentIngressChannel() *v1alpha1.Channel {
 //	c := makeIngressChannel()
 //	c.Spec.Provisioner.Name = "some-other-provisioner"
@@ -1029,19 +942,15 @@ func TestReconcile(t *testing.T) {
 
 //func makeFilterService() *corev1.Service {
 //	svc := resources.MakeFilterService(makeBroker())
-//	svc.TypeMeta = metav1.TypeMeta{
-//		APIVersion: "v1",
-//		Kind:       "Service",
-//	}
 //	return svc
 //}
-
+//
 //func makeDifferentFilterService() *corev1.Service {
 //	s := makeFilterService()
 //	s.Spec.Selector["eventing.knative.dev/broker"] = "some-other-value"
 //	return s
 //}
-
+//
 //func makeIngressDeployment() *appsv1.Deployment {
 //	d := resources.MakeIngress(&resources.IngressArgs{
 //		Broker:             makeBroker(),
@@ -1061,22 +970,18 @@ func TestReconcile(t *testing.T) {
 //	d.Spec.Template.Spec.Containers[0].Image = "some-other-image"
 //	return d
 //}
-
+//
 //func makeIngressService() *corev1.Service {
 //	svc := resources.MakeIngressService(makeBroker())
-//	svc.TypeMeta = metav1.TypeMeta{
-//		APIVersion: "v1",
-//		Kind:       "Service",
-//	}
 //	return svc
 //}
-
+//
 //func makeDifferentIngressService() *corev1.Service {
 //	s := makeIngressService()
 //	s.Spec.Selector["eventing.knative.dev/broker"] = "some-other-value"
 //	return s
 //}
-
+//
 //func makeTestSubscription() *v1alpha1.Subscription {
 //	s := &v1alpha1.Subscription{
 //		TypeMeta: metav1.TypeMeta{
@@ -1090,9 +995,7 @@ func TestReconcile(t *testing.T) {
 //				"eventing.knative.dev/broker":        brokerName,
 //				"eventing.knative.dev/brokerIngress": "true",
 //			},
-//			OwnerReferences: []metav1.OwnerReference{
-//				getOwnerReference(),
-//			},
+//			OwnerReferences: ownerReferences(),
 //		},
 //		Spec: v1alpha1.SubscriptionSpec{
 //			Channel: corev1.ObjectReference{
@@ -1109,8 +1012,7 @@ func TestReconcile(t *testing.T) {
 //			},
 //		},
 //	}
-//	s.Status.MarkChannelReady()
-//	s.Status.MarkReferencesResolved()
+//	s.Status = *v1alpha1.TestHelper.ReadySubscriptionStatus()
 //	return s
 //}
 
@@ -1138,14 +1040,6 @@ func channelProvisioner(name string) *corev1.ObjectReference {
 		Kind:       "ClusterChannelProvisioner",
 		Name:       name,
 	}
-}
-
-func channelStatus() *v1alpha1.ChannelStatus {
-	return &v1alpha1.ChannelStatus{}
-}
-
-func subscriptionStatus() *v1alpha1.SubscriptionStatus {
-	return &v1alpha1.SubscriptionStatus{}
 }
 
 // TODO remove this once we get rid of istio.
@@ -1244,16 +1138,9 @@ func makeAvailableDeployment() *v1.Deployment {
 }
 
 func makeReadyChannelStatus() *v1alpha1.ChannelStatus {
-	cs := &v1alpha1.ChannelStatus{}
-	cs.MarkProvisionerInstalled()
-	cs.MarkProvisioned()
-	cs.SetAddress("foo")
-	return cs
+	return v1alpha1.TestHelper.ReadyChannelStatus()
 }
 
 func makeReadySubscriptionStatus() *v1alpha1.SubscriptionStatus {
-	ss := &v1alpha1.SubscriptionStatus{}
-	ss.MarkChannelReady()
-	ss.MarkReferencesResolved()
-	return ss
+	return v1alpha1.TestHelper.ReadySubscriptionStatus()
 }
