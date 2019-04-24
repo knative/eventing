@@ -115,6 +115,29 @@ func WaitForTriggerState(client eventingclient.TriggerInterface, name string, in
 	})
 }
 
+// WaitForEventTypeState polls the status of the EventType called name from client
+// every interval until inState returns `true` indicating it is done, returns an
+// error or timeout. desc will be used to name the metric that is emitted to
+// track how long it took for name to get into the state checked by inState.
+func WaitForEventTypeState(client eventingclient.EventTypeInterface, name string, inState func(r *eventingv1alpha1.EventType) (bool, error), desc string, timeout time.Duration) error {
+	metricName := fmt.Sprintf("WaitForEventTypeState/%s/%s", name, desc)
+	_, span := trace.StartSpan(context.Background(), metricName)
+	defer span.End()
+
+	return wait.PollImmediate(interval, timeout, func() (bool, error) {
+		r, err := client.Get(name, metav1.GetOptions{})
+		if k8serrors.IsNotFound(err) {
+			// Return false as we are not done yet.
+			// We swallow the error to keep on polling,
+			// as the event
+			return false, nil
+		} else if err != nil {
+			return true, err
+		}
+		return inState(r)
+	})
+}
+
 // WaitForTriggersListState polls the status of the TriggerList
 // from client every interval until inState returns `true` indicating it
 // is done, returns an error or timeout. desc will be used to name the metric
@@ -130,5 +153,27 @@ func WaitForTriggersListState(clients eventingclient.TriggerInterface, inState f
 			return true, err
 		}
 		return inState(t)
+	})
+}
+
+// WaitForEventTypeListState polls the status of the EventTypeList
+// from client every interval until inState returns `true` indicating it
+// is done, returns an error or timeout. desc will be used to name the metric
+// that is emitted to track how long it took to get into the state checked by inState.
+func WaitForEventTypeListState(clients eventingclient.EventTypeInterface, inState func(t *eventingv1alpha1.EventTypeList) (bool, error), desc string, timeout time.Duration) error {
+	metricName := fmt.Sprintf("WaitForEventTypeListState/%s", desc)
+	_, span := trace.StartSpan(context.Background(), metricName)
+	defer span.End()
+
+	return wait.PollImmediate(interval, timeout, func() (bool, error) {
+		l, err := clients.List(metav1.ListOptions{})
+		if err != nil {
+			return true, err
+		}
+		// If there are no items, then we return false as we are not done yet.
+		if len(l.Items) == 0 {
+			return false, nil
+		}
+		return inState(l)
 	})
 }

@@ -249,6 +249,17 @@ func CreateTrigger(clients *test.Clients, trigger *v1alpha1.Trigger, logf loggin
 	return nil
 }
 
+// CreateEventType will create an EventType.
+func CreateEventType(clients *test.Clients, eventType *v1alpha1.EventType, logf logging.FormatLogger, cleaner *test.Cleaner) error {
+	eventTypes := clients.Eventing.EventingV1alpha1().EventTypes(eventType.Namespace)
+	res, err := eventTypes.Create(eventType)
+	if err != nil {
+		return err
+	}
+	cleaner.Add(v1alpha1.SchemeGroupVersion.Group, v1alpha1.SchemeGroupVersion.Version, "eventtypes", eventType.Namespace, res.ObjectMeta.Name)
+	return nil
+}
+
 // WithTriggerReady creates a Trigger and waits until it is Ready.
 func WithTriggerReady(clients *test.Clients, trigger *v1alpha1.Trigger, logf logging.FormatLogger, cleaner *test.Cleaner) error {
 	if err := CreateTrigger(clients, trigger, logf, cleaner); err != nil {
@@ -266,6 +277,29 @@ func WithTriggerReady(clients *test.Clients, trigger *v1alpha1.Trigger, logf log
 	}
 	updatedTrigger.DeepCopyInto(trigger)
 
+	return nil
+}
+
+// WithEventTypeReady creates an EventType and waits until it is Ready.
+func WithEventTypeReady(clients *test.Clients, eventType *v1alpha1.EventType, logf logging.FormatLogger, cleaner *test.Cleaner) error {
+	if err := CreateEventType(clients, eventType, logf, cleaner); err != nil {
+		return err
+	}
+	return WaitForEventTypeReady(clients, eventType)
+}
+
+// WaitForEventTypeReady waits until the EventType is Ready.
+func WaitForEventTypeReady(clients *test.Clients, eventType *v1alpha1.EventType) error {
+	eventTypes := clients.Eventing.EventingV1alpha1().EventTypes(eventType.Namespace)
+	if err := test.WaitForEventTypeState(eventTypes, eventType.Name, test.IsEventTypeReady, "EventTypeIsReady", time.Minute); err != nil {
+		return err
+	}
+	// Update the given object so they'll reflect the ready state.
+	updatedEventType, err := eventTypes.Get(eventType.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	updatedEventType.DeepCopyInto(eventType)
 	return nil
 }
 
@@ -445,6 +479,15 @@ func FindAnyLogContents(clients *test.Clients, logf logging.FormatLogger, podNam
 func WaitForAllTriggersReady(clients *test.Clients, namespace string, logf logging.FormatLogger) error {
 	triggers := clients.Eventing.EventingV1alpha1().Triggers(namespace)
 	if err := test.WaitForTriggersListState(triggers, test.TriggersReady, "TriggerIsReady"); err != nil {
+		return err
+	}
+	return nil
+}
+
+// WaitForAllEventTypesReady will wait until all EventTypes in the given namespace are ready.
+func WaitForAllEventTypesReady(clients *test.Clients, logf logging.FormatLogger, namespace string) error {
+	eventTypes := clients.Eventing.EventingV1alpha1().EventTypes(namespace)
+	if err := test.WaitForEventTypeListState(eventTypes, test.EventTypesReady, "EventTypeIsReady", timeout); err != nil {
 		return err
 	}
 	return nil

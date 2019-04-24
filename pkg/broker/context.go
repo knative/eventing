@@ -26,6 +26,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
+const (
+	// Custom extension to match the EventType, if present.
+	// Otherwise we use the CloudEvent source attribute.
+	// This should be hopefully populated by the sources that we have control over.
+	extensionFrom = "from"
+)
+
 var (
 	// These MUST be lowercase strings, as they will be compared against lowercase strings.
 	forwardHeaders = sets.NewString(

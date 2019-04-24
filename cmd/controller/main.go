@@ -41,6 +41,7 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/subscription"
 	"github.com/knative/eventing/pkg/reconciler/trigger"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
+	"github.com/knative/eventing/pkg/reconciler/v1alpha1/eventtype"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/configmap"
@@ -213,6 +214,7 @@ func startControllerRuntime(stopCh <-chan struct{}, cfg *rest.Config, logger *za
 				FilterServiceAccountName:  getRequiredEnv("BROKER_FILTER_SERVICE_ACCOUNT"),
 			}),
 		namespace.ProvideController,
+		eventtype.ProvideController,
 	}
 	for _, provider := range providers {
 		if _, err = provider(mgr, logger.Desugar()); err != nil {

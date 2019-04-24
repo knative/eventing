@@ -40,6 +40,10 @@ func (c *FakeEventingV1alpha1) ClusterChannelProvisioners() v1alpha1.ClusterChan
 	return &FakeClusterChannelProvisioners{c}
 }
 
+func (c *FakeEventingV1alpha1) EventTypes(namespace string) v1alpha1.EventTypeInterface {
+	return &FakeEventTypes{c, namespace}
+}
+
 func (c *FakeEventingV1alpha1) Subscriptions(namespace string) v1alpha1.SubscriptionInterface {
 	return &FakeSubscriptions{c, namespace}
 }
