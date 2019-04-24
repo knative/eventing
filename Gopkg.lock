@@ -425,7 +425,7 @@
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
 [[projects]]
-  digest = "1:b657ec75371e8baf47023f7eb4f20d78e2a744f51ec824b40dd6cf74ad6fdaf4"
+  digest = "1:57d04562d05dd4500ff1e7e47f2e62b9be0531388377a3b691a012ce70b210d5"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -468,7 +468,7 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "418e675f88c29db0217475a74e61ebfa239f0f50"
+  revision = "6916051a96ae4d87d0e0e557a3c3b887ee4a3cea"
 
 [[projects]]
   branch = "master"
@@ -685,11 +685,12 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:15e5c398fbd9d2c439b635a08ac161b13d04f0c2aa587fe256b65dc0c3efe8b7"
+  digest = "1:9d8420bbf131d1618bde6530af37c3799340d3762cc47210c1d9532a4c3a2779"
   name = "github.com/spf13/pflag"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
+  revision = "298182f68c66c05229eb03ac171abe6e309ee79a"
+  version = "v1.0.3"
 
 [[projects]]
   digest = "1:bce7c290509e40fd1c73d700305c1961004d08c9a1812e47533416a8742893a7"
@@ -1380,6 +1381,7 @@
     "github.com/knative/pkg/system/testing",
     "github.com/knative/pkg/test",
     "github.com/knative/pkg/test/logging",
+    "github.com/knative/pkg/tracker",
     "github.com/knative/pkg/webhook",
     "github.com/knative/test-infra/scripts",
     "github.com/knative/test-infra/tools/dep-collector",
@@ -1424,6 +1426,7 @@
     "k8s.io/client-go/dynamic",
     "k8s.io/client-go/dynamic/fake",
     "k8s.io/client-go/informers",
+    "k8s.io/client-go/informers/core/v1",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/kubernetes/scheme",
@@ -1450,7 +1453,6 @@
     "sigs.k8s.io/controller-runtime/pkg/event",
     "sigs.k8s.io/controller-runtime/pkg/handler",
     "sigs.k8s.io/controller-runtime/pkg/manager",
-    "sigs.k8s.io/controller-runtime/pkg/predicate",
     "sigs.k8s.io/controller-runtime/pkg/reconcile",
     "sigs.k8s.io/controller-runtime/pkg/runtime/inject",
     "sigs.k8s.io/controller-runtime/pkg/runtime/log",

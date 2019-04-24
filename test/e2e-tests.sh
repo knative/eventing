@@ -145,6 +145,6 @@ function dump_extra_cluster_state() {
 
 initialize $@
 
-go_test_e2e -timeout=20m ./test/e2e -run ^TestMain$ -runFromMain=true -clusterChannelProvisioners=in-memory-channel,in-memory,gcp-pubsub || fail_test
+go_test_e2e -timeout=20m ./test/e2e -run ^TestMain$ -runFromMain=true -clusterChannelProvisioners=in-memory-channel,in-memory || fail_test
 
 success
