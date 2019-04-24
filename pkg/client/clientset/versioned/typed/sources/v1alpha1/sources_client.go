@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,16 +27,11 @@ import (
 
 type SourcesV1alpha1Interface interface {
 	RESTClient() rest.Interface
-	CronJobSourcesGetter
 }
 
 // SourcesV1alpha1Client is used to interact with features provided by the sources.eventing.knative.dev group.
 type SourcesV1alpha1Client struct {
 	restClient rest.Interface
-}
-
-func (c *SourcesV1alpha1Client) CronJobSources(namespace string) CronJobSourceInterface {
-	return newCronJobSources(c, namespace)
 }
 
 // NewForConfig creates a new SourcesV1alpha1Client for the given config.

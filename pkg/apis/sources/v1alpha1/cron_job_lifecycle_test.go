@@ -27,7 +27,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/knative/eventing-sources/pkg/apis/sources/v1alpha1"
+	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
 

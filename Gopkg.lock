@@ -425,20 +425,6 @@
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
 [[projects]]
-<<<<<<< HEAD
-  digest = "1:5923fb20c8ac5e5dcc2e7a9f8dfa702c72491f3905372454add6cbb59b0e39fb"
-  name = "github.com/knative/eventing-sources"
-  packages = [
-    "pkg/apis/sources/v1alpha1",
-    "pkg/controller/sdk",
-    "pkg/controller/testing",
-    "pkg/kncloudevents",
-  ]
-  pruneopts = "NUT"
-  revision = "32ce3778fa1bc46ed0b0ade16d5c57f343cafa4d"
-  version = "v0.5.0"
-
-[[projects]]
   digest = "1:57d04562d05dd4500ff1e7e47f2e62b9be0531388377a3b691a012ce70b210d5"
   name = "github.com/knative/pkg"
   packages = [
@@ -1388,9 +1374,6 @@
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/uuid",
-    "github.com/knative/eventing-sources/pkg/apis/sources/v1alpha1",
-    "github.com/knative/eventing-sources/pkg/controller/testing",
-    "github.com/knative/eventing-sources/pkg/kncloudevents",
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
     "github.com/knative/pkg/apis/duck/v1alpha1",
