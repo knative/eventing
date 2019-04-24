@@ -27,11 +27,16 @@ import (
 
 type SourcesV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	CronJobSourcesGetter
 }
 
 // SourcesV1alpha1Client is used to interact with features provided by the sources.eventing.knative.dev group.
 type SourcesV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *SourcesV1alpha1Client) CronJobSources(namespace string) CronJobSourceInterface {
+	return newCronJobSources(c, namespace)
 }
 
 // NewForConfig creates a new SourcesV1alpha1Client for the given config.

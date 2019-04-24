@@ -28,8 +28,7 @@ import (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// TODO: We should add defaults and validation.
+// +k8s:defaulter-gen=true
 
 // CronJobSource is the Schema for the cronjobsources API.
 type CronJobSource struct {
@@ -40,7 +39,9 @@ type CronJobSource struct {
 	Status CronJobSourceStatus `json:"status,omitempty"`
 }
 
-// Check that CronJobSource can be validated and can be defaulted.
+// TODO: Check that CronJobSource can be validated and can be defaulted.
+
+// Check that it is a runtime object.
 var _ runtime.Object = (*CronJobSource)(nil)
 
 // Check that we can create OwnerReferences to a Configuration.
