@@ -111,8 +111,8 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	brokerInformer := eventingInformerFactory.Eventing().V1alpha1().Brokers()
 
 	// Kube
-	coreServiceInformer := kubeInformerFactory.Core().V1().Services()
-	coreNamespaceInformer := kubeInformerFactory.Core().V1().Namespaces()
+	serviceInformer := kubeInformerFactory.Core().V1().Services()
+	namespaceInformer := kubeInformerFactory.Core().V1().Namespaces()
 	configMapInformer := kubeInformerFactory.Core().V1().ConfigMaps()
 
 	// Build all of our controllers, with the clients constructed above.
@@ -125,7 +125,7 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 		),
 		namespace.NewController(
 			opt,
-			coreNamespaceInformer,
+			namespaceInformer,
 		),
 		channel.NewController(
 			opt,
@@ -137,7 +137,7 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 			channelInformer,
 			subscriptionInformer,
 			brokerInformer,
-			coreServiceInformer,
+			serviceInformer,
 		),
 	}
 	if len(controllers) != numControllers {
@@ -163,8 +163,8 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 		triggerInformer.Informer(),
 		// Kube
 		configMapInformer.Informer(),
-		coreServiceInformer.Informer(),
-		coreNamespaceInformer.Informer(),
+		serviceInformer.Informer(),
+		namespaceInformer.Informer(),
 	); err != nil {
 		logger.Fatalf("Failed to start informers: %v", err)
 	}
