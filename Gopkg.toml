@@ -26,29 +26,10 @@ required = [
   name = "github.com/knative/test-infra"
   non-go = false
 
-# Use HEAD (2018-04-21) to pick up:
-# https://github.com/spf13/cobra/pull/662
-# TODO this can be changed to a version constraint on 0.0.3 which has this commit
-# [[constraint]]
-#   name = "github.com/spf13/cobra"
-#   version = "0.0.3"
-[[override]]
-  name = "github.com/spf13/cobra"
-  revision = "615425954c3b0d9485a7027d4d451fdcdfdee84e"
-
-# TODO this can be changed to a version constraint on 1.0.3 which has this commit
-# [[constraint]]
-#   name = "github.com/spf13/pflag"
-#   version = "1.0.3"
-[[override]]
-  name = "github.com/spf13/pflag"
-  revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
-
 # TODO why is this overridden?
 [[override]]
   name = "gopkg.in/yaml.v2"
   version = "v2.2.1"
-
 # TODO(https://github.com/knative/eventing/issues/1065): if we get to update k8s.io to > 1.13, we can remove
 # k8s-dynamic-fake-simple.patch in ./hack/update-deps.sh
 #
@@ -87,16 +68,6 @@ required = [
 [[override]]
   name = "github.com/json-iterator/go"
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
-
-# TODO why is this overridden?
-[[override]]
-  name = "github.com/golang/protobuf"
-  version = "v1.1.0"
-
-# TODO why is this overridden?
-[[override]]
-  name = "golang.org/x/oauth2"
-  revision = "cdc340f7c179dbbfa4afd43b7614e8fcadde4269"
 
 # Constrain the version of knative/pkg we would like to import.
 # This controls when we upgrade apis independently of Serving.

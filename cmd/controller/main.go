@@ -39,10 +39,10 @@ import (
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/channel"
+	"github.com/knative/eventing/pkg/reconciler/namespace"
 	"github.com/knative/eventing/pkg/reconciler/subscription"
 	"github.com/knative/eventing/pkg/reconciler/trigger"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
@@ -97,7 +97,7 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	logger = logger.With(zap.String("controller/impl", "pkg"))
 	logger.Info("Starting the controller")
 
-	const numControllers = 4
+	const numControllers = 5
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
@@ -115,6 +115,7 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	// Kube
 	coreServiceInformer := kubeInformerFactory.Core().V1().Services()
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
+	coreNamespaceInformer := kubeInformerFactory.Core().V1().Namespaces()
 	configMapInformer := kubeInformerFactory.Core().V1().ConfigMaps()
 
 	// Build all of our controllers, with the clients constructed above.
@@ -124,6 +125,10 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 		subscription.NewController(
 			opt,
 			subscriptionInformer,
+		),
+		namespace.NewController(
+			opt,
+			coreNamespaceInformer,
 		),
 		channel.NewController(
 			opt,
@@ -169,6 +174,7 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 		configMapInformer.Informer(),
 		coreServiceInformer.Informer(),
 		deploymentInformer.Informer(),
+		coreNamespaceInformer.Informer(),
 	); err != nil {
 		logger.Fatalf("Failed to start informers: %v", err)
 	}
@@ -222,7 +228,6 @@ func startControllerRuntime(stopCh <-chan struct{}, cfg *rest.Config, logger *za
 				FilterImage:               getRequiredEnv("BROKER_FILTER_IMAGE"),
 				FilterServiceAccountName:  getRequiredEnv("BROKER_FILTER_SERVICE_ACCOUNT"),
 			}),
-		namespace.ProvideController,
 	}
 	for _, provider := range providers {
 		if _, err = provider(mgr, logger.Desugar()); err != nil {
