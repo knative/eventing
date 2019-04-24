@@ -177,7 +177,7 @@ We foresee the following two ways of populating the Registry for the MVP. A thir
     This would register the EventType named `org.bitbucket.repofork` with type `org.bitbucket.repo:fork`, 
     source `bitbucket.org` in the `dev` Broker of the `default` namespace.
     
-    As under the hood, `kubeclt apply` just makes a REST call to the API server with the appropriate RBAC permissions, 
+    As under the hood, `kubectl apply` just makes a REST call to the API server with the appropriate RBAC permissions, 
     the `Cluster Configurator` can give EventType `create` permissions to trusted parties, so that they can register 
     their EventTypes.  
 
