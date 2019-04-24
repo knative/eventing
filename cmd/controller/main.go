@@ -65,12 +65,6 @@ func main() {
 		logger.Fatalf("Error building kubeconfig: %v", err)
 	}
 
-	go startPkgController(stopCh, cfg, logger, atomicLevel)
-	<-stopCh
-}
-
-func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.SugaredLogger, atomicLevel zap.AtomicLevel) {
-	logger = logger.With(zap.String("controller/impl", "pkg"))
 	logger.Info("Starting the controller")
 
 	const numControllers = 5
@@ -162,6 +156,7 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	// Start all of the controllers.
 	logger.Info("Starting controllers.")
 	go kncontroller.StartAll(stopCh, controllers...)
+	<-stopCh
 }
 
 func init() {
