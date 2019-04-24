@@ -15,7 +15,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: controller
+  name: source-controller
   namespace: knative-eventing
   labels:
     eventing.knative.dev/release: devel
@@ -34,9 +34,9 @@ spec:
     spec:
       serviceAccountName: knative-controller
       containers:
-        - name: controller
-          # This is the Go import path for the binary that is containerized
-          # and substituted here.
+      - name: controller
+        # This is the Go import path for the binary that is containerized
+        # and substituted here.
         image: github.com/knative/eventing/cmd/source-controller
         resources:
           requests:
@@ -59,6 +59,8 @@ spec:
           - name: CONFIG_LOGGING_NAME
             value: config-logging
           - name: CRONJOB_RA_IMAGE
+            # This is the Go import path for cron job receive adapter binary
+            # that is containerized and substituted here.
             value: github.com/knative/eventing/cmd/cronjob_receive_adapter
       volumes:
         - name: config-logging
