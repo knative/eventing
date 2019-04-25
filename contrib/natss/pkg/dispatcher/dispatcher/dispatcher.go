@@ -17,12 +17,15 @@ limitations under the License.
 package dispatcher
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/knative/eventing/contrib/natss/pkg/stanutil"
+	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/provisioners"
 	stan "github.com/nats-io/go-nats-streaming"
 	"go.uber.org/zap"
@@ -59,6 +62,8 @@ type SubscriptionsSupervisor struct {
 	natssConnMux        sync.Mutex
 	natssConn           *stan.Conn
 	natssConnInProgress bool
+
+	hostToChannelMap atomic.Value
 }
 
 // NewDispatcher returns a new SubscriptionsSupervisor.
@@ -71,11 +76,15 @@ func NewDispatcher(natssURL, clusterID string, logger *zap.Logger) (*Subscriptio
 		clusterID:     clusterID,
 		subscriptions: make(map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription),
 	}
-	receiver, err := provisioners.NewMessageReceiver(createReceiverFunction(d, logger.Sugar()), logger.Sugar())
+	receiver, err := provisioners.NewMessageReceiver(
+		createReceiverFunction(d, logger.Sugar()),
+		logger.Sugar(),
+		provisioners.ResolveChannelFromHostHeader(provisioners.ResolveChannelFromHostFunc(d.getChannelReferenceFromHost)))
 	if err != nil {
 		return nil, err
 	}
 	d.receiver = receiver
+	d.setHostToChannelMap(map[string]provisioners.ChannelReference{})
 
 	return d, nil
 }
@@ -290,4 +299,45 @@ func (s *SubscriptionsSupervisor) unsubscribe(channel provisioners.ChannelRefere
 
 func getSubject(channel provisioners.ChannelReference) string {
 	return channel.Name + "." + channel.Namespace
+}
+
+func (s *SubscriptionsSupervisor) getHostToChannelMap() map[string]provisioners.ChannelReference {
+	return s.hostToChannelMap.Load().(map[string]provisioners.ChannelReference)
+}
+
+func (s *SubscriptionsSupervisor) setHostToChannelMap(hcMap map[string]provisioners.ChannelReference) {
+	s.hostToChannelMap.Store(hcMap)
+}
+
+// UpdateHostToChannelMap will be called from the controller that watches natss channels.
+// It will update internal hostToChannelMap which is used to resolve the hostHeader of the
+// incoming request to the correct ChannelReference in the receiver function.
+func (s *SubscriptionsSupervisor) UpdateHostToChannelMap(ctx context.Context, chanList []eventingv1alpha1.Channel) error {
+	hostToChanMap := make(map[string]provisioners.ChannelReference, len(chanList))
+	for _, c := range chanList {
+		hostName := c.Status.Address.Hostname
+		if cr, ok := hostToChanMap[hostName]; ok {
+			return fmt.Errorf(
+				"Duplicate hostName found. Each channel must have a unique host header. HostName:%s, channel:%s.%s, channel:%s.%s",
+				hostName,
+				c.Namespace,
+				c.Name,
+				cr.Namespace,
+				cr.Name)
+		}
+		hostToChanMap[hostName] = provisioners.ChannelReference{Name: c.Name, Namespace: c.Namespace}
+	}
+
+	s.setHostToChannelMap(hostToChanMap)
+	logging.FromContext(ctx).Info("hostToChannelMap updated successfully.")
+	return nil
+}
+
+func (s *SubscriptionsSupervisor) getChannelReferenceFromHost(host string) (provisioners.ChannelReference, error) {
+	chMap := s.getHostToChannelMap()
+	cr, ok := chMap[host]
+	if !ok {
+		return cr, fmt.Errorf("Invalid HostName:%q. HostName not found in any of the watched natss channels", host)
+	}
+	return cr, nil
 }

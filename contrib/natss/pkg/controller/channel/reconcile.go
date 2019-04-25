@@ -115,25 +115,18 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 	// We are syncing two things:
 	// 1. The K8s Service to talk to this Channel.
-	// 2. The Istio VirtualService to talk to this Channel.
 
 	if c.DeletionTimestamp != nil {
-		// K8s garbage collection will delete the K8s service and VirtualService for this channel.
+		// K8s garbage collection will delete the K8s service for this channel.
 		return nil
 	}
 
-	svc, err := provisioners.CreateK8sService(ctx, r.client, c)
+	svc, err := provisioners.CreateK8sService(ctx, r.client, c, provisioners.ExternalService(c))
 	if err != nil {
 		r.logger.Info("Error creating the Channel's K8s Service", zap.Error(err))
 		return err
 	}
 	c.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
-
-	_, err = provisioners.CreateVirtualService(ctx, r.client, c, svc)
-	if err != nil {
-		r.logger.Info("Error creating the Virtual Service for the Channel", zap.Error(err))
-		return err
-	}
 
 	c.Status.MarkProvisioned()
 	return nil
