@@ -33,7 +33,7 @@ TestEventTransformationForTrigger tests the following scenario:
                          5                 4
                    ------------- ----------------------
                    |           | |                    |
-             1     v	 2	   | v        3           |
+             1     v	 2     | v        3           |
 EventSource ---> Broker ---> Trigger1 -------> Service(Transformation)
                    |
                    | 6                   7
