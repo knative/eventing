@@ -222,7 +222,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: true,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "ResultResolveFailed", "Failed to resolve spec.reply: status does not contain address"),
-				Eventf(corev1.EventTypeWarning, "SubscriptionUpdateStatusFailed", "Failed to update Subscription's status: status does not contain address"), // TODO: BUGBUG THIS IS WEIRD
+				Eventf(corev1.EventTypeWarning, "SubscriptionUpdateStatusFailed", "Failed to update Subscription's status: invalid value: Subscriber: spec.reply.kind\nonly 'Channel' kind is allowed"),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
