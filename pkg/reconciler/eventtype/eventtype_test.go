@@ -17,22 +17,19 @@ limitations under the License.
 package eventtype
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
-	"go.uber.org/zap"
+	"github.com/knative/eventing/pkg/reconciler"
+	. "github.com/knative/eventing/pkg/reconciler/testing"
+	"github.com/knative/pkg/controller"
+	logtesting "github.com/knative/pkg/logging/testing"
+	. "github.com/knative/pkg/reconciler/testing"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	clientgotesting "k8s.io/client-go/testing"
 )
 
 const (
@@ -40,20 +37,13 @@ const (
 	eventTypeName   = "test-eventtype"
 	eventTypeType   = "test-type"
 	eventTypeBroker = "test-broker"
+	eventTypeSource = "/test-source"
 )
 
 var (
 	trueVal = true
-	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
-	// truncates to seconds to match the loss of precision during serialization.
-	deletionTime = metav1.Now().Rfc3339Copy()
 
-	// Map of events to set test cases' expectations easier.
-	events = map[string]corev1.Event{
-		eventTypeReconciled:         {Reason: eventTypeReconciled, Type: corev1.EventTypeNormal},
-		eventTypeReconcileFailed:    {Reason: eventTypeReconcileFailed, Type: corev1.EventTypeWarning},
-		eventTypeUpdateStatusFailed: {Reason: eventTypeUpdateStatusFailed, Type: corev1.EventTypeWarning},
-	}
+	testKey = fmt.Sprintf("%s/%s", testNS, eventTypeName)
 )
 
 func init() {
@@ -61,219 +51,177 @@ func init() {
 	_ = v1alpha1.AddToScheme(scheme.Scheme)
 }
 
-func TestProvideController(t *testing.T) {
-	// TODO(grantr) This needs a mock of manager.Manager. Creating a manager
-	// with a fake Config fails because the Manager tries to contact the
-	// apiserver.
-
-	// cfg := &rest.Config{
-	// 	Host: "http://foo:80",
-	// }
-	//
-	// mgr, err := manager.New(cfg, manager.Options{})
-	// if err != nil {
-	// 	t.Fatalf("Error creating manager: %v", err)
-	// }
-	//
-	// _, err = ProvideController(mgr)
-	// if err != nil {
-	// 	t.Fatalf("Error in ProvideController: %v", err)
-	// }
-}
-
-func TestInjectClient(t *testing.T) {
-	r := &reconciler{}
-	orig := r.client
-	n := fake.NewFakeClient()
-	if orig == n {
-		t.Errorf("Original and new clients are identical: %v", orig)
-	}
-	err := r.InjectClient(n)
-	if err != nil {
-		t.Errorf("Unexpected error injecting the client: %v", err)
-	}
-	if n != r.client {
-		t.Errorf("Unexpected client. Expected: '%v'. Actual: '%v'", n, r.client)
-	}
-}
-
-func TestInjectConfig(t *testing.T) {
-	r := &reconciler{}
-	wantCfg := &rest.Config{
-		Host: "http://foo",
-	}
-
-	err := r.InjectConfig(wantCfg)
-	if err != nil {
-		t.Fatalf("Unexpected error injecting the config: %v", err)
-	}
-
-	wantDynClient, err := dynamic.NewForConfig(wantCfg)
-	if err != nil {
-		t.Fatalf("Unexpected error generating dynamic client: %v", err)
-	}
-
-	// Since dynamicClient doesn't export any fields, we can only test its type.
-	switch r.dynamicClient.(type) {
-	case dynamic.Interface:
-		// ok
-	default:
-		t.Errorf("Unexpected dynamicClient type. Expected: %T, Got: %T", wantDynClient, r.dynamicClient)
-	}
-}
-
 func TestReconcile(t *testing.T) {
-	testCases := []controllertesting.TestCase{
+	table := TableTest{
+		{
+			Name: "bad workqueue key",
+			// Make sure Reconcile handles bad keys.
+			Key: "too/many/parts",
+		}, {
+			Name: "key not found",
+			// Make sure Reconcile handles good keys that don't exist.
+			Key: "foo/not-found",
+		},
 		{
 			Name: "EventType not found",
+			Key:  testKey,
 		},
 		{
-			Name:   "Get EventType error",
-			Scheme: scheme.Scheme,
-			Mocks: controllertesting.Mocks{
-				MockGets: []controllertesting.MockGet{
-					func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*v1alpha1.EventType); ok {
-							return controllertesting.Handled, errors.New("test error getting the EventType")
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
+			Name: "EventType being deleted",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewEventType(eventTypeName, testNS,
+					WithInitEventTypeConditions,
+					WithEventTypeDeletionTimestamp),
 			},
-			WantErrMsg: "test error getting the EventType",
 		},
 		{
-			Name:   "EventType being deleted",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeDeletingEventType(),
+			Name: "Broker not found",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewEventType(eventTypeName, testNS,
+					WithEventTypeType(eventTypeType),
+					WithEventTypeSource(eventTypeSource),
+					WithEventTypeBroker(eventTypeBroker),
+				),
 			},
-			WantEvent: []corev1.Event{events[eventTypeReconciled]},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewEventType(eventTypeName, testNS,
+					WithEventTypeType(eventTypeType),
+					WithEventTypeSource(eventTypeSource),
+					WithEventTypeBroker(eventTypeBroker),
+					WithInitEventTypeConditions,
+					WithEventTypeBrokerDoesNotExist,
+				),
+			}},
 		},
 		{
-			Name:   "Get Broker error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeEventType(),
+			Name: "Broker not ready",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewEventType(eventTypeName, testNS,
+					WithEventTypeType(eventTypeType),
+					WithEventTypeSource(eventTypeSource),
+					WithEventTypeBroker(eventTypeBroker),
+				),
+				NewBroker(eventTypeBroker, testNS,
+					WithInitBrokerConditions,
+				),
 			},
-			Mocks: controllertesting.Mocks{
-				MockGets: []controllertesting.MockGet{
-					func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*v1alpha1.Broker); ok {
-							return controllertesting.Handled, errors.New("test error getting broker")
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-			WantErrMsg: "test error getting broker",
-			WantEvent:  []corev1.Event{events[eventTypeReconcileFailed]},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewEventType(eventTypeName, testNS,
+					WithEventTypeType(eventTypeType),
+					WithEventTypeSource(eventTypeSource),
+					WithEventTypeBroker(eventTypeBroker),
+					WithEventTypeBrokerExists,
+					WithEventTypeBrokerNotReady,
+				),
+			}},
 		},
 		{
-			Name:   "Broker not ready",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeEventType(),
-				makeBroker(),
+			Name: "Successful reconcile, became ready",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewEventType(eventTypeName, testNS,
+					WithEventTypeType(eventTypeType),
+					WithEventTypeSource(eventTypeSource),
+					WithEventTypeBroker(eventTypeBroker),
+				),
+				NewBroker(eventTypeBroker, testNS,
+					WithBrokerReady,
+				),
 			},
-			WantErrMsg: `broker "` + eventTypeBroker + `" not ready`,
-			WantEvent:  []corev1.Event{events[eventTypeReconcileFailed]},
-		},
-		{
-			Name:   "EventType reconciliation success",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeEventType(),
-				makeBrokerReady(),
-			},
-			WantEvent: []corev1.Event{events[eventTypeReconciled]},
-			WantPresent: []runtime.Object{
-				makeReadyEventType(),
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewEventType(eventTypeName, testNS,
+					WithEventTypeType(eventTypeType),
+					WithEventTypeSource(eventTypeSource),
+					WithEventTypeBroker(eventTypeBroker),
+					WithEventTypeBrokerExists,
+					WithEventTypeBrokerReady,
+				),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, eventTypeReadinessChanged, "EventType %q became ready", eventTypeName),
 			},
 		},
 	}
-	for _, tc := range testCases {
-		c := tc.GetClient()
-		dc := tc.GetDynamicClient()
-		recorder := tc.GetEventRecorder()
 
-		r := &reconciler{
-			client:        c,
-			dynamicClient: dc,
-			recorder:      recorder,
-			logger:        zap.NewNop(),
+	defer logtesting.ClearAll()
+	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
+		return &Reconciler{
+			Base:            reconciler.NewBase(opt, controllerAgentName),
+			eventTypeLister: listers.GetEventTypeLister(),
+			brokerLister:    listers.GetBrokerLister(),
 		}
-		tc.ReconcileKey = fmt.Sprintf("%s/%s", testNS, eventTypeName)
-		tc.IgnoreTimes = true
-		t.Run(tc.Name, tc.Runner(t, r, c, recorder))
-	}
+	}))
+
 }
 
-func makeEventType() *v1alpha1.EventType {
-	return &v1alpha1.EventType{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "eventing.knative.dev/v1alpha1",
-			Kind:       "EventType",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testNS,
-			Name:      eventTypeName,
-		},
-		Spec: v1alpha1.EventTypeSpec{
-			Broker: eventTypeBroker,
-			Type:   eventTypeType,
-		},
-	}
-}
+//func makeEventType() *v1alpha1.EventType {
+//	return &v1alpha1.EventType{
+//		TypeMeta: metav1.TypeMeta{
+//			APIVersion: "eventing.knative.dev/v1alpha1",
+//			Kind:       "EventType",
+//		},
+//		ObjectMeta: metav1.ObjectMeta{
+//			Namespace: testNS,
+//			Name:      eventTypeName,
+//		},
+//		Spec: v1alpha1.EventTypeSpec{
+//			Broker: eventTypeBroker,
+//			Type:   eventTypeType,
+//		},
+//	}
+//}
 
-func makeReadyEventType() *v1alpha1.EventType {
-	t := makeEventType()
-	t.Status.InitializeConditions()
-	t.Status.MarkBrokerExists()
-	t.Status.MarkBrokerReady()
-	return t
-}
-
-func makeDeletingEventType() *v1alpha1.EventType {
-	et := makeReadyEventType()
-	et.DeletionTimestamp = &deletionTime
-	return et
-}
-
-func makeBroker() *v1alpha1.Broker {
-	return &v1alpha1.Broker{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "eventing.knative.dev/v1alpha1",
-			Kind:       "Broker",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testNS,
-			Name:      eventTypeBroker,
-		},
-		Spec: v1alpha1.BrokerSpec{
-			ChannelTemplate: &v1alpha1.ChannelSpec{
-				Provisioner: makeChannelProvisioner(),
-			},
-		},
-	}
-}
-
-func makeBrokerReady() *v1alpha1.Broker {
-	b := makeBroker()
-	b.Status.InitializeConditions()
-	b.Status.MarkTriggerChannelReady()
-	b.Status.MarkFilterReady()
-	b.Status.MarkIngressReady()
-	b.Status.SetAddress("test-address")
-	b.Status.MarkIngressChannelReady()
-	b.Status.MarkIngressSubscriptionReady()
-	return b
-}
-
-func makeChannelProvisioner() *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "eventing.knative.dev/v1alpha1",
-		Kind:       "ClusterChannelProvisioner",
-		Name:       "my-provisioner",
-	}
-}
+//func makeReadyEventType() *v1alpha1.EventType {
+//	t := makeEventType()
+//	t.Status.InitializeConditions()
+//	t.Status.MarkBrokerExists()
+//	t.Status.MarkBrokerReady()
+//	return t
+//}
+//
+//func makeDeletingEventType() *v1alpha1.EventType {
+//	et := makeReadyEventType()
+//	et.DeletionTimestamp = &deletionTime
+//	return et
+//}
+//
+//func makeBroker() *v1alpha1.Broker {
+//	return &v1alpha1.Broker{
+//		TypeMeta: metav1.TypeMeta{
+//			APIVersion: "eventing.knative.dev/v1alpha1",
+//			Kind:       "Broker",
+//		},
+//		ObjectMeta: metav1.ObjectMeta{
+//			Namespace: testNS,
+//			Name:      eventTypeBroker,
+//		},
+//		Spec: v1alpha1.BrokerSpec{
+//			ChannelTemplate: &v1alpha1.ChannelSpec{
+//				Provisioner: makeChannelProvisioner(),
+//			},
+//		},
+//	}
+//}
+//
+//func makeBrokerReady() *v1alpha1.Broker {
+//	b := makeBroker()
+//	b.Status.InitializeConditions()
+//	b.Status.MarkTriggerChannelReady()
+//	b.Status.MarkFilterReady()
+//	b.Status.MarkIngressReady()
+//	b.Status.SetAddress("test-address")
+//	b.Status.MarkIngressChannelReady()
+//	b.Status.MarkIngressSubscriptionReady()
+//	return b
+//}
+//
+//func makeChannelProvisioner() *corev1.ObjectReference {
+//	return &corev1.ObjectReference{
+//		APIVersion: "eventing.knative.dev/v1alpha1",
+//		Kind:       "ClusterChannelProvisioner",
+//		Name:       "my-provisioner",
+//	}
+//}

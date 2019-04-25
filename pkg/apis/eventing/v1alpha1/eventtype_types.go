@@ -60,6 +60,7 @@ type EventTypeSpec struct {
 	// Broker refers to the Broker that can provide the EventType.
 	Broker string `json:"broker"`
 	// Description is an optional field used to describe the EventType, in any meaningful way.
+	// +optional
 	Description string `json:description,omitempty`
 }
 

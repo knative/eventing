@@ -108,6 +108,10 @@ func (l *Listers) GetBrokerLister() eventinglisters.BrokerLister {
 	return eventinglisters.NewBrokerLister(l.indexerFor(&eventingv1alpha1.Broker{}))
 }
 
+func (l *Listers) GetEventTypeLister() eventinglisters.EventTypeLister {
+	return eventinglisters.NewEventTypeLister(l.indexerFor(&eventingv1alpha1.EventType{}))
+}
+
 func (l *Listers) GetChannelLister() eventinglisters.ChannelLister {
 	return eventinglisters.NewChannelLister(l.indexerFor(&eventingv1alpha1.Channel{}))
 }
