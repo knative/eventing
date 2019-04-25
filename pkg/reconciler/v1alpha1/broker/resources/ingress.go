@@ -85,10 +85,6 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 									Value: args.Broker.Name,
 								},
 								{
-									Name:  "AUTO_ADD",
-									Value: strconv.FormatBool(args.Broker.Spec.IngressPolicy.AutoAdd),
-								},
-								{
 									Name:  "ALLOW_ANY",
 									Value: strconv.FormatBool(args.Broker.Spec.IngressPolicy.AllowAny),
 								},

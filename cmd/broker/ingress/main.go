@@ -70,9 +70,6 @@ type envConfig struct {
 
 	// To indicate whether the ingress should allow any event.
 	AllowAny bool `envconfig:"ALLOW_ANY" required:"true"`
-
-	// To indicate whether the ingress should auto-register unknown events.
-	AutoAdd bool `envconfig:"AUTO_ADD" required:"true"`
 }
 
 func main() {
@@ -114,7 +111,6 @@ func main() {
 
 	policySpec := &eventingv1alpha1.IngressPolicySpec{
 		AllowAny: env.AllowAny,
-		AutoAdd:  env.AutoAdd,
 	}
 
 	ingressPolicy := broker.NewPolicy(logger, client, policySpec, namespace, brokerName, true)

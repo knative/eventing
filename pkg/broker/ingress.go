@@ -62,48 +62,13 @@ func NewPolicy(logger *zap.Logger, client client.Client, spec *eventingv1alpha1.
 
 // AllowEvent filters events based on the configured policy.
 func (p *IngressPolicy) AllowEvent(ctx context.Context, event cloudevents.Event) bool {
-	// 1. If autoAdd is set to true, then the event is accepted. In case it wasn't seen before, it is added to the Broker's registry.
+	// 1. If allowAny is set to true, then all events are allowed to enter the mesh.
 	// 2. If allowAny is set to false, then the event is only accepted if it's already in the Broker's registry.
-	// 3. If allowAny is set to true, then all events are allowed to enter the mesh.
-	if p.spec.AutoAdd {
-		return p.autoAdd(ctx, event)
+	if p.spec.AllowAny {
+		p.logger.Debugf("EventType %q received, Accept", event.Type())
+		return true
 	}
-	if !p.spec.AllowAny {
-		return p.isRegistered(ctx, event)
-	}
-	p.logger.Debugf("EventType %q received, Accept", event.Type())
-	return true
-}
-
-// autoAdd attempts to add the EventType corresponding to the CloudEvent if it's not available in the Registry.
-// It always returns true.
-func (p *IngressPolicy) autoAdd(ctx context.Context, event cloudevents.Event) bool {
-	addFunc := func(ctx context.Context) {
-		_, err := p.getEventType(ctx, event)
-		if k8serrors.IsNotFound(err) {
-			p.logger.Debugf("EventType %q not found: Registering", event.Type())
-			eventType := p.makeEventType(event)
-			err := p.client.Create(ctx, eventType)
-			if err != nil {
-				p.logger.Errorf("Error registering EventType %q: %v", event.Type(), err)
-			} else {
-				p.logger.Debugf("EventType %q Registered", event.Type())
-			}
-		} else if err != nil {
-			p.logger.Errorf("Error retrieving EventType %q: %v", event.Type(), err)
-		}
-	}
-	if p.async {
-		// TODO do this in a working queue
-		// TODO should run some background task to dedupe EventTypes within Brokers.
-		// Do not use the previous context as it seems that it can be canceled before
-		// this routine executes.
-		go addFunc(context.TODO())
-	} else {
-		addFunc(ctx)
-	}
-	p.logger.Debugf("EventType %q received, Accept", event.Type())
-	return true
+	return p.isRegistered(ctx, event)
 }
 
 // isRegistered returns whether the EventType corresponding to the CloudEvent is available in the Registry.
