@@ -31,16 +31,9 @@ type BrokerOption func(*v1alpha1.Broker)
 // NewBroker creates a Broker with BrokerOptions.
 func NewBroker(name, namespace string, o ...BrokerOption) *v1alpha1.Broker {
 	b := &v1alpha1.Broker{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "eventing.knative.dev/v1alpha1",
-			Kind:       "Broker",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      name,
-		},
-		Spec: v1alpha1.BrokerSpec{
-			ChannelTemplate: &v1alpha1.ChannelSpec{},
 		},
 	}
 	for _, opt := range o {
@@ -63,7 +56,9 @@ func WithBrokerDeletionTimestamp(b *v1alpha1.Broker) {
 // WithBrokerChannelProvisioner sets the Broker's ChannelTemplate provisioner.
 func WithBrokerChannelProvisioner(provisioner *corev1.ObjectReference) BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Spec.ChannelTemplate.Provisioner = provisioner
+		b.Spec.ChannelTemplate = &v1alpha1.ChannelSpec{
+			Provisioner: provisioner,
+		}
 	}
 }
 

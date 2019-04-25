@@ -146,12 +146,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		r.Logger.Errorf("invalid resource key: %s", key)
 		return nil
 	}
+	ctx = logging.WithLogger(ctx, r.Logger.Desugar().With(zap.String("key", key)))
 
 	// Get the Broker resource with this namespace/name
 	original, err := r.brokerLister.Brokers(namespace).Get(name)
 	if apierrs.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("broker key in work queue no longer exists", zap.Any("key", key))
+		logging.FromContext(ctx).Info("broker key in work queue no longer exists")
 		return nil
 	} else if err != nil {
 		return err
@@ -170,10 +171,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		logging.FromContext(ctx).Debug("Broker reconciled")
 	}
 
-	if _, err := r.updateStatus(ctx, broker.DeepCopy()); err != nil {
-		logging.FromContext(ctx).Warn("Failed to update the Broker status", zap.Error(err))
-		r.Recorder.Eventf(broker, corev1.EventTypeWarning, brokerUpdateStatusFailed, "Failed to update Broker's status: %v", err)
-		return err
+	if _, updateStatusErr := r.updateStatus(ctx, broker); updateStatusErr != nil {
+		logging.FromContext(ctx).Warn("Failed to update the Broker status", zap.Error(updateStatusErr))
+		r.Recorder.Eventf(broker, corev1.EventTypeWarning, brokerUpdateStatusFailed, "Failed to update Broker's status: %v", updateStatusErr)
+		return updateStatusErr
 	}
 
 	// Requeue if the resource is not ready:
@@ -282,7 +283,7 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Broker)
 	b, err := r.EventingClientSet.EventingV1alpha1().Brokers(desired.Namespace).UpdateStatus(existing)
 	if err == nil && becomesReady {
 		duration := time.Since(b.ObjectMeta.CreationTimestamp.Time)
-		r.Logger.Infof("Broker %q became ready after %v", broker.Name, duration)
+		logging.FromContext(ctx).Sugar().Infof("Broker %q became ready after %v", broker.Name, duration)
 		r.Recorder.Event(broker, corev1.EventTypeNormal, brokerReadinessChanged, fmt.Sprintf("Broker %q became ready", broker.Name))
 		//r.StatsReporter.ReportServiceReady(broker.Namespace, broker.Name, duration) // TODO: stats
 	}

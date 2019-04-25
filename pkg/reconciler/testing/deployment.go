@@ -65,7 +65,6 @@ func WithDeploymentOwnerReferences(ownerReferences []metav1.OwnerReference) Depl
 func WithDeploymentAnnotations(annotations map[string]string) DeploymentOption {
 	return func(d *appsv1.Deployment) {
 		d.Spec.Template.Annotations = annotations
-
 	}
 }
 
