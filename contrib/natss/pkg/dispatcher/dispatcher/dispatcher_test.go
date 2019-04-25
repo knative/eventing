@@ -17,11 +17,13 @@ limitations under the License.
 package dispatcher
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/knative/eventing/contrib/natss/pkg/stanutil"
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -197,6 +199,68 @@ func TestUpdateSubscriptions(t *testing.T) {
 			t.Errorf("Unsubscribe failed for subscription: %v, error: %v", sub, err)
 		}
 	}
+}
+
+func TestUpdateHostToChannelMap(t *testing.T) {
+	tests := []struct {
+		name                string
+		chanList            []eventingv1alpha1.Channel
+		expected            map[string]provisioners.ChannelReference
+		expectedErrorString string
+	}{
+		{
+			name:     "Empty channel list",
+			expected: map[string]provisioners.ChannelReference{},
+		}, {
+			name: "Duplicate host name",
+			chanList: []eventingv1alpha1.Channel{
+				*makechannel("chan1", "ns1", "host1"),
+				*makechannel("chan2", "ns2", "host2"),
+				*makechannel("chan3", "ns3", "host2"),
+			},
+			expected:            map[string]provisioners.ChannelReference{},
+			expectedErrorString: "Duplicate hostName found. Each channel must have a unique host header. HostName:host2, channel:ns3.chan3, channel:ns2.chan2",
+		}, {
+			name: "Valid list of channels",
+			chanList: []eventingv1alpha1.Channel{
+				*makechannel("chan1", "ns1", "host1"),
+				*makechannel("chan2", "ns2", "host2"),
+				*makechannel("chan3", "ns3", "host3"),
+			},
+			expected: map[string]provisioners.ChannelReference{
+				"host1": provisioners.ChannelReference{Name: "chan1", Namespace: "ns1"},
+				"host2": provisioners.ChannelReference{Name: "chan2", Namespace: "ns2"},
+				"host3": provisioners.ChannelReference{Name: "chan3", Namespace: "ns3"},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			s.setHostToChannelMap(map[string]provisioners.ChannelReference{})
+			err := s.UpdateHostToChannelMap(context.TODO(), test.chanList)
+
+			if err != nil {
+				if diff := cmp.Diff(test.expectedErrorString, err.Error()); diff != "" {
+					t.Fatalf("Unexpected difference (-want +got): %v", diff)
+				}
+			}
+
+			if diff := cmp.Diff(test.expected, s.getHostToChannelMap()); diff != "" {
+				t.Fatalf("Unexpected difference (-want +got): %v", diff)
+			}
+		})
+	}
+}
+
+func makechannel(name string, namespace string, hostname string) *eventingv1alpha1.Channel {
+	c := eventingv1alpha1.Channel{}
+	c.Name = name
+	c.Namespace = namespace
+	c.Status.InitializeConditions()
+	c.Status.MarkProvisioned()
+	c.Status.MarkProvisionerInstalled()
+	c.Status.SetAddress(hostname)
+	return &c
 }
 
 func startNatss() (*server.StanServer, error) {

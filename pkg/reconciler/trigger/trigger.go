@@ -297,13 +297,13 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Trigger
 // getBrokerTriggerChannel return the Broker's Trigger Channel if it exists, otherwise it returns an
 // error.
 func (r *Reconciler) getBrokerTriggerChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
-	return r.getChannel(ctx, b, labels.SelectorFromSet(broker.TriggerChannelLabels(b)))
+	return r.getChannel(ctx, b, labels.SelectorFromSet(broker.TriggerChannelLabels(b.Name)))
 }
 
 // getBrokerIngressChannel return the Broker's Ingress Channel if it exists, otherwise it returns an
 // error.
 func (r *Reconciler) getBrokerIngressChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
-	return r.getChannel(ctx, b, labels.SelectorFromSet(broker.IngressChannelLabels(b)))
+	return r.getChannel(ctx, b, labels.SelectorFromSet(broker.IngressChannelLabels(b.Name)))
 }
 
 // getChannel returns the Broker's channel based on the provided label selector if it exists, otherwise it returns an error.
@@ -326,7 +326,7 @@ func (r *Reconciler) getChannel(ctx context.Context, b *v1alpha1.Broker, ls labe
 // getBrokerFilterService returns the K8s service for trigger 't' if exists,
 // otherwise it returns an error.
 func (r *Reconciler) getBrokerFilterService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
-	services, err := r.serviceLister.Services(b.Namespace).List(labels.SelectorFromSet(brokerresources.FilterLabels(b)))
+	services, err := r.serviceLister.Services(b.Namespace).List(labels.SelectorFromSet(brokerresources.FilterLabels(b.Name)))
 	if err != nil {
 		return nil, err
 	}

@@ -17,27 +17,25 @@ limitations under the License.
 package broker
 
 import (
-	"context"
-	"errors"
 	"fmt"
-	"strings"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
+	"k8s.io/apimachinery/pkg/runtime"
+
+	"k8s.io/apimachinery/pkg/util/intstr"
+
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
+	"github.com/knative/eventing/pkg/reconciler"
+	. "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
 	"github.com/knative/eventing/pkg/utils"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	"go.uber.org/zap"
-	appsv1 "k8s.io/api/apps/v1"
+	"github.com/knative/pkg/controller"
+	logtesting "github.com/knative/pkg/logging/testing"
+	. "github.com/knative/pkg/reconciler/testing"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	clientgotesting "k8s.io/client-go/testing"
 )
 
 const (
@@ -48,33 +46,43 @@ const (
 	filterSA     = "filter-SA"
 	ingressImage = "ingress-image"
 	ingressSA    = "ingress-SA"
+
+	filterContainerName  = "filter"
+	ingressContainerName = "ingress"
 )
 
 var (
 	trueVal = true
 
-	channelProvisioner = &corev1.ObjectReference{
-		APIVersion: "eventing.knative.dev/v1alpha1",
-		Kind:       "ClusterChannelProvisioner",
-		Name:       "my-provisioner",
-	}
+	testKey                 = fmt.Sprintf("%s/%s", testNS, brokerName)
+	channelGenerateName     = fmt.Sprintf("%s-broker-", brokerName)
+	subscriptionChannelName = fmt.Sprintf("%s-broker", brokerName)
 
 	triggerChannelHostname = fmt.Sprintf("foo.bar.svc.%s", utils.GetClusterDomainName())
 	ingressChannelHostname = fmt.Sprintf("baz.qux.svc.%s", utils.GetClusterDomainName())
 
-	ingressChannelName = "ingress-channel"
+	filterDeploymentName  = fmt.Sprintf("%s-broker-filter", brokerName)
+	filterServiceName     = fmt.Sprintf("%s-broker-filter", brokerName)
+	ingressDeploymentName = fmt.Sprintf("%s-broker-ingress", brokerName)
+	ingressServiceName    = fmt.Sprintf("%s-broker", brokerName)
 
-	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
-	// truncates to seconds to match the loss of precision during serialization.
-	deletionTime = metav1.Now().Rfc3339Copy()
+	ingressSubscriptionGenerateName = fmt.Sprintf("internal-ingress-%s-", brokerName)
 
-	// Map of events to set test cases' expectations easier.
-	events = map[string]corev1.Event{
-		brokerReadinessChanged:          {Reason: brokerReadinessChanged, Type: corev1.EventTypeNormal},
-		brokerReconcileError:            {Reason: brokerReconcileError, Type: corev1.EventTypeWarning},
-		brokerUpdateStatusFailed:        {Reason: brokerUpdateStatusFailed, Type: corev1.EventTypeWarning},
-		ingressSubscriptionDeleteFailed: {Reason: ingressSubscriptionDeleteFailed, Type: corev1.EventTypeWarning},
-		ingressSubscriptionCreateFailed: {Reason: ingressSubscriptionCreateFailed, Type: corev1.EventTypeWarning},
+	channelGVK = metav1.GroupVersionKind{
+		Group:   "eventing.knative.dev",
+		Version: "v1alpha1",
+		Kind:    "Channel",
+	}
+
+	serviceGVK = metav1.GroupVersionKind{
+		Version: "v1",
+		Kind:    "Service",
+	}
+
+	provisionerGVK = metav1.GroupVersionKind{
+		Group:   "eventing.knative.dev",
+		Version: "v1alpha1",
+		Kind:    "ClusterChannelProvisioner",
 	}
 )
 
@@ -83,971 +91,920 @@ func init() {
 	_ = v1alpha1.AddToScheme(scheme.Scheme)
 }
 
-func TestProvideController(t *testing.T) {
-	// TODO(grantr) This needs a mock of manager.Manager. Creating a manager
-	// with a fake Config fails because the Manager tries to contact the
-	// apiserver.
-
-	// cfg := &rest.Config{
-	// 	Host: "http://foo:80",
-	// }
-	//
-	// mgr, err := manager.New(cfg, manager.Options{})
-	// if err != nil {
-	// 	t.Fatalf("Error creating manager: %v", err)
-	// }
-	//
-	// _, err = ProvideController(mgr)
-	// if err != nil {
-	// 	t.Fatalf("Error in ProvideController: %v", err)
-	// }
-}
-
-func TestInjectClient(t *testing.T) {
-	r := &reconciler{}
-	orig := r.client
-	n := fake.NewFakeClient()
-	if orig == n {
-		t.Errorf("Original and new clients are identical: %v", orig)
-	}
-	err := r.InjectClient(n)
-	if err != nil {
-		t.Errorf("Unexpected error injecting the client: %v", err)
-	}
-	if n != r.client {
-		t.Errorf("Unexpected client. Expected: '%v'. Actual: '%v'", n, r.client)
-	}
-}
-
 func TestReconcile(t *testing.T) {
-	testCases := []controllertesting.TestCase{
+	table := TableTest{
+		{
+			Name: "bad workqueue key",
+			// Make sure Reconcile handles bad keys.
+			Key: "too/many/parts",
+		}, {
+			Name: "key not found",
+			// Make sure Reconcile handles good keys that don't exist.
+			Key: "foo/not-found",
+		},
 		{
 			Name: "Broker not found",
+			Key:  testKey,
 		},
 		{
-			Name:   "Broker.Get fails",
-			Scheme: scheme.Scheme,
-			Mocks: controllertesting.Mocks{
-				MockGets: []controllertesting.MockGet{
-					func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*v1alpha1.Broker); ok {
-							return controllertesting.Handled, errors.New("test error getting the Broker")
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-			WantErrMsg: "test error getting the Broker",
-		},
-		{
-			Name:   "Broker is being deleted",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeDeletingBroker(),
+			Name: "Broker is being deleted",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions,
+					WithBrokerDeletionTimestamp),
 			},
 		},
 		{
-			Name:   "Trigger Channel.List error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
+			Name: "Trigger Channel.Create error",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions),
 			},
-			Mocks: controllertesting.Mocks{
-				MockLists: []controllertesting.MockList{
-					func(_ client.Client, _ context.Context, opts *client.ListOptions, list runtime.Object) (controllertesting.MockHandled, error) {
-						// Only match the Trigger Channel labels.
-						ls := labels.FormatLabels(TriggerChannelLabels(makeBroker()))
-						l, _ := labels.ConvertSelectorToLabelsMap(ls)
-
-						if _, ok := list.(*v1alpha1.ChannelList); ok && opts.LabelSelector.Matches(l) {
-							return controllertesting.Handled, errors.New("test error getting Trigger Channel")
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
+			WantCreates: []metav1.Object{
+				NewChannel("", testNS,
+					WithChannelGenerateName(channelGenerateName),
+					WithChannelLabels(TriggerChannelLabels(brokerName)),
+					WithChannelOwnerReferences(ownerReferences()),
+					WithChannelProvisioner(provisionerGVK, "my-provisioner")),
 			},
-			WantEvent:  []corev1.Event{events[brokerReconcileError]},
-			WantErrMsg: "test error getting Trigger Channel",
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithInitBrokerConditions,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithTriggerChannelFailed("ChannelFailure", "inducing failure for create channels")),
+			}},
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("create", "channels"),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create channels"),
+			},
+			WantErr: true,
 		},
 		{
-			Name:   "Trigger Channel.Create error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
+			Name: "Trigger Channel is not yet Addressable",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions),
+				NewChannel("", testNS,
+					WithInitChannelConditions,
+					WithChannelGenerateName(channelGenerateName),
+					WithChannelLabels(TriggerChannelLabels(brokerName)),
+					WithChannelOwnerReferences(ownerReferences()),
+					WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					WithChannelAddress("")),
 			},
-			Mocks: controllertesting.Mocks{
-				MockCreates: []controllertesting.MockCreate{
-					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if c, ok := obj.(*v1alpha1.Channel); ok {
-							if cmp.Equal(c.Labels, TriggerChannelLabels(makeBroker())) {
-								return controllertesting.Handled, errors.New("test error creating Trigger Channel")
-							}
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-			WantEvent:  []corev1.Event{events[brokerReconcileError]},
-			WantErrMsg: "test error creating Trigger Channel",
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions,
+					WithTriggerChannelFailed("NoAddress", "Channel does not have an address.")),
+			}},
 		},
 		{
-			Name:   "Trigger Channel is different than expected",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeDifferentTriggerChannel(),
+			Name: "Filter Deployment.Create error",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions),
+				NewChannel("", testNS,
+					WithChannelGenerateName(channelGenerateName),
+					WithChannelLabels(TriggerChannelLabels(brokerName)),
+					WithChannelOwnerReferences(ownerReferences()),
+					WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					WithChannelReady,
+					WithChannelAddress(triggerChannelHostname)),
 			},
-			WantPresent: []runtime.Object{
-				// This is special because the Channel is not updated, unlike most things that
-				// differ from expected.
-				// TODO uncomment the following line once our test framework supports searching for
-				// GenerateName.
-				// makeDifferentTriggerChannel(),
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("create", "deployments"),
 			},
+			WantCreates: []metav1.Object{
+				NewDeployment(filterDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.FilterLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(filterSA),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions,
+					WithTriggerChannelReady(),
+					WithFilterFailed("DeploymentFailure", "inducing failure for create deployments")),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create deployments"),
+			},
+			WantErr: true,
 		},
 		{
-			Name:   "Trigger Channel is not yet Addressable",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeNonAddressableTriggerChannel(),
+			Name: "Filter Deployment.Update error",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions),
+				NewChannel("", testNS,
+					WithChannelGenerateName(channelGenerateName),
+					WithChannelLabels(TriggerChannelLabels(brokerName)),
+					WithChannelOwnerReferences(ownerReferences()),
+					WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					WithChannelReady,
+					WithChannelAddress(triggerChannelHostname)),
+				NewDeployment(filterDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.FilterLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(filterSA),
+					WithDeploymentContainer(filterContainerName, "some-other-image", envVars(filterContainerName), nil)),
 			},
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("update", "deployments"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions,
+					WithTriggerChannelReady(),
+					WithFilterFailed("DeploymentFailure", "inducing failure for update deployments")),
+			}},
+			WantUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewDeployment(filterDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.FilterLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(filterSA),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for update deployments"),
+			},
+			WantErr: true,
 		},
 		{
-			Name:   "Filter Deployment.Get error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
+			Name: "Filter Service.Create error",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions),
+				NewChannel("", testNS,
+					WithChannelGenerateName(channelGenerateName),
+					WithChannelLabels(TriggerChannelLabels(brokerName)),
+					WithChannelOwnerReferences(ownerReferences()),
+					WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					WithChannelReady,
+					WithChannelAddress(triggerChannelHostname)),
+				NewDeployment(filterDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.FilterLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(filterSA),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
 			},
-			Mocks: controllertesting.Mocks{
-				MockGets: []controllertesting.MockGet{
-					func(_ client.Client, _ context.Context, key client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*appsv1.Deployment); ok {
-							if strings.Contains(key.Name, "filter") {
-								return controllertesting.Handled, errors.New("test error getting filter Deployment")
-							}
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("create", "services"),
 			},
-			WantEvent:  []corev1.Event{events[brokerReconcileError]},
-			WantErrMsg: "test error getting filter Deployment",
+			WantCreates: []metav1.Object{
+				NewService(filterServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.FilterLabels(brokerName)),
+					WithServicePorts(servicePorts(filterContainerName, 8080))),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions,
+					WithTriggerChannelReady(),
+					WithFilterFailed("ServiceFailure", "inducing failure for create services")),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create services"),
+			},
+			WantErr: true,
 		},
 		{
-			Name:   "Filter Deployment.Create error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
+			Name: "Filter Service.Update error",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions),
+				NewChannel("", testNS,
+					WithChannelGenerateName(channelGenerateName),
+					WithChannelLabels(TriggerChannelLabels(brokerName)),
+					WithChannelOwnerReferences(ownerReferences()),
+					WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					WithChannelReady,
+					WithChannelAddress(triggerChannelHostname)),
+				NewDeployment(filterDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.FilterLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(filterSA),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+				NewService(filterServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.FilterLabels(brokerName)),
+					WithServicePorts(servicePorts(filterContainerName, 9090))),
 			},
-			Mocks: controllertesting.Mocks{
-				MockCreates: []controllertesting.MockCreate{
-					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if d, ok := obj.(*appsv1.Deployment); ok {
-							if d.Labels["eventing.knative.dev/brokerRole"] == "filter" {
-								return controllertesting.Handled, errors.New("test error creating filter Deployment")
-							}
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("update", "services"),
 			},
-			WantEvent:  []corev1.Event{events[brokerReconcileError]},
-			WantErrMsg: "test error creating filter Deployment",
+			WantUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewService(filterServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.FilterLabels(brokerName)),
+					WithServicePorts(servicePorts(filterContainerName, 8080))),
+			}},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions,
+					WithTriggerChannelReady(),
+					WithFilterFailed("ServiceFailure", "inducing failure for update services")),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for update services"),
+			},
+			WantErr: true,
 		},
 		{
-			Name:   "Filter Deployment.Update error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
-				makeDifferentFilterDeployment(),
+			Name: "Ingress Deployment.Create error",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions),
+				NewChannel("", testNS,
+					WithChannelGenerateName(channelGenerateName),
+					WithChannelLabels(TriggerChannelLabels(brokerName)),
+					WithChannelOwnerReferences(ownerReferences()),
+					WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					WithChannelReady,
+					WithChannelAddress(triggerChannelHostname)),
+				NewDeployment(filterDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.FilterLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(filterSA),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+				NewService(filterServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.FilterLabels(brokerName)),
+					WithServicePorts(servicePorts(filterContainerName, 8080))),
 			},
-			Mocks: controllertesting.Mocks{
-				MockUpdates: []controllertesting.MockUpdate{
-					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if d, ok := obj.(*appsv1.Deployment); ok {
-							if d.Labels["eventing.knative.dev/brokerRole"] == "filter" {
-								return controllertesting.Handled, errors.New("test error updating filter Deployment")
-							}
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("create", "deployments"),
 			},
-			WantEvent:  []corev1.Event{events[brokerReconcileError]},
-			WantErrMsg: "test error updating filter Deployment",
+			WantCreates: []metav1.Object{
+				NewDeployment(ingressDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.IngressLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(ingressSA),
+					WithDeploymentContainer(ingressContainerName, ingressImage, envVars(ingressContainerName), containerPorts(8080)),
+				),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions,
+					WithTriggerChannelReady(),
+					WithFilterDeploymentAvailable(),
+					WithIngressFailed("DeploymentFailure", "inducing failure for create deployments")),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create deployments"),
+			},
+			WantErr: true,
 		},
 		{
-			Name:   "Filter Service.Get error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
+			Name: "Ingress Deployment.Update error",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions),
+				NewChannel("", testNS,
+					WithChannelGenerateName(channelGenerateName),
+					WithChannelLabels(TriggerChannelLabels(brokerName)),
+					WithChannelOwnerReferences(ownerReferences()),
+					WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					WithChannelReady,
+					WithChannelAddress(triggerChannelHostname)),
+				NewDeployment(filterDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.FilterLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(filterSA),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+				NewService(filterServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.FilterLabels(brokerName)),
+					WithServicePorts(servicePorts(filterContainerName, 8080))),
+				NewDeployment(ingressDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.IngressLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(ingressSA),
+					WithDeploymentContainer(ingressContainerName, ingressImage, envVars(ingressContainerName), containerPorts(9090))),
 			},
-			Mocks: controllertesting.Mocks{
-				MockGets: []controllertesting.MockGet{
-					func(_ client.Client, _ context.Context, key client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*corev1.Service); ok {
-							if strings.Contains(key.Name, "filter") {
-								return controllertesting.Handled, errors.New("test error getting filter Service")
-							}
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("update", "deployments"),
 			},
-			WantEvent:  []corev1.Event{events[brokerReconcileError]},
-			WantErrMsg: "test error getting filter Service",
+			WantUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewDeployment(ingressDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.IngressLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(ingressSA),
+					WithDeploymentContainer(ingressContainerName, ingressImage, envVars(ingressContainerName), containerPorts(8080))),
+			}},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions,
+					WithTriggerChannelReady(),
+					WithFilterDeploymentAvailable(),
+					WithIngressFailed("DeploymentFailure", "inducing failure for update deployments")),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for update deployments"),
+			},
+			WantErr: true,
 		},
 		{
-			Name:   "Filter Service.Create error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
+			Name: "Ingress Service.Create error",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions),
+				NewChannel("", testNS,
+					WithChannelGenerateName(channelGenerateName),
+					WithChannelLabels(TriggerChannelLabels(brokerName)),
+					WithChannelOwnerReferences(ownerReferences()),
+					WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					WithChannelReady,
+					WithChannelAddress(triggerChannelHostname)),
+				NewDeployment(filterDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.FilterLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(filterSA),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+				NewService(filterServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.FilterLabels(brokerName)),
+					WithServicePorts(servicePorts(filterContainerName, 8080))),
+				NewDeployment(ingressDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.IngressLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(ingressSA),
+					WithDeploymentContainer(ingressContainerName, ingressImage, envVars(ingressContainerName), containerPorts(8080))),
 			},
-			Mocks: controllertesting.Mocks{
-				MockCreates: []controllertesting.MockCreate{
-					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if svc, ok := obj.(*corev1.Service); ok {
-							if svc.Labels["eventing.knative.dev/brokerRole"] == "filter" {
-								return controllertesting.Handled, errors.New("test error creating filter Service")
-							}
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("create", "services"),
 			},
-			WantEvent:  []corev1.Event{events[brokerReconcileError]},
-			WantErrMsg: "test error creating filter Service",
+			WantCreates: []metav1.Object{
+				NewService(ingressServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.IngressLabels(brokerName)),
+					WithServicePorts(servicePorts(ingressContainerName, 8080))),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions,
+					WithTriggerChannelReady(),
+					WithFilterDeploymentAvailable(),
+					WithIngressFailed("ServiceFailure", "inducing failure for create services")),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create services"),
+			},
+			WantErr: true,
 		},
 		{
-			Name:   "Filter Service.Update error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
-				makeDifferentFilterService(),
+			Name: "Ingress Service.Update error",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions),
+				NewChannel("", testNS,
+					WithChannelGenerateName(channelGenerateName),
+					WithChannelLabels(TriggerChannelLabels(brokerName)),
+					WithChannelOwnerReferences(ownerReferences()),
+					WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					WithChannelReady,
+					WithChannelAddress(triggerChannelHostname)),
+				NewDeployment(filterDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.FilterLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(filterSA),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+				NewService(filterServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.FilterLabels(brokerName)),
+					WithServicePorts(servicePorts(filterContainerName, 8080))),
+				NewDeployment(ingressDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.IngressLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(ingressSA),
+					WithDeploymentContainer(ingressContainerName, ingressImage, envVars(ingressContainerName), containerPorts(8080))),
+				NewService(ingressServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.IngressLabels(brokerName)),
+					WithServicePorts(servicePorts(ingressContainerName, 9090))),
 			},
-			Mocks: controllertesting.Mocks{
-				MockUpdates: []controllertesting.MockUpdate{
-					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if svc, ok := obj.(*corev1.Service); ok {
-							if svc.Labels["eventing.knative.dev/brokerRole"] == "filter" {
-								return controllertesting.Handled, errors.New("test error updating filter Service")
-							}
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("update", "services"),
 			},
-			WantEvent:  []corev1.Event{events[brokerReconcileError]},
-			WantErrMsg: "test error updating filter Service",
+			WantUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewService(ingressServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.IngressLabels(brokerName)),
+					WithServicePorts(servicePorts(ingressContainerName, 8080))),
+			}},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions,
+					WithTriggerChannelReady(),
+					WithFilterDeploymentAvailable(),
+					WithIngressFailed("ServiceFailure", "inducing failure for update services")),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for update services"),
+			},
+			WantErr: true,
 		},
 		{
-			Name:   "Ingress Deployment.Get error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
+			Name: "Ingress Channel.Create error",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions),
+				NewChannel("", testNS,
+					WithChannelGenerateName(channelGenerateName),
+					WithChannelLabels(TriggerChannelLabels(brokerName)),
+					WithChannelOwnerReferences(ownerReferences()),
+					WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					WithChannelReady,
+					WithChannelAddress(triggerChannelHostname)),
+				NewDeployment(filterDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.FilterLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(filterSA),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+				NewService(filterServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.FilterLabels(brokerName)),
+					WithServicePorts(servicePorts(filterContainerName, 8080))),
+				NewDeployment(ingressDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.IngressLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(ingressSA),
+					WithDeploymentContainer(ingressContainerName, ingressImage, envVars(ingressContainerName), containerPorts(8080))),
+				NewService(ingressServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.IngressLabels(brokerName)),
+					WithServicePorts(servicePorts(ingressContainerName, 8080))),
 			},
-			Mocks: controllertesting.Mocks{
-				MockGets: []controllertesting.MockGet{
-					func(_ client.Client, _ context.Context, key client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*appsv1.Deployment); ok {
-							if strings.Contains(key.Name, "ingress") {
-								return controllertesting.Handled, errors.New("test error getting ingress Deployment")
-							}
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("create", "channels"),
 			},
-			WantEvent:  []corev1.Event{events[brokerReconcileError]},
-			WantErrMsg: "test error getting ingress Deployment",
+			WantCreates: []metav1.Object{
+				NewChannel("", testNS,
+					WithChannelGenerateName(channelGenerateName),
+					WithChannelLabels(IngressChannelLabels(brokerName)),
+					WithChannelOwnerReferences(ownerReferences()),
+					WithChannelProvisioner(provisionerGVK, "my-provisioner")),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions,
+					WithTriggerChannelReady(),
+					WithFilterDeploymentAvailable(),
+					WithIngressDeploymentAvailable(),
+					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),
+					WithIngressChannelFailed("ChannelFailure", "inducing failure for create channels")),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create channels"),
+			},
+			WantErr: true,
 		},
 		{
-			Name:   "Ingress Deployment.Create error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
+			Name: "Subscription.Create error",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions),
+				// Use the channel name to avoid conflicting with the ingress one.
+				NewChannel("filter-channel", testNS,
+					WithChannelGenerateName(channelGenerateName),
+					WithChannelLabels(TriggerChannelLabels(brokerName)),
+					WithChannelOwnerReferences(ownerReferences()),
+					WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					WithChannelReady,
+					WithChannelAddress(triggerChannelHostname)),
+				NewDeployment(filterDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.FilterLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(filterSA),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+				NewService(filterServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.FilterLabels(brokerName)),
+					WithServicePorts(servicePorts(filterContainerName, 8080))),
+				NewDeployment(ingressDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.IngressLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(ingressSA),
+					WithDeploymentContainer(ingressContainerName, ingressImage, envVars(ingressContainerName), containerPorts(8080))),
+				NewService(ingressServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.IngressLabels(brokerName)),
+					WithServicePorts(servicePorts(ingressContainerName, 8080))),
+				// Use the channel name to avoid conflicting with the filter one.
+				NewChannel("ingress-channel", testNS,
+					WithChannelGenerateName(channelGenerateName),
+					WithChannelLabels(IngressChannelLabels(brokerName)),
+					WithChannelOwnerReferences(ownerReferences()),
+					WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					WithChannelReady,
+					WithChannelAddress(ingressChannelHostname)),
 			},
-			Mocks: controllertesting.Mocks{
-				MockCreates: []controllertesting.MockCreate{
-					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if d, ok := obj.(*appsv1.Deployment); ok {
-							if d.Labels["eventing.knative.dev/brokerRole"] == "ingress" {
-								return controllertesting.Handled, errors.New("test error creating ingress Deployment")
-							}
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
+			WantCreates: []metav1.Object{
+				NewSubscription("", testNS,
+					WithSubscriptionGenerateName(ingressSubscriptionGenerateName),
+					WithSubscriptionOwnerReferences(ownerReferences()),
+					WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
+					WithSubscriptionChannel(channelGVK, "ingress-channel"),
+					WithSubscriptionSubscriberRef(serviceGVK, ingressServiceName)),
 			},
-			WantEvent:  []corev1.Event{events[brokerReconcileError]},
-			WantErrMsg: "test error creating ingress Deployment",
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions,
+					WithTriggerChannelReady(),
+					WithFilterDeploymentAvailable(),
+					WithIngressDeploymentAvailable(),
+					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),
+					WithBrokerIngressChannelReady(),
+					WithBrokerIngressSubscriptionFailed("SubscriptionFailure", "inducing failure for create subscriptions"),
+				),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create subscriptions"),
+			},
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("create", "subscriptions"),
+			},
+			WantErr: true,
 		},
 		{
-			Name:   "Ingress Deployment.Update error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
-				makeDifferentIngressDeployment(),
+			Name: "Subscription.Delete error",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions),
+				// Use the channel name to avoid conflicting with the ingress one.
+				NewChannel("filter-channel", testNS,
+					WithChannelGenerateName(channelGenerateName),
+					WithChannelLabels(TriggerChannelLabels(brokerName)),
+					WithChannelOwnerReferences(ownerReferences()),
+					WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					WithChannelReady,
+					WithChannelAddress(triggerChannelHostname)),
+				NewDeployment(filterDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.FilterLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(filterSA),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+				NewService(filterServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.FilterLabels(brokerName)),
+					WithServicePorts(servicePorts(filterContainerName, 8080))),
+				NewDeployment(ingressDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.IngressLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(ingressSA),
+					WithDeploymentContainer(ingressContainerName, ingressImage, envVars(ingressContainerName), containerPorts(8080))),
+				NewService(ingressServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.IngressLabels(brokerName)),
+					WithServicePorts(servicePorts(ingressContainerName, 8080))),
+				// Use the channel name to avoid conflicting with the filter one.
+				NewChannel("ingress-channel", testNS,
+					WithChannelGenerateName(channelGenerateName),
+					WithChannelLabels(IngressChannelLabels(brokerName)),
+					WithChannelOwnerReferences(ownerReferences()),
+					WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					WithChannelReady,
+					WithChannelAddress(ingressChannelHostname)),
+				NewSubscription("subs", testNS,
+					WithSubscriptionGenerateName(ingressSubscriptionGenerateName),
+					WithSubscriptionOwnerReferences(ownerReferences()),
+					WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
+					WithSubscriptionChannel(channelGVK, "ingress-channel"),
+					WithSubscriptionSubscriberRef(serviceGVK, "")),
 			},
-			Mocks: controllertesting.Mocks{
-				MockUpdates: []controllertesting.MockUpdate{
-					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if d, ok := obj.(*appsv1.Deployment); ok {
-							if d.Labels["eventing.knative.dev/brokerRole"] == "ingress" {
-								return controllertesting.Handled, errors.New("test error updating ingress Deployment")
-							}
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
+			WantDeletes: []clientgotesting.DeleteActionImpl{{
+				Name: "subs",
+			}},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions,
+					WithTriggerChannelReady(),
+					WithFilterDeploymentAvailable(),
+					WithIngressDeploymentAvailable(),
+					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),
+					WithBrokerIngressChannelReady(),
+					WithBrokerIngressSubscriptionFailed("SubscriptionFailure", "inducing failure for delete subscriptions"),
+				),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, ingressSubscriptionDeleteFailed, "%v", "Delete Broker Ingress' subscription failed: inducing failure for delete subscriptions"),
+				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for delete subscriptions"),
 			},
-			WantEvent:  []corev1.Event{events[brokerReconcileError]},
-			WantErrMsg: "test error updating ingress Deployment",
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("delete", "subscriptions"),
+			},
+			WantErr: true,
 		},
 		{
-			Name:   "Ingress Service.Get error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
+			Name: "Subscription.Create error when recreating",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions),
+				// Use the channel name to avoid conflicting with the ingress one.
+				NewChannel("filter-channel", testNS,
+					WithChannelGenerateName(channelGenerateName),
+					WithChannelLabels(TriggerChannelLabels(brokerName)),
+					WithChannelOwnerReferences(ownerReferences()),
+					WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					WithChannelReady,
+					WithChannelAddress(triggerChannelHostname)),
+				NewDeployment(filterDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.FilterLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(filterSA),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+				NewService(filterServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.FilterLabels(brokerName)),
+					WithServicePorts(servicePorts(filterContainerName, 8080))),
+				NewDeployment(ingressDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.IngressLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(ingressSA),
+					WithDeploymentContainer(ingressContainerName, ingressImage, envVars(ingressContainerName), containerPorts(8080))),
+				NewService(ingressServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.IngressLabels(brokerName)),
+					WithServicePorts(servicePorts(ingressContainerName, 8080))),
+				// Use the channel name to avoid conflicting with the filter one.
+				NewChannel("ingress-channel", testNS,
+					WithChannelGenerateName(channelGenerateName),
+					WithChannelLabels(IngressChannelLabels(brokerName)),
+					WithChannelOwnerReferences(ownerReferences()),
+					WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					WithChannelReady,
+					WithChannelAddress(ingressChannelHostname)),
+				NewSubscription("subs", testNS,
+					WithSubscriptionGenerateName(ingressSubscriptionGenerateName),
+					WithSubscriptionOwnerReferences(ownerReferences()),
+					WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
+					WithSubscriptionChannel(channelGVK, "ingress-channel"),
+					WithSubscriptionSubscriberRef(serviceGVK, "")),
 			},
-			Mocks: controllertesting.Mocks{
-				MockGets: []controllertesting.MockGet{
-					func(_ client.Client, _ context.Context, key client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*corev1.Service); ok {
-							if key.Name == fmt.Sprintf("%s-broker", brokerName) {
-								return controllertesting.Handled, errors.New("test error getting ingress Service")
-							}
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
+			WantDeletes: []clientgotesting.DeleteActionImpl{{
+				Name: "subs",
+			}},
+			WantCreates: []metav1.Object{
+				NewSubscription("", testNS,
+					WithSubscriptionGenerateName(ingressSubscriptionGenerateName),
+					WithSubscriptionOwnerReferences(ownerReferences()),
+					WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
+					WithSubscriptionChannel(channelGVK, "ingress-channel"),
+					WithSubscriptionSubscriberRef(serviceGVK, ingressServiceName)),
 			},
-			WantEvent:  []corev1.Event{events[brokerReconcileError]},
-			WantErrMsg: "test error getting ingress Service",
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions,
+					WithTriggerChannelReady(),
+					WithFilterDeploymentAvailable(),
+					WithIngressDeploymentAvailable(),
+					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),
+					WithBrokerIngressChannelReady(),
+					WithBrokerIngressSubscriptionFailed("SubscriptionFailure", "inducing failure for create subscriptions"),
+				),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, ingressSubscriptionCreateFailed, "%v", "Create Broker Ingress' subscription failed: inducing failure for create subscriptions"),
+				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create subscriptions"),
+			},
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("create", "subscriptions"),
+			},
+			WantErr: true,
 		},
 		{
-			Name:   "Ingress Service.Create error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
+			Name: "Successful Reconciliation",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithInitBrokerConditions),
+				// Use the channel name to avoid conflicting with the ingress one.
+				NewChannel("filter-channel", testNS,
+					WithChannelGenerateName(channelGenerateName),
+					WithChannelLabels(TriggerChannelLabels(brokerName)),
+					WithChannelOwnerReferences(ownerReferences()),
+					WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					WithChannelReady,
+					WithChannelAddress(triggerChannelHostname)),
+				NewDeployment(filterDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.FilterLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(filterSA),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+				NewService(filterServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.FilterLabels(brokerName)),
+					WithServicePorts(servicePorts(filterContainerName, 8080))),
+				NewDeployment(ingressDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.IngressLabels(brokerName)),
+					WithDeploymentAnnotations(annotations()),
+					WithDeploymentServiceAccount(ingressSA),
+					WithDeploymentContainer(ingressContainerName, ingressImage, envVars(ingressContainerName), containerPorts(8080))),
+				NewService(ingressServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.IngressLabels(brokerName)),
+					WithServicePorts(servicePorts(ingressContainerName, 8080))),
+				// Use the channel name to avoid conflicting with the filter one.
+				NewChannel("ingress-channel", testNS,
+					WithChannelGenerateName(channelGenerateName),
+					WithChannelLabels(IngressChannelLabels(brokerName)),
+					WithChannelOwnerReferences(ownerReferences()),
+					WithChannelProvisioner(provisionerGVK, "my-provisioner"),
+					WithChannelReady,
+					WithChannelAddress(ingressChannelHostname)),
+				NewSubscription("", testNS,
+					WithSubscriptionGenerateName(ingressSubscriptionGenerateName),
+					WithSubscriptionOwnerReferences(ownerReferences()),
+					WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
+					WithSubscriptionChannel(channelGVK, "ingress-channel"),
+					WithSubscriptionSubscriberRef(serviceGVK, ingressServiceName),
+					WithSubscriptionReady),
 			},
-			Mocks: controllertesting.Mocks{
-				MockCreates: []controllertesting.MockCreate{
-					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if svc, ok := obj.(*corev1.Service); ok {
-							if svc.Labels["eventing.knative.dev/brokerRole"] == "ingress" {
-								return controllertesting.Handled, errors.New("test error creating ingress Service")
-							}
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-			WantEvent:  []corev1.Event{events[brokerReconcileError]},
-			WantErrMsg: "test error creating ingress Service",
-		},
-		{
-			Name:   "Ingress Service.Update error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
-				makeDifferentIngressService(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockUpdates: []controllertesting.MockUpdate{
-					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if svc, ok := obj.(*corev1.Service); ok {
-							if svc.Labels["eventing.knative.dev/brokerRole"] == "ingress" {
-								return controllertesting.Handled, errors.New("test error updating ingress Service")
-							}
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-			WantEvent:  []corev1.Event{events[brokerReconcileError]},
-			WantErrMsg: "test error updating ingress Service",
-		},
-		{
-			Name:   "Ingress Channel.List error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockLists: []controllertesting.MockList{
-					func(_ client.Client, _ context.Context, opts *client.ListOptions, list runtime.Object) (controllertesting.MockHandled, error) {
-						// Only match the Ingress Channel labels.
-						ls := labels.FormatLabels(IngressChannelLabels(makeBroker()))
-						l, _ := labels.ConvertSelectorToLabelsMap(ls)
-
-						if _, ok := list.(*v1alpha1.ChannelList); ok && opts.LabelSelector.Matches(l) {
-							return controllertesting.Handled, errors.New("test error getting Ingress Channel")
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-			WantEvent:  []corev1.Event{events[brokerReconcileError]},
-			WantErrMsg: "test error getting Ingress Channel",
-		},
-		{
-			Name:   "Ingress Channel.Create error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockLists: []controllertesting.MockList{
-					// Controller Runtime's fake client totally ignores the opts.LabelSelector, so
-					// picks up the Trigger Channel while listing the Ingress Channel. Use a mock to
-					// force the correct behavior.
-					func(innerClient client.Client, ctx context.Context, opts *client.ListOptions, list runtime.Object) (handled controllertesting.MockHandled, e error) {
-						if _, ok := list.(*v1alpha1.ChannelList); ok {
-							// Only match the Ingress Channel labels.
-							ls := labels.FormatLabels(IngressChannelLabels(makeBroker()))
-							l, _ := labels.ConvertSelectorToLabelsMap(ls)
-							if opts.LabelSelector.Matches(l) {
-								return controllertesting.Handled, nil
-							}
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-				MockCreates: []controllertesting.MockCreate{
-					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if c, ok := obj.(*v1alpha1.Channel); ok {
-							if cmp.Equal(c.Labels, IngressChannelLabels(makeBroker())) {
-								return controllertesting.Handled, errors.New("test error creating Ingress Channel")
-							}
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-			WantEvent:  []corev1.Event{events[brokerReconcileError]},
-			WantErrMsg: "test error creating Ingress Channel",
-		},
-		{
-			Name:   "Ingress Channel is different than expected",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
-				makeDifferentIngressChannel(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockLists: []controllertesting.MockList{
-					// Controller Runtime's fake client totally ignores the opts.LabelSelector, so
-					// picks up the Trigger Channel while listing the Ingress Channel. Use a mock to
-					// force the correct behavior.
-					func(innerClient client.Client, ctx context.Context, opts *client.ListOptions, list runtime.Object) (handled controllertesting.MockHandled, e error) {
-						if cl, ok := list.(*v1alpha1.ChannelList); ok {
-							// Only match the Ingress Channel labels.
-							ls := labels.FormatLabels(IngressChannelLabels(makeBroker()))
-							l, _ := labels.ConvertSelectorToLabelsMap(ls)
-							if opts.LabelSelector.Matches(l) {
-								cl.Items = append(cl.Items, *makeDifferentIngressChannel())
-								return controllertesting.Handled, nil
-							}
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-			WantPresent: []runtime.Object{
-				// This is special because the Channel is not updated, unlike most things that
-				// differ from expected.
-				// TODO uncomment the following line once our test framework supports searching for
-				// GenerateName.
-				// makeDifferentIngressChannel(),
-			},
-		},
-		{
-			Name:   "Ingress Channel is not yet Addressable",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
-				makeNonAddressableIngressChannel(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockLists: []controllertesting.MockList{
-					// Controller Runtime's fake client totally ignores the opts.LabelSelector, so
-					// picks up the Trigger Channel while listing the Ingress Channel. Use a mock to
-					// force the correct behavior.
-					func(innerClient client.Client, ctx context.Context, opts *client.ListOptions, list runtime.Object) (handled controllertesting.MockHandled, e error) {
-						if cl, ok := list.(*v1alpha1.ChannelList); ok {
-							// Only match the Ingress Channel labels.
-							ls := labels.FormatLabels(IngressChannelLabels(makeBroker()))
-							l, _ := labels.ConvertSelectorToLabelsMap(ls)
-							if opts.LabelSelector.Matches(l) {
-								cl.Items = append(cl.Items, *makeNonAddressableIngressChannel())
-								return controllertesting.Handled, nil
-							}
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-		},
-		{
-			Name:   "Subscription.List error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
-				makeIngressChannel(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockLists: []controllertesting.MockList{
-					func(_ client.Client, _ context.Context, opts *client.ListOptions, list runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := list.(*v1alpha1.SubscriptionList); ok {
-							return controllertesting.Handled, errors.New("test error getting Subscription")
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-			WantEvent:  []corev1.Event{events[brokerReconcileError]},
-			WantErrMsg: "test error getting Subscription",
-		},
-		{
-			Name:   "Subscription.Create error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
-				makeIngressChannel(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockCreates: []controllertesting.MockCreate{
-					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*v1alpha1.Subscription); ok {
-							return controllertesting.Handled, errors.New("test error creating Subscription")
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-			WantEvent:  []corev1.Event{events[brokerReconcileError]},
-			WantErrMsg: "test error creating Subscription",
-		},
-		{
-			Name:   "Subscription is different than expected",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
-				makeIngressChannel(),
-			},
-			WantPresent: []runtime.Object{
-				// This is special because the Channel is not updated, unlike most things that
-				// differ from expected.
-				// TODO uncomment the following line once our test framework supports searching for
-				// GenerateName.
-				// makeDifferentSubscription(),
-			},
-		},
-		{
-			Name:   "Subscription.Delete error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
-				makeIngressChannel(),
-				makeDifferentSubscription(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockDeletes: []controllertesting.MockDelete{
-					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*v1alpha1.Subscription); ok {
-							return controllertesting.Handled, errors.New("test error deleting Subscription")
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-			WantEvent:  []corev1.Event{events[ingressSubscriptionDeleteFailed], events[brokerReconcileError]},
-			WantErrMsg: "test error deleting Subscription",
-		},
-		{
-			Name:   "Subscription.Create error when recreating",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
-				makeIngressChannel(),
-				makeDifferentSubscription(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockCreates: []controllertesting.MockCreate{
-					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*v1alpha1.Subscription); ok {
-							return controllertesting.Handled, errors.New("test error creating Subscription")
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-			WantEvent:  []corev1.Event{events[ingressSubscriptionCreateFailed], events[brokerReconcileError]},
-			WantErrMsg: "test error creating Subscription",
-		},
-		{
-			Name:   "Broker.Get for status update fails",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
-				makeIngressChannel(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockGets: []controllertesting.MockGet{
-					// The first Get works.
-					func(innerClient client.Client, ctx context.Context, key client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*v1alpha1.Broker); ok {
-							return controllertesting.Handled, innerClient.Get(ctx, key, obj)
-						}
-						return controllertesting.Unhandled, nil
-					},
-					// The second Get fails.
-					func(_ client.Client, _ context.Context, _ client.ObjectKey, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*v1alpha1.Broker); ok {
-							return controllertesting.Handled, errors.New("test error getting the Broker for status update")
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-			WantErrMsg: "test error getting the Broker for status update",
-			WantEvent:  []corev1.Event{events[brokerUpdateStatusFailed]},
-		},
-		{
-			Name:   "Broker.Status.Update error",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				makeTriggerChannel(),
-				makeIngressChannel(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockStatusUpdates: []controllertesting.MockStatusUpdate{
-					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						if _, ok := obj.(*v1alpha1.Broker); ok {
-							return controllertesting.Handled, errors.New("test error updating the Broker status")
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-			WantErrMsg: "test error updating the Broker status",
-			WantEvent:  []corev1.Event{events[brokerUpdateStatusFailed]},
-		},
-		{
-			Name:   "Successful reconcile",
-			Scheme: scheme.Scheme,
-			InitialState: []runtime.Object{
-				makeBroker(),
-				// The Channel needs to be addressable for the reconcile to succeed.
-				makeTriggerChannel(),
-				makeIngressChannel(),
-				makeTestSubscription(),
-			},
-			Mocks: controllertesting.Mocks{
-				MockLists: []controllertesting.MockList{
-					// Controller Runtime's fake client totally ignores the opts.LabelSelector, so
-					// picks up the Trigger Channel while listing the Ingress Channel. Use a mock to
-					// force the correct behavior.
-					func(innerClient client.Client, ctx context.Context, opts *client.ListOptions, list runtime.Object) (handled controllertesting.MockHandled, e error) {
-						if cl, ok := list.(*v1alpha1.ChannelList); ok {
-							// Only match the Ingress Channel labels.
-							ls := labels.FormatLabels(IngressChannelLabels(makeBroker()))
-							l, _ := labels.ConvertSelectorToLabelsMap(ls)
-							if opts.LabelSelector.Matches(l) {
-								cl.Items = append(cl.Items, *makeIngressChannel())
-								return controllertesting.Handled, nil
-							}
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
-			},
-			WantPresent: []runtime.Object{
-				makeReadyBroker(),
-				// TODO Uncomment makeTriggerChannel() when our test framework handles generateName.
-				// makeTriggerChannel(),
-				makeFilterDeployment(),
-				makeFilterService(),
-				makeIngressDeployment(),
-				makeIngressService(),
-				// TODO Uncomment makeIngressChannel() when our test framework handles generateName.
-				// makeIngressChannel(),
-				makeTestSubscription(),
-			},
-			WantEvent: []corev1.Event{
-				events[brokerReadinessChanged],
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
+					WithBrokerReady,
+					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),
+				),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, brokerReadinessChanged, "Broker %q became ready", brokerName),
 			},
 		},
 	}
-	for _, tc := range testCases {
-		c := tc.GetClient()
-		recorder := tc.GetEventRecorder()
 
-		r := &reconciler{
-			client:   c,
-			recorder: recorder,
-			logger:   zap.NewNop(),
-
+	defer logtesting.ClearAll()
+	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
+		return &Reconciler{
+			Base:                      reconciler.NewBase(opt, controllerAgentName),
+			subscriptionLister:        listers.GetSubscriptionLister(),
+			brokerLister:              listers.GetBrokerLister(),
+			channelLister:             listers.GetChannelLister(),
+			serviceLister:             listers.GetK8sServiceLister(),
+			deploymentLister:          listers.GetDeploymentLister(),
 			filterImage:               filterImage,
 			filterServiceAccountName:  filterSA,
 			ingressImage:              ingressImage,
 			ingressServiceAccountName: ingressSA,
 		}
-		tc.ReconcileKey = fmt.Sprintf("%s/%s", testNS, brokerName)
-		tc.IgnoreTimes = true
-		t.Run(tc.Name, tc.Runner(t, r, c, recorder))
-	}
+	}))
 }
 
-func makeBroker() *v1alpha1.Broker {
-	return &v1alpha1.Broker{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "eventing.knative.dev/v1alpha1",
-			Kind:       "Broker",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testNS,
-			Name:      brokerName,
-		},
-		Spec: v1alpha1.BrokerSpec{
-			ChannelTemplate: &v1alpha1.ChannelSpec{
-				Provisioner: channelProvisioner,
-			},
-		},
-	}
-}
-
-func makeReadyBroker() *v1alpha1.Broker {
-	b := makeBroker()
-	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
-	b.Status.SetAddress(fmt.Sprintf("%s-broker.%s.svc.%s", brokerName, testNS, utils.GetClusterDomainName()))
-	return b
-}
-
-func makeDeletingBroker() *v1alpha1.Broker {
-	b := makeReadyBroker()
-	b.DeletionTimestamp = &deletionTime
-	return b
-}
-
-func makeTriggerChannel() *v1alpha1.Channel {
-	c := &v1alpha1.Channel{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    testNS,
-			GenerateName: fmt.Sprintf("%s-broker-", brokerName),
-			Labels: map[string]string{
-				"eventing.knative.dev/broker":           brokerName,
-				"eventing.knative.dev/brokerEverything": "true",
-			},
-			OwnerReferences: []metav1.OwnerReference{
-				getOwnerReference(),
-			},
-		},
-		Spec: v1alpha1.ChannelSpec{
-			Provisioner: channelProvisioner,
-		},
-	}
-	c.Status.MarkProvisionerInstalled()
-	c.Status.MarkProvisioned()
-	c.Status.SetAddress(triggerChannelHostname)
-	return c
-}
-
-func makeNonAddressableTriggerChannel() *v1alpha1.Channel {
-	c := makeTriggerChannel()
-	c.Status.Address = duckv1alpha1.Addressable{}
-	return c
-}
-
-func makeDifferentTriggerChannel() *v1alpha1.Channel {
-	c := makeTriggerChannel()
-	c.Spec.Provisioner.Name = "some-other-provisioner"
-	return c
-}
-
-func makeIngressChannel() *v1alpha1.Channel {
-	c := &v1alpha1.Channel{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    testNS,
-			GenerateName: fmt.Sprintf("%s-broker-ingress-", brokerName),
-			// The Fake library doesn't understand GenerateName, so give this a name so it doesn't
-			// collide with the Trigger Channel.
-			Name: ingressChannelName,
-			Labels: map[string]string{
-				"eventing.knative.dev/broker":        brokerName,
-				"eventing.knative.dev/brokerIngress": "true",
-			},
-			OwnerReferences: []metav1.OwnerReference{
-				getOwnerReference(),
-			},
-		},
-		Spec: v1alpha1.ChannelSpec{
-			Provisioner: channelProvisioner,
-		},
-	}
-	c.Status.MarkProvisionerInstalled()
-	c.Status.MarkProvisioned()
-	c.Status.SetAddress(ingressChannelHostname)
-	return c
-}
-
-func makeNonAddressableIngressChannel() *v1alpha1.Channel {
-	c := makeIngressChannel()
-	c.Status.Address = duckv1alpha1.Addressable{}
-	return c
-}
-
-func makeDifferentIngressChannel() *v1alpha1.Channel {
-	c := makeIngressChannel()
-	c.Spec.Provisioner.Name = "some-other-provisioner"
-	return c
-}
-
-func makeFilterDeployment() *appsv1.Deployment {
-	d := resources.MakeFilterDeployment(&resources.FilterArgs{
-		Broker:             makeBroker(),
-		Image:              filterImage,
-		ServiceAccountName: filterSA,
-	})
-	d.TypeMeta = metav1.TypeMeta{
-		APIVersion: "apps/v1",
-		Kind:       "Deployment",
-	}
-	return d
-}
-
-func makeDifferentFilterDeployment() *appsv1.Deployment {
-	d := makeFilterDeployment()
-	d.Spec.Template.Spec.Containers[0].Image = "some-other-image"
-	return d
-}
-
-func makeFilterService() *corev1.Service {
-	svc := resources.MakeFilterService(makeBroker())
-	svc.TypeMeta = metav1.TypeMeta{
-		APIVersion: "v1",
-		Kind:       "Service",
-	}
-	return svc
-}
-
-func makeDifferentFilterService() *corev1.Service {
-	s := makeFilterService()
-	s.Spec.Selector["eventing.knative.dev/broker"] = "some-other-value"
-	return s
-}
-
-func makeIngressDeployment() *appsv1.Deployment {
-	d := resources.MakeIngress(&resources.IngressArgs{
-		Broker:             makeBroker(),
-		Image:              ingressImage,
-		ServiceAccountName: ingressSA,
-		ChannelAddress:     triggerChannelHostname,
-	})
-	d.TypeMeta = metav1.TypeMeta{
-		APIVersion: "apps/v1",
-		Kind:       "Deployment",
-	}
-	return d
-}
-
-func makeDifferentIngressDeployment() *appsv1.Deployment {
-	d := makeIngressDeployment()
-	d.Spec.Template.Spec.Containers[0].Image = "some-other-image"
-	return d
-}
-
-func makeIngressService() *corev1.Service {
-	svc := resources.MakeIngressService(makeBroker())
-	svc.TypeMeta = metav1.TypeMeta{
-		APIVersion: "v1",
-		Kind:       "Service",
-	}
-	return svc
-}
-
-func makeDifferentIngressService() *corev1.Service {
-	s := makeIngressService()
-	s.Spec.Selector["eventing.knative.dev/broker"] = "some-other-value"
-	return s
-}
-
-func makeTestSubscription() *v1alpha1.Subscription {
-	s := &v1alpha1.Subscription{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "eventing.knative.dev/v1alpha1",
-			Kind:       "Subscription",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    testNS,
-			GenerateName: fmt.Sprintf("internal-ingress-%s-", brokerName),
-			Labels: map[string]string{
-				"eventing.knative.dev/broker":        brokerName,
-				"eventing.knative.dev/brokerIngress": "true",
-			},
-			OwnerReferences: []metav1.OwnerReference{
-				getOwnerReference(),
-			},
-		},
-		Spec: v1alpha1.SubscriptionSpec{
-			Channel: corev1.ObjectReference{
-				APIVersion: v1alpha1.SchemeGroupVersion.String(),
-				Kind:       "Channel",
-				Name:       ingressChannelName,
-			},
-			Subscriber: &v1alpha1.SubscriberSpec{
-				Ref: &corev1.ObjectReference{
-					APIVersion: "v1",
-					Kind:       "Service",
-					Name:       makeIngressService().Name,
-				},
-			},
-		},
-	}
-	s.Status.MarkChannelReady()
-	s.Status.MarkReferencesResolved()
-	return s
-}
-
-func makeDifferentSubscription() *v1alpha1.Subscription {
-	s := makeTestSubscription()
-	s.Spec.Subscriber.Ref = nil
-	url := "http://example.com/"
-	s.Spec.Subscriber.URI = &url
-	return s
-}
-
-func getOwnerReference() metav1.OwnerReference {
-	return metav1.OwnerReference{
+func ownerReferences() []metav1.OwnerReference {
+	return []metav1.OwnerReference{{
 		APIVersion:         v1alpha1.SchemeGroupVersion.String(),
 		Kind:               "Broker",
 		Name:               brokerName,
 		Controller:         &trueVal,
 		BlockOwnerDeletion: &trueVal,
+	}}
+}
+
+func channelProvisioner(name string) *corev1.ObjectReference {
+	return &corev1.ObjectReference{
+		APIVersion: "eventing.knative.dev/v1alpha1",
+		Kind:       "ClusterChannelProvisioner",
+		Name:       name,
 	}
+}
+
+// TODO remove this once we get rid of istio.
+func annotations() map[string]string {
+	return map[string]string{
+		"sidecar.istio.io/inject": "true",
+	}
+}
+
+func envVars(containerName string) []corev1.EnvVar {
+	switch containerName {
+	case filterContainerName:
+		return []corev1.EnvVar{
+			{
+				Name: "NAMESPACE",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.namespace",
+					},
+				},
+			},
+		}
+	case ingressContainerName:
+		return []corev1.EnvVar{
+			{
+				Name:  "FILTER",
+				Value: "",
+			},
+			{
+				Name:  "CHANNEL",
+				Value: triggerChannelHostname,
+			},
+			{
+				Name:  "BROKER",
+				Value: brokerName,
+			},
+		}
+	}
+	return []corev1.EnvVar{}
+}
+
+func containerPorts(httpInternal int32) []corev1.ContainerPort {
+	return []corev1.ContainerPort{
+		{
+			Name:          "http",
+			ContainerPort: httpInternal,
+		},
+		{
+			Name:          "metrics",
+			ContainerPort: 9090,
+		},
+	}
+}
+
+func servicePorts(containerName string, httpInternal int) []corev1.ServicePort {
+	svcPorts := []corev1.ServicePort{
+		{
+			Name:       "http",
+			Port:       80,
+			TargetPort: intstr.FromInt(httpInternal),
+		},
+	}
+	// TODO remove this if once we add metrics to the filter container.
+	if containerName == ingressContainerName {
+		svcPorts = append(svcPorts, corev1.ServicePort{
+			Name: "metrics",
+			Port: 9090,
+		})
+	}
+	return svcPorts
 }
