@@ -22,15 +22,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go"
 	"k8s.io/apimachinery/pkg/util/sets"
-)
-
-const (
-	// Custom extension to match the EventType, if present.
-	// Otherwise we use the CloudEvent source attribute.
-	// This should be hopefully populated by the sources that we have control over.
-	extensionFrom = "from"
 )
 
 var (

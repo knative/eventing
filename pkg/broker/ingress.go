@@ -18,9 +18,7 @@ package broker
 
 import (
 	"context"
-	"fmt"
-
-	"github.com/knative/eventing/pkg/utils"
+	"strings"
 
 	"go.uber.org/zap"
 
@@ -88,12 +86,11 @@ func (p *IngressPolicy) isRegistered(ctx context.Context, event cloudevents.Even
 // getEventType retrieves the EventType from the Registry for the given cloudevents.Event.
 // If it is not found, it returns an error.
 func (p *IngressPolicy) getEventType(ctx context.Context, event cloudevents.Event) (*eventingv1alpha1.EventType, error) {
-	source := fromOrSource(event)
-
 	opts := &client.ListOptions{
 		Namespace: p.namespace,
 		// Set Raw because if we need to get more than one page, then we will put the continue token
 		// into opts.Raw.Continue.
+		// TODO filter by Broker label.
 		Raw: &metav1.ListOptions{},
 	}
 
@@ -105,9 +102,10 @@ func (p *IngressPolicy) getEventType(ctx context.Context, event cloudevents.Even
 		}
 		for _, et := range etl.Items {
 			if et.Spec.Broker == p.broker {
-				// Matching on type, schemaURL, and "source" (either our custom extension 'from' or the CloudEvent source).
-				// Note that if we end up using the CloudEvent source, most probably the EventType won't be there.
-				if et.Spec.Type == event.Type() && et.Spec.Source == source && et.Spec.Schema == event.SchemaURL() {
+				// Matching on type, source, and schemaURL.
+				// Note that if we the CloudEvent comes with a very specific source (i.e., without the split of
+				// source and subject proposed in v0.3), the EventType most probably won't be there.
+				if strings.EqualFold(et.Spec.Type, event.Type()) && strings.EqualFold(et.Spec.Source, event.Source()) && strings.EqualFold(et.Spec.Schema, event.SchemaURL()) {
 					return &et, nil
 				}
 			}
@@ -118,36 +116,4 @@ func (p *IngressPolicy) getEventType(ctx context.Context, event cloudevents.Even
 			return nil, notFound
 		}
 	}
-}
-
-// makeEventType generates, but does not create an EventType from the given cloudevents.Event.
-func (p *IngressPolicy) makeEventType(event cloudevents.Event) *eventingv1alpha1.EventType {
-	source := fromOrSource(event)
-	cloudEventType := event.Type()
-	return &eventingv1alpha1.EventType{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-", utils.ToDNS1123Subdomain(cloudEventType)),
-			Namespace:    p.namespace,
-		},
-		Spec: eventingv1alpha1.EventTypeSpec{
-			Type:   cloudEventType,
-			Source: source,
-			Schema: event.SchemaURL(),
-			Broker: p.broker,
-		},
-	}
-}
-
-// Retrieve the custom extension 'From' as opposed to CloudEvent source, if available.
-// If the extension is populated, it means the event came from one of our sources.
-// Note that some of our sources might not populate this, e.g., container source, etc., so we just retrieve the CloudEvent
-// source.
-func fromOrSource(event cloudevents.Event) string {
-	source := event.Source()
-	var from string
-	err := event.ExtensionAs(extensionFrom, &from)
-	if err == nil {
-		source = from
-	}
-	return source
 }

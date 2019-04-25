@@ -23,8 +23,6 @@ import (
 	"net/url"
 	"testing"
 
-	"k8s.io/apimachinery/pkg/api/equality"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"go.uber.org/zap"
@@ -45,7 +43,6 @@ const (
 	testType   = "test-type"
 	otherType  = "other-test-type"
 	testSource = "/test-source"
-	testFrom   = "/test-from"
 )
 
 func init() {
@@ -54,10 +51,6 @@ func init() {
 }
 
 func TestIngress(t *testing.T) {
-
-	extensions := map[string]interface{}{
-		extensionFrom: testFrom,
-	}
 
 	testCases := map[string]struct {
 		eventTypes []*eventingv1alpha1.EventType
@@ -98,16 +91,6 @@ func TestIngress(t *testing.T) {
 			},
 			want: false,
 		},
-		"allow registered, event not found with from, reject": {
-			policySpec: &eventingv1alpha1.IngressPolicySpec{
-				AllowAny: false,
-			},
-			event: makeCloudEvent(extensions),
-			eventTypes: []*eventingv1alpha1.EventType{
-				makeEventType(testType, testSource),
-			},
-			want: false,
-		},
 		"allow registered, event registered, accept": {
 			policySpec: &eventingv1alpha1.IngressPolicySpec{
 				AllowAny: false,
@@ -115,63 +98,6 @@ func TestIngress(t *testing.T) {
 			event: makeCloudEvent(nil),
 			eventTypes: []*eventingv1alpha1.EventType{
 				makeEventType(testType, testSource),
-			},
-			want: true,
-		},
-		"allow registered, event registered with from, accept": {
-			policySpec: &eventingv1alpha1.IngressPolicySpec{
-				AllowAny: false,
-			},
-			event: makeCloudEvent(extensions),
-			eventTypes: []*eventingv1alpha1.EventType{
-				makeEventType(testType, testFrom),
-			},
-			want: true,
-		},
-		"auto add, error listing types, accept": {
-			policySpec: &eventingv1alpha1.IngressPolicySpec{
-				AutoAdd: true,
-			},
-			event: makeCloudEvent(nil),
-			mocks: controllertesting.Mocks{
-				MockLists: []controllertesting.MockList{
-					func(_ client.Client, _ context.Context, _ *client.ListOptions, _ runtime.Object) (controllertesting.MockHandled, error) {
-						return controllertesting.Handled, errors.New("error listing types")
-					},
-				},
-			},
-			want: true,
-		},
-		"auto add, error creating type, accept": {
-			policySpec: &eventingv1alpha1.IngressPolicySpec{
-				AutoAdd: true,
-			},
-			event: makeCloudEvent(nil),
-			mocks: controllertesting.Mocks{
-				MockCreates: []controllertesting.MockCreate{
-					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						return controllertesting.Handled, errors.New("error creating type")
-					},
-				},
-			},
-			want: true,
-		},
-		"auto add, created type, accept": {
-			policySpec: &eventingv1alpha1.IngressPolicySpec{
-				AutoAdd: true,
-			},
-			event: makeCloudEvent(nil),
-			mocks: controllertesting.Mocks{
-				MockCreates: []controllertesting.MockCreate{
-					func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {
-						et := obj.(*eventingv1alpha1.EventType)
-						expected := makeEventType(testType, testSource).Spec
-						if !equality.Semantic.DeepDerivative(et.Spec, expected) {
-							return controllertesting.Handled, errors.New("error creating type")
-						}
-						return controllertesting.Unhandled, nil
-					},
-				},
 			},
 			want: true,
 		},

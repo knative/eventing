@@ -14,22 +14,23 @@
 
 ---
 
-# This EventType creates an event type with type 'repo:push' and source
-# 'my-user/my-repo', for the 'broker-allow-registered' Broker.
+# This EventType creates an event type with type 'com.github.pull_request', source
+# 'github.com', for the 'broker-allow-registered' Broker.
 
 apiVersion: eventing.knative.dev/v1alpha1
 kind: EventType
 metadata:
-  name: repopush
+  name: com.github.pullrequest
 spec:
-  type: repo:push
-  source: my-user/my-repo
+  type: com.github.pull_request
+  source: github.com
   broker: broker-allow-registered
+  description: "BitBucket Repo Push"
 
 ---
 
-# This Trigger matches all events of type 'repo:push' and source
-# 'my-user/my-repo', that are sent to the 'broker-allow-registered' Broker.
+# This Trigger matches all events of type 'com.github.pull_request' and source
+# 'github.com', that are sent to the 'broker-allow-registered' Broker.
 
 apiVersion: eventing.knative.dev/v1alpha1
 kind: Trigger
@@ -38,8 +39,8 @@ metadata:
 spec:
   filter:
     sourceAndType:
-      type: repo:push
-      source: my-user/my-repo
+      type: com.github.pull_request
+      source: github.com
   broker: broker-allow-registered
   subscriber:
     ref:

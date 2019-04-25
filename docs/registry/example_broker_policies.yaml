@@ -34,16 +34,3 @@ metadata:
 spec:
   ingressPolicy:
     allowAny: false
-
----
-
-# By setting the IngressPolicy to autoAdd, the broker will accept any event and will add them to the Registry, if
-# not present.
-
-apiVersion: eventing.knative.dev/v1alpha1
-kind: Broker
-metadata:
-  name: broker-auto-add
-spec:
-  ingressPolicy:
-    autoAdd: true
