@@ -135,7 +135,6 @@ func main() {
 	ticker := time.NewTicker(period)
 	for {
 		sequence++
-
 		untyped["sequence"] = fmt.Sprintf("%d", sequence)
 
 		event := cloudevents.NewEvent()

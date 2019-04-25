@@ -44,8 +44,7 @@ Note: the number denotes the sequence of the event that flows in this test case.
 
 func TestEventTransformationForTrigger(t *testing.T) {
 	const (
-		brokerName = "e2e-eventtransformation-broker"
-		// brokerName = test.DefaultBrokerName
+		brokerName  = "e2e-eventtransformation-broker"
 		rbacObjName = "eventing-broker-filter"
 
 		any          = v1alpha1.TriggerAnyFilter
@@ -63,9 +62,9 @@ func TestEventTransformationForTrigger(t *testing.T) {
 	)
 
 	clients, ns, provisioner, cleaner := Setup(t, true, t.Logf)
-	// clients, ns, _, cleaner := Setup(t, true, t.Logf)
 	defer TearDown(clients, ns, cleaner, t.Logf)
 
+	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role
 	err := CreateServiceAccountAndBinding(clients, rbacObjName, ns, t.Logf, cleaner)
 	if err != nil {
 		t.Fatalf("Failed to create the ServiceAccount and ServiceAccountRoleBinding: %v", err)
