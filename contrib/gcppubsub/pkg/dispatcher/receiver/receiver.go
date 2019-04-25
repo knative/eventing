@@ -23,13 +23,12 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/knative/eventing/pkg/channelwatcher"
-
 	"cloud.google.com/go/pubsub"
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/controller/channel"
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/dispatcher/receiver/cache"
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/channelwatcher"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
@@ -79,7 +78,7 @@ func (r *Receiver) getChannelReferenceFromHost(host string) (provisioners.Channe
 	chMap := r.getHostToChannelMap()
 	cr, ok := chMap[host]
 	if !ok {
-		return cr, fmt.Errorf("Invalid HostName:%s. HostName not found in any of the watched natss channels", host)
+		return cr, fmt.Errorf("Invalid HostName:%s. HostName not found in any of the watched gcp-pubsub channels", host)
 	}
 	return cr, nil
 }
@@ -181,7 +180,7 @@ func (r *Receiver) setHostToChannelMap(hcMap map[string]provisioners.ChannelRefe
 	r.hostToChannelMap.Store(hcMap)
 }
 
-// UpdateHostToChannelMap will be called from the controller that watches natss channels.
+// UpdateHostToChannelMap will be called from the controller that watches gcp-pubsub channels.
 // It will update internal hostToChannelMap which is used to resolve the hostHeader of the
 // incoming request to the correct ChannelReference in the receiver function.
 func (r *Receiver) UpdateHostToChannelMap(ctx context.Context) error {

@@ -25,24 +25,19 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util"
+	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/fakepubsub"
+	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/testcreds"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes/scheme"
-
-	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/fakepubsub"
+	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"go.uber.org/zap"
-
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/testcreds"
-	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 )
 
 const (

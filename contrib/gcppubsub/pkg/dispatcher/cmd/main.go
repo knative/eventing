@@ -20,8 +20,6 @@ import (
 	"context"
 	"flag"
 
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/controller/clusterchannelprovisioner"
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/dispatcher/dispatcher"
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/dispatcher/receiver"
@@ -32,6 +30,7 @@ import (
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // This is the main method for the GCP PubSub Channel dispatcher. It handles all the data-plane

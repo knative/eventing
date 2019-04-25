@@ -26,31 +26,25 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/client-go/util/workqueue"
-
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util"
-
-	"github.com/knative/eventing/pkg/provisioners"
-
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
+	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/fakepubsub"
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/testcreds"
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"github.com/knative/eventing/pkg/utils"
-
-	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/fakepubsub"
-
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/provisioners"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
+	"github.com/knative/eventing/pkg/utils"
 	_ "github.com/knative/pkg/system/testing"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
