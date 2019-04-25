@@ -17,6 +17,7 @@ limitations under the License.
 package testing
 
 import (
+	"k8s.io/apimachinery/pkg/types"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,6 +41,12 @@ func NewContainerSource(name, namespace string, o ...ContainerSourceOption) *v1a
 	}
 	//c.SetDefaults(context.Background()) // TODO: We should add defaults and validation.
 	return c
+}
+
+func WithContainerSourceUID(uid types.UID) ContainerSourceOption {
+	return func(s *v1alpha1.ContainerSource) {
+		s.UID = uid
+	}
 }
 
 // WithInitContainerSourceConditions initializes the ContainerSource's conditions.
@@ -71,6 +78,12 @@ func WithContainerSourceDeploying(msg string) ContainerSourceOption {
 	}
 }
 
+func WithContainerSourceDeployFailed(msg string) ContainerSourceOption {
+	return func(s *v1alpha1.ContainerSource) {
+		s.Status.MarkNotDeployed("DeploymentCreateFailed", msg)
+	}
+}
+
 func WithContainerSourceDeployed(s *v1alpha1.ContainerSource) {
 	s.Status.MarkDeployed()
 }
@@ -83,5 +96,17 @@ func WithContainerSourceDeleted(c *v1alpha1.ContainerSource) {
 func WithContainerSourceSpec(spec v1alpha1.ContainerSourceSpec) ContainerSourceOption {
 	return func(c *v1alpha1.ContainerSource) {
 		c.Spec = spec
+	}
+}
+
+func WithContainerSourceLabels(labels map[string]string) ContainerSourceOption {
+	return func(c *v1alpha1.ContainerSource) {
+		c.Labels = labels
+	}
+}
+
+func WithContainerSourceAnnotations(annotations map[string]string) ContainerSourceOption {
+	return func(c *v1alpha1.ContainerSource) {
+		c.Annotations = annotations
 	}
 }

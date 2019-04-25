@@ -17,6 +17,7 @@ limitations under the License.
 package resources
 
 import (
+	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -26,7 +27,11 @@ import (
 )
 
 func TestMakeDeployment_sinkoverrideannotationlabelnotallowed(t *testing.T) {
+	yes := true
 	got := MakeDeployment(ContainerArguments{
+		Source: &v1alpha1.ContainerSource{
+			ObjectMeta: metav1.ObjectMeta{Name: "test-name", UID: "TEST_UID"},
+		},
 		Name:      "test-name",
 		Namespace: "test-namespace",
 		Image:     "test-image",
@@ -63,6 +68,14 @@ func TestMakeDeployment_sinkoverrideannotationlabelnotallowed(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "test-name-",
 			Namespace:    "test-namespace",
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion:         "sources.eventing.knative.dev/v1alpha1",
+				Kind:               "ContainerSource",
+				Name:               "test-name",
+				UID:                "TEST_UID",
+				Controller:         &yes,
+				BlockOwnerDeletion: &yes,
+			}},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
@@ -121,7 +134,11 @@ func TestMakeDeployment_sinkoverrideannotationlabelnotallowed(t *testing.T) {
 }
 
 func TestMakeDeployment_sink(t *testing.T) {
+	yes := true
 	got := MakeDeployment(ContainerArguments{
+		Source: &v1alpha1.ContainerSource{
+			ObjectMeta: metav1.ObjectMeta{Name: "test-name", UID: "TEST_UID"},
+		},
 		Name:      "test-name",
 		Namespace: "test-namespace",
 		Image:     "test-image",
@@ -150,6 +167,14 @@ func TestMakeDeployment_sink(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "test-name-",
 			Namespace:    "test-namespace",
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion:         "sources.eventing.knative.dev/v1alpha1",
+				Kind:               "ContainerSource",
+				Name:               "test-name",
+				UID:                "TEST_UID",
+				Controller:         &yes,
+				BlockOwnerDeletion: &yes,
+			}},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
@@ -206,7 +231,11 @@ func TestMakeDeployment_sink(t *testing.T) {
 }
 
 func TestMakeDeployment_sinkinargs(t *testing.T) {
+	yes := true
 	got := MakeDeployment(ContainerArguments{
+		Source: &v1alpha1.ContainerSource{
+			ObjectMeta: metav1.ObjectMeta{Name: "test-name", UID: "TEST_UID"},
+		},
 		Name:      "test-name",
 		Namespace: "test-namespace",
 		Image:     "test-image",
@@ -236,6 +265,14 @@ func TestMakeDeployment_sinkinargs(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "test-name-",
 			Namespace:    "test-namespace",
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion:         "sources.eventing.knative.dev/v1alpha1",
+				Kind:               "ContainerSource",
+				Name:               "test-name",
+				UID:                "TEST_UID",
+				Controller:         &yes,
+				BlockOwnerDeletion: &yes,
+			}},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{

@@ -182,7 +182,7 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 		if errors.IsNotFound(err) {
 			deploy, err = r.createDeployment(ctx, source, nil, args)
 			if err != nil {
-				r.markDeployingAndRecordEvent(source, corev1.EventTypeWarning, "DeploymentCreateFailed", "Could not create deployment: %v", err)
+				r.markNotDeployedRecordEvent(source, corev1.EventTypeWarning, "DeploymentCreateFailed", "Could not create deployment: %v", err)
 				return err
 			}
 			r.markDeployingAndRecordEvent(source, corev1.EventTypeNormal, "DeploymentCreated", "Created deployment %q", deploy.Name)
@@ -281,6 +281,11 @@ func (r *Reconciler) createDeployment(ctx context.Context, source *v1alpha1.Cont
 func (r *Reconciler) markDeployingAndRecordEvent(source *v1alpha1.ContainerSource, evType string, reason string, messageFmt string, args ...interface{}) {
 	r.Recorder.Eventf(source, evType, reason, messageFmt, args...)
 	source.Status.MarkDeploying(reason, messageFmt, args...)
+}
+
+func (r *Reconciler) markNotDeployedRecordEvent(source *v1alpha1.ContainerSource, evType string, reason string, messageFmt string, args ...interface{}) {
+	r.Recorder.Eventf(source, evType, reason, messageFmt, args...)
+	source.Status.MarkNotDeployed(reason, messageFmt, args...)
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.ContainerSource) (*v1alpha1.ContainerSource, error) {

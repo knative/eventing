@@ -18,31 +18,28 @@ package containersource
 
 import (
 	"fmt"
-	"github.com/knative/eventing/pkg/utils"
-	"k8s.io/apimachinery/pkg/runtime"
 	"testing"
 
-	clientgotesting "k8s.io/client-go/testing"
-
-	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	"github.com/knative/eventing/pkg/reconciler"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	"github.com/knative/pkg/controller"
-	logtesting "github.com/knative/pkg/logging/testing"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	//"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime"
 	kubeinformers "k8s.io/client-go/informers"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
+	clientgotesting "k8s.io/client-go/testing"
+
+	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
+	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/utils"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/controller"
+	logtesting "github.com/knative/pkg/logging/testing"
 
 	. "github.com/knative/eventing/pkg/reconciler/testing"
 	. "github.com/knative/pkg/reconciler/testing"
-
-	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	v1 "k8s.io/api/apps/v1"
 )
 
 const (
@@ -54,8 +51,7 @@ const (
 )
 
 var (
-	trueVal   = true
-	targetURI = "http://addressable.sink.svc.cluster.local/"
+	trueVal = true
 
 	sinkRef = corev1.ObjectReference{
 		Name:       sinkName,
@@ -69,32 +65,19 @@ var (
 	}
 	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
 	sinkURI = "http://" + sinkDNS + "/"
-)
 
-//
-//const (
-//	containerSourceName = "testcontainersource"
-//	containerSourceUID  = "2a2208d1-ce67-11e8-b3a3-42010a8a00af"
-//	deployGeneratedName = "" //sad trombone
-//
-//	addressableDNS = "addressable.sink.svc.cluster.local"
-//
-//	addressableName       = "testsink"
-//	addressableKind       = "Sink"
-//	addressableAPIVersion = "duck.knative.dev/v1alpha1"
-//
-//	unaddressableName       = "testunaddressable"
-//	unaddressableKind       = "KResource"
-//	unaddressableAPIVersion = "duck.knative.dev/v1alpha1"
-//
-//	sinkServiceName       = "testsinkservice"
-//	sinkServiceKind       = "Service"
-//	sinkServiceAPIVersion = "v1"
-//)
+	// TODO: k8s service does not work, fix.
+	//serviceRef = corev1.ObjectReference{
+	//	Name:       sinkName,
+	//	Kind:       "Service",
+	//	APIVersion: "v1",
+	//}
+	//serviceURI = "http://service.sink.svc.cluster.local/"
+)
 
 func init() {
 	// Add types to scheme
-	_ = v1.AddToScheme(scheme.Scheme)
+	_ = appsv1.AddToScheme(scheme.Scheme)
 	_ = corev1.AddToScheme(scheme.Scheme)
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
 }
@@ -238,13 +221,14 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
-			Name: "valid",
+			Name: "valid first pass",
 			Objects: []runtime.Object{
 				NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
 						Image: image,
 						Sink:  &sinkRef,
 					}),
+					WithContainerSourceUID(sourceUID),
 				),
 				NewChannel(sinkName, testNS,
 					WithChannelAddress(sinkDNS),
@@ -261,6 +245,7 @@ func TestAllCases(t *testing.T) {
 						Image: image,
 						Sink:  &sinkRef,
 					}),
+					WithContainerSourceUID(sourceUID),
 					// Status Update:
 					WithInitContainerSourceConditions,
 					WithContainerSourceSink(sinkURI),
@@ -271,18 +256,177 @@ func TestAllCases(t *testing.T) {
 				makeDeployment(NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
 						Image: image,
-					}))),
+					}),
+					WithContainerSourceUID(sourceUID),
+				), 0, nil, nil),
+			},
+		}, {
+			Name: "valid, with ready deployment",
+			Objects: []runtime.Object{
+				NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+						Sink:  &sinkRef,
+					}),
+					WithContainerSourceUID(sourceUID),
+					WithInitContainerSourceConditions,
+					WithContainerSourceSink(sinkURI),
+					WithContainerSourceDeploying(`Created deployment ""`),
+				),
+				NewChannel(sinkName, testNS,
+					WithChannelAddress(sinkDNS),
+				),
+				makeDeployment(NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+					}),
+					WithContainerSourceUID(sourceUID),
+				), 1, nil, nil),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "DeploymentReady", `Deployment "" has 1 ready replicas`),
+				Eventf(corev1.EventTypeNormal, "ContainerSourceReconciled", `ContainerSource reconciled: "testnamespace/test-container-source"`),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+						Sink:  &sinkRef,
+					}),
+					WithContainerSourceUID(sourceUID),
+					WithInitContainerSourceConditions,
+					WithContainerSourceSink(sinkURI),
+					// Status Update:
+					WithContainerSourceDeployed,
+				),
+			}},
+		}, {
+			Name: "valid first pass, with annotations and labels",
+			Objects: []runtime.Object{
+				NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+						Sink:  &sinkRef,
+					}),
+					WithContainerSourceUID(sourceUID),
+					WithContainerSourceLabels(map[string]string{"label": "labeled"}),
+					WithContainerSourceAnnotations(map[string]string{"annotation": "annotated"}),
+				),
+				NewChannel(sinkName, testNS,
+					WithChannelAddress(sinkDNS),
+				),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "DeploymentCreated", `Created deployment ""`), // TODO on noes
+				Eventf(corev1.EventTypeNormal, "ContainerSourceReconciled", `ContainerSource reconciled: "testnamespace/test-container-source"`),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+						Sink:  &sinkRef,
+					}),
+					WithContainerSourceUID(sourceUID),
+					WithContainerSourceLabels(map[string]string{"label": "labeled"}),
+					WithContainerSourceAnnotations(map[string]string{"annotation": "annotated"}),
+					// Status Update:
+					WithInitContainerSourceConditions,
+					WithContainerSourceSink(sinkURI),
+					WithContainerSourceDeploying(`Created deployment ""`),
+				),
+			}},
+			WantCreates: []metav1.Object{
+				makeDeployment(NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+					}),
+					WithContainerSourceUID(sourceUID),
+				), 0, map[string]string{"label": "labeled"}, map[string]string{"annotation": "annotated"}),
+			},
+		}, {
+			Name: "error for create deployment",
+			Objects: []runtime.Object{
+				NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+						Sink:  &sinkRef,
+					}),
+					WithContainerSourceUID(sourceUID),
+				),
+				NewChannel(sinkName, testNS,
+					WithChannelAddress(sinkDNS),
+				),
+			},
+			Key:     testNS + "/" + sourceName,
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "DeploymentCreateFailed", "Could not create deployment: inducing failure for create deployments"),
+			},
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("create", "deployments"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+						Sink:  &sinkRef,
+					}),
+					WithContainerSourceUID(sourceUID),
+					// Status Update:
+					WithInitContainerSourceConditions,
+					WithContainerSourceSink(sinkURI),
+					WithContainerSourceDeployFailed(`Could not create deployment: inducing failure for create deployments`),
+				),
+			}},
+			WantCreates: []metav1.Object{
+				makeDeployment(NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+					}),
+					WithContainerSourceUID(sourceUID),
+				), 0, nil, nil),
 			},
 		},
-
-		//Name:       "valid containersource, sink is provided",
-		//Name:       "valid containersource, labels and annotations given",
-		//Name:       "valid containersource, sink, and deployment",
-		//Name:       "valid containersource, sink, but deployment needs update",
-		//Name:       "Error for create deployment",
-		//Name:       "Error for get source, other than not found",
-		//Name:       "valid containersource, sink is a k8s service",
-
+		//{ // TODO: k8s service does not work, fix.
+		//	Name: "valid, with sink as service",
+		//	Objects: []runtime.Object{
+		//		NewContainerSource(sourceName, testNS,
+		//			WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+		//				Image: image,
+		//				Sink:  &serviceRef,
+		//			}),
+		//			WithContainerSourceUID(sourceUID),
+		//		),
+		//		NewService(sinkName, testNS),
+		//	},
+		//	Key: testNS + "/" + sourceName,
+		//	WantEvents: []string{
+		//		Eventf(corev1.EventTypeNormal, "ContainerSourceReconciled", `ContainerSource reconciled: "testnamespace/test-container-source"`),
+		//	},
+		//	WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+		//		Object: NewContainerSource(sourceName, testNS,
+		//			WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+		//				Image: image,
+		//				Sink:  &serviceRef,
+		//			}),
+		//			WithContainerSourceUID(sourceUID),
+		//			// Status Update:
+		//			WithInitContainerSourceConditions,
+		//			WithContainerSourceSink(serviceURI),
+		//			WithContainerSourceDeploying(`Created deployment ""`),
+		//		),
+		//	}},
+		//	WantCreates: []metav1.Object{
+		//		makeDeployment(NewContainerSource(sourceName, testNS,
+		//			WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+		//				Image: image,
+		//			}),
+		//			WithContainerSourceUID(sourceUID),
+		//		), 0),
+		//	},
+		//},
 	}
 
 	defer logtesting.ClearAll()
@@ -296,125 +440,29 @@ func TestAllCases(t *testing.T) {
 
 }
 
-//
-//func getContainerSource() *sourcesv1alpha1.ContainerSource {
-//	obj := &sourcesv1alpha1.ContainerSource{
-//		TypeMeta:   containerSourceType(),
-//		ObjectMeta: om(testNS, containerSourceName),
-//		Spec: sourcesv1alpha1.ContainerSourceSpec{
-//			Image: image,
-//			Args:  []string(nil),
-//			Sink: &corev1.ObjectReference{
-//				Name:       addressableName,
-//				Kind:       addressableKind,
-//				APIVersion: addressableAPIVersion,
-//			},
-//		},
-//	}
-//	// selflink is not filled in when we create the object, so clear it
-//	obj.ObjectMeta.SelfLink = ""
-//	return obj
-//}
-//
-//func getContainerSourceFilledIn() *sourcesv1alpha1.ContainerSource {
-//	obj := getContainerSource()
-//	obj.ObjectMeta.UID = containerSourceUID
-//	obj.Spec.Args = []string{"--foo", "bar"}
-//	obj.Spec.Env = []corev1.EnvVar{{Name: "FOO", Value: "bar"}}
-//	obj.Spec.ServiceAccountName = "foo"
-//	return obj
-//}
-//
-//func getContainerSourceSinkService() *sourcesv1alpha1.ContainerSource {
-//	obj := &sourcesv1alpha1.ContainerSource{
-//		TypeMeta:   containerSourceType(),
-//		ObjectMeta: om(testNS, containerSourceName),
-//		Spec: sourcesv1alpha1.ContainerSourceSpec{
-//			Image: image,
-//			Args:  []string(nil),
-//			Sink: &corev1.ObjectReference{
-//				Name:       sinkServiceName,
-//				Kind:       sinkServiceKind,
-//				APIVersion: sinkServiceAPIVersion,
-//			},
-//		},
-//	}
-//	// selflink is not filled in when we create the object, so clear it
-//	obj.ObjectMeta.SelfLink = ""
-//	return obj
-//}
-//
-//func getContainerSourceUnaddressable() *sourcesv1alpha1.ContainerSource {
-//	obj := &sourcesv1alpha1.ContainerSource{
-//		TypeMeta:   containerSourceType(),
-//		ObjectMeta: om(testNS, containerSourceName),
-//		Spec: sourcesv1alpha1.ContainerSourceSpec{
-//			Image: image,
-//			Args:  []string{},
-//			Sink: &corev1.ObjectReference{
-//				Name:       unaddressableName,
-//				Kind:       unaddressableKind,
-//				APIVersion: unaddressableAPIVersion,
-//			},
-//		},
-//	}
-//	// selflink is not filled in when we create the object, so clear it
-//	obj.ObjectMeta.SelfLink = ""
-//	return obj
-//}
-//
-//func getAddressable() *unstructured.Unstructured {
-//	return &unstructured.Unstructured{
-//		Object: map[string]interface{}{
-//			"apiVersion": addressableAPIVersion,
-//			"kind":       addressableKind,
-//			"metadata": map[string]interface{}{
-//				"namespace": testNS,
-//				"name":      addressableName,
-//			},
-//			"status": map[string]interface{}{
-//				"address": map[string]interface{}{
-//					"hostname": addressableDNS,
-//				},
-//			},
-//		},
-//	}
-//}
-//
-//func getAddressableNoStatus() *unstructured.Unstructured {
-//	return &unstructured.Unstructured{
-//		Object: map[string]interface{}{
-//			"apiVersion": unaddressableAPIVersion,
-//			"kind":       unaddressableKind,
-//			"metadata": map[string]interface{}{
-//				"namespace": testNS,
-//				"name":      unaddressableName,
-//			},
-//		},
-//	}
-//}
-//
-//func getAddressableNilAddress() *unstructured.Unstructured {
-//	return &unstructured.Unstructured{
-//		Object: map[string]interface{}{
-//			"apiVersion": addressableAPIVersion,
-//			"kind":       addressableKind,
-//			"metadata": map[string]interface{}{
-//				"namespace": testNS,
-//				"name":      addressableName,
-//			},
-//			"status": map[string]interface{}{
-//				"address": map[string]interface{}(nil),
-//			},
-//		},
-//	}
-//}
-//
-func makeDeployment(source *sourcesv1alpha1.ContainerSource) *appsv1.Deployment {
+func makeDeployment(source *sourcesv1alpha1.ContainerSource, replicas int32, labels map[string]string, annotations map[string]string) *appsv1.Deployment {
 	args := append(source.Spec.Args, fmt.Sprintf("--sink=%s", sinkURI))
 	env := append(source.Spec.Env, corev1.EnvVar{Name: "SINK", Value: sinkURI})
+
+	annos := map[string]string{
+		"sidecar.istio.io/inject": "true",
+	}
+	for k, v := range annotations {
+		annos[k] = v
+	}
+
+	labs := map[string]string{
+		"eventing.knative.dev/source": source.Name,
+	}
+	for k, v := range labels {
+		labs[k] = v
+	}
+
 	return &appsv1.Deployment{
-		TypeMeta: deploymentType(),
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: appsv1.SchemeGroupVersion.String(),
+			Kind:       "Deployment",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName:    fmt.Sprintf("%s-", source.Name),
 			Namespace:       source.Namespace,
@@ -428,12 +476,8 @@ func makeDeployment(source *sourcesv1alpha1.ContainerSource) *appsv1.Deployment 
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"sidecar.istio.io/inject": "true",
-					},
-					Labels: map[string]string{
-						"eventing.knative.dev/source": source.Name,
-					},
+					Annotations: annos,
+					Labels:      labs,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
@@ -447,33 +491,12 @@ func makeDeployment(source *sourcesv1alpha1.ContainerSource) *appsv1.Deployment 
 				},
 			},
 		},
+		Status: appsv1.DeploymentStatus{
+			ReadyReplicas: replicas,
+		},
 	}
 }
 
-//
-//func containerSourceType() metav1.TypeMeta {
-//	return metav1.TypeMeta{
-//		APIVersion: sourcesv1alpha1.SchemeGroupVersion.String(),
-//		Kind:       "ContainerSource",
-//	}
-//}
-//
-func deploymentType() metav1.TypeMeta {
-	return metav1.TypeMeta{
-		APIVersion: appsv1.SchemeGroupVersion.String(),
-		Kind:       "Deployment",
-	}
-}
-
-//
-//func om(namespace, name string) metav1.ObjectMeta {
-//	return metav1.ObjectMeta{
-//		Namespace: namespace,
-//		Name:      name,
-//		SelfLink:  fmt.Sprintf("/apis/eventing/sources/v1alpha1/namespaces/%s/object/%s", namespace, name),
-//	}
-//}
-//
 func getOwnerReferences() []metav1.OwnerReference {
 	return []metav1.OwnerReference{{
 		APIVersion:         sourcesv1alpha1.SchemeGroupVersion.String(),
