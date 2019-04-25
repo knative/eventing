@@ -24,9 +24,9 @@ func (b *Broker) SetDefaults(ctx context.Context) {
 
 func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
 	if bs.IngressPolicy == nil {
+		// Setting as default to allow any event.
 		bs.IngressPolicy = &IngressPolicySpec{
 			AllowAny: true,
-			AutoAdd:  false,
 		}
 	}
 }

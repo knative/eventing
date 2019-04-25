@@ -49,13 +49,18 @@ var _ runtime.Object = (*EventType)(nil)
 var _ webhook.GenericCRD = (*EventType)(nil)
 
 type EventTypeSpec struct {
+	// Type represents the CloudEvents type. It is authoritative.
 	Type string `json:"type"`
-	// +optional
+	// Source is a valid URI, it represents the CloudEvents source.
 	Source string `json:"source,omitempty"`
+	// Schema is a valid URI, it represents the CloudEvents schema attribute.
+	// It may be a JSON schema, a protobuf schema, etc. It is optional.
 	// +optional
 	Schema string `json:"schema,omitempty"`
-
+	// Broker refers to the Broker that can provide the EventType.
 	Broker string `json:"broker"`
+	// Description is an optional field used to describe the EventType, in any meaningful way.
+	Description string `json:description,omitempty`
 }
 
 // EventTypeStatus represents the current state of a EventType.
@@ -64,45 +69,6 @@ type EventTypeStatus struct {
 	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
 	// * Conditions - the latest available observations of a resource's current state.
 	duckv1alpha1.Status `json:",inline"`
-}
-
-const (
-	EventTypeConditionReady                                   = duckv1alpha1.ConditionReady
-	EventTypeConditionBrokerExists duckv1alpha1.ConditionType = "BrokerExists"
-	EventTypeConditionBrokerReady  duckv1alpha1.ConditionType = "BrokerReady"
-)
-
-var eventTypeCondSet = duckv1alpha1.NewLivingConditionSet(EventTypeConditionBrokerExists, EventTypeConditionBrokerReady)
-
-// GetCondition returns the condition currently associated with the given type, or nil.
-func (et *EventTypeStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
-	return eventTypeCondSet.Manage(et).GetCondition(t)
-}
-
-// IsReady returns true if the resource is ready overall.
-func (et *EventTypeStatus) IsReady() bool {
-	return eventTypeCondSet.Manage(et).IsHappy()
-}
-
-// InitializeConditions sets relevant unset conditions to Unknown state.
-func (et *EventTypeStatus) InitializeConditions() {
-	eventTypeCondSet.Manage(et).InitializeConditions()
-}
-
-func (et *EventTypeStatus) MarkBrokerExists() {
-	eventTypeCondSet.Manage(et).MarkTrue(EventTypeConditionBrokerExists)
-}
-
-func (et *EventTypeStatus) MarkBrokerDoesNotExist() {
-	eventTypeCondSet.Manage(et).MarkFalse(EventTypeConditionBrokerExists, "BrokerDoesNotExist", "Broker does not exist")
-}
-
-func (et *EventTypeStatus) MarkBrokerReady() {
-	eventTypeCondSet.Manage(et).MarkTrue(EventTypeConditionBrokerReady)
-}
-
-func (et *EventTypeStatus) MarkBrokerNotReady() {
-	eventTypeCondSet.Manage(et).MarkFalse(EventTypeConditionBrokerReady, "BrokerNotReady", "Broker is not ready")
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

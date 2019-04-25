@@ -34,24 +34,6 @@ func TestBrokerDefaults(t *testing.T) {
 				Spec: BrokerSpec{
 					IngressPolicy: &IngressPolicySpec{
 						AllowAny: true,
-						AutoAdd:  false,
-					},
-				},
-			},
-		},
-		"auto add not set": {
-			initial: Broker{
-				Spec: BrokerSpec{
-					IngressPolicy: &IngressPolicySpec{
-						AllowAny: true,
-					},
-				},
-			},
-			expected: Broker{
-				Spec: BrokerSpec{
-					IngressPolicy: &IngressPolicySpec{
-						AllowAny: true,
-						AutoAdd:  false,
 					},
 				},
 			},
@@ -59,16 +41,13 @@ func TestBrokerDefaults(t *testing.T) {
 		"allow any not set": {
 			initial: Broker{
 				Spec: BrokerSpec{
-					IngressPolicy: &IngressPolicySpec{
-						AutoAdd: true,
-					},
+					IngressPolicy: &IngressPolicySpec{},
 				},
 			},
 			expected: Broker{
 				Spec: BrokerSpec{
 					IngressPolicy: &IngressPolicySpec{
 						AllowAny: false,
-						AutoAdd:  true,
 					},
 				},
 			},
