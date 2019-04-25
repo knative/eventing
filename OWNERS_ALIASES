@@ -7,13 +7,6 @@ aliases:
   gcp-pubsub-reviewers:
     - Harwayne
   
-  kafka-approvers:
-    - bbrowning
-    - matzew
-  kafka-reviewers:
-    - bbrowning
-    - matzew
-
   natss-approvers:
     - Abd4llA
   natss-reviewers:

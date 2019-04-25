@@ -21,7 +21,6 @@ declare -A COMPONENTS
 COMPONENTS=(
   ["eventing.yaml"]="config"
   ["in-memory-channel.yaml"]="config/provisioners/in-memory-channel"
-  ["kafka.yaml"]="contrib/kafka/config"
   ["gcp-pubsub.yaml"]="contrib/gcppubsub/config"
   ["natss.yaml"]="contrib/natss/config"
 )

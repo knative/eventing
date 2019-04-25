@@ -30,8 +30,6 @@ const (
 	InMemoryProvisioner = "in-memory"
 	// GCPPubSubProvisioner is the gcp-pubsub provisioner, which is under contrib/gcppubsub.
 	GCPPubSubProvisioner = "gcp-pubsub"
-	// KafkaProvisioner is the kafka provisioner, which is under contrib/kafka.
-	KafkaProvisioner = "kafka"
 	// NatssProvisioner is the natss provisioner, which is under contrib/natss
 	NatssProvisioner = "natss"
 )
