@@ -18,8 +18,9 @@ package testing
 
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/types"
 	"time"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -35,7 +36,6 @@ func NewSubscription(name, namespace string, so ...SubscriptionOption) *v1alpha1
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			UID:       types.UID(name + "-abc-123"),
 		},
 	}
 	for _, opt := range so {
@@ -59,15 +59,43 @@ func NewSubscriptionWithoutNamespace(name string, so ...SubscriptionOption) *v1a
 	return s
 }
 
+func WithSubscriptionUID(uid types.UID) SubscriptionOption {
+	return func(s *v1alpha1.Subscription) {
+		s.UID = uid
+	}
+}
+
+func WithSubscriptionGenerateName(generateName string) SubscriptionOption {
+	return func(c *v1alpha1.Subscription) {
+		c.ObjectMeta.GenerateName = generateName
+	}
+}
+
 // WithInitSubscriptionConditions initializes the Subscriptions's conditions.
 func WithInitSubscriptionConditions(s *v1alpha1.Subscription) {
 	s.Status.InitializeConditions()
+}
+
+func WithSubscriptionReady(s *v1alpha1.Subscription) {
+	s.Status = *v1alpha1.TestHelper.ReadySubscriptionStatus()
 }
 
 // TODO: this can be a runtime object
 func WithSubscriptionDeleted(s *v1alpha1.Subscription) {
 	t := metav1.NewTime(time.Unix(1e9, 0))
 	s.ObjectMeta.SetDeletionTimestamp(&t)
+}
+
+func WithSubscriptionOwnerReferences(ownerReferences []metav1.OwnerReference) SubscriptionOption {
+	return func(c *v1alpha1.Subscription) {
+		c.ObjectMeta.OwnerReferences = ownerReferences
+	}
+}
+
+func WithSubscriptionLabels(labels map[string]string) SubscriptionOption {
+	return func(c *v1alpha1.Subscription) {
+		c.ObjectMeta.Labels = labels
+	}
 }
 
 func WithSubscriptionChannel(gvk metav1.GroupVersionKind, name string) SubscriptionOption {

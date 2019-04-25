@@ -55,16 +55,6 @@ rules:
       - watch
       - create
       - update
-  - apiGroups:
-      - networking.istio.io
-    resources:
-      - virtualservices
-    verbs:
-      - get
-      - list
-      - watch
-      - create
-      - update
 
 ---
 
