@@ -92,8 +92,12 @@ func WithChannelProvisioner(gvk metav1.GroupVersionKind, name string) ChannelOpt
 
 func WithChannelAddress(hostname string) ChannelOption {
 	return func(c *v1alpha1.Channel) {
-		c.Status.Address.Hostname = hostname
+		c.Status.SetAddress(hostname)
 	}
+}
+
+func WithChannelReady(c *v1alpha1.Channel) {
+	c.Status = *v1alpha1.TestHelper.ReadyChannelStatus()
 }
 
 func WithChannelSubscribers(subscribers []duckv1alpha1.ChannelSubscriberSpec) ChannelOption {
@@ -101,5 +105,23 @@ func WithChannelSubscribers(subscribers []duckv1alpha1.ChannelSubscriberSpec) Ch
 		c.Spec.Subscribable = &duckv1alpha1.Subscribable{
 			Subscribers: subscribers,
 		}
+	}
+}
+
+func WithChannelGenerateName(generateName string) ChannelOption {
+	return func(c *v1alpha1.Channel) {
+		c.ObjectMeta.GenerateName = generateName
+	}
+}
+
+func WithChannelLabels(labels map[string]string) ChannelOption {
+	return func(c *v1alpha1.Channel) {
+		c.ObjectMeta.Labels = labels
+	}
+}
+
+func WithChannelOwnerReferences(ownerReferences []metav1.OwnerReference) ChannelOption {
+	return func(c *v1alpha1.Channel) {
+		c.ObjectMeta.OwnerReferences = ownerReferences
 	}
 }
