@@ -159,7 +159,7 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 		}
 	}
 
-	args := &resources.ContainerArguments{
+	args := resources.ContainerArguments{
 		Source:             source,
 		Name:               source.Name,
 		Namespace:          source.Namespace,
@@ -171,7 +171,7 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 		Labels:             labels,
 	}
 
-	err := r.setSinkURIArg(ctx, source, args)
+	err := r.setSinkURIArg(ctx, source, &args)
 	if err != nil {
 		r.Recorder.Eventf(source, corev1.EventTypeWarning, "SetSinkURIFailed", "Failed to set Sink URI: %v", err)
 		return err
@@ -197,7 +197,7 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 	}
 
 	// Update Deployment spec if it's changed
-	expected := resources.MakeDeployment(nil, args)
+	expected := resources.MakeDeployment(args)
 	// Since the Deployment spec has fields defaulted by the webhook, it won't
 	// be equal to expected. Use DeepDerivative to compare only the fields that
 	// are set in expected.
@@ -273,8 +273,8 @@ func (r *Reconciler) getDeployment(ctx context.Context, source *v1alpha1.Contain
 	return nil, errors.NewNotFound(schema.GroupResource{}, "")
 }
 
-func (r *Reconciler) createDeployment(ctx context.Context, source *v1alpha1.ContainerSource, org *appsv1.Deployment, args *resources.ContainerArguments) (*appsv1.Deployment, error) {
-	deployment := resources.MakeDeployment(org, args)
+func (r *Reconciler) createDeployment(ctx context.Context, source *v1alpha1.ContainerSource, org *appsv1.Deployment, args resources.ContainerArguments) (*appsv1.Deployment, error) {
+	deployment := resources.MakeDeployment(args)
 	return r.KubeClientSet.AppsV1().Deployments(source.Namespace).Create(deployment)
 }
 

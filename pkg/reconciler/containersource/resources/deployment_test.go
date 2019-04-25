@@ -26,7 +26,7 @@ import (
 )
 
 func TestMakeDeployment_sinkoverrideannotationlabelnotallowed(t *testing.T) {
-	got := MakeDeployment(nil, &ContainerArguments{
+	got := MakeDeployment(ContainerArguments{
 		Name:      "test-name",
 		Namespace: "test-namespace",
 		Image:     "test-image",
@@ -121,7 +121,7 @@ func TestMakeDeployment_sinkoverrideannotationlabelnotallowed(t *testing.T) {
 }
 
 func TestMakeDeployment_sink(t *testing.T) {
-	got := MakeDeployment(nil, &ContainerArguments{
+	got := MakeDeployment(ContainerArguments{
 		Name:      "test-name",
 		Namespace: "test-namespace",
 		Image:     "test-image",
@@ -206,7 +206,7 @@ func TestMakeDeployment_sink(t *testing.T) {
 }
 
 func TestMakeDeployment_sinkinargs(t *testing.T) {
-	got := MakeDeployment(nil, &ContainerArguments{
+	got := MakeDeployment(ContainerArguments{
 		Name:      "test-name",
 		Namespace: "test-namespace",
 		Image:     "test-image",

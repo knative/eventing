@@ -28,12 +28,10 @@ import (
 
 const sourceLabelKey = "eventing.knative.dev/source"
 
-func MakeDeployment(org *appsv1.Deployment, args *ContainerArguments) *appsv1.Deployment {
+func MakeDeployment(args ContainerArguments) *appsv1.Deployment {
 
-	containerArgs := []string(nil)
-	if args != nil {
-		containerArgs = args.Args
-	}
+	containerArgs := args.Args
+
 	// if sink is already in the provided args.Args, don't attempt to add
 	if !args.SinkInArgs {
 		remote := fmt.Sprintf("--sink=%s", args.Sink)
@@ -107,7 +105,7 @@ func MakeDeployment(org *appsv1.Deployment, args *ContainerArguments) *appsv1.De
 	return deploy
 }
 
-func sinkArg(args *ContainerArguments) string {
+func sinkArg(args ContainerArguments) string {
 	if args.SinkInArgs {
 		for _, a := range args.Args {
 			if strings.HasPrefix(a, "--sink=") {

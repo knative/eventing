@@ -120,6 +120,10 @@ func (l *Listers) GetCronJobSourceLister() sourcelisters.CronJobSourceLister {
 	return sourcelisters.NewCronJobSourceLister(l.indexerFor(&sourcesv1alpha1.CronJobSource{}))
 }
 
+func (l *Listers) GetContainerSourceLister() sourcelisters.ContainerSourceLister {
+	return sourcelisters.NewContainerSourceLister(l.indexerFor(&sourcesv1alpha1.ContainerSource{}))
+}
+
 // GetGatewayLister gets lister for Istio Gateway resource.
 func (l *Listers) GetGatewayLister() istiolisters.GatewayLister {
 	return istiolisters.NewGatewayLister(l.indexerFor(&istiov1alpha3.Gateway{}))
