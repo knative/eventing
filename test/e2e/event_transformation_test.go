@@ -122,10 +122,11 @@ func TestEventTransformation(t *testing.T) {
 
 	// check if the logging service receives the correct number of event messages
 	expectedContentCount := len(subscriptionNames1) * len(subscriptionNames2)
-	podName := loggerPod.Name
-	containerName := loggerPod.Spec.Containers[0].Name
-	if err := WaitForLogContentCount(clients, podName, containerName, ns, transformedEventBody, expectedContentCount); err != nil {
-		logPodLogsForDebugging(clients, podName, containerName, ns, t.Logf)
+	loggerContainerName := loggerPod.Spec.Containers[0].Name
+	if err := WaitForLogContentCount(clients, loggerPodName, loggerContainerName, ns, transformedEventBody, expectedContentCount); err != nil {
+		logPodLogsForDebugging(clients, transformationPodName, transformationPod.Spec.Containers[0].Name, ns, t.Logf)
+		logPodLogsForDebugging(clients, loggerPodName, loggerContainerName, ns, t.Logf)
+		logPodLogsForDebugging(clients, eventSource1, "sendevent", ns, t.Logf)
 		t.Fatalf("String %q does not appear %d times in logs of logger pod %q: %v", transformedEventBody, expectedContentCount, loggerPod.Name, err)
 	}
 }
