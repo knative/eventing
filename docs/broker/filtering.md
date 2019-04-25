@@ -88,13 +88,9 @@ promotion of extension attributes to official attributes. The prefix `ce` was
 chosen for succintness and its suggestion that CloudEvents is the operative
 specification.
 
-Data fields are available to the expression under the prefix `data`.
-
-Parsing dynamic extension attributes and data fields may be costly. In this
-initial proposal, the Trigger must explicitly enable dynamic parsing by setting
-boolean fields `parseExtensions` and/or `parseData`. Future work may
-eliminate the need for these fields by detecting the use of extension attributes
-and/or data fields in the expression.
+Data fields are available to the expression under the prefix `data`, if the data
+serialization format used is known and can be parsed by the filtering
+implementation.
 
 ### Why CEL?
 
@@ -239,7 +235,6 @@ _The `>` syntax is a standard yaml multiline string._
 spec:
   filter:
     cel:
-      parseExtensions: true
       expression: >
         ce.type == "com.github.pull.create" ||
          (ce.type == "com.github.issue.create" &&
@@ -260,7 +255,6 @@ resolved, dynamic integer fields in CEL must be compared as floats._
 spec:
   filter:
     cel:
-      parseData: true
       expression: >
         ce.type == "dev.knative.observation" &&
         data.latency > 300.0
