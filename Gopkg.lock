@@ -1400,7 +1400,6 @@
     "github.com/knative/test-infra/tools/dep-collector",
     "github.com/nats-io/go-nats-streaming",
     "github.com/nats-io/nats-streaming-server/server",
-    "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/robfig/cron",
     "go.opencensus.io/exporter/prometheus",
     "go.opencensus.io/stats",
