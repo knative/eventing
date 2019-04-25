@@ -70,8 +70,9 @@ func NewController(
 ) *controller.Impl {
 
 	r := &Reconciler{
-		Base:         reconciler.NewBase(opt, controllerAgentName),
-		brokerLister: brokerInformer.Lister(),
+		Base:            reconciler.NewBase(opt, controllerAgentName),
+		eventTypeLister: eventTypeInformer.Lister(),
+		brokerLister:    brokerInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
 
