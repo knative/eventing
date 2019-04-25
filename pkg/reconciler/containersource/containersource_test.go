@@ -18,9 +18,10 @@ package containersource
 
 import (
 	"github.com/knative/eventing/pkg/utils"
+	"k8s.io/apimachinery/pkg/runtime"
 	"testing"
 
-	//clientgotesting "k8s.io/client-go/testing"
+	clientgotesting "k8s.io/client-go/testing"
 
 	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
@@ -38,7 +39,7 @@ import (
 	. "github.com/knative/eventing/pkg/reconciler/testing"
 	. "github.com/knative/pkg/reconciler/testing"
 
-	//sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	v1 "k8s.io/api/apps/v1"
 )
 
@@ -125,6 +126,32 @@ func TestAllCases(t *testing.T) {
 			Name: "key not found",
 			// Make sure Reconcile handles good keys that don't exist.
 			Key: "foo/not-found",
+		}, {
+			Name: "missing sink",
+			Objects: []runtime.Object{
+				NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+						Sink:  &sinkRef,
+					}),
+				),
+			},
+			Key:     testNS + "/" + sourceName,
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "SetSinkURIFailed", `Failed to set Sink URI: channels.eventing.knative.dev "testsink" not found`),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+						Sink:  &sinkRef,
+					}),
+					// Status Update:
+					WithInitContainerSourceConditions,
+					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "/testsink": channels.eventing.knative.dev "testsink" not found"`),
+				),
+			}},
 		},
 	}
 
