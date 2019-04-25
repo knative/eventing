@@ -1,0 +1,9 @@
+approvers:
+  - gcp-pubsub-approvers
+
+reviewers:
+  - gcp-pubsub-reviewers
+
+labels:
+  - area/GCP-PubSub
+

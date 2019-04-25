@@ -17,46 +17,33 @@ limitations under the License.
 package cronjobsource
 
 import (
-	"github.com/knative/eventing/pkg/reconciler/cronjobsource/resources"
-	"github.com/knative/eventing/pkg/utils"
-	"k8s.io/apimachinery/pkg/runtime"
 	"os"
 	"testing"
 
-	clientgotesting "k8s.io/client-go/testing"
-
-	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	"github.com/knative/eventing/pkg/reconciler"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	"github.com/knative/pkg/controller"
-	logtesting "github.com/knative/pkg/logging/testing"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	//"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime"
 	kubeinformers "k8s.io/client-go/informers"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
+	clientgotesting "k8s.io/client-go/testing"
+
+	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
+	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/cronjobsource/resources"
+	"github.com/knative/eventing/pkg/utils"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/controller"
+	logtesting "github.com/knative/pkg/logging/testing"
 
 	. "github.com/knative/eventing/pkg/reconciler/testing"
 	. "github.com/knative/pkg/reconciler/testing"
-
-	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	v1 "k8s.io/api/apps/v1"
 )
 
 var (
-	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
-	// truncates to seconds to match the loss of precision during serialization.
-	deletionTime = metav1.Now().Rfc3339Copy()
-
-	trueVal = true
-
-	sinkGVK = metav1.GroupVersionKind{
-		Group:   "eventing.knative.dev",
-		Version: "v1alpha1",
-		Kind:    "Channel",
-	}
 	sinkRef = corev1.ObjectReference{
 		Name:       sinkName,
 		Kind:       "Channel",
@@ -69,7 +56,6 @@ var (
 const (
 	image        = "github.com/knative/test/image"
 	sourceName   = "test-cronjob-source"
-	sourceUID    = "1234-5678-90"
 	testNS       = "testnamespace"
 	testSchedule = "*/2 * * * *"
 	testData     = "data"
@@ -79,7 +65,7 @@ const (
 
 func init() {
 	// Add types to scheme
-	_ = v1.AddToScheme(scheme.Scheme)
+	_ = appsv1.AddToScheme(scheme.Scheme)
 	_ = corev1.AddToScheme(scheme.Scheme)
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
 
@@ -282,7 +268,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func makeReceiveAdapter() *v1.Deployment {
+func makeReceiveAdapter() *appsv1.Deployment {
 	source := NewCronSourceJob(sourceName, testNS,
 		WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 			Schedule: testSchedule,

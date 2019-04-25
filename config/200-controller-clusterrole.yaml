@@ -79,4 +79,7 @@ rules:
       - "cronjobsources"
       - "cronjobsources/status"
       - "cronjobsources/finalizers"
+      - "containersources"
+      - "containersources/status"
+      - "containersources/finalizers"
     verbs: *everything

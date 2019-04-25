@@ -28,7 +28,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -116,7 +115,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	// Get the CronJobSource resource with this namespace/name
 	original, err := r.cronjobLister.CronJobSources(namespace).Get(name)
-	if apierrs.IsNotFound(err) {
+	if apierrors.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
 		logging.FromContext(ctx).Error("CronJobSource key in work queue no longer exists", zap.Any("key", key))
 		return nil

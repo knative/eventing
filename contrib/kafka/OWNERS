@@ -1,0 +1,9 @@
+approvers:
+  - kafka-approvers
+
+reviewers:
+  - kafka-reviewers
+
+labels:
+  - area/Kafka
+
