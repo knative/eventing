@@ -42,7 +42,7 @@ import (
 	. "github.com/knative/pkg/reconciler/testing"
 
 	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	v1 "k8s.io/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
 )
 
 var (
@@ -79,7 +79,7 @@ const (
 
 func init() {
 	// Add types to scheme
-	_ = v1.AddToScheme(scheme.Scheme)
+	_ = appsv1.AddToScheme(scheme.Scheme)
 	_ = corev1.AddToScheme(scheme.Scheme)
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
 
@@ -282,7 +282,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func makeReceiveAdapter() *v1.Deployment {
+func makeReceiveAdapter() *appsv1.Deployment {
 	source := NewCronSourceJob(sourceName, testNS,
 		WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 			Schedule: testSchedule,

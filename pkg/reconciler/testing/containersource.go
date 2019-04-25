@@ -53,9 +53,21 @@ func WithContainerSourceSinkNotFound(msg string) ContainerSourceOption {
 	}
 }
 
+func WithContainerSourceSinkMissing(msg string) ContainerSourceOption {
+	return func(s *v1alpha1.ContainerSource) {
+		s.Status.MarkNoSink("Missing", msg)
+	}
+}
+
 func WithContainerSourceSink(uri string) ContainerSourceOption {
 	return func(s *v1alpha1.ContainerSource) {
 		s.Status.MarkSink(uri)
+	}
+}
+
+func WithContainerSourceDeploying(msg string) ContainerSourceOption {
+	return func(s *v1alpha1.ContainerSource) {
+		s.Status.MarkDeploying("DeploymentCreated", msg)
 	}
 }
 

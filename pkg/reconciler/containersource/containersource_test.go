@@ -17,6 +17,7 @@ limitations under the License.
 package containersource
 
 import (
+	"fmt"
 	"github.com/knative/eventing/pkg/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 	"testing"
@@ -29,8 +30,9 @@ import (
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	//metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	//"k8s.io/apimachinery/pkg/runtime"
 	kubeinformers "k8s.io/client-go/informers"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
@@ -48,7 +50,6 @@ const (
 	sourceName = "test-container-source"
 	sourceUID  = "1234-5678-90"
 	testNS     = "testnamespace"
-	testData   = "data"
 	sinkName   = "testsink"
 )
 
@@ -61,29 +62,35 @@ var (
 		Kind:       "Channel",
 		APIVersion: "eventing.knative.dev/v1alpha1",
 	}
+	nonsinkRef = corev1.ObjectReference{
+		Name:       sinkName,
+		Kind:       "Trigger",
+		APIVersion: "eventing.knative.dev/v1alpha1",
+	}
 	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
 	sinkURI = "http://" + sinkDNS + "/"
 )
 
-const (
-	containerSourceName = "testcontainersource"
-	containerSourceUID  = "2a2208d1-ce67-11e8-b3a3-42010a8a00af"
-	deployGeneratedName = "" //sad trombone
-
-	addressableDNS = "addressable.sink.svc.cluster.local"
-
-	addressableName       = "testsink"
-	addressableKind       = "Sink"
-	addressableAPIVersion = "duck.knative.dev/v1alpha1"
-
-	unaddressableName       = "testunaddressable"
-	unaddressableKind       = "KResource"
-	unaddressableAPIVersion = "duck.knative.dev/v1alpha1"
-
-	sinkServiceName       = "testsinkservice"
-	sinkServiceKind       = "Service"
-	sinkServiceAPIVersion = "v1"
-)
+//
+//const (
+//	containerSourceName = "testcontainersource"
+//	containerSourceUID  = "2a2208d1-ce67-11e8-b3a3-42010a8a00af"
+//	deployGeneratedName = "" //sad trombone
+//
+//	addressableDNS = "addressable.sink.svc.cluster.local"
+//
+//	addressableName       = "testsink"
+//	addressableKind       = "Sink"
+//	addressableAPIVersion = "duck.knative.dev/v1alpha1"
+//
+//	unaddressableName       = "testunaddressable"
+//	unaddressableKind       = "KResource"
+//	unaddressableAPIVersion = "duck.knative.dev/v1alpha1"
+//
+//	sinkServiceName       = "testsinkservice"
+//	sinkServiceKind       = "Service"
+//	sinkServiceAPIVersion = "v1"
+//)
 
 func init() {
 	// Add types to scheme
@@ -152,7 +159,130 @@ func TestAllCases(t *testing.T) {
 					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "/testsink": channels.eventing.knative.dev "testsink" not found"`),
 				),
 			}},
+		}, {
+			Name: "sink not addressable",
+			Objects: []runtime.Object{
+				NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+						Sink:  &nonsinkRef,
+					}),
+				),
+				NewTrigger(sinkName, testNS, ""),
+			},
+			Key:     testNS + "/" + sourceName,
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "SetSinkURIFailed", `Failed to set Sink URI: sink "testnamespace/testsink" (eventing.knative.dev/v1alpha1, Kind=Trigger) does not contain address`),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+						Sink:  &nonsinkRef,
+					}),
+					// Status Update:
+					WithInitContainerSourceConditions,
+					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "/testsink": sink "testnamespace/testsink" (eventing.knative.dev/v1alpha1, Kind=Trigger) does not contain address"`),
+				),
+			}},
+		}, {
+			Name: "sink not ready",
+			Objects: []runtime.Object{
+				NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+						Sink:  &sinkRef,
+					}),
+				),
+				NewChannel(sinkName, testNS),
+			},
+			Key:     testNS + "/" + sourceName,
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "SetSinkURIFailed", `Failed to set Sink URI: sink "testnamespace/testsink" (eventing.knative.dev/v1alpha1, Kind=Channel) contains an empty hostname`),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+						Sink:  &sinkRef,
+					}),
+					// Status Update:
+					WithInitContainerSourceConditions,
+					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "/testsink": sink "testnamespace/testsink" (eventing.knative.dev/v1alpha1, Kind=Channel) contains an empty hostname"`),
+				),
+			}},
+		}, {
+			Name: "sink is nil",
+			Objects: []runtime.Object{
+				NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+					}),
+				),
+			},
+			Key:     testNS + "/" + sourceName,
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "SetSinkURIFailed", `Failed to set Sink URI: Sink missing from spec`),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+					}),
+					// Status Update:
+					WithInitContainerSourceConditions,
+					WithContainerSourceSinkMissing("Sink missing from spec"),
+				),
+			}},
+		}, {
+			Name: "valid",
+			Objects: []runtime.Object{
+				NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+						Sink:  &sinkRef,
+					}),
+				),
+				NewChannel(sinkName, testNS,
+					WithChannelAddress(sinkDNS),
+				),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "DeploymentCreated", `Created deployment ""`), // TODO on noes
+				Eventf(corev1.EventTypeNormal, "ContainerSourceReconciled", `ContainerSource reconciled: "testnamespace/test-container-source"`),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+						Sink:  &sinkRef,
+					}),
+					// Status Update:
+					WithInitContainerSourceConditions,
+					WithContainerSourceSink(sinkURI),
+					WithContainerSourceDeploying(`Created deployment ""`),
+				),
+			}},
+			WantCreates: []metav1.Object{
+				makeDeployment(NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+					}))),
+			},
 		},
+
+		//Name:       "valid containersource, sink is provided",
+		//Name:       "valid containersource, labels and annotations given",
+		//Name:       "valid containersource, sink, and deployment",
+		//Name:       "valid containersource, sink, but deployment needs update",
+		//Name:       "Error for create deployment",
+		//Name:       "Error for get source, other than not found",
+		//Name:       "valid containersource, sink is a k8s service",
+
 	}
 
 	defer logtesting.ClearAll()
@@ -166,19 +296,6 @@ func TestAllCases(t *testing.T) {
 
 }
 
-//		Name:       "valid containersource, but sink does not exist",
-//Name:       "valid containersource, but sink is not addressable",
-//Name:       "valid containersource, sink is addressable",
-//Name:       "valid containersource, sink is addressable, fields filled in",
-//Name:       "valid containersource, sink is Addressable but sink is nil",
-//Name:       "invalid containersource, sink is nil",
-//Name:       "valid containersource, sink is provided",
-//Name:       "valid containersource, labels and annotations given",
-//Name:       "valid containersource, sink, and deployment",
-//Name:       "valid containersource, sink, but deployment needs update",
-//Name:       "Error for create deployment",
-//Name:       "Error for get source, other than not found",
-//Name:       "valid containersource, sink is a k8s service",
 //
 //func getContainerSource() *sourcesv1alpha1.ContainerSource {
 //	obj := &sourcesv1alpha1.ContainerSource{
@@ -293,46 +410,46 @@ func TestAllCases(t *testing.T) {
 //	}
 //}
 //
-//func getDeployment(source *sourcesv1alpha1.ContainerSource) *appsv1.Deployment {
-//	addressableURI := fmt.Sprintf("http://%s/", addressableDNS)
-//	args := append(source.Spec.Args, fmt.Sprintf("--sink=%s", addressableURI))
-//	env := append(source.Spec.Env, corev1.EnvVar{Name: "SINK", Value: addressableURI})
-//	return &appsv1.Deployment{
-//		TypeMeta: deploymentType(),
-//		ObjectMeta: metav1.ObjectMeta{
-//			GenerateName:    fmt.Sprintf("%s-", source.Name),
-//			Namespace:       source.Namespace,
-//			OwnerReferences: getOwnerReferences(),
-//		},
-//		Spec: appsv1.DeploymentSpec{
-//			Selector: &metav1.LabelSelector{
-//				MatchLabels: map[string]string{
-//					"eventing.knative.dev/source": source.Name,
-//				},
-//			},
-//			Template: corev1.PodTemplateSpec{
-//				ObjectMeta: metav1.ObjectMeta{
-//					Annotations: map[string]string{
-//						"sidecar.istio.io/inject": "true",
-//					},
-//					Labels: map[string]string{
-//						"eventing.knative.dev/source": source.Name,
-//					},
-//				},
-//				Spec: corev1.PodSpec{
-//					Containers: []corev1.Container{{
-//						Name:            "source",
-//						Image:           source.Spec.Image,
-//						Args:            args,
-//						Env:             env,
-//						ImagePullPolicy: corev1.PullIfNotPresent,
-//					}},
-//					ServiceAccountName: source.Spec.ServiceAccountName,
-//				},
-//			},
-//		},
-//	}
-//}
+func makeDeployment(source *sourcesv1alpha1.ContainerSource) *appsv1.Deployment {
+	args := append(source.Spec.Args, fmt.Sprintf("--sink=%s", sinkURI))
+	env := append(source.Spec.Env, corev1.EnvVar{Name: "SINK", Value: sinkURI})
+	return &appsv1.Deployment{
+		TypeMeta: deploymentType(),
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName:    fmt.Sprintf("%s-", source.Name),
+			Namespace:       source.Namespace,
+			OwnerReferences: getOwnerReferences(),
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"eventing.knative.dev/source": source.Name,
+				},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"sidecar.istio.io/inject": "true",
+					},
+					Labels: map[string]string{
+						"eventing.knative.dev/source": source.Name,
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{
+						Name:            "source",
+						Image:           source.Spec.Image,
+						Args:            args,
+						Env:             env,
+						ImagePullPolicy: corev1.PullIfNotPresent,
+					}},
+					ServiceAccountName: source.Spec.ServiceAccountName,
+				},
+			},
+		},
+	}
+}
+
 //
 //func containerSourceType() metav1.TypeMeta {
 //	return metav1.TypeMeta{
@@ -341,12 +458,13 @@ func TestAllCases(t *testing.T) {
 //	}
 //}
 //
-//func deploymentType() metav1.TypeMeta {
-//	return metav1.TypeMeta{
-//		APIVersion: appsv1.SchemeGroupVersion.String(),
-//		Kind:       "Deployment",
-//	}
-//}
+func deploymentType() metav1.TypeMeta {
+	return metav1.TypeMeta{
+		APIVersion: appsv1.SchemeGroupVersion.String(),
+		Kind:       "Deployment",
+	}
+}
+
 //
 //func om(namespace, name string) metav1.ObjectMeta {
 //	return metav1.ObjectMeta{
@@ -356,13 +474,13 @@ func TestAllCases(t *testing.T) {
 //	}
 //}
 //
-//func getOwnerReferences() []metav1.OwnerReference {
-//	return []metav1.OwnerReference{{
-//		APIVersion:         sourcesv1alpha1.SchemeGroupVersion.String(),
-//		Kind:               "ContainerSource",
-//		Name:               containerSourceName,
-//		Controller:         &trueVal,
-//		BlockOwnerDeletion: &trueVal,
-//		UID:                containerSourceUID,
-//	}}
-//}
+func getOwnerReferences() []metav1.OwnerReference {
+	return []metav1.OwnerReference{{
+		APIVersion:         sourcesv1alpha1.SchemeGroupVersion.String(),
+		Kind:               "ContainerSource",
+		Name:               sourceName,
+		Controller:         &trueVal,
+		BlockOwnerDeletion: &trueVal,
+		UID:                sourceUID,
+	}}
+}
