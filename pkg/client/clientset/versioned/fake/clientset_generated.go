@@ -22,6 +22,8 @@ import (
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
 	fakeeventingv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1/fake"
+	sourcesv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha1"
+	fakesourcesv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -79,4 +81,14 @@ func (c *Clientset) EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interfac
 // Eventing retrieves the EventingV1alpha1Client
 func (c *Clientset) Eventing() eventingv1alpha1.EventingV1alpha1Interface {
 	return &fakeeventingv1alpha1.FakeEventingV1alpha1{Fake: &c.Fake}
+}
+
+// SourcesV1alpha1 retrieves the SourcesV1alpha1Client
+func (c *Clientset) SourcesV1alpha1() sourcesv1alpha1.SourcesV1alpha1Interface {
+	return &fakesourcesv1alpha1.FakeSourcesV1alpha1{Fake: &c.Fake}
+}
+
+// Sources retrieves the SourcesV1alpha1Client
+func (c *Clientset) Sources() sourcesv1alpha1.SourcesV1alpha1Interface {
+	return &fakesourcesv1alpha1.FakeSourcesV1alpha1{Fake: &c.Fake}
 }

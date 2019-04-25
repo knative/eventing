@@ -26,7 +26,7 @@ rules:
       - "services"
       - "events"
       - "serviceaccounts"
-    verbs:
+    verbs: &everything
       - "get"
       - "list"
       - "create"
@@ -40,42 +40,21 @@ rules:
       - "networking.istio.io"
     resources:
       - "virtualservices"
-    verbs:
-      - "get"
-      - "list"
-      - "create"
-      - "update"
-      - "delete"
-      - "patch"
-      - "watch"
+    verbs: *everything
 
   # Brokers and the namespace annotation controllers manipulate Deployments.
   - apiGroups:
       - "apps"
     resources:
       - "deployments"
-    verbs:
-      - "get"
-      - "list"
-      - "create"
-      - "update"
-      - "delete"
-      - "patch"
-      - "watch"
+    verbs: *everything
 
   # The namespace annotation controller needs to manipulate RoleBindings.
   - apiGroups:
       - "rbac.authorization.k8s.io"
     resources:
       - "rolebindings"
-    verbs:
-      - "get"
-      - "list"
-      - "create"
-      - "update"
-      - "delete"
-      - "patch"
-      - "watch"
+    verbs: *everything
 
   # Our own resources and statuses we care about.
   - apiGroups:
@@ -91,11 +70,13 @@ rules:
       - "subscriptions/status"
       - "triggers"
       - "triggers/status"
-    verbs:
-      - "get"
-      - "list"
-      - "create"
-      - "update"
-      - "delete"
-      - "patch"
-      - "watch"
+    verbs: *everything
+
+  # Source resources and statuses we care about.
+  - apiGroups:
+      - "sources.eventing.knative.dev"
+    resources:
+      - "cronjobsources"
+      - "cronjobsources/status"
+      - "cronjobsources/finalizers"
+    verbs: *everything
