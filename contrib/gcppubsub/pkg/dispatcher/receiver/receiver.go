@@ -72,7 +72,7 @@ func (r *Receiver) newMessageReceiver() (*provisioners.MessageReceiver, error) {
 	return provisioners.NewMessageReceiver(
 		r.sendEventToTopic,
 		r.logger.Sugar(),
-		provisioners.ResolveChannelFromHostHeader(provisioners.ResolveChannelFromHostFunc(r.getChannelReferenceFromHost)))
+		provisioners.ResolveChannelFromHostHeader(r.getChannelReferenceFromHost))
 }
 func (r *Receiver) getChannelReferenceFromHost(host string) (provisioners.ChannelReference, error) {
 	chMap := r.getHostToChannelMap()

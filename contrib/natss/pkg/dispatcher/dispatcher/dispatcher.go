@@ -76,6 +76,7 @@ func NewDispatcher(natssURL, clusterID string, logger *zap.Logger) (*Subscriptio
 		clusterID:     clusterID,
 		subscriptions: make(map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription),
 	}
+	d.setHostToChannelMap(map[string]provisioners.ChannelReference{})
 	receiver, err := provisioners.NewMessageReceiver(
 		createReceiverFunction(d, logger.Sugar()),
 		logger.Sugar(),
@@ -84,8 +85,6 @@ func NewDispatcher(natssURL, clusterID string, logger *zap.Logger) (*Subscriptio
 		return nil, err
 	}
 	d.receiver = receiver
-	d.setHostToChannelMap(map[string]provisioners.ChannelReference{})
-
 	return d, nil
 }
 

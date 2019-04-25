@@ -24,7 +24,6 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/provisioners/inmemory/clusterchannelprovisioner"
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -50,7 +49,6 @@ func main() {
 
 	// Add custom types to this array to get them into the manager's scheme.
 	eventingv1alpha1.AddToScheme(mgr.GetScheme())
-	istiov1alpha3.AddToScheme(mgr.GetScheme())
 
 	// The controllers for both the ClusterChannelProvisioner and the Channels created by that
 	// ClusterChannelProvisioner run in this process.
