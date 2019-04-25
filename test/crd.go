@@ -136,7 +136,7 @@ func EventSenderPod(name string, namespace string, sink string, event *CloudEven
 			Containers: []corev1.Container{{
 				Name:            "sendevent",
 				Image:           pkgTest.ImagePath("sendevent"),
-				ImagePullPolicy: corev1.PullAlways, // TODO: this might not be wanted for local.
+				ImagePullPolicy: corev1.PullPolicy(EventingFlags.ImagePullPolicy),
 				Args: []string{
 					"-event-id",
 					event.ID,
@@ -171,7 +171,7 @@ func EventLoggerPod(name string, namespace string, selector map[string]string) *
 			Containers: []corev1.Container{{
 				Name:            "logevents",
 				Image:           pkgTest.ImagePath("logevents"),
-				ImagePullPolicy: corev1.PullAlways, // TODO: this might not be wanted for local.
+				ImagePullPolicy: corev1.PullPolicy(EventingFlags.ImagePullPolicy),
 			}},
 			RestartPolicy: corev1.RestartPolicyAlways,
 		},
@@ -191,7 +191,7 @@ func EventTransformationPod(name string, namespace string, selector map[string]s
 			Containers: []corev1.Container{{
 				Name:            "transformevents",
 				Image:           pkgTest.ImagePath("transformevents"),
-				ImagePullPolicy: corev1.PullAlways, // TODO: this might not be wanted for local.
+				ImagePullPolicy: corev1.PullPolicy(EventingFlags.ImagePullPolicy),
 				Args: []string{
 					"-msg-postfix",
 					msgPostfix,

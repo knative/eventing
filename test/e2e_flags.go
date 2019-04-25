@@ -23,6 +23,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"k8s.io/api/core/v1"
+	"os"
 	"strings"
 
 	"github.com/knative/pkg/logging"
@@ -70,6 +72,7 @@ func isValid(provisioner string) bool {
 type EventingEnvironmentFlags struct {
 	Provisioners
 	RunFromMain bool
+	ImagePullPolicy string // Image Pull Policy for the test images
 }
 
 func initializeEventingFlags() *EventingEnvironmentFlags {
@@ -77,6 +80,14 @@ func initializeEventingFlags() *EventingEnvironmentFlags {
 
 	flag.Var(&f.Provisioners, "clusterChannelProvisioners", "The names of the Channel's clusterChannelProvisioners, which are separated by comma.")
 	flag.BoolVar(&f.RunFromMain, "runFromMain", false, "If runFromMain is set to false, the TestMain will be skipped when we run tests.")
+
+	imagePullPolicy := string(v1.PullIfNotPresent)
+
+	if os.Getenv("IMAGE_PULL_POLICY") != imagePullPolicy {
+		imagePullPolicy = string(v1.PullAlways)
+	}
+
+	flag.StringVar(&f.ImagePullPolicy, "imagePullPolicy", imagePullPolicy, "Provide the image pull policy for the test images. Valid value is " + string(v1.PullIfNotPresent) + ", any other value will default to " + string(v1.PullAlways) + ".")
 
 	flag.Parse()
 

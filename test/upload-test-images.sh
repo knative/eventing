@@ -27,9 +27,16 @@ function upload_test_images() {
       ko publish -B ${image}
       if [ -n "$docker_tag" ]; then
           image=$KO_DOCKER_REPO/${image_name}
-          local digest=$(gcloud container images list-tags --filter="tags:latest" --format='get(digest)' ${image})
-          echo "Tagging ${image}@${digest} with $docker_tag"
-          gcloud -q container images add-tag ${image}@${digest} ${image}:$docker_tag
+          if [[ $KO_DOCKER_REPO = "ko.local" ]]
+          then
+              local digest=$(docker images | grep $image | head -1 | awk '{print $2}')
+              echo "Tagging ${image}@${digest} with $docker_tag"
+              docker tag $image:$digest $image:$docker_tag
+          else
+              local digest=$(gcloud container images list-tags --filter="tags:latest" --format='get(digest)' ${image})
+              echo "Tagging ${image}@${digest} with $docker_tag"
+              gcloud -q container images add-tag ${image}@${digest} ${image}:$docker_tag
+          fi
       fi
   done
 }
