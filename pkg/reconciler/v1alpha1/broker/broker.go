@@ -140,13 +140,14 @@ func NewController(
 // converge the two. It then updates the Status block of the Broker resource
 // with the current status of the resource.
 func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
+	ctx = logging.WithLogger(ctx, r.Logger.Desugar().With(zap.String("key", key)))
+
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		r.Logger.Errorf("invalid resource key: %s", key)
+		logging.FromContext(ctx).Error("invalid resource key")
 		return nil
 	}
-	ctx = logging.WithLogger(ctx, r.Logger.Desugar().With(zap.String("key", key)))
 
 	// Get the Broker resource with this namespace/name
 	original, err := r.brokerLister.Brokers(namespace).Get(name)
@@ -163,10 +164,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	// Reconcile this copy of the Broker and then write back any status
 	// updates regardless of whether the reconcile error out.
-	err = r.reconcile(ctx, broker)
-	if err != nil {
-		logging.FromContext(ctx).Warn("Error reconciling Broker", zap.Error(err))
-		r.Recorder.Eventf(broker, corev1.EventTypeWarning, brokerReconcileError, fmt.Sprintf("Broker reconcile error: %v", err))
+	reconcileErr := r.reconcile(ctx, broker)
+	if reconcileErr != nil {
+		logging.FromContext(ctx).Warn("Error reconciling Broker", zap.Error(reconcileErr))
+		r.Recorder.Eventf(broker, corev1.EventTypeWarning, brokerReconcileError, fmt.Sprintf("Broker reconcile error: %v", reconcileErr))
 	} else {
 		logging.FromContext(ctx).Debug("Broker reconciled")
 	}
@@ -178,7 +179,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	// Requeue if the resource is not ready:
-	return err
+	return reconcileErr
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {

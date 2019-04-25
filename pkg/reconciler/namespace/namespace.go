@@ -19,6 +19,7 @@ package namespace
 import (
 	"context"
 	"fmt"
+
 	"github.com/knative/eventing/pkg/reconciler/namespace/resources"
 	"k8s.io/client-go/tools/cache"
 
@@ -87,9 +88,11 @@ func NewController(
 // converge the two. It then updates the Status block of the Namespace resource
 // with the current status of the resource.
 func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
+	ctx = logging.WithLogger(ctx, r.Logger.Desugar().With(zap.String("key", key)))
+
 	_, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		r.Logger.Errorf("invalid resource key: %s", key)
+		logging.FromContext(ctx).Error("invalid resource key")
 		return nil
 	}
 
@@ -97,7 +100,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	original, err := r.namespaceLister.Get(name)
 	if apierrs.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("namespace key in work queue no longer exists", zap.Any("key", key))
+		logging.FromContext(ctx).Error("namespace key in work queue no longer exists")
 		return nil
 	} else if err != nil {
 		return err
@@ -114,15 +117,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	// Reconcile this copy of the Namespace and then write back any status updates regardless of
 	// whether the reconcile error out.
-	err = r.reconcile(ctx, ns)
-	if err != nil {
-		logging.FromContext(ctx).Error("Error reconciling Namespace", zap.Error(err), zap.Any("key", key))
+	reconcileErr := r.reconcile(ctx, ns)
+	if reconcileErr != nil {
+		logging.FromContext(ctx).Error("Error reconciling Namespace", zap.Error(reconcileErr))
 	} else {
-		logging.FromContext(ctx).Debug("Namespace reconciled", zap.Any("key", key))
+		logging.FromContext(ctx).Debug("Namespace reconciled")
 	}
 
 	// Requeue if the resource is not ready:
-	return err
+	return reconcileErr
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error {
