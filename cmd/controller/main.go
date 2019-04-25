@@ -75,14 +75,17 @@ func main() {
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(opt.KubeClientSet, opt.ResyncPeriod)
 	eventingInformerFactory := informers.NewSharedInformerFactory(opt.EventingClientSet, opt.ResyncPeriod)
 
+	// Eventing
 	triggerInformer := eventingInformerFactory.Eventing().V1alpha1().Triggers()
 	channelInformer := eventingInformerFactory.Eventing().V1alpha1().Channels()
 	subscriptionInformer := eventingInformerFactory.Eventing().V1alpha1().Subscriptions()
 	brokerInformer := eventingInformerFactory.Eventing().V1alpha1().Brokers()
-	namespaceInformer := kubeInformerFactory.Core().V1().Namespaces()
+
+	// Kube
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
-	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
+	namespaceInformer := kubeInformerFactory.Core().V1().Namespaces()
 	configMapInformer := kubeInformerFactory.Core().V1().ConfigMaps()
+	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
 
 	// Build all of our controllers, with the clients constructed above.
 	// Add new controllers to this array.
@@ -139,13 +142,15 @@ func main() {
 	logger.Info("Starting informers.")
 	if err := kncontroller.StartInformers(
 		stopCh,
-		subscriptionInformer.Informer(),
-		configMapInformer.Informer(),
-		namespaceInformer.Informer(),
-		triggerInformer.Informer(),
-		channelInformer.Informer(),
+		// Eventing
 		brokerInformer.Informer(),
+		channelInformer.Informer(),
+		subscriptionInformer.Informer(),
+		triggerInformer.Informer(),
+		// Kube
+		configMapInformer.Informer(),
 		serviceInformer.Informer(),
+		namespaceInformer.Informer(),
 		deploymentInformer.Informer(),
 	); err != nil {
 		logger.Fatalf("Failed to start informers: %v", err)

@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -63,6 +64,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().Subscriptions().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("triggers"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().Triggers().Informer()}, nil
+
+		// Group=sources.eventing.knative.dev, Version=v1alpha1
+	case sourcesv1alpha1.SchemeGroupVersion.WithResource("cronjobsources"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1alpha1().CronJobSources().Informer()}, nil
 
 	}
 

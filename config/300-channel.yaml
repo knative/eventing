@@ -66,7 +66,6 @@ spec:
                   minLength: 1
             arguments:
               type: object
-              additionalProperties: true
             subscribable:
               type: object
               properties:

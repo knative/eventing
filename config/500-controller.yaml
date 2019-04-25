@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -49,6 +50,8 @@ spec:
             value: github.com/knative/eventing/cmd/broker/filter
           - name: BROKER_FILTER_SERVICE_ACCOUNT
             value: eventing-broker-filter
+          - name: CRONJOB_RA_IMAGE
+            value: github.com/knative/eventing/cmd/cronjob_receive_adapter
         ports:
           - containerPort: 9090
             name: metrics
