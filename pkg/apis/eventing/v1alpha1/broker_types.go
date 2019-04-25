@@ -55,15 +55,6 @@ type BrokerSpec struct {
 	//
 	// +optional
 	ChannelTemplate *ChannelSpec `json:"channelTemplate,omitempty"`
-
-	// IngressPolicy defines the Broker's policy regarding the events it can accept into the mesh or not.
-	// +optional
-	IngressPolicy *IngressPolicySpec `json:"ingressPolicy,omitempty"`
-}
-
-type IngressPolicySpec struct {
-	// AllowAny, if set to true accepts any message into the mesh. If set to false, only allows pre-registered events.
-	AllowAny bool `json:"allowAny,omitempty"`
 }
 
 // BrokerStatus represents the current state of a Broker.

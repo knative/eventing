@@ -25,11 +25,11 @@ import (
 )
 
 func TestEventTypeValidation(t *testing.T) {
-	name := "invalid type and broker"
+	name := "invalid type and source and broker"
 	broker := &EventType{Spec: EventTypeSpec{}}
 
 	want := &apis.FieldError{
-		Paths:   []string{"spec.type", "spec.broker"},
+		Paths:   []string{"spec.type", "spec.source", "spec.broker"},
 		Message: "missing field(s)",
 	}
 
@@ -50,12 +50,13 @@ func TestEventTypeSpecValidation(t *testing.T) {
 		name: "invalid eventtype spec",
 		ets:  &EventTypeSpec{},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("type", "broker")
+			fe := apis.ErrMissingField("type", "source", "broker")
 			return fe
 		}(),
 	}, {
 		name: "invalid eventtype type",
 		ets: &EventTypeSpec{
+			Source: "test-source",
 			Broker: "test-broker",
 		},
 		want: func() *apis.FieldError {
@@ -63,9 +64,20 @@ func TestEventTypeSpecValidation(t *testing.T) {
 			return fe
 		}(),
 	}, {
+		name: "invalid eventtype source",
+		ets: &EventTypeSpec{
+			Type:   "test-type",
+			Broker: "test-broker",
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("source")
+			return fe
+		}(),
+	}, {
 		name: "invalid eventtype broker",
 		ets: &EventTypeSpec{
-			Type: "test-type",
+			Type:   "test-type",
+			Source: "test-source",
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("broker")
@@ -126,6 +138,7 @@ func TestEventTypeImmutableFields(t *testing.T) {
 		current: &EventType{
 			Spec: EventTypeSpec{
 				Type:   "test-type",
+				Source: "test-source",
 				Broker: "test-broker",
 			},
 		},
@@ -138,12 +151,14 @@ func TestEventTypeImmutableFields(t *testing.T) {
 		current: &EventType{
 			Spec: EventTypeSpec{
 				Type:   "test-type",
+				Source: "test-source",
 				Broker: "test-broker",
 			},
 		},
 		original: &EventType{
 			Spec: EventTypeSpec{
 				Type:   "test-type",
+				Source: "test-source",
 				Broker: "original-broker",
 			},
 		},
@@ -160,12 +175,14 @@ func TestEventTypeImmutableFields(t *testing.T) {
 		current: &EventType{
 			Spec: EventTypeSpec{
 				Type:   "test-type",
+				Source: "test-source",
 				Broker: "test-broker",
 			},
 		},
 		original: &EventType{
 			Spec: EventTypeSpec{
 				Type:   "original-type",
+				Source: "test-source",
 				Broker: "test-broker",
 			},
 		},
@@ -178,10 +195,35 @@ func TestEventTypeImmutableFields(t *testing.T) {
 `,
 		},
 	}, {
+		name: "bad (source change)",
+		current: &EventType{
+			Spec: EventTypeSpec{
+				Type:   "test-type",
+				Source: "test-source",
+				Broker: "test-broker",
+			},
+		},
+		original: &EventType{
+			Spec: EventTypeSpec{
+				Type:   "test-type",
+				Source: "original-source",
+				Broker: "test-broker",
+			},
+		},
+		want: &apis.FieldError{
+			Message: "Immutable fields changed (-old +new)",
+			Paths:   []string{"spec"},
+			Details: `{v1alpha1.EventTypeSpec}.Source:
+	-: "original-source"
+	+: "test-source"
+`,
+		},
+	}, {
 		name: "bad (schema change)",
 		current: &EventType{
 			Spec: EventTypeSpec{
 				Type:   "test-type",
+				Source: "test-source",
 				Broker: "test-broker",
 				Schema: "test-schema",
 			},
@@ -189,6 +231,7 @@ func TestEventTypeImmutableFields(t *testing.T) {
 		original: &EventType{
 			Spec: EventTypeSpec{
 				Type:   "test-type",
+				Source: "test-source",
 				Broker: "test-broker",
 				Schema: "original-schema",
 			},
@@ -202,30 +245,28 @@ func TestEventTypeImmutableFields(t *testing.T) {
 `,
 		},
 	}, {
-		name: "bad (source change)",
+		name: "good (description change)",
 		current: &EventType{
 			Spec: EventTypeSpec{
-				Type:   "test-type",
-				Broker: "test-broker",
-				Source: "test-source",
+				Type:        "test-type",
+				Source:      "test-source",
+				Broker:      "test-broker",
+				Schema:      "test-schema",
+				Description: "test-description",
 			},
 		},
 		original: &EventType{
 			Spec: EventTypeSpec{
-				Type:   "test-type",
-				Broker: "test-broker",
-				Source: "original-source",
+				Type:        "test-type",
+				Source:      "test-source",
+				Broker:      "test-broker",
+				Schema:      "test-schema",
+				Description: "original-description",
 			},
 		},
-		want: &apis.FieldError{
-			Message: "Immutable fields changed (-old +new)",
-			Paths:   []string{"spec"},
-			Details: `{v1alpha1.EventTypeSpec}.Source:
-	-: "original-source"
-	+: "test-source"
-`,
-		},
-	}}
+		want: nil,
+	},
+	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

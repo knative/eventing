@@ -24,12 +24,12 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"reflect"
 	"sync"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
-	"github.com/kelseyhightower/envconfig"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/broker"
 	"github.com/knative/eventing/pkg/provisioners"
@@ -58,20 +58,6 @@ var (
 	wg sync.WaitGroup
 )
 
-type envConfig struct {
-	// Channel where to send the cloudevents.
-	Channel string `envconfig:"CHANNEL"`
-
-	// Broker name for this ingress.
-	Broker string `envconfig:"BROKER" required:"true"`
-
-	// Namespace of this ingress.
-	Namespace string `envconfig:"NAMESPACE" required:"true"`
-
-	// To indicate whether the ingress should allow any event.
-	AllowAny bool `envconfig:"ALLOW_ANY" required:"true"`
-}
-
 func main() {
 	logConfig := provisioners.NewLoggingConfig()
 	logger := provisioners.NewProvisionerLoggerFromConfig(logConfig).Desugar()
@@ -79,18 +65,9 @@ func main() {
 	flag.Parse()
 	crlog.SetLogger(crlog.ZapLogger(false))
 
-	var env envConfig
-	if err := envconfig.Process("", &env); err != nil {
-		log.Fatal("Failed to process env var", zap.Error(err))
-	}
-
 	logger.Info("Starting...")
 
-	namespace := env.Namespace
-
-	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
-		Namespace: namespace,
-	})
+	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
 	if err != nil {
 		logger.Fatal("Error starting up.", zap.Error(err))
 	}
@@ -99,32 +76,23 @@ func main() {
 		logger.Fatal("Unable to add eventingv1alpha1 scheme", zap.Error(err))
 	}
 
-	brokerName := env.Broker
+	brokerName := getRequiredEnv("BROKER")
 
 	channelURI := &url.URL{
 		Scheme: "http",
-		Host:   env.Channel,
+		Host:   getRequiredEnv("CHANNEL"),
 		Path:   "/",
 	}
-
-	client := mgr.GetClient()
-
-	policySpec := &eventingv1alpha1.IngressPolicySpec{
-		AllowAny: env.AllowAny,
-	}
-
-	ingressPolicy := broker.NewPolicy(logger, client, policySpec, namespace, brokerName, true)
 
 	ceClient, err := cloudevents.NewDefaultClient()
 	if err != nil {
 		logger.Fatal("Unable to create CE client", zap.Error(err))
 	}
 	h := &handler{
-		logger:        logger,
-		ceClient:      ceClient,
-		channelURI:    channelURI,
-		brokerName:    brokerName,
-		ingressPolicy: ingressPolicy,
+		logger:     logger,
+		ceClient:   ceClient,
+		channelURI: channelURI,
+		brokerName: brokerName,
 	}
 
 	// Run the event handler with the manager.
@@ -178,12 +146,19 @@ func main() {
 	logger.Info("Done.")
 }
 
+func getRequiredEnv(envKey string) string {
+	val, defined := os.LookupEnv(envKey)
+	if !defined {
+		log.Fatalf("required environment variable not defined '%s'", envKey)
+	}
+	return val
+}
+
 type handler struct {
-	logger        *zap.Logger
-	ceClient      cloudevents.Client
-	channelURI    *url.URL
-	brokerName    string
-	ingressPolicy *broker.IngressPolicy
+	logger     *zap.Logger
+	ceClient   cloudevents.Client
+	channelURI *url.URL
+	brokerName string
 }
 
 func (h *handler) Start(stopCh <-chan struct{}) error {
@@ -238,15 +213,10 @@ func (h *handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 		return nil
 	}
 
-	if h.allowEvent(ctx, event) {
-		ctx, _ = tag.New(ctx, tag.Insert(TagResult, "dispatched"))
-		return h.sendEvent(ctx, tctx, event)
-	}
-	return nil
-}
+	// TODO Filter.
 
-func (h *handler) allowEvent(ctx context.Context, event cloudevents.Event) bool {
-	return h.ingressPolicy.AllowEvent(ctx, event)
+	ctx, _ = tag.New(ctx, tag.Insert(TagResult, "dispatched"))
+	return h.sendEvent(ctx, tctx, event)
 }
 
 func (h *handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportContext, event cloudevents.Event) error {

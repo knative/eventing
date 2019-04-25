@@ -19,6 +19,8 @@ package v1alpha1
 import (
 	"context"
 
+	"github.com/google/go-cmp/cmp/cmpopts"
+
 	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/kmp"
 )
@@ -33,10 +35,16 @@ func (ets *EventTypeSpec) Validate(ctx context.Context) *apis.FieldError {
 		fe := apis.ErrMissingField("type")
 		errs = errs.Also(fe)
 	}
+	if ets.Source == "" {
+		// TODO validate is a valid URI.
+		fe := apis.ErrMissingField("source")
+		errs = errs.Also(fe)
+	}
 	if ets.Broker == "" {
 		fe := apis.ErrMissingField("broker")
 		errs = errs.Also(fe)
 	}
+	// TODO validate Schema is a valid URI.
 	return errs
 }
 
@@ -50,8 +58,9 @@ func (et *EventType) CheckImmutableFields(ctx context.Context, og apis.Immutable
 		return &apis.FieldError{Message: "The provided original was not an EventType"}
 	}
 
-	// All fields immutable.
-	if diff, err := kmp.ShortDiff(original.Spec, et.Spec); err != nil {
+	// All but Description field immutable.
+	ignoreArguments := cmpopts.IgnoreFields(EventTypeSpec{}, "Description")
+	if diff, err := kmp.ShortDiff(original.Spec, et.Spec, ignoreArguments); err != nil {
 		return &apis.FieldError{
 			Message: "Failed to diff EventType",
 			Paths:   []string{"spec"},
@@ -64,6 +73,5 @@ func (et *EventType) CheckImmutableFields(ctx context.Context, og apis.Immutable
 			Details: diff,
 		}
 	}
-
 	return nil
 }

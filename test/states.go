@@ -47,12 +47,6 @@ func IsTriggerReady(t *eventingv1alpha1.Trigger) (bool, error) {
 	return t.Status.IsReady(), nil
 }
 
-// IsEventTypeReady will check the status conditions of the EventType and
-// return true if the EventType is ready.
-func IsEventTypeReady(et *eventingv1alpha1.EventType) (bool, error) {
-	return et.Status.IsReady(), nil
-}
-
 // TriggersReady will check the status conditions of the trigger list and return true
 // if all triggers are Ready.
 func TriggersReady(triggerList *eventingv1alpha1.TriggerList) (bool, error) {
@@ -63,22 +57,6 @@ func TriggersReady(triggerList *eventingv1alpha1.TriggerList) (bool, error) {
 	log.Printf("Checking triggers: %v", names)
 	for _, trigger := range triggerList.Items {
 		if !trigger.Status.IsReady() {
-			return false, nil
-		}
-	}
-	return true, nil
-}
-
-// EventTypesReady will check the status conditions of the EventTypeList and return true
-// if all EventTypes are Ready.
-func EventTypesReady(eventTypeList *eventingv1alpha1.EventTypeList) (bool, error) {
-	var names []string
-	for _, t := range eventTypeList.Items {
-		names = append(names, t.Name)
-	}
-	log.Printf("Checking event types: %v", names)
-	for _, eventType := range eventTypeList.Items {
-		if !eventType.Status.IsReady() {
 			return false, nil
 		}
 	}

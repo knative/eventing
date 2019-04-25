@@ -25,7 +25,7 @@ spec:
   type: com.github.pull_request
   source: github.com
   broker: broker-allow-registered
-  description: "BitBucket Repo Push"
+  description: "GitHub Pull Request"
 
 ---
 
