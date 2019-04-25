@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"github.com/knative/eventing/pkg/reconciler/containersource"
 	"k8s.io/client-go/tools/clientcmd"
 	"log"
 
@@ -63,7 +64,7 @@ func main() {
 	logger = logger.With(zap.String("controller/impl", "pkg"))
 	logger.Info("Starting the controller")
 
-	const numControllers = 1
+	const numControllers = 2
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
@@ -72,7 +73,8 @@ func main() {
 	eventingInformerFactory := informers.NewSharedInformerFactory(opt.EventingClientSet, opt.ResyncPeriod)
 
 	// Eventing
-	cronjobsourceInformer := eventingInformerFactory.Sources().V1alpha1().CronJobSources()
+	cronJobSourceInformer := eventingInformerFactory.Sources().V1alpha1().CronJobSources()
+	containerSourceInformer := eventingInformerFactory.Sources().V1alpha1().ContainerSources()
 
 	// Kube
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
@@ -83,7 +85,12 @@ func main() {
 	controllers := []*kncontroller.Impl{
 		cronjobsource.NewController(
 			opt,
-			cronjobsourceInformer,
+			cronJobSourceInformer,
+			deploymentInformer,
+		),
+		containersource.NewController(
+			opt,
+			containerSourceInformer,
 			deploymentInformer,
 		),
 	}
@@ -104,7 +111,8 @@ func main() {
 	if err := kncontroller.StartInformers(
 		stopCh,
 		// Eventing
-		cronjobsourceInformer.Informer(),
+		cronJobSourceInformer.Informer(),
+		containerSourceInformer.Informer(),
 		// Kube
 		deploymentInformer.Informer(),
 	); err != nil {
