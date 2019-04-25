@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resolve
+package duck
 
 import (
 	"context"
@@ -33,10 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/scheme"
-)
-
-const (
-	testNS = "test-namespace"
 )
 
 var (

@@ -33,6 +33,9 @@ const (
 	// Controller is the name of the override key used inside of the logging config for Controller.
 	Controller = "controller"
 
+	// SourcesController is the name of the override key used inside of the logging config for Sources Controller.
+	SourcesController = "sources-controller"
+
 	// Webhook is the name of the override key used inside of the logging config for Webhook Controller.
 	WebhookNameEnv = "WEBHOOK_NAME"
 )
