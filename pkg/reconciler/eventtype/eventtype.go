@@ -22,6 +22,9 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/pkg/tracker"
+
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -54,7 +57,10 @@ type Reconciler struct {
 	// listers index properties about resources
 	eventTypeLister listers.EventTypeLister
 	brokerLister    listers.BrokerLister
+	tracker         tracker.Interface
 }
+
+var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
 
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*Reconciler)(nil)
@@ -77,7 +83,15 @@ func NewController(
 	r.Logger.Info("Setting up event handlers")
 	eventTypeInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
 
-	// TODO Watch for Broker changes. E.g. if the Broker is deleted, we need to reconcile its EventTypes again.
+	// Tracker is used to notify us that a EventType's Broker has changed so that
+	// we can reconcile.
+	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
+	brokerInformer.Informer().AddEventHandler(reconciler.Handler(
+		controller.EnsureTypeMeta(
+			r.tracker.OnChanged,
+			v1alpha1.SchemeGroupVersion.WithKind("Broker"),
+		),
+	))
 
 	return impl
 }
@@ -142,9 +156,15 @@ func (r *Reconciler) reconcile(ctx context.Context, et *v1alpha1.EventType) erro
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Broker", zap.Error(err))
 		et.Status.MarkBrokerDoesNotExist()
-		return nil
+		return err
 	}
 	et.Status.MarkBrokerExists()
+
+	// Tell tracker to reconcile this EventType whenever the Broker changes.
+	if err = r.tracker.Track(utils.ObjectRef(b, brokerGVK), et); err != nil {
+		logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
+		return err
+	}
 
 	if !b.Status.IsReady() {
 		logging.FromContext(ctx).Error("Broker is not ready", zap.String("broker", b.Name))

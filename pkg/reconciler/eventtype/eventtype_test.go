@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/knative/pkg/tracker"
+
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler"
 	. "github.com/knative/eventing/pkg/reconciler/testing"
@@ -94,6 +96,10 @@ func TestReconcile(t *testing.T) {
 					WithEventTypeBrokerDoesNotExist,
 				),
 			}},
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, eventTypeReconcileFailed, "EventType reconcile error: broker.eventing.knative.dev %q not found", eventTypeBroker),
+			},
 		},
 		{
 			Name: "Broker not ready",
@@ -152,6 +158,7 @@ func TestReconcile(t *testing.T) {
 			Base:            reconciler.NewBase(opt, controllerAgentName),
 			eventTypeLister: listers.GetEventTypeLister(),
 			brokerLister:    listers.GetBrokerLister(),
+			tracker:         tracker.New(func(string) {}, 0),
 		}
 	}))
 
