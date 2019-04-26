@@ -17,8 +17,9 @@ limitations under the License.
 package resources
 
 import (
-	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	"testing"
+
+	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 
 	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
@@ -184,9 +185,6 @@ func TestMakeDeployment_sink(t *testing.T) {
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"sidecar.istio.io/inject": "true",
-					},
 					Labels: map[string]string{
 						"eventing.knative.dev/source": "test-name",
 					},
@@ -254,7 +252,6 @@ func TestMakeDeployment_sinkinargs(t *testing.T) {
 		ServiceAccountName: "test-service-account",
 		SinkInArgs:         true,
 		Labels:             map[string]string{"eventing.knative.dev/source": "test-name"},
-		Annotations:        map[string]string{"sidecar.istio.io/inject": "true"},
 	})
 
 	want := &appsv1.Deployment{
@@ -282,9 +279,6 @@ func TestMakeDeployment_sinkinargs(t *testing.T) {
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"sidecar.istio.io/inject": "true",
-					},
 					Labels: map[string]string{
 						"eventing.knative.dev/source": "test-name",
 					},
