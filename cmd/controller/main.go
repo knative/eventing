@@ -21,6 +21,8 @@ import (
 	"log"
 	"os"
 
+	"github.com/knative/eventing/pkg/reconciler/eventtype"
+
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"
 
@@ -67,7 +69,7 @@ func main() {
 
 	logger.Info("Starting the controller")
 
-	const numControllers = 5
+	const numControllers = 6
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
@@ -80,6 +82,7 @@ func main() {
 	channelInformer := eventingInformerFactory.Eventing().V1alpha1().Channels()
 	subscriptionInformer := eventingInformerFactory.Eventing().V1alpha1().Subscriptions()
 	brokerInformer := eventingInformerFactory.Eventing().V1alpha1().Brokers()
+	eventTypeInformer := eventingInformerFactory.Eventing().V1alpha1().EventTypes()
 
 	// Kube
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
@@ -125,6 +128,11 @@ func main() {
 				FilterServiceAccountName:  getRequiredEnv("BROKER_FILTER_SERVICE_ACCOUNT"),
 			},
 		),
+		eventtype.NewController(
+			opt,
+			eventTypeInformer,
+			brokerInformer,
+		),
 	}
 	if len(controllers) != numControllers {
 		logger.Fatalf("Number of controllers and QPS settings mismatch: %d != %d", len(controllers), numControllers)
@@ -147,6 +155,7 @@ func main() {
 		channelInformer.Informer(),
 		subscriptionInformer.Informer(),
 		triggerInformer.Informer(),
+		eventTypeInformer.Informer(),
 		// Kube
 		configMapInformer.Informer(),
 		serviceInformer.Informer(),

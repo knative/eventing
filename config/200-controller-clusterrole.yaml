@@ -70,6 +70,8 @@ rules:
       - "subscriptions/status"
       - "triggers"
       - "triggers/status"
+      - "eventtypes"
+      - "eventtypes/status"
     verbs: *everything
 
   # Source resources and statuses we care about.

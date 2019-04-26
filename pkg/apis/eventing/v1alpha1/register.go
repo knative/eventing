@@ -55,6 +55,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&SubscriptionList{},
 		&Trigger{},
 		&TriggerList{},
+		&EventType{},
+		&EventTypeList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
