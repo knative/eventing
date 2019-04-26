@@ -161,10 +161,10 @@ func ShouldReconcile(c *eventingv1alpha1.Channel) bool {
 func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) (bool, error) {
 	c.Status.InitializeConditions()
 
-	// We are syncing four things:
-	// 1. The K8s Service to talk to this Channel.
-	// 2. The GCP PubSub Topic (one for the Channel).
-	// 3. The GCP PubSub Subscriptions (one for each Subscriber of the Channel).
+	// We are syncing the following:
+	// - The K8s Service to talk to this Channel.
+	// - The GCP PubSub Topic (one for the Channel).
+	// - The GCP PubSub Subscriptions (one for each Subscriber of the Channel).
 
 	// First we will plan all the names out for steps 3 and 4 persist them to status.internal. Then, on a
 	// subsequent reconcile, we manipulate all the GCP resources in steps 3 and 4.

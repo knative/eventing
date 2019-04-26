@@ -78,7 +78,7 @@ func (r *Receiver) getChannelReferenceFromHost(host string) (provisioners.Channe
 	chMap := r.getHostToChannelMap()
 	cr, ok := chMap[host]
 	if !ok {
-		return cr, fmt.Errorf("Invalid HostName:%s. HostName not found in any of the watched gcp-pubsub channels", host)
+		return cr, fmt.Errorf("Invalid HostName:%q. HostName not found in any of the watched gcp-pubsub channels", host)
 	}
 	return cr, nil
 }
@@ -184,10 +184,10 @@ func (r *Receiver) setHostToChannelMap(hcMap map[string]provisioners.ChannelRefe
 // It will update internal hostToChannelMap which is used to resolve the hostHeader of the
 // incoming request to the correct ChannelReference in the receiver function.
 func (r *Receiver) UpdateHostToChannelMap(ctx context.Context) error {
-	logging.FromContext(ctx).Info("UpdateHostToChannelMap: Acquiring mutex lock")
+	logging.FromContext(ctx).Debug("UpdateHostToChannelMap: Acquiring mutex lock")
 	r.hostToChannelMapMutex.Lock()
 	defer r.hostToChannelMapMutex.Unlock()
-	logging.FromContext(ctx).Info("UpdateHostToChannelMap: Acquired mutex lock. Updating internal map")
+	logging.FromContext(ctx).Debug("UpdateHostToChannelMap: Acquired mutex lock. Updating internal map")
 
 	chanList, err := channelwatcher.ListAllChannels(ctx, r.client, channel.ShouldReconcile)
 	if err != nil {
@@ -197,11 +197,11 @@ func (r *Receiver) UpdateHostToChannelMap(ctx context.Context) error {
 
 	hostToChanMap, err := provisioners.NewHostNameToChannelRefMap(chanList)
 	if err != nil {
-		logging.FromContext(ctx).Info("UpdateHostToChannelMap: Error occured when creating the new hostToChannel map.", zap.Error(err))
+		logging.FromContext(ctx).Error("UpdateHostToChannelMap: Error occured when creating the new hostToChannel map.", zap.Error(err))
 		return err
 	}
 
 	r.setHostToChannelMap(hostToChanMap)
-	logging.FromContext(ctx).Info("UpdateHostToChannelMap: Update successful. Releasing mutex lock")
+	logging.FromContext(ctx).Info("UpdateHostToChannelMap: Update successful.")
 	return nil
 }

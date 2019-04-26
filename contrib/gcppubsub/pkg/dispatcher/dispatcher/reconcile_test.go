@@ -427,7 +427,7 @@ func TestReconcile(t *testing.T) {
 			}
 		}
 		if tc.OtherTestData[additionalHandlerError] != nil {
-			r.additionalHandlers = []ReconcileHandlers{
+			r.additionalHandlers = []ReconcileHandler{
 				func(_ context.Context, _ reconcile.Request) error {
 					return fmt.Errorf(tc.OtherTestData[additionalHandlerError].(string))
 				},

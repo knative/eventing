@@ -51,7 +51,7 @@ const (
 // New returns a Controller that represents the dispatcher portion (messages from GCP PubSub are
 // sent into the cluster) of the GCP PubSub dispatcher. We use a reconcile loop to watch all
 // Channels and notice changes to them. It uses an exponential backoff to throttle the retries.
-func New(mgr manager.Manager, logger *zap.Logger, additionalHandlers []ReconcileHandlers) (controller.Controller, error) {
+func New(mgr manager.Manager, logger *zap.Logger, additionalHandlers []ReconcileHandler) (controller.Controller, error) {
 	// reconcileChan is used when the dispatcher itself needs to force reconciliation of a Channel.
 	reconcileChan := make(chan event.GenericEvent)
 
