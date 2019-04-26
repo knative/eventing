@@ -52,8 +52,8 @@ type channelName = types.NamespacedName
 type subscriptionName = types.UID
 type empty struct{}
 
-// ReconcileHandlers will be run by in addition to exiting reconcile
-type ReconcileHandlers func(context.Context, reconcile.Request) error
+// ReconcileHandler will be run by in addition to existing reconcile.
+type ReconcileHandler func(context.Context, reconcile.Request) error
 
 // reconciler reconciles Channels with the gcp-pubsub provisioner. It sets up hanging polling for
 // every Subscription to any Channel.
@@ -78,7 +78,7 @@ type reconciler struct {
 	// rateLimiter is used to limit the pace at which we nack a message when it could not be dispatched.
 	rateLimiter workqueue.RateLimiter
 
-	additionalHandlers []ReconcileHandlers
+	additionalHandlers []ReconcileHandler
 }
 
 // Verify the struct implements reconcile.Reconciler

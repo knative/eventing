@@ -77,7 +77,7 @@ func main() {
 	if _, err = dispatcher.New(
 		mgr,
 		logger.Desugar(),
-		[]dispatcher.ReconcileHandlers{
+		[]dispatcher.ReconcileHandler{
 			func(ctx context.Context, _ reconcile.Request) error {
 				return receiver.UpdateHostToChannelMap(ctx)
 			},

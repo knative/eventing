@@ -22,6 +22,10 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const (
@@ -66,4 +70,17 @@ func getClusterDomainName(r io.Reader) string {
 	}
 	// For all abnormal cases return default domain name
 	return defaultDomainName
+}
+
+func ObjectRef(obj metav1.Object, gvk schema.GroupVersionKind) corev1.ObjectReference {
+	// We can't always rely on the TypeMeta being populated.
+	// See: https://github.com/knative/serving/issues/2372
+	// Also: https://github.com/kubernetes/apiextensions-apiserver/issues/29
+	apiVersion, kind := gvk.ToAPIVersionAndKind()
+	return corev1.ObjectReference{
+		APIVersion: apiVersion,
+		Kind:       kind,
+		Namespace:  obj.GetNamespace(),
+		Name:       obj.GetName(),
+	}
 }
