@@ -139,6 +139,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subscription) error {
 	subscription.Status.InitializeConditions()
 
+	// Verify subscription is valid.
+	if err := subscription.Validate(ctx); err != nil {
+		return err
+	}
 	// See if the subscription has been deleted
 	if subscription.DeletionTimestamp != nil {
 		// If the subscription is Ready, then we have to remove it
@@ -282,7 +286,7 @@ func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyS
 	if s.Status.Address != nil {
 		return eventingduck.DomainToURL(s.Status.Address.Hostname), nil
 	}
-	return "", fmt.Errorf("status does not contain address")
+	return "", fmt.Errorf("reply.status does not contain address")
 }
 
 func (r *Reconciler) syncPhysicalChannel(ctx context.Context, sub *v1alpha1.Subscription, isDeleted bool) error {
