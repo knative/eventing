@@ -23,6 +23,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/knative/eventing/pkg/utils"
+
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -206,7 +208,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	t.Status.PropagateBrokerStatus(&b.Status)
 
 	// Tell tracker to reconcile this Trigger whenever the Broker changes.
-	if err = r.tracker.Track(objectRef(b, brokerGVK), t); err != nil {
+	if err = r.tracker.Track(utils.ObjectRef(b, brokerGVK), t); err != nil {
 		logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
 		return err
 	}
@@ -405,24 +407,4 @@ func (r *Reconciler) getSubscription(ctx context.Context, t *v1alpha1.Trigger) (
 	}
 
 	return nil, apierrs.NewNotFound(schema.GroupResource{}, "")
-}
-
-type accessor interface {
-	GroupVersionKind() schema.GroupVersionKind
-	GetNamespace() string
-	GetName() string
-}
-
-func objectRef(a accessor, gvk schema.GroupVersionKind) corev1.ObjectReference {
-	// We can't always rely on the TypeMeta being populated.
-	// See: https://github.com/knative/serving/issues/2372
-	// Also: https://github.com/kubernetes/apiextensions-apiserver/issues/29
-	// gvk := a.GroupVersionKind()
-	apiVersion, kind := gvk.ToAPIVersionAndKind()
-	return corev1.ObjectReference{
-		APIVersion: apiVersion,
-		Kind:       kind,
-		Namespace:  a.GetNamespace(),
-		Name:       a.GetName(),
-	}
 }

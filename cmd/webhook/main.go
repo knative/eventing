@@ -101,6 +101,7 @@ func main() {
 			eventingv1alpha1.SchemeGroupVersion.WithKind("ClusterChannelProvisioner"): &eventingv1alpha1.ClusterChannelProvisioner{},
 			eventingv1alpha1.SchemeGroupVersion.WithKind("Subscription"):              &eventingv1alpha1.Subscription{},
 			eventingv1alpha1.SchemeGroupVersion.WithKind("Trigger"):                   &eventingv1alpha1.Trigger{},
+			eventingv1alpha1.SchemeGroupVersion.WithKind("EventType"):                 &eventingv1alpha1.EventType{},
 		},
 		Logger: logger,
 	}
