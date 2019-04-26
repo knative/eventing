@@ -81,9 +81,9 @@ as there might be EventTypes with the same `type` but different `sources`, or po
 1. A `Cluster Configurator` configures the cluster in a way that allows the population of EventTypes in the Registry. 
 We foresee the following two ways of populating the Registry for the MVP:
 
-    1.1. Event Source CR installation
+    1.1. Event Source CO instantiation
 
-    Upon installation of an Event Source CR by a `Cluster Configurator`, the Source will register its EventTypes.
+    Upon instantiation of an Event Source CO by a `Cluster Configurator`, the Source will register its EventTypes.
 
     Example:
     
@@ -247,7 +247,7 @@ the destination Sink?
 In other words, is a Registry always going to be there and if not under what conditions will it be?
 
     A Registry will always be there, i.e., `Event Consumers` will always be able to `kubectl get eventtypes -n <namespace>`. 
-    In case no CR Sources are pointing to Brokers, then the Registry will be empty. 
+    In case no CO Sources are pointing to Brokers, then the Registry will be empty. 
     
 - Once an Event Source is created, how is a new one created with different auth in an env where the user is really just meant 
 to deal with Triggers? This may not be a Registry specific question but if one of the goals of the Registry is to make it 
@@ -273,7 +273,7 @@ meaning when the Event Source's CRD is installed (not when an instance of the CR
     Implementation-wise, one potential solution is to have a controller for source CRDs, whenever one is installed, search for all the namespaces with 
     eventing enabled (`kubectl get namespaces -l knative-eventing-injection=enabled`), and adding all the possible EventTypes from that CRD to each of 
     the Brokers in those namespaces. A downside of this is that the Registry information is not "accurate", in the sense that it only has info about EventTypes 
-    that may potentially flow in the system. But actually, they will only be able to flow when a CR is created.
+    that may potentially flow in the system. But actually, they will only be able to flow when a CO is created.
 
 - How can I filter events by the CloudEvents `subject` field?
 
