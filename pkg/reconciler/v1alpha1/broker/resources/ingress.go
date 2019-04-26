@@ -58,11 +58,6 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: IngressLabels(args.Broker.Name),
-					// TODO: Remove this annotation once all channels stop using istio virtual service
-					// https://github.com/knative/eventing/issues/294
-					Annotations: map[string]string{
-						"sidecar.istio.io/inject": "true",
-					},
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: args.ServiceAccountName,

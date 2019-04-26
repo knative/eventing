@@ -57,10 +57,6 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: FilterLabels(args.Broker.Name),
-					// TODO remove this once we get rid of istio.
-					Annotations: map[string]string{
-						"sidecar.istio.io/inject": "true",
-					},
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: args.ServiceAccountName,
