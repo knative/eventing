@@ -24,7 +24,6 @@ import (
 	"github.com/knative/eventing/contrib/natss/pkg/util"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -48,7 +47,6 @@ func main() {
 
 	// Add custom types to this array to get them into the manager's scheme.
 	eventingv1alpha1.AddToScheme(mgr.GetScheme())
-	istiov1alpha3.AddToScheme(mgr.GetScheme())
 
 	_, err = clusterchannelprovisioner.ProvideController(mgr, util.GetDefaultNatssURL(), util.GetDefaultClusterID(), logger.Desugar())
 	if err != nil {

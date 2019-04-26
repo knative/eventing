@@ -17,13 +17,13 @@ limitations under the License.
 package trigger
 
 import (
-	//	"context"
-	//	"errors"
 	"fmt"
 	"net/url"
 	"testing"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
+	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/reconciler"
 	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/reconciler/trigger/resources"
@@ -38,6 +38,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	kubeinformers "k8s.io/client-go/informers"
+	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 )
@@ -55,24 +57,47 @@ const (
 
 var (
 	trueVal = true
-	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
-	// truncates to seconds to match the loss of precision during serialization.
-	deletionTime = metav1.Now().Rfc3339Copy()
-
-	// Map of events to set test cases' expectations easier.
-	events = map[string]corev1.Event{
-		triggerReconciled:         {Reason: triggerReconciled, Type: corev1.EventTypeNormal},
-		triggerUpdateStatusFailed: {Reason: triggerUpdateStatusFailed, Type: corev1.EventTypeWarning},
-		triggerReconcileFailed:    {Reason: triggerReconcileFailed, Type: corev1.EventTypeWarning},
-		subscriptionDeleteFailed:  {Reason: subscriptionDeleteFailed, Type: corev1.EventTypeWarning},
-		subscriptionCreateFailed:  {Reason: subscriptionCreateFailed, Type: corev1.EventTypeWarning},
-	}
 )
 
 func init() {
 	// Add types to scheme
 	_ = v1alpha1.AddToScheme(scheme.Scheme)
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
+}
+
+func TestNewController(t *testing.T) {
+	kubeClient := fakekubeclientset.NewSimpleClientset()
+	eventingClient := fakeclientset.NewSimpleClientset()
+
+	// Create informer factories with fake clients. The second parameter sets the
+	// resync period to zero, disabling it.
+	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, 0)
+	eventingInformerFactory := informers.NewSharedInformerFactory(eventingClient, 0)
+
+	// Eventing
+	triggerInformer := eventingInformerFactory.Eventing().V1alpha1().Triggers()
+	channelInformer := eventingInformerFactory.Eventing().V1alpha1().Channels()
+	subscriptionInformer := eventingInformerFactory.Eventing().V1alpha1().Subscriptions()
+	brokerInformer := eventingInformerFactory.Eventing().V1alpha1().Brokers()
+
+	// Kube
+	serviceInformer := kubeInformerFactory.Core().V1().Services()
+
+	c := NewController(
+		reconciler.Options{
+			KubeClientSet:     kubeClient,
+			EventingClientSet: eventingClient,
+			Logger:            logtesting.TestLogger(t),
+		},
+		triggerInformer,
+		channelInformer,
+		subscriptionInformer,
+		brokerInformer,
+		serviceInformer)
+
+	if c == nil {
+		t.Fatalf("Failed to create with NewController")
+	}
 }
 
 func TestAllCases(t *testing.T) {
@@ -106,6 +131,28 @@ func TestAllCases(t *testing.T) {
 			WantErr: true,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: broker.eventing.knative.dev \"test-broker\" not found"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerFailed("DoesNotExist", "Broker does not exist"),
+				),
+			}},
+		}, {
+			Name: "Broker get failure",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI)),
+			},
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: broker.eventing.knative.dev \"test-broker\" not found"),
+			},
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("get", "brokers"),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
@@ -201,7 +248,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
-			Name: "Subscription Created, not ready",
+			Name: "Subscription create fail",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				makeReadyBroker(),
@@ -209,7 +256,116 @@ func TestAllCases(t *testing.T) {
 				makeIngressChannel(),
 				makeBrokerFilterService(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
-					reconciletesting.WithTriggerSubscriberURI(makeServiceURI().String()),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+				),
+			},
+			WantErr: true,
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("create", "subscriptions"),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "SubscriptionCreateFailed", "Create Trigger's subscription failed: inducing failure for create subscriptions"),
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: inducing failure for create subscriptions")},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerReady(),
+					reconciletesting.WithTriggerNotSubscribed("NotSubscribed", "inducing failure for create subscriptions"),
+					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
+				),
+			}},
+			WantCreates: []metav1.Object{
+				makeIngressSubscription(),
+			},
+		}, {
+			Name: "Subscription delete fail",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				makeReadyBroker(),
+				makeTriggerChannel(),
+				makeIngressChannel(),
+				makeBrokerFilterService(),
+				makeDifferentReadySubscription(),
+				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+				),
+			},
+			WantErr: true,
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("delete", "subscriptions"),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "SubscriptionDeleteFailed", "Delete Trigger's subscription failed: inducing failure for delete subscriptions"),
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: inducing failure for delete subscriptions")},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerReady(),
+					reconciletesting.WithTriggerNotSubscribed("NotSubscribed", "inducing failure for delete subscriptions"),
+					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
+				),
+			}},
+			// Name being "" is NOT a bug. Because we use generate name, the object created
+			// does not have a name...
+			WantDeletes: []clientgotesting.DeleteActionImpl{{
+				Name: "",
+			}},
+		}, {
+			Name: "Subscription create after delete fail",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				makeReadyBroker(),
+				makeTriggerChannel(),
+				makeIngressChannel(),
+				makeBrokerFilterService(),
+				makeDifferentReadySubscription(),
+				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+				),
+			},
+			WantErr: true,
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("create", "subscriptions"),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "SubscriptionCreateFailed", "Create Trigger's subscription failed: inducing failure for create subscriptions"),
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: inducing failure for create subscriptions")},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerReady(),
+					reconciletesting.WithTriggerNotSubscribed("NotSubscribed", "inducing failure for create subscriptions"),
+					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
+				),
+			}},
+			// Name being "" is NOT a bug. Because we use generate name, the object created
+			// does not have a name...
+			WantDeletes: []clientgotesting.DeleteActionImpl{{
+				Name: "",
+			}},
+			WantCreates: []metav1.Object{
+				makeIngressSubscription(),
+			},
+		}, {
+			Name: "Subscription updated works",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				makeReadyBroker(),
+				makeTriggerChannel(),
+				makeIngressChannel(),
+				makeBrokerFilterService(),
+				makeDifferentReadySubscription(),
+				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					reconciletesting.WithInitTriggerConditions,
 				),
 			},
@@ -219,13 +375,18 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
-					reconciletesting.WithTriggerSubscriberURI(makeServiceURI().String()),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
 					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: nil"),
-					reconciletesting.WithTriggerStatusSubscriberURI(makeServiceURI().String()),
+					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 				),
+			}},
+			// Name being "" is NOT a bug. Because we use generate name, the object created
+			// does not have a name...
+			WantDeletes: []clientgotesting.DeleteActionImpl{{
+				Name: "",
 			}},
 			WantCreates: []metav1.Object{
 				makeIngressSubscription(),
@@ -238,9 +399,8 @@ func TestAllCases(t *testing.T) {
 				makeTriggerChannel(),
 				makeIngressChannel(),
 				makeBrokerFilterService(),
-				makeReadySubscription(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
-					reconciletesting.WithTriggerSubscriberURI(makeServiceURI().String()),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					reconciletesting.WithInitTriggerConditions,
 				),
 			},
@@ -250,12 +410,71 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
-					reconciletesting.WithTriggerSubscriberURI(makeServiceURI().String()),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerReady(),
+					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: nil"),
+					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
+				),
+			}},
+			WantCreates: []metav1.Object{
+				makeIngressSubscription(),
+			},
+		}, {
+			Name: "Subscription not ready, trigger marked not ready",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				makeReadyBroker(),
+				makeTriggerChannel(),
+				makeIngressChannel(),
+				makeBrokerFilterService(),
+				makeNotReadySubscription(),
+				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+				),
+			},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerReady(),
+					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: nil"),
+					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
+				),
+			}},
+		}, {
+			Name: "Subscription ready, trigger marked ready",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				makeReadyBroker(),
+				makeTriggerChannel(),
+				makeIngressChannel(),
+				makeBrokerFilterService(),
+				makeReadySubscription(),
+				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+				),
+			},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
 					reconciletesting.WithTriggerSubscribed(),
-					reconciletesting.WithTriggerStatusSubscriberURI(makeServiceURI().String()),
+					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 				),
 			}},
 		},
@@ -304,26 +523,6 @@ func makeTrigger() *v1alpha1.Trigger {
 			},
 		},
 	}
-}
-
-func makeReadyTrigger() *v1alpha1.Trigger {
-	t := makeTrigger()
-	t.Status = *v1alpha1.TestHelper.ReadyTriggerStatus()
-	t.Status.SubscriberURI = fmt.Sprintf("http://%s.%s.svc.%s/", subscriberName, testNS, utils.GetClusterDomainName())
-	return t
-}
-
-func makeDeletingTrigger() *v1alpha1.Trigger {
-	b := makeReadyTrigger()
-	b.DeletionTimestamp = &deletionTime
-	return b
-}
-
-func makeTriggerWithNamespaceAndName(namespace, name string) *v1alpha1.Trigger {
-	t := makeTrigger()
-	t.Namespace = namespace
-	t.Name = name
-	return t
 }
 
 func makeBroker() *v1alpha1.Broker {
@@ -424,9 +623,24 @@ func makeIngressSubscription() *v1alpha1.Subscription {
 	return resources.NewSubscription(makeTrigger(), makeTriggerChannel(), makeIngressChannel(), makeServiceURI())
 }
 
+// Just so we can test subscription updates
+func makeDifferentReadySubscription() *v1alpha1.Subscription {
+	uri := "http://example.com/differenturi"
+	s := makeIngressSubscription()
+	s.Spec.Subscriber.URI = &uri
+	s.Status = *v1alpha1.TestHelper.ReadySubscriptionStatus()
+	return s
+}
+
 func makeReadySubscription() *v1alpha1.Subscription {
 	s := makeIngressSubscription()
 	s.Status = *v1alpha1.TestHelper.ReadySubscriptionStatus()
+	return s
+}
+
+func makeNotReadySubscription() *v1alpha1.Subscription {
+	s := makeIngressSubscription()
+	s.Status = *v1alpha1.TestHelper.NotReadySubscriptionStatus()
 	return s
 }
 

@@ -1,0 +1,21 @@
+aliases:
+  # These aliases are for OWNERS of the various Channel implementations. These
+  # Are in addition to the repo level OWNERS.
+
+  gcp-pubsub-approvers:
+    - Harwayne
+  gcp-pubsub-reviewers:
+    - Harwayne
+  
+  kafka-approvers:
+    - bbrowning
+    - matzew
+  kafka-reviewers:
+    - bbrowning
+    - matzew
+
+  natss-approvers:
+    - Abd4llA
+  natss-reviewers:
+    - Abd4llA
+

@@ -18,8 +18,10 @@ package testing
 
 import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	fakeeventingclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
+	sourcelisters "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
 	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	fakesharedclientset "github.com/knative/pkg/client/clientset/versioned/fake"
 	istiolisters "github.com/knative/pkg/client/listers/istio/v1alpha3"
@@ -114,6 +116,14 @@ func (l *Listers) GetVirtualServiceLister() istiolisters.VirtualServiceLister {
 	return istiolisters.NewVirtualServiceLister(l.indexerFor(&istiov1alpha3.VirtualService{}))
 }
 
+func (l *Listers) GetCronJobSourceLister() sourcelisters.CronJobSourceLister {
+	return sourcelisters.NewCronJobSourceLister(l.indexerFor(&sourcesv1alpha1.CronJobSource{}))
+}
+
+func (l *Listers) GetContainerSourceLister() sourcelisters.ContainerSourceLister {
+	return sourcelisters.NewContainerSourceLister(l.indexerFor(&sourcesv1alpha1.ContainerSource{}))
+}
+
 // GetGatewayLister gets lister for Istio Gateway resource.
 func (l *Listers) GetGatewayLister() istiolisters.GatewayLister {
 	return istiolisters.NewGatewayLister(l.indexerFor(&istiov1alpha3.Gateway{}))
@@ -125,6 +135,10 @@ func (l *Listers) GetDeploymentLister() appsv1listers.DeploymentLister {
 
 func (l *Listers) GetK8sServiceLister() corev1listers.ServiceLister {
 	return corev1listers.NewServiceLister(l.indexerFor(&corev1.Service{}))
+}
+
+func (l *Listers) GetNamespaceLister() corev1listers.NamespaceLister {
+	return corev1listers.NewNamespaceLister(l.indexerFor(&corev1.Namespace{}))
 }
 
 func (l *Listers) GetEndpointsLister() corev1listers.EndpointsLister {
