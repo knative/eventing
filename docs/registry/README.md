@@ -1,4 +1,4 @@
-# Registry Proposal
+# Registry Design
 
 ## Problem 
 
@@ -24,8 +24,6 @@ GitHub after our cluster has been configured (i.e., our GitHub CRD Source instal
 have been created, we will need to create new webhooks (and update the GitHub CRD Source) if we want to listen for 
 those new events. Until doing so, those new events shouldn't be listed in the Registry. 
 Such task will again be in charge of the `Cluster Configurator`.
-- Auto-Registration of events at the Broker-level. This doesn't seem needed for an MVP, but we include a brief description 
-in this document as well.
 
 ## Requirements
 
@@ -40,11 +38,12 @@ is not ready).
 for a consumer to create a Trigger without resorting to some other OOB mechanism.
 
 
-## Proposed Ideas
+## Design Ideas
 
 ### EventType CRD
 
-We propose introducing a namespaced-EventType CRD. Here is an example of how a CR would look like:
+We propose introducing a namespaced-EventType Custom Resource Definition (CRD). 
+Here is an example of how a **Custom Object** (CO) would look like:
 
 ```yaml
 apiVersion: eventing.knative.dev/v1alpha1
@@ -80,8 +79,7 @@ as there might be EventTypes with the same `type` but different `sources`, or po
 ### Typical Flow
 
 1. A `Cluster Configurator` configures the cluster in a way that allows the population of EventTypes in the Registry. 
-We foresee the following two ways of populating the Registry for the MVP. A third one (Broker Auto-Registration) will be 
- explained in the following section but is most likely out of the scope of the Registry MVP.
+We foresee the following two ways of populating the Registry for the MVP:
 
     1.1. Event Source CR installation
 
@@ -151,7 +149,10 @@ We foresee the following two ways of populating the Registry for the MVP. A thir
     ```
     
     Two things to notice: 
-    - We generate the names by stripping invalid characters from the original type (e.g., `_`)
+    - We generate the names by stripping invalid characters from the original type (e.g., `_`). By generating names we aim to 
+    avoid naming collisions. This is a **separate discussion** on whether we should generate them when code (in this case, 
+    the GitHubSource controller) creates the EventTypes or not. 
+     
     - We add the prefix `dev.knative.source.github.` to `spec.type`. This is a **separate discussion** on whether we should 
     change the (GitHub) web hook types or not.
  
@@ -217,74 +218,6 @@ We foresee the following two ways of populating the Registry for the MVP. A thir
          name: my-service
     ```
 
-
-## Broker Ingress Policies
-
-Although this section is more related to the Broker rather than the Registry itself, we include it here to 
-showcase the interplay between the two. 
-
-Herein, we propose configuring a policy in the Broker so that it can decide what EventTypes to accept into the mesh. 
-In order to support that, we propose adding an `ingressPolicy` field to the Broker's spec CRD. 
- 
-Below are two CR examples with Brokers configured using different policies. Note that the fields of 
-`ingressPolicy` might change (e.g., `ingressPolicy` might just end up being a string). 
-Also note that such configuration is done by the `Cluster Configurator`.
-
-- Allow Any
-
-By setting the ingress policy to allow any, the Broker will accept every event into the mesh. 
-
-```yaml
-apiVersion: eventing.knative.dev/v1alpha1
-kind: Broker
-metadata:
-  name: broker-allow-any
-spec:
-  ingressPolicy:
-    allowAny: true  
-```
-
-- Allow Registered
-
-By setting the ingress policy to not allow any, the Broker will accept only events with EventTypes in the Registry.
-
-```yaml
-apiVersion: eventing.knative.dev/v1alpha1
-kind: Broker
-metadata:
-  name: broker-allow-registered
-spec:
-  ingressPolicy:
-    allowAny: false
-```    
-
-By not specifying an ingress policy, we thought that the default behavior would be to allow any event, but this needs further discussion.
-
-Finally, we envision another policy that would allow to auto-register EventTypes. This is currently not being considered 
-for the MVP.
-
-- Auto Add
-
-By setting the ingress policy to auto add, the Broker will accept any event and will add its EventType 
-to the Registry (in case it is not present).
-
-```yaml
-apiVersion: eventing.knative.dev/v1alpha1
-kind: Broker
-metadata:
-  name: broker-auto-add
-spec:
-  ingressPolicy:
-    autoAdd: true 
-```
-
-Note that the creation of the EventType can done asynchronously, i.e., the CloudEvent is accepted and sent 
-to the appropriate Trigger(s) in parallel of the EventType creation. If the creation fails, on a subsequent arrival 
-there might be a new creation attempt.
-
-Although sub-optimal (as `Event Consumers` find out about EventTypes upon first arrival), we believe this mechanism (or something similar) 
-might be needed for Sources where the `Cluster Configurator` does not know in advance the EventTypes they can produce (e.g., a ContainerSource).
-
 ## FAQ
 
 Here is a list of frequently asked questions that may help clarify the scope of the Registry.
@@ -302,7 +235,6 @@ is there a need/use for the Registry?
     then EventTypes won't be added to the Registry (at least in this proposal). 
     Implementation-wise, we can check whether the Source's sink kind is `Broker`, and if so, then register its EventTypes.
     
-         
 - Is the Registry meant to be used in a single-user environment where the same person is setting up both the Event Source and 
 the destination Sink?
 
