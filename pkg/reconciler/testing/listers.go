@@ -126,6 +126,10 @@ func (l *Listers) GetCronJobSourceLister() sourcelisters.CronJobSourceLister {
 	return sourcelisters.NewCronJobSourceLister(l.indexerFor(&sourcesv1alpha1.CronJobSource{}))
 }
 
+func (l *Listers) GetApiServerSourceLister() sourcelisters.ApiServerSourceLister {
+	return sourcelisters.NewApiServerSourceLister(l.indexerFor(&sourcesv1alpha1.ApiServerSource{}))
+}
+
 func (l *Listers) GetContainerSourceLister() sourcelisters.ContainerSourceLister {
 	return sourcelisters.NewContainerSourceLister(l.indexerFor(&sourcesv1alpha1.ContainerSource{}))
 }
