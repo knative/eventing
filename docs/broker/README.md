@@ -235,7 +235,7 @@ The `Broker`'s address is well known, it will always be
 `<name>-broker.<namespace>.svc.<ending>`. In our case, it is
 `default-broker.default.svc.cluster.local`.
 
-While SSHed into a `Pod` with the Istio sidecar, run:
+While SSHed into a `Pod` and run:
 
 ```shell
 curl -v "http://default-broker.default.svc.cluster.local/" \
