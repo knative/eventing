@@ -82,7 +82,7 @@ func main() {
 	// Build all of our controllers, with the clients constructed above.
 	// Add new controllers to this array.
 	// You also need to modify numControllers above to match this.
-	controllers := []*kncontroller.Impl{
+	controllersArray := [...]*kncontroller.Impl{
 		cronjobsource.NewController(
 			opt,
 			cronJobSourceInformer,
@@ -94,9 +94,9 @@ func main() {
 			deploymentInformer,
 		),
 	}
-	if len(controllers) != numControllers {
-		logger.Fatalf("Number of controllers and QPS settings mismatch: %d != %d", len(controllers), numControllers)
-	}
+	controllers := controllersArray[:]
+	// compile-time assert numControllers == len(controllersArray)
+	var _ [numControllers - len(controllersArray)][len(controllersArray) - numControllers]int
 
 	// Watch the logging config map and dynamically update logging levels.
 	opt.ConfigMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.SourcesController))
