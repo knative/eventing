@@ -16,10 +16,34 @@ limitations under the License.
 
 package v1alpha1
 
-import "context"
+import (
+	"context"
+	"github.com/knative/eventing/pkg/apis/eventing"
+	"github.com/knative/pkg/apis"
+	"k8s.io/apimachinery/pkg/api/equality"
+)
 
 func (t *Trigger) SetDefaults(ctx context.Context) {
 	t.Spec.SetDefaults(ctx)
+
+	if ui := apis.GetUserInfo(ctx); ui != nil {
+		ans := t.GetAnnotations()
+		if ans == nil {
+			ans = map[string]string{}
+			defer t.SetAnnotations(ans)
+		}
+
+		if apis.IsInUpdate(ctx) {
+			old := apis.GetBaseline(ctx).(*Trigger)
+			if equality.Semantic.DeepEqual(old.Spec, t.Spec) {
+				return
+			}
+			ans[eventing.UpdaterAnnotation] = ui.Username
+		} else {
+			ans[eventing.CreatorAnnotation] = ui.Username
+			ans[eventing.UpdaterAnnotation] = ui.Username
+		}
+	}
 }
 
 func (ts *TriggerSpec) SetDefaults(ctx context.Context) {
