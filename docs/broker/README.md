@@ -321,8 +321,8 @@ reconciles:
 ### Trigger
 
 `Trigger`s are reconciled by the
-[Trigger Reconciler](../../pkg/reconciler/trigger). For each `Trigger`,
-it reconciles:
+[Trigger Reconciler](../../pkg/reconciler/trigger). For each `Trigger`, it
+reconciles:
 
 1. Verify the Broker Exists
 1. Get the Broker's:
@@ -333,5 +333,6 @@ it reconciles:
    - Currently uses the same logic as the `Subscription` Reconciler, so supports
      Addressables and Kubernetes `Service`s.
 1. Creates a `Subscription` from the `Broker`'s 'trigger' `Channel` to the
-   `Trigger`'s Kubernetes `Service` using the HTTP path `/triggers/{namespace}/{name}`. Replies are sent to the `Broker`'s
-   'ingress' `Channel`.
+   `Trigger`'s Kubernetes `Service` using the HTTP path
+   `/triggers/{namespace}/{name}`. Replies are sent to the `Broker`'s 'ingress'
+   `Channel`.
