@@ -19,6 +19,7 @@ package channel
 import (
 	"context"
 	"fmt"
+
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 
 	ccpcontroller "github.com/knative/eventing/contrib/gcppubsub/pkg/controller/clusterchannelprovisioner"

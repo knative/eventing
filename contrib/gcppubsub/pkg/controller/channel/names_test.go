@@ -17,8 +17,9 @@ limitations under the License.
 package channel
 
 import (
-	v1 "k8s.io/api/core/v1"
 	"testing"
+
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
