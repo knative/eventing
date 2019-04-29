@@ -150,6 +150,15 @@ function dump_extra_cluster_state() {
 
 initialize $@
 
+# I am not sure why knative_setup is not being called... Lets try this:
+E2E_PROJECT_ID="$(gcloud config get-value project)"
+
+echo ">> Enabling Istio"
+# Enable istio.
+gcloud beta container clusters update ${E2E_PROJECT_ID} \
+  --update-addons=Istio=ENABLED --istio-config=auth=MTLS_PERMISSIVE
+kubectl label namespace default istio-injection=enabled || return 1
+
 go_test_e2e -timeout=20m ./test/e2e -run ^TestMain$ -runFromMain=true -clusterChannelProvisioners=in-memory-channel,in-memory || fail_test
 
 success
