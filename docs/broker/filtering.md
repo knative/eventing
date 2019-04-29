@@ -373,6 +373,16 @@ spec:
 
 ## Caveats
 
+### Numeric and nested extension values
+
+Some CloudEvents transports (such as the HTTP binary content mode) may be unable
+to differentiate numeric and string values for top-level or nested extension
+attributes. This is still being discussed by the CloudEvents working group (see
+https://github.com/cloudevents/spec/pull/413).
+
+Until this is resolved, the type of numeric values parsed in CloudEvents
+extensions may be unpredictable.
+
 ### Choice of CEL
 
 The main caveat is the choice of CEL as expression language.
