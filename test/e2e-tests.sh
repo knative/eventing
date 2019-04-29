@@ -37,9 +37,6 @@ readonly GCP_PUBSUB_CONFIG_TEMPLATE="contrib/gcppubsub/config/gcppubsub.yaml"
 # Real GCP PubSub config, generated from the template.
 readonly GCP_PUBSUB_CONFIG="$(mktemp)"
 
-# TODO(Fredy-Z): delete this flag after https://github.com/knative/test-infra/pull/692 is merged and updated
-E2E_PROJECT_ID=""
-
 # Constants used for creating ServiceAccount for GCP PubSub provisioner setup if it's not running on Prow.
 readonly PUBSUB_SERVICE_ACCOUNT="eventing_pubsub_test"
 readonly PUBSUB_SERVICE_ACCOUNT_KEY="$(mktemp)"
@@ -47,11 +44,9 @@ readonly PUBSUB_SECRET_NAME="gcppubsub-channel-key"
 
 # Setup the Knative environment for running tests.
 function knative_setup() {
-  E2E_PROJECT_ID="$(gcloud config get-value project)"
-
   echo ">> Enabling Istio"
   # Enable istio.
-  gcloud beta container clusters update ${E2E_PROJECT_ID} \
+  gcloud beta container clusters update ${E2E_PROJECT_ID} --region=${E2E_CLUSTER_REGION} \
     --update-addons=Istio=ENABLED --istio-config=auth=MTLS_PERMISSIVE
   kubectl label namespace default istio-injection=enabled || return 1
 
@@ -150,12 +145,9 @@ function dump_extra_cluster_state() {
 
 initialize $@
 
-# I am not sure why knative_setup is not being called... Lets try this:
-E2E_PROJECT_ID="$(gcloud config get-value project)"
-
 echo ">> Enabling Istio"
 # Enable istio.
-gcloud beta container clusters update ${E2E_PROJECT_ID} \
+gcloud beta container clusters update ${E2E_PROJECT_ID} --region=${E2E_CLUSTER_REGION} \
   --update-addons=Istio=ENABLED --istio-config=auth=MTLS_PERMISSIVE
 kubectl label namespace default istio-injection=enabled || return 1
 
