@@ -37,10 +37,17 @@ glance.
 
 ## Proposed Solution
 
-Add a field to the Trigger Filter spec allowing users to specify an expression
-as a string. The expression is evaluated for each event considered by the
-Trigger. If the expression evaluates to true, the event is delivered to the
-Trigger's subscriber.
+Extend the Trigger's filter syntax to allow specifying an expression written in
+[CEL](https://github.com/google/cel-spec). The existing `sourceAndType` filter
+will be deprecated and replaced with an `attributes` map that allows filtering
+on any CloudEvents attribute.
+
+### Add CEL expression filter
+
+Add an `expression` filter to the Trigger allowing users to specify an
+expression as a string. The expression is evaluated for each event considered
+by the Trigger. If the expression evaluates to true, the event is delivered to
+the Trigger's subscriber.
 
 The evaluation environment of the expression may include:
 
@@ -58,24 +65,52 @@ expression languages.
 ```yaml
 spec:
   filter:
-    cel:
-      expression: >
-        ce.type == "com.github.pull.create" &&
-        ce.source == "https://github.com/knative/eventing/pulls/123"
+    expression: >
+      ce.type == "com.github.pull.create" &&
+      ce.source == "https://github.com/knative/eventing/pulls/123"
 ```
+
+### Validate expression via webhook
 
 Add a check to the Trigger webhook that validates the expression's syntax and
 rejects the request if an error is encountered. This will not catch errors
-arising from dynamic extension attributes or data fields - these can only be
+arising from use of dynamic extension attributes or data fields - these can only be
 caught at evaluation time.
 
-Reimplement the SourceAndType filter (and any future structured filtering
-interfaces) as a mechanical transformation to an equivalent CEL expression.
-This makes CEL the only code path that does filtering, both simplifying
-maintenance and making the implementation of filtering easier in other
-components (such as upstream event sources).
+### Add attributes map filter and deprecate SourceAndType
 
-### Variable prefixes
+Add an `attributes` filter that allows the user to specify equality for any
+CloudEvents context attribute. Multiple attributes may be specified. The event
+is delivered if all specified attribute values match the event exactly (Boolean
+`AND`).
+
+Extensions may be specified as attributes. Nested extension fields must be
+specified using a dot syntax, e.g. `field1.field2.field3`.
+
+Deprecate the SourceAndType filter as its functionality is subsumed by the
+`attributes` filter.
+
+### Transform all filters into CEL expressions
+
+Implement the `attributes` filter (and reimplement the deprecated SourceAndType
+filter) as a transformation to an equivalent CEL expression. This makes CEL the
+only code path that does filtering, both simplifying maintenance and making the
+implementation of filtering easier in other components (such as upstream event
+sources).
+
+### Document policy for filter specifications
+
+To strike a balance between flexibility, maintainability, and user convenience,
+adopt the following principles:
+
+* Only one top-level filter may be used per Trigger. A Trigger that specifies
+  more than one is rejected.
+* All filters must be transformable to an equivalent CEL expression.
+* Additional filter specifications may be added if indicated by user feedback.
+
+## Implementation details
+
+### Variables in the expression
 
 | Prefix |Description |
 |--------|------------|
@@ -130,7 +165,7 @@ making it safe and secure to embed in a multi-tenant dispatcher process.
 
 ### Single attribute exact match
 
-Specified with the SourceAndType field:
+Specified with the SourceAndType filter:
 
 ```yaml
 spec:
@@ -139,18 +174,26 @@ spec:
       type: com.github.pull.create
 ```
 
-Specified with a CEL expression:
+Specified with the attributes filter:
 
 ```yaml
 spec:
   filter:
-    cel:
-      expression: ce.type == "com.github.pull.create"
+    attributes:
+      type: com.github.pull.create
+```
+
+Specified with the expression filter:
+
+```yaml
+spec:
+  filter:
+    expression: ce.type == "com.github.pull.create"
 ```
 
 ### Multiple attributes exact match
 
-Specified with the SourceAndType field:
+Specified with the SourceAndType filter:
 
 ```yaml
 spec:
@@ -160,30 +203,38 @@ spec:
       source: https://github.com/knative/eventing/pulls/123
 ```
 
-Specified with a CEL expression:
+Specified with the attributes filter:
+
+```yaml
+spec:
+  filter:
+    attributes:
+      type: com.github.pull.create
+      source: https://github.com/knative/eventing/pulls/123
+```
+
+Specified with the expression filter:
 
 _The `>` syntax is a standard yaml multiline string._
 
 ```yaml
 spec:
   filter:
-    cel:
-      expression: >
-        ce.type == "com.github.pull.create" &&
-        ce.source == "https://github.com/knative/eventing/pulls/123"
+    expression: >
+      ce.type == "com.github.pull.create" &&
+      ce.source == "https://github.com/knative/eventing/pulls/123"
 ```
 
 ### Prefix match on source
 
-Cannot be specified with the SourceAndType field.
+Cannot be specified with the SourceAndType filter or the attributes filter.
 
 CEL supports multiple options for prefix match. The simplest is `startsWith`:
 
 ```yaml
 spec:
   filter:
-    cel:
-      expression: ce.source.startsWith("https://github.com")
+    expression: ce.source.startsWith("https://github.com")
 ```
 
 CEL also implements shell-style wildcards with `match`:
@@ -191,8 +242,7 @@ CEL also implements shell-style wildcards with `match`:
 ```yaml
 spec:
   filter:
-    cel:
-      expression: ce.source.match("https://github.com*")
+    expression: ce.source.match("https://github.com*")
 ```
 
 For the most complex matching needs, CEL implements
@@ -202,49 +252,111 @@ For the most complex matching needs, CEL implements
 ```yaml
 spec:
   filter:
-    cel:
-      expression: ce.source.matches("https://github.com.*")
+    expression: ce.source.matches("https://github.com.*")
 ```
 
 ### Complex boolean expression
 
-Cannot be specified with the SourceAndType field.
+Cannot be specified with the SourceAndType filter.
 
 _The `>` syntax is a standard yaml multiline string._
 
 ```yaml
 spec:
   filter:
-    cel:
-      expression: >
-        ce.type == "com.github.pull.create" ||
-        (ce.type == "com.github.issue.create" && ce.source.matches("proposals")
-
+    expression: >
+      ce.type == "com.github.pull.create" ||
+      (ce.type == "com.github.issue.create" && ce.source.matches("proposals")
 ```
 
-### Exact match on Extension
+### Exact match on official and extension attribute
 
-Cannot be specified with the SourceAndType field.
+Cannot be specified with the SourceAndType filter.
 
 _This example assumes the repository name is available as a CloudEvents
-extension with name `repository`._
+extension `{"repository":proposals"}`._
+
+Specified with the attributes filter:
+
+```yaml
+spec:
+  filter:
+    attributes:
+      type: com.github.issue.create
+      repository: proposals
+```
 
 _The `>` syntax is a standard yaml multiline string._
 
 ```yaml
 spec:
   filter:
-    cel:
-      expression: >
-        ce.type == "com.github.pull.create" ||
-         (ce.type == "com.github.issue.create" &&
-          ce.repository == "proposals")
-
+    expression: >
+      ce.type == "com.github.issue.create" &&
+      ce.repository == "proposals"
 ```
 
-### Exact match on Data
+### Exact match on extension with dotted name
 
-Cannot be specified with the SourceAndType field.
+Cannot be specified with the SourceAndType filter.
+
+_This example assumes the repository name is available as a CloudEvents
+extension `{"github.repository":proposals"}`._
+
+Specified with the attributes filter:
+
+```yaml
+spec:
+  filter:
+    attributes:
+      github.repository: proposals
+```
+
+_The `>` syntax is a standard yaml multiline string._
+
+```yaml
+spec:
+  filter:
+    expression: >
+      ce["github.repository"] == "proposals"
+```
+
+### Exact match on nested extension
+
+Cannot be specified with the SourceAndType filter or the attributes filter.
+
+_This example assumes the repository name is available as a **nested**
+CloudEvents extension `{"github":{"repository":"proposals"}}`._
+
+_The `>` syntax is a standard yaml multiline string._
+
+```yaml
+spec:
+  filter:
+    expression: >
+      ce.github.repository == "proposals"
+```
+
+### Exact match on data string field
+
+Cannot be specified with the SourceAndType filter or the attributes filter.
+
+_This example assumes the event data is the parseable equivalent of
+`{"user":{"id":"abc123"}`._
+
+```yaml
+spec:
+  filter:
+    expression: >
+      user.id == "abc123"
+```
+
+### Exact match on data number field
+
+Cannot be specified with the SourceAndType filter or the attributes filter.
+
+_This example assumes the event data is the parseable equivalent of
+`{"latency":300}`._
 
 _The `>` syntax is a standard yaml multiline string._
 
@@ -254,10 +366,9 @@ resolved, dynamic integer fields in CEL must be compared as floats._
 ```yaml
 spec:
   filter:
-    cel:
-      expression: >
-        ce.type == "dev.knative.observation" &&
-        data.latency > 300.0
+    expression: >
+      ce.type == "dev.knative.observation" &&
+      data.latency > 300.0
 ```
 
 ## Caveats
