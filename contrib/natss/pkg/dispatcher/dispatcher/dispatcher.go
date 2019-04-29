@@ -76,6 +76,7 @@ func NewDispatcher(natssURL, clusterID string, logger *zap.Logger) (*Subscriptio
 		clusterID:     clusterID,
 		subscriptions: make(map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription),
 	}
+	d.setHostToChannelMap(map[string]provisioners.ChannelReference{})
 	receiver, err := provisioners.NewMessageReceiver(
 		createReceiverFunction(d, logger.Sugar()),
 		logger.Sugar(),
@@ -84,8 +85,6 @@ func NewDispatcher(natssURL, clusterID string, logger *zap.Logger) (*Subscriptio
 		return nil, err
 	}
 	d.receiver = receiver
-	d.setHostToChannelMap(map[string]provisioners.ChannelReference{})
-
 	return d, nil
 }
 
@@ -313,21 +312,11 @@ func (s *SubscriptionsSupervisor) setHostToChannelMap(hcMap map[string]provision
 // It will update internal hostToChannelMap which is used to resolve the hostHeader of the
 // incoming request to the correct ChannelReference in the receiver function.
 func (s *SubscriptionsSupervisor) UpdateHostToChannelMap(ctx context.Context, chanList []eventingv1alpha1.Channel) error {
-	hostToChanMap := make(map[string]provisioners.ChannelReference, len(chanList))
-	for _, c := range chanList {
-		hostName := c.Status.Address.Hostname
-		if cr, ok := hostToChanMap[hostName]; ok {
-			return fmt.Errorf(
-				"Duplicate hostName found. Each channel must have a unique host header. HostName:%s, channel:%s.%s, channel:%s.%s",
-				hostName,
-				c.Namespace,
-				c.Name,
-				cr.Namespace,
-				cr.Name)
-		}
-		hostToChanMap[hostName] = provisioners.ChannelReference{Name: c.Name, Namespace: c.Namespace}
+	hostToChanMap, err := provisioners.NewHostNameToChannelRefMap(chanList)
+	if err != nil {
+		logging.FromContext(ctx).Info("UpdateHostToChannelMap: Error occured when creating the new hostToChannel map.", zap.Error(err))
+		return err
 	}
-
 	s.setHostToChannelMap(hostToChanMap)
 	logging.FromContext(ctx).Info("hostToChannelMap updated successfully.")
 	return nil

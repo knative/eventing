@@ -21,15 +21,13 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/client-go/util/workqueue"
-
-	"sigs.k8s.io/controller-runtime/pkg/event"
-
 	pubsubutil "github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
+	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -53,7 +51,7 @@ const (
 // New returns a Controller that represents the dispatcher portion (messages from GCP PubSub are
 // sent into the cluster) of the GCP PubSub dispatcher. We use a reconcile loop to watch all
 // Channels and notice changes to them. It uses an exponential backoff to throttle the retries.
-func New(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
+func New(mgr manager.Manager, logger *zap.Logger, additionalHandlers []ReconcileHandler) (controller.Controller, error) {
 	// reconcileChan is used when the dispatcher itself needs to force reconciliation of a Channel.
 	reconcileChan := make(chan event.GenericEvent)
 
@@ -71,7 +69,8 @@ func New(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error)
 		subscriptionsLock: sync.Mutex{},
 		subscriptions:     map[channelName]map[subscriptionName]context.CancelFunc{},
 
-		rateLimiter: workqueue.NewItemExponentialFailureRateLimiter(expBackoffBaseDelay, expBackoffMaxDelay),
+		rateLimiter:        workqueue.NewItemExponentialFailureRateLimiter(expBackoffBaseDelay, expBackoffMaxDelay),
+		additionalHandlers: additionalHandlers,
 	}
 
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{

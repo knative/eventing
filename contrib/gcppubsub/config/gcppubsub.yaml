@@ -62,16 +62,6 @@ rules:
       - create
       - update
   - apiGroups:
-      - networking.istio.io
-    resources:
-      - virtualservices
-    verbs:
-      - get
-      - list
-      - watch
-      - create
-      - update
-  - apiGroups:
       - "" # Core API Group.
     resources:
       - events
@@ -240,15 +230,12 @@ spec:
     clusterChannelProvisioner: gcp-pubsub
     role: dispatcher
   ports:
-    - name: http
-      protocol: TCP
+    - protocol: TCP
       port: 80
       targetPort: 8080
 
 ---
-
-# Needed by the GCP PubSub Channel to communicate with GCP PubSub.
-
+# Needed by the GCP PubSub Channel to communicate with GCP PubSub.	
 apiVersion: networking.istio.io/v1alpha3
 kind: ServiceEntry
 metadata:
