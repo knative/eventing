@@ -21,12 +21,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// MakeServiceAccount creates a ServiceAccount object for the Namespace 'ns'.
-func MakeServiceAccount(namespace string) *corev1.ServiceAccount {
+// MakeServiceAccount creates a ServiceAccount object called 'name' for the Namespace 'ns'.
+func MakeServiceAccount(name, namespace string) *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
-			Name:      ServiceAccountName,
+			Name:      name,
 			Labels:    OwnedLabels(),
 		},
 	}
