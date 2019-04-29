@@ -37,11 +37,8 @@ readonly GCP_PUBSUB_CONFIG_TEMPLATE="contrib/gcppubsub/config/gcppubsub.yaml"
 # Real GCP PubSub config, generated from the template.
 readonly GCP_PUBSUB_CONFIG="$(mktemp)"
 
-# TODO(Fredy-Z): delete this flag after https://github.com/knative/test-infra/pull/692 is merged and updated
-E2E_PROJECT_ID=""
-
 # Constants used for creating ServiceAccount for GCP PubSub provisioner setup if it's not running on Prow.
-readonly PUBSUB_SERVICE_ACCOUNT="eventing_pubsub_test"
+readonly PUBSUB_SERVICE_ACCOUNT="eventing-pubsub-test"
 readonly PUBSUB_SERVICE_ACCOUNT_KEY="$(mktemp)"
 readonly PUBSUB_SECRET_NAME="gcppubsub-channel-key"
 
@@ -55,17 +52,6 @@ function knative_setup() {
   echo "Installing Knative Eventing"
   ko apply -f ${EVENTING_CONFIG} || return 1
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
-
-  echo "Installing In-Memory ClusterChannelProvisioner"
-  ko apply -f ${IN_MEMORY_CHANNEL_CONFIG} || return 1
-  wait_until_pods_running knative-eventing || fail_test "Failed to install the In-Memory ClusterChannelProvisioner"
-
-  E2E_PROJECT_ID="$(gcloud config get-value project)"
-  echo "Installing GCPPubSub ClusterChannelProvisioner"
-  gcppubsub_setup
-  sed "s/REPLACE_WITH_GCP_PROJECT/${E2E_PROJECT_ID}/" ${GCP_PUBSUB_CONFIG_TEMPLATE} > ${GCP_PUBSUB_CONFIG}
-  ko apply -f ${GCP_PUBSUB_CONFIG}
-  wait_until_pods_running knative-eventing || fail_test "Failed to install the GCPPubSub ClusterChannelProvisioner"
 }
 
 # Teardown the Knative environment after tests finish.
@@ -73,7 +59,27 @@ function knative_teardown() {
   echo ">> Stopping Knative Eventing"
   echo "Uninstalling Knative Eventing"
   ko delete --ignore-not-found=true --now --timeout 60s -f ${EVENTING_CONFIG}
+}
 
+# Setup resources common to all eventing tests.
+function test_setup() {
+  echo "Installing In-Memory ClusterChannelProvisioner"
+  ko apply -f ${IN_MEMORY_CHANNEL_CONFIG} || return 1
+  wait_until_pods_running knative-eventing || fail_test "Failed to install the In-Memory ClusterChannelProvisioner"
+
+  echo "Installing GCPPubSub ClusterChannelProvisioner"
+  gcppubsub_setup || return 1
+  sed "s/REPLACE_WITH_GCP_PROJECT/${E2E_PROJECT_ID}/" ${GCP_PUBSUB_CONFIG_TEMPLATE} > ${GCP_PUBSUB_CONFIG}
+  ko apply -f ${GCP_PUBSUB_CONFIG} || return 1
+  wait_until_pods_running knative-eventing || fail_test "Failed to install the GCPPubSub ClusterChannelProvisioner"
+
+  # Publish test images.
+  echo ">> Publishing test images"
+  $(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test images"
+}
+
+# Tear down resources used in the eventing tests.
+function test_teardown() {
   echo "Uninstalling In-Memory ClusterChannelProvisioner"
   ko delete --ignore-not-found=true --now --timeout 60s -f ${IN_MEMORY_CHANNEL_CONFIG}
 
@@ -82,13 +88,6 @@ function knative_teardown() {
   ko delete --ignore-not-found=true --now --timeout 60s -f ${GCP_PUBSUB_CONFIG}
 
   wait_until_object_does_not_exist namespaces knative-eventing
-}
-
-# Setup resources common to all eventing tests.
-function test_setup() {
-  # Publish test images.
-  echo ">> Publishing test images"
-  $(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test images"
 }
 
 # Create resources required for GCP PubSub provisioner setup
@@ -127,16 +126,15 @@ function gcppubsub_teardown() {
 function dump_extra_cluster_state() {
   # Collecting logs from all knative's eventing pods.
   echo "============================================================"
-  for namespace in "knative-eventing" "e2etestfn3"; do
-    for pod in $(kubectl get pod -n $namespace | grep Running | awk '{print $1}' ); do
-      for container in $(kubectl get pod "${pod}" -n $namespace -ojsonpath='{.spec.containers[*].name}'); do
-        echo "Namespace, Pod, Container: ${namespace}, ${pod}, ${container}"
-        kubectl logs -n $namespace "${pod}" -c "${container}" || true
-        echo "----------------------------------------------------------"
-        echo "Namespace, Pod, Container (Previous instance): ${namespace}, ${pod}, ${container}"
-        kubectl logs -p -n $namespace "${pod}" -c "${container}" || true
-        echo "============================================================"
-      done
+  namespace="knative-eventing"
+  for pod in $(kubectl get pod -n $namespace | grep Running | awk '{print $1}' ); do
+    for container in $(kubectl get pod "${pod}" -n $namespace -ojsonpath='{.spec.containers[*].name}'); do
+      echo "Namespace, Pod, Container: ${namespace}, ${pod}, ${container}"
+      kubectl logs -n $namespace "${pod}" -c "${container}" || true
+      echo "----------------------------------------------------------"
+      echo "Namespace, Pod, Container (Previous instance): ${namespace}, ${pod}, ${container}"
+      kubectl logs -p -n $namespace "${pod}" -c "${container}" || true
+      echo "============================================================"
     done
   done
 }
