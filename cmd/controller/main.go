@@ -134,7 +134,7 @@ func main() {
 			brokerInformer,
 		),
 	}
-	// This line asserts at compile time that the length of controllersArray is equal to numControllers.
+	// This line asserts at compile time that the length of controllers is equal to numControllers.
 	// It is based on https://go101.org/article/tips.html#assert-at-compile-time, which notes that
 	// var _ [N-M]int
 	// asserts at compile time that N >= M, which we can use to establish equality of N and M:
