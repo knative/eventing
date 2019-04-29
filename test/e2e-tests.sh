@@ -49,9 +49,11 @@ readonly PUBSUB_SECRET_NAME="gcppubsub-channel-key"
 function knative_setup() {
   E2E_PROJECT_ID="$(gcloud config get-value project)"
 
+  echo ">> Enabling Istio"
   # Enable istio.
   gcloud beta container clusters update ${E2E_PROJECT_ID} \
     --update-addons=Istio=ENABLED --istio-config=auth=MTLS_PERMISSIVE
+  kubectl label namespace default istio-injection=enabled || return 1
 
   # Install the latest Knative/eventing in the current cluster.
   echo ">> Starting Knative Eventing"
