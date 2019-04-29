@@ -294,10 +294,10 @@ func CreateClusterRoleBinding(clients *test.Clients, crb *rbacv1.ClusterRoleBind
 
 // CreateServiceAccountAndBinding creates both ServiceAccount and ClusterRoleBinding with default
 // cluster-admin role.
-func CreateServiceAccountAndBinding(clients *test.Clients, name string, namespace string, logf logging.FormatLogger, cleaner *test.Cleaner) error {
+func CreateServiceAccountAndBinding(clients *test.Clients, saName, crName, namespace string, logf logging.FormatLogger, cleaner *test.Cleaner) error {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      saName,
 			Namespace: namespace,
 		},
 	}
@@ -318,7 +318,7 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, namespac
 		},
 		RoleRef: rbacv1.RoleRef{
 			Kind:     "ClusterRole",
-			Name:     "cluster-admin",
+			Name:     crName,
 			APIGroup: "rbac.authorization.k8s.io",
 		},
 	}

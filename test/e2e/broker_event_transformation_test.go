@@ -44,8 +44,10 @@ Note: the number denotes the sequence of the event that flows in this test case.
 
 func TestEventTransformationForTrigger(t *testing.T) {
 	const (
-		brokerName  = "e2e-eventtransformation-broker"
-		rbacObjName = "eventing-broker-filter"
+		brokerName = "e2e-eventtransformation-broker"
+		saName     = "eventing-broker-filter"
+		// This ClusterRole is installed in Knative Eventing setup, see https://github.com/knative/eventing/tree/master/docs/broker#manual-setup.
+		crName = "eventing-broker-filter"
 
 		any          = v1alpha1.TriggerAnyFilter
 		eventType1   = "type1"
@@ -65,7 +67,7 @@ func TestEventTransformationForTrigger(t *testing.T) {
 	defer TearDown(clients, ns, cleaner, t.Logf)
 
 	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role
-	err := CreateServiceAccountAndBinding(clients, rbacObjName, ns, t.Logf, cleaner)
+	err := CreateServiceAccountAndBinding(clients, saName, crName, ns, t.Logf, cleaner)
 	if err != nil {
 		t.Fatalf("Failed to create the ServiceAccount and ServiceAccountRoleBinding: %v", err)
 	}
