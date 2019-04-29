@@ -167,8 +167,7 @@ func main() {
 
 	// Start all of the controllers.
 	logger.Info("Starting controllers.")
-	go kncontroller.StartAll(stopCh, controllers...)
-	<-stopCh
+	kncontroller.StartAll(stopCh, controllers...)
 }
 
 func init() {
