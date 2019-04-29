@@ -67,6 +67,15 @@ rules:
       - "eventtypes/status"
     verbs: *everything
 
+  # Eventing resources and finalizers we care about.
+  - apiGroups:
+      - "eventing.knative.dev"
+    resources:
+      - "brokers/finalizers"
+      - "triggers/finalizers"
+    verbs:
+      - "update"
+
   # Source resources and statuses we care about.
   - apiGroups:
       - "sources.eventing.knative.dev"
