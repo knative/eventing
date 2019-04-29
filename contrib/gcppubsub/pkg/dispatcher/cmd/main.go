@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/controller/clusterchannelprovisioner"
@@ -29,6 +30,7 @@ import (
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // This is the main method for the GCP PubSub Channel dispatcher. It handles all the data-plane
@@ -61,7 +63,7 @@ func main() {
 	// PubSub) and the dispatcher (takes messages in PubSub and sends them in cluster) in this
 	// binary.
 
-	_, runnables, err := receiver.New(logger.Desugar(), mgr.GetClient(), util.GcpPubSubClientCreator)
+	receiver, runnables, err := receiver.New(logger.Desugar(), mgr.GetClient(), util.GcpPubSubClientCreator)
 	if err != nil {
 		logger.Fatal("Unable to create new receiver and runnable", zap.Error(err))
 	}
@@ -72,7 +74,14 @@ func main() {
 		}
 	}
 
-	if _, err = dispatcher.New(mgr, logger.Desugar()); err != nil {
+	if _, err = dispatcher.New(
+		mgr,
+		logger.Desugar(),
+		[]dispatcher.ReconcileHandler{
+			func(ctx context.Context, _ reconcile.Request) error {
+				return receiver.UpdateHostToChannelMap(ctx)
+			},
+		}); err != nil {
 		logger.Fatal("Unable to create the dispatcher", zap.Error(err))
 	}
 
