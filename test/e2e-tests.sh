@@ -46,7 +46,7 @@ readonly PUBSUB_SECRET_NAME="gcppubsub-channel-key"
 function knative_setup() {
   echo ">> Enabling Istio"
   # Enable istio.
-  gcloud beta container clusters update ${E2E_PROJECT_ID} --region=${E2E_CLUSTER_REGION} \
+  gcloud beta container clusters update ${E2E_CLUSTER_NAME} --region=${E2E_CLUSTER_REGION} \
     --update-addons=Istio=ENABLED --istio-config=auth=MTLS_PERMISSIVE
   kubectl label namespace default istio-injection=enabled || return 1
 
@@ -144,12 +144,6 @@ function dump_extra_cluster_state() {
 # Script entry point.
 
 initialize $@
-
-echo ">> Enabling Istio"
-# Enable istio.
-gcloud beta container clusters update ${E2E_PROJECT_ID} --region=${E2E_CLUSTER_REGION} \
-  --update-addons=Istio=ENABLED --istio-config=auth=MTLS_PERMISSIVE
-kubectl label namespace default istio-injection=enabled || return 1
 
 go_test_e2e -timeout=20m ./test/e2e -run ^TestMain$ -runFromMain=true -clusterChannelProvisioners=in-memory-channel,in-memory || fail_test
 
