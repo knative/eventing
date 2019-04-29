@@ -489,7 +489,7 @@ extensible to support future needs.
 The implementation and maintenance work required to develop a custom expression
 language make this solution less suitable for Trigger filtering than CEL.
 
-### Structured filters
+### Structured filters exclusively
 
 Instead of using an expression language, we could design a system of structured
 filters expressible as yaml or JSON, similar to Kubernetes set-based label
@@ -503,7 +503,8 @@ matchExpressions:
 
 One advantage of structured filters is that their schema can be expressed in an
 OpenAPI document and syntax-checked at creation time without embedding a
-language runtime.
+language runtime. Another is that simple structured filters may be easier to
+implement in many languages than a CEL runtime.
 
 Structured filters are not as flexible as an expression language. For example,
 the above Kubernetes label selectors cannot compose expressions with Boolean OR.
@@ -516,10 +517,11 @@ off-the-shelf expression language can be embedded and immediately support
 significant complexity without additional effort.
 
 The inflexibility and implementation complexity of structured filters make this
-solution less suitable for Trigger filtering than CEL. However, structured
-filters can be a useful and important user interface on top of an expression
-language: for example, the existing SourceAndType syntax for expressing a filter
-should be implemented by transformation to an equivalent CEL expression. This
-provides users a structured filter interface when their needs are simple, and
-allows them to transition to a more complex interface when their needs require
-it.
+solution less suitable for Trigger filtering than CEL.
+
+However, structured filters are a useful and important user interface _in
+addition to_ an expression language. Structured filters like the `attributes`
+filter or `SourceAndType` filter  should be implemented by transformation to an
+equivalent CEL expression. This provides users a structured filter interface
+for simple needs while also preserving the benefits of a single well-specified
+mechanism for evaluating filters.
