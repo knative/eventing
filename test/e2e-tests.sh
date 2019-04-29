@@ -47,8 +47,11 @@ readonly PUBSUB_SECRET_NAME="gcppubsub-channel-key"
 
 # Setup the Knative environment for running tests.
 function knative_setup() {
-  # Install the latest stable Knative/serving in the current cluster.
-  start_latest_knative_serving || return 1
+  E2E_PROJECT_ID="$(gcloud config get-value project)"
+
+  # Enable istio.
+  gcloud beta container clusters update ${E2E_PROJECT_ID} \
+    --update-addons=Istio=ENABLED --istio-config=auth=MTLS_PERMISSIVE
 
   # Install the latest Knative/eventing in the current cluster.
   echo ">> Starting Knative Eventing"
@@ -60,7 +63,7 @@ function knative_setup() {
   ko apply -f ${IN_MEMORY_CHANNEL_CONFIG} || return 1
   wait_until_pods_running knative-eventing || fail_test "Failed to install the In-Memory ClusterChannelProvisioner"
 
-  E2E_PROJECT_ID="$(gcloud config get-value project)"
+
   echo "Installing GCPPubSub ClusterChannelProvisioner"
   gcppubsub_setup
   sed "s/REPLACE_WITH_GCP_PROJECT/${E2E_PROJECT_ID}/" ${GCP_PUBSUB_CONFIG_TEMPLATE} > ${GCP_PUBSUB_CONFIG}
