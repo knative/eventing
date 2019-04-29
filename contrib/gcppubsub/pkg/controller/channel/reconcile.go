@@ -19,10 +19,10 @@ package channel
 import (
 	"context"
 	"fmt"
-	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 
 	ccpcontroller "github.com/knative/eventing/contrib/gcppubsub/pkg/controller/clusterchannelprovisioner"
 	pubsubutil "github.com/knative/eventing/contrib/gcppubsub/pkg/util"
+	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	util "github.com/knative/eventing/pkg/provisioners"
@@ -49,21 +49,20 @@ const (
 	noNeedToPersist
 
 	// Name of the corev1.Events emitted from the reconciliation process
-	channelReconciled          = "ChannelReconciled"
-	channelUpdateStatusFailed  = "ChannelUpdateStatusFailed"
-	channelReadStatusFailed    = "ChannelReadStatusFailed"
-	gcpCredentialsReadFailed   = "GcpCredentialsReadFailed"
-	gcpResourcesPlanFailed     = "GcpResourcesPlanFailed"
-	gcpResourcesPersistFailed  = "GcpResourcesPersistFailed"
-	virtualServiceCreateFailed = "VirtualServiceCreateFailed"
-	k8sServiceCreateFailed     = "K8sServiceCreateFailed"
-	topicCreateFailed          = "TopicCreateFailed"
-	topicDeleteFailed          = "TopicDeleteFailed"
-	subscriptionSyncFailed     = "SubscriptionSyncFailed"
-	subscriptionDeleteFailed   = "SubscriptionDeleteFailed"
+	channelReconciled         = "ChannelReconciled"
+	channelUpdateStatusFailed = "ChannelUpdateStatusFailed"
+	channelReadStatusFailed   = "ChannelReadStatusFailed"
+	gcpCredentialsReadFailed  = "GcpCredentialsReadFailed"
+	gcpResourcesPlanFailed    = "GcpResourcesPlanFailed"
+	gcpResourcesPersistFailed = "GcpResourcesPersistFailed"
+	k8sServiceCreateFailed    = "K8sServiceCreateFailed"
+	topicCreateFailed         = "TopicCreateFailed"
+	topicDeleteFailed         = "TopicDeleteFailed"
+	subscriptionSyncFailed    = "SubscriptionSyncFailed"
+	subscriptionDeleteFailed  = "SubscriptionDeleteFailed"
 )
 
-// reconciler reconciles GCP-PubSub Channels by creating the K8s Service and Istio VirtualService
+// reconciler reconciles GCP-PubSub Channels by creating the K8s Service (ExternalName)
 // allowing other processes to send data to them. It also creates the GCP PubSub Topics (one per
 // Channel) and GCP PubSub Subscriptions (one per Subscriber).
 type reconciler struct {
@@ -116,7 +115,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	// Does this Controller control this Channel?
-	if !r.shouldReconcile(c) {
+	if !ShouldReconcile(c) {
 		logging.FromContext(ctx).Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("ref", c.Spec))
 		return reconcile.Result{}, nil
 	}
@@ -147,9 +146,9 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}, reconcileErr
 }
 
-// shouldReconcile determines if this Controller should control (and therefore reconcile) a given
+// ShouldReconcile determines if this Controller should control (and therefore reconcile) a given
 // Channel. This Controller only handles gcp-pubsub channels.
-func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
+func ShouldReconcile(c *eventingv1alpha1.Channel) bool {
 	if c.Spec.Provisioner != nil {
 		return ccpcontroller.IsControlled(c.Spec.Provisioner)
 	}
@@ -162,11 +161,10 @@ func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) (bool, error) {
 	c.Status.InitializeConditions()
 
-	// We are syncing four things:
-	// 1. The K8s Service to talk to this Channel.
-	// 2. The Istio VirtualService to talk to this Channel.
-	// 3. The GCP PubSub Topic (one for the Channel).
-	// 4. The GCP PubSub Subscriptions (one for each Subscriber of the Channel).
+	// We are syncing the following:
+	// - The K8s Service to talk to this Channel.
+	// - The GCP PubSub Topic (one for the Channel).
+	// - The GCP PubSub Subscriptions (one for each Subscriber of the Channel).
 
 	// First we will plan all the names out for steps 3 and 4 persist them to status.internal. Then, on a
 	// subsequent reconcile, we manipulate all the GCP resources in steps 3 and 4.
@@ -187,7 +185,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	}
 
 	if c.DeletionTimestamp != nil {
-		// K8s garbage collection will delete the K8s service and VirtualService for this channel.
+		// K8s garbage collection will delete the K8s service for this channel.
 		// All the subs should be deleted.
 		subsToSync := &syncSubs{
 			subsToDelete: originalPCS.Subscriptions,
@@ -232,15 +230,9 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		return true, nil
 	}
 
-	svc, err := r.createK8sService(ctx, c)
+	_, err = r.createK8sService(ctx, c)
 	if err != nil {
 		r.recorder.Eventf(c, corev1.EventTypeWarning, k8sServiceCreateFailed, "Failed to reconcile Channel's K8s Service: %v", err)
-		return false, err
-	}
-
-	err = r.createVirtualService(ctx, c, svc)
-	if err != nil {
-		r.recorder.Eventf(c, corev1.EventTypeWarning, virtualServiceCreateFailed, "Failed to reconcile Virtual Service for the Channel: %v", err)
 		return false, err
 	}
 
@@ -360,7 +352,7 @@ func (r *reconciler) planGcpResources(ctx context.Context, c *eventingv1alpha1.C
 }
 
 func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.Channel) (*corev1.Service, error) {
-	svc, err := util.CreateK8sService(ctx, r.client, c)
+	svc, err := util.CreateK8sService(ctx, r.client, c, util.ExternalService(c))
 	if err != nil {
 		logging.FromContext(ctx).Info("Error creating the Channel's K8s Service", zap.Error(err))
 		return nil, err
@@ -368,15 +360,6 @@ func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.C
 
 	c.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
 	return svc, nil
-}
-
-func (r *reconciler) createVirtualService(ctx context.Context, c *eventingv1alpha1.Channel, svc *corev1.Service) error {
-	_, err := util.CreateVirtualService(ctx, r.client, c, svc)
-	if err != nil {
-		logging.FromContext(ctx).Info("Error creating the Virtual Service for the Channel", zap.Error(err))
-		return err
-	}
-	return nil
 }
 
 func (r *reconciler) createTopic(ctx context.Context, plannedPCS *pubsubutil.GcpPubSubChannelStatus, gcpCreds *google.Credentials) (pubsubutil.PubSubTopic, error) {
