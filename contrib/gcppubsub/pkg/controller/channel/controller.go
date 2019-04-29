@@ -19,7 +19,6 @@ package channel
 import (
 	pubsubutil "github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -71,15 +70,6 @@ func ProvideController(defaultGcpProject string, defaultSecret *corev1.ObjectRef
 		}, &handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.Channel{}, IsController: true})
 		if err != nil {
 			logger.Error("Unable to watch K8s Services.", zap.Error(err))
-			return nil, err
-		}
-
-		// Watch the VirtualServices that are owned by Channels.
-		err = c.Watch(&source.Kind{
-			Type: &istiov1alpha3.VirtualService{},
-		}, &handler.EnqueueRequestForOwner{OwnerType: &eventingv1alpha1.Channel{}, IsController: true})
-		if err != nil {
-			logger.Error("Unable to watch VirtualServices.", zap.Error(err))
 			return nil, err
 		}
 

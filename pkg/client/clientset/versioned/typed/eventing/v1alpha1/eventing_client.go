@@ -30,6 +30,7 @@ type EventingV1alpha1Interface interface {
 	BrokersGetter
 	ChannelsGetter
 	ClusterChannelProvisionersGetter
+	EventTypesGetter
 	SubscriptionsGetter
 	TriggersGetter
 }
@@ -49,6 +50,10 @@ func (c *EventingV1alpha1Client) Channels(namespace string) ChannelInterface {
 
 func (c *EventingV1alpha1Client) ClusterChannelProvisioners() ClusterChannelProvisionerInterface {
 	return newClusterChannelProvisioners(c)
+}
+
+func (c *EventingV1alpha1Client) EventTypes(namespace string) EventTypeInterface {
+	return newEventTypes(c, namespace)
 }
 
 func (c *EventingV1alpha1Client) Subscriptions(namespace string) SubscriptionInterface {

@@ -20,11 +20,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
+	"sync/atomic"
 
 	"cloud.google.com/go/pubsub"
+	"github.com/knative/eventing/contrib/gcppubsub/pkg/controller/channel"
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/dispatcher/receiver/cache"
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/channelwatcher"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
@@ -40,6 +44,9 @@ type Receiver struct {
 
 	pubSubClientCreator util.PubSubClientCreator
 	cache               *cache.TTL
+
+	hostToChannelMapMutex sync.Mutex
+	hostToChannelMap      atomic.Value
 }
 
 // New creates a new Receiver and its associated MessageReceiver. The caller is responsible for
@@ -52,7 +59,9 @@ func New(logger *zap.Logger, client client.Client, pubSubClientCreator util.PubS
 		pubSubClientCreator: pubSubClientCreator,
 		cache:               cache.NewTTL(),
 	}
+	r.setHostToChannelMap(map[string]provisioners.ChannelReference{})
 	receiver, err := r.newMessageReceiver()
+
 	if err != nil {
 		return nil, nil, err
 	}
@@ -60,7 +69,18 @@ func New(logger *zap.Logger, client client.Client, pubSubClientCreator util.PubS
 }
 
 func (r *Receiver) newMessageReceiver() (*provisioners.MessageReceiver, error) {
-	return provisioners.NewMessageReceiver(r.sendEventToTopic, r.logger.Sugar())
+	return provisioners.NewMessageReceiver(
+		r.sendEventToTopic,
+		r.logger.Sugar(),
+		provisioners.ResolveChannelFromHostHeader(r.getChannelReferenceFromHost))
+}
+func (r *Receiver) getChannelReferenceFromHost(host string) (provisioners.ChannelReference, error) {
+	chMap := r.getHostToChannelMap()
+	cr, ok := chMap[host]
+	if !ok {
+		return cr, fmt.Errorf("Invalid HostName:%q. HostName not found in any of the watched gcp-pubsub channels", host)
+	}
+	return cr, nil
 }
 
 // sendEventToTopic sends a message to the Cloud Pub/Sub Topic backing the Channel.
@@ -151,4 +171,37 @@ func (r *Receiver) getChannel(ctx context.Context, ref provisioners.ChannelRefer
 		c)
 
 	return c, err
+}
+func (r *Receiver) getHostToChannelMap() map[string]provisioners.ChannelReference {
+	return r.hostToChannelMap.Load().(map[string]provisioners.ChannelReference)
+}
+
+func (r *Receiver) setHostToChannelMap(hcMap map[string]provisioners.ChannelReference) {
+	r.hostToChannelMap.Store(hcMap)
+}
+
+// UpdateHostToChannelMap will be called from the controller that watches gcp-pubsub channels.
+// It will update internal hostToChannelMap which is used to resolve the hostHeader of the
+// incoming request to the correct ChannelReference in the receiver function.
+func (r *Receiver) UpdateHostToChannelMap(ctx context.Context) error {
+	logging.FromContext(ctx).Debug("UpdateHostToChannelMap: Acquiring mutex lock")
+	r.hostToChannelMapMutex.Lock()
+	defer r.hostToChannelMapMutex.Unlock()
+	logging.FromContext(ctx).Debug("UpdateHostToChannelMap: Acquired mutex lock. Updating internal map")
+
+	chanList, err := channelwatcher.ListAllChannels(ctx, r.client, channel.ShouldReconcile)
+	if err != nil {
+		logging.FromContext(ctx).Error("UpdateHostToChannelMap: Failed to list all channels.", zap.Error(err))
+		return err
+	}
+
+	hostToChanMap, err := provisioners.NewHostNameToChannelRefMap(chanList)
+	if err != nil {
+		logging.FromContext(ctx).Error("UpdateHostToChannelMap: Error occured when creating the new hostToChannel map.", zap.Error(err))
+		return err
+	}
+
+	r.setHostToChannelMap(hostToChanMap)
+	logging.FromContext(ctx).Info("UpdateHostToChannelMap: Update successful.")
+	return nil
 }
