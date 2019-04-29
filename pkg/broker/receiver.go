@@ -23,7 +23,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler/trigger/path"
 	"go.uber.org/zap"
@@ -214,8 +214,7 @@ func (r *Receiver) shouldSendMessage(ts *eventingv1alpha1.TriggerSpec, event *cl
 		return false
 	}
 	filterSource := ts.Filter.SourceAndType.Source
-	s := event.Context.AsV01().Source
-	actualSource := s.String()
+	actualSource := event.Source()
 	if filterSource != eventingv1alpha1.TriggerAnyFilter && filterSource != actualSource {
 		r.logger.Debug("Wrong source", zap.String("trigger.spec.filter.sourceAndType.source", filterSource), zap.String("message.source", actualSource))
 		return false

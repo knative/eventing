@@ -27,8 +27,13 @@ func (b *Broker) Validate(ctx context.Context) *apis.FieldError {
 }
 
 func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
+	var errs *apis.FieldError
+	if bs.Policy == nil {
+		fe := apis.ErrMissingField("policy")
+		errs = errs.Also(fe)
+	}
 	// TODO validate that the channelTemplate only specifies the provisioner and arguments.
-	return nil
+	return errs
 }
 
 func (b *Broker) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
@@ -36,5 +41,6 @@ func (b *Broker) CheckImmutableFields(ctx context.Context, og apis.Immutable) *a
 	// changing it will normally not have the desired effect of changing the Channel inside the
 	// Broker. It would have an effect if the existing Channel was then deleted, the newly created
 	// Channel would use the new spec.channelTemplate.
+	// Similar thing would happen with spec.policy.
 	return nil
 }

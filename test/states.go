@@ -63,6 +63,12 @@ func TriggersReady(triggerList *eventingv1alpha1.TriggerList) (bool, error) {
 	return true, nil
 }
 
+// IsEventTypeReady will check the status conditions of the EventType and
+// return true if the EventType is ready.
+func IsEventTypeReady(et *eventingv1alpha1.EventType) (bool, error) {
+	return et.Status.IsReady(), nil
+}
+
 // PodsRunning will check the status conditions of the pod list and return true
 // if all pods are Running.
 func PodsRunning(podList *corev1.PodList) (bool, error) {

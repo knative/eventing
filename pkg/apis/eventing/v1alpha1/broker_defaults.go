@@ -23,5 +23,10 @@ func (b *Broker) SetDefaults(ctx context.Context) {
 }
 
 func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
-	// None
+	if bs.Policy == nil {
+		// Setting as default to allow any event.
+		bs.Policy = &BrokerPolicySpec{
+			AllowAny: true,
+		}
+	}
 }

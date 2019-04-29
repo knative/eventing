@@ -18,6 +18,7 @@ package resources
 
 import (
 	"fmt"
+	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -82,6 +83,18 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 								{
 									Name:  "BROKER",
 									Value: args.Broker.Name,
+								},
+								{
+									Name:  "ALLOW_ANY",
+									Value: strconv.FormatBool(args.Broker.Spec.Policy.AllowAny),
+								},
+								{
+									Name: "NAMESPACE",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "metadata.namespace",
+										},
+									},
 								},
 							},
 							Ports: []corev1.ContainerPort{

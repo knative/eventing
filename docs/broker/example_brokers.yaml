@@ -16,7 +16,8 @@
 
 ---
 
-# By not specifying a spec, the default Channel for the namespace will be used.
+# By not specifying a spec, the default Channel for the namespace will be used, as well
+# as the default policy of accepting any event.
 
 apiVersion: eventing.knative.dev/v1alpha1
 kind: Broker
@@ -40,5 +41,14 @@ spec:
       kind: ClusterChannelProvisioner
       name: gcp-pubsub
 
+---
 
+# By setting the spec.policy.allowAny to false, the broker will only accept events that are in the Registry.
 
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Broker
+metadata:
+  name: broker-allow-registered
+spec:
+  policy:
+    allowAny: false
