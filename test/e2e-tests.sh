@@ -30,11 +30,12 @@ source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/e2e-tests.s
 
 readonly EVENTING_CONFIG="config/"
 
+# In-memory provisioner config.
 readonly IN_MEMORY_CHANNEL_CONFIG="config/provisioners/in-memory-channel/in-memory-channel.yaml"
 
-# GCP PubSub config template.
+# GCP PubSub provisioner config template.
 readonly GCP_PUBSUB_CONFIG_TEMPLATE="contrib/gcppubsub/config/gcppubsub.yaml"
-# Real GCP PubSub config, generated from the template.
+# Real GCP PubSub provisioner config, generated from the template.
 readonly GCP_PUBSUB_CONFIG="$(mktemp)"
 
 # Constants used for creating ServiceAccount for GCP PubSub provisioner setup if it's not running on Prow.
@@ -63,6 +64,7 @@ function knative_teardown() {
 
 # Setup resources common to all eventing tests.
 function test_setup() {
+  # Install provisioners used by the tests.
   echo "Installing In-Memory ClusterChannelProvisioner"
   ko apply -f ${IN_MEMORY_CHANNEL_CONFIG} || return 1
   wait_until_pods_running knative-eventing || fail_test "Failed to install the In-Memory ClusterChannelProvisioner"
@@ -80,6 +82,7 @@ function test_setup() {
 
 # Tear down resources used in the eventing tests.
 function test_teardown() {
+  # Uninstall provisioners used by the tests.
   echo "Uninstalling In-Memory ClusterChannelProvisioner"
   ko delete --ignore-not-found=true --now --timeout 60s -f ${IN_MEMORY_CHANNEL_CONFIG}
 
