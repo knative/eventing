@@ -29,5 +29,10 @@ func MakeBroker(namespace string) *v1alpha1.Broker {
 			Name:      DefaultBrokerName,
 			Labels:    OwnedLabels(),
 		},
+		Spec: v1alpha1.BrokerSpec{
+			Policy: &v1alpha1.BrokerPolicySpec{
+				AllowAny: true,
+			},
+		},
 	}
 }

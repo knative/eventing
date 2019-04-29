@@ -18,6 +18,7 @@ package broker
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -972,6 +973,18 @@ func envVars(containerName string) []corev1.EnvVar {
 			{
 				Name:  "BROKER",
 				Value: brokerName,
+			},
+			{
+				Name:  "ALLOW_ANY",
+				Value: strconv.FormatBool(true),
+			},
+			{
+				Name: "NAMESPACE",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.namespace",
+					},
+				},
 			},
 		}
 	}

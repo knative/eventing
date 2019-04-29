@@ -39,6 +39,10 @@ type IngressArgs struct {
 
 // MakeIngress creates the in-memory representation of the Broker's ingress Deployment.
 func MakeIngress(args *IngressArgs) *appsv1.Deployment {
+	allowAny := true
+	if args.Broker.Spec.Policy != nil {
+		allowAny = args.Broker.Spec.Policy.AllowAny
+	}
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: args.Broker.Namespace,
@@ -86,7 +90,7 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 								},
 								{
 									Name:  "ALLOW_ANY",
-									Value: strconv.FormatBool(args.Broker.Spec.Policy.AllowAny),
+									Value: strconv.FormatBool(allowAny),
 								},
 								{
 									Name: "NAMESPACE",
