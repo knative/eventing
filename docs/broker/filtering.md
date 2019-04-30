@@ -108,6 +108,7 @@ adopt the following principles:
 * All filters must be transformable to an equivalent CEL expression.
 * Additional filter specifications may be added if indicated by user feedback.
 
+
 ## Implementation details
 
 ### Variables in the expression
@@ -373,16 +374,6 @@ spec:
 
 ## Caveats
 
-### Numeric and nested extension values
-
-Some CloudEvents transports (such as the HTTP binary content mode) may be unable
-to differentiate numeric and string values for top-level or nested extension
-attributes. This is still being discussed by the CloudEvents working group (see
-https://github.com/cloudevents/spec/pull/413).
-
-Until this is resolved, the type of numeric values parsed in CloudEvents
-extensions may be unpredictable.
-
 ### Choice of CEL
 
 The main caveat is the choice of CEL as expression language.
@@ -413,7 +404,7 @@ spec:
       expression: ce.type == "com.github.pull.create"
 ```
 
-### Versioning
+### Expression language versioning
 
 Embedding an expression language into the Trigger specification means that we
 effectively have two versions exposed to the user: the Trigger CRD APIVersion and
@@ -431,6 +422,38 @@ expressions at the same time as a Knative upgrade. If no automatic upgrade is
 possible, we should support both CEL versions for one or more Knative releases.
 It might be necessary to add a Trigger field specifying the version of CEL that
 should evaluate the expression.
+
+### Numeric and nested extension values
+
+Some CloudEvents transports (such as the HTTP binary content mode) may be unable
+to differentiate numeric and string values for top-level or nested extension
+attributes. This is still being discussed by the CloudEvents working group (see
+https://github.com/cloudevents/spec/pull/413).
+
+Until this is resolved, the type of numeric values parsed in CloudEvents
+extensions may be unpredictable.
+
+### Single top-level filter
+
+Top-level filters are now explicitly exclusive: only one may be specified. This
+is done to ensure that Trigger filters are easily understood by the user.
+Composable filters at the top-level would have unclear composition logic: are
+they composed by Boolean **OR** or **AND**? The user must be aware of the
+implicit semantics to understand the result of the trigger. 
+
+If there is user demand for structured filter composition, top-level `or` and
+`and` filters can be introduced that indicate how filter elements are composed.
+This example is presented as an illustration only; it is not an element of the
+proposal.
+
+```yaml
+spec:
+  filter:
+    and:
+    - attributes:
+        type: com.github.pull.create
+    - expression: ce.source.match("knative")
+```
 
 ## Alternatives Considered
 
