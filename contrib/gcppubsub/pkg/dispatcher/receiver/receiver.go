@@ -197,7 +197,7 @@ func (r *Receiver) UpdateHostToChannelMap(ctx context.Context) error {
 
 	hostToChanMap, err := provisioners.NewHostNameToChannelRefMap(chanList)
 	if err != nil {
-		logging.FromContext(ctx).Error("UpdateHostToChannelMap: Error occured when creating the new hostToChannel map.", zap.Error(err))
+		logging.FromContext(ctx).Error("UpdateHostToChannelMap: Error occurred when creating the new hostToChannel map.", zap.Error(err))
 		return err
 	}
 
