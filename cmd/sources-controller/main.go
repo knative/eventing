@@ -18,9 +18,10 @@ package main
 
 import (
 	"flag"
+	"log"
+
 	"github.com/knative/eventing/pkg/reconciler/containersource"
 	"k8s.io/client-go/tools/clientcmd"
-	"log"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"

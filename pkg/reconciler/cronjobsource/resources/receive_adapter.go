@@ -18,6 +18,7 @@ package resources
 
 import (
 	"fmt"
+
 	"github.com/knative/pkg/kmeta"
 
 	v1 "k8s.io/api/apps/v1"

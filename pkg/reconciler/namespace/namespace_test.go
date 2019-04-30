@@ -17,10 +17,11 @@ limitations under the License.
 package namespace
 
 import (
+	"testing"
+
 	"github.com/knative/eventing/pkg/reconciler/namespace/resources"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"testing"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"

@@ -220,7 +220,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 			},
 			oldHostToChanMap: map[string]provisioners.ChannelReference{},
 			newHostToChanMap: map[string]provisioners.ChannelReference{
-				"a.b.c.d": provisioners.ChannelReference{Name: "test-channel", Namespace: "default"},
+				"a.b.c.d": {Name: "test-channel", Namespace: "default"},
 			},
 		},
 		{
@@ -250,7 +250,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 			subscribes:       []string{"subscription-1", "subscription-2"},
 			oldHostToChanMap: map[string]provisioners.ChannelReference{},
 			newHostToChanMap: map[string]provisioners.ChannelReference{
-				"a.b.c.d": provisioners.ChannelReference{Name: "test-channel", Namespace: "default"},
+				"a.b.c.d": {Name: "test-channel", Namespace: "default"},
 			},
 		},
 		{
@@ -296,10 +296,10 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 			subscribes:   []string{"subscription-2", "subscription-3"},
 			unsubscribes: []string{"subscription-1"},
 			oldHostToChanMap: map[string]provisioners.ChannelReference{
-				"a.b.c.d": provisioners.ChannelReference{Name: "test-channel", Namespace: "default"},
+				"a.b.c.d": {Name: "test-channel", Namespace: "default"},
 			},
 			newHostToChanMap: map[string]provisioners.ChannelReference{
-				"a.b.c.d": provisioners.ChannelReference{Name: "test-channel", Namespace: "default"},
+				"a.b.c.d": {Name: "test-channel", Namespace: "default"},
 			},
 		},
 		{
@@ -359,11 +359,11 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 			subscribes:   []string{"subscription-1", "subscription-3", "subscription-4"},
 			unsubscribes: []string{"subscription-2"},
 			oldHostToChanMap: map[string]provisioners.ChannelReference{
-				"a.b.c.d": provisioners.ChannelReference{Name: "test-channel-1", Namespace: "default"},
+				"a.b.c.d": {Name: "test-channel-1", Namespace: "default"},
 			},
 			newHostToChanMap: map[string]provisioners.ChannelReference{
-				"a.b.c.d": provisioners.ChannelReference{Name: "test-channel-1", Namespace: "default"},
-				"e.f.g.h": provisioners.ChannelReference{Name: "test-channel-2", Namespace: "default"},
+				"a.b.c.d": {Name: "test-channel-1", Namespace: "default"},
+				"e.f.g.h": {Name: "test-channel-2", Namespace: "default"},
 			},
 		},
 		{

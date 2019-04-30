@@ -1,7 +1,7 @@
 package kncloudevents
 
 import (
-	"github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 )
 
