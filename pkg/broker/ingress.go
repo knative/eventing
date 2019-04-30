@@ -55,7 +55,7 @@ func (p *Policy) AllowEvent(ctx context.Context, event cloudevents.Event) bool {
 	// 1. If allowAny is set to true, then all events are allowed to enter the mesh.
 	// 2. If allowAny is set to false, then the event is only accepted if it's already in the Broker's registry.
 	if p.spec.AllowAny {
-		p.logger.Debugf("EventType (type:%s, source:%s, schema:%s) received, Accept", event.Type(), event.Source(), event.SchemaURL())
+		p.logger.Debugf("EventType (type:'%s', source:'%s', schema:'%s') received, Accept", event.Type(), event.Source(), event.SchemaURL())
 		return true
 	}
 	return p.isRegistered(ctx, event)
@@ -66,13 +66,13 @@ func (p *Policy) AllowEvent(ctx context.Context, event cloudevents.Event) bool {
 func (p *Policy) isRegistered(ctx context.Context, event cloudevents.Event) bool {
 	_, err := p.getEventType(ctx, event)
 	if apierrs.IsNotFound(err) {
-		p.logger.Debugf("EventType (type:%s, source:%s, schema:%s) not found, Reject", event.Type(), event.Source(), event.SchemaURL())
+		p.logger.Debugf("EventType (type:'%s', source:'%s', schema:'%s') not found, Reject", event.Type(), event.Source(), event.SchemaURL())
 		return false
 	} else if err != nil {
-		p.logger.Errorf("Error retrieving EventType (type:%s, source:%s, schema:%s), Reject: %v", event.Type(), event.Source(), event.SchemaURL(), err)
+		p.logger.Errorf("Error retrieving EventType (type:'%s', source:'%s', schema:'%s'), Reject: %v", event.Type(), event.Source(), event.SchemaURL(), err)
 		return false
 	}
-	p.logger.Debugf("EventType (type:%s, source:%s, schema:%s) is registered, Accept", event.Type(), event.Source(), event.SchemaURL())
+	p.logger.Debugf("EventType (type:'%s', source:'%s', schema:'%s') is registered, Accept", event.Type(), event.Source(), event.SchemaURL())
 	return true
 }
 
