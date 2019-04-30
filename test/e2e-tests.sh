@@ -43,6 +43,11 @@ readonly PUBSUB_SERVICE_ACCOUNT="eventing-pubsub-test"
 readonly PUBSUB_SERVICE_ACCOUNT_KEY="$(mktemp)"
 readonly PUBSUB_SECRET_NAME="gcppubsub-channel-key"
 
+# NATS Streaming installation config.
+readonly NATSS_INSTALLATION_CONFIG="contrib/natss/config/broker/natss.yaml"
+# NATSS provisioner config.
+readonly NATSS_CONFIG="contrib/natss/config/provisioner.yaml"
+
 # Setup the Knative environment for running tests.
 function knative_setup() {
   # Install the latest stable Knative/serving in the current cluster.
@@ -75,6 +80,11 @@ function test_setup() {
   ko apply -f ${GCP_PUBSUB_CONFIG} || return 1
   wait_until_pods_running knative-eventing || fail_test "Failed to install the GCPPubSub ClusterChannelProvisioner"
 
+  echo "Installing NATSS ClusterChannelProvisioner"
+  natss_setup || return 1
+  ko apply -f ${NATSS_CONFIG} || return 1
+  wait_until_pods_running knative-eventing || fail_test "Failed to install the NATSS ClusterChannelProvisioner"
+
   # Publish test images.
   echo ">> Publishing test images"
   $(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test images"
@@ -89,6 +99,10 @@ function test_teardown() {
   echo "Uninstalling GCPPubSub ClusterChannelProvisioner"
   gcppubsub_teardown
   ko delete --ignore-not-found=true --now --timeout 60s -f ${GCP_PUBSUB_CONFIG}
+
+  echo "Uninstalling NATSS ClusterChannelProvisioner"
+  natss_teardown
+  ko delete --ignore-not-found=true --now --timeout 60s -f ${NATSS_CONFIG}
 
   wait_until_object_does_not_exist namespaces knative-eventing
 }
@@ -126,6 +140,21 @@ function gcppubsub_teardown() {
   kubectl -n knative-eventing delete secret ${PUBSUB_SECRET_NAME}
 }
 
+# Create resources required for NATSS provisioner setup
+function natss_setup() {
+  echo "Installing NATS Streaming"
+  kubectl create namespace natss
+  kubectl label namespace natss istio-injection=enabled
+  kubectl apply -n natss -f ${NATSS_INSTALLATION_CONFIG}
+}
+
+# Delete resources used for NATSS provisioner setup
+function natss_teardown() {
+  echo "Uninstalling NATS Streaming"
+  kubectl delete -f ${NATSS_INSTALLATION_CONFIG}
+  kubectl delete namespace natss
+}
+
 function dump_extra_cluster_state() {
   # Collecting logs from all knative's eventing pods.
   echo "============================================================"
@@ -146,6 +175,6 @@ function dump_extra_cluster_state() {
 
 initialize $@
 
-go_test_e2e -timeout=20m ./test/e2e -run ^TestMain$ -runFromMain=true -clusterChannelProvisioners=in-memory-channel,in-memory || fail_test
+go_test_e2e -timeout=20m ./test/e2e -run ^TestMain$ -runFromMain=true -clusterChannelProvisioners=in-memory-channel,in-memory,natss || fail_test
 
 success
