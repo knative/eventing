@@ -28,12 +28,14 @@ import (
 	"github.com/knative/pkg/reconciler/testing"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -143,6 +145,14 @@ func (l *Listers) GetK8sServiceLister() corev1listers.ServiceLister {
 
 func (l *Listers) GetNamespaceLister() corev1listers.NamespaceLister {
 	return corev1listers.NewNamespaceLister(l.indexerFor(&corev1.Namespace{}))
+}
+
+func (l *Listers) GetServiceAccountLister() corev1listers.ServiceAccountLister {
+	return corev1listers.NewServiceAccountLister(l.indexerFor(&corev1.ServiceAccount{}))
+}
+
+func (l *Listers) GetRoleBindingLister() rbacv1listers.RoleBindingLister {
+	return rbacv1listers.NewRoleBindingLister(l.indexerFor(&rbacv1.RoleBinding{}))
 }
 
 func (l *Listers) GetEndpointsLister() corev1listers.EndpointsLister {

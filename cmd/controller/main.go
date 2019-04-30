@@ -89,6 +89,8 @@ func main() {
 	namespaceInformer := kubeInformerFactory.Core().V1().Namespaces()
 	configMapInformer := kubeInformerFactory.Core().V1().ConfigMaps()
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
+	serviceAccountInformer := kubeInformerFactory.Core().V1().ServiceAccounts()
+	roleBindingInformer := kubeInformerFactory.Rbac().V1().RoleBindings()
 
 	// Build all of our controllers, with the clients constructed above.
 	// Add new controllers to this array.
@@ -101,6 +103,9 @@ func main() {
 		namespace.NewController(
 			opt,
 			namespaceInformer,
+			serviceAccountInformer,
+			roleBindingInformer,
+			brokerInformer,
 		),
 		channel.NewController(
 			opt,
@@ -164,6 +169,8 @@ func main() {
 		serviceInformer.Informer(),
 		namespaceInformer.Informer(),
 		deploymentInformer.Informer(),
+		serviceAccountInformer.Informer(),
+		roleBindingInformer.Informer(),
 	); err != nil {
 		logger.Fatalf("Failed to start informers: %v", err)
 	}
