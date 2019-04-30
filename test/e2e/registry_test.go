@@ -5,7 +5,9 @@ Copyright 2019 The Knative Authors
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -70,11 +72,12 @@ func Registry(t *testing.T, fixture *testFixture) {
 
 	// Define the constants here to avoid conflicts with other e2e tests.
 	const (
-		brokerName                   = "test-broker"
-		triggerName                  = "test-trigger"
-		eventTypeName                = "test-eventtype"
-		subscriberName               = "test-dumper"
-		waitTimeForBrokerPodsRunning = 30 * time.Second
+		brokerName                     = "test-broker"
+		triggerName                    = "test-trigger"
+		eventTypeName                  = "test-eventtype"
+		subscriberName                 = "test-dumper"
+		waitTimeForBrokerPodsRunning   = 30 * time.Second
+		waitTimeForCheckingNonDelivery = 30 * time.Second
 	)
 
 	t.Logf("Labeling Namespace %s", ns)
@@ -158,6 +161,8 @@ func Registry(t *testing.T, fixture *testFixture) {
 		}
 	} else {
 		t.Logf("Verifying Event not delivered")
+		// Waiting few seconds to check that the event wasn't received.
+		time.Sleep(waitTimeForCheckingNonDelivery)
 		found, err := FindAnyLogContents(clients, t.Logf, subscriberName, subscriberPod.Spec.Containers[0].Name, ns, []string{body})
 		if err != nil {
 			t.Fatalf("Failed querying to find log contents in Subscriber Pod %q: %v", subscriberName, err)
