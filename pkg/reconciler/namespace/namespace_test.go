@@ -17,6 +17,7 @@ limitations under the License.
 package namespace
 
 import (
+	"github.com/knative/pkg/tracker"
 	"testing"
 
 	"github.com/knative/eventing/pkg/reconciler/namespace/resources"
@@ -25,6 +26,7 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
+	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/reconciler"
 	. "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/pkg/controller"
@@ -70,14 +72,18 @@ func TestNew(t *testing.T) {
 	kubeClient := fakekubeclientset.NewSimpleClientset()
 	eventingClient := fakeclientset.NewSimpleClientset()
 	kubeInformer := kubeinformers.NewSharedInformerFactory(kubeClient, 0)
+	eventingInformer := eventinginformers.NewSharedInformerFactory(eventingClient, 0)
 
 	namespaceInformer := kubeInformer.Core().V1().Namespaces()
+	serviceAccountInformer := kubeInformer.Core().V1().ServiceAccounts()
+	roleBindingInformer := kubeInformer.Rbac().V1().RoleBindings()
+	brokerInformer := eventingInformer.Eventing().V1alpha1().Brokers()
 
 	c := NewController(reconciler.Options{
 		KubeClientSet:     kubeClient,
 		EventingClientSet: eventingClient,
 		Logger:            logtesting.TestLogger(t),
-	}, namespaceInformer)
+	}, namespaceInformer, serviceAccountInformer, roleBindingInformer, brokerInformer)
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
@@ -238,8 +244,12 @@ func TestAllCases(t *testing.T) {
 	defer logtesting.ClearAll()
 	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
 		return &Reconciler{
-			Base:            reconciler.NewBase(opt, controllerAgentName),
-			namespaceLister: listers.GetNamespaceLister(),
+			Base:                 reconciler.NewBase(opt, controllerAgentName),
+			namespaceLister:      listers.GetNamespaceLister(),
+			brokerLister:         listers.GetBrokerLister(),
+			serviceAccountLister: listers.GetServiceAccountLister(),
+			roleBindingLister:    listers.GetRoleBindingLister(),
+			tracker:              tracker.New(func(string) {}, 0),
 		}
 	}))
 }

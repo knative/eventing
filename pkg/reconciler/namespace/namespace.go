@@ -19,12 +19,17 @@ package namespace
 import (
 	"context"
 	"fmt"
-
 	"github.com/knative/eventing/pkg/reconciler/namespace/resources"
+	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/pkg/tracker"
 	"k8s.io/client-go/tools/cache"
 
+	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
+	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	corev1informers "k8s.io/client-go/informers/core/v1"
+	rbacv1informers "k8s.io/client-go/informers/rbac/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
@@ -52,11 +57,21 @@ const (
 	serviceAccountRBACCreated = "BrokerFilterServiceAccountRBACCreated"
 )
 
+var (
+	serviceAccountGVK = corev1.SchemeGroupVersion.WithKind("ServiceAccount")
+	roleBindingGVK    = rbacv1.SchemeGroupVersion.WithKind("RoleBinding")
+	brokerGVK         = v1alpha1.SchemeGroupVersion.WithKind("Broker")
+)
+
 type Reconciler struct {
 	*reconciler.Base
 
 	// listers index properties about resources
-	namespaceLister corev1listers.NamespaceLister
+	namespaceLister      corev1listers.NamespaceLister
+	serviceAccountLister corev1listers.ServiceAccountLister
+	roleBindingLister    rbacv1listers.RoleBindingLister
+	brokerLister         eventinglisters.BrokerLister
+	tracker              tracker.Interface
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -67,6 +82,9 @@ var _ controller.Reconciler = (*Reconciler)(nil)
 func NewController(
 	opt reconciler.Options,
 	namespaceInformer corev1informers.NamespaceInformer,
+	serviceAccountInformer corev1informers.ServiceAccountInformer,
+	roleBindingInformer rbacv1informers.RoleBindingInformer,
+	brokerInformer eventinginformers.BrokerInformer,
 ) *controller.Impl {
 
 	r := &Reconciler{
@@ -76,10 +94,23 @@ func NewController(
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
 
 	// TODO: filter label selector: on InjectionEnabledLabels()
-	// TODO: we need to also watch for changes to service accounts, RoleBindings, and Brokers to heal on bad changes.
 
 	r.Logger.Info("Setting up event handlers")
 	namespaceInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
+
+	// Tracker is used to notify us the namespace's resources we need to reconcile.
+	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
+
+	// Watch all the resources that this reconciler reconciles.
+	serviceAccountInformer.Informer().AddEventHandler(reconciler.Handler(
+		controller.EnsureTypeMeta(r.tracker.OnChanged, serviceAccountGVK),
+	))
+	roleBindingInformer.Informer().AddEventHandler(reconciler.Handler(
+		controller.EnsureTypeMeta(r.tracker.OnChanged, roleBindingGVK),
+	))
+	brokerInformer.Informer().AddEventHandler(reconciler.Handler(
+		controller.EnsureTypeMeta(r.tracker.OnChanged, brokerGVK),
+	))
 
 	return impl
 }
@@ -135,16 +166,37 @@ func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error 
 		logging.FromContext(ctx).Error("Unable to reconcile the Broker Filter Service Account for the namespace", zap.Error(err))
 		return err
 	}
-	_, err = r.reconcileBrokerFilterRBAC(ctx, ns, sa)
+
+	// Tell tracker to reconcile this namespace whenever the Service Account changes.
+	if err = r.tracker.Track(utils.ObjectRef(sa, serviceAccountGVK), ns); err != nil {
+		logging.FromContext(ctx).Error("Unable to track changes to ServiceAccount", zap.Error(err))
+		return err
+	}
+
+	rb, err := r.reconcileBrokerFilterRBAC(ctx, ns, sa)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to reconcile the Broker Filter Service Account RBAC for the namespace", zap.Error(err))
 		return err
 	}
-	_, err = r.reconcileBroker(ctx, ns)
+
+	// Tell tracker to reconcile this namespace whenever the RoleBinding changes.
+	if err = r.tracker.Track(utils.ObjectRef(rb, roleBindingGVK), ns); err != nil {
+		logging.FromContext(ctx).Error("Unable to track changes to RoleBinding", zap.Error(err))
+		return err
+	}
+
+	b, err := r.reconcileBroker(ctx, ns)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to reconcile Broker for the namespace", zap.Error(err))
 		return err
 	}
+
+	// Tell tracker to reconcile this namespace whenever the Broker changes.
+	if err = r.tracker.Track(utils.ObjectRef(b, brokerGVK), ns); err != nil {
+		logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
+		return err
+	}
+
 	return nil
 }
 
