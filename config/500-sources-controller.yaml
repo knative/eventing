@@ -26,6 +26,8 @@ spec:
       app: sources-controller
   template:
     metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
       labels:
         app: sources-controller
         eventing.knative.dev/release: devel
