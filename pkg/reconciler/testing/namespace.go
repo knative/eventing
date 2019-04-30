@@ -17,9 +17,10 @@ limitations under the License.
 package testing
 
 import (
+	"time"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"time"
 )
 
 // NamespaceOption enables further configuration of a Namespace.
