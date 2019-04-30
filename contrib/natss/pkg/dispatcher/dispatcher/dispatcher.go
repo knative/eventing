@@ -314,7 +314,7 @@ func (s *SubscriptionsSupervisor) setHostToChannelMap(hcMap map[string]provision
 func (s *SubscriptionsSupervisor) UpdateHostToChannelMap(ctx context.Context, chanList []eventingv1alpha1.Channel) error {
 	hostToChanMap, err := provisioners.NewHostNameToChannelRefMap(chanList)
 	if err != nil {
-		logging.FromContext(ctx).Info("UpdateHostToChannelMap: Error occured when creating the new hostToChannel map.", zap.Error(err))
+		logging.FromContext(ctx).Info("UpdateHostToChannelMap: Error occurred when creating the new hostToChannel map.", zap.Error(err))
 		return err
 	}
 	s.setHostToChannelMap(hostToChanMap)
