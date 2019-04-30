@@ -143,9 +143,9 @@ function gcppubsub_teardown() {
 # Create resources required for NATSS provisioner setup
 function natss_setup() {
   echo "Installing NATS Streaming"
-  kubectl create namespace natss
-  kubectl label namespace natss istio-injection=enabled
-  kubectl apply -n natss -f ${NATSS_INSTALLATION_CONFIG}
+  kubectl create namespace natss || return 1
+  kubectl label namespace natss istio-injection=enabled || return 1
+  kubectl apply -n natss -f ${NATSS_INSTALLATION_CONFIG} || return 1
 }
 
 # Delete resources used for NATSS provisioner setup
@@ -158,7 +158,7 @@ function natss_teardown() {
 function dump_extra_cluster_state() {
   # Collecting logs from all knative's eventing pods.
   echo "============================================================"
-  namespace="knative-eventing"
+  local namespace="knative-eventing"
   for pod in $(kubectl get pod -n $namespace | grep Running | awk '{print $1}' ); do
     for container in $(kubectl get pod "${pod}" -n $namespace -ojsonpath='{.spec.containers[*].name}'); do
       echo "Namespace, Pod, Container: ${namespace}, ${pod}, ${container}"
