@@ -93,7 +93,7 @@ func main() {
 	// Build all of our controllers, with the clients constructed above.
 	// Add new controllers to this array.
 	// You also need to modify numControllers above to match this.
-	controllers := []*kncontroller.Impl{
+	controllers := [...]*kncontroller.Impl{
 		subscription.NewController(
 			opt,
 			subscriptionInformer,
@@ -134,9 +134,12 @@ func main() {
 			brokerInformer,
 		),
 	}
-	if len(controllers) != numControllers {
-		logger.Fatalf("Number of controllers and QPS settings mismatch: %d != %d", len(controllers), numControllers)
-	}
+	// This line asserts at compile time that the length of controllers is equal to numControllers.
+	// It is based on https://go101.org/article/tips.html#assert-at-compile-time, which notes that
+	// var _ [N-M]int
+	// asserts at compile time that N >= M, which we can use to establish equality of N and M:
+	// (N >= M) && (M >= N) => (N == M)
+	var _ [numControllers - len(controllers)][len(controllers) - numControllers]int
 
 	// Watch the logging config map and dynamically update logging levels.
 	opt.ConfigMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller))
@@ -167,7 +170,7 @@ func main() {
 
 	// Start all of the controllers.
 	logger.Info("Starting controllers.")
-	go kncontroller.StartAll(stopCh, controllers...)
+	go kncontroller.StartAll(stopCh, controllers[:]...)
 	<-stopCh
 }
 
