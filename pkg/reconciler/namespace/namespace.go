@@ -19,6 +19,7 @@ package namespace
 import (
 	"context"
 	"fmt"
+
 	"github.com/knative/eventing/pkg/reconciler/namespace/resources"
 	"k8s.io/client-go/tools/cache"
 
