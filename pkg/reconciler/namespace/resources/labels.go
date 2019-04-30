@@ -21,12 +21,13 @@ const (
 	InjectionLabelKey           = "knative-eventing-injection"
 	InjectionEnabledLabelValue  = "enabled"
 	InjectionDisabledLabelValue = "disabled"
+	InjectedResourceLabel       = "eventing.knative.dev/namespaceInjected"
 )
 
 // OwnedLabels generates the labels present on injected broker resources.
 func OwnedLabels() map[string]string {
 	return map[string]string{
-		"eventing.knative.dev/namespaceInjected": "true",
+		InjectedResourceLabel: "true",
 	}
 }
 
