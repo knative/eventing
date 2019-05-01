@@ -2,10 +2,11 @@
 
 
 [[projects]]
-  digest = "1:04a6834455a0a97cdd9bccc7394576ddc7a8a75f69fdc1431303c543df03bcac"
+  digest = "1:59c7473cb534fcc77eeb614ebdff78d0be3a50dad9beacb49123b1e2a0f480e8"
   name = "cloud.google.com/go"
   packages = [
     "compute/metadata",
+    "container/apiv1",
     "iam",
     "internal/optional",
     "internal/version",
@@ -20,14 +21,23 @@
   version = "v0.34.0"
 
 [[projects]]
-  digest = "1:b6eb7c2538ec2999a072c0e372a18d7b7e3aedac249f26e159586fa5f892909f"
+  digest = "1:43fbf05ea84c860a4e86b557d156b1e72511cd29375d3f71adb522362710aea7"
   name = "contrib.go.opencensus.io/exporter/stackdriver"
   packages = [
     ".",
     "monitoredresource",
   ]
   pruneopts = "NUT"
-  revision = "c06c82c832edca4eaf7b0241bd655560a1be0346"
+  revision = "ab5a58af316a529613aadf9f50eeed1b6f044b2f"
+  version = "v0.9.2"
+
+[[projects]]
+  branch = "master"
+  digest = "1:cef70b547ce62d12ea8e5dcb9905bccb57ea1bb253ee6809fd79a17c29ca3cd5"
+  name = "contrib.go.opencensus.io/resource"
+  packages = ["resourcekeys"]
+  pruneopts = "NUT"
+  revision = "21591786a5e0c21806209b266cc6dfdfa85b3cdb"
 
 [[projects]]
   digest = "1:a074ae0f4788ea4c4c7045ab37f21943920bc20cf6ff8afcb2d971154cfa87ab"
@@ -433,7 +443,7 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:8cd04a6109f3a15c2481ff5cffcb15a57eb6e19dc14eb94006d1a20d8db2b20c"
+  digest = "1:7537d6dc68f7d48e6d7f0c9696e026eae9b5cc4986c7d4654f2d499bf9963d82"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -475,7 +485,7 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "6916051a96ae4d87d0e0e557a3c3b887ee4a3cea"
+  revision = "f95c27ee8cdceb4545b57c7d4cf283a94d303dca"
 
 [[projects]]
   branch = "master"
@@ -708,17 +718,19 @@
   version = "v1.0.3"
 
 [[projects]]
-  digest = "1:bce7c290509e40fd1c73d700305c1961004d08c9a1812e47533416a8742893a7"
+  digest = "1:69a97603fe8952de86ee1e74a065f7974ec7d7d1d2301d3f5da6d342156363f4"
   name = "go.opencensus.io"
   packages = [
     ".",
-    "exemplar",
     "exporter/prometheus",
     "internal",
     "internal/tagencoding",
+    "metric/metricdata",
+    "metric/metricproducer",
     "plugin/ocgrpc",
     "plugin/ochttp",
     "plugin/ochttp/propagation/b3",
+    "resource",
     "stats",
     "stats/internal",
     "stats/view",
@@ -729,8 +741,8 @@
     "trace/tracestate",
   ]
   pruneopts = "NUT"
-  revision = "b7bf3cdb64150a8c8c53b769fdeb2ba581bd4d4b"
-  version = "v0.18.0"
+  revision = "75c0cca22312e51bfd4fafdbe9197ae399e18b38"
+  version = "v0.20.2"
 
 [[projects]]
   digest = "1:22f696cee54865fb8e9ff91df7b633f6b8f22037a8015253c6b6a71ca82219c7"
@@ -919,7 +931,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:dba8c4bdaeca16a46cf1a667fe54260501055ab54ebe020baef12ac6477b9e73"
+  digest = "1:7d224bd384f6fbb88bb34c0a939911edda870cbc83719545184e90daaad60ac3"
   name = "google.golang.org/genproto"
   packages = [
     "googleapis/api/annotations",
@@ -927,6 +939,7 @@
     "googleapis/api/label",
     "googleapis/api/metric",
     "googleapis/api/monitoredres",
+    "googleapis/container/v1",
     "googleapis/devtools/cloudtrace/v2",
     "googleapis/iam/v1",
     "googleapis/monitoring/v3",
