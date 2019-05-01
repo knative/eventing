@@ -23,10 +23,12 @@ import (
 	"github.com/knative/pkg/kmp"
 )
 
+// Validate the Trigger.
 func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {
 	return t.Spec.Validate(ctx).ViaField("spec")
 }
 
+// Validate the TriggerSpec.
 func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 	if ts.Broker == "" {
@@ -39,9 +41,33 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(fe)
 	}
 
-	if ts.Filter != nil && ts.Filter.SourceAndType == nil {
-		fe := apis.ErrMissingField("filter.sourceAndType")
-		errs = errs.Also(fe)
+	if ts.Filter != nil {
+		filtersSpecified := []string{}
+
+		if ts.Filter.DeprecatedSourceAndType != nil {
+			filtersSpecified = append(filtersSpecified, "filter.sourceAndType")
+		}
+
+		if ts.Filter.Attributes != nil {
+			filtersSpecified = append(filtersSpecified, "filter.attributes")
+			if len(*ts.Filter.Attributes) == 0 {
+				fe := &apis.FieldError{
+					Message: "At least one filtered attribute must be specified",
+					Paths:   []string{"filter.attributes"},
+				}
+				errs = errs.Also(fe)
+			}
+		}
+
+		if ts.Filter.Expression != nil {
+			filtersSpecified = append(filtersSpecified, "filter.expression")
+			// TODO validate expression here
+		}
+
+		if len(filtersSpecified) > 1 {
+			fe := apis.ErrMultipleOneOf(filtersSpecified...)
+			errs = errs.Also(fe)
+		}
 	}
 
 	if isSubscriberSpecNilOrEmpty(ts.Subscriber) {
@@ -54,6 +80,7 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 	return errs
 }
 
+// CheckImmutableFields checks that any immutable fields were not changed.
 func (t *Trigger) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
 	if og == nil {
 		return nil

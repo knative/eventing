@@ -26,16 +26,13 @@ import (
 var (
 	defaultBroker        = "default"
 	otherBroker          = "other_broker"
-	defaultTriggerFilter = &TriggerFilter{
-		SourceAndType: &TriggerFilterSourceAndType{
-			Type:   TriggerAnyFilter,
-			Source: TriggerAnyFilter},
-	}
-	otherTriggerFilter = &TriggerFilter{
-		SourceAndType: &TriggerFilterSourceAndType{
+	defaultTriggerFilter = &TriggerFilter{}
+	otherTriggerFilter   = &TriggerFilter{
+		DeprecatedSourceAndType: &TriggerFilterSourceAndType{
 			Type:   "other_type",
 			Source: "other_source"},
 	}
+
 	defaultTrigger = Trigger{
 		Spec: TriggerSpec{
 			Broker: defaultBroker,
