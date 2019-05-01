@@ -17,6 +17,7 @@ package stackdriver
 import (
 	"fmt"
 	"math"
+	"strconv"
 	"time"
 	"unicode/utf8"
 
@@ -233,6 +234,13 @@ func attributeValue(v interface{}) *tracepb.AttributeValue {
 	case int64:
 		return &tracepb.AttributeValue{
 			Value: &tracepb.AttributeValue_IntValue{IntValue: value},
+		}
+	case float64:
+		// TODO: set double value if Stackdriver Trace support it in the future.
+		return &tracepb.AttributeValue{
+			Value: &tracepb.AttributeValue_StringValue{
+				StringValue: trunc(strconv.FormatFloat(value, 'f', -1, 64),
+					maxAttributeStringValue)},
 		}
 	case string:
 		return &tracepb.AttributeValue{
