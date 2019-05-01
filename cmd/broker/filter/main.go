@@ -18,13 +18,20 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"sync"
+	"time"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/broker"
 	"github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/signals"
+	"go.opencensus.io/exporter/prometheus"
+	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -32,7 +39,18 @@ import (
 )
 
 const (
-	NAMESPACE = "NAMESPACE"
+	NAMESPACE     = "NAMESPACE"
+	componentName = "trigger_receiver"
+)
+
+var (
+	port        = 8080
+	metricsPort = 9090
+
+	readTimeout  = 1 * time.Minute
+	writeTimeout = 1 * time.Minute
+
+	wg sync.WaitGroup
 )
 
 func main() {
@@ -65,6 +83,32 @@ func main() {
 	err = mgr.Add(receiver)
 	if err != nil {
 		logger.Fatal("Unable to start the receiver", zap.Error(err), zap.Any("receiver", receiver))
+	}
+
+	// Metrics
+	e, err := prometheus.NewExporter(prometheus.Options{Namespace: componentName})
+	if err != nil {
+		logger.Fatal("Unable to create Prometheus exporter", zap.Error(err))
+	}
+	view.RegisterExporter(e)
+	sm := http.NewServeMux()
+	sm.Handle("/metrics", e)
+	metricsSrv := &http.Server{
+		Addr:         fmt.Sprintf(":%d", metricsPort),
+		Handler:      e,
+		ErrorLog:     zap.NewStdLog(logger),
+		ReadTimeout:  readTimeout,
+		WriteTimeout: writeTimeout,
+	}
+
+	err = mgr.Add(&utils.RunnableServer{
+		Server:          metricsSrv,
+		ShutdownTimeout: writeTimeout,
+		WaitGroup:       &wg,
+	})
+
+	if err != nil {
+		logger.Fatal("Unable to add metrics runnableServer", zap.Error(err))
 	}
 
 	// Set up signals so we handle the first shutdown signal gracefully.

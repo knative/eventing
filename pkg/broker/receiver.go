@@ -26,6 +26,8 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler/trigger/path"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -59,7 +61,7 @@ func New(logger *zap.Logger, client client.Client) (*Receiver, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	initViews()
 	return r, nil
 }
 
@@ -124,6 +126,12 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 		return errors.New("unable to parse path as a Trigger")
 	}
 
+	ctx, _ = tag.New(ctx, tag.Insert(TagTrigger, triggerRef.String()))
+
+	defer func() {
+		stats.Record(ctx, MeasureMessagesTotal.M(1))
+	}()
+
 	// Remove the TTL attribute that is used by the Broker.
 	originalV2 := event.Context.AsV02()
 	ttl, present := originalV2.Extensions[V02TTLAttribute]
@@ -134,6 +142,7 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 		// This doesn't return an error because normally this function is called by a Channel, which
 		// will retry all non-2XX responses. If we return an error from this function, then the
 		// framework returns a 500 to the caller, so the Channel would send this repeatedly.
+		ctx, _ = tag.New(ctx, tag.Insert(TagResult, "droppedDueToTTL"))
 		return nil
 	}
 	delete(originalV2.Extensions, V02TTLAttribute)
@@ -144,6 +153,7 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 	responseEvent, err := r.sendEvent(ctx, tctx, triggerRef, &event)
 	if err != nil {
 		r.logger.Error("Error sending the event", zap.Error(err))
+		ctx, _ = tag.New(ctx, tag.Insert(TagResult, "error"))
 		return err
 	}
 
@@ -151,6 +161,8 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 	if responseEvent == nil {
 		return nil
 	}
+
+	ctx, _ = tag.New(ctx, tag.Insert(TagResult, "dispatched"))
 
 	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
 	responseEvent.Context, err = SetTTL(responseEvent.Context, ttl)
@@ -188,6 +200,7 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransport
 
 	if !r.shouldSendMessage(&t.Spec, event) {
 		r.logger.Debug("Message did not pass filter", zap.Any("triggerRef", trigger))
+		ctx, _ = tag.New(ctx, tag.Insert(TagResult, "dispatched"))
 		return nil, nil
 	}
 
