@@ -130,7 +130,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	original, err := r.namespaceLister.Get(name)
 	if apierrs.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("namespace key in work queue no longer exists", zap.Any("key", key))
+		logging.FromContext(ctx).Error("namespace key in work queue no longer exists")
 		return nil
 	} else if err != nil {
 		return err
@@ -149,9 +149,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// whether the reconcile error out.
 	err = r.reconcile(ctx, ns)
 	if err != nil {
-		logging.FromContext(ctx).Error("Error reconciling Namespace", zap.Error(err), zap.Any("key", key))
+		logging.FromContext(ctx).Error("Error reconciling Namespace", zap.Error(err))
 	} else {
-		logging.FromContext(ctx).Debug("Namespace reconciled", zap.Any("key", key))
+		logging.FromContext(ctx).Debug("Namespace reconciled")
 	}
 
 	// Requeue if the resource is not ready:

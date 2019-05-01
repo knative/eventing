@@ -86,7 +86,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	original, err := r.channelLister.Channels(namespace).Get(name)
 	if apierrs.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("channel key in work queue no longer exists", zap.Any("key", key))
+		logging.FromContext(ctx).Error("channel key in work queue no longer exists")
 		return nil
 	} else if err != nil {
 		return err
@@ -106,12 +106,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	if err != nil {
 		logging.FromContext(ctx).Warn("Error reconciling Channel", zap.Error(err))
 	} else {
-		logging.FromContext(ctx).Debug("Successfully reconciled Channel", zap.Any("key", key))
+		logging.FromContext(ctx).Debug("Successfully reconciled Channel")
 		r.Recorder.Eventf(channel, corev1.EventTypeNormal, channelReconciled, "Channel reconciled: %s", key)
 	}
 
 	if _, updateStatusErr := r.updateStatus(ctx, channel.DeepCopy()); updateStatusErr != nil {
-		logging.FromContext(ctx).Warn("Error updating Channel status", zap.Any("key", key), zap.Error(updateStatusErr))
+		logging.FromContext(ctx).Warn("Error updating Channel status", zap.Error(updateStatusErr))
 		r.Recorder.Eventf(channel, corev1.EventTypeWarning, channelUpdateStatusFailed, "Failed to update channel status: %s", key)
 		return updateStatusErr
 	}
