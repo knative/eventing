@@ -7,7 +7,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/labels"
 
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -157,61 +156,6 @@ func createK8sService(ctx context.Context, client runtimeClient.Client, getSvc g
 	return current, nil
 }
 
-func getVirtualService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel) (*istiov1alpha3.VirtualService, error) {
-	list := &istiov1alpha3.VirtualServiceList{}
-	opts := &runtimeClient.ListOptions{
-		Namespace: c.Namespace,
-		// TODO After the full release start selecting on new set of labels by using virtualServiceLabels(c)
-		LabelSelector: labels.SelectorFromSet(virtualOldServiceLabels(c)),
-		// Set Raw because if we need to get more than one page, then we will put the continue token
-		// into opts.Raw.Continue.
-		Raw: &metav1.ListOptions{},
-	}
-
-	err := client.List(ctx, opts, list)
-	if err != nil {
-		return nil, err
-	}
-	for _, vs := range list.Items {
-		if metav1.IsControlledBy(&vs, c) {
-			return &vs, nil
-		}
-	}
-
-	return nil, k8serrors.NewNotFound(schema.GroupResource{}, "")
-}
-
-func CreateVirtualService(ctx context.Context, client runtimeClient.Client, channel *eventingv1alpha1.Channel, svc *corev1.Service) (*istiov1alpha3.VirtualService, error) {
-	virtualService, err := getVirtualService(ctx, client, channel)
-
-	// If the resource doesn't exist, we'll create it
-	if k8serrors.IsNotFound(err) {
-		virtualService = newVirtualService(channel, svc)
-		err = client.Create(ctx, virtualService)
-		if err != nil {
-			return nil, err
-		}
-		return virtualService, nil
-	} else if err != nil {
-		return nil, err
-	}
-
-	// Update VirtualService if it has changed. This is possible since in version 0.2.0, the destinationHost in
-	// spec.HTTP.Route for the dispatcher was changed from *-clusterbus to *-dispatcher. Even otherwise, this
-	// reconciliation is useful for the future mutations to the object.
-	expected := newVirtualService(channel, svc)
-	if !equality.Semantic.DeepDerivative(expected.Spec, virtualService.Spec) ||
-		!expectedLabelsPresent(virtualService.ObjectMeta.Labels, expected.ObjectMeta.Labels) {
-		virtualService.Spec = expected.Spec
-		virtualService.ObjectMeta.Labels = addExpectedLabels(virtualService.ObjectMeta.Labels, expected.ObjectMeta.Labels)
-		err := client.Update(ctx, virtualService)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return virtualService, nil
-}
-
 // checkExpectedLabels checks the presence of expected labels and its values and return true
 // if all labels are found.
 func expectedLabelsPresent(actual, expected map[string]string) bool {
@@ -331,60 +275,6 @@ func k8sServiceLabels(c *eventingv1alpha1.Channel) map[string]string {
 		EventingProvisionerLabel:    c.Spec.Provisioner.Name,
 		OldEventingProvisionerLabel: c.Spec.Provisioner.Name,
 	}
-}
-
-func virtualServiceLabels(c *eventingv1alpha1.Channel) map[string]string {
-	// Use the same labels as the K8s service.
-	return k8sServiceLabels(c)
-}
-
-func virtualOldServiceLabels(c *eventingv1alpha1.Channel) map[string]string {
-	// Use the same labels as the K8s service.
-	return k8sOldServiceLabels(c)
-}
-
-// newVirtualService creates a new VirtualService for a Channel resource. It also sets the
-// appropriate OwnerReferences on the resource so handleObject can discover the Channel resource
-// that 'owns' it. As well as being garbage collected when the Channel is deleted.
-func newVirtualService(channel *eventingv1alpha1.Channel, svc *corev1.Service) *istiov1alpha3.VirtualService {
-	destinationHost := names.ServiceHostName(channelDispatcherServiceName(channel.Spec.Provisioner.Name), system.Namespace())
-	return &istiov1alpha3.VirtualService{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: channelVirtualServiceName(channel.Name),
-			Namespace:    channel.Namespace,
-			Labels:       virtualServiceLabels(channel),
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(channel, schema.GroupVersionKind{
-					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
-					Version: eventingv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Channel",
-				}),
-			},
-		},
-		Spec: istiov1alpha3.VirtualServiceSpec{
-			Hosts: []string{
-				names.ServiceHostName(svc.Name, channel.Namespace),
-				channelHostName(channel.Name, channel.Namespace),
-			},
-			HTTP: []istiov1alpha3.HTTPRoute{{
-				Rewrite: &istiov1alpha3.HTTPRewrite{
-					Authority: channelHostName(channel.Name, channel.Namespace),
-				},
-				Route: []istiov1alpha3.HTTPRouteDestination{{
-					Destination: istiov1alpha3.Destination{
-						Host: destinationHost,
-						Port: istiov1alpha3.PortSelector{
-							Number: PortNumber,
-						},
-					}},
-				}},
-			},
-		},
-	}
-}
-
-func channelVirtualServiceName(channelName string) string {
-	return fmt.Sprintf("%s-channel-", channelName)
 }
 
 func channelServiceName(channelName string) string {

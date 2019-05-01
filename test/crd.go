@@ -128,9 +128,8 @@ func EventSenderPod(name string, namespace string, sink string, event *CloudEven
 
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Namespace:   namespace,
-			Annotations: map[string]string{"sidecar.istio.io/inject": "true"},
+			Name:      name,
+			Namespace: namespace,
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
@@ -162,10 +161,9 @@ func EventSenderPod(name string, namespace string, sink string, event *CloudEven
 func EventLoggerPod(name string, namespace string, selector map[string]string) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Namespace:   namespace,
-			Labels:      selector,
-			Annotations: map[string]string{"sidecar.istio.io/inject": "true"},
+			Name:      name,
+			Namespace: namespace,
+			Labels:    selector,
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
@@ -182,10 +180,9 @@ func EventLoggerPod(name string, namespace string, selector map[string]string) *
 func EventTransformationPod(name string, namespace string, selector map[string]string, msgPostfix string) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Namespace:   namespace,
-			Labels:      selector,
-			Annotations: map[string]string{"sidecar.istio.io/inject": "true"},
+			Name:      name,
+			Namespace: namespace,
+			Labels:    selector,
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{

@@ -433,7 +433,7 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:57d04562d05dd4500ff1e7e47f2e62b9be0531388377a3b691a012ce70b210d5"
+  digest = "1:8cd04a6109f3a15c2481ff5cffcb15a57eb6e19dc14eb94006d1a20d8db2b20c"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -452,7 +452,6 @@
     "client/clientset/versioned/typed/authentication/v1alpha1/fake",
     "client/clientset/versioned/typed/istio/v1alpha3",
     "client/clientset/versioned/typed/istio/v1alpha3/fake",
-    "client/listers/istio/v1alpha3",
     "configmap",
     "controller",
     "kmeta",
@@ -1388,9 +1387,7 @@
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
     "github.com/knative/pkg/apis/duck/v1alpha1",
-    "github.com/knative/pkg/apis/istio/v1alpha3",
     "github.com/knative/pkg/client/clientset/versioned/fake",
-    "github.com/knative/pkg/client/listers/istio/v1alpha3",
     "github.com/knative/pkg/configmap",
     "github.com/knative/pkg/controller",
     "github.com/knative/pkg/kmeta",

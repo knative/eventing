@@ -235,7 +235,7 @@ The `Broker`'s address is well known, it will always be
 `<name>-broker.<namespace>.svc.<ending>`. In our case, it is
 `default-broker.default.svc.cluster.local`.
 
-While SSHed into a `Pod` with the Istio sidecar, run:
+While SSHed into a `Pod` and run:
 
 ```shell
 curl -v "http://default-broker.default.svc.cluster.local/" \
@@ -278,7 +278,7 @@ implmentation**.
 ### Namespace
 
 Namespaces are reconciled by the
-[Namespace Reconciler](../../pkg/reconciler/v1alpha1/namespace). The
+[Namespace Reconciler](../../pkg/reconciler/namespace). The
 `Namespace Reconciler` looks for all `namespace`s that have the label
 `knative-eventing-injection: enabled`. If that label is present, then the
 `Namespace Reconciler` reconciles:

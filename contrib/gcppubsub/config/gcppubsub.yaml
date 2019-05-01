@@ -195,8 +195,6 @@ spec:
       role: dispatcher
   template:
     metadata:
-      annotations:
-        sidecar.istio.io/inject: "true"
       labels: *labels
     spec:
       serviceAccountName: gcp-pubsub-channel-dispatcher
@@ -233,20 +231,21 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 8080
-
 ---
-# Needed by the GCP PubSub Channel to communicate with GCP PubSub.	
-apiVersion: networking.istio.io/v1alpha3
-kind: ServiceEntry
-metadata:
-  name: gcppubsub-bus-ext
-  namespace: knative-eventing
-spec:
-  hosts:
-  - "*.googleapis.com"
-  - "accounts.google.com"
-  ports:
-  - number: 443
-    name: https
-    protocol: HTTPS
-  location: MESH_EXTERNAL
+# Needed by the GCP PubSub Channel to communicate with GCP PubSub.
+# Please uncomment if ISTIO automatic sidecar injector is enabled on the cluster, and 
+# the GCP dispatcher pod in knative-eventing namespace runs with a ISTIO sidecar.
+# apiVersion: networking.istio.io/v1alpha3
+# kind: ServiceEntry
+# metadata:
+#   name: gcppubsub-bus-ext
+#   namespace: knative-eventing
+# spec:
+#   hosts:
+#   - "*.googleapis.com"
+#   - "accounts.google.com"
+#   ports:
+#   - number: 443
+#     name: https
+#     protocol: HTTPS
+#   location: MESH_EXTERNAL
