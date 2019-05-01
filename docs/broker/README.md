@@ -278,7 +278,7 @@ implmentation**.
 ### Namespace
 
 Namespaces are reconciled by the
-[Namespace Reconciler](../../pkg/reconciler/v1alpha1/namespace). The
+[Namespace Reconciler](../../pkg/reconciler/namespace). The
 `Namespace Reconciler` looks for all `namespace`s that have the label
 `knative-eventing-injection: enabled`. If that label is present, then the
 `Namespace Reconciler` reconciles:
