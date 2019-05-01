@@ -459,7 +459,9 @@ spec:
 
 The following alternative solutions were considered but rejected.
 
-### Javascript or Lua as expression language
+### Alternate expression language
+
+#### Javascript or Lua
 
 Trigger filtering is a very limited case for an embedded language. All that is
 needed from a language is the ability to write conditions that evaluate to true
@@ -476,7 +478,7 @@ this could be a large number of diverse processes.
 Due to this additional implementation complexity, both Javascript and Lua have
 been judged less suitable for Trigger filtering than CEL.
 
-### Rego (OPA)
+#### Rego
 
 [Rego](https://www.openpolicyagent.org/docs/v0.10.7/language-reference/) is
 already as a policy expression language by
@@ -489,7 +491,7 @@ filters would likely make Triggers the only remaining use of Rego.
 The possible maintenance burden of being the only Rego user makes Rego less
 suitable for Trigger filtering than CEL.
 
-### Custom expression language
+#### Custom expression language
 
 We could develop our own custom expression language for Trigger filters. This
 might be attractive since we could design the language for the needs of Trigger
@@ -512,7 +514,7 @@ extensible to support future needs.
 The implementation and maintenance work required to develop a custom expression
 language make this solution less suitable for Trigger filtering than CEL.
 
-### Structured filters exclusively
+### Use structured filters with no expression language
 
 Instead of using an expression language, we could design a system of structured
 filters expressible as yaml or JSON, similar to Kubernetes set-based label
@@ -548,3 +550,63 @@ filter or `SourceAndType` filter  should be implemented by transformation to an
 equivalent CEL expression. This provides users a structured filter interface
 for simple needs while also preserving the benefits of a single well-specified
 mechanism for evaluating filters.
+
+### Alternate filter specification
+
+#### SourceAndType
+
+```yaml
+spec:
+  filter:
+    sourceAndType:
+      source: https://github.com
+      type: com.github.pull
+```
+
+Only supports source and type fields, not subject or other fields.
+
+#### Extra level for expression options
+
+```yaml
+spec:
+  filter:
+    cel:
+      expression: ce.subject == "knative/eventing/pull/23"
+```
+
+The ability to specify expression options was not sufficiently useful to justify
+the extra level of nesting, plus we don't have a current need for expression
+options.
+
+If expression options are needed later, we can add this syntax back.
+
+#### Multiple top-level filters
+
+```yaml
+spec:
+  filter:
+    attributes:
+      source: https://github.com
+      type: com.github.pull
+    expression: ce.subject == "knative/eventing/pull/23"
+```
+
+The result of this filter is unclear: does the filter pass if all filters pass
+or any filters pass?
+
+If we later want composable filters, we can add top-level `or` and `and`
+filters.
+
+#### matchSource and matchTypes
+
+```yaml
+spec:
+  filter:
+    matchTypes: com.github*
+    matchSource: https://github.com*
+    expression: ce.subject == "knative/eventing/pull/23"
+```
+
+Only supports matching on type and source, not subject or other fields. The
+result of the filter is unclear due to implicit composition, same as
+[Multiple top-level filters](#multiple-top-level-filters).
