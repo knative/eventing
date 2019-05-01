@@ -41,7 +41,6 @@ EventSource ---> Broker ---> Trigger1 -------> Service(Transformation)
 
 Note: the number denotes the sequence of the event that flows in this test case.
 */
-
 func TestEventTransformationForTrigger(t *testing.T) {
 	const (
 		brokerName = "e2e-eventtransformation-broker"
@@ -77,8 +76,7 @@ func TestEventTransformationForTrigger(t *testing.T) {
 	t.Logf("provisioner name is: %s", broker.Spec.ChannelTemplate.Provisioner.Name)
 	err = WithBrokerReady(clients, broker, t.Logf, cleaner)
 	if err != nil {
-		t.Logf("Broker is: %v", broker)
-		t.Fatalf("Error waiting for the broker to become ready: %v", err)
+		t.Fatalf("Error waiting for the broker to become ready: %v, %v", err, broker)
 	}
 	brokerUrl := fmt.Sprintf("http://%s", broker.Status.Address.Hostname)
 	t.Logf("The broker is ready with url: %q", brokerUrl)

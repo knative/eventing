@@ -21,6 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 )
@@ -71,6 +72,16 @@ func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
 func main() {
 	// parse the command line flags
 	flag.Parse()
+
+	// default eventSource to the current machine's hostname
+	if eventSource == "" {
+		if hostname, err := os.Hostname(); err != nil {
+			eventSource = hostname
+		} else {
+			eventSource = "localhost"
+		}
+	}
+
 	c, err := cloudevents.NewDefaultClient()
 	if err != nil {
 		log.Fatalf("failed to create client, %v", err)
