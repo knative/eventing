@@ -68,6 +68,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Eventing().V1alpha1().Triggers().Informer()}, nil
 
 		// Group=sources.eventing.knative.dev, Version=v1alpha1
+	case sourcesv1alpha1.SchemeGroupVersion.WithResource("apiserversources"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1alpha1().ApiServerSources().Informer()}, nil
 	case sourcesv1alpha1.SchemeGroupVersion.WithResource("containersources"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1alpha1().ContainerSources().Informer()}, nil
 	case sourcesv1alpha1.SchemeGroupVersion.WithResource("cronjobsources"):

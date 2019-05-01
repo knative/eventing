@@ -18,9 +18,10 @@ package main
 
 import (
 	"flag"
+	"log"
+
 	"github.com/knative/eventing/pkg/reconciler/containersource"
 	"k8s.io/client-go/tools/clientcmd"
-	"log"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -32,6 +33,7 @@ import (
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/apiserversource"
 	"github.com/knative/eventing/pkg/reconciler/cronjobsource"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
@@ -64,7 +66,7 @@ func main() {
 	logger = logger.With(zap.String("controller/impl", "pkg"))
 	logger.Info("Starting the controller")
 
-	const numControllers = 2
+	const numControllers = 3
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
@@ -75,6 +77,7 @@ func main() {
 	// Eventing
 	cronJobSourceInformer := eventingInformerFactory.Sources().V1alpha1().CronJobSources()
 	containerSourceInformer := eventingInformerFactory.Sources().V1alpha1().ContainerSources()
+	apiserverSourceInformer := eventingInformerFactory.Sources().V1alpha1().ApiServerSources()
 
 	// Kube
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
@@ -82,7 +85,7 @@ func main() {
 	// Build all of our controllers, with the clients constructed above.
 	// Add new controllers to this array.
 	// You also need to modify numControllers above to match this.
-	controllers := []*kncontroller.Impl{
+	controllers := [...]*kncontroller.Impl{
 		cronjobsource.NewController(
 			opt,
 			cronJobSourceInformer,
@@ -93,10 +96,18 @@ func main() {
 			containerSourceInformer,
 			deploymentInformer,
 		),
+		apiserversource.NewController(
+			opt,
+			apiserverSourceInformer,
+			deploymentInformer,
+		),
 	}
-	if len(controllers) != numControllers {
-		logger.Fatalf("Number of controllers and QPS settings mismatch: %d != %d", len(controllers), numControllers)
-	}
+	// This line asserts at compile time that the length of controllers is equal to numControllers.
+	// It is based on https://go101.org/article/tips.html#assert-at-compile-time, which notes that
+	// var _ [N-M]int
+	// asserts at compile time that N >= M, which we can use to establish equality of N and M:
+	// (N >= M) && (M >= N) => (N == M)
+	var _ [numControllers - len(controllers)][len(controllers) - numControllers]int
 
 	// Watch the logging config map and dynamically update logging levels.
 	opt.ConfigMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.SourcesController))
@@ -113,6 +124,7 @@ func main() {
 		// Eventing
 		cronJobSourceInformer.Informer(),
 		containerSourceInformer.Informer(),
+		apiserverSourceInformer.Informer(),
 		// Kube
 		deploymentInformer.Informer(),
 	); err != nil {
@@ -121,9 +133,8 @@ func main() {
 
 	// Start all of the controllers.
 	logger.Info("Starting controllers.")
-	go kncontroller.StartAll(stopCh, controllers...)
 
-	<-stopCh
+	kncontroller.StartAll(stopCh, controllers[:]...)
 }
 
 func setupLogger() (*zap.SugaredLogger, zap.AtomicLevel) {

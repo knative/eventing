@@ -425,6 +425,14 @@
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
 [[projects]]
+  digest = "1:b8870bf2606dca65dc382f4cb8b7a434f17ff36a915451bda12788e9620be368"
+  name = "github.com/kelseyhightower/envconfig"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "f611eb38b3875cc3bd991ca91c51d06446afa14c"
+  version = "v1.3.0"
+
+[[projects]]
   digest = "1:8cd04a6109f3a15c2481ff5cffcb15a57eb6e19dc14eb94006d1a20d8db2b20c"
   name = "github.com/knative/pkg"
   packages = [
@@ -1368,12 +1376,14 @@
     "github.com/cloudevents/sdk-go",
     "github.com/cloudevents/sdk-go/pkg/cloudevents",
     "github.com/cloudevents/sdk-go/pkg/cloudevents/client",
+    "github.com/cloudevents/sdk-go/pkg/cloudevents/datacodec/json",
     "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http",
     "github.com/cloudevents/sdk-go/pkg/cloudevents/types",
     "github.com/fsnotify/fsnotify",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/uuid",
+    "github.com/kelseyhightower/envconfig",
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
     "github.com/knative/pkg/apis/duck/v1alpha1",
@@ -1439,12 +1449,14 @@
     "k8s.io/client-go/informers",
     "k8s.io/client-go/informers/apps/v1",
     "k8s.io/client-go/informers/core/v1",
+    "k8s.io/client-go/informers/rbac/v1",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/kubernetes/typed/core/v1",
     "k8s.io/client-go/listers/apps/v1",
     "k8s.io/client-go/listers/core/v1",
+    "k8s.io/client-go/listers/rbac/v1",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/testing",
