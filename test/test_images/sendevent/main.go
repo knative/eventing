@@ -91,7 +91,7 @@ func main() {
 	if delay > 0 {
 		log.Printf("will sleep for %s", delay)
 		time.Sleep(delay)
-		log.Printf("awake, contining")
+		log.Printf("awake, continuing")
 	}
 
 	if source == "" {
