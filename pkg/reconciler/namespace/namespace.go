@@ -19,6 +19,7 @@ package namespace
 import (
 	"context"
 	"fmt"
+
 	"github.com/knative/eventing/pkg/reconciler/namespace/resources"
 	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/tracker"

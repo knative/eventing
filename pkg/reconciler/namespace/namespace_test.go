@@ -17,8 +17,9 @@ limitations under the License.
 package namespace
 
 import (
-	"github.com/knative/pkg/tracker"
 	"testing"
+
+	"github.com/knative/pkg/tracker"
 
 	"github.com/knative/eventing/pkg/reconciler/namespace/resources"
 	"k8s.io/apimachinery/pkg/runtime"
