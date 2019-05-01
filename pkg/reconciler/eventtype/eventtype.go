@@ -106,7 +106,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		r.Logger.Errorf("invalid resource key: %s", key)
 		return nil
 	}
-	ctx = logging.WithLogger(ctx, r.Logger.Desugar().With(zap.String("key", key)))
 
 	// Get the EventType resource with this namespace/name
 	original, err := r.eventTypeLister.EventTypes(namespace).Get(name)
