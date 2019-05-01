@@ -22,15 +22,13 @@ import (
 	"reflect"
 	"time"
 
-	"k8s.io/client-go/tools/cache"
-
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/broker/resources"
 	"github.com/knative/eventing/pkg/reconciler/names"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
 	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/apps/v1"
@@ -44,6 +42,7 @@ import (
 	corev1informers "k8s.io/client-go/informers/core/v1"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/cache"
 )
 
 const (

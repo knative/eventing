@@ -292,7 +292,7 @@ Namespaces are reconciled by the
 ### Broker
 
 `Broker`s are reconciled by the
-[Broker Reconciler](../../pkg/reconciler/v1alpha1/broker). For each `Broker`, it
+[Broker Reconciler](../../pkg/reconciler/broker). For each `Broker`, it
 reconciles:
 
 1. The 'trigger' `Channel`. This is a `Channel` that all events in the `Broker`
