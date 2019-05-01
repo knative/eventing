@@ -135,8 +135,6 @@ func NewController(
 // converge the two. It then updates the Status block of the Trigger resource
 // with the current status of the resource.
 func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
-	ctx = logging.WithLogger(ctx, r.Logger.Desugar().With(zap.String("key", key)))
-
 	// Convert the namespace/name string into a distinct namespace and name.
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
