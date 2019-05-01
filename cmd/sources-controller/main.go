@@ -33,6 +33,7 @@ import (
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/apiserversource"
 	"github.com/knative/eventing/pkg/reconciler/cronjobsource"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
@@ -65,7 +66,7 @@ func main() {
 	logger = logger.With(zap.String("controller/impl", "pkg"))
 	logger.Info("Starting the controller")
 
-	const numControllers = 2
+	const numControllers = 3
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
@@ -76,6 +77,7 @@ func main() {
 	// Eventing
 	cronJobSourceInformer := eventingInformerFactory.Sources().V1alpha1().CronJobSources()
 	containerSourceInformer := eventingInformerFactory.Sources().V1alpha1().ContainerSources()
+	apiserverSourceInformer := eventingInformerFactory.Sources().V1alpha1().ApiServerSources()
 
 	// Kube
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
@@ -92,6 +94,11 @@ func main() {
 		containersource.NewController(
 			opt,
 			containerSourceInformer,
+			deploymentInformer,
+		),
+		apiserversource.NewController(
+			opt,
+			apiserverSourceInformer,
 			deploymentInformer,
 		),
 	}
@@ -117,6 +124,7 @@ func main() {
 		// Eventing
 		cronJobSourceInformer.Informer(),
 		containerSourceInformer.Informer(),
+		apiserverSourceInformer.Informer(),
 		// Kube
 		deploymentInformer.Informer(),
 	); err != nil {

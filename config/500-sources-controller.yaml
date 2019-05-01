@@ -62,6 +62,8 @@ spec:
             # This is the Go import path for cron job receive adapter binary
             # that is containerized and substituted here.
             value: github.com/knative/eventing/cmd/cronjob_receive_adapter
+          - name: APISERVER_RA_IMAGE
+            value: github.com/knative/eventing/cmd/apiserver_receive_adapter
       volumes:
         - name: config-logging
           configMap:
