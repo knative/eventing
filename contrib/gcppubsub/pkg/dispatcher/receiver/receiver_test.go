@@ -201,8 +201,8 @@ func TestUpdateHostToChannelMap(t *testing.T) {
 				makeChannel(withName("chan2"), withNamespace("ns2"), withStatusReady("host.name2")),
 			},
 			expectedMap: map[string]provisioners.ChannelReference{
-				"host.name1": provisioners.ChannelReference{Name: "chan1", Namespace: "ns1"},
-				"host.name2": provisioners.ChannelReference{Name: "chan2", Namespace: "ns2"},
+				"host.name1": {Name: "chan1", Namespace: "ns1"},
+				"host.name2": {Name: "chan2", Namespace: "ns2"},
 			},
 		},
 	}

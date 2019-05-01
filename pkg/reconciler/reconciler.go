@@ -17,9 +17,10 @@ limitations under the License.
 package reconciler
 
 import (
+	"time"
+
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/system"
-	"time"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
