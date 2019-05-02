@@ -36,7 +36,6 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/trigger"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
-	"github.com/knative/pkg/logging/logkey"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
 	kubeinformers "k8s.io/client-go/informers"
@@ -55,7 +54,6 @@ func main() {
 
 	logger, atomicLevel := setupLogger()
 	defer logger.Sync()
-	logger = logger.With(zap.String(logkey.ControllerType, logconfig.Controller))
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()

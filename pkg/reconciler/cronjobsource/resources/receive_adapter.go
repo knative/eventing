@@ -57,9 +57,6 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 			Replicas: &replicas,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"sidecar.istio.io/inject": "true", // TODO this might be removed.
-					},
 					Labels: args.Labels,
 				},
 				Spec: corev1.PodSpec{

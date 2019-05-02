@@ -185,9 +185,6 @@ func TestMakeDeployment_sink(t *testing.T) {
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"sidecar.istio.io/inject": "true",
-					},
 					Labels: map[string]string{
 						"eventing.knative.dev/source": "test-name",
 					},
@@ -255,7 +252,6 @@ func TestMakeDeployment_sinkinargs(t *testing.T) {
 		ServiceAccountName: "test-service-account",
 		SinkInArgs:         true,
 		Labels:             map[string]string{"eventing.knative.dev/source": "test-name"},
-		Annotations:        map[string]string{"sidecar.istio.io/inject": "true"},
 	})
 
 	want := &appsv1.Deployment{
@@ -283,9 +279,6 @@ func TestMakeDeployment_sinkinargs(t *testing.T) {
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"sidecar.istio.io/inject": "true",
-					},
 					Labels: map[string]string{
 						"eventing.knative.dev/source": "test-name",
 					},

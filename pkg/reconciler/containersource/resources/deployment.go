@@ -61,9 +61,6 @@ func MakeDeployment(args ContainerArguments) *appsv1.Deployment {
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"sidecar.istio.io/inject": "true",
-					},
 					Labels: map[string]string{
 						sourceLabelKey: args.Name,
 					},
@@ -84,9 +81,11 @@ func MakeDeployment(args ContainerArguments) *appsv1.Deployment {
 		},
 	}
 
-	// Then wire through any annotations from the source. Not a bug by allowing
-	// the container to override Istio injection.
+	// Then wire through any annotations from the source.
 	if args.Annotations != nil {
+		if deploy.Spec.Template.ObjectMeta.Annotations == nil {
+			deploy.Spec.Template.ObjectMeta.Annotations = make(map[string]string, len(args.Annotations))
+		}
 		for k, v := range args.Annotations {
 			deploy.Spec.Template.ObjectMeta.Annotations[k] = v
 		}
