@@ -21,11 +21,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/knative/eventing/pkg/reconciler/eventtype"
-
-	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/rest"
-
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
@@ -33,15 +28,18 @@ import (
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/broker"
 	"github.com/knative/eventing/pkg/reconciler/channel"
+	"github.com/knative/eventing/pkg/reconciler/eventtype"
 	"github.com/knative/eventing/pkg/reconciler/namespace"
 	"github.com/knative/eventing/pkg/reconciler/subscription"
 	"github.com/knative/eventing/pkg/reconciler/trigger"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
+	kubeinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/rest"
 	controllerruntime "sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
