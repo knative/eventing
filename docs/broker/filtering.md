@@ -610,3 +610,9 @@ spec:
 Only supports matching on type and source, not subject or other fields. The
 result of the filter is unclear due to implicit composition, same as
 [Multiple top-level filters](#multiple-top-level-filters).
+
+## Open Questions
+
+### Evaluation error handling
+
+Should the filter fail open (accept) or fail closed (reject)? How should evaluation errors be surfaced to the user?
