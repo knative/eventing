@@ -19,6 +19,7 @@ package broker
 import (
 	"context"
 	"fmt"
+	"github.com/knative/eventing/pkg/reconciler/broker/resources"
 	"reflect"
 	"time"
 
@@ -30,10 +31,9 @@ import (
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/names"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
 	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
-	v1 "k8s.io/api/apps/v1"
+	"k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
