@@ -48,18 +48,15 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 					Kind:    "Broker",
 				}),
 			},
-			Labels: FilterLabels(args.Broker),
+			Labels: FilterLabels(args.Broker.Name),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: FilterLabels(args.Broker),
+				MatchLabels: FilterLabels(args.Broker.Name),
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: FilterLabels(args.Broker),
-					Annotations: map[string]string{
-						"sidecar.istio.io/inject": "true",
-					},
+					Labels: FilterLabels(args.Broker.Name),
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: args.ServiceAccountName,
@@ -91,7 +88,7 @@ func MakeFilterService(b *eventingv1alpha1.Broker) *corev1.Service {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: b.Namespace,
 			Name:      fmt.Sprintf("%s-broker-filter", b.Name),
-			Labels:    FilterLabels(b),
+			Labels:    FilterLabels(b.Name),
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(b, schema.GroupVersionKind{
 					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
@@ -101,7 +98,7 @@ func MakeFilterService(b *eventingv1alpha1.Broker) *corev1.Service {
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: FilterLabels(b),
+			Selector: FilterLabels(b.Name),
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "http",
@@ -115,9 +112,9 @@ func MakeFilterService(b *eventingv1alpha1.Broker) *corev1.Service {
 
 // FilterLabels generates the labels present on all resources representing the filter of the given
 // Broker.
-func FilterLabels(b *eventingv1alpha1.Broker) map[string]string {
+func FilterLabels(brokerName string) map[string]string {
 	return map[string]string{
-		"eventing.knative.dev/broker":     b.Name,
+		"eventing.knative.dev/broker":     brokerName,
 		"eventing.knative.dev/brokerRole": "filter",
 	}
 }

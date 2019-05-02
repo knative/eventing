@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ type EventingV1alpha1Interface interface {
 	BrokersGetter
 	ChannelsGetter
 	ClusterChannelProvisionersGetter
+	EventTypesGetter
 	SubscriptionsGetter
 	TriggersGetter
 }
@@ -49,6 +50,10 @@ func (c *EventingV1alpha1Client) Channels(namespace string) ChannelInterface {
 
 func (c *EventingV1alpha1Client) ClusterChannelProvisioners() ClusterChannelProvisionerInterface {
 	return newClusterChannelProvisioners(c)
+}
+
+func (c *EventingV1alpha1Client) EventTypes(namespace string) EventTypeInterface {
+	return newEventTypes(c, namespace)
 }
 
 func (c *EventingV1alpha1Client) Subscriptions(namespace string) SubscriptionInterface {

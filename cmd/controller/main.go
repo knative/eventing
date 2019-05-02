@@ -17,58 +17,38 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"flag"
-	"github.com/knative/eventing/pkg/reconciler/subscription"
 	"log"
-	"net/http"
 	"os"
-	"time"
 
-	"k8s.io/apimachinery/pkg/runtime"
+	"github.com/knative/eventing/pkg/reconciler/eventtype"
+
 	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/channel"
+	"github.com/knative/eventing/pkg/reconciler/namespace"
+	"github.com/knative/eventing/pkg/reconciler/subscription"
+	"github.com/knative/eventing/pkg/reconciler/trigger"
 	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/channel"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/namespace"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/trigger"
-	istiov1alpha3 "github.com/knative/pkg/apis/istio/v1alpha3"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
-	"github.com/knative/pkg/logging/logkey"
 	"github.com/knative/pkg/signals"
-	"github.com/knative/pkg/system"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	controllerruntime "sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-)
-
-const (
-	metricsScrapeAddr = ":9090"
-	metricsScrapePath = "/metrics"
 )
 
 var (
 	hardcodedLoggingConfig bool
 )
-
-// SchemeFunc adds types to a Scheme.
-type SchemeFunc func(*runtime.Scheme) error
-
-// ProvideFunc adds a controller to a Manager.
-type ProvideFunc func(manager.Manager, *zap.Logger) (controller.Controller, error)
 
 func main() {
 	flag.Parse()
@@ -76,7 +56,6 @@ func main() {
 
 	logger, atomicLevel := setupLogger()
 	defer logger.Sync()
-	logger = logger.With(zap.String(logkey.ControllerType, logconfig.Controller))
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
@@ -86,16 +65,9 @@ func main() {
 		logger.Fatalf("Error building kubeconfig: %v", err)
 	}
 
-	go startPkgController(stopCh, cfg, logger, atomicLevel)
-	go startControllerRuntime(stopCh, cfg, logger, atomicLevel)
-	<-stopCh
-}
-
-func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.SugaredLogger, atomicLevel zap.AtomicLevel) {
-	logger = logger.With(zap.String("controller/impl", "pkg"))
 	logger.Info("Starting the controller")
 
-	const numControllers = 1
+	const numControllers = 6
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
@@ -103,23 +75,74 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(opt.KubeClientSet, opt.ResyncPeriod)
 	eventingInformerFactory := informers.NewSharedInformerFactory(opt.EventingClientSet, opt.ResyncPeriod)
 
+	// Eventing
+	triggerInformer := eventingInformerFactory.Eventing().V1alpha1().Triggers()
+	channelInformer := eventingInformerFactory.Eventing().V1alpha1().Channels()
 	subscriptionInformer := eventingInformerFactory.Eventing().V1alpha1().Subscriptions()
-	// TODO: remove unused after done integrating all controllers.
-	//deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
-	//coreServiceInformer := kubeInformerFactory.Core().V1().Services()
+	brokerInformer := eventingInformerFactory.Eventing().V1alpha1().Brokers()
+	eventTypeInformer := eventingInformerFactory.Eventing().V1alpha1().EventTypes()
+
+	// Kube
+	serviceInformer := kubeInformerFactory.Core().V1().Services()
+	namespaceInformer := kubeInformerFactory.Core().V1().Namespaces()
 	configMapInformer := kubeInformerFactory.Core().V1().ConfigMaps()
+	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
+	serviceAccountInformer := kubeInformerFactory.Core().V1().ServiceAccounts()
+	roleBindingInformer := kubeInformerFactory.Rbac().V1().RoleBindings()
 
 	// Build all of our controllers, with the clients constructed above.
 	// Add new controllers to this array.
-	controllers := []*kncontroller.Impl{
+	// You also need to modify numControllers above to match this.
+	controllers := [...]*kncontroller.Impl{
 		subscription.NewController(
 			opt,
 			subscriptionInformer,
 		),
+		namespace.NewController(
+			opt,
+			namespaceInformer,
+			serviceAccountInformer,
+			roleBindingInformer,
+			brokerInformer,
+		),
+		channel.NewController(
+			opt,
+			channelInformer,
+		),
+		trigger.NewController(
+			opt,
+			triggerInformer,
+			channelInformer,
+			subscriptionInformer,
+			brokerInformer,
+			serviceInformer,
+		),
+		broker.NewController(
+			opt,
+			brokerInformer,
+			subscriptionInformer,
+			channelInformer,
+			serviceInformer,
+			deploymentInformer,
+			broker.ReconcilerArgs{
+				IngressImage:              getRequiredEnv("BROKER_INGRESS_IMAGE"),
+				IngressServiceAccountName: getRequiredEnv("BROKER_INGRESS_SERVICE_ACCOUNT"),
+				FilterImage:               getRequiredEnv("BROKER_FILTER_IMAGE"),
+				FilterServiceAccountName:  getRequiredEnv("BROKER_FILTER_SERVICE_ACCOUNT"),
+			},
+		),
+		eventtype.NewController(
+			opt,
+			eventTypeInformer,
+			brokerInformer,
+		),
 	}
-	if len(controllers) != numControllers {
-		logger.Fatalf("Number of controllers and QPS settings mismatch: %d != %d", len(controllers), numControllers)
-	}
+	// This line asserts at compile time that the length of controllers is equal to numControllers.
+	// It is based on https://go101.org/article/tips.html#assert-at-compile-time, which notes that
+	// var _ [N-M]int
+	// asserts at compile time that N >= M, which we can use to establish equality of N and M:
+	// (N >= M) && (M >= N) => (N == M)
+	var _ [numControllers - len(controllers)][len(controllers) - numControllers]int
 
 	// Watch the logging config map and dynamically update logging levels.
 	opt.ConfigMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller))
@@ -133,94 +156,27 @@ func startPkgController(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.Su
 	logger.Info("Starting informers.")
 	if err := kncontroller.StartInformers(
 		stopCh,
+		// Eventing
+		brokerInformer.Informer(),
+		channelInformer.Informer(),
 		subscriptionInformer.Informer(),
+		triggerInformer.Informer(),
+		eventTypeInformer.Informer(),
+		// Kube
 		configMapInformer.Informer(),
+		serviceInformer.Informer(),
+		namespaceInformer.Informer(),
+		deploymentInformer.Informer(),
+		serviceAccountInformer.Informer(),
+		roleBindingInformer.Informer(),
 	); err != nil {
 		logger.Fatalf("Failed to start informers: %v", err)
 	}
 
 	// Start all of the controllers.
 	logger.Info("Starting controllers.")
-	go kncontroller.StartAll(stopCh, controllers...)
-}
 
-// TODO: remove after done integrating all controllers.
-func startControllerRuntime(stopCh <-chan struct{}, cfg *rest.Config, logger *zap.SugaredLogger, atomicLevel zap.AtomicLevel) {
-	logger = logger.With(zap.String("controller/impl", "cr"))
-	logger.Info("Starting the controller")
-
-	kubeClient, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		logger.Fatalf("Error building kubernetes clientset: %v", err)
-	}
-
-	// Watch the logging config map and dynamically update logging levels.
-	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
-	configMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller))
-	if err = configMapWatcher.Start(stopCh); err != nil {
-		logger.Fatalf("Failed to start controller config map watcher: %v", err)
-	}
-
-	// Setup a Manager
-	mgr, err := manager.New(cfg, manager.Options{})
-	if err != nil {
-		logger.Fatalf("Failed to create manager: %v", err)
-	}
-
-	// Add custom types to this array to get them into the manager's scheme.
-	schemeFuncs := []SchemeFunc{
-		istiov1alpha3.AddToScheme,
-		eventingv1alpha1.AddToScheme,
-	}
-	for _, schemeFunc := range schemeFuncs {
-		if err = schemeFunc(mgr.GetScheme()); err != nil {
-			logger.Fatalf("Error adding type to manager's scheme: %v", err)
-		}
-	}
-
-	// Add each controller's ProvideController func to this list to have the
-	// manager run it.
-	providers := []ProvideFunc{
-		channel.ProvideController,
-		broker.ProvideController(
-			broker.ReconcilerArgs{
-				IngressImage:              getRequiredEnv("BROKER_INGRESS_IMAGE"),
-				IngressServiceAccountName: getRequiredEnv("BROKER_INGRESS_SERVICE_ACCOUNT"),
-				FilterImage:               getRequiredEnv("BROKER_FILTER_IMAGE"),
-				FilterServiceAccountName:  getRequiredEnv("BROKER_FILTER_SERVICE_ACCOUNT"),
-			}),
-		trigger.ProvideController,
-		namespace.ProvideController,
-	}
-	for _, provider := range providers {
-		if _, err = provider(mgr, logger.Desugar()); err != nil {
-			logger.Fatalf("Error adding controller to manager: %v", err)
-		}
-	}
-
-	// Start the Manager
-	go func() {
-		if localErr := mgr.Start(stopCh); localErr != nil {
-			logger.Fatalf("Error starting manager: %v", localErr)
-		}
-	}()
-
-	// Start the endpoint that Prometheus scraper talks to
-	srv := &http.Server{Addr: metricsScrapeAddr}
-	http.Handle(metricsScrapePath, promhttp.Handler())
-	go func() {
-		logger.Infof("Starting metrics listener at %s", metricsScrapeAddr)
-		if localErr := srv.ListenAndServe(); localErr != nil {
-			logger.Infof("HTTPserver: ListenAndServe() finished with error: %s", localErr)
-		}
-	}()
-
-	<-stopCh
-
-	// Close the http server gracefully
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	srv.Shutdown(ctx)
+	kncontroller.StartAll(stopCh, controllers[:]...)
 }
 
 func init() {

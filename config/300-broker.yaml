@@ -73,4 +73,3 @@ spec:
                       minLength: 1
                 arguments:
                   type: object
-                  additionalProperties: true
