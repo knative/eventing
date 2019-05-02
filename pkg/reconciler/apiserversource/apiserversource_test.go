@@ -101,7 +101,7 @@ func TestReconcile(t *testing.T) {
 				NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 						Resources: []sourcesv1alpha1.ApiServerResource{
-							sourcesv1alpha1.ApiServerResource{
+							{
 								APIVersion: "",
 								Kind:       "Namespace",
 							},
@@ -122,7 +122,7 @@ func TestReconcile(t *testing.T) {
 				Object: NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 						Resources: []sourcesv1alpha1.ApiServerResource{
-							sourcesv1alpha1.ApiServerResource{
+							{
 								APIVersion: "",
 								Kind:       "Namespace",
 							},
@@ -178,7 +178,7 @@ func makeReceiveAdapter() *appsv1.Deployment {
 	source := NewApiServerSource(sourceName, testNS,
 		WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 			Resources: []sourcesv1alpha1.ApiServerResource{
-				sourcesv1alpha1.ApiServerResource{
+				{
 					APIVersion: "",
 					Kind:       "Namespace",
 				},
