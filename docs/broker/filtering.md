@@ -352,7 +352,7 @@ spec:
       user.id == "abc123"
 ```
 
-### Exact match on data number field
+### Inequality on data number field
 
 Cannot be specified with the SourceAndType filter or the attributes filter.
 
