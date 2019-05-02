@@ -19,18 +19,14 @@ package cronjobevents
 import (
 	"context"
 	"encoding/json"
-
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
+	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	"github.com/knative/eventing/pkg/kncloudevents"
 	"github.com/knative/pkg/logging"
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
-)
-
-const (
-	eventType = "dev.knative.cronjob.event"
 )
 
 // TODO: this should be a k8s cron.
@@ -87,13 +83,17 @@ func (a *Adapter) Start(ctx context.Context, stopCh <-chan struct{}) error {
 func (a *Adapter) cronTick() {
 	logger := logging.FromContext(context.TODO())
 
+	eventContext := cloudevents.EventContextV02{
+		Type:   sourcesv1alpha1.CronJobEventType,
+		Source: *types.ParseURLRef(sourcesv1alpha1.CronJobEventSource),
+	}.AsV02()
+	eventContext.SetSubject(a.Schedule)
+
 	event := cloudevents.Event{
-		Context: cloudevents.EventContextV02{
-			Type:   eventType,
-			Source: *types.ParseURLRef("/CronJob"),
-		}.AsV02(),
-		Data: message(a.Data),
+		Context: eventContext,
+		Data:    message(a.Data),
 	}
+
 	if _, err := a.client.Send(context.TODO(), event); err != nil {
 		logger.Error("failed to send cloudevent", err)
 	}
