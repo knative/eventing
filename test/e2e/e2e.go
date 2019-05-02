@@ -350,6 +350,9 @@ func CreatePodAndServiceReady(clients *test.Clients, pod *corev1.Pod, svc *corev
 		return nil, fmt.Errorf("Failed to get pod: %v", err)
 	}
 
+	// FIXME(Fredy-Z): This hacky sleep is added to try mitigating the test flakiness. Will delete it after we find the root cause and fix.
+	time.Sleep(10 * time.Second)
+
 	return pod, nil
 }
 
