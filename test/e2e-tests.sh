@@ -85,7 +85,7 @@ function test_setup() {
   # Publish test images.
   echo ">> Publishing test images"
   $(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test images"
-}   
+}
 
 # Tear down resources used in the eventing tests.
 function test_teardown() {
