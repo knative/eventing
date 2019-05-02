@@ -48,6 +48,14 @@
   version = "v1.19.0"
 
 [[projects]]
+  digest = "1:d04889482897652dedae6d8575b479c06fa3eb3c3abe248163b25d3df5fab43e"
+  name = "github.com/antlr/antlr4"
+  packages = ["runtime/Go/antlr"]
+  pruneopts = "NUT"
+  revision = "be58ebffde8e29c154192c019608f0a5b8e6a064"
+  version = "4.7.2"
+
+[[projects]]
   branch = "master"
   digest = "1:f12358576cd79bba0ae626530d23cde63416744f486c8bc817802c6907eaadd7"
   name = "github.com/armon/go-metrics"
@@ -260,9 +268,10 @@
   revision = "24b0969c4cb722950103eed87108c8d291a8df00"
 
 [[projects]]
-  digest = "1:2f01b7e14109d05096661dcb8bab93736d7ba97b4b6a54e1f415282ca3162297"
+  digest = "1:3e3724da4c248f1a069fe7b41baaa0b11d993fac76beeb0e438f57c2a4159f8c"
   name = "github.com/golang/protobuf"
   packages = [
+    "descriptor",
     "proto",
     "protoc-gen-go/descriptor",
     "ptypes",
@@ -292,6 +301,31 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "e89373fe6b4a7413d7acd6da1725b83ef713e6e4"
+
+[[projects]]
+  digest = "1:4d49996da7ca0a062d7a136b65608c24b258673968cc162e97183171a6cb056f"
+  name = "github.com/google/cel-go"
+  packages = [
+    "cel",
+    "checker",
+    "checker/decls",
+    "common",
+    "common/debug",
+    "common/operators",
+    "common/overloads",
+    "common/packages",
+    "common/types",
+    "common/types/pb",
+    "common/types/ref",
+    "common/types/traits",
+    "interpreter",
+    "interpreter/functions",
+    "parser",
+    "parser/gen",
+  ]
+  pruneopts = "NUT"
+  revision = "2c29ff3f5d3d7856e562e821214cc9c77657b853"
+  version = "v0.2.0"
 
 [[projects]]
   digest = "1:010d46ea3c1e730897e53058d1013a963f3f987675dda87df64f891b945281db"
@@ -848,7 +882,7 @@
   revision = "c11f84a56e43e20a78cee75a7c034031ecf57d1f"
 
 [[projects]]
-  digest = "1:e7071ed636b5422cc51c0e3a6cebc229d6c9fffc528814b519a980641422d619"
+  digest = "1:e33513a825fcd765e97b5de639a2f7547542d1a8245df0cef18e1fd390b778a9"
   name = "golang.org/x/text"
   packages = [
     "collate",
@@ -865,6 +899,7 @@
     "unicode/cldr",
     "unicode/norm",
     "unicode/rangetable",
+    "width",
   ]
   pruneopts = "NUT"
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
@@ -931,11 +966,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7d224bd384f6fbb88bb34c0a939911edda870cbc83719545184e90daaad60ac3"
+  digest = "1:1a6416d78233e2b36187e91847ab3ba9b522308c622e9bda0ab09a3f0f722e85"
   name = "google.golang.org/genproto"
   packages = [
     "googleapis/api/annotations",
     "googleapis/api/distribution",
+    "googleapis/api/expr/v1alpha1",
     "googleapis/api/label",
     "googleapis/api/metric",
     "googleapis/api/monitoredres",
@@ -1393,9 +1429,13 @@
     "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http",
     "github.com/cloudevents/sdk-go/pkg/cloudevents/types",
     "github.com/fsnotify/fsnotify",
+    "github.com/google/cel-go/cel",
+    "github.com/google/cel-go/checker/decls",
+    "github.com/google/cel-go/common/types",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/uuid",
+    "github.com/hashicorp/golang-lru",
     "github.com/kelseyhightower/envconfig",
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",

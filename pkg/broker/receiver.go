@@ -19,6 +19,7 @@ package broker
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -202,23 +203,55 @@ func (r *Receiver) getTrigger(ctx context.Context, ref types.NamespacedName) (*e
 }
 
 // shouldSendMessage determines whether message 'm' should be sent based on the triggerSpec 'ts'.
-// Currently it supports exact matching on type and/or source of events.
+// Currently it supports exact matching on event context attributes, or
+// evaluating a CEL expression. Only one filter strategy may be used.
+//
+// If no filter strategy is present, shouldSendMessage returns true.
+//
+// TODO this should allow returning error so the errors can be surfaced to the
+// trigger.
 func (r *Receiver) shouldSendMessage(ts *eventingv1alpha1.TriggerSpec, event *cloudevents.Event) bool {
-	if ts.Filter == nil || ts.Filter.SourceAndType == nil {
+	if ts.Filter == nil {
 		r.logger.Error("No filter specified")
 		return false
 	}
-	filterType := ts.Filter.SourceAndType.Type
-	if filterType != eventingv1alpha1.TriggerAnyFilter && filterType != event.Type() {
-		r.logger.Debug("Wrong type", zap.String("trigger.spec.filter.sourceAndType.type", filterType), zap.String("event.Type()", event.Type()))
-		return false
+
+	var expr string
+
+	// TODO consider adding a status field on the Trigger to store this
+	// expression so it doesn't have to be generated for each event.
+	if ts.Filter.DeprecatedSourceAndType != nil {
+		attrs := map[string]string{}
+		// Since this filter cannot distinguish presence, filtering for an empty
+		// string is impossible.
+		if ts.Filter.DeprecatedSourceAndType.Type != "" {
+			attrs["type"] = ts.Filter.DeprecatedSourceAndType.Type
+		}
+		if ts.Filter.DeprecatedSourceAndType.Source != "" {
+			attrs["source"] = ts.Filter.DeprecatedSourceAndType.Source
+		}
+		expr = expressionFromAttributes(attrs)
 	}
-	filterSource := ts.Filter.SourceAndType.Source
-	s := event.Context.AsV01().Source
-	actualSource := s.String()
-	if filterSource != eventingv1alpha1.TriggerAnyFilter && filterSource != actualSource {
-		r.logger.Debug("Wrong source", zap.String("trigger.spec.filter.sourceAndType.source", filterSource), zap.String("message.source", actualSource))
-		return false
+
+	if ts.Filter.Attributes != nil {
+		expr = expressionFromAttributes(map[string]string(*ts.Filter.Attributes))
 	}
-	return true
+
+	if ts.Filter.Expression != nil {
+		expr = string(*ts.Filter.Expression)
+	}
+
+	fmt.Printf("expr: %s\n", expr)
+
+	// No filter specified, default to passing everything
+	// TODO should this default true?
+	if expr == "" {
+		return true
+	}
+
+	pass, err := r.filterEventByExpression(expr, event)
+	if err != nil {
+		r.logger.Error("Expression filtering failure", zap.Error(err))
+	}
+	return pass
 }

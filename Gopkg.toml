@@ -105,6 +105,10 @@ required = [
   name = "github.com/cloudevents/sdk-go"
   version = "=0.6.0"
 
+[[constraint]]
+  name = "github.com/google/cel-go"
+  version = "=0.2.0"
+
 # needed because pkg upgraded
 [[override]]
   name = "go.uber.org/zap"

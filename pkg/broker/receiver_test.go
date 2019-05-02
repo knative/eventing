@@ -61,12 +61,12 @@ func init() {
 
 func TestReceiver(t *testing.T) {
 	testCases := map[string]struct {
-		triggers         []*eventingv1alpha1.Trigger
+		triggers         []*TriggerBuilder
 		mocks            controllertesting.Mocks
 		tctx             *cloudevents.HTTPTransportContext
-		event            *cloudevents.Event
+		event            *EventBuilder
 		requestFails     bool
-		returnedEvent    *cloudevents.Event
+		returnedEvent    *EventBuilder
 		expectNewToFail  bool
 		expectedErr      bool
 		expectedDispatch bool
@@ -128,68 +128,186 @@ func TestReceiver(t *testing.T) {
 			expectedErr: true,
 		},
 		"Trigger doesn't have SubscriberURI": {
-			triggers: []*eventingv1alpha1.Trigger{
-				makeTriggerWithoutSubscriberURI(),
+			triggers: []*TriggerBuilder{
+				Trigger(),
 			},
 			expectedErr: true,
 		},
 		"Trigger with bad SubscriberURI": {
-			triggers: []*eventingv1alpha1.Trigger{
-				makeTriggerWithBadSubscriberURI(),
+			triggers: []*TriggerBuilder{
+				Trigger().BadSubscriberURI(),
 			},
 			expectedErr: true,
 		},
 		"Trigger without a Filter": {
-			triggers: []*eventingv1alpha1.Trigger{
-				makeTriggerWithoutFilter(),
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI(),
 			},
 		},
 		"No TTL": {
-			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("", ""),
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterSourceAndType("", ""),
 			},
-			event: makeEventWithoutTTL(),
+			event: EventWithoutTTL(),
 		},
 		"Wrong type": {
-			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("some-other-type", ""),
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterSourceAndType("some-other-type", ""),
 			},
 		},
 		"Wrong source": {
-			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("", "some-other-source"),
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterSourceAndType("", "some-other-source"),
 			},
 		},
 		"Dispatch failed": {
-			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("", ""),
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterSourceAndType("", ""),
 			},
 			requestFails:     true,
 			expectedErr:      true,
 			expectedDispatch: true,
 		},
-		"Dispatch succeeded - Any": {
-			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("", ""),
+		"Dispatch succeeded - SourceAndType Any": {
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterSourceAndType("", ""),
 			},
 			expectedDispatch: true,
 		},
-		"Dispatch succeeded - Specific": {
-			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger(eventType, eventSource),
+		"Dispatch succeeded - SourceAndType Specific": {
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterSourceAndType(eventType, eventSource),
 			},
+			expectedDispatch: true,
+		},
+		"Attributes type": {
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterAttributes("type", eventType),
+			},
+			expectedDispatch: true,
+		},
+		"Attributes wrong type": {
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterAttributes("type", "some-other-type"),
+			},
+		},
+		"Attributes source": {
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterAttributes("source", eventSource),
+			},
+			expectedDispatch: true,
+		},
+		"Attributes wrong source": {
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterAttributes("source", "some-other-source"),
+			},
+		},
+		"Attributes type and source correct": {
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterAttributes("type", eventType, "source", eventSource),
+			},
+			expectedDispatch: true,
+		},
+		"Attributes type correct source wrong": {
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterAttributes("type", eventType, "source", "some-other-source"),
+			},
+		},
+		"Attributes extension attribute": {
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterAttributes("foo", "bar"),
+			},
+			event:            Event().Extension("foo", "bar"),
+			expectedDispatch: true,
+		},
+		"Attributes dotted extension attribute": {
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterAttributes("foo.bar", "baz"),
+			},
+			event:            Event().Extension("foo.bar", "baz"),
+			expectedDispatch: true,
+		},
+		"Expression wrong type": {
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterExpression(`ce.type == "some-other-type"`),
+			},
+		},
+		"Expression wrong source": {
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterExpression(`ce.source == "some-other-source"`),
+			},
+		},
+		"Expression wrong parsed extensions": {
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterExpression(`ext.foo == "baz"`),
+			},
+			event: Event().Extension("foo", "bar"),
+		},
+		"Expression wrong parsed data": {
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterExpression(`data.baz == "quz"`),
+			},
+			event: Event().JSONData(`{"baz":"qux"}`),
+		},
+		"Dispatch succeeded - Expression Any": {
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterExpression("1 == 1"),
+			},
+			expectedDispatch: true,
+		},
+		"Dispatch succeeded - Expression Specific": {
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterExpression(fmt.Sprintf(`ce.type == "%s" && ce.source == "%s"`, eventType, eventSource)),
+			},
+			expectedDispatch: true,
+		},
+		"Dispatch succeeded - Expression parsed extensions": {
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterExpression(`ce.foo == "bar"`),
+			},
+			event:            Event().Extension("foo", "bar"),
+			expectedDispatch: true,
+		},
+		"Dispatch succeeded - Expression parsed data": {
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterExpression(`data.baz == "qux"`),
+			},
+			event:            Event().JSONData(`{"baz":"qux"}`),
+			expectedDispatch: true,
+		},
+		"Dispatch succeeded - Expression parsed data integer": {
+			triggers: []*TriggerBuilder{
+				// TODO Revisit this when CEL can compare floats and ints
+				Trigger().SubscriberURI().FilterExpression(`data.baz == 3.0`),
+			},
+			event:            Event().JSONData(`{"baz":3}`),
+			expectedDispatch: true,
+		},
+		"Dispatch succeeded - Expression parsed data float": {
+			triggers: []*TriggerBuilder{
+				// TODO Revisit this when CEL can compare floats and ints
+				Trigger().SubscriberURI().FilterExpression(`data.baz == 3.2`),
+			},
+			event:            Event().JSONData(`{"baz":3.2}`),
+			expectedDispatch: true,
+		},
+		"Dispatch succeeded - Expression parsed data nested field": {
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterExpression(`data.foo.bar == "baz"`),
+			},
+			event:            Event().JSONData(`{"foo":{"bar":"baz"}}`),
 			expectedDispatch: true,
 		},
 		"Returned Cloud Event": {
-			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("", ""),
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterSourceAndType("", ""),
 			},
 			expectedDispatch: true,
-			returnedEvent:    makeDifferentEvent(),
+			returnedEvent:    Event().Type("some-other-type"),
 		},
 		"Returned Cloud Event with custom headers": {
-			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("", ""),
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterSourceAndType("", ""),
 			},
 			tctx: &cloudevents.HTTPTransportContext{
 				Method: "POST",
@@ -223,12 +341,11 @@ func TestReceiver(t *testing.T) {
 				"X-Ot-Foo": []string{"haden"},
 			},
 			expectedDispatch: true,
-			returnedEvent:    makeDifferentEvent(),
+			returnedEvent:    Event().Type("some-other-type"),
 		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-
 			fh := fakeHandler{
 				failRequest:   tc.requestFails,
 				returnedEvent: tc.returnedEvent,
@@ -244,7 +361,7 @@ func TestReceiver(t *testing.T) {
 				if trig.Status.SubscriberURI == toBeReplaced {
 					trig.Status.SubscriberURI = s.URL
 				}
-				correctURI = append(correctURI, trig)
+				correctURI = append(correctURI, trig.Build())
 			}
 
 			r, err := New(
@@ -271,9 +388,9 @@ func TestReceiver(t *testing.T) {
 			resp := &cloudevents.EventResponse{}
 			event := tc.event
 			if event == nil {
-				event = makeEvent()
+				event = Event()
 			}
-			err = r.serveHTTP(ctx, *event, resp)
+			err = r.serveHTTP(ctx, *event.Build(), resp)
 
 			if tc.expectedErr && err == nil {
 				t.Errorf("Expected an error, received nil")
@@ -299,7 +416,7 @@ func TestReceiver(t *testing.T) {
 			}
 
 			// The TTL will be added again.
-			expectedResponseEvent := addTTLToEvent(*tc.returnedEvent)
+			expectedResponseEvent := *tc.returnedEvent.Build()
 			if diff := cmp.Diff(expectedResponseEvent.Context.AsV02(), resp.Event.Context.AsV02()); diff != "" {
 				t.Errorf("Incorrect response event context (-want +got): %s", diff)
 			}
@@ -314,7 +431,7 @@ type fakeHandler struct {
 	failRequest     bool
 	requestReceived bool
 	headers         http.Header
-	returnedEvent   *cloudevents.Event
+	returnedEvent   *EventBuilder
 	t               *testing.T
 }
 
@@ -340,7 +457,7 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	c := &cehttp.CodecV02{}
-	m, err := c.Encode(*h.returnedEvent)
+	m, err := c.Encode(*h.returnedEvent.Build())
 	if err != nil {
 		h.t.Fatalf("Could not encode message: %v", err)
 	}
@@ -362,52 +479,91 @@ func getClient(initial []runtime.Object, mocks controllertesting.Mocks) *control
 	return controllertesting.NewMockClient(innerClient, mocks)
 }
 
-func makeTrigger(t, s string) *eventingv1alpha1.Trigger {
-	return &eventingv1alpha1.Trigger{
+type TriggerBuilder struct {
+	*eventingv1alpha1.Trigger
+}
+
+var _ controllertesting.Buildable = &TriggerBuilder{}
+
+func Trigger() *TriggerBuilder {
+	trigger := &eventingv1alpha1.Trigger{
 		TypeMeta: v1.TypeMeta{
-			APIVersion: "eventing.knative.dev/v1alpha1",
+			APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
 			Kind:       "Trigger",
 		},
 		ObjectMeta: v1.ObjectMeta{
 			Namespace: testNS,
 			Name:      triggerName,
 		},
-		Spec: eventingv1alpha1.TriggerSpec{
-			Filter: &eventingv1alpha1.TriggerFilter{
-				SourceAndType: &eventingv1alpha1.TriggerFilterSourceAndType{
-					Type:   t,
-					Source: s,
-				},
-			},
-		},
-		Status: eventingv1alpha1.TriggerStatus{
-			SubscriberURI: "toBeReplaced",
-		},
+	}
+	return &TriggerBuilder{
+		Trigger: trigger,
 	}
 }
 
-func makeTriggerWithoutFilter() *eventingv1alpha1.Trigger {
-	t := makeTrigger("", "")
-	t.Spec.Filter = nil
-	return t
+func (b *TriggerBuilder) Build() runtime.Object {
+	return b.Trigger
 }
 
-func makeTriggerWithoutSubscriberURI() *eventingv1alpha1.Trigger {
-	t := makeTrigger("", "")
-	t.Status = eventingv1alpha1.TriggerStatus{}
-	return t
+func (b *TriggerBuilder) FilterSourceAndType(t, s string) *TriggerBuilder {
+	b.Spec.Filter = &eventingv1alpha1.TriggerFilter{
+		DeprecatedSourceAndType: &eventingv1alpha1.TriggerFilterSourceAndType{
+			Type:   t,
+			Source: s,
+		},
+	}
+	return b
 }
 
-func makeTriggerWithBadSubscriberURI() *eventingv1alpha1.Trigger {
-	t := makeTrigger("", "")
-	// This should fail url.Parse(). It was taken from the unit tests for url.Parse(), it violates
-	// rfc3986 3.2.3, namely that the port must be digits.
-	t.Status.SubscriberURI = "http://[::1]:namedport"
-	return t
+func (b *TriggerBuilder) FilterAttributes(args ...string) *TriggerBuilder {
+	if len(args)%2 != 0 {
+		panic(fmt.Errorf("args should have even number of elements but has %d", len(args)))
+	}
+	attrs := eventingv1alpha1.TriggerFilterAttributes{}
+	for i := 0; i < len(args); i = i + 2 {
+		attrs[args[i]] = args[i+1]
+	}
+	b.Spec.Filter = &eventingv1alpha1.TriggerFilter{
+		Attributes: &attrs,
+	}
+	return b
 }
 
-func makeEventWithoutTTL() *cloudevents.Event {
-	return &cloudevents.Event{
+func (b *TriggerBuilder) FilterExpression(expr string) *TriggerBuilder {
+	tfe := eventingv1alpha1.TriggerFilterExpression(expr)
+	b.Spec.Filter = &eventingv1alpha1.TriggerFilter{
+		Expression: &tfe,
+	}
+	return b
+}
+
+func (b *TriggerBuilder) SubscriberURI() *TriggerBuilder {
+	b.Status = eventingv1alpha1.TriggerStatus{
+		SubscriberURI: toBeReplaced,
+	}
+	return b
+}
+
+func (b *TriggerBuilder) BadSubscriberURI() *TriggerBuilder {
+	// This should fail url.Parse(). It was taken from the unit tests for
+	// url.Parse(), it violates rfc3986 3.2.3, namely that the port must be
+	// digits.
+	b.Status = eventingv1alpha1.TriggerStatus{
+		SubscriberURI: "http://[::1]:namedport",
+	}
+	return b
+}
+
+type EventBuilder struct {
+	*cloudevents.Event
+}
+
+func (b *EventBuilder) Build() *cloudevents.Event {
+	return b.Event
+}
+
+func EventWithoutTTL() *EventBuilder {
+	event := &cloudevents.Event{
 		Context: cloudevents.EventContextV02{
 			Type: eventType,
 			Source: cloudevents.URLRef{
@@ -418,29 +574,43 @@ func makeEventWithoutTTL() *cloudevents.Event {
 			ContentType: cloudevents.StringOfApplicationJSON(),
 		}.AsV02(),
 	}
-}
-
-func makeEvent() *cloudevents.Event {
-	noTTL := makeEventWithoutTTL()
-	e := addTTLToEvent(*noTTL)
-	return &e
-}
-
-func addTTLToEvent(e cloudevents.Event) cloudevents.Event {
-	e.Context, _ = SetTTL(e.Context, 1)
-	return e
-}
-
-func makeDifferentEvent() *cloudevents.Event {
-	return &cloudevents.Event{
-		Context: cloudevents.EventContextV02{
-			Type: "some-other-type",
-			Source: cloudevents.URLRef{
-				URL: url.URL{
-					Path: eventSource,
-				},
-			},
-			ContentType: cloudevents.StringOfApplicationJSON(),
-		}.AsV02(),
+	return &EventBuilder{
+		Event: event,
 	}
+}
+
+func Event() *EventBuilder {
+	return EventWithoutTTL().TTL()
+}
+
+func (b *EventBuilder) TTL() *EventBuilder {
+	b.Context, _ = SetTTL(b.Context, 1)
+	return b
+}
+
+func (b *EventBuilder) Type(t string) *EventBuilder {
+	ctx := b.Context.AsV02()
+	ctx.Type = t
+	b.Context = ctx
+	return b
+}
+
+func (b *EventBuilder) DataContentType(t string) *EventBuilder {
+	ctx := b.Context.AsV02()
+	ctx.ContentType = &t
+	b.Context = ctx
+	return b
+}
+
+func (b *EventBuilder) Extension(k string, v interface{}) *EventBuilder {
+	ctx := b.Context.AsV02()
+	ctx.SetExtension(k, v)
+	b.Context = ctx
+	return b
+}
+
+func (b *EventBuilder) JSONData(d string) *EventBuilder {
+	b = b.DataContentType("application/json")
+	b.Data = []byte(d)
+	return b
 }
