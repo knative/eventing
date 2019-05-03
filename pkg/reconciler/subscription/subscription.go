@@ -99,7 +99,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		r.Logger.Errorf("invalid resource key: %s", key)
+		logging.FromContext(ctx).Error("invalid resource key")
 		return nil
 	}
 
@@ -118,22 +118,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	// Reconcile this copy of the Subscription and then write back any status
 	// updates regardless of whether the reconcile error out.
-	err = r.reconcile(ctx, subscription)
-	if err != nil {
-		logging.FromContext(ctx).Warn("Error reconciling Subscription", zap.Error(err))
+	reconcileErr := r.reconcile(ctx, subscription)
+	if reconcileErr != nil {
+		logging.FromContext(ctx).Warn("Error reconciling Subscription", zap.Error(reconcileErr))
 	} else {
 		logging.FromContext(ctx).Debug("Subscription reconciled")
 		r.Recorder.Eventf(subscription, corev1.EventTypeNormal, subscriptionReconciled, "Subscription reconciled: %q", subscription.Name)
 	}
 
 	if _, updateStatusErr := r.updateStatus(ctx, subscription.DeepCopy()); updateStatusErr != nil {
-		logging.FromContext(ctx).Warn("Failed to update the Subscription", zap.Error(err))
-		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, subscriptionUpdateStatusFailed, "Failed to update Subscription's status: %v", err)
+		logging.FromContext(ctx).Warn("Failed to update the Subscription", zap.Error(updateStatusErr))
+		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, subscriptionUpdateStatusFailed, "Failed to update Subscription's status: %v", updateStatusErr)
 		return updateStatusErr
 	}
 
 	// Requeue if the resource is not ready:
-	return err
+	return reconcileErr
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subscription) error {

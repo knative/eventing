@@ -50,7 +50,9 @@ const (
 
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName = "knative-eventing-namespace-controller"
+	controllerAgentName       = "knative-eventing-namespace-controller"
+	namespaceReconciled       = "NamespaceReconciled"
+	namespaceReconcileFailure = "NamespaceReconcileFailure"
 
 	// Name of the corev1.Events emitted from the reconciliation process.
 	brokerCreated             = "BrokerCreated"
@@ -93,7 +95,6 @@ func NewController(
 		namespaceLister: namespaceInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
-
 	// TODO: filter label selector: on InjectionEnabledLabels()
 
 	r.Logger.Info("Setting up event handlers")
@@ -122,7 +123,7 @@ func NewController(
 func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	_, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		r.Logger.Errorf("invalid resource key: %s", key)
+		logging.FromContext(ctx).Error("invalid resource key")
 		return nil
 	}
 
@@ -138,30 +139,30 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	if original.Labels[resources.InjectionLabelKey] != resources.InjectionEnabledLabelValue {
 		logging.FromContext(ctx).Debug("Not reconciling Namespace")
-		// TODO: this does not handle cleanup of unwanted brokers in namespace.
 		return nil
 	}
 
 	// Don't modify the informers copy
 	ns := original.DeepCopy()
 
-	// Reconcile this copy of the Namespace and then write back any status updates regardless of
-	// whether the reconcile error out.
-	err = r.reconcile(ctx, ns)
-	if err != nil {
-		logging.FromContext(ctx).Error("Error reconciling Namespace", zap.Error(err))
+	// Reconcile this copy of the Namespace.
+	reconcileErr := r.reconcile(ctx, ns)
+	if reconcileErr != nil {
+		logging.FromContext(ctx).Error("Error reconciling Namespace", zap.Error(reconcileErr))
+		r.Recorder.Eventf(ns, corev1.EventTypeWarning, namespaceReconcileFailure, "Failed to reconcile Namespace: %v", reconcileErr)
 	} else {
 		logging.FromContext(ctx).Debug("Namespace reconciled")
+		r.Recorder.Eventf(ns, corev1.EventTypeNormal, namespaceReconciled, "Namespace reconciled: %q", ns.Name)
 	}
 
-	// Requeue if the resource is not ready:
-	return err
+	return reconcileErr
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error {
 	if ns.DeletionTimestamp != nil {
 		return nil
 	}
+
 	sa, err := r.reconcileBrokerFilterServiceAccount(ctx, ns)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to reconcile the Broker Filter Service Account for the namespace", zap.Error(err))

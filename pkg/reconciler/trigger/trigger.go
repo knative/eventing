@@ -23,19 +23,18 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/knative/eventing/pkg/utils"
-
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/broker"
+	brokerresources "github.com/knative/eventing/pkg/reconciler/broker/resources"
 	"github.com/knative/eventing/pkg/reconciler/names"
 	"github.com/knative/eventing/pkg/reconciler/trigger/path"
 	"github.com/knative/eventing/pkg/reconciler/trigger/resources"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
-	brokerresources "github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
+	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/tracker"
 	"go.uber.org/zap"
@@ -138,7 +137,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Convert the namespace/name string into a distinct namespace and name.
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		r.Logger.Errorf("invalid resource key: %s", key)
+		logging.FromContext(ctx).Error("invalid resource key")
 		return nil
 	}
 
@@ -157,10 +156,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	// Reconcile this copy of the Trigger and then write back any status updates regardless of
 	// whether the reconcile error out.
-	err = r.reconcile(ctx, trigger)
-	if err != nil {
-		logging.FromContext(ctx).Error("Error reconciling Trigger", zap.Error(err))
-		r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerReconcileFailed, "Trigger reconciliation failed: %v", err)
+	reconcileErr := r.reconcile(ctx, trigger)
+	if reconcileErr != nil {
+		logging.FromContext(ctx).Error("Error reconciling Trigger", zap.Error(reconcileErr))
+		r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerReconcileFailed, "Trigger reconciliation failed: %v", reconcileErr)
 	} else {
 		logging.FromContext(ctx).Debug("Trigger reconciled")
 		r.Recorder.Event(trigger, corev1.EventTypeNormal, triggerReconciled, "Trigger reconciled")
@@ -173,7 +172,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	// Requeue if the resource is not ready
-	return err
+	return reconcileErr
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {

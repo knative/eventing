@@ -41,7 +41,6 @@ EventSource ---> Channel ---> Subscription ---> Channel ---> Subscription ----> 
 */
 func TestEventTransformation(t *testing.T) {
 	senderName := "e2e-eventtransformation-sender"
-	msgPostfix := string(uuid.NewUUID())
 	channelNames := [2]string{"e2e-eventtransformation1", "e2e-eventtransformation2"}
 	// subscriptionNames1 corresponds to Subscriptions on channelNames[0]
 	subscriptionNames1 := []string{"e2e-eventtransformation-subs11", "e2e-eventtransformation-subs12"}
@@ -49,6 +48,7 @@ func TestEventTransformation(t *testing.T) {
 	subscriptionNames2 := []string{"e2e-eventtransformation-subs21", "e2e-eventtransformation-subs22"}
 	transformationPodName := "e2e-eventtransformation-transformation-pod"
 	loggerPodName := "e2e-eventtransformation-logger-pod"
+	eventBody := fmt.Sprintf("TestEventTransformation %s", uuid.NewUUID())
 
 	clients, ns, provisioner, cleaner := Setup(t, true, t.Logf)
 	defer TearDown(clients, ns, cleaner, t.Logf)
@@ -58,8 +58,15 @@ func TestEventTransformation(t *testing.T) {
 	subscriberPods := make([]*corev1.Pod, 0)
 
 	// create transformation pod and service
+	transformedEventBody := fmt.Sprintf("eventBody %s", uuid.NewUUID())
+	eventAfterTransformation := &test.CloudEvent{
+		Source:   senderName,
+		Type:     test.CloudEventDefaultType,
+		Data:     fmt.Sprintf(`{"msg":%q}`, transformedEventBody),
+		Encoding: test.CloudEventDefaultEncoding,
+	}
 	transformationPodSelector := map[string]string{"e2etest": string(uuid.NewUUID())}
-	transformationPod := test.EventTransformationPod(transformationPodName, ns, transformationPodSelector, msgPostfix)
+	transformationPod := test.EventTransformationPod(transformationPodName, ns, transformationPodSelector, eventAfterTransformation)
 	transformationSvc := test.Service(transformationPodName, ns, transformationPodSelector)
 	transformationPod, err := CreatePodAndServiceReady(clients, transformationPod, transformationSvc, t.Logf, cleaner)
 	if err != nil {
@@ -102,25 +109,24 @@ func TestEventTransformation(t *testing.T) {
 		t.Fatalf("The Channels or Subscription were not marked as Ready: %v", err)
 	}
 
-	// send fake CloudEvent to the first channel
-	body := fmt.Sprintf("TestEventTransformation %s", uuid.NewUUID())
-	event := &test.CloudEvent{
+	eventToSend := &test.CloudEvent{
 		Source:   senderName,
 		Type:     test.CloudEventDefaultType,
-		Data:     fmt.Sprintf(`{"msg":%q}`, body),
+		Data:     fmt.Sprintf(`{"msg":%q}`, eventBody),
 		Encoding: test.CloudEventDefaultEncoding,
 	}
-	if err := SendFakeEventToChannel(clients, event, channels[0], t.Logf, cleaner); err != nil {
+	// send fake CloudEvent to the first channel
+	if err := SendFakeEventToChannel(clients, eventToSend, channels[0], t.Logf, cleaner); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channels[0].Name)
 	}
 
 	// check if the logging service receives the correct number of event messages
-	expectedContent := body + msgPostfix
 	expectedContentCount := len(subscriptionNames1) * len(subscriptionNames2)
-	podName := loggerPod.Name
-	containerName := loggerPod.Spec.Containers[0].Name
-	if err := WaitForLogContentCount(clients, podName, containerName, ns, expectedContent, expectedContentCount); err != nil {
-		logPodLogsForDebugging(clients, podName, containerName, ns, t.Logf)
-		t.Fatalf("String %q does not appear %d times in logs of logger pod %q: %v", expectedContent, expectedContentCount, loggerPod.Name, err)
+	loggerContainerName := loggerPod.Spec.Containers[0].Name
+	if err := WaitForLogContentCount(clients, loggerPodName, loggerContainerName, ns, transformedEventBody, expectedContentCount); err != nil {
+		logPodLogsForDebugging(clients, transformationPodName, transformationPod.Spec.Containers[0].Name, ns, t.Logf)
+		logPodLogsForDebugging(clients, loggerPodName, loggerContainerName, ns, t.Logf)
+		logPodLogsForDebugging(clients, eventSource1, "sendevent", ns, t.Logf)
+		t.Fatalf("String %q does not appear %d times in logs of logger pod %q: %v", transformedEventBody, expectedContentCount, loggerPod.Name, err)
 	}
 }
