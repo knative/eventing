@@ -19,6 +19,7 @@ package namespace
 import (
 	"context"
 	"fmt"
+
 	"github.com/knative/eventing/pkg/reconciler/namespace/resources"
 	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/tracker"
@@ -52,6 +53,8 @@ const (
 	controllerAgentName = "knative-eventing-namespace-controller"
 
 	// Name of the corev1.Events emitted from the reconciliation process.
+	namespaceReconciled              = "NamespaceReconciled"
+	namespaceReconcileFailure        = "NamespaceReconcileFailure"
 	brokerCreated                    = "BrokerCreated"
 	filterServiceAccountCreated      = "BrokerFilterServiceAccountCreated"
 	filterServiceAccountRBACCreated  = "BrokerFilterServiceAccountRBACCreated"
@@ -94,7 +97,6 @@ func NewController(
 		namespaceLister: namespaceInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
-
 	// TODO: filter label selector: on InjectionEnabledLabels()
 
 	r.Logger.Info("Setting up event handlers")
@@ -131,7 +133,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	original, err := r.namespaceLister.Get(name)
 	if apierrs.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("namespace key in work queue no longer exists", zap.Any("key", key))
+		logging.FromContext(ctx).Error("namespace key in work queue no longer exists")
 		return nil
 	} else if err != nil {
 		return err
@@ -139,7 +141,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	if original.Labels[resources.InjectionLabelKey] != resources.InjectionEnabledLabelValue {
 		logging.FromContext(ctx).Debug("Not reconciling Namespace")
-		// TODO: this does not handle cleanup of unwanted brokers in namespace.
 		return nil
 	}
 
@@ -149,20 +150,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Reconcile this copy of the Namespace and then write back any status updates regardless of
 	// whether the reconcile error out.
 	err = r.reconcile(ctx, ns)
+	// Requeue if the resource is not ready:
 	if err != nil {
-		logging.FromContext(ctx).Error("Error reconciling Namespace", zap.Error(err), zap.Any("key", key))
-	} else {
-		logging.FromContext(ctx).Debug("Namespace reconciled", zap.Any("key", key))
+		logging.FromContext(ctx).Error("Error reconciling Namespace", zap.Error(err))
+		r.Recorder.Eventf(ns, corev1.EventTypeWarning, namespaceReconcileFailure, "Failed to reconcile Namespace: %v", err)
+		return err
 	}
 
-	// Requeue if the resource is not ready:
-	return err
+	logging.FromContext(ctx).Debug("Namespace reconciled")
+	r.Recorder.Eventf(ns, corev1.EventTypeNormal, namespaceReconciled, "Namespace reconciled: %q", ns.Name)
+
+	return nil
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error {
 	if ns.DeletionTimestamp != nil {
 		return nil
 	}
+
 	sa, err := r.reconcileBrokerFilterServiceAccount(ctx, ns)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to reconcile the Broker Filter Service Account for the namespace", zap.Error(err))

@@ -73,8 +73,8 @@ required = [
 # This controls when we upgrade apis independently of Serving.
 [[override]]
   name = "github.com/knative/pkg"
-  # HEAD as of 2019-04-23
-  revision = "6916051a96ae4d87d0e0e557a3c3b887ee4a3cea"
+  # HEAD as of 2019-05-01
+  revision = "f95c27ee8cdceb4545b57c7d4cf283a94d303dca"
 
 # TODO why is this overridden?
 [[override]]
@@ -104,12 +104,6 @@ required = [
 [[constraint]]
   name = "github.com/cloudevents/sdk-go"
   version = "=0.6.0"
-
-[[override]]
-  name = "contrib.go.opencensus.io/exporter/stackdriver"
-  # HEAD as of 2019-02-11
-  # Needed because this includes a fix to support Stackdriver built-in metrics
-  revision = "c06c82c832edca4eaf7b0241bd655560a1be0346"
 
 # needed because pkg upgraded
 [[override]]

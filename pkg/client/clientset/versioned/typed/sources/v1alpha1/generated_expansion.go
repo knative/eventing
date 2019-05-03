@@ -18,6 +18,8 @@ limitations under the License.
 
 package v1alpha1
 
+type ApiServerSourceExpansion interface{}
+
 type ContainerSourceExpansion interface{}
 
 type CronJobSourceExpansion interface{}

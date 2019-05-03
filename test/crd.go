@@ -86,13 +86,17 @@ func Subscription(name string, namespace string, channel *corev1.ObjectReference
 }
 
 // Broker returns a Broker.
-func Broker(name string, namespace string) *v1alpha1.Broker {
+func Broker(name, namespace string, provisioner *corev1.ObjectReference) *v1alpha1.Broker {
 	return &v1alpha1.Broker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: v1alpha1.BrokerSpec{},
+		Spec: v1alpha1.BrokerSpec{
+			ChannelTemplate: &v1alpha1.ChannelSpec{
+				Provisioner: provisioner,
+			},
+		},
 	}
 }
 
@@ -129,9 +133,8 @@ func EventSenderPod(name string, namespace string, sink string, event *CloudEven
 
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Namespace:   namespace,
-			Annotations: map[string]string{"sidecar.istio.io/inject": "true"},
+			Name:      name,
+			Namespace: namespace,
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
@@ -163,10 +166,9 @@ func EventSenderPod(name string, namespace string, sink string, event *CloudEven
 func EventLoggerPod(name string, namespace string, selector map[string]string) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Namespace:   namespace,
-			Labels:      selector,
-			Annotations: map[string]string{"sidecar.istio.io/inject": "true"},
+			Name:      name,
+			Namespace: namespace,
+			Labels:    selector,
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
@@ -180,13 +182,12 @@ func EventLoggerPod(name string, namespace string, selector map[string]string) *
 }
 
 // EventTransformationPod creates a Pod that transforms events received.
-func EventTransformationPod(name string, namespace string, selector map[string]string, msgPostfix string) *corev1.Pod {
+func EventTransformationPod(name string, namespace string, selector map[string]string, event *CloudEvent) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Namespace:   namespace,
-			Labels:      selector,
-			Annotations: map[string]string{"sidecar.istio.io/inject": "true"},
+			Name:      name,
+			Namespace: namespace,
+			Labels:    selector,
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
@@ -194,8 +195,12 @@ func EventTransformationPod(name string, namespace string, selector map[string]s
 				Image:           pkgTest.ImagePath("transformevents"),
 				ImagePullPolicy: corev1.PullAlways, // TODO: this might not be wanted for local.
 				Args: []string{
-					"-msg-postfix",
-					msgPostfix,
+					"-event-type",
+					event.Type,
+					"-event-source",
+					event.Source,
+					"-event-data",
+					event.Data,
 				},
 			}},
 			RestartPolicy: corev1.RestartPolicyAlways,

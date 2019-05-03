@@ -122,6 +122,9 @@ func TestAllCases(t *testing.T) {
 				),
 			},
 			Key: testNS,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "NamespaceReconciled", "Namespace reconciled: \"test-namespace\""),
+			},
 		}, {
 			Name: "Namespace enabled",
 			Objects: []runtime.Object{
@@ -138,6 +141,7 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, ingressServiceAccountCreated, "Service account created for the Broker 'eventing-broker-ingress'"),
 				Eventf(corev1.EventTypeNormal, ingressServiceAccountRBACCreated, "Service account RBAC created for the Broker 'eventing-broker-ingress'"),
 				Eventf(corev1.EventTypeNormal, brokerCreated, "Default eventing.knative.dev Broker created."),
+				Eventf(corev1.EventTypeNormal, "NamespaceReconciled", "Namespace reconciled: \"test-namespace\""),
 			},
 			WantCreates: []metav1.Object{
 				resources.MakeBroker(testNS),
@@ -162,6 +166,7 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, filterServiceAccountRBACCreated, "Service account RBAC created for the Broker 'eventing-broker-filter'"),
 				Eventf(corev1.EventTypeNormal, ingressServiceAccountCreated, "Service account created for the Broker 'eventing-broker-ingress'"),
 				Eventf(corev1.EventTypeNormal, ingressServiceAccountRBACCreated, "Service account RBAC created for the Broker 'eventing-broker-ingress'"),
+				Eventf(corev1.EventTypeNormal, namespaceReconciled, "Namespace reconciled: \"test-namespace\""),
 			},
 			WantCreates: []metav1.Object{
 				resources.MakeServiceAccount(resources.FilterServiceAccountName, testNS),
@@ -169,8 +174,18 @@ func TestAllCases(t *testing.T) {
 				resources.MakeServiceAccount(resources.IngressServiceAccountName, testNS),
 				resources.MakeRoleBinding(resources.IngressRoleBindingName, resources.IngressClusterRoleName, resources.MakeServiceAccount(resources.IngressServiceAccountName, testNS)),
 			},
-		},
-		{
+		}, {
+			Name: "Namespace enabled, broker exists with no label",
+			Objects: []runtime.Object{
+				NewNamespace(testNS,
+					WithNamespaceLabeled(resources.InjectionDisabledLabels()),
+				),
+				NewBroker(resources.DefaultBrokerName, testNS),
+			},
+			Key:                     testNS,
+			SkipNamespaceValidation: true,
+			WantErr:                 false,
+		}, {
 			Name: "Namespace enabled, filter service account exists",
 			Objects: []runtime.Object{
 				NewNamespace(testNS,
@@ -185,7 +200,8 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, filterServiceAccountRBACCreated, "Service account RBAC created for the Broker 'eventing-broker-filter'"),
 				Eventf(corev1.EventTypeNormal, ingressServiceAccountCreated, "Service account created for the Broker 'eventing-broker-ingress'"),
 				Eventf(corev1.EventTypeNormal, ingressServiceAccountRBACCreated, "Service account RBAC created for the Broker 'eventing-broker-ingress'"),
-				Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created."),
+				Eventf(corev1.EventTypeNormal, brokerCreated, "Default eventing.knative.dev Broker created."),
+				Eventf(corev1.EventTypeNormal, namespaceReconciled, "Namespace reconciled: \"test-namespace\""),
 			},
 			WantCreates: []metav1.Object{
 				resources.MakeBroker(testNS),
@@ -209,7 +225,8 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, filterServiceAccountCreated, "Service account created for the Broker 'eventing-broker-filter'"),
 				Eventf(corev1.EventTypeNormal, ingressServiceAccountCreated, "Service account created for the Broker 'eventing-broker-ingress'"),
 				Eventf(corev1.EventTypeNormal, ingressServiceAccountRBACCreated, "Service account RBAC created for the Broker 'eventing-broker-ingress'"),
-				Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created."),
+				Eventf(corev1.EventTypeNormal, brokerCreated, "Default eventing.knative.dev Broker created."),
+				Eventf(corev1.EventTypeNormal, namespaceReconciled, "Namespace reconciled: \"test-namespace\""),
 			},
 			WantCreates: []metav1.Object{
 				resources.MakeBroker(testNS),
@@ -233,7 +250,8 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, filterServiceAccountCreated, "Service account created for the Broker 'eventing-broker-filter'"),
 				Eventf(corev1.EventTypeNormal, filterServiceAccountRBACCreated, "Service account RBAC created for the Broker 'eventing-broker-filter'"),
 				Eventf(corev1.EventTypeNormal, ingressServiceAccountRBACCreated, "Service account RBAC created for the Broker 'eventing-broker-ingress'"),
-				Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created."),
+				Eventf(corev1.EventTypeNormal, brokerCreated, "Default eventing.knative.dev Broker created."),
+				Eventf(corev1.EventTypeNormal, namespaceReconciled, "Namespace reconciled: \"test-namespace\""),
 			},
 			WantCreates: []metav1.Object{
 				resources.MakeBroker(testNS),
@@ -257,7 +275,8 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, filterServiceAccountCreated, "Service account created for the Broker 'eventing-broker-filter'"),
 				Eventf(corev1.EventTypeNormal, filterServiceAccountRBACCreated, "Service account RBAC created for the Broker 'eventing-broker-filter'"),
 				Eventf(corev1.EventTypeNormal, ingressServiceAccountCreated, "Service account created for the Broker 'eventing-broker-ingress'"),
-				Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created."),
+				Eventf(corev1.EventTypeNormal, brokerCreated, "Default eventing.knative.dev Broker created."),
+				Eventf(corev1.EventTypeNormal, namespaceReconciled, "Namespace reconciled: \"test-namespace\""),
 			},
 			WantCreates: []metav1.Object{
 				resources.MakeBroker(testNS),
@@ -266,42 +285,6 @@ func TestAllCases(t *testing.T) {
 				resources.MakeServiceAccount(resources.IngressServiceAccountName, testNS),
 			},
 		},
-		//{  TODO: this test should work but there is no clean-up in the controller.
-		//	Name: "Namespace disabled, cleanup",
-		//	Objects: []runtime.Object{
-		//		NewNamespace(testNS,
-		//			WithNamespaceLabeled(resources.InjectionDisabledLabels()),
-		//		),
-		//		resources.MakeBroker(testNS),
-		//		resources.MakeServiceAccount(testNS),
-		//		resources.MakeRoleBinding(resources.MakeServiceAccount(testNS)),
-		//	},
-		//	Key:                     testNS,
-		//	SkipNamespaceValidation: true,
-		//	WantErr:                 false,
-		//	WantDeletes: []clientgotesting.DeleteActionImpl{{
-		//		ActionImpl: clientgotesting.ActionImpl{
-		//			Namespace: testNS,
-		//			Verb:      "delete",
-		//			Resource:  brokerGVR,
-		//		},
-		//		Name: resources.DefaultBrokerName,
-		//	}, {
-		//		ActionImpl: clientgotesting.ActionImpl{
-		//			Namespace: testNS,
-		//			Verb:      "delete",
-		//			Resource:  roleBindingGVR,
-		//		},
-		//		Name: resources.FilterRoleBindingName,
-		//	}, {
-		//		ActionImpl: clientgotesting.ActionImpl{
-		//			Namespace: testNS,
-		//			Verb:      "delete",
-		//			Resource:  serviceAccountGVR,
-		//		},
-		//		Name: resources.DefaultBrokerName,
-		//	}},
-		//},
 		// TODO: we need a existing default un-owned test.
 	}
 
