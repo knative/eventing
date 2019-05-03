@@ -162,8 +162,6 @@ spec:
       role: dispatcher
   template:
     metadata:
-      annotations:
-        sidecar.istio.io/inject: "true"
       labels: *labels
     spec:
       serviceAccountName: natss-dispatcher

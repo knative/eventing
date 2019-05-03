@@ -17,13 +17,18 @@ limitations under the License.
 package namespace
 
 import (
+	"testing"
+
+	"github.com/knative/pkg/tracker"
+
 	"github.com/knative/eventing/pkg/reconciler/namespace/resources"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"testing"
 
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
+	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/reconciler"
 	. "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/pkg/controller"
@@ -69,14 +74,18 @@ func TestNew(t *testing.T) {
 	kubeClient := fakekubeclientset.NewSimpleClientset()
 	eventingClient := fakeclientset.NewSimpleClientset()
 	kubeInformer := kubeinformers.NewSharedInformerFactory(kubeClient, 0)
+	eventingInformer := eventinginformers.NewSharedInformerFactory(eventingClient, 0)
 
 	namespaceInformer := kubeInformer.Core().V1().Namespaces()
+	serviceAccountInformer := kubeInformer.Core().V1().ServiceAccounts()
+	roleBindingInformer := kubeInformer.Rbac().V1().RoleBindings()
+	brokerInformer := eventingInformer.Eventing().V1alpha1().Brokers()
 
 	c := NewController(reconciler.Options{
 		KubeClientSet:     kubeClient,
 		EventingClientSet: eventingClient,
 		Logger:            logtesting.TestLogger(t),
-	}, namespaceInformer)
+	}, namespaceInformer, serviceAccountInformer, roleBindingInformer, brokerInformer)
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
@@ -84,161 +93,149 @@ func TestNew(t *testing.T) {
 }
 
 func TestAllCases(t *testing.T) {
-	table := TableTest{
-		{
-			Name: "bad workqueue key",
-			// Make sure Reconcile handles bad keys.
-			Key: "too/many/parts",
-		}, {
-			Name: "key not found",
-			// Make sure Reconcile handles good keys that don't exist.
-			Key: "foo/not-found",
-		}, {
-			Name: "Namespace is not labeled",
-			Objects: []runtime.Object{
-				NewNamespace(testNS),
-			},
-			Key: testNS,
-		}, {
-			Name: "Namespace is labeled disabled",
-			Objects: []runtime.Object{
-				NewNamespace(testNS,
-					WithNamespaceLabeled(resources.InjectionDisabledLabels())),
-			},
-			Key: testNS,
-		}, {
-			Name: "Namespace is deleted, no resources",
-			Objects: []runtime.Object{
-				NewNamespace(testNS,
-					WithNamespaceLabeled(resources.InjectionEnabledLabels()),
-					WithNamespaceDeleted,
-				),
-			},
-			Key: testNS,
-		}, {
-			Name: "Namespace enabled",
-			Objects: []runtime.Object{
-				NewNamespace(testNS,
-					WithNamespaceLabeled(resources.InjectionEnabledLabels()),
-				),
-			},
-			Key:                     testNS,
-			SkipNamespaceValidation: true,
-			WantErr:                 false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "BrokerFilterServiceAccountCreated", "Service account created for the Broker 'eventing-broker-filter'"),
-				Eventf(corev1.EventTypeNormal, "BrokerFilterServiceAccountRBACCreated", "Service account RBAC created for the Broker Filter 'eventing-broker-filter'"),
-				Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created."),
-			},
-			WantCreates: []metav1.Object{
-				resources.MakeBroker(testNS),
-				resources.MakeServiceAccount(testNS),
-				resources.MakeRoleBinding(resources.MakeServiceAccount(testNS)),
-			},
-		}, {
-			Name: "Namespace enabled, broker exists",
-			Objects: []runtime.Object{
-				NewNamespace(testNS,
-					WithNamespaceLabeled(resources.InjectionEnabledLabels()),
-				),
-				resources.MakeBroker(testNS),
-			},
-			Key:                     testNS,
-			SkipNamespaceValidation: true,
-			WantErr:                 false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "BrokerFilterServiceAccountCreated", "Service account created for the Broker 'eventing-broker-filter'"),
-				Eventf(corev1.EventTypeNormal, "BrokerFilterServiceAccountRBACCreated", "Service account RBAC created for the Broker Filter 'eventing-broker-filter'"),
-			},
-			WantCreates: []metav1.Object{
-				resources.MakeServiceAccount(testNS),
-				resources.MakeRoleBinding(resources.MakeServiceAccount(testNS)),
+	table := TableTest{{
+		Name: "bad workqueue key",
+		// Make sure Reconcile handles bad keys.
+		Key: "too/many/parts",
+	}, {
+		Name: "key not found",
+		// Make sure Reconcile handles good keys that don't exist.
+		Key: "foo/not-found",
+	}, {
+		Name: "Namespace is not labeled",
+		Objects: []runtime.Object{
+			NewNamespace(testNS),
+		},
+		Key: testNS,
+	}, {
+		Name: "Namespace is labeled disabled",
+		Objects: []runtime.Object{
+			NewNamespace(testNS,
+				WithNamespaceLabeled(resources.InjectionDisabledLabels())),
+		},
+		Key: testNS,
+	}, {
+		Name: "Namespace is deleted no resources",
+		Objects: []runtime.Object{
+			NewNamespace(testNS,
+				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+				WithNamespaceDeleted,
+			),
+		},
+		Key: testNS,
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "NamespaceReconciled", "Namespace reconciled: \"test-namespace\""),
+		},
+	}, {
+		Name: "Namespace enabled",
+		Objects: []runtime.Object{
+			NewNamespace(testNS,
+				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+			),
+		},
+		Key:                     testNS,
+		SkipNamespaceValidation: true,
+		WantErr:                 false,
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "BrokerFilterServiceAccountCreated", "Service account created for the Broker 'eventing-broker-filter'"),
+			Eventf(corev1.EventTypeNormal, "BrokerFilterServiceAccountRBACCreated", "Service account RBAC created for the Broker Filter 'eventing-broker-filter'"),
+			Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created."),
+			Eventf(corev1.EventTypeNormal, "NamespaceReconciled", "Namespace reconciled: \"test-namespace\""),
+		},
+		WantCreates: []metav1.Object{
+			resources.MakeBroker(testNS),
+			resources.MakeServiceAccount(testNS),
+			resources.MakeRoleBinding(resources.MakeServiceAccount(testNS)),
+		},
+	}, {
+		Name: "Namespace enabled, broker exists",
+		Objects: []runtime.Object{
+			NewNamespace(testNS,
+				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+			),
+			resources.MakeBroker(testNS),
+		},
+		Key:                     testNS,
+		SkipNamespaceValidation: true,
+		WantErr:                 false,
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "BrokerFilterServiceAccountCreated", "Service account created for the Broker 'eventing-broker-filter'"),
+			Eventf(corev1.EventTypeNormal, "BrokerFilterServiceAccountRBACCreated", "Service account RBAC created for the Broker Filter 'eventing-broker-filter'"),
+			Eventf(corev1.EventTypeNormal, "NamespaceReconciled", "Namespace reconciled: \"test-namespace\""),
+		},
+		WantCreates: []metav1.Object{
+			resources.MakeServiceAccount(testNS),
+			resources.MakeRoleBinding(resources.MakeServiceAccount(testNS)),
+		},
+	}, {
+		Name: "Namespace enabled, broker exists with no label",
+		Objects: []runtime.Object{
+			NewNamespace(testNS,
+				WithNamespaceLabeled(resources.InjectionDisabledLabels()),
+			),
+			&v1alpha1.Broker{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: testNS,
+					Name:      resources.DefaultBrokerName,
+				},
 			},
 		},
-		{
-			Name: "Namespace enabled, service account exists",
-			Objects: []runtime.Object{
-				NewNamespace(testNS,
-					WithNamespaceLabeled(resources.InjectionEnabledLabels()),
-				),
-				resources.MakeServiceAccount(testNS),
-			},
-			Key:                     testNS,
-			SkipNamespaceValidation: true,
-			WantErr:                 false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "BrokerFilterServiceAccountRBACCreated", "Service account RBAC created for the Broker Filter 'eventing-broker-filter'"),
-				Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created."),
-			},
-			WantCreates: []metav1.Object{
-				resources.MakeBroker(testNS),
-				resources.MakeRoleBinding(resources.MakeServiceAccount(testNS)),
-			},
+		Key:                     testNS,
+		SkipNamespaceValidation: true,
+		WantErr:                 false,
+	}, {
+		Name: "Namespace enabled, service account exists",
+		Objects: []runtime.Object{
+			NewNamespace(testNS,
+				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+			),
+			resources.MakeServiceAccount(testNS),
 		},
-		{
-			Name: "Namespace enabled, role binding exists",
-			Objects: []runtime.Object{
-				NewNamespace(testNS,
-					WithNamespaceLabeled(resources.InjectionEnabledLabels()),
-				),
-				resources.MakeRoleBinding(resources.MakeServiceAccount(testNS)),
-			},
-			Key:                     testNS,
-			SkipNamespaceValidation: true,
-			WantErr:                 false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "BrokerFilterServiceAccountCreated", "Service account created for the Broker 'eventing-broker-filter'"),
-				Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created."),
-			},
-			WantCreates: []metav1.Object{
-				resources.MakeBroker(testNS),
-				resources.MakeServiceAccount(testNS),
-			},
+		Key:                     testNS,
+		SkipNamespaceValidation: true,
+		WantErr:                 false,
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "BrokerFilterServiceAccountRBACCreated", "Service account RBAC created for the Broker Filter 'eventing-broker-filter'"),
+			Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created."),
+			Eventf(corev1.EventTypeNormal, "NamespaceReconciled", "Namespace reconciled: \"test-namespace\""),
 		},
-		//{  TODO: this test should work but there is no clean-up in the controller.
-		//	Name: "Namespace disabled, cleanup",
-		//	Objects: []runtime.Object{
-		//		NewNamespace(testNS,
-		//			WithNamespaceLabeled(resources.InjectionDisabledLabels()),
-		//		),
-		//		resources.MakeBroker(testNS),
-		//		resources.MakeServiceAccount(testNS),
-		//		resources.MakeRoleBinding(resources.MakeServiceAccount(testNS)),
-		//	},
-		//	Key:                     testNS,
-		//	SkipNamespaceValidation: true,
-		//	WantErr:                 false,
-		//	WantDeletes: []clientgotesting.DeleteActionImpl{{
-		//		ActionImpl: clientgotesting.ActionImpl{
-		//			Namespace: testNS,
-		//			Verb:      "delete",
-		//			Resource:  brokerGVR,
-		//		},
-		//		Name: resources.DefaultBrokerName,
-		//	}, {
-		//		ActionImpl: clientgotesting.ActionImpl{
-		//			Namespace: testNS,
-		//			Verb:      "delete",
-		//			Resource:  roleBindingGVR,
-		//		},
-		//		Name: resources.RoleBindingName,
-		//	}, {
-		//		ActionImpl: clientgotesting.ActionImpl{
-		//			Namespace: testNS,
-		//			Verb:      "delete",
-		//			Resource:  serviceAccountGVR,
-		//		},
-		//		Name: resources.DefaultBrokerName,
-		//	}},
-		//},
-		// TODO: we need a existing default un-owned test.
+		WantCreates: []metav1.Object{
+			resources.MakeBroker(testNS),
+			resources.MakeRoleBinding(resources.MakeServiceAccount(testNS)),
+		},
+	}, {
+		Name: "Namespace enabled, role binding exists",
+		Objects: []runtime.Object{
+			NewNamespace(testNS,
+				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+			),
+			resources.MakeRoleBinding(resources.MakeServiceAccount(testNS)),
+		},
+		Key:                     testNS,
+		SkipNamespaceValidation: true,
+		WantErr:                 false,
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "BrokerFilterServiceAccountCreated", "Service account created for the Broker 'eventing-broker-filter'"),
+			Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created."),
+			Eventf(corev1.EventTypeNormal, "NamespaceReconciled", "Namespace reconciled: \"test-namespace\""),
+		},
+		WantCreates: []metav1.Object{
+			resources.MakeBroker(testNS),
+			resources.MakeServiceAccount(testNS),
+		},
+	},
+	// TODO: we need a existing default un-owned test.
 	}
 
 	defer logtesting.ClearAll()
 	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
 		return &Reconciler{
-			Base:            reconciler.NewBase(opt, controllerAgentName),
-			namespaceLister: listers.GetNamespaceLister(),
+			Base:                 reconciler.NewBase(opt, controllerAgentName),
+			namespaceLister:      listers.GetNamespaceLister(),
+			brokerLister:         listers.GetBrokerLister(),
+			serviceAccountLister: listers.GetServiceAccountLister(),
+			roleBindingLister:    listers.GetRoleBindingLister(),
+			tracker:              tracker.New(func(string) {}, 0),
 		}
 	}))
 }

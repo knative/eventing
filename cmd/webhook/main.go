@@ -87,7 +87,7 @@ func main() {
 		ServiceName:    logconfig.WebhookName(),
 		DeploymentName: logconfig.WebhookName(),
 		Namespace:      system.Namespace(),
-		Port:           443,
+		Port:           8443,
 		SecretName:     "webhook-certs",
 		WebhookName:    "webhook.eventing.knative.dev",
 	}

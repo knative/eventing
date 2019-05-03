@@ -39,7 +39,7 @@ type reconciler struct {
 }
 
 func (r *reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) {
-	ctx := logging.WithLogger(context.TODO(), r.logger.With(zap.Any("request", req)))
+	ctx := logging.WithLogger(context.Background(), r.logger.With(zap.Any("request", req)))
 	logging.FromContext(ctx).Info("New update for channel.")
 	if err := r.handler(ctx, r.client, req.NamespacedName); err != nil {
 		logging.FromContext(ctx).Error("WatchHandlerFunc returned error", zap.Error(err))

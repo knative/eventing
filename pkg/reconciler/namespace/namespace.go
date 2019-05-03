@@ -19,11 +19,18 @@ package namespace
 import (
 	"context"
 	"fmt"
+
 	"github.com/knative/eventing/pkg/reconciler/namespace/resources"
+	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/pkg/tracker"
 	"k8s.io/client-go/tools/cache"
 
+	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
+	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	corev1informers "k8s.io/client-go/informers/core/v1"
+	rbacv1informers "k8s.io/client-go/informers/rbac/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
@@ -43,7 +50,9 @@ const (
 
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName = "knative-eventing-namespace-controller"
+	controllerAgentName       = "knative-eventing-namespace-controller"
+	namespaceReconciled       = "NamespaceReconciled"
+	namespaceReconcileFailure = "NamespaceReconcileFailure"
 
 	// Name of the corev1.Events emitted from the reconciliation process.
 	brokerCreated             = "BrokerCreated"
@@ -51,11 +60,21 @@ const (
 	serviceAccountRBACCreated = "BrokerFilterServiceAccountRBACCreated"
 )
 
+var (
+	serviceAccountGVK = corev1.SchemeGroupVersion.WithKind("ServiceAccount")
+	roleBindingGVK    = rbacv1.SchemeGroupVersion.WithKind("RoleBinding")
+	brokerGVK         = v1alpha1.SchemeGroupVersion.WithKind("Broker")
+)
+
 type Reconciler struct {
 	*reconciler.Base
 
 	// listers index properties about resources
-	namespaceLister corev1listers.NamespaceLister
+	namespaceLister      corev1listers.NamespaceLister
+	serviceAccountLister corev1listers.ServiceAccountLister
+	roleBindingLister    rbacv1listers.RoleBindingLister
+	brokerLister         eventinglisters.BrokerLister
+	tracker              tracker.Interface
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -66,6 +85,9 @@ var _ controller.Reconciler = (*Reconciler)(nil)
 func NewController(
 	opt reconciler.Options,
 	namespaceInformer corev1informers.NamespaceInformer,
+	serviceAccountInformer corev1informers.ServiceAccountInformer,
+	roleBindingInformer rbacv1informers.RoleBindingInformer,
+	brokerInformer eventinginformers.BrokerInformer,
 ) *controller.Impl {
 
 	r := &Reconciler{
@@ -73,12 +95,24 @@ func NewController(
 		namespaceLister: namespaceInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
-
 	// TODO: filter label selector: on InjectionEnabledLabels()
-	// TODO: we need to also watch for changes to service accounts, RoleBindings, and Brokers to heal on bad changes.
 
 	r.Logger.Info("Setting up event handlers")
 	namespaceInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
+
+	// Tracker is used to notify us the namespace's resources we need to reconcile.
+	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
+
+	// Watch all the resources that this reconciler reconciles.
+	serviceAccountInformer.Informer().AddEventHandler(reconciler.Handler(
+		controller.EnsureTypeMeta(r.tracker.OnChanged, serviceAccountGVK),
+	))
+	roleBindingInformer.Informer().AddEventHandler(reconciler.Handler(
+		controller.EnsureTypeMeta(r.tracker.OnChanged, roleBindingGVK),
+	))
+	brokerInformer.Informer().AddEventHandler(reconciler.Handler(
+		controller.EnsureTypeMeta(r.tracker.OnChanged, brokerGVK),
+	))
 
 	return impl
 }
@@ -89,7 +123,7 @@ func NewController(
 func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	_, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		r.Logger.Errorf("invalid resource key: %s", key)
+		logging.FromContext(ctx).Error("invalid resource key")
 		return nil
 	}
 
@@ -97,7 +131,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	original, err := r.namespaceLister.Get(name)
 	if apierrs.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("namespace key in work queue no longer exists", zap.Any("key", key))
+		logging.FromContext(ctx).Error("namespace key in work queue no longer exists")
 		return nil
 	} else if err != nil {
 		return err
@@ -105,45 +139,66 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	if original.Labels[resources.InjectionLabelKey] != resources.InjectionEnabledLabelValue {
 		logging.FromContext(ctx).Debug("Not reconciling Namespace")
-		// TODO: this does not handle cleanup of unwanted brokers in namespace.
 		return nil
 	}
 
 	// Don't modify the informers copy
 	ns := original.DeepCopy()
 
-	// Reconcile this copy of the Namespace and then write back any status updates regardless of
-	// whether the reconcile error out.
-	err = r.reconcile(ctx, ns)
-	if err != nil {
-		logging.FromContext(ctx).Error("Error reconciling Namespace", zap.Error(err), zap.Any("key", key))
+	// Reconcile this copy of the Namespace.
+	reconcileErr := r.reconcile(ctx, ns)
+	if reconcileErr != nil {
+		logging.FromContext(ctx).Error("Error reconciling Namespace", zap.Error(reconcileErr))
+		r.Recorder.Eventf(ns, corev1.EventTypeWarning, namespaceReconcileFailure, "Failed to reconcile Namespace: %v", reconcileErr)
 	} else {
-		logging.FromContext(ctx).Debug("Namespace reconciled", zap.Any("key", key))
+		logging.FromContext(ctx).Debug("Namespace reconciled")
+		r.Recorder.Eventf(ns, corev1.EventTypeNormal, namespaceReconciled, "Namespace reconciled: %q", ns.Name)
 	}
 
-	// Requeue if the resource is not ready:
-	return err
+	return reconcileErr
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error {
 	if ns.DeletionTimestamp != nil {
 		return nil
 	}
+
 	sa, err := r.reconcileBrokerFilterServiceAccount(ctx, ns)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to reconcile the Broker Filter Service Account for the namespace", zap.Error(err))
 		return err
 	}
-	_, err = r.reconcileBrokerFilterRBAC(ctx, ns, sa)
+
+	// Tell tracker to reconcile this namespace whenever the Service Account changes.
+	if err = r.tracker.Track(utils.ObjectRef(sa, serviceAccountGVK), ns); err != nil {
+		logging.FromContext(ctx).Error("Unable to track changes to ServiceAccount", zap.Error(err))
+		return err
+	}
+
+	rb, err := r.reconcileBrokerFilterRBAC(ctx, ns, sa)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to reconcile the Broker Filter Service Account RBAC for the namespace", zap.Error(err))
 		return err
 	}
-	_, err = r.reconcileBroker(ctx, ns)
+
+	// Tell tracker to reconcile this namespace whenever the RoleBinding changes.
+	if err = r.tracker.Track(utils.ObjectRef(rb, roleBindingGVK), ns); err != nil {
+		logging.FromContext(ctx).Error("Unable to track changes to RoleBinding", zap.Error(err))
+		return err
+	}
+
+	b, err := r.reconcileBroker(ctx, ns)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to reconcile Broker for the namespace", zap.Error(err))
 		return err
 	}
+
+	// Tell tracker to reconcile this namespace whenever the Broker changes.
+	if err = r.tracker.Track(utils.ObjectRef(b, brokerGVK), ns); err != nil {
+		logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
+		return err
+	}
+
 	return nil
 }
 

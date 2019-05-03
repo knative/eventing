@@ -21,11 +21,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/knative/eventing/pkg/reconciler/eventtype"
-
-	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/rest"
-
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
@@ -33,16 +28,18 @@ import (
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/broker"
 	"github.com/knative/eventing/pkg/reconciler/channel"
+	"github.com/knative/eventing/pkg/reconciler/eventtype"
 	"github.com/knative/eventing/pkg/reconciler/namespace"
 	"github.com/knative/eventing/pkg/reconciler/subscription"
 	"github.com/knative/eventing/pkg/reconciler/trigger"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
-	"github.com/knative/pkg/logging/logkey"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
+	kubeinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/rest"
 	controllerruntime "sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -57,7 +54,6 @@ func main() {
 
 	logger, atomicLevel := setupLogger()
 	defer logger.Sync()
-	logger = logger.With(zap.String(logkey.ControllerType, logconfig.Controller))
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
@@ -89,11 +85,13 @@ func main() {
 	namespaceInformer := kubeInformerFactory.Core().V1().Namespaces()
 	configMapInformer := kubeInformerFactory.Core().V1().ConfigMaps()
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
+	serviceAccountInformer := kubeInformerFactory.Core().V1().ServiceAccounts()
+	roleBindingInformer := kubeInformerFactory.Rbac().V1().RoleBindings()
 
 	// Build all of our controllers, with the clients constructed above.
 	// Add new controllers to this array.
 	// You also need to modify numControllers above to match this.
-	controllers := []*kncontroller.Impl{
+	controllers := [...]*kncontroller.Impl{
 		subscription.NewController(
 			opt,
 			subscriptionInformer,
@@ -101,6 +99,9 @@ func main() {
 		namespace.NewController(
 			opt,
 			namespaceInformer,
+			serviceAccountInformer,
+			roleBindingInformer,
+			brokerInformer,
 		),
 		channel.NewController(
 			opt,
@@ -134,9 +135,12 @@ func main() {
 			brokerInformer,
 		),
 	}
-	if len(controllers) != numControllers {
-		logger.Fatalf("Number of controllers and QPS settings mismatch: %d != %d", len(controllers), numControllers)
-	}
+	// This line asserts at compile time that the length of controllers is equal to numControllers.
+	// It is based on https://go101.org/article/tips.html#assert-at-compile-time, which notes that
+	// var _ [N-M]int
+	// asserts at compile time that N >= M, which we can use to establish equality of N and M:
+	// (N >= M) && (M >= N) => (N == M)
+	var _ [numControllers - len(controllers)][len(controllers) - numControllers]int
 
 	// Watch the logging config map and dynamically update logging levels.
 	opt.ConfigMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller))
@@ -161,14 +165,16 @@ func main() {
 		serviceInformer.Informer(),
 		namespaceInformer.Informer(),
 		deploymentInformer.Informer(),
+		serviceAccountInformer.Informer(),
+		roleBindingInformer.Informer(),
 	); err != nil {
 		logger.Fatalf("Failed to start informers: %v", err)
 	}
 
 	// Start all of the controllers.
 	logger.Info("Starting controllers.")
-	go kncontroller.StartAll(stopCh, controllers...)
-	<-stopCh
+
+	kncontroller.StartAll(stopCh, controllers[:]...)
 }
 
 func init() {
