@@ -43,10 +43,12 @@ Note: the number denotes the sequence of the event that flows in this test case.
 */
 func TestEventTransformationForTrigger(t *testing.T) {
 	const (
-		brokerName = "e2e-eventtransformation-broker"
-		saName     = "eventing-broker-filter"
-		// This ClusterRole is installed in Knative Eventing setup, see https://github.com/knative/eventing/tree/master/docs/broker#manual-setup.
-		crName = "eventing-broker-filter"
+		brokerName    = "e2e-eventtransformation-broker"
+		filterSaName  = "eventing-broker-filter"
+		ingressSaName = "eventing-broker-ingress"
+		// These ClusterRoles are installed in Knative Eventing setup, see https://github.com/knative/eventing/tree/master/docs/broker#manual-setup.
+		filterCrName  = "eventing-broker-filter"
+		ingressCrName = "eventing-broker-ingress"
 
 		any          = v1alpha1.TriggerAnyFilter
 		eventType1   = "type1"
@@ -65,10 +67,16 @@ func TestEventTransformationForTrigger(t *testing.T) {
 	clients, ns, provisioner, cleaner := Setup(t, true, t.Logf)
 	defer TearDown(clients, ns, cleaner, t.Logf)
 
-	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role
-	err := CreateServiceAccountAndBinding(clients, saName, crName, ns, t.Logf, cleaner)
+	// creates ServiceAccount and ClusterRoleBinding for Broker filter with default cluster-admin role
+	err := CreateServiceAccountAndBinding(clients, filterSaName, filterCrName, ns, t.Logf, cleaner)
 	if err != nil {
-		t.Fatalf("Failed to create the ServiceAccount and ServiceAccountRoleBinding: %v", err)
+		t.Fatalf("Failed to create the ServiceAccount and ServiceAccountRoleBinding for Broker filter: %v", err)
+	}
+
+	// creates ServiceAccount and ClusterRoleBinding for Broker ingress with default cluster-admin role
+	err = CreateServiceAccountAndBinding(clients, ingressSaName, ingressCrName, ns, t.Logf, cleaner)
+	if err != nil {
+		t.Fatalf("Failed to create the ServiceAccount and ServiceAccountRoleBinding for Broker ingress: %v", err)
 	}
 
 	// create a new broker
