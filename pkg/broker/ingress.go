@@ -87,26 +87,20 @@ func (p *Policy) getEventType(ctx context.Context, event cloudevents.Event) (*ev
 		Raw: &metav1.ListOptions{},
 	}
 
-	for {
-		etl := &eventingv1alpha1.EventTypeList{}
-		err := p.client.List(ctx, opts, etl)
-		if err != nil {
-			return nil, err
-		}
-		for _, et := range etl.Items {
-			if et.Spec.Broker == p.broker {
-				// Matching on type, source, and schemaURL.
-				// Note that if we the CloudEvent comes with a very specific source (i.e., without the split of
-				// source and subject proposed in v0.3), the EventType most probably won't be there.
-				if strings.EqualFold(et.Spec.Type, event.Type()) && strings.EqualFold(et.Spec.Source, event.Source()) && strings.EqualFold(et.Spec.Schema, event.SchemaURL()) {
-					return &et, nil
-				}
+	etl := &eventingv1alpha1.EventTypeList{}
+	err := p.client.List(ctx, opts, etl)
+	if err != nil {
+		return nil, err
+	}
+	for _, et := range etl.Items {
+		if et.Spec.Broker == p.broker {
+			// Matching on type, source, and schemaURL.
+			// Note that if we the CloudEvent comes with a very specific source (i.e., without the split of
+			// source and subject proposed in v0.3), the EventType most probably won't be there.
+			if strings.EqualFold(et.Spec.Type, event.Type()) && strings.EqualFold(et.Spec.Source, event.Source()) && strings.EqualFold(et.Spec.Schema, event.SchemaURL()) {
+				return &et, nil
 			}
 		}
-		if etl.Continue != "" {
-			opts.Raw.Continue = etl.Continue
-		} else {
-			return nil, apierrs.NewNotFound(eventingv1alpha1.Resource("eventtype"), "")
-		}
 	}
+	return nil, apierrs.NewNotFound(eventingv1alpha1.Resource("eventtype"), "")
 }
