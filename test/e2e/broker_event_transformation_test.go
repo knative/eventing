@@ -89,7 +89,7 @@ func TestEventTransformationForTrigger(t *testing.T) {
 		Encoding: test.CloudEventDefaultEncoding,
 	}
 
-	// create the event we want to tranform to
+	// create the event we want to transform to
 	transformedEventBody := fmt.Sprintf("%s %s", eventBody, string(uuid.NewUUID()))
 	eventAfterTransformation := &test.CloudEvent{
 		Source:   eventSource2,
