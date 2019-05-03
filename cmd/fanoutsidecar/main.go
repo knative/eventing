@@ -124,14 +124,17 @@ func main() {
 func setupChannelWatcher(logger *zap.Logger, configUpdated swappable.UpdateConfig) (manager.Manager, error) {
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
 	if err != nil {
-		logger.Error("Error creating new maanger.", zap.Error(err))
+		logger.Error("Error creating new manager.", zap.Error(err))
 		return nil, err
 	}
 	if err = v1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
 		logger.Error("Error while adding eventing scheme to manager.", zap.Error(err))
 		return nil, err
 	}
-	channelwatcher.New(mgr, logger, channelwatcher.UpdateConfigWatchHandler(configUpdated, shouldWatch))
+	if err = channelwatcher.New(mgr, logger, channelwatcher.UpdateConfigWatchHandler(configUpdated, shouldWatch)); err != nil {
+		logger.Error("Error making the channel watcher: %s", zap.Error(err))
+		return nil, err
+	}
 
 	return mgr, nil
 }
