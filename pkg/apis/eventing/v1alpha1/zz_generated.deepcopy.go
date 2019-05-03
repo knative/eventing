@@ -657,6 +657,11 @@ func (in *TriggerFilter) DeepCopyInto(out *TriggerFilter) {
 			}
 		}
 	}
+	if in.Expression != nil {
+		in, out := &in.Expression, &out.Expression
+		*out = new(TriggerFilterExpression)
+		**out = **in
+	}
 	return
 }
 
