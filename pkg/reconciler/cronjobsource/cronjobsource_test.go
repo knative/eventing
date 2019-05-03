@@ -229,7 +229,7 @@ func TestAllCases(t *testing.T) {
 					WithEventTypeSource(sourcesv1alpha1.CronJobEventSource),
 					WithEventTypeBroker(sinkName),
 					WithEventTypeOwnerReference(ownerRef),
-					WithEventTypeDescription(fmt.Sprintf("Schedule: '%s'", testSchedule))),
+					WithEventTypeDescription(sourceName)),
 				makeReceiveAdapterWithSink(brokerRef),
 			},
 		}, {

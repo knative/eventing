@@ -37,6 +37,9 @@ const (
 
 	// Sink for messages.
 	envSinkURI = "SINK_URI"
+
+	// Environment variable containing the name of the cron job.
+	envName = "NAME"
 )
 
 func getRequiredEnv(envKey string) string {
@@ -62,6 +65,7 @@ func main() {
 		Schedule: getRequiredEnv(envSchedule),
 		Data:     getRequiredEnv(envData),
 		SinkURI:  getRequiredEnv(envSinkURI),
+		Name:     getRequiredEnv(envName),
 	}
 
 	logger.Info("Starting Receive Adapter", zap.Reflect("adapter", adapter))

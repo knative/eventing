@@ -42,6 +42,9 @@ type Adapter struct {
 	// SinkURI is the URI messages will be forwarded on to.
 	SinkURI string
 
+	// Name is the name of the Cron Job.
+	Name string
+
 	// client sends cloudevents.
 	client client.Client
 }
@@ -87,7 +90,7 @@ func (a *Adapter) cronTick() {
 		Type:   sourcesv1alpha1.CronJobEventType,
 		Source: *types.ParseURLRef(sourcesv1alpha1.CronJobEventSource),
 	}.AsV02()
-	eventContext.SetSubject(a.Schedule)
+	eventContext.SetSubject(a.Name)
 
 	event := cloudevents.Event{
 		Context: eventContext,

@@ -44,7 +44,7 @@ func MakeEventType(src *v1alpha1.CronJobSource) *eventingv1alpha1.EventType {
 			Type:        v1alpha1.CronJobEventType,
 			Source:      v1alpha1.CronJobEventSource,
 			Broker:      src.Spec.Sink.Name,
-			Description: fmt.Sprintf("Schedule: '%s'", src.Spec.Schedule),
+			Description: src.Name,
 		},
 	}
 }
