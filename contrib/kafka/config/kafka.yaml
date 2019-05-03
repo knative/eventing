@@ -212,3 +212,32 @@ spec:
         - name: kafka-channel-controller-config
           configMap:
             name: kafka-channel-controller-config
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kafka-channel-dispatcher
+  namespace: knative-eventing
+spec:
+  replicas: 0
+  selector:
+    matchLabels: &labels
+      clusterChannelProvisioner: kafka
+      role: dispatcher
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      serviceAccountName: kafka-channel-dispatcher
+      containers:
+        - name: dispatcher
+          image: github.com/knative/eventing/contrib/kafka/cmd/dispatcher
+          volumeMounts:
+            - name: kafka-channel-controller-config
+              mountPath: /etc/config-provisioner
+      volumes:
+        - name: kafka-channel-controller-config
+          configMap:
+            name: kafka-channel-controller-config
