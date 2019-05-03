@@ -130,7 +130,7 @@ func MakeIngressService(b *eventingv1alpha1.Broker) *corev1.Service {
 	}
 }
 
-// IngressLables generates the labels present on all resources representing the ingress of the given
+// IngressLabels generates the labels present on all resources representing the ingress of the given
 // Broker.
 func IngressLabels(brokerName string) map[string]string {
 	return map[string]string{

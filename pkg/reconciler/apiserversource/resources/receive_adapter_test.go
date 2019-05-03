@@ -35,11 +35,11 @@ func TestMakeReceiveAdapter(t *testing.T) {
 		Spec: v1alpha1.ApiServerSourceSpec{
 			ServiceAccountName: "source-svc-acct",
 			Resources: []v1alpha1.ApiServerResource{
-				v1alpha1.ApiServerResource{
+				{
 					APIVersion: "",
 					Kind:       "Namespace",
 				},
-				v1alpha1.ApiServerResource{
+				{
 					APIVersion: "",
 					Kind:       "Pod",
 					Controller: true,

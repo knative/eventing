@@ -67,7 +67,7 @@ type testCase struct {
 
 func TestReconcile(t *gotesting.T) {
 	table := []testCase{
-		testCase{
+		{
 			Name: "Receive Pod creation event",
 			InitialState: []runtime.Object{
 				getPod(),
