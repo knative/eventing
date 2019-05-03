@@ -284,12 +284,12 @@ func (r *Reconciler) createEventType(ctx context.Context, src *v1alpha1.CronJobS
 		logging.FromContext(ctx).Error("Unable to get an existing event type", zap.Error(err))
 		return nil, err
 	}
-	expected := resources.MakeEventType(src)
 	if current != nil {
 		// Not checking for spec changes as it is immutable. Only description is not, but we don't care if it is changed.
 		logging.FromContext(ctx).Desugar().Debug("EventType already exists", zap.Any("eventType", current))
 		return current, nil
 	}
+	expected := resources.MakeEventType(src)
 	if current, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(expected); err != nil {
 		return nil, err
 	}
