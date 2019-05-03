@@ -81,7 +81,7 @@ type TriggerFilter struct {
 	//
 	// Nested context attributes are not supported as keys. Numeric values are
 	// not supported.
-	Attributes *TriggerFilterAttributes `json:"attributes,omitempty`
+	Attributes *TriggerFilterAttributes `json:"attributes,omitempty"`
 
 	// Expression filters events by evaluating the expression with the Common
 	// Expression Language runtime. An event passes the filter if the expression
