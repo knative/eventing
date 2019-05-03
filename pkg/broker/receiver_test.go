@@ -227,6 +227,13 @@ func TestReceiver(t *testing.T) {
 			event:            Event().Extension("foo.bar", "baz"),
 			expectedDispatch: true,
 		},
+		"Attributes numeric extension attribute cannot be compared": {
+			// TODO consider revisiting this. Should this evaluate true?
+			triggers: []*TriggerBuilder{
+				Trigger().SubscriberURI().FilterAttributes("foo", "3"),
+			},
+			event: Event().Extension("foo", 3),
+		},
 		"Expression wrong type": {
 			triggers: []*TriggerBuilder{
 				Trigger().SubscriberURI().FilterExpression(`ce.type == "some-other-type"`),
