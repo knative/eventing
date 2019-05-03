@@ -137,7 +137,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Convert the namespace/name string into a distinct namespace and name.
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		r.Logger.Errorf("invalid resource key: %s", key)
+		logging.FromContext(ctx).Error("invalid resource key")
 		return nil
 	}
 
@@ -156,10 +156,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	// Reconcile this copy of the Trigger and then write back any status updates regardless of
 	// whether the reconcile error out.
-	err = r.reconcile(ctx, trigger)
-	if err != nil {
-		logging.FromContext(ctx).Error("Error reconciling Trigger", zap.Error(err))
-		r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerReconcileFailed, "Trigger reconciliation failed: %v", err)
+	reconcileErr := r.reconcile(ctx, trigger)
+	if reconcileErr != nil {
+		logging.FromContext(ctx).Error("Error reconciling Trigger", zap.Error(reconcileErr))
+		r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerReconcileFailed, "Trigger reconciliation failed: %v", reconcileErr)
 	} else {
 		logging.FromContext(ctx).Debug("Trigger reconciled")
 		r.Recorder.Event(trigger, corev1.EventTypeNormal, triggerReconciled, "Trigger reconciled")
@@ -172,7 +172,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	// Requeue if the resource is not ready
-	return err
+	return reconcileErr
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {

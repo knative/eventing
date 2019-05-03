@@ -123,7 +123,7 @@ func NewController(
 func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	_, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		r.Logger.Errorf("invalid resource key: %s", key)
+		logging.FromContext(ctx).Error("invalid resource key")
 		return nil
 	}
 
@@ -145,20 +145,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Don't modify the informers copy
 	ns := original.DeepCopy()
 
-	// Reconcile this copy of the Namespace and then write back any status updates regardless of
-	// whether the reconcile error out.
-	err = r.reconcile(ctx, ns)
-	// Requeue if the resource is not ready:
-	if err != nil {
-		logging.FromContext(ctx).Error("Error reconciling Namespace", zap.Error(err))
-		r.Recorder.Eventf(ns, corev1.EventTypeWarning, namespaceReconcileFailure, "Failed to reconcile Namespace: %v", err)
-		return err
+	// Reconcile this copy of the Namespace.
+	reconcileErr := r.reconcile(ctx, ns)
+	if reconcileErr != nil {
+		logging.FromContext(ctx).Error("Error reconciling Namespace", zap.Error(reconcileErr))
+		r.Recorder.Eventf(ns, corev1.EventTypeWarning, namespaceReconcileFailure, "Failed to reconcile Namespace: %v", reconcileErr)
+	} else {
+		logging.FromContext(ctx).Debug("Namespace reconciled")
+		r.Recorder.Eventf(ns, corev1.EventTypeNormal, namespaceReconciled, "Namespace reconciled: %q", ns.Name)
 	}
 
-	logging.FromContext(ctx).Debug("Namespace reconciled")
-	r.Recorder.Eventf(ns, corev1.EventTypeNormal, namespaceReconciled, "Namespace reconciled: %q", ns.Name)
-
-	return nil
+	return reconcileErr
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error {
