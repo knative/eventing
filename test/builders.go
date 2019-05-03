@@ -40,7 +40,7 @@ func NewTriggerBuilder(name, namespace string) *TriggerBuilder {
 		Spec: eventingv1alpha1.TriggerSpec{
 			Broker: "default",
 			Filter: &eventingv1alpha1.TriggerFilter{
-				SourceAndType: &eventingv1alpha1.TriggerFilterSourceAndType{
+				DeprecatedSourceAndType: &eventingv1alpha1.TriggerFilterSourceAndType{
 					Type:   eventingv1alpha1.TriggerAnyFilter,
 					Source: eventingv1alpha1.TriggerAnyFilter,
 				},
@@ -59,12 +59,12 @@ func (b *TriggerBuilder) Build() *eventingv1alpha1.Trigger {
 }
 
 func (b *TriggerBuilder) EventType(eventType string) *TriggerBuilder {
-	b.Trigger.Spec.Filter.SourceAndType.Type = eventType
+	b.Trigger.Spec.Filter.DeprecatedSourceAndType.Type = eventType
 	return b
 }
 
 func (b *TriggerBuilder) EventSource(eventSource string) *TriggerBuilder {
-	b.Trigger.Spec.Filter.SourceAndType.Source = eventSource
+	b.Trigger.Spec.Filter.DeprecatedSourceAndType.Source = eventSource
 	return b
 }
 

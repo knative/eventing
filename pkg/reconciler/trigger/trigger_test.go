@@ -112,15 +112,15 @@ func TestAllCases(t *testing.T) {
 			// Make sure Reconcile handles good keys that don't exist.
 			Key: "foo/not-found",
 		}, { // TODO: there is a bug in the controller, it will query for ""
-			//			Name: "trigger key not found ",
-			//			Objects: []runtime.Object{
-			//				reconciletesting.NewTrigger(triggerName, testNS),
-			//			},
-			//			Key:     "foo/incomplete",
-			//			WantErr: true,
-			//			WantEvents: []string{
-			//				Eventf(corev1.EventTypeWarning, "ChannelReferenceFetchFailed", "Failed to validate spec.channel exists: s \"\" not found"),
-			//			},
+		//			Name: "trigger key not found ",
+		//			Objects: []runtime.Object{
+		//				reconciletesting.NewTrigger(triggerName, testNS),
+		//			},
+		//			Key:     "foo/incomplete",
+		//			WantErr: true,
+		//			WantEvents: []string{
+		//				Eventf(corev1.EventTypeWarning, "ChannelReferenceFetchFailed", "Failed to validate spec.channel exists: s \"\" not found"),
+		//			},
 		}, {
 			Name: "Broker not found",
 			Key:  triggerKey,
@@ -509,7 +509,7 @@ func makeTrigger() *v1alpha1.Trigger {
 		Spec: v1alpha1.TriggerSpec{
 			Broker: brokerName,
 			Filter: &v1alpha1.TriggerFilter{
-				SourceAndType: &v1alpha1.TriggerFilterSourceAndType{
+				DeprecatedSourceAndType: &v1alpha1.TriggerFilterSourceAndType{
 					Source: "Any",
 					Type:   "Any",
 				},
