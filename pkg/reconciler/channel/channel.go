@@ -75,8 +75,6 @@ func NewController(
 // Reconcile will check if the channel is being watched by provisioner's channel controller
 // This will improve UX. See https://github.com/knative/eventing/issues/779
 func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
-	ctx = logging.WithLogger(ctx, r.Logger.Desugar().With(zap.String("key", key)))
-
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {

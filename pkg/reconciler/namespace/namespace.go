@@ -120,8 +120,6 @@ func NewController(
 // converge the two. It then updates the Status block of the Namespace resource
 // with the current status of the resource.
 func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
-	ctx = logging.WithLogger(ctx, r.Logger.Desugar().With(zap.String("key", key)))
-
 	_, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		logging.FromContext(ctx).Error("invalid resource key")
