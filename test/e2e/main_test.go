@@ -35,6 +35,9 @@ var channelTestMap = map[string][]func(t *testing.T){
 		TestChannelChain,
 		TestDefaultBrokerWithManyTriggers,
 		TestEventTransformationForTrigger,
+		TestRegistryBrokerAllowAnyAccept,
+		TestRegistryBrokerAllowRegisteredAccept,
+		TestRegistryBrokerAllowRegisteredNotAccept,
 	},
 	test.InMemoryChannelProvisioner: {
 		TestSingleBinaryEvent,
