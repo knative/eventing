@@ -4,7 +4,6 @@
 
    ```sbtshell
    kubectl create namespace natss
-   kubectl label namespace natss istio-injection=enabled
    kubectl apply -n natss -f contrib/natss/config/broker/natss.yaml
    ```
 

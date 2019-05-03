@@ -26,32 +26,25 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/client-go/util/workqueue"
-
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util"
-
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"github.com/knative/eventing/pkg/provisioners"
-
-	"sigs.k8s.io/controller-runtime/pkg/event"
-
+	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/fakepubsub"
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/testcreds"
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"github.com/knative/eventing/pkg/utils"
-
-	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/fakepubsub"
-
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/provisioners"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
+	"github.com/knative/eventing/pkg/utils"
 	_ "github.com/knative/pkg/system/testing"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -65,10 +58,11 @@ const (
 
 	gcpProject = "gcp-project"
 
-	pscData             = "pscData"
-	reconcileChan       = "reconcileChan"
-	shouldBeCanceled    = "shouldBeCanceled"
-	shouldNotBeCanceled = "shouldNotBeCanceled"
+	pscData                = "pscData"
+	reconcileChan          = "reconcileChan"
+	shouldBeCanceled       = "shouldBeCanceled"
+	shouldNotBeCanceled    = "shouldNotBeCanceled"
+	additionalHandlerError = "Error in additional test handler."
 )
 
 var (
@@ -93,6 +87,8 @@ var (
 		dispatcherReconcileFailed:    {Reason: dispatcherReconcileFailed, Type: corev1.EventTypeWarning},
 		dispatcherUpdateStatusFailed: {Reason: dispatcherUpdateStatusFailed, Type: corev1.EventTypeWarning},
 	}
+
+	hostname = fmt.Sprintf("%s-channel.%s.svc.%s", cName, cNamespace, utils.GetClusterDomainName())
 )
 
 func init() {
@@ -367,6 +363,22 @@ func TestReconcile(t *testing.T) {
 				events[dispatcherReconciled], events[dispatcherUpdateStatusFailed],
 			},
 		},
+		{
+			Name: "Fail additional reconcile handler",
+			InitialState: []runtime.Object{
+				makeChannelWithSubscribersAndFinalizer(),
+				testcreds.MakeSecretWithCreds(),
+			},
+			WantPresent: []runtime.Object{
+				makeChannelWithSubscribersAndFinalizer(),
+			},
+			WantEvent: []corev1.Event{
+				events[dispatcherReconcileFailed],
+			},
+			OtherTestData: map[string]interface{}{
+				additionalHandlerError: additionalHandlerError,
+			},
+		},
 		// Note - we do not test update status since this dispatcher only adds
 		// finalizers to the channel
 	}
@@ -414,12 +426,19 @@ func TestReconcile(t *testing.T) {
 				r.subscriptions[c][s] = cc.wantNotCancel(c, s)
 			}
 		}
+		if tc.OtherTestData[additionalHandlerError] != nil {
+			r.additionalHandlers = []ReconcileHandler{
+				func(_ context.Context, _ reconcile.Request) error {
+					return fmt.Errorf(tc.OtherTestData[additionalHandlerError].(string))
+				},
+			}
+			tc.WantErrMsg = additionalHandlerError
+		}
 		tc.AdditionalVerification = append(tc.AdditionalVerification, cc.verify)
 		tc.IgnoreTimes = true
 		t.Run(tc.Name, tc.Runner(t, r, c, recorder))
 	}
 }
-
 func TestReceiveFunc(t *testing.T) {
 	testCases := map[string]struct {
 		ack              bool
@@ -518,7 +537,7 @@ func makeChannel() *eventingv1alpha1.Channel {
 		},
 	}
 	c.Status.InitializeConditions()
-	c.Status.SetAddress(fmt.Sprintf("%s-channel.%s.svc.%s", c.Name, c.Namespace, utils.GetClusterDomainName()))
+	c.Status.SetAddress(hostname)
 	c.Status.MarkProvisioned()
 	pcs := &util.GcpPubSubChannelStatus{
 		GCPProject: gcpProject,
@@ -638,6 +657,16 @@ func errorGettingChannel() []controllertesting.MockGet {
 	}
 }
 
+func errorListingChannels() []controllertesting.MockList {
+	return []controllertesting.MockList{
+		func(_ client.Client, _ context.Context, _ *client.ListOptions, obj runtime.Object) (controllertesting.MockHandled, error) {
+			if _, ok := obj.(*eventingv1alpha1.ChannelList); ok {
+				return controllertesting.Handled, errors.New(testErrorMessage)
+			}
+			return controllertesting.Unhandled, nil
+		},
+	}
+}
 func errorUpdatingChannel() []controllertesting.MockUpdate {
 	return []controllertesting.MockUpdate{
 		func(_ client.Client, _ context.Context, obj runtime.Object) (controllertesting.MockHandled, error) {

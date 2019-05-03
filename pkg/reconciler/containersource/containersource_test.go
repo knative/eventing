@@ -444,13 +444,6 @@ func makeDeployment(source *sourcesv1alpha1.ContainerSource, replicas int32, lab
 	args := append(source.Spec.Args, fmt.Sprintf("--sink=%s", sinkURI))
 	env := append(source.Spec.Env, corev1.EnvVar{Name: "SINK", Value: sinkURI})
 
-	annos := map[string]string{
-		"sidecar.istio.io/inject": "true",
-	}
-	for k, v := range annotations {
-		annos[k] = v
-	}
-
 	labs := map[string]string{
 		"eventing.knative.dev/source": source.Name,
 	}
@@ -476,7 +469,7 @@ func makeDeployment(source *sourcesv1alpha1.ContainerSource, replicas int32, lab
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: annos,
+					Annotations: annotations,
 					Labels:      labs,
 				},
 				Spec: corev1.PodSpec{

@@ -79,6 +79,8 @@ rules:
       - "subscriptions/status"
       - "triggers"
       - "triggers/status"
+      - "eventtypes"
+      - "eventtypes/status"
     verbs:
       - "get"
       - "list"

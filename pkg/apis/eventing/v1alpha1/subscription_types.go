@@ -104,8 +104,7 @@ type SubscriptionSpec struct {
 // provide the resolved target of the action.
 // Currently we inspect the objects Status and see if there's a predefined
 // Status field that we will then use to dispatch events to be processed by
-// the target. Currently must resolve to a k8s service or Istio virtual
-// service.
+// the target. Currently must resolve to a k8s service.
 // Note that in the future we should try to utilize subresources (/resolve ?) to
 // make this cleaner, but CRDs do not support subresources yet, so we need
 // to rely on a specified Status field today. By relying on this behaviour

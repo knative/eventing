@@ -29,11 +29,12 @@ import (
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/broker"
+	brokerresources "github.com/knative/eventing/pkg/reconciler/broker/resources"
 	"github.com/knative/eventing/pkg/reconciler/names"
 	"github.com/knative/eventing/pkg/reconciler/trigger/path"
 	"github.com/knative/eventing/pkg/reconciler/trigger/resources"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
-	brokerresources "github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
+	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/tracker"
 	"go.uber.org/zap"
@@ -133,8 +134,6 @@ func NewController(
 // converge the two. It then updates the Status block of the Trigger resource
 // with the current status of the resource.
 func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
-	ctx = logging.WithLogger(ctx, r.Logger.Desugar().With(zap.String("key", key)))
-
 	// Convert the namespace/name string into a distinct namespace and name.
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
@@ -206,7 +205,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	t.Status.PropagateBrokerStatus(&b.Status)
 
 	// Tell tracker to reconcile this Trigger whenever the Broker changes.
-	if err = r.tracker.Track(objectRef(b, brokerGVK), t); err != nil {
+	if err = r.tracker.Track(utils.ObjectRef(b, brokerGVK), t); err != nil {
 		logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
 		return err
 	}
@@ -405,24 +404,4 @@ func (r *Reconciler) getSubscription(ctx context.Context, t *v1alpha1.Trigger) (
 	}
 
 	return nil, apierrs.NewNotFound(schema.GroupResource{}, "")
-}
-
-type accessor interface {
-	GroupVersionKind() schema.GroupVersionKind
-	GetNamespace() string
-	GetName() string
-}
-
-func objectRef(a accessor, gvk schema.GroupVersionKind) corev1.ObjectReference {
-	// We can't always rely on the TypeMeta being populated.
-	// See: https://github.com/knative/serving/issues/2372
-	// Also: https://github.com/kubernetes/apiextensions-apiserver/issues/29
-	// gvk := a.GroupVersionKind()
-	apiVersion, kind := gvk.ToAPIVersionAndKind()
-	return corev1.ObjectReference{
-		APIVersion: apiVersion,
-		Kind:       kind,
-		Namespace:  a.GetNamespace(),
-		Name:       a.GetName(),
-	}
 }

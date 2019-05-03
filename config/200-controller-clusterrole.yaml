@@ -35,13 +35,6 @@ rules:
       - "patch"
       - "watch"
 
-  # Channels and Triggers both manipulate VirtualServices.
-  - apiGroups:
-      - "networking.istio.io"
-    resources:
-      - "virtualservices"
-    verbs: *everything
-
   # Brokers and the namespace annotation controllers manipulate Deployments.
   - apiGroups:
       - "apps"
@@ -70,6 +63,8 @@ rules:
       - "subscriptions/status"
       - "triggers"
       - "triggers/status"
+      - "eventtypes"
+      - "eventtypes/status"
     verbs: *everything
 
   # Source resources and statuses we care about.
@@ -82,4 +77,7 @@ rules:
       - "containersources"
       - "containersources/status"
       - "containersources/finalizers"
+      - "apiserversources"
+      - "apiserversources/status"
+      - "apiserversources/finalizers"
     verbs: *everything

@@ -52,20 +52,32 @@ type GKEContainer struct {
 
 	// Zone is the Compute Engine zone in which the VM is running.
 	Zone string
+
+	// LoggingMonitoringV2Enabled is the identifier if user enabled V2 logging and monitoring for GKE
+	LoggingMonitoringV2Enabled bool
 }
 
 // MonitoredResource returns resource type and resource labels for GKEContainer
 func (gke *GKEContainer) MonitoredResource() (resType string, labels map[string]string) {
 	labels = map[string]string{
 		"project_id":     gke.ProjectID,
-		"instance_id":    gke.InstanceID,
-		"zone":           gke.Zone,
 		"cluster_name":   gke.ClusterName,
 		"container_name": gke.ContainerName,
-		"namespace_id":   gke.NamespaceID,
-		"pod_id":         gke.PodID,
 	}
-	return "gke_container", labels
+	var typ string
+	if gke.LoggingMonitoringV2Enabled {
+		typ = "k8s_container"
+		labels["pod_name"] = gke.PodID
+		labels["namespace_name"] = gke.NamespaceID
+		labels["location"] = gke.Zone
+	} else {
+		typ = "gke_container"
+		labels["pod_id"] = gke.PodID
+		labels["namespace_id"] = gke.NamespaceID
+		labels["zone"] = gke.Zone
+		labels["instance_id"] = gke.InstanceID
+	}
+	return typ, labels
 }
 
 // GCEInstance represents gce_instance type monitored resource.
@@ -187,13 +199,14 @@ func createGCEInstanceMonitoredResource(gcpMetadata *gcpMetadata) *GCEInstance {
 // gcpMetadata contains GCP (GKE or GCE) specific attributes.
 func createGKEContainerMonitoredResource(gcpMetadata *gcpMetadata) *GKEContainer {
 	gkeContainer := GKEContainer{
-		ProjectID:     gcpMetadata.projectID,
-		InstanceID:    gcpMetadata.instanceID,
-		Zone:          gcpMetadata.zone,
-		ContainerName: gcpMetadata.containerName,
-		ClusterName:   gcpMetadata.clusterName,
-		NamespaceID:   gcpMetadata.namespaceID,
-		PodID:         gcpMetadata.podID,
+		ProjectID:                  gcpMetadata.projectID,
+		InstanceID:                 gcpMetadata.instanceID,
+		Zone:                       gcpMetadata.zone,
+		ContainerName:              gcpMetadata.containerName,
+		ClusterName:                gcpMetadata.clusterName,
+		NamespaceID:                gcpMetadata.namespaceID,
+		PodID:                      gcpMetadata.podID,
+		LoggingMonitoringV2Enabled: gcpMetadata.monitoringV2,
 	}
 	return &gkeContainer
 }
