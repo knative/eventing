@@ -53,7 +53,7 @@ metadata:
   namespace: default
 spec:
   type: com.github.pull_request
-  source: github.com
+  source: //github.com/user/repo
   schema: //github.com/schemas/pull_request
   description: "GitHub pull request"
   broker: default
@@ -113,7 +113,7 @@ We foresee the following two ways of populating the Registry for the MVP:
     ```
  
     By applying the above file, two EventTypes will be registered, with types `dev.knative.source.github.push` and 
-    `dev.knative.source.github.pull_request`, source `github.com`, for the `default` Broker in the `default`
+    `dev.knative.source.github.pull_request`, source `//github.com/my-other-user/my-other-repo`, for the `default` Broker in the `default`
      namespace, and with owner `github-source-sample`. This should be done by the Event Source controller, in this case, 
      the GitHubSource controller. Although not shown here, the controller could add some `description` to the EventTypes, e.g., 
      from which owner and repo the events are, etc.
@@ -133,7 +133,7 @@ We foresee the following two ways of populating the Registry for the MVP:
       owner: # Owned by github-source-sample
     spec:
       type: dev.knative.source.github.push
-      source: github.com
+      source: //github.com/my-other-user/my-other-repo
       broker: default
    ---
     apiVersion: eventing.knative.dev/v1alpha1
@@ -144,7 +144,7 @@ We foresee the following two ways of populating the Registry for the MVP:
       owner: # Owned by github-source-sample
     spec:
       type: dev.knative.source.github.pull_request
-      source: github.com
+      source: //github.com/my-other-user/my-other-repo
       broker: default
     ```
     
@@ -170,13 +170,13 @@ We foresee the following two ways of populating the Registry for the MVP:
       namespace: default
     spec:
       type: org.bitbucket.repo:fork
-      source: bitbucket.org
+      source: //bitbucket.org/my-other-user/my-other-repo
       broker: dev
       description: "BitBucket fork"
     ``` 
 
     This would register the EventType named `org.bitbucket.repofork` with type `org.bitbucket.repo:fork`, 
-    source `bitbucket.org` in the `dev` Broker of the `default` namespace.
+    source `//bitbucket.org/my-other-user/my-other-repo` in the `dev` Broker of the `default` namespace.
     
     As under the hood, `kubectl apply` just makes a REST call to the API server with the appropriate RBAC permissions, 
     the `Cluster Configurator` can give EventType `create` permissions to trusted parties, so that they can register 
@@ -189,11 +189,11 @@ We foresee the following two ways of populating the Registry for the MVP:
     `$ kubectl get eventtypes -n default`
     
     ```
-    NAME                                         TYPE                                    SOURCE          SCHEMA                              BROKER     DESCRIPTION           READY   REASON
-    org.bitbucket.repofork                       org.bitbucket.repo:fork                 bitbucket.org                                       dev        BitBucket fork        False   BrokerIsNotReady
-    com.github.pullrequest                       com.github.pull_request                 github.com      //github.com/schemas/pull_request   default    GitHub pull request   True 
-    dev.knative.source.github.push-34cnb         dev.knative.source.github.push          github.com                                          default                          True 
-    dev.knative.source.github.pullrequest-86jhv  dev.knative.source.github.pull_request  github.com                                          default                          True  
+    NAME                                         TYPE                                    SOURCE                                        SCHEMA                              BROKER     DESCRIPTION           READY    REASON
+    org.bitbucket.repofork                       org.bitbucket.repo:fork                 //bitbucket.org/my-other-user/my-other-repo                                       dev        BitBucket fork        False    BrokerIsNotReady
+    com.github.pullrequest                       com.github.pull_request                 //github.com/user/repo                        //github.com/schemas/pull_request   default    GitHub pull request   True 
+    dev.knative.source.github.push-34cnb         dev.knative.source.github.push          //github.com/my-other-user/my-other-repo                                          default                          True 
+    dev.knative.source.github.pullrequest-86jhv  dev.knative.source.github.pull_request  //github.com/my-other-user/my-other-repo                                          default                          True  
     ```
 
 1. The `Event Consumer` creates a Trigger to listen to an EventType in the Registry. 
@@ -210,7 +210,7 @@ We foresee the following two ways of populating the Registry for the MVP:
       filter:
         sourceAndType:
           type: dev.knative.source.github.push
-          source: github.com
+          source: //github.com/my-other-user/my-other-repo
       subscriber:
         ref:
          apiVersion: serving.knative.dev/v1alpha1
