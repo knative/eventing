@@ -19,7 +19,6 @@ package broker
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -240,8 +239,6 @@ func (r *Receiver) shouldSendMessage(ts *eventingv1alpha1.TriggerSpec, event *cl
 	if ts.Filter.Expression != nil {
 		expr = string(*ts.Filter.Expression)
 	}
-
-	fmt.Printf("expr: %s\n", expr)
 
 	// No filter specified, default to passing everything
 	// TODO should this default true?
