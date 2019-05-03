@@ -24,7 +24,6 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"go.uber.org/zap"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -81,12 +80,8 @@ func (p *Policy) isRegistered(ctx context.Context, event cloudevents.Event) bool
 func (p *Policy) getEventType(ctx context.Context, event cloudevents.Event) (*eventingv1alpha1.EventType, error) {
 	opts := &client.ListOptions{
 		Namespace: p.namespace,
-		// Set Raw because if we need to get more than one page, then we will put the continue token
-		// into opts.Raw.Continue.
 		// TODO filter by Broker label.
-		Raw: &metav1.ListOptions{},
 	}
-
 	etl := &eventingv1alpha1.EventTypeList{}
 	err := p.client.List(ctx, opts, etl)
 	if err != nil {
