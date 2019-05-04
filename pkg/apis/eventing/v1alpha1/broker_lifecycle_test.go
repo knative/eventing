@@ -17,11 +17,15 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
+	"github.com/knative/eventing/pkg/apis/eventing"
+	"github.com/knative/pkg/apis"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	v1 "k8s.io/api/apps/v1"
+	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -378,6 +382,93 @@ func TestBrokerIsReady(t *testing.T) {
 			got := bs.IsReady()
 			if test.wantReady != got {
 				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
+			}
+		})
+	}
+}
+
+func TestBrokerAnnotateUserInfo(t *testing.T) {
+	const (
+		u1 = "oveja@knative.dev"
+		u2 = "cabra@knative.dev"
+		u3 = "vaca@knative.dev"
+	)
+
+	withUserAnns := func(creator, updater string, b *Broker) *Broker {
+		a := b.GetAnnotations()
+		if a == nil {
+			a = map[string]string{}
+			defer b.SetAnnotations(a)
+		}
+
+		a[eventing.CreatorAnnotation] = creator
+		a[eventing.UpdaterAnnotation] = updater
+
+		return b
+	}
+
+	tests := []struct {
+		name       string
+		user       string
+		this       *Broker
+		prev       *Broker
+		wantedAnns map[string]string
+	}{{
+		"create new broker",
+		u1,
+		&Broker{},
+		nil,
+		map[string]string{
+			eventing.CreatorAnnotation: u1,
+			eventing.UpdaterAnnotation: u1,
+		},
+	}, {
+		"update broker which has no annotations without diff",
+		u1,
+		&Broker{},
+		&Broker{},
+		map[string]string{},
+	}, {
+		"update broker which has annotations without diff",
+		u2,
+		withUserAnns(u1, u1, &Broker{}),
+		withUserAnns(u1, u1, &Broker{}),
+		map[string]string{
+			eventing.CreatorAnnotation: u1,
+			eventing.UpdaterAnnotation: u1,
+		},
+	}, {
+		"update broker which has no annotations with diff",
+		u2,
+		&Broker{Spec: BrokerSpec{ChannelTemplate: &ChannelSpec{DeprecatedGeneration: 1}}},
+		&Broker{},
+		map[string]string{
+			eventing.UpdaterAnnotation: u2,
+		}}, {
+		"update broker which has annotations with diff",
+		u3,
+		withUserAnns(u1, u2, &Broker{Spec: BrokerSpec{ChannelTemplate: &ChannelSpec{DeprecatedGeneration: 1}}}),
+		withUserAnns(u1, u2, &Broker{}),
+		map[string]string{
+			eventing.CreatorAnnotation: u1,
+			eventing.UpdaterAnnotation: u3,
+		},
+	}}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := apis.WithUserInfo(context.Background(), &authv1.UserInfo{
+				Username: test.user,
+			})
+			if test.prev != nil {
+				ctx = apis.WithinUpdate(ctx, test.prev)
+			}
+			test.this.SetDefaults(ctx)
+
+			if got, want := test.this.GetAnnotations(), test.wantedAnns; !cmp.Equal(got, want) {
+				t.Errorf("Annotations = %v, want: %v, diff (-got, +want): %s", got, want, cmp.Diff(got, want))
 			}
 		})
 	}

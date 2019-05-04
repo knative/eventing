@@ -17,11 +17,15 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
+	"github.com/knative/eventing/pkg/apis/eventing"
+	"github.com/knative/pkg/apis"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 )
@@ -315,6 +319,93 @@ func TestChannelStatus_MarkDeprecated(t *testing.T) {
 			}
 			if diff := cmp.Diff(expected, cs.Conditions[0], ignoreLastTransitionTime); diff != "" {
 				t.Errorf("Condition incorrect (-want +got): %s", diff)
+			}
+		})
+	}
+}
+
+func TestChannelAnnotateUserInfo(t *testing.T) {
+	const (
+		u1 = "oveja@knative.dev"
+		u2 = "cabra@knative.dev"
+		u3 = "vaca@knative.dev"
+	)
+
+	withUserAnns := func(creator, updater string, c *Channel) *Channel {
+		a := c.GetAnnotations()
+		if a == nil {
+			a = map[string]string{}
+			defer c.SetAnnotations(a)
+		}
+
+		a[eventing.CreatorAnnotation] = creator
+		a[eventing.UpdaterAnnotation] = updater
+
+		return c
+	}
+
+	tests := []struct {
+		name       string
+		user       string
+		this       *Channel
+		prev       *Channel
+		wantedAnns map[string]string
+	}{{
+		"create new channel",
+		u1,
+		&Channel{},
+		nil,
+		map[string]string{
+			eventing.CreatorAnnotation: u1,
+			eventing.UpdaterAnnotation: u1,
+		},
+	}, {
+		"update channel which has no annotations without diff",
+		u1,
+		&Channel{},
+		&Channel{},
+		map[string]string{},
+	}, {
+		"update channel which has annotations without diff",
+		u2,
+		withUserAnns(u1, u1, &Channel{}),
+		withUserAnns(u1, u1, &Channel{}),
+		map[string]string{
+			eventing.CreatorAnnotation: u1,
+			eventing.UpdaterAnnotation: u1,
+		},
+	}, {
+		"update channel which has no annotations with diff",
+		u2,
+		&Channel{Spec: ChannelSpec{DeprecatedGeneration: 1}},
+		&Channel{},
+		map[string]string{
+			eventing.UpdaterAnnotation: u2,
+		}}, {
+		"update channel which has annotations with diff",
+		u3,
+		withUserAnns(u1, u2, &Channel{Spec: ChannelSpec{DeprecatedGeneration: 1}}),
+		withUserAnns(u1, u2, &Channel{}),
+		map[string]string{
+			eventing.CreatorAnnotation: u1,
+			eventing.UpdaterAnnotation: u3,
+		},
+	}}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := apis.WithUserInfo(context.Background(), &authv1.UserInfo{
+				Username: test.user,
+			})
+			if test.prev != nil {
+				ctx = apis.WithinUpdate(ctx, test.prev)
+			}
+			test.this.SetDefaults(ctx)
+
+			if got, want := test.this.GetAnnotations(), test.wantedAnns; !cmp.Equal(got, want) {
+				t.Errorf("Annotations = %v, want: %v, diff (-got, +want): %s", got, want, cmp.Diff(got, want))
 			}
 		})
 	}
