@@ -15,7 +15,9 @@ content-aware dispatch).
 
 Messaging is explicitly concerned with modelling the event transmission
 topology; the route of the message through the topology is specified by the
-developer, and the topology determines which functions receieve which events.
+developer, and the topology determines which functions receive which events.
+
+<!-- Extracted from https://docs.google.com/document/d/1w5Bd5kEiiMk7i7X0EUdy6PFbWUpwGTwep8I0N52esyM/edit by selecting the picture and then "Actions" > "Download As" -->
 
 ![Channel and Subscription model](channel-subscription-model.svg)
 
@@ -32,6 +34,8 @@ Eventing is a higher-level abstraction which removes explicit management of the
 event transmission topology and replaces it with automatically-optimized routing
 based on the contents of the event. In this way, it is similar to local
 event-driven programming with the Observer pattern.
+
+<!-- Extracted from https://docs.google.com/document/d/1w5Bd5kEiiMk7i7X0EUdy6PFbWUpwGTwep8I0N52esyM/edit by selecting the picture and then "Actions" > "Download As" -->
 
 ![Broker and Trigger model](broker-trigger-model.svg)
 
