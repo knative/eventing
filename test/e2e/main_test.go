@@ -53,6 +53,12 @@ var channelTestMap = map[string][]func(t *testing.T){
 		TestEventTransformation,
 		TestChannelChain,
 	},
+	test.KafkaProvisioner: {
+		TestSingleBinaryEvent,
+		TestSingleStructuredEvent,
+		TestEventTransformation,
+		TestChannelChain,
+	},
 }
 
 func TestMain(t *testing.T) {

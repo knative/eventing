@@ -48,6 +48,19 @@ readonly NATSS_INSTALLATION_CONFIG="contrib/natss/config/broker/natss.yaml"
 # NATSS provisioner config.
 readonly NATSS_CONFIG="contrib/natss/config/provisioner.yaml"
 
+# Strimzi installation config template used for starting up Kafka clusters.
+readonly STRIMZI_INSTALLATION_CONFIG_TEMPLATE="https://github.com/strimzi/strimzi-kafka-operator/releases/download/0.11.3/strimzi-cluster-operator-0.11.3.yaml"
+# Strimzi installation config.
+readonly STRIMZI_INSTALLATION_CONFIG="$(mktemp)"
+# Kafka cluster CR config file.
+readonly KAFKA_INSTALLATION_CONFIG="https://raw.githubusercontent.com/strimzi/strimzi-kafka-operator/0.11.3/examples/kafka/kafka-persistent-single.yaml"
+# Kafka provisioner config template.
+readonly KAFKA_CONFIG_TEMPLATE="contrib/kafka/config/kafka.yaml"
+# Real Kafka provisioner config, generated from the template.
+readonly KAFKA_CONFIG="$(mktemp)"
+# Kafka cluster URL for our installation
+readonly KAFKA_CLUSTER_URL="my-cluster-kafka-bootstrap.kafka:9092"
+
 # Setup the Knative environment for running tests.
 function knative_setup() {
   # Install the latest stable Knative/serving in the current cluster.
@@ -85,6 +98,12 @@ function test_setup() {
   ko apply -f ${NATSS_CONFIG} || return 1
   wait_until_pods_running knative-eventing || fail_test "Failed to install the NATSS ClusterChannelProvisioner"
 
+  echo "Installing Kafka ClusterChannelProvisioner"
+  kafka_setup || return 1
+  sed "s/REPLACE_WITH_CLUSTER_URL/KAFKA_CLUSTER_URL/" ${KAFKA_CONFIG_TEMPLATE} > ${KAFKA_CONFIG}
+  ko apply -f ${KAFKA_CONFIG} || return 1
+  wait_until_pods_running knative-eventing || fail_test "Failed to install the Kafka ClusterChannelProvisioner"
+
   # Publish test images.
   echo ">> Publishing test images"
   $(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test images"
@@ -103,6 +122,10 @@ function test_teardown() {
   echo "Uninstalling NATSS ClusterChannelProvisioner"
   natss_teardown
   ko delete --ignore-not-found=true --now --timeout 60s -f ${NATSS_CONFIG}
+
+  echo "Uninstalling Kafka ClusterChannelProvisioner"
+  kafka_teardown
+  ko delete --ignore-not-found=true --now --timeout 60s -f ${KAFKA_CONFIG}
 
   wait_until_object_does_not_exist namespaces knative-eventing
 }
@@ -146,6 +169,7 @@ function natss_setup() {
   kubectl create namespace natss || return 1
   kubectl label namespace natss istio-injection=enabled || return 1
   kubectl apply -n natss -f ${NATSS_INSTALLATION_CONFIG} || return 1
+  wait_until_pods_running natss || fail_test "Failed to start up a NATSS cluster"
 }
 
 # Delete resources used for NATSS provisioner setup
@@ -153,6 +177,24 @@ function natss_teardown() {
   echo "Uninstalling NATS Streaming"
   kubectl delete -f ${NATSS_INSTALLATION_CONFIG}
   kubectl delete namespace natss
+}
+
+function kafka_setup() {
+  echo "Installing Kafka cluster"
+  kubectl create namespace kafka || return 1
+  curl -L ${STRIMZI_INSTALLATION_CONFIG_TEMPLATE} \
+    | sed 's/namespace: .*/namespace: kafka/' \
+    | > ${STRIMZI_INSTALLATION_CONFIG}
+  kubectl apply -f ${STRIMZI_INSTALLATION_CONFIG} -n kafka
+  kubectl apply -f ${KAFKA_INSTALLATION_CONFIG} -n kafka
+  wait_until_pods_running kafka || fail_test "Failed to start up a Kafka cluster"
+}
+
+function kafka_teardown() {
+  echo "Uninstalling Kafka cluster"
+  kubectl delete -f ${STRIMZI_INSTALLATION_CONFIG} -n kafka
+  kubectl delete -f ${KAFKA_INSTALLATION_CONFIG} -n kafka
+  kubectl delete namespace kafka
 }
 
 function dump_extra_cluster_state() {
@@ -175,6 +217,6 @@ function dump_extra_cluster_state() {
 
 initialize $@
 
-go_test_e2e -timeout=20m ./test/e2e -run ^TestMain$ -runFromMain=true -clusterChannelProvisioners=in-memory-channel,in-memory,natss || fail_test
+go_test_e2e -timeout=20m ./test/e2e -run ^TestMain$ -runFromMain=true -clusterChannelProvisioners=in-memory-channel,in-memory,natss,kafka || fail_test
 
 success
