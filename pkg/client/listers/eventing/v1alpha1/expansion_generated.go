@@ -46,6 +46,14 @@ type EventTypeListerExpansion interface{}
 // EventTypeNamespaceLister.
 type EventTypeNamespaceListerExpansion interface{}
 
+// PipelineListerExpansion allows custom methods to be added to
+// PipelineLister.
+type PipelineListerExpansion interface{}
+
+// PipelineNamespaceListerExpansion allows custom methods to be added to
+// PipelineNamespaceLister.
+type PipelineNamespaceListerExpansion interface{}
+
 // SubscriptionListerExpansion allows custom methods to be added to
 // SubscriptionLister.
 type SubscriptionListerExpansion interface{}

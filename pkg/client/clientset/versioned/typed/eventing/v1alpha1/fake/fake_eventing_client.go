@@ -44,6 +44,10 @@ func (c *FakeEventingV1alpha1) EventTypes(namespace string) v1alpha1.EventTypeIn
 	return &FakeEventTypes{c, namespace}
 }
 
+func (c *FakeEventingV1alpha1) Pipelines(namespace string) v1alpha1.PipelineInterface {
+	return &FakePipelines{c, namespace}
+}
+
 func (c *FakeEventingV1alpha1) Subscriptions(namespace string) v1alpha1.SubscriptionInterface {
 	return &FakeSubscriptions{c, namespace}
 }

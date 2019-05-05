@@ -32,6 +32,8 @@ type Interface interface {
 	ClusterChannelProvisioners() ClusterChannelProvisionerInformer
 	// EventTypes returns a EventTypeInformer.
 	EventTypes() EventTypeInformer
+	// Pipelines returns a PipelineInformer.
+	Pipelines() PipelineInformer
 	// Subscriptions returns a SubscriptionInformer.
 	Subscriptions() SubscriptionInformer
 	// Triggers returns a TriggerInformer.
@@ -67,6 +69,11 @@ func (v *version) ClusterChannelProvisioners() ClusterChannelProvisionerInformer
 // EventTypes returns a EventTypeInformer.
 func (v *version) EventTypes() EventTypeInformer {
 	return &eventTypeInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Pipelines returns a PipelineInformer.
+func (v *version) Pipelines() PipelineInformer {
+	return &pipelineInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Subscriptions returns a SubscriptionInformer.
