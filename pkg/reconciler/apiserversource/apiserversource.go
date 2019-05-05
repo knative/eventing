@@ -72,6 +72,8 @@ type Reconciler struct {
 	// listers index properties about resources
 	apiserversourceLister listers.ApiServerSourceLister
 	deploymentLister      appsv1listers.DeploymentLister
+
+	sinkReconciler *duck.SinkReconciler
 }
 
 // NewController initializes the controller and is called by the generated code
@@ -87,6 +89,8 @@ func NewController(
 		deploymentLister:      deploymentInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
+
+	r.sinkReconciler = duck.NewSinkReconciler(opt, impl.EnqueueKey)
 
 	r.Logger.Info("Setting up event handlers")
 	apiserversourceInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
@@ -146,7 +150,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSource) error {
 	source.Status.InitializeConditions()
 
-	sinkURI, err := duck.GetSinkURI(ctx, r.DynamicClientSet, source.Spec.Sink, source.Namespace)
+	sinkObjRef := source.Spec.Sink
+	if sinkObjRef.Namespace == "" {
+		sinkObjRef.Namespace = source.Namespace
+	}
+
+	sourceDesc := source.Namespace + "/" + source.Name + ", " + source.GroupVersionKind().String()
+	sinkURI, err := r.sinkReconciler.GetSinkURI(sinkObjRef, source, sourceDesc)
 	if err != nil {
 		source.Status.MarkNoSink("NotFound", "")
 		return err

@@ -608,8 +608,9 @@ func TestAllCases(t *testing.T) {
 			Base:               reconciler.NewBase(opt, controllerAgentName),
 			subscriptionLister: listers.GetSubscriptionLister(),
 		}
-	}))
-
+	},
+	false,
+	))
 }
 
 func TestNew(t *testing.T) {

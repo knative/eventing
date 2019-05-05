@@ -18,9 +18,12 @@ package testing
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/runtime"
+        "k8s.io/apimachinery/pkg/api/meta"
+        "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	fakedynamicclientset "k8s.io/client-go/dynamic/fake"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
@@ -45,7 +48,7 @@ const (
 type Ctor func(*Listers, reconciler.Options) controller.Reconciler
 
 // MakeFactory creates a reconciler factory with fake clients and controller created by `ctor`.
-func MakeFactory(ctor Ctor) Factory {
+func MakeFactory(ctor Ctor, unstructured bool) Factory {
 	return func(t *testing.T, r *TableRow) (controller.Reconciler, ActionRecorderList, EventList, *FakeStatsReporter) {
 		ls := NewListers(r.Objects)
 
@@ -57,7 +60,12 @@ func MakeFactory(ctor Ctor) Factory {
 			addTo(dynamicScheme)
 		}
 
-		dynamicClient := fakedynamicclientset.NewSimpleDynamicClient(dynamicScheme, ls.GetAllObjects()...)
+		allObjects := ls.GetAllObjects()
+		if unstructured {
+			allObjects = ToUnstructured(t, allObjects)
+		}
+
+		dynamicClient := fakedynamicclientset.NewSimpleDynamicClient(dynamicScheme, allObjects...)
 		eventRecorder := record.NewFakeRecorder(maxEventBufferSize)
 		statsReporter := &FakeStatsReporter{}
 
@@ -93,4 +101,38 @@ func MakeFactory(ctor Ctor) Factory {
 
 		return c, actionRecorderList, eventList, statsReporter
 	}
+}
+
+// ToUnstructured takes a list of k8s resources and converts them to
+// Unstructured objects.
+// We must pass objects as Unstructured to the dynamic client fake, or it
+// won't handle them properly.
+func ToUnstructured(t *testing.T, objs []runtime.Object) (us []runtime.Object) {
+	sch := NewScheme()
+	for _, obj := range objs {
+		obj = obj.DeepCopyObject() // Don't mess with the primary copy
+		// Determine and set the TypeMeta for this object based on our test scheme.
+		gvks, _, err := sch.ObjectKinds(obj)
+		if err != nil {
+			t.Fatalf("Unable to determine kind for type: %v", err)
+		}
+		apiv, k := gvks[0].ToAPIVersionAndKind()
+		ta, err := meta.TypeAccessor(obj)
+		if err != nil {
+			t.Fatalf("Unable to create type accessor: %v", err)
+		}
+		ta.SetAPIVersion(apiv)
+		ta.SetKind(k)
+
+		b, err := json.Marshal(obj)
+		if err != nil {
+			t.Fatalf("Unable to marshal: %v", err)
+		}
+		u := &unstructured.Unstructured{}
+		if err := json.Unmarshal(b, u); err != nil {
+			t.Fatalf("Unable to unmarshal: %v", err)
+		}
+		us = append(us, u)
+	}
+	return
 }

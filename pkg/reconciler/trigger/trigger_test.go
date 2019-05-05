@@ -492,8 +492,9 @@ func TestAllCases(t *testing.T) {
 			serviceLister:      listers.GetK8sServiceLister(),
 			tracker:            tracker.New(func(string) {}, 0),
 		}
-
-	}))
+	},
+	false,
+	))
 }
 
 func makeTrigger() *v1alpha1.Trigger {
