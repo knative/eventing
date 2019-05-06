@@ -24,8 +24,8 @@ import (
 	"testing"
 
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"github.com/knative/eventing/pkg/sidecar/fanout"
-	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
+	"github.com/knative/eventing/pkg/provisioners/fanout"
+	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
 	"go.uber.org/zap"
 )
 

@@ -28,7 +28,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
+	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
 	"go.uber.org/zap"
 )
 

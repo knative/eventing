@@ -14,9 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// A sidecar that implements filtering of Cloud Events sent out via HTTP. Implemented as an HTTP
-// proxy that the main containers need to write through.
-
 package main
 
 import (
@@ -25,11 +22,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/channelwatcher"
-	"github.com/knative/eventing/pkg/sidecar/swappable"
+	"github.com/knative/eventing/pkg/provisioners/swappable"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -40,27 +38,11 @@ import (
 )
 
 var (
-	readTimeout  = 1 * time.Minute
-	writeTimeout = 1 * time.Minute
-
-	port                int
-	channelProvisioners listFlags
+	readTimeout         = 1 * time.Minute
+	writeTimeout        = 1 * time.Minute
+	port                = 8080
+	channelProvisioners = []string{"in-memory", "in-memory-channel"}
 )
-
-type listFlags []string
-
-func (l *listFlags) String() string {
-	return ""
-}
-func (l *listFlags) Set(value string) error {
-	*l = append(*l, value)
-	return nil
-}
-
-func init() {
-	flag.IntVar(&port, "sidecar_port", -1, "The port to run the sidecar on.")
-	flag.Var(&channelProvisioners, "channel_provisioner", "The provisioner of the channels that will be watched.")
-}
 
 func main() {
 	flag.Parse()
@@ -71,14 +53,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to create logger: %v", err)
 	}
-
-	if port < 0 {
-		logger.Fatal("--sidecar_port flag must be set")
-	}
-
-	if len(channelProvisioners) < 1 {
-		logger.Fatal("--channel_provisioner must be specified")
-	}
+	logger = logger.With(
+		zap.String("eventing.knative.dev/clusterChannelProvisioner", strings.Join(channelProvisioners, ",")),
+		zap.String("eventing.knative.dev/clusterChannelProvisionerComponent", "Dispatcher"),
+	)
 
 	sh, err := swappable.NewEmptyHandler(logger)
 	if err != nil {
@@ -158,6 +136,6 @@ type runnableServer struct {
 }
 
 func (r *runnableServer) Start(<-chan struct{}) error {
-	r.logger.Info("Fanout sidecar listening", zap.String("address", r.s.Addr))
+	r.logger.Info("in-memory dispatcher listening", zap.String("address", r.s.Addr))
 	return r.s.ListenAndServe()
 }

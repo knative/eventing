@@ -21,8 +21,8 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
-	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
-	"github.com/knative/eventing/pkg/sidecar/swappable"
+	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
+	"github.com/knative/eventing/pkg/provisioners/swappable"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
