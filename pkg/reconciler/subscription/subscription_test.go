@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/knative/pkg/tracker"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -607,6 +609,7 @@ func TestAllCases(t *testing.T) {
 		return &Reconciler{
 			Base:               reconciler.NewBase(opt, controllerAgentName),
 			subscriptionLister: listers.GetSubscriptionLister(),
+			tracker:            tracker.New(func(string) {}, 0),
 		}
 	}))
 

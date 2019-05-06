@@ -21,10 +21,8 @@ import (
 	"log"
 	"os"
 
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
@@ -42,6 +40,9 @@ import (
 	"k8s.io/client-go/rest"
 	controllerruntime "sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+
+	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 var (
@@ -88,6 +89,9 @@ func main() {
 	serviceAccountInformer := kubeInformerFactory.Core().V1().ServiceAccounts()
 	roleBindingInformer := kubeInformerFactory.Rbac().V1().RoleBindings()
 
+	// Duck
+	addressableInformer := duck.NewAddressableInformer(opt)
+
 	// Build all of our controllers, with the clients constructed above.
 	// Add new controllers to this array.
 	// You also need to modify numControllers above to match this.
@@ -95,6 +99,8 @@ func main() {
 		subscription.NewController(
 			opt,
 			subscriptionInformer,
+			channelInformer,
+			addressableInformer,
 		),
 		namespace.NewController(
 			opt,
@@ -114,6 +120,7 @@ func main() {
 			subscriptionInformer,
 			brokerInformer,
 			serviceInformer,
+			addressableInformer,
 		),
 		broker.NewController(
 			opt,
