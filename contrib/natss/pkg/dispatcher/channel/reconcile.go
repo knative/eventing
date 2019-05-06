@@ -29,6 +29,7 @@ import (
 
 	ccpcontroller "github.com/knative/eventing/contrib/natss/pkg/controller/clusterchannelprovisioner"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/channelwatcher"
 )
 
 type reconciler struct {
@@ -122,5 +123,17 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		r.logger.Error("UpdateSubscriptions() failed: ", zap.Error(err))
 		return false, err
 	}
+
+	chanList, err := channelwatcher.ListAllChannels(ctx, r.client, r.shouldReconcile)
+	if err != nil {
+		r.logger.Error("Error getting channel list", zap.Error(err))
+		return false, err
+	}
+
+	if err := r.subscriptionsSupervisor.UpdateHostToChannelMap(ctx, chanList); err != nil {
+		r.logger.Error("Error updating host to channel map", zap.Error(err))
+		return false, err
+	}
+
 	return false, nil
 }

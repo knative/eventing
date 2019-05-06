@@ -69,7 +69,7 @@ type forwardMessage struct {
 }
 
 // NewHandler creates a new fanout.Handler.
-func NewHandler(logger *zap.Logger, config Config) *Handler {
+func NewHandler(logger *zap.Logger, config Config) (*Handler, error) {
 	handler := &Handler{
 		logger:           logger,
 		config:           config,
@@ -79,9 +79,12 @@ func NewHandler(logger *zap.Logger, config Config) *Handler {
 	}
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
-	handler.receiver = provisioners.NewMessageReceiver(createReceiverFunction(handler), logger.Sugar())
-
-	return handler
+	receiver, err := provisioners.NewMessageReceiver(createReceiverFunction(handler), logger.Sugar())
+	if err != nil {
+		return nil, err
+	}
+	handler.receiver = receiver
+	return handler, nil
 }
 
 func createReceiverFunction(f *Handler) func(provisioners.ChannelReference, *provisioners.Message) error {

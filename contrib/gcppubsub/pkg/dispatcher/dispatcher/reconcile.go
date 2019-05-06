@@ -22,20 +22,18 @@ import (
 	"sync"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
-
-	"k8s.io/client-go/util/workqueue"
-
-	ccpcontroller "github.com/knative/eventing/contrib/gcppubsub/pkg/controller/clusterchannelprovisioner"
+	"github.com/knative/eventing/contrib/gcppubsub/pkg/controller/channel"
 	pubsubutil "github.com/knative/eventing/contrib/gcppubsub/pkg/util"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/provisioners"
 	util "github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
+	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -53,6 +51,9 @@ const (
 type channelName = types.NamespacedName
 type subscriptionName = types.UID
 type empty struct{}
+
+// ReconcileHandler will be run by in addition to existing reconcile.
+type ReconcileHandler func(context.Context, reconcile.Request) error
 
 // reconciler reconciles Channels with the gcp-pubsub provisioner. It sets up hanging polling for
 // every Subscription to any Channel.
@@ -76,6 +77,8 @@ type reconciler struct {
 
 	// rateLimiter is used to limit the pace at which we nack a message when it could not be dispatched.
 	rateLimiter workqueue.RateLimiter
+
+	additionalHandlers []ReconcileHandler
 }
 
 // Verify the struct implements reconcile.Reconciler
@@ -106,7 +109,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	// Does this Controller control this Channel?
-	if !r.shouldReconcile(c) {
+	if !channel.ShouldReconcile(c) {
 		logging.FromContext(ctx).Info("Not reconciling Channel, it is not controlled by this Controller", zap.Any("ref", c.Spec))
 		return reconcile.Result{}, nil
 	}
@@ -145,15 +148,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}, reconcileErr
 }
 
-// shouldReconcile determines if this Controller should control (and therefore reconcile) a given
-// ClusterChannelProvisioner. This Controller only handles gcp-pubsub Channels.
-func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
-	if c.Spec.Provisioner != nil {
-		return ccpcontroller.IsControlled(c.Spec.Provisioner)
-	}
-	return false
-}
-
 // reconcile reconciles this Channel so that the real world matches the intended state. The returned
 // boolean indicates if this Channel should be immediately requeued for another reconcile loop. The
 // returned error indicates an error during reconciliation.
@@ -176,6 +170,12 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel,
 		return true, nil
 	}
 
+	for _, h := range r.additionalHandlers {
+		if err := h(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: c.Name, Namespace: c.Namespace}}); err != nil {
+			logging.FromContext(ctx).Error("Failed reconcile.", zap.Error(err))
+			return false, err
+		}
+	}
 	// enqueueChannelForReconciliation is a function that when run will force this Channel to be
 	// reconciled again.
 	enqueueChannelForReconciliation := func() {

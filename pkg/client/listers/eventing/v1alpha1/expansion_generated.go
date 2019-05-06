@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -37,6 +37,14 @@ type ChannelNamespaceListerExpansion interface{}
 // ClusterChannelProvisionerListerExpansion allows custom methods to be added to
 // ClusterChannelProvisionerLister.
 type ClusterChannelProvisionerListerExpansion interface{}
+
+// EventTypeListerExpansion allows custom methods to be added to
+// EventTypeLister.
+type EventTypeListerExpansion interface{}
+
+// EventTypeNamespaceListerExpansion allows custom methods to be added to
+// EventTypeNamespaceLister.
+type EventTypeNamespaceListerExpansion interface{}
 
 // SubscriptionListerExpansion allows custom methods to be added to
 // SubscriptionLister.

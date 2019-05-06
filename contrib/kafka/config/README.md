@@ -83,7 +83,7 @@ kubectl get configmap -n knative-eventing kafka-channel-controller-config
 The Channel Dispatcher receives and distributes all events:
 
 ```shell
-kubectl get statefulset -n knative-eventing kafka-channel-dispatcher
+kubectl get deployment -n knative-eventing kafka-channel-dispatcher
 ```
 
 The Channel Dispatcher Config Map is used to send information about Channels and

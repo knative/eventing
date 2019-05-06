@@ -26,21 +26,7 @@ rules:
       - "services"
       - "events"
       - "serviceaccounts"
-    verbs:
-      - "get"
-      - "list"
-      - "create"
-      - "update"
-      - "delete"
-      - "patch"
-      - "watch"
-
-  # Channels and Triggers both manipulate VirtualServices.
-  - apiGroups:
-      - "networking.istio.io"
-    resources:
-      - "virtualservices"
-    verbs:
+    verbs: &everything
       - "get"
       - "list"
       - "create"
@@ -54,28 +40,14 @@ rules:
       - "apps"
     resources:
       - "deployments"
-    verbs:
-      - "get"
-      - "list"
-      - "create"
-      - "update"
-      - "delete"
-      - "patch"
-      - "watch"
+    verbs: *everything
 
   # The namespace annotation controller needs to manipulate RoleBindings.
   - apiGroups:
       - "rbac.authorization.k8s.io"
     resources:
       - "rolebindings"
-    verbs:
-      - "get"
-      - "list"
-      - "create"
-      - "update"
-      - "delete"
-      - "patch"
-      - "watch"
+    verbs: *everything
 
   # Our own resources and statuses we care about.
   - apiGroups:
@@ -91,11 +63,21 @@ rules:
       - "subscriptions/status"
       - "triggers"
       - "triggers/status"
-    verbs:
-      - "get"
-      - "list"
-      - "create"
-      - "update"
-      - "delete"
-      - "patch"
-      - "watch"
+      - "eventtypes"
+      - "eventtypes/status"
+    verbs: *everything
+
+  # Source resources and statuses we care about.
+  - apiGroups:
+      - "sources.eventing.knative.dev"
+    resources:
+      - "cronjobsources"
+      - "cronjobsources/status"
+      - "cronjobsources/finalizers"
+      - "containersources"
+      - "containersources/status"
+      - "containersources/finalizers"
+      - "apiserversources"
+      - "apiserversources/status"
+      - "apiserversources/finalizers"
+    verbs: *everything
