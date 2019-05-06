@@ -6,8 +6,14 @@ with 0.5 planned on April 2, 2019 as reference. Current proposal is to align
 sprint with the release cycle of 6 weeks. Eventually this may change as we learn
 from the process.
 
+<<<<<<< HEAD
 ##How to manage Bugs
 - Refer to [How to manage bugs](bug_triage.md).
+=======
+## How to manage Bugs?
+
+- Refer to [Knative Eventing Bug Triage and Management](bug_triage.md)
+>>>>>>> c3c954ffefd0320fb7c7b164da8ef60097a0d33a
 
 ## How to manage Story/Feature?
 

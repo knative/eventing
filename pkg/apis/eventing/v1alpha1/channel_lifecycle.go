@@ -16,7 +16,14 @@ limitations under the License.
 
 package v1alpha1
 
-import duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+import (
+	"time"
+
+	"github.com/knative/pkg/apis"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 var chanCondSet = duckv1alpha1.NewLivingConditionSet(ChannelConditionProvisioned, ChannelConditionAddressable, ChannelConditionProvisionerInstalled)
 
@@ -75,6 +82,26 @@ func (cs *ChannelStatus) MarkProvisionerInstalled() {
 // MarkProvisionerNotInstalled sets ChannelConditionProvisionerInstalled condition to False state.
 func (cs *ChannelStatus) MarkProvisionerNotInstalled(reason, messageFormat string, messageA ...interface{}) {
 	chanCondSet.Manage(cs).MarkFalse(ChannelConditionProvisionerInstalled, reason, messageFormat, messageA...)
+}
+
+// MarkDeprecated adds a warning condition that this Channel is deprecated and will stop working in
+// the future. Note that this does not affect the Ready condition.
+func (cs *ChannelStatus) MarkDeprecated(reason, msg string) {
+	dc := duckv1alpha1.Condition{
+		Type:               "Deprecated",
+		Reason:             reason,
+		Status:             v1.ConditionTrue,
+		Severity:           duckv1alpha1.ConditionSeverityWarning,
+		Message:            msg,
+		LastTransitionTime: apis.VolatileTime{Inner: metav1.NewTime(time.Now())},
+	}
+	for i, c := range cs.Conditions {
+		if c.Type == dc.Type {
+			cs.Conditions[i] = dc
+			return
+		}
+	}
+	cs.Conditions = append(cs.Conditions, dc)
 }
 
 // SetAddress makes this Channel addressable by setting the hostname. It also

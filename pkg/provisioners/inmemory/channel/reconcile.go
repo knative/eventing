@@ -22,7 +22,6 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -39,8 +38,6 @@ const (
 	channelReconciled         = "ChannelReconciled"
 	channelUpdateStatusFailed = "ChannelUpdateStatusFailed"
 	k8sServiceCreateFailed    = "K8sServiceCreateFailed"
-	// TODO after in-memory-channel is retired, asyncProvisionerName should be removed
-	defaultProvisionerName = "in-memory-channel"
 )
 
 type reconciler struct {
@@ -85,10 +82,15 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 	logger.Info("Reconciling Channel")
 
-	// Finalizer needs to be removed (even though no finalizers are added) to maintain backwards compatibility
-	// with v0.5 in which a finalzier was added. Or else channels will not get deleted after upgrading to 0.6+
+	// Finalizer needs to be removed (even though no finalizers are added) to maintain backwards
+	// compatibility with v0.5 in which a finalizer was added. Or else channels will not get deleted
+	// after upgrading to 0.6+.
 	if result := util.RemoveFinalizer(c, finalizerName); result == util.FinalizerRemoved {
-		r.client.Update(ctx, c)
+		err = r.client.Update(ctx, c)
+		if err != nil {
+			logger.Info("Failed to remove finalizer", zap.Error(err))
+			return reconcile.Result{}, err
+		}
 		logger.Info("Channel reconciled. Finalizer Removed")
 		r.recorder.Eventf(c, corev1.EventTypeNormal, channelReconciled, "Channel reconciled: %q. Finalizer removed.", c.Name)
 		return reconcile.Result{Requeue: true}, nil
@@ -126,6 +128,10 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 	c.Status.InitializeConditions()
 
+	if usesDeprecatedProvisioner(c) {
+		c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", "The `in-memory-channel` ClusterChannelProvisioner is deprecated and will be removed in 0.7. Recommended replacement is `in-memory`.")
+	}
+
 	// We are syncing K8s Service to talk to this Channel.
 	svc, err := util.CreateK8sService(ctx, r.client, c, util.ExternalService(c))
 	if err != nil {
@@ -140,29 +146,8 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	return nil
 }
 
-func (r *reconciler) listAllChannels(ctx context.Context) ([]eventingv1alpha1.Channel, error) {
-	channels := make([]eventingv1alpha1.Channel, 0)
-
-	opts := &client.ListOptions{
-		// Set Raw because if we need to get more than one page, then we will put the continue token
-		// into opts.Raw.Continue.
-		Raw: &metav1.ListOptions{},
-	}
-	for {
-		cl := &eventingv1alpha1.ChannelList{}
-		if err := r.client.List(ctx, opts, cl); err != nil {
-			return nil, err
-		}
-
-		for _, c := range cl.Items {
-			if r.shouldReconcile(&c) {
-				channels = append(channels, c)
-			}
-		}
-		if cl.Continue != "" {
-			opts.Raw.Continue = cl.Continue
-		} else {
-			return channels, nil
-		}
-	}
+func usesDeprecatedProvisioner(c *eventingv1alpha1.Channel) bool {
+	return c.Spec.Provisioner != nil &&
+		c.Spec.Provisioner.Namespace == "" &&
+		c.Spec.Provisioner.Name == "in-memory-channel"
 }

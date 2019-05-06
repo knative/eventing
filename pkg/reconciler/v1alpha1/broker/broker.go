@@ -19,7 +19,6 @@ package broker
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
@@ -29,7 +28,6 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -52,7 +50,8 @@ const (
 	controllerAgentName = "broker-controller"
 
 	// Name of the corev1.Events emitted from the reconciliation process.
-	brokerReconciled                = "BrokerReconciled"
+	brokerReadinessChanged          = "BrokerReadinessChanged"
+	brokerReconcileError            = "BrokerReconcileError"
 	brokerUpdateStatusFailed        = "BrokerUpdateStatusFailed"
 	ingressSubscriptionDeleteFailed = "IngressSubscriptionDeleteFailed"
 	ingressSubscriptionCreateFailed = "IngressSubscriptionCreateFailed"
@@ -133,7 +132,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	broker := &v1alpha1.Broker{}
 	err := r.client.Get(ctx, request.NamespacedName, broker)
 
-	if errors.IsNotFound(err) {
+	if k8serrors.IsNotFound(err) {
 		logging.FromContext(ctx).Info("Could not find Broker")
 		return reconcile.Result{}, nil
 	}
@@ -143,16 +142,19 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
+	originalReadiness := broker.Status.IsReady()
+
 	// Reconcile this copy of the Broker and then write back any status updates regardless of
 	// whether the reconcile error out.
-	result, reconcileErr := r.reconcile(ctx, broker)
+	reconcileErr := r.reconcile(ctx, broker)
 	if reconcileErr != nil {
 		logging.FromContext(ctx).Error("Error reconciling Broker", zap.Error(reconcileErr))
-	} else if result.Requeue || result.RequeueAfter > 0 {
-		logging.FromContext(ctx).Debug("Broker reconcile requeuing")
+		r.recorder.Event(broker, corev1.EventTypeWarning, brokerReconcileError, fmt.Sprintf("Broker reconcile error: %v", reconcileErr))
 	} else {
 		logging.FromContext(ctx).Debug("Broker reconciled")
-		r.recorder.Event(broker, corev1.EventTypeNormal, brokerReconciled, "Broker reconciled")
+		if originalReadiness != broker.Status.IsReady() {
+			r.recorder.Event(broker, corev1.EventTypeNormal, brokerReadinessChanged, fmt.Sprintf("Broker readiness changed to %v", broker.Status.IsReady()))
+		}
 	}
 
 	if _, err = r.updateStatus(broker); err != nil {
@@ -162,10 +164,10 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	// Requeue if the resource is not ready:
-	return result, reconcileErr
+	return reconcile.Result{}, reconcileErr
 }
 
-func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) (reconcile.Result, error) {
+func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	b.Status.InitializeConditions()
 
 	// 1. Trigger Channel is created for all events. Triggers will Subscribe to this Channel.
@@ -181,72 +183,70 @@ func (r *reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) (reconci
 
 	if b.DeletionTimestamp != nil {
 		// Everything is cleaned up by the garbage collector.
-		return reconcile.Result{}, nil
+		return nil
 	}
 
 	triggerChan, err := r.reconcileTriggerChannel(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling the trigger channel", zap.Error(err))
-		b.Status.MarkTriggerChannelFailed(err)
-		return reconcile.Result{}, err
+		b.Status.MarkTriggerChannelFailed("ChannelFailure", "%v", err)
+		return err
 	} else if triggerChan.Status.Address.Hostname == "" {
-		logging.FromContext(ctx).Info("Trigger Channel is not yet ready", zap.Any("triggerChan", triggerChan))
-		// Give the Channel some time to get its address. One second was chosen arbitrarily.
-		return reconcile.Result{RequeueAfter: time.Second}, nil
+		// We check the trigger Channel's address here because it is needed to create the Ingress
+		// Deployment.
+		logging.FromContext(ctx).Debug("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
+		b.Status.MarkTriggerChannelFailed("NoAddress", "Channel does not have an address.")
+		return nil
 	}
-	b.Status.MarkTriggerChannelReady()
+	b.Status.PropagateTriggerChannelReadiness(&triggerChan.Status)
 
-	_, err = r.reconcileFilterDeployment(ctx, b)
+	filterDeployment, err := r.reconcileFilterDeployment(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling filter Deployment", zap.Error(err))
-		b.Status.MarkFilterFailed(err)
-		return reconcile.Result{}, err
+		b.Status.MarkFilterFailed("DeploymentFailure", "%v", err)
+		return err
 	}
 	_, err = r.reconcileFilterService(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling filter Service", zap.Error(err))
-		b.Status.MarkFilterFailed(err)
-		return reconcile.Result{}, err
+		b.Status.MarkFilterFailed("ServiceFailure", "%v", err)
+		return err
 	}
-	b.Status.MarkFilterReady()
+	b.Status.PropagateFilterDeploymentAvailability(filterDeployment)
 
-	_, err = r.reconcileIngressDeployment(ctx, b, triggerChan)
+	ingressDeployment, err := r.reconcileIngressDeployment(ctx, b, triggerChan)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling ingress Deployment", zap.Error(err))
-		b.Status.MarkIngressFailed(err)
-		return reconcile.Result{}, err
+		b.Status.MarkIngressFailed("DeploymentFailure", "%v", err)
+		return err
 	}
 
 	svc, err := r.reconcileIngressService(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling ingress Service", zap.Error(err))
-		b.Status.MarkIngressFailed(err)
-		return reconcile.Result{}, err
+		b.Status.MarkIngressFailed("ServiceFailure", "%v", err)
+		return err
 	}
-	b.Status.MarkIngressReady()
+	b.Status.PropagateIngressDeploymentAvailability(ingressDeployment)
 	b.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
 
 	ingressChan, err := r.reconcileIngressChannel(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling the ingress channel", zap.Error(err))
-		b.Status.MarkIngressChannelFailed(err)
-		return reconcile.Result{}, err
-	} else if ingressChan.Status.Address.Hostname == "" {
-		logging.FromContext(ctx).Info("Ingress Channel is not yet ready", zap.Any("ingressChan", ingressChan))
-		// Give the Channel some time to get its address. One second was chosen arbitrarily.
-		return reconcile.Result{RequeueAfter: time.Second}, nil
+		b.Status.MarkIngressChannelFailed("ChannelFailure", "%v", err)
+		return err
 	}
-	b.Status.MarkIngressChannelReady()
+	b.Status.PropagateIngressChannelReadiness(&ingressChan.Status)
 
-	_, err = r.reconcileIngressSubscription(ctx, b, ingressChan, svc)
+	ingressSub, err := r.reconcileIngressSubscription(ctx, b, ingressChan, svc)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling the ingress subscription", zap.Error(err))
-		b.Status.MarkIngressSubscriptionFailed(err)
-		return reconcile.Result{}, err
+		b.Status.MarkIngressSubscriptionFailed("SubscriptionFailure", "%v", err)
+		return err
 	}
-	b.Status.MarkIngressSubscriptionReady()
+	b.Status.PropagateIngressSubscriptionReadiness(&ingressSub.Status)
 
-	return reconcile.Result{}, nil
+	return nil
 }
 
 // updateStatus may in fact update the broker's finalizers in addition to the status.

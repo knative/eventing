@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	defaultBrokerName       = "default"
+	brokerName              = test.DefaultBrokerName
 	waitForFilterPodRunning = 30 * time.Second
 	selectorKey             = "end2end-test-broker-trigger"
 
@@ -56,34 +56,26 @@ type eventReceiver struct {
 // and sends different events to the broker's address. Finally, it verifies that only
 // the appropriate events are routed to the subscribers.
 func TestDefaultBrokerWithManyTriggers(t *testing.T) {
-	clients, cleaner := Setup(t, t.Logf)
-
-	// Verify namespace exists.
-	ns, cleanupNS := CreateNamespaceIfNeeded(t, clients, t.Logf)
-
-	defer cleanupNS()
-	defer TearDown(clients, cleaner, t.Logf)
+	clients, ns, _, cleaner := Setup(t, true, t.Logf)
+	defer TearDown(clients, ns, cleaner, t.Logf)
 
 	t.Logf("Labeling namespace %s", ns)
-
 	// Label namespace so that it creates the default broker.
-	err := LabelNamespace(clients, t.Logf, map[string]string{"knative-eventing-injection": "enabled"})
+	err := LabelNamespace(clients, ns, map[string]string{"knative-eventing-injection": "enabled"}, t.Logf)
 	if err != nil {
 		t.Fatalf("Error annotating namespace: %v", err)
 	}
-
 	t.Logf("Namespace %s annotated", ns)
 
 	// Wait for default broker ready.
 	t.Logf("Waiting for default broker to be ready")
-	defaultBroker := test.Broker(defaultBrokerName, ns)
+	defaultBroker := test.Broker(brokerName, ns)
 	err = WaitForBrokerReady(clients, defaultBroker)
 	if err != nil {
 		t.Fatalf("Error waiting for default broker to become ready: %v", err)
 	}
 
 	defaultBrokerUrl := fmt.Sprintf("http://%s", defaultBroker.Status.Address.Hostname)
-
 	t.Logf("Default broker ready: %q", defaultBrokerUrl)
 
 	// These are the event types and sources that triggers will listen to, as well as the selectors
@@ -142,7 +134,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			EventSource(event.typeAndSource.Source).
 			// Don't need to set the broker as we use the default one
 			// but wanted to be more explicit.
-			Broker(defaultBrokerName).
+			Broker(brokerName).
 			SubscriberSvc(subscriberName).
 			Build()
 		err := CreateTrigger(clients, trigger, t.Logf, cleaner)
@@ -156,7 +148,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	t.Logf("Waiting for triggers to become ready")
 
 	// Wait for all of the triggers in the namespace to be ready.
-	if err := WaitForAllTriggersReady(clients, t.Logf, ns); err != nil {
+	if err := WaitForAllTriggersReady(clients, ns, t.Logf); err != nil {
 		t.Fatalf("Error waiting for triggers to become ready: %v", err)
 	}
 
@@ -222,13 +214,14 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	for _, event := range eventsToReceive {
 		subscriberPodName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
 		subscriberPod := subscriberPods[subscriberPodName]
+		subscriberContainerName := subscriberPod.Spec.Containers[0].Name
 		t.Logf("Dumper %q expecting %q", subscriberPodName, strings.Join(expectedEvents[subscriberPodName], ","))
-		if err := WaitForLogContents(clients, t.Logf, subscriberPodName, subscriberPod.Spec.Containers[0].Name, ns, expectedEvents[subscriberPodName]); err != nil {
+		if err := WaitForLogContents(clients, t.Logf, subscriberPodName, subscriberContainerName, ns, expectedEvents[subscriberPodName]); err != nil {
 			t.Fatalf("Event(s) not found in logs of subscriber pod %q: %v", subscriberPodName, err)
 		}
 		// At this point all the events should have been received in the pod.
 		// We check whether we find unexpected events. If so, then we fail.
-		found, err := FindAnyLogContents(clients, t.Logf, subscriberPodName, subscriberPod.Spec.Containers[0].Name, ns, unexpectedEvents[subscriberPodName])
+		found, err := FindAnyLogContents(clients, t.Logf, subscriberPodName, subscriberContainerName, ns, unexpectedEvents[subscriberPodName])
 		if err != nil {
 			t.Fatalf("Failed querying to find log contents in pod %q: %v", subscriberPodName, err)
 		}

@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	eventsApiVersion = "eventing.knative.dev/v1alpha1"
+	eventsAPIVersion = "eventing.knative.dev/v1alpha1"
 )
 
 // ClusterChannelProvisioner returns a ClusterChannelProvisioner for a given name.
@@ -34,12 +34,12 @@ func ClusterChannelProvisioner(name string) *corev1.ObjectReference {
 	if name == "" {
 		return nil
 	}
-	return pkgTest.CoreV1ObjectReference("ClusterChannelProvisioner", eventsApiVersion, name)
+	return pkgTest.CoreV1ObjectReference("ClusterChannelProvisioner", eventsAPIVersion, name)
 }
 
 // ChannelRef returns an ObjectReference for a given Channel Name.
 func ChannelRef(name string) *corev1.ObjectReference {
-	return pkgTest.CoreV1ObjectReference("Channel", eventsApiVersion, name)
+	return pkgTest.CoreV1ObjectReference("Channel", eventsAPIVersion, name)
 }
 
 // Channel returns a Channel with the specified provisioner.
@@ -65,7 +65,7 @@ func SubscriberSpecForService(name string) *v1alpha1.SubscriberSpec {
 // ReplyStrategyForChannel returns a ReplyStrategy for a given Channel.
 func ReplyStrategyForChannel(name string) *v1alpha1.ReplyStrategy {
 	return &v1alpha1.ReplyStrategy{
-		Channel: pkgTest.CoreV1ObjectReference("Channel", eventsApiVersion, name),
+		Channel: pkgTest.CoreV1ObjectReference("Channel", eventsAPIVersion, name),
 	}
 }
 
@@ -111,6 +111,7 @@ type TypeAndSource struct {
 	Source string
 }
 
+// CloudEvent related constants.
 const (
 	CloudEventEncodingBinary     = "binary"
 	CloudEventEncodingStructured = "structured"

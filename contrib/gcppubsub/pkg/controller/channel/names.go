@@ -34,5 +34,5 @@ func generateTopicName(c *v1alpha1.Channel) string {
 // subscriber.
 // Note that this requires the subscriber's ref to be set correctly.
 func generateSubName(cs *eventduck.ChannelSubscriberSpec) string {
-	return utils.TopicNameWithUID("_", cs.Ref.Name, cs.Ref.UID)
+	return utils.TopicNameWithUID("_", string(cs.DeprecatedRef.Name), cs.UID)
 }

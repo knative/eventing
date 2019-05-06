@@ -100,6 +100,18 @@ func (c *FakeSubscriptions) Update(subscription *v1alpha1.Subscription) (result 
 	return obj.(*v1alpha1.Subscription), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeSubscriptions) UpdateStatus(subscription *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(subscriptionsResource, "status", c.ns, subscription), &v1alpha1.Subscription{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.Subscription), err
+}
+
 // Delete takes name of the subscription and deletes it. Returns an error if one occurs.
 func (c *FakeSubscriptions) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.

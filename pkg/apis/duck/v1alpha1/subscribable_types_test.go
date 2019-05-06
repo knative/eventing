@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	corev1 "k8s.io/api/core/v1"
 )
 
 func TestGetFullType(t *testing.T) {
@@ -50,23 +49,11 @@ func TestPopulate(t *testing.T) {
 		Spec: ChannelSpec{
 			Subscribable: &Subscribable{
 				Subscribers: []ChannelSubscriberSpec{{
-					Ref: &corev1.ObjectReference{
-						APIVersion: "eventing.knative.dev/v1alpha1",
-						Kind:       "Subscription",
-						Name:       "subscription1",
-						Namespace:  "default",
-						UID:        "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-					},
+					UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 					SubscriberURI: "call1",
 					ReplyURI:      "sink2",
 				}, {
-					Ref: &corev1.ObjectReference{
-						APIVersion: "eventing.knative.dev/v1alpha1",
-						Kind:       "Subscription",
-						Name:       "subscription2",
-						Namespace:  "default",
-						UID:        "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-					},
+					UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
 					SubscriberURI: "call2",
 					ReplyURI:      "sink2",
 				}},

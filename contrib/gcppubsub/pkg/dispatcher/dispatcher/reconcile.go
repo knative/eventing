@@ -51,7 +51,7 @@ const (
 )
 
 type channelName = types.NamespacedName
-type subscriptionName = types.NamespacedName
+type subscriptionName = types.UID
 type empty struct{}
 
 // reconciler reconciles Channels with the gcp-pubsub provisioner. It sets up hanging polling for
@@ -198,11 +198,8 @@ func key(c *eventingv1alpha1.Channel) channelName {
 
 // subscriptionKey creates the second index into reconciler.subscriptions, based on the Subscriber's
 // name.
-func subscriptionKey(sub *pubsubutil.GcpPubSubSubscriptionStatus) subscriptionName {
-	return types.NamespacedName{
-		Namespace: sub.Ref.Namespace,
-		Name:      sub.Ref.Name,
-	}
+func subscriptionKey(sub *pubsubutil.GcpPubSubSubscriptionStatus) types.UID {
+	return sub.UID
 }
 
 // stopAllSubscriptions stops listening to all GCP PubSub Subscriptions for the given Channel.

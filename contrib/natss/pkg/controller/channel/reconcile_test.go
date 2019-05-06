@@ -247,7 +247,7 @@ func makeVirtualService() *istiov1alpha3.VirtualService {
 				Rewrite: &istiov1alpha3.HTTPRewrite{
 					Authority: fmt.Sprintf("%s.%s.channels.%s", channelName, testNS, utils.GetClusterDomainName()),
 				},
-				Route: []istiov1alpha3.DestinationWeight{{
+				Route: []istiov1alpha3.HTTPRouteDestination{{
 					Destination: istiov1alpha3.Destination{
 						Host: "kafka-provisioner.knative-eventing.svc." + utils.GetClusterDomainName(),
 						Port: istiov1alpha3.PortSelector{
