@@ -182,9 +182,7 @@ function natss_teardown() {
 function kafka_setup() {
   echo "Installing Kafka cluster"
   kubectl create namespace kafka || return 1
-  curl -L ${STRIMZI_INSTALLATION_CONFIG_TEMPLATE} \
-    | sed 's/namespace: .*/namespace: kafka/' \
-    | > ${STRIMZI_INSTALLATION_CONFIG}
+  sed 's/namespace: .*/namespace: kafka/' ${STRIMZI_INSTALLATION_CONFIG_TEMPLATE} > ${STRIMZI_INSTALLATION_CONFIG}
   kubectl apply -f ${STRIMZI_INSTALLATION_CONFIG} -n kafka
   kubectl apply -f ${KAFKA_INSTALLATION_CONFIG} -n kafka
   wait_until_pods_running kafka || fail_test "Failed to start up a Kafka cluster"
