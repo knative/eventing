@@ -48,6 +48,7 @@ var channelTestMap = map[string][]func(t *testing.T){
 		TestSingleStructuredEvent,
 		TestEventTransformation,
 		TestChannelChain,
+		TestEventTransformationForTrigger,
 	},
 	test.NatssProvisioner: {
 		TestSingleBinaryEvent,
@@ -61,6 +62,7 @@ var channelTestMap = map[string][]func(t *testing.T){
 		TestSingleStructuredEvent,
 		TestEventTransformation,
 		TestChannelChain,
+		TestEventTransformationForTrigger,
 	},
 }
 
