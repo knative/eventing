@@ -19,6 +19,7 @@ package broker
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -26,6 +27,8 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler/trigger/path"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -173,9 +176,18 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransport
 		return nil, err
 	}
 
+	// Set up the metrics context
+	ctx, _ = tag.New(ctx,
+		tag.Insert(TagTrigger, trigger.String()),
+		tag.Insert(TagBroker, fmt.Sprintf("%s/%s", trigger.Namespace, t.Spec.Broker)),
+	)
+	defer func() {
+		stats.Record(ctx, MeasureTriggerEventsTotal.M(1))
+	}()
+
 	subscriberURIString := t.Status.SubscriberURI
 	if subscriberURIString == "" {
-		r.logger.Error("Unable to read subscriberURI")
+		ctx, _ = tag.New(ctx, tag.Upsert(TagResult, "error"))
 		return nil, errors.New("unable to read subscriberURI")
 	}
 	// We could just send the request to this URI regardless, but let's just check to see if it well
@@ -183,14 +195,17 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransport
 	subscriberURI, err := url.Parse(subscriberURIString)
 	if err != nil {
 		r.logger.Error("Unable to parse subscriberURI", zap.Error(err), zap.String("subscriberURIString", subscriberURIString))
+		ctx, _ = tag.New(ctx, tag.Upsert(TagResult, "error"))
 		return nil, err
 	}
 
-	if !r.shouldSendMessage(&t.Spec, event) {
+	if !r.shouldSendMessage(ctx, &t.Spec, event) {
 		r.logger.Debug("Message did not pass filter", zap.Any("triggerRef", trigger))
+		ctx, _ = tag.New(ctx, tag.Upsert(TagResult, "reject"))
 		return nil, nil
 	}
 
+	ctx, _ = tag.New(ctx, tag.Upsert(TagResult, "accept"))
 	sendingCTX := SendingContext(ctx, tctx, subscriberURI)
 	return r.ceClient.Send(sendingCTX, *event)
 }
@@ -209,11 +224,18 @@ func (r *Receiver) getTrigger(ctx context.Context, ref types.NamespacedName) (*e
 //
 // TODO this should allow returning error so the errors can be surfaced to the
 // trigger.
-func (r *Receiver) shouldSendMessage(ts *eventingv1alpha1.TriggerSpec, event *cloudevents.Event) bool {
+func (r *Receiver) shouldSendMessage(ctx context.Context, ts *eventingv1alpha1.TriggerSpec, event *cloudevents.Event) bool {
 	if ts.Filter == nil {
 		r.logger.Error("No filter specified")
 		return false
 	}
+
+	// Record event count and filtering time
+	startTS := time.Now()
+	defer func() {
+		filterTimeMS := int64(time.Now().Sub(startTS) / time.Millisecond)
+		stats.Record(ctx, MeasureTriggerFilterTime.M(filterTimeMS))
+	}()
 
 	var expr string
 
@@ -243,12 +265,19 @@ func (r *Receiver) shouldSendMessage(ts *eventingv1alpha1.TriggerSpec, event *cl
 	// No filter specified, default to passing everything
 	// TODO should this default true?
 	if expr == "" {
+		ctx, _ = tag.New(ctx, tag.Upsert(TagFilterResult, "empty-pass"))
 		return true
 	}
 
 	pass, err := r.filterEventByExpression(expr, event)
 	if err != nil {
 		r.logger.Error("Expression filtering failure", zap.Error(err))
+		ctx, _ = tag.New(ctx, tag.Upsert(TagFilterResult, "error"))
+	}
+	if pass == true {
+		ctx, _ = tag.New(ctx, tag.Upsert(TagFilterResult, "pass"))
+	} else {
+		ctx, _ = tag.New(ctx, tag.Upsert(TagFilterResult, "fail"))
 	}
 	return pass
 }
