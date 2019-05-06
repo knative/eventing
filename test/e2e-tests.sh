@@ -97,7 +97,7 @@ function test_setup() {
 
   echo "Installing Kafka ClusterChannelProvisioner"
   kafka_setup || return 1
-  sed "s/REPLACE_WITH_CLUSTER_URL/KAFKA_CLUSTER_URL/" ${KAFKA_CONFIG_TEMPLATE} > ${KAFKA_CONFIG}
+  sed "s/REPLACE_WITH_CLUSTER_URL/${KAFKA_CLUSTER_URL}/" ${KAFKA_CONFIG_TEMPLATE} > ${KAFKA_CONFIG}
   ko apply -f ${KAFKA_CONFIG} || return 1
   wait_until_pods_running knative-eventing || fail_test "Failed to install the Kafka ClusterChannelProvisioner"
 
