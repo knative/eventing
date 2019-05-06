@@ -215,6 +215,12 @@ spec:
 
 ---
 
+  # TODO: Remove this for 0.7.0 release,
+  # see also: https://github.com/knative/eventing/issues/1156
+  # Background:
+  # In 0.6.0 the kafka-channel-dispatcher StatefulSet is replaced by a Deployment.
+  # For backwards compatibility we keep the StatefulSet, but scale it to 0 replicas.
+
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
