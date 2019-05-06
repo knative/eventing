@@ -126,7 +126,7 @@ spec:
       serviceAccountName: in-memory-channel-controller
       containers:
         - name: controller
-          image: github.com/knative/eventing/pkg/provisioners/inmemory/controller
+          image: github.com/knative/eventing/cmd/inmemory-channel-controller
           env:
           - name: SYSTEM_NAMESPACE
             valueFrom:
