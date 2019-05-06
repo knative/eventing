@@ -49,11 +49,11 @@ readonly NATSS_INSTALLATION_CONFIG="contrib/natss/config/broker/natss.yaml"
 readonly NATSS_CONFIG="contrib/natss/config/provisioner.yaml"
 
 # Strimzi installation config template used for starting up Kafka clusters.
-readonly STRIMZI_INSTALLATION_CONFIG_TEMPLATE="https://github.com/strimzi/strimzi-kafka-operator/releases/download/0.11.3/strimzi-cluster-operator-0.11.3.yaml"
+readonly STRIMZI_INSTALLATION_CONFIG_TEMPLATE="test/config/100-strimzi-cluster-operator-0.11.3.yaml"
 # Strimzi installation config.
 readonly STRIMZI_INSTALLATION_CONFIG="$(mktemp)"
 # Kafka cluster CR config file.
-readonly KAFKA_INSTALLATION_CONFIG="https://raw.githubusercontent.com/strimzi/strimzi-kafka-operator/0.11.3/examples/kafka/kafka-persistent-single.yaml"
+readonly KAFKA_INSTALLATION_CONFIG="test/config/100-kafka-persistent-single-2.1.0.yaml"
 # Kafka provisioner config template.
 readonly KAFKA_CONFIG_TEMPLATE="contrib/kafka/config/kafka.yaml"
 # Real Kafka provisioner config, generated from the template.

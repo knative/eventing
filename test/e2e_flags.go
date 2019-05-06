@@ -43,8 +43,16 @@ func (ps *Provisioners) String() string {
 }
 
 // Set converts the input string to Provisioners.
-// The default CCP we will test against is in-memory-channel.
+// The default CCP we will test against is in-memory.
 func (ps *Provisioners) Set(value string) error {
+	// We'll test against all valid provisioners if we pass "all" through the flag.
+	if value == "all" {
+		for _, provisioner := range validProvisioners {
+			*ps = append(*ps, provisioner)
+		}
+		return nil
+	}
+
 	for _, provisioner := range strings.Split(value, ",") {
 		provisioner := strings.TrimSpace(provisioner)
 		if !isValid(provisioner) {
