@@ -19,12 +19,12 @@ package multichannelfanout
 import (
 	"testing"
 
-	"github.com/knative/eventing/pkg/sidecar/fanout"
-
 	"github.com/google/go-cmp/cmp"
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/sidecar/fanout"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	v1 "k8s.io/api/core/v1"
 )
 
 func TestNewConfigFromChannels(t *testing.T) {
@@ -66,6 +66,7 @@ func TestNewConfigFromChannels(t *testing.T) {
 						Namespace: "ns-1",
 						HostName:  "e.f.g.h",
 						FanoutConfig: fanout.Config{
+							AsyncHandler: true,
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								makeSubscriber("sub1"),
 								makeSubscriber("sub2"),
@@ -76,9 +77,58 @@ func TestNewConfigFromChannels(t *testing.T) {
 						Namespace: "ns-2",
 						HostName:  "i.j.k.l",
 						FanoutConfig: fanout.Config{
+							AsyncHandler: true,
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								makeSubscriber("sub3"),
 								makeSubscriber("sub4"),
+							},
+						},
+					},
+				},
+			},
+		}, {
+			name: "in-memory provisioner -- async",
+			channels: []v1alpha1.Channel{
+				withProvisioner(
+					makeChannel("chan-1", "ns-1", "a.b.c.d", makeSubscribable(makeSubscriber("sub1"))),
+					&v1.ObjectReference{
+						Name: "in-memory",
+					}),
+			},
+			expected: &Config{
+				ChannelConfigs: []ChannelConfig{
+					{
+						Name:      "chan-1",
+						Namespace: "ns-1",
+						HostName:  "a.b.c.d",
+						FanoutConfig: fanout.Config{
+							AsyncHandler: true,
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+								makeSubscriber("sub1"),
+							},
+						},
+					},
+				},
+			},
+		}, {
+			name: "in-memory-channel provisioner -- synchronous",
+			channels: []v1alpha1.Channel{
+				withProvisioner(
+					makeChannel("chan-1", "ns-1", "a.b.c.d", makeSubscribable(makeSubscriber("sub1"))),
+					&v1.ObjectReference{
+						Name: "in-memory-channel",
+					}),
+			},
+			expected: &Config{
+				ChannelConfigs: []ChannelConfig{
+					{
+						Name:      "chan-1",
+						Namespace: "ns-1",
+						HostName:  "a.b.c.d",
+						FanoutConfig: fanout.Config{
+							AsyncHandler: false,
+							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+								makeSubscriber("sub1"),
 							},
 						},
 					},
@@ -97,7 +147,7 @@ func TestNewConfigFromChannels(t *testing.T) {
 	}
 }
 
-func makeChannel(name string, namespace string, hostname string, subscribable *eventingduck.Subscribable) v1alpha1.Channel {
+func makeChannel(name, namespace, hostname string, subscribable *eventingduck.Subscribable) v1alpha1.Channel {
 	c := v1alpha1.Channel{
 		Spec: v1alpha1.ChannelSpec{
 			Subscribable: subscribable,
@@ -112,6 +162,12 @@ func makeChannel(name string, namespace string, hostname string, subscribable *e
 	c.Namespace = namespace
 	return c
 }
+
+func withProvisioner(c v1alpha1.Channel, p *v1.ObjectReference) v1alpha1.Channel {
+	c.Spec.Provisioner = p
+	return c
+}
+
 func makeSubscribable(subsriberSpec ...eventingduck.ChannelSubscriberSpec) *eventingduck.Subscribable {
 	return &eventingduck.Subscribable{
 		Subscribers: subsriberSpec,

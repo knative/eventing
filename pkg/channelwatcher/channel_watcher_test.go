@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/sidecar/fanout"
@@ -31,8 +32,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 )
 
 func init() {
@@ -73,6 +72,7 @@ func TestUpdateConfigWatchHandler(t *testing.T) {
 						Namespace: "ns-1",
 						HostName:  "e.f.g.h",
 						FanoutConfig: fanout.Config{
+							AsyncHandler: true,
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								makeSubscriber("sub1"),
 								makeSubscriber("sub2"),
@@ -83,6 +83,7 @@ func TestUpdateConfigWatchHandler(t *testing.T) {
 						Namespace: "ns-2",
 						HostName:  "i.j.k.l",
 						FanoutConfig: fanout.Config{
+							AsyncHandler: true,
 							Subscriptions: []eventingduck.ChannelSubscriberSpec{
 								makeSubscriber("sub3"),
 								makeSubscriber("sub4"),
