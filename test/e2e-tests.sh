@@ -63,9 +63,6 @@ readonly KAFKA_CLUSTER_URL="my-cluster-kafka-bootstrap.kafka:9092"
 
 # Setup the Knative environment for running tests.
 function knative_setup() {
-  # Install the latest stable Knative/serving in the current cluster.
-  start_latest_knative_serving || return 1
-
   # Install the latest Knative/eventing in the current cluster.
   echo ">> Starting Knative Eventing"
   echo "Installing Knative Eventing"
@@ -213,7 +210,7 @@ function dump_extra_cluster_state() {
 
 # Script entry point.
 
-initialize $@
+initialize $@ --skip-istio
 
 go_test_e2e -timeout=20m ./test/e2e -run ^TestMain$ -runFromMain=true -clusterChannelProvisioners=in-memory-channel,in-memory,natss,kafka || fail_test
 

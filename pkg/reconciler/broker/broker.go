@@ -22,15 +22,13 @@ import (
 	"reflect"
 	"time"
 
-	"k8s.io/client-go/tools/cache"
-
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/broker/resources"
 	"github.com/knative/eventing/pkg/reconciler/names"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
 	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/apps/v1"
@@ -44,6 +42,7 @@ import (
 	corev1informers "k8s.io/client-go/informers/core/v1"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/cache"
 )
 
 const (
@@ -143,7 +142,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		r.Logger.Errorf("invalid resource key: %s", key)
+		logging.FromContext(ctx).Error("invalid resource key")
 		return nil
 	}
 
@@ -162,10 +161,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	// Reconcile this copy of the Broker and then write back any status
 	// updates regardless of whether the reconcile error out.
-	err = r.reconcile(ctx, broker)
-	if err != nil {
-		logging.FromContext(ctx).Warn("Error reconciling Broker", zap.Error(err))
-		r.Recorder.Eventf(broker, corev1.EventTypeWarning, brokerReconcileError, fmt.Sprintf("Broker reconcile error: %v", err))
+	reconcileErr := r.reconcile(ctx, broker)
+	if reconcileErr != nil {
+		logging.FromContext(ctx).Warn("Error reconciling Broker", zap.Error(reconcileErr))
+		r.Recorder.Eventf(broker, corev1.EventTypeWarning, brokerReconcileError, fmt.Sprintf("Broker reconcile error: %v", reconcileErr))
 	} else {
 		logging.FromContext(ctx).Debug("Broker reconciled")
 	}
@@ -177,7 +176,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	// Requeue if the resource is not ready:
-	return err
+	return reconcileErr
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {

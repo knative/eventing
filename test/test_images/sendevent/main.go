@@ -84,7 +84,7 @@ func main() {
 		r := recover()
 		if r != nil {
 			err = r.(error)
-			fmt.Printf("recovered from panic: %v", err)
+			log.Printf("recovered from panic: %v", err)
 		}
 	}()
 
@@ -105,7 +105,7 @@ func main() {
 	case "structured":
 		encodingOption = cloudevents.WithStructuredEncoding()
 	default:
-		fmt.Printf("unsupported encoding option: %q\n", encoding)
+		log.Printf("unsupported encoding option: %q\n", encoding)
 		os.Exit(1)
 	}
 
@@ -126,7 +126,7 @@ func main() {
 
 	var untyped map[string]interface{}
 	if err := json.Unmarshal([]byte(data), &untyped); err != nil {
-		fmt.Println("Currently sendevent only supports JSON event data")
+		log.Println("Currently sendevent only supports JSON event data")
 		os.Exit(1)
 	}
 
@@ -148,9 +148,9 @@ func main() {
 		}
 
 		if resp, err := c.Send(context.Background(), event); err != nil {
-			fmt.Printf("send returned an error: %v\n", err)
+			log.Printf("send returned an error: %v\n", err)
 		} else if resp != nil {
-			fmt.Printf("Got response from %s\n%s\n", sink, resp)
+			log.Printf("Got response from %s\n%s\n", sink, resp)
 		}
 
 		// Wait for next tick
