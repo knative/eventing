@@ -19,9 +19,7 @@ package cronjobevents
 import (
 	"context"
 	"encoding/json"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
+	"github.com/cloudevents/sdk-go"
 	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	"github.com/knative/eventing/pkg/kncloudevents"
 	"github.com/knative/pkg/logging"
@@ -46,7 +44,7 @@ type Adapter struct {
 	Name string
 
 	// client sends cloudevents.
-	client client.Client
+	client cloudevents.Client
 }
 
 // Initialize cloudevent client
@@ -86,16 +84,11 @@ func (a *Adapter) Start(ctx context.Context, stopCh <-chan struct{}) error {
 func (a *Adapter) cronTick() {
 	logger := logging.FromContext(context.TODO())
 
-	eventContext := cloudevents.EventContextV02{
-		Type:   sourcesv1alpha1.CronJobEventType,
-		Source: *types.ParseURLRef(sourcesv1alpha1.CronJobEventSource),
-	}.AsV02()
-	eventContext.SetSubject(a.Name)
-
-	event := cloudevents.Event{
-		Context: eventContext,
-		Data:    message(a.Data),
-	}
+	event := cloudevents.NewEvent(cloudevents.VersionV02)
+	event.SetType(sourcesv1alpha1.CronJobEventType)
+	event.SetSource(sourcesv1alpha1.CronJobEventSource)
+	event.SetData(message(a.Data))
+	event.SetSubject(a.Name)
 
 	if _, err := a.client.Send(context.TODO(), event); err != nil {
 		logger.Error("failed to send cloudevent", err)
