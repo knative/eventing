@@ -18,6 +18,7 @@ package resources
 
 import (
 	"fmt"
+	"github.com/knative/pkg/kmeta"
 	"net/url"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -35,11 +36,7 @@ func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerIngress *
 			Namespace:    t.Namespace,
 			GenerateName: fmt.Sprintf("%s-%s-", t.Spec.Broker, t.Name),
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(t, schema.GroupVersionKind{
-					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
-					Version: eventingv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Trigger",
-				}),
+				*kmeta.NewControllerRef(t),
 			},
 			Labels: SubscriptionLabels(t),
 		},
