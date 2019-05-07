@@ -51,12 +51,14 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ChannelList{},
 		&ClusterChannelProvisioner{},
 		&ClusterChannelProvisionerList{},
+		&EventType{},
+		&EventTypeList{},
+		&Pipeline{},
+		&PipelineList{},
 		&Subscription{},
 		&SubscriptionList{},
 		&Trigger{},
 		&TriggerList{},
-		&EventType{},
-		&EventTypeList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

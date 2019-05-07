@@ -53,14 +53,19 @@ type PipelineSpec struct {
 	// provided.
 	Steps []SubscriberSpec
 
-	// Subscriber is the addressable that optionally receives events from the last step in the pipeline.
+	// Subscriber is the addressable that optionally receives replies from the last step in the pipeline.
 	// +optional
 	Subscriber *SubscriberSpec `json:"subscriber,omitempty"`
 }
 
 type StepStatus struct {
-	// Array of corresponding subscription statuses
-	SubscriptionStatus []SubscriptionStatus
+	// SubscriptionStatuses is an array of corresponding Subscription statuses.
+	// Matches the Spec.Steps array in the order.
+	SubscriptionStatuses []SubscriptionStatus
+
+	// ChannelStatuses is an array of corresponding Channel statuses.
+	// Matches the Spec.Steps array in the order.
+	ChannelStatuses []ChannelStatus
 }
 
 // PipelineStatus represents the current state of a Pipeline.
