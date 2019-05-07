@@ -22,6 +22,8 @@ import (
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
 	fakeeventingv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1/fake"
+	messagingv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/messaging/v1alpha1"
+	fakemessagingv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/messaging/v1alpha1/fake"
 	sourcesv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha1"
 	fakesourcesv1alpha1 "github.com/knative/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -81,6 +83,16 @@ func (c *Clientset) EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interfac
 // Eventing retrieves the EventingV1alpha1Client
 func (c *Clientset) Eventing() eventingv1alpha1.EventingV1alpha1Interface {
 	return &fakeeventingv1alpha1.FakeEventingV1alpha1{Fake: &c.Fake}
+}
+
+// MessagingV1alpha1 retrieves the MessagingV1alpha1Client
+func (c *Clientset) MessagingV1alpha1() messagingv1alpha1.MessagingV1alpha1Interface {
+	return &fakemessagingv1alpha1.FakeMessagingV1alpha1{Fake: &c.Fake}
+}
+
+// Messaging retrieves the MessagingV1alpha1Client
+func (c *Clientset) Messaging() messagingv1alpha1.MessagingV1alpha1Interface {
+	return &fakemessagingv1alpha1.FakeMessagingV1alpha1{Fake: &c.Fake}
 }
 
 // SourcesV1alpha1 retrieves the SourcesV1alpha1Client

@@ -20,6 +20,7 @@ package scheme
 
 import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	messagingv1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -33,6 +34,7 @@ var Codecs = serializer.NewCodecFactory(Scheme)
 var ParameterCodec = runtime.NewParameterCodec(Scheme)
 var localSchemeBuilder = runtime.SchemeBuilder{
 	eventingv1alpha1.AddToScheme,
+	messagingv1alpha1.AddToScheme,
 	sourcesv1alpha1.AddToScheme,
 }
 
