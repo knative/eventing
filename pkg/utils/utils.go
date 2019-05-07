@@ -19,11 +19,12 @@ package utils
 import (
 	"bufio"
 	"io"
-	"k8s.io/apimachinery/pkg/util/validation"
 	"os"
 	"regexp"
 	"strings"
 	"sync"
+
+	"k8s.io/apimachinery/pkg/util/validation"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
