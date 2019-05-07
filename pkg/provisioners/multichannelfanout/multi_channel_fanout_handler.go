@@ -30,7 +30,7 @@ import (
 	"net/http"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/pkg/sidecar/fanout"
+	"github.com/knative/eventing/pkg/provisioners/fanout"
 	"go.uber.org/zap"
 )
 

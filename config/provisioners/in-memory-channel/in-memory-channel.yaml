@@ -127,7 +127,7 @@ spec:
       serviceAccountName: in-memory-channel-controller
       containers:
         - name: controller
-          image: github.com/knative/eventing/pkg/provisioners/inmemory/controller
+          image: github.com/knative/eventing/cmd/in_memory/controller
           env:
           - name: SYSTEM_NAMESPACE
             valueFrom:
@@ -194,13 +194,10 @@ spec:
       serviceAccountName: in-memory-channel-dispatcher
       containers:
         - name: dispatcher
-          image: github.com/knative/eventing/cmd/fanoutsidecar
-          args:
-            - --sidecar_port=8080
-            - --channel_provisioner=in-memory
-            - --channel_provisioner=in-memory-channel
+          image: github.com/knative/eventing/cmd/in_memory/dispatcher
           env:
           - name: SYSTEM_NAMESPACE
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
+
