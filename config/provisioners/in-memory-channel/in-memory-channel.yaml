@@ -57,6 +57,7 @@ rules:
     - eventing.knative.dev
     resources:
     - channels/finalizers
+    - clusterchannelprovisioners/finalizers
     verbs:
     - update
   - apiGroups:
