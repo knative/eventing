@@ -23,23 +23,24 @@ import (
 )
 
 const (
-	metricsNamespace = "broker_ingress"
+	metricsNamespace = "broker"
 )
 
 var (
-	// MeasureMessagesTotal is a counter which records the number of messages received
-	// by the ingress. The value of the Result tag indicates whether the message
-	// was filtered or dispatched.
-	MeasureMessagesTotal = stats.Int64(
-		"knative.dev/eventing/broker/ingress/measures/messages_total",
-		"Total number of messages received",
+	// MeasureEventsTotal is a counter which records the number of events received
+	// by the ingress. The value of the Result tag indicates whether the event
+	// was filtered or dispatched by the ingress.
+	MeasureEventsTotal = stats.Int64(
+		"knative.dev/eventing/broker/measures/events_total",
+		"Total number of events received",
 		stats.UnitNone,
 	)
 
-	// MeasureDispatchTime records the time spent dispatching a message, in milliseconds.
+	// MeasureDispatchTime records the time spent dispatching an event, in
+	// milliseconds.
 	MeasureDispatchTime = stats.Int64(
-		"knative.dev/eventing/broker/ingress/measures/dispatch_time",
-		"Time spent dispatching a message",
+		"knative.dev/eventing/broker/measures/dispatch_time",
+		"Time spent dispatching an event",
 		stats.UnitMilliseconds,
 	)
 
@@ -61,8 +62,8 @@ func init() {
 	// previously registered view has the same name with a different value.
 	err := view.Register(
 		&view.View{
-			Name:        "messages_total",
-			Measure:     MeasureMessagesTotal,
+			Name:        "events_total",
+			Measure:     MeasureEventsTotal,
 			Aggregation: view.Count(),
 			TagKeys:     []tag.Key{TagResult, TagBroker},
 		},

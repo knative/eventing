@@ -69,13 +69,13 @@ func init() {
 	// previously registered view has the same name with a different value.
 	err := view.Register(
 		&view.View{
-			Name:        "trigger_events_total",
+			Name:        "events_total",
 			Measure:     MeasureTriggerEventsTotal,
 			Aggregation: view.Count(),
 			TagKeys:     []tag.Key{TagResult, TagBroker, TagTrigger},
 		},
 		&view.View{
-			Name:        "trigger_filter_time",
+			Name:        "filter_time",
 			Measure:     MeasureTriggerFilterTime,
 			Aggregation: view.Distribution(0.1, 1, 10, 100),
 			TagKeys:     []tag.Key{TagFilterResult, TagBroker, TagTrigger, TagError},

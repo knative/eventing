@@ -40,7 +40,7 @@ import (
 
 const (
 	NAMESPACE        = "NAMESPACE"
-	metricsNamespace = "broker_filter"
+	metricsNamespace = "trigger"
 )
 
 var (

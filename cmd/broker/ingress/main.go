@@ -204,7 +204,7 @@ func (h *handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 
 	ctx, _ = tag.New(ctx, tag.Insert(TagBroker, h.brokerName))
 	defer func() {
-		stats.Record(ctx, MeasureMessagesTotal.M(1))
+		stats.Record(ctx, MeasureEventsTotal.M(1))
 	}()
 
 	send := h.decrementTTL(&event)
