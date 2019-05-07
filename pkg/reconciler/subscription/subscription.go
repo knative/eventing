@@ -70,7 +70,7 @@ type Reconciler struct {
 
 	// listers index properties about resources
 	subscriptionLister  listers.SubscriptionLister
-	addressableInformer *eventingduck.AddressableInformer
+	addressableInformer eventingduck.AddressableInformer
 	tracker             tracker.Interface
 }
 
@@ -83,7 +83,7 @@ func NewController(
 	opt reconciler.Options,
 	subscriptionInformer eventinginformers.SubscriptionInformer,
 	channelInformer eventinginformers.ChannelInformer,
-	addressableInformer *eventingduck.AddressableInformer,
+	addressableInformer eventingduck.AddressableInformer,
 ) *controller.Impl {
 
 	r := &Reconciler{

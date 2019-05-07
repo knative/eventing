@@ -79,7 +79,7 @@ type Reconciler struct {
 	brokerLister        listers.BrokerLister
 	serviceLister       corev1listers.ServiceLister
 	tracker             tracker.Interface
-	addressableInformer *duck.AddressableInformer
+	addressableInformer duck.AddressableInformer
 }
 
 var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
@@ -96,7 +96,7 @@ func NewController(
 	subscriptionInformer eventinginformers.SubscriptionInformer,
 	brokerInformer eventinginformers.BrokerInformer,
 	serviceInformer corev1informers.ServiceInformer,
-	addressableInformer *duck.AddressableInformer,
+	addressableInformer duck.AddressableInformer,
 ) *controller.Impl {
 
 	r := &Reconciler{

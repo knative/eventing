@@ -19,10 +19,9 @@ package duck
 import (
 	"sync"
 
-	"github.com/knative/pkg/apis/duck/v1alpha1"
-
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/apis/duck"
+	"github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/tracker"
 	corev1 "k8s.io/api/core/v1"
@@ -32,15 +31,31 @@ import (
 )
 
 // AddressableInformer is an informer that allows tracking arbitrary Addressables.
-type AddressableInformer struct {
+type AddressableInformer interface {
+	// TrackInNamespace returns a function that can be used to watch arbitrary Addressables in the same
+	// namespace as obj. Any change will cause a callback for obj.
+	TrackInNamespace(tracker tracker.Interface, obj metav1.Object) func(corev1.ObjectReference) error
+}
+
+// addressableInformer is a concrete implementation of AddressableInformer. It caches informers and ensures TypeMeta.
+// TODO: Once the pkg/apis/duck code properly ensures the TypeMeta, this struct can be removed entirely and replaced
+// with:
+// duck.CachingInformerFactory{
+//   Delegate: duck.EnqueueInformerFactory {
+//      Delegate: duck.TypeInformerFactory { ... },
+//      EventHandler: EnsureTypeMeta,
+//   },
+// }
+type addressableInformer struct {
 	duck duck.InformerFactory
 
 	concrete     map[schema.GroupVersionResource]struct{}
 	concreteLock sync.RWMutex
 }
 
-func NewAddressableInformer(opt reconciler.Options) *AddressableInformer {
-	return &AddressableInformer{
+// NewAddressableInformer creates a new AddressableInformer.
+func NewAddressableInformer(opt reconciler.Options) AddressableInformer {
+	return &addressableInformer{
 		duck: &duck.TypedInformerFactory{
 			Client:       opt.DynamicClientSet,
 			Type:         &v1alpha1.AddressableType{},
@@ -51,9 +66,7 @@ func NewAddressableInformer(opt reconciler.Options) *AddressableInformer {
 	}
 }
 
-// TrackInNamespace returns a function that can be used to watch arbitrary Addressables in the same
-// namespace as obj. Any change will cause a callback for obj.
-func (i *AddressableInformer) TrackInNamespace(tracker tracker.Interface, obj metav1.Object) func(corev1.ObjectReference) error {
+func (i *addressableInformer) TrackInNamespace(tracker tracker.Interface, obj metav1.Object) func(corev1.ObjectReference) error {
 	return func(ref corev1.ObjectReference) error {
 		if err := i.ensureInformer(tracker, ref); err != nil {
 			return err
@@ -71,7 +84,7 @@ func (i *AddressableInformer) TrackInNamespace(tracker tracker.Interface, obj me
 
 // ensureInformer ensures that there is an informer watching and sending events to tracker for the
 // concrete GVK.
-func (i *AddressableInformer) ensureInformer(tracker tracker.Interface, ref corev1.ObjectReference) error {
+func (i *addressableInformer) ensureInformer(tracker tracker.Interface, ref corev1.ObjectReference) error {
 	gvk := ref.GroupVersionKind()
 	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
 

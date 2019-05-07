@@ -607,12 +607,12 @@ func TestAllCases(t *testing.T) {
 	defer logtesting.ClearAll()
 	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
 		return &Reconciler{
-			Base:               reconciler.NewBase(opt, controllerAgentName),
-			subscriptionLister: listers.GetSubscriptionLister(),
-			tracker:            tracker.New(func(string) {}, 0),
+			Base:                reconciler.NewBase(opt, controllerAgentName),
+			subscriptionLister:  listers.GetSubscriptionLister(),
+			tracker:             tracker.New(func(string) {}, 0),
+			addressableInformer: &fakeAddressableInformer{},
 		}
 	}))
-
 }
 
 func TestNew(t *testing.T) {
@@ -622,15 +622,23 @@ func TestNew(t *testing.T) {
 	eventingInformer := informers.NewSharedInformerFactory(eventingClient, 0)
 
 	subscriptionInformer := eventingInformer.Eventing().V1alpha1().Subscriptions()
+	channelInformer := eventingInformer.Eventing().V1alpha1().Channels()
+	addressableInformer := &fakeAddressableInformer{}
 	c := NewController(reconciler.Options{
 		KubeClientSet:     kubeClient,
 		EventingClientSet: eventingClient,
 		Logger:            logtesting.TestLogger(t),
-	}, subscriptionInformer)
+	}, subscriptionInformer, channelInformer, addressableInformer)
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
 	}
+}
+
+type fakeAddressableInformer struct{}
+
+func (*fakeAddressableInformer) TrackInNamespace(tracker.Interface, metav1.Object) func(corev1.ObjectReference) error {
+	return func(corev1.ObjectReference) error { return nil }
 }
 
 func TestFinalizers(t *testing.T) {
