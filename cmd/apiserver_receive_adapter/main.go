@@ -46,7 +46,7 @@ type envConfig struct {
 	Controller []bool   `required:"true"`
 }
 
-// TODO: the controller should make the list of GVR
+// TODO: the controller should take the list of GVR
 
 func main() {
 	flag.Parse()
@@ -73,11 +73,6 @@ func main() {
 	logger = logger.With(zap.String("controller/apiserver", "adapter"))
 	logger.Info("Starting the controller")
 
-	//numControllers := len(env.ApiVersion)
-	//cfg.QPS = float32(numControllers) * rest.DefaultQPS
-	//cfg.Burst = numControllers * rest.DefaultBurst
-	//opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
-
 	client, err := dynamic.NewForConfig(cfg)
 	if err != nil {
 		logger.Fatalw("Error building dynamic client", zap.Error(err))
@@ -92,39 +87,17 @@ func main() {
 
 	for i, apiVersion := range env.ApiVersion {
 		kind := env.Kind[i]
-		//	controlled := env.Controller[i]
-
-		//		obj := &duckv1alpha1.AddressableType{}
-
-		//factory := duck.TypedInformerFactory{
-		//	Client:       client,
-		//	ResyncPeriod: time.Duration(10 * time.Hour),
-		//	StopChannel:  stopCh,
-		//	Type:         obj,
-		//}
 
 		gv, err := schema.ParseGroupVersion(apiVersion)
 		if err != nil {
 			logger.Fatalw("Error parsing APIVersion", zap.Error(err))
 		}
-
-		gvk := schema.GroupVersionKind{Kind: kind, Group: gv.Group, Version: gv.Version}
-
 		// This is really bad.
-		gvr, _ := meta.UnsafeGuessKindToResource(gvk)
-
+		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: kind, Group: gv.Group, Version: gv.Version})
 		gvrs = append(gvrs, gvr)
-
-		// Get and start the informer for gvr
-		//logger.Infof("Starting informer for %v", gvk)
-		//informer, lister, err := factory.Get(gvr)
-		//if err != nil {
-		//	logger.Fatalw("Error starting informer", zap.Error(err))
-		//}
-		//controllers = append(controllers, apiserver.NewController(opt, informer, lister, eventsClient, controlled))
 	}
 
-	a := apiserver.NewAdaptor("this_source", env.Namespace, client, eventsClient, logger, gvrs...)
+	a := apiserver.NewAdaptor(cfg.Host, env.Namespace, client, eventsClient, logger, gvrs...)
 	logger.Info("starting kubernetes api adapter")
 	if err := a.Start(stopCh); err != nil {
 		logger.Warn("start returned an error,", zap.Error(err))
