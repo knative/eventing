@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -30,6 +30,8 @@ type Interface interface {
 	Channels() ChannelInformer
 	// ClusterChannelProvisioners returns a ClusterChannelProvisionerInformer.
 	ClusterChannelProvisioners() ClusterChannelProvisionerInformer
+	// EventTypes returns a EventTypeInformer.
+	EventTypes() EventTypeInformer
 	// Subscriptions returns a SubscriptionInformer.
 	Subscriptions() SubscriptionInformer
 	// Triggers returns a TriggerInformer.
@@ -60,6 +62,11 @@ func (v *version) Channels() ChannelInformer {
 // ClusterChannelProvisioners returns a ClusterChannelProvisionerInformer.
 func (v *version) ClusterChannelProvisioners() ClusterChannelProvisionerInformer {
 	return &clusterChannelProvisionerInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// EventTypes returns a EventTypeInformer.
+func (v *version) EventTypes() EventTypeInformer {
+	return &eventTypeInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Subscriptions returns a SubscriptionInformer.

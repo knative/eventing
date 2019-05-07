@@ -8,19 +8,7 @@ from the process.
 
 ## How to manage Bugs?
 
-- Submit new bugs by creating a new issue of type “Bug”.
-- Please fill the bug template and propose priority.
-- All new bugs will be labelled “kind/bug” as part of the template
-- Bugs will be triaged weekly (this could be modified based on incoming bugs
-  rate), and upon triage will be assigned a priority or closed.
-- All of priority/important-soon and some of priority/important-longterm bugs
-  will be planned for next release cycle to minimize engineering debt.
-- priority/critical-urgent is reserved for critical bugs that needs to be
-  addressed immediately in current release at the cost of currently planned
-  items.
-- Bugs that need more information to decide priority will be labeled
-  priority/awaiting-more-evidence
-- WG lead will drive this and their decision will be final
+- Refer to [Knative Eventing Bug Triage and Management](bug_triage.md)
 
 ## How to manage Story/Feature?
 

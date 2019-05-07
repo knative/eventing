@@ -294,10 +294,10 @@ func CreateClusterRoleBinding(clients *test.Clients, crb *rbacv1.ClusterRoleBind
 
 // CreateServiceAccountAndBinding creates both ServiceAccount and ClusterRoleBinding with default
 // cluster-admin role.
-func CreateServiceAccountAndBinding(clients *test.Clients, name string, namespace string, logf logging.FormatLogger, cleaner *test.Cleaner) error {
+func CreateServiceAccountAndBinding(clients *test.Clients, saName, crName, namespace string, logf logging.FormatLogger, cleaner *test.Cleaner) error {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      saName,
 			Namespace: namespace,
 		},
 	}
@@ -318,7 +318,7 @@ func CreateServiceAccountAndBinding(clients *test.Clients, name string, namespac
 		},
 		RoleRef: rbacv1.RoleRef{
 			Kind:     "ClusterRole",
-			Name:     "cluster-admin",
+			Name:     crName,
 			APIGroup: "rbac.authorization.k8s.io",
 		},
 	}
@@ -350,6 +350,9 @@ func CreatePodAndServiceReady(clients *test.Clients, pod *corev1.Pod, svc *corev
 		return nil, fmt.Errorf("Failed to get pod: %v", err)
 	}
 
+	// FIXME(Fredy-Z): This hacky sleep is added to try mitigating the test flakiness. Will delete it after we find the root cause and fix.
+	time.Sleep(10 * time.Second)
+
 	return pod, nil
 }
 
@@ -377,10 +380,22 @@ func CreatePod(clients *test.Clients, pod *corev1.Pod, _ logging.FormatLogger, c
 
 // SendFakeEventToChannel will create fake CloudEvent and send it to the given channel.
 func SendFakeEventToChannel(clients *test.Clients, event *test.CloudEvent, channel *v1alpha1.Channel, logf logging.FormatLogger, cleaner *test.Cleaner) error {
-	logf("Sending fake CloudEvent")
-	logf("Creating event sender pod")
 	namespace := channel.Namespace
 	url := fmt.Sprintf("http://%s", channel.Status.Address.Hostname)
+	return sendFakeEventToAddress(clients, event, url, namespace, logf, cleaner)
+}
+
+// SendFakeEventToBroker will create fake CloudEvent and send it to the given broker.
+func SendFakeEventToBroker(clients *test.Clients, event *test.CloudEvent, broker *v1alpha1.Broker, logf logging.FormatLogger, cleaner *test.Cleaner) error {
+	namespace := broker.Namespace
+	url := fmt.Sprintf("http://%s", broker.Status.Address.Hostname)
+	return sendFakeEventToAddress(clients, event, url, namespace, logf, cleaner)
+}
+
+func sendFakeEventToAddress(clients *test.Clients, event *test.CloudEvent, url, namespace string, logf logging.FormatLogger, cleaner *test.Cleaner) error {
+	logf("Sending fake CloudEvent")
+	logf("Creating event sender pod %q", event.Source)
+
 	pod := test.EventSenderPod(event.Source, namespace, url, event)
 	if err := CreatePod(clients, pod, logf, cleaner); err != nil {
 		return err
@@ -462,7 +477,25 @@ func CreateNamespaceIfNeeded(t *testing.T, clients *test.Clients, namespace stri
 		if err != nil {
 			t.Fatalf("Failed to create Namespace: %s; %v", namespace, err)
 		}
+
+		// https://github.com/kubernetes/kubernetes/issues/66689
+		// We can only start creating pods after the default ServiceAccount is created by the kube-controller-manager.
+		err = WaitForServiceAccountExists(t, clients, "default", namespace, logf)
+		if err != nil {
+			t.Fatalf("The default ServiceAccount was not created for the Namespace: %s", namespace)
+		}
 	}
+}
+
+// WaitForServiceAccountExists waits until the ServiceAccount exists.
+func WaitForServiceAccountExists(t *testing.T, clients *test.Clients, name, namespace string, logf logging.FormatLogger) error {
+	return wait.PollImmediate(interval, timeout, func() (bool, error) {
+		sas := clients.Kube.Kube.CoreV1().ServiceAccounts(namespace)
+		if _, err := sas.Get(name, metav1.GetOptions{}); err == nil {
+			return true, nil
+		}
+		return false, nil
+	})
 }
 
 // LabelNamespace labels the given namespace with the labels map.
@@ -496,6 +529,6 @@ func logPodLogsForDebugging(clients *test.Clients, podName, containerName, names
 	if err != nil {
 		logf("Failed to get the logs for container %q of the pod %q in namespace %q: %v", containerName, podName, namespace, err)
 	} else {
-		logf("Logs for the container %q of the pod % in namespace %q:\n%s", containerName, podName, namespace, string(logs))
+		logf("Logs for the container %q of the pod %q in namespace %q:\n%s", containerName, podName, namespace, string(logs))
 	}
 }

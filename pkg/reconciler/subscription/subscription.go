@@ -20,17 +20,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"k8s.io/apimachinery/pkg/labels"
 	"reflect"
 	"time"
 
-	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
+	eventingduck "github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/eventing/pkg/utils/resolve"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
@@ -40,6 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
@@ -99,7 +99,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		r.Logger.Errorf("invalid resource key: %s", key)
+		logging.FromContext(ctx).Error("invalid resource key")
 		return nil
 	}
 
@@ -107,7 +107,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	original, err := r.subscriptionLister.Subscriptions(namespace).Get(name)
 	if apierrs.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("subscription key in work queue no longer exists", zap.Any("key", key))
+		logging.FromContext(ctx).Error("subscription key in work queue no longer exists")
 		return nil
 	} else if err != nil {
 		return err
@@ -118,27 +118,31 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	// Reconcile this copy of the Subscription and then write back any status
 	// updates regardless of whether the reconcile error out.
-	err = r.reconcile(ctx, subscription)
-	if err != nil {
-		logging.FromContext(ctx).Warn("Error reconciling Subscription", zap.Error(err))
+	reconcileErr := r.reconcile(ctx, subscription)
+	if reconcileErr != nil {
+		logging.FromContext(ctx).Warn("Error reconciling Subscription", zap.Error(reconcileErr))
 	} else {
 		logging.FromContext(ctx).Debug("Subscription reconciled")
 		r.Recorder.Eventf(subscription, corev1.EventTypeNormal, subscriptionReconciled, "Subscription reconciled: %q", subscription.Name)
 	}
 
 	if _, updateStatusErr := r.updateStatus(ctx, subscription.DeepCopy()); updateStatusErr != nil {
-		logging.FromContext(ctx).Warn("Failed to update the Subscription", zap.Error(err))
-		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, subscriptionUpdateStatusFailed, "Failed to update Subscription's status: %v", err)
+		logging.FromContext(ctx).Warn("Failed to update the Subscription", zap.Error(updateStatusErr))
+		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, subscriptionUpdateStatusFailed, "Failed to update Subscription's status: %v", updateStatusErr)
 		return updateStatusErr
 	}
 
 	// Requeue if the resource is not ready:
-	return err
+	return reconcileErr
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subscription) error {
 	subscription.Status.InitializeConditions()
 
+	// Verify subscription is valid.
+	if err := subscription.Validate(ctx); err != nil {
+		return err
+	}
 	// See if the subscription has been deleted
 	if subscription.DeletionTimestamp != nil {
 		// If the subscription is Ready, then we have to remove it
@@ -157,7 +161,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	}
 
 	// Verify that `channel` exists.
-	if _, err := resolve.ObjectReference(ctx, r.DynamicClientSet, subscription.Namespace, &subscription.Spec.Channel); err != nil {
+	if _, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, subscription.Namespace, &subscription.Spec.Channel); err != nil {
 		logging.FromContext(ctx).Warn("Failed to validate Channel exists",
 			zap.Error(err),
 			zap.Any("channel", subscription.Spec.Channel))
@@ -165,7 +169,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		return err
 	}
 
-	subscriberURI, err := resolve.SubscriberSpec(ctx, r.DynamicClientSet, subscription.Namespace, subscription.Spec.Subscriber)
+	subscriberURI, err := eventingduck.SubscriberSpec(ctx, r.DynamicClientSet, subscription.Namespace, subscription.Spec.Subscriber)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to resolve Subscriber",
 			zap.Error(err),
@@ -266,7 +270,7 @@ func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyS
 	if isNilOrEmptyReply(replyStrategy) {
 		return "", nil
 	}
-	obj, err := resolve.ObjectReference(ctx, r.DynamicClientSet, namespace, replyStrategy.Channel)
+	obj, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, namespace, replyStrategy.Channel)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to fetch ReplyStrategy Channel",
 			zap.Error(err),
@@ -280,9 +284,9 @@ func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyS
 		return "", err
 	}
 	if s.Status.Address != nil {
-		return resolve.DomainToURL(s.Status.Address.Hostname), nil
+		return eventingduck.DomainToURL(s.Status.Address.Hostname), nil
 	}
-	return "", fmt.Errorf("status does not contain address")
+	return "", fmt.Errorf("reply.status does not contain address")
 }
 
 func (r *Reconciler) syncPhysicalChannel(ctx context.Context, sub *v1alpha1.Subscription, isDeleted bool) error {
@@ -331,11 +335,11 @@ func (r *Reconciler) listAllSubscriptionsWithPhysicalChannel(ctx context.Context
 	return subs, nil
 }
 
-func (r *Reconciler) createSubscribable(subs []v1alpha1.Subscription) *eventingduck.Subscribable {
-	rv := &eventingduck.Subscribable{}
+func (r *Reconciler) createSubscribable(subs []v1alpha1.Subscription) *eventingduckv1alpha1.Subscribable {
+	rv := &eventingduckv1alpha1.Subscribable{}
 	for _, sub := range subs {
 		if sub.Status.PhysicalSubscription.SubscriberURI != "" || sub.Status.PhysicalSubscription.ReplyURI != "" {
-			rv.Subscribers = append(rv.Subscribers, eventingduck.ChannelSubscriberSpec{
+			rv.Subscribers = append(rv.Subscribers, eventingduckv1alpha1.ChannelSubscriberSpec{
 				DeprecatedRef: &corev1.ObjectReference{
 					APIVersion: sub.APIVersion,
 					Kind:       sub.Kind,
@@ -352,13 +356,13 @@ func (r *Reconciler) createSubscribable(subs []v1alpha1.Subscription) *eventingd
 	return rv
 }
 
-func (r *Reconciler) patchPhysicalFrom(ctx context.Context, namespace string, physicalFrom corev1.ObjectReference, subs *eventingduck.Subscribable) error {
+func (r *Reconciler) patchPhysicalFrom(ctx context.Context, namespace string, physicalFrom corev1.ObjectReference, subs *eventingduckv1alpha1.Subscribable) error {
 	// First get the original object and convert it to only the bits we care about
-	s, err := resolve.ObjectReference(ctx, r.DynamicClientSet, namespace, &physicalFrom)
+	s, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, namespace, &physicalFrom)
 	if err != nil {
 		return err
 	}
-	original := eventingduck.Channel{}
+	original := eventingduckv1alpha1.Channel{}
 	err = duck.FromUnstructured(s, &original)
 	if err != nil {
 		return err
@@ -372,7 +376,7 @@ func (r *Reconciler) patchPhysicalFrom(ctx context.Context, namespace string, ph
 		return err
 	}
 
-	resourceClient, err := resolve.ResourceInterface(r.DynamicClientSet, namespace, &physicalFrom)
+	resourceClient, err := eventingduck.ResourceInterface(r.DynamicClientSet, namespace, &physicalFrom)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to create dynamic resource client", zap.Error(err))
 		return err

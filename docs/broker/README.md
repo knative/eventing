@@ -235,7 +235,7 @@ The `Broker`'s address is well known, it will always be
 `<name>-broker.<namespace>.svc.<ending>`. In our case, it is
 `default-broker.default.svc.cluster.local`.
 
-While SSHed into a `Pod` with the Istio sidecar, run:
+While SSHed into a `Pod` and run:
 
 ```shell
 curl -v "http://default-broker.default.svc.cluster.local/" \
@@ -278,7 +278,7 @@ implmentation**.
 ### Namespace
 
 Namespaces are reconciled by the
-[Namespace Reconciler](../../pkg/reconciler/v1alpha1/namespace). The
+[Namespace Reconciler](../../pkg/reconciler/namespace). The
 `Namespace Reconciler` looks for all `namespace`s that have the label
 `knative-eventing-injection: enabled`. If that label is present, then the
 `Namespace Reconciler` reconciles:
@@ -292,7 +292,7 @@ Namespaces are reconciled by the
 ### Broker
 
 `Broker`s are reconciled by the
-[Broker Reconciler](../../pkg/reconciler/v1alpha1/broker). For each `Broker`, it
+[Broker Reconciler](../../pkg/reconciler/broker). For each `Broker`, it
 reconciles:
 
 1. The 'trigger' `Channel`. This is a `Channel` that all events in the `Broker`
@@ -321,17 +321,18 @@ reconciles:
 ### Trigger
 
 `Trigger`s are reconciled by the
-[Trigger Reconciler](../../pkg/reconciler/v1alpha1/trigger). For each `Trigger`,
-it reconciles:
+[Trigger Reconciler](../../pkg/reconciler/trigger). For each `Trigger`, it
+reconciles:
 
-1. Determines the subscriber's URI.
+1. Verify the Broker Exists
+1. Get the Broker's:
+   - Trigger Channel
+   - Ingress Channel
+   - Filter Service
+1. Determine the Subscriber's URI
    - Currently uses the same logic as the `Subscription` Reconciler, so supports
      Addressables and Kubernetes `Service`s.
-1. Creates a Kubernetes `Service` and Istio `VirtualService` pair. This allows
-   all Istio enabled `Pod`s to send to the `Trigger`'s address.
-   - This is the same as the current `Channel` implementation. The `Service`
-     points nowhere. The `VirtualService` reroutes requests that originally went
-     to the `Service`, to instead go to the `Broker`'s 'filter' `Service`.
-1. Creates `Subscription` from the `Broker`'s 'trigger' `Channel` to the
-   `Trigger`'s Kubernetes `Service`. Replies are sent to the `Broker`'s
-   'ingress' `Channel`.
+1. Creates a `Subscription` from the `Broker`'s 'trigger' `Channel` to the
+   `Trigger`'s Kubernetes `Service` using the HTTP path
+   `/triggers/{namespace}/{name}`. Replies are sent to the `Broker`'s 'ingress'
+   `Channel`.

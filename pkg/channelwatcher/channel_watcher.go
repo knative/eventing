@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package channelwatcher
 
 import (
@@ -20,8 +21,8 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
-	"github.com/knative/eventing/pkg/sidecar/multichannelfanout"
-	"github.com/knative/eventing/pkg/sidecar/swappable"
+	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
+	"github.com/knative/eventing/pkg/provisioners/swappable"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,7 +40,7 @@ type reconciler struct {
 }
 
 func (r *reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) {
-	ctx := logging.WithLogger(context.TODO(), r.logger.With(zap.Any("request", req)))
+	ctx := logging.WithLogger(context.Background(), r.logger.With(zap.Any("request", req)))
 	logging.FromContext(ctx).Info("New update for channel.")
 	if err := r.handler(ctx, r.client, req.NamespacedName); err != nil {
 		logging.FromContext(ctx).Error("WatchHandlerFunc returned error", zap.Error(err))
@@ -87,7 +88,7 @@ type ShouldWatchFunc func(ch *v1alpha1.Channel) bool
 // This is used by dispatchers or receivers to update their configs by watching channels.
 func UpdateConfigWatchHandler(updateConfig swappable.UpdateConfig, shouldWatch ShouldWatchFunc) WatchHandlerFunc {
 	return func(ctx context.Context, c client.Client, _ types.NamespacedName) error {
-		channels, err := listAllChannels(ctx, c, shouldWatch)
+		channels, err := ListAllChannels(ctx, c, shouldWatch)
 		if err != nil {
 			logging.FromContext(ctx).Info("Unable to list channels", zap.Error(err))
 			return err
@@ -97,8 +98,8 @@ func UpdateConfigWatchHandler(updateConfig swappable.UpdateConfig, shouldWatch S
 	}
 }
 
-// listAllChannels queries client and gets list of all channels for which shouldWatch returns true.
-func listAllChannels(ctx context.Context, c client.Client, shouldWatch ShouldWatchFunc) ([]v1alpha1.Channel, error) {
+// ListAllChannels queries client and gets list of all channels for which shouldWatch returns true.
+func ListAllChannels(ctx context.Context, c client.Client, shouldWatch ShouldWatchFunc) ([]v1alpha1.Channel, error) {
 	channels := make([]v1alpha1.Channel, 0)
 	cl := &v1alpha1.ChannelList{}
 	if err := c.List(ctx, &client.ListOptions{}, cl); err != nil {
