@@ -232,6 +232,7 @@ spec:
     matchLabels: &labels
       clusterChannelProvisioner: kafka
       role: dispatcher
+  serviceName: kafka-channel-dispatcher-service
   template:
     metadata:
       labels: *labels
