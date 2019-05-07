@@ -7,6 +7,7 @@ spec:
   resources:
     - apiVersion: v1
       kind: Pod
+  mode: "Resource"
   sink:
     apiVersion: eventing.knative.dev/v1alpha1
     kind: Broker

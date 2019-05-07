@@ -40,6 +40,7 @@ var (
 
 type envConfig struct {
 	Namespace  string   `envconfig:"SYSTEM_NAMESPACE" default:"default"`
+	Mode       string   `envconfig:"MODE"`
 	SinkURI    string   `split_words:"true" required:"true"`
 	ApiVersion []string `split_words:"true" required:"true"`
 	Kind       []string `required:"true"`
@@ -83,10 +84,11 @@ func main() {
 		logger.Fatalw("Error building cloud event client", zap.Error(err))
 	}
 
-	gvrs := []schema.GroupVersionResource(nil)
+	gvrcs := []apiserver.GVRC(nil)
 
 	for i, apiVersion := range env.ApiVersion {
 		kind := env.Kind[i]
+		controlled := env.Controller[i]
 
 		gv, err := schema.ParseGroupVersion(apiVersion)
 		if err != nil {
@@ -94,10 +96,19 @@ func main() {
 		}
 		// This is really bad.
 		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: kind, Group: gv.Group, Version: gv.Version})
-		gvrs = append(gvrs, gvr)
+		gvrcs = append(gvrcs, apiserver.GVRC{
+			GVR:        gvr,
+			Controller: controlled,
+		})
 	}
 
-	a := apiserver.NewAdaptor(cfg.Host, env.Namespace, client, eventsClient, logger, gvrs...)
+	opt := apiserver.Options{
+		Namespace: env.Namespace,
+		Mode:      env.Mode,
+		GVRCs:     gvrcs,
+	}
+
+	a := apiserver.NewAdaptor(cfg.Host, client, eventsClient, logger, opt)
 	logger.Info("starting kubernetes api adapter")
 	if err := a.Start(stopCh); err != nil {
 		logger.Warn("start returned an error,", zap.Error(err))

@@ -67,6 +67,11 @@ type ApiServerSourceSpec struct {
 	// Sink is a reference to an object that will resolve to a domain name to use as the sink.
 	// +optional
 	Sink *corev1.ObjectReference `json:"sink,omitempty"`
+
+	// Mode is the mode the receive adapter controller runs under: Ref or Resource.
+	// `Ref` sends only the reference to the resource.
+	// `Resource` send the full resource.
+	Mode string `json:"mode,omitempty"`
 }
 
 // ApiServerSourceStatus defines the observed state of ApiServerSource

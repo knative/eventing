@@ -96,6 +96,9 @@ func makeEnv(sinkURI string, spec *v1alpha1.ApiServerSourceSpec) []corev1.EnvVar
 		Name:  "SINK_URI",
 		Value: sinkURI,
 	}, {
+		Name:  "MODE",
+		Value: spec.Mode,
+	}, {
 		Name:  "API_VERSION",
 		Value: apiversions,
 	}, {
