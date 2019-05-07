@@ -104,23 +104,27 @@ type Adapter interface {
 }
 
 type adapter struct {
-	gvrs []schema.GroupVersionResource
+	APIVersion string
+	Kind       string
 
+	gvrs      []schema.GroupVersionResource
 	k8s       dynamic.Interface
 	ce        cloudevents.Client
-	source    string
+	name      string
 	namespace string
 	logger    *zap.SugaredLogger
 }
 
-func NewAdaptor(source string, namespace string, k8sClient dynamic.Interface, ceClient cloudevents.Client, logger *zap.SugaredLogger, gvr ...schema.GroupVersionResource) Adapter {
+func NewAdaptor(name string, namespace string, k8sClient dynamic.Interface, ceClient cloudevents.Client, logger *zap.SugaredLogger, gvr ...schema.GroupVersionResource) Adapter {
 	a := &adapter{
-		k8s:       k8sClient,
-		ce:        ceClient,
-		source:    source,
-		namespace: namespace,
-		gvrs:      gvr,
-		logger:    logger,
+		APIVersion: "v1",
+		Kind:       "Pod",
+		k8s:        k8sClient,
+		ce:         ceClient,
+		name:       name,
+		namespace:  namespace,
+		gvrs:       gvr,
+		logger:     logger,
 	}
 	return a
 }
@@ -217,9 +221,16 @@ func (a *adapter) send(eventType string, obj *duckv1alpha1.KResource, data *Kube
 		Namespace:  obj.GetNamespace(),
 	})
 
+	source := createSelfLink(corev1.ObjectReference{
+		APIVersion: a.APIVersion,
+		Kind:       a.Kind,
+		Name:       a.name,
+		Namespace:  a.namespace,
+	})
+
 	event := cloudevents.NewEvent()
 	event.SetType(eventType)
-	event.SetSource(a.source)
+	event.SetSource(source)
 	event.SetSubject(subject)
 
 	if err := event.SetData(data); err != nil {
