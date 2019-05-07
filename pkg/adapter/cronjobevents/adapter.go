@@ -19,7 +19,8 @@ package cronjobevents
 import (
 	"context"
 	"encoding/json"
-	"github.com/cloudevents/sdk-go"
+
+	cloudevents "github.com/cloudevents/sdk-go"
 	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	"github.com/knative/eventing/pkg/kncloudevents"
 	"github.com/knative/pkg/logging"
