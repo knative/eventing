@@ -48,9 +48,9 @@ const (
 )
 
 type KubernetesEvent struct {
-	Object    *corev1.Event `json:"obj,omitempty"`
-	NewObject *corev1.Event `json:"newObj,omitempty"`
-	OldObject *corev1.Event `json:"oldObj,omitempty"`
+	Object    *duckv1alpha1.KResource `json:"obj,omitempty"`
+	NewObject *duckv1alpha1.KResource `json:"newObj,omitempty"`
+	OldObject *duckv1alpha1.KResource `json:"oldObj,omitempty"`
 }
 
 // Creates a URI of the form found in object metadata selfLinks
@@ -150,8 +150,18 @@ func (a *adapter) Start(stopCh <-chan struct{}) error {
 		Type:         &duckv1alpha1.KResource{},
 	}
 
+	//dynamic.NamespaceableResourceInterface()
+
+	//eventsInformer := coreinformers.NewFilteredEventInformer(
+	//	a.kubeClient, a.Namespace, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, nil)
+
+	//eventsInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	//	AddFunc:    a.addEvent,
+	//	UpdateFunc: a.updateEvent,
+	//})
+
 	for _, gvr := range a.gvrs {
-		informer, _, err := factory.Get(gvr)
+		informer, _, err := factory.GetNamespaced(gvr, a.namespace)
 		if err != nil {
 			return err
 		}
@@ -169,37 +179,44 @@ func (a *adapter) Start(stopCh <-chan struct{}) error {
 }
 
 func (a *adapter) addEvent(obj interface{}) {
-	objEvent := obj.(*corev1.Event)
+	object := obj.(*duckv1alpha1.KResource)
 
-	if err := a.send(addEventType, createSelfLink(objEvent.InvolvedObject), &KubernetesEvent{
-		Object: objEvent,
+	if err := a.send(addEventType, object, &KubernetesEvent{
+		Object: object,
 	}); err != nil {
 		a.logger.Info("event delivery failed", zap.Error(err))
 	}
 }
 
 func (a *adapter) updateEvent(oldObj, newObj interface{}) {
-	objEvent := newObj.(*corev1.Event)
+	object := newObj.(*duckv1alpha1.KResource)
 
-	if err := a.send(updateEventType, createSelfLink(objEvent.InvolvedObject), &KubernetesEvent{
-		NewObject: objEvent,
-		OldObject: oldObj.(*corev1.Event),
+	if err := a.send(updateEventType, object, &KubernetesEvent{
+		NewObject: object,
+		OldObject: oldObj.(*duckv1alpha1.KResource),
 	}); err != nil {
 		a.logger.Info("event delivery failed", zap.Error(err))
 	}
 }
 
 func (a *adapter) deleteEvent(obj interface{}) {
-	objEvent := obj.(*corev1.Event)
+	object := obj.(*duckv1alpha1.KResource)
 
-	if err := a.send(deleteEventType, createSelfLink(objEvent.InvolvedObject), &KubernetesEvent{
-		Object: objEvent,
+	if err := a.send(deleteEventType, object, &KubernetesEvent{
+		Object: object,
 	}); err != nil {
 		a.logger.Info("event delivery failed", zap.Error(err))
 	}
 }
 
-func (a *adapter) send(eventType, subject string, data *KubernetesEvent) error {
+func (a *adapter) send(eventType string, obj *duckv1alpha1.KResource, data *KubernetesEvent) error {
+	subject := createSelfLink(corev1.ObjectReference{
+		APIVersion: obj.APIVersion,
+		Kind:       obj.Kind,
+		Name:       obj.GetName(),
+		Namespace:  obj.GetNamespace(),
+	})
+
 	event := cloudevents.NewEvent()
 	event.SetType(eventType)
 	event.SetSource(a.source)

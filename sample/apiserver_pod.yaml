@@ -6,7 +6,7 @@ spec:
   serviceAccountName: events-sa
   resources:
     - apiVersion: v1
-      kind: Pods
+      kind: Pod
   sink:
     apiVersion: eventing.knative.dev/v1alpha1
     kind: Broker
@@ -24,7 +24,7 @@ metadata:
   name: event-watcher
 rules:
   - apiGroups:
-      - v1
+      - ""
     resources:
       - pods
     verbs:

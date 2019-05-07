@@ -66,6 +66,28 @@ func (dif *TypedInformerFactory) Get(gvr schema.GroupVersionResource) (cache.Sha
 	return inf, lister, nil
 }
 
+// Get implements InformerFactory.
+func (dif *TypedInformerFactory) GetNamespaced(gvr schema.GroupVersionResource, namespace string) (cache.SharedIndexInformer, cache.GenericNamespaceLister, error) {
+	listObj := dif.Type.GetListType()
+	lw := &cache.ListWatch{
+		ListFunc:  asStructuredLister(dif.Client.Resource(gvr).Namespace(namespace).List, listObj),
+		WatchFunc: AsStructuredWatcher(dif.Client.Resource(gvr).Namespace(namespace).Watch, dif.Type),
+	}
+	inf := cache.NewSharedIndexInformer(lw, dif.Type, dif.ResyncPeriod, cache.Indexers{
+		cache.NamespaceIndex: cache.MetaNamespaceIndexFunc,
+	})
+
+	lister := cache.NewGenericLister(inf.GetIndexer(), gvr.GroupResource()).ByNamespace(namespace)
+
+	go inf.Run(dif.StopChannel)
+
+	if ok := cache.WaitForCacheSync(dif.StopChannel, inf.HasSynced); !ok {
+		return nil, nil, fmt.Errorf("failed starting shared index informer for %v with type %T on namespace %s", gvr, dif.Type, namespace)
+	}
+
+	return inf, lister, nil
+}
+
 type unstructuredLister func(metav1.ListOptions) (*unstructured.UnstructuredList, error)
 
 func asStructuredLister(ulist unstructuredLister, listObj runtime.Object) cache.ListFunc {

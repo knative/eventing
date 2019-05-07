@@ -124,7 +124,7 @@ func main() {
 		//controllers = append(controllers, apiserver.NewController(opt, informer, lister, eventsClient, controlled))
 	}
 
-	a := apiserver.NewAdaptor("this_source", client, eventsClient, logger, gvrs...)
+	a := apiserver.NewAdaptor("this_source", env.Namespace, client, eventsClient, logger, gvrs...)
 	logger.Info("starting kubernetes api adapter")
 	if err := a.Start(stopCh); err != nil {
 		logger.Warn("start returned an error,", zap.Error(err))
