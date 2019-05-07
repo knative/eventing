@@ -78,6 +78,7 @@ func main() {
 	cronJobSourceInformer := eventingInformerFactory.Sources().V1alpha1().CronJobSources()
 	containerSourceInformer := eventingInformerFactory.Sources().V1alpha1().ContainerSources()
 	apiserverSourceInformer := eventingInformerFactory.Sources().V1alpha1().ApiServerSources()
+	eventTypeInformer := eventingInformerFactory.Eventing().V1alpha1().EventTypes()
 
 	// Kube
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
@@ -90,6 +91,7 @@ func main() {
 			opt,
 			cronJobSourceInformer,
 			deploymentInformer,
+			eventTypeInformer,
 		),
 		containersource.NewController(
 			opt,
@@ -125,6 +127,8 @@ func main() {
 		cronJobSourceInformer.Informer(),
 		containerSourceInformer.Informer(),
 		apiserverSourceInformer.Informer(),
+		eventTypeInformer.Informer(),
+
 		// Kube
 		deploymentInformer.Informer(),
 	); err != nil {

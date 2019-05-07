@@ -50,6 +50,13 @@ var _ kmeta.OwnerRefable = (*CronJobSource)(nil)
 // Check that CronJobSource implements the Conditions duck type.
 var _ = duck.VerifyType(&CronJobSource{}, &duckv1alpha1.Conditions{})
 
+const (
+	// CronJobEventType is the CronJob CloudEvent type.
+	CronJobEventType = "dev.knative.cronjob.event"
+	// CronJobEventSource is the CronJob CloudEvent source.
+	CronJobEventSource = "/CronJob"
+)
+
 // CronJobSourceSpec defines the desired state of the CronJobSource.
 type CronJobSourceSpec struct {
 

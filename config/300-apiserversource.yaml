@@ -46,15 +46,22 @@ spec:
           properties:
             serviceAccountName:
               type: string
+              description: "name of the ServiceAccount to use to run the receive adapter. More info: https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/."
             sink:
               type: object
+              description: "A reference to the object that should receive events."
             resources:
               items:
                 properties:
                   apiVersion:
                     type: string
+                    description: "API version of the objects to watch."
                   kind:
                     type: string
+                    description: "Kind of the objects to watch."
+                  controller:
+                    type: boolean
+                    description: "If true, watch the managing controller. More info: https://kubernetes.io/docs/concepts/workloads/controllers/garbage-collection/"
               type: array
           required:
           - resources

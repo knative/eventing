@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
@@ -120,4 +121,13 @@ type ClusterChannelProvisionerList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []ClusterChannelProvisioner `json:"items"`
+}
+
+// GetGroupVersionKind return GroupVersionKind for ClusterChannelProvisioner
+func (ccp *ClusterChannelProvisioner) GetGroupVersionKind() schema.GroupVersionKind {
+	return schema.GroupVersionKind{
+		Group:   SchemeGroupVersion.Group,
+		Version: SchemeGroupVersion.Version,
+		Kind:    "ClusterChannelProvisioner",
+	}
 }

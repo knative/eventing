@@ -59,13 +59,23 @@ func TestMakeReceiveAdapter(t *testing.T) {
 	})
 
 	one := int32(1)
+	trueValue := true
 	want := &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    "source-namespace",
-			GenerateName: "apiserver-source-name-",
+			GenerateName: "apiserversource-source-name-",
 			Labels: map[string]string{
 				"test-key1": "test-value1",
 				"test-key2": "test-value2",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion:         "sources.eventing.knative.dev/v1alpha1",
+					Kind:               "ApiServerSource",
+					Name:               "source-name",
+					Controller:         &trueValue,
+					BlockOwnerDeletion: &trueValue,
+				},
 			},
 		},
 		Spec: v1.DeploymentSpec{
