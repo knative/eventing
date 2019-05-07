@@ -18,12 +18,12 @@ package resources
 
 import (
 	"fmt"
+	"github.com/knative/pkg/kmeta"
 	"net/url"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // NewSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'uri'
@@ -35,11 +35,7 @@ func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerIngress *
 			Namespace:    t.Namespace,
 			GenerateName: fmt.Sprintf("%s-%s-", t.Spec.Broker, t.Name),
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(t, schema.GroupVersionKind{
-					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
-					Version: eventingv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Trigger",
-				}),
+				*kmeta.NewControllerRef(t),
 			},
 			Labels: SubscriptionLabels(t),
 		},
