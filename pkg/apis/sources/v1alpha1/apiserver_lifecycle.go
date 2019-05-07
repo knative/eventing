@@ -20,6 +20,22 @@ import (
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
 
+const (
+	// ApiServerConditionReady has status True when the ApiServerSource is ready to send events.
+	ApiServerConditionReady = duckv1alpha1.ConditionReady
+
+	// ApiServerConditionSinkProvided has status True when the ApiServerSource has been configured with a sink target.
+	ApiServerConditionSinkProvided duckv1alpha1.ConditionType = "SinkProvided"
+
+	// ApiServerConditionDeployed has status True when the ApiServerSource has had it's deployment created.
+	ApiServerConditionDeployed duckv1alpha1.ConditionType = "Deployed"
+)
+
+var apiserverCondSet = duckv1alpha1.NewLivingConditionSet(
+	ApiServerConditionSinkProvided,
+	ApiServerConditionDeployed,
+)
+
 // GetConditions returns Conditions
 func (s *ApiServerSourceStatus) GetConditions() duckv1alpha1.Conditions {
 	return s.Conditions
