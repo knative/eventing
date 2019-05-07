@@ -36,6 +36,10 @@ type ref struct {
 	controlledGVRs []schema.GroupVersionResource
 }
 
+// TODO: I think asController is not the feature we want. I think we want to be
+//  able to set the controller as a filter to the watch. Not emit all owners of
+//  the resource. Fix this. It has to be an api change on the CRD.
+
 func (a *ref) asController(obj interface{}) bool {
 	if len(a.controlledGVRs) > 0 {
 		object := obj.(*unstructured.Unstructured)
