@@ -459,6 +459,83 @@ spec:
 
 The following alternative solutions were considered but rejected.
 
+
+### Custom Trigger Types
+
+Another option could be to continue to use the orignal subscription filter
+function to allow for advanced filters without directly depending on CEL.
+
+Allow for the base trigger to take `spec.filter.uri` or `spec.fitler.ref`. Ref
+would be _addressable_ and resolve to a uri.
+
+The data plane contact of the filer uri/ref would be the same as subscriptions.
+
+#### Proposal: 
+
+```yaml
+kind: Trigger
+spec:
+  filter:
+    uri: http://foo.default.cluster.local/
+```
+
+
+```yaml
+kind: Trigger
+spec:
+  filter:
+    ref: 
+      kind: Service
+      apiVersion: serving.service.knative.dev
+      name: Steveo
+```
+
+Then, we make a TriggerCEL that is exactly the same as the above proposal with
+the chance in resource name. 
+
+The reconciler for `TriggerCEL` would turn the CEL input into a function hosted
+in our choice (service or pod) and it makes a Trigger pointing to that new
+_Addressable_ resource.
+
+The side effect is CEL becomes an add-on. If we use services, we can use
+servings.service revisions for versioning.
+
+Example:
+
+```yaml
+kind: TriggerCEL
+spec:
+  filter: >
+    ce.type == "com.github.pull.create" ||
+    (ce.type == "com.github.issue.create" && ce.source.matches("proposals")
+```
+
+(note expression is dropped, because TriggerCEL can be customized.)
+
+This reconciles into:
+
+```yaml
+kind: Trigger
+spec:
+  filter:
+    ref: 
+      kind: Service
+      apiVersion: serving.service.knative.dev
+      name: Steveo
+```
+
+and a service:
+
+```yaml
+kind: Service.serving
+name: Steveo
+spec:
+  image: (our image for CEL runtime)
+  env:
+    - name: "CEL_QUERY"
+      value: "insert the query base64 encoded here or in a config map"
+```
+
 ### Alternate expression language
 
 #### Javascript or Lua
