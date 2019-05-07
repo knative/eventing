@@ -21,6 +21,9 @@ import (
 	"log"
 	"os"
 
+	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logconfig"
@@ -40,9 +43,6 @@ import (
 	"k8s.io/client-go/rest"
 	controllerruntime "sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 var (

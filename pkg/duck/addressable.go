@@ -73,7 +73,7 @@ func (i *addressableInformer) TrackInNamespace(tracker tracker.Interface, obj me
 		}
 
 		// This is often used by Trigger and Subscription, both of which pass in refs that do not
-		// specify the namespace, they only
+		// specify the namespace.
 		ref.Namespace = obj.GetNamespace()
 		if err := tracker.Track(ref, obj); err != nil {
 			return err
