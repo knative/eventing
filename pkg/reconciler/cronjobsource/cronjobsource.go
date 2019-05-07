@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -35,7 +36,9 @@ import (
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/tools/cache"
 
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	sourceinformers "github.com/knative/eventing/pkg/client/informers/externalversions/sources/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
@@ -72,6 +75,7 @@ type Reconciler struct {
 	// listers index properties about resources
 	cronjobLister    listers.CronJobSourceLister
 	deploymentLister appsv1listers.DeploymentLister
+	eventTypeLister  eventinglisters.EventTypeLister
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -83,11 +87,13 @@ func NewController(
 	opt reconciler.Options,
 	cronjobsourceInformer sourceinformers.CronJobSourceInformer,
 	deploymentInformer appsv1informers.DeploymentInformer,
+	eventTypeInformer eventinginformers.EventTypeInformer,
 ) *controller.Impl {
 	r := &Reconciler{
 		Base:             reconciler.NewBase(opt, controllerAgentName),
 		cronjobLister:    cronjobsourceInformer.Lister(),
 		deploymentLister: deploymentInformer.Lister(),
+		eventTypeLister:  eventTypeInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
 
@@ -95,6 +101,11 @@ func NewController(
 	cronjobsourceInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("CronJobSource")),
+		Handler:    reconciler.Handler(impl.EnqueueControllerOf),
+	})
+
+	eventTypeInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("CronJobSource")),
 		Handler:    reconciler.Handler(impl.EnqueueControllerOf),
 	})
@@ -152,6 +163,8 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 	//     - Nothing to delete.
 	// 2. Create a receive adapter in the form of a Deployment.
 	//     - Will be garbage collected by K8s when this CronJobSource is deleted.
+	// 3. Create the EventType that it can emit.
+	//     - Will be garbage collected by K8s when this CronJobSource is deleted.
 
 	cronjob.Status.InitializeConditions()
 
@@ -174,6 +187,17 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 		return err
 	}
 	cronjob.Status.MarkDeployed()
+
+	// Only create EventType for Broker sinks.
+	if cronjob.Spec.Sink.Kind == "Broker" {
+		_, err = r.createEventType(ctx, cronjob)
+		if err != nil {
+			cronjob.Status.MarkNoEventType("EventTypeCreateFailed", "")
+			return err
+		}
+		cronjob.Status.MarkEventType()
+	}
+
 	return nil
 }
 
@@ -249,6 +273,41 @@ func (r *Reconciler) getReceiveAdapter(ctx context.Context, src *v1alpha1.CronJo
 	for _, dep := range dl.Items {
 		if metav1.IsControlledBy(&dep, src) {
 			return &dep, nil
+		}
+	}
+	return nil, apierrors.NewNotFound(schema.GroupResource{}, "")
+}
+
+func (r *Reconciler) createEventType(ctx context.Context, src *v1alpha1.CronJobSource) (*eventingv1alpha1.EventType, error) {
+	current, err := r.getEventType(ctx, src)
+	if err != nil && !apierrors.IsNotFound(err) {
+		logging.FromContext(ctx).Error("Unable to get an existing event type", zap.Error(err))
+		return nil, err
+	}
+	if current != nil {
+		// Not checking for spec changes as it is immutable. Only description is not, but we don't care if it is changed.
+		logging.FromContext(ctx).Desugar().Debug("EventType already exists", zap.Any("eventType", current))
+		return current, nil
+	}
+	expected := resources.MakeEventType(src)
+	if current, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(expected); err != nil {
+		return nil, err
+	}
+	logging.FromContext(ctx).Desugar().Info("EventType created", zap.Any("eventType", current))
+	return current, err
+}
+
+func (r *Reconciler) getEventType(ctx context.Context, src *v1alpha1.CronJobSource) (*eventingv1alpha1.EventType, error) {
+	etl, err := r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).List(metav1.ListOptions{
+		LabelSelector: r.getLabelSelector(src).String(),
+	})
+	if err != nil {
+		logging.FromContext(ctx).Desugar().Error("Unable to list event types: %v", zap.Error(err))
+		return nil, err
+	}
+	for _, et := range etl.Items {
+		if metav1.IsControlledBy(&et, src) {
+			return &et, nil
 		}
 	}
 	return nil, apierrors.NewNotFound(schema.GroupResource{}, "")

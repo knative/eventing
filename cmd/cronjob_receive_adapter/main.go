@@ -19,8 +19,8 @@ package main
 import (
 	"flag"
 	"log"
-	"os"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/knative/eventing/pkg/adapter/cronjobevents"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
@@ -28,23 +28,18 @@ import (
 	"golang.org/x/net/context"
 )
 
-const (
+type envConfig struct {
 	// Environment variable container schedule.
-	envSchedule = "SCHEDULE"
+	Schedule string `envconfig:"SCHEDULE" required:"true"`
 
 	// Environment variable containing data.
-	envData = "DATA"
+	Data string `envconfig:"DATA" required:"true"`
 
 	// Sink for messages.
-	envSinkURI = "SINK_URI"
-)
+	Sink string `envconfig:"SINK_URI" required:"true"`
 
-func getRequiredEnv(envKey string) string {
-	val, defined := os.LookupEnv(envKey)
-	if !defined {
-		log.Fatalf("required environment variable not defined %q", envKey)
-	}
-	return val
+	// Environment variable containing the name of the cron job.
+	Name string `envconfig:"NAME" required:"true"`
 }
 
 func main() {
@@ -58,10 +53,16 @@ func main() {
 		log.Fatalf("Unable to create logger: %v", err)
 	}
 
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		log.Fatal("Failed to process env var", zap.Error(err))
+	}
+
 	adapter := &cronjobevents.Adapter{
-		Schedule: getRequiredEnv(envSchedule),
-		Data:     getRequiredEnv(envData),
-		SinkURI:  getRequiredEnv(envSinkURI),
+		Schedule: env.Schedule,
+		Data:     env.Data,
+		SinkURI:  env.Sink,
+		Name:     env.Name,
 	}
 
 	logger.Info("Starting Receive Adapter", zap.Reflect("adapter", adapter))
