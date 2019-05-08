@@ -56,7 +56,7 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						"sidecar.istio.io/inject": "false",
+						"sidecar.istio.io/inject": "false", // needs to talk to the api server.
 					},
 					Labels: args.Labels,
 				},
@@ -112,13 +112,6 @@ func makeEnv(sinkURI string, spec *v1alpha1.ApiServerSourceSpec) []corev1.EnvVar
 		ValueFrom: &corev1.EnvVarSource{
 			FieldRef: &corev1.ObjectFieldSelector{
 				FieldPath: "metadata.namespace",
-			},
-		},
-	}, {
-		Name: "SYSTEM_NAME",
-		ValueFrom: &corev1.EnvVarSource{
-			FieldRef: &corev1.ObjectFieldSelector{
-				FieldPath: "metadata.name",
 			},
 		},
 	}}
