@@ -100,9 +100,5 @@ type TriggerList struct {
 
 // GetGroupVersionKind returns GroupVersionKind for Triggers
 func (t *Trigger) GetGroupVersionKind() schema.GroupVersionKind {
-	return schema.GroupVersionKind{
-		Group:   SchemeGroupVersion.Group,
-		Version: SchemeGroupVersion.Version,
-		Kind:    "Trigger",
-	}
+	return SchemeGroupVersion.WithKind("Trigger")
 }
