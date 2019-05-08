@@ -122,7 +122,7 @@ func (a *adapter) Start(stopCh <-chan struct{}) error {
 		}
 
 	default:
-		a.logger.Fatal("mode not understood", a.mode)
+		return fmt.Errorf("mode %q not understood", a.mode)
 	}
 
 	for _, gvrc := range a.gvrcs {
@@ -139,12 +139,7 @@ func (a *adapter) Start(stopCh <-chan struct{}) error {
 		go informer.Run(stopCh)
 
 		if ok := cache.WaitForCacheSync(stopCh, informer.HasSynced); !ok {
-			return fmt.Errorf("failed starting shared index informer for %v with type %T on namespace %s", gvrc.GVR, a.namespace)
-		}
-
-		// Double check the delegate is not nil.
-		if d == nil {
-			continue
+			return fmt.Errorf("failed starting shared index informer for %s on namespace %s", gvrc.GVR.String(), a.namespace)
 		}
 
 		informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
