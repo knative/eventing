@@ -18,8 +18,9 @@ package resources
 
 import (
 	"fmt"
-	"github.com/knative/pkg/kmeta"
 	"net/url"
+
+	"github.com/knative/pkg/kmeta"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
