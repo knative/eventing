@@ -16,4 +16,85 @@ limitations under the License.
 
 package apiserver
 
-// TODO
+import (
+	kncetesting "github.com/knative/eventing/pkg/kncloudevents/testing"
+	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"testing"
+)
+
+func simplePod(name, namespace string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Pod",
+			"metadata": map[string]interface{}{
+				"namespace": namespace,
+				"name":      name,
+			},
+		},
+	}
+}
+
+func simpleOwnedPod(name, namespace string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Pod",
+			"metadata": map[string]interface{}{
+				"namespace": namespace,
+				"name":      "owned",
+				"ownerReferences": []interface{}{
+					map[string]interface{}{
+						"apiVersion":         "apps/v1",
+						"blockOwnerDeletion": true,
+						"controller":         true,
+						"kind":               "ReplicaSet",
+						"name":               name,
+						"uid":                "0c119059-7113-11e9-a6c5-42010a8a00ed",
+					},
+				},
+			},
+		},
+	}
+}
+
+func validateSent(t *testing.T, ce *kncetesting.TestCloudEventsClient, want string) {
+	if got := len(ce.Sent); got != 1 {
+		t.Errorf("Expected 1 event to be sent, got %d", got)
+	}
+
+	if got := ce.Sent[0].Type(); got != want {
+		t.Errorf("Expected %q event to be sent, got %q", want, got)
+	}
+}
+
+func validateNotSent(t *testing.T, ce *kncetesting.TestCloudEventsClient, want string) {
+	if got := len(ce.Sent); got != 0 {
+		t.Errorf("Expected 0 event to be sent, got %d", got)
+	}
+}
+
+func makeResourceAndTestingClient() (*resource, *kncetesting.TestCloudEventsClient) {
+	ce := kncetesting.NewTestClient()
+	source := "unit-test"
+	logger := zap.NewExample().Sugar()
+
+	return &resource{
+		ce:     ce,
+		source: source,
+		logger: logger,
+	}, ce
+}
+
+func makeRefAndTestingClient() (*ref, *kncetesting.TestCloudEventsClient) {
+	ce := kncetesting.NewTestClient()
+	source := "unit-test"
+	logger := zap.NewExample().Sugar()
+
+	return &ref{
+		ce:     ce,
+		source: source,
+		logger: logger,
+	}, ce
+}
