@@ -17,6 +17,9 @@ limitations under the License.
 package apiserversource
 
 import (
+	"fmt"
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"os"
 	"testing"
 
@@ -47,6 +50,11 @@ var (
 	sinkRef = corev1.ObjectReference{
 		Name:       sinkName,
 		Kind:       "Channel",
+		APIVersion: "eventing.knative.dev/v1alpha1",
+	}
+	brokerRef = corev1.ObjectReference{
+		Name:       sinkName,
+		Kind:       "Broker",
 		APIVersion: "eventing.knative.dev/v1alpha1",
 	}
 	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
@@ -139,6 +147,57 @@ func TestReconcile(t *testing.T) {
 				makeReceiveAdapter(),
 			},
 		},
+		{
+			Name: "valid with broker sink",
+			Objects: []runtime.Object{
+				NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink: &brokerRef,
+					}),
+				),
+				NewBroker(sinkName, testNS,
+					WithInitBrokerConditions,
+					WithBrokerAddress(sinkDNS),
+				),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink: &brokerRef,
+					}),
+					// Status Update:
+					WithInitApiServerSourceConditions,
+					WithApiServerSourceDeployed,
+					WithApiServerSourceSink(sinkURI),
+					WithApiServerSourceEventTypes,
+				),
+			}},
+			WantCreates: []metav1.Object{
+				makeEventType(sourcesv1alpha1.ApiServerSourceAddEventType),
+				makeEventType(sourcesv1alpha1.ApiServerSourceDeleteEventType),
+				makeEventType(sourcesv1alpha1.ApiServerSourceUpdateEventType),
+				makeEventType(sourcesv1alpha1.ApiServerSourceAddRefEventType),
+				makeEventType(sourcesv1alpha1.ApiServerSourceDeleteRefEventType),
+				makeEventType(sourcesv1alpha1.ApiServerSourceUpdateRefEventType),
+				makeReceiveAdapter(),
+			},
+		},
 	}
 
 	defer logtesting.ClearAll()
@@ -201,4 +260,41 @@ func makeReceiveAdapter() *appsv1.Deployment {
 		SinkURI: sinkURI,
 	}
 	return resources.MakeReceiveAdapter(&args)
+}
+
+func makeEventType(eventType string) *v1alpha1.EventType {
+	return &v1alpha1.EventType{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: fmt.Sprintf("%s-", utils.ToDNS1123Subdomain(eventType)),
+			Labels:       resources.Labels(sourceName),
+			Namespace:    testNS,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(makeApiServerSource(), schema.GroupVersionKind{
+					Group:   sourcesv1alpha1.SchemeGroupVersion.Group,
+					Version: sourcesv1alpha1.SchemeGroupVersion.Version,
+					Kind:    "ApiServerSource",
+				}),
+			},
+		},
+		Spec: v1alpha1.EventTypeSpec{
+			Type: eventType,
+			// TODO Change this.
+			Source: "TODO",
+			Broker: sinkName,
+		},
+	}
+}
+
+func makeApiServerSource() *sourcesv1alpha1.ApiServerSource {
+	return NewApiServerSource(sourceName, testNS,
+		WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+			Resources: []sourcesv1alpha1.ApiServerResource{
+				{
+					APIVersion: "",
+					Kind:       "Namespace",
+				},
+			},
+			Sink: &brokerRef,
+		}),
+	)
 }
