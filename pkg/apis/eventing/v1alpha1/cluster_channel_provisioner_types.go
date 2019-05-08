@@ -23,6 +23,7 @@ import (
 
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/kmeta"
 	"github.com/knative/pkg/webhook"
 )
 
@@ -50,6 +51,7 @@ var _ apis.Validatable = (*ClusterChannelProvisioner)(nil)
 var _ apis.Defaultable = (*ClusterChannelProvisioner)(nil)
 var _ runtime.Object = (*ClusterChannelProvisioner)(nil)
 var _ webhook.GenericCRD = (*ClusterChannelProvisioner)(nil)
+var _ kmeta.OwnerRefable = (*ClusterChannelProvisioner)(nil)
 
 // ClusterChannelProvisionerSpec is the spec for a ClusterChannelProvisioner resource.
 type ClusterChannelProvisionerSpec struct {
