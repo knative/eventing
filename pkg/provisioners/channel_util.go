@@ -3,6 +3,7 @@ package provisioners
 import (
 	"context"
 	"fmt"
+	"github.com/knative/pkg/kmeta"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/labels"
@@ -234,11 +235,7 @@ func newK8sService(c *eventingv1alpha1.Channel, opts ...K8sServiceOption) (*core
 			Namespace:    c.Namespace,
 			Labels:       k8sServiceLabels(c),
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(c, schema.GroupVersionKind{
-					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
-					Version: eventingv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Channel",
-				}),
+				*kmeta.NewControllerRef(c),
 			},
 		},
 		Spec: corev1.ServiceSpec{
