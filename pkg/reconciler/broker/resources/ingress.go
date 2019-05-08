@@ -26,7 +26,6 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // IngressArgs are the arguments to create a Broker's ingress Deployment.
@@ -103,11 +102,7 @@ func MakeIngressService(b *eventingv1alpha1.Broker) *corev1.Service {
 			Name:   fmt.Sprintf("%s-broker", b.Name),
 			Labels: IngressLabels(b.Name),
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(b, schema.GroupVersionKind{
-					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
-					Version: eventingv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Broker",
-				}),
+				*kmeta.NewControllerRef(b),
 			},
 		},
 		Spec: corev1.ServiceSpec{
