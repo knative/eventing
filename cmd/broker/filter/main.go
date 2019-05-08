@@ -26,7 +26,7 @@ import (
 	"time"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/broker"
+	"github.com/knative/eventing/pkg/broker/receiver"
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/signals"
@@ -76,7 +76,7 @@ func main() {
 
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
-	receiver, err := broker.New(logger, mgr.GetClient())
+	receiver, err := receiver.New(logger, mgr.GetClient())
 	if err != nil {
 		logger.Fatal("Error creating Receiver", zap.Error(err))
 	}

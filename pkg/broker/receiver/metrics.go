@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package broker
+package receiver
 
 import (
 	"go.opencensus.io/stats"
@@ -31,9 +31,16 @@ var (
 	// received by the trigger. The value of the Result tag indicates whether
 	// the message was filtered or dispatched.
 	MeasureMessagesTotal = stats.Int64(
-		"knative.dev/eventing/trigger/measures/messages_total",
+		"knative.dev/eventing/trigger/receiver/measures/messages_total",
 		"Total number of messages received",
 		stats.UnitNone,
+	)
+
+	// MeasureDispatchTime records the time spent dispatching a message, in milliseconds.
+	MeasureDispatchTime = stats.Int64(
+		"knative.dev/eventing/trigger/receiver/measures/dispatch_time",
+		"Time spent dispatching a message",
+		stats.UnitMilliseconds,
 	)
 
 	// TagTrigger is a tag key referring to the trigger name
@@ -42,6 +49,29 @@ var (
 	// TagResult is a tag key referring to the observed result of an operation.
 	TagResult = mustNewTagKey("result")
 )
+
+// initMetrics initiallizes the receiver metrics
+func init() {
+	// Create views for exporting measurements.
+
+	err := view.Register(
+		&view.View{
+			Name:        "messages_total",
+			Measure:     MeasureMessagesTotal,
+			Aggregation: view.Count(),
+			TagKeys:     []tag.Key{TagResult, TagTrigger},
+		},
+		&view.View{
+			Name:        "dispatch_time",
+			Measure:     MeasureDispatchTime,
+			Aggregation: view.Distribution(10, 100, 1000, 10000),
+			TagKeys:     []tag.Key{TagResult, TagTrigger},
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+}
 
 // mustNewTagKey creates a Tag or panics. This will only fail if the tag key
 // doesn't conform to tag name validations.
@@ -52,20 +82,4 @@ func mustNewTagKey(k string) tag.Key {
 		panic(err)
 	}
 	return tagKey
-}
-
-func initViews() {
-	// Create views for exporting measurements.
-	err := view.Register(
-		&view.View{
-			Name:        "messages_total",
-			Measure:     MeasureMessagesTotal,
-			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{TagResult, TagTrigger},
-		},
-	)
-
-	if err != nil {
-		panic(err)
-	}
 }

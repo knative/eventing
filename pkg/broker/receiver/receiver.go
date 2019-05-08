@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package broker
+package receiver
 
 import (
 	"context"
@@ -25,6 +25,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/broker"
 	"github.com/knative/eventing/pkg/reconciler/trigger/path"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -46,7 +47,7 @@ type Receiver struct {
 
 // New creates a new Receiver and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned MessageReceiver.
-func New(logger *zap.Logger, client client.Client) (*Receiver, error) {
+func New(logger *zap.Logger, client client.Client, metricsNamespace string) (*Receiver, error) {
 	ceClient, err := cloudevents.NewDefaultClient()
 	if err != nil {
 		return nil, err
@@ -61,7 +62,6 @@ func New(logger *zap.Logger, client client.Client) (*Receiver, error) {
 	if err != nil {
 		return nil, err
 	}
-	initViews()
 	return r, nil
 }
 
@@ -134,7 +134,7 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 
 	// Remove the TTL attribute that is used by the Broker.
 	originalV2 := event.Context.AsV02()
-	ttl, present := originalV2.Extensions[V02TTLAttribute]
+	ttl, present := originalV2.Extensions[broker.V02TTLAttribute]
 	if !present {
 		// Only messages sent by the Broker should be here. If the attribute isn't here, then the
 		// event wasn't sent by the Broker, so we can drop it.
@@ -145,7 +145,7 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 		ctx, _ = tag.New(ctx, tag.Insert(TagResult, "droppedDueToTTL"))
 		return nil
 	}
-	delete(originalV2.Extensions, V02TTLAttribute)
+	delete(originalV2.Extensions, broker.V02TTLAttribute)
 	event.Context = originalV2
 
 	r.logger.Debug("Received message", zap.Any("triggerRef", triggerRef))
@@ -165,13 +165,13 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 	ctx, _ = tag.New(ctx, tag.Insert(TagResult, "dispatched"))
 
 	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
-	responseEvent.Context, err = SetTTL(responseEvent.Context, ttl)
+	responseEvent.Context, err = broker.SetTTL(responseEvent.Context, ttl)
 	if err != nil {
 		return err
 	}
 	resp.Event = responseEvent
 	resp.Context = &cloudevents.HTTPTransportResponseContext{
-		Header: extractPassThroughHeaders(tctx),
+		Header: broker.ExtractPassThroughHeaders(tctx),
 	}
 
 	return nil
@@ -179,6 +179,9 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 
 // sendEvent sends an event to a subscriber if the trigger filter passes.
 func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportContext, trigger types.NamespacedName, event *cloudevents.Event) (*cloudevents.Event, error) {
+	// To use in dispatch time metric
+	startTS := time.Now()
+
 	t, err := r.getTrigger(ctx, trigger)
 	if err != nil {
 		r.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("triggerRef", trigger))
@@ -203,9 +206,20 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransport
 		ctx, _ = tag.New(ctx, tag.Insert(TagResult, "dispatched"))
 		return nil, nil
 	}
+	sendingCTX := broker.SendingContext(ctx, tctx, subscriberURI)
+	defer func() {
+		dispatchTimeMS := int64(time.Now().Sub(startTS) / time.Millisecond)
+		stats.Record(sendingCTX, MeasureDispatchTime.M(dispatchTimeMS))
+	}()
 
-	sendingCTX := SendingContext(ctx, tctx, subscriberURI)
-	return r.ceClient.Send(sendingCTX, *event)
+	e, err := r.ceClient.Send(sendingCTX, *event)
+	if err != nil {
+		sendingCTX, _ = tag.New(sendingCTX, tag.Insert(TagResult, "error"))
+	} else {
+		sendingCTX, _ = tag.New(sendingCTX, tag.Insert(TagResult, "ok"))
+	}
+
+	return e, err
 }
 
 func (r *Receiver) getTrigger(ctx context.Context, ref types.NamespacedName) (*eventingv1alpha1.Trigger, error) {
