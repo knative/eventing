@@ -42,11 +42,9 @@ spec:
     - name: Broker
       type: string
       JSONPath: ".spec.broker"
-    # weird bug with Description, if it doesn't start with a capital letter,
-    # it is not rendered in the kubectl output.
     - name: Description
       type: string
-      JSONPath: ".spec.Description"
+      JSONPath: ".spec.description"
     - name: Ready
       type: string
       JSONPath: ".status.conditions[?(@.type==\"Ready\")].status"
