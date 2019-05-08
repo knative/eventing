@@ -127,9 +127,5 @@ type ClusterChannelProvisionerList struct {
 
 // GetGroupVersionKind return GroupVersionKind for ClusterChannelProvisioner
 func (ccp *ClusterChannelProvisioner) GetGroupVersionKind() schema.GroupVersionKind {
-	return schema.GroupVersionKind{
-		Group:   SchemeGroupVersion.Group,
-		Version: SchemeGroupVersion.Version,
-		Kind:    "ClusterChannelProvisioner",
-	}
+	return SchemeGroupVersion.WithKind("ClusterChannelProvisioner")
 }

@@ -109,9 +109,5 @@ type ChannelList struct {
 
 // GetGroupVersionKind returns GroupVersionKind for Channels
 func (c *Channel) GetGroupVersionKind() schema.GroupVersionKind {
-	return schema.GroupVersionKind{
-		Group:   SchemeGroupVersion.Group,
-		Version: SchemeGroupVersion.Version,
-		Kind:    "Channel",
-	}
+	return SchemeGroupVersion.WithKind("Channel")
 }
