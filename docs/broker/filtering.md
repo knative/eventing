@@ -465,7 +465,7 @@ The following alternative solutions were considered but rejected.
 Another option could be to continue to use the orignal subscription filter
 function to allow for advanced filters without directly depending on CEL.
 
-Allow for the base trigger to take `spec.filter.uri` or `spec.fitler.ref`. Ref
+Allow for the base trigger to take `spec.filter.uri` or `spec.filter.ref`. Ref
 would be _addressable_ and resolve to a uri.
 
 The data plane contact of the filer uri/ref would be the same as subscriptions.
