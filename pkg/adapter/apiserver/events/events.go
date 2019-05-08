@@ -44,6 +44,9 @@ type ResourceEvent struct {
 }
 
 func MakeAddEvent(source string, obj interface{}) (*cloudevents.Event, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("resource can not be nil")
+	}
 	object := obj.(*unstructured.Unstructured)
 
 	return makeEvent(source, addEventType, object, &ResourceEvent{
@@ -52,15 +55,25 @@ func MakeAddEvent(source string, obj interface{}) (*cloudevents.Event, error) {
 }
 
 func MakeUpdateEvent(source string, oldObj, newObj interface{}) (*cloudevents.Event, error) {
+	if newObj == nil {
+		return nil, fmt.Errorf("new resource can not be nil")
+	}
 	object := newObj.(*unstructured.Unstructured)
 
-	return makeEvent(source, updateEventType, object, &ResourceEvent{
+	data := &ResourceEvent{
 		NewObject: object,
-		OldObject: oldObj.(*unstructured.Unstructured),
-	})
+	}
+	if oldObj != nil {
+		data.OldObject = oldObj.(*unstructured.Unstructured)
+	}
+
+	return makeEvent(source, updateEventType, object, data)
 }
 
 func MakeDeleteEvent(source string, obj interface{}) (*cloudevents.Event, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("resource can not be nil")
+	}
 	object := obj.(*unstructured.Unstructured)
 
 	return makeEvent(source, deleteEventType, object, &ResourceEvent{
@@ -68,8 +81,8 @@ func MakeDeleteEvent(source string, obj interface{}) (*cloudevents.Event, error)
 	})
 }
 
-func getRef(object *unstructured.Unstructured, controller bool) corev1.ObjectReference {
-	if controller {
+func getRef(object *unstructured.Unstructured, asController bool) corev1.ObjectReference {
+	if asController {
 		if owner := metav1.GetControllerOf(object); owner != nil {
 			return corev1.ObjectReference{
 				APIVersion: owner.APIVersion,
@@ -88,16 +101,25 @@ func getRef(object *unstructured.Unstructured, controller bool) corev1.ObjectRef
 }
 
 func MakeAddRefEvent(source string, asController bool, obj interface{}) (*cloudevents.Event, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("resource can not be nil")
+	}
 	object := obj.(*unstructured.Unstructured)
 	return makeEvent(source, addEventRefType, object, getRef(object, asController))
 }
 
 func MakeUpdateRefEvent(source string, asController bool, oldObj, newObj interface{}) (*cloudevents.Event, error) {
+	if newObj == nil {
+		return nil, fmt.Errorf("new resource can not be nil")
+	}
 	object := newObj.(*unstructured.Unstructured)
 	return makeEvent(source, updateEventRefType, object, getRef(object, asController))
 }
 
 func MakeDeleteRefEvent(source string, asController bool, obj interface{}) (*cloudevents.Event, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("resource can not be nil")
+	}
 	object := obj.(*unstructured.Unstructured)
 	return makeEvent(source, deleteEventRefType, object, getRef(object, asController))
 }
