@@ -17,113 +17,165 @@ limitations under the License.
 package apiserver
 
 import (
-	"context"
+	"fmt"
+	"time"
 
-	"github.com/cloudevents/sdk-go/pkg/cloudevents"
-	eventsclient "github.com/cloudevents/sdk-go/pkg/cloudevents/client"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
-	"github.com/knative/eventing/pkg/reconciler"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	"github.com/knative/pkg/controller"
-	"go.uber.org/zap"
-	corev1 "k8s.io/api/core/v1"
-	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/cache"
+
+	cloudevents "github.com/cloudevents/sdk-go"
+	"go.uber.org/zap"
 )
+
+type Adapter interface {
+	Start(stopCh <-chan struct{}) error
+}
 
 const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "ApiServerSource"
-
-	controllerAgentName = "apiserver-source-adapter-controller"
-	updateEventType     = "dev.knative.apiserver.object.update"
-	deleteEventType     = "dev.knative.apiserver.object.delete"
+	// RefMode produces payloads of ObjectReference
+	RefMode = "Ref"
+	// ResourceMode produces payloads of ResourceEvent
+	ResourceMode = "Resource"
 )
 
-// NewController initializes the controller and is called by the generated code
-// Registers event handlers to enqueue events
-func NewController(
-	opt reconciler.Options,
-	informer cache.SharedInformer,
-	lister cache.GenericLister,
-	eventsclient eventsclient.Client,
-	controlled bool) *controller.Impl {
-
-	r := &Reconciler{
-		Base:         reconciler.NewBase(opt, controllerAgentName),
-		lister:       lister,
-		eventsClient: eventsclient,
-	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
-
-	r.Logger.Info("Setting up event handlers")
-
-	if controlled {
-		informer.AddEventHandler(reconciler.Handler(impl.EnqueueControllerOf))
-	} else {
-		informer.AddEventHandler(reconciler.Handler(impl.Enqueue))
-	}
-	return impl
+// Options hold the options for the Adapter.
+type Options struct {
+	Mode      string
+	Namespace string
+	GVRCs     []GVRC
 }
 
-// Reconciler reconciles an ApiServerSource object
-type Reconciler struct {
-	*reconciler.Base
-
-	eventsClient eventsclient.Client
-	lister       cache.GenericLister
+// GVRC is a pairing of GroupVersionResource and Controller flag.
+type GVRC struct {
+	GVR        schema.GroupVersionResource
+	Controller bool
 }
 
-// Reconcile sends a cloud event corresponding to the given key
-func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
-	// Convert the namespace/name string into a distinct namespace and name
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		r.Logger.Errorf("invalid resource key: %s", key)
-		return nil
+type adapter struct {
+	gvrcs     []GVRC
+	k8s       dynamic.Interface
+	ce        cloudevents.Client
+	source    string
+	namespace string
+	logger    *zap.SugaredLogger
+
+	mode     string
+	delegate eventDelegate
+}
+
+func NewAdaptor(source string, k8sClient dynamic.Interface, ceClient cloudevents.Client, logger *zap.SugaredLogger, opt Options) Adapter {
+	mode := opt.Mode
+	switch mode {
+	case ResourceMode, RefMode:
+		// ok
+	default:
+		logger.Warn("unknown mode ", mode)
+		mode = RefMode
+		logger.Warn("defaulting mode to ", mode)
 	}
 
-	// Get the resource with this namespace/name
-	original, err := r.lister.ByNamespace(namespace).Get(name)
-	if apierrs.IsNotFound(err) {
-		// The resource may no longer exist, in which case we stop processing.
-		r.Logger.Error("resource key in work queue no longer exists", zap.Any("key", key))
-		return nil
-	} else if err != nil {
-		return err
+	a := &adapter{
+		k8s:       k8sClient,
+		ce:        ceClient,
+		source:    source,
+		logger:    logger,
+		gvrcs:     opt.GVRCs,
+		namespace: opt.Namespace,
+		mode:      mode,
+	}
+	return a
+}
+
+type eventDelegate interface {
+	addEvent(obj interface{})
+	updateEvent(oldObj, newObj interface{})
+	deleteEvent(obj interface{})
+
+	addControllerWatch(gvr schema.GroupVersionResource)
+}
+
+func (a *adapter) Start(stopCh <-chan struct{}) error {
+	// Local stop channel.
+	stop := make(chan struct{})
+
+	resyncPeriod := time.Duration(10 * time.Hour)
+
+	var d eventDelegate
+	switch a.mode {
+	case ResourceMode:
+		d = &resource{
+			ce:     a.ce,
+			source: a.source,
+			logger: a.logger,
+		}
+
+	case RefMode:
+		d = &ref{
+			ce:     a.ce,
+			source: a.source,
+			logger: a.logger,
+		}
+
+	default:
+		a.logger.Fatal("mode not understood", a.mode)
 	}
 
-	object := original.(*duckv1alpha1.AddressableType)
+	for _, gvrc := range a.gvrcs {
+		var informer cache.SharedIndexInformer
 
-	eventType := updateEventType
-	timestamp := object.GetCreationTimestamp()
-	if object.GetDeletionTimestamp() != nil {
-		eventType = deleteEventType
-		timestamp = *object.GetDeletionTimestamp()
+		lw := &cache.ListWatch{
+			ListFunc:  asUnstructuredLister(a.k8s.Resource(gvrc.GVR).Namespace(a.namespace).List),
+			WatchFunc: asUnstructuredWatcher(a.k8s.Resource(gvrc.GVR).Namespace(a.namespace).Watch),
+		}
+		informer = cache.NewSharedIndexInformer(lw, &unstructured.Unstructured{}, resyncPeriod, cache.Indexers{
+			cache.NamespaceIndex: cache.MetaNamespaceIndexFunc,
+		})
+
+		go informer.Run(stopCh)
+
+		if ok := cache.WaitForCacheSync(stopCh, informer.HasSynced); !ok {
+			return fmt.Errorf("failed starting shared index informer for %v with type %T on namespace %s", gvrc.GVR, a.namespace)
+		}
+
+		// Double check the delegate is not nil.
+		if d == nil {
+			continue
+		}
+
+		informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+			AddFunc:    d.addEvent,
+			UpdateFunc: d.updateEvent,
+			DeleteFunc: d.deleteEvent,
+		})
+		if gvrc.Controller {
+			d.addControllerWatch(gvrc.GVR)
+		}
 	}
 
-	objectRef := corev1.ObjectReference{
-		APIVersion: object.APIVersion,
-		Kind:       object.Kind,
-		Name:       object.GetName(),
-		Namespace:  object.GetNamespace(),
-	}
-
-	event := cloudevents.Event{
-		Context: cloudevents.EventContextV02{
-			ID:     string(object.GetUID()),
-			Type:   eventType,
-			Source: *types.ParseURLRef(object.GetSelfLink()),
-			Time:   &types.Timestamp{Time: timestamp.Time},
-		}.AsV02(),
-		Data: objectRef,
-	}
-
-	if _, err := r.eventsClient.Send(ctx, event); err != nil {
-		r.Logger.Error("failed to send cloudevent (retrying)", err)
-
-		return err
-	}
-
+	<-stopCh
+	stop <- struct{}{}
 	return nil
+}
+
+type unstructuredLister func(metav1.ListOptions) (*unstructured.UnstructuredList, error)
+
+func asUnstructuredLister(ulist unstructuredLister) cache.ListFunc {
+	return func(opts metav1.ListOptions) (runtime.Object, error) {
+		ul, err := ulist(opts)
+		if err != nil {
+			return nil, err
+		}
+		return ul, nil
+	}
+}
+
+func asUnstructuredWatcher(wf cache.WatchFunc) cache.WatchFunc {
+	return func(lo metav1.ListOptions) (watch.Interface, error) {
+		return wf(lo)
+	}
 }
