@@ -22,6 +22,7 @@ import (
 	"github.com/knative/pkg/webhook"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // +genclient
@@ -80,4 +81,13 @@ type BrokerList struct {
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Broker `json:"items"`
+}
+
+// GetGroupVersionKind returns GroupVersionKind for Brokers
+func (t *Broker) GetGroupVersionKind() schema.GroupVersionKind {
+	return schema.GroupVersionKind{
+		Group:   SchemeGroupVersion.Group,
+		Version: SchemeGroupVersion.Version,
+		Kind:    "Broker",
+	}
 }
