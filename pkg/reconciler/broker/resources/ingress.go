@@ -18,6 +18,7 @@ package resources
 
 import (
 	"fmt"
+	"github.com/knative/pkg/kmeta"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -43,11 +44,7 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 			Namespace: args.Broker.Namespace,
 			Name:      fmt.Sprintf("%s-broker-ingress", args.Broker.Name),
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(args.Broker, schema.GroupVersionKind{
-					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
-					Version: eventingv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Broker",
-				}),
+				*kmeta.NewControllerRef(args.Broker),
 			},
 			Labels: IngressLabels(args.Broker.Name),
 		},
