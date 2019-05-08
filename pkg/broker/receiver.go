@@ -19,6 +19,7 @@ package broker
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -201,7 +202,7 @@ func (r *Receiver) getTrigger(ctx context.Context, ref path.NamespacedNameUID) (
 		return nil, err
 	}
 	if t.UID != ref.UID {
-		return nil, errors.New("trigger had a different UID")
+		return nil, fmt.Errorf("trigger had a different UID. From ref '%s'. From Kubernetes '%s'", ref.UID, t.UID)
 	}
 	return t, nil
 }

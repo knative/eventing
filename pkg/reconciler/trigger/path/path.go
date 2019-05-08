@@ -34,8 +34,8 @@ func Generate(t *v1alpha1.Trigger) string {
 }
 
 type NamespacedNameUID struct {
-	NamespacedName types.NamespacedName
-	UID            types.UID
+	types.NamespacedName
+	UID types.UID
 }
 
 // Parse parses the Path portion of a URI to determine which Trigger the request corresponds to. It
