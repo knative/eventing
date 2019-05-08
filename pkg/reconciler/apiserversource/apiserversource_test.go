@@ -159,6 +159,7 @@ func TestNew(t *testing.T) {
 
 	apiserverInformer := eventingInformer.Sources().V1alpha1().ApiServerSources()
 	deploymentInformer := kubeInformer.Apps().V1().Deployments()
+	eventTypeInformer := eventingInformer.Eventing().V1alpha1().EventTypes()
 
 	c := NewController(reconciler.Options{
 		KubeClientSet:     kubeClient,
@@ -167,6 +168,7 @@ func TestNew(t *testing.T) {
 	},
 		apiserverInformer,
 		deploymentInformer,
+		eventTypeInformer,
 	)
 
 	if c == nil {
