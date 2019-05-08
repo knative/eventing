@@ -20,7 +20,7 @@ import "testing"
 
 func TestCronJobSource_GetGroupVersionKind(t *testing.T) {
 	src := CronJobSource{}
-	gvk := src.GetGroupVersionKind()t
+	gvk := src.GetGroupVersionKind()
 
 	if gvk.Kind != "CronJobSource" {
 		t.Errorf("Should be CronJobSource.")
