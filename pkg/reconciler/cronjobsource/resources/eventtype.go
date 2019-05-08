@@ -18,12 +18,12 @@ package resources
 
 import (
 	"fmt"
+	"github.com/knative/pkg/kmeta"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	"github.com/knative/eventing/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // MakeEventType creates the in-memory representation of the EventType for the specified CronJobSource.
@@ -34,11 +34,7 @@ func MakeEventType(src *v1alpha1.CronJobSource) *eventingv1alpha1.EventType {
 			Labels:       Labels(src.Name),
 			Namespace:    src.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(src, schema.GroupVersionKind{
-					Group:   v1alpha1.SchemeGroupVersion.Group,
-					Version: v1alpha1.SchemeGroupVersion.Version,
-					Kind:    "CronJobSource",
-				}),
+				*kmeta.NewControllerRef(src),
 			},
 		},
 		Spec: eventingv1alpha1.EventTypeSpec{
