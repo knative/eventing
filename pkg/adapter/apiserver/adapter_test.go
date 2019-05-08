@@ -17,11 +17,190 @@ limitations under the License.
 package apiserver
 
 import (
-	kncetesting "github.com/knative/eventing/pkg/kncloudevents/testing"
-	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"github.com/google/go-cmp/cmp"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"testing"
+	"time"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/dynamic"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
+
+	kncetesting "github.com/knative/eventing/pkg/kncloudevents/testing"
+	rectesting "github.com/knative/eventing/pkg/reconciler/testing"
+	"go.uber.org/zap"
 )
+
+func TestNewAdaptor(t *testing.T) {
+	ce := kncetesting.NewTestClient()
+	logger := zap.NewExample().Sugar()
+	k8s := makeDynamicClient(nil)
+
+	testCases := map[string]struct {
+		opt    Options
+		source string
+
+		wantMode      string
+		wantNamespace string
+		wantGVRCs     []GVRC
+	}{
+		"empty opts": {
+			opt:      Options{},
+			wantMode: RefMode,
+		},
+		"with source": {
+			source:   "test-source",
+			opt:      Options{},
+			wantMode: RefMode,
+		},
+		"with namespace": {
+			source: "test-source",
+			opt: Options{
+				Namespace: "test-ns",
+			},
+			wantMode:      RefMode,
+			wantNamespace: "test-ns",
+		},
+		"with mode resource": {
+			source: "test-source",
+			opt: Options{
+				Mode: ResourceMode,
+			},
+			wantMode: ResourceMode,
+		},
+		"with mode ref": {
+			source: "test-source",
+			opt: Options{
+				Mode: RefMode,
+			},
+			wantMode: RefMode,
+		},
+		"with mode trash": {
+			source: "test-source",
+			opt: Options{
+				Mode: "trash",
+			},
+			wantMode: RefMode,
+		},
+		"with mode gvrs": {
+			source: "test-source",
+			opt: Options{
+				GVRCs: []GVRC{{
+					GVR: schema.GroupVersionResource{
+						Group:    "apps",
+						Version:  "v1",
+						Resource: "replicasets",
+					},
+					Controller: true,
+				}},
+			},
+			wantMode: RefMode,
+			wantGVRCs: []GVRC{{
+				GVR: schema.GroupVersionResource{
+					Group:    "apps",
+					Version:  "v1",
+					Resource: "replicasets",
+				},
+				Controller: true,
+			}},
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+
+			a := NewAdaptor(tc.source, k8s, ce, logger, tc.opt)
+
+			got, ok := a.(*adapter)
+			if !ok {
+				t.Errorf("expected NewAdapter to return a *adapter, but did not")
+			}
+			if diff := cmp.Diff(tc.source, got.source); diff != "" {
+				t.Errorf("unexpected source diff (-want, +got) = %v", diff)
+			}
+			if diff := cmp.Diff(tc.wantMode, got.mode); diff != "" {
+				t.Errorf("unexpected mode diff (-want, +got) = %v", diff)
+			}
+			if diff := cmp.Diff(tc.wantNamespace, got.namespace); diff != "" {
+				t.Errorf("unexpected namespace diff (-want, +got) = %v", diff)
+			}
+			if diff := cmp.Diff(tc.wantGVRCs, got.gvrcs); diff != "" {
+				t.Errorf("unexpected namespace diff (-want, +got) = %v", diff)
+			}
+		})
+	}
+}
+
+func TestAdapter_StartRef(t *testing.T) {
+	ce := kncetesting.NewTestClient()
+	logger := zap.NewExample().Sugar()
+	k8s := makeDynamicClient(nil)
+	source := "test-source"
+	opt := Options{
+		Mode:      RefMode,
+		Namespace: "default",
+		GVRCs: []GVRC{{
+			GVR: schema.GroupVersionResource{
+				Group:    "",
+				Version:  "v1",
+				Resource: "pods",
+			},
+		}},
+	}
+
+	a := NewAdaptor(source, k8s, ce, logger, opt)
+
+	var err error
+	stopCh := make(chan struct{})
+	go func() {
+		err = a.Start(stopCh)
+	}()
+	time.Sleep(1 * time.Millisecond)
+	stopCh <- struct{}{}
+	if err != nil {
+		t.Errorf("did not expect an error, but got %v", err)
+	}
+}
+
+func TestAdapter_StartResource(t *testing.T) {
+	ce := kncetesting.NewTestClient()
+	logger := zap.NewExample().Sugar()
+	k8s := makeDynamicClient(nil)
+	source := "test-source"
+	opt := Options{
+		Mode:      ResourceMode,
+		Namespace: "default",
+		GVRCs: []GVRC{{
+			GVR: schema.GroupVersionResource{
+				Group:    "",
+				Version:  "v1",
+				Resource: "pods",
+			},
+		}},
+	}
+
+	a := NewAdaptor(source, k8s, ce, logger, opt)
+
+	var err error
+	stopCh := make(chan struct{})
+	go func() {
+		err = a.Start(stopCh)
+	}()
+	time.Sleep(1 * time.Millisecond)
+	stopCh <- struct{}{}
+	if err != nil {
+		t.Errorf("did not expect an error, but got %v", err)
+	}
+}
+
+// Common methods:
+
+// GetDynamicClient returns the mockDynamicClient to use for this test case.
+func makeDynamicClient(objects []runtime.Object) dynamic.Interface {
+	dynamicMocks := rectesting.DynamicMocks{} // TODO: maybe we need to customize this.
+	realInterface := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme(), objects...)
+	return rectesting.NewMockDynamicInterface(realInterface, dynamicMocks)
+}
 
 func simplePod(name, namespace string) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
