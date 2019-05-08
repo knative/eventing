@@ -435,12 +435,13 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:7537d6dc68f7d48e6d7f0c9696e026eae9b5cc4986c7d4654f2d499bf9963d82"
+  digest = "1:8db9b5603c2c45a1dda48ba9ae221af3890a9d1388fd01f539e072f009d0279f"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
     "apis/duck",
     "apis/duck/v1alpha1",
+    "apis/duck/v1beta1",
     "apis/istio",
     "apis/istio/authentication",
     "apis/istio/authentication/v1alpha1",
@@ -477,7 +478,7 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "f95c27ee8cdceb4545b57c7d4cf283a94d303dca"
+  revision = "c0f06c32f13373c6ab641d3c67815ac57704171e"
 
 [[projects]]
   branch = "master"
