@@ -58,10 +58,6 @@ var (
 	// TagTrigger is a tag key referring to the Trigger name serviced by this
 	// filter process.
 	TagTrigger = mustNewTagKey("trigger")
-
-	// TagError is a tag key indicating whether an error occurred while filtering
-	// the trigger.
-	TagError = mustNewTagKey("error")
 )
 
 func init() {
@@ -78,7 +74,7 @@ func init() {
 			Name:        "filter_time",
 			Measure:     MeasureTriggerFilterTime,
 			Aggregation: view.Distribution(0.1, 1, 10, 100),
-			TagKeys:     []tag.Key{TagFilterResult, TagBroker, TagTrigger, TagError},
+			TagKeys:     []tag.Key{TagResult, TagFilterResult, TagBroker, TagTrigger},
 		},
 	)
 	if err != nil {
