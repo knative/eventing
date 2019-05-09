@@ -158,6 +158,14 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+      - ""
+    resources:
+      - "configmaps"
+    verbs:
+      - get
+      - list
+      - watch
 
 ---
 
@@ -171,6 +179,39 @@ subjects:
     namespace: knative-eventing
 roleRef:
   kind: ClusterRole
+  name: in-memory-channel-dispatcher
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: in-memory-channel-dispatcher
+  namespace: knative-eventing
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - "configmaps"
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: in-memory-channel-dispatcher
+  namespace: knative-eventing
+subjects:
+  - kind: ServiceAccount
+    name: in-memory-channel-dispatcher
+    namespace: knative-eventing
+roleRef:
+  kind: Role
   name: in-memory-channel-dispatcher
   apiGroup: rbac.authorization.k8s.io
 
