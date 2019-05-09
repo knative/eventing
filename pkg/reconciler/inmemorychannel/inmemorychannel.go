@@ -1,0 +1,265 @@
+/*
+Copyright 2019 The Knative Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package inmemorychannel
+
+import (
+	"context"
+	//	"errors"
+	"reflect"
+	"time"
+
+	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
+	messaginginformers "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
+	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
+	//	"github.com/knative/eventing/pkg/duck"
+	"github.com/knative/eventing/pkg/logging"
+	//	util "github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/pkg/controller"
+	"github.com/knative/pkg/tracker"
+	"go.uber.org/zap"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	appsv1informers "k8s.io/client-go/informers/apps/v1"
+	appsv1listers "k8s.io/client-go/listers/apps/v1"
+	//	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	//	"k8s.io/apimachinery/pkg/labels"
+	//	"k8s.io/apimachinery/pkg/runtime/schema"
+	corev1informers "k8s.io/client-go/informers/core/v1"
+	corev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/cache"
+)
+
+const (
+	// ReconcilerName is the name of the reconciler
+	ReconcilerName = "InMemoryChannels"
+
+	// controllerAgentName is the string used by this controller to identify
+	// itself when creating events.
+	controllerAgentName = "in-memory-channel-controller"
+
+	finalizerName = controllerAgentName
+
+	// Name of the corev1.Events emitted from the reconciliation process.
+	channelReconciled         = "InMemoryChannelReconciled"
+	channelReconcileFailed    = "InMemoryChannelReconcileFailed"
+	channelUpdateStatusFailed = "InMemoryChannelUpdateStatusFailed"
+	channelDispatcherFailed   = "InMemoryChannelDispatcherDeploymentFailed"
+	channelServiceFailed      = "InMemoryChannelDispatcherServiceFailed"
+	channelEndpointsFailed    = "InMemoryChannelDispatcherEndpointsFailed"
+)
+
+type Reconciler struct {
+	*reconciler.Base
+
+	dispatcherNamespace      string
+	dispatcherDeploymentName string
+	dispatcherServiceName    string
+
+	inmemorychannelLister listers.InMemoryChannelLister
+	deploymentLister      appsv1listers.DeploymentLister
+	serviceLister         corev1listers.ServiceLister
+	endpointsLister       corev1listers.EndpointsLister
+	tracker               tracker.Interface
+}
+
+var deploymentGVK = appsv1.SchemeGroupVersion.WithKind("Deployment")
+var serviceGVK = corev1.SchemeGroupVersion.WithKind("Service")
+
+// Check that our Reconciler implements controller.Reconciler.
+var _ controller.Reconciler = (*Reconciler)(nil)
+
+// NewController initializes the controller and is called by the generated code.
+// Registers event handlers to enqueue events.
+func NewController(
+	opt reconciler.Options,
+	dispatcherNamespace string,
+	dispatcherDeploymentName string,
+	dispatcherServiceName string,
+	inmemorychannelinformer messaginginformers.InMemoryChannelInformer,
+	deploymentInformer appsv1informers.DeploymentInformer,
+	serviceInformer corev1informers.ServiceInformer,
+	endpointsInformer corev1informers.EndpointsInformer,
+) *controller.Impl {
+
+	r := &Reconciler{
+		Base:                     reconciler.NewBase(opt, controllerAgentName),
+		dispatcherNamespace:      dispatcherNamespace,
+		dispatcherDeploymentName: dispatcherDeploymentName,
+		dispatcherServiceName:    dispatcherServiceName,
+		inmemorychannelLister:    inmemorychannelinformer.Lister(),
+		deploymentLister:         deploymentInformer.Lister(),
+		serviceLister:            serviceInformer.Lister(),
+		endpointsLister:          endpointsInformer.Lister(),
+	}
+	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
+
+	r.Logger.Info("Setting up event handlers")
+	inmemorychannelinformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
+
+	// We use tracker to keep track of changes to both Dispatcher and k8s service that are shared
+	// between each InMemoryChannel. In the future we may shard dispatchers, but for now, make
+	// sure that we can reflect dispatcher and k8s service readiness to the channels. So track them.
+	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
+
+	/*
+		subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+			FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Trigger")),
+			Handler:    reconciler.Handler(impl.EnqueueControllerOf),
+		})
+	*/
+	return impl
+}
+
+// Reconcile compares the actual state with the desired, and attempts to
+// converge the two. It then updates the Status block of the InMemoryChannel resource
+// with the current status of the resource.
+func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
+	// Convert the namespace/name string into a distinct namespace and name.
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		logging.FromContext(ctx).Error("invalid resource key")
+		return nil
+	}
+
+	// Get the InMemoryChannel resource with this namespace/name.
+	original, err := r.inmemorychannelLister.InMemoryChannels(namespace).Get(name)
+	if apierrs.IsNotFound(err) {
+		// The resource may no longer exist, in which case we stop processing.
+		logging.FromContext(ctx).Error("InMemoryChannel key in work queue no longer exists")
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	// Don't modify the informers copy.
+	channel := original.DeepCopy()
+
+	// Reconcile this copy of the InMemoryChannel and then write back any status updates regardless of
+	// whether the reconcile error out.
+	reconcileErr := r.reconcile(ctx, channel)
+	if reconcileErr != nil {
+		logging.FromContext(ctx).Error("Error reconciling InMemoryChannel", zap.Error(reconcileErr))
+		r.Recorder.Eventf(channel, corev1.EventTypeWarning, channelReconcileFailed, "InMemoryChannel reconciliation failed: %v", reconcileErr)
+	} else {
+		logging.FromContext(ctx).Debug("InMemoryChannel reconciled")
+		r.Recorder.Event(channel, corev1.EventTypeNormal, channelReconciled, "InMemoryChannel reconciled")
+	}
+
+	if _, updateStatusErr := r.updateStatus(ctx, channel); updateStatusErr != nil {
+		logging.FromContext(ctx).Error("Failed to update InMemoryChannel status", zap.Error(updateStatusErr))
+		r.Recorder.Eventf(channel, corev1.EventTypeWarning, channelUpdateStatusFailed, "Failed to update InMemoryChannel's status: %v", err)
+		return updateStatusErr
+	}
+
+	// Requeue if the resource is not ready
+	return reconcileErr
+}
+
+func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChannel) error {
+	imc.Status.InitializeConditions()
+
+	if imc.DeletionTimestamp != nil {
+		// Everything is cleaned up by the garbage collector.
+		return nil
+	}
+
+	// We reconcile the status of the Channel by looking at:
+	// 1. Dispatcher Deployment for it's readiness
+	// 2. Dispatcher k8s Service for it's existence
+	// 3. Dispatcher endpoints to ensure that there's something backing the Service
+
+	// Get the Dispatcher Deployment and propagate the status to the Channel
+	d, err := r.deploymentLister.Deployments(r.dispatcherNamespace).Get(r.dispatcherDeploymentName)
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			imc.Status.MarkDispatcherFailed("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist")
+		} else {
+			logging.FromContext(ctx).Error("Unable to get the dispatcher Deployment", zap.Error(err))
+			imc.Status.MarkDispatcherFailed("DispatcherDeploymentGetFailed", "Failed to get dispatcher Deployment")
+		}
+		return nil
+	}
+	imc.Status.PropagateDispatcherStatus(&d.Status)
+
+	// Get the Dispatcher Service and propagate the status to the Channel in case it does not exist.
+	// We don't do anything with the service because it's status contains nothing useful, so just do
+	// an existence check. Then below we check the endpoints targeting it.
+	_, err = r.serviceLister.Services(r.dispatcherNamespace).Get(r.dispatcherServiceName)
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			imc.Status.MarkServiceFailed("DispatcherServiceDoesNotExist", "Dispatcher Service does not exist")
+		} else {
+			logging.FromContext(ctx).Error("Unable to get the dispatcher service", zap.Error(err))
+			imc.Status.MarkServiceFailed("DispatcherServiceGetFailed", "Failed to get dispatcher service")
+		}
+		return nil
+	}
+
+	imc.Status.MarkServiceTrue()
+
+	// Get the Dispatcher Service Endpoints and propagate the status to the Channel
+	// endpoints has the same name as the service, so not a bug.
+	e, err := r.endpointsLister.Endpoints(r.dispatcherNamespace).Get(r.dispatcherServiceName)
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			imc.Status.MarkEndpointsFailed("DispatcherEndpointsDoesNotExist", "Dispatcher Endpoints does not exist")
+		} else {
+			logging.FromContext(ctx).Error("Unable to get the dispatcher endpoints", zap.Error(err))
+			imc.Status.MarkEndpointsFailed("DispatcherEndpointsGetFailed", "Failed to get dispatcher endpoints")
+		}
+		return nil
+	}
+
+	if len(e.Subsets) != 0 {
+		imc.Status.MarkEndpointsFailed("DispatcherEndpointsNotReady", "There are no endpoints ready for Dispatcher")
+		return nil
+	}
+
+	imc.Status.MarkEndpointsTrue()
+
+	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
+	// dispatcher watches the Channel and where it needs to dispatch events to.
+	return nil
+}
+
+func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.InMemoryChannel) (*v1alpha1.InMemoryChannel, error) {
+	imc, err := r.inmemorychannelLister.InMemoryChannels(desired.Namespace).Get(desired.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	if reflect.DeepEqual(imc.Status, desired.Status) {
+		return imc, nil
+	}
+
+	becomesReady := desired.Status.IsReady() && !imc.Status.IsReady()
+
+	// Don't modify the informers copy.
+	existing := imc.DeepCopy()
+	existing.Status = desired.Status
+
+	new, err := r.EventingClientSet.MessagingV1alpha1().InMemoryChannels(desired.Namespace).UpdateStatus(existing)
+	if err == nil && becomesReady {
+		duration := time.Since(new.ObjectMeta.CreationTimestamp.Time)
+		r.Logger.Infof("Subscription %q became ready after %v", imc.Name, duration)
+		//r.StatsReporter.ReportServiceReady(trigger.Namespace, imc.Name, duration) // TODO: stats
+	}
+
+	return new, err
+}

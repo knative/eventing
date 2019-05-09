@@ -21,7 +21,7 @@ import (
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/webhook"
-	corev1 "k8s.io/api/core/v1"
+	//	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -47,7 +47,6 @@ type InMemoryChannel struct {
 // Check that Channel can be validated, can be defaulted, and has immutable fields.
 var _ apis.Validatable = (*InMemoryChannel)(nil)
 var _ apis.Defaultable = (*InMemoryChannel)(nil)
-var _ apis.Immutable = (*InMemoryChannel)(nil)
 var _ runtime.Object = (*InMemoryChannel)(nil)
 var _ webhook.GenericCRD = (*InMemoryChannel)(nil)
 

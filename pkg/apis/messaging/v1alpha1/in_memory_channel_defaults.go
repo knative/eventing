@@ -19,7 +19,7 @@ package v1alpha1
 import "context"
 
 func (imc *InMemoryChannel) SetDefaults(ctx context.Context) {
-	t.Spec.SetDefaults(ctx)
+	imc.Spec.SetDefaults(ctx)
 }
 
 func (imcs *InMemoryChannelSpec) SetDefaults(ctx context.Context) {

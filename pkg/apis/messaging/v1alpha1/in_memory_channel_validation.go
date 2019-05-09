@@ -20,13 +20,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/knative/pkg/apis"
-	"github.com/knative/pkg/kmp"
 )
 
 func (imc *InMemoryChannel) Validate(ctx context.Context) *apis.FieldError {
-	return c.Spec.Validate(ctx).ViaField("spec")
+	return imc.Spec.Validate(ctx).ViaField("spec")
 }
 
 func (imcs *InMemoryChannelSpec) Validate(ctx context.Context) *apis.FieldError {
