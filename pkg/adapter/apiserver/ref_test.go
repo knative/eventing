@@ -1,7 +1,7 @@
 package apiserver
 
 import (
-	"github.com/knative/eventing/pkg/adapter/apiserver/events"
+	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"testing"
 )
@@ -9,37 +9,37 @@ import (
 func TestRefAddEvent(t *testing.T) {
 	d, ce := makeRefAndTestingClient()
 	d.Add(simplePod("unit", "test"))
-	validateSent(t, ce, events.AddEventRefType)
+	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceAddRefEventType)
 }
 
 func TestRefUpdateEvent(t *testing.T) {
 	d, ce := makeRefAndTestingClient()
 	d.Update(simplePod("unit", "test"))
-	validateSent(t, ce, events.UpdateEventRefType)
+	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceUpdateRefEventType)
 }
 
 func TestRefDeleteEvent(t *testing.T) {
 	d, ce := makeRefAndTestingClient()
 	d.Delete(simplePod("unit", "test"))
-	validateSent(t, ce, events.DeleteEventRefType)
+	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceDeleteRefEventType)
 }
 
 func TestRefAddEventNil(t *testing.T) {
 	d, ce := makeRefAndTestingClient()
 	d.Add(nil)
-	validateNotSent(t, ce, events.AddEventRefType)
+	validateNotSent(t, ce, sourcesv1alpha1.ApiServerSourceAddRefEventType)
 }
 
 func TestRefUpdateEventNil(t *testing.T) {
 	d, ce := makeRefAndTestingClient()
 	d.Update(nil)
-	validateNotSent(t, ce, events.UpdateEventRefType)
+	validateNotSent(t, ce, sourcesv1alpha1.ApiServerSourceUpdateRefEventType)
 }
 
 func TestRefDeleteEventNil(t *testing.T) {
 	d, ce := makeRefAndTestingClient()
 	d.Delete(nil)
-	validateNotSent(t, ce, events.DeleteEventRefType)
+	validateNotSent(t, ce, sourcesv1alpha1.ApiServerSourceDeleteRefEventType)
 }
 
 func TestRefAddEventAsController(t *testing.T) {
@@ -50,7 +50,7 @@ func TestRefAddEventAsController(t *testing.T) {
 		Resource: "pods",
 	})
 	d.Add(simpleOwnedPod("unit", "test"))
-	validateSent(t, ce, events.AddEventRefType)
+	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceAddRefEventType)
 }
 
 func TestRefUpdateEventAsController(t *testing.T) {
@@ -61,7 +61,7 @@ func TestRefUpdateEventAsController(t *testing.T) {
 		Resource: "pods",
 	})
 	d.Update(simpleOwnedPod("unit", "test"))
-	validateSent(t, ce, events.UpdateEventRefType)
+	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceUpdateRefEventType)
 }
 
 func TestRefDeleteEventAsController(t *testing.T) {
@@ -72,7 +72,7 @@ func TestRefDeleteEventAsController(t *testing.T) {
 		Resource: "pods",
 	})
 	d.Delete(simpleOwnedPod("unit", "test"))
-	validateSent(t, ce, events.DeleteEventRefType)
+	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceDeleteRefEventType)
 }
 
 // HACKHACKHACK For test coverage.

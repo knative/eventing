@@ -25,16 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	cloudevents "github.com/cloudevents/sdk-go"
-)
-
-const (
-	AddEventType    = "dev.knative.apiserver.resource.add"
-	UpdateEventType = "dev.knative.apiserver.resource.update"
-	DeleteEventType = "dev.knative.apiserver.resource.delete"
-
-	AddEventRefType    = "dev.knative.apiserver.ref.add"
-	UpdateEventRefType = "dev.knative.apiserver.ref.update"
-	DeleteEventRefType = "dev.knative.apiserver.ref.delete"
+	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 )
 
 func MakeAddEvent(source string, obj interface{}) (*cloudevents.Event, error) {
@@ -43,7 +34,7 @@ func MakeAddEvent(source string, obj interface{}) (*cloudevents.Event, error) {
 	}
 	object := obj.(*unstructured.Unstructured)
 
-	return makeEvent(source, AddEventType, object, object)
+	return makeEvent(source, sourcesv1alpha1.ApiServerSourceAddEventType, object, object)
 }
 
 func MakeUpdateEvent(source string, obj interface{}) (*cloudevents.Event, error) {
@@ -52,7 +43,7 @@ func MakeUpdateEvent(source string, obj interface{}) (*cloudevents.Event, error)
 	}
 	object := obj.(*unstructured.Unstructured)
 
-	return makeEvent(source, UpdateEventType, object, object)
+	return makeEvent(source, sourcesv1alpha1.ApiServerSourceUpdateEventType, object, object)
 }
 
 func MakeDeleteEvent(source string, obj interface{}) (*cloudevents.Event, error) {
@@ -61,7 +52,7 @@ func MakeDeleteEvent(source string, obj interface{}) (*cloudevents.Event, error)
 	}
 	object := obj.(*unstructured.Unstructured)
 
-	return makeEvent(source, DeleteEventType, object, object)
+	return makeEvent(source, sourcesv1alpha1.ApiServerSourceDeleteEventType, object, object)
 }
 
 func getRef(object *unstructured.Unstructured, asController bool) corev1.ObjectReference {
@@ -88,7 +79,7 @@ func MakeAddRefEvent(source string, asController bool, obj interface{}) (*cloude
 		return nil, fmt.Errorf("resource can not be nil")
 	}
 	object := obj.(*unstructured.Unstructured)
-	return makeEvent(source, AddEventRefType, object, getRef(object, asController))
+	return makeEvent(source, sourcesv1alpha1.ApiServerSourceAddRefEventType, object, getRef(object, asController))
 }
 
 func MakeUpdateRefEvent(source string, asController bool, obj interface{}) (*cloudevents.Event, error) {
@@ -96,7 +87,7 @@ func MakeUpdateRefEvent(source string, asController bool, obj interface{}) (*clo
 		return nil, fmt.Errorf("new resource can not be nil")
 	}
 	object := obj.(*unstructured.Unstructured)
-	return makeEvent(source, UpdateEventRefType, object, getRef(object, asController))
+	return makeEvent(source, sourcesv1alpha1.ApiServerSourceUpdateRefEventType, object, getRef(object, asController))
 }
 
 func MakeDeleteRefEvent(source string, asController bool, obj interface{}) (*cloudevents.Event, error) {
@@ -104,7 +95,7 @@ func MakeDeleteRefEvent(source string, asController bool, obj interface{}) (*clo
 		return nil, fmt.Errorf("resource can not be nil")
 	}
 	object := obj.(*unstructured.Unstructured)
-	return makeEvent(source, DeleteEventRefType, object, getRef(object, asController))
+	return makeEvent(source, sourcesv1alpha1.ApiServerSourceDeleteRefEventType, object, getRef(object, asController))
 }
 
 func makeEvent(source, eventType string, obj *unstructured.Unstructured, data interface{}) (*cloudevents.Event, error) {
