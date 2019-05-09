@@ -44,7 +44,7 @@ func (a *ref) asController(obj interface{}) bool {
 	if len(a.controlledGVRs) > 0 {
 		object := obj.(*unstructured.Unstructured)
 		gvk := object.GroupVersionKind()
-		// This is really bad.
+		// TODO: pass down the resource and the kind so we do not have to guess.
 		gvr, _ := meta.UnsafeGuessKindToResource(gvk)
 		for _, gvrc := range a.controlledGVRs {
 			if reflect.DeepEqual(gvr, gvrc) {
