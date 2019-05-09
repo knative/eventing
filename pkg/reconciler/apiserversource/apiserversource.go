@@ -285,7 +285,7 @@ func (r *Reconciler) makeEventTypes(src *v1alpha1.ApiServerSource) ([]eventingv1
 	eventTypes := make([]eventingv1alpha1.EventType, 0)
 	args := &resources.EventTypeArgs{
 		Src:    src,
-		Source: "TODO",
+		Source: "ScottMagic",
 	}
 	for _, apiEventType := range apiServerEventTypes {
 		args.Type = apiEventType

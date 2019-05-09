@@ -279,7 +279,7 @@ func makeEventType(eventType string) *v1alpha1.EventType {
 		Spec: v1alpha1.EventTypeSpec{
 			Type: eventType,
 			// TODO Change this.
-			Source: "TODO",
+			Source: "ScottMagic",
 			Broker: sinkName,
 		},
 	}
