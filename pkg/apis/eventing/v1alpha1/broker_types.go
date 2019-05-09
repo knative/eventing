@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/kmeta"
 	"github.com/knative/pkg/webhook"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -42,12 +43,17 @@ type Broker struct {
 	Status BrokerStatus `json:"status,omitempty"`
 }
 
-// Check that Broker can be validated, can be defaulted, and has immutable fields.
-var _ apis.Validatable = (*Broker)(nil)
-var _ apis.Defaultable = (*Broker)(nil)
-var _ apis.Immutable = (*Broker)(nil)
-var _ runtime.Object = (*Broker)(nil)
-var _ webhook.GenericCRD = (*Broker)(nil)
+var (
+	// Check that Broker can be validated, can be defaulted, and has immutable fields.
+	_ apis.Validatable   = (*Broker)(nil)
+	_ apis.Defaultable   = (*Broker)(nil)
+	_ apis.Immutable     = (*Broker)(nil)
+	_ runtime.Object     = (*Broker)(nil)
+	_ webhook.GenericCRD = (*Broker)(nil)
+
+	// Check that we can create OwnerReferences to a Broker.
+	_ kmeta.OwnerRefable = (*Broker)(nil)
+)
 
 type BrokerSpec struct {
 	// ChannelTemplate, if specified will be used to create all the Channels used internally by the
