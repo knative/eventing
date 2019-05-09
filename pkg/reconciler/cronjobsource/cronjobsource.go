@@ -338,7 +338,7 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.CronJob
 	if err == nil && becomesReady {
 		duration := time.Since(cj.ObjectMeta.CreationTimestamp.Time)
 		r.Logger.Infof("CronJobSource %q became ready after %v", cronjob.Name, duration)
-		//r.StatsReporter.ReportServiceReady(subscription.Namespace, subscription.Name, duration) // TODO: stats
+		r.StatsReporter.ReportServiceReady(subscription.Namespace, subscription.Name, duration)
 	}
 
 	return cj, err

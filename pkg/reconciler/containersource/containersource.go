@@ -309,7 +309,7 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Contain
 	if err == nil && becomesReady {
 		duration := time.Since(cj.ObjectMeta.CreationTimestamp.Time)
 		r.Logger.Infof("ContainerSource %q became ready after %v", source.Name, duration)
-		//r.StatsReporter.ReportServiceReady(subscription.Namespace, subscription.Name, duration) // TODO: stats
+		//r.StatsReporter.ReportReady("ContainerSource", cj.Namespace, cj.Name, duration) // TODO sources stats.
 	}
 
 	return cj, err

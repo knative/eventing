@@ -285,7 +285,9 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Broker)
 		duration := time.Since(b.ObjectMeta.CreationTimestamp.Time)
 		logging.FromContext(ctx).Sugar().Infof("Broker %q became ready after %v", broker.Name, duration)
 		r.Recorder.Event(broker, corev1.EventTypeNormal, brokerReadinessChanged, fmt.Sprintf("Broker %q became ready", broker.Name))
-		//r.StatsReporter.ReportServiceReady(broker.Namespace, broker.Name, duration) // TODO: stats
+		if err := r.StatsReporter.ReportReady("Broker", broker.Namespace, broker.Name, duration); err != nil {
+			logging.FromContext(ctx).Sugar().Infof("failed to record ready for Broker, %v", err)
+		}
 	}
 
 	return b, err
