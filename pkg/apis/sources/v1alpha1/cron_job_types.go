@@ -41,14 +41,16 @@ type CronJobSource struct {
 
 // TODO: Check that CronJobSource can be validated and can be defaulted.
 
-// Check that it is a runtime object.
-var _ runtime.Object = (*CronJobSource)(nil)
+var (
+	// Check that it is a runtime object.
+	_ runtime.Object = (*CronJobSource)(nil)
 
-// Check that we can create OwnerReferences to a Configuration.
-var _ kmeta.OwnerRefable = (*CronJobSource)(nil)
+	// Check that we can create OwnerReferences to a Configuration.
+	_ kmeta.OwnerRefable = (*CronJobSource)(nil)
 
-// Check that CronJobSource implements the Conditions duck type.
-var _ = duck.VerifyType(&CronJobSource{}, &duckv1alpha1.Conditions{})
+	// Check that CronJobSource implements the Conditions duck type.
+	_ = duck.VerifyType(&CronJobSource{}, &duckv1alpha1.Conditions{})
+)
 
 const (
 	// CronJobEventType is the CronJob CloudEvent type.

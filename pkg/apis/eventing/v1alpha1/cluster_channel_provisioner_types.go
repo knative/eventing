@@ -17,14 +17,14 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/kmeta"
+	"github.com/knative/pkg/webhook"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	"github.com/knative/pkg/kmeta"
-	"github.com/knative/pkg/webhook"
 )
 
 // +genclient
@@ -46,12 +46,16 @@ type ClusterChannelProvisioner struct {
 	Status ClusterChannelProvisionerStatus `json:"status,omitempty"`
 }
 
-// Check that ClusterChannelProvisioner can be validated and can be defaulted.
-var _ apis.Validatable = (*ClusterChannelProvisioner)(nil)
-var _ apis.Defaultable = (*ClusterChannelProvisioner)(nil)
-var _ runtime.Object = (*ClusterChannelProvisioner)(nil)
-var _ webhook.GenericCRD = (*ClusterChannelProvisioner)(nil)
-var _ kmeta.OwnerRefable = (*ClusterChannelProvisioner)(nil)
+var (
+	// Check that ClusterChannelProvisioner can be validated and can be defaulted.
+	_ apis.Validatable   = (*ClusterChannelProvisioner)(nil)
+	_ apis.Defaultable   = (*ClusterChannelProvisioner)(nil)
+	_ runtime.Object     = (*ClusterChannelProvisioner)(nil)
+	_ webhook.GenericCRD = (*ClusterChannelProvisioner)(nil)
+
+	// Check that we can create OwnerReferences to a ClusterChannelProvisioner.
+	_ kmeta.OwnerRefable = (*ClusterChannelProvisioner)(nil)
+)
 
 // ClusterChannelProvisionerSpec is the spec for a ClusterChannelProvisioner resource.
 type ClusterChannelProvisionerSpec struct {

@@ -20,6 +20,7 @@ import (
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/kmeta"
 	"github.com/knative/pkg/webhook"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,12 +48,17 @@ type Channel struct {
 	Status ChannelStatus `json:"status,omitempty"`
 }
 
-// Check that Channel can be validated, can be defaulted, and has immutable fields.
-var _ apis.Validatable = (*Channel)(nil)
-var _ apis.Defaultable = (*Channel)(nil)
-var _ apis.Immutable = (*Channel)(nil)
-var _ runtime.Object = (*Channel)(nil)
-var _ webhook.GenericCRD = (*Channel)(nil)
+var (
+	// Check that Channel can be validated, can be defaulted, and has immutable fields.
+	_ apis.Validatable   = (*Channel)(nil)
+	_ apis.Defaultable   = (*Channel)(nil)
+	_ apis.Immutable     = (*Channel)(nil)
+	_ runtime.Object     = (*Channel)(nil)
+	_ webhook.GenericCRD = (*Channel)(nil)
+
+	// Check that we can create OwnerReferences to a Channel.
+	_ kmeta.OwnerRefable = (*Channel)(nil)
+)
 
 // ChannelSpec specifies the Provisioner backing a channel and the configuration
 // arguments for a Channel.

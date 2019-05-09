@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/kmeta"
 	"github.com/knative/pkg/webhook"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -42,12 +43,17 @@ type Trigger struct {
 	Status TriggerStatus `json:"status,omitempty"`
 }
 
-// Check that Trigger can be validated, can be defaulted, and has immutable fields.
-var _ apis.Validatable = (*Trigger)(nil)
-var _ apis.Defaultable = (*Trigger)(nil)
-var _ apis.Immutable = (*Trigger)(nil)
-var _ runtime.Object = (*Trigger)(nil)
-var _ webhook.GenericCRD = (*Trigger)(nil)
+var (
+	// Check that Trigger can be validated, can be defaulted, and has immutable fields.
+	_ apis.Validatable   = (*Trigger)(nil)
+	_ apis.Defaultable   = (*Trigger)(nil)
+	_ apis.Immutable     = (*Trigger)(nil)
+	_ runtime.Object     = (*Trigger)(nil)
+	_ webhook.GenericCRD = (*Trigger)(nil)
+
+	// Check that we can create OwnerReferences to a Trigger.
+	_ kmeta.OwnerRefable = (*Trigger)(nil)
+)
 
 type TriggerSpec struct {
 	// Broker is the broker that this trigger receives events from. If not specified, will default
