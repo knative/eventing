@@ -31,7 +31,7 @@ import (
 	"github.com/knative/eventing/pkg/tracing"
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/system"
-	tracing2 "github.com/knative/pkg/tracing"
+	pkgtracing "github.com/knative/pkg/tracing"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/client-go/kubernetes"
@@ -85,7 +85,7 @@ func main() {
 
 	s := &http.Server{
 		Addr:         fmt.Sprintf(":%d", port),
-		Handler:      tracing2.HTTPSpanMiddleware(sh),
+		Handler:      pkgtracing.HTTPSpanMiddleware(sh),
 		ErrorLog:     zap.NewStdLog(logger),
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
