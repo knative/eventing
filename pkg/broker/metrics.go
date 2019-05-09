@@ -27,7 +27,7 @@ var (
 	// by a Trigger.
 	MeasureTriggerEventsTotal = stats.Int64(
 		"knative.dev/eventing/trigger/measures/events_total",
-		"Total number of events received",
+		"Total number of events received by a Trigger",
 		stats.UnitNone,
 	)
 
@@ -35,7 +35,7 @@ var (
 	// Trigger, in milliseconds.
 	MeasureTriggerFilterTime = stats.Int64(
 		"knative.dev/eventing/trigger/measures/filter_time",
-		"Time spent filtering a message",
+		"Time spent filtering a message for a Trigger",
 		stats.UnitMilliseconds,
 	)
 
@@ -65,13 +65,13 @@ func init() {
 	// previously registered view has the same name with a different value.
 	err := view.Register(
 		&view.View{
-			Name:        "events_total",
+			Name:        "trigger_events_total",
 			Measure:     MeasureTriggerEventsTotal,
 			Aggregation: view.Count(),
 			TagKeys:     []tag.Key{TagResult, TagBroker, TagTrigger},
 		},
 		&view.View{
-			Name:        "filter_time",
+			Name:        "trigger_filter_time",
 			Measure:     MeasureTriggerFilterTime,
 			Aggregation: view.Distribution(0.1, 1, 10, 100),
 			TagKeys:     []tag.Key{TagResult, TagFilterResult, TagBroker, TagTrigger},

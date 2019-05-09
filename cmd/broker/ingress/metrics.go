@@ -22,10 +22,6 @@ import (
 	"go.opencensus.io/tag"
 )
 
-const (
-	metricsNamespace = "broker"
-)
-
 var (
 	// MeasureEventsTotal is a counter which records the number of events received
 	// by the ingress. The value of the Result tag indicates whether the event
@@ -62,13 +58,13 @@ func init() {
 	// previously registered view has the same name with a different value.
 	err := view.Register(
 		&view.View{
-			Name:        "events_total",
+			Name:        "broker_events_total",
 			Measure:     MeasureEventsTotal,
 			Aggregation: view.Count(),
 			TagKeys:     []tag.Key{TagResult, TagBroker},
 		},
 		&view.View{
-			Name:        "dispatch_time",
+			Name:        "broker_dispatch_time",
 			Measure:     MeasureDispatchTime,
 			Aggregation: view.Distribution(10, 100, 1000, 10000),
 			TagKeys:     []tag.Key{TagResult, TagBroker},

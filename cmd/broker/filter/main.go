@@ -39,8 +39,7 @@ import (
 )
 
 const (
-	NAMESPACE        = "NAMESPACE"
-	metricsNamespace = "trigger"
+	NAMESPACE = "NAMESPACE"
 )
 
 var (
@@ -85,7 +84,7 @@ func main() {
 	}
 
 	// Metrics
-	e, err := prometheus.NewExporter(prometheus.Options{Namespace: metricsNamespace})
+	e, err := prometheus.NewExporter(prometheus.Options{})
 	if err != nil {
 		logger.Fatal("Unable to create Prometheus exporter", zap.Error(err))
 	}
