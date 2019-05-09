@@ -17,6 +17,7 @@ limitations under the License.
 package cronjobsource
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -49,8 +50,22 @@ var (
 		Kind:       "Channel",
 		APIVersion: "eventing.knative.dev/v1alpha1",
 	}
+	brokerRef = corev1.ObjectReference{
+		Name:       sinkName,
+		Kind:       "Broker",
+		APIVersion: "eventing.knative.dev/v1alpha1",
+	}
 	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
 	sinkURI = "http://" + sinkDNS + "/"
+
+	trueVal  = true
+	ownerRef = metav1.OwnerReference{
+		APIVersion:         "sources.eventing.knative.dev/v1alpha1",
+		Kind:               "CronJobSource",
+		Name:               sourceName,
+		Controller:         &trueVal,
+		BlockOwnerDeletion: &trueVal,
+	}
 )
 
 const (
@@ -173,6 +188,51 @@ func TestAllCases(t *testing.T) {
 				makeReceiveAdapter(),
 			},
 		}, {
+			Name: "valid with event type creation",
+			Objects: []runtime.Object{
+				NewCronSourceJob(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &brokerRef,
+					}),
+				),
+				NewBroker(sinkName, testNS,
+					WithInitBrokerConditions,
+					WithBrokerAddress(sinkDNS),
+				),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "CronJobSourceReconciled", `CronJobSource reconciled: "%s/%s"`, testNS, sourceName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewCronSourceJob(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &brokerRef,
+					}),
+					// Status Update:
+					WithInitCronJobSourceConditions,
+					WithValidCronJobSourceSchedule,
+					WithCronJobSourceDeployed,
+					WithCronJobSourceEventType,
+					WithCronJobSourceSink(sinkURI),
+				),
+			}},
+			WantCreates: []metav1.Object{
+				NewEventType("", testNS,
+					WithEventTypeGenerateName(fmt.Sprintf("%s-", utils.ToDNS1123Subdomain(sourcesv1alpha1.CronJobEventType))),
+					WithEventTypeLabels(resources.Labels(sourceName)),
+					WithEventTypeType(sourcesv1alpha1.CronJobEventType),
+					WithEventTypeSource(sourcesv1alpha1.CronJobEventSource),
+					WithEventTypeBroker(sinkName),
+					WithEventTypeOwnerReference(ownerRef),
+					WithEventTypeDescription(sourceName)),
+				makeReceiveAdapterWithSink(brokerRef),
+			},
+		}, {
 			Name: "valid, existing ra",
 			Objects: []runtime.Object{
 				NewCronSourceJob(sourceName, testNS,
@@ -239,6 +299,7 @@ func TestAllCases(t *testing.T) {
 			Base:             reconciler.NewBase(opt, controllerAgentName),
 			cronjobLister:    listers.GetCronJobSourceLister(),
 			deploymentLister: listers.GetDeploymentLister(),
+			eventTypeLister:  listers.GetEventTypeLister(),
 		}
 	}))
 
@@ -253,6 +314,7 @@ func TestNew(t *testing.T) {
 
 	cronjobInformer := eventingInformer.Sources().V1alpha1().CronJobSources()
 	deploymentInformer := kubeInformer.Apps().V1().Deployments()
+	eventTypeInformer := eventingInformer.Eventing().V1alpha1().EventTypes()
 
 	c := NewController(reconciler.Options{
 		KubeClientSet:     kubeClient,
@@ -261,6 +323,7 @@ func TestNew(t *testing.T) {
 	},
 		cronjobInformer,
 		deploymentInformer,
+		eventTypeInformer,
 	)
 
 	if c == nil {
@@ -269,11 +332,15 @@ func TestNew(t *testing.T) {
 }
 
 func makeReceiveAdapter() *appsv1.Deployment {
+	return makeReceiveAdapterWithSink(sinkRef)
+}
+
+func makeReceiveAdapterWithSink(ref corev1.ObjectReference) *appsv1.Deployment {
 	source := NewCronSourceJob(sourceName, testNS,
 		WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 			Schedule: testSchedule,
 			Data:     testData,
-			Sink:     &sinkRef,
+			Sink:     &ref,
 		},
 		),
 		// Status Update:

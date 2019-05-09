@@ -22,6 +22,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/knative/pkg/kmeta"
+
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -374,11 +376,7 @@ func newChannel(b *v1alpha1.Broker, l map[string]string) *v1alpha1.Channel {
 			GenerateName: fmt.Sprintf("%s-broker-", b.Name),
 			Labels:       l,
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(b, schema.GroupVersionKind{
-					Group:   v1alpha1.SchemeGroupVersion.Group,
-					Version: v1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Broker",
-				}),
+				*kmeta.NewControllerRef(b),
 			},
 		},
 		Spec: spec,
@@ -532,11 +530,7 @@ func makeSubscription(b *v1alpha1.Broker, c *v1alpha1.Channel, svc *corev1.Servi
 			Namespace:    b.Namespace,
 			GenerateName: fmt.Sprintf("internal-ingress-%s-", b.Name),
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(b, schema.GroupVersionKind{
-					Group:   v1alpha1.SchemeGroupVersion.Group,
-					Version: v1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Broker",
-				}),
+				*kmeta.NewControllerRef(b),
 			},
 			Labels: ingressSubscriptionLabels(b.Name),
 		},

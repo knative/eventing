@@ -3,12 +3,12 @@ package provisioners
 import (
 	"context"
 
+	"github.com/knative/pkg/kmeta"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,11 +67,7 @@ func newDispatcherService(ccp *eventingv1alpha1.ClusterChannelProvisioner, opts 
 			Namespace: system.Namespace(),
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(ccp, schema.GroupVersionKind{
-					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
-					Version: eventingv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "ClusterChannelProvisioner",
-				}),
+				*kmeta.NewControllerRef(ccp),
 			},
 		},
 		Spec: corev1.ServiceSpec{

@@ -47,6 +47,12 @@ func WithInitEventTypeConditions(et *v1alpha1.EventType) {
 	et.Status.InitializeConditions()
 }
 
+func WithEventTypeGenerateName(generateName string) EventTypeOption {
+	return func(et *v1alpha1.EventType) {
+		et.ObjectMeta.GenerateName = generateName
+	}
+}
+
 func WithEventTypeSource(source string) EventTypeOption {
 	return func(et *v1alpha1.EventType) {
 		et.Spec.Source = source
@@ -62,6 +68,26 @@ func WithEventTypeType(t string) EventTypeOption {
 func WithEventTypeBroker(broker string) EventTypeOption {
 	return func(et *v1alpha1.EventType) {
 		et.Spec.Broker = broker
+	}
+}
+
+func WithEventTypeDescription(description string) EventTypeOption {
+	return func(et *v1alpha1.EventType) {
+		et.Spec.Description = description
+	}
+}
+
+func WithEventTypeLabels(labels map[string]string) EventTypeOption {
+	return func(et *v1alpha1.EventType) {
+		et.ObjectMeta.Labels = labels
+	}
+}
+
+func WithEventTypeOwnerReference(ownerRef metav1.OwnerReference) EventTypeOption {
+	return func(et *v1alpha1.EventType) {
+		et.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
+			ownerRef,
+		}
 	}
 }
 

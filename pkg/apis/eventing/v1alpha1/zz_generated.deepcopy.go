@@ -113,7 +113,7 @@ func (in *BrokerSpec) DeepCopy() *BrokerSpec {
 func (in *BrokerStatus) DeepCopyInto(out *BrokerStatus) {
 	*out = *in
 	in.Status.DeepCopyInto(&out.Status)
-	out.Address = in.Address
+	in.Address.DeepCopyInto(&out.Address)
 	return
 }
 
@@ -223,7 +223,7 @@ func (in *ChannelSpec) DeepCopy() *ChannelSpec {
 func (in *ChannelStatus) DeepCopyInto(out *ChannelStatus) {
 	*out = *in
 	in.Status.DeepCopyInto(&out.Status)
-	out.Address = in.Address
+	in.Address.DeepCopyInto(&out.Address)
 	if in.Internal != nil {
 		in, out := &in.Internal, &out.Internal
 		*out = new(runtime.RawExtension)
