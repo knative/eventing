@@ -19,9 +19,10 @@ package broker
 import (
 	"context"
 	"fmt"
-	"github.com/knative/pkg/kmeta"
 	"reflect"
 	"time"
+
+	"github.com/knative/pkg/kmeta"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
