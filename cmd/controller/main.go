@@ -36,6 +36,7 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/trigger"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
+	pkgmetrics "github.com/knative/pkg/metrics"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
 	kubeinformers "k8s.io/client-go/informers"
@@ -235,5 +236,5 @@ func getRequiredEnv(envKey string) string {
 
 func flush(logger *zap.SugaredLogger) {
 	logger.Sync()
-	//	pkgmetrics.FlushExporter() <-- TODO: expose the stats.
+	pkgmetrics.FlushExporter()
 }
