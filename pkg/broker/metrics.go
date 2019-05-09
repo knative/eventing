@@ -31,6 +31,14 @@ var (
 		stats.UnitNone,
 	)
 
+	// MeasureTriggerDispatchTime records the time spent dispatching an event for
+	// a Trigger, in milliseconds.
+	MeasureTriggerDispatchTime = stats.Int64(
+		"knative.dev/eventing/trigger/measures/dispatch_time",
+		"Time spent dispatching an event to a Trigger",
+		stats.UnitMilliseconds,
+	)
+
 	// MeasureTriggerFilterTime records the time spent filtering a message for a
 	// Trigger, in milliseconds.
 	MeasureTriggerFilterTime = stats.Int64(
@@ -68,6 +76,12 @@ func init() {
 			Name:        "trigger_events_total",
 			Measure:     MeasureTriggerEventsTotal,
 			Aggregation: view.Count(),
+			TagKeys:     []tag.Key{TagResult, TagBroker, TagTrigger},
+		},
+		&view.View{
+			Name:        "trigger_dispatch_time",
+			Measure:     MeasureTriggerDispatchTime,
+			Aggregation: view.Distribution(10, 100, 1000, 10000),
 			TagKeys:     []tag.Key{TagResult, TagBroker, TagTrigger},
 		},
 		&view.View{

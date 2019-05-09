@@ -18,4 +18,5 @@ These are exported by `broker-filter` pods.
 | Name                   | Type      | Description                  | Tags                                           |
 | ---------------------- | --------- | ---------------------------- | -----------------------------------------------|
 | `trigger_events_total` | count     | Number of events received.   | `result`, `broker`, `trigger`                  |
+| `trigger_dispatch_time`| histogram | Time to dispatch an event.   | `result`, `broker`, `trigger`                  |
 | `trigger_filter_time`  | histogram | Time to filter an event.     | `result`, `broker`, `trigger`, `filter_result` |

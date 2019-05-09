@@ -181,7 +181,11 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransport
 		tag.Insert(TagTrigger, trigger.String()),
 		tag.Insert(TagBroker, fmt.Sprintf("%s/%s", trigger.Namespace, t.Spec.Broker)),
 	)
+	// Record event count and filtering time
+	startTS := time.Now()
 	defer func() {
+		dispatchTimeMS := int64(time.Now().Sub(startTS) / time.Millisecond)
+		stats.Record(ctx, MeasureTriggerDispatchTime.M(dispatchTimeMS))
 		stats.Record(ctx, MeasureTriggerEventsTotal.M(1))
 	}()
 
