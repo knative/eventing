@@ -13,6 +13,7 @@ import (
 
 // Client
 
+type ClientOption client.Option
 type Client = client.Client
 
 // Event
@@ -34,6 +35,7 @@ type URLRef = types.URLRef
 
 // HTTP Transport
 
+type HTTPOption http.Option
 type HTTPTransport = http.Transport
 type HTTPTransportContext = http.TransportContext
 type HTTPTransportResponseContext = http.TransportResponseContext
@@ -93,6 +95,7 @@ var (
 	WithStructuredEncoding = http.WithStructuredEncoding
 	WithPort               = http.WithPort
 	WithPath               = http.WithPath
+	WithMiddleware         = http.WithMiddleware
 
 	// HTTP Context
 

@@ -19,6 +19,7 @@ package broker
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -27,7 +28,6 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler/trigger/path"
 	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -166,7 +166,7 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 }
 
 // sendEvent sends an event to a subscriber if the trigger filter passes.
-func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportContext, trigger types.NamespacedName, event *cloudevents.Event) (*cloudevents.Event, error) {
+func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportContext, trigger path.NamespacedNameUID, event *cloudevents.Event) (*cloudevents.Event, error) {
 	t, err := r.getTrigger(ctx, trigger)
 	if err != nil {
 		r.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("triggerRef", trigger))
@@ -195,10 +195,16 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransport
 	return r.ceClient.Send(sendingCTX, *event)
 }
 
-func (r *Receiver) getTrigger(ctx context.Context, ref types.NamespacedName) (*eventingv1alpha1.Trigger, error) {
+func (r *Receiver) getTrigger(ctx context.Context, ref path.NamespacedNameUID) (*eventingv1alpha1.Trigger, error) {
 	t := &eventingv1alpha1.Trigger{}
-	err := r.client.Get(ctx, ref, t)
-	return t, err
+	err := r.client.Get(ctx, ref.NamespacedName, t)
+	if err != nil {
+		return nil, err
+	}
+	if t.UID != ref.UID {
+		return nil, fmt.Errorf("trigger had a different UID. From ref '%s'. From Kubernetes '%s'", ref.UID, t.UID)
+	}
+	return t, nil
 }
 
 // shouldSendMessage determines whether message 'm' should be sent based on the triggerSpec 'ts'.

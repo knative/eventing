@@ -30,24 +30,32 @@ const (
 
 // Generate generates the Path portion of a URI to send events to the given Trigger.
 func Generate(t *v1alpha1.Trigger) string {
-	return fmt.Sprintf("/%s/%s/%s", prefix, t.Namespace, t.Name)
+	return fmt.Sprintf("/%s/%s/%s/%s", prefix, t.Namespace, t.Name, t.UID)
+}
+
+type NamespacedNameUID struct {
+	types.NamespacedName
+	UID types.UID
 }
 
 // Parse parses the Path portion of a URI to determine which Trigger the request corresponds to. It
-// is expected to be in the form "/triggers/namespace/name".
-func Parse(path string) (types.NamespacedName, error) {
+// is expected to be in the form "/triggers/namespace/name/uid".
+func Parse(path string) (NamespacedNameUID, error) {
 	parts := strings.Split(path, "/")
-	if len(parts) != 4 {
-		return types.NamespacedName{}, fmt.Errorf("incorrect number of parts in the path, expected 4, actual %d, '%s'", len(parts), path)
+	if len(parts) != 5 {
+		return NamespacedNameUID{}, fmt.Errorf("incorrect number of parts in the path, expected 5, actual %d, '%s'", len(parts), path)
 	}
 	if parts[0] != "" {
-		return types.NamespacedName{}, fmt.Errorf("text before the first slash, actual '%s'", path)
+		return NamespacedNameUID{}, fmt.Errorf("text before the first slash, actual '%s'", path)
 	}
 	if parts[1] != prefix {
-		return types.NamespacedName{}, fmt.Errorf("incorrect prefix, expected '%s', actual '%s'", prefix, path)
+		return NamespacedNameUID{}, fmt.Errorf("incorrect prefix, expected '%s', actual '%s'", prefix, path)
 	}
-	return types.NamespacedName{
-		Namespace: parts[2],
-		Name:      parts[3],
+	return NamespacedNameUID{
+		NamespacedName: types.NamespacedName{
+			Namespace: parts[2],
+			Name:      parts[3],
+		},
+		UID: types.UID(parts[4]),
 	}, nil
 }
