@@ -52,7 +52,7 @@ spec:
               description: "A reference to the object that should receive events."
             mode:
               type: string
-              description: "Mode controls the content of the event payload. One of: 'Ref' (only references of resources), 'Resource' (full resource as ResourceEvent)."
+              description: "Mode controls the content of the event payload. One of: 'Ref' (only references of resources), 'Resource' (full resource)."
             resources:
               items:
                 properties:

@@ -17,6 +17,11 @@ limitations under the License.
 package apiserver
 
 import (
+	"github.com/google/go-cmp/cmp"
+	kncetesting "github.com/knative/eventing/pkg/kncloudevents/testing"
+	rectesting "github.com/knative/eventing/pkg/reconciler/testing"
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -25,12 +30,6 @@ import (
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	rt "runtime"
 	"testing"
-
-	"github.com/google/go-cmp/cmp"
-	kncetesting "github.com/knative/eventing/pkg/kncloudevents/testing"
-	rectesting "github.com/knative/eventing/pkg/reconciler/testing"
-	"github.com/pkg/errors"
-	"go.uber.org/zap"
 )
 
 func TestNewAdaptor(t *testing.T) {
@@ -133,9 +132,6 @@ func TestNewAdaptor(t *testing.T) {
 }
 
 func TestAdapter_StartRef(t *testing.T) {
-	// TODO: fix this test, the cache informer will now sync.
-	t.Skip()
-
 	ce := kncetesting.NewTestClient()
 	logger := zap.NewExample().Sugar()
 	k8s := makeDynamicClient(nil)
@@ -160,19 +156,15 @@ func TestAdapter_StartRef(t *testing.T) {
 		err = a.Start(stopCh)
 	}()
 
-	// Let the cache informer sync.
+	stopCh <- struct{}{}
 	rt.Gosched()
 
-	stopCh <- struct{}{}
 	if err != nil {
 		t.Errorf("did not expect an error, but got %v", err)
 	}
 }
 
 func TestAdapter_StartResource(t *testing.T) {
-	// TODO: fix this test, the cache informer will now sync.
-	t.Skip()
-
 	ce := kncetesting.NewTestClient()
 	logger := zap.NewExample().Sugar()
 	k8s := makeDynamicClient(nil)
@@ -197,10 +189,9 @@ func TestAdapter_StartResource(t *testing.T) {
 		err = a.Start(stopCh)
 	}()
 
-	// Let the cache informer sync.
+	stopCh <- struct{}{}
 	rt.Gosched()
 
-	stopCh <- struct{}{}
 	if err != nil {
 		t.Errorf("did not expect an error, but got %v", err)
 	}

@@ -89,7 +89,7 @@ func TestMakeAddEvent(t *testing.T) {
 					},
 				}.AsV02(),
 			},
-			wantData: `{"obj":{"apiVersion":"v1","kind":"Pod","metadata":{"name":"unit","namespace":"test"}}}`,
+			wantData: `{"apiVersion":"v1","kind":"Pod","metadata":{"name":"unit","namespace":"test"}}`,
 		},
 	}
 	for n, tc := range testCases {
@@ -102,8 +102,7 @@ func TestMakeAddEvent(t *testing.T) {
 
 func TestMakeUpdateEvent(t *testing.T) {
 	testCases := map[string]struct {
-		oldObj interface{}
-		newObj interface{}
+		obj    interface{}
 		source string
 
 		want     *cloudevents.Event
@@ -117,8 +116,7 @@ func TestMakeUpdateEvent(t *testing.T) {
 		},
 		"simple pod": {
 			source: "unit-test",
-			oldObj: simplePod("unit", "test"),
-			newObj: simplePod("unit", "test"),
+			obj:    simplePod("unit", "test"),
 			want: &cloudevents.Event{
 				Context: cloudevents.EventContextV02{
 					Type:   "dev.knative.apiserver.resource.update",
@@ -128,26 +126,12 @@ func TestMakeUpdateEvent(t *testing.T) {
 					},
 				}.AsV02(),
 			},
-			wantData: `{"newObj":{"apiVersion":"v1","kind":"Pod","metadata":{"name":"unit","namespace":"test"}},"oldObj":{"apiVersion":"v1","kind":"Pod","metadata":{"name":"unit","namespace":"test"}}}`,
-		},
-		"nil old": {
-			source: "unit-test",
-			newObj: simplePod("unit", "test"),
-			want: &cloudevents.Event{
-				Context: cloudevents.EventContextV02{
-					Type:   "dev.knative.apiserver.resource.update",
-					Source: *cloudevents.ParseURLRef("unit-test"),
-					Extensions: map[string]interface{}{
-						"subject": "/apis/v1/namespaces/test/pods/unit",
-					},
-				}.AsV02(),
-			},
-			wantData: `{"newObj":{"apiVersion":"v1","kind":"Pod","metadata":{"name":"unit","namespace":"test"}}}`,
+			wantData: `{"apiVersion":"v1","kind":"Pod","metadata":{"name":"unit","namespace":"test"}}`,
 		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			got, err := events.MakeUpdateEvent(tc.source, tc.oldObj, tc.newObj)
+			got, err := events.MakeUpdateEvent(tc.source, tc.obj)
 			validate(t, got, err, tc.want, tc.wantData, tc.wantErr)
 		})
 	}
@@ -179,7 +163,7 @@ func TestMakeDeleteEvent(t *testing.T) {
 					},
 				}.AsV02(),
 			},
-			wantData: `{"obj":{"apiVersion":"v1","kind":"Pod","metadata":{"name":"unit","namespace":"test"}}}`,
+			wantData: `{"apiVersion":"v1","kind":"Pod","metadata":{"name":"unit","namespace":"test"}}`,
 		},
 	}
 	for n, tc := range testCases {
@@ -245,8 +229,7 @@ func TestMakeAddRefEvent(t *testing.T) {
 
 func TestMakeUpdateRefEvent(t *testing.T) {
 	testCases := map[string]struct {
-		oldObj       interface{}
-		newObj       interface{}
+		obj          interface{}
 		source       string
 		asController bool
 
@@ -261,8 +244,7 @@ func TestMakeUpdateRefEvent(t *testing.T) {
 		},
 		"simple pod": {
 			source: "unit-test",
-			oldObj: simplePod("unit", "test"),
-			newObj: simplePod("unit", "test"),
+			obj:    simplePod("unit", "test"),
 			want: &cloudevents.Event{
 				Context: cloudevents.EventContextV02{
 					Type:   "dev.knative.apiserver.ref.update",
@@ -276,7 +258,7 @@ func TestMakeUpdateRefEvent(t *testing.T) {
 		},
 		"simple owned pod": {
 			source:       "unit-test",
-			newObj:       simpleOwnedPod("unit", "test"),
+			obj:          simpleOwnedPod("unit", "test"),
 			asController: true,
 			want: &cloudevents.Event{
 				Context: cloudevents.EventContextV02{
@@ -289,24 +271,10 @@ func TestMakeUpdateRefEvent(t *testing.T) {
 			},
 			wantData: `{"kind":"ReplicaSet","namespace":"test","name":"unit","apiVersion":"apps/v1"}`,
 		},
-		"nil old": {
-			source: "unit-test",
-			newObj: simplePod("unit", "test"),
-			want: &cloudevents.Event{
-				Context: cloudevents.EventContextV02{
-					Type:   "dev.knative.apiserver.ref.update",
-					Source: *cloudevents.ParseURLRef("unit-test"),
-					Extensions: map[string]interface{}{
-						"subject": "/apis/v1/namespaces/test/pods/unit",
-					},
-				}.AsV02(),
-			},
-			wantData: `{"kind":"Pod","namespace":"test","name":"unit","apiVersion":"v1"}`,
-		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			got, err := events.MakeUpdateRefEvent(tc.source, tc.asController, tc.oldObj, tc.newObj)
+			got, err := events.MakeUpdateRefEvent(tc.source, tc.asController, tc.obj)
 			validate(t, got, err, tc.want, tc.wantData, tc.wantErr)
 		})
 	}

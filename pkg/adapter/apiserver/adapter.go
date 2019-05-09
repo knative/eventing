@@ -92,10 +92,7 @@ func NewAdaptor(source string, k8sClient dynamic.Interface, ceClient cloudevents
 }
 
 type eventDelegate interface {
-	addEvent(obj interface{})
-	updateEvent(oldObj, newObj interface{})
-	deleteEvent(obj interface{})
-
+	cache.Store
 	addControllerWatch(gvr schema.GroupVersionResource)
 }
 
@@ -126,30 +123,17 @@ func (a *adapter) Start(stopCh <-chan struct{}) error {
 	}
 
 	for _, gvrc := range a.gvrcs {
-		var informer cache.SharedIndexInformer
-
 		lw := &cache.ListWatch{
 			ListFunc:  asUnstructuredLister(a.k8s.Resource(gvrc.GVR).Namespace(a.namespace).List),
 			WatchFunc: asUnstructuredWatcher(a.k8s.Resource(gvrc.GVR).Namespace(a.namespace).Watch),
 		}
-		informer = cache.NewSharedIndexInformer(lw, &unstructured.Unstructured{}, resyncPeriod, cache.Indexers{
-			cache.NamespaceIndex: cache.MetaNamespaceIndexFunc,
-		})
 
-		go informer.Run(stopCh)
-
-		if ok := cache.WaitForCacheSync(stopCh, informer.HasSynced); !ok {
-			return fmt.Errorf("failed starting shared index informer for %s on namespace %s", gvrc.GVR.String(), a.namespace)
-		}
-
-		informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-			AddFunc:    d.addEvent,
-			UpdateFunc: d.updateEvent,
-			DeleteFunc: d.deleteEvent,
-		})
 		if gvrc.Controller {
 			d.addControllerWatch(gvrc.GVR)
 		}
+
+		reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, d, resyncPeriod)
+		go reflector.Run(stop)
 	}
 
 	<-stopCh
