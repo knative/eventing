@@ -94,7 +94,7 @@ func main() {
 		if err != nil {
 			logger.Fatalw("Error parsing APIVersion", zap.Error(err))
 		}
-		// This is really bad.
+		// TODO: pass down the resource and the kind so we do not have to guess.
 		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: kind, Group: gv.Group, Version: gv.Version})
 		gvrcs = append(gvrcs, apiserver.GVRC{
 			GVR:        gvr,

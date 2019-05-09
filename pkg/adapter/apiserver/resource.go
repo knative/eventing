@@ -22,6 +22,7 @@ import (
 	"github.com/knative/eventing/pkg/adapter/apiserver/events"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/tools/cache"
 )
 
 type resource struct {
@@ -30,43 +31,86 @@ type resource struct {
 	logger *zap.SugaredLogger
 }
 
-func (a *resource) addEvent(obj interface{}) {
+var _ cache.Store = (*resource)(nil)
+
+func (a *resource) Add(obj interface{}) error {
 	event, err := events.MakeAddEvent(a.source, obj)
 	if err != nil {
 		a.logger.Info("event creation failed", zap.Error(err))
-		return
+		return err
 	}
 
 	if _, err := a.ce.Send(context.Background(), *event); err != nil {
 		a.logger.Info("event delivery failed", zap.Error(err))
+		return err
 	}
+
+	return nil
 }
 
-func (a *resource) updateEvent(oldObj, newObj interface{}) {
-	event, err := events.MakeUpdateEvent(a.source, oldObj, newObj)
+func (a *resource) Update(obj interface{}) error {
+	event, err := events.MakeUpdateEvent(a.source, obj)
 	if err != nil {
 		a.logger.Info("event creation failed", zap.Error(err))
-		return
+		return err
 	}
 
 	if _, err := a.ce.Send(context.Background(), *event); err != nil {
 		a.logger.Info("event delivery failed", zap.Error(err))
+		return err
 	}
+
+	return nil
 }
 
-func (a *resource) deleteEvent(obj interface{}) {
+func (a *resource) Delete(obj interface{}) error {
 	event, err := events.MakeDeleteEvent(a.source, obj)
 	if err != nil {
 		a.logger.Info("event creation failed", zap.Error(err))
-		return
+		return err
 	}
 
 	if _, err := a.ce.Send(context.Background(), *event); err != nil {
 		a.logger.Info("event delivery failed", zap.Error(err))
+		return err
 	}
+
+	return nil
 }
 
 func (a *resource) addControllerWatch(gvr schema.GroupVersionResource) {
 	// not supported for resource.
 	a.logger.Warn("ignored controller watch request on gvr.", zap.String("gvr", gvr.String()))
+}
+
+// Stub cache.Store impl
+
+// Implements cache.Store
+func (a *resource) List() []interface{} {
+	return nil
+}
+
+// Implements cache.Store
+func (a *resource) ListKeys() []string {
+	return nil
+}
+
+// Implements cache.Store
+func (a *resource) Get(obj interface{}) (item interface{}, exists bool, err error) {
+	return nil, false, nil
+}
+
+// Implements cache.Store
+func (a *resource) GetByKey(key string) (item interface{}, exists bool, err error) {
+	return nil, false, nil
+}
+
+// Implements cache.Store
+func (a *resource) Replace([]interface{}, string) error {
+	return nil
+}
+
+// Implements cache.Store
+func (a *resource) Resync() error {
+	return nil
 }

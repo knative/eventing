@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/tools/cache"
 	"reflect"
 
 	cloudevents "github.com/cloudevents/sdk-go"
@@ -36,6 +37,8 @@ type ref struct {
 	controlledGVRs []schema.GroupVersionResource
 }
 
+var _ cache.Store = (*ref)(nil)
+
 // TODO: I think asController is not the feature we want. I think we want to be
 //  able to set the controller as a filter to the watch. Not emit all owners of
 //  the resource. Fix this. It has to be an api change on the CRD.
@@ -44,7 +47,7 @@ func (a *ref) asController(obj interface{}) bool {
 	if len(a.controlledGVRs) > 0 {
 		object := obj.(*unstructured.Unstructured)
 		gvk := object.GroupVersionKind()
-		// This is really bad.
+		// TODO: pass down the resource and the kind so we do not have to guess.
 		gvr, _ := meta.UnsafeGuessKindToResource(gvk)
 		for _, gvrc := range a.controlledGVRs {
 			if reflect.DeepEqual(gvr, gvrc) {
@@ -55,40 +58,49 @@ func (a *ref) asController(obj interface{}) bool {
 	return false
 }
 
-func (a *ref) addEvent(obj interface{}) {
+// Implements cache.Store
+func (a *ref) Add(obj interface{}) error {
 	event, err := events.MakeAddRefEvent(a.source, a.asController(obj), obj)
 	if err != nil {
 		a.logger.Info("event creation failed", zap.Error(err))
-		return
+		return err
 	}
 
 	if _, err := a.ce.Send(context.Background(), *event); err != nil {
 		a.logger.Info("event delivery failed", zap.Error(err))
+		return err
 	}
+	return nil
 }
 
-func (a *ref) updateEvent(oldObj, newObj interface{}) {
-	event, err := events.MakeUpdateRefEvent(a.source, a.asController(newObj), oldObj, newObj)
+// Implements cache.Store
+func (a *ref) Update(obj interface{}) error {
+	event, err := events.MakeUpdateRefEvent(a.source, a.asController(obj), obj)
 	if err != nil {
 		a.logger.Info("event creation failed", zap.Error(err))
-		return
+		return err
 	}
 
 	if _, err := a.ce.Send(context.Background(), *event); err != nil {
 		a.logger.Info("event delivery failed", zap.Error(err))
+		return err
 	}
+	return nil
 }
 
-func (a *ref) deleteEvent(obj interface{}) {
+// Implements cache.Store
+func (a *ref) Delete(obj interface{}) error {
 	event, err := events.MakeDeleteRefEvent(a.source, a.asController(obj), obj)
 	if err != nil {
 		a.logger.Info("event creation failed", zap.Error(err))
-		return
+		return err
 	}
 
 	if _, err := a.ce.Send(context.Background(), *event); err != nil {
 		a.logger.Info("event delivery failed", zap.Error(err))
+		return err
 	}
+	return nil
 }
 
 func (a *ref) addControllerWatch(gvr schema.GroupVersionResource) {
@@ -97,4 +109,36 @@ func (a *ref) addControllerWatch(gvr schema.GroupVersionResource) {
 		return
 	}
 	a.controlledGVRs = append(a.controlledGVRs, gvr)
+}
+
+// Stub cache.Store impl
+
+// Implements cache.Store
+func (a *ref) List() []interface{} {
+	return nil
+}
+
+// Implements cache.Store
+func (a *ref) ListKeys() []string {
+	return nil
+}
+
+// Implements cache.Store
+func (a *ref) Get(obj interface{}) (item interface{}, exists bool, err error) {
+	return nil, false, nil
+}
+
+// Implements cache.Store
+func (a *ref) GetByKey(key string) (item interface{}, exists bool, err error) {
+	return nil, false, nil
+}
+
+// Implements cache.Store
+func (a *ref) Replace([]interface{}, string) error {
+	return nil
+}
+
+// Implements cache.Store
+func (a *ref) Resync() error {
+	return nil
 }

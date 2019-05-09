@@ -18,18 +18,17 @@ package apiserver
 
 import (
 	"github.com/google/go-cmp/cmp"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"testing"
-	"time"
-
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/dynamic"
-	dynamicfake "k8s.io/client-go/dynamic/fake"
-
 	kncetesting "github.com/knative/eventing/pkg/kncloudevents/testing"
 	rectesting "github.com/knative/eventing/pkg/reconciler/testing"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
+	"testing"
 )
 
 func TestNewAdaptor(t *testing.T) {
@@ -150,13 +149,17 @@ func TestAdapter_StartRef(t *testing.T) {
 
 	a := NewAdaptor(source, k8s, ce, logger, opt)
 
-	var err error
+	err := errors.New("test never ran")
 	stopCh := make(chan struct{})
+	done := make(chan struct{})
 	go func() {
 		err = a.Start(stopCh)
+		done <- struct{}{}
 	}()
-	time.Sleep(1 * time.Millisecond)
+
 	stopCh <- struct{}{}
+	<-done
+
 	if err != nil {
 		t.Errorf("did not expect an error, but got %v", err)
 	}
@@ -181,13 +184,17 @@ func TestAdapter_StartResource(t *testing.T) {
 
 	a := NewAdaptor(source, k8s, ce, logger, opt)
 
-	var err error
+	err := errors.New("test never ran")
 	stopCh := make(chan struct{})
+	done := make(chan struct{})
 	go func() {
 		err = a.Start(stopCh)
+		done <- struct{}{}
 	}()
-	time.Sleep(1 * time.Millisecond)
+
 	stopCh <- struct{}{}
+	<-done
+
 	if err != nil {
 		t.Errorf("did not expect an error, but got %v", err)
 	}
@@ -197,8 +204,10 @@ func TestAdapter_StartResource(t *testing.T) {
 
 // GetDynamicClient returns the mockDynamicClient to use for this test case.
 func makeDynamicClient(objects []runtime.Object) dynamic.Interface {
+	sc := runtime.NewScheme()
+	_ = corev1.AddToScheme(sc)
 	dynamicMocks := rectesting.DynamicMocks{} // TODO: maybe we need to customize this.
-	realInterface := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme(), objects...)
+	realInterface := dynamicfake.NewSimpleDynamicClient(sc, objects...)
 	return rectesting.NewMockDynamicInterface(realInterface, dynamicMocks)
 }
 
