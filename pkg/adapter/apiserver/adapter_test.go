@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
-	rt "runtime"
 	"testing"
 )
 
@@ -152,12 +151,14 @@ func TestAdapter_StartRef(t *testing.T) {
 
 	err := errors.New("test never ran")
 	stopCh := make(chan struct{})
+	done := make(chan struct{})
 	go func() {
 		err = a.Start(stopCh)
+		done <- struct{}{}
 	}()
 
 	stopCh <- struct{}{}
-	rt.Gosched()
+	<-done
 
 	if err != nil {
 		t.Errorf("did not expect an error, but got %v", err)
@@ -185,12 +186,14 @@ func TestAdapter_StartResource(t *testing.T) {
 
 	err := errors.New("test never ran")
 	stopCh := make(chan struct{})
+	done := make(chan struct{})
 	go func() {
 		err = a.Start(stopCh)
+		done <- struct{}{}
 	}()
 
 	stopCh <- struct{}{}
-	rt.Gosched()
+	<-done
 
 	if err != nil {
 		t.Errorf("did not expect an error, but got %v", err)
