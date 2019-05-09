@@ -53,7 +53,7 @@ func main() {
 	logf.SetLogger(logf.ZapLogger(false))
 
 	logger, atomicLevel := setupLogger()
-	defer logger.Sync()
+	defer flush(logger)
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
@@ -231,4 +231,9 @@ func getRequiredEnv(envKey string) string {
 		log.Fatalf("required environment variable not defined '%s'", envKey)
 	}
 	return val
+}
+
+func flush(logger *zap.SugaredLogger) {
+	logger.Sync()
+	//	pkgmetrics.FlushExporter() <-- TODO: expose the stats.
 }
