@@ -54,7 +54,7 @@ const (
 )
 
 var (
-	kindToStatKeys = map[string]StatKey{
+	KindToStatKeys = map[string]StatKey{
 		"Broker": {
 			ReadyLatencyKey: BrokerReadyLatencyN,
 			ReadyCountKey:   BrokerReadyCountN,
@@ -73,7 +73,7 @@ var (
 		},
 	}
 
-	kindToMeasurements map[string]Measurements
+	KindToMeasurements map[string]Measurements
 
 	reconcilerTagKey tag.Key
 	keyTagKey        tag.Key
@@ -99,9 +99,9 @@ func init() {
 	reconcilerTagKey = mustNewTagKey("reconciler")
 	keyTagKey = mustNewTagKey("key")
 
-	kindToMeasurements := make(map[string]Measurements, len(kindToStatKeys))
+	KindToMeasurements = make(map[string]Measurements, len(KindToStatKeys))
 
-	for kind, keys := range kindToStatKeys {
+	for kind, keys := range KindToStatKeys {
 
 		readyLatencyStat := stats.Int64(
 			keys.ReadyLatencyKey,
@@ -114,7 +114,7 @@ func init() {
 			stats.UnitDimensionless)
 
 		// Save the measurements for later marks.
-		kindToMeasurements[kind] = Measurements{
+		KindToMeasurements[kind] = Measurements{
 			ReadyCountStat:   readyCountStat,
 			ReadyLatencyStat: readyLatencyStat,
 		}
@@ -174,9 +174,9 @@ func (r *reporter) ReportReady(kind, namespace, service string, d time.Duration)
 		return err
 	}
 
-	m, ok := kindToMeasurements[kind]
+	m, ok := KindToMeasurements[kind]
 	if !ok {
-		return fmt.Errorf("unknown kind attempted to report ready, %q", m)
+		return fmt.Errorf("unknown kind attempted to report ready, %q", kind)
 	}
 
 	metrics.Record(ctx, m.ReadyCountStat.M(1))

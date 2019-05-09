@@ -53,12 +53,16 @@ func TestReporter_ReportDuration(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to create reporter: %v", err)
 	}
+
+	kind := "Broker"
+	keys := KindToStatKeys[kind]
+
 	countWas := int64(0)
-	if m := getMetric(t, ServiceReadyCountN); m != nil {
+	if m := getMetric(t, keys.ReadyCountKey); m != nil {
 		countWas = m.Data.(*view.CountData).Value
 	}
 
-	if err = reporter.ReportServiceReady(testServiceNamespace, testServiceName, time.Second); err != nil {
+	if err = reporter.ReportReady(kind, testServiceNamespace, testServiceName, time.Second); err != nil {
 		t.Error(err)
 	}
 	expectedTags := []tag.Tag{
@@ -66,13 +70,13 @@ func TestReporter_ReportDuration(t *testing.T) {
 		{Key: reconcilerTagKey, Value: reconcilerMockName},
 	}
 
-	latency := getMetric(t, ServiceReadyLatencyN)
+	latency := getMetric(t, keys.ReadyLatencyKey)
 	if v := latency.Data.(*view.LastValueData).Value; v != 1000 {
 		t.Errorf("Expected latency %v, Got %v", 1000, v)
 	}
 	checkTags(t, expectedTags, latency.Tags)
 
-	count := getMetric(t, ServiceReadyCountN)
+	count := getMetric(t, keys.ReadyCountKey)
 	if got, want := count.Data.(*view.CountData).Value, countWas+1; got != want {
 		t.Errorf("Latency report count = %d, want: %d", got, want)
 	}
