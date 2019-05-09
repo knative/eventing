@@ -46,6 +46,10 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
+const (
+	component = "controller"
+)
+
 var (
 	hardcodedLoggingConfig bool
 )
