@@ -3,8 +3,9 @@ package provisioners
 import (
 	"context"
 	"fmt"
-	"github.com/knative/pkg/kmeta"
 	"strings"
+
+	"github.com/knative/pkg/kmeta"
 
 	"k8s.io/apimachinery/pkg/labels"
 
