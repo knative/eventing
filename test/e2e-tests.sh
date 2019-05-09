@@ -164,7 +164,6 @@ function gcppubsub_teardown() {
 function natss_setup() {
   echo "Installing NATS Streaming"
   kubectl create namespace natss || return 1
-  kubectl label namespace natss istio-injection=enabled || return 1
   kubectl apply -n natss -f ${NATSS_INSTALLATION_CONFIG} || return 1
   wait_until_pods_running natss || fail_test "Failed to start up a NATSS cluster"
 }
