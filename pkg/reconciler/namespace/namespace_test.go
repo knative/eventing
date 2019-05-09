@@ -144,8 +144,8 @@ func TestAllCases(t *testing.T) {
 		},
 		WantCreates: []metav1.Object{
 			resources.MakeBroker(testNS),
-			resources.MakeServiceAccount(testNS),
-			resources.MakeRoleBinding(resources.MakeServiceAccount(testNS)),
+			resources.MakeServiceAccount(testNS, resources.FilterServiceAccountName),
+			resources.MakeRoleBinding(resources.FilterRoleBindingName, resources.MakeServiceAccount(testNS, resources.FilterServiceAccountName), resources.FilterClusterRoleName),
 		},
 	}, {
 		Name: "Namespace enabled, broker exists",
@@ -164,8 +164,8 @@ func TestAllCases(t *testing.T) {
 			Eventf(corev1.EventTypeNormal, "NamespaceReconciled", "Namespace reconciled: \"test-namespace\""),
 		},
 		WantCreates: []metav1.Object{
-			resources.MakeServiceAccount(testNS),
-			resources.MakeRoleBinding(resources.MakeServiceAccount(testNS)),
+			resources.MakeServiceAccount(testNS, resources.FilterServiceAccountName),
+			resources.MakeRoleBinding(resources.FilterRoleBindingName, resources.MakeServiceAccount(testNS, resources.FilterServiceAccountName), resources.FilterClusterRoleName),
 		},
 	}, {
 		Name: "Namespace enabled, broker exists with no label",
@@ -189,7 +189,7 @@ func TestAllCases(t *testing.T) {
 			NewNamespace(testNS,
 				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
 			),
-			resources.MakeServiceAccount(testNS),
+			resources.MakeServiceAccount(testNS, resources.FilterServiceAccountName),
 		},
 		Key:                     testNS,
 		SkipNamespaceValidation: true,
@@ -201,7 +201,8 @@ func TestAllCases(t *testing.T) {
 		},
 		WantCreates: []metav1.Object{
 			resources.MakeBroker(testNS),
-			resources.MakeRoleBinding(resources.MakeServiceAccount(testNS)),
+			resources.MakeServiceAccount(testNS, resources.FilterServiceAccountName),
+			resources.MakeRoleBinding(resources.FilterRoleBindingName, resources.MakeServiceAccount(testNS, resources.FilterServiceAccountName), resources.FilterClusterRoleName),
 		},
 	}, {
 		Name: "Namespace enabled, role binding exists",
@@ -209,7 +210,7 @@ func TestAllCases(t *testing.T) {
 			NewNamespace(testNS,
 				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
 			),
-			resources.MakeRoleBinding(resources.MakeServiceAccount(testNS)),
+			resources.MakeRoleBinding(resources.FilterRoleBindingName, resources.MakeServiceAccount(testNS, resources.FilterServiceAccountName), resources.FilterClusterRoleName),
 		},
 		Key:                     testNS,
 		SkipNamespaceValidation: true,
@@ -221,7 +222,7 @@ func TestAllCases(t *testing.T) {
 		},
 		WantCreates: []metav1.Object{
 			resources.MakeBroker(testNS),
-			resources.MakeServiceAccount(testNS),
+			resources.MakeServiceAccount(testNS, resources.FilterServiceAccountName),
 		},
 	},
 	// TODO: we need a existing default un-owned test.
