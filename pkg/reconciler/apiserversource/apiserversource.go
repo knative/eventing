@@ -85,6 +85,8 @@ type Reconciler struct {
 	apiserversourceLister listers.ApiServerSourceLister
 	deploymentLister      appsv1listers.DeploymentLister
 	eventTypeLister       eventinglisters.EventTypeLister
+
+	source string
 }
 
 // NewController initializes the controller and is called by the generated code
@@ -94,11 +96,13 @@ func NewController(
 	apiserversourceInformer sourceinformers.ApiServerSourceInformer,
 	deploymentInformer appsv1informers.DeploymentInformer,
 	eventTypeInformer eventinginformers.EventTypeInformer,
+	source string,
 ) *controller.Impl {
 	r := &Reconciler{
 		Base:                  reconciler.NewBase(opt, controllerAgentName),
 		apiserversourceLister: apiserversourceInformer.Lister(),
 		deploymentLister:      deploymentInformer.Lister(),
+		source:                source,
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
 
@@ -285,7 +289,7 @@ func (r *Reconciler) makeEventTypes(src *v1alpha1.ApiServerSource) ([]eventingv1
 	eventTypes := make([]eventingv1alpha1.EventType, 0)
 	args := &resources.EventTypeArgs{
 		Src:    src,
-		Source: "ScottMagic",
+		Source: r.source,
 	}
 	for _, apiEventType := range apiServerEventTypes {
 		args.Type = apiEventType

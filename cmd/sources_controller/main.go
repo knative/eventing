@@ -103,6 +103,7 @@ func main() {
 			apiserverSourceInformer,
 			deploymentInformer,
 			eventTypeInformer,
+			cfg.Host,
 		),
 	}
 	// This line asserts at compile time that the length of controllers is equal to numControllers.

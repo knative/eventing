@@ -68,6 +68,7 @@ const (
 	testNS     = "testnamespace"
 
 	sinkName = "testsink"
+	source   = "apiserveraddr"
 )
 
 func init() {
@@ -198,6 +199,57 @@ func TestReconcile(t *testing.T) {
 				makeReceiveAdapter(),
 			},
 		},
+		{
+			Name: "valid with broker sink and missing event types",
+			Objects: []runtime.Object{
+				NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink: &brokerRef,
+					}),
+				),
+				NewBroker(sinkName, testNS,
+					WithInitBrokerConditions,
+					WithBrokerAddress(sinkDNS),
+				),
+				makeEventTypeWithName(sourcesv1alpha1.ApiServerSourceAddEventType, "name-1"),
+				makeEventTypeWithName(sourcesv1alpha1.ApiServerSourceDeleteEventType, "name-2"),
+				makeEventTypeWithName(sourcesv1alpha1.ApiServerSourceUpdateEventType, "name-3"),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink: &brokerRef,
+					}),
+					// Status Update:
+					WithInitApiServerSourceConditions,
+					WithApiServerSourceDeployed,
+					WithApiServerSourceSink(sinkURI),
+					WithApiServerSourceEventTypes,
+				),
+			}},
+			WantCreates: []metav1.Object{
+				makeEventType(sourcesv1alpha1.ApiServerSourceAddRefEventType),
+				makeEventType(sourcesv1alpha1.ApiServerSourceDeleteRefEventType),
+				makeEventType(sourcesv1alpha1.ApiServerSourceUpdateRefEventType),
+				makeReceiveAdapter(),
+			},
+		},
 	}
 
 	defer logtesting.ClearAll()
@@ -206,6 +258,7 @@ func TestReconcile(t *testing.T) {
 			Base:                  reconciler.NewBase(opt, controllerAgentName),
 			apiserversourceLister: listers.GetApiServerSourceLister(),
 			deploymentLister:      listers.GetDeploymentLister(),
+			source:                source,
 		}
 	}))
 }
@@ -228,6 +281,7 @@ func TestNew(t *testing.T) {
 		apiserverInformer,
 		deploymentInformer,
 		eventTypeInformer,
+		source,
 	)
 
 	if c == nil {
@@ -262,6 +316,12 @@ func makeReceiveAdapter() *appsv1.Deployment {
 	return resources.MakeReceiveAdapter(&args)
 }
 
+func makeEventTypeWithName(eventType, name string) *v1alpha1.EventType {
+	et := makeEventType(eventType)
+	et.Name = name
+	return et
+}
+
 func makeEventType(eventType string) *v1alpha1.EventType {
 	return &v1alpha1.EventType{
 		ObjectMeta: metav1.ObjectMeta{
@@ -277,9 +337,8 @@ func makeEventType(eventType string) *v1alpha1.EventType {
 			},
 		},
 		Spec: v1alpha1.EventTypeSpec{
-			Type: eventType,
-			// TODO Change this.
-			Source: "ScottMagic",
+			Type:   eventType,
+			Source: source,
 			Broker: sinkName,
 		},
 	}
