@@ -198,57 +198,6 @@ func TestReconcile(t *testing.T) {
 				makeReceiveAdapter(),
 			},
 		},
-		{
-			Name: "valid with broker sink and missing event types",
-			Objects: []runtime.Object{
-				NewApiServerSource(sourceName, testNS,
-					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
-						Resources: []sourcesv1alpha1.ApiServerResource{
-							{
-								APIVersion: "",
-								Kind:       "Namespace",
-							},
-						},
-						Sink: &brokerRef,
-					}),
-				),
-				NewBroker(sinkName, testNS,
-					WithInitBrokerConditions,
-					WithBrokerAddress(sinkDNS),
-				),
-				makeEventType(sourcesv1alpha1.ApiServerSourceAddEventType),
-				makeEventType(sourcesv1alpha1.ApiServerSourceDeleteRefEventType),
-			},
-			Key: testNS + "/" + sourceName,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewApiServerSource(sourceName, testNS,
-					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
-						Resources: []sourcesv1alpha1.ApiServerResource{
-							{
-								APIVersion: "",
-								Kind:       "Namespace",
-							},
-						},
-						Sink: &brokerRef,
-					}),
-					// Status Update:
-					WithInitApiServerSourceConditions,
-					WithApiServerSourceDeployed,
-					WithApiServerSourceSink(sinkURI),
-					WithApiServerSourceEventTypes,
-				),
-			}},
-			WantCreates: []metav1.Object{
-				makeEventType(sourcesv1alpha1.ApiServerSourceDeleteEventType),
-				makeEventType(sourcesv1alpha1.ApiServerSourceUpdateEventType),
-				makeEventType(sourcesv1alpha1.ApiServerSourceAddRefEventType),
-				makeEventType(sourcesv1alpha1.ApiServerSourceUpdateRefEventType),
-				makeReceiveAdapter(),
-			},
-		},
 	}
 
 	defer logtesting.ClearAll()
