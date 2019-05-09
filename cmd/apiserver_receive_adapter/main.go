@@ -18,21 +18,12 @@ package main
 
 import (
 	"flag"
-	"time"
-
-	"k8s.io/client-go/rest"
-
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-
-	"github.com/knative/eventing/pkg/reconciler"
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/knative/eventing/pkg/adapter/apiserver"
 	"github.com/knative/eventing/pkg/kncloudevents"
-	"github.com/knative/pkg/apis/duck"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	kncontroller "github.com/knative/pkg/controller"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -48,11 +39,15 @@ var (
 )
 
 type envConfig struct {
+	Namespace  string   `envconfig:"SYSTEM_NAMESPACE" default:"default"`
+	Mode       string   `envconfig:"MODE"`
 	SinkURI    string   `split_words:"true" required:"true"`
 	ApiVersion []string `split_words:"true" required:"true"`
 	Kind       []string `required:"true"`
 	Controller []bool   `required:"true"`
 }
+
+// TODO: the controller should take the list of GVR
 
 func main() {
 	flag.Parse()
@@ -79,11 +74,6 @@ func main() {
 	logger = logger.With(zap.String("controller/apiserver", "adapter"))
 	logger.Info("Starting the controller")
 
-	numControllers := len(env.ApiVersion)
-	cfg.QPS = float32(numControllers) * rest.DefaultQPS
-	cfg.Burst = numControllers * rest.DefaultBurst
-	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
-
 	client, err := dynamic.NewForConfig(cfg)
 	if err != nil {
 		logger.Fatalw("Error building dynamic client", zap.Error(err))
@@ -94,43 +84,33 @@ func main() {
 		logger.Fatalw("Error building cloud event client", zap.Error(err))
 	}
 
-	controllers := []*kncontroller.Impl{}
+	gvrcs := []apiserver.GVRC(nil)
 
-	// Create one controller per resource.
 	for i, apiVersion := range env.ApiVersion {
 		kind := env.Kind[i]
 		controlled := env.Controller[i]
-
-		obj := &duckv1alpha1.AddressableType{}
-
-		factory := duck.TypedInformerFactory{
-			Client:       client,
-			ResyncPeriod: time.Duration(10), // TODO
-			StopChannel:  stopCh,
-			Type:         obj,
-		}
 
 		gv, err := schema.ParseGroupVersion(apiVersion)
 		if err != nil {
 			logger.Fatalw("Error parsing APIVersion", zap.Error(err))
 		}
-
-		gvk := schema.GroupVersionKind{Kind: kind, Group: gv.Group, Version: gv.Version}
-
-		// This is really bad.
-		gvr, _ := meta.UnsafeGuessKindToResource(gvk)
-
-		// Get and start the informer for gvr
-		logger.Infof("Starting informer for %v", gvk)
-		informer, lister, err := factory.Get(gvr)
-		if err != nil {
-			logger.Fatalw("Error starting informer", zap.Error(err))
-		}
-		controllers = append(controllers, apiserver.NewController(opt, informer, lister, eventsClient, controlled))
+		// TODO: pass down the resource and the kind so we do not have to guess.
+		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: kind, Group: gv.Group, Version: gv.Version})
+		gvrcs = append(gvrcs, apiserver.GVRC{
+			GVR:        gvr,
+			Controller: controlled,
+		})
 	}
 
-	// Start all of the controllers.
-	logger.Info("Starting controllers.")
-	go kncontroller.StartAll(stopCh, controllers...)
-	<-stopCh
+	opt := apiserver.Options{
+		Namespace: env.Namespace,
+		Mode:      env.Mode,
+		GVRCs:     gvrcs,
+	}
+
+	a := apiserver.NewAdaptor(cfg.Host, client, eventsClient, logger, opt)
+	logger.Info("starting kubernetes api adapter")
+	if err := a.Start(stopCh); err != nil {
+		logger.Warn("start returned an error,", zap.Error(err))
+	}
 }

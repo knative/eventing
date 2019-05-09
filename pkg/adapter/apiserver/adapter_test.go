@@ -17,187 +17,272 @@ limitations under the License.
 package apiserver
 
 import (
-	"context"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	gotesting "testing"
-	"time"
-
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/datacodec/json"
 	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/pkg/kncloudevents"
-	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/pkg/apis/duck"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	logtesting "github.com/knative/pkg/logging/testing"
+	kncetesting "github.com/knative/eventing/pkg/kncloudevents/testing"
+	rectesting "github.com/knative/eventing/pkg/reconciler/testing"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	fakedynamicclientset "k8s.io/client-go/dynamic/fake"
-	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/dynamic"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
+	"testing"
 )
 
-const (
-	sourceName = "test-apiserver-adapter"
-	sourceUID  = "1234-5678-90"
-	testNS     = "testnamespace"
-)
+func TestNewAdaptor(t *testing.T) {
+	ce := kncetesting.NewTestClient()
+	logger := zap.NewExample().Sugar()
+	k8s := makeDynamicClient(nil)
 
-type testCase struct {
-	// Name is a descriptive name for this test suitable as a first argument to t.Run()
-	Name string
+	testCases := map[string]struct {
+		opt    Options
+		source string
 
-	// InitialState is the list of objects that already exists when reconciliation
-	// starts.
-	InitialState []runtime.Object
-
-	// Key is the parameter to reconciliation.
-	// This has the form "namespace/name".
-	Key string
-
-	// Where to send events
-	sink func(http.ResponseWriter, *http.Request)
-
-	// Expected event data
-	data interface{}
-}
-
-func TestReconcile(t *gotesting.T) {
-	table := []testCase{
-		{
-			Name: "Receive Pod creation event",
-			InitialState: []runtime.Object{
-				getPod(),
+		wantMode      string
+		wantNamespace string
+		wantGVRCs     []GVRC
+	}{
+		"empty opts": {
+			opt:      Options{},
+			wantMode: RefMode,
+		},
+		"with source": {
+			source:   "test-source",
+			opt:      Options{},
+			wantMode: RefMode,
+		},
+		"with namespace": {
+			source: "test-source",
+			opt: Options{
+				Namespace: "test-ns",
 			},
-			Key: testNS + "/" + sourceName,
-
-			sink: sinkAccepted,
-			data: decode(t, encode(t, getPodRef())),
+			wantMode:      RefMode,
+			wantNamespace: "test-ns",
+		},
+		"with mode resource": {
+			source: "test-source",
+			opt: Options{
+				Mode: ResourceMode,
+			},
+			wantMode: ResourceMode,
+		},
+		"with mode ref": {
+			source: "test-source",
+			opt: Options{
+				Mode: RefMode,
+			},
+			wantMode: RefMode,
+		},
+		"with mode trash": {
+			source: "test-source",
+			opt: Options{
+				Mode: "trash",
+			},
+			wantMode: RefMode,
+		},
+		"with mode gvrs": {
+			source: "test-source",
+			opt: Options{
+				GVRCs: []GVRC{{
+					GVR: schema.GroupVersionResource{
+						Group:    "apps",
+						Version:  "v1",
+						Resource: "replicasets",
+					},
+					Controller: true,
+				}},
+			},
+			wantMode: RefMode,
+			wantGVRCs: []GVRC{{
+				GVR: schema.GroupVersionResource{
+					Group:    "apps",
+					Version:  "v1",
+					Resource: "replicasets",
+				},
+				Controller: true,
+			}},
 		},
 	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
 
-	for _, tc := range table {
-		t.Run(tc.Name, func(t *gotesting.T) {
-			// Create fake sink server
-			h := &fakeHandler{
-				handler: tc.sink,
+			a := NewAdaptor(tc.source, k8s, ce, logger, tc.opt)
+
+			got, ok := a.(*adapter)
+			if !ok {
+				t.Errorf("expected NewAdapter to return a *adapter, but did not")
 			}
-
-			sinkServer := httptest.NewServer(h)
-			defer sinkServer.Close()
-
-			// Bind cloud event client
-			ceClient, err := kncloudevents.NewDefaultClient(sinkServer.URL)
-			if err != nil {
-				t.Errorf("cannot create cloud event client: %v", zap.Error(err))
+			if diff := cmp.Diff(tc.source, got.source); diff != "" {
+				t.Errorf("unexpected source diff (-want, +got) = %v", diff)
 			}
-
-			// Create fake dynamic client
-			dynamicScheme := runtime.NewScheme()
-			client := fakedynamicclientset.NewSimpleDynamicClient(dynamicScheme, tc.InitialState...)
-
-			stopCh := make(chan struct{})
-			defer close(stopCh)
-
-			tif := &duck.TypedInformerFactory{
-				Client:       client,
-				Type:         &duckv1alpha1.AddressableType{},
-				ResyncPeriod: 1 * time.Second,
-				StopChannel:  stopCh,
+			if diff := cmp.Diff(tc.wantMode, got.mode); diff != "" {
+				t.Errorf("unexpected mode diff (-want, +got) = %v", diff)
 			}
-
-			_, lister, err := tif.Get(schema.GroupVersionResource{Group: "", Resource: "pods", Version: "v1"})
-			if err != nil {
-				t.Fatalf("Get() = %v", err)
+			if diff := cmp.Diff(tc.wantNamespace, got.namespace); diff != "" {
+				t.Errorf("unexpected namespace diff (-want, +got) = %v", diff)
 			}
-
-			opt := reconciler.Options{
-				KubeClientSet: fakekubeclientset.NewSimpleClientset(),
-				Logger:        logtesting.TestLogger(t),
-			}
-
-			r := &Reconciler{
-				Base:         reconciler.NewBase(opt, controllerAgentName),
-				eventsClient: ceClient,
-				lister:       lister,
-			}
-			ctx := context.Background()
-
-			err = r.Reconcile(ctx, tc.Key)
-			if err != nil {
-				t.Errorf("Expected no error")
-			}
-
-			if diff := cmp.Diff(tc.data, decode(t, h.body)); diff != "" {
-				t.Errorf("incorrect event (-want, +got): %v", diff)
+			if diff := cmp.Diff(tc.wantGVRCs, got.gvrcs); diff != "" {
+				t.Errorf("unexpected namespace diff (-want, +got) = %v", diff)
 			}
 		})
 	}
-
 }
 
-func getPod() runtime.Object {
+func TestAdapter_StartRef(t *testing.T) {
+	ce := kncetesting.NewTestClient()
+	logger := zap.NewExample().Sugar()
+	k8s := makeDynamicClient(nil)
+	source := "test-source"
+	opt := Options{
+		Mode:      RefMode,
+		Namespace: "default",
+		GVRCs: []GVRC{{
+			GVR: schema.GroupVersionResource{
+				Group:    "",
+				Version:  "v1",
+				Resource: "pods",
+			},
+		}},
+	}
+
+	a := NewAdaptor(source, k8s, ce, logger, opt)
+
+	err := errors.New("test never ran")
+	stopCh := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		err = a.Start(stopCh)
+		done <- struct{}{}
+	}()
+
+	stopCh <- struct{}{}
+	<-done
+
+	if err != nil {
+		t.Errorf("did not expect an error, but got %v", err)
+	}
+}
+
+func TestAdapter_StartResource(t *testing.T) {
+	ce := kncetesting.NewTestClient()
+	logger := zap.NewExample().Sugar()
+	k8s := makeDynamicClient(nil)
+	source := "test-source"
+	opt := Options{
+		Mode:      ResourceMode,
+		Namespace: "default",
+		GVRCs: []GVRC{{
+			GVR: schema.GroupVersionResource{
+				Group:    "",
+				Version:  "v1",
+				Resource: "pods",
+			},
+		}},
+	}
+
+	a := NewAdaptor(source, k8s, ce, logger, opt)
+
+	err := errors.New("test never ran")
+	stopCh := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		err = a.Start(stopCh)
+		done <- struct{}{}
+	}()
+
+	stopCh <- struct{}{}
+	<-done
+
+	if err != nil {
+		t.Errorf("did not expect an error, but got %v", err)
+	}
+}
+
+// Common methods:
+
+// GetDynamicClient returns the mockDynamicClient to use for this test case.
+func makeDynamicClient(objects []runtime.Object) dynamic.Interface {
+	sc := runtime.NewScheme()
+	_ = corev1.AddToScheme(sc)
+	dynamicMocks := rectesting.DynamicMocks{} // TODO: maybe we need to customize this.
+	realInterface := dynamicfake.NewSimpleDynamicClient(sc, objects...)
+	return rectesting.NewMockDynamicInterface(realInterface, dynamicMocks)
+}
+
+func simplePod(name, namespace string) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Pod",
 			"metadata": map[string]interface{}{
-				"namespace": testNS,
-				"name":      sourceName,
-				"selfLink":  "/apis/v1/namespaces/" + testNS + "/pod/" + sourceName,
+				"namespace": namespace,
+				"name":      name,
 			},
 		},
 	}
 }
 
-func getPodRef() corev1.ObjectReference {
-	return corev1.ObjectReference{
-		APIVersion: "v1",
-		Kind:       "Pod",
-		Name:       sourceName,
-		Namespace:  testNS,
+func simpleOwnedPod(name, namespace string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Pod",
+			"metadata": map[string]interface{}{
+				"namespace": namespace,
+				"name":      "owned",
+				"ownerReferences": []interface{}{
+					map[string]interface{}{
+						"apiVersion":         "apps/v1",
+						"blockOwnerDeletion": true,
+						"controller":         true,
+						"kind":               "ReplicaSet",
+						"name":               name,
+						"uid":                "0c119059-7113-11e9-a6c5-42010a8a00ed",
+					},
+				},
+			},
+		},
 	}
 }
 
-type fakeHandler struct {
-	body   []byte
-	header http.Header
-
-	handler func(http.ResponseWriter, *http.Request)
-}
-
-func (h *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.header = r.Header
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "can not read body", http.StatusBadRequest)
-		return
+func validateSent(t *testing.T, ce *kncetesting.TestCloudEventsClient, want string) {
+	if got := len(ce.Sent); got != 1 {
+		t.Errorf("Expected 1 event to be sent, got %d", got)
 	}
-	h.body = body
-	defer r.Body.Close()
-	h.handler(w, r)
-}
 
-func sinkAccepted(writer http.ResponseWriter, req *http.Request) {
-	writer.WriteHeader(http.StatusOK)
-}
-
-func encode(t *gotesting.T, data interface{}) string {
-	b, err := json.Encode(data)
-	if err != nil {
-		t.Fatalf("failed to encode data: %v", err)
+	if got := ce.Sent[0].Type(); got != want {
+		t.Errorf("Expected %q event to be sent, got %q", want, got)
 	}
-	return string(b)
 }
 
-func decode(t *gotesting.T, data interface{}) interface{} {
-	var out interface{}
-	err := json.Decode(data, &out)
-	if err != nil {
-		t.Fatalf("failed to decode data: %v", err)
+func validateNotSent(t *testing.T, ce *kncetesting.TestCloudEventsClient, want string) {
+	if got := len(ce.Sent); got != 0 {
+		t.Errorf("Expected 0 event to be sent, got %d", got)
 	}
-	return out
+}
+
+func makeResourceAndTestingClient() (*resource, *kncetesting.TestCloudEventsClient) {
+	ce := kncetesting.NewTestClient()
+	source := "unit-test"
+	logger := zap.NewExample().Sugar()
+
+	return &resource{
+		ce:     ce,
+		source: source,
+		logger: logger,
+	}, ce
+}
+
+func makeRefAndTestingClient() (*ref, *kncetesting.TestCloudEventsClient) {
+	ce := kncetesting.NewTestClient()
+	source := "unit-test"
+	logger := zap.NewExample().Sugar()
+
+	return &ref{
+		ce:     ce,
+		source: source,
+		logger: logger,
+	}, ce
 }
