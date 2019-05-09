@@ -435,7 +435,7 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:8db9b5603c2c45a1dda48ba9ae221af3890a9d1388fd01f539e072f009d0279f"
+  digest = "1:7e9335e0a254717ef5af00f8c5aabb0982b773a3554de533a1ca5c9571a48c8d"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -474,6 +474,8 @@
     "test/monitoring",
     "test/spoof",
     "test/zipkin",
+    "tracing",
+    "tracing/config",
     "tracker",
     "webhook",
   ]
@@ -589,6 +591,21 @@
   pruneopts = "NUT"
   revision = "289cccf02c178dc782430d534e3c1f5b72af807f"
   version = "v1.0.0"
+
+[[projects]]
+  digest = "1:8a081d96c4071c8bddcecf81bfdf84e0acfebd04d2eedc128f49e23b48308026"
+  name = "github.com/openzipkin/zipkin-go"
+  packages = [
+    ".",
+    "idgenerator",
+    "model",
+    "propagation",
+    "reporter",
+    "reporter/http",
+  ]
+  pruneopts = "NUT"
+  revision = "1b5162aa314e6ccfcf83777bfb5218988c9e8283"
+  version = "v0.1.6"
 
 [[projects]]
   digest = "1:93b1d84c5fa6d1ea52f4114c37714cddd84d5b78f151b62bb101128dd51399bf"
@@ -711,11 +728,12 @@
   version = "v1.0.3"
 
 [[projects]]
-  digest = "1:69a97603fe8952de86ee1e74a065f7974ec7d7d1d2301d3f5da6d342156363f4"
+  digest = "1:b8baa7541ef444be218da02d3a7b607d33513263660e489d86d429afbffcdd86"
   name = "go.opencensus.io"
   packages = [
     ".",
     "exporter/prometheus",
+    "exporter/zipkin",
     "internal",
     "internal/tagencoding",
     "metric/metricdata",
@@ -1402,12 +1420,15 @@
     "github.com/knative/pkg/system/testing",
     "github.com/knative/pkg/test",
     "github.com/knative/pkg/test/logging",
+    "github.com/knative/pkg/tracing",
+    "github.com/knative/pkg/tracing/config",
     "github.com/knative/pkg/tracker",
     "github.com/knative/pkg/webhook",
     "github.com/knative/test-infra/scripts",
     "github.com/knative/test-infra/tools/dep-collector",
     "github.com/nats-io/go-nats-streaming",
     "github.com/nats-io/nats-streaming-server/server",
+    "github.com/openzipkin/zipkin-go",
     "github.com/pkg/errors",
     "github.com/robfig/cron",
     "go.opencensus.io/exporter/prometheus",

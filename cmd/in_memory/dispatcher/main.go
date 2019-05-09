@@ -28,13 +28,22 @@ import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/channelwatcher"
 	"github.com/knative/eventing/pkg/provisioners/swappable"
+	"github.com/knative/eventing/pkg/tracing"
+	"github.com/knative/pkg/configmap"
+	"github.com/knative/pkg/system"
+	pkgtracing "github.com/knative/pkg/tracing"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+)
+
+const (
+	NAMESPACE = "NAMESPACE"
 )
 
 var (
@@ -68,9 +77,15 @@ func main() {
 		logger.Fatal("Unable to create channel watcher.", zap.Error(err))
 	}
 
+	kc := kubernetes.NewForConfigOrDie(mgr.GetConfig())
+	configMapWatcher := configmap.NewInformedWatcher(kc, system.Namespace())
+	if err = tracing.SetupDynamicZipkinPublishing(logger.Sugar(), configMapWatcher, "in-memory-dispatcher"); err != nil {
+		logger.Fatal("Error setting up Zipkin publishing", zap.Error(err))
+	}
+
 	s := &http.Server{
 		Addr:         fmt.Sprintf(":%d", port),
-		Handler:      sh,
+		Handler:      pkgtracing.HTTPSpanMiddleware(sh),
 		ErrorLog:     zap.NewStdLog(logger),
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
@@ -86,6 +101,12 @@ func main() {
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
+
+	// configMapWatcher does not block, so start it first.
+	if err = configMapWatcher.Start(stopCh); err != nil {
+		logger.Fatal("Failed to start ConfigMap watcher", zap.Error(err))
+	}
+
 	// Start blocks forever.
 	if err = mgr.Start(stopCh); err != nil {
 		logger.Error("manager.Start() returned an error", zap.Error(err))
