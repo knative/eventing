@@ -2,6 +2,7 @@ package testing
 
 import (
 	"context"
+
 	cloudevents "github.com/cloudevents/sdk-go"
 )
 

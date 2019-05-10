@@ -18,6 +18,7 @@ package apiserver
 
 import (
 	"context"
+
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/knative/eventing/pkg/adapter/apiserver/events"
 	"go.uber.org/zap"
