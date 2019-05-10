@@ -89,7 +89,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						"sidecar.istio.io/inject": "true",
+						"sidecar.istio.io/inject": "false",
 					},
 					Labels: map[string]string{
 						"test-key1": "test-value1",
@@ -106,6 +106,8 @@ func TestMakeReceiveAdapter(t *testing.T) {
 								{
 									Name:  "SINK_URI",
 									Value: "sink-uri",
+								}, {
+									Name: "MODE",
 								}, {
 									Name:  "API_VERSION",
 									Value: ",",

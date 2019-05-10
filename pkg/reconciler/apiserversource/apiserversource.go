@@ -24,14 +24,17 @@ import (
 	"sync"
 	"time"
 
-	v1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	sourceinformers "github.com/knative/eventing/pkg/client/informers/externalversions/sources/v1alpha1"
+	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
+	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/apiserversource/resources"
 	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/logging"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -55,12 +58,22 @@ const (
 
 	// Name of the corev1.Events emitted from the reconciliation process
 	apiserversourceReconciled         = "ApiServerSourceReconciled"
+	apiServerSourceReadinessChanged   = "ApiServerSourceReadinessChanged"
 	apiserversourceUpdateStatusFailed = "ApiServerSourceUpdateStatusFailed"
 
 	// raImageEnvVar is the name of the environment variable that contains the receive adapter's
 	// image. It must be defined.
 	raImageEnvVar = "APISERVER_RA_IMAGE"
 )
+
+var apiServerEventTypes = []string{
+	v1alpha1.ApiServerSourceAddEventType,
+	v1alpha1.ApiServerSourceDeleteEventType,
+	v1alpha1.ApiServerSourceUpdateEventType,
+	v1alpha1.ApiServerSourceAddRefEventType,
+	v1alpha1.ApiServerSourceDeleteRefEventType,
+	v1alpha1.ApiServerSourceUpdateRefEventType,
+}
 
 // Reconciler reconciles a ApiServerSource object
 type Reconciler struct {
@@ -72,7 +85,10 @@ type Reconciler struct {
 	// listers index properties about resources
 	apiserversourceLister listers.ApiServerSourceLister
 	deploymentLister      appsv1listers.DeploymentLister
+	eventTypeLister       eventinglisters.EventTypeLister
 
+	source string
+	
 	sinkReconciler *duck.SinkReconciler
 }
 
@@ -82,11 +98,14 @@ func NewController(
 	opt reconciler.Options,
 	apiserversourceInformer sourceinformers.ApiServerSourceInformer,
 	deploymentInformer appsv1informers.DeploymentInformer,
+	eventTypeInformer eventinginformers.EventTypeInformer,
+	source string,
 ) *controller.Impl {
 	r := &Reconciler{
 		Base:                  reconciler.NewBase(opt, controllerAgentName),
 		apiserversourceLister: apiserversourceInformer.Lister(),
 		deploymentLister:      deploymentInformer.Lister(),
+		source:                source,
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
 
@@ -96,6 +115,11 @@ func NewController(
 	apiserversourceInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("ApiServerSource")),
+		Handler:    reconciler.Handler(impl.EnqueueControllerOf),
+	})
+
+	eventTypeInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("ApiServerSource")),
 		Handler:    reconciler.Handler(impl.EnqueueControllerOf),
 	})
@@ -168,9 +192,18 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 		r.Logger.Error("Unable to create the receive adapter", zap.Error(err))
 		return err
 	}
-
 	// Update source status
 	source.Status.MarkDeployed()
+
+	// Only create EventType for Broker sinks.
+	if source.Spec.Sink.Kind == "Broker" {
+		err = r.createEventTypes(ctx, source)
+		if err != nil {
+			source.Status.MarkNoEventTypes("EventTypesCreateFailed", "")
+			return err
+		}
+		source.Status.MarkEventTypes()
+	}
 	return nil
 }
 
@@ -194,7 +227,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Api
 		return nil, err
 	}
 	if ra != nil {
-		logging.FromContext(ctx).Desugar().Info("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
+		logging.FromContext(ctx).Info("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
 		return ra, nil
 	}
 	adapterArgs := resources.ReceiveAdapterArgs{
@@ -210,9 +243,9 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Api
 			if ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Update(ra); err != nil {
 				return ra, err
 			}
-			logging.FromContext(ctx).Desugar().Info("Receive Adapter updated.", zap.Any("receiveAdapter", ra))
+			logging.FromContext(ctx).Info("Receive Adapter updated.", zap.Any("receiveAdapter", ra))
 		} else {
-			logging.FromContext(ctx).Desugar().Info("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
+			logging.FromContext(ctx).Info("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
 		}
 		return ra, nil
 	}
@@ -220,8 +253,85 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Api
 	if ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Create(expected); err != nil {
 		return nil, err
 	}
-	logging.FromContext(ctx).Desugar().Info("Receive Adapter created.", zap.Any("receiveAdapter", expected))
+	logging.FromContext(ctx).Info("Receive Adapter created.", zap.Any("receiveAdapter", expected))
 	return ra, err
+}
+
+func (r *Reconciler) createEventTypes(ctx context.Context, src *v1alpha1.ApiServerSource) error {
+	current, err := r.getEventTypes(ctx, src)
+	if err != nil {
+		logging.FromContext(ctx).Error("Unable to get existing event types", zap.Error(err))
+		return err
+	}
+
+	expected, err := r.makeEventTypes(src)
+	if err != nil {
+		return err
+	}
+
+	missing := r.computeDiff(current, expected)
+	for _, eventType := range missing {
+		if _, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(&eventType); err != nil {
+			return err
+		}
+		logging.FromContext(ctx).Info("EventType created", zap.Any("eventType", eventType))
+	}
+	return err
+}
+
+func (r *Reconciler) getEventTypes(ctx context.Context, src *v1alpha1.ApiServerSource) ([]eventingv1alpha1.EventType, error) {
+	etl, err := r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).List(metav1.ListOptions{
+		LabelSelector: r.getLabelSelector(src).String(),
+	})
+	if err != nil {
+		logging.FromContext(ctx).Error("Unable to list event types: %v", zap.Error(err))
+		return nil, err
+	}
+	eventTypes := make([]eventingv1alpha1.EventType, 0)
+	for _, et := range etl.Items {
+		if metav1.IsControlledBy(&et, src) {
+			eventTypes = append(eventTypes, et)
+		}
+	}
+	return eventTypes, nil
+}
+
+func (r *Reconciler) makeEventTypes(src *v1alpha1.ApiServerSource) ([]eventingv1alpha1.EventType, error) {
+	eventTypes := make([]eventingv1alpha1.EventType, 0)
+	args := &resources.EventTypeArgs{
+		Src:    src,
+		Source: r.source,
+	}
+	for _, apiEventType := range apiServerEventTypes {
+		args.Type = apiEventType
+		eventType := resources.MakeEventType(args)
+		eventTypes = append(eventTypes, eventType)
+	}
+	return eventTypes, nil
+}
+
+func (r *Reconciler) computeDiff(current []eventingv1alpha1.EventType, expected []eventingv1alpha1.EventType) []eventingv1alpha1.EventType {
+	eventTypes := make([]eventingv1alpha1.EventType, 0)
+	currentMap := asMap(current, keyFromEventType)
+	for _, e := range expected {
+		if _, ok := currentMap[keyFromEventType(&e)]; !ok {
+			eventTypes = append(eventTypes, e)
+		}
+	}
+	return eventTypes
+}
+
+func asMap(eventTypes []eventingv1alpha1.EventType, keyFunc func(*eventingv1alpha1.EventType) string) map[string]eventingv1alpha1.EventType {
+	eventTypesAsMap := make(map[string]eventingv1alpha1.EventType, 0)
+	for _, eventType := range eventTypes {
+		key := keyFunc(&eventType)
+		eventTypesAsMap[key] = eventType
+	}
+	return eventTypesAsMap
+}
+
+func keyFromEventType(eventType *eventingv1alpha1.EventType) string {
+	return fmt.Sprintf("%s_%s_%s_%s", eventType.Spec.Type, eventType.Spec.Source, eventType.Spec.Schema, eventType.Spec.Broker)
 }
 
 func (r *Reconciler) podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {
@@ -244,7 +354,7 @@ func (r *Reconciler) getReceiveAdapter(ctx context.Context, src *v1alpha1.ApiSer
 		LabelSelector: r.getLabelSelector(src).String(),
 	})
 	if err != nil {
-		logging.FromContext(ctx).Desugar().Error("Unable to list deployments: %v", zap.Error(err))
+		logging.FromContext(ctx).Error("Unable to list deployments: %v", zap.Error(err))
 		return nil, err
 	}
 	for _, dep := range dl.Items {
@@ -280,6 +390,10 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.ApiServ
 	if err == nil && becomesReady {
 		duration := time.Since(cj.ObjectMeta.CreationTimestamp.Time)
 		r.Logger.Infof("ApiServerSource %q became ready after %v", apiserversource.Name, duration)
+		r.Recorder.Event(apiserversource, corev1.EventTypeNormal, apiServerSourceReadinessChanged, fmt.Sprintf("ApiServerSource %q became ready", apiserversource.Name))
+		if err := r.StatsReporter.ReportReady("ApiServerSource", apiserversource.Namespace, apiserversource.Name, duration); err != nil {
+			logging.FromContext(ctx).Sugar().Infof("failed to record ready for ApiServerSource, %v", err)
+		}
 	}
 
 	return cj, err

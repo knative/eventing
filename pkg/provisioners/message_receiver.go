@@ -22,17 +22,18 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/knative/pkg/tracing"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
-// MessageReceiver starts a server to receive new messages for the channel dispatcher. The new
-// message is emitted via the receiver function.
 const (
+	// MessageReceiverPort is the port that MessageReceiver opens an HTTP server on.
 	MessageReceiverPort = 8080
 )
 
-// MessageReceiver receives messages.
+// MessageReceiver starts a server to receive new messages for the channel dispatcher. The new
+// message is emitted via the receiver function.
 type MessageReceiver struct {
 	receiverFunc      func(ChannelReference, *Message) error
 	forwardHeaders    sets.String
@@ -113,7 +114,7 @@ func (r *MessageReceiver) stop(srv *http.Server) {
 
 // handler creates the http.Handler used by the http.Server started in MessageReceiver.Run.
 func (r *MessageReceiver) handler() http.Handler {
-	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+	return tracing.HTTPSpanMiddleware(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		if req.URL.Path != "/" {
 			res.WriteHeader(http.StatusNotFound)
 			return
@@ -124,7 +125,7 @@ func (r *MessageReceiver) handler() http.Handler {
 		}
 
 		r.HandleRequest(res, req)
-	})
+	}))
 }
 
 // HandleRequest is an http.Handler function. The request is converted to a
@@ -139,7 +140,7 @@ func (r *MessageReceiver) HandleRequest(res http.ResponseWriter, req *http.Reque
 	r.logger.Infof("Received request for %s", host)
 	channel, err := r.hostToChannelFunc(host)
 	if err != nil {
-		r.logger.Info("Could not extract channel", zap.Error(err))
+		r.logger.Infow("Could not extract channel", zap.Error(err))
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}

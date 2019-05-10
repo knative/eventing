@@ -61,6 +61,10 @@ func WithApiServerSourceDeployed(s *v1alpha1.ApiServerSource) {
 	s.Status.MarkDeployed()
 }
 
+func WithApiServerSourceEventTypes(s *v1alpha1.ApiServerSource) {
+	s.Status.MarkEventTypes()
+}
+
 func WithApiServerSourceDeleted(c *v1alpha1.ApiServerSource) {
 	t := metav1.NewTime(time.Unix(1e9, 0))
 	c.ObjectMeta.SetDeletionTimestamp(&t)

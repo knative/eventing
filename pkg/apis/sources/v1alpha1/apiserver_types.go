@@ -40,6 +40,22 @@ type ApiServerSource struct {
 // Check that we can create OwnerReferences to a Configuration.
 var _ kmeta.OwnerRefable = (*ApiServerSource)(nil)
 
+const (
+	// ApiServerSourceAddEventType is the ApiServerSource CloudEvent type for adds.
+	ApiServerSourceAddEventType = "dev.knative.apiserver.resource.add"
+	// ApiServerSourceUpdateEventType is the ApiServerSource CloudEvent type for updates.
+	ApiServerSourceUpdateEventType = "dev.knative.apiserver.resource.update"
+	// ApiServerSourceDeleteEventType is the ApiServerSource CloudEvent type for deletions.
+	ApiServerSourceDeleteEventType = "dev.knative.apiserver.resource.delete"
+
+	// ApiServerSourceAddRefEventType is the ApiServerSource CloudEvent type for ref adds.
+	ApiServerSourceAddRefEventType = "dev.knative.apiserver.ref.add"
+	// ApiServerSourceUpdateRefEventType is the ApiServerSource CloudEvent type for ref updates.
+	ApiServerSourceUpdateRefEventType = "dev.knative.apiserver.ref.update"
+	// ApiServerSourceDeleteRefEventType is the ApiServerSource CloudEvent type for ref deletions.
+	ApiServerSourceDeleteRefEventType = "dev.knative.apiserver.ref.delete"
+)
+
 // GetGroupVersionKind returns the GroupVersionKind.
 func (s *ApiServerSource) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("ApiServerSource")
@@ -67,6 +83,11 @@ type ApiServerSourceSpec struct {
 	// Sink is a reference to an object that will resolve to a domain name to use as the sink.
 	// +optional
 	Sink *corev1.ObjectReference `json:"sink,omitempty"`
+
+	// Mode is the mode the receive adapter controller runs under: Ref or Resource.
+	// `Ref` sends only the reference to the resource.
+	// `Resource` send the full resource.
+	Mode string `json:"mode,omitempty"`
 }
 
 // ApiServerSourceStatus defines the observed state of ApiServerSource
