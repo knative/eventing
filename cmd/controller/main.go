@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"k8s.io/client-go/tools/clientcmd"
 	"log"
 	"os"
 
@@ -27,6 +28,7 @@ import (
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/logging"
+	"github.com/knative/eventing/pkg/metrics"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/broker"
 	"github.com/knative/eventing/pkg/reconciler/channel"
@@ -36,31 +38,35 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/trigger"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
+	pkgmetrics "github.com/knative/pkg/metrics"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"
-	controllerruntime "sigs.k8s.io/controller-runtime/pkg/client/config"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+)
+
+const (
+	component = "controller"
 )
 
 var (
-	hardcodedLoggingConfig bool
+	hardcodedLoggingConfig = flag.Bool("hardCodedLoggingConfig", false, "If true, use the hard coded logging config. It is intended to be used only when debugging outside a Kubernetes cluster.")
+	masterURL              = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	kubeconfig             = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 )
 
 func main() {
 	flag.Parse()
-	logf.SetLogger(logf.ZapLogger(false))
 
 	logger, atomicLevel := setupLogger()
-	defer logger.Sync()
+	defer flush(logger)
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	cfg, err := controllerruntime.GetConfig()
+	cfg, err := clientcmd.BuildConfigFromFlags(*masterURL, *kubeconfig)
 	if err != nil {
-		logger.Fatalf("Error building kubeconfig: %v", err)
+		logger.Fatalw("Error building kubeconfig", zap.Error(err))
 	}
 
 	logger.Info("Starting the controller")
@@ -144,8 +150,8 @@ func main() {
 
 	// Watch the logging config map and dynamically update logging levels.
 	opt.ConfigMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller))
-	// TODO: Watch the observability config map and dynamically update metrics exporter.
-	//opt.ConfigMapWatcher.Watch(metrics.ObservabilityConfigName, metrics.UpdateExporterFromConfigMap(component, logger))
+	// Watch the observability config map and dynamically update metrics exporter.
+	opt.ConfigMapWatcher.Watch(metrics.ObservabilityConfigName, metrics.UpdateExporterFromConfigMap(component, logger))
 	if err := opt.ConfigMapWatcher.Start(stopCh); err != nil {
 		logger.Fatalw("failed to start configuration manager", zap.Error(err))
 	}
@@ -177,10 +183,6 @@ func main() {
 	kncontroller.StartAll(stopCh, controllers[:]...)
 }
 
-func init() {
-	flag.BoolVar(&hardcodedLoggingConfig, "hardCodedLoggingConfig", false, "If true, use the hard coded logging config. It is intended to be used only when debugging outside a Kubernetes cluster.")
-}
-
 func setupLogger() (*zap.SugaredLogger, zap.AtomicLevel) {
 	// Set up our logger.
 	loggingConfigMap := getLoggingConfigOrDie()
@@ -192,7 +194,7 @@ func setupLogger() (*zap.SugaredLogger, zap.AtomicLevel) {
 }
 
 func getLoggingConfigOrDie() map[string]string {
-	if hardcodedLoggingConfig {
+	if hardcodedLoggingConfig != nil && *hardcodedLoggingConfig {
 		return map[string]string{
 			"loglevel.controller": "info",
 			"zap-logger-config": `
@@ -231,4 +233,9 @@ func getRequiredEnv(envKey string) string {
 		log.Fatalf("required environment variable not defined '%s'", envKey)
 	}
 	return val
+}
+
+func flush(logger *zap.SugaredLogger) {
+	logger.Sync()
+	pkgmetrics.FlushExporter()
 }

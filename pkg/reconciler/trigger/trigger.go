@@ -19,6 +19,7 @@ package trigger
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"reflect"
 	"time"
@@ -61,6 +62,7 @@ const (
 
 	// Name of the corev1.Events emitted from the reconciliation process.
 	triggerReconciled         = "TriggerReconciled"
+	triggerReadinessChanged   = "TriggerReadinessChanged"
 	triggerReconcileFailed    = "TriggerReconcileFailed"
 	triggerUpdateStatusFailed = "TriggerUpdateStatusFailed"
 	subscriptionDeleteFailed  = "SubscriptionDeleteFailed"
@@ -283,14 +285,17 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Trigger
 	existing := trigger.DeepCopy()
 	existing.Status = desired.Status
 
-	new, err := r.EventingClientSet.EventingV1alpha1().Triggers(desired.Namespace).UpdateStatus(existing)
+	trig, err := r.EventingClientSet.EventingV1alpha1().Triggers(desired.Namespace).UpdateStatus(existing)
 	if err == nil && becomesReady {
-		duration := time.Since(new.ObjectMeta.CreationTimestamp.Time)
-		r.Logger.Infof("Subscription %q became ready after %v", trigger.Name, duration)
-		//r.StatsReporter.ReportServiceReady(trigger.Namespace, trigger.Name, duration) // TODO: stats
+		duration := time.Since(trig.ObjectMeta.CreationTimestamp.Time)
+		r.Logger.Infof("Trigger %q became ready after %v", trigger.Name, duration)
+		r.Recorder.Event(trigger, corev1.EventTypeNormal, triggerReadinessChanged, fmt.Sprintf("Trigger %q became ready", trigger.Name))
+		if err := r.StatsReporter.ReportReady("Trigger", trigger.Namespace, trigger.Name, duration); err != nil {
+			logging.FromContext(ctx).Sugar().Infof("failed to record ready for Trigger, %v", err)
+		}
 	}
 
-	return new, err
+	return trig, err
 }
 
 // getBrokerTriggerChannel return the Broker's Trigger Channel if it exists, otherwise it returns an

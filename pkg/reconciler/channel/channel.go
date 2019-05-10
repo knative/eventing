@@ -18,7 +18,9 @@ package channel
 
 import (
 	"context"
+	"fmt"
 	"reflect"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
@@ -39,6 +41,7 @@ const (
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
 	controllerAgentName       = "channel-default-controller"
+	channelReadinessChanged   = "ChannelReadinessChanged"
 	channelReconciled         = "ChannelReconciled"
 	channelUpdateStatusFailed = "ChannelUpdateStatusFailed"
 )
@@ -156,9 +159,22 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Channel
 		return channel, nil
 	}
 
+	becomesReady := desired.Status.IsReady() && !channel.Status.IsReady()
+
 	// Don't modify the informers copy.
 	existing := channel.DeepCopy()
 	existing.Status = desired.Status
 
-	return r.EventingClientSet.EventingV1alpha1().Channels(desired.Namespace).UpdateStatus(existing)
+	c, err := r.EventingClientSet.EventingV1alpha1().Channels(desired.Namespace).UpdateStatus(existing)
+
+	if err == nil && becomesReady {
+		duration := time.Since(c.ObjectMeta.CreationTimestamp.Time)
+		logging.FromContext(ctx).Sugar().Infof("Channel %q became ready after %v", channel.Name, duration)
+		r.Recorder.Event(channel, corev1.EventTypeNormal, channelReadinessChanged, fmt.Sprintf("Channel %q became ready", channel.Name))
+		if err := r.StatsReporter.ReportReady("Channel", channel.Namespace, channel.Name, duration); err != nil {
+			logging.FromContext(ctx).Sugar().Infof("failed to record ready for Channel, %v", err)
+		}
+	}
+
+	return c, err
 }
