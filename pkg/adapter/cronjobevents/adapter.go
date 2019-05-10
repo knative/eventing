@@ -87,9 +87,8 @@ func (a *Adapter) cronTick() {
 
 	event := cloudevents.NewEvent(cloudevents.VersionV02)
 	event.SetType(sourcesv1alpha1.CronJobEventType)
-	event.SetSource(sourcesv1alpha1.CronJobEventSource)
+	event.SetSource(sourcesv1alpha1.CronJobEventSource(a.Name))
 	event.SetData(message(a.Data))
-	event.SetSubject(a.Name)
 
 	if _, err := a.client.Send(context.TODO(), event); err != nil {
 		logger.Error("failed to send cloudevent", err)
