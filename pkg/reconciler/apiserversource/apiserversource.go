@@ -88,7 +88,6 @@ type Reconciler struct {
 	eventTypeLister       eventinglisters.EventTypeLister
 
 	source string
-	
 	sinkReconciler *duck.SinkReconciler
 }
 
