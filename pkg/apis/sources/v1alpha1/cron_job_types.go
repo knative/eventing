@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/kmeta"
@@ -55,13 +56,15 @@ var (
 const (
 	// CronJobEventType is the CronJob CloudEvent type.
 	CronJobEventType = "dev.knative.cronjob.event"
-	// CronJobEventSource is the CronJob CloudEvent source.
-	CronJobEventSource = "/CronJob"
 )
+
+// CronJobEventSource returns the CronJob CloudEvent source.
+func CronJobEventSource(namespace, cronJobName string) string {
+	return fmt.Sprintf("/apis/v1/namespaces/%s/cronjobsources/%s", namespace, cronJobName)
+}
 
 // CronJobSourceSpec defines the desired state of the CronJobSource.
 type CronJobSourceSpec struct {
-
 	// Schedule is the cronjob schedule.
 	// +required
 	Schedule string `json:"schedule"`
