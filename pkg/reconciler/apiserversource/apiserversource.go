@@ -31,10 +31,10 @@ import (
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
+	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/apiserversource/resources"
 	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/logging"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -58,6 +58,7 @@ const (
 
 	// Name of the corev1.Events emitted from the reconciliation process
 	apiserversourceReconciled         = "ApiServerSourceReconciled"
+	apiServerSourceReadinessChanged   = "ApiServerSourceReadinessChanged"
 	apiserversourceUpdateStatusFailed = "ApiServerSourceUpdateStatusFailed"
 
 	// raImageEnvVar is the name of the environment variable that contains the receive adapter's
@@ -216,7 +217,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Api
 		return nil, err
 	}
 	if ra != nil {
-		logging.FromContext(ctx).Desugar().Info("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
+		logging.FromContext(ctx).Info("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
 		return ra, nil
 	}
 	adapterArgs := resources.ReceiveAdapterArgs{
@@ -232,9 +233,9 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Api
 			if ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Update(ra); err != nil {
 				return ra, err
 			}
-			logging.FromContext(ctx).Desugar().Info("Receive Adapter updated.", zap.Any("receiveAdapter", ra))
+			logging.FromContext(ctx).Info("Receive Adapter updated.", zap.Any("receiveAdapter", ra))
 		} else {
-			logging.FromContext(ctx).Desugar().Info("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
+			logging.FromContext(ctx).Info("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
 		}
 		return ra, nil
 	}
@@ -242,7 +243,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Api
 	if ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Create(expected); err != nil {
 		return nil, err
 	}
-	logging.FromContext(ctx).Desugar().Info("Receive Adapter created.", zap.Any("receiveAdapter", expected))
+	logging.FromContext(ctx).Info("Receive Adapter created.", zap.Any("receiveAdapter", expected))
 	return ra, err
 }
 
@@ -263,7 +264,7 @@ func (r *Reconciler) createEventTypes(ctx context.Context, src *v1alpha1.ApiServ
 		if _, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(&eventType); err != nil {
 			return err
 		}
-		logging.FromContext(ctx).Desugar().Info("EventType created", zap.Any("eventType", eventType))
+		logging.FromContext(ctx).Info("EventType created", zap.Any("eventType", eventType))
 	}
 	return err
 }
@@ -273,7 +274,7 @@ func (r *Reconciler) getEventTypes(ctx context.Context, src *v1alpha1.ApiServerS
 		LabelSelector: r.getLabelSelector(src).String(),
 	})
 	if err != nil {
-		logging.FromContext(ctx).Desugar().Error("Unable to list event types: %v", zap.Error(err))
+		logging.FromContext(ctx).Error("Unable to list event types: %v", zap.Error(err))
 		return nil, err
 	}
 	eventTypes := make([]eventingv1alpha1.EventType, 0)
@@ -343,7 +344,7 @@ func (r *Reconciler) getReceiveAdapter(ctx context.Context, src *v1alpha1.ApiSer
 		LabelSelector: r.getLabelSelector(src).String(),
 	})
 	if err != nil {
-		logging.FromContext(ctx).Desugar().Error("Unable to list deployments: %v", zap.Error(err))
+		logging.FromContext(ctx).Error("Unable to list deployments: %v", zap.Error(err))
 		return nil, err
 	}
 	for _, dep := range dl.Items {
@@ -379,6 +380,10 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.ApiServ
 	if err == nil && becomesReady {
 		duration := time.Since(cj.ObjectMeta.CreationTimestamp.Time)
 		r.Logger.Infof("ApiServerSource %q became ready after %v", apiserversource.Name, duration)
+		r.Recorder.Event(apiserversource, corev1.EventTypeNormal, apiServerSourceReadinessChanged, fmt.Sprintf("ApiServerSource %q became ready", apiserversource.Name))
+		if err := r.StatsReporter.ReportReady("ApiServerSource", apiserversource.Namespace, apiserversource.Name, duration); err != nil {
+			logging.FromContext(ctx).Sugar().Infof("failed to record ready for ApiServerSource, %v", err)
+		}
 	}
 
 	return cj, err

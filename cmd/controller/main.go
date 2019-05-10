@@ -18,7 +18,7 @@ package main
 
 import (
 	"flag"
-	"github.com/knative/eventing/pkg/metrics"
+	"k8s.io/client-go/tools/clientcmd"
 	"log"
 	"os"
 
@@ -28,6 +28,7 @@ import (
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/logging"
+	"github.com/knative/eventing/pkg/metrics"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/broker"
 	"github.com/knative/eventing/pkg/reconciler/channel"
@@ -42,8 +43,6 @@ import (
 	"go.uber.org/zap"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"
-	controllerruntime "sigs.k8s.io/controller-runtime/pkg/client/config"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 const (
@@ -51,12 +50,13 @@ const (
 )
 
 var (
-	hardcodedLoggingConfig bool
+	hardcodedLoggingConfig = flag.Bool("hardCodedLoggingConfig", false, "If true, use the hard coded logging config. It is intended to be used only when debugging outside a Kubernetes cluster.")
+	masterURL              = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	kubeconfig             = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 )
 
 func main() {
 	flag.Parse()
-	logf.SetLogger(logf.ZapLogger(false))
 
 	logger, atomicLevel := setupLogger()
 	defer flush(logger)
@@ -64,9 +64,9 @@ func main() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	cfg, err := controllerruntime.GetConfig()
+	cfg, err := clientcmd.BuildConfigFromFlags(*masterURL, *kubeconfig)
 	if err != nil {
-		logger.Fatalf("Error building kubeconfig: %v", err)
+		logger.Fatalw("Error building kubeconfig", zap.Error(err))
 	}
 
 	logger.Info("Starting the controller")
@@ -183,10 +183,6 @@ func main() {
 	kncontroller.StartAll(stopCh, controllers[:]...)
 }
 
-func init() {
-	flag.BoolVar(&hardcodedLoggingConfig, "hardCodedLoggingConfig", false, "If true, use the hard coded logging config. It is intended to be used only when debugging outside a Kubernetes cluster.")
-}
-
 func setupLogger() (*zap.SugaredLogger, zap.AtomicLevel) {
 	// Set up our logger.
 	loggingConfigMap := getLoggingConfigOrDie()
@@ -198,7 +194,7 @@ func setupLogger() (*zap.SugaredLogger, zap.AtomicLevel) {
 }
 
 func getLoggingConfigOrDie() map[string]string {
-	if hardcodedLoggingConfig {
+	if hardcodedLoggingConfig != nil && *hardcodedLoggingConfig {
 		return map[string]string{
 			"loglevel.controller": "info",
 			"zap-logger-config": `

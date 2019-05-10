@@ -50,11 +50,25 @@ const (
 	// SubscriptionReadyLatencyN is the time it takes for a subscription to become ready since the resource is created.
 	SubscriptionReadyLatencyN = "subscription_ready_latency"
 
-	// TODO: sources.
+	// ContainerSourceReadyCountN is the number of container sources that have become ready.
+	ContainerSourceReadyCountN = "container_source_ready_count"
+	// ContainerSourceReadyLatencyN is the time it takes for a container source to become ready since the resource is created.
+	ContainerSourceReadyLatencyN = "container_source_ready_latency"
+
+	// CronJobSourceReadyCountN is the number of cron job sources that have become ready.
+	CronJobSourceReadyCountN = "cron_job_source_ready_count"
+	// CronJobSourceReadyLatencyN is the time it takes for a cron job source to become ready since the resource is created.
+	CronJobSourceReadyLatencyN = "cron_job_source_ready_latency"
+
+	// ApiServerSourceReadyCountN is the number of api server sources that have become ready.
+	ApiServerSourceReadyCountN = "api_server_source_ready_count"
+	// ApiServerSourceReadyLatencyN is the time it takes for an api server source to become ready since the resource is created.
+	ApiServerSourceReadyLatencyN = "api_server_source_ready_latency"
 )
 
 var (
 	KindToStatKeys = map[string]StatKey{
+		// Eventing
 		"Broker": {
 			ReadyLatencyKey: BrokerReadyLatencyN,
 			ReadyCountKey:   BrokerReadyCountN,
@@ -63,6 +77,7 @@ var (
 			ReadyLatencyKey: TriggerReadyLatencyN,
 			ReadyCountKey:   TriggerReadyCountN,
 		},
+		// Messaging
 		"Channel": {
 			ReadyLatencyKey: ChannelReadyLatencyN,
 			ReadyCountKey:   ChannelReadyCountN,
@@ -70,6 +85,19 @@ var (
 		"Subscription": {
 			ReadyLatencyKey: SubscriptionReadyLatencyN,
 			ReadyCountKey:   SubscriptionReadyCountN,
+		},
+		// Sources
+		"ContainerSource": {
+			ReadyLatencyKey: ContainerSourceReadyLatencyN,
+			ReadyCountKey:   ContainerSourceReadyCountN,
+		},
+		"CronJobSource": {
+			ReadyLatencyKey: CronJobSourceReadyLatencyN,
+			ReadyCountKey:   CronJobSourceReadyCountN,
+		},
+		"ApiServerSource": {
+			ReadyLatencyKey: ApiServerSourceReadyLatencyN,
+			ReadyCountKey:   ApiServerSourceReadyCountN,
 		},
 	}
 
