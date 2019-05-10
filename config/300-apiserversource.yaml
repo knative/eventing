@@ -50,6 +50,9 @@ spec:
             sink:
               type: object
               description: "A reference to the object that should receive events."
+            mode:
+              type: string
+              description: "Mode controls the content of the event payload. One of: 'Ref' (only references of resources), 'Resource' (full resource)."
             resources:
               items:
                 properties:
@@ -61,7 +64,7 @@ spec:
                     description: "Kind of the objects to watch."
                   controller:
                     type: boolean
-                    description: "If true, watch the managing controller. More info: https://kubernetes.io/docs/concepts/workloads/controllers/garbage-collection/"
+                    description: "If true, emits the managing controller ref. Only supported for mode=Ref. More info: https://kubernetes.io/docs/concepts/workloads/controllers/garbage-collection/"
               type: array
           required:
           - resources
