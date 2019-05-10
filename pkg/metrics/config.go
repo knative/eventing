@@ -50,10 +50,10 @@ type ObservabilityConfig struct {
 	// collect logs under /var/log/.
 	EnableVarLogCollection bool
 
-	// TODO(#818): Use the fluentd daemon set to collect /var/log.
-	// FluentdSidecarImage is the name of the image used for the fluentd sidecar
-	// injected into the revision pod. It is used only when enableVarLogCollection
-	// is true.
+	// TODO(https://github.com/knative/serving/issues/818): Use the fluentd
+	//  daemon set to collect /var/log. FluentdSidecarImage is the name of the
+	//  image used for the fluentd sidecar injected into the revision pod. It
+	//  is used only when enableVarLogCollection is true.
 	FluentdSidecarImage string
 
 	// FluentdSidecarOutputConfig is the config for fluentd sidecar to specify

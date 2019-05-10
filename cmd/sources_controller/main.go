@@ -21,11 +21,9 @@ import (
 	"github.com/knative/eventing/pkg/metrics"
 	"log"
 
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-
-	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/rest"
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/logging"
@@ -39,6 +37,8 @@ import (
 	pkgmetrics "github.com/knative/pkg/metrics"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
+	kubeinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
