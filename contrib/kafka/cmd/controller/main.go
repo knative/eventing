@@ -4,6 +4,9 @@ import (
 	"flag"
 	"os"
 
+	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+
 	provisionerController "github.com/knative/eventing/contrib/kafka/pkg/controller"
 	"github.com/knative/eventing/contrib/kafka/pkg/controller/channel"
 	eventingv1alpha "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -15,8 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 // SchemeFunc adds types to a Scheme.

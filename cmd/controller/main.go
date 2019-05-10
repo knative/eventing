@@ -23,7 +23,7 @@ import (
 	"os"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/logconfig"
