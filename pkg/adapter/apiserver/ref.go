@@ -18,11 +18,12 @@ package apiserver
 
 import (
 	"context"
+	"reflect"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
-	"reflect"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/knative/eventing/pkg/adapter/apiserver/events"

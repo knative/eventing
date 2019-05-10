@@ -18,10 +18,11 @@ package apiserversource
 
 import (
 	"fmt"
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"os"
 	"testing"
+
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -126,6 +127,7 @@ func TestReconcile(t *testing.T) {
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewApiServerSource(sourceName, testNS,
@@ -170,6 +172,7 @@ func TestReconcile(t *testing.T) {
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewApiServerSource(sourceName, testNS,
@@ -224,6 +227,7 @@ func TestReconcile(t *testing.T) {
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewApiServerSource(sourceName, testNS,

@@ -169,6 +169,7 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "CronJobSourceReconciled", `CronJobSource reconciled: "%s/%s"`, testNS, sourceName),
+				Eventf(corev1.EventTypeNormal, "CronJobSourceReadinessChanged", `CronJobSource %q became ready`, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewCronSourceJob(sourceName, testNS,
@@ -205,6 +206,7 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "CronJobSourceReconciled", `CronJobSource reconciled: "%s/%s"`, testNS, sourceName),
+				Eventf(corev1.EventTypeNormal, "CronJobSourceReadinessChanged", `CronJobSource %q became ready`, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewCronSourceJob(sourceName, testNS,
@@ -226,10 +228,9 @@ func TestAllCases(t *testing.T) {
 					WithEventTypeGenerateName(fmt.Sprintf("%s-", utils.ToDNS1123Subdomain(sourcesv1alpha1.CronJobEventType))),
 					WithEventTypeLabels(resources.Labels(sourceName)),
 					WithEventTypeType(sourcesv1alpha1.CronJobEventType),
-					WithEventTypeSource(sourcesv1alpha1.CronJobEventSource),
+					WithEventTypeSource(sourcesv1alpha1.CronJobEventSource(testNS, sourceName)),
 					WithEventTypeBroker(sinkName),
-					WithEventTypeOwnerReference(ownerRef),
-					WithEventTypeDescription(sourceName)),
+					WithEventTypeOwnerReference(ownerRef)),
 				makeReceiveAdapterWithSink(brokerRef),
 			},
 		}, {
@@ -251,6 +252,7 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "CronJobSourceReconciled", `CronJobSource reconciled: "%s/%s"`, testNS, sourceName),
+				Eventf(corev1.EventTypeNormal, "CronJobSourceReadinessChanged", `CronJobSource %q became ready`, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewCronSourceJob(sourceName, testNS,
