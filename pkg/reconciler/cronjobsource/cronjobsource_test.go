@@ -226,7 +226,7 @@ func TestAllCases(t *testing.T) {
 					WithEventTypeGenerateName(fmt.Sprintf("%s-", utils.ToDNS1123Subdomain(sourcesv1alpha1.CronJobEventType))),
 					WithEventTypeLabels(resources.Labels(sourceName)),
 					WithEventTypeType(sourcesv1alpha1.CronJobEventType),
-					WithEventTypeSource(sourcesv1alpha1.CronJobEventSource(sourceName)),
+					WithEventTypeSource(sourcesv1alpha1.CronJobEventSource(testNS, sourceName)),
 					WithEventTypeBroker(sinkName),
 					WithEventTypeOwnerReference(ownerRef)),
 				makeReceiveAdapterWithSink(brokerRef),

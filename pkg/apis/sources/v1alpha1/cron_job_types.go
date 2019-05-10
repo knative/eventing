@@ -59,8 +59,8 @@ const (
 )
 
 // CronJobEventSource returns the CronJob CloudEvent source.
-func CronJobEventSource(cronJobName string) string {
-	return fmt.Sprintf("urn:cronjob:%s", cronJobName)
+func CronJobEventSource(namespace, cronJobName string) string {
+	return fmt.Sprintf("/apis/v1/namespaces/%s/cronjobsources/%s", namespace, cronJobName)
 }
 
 // CronJobSourceSpec defines the desired state of the CronJobSource.

@@ -44,6 +44,9 @@ type Adapter struct {
 	// Name is the name of the Cron Job.
 	Name string
 
+	// Namespace is the namespace of the Cron Job.
+	Namespace string
+
 	// client sends cloudevents.
 	client cloudevents.Client
 }
@@ -87,7 +90,7 @@ func (a *Adapter) cronTick() {
 
 	event := cloudevents.NewEvent(cloudevents.VersionV02)
 	event.SetType(sourcesv1alpha1.CronJobEventType)
-	event.SetSource(sourcesv1alpha1.CronJobEventSource(a.Name))
+	event.SetSource(sourcesv1alpha1.CronJobEventSource(a.Namespace, a.Name))
 	event.SetData(message(a.Data))
 
 	if _, err := a.client.Send(context.TODO(), event); err != nil {
