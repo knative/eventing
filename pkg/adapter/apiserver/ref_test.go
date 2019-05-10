@@ -1,9 +1,10 @@
 package apiserver
 
 import (
+	"testing"
+
 	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"testing"
 )
 
 func TestRefAddEvent(t *testing.T) {
