@@ -31,6 +31,16 @@ User stories:
 - Publish events
 - Control who can create Feeds
 
+### System Integrator
+
+System Integrators are typically of two varieties. They are producing new Channel
+implmmentations or new Event Source implementations.
+
+User stories:
+
+- Create a new Event Source (creating a bridge between an existing system and Knative Eventing)
+- Create a new CHannel implementation
+
 ## Contributors
 
 Contributors are an important part of the Knative project. As such, we will also
