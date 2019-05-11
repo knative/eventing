@@ -25,12 +25,12 @@ import (
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	messaginginformers "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	//	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
 	//	util "github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/tracker"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -71,11 +71,12 @@ type Reconciler struct {
 	dispatcherDeploymentName string
 	dispatcherServiceName    string
 
-	inmemorychannelLister listers.InMemoryChannelLister
-	deploymentLister      appsv1listers.DeploymentLister
-	serviceLister         corev1listers.ServiceLister
-	endpointsLister       corev1listers.EndpointsLister
-	tracker               tracker.Interface
+	inmemorychannelLister   listers.InMemoryChannelLister
+	inmemorychannelInformer cache.SharedIndexInformer
+	deploymentLister        appsv1listers.DeploymentLister
+	serviceLister           corev1listers.ServiceLister
+	endpointsLister         corev1listers.EndpointsLister
+	impl                    *controller.Impl
 }
 
 var deploymentGVK = appsv1.SchemeGroupVersion.WithKind("Deployment")
@@ -83,6 +84,16 @@ var serviceGVK = corev1.SchemeGroupVersion.WithKind("Service")
 
 // Check that our Reconciler implements controller.Reconciler.
 var _ controller.Reconciler = (*Reconciler)(nil)
+
+func FilterWithNameAndNamespace(namespace, name string) func(obj interface{}) bool {
+	return func(obj interface{}) bool {
+		if object, ok := obj.(metav1.Object); ok {
+			return name == object.GetName() &&
+				namespace == object.GetNamespace()
+		}
+		return false
+	}
+}
 
 // NewController initializes the controller and is called by the generated code.
 // Registers event handlers to enqueue events.
@@ -103,27 +114,47 @@ func NewController(
 		dispatcherDeploymentName: dispatcherDeploymentName,
 		dispatcherServiceName:    dispatcherServiceName,
 		inmemorychannelLister:    inmemorychannelinformer.Lister(),
+		inmemorychannelInformer:  inmemorychannelinformer.Informer(),
 		deploymentLister:         deploymentInformer.Lister(),
 		serviceLister:            serviceInformer.Lister(),
 		endpointsLister:          endpointsInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
+	r.impl = impl
 
 	r.Logger.Info("Setting up event handlers")
 	inmemorychannelinformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
 
-	// We use tracker to keep track of changes to both Dispatcher and k8s service that are shared
-	// between each InMemoryChannel. In the future we may shard dispatchers, but for now, make
-	// sure that we can reflect dispatcher and k8s service readiness to the channels. So track them.
-	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
-
-	/*
-		subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-			FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Trigger")),
-			Handler:    reconciler.Handler(impl.EnqueueControllerOf),
-		})
-	*/
+	// Set up watches for dispatcher resources we care about, since any changes to these
+	// resources will affect our Channels. So, set up a watch here, that will cause
+	// a global Resync for all the channels to take stock of their health when these change.
+	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: FilterWithNameAndNamespace(dispatcherNamespace, dispatcherDeploymentName),
+		Handler:    r,
+	})
+	serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: FilterWithNameAndNamespace(dispatcherNamespace, dispatcherServiceName),
+		Handler:    r,
+	})
+	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: FilterWithNameAndNamespace(dispatcherNamespace, dispatcherServiceName),
+		Handler:    r,
+	})
 	return impl
+}
+
+// These 3 functions just cause a Global Resync of the channels, because any changes here
+// should be reflected onto the channels.
+func (r *Reconciler) OnAdd(obj interface{}) {
+	r.impl.GlobalResync(r.inmemorychannelInformer)
+}
+
+func (r *Reconciler) OnUpdate(old, new interface{}) {
+	r.impl.GlobalResync(r.inmemorychannelInformer)
+}
+
+func (r *Reconciler) OnDelete(obj interface{}) {
+	r.impl.GlobalResync(r.inmemorychannelInformer)
 }
 
 // Reconcile compares the actual state with the desired, and attempts to
@@ -226,8 +257,9 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 		return nil
 	}
 
-	if len(e.Subsets) != 0 {
-		imc.Status.MarkEndpointsFailed("DispatcherEndpointsNotReady", "There are no endpoints ready for Dispatcher")
+	if len(e.Subsets) == 0 {
+		logging.FromContext(ctx).Error("No endpoints found for Dispatcher service", zap.Error(err))
+		imc.Status.MarkEndpointsFailed("DispatcherEndpointsNotReady", "There are no endpoints ready for Dispatcher service")
 		return nil
 	}
 

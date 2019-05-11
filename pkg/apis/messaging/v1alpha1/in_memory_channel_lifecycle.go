@@ -22,7 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var imcCondSet = duckv1alpha1.NewLivingConditionSet(InMemoryChannelDispatcher, InMemoryChannelService)
+var imcCondSet = duckv1alpha1.NewLivingConditionSet(InMemoryChannelDispatcher, InMemoryChannelService, InMemoryChannelEndpoints)
 
 const (
 	// InMemoryChannelConditionReady has status True when all subconditions below have been set to True.

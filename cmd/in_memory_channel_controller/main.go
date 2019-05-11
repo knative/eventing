@@ -62,6 +62,8 @@ func main() {
 
 	logger.Info("Starting the controller")
 
+	systemNS := getRequiredEnv("SYSTEM_NAMESPACE")
+
 	const numControllers = 1
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
@@ -84,7 +86,7 @@ func main() {
 	controllers := [...]*kncontroller.Impl{
 		inmemorychannel.NewController(
 			opt,
-			"knative-eventing",
+			systemNS,
 			"imc-dispatcher",
 			"imc-dispatcher",
 			inMemoryChannelInformer,
@@ -140,7 +142,7 @@ func setupLogger() (*zap.SugaredLogger, zap.AtomicLevel) {
 }
 
 func getLoggingConfigOrDie() map[string]string {
-	if *hardcodedLoggingConfig {
+	if hardcodedLoggingConfig != nil && *hardcodedLoggingConfig {
 		return map[string]string{
 			"loglevel.controller": "info",
 			"zap-logger-config": `
