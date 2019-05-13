@@ -314,20 +314,22 @@ func (r *Reconciler) computeDiff(current []eventingv1alpha1.EventType, expected 
 	extraEventTypes := make([]eventingv1alpha1.EventType, 0)
 	currentMap := asMap(current, keyFromEventType)
 	expectedMap := asMap(expected, keyFromEventType)
-	for ek, ev := range expectedMap {
-		if c, ok := currentMap[ek]; !ok {
-			missingEventTypes = append(missingEventTypes, ev)
+
+	// Iterate over the slices instead of the maps for predictable UT expectations.
+	for _, e := range expected {
+		if c, ok := currentMap[keyFromEventType(&e)]; !ok {
+			missingEventTypes = append(missingEventTypes, e)
 		} else {
-			if !equality.Semantic.DeepEqual(ev.Spec, c.Spec) {
+			if !equality.Semantic.DeepEqual(e.Spec, c.Spec) {
 				extraEventTypes = append(extraEventTypes, c)
 			}
 		}
 	}
 	// Need to check whether the current EventTypes are not in the expected map. If so, we have to delete them.
 	// This could happen if the ApiServerSource CO changes its broker.
-	for ck, cv := range currentMap {
-		if _, ok := expectedMap[ck]; !ok {
-			extraEventTypes = append(extraEventTypes, cv)
+	for _, c := range current {
+		if _, ok := expectedMap[keyFromEventType(&c)]; !ok {
+			extraEventTypes = append(extraEventTypes, c)
 		}
 	}
 	return missingEventTypes, extraEventTypes

@@ -289,11 +289,11 @@ func (r *Reconciler) createEventType(ctx context.Context, src *v1alpha1.CronJobS
 		if !equality.Semantic.DeepEqual(expected.Spec, current.Spec) {
 			// As is immutable, delete it and create it again.
 			if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(current.Name, &metav1.DeleteOptions{}); err != nil {
-				logging.FromContext(ctx).Debug("Error deleting existing event type", zap.Any("eventType", current))
+				logging.FromContext(ctx).Error("Error deleting existing event type", zap.Any("eventType", current))
 				return nil, err
 			}
 			if current, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(expected); err != nil {
-				logging.FromContext(ctx).Debug("Error creating event type", zap.Any("eventType", current))
+				logging.FromContext(ctx).Error("Error creating event type", zap.Any("eventType", current))
 				return nil, err
 			}
 		}
