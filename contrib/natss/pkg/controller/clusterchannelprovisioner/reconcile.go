@@ -55,6 +55,12 @@ func (r *reconciler) InjectClient(c client.Client) error {
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	r.logger.Info("Reconcile: ", zap.Any("request", request))
 
+	// Workaround until https://github.com/kubernetes-sigs/controller-runtime/issues/214 is fixed.
+	// The reconcile requests will include a namespace if they are triggered because of changes to the
+	// objects owned by this ClusterChannelProvisioner (e.g k8s service). Since ClusterChannelProvisioner is
+	// cluster-scoped we need to unset the namespace or otherwise the provisioner object cannot be looked up.
+	request.NamespacedName.Namespace = ""
+
 	ctx := context.TODO()
 	ccp := &eventingv1alpha1.ClusterChannelProvisioner{}
 	err := r.client.Get(ctx, request.NamespacedName, ccp)
