@@ -36,10 +36,10 @@ import (
 	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/apiserversource/resources"
 	"github.com/knative/eventing/pkg/utils"
-	"github.com/knative/eventing/pkg/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
@@ -145,8 +145,59 @@ func TestReconcile(t *testing.T) {
 					WithInitApiServerSourceConditions,
 					WithApiServerSourceDeployed,
 					WithApiServerSourceSink(sinkURI),
+					WithApiServerSourceEventTypes,
 				),
 			}},
+			WantCreates: []metav1.Object{
+				makeReceiveAdapter(),
+			},
+		},
+		{
+			Name: "valid with event types to delete",
+			Objects: []runtime.Object{
+				NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink: &sinkRef,
+					}),
+				),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
+				),
+				makeEventTypeWithName(sourcesv1alpha1.ApiServerSourceAddEventType, "name-1"),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink: &sinkRef,
+					}),
+					// Status Update:
+					WithInitApiServerSourceConditions,
+					WithApiServerSourceDeployed,
+					WithApiServerSourceSink(sinkURI),
+					WithApiServerSourceEventTypes,
+				),
+			}},
+			WantDeletes: []clientgotesting.DeleteActionImpl{
+				{Name: "name-1"},
+			},
 			WantCreates: []metav1.Object{
 				makeReceiveAdapter(),
 			},
@@ -273,9 +324,12 @@ func TestReconcile(t *testing.T) {
 					WithInitBrokerConditions,
 					WithBrokerAddress(sinkDNS),
 				),
+				// https://github.com/knative/pkg/issues/411
+				// Be careful adding more EventTypes here, the current unit test lister does not
+				// return items in a fixed order, so the EventTypes can come back in any order.
+				// WantDeletes requires the order to be correct, so will be flaky if we add more
+				// than one EventType here.
 				makeEventTypeWithName("type1", "name-1"),
-				makeEventTypeWithName("type2", "name-2"),
-				makeEventTypeWithName("type3", "name-3"),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
@@ -302,8 +356,6 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantDeletes: []clientgotesting.DeleteActionImpl{
 				{Name: "name-1"},
-				{Name: "name-2"},
-				{Name: "name-3"},
 			},
 			WantCreates: []metav1.Object{
 				makeEventType(sourcesv1alpha1.ApiServerSourceAddEventType),
@@ -325,10 +377,10 @@ func TestReconcile(t *testing.T) {
 			deploymentLister:      listers.GetDeploymentLister(),
 			source:                source,
 		}
-		r.sinkReconciler = duck.NewSinkReconciler(opt, func(string){})
+		r.sinkReconciler = duck.NewSinkReconciler(opt, func(string) {})
 		return r
 	},
-	true,
+		true,
 	))
 }
 func TestNew(t *testing.T) {

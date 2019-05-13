@@ -39,7 +39,7 @@ const (
 	OldEventingProvisionerLabel = "provisioner"
 )
 
-// AddFinalizerResult is used indicate whether a finalizer was added or already present.
+// AddFinalizerResult is used to indicate whether a finalizer was added or already present.
 type AddFinalizerResult bool
 
 // RemoveFinalizerResult is used to indicate whether a finalizer was found and removed (FinalizerRemoved), or finalizer not found (FinalizerNotFound).
