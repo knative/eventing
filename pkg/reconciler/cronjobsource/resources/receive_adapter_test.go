@@ -106,6 +106,10 @@ func TestMakeReceiveAdapter(t *testing.T) {
 									Name:  "NAME",
 									Value: "source-name",
 								},
+								{
+									Name:  "NAMESPACE",
+									Value: "source-namespace",
+								},
 							},
 						},
 					},

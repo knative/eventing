@@ -40,6 +40,9 @@ type envConfig struct {
 
 	// Environment variable containing the name of the cron job.
 	Name string `envconfig:"NAME" required:"true"`
+
+	// Environment variable containing the namespace of the cron job.
+	Namespace string `envconfig:"NAMESPACE" required:"true"`
 }
 
 func main() {
@@ -59,10 +62,11 @@ func main() {
 	}
 
 	adapter := &cronjobevents.Adapter{
-		Schedule: env.Schedule,
-		Data:     env.Data,
-		SinkURI:  env.Sink,
-		Name:     env.Name,
+		Schedule:  env.Schedule,
+		Data:      env.Data,
+		SinkURI:   env.Sink,
+		Name:      env.Name,
+		Namespace: env.Namespace,
 	}
 
 	logger.Info("Starting Receive Adapter", zap.Reflect("adapter", adapter))

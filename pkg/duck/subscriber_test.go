@@ -182,7 +182,7 @@ func TestSubscriberSpec(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			dc := fake.NewSimpleDynamicClient(scheme.Scheme, tc.Objects...)
 
-			actual, err := SubscriberSpec(context.TODO(), dc, testNS, tc.Sub)
+			actual, err := SubscriberSpec(context.TODO(), dc, testNS, tc.Sub, func(corev1.ObjectReference) error { return nil })
 			if err != nil {
 				if tc.ExpectedErr == "" || tc.ExpectedErr != err.Error() {
 					t.Fatalf("Unexpected error. Expected '%s'. Actual '%s'.", tc.ExpectedErr, err.Error())

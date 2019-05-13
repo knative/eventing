@@ -39,10 +39,9 @@ func MakeEventType(src *v1alpha1.CronJobSource) *eventingv1alpha1.EventType {
 			},
 		},
 		Spec: eventingv1alpha1.EventTypeSpec{
-			Type:        v1alpha1.CronJobEventType,
-			Source:      v1alpha1.CronJobEventSource,
-			Broker:      src.Spec.Sink.Name,
-			Description: src.Name,
+			Type:   v1alpha1.CronJobEventType,
+			Source: v1alpha1.CronJobEventSource(src.Namespace, src.Name),
+			Broker: src.Spec.Sink.Name,
 		},
 	}
 }
