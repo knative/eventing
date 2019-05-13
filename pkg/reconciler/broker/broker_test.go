@@ -188,7 +188,7 @@ func TestReconcile(t *testing.T) {
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
 					WithDeploymentServiceAccount(filterSA),
-					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), containerPorts(8080))),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
@@ -220,7 +220,7 @@ func TestReconcile(t *testing.T) {
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
 					WithDeploymentServiceAccount(filterSA),
-					WithDeploymentContainer(filterContainerName, "some-other-image", envVars(filterContainerName), nil)),
+					WithDeploymentContainer(filterContainerName, "some-other-image", envVars(filterContainerName), containerPorts(8080))),
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("update", "deployments"),
@@ -237,7 +237,7 @@ func TestReconcile(t *testing.T) {
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
 					WithDeploymentServiceAccount(filterSA),
-					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), containerPorts(8080))),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for update deployments"),
@@ -262,7 +262,7 @@ func TestReconcile(t *testing.T) {
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
 					WithDeploymentServiceAccount(filterSA),
-					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), containerPorts(8080))),
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("create", "services"),
@@ -303,7 +303,7 @@ func TestReconcile(t *testing.T) {
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
 					WithDeploymentServiceAccount(filterSA),
-					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), containerPorts(8080))),
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
@@ -348,7 +348,7 @@ func TestReconcile(t *testing.T) {
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
 					WithDeploymentServiceAccount(filterSA),
-					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), containerPorts(8080))),
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
@@ -396,7 +396,7 @@ func TestReconcile(t *testing.T) {
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
 					WithDeploymentServiceAccount(filterSA),
-					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), containerPorts(8080))),
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
@@ -448,7 +448,7 @@ func TestReconcile(t *testing.T) {
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
 					WithDeploymentServiceAccount(filterSA),
-					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), containerPorts(8080))),
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
@@ -499,7 +499,7 @@ func TestReconcile(t *testing.T) {
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
 					WithDeploymentServiceAccount(filterSA),
-					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), containerPorts(8080))),
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
@@ -554,7 +554,7 @@ func TestReconcile(t *testing.T) {
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
 					WithDeploymentServiceAccount(filterSA),
-					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), containerPorts(8080))),
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
@@ -613,7 +613,7 @@ func TestReconcile(t *testing.T) {
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
 					WithDeploymentServiceAccount(filterSA),
-					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), containerPorts(8080))),
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
@@ -683,7 +683,7 @@ func TestReconcile(t *testing.T) {
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
 					WithDeploymentServiceAccount(filterSA),
-					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), containerPorts(8080))),
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
@@ -755,7 +755,7 @@ func TestReconcile(t *testing.T) {
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
 					WithDeploymentServiceAccount(filterSA),
-					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), containerPorts(8080))),
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
@@ -835,7 +835,7 @@ func TestReconcile(t *testing.T) {
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
 					WithDeploymentServiceAccount(filterSA),
-					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), nil)),
+					WithDeploymentContainer(filterContainerName, filterImage, envVars(filterContainerName), containerPorts(8080))),
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
@@ -893,7 +893,7 @@ func TestReconcile(t *testing.T) {
 			ingressServiceAccountName: ingressSA,
 		}
 	},
-	false,
+		false,
 	))
 }
 
@@ -966,14 +966,10 @@ func servicePorts(containerName string, httpInternal int) []corev1.ServicePort {
 			Name:       "http",
 			Port:       80,
 			TargetPort: intstr.FromInt(httpInternal),
-		},
-	}
-	// TODO remove this if once we add metrics to the filter container.
-	if containerName == ingressContainerName {
-		svcPorts = append(svcPorts, corev1.ServicePort{
+		}, {
 			Name: "metrics",
 			Port: 9090,
-		})
+		},
 	}
 	return svcPorts
 }
