@@ -33,12 +33,13 @@ User stories:
 
 ### System Integrator
 
-System Integrators are typically of two varieties. They are producing new Channel
-implmmentations or new Event Source implementations.
+System Integrators are typically of two varieties. They are producing new
+Channel implmmentations or new Event Source implementations.
 
 User stories:
 
-- Create a new Event Source (creating a bridge between an existing system and Knative Eventing)
+- Create a new Event Source (creating a bridge between an existing system and
+  Knative Eventing)
 - Create a new CHannel implementation
 
 ## Contributors
