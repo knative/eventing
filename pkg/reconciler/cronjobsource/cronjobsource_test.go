@@ -36,6 +36,7 @@ import (
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/cronjobsource/resources"
 	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/eventing/pkg/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
@@ -234,6 +235,60 @@ func TestAllCases(t *testing.T) {
 				makeReceiveAdapterWithSink(brokerRef),
 			},
 		}, {
+			Name: "valid with event type deletion and creation",
+			Objects: []runtime.Object{
+				NewCronSourceJob(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &brokerRef,
+					}),
+				),
+				NewBroker(sinkName, testNS,
+					WithInitBrokerConditions,
+					WithBrokerAddress(sinkDNS),
+				),
+				NewEventType("name-1", testNS,
+					WithEventTypeLabels(resources.Labels(sourceName)),
+					WithEventTypeType("type-1"),
+					WithEventTypeSource(sourcesv1alpha1.CronJobEventSource(testNS, sourceName)),
+					WithEventTypeBroker(sinkName),
+					WithEventTypeOwnerReference(ownerRef)),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "CronJobSourceReconciled", `CronJobSource reconciled: "%s/%s"`, testNS, sourceName),
+				Eventf(corev1.EventTypeNormal, "CronJobSourceReadinessChanged", `CronJobSource %q became ready`, sourceName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewCronSourceJob(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &brokerRef,
+					}),
+					// Status Update:
+					WithInitCronJobSourceConditions,
+					WithValidCronJobSourceSchedule,
+					WithCronJobSourceDeployed,
+					WithCronJobSourceEventType,
+					WithCronJobSourceSink(sinkURI),
+				),
+			}},
+			WantDeletes: []clientgotesting.DeleteActionImpl{{
+				Name: "name-1",
+			}},
+			WantCreates: []metav1.Object{
+				NewEventType("", testNS,
+					WithEventTypeGenerateName(fmt.Sprintf("%s-", utils.ToDNS1123Subdomain(sourcesv1alpha1.CronJobEventType))),
+					WithEventTypeLabels(resources.Labels(sourceName)),
+					WithEventTypeType(sourcesv1alpha1.CronJobEventType),
+					WithEventTypeSource(sourcesv1alpha1.CronJobEventSource(testNS, sourceName)),
+					WithEventTypeBroker(sinkName),
+					WithEventTypeOwnerReference(ownerRef)),
+				makeReceiveAdapterWithSink(brokerRef),
+			},
+		}, {
 			Name: "valid, existing ra",
 			Objects: []runtime.Object{
 				NewCronSourceJob(sourceName, testNS,
@@ -297,14 +352,17 @@ func TestAllCases(t *testing.T) {
 
 	defer logtesting.ClearAll()
 	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
-		return &Reconciler{
+		r := &Reconciler{
 			Base:             reconciler.NewBase(opt, controllerAgentName),
 			cronjobLister:    listers.GetCronJobSourceLister(),
 			deploymentLister: listers.GetDeploymentLister(),
 			eventTypeLister:  listers.GetEventTypeLister(),
 		}
-	}))
-
+		r.sinkReconciler = duck.NewSinkReconciler(opt, func(string){})
+		return r
+	},
+	true,
+	))
 }
 
 func TestNew(t *testing.T) {

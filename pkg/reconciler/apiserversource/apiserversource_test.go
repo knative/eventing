@@ -39,6 +39,7 @@ import (
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/apiserversource/resources"
 	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/eventing/pkg/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
@@ -254,17 +255,81 @@ func TestReconcile(t *testing.T) {
 				makeReceiveAdapter(),
 			},
 		},
+		{
+			Name: "valid with broker sink and event types to delete",
+			Objects: []runtime.Object{
+				NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink: &brokerRef,
+					}),
+				),
+				NewBroker(sinkName, testNS,
+					WithInitBrokerConditions,
+					WithBrokerAddress(sinkDNS),
+				),
+				makeEventTypeWithName("type1", "name-1"),
+				makeEventTypeWithName("type2", "name-2"),
+				makeEventTypeWithName("type3", "name-3"),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink: &brokerRef,
+					}),
+					// Status Update:
+					WithInitApiServerSourceConditions,
+					WithApiServerSourceDeployed,
+					WithApiServerSourceSink(sinkURI),
+					WithApiServerSourceEventTypes,
+				),
+			}},
+			WantDeletes: []clientgotesting.DeleteActionImpl{
+				{Name: "name-1"},
+				{Name: "name-2"},
+				{Name: "name-3"},
+			},
+			WantCreates: []metav1.Object{
+				makeEventType(sourcesv1alpha1.ApiServerSourceAddEventType),
+				makeEventType(sourcesv1alpha1.ApiServerSourceDeleteEventType),
+				makeEventType(sourcesv1alpha1.ApiServerSourceUpdateEventType),
+				makeEventType(sourcesv1alpha1.ApiServerSourceAddRefEventType),
+				makeEventType(sourcesv1alpha1.ApiServerSourceDeleteRefEventType),
+				makeEventType(sourcesv1alpha1.ApiServerSourceUpdateRefEventType),
+				makeReceiveAdapter(),
+			},
+		},
 	}
 
 	defer logtesting.ClearAll()
 	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
-		return &Reconciler{
+		r := &Reconciler{
 			Base:                  reconciler.NewBase(opt, controllerAgentName),
 			apiserversourceLister: listers.GetApiServerSourceLister(),
 			deploymentLister:      listers.GetDeploymentLister(),
 			source:                source,
 		}
-	}))
+		r.sinkReconciler = duck.NewSinkReconciler(opt, func(string){})
+		return r
+	},
+	true,
+	))
 }
 func TestNew(t *testing.T) {
 	defer logtesting.ClearAll()

@@ -64,6 +64,8 @@ type Reconciler struct {
 	// listers index properties about resources
 	containerSourceLister listers.ContainerSourceLister
 	deploymentLister      appsv1listers.DeploymentLister
+
+	sinkReconciler *duck.SinkReconciler
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -82,6 +84,7 @@ func NewController(
 		deploymentLister:      deploymentInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
+	r.sinkReconciler = duck.NewSinkReconciler(opt, impl.EnqueueKey)
 
 	r.Logger.Info("Setting up event handlers")
 	containerSourceInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
@@ -240,7 +243,13 @@ func (r *Reconciler) setSinkURIArg(ctx context.Context, source *v1alpha1.Contain
 		return fmt.Errorf("Sink missing from spec")
 	}
 
-	uri, err := duck.GetSinkURI(ctx, r.DynamicClientSet, source.Spec.Sink, source.Namespace)
+	sinkObjRef := source.Spec.Sink
+	if sinkObjRef.Namespace == "" {
+		sinkObjRef.Namespace = source.Namespace
+	}
+
+	sourceDesc := source.Namespace + "/" + source.Name + ", " + source.GroupVersionKind().String()
+	uri, err := r.sinkReconciler.GetSinkURI(source.Spec.Sink, source, sourceDesc)
 	if err != nil {
 		source.Status.MarkNoSink("NotFound", `Couldn't get Sink URI from "%s/%s": %v"`, source.Spec.Sink.Namespace, source.Spec.Sink.Name, err)
 		return err

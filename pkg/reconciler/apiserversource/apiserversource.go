@@ -88,6 +88,7 @@ type Reconciler struct {
 	eventTypeLister       eventinglisters.EventTypeLister
 
 	source string
+	sinkReconciler *duck.SinkReconciler
 }
 
 // NewController initializes the controller and is called by the generated code
@@ -106,6 +107,8 @@ func NewController(
 		source:                source,
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
+
+	r.sinkReconciler = duck.NewSinkReconciler(opt, impl.EnqueueKey)
 
 	r.Logger.Info("Setting up event handlers")
 	apiserversourceInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
@@ -170,7 +173,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSource) error {
 	source.Status.InitializeConditions()
 
-	sinkURI, err := duck.GetSinkURI(ctx, r.DynamicClientSet, source.Spec.Sink, source.Namespace)
+	sinkObjRef := source.Spec.Sink
+	if sinkObjRef.Namespace == "" {
+		sinkObjRef.Namespace = source.Namespace
+	}
+
+	sourceDesc := source.Namespace + "/" + source.Name + ", " + source.GroupVersionKind().String()
+	sinkURI, err := r.sinkReconciler.GetSinkURI(sinkObjRef, source, sourceDesc)
 	if err != nil {
 		source.Status.MarkNoSink("NotFound", "")
 		return err
@@ -259,13 +268,22 @@ func (r *Reconciler) createEventTypes(ctx context.Context, src *v1alpha1.ApiServ
 		return err
 	}
 
-	missing := r.computeDiff(current, expected)
-	for _, eventType := range missing {
-		if _, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(&eventType); err != nil {
+	toCreate, toDelete := r.computeDiff(current, expected)
+
+	for _, eventType := range toDelete {
+		if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(eventType.Name, &metav1.DeleteOptions{}); err != nil {
+			logging.FromContext(ctx).Error("Error deleting eventType", zap.Any("eventType", eventType))
 			return err
 		}
-		logging.FromContext(ctx).Info("EventType created", zap.Any("eventType", eventType))
 	}
+
+	for _, eventType := range toCreate {
+		if _, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(&eventType); err != nil {
+			logging.FromContext(ctx).Error("Error creating eventType", zap.Any("eventType", eventType))
+			return err
+		}
+	}
+
 	return err
 }
 
@@ -300,15 +318,31 @@ func (r *Reconciler) makeEventTypes(src *v1alpha1.ApiServerSource) ([]eventingv1
 	return eventTypes, nil
 }
 
-func (r *Reconciler) computeDiff(current []eventingv1alpha1.EventType, expected []eventingv1alpha1.EventType) []eventingv1alpha1.EventType {
-	eventTypes := make([]eventingv1alpha1.EventType, 0)
+func (r *Reconciler) computeDiff(current []eventingv1alpha1.EventType, expected []eventingv1alpha1.EventType) ([]eventingv1alpha1.EventType, []eventingv1alpha1.EventType) {
+	toCreate := make([]eventingv1alpha1.EventType, 0)
+	toDelete := make([]eventingv1alpha1.EventType, 0)
 	currentMap := asMap(current, keyFromEventType)
+	expectedMap := asMap(expected, keyFromEventType)
+
+	// Iterate over the slices instead of the maps for predictable UT expectations.
 	for _, e := range expected {
-		if _, ok := currentMap[keyFromEventType(&e)]; !ok {
-			eventTypes = append(eventTypes, e)
+		if c, ok := currentMap[keyFromEventType(&e)]; !ok {
+			toCreate = append(toCreate, e)
+		} else {
+			if !equality.Semantic.DeepEqual(e.Spec, c.Spec) {
+				toDelete = append(toDelete, c)
+				toCreate = append(toCreate, e)
+			}
 		}
 	}
-	return eventTypes
+	// Need to check whether the current EventTypes are not in the expected map. If so, we have to delete them.
+	// This could happen if the ApiServerSource CO changes its broker.
+	for _, c := range current {
+		if _, ok := expectedMap[keyFromEventType(&c)]; !ok {
+			toDelete = append(toDelete, c)
+		}
+	}
+	return toCreate, toDelete
 }
 
 func asMap(eventTypes []eventingv1alpha1.EventType, keyFunc func(*eventingv1alpha1.EventType) string) map[string]eventingv1alpha1.EventType {

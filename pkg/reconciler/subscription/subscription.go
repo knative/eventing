@@ -33,6 +33,7 @@ import (
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
+	"github.com/knative/pkg/tracker"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -68,7 +69,9 @@ type Reconciler struct {
 	*reconciler.Base
 
 	// listers index properties about resources
-	subscriptionLister listers.SubscriptionLister
+	subscriptionLister  listers.SubscriptionLister
+	addressableInformer eventingduck.AddressableInformer
+	tracker             tracker.Interface
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -79,16 +82,31 @@ var _ controller.Reconciler = (*Reconciler)(nil)
 func NewController(
 	opt reconciler.Options,
 	subscriptionInformer eventinginformers.SubscriptionInformer,
+	channelInformer eventinginformers.ChannelInformer,
+	addressableInformer eventingduck.AddressableInformer,
 ) *controller.Impl {
 
 	r := &Reconciler{
-		Base:               reconciler.NewBase(opt, controllerAgentName),
-		subscriptionLister: subscriptionInformer.Lister(),
+		Base:                reconciler.NewBase(opt, controllerAgentName),
+		subscriptionLister:  subscriptionInformer.Lister(),
+		addressableInformer: addressableInformer,
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
 
 	r.Logger.Info("Setting up event handlers")
 	subscriptionInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
+
+	// Tracker is used to notify us when the resources Subscription depends on change, so that the
+	// Subscription needs to reconcile again.
+	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
+	channelInformer.Informer().AddEventHandler(reconciler.Handler(
+		// Call the tracker's OnChanged method, but we've seen the objects coming through this path
+		// missing TypeMeta, so ensure it is properly populated.
+		controller.EnsureTypeMeta(
+			r.tracker.OnChanged,
+			v1alpha1.SchemeGroupVersion.WithKind("Channel"),
+		),
+	))
 
 	return impl
 }
@@ -170,7 +188,13 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		return err
 	}
 
-	subscriberURI, err := eventingduck.SubscriberSpec(ctx, r.DynamicClientSet, subscription.Namespace, subscription.Spec.Subscriber)
+	track := r.addressableInformer.TrackInNamespace(r.tracker, subscription)
+	if err := track(subscription.Spec.Channel); err != nil {
+		logging.FromContext(ctx).Error("Unable to track changes to spec.channel", zap.Error(err))
+		return err
+	}
+
+	subscriberURI, err := eventingduck.SubscriberSpec(ctx, r.DynamicClientSet, subscription.Namespace, subscription.Spec.Subscriber, track)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to resolve Subscriber",
 			zap.Error(err),
@@ -182,7 +206,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	subscription.Status.PhysicalSubscription.SubscriberURI = subscriberURI
 	logging.FromContext(ctx).Debug("Resolved Subscriber", zap.String("subscriberURI", subscriberURI))
 
-	replyURI, err := r.resolveResult(ctx, subscription.Namespace, subscription.Spec.Reply)
+	replyURI, err := r.resolveResult(ctx, subscription.Namespace, subscription.Spec.Reply, track)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to resolve reply",
 			zap.Error(err),
@@ -270,10 +294,17 @@ func (c *Reconciler) ensureFinalizer(sub *v1alpha1.Subscription) error {
 }
 
 // resolveResult resolves the Spec.Result object.
-func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyStrategy *v1alpha1.ReplyStrategy) (string, error) {
+func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyStrategy *v1alpha1.ReplyStrategy, track eventingduck.Track) (string, error) {
 	if isNilOrEmptyReply(replyStrategy) {
 		return "", nil
 	}
+
+	// Tell tracker to reconcile this Subscription whenever the Channel changes.
+	if err := track(*replyStrategy.Channel); err != nil {
+		logging.FromContext(ctx).Error("Unable to track changes to spec.reply.channel", zap.Error(err))
+		return "", err
+	}
+
 	obj, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, namespace, replyStrategy.Channel)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to fetch ReplyStrategy Channel",
@@ -287,7 +318,7 @@ func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyS
 		logging.FromContext(ctx).Warn("Failed to deserialize Addressable target", zap.Error(err))
 		return "", err
 	}
-	if s.Status.Address != nil {
+	if s.Status.Address != nil && s.Status.Address.Hostname != "" {
 		return eventingduck.DomainToURL(s.Status.Address.Hostname), nil
 	}
 	return "", fmt.Errorf("reply.status does not contain address")

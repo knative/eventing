@@ -34,6 +34,7 @@ import (
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/eventing/pkg/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
@@ -129,7 +130,7 @@ func TestAllCases(t *testing.T) {
 			Key:     testNS + "/" + sourceName,
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "SetSinkURIFailed", `Failed to set Sink URI: channels.eventing.knative.dev "testsink" not found`),
+				Eventf(corev1.EventTypeWarning, "SetSinkURIFailed", `Failed to set Sink URI: Error fetching sink &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:testsink,UID:,APIVersion:eventing.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} for source "testnamespace/test-container-source, /, Kind=": channels.eventing.knative.dev "testsink" not found`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewContainerSource(sourceName, testNS,
@@ -139,7 +140,7 @@ func TestAllCases(t *testing.T) {
 					}),
 					// Status Update:
 					WithInitContainerSourceConditions,
-					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "/testsink": channels.eventing.knative.dev "testsink" not found"`),
+					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "testnamespace/testsink": Error fetching sink &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:testsink,UID:,APIVersion:eventing.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} for source "testnamespace/test-container-source, /, Kind=": channels.eventing.knative.dev "testsink" not found"`),
 				),
 			}},
 		}, {
@@ -156,7 +157,7 @@ func TestAllCases(t *testing.T) {
 			Key:     testNS + "/" + sourceName,
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "SetSinkURIFailed", `Failed to set Sink URI: sink "testnamespace/testsink" (eventing.knative.dev/v1alpha1, Kind=Trigger) does not contain address`),
+				Eventf(corev1.EventTypeWarning, "SetSinkURIFailed", `Failed to set Sink URI: sink &ObjectReference{Kind:Trigger,Namespace:testnamespace,Name:testsink,UID:,APIVersion:eventing.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} does not contain address`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewContainerSource(sourceName, testNS,
@@ -166,7 +167,7 @@ func TestAllCases(t *testing.T) {
 					}),
 					// Status Update:
 					WithInitContainerSourceConditions,
-					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "/testsink": sink "testnamespace/testsink" (eventing.knative.dev/v1alpha1, Kind=Trigger) does not contain address"`),
+					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "testnamespace/testsink": sink &ObjectReference{Kind:Trigger,Namespace:testnamespace,Name:testsink,UID:,APIVersion:eventing.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} does not contain address"`),
 				),
 			}},
 		}, {
@@ -183,7 +184,7 @@ func TestAllCases(t *testing.T) {
 			Key:     testNS + "/" + sourceName,
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "SetSinkURIFailed", `Failed to set Sink URI: sink "testnamespace/testsink" (eventing.knative.dev/v1alpha1, Kind=Channel) contains an empty hostname`),
+				Eventf(corev1.EventTypeWarning, "SetSinkURIFailed", `Failed to set Sink URI: sink &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:testsink,UID:,APIVersion:eventing.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} contains an empty hostname`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewContainerSource(sourceName, testNS,
@@ -193,7 +194,7 @@ func TestAllCases(t *testing.T) {
 					}),
 					// Status Update:
 					WithInitContainerSourceConditions,
-					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "/testsink": sink "testnamespace/testsink" (eventing.knative.dev/v1alpha1, Kind=Channel) contains an empty hostname"`),
+					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "testnamespace/testsink": sink &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:testsink,UID:,APIVersion:eventing.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} contains an empty hostname"`),
 				),
 			}},
 		}, {
@@ -432,13 +433,16 @@ func TestAllCases(t *testing.T) {
 
 	defer logtesting.ClearAll()
 	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
-		return &Reconciler{
+		r := &Reconciler{
 			Base:                  reconciler.NewBase(opt, controllerAgentName),
 			containerSourceLister: listers.GetContainerSourceLister(),
 			deploymentLister:      listers.GetDeploymentLister(),
 		}
-	}))
-
+		r.sinkReconciler = duck.NewSinkReconciler(opt, func(string){})
+		return r
+	},
+	true,
+	))
 }
 
 func makeDeployment(source *sourcesv1alpha1.ContainerSource, replicas int32, labels map[string]string, annotations map[string]string) *appsv1.Deployment {
