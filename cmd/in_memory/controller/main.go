@@ -22,9 +22,9 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	"github.com/knative/eventing/pkg/provisioners/inmemory/channel"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/eventing/pkg/provisioners/inmemory/channel"
 	"github.com/knative/eventing/pkg/provisioners/inmemory/clusterchannelprovisioner"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
