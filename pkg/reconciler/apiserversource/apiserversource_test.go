@@ -36,10 +36,10 @@ import (
 	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/apiserversource/resources"
 	"github.com/knative/eventing/pkg/utils"
-	"github.com/knative/eventing/pkg/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
@@ -301,9 +301,24 @@ func TestReconcile(t *testing.T) {
 				),
 			}},
 			WantDeletes: []clientgotesting.DeleteActionImpl{
-				{Name: "name-1"},
-				{Name: "name-2"},
-				{Name: "name-3"},
+				{
+					ActionImpl: clientgotesting.ActionImpl{
+						Namespace: testNS,
+					},
+					Name: "name-1",
+				},
+				{
+					ActionImpl: clientgotesting.ActionImpl{
+						Namespace: testNS,
+					},
+					Name: "name-2",
+				},
+				{
+					ActionImpl: clientgotesting.ActionImpl{
+						Namespace: testNS,
+					},
+					Name: "name-3",
+				},
 			},
 			WantCreates: []metav1.Object{
 				makeEventType(sourcesv1alpha1.ApiServerSourceAddEventType),
@@ -325,10 +340,10 @@ func TestReconcile(t *testing.T) {
 			deploymentLister:      listers.GetDeploymentLister(),
 			source:                source,
 		}
-		r.sinkReconciler = duck.NewSinkReconciler(opt, func(string){})
+		r.sinkReconciler = duck.NewSinkReconciler(opt, func(string) {})
 		return r
 	},
-	true,
+		true,
 	))
 }
 func TestNew(t *testing.T) {
