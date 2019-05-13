@@ -101,7 +101,7 @@ func TestAllCases(t *testing.T) {
 				)},
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InMemoryChannelReconcileFailed", "InMemoryChannel reconciliation failed: dispatcher Deployment does not exist"),
+				Eventf(corev1.EventTypeWarning, "InMemoryChannelReconcileFailed", "InMemoryChannel reconciliation failed: deployment.apps \"test-deployment\" not found"),
 			},
 		}, {
 			Name: "Service does not exist",
@@ -115,7 +115,7 @@ func TestAllCases(t *testing.T) {
 				)},
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InMemoryChannelReconcileFailed", "InMemoryChannel reconciliation failed: dispatcher Service does not exist"),
+				Eventf(corev1.EventTypeWarning, "InMemoryChannelReconcileFailed", "InMemoryChannel reconciliation failed: service \"test-service\" not found"),
 			},
 		}, {
 			Name: "Endpoints does not exist",
@@ -131,7 +131,7 @@ func TestAllCases(t *testing.T) {
 				)},
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InMemoryChannelReconcileFailed", "InMemoryChannel reconciliation failed: dispatcher Endpoints does not exist"),
+				Eventf(corev1.EventTypeWarning, "InMemoryChannelReconcileFailed", "InMemoryChannel reconciliation failed: endpoints \"test-service\" not found"),
 			},
 		}, {
 			Name: "Endpoints not ready",
