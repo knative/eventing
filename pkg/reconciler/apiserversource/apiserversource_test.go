@@ -324,9 +324,12 @@ func TestReconcile(t *testing.T) {
 					WithInitBrokerConditions,
 					WithBrokerAddress(sinkDNS),
 				),
+				// https://github.com/knative/pkg/issues/411
+				// Be careful adding more EventTypes here, the current unit test lister does not
+				// return items in a fixed order, so the EventTypes can come back in any order.
+				// WantDeletes requires the order to be correct, so will be flaky if we add more
+				// than one EventType here.
 				makeEventTypeWithName("type1", "name-1"),
-				makeEventTypeWithName("type2", "name-2"),
-				makeEventTypeWithName("type3", "name-3"),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
@@ -353,8 +356,6 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantDeletes: []clientgotesting.DeleteActionImpl{
 				{Name: "name-1"},
-				{Name: "name-2"},
-				{Name: "name-3"},
 			},
 			WantCreates: []metav1.Object{
 				makeEventType(sourcesv1alpha1.ApiServerSourceAddEventType),
