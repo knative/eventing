@@ -86,7 +86,7 @@ func (d *MessageDispatcher) DispatchMessage(message *Message, destination, reply
 		destinationURL := d.resolveURL(destination, defaults.Namespace)
 		response, err = d.executeRequest(destinationURL, message)
 		if err != nil {
-			return fmt.Errorf("Unable to complete request to transform the message %v", err)
+			return fmt.Errorf("Unable to complete transformation request %v", err)
 		}
 	}
 
