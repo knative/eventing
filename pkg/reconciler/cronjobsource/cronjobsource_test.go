@@ -36,6 +36,7 @@ import (
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/cronjobsource/resources"
 	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/eventing/pkg/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
@@ -297,14 +298,17 @@ func TestAllCases(t *testing.T) {
 
 	defer logtesting.ClearAll()
 	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
-		return &Reconciler{
+		r := &Reconciler{
 			Base:             reconciler.NewBase(opt, controllerAgentName),
 			cronjobLister:    listers.GetCronJobSourceLister(),
 			deploymentLister: listers.GetDeploymentLister(),
 			eventTypeLister:  listers.GetEventTypeLister(),
 		}
-	}))
-
+		r.sinkReconciler = duck.NewSinkReconciler(opt, func(string){})
+		return r
+	},
+	true,
+	))
 }
 
 func TestNew(t *testing.T) {

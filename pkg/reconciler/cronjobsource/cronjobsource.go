@@ -76,6 +76,8 @@ type Reconciler struct {
 	cronjobLister    listers.CronJobSourceLister
 	deploymentLister appsv1listers.DeploymentLister
 	eventTypeLister  eventinglisters.EventTypeLister
+
+	sinkReconciler *duck.SinkReconciler
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -96,6 +98,7 @@ func NewController(
 		eventTypeLister:  eventTypeInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
+	r.sinkReconciler = duck.NewSinkReconciler(opt, impl.EnqueueKey)
 
 	r.Logger.Info("Setting up event handlers")
 	cronjobsourceInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
@@ -174,7 +177,19 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 		return err
 	}
 	cronjob.Status.MarkSchedule()
-	sinkURI, err := duck.GetSinkURI(ctx, r.DynamicClientSet, cronjob.Spec.Sink, cronjob.Namespace)
+
+	if cronjob.Spec.Sink == nil {
+		cronjob.Status.MarkNoSink("Missing", "Sink missing from spec")
+		return fmt.Errorf("Sink missing from spec")
+	}
+
+	sinkObjRef := cronjob.Spec.Sink
+	if sinkObjRef.Namespace == "" {
+		sinkObjRef.Namespace = cronjob.Namespace
+	}
+
+	cronjobDesc := cronjob.Namespace + "/" + cronjob.Name + ", " + cronjob.GroupVersionKind().String();
+	sinkURI, err := r.sinkReconciler.GetSinkURI(sinkObjRef, cronjob, cronjobDesc)
 	if err != nil {
 		cronjob.Status.MarkNoSink("NotFound", "")
 		return err
@@ -197,7 +212,6 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 		}
 		cronjob.Status.MarkEventType()
 	}
-
 	return nil
 }
 

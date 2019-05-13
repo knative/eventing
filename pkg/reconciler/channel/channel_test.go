@@ -155,8 +155,9 @@ func TestAllCases(t *testing.T) {
 			Base:          reconciler.NewBase(opt, controllerAgentName),
 			channelLister: listers.GetChannelLister(),
 		}
-	}))
-
+	},
+	false,
+	))
 }
 
 func TestNew(t *testing.T) {

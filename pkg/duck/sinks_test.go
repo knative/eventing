@@ -17,7 +17,6 @@ limitations under the License.
 package duck
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -28,6 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/scheme"
+
+	"github.com/knative/eventing/pkg/reconciler"
 )
 
 var (
@@ -72,7 +73,7 @@ func TestGetSinkURI(t *testing.T) {
 			},
 			namespace: testNS,
 			ref:       getUnaddressableRef(),
-			wantErr:   fmt.Errorf(`sink "testnamespace/testunaddressable" (duck.knative.dev/v1alpha1, Kind=KResource) contains an empty hostname`),
+			wantErr:   fmt.Errorf(`sink &ObjectReference{Kind:%s,Namespace:%s,Name:%s,UID:,APIVersion:%s,ResourceVersion:,FieldPath:,} contains an empty hostname`, unaddressableKind, testNS, unaddressableName, unaddressableAPIVersion),
 		},
 		"nil sink": {
 			objects: []runtime.Object{
@@ -96,19 +97,27 @@ func TestGetSinkURI(t *testing.T) {
 			},
 			namespace: testNS,
 			ref:       getUnaddressableRef(),
-			wantErr:   fmt.Errorf(`sink "testnamespace/testunaddressable" (duck.knative.dev/v1alpha1, Kind=KResource) does not contain address`),
+			wantErr:   fmt.Errorf(`sink &ObjectReference{Kind:%s,Namespace:%s,Name:%s,UID:,APIVersion:%s,ResourceVersion:,FieldPath:,} does not contain address`, unaddressableKind, testNS, unaddressableName, unaddressableAPIVersion),
 		},
 		"notFound": {
 			namespace: testNS,
 			ref:       getUnaddressableRef(),
-			wantErr:   fmt.Errorf(`%s "%s" not found`, unaddressableResource, unaddressableName),
+			wantErr:   fmt.Errorf(`Error fetching sink &ObjectReference{Kind:%s,Namespace:%s,Name:%s,UID:,APIVersion:%s,ResourceVersion:,FieldPath:,} for source "%s": %s "%s" not found`, unaddressableKind, testNS, unaddressableName, unaddressableAPIVersion, unaddressableName, unaddressableResource, unaddressableName),
 		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			ctx := context.Background()
-			client := fake.NewSimpleDynamicClient(scheme.Scheme, tc.objects...)
-			uri, gotErr := GetSinkURI(ctx, client, tc.ref, tc.namespace)
+			sr := NewSinkReconciler(
+				reconciler.Options{
+					DynamicClientSet: fake.NewSimpleDynamicClient(scheme.Scheme, tc.objects...),
+				},
+				func(string){},
+			)
+			sourceName := "nilRef"
+			if tc.ref != nil {
+				sourceName = tc.ref.Name
+			}
+			uri, gotErr := sr.GetSinkURI(tc.ref, getAddressable(), sourceName)
 			if gotErr != nil {
 				if tc.wantErr != nil {
 					if diff := cmp.Diff(tc.wantErr.Error(), gotErr.Error()); diff != "" {
@@ -198,6 +207,7 @@ func getAddressableRef() *corev1.ObjectReference {
 		Kind:       addressableKind,
 		Name:       addressableName,
 		APIVersion: addressableAPIVersion,
+		Namespace:  testNS,
 	}
 }
 
@@ -206,5 +216,6 @@ func getUnaddressableRef() *corev1.ObjectReference {
 		Kind:       unaddressableKind,
 		Name:       unaddressableName,
 		APIVersion: unaddressableAPIVersion,
+		Namespace:  testNS,
 	}
 }

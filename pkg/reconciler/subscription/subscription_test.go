@@ -615,7 +615,9 @@ func TestAllCases(t *testing.T) {
 			tracker:             tracker.New(func(string) {}, 0),
 			addressableInformer: &fakeAddressableInformer{},
 		}
-	}))
+	},
+	false,
+	))
 }
 
 func TestNew(t *testing.T) {

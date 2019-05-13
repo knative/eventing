@@ -531,7 +531,9 @@ func TestAllCases(t *testing.T) {
 			addressableInformer: &fakeAddressableInformer{},
 			tracker:             tracker.New(func(string) {}, 0),
 		}
-	}))
+	},
+	false,
+	))
 }
 
 func makeTrigger() *v1alpha1.Trigger {
