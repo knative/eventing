@@ -235,6 +235,60 @@ func TestAllCases(t *testing.T) {
 				makeReceiveAdapterWithSink(brokerRef),
 			},
 		}, {
+			Name: "valid with event type deletion and creation",
+			Objects: []runtime.Object{
+				NewCronSourceJob(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &brokerRef,
+					}),
+				),
+				NewBroker(sinkName, testNS,
+					WithInitBrokerConditions,
+					WithBrokerAddress(sinkDNS),
+				),
+				NewEventType("name-1", testNS,
+					WithEventTypeLabels(resources.Labels(sourceName)),
+					WithEventTypeType("type-1"),
+					WithEventTypeSource(sourcesv1alpha1.CronJobEventSource(testNS, sourceName)),
+					WithEventTypeBroker(sinkName),
+					WithEventTypeOwnerReference(ownerRef)),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "CronJobSourceReconciled", `CronJobSource reconciled: "%s/%s"`, testNS, sourceName),
+				Eventf(corev1.EventTypeNormal, "CronJobSourceReadinessChanged", `CronJobSource %q became ready`, sourceName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewCronSourceJob(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &brokerRef,
+					}),
+					// Status Update:
+					WithInitCronJobSourceConditions,
+					WithValidCronJobSourceSchedule,
+					WithCronJobSourceDeployed,
+					WithCronJobSourceEventType,
+					WithCronJobSourceSink(sinkURI),
+				),
+			}},
+			WantDeletes: []clientgotesting.DeleteActionImpl{{
+				Name: "name-1",
+			}},
+			WantCreates: []metav1.Object{
+				NewEventType("", testNS,
+					WithEventTypeGenerateName(fmt.Sprintf("%s-", utils.ToDNS1123Subdomain(sourcesv1alpha1.CronJobEventType))),
+					WithEventTypeLabels(resources.Labels(sourceName)),
+					WithEventTypeType(sourcesv1alpha1.CronJobEventType),
+					WithEventTypeSource(sourcesv1alpha1.CronJobEventSource(testNS, sourceName)),
+					WithEventTypeBroker(sinkName),
+					WithEventTypeOwnerReference(ownerRef)),
+				makeReceiveAdapterWithSink(brokerRef),
+			},
+		}, {
 			Name: "valid, existing ra",
 			Objects: []runtime.Object{
 				NewCronSourceJob(sourceName, testNS,

@@ -298,12 +298,21 @@ func (r *Reconciler) createEventType(ctx context.Context, src *v1alpha1.CronJobS
 		logging.FromContext(ctx).Error("Unable to get an existing event type", zap.Error(err))
 		return nil, err
 	}
+	expected := resources.MakeEventType(src)
 	if current != nil {
-		// Not checking for spec changes as it is immutable. Only description is not, but we don't care if it is changed.
-		logging.FromContext(ctx).Debug("EventType already exists", zap.Any("eventType", current))
+		if !equality.Semantic.DeepEqual(expected.Spec, current.Spec) {
+			// As is immutable, delete it and create it again.
+			if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(current.Name, &metav1.DeleteOptions{}); err != nil {
+				logging.FromContext(ctx).Error("Error deleting existing event type", zap.Any("eventType", current))
+				return nil, err
+			}
+			if current, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(expected); err != nil {
+				logging.FromContext(ctx).Error("Error creating event type", zap.Any("eventType", current))
+				return nil, err
+			}
+		}
 		return current, nil
 	}
-	expected := resources.MakeEventType(src)
 	if current, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(expected); err != nil {
 		return nil, err
 	}

@@ -255,6 +255,66 @@ func TestReconcile(t *testing.T) {
 				makeReceiveAdapter(),
 			},
 		},
+		{
+			Name: "valid with broker sink and event types to delete",
+			Objects: []runtime.Object{
+				NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink: &brokerRef,
+					}),
+				),
+				NewBroker(sinkName, testNS,
+					WithInitBrokerConditions,
+					WithBrokerAddress(sinkDNS),
+				),
+				makeEventTypeWithName("type1", "name-1"),
+				makeEventTypeWithName("type2", "name-2"),
+				makeEventTypeWithName("type3", "name-3"),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink: &brokerRef,
+					}),
+					// Status Update:
+					WithInitApiServerSourceConditions,
+					WithApiServerSourceDeployed,
+					WithApiServerSourceSink(sinkURI),
+					WithApiServerSourceEventTypes,
+				),
+			}},
+			WantDeletes: []clientgotesting.DeleteActionImpl{
+				{Name: "name-1"},
+				{Name: "name-2"},
+				{Name: "name-3"},
+			},
+			WantCreates: []metav1.Object{
+				makeEventType(sourcesv1alpha1.ApiServerSourceAddEventType),
+				makeEventType(sourcesv1alpha1.ApiServerSourceDeleteEventType),
+				makeEventType(sourcesv1alpha1.ApiServerSourceUpdateEventType),
+				makeEventType(sourcesv1alpha1.ApiServerSourceAddRefEventType),
+				makeEventType(sourcesv1alpha1.ApiServerSourceDeleteRefEventType),
+				makeEventType(sourcesv1alpha1.ApiServerSourceUpdateRefEventType),
+				makeReceiveAdapter(),
+			},
+		},
 	}
 
 	defer logtesting.ClearAll()
