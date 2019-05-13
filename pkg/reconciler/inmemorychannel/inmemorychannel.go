@@ -18,29 +18,24 @@ package inmemorychannel
 
 import (
 	"context"
-	//	"errors"
+	"errors"
 	"reflect"
 	"time"
 
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	messaginginformers "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	//	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
-	//	util "github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	appsv1informers "k8s.io/client-go/informers/apps/v1"
-	appsv1listers "k8s.io/client-go/listers/apps/v1"
-	//	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	//	"k8s.io/apimachinery/pkg/labels"
-	//	"k8s.io/apimachinery/pkg/runtime/schema"
 	corev1informers "k8s.io/client-go/informers/core/v1"
+	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 )
@@ -220,11 +215,12 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			imc.Status.MarkDispatcherFailed("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist")
+			return errors.New("dispatcher Deployment does not exist")
 		} else {
 			logging.FromContext(ctx).Error("Unable to get the dispatcher Deployment", zap.Error(err))
 			imc.Status.MarkDispatcherFailed("DispatcherDeploymentGetFailed", "Failed to get dispatcher Deployment")
 		}
-		return nil
+		return err
 	}
 	imc.Status.PropagateDispatcherStatus(&d.Status)
 
@@ -235,11 +231,12 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			imc.Status.MarkServiceFailed("DispatcherServiceDoesNotExist", "Dispatcher Service does not exist")
+			return errors.New("dispatcher Service does not exist")
 		} else {
 			logging.FromContext(ctx).Error("Unable to get the dispatcher service", zap.Error(err))
 			imc.Status.MarkServiceFailed("DispatcherServiceGetFailed", "Failed to get dispatcher service")
+			return err
 		}
-		return nil
 	}
 
 	imc.Status.MarkServiceTrue()
@@ -250,17 +247,18 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			imc.Status.MarkEndpointsFailed("DispatcherEndpointsDoesNotExist", "Dispatcher Endpoints does not exist")
+			return errors.New("dispatcher Endpoints does not exist")
 		} else {
 			logging.FromContext(ctx).Error("Unable to get the dispatcher endpoints", zap.Error(err))
 			imc.Status.MarkEndpointsFailed("DispatcherEndpointsGetFailed", "Failed to get dispatcher endpoints")
+			return err
 		}
-		return nil
 	}
 
 	if len(e.Subsets) == 0 {
 		logging.FromContext(ctx).Error("No endpoints found for Dispatcher service", zap.Error(err))
 		imc.Status.MarkEndpointsFailed("DispatcherEndpointsNotReady", "There are no endpoints ready for Dispatcher service")
-		return nil
+		return err
 	}
 
 	imc.Status.MarkEndpointsTrue()

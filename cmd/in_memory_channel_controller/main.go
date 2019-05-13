@@ -22,7 +22,7 @@ import (
 	"os"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/logconfig"
@@ -36,6 +36,11 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+)
+
+const (
+	dispatcherDeploymentName = "imc-dispatcher"
+	dispatcherServiceName    = "imc-dispatcher"
 )
 
 var (
@@ -87,8 +92,8 @@ func main() {
 		inmemorychannel.NewController(
 			opt,
 			systemNS,
-			"imc-dispatcher",
-			"imc-dispatcher",
+			dispatcherDeploymentName,
+			dispatcherServiceName,
 			inMemoryChannelInformer,
 			deploymentInformer,
 			serviceInformer,
@@ -125,9 +130,7 @@ func main() {
 		logger.Fatalf("Failed to start informers: %v", err)
 	}
 
-	// Start all of the controllers.
 	logger.Info("Starting controllers.")
-
 	kncontroller.StartAll(stopCh, controllers[:]...)
 }
 

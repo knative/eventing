@@ -22,29 +22,29 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var imcCondSet = duckv1alpha1.NewLivingConditionSet(InMemoryChannelDispatcher, InMemoryChannelService, InMemoryChannelEndpoints)
+var imcCondSet = duckv1alpha1.NewLivingConditionSet(InMemoryChannelConditionDispatcherReady, InMemoryChannelConditionServiceReady, InMemoryChannelConditionEndpointsReady, InMemoryChannelConditionAddressable)
 
 const (
 	// InMemoryChannelConditionReady has status True when all subconditions below have been set to True.
 	InMemoryChannelConditionReady = duckv1alpha1.ConditionReady
 
-	// InMemoryChannelDispatcher has status True when a Dispatcher deployment is ready
-	InMemoryChannelDispatcher duckv1alpha1.ConditionType = "DispatcherReady"
+	// InMemoryChannelConditionDispatcherReady has status True when a Dispatcher deployment is ready
+	// Keyed off appsv1.DeploymentAvaialble, which means minimum available replicas required are up
+	// and running for at least minReadySeconds.
+	InMemoryChannelConditionDispatcherReady duckv1alpha1.ConditionType = "DispatcherReady"
 
-	// InMemoryChannelService has status True when a k8s Service is ready
-	InMemoryChannelService duckv1alpha1.ConditionType = "ServiceReady"
+	// InMemoryChannelConditionServiceReady has status True when a k8s Service is ready. This
+	// basically just means it exists because there's no meaningful status in Service. See Endpoints
+	// below.
+	InMemoryChannelConditionServiceReady duckv1alpha1.ConditionType = "ServiceReady"
 
-	// InMemoryChannelEndpoints has status True when a k8s Service Endpoints are backed
+	// InMemoryChannelConditionEndpointsReady has status True when a k8s Service Endpoints are backed
 	// by at least one endpoint.
-	InMemoryChannelEndpoints duckv1alpha1.ConditionType = "EndpointsReady"
+	InMemoryChannelConditionEndpointsReady duckv1alpha1.ConditionType = "EndpointsReady"
 
-	// ChannelConditionReady has status True when the Channel is ready to
-	// accept traffic.
-	ChannelConditionReady = duckv1alpha1.ConditionReady
-
-	// ChannelConditionAddressable has status true when this Channel meets
+	// InMemoryChannelConditionAddressable has status true when this InMemoryChannel meets
 	// the Addressable contract and has a non-empty hostname.
-	ChannelConditionAddressable duckv1alpha1.ConditionType = "Addressable"
+	InMemoryChannelConditionAddressable duckv1alpha1.ConditionType = "Addressable"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
@@ -65,14 +65,14 @@ func (imcs *InMemoryChannelStatus) InitializeConditions() {
 func (imcs *InMemoryChannelStatus) SetAddress(hostname string) {
 	imcs.Address.Hostname = hostname
 	if hostname != "" {
-		imcCondSet.Manage(imcs).MarkTrue(ChannelConditionAddressable)
+		imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionAddressable)
 	} else {
-		imcCondSet.Manage(imcs).MarkFalse(ChannelConditionAddressable, "emptyHostname", "hostname is the empty string")
+		imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelConditionAddressable, "emptyHostname", "hostname is the empty string")
 	}
 }
 
 func (imcs *InMemoryChannelStatus) MarkDispatcherFailed(reason, messageFormat string, messageA ...interface{}) {
-	imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelDispatcher, reason, messageFormat, messageA...)
+	imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelConditionDispatcherReady, reason, messageFormat, messageA...)
 }
 
 func (imcs *InMemoryChannelStatus) PropagateDispatcherStatus(ds *appsv1.DeploymentStatus) {
@@ -81,24 +81,24 @@ func (imcs *InMemoryChannelStatus) PropagateDispatcherStatus(ds *appsv1.Deployme
 			if cond.Status != corev1.ConditionTrue {
 				imcs.MarkDispatcherFailed("DispatcherNotReady", "Dispatcher Deployment is not ready: %s : %s", cond.Reason, cond.Message)
 			} else {
-				imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelDispatcher)
+				imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionDispatcherReady)
 			}
 		}
 	}
 }
 
 func (imcs *InMemoryChannelStatus) MarkServiceFailed(reason, messageFormat string, messageA ...interface{}) {
-	imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelService, reason, messageFormat, messageA...)
+	imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelConditionServiceReady, reason, messageFormat, messageA...)
 }
 
 func (imcs *InMemoryChannelStatus) MarkServiceTrue() {
-	imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelService)
+	imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionServiceReady)
 }
 
 func (imcs *InMemoryChannelStatus) MarkEndpointsFailed(reason, messageFormat string, messageA ...interface{}) {
-	imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelEndpoints, reason, messageFormat, messageA...)
+	imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelConditionEndpointsReady, reason, messageFormat, messageA...)
 }
 
 func (imcs *InMemoryChannelStatus) MarkEndpointsTrue() {
-	imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelEndpoints)
+	imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionEndpointsReady)
 }
