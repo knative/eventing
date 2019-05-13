@@ -145,8 +145,59 @@ func TestReconcile(t *testing.T) {
 					WithInitApiServerSourceConditions,
 					WithApiServerSourceDeployed,
 					WithApiServerSourceSink(sinkURI),
+					WithApiServerSourceEventTypes,
 				),
 			}},
+			WantCreates: []metav1.Object{
+				makeReceiveAdapter(),
+			},
+		},
+		{
+			Name: "valid with event types to delete",
+			Objects: []runtime.Object{
+				NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink: &sinkRef,
+					}),
+				),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
+				),
+				makeEventTypeWithName(sourcesv1alpha1.ApiServerSourceAddEventType, "name-1"),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink: &sinkRef,
+					}),
+					// Status Update:
+					WithInitApiServerSourceConditions,
+					WithApiServerSourceDeployed,
+					WithApiServerSourceSink(sinkURI),
+					WithApiServerSourceEventTypes,
+				),
+			}},
+			WantDeletes: []clientgotesting.DeleteActionImpl{
+				{Name: "name-1"},
+			},
 			WantCreates: []metav1.Object{
 				makeReceiveAdapter(),
 			},

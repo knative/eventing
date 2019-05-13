@@ -188,7 +188,7 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 		sinkObjRef.Namespace = cronjob.Namespace
 	}
 
-	cronjobDesc := cronjob.Namespace + "/" + cronjob.Name + ", " + cronjob.GroupVersionKind().String();
+	cronjobDesc := cronjob.Namespace + "/" + cronjob.Name + ", " + cronjob.GroupVersionKind().String()
 	sinkURI, err := r.sinkReconciler.GetSinkURI(sinkObjRef, cronjob, cronjobDesc)
 	if err != nil {
 		cronjob.Status.MarkNoSink("NotFound", "")
@@ -203,15 +203,13 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 	}
 	cronjob.Status.MarkDeployed()
 
-	// Only create EventType for Broker sinks.
-	if cronjob.Spec.Sink.Kind == "Broker" {
-		_, err = r.createEventType(ctx, cronjob)
-		if err != nil {
-			cronjob.Status.MarkNoEventType("EventTypeCreateFailed", "")
-			return err
-		}
-		cronjob.Status.MarkEventType()
+	_, err = r.reconcileEventType(ctx, cronjob)
+	if err != nil {
+		cronjob.Status.MarkNoEventType("EventTypeReconcileFailed", "")
+		return err
 	}
+	cronjob.Status.MarkEventType()
+
 	return nil
 }
 
@@ -292,12 +290,26 @@ func (r *Reconciler) getReceiveAdapter(ctx context.Context, src *v1alpha1.CronJo
 	return nil, apierrors.NewNotFound(schema.GroupResource{}, "")
 }
 
-func (r *Reconciler) createEventType(ctx context.Context, src *v1alpha1.CronJobSource) (*eventingv1alpha1.EventType, error) {
+func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.CronJobSource) (*eventingv1alpha1.EventType, error) {
 	current, err := r.getEventType(ctx, src)
 	if err != nil && !apierrors.IsNotFound(err) {
 		logging.FromContext(ctx).Error("Unable to get an existing event type", zap.Error(err))
 		return nil, err
 	}
+
+	// Only create EventTypes for Broker sinks. But if there is an EventType and the src has a non-Broker sink
+	// (possibly because it was updated), then we need to delete it.
+	if src.Spec.Sink.Kind != "Broker" {
+		if current != nil {
+			if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(current.Name, &metav1.DeleteOptions{}); err != nil {
+				logging.FromContext(ctx).Error("Error deleting existing event type", zap.Any("eventType", current))
+				return nil, err
+			}
+		}
+		// No current and no error.
+		return nil, nil
+	}
+
 	expected := resources.MakeEventType(src)
 	if current != nil {
 		if !equality.Semantic.DeepEqual(expected.Spec, current.Spec) {

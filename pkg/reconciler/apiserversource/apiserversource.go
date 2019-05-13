@@ -194,15 +194,13 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 	// Update source status
 	source.Status.MarkDeployed()
 
-	// Only create EventType for Broker sinks.
-	if source.Spec.Sink.Kind == "Broker" {
-		err = r.createEventTypes(ctx, source)
-		if err != nil {
-			source.Status.MarkNoEventTypes("EventTypesCreateFailed", "")
-			return err
-		}
-		source.Status.MarkEventTypes()
+	err = r.reconcileEventTypes(ctx, source)
+	if err != nil {
+		source.Status.MarkNoEventTypes("EventTypesReconcileFailed", "")
+		return err
 	}
+	source.Status.MarkEventTypes()
+
 	return nil
 }
 
@@ -256,7 +254,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Api
 	return ra, err
 }
 
-func (r *Reconciler) createEventTypes(ctx context.Context, src *v1alpha1.ApiServerSource) error {
+func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *v1alpha1.ApiServerSource) error {
 	current, err := r.getEventTypes(ctx, src)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get existing event types", zap.Error(err))
@@ -306,6 +304,14 @@ func (r *Reconciler) getEventTypes(ctx context.Context, src *v1alpha1.ApiServerS
 
 func (r *Reconciler) makeEventTypes(src *v1alpha1.ApiServerSource) ([]eventingv1alpha1.EventType, error) {
 	eventTypes := make([]eventingv1alpha1.EventType, 0)
+
+	// Only create EventTypes for Broker sinks.
+	// We add this check here in case the APIServerSource was changed from Broker to non-Broker sink.
+	// If so, we need to delete the existing ones, thus we return empty expected.
+	if src.Spec.Sink.Kind != "Broker" {
+		return eventTypes, nil
+	}
+
 	args := &resources.EventTypeArgs{
 		Src:    src,
 		Source: r.source,
