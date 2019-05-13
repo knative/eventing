@@ -263,14 +263,14 @@ func (r *Reconciler) createEventTypes(ctx context.Context, src *v1alpha1.ApiServ
 
 	for _, eventType := range extra {
 		if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(eventType.Name, &metav1.DeleteOptions{}); err != nil {
-			logging.FromContext(ctx).Info("Error deleting eventType", zap.Any("eventType", eventType))
+			logging.FromContext(ctx).Error("Error deleting eventType", zap.Any("eventType", eventType))
 			return err
 		}
 	}
 
 	for _, eventType := range missing {
 		if _, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(&eventType); err != nil {
-			logging.FromContext(ctx).Info("Error creating eventType", zap.Any("eventType", eventType))
+			logging.FromContext(ctx).Error("Error creating eventType", zap.Any("eventType", eventType))
 			return err
 		}
 	}
