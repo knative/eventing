@@ -61,12 +61,32 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		}(),
 		want: false,
 	}, {
+		name: "mark event types",
+		s: func() *ApiServerSourceStatus {
+			s := &ApiServerSourceStatus{}
+			s.InitializeConditions()
+			s.MarkEventTypes()
+			return s
+		}(),
+		want: false,
+	}, {
 		name: "mark sink and deployed",
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSink("uri://example")
 			s.MarkDeployed()
+			return s
+		}(),
+		want: true,
+	}, {
+		name: "mark sink and deployed and event types",
+		s: func() *ApiServerSourceStatus {
+			s := &ApiServerSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSink("uri://example")
+			s.MarkDeployed()
+			s.MarkEventTypes()
 			return s
 		}(),
 		want: true,
@@ -138,6 +158,21 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSink("uri://example")
 			s.MarkDeployed()
+			return s
+		}(),
+		condQuery: ApiServerConditionReady,
+		want: &duckv1alpha1.Condition{
+			Type:   ApiServerConditionReady,
+			Status: corev1.ConditionTrue,
+		},
+	}, {
+		name: "mark sink and deployed and event types",
+		s: func() *ApiServerSourceStatus {
+			s := &ApiServerSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSink("uri://example")
+			s.MarkDeployed()
+			s.MarkEventTypes()
 			return s
 		}(),
 		condQuery: ApiServerConditionReady,

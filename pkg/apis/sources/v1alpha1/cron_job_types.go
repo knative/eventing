@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/kmeta"
@@ -41,25 +43,29 @@ type CronJobSource struct {
 
 // TODO: Check that CronJobSource can be validated and can be defaulted.
 
-// Check that it is a runtime object.
-var _ runtime.Object = (*CronJobSource)(nil)
+var (
+	// Check that it is a runtime object.
+	_ runtime.Object = (*CronJobSource)(nil)
 
-// Check that we can create OwnerReferences to a Configuration.
-var _ kmeta.OwnerRefable = (*CronJobSource)(nil)
+	// Check that we can create OwnerReferences to a Configuration.
+	_ kmeta.OwnerRefable = (*CronJobSource)(nil)
 
-// Check that CronJobSource implements the Conditions duck type.
-var _ = duck.VerifyType(&CronJobSource{}, &duckv1alpha1.Conditions{})
+	// Check that CronJobSource implements the Conditions duck type.
+	_ = duck.VerifyType(&CronJobSource{}, &duckv1alpha1.Conditions{})
+)
 
 const (
 	// CronJobEventType is the CronJob CloudEvent type.
 	CronJobEventType = "dev.knative.cronjob.event"
-	// CronJobEventSource is the CronJob CloudEvent source.
-	CronJobEventSource = "/CronJob"
 )
+
+// CronJobEventSource returns the CronJob CloudEvent source.
+func CronJobEventSource(namespace, cronJobName string) string {
+	return fmt.Sprintf("/apis/v1/namespaces/%s/cronjobsources/%s", namespace, cronJobName)
+}
 
 // CronJobSourceSpec defines the desired state of the CronJobSource.
 type CronJobSourceSpec struct {
-
 	// Schedule is the cronjob schedule.
 	// +required
 	Schedule string `json:"schedule"`

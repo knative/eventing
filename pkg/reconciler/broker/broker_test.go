@@ -892,7 +892,9 @@ func TestReconcile(t *testing.T) {
 			ingressImage:              ingressImage,
 			ingressServiceAccountName: ingressSA,
 		}
-	}))
+	},
+	false,
+	))
 }
 
 func ownerReferences() []metav1.OwnerReference {

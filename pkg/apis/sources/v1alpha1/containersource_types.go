@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/kmeta"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,11 +39,16 @@ type ContainerSource struct {
 	Status ContainerSourceStatus `json:"status,omitempty"`
 }
 
-// Check that ContainerSource can be validated and can be defaulted.
-var _ runtime.Object = (*ContainerSource)(nil)
+var (
+	// Check that ContainerSource can be validated and can be defaulted.
+	_ runtime.Object = (*ContainerSource)(nil)
 
-// Check that ContainerSource implements the Conditions duck type.
-var _ = duck.VerifyType(&ContainerSource{}, &duckv1alpha1.Conditions{})
+	// Check that ContainerSource implements the Conditions duck type.
+	_ = duck.VerifyType(&ContainerSource{}, &duckv1alpha1.Conditions{})
+
+	// Check that we can create OwnerReferences to a ContainerSource.
+	_ kmeta.OwnerRefable = (*ContainerSource)(nil)
+)
 
 // ContainerSourceSpec defines the desired state of ContainerSource
 type ContainerSourceSpec struct {

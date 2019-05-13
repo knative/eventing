@@ -6,9 +6,9 @@ As an `Event Consumer` I want to filter events in triggers with a variety of
 strategies beyond exact match on predefined attributes. Filtering strategies
 that have been requested include:
 
-*   Filtering by source or type prefix or regular expression
-*   Filtering by a custom extension attribute
-*   Filtering by data fields
+- Filtering by source or type prefix or regular expression
+- Filtering by a custom extension attribute
+- Filtering by data fields
 
 The existing filter capability of exact match on source and type is simple to
 understand and use, but doesn't support these more advanced filtering scenarios.
@@ -28,12 +28,12 @@ glance.
 
 ## Requirements
 
-*   Support all of the advanced filtering use cases identified.
-*   Can implement simpler cases like exact match.
-*   Safe and secure when embedded in multi-tenant processes.
-*   Compatible with upstream filter propagation.
-*   Easily specified by the user.
-*   Simple for users to interpret.
+- Support all of the advanced filtering use cases identified.
+- Can implement simpler cases like exact match.
+- Safe and secure when embedded in multi-tenant processes.
+- Compatible with upstream filter propagation.
+- Easily specified by the user.
+- Simple for users to interpret.
 
 ## Proposed Solution
 
@@ -45,16 +45,16 @@ on any CloudEvents attribute.
 ### Add CEL expression filter
 
 Add an `expression` filter to the Trigger allowing users to specify an
-expression as a string. The expression is evaluated for each event considered
-by the Trigger. If the expression evaluates to true, the event is delivered to
-the Trigger's subscriber.
+expression as a string. The expression is evaluated for each event considered by
+the Trigger. If the expression evaluates to true, the event is delivered to the
+Trigger's subscriber.
 
 The evaluation environment of the expression may include:
 
-*   Official CloudEvents attributes like type and source.
-*   Custom extension attributes dynamically parsed from the event.
-*   Data fields parsed from the event, if the data content type is known to be
-    parseable
+- Official CloudEvents attributes like type and source.
+- Custom extension attributes dynamically parsed from the event.
+- Data fields parsed from the event, if the data content type is known to be
+  parseable
 
 The expression language chosen is
 [CEL](https://github.com/google/cel-spec/blob/9cdb3682ba04109d2e03d9b048986bae113bf36f/doc/intro.md)
@@ -62,6 +62,7 @@ as it has the best combination of features for this purpose. See
 [alternatives considered](#alternatives-considered) for comparisons to other
 expression languages.
 
+<!-- prettier-ignore-start -->
 ```yaml
 spec:
   filter:
@@ -69,13 +70,14 @@ spec:
       ce.type == "com.github.pull.create" &&
       ce.source == "https://github.com/knative/eventing/pulls/123"
 ```
+<!-- prettier-ignore-end -->
 
 ### Validate expression via webhook
 
 Add a check to the Trigger webhook that validates the expression's syntax and
 rejects the request if an error is encountered. This will not catch errors
-arising from use of dynamic extension attributes or data fields - these can only be
-caught at evaluation time.
+arising from use of dynamic extension attributes or data fields - these can only
+be caught at evaluation time.
 
 ### Add attributes map filter and deprecate SourceAndType
 
@@ -103,25 +105,24 @@ sources).
 To strike a balance between flexibility, maintainability, and user convenience,
 adopt the following principles:
 
-* Only one top-level filter may be used per Trigger. A Trigger that specifies
+- Only one top-level filter may be used per Trigger. A Trigger that specifies
   more than one is rejected.
-* All filters must be transformable to an equivalent CEL expression.
-* Additional filter specifications may be added if indicated by user feedback.
-
+- All filters must be transformable to an equivalent CEL expression.
+- Additional filter specifications may be added if indicated by user feedback.
 
 ## Implementation details
 
 ### Variables in the expression
 
-| Prefix |Description |
-|--------|------------|
+| Prefix | Description                                                                                  |
+| ------ | -------------------------------------------------------------------------------------------- |
 | `ce`   | Official CloudEvents attributes defined in the spec, plus extension attributes if requested. |
-| `data` | Fields parsed from the event data, if requested. |
+| `data` | Fields parsed from the event data, if requested.                                             |
 
 Official attributes and extension attributes are both available to the
 expression under the prefix `ce`. This co-mingling is intended to ease the
 promotion of extension attributes to official attributes. The prefix `ce` was
-chosen for succintness and its suggestion that CloudEvents is the operative
+chosen for succinctness and its suggestion that CloudEvents is the operative
 specification.
 
 Data fields are available to the expression under the prefix `data`, if the data
@@ -136,27 +137,27 @@ It is designed for expressing security policy and protocols, and has the
 following
 [guiding philosophy](https://github.com/google/cel-spec/blob/9cdb3682ba04109d2e03d9b048986bae113bf36f/README.md):
 
-*   **Small and fast.** CEL is not Turing complete, so it is easy to understand
-    and implement.
-*   **Extensible.** CEL is designed to be embedded and can be extended with new
-    functionality.
-*   **Developer-friendly.** The language spec was based on experience and
-    usability testing from implementing Firebase Rules.
+- **Small and fast.** CEL is not Turing complete, so it is easy to understand
+  and implement.
+- **Extensible.** CEL is designed to be embedded and can be extended with new
+  functionality.
+- **Developer-friendly.** The language spec was based on experience and
+  usability testing from implementing Firebase Rules.
 
 Additional properties of CEL that make it attractive for Trigger Filtering
 include:
 
-*   **Familiar expression syntax.** Filter expressions written in CEL look and
-    behave like conditional expressions written in the most popular languages.
-*   **Expressions can be compiled and cached for efficiency.** We expect users
-    will create many filters that change rarely in comparison to frequency of
-    evaluations. This usage pattern works in favor of an expression language
-    that can be cached in compiled form.
-*   **Expressions are serializable and composable.** These properties are useful
-    in implementing upstream filter propagation. For example, a Broker could
-    advertise a single CEL expression composed of the union of its Triggers'
-    filters, allowing upstream sources to filter events before publishing to the
-    Broker.
+- **Familiar expression syntax.** Filter expressions written in CEL look and
+  behave like conditional expressions written in the most popular languages.
+- **Expressions can be compiled and cached for efficiency.** We expect users
+  will create many filters that change rarely in comparison to frequency of
+  evaluations. This usage pattern works in favor of an expression language that
+  can be cached in compiled form.
+- **Expressions are serializable and composable.** These properties are useful
+  in implementing upstream filter propagation. For example, a Broker could
+  advertise a single CEL expression composed of the union of its Triggers'
+  filters, allowing upstream sources to filter events before publishing to the
+  Broker.
 
 CEL is
 [memory-safe, side-effect-free, and terminating](https://github.com/google/cel-spec/blob/master/doc/langdef.md#overview),
@@ -218,6 +219,7 @@ Specified with the expression filter:
 
 _The `>` syntax is a standard yaml multiline string._
 
+<!-- prettier-ignore-start -->
 ```yaml
 spec:
   filter:
@@ -225,6 +227,7 @@ spec:
       ce.type == "com.github.pull.create" &&
       ce.source == "https://github.com/knative/eventing/pulls/123"
 ```
+<!-- prettier-ignore-end -->
 
 ### Prefix match on source
 
@@ -262,6 +265,7 @@ Cannot be specified with the SourceAndType filter.
 
 _The `>` syntax is a standard yaml multiline string._
 
+<!-- prettier-ignore-start -->
 ```yaml
 spec:
   filter:
@@ -269,6 +273,7 @@ spec:
       ce.type == "com.github.pull.create" ||
       (ce.type == "com.github.issue.create" && ce.source.matches("proposals")
 ```
+<!-- prettier-ignore-end -->
 
 ### Exact match on official and extension attribute
 
@@ -289,6 +294,7 @@ spec:
 
 _The `>` syntax is a standard yaml multiline string._
 
+<!-- prettier-ignore-start -->
 ```yaml
 spec:
   filter:
@@ -296,6 +302,7 @@ spec:
       ce.type == "com.github.issue.create" &&
       ce.repository == "proposals"
 ```
+<!-- prettier-ignore-end -->
 
 ### Exact match on extension with dotted name
 
@@ -364,6 +371,7 @@ _The `>` syntax is a standard yaml multiline string._
 _Until [google/cel-go#203](https://github.com/google/cel-go/issues/203) is
 resolved, dynamic integer fields in CEL must be compared as floats._
 
+<!-- prettier-ignore-start -->
 ```yaml
 spec:
   filter:
@@ -371,6 +379,7 @@ spec:
       ce.type == "dev.knative.observation" &&
       data.latency > 300.0
 ```
+<!-- prettier-ignore-end -->
 
 ## Caveats
 
@@ -407,9 +416,10 @@ spec:
 ### Expression language versioning
 
 Embedding an expression language into the Trigger specification means that we
-effectively have two versions exposed to the user: the Trigger CRD APIVersion and
-the expression language version. As the CEL spec evolves, backward incompatible
-changes may be made that would require a version change in the Trigger.
+effectively have two versions exposed to the user: the Trigger CRD APIVersion
+and the expression language version. As the CEL spec evolves, backward
+incompatible changes may be made that would require a version change in the
+Trigger.
 
 I propose that we rely on the Trigger CRD APIVersion to encode both the Trigger
 version and the CEL version. This ensures that Triggers with the same APIVersion
@@ -439,13 +449,14 @@ Top-level filters are now explicitly exclusive: only one may be specified. This
 is done to ensure that Trigger filters are easily understood by the user.
 Composable filters at the top-level would have unclear composition logic: are
 they composed by Boolean **OR** or **AND**? The user must be aware of the
-implicit semantics to understand the result of the trigger. 
+implicit semantics to understand the result of the trigger.
 
 If there is user demand for structured filter composition, top-level `or` and
 `and` filters can be introduced that indicate how filter elements are composed.
 This example is presented as an illustration only; it is not an element of the
 proposal.
 
+<!-- prettier-ignore-start -->
 ```yaml
 spec:
   filter:
@@ -454,6 +465,7 @@ spec:
         type: com.github.pull.create
     - expression: ce.source.match("knative")
 ```
+<!-- prettier-ignore-end -->
 
 ## Alternatives Considered
 
@@ -520,11 +532,13 @@ Instead of using an expression language, we could design a system of structured
 filters expressible as yaml or JSON, similar to Kubernetes set-based label
 selectors:
 
+<!-- prettier-ignore-start -->
 ```yaml
 matchExpressions:
   - {key: tier, operator: In, values: [cache]}
   - {key: environment, operator: NotIn, values: [dev]}
 ```
+<!-- prettier-ignore-end -->
 
 One advantage of structured filters is that their schema can be expressed in an
 OpenAPI document and syntax-checked at creation time without embedding a
@@ -546,9 +560,9 @@ solution less suitable for Trigger filtering than CEL.
 
 However, structured filters are a useful and important user interface _in
 addition to_ an expression language. Structured filters like the `attributes`
-filter or `SourceAndType` filter  should be implemented by transformation to an
-equivalent CEL expression. This provides users a structured filter interface
-for simple needs while also preserving the benefits of a single well-specified
+filter or `SourceAndType` filter should be implemented by transformation to an
+equivalent CEL expression. This provides users a structured filter interface for
+simple needs while also preserving the benefits of a single well-specified
 mechanism for evaluating filters.
 
 ### Alternate filter specification
@@ -615,4 +629,5 @@ result of the filter is unclear due to implicit composition, same as
 
 ### Evaluation error handling
 
-Should the filter fail open (accept) or fail closed (reject)? How should evaluation errors be surfaced to the user?
+Should the filter fail open (accept) or fail closed (reject)? How should
+evaluation errors be surfaced to the user?
