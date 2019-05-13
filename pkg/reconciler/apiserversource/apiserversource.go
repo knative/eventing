@@ -259,16 +259,16 @@ func (r *Reconciler) createEventTypes(ctx context.Context, src *v1alpha1.ApiServ
 		return err
 	}
 
-	missing, extra := r.computeDiff(current, expected)
+	toCreate, toDelete := r.computeDiff(current, expected)
 
-	for _, eventType := range extra {
+	for _, eventType := range toDelete {
 		if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(eventType.Name, &metav1.DeleteOptions{}); err != nil {
 			logging.FromContext(ctx).Error("Error deleting eventType", zap.Any("eventType", eventType))
 			return err
 		}
 	}
 
-	for _, eventType := range missing {
+	for _, eventType := range toCreate {
 		if _, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(&eventType); err != nil {
 			logging.FromContext(ctx).Error("Error creating eventType", zap.Any("eventType", eventType))
 			return err
@@ -310,18 +310,19 @@ func (r *Reconciler) makeEventTypes(src *v1alpha1.ApiServerSource) ([]eventingv1
 }
 
 func (r *Reconciler) computeDiff(current []eventingv1alpha1.EventType, expected []eventingv1alpha1.EventType) ([]eventingv1alpha1.EventType, []eventingv1alpha1.EventType) {
-	missingEventTypes := make([]eventingv1alpha1.EventType, 0)
-	extraEventTypes := make([]eventingv1alpha1.EventType, 0)
+	toCreate := make([]eventingv1alpha1.EventType, 0)
+	toDelete := make([]eventingv1alpha1.EventType, 0)
 	currentMap := asMap(current, keyFromEventType)
 	expectedMap := asMap(expected, keyFromEventType)
 
 	// Iterate over the slices instead of the maps for predictable UT expectations.
 	for _, e := range expected {
 		if c, ok := currentMap[keyFromEventType(&e)]; !ok {
-			missingEventTypes = append(missingEventTypes, e)
+			toCreate = append(toCreate, e)
 		} else {
 			if !equality.Semantic.DeepEqual(e.Spec, c.Spec) {
-				extraEventTypes = append(extraEventTypes, c)
+				toDelete = append(toDelete, c)
+				toCreate = append(toCreate, e)
 			}
 		}
 	}
@@ -329,10 +330,10 @@ func (r *Reconciler) computeDiff(current []eventingv1alpha1.EventType, expected 
 	// This could happen if the ApiServerSource CO changes its broker.
 	for _, c := range current {
 		if _, ok := expectedMap[keyFromEventType(&c)]; !ok {
-			extraEventTypes = append(extraEventTypes, c)
+			toDelete = append(toDelete, c)
 		}
 	}
-	return missingEventTypes, extraEventTypes
+	return toCreate, toDelete
 }
 
 func asMap(eventTypes []eventingv1alpha1.EventType, keyFunc func(*eventingv1alpha1.EventType) string) map[string]eventingv1alpha1.EventType {
