@@ -160,6 +160,7 @@ func TestReconcile(t *testing.T) {
 			brokerLister:    listers.GetBrokerLister(),
 			tracker:         tracker.New(func(string) {}, 0),
 		}
-	}))
-
+	},
+	false,
+	))
 }

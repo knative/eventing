@@ -82,6 +82,10 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 									Name:  "NAME",
 									Value: args.Source.Name,
 								},
+								{
+									Name:  "NAMESPACE",
+									Value: args.Source.Namespace,
+								},
 							},
 						},
 					},

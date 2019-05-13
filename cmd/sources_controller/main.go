@@ -20,26 +20,31 @@ import (
 	"flag"
 	"log"
 
-	"github.com/knative/eventing/pkg/reconciler/containersource"
-	"k8s.io/client-go/tools/clientcmd"
+	"github.com/knative/eventing/pkg/metrics"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-
-	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/rest"
+	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/apiserversource"
+	"github.com/knative/eventing/pkg/reconciler/containersource"
 	"github.com/knative/eventing/pkg/reconciler/cronjobsource"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging/logkey"
+	pkgmetrics "github.com/knative/pkg/metrics"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
+	kubeinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+)
+
+const (
+	component = "controller"
 )
 
 var (
@@ -52,7 +57,7 @@ func main() {
 	flag.Parse()
 
 	logger, atomicLevel := setupLogger()
-	defer logger.Sync()
+	defer flush(logger)
 	logger = logger.With(zap.String(logkey.ControllerType, logconfig.SourcesController))
 
 	// set up signals so we handle the first shutdown signal gracefully
@@ -102,6 +107,8 @@ func main() {
 			opt,
 			apiserverSourceInformer,
 			deploymentInformer,
+			eventTypeInformer,
+			cfg.Host,
 		),
 	}
 	// This line asserts at compile time that the length of controllers is equal to numControllers.
@@ -113,8 +120,8 @@ func main() {
 
 	// Watch the logging config map and dynamically update logging levels.
 	opt.ConfigMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.SourcesController))
-	// TODO: Watch the observability config map and dynamically update metrics exporter.
-	//opt.ConfigMapWatcher.Watch(metrics.ObservabilityConfigName, metrics.UpdateExporterFromConfigMap(component, logger))
+	// Watch the observability config map and dynamically update metrics exporter.
+	opt.ConfigMapWatcher.Watch(metrics.ObservabilityConfigName, metrics.UpdateExporterFromConfigMap(component, logger))
 	if err := opt.ConfigMapWatcher.Start(stopCh); err != nil {
 		logger.Fatalw("failed to start configuration manager", zap.Error(err))
 	}
@@ -183,4 +190,9 @@ func getLoggingConfigOrDie() map[string]string {
 		}
 		return cm
 	}
+}
+
+func flush(logger *zap.SugaredLogger) {
+	logger.Sync()
+	pkgmetrics.FlushExporter()
 }

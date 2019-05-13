@@ -17,24 +17,24 @@ kind: Deployment
 metadata:
   name: eventing-controller
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 spec:
   replicas: 1
   selector:
-    matchLabels: &labels
+    matchLabels:
       app: eventing-controller
   template:
     metadata:
-      labels: *labels
+      labels:
+        app: eventing-controller
+        eventing.knative.dev/release: devel
     spec:
       serviceAccountName: eventing-controller
       containers:
       - name: eventing-controller
         terminationMessagePolicy: FallbackToLogsOnError
         image: github.com/knative/eventing/cmd/controller
-        args: [
-          "-logtostderr",
-          "-stderrthreshold", "INFO"
-        ]
         env:
           - name: SYSTEM_NAMESPACE
             valueFrom:

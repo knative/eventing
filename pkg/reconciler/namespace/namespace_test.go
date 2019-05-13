@@ -237,5 +237,8 @@ func TestAllCases(t *testing.T) {
 			roleBindingLister:    listers.GetRoleBindingLister(),
 			tracker:              tracker.New(func(string) {}, 0),
 		}
-	}))
+
+	},
+	false,
+	))
 }

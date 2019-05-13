@@ -17,50 +17,84 @@ limitations under the License.
 package duck
 
 import (
-	"context"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/dynamic"
+	"k8s.io/apimachinery/pkg/api/meta"
 
-	duckapis "github.com/knative/pkg/apis"
-	"github.com/knative/pkg/apis/duck"
+	pkgapisduck "github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+
+	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/names"
+	"github.com/knative/pkg/tracker"
 )
 
-// GetSinkURI retrieves the sink URI from the object referenced by the given
-// ObjectReference.
-func GetSinkURI(ctx context.Context, dynamicClient dynamic.Interface, sink *corev1.ObjectReference, namespace string) (string, error) {
-	if sink == nil {
+// SinkReconciler is a helper for Sources. It triggers
+// reconciliation on creation, updates to or deletion of the source's sink.
+type SinkReconciler struct {
+	tracker             tracker.Interface
+	sinkInformerFactory pkgapisduck.InformerFactory
+}
+
+// NewSinkReconciler creates and initializes a new SinkReconciler
+func NewSinkReconciler(opt reconciler.Options, callback func(string)) *SinkReconciler {
+	ret := &SinkReconciler{}
+
+	ret.tracker = tracker.New(callback, opt.GetTrackerLease())
+	ret.sinkInformerFactory = &pkgapisduck.CachedInformerFactory{
+		Delegate: &pkgapisduck.EnqueueInformerFactory{
+			Delegate: &pkgapisduck.TypedInformerFactory{
+				Client:       opt.DynamicClientSet,
+				Type:         &duckv1alpha1.AddressableType{},
+				ResyncPeriod: opt.ResyncPeriod,
+				StopChannel:  opt.StopChannel,
+			},
+			EventHandler: reconciler.Handler(ret.tracker.OnChanged),
+		},
+	}
+
+	return ret
+}
+
+// GetSinkURI registers the given object reference with the tracker and if possible,
+// retrieves the sink URI
+func (r *SinkReconciler) GetSinkURI(sinkObjRef *corev1.ObjectReference, source interface{}, sourceDesc string) (string, error) {
+	if sinkObjRef == nil {
 		return "", fmt.Errorf("sink ref is nil")
 	}
 
-	rc := dynamicClient.Resource(duckapis.KindToResource(sink.GroupVersionKind()))
-	if rc == nil {
-		return "", fmt.Errorf("failed to create dynamic client resource")
+	if err := r.tracker.Track(*sinkObjRef, source); err != nil {
+		return "", fmt.Errorf("Error tracking sink '%+v' for source %q: %+v", sinkObjRef, sourceDesc, err)
 	}
 
-	u, err := rc.Namespace(namespace).Get(sink.Name, metav1.GetOptions{})
+	// K8s Services are special cased. They can be called, even though they do not satisfy the
+	// Callable interface.
+	if sinkObjRef.APIVersion == "v1" && sinkObjRef.Kind == "Service" {
+		return DomainToURL(names.ServiceHostName(sinkObjRef.Name, sinkObjRef.Namespace)), nil
+	}
+
+	gvr, _ := meta.UnsafeGuessKindToResource(sinkObjRef.GroupVersionKind())
+	_, lister, err := r.sinkInformerFactory.Get(gvr)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Error getting a lister for a sink resource '%+v': %+v", gvr, err)
 	}
 
-	objIdentifier := fmt.Sprintf("\"%s/%s\" (%s)", u.GetNamespace(), u.GetName(), u.GroupVersionKind())
-
-	t := duckv1alpha1.AddressableType{}
-	err = duck.FromUnstructured(u, &t)
+	sinkObj, err := lister.ByNamespace(sinkObjRef.Namespace).Get(sinkObjRef.Name)
 	if err != nil {
-		return "", fmt.Errorf("failed to deserialize sink %s: %v", objIdentifier, err)
+		return "", fmt.Errorf("Error fetching sink %+v for source %q: %v", sinkObjRef, sourceDesc, err)
 	}
 
-	if t.Status.Address == nil {
-		return "", fmt.Errorf("sink %s does not contain address", objIdentifier)
+	sink, ok := sinkObj.(*duckv1alpha1.AddressableType)
+	if !ok {
+		return "", fmt.Errorf("object %+v is of the wrong kind", sinkObjRef)
+	}
+	if sink.Status.Address == nil {
+		return "", fmt.Errorf("sink %+v does not contain address", sinkObjRef)
+	}
+	if sink.Status.Address.Hostname == "" {
+		return "", fmt.Errorf("sink %+v contains an empty hostname", sinkObjRef)
 	}
 
-	if t.Status.Address.Hostname == "" {
-		return "", fmt.Errorf("sink %s contains an empty hostname", objIdentifier)
-	}
-
-	return fmt.Sprintf("http://%s/", t.Status.Address.Hostname), nil
+	return fmt.Sprintf("http://%s/", sink.Status.Address.Hostname), nil
 }
