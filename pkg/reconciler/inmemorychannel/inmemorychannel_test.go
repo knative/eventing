@@ -185,8 +185,9 @@ func TestAllCases(t *testing.T) {
 			serviceLister:           listers.GetServiceLister(),
 			endpointsLister:         listers.GetEndpointsLister(),
 		}
-
-	}))
+	},
+		false,
+	))
 }
 
 func makeDeployment() *appsv1.Deployment {
