@@ -65,8 +65,6 @@ func main() {
 	logger = logger.With(zap.String("controller/impl", "pkg"))
 	logger.Info("Starting the controller")
 
-	logger.Info("Starting the controller")
-
 	systemNS := getRequiredEnv("SYSTEM_NAMESPACE")
 
 	const numControllers = 1

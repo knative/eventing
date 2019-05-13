@@ -20,7 +20,7 @@ They differ from most Channels in that they have:
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md).
 1. Apply the 'in-memory-channel' CRD, Controller, and Dispatcher.
    ```shell
-   ko apply -f config/channels/in-memory-channel/in-memory-channel.yaml
+   ko apply -f config/channels/in-memory-channel/...
    ```
 1. Create InMemoryChannels
 
@@ -29,7 +29,6 @@ They differ from most Channels in that they have:
    kind: InMemoryChannel
    metadata:
      name: foo
-   spec:
    ```
 
 ### Components
@@ -37,27 +36,16 @@ They differ from most Channels in that they have:
 The major components are:
 
 - InMemoryChannel Controller
-- Channel Controller
-- Channel Dispatcher
-- Channel Dispatcher Config Map.
+- InMemoryChannel Dispatcher
 
-The ClusterChannelProvisioner Controller and the Channel Controller are
-colocated in one Pod.
 
 ```shell
-kubectl get deployment -n knative-eventing in-memory-channel-controller
+kubectl get deployment -n knative-eventing imc-controller
 ```
 
-The Channel Dispatcher receives and distributes all events. There is a single
+The InMemoryChannel Dispatcher receives and distributes all events. There is a single
 Dispatcher for all in-memory Channels.
 
 ```shell
-kubectl get deployment -n knative-eventing in-memory-channel-dispatcher
-```
-
-The Channel Dispatcher Config Map is used to send information about Channels and
-Subscriptions from the Channel Controller to the Channel Dispatcher.
-
-```shell
-kubectl get configmap -n knative-eventing in-memory-channel-dispatcher-config-map
+kubectl get deployment -n knative-eventing imc-dispatcher
 ```

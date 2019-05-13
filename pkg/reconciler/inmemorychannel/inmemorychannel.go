@@ -28,6 +28,7 @@ import (
 	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
@@ -115,11 +116,10 @@ func NewController(
 		serviceLister:            serviceInformer.Lister(),
 		endpointsLister:          endpointsInformer.Lister(),
 	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
-	r.impl = impl
+	r.impl = controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
 
 	r.Logger.Info("Setting up event handlers")
-	inmemorychannelinformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
+	inmemorychannelinformer.Informer().AddEventHandler(reconciler.Handler(r.impl.Enqueue))
 
 	// Set up watches for dispatcher resources we care about, since any changes to these
 	// resources will affect our Channels. So, set up a watch here, that will cause
@@ -136,7 +136,7 @@ func NewController(
 		FilterFunc: FilterWithNameAndNamespace(dispatcherNamespace, dispatcherServiceName),
 		Handler:    r,
 	})
-	return impl
+	return r.impl
 }
 
 // These 3 functions just cause a Global Resync of the channels, because any changes here
@@ -207,16 +207,15 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 	}
 
 	// We reconcile the status of the Channel by looking at:
-	// 1. Dispatcher Deployment for it's readiness
-	// 2. Dispatcher k8s Service for it's existence
-	// 3. Dispatcher endpoints to ensure that there's something backing the Service
+	// 1. Dispatcher Deployment for it's readiness.
+	// 2. Dispatcher k8s Service for it's existence.
+	// 3. Dispatcher endpoints to ensure that there's something backing the Service.
 
 	// Get the Dispatcher Deployment and propagate the status to the Channel
 	d, err := r.deploymentLister.Deployments(r.dispatcherNamespace).Get(r.dispatcherDeploymentName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			imc.Status.MarkDispatcherFailed("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist")
-			return errors.New("dispatcher Deployment does not exist")
 		} else {
 			logging.FromContext(ctx).Error("Unable to get the dispatcher Deployment", zap.Error(err))
 			imc.Status.MarkDispatcherFailed("DispatcherDeploymentGetFailed", "Failed to get dispatcher Deployment")
@@ -232,12 +231,11 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			imc.Status.MarkServiceFailed("DispatcherServiceDoesNotExist", "Dispatcher Service does not exist")
-			return errors.New("dispatcher Service does not exist")
 		} else {
 			logging.FromContext(ctx).Error("Unable to get the dispatcher service", zap.Error(err))
 			imc.Status.MarkServiceFailed("DispatcherServiceGetFailed", "Failed to get dispatcher service")
-			return err
 		}
+		return err
 	}
 
 	imc.Status.MarkServiceTrue()
@@ -248,12 +246,11 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			imc.Status.MarkEndpointsFailed("DispatcherEndpointsDoesNotExist", "Dispatcher Endpoints does not exist")
-			return errors.New("dispatcher Endpoints does not exist")
 		} else {
 			logging.FromContext(ctx).Error("Unable to get the dispatcher endpoints", zap.Error(err))
 			imc.Status.MarkEndpointsFailed("DispatcherEndpointsGetFailed", "Failed to get dispatcher endpoints")
-			return err
 		}
+		return err
 	}
 
 	if len(e.Subsets) == 0 {
@@ -264,7 +261,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 
 	imc.Status.MarkEndpointsTrue()
 
-	imc.Status.SetAddress(fmt.Sprintf("%s.%s.svc.cluster.local", r.dispatcherServiceName, r.dispatcherNamespace))
+	imc.Status.SetAddress(fmt.Sprintf("%s.%s.svc.%s", r.dispatcherServiceName, r.dispatcherNamespace, utils.GetClusterDomainName()))
 
 	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
 	// dispatcher watches the Channel and where it needs to dispatch events to.

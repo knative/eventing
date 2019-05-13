@@ -30,8 +30,6 @@ spec:
       containers:
         - name: controller
           image: github.com/knative/eventing/cmd/in_memory_channel_controller
-          args:
-          - hardCodedLoggingConfig=true
           env:
           - name: CONFIG_LOGGING_NAME
             value: config-logging
