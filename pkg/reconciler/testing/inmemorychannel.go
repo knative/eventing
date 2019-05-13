@@ -21,7 +21,8 @@ import (
 	"time"
 
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	//	corev1 "k8s.io/api/core/v1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	//	"k8s.io/apimachinery/pkg/types"
 )
@@ -54,8 +55,44 @@ func WithInMemoryChannelDeleted(imc *v1alpha1.InMemoryChannel) {
 	imc.ObjectMeta.SetDeletionTimestamp(&deleteTime)
 }
 
-func WithInMemoryChannelDeploymentNotFound(reason, message string) InMemoryChannelOption {
+func WithInMemoryChannelDeploymentNotReady(reason, message string) InMemoryChannelOption {
 	return func(imc *v1alpha1.InMemoryChannel) {
 		imc.Status.MarkDispatcherFailed(reason, message)
+	}
+}
+
+func WithInMemoryChannelDeploymentReady() InMemoryChannelOption {
+	return func(imc *v1alpha1.InMemoryChannel) {
+		imc.Status.PropagateDispatcherStatus(&appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}}})
+	}
+}
+
+func WithInMemoryChannelServicetNotReady(reason, message string) InMemoryChannelOption {
+	return func(imc *v1alpha1.InMemoryChannel) {
+		imc.Status.MarkServiceFailed(reason, message)
+	}
+}
+
+func WithInMemoryChannelServiceReady() InMemoryChannelOption {
+	return func(imc *v1alpha1.InMemoryChannel) {
+		imc.Status.MarkServiceTrue()
+	}
+}
+
+func WithInMemoryChannelEndpointsNotReady(reason, message string) InMemoryChannelOption {
+	return func(imc *v1alpha1.InMemoryChannel) {
+		imc.Status.MarkEndpointsFailed(reason, message)
+	}
+}
+
+func WithInMemoryChannelEndpointsReady() InMemoryChannelOption {
+	return func(imc *v1alpha1.InMemoryChannel) {
+		imc.Status.MarkEndpointsTrue()
+	}
+}
+
+func WithInMemoryChannelAddress(a string) InMemoryChannelOption {
+	return func(imc *v1alpha1.InMemoryChannel) {
+		imc.Status.SetAddress(a)
 	}
 }

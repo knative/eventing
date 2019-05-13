@@ -19,6 +19,7 @@ package inmemorychannel
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -258,10 +259,12 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 	if len(e.Subsets) == 0 {
 		logging.FromContext(ctx).Error("No endpoints found for Dispatcher service", zap.Error(err))
 		imc.Status.MarkEndpointsFailed("DispatcherEndpointsNotReady", "There are no endpoints ready for Dispatcher service")
-		return err
+		return errors.New("there are no endpoints ready for Dispatcher service")
 	}
 
 	imc.Status.MarkEndpointsTrue()
+
+	imc.Status.SetAddress(fmt.Sprintf("%s.%s.svc.cluster.local", r.dispatcherServiceName, r.dispatcherNamespace))
 
 	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
 	// dispatcher watches the Channel and where it needs to dispatch events to.

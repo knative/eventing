@@ -17,28 +17,20 @@ limitations under the License.
 package inmemorychannel
 
 import (
-	//	"fmt"
-	//	"net/url"
 	"testing"
 
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	appsv1 "k8s.io/api/apps/v1"
-	//	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler"
 	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
-	//	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
 	. "github.com/knative/pkg/reconciler/testing"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	//	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	//	appsv1listers "k8s.io/client-go/listers/apps/v1"
-	//	corev1listers "k8s.io/client-go/listers/core/v1"
-	//	clientgotesting "k8s.io/client-go/testing"
 )
 
 const (
@@ -46,6 +38,7 @@ const (
 	imcName                  = "test-imc"
 	dispatcherDeploymentName = "test-deployment"
 	dispatcherServiceName    = "test-service"
+	dispatcherServiceAddress = "test-service.test-namespace.svc.cluster.local"
 
 	subscriberAPIVersion = "v1"
 	subscriberKind       = "Service"
@@ -58,17 +51,6 @@ var (
 	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
 	// truncates to seconds to match the loss of precision during serialization.
 	deletionTime = metav1.Now().Rfc3339Copy()
-
-	// Map of events to set test cases' expectations easier.
-/*
-	events = map[string]corev1.Event{
-		triggerReconciled:         {Reason: triggerReconciled, Type: corev1.EventTypeNormal},
-		triggerUpdateStatusFailed: {Reason: triggerUpdateStatusFailed, Type: corev1.EventTypeWarning},
-		triggerReconcileFailed:    {Reason: triggerReconcileFailed, Type: corev1.EventTypeWarning},
-		subscriptionDeleteFailed:  {Reason: subscriptionDeleteFailed, Type: corev1.EventTypeWarning},
-		subscriptionCreateFailed:  {Reason: subscriptionCreateFailed, Type: corev1.EventTypeWarning},
-	}
-*/
 )
 
 func init() {
@@ -115,7 +97,7 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				reconciletesting.NewInMemoryChannel(imcName, testNS,
 					reconciletesting.WithInitInMemoryChannelConditions,
-					reconciletesting.WithInMemoryChannelDeploymentNotFound("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist"),
+					reconciletesting.WithInMemoryChannelDeploymentNotReady("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist"),
 				)},
 			WantErr: true,
 			WantEvents: []string{
@@ -125,13 +107,66 @@ func TestAllCases(t *testing.T) {
 			Name: "Service does not exist",
 			Key:  imcKey,
 			Objects: []runtime.Object{
+				makeReadyDeployment(),
 				reconciletesting.NewInMemoryChannel(imcName, testNS,
 					reconciletesting.WithInitInMemoryChannelConditions,
-					reconciletesting.WithInMemoryChannelDeploymentNotFound("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist"),
+					reconciletesting.WithInMemoryChannelDeploymentReady(),
+					reconciletesting.WithInMemoryChannelServicetNotReady("DispatcherServiceDoesNotExist", "Dispatcher Service does not exist"),
 				)},
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InMemoryChannelReconcileFailed", "InMemoryChannel reconciliation failed: dispatcher Deployment does not exist"),
+				Eventf(corev1.EventTypeWarning, "InMemoryChannelReconcileFailed", "InMemoryChannel reconciliation failed: dispatcher Service does not exist"),
+			},
+		}, {
+			Name: "Endpoints does not exist",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				makeReadyDeployment(),
+				makeService(),
+				reconciletesting.NewInMemoryChannel(imcName, testNS,
+					reconciletesting.WithInitInMemoryChannelConditions,
+					reconciletesting.WithInMemoryChannelDeploymentReady(),
+					reconciletesting.WithInMemoryChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelEndpointsNotReady("DispatcherEndpointsDoesNotExist", "Dispatcher Endpoints does not exist"),
+				)},
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "InMemoryChannelReconcileFailed", "InMemoryChannel reconciliation failed: dispatcher Endpoints does not exist"),
+			},
+		}, {
+			Name: "Endpoints not ready",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				makeReadyDeployment(),
+				makeService(),
+				makeEmptyEndpoints(),
+				reconciletesting.NewInMemoryChannel(imcName, testNS,
+					reconciletesting.WithInitInMemoryChannelConditions,
+					reconciletesting.WithInMemoryChannelDeploymentReady(),
+					reconciletesting.WithInMemoryChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelEndpointsNotReady("DispatcherEndpointsNotReady", "There are no endpoints ready for Dispatcher service"),
+				)},
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "InMemoryChannelReconcileFailed", "InMemoryChannel reconciliation failed: there are no endpoints ready for Dispatcher service"),
+			},
+		}, {
+			Name: "Works",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				makeReadyDeployment(),
+				makeService(),
+				makeReadyEndpoints(),
+				reconciletesting.NewInMemoryChannel(imcName, testNS,
+					reconciletesting.WithInitInMemoryChannelConditions,
+					reconciletesting.WithInMemoryChannelDeploymentReady(),
+					reconciletesting.WithInMemoryChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelEndpointsReady(),
+					reconciletesting.WithInMemoryChannelAddress(dispatcherServiceAddress),
+				)},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "InMemoryChannelReconciled", "InMemoryChannel reconciled"),
 			},
 		}, {},
 	}
@@ -169,6 +204,39 @@ func makeDeployment() *appsv1.Deployment {
 }
 
 func makeReadyDeployment() *appsv1.Deployment {
-	b := makeDeployment()
-	return b
+	d := makeDeployment()
+	d.Status.Conditions = []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}}
+	return d
+}
+
+func makeService() *corev1.Service {
+	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNS,
+			Name:      dispatcherServiceName,
+		},
+	}
+}
+
+func makeEmptyEndpoints() *corev1.Endpoints {
+	return &corev1.Endpoints{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Endpoints",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNS,
+			Name:      dispatcherServiceName,
+		},
+	}
+}
+
+func makeReadyEndpoints() *corev1.Endpoints {
+	e := makeEmptyEndpoints()
+	e.Subsets = []corev1.EndpointSubset{{Addresses: []corev1.EndpointAddress{{IP: "1.1.1.1"}}}}
+	return e
 }
