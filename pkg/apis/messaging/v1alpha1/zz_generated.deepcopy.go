@@ -111,7 +111,7 @@ func (in *InMemoryChannelSpec) DeepCopy() *InMemoryChannelSpec {
 func (in *InMemoryChannelStatus) DeepCopyInto(out *InMemoryChannelStatus) {
 	*out = *in
 	in.Status.DeepCopyInto(&out.Status)
-	out.Address = in.Address
+	in.Address.DeepCopyInto(&out.Address)
 	return
 }
 
