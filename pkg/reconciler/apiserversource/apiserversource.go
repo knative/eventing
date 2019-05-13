@@ -259,13 +259,22 @@ func (r *Reconciler) createEventTypes(ctx context.Context, src *v1alpha1.ApiServ
 		return err
 	}
 
-	missing := r.computeDiff(current, expected)
-	for _, eventType := range missing {
-		if _, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(&eventType); err != nil {
+	missing, extra := r.computeDiff(current, expected)
+
+	for _, eventType := range extra {
+		if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(eventType.Name, &metav1.DeleteOptions{}); err != nil {
+			logging.FromContext(ctx).Info("Error deleting eventType", zap.Any("eventType", eventType))
 			return err
 		}
-		logging.FromContext(ctx).Info("EventType created", zap.Any("eventType", eventType))
 	}
+
+	for _, eventType := range missing {
+		if _, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(&eventType); err != nil {
+			logging.FromContext(ctx).Info("Error creating eventType", zap.Any("eventType", eventType))
+			return err
+		}
+	}
+
 	return err
 }
 
@@ -300,15 +309,28 @@ func (r *Reconciler) makeEventTypes(src *v1alpha1.ApiServerSource) ([]eventingv1
 	return eventTypes, nil
 }
 
-func (r *Reconciler) computeDiff(current []eventingv1alpha1.EventType, expected []eventingv1alpha1.EventType) []eventingv1alpha1.EventType {
-	eventTypes := make([]eventingv1alpha1.EventType, 0)
+func (r *Reconciler) computeDiff(current []eventingv1alpha1.EventType, expected []eventingv1alpha1.EventType) ([]eventingv1alpha1.EventType, []eventingv1alpha1.EventType) {
+	missingEventTypes := make([]eventingv1alpha1.EventType, 0)
+	extraEventTypes := make([]eventingv1alpha1.EventType, 0)
 	currentMap := asMap(current, keyFromEventType)
-	for _, e := range expected {
-		if _, ok := currentMap[keyFromEventType(&e)]; !ok {
-			eventTypes = append(eventTypes, e)
+	expectedMap := asMap(expected, keyFromEventType)
+	for ek, ev := range expectedMap {
+		if c, ok := currentMap[ek]; !ok {
+			missingEventTypes = append(missingEventTypes, ev)
+		} else {
+			if !equality.Semantic.DeepEqual(ev.Spec, c.Spec) {
+				extraEventTypes = append(extraEventTypes, c)
+			}
 		}
 	}
-	return eventTypes
+	// Need to check whether the current EventTypes are not in the expected map. If so, we have to delete them.
+	// This could happen if the ApiServerSource CO changes its broker.
+	for ck, cv := range currentMap {
+		if _, ok := expectedMap[ck]; !ok {
+			extraEventTypes = append(extraEventTypes, cv)
+		}
+	}
+	return missingEventTypes, extraEventTypes
 }
 
 func asMap(eventTypes []eventingv1alpha1.EventType, keyFunc func(*eventingv1alpha1.EventType) string) map[string]eventingv1alpha1.EventType {
