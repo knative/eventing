@@ -17,10 +17,11 @@ limitations under the License.
 package events_test
 
 import (
-	"github.com/google/go-cmp/cmp/cmpopts"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/google/go-cmp/cmp"

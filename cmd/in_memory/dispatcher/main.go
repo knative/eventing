@@ -25,6 +25,9 @@ import (
 	"strings"
 	"time"
 
+	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/channelwatcher"
 	"github.com/knative/eventing/pkg/provisioners/swappable"
@@ -38,8 +41,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 const (

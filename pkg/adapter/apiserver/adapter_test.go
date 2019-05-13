@@ -17,6 +17,8 @@ limitations under the License.
 package apiserver
 
 import (
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	kncetesting "github.com/knative/eventing/pkg/kncloudevents/testing"
 	rectesting "github.com/knative/eventing/pkg/reconciler/testing"
@@ -28,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
-	"testing"
 )
 
 func TestNewAdaptor(t *testing.T) {

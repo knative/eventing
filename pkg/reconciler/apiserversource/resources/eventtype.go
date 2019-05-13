@@ -19,29 +19,39 @@ package resources
 import (
 	"fmt"
 
-	"github.com/knative/pkg/kmeta"
-
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	"github.com/knative/eventing/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// MakeEventType creates the in-memory representation of the EventType for the specified CronJobSource.
-func MakeEventType(src *v1alpha1.CronJobSource) *eventingv1alpha1.EventType {
-	return &eventingv1alpha1.EventType{
+// EventTypeArgs are the arguments needed to create an EventType for an Api Server Source.
+type EventTypeArgs struct {
+	Src    *v1alpha1.ApiServerSource
+	Type   string
+	Source string
+}
+
+// MakeEventType creates the in-memory representation of the EventType for the specified ApiServerSource.
+func MakeEventType(args *EventTypeArgs) eventingv1alpha1.EventType {
+	return eventingv1alpha1.EventType{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-", utils.ToDNS1123Subdomain(v1alpha1.CronJobEventType)),
-			Labels:       Labels(src.Name),
-			Namespace:    src.Namespace,
+			GenerateName: fmt.Sprintf("%s-", utils.ToDNS1123Subdomain(args.Type)),
+			Labels:       Labels(args.Src.Name),
+			Namespace:    args.Src.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
-				*kmeta.NewControllerRef(src),
+				*metav1.NewControllerRef(args.Src, schema.GroupVersionKind{
+					Group:   v1alpha1.SchemeGroupVersion.Group,
+					Version: v1alpha1.SchemeGroupVersion.Version,
+					Kind:    "ApiServerSource",
+				}),
 			},
 		},
 		Spec: eventingv1alpha1.EventTypeSpec{
-			Type:   v1alpha1.CronJobEventType,
-			Source: v1alpha1.CronJobEventSource(src.Namespace, src.Name),
-			Broker: src.Spec.Sink.Name,
+			Type:   args.Type,
+			Source: args.Source,
+			Broker: args.Src.Spec.Sink.Name,
 		},
 	}
 }

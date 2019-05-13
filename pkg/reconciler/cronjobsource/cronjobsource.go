@@ -24,7 +24,19 @@ import (
 	"sync"
 	"time"
 
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
+	sourceinformers "github.com/knative/eventing/pkg/client/informers/externalversions/sources/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
+	listers "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
+	"github.com/knative/eventing/pkg/duck"
+	"github.com/knative/eventing/pkg/logging"
+	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/cronjobsource/resources"
+	"github.com/knative/pkg/controller"
+	"github.com/robfig/cron"
+	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -35,19 +47,6 @@ import (
 	appsv1informers "k8s.io/client-go/informers/apps/v1"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/tools/cache"
-
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
-	sourceinformers "github.com/knative/eventing/pkg/client/informers/externalversions/sources/v1alpha1"
-	listers "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
-	"github.com/knative/eventing/pkg/duck"
-	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/eventing/pkg/reconciler/cronjobsource/resources"
-	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/logging"
-	"github.com/robfig/cron"
-	"go.uber.org/zap"
 )
 
 const (
@@ -59,6 +58,7 @@ const (
 
 	// Name of the corev1.Events emitted from the reconciliation process
 	cronjobReconciled         = "CronJobSourceReconciled"
+	cronJobReadinessChanged   = "CronJobSourceReadinessChanged"
 	cronjobUpdateStatusFailed = "CronJobSourceUpdateStatusFailed"
 
 	// raImageEnvVar is the name of the environment variable that contains the receive adapter's
@@ -76,6 +76,8 @@ type Reconciler struct {
 	cronjobLister    listers.CronJobSourceLister
 	deploymentLister appsv1listers.DeploymentLister
 	eventTypeLister  eventinglisters.EventTypeLister
+
+	sinkReconciler *duck.SinkReconciler
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -96,6 +98,7 @@ func NewController(
 		eventTypeLister:  eventTypeInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
+	r.sinkReconciler = duck.NewSinkReconciler(opt, impl.EnqueueKey)
 
 	r.Logger.Info("Setting up event handlers")
 	cronjobsourceInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
@@ -174,7 +177,19 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 		return err
 	}
 	cronjob.Status.MarkSchedule()
-	sinkURI, err := duck.GetSinkURI(ctx, r.DynamicClientSet, cronjob.Spec.Sink, cronjob.Namespace)
+
+	if cronjob.Spec.Sink == nil {
+		cronjob.Status.MarkNoSink("Missing", "Sink missing from spec")
+		return fmt.Errorf("Sink missing from spec")
+	}
+
+	sinkObjRef := cronjob.Spec.Sink
+	if sinkObjRef.Namespace == "" {
+		sinkObjRef.Namespace = cronjob.Namespace
+	}
+
+	cronjobDesc := cronjob.Namespace + "/" + cronjob.Name + ", " + cronjob.GroupVersionKind().String();
+	sinkURI, err := r.sinkReconciler.GetSinkURI(sinkObjRef, cronjob, cronjobDesc)
 	if err != nil {
 		cronjob.Status.MarkNoSink("NotFound", "")
 		return err
@@ -197,7 +212,6 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 		}
 		cronjob.Status.MarkEventType()
 	}
-
 	return nil
 }
 
@@ -233,9 +247,9 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Cro
 			if ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Update(ra); err != nil {
 				return ra, err
 			}
-			logging.FromContext(ctx).Desugar().Info("Receive Adapter updated.", zap.Any("receiveAdapter", ra))
+			logging.FromContext(ctx).Info("Receive Adapter updated.", zap.Any("receiveAdapter", ra))
 		} else {
-			logging.FromContext(ctx).Desugar().Info("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
+			logging.FromContext(ctx).Info("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
 		}
 		return ra, nil
 	}
@@ -243,7 +257,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Cro
 	if ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Create(expected); err != nil {
 		return nil, err
 	}
-	logging.FromContext(ctx).Desugar().Info("Receive Adapter created.", zap.Any("receiveAdapter", expected))
+	logging.FromContext(ctx).Info("Receive Adapter created.", zap.Any("receiveAdapter", expected))
 	return ra, err
 }
 
@@ -267,7 +281,7 @@ func (r *Reconciler) getReceiveAdapter(ctx context.Context, src *v1alpha1.CronJo
 		LabelSelector: r.getLabelSelector(src).String(),
 	})
 	if err != nil {
-		logging.FromContext(ctx).Desugar().Error("Unable to list cronjobs: %v", zap.Error(err))
+		logging.FromContext(ctx).Error("Unable to list cronjobs: %v", zap.Error(err))
 		return nil, err
 	}
 	for _, dep := range dl.Items {
@@ -284,16 +298,25 @@ func (r *Reconciler) createEventType(ctx context.Context, src *v1alpha1.CronJobS
 		logging.FromContext(ctx).Error("Unable to get an existing event type", zap.Error(err))
 		return nil, err
 	}
+	expected := resources.MakeEventType(src)
 	if current != nil {
-		// Not checking for spec changes as it is immutable. Only description is not, but we don't care if it is changed.
-		logging.FromContext(ctx).Desugar().Debug("EventType already exists", zap.Any("eventType", current))
+		if !equality.Semantic.DeepEqual(expected.Spec, current.Spec) {
+			// As is immutable, delete it and create it again.
+			if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(current.Name, &metav1.DeleteOptions{}); err != nil {
+				logging.FromContext(ctx).Error("Error deleting existing event type", zap.Any("eventType", current))
+				return nil, err
+			}
+			if current, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(expected); err != nil {
+				logging.FromContext(ctx).Error("Error creating event type", zap.Any("eventType", current))
+				return nil, err
+			}
+		}
 		return current, nil
 	}
-	expected := resources.MakeEventType(src)
 	if current, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(expected); err != nil {
 		return nil, err
 	}
-	logging.FromContext(ctx).Desugar().Info("EventType created", zap.Any("eventType", current))
+	logging.FromContext(ctx).Info("EventType created", zap.Any("eventType", current))
 	return current, err
 }
 
@@ -302,7 +325,7 @@ func (r *Reconciler) getEventType(ctx context.Context, src *v1alpha1.CronJobSour
 		LabelSelector: r.getLabelSelector(src).String(),
 	})
 	if err != nil {
-		logging.FromContext(ctx).Desugar().Error("Unable to list event types: %v", zap.Error(err))
+		logging.FromContext(ctx).Error("Unable to list event types: %v", zap.Error(err))
 		return nil, err
 	}
 	for _, et := range etl.Items {
@@ -338,7 +361,10 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.CronJob
 	if err == nil && becomesReady {
 		duration := time.Since(cj.ObjectMeta.CreationTimestamp.Time)
 		r.Logger.Infof("CronJobSource %q became ready after %v", cronjob.Name, duration)
-		//r.StatsReporter.ReportServiceReady(subscription.Namespace, subscription.Name, duration) // TODO: stats
+		r.Recorder.Event(cronjob, corev1.EventTypeNormal, cronJobReadinessChanged, fmt.Sprintf("CronJobSource %q became ready", cronjob.Name))
+		if err := r.StatsReporter.ReportReady("CronJobSource", cronjob.Namespace, cronjob.Name, duration); err != nil {
+			logging.FromContext(ctx).Sugar().Infof("failed to record ready for CronJobSource, %v", err)
+		}
 	}
 
 	return cj, err

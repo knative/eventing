@@ -84,6 +84,9 @@ func TestNewController(t *testing.T) {
 	// Kube
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
 
+	// Duck
+	addressableInformer := &fakeAddressableInformer{}
+
 	c := NewController(
 		reconciler.Options{
 			KubeClientSet:     kubeClient,
@@ -94,11 +97,18 @@ func TestNewController(t *testing.T) {
 		channelInformer,
 		subscriptionInformer,
 		brokerInformer,
-		serviceInformer)
+		serviceInformer,
+		addressableInformer)
 
 	if c == nil {
 		t.Fatalf("Failed to create with NewController")
 	}
+}
+
+type fakeAddressableInformer struct{}
+
+func (*fakeAddressableInformer) TrackInNamespace(tracker.Interface, metav1.Object) func(corev1.ObjectReference) error {
+	return func(corev1.ObjectReference) error { return nil }
 }
 
 func TestAllCases(t *testing.T) {
@@ -492,6 +502,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
+				Eventf(corev1.EventTypeNormal, "TriggerReadinessChanged", `Trigger "test-trigger" became ready`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
@@ -511,16 +522,18 @@ func TestAllCases(t *testing.T) {
 
 	table.Test(t, reconciletesting.MakeFactory(func(listers *reconciletesting.Listers, opt reconciler.Options) controller.Reconciler {
 		return &Reconciler{
-			Base:               reconciler.NewBase(opt, controllerAgentName),
-			triggerLister:      listers.GetTriggerLister(),
-			channelLister:      listers.GetChannelLister(),
-			subscriptionLister: listers.GetSubscriptionLister(),
-			brokerLister:       listers.GetBrokerLister(),
-			serviceLister:      listers.GetK8sServiceLister(),
-			tracker:            tracker.New(func(string) {}, 0),
+			Base:                reconciler.NewBase(opt, controllerAgentName),
+			triggerLister:       listers.GetTriggerLister(),
+			channelLister:       listers.GetChannelLister(),
+			subscriptionLister:  listers.GetSubscriptionLister(),
+			brokerLister:        listers.GetBrokerLister(),
+			serviceLister:       listers.GetK8sServiceLister(),
+			addressableInformer: &fakeAddressableInformer{},
+			tracker:             tracker.New(func(string) {}, 0),
 		}
-
-	}))
+	},
+	false,
+	))
 }
 
 func makeTrigger() *v1alpha1.Trigger {

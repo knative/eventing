@@ -18,6 +18,7 @@ package duck
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -65,10 +66,12 @@ func ObjectReference(ctx context.Context, dynamicClient dynamic.Interface, names
 	return resourceClient.Get(ref.Name, metav1.GetOptions{})
 }
 
+type Track func(corev1.ObjectReference) error
+
 // SubscriberSpec resolves the Spec.Call object. If it's an ObjectReference, it will resolve the
 // object and treat it as an Addressable. If it's a DNSName, then it's used as is.
 // TODO: Once Service Routes, etc. support Callable, use that.
-func SubscriberSpec(ctx context.Context, dynamicClient dynamic.Interface, namespace string, s *v1alpha1.SubscriberSpec) (string, error) {
+func SubscriberSpec(ctx context.Context, dynamicClient dynamic.Interface, namespace string, s *v1alpha1.SubscriberSpec, track Track) (string, error) {
 	if isNilOrEmptySubscriber(s) {
 		return "", nil
 	}
@@ -85,6 +88,10 @@ func SubscriberSpec(ctx context.Context, dynamicClient dynamic.Interface, namesp
 			zap.Error(err),
 			zap.Any("subscriberSpec.Ref", s.Ref))
 		return "", err
+	}
+
+	if err = track(*s.Ref); err != nil {
+		return "", fmt.Errorf("unable to track the reference: %v", err)
 	}
 
 	// K8s services are special cased. They can be called, even though they do not satisfy the
@@ -108,7 +115,7 @@ func SubscriberSpec(ctx context.Context, dynamicClient dynamic.Interface, namesp
 		}
 	}
 
-	return "", fmt.Errorf("status does not contain address")
+	return "", errors.New("status does not contain address")
 }
 
 func isNilOrEmptySubscriber(sub *v1alpha1.SubscriberSpec) bool {
