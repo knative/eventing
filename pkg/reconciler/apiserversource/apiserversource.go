@@ -87,7 +87,7 @@ type Reconciler struct {
 	deploymentLister      appsv1listers.DeploymentLister
 	eventTypeLister       eventinglisters.EventTypeLister
 
-	source string
+	source         string
 	sinkReconciler *duck.SinkReconciler
 }
 
