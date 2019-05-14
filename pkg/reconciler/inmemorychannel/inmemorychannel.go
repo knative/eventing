@@ -83,17 +83,6 @@ var _ controller.Reconciler = (*Reconciler)(nil)
 // Check that our Reconciler implements cache.ResourceEventHandler
 var _ cache.ResourceEventHandler = (*Reconciler)(nil)
 
-// TODO: Hoist this to knative/pkg
-func FilterWithNameAndNamespace(namespace, name string) func(obj interface{}) bool {
-	return func(obj interface{}) bool {
-		if object, ok := obj.(metav1.Object); ok {
-			return name == object.GetName() &&
-				namespace == object.GetNamespace()
-		}
-		return false
-	}
-}
-
 // NewController initializes the controller and is called by the generated code.
 // Registers event handlers to enqueue events.
 func NewController(
@@ -127,15 +116,15 @@ func NewController(
 	// resources will affect our Channels. So, set up a watch here, that will cause
 	// a global Resync for all the channels to take stock of their health when these change.
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: FilterWithNameAndNamespace(dispatcherNamespace, dispatcherDeploymentName),
+		FilterFunc: controller.FilterWithNameAndNamespace(dispatcherNamespace, dispatcherDeploymentName),
 		Handler:    r,
 	})
 	serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: FilterWithNameAndNamespace(dispatcherNamespace, dispatcherServiceName),
+		FilterFunc: controller.FilterWithNameAndNamespace(dispatcherNamespace, dispatcherServiceName),
 		Handler:    r,
 	})
 	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: FilterWithNameAndNamespace(dispatcherNamespace, dispatcherServiceName),
+		FilterFunc: controller.FilterWithNameAndNamespace(dispatcherNamespace, dispatcherServiceName),
 		Handler:    r,
 	})
 	return r.impl

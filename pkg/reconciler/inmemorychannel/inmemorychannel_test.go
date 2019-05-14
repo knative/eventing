@@ -104,21 +104,6 @@ func TestNewController(t *testing.T) {
 	}
 }
 
-func TestFilter(t *testing.T) {
-	f := FilterWithNameAndNamespace(testNS, dispatcherDeploymentName)
-	d := makeDeployment()
-	if f(d) == false {
-		t.Errorf("Filter failed")
-	}
-	d.Name = "notright"
-	if f(d) != false {
-		t.Errorf("Filter failed")
-	}
-	if f("notobject") != false {
-		t.Errorf("Filter failed with non-object")
-	}
-}
-
 func TestAllCases(t *testing.T) {
 	imcKey := testNS + "/" + imcName
 	table := TableTest{
