@@ -79,6 +79,18 @@ func WithInMemoryChannelServiceReady() InMemoryChannelOption {
 	}
 }
 
+func WithInMemoryChannelChannelServicetNotReady(reason, message string) InMemoryChannelOption {
+	return func(imc *v1alpha1.InMemoryChannel) {
+		imc.Status.MarkChannelServiceFailed(reason, message)
+	}
+}
+
+func WithInMemoryChannelChannelServiceReady() InMemoryChannelOption {
+	return func(imc *v1alpha1.InMemoryChannel) {
+		imc.Status.MarkChannelServiceTrue()
+	}
+}
+
 func WithInMemoryChannelEndpointsNotReady(reason, message string) InMemoryChannelOption {
 	return func(imc *v1alpha1.InMemoryChannel) {
 		imc.Status.MarkEndpointsFailed(reason, message)

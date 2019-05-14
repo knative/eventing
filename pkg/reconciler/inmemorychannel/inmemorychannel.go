@@ -28,6 +28,7 @@ import (
 	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/inmemorychannel/resources"
 	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
@@ -82,6 +83,10 @@ var serviceGVK = corev1.SchemeGroupVersion.WithKind("Service")
 // Check that our Reconciler implements controller.Reconciler.
 var _ controller.Reconciler = (*Reconciler)(nil)
 
+// Check that our Reconciler implements cache.ResourceEventHandler
+var _ cache.ResourceEventHandler = (*Reconciler)(nil)
+
+// TODO: Hoist this to knative/pkg
 func FilterWithNameAndNamespace(namespace, name string) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
 		if object, ok := obj.(metav1.Object); ok {
@@ -139,6 +144,7 @@ func NewController(
 	return r.impl
 }
 
+// cache.ResourceEventHandler implementation.
 // These 3 functions just cause a Global Resync of the channels, because any changes here
 // should be reflected onto the channels.
 func (r *Reconciler) OnAdd(obj interface{}) {
@@ -210,6 +216,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 	// 1. Dispatcher Deployment for it's readiness.
 	// 2. Dispatcher k8s Service for it's existence.
 	// 3. Dispatcher endpoints to ensure that there's something backing the Service.
+	// 4. k8s service representing the channel that will use ExternalName to point to the Dispatcher k8s service
 
 	// Get the Dispatcher Deployment and propagate the status to the Channel
 	d, err := r.deploymentLister.Deployments(r.dispatcherNamespace).Get(r.dispatcherDeploymentName)
@@ -261,11 +268,50 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 
 	imc.Status.MarkEndpointsTrue()
 
-	imc.Status.SetAddress(fmt.Sprintf("%s.%s.svc.%s", r.dispatcherServiceName, r.dispatcherNamespace, utils.GetClusterDomainName()))
+	// Reconcile the k8s service representing the actual Channel. It points to the Dispatcher service via
+	// ExternalName
+	svc, err := r.reconcileChannelService(ctx, imc)
+	if err != nil {
+		imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
+		return err
+	}
+	imc.Status.MarkChannelServiceTrue()
+	imc.Status.SetAddress(fmt.Sprintf("%s.%s.svc.%s", svc.Name, svc.Namespace, utils.GetClusterDomainName()))
 
 	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
 	// dispatcher watches the Channel and where it needs to dispatch events to.
 	return nil
+}
+
+func (r *Reconciler) reconcileChannelService(ctx context.Context, imc *v1alpha1.InMemoryChannel) (*corev1.Service, error) {
+	// Get the  Service and propagate the status to the Channel in case it does not exist.
+	// We don't do anything with the service because it's status contains nothing useful, so just do
+	// an existence check. Then below we check the endpoints targeting it.
+	svc, err := r.serviceLister.Services(imc.Namespace).Get(fmt.Sprintf("%s-kn-channel", imc.Name))
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			svc, err = resources.NewK8sService(imc, resources.ExternalService(r.dispatcherNamespace, r.dispatcherServiceName))
+			if err != nil {
+				logging.FromContext(ctx).Error("failed to create the channel service object", zap.Error(err))
+				return nil, err
+			}
+			svc, err = r.KubeClientSet.CoreV1().Services(imc.Namespace).Create(svc)
+			if err != nil {
+				logging.FromContext(ctx).Error("failed to create the channel service", zap.Error(err))
+				return nil, err
+			}
+			return svc, nil
+		} else {
+			logging.FromContext(ctx).Error("Unable to get the channel service", zap.Error(err))
+		}
+		return nil, err
+	}
+
+	// Check to make sure that our IMC owns this service and if not, complain.
+	if !metav1.IsControlledBy(svc, imc) {
+		return nil, fmt.Errorf("inmemorychannel: %s/%s does not own Service: %q", imc.Namespace, imc.Name, svc.Name)
+	}
+	return svc, nil
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.InMemoryChannel) (*v1alpha1.InMemoryChannel, error) {

@@ -22,7 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var imcCondSet = duckv1alpha1.NewLivingConditionSet(InMemoryChannelConditionDispatcherReady, InMemoryChannelConditionServiceReady, InMemoryChannelConditionEndpointsReady, InMemoryChannelConditionAddressable)
+var imcCondSet = duckv1alpha1.NewLivingConditionSet(InMemoryChannelConditionDispatcherReady, InMemoryChannelConditionServiceReady, InMemoryChannelConditionEndpointsReady, InMemoryChannelConditionAddressable, InMemoryChannelConditionChannelServiceReady)
 
 const (
 	// InMemoryChannelConditionReady has status True when all subconditions below have been set to True.
@@ -45,6 +45,10 @@ const (
 	// InMemoryChannelConditionAddressable has status true when this InMemoryChannel meets
 	// the Addressable contract and has a non-empty hostname.
 	InMemoryChannelConditionAddressable duckv1alpha1.ConditionType = "Addressable"
+
+	// InMemoryChannelConditionServiceReady has status True when a k8s Service representing the channel is ready.
+	// Because this uses ExternalName, there are no endpoints to check.
+	InMemoryChannelConditionChannelServiceReady duckv1alpha1.ConditionType = "ChannelServiceReady"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
@@ -93,6 +97,14 @@ func (imcs *InMemoryChannelStatus) MarkServiceFailed(reason, messageFormat strin
 
 func (imcs *InMemoryChannelStatus) MarkServiceTrue() {
 	imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionServiceReady)
+}
+
+func (imcs *InMemoryChannelStatus) MarkChannelServiceFailed(reason, messageFormat string, messageA ...interface{}) {
+	imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelConditionChannelServiceReady, reason, messageFormat, messageA...)
+}
+
+func (imcs *InMemoryChannelStatus) MarkChannelServiceTrue() {
+	imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionChannelServiceReady)
 }
 
 func (imcs *InMemoryChannelStatus) MarkEndpointsFailed(reason, messageFormat string, messageA ...interface{}) {

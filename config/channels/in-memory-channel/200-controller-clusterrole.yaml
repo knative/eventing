@@ -38,6 +38,9 @@ rules:
       - get
       - list
       - watch
+      - create
+      - update
+      - patch
   # For watching the health of the endpoints
   - apiGroups:
       - "" # Core API group.

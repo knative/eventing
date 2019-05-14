@@ -23,6 +23,7 @@ import (
 	"github.com/knative/pkg/webhook"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // +genclient
@@ -80,4 +81,9 @@ type InMemoryChannelList struct {
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []InMemoryChannel `json:"items"`
+}
+
+// GetGroupVersionKind returns GroupVersionKind for InMemoryChannels
+func (imc *InMemoryChannel) GetGroupVersionKind() schema.GroupVersionKind {
+	return SchemeGroupVersion.WithKind("InMemoryChannel")
 }

@@ -129,6 +129,9 @@ func TestChannelInitializeConditions(t *testing.T) {
 					Type:   InMemoryChannelConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
+					Type:   InMemoryChannelConditionChannelServiceReady,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   InMemoryChannelConditionDispatcherReady,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -157,6 +160,9 @@ func TestChannelInitializeConditions(t *testing.T) {
 			Status: duckv1alpha1.Status{
 				Conditions: []duckv1alpha1.Condition{{
 					Type:   InMemoryChannelConditionAddressable,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   InMemoryChannelConditionChannelServiceReady,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   InMemoryChannelConditionDispatcherReady,
@@ -189,6 +195,9 @@ func TestChannelInitializeConditions(t *testing.T) {
 					Type:   InMemoryChannelConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
+					Type:   InMemoryChannelConditionChannelServiceReady,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   InMemoryChannelConditionDispatcherReady,
 					Status: corev1.ConditionTrue,
 				}, {
@@ -217,47 +226,61 @@ func TestChannelInitializeConditions(t *testing.T) {
 
 func TestChannelIsReady(t *testing.T) {
 	tests := []struct {
-		name               string
-		markServiceReady   bool
-		setAddress         bool
-		markEndpointsReady bool
-		wantReady          bool
-		dispatcherStatus   *appsv1.DeploymentStatus
+		name                    string
+		markServiceReady        bool
+		markChannelServiceReady bool
+		setAddress              bool
+		markEndpointsReady      bool
+		wantReady               bool
+		dispatcherStatus        *appsv1.DeploymentStatus
 	}{{
-		name:               "all happy",
-		markServiceReady:   true,
-		markEndpointsReady: true,
-		dispatcherStatus:   deploymentStatusReady,
-		setAddress:         true,
-		wantReady:          true,
+		name:                    "all happy",
+		markServiceReady:        true,
+		markChannelServiceReady: true,
+		markEndpointsReady:      true,
+		dispatcherStatus:        deploymentStatusReady,
+		setAddress:              true,
+		wantReady:               true,
 	}, {
-		name:               "service not ready",
-		markServiceReady:   false,
-		markEndpointsReady: true,
-		dispatcherStatus:   deploymentStatusReady,
-		setAddress:         true,
-		wantReady:          false,
+		name:                    "service not ready",
+		markServiceReady:        false,
+		markChannelServiceReady: false,
+		markEndpointsReady:      true,
+		dispatcherStatus:        deploymentStatusReady,
+		setAddress:              true,
+		wantReady:               false,
 	}, {
-		name:               "endpoints not ready",
-		markServiceReady:   true,
-		markEndpointsReady: false,
-		dispatcherStatus:   deploymentStatusReady,
-		setAddress:         true,
-		wantReady:          false,
+		name:                    "endpoints not ready",
+		markServiceReady:        true,
+		markChannelServiceReady: false,
+		markEndpointsReady:      false,
+		dispatcherStatus:        deploymentStatusReady,
+		setAddress:              true,
+		wantReady:               false,
 	}, {
-		name:               "deployment not ready",
-		markServiceReady:   true,
-		markEndpointsReady: true,
-		dispatcherStatus:   deploymentStatusNotReady,
-		setAddress:         true,
-		wantReady:          false,
+		name:                    "deployment not ready",
+		markServiceReady:        true,
+		markEndpointsReady:      true,
+		markChannelServiceReady: false,
+		dispatcherStatus:        deploymentStatusNotReady,
+		setAddress:              true,
+		wantReady:               false,
 	}, {
-		name:               "address not set",
-		markServiceReady:   true,
-		markEndpointsReady: true,
-		dispatcherStatus:   deploymentStatusReady,
-		setAddress:         false,
-		wantReady:          false,
+		name:                    "address not set",
+		markServiceReady:        true,
+		markChannelServiceReady: false,
+		markEndpointsReady:      true,
+		dispatcherStatus:        deploymentStatusReady,
+		setAddress:              false,
+		wantReady:               false,
+	}, {
+		name:                    "channel service not ready",
+		markServiceReady:        true,
+		markChannelServiceReady: false,
+		markEndpointsReady:      true,
+		dispatcherStatus:        deploymentStatusReady,
+		setAddress:              true,
+		wantReady:               false,
 	}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -267,6 +290,11 @@ func TestChannelIsReady(t *testing.T) {
 				cs.MarkServiceTrue()
 			} else {
 				cs.MarkServiceFailed("NotReadyService", "testing")
+			}
+			if test.markChannelServiceReady {
+				cs.MarkChannelServiceTrue()
+			} else {
+				cs.MarkChannelServiceFailed("NotReadyChannelService", "testing")
 			}
 			if test.setAddress {
 				cs.SetAddress("foo.bar")
