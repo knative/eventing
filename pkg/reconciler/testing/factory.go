@@ -21,9 +21,9 @@ import (
 	"encoding/json"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-        "k8s.io/apimachinery/pkg/api/meta"
-        "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	fakedynamicclientset "k8s.io/client-go/dynamic/fake"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"

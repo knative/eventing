@@ -156,7 +156,7 @@ func TestAllCases(t *testing.T) {
 			channelLister: listers.GetChannelLister(),
 		}
 	},
-	false,
+		false,
 	))
 }
 

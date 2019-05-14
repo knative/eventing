@@ -616,7 +616,7 @@ func TestAllCases(t *testing.T) {
 			addressableInformer: &fakeAddressableInformer{},
 		}
 	},
-	false,
+		false,
 	))
 }
 

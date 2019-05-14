@@ -111,7 +111,7 @@ func TestGetSinkURI(t *testing.T) {
 				reconciler.Options{
 					DynamicClientSet: fake.NewSimpleDynamicClient(scheme.Scheme, tc.objects...),
 				},
-				func(string){},
+				func(string) {},
 			)
 			sourceName := "nilRef"
 			if tc.ref != nil {
