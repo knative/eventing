@@ -80,6 +80,7 @@ func (imcs *InMemoryChannelStatus) MarkDispatcherFailed(reason, messageFormat st
 	imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelConditionDispatcherReady, reason, messageFormat, messageA...)
 }
 
+// TODO: Unify this with the ones from Eventing. Say: Broker, Trigger.
 func (imcs *InMemoryChannelStatus) PropagateDispatcherStatus(ds *appsv1.DeploymentStatus) {
 	for _, cond := range ds.Conditions {
 		if cond.Type == appsv1.DeploymentAvailable {

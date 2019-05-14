@@ -18,7 +18,7 @@ They differ from most Channels in that they have:
 ### Deployment steps:
 
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md).
-1. Apply the 'in-memory-channel' CRD, Controller, and Dispatcher.
+1. Apply the `InMemoryChannel` CRD, Controller, and Dispatcher.
    ```shell
    ko apply -f config/channels/in-memory-channel/...
    ```
