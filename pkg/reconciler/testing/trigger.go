@@ -23,6 +23,7 @@ import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // TriggerOption enables further configuration of a Trigger.
@@ -105,4 +106,10 @@ func WithTriggerStatusSubscriberURI(uri string) TriggerOption {
 func WithTriggerDeleted(t *v1alpha1.Trigger) {
 	deleteTime := metav1.NewTime(time.Unix(1e9, 0))
 	t.ObjectMeta.SetDeletionTimestamp(&deleteTime)
+}
+
+func WithTriggerUID(uid string) TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		t.UID = types.UID(uid)
+	}
 }

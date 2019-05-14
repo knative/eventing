@@ -43,6 +43,7 @@ import (
 const (
 	testNS      = "test-namespace"
 	triggerName = "test-trigger"
+	triggerUID  = "test-trigger-uid"
 	eventType   = `com.example.someevent`
 	eventSource = `/mycontext`
 
@@ -51,7 +52,7 @@ const (
 
 var (
 	host      = fmt.Sprintf("%s.%s.triggers.%s", triggerName, testNS, utils.GetClusterDomainName())
-	validPath = fmt.Sprintf("/triggers/%s/%s", testNS, triggerName)
+	validPath = fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID)
 )
 
 func init() {
@@ -371,6 +372,7 @@ func makeTrigger(t, s string) *eventingv1alpha1.Trigger {
 		ObjectMeta: v1.ObjectMeta{
 			Namespace: testNS,
 			Name:      triggerName,
+			UID:       triggerUID,
 		},
 		Spec: eventingv1alpha1.TriggerSpec{
 			Filter: &eventingv1alpha1.TriggerFilter{

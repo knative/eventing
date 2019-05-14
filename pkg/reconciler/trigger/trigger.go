@@ -19,11 +19,10 @@ package trigger
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"reflect"
 	"time"
-
-	"github.com/knative/eventing/pkg/utils"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
@@ -31,11 +30,12 @@ import (
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/broker"
+	brokerresources "github.com/knative/eventing/pkg/reconciler/broker/resources"
 	"github.com/knative/eventing/pkg/reconciler/names"
 	"github.com/knative/eventing/pkg/reconciler/trigger/path"
 	"github.com/knative/eventing/pkg/reconciler/trigger/resources"
-	"github.com/knative/eventing/pkg/reconciler/v1alpha1/broker"
-	brokerresources "github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
+	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/tracker"
 	"go.uber.org/zap"
@@ -62,6 +62,7 @@ const (
 
 	// Name of the corev1.Events emitted from the reconciliation process.
 	triggerReconciled         = "TriggerReconciled"
+	triggerReadinessChanged   = "TriggerReadinessChanged"
 	triggerReconcileFailed    = "TriggerReconcileFailed"
 	triggerUpdateStatusFailed = "TriggerUpdateStatusFailed"
 	subscriptionDeleteFailed  = "SubscriptionDeleteFailed"
@@ -74,12 +75,13 @@ const (
 type Reconciler struct {
 	*reconciler.Base
 
-	triggerLister      listers.TriggerLister
-	channelLister      listers.ChannelLister
-	subscriptionLister listers.SubscriptionLister
-	brokerLister       listers.BrokerLister
-	serviceLister      corev1listers.ServiceLister
-	tracker            tracker.Interface
+	triggerLister       listers.TriggerLister
+	channelLister       listers.ChannelLister
+	subscriptionLister  listers.SubscriptionLister
+	brokerLister        listers.BrokerLister
+	serviceLister       corev1listers.ServiceLister
+	tracker             tracker.Interface
+	addressableInformer duck.AddressableInformer
 }
 
 var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
@@ -96,15 +98,17 @@ func NewController(
 	subscriptionInformer eventinginformers.SubscriptionInformer,
 	brokerInformer eventinginformers.BrokerInformer,
 	serviceInformer corev1informers.ServiceInformer,
+	addressableInformer duck.AddressableInformer,
 ) *controller.Impl {
 
 	r := &Reconciler{
-		Base:               reconciler.NewBase(opt, controllerAgentName),
-		triggerLister:      triggerInformer.Lister(),
-		channelLister:      channelInformer.Lister(),
-		subscriptionLister: subscriptionInformer.Lister(),
-		brokerLister:       brokerInformer.Lister(),
-		serviceLister:      serviceInformer.Lister(),
+		Base:                reconciler.NewBase(opt, controllerAgentName),
+		triggerLister:       triggerInformer.Lister(),
+		channelLister:       channelInformer.Lister(),
+		subscriptionLister:  subscriptionInformer.Lister(),
+		brokerLister:        brokerInformer.Lister(),
+		serviceLister:       serviceInformer.Lister(),
+		addressableInformer: addressableInformer,
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
 
@@ -138,7 +142,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Convert the namespace/name string into a distinct namespace and name.
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		r.Logger.Errorf("invalid resource key: %s", key)
+		logging.FromContext(ctx).Error("invalid resource key")
 		return nil
 	}
 
@@ -157,10 +161,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	// Reconcile this copy of the Trigger and then write back any status updates regardless of
 	// whether the reconcile error out.
-	err = r.reconcile(ctx, trigger)
-	if err != nil {
-		logging.FromContext(ctx).Error("Error reconciling Trigger", zap.Error(err))
-		r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerReconcileFailed, "Trigger reconciliation failed: %v", err)
+	reconcileErr := r.reconcile(ctx, trigger)
+	if reconcileErr != nil {
+		logging.FromContext(ctx).Error("Error reconciling Trigger", zap.Error(reconcileErr))
+		r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerReconcileFailed, "Trigger reconciliation failed: %v", reconcileErr)
 	} else {
 		logging.FromContext(ctx).Debug("Trigger reconciled")
 		r.Recorder.Event(trigger, corev1.EventTypeNormal, triggerReconciled, "Trigger reconciled")
@@ -173,7 +177,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	// Requeue if the resource is not ready
-	return err
+	return reconcileErr
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
@@ -206,7 +210,8 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	t.Status.PropagateBrokerStatus(&b.Status)
 
 	// Tell tracker to reconcile this Trigger whenever the Broker changes.
-	if err = r.tracker.Track(utils.ObjectRef(b, brokerGVK), t); err != nil {
+	track := r.addressableInformer.TrackInNamespace(r.tracker, t)
+	if err = track(utils.ObjectRef(b, brokerGVK)); err != nil {
 		logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
 		return err
 	}
@@ -250,7 +255,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		}
 	}
 
-	subscriberURI, err := duck.SubscriberSpec(ctx, r.DynamicClientSet, t.Namespace, t.Spec.Subscriber)
+	subscriberURI, err := duck.SubscriberSpec(ctx, r.DynamicClientSet, t.Namespace, t.Spec.Subscriber, track)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Subscriber's URI", zap.Error(err))
 		return err
@@ -284,14 +289,17 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Trigger
 	existing := trigger.DeepCopy()
 	existing.Status = desired.Status
 
-	new, err := r.EventingClientSet.EventingV1alpha1().Triggers(desired.Namespace).UpdateStatus(existing)
+	trig, err := r.EventingClientSet.EventingV1alpha1().Triggers(desired.Namespace).UpdateStatus(existing)
 	if err == nil && becomesReady {
-		duration := time.Since(new.ObjectMeta.CreationTimestamp.Time)
-		r.Logger.Infof("Subscription %q became ready after %v", trigger.Name, duration)
-		//r.StatsReporter.ReportServiceReady(trigger.Namespace, trigger.Name, duration) // TODO: stats
+		duration := time.Since(trig.ObjectMeta.CreationTimestamp.Time)
+		r.Logger.Infof("Trigger %q became ready after %v", trigger.Name, duration)
+		r.Recorder.Event(trigger, corev1.EventTypeNormal, triggerReadinessChanged, fmt.Sprintf("Trigger %q became ready", trigger.Name))
+		if err := r.StatsReporter.ReportReady("Trigger", trigger.Namespace, trigger.Name, duration); err != nil {
+			logging.FromContext(ctx).Sugar().Infof("failed to record ready for Trigger, %v", err)
+		}
 	}
 
-	return new, err
+	return trig, err
 }
 
 // getBrokerTriggerChannel return the Broker's Trigger Channel if it exists, otherwise it returns an

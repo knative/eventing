@@ -53,6 +53,15 @@ type Listers struct {
 	sorter testing.ObjectSorter
 }
 
+func NewScheme() *runtime.Scheme {
+	scheme := runtime.NewScheme()
+
+	for _, addTo := range clientSetSchemes {
+		addTo(scheme)
+	}
+	return scheme
+}
+
 func NewListers(objs []runtime.Object) Listers {
 	scheme := runtime.NewScheme()
 

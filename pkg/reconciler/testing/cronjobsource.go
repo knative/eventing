@@ -69,6 +69,10 @@ func WithCronJobSourceDeployed(s *v1alpha1.CronJobSource) {
 	s.Status.MarkDeployed()
 }
 
+func WithCronJobSourceEventType(s *v1alpha1.CronJobSource) {
+	s.Status.MarkEventType()
+}
+
 func WithCronJobSourceDeleted(c *v1alpha1.CronJobSource) {
 	t := metav1.NewTime(time.Unix(1e9, 0))
 	c.ObjectMeta.SetDeletionTimestamp(&t)

@@ -38,10 +38,10 @@ import (
 	sourceinformers "github.com/knative/eventing/pkg/client/informers/externalversions/sources/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
+	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/containersource/resources"
 	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/logging"
 	"go.uber.org/zap"
 )
 
@@ -54,6 +54,7 @@ const (
 
 	// Name of the corev1.Events emitted from the reconciliation process
 	sourceReconciled         = "ContainerSourceReconciled"
+	sourceReadinessChanged   = "ContainerSourceReadinessChanged"
 	sourceUpdateStatusFailed = "ContainerSourceUpdateStatusFailed"
 )
 
@@ -63,6 +64,8 @@ type Reconciler struct {
 	// listers index properties about resources
 	containerSourceLister listers.ContainerSourceLister
 	deploymentLister      appsv1listers.DeploymentLister
+
+	sinkReconciler *duck.SinkReconciler
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -81,6 +84,7 @@ func NewController(
 		deploymentLister:      deploymentInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
+	r.sinkReconciler = duck.NewSinkReconciler(opt, impl.EnqueueKey)
 
 	r.Logger.Info("Setting up event handlers")
 	containerSourceInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
@@ -239,7 +243,13 @@ func (r *Reconciler) setSinkURIArg(ctx context.Context, source *v1alpha1.Contain
 		return fmt.Errorf("Sink missing from spec")
 	}
 
-	uri, err := duck.GetSinkURI(ctx, r.DynamicClientSet, source.Spec.Sink, source.Namespace)
+	sinkObjRef := source.Spec.Sink
+	if sinkObjRef.Namespace == "" {
+		sinkObjRef.Namespace = source.Namespace
+	}
+
+	sourceDesc := source.Namespace + "/" + source.Name + ", " + source.GroupVersionKind().String()
+	uri, err := r.sinkReconciler.GetSinkURI(source.Spec.Sink, source, sourceDesc)
 	if err != nil {
 		source.Status.MarkNoSink("NotFound", `Couldn't get Sink URI from "%s/%s": %v"`, source.Spec.Sink.Namespace, source.Spec.Sink.Name, err)
 		return err
@@ -309,7 +319,10 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Contain
 	if err == nil && becomesReady {
 		duration := time.Since(cj.ObjectMeta.CreationTimestamp.Time)
 		r.Logger.Infof("ContainerSource %q became ready after %v", source.Name, duration)
-		//r.StatsReporter.ReportServiceReady(subscription.Namespace, subscription.Name, duration) // TODO: stats
+		r.Recorder.Event(source, corev1.EventTypeNormal, sourceReadinessChanged, fmt.Sprintf("ContainerSource %q became ready", source.Name))
+		if err := r.StatsReporter.ReportReady("ContainerSource", source.Namespace, source.Name, duration); err != nil {
+			logging.FromContext(ctx).Sugar().Infof("failed to record ready for ContainerSource, %v", err)
+		}
 	}
 
 	return cj, err

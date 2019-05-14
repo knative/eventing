@@ -25,9 +25,9 @@ import (
 	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/reconciler"
+	brokerresources "github.com/knative/eventing/pkg/reconciler/broker/resources"
 	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/reconciler/trigger/resources"
-	brokerresources "github.com/knative/eventing/pkg/reconciler/v1alpha1/broker/resources"
 	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
@@ -47,6 +47,7 @@ import (
 const (
 	testNS      = "test-namespace"
 	triggerName = "test-trigger"
+	triggerUID  = "test-trigger-uid"
 	brokerName  = "test-broker"
 
 	subscriberAPIVersion = "v1"
@@ -83,6 +84,9 @@ func TestNewController(t *testing.T) {
 	// Kube
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
 
+	// Duck
+	addressableInformer := &fakeAddressableInformer{}
+
 	c := NewController(
 		reconciler.Options{
 			KubeClientSet:     kubeClient,
@@ -93,11 +97,18 @@ func TestNewController(t *testing.T) {
 		channelInformer,
 		subscriptionInformer,
 		brokerInformer,
-		serviceInformer)
+		serviceInformer,
+		addressableInformer)
 
 	if c == nil {
 		t.Fatalf("Failed to create with NewController")
 	}
+}
+
+type fakeAddressableInformer struct{}
+
+func (*fakeAddressableInformer) TrackInNamespace(tracker.Interface, metav1.Object) func(corev1.ObjectReference) error {
+	return func(corev1.ObjectReference) error { return nil }
 }
 
 func TestAllCases(t *testing.T) {
@@ -115,6 +126,7 @@ func TestAllCases(t *testing.T) {
 			//			Name: "trigger key not found ",
 			//			Objects: []runtime.Object{
 			//				reconciletesting.NewTrigger(triggerName, testNS),
+			//					reconciletesting.WithTriggerUID(triggerUID),
 			//			},
 			//			Key:     "foo/incomplete",
 			//			WantErr: true,
@@ -126,6 +138,7 @@ func TestAllCases(t *testing.T) {
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI)),
 			},
 			WantErr: true,
@@ -134,6 +147,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
@@ -145,6 +159,7 @@ func TestAllCases(t *testing.T) {
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI)),
 			},
 			WantErr: true,
@@ -156,6 +171,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
@@ -167,6 +183,7 @@ func TestAllCases(t *testing.T) {
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerDeleted),
@@ -181,6 +198,7 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				makeReadyBroker(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					reconciletesting.WithInitTriggerConditions,
 				),
@@ -192,6 +210,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
@@ -205,6 +224,7 @@ func TestAllCases(t *testing.T) {
 				makeReadyBroker(),
 				makeTriggerChannel(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					reconciletesting.WithInitTriggerConditions,
 				),
@@ -216,6 +236,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
@@ -230,6 +251,7 @@ func TestAllCases(t *testing.T) {
 				makeTriggerChannel(),
 				makeIngressChannel(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					reconciletesting.WithInitTriggerConditions,
 				),
@@ -241,6 +263,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
@@ -256,6 +279,7 @@ func TestAllCases(t *testing.T) {
 				makeIngressChannel(),
 				makeBrokerFilterService(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					reconciletesting.WithInitTriggerConditions,
 				),
@@ -269,6 +293,7 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: inducing failure for create subscriptions")},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
@@ -290,6 +315,7 @@ func TestAllCases(t *testing.T) {
 				makeBrokerFilterService(),
 				makeDifferentReadySubscription(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					reconciletesting.WithInitTriggerConditions,
 				),
@@ -303,6 +329,7 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: inducing failure for delete subscriptions")},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
@@ -326,6 +353,7 @@ func TestAllCases(t *testing.T) {
 				makeBrokerFilterService(),
 				makeDifferentReadySubscription(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					reconciletesting.WithInitTriggerConditions,
 				),
@@ -339,6 +367,7 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: inducing failure for create subscriptions")},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
@@ -365,6 +394,7 @@ func TestAllCases(t *testing.T) {
 				makeBrokerFilterService(),
 				makeDifferentReadySubscription(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					reconciletesting.WithInitTriggerConditions,
 				),
@@ -375,6 +405,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
@@ -400,6 +431,7 @@ func TestAllCases(t *testing.T) {
 				makeIngressChannel(),
 				makeBrokerFilterService(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					reconciletesting.WithInitTriggerConditions,
 				),
@@ -410,6 +442,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
@@ -431,6 +464,7 @@ func TestAllCases(t *testing.T) {
 				makeBrokerFilterService(),
 				makeNotReadySubscription(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					reconciletesting.WithInitTriggerConditions,
 				),
@@ -441,6 +475,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
@@ -459,6 +494,7 @@ func TestAllCases(t *testing.T) {
 				makeBrokerFilterService(),
 				makeReadySubscription(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					reconciletesting.WithInitTriggerConditions,
 				),
@@ -466,9 +502,11 @@ func TestAllCases(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
+				Eventf(corev1.EventTypeNormal, "TriggerReadinessChanged", `Trigger "test-trigger" became ready`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
@@ -484,16 +522,18 @@ func TestAllCases(t *testing.T) {
 
 	table.Test(t, reconciletesting.MakeFactory(func(listers *reconciletesting.Listers, opt reconciler.Options) controller.Reconciler {
 		return &Reconciler{
-			Base:               reconciler.NewBase(opt, controllerAgentName),
-			triggerLister:      listers.GetTriggerLister(),
-			channelLister:      listers.GetChannelLister(),
-			subscriptionLister: listers.GetSubscriptionLister(),
-			brokerLister:       listers.GetBrokerLister(),
-			serviceLister:      listers.GetK8sServiceLister(),
-			tracker:            tracker.New(func(string) {}, 0),
+			Base:                reconciler.NewBase(opt, controllerAgentName),
+			triggerLister:       listers.GetTriggerLister(),
+			channelLister:       listers.GetChannelLister(),
+			subscriptionLister:  listers.GetSubscriptionLister(),
+			brokerLister:        listers.GetBrokerLister(),
+			serviceLister:       listers.GetK8sServiceLister(),
+			addressableInformer: &fakeAddressableInformer{},
+			tracker:             tracker.New(func(string) {}, 0),
 		}
-
-	}))
+	},
+		false,
+	))
 }
 
 func makeTrigger() *v1alpha1.Trigger {
@@ -505,6 +545,7 @@ func makeTrigger() *v1alpha1.Trigger {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNS,
 			Name:      triggerName,
+			UID:       triggerUID,
 		},
 		Spec: v1alpha1.TriggerSpec{
 			Broker: brokerName,
@@ -615,7 +656,7 @@ func makeServiceURI() *url.URL {
 	return &url.URL{
 		Scheme: "http",
 		Host:   fmt.Sprintf("%s.%s.svc.%s", makeBrokerFilterService().Name, testNS, utils.GetClusterDomainName()),
-		Path:   fmt.Sprintf("/triggers/%s/%s", testNS, triggerName),
+		Path:   fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID),
 	}
 }
 

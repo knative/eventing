@@ -72,6 +72,15 @@ func TestCronJobSourceStatusIsReady(t *testing.T) {
 		}(),
 		want: false,
 	}, {
+		name: "mark event types",
+		s: func() *v1alpha1.CronJobSourceStatus {
+			s := &v1alpha1.CronJobSourceStatus{}
+			s.InitializeConditions()
+			s.MarkEventType()
+			return s
+		}(),
+		want: false,
+	}, {
 		name: "mark sink and deployed",
 		s: func() *v1alpha1.CronJobSourceStatus {
 			s := &v1alpha1.CronJobSourceStatus{}
@@ -103,6 +112,18 @@ func TestCronJobSourceStatusIsReady(t *testing.T) {
 		}(),
 		want: true,
 	}, {
+		name: "mark schedule, sink, deployed, and event types",
+		s: func() *v1alpha1.CronJobSourceStatus {
+			s := &v1alpha1.CronJobSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSchedule()
+			s.MarkSink("uri://example")
+			s.MarkDeployed()
+			s.MarkEventType()
+			return s
+		}(),
+		want: true,
+	}, {
 		name: "mark schedule, sink and deployed then not deployed",
 		s: func() *v1alpha1.CronJobSourceStatus {
 			s := &v1alpha1.CronJobSourceStatus{}
@@ -114,6 +135,18 @@ func TestCronJobSourceStatusIsReady(t *testing.T) {
 			return s
 		}(),
 		want: false,
+	}, {
+		name: "mark schedule, sink, deployed and event types then no event types",
+		s: func() *v1alpha1.CronJobSourceStatus {
+			s := &v1alpha1.CronJobSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSchedule()
+			s.MarkSink("uri://example")
+			s.MarkDeployed()
+			s.MarkNoEventType("Testing", "")
+			return s
+		}(),
+		want: true,
 	}, {
 		name: "mark schedule, sink and not deployed then deploying then deployed",
 		s: func() *v1alpha1.CronJobSourceStatus {
@@ -240,6 +273,22 @@ func TestCronJobSourceStatusGetCondition(t *testing.T) {
 			Status: corev1.ConditionTrue,
 		},
 	}, {
+		name: "mark schedule, sink, deployed, and event types",
+		s: func() *v1alpha1.CronJobSourceStatus {
+			s := &v1alpha1.CronJobSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSchedule()
+			s.MarkSink("uri://example")
+			s.MarkDeployed()
+			s.MarkEventType()
+			return s
+		}(),
+		condQuery: v1alpha1.CronJobConditionReady,
+		want: &duckv1alpha1.Condition{
+			Type:   v1alpha1.CronJobConditionReady,
+			Status: corev1.ConditionTrue,
+		},
+	}, {
 		name: "mark schedule, sink and deployed then no sink",
 		s: func() *v1alpha1.CronJobSourceStatus {
 			s := &v1alpha1.CronJobSourceStatus{}
@@ -310,6 +359,23 @@ func TestCronJobSourceStatusGetCondition(t *testing.T) {
 			Status:  corev1.ConditionFalse,
 			Reason:  "Testing",
 			Message: "hi",
+		},
+	}, {
+		name: "mark schedule, sink, deployed and event types, then no event types",
+		s: func() *v1alpha1.CronJobSourceStatus {
+			s := &v1alpha1.CronJobSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSchedule()
+			s.MarkSink("uri://example")
+			s.MarkDeployed()
+			s.MarkEventType()
+			s.MarkNoEventType("Testing", "hi")
+			return s
+		}(),
+		condQuery: v1alpha1.CronJobConditionReady,
+		want: &duckv1alpha1.Condition{
+			Type:   v1alpha1.CronJobConditionReady,
+			Status: corev1.ConditionTrue,
 		},
 	}, {
 		name: "mark schedule, sink and not deployed then deploying then deployed",

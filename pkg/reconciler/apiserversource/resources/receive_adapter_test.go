@@ -35,11 +35,11 @@ func TestMakeReceiveAdapter(t *testing.T) {
 		Spec: v1alpha1.ApiServerSourceSpec{
 			ServiceAccountName: "source-svc-acct",
 			Resources: []v1alpha1.ApiServerResource{
-				v1alpha1.ApiServerResource{
+				{
 					APIVersion: "",
 					Kind:       "Namespace",
 				},
-				v1alpha1.ApiServerResource{
+				{
 					APIVersion: "",
 					Kind:       "Pod",
 					Controller: true,
@@ -59,13 +59,23 @@ func TestMakeReceiveAdapter(t *testing.T) {
 	})
 
 	one := int32(1)
+	trueValue := true
 	want := &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    "source-namespace",
-			GenerateName: "apiserver-source-name-",
+			GenerateName: "apiserversource-source-name-",
 			Labels: map[string]string{
 				"test-key1": "test-value1",
 				"test-key2": "test-value2",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion:         "sources.eventing.knative.dev/v1alpha1",
+					Kind:               "ApiServerSource",
+					Name:               "source-name",
+					Controller:         &trueValue,
+					BlockOwnerDeletion: &trueValue,
+				},
 			},
 		},
 		Spec: v1.DeploymentSpec{
@@ -79,7 +89,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						"sidecar.istio.io/inject": "true",
+						"sidecar.istio.io/inject": "false",
 					},
 					Labels: map[string]string{
 						"test-key1": "test-value1",
@@ -96,6 +106,8 @@ func TestMakeReceiveAdapter(t *testing.T) {
 								{
 									Name:  "SINK_URI",
 									Value: "sink-uri",
+								}, {
+									Name: "MODE",
 								}, {
 									Name:  "API_VERSION",
 									Value: ",",

@@ -20,6 +20,25 @@ import (
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
 
+const (
+	// ApiServerConditionReady has status True when the ApiServerSource is ready to send events.
+	ApiServerConditionReady = duckv1alpha1.ConditionReady
+
+	// ApiServerConditionSinkProvided has status True when the ApiServerSource has been configured with a sink target.
+	ApiServerConditionSinkProvided duckv1alpha1.ConditionType = "SinkProvided"
+
+	// ApiServerConditionDeployed has status True when the ApiServerSource has had it's deployment created.
+	ApiServerConditionDeployed duckv1alpha1.ConditionType = "Deployed"
+
+	// ApiServerConditionEventTypeProvided has status True when the ApiServerSource has been configured with its event types.
+	ApiServerConditionEventTypeProvided duckv1alpha1.ConditionType = "EventTypesProvided"
+)
+
+var apiserverCondSet = duckv1alpha1.NewLivingConditionSet(
+	ApiServerConditionSinkProvided,
+	ApiServerConditionDeployed,
+)
+
 // GetConditions returns Conditions
 func (s *ApiServerSourceStatus) GetConditions() duckv1alpha1.Conditions {
 	return s.Conditions
@@ -58,6 +77,16 @@ func (s *ApiServerSourceStatus) MarkNoSink(reason, messageFormat string, message
 // MarkDeployed sets the condition that the source has been deployed.
 func (s *ApiServerSourceStatus) MarkDeployed() {
 	apiserverCondSet.Manage(s).MarkTrue(ApiServerConditionDeployed)
+}
+
+// MarkEventTypes sets the condition that the source has set its event type.
+func (s *ApiServerSourceStatus) MarkEventTypes() {
+	apiserverCondSet.Manage(s).MarkTrue(ApiServerConditionEventTypeProvided)
+}
+
+// MarkNoEventTypes sets the condition that the source does not its event type configured.
+func (s *ApiServerSourceStatus) MarkNoEventTypes(reason, messageFormat string, messageA ...interface{}) {
+	apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionEventTypeProvided, reason, messageFormat, messageA...)
 }
 
 // IsReady returns true if the resource is ready overall.

@@ -102,6 +102,14 @@ func TestMakeReceiveAdapter(t *testing.T) {
 									Name:  "SINK_URI",
 									Value: "sink-uri",
 								},
+								{
+									Name:  "NAME",
+									Value: "source-name",
+								},
+								{
+									Name:  "NAMESPACE",
+									Value: "source-namespace",
+								},
 							},
 						},
 					},

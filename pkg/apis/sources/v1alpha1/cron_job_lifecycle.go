@@ -32,6 +32,9 @@ const (
 
 	// CronJobConditionDeployed has status True when the CronJobSource has had it's receive adapter deployment created.
 	CronJobConditionDeployed duckv1alpha1.ConditionType = "Deployed"
+
+	// CronJobConditionEventTypeProvided has status True when the CronJobSource has been configured with its event type.
+	CronJobConditionEventTypeProvided duckv1alpha1.ConditionType = "EventTypeProvided"
 )
 
 var cronJobSourceCondSet = duckv1alpha1.NewLivingConditionSet(
@@ -93,4 +96,14 @@ func (s *CronJobSourceStatus) MarkDeploying(reason, messageFormat string, messag
 // MarkNotDeployed sets the condition that the source has not been deployed.
 func (s *CronJobSourceStatus) MarkNotDeployed(reason, messageFormat string, messageA ...interface{}) {
 	cronJobSourceCondSet.Manage(s).MarkFalse(CronJobConditionDeployed, reason, messageFormat, messageA...)
+}
+
+// MarkEventType sets the condition that the source has set its event type.
+func (s *CronJobSourceStatus) MarkEventType() {
+	cronJobSourceCondSet.Manage(s).MarkTrue(CronJobConditionEventTypeProvided)
+}
+
+// MarkNoEventType sets the condition that the source does not its event type configured.
+func (s *CronJobSourceStatus) MarkNoEventType(reason, messageFormat string, messageA ...interface{}) {
+	cronJobSourceCondSet.Manage(s).MarkFalse(CronJobConditionEventTypeProvided, reason, messageFormat, messageA...)
 }

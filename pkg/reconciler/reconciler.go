@@ -19,9 +19,11 @@ package reconciler
 import (
 	"time"
 
+	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
+	eventingScheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
 	"github.com/knative/pkg/configmap"
+	"github.com/knative/pkg/logging/logkey"
 	"github.com/knative/pkg/system"
-
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -31,10 +33,6 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
-
-	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
-	eventingScheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
-	"github.com/knative/pkg/logging/logkey"
 )
 
 // Options defines the common reconciler options.
@@ -47,8 +45,8 @@ type Options struct {
 	EventingClientSet clientset.Interface
 	//CachingClientSet cachingclientset.Interface
 
-	Recorder record.EventRecorder
-	//StatsReporter StatsReporter
+	Recorder      record.EventRecorder
+	StatsReporter StatsReporter
 
 	ConfigMapWatcher configmap.Watcher
 	Logger           *zap.SugaredLogger
@@ -56,9 +54,6 @@ type Options struct {
 	ResyncPeriod time.Duration
 	StopChannel  <-chan struct{}
 }
-
-// This is mutable for testing.
-var resetPeriod = 30 * time.Second
 
 func NewOptionsOrDie(cfg *rest.Config, logger *zap.SugaredLogger, stopCh <-chan struct{}) Options {
 	kubeClient := kubernetes.NewForConfigOrDie(cfg)
@@ -105,7 +100,7 @@ type Base struct {
 	Recorder record.EventRecorder
 
 	// StatsReporter reports reconciler's metrics.
-	//StatsReporter StatsReporter
+	StatsReporter StatsReporter
 
 	// Sugared logger is easier to use but is not as performant as the
 	// raw logger. In performance critical paths, call logger.Desugar()
@@ -141,15 +136,15 @@ func NewBase(opt Options, controllerAgentName string) *Base {
 		}()
 	}
 
-	//statsReporter := opt.StatsReporter
-	//if statsReporter == nil {
-	//	logger.Debug("Creating stats reporter")
-	//	var err error
-	//	statsReporter, err = NewStatsReporter(controllerAgentName)
-	//	if err != nil {
-	//		logger.Fatal(err)
-	//	}
-	//}
+	statsReporter := opt.StatsReporter
+	if statsReporter == nil {
+		logger.Debug("Creating stats reporter")
+		var err error
+		statsReporter, err = NewStatsReporter(controllerAgentName)
+		if err != nil {
+			logger.Fatal(err)
+		}
+	}
 
 	base := &Base{
 		KubeClientSet:     opt.KubeClientSet,
@@ -157,8 +152,8 @@ func NewBase(opt Options, controllerAgentName string) *Base {
 		DynamicClientSet:  opt.DynamicClientSet,
 		ConfigMapWatcher:  opt.ConfigMapWatcher,
 		Recorder:          recorder,
-		//StatsReporter:    statsReporter,
-		Logger: logger,
+		StatsReporter:     statsReporter,
+		Logger:            logger,
 	}
 
 	return base

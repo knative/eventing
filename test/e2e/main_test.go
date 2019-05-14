@@ -34,24 +34,35 @@ var channelTestMap = map[string][]func(t *testing.T){
 		TestEventTransformation,
 		TestChannelChain,
 		TestDefaultBrokerWithManyTriggers,
+		TestEventTransformationForTrigger,
 	},
 	test.InMemoryChannelProvisioner: {
 		TestSingleBinaryEvent,
 		TestSingleStructuredEvent,
 		TestEventTransformation,
 		TestChannelChain,
+		TestEventTransformationForTrigger,
 	},
 	test.GCPPubSubProvisioner: {
 		TestSingleBinaryEvent,
 		TestSingleStructuredEvent,
 		TestEventTransformation,
 		TestChannelChain,
+		TestEventTransformationForTrigger,
 	},
 	test.NatssProvisioner: {
 		TestSingleBinaryEvent,
 		TestSingleStructuredEvent,
 		TestEventTransformation,
 		TestChannelChain,
+		TestEventTransformationForTrigger,
+	},
+	test.KafkaProvisioner: {
+		TestSingleBinaryEvent,
+		TestSingleStructuredEvent,
+		TestEventTransformation,
+		TestChannelChain,
+		TestEventTransformationForTrigger,
 	},
 }
 

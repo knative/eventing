@@ -78,6 +78,14 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 									Name:  "SINK_URI",
 									Value: args.SinkURI,
 								},
+								{
+									Name:  "NAME",
+									Value: args.Source.Name,
+								},
+								{
+									Name:  "NAMESPACE",
+									Value: args.Source.Namespace,
+								},
 							},
 						},
 					},

@@ -117,6 +117,15 @@ func TestClusterChannelProvisionerStatusGetCondition(t *testing.T) {
 	}
 }
 
+func TestClusterChannelProvisionerStatus_GetGroupVersionKind(t *testing.T) {
+
+	ccp := ClusterChannelProvisioner{}
+	gvk := ccp.GetGroupVersionKind()
+	if gvk.Kind != "ClusterChannelProvisioner" {
+		t.Errorf("Should be ClusterChannelProvisioner.")
+	}
+}
+
 func TestClusterChannelProvisionerStatus_MarkReady(t *testing.T) {
 	ps := ClusterChannelProvisionerStatus{}
 	ps.InitializeConditions()

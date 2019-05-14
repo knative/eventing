@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/knative/pkg/kmeta"
+
 	"k8s.io/apimachinery/pkg/labels"
 
 	corev1 "k8s.io/api/core/v1"
@@ -37,7 +39,7 @@ const (
 	OldEventingProvisionerLabel = "provisioner"
 )
 
-// AddFinalizerResult is used indicate whether a finalizer was added or already present.
+// AddFinalizerResult is used to indicate whether a finalizer was added or already present.
 type AddFinalizerResult bool
 
 // RemoveFinalizerResult is used to indicate whether a finalizer was found and removed (FinalizerRemoved), or finalizer not found (FinalizerNotFound).
@@ -234,11 +236,7 @@ func newK8sService(c *eventingv1alpha1.Channel, opts ...K8sServiceOption) (*core
 			Namespace:    c.Namespace,
 			Labels:       k8sServiceLabels(c),
 			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(c, schema.GroupVersionKind{
-					Group:   eventingv1alpha1.SchemeGroupVersion.Group,
-					Version: eventingv1alpha1.SchemeGroupVersion.Version,
-					Kind:    "Channel",
-				}),
+				*kmeta.NewControllerRef(c),
 			},
 		},
 		Spec: corev1.ServiceSpec{

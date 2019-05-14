@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	"github.com/knative/pkg/kmeta"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,8 +42,11 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 	return &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    args.Source.Namespace,
-			GenerateName: fmt.Sprintf("apiserver-%s-", args.Source.Name),
+			GenerateName: fmt.Sprintf("apiserversource-%s-", args.Source.Name),
 			Labels:       args.Labels,
+			OwnerReferences: []metav1.OwnerReference{
+				*kmeta.NewControllerRef(args.Source),
+			},
 		},
 		Spec: v1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
@@ -52,7 +56,7 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						"sidecar.istio.io/inject": "true",
+						"sidecar.istio.io/inject": "false", // needs to talk to the api server.
 					},
 					Labels: args.Labels,
 				},
@@ -88,30 +92,27 @@ func makeEnv(sinkURI string, spec *v1alpha1.ApiServerSourceSpec) []corev1.EnvVar
 		sep = ","
 	}
 
-	return []corev1.EnvVar{
-		{
-			Name:  "SINK_URI",
-			Value: sinkURI,
-		},
-		{
-			Name:  "API_VERSION",
-			Value: apiversions,
-		},
-		{
-			Name:  "KIND",
-			Value: kinds,
-		},
-		{
-			Name:  "CONTROLLER",
-			Value: controlled,
-		},
-		{
-			Name: "SYSTEM_NAMESPACE",
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{
-					FieldPath: "metadata.namespace",
-				},
+	return []corev1.EnvVar{{
+		Name:  "SINK_URI",
+		Value: sinkURI,
+	}, {
+		Name:  "MODE",
+		Value: spec.Mode,
+	}, {
+		Name:  "API_VERSION",
+		Value: apiversions,
+	}, {
+		Name:  "KIND",
+		Value: kinds,
+	}, {
+		Name:  "CONTROLLER",
+		Value: controlled,
+	}, {
+		Name: "SYSTEM_NAMESPACE",
+		ValueFrom: &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{
+				FieldPath: "metadata.namespace",
 			},
 		},
-	}
+	}}
 }
