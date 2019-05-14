@@ -239,6 +239,6 @@ func TestAllCases(t *testing.T) {
 		}
 
 	},
-	false,
+		false,
 	))
 }

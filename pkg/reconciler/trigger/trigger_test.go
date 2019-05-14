@@ -532,7 +532,7 @@ func TestAllCases(t *testing.T) {
 			tracker:             tracker.New(func(string) {}, 0),
 		}
 	},
-	false,
+		false,
 	))
 }
 
