@@ -18,9 +18,11 @@ package testing
 
 import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	messagingv1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	fakeeventingclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
+	messaginglisters "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
 	sourcelisters "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
 	fakesharedclientset "github.com/knative/pkg/client/clientset/versioned/fake"
 	"github.com/knative/pkg/reconciler/testing"
@@ -121,6 +123,10 @@ func (l *Listers) GetEventTypeLister() eventinglisters.EventTypeLister {
 	return eventinglisters.NewEventTypeLister(l.indexerFor(&eventingv1alpha1.EventType{}))
 }
 
+func (l *Listers) GetInMemoryChannelLister() messaginglisters.InMemoryChannelLister {
+	return messaginglisters.NewInMemoryChannelLister(l.indexerFor(&messagingv1alpha1.InMemoryChannel{}))
+}
+
 func (l *Listers) GetChannelLister() eventinglisters.ChannelLister {
 	return eventinglisters.NewChannelLister(l.indexerFor(&eventingv1alpha1.Channel{}))
 }
@@ -151,6 +157,10 @@ func (l *Listers) GetNamespaceLister() corev1listers.NamespaceLister {
 
 func (l *Listers) GetServiceAccountLister() corev1listers.ServiceAccountLister {
 	return corev1listers.NewServiceAccountLister(l.indexerFor(&corev1.ServiceAccount{}))
+}
+
+func (l *Listers) GetServiceLister() corev1listers.ServiceLister {
+	return corev1listers.NewServiceLister(l.indexerFor(&corev1.Service{}))
 }
 
 func (l *Listers) GetRoleBindingLister() rbacv1listers.RoleBindingLister {
