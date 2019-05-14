@@ -32,6 +32,7 @@ import (
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
 	"github.com/knative/pkg/signals"
+	"github.com/knative/pkg/system"
 	"go.uber.org/zap"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"
@@ -65,7 +66,7 @@ func main() {
 	logger = logger.With(zap.String("controller/impl", "pkg"))
 	logger.Info("Starting the controller")
 
-	systemNS := getRequiredEnv("SYSTEM_NAMESPACE")
+	systemNS := system.Namespace()
 
 	const numControllers = 1
 	cfg.QPS = numControllers * rest.DefaultQPS

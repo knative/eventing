@@ -66,6 +66,7 @@ func (imcs *InMemoryChannelStatus) InitializeConditions() {
 	imcCondSet.Manage(imcs).InitializeConditions()
 }
 
+// TODO: Use the new beta duck types.
 func (imcs *InMemoryChannelStatus) SetAddress(hostname string) {
 	imcs.Address.Hostname = hostname
 	if hostname != "" {

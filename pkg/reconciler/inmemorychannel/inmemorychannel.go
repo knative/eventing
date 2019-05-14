@@ -54,12 +54,9 @@ const (
 	finalizerName = controllerAgentName
 
 	// Name of the corev1.Events emitted from the reconciliation process.
-	channelReconciled         = "InMemoryChannelReconciled"
-	channelReconcileFailed    = "InMemoryChannelReconcileFailed"
-	channelUpdateStatusFailed = "InMemoryChannelUpdateStatusFailed"
-	channelDispatcherFailed   = "InMemoryChannelDispatcherDeploymentFailed"
-	channelServiceFailed      = "InMemoryChannelDispatcherServiceFailed"
-	channelEndpointsFailed    = "InMemoryChannelDispatcherEndpointsFailed"
+	reconciled         = "Reconciled"
+	reconcileFailed    = "ReconcileFailed"
+	updateStatusFailed = "UpdateStatusFailed"
 )
 
 type Reconciler struct {
@@ -188,15 +185,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	reconcileErr := r.reconcile(ctx, channel)
 	if reconcileErr != nil {
 		logging.FromContext(ctx).Error("Error reconciling InMemoryChannel", zap.Error(reconcileErr))
-		r.Recorder.Eventf(channel, corev1.EventTypeWarning, channelReconcileFailed, "InMemoryChannel reconciliation failed: %v", reconcileErr)
+		r.Recorder.Eventf(channel, corev1.EventTypeWarning, reconcileFailed, "InMemoryChannel reconciliation failed: %v", reconcileErr)
 	} else {
 		logging.FromContext(ctx).Debug("InMemoryChannel reconciled")
-		r.Recorder.Event(channel, corev1.EventTypeNormal, channelReconciled, "InMemoryChannel reconciled")
+		r.Recorder.Event(channel, corev1.EventTypeNormal, reconciled, "InMemoryChannel reconciled")
 	}
 
 	if _, updateStatusErr := r.updateStatus(ctx, channel); updateStatusErr != nil {
 		logging.FromContext(ctx).Error("Failed to update InMemoryChannel status", zap.Error(updateStatusErr))
-		r.Recorder.Eventf(channel, corev1.EventTypeWarning, channelUpdateStatusFailed, "Failed to update InMemoryChannel's status: %v", err)
+		r.Recorder.Eventf(channel, corev1.EventTypeWarning, updateStatusFailed, "Failed to update InMemoryChannel's status: %v", err)
 		return updateStatusErr
 	}
 

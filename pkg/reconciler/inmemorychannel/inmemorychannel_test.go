@@ -149,7 +149,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithInMemoryChannelDeleted)},
 			WantErr: false,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "InMemoryChannelReconciled", "InMemoryChannel reconciled"),
+				Eventf(corev1.EventTypeNormal, "Reconciled", "InMemoryChannel reconciled"),
 			},
 		}, {
 			Name: "deployment does not exist",
@@ -164,7 +164,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithInMemoryChannelDeploymentNotReady("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist")),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InMemoryChannelReconcileFailed", "InMemoryChannel reconciliation failed: deployment.apps \"test-deployment\" not found"),
+				Eventf(corev1.EventTypeWarning, "ReconcileFailed", "InMemoryChannel reconciliation failed: deployment.apps \"test-deployment\" not found"),
 			},
 		}, {
 			Name: "Service does not exist",
@@ -181,7 +181,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithInMemoryChannelServicetNotReady("DispatcherServiceDoesNotExist", "Dispatcher Service does not exist")),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InMemoryChannelReconcileFailed", "InMemoryChannel reconciliation failed: service \"test-service\" not found"),
+				Eventf(corev1.EventTypeWarning, "ReconcileFailed", "InMemoryChannel reconciliation failed: service \"test-service\" not found"),
 			},
 		}, {
 			Name: "Endpoints does not exist",
@@ -201,7 +201,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InMemoryChannelReconcileFailed", "InMemoryChannel reconciliation failed: endpoints \"test-service\" not found"),
+				Eventf(corev1.EventTypeWarning, "ReconcileFailed", "InMemoryChannel reconciliation failed: endpoints \"test-service\" not found"),
 			},
 		}, {
 			Name: "Endpoints not ready",
@@ -222,7 +222,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InMemoryChannelReconcileFailed", "InMemoryChannel reconciliation failed: there are no endpoints ready for Dispatcher service"),
+				Eventf(corev1.EventTypeWarning, "ReconcileFailed", "InMemoryChannel reconciliation failed: there are no endpoints ready for Dispatcher service"),
 			},
 		}, {
 			Name: "Works, creates new channel",
@@ -248,7 +248,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "InMemoryChannelReconciled", "InMemoryChannel reconciled"),
+				Eventf(corev1.EventTypeNormal, "Reconciled", "InMemoryChannel reconciled"),
 			},
 		}, {
 			Name: "Works, channel exists",
@@ -272,7 +272,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "InMemoryChannelReconciled", "InMemoryChannel reconciled"),
+				Eventf(corev1.EventTypeNormal, "Reconciled", "InMemoryChannel reconciled"),
 			},
 		}, {
 			Name: "channel exists, not owned by us",
@@ -295,7 +295,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InMemoryChannelReconcileFailed", "InMemoryChannel reconciliation failed: inmemorychannel: test-namespace/test-imc does not own Service: \"test-imc-kn-channel\""),
+				Eventf(corev1.EventTypeWarning, "ReconcileFailed", "InMemoryChannel reconciliation failed: inmemorychannel: test-namespace/test-imc does not own Service: \"test-imc-kn-channel\""),
 			},
 		}, {
 			Name: "channel does not exist, fails to create",
@@ -323,7 +323,7 @@ func TestAllCases(t *testing.T) {
 				makeChannelService(reconciletesting.NewInMemoryChannel(imcName, testNS)),
 			},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "InMemoryChannelReconcileFailed", "InMemoryChannel reconciliation failed: inducing failure for create services"),
+				Eventf(corev1.EventTypeWarning, "ReconcileFailed", "InMemoryChannel reconciliation failed: inducing failure for create services"),
 			},
 		}, {},
 	}
