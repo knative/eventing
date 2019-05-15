@@ -17,6 +17,7 @@
 package v1alpha1
 
 import (
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/webhook"
@@ -51,21 +52,21 @@ var _ webhook.GenericCRD = (*Pipeline)(nil)
 type PipelineSpec struct {
 	// Steps is the list of Subscribers (processors / functions) that will be called in the order
 	// provided.
-	Steps []SubscriberSpec
+	Steps []eventingv1alpha1.SubscriberSpec
 
 	// Subscriber is the addressable that optionally receives replies from the last step in the pipeline.
 	// +optional
-	Subscriber *SubscriberSpec `json:"subscriber,omitempty"`
+	Subscriber *eventingv1alpha1.SubscriberSpec `json:"subscriber,omitempty"`
 }
 
 type StepStatus struct {
 	// SubscriptionStatuses is an array of corresponding Subscription statuses.
 	// Matches the Spec.Steps array in the order.
-	SubscriptionStatuses []SubscriptionStatus
+	SubscriptionStatuses []eventingv1alpha1.SubscriptionStatus
 
 	// ChannelStatuses is an array of corresponding Channel statuses.
 	// Matches the Spec.Steps array in the order.
-	ChannelStatuses []ChannelStatus
+	ChannelStatuses []eventingv1alpha1.ChannelStatus
 }
 
 // PipelineStatus represents the current state of a Pipeline.

@@ -26,8 +26,6 @@ type ClusterChannelProvisionerExpansion interface{}
 
 type EventTypeExpansion interface{}
 
-type PipelineExpansion interface{}
-
 type SubscriptionExpansion interface{}
 
 type TriggerExpansion interface{}
