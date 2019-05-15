@@ -54,19 +54,11 @@ type PipelineSpec struct {
 	// provided.
 	Steps []eventingv1alpha1.SubscriberSpec
 
+	// TODO: Specify the CRD Channel which should be used to create the underlying Channels.
+
 	// Subscriber is the addressable that optionally receives replies from the last step in the pipeline.
 	// +optional
 	Subscriber *eventingv1alpha1.SubscriberSpec `json:"subscriber,omitempty"`
-}
-
-type StepStatus struct {
-	// SubscriptionStatuses is an array of corresponding Subscription statuses.
-	// Matches the Spec.Steps array in the order.
-	SubscriptionStatuses []eventingv1alpha1.SubscriptionStatus
-
-	// ChannelStatuses is an array of corresponding Channel statuses.
-	// Matches the Spec.Steps array in the order.
-	ChannelStatuses []eventingv1alpha1.ChannelStatus
 }
 
 // PipelineStatus represents the current state of a Pipeline.
@@ -75,6 +67,14 @@ type PipelineStatus struct {
 	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
 	// * Conditions - the latest available observations of a resource's current state.
 	duckv1alpha1.Status `json:",inline"`
+
+	// SubscriptionStatuses is an array of corresponding Subscription statuses.
+	// Matches the Spec.Steps array in the order.
+	SubscriptionStatuses []eventingv1alpha1.SubscriptionStatus
+
+	// ChannelStatuses is an array of corresponding Channel statuses.
+	// Matches the Spec.Steps array in the order.
+	ChannelStatuses []eventingv1alpha1.ChannelStatus
 
 	// Addressable is the starting point to this Pipeline. Sending to this will target the first Subscriber.
 	Address duckv1alpha1.Addressable `json:"address,omitempty"`
@@ -88,4 +88,9 @@ type PipelineList struct {
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Pipeline `json:"items"`
+}
+
+// GetGroupVersionKind returns GroupVersionKind for InMemoryChannels
+func (imc *InMemoryChannel) GetGroupVersionKind() schema.GroupVersionKind {
+	return SchemeGroupVersion.WithKind("InMemoryChannel")
 }
