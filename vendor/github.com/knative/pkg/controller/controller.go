@@ -78,6 +78,18 @@ func Filter(gvk schema.GroupVersionKind) func(obj interface{}) bool {
 	}
 }
 
+// FilterWithNameAndNamespace makes it simple to create FilterFunc's for use with
+// cache.FilteringResourceEventHandler that filter based on a namespace and a name.
+func FilterWithNameAndNamespace(namespace, name string) func(obj interface{}) bool {
+	return func(obj interface{}) bool {
+		if object, ok := obj.(metav1.Object); ok {
+			return name == object.GetName() &&
+				namespace == object.GetNamespace()
+		}
+		return false
+	}
+}
+
 // Impl is our core controller implementation.  It handles queuing and feeding work
 // from the queue to an implementation of Reconciler.
 type Impl struct {
@@ -115,6 +127,17 @@ func NewImpl(r Reconciler, logger *zap.SugaredLogger, workQueueName string, repo
 		logger:        logger,
 		statsReporter: reporter,
 	}
+}
+
+// EnqueueAfter takes a resource, converts it into a namespace/name string,
+// and passes it to EnqueueKey.
+func (c *Impl) EnqueueAfter(obj interface{}, after time.Duration) {
+	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
+	if err != nil {
+		c.logger.Errorw("Enqueue", zap.Error(err))
+		return
+	}
+	c.EnqueueKeyAfter(key, after)
 }
 
 // Enqueue takes a resource, converts it into a namespace/name string,
