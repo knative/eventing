@@ -445,7 +445,12 @@ function get_canonical_path() {
 # Return the base url we use to build the actual knative yaml sources.
 function get_knative_base_yaml_source() {
   local knative_base_yaml_source="https://storage.googleapis.com/knative-nightly/@/latest"
-  local branch_name="$(git rev-parse --abbrev-ref HEAD)"
+  # Get the branch name from Prow's env var by default, see https://github.com/kubernetes/test-infra/blob/master/prow/jobs.md.
+  local branch_name="${PULL_BASE_REF}"
+  if (( ! IS_PROW )); then
+    # If the test job is not running on Prow, we get the branch name directly via git command.
+    branch_name="$(git rev-parse --abbrev-ref HEAD)"
+  fi
   # If it's a release branch, we should have a different knative_base_yaml_source.
   if [[ $branch_name =~ ^release-[0-9\.]+$ ]]; then
     # Get the latest tag name for the current branch, which is likely formatted as v0.5.0
