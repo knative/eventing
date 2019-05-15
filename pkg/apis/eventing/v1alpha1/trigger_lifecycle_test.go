@@ -17,10 +17,14 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
+	"github.com/knative/eventing/pkg/apis/eventing"
+	"github.com/knative/pkg/apis"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -236,6 +240,93 @@ func TestTriggerIsReady(t *testing.T) {
 			got := ts.IsReady()
 			if test.wantReady != got {
 				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
+			}
+		})
+	}
+}
+
+func TestTriggerAnnotateUserInfo(t *testing.T) {
+	const (
+		u1 = "oveja@knative.dev"
+		u2 = "cabra@knative.dev"
+		u3 = "vaca@knative.dev"
+	)
+
+	withUserAnns := func(creator, updater string, t *Trigger) *Trigger {
+		a := t.GetAnnotations()
+		if a == nil {
+			a = map[string]string{}
+			defer t.SetAnnotations(a)
+		}
+
+		a[eventing.CreatorAnnotation] = creator
+		a[eventing.UpdaterAnnotation] = updater
+
+		return t
+	}
+
+	tests := []struct {
+		name       string
+		user       string
+		this       *Trigger
+		prev       *Trigger
+		wantedAnns map[string]string
+	}{{
+		"create new trigger",
+		u1,
+		&Trigger{},
+		nil,
+		map[string]string{
+			eventing.CreatorAnnotation: u1,
+			eventing.UpdaterAnnotation: u1,
+		},
+	}, {
+		"update trigger which has no annotations without diff",
+		u1,
+		&Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter}},
+		&Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter}},
+		map[string]string{},
+	}, {
+		"update trigger which has annotations without diff",
+		u2,
+		withUserAnns(u1, u1, &Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter}}),
+		withUserAnns(u1, u1, &Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter}}),
+		map[string]string{
+			eventing.CreatorAnnotation: u1,
+			eventing.UpdaterAnnotation: u1,
+		},
+	}, {
+		"update trigger which has no annotations with diff",
+		u2,
+		&Trigger{Spec: TriggerSpec{Broker: defaultBroker}},
+		&Trigger{Spec: TriggerSpec{Broker: otherBroker}},
+		map[string]string{
+			eventing.UpdaterAnnotation: u2,
+		}}, {
+		"update trigger which has annotations with diff",
+		u3,
+		withUserAnns(u1, u2, &Trigger{Spec: TriggerSpec{Broker: otherBroker}}),
+		withUserAnns(u1, u2, &Trigger{Spec: TriggerSpec{Broker: defaultBroker}}),
+		map[string]string{
+			eventing.CreatorAnnotation: u1,
+			eventing.UpdaterAnnotation: u3,
+		},
+	}}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := apis.WithUserInfo(context.Background(), &authv1.UserInfo{
+				Username: test.user,
+			})
+			if test.prev != nil {
+				ctx = apis.WithinUpdate(ctx, test.prev)
+			}
+			test.this.SetDefaults(ctx)
+
+			if got, want := test.this.GetAnnotations(), test.wantedAnns; !cmp.Equal(got, want) {
+				t.Errorf("Annotations = %v, want: %v, diff (-got, +want): %s", got, want, cmp.Diff(got, want))
 			}
 		})
 	}
