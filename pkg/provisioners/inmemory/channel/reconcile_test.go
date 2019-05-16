@@ -44,8 +44,7 @@ import (
 )
 
 const (
-	ccpName      = "in-memory-channel"
-	asyncCCPName = "in-memory"
+	ccpName = "in-memory"
 
 	cNamespace = "test-namespace"
 	cName      = "test-channel"

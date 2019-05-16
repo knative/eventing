@@ -40,11 +40,11 @@ import (
 )
 
 const (
-	ccpUID              = "test-uid"
-	testErrorMessage    = "test-induced-error"
-	testNS              = "test-ns"
-	inMemoryChannelName = "in-memory-channel"
-	inMemoryName        = "in-memory"
+	ccpUID             = "test-uid"
+	testErrorMessage   = "test-induced-error"
+	testNS             = "test-ns"
+	dispatcherPodLabel = "in-memory-channel"
+	inMemoryName       = "in-memory"
 )
 
 var (
@@ -65,8 +65,8 @@ var (
 
 func init() {
 	// Add types to scheme
-	eventingv1alpha1.AddToScheme(scheme.Scheme)
-	corev1.AddToScheme(scheme.Scheme)
+	_ = eventingv1alpha1.AddToScheme(scheme.Scheme)
+	_ = corev1.AddToScheme(scheme.Scheme)
 }
 
 func TestInjectClient(t *testing.T) {
@@ -199,23 +199,6 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			Name: "Delete old dispatcher",
-			InitialState: []runtime.Object{
-				makeClusterChannelProvisioner(),
-				makeOldK8sService(),
-			},
-			WantPresent: []runtime.Object{
-				makeReadyClusterChannelProvisioner(),
-				makeK8sService(),
-			},
-			WantAbsent: []runtime.Object{
-				makeOldK8sService(),
-			},
-			WantEvent: []corev1.Event{
-				events[ccpReconciled],
-			},
-		},
-		{
 			Name: "Create dispatcher - not owned by CCP",
 			InitialState: []runtime.Object{
 				makeClusterChannelProvisioner(),
@@ -236,20 +219,6 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeReadyClusterChannelProvisioner(),
 				makeK8sService(),
-			},
-			WantEvent: []corev1.Event{
-				events[ccpReconciled],
-			},
-		},
-		{
-			Name:         "Create dispatcher succeeds - in-memory-Channel",
-			ReconcileKey: inMemoryChannelName,
-			InitialState: []runtime.Object{
-				makeClusterChannelProvisionerOld(),
-			},
-			WantPresent: []runtime.Object{
-				makeReadyClusterChannelProvisionerOld(),
-				makeK8sServiceOld(),
 			},
 			WantEvent: []corev1.Event{
 				events[ccpReconciled],
@@ -319,12 +288,6 @@ func TestReconcile(t *testing.T) {
 	}
 }
 
-func makeClusterChannelProvisionerOld() *eventingv1alpha1.ClusterChannelProvisioner {
-	ccp := makeClusterChannelProvisioner()
-	ccp.SetName(inMemoryChannelName)
-	return ccp
-}
-
 func makeClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvisioner {
 	return &eventingv1alpha1.ClusterChannelProvisioner{
 		TypeMeta: metav1.TypeMeta{
@@ -346,12 +309,6 @@ func makeReadyClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvis
 		Status:   corev1.ConditionTrue,
 		Severity: duckv1alpha1.ConditionSeverityError,
 	}}
-	return ccp
-}
-
-func makeReadyClusterChannelProvisionerOld() *eventingv1alpha1.ClusterChannelProvisioner {
-	ccp := makeReadyClusterChannelProvisioner()
-	ccp.Name = inMemoryChannelName
 	return ccp
 }
 
@@ -383,7 +340,7 @@ func makeK8sService() *corev1.Service {
 			Labels: util.DispatcherLabels(inMemoryName),
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: util.DispatcherLabels(inMemoryChannelName),
+			Selector: util.DispatcherLabels(dispatcherPodLabel),
 			Ports: []corev1.ServicePort{
 				{
 					Port:       80,
@@ -393,20 +350,6 @@ func makeK8sService() *corev1.Service {
 			},
 		},
 	}
-}
-
-func makeK8sServiceOld() *corev1.Service {
-	svc := makeK8sService()
-	svc.SetName(fmt.Sprintf("%s-dispatcher", inMemoryChannelName))
-	svc.GetOwnerReferences()[0].Name = inMemoryChannelName
-	svc.SetLabels(util.DispatcherLabels(inMemoryChannelName))
-	return svc
-}
-
-func makeOldK8sService() *corev1.Service {
-	svc := makeK8sService()
-	svc.ObjectMeta.Name = fmt.Sprintf("%s-clusterbus", inMemoryName)
-	return svc
 }
 
 func makeK8sServiceNotOwnedByClusterChannelProvisioner() *corev1.Service {

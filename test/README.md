@@ -88,7 +88,7 @@ If you want to run tests against other `ClusterChannelProvisioners`, you can
 specify them through `-clusterChannelProvisioners`.
 
 ```bash
-go test -v -tags=e2e -count=1 ./test/e2e -run ^TestMain$ -runFromMain=true -clusterChannelProvisioners=in-memory-channel,gcp-pubsub
+go test -v -tags=e2e -count=1 ./test/e2e -run ^TestMain$ -runFromMain=true -clusterChannelProvisioners=in-memory,gcp-pubsub
 ```
 
 #### One test case
@@ -108,7 +108,7 @@ specify it through `-clusterChannelProvisioners`. Note that you can only specify
 one `ClusterChannelProvisioner` if you are not running from `TestMain`.
 
 ```bash
-go test -v -tags=e2e -count=1 ./test/e2e -run ^TestSingleBinaryEvent$ -clusterChannelProvisioners=in-memory-channel
+go test -v -tags=e2e -count=1 ./test/e2e -run ^TestSingleBinaryEvent$ -clusterChannelProvisioners=in-memory
 ```
 
 ## Environment requirements

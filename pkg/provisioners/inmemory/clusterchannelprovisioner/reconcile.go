@@ -18,21 +18,18 @@ package clusterchannelprovisioner
 
 import (
 	"context"
-	"fmt"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	util "github.com/knative/eventing/pkg/provisioners"
-	"github.com/knative/pkg/system"
 )
 
 const (
@@ -48,7 +45,7 @@ const (
 
 var (
 	// provisionerNames contains the list of provisioners' names served by this controller
-	provisionerNames = []string{"in-memory-channel", "in-memory"}
+	provisionerNames = []string{"in-memory"}
 )
 
 type reconciler struct {
@@ -66,7 +63,7 @@ func (r *reconciler) InjectClient(c client.Client) error {
 }
 
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	//TODO use this to store the logger and set a deadline
+	// TODO use this to store the logger and set a deadline
 	ctx := context.TODO()
 	logger := r.logger.With(zap.Any("request", request))
 
@@ -167,42 +164,15 @@ func (r *reconciler) reconcile(ctx context.Context, ccp *eventingv1alpha1.Cluste
 		logger.Warn("ClusterChannelProvisioner's K8s Service is not owned by the ClusterChannelProvisioner", zap.Any("clusterChannelProvisioner", ccp), zap.Any("service", svc))
 	}
 
-	// The name of the svc has changed since version 0.2.1. Hence, delete old dispatcher service (in-memory-channel-clusterbus)
-	// that was created previously in version 0.2.0 to ensure backwards compatibility.
-	err = r.deleteOldDispatcherService(ctx, ccp)
-	if err != nil {
-		logger.Info("Error deleting the old ClusterChannelProvisioner's K8s Service", zap.Error(err))
-		r.recorder.Eventf(ccp, corev1.EventTypeWarning, k8sServiceDeleteFailed, "Failed to delete the old ClusterChannelProvisioner's K8s Service: %v", err)
-		return err
-	}
-
 	ccp.Status.MarkReady()
 	return nil
 }
 
-// Since there are two provisioners "in-memory" and "in-memory-channel" but one single dispatcher service deployment,
-// update the label of the K8s service to always point at the same dispatcher service deployment
 func setDispatcherServiceSelector() util.ServiceOption {
 	return func(svc *v1.Service) error {
+		// There used to be an "in-memory-channel" provisioner. It was removed in 0.7, but it was
+		// the original, so the dispatcher is still labeled with its name.
 		svc.Spec.Selector = util.DispatcherLabels("in-memory-channel")
 		return nil
 	}
-}
-
-func (r *reconciler) deleteOldDispatcherService(ctx context.Context, ccp *eventingv1alpha1.ClusterChannelProvisioner) error {
-	svcName := fmt.Sprintf("%s-clusterbus", ccp.Name)
-	svcKey := types.NamespacedName{
-		Namespace: system.Namespace(),
-		Name:      svcName,
-	}
-	svc := &corev1.Service{}
-	err := r.client.Get(ctx, svcKey, svc)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-
-	return r.client.Delete(ctx, svc)
 }
