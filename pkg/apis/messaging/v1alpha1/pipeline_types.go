@@ -21,6 +21,7 @@ import (
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/webhook"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -49,16 +50,53 @@ var _ apis.Immutable = (*Pipeline)(nil)
 var _ runtime.Object = (*Pipeline)(nil)
 var _ webhook.GenericCRD = (*Pipeline)(nil)
 
+// This should be duck so that Broker can also use this
+type ChannelTemplateSpec struct {
+	// You can specify only the following fields of the ObjectReference:
+	//   - Kind
+	//   - APIVersion
+	ChannelCRD corev1.ObjectReference `json:"channelCRD,omitempty"`
+
+	// Spec defines the Spec to use for each channel created. Passed
+	// in verbatim to the Channel CRD as Spec section.
+	// +optional
+	Spec *runtime.RawExtension `json:"spec,omitempty"`
+}
+
 type PipelineSpec struct {
 	// Steps is the list of Subscribers (processors / functions) that will be called in the order
 	// provided.
-	Steps []eventingv1alpha1.SubscriberSpec
+	Steps []eventingv1alpha1.SubscriberSpec `json:"steps"`
 
-	// TODO: Specify the CRD Channel which should be used to create the underlying Channels.
+	// ChannelTemplate specifies which Channel CRD to use
+	ChannelTemplate ChannelTemplateSpec `json:"channelTemplate"`
 
-	// Subscriber is the addressable that optionally receives replies from the last step in the pipeline.
+	// Reply is a Reference to where the result of the last Subscriber gets sent to.
+	// Currently due to limitations on the Subscription, this _must_ be a Channel.
+	// If that changes, we can change that later.
+	//
+	// You can specify only the following fields of the ObjectReference:
+	//   - Kind
+	//   - APIVersion
+	//   - Name
+	// Kind must be "Channel" and APIVersion must be
+	// "eventing.knative.dev/v1alpha1"
 	// +optional
-	Subscriber *eventingv1alpha1.SubscriberSpec `json:"subscriber,omitempty"`
+	Reply *corev1.ObjectReference `json:"reply,omitempty"`
+}
+
+type PipelineChannelStatus struct {
+	// Channel is the reference to the underlying channel.
+	Channel corev1.ObjectReference `json:"channel"`
+	// ReadyCondition indicates whether the Channel is ready or not.
+	ReadyCondition duckv1alpha1.Condition `json:"ready"`
+}
+
+type PipelineSubscriptionStatus struct {
+	// Subscription is the reference to the underlying Subscription.
+	Subscription corev1.ObjectReference `json:"subscription"`
+	// ReadyCondition indicates whether the Subscription is ready or not.
+	ReadyCondition duckv1alpha1.Condition `json:"ready"`
 }
 
 // PipelineStatus represents the current state of a Pipeline.
@@ -70,11 +108,11 @@ type PipelineStatus struct {
 
 	// SubscriptionStatuses is an array of corresponding Subscription statuses.
 	// Matches the Spec.Steps array in the order.
-	SubscriptionStatuses []eventingv1alpha1.SubscriptionStatus
+	SubscriptionStatuses []PipelineSubscriptionStatus
 
 	// ChannelStatuses is an array of corresponding Channel statuses.
 	// Matches the Spec.Steps array in the order.
-	ChannelStatuses []eventingv1alpha1.ChannelStatus
+	ChannelStatuses []PipelineChannelStatus
 
 	// Addressable is the starting point to this Pipeline. Sending to this will target the first Subscriber.
 	Address duckv1alpha1.Addressable `json:"address,omitempty"`
