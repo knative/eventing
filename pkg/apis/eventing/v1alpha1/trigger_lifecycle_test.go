@@ -272,47 +272,50 @@ func TestTriggerAnnotateUserInfo(t *testing.T) {
 		this       *Trigger
 		prev       *Trigger
 		wantedAnns map[string]string
-	}{{
-		"create new trigger",
-		u1,
-		&Trigger{},
-		nil,
-		map[string]string{
-			eventing.CreatorAnnotation: u1,
-			eventing.UpdaterAnnotation: u1,
+	}{
+		{
+			name: "create new trigger",
+			user: u1,
+			this: &Trigger{},
+			prev: nil,
+			wantedAnns: map[string]string{
+				eventing.CreatorAnnotation: u1,
+				eventing.UpdaterAnnotation: u1,
+			},
+		}, {
+			name:       "update trigger which has no annotations without diff",
+			user:       u1,
+			this:       &Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter()}},
+			prev:       &Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter()}},
+			wantedAnns: map[string]string{},
+		}, {
+			name: "update trigger which has annotations without diff",
+			user: u2,
+			this: withUserAnns(u1, u1, &Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter()}}),
+			prev: withUserAnns(u1, u1, &Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter()}}),
+			wantedAnns: map[string]string{
+				eventing.CreatorAnnotation: u1,
+				eventing.UpdaterAnnotation: u1,
+			},
+		}, {
+			name: "update trigger which has no annotations with diff",
+			user: u2,
+			this: &Trigger{Spec: TriggerSpec{Broker: defaultBroker}},
+			prev: &Trigger{Spec: TriggerSpec{Broker: otherBroker}},
+			wantedAnns: map[string]string{
+				eventing.UpdaterAnnotation: u2,
+			},
+		}, {
+			name: "update trigger which has annotations with diff",
+			user: u3,
+			this: withUserAnns(u1, u2, &Trigger{Spec: TriggerSpec{Broker: otherBroker}}),
+			prev: withUserAnns(u1, u2, &Trigger{Spec: TriggerSpec{Broker: defaultBroker}}),
+			wantedAnns: map[string]string{
+				eventing.CreatorAnnotation: u1,
+				eventing.UpdaterAnnotation: u3,
+			},
 		},
-	}, {
-		"update trigger which has no annotations without diff",
-		u1,
-		&Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter}},
-		&Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter}},
-		map[string]string{},
-	}, {
-		"update trigger which has annotations without diff",
-		u2,
-		withUserAnns(u1, u1, &Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter}}),
-		withUserAnns(u1, u1, &Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter}}),
-		map[string]string{
-			eventing.CreatorAnnotation: u1,
-			eventing.UpdaterAnnotation: u1,
-		},
-	}, {
-		"update trigger which has no annotations with diff",
-		u2,
-		&Trigger{Spec: TriggerSpec{Broker: defaultBroker}},
-		&Trigger{Spec: TriggerSpec{Broker: otherBroker}},
-		map[string]string{
-			eventing.UpdaterAnnotation: u2,
-		}}, {
-		"update trigger which has annotations with diff",
-		u3,
-		withUserAnns(u1, u2, &Trigger{Spec: TriggerSpec{Broker: otherBroker}}),
-		withUserAnns(u1, u2, &Trigger{Spec: TriggerSpec{Broker: defaultBroker}}),
-		map[string]string{
-			eventing.CreatorAnnotation: u1,
-			eventing.UpdaterAnnotation: u3,
-		},
-	}}
+	}
 
 	for _, test := range tests {
 		test := test
