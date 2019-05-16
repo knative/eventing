@@ -454,7 +454,7 @@ function get_knative_base_yaml_source() {
   # If it's a release branch, we should have a different knative_base_yaml_source.
   if [[ $branch_name =~ ^release-[0-9\.]+$ ]]; then
     # Get the latest tag name for the current branch, which is likely formatted as v0.5.0
-    local tag_name="$(git describe --tags)"
+    local tag_name="$(git describe --tags --abbrev=0)"
     knative_base_yaml_source="https://storage.googleapis.com/knative-releases/@/previous/${tag_name}"
   fi
   echo "${knative_base_yaml_source}"
