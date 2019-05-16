@@ -38,13 +38,12 @@ The major components are:
 - InMemoryChannel Controller
 - InMemoryChannel Dispatcher
 
-
 ```shell
 kubectl get deployment -n knative-eventing imc-controller
 ```
 
-The InMemoryChannel Dispatcher receives and distributes all events. There is a single
-Dispatcher for all in-memory Channels.
+The InMemoryChannel Dispatcher receives and distributes all events. There is a
+single Dispatcher for all in-memory Channels.
 
 ```shell
 kubectl get deployment -n knative-eventing imc-dispatcher
