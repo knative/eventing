@@ -51,7 +51,7 @@ var (
 	readTimeout         = 1 * time.Minute
 	writeTimeout        = 1 * time.Minute
 	port                = 8080
-	channelProvisioners = []string{"in-memory", "in-memory-channel"}
+	channelProvisioners = []string{"in-memory"}
 )
 
 func main() {

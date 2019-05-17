@@ -22,10 +22,6 @@ const (
 	// DefaultClusterChannelProvisioner is the default ClusterChannelProvisioner we will run tests against.
 	DefaultClusterChannelProvisioner = InMemoryProvisioner
 
-	// InMemoryChannelProvisioner is the in-memory-channel provisioner.
-	// It will be delete in 0.7, see https://github.com/knative/eventing/pull/1062 for more info.
-	InMemoryChannelProvisioner = "in-memory-channel"
-
 	// InMemoryProvisioner is the in-memory provisioner, which is also the default one.
 	InMemoryProvisioner = "in-memory"
 	// GCPPubSubProvisioner is the gcp-pubsub provisioner, which is under contrib/gcppubsub.
@@ -38,7 +34,6 @@ const (
 
 // validProvisioners is a list of provisioners that Eventing currently support.
 var validProvisioners = []string{
-	InMemoryChannelProvisioner,
 	InMemoryProvisioner,
 	GCPPubSubProvisioner,
 	KafkaProvisioner,

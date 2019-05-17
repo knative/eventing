@@ -110,30 +110,6 @@ func TestNewConfigFromChannels(t *testing.T) {
 					},
 				},
 			},
-		}, {
-			name: "in-memory-channel provisioner -- synchronous",
-			channels: []v1alpha1.Channel{
-				withProvisioner(
-					makeChannel("chan-1", "ns-1", "a.b.c.d", makeSubscribable(makeSubscriber("sub1"))),
-					&v1.ObjectReference{
-						Name: "in-memory-channel",
-					}),
-			},
-			expected: &Config{
-				ChannelConfigs: []ChannelConfig{
-					{
-						Name:      "chan-1",
-						Namespace: "ns-1",
-						HostName:  "a.b.c.d",
-						FanoutConfig: fanout.Config{
-							AsyncHandler: false,
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
-								makeSubscriber("sub1"),
-							},
-						},
-					},
-				},
-			},
 		},
 	}
 
@@ -168,9 +144,9 @@ func withProvisioner(c v1alpha1.Channel, p *v1.ObjectReference) v1alpha1.Channel
 	return c
 }
 
-func makeSubscribable(subsriberSpec ...eventingduck.ChannelSubscriberSpec) *eventingduck.Subscribable {
+func makeSubscribable(subscriberSpec ...eventingduck.ChannelSubscriberSpec) *eventingduck.Subscribable {
 	return &eventingduck.Subscribable{
-		Subscribers: subsriberSpec,
+		Subscribers: subscriberSpec,
 	}
 }
 
