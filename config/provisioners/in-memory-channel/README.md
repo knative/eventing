@@ -18,8 +18,7 @@ They differ from most Channels in that they have:
 ### Deployment steps:
 
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md).
-1. Apply the 'in-memory' ClusterChannelProvisioner, Controller, and
-   Dispatcher.
+1. Apply the 'in-memory' ClusterChannelProvisioner, Controller, and Dispatcher.
    ```shell
    ko apply -f config/provisioners/in-memory-channel/in-memory-channel.yaml
    ```
