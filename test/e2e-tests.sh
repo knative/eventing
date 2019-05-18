@@ -56,14 +56,14 @@ function knative_teardown() {
 }
 
 function install_istio() {
-  kubectl apply -f "${istio_crd_yaml}" || return 1
-  kubectl apply -f "${istio_yaml}" || return 1
+  kubectl apply -f "${ISTIO_CRD_YAML}" || return 1
+  kubectl apply -f "${ISTIO_YAML}" || return 1
   wait_until_pods_running istio-system || return 1
 }
 
 function uninstall_istio() {
-  kubectl delete -f "${istio_crd_yaml}" || return 1
-  kubectl delete -f "${istio_yaml}" || return 1
+  kubectl delete -f "${ISTIO_CRD_YAML}" || return 1
+  kubectl delete -f "${ISTIO_YAML}" || return 1
   wait_until_object_does_not_exist namespaces istio-system
 }
 
