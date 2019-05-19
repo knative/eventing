@@ -48,7 +48,6 @@ function knative_setup() {
 
 function knative_teardown() {
   uninstall_istio
-  
   ko delete --ignore-not-found=true -f config/
   wait_until_object_does_not_exist namespaces knative-eventing
 
