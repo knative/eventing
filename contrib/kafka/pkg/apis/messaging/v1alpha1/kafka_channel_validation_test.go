@@ -51,6 +51,18 @@ func TestKafkaChannelValidation(t *testing.T) {
 				return fe
 			}(),
 		},
+		"empty bootstrapServer at index 1": {
+			cr: &KafkaChannel{
+				Spec: KafkaChannelSpec{
+					BootstrapServers: "bootstrap_srvs,",
+					ConsumerMode:     "multiplex",
+				},
+			},
+			want: func() *apis.FieldError {
+				fe := apis.ErrMissingField("spec.bootstrapServers[1]")
+				return fe
+			}(),
+		},
 		"empty consumerMode": {
 			cr: &KafkaChannel{
 				Spec: KafkaChannelSpec{

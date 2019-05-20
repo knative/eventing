@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	. "github.com/knative/eventing/contrib/kafka/pkg/reconciler"
+	"strings"
 
 	"github.com/knative/pkg/apis"
 )
@@ -34,6 +35,14 @@ func (cs *KafkaChannelSpec) Validate(ctx context.Context) *apis.FieldError {
 	if cs.BootstrapServers == "" {
 		fe := apis.ErrMissingField("bootstrapServers")
 		errs = errs.Also(fe)
+	} else {
+		bootstrapServers := strings.Split(cs.BootstrapServers, ",")
+		for i, s := range bootstrapServers {
+			if len(s) == 0 {
+				fe := apis.ErrMissingField(fmt.Sprintf("bootstrapServers[%d]", i))
+				errs = errs.Also(fe)
+			}
+		}
 	}
 
 	if cs.ConsumerMode == "" {
