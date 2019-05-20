@@ -18,8 +18,6 @@ package main
 
 import (
 	"flag"
-	"github.com/kelseyhightower/envconfig"
-	corev1 "k8s.io/api/core/v1"
 	"log"
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -97,7 +95,7 @@ func main() {
 			systemNS,
 			dispatcherDeploymentName,
 			dispatcherServiceName,
-			pubSubChannelInformer,
+			kafkaChannelInformer,
 			deploymentInformer,
 			serviceInformer,
 			endpointsInformer,
@@ -123,7 +121,7 @@ func main() {
 	if err := kncontroller.StartInformers(
 		stopCh,
 		// Messaging
-		pubSubChannelInformer.Informer(),
+		kafkaChannelInformer.Informer(),
 
 		// Kube
 		serviceInformer.Informer(),
