@@ -47,11 +47,14 @@ func TestEventTransformationForTrigger(t *testing.T) {
 
 func testEventTransformationForTrigger(t *testing.T, provisioner string) {
 	const (
-		senderName = "e2e-eventtransformation-sender"
-		brokerName = "e2e-eventtransformation-broker"
-		saName     = "eventing-broker-filter"
+		senderName    = "e2e-eventtransformation-sender"
+		brokerName    = "e2e-eventtransformation-broker"
+		saIngressName = "eventing-broker-ingress"
+		saFilterName  = "eventing-broker-filter"
+
 		// This ClusterRole is installed in Knative Eventing setup, see https://github.com/knative/eventing/tree/master/docs/broker#manual-setup.
-		crName = "eventing-broker-filter"
+		crIngressName = "eventing-broker-ingress"
+		crFilterName  = "eventing-broker-filter"
 
 		any          = v1alpha1.TriggerAnyFilter
 		eventType1   = "type1"
@@ -71,8 +74,11 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string) {
 	defer TearDown(client)
 
 	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role
-	if err := client.CreateServiceAccountAndBinding(saName, crName); err != nil {
-		t.Fatalf("Failed to create the ServiceAccount and ServiceAccountRoleBinding: %v", err)
+	if err := client.CreateServiceAccountAndBinding(saIngressName, crIngressName); err != nil {
+		t.Fatalf("Failed to create the Ingress ServiceAccount and ServiceAccountRoleBinding: %v", err)
+	}
+	if err := client.CreateServiceAccountAndBinding(saFilterName, crFilterName); err != nil {
+		t.Fatalf("Failed to create the Filter ServiceAccount and ServiceAccountRoleBinding: %v", err)
 	}
 
 	// create a new broker
