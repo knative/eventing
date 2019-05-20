@@ -30,10 +30,13 @@ source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/e2e-tests.s
 # Currently this namespace must be the same as the namespace specified in
 # test/e2e/e2e.go.
 readonly E2E_TEST_NAMESPACE=e2etest-knative-eventing
+readonly ISTIO_CRD_YAML="${KNATIVE_BASE_YAML_SOURCE/@/serving}/istio-crds.yaml"
+readonly ISTIO_YAML="${KNATIVE_BASE_YAML_SOURCE/@/serving}/istio.yaml"
 
 # Helper functions.
 
 function knative_setup() {
+  install_istio || return 1
   start_latest_knative_serving || return 1
   ko apply -f config/ || return 1
   wait_until_pods_running knative-eventing || fail_test "Eventing did not come up (1)"
@@ -45,11 +48,24 @@ function knative_setup() {
 
 function knative_teardown() {
   ko delete --ignore-not-found=true -f config/
-
   wait_until_object_does_not_exist namespaces knative-eventing
 
   wait_until_object_does_not_exist customresourcedefinitions subscriptions.eventing.knative.dev
   wait_until_object_does_not_exist customresourcedefinitions channels.eventing.knative.dev
+
+  uninstall_istio
+}
+
+function install_istio() {
+  kubectl apply -f "${ISTIO_CRD_YAML}" || return 1
+  kubectl apply -f "${ISTIO_YAML}" || return 1
+  wait_until_pods_running istio-system || return 1
+}
+
+function uninstall_istio() {
+  kubectl delete -f "${ISTIO_CRD_YAML}" || return 1
+  kubectl delete -f "${ISTIO_YAML}" || return 1
+  wait_until_object_does_not_exist namespaces istio-system
 }
 
 # Setup resources common to all eventing tests
@@ -85,7 +101,8 @@ function dump_extra_cluster_state() {
 
 # Script entry point.
 
-initialize $@
+# Skip installing istio as an add-on
+initialize $@ --skip-istio-addon
 
 go_test_e2e ./test/e2e || fail_test
 
