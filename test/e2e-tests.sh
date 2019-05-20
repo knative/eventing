@@ -47,13 +47,13 @@ function knative_setup() {
 }
 
 function knative_teardown() {
-  uninstall_istio
-  
   ko delete --ignore-not-found=true -f config/
   wait_until_object_does_not_exist namespaces knative-eventing
 
   wait_until_object_does_not_exist customresourcedefinitions subscriptions.eventing.knative.dev
   wait_until_object_does_not_exist customresourcedefinitions channels.eventing.knative.dev
+
+  uninstall_istio
 }
 
 function install_istio() {
