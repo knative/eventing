@@ -16,12 +16,23 @@ limitations under the License.
 
 package v1alpha1
 
-import "context"
+import (
+	"context"
+	. "github.com/knative/eventing/contrib/kafka/pkg/reconciler"
+)
 
 func (c *KafkaChannel) SetDefaults(ctx context.Context) {
 	c.Spec.SetDefaults(ctx)
 }
 
 func (cs *KafkaChannelSpec) SetDefaults(ctx context.Context) {
-	// TODO: Nothing to default here...
+	if cs.ConsumerMode == "" {
+		cs.ConsumerMode = ConsumerModeMultiplexConsumerValue
+	}
+	if cs.NumPartitions == 0 {
+		cs.NumPartitions = DefaultNumPartitions
+	}
+	if cs.ReplicationFactor == 0 {
+		cs.ReplicationFactor = DefaultReplicationFactor
+	}
 }

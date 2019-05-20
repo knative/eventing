@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"testing"
 
+	. "github.com/knative/eventing/contrib/kafka/pkg/reconciler"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"

@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	cluster "github.com/bsm/sarama-cluster"
-
+	"github.com/bsm/sarama-cluster"
 	"github.com/google/go-cmp/cmp"
+	. "github.com/knative/eventing/contrib/kafka/pkg/reconciler"
 	_ "github.com/knative/pkg/system/testing"
 )
 

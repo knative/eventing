@@ -5,17 +5,15 @@ import (
 	"log"
 	"strings"
 
-	cluster "github.com/bsm/sarama-cluster"
-
+	"github.com/bsm/sarama-cluster"
+	. "github.com/knative/eventing/contrib/kafka/pkg/reconciler"
 	"github.com/knative/pkg/configmap"
 )
 
 const (
-	BrokerConfigMapKey                 = "bootstrap_servers"
-	ConsumerModeConfigMapKey           = "consumer_mode"
-	ConsumerModePartitionConsumerValue = "partitions"
-	ConsumerModeMultiplexConsumerValue = "multiplex"
-	KafkaChannelSeparator              = "."
+	BrokerConfigMapKey       = "bootstrap_servers"
+	ConsumerModeConfigMapKey = "consumer_mode"
+	KafkaChannelSeparator    = "."
 )
 
 // GetProvisionerConfig returns the details of the associated ClusterChannelProvisioner object

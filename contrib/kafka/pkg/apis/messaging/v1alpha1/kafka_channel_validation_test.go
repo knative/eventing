@@ -23,7 +23,7 @@ import (
 	"github.com/knative/pkg/apis"
 )
 
-func TestGooglePubSubChannelValidation(t *testing.T) {
+func TestKafkaChannelValidation(t *testing.T) {
 	tests := []CRDTest{{
 		name: "empty",
 		cr: &KafkaChannel{

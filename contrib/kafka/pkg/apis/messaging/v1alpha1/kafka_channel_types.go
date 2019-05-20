@@ -59,16 +59,13 @@ type KafkaChannelSpec struct {
 	// ConsumerMode is the mode used to dispatch events from different partitions in parallel.
 	// By default, partitions are multiplexed with a single go channel (multiplex).
 	// `multiplex` and `partitions` are valid values.
-	// +optional
-	ConsumerMode string `json:"consumerMode,omitempty"`
+	ConsumerMode string `json:"consumerMode"`
 
-	// NumPartitions is the number of partitions of a Kafka topic.
-	// +optional
-	NumPartitions int32 `json:"numPartitions,omitempty"`
+	// NumPartitions is the number of partitions of a Kafka topic. By default, it is set to 1.
+	NumPartitions int32 `json:"numPartitions"`
 
-	//ReplicationFactor is the replication factor of a Kafka topic.
-	// +optional
-	ReplicationFactor int16 `json:"replicationFactor,omitempty"`
+	//ReplicationFactor is the replication factor of a Kafka topic. By default, it is set to 1.
+	ReplicationFactor int16 `json:"replicationFactor"`
 
 	// Channel conforms to Duck type Subscribable.
 	Subscribable *eventingduck.Subscribable `json:"subscribable,omitempty"`
