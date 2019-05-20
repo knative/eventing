@@ -24,27 +24,36 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"reflect"
 	"sync"
 	"time"
 
+	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+
 	cloudevents "github.com/cloudevents/sdk-go"
+	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/broker"
 	"github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/eventing/pkg/tracing"
 	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/signals"
+	pkgtracing "github.com/knative/pkg/tracing"
 	"go.opencensus.io/exporter/prometheus"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
 	"go.uber.org/zap"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	crlog "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+)
+
+const (
+	NAMESPACE = "NAMESPACE"
 )
 
 var (
@@ -76,15 +85,26 @@ func main() {
 		logger.Fatal("Unable to add eventingv1alpha1 scheme", zap.Error(err))
 	}
 
-	brokerName := getRequiredEnv("BROKER")
+	brokerName := utils.GetRequiredEnvOrFatal("BROKER")
 
 	channelURI := &url.URL{
 		Scheme: "http",
-		Host:   getRequiredEnv("CHANNEL"),
+		Host:   utils.GetRequiredEnvOrFatal("CHANNEL"),
 		Path:   "/",
 	}
 
-	ceClient, err := cloudevents.NewDefaultClient()
+	kc := kubernetes.NewForConfigOrDie(mgr.GetConfig())
+	configMapWatcher := configmap.NewInformedWatcher(kc, utils.GetRequiredEnvOrFatal(NAMESPACE))
+
+	if err = tracing.SetupDynamicZipkinPublishing(logger.Sugar(), configMapWatcher, utils.GetRequiredEnvOrFatal("ZIPKIN_SERVICE_NAME")); err != nil {
+		logger.Fatal("Error setting up Zipkin publishing", zap.Error(err))
+	}
+
+	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cehttp.WithMiddleware(pkgtracing.HTTPSpanMiddleware))
+	if err != nil {
+		logger.Fatal("Unable to create CE transport", zap.Error(err))
+	}
+	ceClient, err := cloudevents.NewClient(httpTransport, cloudevents.WithTimeNow(), cloudevents.WithUUIDs())
 	if err != nil {
 		logger.Fatal("Unable to create CE client", zap.Error(err))
 	}
@@ -144,14 +164,6 @@ func main() {
 	// goroutine will exit the process if it takes longer than shutdownTimeout.
 	wg.Wait()
 	logger.Info("Done.")
-}
-
-func getRequiredEnv(envKey string) string {
-	val, defined := os.LookupEnv(envKey)
-	if !defined {
-		log.Fatalf("required environment variable not defined '%s'", envKey)
-	}
-	return val
 }
 
 type handler struct {
